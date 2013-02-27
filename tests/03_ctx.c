@@ -3,8 +3,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Library Unit Test Harness - Memory Management
-  02_mem.c
+  Library Unit Test Harness - Thread Scheduler Context Management
+  03_ctx.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
