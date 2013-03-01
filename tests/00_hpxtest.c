@@ -31,6 +31,7 @@
 #include "02_mem.c"
 #include "03_ctx.c"
 #include "04_thread1.c"
+#include "05_queue.c"
 
 
 /*
@@ -55,6 +56,12 @@ int main(int argc, char * argv[]) {
 
   /* test threads (stage 1) */
   tcase_add_test(tc, test_libhpx_thread_create);
+
+  /* test FIFO queues */
+  tcase_add_test(tc, test_libhpx_queue_size);
+  tcase_add_test(tc, test_libhpx_queue_insert);
+  tcase_add_test(tc, test_libhpx_queue_peek);
+  tcase_add_test(tc, test_libhpx_queue_pop);
 
   /* test library cleanup */
   tcase_add_test(tc, test_libhpx_cleanup);
