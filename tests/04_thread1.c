@@ -24,6 +24,11 @@
 #include "hpx_thread.h"
 
 
+void * __thread_test_func1(void * ptr) {
+
+}
+
+
 /*
  --------------------------------------------------------------------
   TEST: thread creation & initialization
@@ -34,12 +39,23 @@ START_TEST (test_libhpx_thread_create)
 {
   hpx_context_t * ctx = NULL;
   hpx_thread_t * th = NULL;
-  
+  hpx_thread_state_t state;  
+  char msg[128];
+
   ctx = hpx_ctx_create();
   ck_assert_msg(ctx != NULL, "Could not create context");
 
-  th = hpx_thread_create(ctx);
+  th = hpx_thread_create(ctx, __thread_test_func1, NULL);
   ck_assert_msg(th != NULL, "Could not create thread");
+
+  state = hpx_thread_get_state(th);
+  sprintf(msg, "New thread has an invalid queuing state (expected %d, got %d)", HPX_THREAD_STATE_PENDING, (int) state);
+  ck_assert_msg(state == HPX_THREAD_STATE_PENDING, msg);
+
+  hpx_thread_set_state(th, HPX_THREAD_STATE_SUSPENDED);
+  state = hpx_thread_get_state(th);
+  sprintf(msg, "Altered thread has an invalid queuing state (expected %d, got %d)", HPX_THREAD_STATE_SUSPENDED, state);
+  ck_assert_msg(state == HPX_THREAD_STATE_SUSPENDED, msg);
 
   hpx_thread_destroy(th);
   hpx_ctx_destroy(ctx);

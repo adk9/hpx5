@@ -53,7 +53,7 @@ START_TEST (test_libhpx_ctx_get_id)
   char msg[128];
   int x;
 
-  for (x = 0; x < 100; x++) {
+  for (x = 0; x < 10; x++) {
     ctx = hpx_ctx_create();
 
     sprintf(msg, "ctx is NULL on loop iteration %d", x);

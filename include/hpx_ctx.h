@@ -26,7 +26,8 @@
 #define LIBHPX_CONTEXT_H_
 
 #include <stdint.h>
-#include "hpx_heap.h"
+#include "hpx_queue.h"
+#include "hpx_kthread.h"
 
 
 /*
@@ -44,44 +45,26 @@ static hpx_context_id_t __ctx_next_id;
 /* the context handle */ 
 typedef struct {
   hpx_context_id_t cid;
-  hpx_heap_t q_pend;
-  hpx_heap_t q_exe;
-  hpx_heap_t q_block;
-  hpx_heap_t q_susp;
-  hpx_heap_t q_term;
+
+  hpx_queue_t q_pend;
+  hpx_queue_t q_exe;
+  hpx_queue_t q_block;
+  hpx_queue_t q_susp;
+  hpx_queue_t q_term;
+
+  hpx_kthread_t ** kths;
+  long kths_count;
 } hpx_context_t;
 
 
 /*
  --------------------------------------------------------------------
-  hpx_ctx_create
-
-  Creates and initializes a new scheduling context.
+  Context Functions
  --------------------------------------------------------------------
 */
 
 hpx_context_t * hpx_ctx_create(void);
-
-
-/*
- --------------------------------------------------------------------
-  hpx_ctx_destroy
-
-  Destroys a previously created scheduling context.
- --------------------------------------------------------------------
-*/
-
 void hpx_ctx_destroy(hpx_context_t *);
-
-
-/*
- --------------------------------------------------------------------
-  hpx_ctx_get_id
-
-  Gets the ID of the supplied context.
- --------------------------------------------------------------------
-*/
-
 hpx_context_id_t hpx_ctx_get_id(hpx_context_t *);
 
 #endif

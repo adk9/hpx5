@@ -32,6 +32,8 @@
 #include "03_ctx.c"
 #include "04_thread1.c"
 #include "05_queue.c"
+#include "06_kthread.c"
+#include "07_mctx.c"
 
 
 /*
@@ -50,6 +52,11 @@ int main(int argc, char * argv[]) {
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
 
+  /* test kernel threads */
+  /* NOTE: should come before context tests */
+  tcase_add_test(tc, test_libhpx_kthread_get_cores);
+  tcase_add_test(tc, test_libhpx_kthread_create);
+
   /* test scheduling context management */
   tcase_add_test(tc, test_libhpx_ctx_create);
   tcase_add_test(tc, test_libhpx_ctx_get_id);
@@ -62,6 +69,9 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_queue_insert);
   tcase_add_test(tc, test_libhpx_queue_peek);
   tcase_add_test(tc, test_libhpx_queue_pop);
+
+  /* test machine context switching */
+  tcase_add_test(tc, test_libhpx_mctx_makecontext);
 
   /* test library cleanup */
   tcase_add_test(tc, test_libhpx_cleanup);
