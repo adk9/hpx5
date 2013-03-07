@@ -3,13 +3,13 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Library initialization and cleanup function definitions
-  hpx_init.h
+  Machine Context Register Table for x86_64 CPUs
+  hpx_mregs.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
 
-  This software may be modified and distributed under the terms of
+  This software may be modified and distributed under the terms of 
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -22,32 +22,25 @@
 
 
 #pragma once
-#ifndef LIBHPX_INIT_H_
-#define LIBHPX_INIT_H_
+#ifndef LIBHPX_MREGS_X86_64_H_
+#define LIBHPX_MREGS_X86_64_H_
 
-#include "hpx_error.h"
-
-
-/*
- --------------------------------------------------------------------
-  Library-wide Definitions
- --------------------------------------------------------------------
-*/
-
-/* make ucontext functions available */
-#define _XOPEN_SOURCE                                              1
-#define _BSD_SOURCE                                                1
+#include <stdint.h>
 
 
 /*
  --------------------------------------------------------------------
-  Initialization & Cleanup Functions
+  Machine Register Table
  --------------------------------------------------------------------
 */
 
-hpx_error_t hpx_init(void);
-void hpx_cleanup(void);
+typedef struct {
+  uint64_t rdi;
+  uint64_t rsi;
+  uint64_t rdx;
+  uint64_t rcx;
+  uint64_t r8;
+  uint64_t r9;
+} hpx_mregs_t;
 
 #endif
-
-

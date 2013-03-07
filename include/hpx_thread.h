@@ -21,6 +21,8 @@
 */
 
 
+#include "hpx_kthread.h"
+
 #pragma once
 #ifndef LIBHPX_THREAD_H_
 #define LIBHPX_THREAD_H_
@@ -37,47 +39,58 @@ typedef uint8_t  hpx_thread_state_t;
 
 /*
  --------------------------------------------------------------------
+  Some Definitions
+ --------------------------------------------------------------------
+*/
+
+#define HPX_THREAD_STATE_SUSPENDED                                 0
+#define HPX_THREAD_STATE_PENDING                                   1
+#define HPX_THREAD_STATE_EXECUTING                                 2
+#define HPX_THREAD_STATE_BLOCKED                                   3
+#define HPX_THREAD_STATE_TERMINATED                                4
+
+
+/*
+ --------------------------------------------------------------------
+  Thread Function
+ --------------------------------------------------------------------
+*/
+
+typedef void *(*hpx_thread_func_t)(void *);
+
+
+/*
+ --------------------------------------------------------------------
   Thread Data
 
   nid                          Node ID
   tid                          Thread ID
-  state                        Bits 0-3:  Queuing State
-                                          0 = Suspended
-                                          1 = Pending
-                                          2 = Executing
-                                          3 = Blocked
-                                          4 = Terminated
-                               Bits 4-7:  Reserved
+  state                        Queuing State
  --------------------------------------------------------------------
 */
 
 typedef struct {
-  hpx_node_id_t      nid;
-  hpx_thread_id_t    tid;
-  hpx_thread_state_t state;
+  hpx_node_id_t       nid;
+  hpx_thread_id_t     tid;
+  hpx_thread_state_t  state;
+  hpx_thread_func_t * func;
+  void *              args;
+  hpx_kthread_t *     kth;
 } hpx_thread_t;
 
 
 /*
  --------------------------------------------------------------------
-  hpx_thread_create
-
-  Creates and initializes a thread.  
+  Thread Functions
  --------------------------------------------------------------------
 */
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *);
-
-
-/*
- --------------------------------------------------------------------
-  hpx_thread_destroy
-
-  Destroys a previously created thread.
- --------------------------------------------------------------------
-*/
-
+hpx_thread_t * hpx_thread_create(hpx_context_t *, hpx_thread_func_t, void *);
 void hpx_thread_destroy(hpx_thread_t *);
+
+hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
+
+void hpx_thread_set_state(hpx_thread_t *, hpx_thread_state_t);
 
 #endif
 
