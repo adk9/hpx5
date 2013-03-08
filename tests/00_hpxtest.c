@@ -71,7 +71,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_queue_pop);
 
   /* test machine context switching */
-  tcase_add_test(tc, test_libhpx_mctx_makecontext);
+  tcase_add_test(tc, test_libhpx_mctx_getcontext);
 
   /* test library cleanup */
   tcase_add_test(tc, test_libhpx_cleanup);
