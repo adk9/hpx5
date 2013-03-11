@@ -27,16 +27,18 @@
 
 #include "hpx_error.h"
 
+#ifdef __x86_64__
+  #include "arch/x86_64/hpx_mconfig.h"
+#endif
+
 
 /*
  --------------------------------------------------------------------
-  Library-wide Definitions
+  Globals
  --------------------------------------------------------------------
 */
 
-/* make ucontext functions available */
-#define _XOPEN_SOURCE                                              1
-#define _BSD_SOURCE                                                1
+static hpx_mconfig_t __mcfg;
 
 
 /*

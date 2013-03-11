@@ -3,10 +3,11 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Machine Context Switch Functions
-  hpx_mctx.h
+  Machine Configuration Function Definitions
+  hpx_mconfig.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013,      Trustees of Indiana University 
+  Copyright (c) 2002-2012, Intel Corporation
   All rights reserved.
 
   This software may be modified and distributed under the terms of 
@@ -22,38 +23,37 @@
 
 
 #pragma once
-#ifndef LIBHPX_MCTX_H_
-#define LIBHPX_MCTX_H_
+#ifndef LIBHPX_MCONFIG_X86_64_H_
+#define LIBHPX_MCONFIG_X86_64_H_
 
 #include <stdint.h>
 
-#ifdef __x86_64__
-  #include "arch/x86_64/hpx_mconfig.h"
-  #include "arch/x86_64/hpx_mregs.h"
-#endif
+
+/* CPU Feature Flags */
+#define HPX_MCONFIG_CPU_HAS_FXSR                                0x01
 
 
 /*
  --------------------------------------------------------------------
-  Machine Context Data
+  Machine Configuration Data
  --------------------------------------------------------------------
 */
-
-typedef void (*hpx_mctx_func_t)(void);
 
 typedef struct {
-  hpx_mregs_t regs;
-  void * sp;
-} hpx_mctx_context_t;
+  uint32_t _cpu_flags1;               /* ECX after CPUID, EAX = 1 */
+  uint32_t _cpu_flags2;               /* EDX after CPUID, EAX = 1 */
+} hpx_mconfig_t;
 
 
 /*
  --------------------------------------------------------------------
-  Machine Context Functions
+  Machine Configuration Functions
  --------------------------------------------------------------------
 */
 
-void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t *);
-void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mconfig_t *, void *, int, ...);
+void hpx_mconfig_init(hpx_mconfig_t *);
+int hpx_mconfig_cpu_has_fxsr(hpx_mconfig_t *);
+
+#define HPX_MCONFIG_X86_64_SAVE_XMM                             0x01
 
 #endif
