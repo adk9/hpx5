@@ -41,6 +41,9 @@ hpx_error_t hpx_init(void) {
   /* init the next context ID */
   __ctx_next_id = 0;
 
+  /* get the global machine configuration */
+  hpx_mconfig_init(&__mcfg);
+
   return HPX_SUCCESS;
 }
 

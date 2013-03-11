@@ -53,14 +53,14 @@ typedef union {
     uint64_t lo;  /* least significant part of value */
     uint64_t hi;  /* most significant part of value */
   } _raw;
-} hpx_x87reg_padded_t;
+} hpx_x87reg_padded_t __attribute__((aligned (16)));
 
 typedef union {
   uint8_t  vec8[16];
   uint16_t vec16[8];
   uint32_t vec32[4];
   uint64_t vec64[2];
-} hpx_xmmreg_t;
+} hpx_xmmreg_t __attribute__((aligned (16)));
 
 typedef struct {
   uint16_t fcw; /* X87 control word */
@@ -77,7 +77,7 @@ typedef struct {
   hpx_xmmreg_t xmms[16];       /* XMM registers */
   uint64_t pad4[12];
 
-} hpx_fpregs_t;
+} hpx_fpregs_t __attribute__ ((aligned (16)));
 
 typedef struct {
   /* function call parameter passing registers */
@@ -96,11 +96,11 @@ typedef struct {
   uint64_t r14;
   uint64_t r15;
 
-  /* instruction pointer */
-  uint64_t rip;
-
   /* floating point registers */
   hpx_fpregs_t fpregs;
-} hpx_mregs_t;
+
+  /* return function address */
+  uint64_t rip;
+} hpx_mregs_t __attribute__((aligned (16)));
 
 #endif
