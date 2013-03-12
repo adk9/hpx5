@@ -25,6 +25,7 @@
 #ifndef LIBHPX_MCTX_H_
 #define LIBHPX_MCTX_H_
 
+#include <signal.h>
 #include <stdint.h>
 
 #ifdef __x86_64__
@@ -43,7 +44,7 @@ typedef void (*hpx_mctx_func_t)(void);
 
 typedef struct {
   hpx_mregs_t regs;
-  void * sp;
+  sigset_t sigs;
 } hpx_mctx_context_t;
 
 

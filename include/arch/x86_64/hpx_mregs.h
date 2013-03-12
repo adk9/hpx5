@@ -101,6 +101,9 @@ typedef struct {
 
   /* return function address */
   uint64_t rip;
+
+  /* stack pointer */
+  uint64_t rsp;
 } hpx_mregs_t __attribute__((aligned (16)));
 
 #endif
