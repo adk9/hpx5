@@ -21,8 +21,11 @@
 	
 .intel_syntax
 
-.align 16
-.globl _hpx_mctx_makecontext, _hpx_mctx_getcontext
+#ifdef __APPLE__
+  #include <sys/syscall.h>
+#endif
+	
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx,makecontext
 
 	
 .text
@@ -44,7 +47,7 @@ _hpx_mctx_getcontext:
 	movq	[rax+40],r9
 
 	# save other registers we want to preserve
-	movq	[rax+48],rdx
+	movq	[rax+48],rbx
 	movq	[rax+56],rbp
 	movq	[rax+64],r12
 	movq	[rax+72],r13
@@ -74,15 +77,71 @@ use_fxsave:
 	movq	[rax+608],r10
 
 	# save the stack pointer
-	leaq	r10,[rsp+8]
-	movq	[rdi+616],r10
+	leaq	r10,[rsp+8]	
+	movq	[rax+616],r10
 
+	# save the set of blocked signals
+	xchgq	rax,r11
 	
+#ifdef __APPLE__
+	movq	rax,SYS___pthread_sigmask
+	mov	rdi,1		                          # SIG_BLOCK
+	movq	rsi,[r11+624]
+	xor	rdx,rdx
+	syscall
+#endif
 	
 	xor	rax,rax
 	ret
 
 
+
+# --------------------------------------------------------------------
+#  hpx_mctx_setcontext
+#
+#  A replacement for the deprecated POSIX setcontext() function.
+# --------------------------------------------------------------------
+
+_hpx_mctx_setcontext:
+	pushq	rdi
+	
+	# restore the set of blocked signals
+#ifdef __APPLE__
+	leaq	rcx,[rdi]
+	movq	rax,SYS___pthread_sigmask
+	mov	rdi,1
+	leaq	rsi,[rcx+624]
+	xor	rdx,rdx
+	syscall
+#endif
+
+	# restore the stack and registers
+	popq	rdi
+	leaq	rax,[rdi]
+
+	movq	rsp,[rax+616]
+	movq	rbx,[rax+48]
+	movq	rbp,[rax+56]
+	movq	r12,[rax+64]
+	movq	r13,[rax+72]
+	movq	r14,[rax+80]
+	movq	r15,[rax+88]
+
+	movq	rcx,[rax+608]
+	pushq	rcx
+
+	movq	rsi,[rax+8]
+	movq	rdx,[rax+16]
+	movq	rcx,[rax+24]
+	movq	r8,[rax+32]
+	movq	r9,[rax+40]
+
+	movq	rdi,[rax]
+	
+	xor	rax,rax
+	ret
+	
+	
 # --------------------------------------------------------------------
 #  hpx_mctx_makecontext
 #
@@ -90,10 +149,5 @@ use_fxsave:
 # --------------------------------------------------------------------
 	
 _hpx_mctx_makecontext:
-	push	rbp
-	mov	rbp,rsp
-
 	xor	rax,rax
-	mov	rsp,rbp
-	pop	rbp
 	ret
