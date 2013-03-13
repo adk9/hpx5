@@ -28,6 +28,22 @@
 
 int * context_counter;
 
+int register_crusher(int a, int b, char c) {
+  FILE * dev_null;
+  char msg[35];
+
+  sprintf(msg, "I sure hope somebody reads this: %c", c);
+
+  dev_null = fopen("/dev/null", "w");
+  if (dev_null != NULL) {
+    fwrite(msg, sizeof(char), 35, dev_null);
+    fclose(dev_null);
+  }
+
+  return (a + b) + 73;
+}
+
+
 
 /*
  --------------------------------------------------------------------
@@ -53,12 +69,18 @@ START_TEST (test_libhpx_mctx_getcontext)
   hpx_mctx_getcontext(&mctx, &__mcfg);  
   *context_counter += 1;
 
+  /* do something that (hopefully) changes the value of our registers */
+  register_crusher(4,92, 'z');
+
   if (*context_counter < 100) {
     hpx_mctx_setcontext(&mctx, &__mcfg);
   } 
 
   ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
 #endif
+
+  free(context_counter);
+  context_counter = NULL;
 }
 END_TEST
 

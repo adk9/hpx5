@@ -49,11 +49,11 @@ _hpx_mconfig_init:
 #endif
 	
 	# save the contents of ECX into flags1
-	lea	rax,[rdi]
+	leaq	rax,[rdi]
 	mov	[rax],ecx
 
 	# save the contents of EDX into flags2
 	mov	[rax+4],edx
-
+	
 	xor	rax,rax
 	ret

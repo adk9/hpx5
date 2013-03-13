@@ -54,24 +54,11 @@ _hpx_mctx_getcontext:
 	movq	[rax+80],r14
 	movq	[rax+88],r15
 
-	# save the FPU control state & registers using FXSAVE if
-	# it is available.  Otherwise, just save the control state
-	# and MXCSR register
-	leaq	r10,[rsi+4]				# flags2
-	leaq	r11,[rax+96]
-	mov	ecx,[r10]
-	
-	bts	ecx,24
-	jc	use_fxsave
-
-	fnstenv	[r11]
-	fldenv	[r11]
-	stmxcsr	[rax+120]
-
-use_fxsave:	
-	fxsave	[r11]
+	# save the FPU control state & registers using FXSAVE
+	leaq	r10,[rax+96]
+	fxsave	[r10]
 	fnclex
-	
+
 	# save the function return address
 	movq	r10,[rsp]
 	movq	[rax+608],r10
@@ -103,7 +90,8 @@ use_fxsave:
 # --------------------------------------------------------------------
 
 _hpx_mctx_setcontext:
-	pushq	rdi
+	movq	r9,rsi
+	movq	r10,rdi
 	
 	# restore the set of blocked signals
 #ifdef __APPLE__
@@ -115,10 +103,16 @@ _hpx_mctx_setcontext:
 	syscall
 #endif
 
-	# restore the stack and registers
-	popq	rdi
+	xchgq	rdi,r10
+	xchgq	rsi,r9
 	leaq	rax,[rdi]
+	
+	# restore the FPU control state & registers with FXSAVE
+	leaq	r10,[rax+96]
+	fxrstor	[r10]
+	fwait
 
+	# restore the stack and non-volatile registers
 	movq	rsp,[rax+616]
 	movq	rbx,[rax+48]
 	movq	rbp,[rax+56]
@@ -127,9 +121,11 @@ _hpx_mctx_setcontext:
 	movq	r14,[rax+80]
 	movq	r15,[rax+88]
 
+	# restore the return function address
 	movq	rcx,[rax+608]
 	pushq	rcx
 
+	# restore the function call registers
 	movq	rsi,[rax+8]
 	movq	rdx,[rax+16]
 	movq	rcx,[rax+24]
