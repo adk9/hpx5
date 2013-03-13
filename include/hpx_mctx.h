@@ -45,6 +45,8 @@ typedef void (*hpx_mctx_func_t)(void);
 typedef struct {
   hpx_mregs_t regs;
   sigset_t sigs;
+  uint64_t exec_t1;
+  uint64_t exec_t2;
 } hpx_mctx_context_t;
 
 

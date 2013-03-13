@@ -29,10 +29,6 @@
 #include <stdint.h>
 
 
-/* CPU Feature Flags */
-#define HPX_MCONFIG_CPU_HAS_FXSR                                0x01
-
-
 /*
  --------------------------------------------------------------------
   Machine Configuration Data
@@ -40,8 +36,8 @@
 */
 
 typedef struct {
-  uint32_t _cpu_flags1;               /* ECX after CPUID, EAX = 1 */
-  uint32_t _cpu_flags2;               /* EDX after CPUID, EAX = 1 */
+  uint32_t _cpuid_flags1;               /* ECX after CPUID, EAX = 1 */
+  uint32_t _cpuid_flags2;               /* EDX after CPUID, EAX = 1 */
 } hpx_mconfig_t;
 
 
@@ -52,8 +48,5 @@ typedef struct {
 */
 
 void hpx_mconfig_init(hpx_mconfig_t *);
-int hpx_mconfig_cpu_has_fxsr(hpx_mconfig_t *);
-
-#define HPX_MCONFIG_X86_64_SAVE_XMM                             0x01
 
 #endif
