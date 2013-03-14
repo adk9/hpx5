@@ -63,15 +63,15 @@ typedef union {
 } hpx_xmmreg_t __attribute__((aligned (16)));
 
 typedef struct {
-  uint16_t fcw; /* X87 control word */
-  uint16_t fsw; /* X87 status word */
-  uint8_t  ftw; /* Abridged X87 tag value */
+  uint16_t fcw;                /* X87 control word */
+  uint16_t fsw;                /* X87 status word */
+  uint8_t  ftw;                /* Abridged X87 tag value */
   uint8_t  pad1;
-  uint16_t fop; /* Last X87 non-control instruction opcode */
-  uint64_t fpuip; /* Last X87 non-control instruction address */
-  uint64_t fpudp; /* Last X87 non-control instruction operand segment offset */
-  uint32_t mxcsr; /* MXCSR control and status register */
-  uint32_t mxcsrmask; /* Mask of valid MXCSR bits */
+  uint16_t fop;                /* Last X87 non-control instruction opcode */
+  uint64_t fpuip;              /* Last X87 non-control instruction address */
+  uint64_t fpudp;              /* Last X87 non-control instruction operand segment offset */
+  uint32_t mxcsr;              /* MXCSR control and status register */
+  uint32_t mxcsrmask;          /* Mask of valid MXCSR bits */
 
   hpx_x87reg_padded_t sts[8];  /* X87 data registers in top-of-stack order */
   hpx_xmmreg_t xmms[16];       /* XMM registers */

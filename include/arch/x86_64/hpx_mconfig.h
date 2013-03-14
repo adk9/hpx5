@@ -27,18 +27,16 @@
 #define LIBHPX_MCONFIG_X86_64_H_
 
 #include <stdint.h>
+#include "arch/x86_64/hpx_mconfig_defs.h"
 
 
 /*
  --------------------------------------------------------------------
-  Machine Configuration Data
+  Machine Configuration Types
  --------------------------------------------------------------------
 */
 
-typedef struct {
-  uint32_t _cpuid_flags1;               /* ECX after CPUID, EAX = 1 */
-  uint32_t _cpuid_flags2;               /* EDX after CPUID, EAX = 1 */
-} hpx_mconfig_t;
+typedef uint64_t hpx_mconfig_t;
 
 
 /*
@@ -47,6 +45,6 @@ typedef struct {
  --------------------------------------------------------------------
 */
 
-void hpx_mconfig_init(hpx_mconfig_t *);
+hpx_mconfig_t hpx_mconfig_get_flags(void);
 
 #endif
