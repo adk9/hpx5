@@ -34,6 +34,13 @@
 #endif
 
 
+/* save/restore FPU registers during context switches */
+#define HPX_MCTX_SWITCH_EXTENDED                                0x01
+
+/* save/restore per-thread signal masks during context switches */
+#define HPX_MCTX_SWITCH_SIGNALS                                 0x02
+
+
 /*
  --------------------------------------------------------------------
   Machine Context Data
@@ -42,11 +49,12 @@
 
 typedef void (*hpx_mctx_func_t)(void);
 
-typedef struct {
+typedef struct _hpx_mctx_context_t {
   hpx_mregs_t regs;
   sigset_t sigs;
-  uint64_t exec_t1;
-  uint64_t exec_t2;
+  void * sp;
+  uint64_t ss;
+  struct _hpx_mctx_context_t * link;
 } hpx_mctx_context_t;
 
 
@@ -56,7 +64,8 @@ typedef struct {
  --------------------------------------------------------------------
 */
 
-void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t *);
-void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mconfig_t *, void *, int, ...);
+void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
+void hpx_mctx_setcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
+void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t, void *, int, ...);
 
 #endif

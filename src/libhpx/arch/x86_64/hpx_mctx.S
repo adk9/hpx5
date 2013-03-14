@@ -18,6 +18,7 @@
 #    Patrick K. Bohan <pbohan [at] indiana.edu>
 # ====================================================================
 
+#include "arch/x86_64/hpx_mconfig_defs.h"
 	
 .intel_syntax
 
@@ -25,7 +26,7 @@
   #include <sys/syscall.h>
 #endif
 	
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx,makecontext
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_makecontext
 
 	
 .text
@@ -38,47 +39,54 @@
 	
 _hpx_mctx_getcontext:
 	# save function call arguments
-	leaq	rax,[rdi]
-	movq	[rax],rdi
-	movq	[rax+8],rsi
-	movq	[rax+16],rdx
-	movq	[rax+24],rcx
-	movq	[rax+32],r8
-	movq	[rax+40],r9
+	leaq		rax,[rdi]
+	movq		[rax+_HPX_MCTX_O_RDI],rdi
+	movq		[rax+_HPX_MCTX_O_RSI],rsi
+	movq		[rax+_HPX_MCTX_O_RDX],rdx
+	movq		[rax+_HPX_MCTX_O_RCX],rcx
+	movq		[rax+_HPX_MCTX_O_R8],r8
+	movq		[rax+_HPX_MCTX_O_R9],r9
 
 	# save other registers we want to preserve
-	movq	[rax+48],rbx
-	movq	[rax+56],rbp
-	movq	[rax+64],r12
-	movq	[rax+72],r13
-	movq	[rax+80],r14
-	movq	[rax+88],r15
+	movq		[rax+_HPX_MCTX_O_RBX],rbx
+	movq		[rax+_HPX_MCTX_O_RBP],rbp
+	movq		[rax+_HPX_MCTX_O_R12],r12
+	movq		[rax+_HPX_MCTX_O_R13],r13
+	movq		[rax+_HPX_MCTX_O_R14],r14
+	movq		[rax+_HPX_MCTX_O_R15],r15
 
+	# save the FPU iff the extended switching state flag is set
+	test		rdx,0x0000000000000001
+	jz		g_no_extstate
+	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
+	
 	# save the FPU control state & registers using FXSAVE
-	leaq	r10,[rax+96]
-	fxsave	[r10]
+	fxsave		[r10]
 	fnclex
 
 	# save the function return address
-	movq	r10,[rsp]
-	movq	[rax+608],r10
+g_no_extstate:	
+	movq		r10,[rsp]
+	movq		[rax+_HPX_MCTX_O_RIP],r10
 
 	# save the stack pointer
-	leaq	r10,[rsp+8]	
-	movq	[rax+616],r10
+	leaq		r10,[rsp+8]	
+	movq		[rax+_HPX_MCTX_O_RSP],r10
 
 	# save the set of blocked signals
-	xchgq	rax,r11
+	test		rdx,0x0000000000000002
+	jz		g_no_signals
+	xchgq		rax,r11
 	
 #ifdef __APPLE__
-	movq	rax,SYS___pthread_sigmask
-	mov	rdi,1		                          # SIG_BLOCK
-	movq	rsi,[r11+624]
-	xor	rdx,rdx
+	movq		rax,SYS___pthread_sigmask
+	mov		rdi,_HPX_MCTX_SIG_BLOCK
+	movq		rsi,[r11+_HPX_MCTX_O_SIGMASK]
+	xor		rdx,rdx
 	syscall
 #endif
-	
-	xor	rax,rax
+g_no_signals:	
+	xor		rax,rax
 	ret
 
 
@@ -90,51 +98,63 @@ _hpx_mctx_getcontext:
 # --------------------------------------------------------------------
 
 _hpx_mctx_setcontext:
-	movq	r9,rsi
-	movq	r10,rdi
-	
 	# restore the set of blocked signals
+	test		rdx,0x0000000000000002
+	jz		s_no_signals
+	
+	movq		r9,rdi
+	movq		r10,rsi
+	movq		r11,rdx
+	
 #ifdef __APPLE__
-	leaq	rcx,[rdi]
-	movq	rax,SYS___pthread_sigmask
-	mov	rdi,1
-	leaq	rsi,[rcx+624]
-	xor	rdx,rdx
+	leaq		rcx,[rdi]
+	movq		rax,SYS___pthread_sigmask
+	mov		rdi,_HPX_MCTX_SIG_BLOCK
+	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
+	xor		rdx,rdx
 	syscall
 #endif
 
-	xchgq	rdi,r10
-	xchgq	rsi,r9
-	leaq	rax,[rdi]
+	xchgq		rdx,r11
+	xchgq		rsi,r10
+	xchgq		rdi,r9
+
+s_no_signals:	
+	leaq		rax,[rdi]
+
+	# restore the FPU state iff the extended switching state flag is set
+	test		rdx,0x0000000000000001
+	jz		s_no_extstate
+	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 	
 	# restore the FPU control state & registers with FXSAVE
-	leaq	r10,[rax+96]
-	fxrstor	[r10]
+	fxrstor		[r10]
 	fwait
 
 	# restore the stack and non-volatile registers
-	movq	rsp,[rax+616]
-	movq	rbx,[rax+48]
-	movq	rbp,[rax+56]
-	movq	r12,[rax+64]
-	movq	r13,[rax+72]
-	movq	r14,[rax+80]
-	movq	r15,[rax+88]
+s_no_extstate:	
+	movq		rsp,[rax+_HPX_MCTX_O_RSP]
+	movq		rbx,[rax+_HPX_MCTX_O_RBX]
+	movq		rbp,[rax+_HPX_MCTX_O_RBP]
+	movq		r12,[rax+_HPX_MCTX_O_R12]
+	movq		r13,[rax+_HPX_MCTX_O_R13]
+	movq		r14,[rax+_HPX_MCTX_O_R14]
+	movq		r15,[rax+_HPX_MCTX_O_R15]
 
 	# restore the return function address
-	movq	rcx,[rax+608]
-	pushq	rcx
+	movq		rcx,[rax+_HPX_MCTX_O_RIP]
+	pushq		rcx
 
 	# restore the function call registers
-	movq	rsi,[rax+8]
-	movq	rdx,[rax+16]
-	movq	rcx,[rax+24]
-	movq	r8,[rax+32]
-	movq	r9,[rax+40]
+	movq		rsi,[rax+_HPX_MCTX_O_RSI]
+	movq		rdx,[rax+_HPX_MCTX_O_RDX]
+	movq		rcx,[rax+_HPX_MCTX_O_RCX]
+	movq		r8,[rax+_HPX_MCTX_O_R8]
+	movq		r9,[rax+_HPX_MCTX_O_R9]
 
-	movq	rdi,[rax]
+	movq		rdi,[rax+_HPX_MCTX_O_RDI]
 	
-	xor	rax,rax
+	xor		rax,rax
 	ret
 	
 	
@@ -145,5 +165,25 @@ _hpx_mctx_setcontext:
 # --------------------------------------------------------------------
 	
 _hpx_mctx_makecontext:
-	xor	rax,rax
+	leaq		rax,[rdi]
+
+	# set up the new stack
+#	movq		r10,[rax+_HPX_MCTX_O_SP]
+#	movq		r11,[rax+_HPX_MCTX_O_SS]
+#	addq		r10,r11
+	
+	xor		rax,rax
+	ret
+
+
+# --------------------------------------------------------------------
+#  ___hpx_mctx_trampoline
+#
+#  Trampoline function for hpx_mctx_makecontext
+# --------------------------------------------------------------------
+
+___hpx_mctx_trampoline:
+		
+	
+	xor		rax,rax
 	ret

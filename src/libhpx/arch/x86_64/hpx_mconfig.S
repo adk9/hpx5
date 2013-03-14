@@ -18,21 +18,22 @@
 #    Patrick K. Bohan <pbohan [at] indiana.edu>
 # ====================================================================
 
+#include "arch/x86_64/hpx_mconfig_defs.h"
 	
 .intel_syntax
 
-.globl _hpx_mconfig_init
+.globl _hpx_mconfig_get_flags
 
 	
 .text
 
 # --------------------------------------------------------------------
-#  hpx_mconfig_init
+#  hpx_mconfig_get_flags
 #
-#  Fetches machine config data.
+#  Fetches CPU features that we're interested in.
 # --------------------------------------------------------------------
 	
-_hpx_mconfig_init:
+_hpx_mconfig_get_flags:
 	# we have to save RBX on Darwin (Mac OS X) because the
 	# opcode generated for CPUID obliterates it.
 #ifdef __APPLE__	
@@ -47,13 +48,31 @@ _hpx_mconfig_init:
 #ifdef __APPLE__	
 	xchgq	rbx,r10
 #endif
-	
-	# save the contents of ECX into flags1
-	leaq	rax,[rdi]
-	mov	[rax],ecx
 
-	# save the contents of EDX into flags2
-	mov	[rax+4],edx
+	xor	r9,r9
 	
-	xor	rax,rax
+	# do we have an FPU?
+	test	edx,0x00000001
+	jz	no_fpu
+	add	r9,_HPX_MCONFIG_HAS_FPU
+	
+	# do we have an FXSR?
+	test	edx,0x01000000
+	jz	no_fxsr
+	add	r9,_HPX_MCONFIG_HAS_FXSR
+
+	# do we have AVX instructions & registers?
+no_fxsr:	
+	test	ecx,0x10000000
+	jz	no_avx
+	add	r9,_HPX_MCONFIG_HAS_AVX
+
+	# do we have a time-stamp counter?
+no_fpu:	
+	test	edx,0x00000010
+	jz	no_tsc
+	add	r9,_HPX_MCONFIG_HAS_TSC
+
+no_tsc:
+	movq	rax,r9
 	ret

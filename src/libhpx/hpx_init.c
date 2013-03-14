@@ -42,7 +42,7 @@ hpx_error_t hpx_init(void) {
   __ctx_next_id = 0;
 
   /* get the global machine configuration */
-  hpx_mconfig_init(&__mcfg);
+  __mcfg = hpx_mconfig_get_flags();
 
   return HPX_SUCCESS;
 }
