@@ -1,5 +1,15 @@
 
-02/25/2013 -- HPX 4.0.0a1
+03/18/2013 -- HPX 4.0.0a1
+=========================
+
+  * Basic kernel and user thread data defined
+  * Partial machine context switching support
+  * Support for CPUID on the x86_64 arch
+  * Basic error handling support
+  * Unit testing framework and test suite added (using GNU Check)
+
+
+02/25/2013 -- HPX 4.0.0a0
 =========================
 
   * Initial build

@@ -1,4 +1,13 @@
 
+2013-03-18	Patrick K. Bohan <pbohan@indiana.edu>
+	* HPX-4 alpha 1 release (4.0.0a1)
+	* added hpx_mctx_getcontext and hpx_mctx_setcontext functions
+	* added hpx_kthread_get_cores
+	* added hpx_queue_t and hpx_heap_t
+	* added hpx_mconfig_t and associated functions
+	* additional unit tests in tests/07_mctx.c
+	
+	
 2013-02-25	Patrick K. Bohan <pbohan@indiana.edu>
 	* created directory structure and build files
 	* initial check-in

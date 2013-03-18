@@ -44,14 +44,14 @@
 
 typedef union {
   struct {
-    uint64_t significand;  /* the floating-point significand */
-    uint16_t exponent;    /* the floating-point exponent */
+    uint64_t significand;       /* the floating-point significand */
+    uint16_t exponent;          /* the floating-point exponent */
     uint16_t pad[3];
   } _fp;
 
   struct {
-    uint64_t lo;  /* least significant part of value */
-    uint64_t hi;  /* most significant part of value */
+    uint64_t lo;                /* least significant part of value */
+    uint64_t hi;                /* most significant part of value */
   } _raw;
 } hpx_x87reg_padded_t __attribute__((aligned (16)));
 
