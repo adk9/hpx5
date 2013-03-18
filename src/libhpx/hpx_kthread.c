@@ -139,7 +139,7 @@ void hpx_kthread_destroy(hpx_kthread_t * kth) {
 long hpx_kthread_get_cores(void) {
   long cores = 0;
 
-#ifdef __linux__                                       /* Linux */
+#ifdef __linux__                                      /* Linux */
   cores = sysconf(_SC_NPROCESSORS_ONLN);
 #elif __APPLE__ && __MACH__                           /* Mac OS X */
   cores = sysconf(_SC_NPROCESSORS_ONLN);
