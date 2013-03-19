@@ -27,7 +27,7 @@
 #endif
 
 .align 8
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,__hpx_mctx_boot
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,__hpx_mctx_boot
 
 	
 .text
@@ -43,7 +43,23 @@ __hpx_mctx_boot:
 	movq		rsp,rbx
 	popq		rdi
 
+	# make sure we have a context to switch to.  this could
+	# be zero because the caller didn't set a link to a
+	# previous context
+	testq		rdi,rdi
+	je		b_procexit
+	
 	call		setcontext_local
+
+b_procexit:
+	# exit the process
+#ifdef __APPLE__
+	movq		rax,SYS_exit
+	xor		rdi,rdi
+	syscall
+#endif
+
+	# we should never get here
 	hlt
 
 	
@@ -194,3 +210,13 @@ s_no_extstate:
 	xor		rax,rax
 	ret
 
+
+# --------------------------------------------------------------------
+#  hpx_mctx_swapcontext
+#
+#  A replacement for the deprecated POSIX swapcontext() function.  
+# --------------------------------------------------------------------
+
+_hpx_mctx_swapcontext:
+	xor		rax,rax
+	ret
