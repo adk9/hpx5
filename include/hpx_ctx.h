@@ -29,6 +29,12 @@
 #include "hpx_queue.h"
 #include "hpx_kthread.h"
 
+#ifdef __x86_64__
+  #include "arch/x86_64/hpx_mconfig.h"
+#else
+  typedef hpx_mconfig_t uint64_t;
+#endif
+
 
 /*
  --------------------------------------------------------------------
@@ -54,6 +60,8 @@ typedef struct {
 
   hpx_kthread_t ** kths;
   long kths_count;
+
+  hpx_mconfig_t mcfg;
 } hpx_context_t;
 
 

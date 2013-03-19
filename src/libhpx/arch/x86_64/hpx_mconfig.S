@@ -45,34 +45,34 @@ _hpx_mconfig_get_flags:
 	mov	eax,1
 	cpuid
 
-#ifdef __APPLE__	
+#ifdef __APPLE__
 	xchgq	rbx,r10
 #endif
 
-	xor	r9,r9
+	xor	rax,rax
 	
 	# do we have an FPU?
 	test	edx,0x00000001
 	jz	no_fpu
-	add	r9,_HPX_MCONFIG_HAS_FPU
+	addq	rax,_HPX_MCONFIG_HAS_FPU
 	
 	# do we have an FXSR?
 	test	edx,0x01000000
 	jz	no_fxsr
-	add	r9,_HPX_MCONFIG_HAS_FXSR
-
-	# do we have AVX instructions & registers?
+	or	rax,_HPX_MCONFIG_HAS_FXSR
+	
 no_fxsr:	
+	# do we have AVX instructions & registers?
 	test	ecx,0x10000000
 	jz	no_avx
-	add	r9,_HPX_MCONFIG_HAS_AVX
+	or	rax,_HPX_MCONFIG_HAS_AVX
 
-	# do we have a time-stamp counter?
+no_avx:
 no_fpu:	
+	# do we have a time-stamp counter?
 	test	edx,0x00000010
 	jz	no_tsc
-	add	r9,_HPX_MCONFIG_HAS_TSC
-
+	or	rax,_HPX_MCONFIG_HAS_TSC
+	
 no_tsc:
-	movq	rax,r9
 	ret

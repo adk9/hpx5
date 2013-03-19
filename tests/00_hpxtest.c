@@ -46,8 +46,11 @@ int main(int argc, char * argv[]) {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
 
-  /* test library initialization */
-  tcase_add_test(tc, test_libhpx_init);
+  /* install fixtures */
+  tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
+
+  /* set timeout */
+  tcase_set_timeout(tc, 60);
 
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
@@ -73,10 +76,8 @@ int main(int argc, char * argv[]) {
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
   tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
+  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
   tcase_add_test(tc, test_libhpx_mctx_makecontext);
-
-  /* test library cleanup */
-  tcase_add_test(tc, test_libhpx_cleanup);
 
   suite_add_tcase(s, tc);
 

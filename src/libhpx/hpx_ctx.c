@@ -82,6 +82,9 @@ hpx_context_t * hpx_ctx_create(void) {
     __hpx_errno = HPX_ERROR_NOMEM;
   }
 
+  /* get the CPU configuration */
+  ctx->mcfg = hpx_mconfig_get_flags();
+
   return ctx;
 
  __hpx_ctx_create_FAIL:
