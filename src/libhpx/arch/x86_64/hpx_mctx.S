@@ -25,12 +25,28 @@
 #ifdef __APPLE__
   #include <sys/syscall.h>
 #endif
-	
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_makecontext
+
+.align 8
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,__hpx_mctx_boot
 
 	
 .text
 
+	
+# --------------------------------------------------------------------
+#  __hpx_mctx_boot
+#
+#  "Boot" function for hpx_mctx_makecontext
+# --------------------------------------------------------------------
+
+__hpx_mctx_boot:
+	movq		rsp,rbx
+	popq		rdi
+
+	call		setcontext_local
+	hlt
+
+	
 # --------------------------------------------------------------------
 #  hpx_mctx_getcontext
 #
@@ -46,7 +62,7 @@ _hpx_mctx_getcontext:
 	movq		[rax+_HPX_MCTX_O_RCX],rcx
 	movq		[rax+_HPX_MCTX_O_R8],r8
 	movq		[rax+_HPX_MCTX_O_R9],r9
-
+	
 	# save other registers we want to preserve
 	movq		[rax+_HPX_MCTX_O_RBX],rbx
 	movq		[rax+_HPX_MCTX_O_RBP],rbp
@@ -61,16 +77,26 @@ _hpx_mctx_getcontext:
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 	
 	# save the FPU control state & registers using FXSAVE
+	test		rsi,_HPX_MCONFIG_HAS_FXSR
+	jz		g_no_fxsave
+	
 	fxsave		[r10]
 	fnclex
-
+	jmp		g_fxsave_done
+	
+g_no_fxsave:
+	# save the FPU control state & registers using FSAVE
+	fnsave		[r15]
+	frstor		[r10]
+	
+g_fxsave_done:	
+g_no_extstate:
 	# save the function return address
-g_no_extstate:	
 	movq		r10,[rsp]
 	movq		[rax+_HPX_MCTX_O_RIP],r10
 
 	# save the stack pointer
-	leaq		r10,[rsp+8]	
+	leaq		r10,[rsp+8]
 	movq		[rax+_HPX_MCTX_O_RSP],r10
 
 	# save the set of blocked signals
@@ -97,6 +123,7 @@ g_no_signals:
 #  A replacement for the deprecated POSIX setcontext() function.
 # --------------------------------------------------------------------
 
+setcontext_local:	
 _hpx_mctx_setcontext:
 	# restore the set of blocked signals
 	test		rdx,0x0000000000000002
@@ -126,13 +153,23 @@ s_no_signals:
 	test		rdx,0x0000000000000001
 	jz		s_no_extstate
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
-	
-	# restore the FPU control state & registers with FXSAVE
+
+	# restore the FPU state using FXRSTOR if supported
+	test		rcx,0x0000000000000002
+	jz		s_no_fxrstor
+
 	fxrstor		[r10]
 	fwait
+	jmp		s_fxrstor_done
 
-	# restore the stack and non-volatile registers
+s_no_fxrstor:
+	# restore the FPU state using FRSTOR
+	frstor		[r10]
+	fwait
+
+s_fxrstor_done:	
 s_no_extstate:	
+	# restore the stack and non-volatile registers
 	movq		rsp,[rax+_HPX_MCTX_O_RSP]
 	movq		rbx,[rax+_HPX_MCTX_O_RBX]
 	movq		rbp,[rax+_HPX_MCTX_O_RBP]
@@ -156,34 +193,4 @@ s_no_extstate:
 	
 	xor		rax,rax
 	ret
-	
-	
-# --------------------------------------------------------------------
-#  hpx_mctx_makecontext
-#
-#  A replacement for the deprecated POSIX makecontext() function.
-# --------------------------------------------------------------------
-	
-_hpx_mctx_makecontext:
-	leaq		rax,[rdi]
 
-	# set up the new stack
-#	movq		r10,[rax+_HPX_MCTX_O_SP]
-#	movq		r11,[rax+_HPX_MCTX_O_SS]
-#	addq		r10,r11
-	
-	xor		rax,rax
-	ret
-
-
-# --------------------------------------------------------------------
-#  ___hpx_mctx_trampoline
-#
-#  Trampoline function for hpx_mctx_makecontext
-# --------------------------------------------------------------------
-
-___hpx_mctx_trampoline:
-		
-	
-	xor		rax,rax
-	ret

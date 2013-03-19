@@ -23,32 +23,38 @@
 
 #include "hpx_init.h"
 
+FILE * perf_log;
+
 
 /*
  --------------------------------------------------------------------
-  TEST: library initialization
+  TEST SUITE FIXTURE: library initialization
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_init)
-{
+void hpxtest_core_setup(void) {
   hpx_error_t err;
 
+  /* initialize libhpx */
   err = hpx_init();
-  ck_assert(err == HPX_SUCCESS);
+  ck_assert_msg(err == HPX_SUCCESS, "Could not initialize libhpx");
+
+  /* open a performance log file */
+  perf_log = fopen("perf.log", "w+");
+  ck_assert_msg(perf_log != NULL, "Could not open performance log");
+
 } 
-END_TEST
 
 
 /*
  --------------------------------------------------------------------
-  TEST: library cleanup
+  TEST SUITE FIXTURE: library cleanup
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_cleanup)
-{
+void hpxtest_core_teardown(void) {
+  fclose(perf_log);
   hpx_cleanup();
 }
-END_TEST
+
 
