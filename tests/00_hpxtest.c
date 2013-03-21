@@ -77,7 +77,15 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
   tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
   tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg);
 
   suite_add_tcase(s, tc);
 

@@ -27,94 +27,29 @@
 #endif
 
 .align 8
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,_hpx_mctx_makecontext
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,__hpx_mctx_trampoline
 
-	
 .text
-
-	
-# --------------------------------------------------------------------
-#  _hpx_mctx_makecontext
-#
-#  Replacement for the deprecated POSIX makecontext() function.
-# --------------------------------------------------------------------	
-
-_hpx_mctx_makecontext:
-	pushq		rbp
-	movq		rbp,rsp
-	leaq		rax,[rdi]
-	
-	# set up the stack frame
-	movq		r10,[rax+_HPX_MCTX_O_SP]
-	movq		r11,[rax+_HPX_MCTX_O_SS]
-	addq		r10,r11
-	
-	# set our context linkage
-	subq		r10,8
-	movq		r11,[rax+_HPX_MCTX_O_LINK]
-	movq		[r10],r11
-
-	# set our machine configuration flags
-	subq		r10,8
-	movq		[r10],rsi
-
-	# set our context switching behavior flags
-	subq		r10,8
-	movq		[r10],rdx
-
-	# save our original RBX value
-	subq		r10,8
-	movq		r11,[rax+_HPX_MCTX_O_RBX]
-	movq		[r10],r11
-	
-	# our first argument is in r9 (if we have any)
-	cmpq		r8,1
-	jl		mc_regarg_done
-	movq		[rax+_HPX_MCTX_O_RDI],r9
-	subq		r8,1
-	
-	# set our new base pointer
-	movq		[rax+_HPX_MCTX_O_RBX],r10
-
-	# our first argument is in r9 if we have one
-	cmpq		r8,1
-	jl		mc_args_done
-	movq		[rax+_HPX_MCTX_O_RDI],r9
-	subq		r8,1
-
-	# set the second argument
-
-mc_args_done:	
-	# set our trampoline function address
-	subq		r10,8
-	leaq		r11,__hpx_mctx_trampoline[rip]
-	movq		[r10],r11
-
-	# set our new stack pointer
-	movq		[rax+_HPX_MCTX_O_RSP],r10
-	
-	# set our new instruction pointer
-	movq		[rax+_HPX_MCTX_O_RIP],rcx
-
-	movq		rsp,rbp
-	popq		rbp
-	ret
 	
 	
 # --------------------------------------------------------------------
 #  __hpx_mctx_trampoline
 #
-#  Trampoline function for hpx_mctx_makecontext
+#  Trampoline function for hpx_mctx_makecontext_va
 # --------------------------------------------------------------------
 
 __hpx_mctx_trampoline:
+	# hpx_mctx_makecontext_va stored our stack pointer in RBX
 	movq		rsp,rbx
+
+	# arguments to hpx_mctx_setcontext got pushed on the stack
 	popq		r10
 	popq		rdx
 	popq		rsi
 	popq		rdi
 
-	# restore our original RBX value
+	# since we used RBX to pass our stack pointer, we have
+	# to restore it
 	leaq		rax,[rdi]
 	movq		[rax+_HPX_MCTX_O_RBX],r10
 
@@ -122,19 +57,19 @@ __hpx_mctx_trampoline:
 	# be zero because the caller didn't set a link to a
 	# previous context
 	testq		rdi,rdi
-	je		b_procexit
+	je		tr_procexit
 	
-	jmp		setcontext_local
+	jmp		tr_setcontext_local
 
-b_procexit:
-	# exit the process
+	# exit the process if mctx->link is NULL, with exit(0)
+tr_procexit:
 #ifdef __APPLE__
 	movq		rax,SYS_exit
 	xor		rdi,rdi
 	syscall
 #endif
 
-	# we should never get here
+	# we should never get here.  if we do, burn it all down
 	hlt
 
 	
@@ -214,7 +149,7 @@ g_no_signals:
 #  A replacement for the deprecated POSIX setcontext() function.
 # --------------------------------------------------------------------
 
-setcontext_local:	
+tr_setcontext_local:	
 _hpx_mctx_setcontext:
 	# restore the set of blocked signals
 	test		rdx,0x0000000000000002
