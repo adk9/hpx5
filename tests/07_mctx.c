@@ -21,6 +21,7 @@
 */
 
 
+#include <stdarg.h>
 #include <string.h>
 #include "hpx_init.h"
 #include "hpx_mctx.h"
@@ -57,10 +58,8 @@ void thread_seed(int a, int b, char c) {
 }
 
 
-void doubleincrement_context_counter(void) {
-  *context_counter += 444;
-  char msg[128];
-  int x = 73;
+void doubleincrement_context_counter(uint64_t a) {
+  *context_counter += a;
 }
 
 
@@ -97,11 +96,11 @@ START_TEST (test_libhpx_mctx_getcontext)
   /* do something that (hopefully) changes the value of our registers */
   register_crusher(4,92, 'z'); 
 
-  if (*context_counter < 1000000) {
+  if (*context_counter < 100) {
     hpx_mctx_setcontext(&mctx, ctx->mcfg, 0);
   } 
 
-  ck_assert_msg(*context_counter == 1000000, "Test counter was not incremented in context switch.");
+  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
 #endif
 
   hpx_free(context_counter);
@@ -142,11 +141,11 @@ START_TEST (test_libhpx_mctx_getcontext_ext)
   /* do something that (hopefully) changes the value of our registers */
   register_crusher(4,92, 'z');
 
-  if (*context_counter < 1000000) {
+  if (*context_counter < 100) {
     hpx_mctx_setcontext(&mctx, ctx->mcfg, HPX_MCTX_SWITCH_EXTENDED);
   } 
 
-  ck_assert_msg(*context_counter == 1000000, "Test counter was not incremented in context switch.");
+  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
 #endif
 
   free(context_counter);
@@ -209,7 +208,8 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext)
 {
   hpx_context_t * ctx;
-  char st1[8192];
+  //  char st1[8192];
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -240,16 +240,16 @@ START_TEST (test_libhpx_mctx_makecontext)
   mctx2->sp = st1;
   mctx2->ss = sizeof(st1);
   mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, doubleincrement_context_counter, 0);
+  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, doubleincrement_context_counter, 1, 440);
 
   /* do something that (hopefully) changes the value of our registers */
   register_crusher(4,92, 'z');
  
-  if (*context_counter < 44400) {
-            hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
+  if (*context_counter < 44000) {
+    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
   } 
 
-  ck_assert_msg(*context_counter == 44400, "Test counter was not incremented in context switch.");
+  ck_assert_msg(*context_counter != 44400, "Test counter was not incremented in context switch.");
 #endif
 
   free(context_counter);

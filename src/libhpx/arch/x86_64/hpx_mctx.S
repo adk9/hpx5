@@ -27,21 +27,96 @@
 #endif
 
 .align 8
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,__hpx_mctx_boot
+.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,_hpx_mctx_makecontext
 
 	
 .text
 
 	
 # --------------------------------------------------------------------
-#  __hpx_mctx_boot
+#  _hpx_mctx_makecontext
 #
-#  "Boot" function for hpx_mctx_makecontext
+#  Replacement for the deprecated POSIX makecontext() function.
+# --------------------------------------------------------------------	
+
+_hpx_mctx_makecontext:
+	pushq		rbp
+	movq		rbp,rsp
+	leaq		rax,[rdi]
+	
+	# set up the stack frame
+	movq		r10,[rax+_HPX_MCTX_O_SP]
+	movq		r11,[rax+_HPX_MCTX_O_SS]
+	addq		r10,r11
+	
+	# set our context linkage
+	subq		r10,8
+	movq		r11,[rax+_HPX_MCTX_O_LINK]
+	movq		[r10],r11
+
+	# set our machine configuration flags
+	subq		r10,8
+	movq		[r10],rsi
+
+	# set our context switching behavior flags
+	subq		r10,8
+	movq		[r10],rdx
+
+	# save our original RBX value
+	subq		r10,8
+	movq		r11,[rax+_HPX_MCTX_O_RBX]
+	movq		[r10],r11
+	
+	# our first argument is in r9 (if we have any)
+	cmpq		r8,1
+	jl		mc_regarg_done
+	movq		[rax+_HPX_MCTX_O_RDI],r9
+	subq		r8,1
+	
+	# set our new base pointer
+	movq		[rax+_HPX_MCTX_O_RBX],r10
+
+	# our first argument is in r9 if we have one
+	cmpq		r8,1
+	jl		mc_args_done
+	movq		[rax+_HPX_MCTX_O_RDI],r9
+	subq		r8,1
+
+	# set the second argument
+
+mc_args_done:	
+	# set our trampoline function address
+	subq		r10,8
+	leaq		r11,__hpx_mctx_trampoline[rip]
+	movq		[r10],r11
+
+	# set our new stack pointer
+	movq		[rax+_HPX_MCTX_O_RSP],r10
+	
+	# set our new instruction pointer
+	movq		[rax+_HPX_MCTX_O_RIP],rcx
+
+	movq		rsp,rbp
+	popq		rbp
+	ret
+	
+	
+# --------------------------------------------------------------------
+#  __hpx_mctx_trampoline
+#
+#  Trampoline function for hpx_mctx_makecontext
 # --------------------------------------------------------------------
 
-__hpx_mctx_boot:
+__hpx_mctx_trampoline:
 	movq		rsp,rbx
+	popq		r10
+	popq		rdx
+	popq		rsi
 	popq		rdi
+
+	# restore our original RBX value
+	leaq		rax,[rdi]
+	movq		[rax+_HPX_MCTX_O_RBX],r10
 
 	# make sure we have a context to switch to.  this could
 	# be zero because the caller didn't set a link to a
@@ -49,7 +124,7 @@ __hpx_mctx_boot:
 	testq		rdi,rdi
 	je		b_procexit
 	
-	call		setcontext_local
+	jmp		setcontext_local
 
 b_procexit:
 	# exit the process
@@ -218,5 +293,7 @@ s_no_extstate:
 # --------------------------------------------------------------------
 
 _hpx_mctx_swapcontext:
+	
+
 	xor		rax,rax
 	ret
