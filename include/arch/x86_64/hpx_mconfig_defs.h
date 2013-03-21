@@ -39,6 +39,7 @@
 */
 
 #define _HPX_MCTX_SIG_BLOCK                                       1
+#define _HPX_MCTX_SIG_SETMASK                                     3
 
 
 /*

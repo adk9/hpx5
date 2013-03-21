@@ -379,7 +379,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_0arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -444,7 +444,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_1arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -509,7 +509,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_2arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -574,7 +574,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_3arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -639,7 +639,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_4arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -704,7 +704,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_5arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -769,7 +769,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_6arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -834,7 +834,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_7arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */
@@ -899,7 +899,7 @@ END_TEST
 START_TEST (test_libhpx_mctx_makecontext_8arg)
 {
   hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (8)));
+  char st1[8192] __attribute__((aligned (16)));
   char msg[128];
 
   /* allocate machine contexts */

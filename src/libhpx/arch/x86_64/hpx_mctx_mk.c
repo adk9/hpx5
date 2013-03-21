@@ -24,6 +24,9 @@
 #include "hpx_mctx.h"
 
 
+extern _hpx_mctx_trampoline(void);
+
+
 /*
  --------------------------------------------------------------------
   hpx_mctx_makecontext_va
