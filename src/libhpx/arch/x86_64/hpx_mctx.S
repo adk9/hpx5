@@ -80,7 +80,6 @@ tr_procexit:
 # --------------------------------------------------------------------
 	
 _hpx_mctx_getcontext:
-
 	# save function call arguments
 	leaq		rax,[rdi]
 	movq		[rax+_HPX_MCTX_O_RDI],rdi
@@ -115,6 +114,7 @@ g_no_fxsave:
 	# save the FPU control state & registers using FSAVE
 	fnsave		[r10]
 	frstor		[r10]
+	fwait
 	
 g_fxsave_done:	
 g_no_extstate:
@@ -152,7 +152,6 @@ g_no_signals:
 
 tr_setcontext_local:	
 _hpx_mctx_setcontext:
-
 	# restore the set of blocked signals
 	test		rdx,0x0000000000000002
 	jz		s_no_signals

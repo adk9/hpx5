@@ -227,6 +227,68 @@ void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g,
 }
 
 
+void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int argc, ...) {
+  hpx_context_t * ctx;
+  char st1[8192] __attribute__((aligned (16)));
+  char msg[128];
+  va_list argv;
+
+  /* allocate machine contexts */
+  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
+
+  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+
+  /* get a thread context */
+  ctx = hpx_ctx_create();
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* allocate our test counter */ 
+  context_counter = (int *) malloc(sizeof(int));
+  if (context_counter != NULL) {
+    *context_counter = 0;
+  }
+
+  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
+ 
+  /* initialize machine contexts */
+  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
+  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
+  
+  /* save the current context */
+  hpx_mctx_getcontext(mctx1, ctx->mcfg, mflags);  
+
+  /* start parsing variadic arguments */
+  va_start(argv, argc);
+
+  /* initialize a new context */
+  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
+  mctx2->sp = st1;
+  mctx2->ss = sizeof(st1);
+  mctx2->link = mctx1;
+  hpx_mctx_makecontext_va(mctx2, ctx->mcfg, mflags, func, argc, &argv);
+  va_end(argv);
+
+  /* crush some registers */
+  register_crusher(4,92, 'z');
+ 
+  /* keep switching back into a new context until our counter is updated */
+  if (*context_counter < mk_limit) {
+    hpx_mctx_setcontext(mctx2, ctx->mcfg, mk_limit);
+  } 
+  
+  ck_assert_msg(*context_counter == mk_limit, "Test counter has incorrect value after context switch.");
+
+  /* clean up */
+  free(context_counter);
+  hpx_ctx_destroy(ctx);
+
+  hpx_free(mctx2);
+  hpx_free(mctx1);
+}
+
+
 /*
  --------------------------------------------------------------------
   TEST: context switching without saving extended (FPU) state
@@ -378,59 +440,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_0arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 44000, increment_context_counter0, 0);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_0arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 44000, increment_context_counter0, 0);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_0arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 44000, increment_context_counter0, 0);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter0, 0);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 44000) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 44000, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_0arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 44000, increment_context_counter0, 0);
 }
 END_TEST
 
@@ -443,59 +474,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_1arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 57300, increment_context_counter1, 1, 573);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_1arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 57300, increment_context_counter1, 1, 573);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_1arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 57300, increment_context_counter1, 1, 573);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter1, 1, 573);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 57300) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 57300, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_1arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 57300, increment_context_counter1, 1, 573);
 }
 END_TEST
 
@@ -508,59 +508,27 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_2arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 86400, increment_context_counter2, 2, 741, 123);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
+START_TEST (test_libhpx_mctx_makecontext_2arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 86400, increment_context_counter2, 2, 741, 123);
+}
+END_TEST
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+START_TEST (test_libhpx_mctx_makecontext_2arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 86400, increment_context_counter2, 2, 741, 123);
+}
+END_TEST
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
-
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter2, 2, 741, 123);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 86400) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 86400, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_2arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 86400, increment_context_counter2, 2, 741, 123);
 }
 END_TEST
 
@@ -573,59 +541,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_3arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 9300, increment_context_counter3, 3, 3, 1, 89);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_3arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 9300, increment_context_counter3, 3, 3, 1, 89);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_3arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 9300, increment_context_counter3, 3, 3, 1, 89);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter3, 3, 3, 1, 89);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 9300) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 9300, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_3arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 9300, increment_context_counter3, 3, 3, 1, 89);
 }
 END_TEST
 
@@ -638,59 +575,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_4arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 826000, increment_context_counter4, 4, 1004, 7348, 17, -109);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_4arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 826000, increment_context_counter4, 4, 1004, 7348, 17, -109);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_4arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 826000, increment_context_counter4, 4, 1004, 7348, 17, -109);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter4, 4, 1004, 7348, 17, -109);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 826000) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 826000, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_4arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 826000, increment_context_counter4, 4, 1004, 7348, 17, -109);
 }
 END_TEST
 
@@ -703,59 +609,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_5arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 132916900, increment_context_counter5, 5, -870, 99999, -4500, 0, 1234540);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_5arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 132916900, increment_context_counter5, 5, -870, 99999, -4500, 0, 1234540);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_5arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 132916900, increment_context_counter5, 5, -870, 99999, -4500, 0, 1234540);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter5, 5, -870, 99999, -4500, 0, 1234540);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 132916900) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 132916900, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_5arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 132916900, increment_context_counter5, 5, -870, 99999, -4500, 0, 1234540);
 }
 END_TEST
 
@@ -768,59 +643,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_6arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 471900, increment_context_counter6, 6, 789, 788, 787, 786, 785, 784);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_6arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 471900, increment_context_counter6, 6, 789, 788, 787, 786, 785, 784);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_6arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 471900, increment_context_counter6, 6, 789, 788, 787, 786, 785, 784);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter6, 6, 789, 788, 787, 786, 785, 784);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 471900) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 471900, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_6arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 471900, increment_context_counter6, 6, 789, 788, 787, 786, 785, 784);
 }
 END_TEST
 
@@ -833,59 +677,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_7arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 1906900, increment_context_counter7, 7, 4321, 1234, 1324, 3214, 3421, 3412, 2143);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_7arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 1906900, increment_context_counter7, 7, 4321, 1234, 1324, 3214, 3421, 3412, 2143);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_7arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 1906900, increment_context_counter7, 7, 4321, 1234, 1324, 3214, 3421, 3412, 2143);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter7, 7, 4321, 1234, 1324, 3214, 3421, 3412, 2143);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 1906900) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 1906900, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_7arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1906900, increment_context_counter7, 7, 4321, 1234, 1324, 3214, 3421, 3412, 2143);
 }
 END_TEST
 
@@ -898,59 +711,28 @@ END_TEST
 
 START_TEST (test_libhpx_mctx_makecontext_8arg)
 {
-  hpx_context_t * ctx;
-  char st1[8192] __attribute__((aligned (16)));
-  char msg[128];
+  run_makecontext_counter(0, 351000, increment_context_counter8, 8, 7, 8, 78, 87, 778, 887, 787, 878);
+}
+END_TEST
 
-  /* allocate machine contexts */
-  mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx1 != NULL, "Could not allocate machine context 1.");
 
-  mctx2 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
+START_TEST (test_libhpx_mctx_makecontext_8arg_ext)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED, 351000, increment_context_counter8, 8, 7, 8, 78, 87, 778, 887, 787, 878);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  /* allocate our test counter */ 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+START_TEST (test_libhpx_mctx_makecontext_8arg_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_SIGNALS, 351000, increment_context_counter8, 8, 7, 8, 78, 87, 778, 887, 787, 878);
+}
+END_TEST
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  /* initialize machine contexts */
-  memset(mctx1, 0, sizeof(hpx_mctx_context_t));
-  memset(mctx2, 0, sizeof(hpx_mctx_context_t));
-  
-  /* save the current context */
-  hpx_mctx_getcontext(mctx1, ctx->mcfg, 0);  
 
-  /* initialize a new context */
-  memcpy(mctx2, mctx1, sizeof(hpx_mctx_context_t));
-  mctx2->sp = st1;
-  mctx2->ss = sizeof(st1);
-  mctx2->link = mctx1;
-  hpx_mctx_makecontext(mctx2, ctx->mcfg, 0, increment_context_counter8, 8, 7, 8, 78, 87, 778, 887, 787, 878);
-
-  /* crush some registers */
-  register_crusher(4,92, 'z');
- 
-  /* keep switching back into a new context until our counter is updated */
-  if (*context_counter < 351000) {
-    hpx_mctx_setcontext(mctx2, ctx->mcfg, 0);
-  } 
-  
-  ck_assert_msg(*context_counter == 351000, "Test counter has incorrect value after context switch.");
-
-  /* clean up */
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
-
-  hpx_free(mctx2);
-  hpx_free(mctx1);
+START_TEST (test_libhpx_mctx_makecontext_8arg_ext_sig)
+{
+  run_makecontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 351000, increment_context_counter8, 8, 7, 8, 78, 87, 778, 887, 787, 878);
 }
 END_TEST
 

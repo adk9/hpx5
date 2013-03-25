@@ -76,6 +76,7 @@ int main(int argc, char * argv[]) {
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
   tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
+  //  tcase_add_test(tc, test_libhpx_mctx_getcontext_sig);
   tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg);
@@ -85,7 +86,34 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg);  
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext_sig);
 
   suite_add_tcase(s, tc);
 
