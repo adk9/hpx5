@@ -75,4 +75,10 @@ no_fpu:
 	or	rax,_HPX_MCONFIG_HAS_TSC
 	
 no_tsc:
+	# do we have some version of SSE?
+	test	edx,0x02000000
+	jz	no_sse
+	or	rax,_HPX_MCONFIG_HAS_SSE
+
+no_sse:	
 	ret

@@ -21,6 +21,7 @@
 */
 
 
+#include <math.h>
 #include <stdarg.h>
 #include <string.h>
 #include "hpx_init.h"
@@ -51,6 +52,10 @@ int register_crusher(int a, int b, char c) {
 
   return (a + b) + 73;
 }
+
+
+extern void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags);
+extern void _sse_crusher(hpx_mconfig_t mcfg, uint64_t mflags, uint64_t xmm0, uint64_t xmm1, uint64_t xmm2, uint64_t xmm3, uint64_t xmm4, uint64_t xmm5);
 
 
 void thread_seed(int a, int b, char c) {
@@ -227,6 +232,166 @@ void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g,
 }
 
 
+void run_getcontext(uint64_t mflags) {
+  hpx_mctx_context_t mctx;
+  hpx_context_t * ctx;
+  long double * x87reg;
+  long double x87_epsilon = 0.000000000000001;
+  long double x87_abs;
+  uint64_t * xmmreg;
+  char msg[256];
+
+  /* get a thread context */
+  ctx = hpx_ctx_create();
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  memset(&mctx, 0, sizeof(hpx_mctx_context_t));
+
+  /* crush that mean old FPU */
+  _fpu_crusher(ctx->mcfg, mflags);
+
+  /* crush that fancy pants SSE */
+  _sse_crusher(ctx->mcfg, mflags, 1234, 5678, 9012, 3456, 7890, 1234);
+  
+  /* make sure we can call getcontext without a problem */
+  hpx_mctx_getcontext(&mctx, ctx->mcfg, mflags);
+
+#ifdef __x86_64
+  /* test for some easy stuff */
+  ck_assert_msg(mctx.regs.rsp != 0, "Stack pointer was not saved.");
+  ck_assert_msg(mctx.regs.rip != 0, "Instruction pointer was not saved.");
+
+  #ifdef __APPLE__
+  ck_assert_msg(mctx.regs.rbx != 0, "PIC register (RBX) was not saved.");
+  #endif
+
+  /* test function call registers */
+  sprintf(msg, "First argument passing register (RDI) was not saved (expected %d, got %d).", (uint64_t) &mctx, mctx.regs.rdi);
+  ck_assert_msg(mctx.regs.rdi == (uint64_t) &mctx, msg);
+
+  sprintf(msg, "Second argument passing register (RSI) was not saved (expected %d, got %d).", (uint64_t) ctx->mcfg, mctx.regs.rsi);
+  ck_assert_msg(mctx.regs.rsi == (uint64_t) ctx->mcfg, msg);
+
+  sprintf(msg, "Third argument passing register (RDX) was not saved (expected %d, got %d).", mflags, mctx.regs.rdx);
+  ck_assert_msg(mctx.regs.rdx == mflags, msg);
+
+  /* test crushed FPU */
+  if ((mflags & HPX_MCTX_SWITCH_EXTENDED) && (ctx->mcfg & _HPX_MCONFIG_HAS_FPU)) {
+    /* ST(0) should have a +1.00 in it */
+    x87reg = (long double *) &mctx.regs.fpregs.sts[0];
+    sprintf(msg, "FPU register ST(0) was not saved (expected 1.00, got %.2Lf).", (long double) *x87reg);
+    ck_assert_msg(*x87reg == 1.00, msg);
+
+    /* ST(1) should have a value of +0.00 (as opposed to NaN) */
+    x87reg = (long double *) &mctx.regs.fpregs.sts[1];
+    sprintf(msg, "FPU register ST(1) was not saved (expected 0.00, got %.2Lf).", (long double) *x87reg);
+    ck_assert_msg((long double) *x87reg == 0.00, msg);
+
+    /* ST(2) should have a value of log2(e) to at least 15 decimal places */
+    x87reg = (long double *) &mctx.regs.fpregs.sts[2];
+    x87_abs = fabs((long double) *x87reg - M_LOG2E);
+    sprintf(msg, "FPU register ST(2) was not saved (expected %.19Lf, got %.19Lf).", (long double) M_LOG2E, (long double) *x87reg);
+    ck_assert_msg((x87_abs < x87_epsilon), msg);
+
+    /* ST(3) should have a value of +1.00 */
+    x87reg = (long double *) &mctx.regs.fpregs.sts[3];
+    sprintf(msg, "FPU register ST(3) was not saved (expected 1.00, got %.2Lf).", (long double) *x87reg);
+    ck_assert_msg(*x87reg == 1.00, msg);
+
+    /* ST(4) should have a value of Pi to at least 15 decimal places */
+    x87reg = (long double *) &mctx.regs.fpregs.sts[4];
+    x87_abs = fabs((long double) *x87reg - M_PI);
+    sprintf(msg, "FPU register ST(4) was not saved (expected %.19Lf, got %.19Lf).", (long double) M_PI, (long double) *x87reg);
+    ck_assert_msg((x87_abs < x87_epsilon), msg);
+
+    /* the abridged tag word should indicate valid values for ST(0)-ST(4) */
+    /* FTW = 11111000b = 0xF8 */
+    sprintf(msg, "Abridged FPU tag word was not saved (expected 0xF8, got %02x).", mctx.regs.fpregs.ftw);
+    ck_assert_msg(mctx.regs.fpregs.ftw == 0xF8, msg);
+  }
+
+  /* test crushed SSE unit */
+  if ((mflags & HPX_MCTX_SWITCH_EXTENDED) && (ctx->mcfg & _HPX_MCONFIG_HAS_SSE)) {
+    /* XMM0 should have 1234 in the upper qword and 73 in the lower qword */
+    xmmreg = (uint64_t) &mctx.regs.fpregs.xmms[0];
+    sprintf(msg, "Lower quadword of XMM0 was not saved (expected 73, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 73, msg);        
+
+    xmmreg++;
+    sprintf(msg, "Upper quadword of XMM0 was not saved (expected 1234, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 1234, msg);
+
+    /* XMM1 should have 5678 in the upper qword and 73 in the lower qword */
+    xmmreg++;
+    sprintf(msg, "Lower quadword of XMM1 was not saved (expected 73, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 73, msg);
+
+    xmmreg++;
+    sprintf(msg, "Upper quadword of XMM1 was not saved (expected 5678, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 5678, msg);
+
+    /* XMM2 should have 9012 in the upper qword and 73 in the lower qword */
+    xmmreg++;
+    sprintf(msg, "Lower quadword of XMM2 was not saved (expected 73, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 73, msg);
+
+    xmmreg++;
+    sprintf(msg, "Upper quadword of XMM2 was not saved (expected 9012, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 9012, msg);
+
+    /* XMM3 should have 3456 in the upper qword and 73 in the lower qword */
+    xmmreg++;
+    sprintf(msg, "Lower quadword of XMM3 was not saved (expected 73, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 73, msg);
+
+    xmmreg++;
+    sprintf(msg, "Upper quadword of XMM3 was not saved (expected 3456, got %d).", *xmmreg);
+    ck_assert_msg(*xmmreg == 3456, msg);
+  }
+#endif
+  /* clean up */
+  hpx_ctx_destroy(ctx);
+}
+
+
+void run_setcontext_counter(uint64_t mflags) {
+  hpx_mctx_context_t mctx;
+  hpx_context_t * ctx;
+  char msg[128];
+
+  /* get a thread context */
+  ctx = hpx_ctx_create();
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  context_counter = (int *) malloc(sizeof(int));
+  if (context_counter != NULL) {
+    *context_counter = 0;
+  }
+
+  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
+
+  memset(&mctx, 0, sizeof(hpx_mctx_context_t));
+ 
+#ifdef __x86_64__
+  hpx_mctx_getcontext(&mctx, ctx->mcfg, mflags);
+
+  *context_counter += 1;
+
+  /* do something that (hopefully) changes the value of our registers */
+  register_crusher(4,92, 'z'); 
+
+  if (*context_counter < 100) {
+    hpx_mctx_setcontext(&mctx, ctx->mcfg, mflags);
+  } 
+
+  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
+#endif
+
+  hpx_free(context_counter);
+  hpx_ctx_destroy(ctx);
+}
+
+
 void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int argc, ...) {
   hpx_context_t * ctx;
   char st1[8192] __attribute__((aligned (16)));
@@ -291,46 +456,26 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
 
 /*
  --------------------------------------------------------------------
-  TEST: context switching without saving extended (FPU) state
+  TEST: saving a context without any flags
  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_mctx_getcontext)
 {
-  hpx_mctx_context_t mctx;
-  hpx_context_t * ctx;
-  char msg[128];
+  run_getcontext(HPX_MCTX_SWITCH_EXTENDED);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+/*
+ --------------------------------------------------------------------
+  TEST: context switching without saving extended (FPU) state
+ --------------------------------------------------------------------
+*/
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
-
-  memset(&mctx, 0, sizeof(hpx_mctx_context_t));
- 
-#ifdef __x86_64__
-  hpx_mctx_getcontext(&mctx, ctx->mcfg, 0);
-
-  *context_counter += 1;
-
-  /* do something that (hopefully) changes the value of our registers */
-  register_crusher(4,92, 'z'); 
-
-  if (*context_counter < 100) {
-    hpx_mctx_setcontext(&mctx, ctx->mcfg, 0);
-  } 
-
-  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
-#endif
-
-  hpx_free(context_counter);
-  hpx_ctx_destroy(ctx);
+START_TEST (test_libhpx_mctx_setcontext)
+{
+  run_setcontext_counter(0);
 }
 END_TEST
 
@@ -341,41 +486,22 @@ END_TEST
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_mctx_getcontext_ext)
+START_TEST (test_libhpx_mctx_setcontext_ext)
 {
-  hpx_mctx_context_t mctx;
-  hpx_context_t * ctx;
-  char msg[128];
+  run_setcontext_counter(HPX_MCTX_SWITCH_EXTENDED);
+}
+END_TEST
 
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
+/*
+ --------------------------------------------------------------------
+  TEST: context switching, saving signals
+ --------------------------------------------------------------------
+*/
 
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  memset(&mctx, 0, sizeof(hpx_mctx_context_t));
-
-#ifdef __x86_64__
-  hpx_mctx_getcontext(&mctx, ctx->mcfg, HPX_MCTX_SWITCH_EXTENDED);  
-  *context_counter += 1;
-
-  /* do something that (hopefully) changes the value of our registers */
-  register_crusher(4,92, 'z');
-
-  if (*context_counter < 100) {
-    hpx_mctx_setcontext(&mctx, ctx->mcfg, HPX_MCTX_SWITCH_EXTENDED);
-  } 
-
-  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
-#endif
-
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
+START_TEST (test_libhpx_mctx_setcontext_sig)
+{
+  run_setcontext_counter(HPX_MCTX_SWITCH_SIGNALS);
 }
 END_TEST
 
@@ -386,41 +512,9 @@ END_TEST
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_mctx_getcontext_ext_sig)
+START_TEST (test_libhpx_mctx_setcontext_ext_sig)
 {
-  hpx_mctx_context_t mctx;
-  hpx_context_t * ctx;
-  char msg[128];
-
-  /* get a thread context */
-  ctx = hpx_ctx_create();
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
- 
-  context_counter = (int *) malloc(sizeof(int));
-  if (context_counter != NULL) {
-    *context_counter = 0;
-  }
-
-  ck_assert_msg(context_counter != NULL, "Could not allocate a counter to test context switching.");
- 
-  memset(&mctx, 0, sizeof(hpx_mctx_context_t));
-  
-#ifdef __x86_64__
-  hpx_mctx_getcontext(&mctx, ctx->mcfg, HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS);  
-  *context_counter += 1;
-
-  /* do something that (hopefully) changes the value of our registers */
-  register_crusher(4,92, 'z');
-
-  if (*context_counter < 100) {
-    hpx_mctx_setcontext(&mctx, __mcfg, HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS);
-  } 
-
-  ck_assert_msg(*context_counter == 100, "Test counter was not incremented in context switch.");
-#endif
-
-  free(context_counter);
-  hpx_ctx_destroy(ctx);
+  run_setcontext_counter(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS);
 }
 END_TEST
 
