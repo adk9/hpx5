@@ -30,6 +30,7 @@
 #define _HPX_MCONFIG_HAS_FXSR                     0x0000000000000002  /* CPU has an FXSR */
 #define _HPX_MCONFIG_HAS_AVX                      0x0000000000000004  /* CPU has some version of AVX */
 #define _HPX_MCONFIG_HAS_TSC                      0x0000000000000008  /* CPU has a time-stamp counter */
+#define _HPX_MCONFIG_HAS_SSE                      0x0000000000000010  /* CPU has some version of SSE */
 
 
 /*

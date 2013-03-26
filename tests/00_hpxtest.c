@@ -75,9 +75,13 @@ int main(int argc, char * argv[]) {
 
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
+  //  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
+  //  tcase_add_test(tc, test_libhpx_mctx_getcontext_sig);
+  //  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext_sig);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg);
   tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg);
