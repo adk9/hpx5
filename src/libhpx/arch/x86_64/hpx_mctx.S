@@ -49,7 +49,7 @@ __hpx_mctx_trampoline:
 	popq		rdi
 
 	# since we used RBX to pass our stack pointer, we have
-	# to restore it
+	# to restore it.  at least under Darwin.
 	leaq		rax,[rdi]
 	movq		[rax+_HPX_MCTX_O_RBX],r10
 
@@ -64,7 +64,8 @@ __hpx_mctx_trampoline:
 	# exit the process if mctx->link is NULL, with exit(0)
 tr_procexit:
 #ifdef __APPLE__
-	movq		rax,SYS_exit
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS_exit
 	xor		rdi,rdi
 	syscall
 #endif
@@ -133,13 +134,21 @@ g_no_extstate:
 
 #ifdef __APPLE__
 	# evidently BSD has different "classes" of syscalls.
+	# we only use the bottom 32 bits of RAX to pass the index.
+	#
 	# the syscall class occupies the upper 16 bits of the dword
 	# while the actual syscall index number lives in the lower
 	# 16 bits.
 	#
 	# the Mach syscall class is defined in
 	# _HPX_MACH_SYSCALL_CLASS_ID
-
+	#
+	# also, we set up a small stack frame here because we
+	# don't already have one.  we don't have one because
+	# having a stack frame might screw up the registers
+	# we're trying to save/restore.  Like RSP, RBP, and
+	# RBX (which is used as a PIC register in BSD/Darwin).
+	
 	enter		32,0
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
@@ -165,7 +174,7 @@ g_no_signals:
 tr_setcontext_local:	
 _hpx_mctx_setcontext:
 	# restore the set of blocked signals
-	test		rdx,0x0000000000000002
+	test		rdx,2
 	jz		s_no_signals
 	
 	movq		r9,rdi
@@ -192,12 +201,12 @@ s_no_signals:
 	leaq		rax,[rdi]
 
 	# restore the FPU state iff the extended switching state flag is set
-	test		rdx,0x0000000000000001
+	test		rdx,1
 	jz		s_no_extstate
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 
 	# restore the FPU state using FXRSTOR if supported
-	test		rcx,0x0000000000000002
+	test		rcx,2
 	jz		s_no_fxrstor
 
 	fxrstor		[r10]
@@ -262,7 +271,7 @@ _hpx_mctx_swapcontext:
 	movq		[rax+_HPX_MCTX_O_R15],r15
 
 	# save the FPU iff the extended switching state flag is set
-	test		rcx,0x0000000000000001
+	test		rcx,1
 	jz		swg_no_extstate
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 	
@@ -289,7 +298,7 @@ swg_no_extstate:
 	leaq		r10,[rsp+8]
 	movq		[rax+_HPX_MCTX_O_RSP],r10
 
-	# save the set of blocked signals
+	# save the set of blocked signals if we're supposed to
 	test		rcx,0x0000000000000002
 	jz		swg_no_signals
 
@@ -300,15 +309,17 @@ swg_no_extstate:
 	
 #ifdef __APPLE__
 	# save the current signal mask
-	movq		rsi,[rax+_HPX_MCTX_O_SIGMASK]
-	movq		rax,SYS___pthread_sigmask
+	leaq		rdx,[rax+_HPX_MCTX_O_SIGMASK]
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS___pthread_sigmask
 	mov		rdi,_HPX_MCTX_SIG_BLOCK
-	xor		rdx,rdx
+	xor		rsi,rsi
 	syscall
 
 	# set the new signal mask
 	leaq		r9,[r10]
-	movq		rax,SYS___pthread_sigmask
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS___pthread_sigmask
 	mov		rdi,_HPX_MCTX_SIG_SETMASK
 	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
 	xor		rdx,rdx
@@ -323,12 +334,12 @@ swg_no_signals:
 	leaq		rax,[rsi]
 
 	# restore the FPU state iff the extended switching state flag is set
-	test		rcx,0x0000000000000001
+	test		rcx,1
 	jz		sws_no_extstate
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 
 	# restore the FPU state using FXRSTOR if supported
-	test		rdx,0x0000000000000002
+	test		rdx,2
 	jz		sws_no_fxrstor
 
 	fxrstor		[r10]
