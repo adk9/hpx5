@@ -98,7 +98,7 @@ _hpx_mctx_getcontext:
 	movq		[rax+_HPX_MCTX_O_R15],r15
 
 	# save the FPU iff the extended switching state flag is set
-	test		rdx,0x0000000000000001
+	test		rdx,1
 	jz		g_no_extstate
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 	
@@ -127,17 +127,29 @@ g_no_extstate:
 	movq		[rax+_HPX_MCTX_O_RSP],r10
 
 	# save the set of blocked signals
-	test		rdx,0x0000000000000002
+	test		rdx,2
 	jz		g_no_signals
 	xchgq		rax,r11
-	
+
 #ifdef __APPLE__
-	movq		rax,SYS___pthread_sigmask
+	# evidently BSD has different "classes" of syscalls.
+	# the syscall class occupies the upper 16 bits of the dword
+	# while the actual syscall index number lives in the lower
+	# 16 bits.
+	#
+	# the Mach syscall class is defined in
+	# _HPX_MACH_SYSCALL_CLASS_ID
+
+	enter		32,0
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS___pthread_sigmask
 	mov		rdi,_HPX_MCTX_SIG_BLOCK
-	movq		rsi,[r11+_HPX_MCTX_O_SIGMASK]
-	xor		rdx,rdx
+	xor		rsi,rsi
+	leaq		rdx,[r11+_HPX_MCTX_O_SIGMASK]
 	syscall
+	leave
 #endif
+	
 g_no_signals:	
 	xor		rax,rax
 	ret
@@ -161,12 +173,15 @@ _hpx_mctx_setcontext:
 	movq		r11,rdx
 	
 #ifdef __APPLE__
+	enter		32,0
 	leaq		rcx,[rdi]
-	movq		rax,SYS___pthread_sigmask
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS___pthread_sigmask
 	mov		rdi,_HPX_MCTX_SIG_SETMASK
 	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
 	xor		rdx,rdx
 	syscall
+	leave
 #endif
 
 	xchgq		rdx,r11

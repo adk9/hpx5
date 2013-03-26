@@ -72,36 +72,25 @@ __sse_crusher:
 	# see if we have SSE
 	test		rdi,_HPX_MCONFIG_HAS_SSE
 	jz		t_no_sse
-
-	# put the best number in R11
-	movq		r11,73
 	
-	# load our arguments into the XMM registers
-	pxor		xmm0,xmm0
-	pinsrq		xmm0,r11,0
-	pinsrq		xmm0,rdx,1
-	
-	pxor		xmm1,xmm1
-	pinsrq		xmm1,r11,0
-	pinsrq		xmm1,rcx,1
+	# load our arguments into XMM registers 0-7
+	leaq		rax,[rdx]
+	movaps		xmm0,[rax]
 
-	pxor		xmm2,xmm2
-	pinsrq		xmm2,r11,0
-	pinsrq		xmm2,r8,1
+	movlps		xmm1,[rax+8]
+	movhps		xmm1,[rax]
 
-	pxor		xmm3,xmm3
-	pinsrq		xmm3,r11,0
-	pinsrq		xmm3,r9,1
+	movaps		xmm2,xmm1
+	maxps		xmm2,xmm0
 
-	popq		r10
-	pxor		xmm4,xmm4
-	pinsrq		xmm4,r11,0
-	pinsrq		xmm4,r10,1
+	movaps		xmm3,xmm2
+	subps		xmm3,xmm0
 
-	popq		r10
+	movaps		xmm4,xmm0
+	minps		xmm4,xmm1
+
 	pxor		xmm5,xmm5
-	pinsrq		xmm5,r11,0
-	pinsrq		xmm5,r10,1
+	addps		xmm5,xmm4
 	
 t_no_sse:
 	movq		rsp,rbp
