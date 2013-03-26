@@ -55,7 +55,7 @@ int register_crusher(int a, int b, char c) {
 
 
 extern void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags);
-extern void _sse_crusher(hpx_mconfig_t mcfg, uint64_t mflags, uint64_t xmm0, uint64_t xmm1, uint64_t xmm2, uint64_t xmm3, uint64_t xmm4, uint64_t xmm5);
+extern void _sse_crusher(hpx_mconfig_t mcfg, uint64_t mflags, uint32_t * xmm_vals);
 
 
 void thread_seed(int a, int b, char c) {
@@ -235,11 +235,14 @@ void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g,
 void run_getcontext(uint64_t mflags) {
   hpx_mctx_context_t mctx;
   hpx_context_t * ctx;
+  hpx_xmmreg_t * xmmreg;
   long double * x87reg;
   long double x87_epsilon = 0.000000000000001;
   long double x87_abs;
-  uint64_t * xmmreg;
+  uint32_t xmmvals[4];
   char msg[256];
+  sigset_t sigs_old;
+  sigset_t sigs;
 
   /* get a thread context */
   ctx = hpx_ctx_create();
@@ -251,19 +254,34 @@ void run_getcontext(uint64_t mflags) {
   _fpu_crusher(ctx->mcfg, mflags);
 
   /* crush that fancy pants SSE */
-  _sse_crusher(ctx->mcfg, mflags, 1234, 5678, 9012, 3456, 7890, 1234);
+  xmmvals[0] = 1234;
+  xmmvals[1] = 5678;
+  xmmvals[2] = 9012;
+  xmmvals[3] = 3456;
+
+  _sse_crusher(ctx->mcfg, mflags, xmmvals);
+
+  /* set some signals in the thread signal mask (if we care about that) */
+  if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
+    sigemptyset(&sigs);
+    sigaddset(&sigs, SIGTERM);
+    sigaddset(&sigs, SIGABRT);
+    sigaddset(&sigs, SIGPIPE);
+    pthread_sigmask(SIG_SETMASK, &sigs, &sigs_old);
+  }
   
   /* make sure we can call getcontext without a problem */
   hpx_mctx_getcontext(&mctx, ctx->mcfg, mflags);
+
+  /* reset the signal mask (if we care) */
+  if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
+    pthread_sigmask(SIG_SETMASK, &sigs_old, 0);
+  }
 
 #ifdef __x86_64
   /* test for some easy stuff */
   ck_assert_msg(mctx.regs.rsp != 0, "Stack pointer was not saved.");
   ck_assert_msg(mctx.regs.rip != 0, "Instruction pointer was not saved.");
-
-  #ifdef __APPLE__
-  ck_assert_msg(mctx.regs.rbx != 0, "PIC register (RBX) was not saved.");
-  #endif
 
   /* test function call registers */
   sprintf(msg, "First argument passing register (RDI) was not saved (expected %d, got %d).", (uint64_t) &mctx, mctx.regs.rdi);
@@ -312,41 +330,97 @@ void run_getcontext(uint64_t mflags) {
 
   /* test crushed SSE unit */
   if ((mflags & HPX_MCTX_SWITCH_EXTENDED) && (ctx->mcfg & _HPX_MCONFIG_HAS_SSE)) {
-    /* XMM0 should have 1234 in the upper qword and 73 in the lower qword */
-    xmmreg = (uint64_t) &mctx.regs.fpregs.xmms[0];
-    sprintf(msg, "Lower quadword of XMM0 was not saved (expected 73, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 73, msg);        
+    /* XMM0 should contain what we passed in */
+    xmmreg = (hpx_xmmreg_t *) &mctx.regs.fpregs.xmms[0];
+    sprintf(msg, "First dword of XMM0 was not saved (exptected 1234, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 1234, msg);
 
-    xmmreg++;
-    sprintf(msg, "Upper quadword of XMM0 was not saved (expected 1234, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 1234, msg);
+    sprintf(msg, "Second dword of XMM0 was not saved (expected 5678, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 5678, msg);
 
-    /* XMM1 should have 5678 in the upper qword and 73 in the lower qword */
-    xmmreg++;
-    sprintf(msg, "Lower quadword of XMM1 was not saved (expected 73, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 73, msg);
+    sprintf(msg, "Third dword of XMM0 was not saved (expected 9012, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 9012, msg);
 
+    sprintf(msg, "Fourth dword of XMM0 was not saved (expected 3456, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 3456, msg);
+   
+    /* XMM1 should contain values 0-1 in its high qword and 2-3 in the low qword */
     xmmreg++;
-    sprintf(msg, "Upper quadword of XMM1 was not saved (expected 5678, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 5678, msg);
+    sprintf(msg, "First dword of XMM1 was not saved (expected 9012, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 9012, msg);
 
-    /* XMM2 should have 9012 in the upper qword and 73 in the lower qword */
-    xmmreg++;
-    sprintf(msg, "Lower quadword of XMM2 was not saved (expected 73, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 73, msg);
+    sprintf(msg, "Second dword of XMM1 was not saved (expected 3456, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 3456, msg);
 
-    xmmreg++;
-    sprintf(msg, "Upper quadword of XMM2 was not saved (expected 9012, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 9012, msg);
+    sprintf(msg, "Third dword of XMM1 was not saved (expected 1234, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 1234, msg);
 
-    /* XMM3 should have 3456 in the upper qword and 73 in the lower qword */
-    xmmreg++;
-    sprintf(msg, "Lower quadword of XMM3 was not saved (expected 73, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 73, msg);
+    sprintf(msg, "Fourth dword of XMM1 was not saved (expected 5678, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 5678, msg);
 
+    /* XMM2 should be 9012, 5678, 9012, 5678 */
     xmmreg++;
-    sprintf(msg, "Upper quadword of XMM3 was not saved (expected 3456, got %d).", *xmmreg);
-    ck_assert_msg(*xmmreg == 3456, msg);
+    sprintf(msg, "First dword of XMM2 was not saved (expected 9012, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 9012, msg);
+
+    sprintf(msg, "Second dword of XMM2 was not saved (expected 5678, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 5678, msg);
+
+    sprintf(msg, "Third dword of XMM2 was not saved (expected 9012, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 9012, msg);
+
+    sprintf(msg, "Fourth dword of XMM2 was not saved (expected 5678, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 5678, msg);
+
+    /* XMM3 should be 7778, 0, 0, 2222 */
+    xmmreg++;
+    sprintf(msg, "First dword of XMM3 was not saved (expected 7778, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 7778, msg);
+
+    sprintf(msg, "Second dword of XMM3 was not saved (expected 0, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 0, msg);
+
+    sprintf(msg, "Third dword of XMM3 was not saved (expected 0, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 0, msg);
+
+    sprintf(msg, "Fourth dword of XMM3 was not saved (expected 2222, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 2222, msg);
+
+    /* XMM4 should be 1234, 3456, 1234, 3456 */
+    xmmreg++;
+    sprintf(msg, "First dword of XMM4 was not saved (expected 1234, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 1234, msg);
+
+    sprintf(msg, "Second dword of XMM4 was not saved (expected 3456, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 3456, msg);
+
+    sprintf(msg, "Third dword of XMM4 was not saved (expected 1234, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 1234, msg);
+
+    sprintf(msg, "Fourth dword of XMM4 was not saved (expected 3456, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 3456, msg);
+
+    /* XMM5 should be the same as XMM4 */
+    xmmreg++;
+    sprintf(msg, "First dword of XMM5 was not saved (expected 1234, got %d).", xmmreg->vec32[0]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[0] == 1234, msg);
+
+    sprintf(msg, "Second dword of XMM5 was not saved (expected 3456, got %d).", xmmreg->vec32[1]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[1] == 3456, msg);
+
+    sprintf(msg, "Third dword of XMM5 was not saved (expected 1234, got %d).", xmmreg->vec32[2]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[2] == 1234, msg);
+
+    sprintf(msg, "Fourth dword of XMM5 was not saved (expected 3456, got %d).", xmmreg->vec32[3]);
+    ck_assert_msg((uint32_t) xmmreg->vec32[3] == 3456, msg);
+  }
+
+  /* test our signal set */
+  if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
+    printf("sigs == %d\n", mctx.sigs);
+    ck_assert_msg(sigismember(&mctx.sigs, SIGTERM) == 1, "Signals were not saved (expected SIGTERM).");
+    ck_assert_msg(sigismember(&mctx.sigs, SIGABRT) == 1, "Signals were not saved (expected SIGABRT).");
+    ck_assert_msg(sigismember(&mctx.sigs, SIGPIPE) == 1, "Signals were not saved (expected SIGPIPE).");
   }
 #endif
   /* clean up */
@@ -462,7 +536,46 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
 
 START_TEST (test_libhpx_mctx_getcontext)
 {
+  run_getcontext(0);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: saving a context with extended (FPU) state
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_getcontext_ext)
+{
   run_getcontext(HPX_MCTX_SWITCH_EXTENDED);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: saving a context with signals
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_getcontext_sig)
+{
+  run_getcontext(HPX_MCTX_SWITCH_SIGNALS);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: saving a context with extended (FPU) state and signals
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_getcontext_ext_sig)
+{
+  run_getcontext(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS);
 }
 END_TEST
 

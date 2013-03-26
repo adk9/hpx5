@@ -39,9 +39,11 @@
  --------------------------------------------------------------------
 */
 
-#define _HPX_MCTX_SIG_BLOCK                                       1
-#define _HPX_MCTX_SIG_SETMASK                                     3
-
+#ifdef __APPLE__
+  #define _HPX_MACH_SYSCALL_CLASS_ID                        0x2000000
+  #define _HPX_MCTX_SIG_BLOCK                                       1
+  #define _HPX_MCTX_SIG_SETMASK                                     3
+#endif
 
 /*
  --------------------------------------------------------------------

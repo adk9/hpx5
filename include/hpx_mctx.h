@@ -36,10 +36,10 @@
 
 
 /* save/restore FPU registers during context switches */
-#define HPX_MCTX_SWITCH_EXTENDED                                0x01
+#define HPX_MCTX_SWITCH_EXTENDED                                   1
 
 /* save/restore per-thread signal masks during context switches */
-#define HPX_MCTX_SWITCH_SIGNALS                                 0x02
+#define HPX_MCTX_SWITCH_SIGNALS                                    2
 
 
 /*
