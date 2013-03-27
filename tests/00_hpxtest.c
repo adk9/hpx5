@@ -50,7 +50,7 @@ int main(int argc, char * argv[]) {
   tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
-  tcase_set_timeout(tc, 60);
+  tcase_set_timeout(tc, 600);
 
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
@@ -125,6 +125,11 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain312);
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain8000);
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain90000);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000);
 
   suite_add_tcase(s, tc);
 

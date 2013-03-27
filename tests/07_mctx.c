@@ -32,6 +32,12 @@
   #include <mach/mach_time.h>
 #endif
 
+typedef struct {
+  uint64_t begin_ts;
+  uint64_t end_ts;
+  uint64_t elapsed_ts;
+  int64_t dev_ts;
+} hpxtest_ts_t;
 
 hpx_mctx_context_t * main_mctx;
 hpx_mctx_context_t * mctx1;
@@ -42,6 +48,23 @@ int * context_counter;
 unsigned int swap_idx;
 unsigned int swap_pos;
 unsigned int num_mctxs;
+
+#ifdef __APPLE__
+  /* https://developer.apple.com/library/mac/#qa/qa1398/_index.html */
+  static mach_timebase_info_data_t tbi;
+
+  hpxtest_ts_t * main_ts;
+  hpxtest_ts_t ** mctx_ts;
+  uint64_t ts_elapsed;
+  uint64_t ts_runs;
+
+  double mean_ts;
+  double mode_ts;
+  double med_ts;
+  double stdev_ts;
+  uint64_t min_ts;
+  uint64_t max_ts;
+#endif
 
 char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is the little-death that brings total obliteration. I will face my fear.  I will permit it to pass over me and through me.  And when it has gone past I will turn the inner eye to see its path.  Where the fear has gone there will be nothing... Only I will remain.";
 
@@ -630,6 +653,184 @@ void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * o
 }
 
 
+void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigned int start_idx, unsigned int end_idx) {
+  hpx_mctx_context_t * my_mctx;
+  unsigned int cur_idx = start_idx;
+
+#ifdef __APPLE__
+  mctx_ts[ts_runs]->elapsed_ts = (mach_absolute_time() - mctx_ts[ts_runs]->begin_ts) * tbi.numer / tbi.denom;
+  ts_runs++;
+#endif
+  
+  while (cur_idx < end_idx) {
+    my_mctx = mctxs[swap_idx];
+
+    swap_msg[cur_idx] = 73;
+    cur_idx++;
+
+    if (cur_idx > swap_pos) {
+      swap_pos = cur_idx;
+    }
+
+    hpx_mctx_swapcontext(my_mctx, main_mctx, mcfg, mflags);
+
+#ifdef __APPLE__
+    mctx_ts[ts_runs]->elapsed_ts = (mach_absolute_time() - mctx_ts[ts_runs]->begin_ts) * tbi.numer / tbi.denom; 
+    ts_runs++;
+#endif
+
+  }
+}
+
+
+void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
+  hpx_mctx_context_t * mctx;
+  hpx_context_t * ctx;
+  unsigned int start_idx;
+  unsigned int idx;
+  char msg[128];
+
+  /* get a thread context */
+  ctx = hpx_ctx_create();
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create a main machine context */
+  main_mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+  ck_assert_msg(main_mctx != NULL, "Could not allocate a main machine context.");
+
+  /* save our current machine context */
+  memset(main_mctx, 0, sizeof(hpx_mctx_context_t));
+  hpx_mctx_getcontext(main_mctx, ctx->mcfg, mflags);
+
+  /* create our swap buffer (20MB) */
+  swap_msg = (char *) hpx_alloc(sizeof(char) * (num_mctxs * 1024));
+  sprintf(msg, "Could not allocate swap buffer (%d KB).", num_mctxs);
+  ck_assert_msg(swap_msg != NULL, msg);
+
+  /* create & initialize our timing buffers */
+#ifdef __APPLE__
+  main_ts = (hpxtest_ts_t *) hpx_alloc(sizeof(hpxtest_ts_t));
+  ck_assert_msg(main_ts != NULL, "Could not allocate a timing buffer for the main machine context.");
+
+  mctx_ts = (hpxtest_ts_t **) hpx_alloc(sizeof(hpxtest_ts_t *) * (num_mctxs * 1024));
+  ck_assert_msg(mctx_ts != NULL, "Could not allocate timing buffers for child machine contexts.");
+
+  for (idx = 0; idx < (num_mctxs * 1024); idx++) {
+    mctx_ts[idx] = (hpxtest_ts_t *) hpx_alloc(sizeof(hpxtest_ts_t));
+    sprintf(msg, "Could not allocate timing data for iteration %d.", idx);
+    ck_assert_msg(mctx_ts[idx] != NULL, msg);
+  }
+#endif
+
+  /* create & initialize our child machine contexts */
+  mctxs = (hpx_mctx_context_t **) hpx_alloc(sizeof(hpx_mctx_context_t *) * num_mctxs);
+  ck_assert_msg(mctxs != NULL, "Could not allocate child machine context pointers.");
+
+  start_idx = 0;
+  swap_pos = 0;
+  swap_idx = 0;
+
+#ifdef __APPLE__
+  if (tbi.denom == 0) {
+    (void) mach_timebase_info(&tbi);
+  }
+
+  ts_elapsed = 0;
+  ts_runs = 0;
+#endif
+
+  for (idx = 0; idx < num_mctxs; idx++) {
+    mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+    sprintf(msg, "Could not allocate child machine context %d.", idx);
+    ck_assert_msg(mctx != NULL, msg);
+
+    memset(mctx, 0, sizeof(hpx_mctx_context_t));
+    mctx->ss = 1024; 
+    mctx->sp = (void *) hpx_alloc(mctx->ss);
+    sprintf(msg, "Could not allocate a stack for child machine context %d.", idx);
+    ck_assert_msg(mctx->sp != NULL, msg);
+
+    mctx->link = main_mctx;    
+    hpx_mctx_makecontext(mctx, ctx->mcfg, mflags, swapcontext_memset_star_worker, 4, ctx->mcfg, mflags, start_idx, (start_idx + 1024));
+    start_idx += 1024;    
+
+    mctxs[idx] = mctx;
+  }
+
+  while (swap_pos < (num_mctxs * 1024)) {
+#ifdef __APPLE__
+    mctx_ts[ts_runs]->begin_ts = mach_absolute_time();
+#endif    
+
+    hpx_mctx_swapcontext(main_mctx, mctxs[swap_idx], ctx->mcfg, mflags);
+
+    swap_idx = (++swap_idx % num_mctxs);
+  }
+
+  sprintf(msg, "Index was not incremented during context swap (expected %d, got %d).", (num_mctxs * 1024), swap_pos);
+  ck_assert_msg(swap_pos == (num_mctxs * 1024), msg);
+
+  for (idx = 0; idx < (num_mctxs * 1024); idx++) {
+    sprintf(msg, "Swap buffer is incorrect at position %d (expected 73, got %d).", swap_msg[idx]);
+    ck_assert_msg(swap_msg[idx] == 73, msg);
+  }
+
+#ifdef __APPLE__
+  /* calculate mean */
+  ts_elapsed = 0;
+  for (idx = 0; idx < ts_runs; idx++) {
+    ts_elapsed += mctx_ts[idx]->elapsed_ts;
+  }
+
+  mean_ts = ts_elapsed / ts_runs;
+  
+  /* calculate max time */
+  max_ts = mctx_ts[0]->elapsed_ts;
+  for (idx = 1; idx < ts_runs; idx++) {
+    if (mctx_ts[idx]->elapsed_ts > max_ts) {
+      max_ts = mctx_ts[idx]->elapsed_ts;
+    }
+  }
+
+  /* calculate min time */
+  min_ts = mctx_ts[0]->elapsed_ts;
+  for (idx = 1; idx < ts_runs; idx++) {
+    if (mctx_ts[idx]->elapsed_ts < min_ts) {
+      min_ts = mctx_ts[idx]->elapsed_ts;
+    }
+  }
+  
+  /* calculate standard deviation */
+  stdev_ts = 0;
+  for (idx = 0; idx < ts_runs; idx++) {
+    stdev_ts += pow((double) mctx_ts[idx]->elapsed_ts - mean_ts, 2.0);
+  }
+  stdev_ts = sqrt(stdev_ts / (ts_runs - 1));
+
+  /* clean up timing data */
+  for (idx = 0; idx < (num_mctxs * 1024); idx++) {
+    hpx_free(mctx_ts[idx]);
+  }
+
+  hpx_free(mctx_ts);
+  hpx_free(main_ts);
+#endif
+
+  /* clean up */
+  hpx_free(swap_msg);
+
+  for (idx = 0; idx < num_mctxs; idx++) {
+    mctx = mctxs[idx];
+    hpx_free(mctx->sp);
+    hpx_free(mctx);
+  }  
+
+  hpx_free(mctxs);
+  hpx_free(main_mctx);
+  hpx_ctx_destroy(ctx);
+}
+
+
 /*
  --------------------------------------------------------------------
   TEST: saving a context without any flags
@@ -1138,13 +1339,94 @@ END_TEST
 
 /*
  --------------------------------------------------------------------
-  TEST: hpx_mctx_swapcontext with no flags and 90000 machine contexts
+  TEST: hpx_mctx_swapcontext with no flags and 90000 machine
+  contexts switching in a chain
  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_mctx_swapcontext_chain90000)
 {
   run_swapcontext_copy_chain(0, 90000, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and one machine context
+  switching in a star topology
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_star1)
+{
+  run_swapcontext_memset_star(0, 1);
+
+  printf("test_libhpx_mctx_swapcontext_star1,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 2 machine contexts
+  switching in a star topology
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_star2)
+{
+  run_swapcontext_memset_star(0, 2);
+
+  printf("test_libhpx_mctx_swapcontext_star2,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 10 machine contexts
+  switching in a star topology
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_star10)
+{
+  run_swapcontext_memset_star(0, 10);
+
+  printf("test_libhpx_mctx_swapcontext_star10,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 1,000 machine 
+  contexts switching in a star topology
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_star1000)
+{
+  run_swapcontext_memset_star(0, 1000);
+
+  printf("test_libhpx_mctx_swapcontext_star1000,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 5,000 machine 
+  contexts switching in a star topology
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_star5000)
+{
+  run_swapcontext_memset_star(0, 5000);
+  
+  printf("test_libhpx_mctx_swapcontext_star5000,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
