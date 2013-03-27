@@ -309,6 +309,7 @@ swg_no_extstate:
 	
 #ifdef __APPLE__
 	# save the current signal mask
+	enter		32,0
 	leaq		rdx,[rax+_HPX_MCTX_O_SIGMASK]
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
@@ -324,6 +325,7 @@ swg_no_extstate:
 	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
 	xor		rdx,rdx
 	syscall
+	leave
 #endif
 
 	# restore clobbered registers (that we care about)

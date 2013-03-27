@@ -33,9 +33,17 @@
 #endif
 
 
+hpx_mctx_context_t * main_mctx;
 hpx_mctx_context_t * mctx1;
 hpx_mctx_context_t * mctx2;
+hpx_mctx_context_t ** mctxs;
+char * swap_msg;
 int * context_counter;
+unsigned int swap_idx;
+unsigned int swap_pos;
+unsigned int num_mctxs;
+
+char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is the little-death that brings total obliteration. I will face my fear.  I will permit it to pass over me and through me.  And when it has gone past I will turn the inner eye to see its path.  Where the fear has gone there will be nothing... Only I will remain.";
 
 
 int register_crusher(int a, int b, char c) {
@@ -326,6 +334,9 @@ void run_getcontext(uint64_t mflags) {
     /* FTW = 11111000b = 0xF8 */
     sprintf(msg, "Abridged FPU tag word was not saved (expected 0xF8, got %02x).", mctx.regs.fpregs.ftw);
     ck_assert_msg(mctx.regs.fpregs.ftw == 0xF8, msg);
+
+    /* we would check our last non-control fopcode here but that might be turned off and we */
+    /* can't check it unless we're in Ring 0.  that is, we're screwed. */
   }
 
   /* test crushed SSE unit */
@@ -417,7 +428,6 @@ void run_getcontext(uint64_t mflags) {
 
   /* test our signal set */
   if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
-    printf("sigs == %d\n", mctx.sigs);
     ck_assert_msg(sigismember(&mctx.sigs, SIGTERM) == 1, "Signals were not saved (expected SIGTERM).");
     ck_assert_msg(sigismember(&mctx.sigs, SIGABRT) == 1, "Signals were not saved (expected SIGABRT).");
     ck_assert_msg(sigismember(&mctx.sigs, SIGPIPE) == 1, "Signals were not saved (expected SIGPIPE).");
@@ -525,6 +535,98 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
 
   hpx_free(mctx2);
   hpx_free(mctx1);
+}
+
+
+void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * msg, unsigned int msg_len) {
+  hpx_mctx_context_t * my_mctx = mctxs[swap_idx];
+  hpx_mctx_context_t * next_mctx;
+
+  while (swap_pos < msg_len) {
+    swap_msg[swap_pos] = msg[swap_pos];
+    swap_pos += 1;
+   
+    swap_msg[swap_pos] = '\0';
+
+    swap_idx = (++swap_idx % num_mctxs);
+    next_mctx = mctxs[swap_idx];
+
+    hpx_mctx_swapcontext(my_mctx, next_mctx, mcfg, mflags);
+  }
+}
+
+
+void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * orig_msg, unsigned int orig_len) {
+  hpx_mctx_context_t * mctx;
+  hpx_context_t * ctx;
+  unsigned int idx;
+  char msg[128 + orig_len + 1];  // yeah, I know this is sooper secure
+
+  /* get a thread context */
+  ctx = hpx_ctx_create();
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create the main machine context */
+  main_mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+  ck_assert_msg(main_mctx != NULL, "Could not allocate a main machine context.");
+
+  /* create child machine contexts */
+  mctxs = (hpx_mctx_context_t **) hpx_alloc(sizeof(hpx_mctx_context_t *) * num_mctx);
+  ck_assert_msg(mctxs != NULL, "Could not create machine child contexts.");
+
+  /* initialize our other stuff */
+  swap_msg = (char *) hpx_alloc(sizeof(char) * (orig_len + 1));
+  ck_assert_msg(swap_msg != NULL, "Could not allocate a context swap message buffer.");
+
+  swap_msg[0] = '\0';
+  swap_idx = 0;
+  swap_pos = 0;
+  num_mctxs = num_mctx;
+
+  /* get our main context */
+  hpx_mctx_getcontext(main_mctx, ctx->mcfg, mflags);
+
+  /* initialize our contexts */
+  if (swap_pos == 0) {
+    memset(main_mctx, 0, sizeof(hpx_mctx_context_t));
+    for (idx = 0; idx < num_mctx; idx++) {
+      mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+      ck_assert_msg(mctx != NULL, "Could not allocate machine child context %d.", idx);
+
+      memset(mctx, 0, sizeof(hpx_mctx_context_t));
+
+      mctx->ss = 1024;
+      mctx->sp = (void *) hpx_alloc(mctx->ss);
+      sprintf(msg, "Could not allocate stack (%d bytes) for machine context %d.", mctx->ss, idx);
+      ck_assert_msg(mctx->sp != NULL, msg);
+  
+      mctx->link = main_mctx;
+      hpx_mctx_makecontext(mctx, ctx->mcfg, mflags, swapcontext_copy_chain_worker, 4, ctx->mcfg, mflags, orig_msg, orig_len);
+   
+      mctxs[idx] = mctx;
+    }
+  }
+
+  hpx_mctx_swapcontext(main_mctx, mctxs[0], ctx->mcfg, mflags);
+
+  sprintf(msg, "Index was not incremented during context swap (expected %d, got %d).", orig_len, swap_pos);
+  ck_assert_msg(swap_pos == orig_len, msg);
+
+  sprintf(msg, "String was not copied (got: \"%s\")", swap_msg);
+  ck_assert_msg((strcmp(swap_msg, orig_msg) == 0), msg);
+
+  /* clean up */
+  hpx_free(swap_msg);
+
+  for (idx = 0; idx < num_mctxs; idx++) {
+    mctx = mctxs[idx];
+    hpx_free(mctx->sp);
+    hpx_free(mctx);
+  }
+
+  hpx_free(mctxs);
+  hpx_free(main_mctx);
+  hpx_ctx_destroy(ctx);
 }
 
 
@@ -945,6 +1047,105 @@ END_TEST
 
 
 
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and one machine context
+ --------------------------------------------------------------------
+*/
 
+START_TEST (test_libhpx_mctx_swapcontext_chain1)
+{
+  run_swapcontext_copy_chain(0, 1, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and two machine contexts
+  switchin in a chain
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain2)
+{
+  run_swapcontext_copy_chain(0, 2, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 310 machine contexts
+  switching in a chain
+
+  (310 machine contexts is the length of the string - 1)
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain310)
+{
+  run_swapcontext_copy_chain(0, 310, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 311 machine contexts
+  switching in a chain
+
+  (311 is the length of the string, or one context per character)
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain311)
+{
+  run_swapcontext_copy_chain(0, 311, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 312 machine contexts
+  switching in a chain
+
+  (312 is the length of the string + 1)
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain312)
+{
+  run_swapcontext_copy_chain(0, 312, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 8000 machine
+  contexts switching in a chain
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain8000)
+{
+  run_swapcontext_copy_chain(0, 8000, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: hpx_mctx_swapcontext with no flags and 90000 machine contexts
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_mctx_swapcontext_chain90000)
+{
+  run_swapcontext_copy_chain(0, 90000, swap_const_msg1, strlen(swap_const_msg1));
+}
+END_TEST
 
 
