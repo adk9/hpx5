@@ -20,21 +20,21 @@
 
 #include "arch/x86_64/hpx_mconfig_defs.h"
 	
-.intel_syntax
+.intel_syntax noprefix
 
 .align 8
-.globl __fpu_crusher, __sse_crusher
+.globl HPX_CDECL(_fpu_crusher), HPX_CDECL(_sse_crusher)
 
 .text
 	
 	
 # --------------------------------------------------------------------
-#  __fpu_crusher
+#  _fpu_crusher
 #
 #  Put some stuff to test in the FPU (if we have one).
 # --------------------------------------------------------------------
 
-__fpu_crusher:
+HPX_CDECL(_fpu_crusher):
 	push		rbp
 	movq		rbp,rsp
 
@@ -65,7 +65,7 @@ t_no_fpu:
 #  Put some stuff to test in the SSE registers (if we have them).
 # --------------------------------------------------------------------
 
-__sse_crusher:
+HPX_CDECL(_sse_crusher):
 	push		rbp
 	movq		rbp,rsp
 

@@ -13,3 +13,6 @@ if CPU_X86_64
 endif
 
 hpxtest_SOURCES += $(ARCH_SRC)
+
+99_hpxtest.o:
+	objcopy --remove-leading-char 99_hpxtest.o 99_hpxtest.o

@@ -20,25 +20,34 @@
 
 #include "arch/x86_64/hpx_mconfig_defs.h"
 	
-.intel_syntax
+.intel_syntax noprefix
 
 #ifdef __APPLE__
-  #include <sys/syscall.h>
+#include <sys/syscall.h>
+#elif __linux__
+#include <sys/syscall.h>
 #endif
-
+	
+	
 .align 8
-.globl _hpx_mctx_getcontext,_hpx_mctx_setcontext,_hpx_mctx_swapcontext,__hpx_mctx_trampoline
+.globl HPX_CDECL(hpx_mctx_getcontext),HPX_CDECL(hpx_mctx_setcontext),HPX_CDECL(hpx_mctx_swapcontext),HPX_CDECL(_hpx_mctx_trampoline)
 
+#ifdef __linux__
+.type  HPX_CDECL(hpx_mctx_getcontext), %function
+.type  HPX_CDECL(hpx_mctx_setcontext), %function
+.type  HPX_CDECL(hpx_mctx_swapcontext), %function
+#endif
+	
 .text
 	
 	
 # --------------------------------------------------------------------
-#  __hpx_mctx_trampoline
+#  _hpx_mctx_trampoline
 #
 #  Trampoline function for hpx_mctx_makecontext_va
 # --------------------------------------------------------------------
 
-__hpx_mctx_trampoline:
+HPX_CDECL(_hpx_mctx_trampoline):
 	# hpx_mctx_makecontext_va stored our stack pointer in RBX
 	movq		rsp,rbx
 
@@ -79,8 +88,8 @@ tr_procexit:
 #
 #  A replacement for the deprecated POSIX getcontext() function.
 # --------------------------------------------------------------------
-	
-_hpx_mctx_getcontext:
+
+HPX_CDECL(hpx_mctx_getcontext):
 	# save function call arguments
 	leaq		rax,[rdi]
 	movq		[rax+_HPX_MCTX_O_RDI],rdi
@@ -130,9 +139,7 @@ g_no_extstate:
 	# save the set of blocked signals
 	test		rdx,2
 	jz		g_no_signals
-	xchgq		rax,r11
 
-#ifdef __APPLE__
 	# evidently BSD has different "classes" of syscalls.
 	# we only use the bottom 32 bits of RAX to pass the index.
 	#
@@ -148,16 +155,24 @@ g_no_extstate:
 	# having a stack frame might screw up the registers
 	# we're trying to save/restore.  Like RSP, RBP, and
 	# RBX (which is used as a PIC register in BSD/Darwin).
-	
+	#
+	# on Linux, we use SYS_rt_sigprocmask instead of a
+	# call to pthread_sigmask.  It requires a 4th argument,
+	# which is the size of the signal mask.  It's passed
+	# via R10, not RCX (as on Darwin).
 	enter		32,0
+	movq		rdi,_HPX_MCTX_SIG_BLOCK
+	xor		rsi,rsi
+	leaq		rdx,[rax+_HPX_MCTX_O_SIGMASK]
+#ifdef __APPLE__
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
-	mov		rdi,_HPX_MCTX_SIG_BLOCK
-	xor		rsi,rsi
-	leaq		rdx,[r11+_HPX_MCTX_O_SIGMASK]
+#elif __linux__
+	movq		rax,SYS_rt_sigprocmask
+	movq		r10,8
+#endif
 	syscall
 	leave
-#endif
 	
 g_no_signals:	
 	xor		rax,rax
@@ -171,31 +186,37 @@ g_no_signals:
 #  A replacement for the deprecated POSIX setcontext() function.
 # --------------------------------------------------------------------
 
+HPX_CDECL(hpx_mctx_setcontext):
 tr_setcontext_local:	
-_hpx_mctx_setcontext:
+	leaq		rax,[rdi]
+
 	# restore the set of blocked signals
 	test		rdx,2
 	jz		s_no_signals
 	
-	movq		r9,rdi
-	movq		r10,rsi
+	movq		r8,rdi
+	movq		r9,rsi
 	movq		r11,rdx
-	
-#ifdef __APPLE__
+
 	enter		32,0
+	mov		rdi,_HPX_MCTX_SIG_SETMASK
+	leaq		rsi,[rax+_HPX_MCTX_O_SIGMASK]
+	xor		rdx,rdx
+#ifdef __APPLE__
 	leaq		rcx,[rdi]
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
-	mov		rdi,_HPX_MCTX_SIG_SETMASK
-	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
-	xor		rdx,rdx
+#elif __linux__
+	leaq		r11,[rdi]
+	movq		rax,SYS_rt_sigprocmask
+	movq		r10,8
+#endif
 	syscall
 	leave
-#endif
 
 	xchgq		rdx,r11
-	xchgq		rsi,r10
-	xchgq		rdi,r9
+	xchgq		rsi,r9
+	xchgq		rdi,r8
 
 s_no_signals:	
 	leaq		rax,[rdi]
@@ -206,7 +227,7 @@ s_no_signals:
 	leaq		r10,[rax+_HPX_MCTX_O_FPREGS]
 
 	# restore the FPU state using FXRSTOR if supported
-	test		rcx,2
+	test		rsi,2
 	jz		s_no_fxrstor
 
 	fxrstor		[r10]
@@ -252,7 +273,7 @@ s_no_extstate:
 #  A replacement for the deprecated POSIX swapcontext() function.  
 # --------------------------------------------------------------------
 
-_hpx_mctx_swapcontext:
+HPX_CDECL(hpx_mctx_swapcontext):
 	# save function call arguments
 	leaq		rax,[rdi]
 	movq		[rax+_HPX_MCTX_O_RDI],rdi
@@ -299,38 +320,50 @@ swg_no_extstate:
 	movq		[rax+_HPX_MCTX_O_RSP],r10
 
 	# save the set of blocked signals if we're supposed to
-	test		rcx,0x0000000000000002
+	test		rcx,2
 	jz		swg_no_signals
 
 	# preserve registers that are clobbered by the syscall
 	# note that we don't care about RDI after this
-	movq		r10,rsi
-	movq		r11,rdx
+	movq		r8,rsi
+	movq		r9,rdx
+	movq		r11,rcx
 	
-#ifdef __APPLE__
 	# save the current signal mask
 	enter		32,0
-	leaq		rdx,[rax+_HPX_MCTX_O_SIGMASK]
-	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
-	addq		rax,SYS___pthread_sigmask
 	mov		rdi,_HPX_MCTX_SIG_BLOCK
 	xor		rsi,rsi
-	syscall
-
-	# set the new signal mask
-	leaq		r9,[r10]
+	leaq		rdx,[rax+_HPX_MCTX_O_SIGMASK]
+#ifdef __APPLE__
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
+	syscall
+#elif __linux__
+	movq		r10,8
+	movq		rax,SYS_rt_sigprocmask
+	syscall
+#endif
+
+	# set the new signal mask
+	movq		rcx,[r8]
 	mov		rdi,_HPX_MCTX_SIG_SETMASK
 	leaq		rsi,[rcx+_HPX_MCTX_O_SIGMASK]
 	xor		rdx,rdx
+
+#ifdef __APPLE__
+	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+	addq		rax,SYS___pthread_sigmask
+#elif __linux__
+	movq		rax,SYS_rt_sigprocmask
+	movq		r10,8
+#endif
 	syscall
 	leave
-#endif
-
+	
 	# restore clobbered registers (that we care about)
-	xchgq		rdx,r11
-	xchgq		rsi,r10
+	xchgq		rcx,r11
+	xchgq		rdx,r9
+	xchgq		rsi,r8
 
 swg_no_signals:	
 	leaq		rax,[rsi]

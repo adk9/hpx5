@@ -52,19 +52,19 @@ unsigned int num_mctxs;
 #ifdef __APPLE__
   /* https://developer.apple.com/library/mac/#qa/qa1398/_index.html */
   static mach_timebase_info_data_t tbi;
-
-  hpxtest_ts_t * main_ts;
-  hpxtest_ts_t ** mctx_ts;
-  uint64_t ts_elapsed;
-  uint64_t ts_runs;
-
-  double mean_ts;
-  double mode_ts;
-  double med_ts;
-  double stdev_ts;
-  uint64_t min_ts;
-  uint64_t max_ts;
 #endif
+
+hpxtest_ts_t * main_ts;
+hpxtest_ts_t ** mctx_ts;
+uint64_t ts_elapsed;
+uint64_t ts_runs;
+
+double mean_ts;
+double mode_ts;
+double med_ts;
+double stdev_ts;
+uint64_t min_ts;
+uint64_t max_ts;
 
 char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is the little-death that brings total obliteration. I will face my fear.  I will permit it to pass over me and through me.  And when it has gone past I will turn the inner eye to see its path.  Where the fear has gone there will be nothing... Only I will remain.";
 
@@ -315,13 +315,13 @@ void run_getcontext(uint64_t mflags) {
   ck_assert_msg(mctx.regs.rip != 0, "Instruction pointer was not saved.");
 
   /* test function call registers */
-  sprintf(msg, "First argument passing register (RDI) was not saved (expected %d, got %d).", (uint64_t) &mctx, mctx.regs.rdi);
+  sprintf(msg, "First argument passing register (RDI) was not saved (expected %ld, got %ld).", (uint64_t) &mctx, mctx.regs.rdi);
   ck_assert_msg(mctx.regs.rdi == (uint64_t) &mctx, msg);
 
-  sprintf(msg, "Second argument passing register (RSI) was not saved (expected %d, got %d).", (uint64_t) ctx->mcfg, mctx.regs.rsi);
+  sprintf(msg, "Second argument passing register (RSI) was not saved (expected %ld, got %ld).", (uint64_t) ctx->mcfg, mctx.regs.rsi);
   ck_assert_msg(mctx.regs.rsi == (uint64_t) ctx->mcfg, msg);
 
-  sprintf(msg, "Third argument passing register (RDX) was not saved (expected %d, got %d).", mflags, mctx.regs.rdx);
+  sprintf(msg, "Third argument passing register (RDX) was not saved (expected %ld, got %ld).", mflags, mctx.regs.rdx);
   ck_assert_msg(mctx.regs.rdx == mflags, msg);
 
   /* test crushed FPU */
@@ -620,7 +620,7 @@ void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * o
 
       mctx->ss = 1024;
       mctx->sp = (void *) hpx_alloc(mctx->ss);
-      sprintf(msg, "Could not allocate stack (%d bytes) for machine context %d.", mctx->ss, idx);
+      sprintf(msg, "Could not allocate stack (%d bytes) for machine context %d.", (uint32_t) mctx->ss, idx);
       ck_assert_msg(mctx->sp != NULL, msg);
   
       mctx->link = main_mctx;
@@ -771,7 +771,7 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   ck_assert_msg(swap_pos == (num_mctxs * 1024), msg);
 
   for (idx = 0; idx < (num_mctxs * 1024); idx++) {
-    sprintf(msg, "Swap buffer is incorrect at position %d (expected 73, got %d).", swap_msg[idx]);
+    sprintf(msg, "Swap buffer is incorrect at position %d (expected 73, got %d).", idx, (int) swap_msg[idx]);
     ck_assert_msg(swap_msg[idx] == 73, msg);
   }
 
@@ -1362,7 +1362,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1)
 {
   run_swapcontext_memset_star(0, 1);
 
-  printf("test_libhpx_mctx_swapcontext_star1,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  printf("test_libhpx_mctx_swapcontext_star1,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1378,7 +1378,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star2)
 {
   run_swapcontext_memset_star(0, 2);
 
-  printf("test_libhpx_mctx_swapcontext_star2,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  printf("test_libhpx_mctx_swapcontext_star2,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1394,7 +1394,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star10)
 {
   run_swapcontext_memset_star(0, 10);
 
-  printf("test_libhpx_mctx_swapcontext_star10,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  printf("test_libhpx_mctx_swapcontext_star10,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1410,7 +1410,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1000)
 {
   run_swapcontext_memset_star(0, 1000);
 
-  printf("test_libhpx_mctx_swapcontext_star1000,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  printf("test_libhpx_mctx_swapcontext_star1000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1426,7 +1426,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000)
 {
   run_swapcontext_memset_star(0, 5000);
   
-  printf("test_libhpx_mctx_swapcontext_star5000,%d,%.1f,%d,%d,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  printf("test_libhpx_mctx_swapcontext_star5000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
