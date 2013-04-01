@@ -35,6 +35,19 @@
 
 /*
  --------------------------------------------------------------------
+  Macros
+ --------------------------------------------------------------------
+*/
+
+#ifdef __APPLE__
+#define HPX_CDECL(label) _##label
+#else
+#define HPX_CDECL(label) label
+#endif
+
+
+/*
+ --------------------------------------------------------------------
   SYSCALL Defines
  --------------------------------------------------------------------
 */
@@ -43,7 +56,11 @@
   #define _HPX_MACH_SYSCALL_CLASS_ID                        0x2000000
   #define _HPX_MCTX_SIG_BLOCK                                       1
   #define _HPX_MCTX_SIG_SETMASK                                     3
+#elif __linux__
+  #define _HPX_MCTX_SIG_BLOCK                                       0
+  #define _HPX_MCTX_SIG_SETMASK                                     2
 #endif
+
 
 /*
  --------------------------------------------------------------------

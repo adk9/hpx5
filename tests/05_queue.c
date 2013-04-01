@@ -60,7 +60,7 @@ START_TEST (test_libhpx_queue_insert)
   }
 
   cnt = hpx_queue_size(&q);
-  sprintf(msg, "Queue does not have the correct number of elements (expected 7, got %d)");
+  sprintf(msg, "Queue does not have the correct number of elements (expected 7, got %d).", cnt);
   ck_assert_msg(cnt == 7, msg);
 
   hpx_queue_destroy(&q);

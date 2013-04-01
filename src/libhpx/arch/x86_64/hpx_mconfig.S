@@ -20,35 +20,33 @@
 
 #include "arch/x86_64/hpx_mconfig_defs.h"
 	
-.intel_syntax
+.intel_syntax noprefix
 
-.globl _hpx_mconfig_get_flags
+.globl HPX_CDECL(hpx_mconfig_get_flags)
 
+#ifdef __linux__
+.type HPX_CDECL(hpx_mconfig_get_flags), %function
+#endif
 	
 .text
 
+	
 # --------------------------------------------------------------------
 #  hpx_mconfig_get_flags
 #
 #  Fetches CPU features that we're interested in.
 # --------------------------------------------------------------------
 	
-_hpx_mconfig_get_flags:
-	# we have to save RBX on Darwin (Mac OS X) because the
-	# opcode generated for CPUID obliterates it.
-#ifdef __APPLE__	
+HPX_CDECL(hpx_mconfig_get_flags):
+	# we have to save RBX because CPUID obliterates it.
 	movq	r10,rbx
-#endif
 	
 	# assume we can execute CPUID since we are on an x86_64
 	# architecture CPU.  this might be naive. 
 	mov	eax,1
 	cpuid
 
-#ifdef __APPLE__
 	xchgq	rbx,r10
-#endif
-
 	xor	rax,rax
 	
 	# do we have an FPU?
