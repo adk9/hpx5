@@ -556,13 +556,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LTCPPASCOMPILE) -c -o $@ $<
 
-99_hpxtest.o: arch/x86_64/99_hpxtest.S
-@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -MT 99_hpxtest.o -MD -MP -MF $(DEPDIR)/99_hpxtest.Tpo -c -o 99_hpxtest.o `test -f 'arch/x86_64/99_hpxtest.S' || echo '$(srcdir)/'`arch/x86_64/99_hpxtest.S
-@am__fastdepCCAS_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/99_hpxtest.Tpo $(DEPDIR)/99_hpxtest.Po
-@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS)source='arch/x86_64/99_hpxtest.S' object='99_hpxtest.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -c -o 99_hpxtest.o `test -f 'arch/x86_64/99_hpxtest.S' || echo '$(srcdir)/'`arch/x86_64/99_hpxtest.S
-
 99_hpxtest.obj: arch/x86_64/99_hpxtest.S
 @am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -MT 99_hpxtest.obj -MD -MP -MF $(DEPDIR)/99_hpxtest.Tpo -c -o 99_hpxtest.obj `if test -f 'arch/x86_64/99_hpxtest.S'; then $(CYGPATH_W) 'arch/x86_64/99_hpxtest.S'; else $(CYGPATH_W) '$(srcdir)/arch/x86_64/99_hpxtest.S'; fi`
 @am__fastdepCCAS_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/99_hpxtest.Tpo $(DEPDIR)/99_hpxtest.Po
@@ -982,6 +975,9 @@ uninstall-am:
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	recheck tags tags-am uninstall uninstall-am
 
+
+99_hpxtest.o:
+	objcopy --remove-leading-char 99_hpxtest.o 99_hpxtest.o
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
