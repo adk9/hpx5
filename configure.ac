@@ -5,7 +5,7 @@ AM_PROG_AR
 
 LT_INIT
 
-AC_PROG_CC
+AC_PROG_CC([icc gcc])
 AM_PROG_CC_C_O
 AM_PROG_AS
 
