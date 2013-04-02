@@ -39,7 +39,7 @@ extern _hpx_mctx_trampoline(void);
  --------------------------------------------------------------------
 */
 
-void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, va_list * argv) {
+void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mctx_context_t * link_mctx, void * stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, va_list * argv) {
   uint64_t * sp;
   uint64_t * reg;
   int arg_cnt;
@@ -47,13 +47,22 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mconfig_t mcfg, uint
   int idx;
 
   /* set up our stack frame and make room for stuff */
-  sp = (uint64_t *) mctx->sp + (mctx->ss / sizeof(uint64_t));
-  
+  mctx->sp = stk;
+  mctx->ss = ss;
+
+  /* initialize our new machine context, if we have a link */
+  if (link_mctx) {
+    memcpy(mctx, link_mctx, sizeof(hpx_mctx_context_t));
+  }
+
+  sp = (uint64_t *) stk + (ss / sizeof(uint64_t));  
+
   (argc > 6) ? (sp_cnt = (argc - 6)) : (sp_cnt = 0);
   sp -= (5 + sp_cnt);  
 
   /* save our context linkage to the new stack */
-  sp[4 + sp_cnt] = (uint64_t) mctx->link;
+  sp[4 + sp_cnt] = (uint64_t) link_mctx;
+  mctx->link = link_mctx;
 
   /* save our machine configuration flags to the new stack */
   sp[3 + sp_cnt] = (uint64_t) mcfg;
@@ -103,10 +112,10 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mconfig_t mcfg, uint
 */
 
 
-void hpx_mctx_makecontext(hpx_mctx_context_t * mctx, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, ...) {
+void hpx_mctx_makecontext(hpx_mctx_context_t * mctx, hpx_mctx_context_t * link_mctx, void * stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, ...) {
   va_list argv;
 
   va_start(argv, argc);
-  hpx_mctx_makecontext_va(mctx, mcfg, mflags, func, argc, &argv);
+  hpx_mctx_makecontext_va(mctx, link_mctx, stk, ss, mcfg, mflags, func, argc, &argv);
   va_end(argv);
 }

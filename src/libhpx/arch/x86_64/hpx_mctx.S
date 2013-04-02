@@ -52,7 +52,7 @@ HPX_CDECL(_hpx_mctx_trampoline):
 	movq		rsp,rbx
 
 	# arguments to hpx_mctx_setcontext got pushed on the stack
-	popq		r10
+	popq		rbx
 	popq		rdx
 	popq		rsi
 	popq		rdi
@@ -60,8 +60,8 @@ HPX_CDECL(_hpx_mctx_trampoline):
 	# since we used RBX to pass our stack pointer, we have
 	# to restore it.  at least under Darwin.
 	leaq		rax,[rdi]
-	movq		[rax+_HPX_MCTX_O_RBX],r10
-
+	movq		[rax+_HPX_MCTX_O_RBX],rbx
+	
 	# make sure we have a context to switch to.  this could
 	# be zero because the caller didn't set a link to a
 	# previous context
@@ -72,13 +72,13 @@ HPX_CDECL(_hpx_mctx_trampoline):
 
 	# exit the process if mctx->link is NULL, with exit(0)
 tr_procexit:
+	movq		rax,SYS_exit
 #ifdef __APPLE__
-	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
-	addq		rax,SYS_exit
+	addq		rax,_HPX_MACH_SYSCALL_CLASS_ID
+#endif
 	xor		rdi,rdi
 	syscall
-#endif
-
+	
 	# we should never get here.  if we do, burn it all down
 	hlt
 
@@ -299,7 +299,7 @@ HPX_CDECL(hpx_mctx_swapcontext):
 	# save the FPU control state & registers using FXSAVE
 	test		rdx,_HPX_MCONFIG_HAS_FXSR
 	jz		swg_no_fxsave
-	
+
 	fxsave		[r10]
 	fnclex
 	jmp		swg_fxsave_done
