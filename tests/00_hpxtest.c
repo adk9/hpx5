@@ -34,6 +34,7 @@
 #include "05_queue.c"
 #include "06_kthread.c"
 #include "07_mctx.c"
+#include "08_thread2.c"
 
 
 /*
@@ -45,6 +46,10 @@
 int main(int argc, char * argv[]) {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
+  char * long_tests = NULL;
+
+  /* figure out if we need to run long-running tests */
+  long_tests = getenv("HPXTEST_EXTENDED");
 
   /* install fixtures */
   tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
@@ -128,8 +133,41 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1);
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2);
   tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_sig);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_sig);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_sig);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext_sig);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext_sig);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext_sig);
+  }
+
+  /* test threads (stage 2) */
+  tcase_add_test(tc, test_libhpx_thread_yield1_core1);
 
   suite_add_tcase(s, tc);
 
