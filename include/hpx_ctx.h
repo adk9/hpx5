@@ -51,17 +51,12 @@ static hpx_context_id_t __ctx_next_id;
 /* the context handle */ 
 typedef struct {
   hpx_context_id_t cid;
-
-  hpx_queue_t q_pend;
-  hpx_queue_t q_exe;
-  hpx_queue_t q_block;
-  hpx_queue_t q_susp;
-  hpx_queue_t q_term;
-
   hpx_kthread_t ** kths;
-  long kths_count;
+  uint32_t kths_count;
+  uint32_t kths_idx;
 
   hpx_mconfig_t mcfg;
+  uint64_t mflags;
 } hpx_context_t;
 
 
@@ -71,7 +66,7 @@ typedef struct {
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(void);
+hpx_context_t * hpx_ctx_create(uint64_t mflags);
 void hpx_ctx_destroy(hpx_context_t *);
 hpx_context_id_t hpx_ctx_get_id(hpx_context_t *);
 

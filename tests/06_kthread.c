@@ -28,6 +28,8 @@ int some_data;
 
 void * __set_some_data(void * ptr) {
   some_data = 73;
+
+  return NULL;
 }
 
 
@@ -60,7 +62,7 @@ START_TEST (test_libhpx_kthread_create)
 
   /* create the thread */
   some_data = 0;
-  kth = hpx_kthread_create(__set_some_data);
+  kth = hpx_kthread_create(__set_some_data, 0, 0);
   ck_assert_msg(kth != NULL, "Kernel thread was NULL.");
 
   sleep(1);

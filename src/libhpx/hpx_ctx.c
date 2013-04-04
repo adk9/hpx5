@@ -37,7 +37,7 @@
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(void) {
+hpx_context_t * hpx_ctx_create(uint64_t mflags) {
   hpx_context_t * ctx = NULL;
   long cores;
   long x;
@@ -51,39 +51,37 @@ hpx_context_t * hpx_ctx_create(void) {
     __ctx_next_id += 1;
 
     /* kernel threads */
+    _hpx_kthread_init();
     cores = hpx_kthread_get_cores();
     if (cores <= 0) {
       __hpx_errno = HPX_ERROR_KTH_CORES;
       goto __hpx_ctx_create_FAIL;
     }
 
+    /* get the CPU configuration and set switching flags */
+    ctx->mcfg = hpx_mconfig_get();
+    ctx->mflags = mflags;
+
     ctx->kths = (hpx_kthread_t **) hpx_alloc(cores * sizeof(hpx_kthread_t *));
     if (ctx->kths != NULL) {
       for (x = 0; x < cores; x++) {
-        ctx->kths[x] = hpx_kthread_create(hpx_kthread_seed_default);
+        ctx->kths[x] = hpx_kthread_create(hpx_kthread_seed_default, ctx->mcfg, mflags);
+
         if (ctx->kths[x] == NULL) {
           goto __hpx_ctx_create_FAIL;
-	} else {
-          ctx->kths_count = cores;
-	}
+	} 
       }    
     } else {
       __hpx_errno = HPX_ERROR_NOMEM;
       goto __hpx_ctx_create_FAIL;
     }
-
-    /* user thread queues */
-    hpx_queue_init(&ctx->q_pend);
-    hpx_queue_init(&ctx->q_exe);
-    hpx_queue_init(&ctx->q_block);
-    hpx_queue_init(&ctx->q_susp);
-    hpx_queue_init(&ctx->q_term);
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
   }
 
-  /* get the CPU configuration */
-  ctx->mcfg = hpx_mconfig_get_flags();
+  /* set the core count and index */
+  ctx->kths_count = cores;
+  ctx->kths_idx = 0;
 
   return ctx;
 
@@ -112,6 +110,11 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
     hpx_kthread_destroy(ctx->kths[x]);
   }  
 
+  for (x = 0; x < ctx->kths_count; x++) {
+    //    hpx_free(ctx->kths[x]->mctx);
+  }
+
+  hpx_free(ctx->kths);
   hpx_free(ctx);
 }
 

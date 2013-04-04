@@ -324,7 +324,7 @@ void run_getcontext(uint64_t mflags) {
   sigset_t sigs;
 
   /* get a thread context */
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   memset(&mctx, 0, sizeof(hpx_mctx_context_t));
@@ -426,7 +426,7 @@ void run_setcontext_counter(uint64_t mflags) {
   char msg[128];
 
   /* get a thread context */
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   context_counter = (int *) malloc(sizeof(int));
@@ -478,7 +478,7 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
   ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
 
   /* get a thread context */
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* allocate our test counter */ 
@@ -504,7 +504,7 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
   va_end(argv);
 
   /* crush some registers */
-  register_crusher(4,92, 'z');
+  register_crusher(4, 92, 'z');
  
   /* keep switching back into a new context until our counter is updated */
   if (*context_counter < mk_limit) {
@@ -562,7 +562,7 @@ void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * o
   char * stk;
 
   /* get a thread context */
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create the main machine context */
@@ -696,7 +696,7 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   void * stk;
 
   /* get a thread context */
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create a main machine context */

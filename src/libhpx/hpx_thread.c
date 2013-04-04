@@ -35,7 +35,7 @@
  --------------------------------------------------------------------
 */
 
-hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, hpx_thread_func_t func, void * args) {
+hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) {
   hpx_thread_t * th = NULL;
 
   /* allocate the thread */
@@ -43,13 +43,32 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, hpx_thread_func_t func, vo
   if (th != NULL) {
     /* initialize the thread */
     memset(th, 0, sizeof(hpx_thread_t));
-    th->state = HPX_THREAD_STATE_PENDING;
+    th->state = HPX_THREAD_STATE_INIT;
     th->func = func;
     th->args = args;
 
-    /* put the thread in the pending queue */
-    /* this should really be the suspended queue, so this will change later */
-    hpx_queue_push(&ctx->q_pend, th);
+    /* create a stack to use */
+    th->ss = 8192;
+    th->stk = (void *) hpx_alloc(th->ss);
+    if (th->stk == NULL) {
+      hpx_free(th);
+      return NULL;
+    }
+
+    /* create a machine context buffer */
+    th->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+    if (th->mctx == NULL) {
+      hpx_free(th->stk);
+      hpx_free(th);
+      return NULL;
+    }
+
+    /* get a kernel thread to run this on */
+    /* we'll assume for now that we aren't pegging threads to a specific core */
+    ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
+    th->kth = ctx->kths[ctx->kths_idx];
+
+    _hpx_kthread_push_pending(th->kth, th);
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
   }
@@ -67,6 +86,11 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, hpx_thread_func_t func, vo
 */
 
 void hpx_thread_destroy(hpx_thread_t * th) {
+  if (th->stk != NULL) {
+    hpx_free(th->mctx);
+    hpx_free(th->stk);
+  }
+
   hpx_free(th);
 }
 
@@ -86,12 +110,21 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t * th) {
 
 /*
  --------------------------------------------------------------------
-  hpx_thread_set_state
+  hpx_thread_self
 
-  Sets the queuing state of the thread.
+  Returns a pointer to thread data about the currently running 
+  HPX thread.
  --------------------------------------------------------------------
 */
 
-void hpx_thread_set_state(hpx_thread_t * th, hpx_thread_state_t state) {
-  th->state = state;
+hpx_thread_t * hpx_thread_self(void) {
+  struct _hpx_kthread_t * kth;
+  hpx_thread_t * th = NULL;
+
+  kth = hpx_kthread_self();
+  if (kth != NULL) {
+    th = kth->exec_th;
+  }
+
+  return th;
 }

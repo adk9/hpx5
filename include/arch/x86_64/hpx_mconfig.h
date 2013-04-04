@@ -45,6 +45,6 @@ typedef uint64_t hpx_mconfig_t;
  --------------------------------------------------------------------
 */
 
-hpx_mconfig_t hpx_mconfig_get_flags(void);
+hpx_mconfig_t hpx_mconfig_get(void);
 
 #endif

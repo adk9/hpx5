@@ -22,6 +22,7 @@
 
 #include "hpx_init.h"
 #include "hpx_ctx.h"
+#include "hpx_kthread.h"
 
 
 /*
@@ -42,7 +43,10 @@ hpx_error_t hpx_init(void) {
   __ctx_next_id = 0;
 
   /* get the global machine configuration */
-  __mcfg = hpx_mconfig_get_flags();
+  __mcfg = hpx_mconfig_get();
+
+  /* initialize kernel threads */
+  //_hpx_kthread_init();
 
   return HPX_SUCCESS;
 }
