@@ -34,7 +34,7 @@ START_TEST (test_libhpx_ctx_create)
 {
   hpx_context_t * ctx = NULL;
 
-  ctx = hpx_ctx_create();
+  ctx = hpx_ctx_create(0);
   ck_assert_msg(ctx != NULL, "ctx is NULL");
   hpx_ctx_destroy(ctx);
 } 
@@ -54,7 +54,7 @@ START_TEST (test_libhpx_ctx_get_id)
   int x;
 
   for (x = 0; x < 10; x++) {
-    ctx = hpx_ctx_create();
+    ctx = hpx_ctx_create(0);
 
     sprintf(msg, "ctx is NULL on loop iteration %d", x);
     ck_assert_msg(ctx != NULL, msg);

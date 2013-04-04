@@ -20,21 +20,20 @@
  ====================================================================
 */
 
-
-#include "hpx_kthread.h"
+#include <stdint.h>
+#include "hpx_mem.h"
+#include "hpx_ctx.h"
+#include "hpx_mctx.h"
 
 #pragma once
 #ifndef LIBHPX_THREAD_H_
 #define LIBHPX_THREAD_H_
 
-#include <stdint.h>
-#include "hpx_mem.h"
-#include "hpx_ctx.h"
-
 
 typedef uint64_t hpx_node_id_t;
 typedef uint64_t hpx_thread_id_t;
 typedef uint8_t  hpx_thread_state_t;
+struct _hpx_kthread_t;
 
 
 /*
@@ -43,10 +42,11 @@ typedef uint8_t  hpx_thread_state_t;
  --------------------------------------------------------------------
 */
 
-#define HPX_THREAD_STATE_SUSPENDED                                 0
+#define HPX_THREAD_STATE_INIT                                      0
 #define HPX_THREAD_STATE_PENDING                                   1
 #define HPX_THREAD_STATE_EXECUTING                                 2
 #define HPX_THREAD_STATE_BLOCKED                                   3
+#define HPX_THREAD_STATE_SUSPENDED                                 4
 #define HPX_THREAD_STATE_TERMINATED                                4
 
 
@@ -56,7 +56,7 @@ typedef uint8_t  hpx_thread_state_t;
  --------------------------------------------------------------------
 */
 
-typedef void *(*hpx_thread_func_t)(void *);
+//typedef void *(*hpx_thread_func_t)(void *);
 
 
 /*
@@ -69,13 +69,16 @@ typedef void *(*hpx_thread_func_t)(void *);
  --------------------------------------------------------------------
 */
 
-typedef struct {
-  hpx_node_id_t       nid;
-  hpx_thread_id_t     tid;
-  hpx_thread_state_t  state;
-  hpx_thread_func_t * func;
-  void *              args;
-  hpx_kthread_t *     kth;
+typedef struct _hpx_thread_t {
+  hpx_node_id_t           nid;
+  hpx_thread_id_t         tid;
+  hpx_thread_state_t      state;
+  void *                  func;
+  void *                  args;
+  void *                  stk;
+  size_t                  ss;
+  struct _hpx_kthread_t * kth;
+  hpx_mctx_context_t *    mctx;
 } hpx_thread_t;
 
 
@@ -85,12 +88,15 @@ typedef struct {
  --------------------------------------------------------------------
 */
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, hpx_thread_func_t, void *);
-void hpx_thread_destroy(hpx_thread_t *);
+hpx_thread_t * hpx_thread_create(hpx_context_t *, void *, void *);
+void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
 
-void hpx_thread_set_state(hpx_thread_t *, hpx_thread_state_t);
+void hpx_thread_exit(void **);
+void hpx_thread_yield(void);
+
+hpx_thread_t * hpx_thread_self(void);
 
 #endif
 

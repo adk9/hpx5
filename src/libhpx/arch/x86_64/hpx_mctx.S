@@ -33,9 +33,9 @@
 .globl HPX_CDECL(hpx_mctx_getcontext),HPX_CDECL(hpx_mctx_setcontext),HPX_CDECL(hpx_mctx_swapcontext),HPX_CDECL(_hpx_mctx_trampoline)
 
 #ifdef __linux__
-.type  HPX_CDECL(hpx_mctx_getcontext), %function
-.type  HPX_CDECL(hpx_mctx_setcontext), %function
-.type  HPX_CDECL(hpx_mctx_swapcontext), %function
+.type HPX_CDECL(hpx_mctx_getcontext), %function
+.type HPX_CDECL(hpx_mctx_setcontext), %function
+.type HPX_CDECL(hpx_mctx_swapcontext), %function
 #endif
 	
 .text
@@ -407,8 +407,9 @@ sws_no_extstate:
 	movq		rcx,[rax+_HPX_MCTX_O_RCX]
 	movq		r8,[rax+_HPX_MCTX_O_R8]
 	movq		r9,[rax+_HPX_MCTX_O_R9]
-
+	
 	movq		rdi,[rax+_HPX_MCTX_O_RDI]
 
 	xor		rax,rax
 	ret
+

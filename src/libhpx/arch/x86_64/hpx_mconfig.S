@@ -22,22 +22,22 @@
 	
 .intel_syntax noprefix
 
-.globl HPX_CDECL(hpx_mconfig_get_flags)
+.globl HPX_CDECL(hpx_mconfig_get)
 
 #ifdef __linux__
-.type HPX_CDECL(hpx_mconfig_get_flags), %function
+.type HPX_CDECL(hpx_mconfig_get), %function
 #endif
 	
 .text
 
 	
 # --------------------------------------------------------------------
-#  hpx_mconfig_get_flags
+#  hpx_mconfig_get
 #
 #  Fetches CPU features that we're interested in.
 # --------------------------------------------------------------------
 	
-HPX_CDECL(hpx_mconfig_get_flags):
+HPX_CDECL(hpx_mconfig_get):
 	# we have to save RBX because CPUID obliterates it.
 	movq	r10,rbx
 	

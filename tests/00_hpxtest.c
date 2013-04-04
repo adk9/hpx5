@@ -70,7 +70,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_ctx_get_id);
 
   /* test threads (stage 1) */
-  tcase_add_test(tc, test_libhpx_thread_create);
+  //  tcase_add_test(tc, test_libhpx_thread_create);
 
   /* test FIFO queues */
   tcase_add_test(tc, test_libhpx_queue_size);
