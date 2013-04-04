@@ -33,24 +33,84 @@
 
 char thread_msg1[] = "The open steppe, fleet horse, falcons at your wrist, and the wind in your hair.";
 char thread_msg2[] = "To crush your enemies, see them driven before you, and to hear the lamentation of their women.";
+char * test_buf;
 
 char * thread_msgbuf;
-hpx_thread_t * th1;
+hpx_thread_t * th_self;
+void * thread_arg;
+int thread_counter;
 
 
 /*
  --------------------------------------------------------------------
-  TEST HELPER: Worker Function for run_thread_yield_counter().
+  TEST HELPER: Worker Function for run_thread_counter_arg1
  --------------------------------------------------------------------
 */
 
-void thread_yield_counter_worker(void) {
-  hpx_thread_t * th = NULL;
-  uint8_t th_state = 0;
+void thread_counter_arg1_worker(void * a) {
+  int * a_ptr;
 
+  thread_arg = a;
+  a_ptr = (int *) a;
+  thread_counter += *a_ptr;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Worker Function for run_thread_self_ptr
+ --------------------------------------------------------------------
+*/
+
+void thread_self_ptr_worker(void) {
+  th_self = hpx_thread_self();
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Worker Function for run_thread_strcpy.
+ --------------------------------------------------------------------
+*/
+
+void thread_strcpy_worker(void) {
   strcpy(thread_msgbuf, thread_msg1);
+}
 
-  th1 = hpx_thread_self();
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Test Runner for thread_counters
+ --------------------------------------------------------------------
+*/
+
+void run_thread_args(uint64_t mflags) {
+  hpx_context_t * ctx;
+  hpx_thread_t * th1;
+  char msg[128];
+  int * th_arg_ptr;
+  int th_arg = 8473;
+
+  /* get a thread context */
+  ctx = hpx_ctx_create(mflags);
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create HPX theads */
+  th1 = hpx_thread_create(ctx, thread_counter_arg1_worker, &th_arg);
+
+  /* this hobbit is tricksy and false, but we aren't testing control objects yet */
+  sleep(5);
+
+  /* make sure we got the right arguments */
+  th_arg_ptr = thread_arg;
+  sprintf(msg, "Thread argument is not correct (expected 8473, got %d).", *th_arg_ptr);
+  ck_assert_msg(*th_arg_ptr == 8473, msg);
+
+  /* clean up */
+  hpx_thread_destroy(th1);  
+
+  hpx_ctx_destroy(ctx);
 }
 
 
@@ -60,7 +120,7 @@ void thread_yield_counter_worker(void) {
  --------------------------------------------------------------------
 */
 
-void run_thread_yield_counter(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char * orig_msg, size_t msg_len) {
+void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char * orig_msg, size_t msg_len) {
   hpx_context_t * ctx;
   hpx_thread_t * ths[th_cnt];
   uint64_t idx;
@@ -78,9 +138,10 @@ void run_thread_yield_counter(uint64_t mflags, uint64_t th_cnt, uint64_t core_cn
 
   /* create HPX theads */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, thread_yield_counter_worker, NULL);
+    ths[idx] = hpx_thread_create(ctx, thread_strcpy_worker, 0);
   }
 
+  /* this hobbit is tricksy and false, but we aren't testing control objects yet */
   sleep(5);
 
   /* clean up */
@@ -93,21 +154,176 @@ void run_thread_yield_counter(uint64_t mflags, uint64_t th_cnt, uint64_t core_cn
   ck_assert_msg(strcmp(thread_msgbuf, orig_msg) == 0, msg);
 
   hpx_free(thread_msgbuf);
-
   hpx_ctx_destroy(ctx);
-
-  ck_assert_msg(th1 != NULL, "Could not get a pointer to the current context's TLS data.");
 }
 
 
 /*
  --------------------------------------------------------------------
-  TEST: thread yields on a single logical CPU.
+  TEST HELPER: Test Runner for thread_self_get_ptr
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_thread_yield1_core1)
+void run_thread_self_get_ptr(uint64_t mflags) {
+  hpx_context_t * ctx;
+  hpx_thread_t * th;
+  hpx_thread_id_t id1;
+  hpx_thread_id_t id2;
+  hpx_kthread_t * kth1;
+  hpx_kthread_t * kth2;
+  char msg[128];
+
+  th_self = NULL;
+
+  /* get a thread context */
+  ctx = hpx_ctx_create(mflags);
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create an HPX thead */
+  th = hpx_thread_create(ctx, thread_self_ptr_worker, 0);
+
+  id1 = th->tid;
+  kth1 = th->kth;
+
+  /* more tricks */
+  sleep(2);
+
+  /* make sure we have something good */
+  ck_assert_msg(th_self != NULL, "Could not get a pointer to a thread's TLS data.");
+
+  /* make sure it's actually the data we want */
+  id2 = th_self->tid;
+  ck_assert_msg(id1 == id2, "Thread IDs do not match (expected %ld, got %ld).", id1, id2);  
+  
+  kth2 = th_self->kth;
+  ck_assert_msg(kth1 == kth2, "Thread kernel contexts do not match (expected %ld, got %ld).", (uint64_t) kth1, (uint64_t) kth2);
+
+  /* clean up */
+  hpx_thread_destroy(th);
+
+  hpx_free(thread_msgbuf);
+  hpx_ctx_destroy(ctx);
+}
+
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: single thread string copy on a single logical CPU with no
+  switching flags.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_strcpy_th1_core1)
 {
-  run_thread_yield_counter(0, 1, 1, thread_msg1, strlen(thread_msg1));
+  run_thread_strcpy(0, 1, 1, thread_msg1, strlen(thread_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: single thread string copy on a single logical CPU, saving
+  extended state.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_strcpy_th1_core1_ext)
+{
+  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED, 1, 1, thread_msg1, strlen(thread_msg1));
+}
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: single thread string copy on a single logical CPU, saving
+  signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_strcpy_th1_core1_sig)
+{
+  run_thread_strcpy(HPX_MCTX_SWITCH_SIGNALS, 1, 1, thread_msg1, strlen(thread_msg1));
+}
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: single thread string copy on a single logical CPU, saving
+  extended state and signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_strcpy_th1_core1_ext_sig)
+{
+  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1, 1, thread_msg1, strlen(thread_msg1));
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: get a pointer to the current thread's data with no flags.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_self_ptr)
+{
+  run_thread_self_get_ptr(0);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: get a pointer to the current thread's data, saving
+  extended state..
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_self_ptr_ext)
+{
+  run_thread_self_get_ptr(HPX_MCTX_SWITCH_EXTENDED);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: get a pointer to the current thread's data, saving signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_self_ptr_sig)
+{
+  run_thread_self_get_ptr(HPX_MCTX_SWITCH_SIGNALS);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: get a pointer to the current thread's data, saving
+  extended state and signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_self_ptr_ext_sig)
+{
+  run_thread_self_get_ptr(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: pass 1, 2, 3, 4, 5, 6, 7, 8, and 8+ arguments into threads
+  with no flags.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_args)
+{
+  run_thread_args(0);
 }
 END_TEST
