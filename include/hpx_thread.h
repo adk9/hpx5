@@ -20,6 +20,7 @@
  ====================================================================
 */
 
+#include <stdarg.h>
 #include <stdint.h>
 #include "hpx_mem.h"
 #include "hpx_ctx.h"
@@ -48,15 +49,6 @@ struct _hpx_kthread_t;
 #define HPX_THREAD_STATE_BLOCKED                                   3
 #define HPX_THREAD_STATE_SUSPENDED                                 4
 #define HPX_THREAD_STATE_TERMINATED                                4
-
-
-/*
- --------------------------------------------------------------------
-  Thread Function
- --------------------------------------------------------------------
-*/
-
-//typedef void *(*hpx_thread_func_t)(void *);
 
 
 /*

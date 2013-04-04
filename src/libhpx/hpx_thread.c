@@ -31,7 +31,7 @@
  --------------------------------------------------------------------
   hpx_thread_create
 
-  Creates and initializes a thread.
+  Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
 
@@ -43,10 +43,11 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
   if (th != NULL) {
     /* initialize the thread */
     memset(th, 0, sizeof(hpx_thread_t));
+
     th->state = HPX_THREAD_STATE_INIT;
     th->func = func;
     th->args = args;
-
+    
     /* create a stack to use */
     th->ss = 8192;
     th->stk = (void *) hpx_alloc(th->ss);

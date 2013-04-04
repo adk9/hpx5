@@ -29,7 +29,6 @@
 #include "hpx_mem.h"
 #include "hpx_thread.h"
 
-int ret1;
 
 /*
  --------------------------------------------------------------------
@@ -57,7 +56,7 @@ void * hpx_kthread_seed_default(void * ptr) {
     th = hpx_queue_pop(&kth->pend_q);
     if (th != NULL) {
       if (th->state == HPX_THREAD_STATE_INIT) {
-        hpx_mctx_makecontext(th->mctx, kth->mctx, th->stk, th->ss, kth->mcfg, kth->mflags, th->func, 0);
+        hpx_mctx_makecontext(th->mctx, kth->mctx, th->stk, th->ss, kth->mcfg, kth->mflags, th->func, 1, th->args);
       }
 
       th->state = HPX_THREAD_STATE_EXECUTING;

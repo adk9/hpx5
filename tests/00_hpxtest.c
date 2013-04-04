@@ -167,7 +167,15 @@ int main(int argc, char * argv[]) {
   }
 
   /* test threads (stage 2) */
-  tcase_add_test(tc, test_libhpx_thread_yield1_core1);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_args);
 
   suite_add_tcase(s, tc);
 
