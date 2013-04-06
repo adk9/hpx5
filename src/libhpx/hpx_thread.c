@@ -44,9 +44,11 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     /* initialize the thread */
     memset(th, 0, sizeof(hpx_thread_t));
 
-    th->state = HPX_THREAD_STATE_INIT;
+    th->state = HPX_THREAD_STATE_CREATE;
     th->func = func;
     th->args = args;
+
+    hpx_lco_future_init(&th->retval);
     
     /* create a stack to use */
     th->ss = 8192;
@@ -69,7 +71,7 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
     th->kth = ctx->kths[ctx->kths_idx];
 
-    _hpx_kthread_push_pending(th->kth, th);
+    _hpx_kthread_sched(th->kth, th);
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
   }
@@ -128,4 +130,57 @@ hpx_thread_t * hpx_thread_self(void) {
   }
 
   return th;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_join
+
+  Wait until the specified thread terminates and get its return
+  value (if any).
+ --------------------------------------------------------------------
+*/
+
+void hpx_thread_join(hpx_thread_t * th, void ** value) {
+  hpx_future_t * fut = &th->retval;
+  struct timespec ts;
+  uint8_t fut_st;
+
+  /* set our timer to 1 nanosecond */
+  ts.tv_sec = 0;
+  ts.tv_nsec = 1;
+
+  /* poll the future until it's set */
+  do {
+    fut_st = fut->state;
+    nanosleep(&ts, NULL);
+  } while (fut_st == HPX_LCO_FUTURE_UNSET);
+
+  /* copy its return value */
+  if (value != NULL) {
+    *value = fut->value;
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_yield
+
+  Suspends execution of the current thread and allows another
+  thread some CPU time.
+ --------------------------------------------------------------------
+*/
+
+void hpx_thread_yield(void) {
+  hpx_thread_t * th = hpx_thread_self();
+
+  if ((th != NULL) && (th->kth != NULL)) {
+    th->state = HPX_THREAD_STATE_YIELD;
+    _hpx_kthread_sched(th->kth, NULL);
+    if (th->state != HPX_THREAD_STATE_EXECUTING) {
+      hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
+    }
+  }
 }

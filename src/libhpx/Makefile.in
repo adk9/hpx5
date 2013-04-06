@@ -80,9 +80,10 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libhpx_la_LIBADD =
 am__libhpx_la_SOURCES_DIST = hpx_error.c hpx_init.c hpx_ctx.c \
 	hpx_thread.c hpx_queue.c hpx_kthread.c arch/x86_64/hpx_mctx.S \
-	arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c
+	arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c \
+	arch/x86_64/hpx_lco_future.S
 @CPU_X86_64_TRUE@am__objects_1 = hpx_mctx.lo hpx_mconfig.lo \
-@CPU_X86_64_TRUE@	hpx_mctx_mk.lo
+@CPU_X86_64_TRUE@	hpx_mctx_mk.lo hpx_lco_future.lo
 am_libhpx_la_OBJECTS = hpx_error.lo hpx_init.lo hpx_ctx.lo \
 	hpx_thread.lo hpx_queue.lo hpx_kthread.lo $(am__objects_1)
 libhpx_la_OBJECTS = $(am_libhpx_la_OBJECTS)
@@ -233,7 +234,7 @@ top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libhpx.la
 libhpx_la_SOURCES = hpx_error.c hpx_init.c hpx_ctx.c hpx_thread.c \
 	hpx_queue.c hpx_kthread.c $(ARCH_SRC)
-@CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/hpx_mctx.S arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c
+@CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/hpx_mctx.S arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c arch/x86_64/hpx_lco_future.S
 all: all-am
 
 .SUFFIXES:
@@ -312,6 +313,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_init.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_kthread.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_lco_future.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_mconfig.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_mctx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_mctx_mk.Plo@am__quote@
@@ -352,6 +354,13 @@ hpx_mconfig.lo: arch/x86_64/hpx_mconfig.S
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	source='arch/x86_64/hpx_mconfig.S' object='hpx_mconfig.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCCAS_FALSE@	$(LIBTOOL)  $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -c -o hpx_mconfig.lo `test -f 'arch/x86_64/hpx_mconfig.S' || echo '$(srcdir)/'`arch/x86_64/hpx_mconfig.S
+
+hpx_lco_future.lo: arch/x86_64/hpx_lco_future.S
+@am__fastdepCCAS_TRUE@	$(LIBTOOL)  $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -MT hpx_lco_future.lo -MD -MP -MF $(DEPDIR)/hpx_lco_future.Tpo -c -o hpx_lco_future.lo `test -f 'arch/x86_64/hpx_lco_future.S' || echo '$(srcdir)/'`arch/x86_64/hpx_lco_future.S
+@am__fastdepCCAS_TRUE@	$(am__mv) $(DEPDIR)/hpx_lco_future.Tpo $(DEPDIR)/hpx_lco_future.Plo
+@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	source='arch/x86_64/hpx_lco_future.S' object='hpx_lco_future.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCCAS_FALSE@	$(LIBTOOL)  $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -c -o hpx_lco_future.lo `test -f 'arch/x86_64/hpx_lco_future.S' || echo '$(srcdir)/'`arch/x86_64/hpx_lco_future.S
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
