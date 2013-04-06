@@ -32,6 +32,69 @@
 
 /*
  --------------------------------------------------------------------
+  _hpx_kthread_sched
+
+  The HPX Thread Scheduler.
+ --------------------------------------------------------------------
+*/
+
+void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th) {
+  hpx_thread_t * exec_th = kth->exec_th;
+
+  pthread_mutex_lock(&kth->mtx);
+
+  /* do something with the current thread */
+  if (exec_th != NULL) {
+    switch (exec_th->state) {
+      /* the thread has finished */
+      case HPX_THREAD_STATE_EXECUTING:
+        exec_th->state = HPX_THREAD_STATE_TERMINATED;
+	kth->exec_th = NULL;
+        hpx_lco_future_set(&exec_th->retval);
+	break;
+      case HPX_THREAD_STATE_YIELD:
+	if (hpx_queue_peek(&kth->pend_q) == NULL) {
+          exec_th->state = HPX_THREAD_STATE_EXECUTING;
+	} else {
+          exec_th->state = HPX_THREAD_STATE_PENDING;
+          hpx_queue_push(&kth->pend_q, exec_th);
+          kth->exec_th = NULL;
+	}
+        break;
+      default:
+	break;
+    }
+  }
+
+  if (th != NULL) {
+    /* do something with the next thread */
+    switch (th->state) {
+      case HPX_THREAD_STATE_CREATE:
+        hpx_queue_push(&kth->pend_q, th);
+        th->state = HPX_THREAD_STATE_INIT;
+        pthread_cond_signal(&kth->k_c);
+        break;
+      case HPX_THREAD_STATE_INIT:
+        hpx_mctx_makecontext(th->mctx, kth->mctx, th->stk, th->ss, kth->mcfg, kth->mflags, th->func, 1, th->args);
+        th->state = HPX_THREAD_STATE_EXECUTING;
+        kth->exec_th = th;
+        break;
+      case HPX_THREAD_STATE_PENDING:
+        /* set up this thread for execution */
+        th->state = HPX_THREAD_STATE_EXECUTING;
+        kth->exec_th = th;
+        break;
+      default:
+        break;
+    }
+  }
+
+  pthread_mutex_unlock(&kth->mtx);
+}
+
+
+/*
+ --------------------------------------------------------------------
   hpx_kthread_seed_default
 
   A default seed function for new kernel threads.
@@ -54,14 +117,8 @@ void * hpx_kthread_seed_default(void * ptr) {
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
     th = hpx_queue_pop(&kth->pend_q);
+    _hpx_kthread_sched(kth, th);
     if (th != NULL) {
-      if (th->state == HPX_THREAD_STATE_INIT) {
-        hpx_mctx_makecontext(th->mctx, kth->mctx, th->stk, th->ss, kth->mcfg, kth->mflags, th->func, 1, th->args);
-      }
-
-      th->state = HPX_THREAD_STATE_EXECUTING;
-      kth->exec_th = th;
-
       pthread_mutex_unlock(&kth->mtx);
       hpx_mctx_swapcontext(kth->mctx, th->mctx, kth->mcfg, kth->mflags);
       pthread_mutex_lock(&kth->mtx);
@@ -86,6 +143,7 @@ void * hpx_kthread_seed_default(void * ptr) {
 */
 
 hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
+  pthread_mutexattr_t mtx_attr;
   hpx_kthread_t * kth = NULL;
   int err;
 
@@ -95,8 +153,12 @@ hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, 
     memset(kth, 0, sizeof(hpx_kthread_t));
     
     hpx_queue_init(&kth->pend_q);
-    pthread_mutex_init(&kth->mtx, 0);
-    pthread_cond_init(&kth->k_c, 0);    
+
+    pthread_mutexattr_init(&mtx_attr);
+    pthread_mutexattr_settype(&mtx_attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&kth->mtx, &mtx_attr);
+  
+    pthread_cond_init(&kth->k_c, 0);
 
     kth->k_st = HPX_KTHREAD_STATE_RUNNING;
     kth->mcfg = mcfg;

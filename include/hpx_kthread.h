@@ -88,6 +88,7 @@ uint16_t hpx_kthread_get_affinity(hpx_kthread_t *);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
+void _hpx_kthread_sched(hpx_kthread_t *, struct _hpx_thread_t *);
 void _hpx_kthread_push_pending(hpx_kthread_t *, struct _hpx_thread_t *);
 
 void _hpx_kthread_init(void);

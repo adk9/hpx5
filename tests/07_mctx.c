@@ -330,7 +330,7 @@ void run_getcontext(uint64_t mflags) {
   memset(&mctx, 0, sizeof(hpx_mctx_context_t));
 
   /* crush that mean old FPU */
-  _fpu_crusher(ctx->mcfg, mflags);
+  (void) _fpu_crusher(ctx->mcfg, mflags);
 
   /* set some signals in the thread signal mask (if we care about that) */
   if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
