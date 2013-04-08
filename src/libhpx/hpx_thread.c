@@ -51,7 +51,7 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     hpx_lco_future_init(&th->retval);
     
     /* create a stack to use */
-    th->ss = 8192;
+    th->ss = 1024;
     th->stk = (void *) hpx_alloc(th->ss);
     if (th->stk == NULL) {
       hpx_free(th);
@@ -70,8 +70,7 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     /* we'll assume for now that we aren't pegging threads to a specific core */
     ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
     th->kth = ctx->kths[ctx->kths_idx];
-
-    _hpx_kthread_sched(th->kth, th);
+    _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_CREATE);
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
   }
@@ -177,10 +176,7 @@ void hpx_thread_yield(void) {
   hpx_thread_t * th = hpx_thread_self();
 
   if ((th != NULL) && (th->kth != NULL)) {
-    th->state = HPX_THREAD_STATE_YIELD;
-    _hpx_kthread_sched(th->kth, NULL);
-    if (th->state != HPX_THREAD_STATE_EXECUTING) {
-      hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
-    }
+    _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_YIELD);
+    hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
   }
 }

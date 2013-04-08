@@ -821,3 +821,19 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield_hardcore5000)
 END_TEST
 
 
+/*
+ --------------------------------------------------------------------
+  TEST: run 50,000 threads per core that yield to one another, 
+  saving extended (FPU) state and the thread signal mask.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_multi_thread_set_yield_hardcore10000)
+{
+  printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_hardcore10000\n  run 10,000 threads per core that yield to one another, with no switching flags.\n");
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 10000);
+  printf("DONE\n\n");
+}
+END_TEST
+
+

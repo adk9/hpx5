@@ -38,54 +38,56 @@
  --------------------------------------------------------------------
 */
 
-void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th) {
+void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t state) {
   hpx_thread_t * exec_th = kth->exec_th;
 
   pthread_mutex_lock(&kth->mtx);
 
-  /* do something with the current thread */
-  if (exec_th != NULL) {
-    switch (exec_th->state) {
-      /* the thread has finished */
-      case HPX_THREAD_STATE_EXECUTING:
-        exec_th->state = HPX_THREAD_STATE_TERMINATED;
-	kth->exec_th = NULL;
-        hpx_lco_future_set(&exec_th->retval);
-	break;
-      case HPX_THREAD_STATE_YIELD:
-	if (hpx_queue_peek(&kth->pend_q) == NULL) {
-          exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	} else {
-          exec_th->state = HPX_THREAD_STATE_PENDING;
-          hpx_queue_push(&kth->pend_q, exec_th);
-          kth->exec_th = NULL;
-	}
+  /* if we have a thread specified, do something with it */
+  if (th != NULL) {
+    switch (state) {
+      case HPX_THREAD_STATE_CREATE:
+        th->state = HPX_THREAD_STATE_INIT;
+        hpx_queue_push(&kth->pend_q, th);
+        pthread_cond_signal(&kth->k_c);
         break;
-      default:
+      case HPX_THREAD_STATE_YIELD:
+        th->state = HPX_THREAD_STATE_PENDING;
+        hpx_queue_push(&kth->pend_q, th);
 	break;
+      default:
+        break;
     }
   }
 
-  if (th != NULL) {
-    /* do something with the next thread */
-    switch (th->state) {
-      case HPX_THREAD_STATE_CREATE:
-        hpx_queue_push(&kth->pend_q, th);
-        th->state = HPX_THREAD_STATE_INIT;
-        pthread_cond_signal(&kth->k_c);
-        break;
-      case HPX_THREAD_STATE_INIT:
-        hpx_mctx_makecontext(th->mctx, kth->mctx, th->stk, th->ss, kth->mcfg, kth->mflags, th->func, 1, th->args);
-        th->state = HPX_THREAD_STATE_EXECUTING;
-        kth->exec_th = th;
-        break;
-      case HPX_THREAD_STATE_PENDING:
-        /* set up this thread for execution */
-        th->state = HPX_THREAD_STATE_EXECUTING;
-        kth->exec_th = th;
-        break;
-      default:
-        break;
+  /* otherwise, do something with the currently executing thread */
+  else {
+    if (kth->exec_th != NULL) {
+      switch (kth->exec_th->state) {
+        case HPX_THREAD_STATE_YIELD:
+	  kth->exec_th->state = HPX_THREAD_STATE_PENDING;
+	  hpx_queue_push(&kth->pend_q, kth->exec_th);
+	  break;
+      case HPX_THREAD_STATE_EXECUTING:
+	kth->exec_th->state = HPX_THREAD_STATE_TERMINATED;
+	hpx_lco_future_set(&kth->exec_th->retval);
+	break;
+      }
+    }
+
+    kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    if (kth->exec_th != NULL) {
+      switch (kth->exec_th->state) {
+        case HPX_THREAD_STATE_INIT:
+	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+	  hpx_mctx_makecontext(kth->exec_th->mctx, kth->mctx, kth->exec_th->stk, kth->exec_th->ss, kth->mcfg, kth->mflags, kth->exec_th->func, 1, kth->exec_th->args);
+	  break;
+        case HPX_THREAD_STATE_PENDING:
+	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+	  break;
+        default:
+	  break;
+      }
     }
   }
 
@@ -116,11 +118,11 @@ void * hpx_kthread_seed_default(void * ptr) {
 
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
-    th = hpx_queue_pop(&kth->pend_q);
-    _hpx_kthread_sched(kth, th);
-    if (th != NULL) {
+    // th = hpx_queue_pop(&kth->pend_q);
+    _hpx_kthread_sched(kth, NULL, 0);
+    if (kth->exec_th != NULL) {
       pthread_mutex_unlock(&kth->mtx);
-      hpx_mctx_swapcontext(kth->mctx, th->mctx, kth->mcfg, kth->mflags);
+      hpx_mctx_swapcontext(kth->mctx, kth->exec_th->mctx, kth->mcfg, kth->mflags);
       pthread_mutex_lock(&kth->mtx);
     } else {
       pthread_cond_wait(&kth->k_c, &kth->mtx);
