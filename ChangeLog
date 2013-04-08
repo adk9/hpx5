@@ -1,4 +1,12 @@
+2013-04-08	Patrick K. Bohan <pbohan@indiana.edu>
+	* HPX-4 alpha 2 release (4.0.0a2)
+	* added hpx_mctx_swapcontext
+	* added _hpx_kthread_sched
+	* finished hpx_mctx_setcontext, hpx_mctx_getcontext, and hpx_mctx_makecontext
+	* added hpx_future_t and associated functions
+	* additional unit tests for LCOs and HPX threads
 
+	
 2013-03-18	Patrick K. Bohan <pbohan@indiana.edu>
 	* HPX-4 alpha 1 release (4.0.0a1)
 	* added hpx_mctx_getcontext and hpx_mctx_setcontext functions
