@@ -634,18 +634,6 @@ void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigne
   hpx_mctx_context_t * my_mctx;
   unsigned int cur_idx = start_idx;
 
-#ifdef __APPLE__
-  mctx_ts[ts_runs]->elapsed_ts = (mach_absolute_time() - mctx_ts[ts_runs]->begin_ts) * tbi.numer / tbi.denom;
-  ts_runs++;
-#elif __linux__
-  clock_gettime(CLOCK_MONOTONIC, &mctx_ts[ts_runs]->end_ts);
-  uint64_t begin_ts = (mctx_ts[ts_runs]->begin_ts.tv_sec * 1000000000) + mctx_ts[ts_runs]->begin_ts.tv_nsec;
-  uint64_t end_ts = (mctx_ts[ts_runs]->end_ts.tv_sec * 1000000000) + mctx_ts[ts_runs]->end_ts.tv_nsec;
-  
-  mctx_ts[ts_runs]->elapsed_ts = (end_ts - begin_ts);
-  ts_runs++;
-#endif
-  
   while (cur_idx < end_idx) {
     my_mctx = mctxs[swap_idx];
 
@@ -657,19 +645,6 @@ void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigne
     }
 
     hpx_mctx_swapcontext(my_mctx, main_mctx, mcfg, mflags);
-
-#ifdef __APPLE__
-    mctx_ts[ts_runs]->elapsed_ts = (mach_absolute_time() - mctx_ts[ts_runs]->begin_ts) * tbi.numer / tbi.denom; 
-    ts_runs++;
-#elif __linux__
-  clock_gettime(CLOCK_MONOTONIC, &mctx_ts[ts_runs]->end_ts);
-  uint64_t begin_ts = (mctx_ts[ts_runs]->begin_ts.tv_sec * 1000000000) + mctx_ts[ts_runs]->begin_ts.tv_nsec;
-  uint64_t end_ts = (mctx_ts[ts_runs]->end_ts.tv_sec * 1000000000) + mctx_ts[ts_runs]->end_ts.tv_nsec;
-  
-  mctx_ts[ts_runs]->elapsed_ts = (end_ts - begin_ts);
-  ts_runs++;
-#endif
-
   }
 }
 
@@ -712,19 +687,6 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   sprintf(msg, "Could not allocate swap buffer (%d KB).", num_mctxs);
   ck_assert_msg(swap_msg != NULL, msg);
 
-  /* create & initialize our timing buffers */
-  main_ts = (hpxtest_ts_t *) hpx_alloc(sizeof(hpxtest_ts_t));
-  ck_assert_msg(main_ts != NULL, "Could not allocate a timing buffer for the main machine context.");
-
-  mctx_ts = (hpxtest_ts_t **) hpx_alloc(sizeof(hpxtest_ts_t *) * (num_mctxs * 1024));
-  ck_assert_msg(mctx_ts != NULL, "Could not allocate timing buffers for child machine contexts.");
-
-  for (idx = 0; idx < (num_mctxs * 1024); idx++) {
-    mctx_ts[idx] = (hpxtest_ts_t *) hpx_alloc(sizeof(hpxtest_ts_t));
-    sprintf(msg, "Could not allocate timing data for iteration %d.", idx);
-    ck_assert_msg(mctx_ts[idx] != NULL, msg);
-  }
-
   /* create & initialize our child machine contexts */
   mctxs = (hpx_mctx_context_t **) hpx_alloc(sizeof(hpx_mctx_context_t *) * num_mctxs);
   ck_assert_msg(mctxs != NULL, "Could not allocate child machine context pointers.");
@@ -732,15 +694,6 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   start_idx = 0;
   swap_pos = 0;
   swap_idx = 0;
-
-#ifdef __APPLE__
-  if (tbi.denom == 0) {
-    (void) mach_timebase_info(&tbi);
-  }
-#endif
-
-  ts_elapsed = 0;
-  ts_runs = 0;
 
   for (idx = 0; idx < num_mctxs; idx++) {
     mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
@@ -758,14 +711,7 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   }
 
   while (swap_pos < (num_mctxs * 1024)) {
-#ifdef __APPLE__
-    mctx_ts[ts_runs]->begin_ts = mach_absolute_time();
-#elif __linux__
-    clock_gettime(CLOCK_MONOTONIC, &mctx_ts[ts_runs]->begin_ts);
-#endif    
-
     hpx_mctx_swapcontext(main_mctx, mctxs[swap_idx], ctx->mcfg, mflags);
-
     swap_idx = (++swap_idx % num_mctxs);
   }
 
@@ -776,45 +722,6 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
     sprintf(msg, "Swap buffer is incorrect at position %d (expected 73, got %d).", idx, (int) swap_msg[idx]);
     ck_assert_msg(swap_msg[idx] == 73, msg);
   }
-
-  /* calculate mean */
-  ts_elapsed = 0;
-  for (idx = 0; idx < ts_runs; idx++) {
-    ts_elapsed += mctx_ts[idx]->elapsed_ts;
-  }
-
-  mean_ts = ts_elapsed / ts_runs;
-  
-  /* calculate max time */
-  max_ts = mctx_ts[0]->elapsed_ts;
-  for (idx = 1; idx < ts_runs; idx++) {
-    if (mctx_ts[idx]->elapsed_ts > max_ts) {
-      max_ts = mctx_ts[idx]->elapsed_ts;
-    }
-  }
-
-  /* calculate min time */
-  min_ts = mctx_ts[0]->elapsed_ts;
-  for (idx = 1; idx < ts_runs; idx++) {
-    if (mctx_ts[idx]->elapsed_ts < min_ts) {
-      min_ts = mctx_ts[idx]->elapsed_ts;
-    }
-  }
-  
-  /* calculate standard deviation */
-  stdev_ts = 0;
-  for (idx = 0; idx < ts_runs; idx++) {
-    stdev_ts += pow((double) mctx_ts[idx]->elapsed_ts - mean_ts, 2.0);
-  }
-  stdev_ts = sqrt(stdev_ts / (ts_runs - 1));
-
-  /* clean up timing data */
-  for (idx = 0; idx < (num_mctxs * 1024); idx++) {
-    hpx_free(mctx_ts[idx]);
-  }
-
-  hpx_free(mctx_ts);
-  hpx_free(main_ts);
 
   /* clean up */
   hpx_free(swap_msg);
@@ -1376,7 +1283,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1)
 {
   run_swapcontext_memset_star(0, 1);
 
-  printf("test_libhpx_mctx_swapcontext_star1,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1392,7 +1299,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star2)
 {
   run_swapcontext_memset_star(0, 2);
 
-  printf("test_libhpx_mctx_swapcontext_star2,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star2,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1408,7 +1315,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star10)
 {
   run_swapcontext_memset_star(0, 10);
 
-  printf("test_libhpx_mctx_swapcontext_star10,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star10,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1424,7 +1331,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1000)
 {
   run_swapcontext_memset_star(0, 1000);
 
-  printf("test_libhpx_mctx_swapcontext_star1000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1440,7 +1347,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000)
 {
   run_swapcontext_memset_star(0, 5000);
   
-  printf("test_libhpx_mctx_swapcontext_star5000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star5000,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1456,7 +1363,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1_ext)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED, 1);
 
-  printf("test_libhpx_mctx_swapcontext_star1_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1472,7 +1379,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star2_ext)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED, 2);
 
-  printf("test_libhpx_mctx_swapcontext_star2_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star2_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1488,7 +1395,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star10_ext)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED, 10);
 
-  printf("test_libhpx_mctx_swapcontext_star10_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star10_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1504,7 +1411,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1000_ext)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED, 1000);
 
-  printf("test_libhpx_mctx_swapcontext_star1000_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1000_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1520,7 +1427,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000_ext)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED, 5000);
   
-  printf("test_libhpx_mctx_swapcontext_star5000_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star5000_ext,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1536,7 +1443,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_SIGNALS, 1);
 
-  printf("test_libhpx_mctx_swapcontext_star1_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1552,7 +1459,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star2_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_SIGNALS, 2);
 
-  printf("test_libhpx_mctx_swapcontext_star2_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star2_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1568,7 +1475,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star10_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_SIGNALS, 10);
 
-  printf("test_libhpx_mctx_swapcontext_star10_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star10_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1584,7 +1491,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1000_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_SIGNALS, 1000);
 
-  printf("test_libhpx_mctx_swapcontext_star1000_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1000_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1600,7 +1507,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_SIGNALS, 5000);
   
-  printf("test_libhpx_mctx_swapcontext_star5000_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star5000_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1616,7 +1523,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1_ext_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1);
 
-  printf("test_libhpx_mctx_swapcontext_star1_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1632,7 +1539,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star2_ext_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 2);
 
-  printf("test_libhpx_mctx_swapcontext_star2_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star2_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1648,7 +1555,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star10_ext_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 10);
 
-  printf("test_libhpx_mctx_swapcontext_star10_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star10_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1665,7 +1572,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star1000_ext_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1000);
 
-  printf("test_libhpx_mctx_swapcontext_star1000_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star1000_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 
@@ -1682,7 +1589,7 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000_ext_sig)
 {
   run_swapcontext_memset_star(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 5000);
   
-  printf("test_libhpx_mctx_swapcontext_star5000_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
+  //  printf("test_libhpx_mctx_swapcontext_star5000_ext_sig,%ld,%.1f,%ld,%ld,%.1f\n", ts_runs, (double) mean_ts, max_ts, min_ts, stdev_ts);
 }
 END_TEST
 

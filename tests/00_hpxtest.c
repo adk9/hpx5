@@ -207,6 +207,7 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore5000);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore1000);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
   }
 
   suite_add_tcase(s, tc);

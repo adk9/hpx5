@@ -44,6 +44,7 @@ struct _hpx_kthread_t;
  --------------------------------------------------------------------
 */
 
+#define HPX_THREAD_STATE_UNDEFINED                               255
 #define HPX_THREAD_STATE_CREATE                                    0
 #define HPX_THREAD_STATE_INIT                                      1
 #define HPX_THREAD_STATE_PENDING                                   2

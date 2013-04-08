@@ -337,13 +337,12 @@ swg_no_extstate:
 #ifdef __APPLE__
 	movq		rax,_HPX_MACH_SYSCALL_CLASS_ID
 	addq		rax,SYS___pthread_sigmask
-	syscall
 #elif __linux__
 	movq		r10,8
 	movq		rax,SYS_rt_sigprocmask
-	syscall
 #endif
-
+	syscall
+	
 	# set the new signal mask
 	movq		rcx,[r8]
 	mov		rdi,_HPX_MCTX_SIG_SETMASK
