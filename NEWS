@@ -1,4 +1,15 @@
 
+04/08/2013 -- HPX 4.0.0a2
+=========================
+
+  * HPX threads are complete enough to begin performance testing
+  * Basic scheduling of HPX threads
+  * Basic Futures
+  * Support for the Intel Compiler
+  * Support for Linux
+  * Additional unit tests
+
+
 03/18/2013 -- HPX 4.0.0a1
 =========================
 
