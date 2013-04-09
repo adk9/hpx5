@@ -24,6 +24,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+#include <pthread.h>
 #include "hpx_init.h"
 #include "hpx_mctx.h"
 
@@ -614,7 +615,6 @@ void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * o
 
   for (idx = 0; idx < num_mctxs; idx++) {
     mctx = mctxs[idx];
-    hpx_free(mctx->sp);
     hpx_free(mctx);
   }
 
