@@ -1,5 +1,5 @@
 
-AC_INIT([hpx], [4.0.0a2], [hpx@indiana.edu])
+AC_INIT([hpx], [4.0.0a3], [hpx@indiana.edu])
 AM_INIT_AUTOMAKE
 AM_PROG_AR
 
@@ -9,7 +9,7 @@ AC_PROG_CC([icc gcc])
 AM_PROG_CC_C_O
 AM_PROG_AS
 
-PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
+PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [1], [0])
 
 AM_CONDITIONAL([CPU_X86_64], [test "$host_cpu" = x86_64])
 
