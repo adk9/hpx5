@@ -40,7 +40,12 @@ hpx_thread_t * th_self;
 void * thread_arg;
 int thread_counter;
 
-unsigned char * thread_buf;
+struct {
+  unsigned char * buf;
+  uint64_t elapsed_ts;
+  uint64_t min_ts;
+  uint64_t max_ts;
+} thread_buf;
 
 
 /*
@@ -92,8 +97,8 @@ void multi_thread_set_worker(void * ptr) {
   int idx;
 
   for (idx = 0; idx < 256; idx++) {
-    buf_idx = (uint32_t) idx + ((uint64_t) my_idx - (uint64_t) thread_buf);
-    thread_buf[buf_idx] = (unsigned char) idx;
+    buf_idx = (uint32_t) idx + ((uint64_t) my_idx - (uint64_t) thread_buf.buf);
+    thread_buf.buf[buf_idx] = (unsigned char) idx;
   }
 }
 
@@ -111,15 +116,17 @@ void run_multi_thread_set(uint64_t mflags, uint32_t th_cnt) {
   uint32_t buf_idx;
   int idx;
 
+  memset(&thread_buf, 0, sizeof(thread_buf));
+
   /* get a thread context */
   ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
-  thread_buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
-  ck_assert_msg(thread_buf != NULL, "Could not allocate memory for test data.");
+  thread_buf.buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
+  ck_assert_msg(thread_buf.buf != NULL, "Could not allocate memory for test data.");
 
-  memset(thread_buf, 0, sizeof(char) * th_cnt * 256);
+  memset(thread_buf.buf, 0, sizeof(char) * th_cnt * 256);
 
   /* create HPX theads */
   ths = (hpx_thread_t **) hpx_alloc(sizeof(hpx_thread_t *) * th_cnt);
@@ -127,7 +134,7 @@ void run_multi_thread_set(uint64_t mflags, uint32_t th_cnt) {
 
   for(idx = 0; idx < th_cnt; idx++) {
     buf_idx = idx * 256;
-    ths[idx] = hpx_thread_create(ctx, multi_thread_set_worker, &thread_buf[buf_idx]);
+    ths[idx] = hpx_thread_create(ctx, multi_thread_set_worker, &thread_buf.buf[buf_idx]);
   }
 
   /* wait until our threads are done */
@@ -137,8 +144,8 @@ void run_multi_thread_set(uint64_t mflags, uint32_t th_cnt) {
 
   /* make sure things got done right */
   for (idx = 0; idx < (th_cnt * 256); idx++) {
-    sprintf(msg, "Thread data was not set at index %d (expected %d, got %d).", idx, (idx % 256), thread_buf[idx]);
-    ck_assert_msg(thread_buf[idx] == (idx % 256), msg);
+    sprintf(msg, "Thread data was not set at index %d (expected %d, got %d).", idx, (idx % 256), thread_buf.buf[idx]);
+    ck_assert_msg(thread_buf.buf[idx] == (idx % 256), msg);
   }
 
   /* clean up */
@@ -147,7 +154,7 @@ void run_multi_thread_set(uint64_t mflags, uint32_t th_cnt) {
   }
 
   hpx_free(ths);
-  hpx_free(thread_buf);
+  hpx_free(thread_buf.buf);
 
   hpx_ctx_destroy(ctx);
 }
@@ -165,8 +172,8 @@ void multi_thread_set_yield_worker(void * ptr) {
   int idx;
 
   for (idx = 0; idx < 256; idx++) {
-    buf_idx = (uint32_t) idx + ((uint64_t) my_idx - (uint64_t) thread_buf);
-    thread_buf[buf_idx] = (unsigned char) idx;
+    buf_idx = (uint32_t) idx + ((uint64_t) my_idx - (uint64_t) thread_buf.buf);
+    thread_buf.buf[buf_idx] = (unsigned char) idx;
     hpx_thread_yield();
   }
 }
@@ -185,15 +192,17 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
   uint32_t buf_idx;
   int idx;
 
+  memset(&thread_buf, 0, sizeof(thread_buf));
+
   /* get a thread context */
   ctx = hpx_ctx_create(mflags);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
-  thread_buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
-  ck_assert_msg(thread_buf != NULL, "Could not allocate memory for test data.");
+  thread_buf.buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
+  ck_assert_msg(thread_buf.buf != NULL, "Could not allocate memory for test data.");
 
-  memset(thread_buf, 0, sizeof(char) * th_cnt * 256);
+  memset(thread_buf.buf, 0, sizeof(char) * th_cnt * 256);
 
   /* create HPX theads */
   ths = (hpx_thread_t **) hpx_alloc(sizeof(hpx_thread_t *) * th_cnt);
@@ -201,7 +210,7 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
 
   for(idx = 0; idx < th_cnt; idx++) {
     buf_idx = idx * 256;
-    ths[idx] = hpx_thread_create(ctx, multi_thread_set_yield_worker, &thread_buf[buf_idx]);
+    ths[idx] = hpx_thread_create(ctx, multi_thread_set_yield_worker, &thread_buf.buf[buf_idx]);
   }
 
   /* wait until our threads are done */
@@ -211,8 +220,8 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
 
   /* make sure things got done right */
   for (idx = 0; idx < (th_cnt * 256); idx++) {
-    sprintf(msg, "Thread data was not set at index %d (expected %d, got %d).", idx, (idx % 256), thread_buf[idx]);
-    ck_assert_msg(thread_buf[idx] == (idx % 256), msg);
+    sprintf(msg, "Thread data was not set at index %d (expected %d, got %d).", idx, (idx % 256), thread_buf.buf[idx]);
+    ck_assert_msg(thread_buf.buf[idx] == (idx % 256), msg);
   }
 
   /* clean up */
@@ -221,7 +230,7 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
   }
 
   hpx_free(ths);
-  hpx_free(thread_buf);
+  hpx_free(thread_buf.buf);
 
   hpx_ctx_destroy(ctx);
 }
