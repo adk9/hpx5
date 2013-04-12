@@ -35,6 +35,7 @@
 #include "06_kthread.c"
 #include "07_mctx.c"
 #include "08_thread2.c"
+#include "09_config.c"
 
 
 /*
