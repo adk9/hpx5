@@ -104,15 +104,24 @@ void multi_thread_set_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_multi_thread_set(uint64_t mflags, uint32_t th_cnt) {
+void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   hpx_context_t * ctx;
   hpx_thread_t ** ths;
+  hpx_config_t cfg;
   char msg[128];
   uint32_t buf_idx;
   int idx;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
+  if (core_cnt > 0) {
+    hpx_config_set_cores(&cfg, core_cnt);
+  }
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
@@ -178,15 +187,24 @@ void multi_thread_set_yield_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
+void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   hpx_context_t * ctx;
   hpx_thread_t ** ths;
+  hpx_config_t cfg;
   char msg[128];
   uint32_t buf_idx;
   int idx;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
+  if (core_cnt > 0) {
+    hpx_config_set_cores(&cfg, core_cnt);
+  }
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
@@ -237,12 +255,17 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
 void run_thread_args(uint64_t mflags) {
   hpx_context_t * ctx;
   hpx_thread_t * th1;
+  hpx_config_t cfg;
   char msg[128];
   int * th_arg_ptr;
   int th_arg = 8473;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create HPX thead */
@@ -272,11 +295,16 @@ void run_thread_args(uint64_t mflags) {
 void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char * orig_msg, size_t msg_len) {
   hpx_context_t * ctx;
   hpx_thread_t * ths[th_cnt];
+  hpx_config_t cfg;
   uint64_t idx;
   char msg[128 + msg_len + 1];  // only l337 h4x0rz can get around this lol
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* initialize our message buffer */
@@ -322,12 +350,17 @@ void run_thread_self_get_ptr(uint64_t mflags) {
   hpx_thread_id_t id2;
   hpx_kthread_t * kth1;
   hpx_kthread_t * kth2;
+  hpx_config_t cfg;
   char msg[128];
 
   th_self = NULL;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create an HPX thead */
@@ -551,7 +584,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x2)
 {
-  run_multi_thread_set(0, hpx_kthread_get_cores() * 2);
+  run_multi_thread_set(0, 0, hpx_kthread_get_cores() * 2);
 }
 END_TEST
 
@@ -564,7 +597,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x2_ext)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED, hpx_kthread_get_cores() * 2);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED, 0, hpx_kthread_get_cores() * 2);
 }
 END_TEST
 
@@ -577,7 +610,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x2_sig)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 2);
+  run_multi_thread_set(HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 2);
 }
 END_TEST
 
@@ -591,7 +624,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x2_ext_sig)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 2);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 2);
 }
 END_TEST
 
@@ -604,7 +637,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x32)
 {
-  run_multi_thread_set(0, hpx_kthread_get_cores() * 32);
+  run_multi_thread_set(0, 0, hpx_kthread_get_cores() * 32);
 }
 END_TEST
 
@@ -617,7 +650,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x32_ext)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED, hpx_kthread_get_cores() * 32);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED, 0, hpx_kthread_get_cores() * 32);
 }
 END_TEST
 
@@ -630,7 +663,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x32_sig)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 32);
+  run_multi_thread_set(HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 32);
 }
 END_TEST
 
@@ -644,7 +677,7 @@ END_TEST
 
 START_TEST (test_libhpx_thread_multi_thread_set_x32_ext_sig)
 {
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 32);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 32);
 }
 END_TEST
 
@@ -705,7 +738,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_hardcore1000)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_hardcore1000\n  create 1,000 threads per core, saving extended (FPU) state and the thread signal mask.\n");
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 1000);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 1000);
   printf("DONE\n\n");
 }
 END_TEST
@@ -721,7 +754,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_hardcore5000)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_hardcore5000\n  create 5,000 threads per core, saving extended (FPU) state and the thread signal mask.\n");
-  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 5000);
+  run_multi_thread_set(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 5000);
   printf("DONE\n\n");
 }
 END_TEST
@@ -736,7 +769,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield1)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield1\n  run one thread that yields to itself, with no switching flags.\n");
-  run_multi_thread_set_yield(0, 1);
+  run_multi_thread_set_yield(0, 0, 1);
   printf("DONE\n\n");
 }
 END_TEST
@@ -751,7 +784,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield2)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield2\n  run two threads that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(0, 2);
+  run_multi_thread_set_yield(0, 0, 2);
   printf("DONE\n\n");
 }
 END_TEST
@@ -767,7 +800,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield_x2)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_x2\n  run two threads per core that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(0, hpx_kthread_get_cores() * 2);
+  run_multi_thread_set_yield(0, 0, hpx_kthread_get_cores() * 2);
   printf("DONE\n\n");
 }
 END_TEST
@@ -783,7 +816,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield_x32)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_x32\n  run 32 threads per core that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(0, hpx_kthread_get_cores() * 32);
+  run_multi_thread_set_yield(0, 0, hpx_kthread_get_cores() * 32);
   printf("DONE\n\n");
 }
 END_TEST
@@ -799,7 +832,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield_hardcore1000)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_hardcore1000\n  run 1,000 threads per core that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 1000);
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 1000);
   printf("DONE\n\n");
 }
 END_TEST
@@ -815,7 +848,7 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield_hardcore5000)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_hardcore5000\n  run 5,000 threads per core that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 5000);
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 5000);
   printf("DONE\n\n");
 }
 END_TEST
@@ -823,7 +856,7 @@ END_TEST
 
 /*
  --------------------------------------------------------------------
-  TEST: run 50,000 threads per core that yield to one another, 
+  TEST: run 10,000 threads per core that yield to one another, 
   saving extended (FPU) state and the thread signal mask.
  --------------------------------------------------------------------
 */
@@ -831,7 +864,54 @@ END_TEST
 START_TEST (test_libhpx_thread_multi_thread_set_yield_hardcore10000)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_hardcore10000\n  run 10,000 threads per core that yield to one another, with no switching flags.\n");
-  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, hpx_kthread_get_cores() * 10000);
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 0, hpx_kthread_get_cores() * 10000);
+  printf("DONE\n\n");
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: run 5,000 threads on one core, saving extended (FPU) 
+  state and the thread signal mask.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_multi_thread_set_yield_1core_5000)
+{
+  printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_1core_5000\n  run 5,000 threads that yield to one another on one core, with all switching flags set.\n");
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1, 5000);
+  printf("DONE\n\n");
+}
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: run 5,000 threads on 2 cores, saving extended (FPU) state
+  and the thread signal mask.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_multi_thread_set_yield_2core_5000)
+{
+  printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_2core_5000\n  run 5,000 threads that yield to one another on two cores, with all switching flags set.\n");
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 2, 5000);
+  printf("DONE\n\n");
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: run 5,000 threads on 1024 cores, saving extended (FPU) 
+  state and the thread signal mask.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_multi_thread_set_yield_1024core_5000)
+{
+  printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_1024core_5000\n  run 5,000 threads that yield to one another on 1,024 cores, with all switching flags set.\n");
+  run_multi_thread_set_yield(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1024, 5000);
   printf("DONE\n\n");
 }
 END_TEST

@@ -316,6 +316,7 @@ void run_getcontext(uint64_t mflags) {
   hpx_mctx_context_t mctx;
   hpx_context_t * ctx;
   hpx_xmmreg_t * xmmreg;
+  hpx_config_t cfg;
   long double * x87reg;
   long double x87_epsilon = 0.000000000000001;
   long double x87_abs;
@@ -324,8 +325,12 @@ void run_getcontext(uint64_t mflags) {
   sigset_t sigs_old;
   sigset_t sigs;
 
+  /* initialize our configuration */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   memset(&mctx, 0, sizeof(hpx_mctx_context_t));
@@ -424,10 +429,15 @@ void run_getcontext(uint64_t mflags) {
 void run_setcontext_counter(uint64_t mflags) {
   hpx_mctx_context_t mctx;
   hpx_context_t * ctx;
+  hpx_config_t cfg;
   char msg[128];
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   context_counter = (int *) malloc(sizeof(int));
@@ -467,9 +477,14 @@ void run_setcontext_counter(uint64_t mflags) {
 
 void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int argc, ...) {
   hpx_context_t * ctx;
+  hpx_config_t cfg;
   char st1[8192] __attribute__((aligned (16)));
   char msg[128];
   va_list argv;
+
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
 
   /* allocate machine contexts */
   mctx1 = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
@@ -479,7 +494,7 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
   ck_assert_msg(mctx2 != NULL, "Could not allocate machine context 2.");
 
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* allocate our test counter */ 
@@ -558,12 +573,17 @@ void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * m
 void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * orig_msg, unsigned int orig_len) {
   hpx_mctx_context_t * mctx;
   hpx_context_t * ctx;
+  hpx_config_t cfg;
   unsigned int idx;
   char msg[128 + orig_len + 1];  // yeah, I know this is sooper secure
   char * stk;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create the main machine context */
@@ -665,13 +685,18 @@ void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigne
 void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   hpx_mctx_context_t * mctx;
   hpx_context_t * ctx;
+  hpx_config_t cfg;
   unsigned int start_idx;
   unsigned int idx;
   char msg[128];
   void * stk;
 
+  /* init our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
   /* get a thread context */
-  ctx = hpx_ctx_create(mflags);
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create a main machine context */

@@ -37,7 +37,7 @@
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(uint64_t mflags) {
+hpx_context_t * hpx_ctx_create(hpx_config_t * cfg) {
   hpx_context_t * ctx = NULL;
   long cores;
   long x;
@@ -45,6 +45,7 @@ hpx_context_t * hpx_ctx_create(uint64_t mflags) {
   ctx = (hpx_context_t *) hpx_alloc(sizeof(hpx_context_t));
   if (ctx != NULL) {
     memset(ctx, 0, sizeof(hpx_context_t));
+    memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
 
     /* context ID */
     ctx->cid = __ctx_next_id;
@@ -52,7 +53,7 @@ hpx_context_t * hpx_ctx_create(uint64_t mflags) {
 
     /* kernel threads */
     _hpx_kthread_init();
-    cores = hpx_kthread_get_cores();
+    cores = hpx_config_get_cores(&ctx->cfg);
     if (cores <= 0) {
       __hpx_errno = HPX_ERROR_KTH_CORES;
       goto __hpx_ctx_create_FAIL;
@@ -60,12 +61,11 @@ hpx_context_t * hpx_ctx_create(uint64_t mflags) {
 
     /* get the CPU configuration and set switching flags */
     ctx->mcfg = hpx_mconfig_get();
-    ctx->mflags = mflags;
 
     ctx->kths = (hpx_kthread_t **) hpx_alloc(cores * sizeof(hpx_kthread_t *));
     if (ctx->kths != NULL) {
       for (x = 0; x < cores; x++) {
-        ctx->kths[x] = hpx_kthread_create(hpx_kthread_seed_default, ctx->mcfg, mflags);
+        ctx->kths[x] = hpx_kthread_create(hpx_kthread_seed_default, ctx->mcfg, hpx_config_get_switch_flags(&ctx->cfg));
 
         if (ctx->kths[x] == NULL) {
           goto __hpx_ctx_create_FAIL;
@@ -109,10 +109,6 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
   for (x = 0; x < ctx->kths_count; x++) {
     hpx_kthread_destroy(ctx->kths[x]);
   }  
-
-  for (x = 0; x < ctx->kths_count; x++) {
-    //    hpx_free(ctx->kths[x]->mctx);
-  }
 
   hpx_free(ctx->kths);
   hpx_free(ctx);

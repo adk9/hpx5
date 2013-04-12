@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include "hpx_queue.h"
 #include "hpx_kthread.h"
+#include "hpx_config.h"
 
 #ifdef __x86_64__
   #include "arch/x86_64/hpx_mconfig.h"
@@ -55,6 +56,7 @@ typedef struct {
   uint32_t kths_count;
   uint32_t kths_idx;
 
+  hpx_config_t cfg;
   hpx_mconfig_t mcfg;
   uint64_t mflags;
 } hpx_context_t;
@@ -66,7 +68,7 @@ typedef struct {
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(uint64_t mflags);
+hpx_context_t * hpx_ctx_create(hpx_config_t *);
 void hpx_ctx_destroy(hpx_context_t *);
 hpx_context_id_t hpx_ctx_get_id(hpx_context_t *);
 
