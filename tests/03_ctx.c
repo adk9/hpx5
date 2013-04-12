@@ -92,7 +92,7 @@ START_TEST (test_libhpx_ctx_cores)
 
   /* see if we can create a context with only one logical CPU core */
   ctx = hpx_ctx_create(&cfg);
-  sprintf(msg, "Core count is incorrect in context (expected 1, got %d).");
+  sprintf(msg, "Core count is incorrect in context (expected 1, got %d).", ctx->kths_count);
   ck_assert_msg(ctx->kths_count == 1, msg);
 
   hpx_ctx_destroy(ctx);
@@ -101,7 +101,7 @@ START_TEST (test_libhpx_ctx_cores)
   /* make sure we're getting good defaults */
   hpx_config_init(&cfg);
   ctx = hpx_ctx_create(&cfg);
-  sprintf(msg, "Core count is incorrect in context (expected %d, got %d).");
+  sprintf(msg, "Core count is incorrect in context (expected %d, got %d).", (int) hpx_kthread_get_cores(), ctx->kths_count);
   ck_assert_msg(ctx->kths_count == hpx_kthread_get_cores(), msg);
 
   hpx_ctx_destroy(ctx);

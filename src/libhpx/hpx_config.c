@@ -34,6 +34,8 @@
 
 void hpx_config_init(hpx_config_t * cfg) {
   hpx_config_set_cores(cfg, hpx_kthread_get_cores());
+  hpx_config_set_switch_flags(cfg, HPX_CONFIG_DEFAULT_SWITCH_FLAG);
+  hpx_config_set_thread_stack_size(cfg, HPX_CONFIG_DEFAULT_THREAD_SS);
 }
 
 
@@ -65,6 +67,19 @@ uint64_t hpx_config_get_switch_flags(hpx_config_t * cfg) {
 
 /*
  --------------------------------------------------------------------
+  hpx_config_get_thread_stack_size
+
+  Returns the number of bytes allocated for thread stacks.
+ --------------------------------------------------------------------
+*/
+
+uint32_t hpx_config_get_thread_stack_size(hpx_config_t * cfg) {
+  return cfg->thread_ss;
+}
+
+
+/*
+ --------------------------------------------------------------------
   hpx_config_set_cores
 
   Sets the number of configured CPU cores.
@@ -88,4 +103,17 @@ void hpx_config_set_cores(hpx_config_t * cfg, uint32_t cores) {
 
 void hpx_config_set_switch_flags(hpx_config_t * cfg, uint64_t flags) {
   cfg->mflags = flags;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_config_set_thread_stack_size
+
+  Sets the number of bytes allocated for thread stacks.
+ --------------------------------------------------------------------
+*/
+
+void hpx_config_set_thread_stack_size(hpx_config_t * cfg, uint32_t ss) {
+  cfg->thread_ss = ss;
 }

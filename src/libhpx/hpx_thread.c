@@ -51,7 +51,7 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     hpx_lco_future_init(&th->retval);
     
     /* create a stack to use */
-    th->ss = 8192;
+    th->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
     th->stk = (void *) hpx_alloc(th->ss);
     if (th->stk == NULL) {
       hpx_free(th);

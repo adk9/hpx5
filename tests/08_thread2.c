@@ -288,6 +288,17 @@ void run_thread_args(uint64_t mflags) {
 
 /*
  --------------------------------------------------------------------
+  TEST HELPER: Worker thread for thread stack size testing
+ --------------------------------------------------------------------
+*/
+
+void stack_size_worker(void * ptr) {
+  volatile float num = 73 / 4;
+}
+
+
+/*
+ --------------------------------------------------------------------
   TEST HELPER: Test Runner for hpx_thread_strcpy().
  --------------------------------------------------------------------
 */
@@ -916,4 +927,42 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield_1024core_5000)
 }
 END_TEST
 
+
+/*
+ --------------------------------------------------------------------
+  TEST: thread stack size
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_stack_size_verify)
+{
+  hpx_context_t * ctx = NULL;
+  hpx_thread_t * th = NULL;
+  hpx_config_t cfg;
+  char msg[128];
+
+  /* set a certain stack size in our configuration */
+  hpx_config_init(&cfg);
+  hpx_config_set_thread_stack_size(&cfg, 65536);
+
+  /* get a thread context */
+  ctx = hpx_ctx_create(&cfg);
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create a thread */
+  th = hpx_thread_create(ctx, stack_size_worker, NULL);
+  ck_assert_msg(th != NULL, "Could not create a thread.");
+
+  /* wait for the thread to finish */
+  hpx_thread_join(th, NULL);
+
+  /* verify it was created with the correct size */
+  sprintf(msg, "Thread was not created with the correct stack size (expected 65536, got %d).", (int) th->ss);
+  ck_assert_msg(th->ss == 65536, msg);
+
+  /* cleanup */
+  hpx_thread_destroy(th);
+  hpx_ctx_destroy(ctx);
+}
+END_TEST
 

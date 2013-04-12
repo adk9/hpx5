@@ -27,7 +27,7 @@
 #define LIBHPX_MCONFIG_X86_64_H_
 
 #include <stdint.h>
-#include "arch/x86_64/hpx_mconfig_defs.h"
+#include "hpx_mconfig_defs.h"
 
 
 /*

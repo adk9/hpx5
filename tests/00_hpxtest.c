@@ -37,6 +37,8 @@
 #include "08_thread2.c"
 #include "09_config.c"
 
+#include "98_thread_perf1.c"
+
 
 /*
  --------------------------------------------------------------------
@@ -49,12 +51,16 @@ int main(int argc, char * argv[]) {
   TCase * tc = tcase_create("hpxtest-core");
   char * long_tests = NULL;
   char * hardcore_tests = NULL;
+  char * perf_tests = NULL;
 
   /* figure out if we need to run long-running tests */
   long_tests = getenv("HPXTEST_EXTENDED");
 
   /* see if we're in HARDCORE mode (heh) */
   hardcore_tests = getenv("HPXTEST_HARDCORE");
+
+  /* see if we're supposed to run performance tests */
+  perf_tests = getenv("HPXTEST_PERF");
 
   /* install fixtures */
   tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
@@ -66,6 +72,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_config_cores);
   tcase_add_test(tc, test_libhpx_config_switch_fpu);
   tcase_add_test(tc, test_libhpx_config_switch_sigmask);
+  tcase_add_test(tc, test_libhpx_config_thread_stack_size);
 
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
@@ -181,6 +188,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_lco_futures);
 
   /* test threads (stage 2) */
+  tcase_add_test(tc, test_libhpx_thread_stack_size_verify);
   tcase_add_test(tc, test_libhpx_thread_self_ptr);
   tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
   tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
@@ -200,9 +208,6 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield1);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield2);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x2);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
 
   if (long_tests || hardcore_tests) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32);
@@ -210,6 +215,9 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_sig);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x32);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
   }
 
   if (hardcore_tests) {
@@ -218,6 +226,59 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore1000);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore5000);
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
+  }
+
+  /* performance tests */
+  if (perf_tests) {
+    tcase_add_test(tc, test_libhpx_thread_perf_switch);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext_sig);
+
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
+    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
   }
 
   suite_add_tcase(s, tc);

@@ -46,7 +46,7 @@ START_TEST (test_libhpx_config_cores)
   hpx_config_init(&cfg);
 
   /* make sure we have a reasonable default */
-  sprintf(msg, "Number of cores was not initialized (expected %d, got %d).", hpx_kthread_get_cores(), hpx_config_get_cores(&cfg));
+  sprintf(msg, "Number of cores was not initialized (expected %d, got %d).", (int) hpx_kthread_get_cores(), hpx_config_get_cores(&cfg));
   ck_assert_msg(hpx_config_get_cores(&cfg) == hpx_kthread_get_cores(), msg);
 
   /* see if a value gets set */
@@ -75,7 +75,7 @@ START_TEST (test_libhpx_config_switch_fpu)
   hpx_config_init(&cfg);
 
   /* FPU switching is disabled by default */
-  ck_assert_msg((hpx_config_get_switch_flags(&cfg) & HPX_MCTX_SWITCH_EXTENDED) == 0, "FPU switching was set by default (it should not have been).");
+  ck_assert_msg(!(hpx_config_get_switch_flags(&cfg) & HPX_MCTX_SWITCH_EXTENDED), "FPU switching was set by default (it should not have been).");
 
   /* set the flag */
   hpx_config_set_switch_flags(&cfg, (hpx_config_get_switch_flags(&cfg) | HPX_MCTX_SWITCH_EXTENDED));
@@ -108,4 +108,28 @@ START_TEST (test_libhpx_config_switch_sigmask)
 END_TEST
 
 
+/*
+ --------------------------------------------------------------------
+  TEST: thread stack size
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_config_thread_stack_size)
+{
+  hpx_config_t cfg;
+  uint32_t ss;
+  char msg[128];
+
+  hpx_config_init(&cfg);
+  
+  /* make sure the default is right */
+  sprintf(msg, "Default thread stack size was not initialized (expected %d, got %d).", HPX_CONFIG_DEFAULT_THREAD_SS, hpx_config_get_thread_stack_size(&cfg));
+  ck_assert_msg(hpx_config_get_thread_stack_size(&cfg) == HPX_CONFIG_DEFAULT_THREAD_SS, msg);
+  
+  /* set the stack size and verify */
+  hpx_config_set_thread_stack_size(&cfg, 32768);
+  sprintf(msg, "Thread stack size was not set (expected 32768, got %d).", hpx_config_get_thread_stack_size(&cfg));
+  ck_assert_msg(hpx_config_get_thread_stack_size(&cfg) == 32768, msg);
+}
+END_TEST
 
