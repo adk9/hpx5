@@ -41,10 +41,6 @@ void * thread_arg;
 int thread_counter;
 
 unsigned char * thread_buf;
-uint32_t * thread_buf_ts;
-uint32_t yield_min_ts;
-uint32_t yield_max_ts;
-float yield_mean_ts;
 
 
 /*
@@ -171,21 +167,7 @@ void multi_thread_set_yield_worker(void * ptr) {
   for (idx = 0; idx < 256; idx++) {
     buf_idx = (uint32_t) idx + ((uint64_t) my_idx - (uint64_t) thread_buf);
     thread_buf[buf_idx] = (unsigned char) idx;
-
-#ifdef __linux__
-    struct timespec y_begin_ts;
-    struct timespec y_end_ts;
-    
-    clock_gettime(CLOCK_MONOTONIC, &y_begin_ts);
-#endif
-
     hpx_thread_yield();
-
-#ifdef __linux__
-    clock_gettime(CLOCK_MONOTONIC, &y_end_ts);
-    thread_buf_ts[buf_idx] = (uint32_t) (((y_end_ts.tv_sec * 1000000000) + y_end_ts.tv_nsec) - ((y_begin_ts.tv_sec * 1000000000) + y_begin_ts.tv_nsec));
-    printf("%d\n", thread_buf_ts[buf_idx]);
-#endif
   }
 }
 
@@ -200,7 +182,6 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
   hpx_context_t * ctx;
   hpx_thread_t ** ths;
   char msg[128];
-  uint64_t elapsed_ts;
   uint32_t buf_idx;
   int idx;
 
@@ -212,11 +193,7 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
   thread_buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
   ck_assert_msg(thread_buf != NULL, "Could not allocate memory for test data.");
 
-  thread_buf_ts = (uint32_t *) hpx_alloc(sizeof(uint32_t) * th_cnt * 256);
-  ck_assert_msg(thread_buf_ts != NULL, "Could not allocate memory for test timing data.");
-
   memset(thread_buf, 0, sizeof(char) * th_cnt * 256);
-  memset(thread_buf_ts, 0, sizeof(uint32_t) * th_cnt * 256);
 
   /* create HPX theads */
   ths = (hpx_thread_t **) hpx_alloc(sizeof(hpx_thread_t *) * th_cnt);
@@ -238,29 +215,12 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t th_cnt) {
     ck_assert_msg(thread_buf[idx] == (idx % 256), msg);
   }
 
-  /* calculate timings */
-  elapsed_ts = 0;
-  for (idx = 0; idx < (th_cnt * 256); idx++) {
-    elapsed_ts += thread_buf_ts[idx];
-
-    if (yield_min_ts > thread_buf_ts[idx]) {
-      yield_min_ts = thread_buf_ts[idx];
-    }
-
-    if (yield_max_ts < thread_buf_ts[idx]) {
-      yield_max_ts = thread_buf_ts[idx];
-    }
-  }
-
-  yield_mean_ts = (float) (elapsed_ts / (th_cnt * 256));
-
   /* clean up */
   for (idx = 0; idx < th_cnt; idx++) {
     hpx_thread_destroy(ths[idx]);
   }
 
   hpx_free(ths);
-  hpx_free(thread_buf_ts);
   hpx_free(thread_buf);
 
   hpx_ctx_destroy(ctx);
@@ -777,12 +737,7 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield1)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield1\n  run one thread that yields to itself, with no switching flags.\n");
   run_multi_thread_set_yield(0, 1);
-
-#ifdef __linux__
-  printf("DONE: mean %.2f, min %d, max %d\n\n", yield_mean_ts, yield_min_ts, yield_max_ts);  
-#else
   printf("DONE\n\n");
-#endif
 }
 END_TEST
 
@@ -797,12 +752,7 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield2)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield2\n  run two threads that yield to one another, with no switching flags.\n");
   run_multi_thread_set_yield(0, 2);
-
-#ifdef __linux__
-  printf("DONE: mean %.2f, min %d, max %d\n\n", yield_mean_ts, yield_min_ts, yield_max_ts);  
-#else
   printf("DONE\n\n");
-#endif
 }
 END_TEST
 
@@ -818,12 +768,7 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield_x2)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_x2\n  run two threads per core that yield to one another, with no switching flags.\n");
   run_multi_thread_set_yield(0, hpx_kthread_get_cores() * 2);
-
-#ifdef __linux__
-  printf("DONE: mean %.2f, min %d, max %d\n\n", yield_mean_ts, yield_min_ts, yield_max_ts);  
-#else
   printf("DONE\n\n");
-#endif
 }
 END_TEST
 
@@ -839,12 +784,7 @@ START_TEST (test_libhpx_thread_multi_thread_set_yield_x32)
 {
   printf("RUNNING TEST test_libhpx_thread_multi_thread_set_yield_x32\n  run 32 threads per core that yield to one another, with no switching flags.\n");
   run_multi_thread_set_yield(0, hpx_kthread_get_cores() * 32);
-
-#ifdef __linux__
-  printf("DONE: mean %.2f, min %d, max %d\n\n", yield_mean_ts, yield_min_ts, yield_max_ts);  
-#else
   printf("DONE\n\n");
-#endif
 }
 END_TEST
 
