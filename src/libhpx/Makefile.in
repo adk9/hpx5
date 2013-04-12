@@ -79,13 +79,14 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhpx_la_LIBADD =
 am__libhpx_la_SOURCES_DIST = hpx_error.c hpx_init.c hpx_ctx.c \
-	hpx_thread.c hpx_queue.c hpx_kthread.c arch/x86_64/hpx_mctx.S \
-	arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c \
-	arch/x86_64/hpx_lco_future.S
+	hpx_thread.c hpx_queue.c hpx_kthread.c hpx_config.c \
+	arch/x86_64/hpx_mctx.S arch/x86_64/hpx_mconfig.S \
+	arch/x86_64/hpx_mctx_mk.c arch/x86_64/hpx_lco_future.S
 @CPU_X86_64_TRUE@am__objects_1 = hpx_mctx.lo hpx_mconfig.lo \
 @CPU_X86_64_TRUE@	hpx_mctx_mk.lo hpx_lco_future.lo
 am_libhpx_la_OBJECTS = hpx_error.lo hpx_init.lo hpx_ctx.lo \
-	hpx_thread.lo hpx_queue.lo hpx_kthread.lo $(am__objects_1)
+	hpx_thread.lo hpx_queue.lo hpx_kthread.lo hpx_config.lo \
+	$(am__objects_1)
 libhpx_la_OBJECTS = $(am_libhpx_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -233,7 +234,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libhpx.la
 libhpx_la_SOURCES = hpx_error.c hpx_init.c hpx_ctx.c hpx_thread.c \
-	hpx_queue.c hpx_kthread.c $(ARCH_SRC)
+	hpx_queue.c hpx_kthread.c hpx_config.c $(ARCH_SRC)
 @CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/hpx_mctx.S arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c arch/x86_64/hpx_lco_future.S
 all: all-am
 
@@ -309,6 +310,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_config.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_ctx.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpx_init.Plo@am__quote@
