@@ -28,7 +28,7 @@
  --------------------------------------------------------------------
   hpx_config_init
 
-  Initializes configuration data for HPX-4.
+  Initializes configuration data for HPX.
  --------------------------------------------------------------------
 */
 
@@ -52,6 +52,19 @@ uint32_t hpx_config_get_cores(hpx_config_t * cfg) {
 
 /*
  --------------------------------------------------------------------
+  hpx_config_get_switch_flags
+
+  Returns machine context switching flags.
+ --------------------------------------------------------------------
+*/
+
+uint64_t hpx_config_get_switch_flags(hpx_config_t * cfg) {
+  return cfg->mflags;
+}
+
+
+/*
+ --------------------------------------------------------------------
   hpx_config_set_cores
 
   Sets the number of configured CPU cores.
@@ -59,5 +72,20 @@ uint32_t hpx_config_get_cores(hpx_config_t * cfg) {
 */
 
 void hpx_config_set_cores(hpx_config_t * cfg, uint32_t cores) {
-  cfg->cores = cores;
+  if (cores > 0) {
+    cfg->cores = cores;
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_config_set_switch_flags
+
+  Sets machine context switching flags.
+ --------------------------------------------------------------------
+*/
+
+void hpx_config_set_switch_flags(hpx_config_t * cfg, uint64_t flags) {
+  cfg->mflags = flags;
 }

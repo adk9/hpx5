@@ -62,6 +62,11 @@ int main(int argc, char * argv[]) {
   /* set timeout */
   tcase_set_timeout(tc, 1200);
 
+  /* test configuration */
+  tcase_add_test(tc, test_libhpx_config_cores);
+  tcase_add_test(tc, test_libhpx_config_switch_fpu);
+  tcase_add_test(tc, test_libhpx_config_switch_sigmask);
+
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
 
@@ -73,6 +78,7 @@ int main(int argc, char * argv[]) {
   /* test scheduling context management */
   tcase_add_test(tc, test_libhpx_ctx_create);
   tcase_add_test(tc, test_libhpx_ctx_get_id);
+  tcase_add_test(tc, test_libhpx_ctx_cores);
 
   /* test threads (stage 1) */
   //  tcase_add_test(tc, test_libhpx_thread_create);
@@ -194,6 +200,9 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield1);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield2);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x2);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
 
   if (long_tests || hardcore_tests) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32);

@@ -33,8 +33,11 @@
 START_TEST (test_libhpx_ctx_create)
 {
   hpx_context_t * ctx = NULL;
+  hpx_config_t cfg;
 
-  ctx = hpx_ctx_create(0);
+  hpx_config_init(&cfg);
+
+  ctx = hpx_ctx_create(&cfg);
   ck_assert_msg(ctx != NULL, "ctx is NULL");
   hpx_ctx_destroy(ctx);
 } 
@@ -50,11 +53,14 @@ END_TEST
 START_TEST (test_libhpx_ctx_get_id)
 {
   hpx_context_t * ctx = NULL;
+  hpx_config_t cfg;
   char msg[128];
   int x;
 
+  hpx_config_init(&cfg);
+
   for (x = 0; x < 10; x++) {
-    ctx = hpx_ctx_create(0);
+    ctx = hpx_ctx_create(&cfg);
 
     sprintf(msg, "ctx is NULL on loop iteration %d", x);
     ck_assert_msg(ctx != NULL, msg);
@@ -65,5 +71,40 @@ START_TEST (test_libhpx_ctx_get_id)
     hpx_ctx_destroy(ctx);
     ctx = NULL;
   }
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: non-default CPU core count
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_ctx_cores)
+{
+  hpx_context_t * ctx = NULL;
+  hpx_config_t cfg;
+  char msg[128];
+
+  hpx_config_init(&cfg);
+  hpx_config_set_cores(&cfg, 1);
+
+  /* see if we can create a context with only one logical CPU core */
+  ctx = hpx_ctx_create(&cfg);
+  sprintf(msg, "Core count is incorrect in context (expected 1, got %d).");
+  ck_assert_msg(ctx->kths_count == 1, msg);
+
+  hpx_ctx_destroy(ctx);
+  ctx = NULL;
+
+  /* make sure we're getting good defaults */
+  hpx_config_init(&cfg);
+  ctx = hpx_ctx_create(&cfg);
+  sprintf(msg, "Core count is incorrect in context (expected %d, got %d).");
+  ck_assert_msg(ctx->kths_count == hpx_kthread_get_cores(), msg);
+
+  hpx_ctx_destroy(ctx);
+  ctx = NULL;
 }
 END_TEST
