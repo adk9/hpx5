@@ -204,8 +204,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 hpxtest_SOURCES = 00_hpxtest.c $(ARCH_SRC)
-hpxtest_CFLAGS = @CHECK_CFLAGS@
-hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la @CHECK_LIBS@ -lm -lpthread
+hpxtest_CFLAGS = @CHECK_CFLAGS@ -I/home/pbohan/usr/include -L/home/pbohan/usr/lib
+hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la @CHECK_LIBS@ -lm -lpthread -lpapi
 @CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/99_hpxtest.S
 all: all-am
 
