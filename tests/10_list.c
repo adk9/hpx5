@@ -94,8 +94,8 @@ START_TEST (test_libhpx_list_peek)
 
   /* see what the front element is */
   val = hpx_list_peek(&ll);
-  sprintf(msg, "List has the wrong front element (expected 104, got %d)", *val);
-  ck_assert_msg(*val == 104, msg);
+  sprintf(msg, "List has the wrong front element (expected 57, got %d)", *val);
+  ck_assert_msg(*val == 57, msg);
 
   hpx_list_destroy(&ll);
 }
@@ -119,7 +119,7 @@ START_TEST (test_libhpx_list_pop)
   hpx_list_init(&ll);
 
   /* insert some values */
-  for (x = 0; x < 11; x++) {
+  for (x = 0; x < 12; x++) {
     hpx_list_push(&ll, &vals[x]);
   }
 
@@ -142,8 +142,8 @@ START_TEST (test_libhpx_list_pop)
 
   /* check the queue size */
   cnt = hpx_list_size(&ll);
-  sprintf(msg, "List does not have the correct number of elements (expected 7, got %d)", cnt);
-  ck_assert_msg(cnt == 7, msg);
+  sprintf(msg, "List does not have the correct number of elements (expected 8, got %d)", cnt);
+  ck_assert_msg(cnt == 8, msg);
 
   /* insert and then delete again */
   hpx_list_push(&ll, &vals[11]);
@@ -153,7 +153,7 @@ START_TEST (test_libhpx_list_pop)
   ck_assert_msg(*val == 1087, msg);
 
   /* take it down to one element */
-  for (x = 0; x < 6; x++) {
+  for (x = 0; x < 7; x++) {
     hpx_list_pop(&ll);
   }
 
