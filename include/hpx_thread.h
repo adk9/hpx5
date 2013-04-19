@@ -26,6 +26,7 @@
 #include "hpx_ctx.h"
 #include "hpx_mctx.h"
 #include "hpx_lco.h"
+#include "hpx_list.h"
 
 #pragma once
 #ifndef LIBHPX_THREAD_H_
@@ -73,6 +74,7 @@ struct _hpx_kthread_t;
 */
 
 typedef struct _hpx_thread_t {
+  hpx_context_t *         ctx;
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
@@ -83,7 +85,13 @@ typedef struct _hpx_thread_t {
   struct _hpx_kthread_t * kth;
   hpx_mctx_context_t *    mctx;
   hpx_future_t            retval;
+  struct _hpx_thread_t *  parent;
+  hpx_list_t              children;
 } hpx_thread_t;
+
+
+/* the next thread ID */
+static hpx_thread_id_t __thread_next_id;
 
 
 /*
@@ -91,6 +99,8 @@ typedef struct _hpx_thread_t {
   Thread Functions
  --------------------------------------------------------------------
 */
+
+hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
 hpx_thread_t * hpx_thread_create(hpx_context_t *, void *, void *);
 void _hpx_thread_destroy(hpx_thread_t *);

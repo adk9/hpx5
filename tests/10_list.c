@@ -182,3 +182,52 @@ START_TEST (test_libhpx_list_pop)
   hpx_list_destroy(&ll);
 }
 END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: iterate through list elements
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_list_iter)
+{
+  hpx_list_node_t * node = NULL;
+  hpx_list_t ll;
+  char msg[128];
+  int vals[7] = { 104, 42, 73, 91, 14, 8, 57 };
+  int * val;
+  int x, cnt;
+
+  hpx_list_init(&ll);
+  
+  for (x = 0; x < 7; x++) {
+    hpx_list_push(&ll, &vals[x]);
+  }
+
+  cnt = hpx_list_size(&ll);
+  sprintf(msg, "List does not have the correct number of elements (expected 7, got %d)", cnt);
+  ck_assert_msg(hpx_list_size(&ll) == 7, msg);
+
+  /* get the first node */
+  node = hpx_list_first(&ll);
+  ck_assert_msg(node != NULL, "First element in the list is NULL.");
+
+  val = node->value;
+  sprintf(msg, "First element in the list is incorrect (expected 57, got %d).", *val);
+  ck_assert_msg(*val == 57, msg);
+
+  /* get the other nodes */
+  for (x = 5; x > 0; x--) {
+    node = hpx_list_next(node);
+    sprintf(msg, "Element %d in list is NULL.", x);
+    ck_assert_msg(node != NULL, msg);
+
+    val = node->value;
+    sprintf(msg, "Element %d in list is incorrect (expected %d, got %d).", x, vals[x], *val);
+    ck_assert_msg(vals[x] == *val, msg);
+  }
+
+  hpx_list_destroy(&ll);
+}
+END_TEST

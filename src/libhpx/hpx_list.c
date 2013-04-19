@@ -145,3 +145,29 @@ void * hpx_list_pop(hpx_list_t * ll) {
 
   return val;
 }
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_list_first
+
+  Returns the first node in the list.
+ --------------------------------------------------------------------
+*/
+
+hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
+  return SLIST_FIRST(&ll->head);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_list_next
+
+  Returns the next element in the list.
+ --------------------------------------------------------------------
+*/
+
+hpx_list_node_t * hpx_list_next(hpx_list_node_t * node) {
+  return SLIST_NEXT(node, entries);
+}

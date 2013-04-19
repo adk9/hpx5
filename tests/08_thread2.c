@@ -401,6 +401,169 @@ void run_thread_self_get_ptr(uint64_t mflags) {
 }
 
 
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: worker function for run_main_hierarchy (level 1)
+ --------------------------------------------------------------------
+*/
+
+void main_hierarchy_worker2(void * ptr) {
+  hpx_list_node_t * child = NULL;
+  hpx_thread_t * parent = (hpx_thread_t *) ptr;
+  hpx_thread_t * th = hpx_thread_self();
+  int found = 0;
+  char msg[128];
+
+  ck_assert_msg(th != NULL, "Thread data is NULL.");
+  ck_assert_msg(th->parent != NULL, "Thread has no parent at hierarchy level 2.");
+
+  sprintf(msg, "Thread %ld has an incorrect parent at hierarchy level 2 (expected %ld, got %ld)", hpx_thread_get_id(th), hpx_thread_get_id(parent), hpx_thread_get_id(th->parent));
+  ck_assert_msg(th->parent == parent, msg);
+
+  /* see if this thread is a child of its parent */
+  child = hpx_list_first(&parent->children);
+  while (child != NULL) {
+    if ((child->value != NULL) && (hpx_thread_get_id(th) == hpx_thread_get_id(child->value))) {
+      found = 1;
+    }
+
+    child = hpx_list_next(child);
+  }
+
+  sprintf(msg, "Thread %ld was not found among its parent's children.", hpx_thread_get_id(th));
+  ck_assert_msg(found == 1, msg);  
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: worker function for run_main_hierarchy (level 0)
+ --------------------------------------------------------------------
+*/
+
+void main_hierarchy_worker1(void * ptr) {
+  hpx_list_node_t * child = NULL;
+  hpx_thread_t * th = hpx_thread_self();
+  hpx_thread_t * parent = (hpx_thread_t *) ptr;
+  hpx_thread_t * clds[10];
+  int found = 0;
+  char msg[128];
+  uint32_t idx;
+
+  ck_assert_msg(th != NULL, "Thread data is NULL.");
+  ck_assert_msg(th->parent != NULL, "Thread has no parent at hierarchy level 1.");
+
+  sprintf(msg, "Thread %ld has an incorrect parent at hierarchy level 1 (expected %ld, got %ld)", hpx_thread_get_id(th), hpx_thread_get_id(parent), hpx_thread_get_id(th->parent));
+  ck_assert_msg(th->parent == parent, msg);
+
+  /* see if this thread is a child of its parent */
+  child = hpx_list_first(&parent->children);
+  while (child != NULL) {
+    if ((child->value != NULL) && (hpx_thread_get_id(th) == hpx_thread_get_id(child->value))) {
+      found = 1;
+    }
+
+    child = hpx_list_next(child);
+  }
+
+  sprintf(msg, "Thread %ld was not found among its parent's children.", hpx_thread_get_id(th));
+  ck_assert_msg(found == 1, msg);  
+
+  hpx_thread_yield();
+
+  sprintf(msg, "Parent for thread %ld is NULL when spawned from hierarchy level 1.", hpx_thread_get_id(th));
+  ck_assert_msg(th->parent != NULL, msg);
+
+  /* create some child threads */
+  for (idx = 0; idx < 10; idx++) {
+    clds[idx] = hpx_thread_create(th->ctx, main_hierarchy_worker2, (void *) th);
+  }
+
+  /* wait for the children to finish */
+  for (idx = 0; idx < 10; idx++) {
+    hpx_thread_join(clds[idx], NULL);
+  }
+
+  /* cleanup */
+  for (idx = 0; idx < 10; idx++) {
+    hpx_thread_destroy(clds[idx]);
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: worker function for run_main_hierarchy (level 0)
+ --------------------------------------------------------------------
+*/
+
+void main_hierarchy_worker0(void * ptr) {
+  hpx_thread_t * th = hpx_thread_self();
+  uint32_t * th_cnt = (uint32_t *) ptr;
+  hpx_thread_t * clds[*th_cnt];
+  char msg[128];
+  uint32_t idx;
+
+  hpx_thread_yield();
+
+  sprintf(msg, "Parent for thread %ld is not NULL when spawned from main thread.", hpx_thread_get_id(th));
+  ck_assert_msg(th->parent == NULL, msg);
+
+  /* create some child threads */
+  for (idx = 0; idx < *th_cnt; idx++) {
+    clds[idx] = hpx_thread_create(th->ctx, main_hierarchy_worker1, (void *) th);
+  }
+
+  /* wait for the children to finish */
+  for (idx = 0; idx < *th_cnt; idx++) {
+    hpx_thread_join(clds[idx], NULL);
+  }
+
+  /* cleanup */
+  for (idx = 0; idx < *th_cnt; idx++) {
+    hpx_thread_destroy(clds[idx]);
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: thread hierarchies
+ --------------------------------------------------------------------
+*/
+
+run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
+  hpx_context_t * ctx = NULL;
+  hpx_config_t cfg;
+  hpx_thread_t * ths[th_cnt];
+  uint32_t idx;
+
+  /* get our config */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
+  /* get a thread context */
+  ctx = hpx_ctx_create(&cfg);  
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create some threads */
+  for (idx = 0; idx < th_cnt; idx++) {
+    ths[idx] = hpx_thread_create(ctx, main_hierarchy_worker0, &th_cnt);
+  }
+
+  /* wait until the threads are done */
+  for (idx = 0; idx < th_cnt; idx++) {
+    hpx_thread_join(ths[idx], NULL);
+  }
+
+  /* cleanup */
+  for (idx = 0; idx < th_cnt; idx++) {
+    hpx_thread_destroy(ths[idx]);
+  }
+
+  hpx_ctx_destroy(ctx);
+}
+
 
 /*
  --------------------------------------------------------------------
@@ -966,3 +1129,62 @@ START_TEST (test_libhpx_thread_stack_size_verify)
 }
 END_TEST
 
+
+/*
+ --------------------------------------------------------------------
+  TEST: create some HPX threads from the main thread and make sure
+  their parent <--> child relationships are set correctly, with no
+  switching flags.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_main_hierarchy)
+{
+  run_main_hierarchy(0, 10);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: create some HPX threads from the main thread and make sure
+  their parent <--> child relationships are set correctly, saving
+  extended (FPU) state.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_main_hierarchy_ext)
+{
+  run_main_hierarchy(HPX_MCTX_SWITCH_EXTENDED, 10);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: create some HPX threads from the main thread and make sure
+  their parent <--> child relationships are set correctly, saving
+  signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_main_hierarchy_sig)
+{
+  run_main_hierarchy(HPX_MCTX_SWITCH_SIGNALS, 10);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: create some HPX threads from the main thread and make sure
+  their parent <--> child relationships are set correctly, saving
+  extended (FPU) state and signals.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_main_hierarchy_ext_sig)
+{
+  run_main_hierarchy(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 10);
+}
+END_TEST
