@@ -37,7 +37,7 @@
 #include "08_thread2.c"
 #include "09_config.c"
 
-#include "98_thread_perf1.c"
+/* #include "98_thread_perf1.c" */
 
 
 /*
@@ -229,6 +229,7 @@ int main(int argc, char * argv[]) {
   }
 
   /* performance tests */
+  /*
   if (perf_tests) {
     tcase_add_test(tc, test_libhpx_thread_perf_switch);
     tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
@@ -280,6 +281,7 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
   }
+  */
 
   suite_add_tcase(s, tc);
 

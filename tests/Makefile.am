@@ -6,7 +6,7 @@ TESTS = hpxtest
 check_PROGRAMS = hpxtest
 hpxtest_SOURCES = 00_hpxtest.c
 hpxtest_CFLAGS = @CHECK_CFLAGS@ -I/home/pbohan/usr/include -L/home/pbohan/usr/lib
-hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la @CHECK_LIBS@ -lm -lpthread -lpapi
+hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la @CHECK_LIBS@ -lm -lpthread
 
 if CPU_X86_64
   ARCH_SRC = arch/x86_64/99_hpxtest.S
