@@ -119,7 +119,7 @@ START_TEST (test_libhpx_queue_pop)
   hpx_queue_init(&q);
 
   /* insert some values */
-  for (x = 0; x < 11; x++) {
+  for (x = 0; x < 12; x++) {
     hpx_queue_push(&q, &vals[x]);
   }
 
@@ -142,8 +142,8 @@ START_TEST (test_libhpx_queue_pop)
 
   /* check the queue size */
   cnt = hpx_queue_size(&q);
-  sprintf(msg, "Queue does not have the correct number of elements (expected 7, got %d)", cnt);
-  ck_assert_msg(cnt == 7, msg);
+  sprintf(msg, "Queue does not have the correct number of elements (expected 8, got %d)", cnt);
+  ck_assert_msg(cnt == 8, msg);
 
   /* insert and then delete again */
   hpx_queue_push(&q, &vals[11]);
@@ -153,7 +153,7 @@ START_TEST (test_libhpx_queue_pop)
   ck_assert_msg(*val == 14, msg);
 
   /* take it down to one element */
-  for (x = 0; x < 6; x++) {
+  for (x = 0; x < 7; x++) {
     hpx_queue_pop(&q);
   }
 
