@@ -21,7 +21,7 @@
 */
 
 #include "hpx_init.h"
-#include "hpx_ctx.h"
+#include "hpx_thread.h"
 #include "hpx_kthread.h"
 
 
@@ -40,7 +40,10 @@ hpx_error_t hpx_init(void) {
   __hpx_errno = HPX_SUCCESS;
 
   /* init the next context ID */
-  __ctx_next_id = 0;
+  __ctx_next_id = 1;
+
+  /* init the next thread ID */
+  __thread_next_id = 1;
 
   /* get the global machine configuration */
   __mcfg = hpx_mconfig_get();

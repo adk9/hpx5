@@ -59,4 +59,7 @@ void * hpx_list_peek(hpx_list_t *);
 void hpx_list_push(hpx_list_t *, void *);
 void * hpx_list_pop(hpx_list_t *);
 
+hpx_list_node_t * hpx_list_first(hpx_list_t *);
+hpx_list_node_t * hpx_list_next(hpx_list_node_t *);
+
 #endif

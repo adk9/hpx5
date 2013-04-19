@@ -102,6 +102,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_list_insert);
   tcase_add_test(tc, test_libhpx_list_peek);
   tcase_add_test(tc, test_libhpx_list_pop);
+  tcase_add_test(tc, test_libhpx_list_iter);
 
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
@@ -200,6 +201,10 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
   tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
   tcase_add_test(tc, test_libhpx_thread_self_ptr_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_main_hierarchy);
+  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext);
+  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_sig);
+  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext_sig);
   tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1);
   tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext);
   tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_sig);

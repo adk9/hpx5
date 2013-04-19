@@ -29,6 +29,19 @@
 
 /*
  --------------------------------------------------------------------
+  hpx_thread_get_id
+
+  Returns the Thread ID from the supplied thread data.
+ --------------------------------------------------------------------
+*/
+
+hpx_thread_id_t hpx_thread_get_id(hpx_thread_t * th) {
+  return th->tid;
+}
+
+
+/*
+ --------------------------------------------------------------------
   hpx_thread_create
 
   Creates and initializes a thread with variadic arguments.
@@ -44,11 +57,17 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
     /* initialize the thread */
     memset(th, 0, sizeof(hpx_thread_t));
 
+    th->tid = __thread_next_id;
+    __thread_next_id += 1;
+
+    th->ctx = ctx;
     th->state = HPX_THREAD_STATE_CREATE;
     th->func = func;
     th->args = args;
 
     hpx_lco_future_init(&th->retval);
+    hpx_list_init(&th->children);
+    th->parent = hpx_thread_self();
     
     /* create a stack to use */
     th->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
@@ -64,6 +83,11 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
       hpx_free(th->stk);
       hpx_free(th);
       return NULL;
+    }
+
+    /* add this thread as a child to its parent */
+    if (th->parent != NULL) {
+      hpx_list_push(&th->parent->children, th);
     }
 
     /* get a kernel thread to run this on */
@@ -142,18 +166,16 @@ hpx_thread_t * hpx_thread_self(void) {
 */
 
 void hpx_thread_join(hpx_thread_t * th, void ** value) {
+  hpx_thread_t * self = hpx_thread_self();
   hpx_future_t * fut = &th->retval;
-  struct timespec ts;
   uint8_t fut_st;
-
-  /* set our timer to 1 nanosecond */
-  ts.tv_sec = 0;
-  ts.tv_nsec = 1;
 
   /* poll the future until it's set */
   do {
     fut_st = fut->state;
-    nanosleep(&ts, NULL);
+    if (fut_st == HPX_LCO_FUTURE_UNSET) {
+      hpx_thread_yield();
+    }
   } while (fut_st == HPX_LCO_FUTURE_UNSET);
 
   /* copy its return value */
