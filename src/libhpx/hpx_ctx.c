@@ -128,23 +128,4 @@ hpx_context_id_t hpx_ctx_get_id(hpx_context_t * ctx) {
 }
 
 
-/*
- --------------------------------------------------------------------
-  _hpx_ctx_thread_queue_destroy
 
-  Helper function to destroy a user thread queue.  Called from
-  hpx_ctx_destroy().
- --------------------------------------------------------------------
-*/
-
-void _hpx_ctx_thread_queue_destroy(hpx_queue_t * q) {
-  hpx_thread_t * th;
-
-  while (hpx_queue_size(q) > 0) {
-    th = (hpx_thread_t *) hpx_queue_pop(q);
-    hpx_thread_destroy(th);
-    th = NULL;
-  }
-
-  hpx_queue_destroy(q);
-}

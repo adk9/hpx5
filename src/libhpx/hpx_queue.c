@@ -22,6 +22,7 @@
 
 
 #include <stdlib.h>
+#include <sys/queue.h>
 #include "hpx_queue.h"
 #include "hpx_mem.h"
 
@@ -35,9 +36,8 @@
  --------------------------------------------------------------------
 */
 
-void hpx_queue_init(hpx_queue_t * q) {
-  q->head = NULL;
-  q->tail = NULL;
+void hpx_queue_init(hpx_queue_t * q) {  
+  STAILQ_INIT(&q->head);
   q->count = 0;
 }
 
@@ -52,15 +52,18 @@ void hpx_queue_init(hpx_queue_t * q) {
 */
 
 void hpx_queue_destroy(hpx_queue_t * q) {
-  hpx_queue_node_t * next = NULL;
   hpx_queue_node_t * cur = NULL;
+  hpx_queue_node_t * next = NULL;
 
-  cur = q->head;
+  cur = STAILQ_FIRST(&q->head);
   while (cur != NULL) {
-    next = cur->next;
+    next = STAILQ_NEXT(cur, entries);
     hpx_free(cur);
     cur = next;
   }
+
+  STAILQ_INIT(&q->head);
+  q->count = 0;
 }
 
 
@@ -86,10 +89,12 @@ uint64_t hpx_queue_size(hpx_queue_t * q) {
 */
 
 void * hpx_queue_peek(hpx_queue_t * q) {
+  hpx_queue_node_t * node;
   void * val = NULL;
   
-  if (q->tail != NULL) {
-    val = q->tail->value;
+  node = STAILQ_FIRST(&q->head);
+  if (node != NULL) {
+    val = node->value;
   }
   
   return val;
@@ -106,31 +111,12 @@ void * hpx_queue_peek(hpx_queue_t * q) {
 
 void hpx_queue_push(hpx_queue_t * q, void * val) {
   hpx_queue_node_t * node = NULL;
-  hpx_queue_node_t * head = NULL;
 
-  /* allocate the node */
   node = (hpx_queue_node_t *) hpx_alloc(sizeof(hpx_queue_node_t));
   if (node != NULL) {
-    /* set up the node */
-    node->prev = NULL;
-    node->next = q->head;
     node->value = val;
 
-    /* link in the current head */
-    head = q->head;
-    if (head != NULL) {
-      head->prev = node;
-    }
-
-    /* set the queue's head */
-    q->head = node;
-
-    /* set the queue's tail if this is the only element */
-    if (q->tail == NULL) {
-      q->tail = node;
-    }
-
-    /* increment the element counter */
+    STAILQ_INSERT_TAIL(&q->head, node, entries);
     q->count += 1;
   }
 }
@@ -146,29 +132,16 @@ void hpx_queue_push(hpx_queue_t * q, void * val) {
 
 void * hpx_queue_pop(hpx_queue_t * q) {
   hpx_queue_node_t * node = NULL;
-  hpx_queue_node_t * prev = NULL;
   void * val = NULL;
 
-  if (q->tail != NULL) {
-    /* detach the tail */
-    node = q->tail;
-
-    prev = node->prev;
-    q->tail = prev;
-    if (prev != NULL) {
-      prev->next = NULL;
-    } else {
-      q->head = NULL;
-    }
-    
-    /* set the value to return and decrement the element counter */
+  node = STAILQ_FIRST(&q->head);
+  if (node != NULL) {
     val = node->value;
-    q->count -= 1;
-
-    /* free the node */
+    STAILQ_REMOVE_HEAD(&q->head, entries);
     hpx_free(node);
-    node = NULL;
   }
+
+  q->count -= 1;
 
   return val;
 }
