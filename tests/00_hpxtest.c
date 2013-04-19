@@ -36,6 +36,7 @@
 #include "07_mctx.c"
 #include "08_thread2.c"
 #include "09_config.c"
+#include "10_list.c"
 
 /* #include "98_thread_perf1.c" */
 
@@ -95,6 +96,12 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_queue_insert);
   tcase_add_test(tc, test_libhpx_queue_peek);
   tcase_add_test(tc, test_libhpx_queue_pop);
+
+  /* test linked lists */
+  tcase_add_test(tc, test_libhpx_list_size);
+  tcase_add_test(tc, test_libhpx_list_insert);
+  tcase_add_test(tc, test_libhpx_list_peek);
+  tcase_add_test(tc, test_libhpx_list_pop);
 
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
