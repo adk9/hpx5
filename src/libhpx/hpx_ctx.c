@@ -59,17 +59,22 @@ hpx_context_t * hpx_ctx_create(hpx_config_t * cfg) {
       goto __hpx_ctx_create_FAIL;
     }
 
+    /* kernel mutex */
+    hpx_kthread_mutex_init(&ctx->mtx);
+
     /* get the CPU configuration and set switching flags */
     ctx->mcfg = hpx_mconfig_get();
 
     ctx->kths = (hpx_kthread_t **) hpx_alloc(cores * sizeof(hpx_kthread_t *));
     if (ctx->kths != NULL) {
       for (x = 0; x < cores; x++) {
-        ctx->kths[x] = hpx_kthread_create(hpx_kthread_seed_default, ctx->mcfg, hpx_config_get_switch_flags(&ctx->cfg));
+        ctx->kths[x] = hpx_kthread_create(ctx, hpx_kthread_seed_default, ctx->mcfg, hpx_config_get_switch_flags(&ctx->cfg));
 
         if (ctx->kths[x] == NULL) {
           goto __hpx_ctx_create_FAIL;
-	} 
+	} else {
+	  hpx_kthread_set_affinity(ctx->kths[x], x);
+	}
       }    
     } else {
       __hpx_errno = HPX_ERROR_NOMEM;

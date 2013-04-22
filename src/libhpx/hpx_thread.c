@@ -202,3 +202,25 @@ void hpx_thread_yield(void) {
     hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
   }
 }
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_exit
+
+  Exits the current thread and optionally passes a return value.
+ --------------------------------------------------------------------
+*/
+
+void hpx_thread_exit(void * retval) {
+  hpx_thread_t * th = hpx_thread_self();
+  hpx_future_t * fut = &th->retval;
+
+  if (retval != NULL) {
+    fut->value = retval;
+    hpx_lco_future_set(fut);    
+  }
+
+  _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_TERMINATED);
+  hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
+}

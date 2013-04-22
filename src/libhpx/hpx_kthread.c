@@ -20,6 +20,10 @@
  ====================================================================
 */
 
+#ifdef __linux__
+  #define _GNU_SOURCE
+#endif
+
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,8 +44,10 @@
 
 void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t state) {
   hpx_thread_t * exec_th = kth->exec_th;
+  hpx_context_t * ctx = kth->ctx;
 
-  pthread_mutex_lock(&kth->mtx);
+  //  pthread_mutex_lock(&kth->mtx);
+  pthread_mutex_lock(&ctx->mtx);
 
   /* if we have a thread specified, do something with it */
   if (th != NULL) {
@@ -55,6 +61,9 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
         th->state = HPX_THREAD_STATE_PENDING;
         hpx_queue_push(&kth->pend_q, th);
 	break;
+      case HPX_THREAD_STATE_TERMINATED:
+        th->state = HPX_THREAD_STATE_TERMINATED;
+        break;
       default:
         break;
     }
@@ -72,6 +81,8 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
 	kth->exec_th->state = HPX_THREAD_STATE_TERMINATED;
 	hpx_lco_future_set(&kth->exec_th->retval);
 	break;
+      case HPX_THREAD_STATE_TERMINATED:
+        break;
       }
     }
 
@@ -91,7 +102,8 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
     }
   }
 
-  pthread_mutex_unlock(&kth->mtx);
+  //  pthread_mutex_unlock(&kth->mtx);
+  pthread_mutex_unlock(&ctx->mtx);
 }
 
 
@@ -106,6 +118,7 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
 void * hpx_kthread_seed_default(void * ptr) {
   hpx_kthread_t * kth = (hpx_kthread_t *) ptr;
   struct _hpx_thread_t * th = NULL;
+  struct _hpx_context_t * ctx = kth->ctx;
 
   /* save a pointer to our data in TLS */
   pthread_setspecific(kth_key, kth);
@@ -114,23 +127,24 @@ void * hpx_kthread_seed_default(void * ptr) {
   hpx_mctx_getcontext(kth->mctx, kth->mcfg, kth->mflags); 
 
   /* enter our critical section */
-  pthread_mutex_lock(&kth->mtx);
+  //  pthread_mutex_lock(&kth->mtx);
+  pthread_mutex_lock(&ctx->mtx);
 
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
     // th = hpx_queue_pop(&kth->pend_q);
     _hpx_kthread_sched(kth, NULL, 0);
     if (kth->exec_th != NULL) {
-      pthread_mutex_unlock(&kth->mtx);
+      pthread_mutex_unlock(&ctx->mtx);
       hpx_mctx_swapcontext(kth->mctx, kth->exec_th->mctx, kth->mcfg, kth->mflags);
-      pthread_mutex_lock(&kth->mtx);
+      pthread_mutex_lock(&ctx->mtx);
     } else {
-      pthread_cond_wait(&kth->k_c, &kth->mtx);
+      pthread_cond_wait(&kth->k_c, &ctx->mtx);
     }
   }
 
   /* leave */
-  pthread_mutex_unlock(&kth->mtx);
+  pthread_mutex_unlock(&ctx->mtx);
 
   return NULL;  
 }
@@ -144,7 +158,7 @@ void * hpx_kthread_seed_default(void * ptr) {
  --------------------------------------------------------------------
 */
 
-hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
+hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t * ctx, hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
   pthread_mutexattr_t mtx_attr;
   hpx_kthread_t * kth = NULL;
   int err;
@@ -153,13 +167,9 @@ hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, 
   kth = (hpx_kthread_t *) hpx_alloc(sizeof(hpx_kthread_t));
   if (kth != NULL) {
     memset(kth, 0, sizeof(hpx_kthread_t));
+    kth->ctx = ctx;
     
-    hpx_queue_init(&kth->pend_q);
-
-    pthread_mutexattr_init(&mtx_attr);
-    pthread_mutexattr_settype(&mtx_attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&kth->mtx, &mtx_attr);
-  
+    hpx_queue_init(&kth->pend_q);  
     pthread_cond_init(&kth->k_c, 0);
 
     kth->k_st = HPX_KTHREAD_STATE_RUNNING;
@@ -209,19 +219,6 @@ hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, 
 
 /*
  --------------------------------------------------------------------
-  hpx_kthread_get_affinity
-
-  Gets the logical CPU affinity for a given kernel thread.
- --------------------------------------------------------------------
-*/
-
-uint16_t hpx_kthread_get_affinity(hpx_kthread_t * kth) {
-  return 0;
-}
-
-
-/*
- --------------------------------------------------------------------
   hpx_kthread_set_affinity
 
   Sets the logical CPU affinity for a given kernel thread.
@@ -229,7 +226,14 @@ uint16_t hpx_kthread_get_affinity(hpx_kthread_t * kth) {
 */
 
 void hpx_kthread_set_affinity(hpx_kthread_t * kth, uint16_t aff) {
+#ifdef __linux__
+  cpu_set_t cpuset;
 
+  CPU_ZERO(&cpuset);
+  CPU_SET(aff, &cpuset);
+
+  pthread_setaffinity_np(kth->core_th, sizeof(cpu_set_t), &cpuset);
+#endif
 }
 
 
@@ -332,4 +336,47 @@ void _hpx_kthread_init(void) {
 
 hpx_kthread_t * hpx_kthread_self(void) {
   return (hpx_kthread_t *) pthread_getspecific(kth_key);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_mutex_init
+
+  Initializes an HPX kernel mutex.
+ --------------------------------------------------------------------
+*/
+
+void hpx_kthread_mutex_init(hpx_kthread_mutex_t * mtx) {
+  pthread_mutexattr_t mtx_attr;
+
+  pthread_mutexattr_init(&mtx_attr);
+  pthread_mutexattr_settype(&mtx_attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init((pthread_mutex_t *) mtx, &mtx_attr);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_mutex_lock
+
+  Locks an HPX kernel mutex.
+ --------------------------------------------------------------------
+*/
+
+void hpx_kthread_mutex_lock(hpx_kthread_mutex_t * mtx) {
+  pthread_mutex_lock((pthread_mutex_t *) mtx);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_mutex_unlock
+
+  Unlocks an HPX kernel mutex.
+ --------------------------------------------------------------------
+*/
+
+void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t * mtx) {
+  pthread_mutex_unlock((pthread_mutex_t *) mtx);
 }

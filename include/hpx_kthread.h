@@ -29,6 +29,7 @@
 #ifndef LIBHPX_KTHREAD_H_
 #define LIBHPX_KTHREAD_H_
 
+struct _hpx_context_t;
 struct _hpx_thread_t;
 
 static pthread_once_t __kthread_init_once = PTHREAD_ONCE_INIT;
@@ -53,12 +54,15 @@ static pthread_key_t kth_key;
  --------------------------------------------------------------------
 */
 
+typedef pthread_mutex_t hpx_kthread_mutex_t;
+
 typedef struct _hpx_kthread_t {
-  pthread_mutex_t mtx;
+  hpx_kthread_mutex_t mtx;
   pthread_cond_t k_c;
   pthread_t core_th;
   hpx_queue_t pend_q;
   struct _hpx_thread_t * exec_th;
+  struct _hpx_context_t * ctx;
   uint8_t k_st;
   hpx_mctx_context_t * mctx;
   hpx_mconfig_t mcfg;
@@ -83,8 +87,7 @@ void * hpx_kthread_seed_default(void *);
  --------------------------------------------------------------------
 */
 
-hpx_kthread_t * hpx_kthread_create(hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
-uint16_t hpx_kthread_get_affinity(hpx_kthread_t *);
+hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
@@ -95,6 +98,10 @@ void _hpx_kthread_init(void);
 static void __hpx_kthread_make_keys(void);
 
 hpx_kthread_t * hpx_kthread_self(void);
+
+void hpx_kthread_mutex_init(hpx_kthread_mutex_t *);
+void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);
+void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
 
 
 /*

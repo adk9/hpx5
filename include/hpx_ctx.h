@@ -50,9 +50,10 @@ typedef uint64_t hpx_context_id_t;
 static hpx_context_id_t __ctx_next_id;
 
 /* the context handle */ 
-typedef struct {
+typedef struct _hpx_context_t {
   hpx_context_id_t cid;
   hpx_kthread_t ** kths;
+  hpx_kthread_mutex_t mtx;
   uint32_t kths_count;
   uint32_t kths_idx;
 
