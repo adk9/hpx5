@@ -88,20 +88,18 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   hpx_thread_t * ths[th_cnt];
 
   int eventset=PAPI_NULL;
+  long long begin_ts;
+  long long end_ts;
   long long values[3];
 
   PAPI_library_init(PAPI_VER_CURRENT);
 
-  PAPI_create_eventset(&eventset);
-  PAPI_add_event(eventset, PAPI_L1_TCM);
-  PAPI_add_event(eventset, PAPI_L2_TCM);
-  PAPI_add_event(eventset, PAPI_TLB_DM);
+  //  PAPI_create_eventset(&eventset);
+  //  PAPI_add_event(eventset, PAPI_L1_TCM);
+  //  PAPI_add_event(eventset, PAPI_L2_TCM);
+  //  PAPI_add_event(eventset, PAPI_TLB_DM);
 
-  PAPI_start(eventset);
-#ifdef __linux__
-  long long begin_ts;
-  long long end_ts;
-#endif
+  //  PAPI_start(eventset);
 
   perf.iters = iters;
   perf.delay = delay;
@@ -132,10 +130,8 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_destroy(ths[idx]);
   }
 
-#ifdef __linux__
-  PAPI_reset(eventset);
-  begin_ts = PAPI_get_real_nsec();
-#endif
+  //  PAPI_reset(eventset);
+  begin_ts = PAPI_get_virt_nsec();
 
   /* create threads for the baseline measurement */
   for (idx = 0; idx < th_cnt; idx++) {
@@ -147,11 +143,8 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join((hpx_thread_t *) ths[idx], &retval);
   }
 
-#ifdef __linux__
-  end_ts = PAPI_get_real_nsec();
-  //  elapsed1 = (double) (((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec));
+  end_ts = PAPI_get_virt_nsec();
   elapsed1 = end_ts - begin_ts;
-#endif
 
   /* cleanup baseline threads */
   for (idx = 0; idx < th_cnt; idx++) {
@@ -173,10 +166,8 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_destroy(ths[idx]);
   }
 
-#ifdef __linux__
-  PAPI_reset(eventset);
-  begin_ts = PAPI_get_real_nsec();
-#endif
+  //  PAPI_reset(eventset);
+  begin_ts = PAPI_get_virt_nsec();
 
   /* create threads for the yield measurement */
   for (idx = 0; idx < th_cnt; idx++) {
@@ -188,13 +179,10 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join(ths[idx], &retval);
   }
 
-#ifdef __linux__
-  end_ts = PAPI_get_real_nsec();
-  //  elapsed2 = (double) (((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec));
+  end_ts = PAPI_get_virt_nsec();
   elapsed2 = end_ts - begin_ts;
 
-  PAPI_stop(eventset, values);
-#endif
+  //  PAPI_stop(eventset, values);
 
   printf("  Time spent context switching:                %.4f seconds\n", ((elapsed2 - elapsed1) / 1000000000.0));
   printf("  Percentage of time spent context switching:  %.2f%%\n", (1 - elapsed1 / ((double) (elapsed2))) * 100);
@@ -208,6 +196,67 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   hpx_ctx_destroy(ctx);
   ctx = NULL;
 }
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Fibonacci Worker
+ --------------------------------------------------------------------
+*/
+
+void fibonnaci_worker(void * ptr) {
+  uint64_t * fib_n = (uint64_t *) ptr;
+  hpx_thread_t * fib_th1;
+  hpx_thread_t * fib_th2;
+  hpx_thread_t * my_th;
+
+  /* get ahold of myself */
+  my_th = hpx_thread_self();
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Fibonnaci Runner
+ --------------------------------------------------------------------
+*/
+
+void run_fibonnaci(uint64_t mflags, uint32_t core_cnt, uint64_t fib_n) {
+  hpx_context_t * ctx;
+  hpx_config_t cfg;
+
+  /* get our configuration */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
+  if (core_cnt > 0) {
+    hpx_config_set_cores(&cfg, core_cnt);
+  }
+
+  /* get a thread context */
+  ctx = hpx_ctx_create(&cfg);
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* cleanup */
+  hpx_ctx_destroy(ctx);    
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: Fibonnaci (n = 10)
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_perf_fib10)
+{
+  printf("RUNNING PERFORMANCE TEST: test_libhpx_thread_perf_fib10\n");
+  printf("Fibonnaci series (n = 10) with one HPX thread on one core.\n");
+  printf("----------------------------------------------------------------------------\n"); 
+  run_fibonnaci(0, 1, 10);  
+  printf("\n\n");
+}
+END_TEST
 
 
 /*

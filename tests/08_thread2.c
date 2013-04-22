@@ -403,7 +403,7 @@ void run_thread_self_get_ptr(uint64_t mflags) {
 
 /*
  --------------------------------------------------------------------
-  TEST HELPER: worker function for run_main_hierarchy (level 1)
+  TEST HELPER: worker function for run_main_hierarchy (level 2)
  --------------------------------------------------------------------
 */
 
@@ -437,7 +437,7 @@ void main_hierarchy_worker2(void * ptr) {
 
 /*
  --------------------------------------------------------------------
-  TEST HELPER: worker function for run_main_hierarchy (level 0)
+  TEST HELPER: worker function for run_main_hierarchy (level 1)
  --------------------------------------------------------------------
 */
 
@@ -554,6 +554,70 @@ run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
   /* wait until the threads are done */
   for (idx = 0; idx < th_cnt; idx++) {
     hpx_thread_join(ths[idx], NULL);
+  }
+
+  /* cleanup */
+  for (idx = 0; idx < th_cnt; idx++) {
+    hpx_thread_destroy(ths[idx]);
+  }
+
+  hpx_ctx_destroy(ctx);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Return Value Worker
+ --------------------------------------------------------------------
+*/
+
+void return_value_worker(void * ptr) {
+  int * x = (int *) hpx_alloc(sizeof(int));
+  ck_assert_msg(x != NULL, "Could not allocate a return value.");
+
+  *x = 73;
+  hpx_thread_exit((void *) x);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Return Value Runner
+ --------------------------------------------------------------------
+*/
+
+void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt) {
+  hpx_context_t * ctx;
+  hpx_thread_t * ths[th_cnt];
+  hpx_config_t cfg;
+  uint64_t idx;
+  int * retval;
+  char msg[128];
+
+  /* get our configuration */
+  hpx_config_init(&cfg);
+  hpx_config_set_switch_flags(&cfg, mflags);
+
+  if (core_cnt > 0) {
+    hpx_config_set_cores(&cfg, core_cnt);
+  }
+
+  /* get our thread context */
+  ctx = hpx_ctx_create(&cfg);
+  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+
+  /* create threads */
+  for (idx = 0; idx < th_cnt; idx++) {
+    ths[idx] = hpx_thread_create(ctx, return_value_worker, NULL);
+    ck_assert_msg(ths[idx] != NULL, "Could not create thread.");
+  }
+
+  /* wait for threads to finish */
+  for (idx = 0; idx < th_cnt; idx++) {
+    hpx_thread_join(ths[idx], &(void *) retval);
+
+    sprintf(msg, "Return value is incorrect (expected 73, got %d).", *retval);
+    ck_assert_msg((int) *retval == 73, msg);
   }
 
   /* cleanup */
@@ -1186,5 +1250,19 @@ END_TEST
 START_TEST (test_libhpx_thread_main_hierarchy_ext_sig)
 {
   run_main_hierarchy(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 10);
+}
+END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: create 1,000 threads and make sure they set the correct
+  return value.
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_thread_return_value1000)
+{
+  run_return_value(0, 0, 1000);
 }
 END_TEST

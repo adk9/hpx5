@@ -38,7 +38,7 @@
 #include "09_config.c"
 #include "10_list.c"
 
-/* #include "98_thread_perf1.c" */
+#include "98_thread_perf1.c" */
 
 
 /*
@@ -213,6 +213,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_thread_args_ext);
   tcase_add_test(tc, test_libhpx_thread_args_sig);
   tcase_add_test(tc, test_libhpx_thread_args_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_return_value1000);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext);
   tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_sig);
@@ -241,8 +242,9 @@ int main(int argc, char * argv[]) {
   }
 
   /* performance tests */
-  /*
   if (perf_tests) {
+    tcase_add_test(tc, test_libhpx_thread_perf_fib10);
+
     tcase_add_test(tc, test_libhpx_thread_perf_switch);
     tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
     tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
@@ -293,7 +295,6 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
   }
-  */
 
   suite_add_tcase(s, tc);
 

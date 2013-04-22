@@ -108,7 +108,7 @@ void _hpx_thread_destroy(hpx_thread_t *);
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
 
 void hpx_thread_join(hpx_thread_t *, void **);
-void hpx_thread_exit(void **);
+void hpx_thread_exit(void *);
 void hpx_thread_yield(void);
 
 hpx_thread_t * hpx_thread_self(void);
