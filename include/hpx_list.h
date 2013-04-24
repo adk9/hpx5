@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/queue.h>
+//#include <sys/queue.h>
 
 
 /*
@@ -34,15 +34,25 @@
  --------------------------------------------------------------------
 */
 
+//typedef struct _hpx_list_node_t {
+//  SLIST_ENTRY(_hpx_list_node_t) entries;
+//  void * value;
+//} hpx_list_node_t;
+//
+//typedef SLIST_HEAD(_hpx_list_head_t, _hpx_list_node_t) hpx_list_head_t;
+//
+//typedef struct _hpx_list_t {
+//  hpx_list_head_t head;
+//  uint64_t count;
+//} hpx_list_t;
+
 typedef struct _hpx_list_node_t {
-  SLIST_ENTRY(_hpx_list_node_t) entries;
+  struct _hpx_list_node_t * next;
   void * value;
 } hpx_list_node_t;
 
-typedef SLIST_HEAD(_hpx_list_head_t, _hpx_list_node_t) hpx_list_head_t;
-
 typedef struct _hpx_list_t {
-  hpx_list_head_t head;
+  struct _hpx_list_node_t * head;
   uint64_t count;
 } hpx_list_t;
 		   
@@ -58,6 +68,7 @@ uint64_t hpx_list_size(hpx_list_t *);
 void * hpx_list_peek(hpx_list_t *); 
 void hpx_list_push(hpx_list_t *, void *);
 void * hpx_list_pop(hpx_list_t *);
+void hpx_list_delete(hpx_list_t *, void *);
 
 hpx_list_node_t * hpx_list_first(hpx_list_t *);
 hpx_list_node_t * hpx_list_next(hpx_list_node_t *);

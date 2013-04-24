@@ -58,11 +58,35 @@ struct _hpx_kthread_t;
 
 /*
  --------------------------------------------------------------------
+  Thread Options
+
+  Values for a bitmask that contain option flags for HPX threads.
+
+  Normally, thread stacks and machine context switching buffers
+  are reused after a thread is terminated.  Setting the thread
+  to DETACHED will cause the scheduler to immediately deallocate
+  these data structures upon thread termination.
+
+  BOUND threads are pinned to the same kernel thread as their
+  parent, as opposed to being evenly distributed evenly across all 
+  kernel threads in a round-robin fashion (the default).
+ --------------------------------------------------------------------
+*/
+
+#define HPX_THREAD_OPT_NONE                                     0x00
+#define HPX_THREAD_OPT_DETACHED                                 0x01
+#define HPX_THREAD_OPT_BOUND                                    0x02
+
+
+/*
+ --------------------------------------------------------------------
   Thread Data
 
+  ctx                          Pointer to the thread context
   nid                          Node ID
   tid                          Thread ID
   state                        Queuing State
+  opts                         Thread option flags
   func                         Function to run in the thread
   args                         Application data for the thread
   stk                          The stack allocated for the thread
@@ -70,6 +94,8 @@ struct _hpx_kthread_t;
   kth                          The current kernel thread
   mctx                         The last machine context
   retval                       The thread's return value (if any)
+  parent                       The thread's parent thread
+  children                     Child threads of this thread
  --------------------------------------------------------------------
 */
 
@@ -78,6 +104,7 @@ typedef struct _hpx_thread_t {
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
+  uint16_t                opts;
   void *                  func;
   void *                  args;
   void *                  stk;
@@ -112,6 +139,18 @@ void hpx_thread_exit(void *);
 void hpx_thread_yield(void);
 
 hpx_thread_t * hpx_thread_self(void);
+
+uint16_t hpx_thread_get_opt(hpx_thread_t *);
+void hpx_thread_set_opt(hpx_thread_t *, uint16_t);
+
+
+/*
+ --------------------------------------------------------------------
+  Private Functions
+ --------------------------------------------------------------------
+*/
+
+void _hpx_thread_terminate(hpx_thread_t *);
 
 #endif
 

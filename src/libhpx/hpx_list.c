@@ -22,7 +22,6 @@
 
 
 #include <stdlib.h>
-#include <sys/queue.h>
 #include "hpx_list.h"
 #include "hpx_mem.h"
 
@@ -37,7 +36,7 @@
 */
 
 void hpx_list_init(hpx_list_t * ll) {  
-  SLIST_INIT(&ll->head);
+  ll->head = NULL;
   ll->count = 0;
 }
 
@@ -55,14 +54,14 @@ void hpx_list_destroy(hpx_list_t * ll) {
   hpx_list_node_t * cur = NULL;
   hpx_list_node_t * next = NULL;
 
-  cur = SLIST_FIRST(&ll->head);
+  cur = ll->head;
   while (cur != NULL) {
-    next = SLIST_NEXT(cur, entries);
+    next = cur->next;
     hpx_free(cur);
     cur = next;
   }
 
-  SLIST_INIT(&ll->head);
+  ll->head = NULL;
   ll->count = 0;
 }
 
@@ -91,8 +90,8 @@ uint64_t hpx_list_size(hpx_list_t * ll) {
 void * hpx_list_peek(hpx_list_t * ll) {
   hpx_list_node_t * node;
   void * val = NULL;
-  
-  node = SLIST_FIRST(&ll->head);
+
+  node = ll->head;
   if (node != NULL) {
     val = node->value;
   }
@@ -115,8 +114,9 @@ void hpx_list_push(hpx_list_t * ll, void * val) {
   node = (hpx_list_node_t *) hpx_alloc(sizeof(hpx_list_node_t));
   if (node != NULL) {
     node->value = val;
+    node->next = ll->head;
 
-    SLIST_INSERT_HEAD(&ll->head, node, entries);
+    ll->head = node;
     ll->count += 1;
   }
 }
@@ -134,14 +134,15 @@ void * hpx_list_pop(hpx_list_t * ll) {
   hpx_list_node_t * node = NULL;
   void * val = NULL;
 
-  node = SLIST_FIRST(&ll->head);
+  node = ll->head;
   if (node != NULL) {
     val = node->value;
-    SLIST_REMOVE_HEAD(&ll->head, entries);
-    hpx_free(node);
-  }
 
-  ll->count -= 1;
+    ll->head = node->next;
+    hpx_free(node);
+
+    ll->count -= 1;
+  }
 
   return val;
 }
@@ -156,7 +157,7 @@ void * hpx_list_pop(hpx_list_t * ll) {
 */
 
 hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
-  return SLIST_FIRST(&ll->head);
+  return ll->head;
 }
 
 
@@ -169,5 +170,43 @@ hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
 */
 
 hpx_list_node_t * hpx_list_next(hpx_list_node_t * node) {
-  return SLIST_NEXT(node, entries);
+  return node->next;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_list_delete
+
+  Deletes an element from the list (by value).
+ --------------------------------------------------------------------
+*/
+
+void hpx_list_delete(hpx_list_t * ll, void * val) {
+  struct _hpx_list_node_t * found = NULL;
+  struct _hpx_list_node_t * prev = NULL;
+  struct _hpx_list_node_t * cur = NULL;
+
+  cur = ll->head;
+  prev = NULL;
+
+  while ((cur != NULL) && (found == NULL)) {
+    if (cur->value == val) {
+      found = cur;
+    } else {
+      prev = cur;
+      cur = cur->next;
+    }
+  }
+
+  if (found != NULL) {
+    if (prev == NULL) {
+      hpx_list_pop(ll);
+    } else {
+      prev->next = found->next;
+      hpx_free(found);
+    }
+
+    ll->count -= 1;
+  }
 }

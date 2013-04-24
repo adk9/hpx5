@@ -103,6 +103,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_list_peek);
   tcase_add_test(tc, test_libhpx_list_pop);
   tcase_add_test(tc, test_libhpx_list_iter);
+  tcase_add_test(tc, test_libhpx_list_delete);
 
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
@@ -243,57 +244,57 @@ int main(int argc, char * argv[]) {
 
   /* performance tests */
   if (perf_tests) {
-    tcase_add_test(tc, test_libhpx_thread_perf_fib10);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_fib10);
 
-    tcase_add_test(tc, test_libhpx_thread_perf_switch);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext_sig);
 
     tcase_add_test(tc, test_libhpx_thread_perf_switch2);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext_sig);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th);
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
+    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
   }
 
   suite_add_tcase(s, tc);

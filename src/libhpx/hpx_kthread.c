@@ -46,7 +46,6 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
   hpx_thread_t * exec_th = kth->exec_th;
   hpx_context_t * ctx = kth->ctx;
 
-  //  pthread_mutex_lock(&kth->mtx);
   pthread_mutex_lock(&ctx->mtx);
 
   /* if we have a thread specified, do something with it */
@@ -82,6 +81,7 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
 	hpx_lco_future_set(&kth->exec_th->retval);
 	break;
       case HPX_THREAD_STATE_TERMINATED:
+	_hpx_thread_terminate(exec_th);
         break;
       }
     }
@@ -102,7 +102,6 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
     }
   }
 
-  //  pthread_mutex_unlock(&kth->mtx);
   pthread_mutex_unlock(&ctx->mtx);
 }
 
@@ -127,12 +126,10 @@ void * hpx_kthread_seed_default(void * ptr) {
   hpx_mctx_getcontext(kth->mctx, kth->mcfg, kth->mflags); 
 
   /* enter our critical section */
-  //  pthread_mutex_lock(&kth->mtx);
   pthread_mutex_lock(&ctx->mtx);
 
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
-    // th = hpx_queue_pop(&kth->pend_q);
     _hpx_kthread_sched(kth, NULL, 0);
     if (kth->exec_th != NULL) {
       pthread_mutex_unlock(&ctx->mtx);
@@ -246,13 +243,26 @@ void hpx_kthread_set_affinity(hpx_kthread_t * kth, uint16_t aff) {
 */
 
 void hpx_kthread_destroy(hpx_kthread_t * kth) {
+  struct _hpx_thread_t * th;
+
+  /* shut down the kernel thread */
   pthread_mutex_lock(&kth->mtx);
   kth->k_st = HPX_KTHREAD_STATE_STOPPED;
   pthread_cond_signal(&kth->k_c);
   pthread_mutex_unlock(&kth->mtx);
 
+  /* wait for our pthread to terminate */
   pthread_join(kth->core_th, NULL);
 
+  /* destroy any remaining HPX threads in the pending queue */
+  do {
+    th = hpx_queue_pop(&kth->pend_q);
+    if (th != NULL) {
+      hpx_thread_destroy(th);
+    }
+  } while (th != NULL);
+
+  /* cleanup */
   hpx_queue_destroy(&kth->pend_q);
   pthread_cond_destroy(&kth->k_c);
   pthread_mutex_destroy(&kth->mtx);
@@ -279,23 +289,6 @@ long hpx_kthread_get_cores(void) {
 #endif
 
   return cores;
-}
-
-
-/*
- --------------------------------------------------------------------
-  _hpx_kthread_push_pending
-
-  Pushes a new HPX thread onto the PENDING queue.
- --------------------------------------------------------------------
-*/
-
-void _hpx_kthread_push_pending(hpx_kthread_t * kth, struct _hpx_thread_t * th) {
-  pthread_mutex_lock(&kth->mtx);
-  hpx_queue_push(&kth->pend_q, th);
-  pthread_mutex_unlock(&kth->mtx);  
-
-  pthread_cond_signal(&kth->k_c);
 }
 
 

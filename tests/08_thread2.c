@@ -151,9 +151,9 @@ void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   }
 
   /* clean up */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
+  //  for (idx = 0; idx < th_cnt; idx++) {
+  //    hpx_thread_destroy(ths[idx]);
+  //  }
 
   hpx_free(ths);
   hpx_free(thread_buf);
@@ -234,9 +234,9 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_
   }
 
   /* clean up */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
+  //  for (idx = 0; idx < th_cnt; idx++) {
+  //    hpx_thread_destroy(ths[idx]);
+  //  }
 
   hpx_free(ths);
   hpx_free(thread_buf);
@@ -280,7 +280,7 @@ void run_thread_args(uint64_t mflags) {
   ck_assert_msg(*th_arg_ptr == 8473, msg);
 
   /* clean up */
-  hpx_thread_destroy(th1);  
+  //  hpx_thread_destroy(th1);  
 
   hpx_ctx_destroy(ctx);
 }
@@ -335,9 +335,9 @@ void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char
   }
 
   /* clean up */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
+  //  for (idx = 0; idx < th_cnt; idx++) {
+  //    hpx_thread_destroy(ths[idx]);
+  //  }
 
   /* make sure our string got copied */
   sprintf(msg, "Thread message was not copied (expected \"%s\", got \"%s\").", orig_msg, thread_msgbuf);
@@ -394,7 +394,7 @@ void run_thread_self_get_ptr(uint64_t mflags) {
   ck_assert_msg(kth1 == kth2, "Thread kernel contexts do not match (expected %ld, got %ld).", (uint64_t) kth1, (uint64_t) kth2);
 
   /* clean up */
-  hpx_thread_destroy(th);
+  //  hpx_thread_destroy(th);
 
   hpx_free(thread_msgbuf);
   hpx_ctx_destroy(ctx);
@@ -485,9 +485,9 @@ void main_hierarchy_worker1(void * ptr) {
   }
 
   /* cleanup */
-  for (idx = 0; idx < 10; idx++) {
-    hpx_thread_destroy(clds[idx]);
-  }
+  //  for (idx = 0; idx < 10; idx++) {
+  //    hpx_thread_destroy(clds[idx]);
+  //  }
 }
 
 
@@ -520,9 +520,9 @@ void main_hierarchy_worker0(void * ptr) {
   }
 
   /* cleanup */
-  for (idx = 0; idx < *th_cnt; idx++) {
-    hpx_thread_destroy(clds[idx]);
-  }
+  //  for (idx = 0; idx < *th_cnt; idx++) {
+  //    hpx_thread_destroy(clds[idx]);
+  //  }
 }
 
 
@@ -557,9 +557,9 @@ run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
   }
 
   /* cleanup */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
+  //  for (idx = 0; idx < th_cnt; idx++) {
+  //    hpx_thread_destroy(ths[idx]);
+  //  }
 
   hpx_ctx_destroy(ctx);
 }
@@ -614,16 +614,16 @@ void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt) {
 
   /* wait for threads to finish */
   for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_join(ths[idx], &(void *) retval);
+    hpx_thread_join(ths[idx], (void **) &retval);
 
     sprintf(msg, "Return value is incorrect (expected 73, got %d).", *retval);
     ck_assert_msg((int) *retval == 73, msg);
   }
 
   /* cleanup */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
+  //  for (idx = 0; idx < th_cnt; idx++) {
+  //    hpx_thread_destroy(ths[idx]);
+  //  }
 
   hpx_ctx_destroy(ctx);
 }
