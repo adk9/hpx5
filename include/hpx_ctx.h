@@ -60,6 +60,8 @@ typedef struct _hpx_context_t {
   hpx_config_t cfg;
   hpx_mconfig_t mcfg;
   uint64_t mflags;
+
+  hpx_queue_t term_ths;
 } hpx_context_t;
 
 

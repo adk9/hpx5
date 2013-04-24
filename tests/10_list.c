@@ -231,3 +231,83 @@ START_TEST (test_libhpx_list_iter)
   hpx_list_destroy(&ll);
 }
 END_TEST
+
+
+/*
+ --------------------------------------------------------------------
+  TEST: delete a specific element in the list
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_list_delete)
+{
+  hpx_list_node_t * node = NULL;
+  hpx_list_t ll;
+  char msg[128];
+  int vals[7] = { 104, 42, 73, 91, 14, 8, 57 };
+  int * val;
+  int x, cnt;
+
+  hpx_list_init(&ll);
+  
+  for (x = 0; x < 7; x++) {
+    hpx_list_push(&ll, &vals[x]);
+  }
+
+  cnt = hpx_list_size(&ll);
+  sprintf(msg, "List does not have the correct number of elements (expected 7, got %d)", cnt);
+  ck_assert_msg(hpx_list_size(&ll) == 7, msg);
+
+  /* delete an element */
+  hpx_list_delete(&ll, &vals[3]);
+
+  cnt = hpx_list_size(&ll);
+  sprintf(msg, "List does not have the correct number of elements (expected 6, got %d)", cnt);
+  ck_assert_msg(cnt == 6, msg);
+
+  /* see if we have the right values */
+  node = hpx_list_first(&ll);
+  ck_assert_msg(node != NULL, "First element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "First element in the list is incorrect (expected 57, got %d)", *val);
+  ck_assert_msg(*val == 57, msg);
+
+  node = hpx_list_next(node);
+  ck_assert_msg(node != NULL, "Second element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "Second element in the list is incorrect (expected 8, got %d)", *val);
+  ck_assert_msg(*val == 8, msg);
+
+  node = hpx_list_next(node);
+  ck_assert_msg(node != NULL, "Third element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "Third element in the list is incorrect (expected 14, got %d)", *val);
+  ck_assert_msg(*val == 14, msg);
+
+  node = hpx_list_next(node);
+  ck_assert_msg(node != NULL, "Fourth element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "Fourth element in the list is incorrect (expected 73, got %d)", *val);
+  ck_assert_msg(*val == 73, msg);
+
+  node = hpx_list_next(node);
+  ck_assert_msg(node != NULL, "Fifth element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "Fifth element in the list is incorrect (expected 42, got %d)", *val);
+  ck_assert_msg(*val == 42, msg);
+
+  node = hpx_list_next(node);
+  ck_assert_msg(node != NULL, "Sixth element in the list is NULL");
+
+  val = node->value;
+  sprintf(msg, "Sixth element in the list is incorrect (expected 104, got %d)", *val);
+  ck_assert_msg(*val == 104, msg);
+
+  hpx_list_destroy(&ll);
+}
+END_TEST

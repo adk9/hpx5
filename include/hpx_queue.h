@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/queue.h>
+//#include <sys/queue.h>
 
 
 /*
@@ -34,18 +34,29 @@
  --------------------------------------------------------------------
 */
 
-typedef struct _hpx_queue_node_t {
-  STAILQ_ENTRY(_hpx_queue_node_t) entries;
-  void * value;
-} hpx_queue_node_t;
+//typedef struct _hpx_queue_node_t {
+//  STAILQ_ENTRY(_hpx_queue_node_t) entries;
+//  void * value;
+//} hpx_queue_node_t;
+//
+//typedef STAILQ_HEAD(_hpx_head_queue_t, _hpx_queue_node_t) hpx_queue_head_t;
+//
+//typedef struct _hpx_queue_t {
+//  hpx_queue_head_t head;
+//  uint64_t count;
+//} hpx_queue_t;
 
-typedef STAILQ_HEAD(_hpx_head_queue_t, _hpx_queue_node_t) hpx_queue_head_t;
+typedef struct _hpx_queue_node_t {
+  struct _hpx_queue_node_t * next;
+  void * value;
+} hpx_queue_node_t;	
 
 typedef struct _hpx_queue_t {
-  hpx_queue_head_t head;
+  struct _hpx_queue_node_t * head;
+  struct _hpx_queue_node_t * tail;
   uint64_t count;
-} hpx_queue_t;
-		   
+} hpx_queue_t;	   
+
 
 /*
  --------------------------------------------------------------------

@@ -30,6 +30,8 @@ typedef struct {
   int delay;
 } hpx_thread_perf_t;
 
+hpx_context_t * fib_ctx;
+
 
 /*
  --------------------------------------------------------------------
@@ -180,65 +182,19 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
 
 /*
  --------------------------------------------------------------------
-  TEST HELPER: Fibonacci Worker
- --------------------------------------------------------------------
-*/
-
-void fibonnaci_worker(void * ptr) {
-  uint64_t * fib_n = (uint64_t *) ptr;
-  hpx_thread_t * fib_th1;
-  hpx_thread_t * fib_th2;
-  hpx_thread_t * my_th;
-
-  /* get ahold of myself */
-  my_th = hpx_thread_self();
-
-  
-}
-
-
-/*
- --------------------------------------------------------------------
-  TEST HELPER: Fibonnaci Runner
- --------------------------------------------------------------------
-*/
-
-void run_fibonnaci(uint64_t mflags, uint32_t core_cnt, uint64_t fib_n) {
-  hpx_context_t * ctx;
-  hpx_config_t cfg;
-
-  /* get our configuration */
-  hpx_config_init(&cfg);
-  hpx_config_set_switch_flags(&cfg, mflags);
-
-  if (core_cnt > 0) {
-    hpx_config_set_cores(&cfg, core_cnt);
-  }
-
-  /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
-
-  /* cleanup */
-  hpx_ctx_destroy(ctx);    
-}
-
-
-/*
- --------------------------------------------------------------------
   TEST: Fibonnaci (n = 10)
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_thread_perf_fib10)
-{
-  printf("RUNNING PERFORMANCE TEST: test_libhpx_thread_perf_fib10\n");
-  printf("Fibonnaci series (n = 10) with one HPX thread on one core.\n");
-  printf("----------------------------------------------------------------------------\n"); 
-  run_fibonnaci(0, 1, 10);  
-  printf("\n\n");
-}
-END_TEST
+//START_TEST (test_libhpx_thread_perf_fib10)
+//{
+//  printf("RUNNING PERFORMANCE TEST: test_libhpx_thread_perf_fib10\n");
+//  printf("Fibonacci series (n = 10) with one HPX thread on one core.\n");
+//  printf("----------------------------------------------------------------------------\n"); 
+//  run_fibonacci(0, 1, 10);  
+//  printf("\n\n");
+//}
+//END_TEST
 
 
 /*

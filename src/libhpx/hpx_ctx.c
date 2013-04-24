@@ -62,6 +62,9 @@ hpx_context_t * hpx_ctx_create(hpx_config_t * cfg) {
     /* kernel mutex */
     hpx_kthread_mutex_init(&ctx->mtx);
 
+    /* terminated thread queue */
+    hpx_queue_init(&ctx->term_ths);
+
     /* get the CPU configuration and set switching flags */
     ctx->mcfg = hpx_mconfig_get();
 
@@ -115,6 +118,15 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
     hpx_kthread_destroy(ctx->kths[x]);
   }  
 
+  /* destroy any remaining termianted threads */
+  do {
+    th = hpx_queue_pop(&ctx->term_ths);
+    if (th != NULL) {
+      hpx_thread_destroy(th);
+    }
+  } while (th != NULL);
+
+  /* cleanup */
   hpx_free(ctx->kths);
   hpx_free(ctx);
 }

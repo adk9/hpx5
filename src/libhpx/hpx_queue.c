@@ -37,7 +37,8 @@
 */
 
 void hpx_queue_init(hpx_queue_t * q) {  
-  STAILQ_INIT(&q->head);
+  q->head = NULL;
+  q->tail = NULL;
   q->count = 0;
 }
 
@@ -54,16 +55,18 @@ void hpx_queue_init(hpx_queue_t * q) {
 void hpx_queue_destroy(hpx_queue_t * q) {
   hpx_queue_node_t * cur = NULL;
   hpx_queue_node_t * next = NULL;
-
-  cur = STAILQ_FIRST(&q->head);
-  while (cur != NULL) {
-    next = STAILQ_NEXT(cur, entries);
+  
+  cur = q->head;
+  while (q->count > 0) {
+    next = cur->next;
     hpx_free(cur);
     cur = next;
+
+    q->count -= 1;
   }
 
-  STAILQ_INIT(&q->head);
-  q->count = 0;
+  q->head = NULL;
+  q->tail = NULL;
 }
 
 
@@ -91,8 +94,8 @@ uint64_t hpx_queue_size(hpx_queue_t * q) {
 void * hpx_queue_peek(hpx_queue_t * q) {
   hpx_queue_node_t * node;
   void * val = NULL;
-  
-  node = STAILQ_FIRST(&q->head);
+
+  node = q->head;
   if (node != NULL) {
     val = node->value;
   }
@@ -110,13 +113,20 @@ void * hpx_queue_peek(hpx_queue_t * q) {
 */
 
 void hpx_queue_push(hpx_queue_t * q, void * val) {
-  hpx_queue_node_t * node = NULL;
+  struct _hpx_queue_node_t * node = NULL;
 
-  node = (hpx_queue_node_t *) hpx_alloc(sizeof(hpx_queue_node_t));
+  node = (struct _hpx_queue_node_t *) hpx_alloc(sizeof(struct _hpx_queue_node_t));
   if (node != NULL) {
     node->value = val;
+    node->next = NULL;
 
-    STAILQ_INSERT_TAIL(&q->head, node, entries);
+    if (q->count == 0) {
+      q->head = node;
+    } else {
+      q->tail->next = node;
+    }
+
+    q->tail = node;
     q->count += 1;
   }
 }
@@ -134,14 +144,19 @@ void * hpx_queue_pop(hpx_queue_t * q) {
   hpx_queue_node_t * node = NULL;
   void * val = NULL;
 
-  node = STAILQ_FIRST(&q->head);
+  node = q->head;
   if (node != NULL) {
     val = node->value;
-    STAILQ_REMOVE_HEAD(&q->head, entries);
-    hpx_free(node);
-  }
 
-  q->count -= 1;
+    q->head = q->head->next;
+    hpx_free(node);    
+
+    if (q->count == 1) {
+      q->tail = NULL;
+    }
+
+    q->count -= 1;
+  }
 
   return val;
 }
