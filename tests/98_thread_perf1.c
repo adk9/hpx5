@@ -125,11 +125,6 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join(ths[idx], &retval);
   }
 
-  /* destroy the threads */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
-  }
-
   //  PAPI_reset(eventset);
   begin_ts = PAPI_get_virt_nsec();
 
@@ -146,11 +141,6 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   end_ts = PAPI_get_virt_nsec();
   elapsed1 = end_ts - begin_ts;
 
-  /* cleanup baseline threads */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy((hpx_thread_t *) ths[idx]);
-  }
-
   /* run the yielding threads once to get data locality */
   for (idx = 0; idx < th_cnt; idx++) {
     ths[idx] = hpx_thread_create(ctx, loop_function2, &perf);
@@ -159,11 +149,6 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   /* wait for them to finish */
   for (idx = 0; idx < th_cnt; idx++) {
     hpx_thread_join(ths[idx], &retval);
-  }
-
-  /* delete the threads */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy(ths[idx]);
   }
 
   //  PAPI_reset(eventset);
@@ -188,11 +173,6 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   printf("  Percentage of time spent context switching:  %.2f%%\n", (1 - elapsed1 / ((double) (elapsed2))) * 100);
   printf("  Mean context switch time:                    %.2f nanoseconds\n", (elapsed2 - elapsed1) / (th_cnt * (double) iters) * delay);
 
-  /* cleanup yield threads */
-  for (idx = 0; idx < th_cnt; idx++) {
-    hpx_thread_destroy((hpx_thread_t *) ths[idx]);
-  }
-
   hpx_ctx_destroy(ctx);
   ctx = NULL;
 }
@@ -212,6 +192,8 @@ void fibonnaci_worker(void * ptr) {
 
   /* get ahold of myself */
   my_th = hpx_thread_self();
+
+  
 }
 
 
