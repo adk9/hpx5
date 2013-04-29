@@ -61,6 +61,7 @@ typedef struct _hpx_kthread_t {
   pthread_cond_t k_c;
   pthread_t core_th;
   hpx_queue_t pend_q;
+  hpx_queue_t susp_q;
   struct _hpx_thread_t * exec_th;
   struct _hpx_context_t * ctx;
   uint8_t k_st;
