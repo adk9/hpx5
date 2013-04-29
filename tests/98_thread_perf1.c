@@ -25,13 +25,47 @@
 #include <papi.h>
 #include "hpx_thread.h"
 
+/* from autoconf */
+#include "config.h"
+
+/* include a header for whatever timing functions we're using */
+#ifdef WITH_PAPI
+  #include <papi.h>
+#else
+  #ifdef __linux__
+    #include <time.h>
+  #endif
+#endif
+
+
 typedef struct {
   uint64_t iters;
   int delay;
 } hpx_thread_perf_t;
 
-hpx_context_t * fib_ctx;
 
+/*
+ --------------------------------------------------------------------
+  UTILITY: get a monotonic timestamp with nanosecond resolution
+ --------------------------------------------------------------------
+*/
+
+#ifdef WITH_PAPI
+#define get_ns() PAPI_get_real_nsec()
+#else
+long long get_ns(void) {
+  long long ns = 0;
+
+  #ifdef __linux__
+  struct timespec ts;
+
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  ns = (ts.tv_sec * 1000000000) + ts.tv_nsec;  
+  #endif
+
+  return ns;
+}
+#endif
 
 /*
  --------------------------------------------------------------------
@@ -83,25 +117,18 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   hpx_thread_perf_t perf;
   hpx_config_t cfg;
   uint64_t idx;
-  double elapsed1;
-  double elapsed2;
+  double elapsed1 = 1;
+  double elapsed2 = 1;
   void * retval;
 
   hpx_thread_t * ths[th_cnt];
 
-  int eventset=PAPI_NULL;
   long long begin_ts;
   long long end_ts;
-  long long values[3];
 
+#ifdef WITH_PAPI
   PAPI_library_init(PAPI_VER_CURRENT);
-
-  //  PAPI_create_eventset(&eventset);
-  //  PAPI_add_event(eventset, PAPI_L1_TCM);
-  //  PAPI_add_event(eventset, PAPI_L2_TCM);
-  //  PAPI_add_event(eventset, PAPI_TLB_DM);
-
-  //  PAPI_start(eventset);
+#endif
 
   perf.iters = iters;
   perf.delay = delay;
@@ -127,8 +154,7 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join(ths[idx], &retval);
   }
 
-  //  PAPI_reset(eventset);
-  begin_ts = PAPI_get_virt_nsec();
+  begin_ts = get_ns();
 
   /* create threads for the baseline measurement */
   for (idx = 0; idx < th_cnt; idx++) {
@@ -140,7 +166,7 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join((hpx_thread_t *) ths[idx], &retval);
   }
 
-  end_ts = PAPI_get_virt_nsec();
+  end_ts = get_ns();
   elapsed1 = end_ts - begin_ts;
 
   /* run the yielding threads once to get data locality */
@@ -153,8 +179,7 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join(ths[idx], &retval);
   }
 
-  //  PAPI_reset(eventset);
-  begin_ts = PAPI_get_virt_nsec();
+  begin_ts = get_ns();
 
   /* create threads for the yield measurement */
   for (idx = 0; idx < th_cnt; idx++) {
@@ -166,10 +191,8 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
     hpx_thread_join(ths[idx], &retval);
   }
 
-  end_ts = PAPI_get_virt_nsec();
+  end_ts = get_ns();
   elapsed2 = end_ts - begin_ts;
-
-  //  PAPI_stop(eventset, values);
 
   printf("  Time spent context switching:                %.4f seconds\n", ((elapsed2 - elapsed1) / 1000000000.0));
   printf("  Percentage of time spent context switching:  %.2f%%\n", (1 - elapsed1 / ((double) (elapsed2))) * 100);
@@ -178,23 +201,6 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   hpx_ctx_destroy(ctx);
   ctx = NULL;
 }
-
-
-/*
- --------------------------------------------------------------------
-  TEST: Fibonnaci (n = 10)
- --------------------------------------------------------------------
-*/
-
-//START_TEST (test_libhpx_thread_perf_fib10)
-//{
-//  printf("RUNNING PERFORMANCE TEST: test_libhpx_thread_perf_fib10\n");
-//  printf("Fibonacci series (n = 10) with one HPX thread on one core.\n");
-//  printf("----------------------------------------------------------------------------\n"); 
-//  run_fibonacci(0, 1, 10);  
-//  printf("\n\n");
-//}
-//END_TEST
 
 
 /*

@@ -42,7 +42,10 @@ check_PROGRAMS = hpxtest$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -141,6 +144,8 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PAPI_CFLAGS = @PAPI_CFLAGS@
+PAPI_LIBS = @PAPI_LIBS@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
@@ -204,8 +209,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 hpxtest_SOURCES = 00_hpxtest.c $(ARCH_SRC)
-hpxtest_CFLAGS = @CHECK_CFLAGS@ -I/home/pbohan/usr/include -L/home/pbohan/usr/lib
-hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la @CHECK_LIBS@ -lm -lpthread -lpapi
+hpxtest_CFLAGS = @CHECK_CFLAGS@ @PAPI_CFLAGS@
+hpxtest_LDADD = $(top_builddir)/src/libhpx/libhpx.la -lm -lpthread @CHECK_LIBS@ @PAPI_LIBS@
 @CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/99_hpxtest.S
 all: all-am
 

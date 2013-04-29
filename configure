@@ -615,8 +615,12 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+USE_PAPI_FALSE
+USE_PAPI_TRUE
 CPU_X86_64_FALSE
 CPU_X86_64_TRUE
+PAPI_LIBS
+PAPI_CFLAGS
 CHECK_LIBS
 CHECK_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -746,6 +750,7 @@ enable_fast_install
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+with_papi
 '
       ac_precious_vars='build_alias
 host_alias
@@ -762,7 +767,9 @@ PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 CHECK_CFLAGS
-CHECK_LIBS'
+CHECK_LIBS
+PAPI_CFLAGS
+PAPI_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1399,6 +1406,7 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot=DIR Search for dependent libraries within DIR
                         (or the compiler's sysroot if not specified).
+  --with-papi             Build with PAPI measurement support
 
 Some influential environment variables:
   CC          C compiler command
@@ -1419,6 +1427,8 @@ Some influential environment variables:
   CHECK_CFLAGS
               C compiler flags for CHECK, overriding pkg-config
   CHECK_LIBS  linker flags for CHECK, overriding pkg-config
+  PAPI_CFLAGS C compiler flags for PAPI, overriding pkg-config
+  PAPI_LIBS   linker flags for PAPI, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -7800,6 +7810,10 @@ _lt_linker_boilerplate=`cat conftest.err`
 $RM -r conftest*
 
 
+## CAVEAT EMPTOR:
+## There is no encapsulation within the following macros, do not change
+## the running order or otherwise move them around unless you know exactly
+## what you are doing...
 if test -n "$compiler"; then
 
 lt_prog_compiler_no_builtin_flag=
@@ -11356,6 +11370,8 @@ CC="$lt_save_CC"
 
 
 
+
+
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -12092,6 +12108,17 @@ fi
 
 
 
+#AS_IF([test "x$CC" = "icc"], [CFLAGS += "-no-gcc"])
+
+
+# Check whether --with-papi was given.
+if test "${with_papi+set}" = set; then :
+  withval=$with_papi; use_papi=yes
+else
+  0
+fi
+
+
 
 
 
@@ -12284,12 +12311,120 @@ $as_echo "yes" >&6; }
 	1
 fi
 
+if test "x$use_papi" = xyes; then :
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PAPI" >&5
+$as_echo_n "checking for PAPI... " >&6; }
+
+if test -n "$PAPI_CFLAGS"; then
+    pkg_cv_PAPI_CFLAGS="$PAPI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"papi\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "papi") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PAPI_CFLAGS=`$PKG_CONFIG --cflags "papi" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$PAPI_LIBS"; then
+    pkg_cv_PAPI_LIBS="$PAPI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"papi\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "papi") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PAPI_LIBS=`$PKG_CONFIG --libs "papi" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        PAPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "papi" 2>&1`
+        else
+	        PAPI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "papi" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$PAPI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (papi) were not met:
+
+$PAPI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables PAPI_CFLAGS
+and PAPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables PAPI_CFLAGS
+and PAPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	PAPI_CFLAGS=$pkg_cv_PAPI_CFLAGS
+	PAPI_LIBS=$pkg_cv_PAPI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
+$as_echo "#define WITH_PAPI /**/" >>confdefs.h
+
+
+fi
+
  if test "$host_cpu" = x86_64; then
   CPU_X86_64_TRUE=
   CPU_X86_64_FALSE='#'
 else
   CPU_X86_64_TRUE='#'
   CPU_X86_64_FALSE=
+fi
+
+
+ if test "x$use_papi" = xyes; then
+  USE_PAPI_TRUE=
+  USE_PAPI_FALSE='#'
+else
+  USE_PAPI_TRUE='#'
+  USE_PAPI_FALSE=
 fi
 
 
@@ -12432,6 +12567,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CPU_X86_64_TRUE}" && test -z "${CPU_X86_64_FALSE}"; then
   as_fn_error $? "conditional \"CPU_X86_64\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${USE_PAPI_TRUE}" && test -z "${USE_PAPI_FALSE}"; then
+  as_fn_error $? "conditional \"USE_PAPI\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

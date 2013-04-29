@@ -244,8 +244,6 @@ int main(int argc, char * argv[]) {
 
   /* performance tests */
   if (perf_tests) {
-    //    tcase_add_test(tc, test_libhpx_thread_perf_fib10);
-
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
