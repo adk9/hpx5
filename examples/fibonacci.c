@@ -7,6 +7,10 @@
   #include <mach/mach_time.h>
 #endif
 
+#ifdef __linux__
+  #include <time.h>
+#endif
+
 hpx_context_t * ctx;
 
 void fib(unsigned int n) {
@@ -44,6 +48,11 @@ int main(int argc, char * argv[]) {
   }
 #endif
 
+#ifdef __linux__
+  struct timespec begin_ts;
+  struct timespec end_ts;
+#endif
+
   /* validate our arguments */
   if (argc < 2) {
     fprintf(stderr, "Invalid number of cores (set to 0 to use all available cores).\n");
@@ -70,6 +79,10 @@ int main(int argc, char * argv[]) {
   begin_ts = mach_absolute_time();
 #endif
 
+#ifdef __linux__
+  clock_gettime(CLOCK_MONOTONIC, &begin_ts);
+#endif
+
   /* create a fibonacci thread */
   th = hpx_thread_create(ctx, fib, (void *) n);
 
@@ -80,6 +93,14 @@ int main(int argc, char * argv[]) {
   end_ts = mach_absolute_time();
 
   printf("seconds: %.7f\ncores:   %d\nthreads: %ld\n", (((end_ts - begin_ts) * tbi.numer / tbi.denom) / 1000000000.0),
+	 hpx_config_get_cores(&cfg), (unsigned long) pow(2, n) + 1);
+#endif
+
+#ifdef __linux__
+  clock_gettime(CLOCK_MONOTONIC, &end_ts);
+  unsigned long elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);
+
+  printf("seconds: %.7f\ncores:   %d\nthreads: %ld\n", (elapsed / 1000000000.0),
 	 hpx_config_get_cores(&cfg), (unsigned long) pow(2, n) + 1);
 #endif
 
