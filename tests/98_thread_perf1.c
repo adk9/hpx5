@@ -21,8 +21,6 @@
 */
 
 
-#include <time.h>
-#include <papi.h>
 #include "hpx_thread.h"
 
 /* from autoconf */
@@ -35,6 +33,12 @@
   #ifdef __linux__
     #include <time.h>
   #endif
+  
+  #ifdef __APPLE__
+    #include <mach/mach_time.h>
+
+    static mach_timebase_info_data_t tbi;
+  #endif
 #endif
 
 
@@ -42,6 +46,25 @@ typedef struct {
   uint64_t iters;
   int delay;
 } hpx_thread_perf_t;
+
+
+/*
+ --------------------------------------------------------------------
+  UTILITY: initialize measurement functions
+ --------------------------------------------------------------------
+*/
+
+void init_measurement(void) {
+#ifdef WITH_PAPI
+  PAPI_library_init(PAPI_VER_CURRENT);
+#else
+  #ifdef __APPLE__
+  if (tbi.denom == 0) {
+    (void) mach_timebase_info(&tbi);
+  }
+  #endif
+#endif
+}
 
 
 /*
@@ -61,6 +84,10 @@ long long get_ns(void) {
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
   ns = (ts.tv_sec * 1000000000) + ts.tv_nsec;  
+  #endif
+
+  #ifdef __APPLE__
+  ns = mach_absolute_time() * tbi.numer / tbi.denom;
   #endif
 
   return ns;
@@ -126,9 +153,7 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
   long long begin_ts;
   long long end_ts;
 
-#ifdef WITH_PAPI
-  PAPI_library_init(PAPI_VER_CURRENT);
-#endif
+  init_measurement();
 
   perf.iters = iters;
   perf.delay = delay;
