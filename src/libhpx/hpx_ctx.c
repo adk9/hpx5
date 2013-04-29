@@ -113,11 +113,6 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
   hpx_thread_t * th;
   uint32_t x;
 
-  /* destroy kernel threads */
-  for (x = 0; x < ctx->kths_count; x++) {
-    hpx_kthread_destroy(ctx->kths[x]);
-  }  
-
   /* destroy any remaining termianted threads */
   do {
     th = hpx_queue_pop(&ctx->term_ths);
@@ -125,6 +120,11 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
       hpx_thread_destroy(th);
     }
   } while (th != NULL);
+
+  /* destroy kernel threads */
+  for (x = 0; x < ctx->kths_count; x++) {
+    hpx_kthread_destroy(ctx->kths[x]);
+  }  
 
   /* cleanup */
   hpx_free(ctx->kths);

@@ -18,6 +18,7 @@
 # Makefile for HPX #
 ####################
 
+
 VPATH = @srcdir@
 am__make_dryrun = \
   { \
@@ -56,7 +57,8 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = src/libhpx
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/depcomp
+	$(top_srcdir)/depcomp $(libhpx_la_HEADERS) \
+	$(am__libhpx_la_arch_x86_64_HEADERS_DIST)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -95,7 +97,9 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(libdir)"
+am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libhpx_ladir)" \
+	"$(DESTDIR)$(libhpx_la_arch_x86_64dir)" \
+	"$(DESTDIR)$(libhpx_ladir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhpx_la_LIBADD =
 am__libhpx_la_SOURCES_DIST = hpx_error.c hpx_init.c hpx_ctx.c \
@@ -163,6 +167,10 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+am__libhpx_la_arch_x86_64_HEADERS_DIST =  \
+	$(top_srcdir)/include/arch/x86_64/*.h
+HEADERS = $(libhpx_la_HEADERS) $(libhpx_la_arch_x86_64_HEADERS) \
+	$(nodist_libhpx_la_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -308,9 +316,14 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libhpx.la
+libhpx_ladir = $(includedir)/hpx
 libhpx_la_SOURCES = hpx_error.c hpx_init.c hpx_ctx.c hpx_thread.c \
 	hpx_queue.c hpx_kthread.c hpx_config.c hpx_list.c $(ARCH_SRC)
+libhpx_la_HEADERS = $(top_srcdir)/include/*.h
 @CPU_X86_64_TRUE@ARCH_SRC = arch/x86_64/hpx_mctx.S arch/x86_64/hpx_mconfig.S arch/x86_64/hpx_mctx_mk.c arch/x86_64/hpx_lco_future.S
+@CPU_X86_64_TRUE@libhpx_la_arch_x86_64dir = $(includedir)/hpx/arch/x86_64
+@CPU_X86_64_TRUE@libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/arch/x86_64/*.h
+nodist_libhpx_la_HEADERS = $(top_srcdir)/include/config.h
 all: all-am
 
 .SUFFIXES:
@@ -477,6 +490,69 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+install-libhpx_laHEADERS: $(libhpx_la_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(libhpx_la_HEADERS)'; test -n "$(libhpx_ladir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(libhpx_ladir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(libhpx_ladir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(libhpx_ladir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(libhpx_ladir)" || exit $$?; \
+	done
+
+uninstall-libhpx_laHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(libhpx_la_HEADERS)'; test -n "$(libhpx_ladir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(libhpx_ladir)'; $(am__uninstall_files_from_dir)
+install-libhpx_la_arch_x86_64HEADERS: $(libhpx_la_arch_x86_64_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(libhpx_la_arch_x86_64_HEADERS)'; test -n "$(libhpx_la_arch_x86_64dir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(libhpx_la_arch_x86_64dir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(libhpx_la_arch_x86_64dir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(libhpx_la_arch_x86_64dir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(libhpx_la_arch_x86_64dir)" || exit $$?; \
+	done
+
+uninstall-libhpx_la_arch_x86_64HEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(libhpx_la_arch_x86_64_HEADERS)'; test -n "$(libhpx_la_arch_x86_64dir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(libhpx_la_arch_x86_64dir)'; $(am__uninstall_files_from_dir)
+install-nodist_libhpx_laHEADERS: $(nodist_libhpx_la_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(nodist_libhpx_la_HEADERS)'; test -n "$(libhpx_ladir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(libhpx_ladir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(libhpx_ladir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(libhpx_ladir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(libhpx_ladir)" || exit $$?; \
+	done
+
+uninstall-nodist_libhpx_laHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_libhpx_la_HEADERS)'; test -n "$(libhpx_ladir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(libhpx_ladir)'; $(am__uninstall_files_from_dir)
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -562,9 +638,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES)
+all-am: Makefile $(LTLIBRARIES) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(libhpx_ladir)" "$(DESTDIR)$(libhpx_la_arch_x86_64dir)" "$(DESTDIR)$(libhpx_ladir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -620,7 +696,9 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-libhpx_laHEADERS \
+	install-libhpx_la_arch_x86_64HEADERS \
+	install-nodist_libhpx_laHEADERS
 
 install-dvi: install-dvi-am
 
@@ -666,7 +744,9 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLTLIBRARIES
+uninstall-am: uninstall-libLTLIBRARIES uninstall-libhpx_laHEADERS \
+	uninstall-libhpx_la_arch_x86_64HEADERS \
+	uninstall-nodist_libhpx_laHEADERS
 
 .MAKE: install-am install-strip
 
@@ -677,12 +757,17 @@ uninstall-am: uninstall-libLTLIBRARIES
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
 	install-exec-am install-html install-html-am install-info \
-	install-info-am install-libLTLIBRARIES install-man install-pdf \
+	install-info-am install-libLTLIBRARIES \
+	install-libhpx_laHEADERS install-libhpx_la_arch_x86_64HEADERS \
+	install-man install-nodist_libhpx_laHEADERS install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
 	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am uninstall-libLTLIBRARIES
+	tags tags-am uninstall uninstall-am uninstall-libLTLIBRARIES \
+	uninstall-libhpx_laHEADERS \
+	uninstall-libhpx_la_arch_x86_64HEADERS \
+	uninstall-nodist_libhpx_laHEADERS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

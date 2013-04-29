@@ -1,3 +1,18 @@
+2013-04-29	Patrick K. Bohan <pbohan@indiana.edu>
+	* HPX-4 alpha 3 release (4.0.0a3)
+	* added a termination queue for thread reuse
+	* added a configuration system
+	* fixed various performance bugs
+	* instrumented performance measurement in unit tests
+	* added a naive Fibonacci example application
+	* made hpx_thread_join yield instead of blocking on futures
+	* additional unit tests
+	* added support for using PAPI in performance measurement tests
+	* made hpx_ctx_destroy clean up HPX threads automatically
+	* made the scheduler aware of HPX thread parent/child relationships
+	* added an option to pin kernel threads to a specific core (affinity)
+	* better testing of FPU state in context switching
+
 2013-04-08	Patrick K. Bohan <pbohan@indiana.edu>
 	* HPX-4 alpha 2 release (4.0.0a2)
 	* added hpx_mctx_swapcontext

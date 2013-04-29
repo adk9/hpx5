@@ -1,4 +1,19 @@
 
+04/29/2013 -- HPX 4.0.0a3
+=========================
+
+  * Basic performance measurement for context switching and naive Fibonacci
+  * Termination queue that can reuse old thread stacks
+  * Better FPU tests
+  * Configuration system for global and thread-specific variables
+  * Better overall performance
+  * An example application (naive threaded Fibonacci)
+  * Better yield performance
+  * More unit tests
+  * Parent/child relationships for thread locality support
+  * Kernel thread to CPU core affinity
+
+
 04/08/2013 -- HPX 4.0.0a2
 =========================
 

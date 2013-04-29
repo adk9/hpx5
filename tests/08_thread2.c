@@ -1188,7 +1188,7 @@ START_TEST (test_libhpx_thread_stack_size_verify)
   ck_assert_msg(th->ss == 65536, msg);
 
   /* cleanup */
-  hpx_thread_destroy(th);
+  //  hpx_thread_destroy(th);
   hpx_ctx_destroy(ctx);
 }
 END_TEST

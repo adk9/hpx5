@@ -320,6 +320,9 @@ void hpx_thread_exit(void * retval) {
 void _hpx_thread_terminate(hpx_thread_t * th) {
   hpx_thread_t * child = NULL;
 
+  /* trigger the return future */
+  hpx_lco_future_set(&th->retval);
+
   /* set our state to TERMINATED */
   th->state = HPX_THREAD_STATE_TERMINATED;
 
