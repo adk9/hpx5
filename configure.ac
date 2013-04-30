@@ -1,5 +1,5 @@
 
-AC_INIT([hpx], [4.0.0a3], [hpx@indiana.edu])
+AC_INIT([hpx], [4.0.0a4], [hpx@indiana.edu])
 AM_INIT_AUTOMAKE
 AM_PROG_AR
 
