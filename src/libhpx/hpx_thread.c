@@ -113,55 +113,6 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
 
   _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_CREATE);
 
-  //  /* allocate the thread */
-  //  th = (hpx_thread_t *) hpx_alloc(sizeof(hpx_thread_t));
-  //  if (th != NULL) {
-  //    /* initialize the thread */
-  //    memset(th, 0, sizeof(hpx_thread_t));
-  //
-  //    th->tid = __thread_next_id;
-  //    __thread_next_id += 1;
-  //
-  //    th->ctx = ctx;
-  //    th->state = HPX_THREAD_STATE_CREATE;
-  //    th->func = func;
-  //    th->args = args;
-  //    th->opts = HPX_THREAD_OPT_NONE;
-  //
-  //    hpx_lco_future_init(&th->retval);
-  //    hpx_list_init(&th->children);
-  //    th->parent = hpx_thread_self();
-  //    
-  //    /* create a stack to use */
-  //    th->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
-  //    th->stk = (void *) hpx_alloc(th->ss);
-  //    if (th->stk == NULL) {
-  //      hpx_free(th);
-  //      return NULL;
-  //    }
-  //
-  //    /* create a machine context buffer */
-  //    th->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-  //    if (th->mctx == NULL) {
-  //      hpx_free(th->stk);
-  //      hpx_free(th);
-  //      return NULL;
-  //    }
-  //
-  //    /* add this thread as a child to its parent */
-  //    if (th->parent != NULL) {
-  //      hpx_list_push(&th->parent->children, th);
-  //    }
-  //
-  //    /* get a kernel thread to run this on */
-  //    /* we'll assume for now that we aren't pegging threads to a specific core */
-  //    ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
-  //    th->kth = ctx->kths[ctx->kths_idx];
-  //    _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_CREATE);
-  //  } else {
-  //    __hpx_errno = HPX_ERROR_NOMEM;
-  //  }
-
   return th;
 
  __hpx_thread_create_FAIL2:
@@ -374,4 +325,34 @@ uint16_t hpx_thread_get_opt(hpx_thread_t * th) {
 
 void hpx_thread_set_opt(hpx_thread_t * th, uint16_t opts) {
   th->opts = opts;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_map_hash
+
+  A rather naive hashing function for storing HPX Threads in maps.
+ --------------------------------------------------------------------
+*/
+
+uint64_t hpx_thread_map_hash(hpx_map_t * map, void * ptr) {
+  hpx_thread_t * th = (hpx_thread_t *) ptr;
+
+  return (hpx_thread_get_id(th) % hpx_map_size(map));
+}
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_map_cmp
+
+  A comparator for HPX Threads (stored in maps).
+ --------------------------------------------------------------------
+*/
+
+bool hpx_thread_map_cmp(void * ptr1, void * ptr2) {
+  hpx_thread_t * th1 = (hpx_thread_t *) ptr1;
+  hpx_thread_t * th2 = (hpx_thread_t *) ptr2;
+
+  return (hpx_thread_get_id(th1) == hpx_thread_get_id(th2));
 }

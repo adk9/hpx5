@@ -25,7 +25,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-//#include <sys/queue.h>
 
 
 /*
@@ -33,18 +32,6 @@
   List Data Structures
  --------------------------------------------------------------------
 */
-
-//typedef struct _hpx_list_node_t {
-//  SLIST_ENTRY(_hpx_list_node_t) entries;
-//  void * value;
-//} hpx_list_node_t;
-//
-//typedef SLIST_HEAD(_hpx_list_head_t, _hpx_list_node_t) hpx_list_head_t;
-//
-//typedef struct _hpx_list_t {
-//  hpx_list_head_t head;
-//  uint64_t count;
-//} hpx_list_t;
 
 typedef struct _hpx_list_node_t {
   struct _hpx_list_node_t * next;
