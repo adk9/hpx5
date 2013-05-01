@@ -27,6 +27,7 @@
 #include "hpx_mctx.h"
 #include "hpx_lco.h"
 #include "hpx_list.h"
+#include "hpx_map.h"
 
 #pragma once
 #ifndef LIBHPX_THREAD_H_
@@ -151,6 +152,16 @@ void hpx_thread_set_opt(hpx_thread_t *, uint16_t);
 */
 
 void _hpx_thread_terminate(hpx_thread_t *);
+
+
+/*
+ --------------------------------------------------------------------
+  Map Functions
+ --------------------------------------------------------------------
+*/
+
+uint64_t hpx_thread_map_hash(hpx_map_t *, void *);
+bool hpx_thread_map_cmp(void *, void *);
 
 #endif
 

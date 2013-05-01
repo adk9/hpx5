@@ -37,8 +37,9 @@
 #include "08_thread2.c"
 #include "09_config.c"
 #include "10_list.c"
+#include "11_map.c"
 
-#include "98_thread_perf1.c" */
+#include "98_thread_perf1.c"
 
 
 /*
@@ -104,6 +105,12 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_list_pop);
   tcase_add_test(tc, test_libhpx_list_iter);
   tcase_add_test(tc, test_libhpx_list_delete);
+
+  /* test maps */
+  tcase_add_test(tc, test_libhpx_map_sizecount);
+  tcase_add_test(tc, test_libhpx_map_insert);
+  tcase_add_test(tc, test_libhpx_map_foreach);
+  tcase_add_test(tc, test_libhpx_map_delete);
 
   /* test machine context switching */
   tcase_add_test(tc, test_libhpx_mctx_getcontext);
