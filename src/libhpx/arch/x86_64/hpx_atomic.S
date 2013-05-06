@@ -2,8 +2,8 @@
 # ==================================================================== 
 #  High Performance ParalleX Library (libhpx)
 #
-#  LCO Functions - Futures
-#  hpx_lco_future.S
+#  Atomic Operations
+#  hpx_atomic.S
 # 
 #  Copyright (c) 2013, Trustees of Indiana University
 #  All rights reserved.
@@ -24,43 +24,24 @@
 	
 	
 .align 8
-.globl HPX_CDECL(hpx_lco_future_init),HPX_CDECL(hpx_lco_future_set)
+.globl HPX_CDECL(hpx_atomic_set8)
 
 #ifdef __linux__
-.type HPX_CDECL(hpx_lco_future_init), %function
-.type HPX_CDECL(hpx_lco_future_set), %function
+.type HPX_CDECL(hpx_atomic_set8), %function
 #endif
 	
 .text
 	
 	
 # --------------------------------------------------------------------
-#  hpx_lco_future_init
+#  hpx_atomic_set8
 #
-#  Initialize a future for future use (pun intended).
+#  Atomically stores a byte of data to the provided memory
+#  location.
 # --------------------------------------------------------------------
 
-HPX_CDECL(hpx_lco_future_init):
-	# set the future's state to UNSET
-	leaq			r11,[rdi]
-	xor			rax,rax
-	mov			[r11],al
-
-	# set the future's value to NULL
-	movq			[r11+1],rax
-
-	ret
-
-	
-# --------------------------------------------------------------------
-#  hpx_lco_future_set
-#
-#  Atomically set a future.
-# --------------------------------------------------------------------
-
-HPX_CDECL(hpx_lco_future_set):
-	# atomically set the future's state to SET
-	mov			al,1
+HPX_CDECL(hpx_atomic_set8):
+	movq			rax,rsi
 	xchg			[rdi],al
-	
 	ret
+
