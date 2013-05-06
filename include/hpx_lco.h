@@ -50,6 +50,7 @@ typedef struct _hpx_future_t {
 
 void hpx_lco_future_init(hpx_future_t *);
 void hpx_lco_future_set(hpx_future_t *);
+void hpx_lco_future_set_value(hpx_future_t *, void *);
 
 #endif
 
