@@ -13,9 +13,9 @@ AM_PROG_AS
 
 #AS_IF([test "x$CC" = "icc"], [CFLAGS += "-no-gcc"])
 
-AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [0])
+AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
 
-PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [1], [0])
+PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
 
 AS_IF([test "x$use_papi" = xyes], [
   PKG_CHECK_MODULES([PAPI], [papi])

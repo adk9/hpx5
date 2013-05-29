@@ -37,12 +37,12 @@
 typedef struct _hpx_list_node_t {
   struct _hpx_list_node_t * next;
   void * value;
-} hpx_list_node_t;
+} hpx_list_node_t __attribute__((aligned (8)));
 
 typedef struct _hpx_list_t {
   struct _hpx_list_node_t * head;
   uint64_t count;
-} hpx_list_t;
+} hpx_list_t __attribute__((aligned (8)));
 		   
 
 /*
@@ -50,17 +50,6 @@ typedef struct _hpx_list_t {
   List Functions
  --------------------------------------------------------------------
 */
-
-void hpx_list_init(hpx_list_t *);
-uint64_t hpx_list_size(hpx_list_t *);
-void * hpx_list_peek(hpx_list_t *); 
-void hpx_list_push(hpx_list_t *, void *);
-void * hpx_list_pop(hpx_list_t *);
-void hpx_list_delete(hpx_list_t *, void *);
-
-hpx_list_node_t * hpx_list_first(hpx_list_t *);
-hpx_list_node_t * hpx_list_next(hpx_list_node_t *);
-
 
 /*
  --------------------------------------------------------------------
@@ -71,10 +60,10 @@ hpx_list_node_t * hpx_list_next(hpx_list_node_t *);
  --------------------------------------------------------------------
 */
 
-inline void hpx_list_init(hpx_list_t * ll) {  
+static inline void hpx_list_init(hpx_list_t * ll) {  
   ll->head = NULL;
   ll->count = 0;
-} __attribute((always_inline));
+}
 
 
 /*
@@ -86,7 +75,7 @@ inline void hpx_list_init(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_list_destroy(hpx_list_t * ll) {
+static inline void hpx_list_destroy(hpx_list_t * ll) {
   hpx_list_node_t * cur = NULL;
   hpx_list_node_t * next = NULL;
 
@@ -99,7 +88,7 @@ inline void hpx_list_destroy(hpx_list_t * ll) {
 
   ll->head = NULL;
   ll->count = 0;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -110,9 +99,9 @@ inline void hpx_list_destroy(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline uint64_t hpx_list_size(hpx_list_t * ll) {
+static inline uint64_t hpx_list_size(hpx_list_t * ll) {
   return ll->count;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -123,7 +112,7 @@ inline uint64_t hpx_list_size(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline void * hpx_list_peek(hpx_list_t * ll) {
+static inline void * hpx_list_peek(hpx_list_t * ll) {
   hpx_list_node_t * node;
   void * val = NULL;
 
@@ -133,7 +122,7 @@ inline void * hpx_list_peek(hpx_list_t * ll) {
   }
   
   return val;
-} __attribute__((always_inline));
+} 
 
 
 /*
@@ -144,7 +133,7 @@ inline void * hpx_list_peek(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_list_push(hpx_list_t * ll, void * val) {
+static inline void hpx_list_push(hpx_list_t * ll, void * val) {
   hpx_list_node_t * node = NULL;
 
   node = (hpx_list_node_t *) hpx_alloc(sizeof(hpx_list_node_t));
@@ -155,7 +144,7 @@ inline void hpx_list_push(hpx_list_t * ll, void * val) {
     ll->head = node;
     ll->count += 1;
   }
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -166,7 +155,7 @@ inline void hpx_list_push(hpx_list_t * ll, void * val) {
  --------------------------------------------------------------------
 */
 
-inline void * hpx_list_pop(hpx_list_t * ll) {
+static inline void * hpx_list_pop(hpx_list_t * ll) {
   hpx_list_node_t * node = NULL;
   void * val = NULL;
 
@@ -181,7 +170,7 @@ inline void * hpx_list_pop(hpx_list_t * ll) {
   }
 
   return val;
-} __attribute__((always_inline));
+} 
 
 
 /*
@@ -192,9 +181,9 @@ inline void * hpx_list_pop(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
+static inline hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
   return ll->head;
-} __attribute__((always_inline));
+} 
 
 
 /*
@@ -205,9 +194,9 @@ inline hpx_list_node_t * hpx_list_first(hpx_list_t * ll) {
  --------------------------------------------------------------------
 */
 
-inline hpx_list_node_t * hpx_list_next(hpx_list_node_t * node) {
+static inline hpx_list_node_t * hpx_list_next(hpx_list_node_t * node) {
   return node->next;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -218,7 +207,7 @@ inline hpx_list_node_t * hpx_list_next(hpx_list_node_t * node) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_list_delete(hpx_list_t * ll, void * val) {
+static inline void hpx_list_delete(hpx_list_t * ll, void * val) {
   struct _hpx_list_node_t * found = NULL;
   struct _hpx_list_node_t * prev = NULL;
   struct _hpx_list_node_t * cur = NULL;
@@ -245,6 +234,6 @@ inline void hpx_list_delete(hpx_list_t * ll, void * val) {
 
     ll->count -= 1;
   }
-} __attribute__((always_inline));
+}
 
 #endif

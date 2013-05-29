@@ -57,10 +57,10 @@ typedef struct _hpx_future_t {
  --------------------------------------------------------------------
 */
 
-inline void hpx_lco_future_init(hpx_future_t * fut) {
+static inline void hpx_lco_future_init(hpx_future_t * fut) {
   fut->state = HPX_LCO_FUTURE_UNSET;
   fut->value = NULL;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -71,7 +71,7 @@ inline void hpx_lco_future_init(hpx_future_t * fut) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_lco_future_set(hpx_future_t * fut) {
+static inline void hpx_lco_future_set(hpx_future_t * fut) {
 #ifdef __x86_64__
   __asm__ __volatile__ (
     "movb %1,%%al;\n\t"
@@ -80,7 +80,7 @@ inline void hpx_lco_future_set(hpx_future_t * fut) {
     :"i" (HPX_LCO_FUTURE_SET)
     :"%al");
 #endif
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -91,10 +91,10 @@ inline void hpx_lco_future_set(hpx_future_t * fut) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
+static inline void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
   fut->value = val;
   hpx_lco_future_set(fut);
-} __attribute__((always_inline));
+}
 
 #endif
 
