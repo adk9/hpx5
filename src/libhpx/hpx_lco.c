@@ -33,10 +33,10 @@
  --------------------------------------------------------------------
 */
 
-void hpx_lco_future_init(hpx_future_t * fut) {
-  fut->value = NULL;
-  fut->state = HPX_LCO_FUTURE_UNSET;
-}
+//void hpx_lco_future_init(hpx_future_t * fut) {
+//  fut->value = NULL;
+//  fut->state = HPX_LCO_FUTURE_UNSET;
+//}
 
 
 /*
@@ -47,9 +47,9 @@ void hpx_lco_future_init(hpx_future_t * fut) {
  --------------------------------------------------------------------
 */
 
-void hpx_lco_future_set(hpx_future_t * fut) {
-  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
-}
+//void hpx_lco_future_set(hpx_future_t * fut) {
+//  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
+//}
 
 
 /*
@@ -60,8 +60,8 @@ void hpx_lco_future_set(hpx_future_t * fut) {
  --------------------------------------------------------------------
 */
 
-void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
-  fut->value = val;
-  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
-}
+//void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
+//  fut->value = val;
+//  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
+//}
 

@@ -77,9 +77,7 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
 	  hpx_queue_push(&kth->pend_q, kth->exec_th);
 	  break;
       case HPX_THREAD_STATE_EXECUTING:
-	//	kth->exec_th->state = HPX_THREAD_STATE_TERMINATED;
         _hpx_thread_terminate(exec_th);
-	//	hpx_lco_future_set(&kth->exec_th->retval);
 	break;
       case HPX_THREAD_STATE_TERMINATED:
 	_hpx_thread_terminate(exec_th);

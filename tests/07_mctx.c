@@ -355,7 +355,7 @@ void run_getcontext(uint64_t mflags) {
     pthread_sigmask(SIG_SETMASK, &sigs_old, 0);
   }
 
-#ifdef __x86_64
+#ifdef __x86_64__
   /* test for some easy stuff */
   ck_assert_msg(mctx.regs.rsp != 0, "Stack pointer was not saved.");
   ck_assert_msg(mctx.regs.rip != 0, "Instruction pointer was not saved.");

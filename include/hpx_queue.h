@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-//#include <sys/queue.h>
+#include "hpx_mem.h"
 
 
 /*
@@ -33,18 +33,6 @@
   Queue Data Structures
  --------------------------------------------------------------------
 */
-
-//typedef struct _hpx_queue_node_t {
-//  STAILQ_ENTRY(_hpx_queue_node_t) entries;
-//  void * value;
-//} hpx_queue_node_t;
-//
-//typedef STAILQ_HEAD(_hpx_head_queue_t, _hpx_queue_node_t) hpx_queue_head_t;
-//
-//typedef struct _hpx_queue_t {
-//  hpx_queue_head_t head;
-//  uint64_t count;
-//} hpx_queue_t;
 
 typedef struct _hpx_queue_node_t {
   struct _hpx_queue_node_t * next;
@@ -58,16 +46,139 @@ typedef struct _hpx_queue_t {
 } hpx_queue_t;	   
 
 
+
 /*
  --------------------------------------------------------------------
-  Queue Functions
+  hpx_queue_init
+
+  Initialize a priority queue.  This function should be called
+  before using any other functions on this queue.
  --------------------------------------------------------------------
 */
 
-void hpx_queue_init(hpx_queue_t *);
-uint64_t hpx_queue_size(hpx_queue_t *);
-void * hpx_queue_peek(hpx_queue_t *); 
-void hpx_queue_push(hpx_queue_t *, void *);
-void * hpx_queue_pop(hpx_queue_t *);
+inline void hpx_queue_init(hpx_queue_t * q) {  
+  q->head = NULL;
+  q->tail = NULL;
+  q->count = 0;
+} __attribute__((always_inline));
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_queue_destroy
+
+  Frees any memory allocated by this queue.  Should be called after
+  all other functions.
+ --------------------------------------------------------------------
+*/
+
+inline void hpx_queue_destroy(hpx_queue_t * q) {
+  hpx_queue_node_t * cur = NULL;
+  hpx_queue_node_t * next = NULL;
+  
+  cur = q->head;
+  while (q->count > 0) {
+    next = cur->next;
+    hpx_free(cur);
+    cur = next;
+
+    q->count -= 1;
+  }
+
+  q->head = NULL;
+  q->tail = NULL;
+} __attribute__((always_inline));
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_queue_size
+
+  Returns the number of elements in the queue.
+ --------------------------------------------------------------------
+*/
+
+inline uint64_t hpx_queue_size(hpx_queue_t * q) {
+  return q->count;
+} __attribute__((always_inline));
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_queue_peek
+
+  Returns the front element WITHOUT popping it off of the queue.
+ --------------------------------------------------------------------
+*/
+
+inline void * hpx_queue_peek(hpx_queue_t * q) {
+  hpx_queue_node_t * node;
+  void * val = NULL;
+
+  node = q->head;
+  if (node != NULL) {
+    val = node->value;
+  }
+  
+  return val;
+} __attribute__((always_inline));
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_queue_push
+
+  Push an element into the back of the queue.
+ --------------------------------------------------------------------
+*/
+
+inline void hpx_queue_push(hpx_queue_t * q, void * val) {
+  struct _hpx_queue_node_t * node = NULL;
+
+  node = (struct _hpx_queue_node_t *) hpx_alloc(sizeof(struct _hpx_queue_node_t));
+  if (node != NULL) {
+    node->value = val;
+    node->next = NULL;
+
+    if (q->count == 0) {
+      q->head = node;
+    } else {
+      q->tail->next = node;
+    }
+
+    q->tail = node;
+    q->count += 1;
+  }
+} __attribute__((always_inline));
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_queue_pop
+
+  Pops the front element off of the queue and returns it.
+ --------------------------------------------------------------------
+*/
+
+inline void * hpx_queue_pop(hpx_queue_t * q) {
+  hpx_queue_node_t * node = NULL;
+  void * val = NULL;
+
+  node = q->head;
+  if (node != NULL) {
+    val = node->value;
+
+    q->head = q->head->next;
+    hpx_free(node);    
+
+    if (q->count == 1) {
+      q->tail = NULL;
+    }
+
+    q->count -= 1;
+  }
+
+  return val;
+} __attribute__((always_inline));
 
 #endif
