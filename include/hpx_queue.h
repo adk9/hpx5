@@ -37,13 +37,13 @@
 typedef struct _hpx_queue_node_t {
   struct _hpx_queue_node_t * next;
   void * value;
-} hpx_queue_node_t;	
+} hpx_queue_node_t __attribute__((aligned (8)));	
 
 typedef struct _hpx_queue_t {
   struct _hpx_queue_node_t * head;
   struct _hpx_queue_node_t * tail;
   uint64_t count;
-} hpx_queue_t;	   
+} hpx_queue_t __attribute__((aligned (8)));
 
 
 
@@ -56,11 +56,11 @@ typedef struct _hpx_queue_t {
  --------------------------------------------------------------------
 */
 
-inline void hpx_queue_init(hpx_queue_t * q) {  
+static inline void hpx_queue_init(hpx_queue_t * q) {  
   q->head = NULL;
   q->tail = NULL;
   q->count = 0;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -72,7 +72,7 @@ inline void hpx_queue_init(hpx_queue_t * q) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_queue_destroy(hpx_queue_t * q) {
+static inline void hpx_queue_destroy(hpx_queue_t * q) {
   hpx_queue_node_t * cur = NULL;
   hpx_queue_node_t * next = NULL;
   
@@ -87,7 +87,7 @@ inline void hpx_queue_destroy(hpx_queue_t * q) {
 
   q->head = NULL;
   q->tail = NULL;
-} __attribute__((always_inline));
+} 
 
 
 /*
@@ -98,9 +98,9 @@ inline void hpx_queue_destroy(hpx_queue_t * q) {
  --------------------------------------------------------------------
 */
 
-inline uint64_t hpx_queue_size(hpx_queue_t * q) {
+static inline uint64_t hpx_queue_size(hpx_queue_t * q) {
   return q->count;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -111,7 +111,7 @@ inline uint64_t hpx_queue_size(hpx_queue_t * q) {
  --------------------------------------------------------------------
 */
 
-inline void * hpx_queue_peek(hpx_queue_t * q) {
+static inline void * hpx_queue_peek(hpx_queue_t * q) {
   hpx_queue_node_t * node;
   void * val = NULL;
 
@@ -121,7 +121,7 @@ inline void * hpx_queue_peek(hpx_queue_t * q) {
   }
   
   return val;
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -132,7 +132,7 @@ inline void * hpx_queue_peek(hpx_queue_t * q) {
  --------------------------------------------------------------------
 */
 
-inline void hpx_queue_push(hpx_queue_t * q, void * val) {
+static inline void hpx_queue_push(hpx_queue_t * q, void * val) {
   struct _hpx_queue_node_t * node = NULL;
 
   node = (struct _hpx_queue_node_t *) hpx_alloc(sizeof(struct _hpx_queue_node_t));
@@ -149,7 +149,7 @@ inline void hpx_queue_push(hpx_queue_t * q, void * val) {
     q->tail = node;
     q->count += 1;
   }
-} __attribute__((always_inline));
+}
 
 
 /*
@@ -160,7 +160,7 @@ inline void hpx_queue_push(hpx_queue_t * q, void * val) {
  --------------------------------------------------------------------
 */
 
-inline void * hpx_queue_pop(hpx_queue_t * q) {
+static inline void * hpx_queue_pop(hpx_queue_t * q) {
   hpx_queue_node_t * node = NULL;
   void * val = NULL;
 
@@ -179,6 +179,6 @@ inline void * hpx_queue_pop(hpx_queue_t * q) {
   }
 
   return val;
-} __attribute__((always_inline));
+}
 
 #endif
