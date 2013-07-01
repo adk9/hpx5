@@ -78,6 +78,7 @@ AC_CONFIG_FILES([
   Makefile
   src/Makefile
   src/libhpx/Makefile
+  examples/Makefile
   tests/Makefile
 ])
 AC_OUTPUT
