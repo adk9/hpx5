@@ -1,0 +1,97 @@
+
+# /
+/aclocal.m4
+/configure
+/config.log
+/config.status
+/libtool
+/autom4te.cache
+/.deps
+/Makefile
+/Makefile.in
+
+# /config/
+/config/*
+
+# /examples/
+/examples/.deps
+/examples/Makefile
+/examples/Makefile.in
+
+# /include/
+/include/stamp-h1
+/include/config.h
+/include/.deps
+/include/Makefile
+/include/Makefile.in
+
+# /include/arch/
+/include/arch/.deps
+/include/arch/Makefile
+/include/arch/Makefile.in
+
+# /include/arch/x86_64/
+/include/arch/x86_64/.deps
+/include/arch/x86_64/Makefile
+/include/arch/x86_64/Makefile.in
+
+# /include/contrib/
+/include/contrib/.deps
+/include/contrib/Makefile
+/include/contrib/Makefile.in
+
+# /include/contrib/freebsd/
+/include/contrib/freebsd/.deps
+/include/contrib/freebsd/Makefile
+/include/contrib/freebsd/Makefile.in
+
+# /include/contrib/sglib/
+/include/contrib/sglib/.deps
+/include/contrib/sglib/Makefile
+/include/contrib/sglib/Makefile.in
+
+# /include/xpi/
+/include/xpi/.deps
+/include/xpi/Makefile
+/include/xpi/Makefile.in
+
+# /src/
+/src/.deps
+/src/Makefile
+/src/Makefile.in
+
+# /src/libhpx/
+/src/libhpx/.deps
+/src/libhpx/Makefile
+/src/libhpx/Makefile.in
+
+# /src/libhpx/arch/
+/src/libhpx/arch/.deps
+/src/libhpx/arch/Makefile
+/src/libhpx/arch/Makefile.in
+
+# /src/libhpx/arch/x86_64/
+/src/libhpx/arch/x86_64/.dirstamp
+/src/libhpx/arch/x86_64/.deps
+/src/libhpx/arch/x86_64/Makefile
+/src/libhpx/arch/x86_64/Makefile.in
+
+# /src/libxpi/
+/src/libxpi/.deps
+/src/libxpi/Makefile
+/src/libxpi/Makefile.in
+
+# /tests/
+/tests/.deps
+/tests/Makefile
+/tests/Makefile.in
+
+# /tests/arch/
+/tests/arch/.deps
+/tests/arch/Makefile
+/tests/arch/Makefile.in
+
+# /tests/arch/x86_64/
+/tests/arch/x86_64/.deps
+/tests/arch/x86_64/Makefile
+/tests/arch/x86_64/Makefile.in
