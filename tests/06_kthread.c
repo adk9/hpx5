@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx_kthread.h"
+#include "hpx.h"
 
 
 int some_data;

@@ -3,13 +3,14 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Library initialization and cleanup function definitions
-  hpx_init.h
+  Machine Configuration Function Definitions
+  hpx_mconfig.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013,      Trustees of Indiana University 
+  Copyright (c) 2002-2012, Intel Corporation
   All rights reserved.
 
-  This software may be modified and distributed under the terms of
+  This software may be modified and distributed under the terms of 
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -22,34 +23,28 @@
 
 
 #pragma once
-#ifndef LIBHPX_INIT_H_
-#define LIBHPX_INIT_H_
+#ifndef LIBHPX_MCONFIG_X86_64_H_
+#define LIBHPX_MCONFIG_X86_64_H_
 
-#include "hpx_error.h"
-
-#ifdef __x86_64__
-  #include "arch/x86_64/hpx_mconfig.h"
-#endif
+#include <stdint.h>
+#include "mconfig_defs.h"
 
 
 /*
  --------------------------------------------------------------------
-  Library Globals
+  Machine Configuration Types
  --------------------------------------------------------------------
 */
 
-hpx_mconfig_t __mcfg;
+typedef uint64_t hpx_mconfig_t;
 
 
 /*
  --------------------------------------------------------------------
-  Initialization & Cleanup Functions
+  Machine Configuration Functions
  --------------------------------------------------------------------
 */
 
-hpx_error_t hpx_init(void);
-void hpx_cleanup(void);
+hpx_mconfig_t hpx_mconfig_get(void);
 
 #endif
-
-

@@ -20,8 +20,8 @@
  ====================================================================
 */
 
-#include "hpx_config.h"
-#include "hpx_kthread.h"
+#include "hpx/config.h"
+#include "hpx/kthread.h"
 
 
 /*

@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "hpx_list.h"
+#include "hpx/list.h"
 
 /* this should probably be a prime number */
 #define HPX_MAP_DEFAULT_SIZE                                 1000003

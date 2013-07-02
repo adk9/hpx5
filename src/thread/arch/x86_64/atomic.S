@@ -18,7 +18,7 @@
 #    Patrick K. Bohan <pbohan [at] indiana.edu>
 # ====================================================================
 
-#include "arch/x86_64/hpx_mconfig_defs.h"
+#include "arch/x86_64/mconfig_defs.h"
 	
 .intel_syntax noprefix
 	

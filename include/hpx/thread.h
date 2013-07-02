@@ -22,12 +22,12 @@
 
 #include <stdarg.h>
 #include <stdint.h>
-#include "hpx_mem.h"
-#include "hpx_ctx.h"
-#include "hpx_mctx.h"
-#include "hpx_lco.h"
-#include "hpx_list.h"
-#include "hpx_map.h"
+#include "hpx/mem.h"
+#include "hpx/ctx.h"
+#include "hpx/mctx.h"
+#include "hpx/lco.h"
+#include "hpx/list.h"
+#include "hpx/map.h"
 
 #pragma once
 #ifndef LIBHPX_THREAD_H_

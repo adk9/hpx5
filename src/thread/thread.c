@@ -22,9 +22,9 @@
 
 
 #include <string.h>
-#include "hpx_thread.h"
-#include "hpx_error.h"
-#include "hpx_mem.h"
+#include "hpx/thread.h"
+#include "hpx/error.h"
+#include "hpx/mem.h"
 
 
 /*

@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "hpx_mem.h"
+#include "hpx/mem.h"
 
 
 /*

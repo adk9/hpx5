@@ -22,8 +22,8 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "hpx_queue.h"
-#include "hpx_mctx.h"
+#include "hpx/queue.h"
+#include "hpx/mctx.h"
 
 #pragma once
 #ifndef LIBHPX_KTHREAD_H_

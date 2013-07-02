@@ -28,10 +28,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "hpx_kthread.h"
-#include "hpx_error.h"
-#include "hpx_mem.h"
-#include "hpx_thread.h"
+#include "hpx/kthread.h"
+#include "hpx/error.h"
+#include "hpx/mem.h"
+#include "hpx/thread.h"
 
 
 /*
