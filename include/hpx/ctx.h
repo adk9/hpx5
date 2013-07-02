@@ -26,12 +26,12 @@
 #define LIBHPX_CONTEXT_H_
 
 #include <stdint.h>
-#include "hpx_queue.h"
-#include "hpx_kthread.h"
-#include "hpx_config.h"
+#include "hpx/queue.h"
+#include "hpx/kthread.h"
+#include "hpx/config.h"
 
 #ifdef __x86_64__
-  #include "arch/x86_64/hpx_mconfig.h"
+  #include "arch/x86_64/mconfig.h"
 #else
   typedef hpx_mconfig_t uint64_t;
 #endif

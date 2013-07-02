@@ -20,50 +20,48 @@
  ====================================================================
 */
 
-#include "hpx_init.h"
-#include "hpx_thread.h"
-#include "hpx_kthread.h"
+#include <stdlib.h>
+#include "hpx/lco.h"
+#include "hpx/atomic.h"
 
 
 /*
  --------------------------------------------------------------------
-  hpx_init
+  hpx_lco_future_init
 
-  Initializes data structures used by libhpx.  This function must
-  be called BEFORE any other functions in libhpx.  Not doing so 
-  will cause all other functions to return HPX_ERROR_NOINIT.
+  Initializes an HPX Future.
  --------------------------------------------------------------------
 */
 
-hpx_error_t hpx_init(void) {
-  /* init hpx_errno */
-  __hpx_errno = HPX_SUCCESS;
-
-  /* init the next context ID */
-  __ctx_next_id = 1;
-
-  /* init the next thread ID */
-  __thread_next_id = 1;
-
-  /* get the global machine configuration */
-  __mcfg = hpx_mconfig_get();
-
-  /* initialize kernel threads */
-  //_hpx_kthread_init();
-
-  return HPX_SUCCESS;
-}
+//void hpx_lco_future_init(hpx_future_t * fut) {
+//  fut->value = NULL;
+//  fut->state = HPX_LCO_FUTURE_UNSET;
+//}
 
 
 /*
  --------------------------------------------------------------------
-  hpx_cleanup
+  hpx_lco_future_set
 
-  Cleans up data structures created by hpx_init.  This function
-  must be called after all other HPX functions.
+  Sets the state of an HPX Future to SET.
  --------------------------------------------------------------------
 */
 
-void hpx_cleanup(void) {
+//void hpx_lco_future_set(hpx_future_t * fut) {
+//  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
+//}
 
-}
+
+/*
+ --------------------------------------------------------------------
+  hpx_lco_future_set_value
+
+  Sets the value of an HPX Future and sets its state to SET.
+ --------------------------------------------------------------------
+*/
+
+//void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
+//  fut->value = val;
+//  hpx_atomic_set8(&fut->state, HPX_LCO_FUTURE_SET);
+//}
+

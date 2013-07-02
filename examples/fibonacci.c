@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <hpx_thread.h>
+#include <hpx/thread.h>
 
 #ifdef __APPLE__
   #include <mach/mach_time.h>

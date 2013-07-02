@@ -13,7 +13,7 @@ CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
 AC_USE_SYSTEM_EXTENSIONS
-AC_CONFIG_SRCDIR([include/hpx_list.h])
+AC_CONFIG_SRCDIR([include/hpx/list.h])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
@@ -77,7 +77,6 @@ AM_CONDITIONAL([USE_PAPI], [test "x$use_papi" = xyes])
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
-  src/libhpx/Makefile
   examples/Makefile
   tests/Makefile
 ])

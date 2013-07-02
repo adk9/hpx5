@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx_thread.h"
+#include "hpx.h"
 
 
 void * __thread_test_func1(void) {

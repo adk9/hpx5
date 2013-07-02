@@ -30,8 +30,8 @@
 #include <stdint.h>
 
 #ifdef __x86_64__
-  #include "arch/x86_64/hpx_mconfig.h"
-  #include "arch/x86_64/hpx_mregs.h"
+  #include "arch/x86_64/mconfig.h"
+  #include "arch/x86_64/mregs.h"
 #endif
 
 

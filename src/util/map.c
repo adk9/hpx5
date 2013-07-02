@@ -21,8 +21,8 @@
 */
 
 
-#include "hpx_map.h"
-#include "hpx_mem.h"
+#include "hpx/map.h"
+#include "hpx/mem.h"
 
 
 /*

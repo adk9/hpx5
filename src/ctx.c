@@ -22,12 +22,12 @@
 
 
 #include <string.h>
-#include "hpx_mem.h"
-#include "hpx_ctx.h"
-#include "hpx_error.h"
-#include "hpx_kthread.h"
-#include "hpx_thread.h"
 
+#include "hpx/mem.h"
+#include "hpx/ctx.h"
+#include "hpx/error.h"
+#include "hpx/kthread.h"
+#include "hpx/thread.h"
 
 /*
  --------------------------------------------------------------------

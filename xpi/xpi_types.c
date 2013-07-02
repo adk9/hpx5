@@ -1,10 +1,10 @@
 
 /*
  ====================================================================
-  High Performance ParalleX Library (libhpx)
+  ParalleX Programming Interface (XPI) Library (libxpi)
   
-  Library Unit Test Harness - Memory Management
-  02_mem.c
+  Datatype Functions
+  xpi_types.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -20,25 +20,18 @@
  ====================================================================
 */
 
-
-#include "hpx.h"
+#include "xpi/xpi_types.h"
 
 
 /*
  --------------------------------------------------------------------
-  TEST: shared memory allocation
+  XPI_Type_contiguous
+
+  Creates a contiguous XPI type.
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_alloc)
-{
-  char * some_data = NULL;
-
-  some_data = (char *) hpx_alloc(1024 * sizeof(char));
-  ck_assert_msg(some_data != NULL, "hpx_alloc returned NULL");
-  
-  hpx_free(some_data);
-  some_data = NULL;
-} 
-END_TEST
+XPI_Err XPI_Type_contiguous(size_t count, XPI_Type old, XPI_Type * new) {
+  return XPI_SUCCESS;
+}
 

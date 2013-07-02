@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx_queue.h"
+#include "hpx.h"
 
 
 /*

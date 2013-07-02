@@ -21,7 +21,7 @@
 */
 
 #include <string.h>
-#include "hpx_mctx.h"
+#include "hpx/mctx.h"
 
 
 extern _hpx_mctx_trampoline(void);

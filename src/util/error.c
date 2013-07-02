@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx_error.h"
+#include "hpx/error.h"
 
 
 /*
