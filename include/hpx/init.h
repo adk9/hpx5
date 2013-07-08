@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,7 +19,6 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_INIT_H_
 #define LIBHPX_INIT_H_
@@ -30,7 +28,6 @@
 #ifdef __x86_64__
   #include "arch/x86_64/mconfig.h"
 #endif
-
 
 /*
  --------------------------------------------------------------------
@@ -50,6 +47,4 @@ hpx_mconfig_t __mcfg;
 hpx_error_t hpx_init(void);
 void hpx_cleanup(void);
 
-#endif
-
-
+#endif /* LIBHPX_INIT_H_ */

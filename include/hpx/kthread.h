@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,14 +19,14 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_KTHREAD_H_
+#define LIBHPX_KTHREAD_H_
+
 #include <stdint.h>
 #include <pthread.h>
 #include "hpx/queue.h"
 #include "hpx/mctx.h"
-
-#pragma once
-#ifndef LIBHPX_KTHREAD_H_
-#define LIBHPX_KTHREAD_H_
 
 struct _hpx_context_t;
 struct _hpx_thread_t;
@@ -43,9 +42,9 @@ static pthread_key_t kth_key;
  --------------------------------------------------------------------
 */
 
-#define HPX_KTHREAD_STATE_STOPPED                                  0
-#define HPX_KTHREAD_STATE_RUNNING                                  1
-#define HPX_KTHREAD_STATE_BUSY                                     2
+#define HPX_KTHREAD_STATE_STOPPED   0
+#define HPX_KTHREAD_STATE_RUNNING   1
+#define HPX_KTHREAD_STATE_BUSY      2
 
 
 /*
@@ -57,28 +56,26 @@ static pthread_key_t kth_key;
 typedef pthread_mutex_t hpx_kthread_mutex_t;
 
 typedef struct _hpx_kthread_t {
-  hpx_kthread_mutex_t mtx;
-  pthread_cond_t k_c;
-  pthread_t core_th;
-  hpx_queue_t pend_q;
-  hpx_queue_t susp_q;
-  struct _hpx_thread_t * exec_th;
-  struct _hpx_context_t * ctx;
-  uint8_t k_st;
-  hpx_mctx_context_t * mctx;
-  hpx_mconfig_t mcfg;
-  uint64_t mflags;
+  hpx_kthread_mutex_t     mtx;
+  pthread_cond_t          k_c;
+  pthread_t               core_th;
+  hpx_queue_t             pend_q;
+  hpx_queue_t             susp_q;
+  struct _hpx_thread_t   *exec_th;
+  struct _hpx_context_t  *ctx;
+  uint8_t                 k_st;
+  hpx_mctx_context_t     *mctx;
+  hpx_mconfig_t           mcfg;
+  uint64_t                mflags;
 } hpx_kthread_t;
 
 typedef void *(*hpx_kthread_seed_t)(void *);
-
 
 /*
  --------------------------------------------------------------------
   Seed Function
  --------------------------------------------------------------------
 */
-
 void * hpx_kthread_seed_default(void *);
 
 
@@ -87,7 +84,6 @@ void * hpx_kthread_seed_default(void *);
   Kernel Thread Functions
  --------------------------------------------------------------------
 */
-
 hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
@@ -110,7 +106,6 @@ void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
   Support Functions
  --------------------------------------------------------------------
 */
-
 long hpx_kthread_get_cores(void);
 
-#endif
+#endif /* LIBHPX_KTHREAD_H */

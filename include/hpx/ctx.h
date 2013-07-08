@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,12 +19,12 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_CONTEXT_H_
 #define LIBHPX_CONTEXT_H_
 
 #include <stdint.h>
+
 #include "hpx/queue.h"
 #include "hpx/kthread.h"
 #include "hpx/config.h"
@@ -35,7 +34,6 @@
 #else
   typedef hpx_mconfig_t uint64_t;
 #endif
-
 
 /*
  --------------------------------------------------------------------
@@ -51,17 +49,17 @@ static hpx_context_id_t __ctx_next_id;
 
 /* the context handle */ 
 typedef struct _hpx_context_t {
-  hpx_context_id_t cid;
-  hpx_kthread_t ** kths;
+  hpx_context_id_t    cid;
+  hpx_kthread_t     **kths;
   hpx_kthread_mutex_t mtx;
-  uint32_t kths_count;
-  uint32_t kths_idx;
+  uint32_t            kths_count;
+  uint32_t            kths_idx;
 
-  hpx_config_t cfg;
-  hpx_mconfig_t mcfg;
-  uint64_t mflags;
+  hpx_config_t        cfg;
+  hpx_mconfig_t       mcfg;
+  uint64_t            mflags;
 
-  hpx_queue_t term_ths;
+  hpx_queue_t         term_ths;
 } hpx_context_t;
 
 
@@ -71,10 +69,8 @@ typedef struct _hpx_context_t {
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(hpx_config_t *);
+hpx_context_t *hpx_ctx_create(hpx_config_t *);
 void hpx_ctx_destroy(hpx_context_t *);
 hpx_context_id_t hpx_ctx_get_id(hpx_context_t *);
 
-#endif
-
-
+#endif /* LIBHPX_CONTEXT_H_ */

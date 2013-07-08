@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,7 +19,6 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_MEM_H_
 #define LIBHPX_MEM_H_
@@ -30,6 +28,6 @@
 #define hpx_alloc(u) malloc(u)
 #define hpx_free(u)  free(u)
 
-#endif
+#endif /* LIBHPX_MEM_H_ */
 
 

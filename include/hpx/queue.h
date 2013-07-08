@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -14,8 +13,6 @@
 
   Authors:
     Patrick K. Bohan <pbohan [at] indiana.edu>
-
-  https://github.com/brandenburg/binomial-heaps/blob/master/heap.h
  ====================================================================
 */
 
@@ -25,8 +22,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "hpx/mem.h"
 
+#include "hpx/mem.h"
 
 /*
  --------------------------------------------------------------------
@@ -40,8 +37,8 @@ typedef struct _hpx_queue_node_t {
 } hpx_queue_node_t __attribute__((aligned (8)));	
 
 typedef struct _hpx_queue_t {
-  struct _hpx_queue_node_t * head;
-  struct _hpx_queue_node_t * tail;
+  struct _hpx_queue_node_t *head;
+  struct _hpx_queue_node_t *tail;
   uint64_t count;
 } hpx_queue_t __attribute__((aligned (8)));
 
@@ -55,8 +52,7 @@ typedef struct _hpx_queue_t {
   before using any other functions on this queue.
  --------------------------------------------------------------------
 */
-
-static inline void hpx_queue_init(hpx_queue_t * q) {  
+static inline void hpx_queue_init(hpx_queue_t *q) {  
   q->head = NULL;
   q->tail = NULL;
   q->count = 0;
@@ -72,9 +68,9 @@ static inline void hpx_queue_init(hpx_queue_t * q) {
  --------------------------------------------------------------------
 */
 
-static inline void hpx_queue_destroy(hpx_queue_t * q) {
-  hpx_queue_node_t * cur = NULL;
-  hpx_queue_node_t * next = NULL;
+static inline void hpx_queue_destroy(hpx_queue_t *q) {
+  hpx_queue_node_t *cur = NULL;
+  hpx_queue_node_t *next = NULL;
   
   cur = q->head;
   while (q->count > 0) {
@@ -97,8 +93,7 @@ static inline void hpx_queue_destroy(hpx_queue_t * q) {
   Returns the number of elements in the queue.
  --------------------------------------------------------------------
 */
-
-static inline uint64_t hpx_queue_size(hpx_queue_t * q) {
+static inline uint64_t hpx_queue_size(hpx_queue_t *q) {
   return q->count;
 }
 
@@ -110,10 +105,9 @@ static inline uint64_t hpx_queue_size(hpx_queue_t * q) {
   Returns the front element WITHOUT popping it off of the queue.
  --------------------------------------------------------------------
 */
-
-static inline void * hpx_queue_peek(hpx_queue_t * q) {
-  hpx_queue_node_t * node;
-  void * val = NULL;
+static inline void *hpx_queue_peek(hpx_queue_t *q) {
+  hpx_queue_node_t *node;
+  void *val = NULL;
 
   node = q->head;
   if (node != NULL) {
@@ -131,9 +125,8 @@ static inline void * hpx_queue_peek(hpx_queue_t * q) {
   Push an element into the back of the queue.
  --------------------------------------------------------------------
 */
-
-static inline void hpx_queue_push(hpx_queue_t * q, void * val) {
-  struct _hpx_queue_node_t * node = NULL;
+static inline void hpx_queue_push(hpx_queue_t *q, void *val) {
+  struct _hpx_queue_node_t *node = NULL;
 
   node = (struct _hpx_queue_node_t *) hpx_alloc(sizeof(struct _hpx_queue_node_t));
   if (node != NULL) {
@@ -159,10 +152,9 @@ static inline void hpx_queue_push(hpx_queue_t * q, void * val) {
   Pops the front element off of the queue and returns it.
  --------------------------------------------------------------------
 */
-
-static inline void * hpx_queue_pop(hpx_queue_t * q) {
-  hpx_queue_node_t * node = NULL;
-  void * val = NULL;
+static inline void *hpx_queue_pop(hpx_queue_t *q) {
+  hpx_queue_node_t *node = NULL;
+  void *val = NULL;
 
   node = q->head;
   if (node != NULL) {
@@ -181,4 +173,4 @@ static inline void * hpx_queue_pop(hpx_queue_t * q) {
   return val;
 }
 
-#endif
+#endif /* LIBHPX_QUEUE_H_ */

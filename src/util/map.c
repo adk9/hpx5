@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,10 +19,8 @@
  ====================================================================
 */
 
-
 #include "hpx/map.h"
 #include "hpx/mem.h"
-
 
 /*
  --------------------------------------------------------------------
@@ -33,8 +30,7 @@
   before using any other functions on this queue.
  --------------------------------------------------------------------
 */
-
-void hpx_map_init(hpx_map_t * map, hpx_map_hash_fn_t hash_fn, hpx_map_cmp_fn_t cmp_fn, uint64_t sz) {  
+void hpx_map_init(hpx_map_t *map, hpx_map_hash_fn_t hash_fn, hpx_map_cmp_fn_t cmp_fn, uint64_t sz) {  
   uint64_t idx;
 
   /* figure out how big our map should be */
@@ -67,8 +63,7 @@ void hpx_map_init(hpx_map_t * map, hpx_map_hash_fn_t hash_fn, hpx_map_cmp_fn_t c
   all other functions.
  --------------------------------------------------------------------
 */
-
-void hpx_map_destroy(hpx_map_t * map) {
+void hpx_map_destroy(hpx_map_t *map) {
   uint64_t idx;
 
   if (map->data != NULL) {
@@ -88,8 +83,7 @@ void hpx_map_destroy(hpx_map_t * map) {
   Returns the number of elements currently in the map.
  --------------------------------------------------------------------
 */
-
-uint64_t hpx_map_count(hpx_map_t * map) {
+uint64_t hpx_map_count(hpx_map_t *map) {
   return map->count;
 }
 
@@ -101,8 +95,7 @@ uint64_t hpx_map_count(hpx_map_t * map) {
   Returns the number of buckets allocated for elements in the map.
  --------------------------------------------------------------------
 */
-
-uint64_t hpx_map_size(hpx_map_t * map) {
+uint64_t hpx_map_size(hpx_map_t *map) {
   return map->sz;
 }
 
@@ -115,7 +108,7 @@ uint64_t hpx_map_size(hpx_map_t * map) {
  --------------------------------------------------------------------
 */
 
-void hpx_map_insert(hpx_map_t * map, void * ptr) {
+void hpx_map_insert(hpx_map_t *map, void *ptr) {
   uint64_t idx = map->hash_fn(map, ptr);
 
   hpx_list_push(&map->data[idx], ptr);
@@ -130,8 +123,7 @@ void hpx_map_insert(hpx_map_t * map, void * ptr) {
   Deletes an element from the map.
  --------------------------------------------------------------------
 */
-
-void hpx_map_delete(hpx_map_t * map, void * ptr) {
+void hpx_map_delete(hpx_map_t *map, void *ptr) {
   uint64_t idx;
  
   if (map->count > 0) {
@@ -150,11 +142,10 @@ void hpx_map_delete(hpx_map_t * map, void * ptr) {
   was found with the supplied key.
  --------------------------------------------------------------------
 */
-
-void * hpx_map_search(hpx_map_t * map, void * ptr) {
-  hpx_list_node_t * node = NULL;
+void *hpx_map_search(hpx_map_t *map, void *ptr) {
+  hpx_list_node_t *node = NULL;
   uint64_t idx;
-  void * val = NULL;
+  void *val = NULL;
 
   if (map->count > 0) {
     idx = map->hash_fn(map, ptr);
@@ -180,9 +171,8 @@ void * hpx_map_search(hpx_map_t * map, void * ptr) {
   function on each element.
  --------------------------------------------------------------------
 */
-
-void hpx_map_foreach(hpx_map_t * map, hpx_map_foreach_fn_t foreach_fn) {
-  hpx_list_node_t * node = NULL;
+void hpx_map_foreach(hpx_map_t *map, hpx_map_foreach_fn_t foreach_fn) {
+  hpx_list_node_t *node = NULL;
   uint64_t idx;
 
   for (idx = 0; idx < map->sz; idx++) {

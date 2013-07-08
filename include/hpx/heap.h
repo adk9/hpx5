@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -31,37 +30,37 @@
 #define HPX_NOT_IN_HEAP UINT_MAX
 
 typedef struct _hpx_heap_node_t {
-  struct _hpx_heap_node_t * parent;
-  struct _hpx_heap_node_t * next;
-  struct _hpx_heap_node_t * child;
+  struct _hpx_heap_node_t *parent;
+  struct _hpx_heap_node_t *next;
+  struct _hpx_heap_node_t *child;
 
   unsigned int degree;
-  void * value;
+  void *value;
 
-  struct _hpx_heap_node_t ** ref;
+  struct _hpx_heap_node_t **ref;
 } hpx_heap_node_t;
 
 typedef struct {
-  hpx_heap_node_t * head;
+  hpx_heap_node_t *head;
 
   /* We cache the minimum of the heap. This speeds up repeated peek operations. */
-  hpx_heap_node_t * min;
+  hpx_heap_node_t *min;
 } hpx_heap_t;
 
 /* item comparison function:
  * return 1 if a has higher prio than b, 0 otherwise
  */
-typedef int (* hpx_heap_prio_t)(hpx_heap_node_t * a, hpx_heap_node_t * b);
+typedef int (* hpx_heap_prio_t)(hpx_heap_node_t *a, hpx_heap_node_t *b);
 
-static inline void hpx_heap_init(hpx_heap_t * h)
+static inline void hpx_heap_init(hpx_heap_t *h)
 {
   h->head = NULL;
   h->min = NULL;
 }
 
-static inline void hpx_heap_node_init_ref(hpx_heap_node_t ** _h, void * value)
+static inline void hpx_heap_node_init_ref(hpx_heap_node_t **_h, void *value)
 {
-  hpx_heap_node_t * h = *_h;
+  hpx_heap_node_t *h = *_h;
   h->parent = NULL;
   h->next = NULL;
   h->child = NULL;
@@ -70,7 +69,7 @@ static inline void hpx_heap_node_init_ref(hpx_heap_node_t ** _h, void * value)
   h->ref = _h;
 }
 
-static inline void hpx_heap_node_init(hpx_heap_node_t * h, void * value)
+static inline void hpx_heap_node_init(hpx_heap_node_t *h, void *value)
 {
   h->parent = NULL;
   h->next = NULL;
@@ -80,24 +79,24 @@ static inline void hpx_heap_node_init(hpx_heap_node_t * h, void * value)
   h->ref = NULL;
 }
 
-static inline void * hpx_heap_node_value(hpx_heap_node_t * h)
+static inline void *hpx_heap_node_value(hpx_heap_node_t *h)
 {
   return h->value;
 }
 
-static inline int hpx_heap_node_in_heap(hpx_heap_node_t * h)
+static inline int hpx_heap_node_in_heap(hpx_heap_node_t *h)
 {
   return h->degree != HPX_NOT_IN_HEAP;
 }
 
-static inline int hpx_heap_empty(hpx_heap_t * heap)
+static inline int hpx_heap_empty(hpx_heap_t *heap)
 {
   return heap->head == NULL && heap->min == NULL;
 }
 
 /* make child a subtree of root */
-static inline void __hpx_heap_link(hpx_heap_node_t * root,
-			           hpx_heap_node_t * child)
+static inline void __hpx_heap_link(hpx_heap_node_t *root,
+			           hpx_heap_node_t *child)
 {
   child->parent = root;
   child->next = root->child;
@@ -106,11 +105,11 @@ static inline void __hpx_heap_link(hpx_heap_node_t * root,
 }
 
 /* merge root lists */
-static inline hpx_heap_node_t * __hpx_heap_merge(hpx_heap_node_t * a,
-					         hpx_heap_node_t * b)
+static inline hpx_heap_node_t *__hpx_heap_merge(hpx_heap_node_t *a,
+                                                hpx_heap_node_t *b)
 {
-  hpx_heap_node_t * head = NULL;
-  hpx_heap_node_t ** pos = &head;
+  hpx_heap_node_t *head = NULL;
+  hpx_heap_node_t **pos = &head;
 
   while (a && b) {
     if (a->degree < b->degree) {
@@ -130,10 +129,10 @@ static inline hpx_heap_node_t * __hpx_heap_merge(hpx_heap_node_t * a,
 }
 
 /* reverse a linked list of nodes. also clears parent pointer */
-static inline hpx_heap_node_t * __hpx_heap_reverse(hpx_heap_node_t * h)
+static inline hpx_heap_node_t *__hpx_heap_reverse(hpx_heap_node_t *h)
 {
-  hpx_heap_node_t * tail = NULL;
-  hpx_heap_node_t * next;
+  hpx_heap_node_t *tail = NULL;
+  hpx_heap_node_t *next;
 
   if (!h)
     return h;
@@ -150,10 +149,10 @@ static inline hpx_heap_node_t * __hpx_heap_reverse(hpx_heap_node_t * h)
   return h;
 }
 
-static inline void __hpx_heap_min(hpx_heap_prio_t higher_prio, hpx_heap_t * heap,
-			          hpx_heap_node_t ** prev, hpx_heap_node_t ** node)
+static inline void __hpx_heap_min(hpx_heap_prio_t higher_prio, hpx_heap_t *heap,
+			          hpx_heap_node_t **prev, hpx_heap_node_t **node)
 {
-  hpx_heap_node_t * _prev, * cur;
+  hpx_heap_node_t *_prev, *cur;
   *prev = NULL;
 
   if (!heap->head) {
@@ -174,11 +173,11 @@ static inline void __hpx_heap_min(hpx_heap_prio_t higher_prio, hpx_heap_t * heap
   }
 }
 
-static inline void __hpx_heap_union(hpx_heap_prio_t higher_prio, hpx_heap_t * heap,
-				    hpx_heap_node_t * h2)
+static inline void __hpx_heap_union(hpx_heap_prio_t higher_prio, hpx_heap_t *heap,
+				    hpx_heap_node_t *h2)
 {
-  hpx_heap_node_t * h1;
-  hpx_heap_node_t * prev, * x, * next;
+  hpx_heap_node_t *h1;
+  hpx_heap_node_t *prev, *x, *next;
 
   if (!h2)
     return;
@@ -215,10 +214,10 @@ static inline void __hpx_heap_union(hpx_heap_prio_t higher_prio, hpx_heap_t * he
   heap->head = h1;
 }
 
-static inline hpx_heap_node_t * __hpx_heap_extract_min(hpx_heap_prio_t higher_prio,
-						       hpx_heap_t * heap)
+static inline hpx_heap_node_t *__hpx_heap_extract_min(hpx_heap_prio_t higher_prio,
+                                                      hpx_heap_t *heap)
 {
-  hpx_heap_node_t * prev, * node;
+  hpx_heap_node_t *prev, *node;
   __hpx_heap_min(higher_prio, heap, &prev, &node);
   if (!node)
     return NULL;
@@ -231,10 +230,10 @@ static inline hpx_heap_node_t * __hpx_heap_extract_min(hpx_heap_prio_t higher_pr
 }
 
 /* insert (and reinitialize) a node into the heap */
-static inline void hpx_heap_insert(hpx_heap_prio_t higher_prio, hpx_heap_t * heap,
-			           hpx_heap_node_t * node)
+static inline void hpx_heap_insert(hpx_heap_prio_t higher_prio, hpx_heap_t *heap,
+			           hpx_heap_node_t *node)
 {
-  hpx_heap_node_t * min;
+  hpx_heap_node_t *min;
   node->child = NULL;
   node->parent = NULL;
   node->next = NULL;
@@ -252,9 +251,9 @@ static inline void hpx_heap_insert(hpx_heap_prio_t higher_prio, hpx_heap_t * hea
     __hpx_heap_union(higher_prio, heap, node);
 }
 
-static inline void __hpx_uncache_min(hpx_heap_prio_t higher_prio, hpx_heap_t * heap)
+static inline void __hpx_uncache_min(hpx_heap_prio_t higher_prio, hpx_heap_t *heap)
 {
-  hpx_heap_node_t * min;
+  hpx_heap_node_t *min;
   if (heap->min) {
     min = heap->min;
     heap->min = NULL;
@@ -264,7 +263,7 @@ static inline void __hpx_uncache_min(hpx_heap_prio_t higher_prio, hpx_heap_t * h
 
 /* merge addition into target */
 static inline void hpx_heap_union(hpx_heap_prio_t higher_prio,
-			          hpx_heap_t * target, hpx_heap_t * addition)
+			          hpx_heap_t * target, hpx_heap_t *addition)
 {
   /* first insert any cached minima, if necessary */
   __hpx_uncache_min(higher_prio, target);
@@ -274,18 +273,18 @@ static inline void hpx_heap_union(hpx_heap_prio_t higher_prio,
   addition->head = NULL;
 }
 
-static inline hpx_heap_node_t * hpx_heap_peek(hpx_heap_prio_t higher_prio,
-					      hpx_heap_t * heap)
+static inline hpx_heap_node_t *hpx_heap_peek(hpx_heap_prio_t higher_prio,
+                                             hpx_heap_t *heap)
 {
   if (!heap->min)
     heap->min = __hpx_heap_extract_min(higher_prio, heap);
   return heap->min;
 }
 
-static inline hpx_heap_node_t * heap_take(hpx_heap_prio_t higher_prio,
-					  hpx_heap_t * heap)
+static inline hpx_heap_node_t *heap_take(hpx_heap_prio_t higher_prio,
+                                         hpx_heap_t * heap)
 {
-  hpx_heap_node_t * node;
+  hpx_heap_node_t *node;
   if (!heap->min)
     heap->min = __hpx_heap_extract_min(higher_prio, heap);
   node = heap->min;
@@ -295,12 +294,12 @@ static inline hpx_heap_node_t * heap_take(hpx_heap_prio_t higher_prio,
   return node;
 }
 
-static inline void hpx_heap_decrease(hpx_heap_prio_t higher_prio, hpx_heap_t * heap,
-				     hpx_heap_node_t * node)
+static inline void hpx_heap_decrease(hpx_heap_prio_t higher_prio, hpx_heap_t *heap,
+				     hpx_heap_node_t *node)
 {
-  hpx_heap_node_t * parent;
-  hpx_heap_node_t ** tmp_ref;
-  void* tmp;
+  hpx_heap_node_t *parent;
+  hpx_heap_node_t **tmp_ref;
+  void *tmp;
 
   /* node's priority was decreased, we need to update its position */
   if (!node->ref)
@@ -329,12 +328,12 @@ static inline void hpx_heap_decrease(hpx_heap_prio_t higher_prio, hpx_heap_t * h
   }
 }
 
-static inline void hpx_heap_delete(hpx_heap_prio_t higher_prio, hpx_heap_t * heap,
-			           hpx_heap_node_t * node)
+static inline void hpx_heap_delete(hpx_heap_prio_t higher_prio, hpx_heap_t *heap,
+			           hpx_heap_node_t *node)
 {
-  hpx_heap_node_t * parent, * prev, * pos;
-  hpx_heap_node_t ** tmp_ref;
-  void* tmp;
+  hpx_heap_node_t *parent, *prev, *pos;
+  hpx_heap_node_t **tmp_ref;
+  void *tmp;
 
   if (!node->ref) /* can only delete if we have a reference */
     return;
@@ -376,4 +375,4 @@ static inline void hpx_heap_delete(hpx_heap_prio_t higher_prio, hpx_heap_t * hea
   node->degree = HPX_NOT_IN_HEAP;
 }
 
-#endif
+#endif /* LIBHPX_HEAP_H */

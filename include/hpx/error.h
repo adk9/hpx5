@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,13 +19,11 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_ERROR_H_
 #define LIBHPX_ERROR_H_
 
 #include <stdint.h>
-
 
 /*
  --------------------------------------------------------------------
@@ -57,13 +54,11 @@ hpx_error_t * __hpx_error(void);
  --------------------------------------------------------------------
 */
 
-#define HPX_SUCCESS                                           0x0000  /* no error */
-#define HPX_ERROR_NOMEM                                       0x0001  /* can't allocate (out of memory) */
-#define HPX_ERROR_KTH_INIT                                    0x0002  /* unknown init error for kernel thread */
-#define HPX_ERROR_KTH_MAX                                     0x0003  /* too many kernel threads */
-#define HPX_ERROR_KTH_ATTR                                    0x0004  /* bad attributes for kernel thread */
-#define HPX_ERROR_KTH_CORES                                   0x0005  /* couldn't get active CPU core count */
+#define HPX_SUCCESS             0x0000  /* no error */
+#define HPX_ERROR_NOMEM         0x0001  /* can't allocate (out of memory) */
+#define HPX_ERROR_KTH_INIT      0x0002  /* unknown init error for kernel thread */
+#define HPX_ERROR_KTH_MAX       0x0003  /* too many kernel threads */
+#define HPX_ERROR_KTH_ATTR      0x0004  /* bad attributes for kernel thread */
+#define HPX_ERROR_KTH_CORES     0x0005  /* couldn't get active CPU core count */
 
-#endif
-
-
+#endif /* LIBHPX_ERROR_H_ */

@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -21,13 +20,11 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_MREGS_X86_64_H_
 #define LIBHPX_MREGS_X86_64_H_
 
 #include <stdint.h>
-
 
 /*
  --------------------------------------------------------------------
@@ -106,4 +103,4 @@ typedef struct {
   uint64_t rsp;
 } hpx_mregs_t __attribute__((aligned (16)));
 
-#endif
+#endif /* LIBHPX_MREGS_X86_64_H_ */

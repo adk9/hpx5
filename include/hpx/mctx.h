@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,7 +19,6 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_MCTX_H_
 #define LIBHPX_MCTX_H_
@@ -36,10 +34,10 @@
 
 
 /* save/restore FPU registers during context switches */
-#define HPX_MCTX_SWITCH_EXTENDED                                   1
+#define HPX_MCTX_SWITCH_EXTENDED  1
 
 /* save/restore per-thread signal masks during context switches */
-#define HPX_MCTX_SWITCH_SIGNALS                                    2
+#define HPX_MCTX_SWITCH_SIGNALS   2
 
 
 /*
@@ -49,11 +47,11 @@
 */
 
 typedef struct _hpx_mctx_context_t {
-  hpx_mregs_t regs;
-  sigset_t sigs;
-  void * sp;
-  uint64_t ss;
-  struct _hpx_mctx_context_t * link;
+  hpx_mregs_t                  regs;
+  sigset_t                     sigs;
+  void                        *sp;
+  uint64_t                     ss;
+  struct _hpx_mctx_context_t  *link;
 } hpx_mctx_context_t;
 
 
@@ -69,4 +67,4 @@ void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, si
 void hpx_mctx_makecontext_va(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void *, int, va_list *);
 void hpx_mctx_swapcontext(hpx_mctx_context_t *, hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
 
-#endif
+#endif /* LIBHPX_MCTX_H_ */

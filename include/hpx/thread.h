@@ -101,19 +101,19 @@ struct _hpx_kthread_t;
 */
 
 typedef struct _hpx_thread_t {
-  hpx_context_t *         ctx;
+  hpx_context_t          *ctx;
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
   uint16_t                opts;
-  void *                  func;
-  void *                  args;
-  void *                  stk;
+  void                   *func;
+  void                   *args;
+  void                   *stk;
   size_t                  ss;
-  struct _hpx_kthread_t * kth;
-  hpx_mctx_context_t *    mctx;
+  struct _hpx_kthread_t  *kth;
+  hpx_mctx_context_t     *mctx;
   hpx_future_t            retval;
-  struct _hpx_thread_t *  parent;
+  struct _hpx_thread_t   *parent;
   hpx_list_t              children;
 } hpx_thread_t;
 
@@ -130,7 +130,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, void *, void *);
+hpx_thread_t * hpx_thread_create(hpx_context_t *, void *(*fn)(void *), void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);

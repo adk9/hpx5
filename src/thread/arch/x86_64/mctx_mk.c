@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -23,9 +22,7 @@
 #include <string.h>
 #include "hpx/mctx.h"
 
-
 extern _hpx_mctx_trampoline(void);
-
 
 /*
  --------------------------------------------------------------------
@@ -38,10 +35,9 @@ extern _hpx_mctx_trampoline(void);
   cumbersome and error-prone in assembly.
  --------------------------------------------------------------------
 */
-
-void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mctx_context_t * link_mctx, void * stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, va_list * argv) {
-  uint64_t * sp;
-  uint64_t * reg;
+void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx, void *stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void *func, int argc, va_list *argv) {
+  uint64_t *sp;
+  uint64_t *reg;
   int arg_cnt;
   int sp_cnt;
   int idx;
@@ -110,9 +106,7 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t * mctx, hpx_mctx_context_t * lin
   Wrapper for hpx_mctx_makecontext_va.  
  --------------------------------------------------------------------
 */
-
-
-void hpx_mctx_makecontext(hpx_mctx_context_t * mctx, hpx_mctx_context_t * link_mctx, void * stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void * func, int argc, ...) {
+void hpx_mctx_makecontext(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx, void *stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void *func, int argc, ...) {
   va_list argv;
 
   va_start(argv, argc);

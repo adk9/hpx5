@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,12 +19,11 @@
  ====================================================================
 */
 
-#include <stdint.h>
-
 #pragma once
 #ifndef LIBHPX_CONFIG_H_
 #define LIBHPX_CONFIG_H_
 
+#include <stdint.h>
 
 /*
  --------------------------------------------------------------------
@@ -33,8 +31,8 @@
  --------------------------------------------------------------------
 */
 
-#define HPX_CONFIG_DEFAULT_THREAD_SS                           16384
-#define HPX_CONFIG_DEFAULT_SWITCH_FLAG                             0
+#define HPX_CONFIG_DEFAULT_THREAD_SS     16384
+#define HPX_CONFIG_DEFAULT_SWITCH_FLAG   0
 
 
 /*
@@ -66,6 +64,4 @@ void hpx_config_set_cores(hpx_config_t *, uint32_t);
 void hpx_config_set_switch_flags(hpx_config_t *, uint64_t);
 void hpx_config_set_thread_stack_size(hpx_config_t *, uint32_t);
 
-#endif
-
-
+#endif /* LIBHPX_CONFIG_H_ */
