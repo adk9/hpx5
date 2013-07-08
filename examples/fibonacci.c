@@ -43,6 +43,9 @@ int main(int argc, char * argv[]) {
     n = atoi(argv[2]);
   }
 
+  /* initialize hpx runtime */
+  hpx_init();
+
   /* set up our configuration */
   hpx_config_init(&cfg);
 
@@ -54,7 +57,7 @@ int main(int argc, char * argv[]) {
   ctx = hpx_ctx_create(&cfg);
 
   /* get start time */
-  hpx_get_time(timer);
+  hpx_get_time(&timer);
 
   /* create a fibonacci thread */
   th = hpx_thread_create(ctx, fib, (void *) n);

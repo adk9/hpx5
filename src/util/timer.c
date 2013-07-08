@@ -27,7 +27,7 @@
   -------------------------------------------------------------------
 */
 
-void hpx_time_init(void) {
+void hpx_timer_init(void) {
 #ifdef __APPLE__
     if (tbi.denom == 0) {
         (void) mach_timebase_info(&tbi);
@@ -35,9 +35,9 @@ void hpx_time_init(void) {
 #endif
 }
 
-void hpx_get_time(hpx_timer_t time) {
-  assert(time);
+void hpx_get_time(hpx_timer_t *time) {
 #ifdef __APPLE__
+  assert(time);
   *time = mach_absolute_time();
 #endif
 #ifdef __linux__
@@ -47,13 +47,13 @@ void hpx_get_time(hpx_timer_t time) {
 
 double hpx_elapsed_us(hpx_timer_t start_time) {
   hpx_timer_t end_time;
-  hpx_get_time(end_time);
-  assert(start_time);
+  hpx_get_time(&end_time);
 #ifdef __APPLE__
+  assert(tbi.denom!=0);
   return (((end_time - start_time) * tbi.numer / tbi.denom) / 1e6);
 #endif
 #ifdef __linux__
-  unsigned long elapsed = ((end_time->tv_sec * 1e9) + end_time->tv_nsec) - ((start_time->tv_sec * 1e9) + start_time->tv_nsec);
+  unsigned long elapsed = ((end_time.tv_sec * 1e9) + end_time.tv_nsec) - ((start_time.tv_sec * 1e9) + start_time.tv_nsec);
   return (elapsed / 1e6);
 #endif
 }

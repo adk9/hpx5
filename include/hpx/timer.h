@@ -31,11 +31,11 @@
 
 #ifdef __APPLE__
 static mach_timebase_info_data_t tbi;
-typedef uint64_t* hpx_timer_t;
+typedef uint64_t hpx_timer_t;
 #endif
 
 #ifdef __linux__
-typedef struct timespec* hpx_timer_t;
+typedef struct timespec hpx_timer_t;
 #endif
 
 /*
@@ -49,7 +49,7 @@ void hpx_timer_init(void);
 /* Return the current time per the resolution of the platform-specific
    internal clock. The default resolution used is nanoseconds.
 */
-void hpx_get_time(hpx_timer_t time);
+void hpx_get_time(hpx_timer_t *time);
 
 /* Given a start time (ns), returns the elapsed time in microseconds. */
 double hpx_elapsed_us(hpx_timer_t start_time);
