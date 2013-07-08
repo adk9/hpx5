@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -24,7 +23,6 @@
 #include "hpx/thread.h"
 #include "hpx/kthread.h"
 
-
 /*
  --------------------------------------------------------------------
   hpx_init
@@ -34,7 +32,6 @@
   will cause all other functions to return HPX_ERROR_NOINIT.
  --------------------------------------------------------------------
 */
-
 hpx_error_t hpx_init(void) {
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;
@@ -66,7 +63,6 @@ hpx_error_t hpx_init(void) {
   must be called after all other HPX functions.
  --------------------------------------------------------------------
 */
-
 void hpx_cleanup(void) {
 
 }

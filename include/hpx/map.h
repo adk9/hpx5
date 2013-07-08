@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -14,8 +13,6 @@
 
   Authors:
     Patrick K. Bohan <pbohan [at] indiana.edu>
-
-  https://github.com/brandenburg/binomial-heaps/blob/master/heap.h
  ====================================================================
 */
 
@@ -28,7 +25,7 @@
 #include "hpx/list.h"
 
 /* this should probably be a prime number */
-#define HPX_MAP_DEFAULT_SIZE                                 1000003
+#define HPX_MAP_DEFAULT_SIZE  1000003
 
 
 /*
@@ -46,7 +43,7 @@ typedef void (*hpx_map_foreach_fn_t)(void *);
 typedef struct _hpx_map_t {
   hpx_map_hash_fn_t hash_fn;
   hpx_map_cmp_fn_t  cmp_fn;
-  hpx_list_t *      data;
+  hpx_list_t       *data;
   uint64_t          count;
   uint64_t          sz;
 } hpx_map_t;
@@ -66,4 +63,4 @@ uint64_t hpx_map_size(hpx_map_t *);
 
 void hpx_map_insert(hpx_map_t * map, void *);
 
-#endif
+#endif /* LIBHPX_MAP_H_ */

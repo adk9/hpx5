@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -26,15 +25,21 @@
   before using any other timer functions.
   -------------------------------------------------------------------
 */
-
 void hpx_timer_init(void) {
 #ifdef __APPLE__
-    if (tbi.denom == 0) {
-        (void) mach_timebase_info(&tbi);
-    }
+  if (tbi.denom == 0) {
+    (void) mach_timebase_info(&tbi);
+  }
 #endif
 }
 
+/*
+ --------------------------------------------------------------------
+  hpx_get_time
+
+  Returns the current time in nanoseconds.
+  -------------------------------------------------------------------
+*/
 void hpx_get_time(hpx_timer_t *time) {
 #ifdef __APPLE__
   assert(time);
@@ -45,6 +50,15 @@ void hpx_get_time(hpx_timer_t *time) {
 #endif
 }
 
+/*
+ --------------------------------------------------------------------
+  hpx_elapsed_us
+
+  Given a timer handle, return the elapsed time (between current time
+  and time indicated by the timer handle "start_time") in
+  microseconds.
+  -------------------------------------------------------------------
+*/
 double hpx_elapsed_us(hpx_timer_t start_time) {
   hpx_timer_t end_time;
   hpx_get_time(&end_time);

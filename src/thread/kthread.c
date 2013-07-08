@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -33,7 +32,6 @@
 #include "hpx/mem.h"
 #include "hpx/thread.h"
 
-
 /*
  --------------------------------------------------------------------
   _hpx_kthread_sched
@@ -41,10 +39,9 @@
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-
-void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t state) {
-  hpx_thread_t * exec_th = kth->exec_th;
-  hpx_context_t * ctx = kth->ctx;
+void _hpx_kthread_sched(hpx_kthread_t *kth, struct _hpx_thread_t *th, uint8_t state) {
+  hpx_thread_t *exec_th = kth->exec_th;
+  hpx_context_t *ctx = kth->ctx;
 
   pthread_mutex_lock(&ctx->mtx);
 
@@ -112,11 +109,10 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
   A default seed function for new kernel threads.
  --------------------------------------------------------------------
 */
-
-void * hpx_kthread_seed_default(void * ptr) {
-  hpx_kthread_t * kth = (hpx_kthread_t *) ptr;
-  struct _hpx_thread_t * th = NULL;
-  struct _hpx_context_t * ctx = kth->ctx;
+void * hpx_kthread_seed_default(void *ptr) {
+  hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
+  struct _hpx_thread_t *th = NULL;
+  struct _hpx_context_t *ctx = kth->ctx;
 
   /* save a pointer to our data in TLS */
   pthread_setspecific(kth_key, kth);
@@ -153,10 +149,9 @@ void * hpx_kthread_seed_default(void * ptr) {
   Creates a kernel thread and executes the provided seed function.
  --------------------------------------------------------------------
 */
-
-hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t * ctx, hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
+hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
   pthread_mutexattr_t mtx_attr;
-  hpx_kthread_t * kth = NULL;
+  hpx_kthread_t *kth = NULL;
   int err;
 
   /* allocate and init the handle */
@@ -227,8 +222,7 @@ hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t * ctx, hpx_kthread_seed
   Sets the logical CPU affinity for a given kernel thread.
  --------------------------------------------------------------------
 */
-
-void hpx_kthread_set_affinity(hpx_kthread_t * kth, uint16_t aff) {
+void hpx_kthread_set_affinity(hpx_kthread_t *kth, uint16_t aff) {
 #ifdef __linux__
   cpu_set_t cpuset;
 
@@ -247,9 +241,8 @@ void hpx_kthread_set_affinity(hpx_kthread_t * kth, uint16_t aff) {
   Terminates and destroys a previously created kernel thread.
  --------------------------------------------------------------------
 */
-
-void hpx_kthread_destroy(hpx_kthread_t * kth) {
-  struct _hpx_thread_t * th;
+void hpx_kthread_destroy(hpx_kthread_t *kth) {
+  struct _hpx_thread_t *th;
 
   /* shut down the kernel thread */
   pthread_mutex_lock(&kth->mtx);
@@ -293,7 +286,6 @@ void hpx_kthread_destroy(hpx_kthread_t * kth) {
   Returns the number of logical compute cores on this machine.
  --------------------------------------------------------------------
 */
-
 long hpx_kthread_get_cores(void) {
   long cores = 0;
 
@@ -314,7 +306,6 @@ long hpx_kthread_get_cores(void) {
   Helper function to create TLS keys for pthreads.
  --------------------------------------------------------------------
 */
-
 static void __hpx_kthread_make_keys(void) {
   (void) pthread_key_create(&errno_key, NULL);
   (void) pthread_key_create(&kth_key, NULL);
@@ -328,7 +319,6 @@ static void __hpx_kthread_make_keys(void) {
   Internal initialization function for kernel threads.
  --------------------------------------------------------------------
 */
-
 void _hpx_kthread_init(void) {
   pthread_once(&__kthread_init_once, __hpx_kthread_make_keys);
 }
@@ -341,8 +331,7 @@ void _hpx_kthread_init(void) {
   Returns a pointer to the currently running kernel thread's data.
  --------------------------------------------------------------------
 */
-
-hpx_kthread_t * hpx_kthread_self(void) {
+hpx_kthread_t *hpx_kthread_self(void) {
   return (hpx_kthread_t *) pthread_getspecific(kth_key);
 }
 
@@ -354,8 +343,7 @@ hpx_kthread_t * hpx_kthread_self(void) {
   Initializes an HPX kernel mutex.
  --------------------------------------------------------------------
 */
-
-void hpx_kthread_mutex_init(hpx_kthread_mutex_t * mtx) {
+void hpx_kthread_mutex_init(hpx_kthread_mutex_t *mtx) {
   pthread_mutexattr_t mtx_attr;
 
   pthread_mutexattr_init(&mtx_attr);
@@ -371,8 +359,7 @@ void hpx_kthread_mutex_init(hpx_kthread_mutex_t * mtx) {
   Locks an HPX kernel mutex.
  --------------------------------------------------------------------
 */
-
-void hpx_kthread_mutex_lock(hpx_kthread_mutex_t * mtx) {
+void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *mtx) {
   pthread_mutex_lock((pthread_mutex_t *) mtx);
 }
 
@@ -384,7 +371,6 @@ void hpx_kthread_mutex_lock(hpx_kthread_mutex_t * mtx) {
   Unlocks an HPX kernel mutex.
  --------------------------------------------------------------------
 */
-
-void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t * mtx) {
+void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *mtx) {
   pthread_mutex_unlock((pthread_mutex_t *) mtx);
 }

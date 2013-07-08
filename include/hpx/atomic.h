@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,11 +19,9 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_ATOMIC_H_
 #define LIBHPX_ATOMIC_H_
-
 
 /*
  --------------------------------------------------------------------
@@ -34,6 +31,4 @@
 
 void hpx_atomic_set8(void *, uint8_t);
 
-#endif
-
-
+#endif /* LIBHPX_ATOMIC_H_ */

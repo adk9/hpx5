@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,7 +19,6 @@
  ====================================================================
 */
 
-
 #include <string.h>
 
 #include "hpx/mem.h"
@@ -37,8 +35,8 @@
  --------------------------------------------------------------------
 */
 
-hpx_context_t * hpx_ctx_create(hpx_config_t * cfg) {
-  hpx_context_t * ctx = NULL;
+hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
+  hpx_context_t *ctx = NULL;
   long cores;
   long x;
 
@@ -108,9 +106,8 @@ hpx_context_t * hpx_ctx_create(hpx_config_t * cfg) {
   Destroy a previously allocated HPX context.
  --------------------------------------------------------------------
 */
-
-void hpx_ctx_destroy(hpx_context_t * ctx) {
-  hpx_thread_t * th;
+void hpx_ctx_destroy(hpx_context_t *ctx) {
+  hpx_thread_t *th;
   uint32_t x;
 
   /* destroy any remaining termianted threads */
@@ -139,10 +136,6 @@ void hpx_ctx_destroy(hpx_context_t * ctx) {
   Get the ID of this HPX context.
  --------------------------------------------------------------------
 */
-
-hpx_context_id_t hpx_ctx_get_id(hpx_context_t * ctx) {
+hpx_context_id_t hpx_ctx_get_id(hpx_context_t *ctx) {
   return ctx->cid;
 }
-
-
-

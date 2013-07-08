@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -21,14 +20,12 @@
  ====================================================================
 */
 
-
 #pragma once
 #ifndef LIBHPX_MCONFIG_X86_64_H_
 #define LIBHPX_MCONFIG_X86_64_H_
 
 #include <stdint.h>
 #include "mconfig_defs.h"
-
 
 /*
  --------------------------------------------------------------------
@@ -47,4 +44,4 @@ typedef uint64_t hpx_mconfig_t;
 
 hpx_mconfig_t hpx_mconfig_get(void);
 
-#endif
+#endif /* LIBHPX_MCONFIG_X86_64_H_ */

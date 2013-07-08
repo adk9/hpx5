@@ -1,4 +1,3 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
@@ -20,12 +19,11 @@
  ====================================================================
 */
 
-
 #include <string.h>
+
 #include "hpx/thread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
-
 
 /*
  --------------------------------------------------------------------
@@ -34,11 +32,9 @@
   Returns the Thread ID from the supplied thread data.
  --------------------------------------------------------------------
 */
-
-hpx_thread_id_t hpx_thread_get_id(hpx_thread_t * th) {
+hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   return th->tid;
 }
-
 
 /*
  --------------------------------------------------------------------
@@ -47,9 +43,8 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t * th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-
-hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) {
-  hpx_thread_t * th = NULL;
+hpx_thread_t *hpx_thread_create(hpx_context_t *restrict ctx, void *func, void *restrict args) {
+  hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
 
   /* see if we can reuse a terminated thread */
@@ -133,8 +128,7 @@ hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) 
   Cleans up a previously created thread.
  --------------------------------------------------------------------
 */
-
-void hpx_thread_destroy(hpx_thread_t * th) {
+void hpx_thread_destroy(hpx_thread_t *th) {
   if (th->stk != NULL) {
     hpx_free(th->mctx);
     hpx_free(th->stk);
@@ -144,7 +138,6 @@ void hpx_thread_destroy(hpx_thread_t * th) {
   hpx_free(th);
 }
 
-
 /*
  --------------------------------------------------------------------
   hpx_thread_get_state
@@ -152,8 +145,7 @@ void hpx_thread_destroy(hpx_thread_t * th) {
   Returns the queuing state of the thread.
  --------------------------------------------------------------------
 */
-
-hpx_thread_state_t hpx_thread_get_state(hpx_thread_t * th) {
+hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *th) {
   return th->state;
 }
 
@@ -166,10 +158,9 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t * th) {
   HPX thread.
  --------------------------------------------------------------------
 */
-
-hpx_thread_t * hpx_thread_self(void) {
-  struct _hpx_kthread_t * kth;
-  hpx_thread_t * th = NULL;
+hpx_thread_t *hpx_thread_self(void) {
+  struct _hpx_kthread_t *kth;
+  hpx_thread_t *th = NULL;
 
   kth = hpx_kthread_self();
   if (kth != NULL) {
@@ -188,10 +179,9 @@ hpx_thread_t * hpx_thread_self(void) {
   value (if any).
  --------------------------------------------------------------------
 */
-
-void hpx_thread_join(hpx_thread_t * th, void ** value) {
-  hpx_thread_t * self = hpx_thread_self();
-  hpx_future_t * fut = &th->retval;
+void hpx_thread_join(hpx_thread_t *th, void **value) {
+  hpx_thread_t *self = hpx_thread_self();
+  hpx_future_t *fut = &th->retval;
   uint8_t fut_st;
 
   /* poll the future until it's set */
@@ -217,9 +207,8 @@ void hpx_thread_join(hpx_thread_t * th, void ** value) {
   thread some CPU time.
  --------------------------------------------------------------------
 */
-
 void hpx_thread_yield(void) {
-  hpx_thread_t * th = hpx_thread_self();
+  hpx_thread_t *th = hpx_thread_self();
 
   if ((th != NULL) && (th->kth != NULL)) {
     _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_YIELD);
@@ -235,10 +224,9 @@ void hpx_thread_yield(void) {
   Exits the current thread and optionally passes a return value.
  --------------------------------------------------------------------
 */
-
-void hpx_thread_exit(void * retval) {
-  hpx_thread_t * th = hpx_thread_self();
-  hpx_future_t * fut = &th->retval;
+void hpx_thread_exit(void *retval) {
+  hpx_thread_t *th = hpx_thread_self();
+  hpx_future_t *fut = &th->retval;
 
   if (retval != NULL) {
     fut->value = retval;
@@ -267,9 +255,8 @@ void hpx_thread_exit(void * retval) {
       hasn't already done this (it should have).
  --------------------------------------------------------------------
 */
-
-void _hpx_thread_terminate(hpx_thread_t * th) {
-  hpx_thread_t * child = NULL;
+void _hpx_thread_terminate(hpx_thread_t *th) {
+  hpx_thread_t *child = NULL;
 
   /* trigger the return future */
   hpx_lco_future_set(&th->retval);
@@ -309,8 +296,7 @@ void _hpx_thread_terminate(hpx_thread_t * th) {
   Gets the option flags for the specified thread.
  --------------------------------------------------------------------
 */
-
-uint16_t hpx_thread_get_opt(hpx_thread_t * th) {
+uint16_t hpx_thread_get_opt(hpx_thread_t *th) {
   return th->opts;
 }
 
@@ -322,8 +308,7 @@ uint16_t hpx_thread_get_opt(hpx_thread_t * th) {
   Sets the option flags for the specified thread.
  --------------------------------------------------------------------
 */
-
-void hpx_thread_set_opt(hpx_thread_t * th, uint16_t opts) {
+void hpx_thread_set_opt(hpx_thread_t *th, uint16_t opts) {
   th->opts = opts;
 }
 
@@ -335,9 +320,8 @@ void hpx_thread_set_opt(hpx_thread_t * th, uint16_t opts) {
   A rather naive hashing function for storing HPX Threads in maps.
  --------------------------------------------------------------------
 */
-
-uint64_t hpx_thread_map_hash(hpx_map_t * map, void * ptr) {
-  hpx_thread_t * th = (hpx_thread_t *) ptr;
+uint64_t hpx_thread_map_hash(hpx_map_t *map, void *ptr) {
+  hpx_thread_t *th = (hpx_thread_t *) ptr;
 
   return (hpx_thread_get_id(th) % hpx_map_size(map));
 }
@@ -350,9 +334,9 @@ uint64_t hpx_thread_map_hash(hpx_map_t * map, void * ptr) {
  --------------------------------------------------------------------
 */
 
-bool hpx_thread_map_cmp(void * ptr1, void * ptr2) {
-  hpx_thread_t * th1 = (hpx_thread_t *) ptr1;
-  hpx_thread_t * th2 = (hpx_thread_t *) ptr2;
+bool hpx_thread_map_cmp(void *ptr1, void *ptr2) {
+  hpx_thread_t *th1 = (hpx_thread_t *) ptr1;
+  hpx_thread_t *th2 = (hpx_thread_t *) ptr2;
 
   return (hpx_thread_get_id(th1) == hpx_thread_get_id(th2));
 }
