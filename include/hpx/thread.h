@@ -46,15 +46,15 @@ struct _hpx_kthread_t;
  --------------------------------------------------------------------
 */
 
-#define HPX_THREAD_STATE_UNDEFINED                               255
-#define HPX_THREAD_STATE_CREATE                                    0
-#define HPX_THREAD_STATE_INIT                                      1
-#define HPX_THREAD_STATE_PENDING                                   2
-#define HPX_THREAD_STATE_EXECUTING                                 3
-#define HPX_THREAD_STATE_YIELD                                     4
-#define HPX_THREAD_STATE_BLOCKED                                   5
-#define HPX_THREAD_STATE_SUSPENDED                                 6
-#define HPX_THREAD_STATE_TERMINATED                                7
+#define HPX_THREAD_STATE_UNDEFINED  255
+#define HPX_THREAD_STATE_CREATE       0
+#define HPX_THREAD_STATE_INIT         1
+#define HPX_THREAD_STATE_PENDING      2
+#define HPX_THREAD_STATE_EXECUTING    3
+#define HPX_THREAD_STATE_YIELD        4
+#define HPX_THREAD_STATE_BLOCKED      5
+#define HPX_THREAD_STATE_SUSPENDED    6
+#define HPX_THREAD_STATE_TERMINATED   7
 
 
 /*
@@ -74,9 +74,9 @@ struct _hpx_kthread_t;
  --------------------------------------------------------------------
 */
 
-#define HPX_THREAD_OPT_NONE                                     0x00
-#define HPX_THREAD_OPT_DETACHED                                 0x01
-#define HPX_THREAD_OPT_BOUND                                    0x02
+#define HPX_THREAD_OPT_NONE        0x00
+#define HPX_THREAD_OPT_DETACHED    0x01
+#define HPX_THREAD_OPT_BOUND       0x02
 
 
 /*
@@ -130,7 +130,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, void *(*fn)(void *), void *);
+hpx_thread_t * hpx_thread_create(hpx_context_t *, void (*fn)(void *), void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);

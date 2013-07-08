@@ -1,34 +1,35 @@
 
 #include <stdio.h>
-#include <math.h>
 #include <hpx/timer.h>
 #include <hpx/thread.h>
 
 hpx_context_t *ctx;
 hpx_timer_t    timer;
+static int     nthreads;
 
-void fib(unsigned int n) {
-  hpx_thread_t * th1;
-  hpx_thread_t * th2;
+void fib(void *n) {
+  hpx_thread_t *th1;
+  hpx_thread_t *th2;
 
   /* handle our base case */
-  if (n < 2) {
+  if ((long)n < 2) {
     return;
   }
 
   /* create child threads */
-  th1 = hpx_thread_create(ctx, fib, (void *) (n - 1));
-  th2 = hpx_thread_create(ctx, fib, (void *) (n - 2));
+  th1 = hpx_thread_create(ctx, fib, (void*) (long)n - 1);
+  th2 = hpx_thread_create(ctx, fib, (void*) (long)n - 2);
 
   /* wait for threads to finish */
   hpx_thread_join(th1, NULL);
   hpx_thread_join(th2, NULL);
+  nthreads += 2;
 }
 
 int main(int argc, char * argv[]) {
   hpx_config_t cfg;
-  hpx_thread_t * th;
-  unsigned int n;
+  hpx_thread_t *th;
+  long n;
   uint32_t cores;
 
   /* validate our arguments */
@@ -40,7 +41,7 @@ int main(int argc, char * argv[]) {
     return -2;
   } else {
     cores = atoi(argv[1]);
-    n = atoi(argv[2]);
+    n = atol(argv[2]);
   }
 
   /* initialize hpx runtime */
@@ -60,13 +61,13 @@ int main(int argc, char * argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  th = hpx_thread_create(ctx, fib, (void *) n);
+  th = hpx_thread_create(ctx, fib, (void *)n);
 
   /* wait for the thread to finish */
   hpx_thread_join(th, NULL);
 
-  printf("seconds: %.7f\ncores:   %d\nthreads: %ld\n", hpx_elapsed_us(timer)/1e3,
-	 hpx_config_get_cores(&cfg), (unsigned long) pow(2, n) + 1);
+  printf("seconds: %.7f\ncores:   %d\nthreads: %d\n", hpx_elapsed_us(timer)/1e3,
+	 hpx_config_get_cores(&cfg), ++nthreads);
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
