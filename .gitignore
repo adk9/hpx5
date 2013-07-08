@@ -2,6 +2,8 @@
 *.lo
 *.deps
 *.dirstamp
+*.la
+*~
 
 # /
 /aclocal.m4

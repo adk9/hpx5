@@ -12,11 +12,12 @@ AC_INIT([hpx], [4.0.0a4], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
-AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_SRCDIR([include/hpx/list.h])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
+AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
 AM_PROG_AR
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -72,6 +73,7 @@ AS_IF([test "x$use_papi" = xyes], [
 ])
 
 AM_CONDITIONAL([CPU_X86_64], [test "$host_cpu" = x86_64])
+AM_CONDITIONAL([PLATFORM_LINUX], [test "$host_os" = linux-gnu])
 AM_CONDITIONAL([USE_PAPI], [test "x$use_papi" = xyes])
 
 AC_CONFIG_FILES([
