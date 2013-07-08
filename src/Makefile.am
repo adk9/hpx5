@@ -12,6 +12,7 @@ libhpx_la_SOURCES = ctx.c	      \
 		    thread/kthread.c  \
 		    thread/lco.c      \
 		    util/error.c      \
+		    util/timer.c      \
 		    util/config.c     \
 		    util/map.c
 
@@ -29,3 +30,7 @@ libhpx_la_SOURCES += $(ARCH_SRC)
 libhpx_ladir = $(includedir)/hpx
 nodist_libhpx_la_HEADERS = $(top_srcdir)/include/config.h
 libhpx_la_HEADERS = $(top_srcdir)/include/*.h
+
+if PLATFORM_LINUX
+  libhpx_la_LIBADD = -lrt
+endif
