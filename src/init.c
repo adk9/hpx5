@@ -51,6 +51,9 @@ hpx_error_t hpx_init(void) {
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
+  /* initialize timer subsystem */
+  hpx_timer_init();
+
   return HPX_SUCCESS;
 }
 
