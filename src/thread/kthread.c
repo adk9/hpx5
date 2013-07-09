@@ -87,7 +87,9 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, struct _hpx_thread_t *th, uint8_t st
       switch (kth->exec_th->state) {
         case HPX_THREAD_STATE_INIT:
 	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	  hpx_mctx_makecontext(kth->exec_th->mctx, kth->mctx, kth->exec_th->stk, kth->exec_th->ss, kth->mcfg, kth->mflags, kth->exec_th->func, 1, kth->exec_th->args);
+	  hpx_mctx_makecontext(kth->exec_th->mctx, kth->mctx, kth->exec_th->stk,
+                               kth->exec_th->ss, kth->mcfg, kth->mflags, kth->exec_th->func,
+                               1, kth->exec_th->args);
 	  break;
         case HPX_THREAD_STATE_PENDING:
 	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
@@ -149,7 +151,8 @@ void * hpx_kthread_seed_default(void *ptr) {
   Creates a kernel thread and executes the provided seed function.
  --------------------------------------------------------------------
 */
-hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t seed, hpx_mconfig_t mcfg, uint64_t mflags) {
+hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t seed,
+                                  hpx_mconfig_t mcfg, uint64_t mflags) {
   pthread_mutexattr_t mtx_attr;
   hpx_kthread_t *kth = NULL;
   int err;

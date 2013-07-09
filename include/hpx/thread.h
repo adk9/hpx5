@@ -57,6 +57,9 @@ struct _hpx_kthread_t;
 #define HPX_THREAD_STATE_TERMINATED   7
 
 
+/* An HPX action taking a single generic (void*) argument */
+typedef (*hpx_action_t)(void *);
+
 /*
  --------------------------------------------------------------------
   Thread Options
@@ -106,7 +109,7 @@ typedef struct _hpx_thread_t {
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
   uint16_t                opts;
-  void                   *func;
+  hpx_action_t            func;
   void                   *args;
   void                   *stk;
   size_t                  ss;
@@ -130,7 +133,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, void (*fn)(void *), void *);
+hpx_thread_t * hpx_thread_create(hpx_context_t *, hpx_action_t, void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
