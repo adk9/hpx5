@@ -16,8 +16,8 @@
 typedef struct hpx_parcel_t {
   unsigned int  parcel_id;    /* the parcel idenitifer */
   hpx_action_t  action;       /* handle to the associated action */
-  hpx_action_t  continuation; /* handle to the continuation action */
   int           flags;        /* flags related to the parcel */
+  void         *payload;
 } hpx_parcel_t;
 
 
