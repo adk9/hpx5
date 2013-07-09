@@ -1,4 +1,4 @@
-if HAVE_DOXYGEN
+if WITH_DOCS
 
 hpxdocdir=$(top_srcdir)/docs/man/man3/
 
@@ -9,7 +9,7 @@ doxyfile.stamp:
 	$(DOXYGEN) Doxyfile
 	echo Timestamp > doxyfile.stamp
 
-CLEANFILES+=doxyfile.stamp
+CLEANFILES += doxyfile.stamp
 
 all-local: doxyfile.stamp
 clean-local:
