@@ -72,9 +72,19 @@ AS_IF([test "x$use_papi" = xyes], [
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+if test -z "$DOXYGEN";
+  then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
+fi
+
 AM_CONDITIONAL([CPU_X86_64], [test "$host_cpu" = x86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "$host_os" = linux-gnu])
-AM_CONDITIONAL([USE_PAPI], [test "x$use_papi" = xyes])
+AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
+
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "x$DOXYGEN"])
+AM_COND_IF([HAVE_DOXYGEN],
+           [AC_CONFIG_FILES([docs/Doxyfile
+		             docs/Makefile])])
 
 AC_CONFIG_FILES([
   Makefile
@@ -83,3 +93,20 @@ AC_CONFIG_FILES([
   tests/Makefile
 ])
 AC_OUTPUT
+
+AS_IF([test -n "x$DOXYGEN"],
+      [doc_string="yes"],
+      [doc_string="no"])
+AS_IF([test "x$use_papi" = xyes],
+      [papi_string="yes"],
+      [papi_string="no"])
+
+echo "================================================"
+echo " HPX Build Configuration"
+echo "================================================"
+echo "              Host CPU  : $host_cpu"
+echo "               Host OS  : $host_os"
+echo "             Profiling  : $papi_string"
+echo "          Documentation : $doc_string"
+echo "================================================"
+

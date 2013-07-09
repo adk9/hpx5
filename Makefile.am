@@ -5,8 +5,9 @@
 EXTRA_DIST = autogen.sh      \
         README NEWS TODO     \
         examples/Makefile    \
-        examples/fibonacci.c
+        examples/fibonacci.c \
+	docs
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = src . examples tests
+SUBDIRS = src . examples tests docs
