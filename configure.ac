@@ -72,29 +72,31 @@ AS_IF([test "x$use_papi" = xyes], [
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
-AC_CHECK_PROGS([DOXYGEN], [doxygen])
+AC_CHECK_PROG([DOXYGEN], [doxygen])
 if test -z "$DOXYGEN";
   then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
 fi
 
-AM_CONDITIONAL([CPU_X86_64], [test "$host_cpu" = x86_64])
-AM_CONDITIONAL([PLATFORM_LINUX], [test "$host_os" = linux-gnu])
+AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
+AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
 
-AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "x$DOXYGEN"])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 AM_COND_IF([HAVE_DOXYGEN],
-           [AC_CONFIG_FILES([docs/Doxyfile
-		             docs/Makefile])])
+	[AC_CONFIG_FILES([docs/Doxyfile
+			  docs/Makefile])])
+AC_SUBST(HAVE_DOXYGEN)
 
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
   examples/Makefile
+  examples/thread/Makefile
   tests/Makefile
 ])
 AC_OUTPUT
 
-AS_IF([test -n "x$DOXYGEN"],
+AS_IF([test -n "$DOXYGEN"],
       [doc_string="yes"],
       [doc_string="no"])
 AS_IF([test "x$use_papi" = xyes],

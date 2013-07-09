@@ -10,4 +10,4 @@ EXTRA_DIST = autogen.sh      \
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = src . examples tests docs
+SUBDIRS = src . examples tests

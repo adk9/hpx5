@@ -17,8 +17,8 @@ void fib(void *n) {
   }
 
   /* create child threads */
-  th1 = hpx_thread_create(ctx, (hpx_action_t)fib, (void*)(long)n - 1);
-  th2 = hpx_thread_create(ctx, (hpx_action_t)fib, (void*)(long)n - 2);
+  th1 = hpx_thread_create(ctx, (hpx_func_t)fib, (void*)(long)n - 1);
+  th2 = hpx_thread_create(ctx, (hpx_func_t)fib, (void*)(long)n - 2);
 
   /* wait for threads to finish */
   hpx_thread_join(th1, NULL);
@@ -61,7 +61,7 @@ int main(int argc, char * argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  th = hpx_thread_create(ctx, (hpx_action_t)fib, (void *)n);
+  th = hpx_thread_create(ctx, (hpx_func_t)fib, (void *)n);
 
   /* wait for the thread to finish */
   hpx_thread_join(th, NULL);
