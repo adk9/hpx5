@@ -6,8 +6,8 @@ SUBDIRS = .
 
 lib_LTLIBRARIES = libhpx.la
 
-libhpx_la_SOURCES = ctx.c	      \
-		    init.c	      \
+libhpx_la_SOURCES = runtime/ctx.c     \
+		    runtime/init.c    \
 		    thread/thread.c   \
 		    thread/kthread.c  \
 		    thread/lco.c      \
