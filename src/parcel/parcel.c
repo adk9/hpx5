@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 
+#include "hpx/action.h"
 #include "hpx/parcel.h"
 
 /*
@@ -34,13 +35,11 @@
 
 /*
  --------------------------------------------------------------------
-  hpx_parcel_register
+  hpx_action_register
 
-  Register a HPX parcel.
+  Register an HPX action.
   -------------------------------------------------------------------
 */
-int hpx_parcel_register(char *aname, hpx_action_t act, hpx_action_t cont,
-                        hpx_parcel_t *handle)
-{
+int hpx_new_parcel(char *aname, hpx_action_t act, hpx_action_t cont,
+                   hpx_parcel_t *handle) {
 }
-
