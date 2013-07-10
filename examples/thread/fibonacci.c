@@ -8,28 +8,33 @@ hpx_timer_t    timer;
 static int     nthreads;
 
 void fib(void *n) {
+  long *n1, *n2, num, sum;
   hpx_thread_t *th1;
   hpx_thread_t *th2;
 
+  num = (long) n;
   /* handle our base case */
-  if ((long)n < 2) {
-    return;
-  }
+  if (num < 2)
+    hpx_thread_exit(&num);
 
   /* create child threads */
-  th1 = hpx_thread_create(ctx, (hpx_func_t)fib, (void*)(long)n - 1);
-  th2 = hpx_thread_create(ctx, (hpx_func_t)fib, (void*)(long)n - 2);
+  th1 = hpx_thread_create(ctx, fib, (void*) num-1);
+  th2 = hpx_thread_create(ctx, fib, (void*) num-2);
 
   /* wait for threads to finish */
-  hpx_thread_join(th1, NULL);
-  hpx_thread_join(th2, NULL);
+  // ADK: need an OR gate here. Also, why not just expose the future
+  //      interface and have such control constructs for them?
+  hpx_thread_join(th2, (void**) &n2);
+  hpx_thread_join(th1, (void**) &n1);
+  sum = *n1 + *n2;
   nthreads += 2;
+  hpx_thread_exit(&sum);
 }
 
 int main(int argc, char * argv[]) {
   hpx_config_t cfg;
   hpx_thread_t *th;
-  long n;
+  long n, *result;
   uint32_t cores;
 
   /* validate our arguments */
@@ -61,12 +66,13 @@ int main(int argc, char * argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  th = hpx_thread_create(ctx, (hpx_func_t)fib, (void *)n);
+  th = hpx_thread_create(ctx, fib, (void *)n);
 
   /* wait for the thread to finish */
-  hpx_thread_join(th, NULL);
+  hpx_thread_join(th, (void**)&result);
 
-  printf("seconds: %.7f\ncores:   %d\nthreads: %d\n", hpx_elapsed_us(timer)/1e3,
+  printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
+         n, *result, hpx_elapsed_us(timer)/1e3,
 	 hpx_config_get_cores(&cfg), ++nthreads);
 
   /* cleanup */
