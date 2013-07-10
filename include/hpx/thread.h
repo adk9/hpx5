@@ -132,7 +132,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, hpx_func_t, void *);
+hpx_thread_t *hpx_thread_create(hpx_context_t *, hpx_func_t, void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
@@ -141,7 +141,7 @@ void hpx_thread_join(hpx_thread_t *, void **);
 void hpx_thread_exit(void *);
 void hpx_thread_yield(void);
 
-hpx_thread_t * hpx_thread_self(void);
+hpx_thread_t *hpx_thread_self(void);
 
 uint16_t hpx_thread_get_opt(hpx_thread_t *);
 void hpx_thread_set_opt(hpx_thread_t *, uint16_t);

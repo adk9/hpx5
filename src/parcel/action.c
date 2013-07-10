@@ -40,11 +40,11 @@
  * 
  * @return HPX error code
  */
-int hpx_action_register(char *name, hpx_func_t func) {
+int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *) {
 }
 
-int hpx_action_lookup_local(char *name, hpx_func_t *func) {
+int hpx_action_lookup_local(char *name, hpx_action_t *act) {
 }
 
-int hpx_action_lookup_addr_local(void *, hpx_func_t *func) {
+int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *act) {
 }

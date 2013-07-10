@@ -13,6 +13,10 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_PARCEL_H_
+#define LIBHPX_PARCEL_H_
+
 typedef struct hpx_parcel_t {
   unsigned int  parcel_id;    /*!< the parcel idenitifer. */
   hpx_action_t  action;       /*!< handle to the associated action. */
@@ -29,4 +33,14 @@ typedef struct hpx_parcel_t {
   Parcel Handling Routines
   -------------------------------------------------------------------
 */
-int hpx_new_parcel(char *, hpx_action_t, hpx_action_t, hpx_parcel_t *);
+int hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
+
+
+/*
+ --------------------------------------------------------------------
+  Generic Parcel Invocation
+ --------------------------------------------------------------------
+*/
+hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action, void *args, size_t len);
+
+#endif /* LIBHPX_PARCEL_H_ */
