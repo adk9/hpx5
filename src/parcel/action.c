@@ -18,7 +18,6 @@
 
 #include <stdlib.h>
 
-
 #include "hpx/action.h"
 
   /************************************************************************/
@@ -37,7 +36,7 @@
  * Register an HPX action.
  * 
  * @param name Action Name
- * @param func The HPX function that is represented by this action
+ * @param func The HPX function that is represented by this action.
  * 
  * @return HPX error code
  */
@@ -45,9 +44,7 @@ int hpx_action_register(char *name, hpx_func_t func) {
 }
 
 int hpx_action_lookup_local(char *name, hpx_func_t *func) {
-
 }
 
-int hpx_action_lookup_byaddr_local(void *, hpx_func_t *func) {
-
+int hpx_action_lookup_addr_local(void *, hpx_func_t *func) {
 }
