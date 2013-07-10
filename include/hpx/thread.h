@@ -100,7 +100,7 @@ struct _hpx_kthread_t;
 */
 
 /* An HPX function taking a single generic (void*) argument */
-typedef (*hpx_func_t)(void *);
+typedef void (*hpx_func_t)(void *);
 
 typedef struct _hpx_thread_t {
   hpx_context_t          *ctx;

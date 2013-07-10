@@ -36,7 +36,7 @@
 */
 typedef struct _hpx_future_t {
   uint8_t state;
-  void * value;
+  void   *value;
 } hpx_future_t __attribute__((aligned (8)));
 
 
@@ -54,7 +54,7 @@ typedef struct _hpx_future_t {
   UNSET state.
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_init(hpx_future_t * fut) {
+static inline void hpx_lco_future_init(hpx_future_t *fut) {
   fut->state = HPX_LCO_FUTURE_UNSET;
   fut->value = NULL;
 }
@@ -67,8 +67,7 @@ static inline void hpx_lco_future_init(hpx_future_t * fut) {
   Sets an HPX Future's state to SET without changing its value.
  --------------------------------------------------------------------
 */
-
-static inline void hpx_lco_future_set(hpx_future_t * fut) {
+static inline void hpx_lco_future_set(hpx_future_t *fut) {
 #ifdef __x86_64__
   __asm__ __volatile__ (
     "movb %1,%%al;\n\t"
@@ -87,7 +86,7 @@ static inline void hpx_lco_future_set(hpx_future_t * fut) {
   Sets an HPX Future's value and its state to SET.
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_set_value(hpx_future_t * fut, void * val) {
+static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *val) {
   fut->value = val;
   hpx_lco_future_set(fut);
 }
