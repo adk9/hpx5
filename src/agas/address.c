@@ -2,6 +2,9 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
+  AGAS (Address management)
+  address.c
+
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
 
@@ -13,17 +16,9 @@
  ====================================================================
 */
 
-/* An HPX action taking a single generic (void*) argument */
-typedef struct hpx_action_t {
-  char *name;          /* name of the action */
-  hpx_func_t *action;  /* handle to the function */
-} hpx_action_t;
+#include <stdlib.h>
 
-/* Register a new action */
-int hpx_action_register(char *, hpx_func_t);
+#include "hpx/agas.h"
 
-/* Lookup actions in the local action table by their name */
-int hpx_action_lookup_local(char *, hpx_func_t *);
-
-/* Reverse lookup of actions in the local action table */
-int hpx_action_lookup_addr_local(void *, hpx_func_t *);
+int hpx_addr_is_local(hpx_addr_t) {
+}

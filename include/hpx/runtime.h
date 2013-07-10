@@ -13,17 +13,15 @@
  ====================================================================
 */
 
-/* An HPX action taking a single generic (void*) argument */
-typedef struct hpx_action_t {
-  char *name;          /* name of the action */
-  hpx_func_t *action;  /* handle to the function */
-} hpx_action_t;
+typedef struct hpx_locality_t {
+    char *hostname;
+    uint32 rank;
+    union {
+        uint32 nid;
+        uint32 pid;
+    } physical;
+} hpx_locality_t;
 
-/* Register a new action */
-int hpx_action_register(char *, hpx_func_t);
+int hpx_create_locality(hpx_locality_t *);
 
-/* Lookup actions in the local action table by their name */
-int hpx_action_lookup_local(char *, hpx_func_t *);
-
-/* Reverse lookup of actions in the local action table */
-int hpx_action_lookup_addr_local(void *, hpx_func_t *);
+int hpx_get_locality(hpx_locality_t *);

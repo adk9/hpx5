@@ -14,12 +14,15 @@
 */
 
 typedef struct hpx_parcel_t {
-  unsigned int  parcel_id;    /* the parcel idenitifer */
-  hpx_action_t  action;       /* handle to the associated action */
-  int           flags;        /* flags related to the parcel */
+  unsigned int  parcel_id;    /*!< the parcel idenitifer. */
+  hpx_action_t  action;       /*!< handle to the associated action. */
+  hpx_addr_t    dest;         /*!< destination locality. */
+  /// ADK: I am not entirely convinced that we need these yet.
+  /// hpx_action_t continuation; /*!< the continuation action. */
+  /// hpx_addr_t  cdest;      /*!< target to execute continuation at. */
+  int           flags;        /*!< flags related to the parcel. */
   void         *payload;
 } hpx_parcel_t;
-
 
 /*
  --------------------------------------------------------------------
