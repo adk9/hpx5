@@ -13,6 +13,10 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_ACTION_H_
+#define LIBHPX_ACTION_H_
+
 /* An HPX action taking a single generic (void*) argument */
 typedef struct hpx_action_t {
   char *name;          /* name of the action */
@@ -20,10 +24,12 @@ typedef struct hpx_action_t {
 } hpx_action_t;
 
 /* Register a new action */
-int hpx_action_register(char *, hpx_func_t);
+int hpx_action_register(char *, hpx_func_t, hpx_action_t *);
 
 /* Lookup actions in the local action table by their name */
-int hpx_action_lookup_local(char *, hpx_func_t *);
+int hpx_action_lookup_local(char *, hpx_action_t *);
 
 /* Reverse lookup of actions in the local action table */
-int hpx_action_lookup_addr_local(void *, hpx_func_t *);
+int hpx_action_lookup_addr_local(void *, hpx_action_t *);
+
+#endif /* LIBHPX_ACTION_H_ */

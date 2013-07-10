@@ -13,6 +13,12 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_RUNTIME_H_
+#define LIBHPX_RUNTIME_H_
+
+#include "hpx/types.h"
+
 typedef struct hpx_locality_t {
     char *hostname;
     uint32 rank;
@@ -24,4 +30,12 @@ typedef struct hpx_locality_t {
 
 int hpx_create_locality(hpx_locality_t *);
 
-int hpx_get_locality(hpx_locality_t *);
+hpx_locality_t *hpx_get_my_locality(void);
+
+hpx_locality_t *hpx_get_locality(int rank);
+
+uint32 hpx_get_num_localities(void);
+
+uint32 hpx_get_rank(void);
+
+#endif
