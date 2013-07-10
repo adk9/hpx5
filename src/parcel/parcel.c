@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "hpx/action.h"
+#include "hpx/comm.h"
 #include "hpx/parcel.h"
 
 /*
@@ -31,8 +32,6 @@
   -------------------------------------------------------------------
 */
 
-static int parcel_send
-
 int hpx_new_parcel(char *act, hpx_parcel_t *handle) {
 }
 
@@ -43,6 +42,7 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t *action,
     /* create a parcel from action, args, len */
     hpx_new_parcel(action, args, len, &p);
     /* send parcel to the destination locality */
-    ret = comm_parcel_send(dest, &p);
+    
+    ret = comm_send_parcel(dest, &p);
     return ret;
 }
