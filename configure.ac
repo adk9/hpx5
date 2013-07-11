@@ -64,14 +64,20 @@ AC_FUNC_REALLOC
 AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
-PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
-
+# Check for PAPI measurement support.
 AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
 AS_IF([test "x$use_papi" = xyes], [
   PKG_CHECK_MODULES([PAPI], [papi])
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
+# Check for check (and disable test-suite if not found).
+AC_CHECK_PROGS([CHECK], [check])
+if test -z "$CHECK";
+  then AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
+fi
+
+# Check for doxygen (to build the documentation).
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
 if test -z "$DOXYGEN";
   then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
@@ -80,6 +86,11 @@ fi
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
+
+AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
+AM_COND_IF([WITH_TESTSUITE],
+	[AC_CONFIG_FILES([tests/Makefile])])
+AC_SUBST(WITH_DOCS)
 
 AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
 AM_COND_IF([WITH_DOCS],
@@ -92,23 +103,27 @@ AC_CONFIG_FILES([
   src/Makefile
   examples/Makefile
   examples/thread/Makefile
-  tests/Makefile
 ])
 AC_OUTPUT
 
 AS_IF([test -n "$DOXYGEN"],
       [doc_string="yes"],
       [doc_string="no"])
+AS_IF([test -n "$CHECK"],
+      [test_string="yes"],
+      [test_string="no"])
 AS_IF([test "x$use_papi" = xyes],
       [papi_string="yes"],
       [papi_string="no"])
 
+echo ""
 echo "================================================"
 echo " HPX Build Configuration"
 echo "================================================"
-echo "              Host CPU  : $host_cpu"
-echo "               Host OS  : $host_os"
-echo "             Profiling  : $papi_string"
+echo "               Host CPU : $host_cpu"
+echo "                Host OS : $host_os"
+echo "              Profiling : $papi_string"
 echo "          Documentation : $doc_string"
+echo "             Test Suite : $test_string"
 echo "================================================"
 

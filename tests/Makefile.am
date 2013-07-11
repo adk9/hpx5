@@ -1,6 +1,4 @@
-####################
-# Makefile for HPX #
-####################
+if WITH_TESTSUITE
 
 TESTS = hpxtest
 check_PROGRAMS = hpxtest
@@ -13,3 +11,5 @@ if CPU_X86_64
 endif
 
 hpxtest_SOURCES += $(ARCH_SRC)
+
+endif
