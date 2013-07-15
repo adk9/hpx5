@@ -4,7 +4,7 @@
 #include <hpx/thread.h>
 
 hpx_context_t *ctx;
-hpx_action_t  act;
+hpx_action_t   act;
 hpx_timer_t    timer;
 static int     nthreads;
 static int     num_ranks;
@@ -79,10 +79,10 @@ int main(int argc, char * argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  th = hpx_thread_create(ctx, fib, (void *)n);
+  th = hpx_thread_create(ctx, fib, (void*) n);
 
   /* wait for the thread to finish */
-  hpx_thread_join(th, (void**)&result);
+  hpx_thread_join(th, (void**) &result);
 
   printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
          n, *result, hpx_elapsed_us(timer)/1e3,

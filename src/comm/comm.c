@@ -22,24 +22,34 @@
 #include "hpx/comm.h"
 #include "hpx/parcel.h"
 
+/* Default communication operations */
+comm_operations_t default_operations = {
+    .init            = _comm_init,
+    .send_parcel     = _comm_send_parcel,
+    .send            = _comm_send,
+    .put             = _comm_put,
+    .get             = _comm_get,
+    .progress        = _comm_progress,
+    .finalize        = _comm_finalize,
+};
 
-int comm_init(void) {
+int _comm_init(void) {
 }
 
-int comm_send_parcel(hpx_locality_t *, hpx_parcel_t *) {
+int _comm_send_parcel(hpx_locality_t *, hpx_parcel_t *) {
 }
 
-int comm_send(int peer, void *payload, size_t len) {
+int _comm_send(int peer, void *payload, size_t len) {
 }
 
-int comm_put(int peer, void *dst, void *src, size_t len) {
+int _comm_put(int peer, void *dst, void *src, size_t len) {
 }
 
-int comm_get(void *dst, int peer, void *src, size_t len) {
+int _comm_get(void *dst, int peer, void *src, size_t len) {
 }
 
-void comm_progress_engine(void *data) {
+void _comm_progress(void *data) {
 }
 
-void comm_finalize(void) {
+void _comm_finalize(void) {
 }
