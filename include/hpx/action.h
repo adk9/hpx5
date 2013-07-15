@@ -24,12 +24,18 @@ typedef struct hpx_action_t {
 } hpx_action_t;
 
 /* Register a new action */
-int hpx_action_register(char *, hpx_func_t, hpx_action_t *);
+int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action);
 
 /* Lookup actions in the local action table by their name */
-int hpx_action_lookup_local(char *, hpx_action_t *);
+int hpx_action_lookup_local(char *name, hpx_action_t *action);
 
 /* Reverse lookup of actions in the local action table */
-int hpx_action_lookup_addr_local(void *, hpx_action_t *);
+int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action);
+
+/* Invoke an action
+   Note: This is used to invoke an action locally. For remote action
+         invocations, see hpx_call(3).
+ */
+int hpx_action_invoke(hpx_action_t *action, void *args, void **result);
 
 #endif /* LIBHPX_ACTION_H_ */

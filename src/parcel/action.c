@@ -40,11 +40,20 @@
  * 
  * @return HPX error code
  */
-int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *) {
+int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
 }
 
-int hpx_action_lookup_local(char *name, hpx_action_t *act) {
+int hpx_action_lookup_local(char *name, hpx_action_t *action) {
 }
 
-int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *act) {
+int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action) {
+}
+
+int hpx_action_invoke(hpx_action_t *action, void *args, void **result) {
+    hpx_thread_t *th;
+    void *ctx; // TODO
+    // spawn a thread to invoke the action locally
+    th = hpx_thread_create(ctx, action->action, args);
+    hpx_thread_join(th, result);
+    return 0;
 }
