@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx_parchandler.h"
+#include "hpx_parcelhandler.h"
 
 /*
  --------------------------------------------------------------------
@@ -29,14 +29,14 @@
  --------------------------------------------------------------------
 */
 
-START_TEST (test_libhpx_parchandler_create)
+START_TEST (test_libhpx_parcelhandler_create)
 {
-  hpx_parchandler_t * ph = NULL;
+  hpx_parcelhandler_t * ph = NULL;
 
-  ph = hpx_parchandler_create();
-  ck_assert_msg(ph != NULL, "Could not create parchandler");
+  ph = hpx_parcelhandler_create();
+  ck_assert_msg(ph != NULL, "Could not create parcelhandler");
 
-  hpx_parchandler_destroy(ph);
+  hpx_parcelhandler_destroy(ph);
 
   ph = NULL;
 } 

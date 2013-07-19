@@ -3,7 +3,7 @@
   High Performance ParalleX Library (libhpx)
   
   Parcel Handler Function Definitions
-  hpx_parchandler.h
+  hpx_parcelhandler.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -20,8 +20,8 @@
 */
 
 #pragma once
-#ifndef LIBHPX_PARCHANDLER_H_
-#define LIBHPX_PARCHANDLER_H_
+#ifndef LIBHPX_PARCELHANDLER_H_
+#define LIBHPX_PARCELHANDLER_H_
 
 #include "hpx/mem.h"
 #include "hpx/thread.h"
@@ -36,10 +36,10 @@
  --------------------------------------------------------------------
 */
 
-typedef struct hpx_parchandler_t {
+typedef struct hpx_parcelhandler_t {
   hpx_context_t *ctx;
   hpx_thread_t *thread;  
-} hpx_parchandler_t;
+} hpx_parcelhandler_t;
 
 /*
  --------------------------------------------------------------------
@@ -47,8 +47,8 @@ typedef struct hpx_parchandler_t {
  --------------------------------------------------------------------
 */
 
-hpx_parchandler_t *hpx_parchandler_create();
-void hpx_parchandler_destroy(hpx_parchandler_t *);
+hpx_parcelhandler_t *hpx_parcelhandler_create();
+void hpx_parcelhandler_destroy(hpx_parcelhandler_t *);
 
 /*
  --------------------------------------------------------------------
@@ -56,7 +56,7 @@ void hpx_parchandler_destroy(hpx_parchandler_t *);
  --------------------------------------------------------------------
 */
 
-/* TODO: should _hpx_parchandler_main be here? */
+/* TODO: should _hpx_parcelhandler_main be here? */
 
 #endif /* LIBHPX_PARCELHANDLER_H_ */
 

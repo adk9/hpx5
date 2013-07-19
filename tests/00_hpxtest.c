@@ -38,7 +38,7 @@
 #include "09_config.c"
 #include "10_list.c"
 #include "11_map.c"
-#include "12_parchandler.c"
+#include "12_parcelhandler.c"
 
 #include "98_thread_perf1.c"
 
@@ -251,7 +251,7 @@ int main(int argc, char * argv[]) {
   }
 
   /* parcel handler tests */
-  tcase_add_test(tc, test_libhpx_parchandler_create);
+  tcase_add_test(tc, test_libhpx_parcelhandler_create);
   
   /* performance tests */
   if (perf_tests) {
