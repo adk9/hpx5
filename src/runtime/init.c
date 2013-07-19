@@ -48,7 +48,7 @@ hpx_error_t hpx_init(void) {
   /* initialize network */
   hpx_network_init(0, NULL); /* TODO: should be argc and argv */
 
-  __hpx_parchandler = hpx_parchandler_create();
+  __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -63,6 +63,6 @@ hpx_error_t hpx_init(void) {
  * 
  */
 void hpx_cleanup(void) {
-  hpx_parchandler_destroy(__hpx_parchandler); 
+  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
   hpx_network_finalize();
 }

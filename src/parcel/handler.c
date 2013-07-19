@@ -3,7 +3,7 @@
   High Performance ParalleX Library (libhpx)
   
   Parcel Handler Functions
-  hpx_parchandler.c
+  hpx_parcelhandler.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -25,14 +25,14 @@
 #include "hpx_ctx.h"
 #include "hpx_error.h"
 #include "hpx_network.h"
-#include "hpx_parchandler.h"
+#include "hpx_parcelhandler.h"
 #include "hpx_thread.h"
 
 #if USE_PHOTON
 #include <photon.h>
 #endif
 
-void *_hpx_parchandler_main_test(void) {
+void *_hpx_parcelhandler_main_test(void) {
   int PING_TAG=0;
   int PONG_TAG=1;
   printf("Alive\n");
@@ -158,7 +158,7 @@ void *_hpx_parchandler_main_test(void) {
   return NULL;
 }
 
-void * _hpx_parchandler_main_pingpong(void) {
+void * _hpx_parcelhandler_main_pingpong(void) {
   int PING_TAG=0;
   int PONG_TAG=1;
   fflush(NULL);
@@ -312,19 +312,19 @@ void * _hpx_parchandler_main_pingpong(void) {
 }
 
 
-hpx_parchandler_t * hpx_parchandler_create() {
+hpx_parcelhandler_t * hpx_parcelhandler_create() {
   hpx_config_t * cfg = NULL;
-  hpx_parchandler_t * ph = NULL;
+  hpx_parcelhandler_t * ph = NULL;
 
   cfg = hpx_alloc(sizeof(hpx_config_t));
-  ph = hpx_alloc(sizeof(hpx_parchandler_t));
+  ph = hpx_alloc(sizeof(hpx_parcelhandler_t));
 
   if (cfg != NULL) {
     hpx_config_init(cfg);
     if (ph != NULL) {
       ph->ctx = hpx_ctx_create(cfg);
       /* TODO: error check */
-      ph->thread = hpx_thread_create(ph->ctx, 0, _hpx_parchandler_main_pingpong, 0);
+      ph->thread = hpx_thread_create(ph->ctx, 0, _hpx_parcelhandler_main_pingpong, 0);
       /* TODO: error check */
     }
     else {
@@ -335,7 +335,7 @@ hpx_parchandler_t * hpx_parchandler_create() {
   return ph;
 }
 
-void hpx_parchandler_destroy(hpx_parchandler_t * ph) {
+void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
   int *retval;
 
   hpx_thread_join(ph->thread, (void**)&retval);
