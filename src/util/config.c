@@ -33,6 +33,7 @@ void hpx_config_init(hpx_config_t *cfg) {
   hpx_config_set_cores(cfg, hpx_kthread_get_cores());
   hpx_config_set_switch_flags(cfg, HPX_CONFIG_DEFAULT_SWITCH_FLAG);
   hpx_config_set_thread_stack_size(cfg, HPX_CONFIG_DEFAULT_THREAD_SS);
+  hpx_config_set_thread_suspend_policy(cfg, HPX_CONFIG_DEFAULT_THREAD_SUSPEND_POLICY);
 }
 
 
@@ -73,6 +74,18 @@ uint32_t hpx_config_get_thread_stack_size(hpx_config_t *cfg) {
 
 
 /*
+  --------------------------------------------------------------------
+  hpx_config_get_thread_suspend_policy
+
+  Gets the manner in which suspended threads are woken up by the
+  Thread Manager.
+ --------------------------------------------------------------------
+*/
+uint8_t hpx_config_get_thread_suspend_policy(hpx_config_t *cfg) {
+  return cfg->srv_susp_policy;
+}
+
+/*
  --------------------------------------------------------------------
   hpx_config_set_cores
 
@@ -83,6 +96,19 @@ void hpx_config_set_cores(hpx_config_t *cfg, uint32_t cores) {
   if (cores > 0) {
     cfg->cores = cores;
   }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_config_set_thread_suspend_policy
+
+  Sets the manner in which suspended threads are woken up by the
+  Thread Manager.
+ --------------------------------------------------------------------
+*/
+void hpx_config_set_thread_suspend_policy(hpx_config_t *cfg, uint8_t sp) {
+  cfg->srv_susp_policy = sp;
 }
 
 

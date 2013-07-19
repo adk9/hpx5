@@ -24,10 +24,12 @@
 #define LIBHPX_CONTEXT_H_
 
 #include <stdint.h>
+//#include <hwloc.h>
 
 #include "hpx/queue.h"
 #include "hpx/kthread.h"
 #include "hpx/config.h"
+#include "hpx_thread.h"
 
 #ifdef __x86_64__
   #include "arch/x86_64/mconfig.h"
@@ -51,15 +53,27 @@ static hpx_context_id_t __ctx_next_id;
 typedef struct _hpx_context_t {
   hpx_context_id_t    cid;
   hpx_kthread_t     **kths;
-  hpx_kthread_mutex_t mtx;
   uint32_t            kths_count;
   uint32_t            kths_idx;
+
+  hpx_kthread_mutex_t mtx;
 
   hpx_config_t        cfg;
   hpx_mconfig_t       mcfg;
   uint64_t            mflags;
 
   hpx_queue_t         term_ths;
+  hpx_queue_t term_stks;
+  hpx_queue_t term_lcos;
+
+  /* service threads */
+  struct _hpx_thread_t ** srv_susp;
+  struct _hpx_thread_t * srv_rebal;
+
+  hpx_future_t f_srv_susp;
+  hpx_future_t f_srv_rebal;
+
+  //  hwloc_topology_t hw_topo;
 } hpx_context_t;
 
 

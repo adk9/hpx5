@@ -43,82 +43,210 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, hpx_func_t func, void *args) {
+hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, void *args) {
+  hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
 
   /* see if we can reuse a terminated thread */
+  if (opts == 0) {
+    opts = HPX_THREAD_OPT_NONE;
+  }
+
   hpx_kthread_mutex_lock(&ctx->mtx);
-  th = hpx_queue_pop(&ctx->term_ths);
 
   /* increment the next thread ID */
   th_id = __thread_next_id;
-  __thread_next_id += 1;  
-  hpx_kthread_mutex_unlock(&ctx->mtx);
+  __thread_next_id += 1;
 
-  /* if we didn't get a thread to reuse, create a stack and machine context area */
-  if (th == NULL) {
-    th = (hpx_thread_t *) hpx_alloc(sizeof(hpx_thread_t));
-    if (th != NULL) {
-      /* create a stack */
-      th->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
-      th->stk = (void *) hpx_alloc(th->ss);
-      if (th->stk == NULL) {
-	__hpx_errno = HPX_ERROR_NOMEM;
-	goto __hpx_thread_create_FAIL1;
-      }
+  /* see if we can get a reusable section from a terminated thread */
+  th_ru = hpx_queue_pop(&ctx->term_stks);
 
-      /* create a machine context area */
-      th->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-      if (th->mctx == NULL) {
-        __hpx_errno = HPX_ERROR_NOMEM;
-        goto __hpx_thread_create_FAIL2;
-      }
-    } else {
+  /* if we didn't get a reusable area, create one */
+  if (th_ru == NULL) {
+    th_ru = (hpx_thread_reusable_t *) hpx_alloc(sizeof(hpx_thread_reusable_t));
+    if (th_ru == NULL) {
+      hpx_kthread_mutex_unlock(&ctx->mtx);
       __hpx_errno = HPX_ERROR_NOMEM;
-      goto __hpx_thread_create_FAIL0;
+      goto _hpx_thread_create_FAIL0;
     }
+
+    /* create a stack */
+    th_ru->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
+    th_ru->stk = (void *) hpx_alloc(th_ru->ss);
+    if (th_ru->stk == NULL) {
+      hpx_kthread_mutex_unlock(&ctx->mtx);
+      __hpx_errno = HPX_ERROR_NOMEM;
+      goto _hpx_thread_create_FAIL1;
+    }
+
+    /* create a machine context switching area */
+    th_ru->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+    if (th_ru->mctx == NULL) {
+      hpx_kthread_mutex_unlock(&ctx->mtx);
+      __hpx_errno = HPX_ERROR_NOMEM;
+      goto _hpx_thread_create_FAIL2;
+    }    
+  }
+
+  /* create the non-reusable thread area */
+  th = (hpx_thread_t *) hpx_alloc(sizeof(hpx_thread_t));
+  if (th == NULL) {
+    hpx_kthread_mutex_unlock(&ctx->mtx);
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto _hpx_thread_create_FAIL3;
   }
 
   /* initialize the thread */
   th->ctx = ctx;
   th->tid = th_id;
   th->state = HPX_THREAD_STATE_CREATE;
-  th->opts = HPX_THREAD_OPT_NONE;
+  th->opts = opts;
   th->parent = hpx_thread_self();
-  th->func = func;
-  th->args = args;
+  th->skip = 0;
 
   hpx_lco_future_init(&th->retval);
   hpx_list_init(&th->children);
+  th->reuse = th_ru;
+  th->reuse->func = func;
+  th->reuse->args = args;
+  th->reuse->f_wait = NULL;
 
-  /* add this thread to its parent's list of children */
-  if (th->parent != NULL) {
-    hpx_list_push(&th->parent->children, th);
+  th->f_ret = (hpx_future_t *) hpx_alloc(sizeof(hpx_future_t));
+  if (th->f_ret == NULL) {
+    hpx_kthread_mutex_unlock(&ctx->mtx);
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto _hpx_thread_create_FAIL4;
   }
+
+  hpx_lco_future_init(th->f_ret, 1);
+  hpx_queue_push(&ctx->term_lcos, th->f_ret);
 
   /* put this thread on a kernel thread's pending queue */
   /* if it's bound and has a parent, use its parent's kernel thread */
-  if ((th->opts & HPX_THREAD_OPT_BOUND) && (th->parent != NULL)) {
-    th->kth = th->parent->kth;
-  } else {
-    ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
-    th->kth = ctx->kths[ctx->kths_idx];
+  if ((opts & HPX_THREAD_OPT_SERVICE_CORELOCAL) != HPX_THREAD_OPT_SERVICE_CORELOCAL) {
+    if ((th->opts & HPX_THREAD_OPT_BOUND) && (th->parent != NULL)) {
+      th->reuse->kth = th->parent->reuse->kth;
+    } else {
+      ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
+      th->reuse->kth = ctx->kths[ctx->kths_idx];
+    }
   }
 
-  _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_CREATE);
+  hpx_kthread_mutex_unlock(&ctx->mtx);
+
+  if ((opts & HPX_THREAD_OPT_SERVICE_CORELOCAL) != HPX_THREAD_OPT_SERVICE_CORELOCAL) {
+    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_CREATE, NULL);
+  }
 
   return th;
 
- __hpx_thread_create_FAIL2:
-  hpx_free(th->stk);
-
- __hpx_thread_create_FAIL1:
+ _hpx_thread_create_FAIL4:
   hpx_free(th);
 
- __hpx_thread_create_FAIL0:
+ _hpx_thread_create_FAIL3:
+  hpx_free(th_ru->mctx);
+
+ _hpx_thread_create_FAIL2:
+  hpx_free(th_ru->stk);
+
+ _hpx_thread_create_FAIL1:
+  hpx_free(th_ru);
+
+ _hpx_thread_create_FAIL0:
   return NULL;
 }
+
+//hpx_thread_t * hpx_thread_create(hpx_context_t * ctx, void * func, void * args) {
+//  hpx_thread_t * th = NULL;
+//  hpx_thread_id_t th_id;
+//
+//  hpx_kthread_mutex_lock(&ctx->mtx);
+//
+//  /* increment the next thread ID */
+//  th_id = __thread_next_id;
+//  __thread_next_id += 1;  
+//
+//  /* see if we can reuse a terminated thread */
+//  th = hpx_queue_pop(&ctx->term_ths);
+//
+//  /* if we didn't get a thread to reuse, create a stack and machine context area */
+//  if (th == NULL) {
+//    th = (hpx_thread_t *) hpx_alloc(sizeof(hpx_thread_t));
+//    if (th != NULL) {
+//      /* create a stack */
+//      th->ss = hpx_config_get_thread_stack_size(&ctx->cfg);
+//      th->stk = (void *) hpx_alloc(th->ss);
+//      if (th->stk == NULL) {
+//	hpx_kthread_mutex_unlock(&ctx->mtx);
+//	__hpx_errno = HPX_ERROR_NOMEM;
+//	goto __hpx_thread_create_FAIL1;
+//      }
+//
+//      /* create a machine context area */
+//      th->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+//      if (th->mctx == NULL) {
+//        hpx_kthread_mutex_unlock(&ctx->mtx);
+//        __hpx_errno = HPX_ERROR_NOMEM;
+//        goto __hpx_thread_create_FAIL2;
+//      }
+//    } else {
+//      hpx_kthread_mutex_unlock(&ctx->mtx);
+//      __hpx_errno = HPX_ERROR_NOMEM;
+//      goto __hpx_thread_create_FAIL0;
+//    }
+//  }
+//
+//  /* initialize the thread */
+//  th->ctx = ctx;
+//  th->tid = th_id;
+//  th->state = HPX_THREAD_STATE_CREATE;
+//  th->opts = HPX_THREAD_OPT_NONE;
+//  th->parent = hpx_thread_self();
+//  th->func = func;
+//  th->args = args;
+//
+//  printf("thread %ld args == %d\n", th_id, args);
+//
+//  th->f_ret = (hpx_future_t *) hpx_alloc(sizeof(hpx_future_t));
+//  if (th->f_ret == NULL) {
+//    hpx_kthread_mutex_unlock(&ctx->mtx);
+//    __hpx_errno = HPX_ERROR_NOMEM;
+//    goto __hpx_thread_create_FAIL3;
+//  } 
+//
+//  hpx_lco_future_init(th->f_ret);
+//  th->f_wait = NULL;
+//
+//  hpx_queue_push(&ctx->term_lcos, th->f_ret);
+//
+//  /* put this thread on a kernel thread's pending queue */
+//  /* if it's bound and has a parent, use its parent's kernel thread */
+//  if ((th->opts & HPX_THREAD_OPT_BOUND) && (th->parent != NULL)) {
+//    th->kth = th->parent->kth;
+//  } else {
+//    ctx->kths_idx = ((ctx->kths_idx + 1) % ctx->kths_count);
+//    th->kth = ctx->kths[ctx->kths_idx];
+//  }
+//
+//  hpx_kthread_mutex_unlock(&ctx->mtx);
+//
+//  _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_CREATE, NULL);
+//
+//  return th;
+//
+// __hpx_thread_create_FAIL3: 
+//  hpx_free(th->mctx);
+//
+// __hpx_thread_create_FAIL2:
+//  hpx_free(th->stk);
+//
+// __hpx_thread_create_FAIL1:
+//  hpx_free(th);
+//
+// __hpx_thread_create_FAIL0:
+//  return NULL;
+//}
 
 
 /*
@@ -129,12 +257,6 @@ hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, hpx_func_t func, void *args)
  --------------------------------------------------------------------
 */
 void hpx_thread_destroy(hpx_thread_t *th) {
-  if (th->stk != NULL) {
-    hpx_free(th->mctx);
-    hpx_free(th->stk);
-  }
-
-  hpx_list_destroy(&th->children);
   hpx_free(th);
 }
 
@@ -181,20 +303,21 @@ hpx_thread_t *hpx_thread_self(void) {
 */
 void hpx_thread_join(hpx_thread_t *th, void **value) {
   hpx_thread_t *self = hpx_thread_self();
-  hpx_future_t *fut = &th->retval;
+  hpx_future_t *fut = &th->f_ret;
   uint8_t fut_st;
 
   /* poll the future until it's set */
-  do {
-    fut_st = fut->state;
-    if (fut_st == HPX_LCO_FUTURE_UNSET) {
+  while (hpx_lco_future_isset(fut) == false) {
+    if (self == NULL) {
       hpx_thread_yield();
+    } else {
+      hpx_thread_wait(fut);
     }
-  } while (fut_st == HPX_LCO_FUTURE_UNSET);
+  }
 
   /* copy its return value */
   if (value != NULL) {
-    *value = fut->value;
+    *value = hpx_lco_future_get_value(fut, 0);
   }
 }
 
@@ -210,9 +333,47 @@ void hpx_thread_join(hpx_thread_t *th, void **value) {
 void hpx_thread_yield(void) {
   hpx_thread_t *th = hpx_thread_self();
 
-  if ((th != NULL) && (th->kth != NULL)) {
-    _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_YIELD);
-    hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
+  if ((th != NULL) && (th->reuse->kth != NULL)) {
+    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_YIELD, NULL);
+    hpx_mctx_swapcontext(th->reuse->mctx, th->reuse->kth->mctx, th->reuse->kth->mcfg, th->reuse->kth->mflags);
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_yield_skip
+
+  Suspends execution of the current thread and allows another
+  thread some CPU time.  Tells the scheduler to skip N number of
+  rounds through the PENDING queue before scheduling this thread
+  again.
+ --------------------------------------------------------------------
+*/
+void hpx_thread_yield_skip(uint8_t sk) {
+  hpx_thread_t *th = hpx_thread_self();
+
+  if ((th != NULL) && (th->reuse->kth != NULL)) {
+    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_YIELD, (void *) sk);
+    hpx_mctx_swapcontext(th->reuse->mctx, th->reuse->kth->mctx, th->reuse->kth->mcfg, th->reuse->kth->mflags);
+  }
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_thread_wait
+
+  Suspends execution of the current thread until an HPX Future is
+  put into the SET state.
+ --------------------------------------------------------------------
+*/
+void hpx_thread_wait(hpx_future_t *fut) {
+  hpx_thread_t *th = hpx_thread_self();
+
+  if ((th != NULL) && (th->reuse->kth != NULL) && (fut != NULL)) {
+    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_SUSPENDED, fut);
+    hpx_mctx_swapcontext(th->reuse->mctx, th->reuse->kth->mctx, th->reuse->kth->mcfg, th->reuse->kth->mflags);
   }
 }
 
@@ -226,15 +387,12 @@ void hpx_thread_yield(void) {
 */
 void hpx_thread_exit(void *retval) {
   hpx_thread_t *th = hpx_thread_self();
-  hpx_future_t *fut = &th->retval;
+  if (th != NULL) {
+    hpx_lco_future_set_value(th->f_ret, 0, retval);
 
-  if (retval != NULL) {
-    fut->value = retval;
-    hpx_lco_future_set(fut);    
+    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_TERMINATED, NULL);
+    hpx_mctx_swapcontext(th->reuse->mctx, th->reuse->kth->mctx, th->reuse->kth->mcfg, th->reuse->kth->mflags);
   }
-
-  _hpx_kthread_sched(th->kth, th, HPX_THREAD_STATE_TERMINATED);
-  hpx_mctx_swapcontext(th->mctx, th->kth->mctx, th->kth->mcfg, th->kth->mflags);
 }
 
 
@@ -258,27 +416,17 @@ void hpx_thread_exit(void *retval) {
 void _hpx_thread_terminate(hpx_thread_t *th) {
   hpx_thread_t *child = NULL;
 
+  hpx_kthread_mutex_lock(&th->ctx->mtx);
+  
   /* trigger the return future */
-  hpx_lco_future_set(&th->retval);
+  hpx_lco_future_set(th->f_ret, 0);
 
   /* set our state to TERMINATED */
   th->state = HPX_THREAD_STATE_TERMINATED;
 
-  /* remove children and set their parent to their grandparent */
-  do {
-    child = hpx_list_pop(&th->children);
-    if (child != NULL) {
-      child->parent = th->parent;
-      if (th->parent != NULL) {
-        hpx_list_push(&th->parent->children, child);
-      }
-    }
-  } while (child != NULL);
-
-  /* remove this thread from its parent */
-  if (th->parent != NULL) {
-    hpx_list_delete(&th->parent->children, th);
-  }
+  /* push the reusable thread area onto the reuse queue */
+  hpx_queue_push(&th->ctx->term_stks, th->reuse);
+  th->reuse = NULL;
 
   /* if the thread is detached, destroy it.  otherwise, put it on the termination queue */
   if (th->opts & HPX_THREAD_OPT_DETACHED) {
@@ -286,6 +434,8 @@ void _hpx_thread_terminate(hpx_thread_t *th) {
   } else {
     hpx_queue_push(&th->ctx->term_ths, th);
   }
+
+  hpx_kthread_mutex_unlock(&th->ctx->mtx);
 }
 
 

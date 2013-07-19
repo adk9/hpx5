@@ -54,17 +54,27 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     cores = hpx_config_get_cores(&ctx->cfg);
     if (cores <= 0) {
       __hpx_errno = HPX_ERROR_KTH_CORES;
-      goto __hpx_ctx_create_FAIL;
+      goto _hpx_ctx_create_FAIL0;
     }
 
-    /* kernel mutex */
+    /* context mutex */
     hpx_kthread_mutex_init(&ctx->mtx);
 
     /* terminated thread queue */
     hpx_queue_init(&ctx->term_ths);
 
+    /* reusable stack queue */
+    hpx_queue_init(&ctx->term_stks);
+
+    /* LCOs to destroy */
+    hpx_queue_init(&ctx->term_lcos);
+
     /* get the CPU configuration and set switching flags */
     ctx->mcfg = hpx_mconfig_get();
+
+    /* hardware topology */
+    //    hwloc_topology_init(&ctx->hw_topo);
+    //    hwloc_topology_load(ctx->hw_topo);
 
     ctx->kths = (hpx_kthread_t **) hpx_alloc(cores * sizeof(hpx_kthread_t *));
     if (ctx->kths != NULL) {
@@ -72,14 +82,14 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
         ctx->kths[x] = hpx_kthread_create(ctx, hpx_kthread_seed_default, ctx->mcfg, hpx_config_get_switch_flags(&ctx->cfg));
 
         if (ctx->kths[x] == NULL) {
-          goto __hpx_ctx_create_FAIL;
+          goto _hpx_ctx_create_FAIL0;
 	} else {
 	  hpx_kthread_set_affinity(ctx->kths[x], x);
 	}
       }    
     } else {
       __hpx_errno = HPX_ERROR_NOMEM;
-      goto __hpx_ctx_create_FAIL;
+      goto _hpx_ctx_create_FAIL0;
     }
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
@@ -89,9 +99,44 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   ctx->kths_count = cores;
   ctx->kths_idx = 0;
 
+  /* initialize service thread futures */
+  hpx_lco_future_init(&ctx->f_srv_susp, 1);
+  hpx_lco_future_init(&ctx->f_srv_rebal, 1);
+
+  /* create service threads: suspended thread pruner */
+  ctx->srv_susp = (hpx_thread_t **) hpx_alloc(cores * sizeof(hpx_thread_t *));
+  if (ctx->srv_susp == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto _hpx_ctx_create_FAIL1;
+  }
+
+  switch (hpx_config_get_thread_suspend_policy(cfg)) {
+    case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
+      for (x = 0; x < cores; x++) {
+        ctx->srv_susp[x] = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, _hpx_kthread_srv_susp_local, ctx);
+        ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
+      
+        _hpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL);    
+      }
+      break;
+    case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
+      ctx->srv_susp[0] = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_susp_global, ctx);
+      break;
+    default:
+      break;
+  }
+
+  /* create service thread: workload rebalancer */
+  ctx->srv_rebal = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_rebal, ctx);
+
   return ctx;
 
- __hpx_ctx_create_FAIL:
+ _hpx_ctx_create_FAIL1:
+  for (x = 0; x < cores; x++) {
+    hpx_kthread_destroy(ctx->kths[x]);
+  }
+
+ _hpx_ctx_create_FAIL0:
   hpx_free(ctx);
   ctx = NULL;
 
@@ -107,8 +152,33 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
  --------------------------------------------------------------------
 */
 void hpx_ctx_destroy(hpx_context_t *ctx) {
+  hpx_thread_reusable_t * th_ru;
+  hpx_future_t * fut;
   hpx_thread_t *th;
   uint32_t x;
+
+  /* stop service threads & wait */
+  hpx_lco_future_set(&ctx->f_srv_susp, 0);
+  switch (hpx_config_get_thread_suspend_policy(&ctx->cfg)) {
+    case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
+      for (x = 0; x < ctx->kths_count; x++) {
+        hpx_thread_join(ctx->srv_susp[x], NULL);
+      }
+      break;
+    case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
+      hpx_thread_join(ctx->srv_susp[0], NULL);
+      break;
+    default:
+      break;
+  }
+
+  hpx_lco_future_set(&ctx->f_srv_rebal, 0);
+  hpx_thread_join(ctx->srv_rebal, NULL);
+
+  /* destroy kernel threads */
+  for (x = 0; x < ctx->kths_count; x++) {
+    hpx_kthread_destroy(ctx->kths[x]);
+  }  
 
   /* destroy any remaining termianted threads */
   do {
@@ -118,12 +188,31 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
     }
   } while (th != NULL);
 
-  /* destroy kernel threads */
-  for (x = 0; x < ctx->kths_count; x++) {
-    hpx_kthread_destroy(ctx->kths[x]);
-  }  
+  /* destroy remaining reusable stacks */
+  do {
+    th_ru = hpx_queue_pop(&ctx->term_stks);
+    if (th_ru != NULL) {
+      hpx_free(th_ru);
+    }
+  } while (th_ru != NULL);
 
+  /* destroy LCOs */
+  do {
+    fut = hpx_queue_pop(&ctx->term_lcos);
+    if (fut != NULL) {
+      hpx_lco_future_destroy(fut);
+      hpx_free(fut);
+    }
+  } while (fut != NULL);
+
+  /* destroy hardware topology */
+  //  hwloc_topology_destroy(ctx->hw_topo);
+
+  hpx_lco_future_destroy(&ctx->f_srv_susp);
+  
   /* cleanup */
+  hpx_kthread_mutex_destroy(&ctx->mtx);
+
   hpx_free(ctx->kths);
   hpx_free(ctx);
 }

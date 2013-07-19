@@ -1,43 +1,6 @@
 
-04/29/2013 -- HPX 4.0.0a3
+06/27/2013 -- HPX 5.0.0a1
 =========================
 
-  * Basic performance measurement for context switching and naive Fibonacci
-  * Termination queue that can reuse old thread stacks
-  * Better FPU tests
-  * Configuration system for global and thread-specific variables
-  * Better overall performance
-  * An example application (naive threaded Fibonacci)
-  * Better yield performance
-  * More unit tests
-  * Parent/child relationships for thread locality support
-  * Kernel thread to CPU core affinity
-
-
-04/08/2013 -- HPX 4.0.0a2
-=========================
-
-  * HPX threads are complete enough to begin performance testing
-  * Basic scheduling of HPX threads
-  * Basic Futures
-  * Support for the Intel Compiler
-  * Support for Linux
-  * Additional unit tests
-
-
-03/18/2013 -- HPX 4.0.0a1
-=========================
-
-  * Basic kernel and user thread data defined
-  * Partial machine context switching support
-  * Support for CPUID on the x86_64 arch
-  * Basic error handling support
-  * Unit testing framework and test suite added (using GNU Check)
-
-
-02/25/2013 -- HPX 4.0.0a0
-=========================
-
-  * Initial build
-  * Library initialization & cleanup functions
+  * Initial release
 
