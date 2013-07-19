@@ -41,11 +41,39 @@
  * @return HPX error code
  */
 int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
+    int ret;
+    hpx_action_t *a;
+    ENTRY *e;
+
+    if (action_table == NULL)
+        return HPX_ERROR;
+
+    a = hpx_alloc(sizeof(*a));
+    a->name = name;
+    a->action = func;
+
+    ret = hsearch_r(*(ENTRY*)a, ENTER, &e, &action_table);
+    if (e == NULL || ret < 0)
+        return HPX_ERROR;
+
+    free(a);
+    return HPX_SUCCESS;
 }
 
 int hpx_action_lookup_local(char *name, hpx_action_t *action) {
+    int ret;
+    hpx_action_t *a;
+    ENTRY e;
+
+    if (action_table == NULL)
+        return HPX_ERROR;
+
+    e.key = name;
+    ret = hsearch_r(e, FIND, (ENTRY**)&a, &action_table);
+    return a;
 }
 
+// reverse lookup
 int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action) {
 }
 
