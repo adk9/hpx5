@@ -21,7 +21,10 @@
 
 #include <string.h>
 
+#include "hpx/types.h"
+#include "hpx/ctx.h"
 #include "hpx/thread.h"
+#include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
 
@@ -43,7 +46,7 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, void *args) {
+hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, hpx_func_t func, void *args) {
   hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
@@ -105,8 +108,6 @@ hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, v
   th->parent = hpx_thread_self();
   th->skip = 0;
 
-  hpx_lco_future_init(&th->retval);
-  hpx_list_init(&th->children);
   th->reuse = th_ru;
   th->reuse->func = func;
   th->reuse->args = args;
@@ -281,7 +282,7 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *th) {
  --------------------------------------------------------------------
 */
 hpx_thread_t *hpx_thread_self(void) {
-  struct _hpx_kthread_t *kth;
+  hpx_kthread_t *kth;
   hpx_thread_t *th = NULL;
 
   kth = hpx_kthread_self();
@@ -303,7 +304,7 @@ hpx_thread_t *hpx_thread_self(void) {
 */
 void hpx_thread_join(hpx_thread_t *th, void **value) {
   hpx_thread_t *self = hpx_thread_self();
-  hpx_future_t *fut = &th->f_ret;
+  hpx_future_t *fut = th->f_ret;
   uint8_t fut_st;
 
   /* poll the future until it's set */
@@ -354,7 +355,7 @@ void hpx_thread_yield_skip(uint8_t sk) {
   hpx_thread_t *th = hpx_thread_self();
 
   if ((th != NULL) && (th->reuse->kth != NULL)) {
-    _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_YIELD, (void *) sk);
+      _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_YIELD, (void*)(uint64_t)sk);
     hpx_mctx_swapcontext(th->reuse->mctx, th->reuse->kth->mctx, th->reuse->kth->mcfg, th->reuse->kth->mflags);
   }
 }

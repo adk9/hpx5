@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "hpx/ctx.h"
 #include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
@@ -39,7 +41,7 @@
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t state, void * ptr) {
+void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, void *ptr) {
   hpx_thread_t *exec_th = kth->exec_th;
   hpx_context_t *ctx = kth->ctx;
   uint64_t cnt;
@@ -57,7 +59,7 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
       case HPX_THREAD_STATE_YIELD:
         th->state = HPX_THREAD_STATE_PENDING;
 	if (ptr != NULL) {
-	  th->skip = (uint8_t) ptr;
+            th->skip = (uint8_t) (uint64_t)ptr;
 	}
 
         hpx_queue_push(&kth->pend_q, th);
@@ -88,8 +90,8 @@ void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t 
 */
 void * hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
-  struct _hpx_thread_t *th = NULL;
-  struct _hpx_context_t *ctx = kth->ctx;
+  hpx_thread_t *th = NULL;
+  hpx_context_t *ctx = kth->ctx;
   struct timespec ts;
   struct timeval tv;
   uint64_t susp_idx = 0;
@@ -127,7 +129,7 @@ void * hpx_kthread_seed_default(void *ptr) {
     //      kth->exec_th = NULL;
     //        
     //      while ((kth->exec_th == NULL) && (cnt > 0)) {
-    //        kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //        kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
     //       
     //        if ((kth->exec_th != NULL) && (kth->exec_th->state == HPX_THREAD_STATE_SUSPENDED)) {
     //          if (hpx_lco_future_isset(kth->exec_th->reuse->f_wait) == true) {
@@ -142,13 +144,13 @@ void * hpx_kthread_seed_default(void *ptr) {
     //        cnt -= 1;
     //      }
     //    } else {
-    //      kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //      kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
     //    }
 
     //    kth->exec_th = NULL;
     //    if (hpx_queue_size(&kth->pend_q) > 0) {
     //      do {
-    //        kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //        kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
     //        if ((kth->exec_th != NULL) && (kth->exec_th->skip > 0)) {
     //    	  kth->exec_th->skip -= 1;
     //	  hpx_queue_push(&kth->pend_q, kth->exec_th);
@@ -157,7 +159,7 @@ void * hpx_kthread_seed_default(void *ptr) {
     //      } while (kth->exec_th == NULL);
     //    }
 
-    kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
 
     /* if we have an next thread, put it in the EXECUTING state */
     if (kth->exec_th != NULL) {
@@ -199,7 +201,7 @@ void * hpx_kthread_seed_default(void *ptr) {
   Creates a kernel thread and executes the provided seed function.
  --------------------------------------------------------------------
 */
-hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t seed,
+hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
                                   hpx_mconfig_t mcfg, uint64_t mflags) {
   pthread_mutexattr_t mtx_attr;
   hpx_kthread_t *kth = NULL;
@@ -296,7 +298,7 @@ void hpx_kthread_set_affinity(hpx_kthread_t *kth, uint16_t aff) {
  --------------------------------------------------------------------
 */
 void hpx_kthread_destroy(hpx_kthread_t *kth) {
-  struct _hpx_thread_t *th;
+  hpx_thread_t *th;
 
   /* shut down the kernel thread */
   pthread_mutex_lock(&kth->mtx);

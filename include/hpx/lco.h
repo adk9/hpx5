@@ -26,7 +26,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "hpx_error.h"
+
+#include "hpx/error.h"
 
 #define HPX_LCO_FUTURE_UNSET  0x00
 #define HPX_LCO_FUTURE_SET    0xFF

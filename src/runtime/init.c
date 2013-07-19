@@ -20,8 +20,7 @@
 */
 
 #include "hpx/init.h"
-#include "hpx/thread.h"
-#include "hpx/kthread.h"
+#include "hpx/ctx.h"
 
 /*
  --------------------------------------------------------------------

@@ -27,9 +27,7 @@
 #include <pthread.h>
 #include "hpx/queue.h"
 #include "hpx/mctx.h"
-
-struct _hpx_context_t;
-struct _hpx_thread_t;
+#include "hpx/types.h"
 
 static pthread_once_t __kthread_init_once = PTHREAD_ONCE_INIT;
 static pthread_key_t errno_key;
@@ -55,21 +53,21 @@ static pthread_key_t kth_key;
 
 typedef pthread_mutex_t hpx_kthread_mutex_t;
 
-typedef struct _hpx_kthread_t {
+struct hpx_kthread_t {
   hpx_kthread_mutex_t     mtx;
   pthread_cond_t          k_c;
   pthread_t               core_th;
   hpx_queue_t             pend_q;
   hpx_queue_t             susp_q;
-  struct _hpx_thread_t   *exec_th;
-  struct _hpx_context_t  *ctx;
+  hpx_thread_t           *exec_th;
+  hpx_context_t          *ctx;
   uint8_t                 k_st;
   hpx_mctx_context_t     *mctx;
   hpx_mconfig_t           mcfg;
   uint64_t                mflags;
   uint64_t                pend_load;
   uint64_t                wait_load;
-} hpx_kthread_t;
+};
 
 typedef void *(*hpx_kthread_seed_t)(void *);
 
@@ -86,12 +84,12 @@ void * hpx_kthread_seed_default(void *);
   Kernel Thread Functions
  --------------------------------------------------------------------
 */
-hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
+hpx_kthread_t * hpx_kthread_create(hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
-void _hpx_kthread_sched(hpx_kthread_t *, struct _hpx_thread_t *, uint8_t, void *);
-void _hpx_kthread_push_pending(hpx_kthread_t *, struct _hpx_thread_t *);
+void _hpx_kthread_sched(hpx_kthread_t *, hpx_thread_t *, uint8_t, void *);
+void _hpx_kthread_push_pending(hpx_kthread_t *, hpx_thread_t *);
 
 void _hpx_kthread_init(void);
 static void __hpx_kthread_make_keys(void);

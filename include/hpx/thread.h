@@ -20,26 +20,23 @@
  ====================================================================
 */
 
-#include <stdarg.h>
-#include <stdint.h>
-#include "hpx/mem.h"
-#include "hpx/ctx.h"
-#include "hpx/mctx.h"
-#include "hpx/lco.h"
-#include "hpx/list.h"
-#include "hpx/map.h"
-
 #pragma once
 #ifndef LIBHPX_THREAD_H_
 #define LIBHPX_THREAD_H_
 
+#include <stdarg.h>
+#include <stdint.h>
+
+#include "hpx/mem.h"
+#include "hpx/mctx.h"
+#include "hpx/lco.h"
+#include "hpx/list.h"
+#include "hpx/map.h"
+#include "hpx/types.h"
 
 typedef uint64_t hpx_node_id_t;
 typedef uint64_t hpx_thread_id_t;
 typedef uint8_t  hpx_thread_state_t;
-struct _hpx_context_t;
-struct _hpx_kthread_t;
-
 
 /*
  --------------------------------------------------------------------
@@ -81,6 +78,10 @@ struct _hpx_kthread_t;
 #define HPX_THREAD_OPT_SERVICE_COREGLOBAL 8
 
 
+/* An HPX function taking a single generic (void*) argument */
+typedef void (*hpx_func_t)(void *);
+
+
 /*
  --------------------------------------------------------------------
   Reusable Thread Data
@@ -95,15 +96,15 @@ struct _hpx_kthread_t;
  --------------------------------------------------------------------
 */
 
-typedef struct _hpx_thread_reusable_t {
-  void *               func;
-  void *               args;
-  void *               stk;
+struct hpx_thread_reusable_t {
+  hpx_func_t           func;
+  void                *args;
+  void                *stk;
   size_t               ss;
-  hpx_mctx_context_t * mctx;
-  hpx_future_t *       f_wait;
-  hpx_kthread_t *      kth;
-} hpx_thread_reusable_t;
+  hpx_mctx_context_t  *mctx;
+  hpx_future_t        *f_wait;
+  hpx_kthread_t       *kth;
+};
 
 
 /*
@@ -121,11 +122,8 @@ typedef struct _hpx_thread_reusable_t {
  --------------------------------------------------------------------
 */
 
-/* An HPX function taking a single generic (void*) argument */
-typedef void (*hpx_func_t)(void *);
-
-typedef struct _hpx_thread_t {
-  struct _hpx_context_t  *ctx;
+struct hpx_thread_t {
+  hpx_context_t          *ctx;
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
@@ -133,9 +131,9 @@ typedef struct _hpx_thread_t {
   uint8_t                 skip;
   hpx_thread_reusable_t  *reuse;
   hpx_future_t           *f_ret;
-  struct _hpx_thread_t   *parent;
+  hpx_thread_t           *parent;
   hpx_list_t              children;
-} hpx_thread_t;
+};
 
 /* the next thread ID */
 static hpx_thread_id_t __thread_next_id;
@@ -149,7 +147,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(struct _hpx_context_t *, uint16_t, void *, void *);
+hpx_thread_t * hpx_thread_create(hpx_context_t *, uint16_t, hpx_func_t, void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
@@ -158,7 +156,7 @@ void hpx_thread_join(hpx_thread_t *, void **);
 void hpx_thread_exit(void *);
 void hpx_thread_yield(void);
 void hpx_thread_yield_skip(uint8_t);
-void hpx_thread_wait(hpx_future_t *)
+void hpx_thread_wait(hpx_future_t *);
 
 hpx_thread_t *hpx_thread_self(void);
 
@@ -184,6 +182,4 @@ void _hpx_thread_terminate(hpx_thread_t *);
 uint64_t hpx_thread_map_hash(hpx_map_t *, void *);
 bool hpx_thread_map_cmp(void *, void *);
 
-#endif
-
-
+#endif /* LIBHPX_THREAD_H */
