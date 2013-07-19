@@ -152,6 +152,9 @@
 /* Version number of package */
 #undef VERSION
 
+/* Enable HWLOC support */
+#undef WITH_HWLOC
+
 /* Enable PAPI measurement support */
 #undef WITH_PAPI
 

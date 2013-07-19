@@ -1,6 +1,8 @@
 
 #include <stdio.h>
+#include <hpx/config.h>
 #include <hpx/timer.h>
+#include <hpx/ctx.h>
 #include <hpx/thread.h>
 
 hpx_context_t *ctx;

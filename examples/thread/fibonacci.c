@@ -1,6 +1,8 @@
 
 #include <stdio.h>
+#include <hpx/config.h>
 #include <hpx/timer.h>
+#include <hpx/ctx.h>
 #include <hpx/thread.h>
 
 hpx_context_t *ctx;
@@ -18,8 +20,8 @@ void fib(void *n) {
     hpx_thread_exit(&num);
 
   /* create child threads */
-  th1 = hpx_thread_create(ctx, fib, (void*) num-1);
-  th2 = hpx_thread_create(ctx, fib, (void*) num-2);
+  th1 = hpx_thread_create(ctx, 0, fib, (void*) num-1);
+  th2 = hpx_thread_create(ctx, 0, fib, (void*) num-2);
 
   /* wait for threads to finish */
   // ADK: need an OR gate here. Also, why not just expose the future
@@ -67,7 +69,7 @@ int main(int argc, char * argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  th = hpx_thread_create(ctx, fib, (void *)n);
+  th = hpx_thread_create(ctx, 0, fib, (void *)n);
 
   /* wait for the thread to finish */
   hpx_thread_join(th, (void**)&result);
