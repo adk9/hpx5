@@ -17,6 +17,8 @@
 #ifndef LIBHPX_ACTION_H_
 #define LIBHPX_ACTION_H_
 
+#define ACTION_TABLE_SIZE 512
+
 /* An HPX action taking a single generic (void*) argument */
 typedef struct hpx_action_t {
   char *name;          /* name of the action */
