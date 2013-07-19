@@ -22,15 +22,13 @@
 #include "hpx/init.h"
 #include "hpx/ctx.h"
 
-/*
- --------------------------------------------------------------------
-  hpx_init
-
-  Initializes data structures used by libhpx.  This function must
-  be called BEFORE any other functions in libhpx.  Not doing so 
-  will cause all other functions to return HPX_ERROR_NOINIT.
- --------------------------------------------------------------------
-*/
+/**
+ * Initializes data structures used by libhpx.  This function must
+ * be called BEFORE any other functions in libhpx.  Not doing so 
+ * will cause all other functions to return HPX_ERROR_NOINIT.
+ * 
+ * @return error code.
+ */
 hpx_error_t hpx_init(void) {
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;
@@ -47,6 +45,9 @@ hpx_error_t hpx_init(void) {
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
+  /* initialize the parcel subsystem */
+  hpx_parcel_init();
+
   /* initialize timer subsystem */
   hpx_timer_init();
 
@@ -54,14 +55,13 @@ hpx_error_t hpx_init(void) {
 }
 
 
-/*
- --------------------------------------------------------------------
-  hpx_cleanup
-
-  Cleans up data structures created by hpx_init.  This function
-  must be called after all other HPX functions.
- --------------------------------------------------------------------
-*/
+/**
+ * Cleans up data structures created by hpx_init.  This function
+ * must be called after all other HPX functions.
+ * 
+ */
 void hpx_cleanup(void) {
 
+    /* shutdown the parcel subsystem */
+    hpx_parcel_fini();
 }

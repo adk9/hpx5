@@ -60,5 +60,6 @@ hpx_error_t * __hpx_error(void);
 #define HPX_ERROR_KTH_MAX       0x0003  /* too many kernel threads */
 #define HPX_ERROR_KTH_ATTR      0x0004  /* bad attributes for kernel thread */
 #define HPX_ERROR_KTH_CORES     0x0005  /* couldn't get active CPU core count */
+#define HPX_ERROR               0x0006  /* generic failure */
 
 #endif /* LIBHPX_ERROR_H_ */
