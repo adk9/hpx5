@@ -1,9 +1,10 @@
+
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Library initialization and cleanup function definitions
-  hpx_init.h
+  Library Unit Test Harness - Parcel Handler Creation
+  12_parchandler.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -15,36 +16,29 @@
   Research in Extreme Scale Technologies (CREST).
 
   Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
+    Benjamin D. Martin <benjmart [at] indiana.edu>
  ====================================================================
 */
 
-#pragma once
-#ifndef LIBHPX_INIT_H_
-#define LIBHPX_INIT_H_
-
-#include "hpx/error.h"
-
-#ifdef __x86_64__
-  #include "arch/x86_64/mconfig.h"
-#endif
+#include <check.h>
+#include "hpx_parchandler.h"
 
 /*
  --------------------------------------------------------------------
-  Library Globals
+  TEST: parcel handler creation
  --------------------------------------------------------------------
 */
 
-hpx_mconfig_t __mcfg;
-hpx_parchandler_t *__hpx_parchandler;
+START_TEST (test_libhpx_parchandler_create)
+{
+  hpx_parchandler_t * ph = NULL;
 
-/*
- --------------------------------------------------------------------
-  Initialization & Cleanup Functions
- --------------------------------------------------------------------
-*/
+  ph = hpx_parchandler_create();
+  ck_assert_msg(ph != NULL, "Could not create parchandler");
 
-hpx_error_t hpx_init(void);
-void hpx_cleanup(void);
+  hpx_parchandler_destroy(ph);
 
-#endif /* LIBHPX_INIT_H_ */
+  ph = NULL;
+} 
+END_TEST
+
