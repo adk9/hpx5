@@ -7,7 +7,7 @@
 # This software was created at the Indiana University Center for
 # Research in Extreme Scale Technologies (CREST).
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.68])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
@@ -39,10 +39,10 @@ AC_CHECK_LIB([m], [pow])
 AC_CHECK_LIB([pthread], [pthread_self])
 
 # Checks for header files.
-AC_CHECK_HEADERS([limits.h mach/mach.h stdint.h stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([limits.h mach/mach.h stdbool.h stdint.h stdlib.h string.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_CHECK_HEADER_STDBOOL
+#AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
@@ -79,7 +79,11 @@ AS_IF([test "x$use_hwloc" = xyes], [
 ])
 
 # Check for check (and disable test-suite if not found).
-AC_CHECK_PROGS([CHECK], [check])
+AC_CHECK_LIB([check], [check_major_version], [CHECK=yes])
+AS_IF([test -z "$CHECK"], [
+  PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
+  AC_DEFINE([WITH_TESTSUITE], [], [Enable test suite])
+])
 if test -z "$CHECK";
   then AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
 fi
