@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.69])
-AC_INIT([hpx], [4.0.0a4], [hpx@indiana.edu])
+AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
@@ -71,6 +71,13 @@ AS_IF([test "x$use_papi" = xyes], [
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
+# Check for HWLOC.
+AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
+AS_IF([test "x$use_hwloc" = xyes], [
+  PKG_CHECK_MODULES([HWLOC], [hwloc])
+  AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
+])
+
 # Check for check (and disable test-suite if not found).
 AC_CHECK_PROGS([CHECK], [check])
 if test -z "$CHECK";
@@ -86,6 +93,7 @@ fi
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
+AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
 
 AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
 AM_COND_IF([WITH_TESTSUITE],
@@ -115,6 +123,9 @@ AS_IF([test -n "$CHECK"],
 AS_IF([test "x$use_papi" = xyes],
       [papi_string="yes"],
       [papi_string="no"])
+AS_IF([test "x$use_hwloc" = xyes],
+      [hwloc_string="yes"],
+      [hwloc_string="no"])
 
 echo ""
 echo "================================================"
@@ -122,7 +133,8 @@ echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
-echo "              Profiling : $papi_string"
+echo "              Profiling : $papi_string (PAPI)"
+echo "     Topology Awareness : $hwloc_string (HWLOC)"
 echo "          Documentation : $doc_string"
 echo "             Test Suite : $test_string"
 echo "================================================"

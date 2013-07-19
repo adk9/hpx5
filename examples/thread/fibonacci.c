@@ -54,6 +54,7 @@ int main(int argc, char * argv[]) {
 
   /* set up our configuration */
   hpx_config_init(&cfg);
+  hpx_config_set_thread_suspend_policy(&cfg, HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL);
 
   if (cores > 0) {
     hpx_config_set_cores(&cfg, cores);

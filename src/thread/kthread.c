@@ -39,11 +39,12 @@
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-void _hpx_kthread_sched(hpx_kthread_t *kth, struct _hpx_thread_t *th, uint8_t state) {
+void _hpx_kthread_sched(hpx_kthread_t * kth, struct _hpx_thread_t * th, uint8_t state, void * ptr) {
   hpx_thread_t *exec_th = kth->exec_th;
   hpx_context_t *ctx = kth->ctx;
+  uint64_t cnt;
 
-  pthread_mutex_lock(&ctx->mtx);
+  pthread_mutex_lock(&kth->mtx);
 
   /* if we have a thread specified, do something with it */
   if (th != NULL) {
@@ -55,52 +56,26 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, struct _hpx_thread_t *th, uint8_t st
         break;
       case HPX_THREAD_STATE_YIELD:
         th->state = HPX_THREAD_STATE_PENDING;
+	if (ptr != NULL) {
+	  th->skip = (uint8_t) ptr;
+	}
+
         hpx_queue_push(&kth->pend_q, th);
 	break;
       case HPX_THREAD_STATE_TERMINATED:
         th->state = HPX_THREAD_STATE_TERMINATED;
+        break;
+      case HPX_THREAD_STATE_SUSPENDED:
+        th->state = HPX_THREAD_STATE_SUSPENDED;
+        th->reuse->f_wait = (hpx_future_t *) ptr;
+        hpx_queue_push(&kth->susp_q, th);
         break;
       default:
         break;
     }
   }
 
-  /* otherwise, do something with the currently executing thread */
-  else {
-    if (kth->exec_th != NULL) {
-      switch (kth->exec_th->state) {
-        case HPX_THREAD_STATE_YIELD:
-	  kth->exec_th->state = HPX_THREAD_STATE_PENDING;
-	  hpx_queue_push(&kth->pend_q, kth->exec_th);
-	  break;
-      case HPX_THREAD_STATE_EXECUTING:
-        _hpx_thread_terminate(exec_th);
-	break;
-      case HPX_THREAD_STATE_TERMINATED:
-	_hpx_thread_terminate(exec_th);
-        break;
-      }
-    }
-
-    kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
-    if (kth->exec_th != NULL) {
-      switch (kth->exec_th->state) {
-        case HPX_THREAD_STATE_INIT:
-	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	  hpx_mctx_makecontext(kth->exec_th->mctx, kth->mctx, kth->exec_th->stk,
-                               kth->exec_th->ss, kth->mcfg, kth->mflags, kth->exec_th->func,
-                               1, kth->exec_th->args);
-	  break;
-        case HPX_THREAD_STATE_PENDING:
-	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	  break;
-        default:
-	  break;
-      }
-    }
-  }
-
-  pthread_mutex_unlock(&ctx->mtx);
+  pthread_mutex_unlock(&kth->mtx);
 }
 
 
@@ -115,6 +90,10 @@ void * hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
   struct _hpx_thread_t *th = NULL;
   struct _hpx_context_t *ctx = kth->ctx;
+  struct timespec ts;
+  struct timeval tv;
+  uint64_t susp_idx = 0;
+  uint64_t cnt;
 
   /* save a pointer to our data in TLS */
   pthread_setspecific(kth_key, kth);
@@ -123,22 +102,91 @@ void * hpx_kthread_seed_default(void *ptr) {
   hpx_mctx_getcontext(kth->mctx, kth->mcfg, kth->mflags); 
 
   /* enter our critical section */
-  pthread_mutex_lock(&ctx->mtx);
+  pthread_mutex_lock(&kth->mtx);
 
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
-    _hpx_kthread_sched(kth, NULL, 0);
     if (kth->exec_th != NULL) {
-      pthread_mutex_unlock(&ctx->mtx);
-      hpx_mctx_swapcontext(kth->mctx, kth->exec_th->mctx, kth->mcfg, kth->mflags);
-      pthread_mutex_lock(&ctx->mtx);
+      switch (kth->exec_th->state) {
+        case HPX_THREAD_STATE_YIELD:
+	  kth->exec_th->state = HPX_THREAD_STATE_PENDING;
+	  hpx_queue_push(&kth->pend_q, kth->exec_th);
+	  break;
+      case HPX_THREAD_STATE_EXECUTING:
+        _hpx_thread_terminate(kth->exec_th);
+	break;
+      case HPX_THREAD_STATE_TERMINATED:
+	_hpx_thread_terminate(kth->exec_th);
+        break;
+      }
+    }
+
+    //    if (hpx_config_get_thread_suspend_policy(&ctx->cfg) == HPX_CONFIG_THREAD_SUSPEND_SCHED) {
+    //      /* get the next pending thread or see if we need to wake up suspended threads */    
+    //      cnt = hpx_queue_size(&kth->pend_q);
+    //      kth->exec_th = NULL;
+    //        
+    //      while ((kth->exec_th == NULL) && (cnt > 0)) {
+    //        kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //       
+    //        if ((kth->exec_th != NULL) && (kth->exec_th->state == HPX_THREAD_STATE_SUSPENDED)) {
+    //          if (hpx_lco_future_isset(kth->exec_th->reuse->f_wait) == true) {
+    //            kth->exec_th->state = HPX_THREAD_STATE_PENDING;
+    //      	    kth->exec_th->reuse->f_wait = NULL;
+    //          } else {
+    //            hpx_queue_push(&kth->pend_q, kth->exec_th);
+    //           kth->exec_th = NULL;
+    //          }
+    //        } 
+    //        
+    //        cnt -= 1;
+    //      }
+    //    } else {
+    //      kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //    }
+
+    //    kth->exec_th = NULL;
+    //    if (hpx_queue_size(&kth->pend_q) > 0) {
+    //      do {
+    //        kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+    //        if ((kth->exec_th != NULL) && (kth->exec_th->skip > 0)) {
+    //    	  kth->exec_th->skip -= 1;
+    //	  hpx_queue_push(&kth->pend_q, kth->exec_th);
+    //	  kth->exec_th = NULL;
+    //        }
+    //      } while (kth->exec_th == NULL);
+    //    }
+
+    kth->exec_th = (struct _hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
+
+    /* if we have an next thread, put it in the EXECUTING state */
+    if (kth->exec_th != NULL) {
+      switch (kth->exec_th->state) {
+        case HPX_THREAD_STATE_INIT:
+	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+	  hpx_mctx_makecontext(kth->exec_th->reuse->mctx, kth->mctx, kth->exec_th->reuse->stk, kth->exec_th->reuse->ss, kth->mcfg, kth->mflags, kth->exec_th->reuse->func, 1, kth->exec_th->reuse->args);
+	  break;
+        case HPX_THREAD_STATE_PENDING:
+	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+	  break;
+        default:
+	  break;
+      }
+
+      pthread_mutex_unlock(&kth->mtx);
+      hpx_mctx_swapcontext(kth->mctx, kth->exec_th->reuse->mctx, kth->mcfg, kth->mflags);
+      pthread_mutex_lock(&kth->mtx);
     } else {
-      pthread_cond_wait(&kth->k_c, &ctx->mtx);
+      gettimeofday(&tv, NULL);
+      ts.tv_sec = tv.tv_sec;
+      ts.tv_nsec = (tv.tv_usec * 1000) + 5;
+      
+      pthread_cond_timedwait(&kth->k_c, &kth->mtx, &ts);
     }
   }
 
   /* leave */
-  pthread_mutex_unlock(&ctx->mtx);
+  pthread_mutex_unlock(&kth->mtx);
 
   return NULL;  
 }
@@ -165,12 +213,14 @@ hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t
     hpx_queue_init(&kth->pend_q);  
     hpx_queue_init(&kth->susp_q);
 
+    hpx_kthread_mutex_init(&kth->mtx);
     pthread_cond_init(&kth->k_c, 0);
 
     kth->ctx = ctx;
     kth->k_st = HPX_KTHREAD_STATE_RUNNING;
     kth->mcfg = mcfg;
     kth->mflags = mflags;
+    kth->pend_load = 0;
 
     /* create a machine context buffer */
     kth->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
@@ -207,7 +257,8 @@ hpx_kthread_t *hpx_kthread_create(struct _hpx_context_t *ctx, hpx_kthread_seed_t
 
  __hpx_kthread_create_FAIL1:
   pthread_cond_destroy(&kth->k_c);
-  
+  hpx_kthread_mutex_destroy(&kth->mtx);  
+
   hpx_queue_destroy(&kth->susp_q);
   hpx_queue_destroy(&kth->pend_q);
 
@@ -275,8 +326,10 @@ void hpx_kthread_destroy(hpx_kthread_t *kth) {
   /* cleanup */
   hpx_queue_destroy(&kth->susp_q);
   hpx_queue_destroy(&kth->pend_q);
+
   pthread_cond_destroy(&kth->k_c);
-  pthread_mutex_destroy(&kth->mtx);
+  hpx_kthread_mutex_destroy(&kth->mtx);  
+
   hpx_free(kth->mctx);
   hpx_free(kth);
 }
@@ -354,6 +407,16 @@ void hpx_kthread_mutex_init(hpx_kthread_mutex_t *mtx) {
   pthread_mutex_init((pthread_mutex_t *) mtx, &mtx_attr);
 }
 
+/*
+  --------------------------------------------------------------------
+  hpx_kthread_mutex_destroy
+
+  Destroys an HPX kernel mutex.
+ --------------------------------------------------------------------
+*/
+void hpx_kthread_mutex_destroy(hpx_kthread_mutex_t *mtx) {
+  pthread_mutex_destroy(mtx);
+}
 
 /*
  --------------------------------------------------------------------
@@ -376,4 +439,166 @@ void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *mtx) {
 */
 void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *mtx) {
   pthread_mutex_unlock((pthread_mutex_t *) mtx);
+}
+
+
+
+/*
+ --------------------------------------------------------------------
+  _hpx_kthread_srv_susp_local
+
+  Service thread that wakes up suspended threads when the futures
+  they are waiting are put into the SET state.
+ --------------------------------------------------------------------
+*/
+void _hpx_kthread_srv_susp_local(void *ptr) {
+  hpx_context_t *ctx = (hpx_context_t *) ptr;
+  hpx_future_t *fut = &ctx->f_srv_susp;
+  hpx_kthread_t *kth = hpx_kthread_self();
+  hpx_thread_t *th = NULL;
+  uint64_t cnt;
+
+  while (hpx_lco_future_isset(fut) == false) {
+    hpx_kthread_mutex_lock(&kth->mtx);
+
+    cnt = hpx_queue_size(&kth->susp_q);
+    do {
+      th = hpx_queue_pop(&kth->susp_q);
+      if (th != NULL) {
+        if (hpx_lco_future_isset(th->reuse->f_wait) == true) {
+          th->state = HPX_THREAD_STATE_PENDING;
+	  hpx_queue_push(&kth->pend_q, th);
+	  cnt = 0;
+	} else {
+	  hpx_queue_push(&kth->susp_q, th);
+	  cnt -= 1;
+	}
+      } else {
+	cnt = 0;
+      } 
+    } while (cnt > 0);
+
+    hpx_kthread_mutex_unlock(&kth->mtx);
+    hpx_thread_yield();
+  }
+
+  hpx_thread_exit(NULL);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  _hpx_kthread_srv_susp_global
+
+  (core global version)
+
+  Service thread that wakes up suspended threads when the futures
+  they are waiting are put into the SET state.
+ --------------------------------------------------------------------
+*/
+
+void _hpx_kthread_srv_susp_global(void *ptr) {
+  hpx_context_t * ctx = (hpx_context_t *) ptr;
+  hpx_future_t * fut = &ctx->f_srv_susp;
+  hpx_kthread_t * kth = NULL;
+  hpx_thread_t * th = NULL;
+  uint64_t k_idx;
+  uint64_t cnt;
+
+  while (hpx_lco_future_isset(fut) == false) {
+    for (k_idx = 0; k_idx < ctx->kths_count; k_idx++) {
+      kth = ctx->kths[k_idx];
+
+      hpx_kthread_mutex_lock(&kth->mtx);
+
+      cnt = hpx_queue_size(&kth->susp_q);
+      do {
+        th = hpx_queue_pop(&kth->susp_q);
+        if (th != NULL) {
+          if (hpx_lco_future_isset(th->reuse->f_wait) == true) {
+            th->state = HPX_THREAD_STATE_PENDING;
+	    hpx_queue_push(&kth->pend_q, th);
+	    cnt = 0;
+	  } else {
+	    hpx_queue_push(&kth->susp_q, th);
+	    cnt -= 1;
+	  }
+        } else {
+	  cnt = 0;
+        } 
+      } while (cnt > 0);
+
+      hpx_kthread_mutex_unlock(&kth->mtx);
+    }
+
+    hpx_thread_yield_skip(ctx->kths_count);
+  }
+
+  hpx_thread_exit(NULL);
+}
+
+
+
+/*
+ --------------------------------------------------------------------
+  _hpx_kthread_srv_rebal
+
+  Service thread that rebalances workload between cores.
+ --------------------------------------------------------------------
+*/
+
+void _hpx_kthread_srv_rebal(void *ptr) {
+  hpx_context_t * ctx = (hpx_context_t *) ptr;
+  hpx_future_t * fut = &ctx->f_srv_rebal;
+  hpx_kthread_t * kth_high = NULL;
+  hpx_kthread_t * kth_low = NULL;
+  hpx_kthread_t * kth = NULL;
+  hpx_thread_t * th = NULL;
+  uint64_t cnt_high = 0;
+  uint64_t cnt_low = 0;
+  uint64_t core_high = 0;
+  uint64_t core_low = 0;
+  uint64_t idx;
+  uint64_t cnt;
+
+  while (hpx_lco_future_isset(fut) == false) {
+    for (idx = 0; idx < ctx->kths_count; idx++) {
+      kth = ctx->kths[idx];
+      hpx_kthread_mutex_lock(&kth->mtx);
+    }
+
+    for (idx = 0; idx < ctx->kths_count; idx++) {
+      kth = ctx->kths[idx];
+      cnt = hpx_queue_size(&kth->pend_q);
+
+      if (cnt_high < cnt) {
+	cnt_high = cnt;
+	kth_high = kth;
+	core_high = idx;
+      }
+
+      if (cnt_low >= cnt) {
+	cnt_low = cnt;
+	kth_low = kth;
+	core_low = idx;
+      }
+    }
+
+    if ((cnt_high - cnt_low) > 3) {
+      th = hpx_queue_pop(&kth_high->pend_q);
+      if (th != NULL) {
+	th->reuse->kth = kth_low;
+	hpx_queue_push(&kth_low->pend_q, th);
+      }
+    }
+
+    for (idx = 0; idx < ctx->kths_count; idx++) {
+      kth = ctx->kths[idx];
+      hpx_kthread_mutex_unlock(&kth->mtx);
+    }
+
+    hpx_thread_yield();
+  }
+
+  hpx_thread_exit(NULL);
 }

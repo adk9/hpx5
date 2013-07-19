@@ -37,6 +37,7 @@
 typedef uint64_t hpx_node_id_t;
 typedef uint64_t hpx_thread_id_t;
 typedef uint8_t  hpx_thread_state_t;
+struct _hpx_context_t;
 struct _hpx_kthread_t;
 
 
@@ -73,9 +74,36 @@ struct _hpx_kthread_t;
  --------------------------------------------------------------------
 */
 
-#define HPX_THREAD_OPT_NONE        0x00
-#define HPX_THREAD_OPT_DETACHED    0x01
-#define HPX_THREAD_OPT_BOUND       0x02
+#define HPX_THREAD_OPT_NONE               0
+#define HPX_THREAD_OPT_DETACHED           1
+#define HPX_THREAD_OPT_BOUND              2
+#define HPX_THREAD_OPT_SERVICE_CORELOCAL  4
+#define HPX_THREAD_OPT_SERVICE_COREGLOBAL 8
+
+
+/*
+ --------------------------------------------------------------------
+  Reusable Thread Data
+
+  func                         The thread's execute function
+  args                         Arguments to the execute function
+  stk                          The thread's call stack
+  ss                           The thread's stack size
+  mctx                         Machine context switching data
+  f_wait                       The thread's waiting future
+  kth                          The thread's kernel thread
+ --------------------------------------------------------------------
+*/
+
+typedef struct _hpx_thread_reusable_t {
+  void *               func;
+  void *               args;
+  void *               stk;
+  size_t               ss;
+  hpx_mctx_context_t * mctx;
+  hpx_future_t *       f_wait;
+  hpx_kthread_t *      kth;
+} hpx_thread_reusable_t;
 
 
 /*
@@ -87,15 +115,9 @@ struct _hpx_kthread_t;
   tid                          Thread ID
   state                        Queuing State
   opts                         Thread option flags
-  func                         Function to run in the thread
-  args                         Application data for the thread
-  stk                          The stack allocated for the thread
-  ss                           Size (in bytes) of the thread stack
-  kth                          The current kernel thread
-  mctx                         The last machine context
-  retval                       The thread's return value (if any)
+  reuse                        The thread's reusable data area
+  f_ret                        The thread's return value (if any)  
   parent                       The thread's parent thread
-  children                     Child threads of this thread
  --------------------------------------------------------------------
 */
 
@@ -103,22 +125,17 @@ struct _hpx_kthread_t;
 typedef void (*hpx_func_t)(void *);
 
 typedef struct _hpx_thread_t {
-  hpx_context_t          *ctx;
+  struct _hpx_context_t  *ctx;
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;
   hpx_thread_state_t      state;
   uint16_t                opts;
-  hpx_func_t              func;
-  void                   *args;
-  void                   *stk;
-  size_t                  ss;
-  struct _hpx_kthread_t  *kth;
-  hpx_mctx_context_t     *mctx;
-  hpx_future_t            retval;
+  uint8_t                 skip;
+  hpx_thread_reusable_t  *reuse;
+  hpx_future_t           *f_ret;
   struct _hpx_thread_t   *parent;
   hpx_list_t              children;
 } hpx_thread_t;
-
 
 /* the next thread ID */
 static hpx_thread_id_t __thread_next_id;
@@ -132,7 +149,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t *hpx_thread_create(hpx_context_t *, hpx_func_t, void *);
+hpx_thread_t * hpx_thread_create(struct _hpx_context_t *, uint16_t, void *, void *);
 void _hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
@@ -140,6 +157,8 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
 void hpx_thread_join(hpx_thread_t *, void **);
 void hpx_thread_exit(void *);
 void hpx_thread_yield(void);
+void hpx_thread_yield_skip(uint8_t);
+void hpx_thread_wait(hpx_future_t *)
 
 hpx_thread_t *hpx_thread_self(void);
 

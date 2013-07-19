@@ -67,6 +67,8 @@ typedef struct _hpx_kthread_t {
   hpx_mctx_context_t     *mctx;
   hpx_mconfig_t           mcfg;
   uint64_t                mflags;
+  uint64_t                pend_load;
+  uint64_t                wait_load;
 } hpx_kthread_t;
 
 typedef void *(*hpx_kthread_seed_t)(void *);
@@ -88,7 +90,7 @@ hpx_kthread_t * hpx_kthread_create(struct _hpx_context_t *, hpx_kthread_seed_t, 
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
-void _hpx_kthread_sched(hpx_kthread_t *, struct _hpx_thread_t *, uint8_t);
+void _hpx_kthread_sched(hpx_kthread_t *, struct _hpx_thread_t *, uint8_t, void *);
 void _hpx_kthread_push_pending(hpx_kthread_t *, struct _hpx_thread_t *);
 
 void _hpx_kthread_init(void);
@@ -99,6 +101,16 @@ hpx_kthread_t * hpx_kthread_self(void);
 void hpx_kthread_mutex_init(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
+void hpx_kthread_mutex_destroy(hpx_kthread_mutex_t *);
+
+/*
+ --------------------------------------------------------------------
+  Service Thread Functions
+ --------------------------------------------------------------------
+*/
+void _hpx_kthread_srv_susp_local(void *);
+void _hpx_kthread_srv_susp_global(void *);
+void _hpx_kthread_srv_rebal(void *);
 
 
 /*
