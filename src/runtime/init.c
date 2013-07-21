@@ -20,6 +20,7 @@
 */
 
 #include "hpx/init.h"
+#include "hpx/parcel.h"
 #include "hpx/ctx.h"
 
 /**
@@ -46,7 +47,7 @@ hpx_error_t hpx_init(void) {
   //_hpx_kthread_init();
 
   /* initialize the parcel subsystem */
-  hpx_parcel_init();
+  //hpx_parcel_init();
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -62,6 +63,6 @@ hpx_error_t hpx_init(void) {
  */
 void hpx_cleanup(void) {
 
-    /* shutdown the parcel subsystem */
-    hpx_parcel_fini();
+  /* shutdown the parcel subsystem */
+  //hpx_parcel_fini();
 }

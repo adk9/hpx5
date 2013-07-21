@@ -158,6 +158,9 @@
 /* Enable PAPI measurement support */
 #undef WITH_PAPI
 
+/* Enable test suite */
+#undef WITH_TESTSUITE
+
 /* Define to 1 if on MINIX. */
 #undef _MINIX
 

@@ -12,6 +12,7 @@ doxyfile.stamp:
 CLEANFILES += doxyfile.stamp
 
 all-local: doxyfile.stamp
+dist-clean:
 clean-local:
 	rm -rf $(top_srcdir)/docs/man
 

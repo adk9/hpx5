@@ -1,9 +1,11 @@
 *.o
 *.lo
+*.libs
 *.deps
 *.dirstamp
 *.la
 *~
+*Makefile.in
 
 # /
 /aclocal.m4
@@ -23,6 +25,18 @@
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
+
+# /examples/thread
+/examples/thread/.deps
+/examples/thread/fibonacci
+/examples/thread/Makefile
+/examples/thread/Makefile.in
+
+# /examples/hpx
+/examples/hpx/.deps
+/examples/hpx/fibonacci
+/examples/hpx/Makefile
+/examples/hpx/Makefile.in
 
 # /include/
 /include/stamp-h1
