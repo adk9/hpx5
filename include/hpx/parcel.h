@@ -17,6 +17,9 @@
 #ifndef LIBHPX_PARCEL_H_
 #define LIBHPX_PARCEL_H_
 
+#include "hpx/action.h"
+#include "hpx/agas.h"
+
 typedef struct hpx_parcel_t {
   unsigned int  parcel_id;    /*!< the parcel idenitifer. */
   hpx_action_t  action;       /*!< handle to the associated action. */
@@ -27,6 +30,9 @@ typedef struct hpx_parcel_t {
   int           flags;        /*!< flags related to the parcel. */
   void         *payload;
 } hpx_parcel_t;
+
+int hpx_parcel_init(void);
+void hpx_parcel_fini(void);
 
 /*
  --------------------------------------------------------------------

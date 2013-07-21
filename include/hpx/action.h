@@ -17,6 +17,8 @@
 #ifndef LIBHPX_ACTION_H_
 #define LIBHPX_ACTION_H_
 
+#include "hpx/thread.h"
+
 #define ACTION_TABLE_SIZE 512
 
 /* An HPX action taking a single generic (void*) argument */
