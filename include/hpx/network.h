@@ -28,6 +28,9 @@
 #endif
 
 typedef struct network_mgr_t {
+  /* Default transport. We do not want to walk a list when
+   * multi-railing is turned off.  */
+  network_trans_t *default;
   /* List of configured transports  */
   network_trans_t *trans;
 } network_mgr_t;
@@ -37,10 +40,10 @@ typedef struct network_mgr_t {
  * Network Transport
  */
 typedef struct network_trans_t {
-  char        name[128];
+  char           name[128];
   network_ops_t *ops;
-  int        *flags;
-  int         active;
+  int           *flags;
+  int            active;
 } network_trans_t;
 
 /**
