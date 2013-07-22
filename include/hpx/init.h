@@ -38,6 +38,7 @@
 
 hpx_mconfig_t __mcfg;
 hpx_parcelhandler_t *__hpx_parcelhandler;
+hpx_comm_operations_t *__hpx_comm_operations;
 
 /*
  --------------------------------------------------------------------

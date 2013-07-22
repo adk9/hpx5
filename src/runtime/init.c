@@ -46,7 +46,13 @@ hpx_error_t hpx_init(void) {
   //_hpx_kthread_init();
 
   /* initialize network */
-  hpx_network_init(0, NULL); /* TODO: should be argc and argv */
+  /* TODO:
+     psuedo-code:
+     allocate __hpx_comm_operations
+     copy defaults to iy
+     set photon and mpi vatiants (if photon is selected, which for now do by default)
+     call correct initializatiob function
+  */
 
   __hpx_parcelhandler = hpx_parcelhandler_create();
 
@@ -64,5 +70,8 @@ hpx_error_t hpx_init(void) {
  */
 void hpx_cleanup(void) {
   hpx_parcelhandler_destroy(__hpx_parcelhandler); 
-  hpx_network_finalize();
+  /* TODO:
+    lookup correct network finalize
+    call it
+  */
 }
