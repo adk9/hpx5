@@ -46,6 +46,9 @@ hpx_error_t hpx_init(void) {
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
+  /* initialize the communication subsystem */
+  //hpx_network_init();
+
   /* initialize the parcel subsystem */
   //hpx_parcel_init();
 

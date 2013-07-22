@@ -21,7 +21,7 @@
 #include <search.h>
 
 #include "hpx/action.h"
-#include "hpx/comm.h"
+#include "hpx/network.h"
 #include "hpx/parcel.h"
 
 struct hsearch_data action_table;
@@ -68,6 +68,10 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t *action,
   hpx_new_parcel(action, args, len, &p);
   /* send parcel to the destination locality */
     
-  ret = comm_send_parcel(dest, &p);
+  ret = hpx_send_parcel(dest, &p);
   return ret;
+}
+
+int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+
 }
