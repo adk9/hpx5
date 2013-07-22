@@ -41,7 +41,7 @@ void fib(void *n) {
   hpx_thread_exit(&sum);
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   hpx_config_t cfg;
   long n, *result;
   uint32_t localities;

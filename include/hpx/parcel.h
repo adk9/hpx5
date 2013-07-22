@@ -41,6 +41,8 @@ void hpx_parcel_fini(void);
 */
 int hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
 
+/* Helper to send a parcel structure */
+int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
 
 /*
  --------------------------------------------------------------------

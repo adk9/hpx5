@@ -33,6 +33,8 @@ hpx_locality_t *hpx_get_locality(int rank) {
 }
 
 uint32 hpx_get_num_localities(void) {
+  // ask the network layer for the number of localities
+  
 }
 
 uint32 hpx_get_rank(void) {
