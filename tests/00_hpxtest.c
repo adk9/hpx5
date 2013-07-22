@@ -38,6 +38,7 @@
 #include "09_config.c"
 #include "10_list.c"
 #include "11_map.c"
+#include "12_parcelhandler.c"
 
 #include "98_thread_perf1.c"
 
@@ -249,6 +250,9 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
   }
 
+  /* parcel handler tests */
+  tcase_add_test(tc, test_libhpx_parcelhandler_create);
+  
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);

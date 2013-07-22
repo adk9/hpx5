@@ -16,11 +16,17 @@
  ====================================================================
 */
 
+#include <limits.h>
 #include <stdlib.h>
 
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
+#include "hpx/runtime.h" /* for hpx_locality_t */
+
+#include <mpi.h>
+
+int _comm_eage_threshold = 256; /* is big better or worse? smaller means less likelihood of memory problems but higher latency */
 
 /* Default networkunication operations */
 network_ops_t default_ops = {
@@ -31,7 +37,13 @@ network_ops_t default_ops = {
     .get      = hpx_network_get,
     .progress = hpx_network_progress,
     .finalize = hpx_network_finalize,
+    // ADK: this needs to go in transport-specific parameters
+    // .eager_threshold = _comm_edge_threshold,
 };
+
+/*
+ * Stub versions
+ */
 
 int hpx_network_init(void) {
 }

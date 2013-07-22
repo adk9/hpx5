@@ -46,8 +46,17 @@ hpx_error_t hpx_init(void) {
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
-  /* initialize the communication subsystem */
+  /* initialize network */
   //hpx_network_init();
+  /* TODO:
+     psuedo-code:
+     allocate __hpx_comm_operations
+     copy defaults to iy
+     set photon and mpi vatiants (if photon is selected, which for now do by default)
+     call correct initializatiob function
+  */
+
+  __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize the parcel subsystem */
   //hpx_parcel_init();
@@ -65,7 +74,15 @@ hpx_error_t hpx_init(void) {
  * 
  */
 void hpx_cleanup(void) {
+<<<<<<< HEAD
 
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
+=======
+  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+  /* TODO:
+    lookup correct network finalize
+    call it
+  */
+>>>>>>> photon
 }

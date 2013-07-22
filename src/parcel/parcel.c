@@ -73,5 +73,4 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t *action,
 }
 
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
-
 }

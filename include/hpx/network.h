@@ -2,6 +2,9 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
+  Network Functions
+  network.h
+
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
 
@@ -17,6 +20,12 @@
 #ifndef LIBHPX_NETWORK_H_
 #define LIBHPX_NETWORK_H_
 
+#if HAVE_MPI
+  #include <mpi.h>
+#endif
+#if HAVE_PHOTON
+  #include <photon.h>
+#endif
 
 typedef struct network_mgr_t {
   /* List of configured transports  */
@@ -25,7 +34,7 @@ typedef struct network_mgr_t {
 
 
 /**
- * Networkunication Transport
+ * Network Transport
  */
 typedef struct network_trans_t {
   char        name[128];
@@ -35,30 +44,46 @@ typedef struct network_trans_t {
 } network_trans_t;
 
 /**
- * Networkunication Operations
+ * Network Operations
  */
 typedef struct network_ops_t {
-  /* Initialize the networkunication layer */
+  /* Initialize the network layer */
   int (*init)(void);
   /* Send a raw payload */
   int (*send)(int peer, void *payload, size_t len);
   /* Receive a raw payload */
   int (*recv)(int peer, void *payload, size_t len);
+  /* test for completion of send or receive */
+  int (*sendrecv_test)(comm_request_t *request, int *flag, comm_status_t *status);  
   /* RMA put */
   int (*put)(int peer, void *dst, void *src, size_t len);
   /* RMA get */
   int (*get)(void *dst, int peer, void *src, size_t len);
-  /* The networkunication progress function */
+  /* The network progress function */
   void (*progress)(void *data);
-  /* Shutdown and clean up the networkunication layer */
+  /* test for completion of put or get */
+  int (*putget_test)(comm_request_t *request, int *flag, comm_status_t *status);
+  /* Shutdown and clean up the network layer */
   void (*finalize)(void);
 } network_ops_t;
 
+typedef struct comm_request_t {
+  /* TODO: deal with case where there is no mpi */
+  MPI_Request mpi;
+  uint32_t photon;
+} comm_request_t;
+
+typedef struct comm_status_t {
+  /* TODO: deal with case where there is no mpi */
+  MPI_Status mpi;
+  MPI_Status photon; /* not a mistake - Photon uses MPI status */
+}
+
 /**
- * Default networkunication operations
+ * Default network operations
  */
 
-/* Initialize the networkunication layer */
+/* Initialize the network layer */
 int hpx_network_init(void);
 
 /* Send a raw payload */
@@ -73,10 +98,10 @@ int hpx_network_put(int peer, void *dst, void *src, size_t len);
 /* RMA get */
 int hpx_network_get(void *dst, int peer, void *src, size_t len);
 
-/* The networkunication progress function */
+/* The network progress function */
 void hpx_network_progress(void *data);
 
-/* Shutdown and clean up the networkunication layer */
+/* Shutdown and clean up the network layer */
 void hpx_network_finalize(void);
 
 #endif /* LIBHPX_NETWORK_H_ */
