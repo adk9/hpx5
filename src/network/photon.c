@@ -22,16 +22,22 @@
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
+#include "hpx/network/mpi.h"
+#include "hpx/network/photon.h"
 
 /* Photon communication operations */
 network_ops_t photon_ops = {
   .init     = _init_photon,
-  .send     = _send_photon,
-  .recv     = _recv_photon,
+  .finalize = _finalize_photon,
+  .progress = _progress_photon,
+  .send     = _send_mpi,
+  .recv     = _recv_mpi,
+  .sendrecv_test = _test_mpi
   .put      = _put_photon,
   .get      = _get_photon,
-  .progress = _progress_photon,
-  .finalize = _finalize_photon,
+  .putget_test = _test_photon
+  .pin      = _pin_photon,
+  .unpin    = _unpin_photon,
 };
 
 /* If using Photon, call this instead of _init_mpi */
@@ -116,7 +122,7 @@ int _get_photon(void* buffer, size_t len) {
   return 0;
 }
 
-int _putget_test_photon(comm_request_t *request, int *flag, comm_status_t *status) {
+int _test_photon(comm_request_t *request, int *flag, comm_status_t *status) {
   int retval;
   int temp;
   retval = -1;
@@ -135,7 +141,6 @@ int _putget_test_photon(comm_request_t *request, int *flag, comm_status_t *statu
 
   return retval;  
 }
-
 
 int _send_parcel_photon(hpx_locality_t *, hpx_parcel_t *) {
 }

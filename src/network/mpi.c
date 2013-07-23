@@ -22,16 +22,21 @@
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
+#include "hpx/network/mpi.h"
+
+int _network_eager_threshold = 256;
 
 /* MPI communication operations */
 network_ops_t mpi_ops = {
     .init     = _init_mpi,
+    .finalize = _finalize_mpi,
+    .progress = _progress_mpi,
     .send     = _send_mpi,
     .recv     = _recv_mpi,
+    .sendrecv_test = _test_mpi,
     .put      = _put_mpi,
     .get      = _get_mpi,
-    .progress = _progress_mpi,
-    .finalize = _finalize_mpi,
+    .putget_test = _test_mpi,
 };
 
 int _init_mpi(void) {
@@ -105,7 +110,7 @@ int _recv_mpi(void* buffer, comm_request_t *request) {
 }
 
 /* status may be NULL */
-int _sendrecv_test_mpi(comm_request_t *request, int *flag, comm_status_t *status) {
+int _test_mpi(comm_request_t *request, int *flag, comm_status_t *status) {
   int retval;
   int temp;
   retval = -1;
