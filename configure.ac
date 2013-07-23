@@ -78,6 +78,12 @@ AS_IF([test "x$use_hwloc" = xyes], [
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
 ])
 
+# Check for MPI
+AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
+AS_IF([test "x$use_mpi" = xyes], [
+  AC_DEFINE([WITH_MPI], [], [Enable MPI support])
+])
+
 # Check for check (and disable test-suite if not found).
 AC_CHECK_LIB([check], [check_major_version], [CHECK=yes])
 AS_IF([test -z "$CHECK"], [
@@ -98,6 +104,7 @@ AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
 AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
+AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
 
 AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
 AM_COND_IF([WITH_TESTSUITE],
@@ -130,6 +137,9 @@ AS_IF([test "x$use_papi" = xyes],
 AS_IF([test "x$use_hwloc" = xyes],
       [hwloc_string="yes"],
       [hwloc_string="no"])
+AS_IF([test "x$use_mpi" = xyes],
+      [mpi_string="yes"],
+      [mpi_string="no"])
 
 echo ""
 echo "================================================"
@@ -139,6 +149,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "              Profiling : $papi_string (PAPI)"
 echo "     Topology Awareness : $hwloc_string (HWLOC)"
+echo "              Using MPI : $mpi_string"
 echo "          Documentation : $doc_string"
 echo "             Test Suite : $test_string"
 echo "================================================"
