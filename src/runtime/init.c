@@ -74,15 +74,11 @@ hpx_error_t hpx_init(void) {
  * 
  */
 void hpx_cleanup(void) {
-<<<<<<< HEAD
-
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
-=======
   hpx_parcelhandler_destroy(__hpx_parcelhandler); 
   /* TODO:
     lookup correct network finalize
     call it
   */
->>>>>>> photon
 }
