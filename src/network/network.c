@@ -26,19 +26,17 @@
 
 #include <mpi.h>
 
-int _comm_eage_threshold = 256; /* is big better or worse? smaller means less likelihood of memory problems but higher latency */
-
 /* Default networkunication operations */
 network_ops_t default_ops = {
     .init     = hpx_network_init,
+    .finalize = hpx_network_finalize,
+    .progress = hpx_network_progress,
     .send     = hpx_network_send,
     .recv     = hpx_network_recv,
     .put      = hpx_network_put,
     .get      = hpx_network_get,
-    .progress = hpx_network_progress,
-    .finalize = hpx_network_finalize,
-    // ADK: this needs to go in transport-specific parameters
-    // .eager_threshold = _comm_edge_threshold,
+    .pin      = hpx_network_pin,
+    .unpin      = hpx_network_unpin,
 };
 
 /*
@@ -46,6 +44,12 @@ network_ops_t default_ops = {
  */
 
 int hpx_network_init(void) {
+}
+
+void hpx_network_finalize(void) {
+}
+
+void hpx_network_progress(void *data) {
 }
 
 int hpx_network_send(int peer, void *src, size_t len) {
@@ -60,8 +64,8 @@ int hpx_network_put(int peer, void *dst, void *src, size_t len) {
 int hpx_network_get(void *dst, int peer, void *src, size_t len) {
 }
 
-void hpx_network_progress(void *data) {
+int hpx_network_pin(void* buffer, size_t len) {
 }
 
-void hpx_network_finalize(void) {
+int hpx_network_unpin(void* buffer, size_t len) {
 }
