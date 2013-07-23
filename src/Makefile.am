@@ -2,6 +2,8 @@
 # Makefile for HPX #
 ####################
 
+AM_CPPFLAGS =
+
 SUBDIRS = .
 
 lib_LTLIBRARIES = libhpx.la
@@ -32,3 +34,8 @@ libhpx_la_HEADERS = $(top_srcdir)/include/*.h
 if PLATFORM_LINUX
   libhpx_la_LIBADD = -lrt
 endif
+
+if HAVE_MPI
+MPI_CPP = -DHAVE_MPI=1
+endif
+AM_CPPFLAGS += $(MPI_CPP)

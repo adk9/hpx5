@@ -22,29 +22,28 @@
 
 #if HAVE_MPI
   #include <mpi.h>
+#else
+  #error "without mpi"
 #endif
 #if HAVE_PHOTON
   #include <photon.h>
 #endif
 
-typedef struct network_mgr_t {
-  /* Default transport. We do not want to walk a list when
-   * multi-railing is turned off.  */
-  network_trans_t *default;
-  /* List of configured transports  */
-  network_trans_t *trans;
-} network_mgr_t;
-
-
 /**
- * Network Transport
+ * Some basic underlying network types
  */
-typedef struct network_trans_t {
-  char           name[128];
-  network_ops_t *ops;
-  int           *flags;
-  int            active;
-} network_trans_t;
+
+typedef struct network_request_t {
+  /* TODO: deal with case where there is no mpi */
+  MPI_Request mpi;
+  uint32_t photon;
+} network_request_t;
+
+typedef struct network_status_t {
+  /* TODO: deal with case where there is no mpi */
+  MPI_Status mpi;
+  MPI_Status photon; /* not a mistake - Photon uses MPI status */
+} network_status_t;
 
 /**
  * Network Operations
@@ -61,30 +60,36 @@ typedef struct network_ops_t {
   /* Receive a raw payload */
   int (*recv)(int peer, void *payload, size_t len);
   /* test for completion of send or receive */
-  int (*sendrecv_test)(comm_request_t *request, int *flag, comm_status_t *status);  
+  int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);  
   /* RMA put */
   int (*put)(int peer, void *dst, void *src, size_t len);
   /* RMA get */
   int (*get)(void *dst, int peer, void *src, size_t len);
   /* test for completion of put or get */
-  int (*putget_test)(comm_request_t *request, int *flag, comm_status_t *status);
+  int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
   /* pin memory for put/get */
   int (*pin)(void* buffer, size_t len);
   /* unpin memory for put/get */
   int (*unpin)(void* buffer, size_t len);
 } network_ops_t;
 
-typedef struct comm_request_t {
-  /* TODO: deal with case where there is no mpi */
-  MPI_Request mpi;
-  uint32_t photon;
-} comm_request_t;
+/**
+ * Network Transport
+ */
+typedef struct network_trans_t {
+  char           name[128];
+  network_ops_t *ops;
+  int           *flags;
+  int            active;
+} network_trans_t;
 
-typedef struct comm_status_t {
-  /* TODO: deal with case where there is no mpi */
-  MPI_Status mpi;
-  MPI_Status photon; /* not a mistake - Photon uses MPI status */
-}
+typedef struct network_mgr_t {
+  /* Default transport. We do not want to walk a list when
+   * multi-railing is turned off.  */
+  network_trans_t *defaults;
+  /* List of configured transports  */
+  network_trans_t *trans;
+} network_mgr_t;
 
 /**
  * Default network operations
@@ -103,7 +108,7 @@ int hpx_network_send(int peer, void *src, size_t len);
 int hpx_network_recv(int peer, void *dst, size_t len);
 
 /* Test for completion of send/recv */
-int hpx_sendrecv_test(comm_request_t *request, int *flag, comm_status_t *status);
+int hpx_sendrecv_test(network_request_t *request, int *flag, network_status_t *status);
 
 /* RMA put */
 int hpx_network_put(int peer, void *dst, void *src, size_t len);
@@ -112,7 +117,7 @@ int hpx_network_put(int peer, void *dst, void *src, size_t len);
 int hpx_network_get(void *dst, int peer, void *src, size_t len);
 
 /* Test for completion of put/get */
-int hpx_putget_test(comm_request_t *request, int *flag, comm_status_t *status);
+int hpx_putget_test(network_request_t *request, int *flag, network_status_t *status);
 
 /* pin memory for put/get */
 int hpx_network_pin(void* buffer, size_t len);

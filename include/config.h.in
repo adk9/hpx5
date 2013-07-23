@@ -155,6 +155,9 @@
 /* Enable HWLOC support */
 #undef WITH_HWLOC
 
+/* Enable MPI support */
+#undef WITH_MPI
+
 /* Enable PAPI measurement support */
 #undef WITH_PAPI
 

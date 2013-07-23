@@ -24,6 +24,7 @@
 #define LIBHPX_INIT_H_
 
 #include "hpx/error.h"
+#include "hpx/network.h"
 #include "hpx/parcelhandler.h"
 
 #ifdef __x86_64__
@@ -38,7 +39,7 @@
 
 hpx_mconfig_t __mcfg;
 hpx_parcelhandler_t *__hpx_parcelhandler;
-hpx_comm_operations_t *__hpx_comm_operations;
+network_ops_t *__hpx_network_ops;
 
 /*
  --------------------------------------------------------------------

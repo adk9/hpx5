@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
+
 #include "hpx_config.h"
 #include "hpx_ctx.h"
 #include "hpx_error.h"
@@ -32,130 +33,22 @@
 #include <photon.h>
 #endif
 
-void *_hpx_parcelhandler_main_test(void) {
-  int PING_TAG=0;
-  int PONG_TAG=1;
-  printf("Alive\n");
-  fflush(NULL);
-  int size;
-  int rank;
-  int next, prev;
-  int success;
-  int flag;
-  int type;
-  MPI_Status stat;
+void * _handler_main(void) {
 
-  size = hpx_network_size();
-  rank = hpx_network_rank();
-
-  //hpx_network_init(&argc,&argv);
-
-  char* hostname = (char*)malloc(MPI_MAX_PROCESSOR_NAME*sizeof(char));
-  int hostname_len;
-  MPI_Get_processor_name(hostname, &hostname_len);
-  printf("Running on %s\n", hostname);
-  fflush(NULL);
-
-  int buffer_size = 1024*1024;
-  char* send_buffer = NULL;
-  char* recv_buffer = NULL;
-  char* copy_buffer = NULL;
-
-  uint32_t send_request;
-  uint32_t recv_request;
-
-  send_buffer = (char*)malloc(buffer_size*sizeof(char));
-  recv_buffer = (char*)malloc(buffer_size*sizeof(char));
-  copy_buffer = (char*)malloc(buffer_size*sizeof(char));
-  hpx_network_register_buffer(send_buffer, buffer_size);
-  hpx_network_register_buffer(recv_buffer, buffer_size);
-
-  if (rank == 0) {
-    strcpy(send_buffer, "Message from proc 0"); 
-    printf("send started on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_send_start(1, PING_TAG, send_buffer, buffer_size, 0, &send_request);
-    printf("send done on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_wait(send_request);
-    printf("send finished on rank %d\n", rank);
-    fflush(NULL);
-
-    sleep(5);
-
-    printf("recv started on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_recv_start(1, PONG_TAG, recv_buffer, buffer_size, 0, &recv_request);
-    printf("recv done on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_wait(recv_request);
-    printf("recv finished on rank %d\n", rank);
-    fflush(NULL);
-
-    printf("Message from proc 1: %s\n", recv_buffer);
-    fflush(NULL);
-  }
-  else if (rank == 1) {
-    printf("recv started on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_recv_start(0, PING_TAG, recv_buffer, buffer_size, 0, &recv_request);
-    printf("recv done on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_wait(recv_request);
-    printf("recv finished on rank %d\n", rank);
-    fflush(NULL);
-
-    int str_length;
-    strcpy(copy_buffer, "Received from proc 0 message: '");
-    str_length = strlen(copy_buffer);
-    strcpy(&copy_buffer[str_length], recv_buffer);
-    str_length = strlen(copy_buffer);
-    strcpy(&copy_buffer[str_length], "'");
-    strcpy(send_buffer, copy_buffer);
-
-    sleep(5);
-
-    printf("send started on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_send_start(0, PONG_TAG, send_buffer, buffer_size, 0, &send_request);
-    printf("send done on rank %d\n", rank);
-    fflush(NULL);
-    hpx_network_wait(send_request);
-    printf("send finished on rank %d\n", rank);
-    fflush(NULL);
-  }
-  printf("Data transmission finished on rank %d\n", rank);
-  fflush(NULL);
+  /* check if we need to quit */
   
-  printf("Unregistering buffers on rank %d\n", rank);
-  fflush(NULL);
-  hpx_network_unregister_buffer(send_buffer, buffer_size);
-  hpx_network_unregister_buffer(recv_buffer, buffer_size);
+  /* check if parcels need sent */
 
-  //  printf("hpx finalize on rank %d\n", rank);
-  //  fflush(NULL);
-  //  hpx_network_finalize();
+  /* check if parcels have arrived (do an irecv) */
 
-  free(send_buffer);
-  free(recv_buffer);
-  free(copy_buffer);
+  /* if a large parcel notification came in, post a get */
 
-  free(hostname);
+  /* process one or more received parcels */
 
-  printf("SUCCESS\n", rank);
-  fflush(NULL);
+  /* check if outgoing parcels have completed */
 
+  /* check if puts and gets have completed */
 
-  while (0) {
-    /* TODO: wait for signal to exit... */
-  }
-
-  int * retval;
-  retval = hpx_alloc(sizeof(int));
-  *retval = 0;
-  hpx_thread_exit((void*)retval);
-
-  return NULL;
 }
 
 void * _hpx_parcelhandler_main_pingpong(void) {
