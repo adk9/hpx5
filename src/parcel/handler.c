@@ -22,12 +22,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hpx_config.h"
-#include "hpx_ctx.h"
-#include "hpx_error.h"
-#include "hpx_network.h"
-#include "hpx_parcelhandler.h"
-#include "hpx_thread.h"
+#include "hpx/config.h"
+#include "hpx/ctx.h"
+#include "hpx/error.h"
+#include "hpx/network.h"
+#include "hpx/parcelhandler.h"
+#include "hpx/thread.h"
 
 #if USE_PHOTON
 #include <photon.h>
@@ -217,7 +217,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
     if (ph != NULL) {
       ph->ctx = hpx_ctx_create(cfg);
       /* TODO: error check */
-      ph->thread = hpx_thread_create(ph->ctx, 0, _hpx_parcelhandler_main_pingpong, 0);
+      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
       /* TODO: error check */
     }
     else {

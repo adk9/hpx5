@@ -32,10 +32,10 @@ network_ops_t photon_ops = {
   .progress = _progress_photon,
   .send     = _send_mpi,
   .recv     = _recv_mpi,
-  .sendrecv_test = _test_mpi
+  .sendrecv_test = _test_mpi,
   .put      = _put_photon,
   .get      = _get_photon,
-  .putget_test = _test_photon
+  .putget_test = _test_photon,
   .pin      = _pin_photon,
   .unpin    = _unpin_photon,
 };
@@ -94,35 +94,41 @@ int _finalize_photon(void) {
 
 
 /* have to test/wait on the request */
-int _put_photon(void* buffer, size_t len, comm_request_t *request) {
+int _put_photon(void* buffer, size_t len, network_request_t *request) {
+  int retval;
   int rank;
-  MPI_rank(&rank); /* TODO: cache this */
 
-  if (len > UINT32_MAX)
+  retval = -1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
+
+  if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
-    retval = -1;    
+    retval = -1;
   }
 
-  photon_post_recv_buffer_rdma(rank, buffer, (uint32_t)len, rank, request.photon);
+  photon_post_recv_buffer_rdma(rank, buffer, (uint32_t)len, rank, &(request->photon));
   return 0;
 }
 
 int _get_photon(void* buffer, size_t len) {
+  int retval;
   int rank;
-  MPI_rank(&rank); /* TODO: cache this */
 
-  if (len > UINT32_MAX)
+  retval = -1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
+
+  if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
     retval = -1;    
   }
 
   photon_wait_recv_buffer_rdma(rank, rank);
-  photon_post_os_put(rank, buffer, (uint32_t)len, rank, 0, request.photon);
+  photon_post_os_put(rank, buffer, (uint32_t)len, rank, 0, &(request->photon));
   photon_send_FIN(rank);
   return 0;
 }
 
-int _test_photon(comm_request_t *request, int *flag, comm_status_t *status) {
+int _test_photon(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
   retval = -1;
@@ -148,7 +154,7 @@ int _send_parcel_photon(hpx_locality_t *, hpx_parcel_t *) {
 int _send_photon(int peer, void *payload, size_t len) {
 }
 
-int _recv_photon(void *buffer, comm_request_t req) {
+int _recv_photon(void *buffer, network_request_t req) {
 }
 
 void _progress_photon(void *data) {

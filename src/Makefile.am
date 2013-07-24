@@ -8,7 +8,9 @@ SUBDIRS = .
 
 lib_LTLIBRARIES = libhpx.la
 
-libhpx_la_SOURCES = runtime/ctx.c     \
+libhpx_la_SOURCES = network/network.c \
+                    parcel/handler.c  \
+                    runtime/ctx.c     \
 		    runtime/init.c    \
 		    thread/thread.c   \
 		    thread/kthread.c  \
@@ -36,6 +38,13 @@ if PLATFORM_LINUX
 endif
 
 if HAVE_MPI
-MPI_CPP = -DHAVE_MPI=1
+MPI_DEFS = -DHAVE_MPI=1
+libhpx_la_SOURCES += network/mpi.c
 endif
-AM_CPPFLAGS += $(MPI_CPP)
+
+if HAVE_PHOTON
+PHOTON_DEFS = -DHAVE_PHOTON=1
+libhpx_la_SOURCES += network/photon.c
+endif
+
+AM_CPPFLAGS += $(MPI_DEFS) $(PHOTON_DEFS)
