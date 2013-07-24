@@ -161,6 +161,9 @@
 /* Enable PAPI measurement support */
 #undef WITH_PAPI
 
+/* Enable Photon support */
+#undef WITH_PHOTON
+
 /* Enable test suite */
 #undef WITH_TESTSUITE
 

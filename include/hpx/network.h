@@ -29,6 +29,9 @@
   #include <photon.h>
 #endif
 
+#define NETWORK_ANY_SOURCE -1
+#define NETWORK_ANY_LENGTH -1
+
 /**
  * Some basic underlying network types
  */
@@ -52,13 +55,13 @@ typedef struct network_ops_t {
   /* Initialize the network layer */
   int (*init)(void);
   /* Shutdown and clean up the network layer */
-  void (*finalize)(void);
+  int (*finalize)(void);
   /* The network progress function */
   void (*progress)(void *data);
   /* Send a raw payload */
-  int (*send)(int peer, void *payload, size_t len);
+  int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
   /* Receive a raw payload */
-  int (*recv)(int peer, void *payload, size_t len);
+  int (*recv)(int src, void *buffer, size_t len, network_status_t *request);
   /* test for completion of send or receive */
   int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);  
   /* RMA put */
