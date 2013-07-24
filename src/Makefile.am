@@ -6,6 +6,8 @@ AM_CPPFLAGS =
 
 SUBDIRS = .
 
+libhpx_la_LIBADD = 
+
 lib_LTLIBRARIES = libhpx.la
 
 libhpx_la_SOURCES = network/network.c \
@@ -34,7 +36,7 @@ nodist_libhpx_la_HEADERS = $(top_srcdir)/include/config.h
 libhpx_la_HEADERS = $(top_srcdir)/include/*.h
 
 if PLATFORM_LINUX
-  libhpx_la_LIBADD = -lrt
+  libhpx_la_LIBADD += -lrt
 endif
 
 if HAVE_MPI
@@ -43,8 +45,9 @@ libhpx_la_SOURCES += network/mpi.c
 endif
 
 if HAVE_PHOTON
-PHOTON_DEFS = -DHAVE_PHOTON=1
-libhpx_la_SOURCES += network/photon.c
+  PHOTON_DEFS = -DHAVE_PHOTON=1
+  libhpx_la_SOURCES += network/photon.c
+  libhpx_la_LIBADD += -lphoton_verbs -libverbs
 endif
 
 AM_CPPFLAGS += $(MPI_DEFS) $(PHOTON_DEFS)

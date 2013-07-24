@@ -24,12 +24,27 @@
 #include "hpx/parcel.h"
 #include "hpx/network/mpi.h"
 
+/* MPI network operations */
+network_ops_t mpi_ops = {
+    .init     = _init_mpi,
+    .finalize = _finalize_mpi,
+    .progress = _progress_mpi,
+    .send     = _send_mpi,
+    .recv     = _recv_mpi,
+    .sendrecv_test = _test_mpi,
+    .put      = _put_mpi,
+    .get      = _get_mpi,
+    .putget_test = _test_mpi,
+};
+
+int _eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;
+
 int _init_mpi(void) {
   int retval;
   int temp;
   int thread_support_provided;
 
-  retval = -1;
+  retval = HPX_ERROR;
 
   /* TODO: see if we really need thread multiple */
   temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
@@ -57,17 +72,17 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   int temp;
   int rank;
 
-  retval = -1;
+  retval = HPX_ERROR;
 
   /*
   if (len > INT_MAX) {
     __hpx_errno = HPX_ERROR;
-    retval = -1;
+    retval = HPX_ERROR;
   }
   */ /* not necessary because of eager_threshold */
   if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */
     __hpx_errno = HPX_ERROR;
-    retval = -1;    
+    retval = HPX_ERROR;    
   }
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this, obviously */
@@ -88,7 +103,7 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
   int mpi_src;
   int mpi_len;
 
-  retval = -1;
+  retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE)
     mpi_src = MPI_ANY_SOURCE;
   if (len == NETWORK_ANY_LENGTH)
@@ -96,7 +111,7 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
   else {
     if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */
       __hpx_errno = HPX_ERROR;
-      retval = -1;    
+      retval = HPX_ERROR;    
       goto error;
     }
   }
@@ -116,12 +131,12 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
 int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
-  retval = -1;
+  retval = HPX_ERROR;
 
   if (status == NULL)
-    temp = MPI_Test(&(request->mpi), &flag, MPI_STATUS_IGNORE);
+    temp = MPI_Test(&(request->mpi), flag, MPI_STATUS_IGNORE);
   else
-    temp = MPI_Test(&(request->mpi), &flag, &(status->mpi));
+    temp = MPI_Test(&(request->mpi), flag, &(status->mpi));
 
   if (temp == MPI_SUCCESS)
     retval = 0;
@@ -131,10 +146,10 @@ int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
   return retval;  
 }
 
-int _put_mpi(int peer, void *dst, void *src, size_t len) {
+int _put_mpi(int dest, void *buffer, size_t len, network_request_t *request) {
 }
 
-int _get_mpi(void *dst, int peer, void *src, size_t len) {
+int _get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
 }
 
 void _progress_mpi(void *data) {
@@ -143,7 +158,7 @@ void _progress_mpi(void *data) {
 int _finalize_mpi(void) {
   int retval;
   int temp;
-  retval = -1;
+  retval = HPX_ERROR;
 
   temp = MPI_Finalize();
 
