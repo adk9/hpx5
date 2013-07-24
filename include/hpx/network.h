@@ -61,13 +61,13 @@ typedef struct network_ops_t {
   /* Send a raw payload */
   int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
   /* Receive a raw payload */
-  int (*recv)(int src, void *buffer, size_t len, network_status_t *request);
+  int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
   /* test for completion of send or receive */
   int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);  
   /* RMA put */
-  int (*put)(int peer, void *dst, void *src, size_t len);
+  int (*put)(int dest, void *buffer, size_t len, network_request_t *request);
   /* RMA get */
-  int (*get)(void *dst, int peer, void *src, size_t len);
+  int (*get)(int dest, void *buffer, size_t len, network_request_t *request); 
   /* test for completion of put or get */
   int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
   /* pin memory for put/get */

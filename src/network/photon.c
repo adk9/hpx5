@@ -17,7 +17,6 @@
 */
 
 #include <stdlib.h>
-#include <photon.h>
 
 #include "hpx/action.h"
 #include "hpx/network.h"
@@ -25,7 +24,11 @@
 #include "hpx/network/mpi.h"
 #include "hpx/network/photon.h"
 
-/* Photon communication operations */
+#include <mpi.h>
+#include <photon.h>
+
+
+/* Photon network operations */
 network_ops_t photon_ops = {
   .init     = _init_photon,
   .finalize = _finalize_photon,
@@ -40,6 +43,8 @@ network_ops_t photon_ops = {
   .unpin    = _unpin_photon,
 };
 
+int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
+
 /* If using Photon, call this instead of _init_mpi */
 int _init_photon(void) {
   int retval;
@@ -48,7 +53,7 @@ int _init_photon(void) {
   int rank;
   int size;
 
-  retval = -1;
+  retval = HPX_ERROR;
 
   /* TODO: see if we really need thread multiple */
   temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
@@ -75,7 +80,7 @@ int _init_photon(void) {
 int _finalize_photon(void) {
   int retval;
   int temp;
-  retval = -1;
+  retval = HPX_ERROR;
 
   temp = MPI_Finalize();
 
@@ -94,51 +99,80 @@ int _finalize_photon(void) {
 
 
 /* have to test/wait on the request */
-int _put_photon(void* buffer, size_t len, network_request_t *request) {
+int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) {
+  int temp;
   int retval;
   int rank;
+  int tag;
 
-  retval = -1;
+  retval = HPX_ERROR;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
+  tag = rank;
 
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
-    retval = -1;
+    retval = HPX_ERROR;
+    goto error;
   }
 
-  photon_post_recv_buffer_rdma(rank, buffer, (uint32_t)len, rank, &(request->photon));
-  return 0;
+  temp = photon_post_recv_buffer_rdma(dest, buffer, (uint32_t)len, tag, &(request->photon));
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+
+
+ error:
+  return retval;
 }
 
-int _get_photon(void* buffer, size_t len) {
+int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
+  int temp;
   int retval;
   int rank;
+  int tag;
 
-  retval = -1;
+  retval = HPX_ERROR;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
+  tag = rank;
 
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
-    retval = -1;    
+    retval = HPX_ERROR;    
+    goto error;
   }
 
-  photon_wait_recv_buffer_rdma(rank, rank);
-  photon_post_os_put(rank, buffer, (uint32_t)len, rank, 0, &(request->photon));
-  photon_send_FIN(rank);
-  return 0;
+  temp = photon_wait_recv_buffer_rdma(src, tag);
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+  temp = photon_post_os_put(src, buffer, (uint32_t)len, tag, 0, &(request->photon));
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+  temp = photon_send_FIN(src);
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+
+ error:
+  return retval;
 }
 
 int _test_photon(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
-  retval = -1;
+  retval = HPX_ERROR;
 
   int type; /* I'm not actually sure what this does with photon. 0 is event, 1 is ledger but I don't know why I care */
 
   if (status == NULL)
-    temp = photon_test(request, flag, &type, MPI_STATUS_IGNORE);
+    temp = photon_test((request->photon), flag, &type, MPI_STATUS_IGNORE);
   else
-    temp = photon_test(request, flag, &type, status.photon);
+    temp = photon_test((request->photon), flag, &type, &(status->photon));
 
   if (temp == 0)
     retval = 0;
@@ -148,15 +182,48 @@ int _test_photon(network_request_t *request, int *flag, network_status_t *status
   return retval;  
 }
 
-int _send_parcel_photon(hpx_locality_t *, hpx_parcel_t *) {
+int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
 }
 
-int _send_photon(int peer, void *payload, size_t len) {
+int _send_photon(int peer, void *payload, size_t len, network_request_t *request) {
 }
 
-int _recv_photon(void *buffer, network_request_t req) {
+int _recv_photon(int src, void *buffer, size_t len, network_request_t *request) {
 }
 
 void _progress_photon(void *data) {
 }
 
+/* pin memory for put/get */
+int _pin_photon(void* buffer, size_t len) {
+  int temp;
+  int retval;
+
+  retval = HPX_ERROR;
+
+  temp = photon_register_buffer(buffer, len);
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+
+ error:
+  return retval;
+}
+
+/* unpin memory for put/get */
+int _unpin_photon(void* buffer, size_t len) {
+  int temp;
+  int retval;
+
+  retval = HPX_ERROR;
+
+  temp = photon_unregister_buffer(buffer, len);
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    goto error;
+  }
+
+ error:
+  return retval;
+}
