@@ -127,6 +127,7 @@ AC_SUBST(WITH_DOCS)
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
+  include/Makefile
   examples/Makefile
   examples/thread/Makefile
 ])
