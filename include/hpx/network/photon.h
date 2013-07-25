@@ -16,14 +16,23 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_NETWORK_PHOTON_H_
+#define LIBHPX_NETWORK_PHOTON_H_
+
 #include <stdlib.h>
-#include <photon.h>
 
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
+#include "hpx/network/mpi.h"
 
-extern int _network_eager_threshold = 256;
+#include <mpi.h>
+#include <photon.h>
+
+
+#define _EAGER_THRESHOLD_PHOTON_DEFAULT 256;
+extern int _eager_threshold_photon;
 
 /* If using Photon, call this instead of _init_mpi */
 int _init_photon(void);
@@ -34,29 +43,24 @@ int _finalize_photon(void);
 void _progress_photon(void *data);
 
 /* have to test/wait on the request */
-int _put_photon(void* buffer, size_t len, comm_request_t *request);
+int _put_photon(int dest, void* buffer, size_t len, network_request_t *request);
 
-int _get_photon(void* buffer, size_t len);
+int _get_photon(int src, void* buffer, size_t len, network_request_t *request);
 
-int _test_photon(comm_request_t *request, int *flag, comm_status_t *status);
+int _test_photon(network_request_t *request, int *flag, network_status_t *status);
 
 int _send_parcel_photon(hpx_locality_t *, hpx_parcel_t *);
 
-int _send_photon(int peer, void *payload, size_t len);
+int _send_photon(int peer, void *payload, size_t len, network_request_t *request);
 
-int _recv_photon(void *buffer, comm_request_t req);
+int _recv_photon(int src, void *buffer, size_t len, network_request_t *request);
 
-/* Photon communication operations */
-network_ops_t photon_ops = {
-  .init     = _init_photon,
-  .finalize = _finalize_photon,
-  .progress = _progress_photon,
-  .send     = _send_mpi,
-  .recv     = _recv_mpi,
-  .sendrecv_test = _test_mpi
-  .put      = _put_photon,
-  .get      = _get_photon,
-  .putget_test = _test_photon
-  .pin      = _pin_photon,
-  .unpin    = _unpin_photon,
-};
+/* pin memory for put/get */
+int _pin_photon(void* buffer, size_t len);
+
+/* unpin memory for put/get */
+int _unpin_photon(void* buffer, size_t len);
+
+extern network_ops_t photon_ops;
+
+#endif
