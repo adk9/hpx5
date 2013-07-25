@@ -27,15 +27,18 @@
 struct hsearch_data action_table;
 
 int hpx_parcel_init(void) {
+    int status;
+
     /* create an action table */
-
+    
     bzero(&action_table, sizeof(action_table));
+    
     /* ADK: TODO: we need a better hash table implementation. */
-    hcreate_r(ACTION_TABLE_SIZE, &action_table);
-
-    if (!action_table)
-        return HPX_ERROR_NOMEM;
-
+    status = hcreate_r(ACTION_TABLE_SIZE, &action_table);
+    
+    if (status != 0) /* this should be impossible */
+      return HPX_ERROR;
+    
     /* spawn the parcel handler/dispatcher thread */
 }
 
@@ -43,9 +46,9 @@ int hpx_parcel_init(void) {
 void hpx_parcel_fini(void) {
     /* destroy the action table */
     hdestroy_r(&action_table);
-
+  
     /* shutdown the parcel handler thread */
-    
+  
 }
 
 /*
@@ -57,10 +60,11 @@ void hpx_parcel_fini(void) {
   locality if we are running under the SPMD/symmetric heap assumption.
   -------------------------------------------------------------------
 */
-int hpx_new_parcel(char *act, hpx_parcel_t *handle) {
+int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
+  return 0;
 }
 
-hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t *action,
+hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
                        void *args, size_t len) {
   int ret;
   hpx_parcel_t p;

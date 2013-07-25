@@ -24,8 +24,6 @@
 #include "hpx/parcel.h"
 #include "hpx/runtime.h" /* for hpx_locality_t */
 
-#include <mpi.h>
-
 /* Default networkunication operations */
 network_ops_t default_ops = {
     .init     = hpx_network_init,
