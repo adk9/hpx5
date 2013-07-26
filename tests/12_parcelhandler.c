@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx_parcelhandler.h"
+#include "hpx.h"
 
 /*
  --------------------------------------------------------------------

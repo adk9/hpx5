@@ -13,6 +13,11 @@
  ====================================================================
 */
 
+#pragma once
+#ifndef LIBHPX_AGAS_H_
+#define LIBHPX_AGAS_H_
+
+
 #include "hpx/types.h"
 #include "hpx/runtime.h"
 
@@ -51,3 +56,5 @@ hpx_addr_t hpx_malloc(hpx_distribution_t, size_t);
  * localities is variable, and a runtime parameter */
 int cyclic_distribution(uint32, hpx_distribution_t *);
 int block_cyclic_distribution(uint32, hpx_distribution_t *);
+
+#endif
