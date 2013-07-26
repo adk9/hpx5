@@ -30,6 +30,12 @@
 #include <mpi.h>
 #include <photon.h>
 
+/*
+ * Forward declarations - things in network.h we need here
+ */
+struct network_ops_t;
+struct network_request_t;
+struct network_status_t;
 
 #define _EAGER_THRESHOLD_PHOTON_DEFAULT 256;
 extern int _eager_threshold_photon;

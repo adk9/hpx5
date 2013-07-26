@@ -22,6 +22,8 @@
 #include "hpx/init.h"
 #include "hpx/parcel.h"
 #include "hpx/ctx.h"
+#include "hpx/network.h"
+
 
 /**
  * Initializes data structures used by libhpx.  This function must
@@ -47,7 +49,11 @@ hpx_error_t hpx_init(void) {
   //_hpx_kthread_init();
 
   /* initialize network */
-  //hpx_network_init();
+  __hpx_network_ops = hpx_alloc(sizeof(__hpx_network_ops));
+#if HAVE_MPI
+  *__hpx_network_ops = mpi_ops;
+#endif
+  __hpx_network_ops->init();
   /* TODO:
      psuedo-code:
      allocate __hpx_comm_operations
@@ -81,4 +87,6 @@ void hpx_cleanup(void) {
     lookup correct network finalize
     call it
   */
+  __hpx_network_ops->finalize();
+  hpx_free(__hpx_network_ops);
 }

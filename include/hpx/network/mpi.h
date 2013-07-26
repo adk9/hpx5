@@ -21,14 +21,18 @@
 #define LIBHPX_NETWORK_MPI_H_
 
 #include <stdlib.h>
-#include <mpi.h>
 
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 
+#include <mpi.h>
+
 #define _EAGER_THRESHOLD_MPI_DEFAULT 256;
 extern int _eager_threshold_mpi;
+
+extern network_ops_t mpi_ops;
+
 
 int _init_mpi(void);
 
@@ -52,7 +56,5 @@ int _test_mpi(network_request_t *request, int *flag, network_status_t *status);
 int _put_mpi(int dest, void *buffer, size_t len, network_request_t *request);
 
 int _get_mpi(int src, void *buffer, size_t len, network_request_t *request);
-
-extern network_ops_t mpi_ops;
 
 #endif

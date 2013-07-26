@@ -22,8 +22,6 @@
 
 #if HAVE_MPI
   #include <mpi.h>
-#else
-  #error "without mpi"
 #endif
 #if HAVE_PHOTON
   #include <photon.h>
@@ -38,14 +36,22 @@
 
 typedef struct network_request_t {
   /* TODO: deal with case where there is no mpi */
+#if HAVE_MPI
   MPI_Request mpi;
+#endif
+#if HAVE_PHOTON
   uint32_t photon;
+#endif
 } network_request_t;
 
 typedef struct network_status_t {
   /* TODO: deal with case where there is no mpi */
+#if HAVE_MPI
   MPI_Status mpi;
+#endif
+#if HAVE_PHOTON
   MPI_Status photon; /* not a mistake - Photon uses MPI status */
+#endif
 } network_status_t;
 
 /**
@@ -75,6 +81,8 @@ typedef struct network_ops_t {
   /* unpin memory for put/get */
   int (*unpin)(void* buffer, size_t len);
 } network_ops_t;
+
+//extern network_ops_t network_ops;
 
 /**
  * Network Transport
@@ -132,4 +140,12 @@ int hpx_network_unpin(void* buffer, size_t len);
 void hpx_network_progress(void *data);
 
 
+#if HAVE_MPI
+  #include "hpx/network/mpi.h"
+#endif
+#if HAVE_PHOTON
+  #include "hpx/network/photon.h"
+#endif
+
 #endif /* LIBHPX_NETWORK_H_ */
+
