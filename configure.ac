@@ -84,7 +84,7 @@ AS_IF([test "x$use_mpi" = xyes], [
   AC_DEFINE([WITH_MPI], [], [Enable MPI support])
 ])
 
-# Check for MPI
+# Check for PHOTON
 AC_ARG_WITH([photon], AS_HELP_STRING([--with-photon], [Build with Photon support]), [use_photon=yes], [])
 AS_IF([test "x$use_photon" = xyes], [
   AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])

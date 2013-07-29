@@ -20,6 +20,8 @@
 #ifndef LIBHPX_NETWORK_H_
 #define LIBHPX_NETWORK_H_
 
+#include <stdlib.h>
+
 #if HAVE_MPI
   #include <mpi.h>
 #endif

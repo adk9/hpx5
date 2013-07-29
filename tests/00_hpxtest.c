@@ -50,6 +50,19 @@
 */
 
 int main(int argc, char * argv[]) {
+
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(20);
+
+
+
+
+
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
   char * long_tests = NULL;
@@ -76,6 +89,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_config_switch_fpu);
   tcase_add_test(tc, test_libhpx_config_switch_sigmask);
   tcase_add_test(tc, test_libhpx_config_thread_stack_size);
+
 
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
@@ -250,9 +264,11 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
   }
 
+#if 0
   /* parcel handler tests */
   tcase_add_test(tc, test_libhpx_parcelhandler_create);
-  
+#endif
+
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
@@ -304,6 +320,7 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
+
   }
 
   suite_add_tcase(s, tc);

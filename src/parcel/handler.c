@@ -52,6 +52,7 @@ void * _handler_main(void) {
 }
 
 void * _hpx_parcelhandler_main_pingpong(void) {
+#if HAVE_MPI
   int PING_TAG=0;
   int PONG_TAG=1;
   fflush(NULL);
@@ -190,7 +191,9 @@ void * _hpx_parcelhandler_main_pingpong(void) {
   free(send_buffer);
   free(recv_buffer);
   free(copy_buffer);
-#endif
+#endif // end of if USE_PHOTON
+
+#endif // end of if HAVE_MPI
 
   while (0) {
     /* TODO: wait for signal to exit... */
