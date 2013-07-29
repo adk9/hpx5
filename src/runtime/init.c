@@ -52,8 +52,9 @@ hpx_error_t hpx_init(void) {
   __hpx_network_ops = hpx_alloc(sizeof(__hpx_network_ops));
 #if HAVE_MPI
   *__hpx_network_ops = mpi_ops;
-#endif
   __hpx_network_ops->init();
+#endif
+
   /* TODO:
      psuedo-code:
      allocate __hpx_comm_operations
