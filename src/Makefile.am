@@ -12,6 +12,7 @@ lib_LTLIBRARIES = libhpx.la
 
 libhpx_la_SOURCES = network/network.c \
                     parcel/handler.c  \
+                    parcel/parcel.c   \
                     runtime/ctx.c     \
 		    runtime/init.c    \
 		    thread/thread.c   \

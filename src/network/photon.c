@@ -56,7 +56,8 @@ int _init_photon(void) {
   retval = HPX_ERROR;
 
   /* TODO: see if we really need thread multiple */
-  temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
+  //  temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
+  temp = MPI_Init(0, NULL); /* TODO: should be argc and argv if possible */
   if (temp == MPI_SUCCESS)
     retval = 0;
   else {
