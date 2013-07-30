@@ -213,6 +213,7 @@ void * _hpx_parcelhandler_main_dummy(void) {
   while (1) {
     sleep(1);
     printf("Parcel handler spinningl i = %zd\n", i);
+    i++;
   }
 
   int * retval;

@@ -80,5 +80,7 @@ int main(int argc, char *argv[]) {
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
+
+  hpx_cleanup();
   return 0;
 }
