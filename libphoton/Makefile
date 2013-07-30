@@ -9,9 +9,6 @@ HARDWARE=verbs
 # MVAPICH
 #export MPICC=/usr/local/mvapich/bin/mpicc
 
-# MVAPICH-uDAPL
-#export MPICC=/usr/local/mvapich-udapl/bin/mpicc
-
 # MPICH2
 #export MPICC=/work/kissel/mpich2-1.3.1/bin/mpicc
 
@@ -21,18 +18,6 @@ HARDWARE=verbs
 export MPICC=mpicc
 
 PREFIX := src
-
-ifeq ($(HARDWARE),dapl_overmx)
-SUBDIRS := \
-	dapl_overmx_util \
-	dapl_overmx
-endif
-
-ifeq ($(HARDWARE),dapl)
-SUBDIRS := \
-	dapl_util \
-	dapl
-endif
 
 ifeq ($(HARDWARE),verbs)
 SUBDIRS := \
