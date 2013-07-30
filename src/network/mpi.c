@@ -150,7 +150,8 @@ int _init_mpi(void) {
     _argv = NULL;
   }
     
-  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
+  //  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
+  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /*
   //  temp = MPI_Init(&_argc, &_argv); /* TODO: should be argc and argv if possible */
 #else
   temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /*
