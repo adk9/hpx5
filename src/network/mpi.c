@@ -61,6 +61,8 @@ int _init_mpi(void) {
   retval = HPX_ERROR;
 
   /* Get argc and argv */
+  /* BDM: TODO: Move to utils. Or throw out. MPI_Init can be given
+     NULL, NULL so this isn't strictly necessary. */
 #if __linux__
   /* TODO: find way to do this when NOT on Linux, since /proc is Linux-specific */
 
@@ -151,11 +153,9 @@ int _init_mpi(void) {
   }
     
   //  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
-  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /*
-  //  temp = MPI_Init(&_argc, &_argv); /* TODO: should be argc and argv if possible */
+  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #else
-  temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /*
- TODO: should be argc and argv if possible */
+  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #endif // ifdef __linux__
 
   if (temp == MPI_SUCCESS)

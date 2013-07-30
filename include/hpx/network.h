@@ -37,7 +37,6 @@
  */
 
 typedef struct network_request_t {
-  /* TODO: deal with case where there is no mpi */
 #if HAVE_MPI
   MPI_Request mpi;
 #endif
@@ -47,7 +46,6 @@ typedef struct network_request_t {
 } network_request_t;
 
 typedef struct network_status_t {
-  /* TODO: deal with case where there is no mpi */
 #if HAVE_MPI
   MPI_Status mpi;
 #endif
