@@ -207,6 +207,22 @@ void * _hpx_parcelhandler_main_pingpong(void) {
   return NULL;
 }
 
+void * _hpx_parcelhandler_main_dummy(void) {
+
+  size_t i = 0;
+  while (1) {
+    sleep(1);
+    printf("Parcel handler spinningl i = %zd\n", i);
+  }
+
+  int * retval;
+  retval = hpx_alloc(sizeof(int));
+  *retval = 0;
+  hpx_thread_exit((void*)retval);
+
+  return NULL;
+}
+
 
 hpx_parcelhandler_t * hpx_parcelhandler_create() {
   hpx_config_t * cfg = NULL;
@@ -220,7 +236,8 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
     if (ph != NULL) {
       ph->ctx = hpx_ctx_create(cfg);
       /* TODO: error check */
-      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
+      //      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
+      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_dummy, 0);
       /* TODO: error check */
     }
     else {

@@ -59,49 +59,74 @@ int _init_mpi(void) {
 
   retval = HPX_ERROR;
 
+  /* Get argc and argv */
 #if __linux__
   /* TODO: find way to do this when NOT on Linux, since /proc is Linux-specific */
-  int cmdline_fd;
-  ssize_t cmdline_bytes_read;
+
+  /* Procedure:
+     1a. Find out how much space we need
+     1b. Allocate space
+     2. Copy command line from proc
+     3. Parse command line into _argv so we can pass it to MPI_Init
+  */
+  bool fallback;
   long arg_max;
   int _argv_len;
+
+  int cmdline_fd;
   pid_t pid;
   char filename[256];
 
-  //  filename = hpx_alloc(sizeof(char)*256);
+  char prev, curr;
+  int i, j;
 
+  fallback = false;
+
+  /* find how much space we need, then allocate buffer to hold copy of argv */
   _argv_len = 0;
   pid = getpid();
   arg_max = sysconf(_SC_ARG_MAX);
-  if (arg_max <= 0)
-    exit(-1);
-
-
-  snprintf(filename, 255, "/proc/%d/cmdline", (int)pid);
-
-  printf("We are ok so far!\n");
-  printf("arg_max = %ld\n", (long)arg_max);
-
+  if (arg_max <= 0) { /* can supposedly only happen if _SC_ARG_MAX is undefined */
+    fallback = true;
+    goto fail;
+  }
   _argv_buffer = hpx_alloc(arg_max);
-  printf("_argv_buffer = %zx\n", (size_t)_argv_buffer);
+  if (_argv_buffer == NULL) {
+    __hpx_errno = HPX_ERROR;
+    retval = HPX_ERROR;
+    goto error;
+  }
 
-  printf("Getting %s ...\n", filename);
+  /* copy command line from proc */
+  snprintf(filename, 255, "/proc/%d/cmdline", (int)pid);
   cmdline_fd = open(filename, O_RDONLY);
-  do {
-    cmdline_bytes_read = read(cmdline_fd, (void*)(_argv_buffer + _argv_len), arg_max - _argv_len);
-    _argv_len += cmdline_bytes_read;
-  } while (cmdline_bytes_read != 0);
+  if (cmdline_fd < 0) {
+    fallback = true;
+    goto read_fail;
+  }
+  /* TODO: check reason for error */
+  _argv_len = read(cmdline_fd, (void*)(_argv_buffer + _argv_len), arg_max - _argv_len);
+  if (_argv_len < 0) {
+    fallback = true;
+    goto read_fail;
+  }
   close(cmdline_fd);
 
+  /* parse raw command line into _argv */
   if (_argv_len == 0)
     exit(-1);
   _argv = hpx_alloc(sizeof(char*)*(_argv_len>>2)); // can't possibly have more arguments than this
+  if (_argv == NULL) {
+    free(_argv_buffer);
+    __hpx_errno = HPX_ERROR;
+    retval = HPX_ERROR;
+    goto error;
+  }
+  
   _argv[0] = &_argv_buffer[0];
   _argc = 0;
-  char prev, curr;
   prev = 0;
   curr = _argv_buffer[0];
-  int i, j;
   i = 0;
   j = 0;
   while (!(curr == 0 && prev == 0) && (i + j < _argv_len) ) {
@@ -114,31 +139,17 @@ int _init_mpi(void) {
     i += j;
     j = 0;
     _argc++;
-
   }
 
-#if 0
-  _argv = hpx_alloc(sizeof(char*)*_argc);
-  prev = 0;
-  curr = _argv_buffer[0];
-  i = 0;
-  j = 0;
-  _argv[0] = &_argv_buffer[0];
-  //  while (!(curr == 0 && prev == 0) && (i + j < _argv_len) ) {
-  int c;
-  for(c = 0; c < _argc; c++) {
-    _argv[i] = &_argv_buffer[i];
-    j = 0;
-    do {
-      prev = curr;
-      curr = _argv_buffer[i+j];
-      j++;
-    }  while (curr != 0);
-    i += j;
-    j = 0;
+ read_fail:
+  free(_argv_buffer);
+ fail:
+  if (fallback) {
+    _argc = 0;
+    _argv = NULL;
   }
-#endif
-  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
+    
+  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
   //  temp = MPI_Init(&_argc, &_argv); /* TODO: should be argc and argv if possible */
 #else
   temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /*
@@ -149,7 +160,8 @@ int _init_mpi(void) {
     retval = 0;
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-  
+
+ error:
   return retval;
 }
 
