@@ -31,7 +31,7 @@
  * will cause all other functions to return HPX_ERROR_NOINIT.
  * 
  * @return error code.
- */
+\ */
 hpx_error_t hpx_init(void) {
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;
@@ -49,11 +49,12 @@ hpx_error_t hpx_init(void) {
   //_hpx_kthread_init();
 
   /* initialize network */
-  __hpx_network_ops = hpx_alloc(sizeof(__hpx_network_ops));
+  __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
 #if HAVE_MPI
   *__hpx_network_ops = mpi_ops;
-#endif
   __hpx_network_ops->init();
+#endif
+
   /* TODO:
      psuedo-code:
      allocate __hpx_comm_operations
