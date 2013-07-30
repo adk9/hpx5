@@ -569,6 +569,10 @@ void _hpx_kthread_srv_rebal(void *ptr) {
       hpx_kthread_mutex_lock(&kth->mtx);
     }
 
+    kth = ctx->kths[0];
+    kth_high = kth;
+    kth_low = kth;
+
     for (idx = 0; idx < ctx->kths_count; idx++) {
       kth = ctx->kths[idx];
       cnt = hpx_queue_size(&kth->pend_q);
