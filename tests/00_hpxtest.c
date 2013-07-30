@@ -56,8 +56,7 @@ int main(int argc, char * argv[]) {
   gethostname(hostname, sizeof(hostname));
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
-  while (0 == i)
-    sleep(20);
+  sleep(10);
 
 
 

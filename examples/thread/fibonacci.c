@@ -34,14 +34,6 @@ void fib(void *n) {
 }
 
 int main(int argc, char *argv[]) {
-  int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  sleep(10);
-
-
   hpx_config_t cfg;
   hpx_thread_t *th;
   long n, *result;
