@@ -31,7 +31,7 @@
  * will cause all other functions to return HPX_ERROR_NOINIT.
  * 
  * @return error code.
-\ */
+ */
 hpx_error_t hpx_init(void) {
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;
