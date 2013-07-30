@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   /* set up our configuration */
   hpx_config_init(&cfg);
 
-  if (cores > 0)
+  if (localities > 0)
     hpx_config_set_localities(&cfg, localities);
 
   /* get the number of localities */
@@ -82,9 +82,9 @@ int main(int argc, char *argv[]) {
   /* create a fibonacci thread */
   hpx_action_invoke(&act, (void*) n, (void**) &result);
 
-  printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
+  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
          n, *result, hpx_elapsed_us(timer)/1e3,
-	 hpx_config_get_cores(&cfg), ++nthreads);
+	 hpx_config_get_localities(&cfg), ++nthreads);
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
