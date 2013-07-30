@@ -65,14 +65,14 @@ AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
 # Check for PAPI measurement support.
-AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
+AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=no], [])
 AS_IF([test "x$use_papi" = xyes], [
   PKG_CHECK_MODULES([PAPI], [papi])
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
 # Check for HWLOC.
-AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
+AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=no], [])
 AS_IF([test "x$use_hwloc" = xyes], [
   PKG_CHECK_MODULES([HWLOC], [hwloc])
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
