@@ -55,18 +55,9 @@ hpx_error_t hpx_init(void) {
   __hpx_network_ops->init();
 #endif
 
-  /* TODO:
-     psuedo-code:
-     allocate __hpx_comm_operations
-     copy defaults to iy
-     set photon and mpi vatiants (if photon is selected, which for now do by default)
-     call correct initializatiob function
-  */
-
-  __hpx_parcelhandler = hpx_parcelhandler_create();
-
   /* initialize the parcel subsystem */
   //hpx_parcel_init();
+  __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize timer subsystem */
   hpx_timer_init();
