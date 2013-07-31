@@ -313,7 +313,7 @@ int verbs_init(int nproc, int myrank, MPI_Comm comm, int forwarder) {
     
     if (verbs_xsp_init() != 0) {
       log_err("verbs_init(); couldn't initialize phorwarder connection");
-      goto error_exit_xsp_init;
+      goto error_exit_FIN_ledger;
     }
   }
 #endif
@@ -323,7 +323,6 @@ int verbs_init(int nproc, int myrank, MPI_Comm comm, int forwarder) {
   
   return 0;
   
- error_exit_xsp_init:
  error_exit_FIN_ledger:
  error_exit_listeners:
  error_exit_verbs_cntx:
