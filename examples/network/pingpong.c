@@ -10,7 +10,7 @@ static int     num_ranks;
 static int     my_rank;
 
 typedef struct Packet {
-  hpx_locality *src;
+  hpx_locality_t *src;
   int token;
 } Packet;
 
@@ -26,6 +26,7 @@ void ping(void *arg) {
     dst = p->src;
     p->src = hpx_get_my_locality();
     hpx_call(dst, "ping", (void*) p, sizeof(*p));
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -47,8 +48,10 @@ int main(int argc, char *argv[]) {
   /* set up our configuration */
   hpx_config_init(&cfg);
 
+  /* TODO:
   if (localities > 0)
     hpx_config_set_localities(&cfg, localities);
+  */
 
   /* get the number of localities */
   num_ranks = hpx_get_num_localities();
@@ -65,15 +68,19 @@ int main(int argc, char *argv[]) {
   /* get start time */
   hpx_get_time(&timer);
 
-  dst = hpx_get_locality((hpx_get_rank()+1)%num_ranks());
+  dst = hpx_get_locality((hpx_get_rank()+1)%num_ranks);
   assert(dst!=NULL);
 
   hpx_call(dst, "ping", (void*)&p, sizeof(Packet));
+  /* TODO: ?
   hpx_quiescence(); // ???
-
+  */
   printf("elapsed time: %.7f\n", hpx_elapsed_us(timer)/1e3);
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
+
+  hpx_cleanup();
+
   return 0;
 }

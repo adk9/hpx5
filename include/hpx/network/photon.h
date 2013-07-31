@@ -38,7 +38,9 @@ struct network_request_t;
 struct network_status_t;
 
 #define _EAGER_THRESHOLD_PHOTON_DEFAULT 256;
-extern int _eager_threshold_photon;
+
+uint32_t _get_rank_photon();
+uint32_t _get_size_photon();
 
 /* If using Photon, call this instead of _init_mpi */
 int _init_photon(void);

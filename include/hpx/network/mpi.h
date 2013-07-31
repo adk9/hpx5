@@ -29,10 +29,10 @@
 #include <mpi.h>
 
 #define _EAGER_THRESHOLD_MPI_DEFAULT 256;
-extern int _eager_threshold_mpi;
-
 extern network_ops_t mpi_ops;
 
+uint32_t _get_rank_mpi();
+uint32_t _get_size_mpi();
 
 int _init_mpi(void);
 

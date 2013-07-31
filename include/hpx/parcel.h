@@ -17,8 +17,12 @@
 #ifndef LIBHPX_PARCEL_H_
 #define LIBHPX_PARCEL_H_
 
+#include <search.h>
+
 #include "hpx/action.h"
 #include "hpx/agas.h"
+
+extern struct hsearch_data action_table; /* TODO: move this out of globals */
 
 typedef struct hpx_parcel_t {
   unsigned int  parcel_id;    /*!< the parcel idenitifer. */

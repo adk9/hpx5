@@ -53,10 +53,11 @@ hpx_error_t hpx_init(void) {
 #if HAVE_MPI
   *__hpx_network_ops = mpi_ops;
   __hpx_network_ops->init();
+  
 #endif
 
   /* initialize the parcel subsystem */
-  //hpx_parcel_init();
+  hpx_parcel_init();
   __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize timer subsystem */

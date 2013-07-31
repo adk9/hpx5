@@ -52,6 +52,16 @@ network_ops_t mpi_ops = {
 };
 
 int _eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;
+int _rank_mpi;
+int _size_mpi;
+
+uint32_t _get_rank_mpi() {
+  return (uint32_t)_rank_mpi;
+}
+
+uint32_t _get_size_mpi() {
+  return (uint32_t)_size_mpi;
+}
 
 int _init_mpi(void) {
   int retval;
@@ -60,6 +70,7 @@ int _init_mpi(void) {
 
   retval = HPX_ERROR;
 
+#if 0
   /* Get argc and argv */
   /* BDM: TODO: Move to utils. Or throw out. MPI_Init can be given
      NULL, NULL so this isn't strictly necessary. */
@@ -151,17 +162,22 @@ int _init_mpi(void) {
     _argc = 0;
     _argv = NULL;
   }
-    
   //  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
   temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #else
   temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #endif // ifdef __linux__
+#endif //if 0   
 
+  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
   if (temp == MPI_SUCCESS)
     retval = 0;
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+
+  /* cache size and rank */
+  MPI_Comm_rank(MPI_COMM_WORLD, &_rank_mpi);
+  MPI_Comm_size(MPI_COMM_WORLD, &_size_mpi);
 
  error:
   return retval;
@@ -181,7 +197,6 @@ int _send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
 int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   int retval;
   int temp;
-  int rank;
 
   retval = HPX_ERROR;
 
@@ -196,8 +211,7 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
     retval = HPX_ERROR;    
   }
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this, obviously */
-  temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, rank, MPI_COMM_WORLD, &(request->mpi));
+  temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, _rank_mpi, MPI_COMM_WORLD, &(request->mpi));
 
   if (temp == MPI_SUCCESS)
     retval = 0;

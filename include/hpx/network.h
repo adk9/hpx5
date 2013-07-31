@@ -82,8 +82,6 @@ typedef struct network_ops_t {
   int (*unpin)(void* buffer, size_t len);
 } network_ops_t;
 
-//extern network_ops_t network_ops;
-
 /**
  * Network Transport
  */
@@ -98,6 +96,9 @@ typedef struct network_mgr_t {
   /* Default transport. We do not want to walk a list when
    * multi-railing is turned off.  */
   network_trans_t *defaults;
+  /* Number of transports in list, since we don't walk to traverse
+     the list to know how many */
+  int num_trans;
   /* List of configured transports  */
   network_trans_t *trans;
 } network_mgr_t;
