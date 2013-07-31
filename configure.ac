@@ -130,6 +130,7 @@ AC_CONFIG_FILES([
   include/Makefile
   examples/Makefile
   examples/thread/Makefile
+  examples/network/Makefile
 ])
 AC_OUTPUT
 

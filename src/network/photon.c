@@ -44,14 +44,22 @@ network_ops_t photon_ops = {
 };
 
 int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
+int _rank_photon;
+int _size_photon;
+
+uint32_t _get_rank_photon() {
+  return (uint32_t)_rank_photon;
+}
+
+uint32_t _get_size_photon() {
+  return (uint32_t)_size_photon;
+}
 
 /* If using Photon, call this instead of _init_mpi */
 int _init_photon(void) {
   int retval;
   int temp;
   int thread_support_provided;
-  int rank;
-  int size;
 
   retval = HPX_ERROR;
 
@@ -65,9 +73,9 @@ int _init_photon(void) {
     goto error;
   }
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache */
-  MPI_Comm_size(MPI_COMM_WORLD, &size); /* TODO: cache */
-  temp =  photon_init(size, rank, MPI_COMM_WORLD);
+  MPI_Comm_rank(MPI_COMM_WORLD, &_rank_photon);
+  MPI_Comm_size(MPI_COMM_WORLD, &_size_photon);
+  temp =  photon_init(_size_photon, _rank_photon, MPI_COMM_WORLD);
   if (temp == 0)
     retval = 0;
   else
@@ -103,12 +111,10 @@ int _finalize_photon(void) {
 int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
-  int rank;
   int tag;
 
   retval = HPX_ERROR;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
-  tag = rank;
+  tag = _rank_photon;
 
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
@@ -130,12 +136,10 @@ int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) 
 int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
-  int rank;
   int tag;
 
   retval = HPX_ERROR;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* TODO: cache this */
-  tag = rank;
+  tag = _rank_photon;
 
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;

@@ -24,7 +24,7 @@
 /* An HPX action taking a single generic (void*) argument */
 typedef struct hpx_action_t {
   char *name;          /* name of the action */
-  hpx_func_t *action;  /* handle to the function */
+  hpx_func_t action;  /* handle to the function */
 } hpx_action_t;
 
 /* Register a new action */

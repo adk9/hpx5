@@ -16,9 +16,11 @@
  ====================================================================
 */
 
+#include <search.h>
 #include <stdlib.h>
 
 #include "hpx/action.h"
+#include "hpx/parcel.h"
 
   /************************************************************************/
   /* ADK: There are a few ways to handle action registration--The         */
@@ -45,9 +47,10 @@ int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
     hpx_action_t *a;
     ENTRY *e;
 
+    /*
     if (action_table == NULL)
         return HPX_ERROR;
-
+    */ /* won't work since action_table is not a pointer */
     a = hpx_alloc(sizeof(*a));
     a->name = name;
     a->action = func;
@@ -65,12 +68,14 @@ int hpx_action_lookup_local(char *name, hpx_action_t *action) {
     hpx_action_t *a;
     ENTRY e;
 
+    /*
     if (action_table == NULL)
         return HPX_ERROR;
+    */
 
     e.key = name;
     ret = hsearch_r(e, FIND, (ENTRY**)&a, &action_table);
-    return a;
+    return ret;
 }
 
 // reverse lookup
@@ -81,7 +86,7 @@ int hpx_action_invoke(hpx_action_t *action, void *args, void **result) {
     hpx_thread_t *th;
     void *ctx; // TODO
     // spawn a thread to invoke the action locally
-    th = hpx_thread_create(ctx, action->action, args);
+    th = hpx_thread_create(ctx, 0, action->action, args);
     hpx_thread_join(th, result);
     return 0;
 }

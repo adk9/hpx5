@@ -28,7 +28,9 @@ typedef struct hpx_locality_t {
     } physical;
 } hpx_locality_t;
 
-int hpx_create_locality(hpx_locality_t *);
+hpx_locality_t* hpx_locality_create(void);
+
+void hpx_locality_destroy(hpx_locality_t*);
 
 hpx_locality_t *hpx_get_my_locality(void);
 

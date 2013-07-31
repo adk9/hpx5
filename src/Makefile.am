@@ -11,10 +11,12 @@ libhpx_la_LIBADD =
 lib_LTLIBRARIES = libhpx.la
 
 libhpx_la_SOURCES = network/network.c \
+                    parcel/action.c  \
                     parcel/handler.c  \
                     parcel/parcel.c   \
                     runtime/ctx.c     \
 		    runtime/init.c    \
+		    runtime/locality.c\
 		    thread/thread.c   \
 		    thread/kthread.c  \
 		    util/error.c      \
