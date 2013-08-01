@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx_map.h"
+#include "hpx/map.h"
 
 
 /*
@@ -94,11 +94,11 @@ START_TEST (test_libhpx_map_sizecount)
   hpx_map_init(&map, hpx_thread_map_hash, hpx_thread_map_cmp, 0);
 
   sz = hpx_map_size(&map);
-  sprintf(msg, "Map was initialized with an incorrect size (expected %d, got %d).", HPX_MAP_DEFAULT_SIZE, sz);
+  sprintf(msg, "Map was initialized with an incorrect size (expected %d, got %ld).", HPX_MAP_DEFAULT_SIZE, sz);
   ck_assert_msg(sz == HPX_MAP_DEFAULT_SIZE, msg);
 
   sz = hpx_map_count(&map);
-  sprintf(msg, "Map was initialized with an incorrect element count (expected 0, got %d).", sz);
+  sprintf(msg, "Map was initialized with an incorrect element count (expected 0, got %ld).", sz);
   ck_assert_msg(sz == 0, msg);
 
   hpx_map_destroy(&map);
@@ -107,11 +107,11 @@ START_TEST (test_libhpx_map_sizecount)
   hpx_map_init(&map, hpx_thread_map_hash, hpx_thread_map_cmp, 11287);
   
   sz = hpx_map_size(&map);
-  sprintf(msg, "Map was initialized with an incorrect size (expected 11287, got %d).", sz);
+  sprintf(msg, "Map was initialized with an incorrect size (expected 11287, got %ld).", sz);
   ck_assert_msg(sz == 11287, msg);
 
   sz = hpx_map_count(&map);
-  sprintf(msg, "Map was initialized with an incorrect element count (expected 0, got %d).", sz);
+  sprintf(msg, "Map was initialized with an incorrect element count (expected 0, got %ld).", sz);
   ck_assert_msg(sz == 0, msg);
 
   hpx_map_destroy(&map);
@@ -210,7 +210,7 @@ START_TEST (test_libhpx_map_delete)
   hpx_map_foreach(&map, int_visitor2);
 
   /* verify our element count is correct */
-  sprintf(msg, "Map has an incorrect element count (expected 8, got %d).", hpx_map_count(&map));
+  sprintf(msg, "Map has an incorrect element count (expected 8, got %ld).", hpx_map_count(&map));
   ck_assert_msg(hpx_map_count(&map) == 8, msg);
 
   hpx_map_destroy(&map);  
