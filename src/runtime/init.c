@@ -58,7 +58,7 @@ hpx_error_t hpx_init(void) {
 
   /* initialize the parcel subsystem */
   hpx_parcel_init();
-  __hpx_parcelhandler = hpx_parcelhandler_create();
+  //  __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -75,7 +75,9 @@ hpx_error_t hpx_init(void) {
 void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
-  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+
+  //  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+
   /* TODO:
     lookup correct network finalize
     call it

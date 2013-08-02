@@ -27,6 +27,36 @@
 #include "hpx/thread.h"
 
 
+/* 
+---------------------------------------------------------------
+ Parcel Handler Queue Data Types
+---------------------------------------------------------------
+*/
+
+#define CACHE_LINE_SIZE 64 /* TODO: get this for real... */
+
+typedef struct hpx_parcelqueue_node_t {
+  void* value;
+  struct hpx_parcelqueue_node_t* next;
+} hpx_parcelqueue_node_t;
+
+typedef struct hpx_parcelqueue_t {
+  hpx_parcelqueue_node_t* head;
+  uint8_t _padding[CACHE_LINE_SIZE - sizeof(hpx_parcelqueue_node_t*)];
+  /* padding should improve performance by a fair margin */
+  hpx_parcelqueue_node_t* tail;  
+  pthread_mutex_t lock;
+} hpx_parcelqueue_t;
+
+int hpx_parcelqueue_create();
+
+void* hpx_parcelqueue_pop();
+
+int hpx_parcelqueue_push(void* val);
+
+/* this does NOT deallocate queue */
+int hpx_parcelqueue_destroy();
+
 /*
  --------------------------------------------------------------------
   Parcel Handler Data

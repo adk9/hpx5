@@ -19,19 +19,172 @@
  ====================================================================
 */
 
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "hpx/config.h"
-#include "hpx/ctx.h"
-#include "hpx/error.h"
-#include "hpx/network.h"
-#include "hpx/parcelhandler.h"
-#include "hpx/thread.h"
+#include "hpx.h"
 
-#if USE_PHOTON
-#include <photon.h>
-#endif
+#define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
+
+/* 
+   Parcel Queue
+
+   The handler needs an efficient way to get parcels from other
+   threads. This queue is designed to meet that goal. The design goals
+   for the queue were:
+   
+   it must be safe despite being read to by many threads,
+   
+   it must be efficient for the consumer (the parcel handler) since it
+   reads from it very often,
+   
+   it should be as relatively efficient for the producers.
+
+   It is a locking queue for simplicity. Fortunately, as there is only
+   one consumer, we only need a lock on the tail and not one on the
+   head. Like in Michael & Scott, we use dummy nodes so that proucers
+   and the consumer do not block each other. This is especially
+   helpful in our case, since pop is supposed to be fast.
+
+   (In fact, in the final implementation, it pretty much is the
+   two-lock queue from Michael & Scott with no head lock. See
+   http://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html)
+
+   One known issue with the current queue implementation is I that one
+   thread being killed or dying while pushing to the queue can lock up
+   the queue. Is that possible at present? So it may not actually be
+   that safe...
+
+   [Note: If we ever need to generalize this queue for some reason
+   (i.e. not just have a single queue) it's an easy change. To each
+   function add a hpx_parcelqueue_t* parameter and remove the line
+   assigning __hpx_parcelqueue to q. Except in create() and destroy()
+   where you must also remove the line where __hpx_parcelqueue is
+   assigned to, of course.]
+
+*/
+
+hpx_parcelqueue_t * __hpx_parcelqueue = NULL;
+
+int hpx_parcelqueue_create() {
+  int ret;
+  int temp;
+  hpx_parcelqueue_node_t* node;
+  ret = HPX_ERROR;
+  __hpx_parcelqueue = hpx_alloc(sizeof(hpx_parcelqueue_t));
+  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+  if (q == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+
+  node = hpx_alloc(sizeof(hpx_parcelqueue_node_t));
+  if (node == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+  node->next = NULL;
+  q->head = node;
+  q->tail = node;
+
+  ret = pthread_mutex_init(&(q->lock), NULL);
+  if (ret != 0) { /* TODO: better error handling */
+    ret = HPX_ERROR;
+    __hpx_errno = HPX_ERROR;
+  }
+
+ error:
+  return ret;
+}
+
+void* hpx_parcelqueue_pop() { /* TODO: rename to trypop */
+  void* val;
+  hpx_parcelqueue_node_t* node;
+    hpx_parcelqueue_node_t* new_head;
+  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+  if (q == NULL) {
+    __hpx_errno = HPX_ERROR; /* TODO: more specific error */
+    val = NULL;
+    goto error;
+  }
+
+  node = q->head;
+  new_head = node->next;
+  
+  if (new_head != NULL) { /* i.e. is not empty */
+    val = new_head->value; /* looks weird but it's correct */
+    q->head = new_head;
+    hpx_free(node);
+  }
+  else
+    val = NULL; /* queue is empty so indicate that */
+ error:
+  return val;
+}
+
+int hpx_parcelqueue_push(void* val) {
+  int ret;
+  int temp;
+  hpx_parcelqueue_node_t* node;
+  ret = HPX_ERROR;
+  node = NULL;
+
+  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+  if (q == NULL) {
+    ret = HPX_ERROR; /* TODO: more specific error */
+    goto error;
+  }
+
+  node = hpx_alloc(sizeof(hpx_parcelqueue_node_t));
+  if (node == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+  node->next = NULL;
+  node->value = val;
+
+  /* CRITICAL SECTION */
+  temp = pthread_mutex_lock(&(q->lock));
+  if (temp != 0) /* TODO: real error handling */
+    goto error;
+
+  q->tail->next = node;
+  q->tail = node;
+
+  temp = pthread_mutex_unlock(&(q->lock));
+  if (temp != 0) /* TODO: real error handling */
+    goto error;
+  /* END CRITICAL SECTION */
+
+  ret = 0;
+
+ error:
+  return ret;
+}
+
+int hpx_parcelqueue_destroy() {
+  int ret;
+  ret = HPX_ERROR;
+  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+  if (q == NULL) {
+    __hpx_errno = HPX_ERROR; /* TODO: more specific error */
+    ret = HPX_ERROR; /* TODO: more specific error */
+    goto error;
+  }
+  pthread_mutex_destroy(&(q->lock));
+  hpx_free(q);
+
+  __hpx_parcelqueue = NULL;
+
+  ret = 0;
+
+ error:
+  return ret;
+}
 
 void * _handler_main(void) {
 
@@ -126,7 +279,7 @@ void * _hpx_parcelhandler_main_pingpong(void) {
 
   // end of use MPI part ===========================================================================================
 
-#if USE_PHOTON
+#if HAVE_PHOTON
   send_buffer = (char*)malloc(buffer_size*sizeof(char));
   recv_buffer = (char*)malloc(buffer_size*sizeof(char));
   copy_buffer = (char*)malloc(buffer_size*sizeof(char));
@@ -191,7 +344,7 @@ void * _hpx_parcelhandler_main_pingpong(void) {
   free(send_buffer);
   free(recv_buffer);
   free(copy_buffer);
-#endif // end of if USE_PHOTON
+#endif // end of if HAVE_PHOTON
 
 #endif // end of if HAVE_MPI
 
@@ -212,7 +365,7 @@ void * _hpx_parcelhandler_main_dummy(void) {
   size_t i = 0;
   while (1) {
     sleep(1);
-    printf("Parcel handler spinningl i = %zd\n", i);
+    printf("Parcel handler spinning i = %zd\n", i);
     i++;
   }
 
@@ -224,11 +377,48 @@ void * _hpx_parcelhandler_main_dummy(void) {
   return NULL;
 }
 
+void * _hpx_parcelhandler_main(void) {
+  int success;
+  hpx_parcel_t* parcel;
+  void* result; /* for action returns */
+
+  size_t i = 0;
+  while (1) {
+    parcel = (hpx_parcel_t*)hpx_parcelqueue_pop();
+    if (parcel != NULL) {
+      if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION)
+	break;
+      /* invoke action */
+      success = hpx_action_invoke(&(parcel->action), NULL, &result);
+    }
+    i++;
+    printf("Parcel handler _main spinning i = %zd\n", i);
+  }
+
+  printf("Parcel handler _main exiting\n");
+
+  int * retval;
+  retval = hpx_alloc(sizeof(int));
+  *retval = 0;
+  hpx_thread_exit((void*)retval);
+
+  return NULL;
+}
 
 hpx_parcelhandler_t * hpx_parcelhandler_create() {
+  int ret = HPX_ERROR;
   hpx_config_t * cfg = NULL;
   hpx_parcelhandler_t * ph = NULL;
 
+  /* create and initialize queue */
+  ret = hpx_parcelqueue_create();
+  if (ret != 0) {
+    __hpx_errno = HPX_ERROR;
+    goto error;
+  }
+
+
+  /* create thread */
   cfg = hpx_alloc(sizeof(hpx_config_t));
   ph = hpx_alloc(sizeof(hpx_parcelhandler_t));
 
@@ -238,7 +428,11 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
       ph->ctx = hpx_ctx_create(cfg);
       /* TODO: error check */
       //      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
-      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_dummy, 0);
+
+
+      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main, 0);
+
+
       /* TODO: error check */
     }
     else {
@@ -246,21 +440,38 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
     }
   }
 
+ error:
   return ph;
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-  int *retval;
+  int *child_retval;
 
-  hpx_thread_join(ph->thread, (void**)&retval);
+  hpx_parcel_t* kill_parcel;
+  /* could possibly use hpx_send_parcel instead */
+  kill_parcel = hpx_alloc(sizeof(hpx_parcel_t));
+  if (kill_parcel == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto error;
+  }
+  kill_parcel->action.action = (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION;
+  hpx_parcelqueue_push((void*)kill_parcel);
+
+  hpx_thread_join(ph->thread, (void**)&child_retval);
 
   /* test code */
   /* TODO: remove */
   printf("Thread joined\n");
-  printf("Value on return = %d\n", *retval);
+  printf("Value on return = %d\n", *child_retval);
   /* end test code */
 
-  hpx_thread_destroy(ph->thread); // TODO: find out where this function has gone to...
+  // hpx_thread_destroy(ph->thread);
   hpx_ctx_destroy(ph->ctx);
   hpx_free(ph);
+
+  hpx_parcelqueue_destroy();
+  hpx_free(__hpx_parcelqueue);
+
+ error:
+  return;
 }

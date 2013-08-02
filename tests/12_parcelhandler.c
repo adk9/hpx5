@@ -25,6 +25,56 @@
 
 /*
  --------------------------------------------------------------------
+  TEST: parcel handler queue init
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_parcelqueue_create)
+{
+  bool success;
+  int ret;
+  ret = hpx_parcelqueue_create();
+  ck_assert_msg(ret == 0, "Could not initialize parcelqueue");
+  hpx_parcelqueue_destroy();
+}
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: parcel handler queue push and pop
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_parcelqueue_push)
+{
+  int i;
+  bool success;
+  int ret;
+  ret = hpx_parcelqueue_create();
+
+  hpx_parcel_t* vals[7];
+  for (i = 0; i < 7; i++) {
+    vals[i] = hpx_alloc(sizeof(hpx_parcel_t));
+    ret = hpx_parcelqueue_push(vals[i]);
+    ck_assert_msg(ret == 0, "Could not push to parcelqueue");
+  }
+
+  hpx_parcel_t* pop_vals[7];
+  for (i = 0; i < 7; i++) {
+    pop_vals[i] = (hpx_parcel_t*)hpx_parcelqueue_pop();
+    ck_assert_msg(pop_vals[i] != NULL, "Could not pop from parcelqueue");
+    ck_assert_msg(pop_vals[i] == vals[i], "Popped bad value from parcelqueue");
+    hpx_free(pop_vals[i]);
+  }
+
+  hpx_parcelqueue_destroy();
+}
+END_TEST
+
+
+
+/*
+ --------------------------------------------------------------------
   TEST: parcel handler creation
  --------------------------------------------------------------------
 */
