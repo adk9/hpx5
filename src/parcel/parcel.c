@@ -21,6 +21,7 @@
 #include <search.h>
 
 #include "hpx/action.h"
+#include "hpx/error.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 
@@ -61,7 +62,30 @@ void hpx_parcel_fini(void) {
   -------------------------------------------------------------------
 */
 int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
-  return 0;
+  int ret;
+  int temp;
+  ret = HPX_ERROR;
+
+  /* where do args go? to what does len refer to (i.e. args or data)? */
+
+  temp = hpx_action_lookup_local(act, &(handle->action));
+  if (temp != 0) {
+    __hpx_errno = HPX_ERROR;
+    ret = temp;
+    goto error;
+  }
+
+  handle->payload = hpx_alloc(len);
+  if (handle->payload == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+
+
+  ret = 0;
+ error:
+  return ret;
 }
 
 hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
@@ -77,4 +101,7 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
 }
 
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+
+
+
 }

@@ -32,6 +32,7 @@ typedef struct hpx_parcel_t {
   /// hpx_action_t continuation; /*!< the continuation action. */
   /// hpx_addr_t  cdest;      /*!< target to execute continuation at. */
   int           flags;        /*!< flags related to the parcel. */
+  size_t       payload_size;
   void         *payload;
 } hpx_parcel_t;
 
