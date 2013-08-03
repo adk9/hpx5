@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx_list.h"
+#include "hpx/list.h"
 
 
 /*

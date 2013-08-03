@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx_thread.h"
+#include "hpx/thread.h"
 
 /* from autoconf */
 #include "config.h"
