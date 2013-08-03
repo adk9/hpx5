@@ -82,6 +82,8 @@ typedef struct network_ops_t {
   int (*unpin)(void* buffer, size_t len);
 } network_ops_t;
 
+extern network_ops_t default_ops;
+
 /**
  * Network Transport
  */
@@ -111,22 +113,22 @@ typedef struct network_mgr_t {
 int hpx_network_init(void);
 
 /* Shutdown and clean up the network layer */
-void hpx_network_finalize(void);
+int hpx_network_finalize(void);
 
 /* Send a raw payload */
-int hpx_network_send(int peer, void *src, size_t len);
+int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req);
 
 /* Receive a raw payload */
-int hpx_network_recv(int peer, void *dst, size_t len);
+int hpx_network_recv(int src, void *buffer, size_t len, network_request_t* req);
 
 /* Test for completion of send/recv */
 int hpx_sendrecv_test(network_request_t *request, int *flag, network_status_t *status);
 
 /* RMA put */
-int hpx_network_put(int peer, void *dst, void *src, size_t len);
+int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req);
 
 /* RMA get */
-int hpx_network_get(void *dst, int peer, void *src, size_t len);
+int hpx_network_get(int src, void *buffer, size_t len, network_request_t* req);
 
 /* Test for completion of put/get */
 int hpx_putget_test(network_request_t *request, int *flag, network_status_t *status);

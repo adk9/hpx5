@@ -256,7 +256,6 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_parcelqueue_push);
   tcase_add_test(tc, test_libhpx_parcelhandler_create);
 
-
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
