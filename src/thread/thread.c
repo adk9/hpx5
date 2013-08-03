@@ -28,6 +28,7 @@
 #include "hpx/error.h"
 #include "hpx/mem.h"
 
+
 /*
  --------------------------------------------------------------------
   hpx_thread_get_id
@@ -46,7 +47,7 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, hpx_func_t func, void *args) {
+hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, void *args) {
   hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
