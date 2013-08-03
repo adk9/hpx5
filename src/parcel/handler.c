@@ -392,10 +392,10 @@ void * _hpx_parcelhandler_main(void) {
       success = hpx_action_invoke(&(parcel->action), NULL, &result);
     }
     i++;
-    printf("Parcel handler _main spinning i = %zd\n", i);
+//    printf("Parcel handler _main spinning i = %zd\n", i);
   }
 
-  printf("Parcel handler _main exiting\n");
+//  printf("Parcel handler _main exiting\n");
 
   int * retval;
   retval = hpx_alloc(sizeof(int));
@@ -461,8 +461,8 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
 
   /* test code */
   /* TODO: remove */
-  printf("Thread joined\n");
-  printf("Value on return = %d\n", *child_retval);
+//  printf("Thread joined\n");
+//  printf("Value on return = %d\n", *child_retval);
   /* end test code */
 
   // hpx_thread_destroy(ph->thread);
