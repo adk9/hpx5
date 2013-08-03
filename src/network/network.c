@@ -42,28 +42,50 @@ network_ops_t default_ops = {
  */
 
 int hpx_network_init(void) {
+  return 0;
 }
 
-void hpx_network_finalize(void) {
+int hpx_network_finalize(void) {
+  return 0;
 }
 
 void hpx_network_progress(void *data) {
 }
 
-int hpx_network_send(int peer, void *src, size_t len) {
+int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-int hpx_network_recv(int peer, void *dst, size_t len) {
+int hpx_network_recv(int src, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-int hpx_network_put(int peer, void *dst, void *src, size_t len) {
+int hpx_sendrecv_test(network_request_t *request, int *flag, network_status_t *status) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
+}  
+
+int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-int hpx_network_get(void *dst, int peer, void *src, size_t len) {
+int hpx_network_get(int src, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
+
+int hpx_putget_test(network_request_t *request, int *flag, network_status_t *status) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
+}  
 
 int hpx_network_pin(void* buffer, size_t len) {
+  return 0;
 }
 
 int hpx_network_unpin(void* buffer, size_t len) {
+  return 0;
 }

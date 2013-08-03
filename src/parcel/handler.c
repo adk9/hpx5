@@ -389,13 +389,15 @@ void * _hpx_parcelhandler_main(void) {
       if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION)
 	break;
       /* invoke action */
-      success = hpx_action_invoke(&(parcel->action), NULL, &result);
+      if (parcel->action.action != NULL) {
+	success = hpx_action_invoke(&(parcel->action), NULL, &result);
+      }
     }
     i++;
-//    printf("Parcel handler _main spinning i = %zd\n", i);
+    //printf("Parcel handler _main spinning i = %zd\n", i);
   }
 
-//  printf("Parcel handler _main exiting\n");
+  //printf("Parcel handler _main exiting\n");
 
   int * retval;
   retval = hpx_alloc(sizeof(int));
@@ -429,9 +431,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
       /* TODO: error check */
       //      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
 
-
-      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main, 0);
-
+      ph->thread = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, (hpx_func_t)_hpx_parcelhandler_main, 0);
 
       /* TODO: error check */
     }

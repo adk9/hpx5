@@ -50,15 +50,15 @@ hpx_error_t hpx_init(void) {
 
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
+  *__hpx_network_ops = default_ops;
 #if HAVE_MPI
   *__hpx_network_ops = mpi_ops;
-  __hpx_network_ops->init();
-  
 #endif
+  __hpx_network_ops->init();
 
   /* initialize the parcel subsystem */
   hpx_parcel_init();
-  //  __hpx_parcelhandler = hpx_parcelhandler_create();
+  __hpx_parcelhandler = hpx_parcelhandler_create();
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -76,7 +76,7 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
-  //  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+  hpx_parcelhandler_destroy(__hpx_parcelhandler); 
 
   /* TODO:
     lookup correct network finalize

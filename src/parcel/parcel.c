@@ -97,7 +97,8 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
   /* send parcel to the destination locality */
     
   ret = hpx_send_parcel(dest, &p);
-  return ret;
+
+  return NULL; /* TODO */
 }
 
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
