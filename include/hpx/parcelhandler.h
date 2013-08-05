@@ -36,7 +36,7 @@
 #define CACHE_LINE_SIZE 64 /* TODO: get this for real... */
 
 typedef struct hpx_parcelqueue_node_t {
-  void* value;
+  void* value; /* BDM: I've kept this void* so we can use it for related things if necessary; we can generalize this queue structure eventually */
   struct hpx_parcelqueue_node_t* next;
 } hpx_parcelqueue_node_t;
 
@@ -48,14 +48,18 @@ typedef struct hpx_parcelqueue_t {
   pthread_mutex_t lock;
 } hpx_parcelqueue_t;
 
-int hpx_parcelqueue_create();
+extern hpx_parcelqueue_t* __hpx_send_queue;
 
-void* hpx_parcelqueue_pop();
+int hpx_parcelqueue_create(hpx_parcelqueue_t**);
 
-int hpx_parcelqueue_push(void* val);
+void* hpx_parcelqueue_trypop(hpx_parcelqueue_t*);
+
+int hpx_parcelqueue_push(hpx_parcelqueue_t*, void* val);
+
+int hpx_parcelqueue_push_nb(hpx_parcelqueue_t*, void* val);
 
 /* this does NOT deallocate queue */
-int hpx_parcelqueue_destroy();
+int hpx_parcelqueue_destroy(hpx_parcelqueue_t**);
 
 /*
  --------------------------------------------------------------------

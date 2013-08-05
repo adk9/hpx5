@@ -56,24 +56,19 @@
    the queue. Is that possible at present? So it may not actually be
    that safe...
 
-   [Note: If we ever need to generalize this queue for some reason
-   (i.e. not just have a single queue) it's an easy change. To each
-   function add a hpx_parcelqueue_t* parameter and remove the line
-   assigning __hpx_parcelqueue to q. Except in create() and destroy()
-   where you must also remove the line where __hpx_parcelqueue is
-   assigned to, of course.]
-
 */
 
-hpx_parcelqueue_t * __hpx_parcelqueue = NULL;
+hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
+hpx_parcelqueue_t * __hpx_send_queue = NULL;
 
-int hpx_parcelqueue_create() {
+int hpx_parcelqueue_create(hpx_parcelqueue_t** q_handle) {
+  hpx_parcelqueue_t* q = *q_handle;
   int ret;
   int temp;
   hpx_parcelqueue_node_t* node;
   ret = HPX_ERROR;
-  __hpx_parcelqueue = hpx_alloc(sizeof(hpx_parcelqueue_t));
-  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+
+  q = hpx_alloc(sizeof(hpx_parcelqueue_t));
   if (q == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
@@ -84,6 +79,7 @@ int hpx_parcelqueue_create() {
   if (node == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
+    free(q);
     goto error;
   }
   node->next = NULL;
@@ -94,17 +90,22 @@ int hpx_parcelqueue_create() {
   if (ret != 0) { /* TODO: better error handling */
     ret = HPX_ERROR;
     __hpx_errno = HPX_ERROR;
+    free(node);
+    free(q);
+    goto error;
   }
+
+  *q_handle = q;
 
  error:
   return ret;
 }
 
-void* hpx_parcelqueue_pop() { /* TODO: rename to trypop */
+void* hpx_parcelqueue_trypop(hpx_parcelqueue_t* q) {
   void* val;
   hpx_parcelqueue_node_t* node;
-    hpx_parcelqueue_node_t* new_head;
-  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+  hpx_parcelqueue_node_t* new_head;
+
   if (q == NULL) {
     __hpx_errno = HPX_ERROR; /* TODO: more specific error */
     val = NULL;
@@ -125,14 +126,13 @@ void* hpx_parcelqueue_pop() { /* TODO: rename to trypop */
   return val;
 }
 
-int hpx_parcelqueue_push(void* val) {
+int hpx_parcelqueue_push(hpx_parcelqueue_t* q, void* val) {
   int ret;
   int temp;
   hpx_parcelqueue_node_t* node;
   ret = HPX_ERROR;
   node = NULL;
 
-  hpx_parcelqueue_t* q = __hpx_parcelqueue;
   if (q == NULL) {
     ret = HPX_ERROR; /* TODO: more specific error */
     goto error;
@@ -166,10 +166,43 @@ int hpx_parcelqueue_push(void* val) {
   return ret;
 }
 
-int hpx_parcelqueue_destroy() {
+/* for use with single reader and writer ONLY!!!! */
+int hpx_parcelqueue_push_nb(hpx_parcelqueue_t* q, void* val) {
+  int ret;
+  int temp;
+  hpx_parcelqueue_node_t* node;
+  ret = HPX_ERROR;
+  node = NULL;
+
+  if (q == NULL) {
+    ret = HPX_ERROR; /* TODO: more specific error */
+    goto error;
+  }
+
+  node = hpx_alloc(sizeof(hpx_parcelqueue_node_t));
+  if (node == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+  node->next = NULL;
+  node->value = val;
+
+  q->tail->next = node;
+  q->tail = node;
+
+  ret = 0;
+
+ error:
+  return ret;
+}
+
+
+int hpx_parcelqueue_destroy(hpx_parcelqueue_t** q_handle) {
+  hpx_parcelqueue_t* q = *q_handle;
   int ret;
   ret = HPX_ERROR;
-  hpx_parcelqueue_t* q = __hpx_parcelqueue;
+
   if (q == NULL) {
     __hpx_errno = HPX_ERROR; /* TODO: more specific error */
     ret = HPX_ERROR; /* TODO: more specific error */
@@ -178,10 +211,9 @@ int hpx_parcelqueue_destroy() {
   pthread_mutex_destroy(&(q->lock));
   hpx_free(q);
 
-  __hpx_parcelqueue = NULL;
-
   ret = 0;
 
+  q_handle = NULL;
  error:
   return ret;
 }
@@ -377,14 +409,39 @@ void * _hpx_parcelhandler_main_dummy(void) {
   return NULL;
 }
 
+
+/*
+  For now, I've decided to use just a single parcel handler thread. We
+  could split this into two based on (1) network stuff and (2) action
+  invocation. BDM
+ */
 void * _hpx_parcelhandler_main(void) {
   int success;
   hpx_parcel_t* parcel;
   void* result; /* for action returns */
+  size_t i;
 
-  size_t i = 0;
+  i = 0;
   while (1) {
-    parcel = (hpx_parcel_t*)hpx_parcelqueue_pop();
+
+    /* ==================================
+       Phase 1: Deal with receives
+       ==================================
+    */
+
+    /* ==================================
+       Phase 2: Deal with sends 
+       ==================================
+    */
+    /* check __hpx_send_queue
+       call network ops to send
+    */
+
+    /* =================================
+       Phase 3: Deal with local parcels 
+       =================================
+    */
+    parcel = (hpx_parcel_t*)hpx_parcelqueue_trypop(__hpx_parcelqueue_local);
     if (parcel != NULL) {
       if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION)
 	break;
@@ -393,6 +450,14 @@ void * _hpx_parcelhandler_main(void) {
 	success = hpx_action_invoke(&(parcel->action), NULL, &result);
       }
     }
+
+    
+    /* ==================================
+       Phase 4: Deal with remote parcels 
+       ==================================
+    */
+
+
     i++;
     //printf("Parcel handler _main spinning i = %zd\n", i);
   }
@@ -413,12 +478,18 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
   hpx_parcelhandler_t * ph = NULL;
 
   /* create and initialize queue */
-  ret = hpx_parcelqueue_create();
+  ret = hpx_parcelqueue_create(&__hpx_parcelqueue_local);
   if (ret != 0) {
     __hpx_errno = HPX_ERROR;
     goto error;
   }
 
+  /* create and initialize send queue */
+  ret = hpx_parcelqueue_create(&__hpx_send_queue);
+  if (ret != 0) {
+    __hpx_errno = HPX_ERROR;
+    goto error;
+  }
 
   /* create thread */
   cfg = hpx_alloc(sizeof(hpx_config_t));
@@ -455,7 +526,7 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
     goto error;
   }
   kill_parcel->action.action = (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION;
-  hpx_parcelqueue_push((void*)kill_parcel);
+  hpx_parcelqueue_push(__hpx_parcelqueue_local, (void*)kill_parcel);
 
   hpx_thread_join(ph->thread, (void**)&child_retval);
 
@@ -469,8 +540,8 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
   hpx_ctx_destroy(ph->ctx);
   hpx_free(ph);
 
-  hpx_parcelqueue_destroy();
-  hpx_free(__hpx_parcelqueue);
+  hpx_parcelqueue_destroy(&__hpx_send_queue);
+  hpx_parcelqueue_destroy(&__hpx_parcelqueue_local);
 
  error:
   return;

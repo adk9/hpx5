@@ -24,6 +24,7 @@
 #include "hpx/error.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
+#include "hpx/parcelhandler.h"
 
 struct hsearch_data action_table;
 
@@ -66,7 +67,9 @@ int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
   int temp;
   ret = HPX_ERROR;
 
-  /* where do args go? to what does len refer to (i.e. args or data)? */
+  /* where do args go? to what does len refer to (i.e. args or data or either)? */
+  /* I'm going to assume args is args or payload, depending
+     Also, I'm going to assume new_parcel doesn't allocate it... */
 
   temp = hpx_action_lookup_local(act, &(handle->action));
   if (temp != 0) {
@@ -75,13 +78,16 @@ int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
     goto error;
   }
 
+  /* TODO: set parcel_id */
+
+  /* put this back in if we're responsibe for allocating room for data
   handle->payload = hpx_alloc(len);
   if (handle->payload == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
-
+  */
 
   ret = 0;
  error:
@@ -95,14 +101,39 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
   /* create a parcel from action, args, len */
   hpx_new_parcel(action, args, len, &p);
   /* send parcel to the destination locality */
-    
   ret = hpx_send_parcel(dest, &p);
 
   return NULL; /* TODO */
 }
 
+int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
+  /* TODO: check size? */
+  int ret;
+  ret = HPX_ERROR;
+  *blob = hpx_alloc(sizeof(hpx_parcel_t) + p->payload_size);
+  if (*blob == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+
+  memcpy(*blob, (void*)p, sizeof(hpx_parcel_t));
+  memcpy(*blob + sizeof(hpx_parcel_t), (void*)p, p->payload_size);
+
+  ret = 0;
+ error:
+  return ret;
+}
+
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+  int ret;
+  char* serialized_parcel;
 
+  hpx_serialize_parcel(p, &serialized_parcel);
+  ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
+  if (ret != 0) {   
+    __hpx_errno = ret;
+  }
 
-
+  return ret;
 }

@@ -87,6 +87,5 @@ int hpx_action_invoke(hpx_action_t *action, void *args, void **result) {
     void *ctx; // TODO
     // spawn a thread to invoke the action locally
     th = hpx_thread_create(ctx, 0, action->action, args);
-    hpx_thread_join(th, result);
     return 0;
 }
