@@ -49,6 +49,10 @@ int hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
 /* Helper to send a parcel structure */
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
 
+/* Helper function for sending; combines parcel plus it's payload into
+   blob. Size of blob is sizeof(hpx_parcel_t) + p->payload_size */
+int hpx_serialize_parcel(hpx_parcel_t *p, char** blob);
+
 /*
  --------------------------------------------------------------------
   Generic Parcel Invocation
