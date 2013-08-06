@@ -48,7 +48,7 @@ typedef struct hpx_parcelqueue_t {
   pthread_mutex_t lock;
 } hpx_parcelqueue_t;
 
-extern hpx_parcelqueue_t* __hpx_send_queue;
+extern hpx_parcelqueue_t* __hpx_send_queue; /* holds hpx_parcel_serialized_t */
 
 int hpx_parcelqueue_create(hpx_parcelqueue_t**);
 
