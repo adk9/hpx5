@@ -106,6 +106,7 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
   return NULL; /* TODO */
 }
 
+/* caller is responsible for freeing *blob */
 int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
   /* TODO: check size? */
   int ret;
@@ -125,10 +126,54 @@ int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
   return ret;
 }
 
+/* DO NOT FREE THE RETURN VALUE */
+hpx_parcel_t* hpx_read_serialized_parcel(char* blob) {
+  return (hpx_parcel_t*)blob;
+}
+
+/* caller is reponsible for free()ing *p and *p->payload */
+int hpx_deserialize_parcel(char* blob, hpx_parcel_t** p) {
+  int ret;
+  size_t payload_size;
+  void* data;
+
+  ret = HPX_ERROR;
+  payload_size = 0;
+
+  *p = hpx_alloc(sizeof(hpx_parcel_t));
+  if (*p == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    goto error;
+  }
+  payload_size = ((hpx_parcel_t*)blob)->payload_size;
+  
+  if (payload_size > 0) {
+    data = hpx_alloc(payload_size);
+    if (data == NULL) {
+      __hpx_errno = HPX_ERROR_NOMEM;
+      ret = HPX_ERROR_NOMEM;
+      goto error;
+    } 
+    memcpy(data, blob + sizeof(hpx_parcel_t), payload_size);
+  }
+  else
+    data = NULL;
+
+  (*p)->payload = data;
+
+  memcpy(*p, blob, sizeof(hpx_parcel_t));
+
+  ret = 0;
+ error:
+  return ret;
+}
+
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
   int ret;
   char* serialized_parcel;
 
+  p->dest.locality = *loc;
   hpx_serialize_parcel(p, &serialized_parcel);
   ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
   if (ret != 0) {   

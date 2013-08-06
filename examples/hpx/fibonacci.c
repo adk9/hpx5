@@ -1,9 +1,12 @@
 
 #include <stdio.h>
+#include <hpx/action.h>
 #include <hpx/config.h>
-#include <hpx/timer.h>
 #include <hpx/ctx.h>
+#include <hpx/parcel.h>
+#include <hpx/runtime.h>
 #include <hpx/thread.h>
+#include <hpx/timer.h>
 
 hpx_context_t *ctx;
 hpx_action_t   act;
@@ -64,8 +67,10 @@ int main(int argc, char *argv[]) {
   /* set up our configuration */
   hpx_config_init(&cfg);
 
+#if 0
   if (localities > 0)
     hpx_config_set_localities(&cfg, localities);
+#endif
 
   /* get the number of localities */
   num_ranks = hpx_get_num_localities();
@@ -82,9 +87,14 @@ int main(int argc, char *argv[]) {
   /* create a fibonacci thread */
   hpx_action_invoke(&act, (void*) n, (void**) &result);
 
+#if 0
   printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
          n, *result, hpx_elapsed_us(timer)/1e3,
 	 hpx_config_get_localities(&cfg), ++nthreads);
+#endif
+  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
+         n, *result, hpx_elapsed_us(timer)/1e3,
+	 localities, ++nthreads);
 
   /* cleanup */
   hpx_ctx_destroy(ctx);

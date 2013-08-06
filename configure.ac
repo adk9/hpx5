@@ -129,6 +129,7 @@ AC_CONFIG_FILES([
   src/Makefile
   include/Makefile
   examples/Makefile
+  examples/hpx/Makefile	
   examples/thread/Makefile
   examples/network/Makefile
 ])

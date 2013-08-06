@@ -200,16 +200,19 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
 
   retval = HPX_ERROR;
 
-  /*
+  /* TODO: move this when checking for eager_threshhold boundary */
   if (len > INT_MAX) {
     __hpx_errno = HPX_ERROR;
     retval = HPX_ERROR;
   }
   */ /* not necessary because of eager_threshold */
+#if 0
+  /* TODO: put this back in - but maybe make this automatically call put() in place of the send */
   if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */
     __hpx_errno = HPX_ERROR;
     retval = HPX_ERROR;    
   }
+#endif
 
   temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, _rank_mpi, MPI_COMM_WORLD, &(request->mpi));
 

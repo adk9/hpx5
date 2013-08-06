@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = . thread network
+SUBDIRS = . hpx thread network
