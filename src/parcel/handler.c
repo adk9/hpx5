@@ -532,8 +532,8 @@ void * _hpx_parcelhandler_main(void) {
       if (parcel_data != NULL) {
 	/* first sizeof(hpx_parcel_t) bytes of a serialized parcel is
 	   actually a hpx_parcel_t: */
-	success = hpx_read_serialized_parcel((char*)parcel_data, &parcel); 
-	if (success != 0) {
+	parcel = hpx_read_serialized_parcel((char*)parcel_data); 
+	if (parcel == NULL) {
 	  /* TODO: signal error to somewhere else! */
 	}
 	network_rank = parcel->dest.locality.rank;
@@ -612,7 +612,7 @@ void * _hpx_parcelhandler_main(void) {
 
 }
 
-hpx_parcelhandler_t * hpx_parcelhandler_create() {
+hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
   int ret = HPX_ERROR;
   hpx_config_t * cfg = NULL;
   hpx_parcelhandler_t * ph = NULL;
@@ -659,24 +659,11 @@ hpx_parcelhandler_t * hpx_parcelhandler_create() {
   }
 
   /* create thread */
-  cfg = hpx_alloc(sizeof(hpx_config_t));
   ph = hpx_alloc(sizeof(hpx_parcelhandler_t));
-
-  if (cfg != NULL) {
-    hpx_config_init(cfg);
-    if (ph != NULL) {
-      ph->ctx = hpx_ctx_create(cfg);
-      /* TODO: error check */
-      //      ph->thread = hpx_thread_create(ph->ctx, 0, (hpx_func_t)_hpx_parcelhandler_main_pingpong, 0);
-
-      ph->thread = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, (hpx_func_t)_hpx_parcelhandler_main, 0);
-
-      /* TODO: error check */
-    }
-    else {
-      __hpx_errno = HPX_ERROR_NOMEM;
-    }
-  }
+  
+  ph->ctx = ctx;
+  ph->thread = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, (hpx_func_t)_hpx_parcelhandler_main, 0);
+  /* TODO: error check */
 
  error:
   return ph;
@@ -704,7 +691,6 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
   /* end test code */
 
   // hpx_thread_destroy(ph->thread);
-  hpx_ctx_destroy(ph->ctx);
   hpx_free(ph);
 
   request_queue_destroy(&network_send_requests);

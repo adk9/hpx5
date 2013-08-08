@@ -17,6 +17,7 @@
 */
 
 #include <stdbool.h>
+#include <limits.h>
 #include <stdlib.h>
 
 #ifdef __linux__
@@ -205,7 +206,7 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
     __hpx_errno = HPX_ERROR;
     retval = HPX_ERROR;
   }
-  */ /* not necessary because of eager_threshold */
+  /* not necessary because of eager_threshold */
 #if 0
   /* TODO: put this back in - but maybe make this automatically call put() in place of the send */
   if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */

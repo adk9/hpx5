@@ -30,6 +30,7 @@ struct hsearch_data action_table;
 
 int hpx_parcel_init(void) {
     int status;
+    int ret;
 
     /* create an action table */
     
@@ -38,10 +39,15 @@ int hpx_parcel_init(void) {
     /* ADK: TODO: we need a better hash table implementation. */
     status = hcreate_r(ACTION_TABLE_SIZE, &action_table);
     
-    if (status != 0) /* this should be impossible */
+
+    if (status == 0) /* this should be impossible */
+      /* BDM: note that hcreate_r returns 0 on FAILURE, and non-zero on success. backwards, but hey */
       return HPX_ERROR;
     
     /* spawn the parcel handler/dispatcher thread */
+
+    ret = 0;
+    return ret;
 }
 
 
@@ -53,7 +59,7 @@ void hpx_parcel_fini(void) {
   
 }
 
-/*
+/**
  --------------------------------------------------------------------
   hpx_new_parcel
 
@@ -172,6 +178,7 @@ int hpx_deserialize_parcel(char* blob, hpx_parcel_t** p) {
 int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
   int ret;
   char* serialized_parcel;
+  ret = 0;
 
   p->dest.locality = *loc;
   hpx_serialize_parcel(p, &serialized_parcel);
