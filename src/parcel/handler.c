@@ -482,6 +482,7 @@ void * _hpx_parcelhandler_main_dummy(void) {
   * check if puts and gets have completed
  */
 void * _hpx_parcelhandler_main(void) {
+  bool quitting;
   int success;
   hpx_parcel_t* parcel;
   void* result; /* for action returns */
@@ -492,13 +493,15 @@ void * _hpx_parcelhandler_main(void) {
   size_t network_size; /* total size of raw network data */
 
   network_request_t recv_request; /* seperate request for this since we need it to persist */
-  bool outstanding_recv_request = false;
   network_request_t* curr_request;
+  bool outstanding_receive;
   int curr_flag;
   network_status_t curr_status;
+  int curr_source;
   char* recv_buffer;
-
   int * retval;
+
+  quitting = false;
   retval = hpx_alloc(sizeof(int));
   *retval = 0;
 
@@ -519,6 +522,7 @@ void * _hpx_parcelhandler_main(void) {
        (2) check __hpx_send_queue
        + call network ops to send
     */
+
     /* cleanup outstanding sends/puts */
     if (!request_queue_empty(&network_send_requests)) {
       curr_request = request_queue_head(&network_send_requests);
@@ -526,6 +530,7 @@ void * _hpx_parcelhandler_main(void) {
       if (curr_flag)
 	request_queue_pop(&network_send_requests);
     }
+
     /* check send queue */
     if (!request_queue_full(&network_send_requests)) { /* don't do this if we can't handle any more send requests */
       parcel_data = hpx_parcelqueue_trypop(__hpx_send_queue);
@@ -560,8 +565,10 @@ void * _hpx_parcelhandler_main(void) {
     /* TODO: handle local parcels other than actions - if applicable? */
     parcel = (hpx_parcel_t*)hpx_parcelqueue_trypop(__hpx_parcelqueue_local);
     if (parcel != NULL) {
-      if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION)
-	break;
+      if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION) {
+	quitting = true;
+	// break;
+      }
       /* invoke action */
       if (parcel->action.action != NULL) {
 	success = hpx_action_invoke(&(parcel->action), NULL, &result);
@@ -572,9 +579,11 @@ void * _hpx_parcelhandler_main(void) {
        Phase 3: Deal with remote parcels 
        ==================================
     */
-    if (outstanding_recv_request == true) {
+    if (outstanding_receive) { /* if we're currently waiting on a message */
+      /* if we've finished receiving the message, move on... else keep waiting */
       __hpx_network_ops->sendrecv_test(&recv_request, &curr_flag, &curr_status);
       if (curr_flag) {
+	outstanding_receive = false;
 	/* 
 	   If we've received something, do stuff:
 	   * If it's a notificiation of a put, call get() TODO: do this
@@ -589,13 +598,24 @@ void * _hpx_parcelhandler_main(void) {
 	/* TODO: deal with case where there is no invocation */
 
       }
-    }
-    /* now get a new parcel to process */
-    __hpx_network_ops->recv(NETWORK_ANY_SOURCE, recv_buffer,  NETWORK_ANY_LENGTH, &recv_request);
+      else { /* otherwise, see if there's a message to wait for */
+	__hpx_network_ops->probe(NETWORK_ANY_SOURCE, &curr_flag, &curr_status);
+	if (curr_flag) { /* there is a message to receive */
+	  __hpx_network_ops->recv(curr_status.source, recv_buffer, NETWORK_ANY_LENGTH, &recv_request);
+	  outstanding_receive = true;
+	}
 
+      } /* end if(curr_flag) */
+    } /* end if(outstanding_receive) */
+    /* now get a new parcel to process */
+    
     /* Right now, deserialize_parcel() calls hpx_alloc(). In the
        future, if that changes, we might have to allocate a new buffer
        here.... */
+
+    /* TODO: if no sends in queue, nothing with probe, and quitting == true, break */
+    if (quitting && request_queue_empty(&network_send_requests) && !outstanding_receive)
+      break;
 
     i++;
     //printf("Parcel handler _main spinning i = %zd\n", i);

@@ -40,6 +40,8 @@ int _finalize_mpi(void);
 
 void _progress_mpi(void *data);
 
+int _probe_mpi(int source, int* flag, network_status_t* status);
+
 int _send_parcel_mpi(hpx_locality_t *, hpx_parcel_t *);
 
 /* Send data via MPI. Presumably this will be an "eager" send. Don't use "data" until it's done! */

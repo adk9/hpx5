@@ -44,6 +44,7 @@ network_ops_t mpi_ops = {
     .init     = _init_mpi,
     .finalize = _finalize_mpi,
     .progress = _progress_mpi,
+    .probe    = _probe_mpi,
     .send     = _send_mpi,
     .recv     = _recv_mpi,
     .sendrecv_test = _test_mpi,
@@ -194,6 +195,29 @@ int _send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
   */
 }
 
+/* status may NOT be NULL */
+int _probe_mpi(int source, int* flag, network_status_t* status) {
+  int retval;
+  int temp;
+  int mpi_src;
+  int mpi_len;
+
+  retval = HPX_ERROR;
+  if (source == NETWORK_ANY_SOURCE)
+    mpi_src = MPI_ANY_SOURCE;
+
+  temp = MPI_Iprobe(source, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
+
+  if (temp == MPI_SUCCESS) {
+    status->source = status->mpi.MPI_SOURCE;
+    retval = 0;
+  }
+  else
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+
+  return retval;  
+}
+
 /* Send data via MPI. Presumably this will be an "eager" send. Don't use "data" until it's done! */
 int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   int retval;
@@ -267,8 +291,10 @@ int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
   else
     temp = MPI_Test(&(request->mpi), flag, &(status->mpi));
 
-  if (temp == MPI_SUCCESS)
+  if (temp == MPI_SUCCESS) {
     retval = 0;
+    status->source = status->mpi.MPI_SOURCE;
+  }
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
 
@@ -301,4 +327,3 @@ int _finalize_mpi(void) {
 
   return retval;
 }
-

@@ -29,6 +29,7 @@ network_ops_t default_ops = {
     .init     = hpx_network_init,
     .finalize = hpx_network_finalize,
     .progress = hpx_network_progress,
+    .probe    = hpx_network_probe,
     .send     = hpx_network_send,
     .recv     = hpx_network_recv,
     .put      = hpx_network_put,
@@ -50,6 +51,11 @@ int hpx_network_finalize(void) {
 }
 
 void hpx_network_progress(void *data) {
+}
+
+int hpx_network_probe(int source, int* flag, network_status_t* status) {
+  *flag = false;
+  return 0;
 }
 
 int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req) {
