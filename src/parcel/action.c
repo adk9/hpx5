@@ -18,7 +18,9 @@
 
 #include <search.h>
 #include <stdlib.h>
+#include <stdio.h>
 
+#include "hpx/init.h"
 #include "hpx/action.h"
 #include "hpx/parcel.h"
 
@@ -58,13 +60,14 @@ int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
     ret = hsearch_r(*(ENTRY*)a, ENTER, &e, &action_table);
     if (e == NULL || ret < 0)
         return HPX_ERROR;
+    *action = *(hpx_action_t*)e;
 
     free(a);
     return HPX_SUCCESS;
 }
 
 int hpx_action_lookup_local(char *name, hpx_action_t *action) {
-    int ret;
+  int ret, status;
     hpx_action_t *a;
     ENTRY e;
 
@@ -74,7 +77,14 @@ int hpx_action_lookup_local(char *name, hpx_action_t *action) {
     */
 
     e.key = name;
-    ret = hsearch_r(e, FIND, (ENTRY**)&a, &action_table);
+    status = hsearch_r(e, FIND, (ENTRY**)&a, &action_table);
+    if (status == 0) /* note that hsearch_r returns 0 on FAILURE, and non-zero on success. */
+      ret = HPX_ERROR;
+    else {
+      *action = *(hpx_action_t*)a;
+      ret = 0;
+    }
+
     return ret;
 }
 
@@ -83,9 +93,29 @@ int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action) {
 }
 
 int hpx_action_invoke(hpx_action_t *action, void *args, void **result) {
-    hpx_thread_t *th;
-    void *ctx; // TODO
-    // spawn a thread to invoke the action locally
-    th = hpx_thread_create(ctx, 0, action->action, args);
-    return 0;
+  int ret;
+#if 0
+
+  hpx_thread_t *th = NULL;
+  void *ctx = NULL;
+  
+  ctx = __hpx_global_ctx; /* TODO? Change if necessary */
+  // spawn a thread to invoke the action locally
+  th = hpx_thread_create(ctx, 0, action->action, args);
+  ret = 0;
+#else
+  if (action->action != NULL) {
+
+    /* TODO: assign result
+
+    */
+    ret = 0;
+  }
+  else
+    { /* TODO: error */ }
+#endif
+
+
+
+  return ret;
 }

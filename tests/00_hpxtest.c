@@ -254,7 +254,13 @@ int main(int argc, char * argv[]) {
   /* parcel handler tests */
   tcase_add_test(tc, test_libhpx_parcelqueue_create);
   tcase_add_test(tc, test_libhpx_parcelqueue_push);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded_concurrent);
   tcase_add_test(tc, test_libhpx_parcelhandler_create);
+  tcase_add_test(tc, test_libhpx_parcelsystem_init);
+  tcase_add_test(tc, test_libhpx_action_register);
+  tcase_add_test(tc, test_libhpx_parcel_create);
+  tcase_add_test(tc, test_libhpx_parcel_send);
 
   /* performance tests */
   if (perf_tests) {
