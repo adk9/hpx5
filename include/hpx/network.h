@@ -46,6 +46,7 @@ typedef struct network_request_t {
 } network_request_t;
 
 typedef struct network_status_t {
+  int source;
 #if HAVE_MPI
   MPI_Status mpi;
 #endif
@@ -64,6 +65,7 @@ typedef struct network_ops_t {
   int (*finalize)(void);
   /* The network progress function */
   void (*progress)(void *data);
+  int (*probe)(int src, int* flag, network_status_t* status);
   /* Send a raw payload */
   int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
   /* Receive a raw payload */
@@ -114,6 +116,8 @@ int hpx_network_init(void);
 
 /* Shutdown and clean up the network layer */
 int hpx_network_finalize(void);
+
+int hpx_network_probe(int source, int* flag, network_status_t* status);
 
 /* Send a raw payload */
 int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req);

@@ -125,7 +125,8 @@ int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
   }
 
   memcpy(*blob, (void*)p, sizeof(hpx_parcel_t));
-  memcpy(*blob + sizeof(hpx_parcel_t), (void*)p, p->payload_size);
+  if (p->payload_size > 0)
+    memcpy(*blob + sizeof(hpx_parcel_t), (void*)p, p->payload_size);
 
   ret = 0;
  error:
