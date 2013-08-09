@@ -7,7 +7,7 @@
 # This software was created at the Indiana University Center for
 # Research in Extreme Scale Technologies (CREST).
 
-AC_PREREQ([2.68])
+AC_PREREQ([2.63])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
@@ -19,7 +19,7 @@ AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
-AM_PROG_AR
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT
