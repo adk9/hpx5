@@ -94,28 +94,20 @@ int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action) {
 
 int hpx_action_invoke(hpx_action_t *action, void *args, void **result) {
   int ret;
-#if 0
 
   hpx_thread_t *th = NULL;
   void *ctx = NULL;
   
-  ctx = __hpx_global_ctx; /* TODO? Change if necessary */
-  // spawn a thread to invoke the action locally
-  th = hpx_thread_create(ctx, 0, action->action, args);
-  ret = 0;
-#else
   if (action->action != NULL) {
-
-    /* TODO: assign result
-
-    */
+    ctx = __hpx_global_ctx; /* TODO? Change if necessary */
+    // spawn a thread to invoke the action locally
+    th = hpx_thread_create(ctx, 0, action->action, args);
     ret = 0;
   }
-  else
-    { /* TODO: error */ }
-#endif
-
-
+  else { 
+    ret = HPX_ERROR;
+    __hpx_errno = HPX_ERROR;
+  }
 
   return ret;
 }
