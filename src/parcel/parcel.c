@@ -134,12 +134,13 @@ int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
 }
 
 /* DO NOT FREE THE RETURN VALUE */
-hpx_parcel_t* hpx_read_serialized_parcel(char* blob) {
+/* FIXME CAUTION for some reason using this causes a bug. gcc interprets the return value as a 32 bit integer and sign extends it to 64 bits resulting in BAD THINGS happening... */
+hpx_parcel_t* hpx_read_serialized_parcel(void* blob) {
   return (hpx_parcel_t*)blob;
 }
 
 /* caller is reponsible for free()ing *p and *p->payload */
-int hpx_deserialize_parcel(char* blob, hpx_parcel_t** p) {
+int hpx_deserialize_parcel(void* blob, hpx_parcel_t** p) {
   int ret;
   size_t payload_size;
   void* data;

@@ -61,7 +61,10 @@
 hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
 hpx_parcelqueue_t * __hpx_send_queue = NULL;
 
-/* private storage for network requests; are ring buffers */
+/**
+   Private storage for network requests. Request queues are ring
+buffers and are not intended to be used concurrently.
+  */
 typedef struct request_queue_t {
   network_request_t *requests;
   size_t head;
@@ -124,6 +127,7 @@ void request_queue_pop(request_queue_t* q) {
     q->head++;
   if (q->head == q->limit) /* wrap around */
     q->head = 0;
+  q->size--;
 }
 
 int hpx_parcelqueue_create(hpx_parcelqueue_t** q_handle) {
@@ -537,7 +541,8 @@ void * _hpx_parcelhandler_main(void) {
       if (parcel_data != NULL) {
 	/* first sizeof(hpx_parcel_t) bytes of a serialized parcel is
 	   actually a hpx_parcel_t: */
-	parcel = hpx_read_serialized_parcel((char*)parcel_data); 
+	//	parcel = hpx_read_serialized_parcel(parcel_data); 
+	parcel = (hpx_parcel_t*)parcel_data;
 	if (parcel == NULL) {
 	  /* TODO: signal error to somewhere else! */
 	}
@@ -582,21 +587,23 @@ void * _hpx_parcelhandler_main(void) {
     if (outstanding_receive) { /* if we're currently waiting on a message */
       /* if we've finished receiving the message, move on... else keep waiting */
       __hpx_network_ops->sendrecv_test(&recv_request, &curr_flag, &curr_status);
+
       if (curr_flag) {
 	outstanding_receive = false;
-	/* 
-	   If we've received something, do stuff:
+	/* If we've received something, do stuff:
 	   * If it's a notificiation of a put, call get() TODO: do this
 	   * If it's an action invocation, do that.
 	*/
 
 	/* TODO: move this to a seperate thread */
-	hpx_deserialize_parcel((char*)recv_buffer, &parcel);
-	/* invoke action */
-	if (parcel->action.action != NULL)
-	  success = hpx_action_invoke(&(parcel->action), NULL, &result);
-	/* TODO: deal with case where there is no invocation */
+	hpx_deserialize_parcel(recv_buffer, &parcel);
 
+	/* invoke action */
+	if (parcel->action.action != NULL) {
+	  // printf("Invoking action %s\n", parcel->action.name);
+	  success = hpx_action_invoke(&(parcel->action), NULL, &result);
+	}
+	/* TODO: deal with case where there is no invocation */
       }
       else { /* otherwise, see if there's a message to wait for */
 	__hpx_network_ops->probe(NETWORK_ANY_SOURCE, &curr_flag, &curr_status);
