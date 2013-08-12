@@ -44,18 +44,6 @@ void _test_action(void* args) {
 
 /*
  -------------------------------------------------------------------
-  TEST HELPER: empty action for send parcel tests
- -------------------------------------------------------------------
-*/
-
-void _test_action_checkrank(void* args) {
-  unsigned int my_rank;
-  my_rank = hpx_get_rank();
-  ck_assert_msg(my_rank == 1, "Parcel sent to wrong locality");
-}
-
-/*
- -------------------------------------------------------------------
   TEST HELPER: worker for parcelqueue tests
  -------------------------------------------------------------------
 */
@@ -73,6 +61,67 @@ void thread_queue_worker(void* a) {
   //  printf("thread %ld is done\n", hpx_thread_get_id(hpx_thread_self()));
   return;
 }
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for send parcel tests
+ -------------------------------------------------------------------
+*/
+
+void _test_action_checkrank(void* args) {
+  unsigned int my_rank;
+  my_rank = hpx_get_rank();
+  ck_assert_msg(my_rank == 1, "Parcel sent to wrong locality");
+  hpx_lco_future_set(&fut, 0);
+}
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Main thread for parcel send test
+ --------------------------------------------------------------------
+*/
+void _thread_main_parcelsend(void* args) {
+  int success;
+  hpx_action_t* a;
+  hpx_parcel_t* p;
+  unsigned int num_ranks;
+  unsigned int my_rank;
+  hpx_locality_t* my_loc;
+  hpx_locality_t* other_loc;
+
+  hpx_lco_future_init(&fut, 1);
+
+  num_ranks = hpx_get_num_localities();
+  ck_assert_msg(num_ranks > 1, "Couldn't send parcel - no remote localities available to send to");
+
+  my_loc = hpx_get_my_locality();
+  my_rank = my_loc->rank;
+
+  /* register action for parcel (must be done by all ranks) */
+  a = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_test_action_checkrank", (hpx_func_t)_test_action_checkrank, a);
+
+  if (my_rank == 0) {
+    other_loc = hpx_get_locality(1);
+    p = hpx_alloc(sizeof(hpx_parcel_t));
+    success = hpx_new_parcel("_test_action_checkrank", (void*)NULL, 0, p);
+    
+    success = hpx_send_parcel(other_loc, p);
+    ck_assert_msg(success == 0, "Couldn't send parcel");
+
+    hpx_locality_destroy(other_loc);
+  }
+  else if (my_rank == 1) {
+    hpx_thread_wait(&fut);
+  }
+  else {
+  }
+
+  /* cleanup */
+  hpx_lco_future_destroy(&fut);
+
+}
+
 
 /*
  --------------------------------------------------------------------
@@ -362,56 +411,20 @@ END_TEST
 
 START_TEST (test_libhpx_parcel_send)
 {
-  struct args Args;
-  hpx_action_t* a;
-  hpx_parcel_t* p;
   int success;
-  unsigned int num_ranks;
-  unsigned int my_rank;
-  hpx_locality_t* my_loc;
-  hpx_locality_t* other_loc;
 
-  /* DEBUG CODE */
-
-  int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  //  sleep(15);
-  /* END DEBUG CODE */
-
-  hpx_lco_future_init(&fut, 1);
-
-  num_ranks = hpx_get_num_localities();
-  ck_assert_msg(num_ranks > 1, "Could not send parcel - no network available");
-
-  my_loc = hpx_get_my_locality();
-  my_rank = my_loc->rank;
-
-  /* register action for parcel (must be done by all ranks) */
-  a = hpx_alloc(sizeof(hpx_action_t));
-  hpx_action_register("_test_action", (hpx_func_t)_test_action_checkrank, a);
-
-  if (my_rank == 0) {
-    other_loc = hpx_get_locality(1);
-    p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
-    
-    success = hpx_send_parcel(other_loc, p);
-    ck_assert_msg(success == 0, "Could not send parcel - hpx_send_parcel() failed");
-    hpx_locality_destroy(my_loc);
-  }
-  else if (my_rank == 1) {
-
-
-  }
-  else {
-  }
+  hpx_config_t *cfg;
+  hpx_context_t *ctx;
+  hpx_thread_t* th;
+  
+  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  hpx_config_init(cfg);
+  ctx = hpx_ctx_create(cfg);
+  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0);
+  hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-
-  hpx_lco_future_destroy(&fut);
-
+  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  hpx_free(cfg);
 } 
 END_TEST

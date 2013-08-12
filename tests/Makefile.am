@@ -2,8 +2,8 @@ if WITH_TESTSUITE
 
 noinst_bindir=.
 noinst_bin_PROGRAMS = hpxtest
-TESTS = hpxtest
-#TESTS = 
+#TESTS = hpxtest
+TESTS = 
 check_PROGRAMS = hpxtest
 hpxtest_SOURCES = 00_hpxtest.c
 hpxtest_CFLAGS = @CHECK_CFLAGS@ @PAPI_CFLAGS@
