@@ -507,6 +507,7 @@ void * _hpx_parcelhandler_main(void) {
   int * retval;
 
   quitting = false;
+  outstanding_receive = false;
   retval = hpx_alloc(sizeof(int));
   *retval = 0;
 
