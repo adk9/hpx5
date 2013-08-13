@@ -23,19 +23,19 @@ void kernel(int maxIter) {
 	do_kernel(maxIter);
 }
 
-int estimateKernelSize(double time){
-    double dt;
-    struct timeval tv1, tv2;
+int estimateKernelSize(double time) {
+	double dt;
+	struct timeval tv1, tv2;
 
-    gettimeofday(&tv1, NULL);
-    kernel(10000);
-    gettimeofday(&tv2, NULL);
-    dt = (1000000.0*(double)(tv2.tv_sec-tv1.tv_sec) + (double)(tv2.tv_usec-tv1.tv_usec));
+	gettimeofday(&tv1, NULL);
+	kernel(10000);
+	gettimeofday(&tv2, NULL);
+	dt = (1000000.0*(double)(tv2.tv_sec-tv1.tv_sec) + (double)(tv2.tv_usec-tv1.tv_usec));
 
-    return (int)((10000*time)/dt);
+	return (int)((10000*time)/dt);
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
 	uint32_t recvReq,sendReq;
 	char *send,*recv;
 	int rank,size,prev,next;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
 	MPI_Comm_size(MPI_COMM_WORLD,&size);
 	next = (rank+1) % size;
 	prev = (size+rank-1) % size;
-	
+
 	photon_init(size,rank, MPI_COMM_WORLD);
 	maxSize = 104857600; // 100 Mb
 	smallAmountOfWork = estimateKernelSize(5000); // 5 milliseconds (i think)
@@ -66,50 +66,56 @@ int main(int argc, char *argv[]){
 				photon_send_FIN(next);
 				photon_gettime_(&kernel_start);
 				kernel(workSize);
-				photon_gettime_(&kernel_end);				
-				while(1){
+				photon_gettime_(&kernel_end);
+				while(1) {
 					int flag, type;
 					MPI_Status stat;
 					int tst = photon_test(recvReq, &flag, &type, &stat);
-					if( tst < 0 ){
+					if( tst < 0 ) {
 						fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
 						exit(-1);
-					}else if( tst > 0 ){
+					}
+					else if( tst > 0 ) {
 						fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
 						exit(0);
-                    }else{
-						if( flag ){
+					}
+					else {
+						if( flag ) {
 							fprintf(stderr,"%d: recv(%d, %d) completed successfully\n", rank, stat.MPI_SOURCE, stat.MPI_TAG);
 							break;
-						}else{
+						}
+						else {
 //							fprintf(stderr,"%d: Busy waiting for recv\n", rank);
 							usleep(10*1000); // 1/100th of a second
-                    	}
-                    }
+						}
+					}
 				}
-				while(1){
+				while(1) {
 					int flag, type;
 					MPI_Status stat;
 					int tst = photon_test(sendReq, &flag, &type, &stat);
-					if( tst < 0 ){
+					if( tst < 0 ) {
 						fprintf(stderr,"%d: An error occured in photon_test(send)\n", rank);
 						exit(-1);
-					}else if( tst > 0 ){
+					}
+					else if( tst > 0 ) {
 						fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
 						exit(0);
-                    }else{
-						if( flag ){
+					}
+					else {
+						if( flag ) {
 							fprintf(stderr,"%d: send(%d, %d) completed successfully\n", rank, stat.MPI_SOURCE, stat.MPI_TAG);
 							break;
-						}else{
+						}
+						else {
 //							fprintf(stderr,"%d: Busy waiting for send\n", rank);
 							usleep(10*1000); // 1/100th of a second
-                    	}
-                    }
+						}
+					}
 				}
 				photon_gettime_(&total_end);
 				overhead = (total_end-total_start) - (kernel_end-kernel_start);
-				if (rank == 0 ) 
+				if (rank == 0 )
 					printf("%i,%i,%i,%f,%f,%f\n",trial,arraySize,workSize,(total_end-total_start),(kernel_end-kernel_start),overhead);
 			}
 			photon_unregister_buffer(send,arraySize);
@@ -117,7 +123,7 @@ int main(int argc, char *argv[]){
 			free(send);
 			free(recv);
 		}
-	}		
+	}
 	photon_finalize();
 	MPI_Finalize();
 	return 0;

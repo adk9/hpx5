@@ -7,9 +7,9 @@
 typedef struct verbs_remote_buffer_info {
 	volatile uint8_t header;
 	uint32_t request;
-    uint32_t rkey;
-    uintptr_t addr;
-    uint32_t size;
+	uint32_t rkey;
+	uintptr_t addr;
+	uint32_t size;
 	int tag;
 	volatile uint16_t filler;
 	volatile uint8_t footer;

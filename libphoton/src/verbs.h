@@ -31,23 +31,23 @@
 #define MAX_QP 1
 
 typedef struct proc_info_t {
-   struct ibv_qp *qp[MAX_QP];
-   int            psn;
-   int            num_qp;
+	struct ibv_qp *qp[MAX_QP];
+	int            psn;
+	int            num_qp;
 
 // Conduit independent (almost) part
-  verbs_ri_ledger_t *local_snd_info_ledger;
-  verbs_ri_ledger_t *remote_snd_info_ledger;
-  verbs_ri_ledger_t *local_rcv_info_ledger;
-  verbs_ri_ledger_t *remote_rcv_info_ledger;
-  verbs_rdma_FIN_ledger_t *local_FIN_ledger;
-  verbs_rdma_FIN_ledger_t *remote_FIN_ledger;
+	verbs_ri_ledger_t *local_snd_info_ledger;
+	verbs_ri_ledger_t *remote_snd_info_ledger;
+	verbs_ri_ledger_t *local_rcv_info_ledger;
+	verbs_ri_ledger_t *remote_rcv_info_ledger;
+	verbs_rdma_FIN_ledger_t *local_FIN_ledger;
+	verbs_rdma_FIN_ledger_t *remote_FIN_ledger;
 
-  verbs_remote_buffer_t *curr_remote_buffer;
+	verbs_remote_buffer_t *curr_remote_buffer;
 
 #ifdef WITH_XSP
-  libxspSess *sess;
-  PhotonIOInfo *io_info;
+	libxspSess *sess;
+	PhotonIOInfo *io_info;
 #endif
 } ProcessInfo;
 
@@ -58,8 +58,8 @@ typedef struct verbs_req {
 	int type;
 	int proc;
 	int tag;
-  pthread_mutex_t mtx;
-  pthread_cond_t completed;
+	pthread_mutex_t mtx;
+	pthread_cond_t completed;
 } verbs_req_t;
 
 struct mem_register_req {
@@ -69,9 +69,9 @@ struct mem_register_req {
 };
 
 typedef struct verbs_cnct_info {
-  int lid;
-  int qpn;
-  int psn;
+	int lid;
+	int qpn;
+	int psn;
 } verbs_cnct_info_t;
 
 #endif

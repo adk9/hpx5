@@ -4,15 +4,15 @@
 #include <infiniband/verbs.h>
 
 typedef struct verbs_buffer {
-    char *buffer;
-    int size;
-    int is_registered;
+	char *buffer;
+	int size;
+	int is_registered;
 //    int is_remote;
-    int ref_count;
+	int ref_count;
 //    DAT_LMR_HANDLE lmr_handle;
 //    DAT_LMR_CONTEXT lmr_context;
 //    DAT_RMR_CONTEXT rmr_context;
-    struct ibv_mr *mr;
+	struct ibv_mr *mr;
 
 ////*    DAT_IA_HANDLE ia;
 ////*    DAT_PZ_HANDLE pz;

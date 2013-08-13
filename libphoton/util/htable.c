@@ -11,7 +11,7 @@ static int hash_key(uint64_t key, int table_size);
 
 htable_t *htable_create(int size) {
 	htable_t *htable;
-  
+
 	htable = (htable_t *)malloc(sizeof(htable_t));
 	if( !htable )
 		goto error_exit;
@@ -36,8 +36,8 @@ error_exit:
 }
 
 
-static int hash_key(uint64_t key, int table_size){
-    return (int)(key%table_size);
+static int hash_key(uint64_t key, int table_size) {
+	return (int)(key%table_size);
 
 }
 
@@ -45,32 +45,32 @@ static int hash_key(uint64_t key, int table_size){
 int htable_insert(htable_t *htable, uint64_t key, void *value) {
 	int hash;
 	hash_element_t *temp;
-	
+
 	pthread_mutex_lock(&htable->mtx);
-    {
-        // TODO: Do we need to verify that the element doesn't exist?
-        if (__htable_lookup(htable, key) != NULL) {
-            pthread_mutex_unlock(&htable->mtx);
-            return -2;
-        }
+	{
+		// TODO: Do we need to verify that the element doesn't exist?
+		if (__htable_lookup(htable, key) != NULL) {
+			pthread_mutex_unlock(&htable->mtx);
+			return -2;
+		}
 
-        // allocate a new node
-        temp = malloc( sizeof(hash_element_t) );
-        temp->key = key;
-        temp->value = value;
-        temp->next = NULL;
-        temp->prev = NULL;
+		// allocate a new node
+		temp = malloc( sizeof(hash_element_t) );
+		temp->key = key;
+		temp->value = value;
+		temp->next = NULL;
+		temp->prev = NULL;
 
-        // insert the node at the head of the list
-        hash = hash_key(key, htable->size);
-        temp->next = htable->table[hash];
-        if (temp->next)
-            temp->next->prev = temp;
-        htable->table[hash] = temp;
+		// insert the node at the head of the list
+		hash = hash_key(key, htable->size);
+		temp->next = htable->table[hash];
+		if (temp->next)
+			temp->next->prev = temp;
+		htable->table[hash] = temp;
 
-        htable->elements++;
-    }
-    pthread_mutex_unlock(&htable->mtx);
+		htable->elements++;
+	}
+	pthread_mutex_unlock(&htable->mtx);
 
 	return 0;
 }
@@ -82,8 +82,8 @@ static hash_element_t *__htable_lookup(htable_t *htable, uint64_t key) {
 	hash = hash_key(key, htable->size);
 
 	for(temp = htable->table[hash]; temp != NULL; temp = temp->next) {
-	    if( temp->key == key )
-	        return temp;
+		if( temp->key == key )
+			return temp;
 	}
 
 	return NULL;
@@ -94,14 +94,14 @@ int htable_lookup(htable_t *htable, uint64_t key, void **value) {
 
 	pthread_mutex_lock(&htable->mtx);
 	{
-        temp = __htable_lookup(htable, key);
-        if (!temp) {
-            pthread_mutex_unlock(&htable->mtx);
-            return -1;
-        }
+		temp = __htable_lookup(htable, key);
+		if (!temp) {
+			pthread_mutex_unlock(&htable->mtx);
+			return -1;
+		}
 
-        if (value)
-            *value = temp->value;
+		if (value)
+			*value = temp->value;
 	}
 	pthread_mutex_unlock(&htable->mtx);
 
@@ -115,31 +115,31 @@ int htable_remove(htable_t *htable, uint64_t key, void **value) {
 
 	pthread_mutex_lock(&htable->mtx);
 	{
-	    temp = __htable_lookup(htable, key);
-	    if (!temp) {
-	        pthread_mutex_unlock(&htable->mtx);
-	        return -1;
-	    }
+		temp = __htable_lookup(htable, key);
+		if (!temp) {
+			pthread_mutex_unlock(&htable->mtx);
+			return -1;
+		}
 
-	    // remove the node
-	    if (temp->prev)
-	        temp->prev->next = temp->next;
-	    if (temp->next)
-	        temp->next->prev = temp->prev;
+		// remove the node
+		if (temp->prev)
+			temp->prev->next = temp->next;
+		if (temp->next)
+			temp->next->prev = temp->prev;
 
-	    // if the node was the head of the list
-	    if (temp->prev == NULL) {
-	        hash = hash_key(key, htable->size);
-	        htable->table[hash] = temp->next;
-	    }
+		// if the node was the head of the list
+		if (temp->prev == NULL) {
+			hash = hash_key(key, htable->size);
+			htable->table[hash] = temp->next;
+		}
 
-	    // return the value to the user if they want it
-	    if (value != NULL)
-	        *value = temp->value;
+		// return the value to the user if they want it
+		if (value != NULL)
+			*value = temp->value;
 
-	    free(temp);
+		free(temp);
 
-	    htable->elements--;
+		htable->elements--;
 	}
 	pthread_mutex_unlock(&htable->mtx);
 
@@ -184,15 +184,15 @@ int htable_update(htable_t *htable, uint64_t key, void *value, void **old_value)
 
 	pthread_mutex_lock(&htable->mtx);
 	{
-	    temp = __htable_lookup(htable, key);
-	    if (!temp) {
-	        pthread_mutex_unlock(&htable->mtx);
-	        return htable_insert(htable, key, value);
-	    }
+		temp = __htable_lookup(htable, key);
+		if (!temp) {
+			pthread_mutex_unlock(&htable->mtx);
+			return htable_insert(htable, key, value);
+		}
 
-	    if (old_value)
-	        old_value = temp->value;
-	    temp->value = value;
+		if (old_value)
+			old_value = temp->value;
+		temp->value = value;
 	}
 	pthread_mutex_unlock(&htable->mtx);
 
@@ -204,15 +204,15 @@ int htable_update_if_exists(htable_t *htable, uint64_t key, void *value, void **
 
 	pthread_mutex_lock(&htable->mtx);
 	{
-	    temp = __htable_lookup(htable, key);
-	    if (!temp) {
-	        pthread_mutex_unlock(&htable->mtx);
-	        return -1;
-	    }
+		temp = __htable_lookup(htable, key);
+		if (!temp) {
+			pthread_mutex_unlock(&htable->mtx);
+			return -1;
+		}
 
-	    if (old_value)
-	        *old_value = temp->value;
-	    temp->value = value;
+		if (old_value)
+			*old_value = temp->value;
+		temp->value = value;
 	}
 	pthread_mutex_unlock(&htable->mtx);
 

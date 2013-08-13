@@ -19,8 +19,8 @@
 
 
 typedef struct photon_ledger_info {
-    uint32_t rkey;
-    uintptr_t va;
+	uint32_t rkey;
+	uintptr_t va;
 } PhotonLedgerInfo;
 
 /*
@@ -36,20 +36,20 @@ enum PhotonMPITypes {
 };
 
 typedef struct photon_mpi_datatype {
-    int combiner;
-    int nints;
-    int *integers;
-    int naddrs;
-    MPI_Aint *addresses;
-    int ndatatypes;
-    int *datatypes;
+	int combiner;
+	int nints;
+	int *integers;
+	int naddrs;
+	MPI_Aint *addresses;
+	int ndatatypes;
+	int *datatypes;
 } PhotonMPIDatatype;
 
 typedef struct photon_io_info {
-    char *fileURI;
-    int amode;
-    int niter;
-    PhotonMPIDatatype view;
+	char *fileURI;
+	int amode;
+	int niter;
+	PhotonMPIDatatype view;
 } PhotonIOInfo;
 
 

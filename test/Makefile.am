@@ -5,5 +5,4 @@ AM_CFLAGS = @CFLAGS@                         \
 
 bin_PROGRAMS = photon_test
 photon_test_SOURCES = kernel.c photon_test.c
-photon_test_LDADD = @top_srcdir@/libphoton/src/libphoton.la
-photon_test_LDFLAGS = -lm @RDMA_LIBS@ @THREAD_LIBS@ @MPI_LIBS@
+photon_test_LDFLAGS = @top_srcdir@/libphoton/src/libphoton.la -lm @RDMA_LIBS@ @THREAD_LIBS@ @MPI_LIBS@
