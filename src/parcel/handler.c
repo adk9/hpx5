@@ -609,7 +609,7 @@ void * _hpx_parcelhandler_main(void) {
 	*/
 
 	/* TODO: move this to a seperate thread */
-	hpx_deserialize_parcel(recv_buffer, &parcel);
+	hpx_parcel_deserialize(recv_buffer, &parcel);
 
 	/* invoke action */
 	if (parcel->action.action != NULL) {
@@ -630,7 +630,7 @@ void * _hpx_parcelhandler_main(void) {
     } /* end if(outstanding_receive) */
     /* now get a new parcel to process */
     
-    /* Right now, deserialize_parcel() calls hpx_alloc(). In the
+    /* Right now, parcel_deserialize() calls hpx_alloc(). In the
        future, if that changes, we might have to allocate a new buffer
        here.... */
 

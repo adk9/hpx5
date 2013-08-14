@@ -54,9 +54,10 @@ int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
         return HPX_ERROR;
     */ /* won't work since action_table is not a pointer */
     a = hpx_alloc(sizeof(*a));
-    a->name = name;
+    a->name = strdup(name);
     a->action = func;
 
+    /* FIXME Does hsearch do a deep or shallow copy? If a deep copy, we are leaking memory */
     ret = hsearch_r(*(ENTRY*)a, ENTER, &e, &action_table);
     if (e == NULL || ret < 0)
         return HPX_ERROR;
@@ -81,7 +82,7 @@ int hpx_action_lookup_local(char *name, hpx_action_t *action) {
     if (status == 0) /* note that hsearch_r returns 0 on FAILURE, and non-zero on success. */
       ret = HPX_ERROR;
     else {
-      *action = *(hpx_action_t*)a;
+      *action = *a;
       ret = 0;
     }
 

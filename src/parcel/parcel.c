@@ -113,20 +113,43 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
 }
 
 /* caller is responsible for freeing *blob */
-int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
+int hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
   /* TODO: check size? */
   int ret;
+  size_t size_of_action_name;
+  size_t size_of_payload;
+  size_t size_of_blob;
+  size_t blobi; /* where we are at in the blob */
+
+  blobi = 0;
   ret = HPX_ERROR;
-  *blob = hpx_alloc(sizeof(hpx_parcel_t) + p->payload_size);
+
+  /* figure out how much space we need */
+  size_of_payload = p->payload_size;
+  size_of_action_name = sizeof(char)*(strlen(p->action.name) + 1);
+  size_of_blob = sizeof(hpx_parcel_t) + size_of_action_name + size_of_payload;
+
+  /* allocate space for binary blob */
+  *blob = hpx_alloc(size_of_blob);
   if (*blob == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
 
+  /* copy the parcel struct to the blob */
   memcpy(*blob, (void*)p, sizeof(hpx_parcel_t));
-  if (p->payload_size > 0)
-    memcpy(*blob + sizeof(hpx_parcel_t), (void*)p, p->payload_size);
+  blobi += sizeof(hpx_parcel_t);
+
+  /* copy the action name to the blob */
+  strncpy(*blob + blobi, p->action.name, size_of_action_name);
+  blobi += size_of_action_name + 1; /* +1 for nul terminator */
+  (*blob)[blobi - 1] = '\0'; /* just in case some other thread did something very bad, we will limit the damage here */
+
+  /* copy the payload to the blob */
+  if (size_of_payload > 0)
+    memcpy(*blob + blobi, p->payload, size_of_payload);
+  blobi += size_of_payload;
 
   ret = 0;
  error:
@@ -139,38 +162,49 @@ hpx_parcel_t* hpx_read_serialized_parcel(void* blob) {
   return (hpx_parcel_t*)blob;
 }
 
-/* caller is reponsible for free()ing *p and *p->payload */
-int hpx_deserialize_parcel(void* blob, hpx_parcel_t** p) {
+/** caller is reponsible for free()ing *p and *p->payload */
+int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   int ret;
-  size_t payload_size;
-  void* data;
+  size_t size_of_action_name;
+  size_t size_of_payload;
+  size_t size_of_blob;
+  size_t blobi; /* where we are at in the blob */
+  char* action_name;
+  void* payload;
 
+  blobi = 0;
   ret = HPX_ERROR;
-  payload_size = 0;
 
+  /* we know we need room for the parcel so make room for that */
   *p = hpx_alloc(sizeof(hpx_parcel_t));
   if (*p == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
-  payload_size = ((hpx_parcel_t*)blob)->payload_size;
+  blobi += sizeof(hpx_parcel_t);
+
+  /* now we can figure out the size of our payload */
+  size_of_payload = ((hpx_parcel_t*)blob)->payload_size;
+
+  /* now we can figure out the size of our action name */
+  size_of_action_name = strlen((char*)blob + blobi);
   
-  if (payload_size > 0) {
-    data = hpx_alloc(payload_size);
-    if (data == NULL) {
-      __hpx_errno = HPX_ERROR_NOMEM;
-      ret = HPX_ERROR_NOMEM;
-      goto error;
-    } 
-    memcpy(data, blob + sizeof(hpx_parcel_t), payload_size);
+  /* allocate space for payload */
+  payload = hpx_alloc(size_of_payload);
+  if (action_name == NULL) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    ret = HPX_ERROR_NOMEM;
+    free(action_name);
+    free(*p);
+    goto error;
   }
-  else
-    data = NULL;
 
-  (*p)->payload = data;
-
-  memcpy(*p, blob, sizeof(hpx_parcel_t));
+  /* lookup our local action - that way we avoid problems with who is responsible for free()ing action.name */
+  hpx_action_lookup_local(action_name, &((*p)->action));
+  
+  /* fix up our payload pointer in our parcel */
+  (*p)->payload = payload;
 
   ret = 0;
  error:
@@ -183,7 +217,7 @@ int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
   ret = 0;
 
   p->dest.locality = *loc;
-  hpx_serialize_parcel(p, &serialized_parcel);
+  hpx_parcel_serialize(p, &serialized_parcel);
   ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
   if (ret != 0) {   
     __hpx_errno = ret;
