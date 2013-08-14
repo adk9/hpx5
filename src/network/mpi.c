@@ -259,6 +259,8 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE)
     mpi_src = MPI_ANY_SOURCE;
+
+  /* This may go away eventually. If we take this out, we need to use MPI_Get_count to get the size (which introduces problems with threading, should we ever change that) or we need to change sending to send the size first. */
   if (len == NETWORK_ANY_LENGTH)
     mpi_len = _eager_threshold_mpi;
   else {
@@ -269,7 +271,8 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
     }
   }
 
-  temp = MPI_Irecv(buffer, (int)mpi_len, MPI_BYTE, mpi_src, MPI_ANY_TAG, MPI_COMM_WORLD, &(request->mpi));
+
+  temp = MPI_Irecv(buffer, (int)mpi_len, MPI_BYTE, mpi_src, mpi_src, MPI_COMM_WORLD, &(request->mpi));
 
   if (temp == MPI_SUCCESS)
     retval = 0;
