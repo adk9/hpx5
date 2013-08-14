@@ -95,6 +95,9 @@ int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
   }
   */
 
+  handle->payload = args;
+  handle->payload_size = len;
+
   ret = 0;
  error:
   return ret;
@@ -182,6 +185,7 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
+  memcpy(*p, blob, sizeof(hpx_parcel_t));
   blobi += sizeof(hpx_parcel_t);
 
   /* now we can figure out the size of our payload */
@@ -202,7 +206,13 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
 
   /* lookup our local action - that way we avoid problems with who is responsible for free()ing action.name */
   hpx_action_lookup_local(action_name, &((*p)->action));
+  blobi += size_of_action_name + 1;
   
+  /* move payload to new payload space */
+  if (size_of_payload > 0)
+    memcpy(payload, blob + blobi, size_of_payload);
+  blobi += size_of_payload;
+
   /* fix up our payload pointer in our parcel */
   (*p)->payload = payload;
 
