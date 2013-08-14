@@ -53,7 +53,7 @@ typedef struct photon_io_info {
 } PhotonIOInfo;
 
 
-int photon_xsp_init(int nproc, int myrank, MPI_Comm comm, int *phorwarder);
+int photon_xsp_init(photonConfig cfg);
 int photon_xsp_init_server(int nproc);
 int photon_xsp_phorwarder_io_init(char *fileURI, int amode, MPI_Datatype view, int niter);
 int photon_xsp_phorwarder_io_finalize();

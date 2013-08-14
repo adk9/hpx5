@@ -5,4 +5,4 @@ AM_CFLAGS = @CFLAGS@                         \
             -I@top_srcdir@/libphoton/src
 
 noinst_LTLIBRARIES = libutil.la
-libutil_la_SOURCES = buffertable.c htable.c
+libutil_la_SOURCES = buffertable.c htable.c util.c

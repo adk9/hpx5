@@ -9,8 +9,7 @@ libphoton_la_SOURCES = verbs.c                     \
 						verbs_buffer.c             \
 						verbs_remote_buffer.c      \
 						verbs_rdma_info_ledger.c   \
-						verbs_rdma_FIN_ledger.c    \
-						wrapper.c
+						verbs_rdma_FIN_ledger.c 
 
 libphoton_ladir = @top_srcdir@/libphoton/include
 libphoton_la_HEADERS = *.h

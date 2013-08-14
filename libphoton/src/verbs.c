@@ -71,6 +71,7 @@ verbs_buffer_t *shared_storage;
 
 static ProcessInfo *verbs_processes;
 
+static char *              phot_verbs_ib_dev = NULL;
 static int                 phot_verbs_ib_port = 1;
 static struct ibv_context *phot_verbs_context;
 static struct ibv_pd      *phot_verbs_pd;
@@ -92,8 +93,18 @@ DEFINE_COUNTER(curr_cookie, uint32_t)
 DEFINE_COUNTER(handshake_rdma_write, uint32_t)
 
 
+//////// Global variables ////////
+#ifdef DEBUG
+
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 #ifdef DEBUG
+int _photon_start_debugging=1;
+#endif
+#if defined(DEBUG) || defined(CALLTRACE)
+FILE *_phot_ofp;
+
 static time_t _tictoc(time_t stime, int proc) {
 	time_t etime;
 	etime = time(NULL);
@@ -109,16 +120,22 @@ static time_t _tictoc(time_t stime, int proc) {
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
-int verbs_init_common(int nproc, int myrank, MPI_Comm comm, int forwarder) {
+int verbs_init_common(photonConfig cfg) {
 	int i;
 	char *buf;
 	int bufsize, offset;
 	int info_ledger_size, FIN_ledger_size;
 
-	_photon_nproc = nproc;
-	_photon_myrank = myrank;
-	_photon_forwarder = forwarder;
-	_photon_comm = comm;
+	_photon_nproc = cfg->nproc;
+	_photon_myrank = (int)cfg->address;
+	_photon_forwarder = cfg->use_forwarder;
+	_photon_comm = cfg->comm;
+
+	if (cfg->ib_dev)
+		phot_verbs_ib_dev = cfg->ib_dev;
+
+	if (cfg->ib_port)
+		phot_verbs_ib_port = cfg->ib_port;
 
 	if (__initialized != 0) {
 		log_err("verbs_init_common(): Error: already initialized/initializing");
@@ -170,16 +187,16 @@ int verbs_init_common(int nproc, int myrank, MPI_Comm comm, int forwarder) {
 		goto error_exit_rt;
 	}
 
-	verbs_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc+forwarder));
+	verbs_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc+_photon_forwarder));
 	if (!verbs_processes) {
 		log_err("verbs_init_common(): Couldn't allocate process information");
 		goto error_exit_lrt;
 	}
 
 	// Set it to zero, so that we know if it ever got initialized
-	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc+forwarder));
+	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc+_photon_forwarder));
 
-	for(i = 0; i < _photon_nproc+forwarder; i++) {
+	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
 		verbs_processes[i].curr_remote_buffer = verbs_remote_buffer_create();
 		if(!verbs_processes[i].curr_remote_buffer) {
 			log_err("Couldn't allocate process remote buffer information");
@@ -196,8 +213,8 @@ int verbs_init_common(int nproc, int myrank, MPI_Comm comm, int forwarder) {
 
 	// Everything is x2 cause we need a local and a remote copy of each ledger.
 	// Remote Info (_ri_) ledger has an additional x2 cause we need "send-info" and "receive-info" ledgers.
-	info_ledger_size = 2 * 2 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+forwarder);
-	FIN_ledger_size  = 2 * sizeof(verbs_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+forwarder);
+	info_ledger_size = 2 * 2 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
+	FIN_ledger_size  = 2 * sizeof(verbs_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
 	bufsize = info_ledger_size + FIN_ledger_size;
 	buf = malloc(bufsize);
 	if (!buf) {
@@ -274,10 +291,10 @@ error_exit:
 	return -1;
 }
 
-int verbs_init(int nproc, int myrank, MPI_Comm comm, int forwarder) {
+int verbs_init(photonConfig cfg) {
 	int i;
 
-	if (verbs_init_common(nproc, myrank, comm, forwarder) != 0)
+	if (verbs_init_common(cfg) != 0)
 		goto error_exit;
 
 	if( verbs_connect_peers(verbs_processes) ) {
@@ -962,7 +979,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 		}
 
 		cookie = (uint32_t)( (wc.wr_id<<32)>>32);
-//fprintf(stderr,"[%d/%d] __verbs_wait_event(): Event occured with cookie:%x\n", _photon_myrank, _photon_nproc, cookie);
+		//fprintf(stderr,"[%d/%d] __verbs_wait_event(): Event occured with cookie:%x\n", _photon_myrank, _photon_nproc, cookie);
 		if (cookie == req->id) {
 			req->state = REQUEST_COMPLETED;
 
@@ -2452,8 +2469,8 @@ error_exit:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // the actual photon API
 
-inline int photon_init(int nproc, int myrank, MPI_Comm comm) {
-	return verbs_init(nproc, myrank, comm, 0);
+inline int photon_init(photonConfig cfg) {
+	return verbs_init(cfg);
 }
 
 inline int photon_register_buffer(char *buffer, int buffer_size) {
@@ -2564,24 +2581,29 @@ inline int photon_finalize() {
 static int verbs_init_context(ProcessInfo *verbs_processes) {
 
 	struct ibv_device **dev_list;
-	int i, iproc, num_qp;
+	int i, iproc, num_qp, num_devs;
 
 	ctr_info(" > verbs_init_context()");
 
 	// FIXME: Are we using random numbers anywhere?
 	srand48(getpid() * time(NULL));
 
-	dev_list = ibv_get_device_list(NULL);
+	dev_list = ibv_get_device_list(&num_devs);
 	if (!dev_list || !dev_list[0]) {
 		fprintf(stderr, "No IB devices found\n");
 		return 1;
 	}
 
-	ctr_info(" > verbs_init_context(): using device %s", ibv_get_device_name(dev_list[1]));
+	for (i=0; i<=num_devs; i++) {
+		if (!strcmp(ibv_get_device_name(dev_list[i]), phot_verbs_ib_dev)) {
+			ctr_info(" > verbs_init_context(): using device %s:%d", ibv_get_device_name(dev_list[i]), phot_verbs_ib_port);
+			break;
+		}
+	}
 
-	phot_verbs_context = ibv_open_device(dev_list[1]);
+	phot_verbs_context = ibv_open_device(dev_list[i]);
 	if (!phot_verbs_context) {
-		fprintf(stderr, "Couldn't get context for %s\n", ibv_get_device_name(dev_list[1]));
+		fprintf(stderr, "Couldn't get context for %s\n", ibv_get_device_name(dev_list[i]));
 		return 1;
 	}
 	ctr_info(" > verbs_init_context(): context has device %s", ibv_get_device_name(phot_verbs_context->device));
@@ -2601,7 +2623,6 @@ static int verbs_init_context(ProcessInfo *verbs_processes) {
 			return 1;
 		}
 		phot_verbs_lid = attr.lid;
-		printf("%d\n", attr.lid);
 	}
 
 	// The second argument (cq_size) can be something like 40K.	 It should be

@@ -3,11 +3,24 @@
 
 #include <stdint.h>
 
+struct photon_config_t {
+	uint64_t address;
+	int nproc;
+	int use_mpi;
+	MPI_Comm comm;
+	int use_forwarder;
+
+	char *ib_dev;
+	int ib_port;
+};
+
 #ifdef WITH_XSP
 #include "photon_xsp.h"
 #endif
 
-int photon_init(int nproc, int rank, MPI_Comm comm);
+typedef struct photon_config_t * photonConfig;
+	
+int photon_init(photonConfig cfg);
 int photon_finalize();
 
 int photon_register_buffer(char *buffer, int buffer_size);

@@ -47,7 +47,17 @@ int main(int argc, char *argv[]) {
 	next = (rank+1) % size;
 	prev = (size+rank-1) % size;
 
-	photon_init(size,rank, MPI_COMM_WORLD);
+	struct photon_config_t cfg = {
+		.use_mpi = 1,
+		.nproc = size,
+		.address = rank,
+		.comm = MPI_COMM_WORLD,
+		.use_forwarder = 0,
+		.ib_dev = "mlx4_1",
+		.ib_port = 1
+	};
+
+	photon_init(&cfg);
 	maxSize = 104857600; // 100 Mb
 	smallAmountOfWork = estimateKernelSize(5000); // 5 milliseconds (i think)
 	maxWork = estimateKernelSize(200000); // 20 seconds (i think)
