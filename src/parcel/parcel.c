@@ -205,6 +205,7 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   }
 
   /* lookup our local action - that way we avoid problems with who is responsible for free()ing action.name */
+  action_name = (char*)blob + blobi;
   hpx_action_lookup_local(action_name, &((*p)->action));
   blobi += size_of_action_name + 1;
   
