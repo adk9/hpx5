@@ -40,6 +40,39 @@ typedef struct hpx_parcelqueue_node_t {
   struct hpx_parcelqueue_node_t* next;
 } hpx_parcelqueue_node_t;
 
+/*
+--------------------------------------------------------------------
+ Parcel Queue 
+--------------------------------------------------------------------
+*/
+/** 
+   The handler needs an efficient way to get parcels from other
+   threads. This queue is designed to meet that goal. The design goals
+   for the queue were:
+   
+   - it must be safe despite being read to by many threads,
+   
+   - it must be efficient for the consumer (the parcel handler) since it
+   reads from it very often,
+   
+   - it should be as efficient for the producers as possible given the other constraints.
+
+   It is a locking queue for simplicity. Fortunately, as there is only
+   one consumer, we only need a lock on the tail and not one on the
+   head. Like in Michael & Scott, we use dummy nodes so that producers
+   and the consumer do not block each other. This is especially
+   helpful in our case, since pop is supposed to be fast.
+
+   (In fact, in the final implementation, it pretty much is the
+   two-lock queue from Michael & Scott with no head lock. See
+   http://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html)
+
+   One known issue with the current queue implementation is that one
+   thread being killed or dying while pushing to the queue can lock up
+   the queue. Is that possible at present? So it may not actually be
+   that safe...
+
+*/
 typedef struct hpx_parcelqueue_t {
   hpx_parcelqueue_node_t* head;
   uint8_t _padding[CACHE_LINE_SIZE - sizeof(hpx_parcelqueue_node_t*)];
@@ -50,15 +83,25 @@ typedef struct hpx_parcelqueue_t {
 
 extern hpx_parcelqueue_t* __hpx_send_queue; /* holds hpx_parcel_serialized_t */
 
+/** This creates the queue (including any allocation) and initialized its data structures. */
 int hpx_parcelqueue_create(hpx_parcelqueue_t**);
 
+/** 
+    This pops an element off the queue if one is available, and
+    returns NULL otherwise. This function does not block. It should be
+    called only by a single consumer.
+ */
 void* hpx_parcelqueue_trypop(hpx_parcelqueue_t*);
 
+/** This pushes an element onto the queue. It is blocking. It is threadsafe. */
 int hpx_parcelqueue_push(hpx_parcelqueue_t*, void* val);
 
+/** 
+    This pushed an element onto the queue in a non-blocking, non-threadsafe way. It is to be used when there is only one producer. 
+*/
 int hpx_parcelqueue_push_nb(hpx_parcelqueue_t*, void* val);
 
-/* this does NOT deallocate queue */
+/** This cleans up the queues related data structures and deallocate the queue. */
 int hpx_parcelqueue_destroy(hpx_parcelqueue_t**);
 
 /*
@@ -81,7 +124,20 @@ typedef struct hpx_parcelhandler_t {
  --------------------------------------------------------------------
 */
 
+/**
+  Create the parcel handler. Returns a newly allocated and initialized
+  parcel handler. 
+
+  *Warning*: In the present implementation, there
+  should only ever be one parcel handler, or the system will break.
+ */
 hpx_parcelhandler_t *hpx_parcelhandler_create();
+
+/**
+   Clean up the parcel handler: Destroy any outstanding threads in a
+   clean way, free any related data structures, and free the parcel
+   handler itself.
+ */
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t *);
 
 /*
