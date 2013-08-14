@@ -20,7 +20,7 @@
 #include "hpx/types.h"
 
 typedef struct hpx_locality_t {
-    char *hostname;
+  /* char *hostname; */ /* BDM: If we put this in, we need to change parcel serialization. Since this is referenced nowhere else, I've taken it out for now. Do we need this? */
     uint32 rank;
     union {
         uint32 nid;

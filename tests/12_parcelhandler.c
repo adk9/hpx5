@@ -340,26 +340,11 @@ END_TEST
 
 /*
  --------------------------------------------------------------------
-  TEST: parcel system initialization
- --------------------------------------------------------------------
-*/
-
-START_TEST (test_libhpx_parcelsystem_init)
-{
-
-  int success;
-  success = hpx_parcel_init();
-  ck_assert_msg(success == 0, "Could not initialize parcel system");
-
-} 
-END_TEST
-
-/*
- --------------------------------------------------------------------
   TEST: action registration
  --------------------------------------------------------------------
 */
 
+/*TODO: Move action tests to their own file */
 START_TEST (test_libhpx_action_register)
 {
   hpx_action_t* a;
@@ -374,6 +359,21 @@ START_TEST (test_libhpx_action_register)
 } 
 END_TEST
 
+/*
+ --------------------------------------------------------------------
+  TEST: parcel system initialization
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_parcelsystem_init)
+{
+
+  int success;
+  success = hpx_parcel_init();
+  ck_assert_msg(success == 0, "Could not initialize parcel system");
+
+} 
+END_TEST
 
 /*
  --------------------------------------------------------------------
@@ -404,6 +404,43 @@ END_TEST
 
 /*
  --------------------------------------------------------------------
+  TEST: parcel serialize
+ --------------------------------------------------------------------
+*/
+START_TEST (test_libhpx_parcel_serialize)
+{
+  struct args Args;
+  Args.x = 1.414;
+  Args.y = 3;
+  Args.z = 'a';
+  hpx_action_t* a;
+  hpx_parcel_t* p;
+  int success;
+  char* blob;
+
+  a = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  p = hpx_alloc(sizeof(hpx_parcel_t));
+  success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
+
+  ck_assert_msg(success == 0, "Could not serialize parcel - failed to create parcel");
+
+  success = hpx_parcel_serialize(p, &blob);
+  ck_assert_msg(success == 0, "Could not serialize parcel");
+
+  int action_name_matches;
+  action_name_matches = strncmp("_test_action", blob + sizeof(hpx_parcel_t), strlen("_test_action"));
+  ck_assert_msg(action_name_matches == 0, "Parcel not serialized properly - action name was incorrect or missing");
+  int payload_matches;
+  payload_matches = memcmp((void*)&Args, (void*)(blob) + sizeof(hpx_parcel_t) + strlen("_test_action") + 1, sizeof(struct args));
+  ck_assert_msg(action_name_matches == 0, "Parcel not serialized properly - action name was incorrect or missing");
+} 
+END_TEST
+
+
+
+/*
+ --------------------------------------------------------------------
   TEST: parcel send
         This test is designed to be run in a networked environment!
  --------------------------------------------------------------------
@@ -416,7 +453,12 @@ START_TEST (test_libhpx_parcel_send)
   hpx_config_t *cfg;
   hpx_context_t *ctx;
   hpx_thread_t* th;
-  
+
+  //hpx_action_t* a_main;
+  //hpx_action_t* a_sub; 
+  //a_main = hpx_alloc(sizeof(hpx_action_t));
+  //hpx_action_register("_thread_main_parcelsend", (hpx_func_t)_thread_main_parcelsend, a_main);
+
   cfg = hpx_alloc(sizeof(hpx_config_t));  
   hpx_config_init(cfg);
   ctx = hpx_ctx_create(cfg);
