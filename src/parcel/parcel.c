@@ -95,6 +95,9 @@ int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
   }
   */
 
+  handle->payload = args;
+  handle->payload_size = len;
+
   ret = 0;
  error:
   return ret;
@@ -126,7 +129,7 @@ int hpx_serialize_parcel(hpx_parcel_t *p, char** blob) {
 
   memcpy(*blob, (void*)p, sizeof(hpx_parcel_t));
   if (p->payload_size > 0)
-    memcpy(*blob + sizeof(hpx_parcel_t), (void*)p, p->payload_size);
+    memcpy(*blob + sizeof(hpx_parcel_t), (void*)p->payload, p->payload_size);
 
   ret = 0;
  error:
@@ -154,8 +157,9 @@ int hpx_deserialize_parcel(void* blob, hpx_parcel_t** p) {
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
-  payload_size = ((hpx_parcel_t*)blob)->payload_size;
-  
+  memcpy(*p, blob, sizeof(hpx_parcel_t));
+
+  payload_size = (*p)->payload_size; 
   if (payload_size > 0) {
     data = hpx_alloc(payload_size);
     if (data == NULL) {
@@ -169,8 +173,6 @@ int hpx_deserialize_parcel(void* blob, hpx_parcel_t** p) {
     data = NULL;
 
   (*p)->payload = data;
-
-  memcpy(*p, blob, sizeof(hpx_parcel_t));
 
   ret = 0;
  error:

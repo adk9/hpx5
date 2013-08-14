@@ -28,7 +28,7 @@
 
 #include <mpi.h>
 
-#define _EAGER_THRESHOLD_MPI_DEFAULT 256;
+#define _EAGER_THRESHOLD_MPI_DEFAULT 10240; /* TODO: make reasonable once we have puts/gets working */
 extern network_ops_t mpi_ops;
 
 uint32_t _get_rank_mpi();

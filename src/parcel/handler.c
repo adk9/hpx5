@@ -27,37 +27,6 @@
 
 #define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
 
-/* 
-   Parcel Queue
-
-   The handler needs an efficient way to get parcels from other
-   threads. This queue is designed to meet that goal. The design goals
-   for the queue were:
-   
-   it must be safe despite being read to by many threads,
-   
-   it must be efficient for the consumer (the parcel handler) since it
-   reads from it very often,
-   
-   it should be as relatively efficient for the producers.
-
-   It is a locking queue for simplicity. Fortunately, as there is only
-   one consumer, we only need a lock on the tail and not one on the
-   head. Like in Michael & Scott, we use dummy nodes so that proucers
-   and the consumer do not block each other. This is especially
-   helpful in our case, since pop is supposed to be fast.
-
-   (In fact, in the final implementation, it pretty much is the
-   two-lock queue from Michael & Scott with no head lock. See
-   http://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html)
-
-   One known issue with the current queue implementation is I that one
-   thread being killed or dying while pushing to the queue can lock up
-   the queue. Is that possible at present? So it may not actually be
-   that safe...
-
-*/
-
 hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
 hpx_parcelqueue_t * __hpx_send_queue = NULL;
 
@@ -585,7 +554,7 @@ void * _hpx_parcelhandler_main(void) {
       else {
 	/* invoke action */
 	if (parcel->action.action != NULL) {
-	  success = hpx_action_invoke(&(parcel->action), NULL, &result);
+	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
 	}
       }
     } /* end if (parcel != NULL) */
@@ -608,21 +577,21 @@ void * _hpx_parcelhandler_main(void) {
 	   * If it's an action invocation, do that.
 	*/
 
-	/* TODO: move this to a seperate thread */
+	/* TODO: move this to a seperate thread? */
 	hpx_deserialize_parcel(recv_buffer, &parcel);
 
 	/* invoke action */
 	if (parcel->action.action != NULL) {
 	  // printf("Invoking action %s\n", parcel->action.name);
-	  success = hpx_action_invoke(&(parcel->action), NULL, &result);
+	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
 	}
 	/* TODO: deal with case where there is no invocation */
       } /* end if(curr_flag) */
     }
     else { /* otherwise, see if there's a message to wait for */
-      probe_successes++;
       __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &curr_flag, &curr_status);
       if (curr_flag) { /* there is a message to receive */
+	probe_successes++;
 	__hpx_network_ops->recv(curr_status.source, recv_buffer, NETWORK_ANY_LENGTH, &recv_request);
 	outstanding_receive = true;	
       }
