@@ -64,7 +64,6 @@ AC_ARG_ENABLE(debug,
 	[CFLAGS="-g -O0 -Wall -DDEBUG ${CFLAGS}"],
 	[CFLAGS="-O2 -Wall ${CFLAGS}"])
 
-
 dnl Check for infiniband verbs
 AC_ARG_ENABLE(rdma, AC_HELP_STRING([--disable-rdma],
 		    [disable RDMA (IBV) support (default is autodetect)]),
@@ -74,8 +73,8 @@ AC_ARG_ENABLE(rdma, AC_HELP_STRING([--disable-rdma],
 if test "$enable_rdma" != "no" ; then
         AH_TEMPLATE(HAVE_RDMA, Whether or not ibverbs is installed on the system)
         AC_CHECK_LIB(ibverbs, main, [
-                AC_CHECK_HEADER([infiniband/verbs.h], [
-                        RDMA_LIBS="-libverbs"
+                AC_CHECK_HEADERS([infiniband/verbs.h rdma/rdma_cma.h], [
+                        RDMA_LIBS="-libverbs -lrdmacm"
                         AC_SUBST(RDMA_LIBS)
                         have_rdma=yes
                 ])
@@ -84,44 +83,74 @@ if test "$enable_rdma" != "no" ; then
         if test "x$have_rdma" == "xyes"; then
                 AC_DEFINE(HAVE_RDMA,, Build with RDMA support)
         else
-		AC_MSG_WARN([IB/RDMA Verbs not found.  Try installing OFED or libiberbs-dev.])
+		AC_MSG_ERROR([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])
 	fi
 fi
 AM_CONDITIONAL(HAVE_RDMA, test x$have_rdma = xyes)
 
 dnl Check for mpich2
-AC_ARG_ENABLE(mpich2, AC_HELP_STRING([--disable-mpich2],
-                    [disable MPICH2 support (default is autodetect)]),
-                    [enable_mpich2=$enableval],
-                    [enable_mpich2=try])
+AC_ARG_ENABLE([mpich2], AC_HELP_STRING([--disable-mpich2],						
+                    	[disable MPICH2 support (default is autodetect)]),
+                    	[enable_mpich2=$enableval],
+                    	[enable_mpich2=try])
 
 if test "$enable_mpich2" != "no" ; then
-        AH_TEMPLATE(HAVE_MPICH2, Whether or not MPICH2 is installed on the system)
-        AC_CHECK_LIB(mpich, main, [
-                AC_CHECK_HEADER([mpich2/mpi.h], [
-			if test -f /usr/include/mpich2/mpi.h; then
-			   MPICH2_INCLUDES="/usr/include/mpich2"
-			elif test -f /usr/local/include/mpich2/mpi.h; then
-			   MPICH2_INCLUDES="/usr/local/include/mpich2"
-			fi
-                        MPICH2_LIBS="-lmpich"
-                        have_mpich2=yes
-                ])
-        ])
+   AH_TEMPLATE(HAVE_MPICH2, Whether or not MPICH2 is installed on the system)
+   AC_CHECK_LIB([mpich2], [main], [have_mpich2_lib=yes], [have_mpich2_lib=no])
+   AC_CHECK_HEADER([mpich2/mpi.h], [have_mpich2=yes], [have_mpich2=no], [])
 
-        if test "x$have_mpich2" == "xyes"; then
-                AC_DEFINE(HAVE_MPICH2,, Build with MPICH2 support)
-		
-        else
-                AC_MSG_WARN([MPICH2 not found.  Please install MPICH2 to compile photon.])
-	fi
+   if test "$have_mpich2" == "no"; then
+   	  if test -f /usr/include/mpich2/mpi.h; then
+   	  	 AC_SUBST(MPI_CFLAGS, "-I/usr/include/mpich2")
+		 have_mpich2=yes
+	  elif test -f /usr/local/include/mpich2/mpi.h; then
+		 AC_SUBST(MPI_CFLAGS, "-I/usr/local/include/mpich2")
+		 have_mpich2=yes
+	  fi
+   fi
+   
+   if test "x$have_mpich2" == "xyes"; then
+   	  	AC_DEFINE(HAVE_MPICH2,, Build with MPICH2 support)
+      	AC_SUBST(MPI_LIBS, "-lmpich2")
+   else
+		AC_MSG_WARN([MPICH2 not found.])
+   fi
 fi
 AM_CONDITIONAL(HAVE_MPICH2, test x$have_mpich2 = xyes)
 
-dnl MPICH2 default for now
-if test "x$have_mpich2" == "xyes"; then
-   AC_SUBST(MPI_LIBS, $MPICH2_LIBS)
-   AC_SUBST(MPI_INCLUDES, $MPICH2_INCLUDES)
+dnl Check for user defined MPI
+AC_ARG_WITH([mpi-include-path], [AC_HELP_STRING([--with-mpi-include-path[=PATH]],
+				   [find MPI headers in PATH])], 
+				   [with_mpi_include=$withval], 
+				   [with_mpi_include=no])
+
+if test "$with_mpi_include" != "no"; then
+   AC_MSG_CHECKING(for mpi.h in $with_mpi_include)
+   if test -f $with_mpi_include/mpi.h; then
+   	  AC_MSG_RESULT(yes)
+	  AC_SUBST(MPI_CFLAGS, "-I$with_mpi_include")
+   else
+	  AC_MSG_RESULT(no)
+      AC_MSG_ERROR(No MPI headers found!)
+   fi
+fi
+
+AC_ARG_WITH([mpi-ld-path], [AC_HELP_STRING([--with-mpi-ld-path[=PATH]],
+                   [find MPI libraries in PATH])],
+                   [with_mpi_lib=$withval],
+                   [with_mpi_lib=no])
+
+if test "$with_mpi_lib" != "no"; then
+   AC_MSG_CHECKING(for MPI libs in $with_mpi_lib with $LDFLAGS)
+   save_LDFLAGS=$LDFLAGS
+   LDFLAGS="-L$with_mpi_lib"
+   AC_CHECK_LIB([mpi], [MPI_Init], [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpi")],
+   					   		   	   [AC_CHECK_LIB([mpich], [MPI_Init],
+					   						 			  [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich")],
+					   						 			  [AC_MSG_ERROR(No MPI libs found!)],
+														  [-lmpl -lpthread])],
+                                   [-lmpl -lpthread])
+   LDFLAGS=$save_LDFLAGS
 fi
 
 AC_CONFIG_FILES([

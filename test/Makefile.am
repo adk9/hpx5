@@ -1,7 +1,7 @@
 AM_CFLAGS = @CFLAGS@                         \
-            -I@top_srcdir@/include           \
-	    -I@top_srcdir@/libphoton/include \
-	    -I@MPI_INCLUDES@
+			@MPI_CFLAGS@                     \
+			-I@top_srcdir@/include           \
+			-I@top_srcdir@/libphoton/include
 
 bin_PROGRAMS = photon_test
 photon_test_SOURCES = kernel.c photon_test.c
