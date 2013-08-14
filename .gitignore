@@ -21,10 +21,23 @@
 # /config/
 /config/*
 
+# /docs/
+/docs/Doxyfile
+/docs/Makefile
+/docs/doxyfile.stamp
+/docs/html/
+/docs/latex/
+
 # /examples/
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
+
+# /examples/network
+/examples/network/.deps
+/examples/network/pingpong
+/examples/network/Makefile
+/examples/network/Makefile.in
 
 # /examples/thread
 /examples/thread/.deps
@@ -34,7 +47,8 @@
 
 # /examples/hpx
 /examples/hpx/.deps
-/examples/hpx/fibonacci
+/examples/hpx/fibonaccihpx
+/examples/hpx/pingponghpx
 /examples/hpx/Makefile
 /examples/hpx/Makefile.in
 
@@ -103,6 +117,7 @@
 
 # /tests/
 /tests/.deps
+/tests/hpxtest
 /tests/Makefile
 /tests/Makefile.in
 
