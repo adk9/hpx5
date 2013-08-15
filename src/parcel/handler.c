@@ -265,180 +265,6 @@ size_t REQUEST_QUEUE_SIZE = 2048; /* TODO: make configurable (and find a good, s
 
 size_t RECV_BUFFER_SIZE = 10240; /* TODO: make configurable (and use a real size) */
 
-void * _hpx_parcelhandler_main_pingpong(void) {
-#if HAVE_MPI
-  int PING_TAG=0;
-  int PONG_TAG=1;
-  fflush(NULL);
-  int size;
-  int rank;
-  int next, prev;
-  int success;
-  int flag;
-  int type;
-  MPI_Status stat;
-  int i;
-  int iter_limit=10;//1000;
-  int buffer_size = 1024*1024;
-  char* send_buffer = NULL;
-  char* recv_buffer = NULL;
-  char* copy_buffer = NULL;
-  uint32_t send_request;
-  uint32_t recv_request;
-
-  struct timespec begin_ts;
-  struct timespec end_ts;
-  unsigned long elapsed;
-  double avg_oneway_latency;
-
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // use MPI ==================================================================================================================
-  send_buffer = (char*)malloc(buffer_size*sizeof(char));
-  recv_buffer = (char*)malloc(buffer_size*sizeof(char));
-  copy_buffer = (char*)malloc(buffer_size*sizeof(char));
-
-  clock_gettime(CLOCK_MONOTONIC, &begin_ts);
-
-  if (rank == 0) {
-    for (i = 0; i < iter_limit; i++) {
-      snprintf(send_buffer, 50, "Message %d from proc 0", i);
-      MPI_Send(send_buffer, buffer_size, MPI_CHAR, 1, PING_TAG, MPI_COMM_WORLD);
-      
-      MPI_Recv(recv_buffer, buffer_size, MPI_CHAR, 1, PONG_TAG, MPI_COMM_WORLD, &stat);
-      // printf("Message from proc 1: <<%s>>\n", recv_buffer);
-    }
-  }
-  else if (rank == 1) {
-    strcpy(send_buffer, "Message from proc 1");
-
-    for (i = 0; i < iter_limit; i++) {
-      MPI_Recv(recv_buffer, buffer_size, MPI_CHAR, 0, PING_TAG, MPI_COMM_WORLD, &stat);
-
-      int str_length;
-      snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", i);
-      str_length = strlen(copy_buffer);
-      strcpy(&copy_buffer[str_length], recv_buffer);
-      str_length = strlen(copy_buffer);
-      strcpy(&copy_buffer[str_length], "'");
-      strcpy(send_buffer, copy_buffer);
-
-      MPI_Send(send_buffer, buffer_size, MPI_CHAR, 0, PONG_TAG, MPI_COMM_WORLD);
-    }
-  }
-
-  clock_gettime(CLOCK_MONOTONIC, &end_ts);
-  elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);
-
-  avg_oneway_latency = elapsed/((double)(iter_limit*2));
-
-  printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
-
-  free(send_buffer);
-  free(recv_buffer);
-
-  // end of use MPI part ===========================================================================================
-
-#if HAVE_PHOTON
-  send_buffer = (char*)malloc(buffer_size*sizeof(char));
-  recv_buffer = (char*)malloc(buffer_size*sizeof(char));
-  copy_buffer = (char*)malloc(buffer_size*sizeof(char));
-
-  hpx_network_register_buffer(send_buffer, buffer_size);
-  hpx_network_register_buffer(recv_buffer, buffer_size);
-
-  clock_gettime(CLOCK_MONOTONIC, &begin_ts);
-
-  if (rank == 0) {
-
-    for (i = 0; i < iter_limit; i++) {
-      snprintf(send_buffer, 50, "Message %d from proc 0", i);
-      hpx_network_send_start(1, PING_TAG, send_buffer, buffer_size, 0, &send_request);
-      hpx_network_wait(send_request);
-      
-      //      photon_wait_send_request_rdma(PONG_TAG);
-      hpx_network_recv_start(-1, PONG_TAG, recv_buffer, buffer_size, 0, &recv_request);
-      //hpx_network_recv_start(1, PONG_TAG, recv_buffer, buffer_size, 0, &recv_request);
-      hpx_network_wait(recv_request);
-      //printf("%02d: Receiver done waiting on recv %d\n", i, recv_request);
-      //printf("Message from proc 1: <<%s>>\n", recv_buffer);
-
-
-    }
-  }
-  else if (rank == 1) {
-    //    strcpy(send_buffer, "Message from proc 1");
-
-
-    for (i = 0; i < iter_limit; i++) {
-      hpx_network_recv_start(0, PING_TAG, recv_buffer, buffer_size, 0, &recv_request);
-      hpx_network_wait(recv_request);
-
-      int str_length;
-      snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", i);
-      str_length = strlen(copy_buffer);
-      strcpy(&copy_buffer[str_length], recv_buffer);
-      str_length = strlen(copy_buffer);
-      strcpy(&copy_buffer[str_length], "'");
-      strcpy(send_buffer, copy_buffer);
-
-      photon_post_send_request_rdma(0, buffer_size, PONG_TAG, &send_request);
-      hpx_network_wait(send_request);
-      //printf("%02d: Sender done waiting on photon_post_send_request_rdma %d\n", i, send_request);
-      hpx_network_send_start(0, PONG_TAG, send_buffer, buffer_size, 0, &send_request);
-      hpx_network_wait(send_request);
-      //printf("%02d: Sender done waiting on send %d\n", i, send_request);
-    }
-  }
-
-  clock_gettime(CLOCK_MONOTONIC, &end_ts);
-  elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);
-
-  avg_oneway_latency = elapsed/((double)(iter_limit*2));
-
-  printf("average oneway latency :   %f ms\n", avg_oneway_latency/1000000.0);
-
-  hpx_network_unregister_buffer(send_buffer, buffer_size);
-  hpx_network_unregister_buffer(recv_buffer, buffer_size);
-
-  free(send_buffer);
-  free(recv_buffer);
-  free(copy_buffer);
-#endif // end of if HAVE_PHOTON
-
-#endif // end of if HAVE_MPI
-
-  while (0) {
-    /* TODO: wait for signal to exit... */
-  }
-
-  int * retval;
-  retval = hpx_alloc(sizeof(int));
-  *retval = 0;
-  hpx_thread_exit((void*)retval);
-
-  return NULL;
-}
-
-void * _hpx_parcelhandler_main_dummy(void) {
-
-  size_t i = 0;
-  while (1) {
-    sleep(1);
-    printf("Parcel handler spinning i = %zd\n", i);
-    i++;
-  }
-
-  int * retval;
-  retval = hpx_alloc(sizeof(int));
-  *retval = 0;
-  hpx_thread_exit((void*)retval);
-
-  return NULL;
-}
-
-
 /*
   For now, I've decided to use just a single parcel handler thread. We
   could split this into two based on (1) network stuff and (2) action
@@ -460,7 +286,11 @@ void * _hpx_parcelhandler_main(void) {
   hpx_parcel_t* parcel;
   void* result; /* for action returns */
   size_t i;
-  size_t probe_successes, recv_successes;
+
+  #if DEBUG
+    size_t probe_successes, recv_successes, send_successes;
+    int initiated_something, completed_something;
+  #endif
 
   void* parcel_data; /* raw parcel_data from send queue */
   int network_rank; /* raw network address as opposed to internal hpx address */
@@ -487,8 +317,14 @@ void * _hpx_parcelhandler_main(void) {
   }
 
   i = 0;
-  probe_successes= 0;
-  recv_successes = 0;
+  #if DEBUG
+    probe_successes= 0;
+    recv_successes = 0;
+    send_successes = 0;
+    initiated_something = 0;
+    completed_something = 0;
+  #endif
+
   while (1) {
 
     /* ==================================
@@ -506,14 +342,22 @@ void * _hpx_parcelhandler_main(void) {
     if (!request_queue_empty(&network_send_requests)) {
       curr_request = request_queue_head(&network_send_requests);
       __hpx_network_ops->sendrecv_test(curr_request, &curr_flag, &curr_status);
-      if (curr_flag)
+      if (curr_flag) {
+	#if DEBUG
+	  completed_something = 1;
+	  send_successes++;
+	#endif
 	request_queue_pop(&network_send_requests);
+      }
     }
 
     /* check send queue */
     if (!request_queue_full(&network_send_requests)) { /* don't do this if we can't handle any more send requests */
       parcel_data = hpx_parcelqueue_trypop(__hpx_send_queue);
       if (parcel_data != NULL) {
+        #if DEBUG
+          initiated_something = 1;
+        #endif
 	/* first sizeof(hpx_parcel_t) bytes of a serialized parcel is
 	   actually a hpx_parcel_t: */
 	//	parcel = hpx_read_serialized_parcel(parcel_data); 
@@ -547,6 +391,9 @@ void * _hpx_parcelhandler_main(void) {
     //    fflush(stdout);
     parcel = (hpx_parcel_t*)hpx_parcelqueue_trypop(__hpx_parcelqueue_local);
     if (parcel != NULL) {
+      #if DEBUG
+        initiated_something = 1;
+      #endif
       if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION) {
 	quitting = true;
 	// break;
@@ -570,15 +417,22 @@ void * _hpx_parcelhandler_main(void) {
       __hpx_network_ops->sendrecv_test(&recv_request, &curr_flag, &curr_status);
 
       if (curr_flag) {
-	recv_successes++;
+	#if DEBUG
+	  completed_something = 1;
+	  recv_successes++;
+	#endif
 	outstanding_receive = false;
 	/* If we've received something, do stuff:
 	   * If it's a notificiation of a put, call get() TODO: do this
 	   * If it's an action invocation, do that.
 	*/
 
-	/* TODO: move this to a seperate thread */
+	/* TODO: move this to a seperate thread? */
 	hpx_parcel_deserialize(recv_buffer, &parcel);
+	/* Right now, parcel_deserialize() calls hpx_alloc(). In the
+	   future, if that changes, we might have to allocate a new buffer
+	   here.... */
+
 
 	/* invoke action */
 	if (parcel->action.action != NULL) {
@@ -591,31 +445,43 @@ void * _hpx_parcelhandler_main(void) {
     else { /* otherwise, see if there's a message to wait for */
       __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &curr_flag, &curr_status);
       if (curr_flag) { /* there is a message to receive */
-	probe_successes++;
+	#if DEBUG
+          initiated_something = 1;
+	  probe_successes++;
+	#endif
 	__hpx_network_ops->recv(curr_status.source, recv_buffer, NETWORK_ANY_LENGTH, &recv_request);
 	outstanding_receive = true;	
       }
       
     } /* end if(outstanding_receive) */
-    /* now get a new parcel to process */
-    
-    /* Right now, parcel_deserialize() calls hpx_alloc(). In the
-       future, if that changes, we might have to allocate a new buffer
-       here.... */
+
+    #if DEBUG
+      if (initiated_something != 0 || completed_something != 0) {
+        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, probe_successes, recv_successes, send_successes);
+        initiated_something = 0;
+        completed_something = 0;
+      }
+    #endif
 
     /* TODO: if no sends in queue, nothing with probe, and quitting == true, break */
     if (quitting && request_queue_empty(&network_send_requests) && !outstanding_receive)
       break;
 
     i++;
+
+    /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. TODO: takeout after resolving this */
+    if (i % 1000 == 0)
+      hpx_thread_yield();
+
+
+
     //printf("Parcel handler _main spinning i = %zd\n", i);
   }
 
-  //  printf("Handler done after iter %d\n", i);
-  //  fflush(stdout);
-
-
-  //printf("Parcel handler _main exiting\n");
+  #if DEBUG
+    printf("Handler done after iter %d\n", i);
+    fflush(stdout);
+  #endif
 
   free(recv_buffer);
 

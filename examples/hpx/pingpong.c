@@ -10,17 +10,16 @@ struct pingpong_args {
 };
 
 #define BUFFER_SIZE 128
-int iter_limit = 10;
+
 int global_count = 0;
 hpx_locality_t* my_loc;
 hpx_locality_t* other_loc;
 
-void _ping_action(void* _args) {
-  if (_args == NULL) {
-    printf("Dieing horribly - bad args!\n");
-    exit(-1);
-  }
+int opt_iter_limit = 1000;
+int opt_text_ping = 0;
+int opt_screen_out = 0;
 
+void _ping_action(void* _args) {
   int success;
   hpx_parcel_t* p;
   struct pingpong_args* in_args = (struct pingpong_args*)_args;
@@ -33,9 +32,11 @@ void _ping_action(void* _args) {
     exit(-1);
   }
   out_args->ping_id = ping_id;
-  snprintf(out_args->msg, 128, "Message %d from proc 0", ping_id);
+  if (opt_text_ping)
+    snprintf(out_args->msg, 128, "Message %d from proc 0", ping_id);
 
-  printf("Ping acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
+  if (opt_screen_out)
+    printf("Ping acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
 
   p = hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_pong_action", (void*)out_args, sizeof(struct pingpong_args), p);
@@ -46,11 +47,6 @@ void _ping_action(void* _args) {
 }
 
 void _pong_action(void* _args) {
-  if (_args == NULL) {
-    printf("Dieing horribly - bad args!\n");
-    exit(-1);
-  }
-
   int success;
   int str_length;
   char copy_buffer[BUFFER_SIZE];
@@ -67,14 +63,17 @@ void _pong_action(void* _args) {
   }
   out_args->pong_id = pong_id;
 
-  snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", pong_id);
-  str_length = strlen(copy_buffer);
-  strcpy(&copy_buffer[str_length], in_args->msg);
-  str_length = strlen(copy_buffer);
-  strcpy(&copy_buffer[str_length], "'");
-  strcpy(out_args->msg, copy_buffer);
+  if (opt_text_ping) {
+    snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", pong_id);
+    str_length = strlen(copy_buffer);
+    strcpy(&copy_buffer[str_length], in_args->msg);
+    str_length = strlen(copy_buffer);
+    strcpy(&copy_buffer[str_length], "'");
+    strcpy(out_args->msg, copy_buffer);
+  }
 
-  printf("Pong acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
+  if (opt_screen_out)
+    printf("Pong acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
 
   p = hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_ping_action", (void*)out_args, sizeof(struct pingpong_args), p);
@@ -83,19 +82,8 @@ void _pong_action(void* _args) {
   global_count++;
 }
 
-int main() {
+int main(int argc, char** argv) {
   int success;
-
-  /* DEBUG CODE */
-
-  int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  sleep(15);
-  /* END DEBUG CODE */
-
 
   struct timespec begin_ts;
   struct timespec end_ts;
@@ -107,6 +95,17 @@ int main() {
   struct pingpong_args* args;
   hpx_action_t* a_ping;
   hpx_action_t* a_pong;
+
+  if (argc > 1)
+    opt_iter_limit = atoi(argv[1]);
+  if (opt_iter_limit < 0) {
+    printf("Bad iteration limit\n");
+    exit(-1);
+  }
+  if (argc > 2)
+    opt_text_ping = atoi(argv[2]);
+  if (argc > 3)
+    opt_screen_out = atoi(argv[3]);
 
   hpx_init();
 
@@ -137,12 +136,12 @@ int main() {
     //    success = hpx_send_parcel(other_loc, p);
     int *result = hpx_alloc(sizeof(int));
     hpx_action_invoke(a_ping, args, (void**)&result);
-    while (global_count < iter_limit) {
+    while (global_count < opt_iter_limit) {
     }
     free(result);
   }
   else if (my_rank ==1) {
-    while (global_count < iter_limit-1) {
+    while (global_count < opt_iter_limit-1) {
     }
   }
   else
@@ -151,7 +150,7 @@ int main() {
   clock_gettime(CLOCK_MONOTONIC, &end_ts);
   elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);
   
-  avg_oneway_latency = elapsed/((double)(iter_limit*2));
+  avg_oneway_latency = elapsed/((double)(opt_iter_limit*2));
   
   printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
   
@@ -161,4 +160,6 @@ int main() {
   free(a_pong);
   
   hpx_cleanup();
+
+  return 0;
 }
