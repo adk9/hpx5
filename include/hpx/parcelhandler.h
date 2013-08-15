@@ -25,6 +25,7 @@
 
 #include "hpx/mem.h"
 #include "hpx/thread.h"
+#include "hpx/kthread.h"
 
 
 /* 
@@ -78,7 +79,7 @@ typedef struct hpx_parcelqueue_t {
   uint8_t _padding[CACHE_LINE_SIZE - sizeof(hpx_parcelqueue_node_t*)];
   /* padding should improve performance by a fair margin */
   hpx_parcelqueue_node_t* tail;  
-  pthread_mutex_t lock;
+  hpx_kthread_mutex_t lock;
 } hpx_parcelqueue_t;
 
 extern hpx_parcelqueue_t* __hpx_send_queue; /* holds hpx_parcel_serialized_t */
