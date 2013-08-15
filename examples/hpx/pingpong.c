@@ -131,7 +131,7 @@ int main() {
   clock_gettime(CLOCK_MONOTONIC, &begin_ts);
   if (my_rank == 0) {
     args = hpx_alloc(sizeof(struct pingpong_args));
-    args->ping_id = 0;
+    args->pong_id = 0;
     //    p = hpx_alloc(sizeof(hpx_parcel_t));
     //    success = hpx_new_parcel("_ping_action", (void*)args, sizeof(struct pingpong_args), p);
     //    success = hpx_send_parcel(other_loc, p);
