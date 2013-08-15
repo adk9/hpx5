@@ -146,7 +146,7 @@ int hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
 
   /* copy the action name to the blob */
   strncpy(*blob + blobi, p->action.name, size_of_action_name);
-  blobi += size_of_action_name + 1; /* +1 for nul terminator */
+  blobi += size_of_action_name; /* We have ALREADY included +1 for nul terminator */
   (*blob)[blobi - 1] = '\0'; /* just in case some other thread did something very bad, we will limit the damage here */
 
   /* copy the payload to the blob */
@@ -172,7 +172,6 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   size_t size_of_payload;
   size_t size_of_blob;
   size_t blobi; /* where we are at in the blob */
-  char* action_name;
   void* payload;
 
   blobi = 0;
@@ -192,22 +191,20 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   size_of_payload = ((hpx_parcel_t*)blob)->payload_size;
 
   /* now we can figure out the size of our action name */
-  size_of_action_name = strlen((char*)blob + blobi);
+  size_of_action_name = sizeof(char) * strlen((char*)blob + blobi) + 1;
   
   /* allocate space for payload */
   payload = hpx_alloc(size_of_payload);
-  if (action_name == NULL) {
+  if (payload == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
-    free(action_name);
     free(*p);
     goto error;
   }
 
   /* lookup our local action - that way we avoid problems with who is responsible for free()ing action.name */
-  action_name = (char*)blob + blobi;
-  hpx_action_lookup_local(action_name, &((*p)->action));
-  blobi += size_of_action_name + 1;
+  hpx_action_lookup_local((char*)blob + blobi, &((*p)->action));
+  blobi += size_of_action_name;
   
   /* move payload to new payload space */
   if (size_of_payload > 0)
