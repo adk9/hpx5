@@ -2,12 +2,9 @@
 #define VERBS_REMOTE_BUFFER_H
 
 #include <stdint.h>
-#include <infiniband/verbs.h>
 
 typedef struct verbs_remote_buffer {
 	uint32_t request;
-//    DAT_RMR_CONTEXT context;
-//    DAT_VADDR address;
 	uintptr_t addr;
 	uint32_t  lkey;
 	uint32_t  rkey;

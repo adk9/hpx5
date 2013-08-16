@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "photon.h"
 #include "verbs.h"
 #include "verbs_buffer.h"
 #include "verbs_remote_buffer.h"
@@ -38,10 +37,10 @@ static pthread_mutex_t sess_mtx;
 
 #endif
 
-int _photon_nproc;
-int _photon_myrank;
-int _photon_forwarder;
-MPI_Comm _photon_comm;
+extern int _photon_nproc;
+extern int _photon_myrank;
+static int _photon_forwarder;
+static MPI_Comm _photon_comm;
 
 static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_info **local_info);
 static int verbs_connect_qps(int num_qp, struct verbs_cnct_info *local_info, struct verbs_cnct_info *remote_info, ProcessInfo *verbs_process);
@@ -52,6 +51,27 @@ static int verbs_setup_FIN_ledger(char *buf, int num_entries);
 int        verbs_register_buffer(char *buffer, int buffer_size);
 static int verbs_init_context(ProcessInfo *verbs_processes);
 static int verbs_connect_peers(ProcessInfo *verbs_processes);
+
+int verbs_initialized(void);
+int verbs_init(photonConfig cfg);
+int verbs_finalize(void);
+int verbs_register_buffer(char *buffer, int buffer_size);
+int verbs_unregister_buffer(char *buffer, int size);
+int verbs_test(uint32_t request, int *flag, int *type, void *status);
+int verbs_wait(uint32_t request);
+int verbs_wait_ledger(uint32_t request);
+int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
+int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
+int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request);
+int verbs_wait_recv_buffer_rdma(int proc, int tag);
+int verbs_wait_send_buffer_rdma(int proc, int tag);
+int verbs_wait_send_request_rdma(int tag);
+int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+int verbs_send_FIN(int proc);
+int verbs_wait_any(int *ret_proc, uint32_t *ret_req);
+int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
 // We only want to spawn a dedicated thread for ledgers on
 // multithreaded instantiations of the library (e.g. in xspd).
@@ -92,19 +112,7 @@ static int __initialized = 0;
 DEFINE_COUNTER(curr_cookie, uint32_t)
 DEFINE_COUNTER(handshake_rdma_write, uint32_t)
 
-
-//////// Global variables ////////
 #ifdef DEBUG
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-#ifdef DEBUG
-int _photon_start_debugging=1;
-#endif
-#if defined(DEBUG) || defined(CALLTRACE)
-FILE *_phot_ofp;
-
 static time_t _tictoc(time_t stime, int proc) {
 	time_t etime;
 	etime = time(NULL);
@@ -118,6 +126,35 @@ static time_t _tictoc(time_t stime, int proc) {
 	return stime;
 }
 #endif
+
+/* we are now a Photon backend */
+struct photon_backend_t photon_verbs_backend = {
+	.initialized = verbs_initialized,
+    .init = verbs_init,
+    .finalize = verbs_finalize,
+    .register_buffer = verbs_register_buffer,
+    .unregister_buffer = verbs_unregister_buffer,
+    .test = verbs_test,
+    .wait = verbs_wait,
+    .wait_ledger = verbs_wait,
+    .post_recv_buffer_rdma = verbs_post_recv_buffer_rdma,
+    .post_send_buffer_rdma = verbs_post_send_buffer_rdma,
+    .wait_recv_buffer_rdma = verbs_wait_recv_buffer_rdma,
+    .wait_send_buffer_rdma = verbs_wait_send_buffer_rdma,
+    .wait_send_request_rdma = verbs_wait_send_request_rdma,
+    .post_os_put = verbs_post_os_put,
+    .post_os_get = verbs_post_os_get,
+    .send_FIN = verbs_send_FIN,
+    .wait_any = verbs_wait_any,
+    .wait_any_ledger = verbs_wait_any_ledger
+};
+
+int verbs_initialized() {
+	if (__initialized)
+		return PHOTON_OK;
+	else
+		return PHOTON_ERROR_NOINIT;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_init_common(photonConfig cfg) {
@@ -755,7 +792,7 @@ error_exit:
 // Regardless of the return value and the value of "flag", the parameter "type"
 // will be set to 0 (zero) when the request is of type event and 1 (one) when the
 // request is of type ledger.
-int verbs_test(uint32_t request, int *flag, int *type, MPI_Status *status) {
+int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 	verbs_req_t *req;
 	void *test;
 	int ret_val;
@@ -806,11 +843,11 @@ int verbs_test(uint32_t request, int *flag, int *type, MPI_Status *status) {
 
 	if( !ret_val ) {
 		*flag = 1;
-		if( status != MPI_STATUS_IGNORE ) {
-			status->MPI_SOURCE = req->proc;
-			status->MPI_TAG = req->tag;
-			status->MPI_ERROR = 0; // FIXME: Make sure that "0" means success in MPI?
-		}
+		//if( status != MPI_STATUS_IGNORE ) {
+		//	status->MPI_SOURCE = req->proc;
+		//	status->MPI_TAG = req->tag;
+		//	status->MPI_ERROR = 0; // FIXME: Make sure that "0" means success in MPI?
+		//}
 		dbg_info("verbs_test(): returning 0, flag:1");
 		return 0;
 	}
@@ -2462,113 +2499,6 @@ int verbs_send_FIN(int proc) {
 	return 0;
 error_exit:
 	return -1;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// the actual photon API
-
-inline int photon_init(photonConfig cfg) {
-	return verbs_init(cfg);
-}
-
-inline int photon_register_buffer(char *buffer, int buffer_size) {
-	return verbs_register_buffer(buffer, buffer_size);
-}
-
-inline int photon_unregister_buffer(char *buffer, int size) {
-	return verbs_unregister_buffer(buffer, size);
-}
-
-/*
-inline int photon_post_recv(int proc, char *ptr, uint32_t size, uint32_t *request) {
-		return verbs_post_recv(proc, ptr, size, request);
-}
-
-inline int photon_post_send(int proc, char *ptr, uint32_t size, uint32_t *request) {
-		return verbs_post_send(proc, ptr, size, request);
-}
-*/
-
-inline int photon_test(uint32_t request, int *flag, int *type, MPI_Status *status) {
-	return verbs_test(request, flag, type, status);
-}
-
-inline int photon_wait(uint32_t request) {
-	return verbs_wait(request);
-}
-
-inline int photon_wait_ledger(uint32_t request) {
-	return verbs_wait(request);
-}
-
-/*
-inline int photon_wait_remaining() {
-		return verbs_wait_remaining();
-}
-
-inline int photon_wait_remaining_ledger() {
-		return verbs_wait_remaining_ledger();
-}
-*/
-
-inline int photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	return verbs_post_recv_buffer_rdma(proc, ptr, size, tag, request);
-}
-
-inline int photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	return verbs_post_send_buffer_rdma(proc, ptr, size, tag, request);
-}
-
-inline int photon_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
-	return verbs_post_send_request_rdma(proc, size, tag, request);
-}
-
-inline int photon_wait_recv_buffer_rdma(int proc, int tag) {
-	return verbs_wait_recv_buffer_rdma(proc, tag);
-}
-
-inline int photon_wait_send_buffer_rdma(int proc, int tag) {
-	return verbs_wait_send_buffer_rdma(proc, tag);
-}
-
-inline int photon_wait_send_request_rdma(int tag) {
-	return verbs_wait_send_request_rdma(tag);
-}
-
-inline int photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	return verbs_post_os_put(proc, ptr, size, tag, remote_offset, request);
-}
-
-inline int photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	return verbs_post_os_get(proc, ptr, size, tag, remote_offset, request);
-}
-
-inline int photon_send_FIN(int proc) {
-	return verbs_send_FIN(proc);
-}
-
-inline int photon_wait_any(int *ret_proc, uint32_t *ret_req) {
-#ifdef PHOTON_MULTITHREADED
-	// TODO: These can probably be implemented by having
-	//	 a condition var for the unreaped lists
-	return -1;
-#else
-	return verbs_wait_any(ret_proc, ret_req);
-#endif
-}
-
-inline int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
-#ifdef PHOTON_MULTITHREADED
-	return -1;
-#else
-	return verbs_wait_any_ledger(ret_proc, ret_req);
-#endif
-}
-
-inline int photon_finalize() {
-	return verbs_finalize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

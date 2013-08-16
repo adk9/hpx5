@@ -54,7 +54,8 @@ int main(int argc, char *argv[]) {
 		.comm = MPI_COMM_WORLD,
 		.use_forwarder = 0,
 		.ib_dev = "mlx4_1",
-		.ib_port = 1
+		.ib_port = 1,
+		.backend = "verbs"
 	};
 
 	photon_init(&cfg);

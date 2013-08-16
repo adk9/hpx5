@@ -1,7 +1,8 @@
-#ifndef photon_H
-#define photon_H
+#ifndef PHOTON_H
+#define PHOTON_H
 
 #include <stdint.h>
+#include <mpi.h>
 
 struct photon_config_t {
 	uint64_t address;
@@ -10,15 +11,22 @@ struct photon_config_t {
 	MPI_Comm comm;
 	int use_forwarder;
 
+	char *backend;
+
 	char *ib_dev;
 	int ib_port;
 };
+
+typedef struct photon_config_t * photonConfig;
 
 #ifdef WITH_XSP
 #include "photon_xsp.h"
 #endif
 
-typedef struct photon_config_t * photonConfig;
+#define PHOTON_OK              0x0000
+#define PHOTON_ERROR_NOINIT    0x0001
+#define PHOTON_ERROR           0x0002
+
 	
 int photon_init(photonConfig cfg);
 int photon_finalize();

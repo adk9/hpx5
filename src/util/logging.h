@@ -45,5 +45,6 @@ extern FILE *_phot_ofp;
 #define log_err(fmt, args...)   fprintf(stderr, "ALL:ERR: %d: "fmt"\n", _photon_myrank, ##args)
 #define log_info(fmt, args...)  fprintf(stderr, "ALL:INF: %d: "fmt"\n", _photon_myrank, ##args)
 #define log_warn(fmt, args...)  fprintf(stderr, "ALL:WRN: %d: "fmt"\n", _photon_myrank, ##args)
+#define init_err(fmt, args...)  fprintf(stderr, "ALL:ERR: %d: %s(): Library not initialized.  Call photon_init() first "fmt"\n", _photon_myrank, __FUNCTION__, ##args); 
 
 #endif

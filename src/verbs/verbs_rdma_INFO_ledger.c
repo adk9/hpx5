@@ -3,7 +3,7 @@
 
 #include "logging.h"
 #include "verbs.h"
-#include "verbs_rdma_info_ledger.h"
+#include "verbs_rdma_INFO_ledger.h"
 #include "verbs_buffer.h"
 #include "verbs_remote_buffer.h"
 

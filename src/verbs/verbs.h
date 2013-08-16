@@ -7,8 +7,10 @@
 
 #include "squeue.h"
 #include "verbs_buffer.h"
-#include "verbs_rdma_info_ledger.h"
+#include "verbs_rdma_INFO_ledger.h"
 #include "verbs_rdma_FIN_ledger.h"
+
+#include "photon_backend.h"
 
 #ifdef WITH_XSP
 #include "photon_xsp.h"
@@ -29,6 +31,8 @@
 #define REQUEST_COMPLETED		3
 
 #define MAX_QP 1
+
+extern struct photon_backend_t photon_verbs_backend;
 
 typedef struct proc_info_t {
 	struct ibv_qp *qp[MAX_QP];

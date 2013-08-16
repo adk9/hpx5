@@ -8,4 +8,14 @@ EXTRA_DIST = autogen.sh      \
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = libphoton/util libphoton/src test
+SUBDIRS = . src/util src test
+
+#if HAVE_VERBS
+#SUBDIRS += src/verbs
+#endif
+
+#if HAVE_UGNI
+#SUBDIRS += src/ugni
+#endif
+
+#SUBDIRS += src/libphoton test

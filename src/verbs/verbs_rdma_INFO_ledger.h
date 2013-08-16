@@ -22,7 +22,6 @@ typedef struct verbs_rdma_info_ledger_t {
 	int curr;
 } verbs_ri_ledger_t;
 
-//verbs_ri_ledger_t *verbs_ri_ledger_create(int num_entries, DAT_IA_HANDLE ia, DAT_PZ_HANDLE pz);
 verbs_ri_ledger_t *verbs_ri_ledger_create_reuse(verbs_ri_ledger_entry_t *ledger_buffer, int ledger_size);
 void verbs_ri_ledger_free(verbs_ri_ledger_t *ledger);
 

@@ -1,13 +1,15 @@
+AC_PREREQ([2.63])
 AC_INIT([photon], [0.1a], [photon@stout.incntre.iu.edu])
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
-AM_INIT_AUTOMAKE
+AC_USE_SYSTEM_EXTENSIONS
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+LT_PREREQ([2.2.6])
+LT_INIT
 
-# Prevent autoconf from setting CFLAGS="-g -O2" on AC_PROG_CC
-${CFLAGS=""}
-
-AC_GNU_SOURCE
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
@@ -65,28 +67,31 @@ AC_ARG_ENABLE(debug,
 	[CFLAGS="-O2 -Wall ${CFLAGS}"])
 
 dnl Check for infiniband verbs
-AC_ARG_ENABLE(rdma, AC_HELP_STRING([--disable-rdma],
-		    [disable RDMA (IBV) support (default is autodetect)]),
-		    [enable_rdma=$enableval],
-		    [enable_rdma=try])
+AC_ARG_ENABLE(verbs, AC_HELP_STRING([--disable-verbs],
+		    [disable verbs (IBV) support (default is autodetect)]),
+		    [enable_verbs=$enableval],
+		    [enable_verbs=try])
 
-if test "$enable_rdma" != "no" ; then
-        AH_TEMPLATE(HAVE_RDMA, Whether or not ibverbs is installed on the system)
+if test "$enable_verbs" != "no" ; then
+        AH_TEMPLATE(HAVE_VERBS, Whether or not ibverbs is installed on the system)
         AC_CHECK_LIB(ibverbs, main, [
                 AC_CHECK_HEADERS([infiniband/verbs.h rdma/rdma_cma.h], [
-                        RDMA_LIBS="-libverbs -lrdmacm"
-                        AC_SUBST(RDMA_LIBS)
-                        have_rdma=yes
+                        VERBS_LIBS="-libverbs -lrdmacm"
+                        AC_SUBST(VERBS_LIBS)
+                        have_verbs=yes
                 ])
         ])
 
-        if test "x$have_rdma" == "xyes"; then
-                AC_DEFINE(HAVE_RDMA,, Build with RDMA support)
+        if test "x$have_verbs" == "xyes"; then
+                AC_DEFINE(HAVE_VERBS,, Build with VERBS support)
         else
 		AC_MSG_ERROR([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])
 	fi
 fi
-AM_CONDITIONAL(HAVE_RDMA, test x$have_rdma = xyes)
+AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
+
+dnl Check for uGNI and DMAPP
+dnl TODO
 
 dnl Check for mpich2
 AC_ARG_ENABLE([mpich2], AC_HELP_STRING([--disable-mpich2],						
@@ -155,8 +160,7 @@ fi
 
 AC_CONFIG_FILES([
 	Makefile
-	libphoton/util/Makefile
-	libphoton/src/Makefile
+	src/Makefile
 	test/Makefile
 ])
 AC_OUTPUT
