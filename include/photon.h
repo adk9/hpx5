@@ -7,12 +7,16 @@
 struct photon_config_t {
 	uint64_t address;
 	int nproc;
-	int use_mpi;
-	MPI_Comm comm;
+
+	int use_cma;
 	int use_forwarder;
-
+	
+	MPI_Comm comm;
+	
 	char *backend;
+	int meta_exch;
 
+	char *eth_dev;
 	char *ib_dev;
 	int ib_port;
 };
@@ -27,7 +31,10 @@ typedef struct photon_config_t * photonConfig;
 #define PHOTON_ERROR_NOINIT    0x0001
 #define PHOTON_ERROR           0x0002
 
-	
+#define PHOTON_EXCH_TCP        0x0000
+#define PHOTON_EXCH_MPI        0x0001
+#define PHOTON_EXCH_XSP        0x0002
+
 int photon_init(photonConfig cfg);
 int photon_finalize();
 

@@ -48,11 +48,13 @@ int main(int argc, char *argv[]) {
 	prev = (size+rank-1) % size;
 
 	struct photon_config_t cfg = {
-		.use_mpi = 1,
+		.meta_exch = PHOTON_EXCH_MPI,
 		.nproc = size,
 		.address = rank,
 		.comm = MPI_COMM_WORLD,
 		.use_forwarder = 0,
+		.use_cma = 1,
+		.eth_dev = "roce0",
 		.ib_dev = "mlx4_1",
 		.ib_port = 1,
 		.backend = "verbs"

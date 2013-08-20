@@ -20,7 +20,6 @@ FILE *_phot_ofp;
 
 
 int photon_init(photonConfig cfg) {
-    
 	if (cfg->backend != NULL) {
 		if (!strncasecmp(cfg->backend, "verbs", 10)) {
 #ifdef HAVE_VERBS
@@ -80,7 +79,6 @@ int photon_unregister_buffer(char *buffer, int size) {
     
     return __photon_backend->unregister_buffer(buffer, size);
 }
-
 
 int photon_test(uint32_t request, int *flag, int *type, MPI_Status *status) {
     if(__photon_backend->initialized() != PHOTON_OK) {

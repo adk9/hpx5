@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <netinet/in.h>
 #include <infiniband/verbs.h>
 
 #include "squeue.h"
@@ -76,6 +77,7 @@ typedef struct verbs_cnct_info {
 	int lid;
 	int qpn;
 	int psn;
+    struct in_addr ip;
 } verbs_cnct_info_t;
 
 #endif

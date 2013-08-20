@@ -5,6 +5,7 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,6 +38,7 @@ static pthread_mutex_t sess_mtx;
 
 #endif
 
+extern photonConfig __photon_config;
 extern int _photon_nproc;
 extern int _photon_myrank;
 static int _photon_forwarder;
@@ -91,7 +93,7 @@ verbs_buffer_t *shared_storage;
 
 static ProcessInfo *verbs_processes;
 
-static char *              phot_verbs_ib_dev = NULL;
+static char               *phot_verbs_ib_dev = "ib0";
 static int                 phot_verbs_ib_port = 1;
 static struct ibv_context *phot_verbs_context;
 static struct ibv_pd      *phot_verbs_pd;
@@ -163,10 +165,17 @@ int verbs_init_common(photonConfig cfg) {
 	int bufsize, offset;
 	int info_ledger_size, FIN_ledger_size;
 
+	if (__initialized != 0) {
+		log_err("verbs_init_common(): Error: already initialized/initializing");
+		goto error_exit;
+	}
+
 	_photon_nproc = cfg->nproc;
 	_photon_myrank = (int)cfg->address;
 	_photon_forwarder = cfg->use_forwarder;
 	_photon_comm = cfg->comm;
+
+	ctr_info(" > verbs_init_common(%d, %d)",_photon_nproc, _photon_myrank);
 
 	if (cfg->ib_dev)
 		phot_verbs_ib_dev = cfg->ib_dev;
@@ -174,12 +183,10 @@ int verbs_init_common(photonConfig cfg) {
 	if (cfg->ib_port)
 		phot_verbs_ib_port = cfg->ib_port;
 
-	if (__initialized != 0) {
-		log_err("verbs_init_common(): Error: already initialized/initializing");
+	if (cfg->use_cma && !cfg->eth_dev) {
+		log_err("verbs_init_common(): CMA specified but Ethernet dev missing");
 		goto error_exit;
 	}
-
-	ctr_info(" > verbs_init_common(%d, %d)",_photon_nproc, _photon_myrank);
 
 	// __initialized: 0 - not; -1 - initializing; 1 - initialized
 	__initialized = -1;
@@ -2633,6 +2640,7 @@ static int verbs_init_context(ProcessInfo *verbs_processes) {
 
 static int verbs_connect_peers(ProcessInfo *verbs_processes) {
 	struct verbs_cnct_info **local_info, **remote_info;
+	struct ifaddrs *ifaddr, *ifa;
 	int i, iproc, num_qp;
 
 	ctr_info(" > verbs_connect_peers()");
@@ -2642,6 +2650,26 @@ static int verbs_connect_peers(ProcessInfo *verbs_processes) {
 		goto error_exit;
 	}
 
+	if (getifaddrs(&ifaddr) == -1) {
+		log_err("verbs_connect_peers(): Cannot get interface addrs");
+		goto error_exit;
+	}
+	
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL)
+			continue;
+		
+		if (!strcmp(ifa->ifa_name, __photon_config->eth_dev) &&
+			ifa->ifa_addr->sa_family == AF_INET) {
+			break;
+		}
+	}
+
+	if (__photon_config->use_cma && !ifa) {
+		log_err("verbs_connect_peers(): Did not find interface info for %s\n", __photon_config->eth_dev);
+		goto error_exit;
+	}
+	
 	num_qp = MAX_QP;
 	for(iproc=0; iproc<_photon_nproc; ++iproc) {
 
@@ -2658,6 +2686,7 @@ static int verbs_connect_peers(ProcessInfo *verbs_processes) {
 			local_info[iproc][i].lid = phot_verbs_lid;
 			local_info[iproc][i].qpn = verbs_processes[iproc].qp[i]->qp_num;
 			local_info[iproc][i].psn = (lrand48() & 0xfff000) + _photon_myrank+1;
+			local_info[iproc][i].ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
 		}
 	}
 
@@ -2750,11 +2779,11 @@ static int verbs_connect_qps(int num_qp, struct verbs_cnct_info *local_info, str
 static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_info **local_info) {
 	MPI_Request *rreq;
 	int peer;
-	char smsg[ sizeof "00000000:00000000:00000000"];
+	char smsg[ sizeof "00000000:00000000:00000000:00000000"];
 	char **rmsg;
 	int i, j, iproc;
 	struct verbs_cnct_info **remote_info = NULL;
-	int msg_size = sizeof "00000000:00000000:00000000";
+	int msg_size = sizeof "00000000:00000000:00000000:00000000";
 
 	remote_info = (struct verbs_cnct_info **)malloc( _photon_nproc * sizeof(struct verbs_cnct_info *) );
 	for (iproc = 0; iproc < _photon_nproc; ++iproc) {
@@ -2803,9 +2832,9 @@ static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_inf
 			if( peer == _photon_myrank ) {
 				continue;
 			}
-			sprintf(smsg, "%08x:%08x:%08x", local_info[peer][i].lid, local_info[peer][i].qpn,
-			        local_info[peer][i].psn);
-			//fprintf(stderr,"[%d/%d] Sending lid:qpn:psn = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
+			sprintf(smsg, "%08x:%08x:%08x:%08x", local_info[peer][i].lid, local_info[peer][i].qpn,
+			        local_info[peer][i].psn, local_info[peer][i].ip.s_addr);
+			//fprintf(stderr,"[%d/%d] Sending lid:qpn:psn:ip = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
 			if( MPI_Send(smsg, msg_size , MPI_BYTE, peer, 0, _photon_comm ) != MPI_SUCCESS ) {
 				fprintf(stderr, "Couldn't send local address\n");
 				goto err_exit;
@@ -2822,11 +2851,19 @@ static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_inf
 				fprintf(stderr, "Couldn't wait() to receive remote address\n");
 				goto err_exit;
 			}
-			sscanf(rmsg[peer], "%x:%x:%x",
-			       &remote_info[peer][i].lid, &remote_info[peer][i].qpn, &remote_info[peer][i].psn);
-			//fprintf(stderr,"[%d/%d] Received lid:qpn:psn = %x:%x:%x from task=%d\n",
-			//								_photon_myrank, _photon_nproc,
-			//								remote_info[peer][i].lid, remote_info[peer][i].qpn, remote_info[peer][i].psn, peer);
+			sscanf(rmsg[peer], "%x:%x:%x:%x",
+			       &remote_info[peer][i].lid,
+				   &remote_info[peer][i].qpn,
+				   &remote_info[peer][i].psn,
+				   &remote_info[peer][i].ip.s_addr);
+
+			//fprintf(stderr,"[%d/%d] Received lid:qpn:psn:ip = %x:%x:%x:%s from task=%d\n",
+			//		_photon_myrank, _photon_nproc,
+			//		remote_info[peer][i].lid,
+			//		remote_info[peer][i].qpn,
+			//		remote_info[peer][i].psn,
+			//		inet_ntoa(remote_info[peer][i].ip),
+			//		peer);
 		}
 	}
 
