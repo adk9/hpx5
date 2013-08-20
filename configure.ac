@@ -148,12 +148,16 @@ AS_IF([test "x$use_hwloc" = xyes],
       [hwloc_string="yes"],
       [hwloc_string="no"])
 
+AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
+AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
+
 echo ""
 echo "================================================"
 echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
+echo "               Networks : $networks_string"
 echo "              Profiling : $papi_string (PAPI)"
 echo "     Topology Awareness : $hwloc_string (HWLOC)"
 echo "          Documentation : $doc_string"
