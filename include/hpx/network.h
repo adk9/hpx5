@@ -47,6 +47,7 @@ typedef struct network_request_t {
 
 typedef struct network_status_t {
   int source;
+  int count;
 #if HAVE_MPI
   MPI_Status mpi;
 #endif
