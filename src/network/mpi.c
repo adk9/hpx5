@@ -177,6 +177,10 @@ int _init_mpi(void) {
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
 
+  #if DEBUG
+  printf("thread_support_provided = %d\n", thread_support_provided);
+  #endif
+
   /* cache size and rank */
   MPI_Comm_rank(MPI_COMM_WORLD, &_rank_mpi);
   MPI_Comm_size(MPI_COMM_WORLD, &_size_mpi);
@@ -209,8 +213,11 @@ int _probe_mpi(int source, int* flag, network_status_t* status) {
   temp = MPI_Iprobe(source, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
 
   if (temp == MPI_SUCCESS) {
-    status->source = status->mpi.MPI_SOURCE;
     retval = 0;
+    if (*flag == true) {
+      status->source = status->mpi.MPI_SOURCE;
+      MPI_Get_count(&(status->mpi), MPI_BYTE, &(status->count));
+    }
   }
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
@@ -259,6 +266,8 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE)
     mpi_src = MPI_ANY_SOURCE;
+  else
+    mpi_src = source;
 
   /* This may go away eventually. If we take this out, we need to use MPI_Get_count to get the size (which introduces problems with threading, should we ever change that) or we need to change sending to send the size first. */
   if (len == NETWORK_ANY_LENGTH)
@@ -269,6 +278,8 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
       retval = HPX_ERROR;    
       goto error;
     }
+    else
+      mpi_len = len;
   }
 
 
@@ -296,7 +307,8 @@ int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
 
   if (temp == MPI_SUCCESS) {
     retval = 0;
-    status->source = status->mpi.MPI_SOURCE;
+    if (*flag == true)
+      status->source = status->mpi.MPI_SOURCE;
   }
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */

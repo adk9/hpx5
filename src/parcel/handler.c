@@ -449,7 +449,7 @@ void * _hpx_parcelhandler_main(void) {
           initiated_something = 1;
 	  probe_successes++;
 	#endif
-	__hpx_network_ops->recv(curr_status.source, recv_buffer, NETWORK_ANY_LENGTH, &recv_request);
+	__hpx_network_ops->recv(curr_status.source, recv_buffer, curr_status.count, &recv_request);
 	outstanding_receive = true;	
       }
       
@@ -457,7 +457,7 @@ void * _hpx_parcelhandler_main(void) {
 
     #if DEBUG
       if (initiated_something != 0 || completed_something != 0) {
-        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, probe_successes, recv_successes, send_successes);
+        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, (int)probe_successes, (int)recv_successes, (int)send_successes);
         initiated_something = 0;
         completed_something = 0;
       }
@@ -479,7 +479,7 @@ void * _hpx_parcelhandler_main(void) {
   }
 
   #if DEBUG
-    printf("Handler done after iter %d\n", i);
+  printf("Handler done after iter %d\n", (int)i);
     fflush(stdout);
   #endif
 

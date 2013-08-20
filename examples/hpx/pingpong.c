@@ -20,6 +20,9 @@ int opt_text_ping = 0;
 int opt_screen_out = 0;
 
 void _ping_action(void* _args) {
+  if (global_count > opt_iter_limit)
+    return;
+
   int success;
   hpx_parcel_t* p;
   struct pingpong_args* in_args = (struct pingpong_args*)_args;
@@ -47,6 +50,9 @@ void _ping_action(void* _args) {
 }
 
 void _pong_action(void* _args) {
+  if (global_count > opt_iter_limit)
+    return;
+
   int success;
   int str_length;
   char copy_buffer[BUFFER_SIZE];
@@ -107,7 +113,11 @@ int main(int argc, char** argv) {
   if (argc > 3)
     opt_screen_out = atoi(argv[3]);
 
-  hpx_init();
+  printf("Running with options: {iter limit: %d}, {text_ping: %d}, {screen_out: %d}\n", opt_iter_limit, opt_text_ping, opt_screen_out);
+
+  success = hpx_init();
+  if (success != 0)
+    exit(-1);
 
   num_ranks = hpx_get_num_localities();
   my_loc = hpx_get_my_locality();
