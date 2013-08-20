@@ -1,4 +1,4 @@
-AM_CFLAGS = @CFLAGS@                     \
+AM_CFLAGS = @CFLAGS@                         \
 	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include           \
 	    -I@top_srcdir@/src/util
@@ -15,9 +15,10 @@ libphoton_la_LDFLAGS = @top_srcdir@/src/util/libutil.la
 libphoton_la_LIBADD = 
 
 if HAVE_VERBS
-AM_CFLAGS += -I@top_srcdir@/src/verbs      \
-	         -I@top_srcdir@/src/libphoton
-libphoton_la_SOURCES += verbs/verbs.c      \
+AM_CFLAGS += -I@top_srcdir@/src/verbs                  \
+	     -I@top_srcdir@/src/libphoton
+libphoton_la_SOURCES += verbs/verbs.c                  \
+			verbs/verbs_cma_connect.c      \
 			verbs/verbs_buffer.c           \
 			verbs/verbs_remote_buffer.c    \
 			verbs/verbs_rdma_FIN_ledger.c  \
