@@ -30,7 +30,18 @@ struct args {
   char z;
 };
 
-hpx_future_t fut;
+struct args data_to_check = {1.414, 3, 'a'};
+
+/* arguments to use for parcel send tests */
+struct send_args {
+  hpx_future_t *fut;
+  unsigned int src_rank;
+  void* in_data;
+};
+
+int DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS =  (10*1037)/sizeof(size_t);
+
+hpx_future_t sendtest_fut; /* used for the simplest send test */
 
 /*
  -------------------------------------------------------------------
@@ -40,6 +51,28 @@ hpx_future_t fut;
 
 void _test_action(void* args) {
   return;
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for parcel send test, to set future
+ -------------------------------------------------------------------
+*/
+
+void _set_sendtest_future_action(void* args) {
+  hpx_lco_future_set(&sendtest_fut, 0);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for some parcel send tests, to set future
+ -------------------------------------------------------------------
+*/
+
+void _set_future_action(void* args) {
+  hpx_future_t* fut = (hpx_future_t*)args;
+  ck_assert_msg(fut != NULL, "Couldn't set future - no argument received");
+  hpx_lco_future_set(fut, 0);
 }
 
 /*
@@ -69,10 +102,85 @@ void thread_queue_worker(void* a) {
 */
 
 void _test_action_checkrank(void* args) {
+  int success;
   unsigned int my_rank;
+  hpx_parcel_t *p;
+  hpx_locality_t* other_loc;
+
   my_rank = hpx_get_rank();
   ck_assert_msg(my_rank == 1, "Parcel sent to wrong locality");
-  hpx_lco_future_set(&fut, 0);
+  
+  other_loc = hpx_get_locality(0);
+  p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
+  success = hpx_new_parcel("_set_sendtest_future_action", (void*)NULL, 0, p);   
+  ck_assert_msg(success == 0, "Couldn't create return parcel");
+  success = hpx_send_parcel(other_loc, p);
+  ck_assert_msg(success == 0, "Couldn't send parcel");
+
+  hpx_locality_destroy(other_loc);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for send parcel data tests
+ -------------------------------------------------------------------
+*/
+
+void _test_action_checkdata(void* args) {
+  int success;
+  hpx_parcel_t *p;
+  hpx_locality_t* other_loc;
+  ck_assert_msg(args != NULL, "Did not receive any data");
+  struct send_args *p_args = (struct send_args*)args;
+  struct args *in_data = (struct args*)p_args->in_data;
+  ck_assert_msg(in_data != NULL, "Did not receive correct data");
+  ck_assert_msg(in_data->x == data_to_check.x, "Did not receive correct data");
+  ck_assert_msg(in_data->y == data_to_check.y, "Did not receive correct data");
+  ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data");
+
+  other_loc = hpx_get_locality(p_args->src_rank);
+  p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
+  success = hpx_new_parcel("_set_future_action", (void*)p_args->fut, 0, p);   
+  ck_assert_msg(success == 0, "Couldn't create return parcel");
+  success = hpx_send_parcel(other_loc, p);
+  ck_assert_msg(success == 0, "Couldn't send parcel");
+
+  free(in_data);
+  free(p_args);
+  hpx_locality_destroy(other_loc);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for send parcel (large) data tests
+ -------------------------------------------------------------------
+*/
+
+void _test_action_checkdata_large(void* args) {
+  int success;
+  hpx_parcel_t *p;
+  hpx_locality_t* other_loc;
+  int i;
+
+  ck_assert_msg(args != NULL, "Did not receive any data");
+  struct send_args *p_args = (struct send_args*)args;
+  size_t *data = (size_t*)p_args->in_data;
+  ck_assert_msg(data != NULL, "Did not receive correct data");
+
+  for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
+    ck_assert_msg(data[i] == i, "Sent data was corrupt");
+
+  other_loc = hpx_get_locality(p_args->src_rank);
+  p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
+  success = hpx_new_parcel("_set_future_action", (void*)p_args->fut, 0, p);   
+  ck_assert_msg(success == 0, "Couldn't create return parcel");
+  success = hpx_send_parcel(other_loc, p);
+  ck_assert_msg(success == 0, "Couldn't send parcel");
+
+  free(data);
+  free(p_args);
+  hpx_locality_destroy(other_loc);
+
 }
 
 /*
@@ -82,12 +190,99 @@ void _test_action_checkrank(void* args) {
 */
 void _thread_main_parcelsend(void* args) {
   int success;
-  hpx_action_t* a;
   hpx_parcel_t* p;
   unsigned int num_ranks;
   unsigned int my_rank;
   hpx_locality_t* my_loc;
   hpx_locality_t* other_loc;
+
+  num_ranks = hpx_get_num_localities();
+  ck_assert_msg(num_ranks > 1, "Couldn't send parcel - no remote localities available to send to");
+
+  my_loc = hpx_get_my_locality();
+  my_rank = my_loc->rank;
+
+  if (my_rank == 0) {
+    hpx_lco_future_init(&sendtest_fut, 1);
+    other_loc = hpx_get_locality(1);
+
+    p = hpx_alloc(sizeof(hpx_parcel_t));
+    success = hpx_new_parcel("_test_action_checkrank", (void*)NULL, 0, p);  
+    success = hpx_send_parcel(other_loc, p);
+    ck_assert_msg(success == 0, "Couldn't send parcel");
+
+    hpx_thread_wait(&sendtest_fut);
+
+    hpx_locality_destroy(other_loc);
+    hpx_lco_future_destroy(&sendtest_fut);
+  }
+  else {
+  }
+
+}
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Main thread for parcel send data test
+ --------------------------------------------------------------------
+*/
+void _thread_main_parcelsenddata(void* args) {
+  int success;
+  hpx_parcel_t* p;
+  unsigned int num_ranks;
+  unsigned int my_rank;
+  hpx_locality_t* my_loc;
+  hpx_locality_t* other_loc;
+  hpx_future_t fut;
+
+  num_ranks = hpx_get_num_localities();
+  ck_assert_msg(num_ranks > 1, "Couldn't send parcel - no remote localities available to send to");
+
+  my_loc = hpx_get_my_locality();
+  my_rank = my_loc->rank;
+
+  if (my_rank == 0) {
+    hpx_lco_future_init(&fut, 1);
+    other_loc = hpx_get_locality(1);
+
+    p = hpx_alloc(sizeof(hpx_parcel_t));
+    success = hpx_new_parcel("_test_action_checkdata", (void*)&data_to_check, sizeof(data_to_check), p);
+    success = hpx_send_parcel(other_loc, p);
+    ck_assert_msg(success == 0, "Couldn't send parcel");
+
+    hpx_thread_wait(&fut);
+
+    hpx_locality_destroy(other_loc);
+    hpx_lco_future_destroy(&fut);
+  }
+  else {
+  }
+
+  /* cleanup */
+
+
+}
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: Main thread for parcel send (large) data test
+ --------------------------------------------------------------------
+*/
+void _thread_main_parcelsenddata_large(void* args) {
+  int success;
+  hpx_parcel_t* p;
+  unsigned int num_ranks;
+  unsigned int my_rank;
+  hpx_locality_t* my_loc;
+  hpx_locality_t* other_loc;
+  size_t *data_to_send;
+  int i;
+  hpx_future_t fut;
+
+  data_to_send = hpx_alloc(DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
+  ck_assert_msg(data_to_send != NULL, "Could not send large data - not enough memory to allocate space for data");
+  for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
+    data_to_send[i] = i;
 
   hpx_lco_future_init(&fut, 1);
 
@@ -97,31 +292,23 @@ void _thread_main_parcelsend(void* args) {
   my_loc = hpx_get_my_locality();
   my_rank = my_loc->rank;
 
-  /* register action for parcel (must be done by all ranks) */
-  a = hpx_alloc(sizeof(hpx_action_t));
-  hpx_action_register("_test_action_checkrank", (hpx_func_t)_test_action_checkrank, a);
-
   if (my_rank == 0) {
+    hpx_lco_future_init(&fut, 1);
     other_loc = hpx_get_locality(1);
+
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_test_action_checkrank", (void*)NULL, 0, p);
-    
+    success = hpx_new_parcel("_test_action_checkdata_large", (void*)data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS, p);   
     success = hpx_send_parcel(other_loc, p);
     ck_assert_msg(success == 0, "Couldn't send parcel");
 
-    hpx_locality_destroy(other_loc);
-  }
-  else if (my_rank == 1) {
     hpx_thread_wait(&fut);
+
+    hpx_locality_destroy(other_loc);
+    hpx_lco_future_destroy(&fut);
   }
   else {
   }
-
-  /* cleanup */
-  hpx_lco_future_destroy(&fut);
-
 }
-
 
 /*
  --------------------------------------------------------------------
@@ -409,10 +596,7 @@ END_TEST
 */
 START_TEST (test_libhpx_parcel_serialize)
 {
-  struct args Args;
-  Args.x = 1.414;
-  Args.y = 3;
-  Args.z = 'a';
+  struct args Args = data_to_check;
   hpx_action_t* a;
   hpx_parcel_t* p;
   int success;
@@ -449,10 +633,18 @@ END_TEST
 START_TEST (test_libhpx_parcel_send)
 {
   int success;
+  hpx_action_t* a;
+  hpx_action_t* b;
 
   hpx_config_t *cfg;
   hpx_context_t *ctx;
   hpx_thread_t* th;
+
+  /* register action for parcel (must be done by all ranks) */
+  a = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_test_action_checkrank", (hpx_func_t)_test_action_checkrank, a);
+  b = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_sendtest_future_action", (hpx_func_t)_set_sendtest_future_action, b);
 
   //hpx_action_t* a_main;
   //hpx_action_t* a_sub; 
@@ -463,6 +655,76 @@ START_TEST (test_libhpx_parcel_send)
   hpx_config_init(cfg);
   ctx = hpx_ctx_create(cfg);
   th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0);
+  hpx_thread_join(th, (void**)NULL);
+
+  /* cleanup */
+  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  hpx_free(cfg);
+} 
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: parcel send data
+        This test is designed to be run in a networked environment!
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_parcel_senddata)
+{
+  int success;
+
+  hpx_action_t* a;
+  hpx_action_t* b;
+  hpx_config_t *cfg;
+  hpx_context_t *ctx;
+  hpx_thread_t* th;
+
+  /* register action for parcel (must be done by all ranks) */
+  a = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_test_action_checkdata", (hpx_func_t)_test_action_checkdata, a);
+  b = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+
+  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  hpx_config_init(cfg);
+  ctx = hpx_ctx_create(cfg);
+  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0);
+  hpx_thread_join(th, (void**)NULL);
+
+  /* cleanup */
+  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  hpx_free(cfg);
+} 
+END_TEST
+
+/*
+ --------------------------------------------------------------------
+  TEST: parcel send (large) data
+        This test is designed to be run in a networked environment!
+ --------------------------------------------------------------------
+*/
+
+START_TEST (test_libhpx_parcel_senddata_large)
+{
+  int success;
+
+  hpx_action_t* a;
+  hpx_action_t* b;
+  hpx_config_t *cfg;
+  hpx_context_t *ctx;
+  hpx_thread_t* th;
+
+  /* register action for parcel (must be done by all ranks) */
+  a = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_test_action_checkdata_large", (hpx_func_t)_test_action_checkdata_large, a);
+  b = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+
+  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  hpx_config_init(cfg);
+  ctx = hpx_ctx_create(cfg);
+  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */

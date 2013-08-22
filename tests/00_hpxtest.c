@@ -50,6 +50,13 @@
 */
 
 int main(int argc, char * argv[]) {
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  sleep(15);
+
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
   char * long_tests = NULL;
@@ -66,7 +73,7 @@ int main(int argc, char * argv[]) {
   perf_tests = getenv("HPXTEST_PERF");
 
   /* install fixtures */
-  tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
+  tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
   tcase_set_timeout(tc, 1200);
@@ -262,7 +269,10 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_parcel_create);
   tcase_add_test(tc, test_libhpx_parcel_serialize);
   tcase_add_test(tc, test_libhpx_parcel_send);
-
+#if 0
+  tcase_add_test(tc, test_libhpx_parcel_senddata);
+  tcase_add_test(tc, test_libhpx_parcel_senddata_large);
+#endif
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
@@ -316,6 +326,7 @@ int main(int argc, char * argv[]) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
 
   }
+
 
   suite_add_tcase(s, tc);
 
