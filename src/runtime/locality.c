@@ -78,5 +78,5 @@ uint32 hpx_get_num_localities(void) {
 }
 
 uint32 hpx_get_rank(void) {
-  return __hpx_my_locality->rank;
+  return hpx_get_my_locality()->rank;
 }
