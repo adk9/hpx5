@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "hpx.h"
-#include <mpi.h>
+//#include <mpi.h>
 
 #define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
 
@@ -551,7 +551,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-  MPI_Barrier(MPI_COMM_WORLD);
+  // MPI_Barrier(MPI_COMM_WORLD);
 
   int *child_retval;
 
