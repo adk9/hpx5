@@ -50,13 +50,6 @@
 */
 
 int main(int argc, char * argv[]) {
-  int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  sleep(15);
-
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
   char * long_tests = NULL;
@@ -269,10 +262,9 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_parcel_create);
   tcase_add_test(tc, test_libhpx_parcel_serialize);
   tcase_add_test(tc, test_libhpx_parcel_send);
-#if 0
   tcase_add_test(tc, test_libhpx_parcel_senddata);
   tcase_add_test(tc, test_libhpx_parcel_senddata_large);
-#endif
+
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
