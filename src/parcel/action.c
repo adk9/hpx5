@@ -59,7 +59,7 @@ int hpx_action_register(char *name, hpx_func_t func, hpx_action_t *action) {
 
     /* FIXME Does hsearch do a deep or shallow copy? If a deep copy, we are leaking memory */
     ret = hsearch_r(*(ENTRY*)a, ENTER, &e, &action_table);
-    if (e == NULL || ret < 0)
+    if (e == NULL || ret == 0) /* hsearch_r returns 0 on error and non-zero on success! */
         return HPX_ERROR;
     *action = *(hpx_action_t*)e;
 
