@@ -18,9 +18,9 @@ typedef struct verbs_buffer {
 ////*    DAT_PZ_HANDLE pz;
 } verbs_buffer_t;
 
-verbs_buffer_t *verbs_buffer_create(char *buf, int size);
-void verbs_buffer_free(verbs_buffer_t *buffer);
-int verbs_buffer_register(verbs_buffer_t *dbuffer, struct ibv_pd *pd);
-int verbs_buffer_unregister(verbs_buffer_t *dbuffer);
+verbs_buffer_t *__verbs_buffer_create(char *buf, int size);
+void __verbs_buffer_free(verbs_buffer_t *buffer);
+int __verbs_buffer_register(verbs_buffer_t *dbuffer, struct ibv_pd *pd);
+int __verbs_buffer_unregister(verbs_buffer_t *dbuffer);
 
 #endif

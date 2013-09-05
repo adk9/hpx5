@@ -20,12 +20,12 @@
 
 #define DEF_QUEUE_LENGTH 		5*10240
 #define DEF_NUM_REQUESTS 		5*10240
-#define LEDGER_SIZE			10240
+#define LEDGER_SIZE			    10240
 
-#define NULL_COOKIE			0x0
+#define NULL_COOKIE			    0x0
 
-#define LEDGER				1
-#define EVQUEUE				2
+#define LEDGER				    1
+#define EVQUEUE				    2
 
 #define REQUEST_PENDING			1
 #define REQUEST_FAILED			2
@@ -33,14 +33,12 @@
 
 #define MAX_QP 1
 
-extern struct photon_backend_t photon_verbs_backend;
-
 typedef struct proc_info_t {
 	struct ibv_qp *qp[MAX_QP];
 	int            psn;
 	int            num_qp;
 
-// Conduit independent (almost) part
+	// Conduit independent (almost) part
 	verbs_ri_ledger_t *local_snd_info_ledger;
 	verbs_ri_ledger_t *remote_snd_info_ledger;
 	verbs_ri_ledger_t *local_rcv_info_ledger;
@@ -73,11 +71,6 @@ struct mem_register_req {
 	int buffer_size;
 };
 
-typedef struct verbs_cnct_info {
-	int lid;
-	int qpn;
-	int psn;
-    struct in_addr ip;
-} verbs_cnct_info_t;
+extern struct photon_backend_t photon_verbs_backend;
 
 #endif

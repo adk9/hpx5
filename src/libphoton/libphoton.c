@@ -3,8 +3,9 @@
 #include "logging.h"
 
 /* Globals */
-int _photon_nproc;
 int _photon_myrank;
+int _photon_nproc;
+int _photon_forwarder;
 
 #ifdef DEBUG
 int _photon_start_debugging=1;

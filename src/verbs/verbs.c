@@ -1,11 +1,5 @@
 #include "mpi.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-#include <net/if.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,6 +11,8 @@
 #include <pthread.h>
 
 #include "verbs.h"
+#include "verbs_connect.h"
+#include "verbs_exchange.h"
 #include "verbs_buffer.h"
 #include "verbs_remote_buffer.h"
 #include "htable.h"
@@ -24,35 +20,10 @@
 #include "logging.h"
 #include "counter.h"
 
-#ifdef WITH_XSP
-
-static int verbs_xsp_init();
-static int verbs_xsp_setup_session(libxspSess **sess, char *xsp_hop);
-static int verbs_xsp_connect_phorwarder();
-static int verbs_xsp_exchange_ri_ledgers();
-static int verbs_xsp_exchange_FIN_ledger();
-
-static int _photon_fp;
-static int sess_count;
-static pthread_mutex_t sess_mtx;
-
-#endif
-
-extern photonConfig __photon_config;
 extern int _photon_nproc;
 extern int _photon_myrank;
-static int _photon_forwarder;
+extern int _photon_forwarder;
 static MPI_Comm _photon_comm;
-
-static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_info **local_info);
-static int verbs_connect_qps(int num_qp, struct verbs_cnct_info *local_info, struct verbs_cnct_info *remote_info, ProcessInfo *verbs_process);
-static int verbs_exchange_ri_ledgers();
-static int verbs_setup_ri_ledgers(char *buf, int num_entries);
-static int verbs_exchange_FIN_ledger();
-static int verbs_setup_FIN_ledger(char *buf, int num_entries);
-int        verbs_register_buffer(char *buffer, int buffer_size);
-static int verbs_init_context(ProcessInfo *verbs_processes);
-static int verbs_connect_peers(ProcessInfo *verbs_processes);
 
 int verbs_initialized(void);
 int verbs_init(photonConfig cfg);
@@ -75,12 +46,14 @@ int verbs_send_FIN(int proc);
 int verbs_wait_any(int *ret_proc, uint32_t *ret_req);
 int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
-// We only want to spawn a dedicated thread for ledgers on
-// multithreaded instantiations of the library (e.g. in xspd).
-// FIXME: All of the pthreads stuff below should also depend on this.
+/* 
+   We only want to spawn a dedicated thread for ledgers on
+   multithreaded instantiations of the library (e.g. in xspd).
+   FIXME: All of the pthreads stuff below should also depend on this.
+*/
 #ifdef PHOTON_MULTITHREADED
 static pthread_t ledger_watcher;
-static void *verbs_req_watcher(void *arg);
+static void *__verbs_req_watcher(void *arg);
 #else
 static int __verbs_wait_event(verbs_req_t *req);
 static int __verbs_wait_ledger(verbs_req_t *req);
@@ -88,18 +61,10 @@ static int __verbs_nbpop_ledger(verbs_req_t *req);
 static int __verbs_nbpop_event(verbs_req_t *req);
 #endif
 
-static inline verbs_req_t *verbs_get_request();
 verbs_buffer_t *shared_storage;
 
 static ProcessInfo *verbs_processes;
-
-static char               *phot_verbs_ib_dev = "ib0";
-static int                 phot_verbs_ib_port = 1;
-static struct ibv_context *phot_verbs_context;
-static struct ibv_pd      *phot_verbs_pd;
-static struct ibv_cq      *phot_verbs_cq;
-static struct ibv_srq     *phot_verbs_srq;
-static int                 phot_verbs_lid = -1;
+static verbs_cnct_ctx verbs_ctx;
 
 static htable_t *reqtable, *ledger_reqtable;
 static struct verbs_req *requests;
@@ -113,6 +78,8 @@ static SLIST_HEAD(pendingmemregs, mem_register_req) pending_mem_register_list;
 static int __initialized = 0;
 DEFINE_COUNTER(curr_cookie, uint32_t)
 DEFINE_COUNTER(handshake_rdma_write, uint32_t)
+
+static inline verbs_req_t *__verbs_get_request();
 
 #ifdef DEBUG
 static time_t _tictoc(time_t stime, int proc) {
@@ -151,6 +118,25 @@ struct photon_backend_t photon_verbs_backend = {
     .wait_any_ledger = verbs_wait_any_ledger
 };
 
+
+static inline verbs_req_t *__verbs_get_request() {
+	verbs_req_t *req;
+
+	LIST_LOCK(&free_reqs_list);
+	req = LIST_FIRST(&free_reqs_list);
+	if (req)
+		LIST_REMOVE(req, list);
+	LIST_UNLOCK(&free_reqs_list);
+
+	if (!req) {
+		req = malloc(sizeof(verbs_req_t));
+		pthread_mutex_init(&req->mtx, NULL);
+		pthread_cond_init (&req->completed, NULL);
+	}
+
+	return req;
+}
+
 int verbs_initialized() {
 	if (__initialized)
 		return PHOTON_OK;
@@ -158,8 +144,7 @@ int verbs_initialized() {
 		return PHOTON_ERROR_NOINIT;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-int verbs_init_common(photonConfig cfg) {
+int __verbs_init_common(photonConfig cfg) {
 	int i;
 	char *buf;
 	int bufsize, offset;
@@ -170,6 +155,8 @@ int verbs_init_common(photonConfig cfg) {
 		goto error_exit;
 	}
 
+	srand48(getpid() * time(NULL));
+
 	_photon_nproc = cfg->nproc;
 	_photon_myrank = (int)cfg->address;
 	_photon_forwarder = cfg->use_forwarder;
@@ -178,10 +165,10 @@ int verbs_init_common(photonConfig cfg) {
 	ctr_info(" > verbs_init_common(%d, %d)",_photon_nproc, _photon_myrank);
 
 	if (cfg->ib_dev)
-		phot_verbs_ib_dev = cfg->ib_dev;
+		verbs_ctx.ib_dev = cfg->ib_dev;
 
 	if (cfg->ib_port)
-		phot_verbs_ib_port = cfg->ib_port;
+	    verbs_ctx.ib_port = cfg->ib_port;
 
 	if (cfg->use_cma && !cfg->eth_dev) {
 		log_err("verbs_init_common(): CMA specified but Ethernet dev missing");
@@ -241,16 +228,19 @@ int verbs_init_common(photonConfig cfg) {
 	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc+_photon_forwarder));
 
 	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
-		verbs_processes[i].curr_remote_buffer = verbs_remote_buffer_create();
+		verbs_processes[i].curr_remote_buffer = __verbs_remote_buffer_create();
 		if(!verbs_processes[i].curr_remote_buffer) {
 			log_err("Couldn't allocate process remote buffer information");
 			goto error_exit_gp;
 		}
 	}
 
+	// keep a pointer to the processes list in the verbs context
+	verbs_ctx.verbs_processes = verbs_processes;
+
 	dbg_info("verbs_init_common(): alloc'd process info");
 
-	if( verbs_init_context(verbs_processes) ) {
+	if(__verbs_init_context(&verbs_ctx)) {
 		log_err("verbs_init_common(): Couldn't initialize verbs context\n");
 		goto error_exit_crb;
 	}
@@ -267,31 +257,31 @@ int verbs_init_common(photonConfig cfg) {
 	}
 	dbg_info("Bufsize: %d", bufsize);
 
-	shared_storage = verbs_buffer_create(buf, bufsize);
+	shared_storage = __verbs_buffer_create(buf, bufsize);
 	if (!shared_storage) {
 		log_err("verbs_init_common(): Couldn't register shared storage");
 		goto error_exit_buf;
 	}
 
-	if (verbs_buffer_register(shared_storage, phot_verbs_pd) != 0) {
+	if (__verbs_buffer_register(shared_storage, verbs_ctx.ib_pd) != 0) {
 		log_err("verbs_init_common(): couldn't register local buffer for the ledger entries");
 		goto error_exit_ss;
 	}
 
-	if (verbs_setup_ri_ledgers(buf, LEDGER_SIZE) != 0) {
+	if (__verbs_setup_ri_ledgers(verbs_processes, buf, LEDGER_SIZE) != 0) {
 		log_err("verbs_init_common(); couldn't setup snd/rcv info ledgers");
 		goto error_exit_listeners;
 	}
 
 	// skip 4 ledgers (rcv info local, rcv info remote, snd info local, snd info remote)
 	offset = 4 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
-	if (verbs_setup_FIN_ledger(buf + offset, LEDGER_SIZE) != 0) {
+	if (__verbs_setup_FIN_ledger(verbs_processes, buf + offset, LEDGER_SIZE) != 0) {
 		log_err("verbs_init_common(); couldn't setup send ledgers");
 		goto error_exit_ri_ledger;
 	}
 
 #ifdef PHOTON_MULTITHREADED
-	if (pthread_create(&ledger_watcher, NULL, verbs_req_watcher, NULL)) {
+	if (pthread_create(&ledger_watcher, NULL, __verbs_req_watcher, NULL)) {
 		log_err("verbs_init_common(): pthread_create() failed.\n");
 		goto error_exit_ledger_watcher;
 	}
@@ -307,7 +297,7 @@ error_exit_ledger_watcher:
 error_exit_ri_ledger:
 error_exit_listeners:
 error_exit_ss:
-	verbs_buffer_free(shared_storage);
+	__verbs_buffer_free(shared_storage);
 error_exit_buf:
 	if (buf)
 		free(buf);
@@ -315,7 +305,7 @@ error_exit_verbs_cnct:
 error_exit_crb:
 	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
-			verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
+			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}
 	}
 error_exit_gp:
@@ -338,20 +328,20 @@ error_exit:
 int verbs_init(photonConfig cfg) {
 	int i;
 
-	if (verbs_init_common(cfg) != 0)
+	if (__verbs_init_common(cfg) != 0)
 		goto error_exit;
 
-	if( verbs_connect_peers(verbs_processes) ) {
+	if(__verbs_connect_peers(&verbs_ctx)) {
 		log_err("verbs_init(): Couldn't exchange peer information to create the connections\n");
 		goto error_exit_verbs_cntx;
 	}
 
-	if (verbs_exchange_ri_ledgers() != 0) {
+	if (__verbs_exchange_ri_ledgers(verbs_processes) != 0) {
 		log_err("verbs_init(); couldn't exchange rdma ledgers");
 		goto error_exit_listeners;
 	}
 
-	if (verbs_exchange_FIN_ledger() != 0) {
+	if (__verbs_exchange_FIN_ledger(verbs_processes) != 0) {
 		log_err("verbs_init(); couldn't exchange send ledgers");
 		goto error_exit_FIN_ledger;
 	}
@@ -389,10 +379,10 @@ error_exit_listeners:
 error_exit_verbs_cntx:
 	if (shared_storage->buffer)
 		free(shared_storage->buffer);
-	verbs_buffer_free(shared_storage);
+	__verbs_buffer_free(shared_storage);
 	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
-			verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
+			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}
 	}
 	free(verbs_processes);
@@ -407,285 +397,10 @@ error_exit:
 	return -1;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 int verbs_finalize() {
 	return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-static int verbs_exchange_ri_ledgers() {
-	int i;
-	MPI_Request *req;
-	uintptr_t *va;
-
-	ctr_info(" > verbs_exchange_ri_ledgers()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_exchange_ri_ledgers(): Library not initialized.  Call photon_init() first");
-		return -1;
-	}
-
-	va = (uintptr_t *)malloc( _photon_nproc*sizeof(uintptr_t) );
-	req = (MPI_Request *)malloc( 2*_photon_nproc*sizeof(MPI_Request) );
-	if( !va || !req ) {
-		log_err("verbs_exchange_ri_ledgers(): Cannot malloc temporary message buffers\n");
-		return -1;
-	}
-	memset(va, 0, _photon_nproc*sizeof(uintptr_t));
-	memset(req, 0, 2*_photon_nproc*sizeof(MPI_Request));
-
-///////////////////////////////////////////////////////////////////////////////
-// Prepare to receive the receive-info ledger rkey and pointers.  The rkey is also used for the send-info ledgers.
-	for(i = 0; i < _photon_nproc; i++) {
-
-		if( MPI_Irecv(&(verbs_processes[i].remote_rcv_info_ledger->remote.rkey), sizeof(uint32_t), MPI_BYTE, i, 0, _photon_comm, &req[2*i]) != MPI_SUCCESS ) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't post irecv() for receive-info ledger from task %d", i);
-			return -1;
-		}
-
-		if( MPI_Irecv(&(va[i]), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm, &req[2*i+1]) != MPI_SUCCESS) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't post irecv() for receive-info ledger from task %d", i);
-			return -1;
-		}
-	}
-
-	// Send the receive-info ledger rkey and pointers
-	for(i = 0; i < _photon_nproc; i++) {
-		uintptr_t tmp_va;
-
-		if( MPI_Send(&shared_storage->mr->rkey, sizeof(uint32_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't send receive-info ledger to process %d", i);
-			return -1;
-		}
-
-		tmp_va = (uintptr_t)(verbs_processes[i].local_rcv_info_ledger->entries);
-
-		dbg_info("Transmitting rcv_info ledger info to %d: %"PRIxPTR, i, tmp_va);
-
-		if( MPI_Send(&(tmp_va), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't send receive-info ledger to process %d", i);
-			return -1;
-		}
-	}
-
-	// Wait for the arrival of the receive-info ledger rkey and pointers.  The rkey is also used for the send-info ledgers.
-	if (MPI_Waitall(2*_photon_nproc, req, MPI_STATUSES_IGNORE) != MPI_SUCCESS) {
-		log_err("verbs_exchange_ri_ledgers(): Couldn't wait() for receive-info ledger from task %d", i);
-		return -1;
-	}
-	for(i = 0; i < _photon_nproc; i++) {
-		// snd_info and rcv_info ledgers are all stored in the same contiguous memory region and share a common "rkey"
-		verbs_processes[i].remote_snd_info_ledger->remote.rkey = verbs_processes[i].remote_rcv_info_ledger->remote.rkey;
-		verbs_processes[i].remote_rcv_info_ledger->remote.addr = va[i];
-	}
-
-
-	// Clean up the temp arrays before we reuse them, just to be tidy.  This is not the fast path so we can afford it.
-	memset(va, 0, _photon_nproc*sizeof(uintptr_t));
-	memset(req, 0, _photon_nproc*sizeof(MPI_Request));
-	////////////////////////////////////////////////////////////////////////////////////
-	// Prepare to receive the send-info ledger pointers
-	for(i = 0; i < _photon_nproc; i++) {
-		if( MPI_Irecv(&(va[i]), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm, &req[i]) != MPI_SUCCESS) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't receive send-info ledger from task %d", i);
-			return -1;
-		}
-	}
-
-	// Send the send-info ledger pointers
-	for(i = 0; i < _photon_nproc; i++) {
-		uintptr_t tmp_va;
-
-		tmp_va = (uintptr_t)(verbs_processes[i].local_snd_info_ledger->entries);
-
-		dbg_info("Transmitting snd_info ledger info to %d: %"PRIxPTR, i, tmp_va);
-
-		if( MPI_Send(&(tmp_va), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
-			log_err("verbs_exchange_ri_ledgers(): Couldn't send send-info ledger to task %d", i);
-			return -1;
-		}
-	}
-
-	// Wait for the arrival of the send-info ledger pointers
-
-	if (MPI_Waitall(_photon_nproc, req, MPI_STATUSES_IGNORE) != MPI_SUCCESS) {
-		log_err("verbs_exchange_ri_ledgers(): Couldn't wait to receive send-info ledger from task %d", i);
-		return -1;
-	}
-	for(i = 0; i < _photon_nproc; i++) {
-		verbs_processes[i].remote_snd_info_ledger->remote.addr = va[i];
-	}
-
-	free(va);
-	free(req);
-
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-static int verbs_setup_ri_ledgers(char *buf, int num_entries) {
-	int i;
-	int ledger_size, offset;
-
-	ctr_info(" > verbs_setup_ri_ledgers()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_setup_ri_ledgers(): Library not initialized.  Call photon_init() first");
-		return -1;
-	}
-
-	ledger_size = sizeof(verbs_ri_ledger_entry_t) * num_entries;
-
-	// Allocate the receive info ledgers
-	for(i = 0; i < _photon_nproc + _photon_forwarder; i++) {
-		dbg_info("allocating rcv info ledger for %d: %p", i, (buf + ledger_size * i));
-		dbg_info("Offset: %d", ledger_size * i);
-
-		// allocate the ledger
-		verbs_processes[i].local_rcv_info_ledger = verbs_ri_ledger_create_reuse((verbs_ri_ledger_entry_t * ) (buf + ledger_size * i), num_entries);
-		if (!verbs_processes[i].local_rcv_info_ledger) {
-			log_err("verbs_setup_ri_ledgers(): couldn't create local rcv info ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote ri ledger for %d: %p", i, buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-		dbg_info("Offset: %d", ledger_size * _photon_nproc + ledger_size * i);
-
-		verbs_processes[i].remote_rcv_info_ledger = verbs_ri_ledger_create_reuse((verbs_ri_ledger_entry_t * ) (buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!verbs_processes[i].remote_rcv_info_ledger) {
-			log_err("verbs_setup_ri_ledgers(): couldn't create remote rcv info ledger for process %d", i);
-			return -1;
-		}
-	}
-
-	// Allocate the send info ledgers
-	offset = 2 * ledger_size * (_photon_nproc+_photon_forwarder);
-	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
-		dbg_info("allocating snd info ledger for %d: %p", i, (buf + offset + ledger_size * i));
-		dbg_info("Offset: %d", offset + ledger_size * i);
-
-		// allocate the ledger
-		verbs_processes[i].local_snd_info_ledger = verbs_ri_ledger_create_reuse((verbs_ri_ledger_entry_t * ) (buf + offset + ledger_size * i), num_entries);
-		if (!verbs_processes[i].local_snd_info_ledger) {
-			log_err("verbs_setup_ri_ledgers(): couldn't create local snd info ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote ri ledger for %d: %p", i, buf + offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-		dbg_info("Offset: %d", offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-
-		verbs_processes[i].remote_snd_info_ledger = verbs_ri_ledger_create_reuse((verbs_ri_ledger_entry_t * ) (buf + offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!verbs_processes[i].remote_snd_info_ledger) {
-			log_err("verbs_setup_ri_ledgers(): couldn't create remote snd info ledger for process %d", i);
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-static int verbs_exchange_FIN_ledger() {
-	int i;
-	uintptr_t   *va;
-	MPI_Request *req;
-
-	ctr_info(" > verbs_exchange_FIN_ledger()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_exchange_FIN_ledger(): Library not initialized.  Call photon_init() first");
-		return -1;
-	}
-
-	va = (uintptr_t *)malloc( _photon_nproc*sizeof(uintptr_t) );
-	req = (MPI_Request *)malloc( 2*_photon_nproc*sizeof(MPI_Request) );
-	if( !va || !req ) {
-		log_err("verbs_exchange_FIN_ledgers(): Cannot malloc temporary message buffers\n");
-		return -1;
-	}
-	memset(va, 0, _photon_nproc*sizeof(uintptr_t));
-	memset(req, 0, 2*_photon_nproc*sizeof(MPI_Request));
-
-	for(i = 0; i < _photon_nproc; i++) {
-		if( MPI_Irecv(&verbs_processes[i].remote_FIN_ledger->remote.rkey, sizeof(uint32_t), MPI_BYTE, i, 0, _photon_comm, &(req[2*i])) != MPI_SUCCESS) {
-			log_err("verbs_exchange_FIN_ledger(): Couldn't send rdma info ledger to process %d", i);
-			return -1;
-		}
-
-		if( MPI_Irecv(&(va[i]), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm, &(req[2*i+1])) != MPI_SUCCESS) {
-			log_err("verbs_exchange_FIN_ledger(): Couldn't send rdma info ledger to process %d", i);
-			return -1;
-		}
-	}
-
-	for(i = 0; i < _photon_nproc; i++) {
-		uintptr_t tmp_va;
-
-		if( MPI_Send(&shared_storage->mr->rkey, sizeof(uint32_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
-			log_err("verbs_exchange_FIN_ledger(): Couldn't send rdma send ledger to process %d", i);
-			return -1;
-		}
-
-		tmp_va = (uintptr_t)(verbs_processes[i].local_FIN_ledger->entries);
-
-		if( MPI_Send(&(tmp_va), sizeof(uintptr_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
-			log_err("verbs_exchange_FIN_ledger(): Couldn't send rdma info ledger to process %d", i);
-			return -1;
-		}
-	}
-
-	if (MPI_Waitall(2*_photon_nproc,req, MPI_STATUSES_IGNORE) != MPI_SUCCESS) {
-		log_err("verbs_exchange_FIN_ledger(): Couldn't send rdma info ledger to process %d", i);
-		return -1;
-	}
-	for(i = 0; i < _photon_nproc; i++) {
-		verbs_processes[i].remote_FIN_ledger->remote.addr = va[i];
-	}
-
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-static int verbs_setup_FIN_ledger(char *buf, int num_entries) {
-	int i;
-	int ledger_size;
-
-	ctr_info(" > verbs_setup_FIN_ledger()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_setup_FIN_ledger(): Library not initialized.	 Call photon_init() first");
-		return -1;
-	}
-
-	ledger_size = sizeof(verbs_rdma_FIN_ledger_entry_t) * num_entries;
-
-	for(i = 0; i < (_photon_nproc+_photon_forwarder); i++) {
-		// allocate the ledger
-		dbg_info("allocating local FIN ledger for %d", i);
-
-		verbs_processes[i].local_FIN_ledger = verbs_rdma_FIN_ledger_create_reuse((verbs_rdma_FIN_ledger_entry_t *) (buf + ledger_size * i), num_entries);
-		if (!verbs_processes[i].local_FIN_ledger) {
-			log_err("verbs_setup_FIN_ledger(): couldn't create local FIN ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote FIN ledger for %d", i);
-
-		verbs_processes[i].remote_FIN_ledger = verbs_rdma_FIN_ledger_create_reuse((verbs_rdma_FIN_ledger_entry_t *) (buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!verbs_processes[i].remote_FIN_ledger) {
-			log_err("verbs_setup_FIN_ledger(): couldn't create remote FIN ledger for process %d", i);
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
 int verbs_register_buffer(char *buffer, int buffer_size) {
 	static int first_time = 1;
 	verbs_buffer_t *db;
@@ -713,7 +428,7 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 		goto normal_exit;
 	}
 
-	db = verbs_buffer_create(buffer, buffer_size);
+	db = __verbs_buffer_create(buffer, buffer_size);
 	if (!db) {
 		log_err("Couldn't register shared storage");
 		goto error_exit;
@@ -721,7 +436,7 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 
 	dbg_info("verbs_register_buffer(): created buffer: %p", db);
 
-	if (verbs_buffer_register(db, phot_verbs_pd) != 0) {
+	if (__verbs_buffer_register(db, verbs_ctx.ib_pd) != 0) {
 		log_err("Couldn't register buffer");
 		goto error_exit_db;
 	}
@@ -737,13 +452,11 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 normal_exit:
 	return 0;
 error_exit_db:
-	verbs_buffer_free(db);
+	__verbs_buffer_free(db);
 error_exit:
 	return -1;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
 int verbs_unregister_buffer(char *buffer, int size) {
 	verbs_buffer_t *db;
 
@@ -760,11 +473,11 @@ int verbs_unregister_buffer(char *buffer, int size) {
 	}
 
 	if (--(db->ref_count) == 0) {
-		if (verbs_buffer_unregister(db) != 0) {
+		if (__verbs_buffer_unregister(db) != 0) {
 			goto error_exit;
 		}
 		buffertable_remove( db );
-		verbs_buffer_free(db);
+		__verbs_buffer_free(db);
 	}
 
 	return 0;
@@ -772,14 +485,6 @@ int verbs_unregister_buffer(char *buffer, int size) {
 error_exit:
 	return -1;
 }
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-//					 Some Utility Functions to wait for specific events							 //
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
 // verbs_test() is a nonblocking operation that checks the event queue to see if
@@ -949,7 +654,7 @@ static int __verbs_wait_one() {
 	}
 
 	do {
-		ne = ibv_poll_cq(phot_verbs_cq, 1, &wc);
+		ne = ibv_poll_cq(verbs_ctx.ib_cq, 1, &wc);
 		if (ne < 0) {
 			log_err("ibv_poll_cq() failed");
 			goto error_exit;
@@ -983,7 +688,6 @@ error_exit:
 	return -1;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 static int __verbs_wait_event(verbs_req_t *req) {
 	int ne;
@@ -1009,7 +713,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 //				int i=0,j=0;
 
 		do {
-			ne = ibv_poll_cq(phot_verbs_cq, 1, &wc);
+			ne = ibv_poll_cq(verbs_ctx.ib_cq, 1, &wc);
 			if (ne < 0) {
 				fprintf(stderr, "poll CQ failed %d\n", ne);
 				return 1;
@@ -1057,7 +761,6 @@ error_exit:
 	return -1;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // __verbs_nbpop_event() is non blocking and returns:
 // -1 if an error occured.
@@ -1077,7 +780,7 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 	if(req->state == REQUEST_PENDING) {
 		uint32_t cookie;
 
-		ne = ibv_poll_cq(phot_verbs_cq, 1, &wc);
+		ne = ibv_poll_cq(verbs_ctx.ib_cq, 1, &wc);
 		if (ne < 0) {
 			log_err("ibv_poll_cq() failed");
 			goto error_exit;
@@ -1292,7 +995,7 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 		uint32_t cookie;
 		int existed, ne;
 
-		ne = ibv_poll_cq(phot_verbs_cq, 1, &wc);
+		ne = ibv_poll_cq(verbs_ctx.ib_cq, 1, &wc);
 		if (ne < 0) {
 			log_err("ibv_poll_cq() failed");
 			goto error_exit;
@@ -1336,7 +1039,6 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 error_exit:
 	return -1;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
@@ -1437,7 +1139,7 @@ static inline int __verbs_complete_evd_req(uint32_t cookie) {
 	return 0;
 }
 
-static void *verbs_req_watcher(void *arg) {
+static void *__verbs_req_watcher(void *arg) {
 	int i;
 	int ne;
 	int curr;
@@ -1455,7 +1157,7 @@ static void *verbs_req_watcher(void *arg) {
 	while(1) {
 		// First we poll for CQEs and clear reqs waiting on them.
 		// We don't want to spend too much time on this before moving to ledgers.
-		ne = ibv_poll_cq(phot_verbs_cq, 32, wc);
+		ne = ibv_poll_cq(verbs_ctx.ib_cq, 32, wc);
 		if (ne < 0) {
 			log_err("verbs_req_watcher(): poll CQ failed %d, EXITING WATCHER\n", ne);
 			pthread_exit((void*)-1);
@@ -1507,13 +1209,6 @@ static void *verbs_req_watcher(void *arg) {
 }
 
 #endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//								DAPL One-Sided send()s/recv()s and handshake functions								//
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_wait_recv_buffer_rdma(int proc, int tag) {
@@ -1619,8 +1314,6 @@ error_exit:
 
 }
 
-
-
 // verbs_wait_send_buffer_rdma() should never be called between a verbs_wait_recv_buffer_rdma()
 // and the corresponding verbs_post_os_put(), or between an other verbs_wait_send_buffer_rdma()
 // and the corresponding verbs_post_os_get() for the same proc.
@@ -1724,7 +1417,6 @@ error_exit:
 
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 //// verbs_wait_send_request_rdma() treats "tag == -1" as ANY_TAG
 int verbs_wait_send_request_rdma(int tag) {
@@ -1807,7 +1499,6 @@ error_exit:
 	return -1;
 
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
@@ -1904,7 +1595,7 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	if (request != NULL) {
 		verbs_req_t *req;
 
-		req = verbs_get_request();
+		req = __verbs_get_request();
 		if (!req) {
 			log_err("verbs_post_recv(): Couldn't allocate request\n");
 			goto error_exit;
@@ -1944,7 +1635,6 @@ error_exit:
 	}
 	return -1;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
@@ -2025,7 +1715,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 	if (request != NULL) {
 		verbs_req_t *req;
 
-		req = verbs_get_request();
+		req = __verbs_get_request();
 		if (!req) {
 			log_err("verbs_post_send_request_rdma(): Couldn't allocate request\n");
 			goto error_exit;
@@ -2064,7 +1754,6 @@ error_exit:
 	}
 	return -1;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
@@ -2151,7 +1840,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	if (request != NULL) {
 		verbs_req_t *req;
 
-		req = verbs_get_request();
+		req = __verbs_get_request();
 		if (!req) {
 			log_err("verbs_post_send_buffer_rdma(): Couldn't allocate request\n");
 			goto error_exit;
@@ -2190,27 +1879,6 @@ error_exit:
 	}
 	return -1;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////
-static inline verbs_req_t *verbs_get_request() {
-	verbs_req_t *req;
-
-	LIST_LOCK(&free_reqs_list);
-	req = LIST_FIRST(&free_reqs_list);
-	if (req)
-		LIST_REMOVE(req, list);
-	LIST_UNLOCK(&free_reqs_list);
-
-	if (!req) {
-		req = malloc(sizeof(verbs_req_t));
-		pthread_mutex_init(&req->mtx, NULL);
-		pthread_cond_init (&req->completed, NULL);
-	}
-
-	return req;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
@@ -2288,7 +1956,7 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		*request = request_id;
 
-		req = verbs_get_request();
+		req = __verbs_get_request();
 		if (!req) {
 			log_err("verbs_post_os_put(): Couldn't allocate request\n");
 			goto error_exit;
@@ -2317,8 +1985,6 @@ error_exit:
 	}
 	return -1;
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
@@ -2395,7 +2061,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		*request = request_id;
 
-		req = verbs_get_request();
+		req = __verbs_get_request();
 		if (!req) {
 			log_err("verbs_post_os_get(): Couldn't allocate request\n");
 			goto error_exit;
@@ -2424,8 +2090,6 @@ error_exit:
 	}
 	return -1;
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_send_FIN(int proc) {
@@ -2507,1155 +2171,4 @@ int verbs_send_FIN(int proc) {
 error_exit:
 	return -1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//																		 DAPL Utility Functions																		 //
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-static int verbs_init_context(ProcessInfo *verbs_processes) {
-
-	struct ibv_device **dev_list;
-	int i, iproc, num_qp, num_devs;
-
-	ctr_info(" > verbs_init_context()");
-
-	// FIXME: Are we using random numbers anywhere?
-	srand48(getpid() * time(NULL));
-
-	dev_list = ibv_get_device_list(&num_devs);
-	if (!dev_list || !dev_list[0]) {
-		fprintf(stderr, "No IB devices found\n");
-		return 1;
-	}
-
-	for (i=0; i<=num_devs; i++) {
-		if (!strcmp(ibv_get_device_name(dev_list[i]), phot_verbs_ib_dev)) {
-			ctr_info(" > verbs_init_context(): using device %s:%d", ibv_get_device_name(dev_list[i]), phot_verbs_ib_port);
-			break;
-		}
-	}
-
-	phot_verbs_context = ibv_open_device(dev_list[i]);
-	if (!phot_verbs_context) {
-		fprintf(stderr, "Couldn't get context for %s\n", ibv_get_device_name(dev_list[i]));
-		return 1;
-	}
-	ctr_info(" > verbs_init_context(): context has device %s", ibv_get_device_name(phot_verbs_context->device));
-
-	phot_verbs_pd = ibv_alloc_pd(phot_verbs_context);
-	if (!phot_verbs_pd) {
-		fprintf(stderr, "Couldn't allocate PD\n");
-		return 1;
-	}
-
-	{
-		struct ibv_port_attr attr;
-
-		memset(&attr, 0, sizeof(attr));
-		if( ibv_query_port(phot_verbs_context, phot_verbs_ib_port, &attr) ) {
-			fprintf(stderr, "Cannot query port");
-			return 1;
-		}
-		phot_verbs_lid = attr.lid;
-	}
-
-	// The second argument (cq_size) can be something like 40K.	 It should be
-	// within NIC MaxCQEntries limit
-	phot_verbs_cq = ibv_create_cq(phot_verbs_context, 1000, NULL, NULL, 0);
-	if (!phot_verbs_cq) {
-		fprintf(stderr, "Couldn't create CQ\n");
-		return 1;
-	}
-
-	{
-		struct ibv_srq_init_attr attr = {
-			.attr = {
-				.max_wr	 = 500,
-				.max_sge = 1
-			}
-		};
-
-		phot_verbs_srq = ibv_create_srq(phot_verbs_pd, &attr);
-		if (!phot_verbs_srq)	{
-			fprintf(stderr, "Couldn't create SRQ\n");
-			return 1;
-		}
-	}
-
-	num_qp = MAX_QP;
-	for (iproc = 0; iproc < _photon_nproc+_photon_forwarder; ++iproc) {
-
-		//FIXME: What if I want to send to myself?
-		if( iproc == _photon_myrank ) {
-			continue;
-		}
-
-		verbs_processes[iproc].num_qp = num_qp;
-		for (i = 0; i < num_qp; ++i) {
-			struct ibv_qp_init_attr attr = {
-				.send_cq = phot_verbs_cq,
-				.recv_cq = phot_verbs_cq,
-				.srq		 = phot_verbs_srq,
-				.cap		 = {
-					.max_send_wr	= 14,
-					.max_send_sge = 1, // scatter gather element
-					.max_recv_wr	= 18,
-					.max_recv_sge = 1, // scatter gather element
-				},
-				.qp_type = IBV_QPT_RC
-			};
-
-			verbs_processes[iproc].qp[i] = ibv_create_qp(phot_verbs_pd, &attr);
-			if (!verbs_processes[iproc].qp[i] ) {
-				fprintf(stderr, "Couldn't create QP[%d] for task:%d\n", i, iproc);
-				return 1;
-			}
-		}
-
-		for (i = 0; i < num_qp; ++i) {
-			struct ibv_qp_attr attr;
-
-			attr.qp_state    = IBV_QPS_INIT;
-			attr.pkey_index	 = 0;
-			attr.port_num	 = phot_verbs_ib_port;
-			attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ;
-
-			if (ibv_modify_qp(verbs_processes[iproc].qp[i], &attr,
-			                  IBV_QP_STATE							|
-			                  IBV_QP_PKEY_INDEX					|
-			                  IBV_QP_PORT								|
-			                  IBV_QP_ACCESS_FLAGS)) {
-				fprintf(stderr, "Failed to modify QP[%d] for task:%d to INIT\n", i, iproc);
-				return 1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-
-static int verbs_connect_peers(ProcessInfo *verbs_processes) {
-	struct verbs_cnct_info **local_info, **remote_info;
-	struct ifaddrs *ifaddr, *ifa;
-	int i, iproc, num_qp;
-
-	ctr_info(" > verbs_connect_peers()");
-
-	local_info	= (struct verbs_cnct_info **)malloc( _photon_nproc*sizeof(struct verbs_cnct_info *) );
-	if( !local_info ) {
-		goto error_exit;
-	}
-
-	if (getifaddrs(&ifaddr) == -1) {
-		log_err("verbs_connect_peers(): Cannot get interface addrs");
-		goto error_exit;
-	}
-	
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-		if (ifa->ifa_addr == NULL)
-			continue;
-		
-		if (!strcmp(ifa->ifa_name, __photon_config->eth_dev) &&
-			ifa->ifa_addr->sa_family == AF_INET) {
-			break;
-		}
-	}
-
-	if (__photon_config->use_cma && !ifa) {
-		log_err("verbs_connect_peers(): Did not find interface info for %s\n", __photon_config->eth_dev);
-		goto error_exit;
-	}
-	
-	num_qp = MAX_QP;
-	for(iproc=0; iproc<_photon_nproc; ++iproc) {
-
-		if( iproc == _photon_myrank ) {
-			continue;
-		}
-
-		local_info[iproc]	 = (struct verbs_cnct_info *)malloc( num_qp*sizeof(struct verbs_cnct_info) );
-		if( !local_info[iproc] ) {
-			goto error_exit;
-		}
-
-		for(i=0; i<num_qp; ++i) {
-			local_info[iproc][i].lid = phot_verbs_lid;
-			local_info[iproc][i].qpn = verbs_processes[iproc].qp[i]->qp_num;
-			local_info[iproc][i].psn = (lrand48() & 0xfff000) + _photon_myrank+1;
-			local_info[iproc][i].ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
-		}
-	}
-
-	remote_info = exch_cnct_info(num_qp, local_info);
-	if( !remote_info ) {
-		log_err("verbs_connect_peers(): Cannot exchange connect info");
-		goto error_exit;
-	}
-	MPI_Barrier(_photon_comm);
-
-	for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-		if( iproc == _photon_myrank ) {
-			continue;
-		}
-
-		if( verbs_connect_qps(num_qp, local_info[iproc], remote_info[iproc], &verbs_processes[iproc]) ) {
-			log_err("verbs_connect_peers(): Cannot connect queue pairs");
-			goto error_exit;
-		}
-	}
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-
-static int verbs_connect_qps(int num_qp, struct verbs_cnct_info *local_info, struct verbs_cnct_info *remote_info, ProcessInfo *verbs_processes) {
-	int i;
-	int err;
-
-	for (i = 0; i < num_qp; ++i) {
-		fprintf(stderr,"[%d/%d], i=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x\n",
-		        _photon_myrank, _photon_nproc, i,
-		        remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
-		        verbs_processes->qp[i]->qp_num);
-
-		struct ibv_qp_attr attr = {
-			.qp_state	    = IBV_QPS_RTR,
-			.path_mtu	    = 3, // (3 == IBV_MTU_1024) which means 1024. Is this a good value?
-			.dest_qp_num	    = remote_info[i].qpn,
-			.rq_psn		    = remote_info[i].psn,
-			.max_dest_rd_atomic = 1,
-			.min_rnr_timer	    = 12,
-			.ah_attr = {
-				.is_global     = 0,
-				.dlid	       = remote_info[i].lid,
-				.sl	       = 0,
-				.src_path_bits = 0,
-				.port_num      = phot_verbs_ib_port
-			}
-		};
-		err=ibv_modify_qp(verbs_processes->qp[i], &attr,
-		                  IBV_QP_STATE							|
-		                  IBV_QP_AV							|
-		                  IBV_QP_PATH_MTU						|
-		                  IBV_QP_DEST_QPN						|
-		                  IBV_QP_RQ_PSN							|
-		                  IBV_QP_MAX_DEST_RD_ATOMIC |
-		                  IBV_QP_MIN_RNR_TIMER);
-		if (err) {
-			fprintf(stderr, "Failed to modify QP[%d] to RTR. Reason:%d\n", i,err);
-			return 1;
-		}
-
-		attr.qp_state				= IBV_QPS_RTS;
-		attr.timeout				= 14;
-		attr.retry_cnt			= 7;
-		attr.rnr_retry			= 7;
-		attr.sq_psn					= local_info[i].psn;
-		attr.max_rd_atomic	= 1;
-		err=ibv_modify_qp(verbs_processes->qp[i], &attr,
-		                  IBV_QP_STATE							|
-		                  IBV_QP_TIMEOUT						|
-		                  IBV_QP_RETRY_CNT					|
-		                  IBV_QP_RNR_RETRY					|
-		                  IBV_QP_SQ_PSN							|
-		                  IBV_QP_MAX_QP_RD_ATOMIC);
-		if (err) {
-			fprintf(stderr, "Failed to modify QP[%d] to RTS. Reason:%d\n", i,err);
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-
-static struct verbs_cnct_info **exch_cnct_info(int num_qp, struct verbs_cnct_info **local_info) {
-	MPI_Request *rreq;
-	int peer;
-	char smsg[ sizeof "00000000:00000000:00000000:00000000"];
-	char **rmsg;
-	int i, j, iproc;
-	struct verbs_cnct_info **remote_info = NULL;
-	int msg_size = sizeof "00000000:00000000:00000000:00000000";
-
-	remote_info = (struct verbs_cnct_info **)malloc( _photon_nproc * sizeof(struct verbs_cnct_info *) );
-	for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-		if( iproc == _photon_myrank ) {
-			continue;
-		}
-		remote_info[iproc] = (struct verbs_cnct_info *)malloc( num_qp * sizeof(struct verbs_cnct_info) );
-		if (!remote_info) {
-			for (j = 0; j < iproc; j++) {
-				free(remote_info[j]);
-			}
-			free(remote_info);
-			goto err_exit;
-		}
-	}
-
-	rreq = (MPI_Request *)malloc( _photon_nproc * sizeof(MPI_Request) );
-	if( !rreq ) goto err_exit;
-
-	rmsg = (char **)malloc( _photon_nproc * sizeof(char *) );
-	if( !rmsg ) goto err_exit;
-	for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-		rmsg[iproc] = (char *)malloc( msg_size );
-		if( !rmsg[iproc] ) {
-			int j = 0;
-			for (j = 0; j < iproc; j++) {
-				free(rmsg[j]);
-			}
-			free(rmsg);
-			goto err_exit;
-		}
-	}
-
-	for (i = 0; i < num_qp; ++i) {
-		for (iproc=0; iproc < _photon_nproc; iproc++) {
-			peer = (_photon_myrank+iproc)%_photon_nproc;
-			if( peer == _photon_myrank ) {
-				continue;
-			}
-			MPI_Irecv(rmsg[peer], msg_size, MPI_BYTE, peer, 0, _photon_comm, &rreq[peer]);
-
-		}
-
-		for (iproc=0; iproc < _photon_nproc; iproc++) {
-			peer = (_photon_nproc+_photon_myrank-iproc)%_photon_nproc;
-			if( peer == _photon_myrank ) {
-				continue;
-			}
-			sprintf(smsg, "%08x:%08x:%08x:%08x", local_info[peer][i].lid, local_info[peer][i].qpn,
-			        local_info[peer][i].psn, local_info[peer][i].ip.s_addr);
-			//fprintf(stderr,"[%d/%d] Sending lid:qpn:psn:ip = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
-			if( MPI_Send(smsg, msg_size , MPI_BYTE, peer, 0, _photon_comm ) != MPI_SUCCESS ) {
-				fprintf(stderr, "Couldn't send local address\n");
-				goto err_exit;
-			}
-		}
-
-		for (iproc=0; iproc < _photon_nproc; iproc++) {
-			peer = (_photon_myrank+iproc)%_photon_nproc;
-			if( peer == _photon_myrank ) {
-				continue;
-			}
-
-			if( MPI_Wait(&rreq[peer], MPI_STATUS_IGNORE) ) {
-				fprintf(stderr, "Couldn't wait() to receive remote address\n");
-				goto err_exit;
-			}
-			sscanf(rmsg[peer], "%x:%x:%x:%x",
-			       &remote_info[peer][i].lid,
-				   &remote_info[peer][i].qpn,
-				   &remote_info[peer][i].psn,
-				   &remote_info[peer][i].ip.s_addr);
-
-			//fprintf(stderr,"[%d/%d] Received lid:qpn:psn:ip = %x:%x:%x:%s from task=%d\n",
-			//		_photon_myrank, _photon_nproc,
-			//		remote_info[peer][i].lid,
-			//		remote_info[peer][i].qpn,
-			//		remote_info[peer][i].psn,
-			//		inet_ntoa(remote_info[peer][i].ip),
-			//		peer);
-		}
-	}
-
-	for (i = 0; i < _photon_nproc; i++) {
-		free(rmsg[i]);
-	}
-	free(rmsg);
-
-	return remote_info;
-err_exit:
-	return NULL;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//																		 XSP-specific Functions																		 //
-//	TODO: separate I/O from XSP and move functions to a different file.													 //
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-#ifdef WITH_XSP
-
-int verbs_xsp_init() {
-	char *forwarder_node;
-
-	ctr_info(" > verbs_xsp_init()");
-
-	forwarder_node = getenv("PHOTON_FORWARDER");
-
-	if (!forwarder_node) {
-		log_err("verbs_xsp_init(): Error: no photon forwarder specified: set the environmental variable PHOTON_FORWARDER");
-		return -1;
-	}
-
-	if (verbs_xsp_setup_session(&(verbs_processes[_photon_fp].sess), forwarder_node) != 0) {
-		log_err("verbs_xsp_init(): Error: could not setup XSP session");
-		return -1;
-	}
-
-	if (verbs_xsp_connect_phorwarder() != 0) {
-		log_err("verbs_xsp_init(); couldn't setup listeners");
-		return -1;
-	}
-
-	if (verbs_xsp_exchange_ri_ledgers() != 0) {
-		log_err("verbs_xsp_init(); couldn't exchange rdma ledgers");
-		return -1;
-	}
-
-	if (verbs_xsp_exchange_FIN_ledger() != 0) {
-		log_err("verbs_xsp_init(); couldn't exchange send ledgers");
-		return -1;
-	}
-
-	return 0;
-}
-
-int verbs_xsp_setup_session(libxspSess **sess, char *xsp_hop) {
-
-	if (libxsp_init() < 0) {
-		perror("libxsp_init(): failed");
-		return -1;
-	}
-
-	*sess = xsp_session();
-	if (!sess) {
-		perror("xsp_session() failed");
-		return -1;
-	}
-
-	xsp_sess_appendchild(*sess, xsp_hop, XSP_HOP_NATIVE);
-
-	if (xsp_connect(*sess)) {
-		perror("xsp_connect(): connect failed");
-		return -1;
-	}
-
-	dbg_info("XSP session established with %s", xsp_hop);
-
-	return 0;
-}
-
-int verbs_xsp_connect_phorwarder() {
-	int i;
-	int num_qp;
-	int ci_size;
-	int rmsg_type;
-	int rmsg_size;
-	struct verbs_cnct_info *local_info;
-	struct verbs_cnct_info *remote_info;
-
-	num_qp = MAX_QP;
-
-	ci_size = num_qp*sizeof(struct verbs_cnct_info);
-	local_info = (struct verbs_cnct_info *)malloc(ci_size);
-	if( !local_info ) {
-		goto error_exit;
-	}
-
-	for(i=0; i<num_qp; ++i) {
-		local_info[i].lid = phot_verbs_lid;
-		local_info[i].qpn = verbs_processes[_photon_fp].qp[i]->qp_num;
-		local_info[i].psn = (lrand48() & 0xfff000) + _photon_myrank+1;
-	}
-
-	if (xsp_send_msg(verbs_processes[_photon_fp].sess, local_info, ci_size, PHOTON_CI) <= 0) {
-		log_err("verbs_xsp_connect_phorwarder(): Couldn't send connect info");
-		goto error_send;
-	}
-
-	if (xsp_recv_msg(verbs_processes[_photon_fp].sess, (void**)&remote_info, &rmsg_size, &rmsg_type) <= 0) {
-		log_err("verbs_xsp_connect_phorwarder(): Couldn't receive connect info");
-		goto error_recv;
-	}
-
-	if (rmsg_type != PHOTON_CI) {
-		log_err("verbs_xsp_connect_phorwarder(): Received message other than PHOTON_CI");
-		goto error_recv;
-	}
-
-	if (rmsg_size != ci_size) {
-		log_err("verbs_xsp_connect_phorwarder(): Bad received message size: %d", rmsg_size);
-		goto error_recv;
-	}
-
-	if( verbs_connect_qps(num_qp, local_info, remote_info, &verbs_processes[_photon_fp]) ) {
-		log_err("verbs_xsp_connect_phorwarder(): Cannot connect queue pairs");
-		goto error_qps;
-	}
-
-	return 0;
-
-error_qps:
-error_recv:
-	free(remote_info);
-error_send:
-	free(local_info);
-error_exit:
-	return -1;
-}
-
-int verbs_xsp_exchange_ri_ledgers() {
-	PhotonLedgerInfo li;
-	PhotonLedgerInfo *ret_li;
-	int ret_len;
-	int ret_type;
-
-	ctr_info(" > verbs_xsp_exchange_ri_ledgers()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Library not initialized.	Call photon_xsp_init() first");
-		return -1;
-	}
-
-	li.rkey = shared_storage->mr->rkey;
-	li.va = (uintptr_t)(verbs_processes[_photon_fp].local_rcv_info_ledger->entries);
-
-	dbg_info("Transmitting rcv_info ledger info to phorwarder: %"PRIxPTR, li.va);
-
-	if (xsp_send_msg(verbs_processes[_photon_fp].sess, &li, sizeof(PhotonLedgerInfo), PHOTON_RI) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't send ledger receive-info");
-		goto error_exit;
-	}
-
-	if (xsp_recv_msg(verbs_processes[_photon_fp].sess, (void**)&ret_li, &ret_len, &ret_type) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't receive ledger receive-info");
-		goto error_exit;
-	}
-
-	// snd_info and rcv_info ledgers are all stored in the same
-	// contiguous memory region and share a common "rkey"
-	// but we send everything again to make it easier for xsp
-	verbs_processes[_photon_fp].remote_rcv_info_ledger->remote.rkey = ret_li->rkey;
-	verbs_processes[_photon_fp].remote_rcv_info_ledger->remote.addr = ret_li->va;
-
-	free(ret_li);
-
-	// Send the send-info ledger pointers
-	li.rkey = shared_storage->mr->rkey;
-	li.va = (uintptr_t)(verbs_processes[_photon_fp].local_snd_info_ledger->entries);
-
-	dbg_info("Transmitting snd_info ledger info to phorwarder: %"PRIxPTR, li.va);
-
-	if (xsp_send_msg(verbs_processes[_photon_fp].sess, &li, sizeof(PhotonLedgerInfo), PHOTON_SI) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't send ledger sender-info");
-		goto error_exit;
-	}
-
-	if (xsp_recv_msg(verbs_processes[_photon_fp].sess, (void**)&ret_li, &ret_len, &ret_type) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't receive ledger receive-info");
-		goto error_exit;
-	}
-
-	verbs_processes[_photon_fp].remote_snd_info_ledger->remote.rkey = ret_li->rkey;
-	verbs_processes[_photon_fp].remote_snd_info_ledger->remote.addr = ret_li->va;
-
-	free(ret_li);
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-int verbs_xsp_exchange_FIN_ledger() {
-	PhotonLedgerInfo fi;
-	PhotonLedgerInfo *ret_fi;
-	int ret_len;
-	int ret_type;
-
-	ctr_info(" > verbs_xsp_exchange_FIN_ledger()");
-
-	if( __initialized != -1 ) {
-		log_err("verbs_xsp_exchange_FIN_ledger(): Library not initialized.	Call photon_xsp_init() first");
-		return -1;
-	}
-
-	fi.rkey = shared_storage->mr->rkey;
-	fi.va = (uintptr_t)(verbs_processes[_photon_fp].local_FIN_ledger->entries);
-
-	if (xsp_send_msg(verbs_processes[_photon_fp].sess, &fi, sizeof(PhotonLedgerInfo), PHOTON_FI) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't send ledger fin-info");
-		goto error_exit;
-	}
-
-	if (xsp_recv_msg(verbs_processes[_photon_fp].sess, (void**)&ret_fi, &ret_len, &ret_type) <= 0) {
-		log_err("verbs_xsp_exchange_ri_ledgers(): Couldn't receive ledger fin-info");
-		goto error_exit;
-	}
-
-	// snd_info and rcv_info ledgers are all stored in the same
-	// contiguous memory region and share a common "rkey"
-	verbs_processes[_photon_fp].remote_FIN_ledger->remote.rkey = ret_fi->rkey;
-	verbs_processes[_photon_fp].remote_FIN_ledger->remote.addr = ret_fi->va;
-
-	free(ret_fi);
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-// this call sets up the context for nproc photon-xsp connections
-int verbs_xsp_init_server(int nproc) {
-
-	_photon_fp = nproc;
-	if (verbs_init_common(nproc+1, _photon_fp, MPI_COMM_SELF, 0) != 0) {
-		log_err("verbs_xsp_init_server(): Couldn't initialize libphoton");
-		goto error_exit;
-	}
-
-	__initialized = 1;
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-int verbs_xsp_lookup_proc(libxspSess *sess, int *index) {
-	int i;
-
-	for(i = 0; i < _photon_nproc; i++) {
-		if (verbs_processes[i].sess &&
-		        !xsp_sesscmp(verbs_processes[i].sess, sess)) {
-			*index = i;
-			return i;
-		}
-	}
-
-	*index = -1;
-	return -1;
-}
-
-int photon_decode_MPI_Datatype(MPI_Datatype type, PhotonMPIDatatype *ptype) {
-	int i;
-	MPI_Datatype *types;
-
-	MPI_Type_get_envelope(type, &ptype->nints, &ptype->naddrs,
-	                      &ptype->ndatatypes, &ptype->combiner);
-
-	if (ptype->nints) {
-		ptype->integers = malloc(sizeof(int)*ptype->nints);
-		if (!ptype->integers) {
-			fprintf(stderr, "photon_decode_MPI_Datatype(): out of memory");
-			return -1;
-		}
-	}
-
-	if (ptype->naddrs) {
-		ptype->addresses = malloc(sizeof(MPI_Aint)*ptype->naddrs);
-		if (!ptype->addresses) {
-			fprintf(stderr, "photon_decode_MPI_Datatype(): out of memory");
-			goto error_exit_addresses;
-		}
-	}
-
-	if (ptype->ndatatypes) {
-		types = malloc(sizeof(MPI_Datatype)*ptype->ndatatypes);
-		ptype->datatypes = malloc(sizeof(int)*ptype->ndatatypes);
-		if (!types || !ptype->datatypes) {
-			fprintf(stderr, "photon_decode_MPI_Datatype(): out of memory");
-			goto error_exit_datatypes;
-		}
-	}
-
-	MPI_Type_get_contents(type, ptype->nints, ptype->naddrs, ptype->ndatatypes,
-	                      ptype->integers, ptype->addresses, types);
-
-	/* Transform MPI_Datatypes to our own mapping to send over the wire.
-	 * There might be a better way to do this.
-	 */
-	for (i = 0; i < ptype->ndatatypes; i++) {
-		if (types[i] == MPI_DOUBLE)
-			ptype->datatypes[i] = PHOTON_MPI_DOUBLE;
-		else
-			ptype->datatypes[i] = -1;
-	}
-
-	return 0;
-
-error_exit_datatypes:
-	free(ptype->addresses);
-error_exit_addresses:
-	free(ptype->integers);
-	return -1;
-}
-
-#define INT_ASSIGN_MOVE(ptr, i) do { \
-				*((int *)ptr) = i; \
-				ptr += sizeof(int); \
-} while(0)
-
-inline void photon_destroy_mpi_datatype (PhotonMPIDatatype *pd) {
-	if (pd->nints)			free(pd->integers);
-	if (pd->naddrs)			free(pd->addresses);
-	if (pd->ndatatypes) free(pd->datatypes);
-}
-
-void print_photon_io_info(PhotonIOInfo *io) {
-	fprintf(stderr, "PhotonIOInfo:\n"
-	        "fileURI		= %s\n"
-	        "amode			= %d\n"
-	        "niter			= %d\n"
-	        "v.combiner = %d\n"
-	        "v.nints		= %d\n"
-	        "v.ints[0]	= %d\n"
-	        "v.naddrs		= %d\n"
-	        "v.ndts			= %d\n"
-	        "v.dts[0]		= %d\n",
-	        io->fileURI, io->amode, io->niter, io->view.combiner,
-	        io->view.nints, io->view.integers[0], io->view.naddrs,
-	        io->view.ndatatypes, io->view.datatypes[0]
-	       );
-}
-
-/* See photon_xsp.h for message format */
-void *photon_create_xsp_io_init_msg(PhotonIOInfo *io, int *size) {
-	void *msg;
-	void *msg_ptr;
-	int totalsize = 0;
-
-	totalsize += sizeof(int) + strlen(io->fileURI) + 1;
-	totalsize += sizeof(int)*3;
-	totalsize += sizeof(int) + io->view.nints*sizeof(int);
-	totalsize += sizeof(int) + io->view.naddrs*sizeof(MPI_Aint);
-	totalsize += sizeof(int) + io->view.ndatatypes*sizeof(int);
-
-	msg_ptr = msg = malloc(totalsize);
-	if (!msg) {
-		log_err("photon_create_xsp_io_init_msg(): out of memory");
-		return NULL;
-	}
-
-	INT_ASSIGN_MOVE(msg_ptr, strlen(io->fileURI) + 1);
-	strcpy((char*)msg_ptr, io->fileURI);
-	msg_ptr += strlen(io->fileURI) + 1;
-
-	INT_ASSIGN_MOVE(msg_ptr, io->amode);
-	INT_ASSIGN_MOVE(msg_ptr, io->niter);
-	INT_ASSIGN_MOVE(msg_ptr, io->view.combiner);
-
-	INT_ASSIGN_MOVE(msg_ptr, io->view.nints);
-	memcpy(msg_ptr, io->view.integers, io->view.nints*sizeof(int));
-	msg_ptr += io->view.nints*sizeof(int);
-
-	INT_ASSIGN_MOVE(msg_ptr, io->view.naddrs);
-	memcpy(msg_ptr, io->view.addresses, io->view.naddrs*sizeof(MPI_Aint));
-	msg_ptr += io->view.naddrs*sizeof(MPI_Aint);
-
-	INT_ASSIGN_MOVE(msg_ptr, io->view.ndatatypes);
-	memcpy(msg_ptr, io->view.datatypes, io->view.ndatatypes*sizeof(int));
-
-	*size = totalsize;
-	return msg;
-}
-
-// stub function for higher-level I/O operation
-int verbs_xsp_phorwarder_io_init(char *file, int amode, MPI_Datatype view, int niter) {
-	PhotonIOInfo io;
-	void *msg;
-	int msg_size;
-
-	ctr_info(" > verbs_xsp_phorwarder_io_init()");
-
-	if( __initialized <= 0 ) {
-		log_err("verbs_xsp_phorwarder_io_init(): Library not initialized.	 Call photon_xsp_init() first");
-		return -1;
-	}
-
-	io.fileURI = file;
-	io.amode = amode;
-	io.niter = niter;
-
-	if (photon_decode_MPI_Datatype(view, &io.view) != 0)
-		return -1;
-
-	msg = photon_create_xsp_io_init_msg(&io, &msg_size);
-	if (msg == NULL) {
-		photon_destroy_mpi_datatype(&io.view);
-		return -1;
-	}
-
-	print_photon_io_info(&io);
-
-	if (xsp_send_msg(verbs_processes[_photon_fp].sess, msg, msg_size, PHOTON_IO) <= 0) {
-		log_err("verbs_xsp_phorwarder_io_init(): Couldn't send IO info");
-		photon_destroy_mpi_datatype(&io.view);
-		free(msg);
-		return -1;
-	}
-
-	/* TODO: Maybe we should receive an ACK? */
-
-	photon_destroy_mpi_datatype(&io.view);
-	free(msg);
-
-	ctr_info(" > verbs_xsp_phorwarder_io_init() completed.");
-	return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// the actual photon XSP API (phorwarder)
-
-int photon_xsp_init(int nproc, int myrank, MPI_Comm comm, int *phorwarder) {
-	int ret;
-	if((ret = verbs_init(nproc, myrank, comm, 1)) != 0)
-		return ret;
-	*phorwarder = _photon_fp;
-	ctr_info(" > photon_xsp_init(%d, %d): %d", nproc, myrank, _photon_fp);
-	return 0;
-}
-
-inline int photon_xsp_init_server(int nproc) {
-	return verbs_xsp_init_server(nproc);
-}
-
-inline int photon_xsp_phorwarder_io_init(char *file, int amode, MPI_Datatype view, int niter) {
-	return verbs_xsp_phorwarder_io_init(file, amode, view, niter);
-}
-
-int photon_xsp_phorwarder_io_finalize() {
-	return 0;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Util methods for the XSP libphoton server implementation
-
-int verbs_xsp_register_session(libxspSess *sess) {
-	int i;
-
-	pthread_mutex_lock(&sess_mtx);
-	if (sess_count >= _photon_nproc) {
-		log_err("verbs_xsp_register_session(): Error: out of active DAT buffers!");
-		pthread_mutex_unlock(&sess_mtx);
-		return -1;
-	}
-
-	// find a process struct that has no session...
-	// proc _photon_nproc has the phorwarder server info
-
-	for (i = 0; i < _photon_nproc-1; i++) {
-		if (!verbs_processes[i].sess)
-			break;
-	}
-
-	dbg_info("verbs_xsp_register_session(): registering session to proc: %d", i);
-
-	verbs_processes[i].sess = sess;
-
-	sess_count++;
-	pthread_mutex_unlock(&sess_mtx);
-
-	return 0;
-}
-
-int verbs_xsp_unregister_session(libxspSess *sess) {
-	int ind;
-
-	pthread_mutex_lock(&sess_mtx);
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_dergister_session(): Couldn't find proc associated with session");
-		pthread_mutex_unlock(&sess_mtx);
-		return -1;
-	}
-
-	verbs_processes[ind].sess = NULL;
-
-	sess_count--;
-	pthread_mutex_unlock(&sess_mtx);
-
-	return 0;
-}
-
-int verbs_xsp_get_local_ci(libxspSess *sess, verbs_cnct_info_t **ci) {
-	int i;
-	int ind;
-
-	ctr_info(" > verbs_xsp_get_local_ci()");
-
-	if( __initialized <= 0 ) {
-		log_err("verbs_xsp_get_local_ci(): Library not initialized.	 Call photon_xsp_init_server() first");
-		goto error_exit;
-	}
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_set_ri(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	*ci = (struct verbs_cnct_info *)malloc(MAX_QP*sizeof(struct verbs_cnct_info));
-	if( !*ci ) {
-		goto error_exit;
-	}
-
-	for(i=0; i<MAX_QP; ++i) {
-		(*ci)[i].lid = phot_verbs_lid;
-		(*ci)[i].qpn = verbs_processes[ind].qp[i]->qp_num;
-		(*ci)[i].psn = (lrand48() & 0xfff000) + _photon_fp+1;
-	}
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-int verbs_xsp_server_connect_peer(libxspSess *sess, verbs_cnct_info_t *local_ci, verbs_cnct_info_t *remote_ci) {
-	int ind;
-
-	ctr_info(" > verbs_xsp_server_connect_peer()");
-
-	if( __initialized <= 0 ) {
-		log_err("verbs_xsp_server_connect_peer(): Library not initialized.	Call photon_xsp_init_server() first");
-		goto error_exit;
-	}
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_server_connect_peer(): Couldn't find proc associated with session");
-		goto error_exit;
-	}
-
-	if (verbs_connect_qps(MAX_QP, local_ci, remote_ci, &verbs_processes[ind]) != 0) {
-		log_err("verbs_xsp_server_connect_peer(): Cannot connect queue pairs");
-		goto error_exit;
-	}
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
-int verbs_xsp_set_ri(libxspSess *sess, PhotonLedgerInfo *ri, PhotonLedgerInfo **ret_ri) {
-	int ind;
-
-	ctr_info(" > verbs_xsp_set_ri()");
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_set_ri(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	if (!ri)
-		return -1;
-
-	verbs_processes[ind].remote_rcv_info_ledger->remote.rkey = ri->rkey;
-	verbs_processes[ind].remote_rcv_info_ledger->remote.addr = ri->va;
-
-	dbg_info("Setting rcv_info ledger info of %d: %"PRIxPTR, ind, ri->va);
-
-	*ret_ri = (PhotonLedgerInfo*)malloc(sizeof(PhotonLedgerInfo));
-	if( !*ret_ri ) {
-		return -1;
-	}
-
-	(*ret_ri)->rkey = shared_storage->mr->rkey;
-	(*ret_ri)->va = (uintptr_t)(verbs_processes[ind].local_rcv_info_ledger->entries);
-
-	return 0;
-}
-
-int verbs_xsp_set_si(libxspSess *sess, PhotonLedgerInfo *si, PhotonLedgerInfo **ret_si) {
-	int ind;
-
-	ctr_info(" > verbs_xsp_set_si()");
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_set_si(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	if (!si)
-		return -1;
-
-	verbs_processes[ind].remote_snd_info_ledger->remote.rkey = si->rkey;
-	verbs_processes[ind].remote_snd_info_ledger->remote.addr = si->va;
-
-	dbg_info("Setting snd_info ledger info of %d: %"PRIxPTR, ind, si->va);
-
-	*ret_si = (PhotonLedgerInfo*)malloc(sizeof(PhotonLedgerInfo));
-	if( !*ret_si ) {
-		return -1;
-	}
-
-	(*ret_si)->rkey = shared_storage->mr->rkey;
-	(*ret_si)->va = (uintptr_t)(verbs_processes[ind].local_snd_info_ledger->entries);
-
-	return 0;
-}
-
-int verbs_xsp_set_fi(libxspSess *sess, PhotonLedgerInfo *fi, PhotonLedgerInfo **ret_fi) {
-	int ind;
-
-	ctr_info(" > verbs_xsp_set_fi()");
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_set_ri(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	if (!fi)
-		return -1;
-
-	verbs_processes[ind].remote_FIN_ledger->remote.rkey = fi->rkey;
-	verbs_processes[ind].remote_FIN_ledger->remote.addr = fi->va;
-
-	*ret_fi = (PhotonLedgerInfo*)malloc(sizeof(PhotonLedgerInfo));
-	if( !*ret_fi ) {
-		return -1;
-	}
-
-	(*ret_fi)->rkey = shared_storage->mr->rkey;
-	(*ret_fi)->va = (uintptr_t)(verbs_processes[ind].local_FIN_ledger->entries);
-
-	return 0;
-}
-
-int verbs_xsp_set_io(libxspSess *sess, PhotonIOInfo *io) {
-	int ind;
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_set_io(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	verbs_processes[ind].io_info = io;
-
-	return 0;
-}
-
-int verbs_xsp_do_io(libxspSess *sess) {
-	int i;
-	int ind;
-	int ndimensions;
-	int bufsize;
-	char *filename;
-	FILE *file;
-	void *buf[2];
-	MPI_Aint dtextent;
-	uint32_t request;
-	ProcessInfo *p;
-
-	if (verbs_xsp_lookup_proc(sess, &ind) < 0) {
-		log_err("verbs_xsp_do_io(): Couldn't find proc associated with session");
-		return -1;
-	}
-
-	p = &verbs_processes[ind];
-
-	if (!p->io_info) {
-		log_err("verbs_xsp_do_io(): Trying to do I/O without I/O Info set");
-		return -1;
-	}
-
-	/* TODO: So this is how I think this will go: */
-	if (p->io_info->view.combiner != MPI_COMBINER_SUBARRAY) {
-		log_err("verbs_xsp_do_io(): Unsupported combiner");
-		return -1;
-	}
-
-	/* We can't do this because it requires MPI_Init. We need to figure out
-	 * the best way to support MPI_Datatypes. Also, OpenMPI doesn't use simple
-	 * int constants like MPICH2, so I'm not sure how we would transfer these.
-	 *
-	 * MPI_Type_get_true_extent(p->io_info->view.datatypes[0], &dtlb, &dtextent);
-	 */
-	if (p->io_info->view.datatypes[0] == PHOTON_MPI_DOUBLE) {
-		dtextent = 8;
-	}
-	else {
-		log_err("verbs_xsp_do_io(): Unsupported datatype");
-		return -1;
-	}
-
-	bufsize = dtextent;
-	ndimensions = p->io_info->view.integers[0];
-	for(i = ndimensions+1; i <= 2*ndimensions; i++) {
-		bufsize *= p->io_info->view.integers[i];
-	}
-
-	buf[0] = malloc(bufsize);
-	buf[1] = malloc(bufsize);
-	if (buf[0] == NULL || buf[1] == NULL) {
-		log_err("verbs_xsp_do_io(): Out of memory");
-		return -1;
-	}
-
-	if(verbs_register_buffer(buf[0], bufsize) != 0) {
-		log_err("verbs_xsp_do_io(): Couldn't register first receive buffer");
-		return -1;
-	}
-
-	if(verbs_register_buffer(buf[1], bufsize) != 0) {
-		log_err("verbs_xsp_do_io(): Couldn't register second receive buffer");
-		return -1;
-	}
-
-	/* For now we just write locally (fileURI is a local path on phorwarder) */
-	filename = malloc(strlen(p->io_info->fileURI) + 10);
-	sprintf(filename, "%s_%d", p->io_info->fileURI, ind);
-	file = fopen(filename, "w");
-	if (file == NULL) {
-		log_err("verbs_xsp_do_io(): Couldn't open local file %s", filename);
-		return -1;
-	}
-
-	verbs_post_recv_buffer_rdma(ind, buf[0], bufsize, 0, &request);
-	/* XXX: is the index = rank? FIXME: not right now! */
-	for (i = 1; i < p->io_info->niter; i++) {
-		verbs_wait(request);
-		/* Post the second buffer so we can overlap the I/O */
-		verbs_post_recv_buffer_rdma(ind, buf[i%2], bufsize, i, &request);
-
-		if(fwrite(buf[(i-1)%2], 1, bufsize, file) != bufsize) {
-			log_err("verbs_xsp_do_io(): Couldn't write to local file %s: %m", filename);
-			return -1;
-		}
-		/* For now we just write locally, AFAIK this is blocking */
-		/*
-		 * Process the buffer:
-		 * This is one iteration of (I/O) data in a contiguous buffer.
-		 * The actual data layout is specified by p->io_info.view.
-		 * Basically what we do is have p->io_info.view described on the
-		 * eXnode as the metadata for what this particular node is writing.
-		 * Each node will write to its own file and we keep track of the
-		 * offsets using p->io_info.view and the iteration number.
-		 * Right now I'm assuming only new files and write only.
-		 *
-		 * TODO: add 'file offset' to PhotonIOInfo so we can keep track.
-		 *	 This should also allow the client to start writing at any place
-		 *	 in the file.
-		 *
-		 * So this buffer would actually need to be moved somewhere else
-		 * where we manage the transfer to the I/O server (or write it locally).
-		 */
-	}
-	/* wait for last write */
-	verbs_wait(request);
-	if(fwrite(buf[(i-1)%2], 1, bufsize, file) != bufsize) {
-		log_err("verbs_xsp_do_io(): Couldn't write to local file %s: %m", filename);
-		return -1;
-	}
-	fclose(file);
-	free(filename);
-	free(buf[0]);
-	free(buf[1]);
-
-	return 0;
-}
-
-#endif
 

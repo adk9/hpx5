@@ -37,7 +37,7 @@ error_exit:
 
 void verbs_rdma_FIN_ledger_free(verbs_rdma_FIN_ledger_t *ledger) {
 	if (ledger->local) {
-		verbs_buffer_free(ledger->local);
+		__verbs_buffer_free(ledger->local);
 		free(ledger->entries);
 	}
 	free(ledger);

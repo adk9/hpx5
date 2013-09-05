@@ -7,7 +7,7 @@
 //void log_dat_err(const DAT_RETURN status, const char *fmt, ...);
 //void log_dto_err(const DAT_DTO_COMPLETION_STATUS status, const char *fmt, ...);
 
-verbs_buffer_t *verbs_buffer_create(char *buf, int size) {
+verbs_buffer_t *__verbs_buffer_create(char *buf, int size) {
 	verbs_buffer_t *new_buf;
 
 	dbg_info("verbs_buffer_create()");
@@ -29,14 +29,14 @@ verbs_buffer_t *verbs_buffer_create(char *buf, int size) {
 	return new_buf;
 }
 
-void verbs_buffer_free(verbs_buffer_t *buffer) {
+void __verbs_buffer_free(verbs_buffer_t *buffer) {
 	if (buffer->is_registered)
-		verbs_buffer_unregister(buffer);
+		__verbs_buffer_unregister(buffer);
 
 	free(buffer);
 }
 
-int verbs_buffer_register(verbs_buffer_t *dbuffer, struct ibv_pd *pd) {
+int __verbs_buffer_register(verbs_buffer_t *dbuffer, struct ibv_pd *pd) {
 	enum ibv_access_flags flags;
 
 	dbg_info("verbs_buffer_register(): %p", dbuffer);
@@ -60,7 +60,7 @@ error_exit:
 	return -1;
 }
 
-int verbs_buffer_unregister(verbs_buffer_t *dbuffer) {
+int __verbs_buffer_unregister(verbs_buffer_t *dbuffer) {
 	int retval;
 
 	dbg_info("verbs_buffer_unregister()");

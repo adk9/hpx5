@@ -12,7 +12,7 @@ typedef struct verbs_remote_buffer {
 	int tag;
 } verbs_remote_buffer_t;
 
-verbs_remote_buffer_t *verbs_remote_buffer_create();
-void verbs_remote_buffer_free(verbs_remote_buffer_t *drb);
+verbs_remote_buffer_t *__verbs_remote_buffer_create();
+void __verbs_remote_buffer_free(verbs_remote_buffer_t *drb);
 
 #endif

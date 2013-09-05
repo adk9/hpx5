@@ -35,6 +35,7 @@ typedef struct photon_config_t * photonConfig;
 #define PHOTON_EXCH_MPI        0x0001
 #define PHOTON_EXCH_XSP        0x0002
 
+int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 

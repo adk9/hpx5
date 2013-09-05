@@ -18,6 +18,8 @@ if HAVE_VERBS
 AM_CFLAGS += -I@top_srcdir@/src/verbs                  \
 	     -I@top_srcdir@/src/libphoton
 libphoton_la_SOURCES += verbs/verbs.c                  \
+			verbs/verbs_exchange.c         \
+			verbs/verbs_connect.c          \
 			verbs/verbs_cma_connect.c      \
 			verbs/verbs_buffer.c           \
 			verbs/verbs_remote_buffer.c    \
