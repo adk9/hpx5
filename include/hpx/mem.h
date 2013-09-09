@@ -26,6 +26,7 @@
 #include <stdlib.h>
 
 #define hpx_alloc(u) malloc(u)
+#define hpx_realloc(u, s) realloc(u, s)
 #define hpx_free(u)  free(u)
 
 #endif /* LIBHPX_MEM_H_ */

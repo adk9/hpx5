@@ -871,109 +871,54 @@ START_TEST (test_libhpx_lco_futures)
   int x = 73;
 
   /* initialize Future 1 */
-  hpx_lco_future_init(&fut1, 1);
-  sprintf(msg, "Future 1 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut1, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut1, 0) == HPX_LCO_FUTURE_UNSET, msg);
+  hpx_lco_future_init(&fut1);
+  sprintf(msg, "Future 1 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut1));
+  ck_assert_msg(!(hpx_lco_future_get_state(&fut1) & HPX_LCO_FUTURE_SETMASK), msg);
 
   /* set Future 1 to NULL */
   //  fut1.value = NULL;
-  hpx_lco_future_set(&fut1, 0);
-  sprintf(msg, "Future 1 was not set (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut1, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut1, 0) == HPX_LCO_FUTURE_SET, msg);
+  hpx_lco_future_set_state(&fut1);
+  sprintf(msg, "Future 1 was not set (expected %ld, got %ld).", HPX_LCO_FUTURE_SETMASK, hpx_lco_future_get_state(&fut1));
+  ck_assert_msg((hpx_lco_future_get_state(&fut1) & HPX_LCO_FUTURE_SETMASK) == HPX_LCO_FUTURE_SETMASK, msg);
   
-  sprintf(msg, "Future 1 was set with an incorrect value (expected NULL, got %ld).", (uint64_t) hpx_lco_future_get_value(&fut1, 0));
-  ck_assert_msg(hpx_lco_future_get_value(&fut1, 0) == NULL, msg);
+  sprintf(msg, "Future 1 was set with an incorrect value (expected NULL, got %ld).", (uint64_t) hpx_lco_future_get_value(&fut1));
+  ck_assert_msg(hpx_lco_future_get_value(&fut1) == NULL, msg);
 
   /* initialize Future 2 */
-  hpx_lco_future_init(&fut2, 1);
-  sprintf(msg, "Future 2 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut2, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut2, 0) == HPX_LCO_FUTURE_UNSET, msg);
+  hpx_lco_future_init(&fut2);
+  sprintf(msg, "Future 2 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut2));
+  ck_assert_msg(!(hpx_lco_future_get_state(&fut2) & HPX_LCO_FUTURE_SETMASK), msg);
 
   /* set Future 2 to a value */
-  hpx_lco_future_set_value(&fut2, 0, &x);
-  sprintf(msg, "Future 2 was not set (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut2, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut2, 0) == HPX_LCO_FUTURE_SET, msg);
+  hpx_lco_future_set_value(&fut2, &x);
 
-  xp = (int *) hpx_lco_future_get_value(&fut2, 0);
+  xp = (int *) hpx_lco_future_get_value(&fut2);
   sprintf(msg, "Future 2 was set with an incorrect value (expected 73, got %d).", *xp);
   ck_assert_msg(*xp == 73, msg);
 
   /* initialize future 3 */
-  hpx_lco_future_init(&fut3, 4);
+  hpx_lco_future_init(&fut3);
   
-  sprintf(msg, "Element 0 of Future 3 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 0) == HPX_LCO_FUTURE_UNSET, msg);
+  sprintf(msg, "Future 3 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut3));
+  ck_assert_msg(!(hpx_lco_future_get_state(&fut3) & HPX_LCO_FUTURE_SETMASK), msg);
 
-  sprintf(msg, "Element 1 of Future 3 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 1));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 1) == HPX_LCO_FUTURE_UNSET, msg);
-
-  sprintf(msg, "Element 2 of Future 3 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 2) == HPX_LCO_FUTURE_UNSET, msg);
-
-  sprintf(msg, "Element 3 of Future 3 was not initialized in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 3));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 3) == HPX_LCO_FUTURE_UNSET, msg);
-
-  sprintf(msg, "Element 0 of Future 3 was not initialized with a NULL value (got %ld).", hpx_lco_future_get_value(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 0) == NULL, msg);
-
-  sprintf(msg, "Element 1 of Future 3 was not initialized with a NULL value (got %ld).", hpx_lco_future_get_value(&fut3, 1));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 1) == NULL, msg);
-
-  sprintf(msg, "Element 2 of Future 3 was not initialized with a NULL value (got %ld).", hpx_lco_future_get_value(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 2) == NULL, msg);
-
-  sprintf(msg, "Element 3 of Future 3 was not initialized with a NULL value (got %ld).", hpx_lco_future_get_value(&fut3, 3));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 3) == NULL, msg);
-
-  ck_assert_msg(hpx_lco_future_isset(&fut3) == false, "Future 3 was not initialized in an UNSET state.");
-
-  /* set some elements on future 3 */
-  hpx_lco_future_set_value(&fut3, 1, (void *) 73);
-  hpx_lco_future_set_value(&fut3, 3, (void *) 37);
-
-  sprintf(msg, "Element 0 of Future 3 is not NULL (got %ld).", hpx_lco_future_get_value(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 0) == NULL, msg);
-
-  sprintf(msg, "Element 1 of Future 3 was not set to the correct value (expected %d, got %ld).", 73, hpx_lco_future_get_value(&fut3, 1));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 1) == (void *) 73, msg);
-
-  sprintf(msg, "Element 2 of Future 3 is not NULL (got %ld).", hpx_lco_future_get_value(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 2) == NULL, msg);
-
-  sprintf(msg, "Element 3 of Future 3 was not set to the correct value (expected %d, got %ld).", 37, hpx_lco_future_get_value(&fut3, 3));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 3) == (void *) 37, msg);
-
-  sprintf(msg, "Element 0 of Future 3 is not in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 0) == HPX_LCO_FUTURE_UNSET, msg);
-
-  sprintf(msg, "Element 1 of Future 3 is not in a SET state (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut3, 1));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 1) == HPX_LCO_FUTURE_SET, msg);
-
-  sprintf(msg, "Element 2 of Future 3 is not in an UNSET state (expected %d, got %d).", HPX_LCO_FUTURE_UNSET, hpx_lco_future_get_state(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 2) == HPX_LCO_FUTURE_UNSET, msg);
-
-  sprintf(msg, "Element 3 of Future 3 is not in a SET state (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut3, 3));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 3) == HPX_LCO_FUTURE_SET, msg);
+  sprintf(msg, "Future 3 was not initialized with a NULL value (got %ld).", hpx_lco_future_get_value(&fut3));
+  ck_assert_msg(hpx_lco_future_get_value(&fut3) == NULL, msg);
 
   ck_assert_msg(hpx_lco_future_isset(&fut3) == false, "Future 3 is not in an UNSET state.");
 
-  /* set the rest of the elements on fugure 3 */
-  hpx_lco_future_set(&fut3, 0);
-  hpx_lco_future_set(&fut3, 2);
+  /* set a value on future 3 */
+  hpx_lco_future_set_value(&fut3, (void *) 73);
 
-  sprintf(msg, "Element 0 of Future 3 is not NULL (got %ld).", hpx_lco_future_get_value(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 0) == NULL, msg);
+  sprintf(msg, "Future 3 was not set to the correct value (expected %d, got %ld).", 73, hpx_lco_future_get_value(&fut3));
+  ck_assert_msg(hpx_lco_future_get_value(&fut3) == (void *) 73, msg);
 
-  sprintf(msg, "Element 2 of Future 3 is not NULL (got %ld).", hpx_lco_future_get_value(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_value(&fut3, 2) == NULL, msg);
+  ck_assert_msg(hpx_lco_future_isset(&fut3) == false, "Future 3 is not in an UNSET state.");
 
-  sprintf(msg, "Element 0 of Future 3 is not in a SET state (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut3, 0));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 0) == HPX_LCO_FUTURE_SET, msg);
-
-  sprintf(msg, "Element 2 of Future 3 is not in a SET state (expected %d, got %d).", HPX_LCO_FUTURE_SET, hpx_lco_future_get_state(&fut3, 2));
-  ck_assert_msg(hpx_lco_future_get_state(&fut3, 2) == HPX_LCO_FUTURE_SET, msg);
-  
-  ck_assert_msg(hpx_lco_future_isset(&fut3) == true, "Future 3 is not in a SET state.");  
+  /* set all values on future 3 */
+  hpx_lco_future_set(&fut3, 294, (void *) 73);
+  sprintf(msg, "Future 3 was not set (expected %ld, got %ld).", (HPX_LCO_FUTURE_SETMASK + 294), hpx_lco_future_get_state(&fut3));
+  ck_assert_msg((hpx_lco_future_get_state(&fut3) & HPX_LCO_FUTURE_SETMASK) == HPX_LCO_FUTURE_SETMASK, msg);
 
   /* clean up */
   hpx_lco_future_destroy(&fut1);

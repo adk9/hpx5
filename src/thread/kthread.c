@@ -41,7 +41,7 @@
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, void *ptr) {
+void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, void *target, void *pred, void *arg) {
   hpx_thread_t *exec_th = kth->exec_th;
   hpx_context_t *ctx = kth->ctx;
   uint64_t cnt;
@@ -58,8 +58,8 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, voi
         break;
       case HPX_THREAD_STATE_YIELD:
         th->state = HPX_THREAD_STATE_PENDING;
-	if (ptr != NULL) {
-            th->skip = (uint8_t) (uint64_t)ptr;
+	if (target != NULL) {
+            th->skip = (uint8_t) (uint64_t) target;
 	}
 
         hpx_queue_push(&kth->pend_q, th);
@@ -69,7 +69,9 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, voi
         break;
       case HPX_THREAD_STATE_SUSPENDED:
         th->state = HPX_THREAD_STATE_SUSPENDED;
-        th->reuse->f_wait = (hpx_future_t *) ptr;
+        th->reuse->wait = target;
+        th->reuse->func = pred;
+        th->reuse->args = arg;
         hpx_queue_push(&kth->susp_q, th);
         break;
       default:
@@ -88,6 +90,7 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, voi
   A default seed function for new kernel threads.
  --------------------------------------------------------------------
 */
+
 void * hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
   hpx_thread_t *th = NULL;
@@ -122,42 +125,6 @@ void * hpx_kthread_seed_default(void *ptr) {
         break;
       }
     }
-
-    //    if (hpx_config_get_thread_suspend_policy(&ctx->cfg) == HPX_CONFIG_THREAD_SUSPEND_SCHED) {
-    //      /* get the next pending thread or see if we need to wake up suspended threads */    
-    //      cnt = hpx_queue_size(&kth->pend_q);
-    //      kth->exec_th = NULL;
-    //        
-    //      while ((kth->exec_th == NULL) && (cnt > 0)) {
-    //        kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
-    //       
-    //        if ((kth->exec_th != NULL) && (kth->exec_th->state == HPX_THREAD_STATE_SUSPENDED)) {
-    //          if (hpx_lco_future_isset(kth->exec_th->reuse->f_wait) == true) {
-    //            kth->exec_th->state = HPX_THREAD_STATE_PENDING;
-    //      	    kth->exec_th->reuse->f_wait = NULL;
-    //          } else {
-    //            hpx_queue_push(&kth->pend_q, kth->exec_th);
-    //           kth->exec_th = NULL;
-    //          }
-    //        } 
-    //        
-    //        cnt -= 1;
-    //      }
-    //    } else {
-    //      kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
-    //    }
-
-    //    kth->exec_th = NULL;
-    //    if (hpx_queue_size(&kth->pend_q) > 0) {
-    //      do {
-    //        kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
-    //        if ((kth->exec_th != NULL) && (kth->exec_th->skip > 0)) {
-    //    	  kth->exec_th->skip -= 1;
-    //	  hpx_queue_push(&kth->pend_q, kth->exec_th);
-    //	  kth->exec_th = NULL;
-    //        }
-    //      } while (kth->exec_th == NULL);
-    //    }
 
     kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
 
@@ -201,6 +168,7 @@ void * hpx_kthread_seed_default(void *ptr) {
   Creates a kernel thread and executes the provided seed function.
  --------------------------------------------------------------------
 */
+
 hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
                                   hpx_mconfig_t mcfg, uint64_t mflags) {
   pthread_mutexattr_t mtx_attr;
@@ -454,6 +422,7 @@ void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *mtx) {
  --------------------------------------------------------------------
 */
 void _hpx_kthread_srv_susp_local(void *ptr) {
+  hpx_thread_wait_pred_t pred;
   hpx_context_t *ctx = (hpx_context_t *) ptr;
   hpx_future_t *fut = &ctx->f_srv_susp;
   hpx_kthread_t *kth = hpx_kthread_self();
@@ -467,7 +436,8 @@ void _hpx_kthread_srv_susp_local(void *ptr) {
     do {
       th = hpx_queue_pop(&kth->susp_q);
       if (th != NULL) {
-        if (hpx_lco_future_isset(th->reuse->f_wait) == true) {
+        pred = th->reuse->func;
+        if (pred(th->reuse->wait, th->reuse->args) == true) {
           th->state = HPX_THREAD_STATE_PENDING;
 	  hpx_queue_push(&kth->pend_q, th);
 	  cnt = 0;
@@ -500,6 +470,7 @@ void _hpx_kthread_srv_susp_local(void *ptr) {
 */
 
 void _hpx_kthread_srv_susp_global(void *ptr) {
+  hpx_thread_wait_pred_t pred;
   hpx_context_t * ctx = (hpx_context_t *) ptr;
   hpx_future_t * fut = &ctx->f_srv_susp;
   hpx_kthread_t * kth = NULL;
@@ -517,7 +488,8 @@ void _hpx_kthread_srv_susp_global(void *ptr) {
       do {
         th = hpx_queue_pop(&kth->susp_q);
         if (th != NULL) {
-          if (hpx_lco_future_isset(th->reuse->f_wait) == true) {
+          pred = th->reuse->func;
+	  if (pred(th->reuse->wait, th->reuse->args) == true) {
             th->state = HPX_THREAD_STATE_PENDING;
 	    hpx_queue_push(&kth->pend_q, th);
 	    cnt = 0;
