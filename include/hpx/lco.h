@@ -29,8 +29,7 @@
 
 #include "hpx/error.h"
 
-#define HPX_LCO_FUTURE_UNSET  0x00
-#define HPX_LCO_FUTURE_SET    0xFF
+#define HPX_LCO_FUTURE_SETMASK    0x8000000000000000
 
 
 /*
@@ -38,11 +37,11 @@
   LCO Data
  --------------------------------------------------------------------
 */
+
 typedef struct _hpx_future_t {
-  uint8_t *states;
-  void   **values;
-  uint64_t count;
-} hpx_future_t __attribute__((aligned (8)));
+  uint64_t   state;
+  void      *value;
+} hpx_future_t;
 
 
 /*
@@ -59,27 +58,11 @@ typedef struct _hpx_future_t {
   UNSET state.
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_init(hpx_future_t *fut, uint64_t num) {
-  /* initialize */
-  fut->states = NULL;
-  fut->values = NULL;
-  fut->count = 0;
 
-  /* allocate states */
-  fut->states = (uint8_t*) hpx_alloc(num);
-  if (fut->states == NULL) {
-    __hpx_errno = HPX_ERROR_NOMEM;
-  } else {
-    /* allocate values */
-    fut->values = (void**) hpx_alloc(num * sizeof(void*));
-    if (fut->values == NULL) {
-      __hpx_errno = HPX_ERROR_NOMEM;
-    } else {
-      memset(fut->states, HPX_LCO_FUTURE_UNSET, num * sizeof(uint8_t));
-      memset(fut->values, 0, num * sizeof(void*));
-      fut->count = num;
-    }
-  }
+static inline void hpx_lco_future_init(hpx_future_t *fut) {
+  /* initialize */
+  fut->state = 0x0000000000000000;
+  fut->value = NULL;
 }
 
 
@@ -90,13 +73,9 @@ static inline void hpx_lco_future_init(hpx_future_t *fut, uint64_t num) {
   Destroys a future.
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_destroy(hpx_future_t *fut) {
-  hpx_free(fut->states);
-  hpx_free(fut->values);
 
-  fut->states = NULL;
-  fut->values = NULL;
-  fut->count = 0;
+static inline void hpx_lco_future_destroy(hpx_future_t *fut) {
+
 }
 
 
@@ -104,17 +83,51 @@ static inline void hpx_lco_future_destroy(hpx_future_t *fut) {
  --------------------------------------------------------------------
   hpx_lco_future_set
 
+  Sets the state and value of a future at the same time.
+
+  NOTE: This triggers the future.
+ --------------------------------------------------------------------
+*/
+
+static inline void hpx_lco_future_set(hpx_future_t * fut, uint64_t state, void * value) {
+#ifdef __x86_64__
+  __asm__ __volatile__(
+    "__HLFS%=:\n\t"
+    "movq  %4,%%r10;\n\t"
+    "movq  %0,%%rax;\n\t"
+    "movq  %1,%%rdx;\n\t"
+    "movq  %2,%%rbx;\n\t"
+    "movq  %3,%%rcx;\n\t"
+    "orq   %%r10,%%rbx;\n\t"
+    "lock; cmpxchg16b %0;\n\t"
+    "jnz __HLFS%=;\n\t"
+    :"=m" (fut->state), "=m" (fut->value)
+    :"m" (state), "m" (value), "i" (HPX_LCO_FUTURE_SETMASK)
+    :"%rax", "%rbx", "%rcx", "%rdx", "%r10");
+#endif
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_lco_future_set_state
+
   Sets an HPX Future's state to SET without changing its value.
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_set(hpx_future_t *fut, uint64_t idx) {
+
+static inline void hpx_lco_future_set_state(hpx_future_t *fut) {
 #ifdef __x86_64__
-  __asm__ __volatile__ (
-    "movb %1,%%al;\n\t"
-    "lock; xchgb %%al,%0;\n\t"
-    :"=m" (fut->states[idx])
-    :"i" (HPX_LCO_FUTURE_SET)
-    :"%al");
+  __asm__ __volatile__(
+    "movq %1,%%rax;\n\t"
+    "__HLFSS%=:\n\t"
+    "movq %2,%%r11;\n\t"
+    "orq  %%rax,%%r11;\n\t"
+    "lock; cmpxchg %%r11,%0;\n\t"
+    "jnz __HLFSS%=;\n\t"
+    :"=m" (fut->state)
+    :"m" (fut->state), "i" (HPX_LCO_FUTURE_SETMASK)
+    :"%rax", "%r11");
 #endif
 }
 
@@ -123,12 +136,22 @@ static inline void hpx_lco_future_set(hpx_future_t *fut, uint64_t idx) {
  --------------------------------------------------------------------
   hpx_lco_future_set_value
 
-  Sets an HPX Future's value and its state to SET.
+  Atomically sets an HPX Future's value (but not its state).
  --------------------------------------------------------------------
 */
-static inline void hpx_lco_future_set_value(hpx_future_t *fut, uint64_t idx, void *val) {
-  fut->values[idx] = val;
-  hpx_lco_future_set(fut, idx);
+
+static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *val) {
+#ifdef __x86_64__
+  __asm__ __volatile__(
+    "movq %0,%%rax;\n\t"
+    "__HLFSV%=:\n\t"
+    "movq %1,%%r11;\n\t"
+    "lock; cmpxchg %%r11,%0;\n\t"
+    "jnz __HLFSV%=;\n\t"
+    :"=m" (fut->value)
+    :"m" (val)
+    :"%rax", "%r11");
+#endif
 }
 
 
@@ -141,17 +164,11 @@ static inline void hpx_lco_future_set_value(hpx_future_t *fut, uint64_t idx, voi
 */
 
 static inline bool hpx_lco_future_isset(hpx_future_t *fut) {
-  bool isset = true;
-  uint64_t idx;
- 
-  for (idx = 0; idx < fut->count; idx++) {
-    if (fut->states[idx] != HPX_LCO_FUTURE_SET) {
-      isset = false;
-      break;
-    }
+  if (fut->state & HPX_LCO_FUTURE_SETMASK) {
+    return true;
+  } else {
+    return false;
   }
-
-  return isset;
 }
 
 
@@ -163,8 +180,8 @@ static inline bool hpx_lco_future_isset(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline void * hpx_lco_future_get_value(hpx_future_t *fut, uint64_t idx) {
-  return fut->values[idx];
+static inline void * hpx_lco_future_get_value(hpx_future_t *fut) {
+  return fut->value;
 }
 
 
@@ -176,8 +193,21 @@ static inline void * hpx_lco_future_get_value(hpx_future_t *fut, uint64_t idx) {
  --------------------------------------------------------------------
 */
 
-static inline uint8_t hpx_lco_future_get_state(hpx_future_t *fut, uint64_t idx) {
-  return fut->states[idx];
+static inline uint64_t hpx_lco_future_get_state(hpx_future_t *fut) {
+  return fut->state;
+}
+
+
+/*
+ --------------------------------------------------------------------
+  _hpx_lco_future_wait_pred
+
+  Internal predicate function for use with _hpx_thread_wait()
+ --------------------------------------------------------------------
+*/
+
+static bool _hpx_lco_future_wait_pred(void * target, void * arg) {
+  return hpx_lco_future_isset((hpx_future_t *) target);
 }
 
 #endif /* LIBHPX_LCO_H_ */

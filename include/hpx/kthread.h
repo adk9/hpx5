@@ -88,7 +88,7 @@ hpx_kthread_t * hpx_kthread_create(hpx_context_t *, hpx_kthread_seed_t, hpx_mcon
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
-void _hpx_kthread_sched(hpx_kthread_t *, hpx_thread_t *, uint8_t, void *);
+void _hpx_kthread_sched(hpx_kthread_t *, hpx_thread_t *, uint8_t, void *, void *, void *);
 void _hpx_kthread_push_pending(hpx_kthread_t *, hpx_thread_t *);
 
 void _hpx_kthread_init(void);
