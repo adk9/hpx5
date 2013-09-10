@@ -50,7 +50,7 @@ endif
 if HAVE_PHOTON
   PHOTON_DEFS = -DHAVE_PHOTON=1
   libhpx_la_SOURCES += network/photon.c
-  libhpx_la_LIBADD += -lphoton_verbs -libverbs
+  libhpx_la_LIBADD += -lphoton -libverbs -lrdmacm
 endif
 
 AM_CPPFLAGS += $(MPI_DEFS) $(PHOTON_DEFS)
