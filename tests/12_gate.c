@@ -38,7 +38,7 @@ void * allreduce_pred(void * orig_val, void * my_val) {
   if (orig_val == NULL) {
     return my_val;
   } else {
-    return (void *) orig_val += 1;
+    return (void *)(orig_val += 1);
   }
 }
 
@@ -81,8 +81,6 @@ void run_gate_allreduce(hpx_context_t * ctx) {
 
   /* wait for this generation's future to be triggered */
   hpx_thread_wait(fut);
-
-  printf("fut == %ld\n", fut->value);
 }
 
 
