@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "hpx/error.h"
+#include "hpx/mutex.h"
 
 #define HPX_LCO_FUTURE_SETMASK    0x8000000000000000
 
@@ -38,9 +39,12 @@
  --------------------------------------------------------------------
 */
 
+typedef void * (*hpx_lco_future_pred_t)(void *, void *);
+
 typedef struct _hpx_future_t {
-  uint64_t   state;
-  void      *value;
+  hpx_mutex_t mtx;
+  uint64_t    state;
+  void       *value;
 } hpx_future_t;
 
 
@@ -61,6 +65,7 @@ typedef struct _hpx_future_t {
 
 static inline void hpx_lco_future_init(hpx_future_t *fut) {
   /* initialize */
+  hpx_lco_mutex_init(&fut->mtx, 0);
   fut->state = 0x0000000000000000;
   fut->value = NULL;
 }
@@ -90,21 +95,10 @@ static inline void hpx_lco_future_destroy(hpx_future_t *fut) {
 */
 
 static inline void hpx_lco_future_set(hpx_future_t * fut, uint64_t state, void * value) {
-#ifdef __x86_64__
-  __asm__ __volatile__(
-    "__HLFS%=:\n\t"
-    "movq  %4,%%r10;\n\t"
-    "movq  %0,%%rax;\n\t"
-    "movq  %1,%%rdx;\n\t"
-    "movq  %2,%%rbx;\n\t"
-    "movq  %3,%%rcx;\n\t"
-    "orq   %%r10,%%rbx;\n\t"
-    "lock; cmpxchg16b %0;\n\t"
-    "jnz __HLFS%=;\n\t"
-    :"=m" (fut->state), "=m" (fut->value)
-    :"m" (state), "m" (value), "i" (HPX_LCO_FUTURE_SETMASK)
-    :"%rax", "%rbx", "%rcx", "%rdx", "%r10");
-#endif
+  hpx_lco_mutex_lock(&fut->mtx);
+  fut->state = (state | HPX_LCO_FUTURE_SETMASK);
+  fut->value = value;
+  hpx_lco_mutex_unlock(&fut->mtx);
 }
 
 
@@ -117,18 +111,9 @@ static inline void hpx_lco_future_set(hpx_future_t * fut, uint64_t state, void *
 */
 
 static inline void hpx_lco_future_set_state(hpx_future_t *fut) {
-#ifdef __x86_64__
-  __asm__ __volatile__(
-    "movq %1,%%rax;\n\t"
-    "__HLFSS%=:\n\t"
-    "movq %2,%%r11;\n\t"
-    "orq  %%rax,%%r11;\n\t"
-    "lock; cmpxchg %%r11,%0;\n\t"
-    "jnz __HLFSS%=;\n\t"
-    :"=m" (fut->state)
-    :"m" (fut->state), "i" (HPX_LCO_FUTURE_SETMASK)
-    :"%rax", "%r11");
-#endif
+  hpx_lco_mutex_lock(&fut->mtx);
+  fut->state |= HPX_LCO_FUTURE_SETMASK;
+  hpx_lco_mutex_unlock(&fut->mtx);
 }
 
 
@@ -140,18 +125,10 @@ static inline void hpx_lco_future_set_state(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *val) {
-#ifdef __x86_64__
-  __asm__ __volatile__(
-    "movq %0,%%rax;\n\t"
-    "__HLFSV%=:\n\t"
-    "movq %1,%%r11;\n\t"
-    "lock; cmpxchg %%r11,%0;\n\t"
-    "jnz __HLFSV%=;\n\t"
-    :"=m" (fut->value)
-    :"m" (val)
-    :"%rax", "%r11");
-#endif
+static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *value) {
+  hpx_lco_mutex_lock(&fut->mtx);
+  fut->value = value;
+  hpx_lco_mutex_unlock(&fut->mtx);
 }
 
 
@@ -208,6 +185,23 @@ static inline uint64_t hpx_lco_future_get_state(hpx_future_t *fut) {
 
 static bool _hpx_lco_future_wait_pred(void * target, void * arg) {
   return hpx_lco_future_isset((hpx_future_t *) target);
+}
+
+
+/*
+ --------------------------------------------------------------------
+  hpx_lco_future_apply_pred
+
+  Applies a predicate to the value of a future.  That is, it calls
+  the predicate function and atomically replaces the value of the
+  future with the return value of the predicate.
+ --------------------------------------------------------------------
+*/
+
+static inline void hpx_lco_future_apply_pred(hpx_future_t * fut, hpx_lco_future_pred_t pred, void * userdata) {
+  hpx_lco_mutex_lock(&fut->mtx);
+  fut->value = pred(fut->value, userdata);
+  hpx_lco_mutex_unlock(&fut->mtx);
 }
 
 #endif /* LIBHPX_LCO_H_ */

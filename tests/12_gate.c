@@ -24,7 +24,23 @@
 #include "hpx/gate.h"
 
 /* Globals */
+hpx_future_t * fut;
 hpx_gate_t * gate;
+
+
+/*
+ --------------------------------------------------------------------
+  TEST HELPER: predicate function for gate_allreduce_worker
+ --------------------------------------------------------------------
+*/
+
+void * allreduce_pred(void * orig_val, void * my_val) {
+  if (orig_val == NULL) {
+    return my_val;
+  } else {
+    return (void *) orig_val += 1;
+  }
+}
 
 
 /*
@@ -50,26 +66,23 @@ void gate_allreduce_worker(void * ptr) {
 */
 
 void run_gate_allreduce(hpx_context_t * ctx) {
-  hpx_thread_t * ths[1024];
-  hpx_future_t * fut = NULL;
+  hpx_thread_t * ths[8];
   uint64_t gen;
   uint64_t idx;
 
   /* get a future associated with the current generation on the gate */
-  fut = hpx_lco_gate_get_future(gate, 1024, &gen);
+  fut = hpx_lco_gate_get_future(gate, 8, &gen);
   ck_assert_msg(fut != NULL, "Future was NULL.");
 
   /* create some threads */
-  for (idx = 0; idx < 1024; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, (void *) gate_allreduce_worker, (void *) gen);
+  for (idx = 0; idx < 8; idx++) {
+    hpx_thread_create(ctx, 0, (void *) gate_allreduce_worker, (void *) gen);
   }
 
+  /* wait for this generation's future to be triggered */
   hpx_thread_wait(fut);
 
-  /* wait for threads to finish */
-  for (idx = 0; idx < 1024; idx++) {
-    hpx_thread_join(ths[idx], NULL);
-  }
+  printf("fut == %ld\n", fut->value);
 }
 
 
@@ -83,8 +96,8 @@ START_TEST (test_libhpx_gate_allreduce)
 {
   hpx_context_t * ctx;
   hpx_config_t cfg;
-  hpx_thread_t * ths[1024];
   uint64_t idx;
+  uint64_t mydata = 73;
 
   /* initialize a configuration */
   hpx_config_init(&cfg);
@@ -94,23 +107,13 @@ START_TEST (test_libhpx_gate_allreduce)
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create a gate */
-  gate = hpx_lco_gate_create(HPX_LCO_GATE_TYPE_AND, NULL);
+  gate = hpx_lco_gate_create(HPX_LCO_GATE_TYPE_AND, HPX_LCO_GATE_MODE_SPARSE, allreduce_pred, (void *) mydata);
   ck_assert_msg(gate != NULL, "Gate was NULL.");
 
   /* run allreduce 73 times */
   for (idx = 0; idx < 73; idx++) {
     run_gate_allreduce(ctx);
   }
-
-  //  /* create some worker threads */
-  //  for (idx = 0; idx < 1024; idx++) {
-  //    ths[idx] = hpx_thread_create(ctx, 0, (void *) run_gate_test, (void *) idx);
-  //  }
-  //
-  //  /* wait for threads to terminate */
-  //  for (idx = 0; idx < 1024; idx++) {
-  //    hpx_thread_join(ths[idx], NULL);
-  //  }
 
   /* clean up */
   hpx_lco_gate_destroy(gate);
