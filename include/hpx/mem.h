@@ -25,9 +25,17 @@
 
 #include <stdlib.h>
 
+
+#ifdef HAVE_TCMALLOC
+#include <google/tcmalloc.h>
+#define hpx_alloc(u) tc_malloc(u)
+#define hpx_realloc(u, s) tc_realloc(u, s)
+#define hpx_free(u) tc_free(u)
+#else
 #define hpx_alloc(u) malloc(u)
 #define hpx_realloc(u, s) realloc(u, s)
 #define hpx_free(u)  free(u)
+#endif
 
 #endif /* LIBHPX_MEM_H_ */
 
