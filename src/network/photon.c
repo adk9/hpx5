@@ -75,7 +75,12 @@ int _init_photon(void) {
 
   MPI_Comm_rank(MPI_COMM_WORLD, &_rank_photon);
   MPI_Comm_size(MPI_COMM_WORLD, &_size_photon);
-  temp =  photon_init(_size_photon, _rank_photon, MPI_COMM_WORLD);
+  struct photon_config_t photon_conf;
+  photon_conf.comm = MPI_COMM_WORLD;
+  photon_conf.backend = "verbs";
+  photon_conf.nproc = _size_photon;
+  photon_conf.address = _rank_photon;
+  temp =  photon_init(&photon_conf);
   if (temp == 0)
     retval = 0;
   else
