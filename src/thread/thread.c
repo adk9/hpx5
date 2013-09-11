@@ -48,7 +48,7 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, void *args) {
+hpx_future_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, void *args, hpx_thread_t ** thp) {
   hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
@@ -142,7 +142,11 @@ hpx_thread_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void *func, v
     _hpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
   }
 
-  return th;
+  if (thp != NULL) {
+    *thp = th;
+  }
+
+  return th->f_ret;
 
  _hpx_thread_create_FAIL4:
   hpx_free(th);
