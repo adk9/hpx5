@@ -536,45 +536,45 @@ void _hpx_kthread_srv_rebal(void *ptr) {
   uint64_t cnt;
 
   while (hpx_lco_future_isset(fut) == false) {
-    for (idx = 0; idx < ctx->kths_count; idx++) {
-      kth = ctx->kths[idx];
-      hpx_kthread_mutex_lock(&kth->mtx);
-    }
-
-    kth = ctx->kths[0];
-    kth_high = kth;
-    kth_low = kth;
-
-    for (idx = 0; idx < ctx->kths_count; idx++) {
-      kth = ctx->kths[idx];
-      cnt = hpx_queue_size(&kth->pend_q);
-
-      if (cnt_high < cnt) {
-	cnt_high = cnt;
-	kth_high = kth;
-	core_high = idx;
-      }
-
-      if (cnt_low >= cnt) {
-	cnt_low = cnt;
-	kth_low = kth;
-	core_low = idx;
-      }
-    }
-
-    if ((cnt_high - cnt_low) > 3) {
-      th = hpx_queue_pop(&kth_high->pend_q);
-      if (th != NULL) {
-	th->reuse->kth = kth_low;
-	hpx_queue_push(&kth_low->pend_q, th);
-      }
-    }
-
-    for (idx = 0; idx < ctx->kths_count; idx++) {
-      kth = ctx->kths[idx];
-      hpx_kthread_mutex_unlock(&kth->mtx);
-    }
-
+    //    for (idx = 0; idx < ctx->kths_count; idx++) {
+    //      kth = ctx->kths[idx];
+    //      hpx_kthread_mutex_lock(&kth->mtx);
+    //    }
+    //
+    //    kth = ctx->kths[0];
+    //    kth_high = kth;
+    //    kth_low = kth;
+    //
+    //    for (idx = 0; idx < ctx->kths_count; idx++) {
+    //      kth = ctx->kths[idx];
+    //      cnt = hpx_queue_size(&kth->pend_q);
+    //
+    //      if (cnt_high < cnt) {
+    //	cnt_high = cnt;
+    //	kth_high = kth;
+    //	core_high = idx;
+    //      }
+    //
+    //      if (cnt_low >= cnt) {
+    //	cnt_low = cnt;
+    //	kth_low = kth;
+    //	core_low = idx;
+    //      }
+    //    }
+    //
+    //    if ((cnt_high - cnt_low) > 3) {
+    //      th = hpx_queue_pop(&kth_high->pend_q);
+    //      if (th != NULL) {
+    //	th->reuse->kth = kth_low;
+    //	hpx_queue_push(&kth_low->pend_q, th);
+    //      }
+    //    }
+    //
+    //    for (idx = 0; idx < ctx->kths_count; idx++) {
+    //      kth = ctx->kths[idx];
+    //      hpx_kthread_mutex_unlock(&kth->mtx);
+    //    }
+    //
     hpx_thread_yield();
   }
 

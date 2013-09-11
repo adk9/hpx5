@@ -55,6 +55,10 @@ void gate_allreduce_worker(void * ptr) {
   /* synchronize the gate with this generation */
   hpx_lco_gate_sync(gate, gen);
 
+  /* you can let the reduction predicate handle the work here, or you can use */
+  /* hpx_lco_mutex_lock() and hpx_lco_mutex_unlock() from <hpx/mutex.h> with  */
+  /* your own data */
+
   hpx_lco_gate_set(gate);
 }
 
@@ -76,7 +80,7 @@ void run_gate_allreduce(hpx_context_t * ctx) {
 
   /* create some threads */
   for (idx = 0; idx < 8; idx++) {
-    hpx_thread_create(ctx, 0, (void *) gate_allreduce_worker, (void *) gen);
+    hpx_thread_create(ctx, 0, (void *) gate_allreduce_worker, (void *) gen, NULL);
   }
 
   /* wait for this generation's future to be triggered */

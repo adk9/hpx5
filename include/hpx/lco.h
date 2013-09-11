@@ -141,11 +141,15 @@ static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *value) {
 */
 
 static inline bool hpx_lco_future_isset(hpx_future_t *fut) {
-  if (fut->state & HPX_LCO_FUTURE_SETMASK) {
-    return true;
-  } else {
-    return false;
+  bool retval = false;
+
+  hpx_lco_mutex_lock(&fut->mtx);
+  if ((fut->state & HPX_LCO_FUTURE_SETMASK) == HPX_LCO_FUTURE_SETMASK) {
+    retval = true;
   }
+  hpx_lco_mutex_unlock(&fut->mtx);
+
+  return retval;
 }
 
 
@@ -158,7 +162,13 @@ static inline bool hpx_lco_future_isset(hpx_future_t *fut) {
 */
 
 static inline void * hpx_lco_future_get_value(hpx_future_t *fut) {
-  return fut->value;
+  void * val;
+
+  hpx_lco_mutex_lock(&fut->mtx);
+  val = fut->value;
+  hpx_lco_mutex_unlock(&fut->mtx);
+
+  return val;
 }
 
 
@@ -171,7 +181,13 @@ static inline void * hpx_lco_future_get_value(hpx_future_t *fut) {
 */
 
 static inline uint64_t hpx_lco_future_get_state(hpx_future_t *fut) {
-  return fut->state;
+  uint64_t state;
+
+  hpx_lco_mutex_lock(&fut->mtx);
+  state = fut->state;
+  hpx_lco_mutex_unlock(&fut->mtx);
+
+  return state;
 }
 
 

@@ -29,6 +29,14 @@ libhpx_ladir = $(includedir)/hpx
 nodist_libhpx_la_HEADERS = $(top_srcdir)/include/config.h
 libhpx_la_HEADERS = $(top_srcdir)/include/*.h
 
+libhpx_la_CFLAGS = 
+libhpx_la_LIBADD = 
+
 if PLATFORM_LINUX
-  libhpx_la_LIBADD = -lrt
+  libhpx_la_LIBADD += -lrt
+endif
+
+if HAVE_TCMALLOC
+  libhpx_la_CFLAGS += @TCMALLOC_CFLAGS@
+  libhpx_la_LIBADD += @TCMALLOC_LIBS@
 endif
