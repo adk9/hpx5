@@ -17,7 +17,7 @@ void fib(void *n) {
   num = (long) n;
   /* handle our base case */
   if (num < 2) {
-    hpx_thread_exit(num);
+    hpx_thread_exit((void *) num);
   }
 
   /* create child threads */
@@ -38,7 +38,7 @@ void fib(void *n) {
 
   sum = n1 + n2;
   nthreads += 2;
-  hpx_thread_exit(sum);
+  hpx_thread_exit((void *) sum);
 }
 
 int main(int argc, char * argv[]) {
