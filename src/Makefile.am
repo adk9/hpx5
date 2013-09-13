@@ -1,7 +1,8 @@
 AM_CFLAGS = @CFLAGS@                         \
 	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include           \
-	    -I@top_srcdir@/src/util
+	    -I@top_srcdir@/src/util 
+#-DPHOTON_MULTITHREADED
 
 SUBDIRS = .
 

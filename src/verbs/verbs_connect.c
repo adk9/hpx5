@@ -46,14 +46,20 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	int i, iproc, num_devs;
 
     if (__photon_config->use_cma) {
-        ctx->cm_channel = rdma_create_event_channel();
-        if (!ctx->cm_channel) {
+        ctx->cm_schannel = rdma_create_event_channel();
+        if (!ctx->cm_schannel) {
 			dbg_err("Could not create RDMA event channel");
+            return PHOTON_ERROR;
+        }
+
+		ctx->cm_rchannel = rdma_create_event_channel();
+        if (!ctx->cm_rchannel) {
+            dbg_err("Could not create RDMA event channel");
             return PHOTON_ERROR;
         }
 		
 		// we will use this CM ID to listen for RDMA CMA connections
-		if (rdma_create_id(ctx->cm_channel, &ctx->cm_id, NULL, RDMA_PS_TCP)) {
+		if (rdma_create_id(ctx->cm_rchannel, &ctx->cm_id, NULL, RDMA_PS_TCP)) {
 			dbg_err("Could not create CM ID");
 			return PHOTON_ERROR;
 		}
@@ -259,8 +265,6 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 
 	MPI_Barrier(_photon_comm);
 
-	dbg_info("after barrier");
-
 	if (__photon_config->use_cma) {
 		if (__verbs_connect_qps_cma(ctx, local_info, remote_info, MAX_QP)) {
 			dbg_err("Could not connect queue pairs using RDMA CMA");
@@ -386,23 +390,23 @@ static void *__rdma_cma_listener_thread(void *arg) {
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(RDMA_CMA_BASE_PORT + _photon_myrank);
 
+	if (rdma_bind_addr(ctx->cm_id, (struct sockaddr *)&sin)) {
+		dbg_err("rdma_bind_addr failed: %s", strerror(errno));
+		goto error_exit;
+	}
+
+	if (rdma_listen(ctx->cm_id, 0)) {
+		dbg_err("rdma_listen failed: %s", strerror(errno));
+		goto error_exit;
+	}
+
 	// accept some number of connections
 	// this currently depends on rank position
 	for (i=0; i<_photon_myrank; i++) {
 
-		dbg_info("Listening for connection from %d on port %d", i, RDMA_CMA_BASE_PORT + _photon_myrank);
+		dbg_info("Listening for %d more connections on port %d", _photon_myrank - i, RDMA_CMA_BASE_PORT + _photon_myrank);
 
-		if (rdma_bind_addr(ctx->cm_id, (struct sockaddr *)&sin)) {
-            dbg_err("rdma_bind_addr failed: %s", strerror(errno));
-            goto error_exit;
-		}
-
-		if (rdma_listen(ctx->cm_id, 0)) {
-            dbg_err("rdma_listen failed: %s", strerror(errno));
-            goto error_exit;
-        }
-
-        if (rdma_get_cm_event(ctx->cm_channel, &event)) {
+        if (rdma_get_cm_event(ctx->cm_rchannel, &event)) {
 			dbg_err("did not get event");
 			goto error_exit;
 		}
@@ -423,7 +427,7 @@ static void *__rdma_cma_listener_thread(void *arg) {
 		if (event->param.conn.private_data &&
 			(event->param.conn.private_data_len > 0)) {
 			priv = (struct rdma_cma_priv*)event->param.conn.private_data;
-			dbg_info("data size: %d", event->param.conn.private_data_len);
+			//ctx->verbs_processes[priv->address].remote_priv = malloc(sizeof(struct rdma_cma_priv));
 			//memcpy(ctx->verbs_processes[priv->address].remote_priv, priv, event->param.conn.private_data_len);
         }
 		else {
@@ -458,6 +462,16 @@ static void *__rdma_cma_listener_thread(void *arg) {
         }
         rdma_ack_cm_event(event);
 
+		if (rdma_get_cm_event(ctx->cm_rchannel, &event)) {
+            dbg_err("did not get event");
+            goto error_exit;
+        }
+
+        if (event->event != RDMA_CM_EVENT_ESTABLISHED) {
+            dbg_err("bad event waiting for connect request %d", event->event);
+            goto error_exit;
+        }
+		rdma_ack_cm_event(event);
 	}
 
 	dbg_info("Listener thread done");
@@ -507,7 +521,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
 		sin.sin_family = AF_INET;
         sin.sin_port = htons(RDMA_CMA_BASE_PORT + i);
 
-		if (rdma_create_id(ctx->cm_channel, &(ctx->verbs_processes[i].cm_id), NULL, RDMA_PS_TCP)) {
+		if (rdma_create_id(ctx->cm_schannel, &(ctx->verbs_processes[i].cm_id), NULL, RDMA_PS_TCP)) {
             dbg_err("Could not create CM ID");
 			goto error_exit;
 		}
@@ -518,7 +532,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
             goto error_exit;
         }
 
-        if (rdma_get_cm_event(ctx->cm_channel, &event)) {
+        if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
             goto error_exit;
 		}
 
@@ -541,7 +555,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
             goto error_exit;
         }
 
-		if (rdma_get_cm_event(ctx->cm_channel, &event)) {
+		if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
             goto error_exit;
 		}
 
@@ -579,7 +593,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
             goto error_exit;
 		}
 
-        if (rdma_get_cm_event(ctx->cm_channel, &event)) {
+        if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
             goto error_exit;
 		}
 
@@ -596,7 +610,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
 		rdma_ack_cm_event(event);
 
 		freeaddrinfo(res);
-	}
+	}	
 
 	return PHOTON_OK;
 

@@ -14,12 +14,9 @@ typedef struct verbs_cnct_ctx_t {
 	int                        ib_lid;
 	ProcessInfo               *verbs_processes;
 
-	struct rdma_event_channel *cm_channel;
+	struct rdma_event_channel *cm_schannel;
+	struct rdma_event_channel *cm_rchannel;
 	struct rdma_cm_id         *cm_id;
-	void                      *local_priv;
-	void                      *remote_priv;
-	uint64_t                   local_priv_size;
-	uint64_t                   remote_priv_size;
 
 	int                        tx_depth;
 	int                        rx_depth;

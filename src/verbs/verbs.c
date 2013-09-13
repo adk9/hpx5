@@ -74,7 +74,8 @@ static verbs_cnct_ctx verbs_ctx = {
     .ib_cc = NULL,
 	.ib_lid = 0,
 	.verbs_processes = NULL,
-	.cm_channel = NULL,
+	.cm_schannel = NULL,
+	.cm_rchannel = NULL,
     .cm_id = NULL,
     .tx_depth = 16,
     .rx_depth = 16
@@ -128,8 +129,10 @@ struct photon_backend_t photon_verbs_backend = {
     .post_os_put = verbs_post_os_put,
     .post_os_get = verbs_post_os_get,
     .send_FIN = verbs_send_FIN,
+#ifndef PHOTON_MULTITHREADED
     .wait_any = verbs_wait_any,
     .wait_any_ledger = verbs_wait_any_ledger
+#endif
 };
 
 
