@@ -64,7 +64,21 @@ static int __verbs_nbpop_event(verbs_req_t *req);
 verbs_buffer_t *shared_storage;
 
 static ProcessInfo *verbs_processes;
-static verbs_cnct_ctx verbs_ctx;
+static verbs_cnct_ctx verbs_ctx = {
+	.ib_dev ="ib0",
+	.ib_port = 1,
+	.ib_context = NULL,
+	.ib_pd = NULL,
+	.ib_cq = NULL,
+    .ib_srq = NULL,
+    .ib_cc = NULL,
+	.ib_lid = 0,
+	.verbs_processes = NULL,
+	.cm_channel = NULL,
+    .cm_id = NULL,
+    .tx_depth = 16,
+    .rx_depth = 16
+};
 
 static htable_t *reqtable, *ledger_reqtable;
 static struct verbs_req *requests;
@@ -196,21 +210,21 @@ int __verbs_init_common(photonConfig cfg) {
 		LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
 	}
 
-	dbg_info("create_buffertable()");
+	ctr_info("create_buffertable()");
 	fflush(stderr);
 	if (buffertable_init(193)) {
 		log_err("verbs_init_common(); Failed to allocate buffer table");
 		goto error_exit_req;
 	}
 
-	dbg_info("create_reqtable()");
+	ctr_info("create_reqtable()");
 	reqtable = htable_create(193);
 	if (!reqtable) {
 		log_err("verbs_init_common(): Failed to allocate request table");
 		goto error_exit_bt;
 	}
 
-	dbg_info("create_ledger_reqtable()");
+	ctr_info("create_ledger_reqtable()");
 
 	ledger_reqtable = htable_create(193);
 	if (!ledger_reqtable) {
@@ -218,16 +232,16 @@ int __verbs_init_common(photonConfig cfg) {
 		goto error_exit_rt;
 	}
 
-	verbs_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc+_photon_forwarder));
+	verbs_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc));
 	if (!verbs_processes) {
 		log_err("verbs_init_common(): Couldn't allocate process information");
 		goto error_exit_lrt;
 	}
 
 	// Set it to zero, so that we know if it ever got initialized
-	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc+_photon_forwarder));
+	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc));
 
-	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
+	for(i = 0; i < _photon_nproc; i++) {
 		verbs_processes[i].curr_remote_buffer = __verbs_remote_buffer_create();
 		if(!verbs_processes[i].curr_remote_buffer) {
 			log_err("Couldn't allocate process remote buffer information");
@@ -238,24 +252,29 @@ int __verbs_init_common(photonConfig cfg) {
 	// keep a pointer to the processes list in the verbs context
 	verbs_ctx.verbs_processes = verbs_processes;
 
-	dbg_info("verbs_init_common(): alloc'd process info");
+	ctr_info("verbs_init_common(): alloc'd process info");
 
 	if(__verbs_init_context(&verbs_ctx)) {
-		log_err("verbs_init_common(): Couldn't initialize verbs context\n");
+		log_err("Could not initialize verbs context");
+		goto error_exit_crb;
+	}
+
+	if(__verbs_connect_peers(&verbs_ctx)) {
+		log_err("Could not connect peers");
 		goto error_exit_crb;
 	}
 
 	// Everything is x2 cause we need a local and a remote copy of each ledger.
 	// Remote Info (_ri_) ledger has an additional x2 cause we need "send-info" and "receive-info" ledgers.
-	info_ledger_size = 2 * 2 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
-	FIN_ledger_size  = 2 * sizeof(verbs_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
+	info_ledger_size = 2 * 2 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
+	FIN_ledger_size  = 2 * sizeof(verbs_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
 	bufsize = info_ledger_size + FIN_ledger_size;
 	buf = malloc(bufsize);
 	if (!buf) {
 		log_err("verbs_init_common(): Couldn't allocate ledgers");
 		goto error_exit_verbs_cnct;
 	}
-	dbg_info("Bufsize: %d", bufsize);
+	ctr_info("Bufsize: %d", bufsize);
 
 	shared_storage = __verbs_buffer_create(buf, bufsize);
 	if (!shared_storage) {
@@ -274,7 +293,7 @@ int __verbs_init_common(photonConfig cfg) {
 	}
 
 	// skip 4 ledgers (rcv info local, rcv info remote, snd info local, snd info remote)
-	offset = 4 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc+_photon_forwarder);
+	offset = 4 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
 	if (__verbs_setup_FIN_ledger(verbs_processes, buf + offset, LEDGER_SIZE) != 0) {
 		log_err("verbs_init_common(); couldn't setup send ledgers");
 		goto error_exit_ri_ledger;
@@ -287,7 +306,7 @@ int __verbs_init_common(photonConfig cfg) {
 	}
 #endif
 
-	dbg_info("verbs_init_common(): ended successfully =============");
+	ctr_info("verbs_init_common(): ended successfully =============");
 
 	return 0;
 
@@ -303,7 +322,7 @@ error_exit_buf:
 		free(buf);
 error_exit_verbs_cnct:
 error_exit_crb:
-	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
+	for(i = 0; i < _photon_nproc; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
 			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}
@@ -331,11 +350,6 @@ int verbs_init(photonConfig cfg) {
 	if (__verbs_init_common(cfg) != 0)
 		goto error_exit;
 
-	if(__verbs_connect_peers(&verbs_ctx)) {
-		log_err("verbs_init(): Couldn't exchange peer information to create the connections\n");
-		goto error_exit_verbs_cntx;
-	}
-
 	if (__verbs_exchange_ri_ledgers(verbs_processes) != 0) {
 		log_err("verbs_init(); couldn't exchange rdma ledgers");
 		goto error_exit_listeners;
@@ -348,7 +362,7 @@ int verbs_init(photonConfig cfg) {
 
 	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
 		struct mem_register_req *mem_reg_req;
-		dbg_info("verbs_init(): registering buffer in queue");
+	    ctr_info("verbs_init(): registering buffer in queue");
 		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
 		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
 		// FIXME: What if this fails?
@@ -370,17 +384,16 @@ int verbs_init(photonConfig cfg) {
 #endif
 
 	__initialized = 1;
-	dbg_info("verbs_init(): ended successfully =============");
+	ctr_info("verbs_init(): ended successfully =============");
 
 	return 0;
 
 error_exit_FIN_ledger:
 error_exit_listeners:
-error_exit_verbs_cntx:
 	if (shared_storage->buffer)
 		free(shared_storage->buffer);
 	__verbs_buffer_free(shared_storage);
-	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
+	for(i = 0; i < _photon_nproc; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
 			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}

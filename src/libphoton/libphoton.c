@@ -19,8 +19,8 @@ FILE *_phot_ofp;
 #include "verbs.h"
 #endif
 
-
 int photon_init(photonConfig cfg) {
+
 	if (cfg->backend != NULL) {
 		if (!strncasecmp(cfg->backend, "verbs", 10)) {
 #ifdef HAVE_VERBS

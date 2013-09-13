@@ -4,17 +4,25 @@
 #include "verbs.h"
 
 typedef struct verbs_cnct_ctx_t {
-	char               *ib_dev;
-	int                 ib_port;
-	struct ibv_context *ib_context;
-	struct ibv_pd      *ib_pd;
-	struct ibv_cq      *ib_cq;
-	struct ibv_srq     *ib_srq;
-	int                 ib_lid;
-	ProcessInfo        *verbs_processes;
+	char                      *ib_dev;
+	int                        ib_port;
+	struct ibv_context        *ib_context;
+	struct ibv_pd             *ib_pd;
+	struct ibv_cq             *ib_cq;
+	struct ibv_srq            *ib_srq;
+    struct ibv_comp_channel   *ib_cc;
+	int                        ib_lid;
+	ProcessInfo               *verbs_processes;
 
-	int                 tx_depth;
-	int                 rx_depth;
+	struct rdma_event_channel *cm_channel;
+	struct rdma_cm_id         *cm_id;
+	void                      *local_priv;
+	void                      *remote_priv;
+	uint64_t                   local_priv_size;
+	uint64_t                   remote_priv_size;
+
+	int                        tx_depth;
+	int                        rx_depth;
 } verbs_cnct_ctx;
 
 typedef struct verbs_cnct_info_t {

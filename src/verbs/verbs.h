@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <netinet/in.h>
 #include <infiniband/verbs.h>
+#include <rdma/rdma_cma.h>
 
 #include "squeue.h"
 #include "verbs_buffer.h"
@@ -34,9 +35,16 @@
 #define MAX_QP 1
 
 typedef struct proc_info_t {
-	struct ibv_qp *qp[MAX_QP];
-	int            psn;
-	int            num_qp;
+	struct ibv_qp     *qp[MAX_QP];
+	int                psn;
+	int                num_qp;
+
+	// for RDMA CMA connections
+	struct rdma_cm_id *cm_id;
+	void              *local_priv;
+	uint64_t           local_priv_size;  
+	void              *remote_priv;
+	uint64_t           remote_priv_size;
 
 	// Conduit independent (almost) part
 	verbs_ri_ledger_t *local_snd_info_ledger;

@@ -11,7 +11,7 @@ libphoton_la_SOURCES = libphoton/libphoton.c           \
 
 libphoton_ladir = @top_srcdir@/src/libphoton
 libphoton_la_HEADERS = 
-libphoton_la_LDFLAGS = @top_srcdir@/src/util/libutil.la
+libphoton_la_LDFLAGS = @VERBS_LIBS@ @THREAD_LIBS@ @top_srcdir@/src/util/libutil.la 
 libphoton_la_LIBADD = 
 
 if HAVE_VERBS
