@@ -91,7 +91,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 		
 		for (i=0; i<=num_devs; i++) {
 			if (!strcmp(ibv_get_device_name(dev_list[i]), ctx->ib_dev)) {
-				ctr_info("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
+				dbg_info("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
 				break;
 			}
 		}
@@ -101,7 +101,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 			dbg_err("Could not get context for %s\n", ibv_get_device_name(dev_list[i]));
 			return PHOTON_ERROR;
 		}
-		ctr_info("context has device %s", ibv_get_device_name(ctx->ib_context->device));
+		dbg_info("context has device %s", ibv_get_device_name(ctx->ib_context->device));
 
 		// get my local lid
 		struct ibv_port_attr attr;
@@ -205,7 +205,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 	int i, iproc;
 	MPI_Comm _photon_comm = __photon_config->comm;
 
-	ctr_info();
+	dbg_info();
 
 	local_info	= (verbs_cnct_info **)malloc( _photon_nproc*sizeof(verbs_cnct_info *) );
 	if( !local_info ) {

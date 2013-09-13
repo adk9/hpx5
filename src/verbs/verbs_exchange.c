@@ -19,7 +19,7 @@ int __verbs_exchange_ri_ledgers(ProcessInfo *verbs_processes) {
 	MPI_Comm _photon_comm = __photon_config->comm;
 	uintptr_t *va;
 
-	ctr_info(" > verbs_exchange_ri_ledgers()");
+	dbg_info();
 
 	va = (uintptr_t *)malloc( _photon_nproc*sizeof(uintptr_t) );
 	req = (MPI_Request *)malloc( 2*_photon_nproc*sizeof(MPI_Request) );
@@ -120,7 +120,7 @@ int __verbs_setup_ri_ledgers(ProcessInfo *verbs_processes, char *buf, int num_en
 	int i;
 	int ledger_size, offset;
 
-	ctr_info(" > verbs_setup_ri_ledgers()");
+	dbg_info();
 
 	ledger_size = sizeof(verbs_ri_ledger_entry_t) * num_entries;
 
@@ -178,7 +178,7 @@ int __verbs_exchange_FIN_ledger(ProcessInfo *verbs_processes) {
 	MPI_Request *req;
 	MPI_Comm _photon_comm = __photon_config->comm;
 
-	ctr_info(" > verbs_exchange_FIN_ledger()");
+	dbg_info();
 
 	va = (uintptr_t *)malloc( _photon_nproc*sizeof(uintptr_t) );
 	req = (MPI_Request *)malloc( 2*_photon_nproc*sizeof(MPI_Request) );
@@ -232,7 +232,7 @@ int __verbs_setup_FIN_ledger(ProcessInfo *verbs_processes, char *buf, int num_en
 	int i;
 	int ledger_size;
 
-	ctr_info(" > verbs_setup_FIN_ledger()");
+	dbg_info();
 
 	ledger_size = sizeof(verbs_rdma_FIN_ledger_entry_t) * num_entries;
 

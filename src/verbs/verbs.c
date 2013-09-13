@@ -168,7 +168,7 @@ int __verbs_init_common(photonConfig cfg) {
 	int info_ledger_size, FIN_ledger_size;
 
 	if (__initialized != 0) {
-		log_err("verbs_init_common(): Error: already initialized/initializing");
+		log_err("Error: already initialized/initializing");
 		goto error_exit;
 	}
 
@@ -179,7 +179,7 @@ int __verbs_init_common(photonConfig cfg) {
 	_photon_forwarder = cfg->use_forwarder;
 	_photon_comm = cfg->comm;
 
-	ctr_info(" > verbs_init_common(%d, %d)",_photon_nproc, _photon_myrank);
+	dbg_info("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
 
 	if (cfg->ib_dev)
 		verbs_ctx.ib_dev = cfg->ib_dev;
@@ -188,7 +188,7 @@ int __verbs_init_common(photonConfig cfg) {
 	    verbs_ctx.ib_port = cfg->ib_port;
 
 	if (cfg->use_cma && !cfg->eth_dev) {
-		log_err("verbs_init_common(): CMA specified but Ethernet dev missing");
+		log_err("CMA specified but Ethernet dev missing");
 		goto error_exit;
 	}
 
@@ -199,7 +199,7 @@ int __verbs_init_common(photonConfig cfg) {
 
 	requests = malloc(sizeof(verbs_req_t) * DEF_NUM_REQUESTS);
 	if (!requests) {
-		log_err("verbs_init_common(): Failed to allocate request list");
+		log_err("Failed to allocate request list");
 		goto error_exit_req;
 	}
 
@@ -213,31 +213,31 @@ int __verbs_init_common(photonConfig cfg) {
 		LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
 	}
 
-	ctr_info("create_buffertable()");
+	dbg_info("create_buffertable()");
 	fflush(stderr);
 	if (buffertable_init(193)) {
 		log_err("verbs_init_common(); Failed to allocate buffer table");
 		goto error_exit_req;
 	}
 
-	ctr_info("create_reqtable()");
+	dbg_info("create_reqtable()");
 	reqtable = htable_create(193);
 	if (!reqtable) {
-		log_err("verbs_init_common(): Failed to allocate request table");
+		log_err("Failed to allocate request table");
 		goto error_exit_bt;
 	}
 
-	ctr_info("create_ledger_reqtable()");
+	dbg_info("create_ledger_reqtable()");
 
 	ledger_reqtable = htable_create(193);
 	if (!ledger_reqtable) {
-		log_err("verbs_init_common(): Failed to allocate request table");
+		log_err("Failed to allocate request table");
 		goto error_exit_rt;
 	}
 
 	verbs_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc));
 	if (!verbs_processes) {
-		log_err("verbs_init_common(): Couldn't allocate process information");
+		log_err("Couldn't allocate process information");
 		goto error_exit_lrt;
 	}
 
@@ -255,7 +255,7 @@ int __verbs_init_common(photonConfig cfg) {
 	// keep a pointer to the processes list in the verbs context
 	verbs_ctx.verbs_processes = verbs_processes;
 
-	ctr_info("verbs_init_common(): alloc'd process info");
+	dbg_info("alloc'd process info");
 
 	if(__verbs_init_context(&verbs_ctx)) {
 		log_err("Could not initialize verbs context");
@@ -274,19 +274,19 @@ int __verbs_init_common(photonConfig cfg) {
 	bufsize = info_ledger_size + FIN_ledger_size;
 	buf = malloc(bufsize);
 	if (!buf) {
-		log_err("verbs_init_common(): Couldn't allocate ledgers");
+		log_err("Couldn't allocate ledgers");
 		goto error_exit_verbs_cnct;
 	}
-	ctr_info("Bufsize: %d", bufsize);
+	dbg_info("Bufsize: %d", bufsize);
 
 	shared_storage = __verbs_buffer_create(buf, bufsize);
 	if (!shared_storage) {
-		log_err("verbs_init_common(): Couldn't register shared storage");
+		log_err("Couldn't register shared storage");
 		goto error_exit_buf;
 	}
 
 	if (__verbs_buffer_register(shared_storage, verbs_ctx.ib_pd) != 0) {
-		log_err("verbs_init_common(): couldn't register local buffer for the ledger entries");
+		log_err("couldn't register local buffer for the ledger entries");
 		goto error_exit_ss;
 	}
 
@@ -304,12 +304,12 @@ int __verbs_init_common(photonConfig cfg) {
 
 #ifdef PHOTON_MULTITHREADED
 	if (pthread_create(&ledger_watcher, NULL, __verbs_req_watcher, NULL)) {
-		log_err("verbs_init_common(): pthread_create() failed.\n");
+		log_err("pthread_create() failed");
 		goto error_exit_ledger_watcher;
 	}
 #endif
 
-	ctr_info("verbs_init_common(): ended successfully =============");
+	dbg_info("ended successfully =============");
 
 	return 0;
 
@@ -365,7 +365,7 @@ int verbs_init(photonConfig cfg) {
 
 	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
 		struct mem_register_req *mem_reg_req;
-	    ctr_info("verbs_init(): registering buffer in queue");
+	    dbg_info("registering buffer in queue");
 		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
 		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
 		// FIXME: What if this fails?
@@ -387,7 +387,7 @@ int verbs_init(photonConfig cfg) {
 #endif
 
 	__initialized = 1;
-	ctr_info("verbs_init(): ended successfully =============");
+	dbg_info("ended successfully =============");
 
 	return 0;
 
@@ -421,7 +421,7 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 	static int first_time = 1;
 	verbs_buffer_t *db;
 
-	ctr_info(" > verbs_register_buffer(%p, %d)",buffer, buffer_size);
+	dbg_info("(%p, %d)",buffer, buffer_size);
 
 	if( __initialized == 0 ) {
 		struct mem_register_req *mem_reg_req;
@@ -434,12 +434,12 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 		mem_reg_req->buffer_size = buffer_size;
 
 		SLIST_INSERT_HEAD(&pending_mem_register_list, mem_reg_req, list);
-		dbg_info("verbs_register_buffer(): called before init, queueing buffer info");
+		dbg_info("called before init, queueing buffer info");
 		goto normal_exit;
 	}
 
 	if (buffertable_find_exact((void *)buffer, buffer_size, &db) == 0) {
-		dbg_info("verbs_register_buffer(): we had an existing buffer, reusing it");
+		dbg_info("we had an existing buffer, reusing it");
 		db->ref_count++;
 		goto normal_exit;
 	}
@@ -450,20 +450,20 @@ int verbs_register_buffer(char *buffer, int buffer_size) {
 		goto error_exit;
 	}
 
-	dbg_info("verbs_register_buffer(): created buffer: %p", db);
+	dbg_info("created buffer: %p", db);
 
 	if (__verbs_buffer_register(db, verbs_ctx.ib_pd) != 0) {
 		log_err("Couldn't register buffer");
 		goto error_exit_db;
 	}
 
-	dbg_info("verbs_register_buffer(): registered buffer");
+	dbg_info("registered buffer");
 
 	if (buffertable_insert(db) != 0) {
 		goto error_exit_db;
 	}
 
-	dbg_info("verbs_register_buffer(): added buffer to hash table");
+	dbg_info("added buffer to hash table");
 
 normal_exit:
 	return 0;
@@ -476,15 +476,15 @@ error_exit:
 int verbs_unregister_buffer(char *buffer, int size) {
 	verbs_buffer_t *db;
 
-	ctr_info(" > verbs_unregister_buffer()");
+	dbg_info();
 
 	if( __initialized == 0 ) {
-		log_err("verbs_unregister_buffer(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		goto error_exit;
 	}
 
 	if (buffertable_find_exact((void *)buffer, size, &db) != 0) {
-		dbg_info("verbs_unregister_buffer(): no such buffer is registered");
+		dbg_info("no such buffer is registered");
 		return 0;
 	}
 
@@ -525,11 +525,11 @@ int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 	void *test;
 	int ret_val;
 
-	ctr_info(" > verbs_test(%d)",request);
+	dbg_info("(%d)",request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_test(): Library not initialized.	 Call photon_init() first");
-		dbg_info("verbs_test(): returning -1");
+		log_err("Library not initialized.	 Call photon_init() first");
+		dbg_info("returning -1");
 		return -1;
 	}
 
@@ -542,7 +542,7 @@ int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 			// issued.	It's up to the application to guarantee correctness, by keeping
 			// track, of	what's going on.	Unless you know what you are doing, consider
 			// (flag==-1 && return_value==1) to be an error case.
-			dbg_info("verbs_test(): returning 1, flag:-1");
+			dbg_info("returning 1, flag:-1");
 			*flag = -1;
 			return 1;
 		}
@@ -576,16 +576,16 @@ int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 		//	status->MPI_TAG = req->tag;
 		//	status->MPI_ERROR = 0; // FIXME: Make sure that "0" means success in MPI?
 		//}
-		dbg_info("verbs_test(): returning 0, flag:1");
+		dbg_info("returning 0, flag:1");
 		return 0;
 	}
 	else if( ret_val > 0 ) {
-		dbg_info("verbs_test(): returning 0, flag:0");
+		dbg_info("returning 0, flag:0");
 		*flag = 0;
 		return 0;
 	}
 	else {
-		dbg_info("verbs_test(): returning -1, flag:0");
+		dbg_info("returning -1, flag:0");
 		*flag = 0;
 		return -1;
 	}
@@ -595,16 +595,16 @@ int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 int verbs_wait(uint32_t request) {
 	verbs_req_t *req;
 
-	ctr_info(" > verbs_wait(%d)",request);
+	dbg_info("(%d)",request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		return -1;
 	}
 
 	if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
 		if (htable_lookup(ledger_reqtable, (uint64_t)request, (void**)&req) != 0) {
-			log_err("verbs_wait(): Wrong request value, operation not in table");
+			log_err("Wrong request value, operation not in table");
 			return -1;
 		}
 	}
@@ -618,20 +618,20 @@ int verbs_wait(uint32_t request) {
 
 		if (req->type == LEDGER) {
 			if (htable_lookup(ledger_reqtable, (uint64_t)req->id, NULL) != -1) {
-				dbg_info("verbs_wait(): removing ledger RDMA: %u", req->id);
+				dbg_info("removing ledger RDMA: %u", req->id);
 				htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
 				SAFE_LIST_REMOVE(req, list);
 				SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-				dbg_info("verbs_wait(): %d requests left in ledgertable", htable_count(ledger_reqtable));
+				dbg_info("%d requests left in ledgertable", htable_count(ledger_reqtable));
 			}
 		}
 		else {
 			if (htable_lookup(reqtable, (uint64_t)req->id, NULL) != -1) {
-				dbg_info("verbs_wait(): removing event with cookie:%u", req->id);
+				dbg_info("removing event with cookie:%u", req->id);
 				htable_remove(reqtable, (uint64_t)req->id, NULL);
 				SAFE_LIST_REMOVE(req, list);
 				SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-				dbg_info("verbs_wait(): %d requests left in reqtable", htable_count(reqtable));
+				dbg_info("%d requests left in reqtable", htable_count(reqtable));
 			}
 		}
 	}
@@ -657,10 +657,10 @@ static int __verbs_wait_one() {
 	int ne;
 	struct ibv_wc wc;
 
-	dbg_info("__verbs_wait_one(): remaining: %d+%d", htable_count(reqtable), GET_COUNTER(handshake_rdma_write));
+	dbg_info("remaining: %d+%d", htable_count(reqtable), GET_COUNTER(handshake_rdma_write));
 
 	if( __initialized <= 0 ) {
-		log_err("__verbs_wait_one(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		goto error_exit;
 	}
 
@@ -679,12 +679,12 @@ static int __verbs_wait_one() {
 	while (ne < 1);
 
 	if (wc.status != IBV_WC_SUCCESS) {
-		log_err("__verbs_wait_event(): (status==%d) != IBV_WC_SUCCESS\n",wc.status);
+		log_err("(status==%d) != IBV_WC_SUCCESS\n",wc.status);
 		goto error_exit;
 	}
 
 	cookie = (uint32_t)( (wc.wr_id<<32)>>32);
-	dbg_info("__verbs_wait_one(): received event with cookie:%u", cookie);
+	dbg_info("received event with cookie:%u", cookie);
 
 	if (htable_lookup(reqtable, (uint64_t)cookie, &test) == 0) {
 		tmp_req = test;
@@ -695,7 +695,7 @@ static int __verbs_wait_one() {
 	}
 	else if (htable_lookup(ledger_reqtable, (uint64_t)cookie, &test) == 0) {
 		if( DEC_COUNTER(handshake_rdma_write) <= 0 ) {
-			log_err("__verbs_wait_one(): handshake_rdma_write_count is negative");
+			log_err("handshake_rdma_write_count is negative");
 		}
 	}
 
@@ -710,7 +710,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 	struct ibv_wc wc;
 
 	if( __initialized <= 0 ) {
-		log_err("__verbs_wait_event(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		return -1;
 	}
 
@@ -738,7 +738,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 		while (ne < 1);
 
 		if (wc.status != IBV_WC_SUCCESS) {
-			log_err("__verbs_wait_event(): (status==%d) != IBV_WC_SUCCESS\n",wc.status);
+			log_err("(status==%d) != IBV_WC_SUCCESS\n",wc.status);
 			goto error_exit;
 		}
 
@@ -747,11 +747,11 @@ static int __verbs_wait_event(verbs_req_t *req) {
 		if (cookie == req->id) {
 			req->state = REQUEST_COMPLETED;
 
-			dbg_info("verbs_wait_event(): removing event with cookie:%u", cookie);
+			dbg_info("removing event with cookie:%u", cookie);
 			htable_remove(reqtable, (uint64_t)req->id, NULL);
 			SAFE_LIST_REMOVE(req, list);
 			SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-			dbg_info("verbs_wait_evd(): %d requests left in reqtable", htable_count(reqtable));
+			dbg_info("%d requests left in reqtable", htable_count(reqtable));
 		}
 		else if (cookie != NULL_COOKIE) {
 			void *test;
@@ -765,7 +765,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 			}
 			else if (htable_lookup(ledger_reqtable, (uint64_t)cookie, &test) == 0) {
 				if( DEC_COUNTER(handshake_rdma_write) <= 0 ) {
-					log_err("__verbs_wait_event(): handshake_rdma_write_count is negative");
+					log_err("handshake_rdma_write_count is negative");
 				}
 			}
 		}
@@ -786,10 +786,10 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 	int ne;
 	struct ibv_wc wc;
 
-	ctr_info(" > __verbs_nbpop_event(%d)",req->id);
+	dbg_info("(%d)",req->id);
 
 	if( __initialized <= 0 ) {
-		log_err("__verbs_nbpop_event(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
@@ -806,7 +806,7 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 		}
 
 		if (wc.status != IBV_WC_SUCCESS) {
-			log_err("__verbs_wait_event(): (status==%d) != IBV_WC_SUCCESS\n",wc.status);
+			log_err("(status==%d) != IBV_WC_SUCCESS\n",wc.status);
 			goto error_exit;
 		}
 
@@ -815,11 +815,11 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 		if (cookie == req->id) {
 			req->state = REQUEST_COMPLETED;
 
-			dbg_info("verbs_wait_event(): removing event with cookie:%u", cookie);
+			dbg_info("removing event with cookie:%u", cookie);
 			htable_remove(reqtable, (uint64_t)req->id, NULL);
 			SAFE_LIST_REMOVE(req, list);
 			SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-			dbg_info("verbs_wait_evd(): %d requests left in reqtable", htable_count(reqtable));
+			dbg_info("%d requests left in reqtable", htable_count(reqtable));
 		}
 		else if (cookie != NULL_COOKIE) {
 			void *test;
@@ -833,13 +833,13 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 			}
 			else if (htable_lookup(ledger_reqtable, (uint64_t)cookie, &test) == 0) {
 				if( DEC_COUNTER(handshake_rdma_write) <= 0 ) {
-					log_err("__verbs_wait_event(): handshake_rdma_write_count is negative");
+					log_err("handshake_rdma_write_count is negative");
 				}
 			}
 		}
 	}
 
-	dbg_info("__verbs_nbpop_event(): returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
+	dbg_info("returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
 	return (req->state == REQUEST_COMPLETED)?0:1;
 
 error_exit:
@@ -851,10 +851,10 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 	void *test;
 	int curr, num_entries, i=-1;
 
-	ctr_info(" > __verbs_wait_ledger(%d)",req->id);
+	dbg_info("(%d)",req->id);
 
 	if( __initialized <= 0 ) {
-		log_err("__verbs_wait_ledger(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
@@ -863,7 +863,7 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 		verbs_rdma_FIN_ledger_entry_t *curr_entry;
 		curr = verbs_processes[i].local_FIN_ledger->curr;
 		curr_entry = &(verbs_processes[i].local_FIN_ledger->entries[curr]);
-		dbg_info("__verbs_wait_ledger() curr_entry(proc==%d)=%p",i,curr_entry);
+		dbg_info("curr_entry(proc==%d)=%p",i,curr_entry);
 	}
 #endif
 	while(req->state == REQUEST_PENDING) {
@@ -900,11 +900,11 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 			}
 		}
 	}
-	dbg_info("verbs_wait_ledger(): removing RDMA: %u/%u", i, req->id);
+	dbg_info("removing RDMA: %u/%u", i, req->id);
 	htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
 	SAFE_LIST_REMOVE(req, list);
 	SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-	dbg_info("verbs_wait_ledger(): %d requests left in reqtable", htable_count(ledger_reqtable));
+	dbg_info("%d requests left in reqtable", htable_count(ledger_reqtable));
 
 	return (req->state == REQUEST_COMPLETED)?0:-1;
 }
@@ -920,10 +920,10 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 	void *test;
 	int curr, i=-1;
 
-	ctr_info(" > __verbs_nbpop_ledger(%d)",req->id);
+	dbg_info("(%d)",req->id);
 
 	if( __initialized <= 0 ) {
-		log_err("__verbs_nbpop_ledger(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		return -1;
 	}
 
@@ -944,20 +944,20 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 			curr = verbs_processes[i].local_FIN_ledger->curr;
 			curr_entry = &(verbs_processes[i].local_FIN_ledger->entries[curr]);
 			if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
-				dbg_info("__verbs_nbpop_ledger(): Found curr:%d req:%u while looking for req:%u", curr, curr_entry->request, req->id);
+				dbg_info("Found curr:%d req:%u while looking for req:%u", curr, curr_entry->request, req->id);
 				curr_entry->header = 0;
 				curr_entry->footer = 0;
 
 				if (curr_entry->request == req->id) {
 					req->state = REQUEST_COMPLETED;
-					dbg_info("__verbs_nbpop_ledger(): removing RDMA i:%u req:%u", i, req->id);
+					dbg_info("removing RDMA i:%u req:%u", i, req->id);
 					htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
 					LIST_REMOVE(req, list);
 					LIST_INSERT_HEAD(&free_reqs_list, req, list);
 					int num = verbs_processes[i].local_FIN_ledger->num_entries;
 					int new_curr = (verbs_processes[i].local_FIN_ledger->curr + 1) % num;
 					verbs_processes[i].local_FIN_ledger->curr = new_curr;
-					dbg_info("__verbs_nbpop_ledger(): returning 0");
+					dbg_info("returning 0");
 					return 0;
 				}
 				else {
@@ -979,11 +979,11 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 		}
 	}
 	else {
-		dbg_info("__verbs_nbpop_ledger(): req->state != PENDING, returning 0");
+		dbg_info("req->state != PENDING, returning 0");
 		return 0;
 	}
 
-	dbg_info("__verbs_nbpop_ledger(): at end, returning %d",(req->state == REQUEST_COMPLETED)?0:1);
+	dbg_info("at end, returning %d",(req->state == REQUEST_COMPLETED)?0:1);
 	return (req->state == REQUEST_COMPLETED)?0:1;
 }
 
@@ -991,10 +991,10 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 	struct ibv_wc wc;
 
-	dbg_info("verbs_wait_any(): remaining: %d", htable_count(reqtable));
+	dbg_info("remaining: %d", htable_count(reqtable));
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait_any(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		goto error_exit;
 	}
 
@@ -1003,7 +1003,7 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 	}
 
 	if (htable_count(reqtable) == 0) {
-		log_err("verbs_wait_any(): No events on queue to wait on");
+		log_err("No events on queue to wait on");
 		goto error_exit;
 	}
 
@@ -1021,7 +1021,7 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 		}
 
 		if (wc.status != IBV_WC_SUCCESS) {
-			log_err("__verbs_wait_event(): (status==%d) != IBV_WC_SUCCESS\n",wc.status);
+			log_err("(status==%d) != IBV_WC_SUCCESS\n",wc.status);
 			goto error_exit;
 		}
 
@@ -1031,7 +1031,7 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 			verbs_req_t *req;
 			void *test;
 
-			dbg_info("verbs_wait_any(): removing event with cookie:%u", cookie);
+			dbg_info("removing event with cookie:%u", cookie);
 			existed = htable_remove(ledger_reqtable, (uint64_t)cookie, &test);
 			req = test;
 			SAFE_LIST_REMOVE(req, list);
@@ -1061,10 +1061,10 @@ int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 	static int i = -1; // this is static so we don't starve events in later processes
 	int curr, num_entries;
 
-	dbg_info("verbs_wait_any(): remaining: %d", htable_count(reqtable));
+	dbg_info("remaining: %d", htable_count(reqtable));
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait_any_ledger(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
@@ -1073,7 +1073,7 @@ int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 	}
 
 	if (htable_count(ledger_reqtable) == 0) {
-		log_err("verbs_wait_any_ledger(): No events on queue to wait_one()");
+		log_err("No events on queue to wait_one()");
 		return -1;
 	}
 
@@ -1123,7 +1123,7 @@ static inline int __verbs_complete_ledger_req(uint32_t cookie) {
 	if (htable_lookup(ledger_reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
 		return -1;
 
-	dbg_info("__verbs_complete_ledger_req(): completing ledger req %"PRIo32, cookie);
+	dbg_info("completing ledger req %"PRIo32, cookie);
 	pthread_mutex_lock(&tmp_req->mtx);
 	{
 		tmp_req->state = REQUEST_COMPLETED;
@@ -1142,7 +1142,7 @@ static inline int __verbs_complete_evd_req(uint32_t cookie) {
 	if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
 		return -1;
 
-	dbg_info("__verbs_complete_ledger_req(): completing event req %"PRIo32, cookie);
+	dbg_info("completing event req %"PRIo32, cookie);
 	pthread_mutex_lock(&tmp_req->mtx);
 	{
 		tmp_req->state = REQUEST_COMPLETED;
@@ -1162,10 +1162,10 @@ static void *__verbs_req_watcher(void *arg) {
 	uint32_t cookie;
 	struct ibv_wc wc[32];
 
-	ctr_info(" > reqs watcher started.");
+	dbg_info("reqs watcher started");
 
 	if( __initialized == 0 ) {
-		log_err("verbs_req_watcher(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		pthread_exit((void*)-1);
 	}
 
@@ -1175,7 +1175,7 @@ static void *__verbs_req_watcher(void *arg) {
 		// We don't want to spend too much time on this before moving to ledgers.
 		ne = ibv_poll_cq(verbs_ctx.ib_cq, 32, wc);
 		if (ne < 0) {
-			log_err("verbs_req_watcher(): poll CQ failed %d, EXITING WATCHER\n", ne);
+			log_err("poll CQ failed %d, EXITING WATCHER\n", ne);
 			pthread_exit((void*)-1);
 		}
 
@@ -1183,7 +1183,7 @@ static void *__verbs_req_watcher(void *arg) {
 			if (wc[i].status != IBV_WC_SUCCESS) {
 				// TODO: is there anything we can/must do with the error?
 				//	 I think the wr_id is valid, so we should probably notify the request.
-				log_err("verbs_req_watcher(): (status==%d) != IBV_WC_SUCCESS\n",wc[i].status);
+				log_err("(status==%d) != IBV_WC_SUCCESS\n",wc[i].status);
 				continue;
 			}
 
@@ -1200,7 +1200,7 @@ static void *__verbs_req_watcher(void *arg) {
 
 			// TODO: Is this the only other possibility?
 			if( DEC_COUNTER(handshake_rdma_write) <= 0 )
-				log_err("verbs_req_watcher(): handshake_rdma_write_count is negative");
+				log_err("handshake_rdma_write_count is negative");
 		}
 
 		for(i = 0; i < _photon_nproc; i++) {
@@ -1213,10 +1213,10 @@ static void *__verbs_req_watcher(void *arg) {
 				curr_entry->footer = 0;
 
 				if (__verbs_complete_ledger_req(curr_entry->request))
-					log_err("verbs_req_watcher(): couldn't find req for FIN ledger: %u", curr_entry->request);
+					log_err("couldn't find req for FIN ledger: %u", curr_entry->request);
 
 				verbs_processes[i].local_FIN_ledger->curr = (verbs_processes[i].local_FIN_ledger->curr + 1) % verbs_processes[i].local_FIN_ledger->num_entries;
-				dbg_info("verbs_req_watcher(): %d requests left in reqtable", htable_count(ledger_reqtable));
+				dbg_info("%d requests left in reqtable", htable_count(ledger_reqtable));
 			}
 		}
 	}
@@ -1236,10 +1236,10 @@ int verbs_wait_recv_buffer_rdma(int proc, int tag) {
 #endif
 	int curr, num_entries, still_searching;
 
-	ctr_info(" > verbs_wait_recv_buffer_rdma(%d, %d)", proc, tag);
+	dbg_info("(%d, %d)", proc, tag);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait_recv_buffer_rdma(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
@@ -1256,14 +1256,14 @@ int verbs_wait_recv_buffer_rdma(int proc, int tag) {
 		}
 	}
 
-	dbg_info("verbs_wait_recv_buffer_rdma(): Spinning on info ledger looking for receive request");
-	dbg_info("verbs_wait_recv_buffer_rdma(): curr == %d", verbs_processes[proc].local_rcv_info_ledger->curr);
+	dbg_info("Spinning on info ledger looking for receive request");
+	dbg_info("curr == %d", verbs_processes[proc].local_rcv_info_ledger->curr);
 
 
 	curr = verbs_processes[proc].local_rcv_info_ledger->curr;
 	curr_entry = &(verbs_processes[proc].local_rcv_info_ledger->entries[curr]);
 
-	dbg_info("verbs_wait_recv_buffer_rdma(): looking in position %d/%p", verbs_processes[proc].local_rcv_info_ledger->curr, curr_entry);
+	dbg_info("looking in position %d/%p", verbs_processes[proc].local_rcv_info_ledger->curr, curr_entry);
 
 #ifdef DEBUG
 	stime = time(NULL);
@@ -1307,11 +1307,11 @@ int verbs_wait_recv_buffer_rdma(int proc, int tag) {
 	verbs_processes[proc].curr_remote_buffer->size = curr_entry->size;
 	verbs_processes[proc].curr_remote_buffer->tag	 = curr_entry->tag;
 
-	dbg_info("verbs_wait_recv_buffer_rdma(): Request: %u", curr_entry->request);
-	dbg_info("verbs_wait_recv_buffer_rdma(): rkey: %u", curr_entry->rkey);
-	dbg_info("verbs_wait_recv_buffer_rdma(): Addr: %p", (void *)curr_entry->addr);
-	dbg_info("verbs_wait_recv_buffer_rdma(): Size: %u", curr_entry->size);
-	dbg_info("verbs_wait_recv_buffer_rdma(): Tag: %d",	curr_entry->tag);
+	dbg_info("Request: %u", curr_entry->request);
+	dbg_info("rkey: %u", curr_entry->rkey);
+	dbg_info("Addr: %p", (void *)curr_entry->addr);
+	dbg_info("Size: %u", curr_entry->size);
+	dbg_info("Tag: %d",	curr_entry->tag);
 
 	curr_entry->header = 0;
 	curr_entry->footer = 0;
@@ -1321,7 +1321,7 @@ int verbs_wait_recv_buffer_rdma(int proc, int tag) {
 	curr = (curr + 1) % num_entries;
 	verbs_processes[proc].local_rcv_info_ledger->curr = curr;
 
-	dbg_info("verbs_wait_recv_buffer_rdma(): new curr == %d", verbs_processes[proc].local_rcv_info_ledger->curr);
+	dbg_info("new curr == %d", verbs_processes[proc].local_rcv_info_ledger->curr);
 
 normal_exit:
 	return 0;
@@ -1344,10 +1344,10 @@ int verbs_wait_send_buffer_rdma(int proc, int tag) {
 #endif
 	int curr, num_entries, still_searching;
 
-	ctr_info(" > verbs_wait_send_buffer_rdma(%d, %d)", proc, tag);
+	dbg_info("(%d, %d)", proc, tag);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait_send_buffer_rdma(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
@@ -1367,8 +1367,8 @@ int verbs_wait_send_buffer_rdma(int proc, int tag) {
 	curr = verbs_processes[proc].local_snd_info_ledger->curr;
 	curr_entry = &(verbs_processes[proc].local_snd_info_ledger->entries[curr]);
 
-	dbg_info("verbs_wait_send_buffer_rdma(): Spinning on info ledger looking for receive request");
-	dbg_info("verbs_wait_send_buffer_rdma(): looking in position %d/%p", curr, curr_entry);
+	dbg_info("Spinning on info ledger looking for receive request");
+	dbg_info("looking in position %d/%p", curr, curr_entry);
 
 #ifdef DEBUG
 	stime = time(NULL);
@@ -1410,11 +1410,11 @@ int verbs_wait_send_buffer_rdma(int proc, int tag) {
 	verbs_processes[proc].curr_remote_buffer->size = curr_entry->size;
 	verbs_processes[proc].curr_remote_buffer->tag = curr_entry->tag;
 
-	dbg_info("verbs_wait_send_buffer_rdma(): Request: %u", curr_entry->request);
-	dbg_info("verbs_wait_send_buffer_rdma(): Context: %u", curr_entry->rkey);
-	dbg_info("verbs_wait_send_buffer_rdma(): Address: %p", (void *)curr_entry->addr);
-	dbg_info("verbs_wait_send_buffer_rdma(): Size: %u", curr_entry->size);
-	dbg_info("verbs_wait_send_buffer_rdma(): Tag: %d", curr_entry->tag);
+	dbg_info("Request: %u", curr_entry->request);
+	dbg_info("Context: %u", curr_entry->rkey);
+	dbg_info("Address: %p", (void *)curr_entry->addr);
+	dbg_info("Size: %u", curr_entry->size);
+	dbg_info("Tag: %d", curr_entry->tag);
 
 	curr_entry->header = 0;
 	curr_entry->footer = 0;
@@ -1424,7 +1424,7 @@ int verbs_wait_send_buffer_rdma(int proc, int tag) {
 	curr = (curr + 1) % num_entries;
 	verbs_processes[proc].local_snd_info_ledger->curr = curr;
 
-	dbg_info("verbs_wait_send_buffer_rdma(): new curr == %d", verbs_processes[proc].local_snd_info_ledger->curr);
+	dbg_info("new curr == %d", verbs_processes[proc].local_snd_info_ledger->curr);
 
 normal_exit:
 	return 0;
@@ -1443,14 +1443,14 @@ int verbs_wait_send_request_rdma(int tag) {
 #endif
 	int curr, num_entries, still_searching;
 
-	ctr_info(" > verbs_wait_send_request_rdma(%d)", tag);
+	dbg_info("(%d)", tag);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_wait_send_request_rdma(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		goto error_exit;
 	}
 
-	dbg_info("verbs_wait_send_request_rdma(): Spinning on send info ledger looking for send request");
+	dbg_info("Spinning on send info ledger looking for send request");
 
 	still_searching = 1;
 	iproc = -1;
@@ -1461,7 +1461,7 @@ int verbs_wait_send_request_rdma(int tag) {
 		iproc = (iproc+1)%_photon_nproc;
 		curr = verbs_processes[iproc].local_snd_info_ledger->curr;
 		curr_entry = &(verbs_processes[iproc].local_snd_info_ledger->entries[curr]);
-		dbg_info("verbs_wait_send_request_rdma(): looking in position %d/%p for proc %d", curr, curr_entry,iproc);
+		dbg_info("looking in position %d/%p for proc %d", curr, curr_entry,iproc);
 
 		count = 1;
 		entry_iterator = curr_entry;
@@ -1469,11 +1469,11 @@ int verbs_wait_send_request_rdma(int tag) {
 		while(entry_iterator->header == 1 && entry_iterator->footer == 1) {
 			if( (entry_iterator->addr == (uintptr_t)0) && (entry_iterator->rkey == 0) && ((tag < 0) || (entry_iterator->tag == tag )) ) {
 				still_searching = 0;
-				dbg_info("verbs_wait_send_request_rdma(): Found matching send request with tag %d from proc %d", tag, iproc);
+				dbg_info("Found matching send request with tag %d from proc %d", tag, iproc);
 				break;
 			}
 			else {
-				dbg_info("verbs_wait_send_request_rdma(): Found non-matching send request with tag %d from proc %d", tag, iproc);
+				dbg_info("Found non-matching send request with tag %d from proc %d", tag, iproc);
 				curr = (verbs_processes[iproc].local_snd_info_ledger->curr + count) % verbs_processes[iproc].local_snd_info_ledger->num_entries;
 				++count;
 				entry_iterator = &(verbs_processes[iproc].local_snd_info_ledger->entries[curr]);
@@ -1507,7 +1507,7 @@ int verbs_wait_send_request_rdma(int tag) {
 	curr = (curr + 1) % num_entries;
 	verbs_processes[iproc].local_snd_info_ledger->curr = curr;
 
-	dbg_info("verbs_wait_send_request_rdma(): new curr == %d", verbs_processes[iproc].local_snd_info_ledger->curr);
+	dbg_info("new curr == %d", verbs_processes[iproc].local_snd_info_ledger->curr);
 
 	return iproc;
 
@@ -1524,15 +1524,15 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	int curr, num_entries, qp_index, err;
 	uint32_t request_id;
 
-	ctr_info(" > verbs_post_recv_buffer_rdma(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
+	dbg_info("(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_post_recv_buffer_rdma(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
 	if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
-		log_err("verbs_post_recv_buffer_rdma(): Requested recv from ptr not in table");
+		log_err("Requested recv from ptr not in table");
 		goto error_exit;
 	}
 
@@ -1595,7 +1595,7 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_post_recv_buffer_rdma(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
@@ -1613,7 +1613,7 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 
 		req = __verbs_get_request();
 		if (!req) {
-			log_err("verbs_post_recv(): Couldn't allocate request\n");
+			log_err("Couldn't allocate request\n");
 			goto error_exit;
 		}
 		req->id = request_id;
@@ -1641,7 +1641,7 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	curr = (curr + 1) % num_entries;
 	verbs_processes[proc].remote_rcv_info_ledger->curr = curr;
 
-	dbg_info("verbs_post_recv_buffer_rdma(): New curr (proc=%d): %u", proc, verbs_processes[proc].remote_rcv_info_ledger->curr);
+	dbg_info("New curr (proc=%d): %u", proc, verbs_processes[proc].remote_rcv_info_ledger->curr);
 
 	return 0;
 
@@ -1659,10 +1659,10 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 	uint64_t cookie;
 	uint32_t request_id;
 
-	ctr_info(" > verbs_post_send_request_rdma(%d, %u, %d, %p)", proc, size, tag, request);
+	dbg_info("(%d, %u, %d, %p)", proc, size, tag, request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_post_send_request_rdma(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		goto error_exit;
 	}
 
@@ -1716,7 +1716,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_post_send_request_rdma(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
@@ -1733,7 +1733,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 
 		req = __verbs_get_request();
 		if (!req) {
-			log_err("verbs_post_send_request_rdma(): Couldn't allocate request\n");
+			log_err("Couldn't allocate request\n");
 			goto error_exit;
 		}
 		req->id = request_id;
@@ -1747,7 +1747,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 		req->tag = tag;
 		SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
 
-		dbg_info("verbs_post_send_request_rmda(): Inserting the RDMA request into the request table: %d/%p", request_id, req);
+		dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
 
 		if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
 			// this is bad, we've submitted the request, but we can't track it
@@ -1760,7 +1760,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 	curr = verbs_processes[proc].remote_snd_info_ledger->curr;
 	curr = (curr + 1) % num_entries;
 	verbs_processes[proc].remote_snd_info_ledger->curr = curr;
-	dbg_info("verbs_post_send_request_rmda(): New curr: %u", curr);
+	dbg_info("New curr: %u", curr);
 
 	return 0;
 
@@ -1779,15 +1779,15 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	uint64_t cookie;
 	uint32_t request_id;
 
-	ctr_info(" > verbs_post_send_buffer_rdma(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
+	dbg_info("(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_post_send_buffer_rdma(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		goto error_exit;
 	}
 
 	if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
-		log_err("verbs_post_send_buffer_rdma(): Requested post of send buffer for ptr not in table");
+		log_err("Requested post of send buffer for ptr not in table");
 		goto error_exit;
 	}
 
@@ -1841,7 +1841,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_post_send_buffer_rdma(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
@@ -1858,7 +1858,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 
 		req = __verbs_get_request();
 		if (!req) {
-			log_err("verbs_post_send_buffer_rdma(): Couldn't allocate request\n");
+			log_err("Couldn't allocate request\n");
 			goto error_exit;
 		}
 		req->id = request_id;
@@ -1872,7 +1872,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 		req->tag = tag;
 		SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
 
-		dbg_info("verbs_post_send_buffer_rmda(): Inserting the RDMA request into the request table: %d/%p", request_id, req);
+		dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
 
 		if (htable_insert(ledger_reqtable, (uint64_t)request_id, req) != 0) {
 			// this is bad, we've submitted the request, but we can't track it
@@ -1885,7 +1885,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	curr = verbs_processes[proc].remote_snd_info_ledger->curr;
 	curr = (curr + 1) % num_entries;
 	verbs_processes[proc].remote_snd_info_ledger->curr = curr;
-	dbg_info("verbs_post_send_buffer_rmda(): New curr: %u", curr);
+	dbg_info("New curr: %u", curr);
 
 	return 0;
 
@@ -1904,27 +1904,27 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 	int qp_index, err;
 	uint32_t request_id;
 
-	ctr_info(" > verbs_post_os_put(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
+	dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_post_os_put(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
 	drb = verbs_processes[proc].curr_remote_buffer;
 
 	if (drb->request == NULL_COOKIE) {
-		log_err("verbs_post_os_put(): Tried posting a send with no recv buffer. Have you called verbs_wait_recv_buffer_rdma() first?");
+		log_err("Tried posting a send with no recv buffer. Have you called verbs_wait_recv_buffer_rdma() first?");
 		return -1;
 	}
 
 	if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
-		log_err("verbs_post_os_put(): Tried posting a send for a buffer not registered");
+		log_err("Tried posting a send for a buffer not registered");
 		return -1;
 	}
 
 	if (drb->size > 0 && size + remote_offset > drb->size) {
-		log_err("verbs_post_os_put(): Requested to send %u bytes to a %u buffer size at offset %u", size, drb->size, remote_offset);
+		log_err("Requested to send %u bytes to a %u buffer size at offset %u", size, drb->size, remote_offset);
 		return -2;
 	}
 
@@ -1958,7 +1958,7 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_post_os_put(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
@@ -1974,7 +1974,7 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		req = __verbs_get_request();
 		if (!req) {
-			log_err("verbs_post_os_put(): Couldn't allocate request\n");
+			log_err("Couldn't allocate request\n");
 			goto error_exit;
 		}
 		req->id = request_id;
@@ -1990,7 +1990,7 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
 			// this is bad, we've submitted the request, but we can't track it
-			log_err("verbs_post_os_put(): Couldn't save request in hashtable");
+			log_err("Couldn't save request in hashtable");
 		}
 	}
 
@@ -2010,27 +2010,27 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 	int qp_index, err;
 	uint32_t request_id;
 
-	ctr_info(" > verbs_post_os_get(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
+	dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_post_os_get(): Library not initialized.	Call photon_init() first");
+		log_err("Library not initialized.	Call photon_init() first");
 		return -1;
 	}
 
 	drb = verbs_processes[proc].curr_remote_buffer;
 
 	if (drb->request == NULL_COOKIE) {
-		log_err("verbs_post_os_get(): Tried posting an os_get() with no send buffer");
+		log_err("Tried posting an os_get() with no send buffer");
 		return -1;
 	}
 
 	if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
-		log_err("verbs_post_os_get(): Tried posting a og_get() into a buffer that's not registered");
+		log_err("Tried posting a og_get() into a buffer that's not registered");
 		return -1;
 	}
 
 	if ( (drb->size > 0) && ((size+remote_offset) > drb->size) ) {
-		log_err("verbs_post_os_get(): Requested to get %u bytes from a %u buffer size at offset %u", size, drb->size, remote_offset);
+		log_err("Requested to get %u bytes from a %u buffer size at offset %u", size, drb->size, remote_offset);
 		return -2;
 	}
 
@@ -2064,7 +2064,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_post_os_get(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
@@ -2079,7 +2079,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		req = __verbs_get_request();
 		if (!req) {
-			log_err("verbs_post_os_get(): Couldn't allocate request\n");
+			log_err("Couldn't allocate request\n");
 			goto error_exit;
 		}
 		req->id = request_id;
@@ -2095,7 +2095,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 		if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
 			// this is bad, we've submitted the request, but we can't track it
-			log_err("verbs_post_os_get(): Couldn't save request in hashtable");
+			log_err("Couldn't save request in hashtable");
 		}
 	}
 
@@ -2113,25 +2113,25 @@ int verbs_send_FIN(int proc) {
 	verbs_rdma_FIN_ledger_entry_t *entry;
 	int curr, num_entries, qp_index, err;
 
-	ctr_info(" > verbs_send_FIN(%d)", proc);
+	dbg_info("(%d)", proc);
 
 	if( __initialized <= 0 ) {
-		log_err("verbs_send_FIN(): Library not initialized.	 Call photon_init() first");
+		log_err("Library not initialized.	 Call photon_init() first");
 		return -1;
 	}
 
 	if (verbs_processes[proc].curr_remote_buffer->request == NULL_COOKIE) {
-		log_err("verbs_send_FIN(): Cannot send FIN, curr_remote_buffer->request is NULL_COOKIE");
+		log_err("Cannot send FIN, curr_remote_buffer->request is NULL_COOKIE");
 		goto error_exit;
 	}
 
 	drb = verbs_processes[proc].curr_remote_buffer;
 	curr = verbs_processes[proc].remote_FIN_ledger->curr;
 	entry = &verbs_processes[proc].remote_FIN_ledger->entries[curr];
-	dbg_info("verbs_send_FIN() verbs_processes[%d].remote_FIN_ledger->curr==%d\n",proc, curr);
+	dbg_info("verbs_processes[%d].remote_FIN_ledger->curr==%d",proc, curr);
 
 	if( entry == NULL ) {
-		log_err("verbs_send_FIN() entry is NULL for proc=%d\n",proc);
+		log_err("entry is NULL for proc=%d",proc);
 		return 1;
 	}
 
@@ -2168,7 +2168,7 @@ int verbs_send_FIN(int proc) {
 			err = ibv_post_send(verbs_processes[proc].qp[qp_index], &wr, &bad_wr);
 #ifndef PHOTON_MULTITHREADED
 			if( err && __verbs_wait_one() ) {
-				log_err("verbs_send_FINE(): ibv_post_send() returned: %d and __verbs_wait_one() failed. Exiting",err);
+				log_err("returned: %d and __verbs_wait_one() failed. Exiting",err);
 				goto error_exit;
 			}
 #endif
