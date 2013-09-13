@@ -20,9 +20,6 @@ int opt_text_ping = 0;
 int opt_screen_out = 0;
 
 void _ping_action(void* _args) {
-  if (global_count > opt_iter_limit)
-    return;
-
   int success;
   hpx_parcel_t* p;
   struct pingpong_args* in_args = (struct pingpong_args*)_args;
@@ -39,20 +36,21 @@ void _ping_action(void* _args) {
     snprintf(out_args->msg, 128, "Message %d from proc 0", ping_id);
 
   if (opt_screen_out)
-    printf("Ping acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
+    printf("Ping acting; global_count=%d, message=%s\n", global_count, out_args->msg);
 
-  p = hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_pong_action", (void*)out_args, sizeof(struct pingpong_args), p);
-  success = hpx_send_parcel(other_loc, p);
+  if (global_count >= opt_iter_limit) {
+  }
+  else {
+    p = hpx_alloc(sizeof(hpx_parcel_t));
+    success = hpx_new_parcel("_pong_action", (void*)out_args, sizeof(struct pingpong_args), p);
+    success = hpx_send_parcel(other_loc, p);
+  }
 
   hpx_free(in_args);
   global_count++;
 }
 
 void _pong_action(void* _args) {
-  if (global_count > opt_iter_limit)
-    return;
-
   int success;
   int str_length;
   char copy_buffer[BUFFER_SIZE];
@@ -79,11 +77,16 @@ void _pong_action(void* _args) {
   }
 
   if (opt_screen_out)
-    printf("Pong acting; global_count=%d, message=%s\n", global_count+1, out_args->msg);
+    printf("Pong acting; global_count=%d, message=%s\n", global_count, out_args->msg);
 
-  p = hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_ping_action", (void*)out_args, sizeof(struct pingpong_args), p);
-  success = hpx_send_parcel(other_loc, p);
+
+  if (global_count >= opt_iter_limit - 1) {
+  }
+  else {
+    p = hpx_alloc(sizeof(hpx_parcel_t));
+    success = hpx_new_parcel("_ping_action", (void*)out_args, sizeof(struct pingpong_args), p);
+    success = hpx_send_parcel(other_loc, p);
+  }
 
   global_count++;
 }
@@ -140,7 +143,7 @@ int main(int argc, char** argv) {
   clock_gettime(CLOCK_MONOTONIC, &begin_ts);
   if (my_rank == 0) {
     args = hpx_alloc(sizeof(struct pingpong_args));
-    args->pong_id = 0;
+    args->pong_id = -1;
     //    p = hpx_alloc(sizeof(hpx_parcel_t));
     //    success = hpx_new_parcel("_ping_action", (void*)args, sizeof(struct pingpong_args), p);
     //    success = hpx_send_parcel(other_loc, p);
@@ -151,7 +154,7 @@ int main(int argc, char** argv) {
     free(result);
   }
   else if (my_rank ==1) {
-    while (global_count < opt_iter_limit-1) {
+    while (global_count < opt_iter_limit) {
     }
   }
   else
