@@ -654,7 +654,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-  // MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   int *child_retval;
 
