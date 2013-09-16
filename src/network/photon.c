@@ -33,6 +33,7 @@ network_ops_t photon_ops = {
   .init     = _init_photon,
   .finalize = _finalize_photon,
   .progress = _progress_photon,
+  .probe    = _probe_mpi,
   .send     = _send_mpi,
   .recv     = _recv_mpi,
   .sendrecv_test = _test_mpi,
@@ -69,6 +70,7 @@ int _init_photon(void) {
   if (temp == MPI_SUCCESS)
     retval = 0;
   else {
+    retval = HPX_ERROR;
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
@@ -79,12 +81,18 @@ int _init_photon(void) {
   photon_conf.comm = MPI_COMM_WORLD;
   photon_conf.backend = "verbs";
   photon_conf.nproc = _size_photon;
+  photon_conf.use_cma = 1;
+  photon_conf.eth_dev="eth0";
+  photon_conf.ib_dev="ib0";
+  photon_conf.ib_port=1;
   photon_conf.address = _rank_photon;
   temp =  photon_init(&photon_conf);
   if (temp == 0)
     retval = 0;
-  else
+  else {
+    retval = HPX_ERROR;
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+  }
 
  error:
   return retval;
