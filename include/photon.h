@@ -44,7 +44,9 @@ typedef struct photon_status_t * photonStatus;
 #define PHOTON_EXCH_XSP        0x0002
 
 #define PHOTON_SEND_LEDGER     0x0000
-#define PHOTON_RECV_LEDGER     0x0000
+#define PHOTON_RECV_LEDGER     0x0001
+
+#define PHOTON_ANY_SOURCE      -1
 
 int photon_initialized();
 int photon_init(photonConfig cfg);

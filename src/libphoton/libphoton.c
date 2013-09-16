@@ -217,6 +217,15 @@ int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 #endif
 }
 
+int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
+	if(__photon_backend->initialized() != PHOTON_OK) {
+		init_err();
+		return PHOTON_ERROR_NOINIT;
+	}
+
+	return __photon_backend->probe_ledger(proc, flag, type, status);
+}
+
 /*
   int photon_post_recv(int proc, char *ptr, uint32_t size, uint32_t *request) {
 

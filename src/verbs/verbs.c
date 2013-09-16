@@ -45,6 +45,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 int verbs_send_FIN(int proc);
 int verbs_wait_any(int *ret_proc, uint32_t *ret_req);
 int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
+int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status);
 
 /*
    We only want to spawn a dedicated thread for ledgers on
@@ -129,6 +130,7 @@ struct photon_backend_t photon_verbs_backend = {
 	.post_os_put = verbs_post_os_put,
 	.post_os_get = verbs_post_os_get,
 	.send_FIN = verbs_send_FIN,
+	.probe_ledger = verbs_probe_ledger,
 #ifndef PHOTON_MULTITHREADED
 	.wait_any = verbs_wait_any,
 	.wait_any_ledger = verbs_wait_any_ledger
@@ -500,6 +502,60 @@ int verbs_unregister_buffer(char *buffer, int size) {
 
 error_exit:
 	return -1;
+}
+
+int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
+	verbs_ri_ledger_t *ledger;
+	verbs_ri_ledger_entry_t *entry_iterator;
+	int i, j;
+	int start, end;
+
+	dbg_info("(%d, %d)", proc, type);
+
+	if (proc == PHOTON_ANY_SOURCE) {
+		start = 0;
+		end = _photon_nproc;
+	}
+	else {
+		start = proc;
+		end = proc+1;
+	}
+
+	for (i=start; i<end; i++) {
+		
+		switch (type) {
+		case PHOTON_SEND_LEDGER:
+			ledger = verbs_processes[i].local_snd_info_ledger;
+			break;
+		case PHOTON_RECV_LEDGER:
+			ledger = verbs_processes[i].local_rcv_info_ledger;
+			break;
+		default:
+			dbg_err("unknown ledger type");
+			goto error_exit;
+		}
+		
+		for (j=0; j<ledger->num_entries; j++) {
+			entry_iterator = &(ledger->entries[j]);
+			if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
+				*flag = i;
+				status->src_addr = i;
+				status->tag = entry_iterator->tag;
+
+				dbg_info("Request: %u", entry_iterator->request);
+				dbg_info("Context: %u", entry_iterator->rkey);
+				dbg_info("Address: %p", (void *)entry_iterator->addr);
+				dbg_info("Size: %u", entry_iterator->size);
+				dbg_info("Tag: %d", entry_iterator->tag);
+
+				return PHOTON_OK;
+			}
+		}
+	}
+	
+ error_exit:
+	*flag = -1;
+	return PHOTON_ERROR;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1429,7 +1485,6 @@ normal_exit:
 	return 0;
 error_exit:
 	return 1;
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////

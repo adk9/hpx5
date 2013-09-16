@@ -21,7 +21,8 @@ struct photon_backend_t photon_default_backend = {
 	.post_os_get = _photon_post_os_get,
 	.send_FIN = _photon_send_FIN,
 	.wait_any = _photon_wait_any,
-	.wait_any_ledger = _photon_wait_any_ledger
+	.wait_any_ledger = _photon_wait_any_ledger,
+	.probe_ledger = _photon_probe_ledger
 };
 
 int _photon_initialized() {
@@ -46,7 +47,7 @@ int _photon_unregister_buffer(char *buffer, int size) {
 	return PHOTON_OK;
 }
 
-int _photon_test(uint32_t request, int *flag, int *type, void *status) {
+int _photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
 	return PHOTON_OK;
 }
 
@@ -99,5 +100,9 @@ int _photon_wait_any(int *ret_proc, uint32_t *ret_req) {
 }
 
 int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
+	return PHOTON_OK;
+}
+
+int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
 	return PHOTON_OK;
 }
