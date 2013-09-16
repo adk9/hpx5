@@ -23,6 +23,8 @@ struct photon_config_t {
 
 struct photon_status_t {
 	uint64_t src_addr;
+	uint64_t size;
+	int request;
 	int tag;
 	int count;
 	int error;

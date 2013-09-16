@@ -512,6 +512,8 @@ int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
 
 	dbg_info("(%d, %d)", proc, type);
 
+	*flag = -1;
+
 	if (proc == PHOTON_ANY_SOURCE) {
 		start = 0;
 		end = _photon_nproc;
@@ -540,7 +542,9 @@ int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
 			if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
 				*flag = i;
 				status->src_addr = i;
+				status->request = entry_iterator->request;
 				status->tag = entry_iterator->tag;
+				status->size = entry_iterator->size;
 
 				dbg_info("Request: %u", entry_iterator->request);
 				dbg_info("Context: %u", entry_iterator->rkey);
@@ -548,13 +552,14 @@ int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
 				dbg_info("Size: %u", entry_iterator->size);
 				dbg_info("Tag: %d", entry_iterator->tag);
 
+				*flag = 1;
+
 				return PHOTON_OK;
 			}
 		}
 	}
 	
  error_exit:
-	*flag = -1;
 	return PHOTON_ERROR;
 }
 
@@ -2079,7 +2084,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 	}
 
 	if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
-		log_err("Tried posting a og_get() into a buffer that's not registered");
+		log_err("Tried posting a os_get() into a buffer that's not registered");
 		return -1;
 	}
 
