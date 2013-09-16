@@ -81,7 +81,7 @@ int photon_unregister_buffer(char *buffer, int size) {
 	return __photon_backend->unregister_buffer(buffer, size);
 }
 
-int photon_test(uint32_t request, int *flag, int *type, MPI_Status *status) {
+int photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
 	if(__photon_backend->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;

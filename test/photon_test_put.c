@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	while(1) {
 		int flag, type;
-		MPI_Status stat;
+		struct photon_status_t stat;
 		int tst = photon_test(sendReq, &flag, &type, &stat);
 		if( tst < 0 ) {
 			fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 		}
 		else {
 			if( flag ) {
-				fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, stat.MPI_SOURCE, stat.MPI_TAG, PHOTON_SEND_SIZE);
+				fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
 				break;
 			}
 			else {

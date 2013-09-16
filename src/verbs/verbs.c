@@ -30,7 +30,7 @@ int verbs_init(photonConfig cfg);
 int verbs_finalize(void);
 int verbs_register_buffer(char *buffer, int buffer_size);
 int verbs_unregister_buffer(char *buffer, int size);
-int verbs_test(uint32_t request, int *flag, int *type, void *status);
+int verbs_test(uint32_t request, int *flag, int *type, photonStatus status);
 int verbs_wait(uint32_t request);
 int verbs_wait_ledger(uint32_t request);
 int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
@@ -520,7 +520,7 @@ error_exit:
 // Regardless of the return value and the value of "flag", the parameter "type"
 // will be set to 0 (zero) when the request is of type event and 1 (one) when the
 // request is of type ledger.
-int verbs_test(uint32_t request, int *flag, int *type, void *status) {
+int verbs_test(uint32_t request, int *flag, int *type, photonStatus status) {
 	verbs_req_t *req;
 	void *test;
 	int ret_val;
@@ -571,11 +571,10 @@ int verbs_test(uint32_t request, int *flag, int *type, void *status) {
 
 	if( !ret_val ) {
 		*flag = 1;
-		//if( status != MPI_STATUS_IGNORE ) {
-		//	status->MPI_SOURCE = req->proc;
-		//	status->MPI_TAG = req->tag;
-		//	status->MPI_ERROR = 0; // FIXME: Make sure that "0" means success in MPI?
-		//}
+		status->src_addr = req->proc;
+		status->tag = req->tag;
+		status->count = 1;
+		status->error = 0;
 		dbg_info("returning 0, flag:1");
 		return 0;
 	}

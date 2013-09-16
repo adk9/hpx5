@@ -21,7 +21,15 @@ struct photon_config_t {
 	int ib_port;
 };
 
+struct photon_status_t {
+	uint64_t src_addr;
+	int tag;
+	int count;
+	int error;
+};
+
 typedef struct photon_config_t * photonConfig;
+typedef struct photon_status_t * photonStatus;
 
 #ifdef WITH_XSP
 #include "photon_xsp.h"
@@ -34,6 +42,9 @@ typedef struct photon_config_t * photonConfig;
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
 #define PHOTON_EXCH_XSP        0x0002
+
+#define PHOTON_SEND_LEDGER     0x0000
+#define PHOTON_RECV_LEDGER     0x0000
 
 int photon_initialized();
 int photon_init(photonConfig cfg);
@@ -51,13 +62,15 @@ int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
 int photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
 int photon_send_FIN(int proc);
-int photon_test(uint32_t request, int *flag, int *type, MPI_Status *status);
+int photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 
 int photon_wait(uint32_t request);
 int photon_wait_ledger(uint32_t request);
 
 int photon_wait_any(int *ret_proc, uint32_t *ret_req);
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
+
+int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
 
 // The following 4 functions are implemented over DAPL
 // only and will not be supported in the future.
