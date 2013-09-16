@@ -10,9 +10,9 @@ struct photon_config_t {
 
 	int use_cma;
 	int use_forwarder;
-	
+
 	MPI_Comm comm;
-	
+
 	char *backend;
 	int meta_exch;
 

@@ -45,19 +45,19 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	struct ibv_context **ctx_list;
 	int i, iproc, num_devs;
 
-    if (__photon_config->use_cma) {
-        ctx->cm_schannel = rdma_create_event_channel();
-        if (!ctx->cm_schannel) {
+	if (__photon_config->use_cma) {
+		ctx->cm_schannel = rdma_create_event_channel();
+		if (!ctx->cm_schannel) {
 			dbg_err("Could not create RDMA event channel");
-            return PHOTON_ERROR;
-        }
+			return PHOTON_ERROR;
+		}
 
 		ctx->cm_rchannel = rdma_create_event_channel();
-        if (!ctx->cm_rchannel) {
-            dbg_err("Could not create RDMA event channel");
-            return PHOTON_ERROR;
-        }
-		
+		if (!ctx->cm_rchannel) {
+			dbg_err("Could not create RDMA event channel");
+			return PHOTON_ERROR;
+		}
+
 		// we will use this CM ID to listen for RDMA CMA connections
 		if (rdma_create_id(ctx->cm_rchannel, &ctx->cm_id, NULL, RDMA_PS_TCP)) {
 			dbg_err("Could not create CM ID");
@@ -73,12 +73,12 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 
 		// initialize some QP info that gets set later
 		for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-            ctx->verbs_processes[iproc].num_qp = MAX_QP;
+			ctx->verbs_processes[iproc].num_qp = MAX_QP;
 			for (i = 0; i < MAX_QP; i++) {
 				ctx->verbs_processes[iproc].qp[i] = NULL;
 			}
 		}
-	
+
 		// start the RDMA CMA listener
 		// first rank only connects
 		if (_photon_myrank > 0) {
@@ -91,14 +91,14 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 			dbg_err("No IB devices found");
 			return PHOTON_ERROR;
 		}
-		
+
 		for (i=0; i<=num_devs; i++) {
 			if (!strcmp(ibv_get_device_name(dev_list[i]), ctx->ib_dev)) {
 				dbg_info("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
 				break;
 			}
 		}
-		
+
 		ctx->ib_context = ibv_open_device(dev_list[i]);
 		if (!ctx->ib_context) {
 			dbg_err("Could not get context for %s\n", ibv_get_device_name(dev_list[i]));
@@ -120,7 +120,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 			dbg_err("Could not create protection domain");
 			return PHOTON_ERROR;
 		}
-		
+
 		// create a completion queue
 		// The second argument (cq_size) can be something like 40K.	 It should be
 		// within NIC MaxCQEntries limit
@@ -129,7 +129,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 			dbg_err("Could not create completion queue");
 			return PHOTON_ERROR;
 		}
-		
+
 		{
 			// create shared receive queue
 			struct ibv_srq_init_attr attr = {
@@ -138,23 +138,23 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 					.max_sge = 1
 				}
 			};
-			
+
 			ctx->ib_srq = ibv_create_srq(ctx->ib_pd, &attr);
 			if (!ctx->ib_srq) {
 				dbg_err("Could not create SRQ");
 				return PHOTON_ERROR;
 			}
 		}
-		
+
 		// create QPs in the non-CMA case and transition to INIT state
 		// RDMA CMA does this transition for us when we connect
 		for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-			
+
 			//FIXME: What if I want to send to myself?
 			if( iproc == _photon_myrank ) {
 				continue;
 			}
-			
+
 			ctx->verbs_processes[iproc].num_qp = MAX_QP;
 			for (i = 0; i < MAX_QP; ++i) {
 				struct ibv_qp_init_attr attr = {
@@ -171,26 +171,26 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 					.qp_type    = IBV_QPT_RC
 					//.sq_sig_all = 0
 				};
-				
+
 				ctx->verbs_processes[iproc].qp[i] = ibv_create_qp(ctx->ib_pd, &attr);
 				if (!(ctx->verbs_processes[iproc].qp[i])) {
 					dbg_err("Could not create QP[%d] for task:%d", i, iproc);
 					return PHOTON_ERROR;
 				}
-				
+
 				{
 					struct ibv_qp_attr attr;
-					
+
 					attr.qp_state    = IBV_QPS_INIT;
 					attr.pkey_index	 = 0;
 					attr.port_num	 = ctx->ib_port;
 					attr.qp_access_flags = IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
-					
+
 					if (ibv_modify_qp(ctx->verbs_processes[iproc].qp[i], &attr,
-									  IBV_QP_STATE		 |
-									  IBV_QP_PKEY_INDEX	 |
-									  IBV_QP_PORT		 |
-									  IBV_QP_ACCESS_FLAGS)) {
+					                  IBV_QP_STATE		 |
+					                  IBV_QP_PKEY_INDEX	 |
+					                  IBV_QP_PORT		 |
+					                  IBV_QP_ACCESS_FLAGS)) {
 						dbg_err("Failed to modify QP[%d] for task:%d to INIT", i, iproc);
 						return PHOTON_ERROR;
 					}
@@ -198,7 +198,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 			}
 		}
 	}
-	
+
 	return PHOTON_OK;
 }
 
@@ -219,13 +219,13 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 		dbg_err("verbs_connect_peers(): Cannot get interface addrs");
 		goto error_exit;
 	}
-	
+
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		if (ifa->ifa_addr == NULL)
 			continue;
-		
+
 		if (!strcmp(ifa->ifa_name, __photon_config->eth_dev) &&
-			ifa->ifa_addr->sa_family == AF_INET) {
+		        ifa->ifa_addr->sa_family == AF_INET) {
 			break;
 		}
 	}
@@ -234,7 +234,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 		dbg_err("verbs_connect_peers(): Did not find interface info for %s\n", __photon_config->eth_dev);
 		goto error_exit;
 	}
-	
+
 	for(iproc=0; iproc<_photon_nproc; ++iproc) {
 
 		if( iproc == _photon_myrank ) {
@@ -253,7 +253,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 			else {
 				local_info[iproc][i].qpn = ctx->verbs_processes[iproc].qp[i]->qp_num;
 			}
-			
+
 			local_info[iproc][i].lid = ctx->ib_lid;
 			local_info[iproc][i].psn = (lrand48() & 0xfff000) + _photon_myrank+1;
 			local_info[iproc][i].ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
@@ -279,7 +279,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 			if( iproc == _photon_myrank ) {
 				continue;
 			}
-			
+
 			if(__verbs_connect_qps(ctx, local_info[iproc], remote_info[iproc], iproc, MAX_QP)) {
 				dbg_err("verbs_connect_peers(): Cannot connect queue pairs");
 				goto error_exit;
@@ -305,7 +305,7 @@ error_exit:
 }
 
 static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_id) {
-	// assign the verbs context if this is the first connection 
+	// assign the verbs context if this is the first connection
 	if (!ctx->ib_context) {
 		ctx->ib_context = cm_id->verbs;
 		if (!ctx->ib_context) {
@@ -319,7 +319,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 			dbg_err("could not create PD");
 			goto error_exit;
 		}
-		
+
 		ctx->ib_cc = ibv_create_comp_channel(ctx->ib_context);
 		if (!ctx->ib_cc) {
 			dbg_err("could not create completion channel");
@@ -331,7 +331,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 			dbg_err("could not create CQ");
 			goto error_exit;
 		}
-		
+
 		if (ibv_req_notify_cq(ctx->ib_cq, 0)) {
 			dbg_err("could not request CQ notifications");
 			goto error_exit;
@@ -343,7 +343,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 			goto error_exit;
 		}
 	}
-	
+
 	struct ibv_qp_init_attr attr = {
 		.qp_context = ctx,
 		.send_cq = ctx->ib_cq,
@@ -359,42 +359,42 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 		.sq_sig_all = 1,
 		.srq = NULL
 	};
-	
+
 	// create a new QP for each connection
 	if (rdma_create_qp(cm_id, ctx->ib_pd, &attr)) {
 		dbg_err("could not create QP");
 		goto error_exit;
 	}
-	
+
 	return PHOTON_OK;
-	
- error_exit:
+
+error_exit:
 	return PHOTON_ERROR;
 }
 
 static void *__rdma_cma_listener_thread(void *arg) {
 	verbs_cnct_ctx *ctx = (verbs_cnct_ctx*)arg;
 	int n, num_connected = 0;
-    char *service;
+	char *service;
 
-    struct addrinfo *res;
-    struct addrinfo hints = {
-        .ai_flags    = AI_PASSIVE,
-        .ai_family   = AF_UNSPEC,
-        .ai_socktype = SOCK_STREAM
-    };
-    struct rdma_cm_event *event;
-    struct sockaddr_in sin;
-    struct rdma_cm_id *child_cm_id;
-    struct rdma_conn_param conn_param;
+	struct addrinfo *res;
+	struct addrinfo hints = {
+		.ai_flags    = AI_PASSIVE,
+		.ai_family   = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM
+	};
+	struct rdma_cm_event *event;
+	struct sockaddr_in sin;
+	struct rdma_cm_id *child_cm_id;
+	struct rdma_conn_param conn_param;
 
 	if (asprintf(&service, "%d", RDMA_CMA_BASE_PORT + _photon_myrank) < 0)
-        goto error_exit;
-	
-    if ((n = getaddrinfo(NULL, service, &hints, &res)) < 0) {
-        dbg_err("%s for port %d\n", gai_strerror(n), RDMA_CMA_BASE_PORT + _photon_myrank);
-        goto error_exit;
-    }
+		goto error_exit;
+
+	if ((n = getaddrinfo(NULL, service, &hints, &res)) < 0) {
+		dbg_err("%s for port %d\n", gai_strerror(n), RDMA_CMA_BASE_PORT + _photon_myrank);
+		goto error_exit;
+	}
 
 	sin.sin_addr.s_addr = 0;
 	sin.sin_family = AF_INET;
@@ -411,67 +411,66 @@ static void *__rdma_cma_listener_thread(void *arg) {
 	}
 
 	// accept some number of connections
-	// this currently depends on rank position	
+	// this currently depends on rank position
 	do {
-		
+
 		dbg_info("Listening for %d more connections on port %d", _photon_myrank - num_connected, RDMA_CMA_BASE_PORT + _photon_myrank);
 
-        if (rdma_get_cm_event(ctx->cm_rchannel, &event)) {
+		if (rdma_get_cm_event(ctx->cm_rchannel, &event)) {
 			dbg_err("coult not get event %s", strerror(errno));
 			goto error_exit;
 		}
 
 		switch (event->event) {
-		case RDMA_CM_EVENT_CONNECT_REQUEST:
-			{
-				child_cm_id = (struct rdma_cm_id *)event->id;
-				if (!child_cm_id) {
-					dbg_err("could not get child CM ID");
-					goto error_exit;
-				}
-				
-				// figure out who just connected to us and accept
-				struct rdma_cma_priv *priv;
-				if (event->param.conn.private_data &&
-					(event->param.conn.private_data_len > 0)) {
-					priv = (struct rdma_cma_priv*)event->param.conn.private_data;
-					ctx->verbs_processes[priv->address].remote_priv = malloc(event->param.conn.private_data_len);
-					memcpy(ctx->verbs_processes[priv->address].remote_priv,
-						   event->param.conn.private_data,
-						   event->param.conn.private_data_len);
-				}
-				else {
-					// TODO: use another mechanism to identify remote peer
-					dbg_err("no remote connect info found");
-					goto error_exit;
-				}
-				
-				dbg_info("got connection request from %d", (int)priv->address);
-				
-				if (__verbs_init_context_cma(ctx, child_cm_id) != PHOTON_OK) {
-					goto error_exit;
-				}
-				
-				dbg_info("created context");
-				
-				// save the child CM_ID in our process list
-				ctx->verbs_processes[priv->address].cm_id = child_cm_id;
-				// save the QP in our process list
-				ctx->verbs_processes[priv->address].qp[0] = child_cm_id->qp;
-				
-				memset(&conn_param, 0, sizeof conn_param);
-				conn_param.responder_resources = ctx->tx_depth;
-				conn_param.initiator_depth = ctx->rx_depth;
-				// don't send any private data back
-				conn_param.private_data = NULL;
-				conn_param.private_data_len = 0;
-				
-				if (rdma_accept(child_cm_id, &conn_param)) {
-					dbg_err("rdma_accept failed: %s", strerror(errno));
-					goto error_exit;
-				}
+		case RDMA_CM_EVENT_CONNECT_REQUEST: {
+			child_cm_id = (struct rdma_cm_id *)event->id;
+			if (!child_cm_id) {
+				dbg_err("could not get child CM ID");
+				goto error_exit;
 			}
-			break;
+
+			// figure out who just connected to us and accept
+			struct rdma_cma_priv *priv;
+			if (event->param.conn.private_data &&
+			        (event->param.conn.private_data_len > 0)) {
+				priv = (struct rdma_cma_priv*)event->param.conn.private_data;
+				ctx->verbs_processes[priv->address].remote_priv = malloc(event->param.conn.private_data_len);
+				memcpy(ctx->verbs_processes[priv->address].remote_priv,
+				       event->param.conn.private_data,
+				       event->param.conn.private_data_len);
+			}
+			else {
+				// TODO: use another mechanism to identify remote peer
+				dbg_err("no remote connect info found");
+				goto error_exit;
+			}
+
+			dbg_info("got connection request from %d", (int)priv->address);
+
+			if (__verbs_init_context_cma(ctx, child_cm_id) != PHOTON_OK) {
+				goto error_exit;
+			}
+
+			dbg_info("created context");
+
+			// save the child CM_ID in our process list
+			ctx->verbs_processes[priv->address].cm_id = child_cm_id;
+			// save the QP in our process list
+			ctx->verbs_processes[priv->address].qp[0] = child_cm_id->qp;
+
+			memset(&conn_param, 0, sizeof conn_param);
+			conn_param.responder_resources = ctx->tx_depth;
+			conn_param.initiator_depth = ctx->rx_depth;
+			// don't send any private data back
+			conn_param.private_data = NULL;
+			conn_param.private_data_len = 0;
+
+			if (rdma_accept(child_cm_id, &conn_param)) {
+				dbg_err("rdma_accept failed: %s", strerror(errno));
+				goto error_exit;
+			}
+		}
+		break;
 		case RDMA_CM_EVENT_ESTABLISHED:
 			dbg_info("connection established");
 			num_connected++;
@@ -484,27 +483,28 @@ static void *__rdma_cma_listener_thread(void *arg) {
 
 		rdma_ack_cm_event(event);
 
-	} while (num_connected < _photon_myrank);
-	
+	}
+	while (num_connected < _photon_myrank);
+
 	dbg_info("Listener thread done");
 
- error_exit:
+error_exit:
 	return NULL;
 }
 
 static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_info, verbs_cnct_info **remote_info, int num_qp) {
-    struct addrinfo *res;
-    struct addrinfo hints = {
-        .ai_family   = AF_UNSPEC,
-        .ai_socktype = SOCK_STREAM
-    };
+	struct addrinfo *res;
+	struct addrinfo hints = {
+		.ai_family   = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM
+	};
 
-    char *service, *host;
-    int i, n;
-    int n_retries = RDMA_CMA_RETRIES;
-    struct rdma_cm_event *event;
-    struct sockaddr_in sin;
-    struct rdma_conn_param conn_param;
+	char *service, *host;
+	int i, n;
+	int n_retries = RDMA_CMA_RETRIES;
+	struct rdma_cm_event *event;
+	struct sockaddr_in sin;
+	struct rdma_conn_param conn_param;
 
 	// TODO: allow multiple RDMA CMA connections per process
 	if (num_qp > 1) {
@@ -523,64 +523,64 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
 
 		if (asprintf(&service, "%d", RDMA_CMA_BASE_PORT + i) < 0)
 			goto error_exit;
-		
+
 		if ((n = getaddrinfo(host, service, &hints, &res) < 0)) {
 			dbg_err("%s for %s:%d", gai_strerror(n), host, RDMA_CMA_BASE_PORT + _photon_myrank);
 			goto error_exit;
-		}	   
+		}
 
 		sin.sin_addr.s_addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr.s_addr;
 		sin.sin_family = AF_INET;
-        sin.sin_port = htons(RDMA_CMA_BASE_PORT + i);
+		sin.sin_port = htons(RDMA_CMA_BASE_PORT + i);
 
 		if (rdma_create_id(ctx->cm_schannel, &(ctx->verbs_processes[i].cm_id), NULL, RDMA_PS_TCP)) {
-            dbg_err("Could not create CM ID");
+			dbg_err("Could not create CM ID");
 			goto error_exit;
 		}
 
-	retry_addr:
+retry_addr:
 		if (rdma_resolve_addr(ctx->verbs_processes[i].cm_id, NULL, (struct sockaddr *)&sin, RDMA_CMA_TIMEOUT)) {
 			dbg_err("resolve addr failed: %s", strerror(errno));
-            goto error_exit;
-        }
+			goto error_exit;
+		}
 
-        if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
-            goto error_exit;
+		if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
+			goto error_exit;
 		}
 
 		if (event->event == RDMA_CM_EVENT_ADDR_ERROR && (n_retries-- > 0)) {
-            rdma_ack_cm_event(event);
-            goto retry_addr;
-        }
-		
-        if (event->event != RDMA_CM_EVENT_ADDR_RESOLVED) {
-            dbg_err("unexpected CM event %d", event->event);
-            goto error_exit;
+			rdma_ack_cm_event(event);
+			goto retry_addr;
 		}
-        rdma_ack_cm_event(event);
-		
-	retry_route:
+
+		if (event->event != RDMA_CM_EVENT_ADDR_RESOLVED) {
+			dbg_err("unexpected CM event %d", event->event);
+			goto error_exit;
+		}
+		rdma_ack_cm_event(event);
+
+retry_route:
 		n_retries = RDMA_CMA_RETRIES;
-		
+
 		if (rdma_resolve_route(ctx->verbs_processes[i].cm_id, RDMA_CMA_TIMEOUT)) {
 			dbg_err("rdma_resolve_route failed: %s", strerror(errno));
-            goto error_exit;
-        }
-
-		if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
-            goto error_exit;
+			goto error_exit;
 		}
 
-        if (event->event == RDMA_CM_EVENT_ROUTE_ERROR && (n_retries-- > 0)) {
-            rdma_ack_cm_event(event);
-            goto retry_route;
-        }
+		if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
+			goto error_exit;
+		}
 
-        if (event->event != RDMA_CM_EVENT_ROUTE_RESOLVED) {
-            dbg_err("unexpected CM event %d", event->event);
-            goto error_exit;
-        }
-        rdma_ack_cm_event(event);
+		if (event->event == RDMA_CM_EVENT_ROUTE_ERROR && (n_retries-- > 0)) {
+			rdma_ack_cm_event(event);
+			goto retry_route;
+		}
+
+		if (event->event != RDMA_CM_EVENT_ROUTE_RESOLVED) {
+			dbg_err("unexpected CM event %d", event->event);
+			goto error_exit;
+		}
+		rdma_ack_cm_event(event);
 
 		if (__verbs_init_context_cma(ctx, ctx->verbs_processes[i].cm_id) != PHOTON_OK) {
 			goto error_exit;
@@ -594,39 +594,39 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
 		};
 
 		memset(&conn_param, 0, sizeof conn_param);
-        conn_param.responder_resources = ctx->tx_depth;
+		conn_param.responder_resources = ctx->tx_depth;
 		conn_param.initiator_depth = ctx->rx_depth;
-        conn_param.retry_count = RDMA_CMA_RETRIES;
-        conn_param.private_data = &priv_data;
+		conn_param.retry_count = RDMA_CMA_RETRIES;
+		conn_param.private_data = &priv_data;
 		conn_param.private_data_len = sizeof(struct rdma_cma_priv);
 
-        if (rdma_connect(ctx->verbs_processes[i].cm_id, &conn_param)) {
-            dbg_err("rdma_connect failure: %s", strerror(errno));
-            goto error_exit;
+		if (rdma_connect(ctx->verbs_processes[i].cm_id, &conn_param)) {
+			dbg_err("rdma_connect failure: %s", strerror(errno));
+			goto error_exit;
 		}
 
-        if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
-            goto error_exit;
+		if (rdma_get_cm_event(ctx->cm_schannel, &event)) {
+			goto error_exit;
 		}
 
-        if (event->event != RDMA_CM_EVENT_ESTABLISHED) {
-            dbg_err("unexpected CM event %d", event->event);
-            goto error_exit;
+		if (event->event != RDMA_CM_EVENT_ESTABLISHED) {
+			dbg_err("unexpected CM event %d", event->event);
+			goto error_exit;
 		}
 
-        if (event->param.conn.private_data &&
-			(event->param.conn.private_data_len > 0)) {
+		if (event->param.conn.private_data &&
+		        (event->param.conn.private_data_len > 0)) {
 			// we got some data back from the remote peer
 			// not used
-        }
+		}
 		rdma_ack_cm_event(event);
 
 		freeaddrinfo(res);
-	}	
+	}
 
 	return PHOTON_OK;
 
- error_exit:
+error_exit:
 	return PHOTON_ERROR;
 }
 
@@ -637,10 +637,10 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
 
 	for (i = 0; i < num_qp; ++i) {
 		dbg_info("[%d/%d], i=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x",
-				 _photon_myrank, _photon_nproc, i,
-				 remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
-				 verbs_process->qp[i]->qp_num);
-		
+		         _photon_myrank, _photon_nproc, i,
+		         remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
+		         verbs_process->qp[i]->qp_num);
+
 		struct ibv_qp_attr attr = {
 			.qp_state	        = IBV_QPS_RTR,
 			.path_mtu	        = 3, // (3 == IBV_MTU_1024) which means 1024. Is this a good value?
@@ -749,7 +749,7 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
 				continue;
 			}
 			sprintf(smsg, "%08x:%08x:%08x:%08x", local_info[peer][i].lid, local_info[peer][i].qpn,
-					local_info[peer][i].psn, local_info[peer][i].ip.s_addr);
+			        local_info[peer][i].psn, local_info[peer][i].ip.s_addr);
 			//fprintf(stderr,"[%d/%d] Sending lid:qpn:psn:ip = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
 			if( MPI_Send(smsg, msg_size , MPI_BYTE, peer, 0, _photon_comm ) != MPI_SUCCESS ) {
 				dbg_err("Could not send local address");
@@ -768,10 +768,10 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
 				goto err_exit;
 			}
 			sscanf(rmsg[peer], "%x:%x:%x:%x",
-				   &remote_info[peer][i].lid,
-				   &remote_info[peer][i].qpn,
-				   &remote_info[peer][i].psn,
-				   &remote_info[peer][i].ip.s_addr);
+			       &remote_info[peer][i].lid,
+			       &remote_info[peer][i].qpn,
+			       &remote_info[peer][i].psn,
+			       &remote_info[peer][i].ip.s_addr);
 
 			//fprintf(stderr,"[%d/%d] Received lid:qpn:psn:ip = %x:%x:%x:%s from task=%d\n",
 			//		_photon_myrank, _photon_nproc,

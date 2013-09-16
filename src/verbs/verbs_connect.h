@@ -10,7 +10,7 @@ typedef struct verbs_cnct_ctx_t {
 	struct ibv_pd             *ib_pd;
 	struct ibv_cq             *ib_cq;
 	struct ibv_srq            *ib_srq;
-    struct ibv_comp_channel   *ib_cc;
+	struct ibv_comp_channel   *ib_cc;
 	int                        ib_lid;
 	ProcessInfo               *verbs_processes;
 
@@ -26,7 +26,7 @@ typedef struct verbs_cnct_info_t {
 	int lid;
 	int qpn;
 	int psn;
-    struct in_addr ip;
+	struct in_addr ip;
 } verbs_cnct_info;
 
 int __verbs_init_context(verbs_cnct_ctx *ctx);

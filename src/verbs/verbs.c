@@ -46,7 +46,7 @@ int verbs_send_FIN(int proc);
 int verbs_wait_any(int *ret_proc, uint32_t *ret_req);
 int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
-/* 
+/*
    We only want to spawn a dedicated thread for ledgers on
    multithreaded instantiations of the library (e.g. in xspd).
    FIXME: All of the pthreads stuff below should also depend on this.
@@ -70,15 +70,15 @@ static verbs_cnct_ctx verbs_ctx = {
 	.ib_context = NULL,
 	.ib_pd = NULL,
 	.ib_cq = NULL,
-    .ib_srq = NULL,
-    .ib_cc = NULL,
+	.ib_srq = NULL,
+	.ib_cc = NULL,
 	.ib_lid = 0,
 	.verbs_processes = NULL,
 	.cm_schannel = NULL,
 	.cm_rchannel = NULL,
-    .cm_id = NULL,
-    .tx_depth = 16,
-    .rx_depth = 16
+	.cm_id = NULL,
+	.tx_depth = 16,
+	.rx_depth = 16
 };
 
 static htable_t *reqtable, *ledger_reqtable;
@@ -114,24 +114,24 @@ static time_t _tictoc(time_t stime, int proc) {
 /* we are now a Photon backend */
 struct photon_backend_t photon_verbs_backend = {
 	.initialized = verbs_initialized,
-    .init = verbs_init,
-    .finalize = verbs_finalize,
-    .register_buffer = verbs_register_buffer,
-    .unregister_buffer = verbs_unregister_buffer,
-    .test = verbs_test,
-    .wait = verbs_wait,
-    .wait_ledger = verbs_wait,
-    .post_recv_buffer_rdma = verbs_post_recv_buffer_rdma,
-    .post_send_buffer_rdma = verbs_post_send_buffer_rdma,
-    .wait_recv_buffer_rdma = verbs_wait_recv_buffer_rdma,
-    .wait_send_buffer_rdma = verbs_wait_send_buffer_rdma,
-    .wait_send_request_rdma = verbs_wait_send_request_rdma,
-    .post_os_put = verbs_post_os_put,
-    .post_os_get = verbs_post_os_get,
-    .send_FIN = verbs_send_FIN,
+	.init = verbs_init,
+	.finalize = verbs_finalize,
+	.register_buffer = verbs_register_buffer,
+	.unregister_buffer = verbs_unregister_buffer,
+	.test = verbs_test,
+	.wait = verbs_wait,
+	.wait_ledger = verbs_wait,
+	.post_recv_buffer_rdma = verbs_post_recv_buffer_rdma,
+	.post_send_buffer_rdma = verbs_post_send_buffer_rdma,
+	.wait_recv_buffer_rdma = verbs_wait_recv_buffer_rdma,
+	.wait_send_buffer_rdma = verbs_wait_send_buffer_rdma,
+	.wait_send_request_rdma = verbs_wait_send_request_rdma,
+	.post_os_put = verbs_post_os_put,
+	.post_os_get = verbs_post_os_get,
+	.send_FIN = verbs_send_FIN,
 #ifndef PHOTON_MULTITHREADED
-    .wait_any = verbs_wait_any,
-    .wait_any_ledger = verbs_wait_any_ledger
+	.wait_any = verbs_wait_any,
+	.wait_any_ledger = verbs_wait_any_ledger
 #endif
 };
 
@@ -185,7 +185,7 @@ int __verbs_init_common(photonConfig cfg) {
 		verbs_ctx.ib_dev = cfg->ib_dev;
 
 	if (cfg->ib_port)
-	    verbs_ctx.ib_port = cfg->ib_port;
+		verbs_ctx.ib_port = cfg->ib_port;
 
 	if (cfg->use_cma && !cfg->eth_dev) {
 		log_err("CMA specified but Ethernet dev missing");
@@ -365,7 +365,7 @@ int verbs_init(photonConfig cfg) {
 
 	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
 		struct mem_register_req *mem_reg_req;
-	    dbg_info("registering buffer in queue");
+		dbg_info("registering buffer in queue");
 		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
 		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
 		// FIXME: What if this fails?
@@ -1823,7 +1823,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 			.lkey		= shared_storage->mr->lkey
 		};
 
-		rmt_addr	= verbs_processes[proc].remote_snd_info_ledger->remote.addr;
+		rmt_addr  = verbs_processes[proc].remote_snd_info_ledger->remote.addr;
 		rmt_addr += verbs_processes[proc].remote_snd_info_ledger->curr * sizeof(*entry);
 		cookie = (( (uint64_t)proc)<<32) | request_id;
 		struct ibv_send_wr wr = {

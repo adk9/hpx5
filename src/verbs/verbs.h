@@ -42,7 +42,7 @@ typedef struct proc_info_t {
 	// for RDMA CMA connections
 	struct rdma_cm_id *cm_id;
 	void              *local_priv;
-	uint64_t           local_priv_size;  
+	uint64_t           local_priv_size;
 	void              *remote_priv;
 	uint64_t           remote_priv_size;
 

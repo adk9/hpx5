@@ -101,24 +101,19 @@ AC_ARG_ENABLE([mpich2], AC_HELP_STRING([--disable-mpich2],
 
 if test "$enable_mpich2" != "no" ; then
    AH_TEMPLATE(HAVE_MPICH2, Whether or not MPICH2 is installed on the system)
-   AC_CHECK_LIB([mpich2], [main], [have_mpich2_lib=yes], [have_mpich2_lib=no])
+   AC_CHECK_LIB([mpich2], [MPI_Init], [have_mpich2_lib=yes], [have_mpich2_lib=no])
    AC_CHECK_HEADER([mpich2/mpi.h], [have_mpich2=yes], [have_mpich2=no], [])
 
-   if test "$have_mpich2" == "no"; then
-   	  if test -f /usr/include/mpich2/mpi.h; then
+   if test "$have_mpich2" == "yes"; then
+      	  if test -f /usr/include/mpich2/mpi.h; then
    	  	 AC_SUBST(MPI_CFLAGS, "-I/usr/include/mpich2")
 		 have_mpich2=yes
 	  elif test -f /usr/local/include/mpich2/mpi.h; then
 		 AC_SUBST(MPI_CFLAGS, "-I/usr/local/include/mpich2")
 		 have_mpich2=yes
 	  fi
-   fi
-   
-   if test "x$have_mpich2" == "xyes"; then
-   	  	AC_DEFINE(HAVE_MPICH2,, Build with MPICH2 support)
-      	AC_SUBST(MPI_LIBS, "-lmpich2")
-   else
-		AC_MSG_WARN([MPICH2 not found.])
+	  AC_SUBST(MPI_LIBS, "-L/usr/lib/mpich2/lib/ -L/usr/local/mpich2/lib -lmpich -lmpl")
+	  AC_DEFINE(HAVE_MPICH2,, Build with MPICH2 support)
    fi
 fi
 AM_CONDITIONAL(HAVE_MPICH2, test x$have_mpich2 = xyes)
@@ -150,11 +145,11 @@ if test "$with_mpi_lib" != "no"; then
    save_LDFLAGS=$LDFLAGS
    LDFLAGS="-L$with_mpi_lib"
    AC_CHECK_LIB([mpi], [MPI_Init], [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpi")],
-   					   		   	   [AC_CHECK_LIB([mpich], [MPI_Init],
-					   						 			  [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich")],
-					   						 			  [AC_MSG_ERROR(No MPI libs found!)],
-														  [-lmpl -lpthread])],
-                                   [-lmpl -lpthread])
+   		       		     [AC_CHECK_LIB([mpich], [MPI_Init],
+				       [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich")],
+				       [AC_MSG_ERROR(No MPI libs found!)],
+				       [-lmpl -lpthread])],
+				   [-lmpl -lpthread])
    LDFLAGS=$save_LDFLAGS
 fi
 
