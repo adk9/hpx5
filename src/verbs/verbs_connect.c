@@ -512,8 +512,6 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info **local_
 		goto error_exit;
 	}
 
-	sleep(1);
-
 	for (i=(_photon_myrank+1); i<_photon_nproc; i++) {
 		// we may get a list of hostnames in the future
 		// for now we use the ip exchanged in the remote info
