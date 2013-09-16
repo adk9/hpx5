@@ -69,7 +69,10 @@ hpx_error_t hpx_init(void) {
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
   *__hpx_network_ops = default_ops;
-#if HAVE_MPI
+#if HAVE_PHOTON
+#warning Building with photon...
+  *__hpx_network_ops = photon_ops;
+#elif HAVE_MPI
   *__hpx_network_ops = mpi_ops;
 #endif
   __hpx_network_ops->init();

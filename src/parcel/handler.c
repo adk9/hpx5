@@ -29,7 +29,10 @@
 #define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
 #define _HPX_PARCELHANDLER_GET_ACTION 0xfecc
 
-#define _HPX_PARCELHANDLER_GET_THRESHOLD 10240
+//#define _HPX_PARCELHANDLER_GET_THRESHOLD 10240
+#define _HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
+/* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
+
 
 hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
 hpx_parcelqueue_t * __hpx_send_queue = NULL;
@@ -341,6 +344,7 @@ void _hpx_request_list_del(_hpx_request_list_t* list) {
 request_queue_t network_send_requests;
 request_queue_t network_recv_requests;
 _hpx_request_list_t get_requests;
+_hpx_request_list_t put_requests;
 
 size_t REQUEST_QUEUE_SIZE = 2048; /* TODO: make configurable (and find a good, sane size) */
 
@@ -393,9 +397,11 @@ void * _hpx_parcelhandler_main(void) {
 
   network_request_t recv_request; /* seperate request for this since we need it to persist */
   network_request_t* get_req;
+  network_request_t* put_req;
   network_request_t* curr_request;
   bool outstanding_receive;
   int outstanding_gets;
+  int outstanding_puts;
   int curr_flag;
   network_status_t curr_status;
   int curr_source;
@@ -405,9 +411,10 @@ void * _hpx_parcelhandler_main(void) {
 
   quitting = false;
   outstanding_receive = false;
+  outstanding_gets = 0;
+  outstanding_puts = 0;
   retval = hpx_alloc(sizeof(int));
   *retval = 0;
-
   recv_buffer = hpx_alloc(RECV_BUFFER_SIZE);
   if (recv_buffer == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
@@ -448,6 +455,20 @@ void * _hpx_parcelhandler_main(void) {
 	request_queue_pop(&network_send_requests);
       }
     }
+    if (outstanding_puts > 0) {
+      _hpx_request_list_begin(&put_requests);
+      while ((put_req = _hpx_request_list_curr(&put_requests)) != NULL) {
+	__hpx_network_ops->putget_test(put_req, &curr_flag, &curr_status);
+	if (curr_flag == 1) {
+	  parcel = _hpx_request_list_curr_parcel(&put_requests);
+	  outstanding_puts--;
+	  _hpx_request_list_del(&put_requests);
+	  /* Free up the parcel as we don't need it anymore */
+	  hpx_free(parcel);
+	} /* if (curr_flag == 1) */
+	_hpx_request_list_next(&put_requests);
+      } /* while() */
+    } /* if (outstanding_gets > 0) */
 
     /* check send queue */
     if (!request_queue_full(&network_send_requests)) { /* don't do this if we can't handle any more send requests */
@@ -464,12 +485,17 @@ void * _hpx_parcelhandler_main(void) {
 	  /* TODO: signal error to somewhere else! */
 	}
 	network_rank = parcel->dest.locality.rank;
-	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)) + parcel->payload_size; /* total size is parcel header size + action name + data: */
-	if(1) { 	/* TODO: check if size is over the eager limit, then use put() instead */
-	  __hpx_network_ops->send(network_rank, 
-				  parcel_data, 
-				  network_size,
-				  request_queue_push(&network_send_requests));
+	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)); /* total size is parcel header size + action name + data: */
+	if (parcel->payload_size < _HPX_PARCELHANDLER_GET_THRESHOLD) /* if size is under the eager limit, we send the payload also, so we need to add the size */
+	  network_size += parcel->payload_size;
+	__hpx_network_ops->send(network_rank, 
+				parcel_data, 
+				network_size,
+				request_queue_push(&network_send_requests));
+	if (parcel->payload_size >= _HPX_PARCELHANDLER_GET_THRESHOLD) { /* if size is over the eager limit, ALSO do a put */
+	  put_req = _hpx_request_list_append(&put_requests, parcel);
+	  __hpx_network_ops->put(network_rank, parcel->payload, parcel->payload_size, put_req); 
+	  
 	}
       } // end if (parcel_data != NULL)
     } // end if (requests_queue_full(network_send_requests)
@@ -543,7 +569,7 @@ void * _hpx_parcelhandler_main(void) {
 	   future, if that changes, we might have to allocate a new buffer
 	   here.... */
 	
-	if (parcel->payload_size > _HPX_PARCELHANDLER_GET_THRESHOLD) { /* do a get */
+	if (parcel->payload_size >= _HPX_PARCELHANDLER_GET_THRESHOLD) { /* do a get */
 	  get_buffer = hpx_alloc(parcel->payload_size);
 	  if (get_buffer == NULL) {
 	    __hpx_errno = HPX_ERROR_NOMEM;
