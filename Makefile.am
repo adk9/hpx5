@@ -2,6 +2,9 @@
 # Makefile for Photon #
 #######################
 
+instdir = $(prefix)/include
+inst_HEADERS=include/photon.h
+
 EXTRA_DIST = autogen.sh      \
         README NEWS TODO     \
         docs
