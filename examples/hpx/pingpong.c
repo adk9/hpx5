@@ -26,26 +26,26 @@ void _ping_action(void* _args) {
   int ping_id = in_args->pong_id + 1;
   struct pingpong_args* out_args;
 
-  out_args = hpx_alloc(sizeof(struct pingpong_args));
-  if (out_args == NULL) {
-    printf("Dieing horribly - no memory!\n");
-    exit(-1);
-  }
-  out_args->ping_id = ping_id;
-  if (opt_text_ping)
-    snprintf(out_args->msg, 128, "Message %d from proc 0", ping_id);
-
   if (opt_screen_out)
     printf("Ping acting; global_count=%d, message=%s\n", global_count, out_args->msg);
 
   if (global_count >= opt_iter_limit) {
   }
   else {
+    out_args = hpx_alloc(sizeof(struct pingpong_args));
+    if (out_args == NULL) {
+      printf("Dieing horribly - no memory!\n");
+      exit(-1);
+    }
+    out_args->ping_id = ping_id;
+    if (opt_text_ping)
+      snprintf(out_args->msg, 128, "Message %d from proc 0", ping_id);
+  
     p = hpx_alloc(sizeof(hpx_parcel_t));
     success = hpx_new_parcel("_pong_action", (void*)out_args, sizeof(struct pingpong_args), p);
     success = hpx_send_parcel(other_loc, p);
   }
-
+  
   hpx_free(in_args);
   global_count++;
 }
@@ -60,29 +60,28 @@ void _pong_action(void* _args) {
   int ping_id = in_args->ping_id;
   int pong_id = ping_id;
 
-  out_args = hpx_alloc(sizeof(struct pingpong_args));
-  if (out_args == NULL) {
-    printf("Dieing horribly!\n");
-    exit(-1);
-  }
-  out_args->pong_id = pong_id;
-
-  if (opt_text_ping) {
-    snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", pong_id);
-    str_length = strlen(copy_buffer);
-    strcpy(&copy_buffer[str_length], in_args->msg);
-    str_length = strlen(copy_buffer);
-    strcpy(&copy_buffer[str_length], "'");
-    strcpy(out_args->msg, copy_buffer);
-  }
-
-  if (opt_screen_out)
-    printf("Pong acting; global_count=%d, message=%s\n", global_count, out_args->msg);
-
-
   if (global_count >= opt_iter_limit - 1) {
   }
   else {
+    out_args = hpx_alloc(sizeof(struct pingpong_args));
+    if (out_args == NULL) {
+      printf("Dieing horribly!\n");
+      exit(-1);
+    }
+    out_args->pong_id = pong_id;
+    
+    if (opt_text_ping) {
+      snprintf(copy_buffer, 50, "At %d, received from proc 0 message: '", pong_id);
+      str_length = strlen(copy_buffer);
+      strcpy(&copy_buffer[str_length], in_args->msg);
+      str_length = strlen(copy_buffer);
+      strcpy(&copy_buffer[str_length], "'");
+      strcpy(out_args->msg, copy_buffer);
+    }
+    
+    if (opt_screen_out)
+      printf("Pong acting; global_count=%d, message=%s\n", global_count, out_args->msg);
+    
     p = hpx_alloc(sizeof(hpx_parcel_t));
     success = hpx_new_parcel("_ping_action", (void*)out_args, sizeof(struct pingpong_args), p);
     success = hpx_send_parcel(other_loc, p);
@@ -153,7 +152,7 @@ int main(int argc, char** argv) {
     }
     free(result);
   }
-  else if (my_rank ==1) {
+  else if (my_rank == 1) {
     while (global_count < opt_iter_limit) {
     }
   }
