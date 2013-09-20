@@ -24,7 +24,7 @@
 #include "hpx/parcel.h"
 #include "hpx/runtime.h" /* for hpx_locality_t */
 
-/* Default networkunication operations */
+/* Default network operations */
 network_ops_t default_ops = {
     .init     = hpx_network_init,
     .finalize = hpx_network_finalize,
@@ -32,10 +32,11 @@ network_ops_t default_ops = {
     .probe    = hpx_network_probe,
     .send     = hpx_network_send,
     .recv     = hpx_network_recv,
+    .test     = hpx_network_test,
     .put      = hpx_network_put,
     .get      = hpx_network_get,
     .pin      = hpx_network_pin,
-    .unpin      = hpx_network_unpin,
+    .unpin    = hpx_network_unpin,
 };
 
 /*
@@ -68,11 +69,6 @@ int hpx_network_recv(int src, void *buffer, size_t len, network_request_t* req) 
   return HPX_ERROR;
 }
 
-int hpx_sendrecv_test(network_request_t *request, int *flag, network_status_t *status) {
-  __hpx_errno = HPX_ERROR;
-  return HPX_ERROR;
-}  
-
 int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
@@ -83,7 +79,7 @@ int hpx_network_get(int src, void *buffer, size_t len, network_request_t* req) {
   return HPX_ERROR;
 }
 
-int hpx_putget_test(network_request_t *request, int *flag, network_status_t *status) {
+int hpx_network_test(network_request_t *request, int *flag, network_status_t *status) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }  

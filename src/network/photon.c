@@ -35,10 +35,9 @@ network_ops_t photon_ops = {
   .progress = _progress_photon,
   .send     = _send_mpi,
   .recv     = _recv_mpi,
-  .sendrecv_test = _test_mpi,
   .put      = _put_photon,
   .get      = _get_photon,
-  .putget_test = _test_photon,
+  .test     = _test_photon,
   .pin      = _pin_photon,
   .unpin    = _unpin_photon,
 };

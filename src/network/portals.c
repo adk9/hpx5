@@ -30,6 +30,8 @@ network_ops_t portals_ops = {
     .recv     = portals_recv,
     .put      = portals_put,
     .get      = portals_get,
+    .probe    = portals_probe,
+    .test     = portals_test,
     .progress = portals_progress,
     .finalize = portals_finalize,
 };
@@ -55,3 +57,8 @@ void portals_progress(void *data) {
 void portals_finalize(void) {
 }
 
+int portals_probe(int source, int* flag, network_status_t *status) {
+}
+
+int portals_test(network_request_t *request, int *flag, network_status_t *status) {
+}
