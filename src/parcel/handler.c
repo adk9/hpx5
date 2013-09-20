@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "hpx.h"
+//#include <mpi.h>
 
 #define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
 
@@ -366,11 +367,11 @@ void * _hpx_parcelhandler_main(void) {
 	  /* TODO: signal error to somewhere else! */
 	}
 	network_rank = parcel->dest.locality.rank;
-	network_size = sizeof(hpx_parcel_t) + parcel->payload_size; /* total size is parcel header size + data: */
+	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)) + parcel->payload_size; /* total size is parcel header size + action name + data: */
 	if(1) { 	/* TODO: check if size is over the eager limit, then use put() instead */
 	  __hpx_network_ops->send(network_rank, 
 				  parcel_data, 
-				  sizeof(hpx_parcel_t) + parcel->payload_size,
+				  network_size,
 				  request_queue_push(&network_send_requests));
 	}
       } // end if (parcel_data != NULL)
@@ -449,7 +450,7 @@ void * _hpx_parcelhandler_main(void) {
           initiated_something = 1;
 	  probe_successes++;
 	#endif
-	__hpx_network_ops->recv(curr_status.source, recv_buffer, NETWORK_ANY_LENGTH, &recv_request);
+	__hpx_network_ops->recv(curr_status.source, recv_buffer, curr_status.count, &recv_request);
 	outstanding_receive = true;	
       }
       
@@ -457,7 +458,7 @@ void * _hpx_parcelhandler_main(void) {
 
     #if DEBUG
       if (initiated_something != 0 || completed_something != 0) {
-        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, probe_successes, recv_successes, send_successes);
+        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, (int)probe_successes, (int)recv_successes, (int)send_successes);
         initiated_something = 0;
         completed_something = 0;
       }
@@ -479,7 +480,7 @@ void * _hpx_parcelhandler_main(void) {
   }
 
   #if DEBUG
-    printf("Handler done after iter %d\n", i);
+  printf("Handler done after iter %d\n", (int)i);
     fflush(stdout);
   #endif
 
@@ -550,6 +551,8 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
+  MPI_Barrier(MPI_COMM_WORLD);
+
   int *child_retval;
 
   hpx_parcel_t* kill_parcel;
