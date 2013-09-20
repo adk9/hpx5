@@ -55,6 +55,10 @@ hpx_error_t hpx_init(void) {
   if (__hpx_global_cfg != NULL) {
     hpx_config_init(__hpx_global_cfg);
     __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
+    if (__hpx_global_ctx == NULL) {
+      __hpx_errno = HPX_ERROR;
+      return HPX_ERROR;
+    }
   }
   else {
     __hpx_errno = HPX_ERROR_NOMEM;
