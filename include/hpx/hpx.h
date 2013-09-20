@@ -24,15 +24,16 @@
 #ifndef LIBHPX_H_
 #define LIBHPX_H_
 
+#include "hpx/init.h"
 #include "hpx/ctx.h"
 #include "hpx/list.h"
 #include "hpx/queue.h"
 #include "hpx/thread.h"
 
 #ifdef __x86_64__
-#include "arch/x86_64/mconfig_defs.h"
-#include "arch/x86_64/mconfig.h"
-#include "arch/x86_64/mregs.h"
+#include "hpx/arch/x86_64/mconfig_defs.h"
+#include "hpx/arch/x86_64/mconfig.h"
+#include "hpx/arch/x86_64/mregs.h"
 #endif
 
 #endif /* LIBHPX_H */
