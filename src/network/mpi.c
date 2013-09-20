@@ -47,10 +47,9 @@ network_ops_t mpi_ops = {
     .probe    = _probe_mpi,
     .send     = _send_mpi,
     .recv     = _recv_mpi,
-    .sendrecv_test = _test_mpi,
+    .test     = _test_mpi,
     .put      = _put_mpi,
     .get      = _get_mpi,
-    .putget_test = _test_mpi,
 };
 
 int _eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;

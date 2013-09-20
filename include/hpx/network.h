@@ -23,10 +23,10 @@
 #include <stdlib.h>
 
 #if HAVE_MPI
-  #include <mpi.h>
+  #include "hpx/network/mpi.h"
 #endif
 #if HAVE_PHOTON
-  #include <photon.h>
+  #include "hpx/network/photon.h"
 #endif
 
 #define NETWORK_ANY_SOURCE -1
@@ -70,14 +70,12 @@ typedef struct network_ops_t {
   int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
   /* Receive a raw payload */
   int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
-  /* test for completion of send or receive */
-  int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);  
   /* RMA put */
   int (*put)(int dest, void *buffer, size_t len, network_request_t *request);
   /* RMA get */
   int (*get)(int dest, void *buffer, size_t len, network_request_t *request); 
-  /* test for completion of put or get */
-  int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
+  /* test for completion of communication */
+  int (*test)(network_request_t *request, int *flag, network_status_t *status);
   /* pin memory for put/get */
   int (*pin)(void* buffer, size_t len);
   /* unpin memory for put/get */
@@ -125,9 +123,6 @@ int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req)
 /* Receive a raw payload */
 int hpx_network_recv(int src, void *buffer, size_t len, network_request_t* req);
 
-/* Test for completion of send/recv */
-int hpx_sendrecv_test(network_request_t *request, int *flag, network_status_t *status);
-
 /* RMA put */
 int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req);
 
@@ -135,7 +130,7 @@ int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req);
 int hpx_network_get(int src, void *buffer, size_t len, network_request_t* req);
 
 /* Test for completion of put/get */
-int hpx_putget_test(network_request_t *request, int *flag, network_status_t *status);
+int hpx_network_test(network_request_t *request, int *flag, network_status_t *status);
 
 /* pin memory for put/get */
 int hpx_network_pin(void* buffer, size_t len);
@@ -145,14 +140,6 @@ int hpx_network_unpin(void* buffer, size_t len);
 
 /* The network progress function */
 void hpx_network_progress(void *data);
-
-
-#if HAVE_MPI
-  #include "hpx/network/mpi.h"
-#endif
-#if HAVE_PHOTON
-  #include "hpx/network/photon.h"
-#endif
 
 #endif /* LIBHPX_NETWORK_H_ */
 
