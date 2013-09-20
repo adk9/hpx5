@@ -20,17 +20,17 @@ if CPU_X86_64
 	     thread/arch/x86_64/mconfig.S    \
              thread/arch/x86_64/mctx_mk.c
   libhpx_la_arch_x86_64dir = $(includedir)/hpx/arch/x86_64
-  libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/arch/x86_64/*.h
+  libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/arch/x86_64/*.h
 endif
 
 libhpx_la_SOURCES += $(ARCH_SRC)
 
 libhpx_ladir = $(includedir)/hpx
 nodist_libhpx_la_HEADERS = $(top_srcdir)/include/config.h
-libhpx_la_HEADERS = $(top_srcdir)/include/*.h
+libhpx_la_HEADERS = $(top_srcdir)/include/hpx/*.h
 
-libhpx_la_CFLAGS = 
-libhpx_la_LIBADD = 
+libhpx_la_CFLAGS = @PAPI_CFLAGS@ @HWLOC_CFLAGS@ @TCMALLOC_CFLAGS@
+libhpx_la_LIBADD = @PAPI_LIBS@ @HWLOC_LIBS@ @TCMALLOC_LIBS@
 
 if PLATFORM_LINUX
   libhpx_la_LIBADD += -lrt

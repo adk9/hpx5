@@ -21,7 +21,7 @@
 */
 
 #include <check.h>
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 
 /*

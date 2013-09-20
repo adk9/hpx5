@@ -21,8 +21,7 @@
 */
 
 #include <string.h>
-#include "hpx/thread.h"
-#include "hpx/config.h"
+#include "hpx/hpx.h"
 
 
 /*
