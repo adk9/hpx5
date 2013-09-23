@@ -402,7 +402,8 @@ void * _hpx_parcelhandler_main(void) {
       else {
 	/* invoke action */
 	if (parcel->action.action != NULL) {
-	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
+	  //success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
+	  success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
 	}
       }
     } /* end if (parcel != NULL) */
@@ -438,7 +439,8 @@ void * _hpx_parcelhandler_main(void) {
 	/* invoke action */
 	if (parcel->action.action != NULL) {
 	  // printf("Invoking action %s\n", parcel->action.name);
-	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
+	  //	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
+	  success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
 	}
 	/* TODO: deal with case where there is no invocation */
       } /* end if(curr_flag) */
