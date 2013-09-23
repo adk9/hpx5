@@ -36,7 +36,7 @@ typedef struct hpx_parcel_t {
   void         *payload;
 } hpx_parcel_t;
 
-int hpx_parcel_init(void);
+hpx_error_t hpx_parcel_init(void);
 void hpx_parcel_fini(void);
 
 /*
@@ -44,16 +44,16 @@ void hpx_parcel_fini(void);
   Parcel Handling Routines
   -------------------------------------------------------------------
 */
-int hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
+hpx_error_t hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
 
 /* Helper to send a parcel structure */
-int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
+hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
 
 /**
    Helper function for sending; combines parcel plus it's payload into
    blob. Size of blob is 
    sizeof(hpx_parcel_t) + (strlen(action->name) + 1) + p->payload_size . */
-int hpx_serialize_parcel(hpx_parcel_t *p, char** blob);
+hpx_error_t hpx_serialize_parcel(hpx_parcel_t *p, char** blob);
 
 /*
  --------------------------------------------------------------------

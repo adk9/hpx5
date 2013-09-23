@@ -28,9 +28,9 @@
 
 struct hsearch_data action_table;
 
-int hpx_parcel_init(void) {
+hpx_error_t hpx_parcel_init(void) {
     int status;
-    int ret;
+    hpx_error_t ret;
 
     /* create an action table */
     
@@ -46,7 +46,7 @@ int hpx_parcel_init(void) {
     
     /* spawn the parcel handler/dispatcher thread */
 
-    ret = 0;
+    ret = HPX_SUCCESS;
     return ret;
 }
 
@@ -68,8 +68,8 @@ void hpx_parcel_fini(void) {
   locality if we are running under the SPMD/symmetric heap assumption.
   -------------------------------------------------------------------
 */
-int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
-  int ret;
+hpx_error_t hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
+  hpx_error_t ret;
   int temp;
   ret = HPX_ERROR;
 
@@ -98,14 +98,14 @@ int hpx_new_parcel(char *act, void* args, size_t len, hpx_parcel_t *handle) {
   handle->payload = args;
   handle->payload_size = len;
 
-  ret = 0;
+  ret = HPX_SUCCESS;
  error:
   return ret;
 }
 
 hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
                        void *args, size_t len) {
-  int ret;
+  hpx_error_t ret;
   hpx_parcel_t p;
   /* create a parcel from action, args, len */
   hpx_new_parcel(action, args, len, &p);
@@ -115,10 +115,13 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
   return NULL; /* TODO */
 }
 
-/* caller is responsible for freeing *blob */
-int hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
+/**
+   Caller is responsible for freeing *blob.
+   Will return HPX_ERROR if (1) payload size is not 0 and (2) payload is NULL (a NULL pointer is allowed if payload size is 0)
+*/
+hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
   /* TODO: check size? */
-  int ret;
+  hpx_error_t ret;
   size_t size_of_action_name;
   size_t size_of_payload;
   size_t size_of_blob;
@@ -126,6 +129,13 @@ int hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
 
   blobi = 0;
   ret = HPX_ERROR;
+
+  /* sanity check parcel to catch a common mistake */
+  if (p->payload_size != 0 && p->payload == NULL) {
+    __hpx_errno = HPX_ERROR;
+    return HPX_ERROR;
+  }
+    
 
   /* figure out how much space we need */
   size_of_payload = p->payload_size;
@@ -154,7 +164,7 @@ int hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
     memcpy(*blob + blobi, p->payload, size_of_payload);
   blobi += size_of_payload;
 
-  ret = 0;
+  ret = HPX_SUCCESS;
  error:
   return ret;
 }
@@ -166,8 +176,8 @@ hpx_parcel_t* hpx_read_serialized_parcel(void* blob) {
 }
 
 /** caller is reponsible for free()ing *p and *p->payload */
-int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
-  int ret;
+hpx_error_t hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
+  hpx_error_t ret;
   size_t size_of_action_name;
   size_t size_of_payload;
   size_t size_of_blob;
@@ -214,22 +224,29 @@ int hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   /* fix up our payload pointer in our parcel */
   (*p)->payload = payload;
 
-  ret = 0;
+  ret = HPX_SUCCESS;
  error:
   return ret;
 }
 
-int hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
-  int ret;
+hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+  hpx_error_t ret;
   char* serialized_parcel;
-  ret = 0;
+  ret = HPX_ERROR;
 
   p->dest.locality = *loc;
-  hpx_parcel_serialize(p, &serialized_parcel);
+  ret = hpx_parcel_serialize(p, &serialized_parcel);
+  if (ret != 0) {   
+    __hpx_errno = ret;
+    return ret;
+  }
+
   ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
   if (ret != 0) {   
     __hpx_errno = ret;
+    return ret;
   }
-
+  
+  ret = HPX_SUCCESS;
   return ret;
 }
