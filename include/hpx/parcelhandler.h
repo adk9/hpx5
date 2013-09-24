@@ -24,6 +24,8 @@
 #define LIBHPX_PARCELHANDLER_H_
 
 #include "hpx/mem.h"
+#include "hpx/network.h"
+#include "hpx/parcel.h"
 #include "hpx/thread.h"
 #include "hpx/kthread.h"
 
@@ -143,9 +145,51 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t *);
 
 /*
  --------------------------------------------------------------------
-  Private Functions
+  Private Functions and Structures
  --------------------------------------------------------------------
 */
+
+/** Contains the arguments needed for the parcel handler to do a get() from a remote node */
+struct _hpx_request_list_node_t;
+typedef struct _hpx_request_list_node_t _hpx_request_list_node_t;
+struct _hpx_request_list_node_t {
+  network_request_t request; /* not a pointer so we can avoid extra allocs() */
+  hpx_parcel_t* parcel;
+  _hpx_request_list_node_t* next;
+};
+
+typedef struct _hpx_request_list_t {
+  int size;
+  _hpx_request_list_node_t* head;
+  _hpx_request_list_node_t* tail;
+  _hpx_request_list_node_t* prev;
+  _hpx_request_list_node_t* curr;
+} _hpx_request_list_t;
+
+void _hpx_request_list_init(_hpx_request_list_t* list);
+
+/* Perhaps confusingly, this function returns a network_request_t* so
+   that it can be used in the get() call. It's done this way so we can
+   avoid an extra alloc() we really don't need. */
+network_request_t* _hpx_request_list_append(_hpx_request_list_t* list, hpx_parcel_t* parcel);
+
+/* TODO: Might be nice to have explicitly inline versions of these:
+network_request_t* _hpx_request_list_begin(_hpx_request_list_t* list);
+network_request_t* _hpx_request_list_curr(_hpx_request_list_t* list);
+hpx_parcel_t* _hpx_request_list_curr_parcel(_hpx_request_list_t* list);
+void _hpx_request_list_next(_hpx_request_list_t* list);
+*/
+
+network_request_t* _hpx_request_list_begin(_hpx_request_list_t* list);
+
+network_request_t* _hpx_request_list_curr(_hpx_request_list_t* list); 
+
+hpx_parcel_t* _hpx_request_list_curr_parcel(_hpx_request_list_t* list);
+
+void _hpx_request_list_next(_hpx_request_list_t* list);
+
+void _hpx_request_list_del(_hpx_request_list_t* list);
+
 
 /* TODO: should _hpx_parcelhandler_main be here? */
 
