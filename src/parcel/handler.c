@@ -27,6 +27,11 @@
 //#include <mpi.h>
 
 #define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
+#define _HPX_PARCELHANDLER_GET_ACTION 0xfecc
+
+// #define _HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
+/* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
+#define _HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
 
 hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
 hpx_parcelqueue_t * __hpx_send_queue = NULL;
@@ -257,14 +262,105 @@ int hpx_parcelqueue_destroy(hpx_parcelqueue_t** q_handle) {
   return ret;
 }
 
+void _hpx_request_list_init(_hpx_request_list_t* list) {
+  list->head = NULL;
+  list->tail = NULL;
+  list->prev = NULL;
+  list->curr = NULL;
+  list->size = 0;
+}
+
+/* Perhaps confusingly, this function returns a network_request_t* so
+   that it can be used in the get() call. It's done this way so we can
+   avoid an extra alloc() we really don't need. */
+network_request_t* _hpx_request_list_append(_hpx_request_list_t* list, hpx_parcel_t* parcel) {
+  _hpx_request_list_node_t* node;
+  node = hpx_alloc(sizeof(_hpx_request_list_node_t));
+  if (node != NULL) {
+  node->parcel = parcel;
+  node->next = list->head;
+  if (list->head == NULL)
+    list->head = node;
+  if (list->tail == NULL)
+    list->tail = node;
+
+  list->size++;
+  return &(node->request);
+  }
+  else {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    return NULL;
+  }
+
+  return HPX_SUCCESS;
+}
+
+inline network_request_t* _hpx_request_list_begin(_hpx_request_list_t* list) {
+  list->prev = NULL;
+  list->curr = list->head;
+} 
+
+inline network_request_t* _hpx_request_list_curr(_hpx_request_list_t* list) {
+  if (list->curr != NULL)
+    return &(list->curr->request);
+  else
+    return NULL;
+} 
+
+inline hpx_parcel_t* _hpx_request_list_curr_parcel(_hpx_request_list_t* list) {
+  if (list->curr != NULL)
+    return list->curr->parcel;
+  else
+    return NULL;
+} 
+
+inline void _hpx_request_list_next(_hpx_request_list_t* list) {
+  if (list->curr != NULL) {
+    list->prev = list->curr;
+    list->curr = list->curr->next;
+  }
+}
+
+void _hpx_request_list_del(_hpx_request_list_t* list) {
+  _hpx_request_list_node_t* node = list->curr;
+  if (node != NULL) { /* don't delete a node that doesn't exist... :) */
+
+    /* take care of head and tail if necessary */
+    if (node == list->head) /* if curr is head, change head to next */
+      list->head == list->head->next;
+    if (node == list->tail) /* if curr is tail, change tail to prev */
+      list->tail == list->prev;
+
+    /* now fix up curr and prev */
+    if (list->prev != NULL)
+      list->prev->next = node->next; 
+    list->curr = list->prev; /* do this instead of making it next since we want next() to still work in a for loop if we delete */
+    list->size--;
+    hpx_free(node);
+  }
+}
+
 request_queue_t network_send_requests;
 request_queue_t network_recv_requests;
-request_queue_t network_put_requests;
-request_queue_t network_get_requests;
+_hpx_request_list_t get_requests;
+_hpx_request_list_t put_requests;
 
 size_t REQUEST_QUEUE_SIZE = 2048; /* TODO: make configurable (and find a good, sane size) */
 
-size_t RECV_BUFFER_SIZE = 10240; /* TODO: make configurable (and use a real size) */
+size_t RECV_BUFFER_SIZE = 1024*1024*32; /* TODO: make configurable (and use a real size) */
+
+hpx_error_t _hpx_parcel_process(hpx_parcel_t *parcel) {
+  int success;
+  if (parcel->action.action != NULL) {
+    // printf("Invoking action %s\n", parcel->action.name);
+    success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
+    if (success != HPX_SUCCESS) {
+      __hpx_errno = HPX_ERROR;
+      return HPX_ERROR;
+    }
+  }
+  /* TODO: deal with case where there is no invocation */
+}
 
 /*
   For now, I've decided to use just a single parcel handler thread. We
@@ -298,16 +394,24 @@ void * _hpx_parcelhandler_main(void) {
   size_t network_size; /* total size of raw network data */
 
   network_request_t recv_request; /* seperate request for this since we need it to persist */
+  network_request_t* get_req;
+  network_request_t* put_req;
   network_request_t* curr_request;
   bool outstanding_receive;
+  int outstanding_gets;
+  int outstanding_puts;
   int curr_flag;
   network_status_t curr_status;
   int curr_source;
   char* recv_buffer;
+  size_t recv_size;
+  void* get_buffer;
   int * retval;
 
   quitting = false;
   outstanding_receive = false;
+  outstanding_gets = 0;
+  outstanding_puts = 0;
   retval = hpx_alloc(sizeof(int));
   *retval = 0;
 
@@ -317,14 +421,18 @@ void * _hpx_parcelhandler_main(void) {
     *retval = HPX_ERROR_NOMEM;
   }
 
+#ifdef HAVE_PHOTON
+  __hpx_network_ops->pin(recv_buffer, RECV_BUFFER_SIZE);
+#endif
+
   i = 0;
-  #if DEBUG
-    probe_successes= 0;
-    recv_successes = 0;
-    send_successes = 0;
-    initiated_something = 0;
-    completed_something = 0;
-  #endif
+#if DEBUG
+  probe_successes= 0;
+  recv_successes = 0;
+  send_successes = 0;
+  initiated_something = 0;
+  completed_something = 0;
+#endif
 
   while (1) {
 
@@ -340,25 +448,40 @@ void * _hpx_parcelhandler_main(void) {
     //    printf("In phase 1 (sends) on iter %d\n", i);
     //    fflush(stdout);
     /* cleanup outstanding sends/puts */
+
     if (!request_queue_empty(&network_send_requests)) {
       curr_request = request_queue_head(&network_send_requests);
       __hpx_network_ops->sendrecv_test(curr_request, &curr_flag, &curr_status);
       if (curr_flag) {
-	#if DEBUG
-	  completed_something = 1;
-	  send_successes++;
-	#endif
+#if DEBUG
+	completed_something = 1;
+	send_successes++;
+#endif
 	request_queue_pop(&network_send_requests);
       }
     }
-
+    if (outstanding_puts > 0) {
+      _hpx_request_list_begin(&put_requests);
+      while ((put_req = _hpx_request_list_curr(&put_requests)) != NULL) {
+    	__hpx_network_ops->putget_test(put_req, &curr_flag, &curr_status);
+    	if (curr_flag == 1) {
+    	  parcel = _hpx_request_list_curr_parcel(&put_requests);
+    	  outstanding_puts--;
+    	  _hpx_request_list_del(&put_requests);
+    	  /* Free up the parcel as we don't need it anymore */
+    	  hpx_free(parcel);
+    	} /* if (curr_flag == 1) */
+    	_hpx_request_list_next(&put_requests);
+      } /* while() */
+    } /* if (outstanding_gets > 0) */
+    
     /* check send queue */
     if (!request_queue_full(&network_send_requests)) { /* don't do this if we can't handle any more send requests */
       parcel_data = hpx_parcelqueue_trypop(__hpx_send_queue);
       if (parcel_data != NULL) {
-        #if DEBUG
-          initiated_something = 1;
-        #endif
+#if DEBUG
+	initiated_something = 1;
+#endif
 	/* first sizeof(hpx_parcel_t) bytes of a serialized parcel is
 	   actually a hpx_parcel_t: */
 	//	parcel = hpx_read_serialized_parcel(parcel_data); 
@@ -367,12 +490,24 @@ void * _hpx_parcelhandler_main(void) {
 	  /* TODO: signal error to somewhere else! */
 	}
 	network_rank = parcel->dest.locality.rank;
-	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)) + parcel->payload_size; /* total size is parcel header size + action name + data: */
+	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)); /* total size is parcel header size + action name + data: */
+	if (parcel->payload_size < _HPX_PARCELHANDLER_GET_THRESHOLD) /* if size is under the eager limit, we send the payload also, so we need to add the size */
+	  network_size += parcel->payload_size;
+	// network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)) + parcel->payload_size;
+	/* total size is parcel header size + action name + data: */
 	if(1) { 	/* TODO: check if size is over the eager limit, then use put() instead */
+#ifdef HAVE_PHOTON // TODO: make a runtime choice
+	  /* need to unpin this again somewhere */
+	  __hpx_network_ops->pin(parcel_data, network_size);
+#endif
 	  __hpx_network_ops->send(network_rank, 
 				  parcel_data, 
 				  network_size,
 				  request_queue_push(&network_send_requests));
+	}
+	if (parcel->payload_size >= _HPX_PARCELHANDLER_GET_THRESHOLD) { /* if size is over the eager limit, ALSO do a put */
+	  put_req = _hpx_request_list_append(&put_requests, parcel);
+	  __hpx_network_ops->put(network_rank, parcel->payload, parcel->payload_size, put_req); 
 	}
       } // end if (parcel_data != NULL)
     } // end if (requests_queue_full(network_send_requests)
@@ -390,21 +525,18 @@ void * _hpx_parcelhandler_main(void) {
     /* TODO: handle local parcels other than actions - if applicable? */
     //    printf("In phase 2 (actions) on iter %d\n", i);
     //    fflush(stdout);
+    
     parcel = (hpx_parcel_t*)hpx_parcelqueue_trypop(__hpx_parcelqueue_local);
     if (parcel != NULL) {
-      #if DEBUG
-        initiated_something = 1;
-      #endif
+#if DEBUG
+      initiated_something = 1;
+#endif
       if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION) {
 	quitting = true;
 	// break;
       }
       else {
-	/* invoke action */
-	if (parcel->action.action != NULL) {
-	  //success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
-	  success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
-	}
+	_hpx_parcel_process(parcel);
       }
     } /* end if (parcel != NULL) */
     
@@ -412,87 +544,117 @@ void * _hpx_parcelhandler_main(void) {
        Phase 3: Deal with remote parcels 
        ==================================
     */
-    //    printf("In phase 3 (recvs) on iter %d\n", i);
-    //    fflush(stdout);
+    /*printf("In phase 3 (recvs) on iter %d\n", i); 
+      fflush(stdout);*/
+    if (outstanding_gets > 0) {
+      _hpx_request_list_begin(&get_requests);
+      while ((get_req = _hpx_request_list_curr(&get_requests)) != NULL) {
+	__hpx_network_ops->putget_test(get_req, &curr_flag, &curr_status);
+	if (curr_flag == 1) {
+	  parcel = _hpx_request_list_curr_parcel(&get_requests);
+	  outstanding_gets--;
+	  _hpx_request_list_del(&get_requests);
+	  /* Now invoke the action - or whatever */
+	  _hpx_parcel_process(parcel);
+	} /* if (curr_flag == 1) */
+	_hpx_request_list_next(&get_requests);
+      } /* while() */
+    } /* if (outstanding_gets > 0) */
+    
     if (outstanding_receive) { /* if we're currently waiting on a message */
+      
       /* if we've finished receiving the message, move on... else keep waiting */
       __hpx_network_ops->sendrecv_test(&recv_request, &curr_flag, &curr_status);
-
+      
       if (curr_flag) {
-	#if DEBUG
-	  completed_something = 1;
-	  recv_successes++;
-	#endif
+#if DEBUG
+	completed_something = 1;
+	recv_successes++;
+#endif
 	outstanding_receive = false;
 	/* If we've received something, do stuff:
 	   * If it's a notificiation of a put, call get() TODO: do this
 	   * If it's an action invocation, do that.
-	*/
-
+	   */
+	
 	/* TODO: move this to a seperate thread? */
 	hpx_parcel_deserialize(recv_buffer, &parcel);
 	/* Right now, parcel_deserialize() calls hpx_alloc(). In the
 	   future, if that changes, we might have to allocate a new buffer
 	   here.... */
-
-
-	/* invoke action */
-	if (parcel->action.action != NULL) {
-	  // printf("Invoking action %s\n", parcel->action.name);
-	  //	  success = hpx_action_invoke(&(parcel->action), parcel->payload, &result);
-	  success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
+	
+	if (parcel->payload_size > _HPX_PARCELHANDLER_GET_THRESHOLD) { /* do a get */
+	  get_buffer = hpx_alloc(parcel->payload_size);
+	  if (get_buffer == NULL) {
+	    __hpx_errno = HPX_ERROR_NOMEM;
+	    *retval = HPX_ERROR_NOMEM;
+	  } 
+	  parcel->payload = get_buffer; /* make sure parcel's payload actually points to the payload */
+	  get_req = _hpx_request_list_append(&get_requests, parcel);
+	  __hpx_network_ops->get(curr_status.source, get_buffer, parcel->payload_size, get_req); 
 	}
-	/* TODO: deal with case where there is no invocation */
+	else 
+	  _hpx_parcel_process(parcel);
+	
       } /* end if(curr_flag) */
     }
     else { /* otherwise, see if there's a message to wait for */
       __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &curr_flag, &curr_status);
-      if (curr_flag) { /* there is a message to receive */
-	#if DEBUG
-          initiated_something = 1;
-	  probe_successes++;
-	#endif
+      if (curr_flag > 0) { /* there is a message to receive */
+	
+#if DEBUG
+	initiated_something = 1;
+	probe_successes++;
+#endif
+#if HAVE_PHOTON
+	recv_size = (size_t)curr_status.photon.size;
+#else
+	recv_size = RECV_BUFFER_SIZE;
+#endif
+	//__hpx_network_ops->recv(curr_status.source, recv_buffer, recv_size, &recv_request);
 	__hpx_network_ops->recv(curr_status.source, recv_buffer, curr_status.count, &recv_request);
-	outstanding_receive = true;	
+	outstanding_receive = true;
       }
       
     } /* end if(outstanding_receive) */
-
-    #if DEBUG
-      if (initiated_something != 0 || completed_something != 0) {
-        printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, (int)probe_successes, (int)recv_successes, (int)send_successes);
-        initiated_something = 0;
-        completed_something = 0;
-      }
-    #endif
-
+    
+#if DEBUG
+    if (initiated_something != 0 || completed_something != 0) {
+      printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, (int)probe_successes, (int)recv_successes, (int)send_successes);
+      initiated_something = 0;
+      completed_something = 0;
+    }
+#endif
+    
     /* TODO: if no sends in queue, nothing with probe, and quitting == true, break */
     if (quitting && request_queue_empty(&network_send_requests) && !outstanding_receive)
       break;
-
+    
     i++;
-
+    
     /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. TODO: takeout after resolving this */
     if (i % 1000 == 0)
       hpx_thread_yield();
-
-
-
-    //printf("Parcel handler _main spinning i = %zd\n", i);
+    
+    /*	  printf("Parcel handler _main spinning i = %zd\n", i);*/
   }
-
-  #if DEBUG
+  
+#if DEBUG
   printf("Handler done after iter %d\n", (int)i);
-    fflush(stdout);
-  #endif
-
+  fflush(stdout);
+#endif
+  
+#ifdef HAVE_PHOTON
+  __hpx_network_ops->unpin(recv_buffer, RECV_BUFFER_SIZE);
+#endif
+  
   free(recv_buffer);
-
+  
  error:
   hpx_thread_exit((void*)retval);
-
+  
   return NULL;
-
+  
 }
 
 hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
@@ -528,18 +690,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto error;
   }
-  ret = request_queue_init(&network_put_requests, REQUEST_QUEUE_SIZE);
-  if (ret != 0) {
-    ret = HPX_ERROR_NOMEM;
-    __hpx_errno = HPX_ERROR_NOMEM;
-    goto error;
-  }
-  ret = request_queue_init(&network_get_requests, REQUEST_QUEUE_SIZE);
-  if (ret != 0) {
-    ret = HPX_ERROR_NOMEM;
-    __hpx_errno = HPX_ERROR_NOMEM;
-    goto error;
-  }
+  _hpx_request_list_init(&get_requests);
 
   /* create thread */
   ph = hpx_alloc(sizeof(hpx_parcelhandler_t));
@@ -580,8 +731,6 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
 
   request_queue_destroy(&network_send_requests);
   request_queue_destroy(&network_recv_requests);
-  request_queue_destroy(&network_put_requests);
-  request_queue_destroy(&network_get_requests);
 
   hpx_parcelqueue_destroy(&__hpx_send_queue);
   hpx_parcelqueue_destroy(&__hpx_parcelqueue_local);

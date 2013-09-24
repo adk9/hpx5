@@ -50,6 +50,8 @@ int _finalize_photon(void);
 
 void _progress_photon(void *data);
 
+int _probe_photon(int source, int* flag, network_status_t* status);
+
 /* have to test/wait on the request */
 int _put_photon(int dest, void* buffer, size_t len, network_request_t *request);
 
