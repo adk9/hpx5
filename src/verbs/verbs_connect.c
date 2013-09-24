@@ -254,9 +254,12 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 				local_info[iproc][i].qpn = ctx->verbs_processes[iproc].qp[i]->qp_num;
 			}
 
+			if (ifa) {
+				local_info[iproc][i].ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+			}
+
 			local_info[iproc][i].lid = ctx->ib_lid;
 			local_info[iproc][i].psn = (lrand48() & 0xfff000) + _photon_myrank+1;
-			local_info[iproc][i].ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
 		}
 	}
 
