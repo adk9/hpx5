@@ -52,7 +52,7 @@ typedef struct network_status_t {
   MPI_Status mpi;
 #endif
 #if HAVE_PHOTON
-  MPI_Status photon; /* not a mistake - Photon uses MPI status */
+  struct photon_status_t photon;
 #endif
 } network_status_t;
 
