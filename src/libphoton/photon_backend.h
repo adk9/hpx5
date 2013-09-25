@@ -8,8 +8,6 @@ struct photon_backend_t {
 	int (*initialized)(void);
 	int (*init)(photonConfig);
 	int (*finalize)(void);
-	int (*register_buffer)(char *buffer, int size);
-	int (*unregister_buffer)(char *buffer, int size);
 	int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
 	int (*wait)(uint32_t request);
 	int (*wait_ledger)(uint32_t request);
@@ -35,8 +33,6 @@ extern struct photon_backend_t photon_default_backend;
 int _photon_initialized(void);
 int _photon_init(photonConfig cfg);
 int _photon_finalize(void);
-int _photon_register_buffer(char *buffer, int buffer_size);
-int _photon_unregister_buffer(char *buffer, int size);
 int _photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 int _photon_wait(uint32_t request);
 int _photon_wait_ledger(uint32_t request);

@@ -8,27 +8,27 @@ SUBDIRS = .
 
 lib_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c           \
-		       libphoton/photon_backend.c
+		       libphoton/photon_backend.c              \
+		       libphoton/photon_buffer.c               \
+		       libphoton/photon_buffertable.c          \
+		       libphoton/photon_rdma_FIN_ledger.c      \
+		       libphoton/photon_rdma_INFO_ledger.c
 
 libphoton_ladir = @top_srcdir@/src/libphoton
 libphoton_la_HEADERS = 
 libphoton_la_LDFLAGS = @VERBS_LIBS@ @THREAD_LIBS@ @top_srcdir@/src/util/libutil.la 
 libphoton_la_LIBADD = 
 
-if HAVE_VERBS
 AM_CFLAGS += -I@top_srcdir@/src/verbs                  \
 	     -I@top_srcdir@/src/libphoton
+
+if HAVE_VERBS
 libphoton_la_SOURCES += verbs/verbs.c                  \
-			verbs/verbs_exchange.c         \
-			verbs/verbs_connect.c          \
-			verbs/verbs_cma_connect.c      \
-			verbs/verbs_buffer.c           \
-			verbs/verbs_remote_buffer.c    \
-			verbs/verbs_rdma_FIN_ledger.c  \
-			verbs/verbs_rdma_INFO_ledger.c \
-			verbs/buffertable.c
+		    verbs/verbs_exchange.c                     \
+		    verbs/verbs_connect.c                      \
+		    verbs/verbs_buffer.c
 endif
 
-#if HAVE_UGNI
-#libphoton_la_SOURCES +=
-#endif
+if HAVE_UGNI
+libphoton_la_SOURCES += ugni/ugni.c
+endif

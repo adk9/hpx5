@@ -4,12 +4,12 @@
 #include <stdint.h>
 
 typedef struct verbs_remote_buffer {
-	uint32_t request;
+	uint32_t  request;
 	uintptr_t addr;
 	uint32_t  lkey;
 	uint32_t  rkey;
-	uint32_t size;
-	int tag;
+	uint32_t  size;
+	int       tag;
 } verbs_remote_buffer_t;
 
 verbs_remote_buffer_t *__verbs_remote_buffer_create();

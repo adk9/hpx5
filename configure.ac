@@ -92,6 +92,7 @@ AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
 
 dnl Check for uGNI and DMAPP
 dnl TODO
+AM_CONDITIONAL(HAVE_UGNI, test x$have_ugni = xyes)
 
 dnl Check for mpich2
 AC_ARG_ENABLE([mpich2], AC_HELP_STRING([--disable-mpich2],						

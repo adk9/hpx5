@@ -1,11 +1,11 @@
-#include "buffertable.h"
+#include "photon_buffertable.h"
 
-static verbs_buffer_t** registered_buffers=NULL;
+static photonBuffer* registered_buffers=NULL;
 static int buffertable_size;
 static int num_registered_buffers;
 
 static int buffertable_resize(int new_buffertable_size) {
-	verbs_buffer_t** new_registered_buffer = realloc(registered_buffers,sizeof(verbs_buffer_t *)*new_buffertable_size);
+	photonBuffer* new_registered_buffer = realloc(registered_buffers,sizeof(struct photon_buffer_t*)*new_buffertable_size);
 	if (!new_registered_buffer)
 		return 1;
 	registered_buffers = new_registered_buffer;
@@ -25,11 +25,11 @@ void buffertable_finalize() {
 	buffertable_size = 0;
 }
 
-int buffertable_find_containing(void* start, int size, verbs_buffer_t** result) {
+int buffertable_find_containing(void* start, int size, photonBuffer* result) {
 	int i, cond;
 
 	for(i=0; i<num_registered_buffers; i++) {
-		verbs_buffer_t* tmpbuf = registered_buffers[i];
+		photonBuffer tmpbuf = registered_buffers[i];
 		cond =  ((void *)(tmpbuf->buffer) <= start);
 		cond &= ((void *)(tmpbuf->buffer+tmpbuf->size) >= start+size);
 		if ( cond ) {
@@ -41,11 +41,11 @@ int buffertable_find_containing(void* start, int size, verbs_buffer_t** result) 
 	return 1;
 }
 
-int buffertable_find_exact(void* start, int size, verbs_buffer_t** result) {
+int buffertable_find_exact(void* start, int size, photonBuffer* result) {
 	int i, cond;
 
 	for(i=0; i<num_registered_buffers; i++) {
-		verbs_buffer_t* tmpbuf = registered_buffers[i];
+		photonBuffer tmpbuf = registered_buffers[i];
 		cond =  ((void *)(tmpbuf->buffer) == start);
 		cond &= (tmpbuf->size == size);
 		if ( cond ) {
@@ -57,7 +57,7 @@ int buffertable_find_exact(void* start, int size, verbs_buffer_t** result) {
 	return 1;
 }
 
-int buffertable_insert(verbs_buffer_t *buffer) {
+int buffertable_insert(photonBuffer buffer) {
 	if (!registered_buffers) {
 		log_err("buffertable_insert(): Buffertable not initialized. Call buffertable_init() first.");
 		return 1;
@@ -71,7 +71,7 @@ int buffertable_insert(verbs_buffer_t *buffer) {
 }
 
 
-int buffertable_remove(verbs_buffer_t *buffer) {
+int buffertable_remove(photonBuffer buffer) {
 	int i;
 
 	if (!registered_buffers) {
@@ -80,7 +80,7 @@ int buffertable_remove(verbs_buffer_t *buffer) {
 	}
 
 	for(i=0; i<num_registered_buffers; i++) {
-		verbs_buffer_t* tmpbuf = registered_buffers[i];
+		photonBuffer tmpbuf = registered_buffers[i];
 		if ( tmpbuf == buffer ) {
 			registered_buffers[i] = registered_buffers[--num_registered_buffers];
 			return 0;

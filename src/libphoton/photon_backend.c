@@ -7,8 +7,6 @@ struct photon_backend_t photon_default_backend = {
 	.initialized = _photon_initialized,
 	.init = _photon_init,
 	.finalize = _photon_finalize,
-	.register_buffer = _photon_register_buffer,
-	.unregister_buffer = _photon_unregister_buffer,
 	.test = _photon_test,
 	.wait = _photon_wait,
 	.wait_ledger = _photon_wait_ledger,
@@ -36,14 +34,6 @@ int _photon_init(photonConfig cfg) {
 }
 
 int _photon_finalize() {
-	return PHOTON_OK;
-}
-
-int _photon_register_buffer(char *buffer, int buffer_size) {
-	return PHOTON_OK;
-}
-
-int _photon_unregister_buffer(char *buffer, int size) {
 	return PHOTON_OK;
 }
 

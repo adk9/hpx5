@@ -10,15 +10,15 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include "photon_buffer.h"
+#include "photon_buffertable.h"
+
 #include "verbs.h"
 #include "verbs_connect.h"
 #include "verbs_exchange.h"
-#include "verbs_buffer.h"
-#include "verbs_remote_buffer.h"
-#include "htable.h"
-#include "buffertable.h"
 #include "logging.h"
 #include "counter.h"
+#include "htable.h"
 
 extern int _photon_nproc;
 extern int _photon_myrank;
@@ -28,8 +28,6 @@ static MPI_Comm _photon_comm;
 int verbs_initialized(void);
 int verbs_init(photonConfig cfg);
 int verbs_finalize(void);
-int verbs_register_buffer(char *buffer, int buffer_size);
-int verbs_unregister_buffer(char *buffer, int size);
 int verbs_test(uint32_t request, int *flag, int *type, photonStatus status);
 int verbs_wait(uint32_t request);
 int verbs_wait_ledger(uint32_t request);
@@ -62,10 +60,10 @@ static int __verbs_nbpop_ledger(verbs_req_t *req);
 static int __verbs_nbpop_event(verbs_req_t *req);
 #endif
 
-verbs_buffer_t *shared_storage;
+photonBuffer shared_storage;
 
 static ProcessInfo *verbs_processes;
-static verbs_cnct_ctx verbs_ctx = {
+verbs_cnct_ctx verbs_ctx = {
 	.ib_dev ="ib0",
 	.ib_port = 1,
 	.ib_context = NULL,
@@ -89,7 +87,6 @@ static LIST_HEAD(freereqs, verbs_req) free_reqs_list;
 static LIST_HEAD(unreapedevdreqs, verbs_req) unreaped_evd_reqs_list;
 static LIST_HEAD(unreapedledgerreqs, verbs_req) unreaped_ledger_reqs_list;
 static LIST_HEAD(pendingreqs, verbs_req) pending_reqs_list;
-static SLIST_HEAD(pendingmemregs, mem_register_req) pending_mem_register_list;
 
 static int __initialized = 0;
 DEFINE_COUNTER(curr_cookie, uint32_t)
@@ -117,8 +114,6 @@ struct photon_backend_t photon_verbs_backend = {
 	.initialized = verbs_initialized,
 	.init = verbs_init,
 	.finalize = verbs_finalize,
-	.register_buffer = verbs_register_buffer,
-	.unregister_buffer = verbs_unregister_buffer,
 	.test = verbs_test,
 	.wait = verbs_wait,
 	.wait_ledger = verbs_wait,
@@ -247,7 +242,7 @@ int __verbs_init_common(photonConfig cfg) {
 	memset(verbs_processes, 0, sizeof(ProcessInfo) * (_photon_nproc));
 
 	for(i = 0; i < _photon_nproc; i++) {
-		verbs_processes[i].curr_remote_buffer = __verbs_remote_buffer_create();
+		verbs_processes[i].curr_remote_buffer = photon_remote_buffer_create();
 		if(!verbs_processes[i].curr_remote_buffer) {
 			log_err("Couldn't allocate process remote buffer information");
 			goto error_exit_gp;
@@ -271,8 +266,8 @@ int __verbs_init_common(photonConfig cfg) {
 
 	// Everything is x2 cause we need a local and a remote copy of each ledger.
 	// Remote Info (_ri_) ledger has an additional x2 cause we need "send-info" and "receive-info" ledgers.
-	info_ledger_size = 2 * 2 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
-	FIN_ledger_size  = 2 * sizeof(verbs_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
+	info_ledger_size = 2 * 2 * sizeof(struct photon_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
+	FIN_ledger_size  = 2 * sizeof(struct photon_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
 	bufsize = info_ledger_size + FIN_ledger_size;
 	buf = malloc(bufsize);
 	if (!buf) {
@@ -281,13 +276,13 @@ int __verbs_init_common(photonConfig cfg) {
 	}
 	dbg_info("Bufsize: %d", bufsize);
 
-	shared_storage = __verbs_buffer_create(buf, bufsize);
+	shared_storage = photon_buffer_create(buf, bufsize);
 	if (!shared_storage) {
 		log_err("Couldn't register shared storage");
 		goto error_exit_buf;
 	}
 
-	if (__verbs_buffer_register(shared_storage, verbs_ctx.ib_pd) != 0) {
+	if (photon_buffer_register(shared_storage) != 0) {
 		log_err("couldn't register local buffer for the ledger entries");
 		goto error_exit_ss;
 	}
@@ -298,7 +293,7 @@ int __verbs_init_common(photonConfig cfg) {
 	}
 
 	// skip 4 ledgers (rcv info local, rcv info remote, snd info local, snd info remote)
-	offset = 4 * sizeof(verbs_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
+	offset = 4 * sizeof(struct photon_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc);
 	if (__verbs_setup_FIN_ledger(verbs_processes, buf + offset, LEDGER_SIZE) != 0) {
 		log_err("verbs_init_common(); couldn't setup send ledgers");
 		goto error_exit_ri_ledger;
@@ -321,7 +316,7 @@ error_exit_ledger_watcher:
 error_exit_ri_ledger:
 error_exit_listeners:
 error_exit_ss:
-	__verbs_buffer_free(shared_storage);
+	photon_buffer_free(shared_storage);
 error_exit_buf:
 	if (buf)
 		free(buf);
@@ -329,7 +324,7 @@ error_exit_verbs_cnct:
 error_exit_crb:
 	for(i = 0; i < _photon_nproc; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
-			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
+			photon_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}
 	}
 error_exit_gp:
@@ -365,15 +360,6 @@ int verbs_init(photonConfig cfg) {
 		goto error_exit_FIN_ledger;
 	}
 
-	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
-		struct mem_register_req *mem_reg_req;
-		dbg_info("registering buffer in queue");
-		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
-		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
-		// FIXME: What if this fails?
-		verbs_register_buffer(mem_reg_req->buffer, mem_reg_req->buffer_size);
-	}
-
 #ifdef WITH_XSP
 	if (forwarder) {
 
@@ -397,10 +383,10 @@ error_exit_FIN_ledger:
 error_exit_listeners:
 	if (shared_storage->buffer)
 		free(shared_storage->buffer);
-	__verbs_buffer_free(shared_storage);
+	photon_buffer_free(shared_storage);
 	for(i = 0; i < _photon_nproc; i++) {
 		if (verbs_processes[i].curr_remote_buffer != NULL) {
-			__verbs_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
+			photon_remote_buffer_free(verbs_processes[i].curr_remote_buffer);
 		}
 	}
 	free(verbs_processes);
@@ -419,94 +405,9 @@ int verbs_finalize() {
 	return 0;
 }
 
-int verbs_register_buffer(char *buffer, int buffer_size) {
-	static int first_time = 1;
-	verbs_buffer_t *db;
-
-	dbg_info("(%p, %d)",buffer, buffer_size);
-
-	if( __initialized == 0 ) {
-		struct mem_register_req *mem_reg_req;
-		if( first_time ) {
-			SLIST_INIT(&pending_mem_register_list);
-			first_time = 0;
-		}
-		mem_reg_req = malloc( sizeof(struct mem_register_req) );
-		mem_reg_req->buffer = buffer;
-		mem_reg_req->buffer_size = buffer_size;
-
-		SLIST_INSERT_HEAD(&pending_mem_register_list, mem_reg_req, list);
-		dbg_info("called before init, queueing buffer info");
-		goto normal_exit;
-	}
-
-	if (buffertable_find_exact((void *)buffer, buffer_size, &db) == 0) {
-		dbg_info("we had an existing buffer, reusing it");
-		db->ref_count++;
-		goto normal_exit;
-	}
-
-	db = __verbs_buffer_create(buffer, buffer_size);
-	if (!db) {
-		log_err("Couldn't register shared storage");
-		goto error_exit;
-	}
-
-	dbg_info("created buffer: %p", db);
-
-	if (__verbs_buffer_register(db, verbs_ctx.ib_pd) != 0) {
-		log_err("Couldn't register buffer");
-		goto error_exit_db;
-	}
-
-	dbg_info("registered buffer");
-
-	if (buffertable_insert(db) != 0) {
-		goto error_exit_db;
-	}
-
-	dbg_info("added buffer to hash table");
-
-normal_exit:
-	return 0;
-error_exit_db:
-	__verbs_buffer_free(db);
-error_exit:
-	return -1;
-}
-
-int verbs_unregister_buffer(char *buffer, int size) {
-	verbs_buffer_t *db;
-
-	dbg_info();
-
-	if( __initialized == 0 ) {
-		log_err("Library not initialized.	Call photon_init() first");
-		goto error_exit;
-	}
-
-	if (buffertable_find_exact((void *)buffer, size, &db) != 0) {
-		dbg_info("no such buffer is registered");
-		return 0;
-	}
-
-	if (--(db->ref_count) == 0) {
-		if (__verbs_buffer_unregister(db) != 0) {
-			goto error_exit;
-		}
-		buffertable_remove( db );
-		__verbs_buffer_free(db);
-	}
-
-	return 0;
-
-error_exit:
-	return -1;
-}
-
 int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
-	verbs_ri_ledger_t *ledger;
-	verbs_ri_ledger_entry_t *entry_iterator;
+	photonRILedger ledger;
+	photonRILedgerEntry entry_iterator;
 	int i, j;
 	int start, end;
 
@@ -920,7 +821,7 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 
 #ifdef DEBUG
 	for(i = 0; i < _photon_nproc; i++) {
-		verbs_rdma_FIN_ledger_entry_t *curr_entry;
+		photonFINLedgerEntry curr_entry;
 		curr = verbs_processes[i].local_FIN_ledger->curr;
 		curr_entry = &(verbs_processes[i].local_FIN_ledger->entries[curr]);
 		dbg_info("curr_entry(proc==%d)=%p",i,curr_entry);
@@ -930,11 +831,11 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 
 		// Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
 		for(i = 0; i < _photon_nproc; i++) {
-			verbs_rdma_FIN_ledger_entry_t *curr_entry;
+			photonFINLedgerEntry curr_entry;
 			curr = verbs_processes[i].local_FIN_ledger->curr;
 			curr_entry = &(verbs_processes[i].local_FIN_ledger->entries[curr]);
 			if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
-				dbg_info("__verbs_wait_ledger() Found: %d/%u/%u", curr, curr_entry->request, req->id);
+				dbg_info("Found: %d/%u/%u", curr, curr_entry->request, req->id);
 				curr_entry->header = 0;
 				curr_entry->footer = 0;
 
@@ -1000,7 +901,7 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 
 		// Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
 		for(i = 0; i < _photon_nproc; i++) {
-			verbs_rdma_FIN_ledger_entry_t *curr_entry;
+			photonFINLedgerEntry curr_entry;
 			curr = verbs_processes[i].local_FIN_ledger->curr;
 			curr_entry = &(verbs_processes[i].local_FIN_ledger->entries[curr]);
 			if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
@@ -1138,7 +1039,7 @@ int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 	}
 
 	while(1) {
-		verbs_rdma_FIN_ledger_entry_t *curr_entry;
+		photonFINLedgerEntry curr_entry;
 		int exists;
 
 		i=(i+1)%_photon_nproc;
@@ -1288,8 +1189,9 @@ static void *__verbs_req_watcher(void *arg) {
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_wait_recv_buffer_rdma(int proc, int tag) {
-	verbs_remote_buffer_t *curr_remote_buffer;
-	verbs_ri_ledger_entry_t *curr_entry, *entry_iterator, tmp_entry;
+	photonRemoteBuffer curr_remote_buffer;
+	photonRILedgerEntry curr_entry, entry_iterator;
+	struct photon_ri_ledger_entry_t tmp_entry;
 	int count;
 #ifdef DEBUG
 	time_t stime;
@@ -1396,8 +1298,9 @@ error_exit:
 // In other words if verbs_processes[proc].curr_remote_buffer is full, verbs_wait_send_buffer_rdma()
 // should not be called.
 int verbs_wait_send_buffer_rdma(int proc, int tag) {
-	verbs_remote_buffer_t *curr_remote_buffer;
-	verbs_ri_ledger_entry_t *curr_entry, *entry_iterator, tmp_entry;
+	photonRemoteBuffer curr_remote_buffer;
+	photonRILedgerEntry curr_entry, entry_iterator;
+	struct photon_ri_ledger_entry_t tmp_entry;
 	int count;
 #ifdef DEBUG
 	time_t stime;
@@ -1495,7 +1398,8 @@ error_exit:
 ////////////////////////////////////////////////////////////////////////////////
 //// verbs_wait_send_request_rdma() treats "tag == -1" as ANY_TAG
 int verbs_wait_send_request_rdma(int tag) {
-	verbs_ri_ledger_entry_t *curr_entry, *entry_iterator, tmp_entry;
+	photonRILedgerEntry curr_entry, entry_iterator;
+	struct photon_ri_ledger_entry_t tmp_entry;
 	int count, iproc;
 #ifdef DEBUG
 	time_t stime;
@@ -1577,9 +1481,9 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	verbs_buffer_t *db;
+	photonBuffer db;
 	uint64_t cookie;
-	verbs_ri_ledger_entry_t *entry;
+	photonRILedgerEntry entry;
 	int curr, num_entries, qp_index, err;
 	uint32_t request_id;
 
@@ -1713,7 +1617,7 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
-	verbs_ri_ledger_entry_t *entry;
+	photonRILedgerEntry entry;
 	int curr, num_entries, qp_index, err;
 	uint64_t cookie;
 	uint32_t request_id;
@@ -1832,8 +1736,8 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	verbs_buffer_t *db;
-	verbs_ri_ledger_entry_t *entry;
+	photonBuffer db;
+	photonRILedgerEntry entry;
 	int curr, num_entries, qp_index, err;
 	uint64_t cookie;
 	uint32_t request_id;
@@ -1957,8 +1861,8 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	verbs_remote_buffer_t *drb;
-	verbs_buffer_t *db;
+	photonRemoteBuffer drb;
+	photonBuffer db;
 	uint64_t cookie;
 	int qp_index, err;
 	uint32_t request_id;
@@ -2063,8 +1967,8 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	verbs_remote_buffer_t *drb;
-	verbs_buffer_t *db;
+	photonRemoteBuffer drb;
+	photonBuffer db;
 	uint64_t cookie;
 	int qp_index, err;
 	uint32_t request_id;
@@ -2168,8 +2072,8 @@ error_exit:
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_send_FIN(int proc) {
-	verbs_remote_buffer_t *drb;
-	verbs_rdma_FIN_ledger_entry_t *entry;
+	photonRemoteBuffer drb;
+	photonFINLedgerEntry entry;
 	int curr, num_entries, qp_index, err;
 
 	dbg_info("(%d)", proc);

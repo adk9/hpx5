@@ -7,12 +7,13 @@
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 
-#include "squeue.h"
-#include "verbs_buffer.h"
-#include "verbs_rdma_INFO_ledger.h"
-#include "verbs_rdma_FIN_ledger.h"
-
+#include "libphoton.h"
 #include "photon_backend.h"
+#include "photon_rdma_INFO_ledger.h"
+#include "photon_rdma_FIN_ledger.h"
+
+#include "verbs_buffer.h"
+#include "squeue.h"
 
 #ifdef WITH_XSP
 #include "photon_xsp.h"
@@ -22,8 +23,6 @@
 #define DEF_QUEUE_LENGTH 		5*10240
 #define DEF_NUM_REQUESTS 		5*10240
 #define LEDGER_SIZE			    10240
-
-#define NULL_COOKIE			    0x0
 
 #define LEDGER				    1
 #define EVQUEUE				    2
@@ -47,14 +46,14 @@ typedef struct proc_info_t {
 	uint64_t           remote_priv_size;
 
 	// Conduit independent (almost) part
-	verbs_ri_ledger_t *local_snd_info_ledger;
-	verbs_ri_ledger_t *remote_snd_info_ledger;
-	verbs_ri_ledger_t *local_rcv_info_ledger;
-	verbs_ri_ledger_t *remote_rcv_info_ledger;
-	verbs_rdma_FIN_ledger_t *local_FIN_ledger;
-	verbs_rdma_FIN_ledger_t *remote_FIN_ledger;
+	photonRILedger  local_snd_info_ledger;
+	photonRILedger  remote_snd_info_ledger;
+	photonRILedger  local_rcv_info_ledger;
+	photonRILedger  remote_rcv_info_ledger;
+	photonFINLedger local_FIN_ledger;
+	photonFINLedger remote_FIN_ledger;
 
-	verbs_remote_buffer_t *curr_remote_buffer;
+	photonRemoteBuffer curr_remote_buffer;
 
 #ifdef WITH_XSP
 	libxspSess *sess;
