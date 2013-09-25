@@ -49,6 +49,7 @@
   General Configuration Data
  --------------------------------------------------------------------
 */
+
 typedef struct {
   uint32_t cores;
   uint64_t mflags;

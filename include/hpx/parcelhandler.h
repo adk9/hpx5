@@ -113,12 +113,14 @@ int hpx_parcelqueue_destroy(hpx_parcelqueue_t**);
 
   ctx                          Pointer to the thread context
   thread                       Pointer to the parcel handler's thread
+  fut                          Pointer to the parcel handler's return future
  --------------------------------------------------------------------
 */
 
 typedef struct hpx_parcelhandler_t {
   hpx_context_t *ctx;
   hpx_thread_t *thread;  
+  hpx_future_t *fut;
 } hpx_parcelhandler_t;
 
 /*

@@ -81,6 +81,9 @@ typedef uint8_t  hpx_thread_state_t;
 /* An HPX function taking a single generic (void*) argument */
 typedef void (*hpx_func_t)(void *);
 
+/* Predicate functions for _hpx_thread_wait */
+typedef bool (*hpx_thread_wait_pred_t)(void *, void *);
+
 
 /*
  --------------------------------------------------------------------
@@ -97,12 +100,12 @@ typedef void (*hpx_func_t)(void *);
 */
 
 struct hpx_thread_reusable_t {
-  hpx_func_t           func;
+  void                *func;
   void                *args;
   void                *stk;
   size_t               ss;
   hpx_mctx_context_t  *mctx;
-  hpx_future_t        *f_wait;
+  void                *wait;
   hpx_kthread_t       *kth;
 };
 
@@ -147,8 +150,8 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_thread_t * hpx_thread_create(hpx_context_t *, uint16_t, hpx_func_t, void *);
-void _hpx_thread_destroy(hpx_thread_t *);
+hpx_future_t * hpx_thread_create(hpx_context_t *, uint16_t, void *, void *, hpx_thread_t **);
+void hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
 
@@ -171,7 +174,7 @@ void hpx_thread_set_opt(hpx_thread_t *, uint16_t);
 */
 
 void _hpx_thread_terminate(hpx_thread_t *);
-
+void _hpx_thread_wait(void *, void *, void *);
 
 /*
  --------------------------------------------------------------------

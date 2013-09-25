@@ -22,7 +22,7 @@ int opt_text_ping = 0;
 int opt_screen_out = 0;
 
 void _done_action(void* _args) {
-  hpx_lco_future_set(&done_fut, 0);
+  hpx_lco_future_set_state(&done_fut);
 }
 
 void _ping_action(void* _args) {
@@ -37,7 +37,7 @@ void _ping_action(void* _args) {
     p = hpx_alloc(sizeof(hpx_parcel_t));
     success = hpx_new_parcel("_done_action", (void*)NULL, 0, p);
     success = hpx_send_parcel(other_loc, p);
-    hpx_action_invoke(a_done, NULL, (void**)NULL);
+    hpx_action_invoke(a_done, NULL, NULL);
   }
   else {
     out_args = hpx_alloc(sizeof(struct pingpong_args));
@@ -130,7 +130,6 @@ void pingpong(void* _args) {
   struct pingpong_args* args;
   hpx_action_t* a_ping;
   hpx_action_t* a_pong;
-  int* result;
 
   num_ranks = hpx_get_num_localities();
   my_loc = hpx_get_my_locality();
@@ -151,7 +150,7 @@ void pingpong(void* _args) {
   else 
     {}
 
-  hpx_lco_future_init(&done_fut, 1);
+  hpx_lco_future_init(&done_fut);
 
   if (my_rank == 0) {
     args = hpx_alloc(sizeof(struct pingpong_args));
@@ -159,8 +158,7 @@ void pingpong(void* _args) {
     //    p = hpx_alloc(sizeof(hpx_parcel_t));
     //    success = hpx_new_parcel("_ping_action", (void*)args, sizeof(struct pingpong_args), p);
     //    success = hpx_send_parcel(other_loc, p);
-    result = hpx_alloc(sizeof(int));
-    hpx_action_invoke(a_ping, args, (void**)&result);
+    hpx_action_invoke(a_ping, args, NULL);
   }
   else if (my_rank ==1) {
   }
@@ -169,8 +167,6 @@ void pingpong(void* _args) {
 
   hpx_thread_wait(&done_fut);
 
-  if (my_rank == 0)
-    free(result);
   hpx_locality_destroy(other_loc);
   free(a_ping);
   free(a_pong);
@@ -204,7 +200,7 @@ int main(int argc, char** argv) {
     exit(-1);
 
   clock_gettime(CLOCK_MONOTONIC, &begin_ts);
-  th = hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)pingpong, 0);
+  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)pingpong, 0, &th);
   hpx_thread_join(th, NULL);
   clock_gettime(CLOCK_MONOTONIC, &end_ts);
   elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);

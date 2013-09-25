@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 
 int some_data;

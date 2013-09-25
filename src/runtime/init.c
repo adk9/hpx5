@@ -71,6 +71,7 @@ hpx_error_t hpx_init(void) {
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
   *__hpx_network_ops = default_ops;
+#if HAVE_NETWORK
 #if HAVE_PHOTON
 #warning Building with photon...
   *__hpx_network_ops = photon_ops;
@@ -82,11 +83,13 @@ hpx_error_t hpx_init(void) {
     __hpx_errno = HPX_ERROR;
     return HPX_ERROR;
   }
-
+#endif
 
   /* initialize the parcel subsystem */
   hpx_parcel_init();
+#if HAVE_NETWORK
   __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
+#endif
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -104,11 +107,15 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
+#if HAVE_NETWORK
   hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+#endif
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
 
+#if HAVE_NETWORK
   __hpx_network_ops->finalize();
   hpx_free(__hpx_network_ops);
+#endif
 }
