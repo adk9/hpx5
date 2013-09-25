@@ -234,19 +234,25 @@ hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
   char* serialized_parcel;
   ret = HPX_ERROR;
 
-  p->dest.locality = *loc;
-  ret = hpx_parcel_serialize(p, &serialized_parcel);
-  if (ret != 0) {   
-    __hpx_errno = ret;
-    return ret;
+  if (loc->rank != hpx_get_rank()) {
+    p->dest.locality = *loc;
+    ret = hpx_parcel_serialize(p, &serialized_parcel);
+    if (ret != 0) {   
+      __hpx_errno = ret;
+      return ret;
+    }
+    
+    ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
+    if (ret != 0) {   
+      __hpx_errno = ret;
+      return ret;
+    }
   }
+  else {
+    hpx_action_invoke(&p->action, p->payload, NULL);
+    free(p);
+  }  
 
-  ret = hpx_parcelqueue_push(__hpx_send_queue, (void*)serialized_parcel);
-  if (ret != 0) {   
-    __hpx_errno = ret;
-    return ret;
-  }
-  
   ret = HPX_SUCCESS;
   return ret;
 }
