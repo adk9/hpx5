@@ -317,17 +317,17 @@ void _thread_main_parcelsenddata_large(void* args) {
 */
 
 void run_multi_thread_set_concurrent(uint32_t th_cnt, hpx_func_t th_func, void* args[]) {
-  hpx_context_t * ctx;
+  hpx_context_t * ctx = __hpx_global_ctx;
   hpx_thread_t ** ths;
-  hpx_config_t cfg;
+  //  hpx_config_t cfg;
   int idx;
 
   /* init our config */
-  hpx_config_init(&cfg);
+  //  hpx_config_init(&cfg);
 
   /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+  //  ctx = hpx_ctx_create(&cfg);
+  //  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create HPX theads */
   ths = (hpx_thread_t **) hpx_alloc(sizeof(hpx_thread_t *) * th_cnt);
@@ -344,7 +344,7 @@ void run_multi_thread_set_concurrent(uint32_t th_cnt, hpx_func_t th_func, void* 
   
   /* clean up */
   hpx_free(ths);
-  hpx_ctx_destroy(ctx);
+  //  hpx_ctx_destroy(ctx);
 }
 
 
@@ -447,9 +447,9 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   int count;
   count = 1000;
 
-  hpx_context_t * ctx;
+  hpx_context_t * ctx = __hpx_global_ctx;
   hpx_thread_t ** ths;
-  hpx_config_t cfg;
+  //  hpx_config_t cfg;
   int idx;
   int i;
   int success;
@@ -462,11 +462,11 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
 
 
   /* init our config */
-  hpx_config_init(&cfg);
+  //  hpx_config_init(&cfg);
 
   /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+  //  ctx = hpx_ctx_create(&cfg);
+  //  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create parcelqueue */
   success = hpx_parcelqueue_create(&q);
@@ -498,7 +498,7 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   for (i = 0; i < count; i++) /* this is normally done right after popping, but we want to stress the queue so we wait */
     hpx_free(pop_vals[i]);
   hpx_free(ths);
-  hpx_ctx_destroy(ctx);
+  //  hpx_ctx_destroy(ctx);
 
 
 }
@@ -636,8 +636,8 @@ START_TEST (test_libhpx_parcel_send)
   hpx_action_t* a;
   hpx_action_t* b;
 
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -651,15 +651,15 @@ START_TEST (test_libhpx_parcel_send)
   //a_main = hpx_alloc(sizeof(hpx_action_t));
   //hpx_action_register("_thread_main_parcelsend", (hpx_func_t)_thread_main_parcelsend, a_main);
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
   hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  //  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST
 
@@ -676,8 +676,8 @@ START_TEST (test_libhpx_parcel_senddata)
 
   hpx_action_t* a;
   hpx_action_t* b;
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -686,15 +686,15 @@ START_TEST (test_libhpx_parcel_senddata)
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
   hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  //  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST
 
@@ -711,8 +711,8 @@ START_TEST (test_libhpx_parcel_senddata_large)
 
   hpx_action_t* a;
   hpx_action_t* b;
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -721,14 +721,14 @@ START_TEST (test_libhpx_parcel_senddata_large)
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
   hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  // hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST
