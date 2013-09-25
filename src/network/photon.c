@@ -50,6 +50,9 @@ int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
 int _rank_photon;
 int _size_photon;
 
+static char* ETH_DEV_ROCE0 = "roce0";
+static char* IB_DEV_MLX4_1 = "mlx4_1";
+
 uint32_t _get_rank_photon() {
   return (uint32_t)_rank_photon;
 }
@@ -63,6 +66,11 @@ int _init_photon(void) {
   int retval;
   int temp;
   int thread_support_provided;
+
+  /* runtime configuration options */
+  char* eth_dev;
+  char* ib_dev;
+  int use_cma;
 
   retval = HPX_ERROR;
 
@@ -80,15 +88,27 @@ int _init_photon(void) {
   MPI_Comm_size(MPI_COMM_WORLD, &_size_photon);
 
   // TODO: make eth_dev and ib_dev runtime configurable!
+  eth_dev = getenv("HPX_USE_ETH_DEV");
+  ib_dev = getenv("HPX_USE_IB_DEV");
+
+  if (eth_dev == NULL)
+    eth_dev = ETH_DEV_ROCE0;
+  if (ib_dev == NULL)
+    ib_dev = IB_DEV_MLX4_1;
+  if(getenv("HPX_USE_CMA") == NULL)
+    use_cma = 1;
+  else
+    use_cma = atoi(getenv("HPX_USE_CMA"));
+
   struct photon_config_t photon_conf = {
 	  .meta_exch = PHOTON_EXCH_MPI,
 	  .nproc = _size_photon,
 	  .address = _rank_photon,
 	  .comm = MPI_COMM_WORLD,
 	  .use_forwarder = 0,
-	  .use_cma = 1,
-	  .eth_dev = "roce0",
-	  .ib_dev = "mlx4_1",
+	  .use_cma = use_cma,
+	  .eth_dev = eth_dev,
+	  .ib_dev = ib_dev,
 	  .ib_port = 1,
 	  .backend = "verbs"
   };
