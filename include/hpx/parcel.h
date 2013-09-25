@@ -53,7 +53,7 @@ hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
    Helper function for sending; combines parcel plus it's payload into
    blob. Size of blob is 
    sizeof(hpx_parcel_t) + (strlen(action->name) + 1) + p->payload_size . */
-hpx_error_t hpx_serialize_parcel(hpx_parcel_t *p, char** blob);
+hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob);
 
 /*
  --------------------------------------------------------------------

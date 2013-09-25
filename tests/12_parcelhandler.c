@@ -60,7 +60,7 @@ void _test_action(void* args) {
 */
 
 void _set_sendtest_future_action(void* args) {
-  hpx_lco_future_set(&sendtest_fut, 0);
+  hpx_lco_future_set_state(&sendtest_fut);
 }
 
 /*
@@ -72,7 +72,7 @@ void _set_sendtest_future_action(void* args) {
 void _set_future_action(void* args) {
   hpx_future_t* fut = (hpx_future_t*)args;
   ck_assert_msg(fut != NULL, "Couldn't set future - no argument received");
-  hpx_lco_future_set(fut, 0);
+  hpx_lco_future_set_state(fut);
 }
 
 /*
@@ -203,7 +203,7 @@ void _thread_main_parcelsend(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&sendtest_fut, 1);
+    hpx_lco_future_init(&sendtest_fut);
     other_loc = hpx_get_locality(1);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
@@ -242,7 +242,7 @@ void _thread_main_parcelsenddata(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&fut, 1);
+    hpx_lco_future_init(&fut);
     other_loc = hpx_get_locality(1);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
@@ -284,7 +284,7 @@ void _thread_main_parcelsenddata_large(void* args) {
   for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
     data_to_send[i] = i;
 
-  hpx_lco_future_init(&fut, 1);
+  hpx_lco_future_init(&fut);
 
   num_ranks = hpx_get_num_localities();
   ck_assert_msg(num_ranks > 1, "Couldn't send parcel - no remote localities available to send to");
@@ -293,7 +293,7 @@ void _thread_main_parcelsenddata_large(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&fut, 1);
+    hpx_lco_future_init(&fut);
     other_loc = hpx_get_locality(1);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
@@ -334,7 +334,7 @@ void run_multi_thread_set_concurrent(uint32_t th_cnt, hpx_func_t th_func, void* 
   ck_assert_msg(ths != NULL, "Could not allocate an array to hold thread data.");
 
   for(idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, th_func, args[idx]);
+    hpx_thread_create(ctx, 0, th_func, args[idx], &ths[idx]);
   }
 
   /* wait until our threads are done */
@@ -478,7 +478,7 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   ck_assert_msg(ths != NULL, "Could not allocate an array to hold thread data.");
 
   for(idx = 0; idx < count; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, thread_queue_worker, (void*)q);
+    hpx_thread_create(ctx, 0, thread_queue_worker, (void*)q, &ths[idx]);
   }
 
   /* pop values from main thread BEFORE all other threads are finished */
@@ -654,7 +654,7 @@ START_TEST (test_libhpx_parcel_send)
   cfg = hpx_alloc(sizeof(hpx_config_t));  
   hpx_config_init(cfg);
   ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
@@ -689,7 +689,7 @@ START_TEST (test_libhpx_parcel_senddata)
   cfg = hpx_alloc(sizeof(hpx_config_t));  
   hpx_config_init(cfg);
   ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
@@ -724,7 +724,7 @@ START_TEST (test_libhpx_parcel_senddata_large)
   cfg = hpx_alloc(sizeof(hpx_config_t));  
   hpx_config_init(cfg);
   ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */

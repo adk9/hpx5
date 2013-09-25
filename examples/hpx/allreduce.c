@@ -12,7 +12,7 @@ hpx_future_t done_fut;
 hpx_action_t* a_done;
 
 void _done_action(void* _args) {
-  hpx_lco_future_set(&done_fut, 0);
+  hpx_lco_future_set_state(&done_fut);
 }
 
 struct reduction_recv_args {
@@ -50,7 +50,7 @@ void _reduction_recv_action(void* _args) {
   struct reduction_recv_args* args = (struct reduction_recv_args*)_args;
   //  printf("At %d received value to reduce %d\n", my_rank, args->value);
   local_reduction_values[args->index] = args->value;
-  hpx_lco_future_set(&local_reduction_futures[args->index], 0);
+  hpx_lco_future_set_state(&local_reduction_futures[args->index]);
   //  hpx_free(_args);
 }
 
@@ -107,7 +107,7 @@ void _broadcast_recv_action(void* _args) {
   //  printf("At %d received reduction value %lld\n", my_rank, (long long)*value);
   local_reduction_result = *value;
 
-  hpx_action_invoke(a_done, NULL, (void**)NULL);
+  hpx_action_invoke(a_done, NULL, NULL);
 }
 
 void allreduce(void *_value) {
@@ -142,13 +142,13 @@ void allreduce(void *_value) {
   a_done = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("done_action", (hpx_func_t)_done_action, a_done);
 
-  hpx_lco_future_init(&done_fut, 1);
+  hpx_lco_future_init(&done_fut);
   if (my_rank == 0) {
     local_reduction_values = hpx_alloc(num_ranks * sizeof(REDUCTION_TYPE));
     local_reduction_futures = hpx_alloc(num_ranks * sizeof(hpx_future_t));
     int i;
     for (i = 0; i < num_ranks; i++) {
-      hpx_lco_future_init(&local_reduction_futures[i], 1);
+      hpx_lco_future_init(&local_reduction_futures[i]);
     }
     local_reduction_value = 0;
     local_reduction_count = num_ranks;
@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
 
   clock_gettime(CLOCK_MONOTONIC, &begin_ts);
 
-  th = hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)allreduce, (void*)&my_rank);
+  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)allreduce, (void*)&my_rank, &th);
   hpx_thread_join(th, NULL);
 
   clock_gettime(CLOCK_MONOTONIC, &end_ts);

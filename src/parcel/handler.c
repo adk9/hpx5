@@ -350,16 +350,13 @@ size_t REQUEST_QUEUE_SIZE = 2048; /* TODO: make configurable (and find a good, s
 size_t RECV_BUFFER_SIZE = 1024*1024*32; /* TODO: make configurable (and use a real size) */
 
 hpx_error_t _hpx_parcel_process(hpx_parcel_t *parcel) {
-  int success;
+  hpx_future_t* fut;
   if (parcel->action.action != NULL) {
     // printf("Invoking action %s\n", parcel->action.name);
-    success = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
-    if (success != HPX_SUCCESS) {
-      __hpx_errno = HPX_ERROR;
-      return HPX_ERROR;
-    }
+    fut = hpx_action_invoke(&(parcel->action), parcel->payload, NULL);
   }
   /* TODO: deal with case where there is no invocation */
+  return HPX_SUCCESS;
 }
 
 /*
@@ -696,7 +693,7 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
   ph = hpx_alloc(sizeof(hpx_parcelhandler_t));
   
   ph->ctx = ctx;
-  ph->thread = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, (hpx_func_t)_hpx_parcelhandler_main, 0);
+  ph->fut = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, (hpx_func_t)_hpx_parcelhandler_main, 0, &ph->thread);
   /* TODO: error check */
 
  error:
@@ -704,7 +701,9 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
+#ifdef HAVE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   int *child_retval;
 
