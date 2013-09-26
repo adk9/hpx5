@@ -9,6 +9,10 @@
 #include "verbs.h"
 #endif
 
+#ifdef HAVE_UGNI
+#include "photon_ugni.h"
+#endif
+
 /* Globals */
 int _photon_myrank;
 int _photon_nproc;
@@ -38,6 +42,7 @@ int photon_init(photonConfig cfg) {
 		else if (!strncasecmp(cfg->backend, "ugni", 10)) {
 #ifdef HAVE_UGNI
 			__photon_backend = &photon_ugni_backend;
+			photon_buffer_init(&ugni_buffer_interface);
 #else
 			goto error_exit;
 #endif

@@ -38,7 +38,6 @@ int verbs_wait_recv_buffer_rdma(int proc, int tag);
 int verbs_wait_send_buffer_rdma(int proc, int tag);
 int verbs_wait_send_request_rdma(int tag);
 int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
 int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
 int verbs_send_FIN(int proc);
 int verbs_wait_any(int *ret_proc, uint32_t *ret_req);

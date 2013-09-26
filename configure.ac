@@ -4,7 +4,7 @@ AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -83,15 +83,35 @@ if test "$enable_verbs" != "no" ; then
         ])
 
         if test "x$have_verbs" == "xyes"; then
-                AC_DEFINE(HAVE_VERBS,, Build with VERBS support)
+                AC_DEFINE(HAVE_VERBS, 1, Build with VERBS support)
         else
 		AC_MSG_ERROR([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])
 	fi
 fi
 AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
 
-dnl Check for uGNI and DMAPP
-dnl TODO
+dnl Check for uGNI
+AC_ARG_ENABLE([ugni], AC_HELP_STRING([--disable-ugni],
+			[disable UGNI support (default is autodetect)]),
+			[enable_ugni=$enableval],
+			[enable_ugni=try])
+
+if test "$enable_ugni" != "no" ; then
+   AH_TEMPLATE(HAVE_UGNI, Whether or not UGNI is installed on the system)
+   AC_MSG_CHECKING(for UGNI with pkg-config)
+   `pkg-config --exists cray-ugni`
+   have_ugni=`echo $?`
+   if test $have_ugni -eq 0; then
+      AC_MSG_RESULT(yes)
+      AC_DEFINE(HAVE_UGNI, 1, Build with UGNI support)
+      AC_SUBST(UGNI_CFLAGS, `pkg-config --cflags cray-ugni`)
+      AC_SUBST(UGNI_LIBS, `pkg-config --libs cray-ugni`)
+      have_ugni=yes
+   else
+      AC_MSG_RESULT(no)
+      have_ugni=no
+   fi
+fi
 AM_CONDITIONAL(HAVE_UGNI, test x$have_ugni = xyes)
 
 dnl Check for mpich2
@@ -147,10 +167,10 @@ if test "$with_mpi_lib" != "no"; then
    LDFLAGS="-L$with_mpi_lib"
    AC_CHECK_LIB([mpi], [MPI_Init], [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpi")],
    		       		     [AC_CHECK_LIB([mpich], [MPI_Init],
-				       [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich")],
+				       [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich -lmpl")],
 				       [AC_MSG_ERROR(No MPI libs found!)],
 				       [-lmpl -lpthread])],
-				   [-lmpl -lpthread])
+				   [-lpthread])
    LDFLAGS=$save_LDFLAGS
 fi
 
