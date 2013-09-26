@@ -39,7 +39,7 @@
 #include "10_list.c"
 #include "11_map.c"
 #include "12_gate.c"
-#ifdef HAVE_NETWORK
+#if HAVE_NETWORK
 #include "12_parcelhandler.c"
 #endif
 #include "98_thread_perf1.c"
