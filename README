@@ -65,3 +65,5 @@ The network-enabled tests can not be run automatically. "make check"
 will build them, but then they must be run manually so that they can
 be run using MPI.
 
+Also, check's forking does not work properly in the networked tests,
+so set CK_FORK=no before running the tests.

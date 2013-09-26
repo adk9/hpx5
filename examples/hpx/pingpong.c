@@ -142,6 +142,7 @@ void pingpong(void* _args) {
   hpx_action_register("_pong_action", (hpx_func_t)_pong_action, a_pong);
   a_done = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_done_action", (hpx_func_t)_done_action, a_done);
+  hpx_network_barrier();
 
   if (my_rank == 0)
     other_loc = hpx_get_locality(1);

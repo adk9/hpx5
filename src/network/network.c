@@ -95,3 +95,9 @@ int hpx_network_pin(void* buffer, size_t len) {
 int hpx_network_unpin(void* buffer, size_t len) {
   return 0;
 }
+
+void hpx_network_barrier() {
+#if HAVE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
