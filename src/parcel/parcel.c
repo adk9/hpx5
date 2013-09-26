@@ -120,6 +120,7 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, char *action,
    Will return HPX_ERROR if (1) payload size is not 0 and (2) payload is NULL (a NULL pointer is allowed if payload size is 0)
 */
 hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
+  /* TODO: do something better than using char* for everything? maybe a struct? and make sure alignments are better taken care of */
   /* TODO: check size? */
   hpx_error_t ret;
   size_t size_of_action_name;
@@ -161,7 +162,7 @@ hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
 
   /* copy the payload to the blob */
   if (size_of_payload > 0)
-    memcpy(*blob + blobi, p->payload, size_of_payload);
+    memcpy(*blob + blobi, (char*)p->payload, size_of_payload);
   blobi += size_of_payload;
 
   ret = HPX_SUCCESS;
@@ -170,13 +171,13 @@ hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
 }
 
 /* DO NOT FREE THE RETURN VALUE */
-/* FIXME CAUTION for some reason using this causes a bug. gcc interprets the return value as a 32 bit integer and sign extends it to 64 bits resulting in BAD THINGS happening... */
-hpx_parcel_t* hpx_read_serialized_parcel(void* blob) {
+/* FIXME CAUTION for some reason using this causes a bug (alisaing issues?). gcc interprets the return value as a 32 bit integer and sign extends it to 64 bits resulting in BAD THINGS happening... */
+hpx_parcel_t* hpx_read_serialized_parcel(char* blob) {
   return (hpx_parcel_t*)blob;
 }
 
 /** caller is reponsible for free()ing *p and *p->payload */
-hpx_error_t hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
+hpx_error_t hpx_parcel_deserialize(char* blob, hpx_parcel_t** p) {
   hpx_error_t ret;
   size_t size_of_action_name;
   size_t size_of_payload;
@@ -194,7 +195,7 @@ hpx_error_t hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
-  memcpy(*p, blob, sizeof(hpx_parcel_t));
+  memcpy((char*)*p, blob, sizeof(hpx_parcel_t));
   blobi += sizeof(hpx_parcel_t);
 
   /* now we can figure out the size of our payload */
@@ -218,7 +219,7 @@ hpx_error_t hpx_parcel_deserialize(void* blob, hpx_parcel_t** p) {
   
   /* move payload to new payload space */
   if (size_of_payload > 0)
-    memcpy(payload, blob + blobi, size_of_payload);
+    memcpy((char*)payload, blob + blobi, size_of_payload);
   blobi += size_of_payload;
 
   /* fix up our payload pointer in our parcel */

@@ -130,14 +130,18 @@ int hpx_parcelqueue_create(hpx_parcelqueue_t** q_handle) {
   q->head = node;
   q->tail = node;
 
-  ret = pthread_mutex_init(&(q->lock), NULL);
-  if (ret != 0) { /* TODO: better error handling */
-    ret = HPX_ERROR;
-    __hpx_errno = HPX_ERROR;
-    free(node);
-    free(q);
-    goto error;
-  }
+  //  ret = pthread_mutex_init(&(q->lock), NULL);
+  //  if (ret != 0) { /* TODO: better error handling */
+  //    ret = HPX_ERROR;
+  //    __hpx_errno = HPX_ERROR;
+  //    free(node);
+  //    free(q);
+  //    goto error;
+  //  }
+  ret = 0;
+
+  q->lock = hpx_lco_mutex_create(0);
+  hpx_lco_mutex_init(q->lock, 0);
 
   *q_handle = q;
 
@@ -192,16 +196,18 @@ int hpx_parcelqueue_push(hpx_parcelqueue_t* q, void* val) {
   node->value = val;
 
   /* CRITICAL SECTION */
-  temp = pthread_mutex_lock(&(q->lock));
-  if (temp != 0) /* TODO: real error handling */
-    goto error;
+  //  temp = pthread_mutex_lock(&(q->lock));
+  //  if (temp != 0) /* TODO: real error handling */
+  //    goto error;
+  hpx_lco_mutex_lock(q->lock);
 
   q->tail->next = node;
   q->tail = node;
 
-  temp = pthread_mutex_unlock(&(q->lock));
-  if (temp != 0) /* TODO: real error handling */
-    goto error;
+  //  temp = pthread_mutex_unlock(&(q->lock));
+  //  if (temp != 0) /* TODO: real error handling */
+  //    goto error;
+  hpx_lco_mutex_unlock(q->lock);
   /* END CRITICAL SECTION */
 
   ret = 0;
@@ -252,7 +258,8 @@ int hpx_parcelqueue_destroy(hpx_parcelqueue_t** q_handle) {
     ret = HPX_ERROR; /* TODO: more specific error */
     goto error;
   }
-  pthread_mutex_destroy(&(q->lock));
+  //  pthread_mutex_destroy(&(q->lock));
+  hpx_lco_mutex_destroy(q->lock);
   hpx_free(q);
 
   ret = 0;
@@ -701,12 +708,13 @@ hpx_parcelhandler_t * hpx_parcelhandler_create(hpx_context_t *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-#ifdef HAVE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
+  hpx_network_barrier();
+  //#ifdef HAVE_MPI
+  //  MPI_Barrier(MPI_COMM_WORLD);
+  //#endif
 
   int *child_retval;
-
+  
   hpx_parcel_t* kill_parcel;
   /* could possibly use hpx_send_parcel instead */
   kill_parcel = hpx_alloc(sizeof(hpx_parcel_t));
@@ -717,7 +725,8 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
   kill_parcel->action.action = (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION;
   hpx_parcelqueue_push(__hpx_parcelqueue_local, (void*)kill_parcel);
 
-  hpx_thread_join(ph->thread, (void**)&child_retval);
+  //hpx_thread_wait(ph->fut);
+  hpx_thread_join(ph->thread, NULL);
 
   /* test code */
   /* TODO: remove */

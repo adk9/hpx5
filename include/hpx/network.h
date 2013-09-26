@@ -147,6 +147,10 @@ int hpx_network_unpin(void* buffer, size_t len);
 /* The network progress function */
 void hpx_network_progress(void *data);
 
+/**
+ * Utility network operations
+ */
+void hpx_network_barrier();
 
 #if HAVE_MPI
   #include "hpx/network/mpi.h"

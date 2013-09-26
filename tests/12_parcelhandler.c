@@ -36,13 +36,13 @@ struct args data_to_check = {1.414, 3, 'a'};
 struct send_args {
   hpx_future_t *fut;
   unsigned int src_rank;
-  void* in_data;
+  char* in_data[];
 };
 
 int DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS =  (10*1037)/sizeof(size_t);
 
 hpx_future_t sendtest_fut; /* used for the simplest send test */
-
+hpx_future_t sendtest_data_fut; /* used for the simplest send test */
 /*
  -------------------------------------------------------------------
   TEST HELPER: empty action for action/parcel tests
@@ -61,6 +61,16 @@ void _test_action(void* args) {
 
 void _set_sendtest_future_action(void* args) {
   hpx_lco_future_set_state(&sendtest_fut);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for parcel send data test, to set future
+ -------------------------------------------------------------------
+*/
+
+void _set_sendtest_data_future_action(void* args) {
+  hpx_lco_future_set_state(&sendtest_data_fut);
 }
 
 /*
@@ -133,19 +143,30 @@ void _test_action_checkdata(void* args) {
   ck_assert_msg(args != NULL, "Did not receive any data");
   struct send_args *p_args = (struct send_args*)args;
   struct args *in_data = (struct args*)p_args->in_data;
-  ck_assert_msg(in_data != NULL, "Did not receive correct data");
-  ck_assert_msg(in_data->x == data_to_check.x, "Did not receive correct data");
-  ck_assert_msg(in_data->y == data_to_check.y, "Did not receive correct data");
-  ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data");
+  ck_assert_msg(in_data != NULL, "Did not receive data");
+  if (in_data != NULL) {
+    printf("=====================================================\n");
+    printf("Expected %f, received %f\n", data_to_check.x, in_data->x);
+    printf("Expected %d, received %d\n", data_to_check.y, in_data->y);
+    printf("Expected %c, received %c\n", data_to_check.z, in_data->z);
+    printf("=====================================================\n");
+    fflush(stdout);
+    ck_assert_msg(in_data->x == data_to_check.x, "Did not receive correct data at beginning");
+    ck_assert_msg(in_data->y == data_to_check.y, "Did not receive correct data in middle");
+    ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data at end");
+  }
 
   other_loc = hpx_get_locality(p_args->src_rank);
+  void* return_fut = hpx_alloc(sizeof(void*));
+  return_fut = (void*)p_args->fut;
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_set_future_action", (void*)p_args->fut, 0, p);   
+  //  success = hpx_new_parcel("_set_future_action", &return_fut, sizeof(void*), p);   
+  success = hpx_new_parcel("_set_sendtest_data_future_action", NULL, 0, p);   
   ck_assert_msg(success == 0, "Couldn't create return parcel");
   success = hpx_send_parcel(other_loc, p);
   ck_assert_msg(success == 0, "Couldn't send parcel");
 
-  free(in_data);
+  //  free(in_data);
   free(p_args);
   hpx_locality_destroy(other_loc);
 }
@@ -242,15 +263,23 @@ void _thread_main_parcelsenddata(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
+    hpx_lco_future_init(&sendtest_data_fut);
     hpx_lco_future_init(&fut);
     other_loc = hpx_get_locality(1);
 
+    size_t size_of_sendargs = sizeof(struct send_args) + sizeof(struct args);
+    struct send_args* args = hpx_alloc(size_of_sendargs);
+    args->fut = &fut;
+    args->src_rank = my_rank;
+    memcpy(args->in_data, &data_to_check, sizeof(struct args));
+
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_test_action_checkdata", (void*)&data_to_check, sizeof(data_to_check), p);
+    success = hpx_new_parcel("_test_action_checkdata", (void*)args, size_of_sendargs, p);
     success = hpx_send_parcel(other_loc, p);
     ck_assert_msg(success == 0, "Couldn't send parcel");
 
-    hpx_thread_wait(&fut);
+    //    hpx_thread_wait(&fut);
+    hpx_thread_wait(&sendtest_data_fut);
 
     hpx_locality_destroy(other_loc);
     hpx_lco_future_destroy(&fut);
@@ -517,8 +546,8 @@ START_TEST (test_libhpx_parcelhandler_create)
     
     ph = hpx_parcelhandler_create();
     ck_assert_msg(ph != NULL, "Could not create parcelhandler");
-    
-    hpx_parcelhandler_destroy(ph);
+    if (ph != NULL)
+      hpx_parcelhandler_destroy(ph);
 
     ph = NULL;
   }
@@ -537,6 +566,7 @@ START_TEST (test_libhpx_action_register)
   hpx_action_t* a;
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
 
   ck_assert_msg(a != NULL, "Could not register action");
   ck_assert_msg(!strcmp(a->name, "_test_action"), "Error registering action - wrong name");
@@ -577,6 +607,8 @@ START_TEST (test_libhpx_parcel_create)
 
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
+
   p = hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
 
@@ -604,6 +636,8 @@ START_TEST (test_libhpx_parcel_serialize)
 
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
+
   p = hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
 
@@ -645,11 +679,11 @@ START_TEST (test_libhpx_parcel_send)
   hpx_action_register("_test_action_checkrank", (hpx_func_t)_test_action_checkrank, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_sendtest_future_action", (hpx_func_t)_set_sendtest_future_action, b);
-
   //hpx_action_t* a_main;
   //hpx_action_t* a_sub; 
   //a_main = hpx_alloc(sizeof(hpx_action_t));
   //hpx_action_register("_thread_main_parcelsend", (hpx_func_t)_thread_main_parcelsend, a_main);
+  hpx_network_barrier();
 
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
@@ -676,6 +710,7 @@ START_TEST (test_libhpx_parcel_senddata)
 
   hpx_action_t* a;
   hpx_action_t* b;
+  hpx_action_t* c;
   //  hpx_config_t *cfg;
   hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
@@ -685,6 +720,9 @@ START_TEST (test_libhpx_parcel_senddata)
   hpx_action_register("_test_action_checkdata", (hpx_func_t)_test_action_checkdata, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+  c = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_sendtest_data_future_action", (hpx_func_t)_set_sendtest_data_future_action, c);
+  hpx_network_barrier();
 
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
@@ -720,6 +758,7 @@ START_TEST (test_libhpx_parcel_senddata_large)
   hpx_action_register("_test_action_checkdata_large", (hpx_func_t)_test_action_checkdata_large, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+  hpx_network_barrier();
 
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
