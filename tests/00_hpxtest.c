@@ -71,7 +71,7 @@ int main(int argc, char * argv[]) {
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
-  //tcase_set_timeout(tc, 1200);
+  tcase_set_timeout(tc, 1200);
 
   /* test configuration */
   tcase_add_test(tc, test_libhpx_config_cores);
@@ -269,9 +269,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_parcel_serialize);
   tcase_add_test(tc, test_libhpx_parcel_send);
   tcase_add_test(tc, test_libhpx_parcel_senddata);
-#if 0
   tcase_add_test(tc, test_libhpx_parcel_senddata_large);
-#endif
 #endif
 
   /* performance tests */
