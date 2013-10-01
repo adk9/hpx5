@@ -32,5 +32,7 @@ if HAVE_UGNI
 AM_CFLAGS += -I@top_srcdir@/src/ugni @UGNI_CFLAGS@
 libphoton_la_LDFLAGS += @UGNI_LIBS@
 libphoton_la_SOURCES += ugni/photon_ugni.c             \
+		    ugni/photon_ugni_exchange.c                \
+		    ugni/photon_ugni_connect.c                 \
 		    ugni/photon_ugni_buffer.c
 endif

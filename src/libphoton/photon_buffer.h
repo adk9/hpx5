@@ -2,12 +2,15 @@
 #define PHOTON_BUFFER_H
 
 #include <stdint.h>
+#include "libphoton.h"
 
 #ifdef HAVE_VERBS
 #include <infiniband/verbs.h>
 #endif
 
-#include "libphoton.h"
+#ifdef HAVE_UGNI
+#include "gni_pub.h"
+#endif
 
 typedef struct photon_buffer_t {
 	void *buffer;
@@ -18,6 +21,9 @@ typedef struct photon_buffer_t {
 #ifdef HAVE_VERBS
 	struct ibv_mr *mr;
 #endif
+#ifdef HAVE_UGNI
+	gni_mem_handle_t mdh;
+#endif
 } photon_buffer;
 
 typedef struct photon_remote_buffer_t {
@@ -27,6 +33,9 @@ typedef struct photon_remote_buffer_t {
 	uint32_t  rkey;
 	uint32_t  size;
 	int       tag;
+#ifdef HAVE_UGNI
+	gni_mem_handle_t mdh;
+#endif
 } photon_remote_buffer;
 
 typedef struct photon_buffer_t * photonBuffer;

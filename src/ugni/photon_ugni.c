@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "gni_pub.h"
-
 #include "photon_buffer.h"
 #include "photon_buffertable.h"
 
@@ -59,6 +57,7 @@ struct photon_backend_t photon_ugni_backend = {
 	.wait_any_ledger = ugni_wait_any_ledger
 #endif
 };
+
 
 int ugni_initialized() {
 	if (__initialized)
