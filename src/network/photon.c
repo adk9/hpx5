@@ -38,10 +38,9 @@ network_ops_t photon_ops = {
   .probe    = _probe_photon,
   .send     = _put_photon,
   .recv     = _get_photon,
-  .sendrecv_test = _test_photon,
+  .test     = _test_photon,
   .put      = _put_photon,
   .get      = _get_photon,
-  .test     = _test_photon,
   .pin      = _pin_photon,
   .unpin    = _unpin_photon,
 };

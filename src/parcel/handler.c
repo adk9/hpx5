@@ -455,7 +455,7 @@ void * _hpx_parcelhandler_main(void) {
 
     if (!request_queue_empty(&network_send_requests)) {
       curr_request = request_queue_head(&network_send_requests);
-      __hpx_network_ops->sendrecv_test(curr_request, &curr_flag, &curr_status);
+      __hpx_network_ops->test(curr_request, &curr_flag, &curr_status);
       if (curr_flag) {
 #if DEBUG
 	completed_something = 1;
@@ -467,7 +467,7 @@ void * _hpx_parcelhandler_main(void) {
     if (outstanding_puts > 0) {
       _hpx_request_list_begin(&put_requests);
       while ((put_req = _hpx_request_list_curr(&put_requests)) != NULL) {
-    	__hpx_network_ops->putget_test(put_req, &curr_flag, &curr_status);
+    	__hpx_network_ops->test(put_req, &curr_flag, &curr_status);
     	if (curr_flag == 1) {
     	  parcel = _hpx_request_list_curr_parcel(&put_requests);
     	  outstanding_puts--;
@@ -553,7 +553,7 @@ void * _hpx_parcelhandler_main(void) {
     if (outstanding_gets > 0) {
       _hpx_request_list_begin(&get_requests);
       while ((get_req = _hpx_request_list_curr(&get_requests)) != NULL) {
-	__hpx_network_ops->putget_test(get_req, &curr_flag, &curr_status);
+	__hpx_network_ops->test(get_req, &curr_flag, &curr_status);
 	if (curr_flag == 1) {
 	  parcel = _hpx_request_list_curr_parcel(&get_requests);
 	  outstanding_gets--;
@@ -568,7 +568,7 @@ void * _hpx_parcelhandler_main(void) {
     if (outstanding_receive) { /* if we're currently waiting on a message */
       
       /* if we've finished receiving the message, move on... else keep waiting */
-      __hpx_network_ops->sendrecv_test(&recv_request, &curr_flag, &curr_status);
+      __hpx_network_ops->test(&recv_request, &curr_flag, &curr_status);
       
       if (curr_flag) {
 #if DEBUG
