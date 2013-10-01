@@ -55,6 +55,7 @@
 # /include/
 /include/stamp-h1
 /include/config.h
+/include/config.h.in
 /include/.deps
 /include/Makefile
 /include/Makefile.in
@@ -130,3 +131,11 @@
 /tests/arch/x86_64/.deps
 /tests/arch/x86_64/Makefile
 /tests/arch/x86_64/Makefile.in
+
+# /docs
+/docs/doxyfile.stamp
+/docs/Doxyfile
+/docs/Makefile
+/docs/html/
+/docs/latex/
+

@@ -126,6 +126,12 @@ if test -z "$DOXYGEN";
   then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
 fi
 
+AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
+AM_COND_IF([WITH_DOCS],
+	[AC_CONFIG_FILES([docs/Doxyfile
+			  docs/Makefile])])
+AC_SUBST(WITH_DOCS)
+
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
@@ -138,13 +144,6 @@ AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes
 AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
 AM_COND_IF([WITH_TESTSUITE],
 	[AC_CONFIG_FILES([tests/Makefile])])
-AC_SUBST(WITH_DOCS)
-
-AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
-AM_COND_IF([WITH_DOCS],
-	[AC_CONFIG_FILES([docs/Doxyfile
-			  docs/Makefile])])
-AC_SUBST(WITH_DOCS)
 
 AC_CONFIG_FILES([
   Makefile
