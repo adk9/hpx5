@@ -38,11 +38,11 @@
  --------------------------------------------------------------------
 */
 
-hpx_mconfig_t __mcfg;
 hpx_config_t *__hpx_global_cfg;
 hpx_context_t *__hpx_global_ctx;
 hpx_parcelhandler_t *__hpx_parcelhandler;
 network_ops_t *__hpx_network_ops;
+static hpx_mconfig_t __mcfg;
 
 /*
  --------------------------------------------------------------------

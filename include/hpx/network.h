@@ -52,7 +52,7 @@ typedef struct network_status_t {
   MPI_Status mpi;
 #endif
 #if HAVE_PHOTON
-  MPI_Status photon; /* not a mistake - Photon uses MPI status */
+  struct photon_status_t photon;
 #endif
 } network_status_t;
 
@@ -141,6 +141,18 @@ int hpx_network_unpin(void* buffer, size_t len);
 
 /* The network progress function */
 void hpx_network_progress(void *data);
+
+/**
+ * Utility network operations
+ */
+void hpx_network_barrier();
+
+#if HAVE_MPI
+  #include "hpx/network/mpi.h"
+#endif
+#if HAVE_PHOTON
+  #include "hpx/network/photon.h"
+#endif
 
 #endif /* LIBHPX_NETWORK_H_ */
 

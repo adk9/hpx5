@@ -38,8 +38,10 @@
 #include "09_config.c"
 #include "10_list.c"
 #include "11_map.c"
+#include "12_gate.c"
+#if HAVE_NETWORK
 #include "12_parcelhandler.c"
-
+#endif
 #include "98_thread_perf1.c"
 
 
@@ -251,7 +253,11 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
   }
 
+  /* gates */
+  tcase_add_test(tc, test_libhpx_gate_allreduce);
+
   /* parcel handler tests */
+#if HAVE_NETWORK
   tcase_add_test(tc, test_libhpx_parcelqueue_create);
   tcase_add_test(tc, test_libhpx_parcelqueue_push);
   tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
@@ -264,6 +270,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_parcel_send);
   tcase_add_test(tc, test_libhpx_parcel_senddata);
   tcase_add_test(tc, test_libhpx_parcel_senddata_large);
+#endif
 
   /* performance tests */
   if (perf_tests) {

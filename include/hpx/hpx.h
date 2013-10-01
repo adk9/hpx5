@@ -1,14 +1,15 @@
+
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Shared memory management function definitions
-  hpx_mem.h
+  Library Exports
+  hpx.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
 
-  This software may be modified and distributed under the terms of
+  This software may be modified and distributed under the terms of 
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -20,23 +21,19 @@
 */
 
 #pragma once
-#ifndef LIBHPX_MEM_H_
-#define LIBHPX_MEM_H_
+#ifndef LIBHPX_H_
+#define LIBHPX_H_
 
-#include <stdlib.h>
+#include "hpx/init.h"
+#include "hpx/ctx.h"
+#include "hpx/list.h"
+#include "hpx/queue.h"
+#include "hpx/thread.h"
 
-
-#ifdef HAVE_TCMALLOC
-#include <google/tcmalloc.h>
-#define hpx_alloc(u) tc_malloc(u)
-#define hpx_realloc(u, s) tc_realloc(u, s)
-#define hpx_free(u) tc_free(u)
-#else
-#define hpx_alloc(u) malloc(u)
-#define hpx_realloc(u, s) realloc(u, s)
-#define hpx_free(u)  free(u)
+#ifdef __x86_64__
+#include "hpx/arch/x86_64/mconfig_defs.h"
+#include "hpx/arch/x86_64/mconfig.h"
+#include "hpx/arch/x86_64/mregs.h"
 #endif
 
-#endif /* LIBHPX_MEM_H_ */
-
-
+#endif /* LIBHPX_H */

@@ -16,6 +16,7 @@
  ====================================================================
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "hpx/action.h"
@@ -27,14 +28,17 @@
 #include <mpi.h>
 #include <photon.h>
 
+#define PHOTON_TAG 0xdead
 
 /* Photon network operations */
 network_ops_t photon_ops = {
   .init     = _init_photon,
   .finalize = _finalize_photon,
   .progress = _progress_photon,
-  .send     = _send_mpi,
-  .recv     = _recv_mpi,
+  .probe    = _probe_photon,
+  .send     = _put_photon,
+  .recv     = _get_photon,
+  .sendrecv_test = _test_photon,
   .put      = _put_photon,
   .get      = _get_photon,
   .test     = _test_photon,
@@ -45,6 +49,9 @@ network_ops_t photon_ops = {
 int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
 int _rank_photon;
 int _size_photon;
+
+static char* ETH_DEV_ROCE0 = "roce0";
+static char* IB_DEV_MLX4_1 = "mlx4_1";
 
 uint32_t _get_rank_photon() {
   return (uint32_t)_rank_photon;
@@ -60,6 +67,11 @@ int _init_photon(void) {
   int temp;
   int thread_support_provided;
 
+  /* runtime configuration options */
+  char* eth_dev;
+  char* ib_dev;
+  int use_cma;
+
   retval = HPX_ERROR;
 
   /* TODO: see if we really need thread multiple */
@@ -74,9 +86,36 @@ int _init_photon(void) {
 
   MPI_Comm_rank(MPI_COMM_WORLD, &_rank_photon);
   MPI_Comm_size(MPI_COMM_WORLD, &_size_photon);
-  temp =  photon_init(_size_photon, _rank_photon, MPI_COMM_WORLD);
+
+  // TODO: make eth_dev and ib_dev runtime configurable!
+  eth_dev = getenv("HPX_USE_ETH_DEV");
+  ib_dev = getenv("HPX_USE_IB_DEV");
+
+  if (eth_dev == NULL)
+    eth_dev = ETH_DEV_ROCE0;
+  if (ib_dev == NULL)
+    ib_dev = IB_DEV_MLX4_1;
+  if(getenv("HPX_USE_CMA") == NULL)
+    use_cma = 1;
+  else
+    use_cma = atoi(getenv("HPX_USE_CMA"));
+
+  struct photon_config_t photon_conf = {
+	  .meta_exch = PHOTON_EXCH_MPI,
+	  .nproc = _size_photon,
+	  .address = _rank_photon,
+	  .comm = MPI_COMM_WORLD,
+	  .use_forwarder = 0,
+	  .use_cma = use_cma,
+	  .eth_dev = eth_dev,
+	  .ib_dev = ib_dev,
+	  .ib_port = 1,
+	  .backend = "verbs"
+  };
+
+  temp =  photon_init(&photon_conf);
   if (temp == 0)
-    retval = 0;
+    retval = HPX_SUCCESS;
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
 
@@ -106,14 +145,12 @@ int _finalize_photon(void) {
 }
 
 
-/* have to test/wait on the request */
-int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) {
+/* just tell the other side we have a buffer ready to be retrieved */
+int _put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
-  int tag;
 
   retval = HPX_ERROR;
-  tag = _rank_photon;
 
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
@@ -121,12 +158,11 @@ int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) 
     goto error;
   }
 
-  temp = photon_post_recv_buffer_rdma(dest, buffer, (uint32_t)len, tag, &(request->photon));
+  temp = photon_post_send_buffer_rdma(dst, buffer, (uint32_t)len, PHOTON_TAG, &(request->photon));
   if (temp != 0) {
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
-
 
  error:
   return retval;
@@ -135,27 +171,27 @@ int _put_photon(int dest, void* buffer, size_t len, network_request_t *request) 
 int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
-  int tag;
 
   retval = HPX_ERROR;
-  tag = _rank_photon;
-
   if (len > UINT32_MAX) {
     __hpx_errno = HPX_ERROR;
     retval = HPX_ERROR;    
     goto error;
   }
 
-  temp = photon_wait_recv_buffer_rdma(src, tag);
+  /* make sure we have remote buffer metadata */
+  temp = photon_wait_send_buffer_rdma(src, PHOTON_TAG);
+  if (temp != 0) {
+	  __hpx_errno = HPX_ERROR;
+	  goto error;
+  }
+  /* get the remote buffer */
+  temp = photon_post_os_get(src, buffer, (uint32_t)len, PHOTON_TAG, 0, &(request->photon));
   if (temp != 0) {
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
-  temp = photon_post_os_put(src, buffer, (uint32_t)len, tag, 0, &(request->photon));
-  if (temp != 0) {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
-  }
+  /* tell the source ledger saying we retrieved its buffer */
   temp = photon_send_FIN(src);
   if (temp != 0) {
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
@@ -169,14 +205,18 @@ int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
 int _test_photon(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
+  struct photon_status_t stat;
+  int type; /* 0=RDMA completion event, 1=ledger entry */
+
   retval = HPX_ERROR;
 
-  int type; /* I'm not actually sure what this does with photon. 0 is event, 1 is ledger but I don't know why I care */
-
-  if (status == NULL)
-    temp = photon_test((request->photon), flag, &type, MPI_STATUS_IGNORE);
-  else
+  if (status == NULL) {
+    temp = photon_test((request->photon), flag, &type, &stat);
+  }
+  else {
     temp = photon_test((request->photon), flag, &type, &(status->photon));
+	status->source = (int)status->photon.src_addr;
+  }
 
   if (temp == 0)
     retval = 0;
@@ -187,15 +227,55 @@ int _test_photon(network_request_t *request, int *flag, network_status_t *status
 }
 
 int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
+	printf("in send parcel\n");
+	return HPX_SUCCESS;
 }
 
 int _send_photon(int peer, void *payload, size_t len, network_request_t *request) {
+
+	return HPX_SUCCESS;
 }
 
 int _recv_photon(int src, void *buffer, size_t len, network_request_t *request) {
+	
+	return HPX_SUCCESS;
+}
+
+int _probe_photon(int src, int *flag, network_status_t* status) {
+	int retval;
+	int temp;
+	int phot_src;
+	struct photon_status_t stat;
+	
+	retval = HPX_ERROR;
+
+	if (src == NETWORK_ANY_SOURCE) {
+		phot_src = PHOTON_ANY_SOURCE;
+	}
+	else {
+		phot_src = src;
+	}
+	
+	if (status == NULL) {
+		temp = photon_probe_ledger(phot_src, flag, PHOTON_SEND_LEDGER, &status->photon);
+	}
+	else {
+		temp = photon_probe_ledger(phot_src, flag, PHOTON_SEND_LEDGER, &status->photon);
+		status->source = (int)status->photon.src_addr;
+	}
+
+	if (temp == 0)
+		retval = HPX_SUCCESS;
+	else
+		__hpx_errno = HPX_ERROR;
+
+	status->count = status->photon.size;
+
+	return retval;
 }
 
 void _progress_photon(void *data) {
+	
 }
 
 /* pin memory for put/get */
@@ -221,6 +301,8 @@ int _unpin_photon(void* buffer, size_t len) {
   int retval;
 
   retval = HPX_ERROR;
+
+  printf("in UNPIN\n");
 
   temp = photon_unregister_buffer(buffer, len);
   if (temp != 0) {

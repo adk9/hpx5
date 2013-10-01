@@ -64,6 +64,9 @@ AC_FUNC_REALLOC
 AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
+AC_SUBST(PAPI_CFLAGS)
+AC_SUBST(PAPI_LIBS)
+
 # Check for PAPI measurement support.
 AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
 AS_IF([test "x$use_papi" = xyes], [
@@ -71,12 +74,26 @@ AS_IF([test "x$use_papi" = xyes], [
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
 ])
 
+AC_SUBST(HWLOC_CFLAGS)
+AC_SUBST(HWLOC_LIBS)
+
 # Check for HWLOC.
 AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
 AS_IF([test "x$use_hwloc" = xyes], [
   PKG_CHECK_MODULES([HWLOC], [hwloc])
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
 ])
+
+AC_SUBST(TCMALLOC_CFLAGS)
+AC_SUBST(TCMALLOC_LIBS)
+
+# Check for TCMALLOC.
+AC_ARG_WITH([tcmalloc], AS_HELP_STRING([--with-tcmalloc], [Build with TCMALLOC support]), [use_tcmalloc=yes], [])
+AS_IF([test "x$use_tcmalloc" = xyes], [
+  PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
+  AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
+])
+
 
 # Check for MPI
 AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
@@ -89,6 +106,9 @@ AC_ARG_WITH([photon], AS_HELP_STRING([--with-photon], [Build with Photon support
 AS_IF([test "x$use_photon" = xyes], [
   AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])
 ])
+
+AC_SUBST(CHECK_CFLAGS)
+AC_SUBST(CHECK_LIBS)
 
 # Check for check (and disable test-suite if not found).
 AC_CHECK_LIB([check], [check_major_version], [CHECK=yes])
@@ -110,8 +130,10 @@ AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
 AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
+AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" = xyes])
 AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
 
 AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
 AM_COND_IF([WITH_TESTSUITE],
@@ -147,6 +169,9 @@ AS_IF([test "x$use_papi" = xyes],
 AS_IF([test "x$use_hwloc" = xyes],
       [hwloc_string="yes"],
       [hwloc_string="no"])
+AS_IF([test "x$use_tcmalloc" = xyes],
+      [tcmalloc_string="yes"],
+      [tcmalloc_string="no"])
 
 AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
 AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
@@ -160,6 +185,7 @@ echo "                Host OS : $host_os"
 echo "               Networks : $networks_string"
 echo "              Profiling : $papi_string (PAPI)"
 echo "     Topology Awareness : $hwloc_string (HWLOC)"
+echo "  Thread-Caching Malloc : $tcmalloc_string (TCMALLOC)"
 echo "          Documentation : $doc_string"
 echo "             Test Suite : $test_string"
 echo "================================================"
