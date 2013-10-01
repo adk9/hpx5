@@ -2,7 +2,7 @@ if WITH_DOCS
 
 hpxdocdir=$(top_srcdir)/docs/man/man3/
 
-dist_man_MANS = $(hpxdocdir)/hpx.3
+dist_man3_MANS = $(hpxdocdir)/hpx.3
 $(hpxdocdir)/hpx.3: doxyfile.stamp
 
 doxyfile.stamp:
@@ -14,6 +14,6 @@ CLEANFILES += doxyfile.stamp
 all-local: doxyfile.stamp
 dist-clean:
 clean-local:
-	rm -rf $(top_srcdir)/docs/man
+	rm -rf $(top_srcdir)/docs/man/
 
 endif
