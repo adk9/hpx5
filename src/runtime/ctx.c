@@ -100,8 +100,8 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   ctx->kths_idx = 0;
 
   /* initialize service thread futures */
-  hpx_lco_future_init(&ctx->f_srv_susp, 1);
-  hpx_lco_future_init(&ctx->f_srv_rebal, 1);
+  hpx_lco_future_init(&ctx->f_srv_susp);
+  hpx_lco_future_init(&ctx->f_srv_rebal);
 
   /* create service threads: suspended thread pruner */
   ctx->srv_susp = (hpx_thread_t **) hpx_alloc(cores * sizeof(hpx_thread_t *));
@@ -113,21 +113,21 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   switch (hpx_config_get_thread_suspend_policy(cfg)) {
     case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
       for (x = 0; x < cores; x++) {
-        ctx->srv_susp[x] = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, _hpx_kthread_srv_susp_local, ctx);
+        hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, _hpx_kthread_srv_susp_local, ctx, &ctx->srv_susp[x]);
         ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
       
-        _hpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL);    
+        _hpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);    
       }
       break;
     case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
-      ctx->srv_susp[0] = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_susp_global, ctx);
+      hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_susp_global, ctx, &ctx->srv_susp[0]);
       break;
     default:
       break;
   }
 
   /* create service thread: workload rebalancer */
-  ctx->srv_rebal = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_rebal, ctx);
+  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_rebal, ctx, &ctx->srv_rebal);
 
   return ctx;
 
@@ -158,7 +158,7 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
   uint32_t x;
 
   /* stop service threads & wait */
-  hpx_lco_future_set(&ctx->f_srv_susp, 0);
+  hpx_lco_future_set_state(&ctx->f_srv_susp);
   switch (hpx_config_get_thread_suspend_policy(&ctx->cfg)) {
     case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
       for (x = 0; x < ctx->kths_count; x++) {
@@ -172,7 +172,7 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
       break;
   }
 
-  hpx_lco_future_set(&ctx->f_srv_rebal, 0);
+  hpx_lco_future_set_state(&ctx->f_srv_rebal);
   hpx_thread_join(ctx->srv_rebal, NULL);
 
   /* destroy kernel threads */

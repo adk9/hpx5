@@ -36,12 +36,14 @@ struct args data_to_check = {1.414, 3, 'a'};
 struct send_args {
   hpx_future_t *fut;
   unsigned int src_rank;
-  void* in_data;
+  char* in_data[];
 };
 
 int DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS =  (10*1037)/sizeof(size_t);
 
 hpx_future_t sendtest_fut; /* used for the simplest send test */
+hpx_future_t sendtest_data_fut; /* used for the data send test */
+hpx_future_t sendtest_datalarge_fut; /* used for the large data sent test */
 
 /*
  -------------------------------------------------------------------
@@ -60,7 +62,27 @@ void _test_action(void* args) {
 */
 
 void _set_sendtest_future_action(void* args) {
-  hpx_lco_future_set(&sendtest_fut, 0);
+  hpx_lco_future_set_state(&sendtest_fut);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for parcel send data test, to set future
+ -------------------------------------------------------------------
+*/
+
+void _set_sendtest_data_future_action(void* args) {
+  hpx_lco_future_set_state(&sendtest_data_fut);
+}
+
+/*
+ -------------------------------------------------------------------
+  TEST HELPER: action for parcel send data test, to set future
+ -------------------------------------------------------------------
+*/
+
+void _set_sendtest_datalarge_future_action(void* args) {
+  hpx_lco_future_set_state(&sendtest_datalarge_fut);
 }
 
 /*
@@ -72,7 +94,7 @@ void _set_sendtest_future_action(void* args) {
 void _set_future_action(void* args) {
   hpx_future_t* fut = (hpx_future_t*)args;
   ck_assert_msg(fut != NULL, "Couldn't set future - no argument received");
-  hpx_lco_future_set(fut, 0);
+  hpx_lco_future_set_state(fut);
 }
 
 /*
@@ -133,19 +155,32 @@ void _test_action_checkdata(void* args) {
   ck_assert_msg(args != NULL, "Did not receive any data");
   struct send_args *p_args = (struct send_args*)args;
   struct args *in_data = (struct args*)p_args->in_data;
-  ck_assert_msg(in_data != NULL, "Did not receive correct data");
-  ck_assert_msg(in_data->x == data_to_check.x, "Did not receive correct data");
-  ck_assert_msg(in_data->y == data_to_check.y, "Did not receive correct data");
-  ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data");
+  ck_assert_msg(in_data != NULL, "Did not receive data");
+  if (in_data != NULL) {
+    /*
+    printf("=====================================================\n");
+    printf("Expected %f, received %f\n", data_to_check.x, in_data->x);
+    printf("Expected %d, received %d\n", data_to_check.y, in_data->y);
+    printf("Expected %c, received %c\n", data_to_check.z, in_data->z);
+    printf("=====================================================\n");
+    fflush(stdout);
+    */
+    ck_assert_msg(in_data->x == data_to_check.x, "Did not receive correct data at beginning");
+    ck_assert_msg(in_data->y == data_to_check.y, "Did not receive correct data in middle");
+    ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data at end");
+  }
 
   other_loc = hpx_get_locality(p_args->src_rank);
+  void* return_fut = hpx_alloc(sizeof(void*));
+  return_fut = (void*)p_args->fut;
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_set_future_action", (void*)p_args->fut, 0, p);   
+  //  success = hpx_new_parcel("_set_future_action", &return_fut, sizeof(void*), p);   
+  success = hpx_new_parcel("_set_sendtest_data_future_action", NULL, 0, p);   
   ck_assert_msg(success == 0, "Couldn't create return parcel");
   success = hpx_send_parcel(other_loc, p);
   ck_assert_msg(success == 0, "Couldn't send parcel");
 
-  free(in_data);
+  //  free(in_data);
   free(p_args);
   hpx_locality_destroy(other_loc);
 }
@@ -160,27 +195,25 @@ void _test_action_checkdata_large(void* args) {
   int success;
   hpx_parcel_t *p;
   hpx_locality_t* other_loc;
-  int i;
+  size_t s_i;
 
   ck_assert_msg(args != NULL, "Did not receive any data");
   struct send_args *p_args = (struct send_args*)args;
   size_t *data = (size_t*)p_args->in_data;
-  ck_assert_msg(data != NULL, "Did not receive correct data");
+  ck_assert_msg(data != NULL, "Did not receive data");
 
-  for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
-    ck_assert_msg(data[i] == i, "Sent data was corrupt");
+  for (s_i = 0; s_i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); s_i++)
+    ck_assert_msg(data[s_i] == s_i, "Sent data was corrupt");
 
   other_loc = hpx_get_locality(p_args->src_rank);
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_set_future_action", (void*)p_args->fut, 0, p);   
+  success = hpx_new_parcel("_set_sendtest_datalarge_future_action", (void*)NULL, 0, p);   
   ck_assert_msg(success == 0, "Couldn't create return parcel");
   success = hpx_send_parcel(other_loc, p);
   ck_assert_msg(success == 0, "Couldn't send parcel");
 
-  free(data);
   free(p_args);
   hpx_locality_destroy(other_loc);
-
 }
 
 /*
@@ -203,7 +236,7 @@ void _thread_main_parcelsend(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&sendtest_fut, 1);
+    hpx_lco_future_init(&sendtest_fut);
     other_loc = hpx_get_locality(1);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
@@ -242,15 +275,23 @@ void _thread_main_parcelsenddata(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&fut, 1);
+    hpx_lco_future_init(&sendtest_data_fut);
+    hpx_lco_future_init(&fut);
     other_loc = hpx_get_locality(1);
 
+    size_t size_of_sendargs = sizeof(struct send_args) + sizeof(struct args);
+    struct send_args* args = hpx_alloc(size_of_sendargs);
+    args->fut = &fut;
+    args->src_rank = my_rank;
+    memcpy(args->in_data, &data_to_check, sizeof(struct args));
+
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_test_action_checkdata", (void*)&data_to_check, sizeof(data_to_check), p);
+    success = hpx_new_parcel("_test_action_checkdata", (char*)args, size_of_sendargs, p);
     success = hpx_send_parcel(other_loc, p);
     ck_assert_msg(success == 0, "Couldn't send parcel");
 
-    hpx_thread_wait(&fut);
+    //    hpx_thread_wait(&fut);
+    hpx_thread_wait(&sendtest_data_fut);
 
     hpx_locality_destroy(other_loc);
     hpx_lco_future_destroy(&fut);
@@ -277,14 +318,6 @@ void _thread_main_parcelsenddata_large(void* args) {
   hpx_locality_t* other_loc;
   size_t *data_to_send;
   int i;
-  hpx_future_t fut;
-
-  data_to_send = hpx_alloc(DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
-  ck_assert_msg(data_to_send != NULL, "Could not send large data - not enough memory to allocate space for data");
-  for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
-    data_to_send[i] = i;
-
-  hpx_lco_future_init(&fut, 1);
 
   num_ranks = hpx_get_num_localities();
   ck_assert_msg(num_ranks > 1, "Couldn't send parcel - no remote localities available to send to");
@@ -293,18 +326,31 @@ void _thread_main_parcelsenddata_large(void* args) {
   my_rank = my_loc->rank;
 
   if (my_rank == 0) {
-    hpx_lco_future_init(&fut, 1);
+    hpx_lco_future_init(&sendtest_data_fut);
     other_loc = hpx_get_locality(1);
 
+    data_to_send = hpx_alloc(sizeof(struct send_args) + DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
+    ck_assert_msg(data_to_send != NULL, "Could not send large data - not enough memory to allocate space for data");
+    for (i = 0; i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); i++)
+      data_to_send[i] = i;
+
+    size_t size_of_sendargs = sizeof(struct send_args) +  DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS;
+    struct send_args* args = hpx_alloc(size_of_sendargs);
+    args->fut = &fut;
+    args->src_rank = my_rank;
+    memcpy(args->in_data, &data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
+
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_test_action_checkdata_large", (void*)data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS, p);   
+    success = hpx_new_parcel("_test_action_checkdata_large", (char*)args, sizeof(struct send_args) + DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS, p);   
     success = hpx_send_parcel(other_loc, p);
     ck_assert_msg(success == 0, "Couldn't send parcel");
 
-    hpx_thread_wait(&fut);
+
+
+    hpx_thread_wait(&sendtest_datalarge_fut);
 
     hpx_locality_destroy(other_loc);
-    hpx_lco_future_destroy(&fut);
+    hpx_lco_future_destroy(&sendtest_data_fut);
   }
   else {
   }
@@ -317,24 +363,24 @@ void _thread_main_parcelsenddata_large(void* args) {
 */
 
 void run_multi_thread_set_concurrent(uint32_t th_cnt, hpx_func_t th_func, void* args[]) {
-  hpx_context_t * ctx;
+  hpx_context_t * ctx = __hpx_global_ctx;
   hpx_thread_t ** ths;
-  hpx_config_t cfg;
+  //  hpx_config_t cfg;
   int idx;
 
   /* init our config */
-  hpx_config_init(&cfg);
+  //  hpx_config_init(&cfg);
 
   /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+  //  ctx = hpx_ctx_create(&cfg);
+  //  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create HPX theads */
   ths = (hpx_thread_t **) hpx_alloc(sizeof(hpx_thread_t *) * th_cnt);
   ck_assert_msg(ths != NULL, "Could not allocate an array to hold thread data.");
 
   for(idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, th_func, args[idx]);
+    hpx_thread_create(ctx, 0, th_func, args[idx], &ths[idx]);
   }
 
   /* wait until our threads are done */
@@ -344,7 +390,7 @@ void run_multi_thread_set_concurrent(uint32_t th_cnt, hpx_func_t th_func, void* 
   
   /* clean up */
   hpx_free(ths);
-  hpx_ctx_destroy(ctx);
+  //  hpx_ctx_destroy(ctx);
 }
 
 
@@ -447,9 +493,9 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   int count;
   count = 1000;
 
-  hpx_context_t * ctx;
+  hpx_context_t * ctx = __hpx_global_ctx;
   hpx_thread_t ** ths;
-  hpx_config_t cfg;
+  //  hpx_config_t cfg;
   int idx;
   int i;
   int success;
@@ -462,11 +508,11 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
 
 
   /* init our config */
-  hpx_config_init(&cfg);
+  //  hpx_config_init(&cfg);
 
   /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
+  //  ctx = hpx_ctx_create(&cfg);
+  //  ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create parcelqueue */
   success = hpx_parcelqueue_create(&q);
@@ -478,7 +524,7 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   ck_assert_msg(ths != NULL, "Could not allocate an array to hold thread data.");
 
   for(idx = 0; idx < count; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, thread_queue_worker, (void*)q);
+    hpx_thread_create(ctx, 0, thread_queue_worker, (void*)q, &ths[idx]);
   }
 
   /* pop values from main thread BEFORE all other threads are finished */
@@ -498,7 +544,7 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
   for (i = 0; i < count; i++) /* this is normally done right after popping, but we want to stress the queue so we wait */
     hpx_free(pop_vals[i]);
   hpx_free(ths);
-  hpx_ctx_destroy(ctx);
+  //  hpx_ctx_destroy(ctx);
 
 
 }
@@ -517,8 +563,8 @@ START_TEST (test_libhpx_parcelhandler_create)
     
     ph = hpx_parcelhandler_create();
     ck_assert_msg(ph != NULL, "Could not create parcelhandler");
-    
-    hpx_parcelhandler_destroy(ph);
+    if (ph != NULL)
+      hpx_parcelhandler_destroy(ph);
 
     ph = NULL;
   }
@@ -537,6 +583,7 @@ START_TEST (test_libhpx_action_register)
   hpx_action_t* a;
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
 
   ck_assert_msg(a != NULL, "Could not register action");
   ck_assert_msg(!strcmp(a->name, "_test_action"), "Error registering action - wrong name");
@@ -577,8 +624,10 @@ START_TEST (test_libhpx_parcel_create)
 
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
+
   p = hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
+  success = hpx_new_parcel("_test_action", (char*)&Args, sizeof(struct args), p);
 
   ck_assert_msg(success == 0, "Could not create parcel");
   ck_assert_msg(p->action.action != NULL, "Error creating parcel - empty action");
@@ -604,8 +653,10 @@ START_TEST (test_libhpx_parcel_serialize)
 
   a = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_test_action", (hpx_func_t)_test_action, a);
+  hpx_network_barrier();
+
   p = hpx_alloc(sizeof(hpx_parcel_t));
-  success = hpx_new_parcel("_test_action", (void*)&Args, sizeof(struct args), p);
+  success = hpx_new_parcel("_test_action", (char*)&Args, sizeof(struct args), p);
 
   ck_assert_msg(success == 0, "Could not serialize parcel - failed to create parcel");
 
@@ -616,7 +667,7 @@ START_TEST (test_libhpx_parcel_serialize)
   action_name_matches = strncmp("_test_action", blob + sizeof(hpx_parcel_t), strlen("_test_action"));
   ck_assert_msg(action_name_matches == 0, "Parcel not serialized properly - action name was incorrect or missing");
   int payload_matches;
-  payload_matches = memcmp((void*)&Args, (void*)(blob) + sizeof(hpx_parcel_t) + strlen("_test_action") + 1, sizeof(struct args));
+  payload_matches = memcmp((char*)&Args, (blob) + sizeof(hpx_parcel_t) + strlen("_test_action") + 1, sizeof(struct args));
   ck_assert_msg(action_name_matches == 0, "Parcel not serialized properly - action name was incorrect or missing");
 } 
 END_TEST
@@ -636,8 +687,8 @@ START_TEST (test_libhpx_parcel_send)
   hpx_action_t* a;
   hpx_action_t* b;
 
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -645,21 +696,21 @@ START_TEST (test_libhpx_parcel_send)
   hpx_action_register("_test_action_checkrank", (hpx_func_t)_test_action_checkrank, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_sendtest_future_action", (hpx_func_t)_set_sendtest_future_action, b);
-
   //hpx_action_t* a_main;
   //hpx_action_t* a_sub; 
   //a_main = hpx_alloc(sizeof(hpx_action_t));
   //hpx_action_register("_thread_main_parcelsend", (hpx_func_t)_thread_main_parcelsend, a_main);
+  hpx_network_barrier();
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsend, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  //  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST
 
@@ -676,8 +727,9 @@ START_TEST (test_libhpx_parcel_senddata)
 
   hpx_action_t* a;
   hpx_action_t* b;
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  hpx_action_t* c;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -685,16 +737,19 @@ START_TEST (test_libhpx_parcel_senddata)
   hpx_action_register("_test_action_checkdata", (hpx_func_t)_test_action_checkdata, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+  c = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_sendtest_data_future_action", (hpx_func_t)_set_sendtest_data_future_action, c);
+  hpx_network_barrier();
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  //  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST
 
@@ -711,8 +766,9 @@ START_TEST (test_libhpx_parcel_senddata_large)
 
   hpx_action_t* a;
   hpx_action_t* b;
-  hpx_config_t *cfg;
-  hpx_context_t *ctx;
+  hpx_action_t* c;
+  //  hpx_config_t *cfg;
+  hpx_context_t *ctx = __hpx_global_ctx;
   hpx_thread_t* th;
 
   /* register action for parcel (must be done by all ranks) */
@@ -720,15 +776,18 @@ START_TEST (test_libhpx_parcel_senddata_large)
   hpx_action_register("_test_action_checkdata_large", (hpx_func_t)_test_action_checkdata_large, a);
   b = hpx_alloc(sizeof(hpx_action_t));
   hpx_action_register("_set_future_action", (hpx_func_t)_set_future_action, b);
+  c = hpx_alloc(sizeof(hpx_action_t));
+  hpx_action_register("_set_sendtest_datalarge_future_action", (hpx_func_t)_set_sendtest_datalarge_future_action, c);
+  hpx_network_barrier();
 
-  cfg = hpx_alloc(sizeof(hpx_config_t));  
-  hpx_config_init(cfg);
-  ctx = hpx_ctx_create(cfg);
-  th = hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0);
+  //  cfg = hpx_alloc(sizeof(hpx_config_t));  
+  //  hpx_config_init(cfg);
+  //  ctx = hpx_ctx_create(cfg);
+  hpx_thread_create(ctx, 0, (hpx_func_t)_thread_main_parcelsenddata_large, 0, &th);
   hpx_thread_join(th, (void**)NULL);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
-  hpx_free(cfg);
+  // hpx_ctx_destroy(ctx); /* note we don't need to free the context - destroy does that */
+  //  hpx_free(cfg);
 } 
 END_TEST

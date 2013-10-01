@@ -19,6 +19,7 @@
  ====================================================================
 */
 
+#include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
 #include "hpx/ctx.h"
@@ -32,6 +33,7 @@
  * @return error code.
  */
 hpx_error_t hpx_init(void) {
+  hpx_error_t success;
   __hpx_global_cfg = NULL;
   __hpx_global_ctx = NULL;
 
@@ -69,14 +71,26 @@ hpx_error_t hpx_init(void) {
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
   *__hpx_network_ops = default_ops;
-#if HAVE_MPI
+#if HAVE_NETWORK
+#if HAVE_PHOTON
+#warning Building with photon...
+  *__hpx_network_ops = photon_ops;
+#elif HAVE_MPI
   *__hpx_network_ops = mpi_ops;
 #endif
-  __hpx_network_ops->init();
+  success = __hpx_network_ops->init();
+  if (success != HPX_SUCCESS) {
+    __hpx_errno = HPX_ERROR;
+    return HPX_ERROR;
+  }
+#endif
 
   /* initialize the parcel subsystem */
   hpx_parcel_init();
+  __hpx_parcelhandler = NULL;
+#if HAVE_NETWORK
   __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
+#endif
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -94,11 +108,15 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
+#if HAVE_NETWORK
   hpx_parcelhandler_destroy(__hpx_parcelhandler); 
+#endif
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
 
+#if HAVE_NETWORK
   __hpx_network_ops->finalize();
   hpx_free(__hpx_network_ops);
+#endif
 }

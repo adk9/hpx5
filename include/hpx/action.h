@@ -49,6 +49,6 @@ int hpx_action_lookup_addr_local(hpx_func_t *func, hpx_action_t *action);
    Note: This is used to invoke an action locally. For remote action
    invocations, see hpx_call(3).
 */
-int hpx_action_invoke(hpx_action_t *action, void *args, void **result);
+hpx_future_t* hpx_action_invoke(hpx_action_t *action, void *args, hpx_thread_t** thp);
 
 #endif /* LIBHPX_ACTION_H_ */

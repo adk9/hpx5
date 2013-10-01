@@ -48,11 +48,12 @@ hpx_locality_t *hpx_get_my_locality(void) {
   if (__hpx_my_locality == NULL) {
     __hpx_my_locality = hpx_locality_create();
     /* TODO: replace with real runtime configured rank setting */
-    #if HAVE_MPI
+#if HAVE_MPI
     __hpx_my_locality->rank = _get_rank_mpi();
-    #elif HAVE_PHOTON
+#endif
+#if HAVE_PHOTON
     __hpx_my_locality->rank = _get_rank_photon();
-    #endif
+#endif
   }
   return __hpx_my_locality;
 }
@@ -60,21 +61,25 @@ hpx_locality_t *hpx_get_my_locality(void) {
 hpx_locality_t *hpx_get_locality(int rank) {
   hpx_locality_t *loc = hpx_locality_create();
   /* TODO: replace with real runtime configured ranks */
-  #if HAVE_MPI
+#if HAVE_MPI
   loc->rank = (uint32_t)rank;
-  #elif HAVE_PHOTON
-  loc->rank = (unit32_t)rank;
-  #endif
+#endif
+#if HAVE_PHOTON
+  loc->rank = (uint32_t)rank;
+#endif
 }
 
 uint32 hpx_get_num_localities(void) {
   // ask the network layer for the number of localities
   /* TODO: replace with real runtime configured ranks */
-  #if HAVE_MPI
-  return _get_size_mpi();
-  #elif HAVE_PHOTON
-  return _get_size_mpi();
-  #endif
+	uint32 ranks;
+#if HAVE_MPI
+	ranks = _get_size_mpi();
+#endif
+#if HAVE_PHOTON
+	ranks =  _get_size_photon();
+#endif
+	return ranks;
 }
 
 uint32 hpx_get_rank(void) {
