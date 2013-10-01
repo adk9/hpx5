@@ -12,7 +12,7 @@ AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
-AC_CONFIG_SRCDIR([include/hpx/list.h])
+AC_CONFIG_SRCDIR([include/hpx/hpx.h])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
