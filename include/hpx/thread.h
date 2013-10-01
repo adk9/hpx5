@@ -181,3 +181,4 @@ void _hpx_thread_wait(void *, void *, void *);
 uint64_t hpx_thread_map_hash(hpx_map_t *, void *);
 bool hpx_thread_map_cmp(void *, void *);
 
+#endif /* LIBHPX_THREAD_H_ */
