@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 		.eth_dev = "roce0",
 		.ib_dev = "mlx4_1",
 		.ib_port = 1,
-		.backend = "verbs"
+		.backend = "ugni"
 	};
 
 	photon_init(&cfg);

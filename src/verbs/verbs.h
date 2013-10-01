@@ -61,23 +61,6 @@ typedef struct proc_info_t {
 #endif
 } ProcessInfo;
 
-typedef struct verbs_req {
-	LIST_ENTRY(verbs_req) list;
-	uint32_t id;
-	int state;
-	int type;
-	int proc;
-	int tag;
-	pthread_mutex_t mtx;
-	pthread_cond_t completed;
-} verbs_req_t;
-
-struct mem_register_req {
-	SLIST_ENTRY(mem_register_req) list;
-	char *buffer;
-	int buffer_size;
-};
-
 extern struct photon_backend_t photon_verbs_backend;
 
 #endif

@@ -3,7 +3,6 @@
 #include "photon_buffer.h"
 #include "photon_buffertable.h"
 #include "logging.h"
-#include "squeue.h"
 
 #ifdef HAVE_VERBS
 #include "verbs.h"
@@ -18,7 +17,7 @@ int _photon_myrank;
 int _photon_nproc;
 int _photon_forwarder;
 
-static SLIST_HEAD(pendingmemregs, mem_register_req) pending_mem_register_list;
+static SLIST_HEAD(pendingmemregs, photon_mem_register_req) pending_mem_register_list;
 
 #ifdef DEBUG
 int _photon_start_debugging=1;
@@ -27,6 +26,8 @@ int _photon_start_debugging=1;
 #if defined(DEBUG) || defined(CALLTRACE)
 FILE *_phot_ofp;
 #endif
+/* END Globals */
+
 
 int photon_init(photonConfig cfg) {
 
@@ -60,7 +61,7 @@ int photon_init(photonConfig cfg) {
 
 	/* register any buffers that were requested before init */
 	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
-		struct mem_register_req *mem_reg_req;
+		struct photon_mem_register_req *mem_reg_req;
 		dbg_info("registering buffer in queue");
 		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
 		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
@@ -90,12 +91,12 @@ int photon_register_buffer(char *buffer, int buffer_size) {
 	dbg_info("(%p, %d)",buffer, buffer_size);
 
 	if(__photon_backend->initialized() != PHOTON_OK) {
-		struct mem_register_req *mem_reg_req;
+		struct photon_mem_register_req *mem_reg_req;
 		if( first_time ) {
 			SLIST_INIT(&pending_mem_register_list);
 			first_time = 0;
 		}
-		mem_reg_req = malloc( sizeof(struct mem_register_req) );
+		mem_reg_req = malloc( sizeof(struct photon_mem_register_req) );
 		mem_reg_req->buffer = buffer;
 		mem_reg_req->buffer_size = buffer_size;
 

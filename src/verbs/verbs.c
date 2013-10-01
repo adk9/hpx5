@@ -53,15 +53,12 @@ int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status);
 static pthread_t ledger_watcher;
 static void *__verbs_req_watcher(void *arg);
 #else
-static int __verbs_wait_event(verbs_req_t *req);
-static int __verbs_wait_ledger(verbs_req_t *req);
-static int __verbs_nbpop_ledger(verbs_req_t *req);
-static int __verbs_nbpop_event(verbs_req_t *req);
+static int __verbs_wait_event(photonRequest req);
+static int __verbs_wait_ledger(photonRequest req);
+static int __verbs_nbpop_ledger(photonRequest req);
+static int __verbs_nbpop_event(photonRequest req);
 #endif
 
-photonBuffer shared_storage;
-
-static ProcessInfo *verbs_processes;
 verbs_cnct_ctx verbs_ctx = {
 	.ib_dev ="ib0",
 	.ib_port = 1,
@@ -78,35 +75,22 @@ verbs_cnct_ctx verbs_ctx = {
 	.tx_depth = 16,
 	.rx_depth = 16
 };
+photonBuffer shared_storage;
 
+static ProcessInfo *verbs_processes;
 static htable_t *reqtable, *ledger_reqtable;
-static struct verbs_req *requests;
+static photonRequest requests;
 static int num_requests;
-static LIST_HEAD(freereqs, verbs_req) free_reqs_list;
-static LIST_HEAD(unreapedevdreqs, verbs_req) unreaped_evd_reqs_list;
-static LIST_HEAD(unreapedledgerreqs, verbs_req) unreaped_ledger_reqs_list;
-static LIST_HEAD(pendingreqs, verbs_req) pending_reqs_list;
+static LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
+static LIST_HEAD(unreapedevdreqs, photon_req_t) unreaped_evd_reqs_list;
+static LIST_HEAD(unreapedledgerreqs, photon_req_t) unreaped_ledger_reqs_list;
+static LIST_HEAD(pendingreqs, photon_req_t) pending_reqs_list;
 
 static int __initialized = 0;
 DEFINE_COUNTER(curr_cookie, uint32_t)
 DEFINE_COUNTER(handshake_rdma_write, uint32_t)
 
-static inline verbs_req_t *__verbs_get_request();
-
-#ifdef DEBUG
-static time_t _tictoc(time_t stime, int proc) {
-	time_t etime;
-	etime = time(NULL);
-	if ((etime - stime) > 10) {
-		if( proc >= 0 )
-			dbg_info("Still waiting for a recv buffer from %d", proc);
-		else
-			dbg_info("Still waiting for a recv buffer from any peer");
-		stime = etime;
-	}
-	return stime;
-}
-#endif
+static inline photonRequest __verbs_get_request();
 
 /* we are now a Photon backend */
 struct photon_backend_t photon_verbs_backend = {
@@ -132,8 +116,8 @@ struct photon_backend_t photon_verbs_backend = {
 };
 
 
-static inline verbs_req_t *__verbs_get_request() {
-	verbs_req_t *req;
+static inline photonRequest __verbs_get_request() {
+	photonRequest req;
 
 	LIST_LOCK(&free_reqs_list);
 	req = LIST_FIRST(&free_reqs_list);
@@ -142,7 +126,7 @@ static inline verbs_req_t *__verbs_get_request() {
 	LIST_UNLOCK(&free_reqs_list);
 
 	if (!req) {
-		req = malloc(sizeof(verbs_req_t));
+		req = malloc(sizeof(struct photon_req_t));
 		pthread_mutex_init(&req->mtx, NULL);
 		pthread_cond_init (&req->completed, NULL);
 	}
@@ -193,7 +177,7 @@ int __verbs_init_common(photonConfig cfg) {
 	INIT_COUNTER(curr_cookie, 1);
 	INIT_COUNTER(handshake_rdma_write, 0);
 
-	requests = malloc(sizeof(verbs_req_t) * DEF_NUM_REQUESTS);
+	requests = malloc(sizeof(struct photon_req_t) * DEF_NUM_REQUESTS);
 	if (!requests) {
 		log_err("Failed to allocate request list");
 		goto error_exit_req;
@@ -482,7 +466,7 @@ int verbs_probe_ledger(int proc, int *flag, int type, photonStatus status) {
 // will be set to 0 (zero) when the request is of type event and 1 (one) when the
 // request is of type ledger.
 int verbs_test(uint32_t request, int *flag, int *type, photonStatus status) {
-	verbs_req_t *req;
+	photonRequest req;
 	void *test;
 	int ret_val;
 
@@ -553,7 +537,7 @@ int verbs_test(uint32_t request, int *flag, int *type, photonStatus status) {
 
 ///////////////////////////////////////////////////////////////////////////////
 int verbs_wait(uint32_t request) {
-	verbs_req_t *req;
+	photonRequest req;
 
 	dbg_info("(%d)",request);
 
@@ -612,7 +596,7 @@ int verbs_wait(uint32_t request) {
 // this function can be used to wait for an event to occur
 static int __verbs_wait_one() {
 	uint32_t cookie;
-	verbs_req_t *tmp_req;
+	photonRequest tmp_req;
 	void *test;
 	int ne;
 	struct ibv_wc wc;
@@ -665,7 +649,7 @@ error_exit:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-static int __verbs_wait_event(verbs_req_t *req) {
+static int __verbs_wait_event(photonRequest req) {
 	int ne;
 	struct ibv_wc wc;
 
@@ -717,7 +701,7 @@ static int __verbs_wait_event(verbs_req_t *req) {
 			void *test;
 
 			if (htable_lookup(reqtable, (uint64_t)cookie, &test) == 0) {
-				verbs_req_t *tmp_req = test;
+				photonRequest tmp_req = test;
 
 				tmp_req->state = REQUEST_COMPLETED;
 				SAFE_LIST_REMOVE(tmp_req, list);
@@ -742,7 +726,7 @@ error_exit:
 // -1 if an error occured.
 //	0 if the request (req) specified in the argument has completed.
 //	1 if either no event was in the queue, or there was an event but not for the specified request (req).
-static int __verbs_nbpop_event(verbs_req_t *req) {
+static int __verbs_nbpop_event(photonRequest req) {
 	int ne;
 	struct ibv_wc wc;
 
@@ -785,7 +769,7 @@ static int __verbs_nbpop_event(verbs_req_t *req) {
 			void *test;
 
 			if (htable_lookup(reqtable, (uint64_t)cookie, &test) == 0) {
-				verbs_req_t *tmp_req = test;
+				photonRequest tmp_req = test;
 
 				tmp_req->state = REQUEST_COMPLETED;
 				SAFE_LIST_REMOVE(tmp_req, list);
@@ -807,7 +791,7 @@ error_exit:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-static int __verbs_wait_ledger(verbs_req_t *req) {
+static int __verbs_wait_ledger(photonRequest req) {
 	void *test;
 	int curr, num_entries, i=-1;
 
@@ -842,7 +826,7 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 					req->state = REQUEST_COMPLETED;
 				}
 				else {
-					verbs_req_t *tmp_req;
+					photonRequest tmp_req;
 
 					if (htable_lookup(ledger_reqtable, (uint64_t)curr_entry->request, &test) == 0) {
 						tmp_req = test;
@@ -876,7 +860,7 @@ static int __verbs_wait_ledger(verbs_req_t *req) {
 //		the "req" is not pending.	 This is not an error, if a previous
 //		call to __verbs_nbpop_ledger() poped the FIN that corresponds to "req".
 //	1 if the request is pending and the FIN has not arrived yet
-static int __verbs_nbpop_ledger(verbs_req_t *req) {
+static int __verbs_nbpop_ledger(photonRequest req) {
 	void *test;
 	int curr, i=-1;
 
@@ -921,7 +905,7 @@ static int __verbs_nbpop_ledger(verbs_req_t *req) {
 					return 0;
 				}
 				else {
-					verbs_req_t *tmp_req;
+					photonRequest tmp_req;
 
 					if (htable_lookup(ledger_reqtable, (uint64_t)curr_entry->request, &test) == 0) {
 						tmp_req = test;
@@ -988,7 +972,7 @@ int verbs_wait_any(int *ret_proc, uint32_t *ret_req) {
 		cookie = (uint32_t)( (wc.wr_id<<32)>>32);
 //fprintf(stderr,"gen_wait_any() poped an events with cookie:%x\n",cookie);
 		if (cookie != NULL_COOKIE) {
-			verbs_req_t *req;
+			photonRequest req;
 			void *test;
 
 			dbg_info("removing event with cookie:%u", cookie);
@@ -1055,7 +1039,7 @@ int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 
 			exists = htable_remove(ledger_reqtable, (uint64_t)curr_entry->request, &test);
 			if (exists != -1) {
-				verbs_req_t *req;
+				photonRequest req;
 				req = test;
 				*ret_req = curr_entry->request;
 				*ret_proc = i;
@@ -1078,7 +1062,7 @@ int verbs_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 #else /* PHOTON_MULTITHREADED */
 ///////////////////////////////////////////////////////////////////////////////
 static inline int __verbs_complete_ledger_req(uint32_t cookie) {
-	verbs_req_t *tmp_req;
+	photonRequest tmp_req;
 
 	if (htable_lookup(ledger_reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
 		return -1;
@@ -1097,7 +1081,7 @@ static inline int __verbs_complete_ledger_req(uint32_t cookie) {
 }
 
 static inline int __verbs_complete_evd_req(uint32_t cookie) {
-	verbs_req_t *tmp_req;
+	photonRequest tmp_req;
 
 	if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
 		return -1;
@@ -1571,7 +1555,7 @@ int verbs_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	INC_COUNTER(handshake_rdma_write);
 
 	if (request != NULL) {
-		verbs_req_t *req;
+		photonRequest req;
 
 		req = __verbs_get_request();
 		if (!req) {
@@ -1691,7 +1675,7 @@ int verbs_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *req
 	INC_COUNTER(handshake_rdma_write);
 
 	if (request != NULL) {
-		verbs_req_t *req;
+		photonRequest req;
 
 		req = __verbs_get_request();
 		if (!req) {
@@ -1816,7 +1800,7 @@ int verbs_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uin
 	INC_COUNTER(handshake_rdma_write);
 
 	if (request != NULL) {
-		verbs_req_t *req;
+		photonRequest req;
 
 		req = __verbs_get_request();
 		if (!req) {
@@ -1930,7 +1914,7 @@ int verbs_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 
 
 	if (request != NULL) {
-		verbs_req_t *req;
+		photonRequest req;
 
 		*request = request_id;
 
@@ -2035,7 +2019,7 @@ int verbs_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remo
 	}
 
 	if (request != NULL) {
-		verbs_req_t *req;
+		photonRequest req;
 
 		*request = request_id;
 
