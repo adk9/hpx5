@@ -1,12 +1,6 @@
 
 #include <stdio.h>
-#include <hpx/action.h>
-#include <hpx/config.h>
-#include <hpx/ctx.h>
-#include <hpx/parcel.h>
-#include <hpx/runtime.h>
-#include <hpx/thread.h>
-#include <hpx/timer.h>
+#include <hpx.h>
 
 hpx_context_t *ctx;
 hpx_action_t   act;

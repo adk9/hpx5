@@ -22,7 +22,6 @@
 
 
 #include <stdio.h>
-
 #include <check.h>
 
 /* Source files containing tests */

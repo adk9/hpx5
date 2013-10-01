@@ -31,24 +31,29 @@
 #include "hpx/agas.h"
 #include "hpx/atomic.h"
 #include "hpx/config.h"
-#include "hpx/ctx.h"
 #include "hpx/error.h"
-#include "hpx/heap.h"
 #include "hpx/init.h"
 #include "hpx/kthread.h"
 #include "hpx/lco.h"
-#include "hpx/list.h"
-#include "hpx/map.h"
-#include "hpx/mctx.h"
 #include "hpx/mem.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/parcelhandler.h"
-#include "hpx/queue.h"
 #include "hpx/runtime.h"
 #include "hpx/thread.h"
-#include "hpx/timer.h"
+#include "hpx/thread/ctx.h"
 #include "hpx/types.h"
+#include "hpx/utils/heap.h"
+#include "hpx/utils/list.h"
+#include "hpx/utils/map.h"
+#include "hpx/utils/queue.h"
+#include "hpx/utils/timer.h"
+
+#ifdef __x86_64__
+#include "hpx/thread/arch/x86_64/mconfig_defs.h"
+#include "hpx/thread/arch/x86_64/mconfig.h"
+#include "hpx/thread/arch/x86_64/mregs.h"
+#endif
 
 #undef _HPX_H_INSIDE
 

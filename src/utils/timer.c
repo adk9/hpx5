@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-#include "hpx/timer.h"
+#include "hpx/utils/timer.h"
 
 /*
  --------------------------------------------------------------------

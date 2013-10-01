@@ -25,7 +25,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <pthread.h>
-#include "hpx/hpx.h"
+#include "hpx.h"
 
 #ifdef __APPLE__
   #include <mach/mach.h>

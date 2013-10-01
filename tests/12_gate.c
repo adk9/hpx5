@@ -20,7 +20,7 @@
  ====================================================================
 */
 
-#include <hpx/hpx.h>
+#include "hpx.h"
 #include "hpx/gate.h"
 
 /* Globals */

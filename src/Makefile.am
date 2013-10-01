@@ -12,22 +12,22 @@ libhpx_la_SOURCES = network/network.c \
                     parcel/action.c  \
                     parcel/handler.c  \
                     parcel/parcel.c   \
-                    runtime/ctx.c     \
 		    runtime/init.c    \
 		    runtime/locality.c\
+                    thread/ctx.c     \
 		    thread/thread.c   \
 		    thread/kthread.c  \
-		    util/error.c      \
-		    util/timer.c      \
-		    util/config.c     \
-		    util/map.c
+		    utils/error.c      \
+		    utils/timer.c      \
+		    utils/config.c     \
+		    utils/map.c
 
 if CPU_X86_64
   ARCH_SRC = thread/arch/x86_64/mctx.S       \
 	     thread/arch/x86_64/mconfig.S    \
              thread/arch/x86_64/mctx_mk.c
   libhpx_la_arch_x86_64dir = $(includedir)/hpx/arch/x86_64
-  libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/arch/x86_64/*.h
+  libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/thread/arch/x86_64/*.h
 endif
 
 libhpx_la_SOURCES += $(ARCH_SRC)

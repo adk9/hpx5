@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 #include <check.h>
-#include "hpx/map.h"
+#include "hpx/utils/map.h"
 
 /*
  --------------------------------------------------------------------
