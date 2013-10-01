@@ -29,6 +29,20 @@ extern int _photon_nproc;
 extern int _photon_forwarder;
 
 int __ugni_init_context(ugni_cnct_ctx *ctx) {
+	int status;
+	unsigned address, cpu_id;
+	int device_id = 0;
+	
+	status = GNI_CdmGetNicAddress(device_id, &address, &cpu_id);
+	if (status != GNI_RC_SUCCESS) {
+		fprintf(stdout,
+				"GNI_CdmGetNicAddress ERROR status: %s (%d)\n", gni_err_str[status], status);
+		abort();
+	}
+	
+	printf("DEV_ADDR: %u, CPU_ID: %u\n", address, cpu_id);
+    printf("PMI_GNI_DEV_ID: %s\n", getenv("PMI_GNI_DEV_ID"));
+	printf("PMI_GNI_LOC_ADDR: %s\n", getenv("PMI_GNI_LOC_ADDR"));
 	
 	
 	return PHOTON_OK;

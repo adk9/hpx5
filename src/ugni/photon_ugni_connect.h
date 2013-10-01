@@ -1,6 +1,7 @@
 #ifndef PHOTON_UGNI_CONNECT_H
 #define PHOTON_UGNI_CONNECT_H
 
+#include <netinet/in.h>
 #include "photon_ugni.h"
 
 #define BIND_ID_MULTIPLIER       100
