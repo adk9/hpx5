@@ -24,11 +24,11 @@
 #include <stdint.h>
 
 #include "hpx/mem.h"
-#include "hpx/mctx.h"
 #include "hpx/lco.h"
-#include "hpx/list.h"
-#include "hpx/map.h"
 #include "hpx/types.h"
+#include "hpx/thread/mctx.h"
+#include "hpx/utils/list.h"
+#include "hpx/utils/map.h"
 
 typedef uint64_t hpx_node_id_t;
 typedef uint64_t hpx_thread_id_t;

@@ -12,7 +12,7 @@ AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
-AC_CONFIG_SRCDIR([include/hpx/hpx.h])
+AC_CONFIG_SRCDIR([include/hpx.h])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
@@ -69,27 +69,27 @@ AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement s
 AS_IF([test "x$use_papi" = xyes], [
   PKG_CHECK_MODULES([PAPI], [papi])
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
+  AC_SUBST(PAPI_CFLAGS)
+  AC_SUBST(PAPI_LIBS)
 ])
-AC_SUBST(PAPI_CFLAGS)
-AC_SUBST(PAPI_LIBS)
 
 # Check for HWLOC.
 AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
 AS_IF([test "x$use_hwloc" = xyes], [
   PKG_CHECK_MODULES([HWLOC], [hwloc])
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
+  AC_SUBST(HWLOC_CFLAGS)
+  AC_SUBST(HWLOC_LIBS)
 ])
-AC_SUBST(HWLOC_CFLAGS)
-AC_SUBST(HWLOC_LIBS)
 
 # Check for TCMALLOC.
 AC_ARG_WITH([tcmalloc], AS_HELP_STRING([--with-tcmalloc], [Build with TCMALLOC support]), [use_tcmalloc=yes], [])
 AS_IF([test "x$use_tcmalloc" = xyes], [
   PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
   AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
+  AC_SUBST(TCMALLOC_CFLAGS)
+  AC_SUBST(TCMALLOC_LIBS)
 ])
-AC_SUBST(TCMALLOC_CFLAGS)
-AC_SUBST(TCMALLOC_LIBS)
 
 # Check for MPI
 AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
@@ -104,16 +104,16 @@ AS_IF([test "x$use_photon" = xyes], [
 ])
 
 # Check for check (and disable test-suite if not found).
-AC_CHECK_LIB([check], [check_major_version], [CHECK=yes])
-AS_IF([test -z "$CHECK"], [
-  PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
+PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [
   AC_DEFINE([WITH_TESTSUITE], [], [Enable test suite])
-])
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
-if test -z "$CHECK";
-  then AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-fi
+  AM_CONDITIONAL([WITH_TESTSUITE], true)
+  AC_SUBST(CHECK, [check])
+  AC_SUBST(CHECK_CFLAGS)
+  AC_SUBST(CHECK_LIBS)], [
+  AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
+  AM_CONDITIONAL([WITH_TESTSUITE], false)])
+
+AM_COND_IF([WITH_TESTSUITE], [AC_CONFIG_FILES([tests/Makefile])])
 
 # Check for doxygen (to build the documentation).
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -135,10 +135,6 @@ AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" = xyes])
 AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
-
-AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
-AM_COND_IF([WITH_TESTSUITE],
-	[AC_CONFIG_FILES([tests/Makefile])])
 
 AC_CONFIG_FILES([
   Makefile

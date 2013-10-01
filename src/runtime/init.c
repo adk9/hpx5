@@ -22,8 +22,8 @@
 #include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
-#include "hpx/ctx.h"
 #include "hpx/network.h"
+#include "hpx/thread/ctx.h"
 
 /**
  * Initializes data structures used by libhpx.  This function must

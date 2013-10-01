@@ -26,11 +26,11 @@
 #include <stdint.h>
 //#include <hwloc.h>
 
-#include "hpx/queue.h"
 #include "hpx/thread.h"
 #include "hpx/kthread.h"
 #include "hpx/config.h"
 #include "hpx/types.h"
+#include "hpx/utils/queue.h"
 
 #ifdef __x86_64__
   #include "arch/x86_64/mconfig.h"

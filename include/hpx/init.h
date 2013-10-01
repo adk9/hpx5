@@ -27,10 +27,7 @@
 #include "hpx/error.h"
 #include "hpx/network.h"
 #include "hpx/parcelhandler.h"
-
-#ifdef __x86_64__
-  #include "arch/x86_64/mconfig.h"
-#endif
+#include "hpx/thread.h"
 
 /*
  --------------------------------------------------------------------

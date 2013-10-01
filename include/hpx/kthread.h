@@ -25,9 +25,9 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "hpx/queue.h"
-#include "hpx/mctx.h"
 #include "hpx/types.h"
+#include "hpx/thread/mctx.h"
+#include "hpx/utils/queue.h"
 
 static pthread_once_t __kthread_init_once = PTHREAD_ONCE_INIT;
 static pthread_key_t errno_key;
