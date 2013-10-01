@@ -23,10 +23,10 @@
 #include <stdlib.h>
 
 #if HAVE_MPI
-  #include "hpx/network/mpi.h"
+  #include <mpi.h>
 #endif
 #if HAVE_PHOTON
-  #include "hpx/network/photon.h"
+  #include <photon.h>
 #endif
 
 #define NETWORK_ANY_SOURCE -1
