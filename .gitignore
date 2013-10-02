@@ -95,22 +95,6 @@
 /src/Makefile
 /src/Makefile.in
 
-# /src/libhpx/
-/src/libhpx/.deps
-/src/libhpx/Makefile
-/src/libhpx/Makefile.in
-
-# /src/libhpx/arch/
-/src/libhpx/arch/.deps
-/src/libhpx/arch/Makefile
-/src/libhpx/arch/Makefile.in
-
-# /src/libhpx/arch/x86_64/
-/src/libhpx/arch/x86_64/.dirstamp
-/src/libhpx/arch/x86_64/.deps
-/src/libhpx/arch/x86_64/Makefile
-/src/libhpx/arch/x86_64/Makefile.in
-
 # /src/libxpi/
 /src/libxpi/.deps
 /src/libxpi/Makefile
