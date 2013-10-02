@@ -3,7 +3,7 @@ AM_CFLAGS = @CFLAGS@                         \
 	    -I@top_srcdir@/include
 
 bin_PROGRAMS = photon_test photon_test_get photon_test_put
-AM_LDFLAGS = @top_srcdir@/src/libphoton.la -lm @VERBS_LIBS@ @THREAD_LIBS@ @MPI_LIBS@
+AM_LDFLAGS = @top_srcdir@/src/libphoton.la -lm @MPI_LIBS@ @VERBS_LIBS@ @THREAD_LIBS@
 
 photon_test_SOURCES = kernel.c photon_test.c
 photon_test_get_SOURCES = photon_test_get.c

@@ -17,12 +17,8 @@
 #include "logging.h"
 
 #define BIND_ID_MULTIPLIER       100
-#define CACHELINE_MASK           0x3F   /* 64 byte cacheline */
 #define CDM_ID_MULTIPLIER        1000
-#define LOCAL_EVENT_ID_BASE      10000000
-#define NUMBER_OF_TRANSFERS      10
 #define POST_ID_MULTIPLIER       1000
-#define REMOTE_EVENT_ID_BASE     11000000
 #define GEMINI_DEVICE_ID         0x0
 #define MAX_CQ_ENTRIES           1000
 
@@ -38,19 +34,19 @@ extern int _photon_myrank;
 extern int _photon_nproc;
 extern int _photon_forwarder;
 
+static int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info);
+
 int __ugni_init_context(ugni_cnct_ctx *ctx) {
 	unsigned local_address;
-	int address, cookie;
-	int status;
+	int cookie, status;
 	/* GNI_CDM_MODE_BTE_SINGLE_CHANNEL | GNI_CDM_MODE_DUAL_EVENTS | GNI_CDM_MODE_FMA_SHARED */
 	int modes = 0;
 	uint8_t ptag;
 
-	address = get_gni_nic_address(GEMINI_DEVICE_ID);
 	ptag = get_ptag();
 	cookie = get_cookie();
 	
-	ctx->cdm_id = _photon_myrank * CDM_ID_MULTIPLIER + 1;
+	ctx->cdm_id = _photon_myrank * CDM_ID_MULTIPLIER + CDM_ID_MULTIPLIER;
 
 	status = GNI_CdmCreate(ctx->cdm_id, ptag, cookie, modes, &(ctx->cdm_handle));
     if (status != GNI_RC_SUCCESS) {
@@ -82,6 +78,12 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
         goto error_exit;
     }
 
+	ctx->ep_handles = (gni_ep_handle_t *)calloc(_photon_nproc, sizeof(gni_ep_handle_t));
+	if (!ctx->ep_handles) {
+		dbg_err("Could not allocate endpoint array");
+		goto error_exit;
+	}
+
 	return PHOTON_OK;
 
  error_exit:
@@ -89,7 +91,129 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
 }
 
 int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
+	ugni_cnct_info *remote_info, *curr_info;
+	ugni_cnct_info local_info;
+	unsigned int *remote_lids;
+	unsigned int *remote_ips;
+	struct ifaddrs *ifaddr, *ifa;
+	int i, rc;
+	MPI_Comm _photon_comm = __photon_config->comm;
 
+	remote_info = (ugni_cnct_info *)malloc(_photon_nproc * sizeof(ugni_cnct_info));
+	if(!remote_info) {
+		goto error_exit;
+	}
 
+	remote_ips = (unsigned int *)malloc(_photon_nproc * sizeof(unsigned int));
+	if (!remote_ips) {
+		goto error_exit;
+	}
+
+	remote_lids = (unsigned int *)malloc(_photon_nproc * sizeof(unsigned int));
+	if (!remote_lids) {
+		goto error_exit;
+	}
+
+	memset(remote_info, 0, _photon_nproc*sizeof(ugni_cnct_info));
+	memset(remote_ips, 0, _photon_nproc*sizeof(unsigned int));
+	memset(remote_lids, 0, _photon_nproc*sizeof(unsigned int));
+
+	if (getifaddrs(&ifaddr) == -1) {
+		dbg_info("Cannot get interface addrs");
+		ifa = NULL;
+	}
+	else {
+		for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+			if (ifa->ifa_addr == NULL)
+				continue;
+			
+			if (!strcmp(ifa->ifa_name, ctx->gemini_dev) &&
+				ifa->ifa_addr->sa_family == AF_INET) {
+				break;
+			}
+		}
+	}
+	
+	if (!ifa) {
+		dbg_info("Did not find interface info for %s\n", ctx->gemini_dev);
+		local_info.ip.s_addr = 0x0;
+	}
+	else {
+		local_info.ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+		dbg_info("Found local IP: %s", inet_ntoa(local_info.ip));
+	}
+	
+	local_info.lid = get_gni_nic_address(GEMINI_DEVICE_ID);
+
+	rc = MPI_Allgather(&local_info.lid, 1, MPI_UNSIGNED, remote_lids, 1, MPI_UNSIGNED, _photon_comm);
+	if (rc != MPI_SUCCESS) {
+		dbg_err("Could not allgather NIC IDs");
+		goto error_exit_free;
+	}
+
+	rc = MPI_Allgather(&local_info.ip.s_addr, 1, MPI_UNSIGNED, remote_ips, 1, MPI_UNSIGNED, _photon_comm);
+	if (rc != MPI_SUCCESS) {
+		dbg_err("Could not allgather NIC IPs");
+		goto error_exit_free;
+	}
+
+	curr_info = remote_info;
+	for (i=0; i<_photon_nproc; i++) {
+		curr_info[i].lid = remote_lids[i];
+		curr_info[i].ip.s_addr = remote_ips[i];
+		dbg_info(">>>> from rank: %d, ID: %u, IP: %s", i, curr_info[i].lid, inet_ntoa(curr_info[i].ip));
+	}						 
+
+	if (__ugni_connect_endpoints(ctx, &local_info, remote_info)) {
+		dbg_err("Could not connect GEMINI endpoints");
+		goto error_exit_free;
+	}
+	
+	free(remote_info);
+	free(remote_ips);
+	free(remote_lids);
+	
 	return PHOTON_OK;
+
+ error_exit_free:
+	free(remote_info);
+	free(remote_ips);
+	free(remote_lids);
+ error_exit:
+	return PHOTON_ERROR;
+}
+
+static int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info) {
+	int i, status;
+	uint32_t bind_id;
+
+	for (i=0; i<_photon_nproc; i++) {
+
+		if (_photon_myrank == i)
+			continue;
+
+		status = GNI_EpCreate(ctx->nic_handle, ctx->local_cq_handle, &ctx->ep_handles[i]);
+		if (status != GNI_RC_SUCCESS) {
+			dbg_err("GNI_EpCreate ERROR status: %s (%d)", gni_err_str[status], status);
+			goto error_exit;
+		}
+		dbg_info("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, ctx->nic_handle,
+				 ctx->local_cq_handle, ctx->ep_handles[i]);
+		
+		
+		bind_id = (_photon_myrank * BIND_ID_MULTIPLIER) + BIND_ID_MULTIPLIER + i;
+		
+		status = GNI_EpBind(ctx->ep_handles[i], remote_info[i].lid, bind_id);
+        if (status != GNI_RC_SUCCESS) {
+			dbg_err("GNI_EpBind ERROR status: %s (%d)", gni_err_str[status], status);
+            goto error_exit;
+        }
+		dbg_info("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
+				 ctx->ep_handles[i], remote_info[i].lid, bind_id);
+	}
+	
+	return PHOTON_OK;
+
+ error_exit:
+	return PHOTON_ERROR;
 }

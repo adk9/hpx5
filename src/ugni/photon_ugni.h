@@ -25,8 +25,6 @@
 
 /* use the common set of photon ledgers */
 typedef struct ugni_proc_info_t {
-	gni_ep_handle_t ep;
-
 	photonRILedger  local_snd_info_ledger;
 	photonRILedger  remote_snd_info_ledger;
 	photonRILedger  local_rcv_info_ledger;
