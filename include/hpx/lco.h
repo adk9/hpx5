@@ -27,7 +27,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <immintrin.h>
+
+#ifdef __APPLE__
+  #include <emmintrin.h>
+#endif
+
+#ifdef __linux__
+  #include <immintrin.h>
+#endif
 
 #include "hpx/error.h"
 #include "hpx/mutex.h"
