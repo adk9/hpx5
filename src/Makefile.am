@@ -8,7 +8,8 @@ SUBDIRS = .
 
 lib_LTLIBRARIES = libhpx.la
 
-libhpx_la_SOURCES = network/network.c \
+libhpx_la_SOURCES = network/network.c\
+                    bootstrap/bootstrap.c\
                     parcel/action.c  \
                     parcel/handler.c  \
                     parcel/parcel.c   \
@@ -51,6 +52,7 @@ endif
 if HAVE_MPI
 MPI_DEFS = -DHAVE_MPI=1
 libhpx_la_SOURCES += network/mpi.c
+libhpx_la_SOURCES += bootstrap/mpirun.c
 endif
 
 if HAVE_PHOTON

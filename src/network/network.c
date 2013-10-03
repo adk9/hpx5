@@ -2,7 +2,7 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Networkunication Layer
+  Network Layer
   network.c
 
   Copyright (c) 2013, Trustees of Indiana University 
@@ -25,7 +25,7 @@
 #include "hpx/runtime.h" /* for hpx_locality_t */
 
 /* Default network operations */
-network_ops_t default_ops = {
+network_ops_t default_net_ops = {
     .init     = hpx_network_init,
     .finalize = hpx_network_finalize,
     .progress = hpx_network_progress,
