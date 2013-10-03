@@ -14,6 +14,8 @@
 #include "aries/misc/exceptions.h"
 #endif
 
+#include "logging.h"
+
 int             aborted = 0;
 char           *command_name;
 int             expected_passed = 0;
@@ -102,8 +104,7 @@ get_gni_nic_address(int device_id)
 
         status = GNI_CdmGetNicAddress(device_id, &address, &cpu_id);
         if (status != GNI_RC_SUCCESS) {
-            fprintf(stdout,
-                    "GNI_CdmGetNicAddress ERROR status: %s (%d)\n", gni_err_str[status], status);
+			dbg_err("GNI_CdmGetNicAddress ERROR status: %s (%d)", gni_err_str[status], status);
             abort();
         }
     } else {
@@ -242,8 +243,8 @@ get_cookie(void)
  */
 
 static int
-get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
-             int rank_id, unsigned int source_cq, unsigned int retry,
+get_cq_event(gni_cq_handle_t cq_handle,
+             unsigned int source_cq, unsigned int retry,
              gni_cq_entry_t *next_event)
 {
     gni_cq_entry_t  event_data = 0;
@@ -271,72 +272,56 @@ get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
 
                 if (event_type == GNI_CQ_EVENT_TYPE_POST) {
                     if (source_cq == 1) {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    source      type: POST(%lu) inst_id: %lu tid: %lu event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_INST_ID(event_data),
-                                GNI_CQ_GET_TID(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    source      type: POST(%lu) inst_id: %lu tid: %lu event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_INST_ID(event_data),
+								 GNI_CQ_GET_TID(event_data),
+								 event_data);
                     } else {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    destination type: POST(%lu) inst_id: %lu event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_INST_ID(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    destination type: POST(%lu) inst_id: %lu event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_INST_ID(event_data),
+								 event_data);
                     }
                 } else if (event_type == GNI_CQ_EVENT_TYPE_SMSG) {
                     if (source_cq == 1) {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    source      type: SMSG(%lu) msg_id: 0x%8.8x event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    source      type: SMSG(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
+								 event_type,
+								 (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
+								 event_data);
                     } else {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    destination type: SMSG(%lu) data: 0x%16.16lx event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_DATA(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    destination type: SMSG(%lu) data: 0x%16.16lx event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_DATA(event_data),
+								 event_data);
                     }
                 } else if (event_type == GNI_CQ_EVENT_TYPE_MSGQ) {
                     if (source_cq == 1) {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    source      type: MSGQ(%lu) msg_id: 0x%8.8x event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    source      type: MSGQ(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
+								 event_type,
+								 (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
+								 event_data);
                     } else {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    destination type: MSGQ(%lu) data: 0x%16.16lx event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_DATA(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    destination type: MSGQ(%lu) data: 0x%16.16lx event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_DATA(event_data),
+								 event_data);
                     }
                 } else {
                     if (source_cq == 1) {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    source      type: %lu inst_id: %lu event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_DATA(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    source      type: %lu inst_id: %lu event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_DATA(event_data),
+								 event_data);
                     } else {
-                        fprintf(stdout,
-                                "[%s] Rank: %4i GNI_CqGetEvent    destination type: %lu data: 0x%16.16lx event: 0x%16.16lx\n",
-                                uts_info.nodename, rank_id,
-                                event_type,
-                                GNI_CQ_GET_DATA(event_data),
-                                event_data);
+                        dbg_info("GNI_CqGetEvent    destination type: %lu data: 0x%16.16lx event: 0x%16.16lx",
+								 event_type,
+								 GNI_CQ_GET_DATA(event_data),
+								 event_data);
                     }
                 }
             }
-
+			
             return 0;
         } else if (status != GNI_RC_NOT_DONE) {
             int error_code = 1;
@@ -369,9 +354,7 @@ get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
                 error_code = 2;
 
                 if (v_option > 2) {
-                    fprintf(stdout,
-                            "[%s] Rank: %4i ERROR CQ_OVERRUN detected\n",
-                            uts_info.nodename, rank_id);
+                    dbg_info("ERROR CQ_OVERRUN detected");
                 }
             }
 
@@ -384,23 +367,21 @@ get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
 
                 tmp_status = GNI_CqErrorStr(event_data, cqErrorStr, 256);
                 if (tmp_status == GNI_RC_SUCCESS) {
-                    fprintf(stdout,
-                            "[%s] Rank: %4i GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx GNI_CqErrorStr: %s\n",
-                            uts_info.nodename, rank_id, cqOverrunErrorStr, gni_err_str[status], status,
-                            GNI_CQ_GET_INST_ID(event_data),
-                            event_data,
-                            cqErrorStr);
+                    dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx GNI_CqErrorStr: %s",
+                             cqOverrunErrorStr, gni_err_str[status], status,
+							 GNI_CQ_GET_INST_ID(event_data),
+							 event_data,
+							 cqErrorStr);
                 } else {
 
                     /*
                      * Print the error number.
                      */
 
-                    fprintf(stdout,
-                            "[%s] Rank: %4i GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx\n",
-                            uts_info.nodename, rank_id, cqOverrunErrorStr, gni_err_str[status], status,
-                            GNI_CQ_GET_INST_ID(event_data),
-                            event_data);
+                    dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
+                             cqOverrunErrorStr, gni_err_str[status], status,
+							 GNI_CQ_GET_INST_ID(event_data),
+							 event_data);
                 }
 
                 free(cqErrorStr);
@@ -410,11 +391,10 @@ get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
                  * Print the error number.
                  */
 
-                fprintf(stdout,
-                        "[%s] Rank: %4i GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx\n",
-                        uts_info.nodename, rank_id, cqOverrunErrorStr, gni_err_str[status], status,
-                        GNI_CQ_GET_INST_ID(event_data),
-                        event_data);
+                dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
+                         cqOverrunErrorStr, gni_err_str[status], status,
+						 GNI_CQ_GET_INST_ID(event_data),
+						 event_data);
             }
             return error_code;
         } else if (retry == 0) {
@@ -433,9 +413,8 @@ get_cq_event(gni_cq_handle_t cq_handle, struct utsname uts_info,
                  * application.
                  */
 
-                fprintf(stdout,
-                        "[%s] Rank: %4i GNI_CqGetEvent    ERROR no event was received status: %d retry count: %d\n",
-                        uts_info.nodename, rank_id, status, wait_count);
+                dbg_info("GNI_CqGetEvent    ERROR no event was received status: %d retry count: %d",
+                         status, wait_count);
                 return 3;
             }
 
@@ -545,9 +524,9 @@ print_results(void)
      * Print the results from this test.
      */
 
-    fprintf(stdout, "[%s] Rank: %4i %s:    %s    Test Results    Passed: %i/%i Failed: %i Aborted: %i\n",
-            uts_info.nodename, rank_id, command_name, exit_status,
-            passed, expected_passed, failed, aborted);
+    dbg_info("%s:    %s    Test Results    Passed: %i/%i Failed: %i Aborted: %i",
+			 command_name, exit_status,
+			 passed, expected_passed, failed, aborted);
 
     if (aborted > 0) {
 
