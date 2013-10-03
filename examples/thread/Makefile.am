@@ -1,8 +1,7 @@
-examplesdir = $(datarootdir)/doc/@PACKAGE@
+examplesdir				= $(datarootdir)/doc/@PACKAGE@
 
-AM_CPPFLAGS = -I$(top_srcdir)/include
+examples_PROGRAMS		= fibonacci
+fibonacci_SOURCES		= fibonacci.c
 
-examples_PROGRAMS = fibonacci
-fibonacci_SOURCES = fibonacci.c
-fibonacci_LDADD = $(top_srcdir)/src/libhpx.la
-
+fibonacci_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_builddir)/include
+fibonacci_LDADD			= $(top_builddir)/src/libhpx.la
