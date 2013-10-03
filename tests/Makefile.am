@@ -1,7 +1,7 @@
 if WITH_TESTSUITE
 
-noinst_bindir=.
 noinst_bin_PROGRAMS = hpxtest
+noinst_bindir = $(abs_top_builddir)/tests
 #TESTS = hpxtest
 TESTS = 
 check_PROGRAMS = hpxtest
