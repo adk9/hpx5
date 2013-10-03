@@ -70,7 +70,7 @@ hpx_error_t hpx_init(void) {
 
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
-  *__hpx_network_ops = default_ops;
+  *__hpx_network_ops = default_net_ops;
 #if HAVE_NETWORK
 #if HAVE_PHOTON
 #warning Building with photon...
