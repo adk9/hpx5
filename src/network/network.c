@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "hpx/action.h"
+#include "hpx/bootstrap.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h" /* for hpx_locality_t */
@@ -37,6 +38,7 @@ network_ops_t default_net_ops = {
     .get      = hpx_network_get,
     .pin      = hpx_network_pin,
     .unpin    = hpx_network_unpin,
+    .phys_addr= hpx_network_phys_addr,
 };
 
 /*
@@ -91,6 +93,12 @@ int hpx_network_pin(void* buffer, size_t len) {
 int hpx_network_unpin(void* buffer, size_t len) {
   return 0;
 }
+
+int hpx_network_phys_addr(network_id_t *id) {
+  return 0;
+}
+
+/**********************************************************/
 
 void hpx_network_barrier() {
 #if HAVE_MPI

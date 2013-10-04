@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "hpx/action.h"
+#include "hpx/bootstrap.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/network/mpi.h"
@@ -32,17 +33,18 @@
 
 /* Photon network operations */
 network_ops_t photon_ops = {
-  .init     = _init_photon,
-  .finalize = _finalize_photon,
-  .progress = _progress_photon,
-  .probe    = _probe_photon,
-  .send     = _put_photon,
-  .recv     = _get_photon,
-  .test     = _test_photon,
-  .put      = _put_photon,
-  .get      = _get_photon,
-  .pin      = _pin_photon,
-  .unpin    = _unpin_photon,
+  .init     = init_photon,
+  .finalize = finalize_photon,
+  .progress = progress_photon,
+  .probe    = probe_photon,
+  .send     = put_photon,
+  .recv     = get_photon,
+  .test     = test_photon,
+  .put      = put_photon,
+  .get      = get_photon,
+  .pin      = pin_photon,
+  .unpin    = unpin_photon,
+  .phys_addr= phys_addr_photon,
 };
 
 int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
@@ -75,16 +77,19 @@ int _init_photon(void) {
 
   /* TODO: see if we really need thread multiple */
   //  temp = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided); /* TODO: should be argc and argv if possible */
-  temp = MPI_Init(0, NULL); /* TODO: should be argc and argv if possible */
-  if (temp == MPI_SUCCESS)
-    retval = 0;
-  else {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
+  MPI_Initialized(&retval);
+  if (!retval) {
+    temp = MPI_Init(0, NULL); /* TODO: should be argc and argv if possible */
+    if (temp == MPI_SUCCESS)
+      retval = 0;
+    else {
+      __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+      goto error;
+    }
   }
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &_rank_photon);
-  MPI_Comm_size(MPI_COMM_WORLD, &_size_photon);
+  _rank_photon = bootmgr->get_rank();
+  _size_photon = bootmgr->size();
 
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
@@ -128,11 +133,13 @@ int _finalize_photon(void) {
   int temp;
   retval = HPX_ERROR;
 
-  temp = MPI_Finalize();
-
-  if (temp != MPI_SUCCESS) {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
+  MPI_Finalized(&retval);
+  if (!retval) {
+    temp = MPI_Finalize();
+    if (temp != MPI_SUCCESS) {
+      __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+      goto error;
+    }
   }
 
   temp = photon_finalize();
@@ -311,4 +318,19 @@ int _unpin_photon(void* buffer, size_t len) {
 
  error:
   return retval;
+}
+
+/* Return the physical network ID of the current process */
+int phys_addr_photon(network_id_t *id) {
+    int ret;
+    ret = HPX_ERROR;
+
+    if (!id) {
+        __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+        return ret;
+    }
+
+    id->addr = bootmgr->get_rank();
+    id->pid = 0;
+    return 0;
 }

@@ -20,20 +20,22 @@
 #include <portals4.h>
 
 #include "hpx/action.h"
+#include "hpx/bootstrap.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 
 /* Portals communication operations */
 network_ops_t portals_ops = {
     .init     = portals_init,
+    .finalize = portals_finalize,
+    .progress = portals_progress,
+    .probe    = portals_probe,
     .send     = portals_send,
     .recv     = portals_recv,
+    .test     = portals_test,
     .put      = portals_put,
     .get      = portals_get,
-    .probe    = portals_probe,
-    .test     = portals_test,
-    .progress = portals_progress,
-    .finalize = portals_finalize,
+    .phys_addr= portals_phys_addr,
 };
 
 int portals_init(void) {
@@ -61,4 +63,7 @@ int portals_probe(int source, int* flag, network_status_t *status) {
 }
 
 int portals_test(network_request_t *request, int *flag, network_status_t *status) {
+}
+
+int portals_phys_addr(network_id_t *id) {
 }

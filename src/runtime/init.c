@@ -19,6 +19,7 @@
  ====================================================================
 */
 
+#include "hpx/bootstrap.h"
 #include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
@@ -67,7 +68,6 @@ hpx_error_t hpx_init(void) {
     return HPX_ERROR_NOMEM;
   }
 
-
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
   *__hpx_network_ops = default_net_ops;
@@ -78,6 +78,22 @@ hpx_error_t hpx_init(void) {
 #elif HAVE_MPI
   *__hpx_network_ops = mpi_ops;
 #endif
+
+  bootmgr = hpx_alloc(sizeof(bootstrap_ops_t));
+#if HAVE_MPI
+  *bootmgr = mpi_boot_ops;
+#else
+  *bootmgr = default_boot_ops;
+#endif
+
+  /* bootstrap the runtime */
+  success = bootmgr->init();
+  if (success != HPX_SUCCESS) {
+    __hpx_errno = HPX_ERROR;
+    return HPX_ERROR;
+  }
+
+  /* initialize network */
   success = __hpx_network_ops->init();
   if (success != HPX_SUCCESS) {
     __hpx_errno = HPX_ERROR;
@@ -115,8 +131,14 @@ void hpx_cleanup(void) {
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
 
+  /* finalize the network */
 #if HAVE_NETWORK
   __hpx_network_ops->finalize();
   hpx_free(__hpx_network_ops);
 #endif
+
+  /* tear down the bootstrap */
+  bootmgr->finalize();
+  hpx_free(bootmgr);
+
 }
