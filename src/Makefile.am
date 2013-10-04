@@ -11,7 +11,8 @@ libhpx_la_SOURCES        = runtime/ctx.c     \
                            util/error.c      \
                            util/timer.c      \
                            util/config.c     \
-                           util/map.c
+                           util/map.c        \
+                           sync/locks.c
 
 if CPU_X86_64
 libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/arch/x86_64/*.h
