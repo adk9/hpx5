@@ -41,30 +41,23 @@ char *_argv_buffer;
 
 /* MPI network operations */
 network_ops_t mpi_ops = {
-    .init     = _init_mpi,
-    .finalize = _finalize_mpi,
-    .progress = _progress_mpi,
-    .probe    = _probe_mpi,
-    .send     = _send_mpi,
-    .recv     = _recv_mpi,
-    .test     = _test_mpi,
-    .put      = _put_mpi,
-    .get      = _get_mpi,
+    .init     = init_mpi,
+    .finalize = finalize_mpi,
+    .progress = progress_mpi,
+    .probe    = probe_mpi,
+    .send     = send_mpi,
+    .recv     = recv_mpi,
+    .test     = test_mpi,
+    .put      = put_mpi,
+    .get      = get_mpi,
+    .phys_addr= phys_addr_mpi,
 };
 
-int _eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;
+int eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;
 int _rank_mpi;
 int _size_mpi;
 
-uint32_t _get_rank_mpi() {
-  return (uint32_t)_rank_mpi;
-}
-
-uint32_t _get_size_mpi() {
-  return (uint32_t)_size_mpi;
-}
-
-int _init_mpi(void) {
+int init_mpi(void) {
   int retval;
   int temp;
   int thread_support_provided;
@@ -163,32 +156,39 @@ int _init_mpi(void) {
     _argc = 0;
     _argv = NULL;
   }
-  //  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
-  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
+  MPI_Initialized(&retval);
+  if (!retval)
+    //  temp = MPI_Init_thread(&_argc, &_argv, MPI_THREAD_MULTIPLE, &thread_support_provided);
+    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #else
-  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
+  MPI_Initialized(&retval);
+  if (!retval)
+    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
 #endif // ifdef __linux__
 #endif //if 0   
 
-  temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
-  if (temp == MPI_SUCCESS)
-    retval = 0;
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+  MPI_Initialized(&retval);
+  if (!retval) {
+    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
+    if (temp == MPI_SUCCESS)
+      retval = 0;
+    else
+      __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+  }
 
   #if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
   #endif
 
   /* cache size and rank */
-  MPI_Comm_rank(MPI_COMM_WORLD, &_rank_mpi);
-  MPI_Comm_size(MPI_COMM_WORLD, &_size_mpi);
+  _rank_mpi = bootmgr->get_rank();
+  _size_mpi = bootmgr->size();
 
  error:
   return retval;
 }
 
-int _send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
+int send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
   /* pseudocode:
      if size > eager_threshold:
        send notice to other process of intent to put via rdma
@@ -199,7 +199,7 @@ int _send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
 }
 
 /* status may NOT be NULL */
-int _probe_mpi(int source, int* flag, network_status_t* status) {
+int probe_mpi(int source, int* flag, network_status_t* status) {
   int retval;
   int temp;
   int mpi_src;
@@ -225,7 +225,7 @@ int _probe_mpi(int source, int* flag, network_status_t* status) {
 }
 
 /* Send data via MPI. Presumably this will be an "eager" send. Don't use "data" until it's done! */
-int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
+int send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   int retval;
   int temp;
 
@@ -239,7 +239,7 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   /* not necessary because of eager_threshold */
 #if 0
   /* TODO: put this back in - but maybe make this automatically call put() in place of the send */
-  if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */
+  if (len > eager_threshold_mpi) { /* need to use _network_put_* for that */
     __hpx_errno = HPX_ERROR;
     retval = HPX_ERROR;    
   }
@@ -256,7 +256,7 @@ int _send_mpi(int dest, void *data, size_t len, network_request_t *request) {
 }
 
 /* this is non-blocking recv - user must test/wait on the request */
-int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
+int recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
   int retval;
   int temp;
   int tag;
@@ -298,7 +298,7 @@ int _recv_mpi(int source, void* buffer, size_t len, network_request_t *request) 
 }
 
 /* status may be NULL */
-int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
+int test_mpi(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
   retval = HPX_ERROR;
@@ -319,26 +319,44 @@ int _test_mpi(network_request_t *request, int *flag, network_status_t *status) {
   return retval;  
 }
 
-int _put_mpi(int dest, void *buffer, size_t len, network_request_t *request) {
+int put_mpi(int dest, void *buffer, size_t len, network_request_t *request) {
 }
 
-int _get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
+int get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
 }
 
-void _progress_mpi(void *data) {
+/* Return the physical network ID of the current process */
+int phys_addr_mpi(network_id_t *id) {
+    int ret;
+    ret = HPX_ERROR;
+
+    if (!id) {
+        __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+        return ret;
+    }
+
+    id->addr = bootmgr->get_rank();
+    id->pid = 0;
+    return 0;
 }
 
-int _finalize_mpi(void) {
+void progress_mpi(void *data) {
+}
+
+int finalize_mpi(void) {
   int retval;
   int temp;
   retval = HPX_ERROR;
 
-  temp = MPI_Finalize();
+  MPI_Finalized(&retval);
+  if (!retval) {
+    temp = MPI_Finalize();
 
-  if (temp == MPI_SUCCESS)
-    retval = 0;
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    if (temp == MPI_SUCCESS)
+      retval = 0;
+    else
+      __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+  }
 
   free(_argv_buffer);
   free(_argv);

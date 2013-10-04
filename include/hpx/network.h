@@ -21,6 +21,7 @@
 #define LIBHPX_NETWORK_H_
 
 #include <stdlib.h>
+#include "hpx/types.h"
 
 #if HAVE_MPI
   #include <mpi.h>
@@ -56,6 +57,11 @@ typedef struct network_status_t {
 #endif
 } network_status_t;
 
+typedef struct network_id_t {
+  uint32_t addr;
+  uint32_t pid;
+} network_id_t;
+
 /**
  * Network Operations
  */
@@ -81,6 +87,8 @@ typedef struct network_ops_t {
   int (*pin)(void* buffer, size_t len);
   /* unpin memory for put/get */
   int (*unpin)(void* buffer, size_t len);
+  /* get the physical address of the current locality */
+  int (*phys_addr)(network_id_t *id);
 } network_ops_t;
 
 extern network_ops_t default_net_ops;
@@ -138,6 +146,9 @@ int hpx_network_pin(void* buffer, size_t len);
 
 /* unpin memory for put/get */
 int hpx_network_unpin(void* buffer, size_t len);
+
+/* get the physical address of the current locality */
+int hpx_network_phys_addr(network_id_t *id);
 
 /* The network progress function */
 void hpx_network_progress(void *data);
