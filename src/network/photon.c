@@ -18,16 +18,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
+#include <photon.h>
 
 #include "hpx/action.h"
 #include "hpx/bootstrap.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
-#include "hpx/network/mpi.h"
-#include "hpx/network/photon.h"
 
-#include <mpi.h>
-#include <photon.h>
+#include "network_mpi.h"
+#include "network_photon.h"
 
 #define PHOTON_TAG 0xdead
 
@@ -47,23 +47,15 @@ network_ops_t photon_ops = {
   .phys_addr= phys_addr_photon,
 };
 
-int _eager_threshold_PHOTON = _EAGER_THRESHOLD_PHOTON_DEFAULT;
+int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT;
 int _rank_photon;
 int _size_photon;
 
 static char* ETH_DEV_ROCE0 = "roce0";
 static char* IB_DEV_MLX4_1 = "mlx4_1";
 
-uint32_t _get_rank_photon() {
-  return (uint32_t)_rank_photon;
-}
-
-uint32_t _get_size_photon() {
-  return (uint32_t)_size_photon;
-}
-
 /* If using Photon, call this instead of _init_mpi */
-int _init_photon(void) {
+int init_photon(void) {
   int retval;
   int temp;
   int thread_support_provided;
@@ -128,7 +120,7 @@ int _init_photon(void) {
 }
 
 /* If you're using Photon, call this instead of _finalize_mpi */
-int _finalize_photon(void) {
+int finalize_photon(void) {
   int retval;
   int temp;
   retval = HPX_ERROR;
@@ -152,7 +144,7 @@ int _finalize_photon(void) {
 
 
 /* just tell the other side we have a buffer ready to be retrieved */
-int _put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
+int put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
 
@@ -174,7 +166,7 @@ int _put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
+int get_photon(int src, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
 
@@ -208,7 +200,7 @@ int _get_photon(int src, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int _test_photon(network_request_t *request, int *flag, network_status_t *status) {
+int test_photon(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
   struct photon_status_t stat;
@@ -237,17 +229,17 @@ int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
 	return HPX_SUCCESS;
 }
 
-int _send_photon(int peer, void *payload, size_t len, network_request_t *request) {
+int send_photon(int peer, void *payload, size_t len, network_request_t *request) {
 
 	return HPX_SUCCESS;
 }
 
-int _recv_photon(int src, void *buffer, size_t len, network_request_t *request) {
+int recv_photon(int src, void *buffer, size_t len, network_request_t *request) {
 	
 	return HPX_SUCCESS;
 }
 
-int _probe_photon(int src, int *flag, network_status_t* status) {
+int probe_photon(int src, int *flag, network_status_t* status) {
 	int retval;
 	int temp;
 	int phot_src;
@@ -280,12 +272,11 @@ int _probe_photon(int src, int *flag, network_status_t* status) {
 	return retval;
 }
 
-void _progress_photon(void *data) {
-	
+void progress_photon(void *data) {	
 }
 
 /* pin memory for put/get */
-int _pin_photon(void* buffer, size_t len) {
+int pin_photon(void* buffer, size_t len) {
   int temp;
   int retval;
 
@@ -302,7 +293,7 @@ int _pin_photon(void* buffer, size_t len) {
 }
 
 /* unpin memory for put/get */
-int _unpin_photon(void* buffer, size_t len) {
+int unpin_photon(void* buffer, size_t len) {
   int temp;
   int retval;
 
@@ -321,16 +312,16 @@ int _unpin_photon(void* buffer, size_t len) {
 }
 
 /* Return the physical network ID of the current process */
-int phys_addr_photon(network_id_t *id) {
-    int ret;
-    ret = HPX_ERROR;
+int phys_addr_photon(hpx_locality_t *l) {
+  int ret;
+  ret = HPX_ERROR;
 
-    if (!id) {
-        __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-        return ret;
-    }
+  if (!l) {
+    /* TODO: replace with more specific error */
+    __hpx_errno = HPX_ERROR;
+    return ret;
+  }
 
-    id->addr = bootmgr->get_rank();
-    id->pid = 0;
-    return 0;
+  l->rank = bootmgr->get_rank();
+  return 0;
 }

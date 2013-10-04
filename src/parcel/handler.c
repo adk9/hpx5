@@ -23,15 +23,19 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hpx.h"
+#include "hpx/action.h"
+#include "hpx/init.h"
+#include "hpx/network.h"
+#include "hpx/parcelhandler.h"
+#include "hpx/parcel.h"
 //#include <mpi.h>
 
-#define _HPX_PARCELHANDLER_KILL_ACTION 0xdead
-#define _HPX_PARCELHANDLER_GET_ACTION 0xfecc
+#define HPX_PARCELHANDLER_KILL_ACTION 0xdead
+#define HPX_PARCELHANDLER_GET_ACTION 0xfecc
 
-// #define _HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
+// #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
 /* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
-#define _HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
+#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
 
 hpx_parcelqueue_t * __hpx_parcelqueue_local = NULL;
 hpx_parcelqueue_t * __hpx_send_queue = NULL;
@@ -495,7 +499,7 @@ void * _hpx_parcelhandler_main(void) {
 	}
 	network_rank = parcel->dest.locality.rank;
 	network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)); /* total size is parcel header size + action name + data: */
-	if (parcel->payload_size < _HPX_PARCELHANDLER_GET_THRESHOLD) /* if size is under the eager limit, we send the payload also, so we need to add the size */
+	if (parcel->payload_size < HPX_PARCELHANDLER_GET_THRESHOLD) /* if size is under the eager limit, we send the payload also, so we need to add the size */
 	  network_size += parcel->payload_size;
 	// network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)) + parcel->payload_size;
 	/* total size is parcel header size + action name + data: */
@@ -509,7 +513,7 @@ void * _hpx_parcelhandler_main(void) {
 				  network_size,
 				  request_queue_push(&network_send_requests));
 	}
-	if (parcel->payload_size >= _HPX_PARCELHANDLER_GET_THRESHOLD) { /* if size is over the eager limit, ALSO do a put */
+	if (parcel->payload_size >= HPX_PARCELHANDLER_GET_THRESHOLD) { /* if size is over the eager limit, ALSO do a put */
 	  put_req = _hpx_request_list_append(&put_requests, parcel);
 	  __hpx_network_ops->put(network_rank, parcel->payload, parcel->payload_size, put_req); 
 	}
@@ -535,7 +539,7 @@ void * _hpx_parcelhandler_main(void) {
 #if DEBUG
       initiated_something = 1;
 #endif
-      if (parcel->action.action == (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION) {
+      if (parcel->action.action == (hpx_func_t)HPX_PARCELHANDLER_KILL_ACTION) {
 	quitting = true;
 	// break;
       }
@@ -587,7 +591,7 @@ void * _hpx_parcelhandler_main(void) {
 	   future, if that changes, we might have to allocate a new buffer
 	   here.... */
 	
-	if (parcel->payload_size > _HPX_PARCELHANDLER_GET_THRESHOLD) { /* do a get */
+	if (parcel->payload_size > HPX_PARCELHANDLER_GET_THRESHOLD) { /* do a get */
 	  get_buffer = hpx_alloc(parcel->payload_size);
 	  if (get_buffer == NULL) {
 	    __hpx_errno = HPX_ERROR_NOMEM;
@@ -722,7 +726,7 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto error;
   }
-  kill_parcel->action.action = (hpx_func_t)_HPX_PARCELHANDLER_KILL_ACTION;
+  kill_parcel->action.action = (hpx_func_t)HPX_PARCELHANDLER_KILL_ACTION;
   hpx_parcelqueue_push(__hpx_parcelqueue_local, (void*)kill_parcel);
 
   //hpx_thread_wait(ph->fut);

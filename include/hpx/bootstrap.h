@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "hpx/network.h"
+#include "hpx/runtime.h"
 
 typedef struct bootstrap_ops_t {
   /* Initialize the bootstrap module */
@@ -27,16 +28,17 @@ typedef struct bootstrap_ops_t {
   /* Get identifier/rank of the calling locality */
   int (*get_rank)(void);
   /* Get the physical network address of current locality */
-  int (*get_addr)(network_id_t *);
+  int (*get_addr)(hpx_locality_t *);
   /* Get the total number of participating ranks */
   int (*size)(void);
   /* Get the logical (rank -> addr) map of the bootstrapped network */
-  int (*get_map)(network_id_t **);
+  int (*get_map)(hpx_locality_t **);
   /* Shutdown and clean up the bootstrap module */
   int (*finalize)(void);
 } bootstrap_ops_t;
 
 extern bootstrap_ops_t default_boot_ops;
+extern bootstrap_ops_t mpi_boot_ops;
 
 /**
  * Bootstrap components.
@@ -67,13 +69,13 @@ int hpx_bootstrap_init(void);
 int hpx_bootstrap_get_rank(void);
 
 /* Get the physical network address of current locality */
-int hpx_bootstrap_get_addr(network_id_t *);
+int hpx_bootstrap_get_addr(hpx_locality_t *);
 
 /* Get the total number of participating ranks */
 int hpx_bootstrap_size(void);
 
 /* Get the logical map of the bootstrapped network */
-int hpx_bootstrap_get_map(network_id_t **);
+int hpx_bootstrap_get_map(hpx_locality_t **);
 
 /* Shutdown and clean up the bootstrap layer */
 int hpx_bootstrap_finalize(void);

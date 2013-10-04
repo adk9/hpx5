@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include "hpx/types.h"
+#include "hpx/runtime.h"
 
 #if HAVE_MPI
   #include <mpi.h>
@@ -57,11 +58,6 @@ typedef struct network_status_t {
 #endif
 } network_status_t;
 
-typedef struct network_id_t {
-  uint32_t addr;
-  uint32_t pid;
-} network_id_t;
-
 /**
  * Network Operations
  */
@@ -88,10 +84,12 @@ typedef struct network_ops_t {
   /* unpin memory for put/get */
   int (*unpin)(void* buffer, size_t len);
   /* get the physical address of the current locality */
-  int (*phys_addr)(network_id_t *id);
+  int (*phys_addr)(hpx_locality_t *l);
 } network_ops_t;
 
 extern network_ops_t default_net_ops;
+extern network_ops_t mpi_ops;
+extern network_ops_t photon_ops;
 
 /**
  * Network Transport
@@ -148,7 +146,7 @@ int hpx_network_pin(void* buffer, size_t len);
 int hpx_network_unpin(void* buffer, size_t len);
 
 /* get the physical address of the current locality */
-int hpx_network_phys_addr(network_id_t *id);
+int hpx_network_phys_addr(hpx_locality_t *l);
 
 /* The network progress function */
 void hpx_network_progress(void *data);
@@ -157,13 +155,6 @@ void hpx_network_progress(void *data);
  * Utility network operations
  */
 void hpx_network_barrier();
-
-#if HAVE_MPI
-  #include "hpx/network/mpi.h"
-#endif
-#if HAVE_PHOTON
-  #include "hpx/network/photon.h"
-#endif
 
 #endif /* LIBHPX_NETWORK_H_ */
 

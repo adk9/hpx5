@@ -48,7 +48,7 @@ int hpx_bootstrap_get_rank(void) {
   return HPX_ERROR; 
 }
 
-int hpx_bootstrap_get_addr(network_id_t *id) {
+int hpx_bootstrap_get_addr(hpx_locality_t *l) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR; 
 }
@@ -58,7 +58,7 @@ int hpx_bootstrap_size(void) {
   return HPX_ERROR;
 }
 
-int hpx_bootstrap_get_map(network_id_t **map) {
+int hpx_bootstrap_get_map(hpx_locality_t **map) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }

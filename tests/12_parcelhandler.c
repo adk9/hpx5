@@ -132,7 +132,7 @@ void _test_action_checkrank(void* args) {
   my_rank = hpx_get_rank();
   ck_assert_msg(my_rank == 1, "Parcel sent to wrong locality");
   
-  other_loc = hpx_get_locality(0);
+  other_loc = hpx_find_locality(0);
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_set_sendtest_future_action", (void*)NULL, 0, p);   
   ck_assert_msg(success == 0, "Couldn't create return parcel");
@@ -170,7 +170,7 @@ void _test_action_checkdata(void* args) {
     ck_assert_msg(in_data->z == data_to_check.z, "Did not receive correct data at end");
   }
 
-  other_loc = hpx_get_locality(p_args->src_rank);
+  other_loc = hpx_find_locality(p_args->src_rank);
   void* return_fut = hpx_alloc(sizeof(void*));
   return_fut = (void*)p_args->fut;
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
@@ -205,7 +205,7 @@ void _test_action_checkdata_large(void* args) {
   for (s_i = 0; s_i < DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS/sizeof(size_t); s_i++)
     ck_assert_msg(data[s_i] == s_i, "Sent data was corrupt");
 
-  other_loc = hpx_get_locality(p_args->src_rank);
+  other_loc = hpx_find_locality(p_args->src_rank);
   p = (hpx_parcel_t*)hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel("_set_sendtest_datalarge_future_action", (void*)NULL, 0, p);   
   ck_assert_msg(success == 0, "Couldn't create return parcel");
@@ -237,7 +237,7 @@ void _thread_main_parcelsend(void* args) {
 
   if (my_rank == 0) {
     hpx_lco_future_init(&sendtest_fut);
-    other_loc = hpx_get_locality(1);
+    other_loc = hpx_find_locality(1);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
     success = hpx_new_parcel("_test_action_checkrank", (void*)NULL, 0, p);  
@@ -277,7 +277,7 @@ void _thread_main_parcelsenddata(void* args) {
   if (my_rank == 0) {
     hpx_lco_future_init(&sendtest_data_fut);
     hpx_lco_future_init(&fut);
-    other_loc = hpx_get_locality(1);
+    other_loc = hpx_find_locality(1);
 
     size_t size_of_sendargs = sizeof(struct send_args) + sizeof(struct args);
     struct send_args* args = hpx_alloc(size_of_sendargs);
@@ -327,7 +327,7 @@ void _thread_main_parcelsenddata_large(void* args) {
 
   if (my_rank == 0) {
     hpx_lco_future_init(&sendtest_data_fut);
-    other_loc = hpx_get_locality(1);
+    other_loc = hpx_find_locality(1);
 
     data_to_send = hpx_alloc(sizeof(struct send_args) + DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
     ck_assert_msg(data_to_send != NULL, "Could not send large data - not enough memory to allocate space for data");

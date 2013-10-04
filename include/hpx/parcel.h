@@ -47,7 +47,7 @@ void hpx_parcel_fini(void);
 hpx_error_t hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
 
 /* Helper to send a parcel structure */
-hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p);
+hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p);
 
 /**
    Helper function for sending; combines parcel plus it's payload into

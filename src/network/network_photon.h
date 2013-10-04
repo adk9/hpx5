@@ -21,14 +21,14 @@
 #define LIBHPX_NETWORK_PHOTON_H_
 
 #include <stdlib.h>
+#include <mpi.h>
+#include <photon.h>
 
 #include "hpx/action.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
-#include "hpx/network/mpi.h"
 
-#include <mpi.h>
-#include <photon.h>
+#include "network_mpi.h"
 
 /*
  * Forward declarations - things in network.h we need here
@@ -37,40 +37,35 @@ struct network_ops_t;
 struct network_request_t;
 struct network_status_t;
 
-#define _EAGER_THRESHOLD_PHOTON_DEFAULT 256;
-
-uint32_t _get_rank_photon();
-uint32_t _get_size_photon();
+#define EAGER_THRESHOLD_PHOTON_DEFAULT 256;
 
 /* If using Photon, call this instead of _init_mpi */
-int _init_photon(void);
+int init_photon(void);
 
 /* If you're using Photon, call this instead of _finalize_mpi */
-int _finalize_photon(void);
+int finalize_photon(void);
 
-void _progress_photon(void *data);
+void progress_photon(void *data);
 
-int _probe_photon(int source, int* flag, network_status_t* status);
+int probe_photon(int source, int* flag, network_status_t* status);
 
 /* have to test/wait on the request */
-int _put_photon(int dest, void* buffer, size_t len, network_request_t *request);
+int put_photon(int dest, void* buffer, size_t len, network_request_t *request);
 
-int _get_photon(int src, void* buffer, size_t len, network_request_t *request);
+int get_photon(int src, void* buffer, size_t len, network_request_t *request);
 
-int _test_photon(network_request_t *request, int *flag, network_status_t *status);
+int test_photon(network_request_t *request, int *flag, network_status_t *status);
 
-int _send_parcel_photon(hpx_locality_t *, hpx_parcel_t *);
+int send_parcel_photon(hpx_locality_t *, hpx_parcel_t *);
 
-int _send_photon(int peer, void *payload, size_t len, network_request_t *request);
+int send_photon(int peer, void *payload, size_t len, network_request_t *request);
 
-int _recv_photon(int src, void *buffer, size_t len, network_request_t *request);
+int recv_photon(int src, void *buffer, size_t len, network_request_t *request);
 
 /* pin memory for put/get */
-int _pin_photon(void* buffer, size_t len);
+int pin_photon(void* buffer, size_t len);
 
 /* unpin memory for put/get */
-int _unpin_photon(void* buffer, size_t len);
-
-extern network_ops_t photon_ops;
+int unpin_photon(void* buffer, size_t len);
 
 #endif

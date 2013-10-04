@@ -24,6 +24,15 @@
 #include <mpi.h>
 #endif
 
+#include "hpx/action.h"
+#include "hpx/bootstrap.h"
+#include "hpx/init.h"
+#include "hpx/parcel.h"
+#include "hpx/network.h"
+#include "hpx/runtime.h"
+
+#include "bootstrap_mpirun.h"
+
 static int rank;
 static int size;
 
@@ -62,26 +71,26 @@ int bootstrap_mpi_get_rank(void) {
   return rank;
 }
 
-int bootstrap_mpi_get_addr(network_id_t *id) {
-  return __hpx_network_ops->phys_addr(id);
+int bootstrap_mpi_get_addr(hpx_locality_t *l) {
+  return __hpx_network_ops->phys_addr(l);
 }
 
 int bootstrap_mpi_size(void) {
   return size;
 }
 
-int bootstrap_mpi_get_mpi_map(network_id_t **map) {
+int bootstrap_mpi_get_map(hpx_locality_t **map) {
     int ret;
-    network_id_t id;
+    hpx_locality_t *loc;
 
     *map = NULL;
-    ret = __hpx_network_ops->phys_addr(&id);
-    if (ret != 0) return HPX_ERROR;
+    loc = hpx_get_my_locality();
+    if (!loc) return HPX_ERROR;
 
-    *map = malloc(size * sizeof(network_id_t));
-    if (*map == NULL) return HPX_ERROR;
+    *map = hpx_alloc(size * sizeof(hpx_locality_t));
+    if (*map == NULL) return HPX_ERROR_NOMEM;
 
-    ret = MPI_Allgather(&id, sizeof(id), MPI_BYTE, *map, sizeof(id), MPI_BYTE, MPI_COMM_WORLD);
+    ret = MPI_Allgather(loc, sizeof(*loc), MPI_BYTE, *map, sizeof(*loc), MPI_BYTE, MPI_COMM_WORLD);
     if (ret != MPI_SUCCESS) {
         free(*map);
         *map = NULL;

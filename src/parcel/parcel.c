@@ -230,7 +230,7 @@ hpx_error_t hpx_parcel_deserialize(char* blob, hpx_parcel_t** p) {
   return ret;
 }
 
-hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p) {
   hpx_error_t ret;
   char* serialized_parcel;
   ret = HPX_ERROR;
