@@ -6,12 +6,6 @@ AM_CFLAGS = @CFLAGS@                         \
 #-DPHOTON_MULTITHREADED
 SUBDIRS = .
 
-noinst_bindir = @abs_top_builddir@/test
-noinst_bin_PROGRAMS = ugni_test
-ugni_test_SOURCES = ugni/ugni_test.c
-ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
-ugni_test_LDFLAGS = @MPI_LIBS@ @UGNI_LIBS@
-
 lib_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c           \
 		       libphoton/photon_backend.c              \
@@ -41,4 +35,10 @@ libphoton_la_SOURCES += ugni/photon_ugni.c             \
 		    ugni/photon_ugni_exchange.c                \
 		    ugni/photon_ugni_connect.c                 \
 		    ugni/photon_ugni_buffer.c
+
+noinst_bindir = @abs_top_builddir@/test
+noinst_bin_PROGRAMS = ugni_test
+ugni_test_SOURCES = ugni/ugni_test.c
+ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
+ugni_test_LDFLAGS = @MPI_LIBS@ @UGNI_LIBS@
 endif
