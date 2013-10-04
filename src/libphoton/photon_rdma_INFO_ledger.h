@@ -10,6 +10,8 @@ typedef struct photon_ri_ledger_entry_t {
 	uintptr_t addr;
 	uint32_t size;
 	int tag;
+	uint64_t qword1;
+	uint64_t qword2;
 	volatile uint16_t filler;
 	volatile uint8_t footer;
 } photon_ri_ledger_entry;

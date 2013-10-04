@@ -22,14 +22,6 @@
 #define GEMINI_DEVICE_ID         0x0
 #define MAX_CQ_ENTRIES           1000
 
-#ifdef HAVE_DEBUG
-int v_option = 3;
-#else
-int v_option = 0;
-#endif
-
-#include "utility_functions.h"
-
 extern int _photon_myrank;
 extern int _photon_nproc;
 extern int _photon_forwarder;
@@ -188,10 +180,6 @@ static int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_in
 	uint32_t bind_id;
 
 	for (i=0; i<_photon_nproc; i++) {
-
-		if (_photon_myrank == i)
-			continue;
-
 		status = GNI_EpCreate(ctx->nic_handle, ctx->local_cq_handle, &ctx->ep_handles[i]);
 		if (status != GNI_RC_SUCCESS) {
 			dbg_err("GNI_EpCreate ERROR status: %s (%d)", gni_err_str[status], status);

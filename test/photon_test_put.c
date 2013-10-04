@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
 
 	photon_init(&cfg);
 
-	send = (char*)malloc(PHOTON_SEND_SIZE*sizeof(char));
-	recv = (char*)malloc(PHOTON_SEND_SIZE*sizeof(char));
-	
+	posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
+	posix_memalign((void **) &recv, 64, PHOTON_SEND_SIZE*sizeof(char));
+
 	photon_register_buffer(send, PHOTON_SEND_SIZE);
 	photon_register_buffer(recv, PHOTON_SEND_SIZE);
 

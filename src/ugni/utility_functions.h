@@ -27,13 +27,14 @@ int             passed = 0;
 #define INCREMENT_PASSED  passed++
 #define MAXIMUM_CQ_RETRY_COUNT 500
 
+int v_option = 3;
 
 #ifdef HAVE_PMI
 /*
  * allgather gather the requested information from all of the ranks.
  */
 
-static void
+void
 allgather(void *in, void *out, int len)
 {
     static int      already_called = 0;
@@ -83,7 +84,7 @@ allgather(void *in, void *out, int len)
  *   Returns: the nic address for the specified device.
  */
 
-static unsigned int
+unsigned int
 get_gni_nic_address(int device_id)
 {
     int             alps_address = -1;
@@ -160,7 +161,7 @@ get_gni_nic_address(int device_id)
  *            other ranks.
  */
 
-static void    *
+void    *
 gather_nic_addresses(void)
 {
     size_t          addr_len;
@@ -208,7 +209,7 @@ gather_nic_addresses(void)
  * Returns: the cookie value.
  */
 
-static          uint32_t
+uint32_t
 get_cookie(void)
 {
     uint32_t        cookie;
@@ -242,7 +243,7 @@ get_cookie(void)
  *             3 on no event found error
  */
 
-static int
+int
 get_cq_event(gni_cq_handle_t cq_handle,
              unsigned int source_cq, unsigned int retry,
              gni_cq_entry_t *next_event)
@@ -445,7 +446,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
  * Returns: the ptag value.
  */
 
-static          uint8_t
+uint8_t
 get_ptag(void)
 {
     char           *p_ptr;
@@ -472,7 +473,7 @@ get_ptag(void)
  *            -2 for an abort
  */
 
-static inline int
+inline int
 print_results(void)
 {
     char            abort_string[256];

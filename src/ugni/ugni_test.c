@@ -8,6 +8,7 @@
 
 #include <mpi.h>
 #include "gni_pub.h"
+#include "utility_functions.h"
 
 #define BIND_ID_MULTIPLIER       100
 #define CDM_ID_MULTIPLIER        1000
@@ -29,9 +30,6 @@ typedef struct {
 int _photon_nproc, _photon_myrank;
 FILE *_phot_ofp;
 int _photon_start_debugging = 1;
-int v_option = 3;
-
-#include "utility_functions.h"
 
 int main(int argc, char **argv) {
     /* GNI_CDM_MODE_BTE_SINGLE_CHANNEL | GNI_CDM_MODE_DUAL_EVENTS | GNI_CDM_MODE_FMA_SHARED */

@@ -43,10 +43,10 @@ int __ugni_buffer_unregister(photonBuffer dbuffer) {
 
 	status = GNI_MemDeregister(ugni_ctx.nic_handle, &dbuffer->mdh);
 	if (status != GNI_RC_SUCCESS) {
-		dbg_err("GNI_MemDeregister ERROR status: %s (%d)\n", gni_err_str[status], status);
+		dbg_err("GNI_MemDeregister ERROR status: %s (%d)", gni_err_str[status], status);
 		goto error_exit;
 	}
-	dbg_info("GNI_MemDeregister NIC: %p\n", ugni_ctx.nic_handle);
+	dbg_info("GNI_MemDeregister (%p) NIC: %p", (void *)dbuffer->buffer, ugni_ctx.nic_handle);
 
 	dbuffer->is_registered = 0;
 
