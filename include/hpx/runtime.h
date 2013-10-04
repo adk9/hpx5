@@ -34,7 +34,7 @@ void hpx_locality_destroy(hpx_locality_t*);
 
 hpx_locality_t *hpx_get_my_locality(void);
 
-hpx_locality_t *hpx_get_locality(int rank);
+hpx_locality_t *hpx_find_locality(int rank);
 
 uint32 hpx_get_num_localities(void);
 

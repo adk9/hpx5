@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <stdlib.h>
-
 #ifdef __linux__
 #include <stdio.h>
 #include <fcntl.h>
@@ -27,13 +26,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
-
 #include <mpi.h>
 
 #include "hpx/action.h"
+#include "hpx/init.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
-#include "hpx/network/mpi.h"
+
+#include "network_mpi.h"
 
 int _argc;
 char **_argv;
@@ -53,7 +53,7 @@ network_ops_t mpi_ops = {
     .phys_addr= phys_addr_mpi,
 };
 
-int eager_threshold_mpi = _EAGER_THRESHOLD_MPI_DEFAULT;
+int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
 int _rank_mpi;
 int _size_mpi;
 
@@ -275,9 +275,9 @@ int recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
   
   /* This may go away eventually. If we take this out, we need to use MPI_Get_count to get the size (which introduces problems with threading, should we ever change that) or we need to change sending to send the size first. */
   if (len == NETWORK_ANY_LENGTH)
-    mpi_len = _eager_threshold_mpi;
+    mpi_len = eager_threshold_mpi;
   else {
-    if (len > _eager_threshold_mpi) { /* need to use _network_put_* for that */
+    if (len > eager_threshold_mpi) { /* need to use _network_put_* for that */
       __hpx_errno = HPX_ERROR;
       retval = HPX_ERROR;    
       goto error;
@@ -326,18 +326,18 @@ int get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
 }
 
 /* Return the physical network ID of the current process */
-int phys_addr_mpi(network_id_t *id) {
-    int ret;
-    ret = HPX_ERROR;
+int phys_addr_mpi(hpx_locality_t *l) {
+  int ret;
+  ret = HPX_ERROR;
 
-    if (!id) {
-        __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-        return ret;
-    }
+  if (!l) {
+    /* TODO: replace with more specific error */
+    __hpx_errno = HPX_ERROR;
+    return ret;
+  }
 
-    id->addr = bootmgr->get_rank();
-    id->pid = 0;
-    return 0;
+  l->rank = bootmgr->get_rank();
+  return 0;
 }
 
 void progress_mpi(void *data) {

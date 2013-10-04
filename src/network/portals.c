@@ -65,5 +65,5 @@ int portals_probe(int source, int* flag, network_status_t *status) {
 int portals_test(network_request_t *request, int *flag, network_status_t *status) {
 }
 
-int portals_phys_addr(network_id_t *id) {
+int portals_phys_addr(hpx_locality_t *id) {
 }

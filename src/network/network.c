@@ -94,7 +94,7 @@ int hpx_network_unpin(void* buffer, size_t len) {
   return 0;
 }
 
-int hpx_network_phys_addr(network_id_t *id) {
+int hpx_network_phys_addr(hpx_locality_t *l) {
   return 0;
 }
 
