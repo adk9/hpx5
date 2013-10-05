@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "hpx/ctx.h"
 #include "hpx/kthread.h"
@@ -71,9 +72,9 @@ void libhpx_kthread_init(void) {
 */
 void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
     void *target, bool (*pred)(void *, void *), void *arg) {
-  hpx_thread_t *exec_th = kth->exec_th;
-  hpx_context_t *ctx = kth->ctx;
-  uint64_t cnt;
+  /* hpx_thread_t *exec_th = kth->exec_th; */
+  /* hpx_context_t *ctx = kth->ctx; */
+  /* uint64_t cnt; */
 
   pthread_mutex_lock(&kth->mtx);
 
@@ -99,7 +100,7 @@ void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
       case HPX_THREAD_STATE_SUSPENDED:
         th->state = HPX_THREAD_STATE_SUSPENDED;
         th->reuse->wait = target;
-        th->reuse->func = pred;
+        th->reuse->func = (void (*)())pred;
         th->reuse->args = arg;
         hpx_queue_push(&kth->susp_q, th);
         break;
@@ -122,12 +123,12 @@ void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
 
 void * hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
-  hpx_thread_t *th = NULL;
-  hpx_context_t *ctx = kth->ctx;
+  /* hpx_thread_t *th = NULL; */
+  /* hpx_context_t *ctx = kth->ctx; */
   struct timespec ts;
   struct timeval tv;
-  uint64_t susp_idx = 0;
-  uint64_t cnt;
+  /* uint64_t susp_idx = 0; */
+  /* uint64_t cnt; */
 
   /* save a pointer to our data in TLS */
   pthread_setspecific(kth_key, kth);
@@ -200,7 +201,7 @@ void * hpx_kthread_seed_default(void *ptr) {
 
 hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
                                   hpx_mconfig_t mcfg, uint64_t mflags) {
-  pthread_mutexattr_t mtx_attr;
+  /* pthread_mutexattr_t mtx_attr; */
   hpx_kthread_t *kth = NULL;
   int err;
 
@@ -439,7 +440,7 @@ void libhpx_kthread_srv_susp_local(void *ptr) {
     do {
       th = hpx_queue_pop(&kth->susp_q);
       if (th != NULL) {
-        pred = th->reuse->func;
+        pred = (hpx_thread_wait_pred_t)th->reuse->func;
         if (pred(th->reuse->wait, th->reuse->args) == true) {
           th->state = HPX_THREAD_STATE_PENDING;
       hpx_queue_push(&kth->pend_q, th);
@@ -491,7 +492,7 @@ void libhpx_kthread_srv_susp_global(void *ptr) {
       do {
         th = hpx_queue_pop(&kth->susp_q);
         if (th != NULL) {
-          pred = th->reuse->func;
+            pred = (hpx_thread_wait_pred_t)th->reuse->func;
       if (pred(th->reuse->wait, th->reuse->args) == true) {
             th->state = HPX_THREAD_STATE_PENDING;
         hpx_queue_push(&kth->pend_q, th);
@@ -527,16 +528,16 @@ void libhpx_kthread_srv_susp_global(void *ptr) {
 void libhpx_kthread_srv_rebal(void *ptr) {
   hpx_context_t * ctx = (hpx_context_t *) ptr;
   hpx_future_t * fut = &ctx->f_srv_rebal;
-  hpx_kthread_t * kth_high = NULL;
-  hpx_kthread_t * kth_low = NULL;
-  hpx_kthread_t * kth = NULL;
-  hpx_thread_t * th = NULL;
-  uint64_t cnt_high = 0;
-  uint64_t cnt_low = 0;
-  uint64_t core_high = 0;
-  uint64_t core_low = 0;
-  uint64_t idx;
-  uint64_t cnt;
+  /* hpx_kthread_t * kth_high = NULL; */
+  /* hpx_kthread_t * kth_low = NULL; */
+  /* hpx_kthread_t * kth = NULL; */
+  /* hpx_thread_t * th = NULL; */
+  /* uint64_t cnt_high = 0; */
+  /* uint64_t cnt_low = 0; */
+  /* uint64_t core_high = 0; */
+  /* uint64_t core_low = 0; */
+  /* uint64_t idx; */
+  /* uint64_t cnt; */
 
   while (hpx_lco_future_isset(fut) == false) {
     //    for (idx = 0; idx < ctx->kths_count; idx++) {
