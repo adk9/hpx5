@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Library initialization and cleanup functions
   hpx_init.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -22,12 +22,15 @@
 #include "hpx/init.h"
 #include "hpx/parcel.h"
 #include "hpx/ctx.h"
+#include "hpx/timer.h"
+#include "runtime/ctx.h"                        /* libhpx_ctx_init(); */
+#include "thread/thread.h"                      /* libhpx_thread_init() */
 
 /**
  * Initializes data structures used by libhpx.  This function must
- * be called BEFORE any other functions in libhpx.  Not doing so 
+ * be called BEFORE any other functions in libhpx.  Not doing so
  * will cause all other functions to return HPX_ERROR_NOINIT.
- * 
+ *
  * @return error code.
  */
 hpx_error_t hpx_init(void) {
@@ -35,10 +38,10 @@ hpx_error_t hpx_init(void) {
   __hpx_errno = HPX_SUCCESS;
 
   /* init the next context ID */
-  __ctx_next_id = 1;
+  libhpx_ctx_init();
 
-  /* init the next thread ID */
-  __thread_next_id = 1;
+  /* init the thread */
+  libhpx_thread_init();
 
   /* get the global machine configuration */
   __mcfg = hpx_mconfig_get();
@@ -59,7 +62,7 @@ hpx_error_t hpx_init(void) {
 /**
  * Cleans up data structures created by hpx_init.  This function
  * must be called after all other HPX functions.
- * 
+ *
  */
 void hpx_cleanup(void) {
 

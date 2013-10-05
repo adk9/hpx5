@@ -1,14 +1,14 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Local Control Object (LCO) Function Definitions
   hpx_lco.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -41,7 +41,7 @@
  --------------------------------------------------------------------
 */
 
-typedef union _hpx_future_value_t_t {
+typedef union {
   __m128i         i128;
   int64_t         i64;
   int32_t         i32;
@@ -56,7 +56,7 @@ typedef union _hpx_future_value_t_t {
 
 typedef hpx_future_value_t (*hpx_lco_future_pred_t)(void *, void *);
 
-typedef struct _hpx_future_t {
+typedef struct {
   hpx_mutex_t           mtx;
   uint64_t              state;
   hpx_future_value_t    value;
@@ -90,7 +90,7 @@ static inline void __hpx_lco_future_init(hpx_future_t *fut) {
 
   (Pointer Future)
 
-  Sets the value of an HPX Future to NULL and puts it in the 
+  Sets the value of an HPX Future to NULL and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -106,7 +106,7 @@ static inline void hpx_lco_future_init(hpx_future_t *fut) {
 
   (8-bit Integer Future)
 
-  Sets the value of an HPX Future to 0 and puts it in the 
+  Sets the value of an HPX Future to 0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -123,7 +123,7 @@ static inline void hpx_lco_future_init_i8(hpx_future_t *fut) {
 
   (16-bit Integer Future)
 
-  Sets the value of an HPX Future to 0 and puts it in the 
+  Sets the value of an HPX Future to 0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -140,7 +140,7 @@ static inline void hpx_lco_future_init_i16(hpx_future_t *fut) {
 
   (32-bit Integer Future)
 
-  Sets the value of an HPX Future to 0 and puts it in the 
+  Sets the value of an HPX Future to 0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -157,7 +157,7 @@ static inline void hpx_lco_future_init_i32(hpx_future_t *fut) {
 
   (64-bit Integer Future)
 
-  Sets the value of an HPX Future to 0 and puts it in the 
+  Sets the value of an HPX Future to 0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -174,7 +174,7 @@ static inline void hpx_lco_future_init_i64(hpx_future_t *fut) {
 
   (128-bit Integer Future)
 
-  Sets the value of an HPX Future to 0 and puts it in the 
+  Sets the value of an HPX Future to 0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -191,7 +191,7 @@ static inline void hpx_lco_future_init_i128(hpx_future_t *fut) {
 
   (Single Precision Floating Point Future)
 
-  Sets the value of an HPX Future to 0.0 and puts it in the 
+  Sets the value of an HPX Future to 0.0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -208,7 +208,7 @@ static inline void hpx_lco_future_init_f32(hpx_future_t *fut) {
 
   (Double Precision Floating Point Future)
 
-  Sets the value of an HPX Future to 0.0 and puts it in the 
+  Sets the value of an HPX Future to 0.0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -225,7 +225,7 @@ static inline void hpx_lco_future_init_f64(hpx_future_t *fut) {
 
   (80-bit [Long] Double Precision Floating Point Future)
 
-  Sets the value of an HPX Future to 0.0 and puts it in the 
+  Sets the value of an HPX Future to 0.0 and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -242,7 +242,7 @@ static inline void hpx_lco_future_init_f80(hpx_future_t *fut) {
 
   (2x Packed Double Precision Floating Point Future)
 
-  Sets the value of an HPX Future to NULL and puts it in the 
+  Sets the value of an HPX Future to NULL and puts it in the
   UNSET state.
  --------------------------------------------------------------------
 */
@@ -898,19 +898,6 @@ static inline uint64_t hpx_lco_future_get_state(hpx_future_t *fut) {
   hpx_lco_mutex_unlock(&fut->mtx);
 
   return state;
-}
-
-
-/*
- --------------------------------------------------------------------
-  _hpx_lco_future_wait_pred
-
-  Internal predicate function for use with _hpx_thread_wait()
- --------------------------------------------------------------------
-*/
-
-static bool _hpx_lco_future_wait_pred(void * target, void * arg) {
-  return hpx_lco_future_isset((hpx_future_t *) target);
 }
 
 #endif /* LIBHPX_LCO_H_ */
