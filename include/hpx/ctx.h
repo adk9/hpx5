@@ -1,7 +1,7 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Thread Scheduling Context Function Definitions
   hpx_ctx.h
 
@@ -47,10 +47,7 @@
 /* the context ID type */
 typedef uint64_t hpx_context_id_t;
 
-/* the global next context ID */
-static hpx_context_id_t __ctx_next_id;
-
-/* the context handle */ 
+/* the context handle */
 struct hpx_context_t {
   hpx_context_id_t    cid;
   hpx_kthread_t     **kths;

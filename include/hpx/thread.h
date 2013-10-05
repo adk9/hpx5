@@ -2,14 +2,14 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Thread Function Definitions
   hpx_thread.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -66,7 +66,7 @@ typedef uint8_t  hpx_thread_state_t;
   these data structures upon thread termination.
 
   BOUND threads are pinned to the same kernel thread as their
-  parent, as opposed to being evenly distributed evenly across all 
+  parent, as opposed to being evenly distributed evenly across all
   kernel threads in a round-robin fashion (the default).
  --------------------------------------------------------------------
 */
@@ -100,7 +100,7 @@ typedef bool (*hpx_thread_wait_pred_t)(void *, void *);
 */
 
 struct hpx_thread_reusable_t {
-  void                *func;
+  void                (*func)(void *);
   void                *args;
   void                *stk;
   size_t               ss;
@@ -120,7 +120,7 @@ struct hpx_thread_reusable_t {
   state                        Queuing State
   opts                         Thread option flags
   reuse                        The thread's reusable data area
-  f_ret                        The thread's return value (if any)  
+  f_ret                        The thread's return value (if any)
   parent                       The thread's parent thread
  --------------------------------------------------------------------
 */
@@ -138,10 +138,6 @@ struct hpx_thread_t {
   hpx_list_t              children;
 };
 
-/* the next thread ID */
-static hpx_thread_id_t __thread_next_id;
-
-
 /*
  --------------------------------------------------------------------
   Thread Functions
@@ -150,7 +146,7 @@ static hpx_thread_id_t __thread_next_id;
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_future_t * hpx_thread_create(hpx_context_t *, uint16_t, void *, void *, hpx_thread_t **);
+hpx_future_t * hpx_thread_create(hpx_context_t *, uint16_t, void (*)(void*), void *, hpx_thread_t **);
 void hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
@@ -174,7 +170,7 @@ void hpx_thread_set_opt(hpx_thread_t *, uint16_t);
 */
 
 void _hpx_thread_terminate(hpx_thread_t *);
-void _hpx_thread_wait(void *, void *, void *);
+void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
 
 /*
  --------------------------------------------------------------------
