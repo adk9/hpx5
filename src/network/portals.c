@@ -2,8 +2,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Communication Layer
-  comm.c
+  Portals Network Interface 
+  portals.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -20,18 +20,22 @@
 #include <portals4.h>
 
 #include "hpx/action.h"
-#include "hpx/comm.h"
+#include "hpx/bootstrap.h"
+#include "hpx/network.h"
 #include "hpx/parcel.h"
 
 /* Portals communication operations */
-comm_operations_t portals_operations = {
-    .init            = portals_init,
-    .send_parcel     = portals_send_parcel,
-    .send            = portals_send,
-    .put             = portals_put,
-    .get             = portals_get,
-    .progress        = portals_progress,
-    .finalize        = portals_finalize,
+network_ops_t portals_ops = {
+    .init     = portals_init,
+    .finalize = portals_finalize,
+    .progress = portals_progress,
+    .probe    = portals_probe,
+    .send     = portals_send,
+    .recv     = portals_recv,
+    .test     = portals_test,
+    .put      = portals_put,
+    .get      = portals_get,
+    .phys_addr= portals_phys_addr,
 };
 
 int portals_init(void) {
@@ -55,3 +59,11 @@ void portals_progress(void *data) {
 void portals_finalize(void) {
 }
 
+int portals_probe(int source, int* flag, network_status_t *status) {
+}
+
+int portals_test(network_request_t *request, int *flag, network_status_t *status) {
+}
+
+int portals_phys_addr(hpx_locality_t *id) {
+}

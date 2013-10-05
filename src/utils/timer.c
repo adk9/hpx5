@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-#include "hpx/timer.h"
+#include "hpx/utils/timer.h"
 
 #ifdef __APPLE__
 static mach_timebase_info_data_t tbi;

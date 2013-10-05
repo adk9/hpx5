@@ -23,8 +23,8 @@
 #include <string.h>
 
 #include "hpx/types.h"
-#include "hpx/ctx.h"
 #include "hpx/thread.h"
+#include "hpx/thread/ctx.h"
 #include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
