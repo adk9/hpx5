@@ -14,22 +14,33 @@
 */
 
 #include "locks.h"
+#include "nop.h"
 
-/*
-  ====================================================================
-  Backoff for now just does some wasted work. Make sure that this is
-  not optimized.
-  ====================================================================
+/**
+ *  "Magic" backoff constants.
+ */
+static const int base = 16;
+static const int multiplier = 2;
+static const int limit = 65536;
+
+
+/* Modern compilers are smart. No need to macro this. */
+static int min(int x, int y) {
+    return (x < y) ? x : y;
+}
+
+/*  Backoff for now just does some wasted work. Make sure that this is
+ *  not optimized.
 */
 static  __attribute__((noinline))
 void backoff(int *prev) {
-    int i, e;
-    for (i = 0, e = *prev * 2; i < e; ++i)
-        *prev += 1;
+    *prev = min(*prev * multiplier, limit);
+    for (int i = 0, e = *prev; i < e; ++i)
+        hpx_sync_nop();
 }
 
 void hpx_sync_tatas_acquire_slow(tatas_t *l) {
-    int i = 16;
+    int i = base;
     do {
         backoff(&i);
     } while (hpx_sync_swap(&l->lock, 1, HPX_SYNC_ACQUIRE));

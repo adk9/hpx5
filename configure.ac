@@ -64,6 +64,42 @@ AC_FUNC_REALLOC
 AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
+
+dnl Allow users to build libitm with warnings treated as errors (disabled by
+dnl default). 
+AC_ARG_ENABLE([pedantic],
+    AS_HELP_STRING([--disable-pedantic], [Disable -pedantic (default=NO)]),
+    [],
+    [enable_pedantic=yes])
+
+AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
+
+dnl Allow users to build libitm with warnings treated as errors (disabled by
+dnl default). 
+AC_ARG_ENABLE([wall],
+    AS_HELP_STRING([--disable-wall], [Disable -Wall (defualt=NO)]),
+    [],
+    [enable_wall=yes])
+
+AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
+
+dnl Allow users to build libitm with warnings treated as errors (disabled by
+dnl default). 
+AC_ARG_ENABLE([werror],
+    AS_HELP_STRING([--disable-werror], [Disable -Werror (defualt=NO)]),
+    [],
+    [enable_werror=yes])
+    
+AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
+
+dnl Allow users to build libitm with link-time-optimization.
+AC_ARG_ENABLE([lto],
+    AS_HELP_STRING([--enable-lto], [Enable link-time optimization (defualt=NO)]),
+    [],
+    [enable_lto=no])
+
+AS_IF([test "x$enable_lto" != xno], AC_SUBST([HPX_F_LTO], [-flto]))
+
 AC_SUBST(PAPI_CFLAGS)
 AC_SUBST(PAPI_LIBS)
 
