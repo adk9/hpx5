@@ -100,7 +100,7 @@ typedef bool (*hpx_thread_wait_pred_t)(void *, void *);
 */
 
 struct hpx_thread_reusable_t {
-  void                (*func)(void *);
+  void                (*func)();
   void                *args;
   void                *stk;
   size_t               ss;

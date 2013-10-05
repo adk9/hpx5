@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Machine Context Switching Functions: makecontext() Replacement
   hpx_mctx_mk.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -22,7 +22,7 @@
 #include <string.h>
 #include "hpx/mctx.h"
 
-extern _hpx_mctx_trampoline(void);
+extern void _hpx_mctx_trampoline(void) __attribute__((noreturn));
 
 /*
  --------------------------------------------------------------------
@@ -31,13 +31,13 @@ extern _hpx_mctx_trampoline(void);
   Replacement for the deprecated POSIX makecontext() function.
 
   We do this in C because we have to work with variadic arguments,
-  which are implemented by the compiler via macros.  They're 
+  which are implemented by the compiler via macros.  They're
   cumbersome and error-prone in assembly.
  --------------------------------------------------------------------
 */
 void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx,
                              void *stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags,
-                             void *func, int argc, va_list *argv) {
+                             void (*func)(), int argc, va_list *argv) {
   uint64_t *sp;
   uint64_t *reg;
   int arg_cnt;
@@ -53,10 +53,10 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_
     memcpy(mctx, link_mctx, sizeof(hpx_mctx_context_t));
   }
 
-  sp = (uint64_t *) stk + (ss / sizeof(uint64_t));  
+  sp = (uint64_t *) stk + (ss / sizeof(uint64_t));
 
   (argc > 6) ? (sp_cnt = (argc - 6)) : (sp_cnt = 0);
-  sp -= (5 + sp_cnt);  
+  sp -= (5 + sp_cnt);
 
   /* save our context linkage to the new stack */
   sp[4 + sp_cnt] = (uint64_t) link_mctx;
@@ -89,11 +89,11 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_
   /* RDI, RSI, RDX, RCX, R8, R9 */
   (argc > 6) ? (arg_cnt = 6) : (arg_cnt = argc);
   reg = &mctx->regs.rdi;
-   
+
   for (idx = 0; idx < arg_cnt; idx++) {
     reg[idx] = va_arg(*argv, uint64_t);
   }
-  
+
   /* save arguments that are passed via the stack */
   for (idx = 1; idx <= sp_cnt; idx++) {
     sp[idx] = (uint64_t) va_arg(*argv, uint64_t);
@@ -105,11 +105,11 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_
  --------------------------------------------------------------------
   hpx_mctx_makecontext
 
-  Wrapper for hpx_mctx_makecontext_va.  
+  Wrapper for hpx_mctx_makecontext_va.
  --------------------------------------------------------------------
 */
 void hpx_mctx_makecontext(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx, void *stk,
-                          size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void *func,
+                          size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void (*func)(),
                           int argc, ...) {
   va_list argv;
 
