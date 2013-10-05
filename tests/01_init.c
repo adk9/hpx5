@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx/hpx.h"
+#include "hpx.h"
 
 FILE * perf_log;
 

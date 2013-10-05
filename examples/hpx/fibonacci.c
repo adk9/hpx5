@@ -1,9 +1,6 @@
 
 #include <stdio.h>
-#include <hpx/config.h>
-#include <hpx/timer.h>
-#include <hpx/ctx.h>
-#include <hpx/thread.h>
+#include <hpx.h>
 
 hpx_context_t *ctx;
 hpx_action_t   act;
@@ -13,10 +10,12 @@ static int     num_ranks;
 static int     my_rank;
 
 void fib(void *n) {
-  long *n1, *n2, num, sum;
+  long *n1, *n2, num, *sum;
   hpx_thread_t *th1;
   hpx_thread_t *th2;
   hpx_locality_t *left, *right;
+
+  sum = hpx_alloc(sizeof(long));
 
   num = (long) n;
   /* handle our base case */
@@ -25,8 +24,8 @@ void fib(void *n) {
 
   /* create children parcels */
   my_rank = hpx_get_rank();
-  left = hpx_get_locality((my_rank+num_ranks-1)%num_ranks);
-  right = hpx_get_locality((my_rank+1)%num_ranks);
+  left = hpx_find_locality((my_rank+num_ranks-1)%num_ranks);
+  right = hpx_find_locality((my_rank+1)%num_ranks);
 
   th1 = hpx_call(left, "fib", (void*) num-1, sizeof(long));
   th2 = hpx_call(right, "fib", (void*) num-2, sizeof(long));
@@ -36,12 +35,12 @@ void fib(void *n) {
   //      interface and have such control constructs for them?
   hpx_thread_join(th2, (void**) &n2);
   hpx_thread_join(th1, (void**) &n1);
-  sum = *n1 + *n2;
+  *sum = *n1 + *n2;
   nthreads += 2;
   hpx_thread_exit(&sum);
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   hpx_config_t cfg;
   long n, *result;
   uint32_t localities;
@@ -64,29 +63,44 @@ int main(int argc, char * argv[]) {
   /* set up our configuration */
   hpx_config_init(&cfg);
 
-  if (cores > 0)
+#if 0
+  if (localities > 0)
     hpx_config_set_localities(&cfg, localities);
+#endif
 
   /* get the number of localities */
   num_ranks = hpx_get_num_localities();
 
   /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
+//  ctx = hpx_ctx_create(&cfg);
 
   /* register the fib action */
-  hpx_action_register("fib", fib, &act);
-
+  int ret = hpx_action_register("fib", fib, &act);
+  if (ret != 0)
+    printf("FIBONACCI: Failed to register action\n");
+#if 0
+  if (act->action == NULL)
+    printf("FIBONACCI: Action is invalid\n");
+#endif
   /* get start time */
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
+  result = hpx_alloc(sizeof(long));
   hpx_action_invoke(&act, (void*) n, (void**) &result);
 
-  printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
+
+#if 0
+  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
          n, *result, hpx_elapsed_us(timer)/1e3,
-	 hpx_config_get_cores(&cfg), ++nthreads);
+	 hpx_config_get_localities(&cfg), ++nthreads);
+#endif
+  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
+         n, *result, hpx_elapsed_us(timer)/1e3,
+	 localities, ++nthreads);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx);
+  hpx_free(result);
+//  hpx_ctx_destroy(ctx);
   return 0;
 }

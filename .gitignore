@@ -21,10 +21,23 @@
 # /config/
 /config/*
 
+# /docs/
+/docs/Doxyfile
+/docs/Makefile
+/docs/doxyfile.stamp
+/docs/html/
+/docs/latex/
+
 # /examples/
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
+
+# /examples/network
+/examples/network/.deps
+/examples/network/pingpong
+/examples/network/Makefile
+/examples/network/Makefile.in
 
 # /examples/thread
 /examples/thread/.deps
@@ -34,7 +47,8 @@
 
 # /examples/hpx
 /examples/hpx/.deps
-/examples/hpx/fibonacci
+/examples/hpx/fibonaccihpx
+/examples/hpx/pingponghpx
 /examples/hpx/Makefile
 /examples/hpx/Makefile.in
 
@@ -81,22 +95,6 @@
 /src/Makefile
 /src/Makefile.in
 
-# /src/libhpx/
-/src/libhpx/.deps
-/src/libhpx/Makefile
-/src/libhpx/Makefile.in
-
-# /src/libhpx/arch/
-/src/libhpx/arch/.deps
-/src/libhpx/arch/Makefile
-/src/libhpx/arch/Makefile.in
-
-# /src/libhpx/arch/x86_64/
-/src/libhpx/arch/x86_64/.dirstamp
-/src/libhpx/arch/x86_64/.deps
-/src/libhpx/arch/x86_64/Makefile
-/src/libhpx/arch/x86_64/Makefile.in
-
 # /src/libxpi/
 /src/libxpi/.deps
 /src/libxpi/Makefile
@@ -104,6 +102,7 @@
 
 # /tests/
 /tests/.deps
+/tests/hpxtest
 /tests/Makefile
 /tests/Makefile.in
 
@@ -122,5 +121,6 @@
 /docs/Doxyfile
 /docs/Makefile
 /docs/html/
+/docs/man/
 /docs/latex/
 

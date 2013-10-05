@@ -20,7 +20,7 @@
 */
 
 #include <string.h>
-#include "hpx/mctx.h"
+#include "hpx/thread/mctx.h"
 
 extern void _hpx_mctx_trampoline(void) __attribute__((noreturn));
 

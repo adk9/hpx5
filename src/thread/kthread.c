@@ -29,11 +29,11 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "hpx/ctx.h"
 #include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
 #include "hpx/thread.h"
+#include "hpx/thread/ctx.h"
 #include "kthread.h"
 
 static pthread_key_t errno_key;

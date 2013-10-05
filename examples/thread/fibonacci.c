@@ -1,9 +1,6 @@
 
 #include <stdio.h>
-#include <hpx/config.h>
-#include <hpx/timer.h>
-#include <hpx/ctx.h>
-#include <hpx/thread.h>
+#include <hpx.h>
 
 hpx_context_t *ctx;
 hpx_timer_t    timer;
@@ -41,7 +38,7 @@ void fib(void *n) {
   hpx_thread_exit((void *) sum);
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   hpx_config_t cfg;
   hpx_future_t *fut;
   long n, *result;
@@ -88,5 +85,7 @@ int main(int argc, char * argv[]) {
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
+
+  hpx_cleanup();
   return 0;
 }

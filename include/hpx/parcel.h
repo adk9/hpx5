@@ -17,8 +17,12 @@
 #ifndef LIBHPX_PARCEL_H_
 #define LIBHPX_PARCEL_H_
 
+#include <search.h>
+
 #include "hpx/action.h"
 #include "hpx/agas.h"
+
+extern struct hsearch_data action_table; /* TODO: move this out of globals */
 
 typedef struct hpx_parcel_t {
   unsigned int  parcel_id;    /*!< the parcel idenitifer. */
@@ -28,10 +32,11 @@ typedef struct hpx_parcel_t {
   /// hpx_action_t continuation; /*!< the continuation action. */
   /// hpx_addr_t  cdest;      /*!< target to execute continuation at. */
   int           flags;        /*!< flags related to the parcel. */
+  size_t       payload_size;
   void         *payload;
 } hpx_parcel_t;
 
-int hpx_parcel_init(void);
+hpx_error_t hpx_parcel_init(void);
 void hpx_parcel_fini(void);
 
 /*
@@ -39,8 +44,16 @@ void hpx_parcel_fini(void);
   Parcel Handling Routines
   -------------------------------------------------------------------
 */
-int hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
+hpx_error_t hpx_new_parcel(char *, void *, size_t, hpx_parcel_t *);
 
+/* Helper to send a parcel structure */
+hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p);
+
+/**
+   Helper function for sending; combines parcel plus it's payload into
+   blob. Size of blob is 
+   sizeof(hpx_parcel_t) + (strlen(action->name) + 1) + p->payload_size . */
+hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob);
 
 /*
  --------------------------------------------------------------------

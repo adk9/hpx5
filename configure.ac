@@ -7,19 +7,19 @@
 # This software was created at the Indiana University Center for
 # Research in Extreme Scale Technologies (CREST).
 
-AC_PREREQ([2.68])
+AC_PREREQ([2.63])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
-AC_CONFIG_SRCDIR([include/hpx/list.h])
+AC_CONFIG_SRCDIR([include/hpx.h])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
-AM_PROG_AR
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT
@@ -64,7 +64,6 @@ AC_FUNC_REALLOC
 AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
-
 dnl Allow users to build libitm with warnings treated as errors (disabled by
 dnl default). 
 AC_ARG_ENABLE([pedantic],
@@ -108,40 +107,51 @@ AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement s
 AS_IF([test "x$use_papi" = xyes], [
   PKG_CHECK_MODULES([PAPI], [papi])
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
+  AC_SUBST(PAPI_CFLAGS)
+  AC_SUBST(PAPI_LIBS)
 ])
-
-AC_SUBST(HWLOC_CFLAGS)
-AC_SUBST(HWLOC_LIBS)
 
 # Check for HWLOC.
 AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
 AS_IF([test "x$use_hwloc" = xyes], [
   PKG_CHECK_MODULES([HWLOC], [hwloc])
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
+  AC_SUBST(HWLOC_CFLAGS)
+  AC_SUBST(HWLOC_LIBS)
 ])
-
-AC_SUBST(TCMALLOC_CFLAGS)
-AC_SUBST(TCMALLOC_LIBS)
 
 # Check for TCMALLOC.
 AC_ARG_WITH([tcmalloc], AS_HELP_STRING([--with-tcmalloc], [Build with TCMALLOC support]), [use_tcmalloc=yes], [])
 AS_IF([test "x$use_tcmalloc" = xyes], [
   PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
   AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
+  AC_SUBST(TCMALLOC_CFLAGS)
+  AC_SUBST(TCMALLOC_LIBS)
 ])
 
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
+# Check for MPI
+AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
+AS_IF([test "x$use_mpi" = xyes], [
+  AC_DEFINE([WITH_MPI], [], [Enable MPI support])
+])
+
+# Check for PHOTON
+AC_ARG_WITH([photon], AS_HELP_STRING([--with-photon], [Build with Photon support]), [use_photon=yes], [])
+AS_IF([test "x$use_photon" = xyes], [
+  AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])
+])
 
 # Check for check (and disable test-suite if not found).
-AC_CHECK_LIB([check], [check_major_version], [CHECK=yes])
-AS_IF([test -z "$CHECK"], [
-  PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ])
+PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [
   AC_DEFINE([WITH_TESTSUITE], [], [Enable test suite])
-])
-if test -z "$CHECK";
-  then AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-fi
+  AM_CONDITIONAL([WITH_TESTSUITE], true)
+  AC_SUBST(CHECK, [check])
+  AC_SUBST(CHECK_CFLAGS)
+  AC_SUBST(CHECK_LIBS)], [
+  AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
+  AM_CONDITIONAL([WITH_TESTSUITE], false)])
+
+AM_COND_IF([WITH_TESTSUITE], [AC_CONFIG_FILES([tests/Makefile])])
 
 # Check for doxygen (to build the documentation).
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -160,16 +170,18 @@ AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
 AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
 AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
 AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" = xyes])
-
-AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
-AM_COND_IF([WITH_TESTSUITE],
-	[AC_CONFIG_FILES([tests/Makefile])])
+AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
+AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
 
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
+  include/Makefile
   examples/Makefile
+  examples/hpx/Makefile	
   examples/thread/Makefile
+  examples/network/Makefile
 ])
 AC_OUTPUT
 
@@ -189,12 +201,16 @@ AS_IF([test "x$use_tcmalloc" = xyes],
       [tcmalloc_string="yes"],
       [tcmalloc_string="no"])
 
+AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
+AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
+
 echo ""
 echo "================================================"
 echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
+echo "               Networks : $networks_string"
 echo "              Profiling : $papi_string (PAPI)"
 echo "     Topology Awareness : $hwloc_string (HWLOC)"
 echo "  Thread-Caching Malloc : $tcmalloc_string (TCMALLOC)"

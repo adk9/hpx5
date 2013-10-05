@@ -21,7 +21,7 @@
 */
 
 
-#include "hpx/hpx.h"
+#include "hpx.h"
 
 
 /*
@@ -66,7 +66,7 @@ START_TEST (test_libhpx_ctx_get_id)
     ck_assert_msg(ctx != NULL, msg);
 
     sprintf(msg, "ID of ctx is incorrect on loop iteration %d", x);
-    ck_assert_msg(hpx_ctx_get_id(ctx) == x, msg);
+    ck_assert_msg(hpx_ctx_get_id(ctx) == x+1, msg); /* hpx_init() always creates one ctx */
 
     hpx_ctx_destroy(ctx);
     ctx = NULL;

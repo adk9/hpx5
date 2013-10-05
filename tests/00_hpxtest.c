@@ -22,7 +22,6 @@
 
 
 #include <stdio.h>
-
 #include <check.h>
 
 /* Source files containing tests */
@@ -39,7 +38,9 @@
 #include "10_list.c"
 #include "11_map.c"
 #include "12_gate.c"
-
+#if HAVE_NETWORK
+#include "12_parcelhandler.c"
+#endif
 #include "98_thread_perf1.c"
 
 
@@ -66,7 +67,7 @@ int main(int argc, char * argv[]) {
   perf_tests = getenv("HPXTEST_PERF");
 
   /* install fixtures */
-  tcase_add_checked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
+  tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
   tcase_set_timeout(tc, 1200);
@@ -76,6 +77,7 @@ int main(int argc, char * argv[]) {
   tcase_add_test(tc, test_libhpx_config_switch_fpu);
   tcase_add_test(tc, test_libhpx_config_switch_sigmask);
   tcase_add_test(tc, test_libhpx_config_thread_stack_size);
+
 
   /* test memory management */
   tcase_add_test(tc, test_libhpx_alloc);
@@ -253,6 +255,22 @@ int main(int argc, char * argv[]) {
   /* gates */
   tcase_add_test(tc, test_libhpx_gate_allreduce);
 
+  /* parcel handler tests */
+#if HAVE_NETWORK
+  tcase_add_test(tc, test_libhpx_parcelqueue_create);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded_concurrent);
+  tcase_add_test(tc, test_libhpx_parcelhandler_create);
+  tcase_add_test(tc, test_libhpx_action_register);
+  tcase_add_test(tc, test_libhpx_parcelsystem_init);
+  tcase_add_test(tc, test_libhpx_parcel_create);
+  tcase_add_test(tc, test_libhpx_parcel_serialize);
+  tcase_add_test(tc, test_libhpx_parcel_send);
+  tcase_add_test(tc, test_libhpx_parcel_senddata);
+  tcase_add_test(tc, test_libhpx_parcel_senddata_large);
+#endif
+
   /* performance tests */
   if (perf_tests) {
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
@@ -304,7 +322,9 @@ int main(int argc, char * argv[]) {
     tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
     //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
+
   }
+
 
   suite_add_tcase(s, tc);
 

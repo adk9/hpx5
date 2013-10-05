@@ -1,10 +1,9 @@
-
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
 
-  Thread Function Definitions
-  hpx_thread.h
+  Thread Functions
+  network.h
 
   Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
@@ -14,9 +13,6 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
  ====================================================================
 */
 
@@ -28,11 +24,11 @@
 #include <stdint.h>
 
 #include "hpx/mem.h"
-#include "hpx/mctx.h"
 #include "hpx/lco.h"
-#include "hpx/list.h"
-#include "hpx/map.h"
 #include "hpx/types.h"
+#include "hpx/thread/mctx.h"
+#include "hpx/utils/list.h"
+#include "hpx/utils/map.h"
 
 typedef uint64_t hpx_node_id_t;
 typedef uint64_t hpx_thread_id_t;
@@ -181,4 +177,4 @@ void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
 uint64_t hpx_thread_map_hash(hpx_map_t *, void *);
 bool hpx_thread_map_cmp(void *, void *);
 
-#endif /* LIBHPX_THREAD_H */
+#endif /* LIBHPX_THREAD_H_ */

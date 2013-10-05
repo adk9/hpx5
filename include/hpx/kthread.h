@@ -25,9 +25,9 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "hpx/queue.h"
-#include "hpx/mctx.h"
 #include "hpx/types.h"
+#include "hpx/thread/mctx.h"
+#include "hpx/utils/queue.h"
 
 /*
  --------------------------------------------------------------------
