@@ -37,7 +37,6 @@ hpx_locality_t *hpx_locality_create(void) {
     memset(loc, 0, sizeof(hpx_locality_t));
   else
     __hpx_errno = HPX_ERROR_NOMEM;
-
   return loc;
 }
 
@@ -54,11 +53,20 @@ hpx_locality_t *hpx_get_my_locality(void) {
   return my_locality;
 }
 
+hpx_locality_t* hpx_locality_from_rank(int rank) {
+  hpx_locality_t *l;
+  l = hpx_locality_create();
+  if (!l) return NULL;
+  l->rank = rank;
+  return l;
+}
+
 hpx_locality_t *hpx_find_locality(int rank) {
   int ret;
   hpx_locality_t *locs, *l, *m;
 
   l = hpx_locality_create();
+  if (!l) return NULL;
   ret = bootmgr->get_map(&locs);
   if (ret != 0)
     return NULL;
@@ -68,7 +76,7 @@ hpx_locality_t *hpx_find_locality(int rank) {
     memcpy(l, m, sizeof(*l));
 
   free(locs);
-  return l;          
+  return l;
 }
 
 uint32 hpx_get_num_localities(void) {

@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   /* get start time */
   hpx_get_time(&timer);
 
-  dst = hpx_find_locality((hpx_get_rank()+1)%num_ranks);
+  dst = hpx_locality_from_rank((hpx_get_rank()+1)%num_ranks);
   assert(dst!=NULL);
 
   hpx_call(dst, "ping", (void*)&p, sizeof(Packet));

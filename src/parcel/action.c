@@ -2,8 +2,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Parcel Registration
-  register.c
+  Actions
+  action.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
