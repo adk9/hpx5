@@ -164,6 +164,11 @@ static int __ugni_nbpop_event(photonRequest req) {
 		}
 	}
 
+	/* free up the descriptor we allocated for the operation */
+	if (event_post_desc_ptr) {
+		free(event_post_desc_ptr);
+	}
+
 	dbg_info("returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
 	return (req->state == REQUEST_COMPLETED)?0:1;
 
@@ -606,28 +611,36 @@ static int ugni_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int ta
 	dbg_info("MDH: 0x%016lx / 0x%016lx", entry->qword1, entry->qword2);
 
 	{
-		gni_post_descriptor_t fma_desc;
+		gni_post_descriptor_t *fma_desc;
 		uintptr_t rmt_addr;
 
+		/* create a new descriptor, free once the event is completed */
+		/* this is different from verbs where the descriptors are copied in the call */
+		fma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
+		if (!fma_desc) {
+			dbg_err("Could not allocate new post descriptor");
+			goto error_exit;
+		}
+
         rmt_addr  = ugni_processes[proc].remote_rcv_info_ledger->remote.addr;
-		rmt_addr += ugni_processes[proc].remote_rcv_info_ledger->curr * sizeof(*entry);
+		rmt_addr += ugni_processes[proc].remote_rcv_info_ledger->curr * sizeof(photon_ri_ledger_entry);
 		cookie = (( (uint64_t)proc<<32) | NULL_COOKIE);
 
 		dbg_info("Posting cookie: %"PRIx64, cookie);
 
-		fma_desc.type = GNI_POST_FMA_PUT;
-		fma_desc.cq_mode = GNI_CQMODE_GLOBAL_EVENT;
-		fma_desc.dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-        fma_desc.local_addr = (uint64_t) entry;
-        fma_desc.local_mem_hndl = shared_storage->mdh;
-		fma_desc.remote_addr = (uint64_t) rmt_addr;
-        fma_desc.remote_mem_hndl = ugni_processes[proc].remote_rcv_info_ledger->remote.mdh;
-        fma_desc.length = sizeof(*entry);
-        fma_desc.post_id = cookie;
-		fma_desc.rdma_mode = GNI_RDMAMODE_FENCE;
-        fma_desc.src_cq_hndl = ugni_ctx.local_cq_handle;
+		fma_desc->type = GNI_POST_FMA_PUT;
+		fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+		fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+        fma_desc->local_addr = (uint64_t) entry;
+        fma_desc->local_mem_hndl = shared_storage->mdh;
+		fma_desc->remote_addr = (uint64_t) rmt_addr;
+        fma_desc->remote_mem_hndl = ugni_processes[proc].remote_rcv_info_ledger->remote.mdh;
+        fma_desc->length = sizeof(photon_ri_ledger_entry);
+        fma_desc->post_id = cookie;
+		fma_desc->rdma_mode = 0;
+        fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
 
-		err = GNI_PostFma(ugni_ctx.ep_handles[proc], &fma_desc);
+		err = GNI_PostFma(ugni_ctx.ep_handles[proc], fma_desc);
 		if (err != GNI_RC_SUCCESS) {
 			log_err("GNI_PostFma data ERROR status: %s (%d)\n", gni_err_str[err], err);
 			goto error_exit;
@@ -635,22 +648,6 @@ static int ugni_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int ta
 		/* the associated CQ events will eventually get popped by __ugni_nbpop_event() when app waits
 		   we could wait for it here but that means handling any other events that might pop up
 		   another option is to create separate CQs for these FMA ops */
-		
-		/*
-		gni_post_descriptor_t *event_post_desc_ptr;
-		gni_cq_entry_t current_event;
-		err = get_cq_event(ugni_ctx.local_cq_handle, 1, 0, &current_event);
-		if (err == 0) {
-			err = GNI_GetCompleted(ugni_ctx.local_cq_handle, current_event, &event_post_desc_ptr);
-			if (err != GNI_RC_SUCCESS) {
-				if (event_post_desc_ptr == NULL) {
-					dbg_err("GNI_GetCompleted returned NULL, ERROR status: %s (%d)", gni_err_str[err], err);
-					goto error_exit;
-				}
-			}
-			dbg_info("Got post_id: %"PRIx64, event_post_desc_ptr->post_id);
-		}
-		*/
 
 		dbg_info("GNI_PostFma data transfer successful: %"PRIx64, cookie);
 	}
@@ -728,11 +725,6 @@ static int ugni_wait_recv_buffer_rdma(int proc, int tag) {
 	int curr, num_entries, still_searching;
 
 	dbg_info("(%d, %d)", proc, tag);
-
-	if( __initialized <= 0 ) {
-		log_err("Library not initialized.	Call photon_init() first");
-		return -1;
-	}
 
 	// If we've received a Rendezvous-Start from processor "proc" that is still pending
 	curr_remote_buffer = ugni_processes[proc].curr_remote_buffer;
@@ -867,21 +859,27 @@ static int ugni_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_
 	dbg_info("Posting to remote buffer %p", (void *)drb->addr);
 
 	{
-		gni_post_descriptor_t rdma_desc;
+		gni_post_descriptor_t *rdma_desc;
+
+		rdma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
+		if (!rdma_desc) {
+			dbg_err("Could not allocate new post descriptor");
+			goto error_exit;
+		}
 		
-		rdma_desc.type = GNI_POST_FMA_PUT;
-		rdma_desc.cq_mode = GNI_CQMODE_GLOBAL_EVENT;
-		rdma_desc.dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-        rdma_desc.local_addr = (uint64_t) ptr;
-        rdma_desc.local_mem_hndl = db->mdh;
-		rdma_desc.remote_addr = (uint64_t) drb->addr + (uint64_t) remote_offset;
-        rdma_desc.remote_mem_hndl = drb->mdh;
-        rdma_desc.length = size;
-        rdma_desc.post_id = cookie;
-		rdma_desc.rdma_mode = GNI_RDMAMODE_FENCE;
-        rdma_desc.src_cq_hndl = ugni_ctx.local_cq_handle;
+		rdma_desc->type = GNI_POST_RDMA_PUT;
+		rdma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+		rdma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+        rdma_desc->local_addr = (uint64_t) ptr;
+        rdma_desc->local_mem_hndl = db->mdh;
+		rdma_desc->remote_addr = (uint64_t) drb->addr + (uint64_t) remote_offset;
+        rdma_desc->remote_mem_hndl = drb->mdh;
+        rdma_desc->length = size;
+        rdma_desc->post_id = cookie;
+		rdma_desc->rdma_mode = 0;
+        rdma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
 		
-		err = GNI_PostFma(ugni_ctx.ep_handles[proc], &rdma_desc);
+		err = GNI_PostRdma(ugni_ctx.ep_handles[proc], rdma_desc);
 		if (err != GNI_RC_SUCCESS) {
 			log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
 			/* do some retries first */
@@ -964,27 +962,33 @@ static int ugni_send_FIN(int proc) {
 	entry->footer = 1;
 
 	{
-		gni_post_descriptor_t fma_desc;
+		gni_post_descriptor_t *fma_desc;
 		uintptr_t rmt_addr;
 
+		fma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
+		if (!fma_desc) {
+			dbg_err("Could not allocate new post descriptor");
+			goto error_exit;
+		}
+
 		rmt_addr  = ugni_processes[proc].remote_FIN_ledger->remote.addr;
-		rmt_addr += ugni_processes[proc].remote_FIN_ledger->curr * sizeof(*entry);
+		rmt_addr += ugni_processes[proc].remote_FIN_ledger->curr * sizeof(photon_rdma_FIN_ledger_entry);
 		/* apparently UGNI post_id should be > 1 */
 		cookie = (( (uint64_t)proc<<32) | NULL_COOKIE);
 
-		fma_desc.type = GNI_POST_FMA_PUT;
-		fma_desc.cq_mode = GNI_CQMODE_GLOBAL_EVENT;
-		fma_desc.dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-        fma_desc.local_addr = (uint64_t) entry;
-        fma_desc.local_mem_hndl = shared_storage->mdh;
-		fma_desc.remote_addr = (uint64_t) rmt_addr;
-        fma_desc.remote_mem_hndl = ugni_processes[proc].remote_FIN_ledger->remote.mdh;
-        fma_desc.length = sizeof(*entry);
-        fma_desc.post_id = cookie;
-		fma_desc.rdma_mode = GNI_RDMAMODE_FENCE;
-        fma_desc.src_cq_hndl = ugni_ctx.local_cq_handle;
+		fma_desc->type = GNI_POST_FMA_PUT;
+		fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+		fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+        fma_desc->local_addr = (uint64_t) entry;
+        fma_desc->local_mem_hndl = shared_storage->mdh;
+		fma_desc->remote_addr = (uint64_t) rmt_addr;
+        fma_desc->remote_mem_hndl = ugni_processes[proc].remote_FIN_ledger->remote.mdh;
+        fma_desc->length = sizeof(photon_rdma_FIN_ledger_entry);
+        fma_desc->post_id = cookie;
+		fma_desc->rdma_mode = 0;
+        fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
 
-		err = GNI_PostFma(ugni_ctx.ep_handles[proc], &fma_desc);
+		err = GNI_PostFma(ugni_ctx.ep_handles[proc], fma_desc);
 		if (err != GNI_RC_SUCCESS) {
 			log_err("GNI_PostFma data ERROR status: %s (%d)\n", gni_err_str[err], err);
 			goto error_exit;

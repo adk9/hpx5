@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 
 	// everyone posts their recv buffer to their next rank
 	photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-	
+
 	// do some "work"
 	//sleep(1);
 
