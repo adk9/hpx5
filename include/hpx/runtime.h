@@ -30,6 +30,8 @@ typedef struct hpx_locality_t {
 
 hpx_locality_t* hpx_locality_create(void);
 
+hpx_locality_t* hpx_locality_from_rank(int);
+
 void hpx_locality_destroy(hpx_locality_t*);
 
 hpx_locality_t *hpx_get_my_locality(void);

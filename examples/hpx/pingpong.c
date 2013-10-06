@@ -145,9 +145,9 @@ void pingpong(void* _args) {
   hpx_network_barrier();
 
   if (my_rank == 0)
-    other_loc = hpx_find_locality(1);
+    other_loc = hpx_locality_from_rank(1);
   else if (my_rank == 1)
-    other_loc = hpx_find_locality(0);
+    other_loc = hpx_locality_from_rank(0);
   else 
     {}
 

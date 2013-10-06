@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <assert.h>
 #include <hpx.h>
 
 hpx_context_t *ctx;
@@ -24,8 +25,10 @@ void fib(void *n) {
 
   /* create children parcels */
   my_rank = hpx_get_rank();
-  left = hpx_find_locality((my_rank+num_ranks-1)%num_ranks);
-  right = hpx_find_locality((my_rank+1)%num_ranks);
+  left = hpx_locality_from_rank((my_rank+num_ranks-1)%num_ranks);
+  assert(left!=NULL);
+  right = hpx_locality_from_rank((my_rank+1)%num_ranks);
+  assert(right!=NULL);
 
   th1 = hpx_call(left, "fib", (void*) num-1, sizeof(long));
   th2 = hpx_call(right, "fib", (void*) num-2, sizeof(long));
