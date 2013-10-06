@@ -14,6 +14,7 @@
 
 #include "libphoton.h"
 #include "photon_ugni_connect.h"
+#include "utility_functions.h"
 #include "logging.h"
 
 #define BIND_ID_MULTIPLIER       100
@@ -26,7 +27,7 @@ extern int _photon_myrank;
 extern int _photon_nproc;
 extern int _photon_forwarder;
 
-static int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info);
+int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info);
 
 int __ugni_init_context(ugni_cnct_ctx *ctx) {
 	unsigned local_address;
@@ -63,12 +64,13 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
         goto error_exit;
     }
 
-	/* setup completion queue for remote memory events */
+	/* setup completion queue for remote memory events
     status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->remote_cq_handle));
     if (status != GNI_RC_SUCCESS) {
 		dbg_err("GNI_CqCreate remote_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
         goto error_exit;
     }
+	*/
 
 	ctx->ep_handles = (gni_ep_handle_t *)calloc(_photon_nproc, sizeof(gni_ep_handle_t));
 	if (!ctx->ep_handles) {
@@ -175,7 +177,7 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
 	return PHOTON_ERROR;
 }
 
-static int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info) {
+int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info) {
 	int i, status;
 	uint32_t bind_id;
 

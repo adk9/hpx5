@@ -36,22 +36,22 @@ void photon_buffer_free(photonBuffer buf) {
 	return bi->buffer_free(buf);
 }
 
-int photon_buffer_register(photonBuffer buf) {
+int photon_buffer_register(photonBuffer buf, void *ctx) {
 	if (!bi) {
 		log_err("Buffer interface not set!");
 		return PHOTON_ERROR;
 	}
 
-	return bi->buffer_register(buf);
+	return bi->buffer_register(buf, ctx);
 }
 
-int photon_buffer_unregister(photonBuffer buf) {
+int photon_buffer_unregister(photonBuffer buf, void *ctx) {
 	if (!bi) {
 		log_err("Buffer interface not set!");
 		return PHOTON_ERROR;
 	}
 	
-	return bi->buffer_unregister(buf);
+	return bi->buffer_unregister(buf, ctx);
 }
 
 /* remote buffers */
@@ -100,31 +100,32 @@ photonBuffer _photon_buffer_create(void *buf, uint64_t size) {
 }
 
 void _photon_buffer_free(photonBuffer buf) {	
+	/*
 	if (buf->is_registered) {
 		if (!bi) {
 			log_err("Buffer interface not set!");
 			return;
 		}
-		bi->buffer_unregister(buf);
+		bi->buffer_unregister(buf, ctx);
 	}
-
+	*/
 	free(buf);
 }
 
-int _photon_buffer_register(photonBuffer buf) {
+int _photon_buffer_register(photonBuffer buf, void *ctx) {
 	if (!bi) {
 		log_err("Buffer interface not set!");
 		return PHOTON_ERROR;
 	}
 
-	return bi->buffer_register(buf);
+	return bi->buffer_register(buf, ctx);
 }
 
-int _photon_buffer_unregister(photonBuffer buf) {
+int _photon_buffer_unregister(photonBuffer buf, void *ctx) {
 	if (!bi) {
 		log_err("Buffer interface not set!");
 		return PHOTON_ERROR;
 	}
 	
-	return bi->buffer_unregister(buf);
+	return bi->buffer_unregister(buf, ctx);
 }

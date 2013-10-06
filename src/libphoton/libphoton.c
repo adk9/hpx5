@@ -119,7 +119,7 @@ int photon_register_buffer(char *buffer, int buffer_size) {
 
 	dbg_info("created buffer: %p", db);
 
-	if (photon_buffer_register(db) != 0) {
+	if (photon_buffer_register(db, __photon_backend->context) != 0) {
 		log_err("Couldn't register buffer");
 		goto error_exit_db;
 	}
@@ -156,7 +156,7 @@ int photon_unregister_buffer(char *buffer, int size) {
 	}
 
 	if (--(db->ref_count) == 0) {
-		if (photon_buffer_unregister(db) != 0) {
+		if (photon_buffer_unregister(db, __photon_backend->context) != 0) {
 			goto error_exit;
 		}
 		buffertable_remove( db );

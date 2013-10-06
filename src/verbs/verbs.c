@@ -265,7 +265,7 @@ int __verbs_init_common(photonConfig cfg) {
 		goto error_exit_buf;
 	}
 
-	if (photon_buffer_register(shared_storage) != 0) {
+	if (photon_buffer_register(shared_storage, &verbs_ctx) != 0) {
 		log_err("couldn't register local buffer for the ledger entries");
 		goto error_exit_ss;
 	}

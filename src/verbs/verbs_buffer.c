@@ -7,7 +7,8 @@
 #include "verbs_connect.h"
 #include "logging.h"
 
-extern verbs_cnct_ctx verbs_ctx;
+static int __verbs_buffer_register(photonBuffer dbuffer, void *ctx);
+static int __verbs_buffer_unregister(photonBuffer dbuffer, void *ctx);
 
 struct photon_buffer_interface_t verbs_buffer_interface = {
 	.buffer_create = _photon_buffer_create,
@@ -16,7 +17,7 @@ struct photon_buffer_interface_t verbs_buffer_interface = {
 	.buffer_unregister = __verbs_buffer_unregister
 };
 
-int __verbs_buffer_register(photonBuffer dbuffer) {
+static int __verbs_buffer_register(photonBuffer dbuffer, void *ctx) {
 	enum ibv_access_flags flags;
 
 	dbg_info("buffer address: %p", dbuffer);
@@ -25,7 +26,7 @@ int __verbs_buffer_register(photonBuffer dbuffer) {
 		return 0;
 
 	flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_READ|IBV_ACCESS_REMOTE_WRITE;
-	dbuffer->mr = ibv_reg_mr(verbs_ctx.ib_pd, dbuffer->buffer, dbuffer->size, flags);
+	dbuffer->mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, dbuffer->buffer, dbuffer->size, flags);
 	if (!dbuffer->mr) {
 		log_err("Could not allocate MR\n");
 		goto error_exit;
@@ -40,7 +41,7 @@ error_exit:
 	return -1;
 }
 
-int __verbs_buffer_unregister(photonBuffer dbuffer) {
+static int __verbs_buffer_unregister(photonBuffer dbuffer, void *ctx) {
 	int retval;
 
 	dbg_info();

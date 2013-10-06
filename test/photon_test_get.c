@@ -58,6 +58,29 @@ int main(int argc, char *argv[]) {
 	while(1) {
 		int flag, type;
 		struct photon_status_t stat;
+		int tst = photon_test(sendReq, &flag, &type, &stat);
+		if( tst < 0 ) {
+			fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+			exit(-1);
+		}
+		else if( tst > 0 ) {
+			fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+			exit(0);
+		}
+		else {
+			if( flag ) {
+				fprintf(stderr,"%d: post_send_buf(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+				break;
+			}
+			else {
+				//fprintf(stderr,"%d: Busy waiting for recv\n", rank);
+				usleep(10*1000); // 1/100th of a second
+			}
+		}
+	}
+	while(1) {
+		int flag, type;
+		struct photon_status_t stat;
 		int tst = photon_test(recvReq, &flag, &type, &stat);
 		if( tst < 0 ) {
 			fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);

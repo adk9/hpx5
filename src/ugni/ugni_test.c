@@ -9,6 +9,7 @@
 #include <mpi.h>
 #include "gni_pub.h"
 #include "utility_functions.h"
+#include "logging.h"
 
 #define BIND_ID_MULTIPLIER       100
 #define CDM_ID_MULTIPLIER        1000
@@ -234,7 +235,7 @@ int main(int argc, char **argv) {
 
 		dbg_info("GNI_PostFma data transfer: %4i successful", i);
 		dbg_info("data transfer complete, checking CQ events");
-		
+
 		status = get_cq_event(local_cq_handle, 1, 1, &current_event);
         if (status == 0) {
 			status = GNI_GetCompleted(local_cq_handle, current_event, &event_post_desc_ptr);

@@ -34,11 +34,12 @@ libphoton_la_LDFLAGS += @UGNI_LIBS@
 libphoton_la_SOURCES += ugni/photon_ugni.c             \
 		    ugni/photon_ugni_exchange.c                \
 		    ugni/photon_ugni_connect.c                 \
-		    ugni/photon_ugni_buffer.c
+		    ugni/photon_ugni_buffer.c                  \
+		    ugni/utility_functions.c
 
 noinst_bindir = @abs_top_builddir@/test
 noinst_bin_PROGRAMS = ugni_test
-ugni_test_SOURCES = ugni/ugni_test.c
+ugni_test_SOURCES = ugni/ugni_test.c ugni/utility_functions.c
 ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
 ugni_test_LDFLAGS = @MPI_LIBS@ @UGNI_LIBS@
 endif

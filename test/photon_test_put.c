@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
 	// wait for the recv buffer that was posted from the previous rank
 	photon_wait_recv_buffer_rdma(prev, PHOTON_TAG);
-
+	
 	// put directly into that recv buffer
 	photon_post_os_put(prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0, &sendReq);
 	photon_send_FIN(prev);
@@ -70,6 +70,29 @@ int main(int argc, char *argv[]) {
 		else {
 			if( flag ) {
 				fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+				break;
+			}
+			else {
+				//fprintf(stderr,"%d: Busy waiting for recv\n", rank);
+				usleep(10*1000); // 1/100th of a second
+			}
+		}
+	}
+	while(1) {
+		int flag, type;
+		struct photon_status_t stat;
+		int tst = photon_test(recvReq, &flag, &type, &stat);
+		if( tst < 0 ) {
+			fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+			exit(-1);
+		}
+		else if( tst > 0 ) {
+			fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+			exit(0);
+		}
+		else {
+			if( flag ) {
+				fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
 				break;
 			}
 			else {

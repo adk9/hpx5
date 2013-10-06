@@ -5,6 +5,7 @@
 
 /* TODO: fix parameters and generalize API */
 struct photon_backend_t {
+	void *context;
 	int (*initialized)(void);
 	int (*init)(photonConfig);
 	int (*finalize)(void);

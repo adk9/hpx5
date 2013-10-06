@@ -5,6 +5,9 @@
 #include "photon_ugni_connect.h"
 #include "logging.h"
 
+static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx);
+static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx);
+
 struct photon_buffer_interface_t ugni_buffer_interface = {
 	.buffer_create = _photon_buffer_create,
 	.buffer_free = _photon_buffer_free,
@@ -12,15 +15,13 @@ struct photon_buffer_interface_t ugni_buffer_interface = {
 	.buffer_unregister = __ugni_buffer_unregister
 };
 
-extern ugni_cnct_ctx ugni_ctx;
-
-int __ugni_buffer_register(photonBuffer dbuffer) {
+static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx) {
 	int status;
 	
 	if (dbuffer->is_registered)
 		return PHOTON_OK;
 	
-	status = GNI_MemRegister(ugni_ctx.nic_handle, dbuffer->buffer, dbuffer->size,
+	status = GNI_MemRegister(((ugni_cnct_ctx*)ctx)->nic_handle, (uint64_t)dbuffer->buffer, dbuffer->size,
 							 NULL, GNI_MEM_READWRITE, -1, &dbuffer->mdh);
 	if (status != GNI_RC_SUCCESS) {
 		dbg_err("GNI_MemRegister ERROR status: %s (%d)", gni_err_str[status], status);
@@ -38,15 +39,15 @@ int __ugni_buffer_register(photonBuffer dbuffer) {
 	return PHOTON_ERROR;
 }
 
-int __ugni_buffer_unregister(photonBuffer dbuffer) {
+static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx) {
 	int status;
 
-	status = GNI_MemDeregister(ugni_ctx.nic_handle, &dbuffer->mdh);
+	status = GNI_MemDeregister(((ugni_cnct_ctx*)ctx)->nic_handle, &dbuffer->mdh);
 	if (status != GNI_RC_SUCCESS) {
 		dbg_err("GNI_MemDeregister ERROR status: %s (%d)", gni_err_str[status], status);
 		goto error_exit;
 	}
-	dbg_info("GNI_MemDeregister (%p) NIC: %p", (void *)dbuffer->buffer, ugni_ctx.nic_handle);
+	dbg_info("GNI_MemDeregister (%p)", (void *)dbuffer->buffer);
 
 	dbuffer->is_registered = 0;
 

@@ -44,8 +44,8 @@ typedef struct photon_remote_buffer_t * photonRemoteBuffer;
 struct photon_buffer_interface_t {
 	photonBuffer (*buffer_create)(void *buf, uint64_t size);
 	void (*buffer_free)(photonBuffer buf);
-	int (*buffer_register)(photonBuffer buf);
-	int (*buffer_unregister)(photonBuffer buf);
+	int (*buffer_register)(photonBuffer buf, void *ctx);
+	int (*buffer_unregister)(photonBuffer buf, void *ctx);
 };
 
 typedef struct photon_buffer_interface_t * photonBufferInterface;
@@ -54,8 +54,8 @@ typedef struct photon_buffer_interface_t * photonBufferInterface;
 void photon_buffer_init(photonBufferInterface buf_interface);
 photonBuffer photon_buffer_create(void *buf, uint64_t size);
 void photon_buffer_free(photonBuffer buf);
-int photon_buffer_register(photonBuffer buf);
-int photon_buffer_unregister(photonBuffer buf);
+int photon_buffer_register(photonBuffer buf, void *ctx);
+int photon_buffer_unregister(photonBuffer buf, void *ctx);
 
 /* including the remote buffers */
 photonRemoteBuffer photon_remote_buffer_create();
@@ -64,7 +64,7 @@ void photon_remote_buffer_free(photonRemoteBuffer drb);
 /* default buffer interface methods */
 photonBuffer _photon_buffer_create(void *buf, uint64_t size);
 void _photon_buffer_free(photonBuffer buf);
-int _photon_buffer_register(photonBuffer buf);
-int _photon_buffer_unregister(photonBuffer buf);
+int _photon_buffer_register(photonBuffer buf, void *ctx);
+int _photon_buffer_unregister(photonBuffer buf, void *ctx);
 
 #endif
