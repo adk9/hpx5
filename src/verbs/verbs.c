@@ -59,7 +59,7 @@ static int __verbs_nbpop_ledger(photonRequest req);
 static int __verbs_nbpop_event(photonRequest req);
 #endif
 
-verbs_cnct_ctx verbs_ctx = {
+static verbs_cnct_ctx verbs_ctx = {
 	.ib_dev ="ib0",
 	.ib_port = 1,
 	.ib_context = NULL,
@@ -94,6 +94,7 @@ static inline photonRequest __verbs_get_request();
 
 /* we are now a Photon backend */
 struct photon_backend_t photon_verbs_backend = {
+	.context = &verbs_ctx,
 	.initialized = verbs_initialized,
 	.init = verbs_init,
 	.finalize = verbs_finalize,
