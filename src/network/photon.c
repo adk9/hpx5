@@ -23,6 +23,7 @@
 
 #include "hpx/action.h"
 #include "hpx/bootstrap.h"
+#include "hpx/init.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 

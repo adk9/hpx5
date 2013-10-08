@@ -39,7 +39,7 @@ struct send_args {
   char* in_data[];
 };
 
-int DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS =  (10*1037)/sizeof(size_t);
+int DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS =  (10*1037*1024)/sizeof(size_t);
 
 hpx_future_t sendtest_fut; /* used for the simplest send test */
 hpx_future_t sendtest_data_fut; /* used for the data send test */
@@ -336,7 +336,7 @@ void _thread_main_parcelsenddata_large(void* args) {
 
     size_t size_of_sendargs = sizeof(struct send_args) +  DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS;
     struct send_args* args = hpx_alloc(size_of_sendargs);
-    args->fut = &fut;
+    args->fut = NULL; // &fut;
     args->src_rank = my_rank;
     memcpy(args->in_data, &data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
 

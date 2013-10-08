@@ -68,4 +68,6 @@ int pin_photon(void* buffer, size_t len);
 /* unpin memory for put/get */
 int unpin_photon(void* buffer, size_t len);
 
+int phys_addr_photon(hpx_locality_t* loc);
+
 #endif
