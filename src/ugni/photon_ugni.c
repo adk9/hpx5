@@ -704,9 +704,126 @@ error_exit:
 }
 
 static int ugni_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
+	photonBuffer db;
+	photonRILedgerEntry entry;
+	int curr, num_entries, err;
+	uint64_t cookie;
+	uint32_t request_id;
 
+	dbg_info("(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
+
+	if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
+		log_err("Requested post of send buffer for ptr not in table");
+		goto error_exit;
+	}
+
+	request_id = INC_COUNTER(curr_cookie);
+	dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+
+	curr = ugni_processes[proc].remote_snd_info_ledger->curr;
+	entry = &ugni_processes[proc].remote_snd_info_ledger->entries[curr];
+
+	// fill in what we're going to transfer
+	entry->header = 1;
+	entry->request = request_id;
+	entry->rkey = 0;
+	entry->addr = (uintptr_t)ptr;
+	entry->size = size;
+	entry->tag = tag;
+	entry->footer = 1;
+	entry->qword1 = db->mdh.qword1;
+	entry->qword2 = db->mdh.qword2;
+
+	dbg_info("Post send request");
+	dbg_info("Request: %u", entry->request);
+	dbg_info("rkey: %u", entry->rkey);
+	dbg_info("Addr: %p", (void *)entry->addr);
+	dbg_info("Size: %u", entry->size);
+	dbg_info("Tag: %d", entry->tag);
+	dbg_info("MDH: 0x%016lx / 0x%016lx", entry->qword1, entry->qword2);	
+
+	{
+		gni_post_descriptor_t *fma_desc;
+		uintptr_t rmt_addr;
+
+		fma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
+		if (!fma_desc) {
+			dbg_err("Could not allocate new post descriptor");
+			goto error_exit;
+		}
+
+        rmt_addr  = ugni_processes[proc].remote_snd_info_ledger->remote.addr;
+		rmt_addr += ugni_processes[proc].remote_snd_info_ledger->curr * sizeof(photon_ri_ledger_entry);
+		cookie = (( (uint64_t)proc<<32) | request_id);
+
+		dbg_info("Posting cookie: %"PRIx64, cookie);
+
+		fma_desc->type = GNI_POST_FMA_PUT;
+		fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+		fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+        fma_desc->local_addr = (uint64_t) entry;
+        fma_desc->local_mem_hndl = shared_storage->mdh;
+		fma_desc->remote_addr = (uint64_t) rmt_addr;
+        fma_desc->remote_mem_hndl = ugni_processes[proc].remote_snd_info_ledger->remote.mdh;
+        fma_desc->length = sizeof(photon_ri_ledger_entry);
+        fma_desc->post_id = cookie;
+		fma_desc->rdma_mode = 0;
+        fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
+
+		err = GNI_PostFma(ugni_ctx.ep_handles[proc], fma_desc);
+		if (err != GNI_RC_SUCCESS) {
+			log_err("GNI_PostFma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+			goto error_exit;
+		}
+
+		dbg_info("GNI_PostFma data transfer successful: %"PRIx64, cookie);
+	}
+
+	// Keep track of the dat_ep_post_rdma_write()s that do not insert an entry into "reqtable", so
+	// that __ugni_wait_one() is able to wait on this event's completion
+	INC_COUNTER(handshake_rdma_write);
+
+	if (request != NULL) {
+		photonRequest req;
+
+		req = __ugni_get_request();
+		if (!req) {
+			log_err("Couldn't allocate request\n");
+			goto error_exit;
+		}
+		req->id = request_id;
+		req->state = REQUEST_PENDING;
+		// ugni_post_send_buffer_rdma() initiates a sender initiated handshake.	For this reason,
+		// we don't care when the function is completed, but rather when the transfer associated with
+		// this handshake is completed.	 This will be reflected in the LEDGER by the corresponding
+		// ugni_send_FIN() posted by the receiver.
+		req->type = LEDGER;
+		req->proc = proc;
+		req->tag = tag;
+		SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
+
+		dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
+
+		if (htable_insert(ledger_reqtable, (uint64_t)request_id, req) != 0) {
+			// this is bad, we've submitted the request, but we can't track it
+			log_err("Couldn't save request in hashtable");
+		}
+		*request = request_id;
+	}
+
+	num_entries = ugni_processes[proc].remote_snd_info_ledger->num_entries;
+	curr = ugni_processes[proc].remote_snd_info_ledger->curr;
+	curr = (curr + 1) % num_entries;
+	ugni_processes[proc].remote_snd_info_ledger->curr = curr;
+	dbg_info("New curr: %u", curr);
 
 	return PHOTON_OK;
+
+error_exit:
+	if (request != NULL) {
+		*request = NULL_COOKIE;
+	}
+	return PHOTON_ERROR;
 }
 
 static int ugni_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
@@ -815,8 +932,99 @@ error_exit:
 }
 
 static int ugni_wait_send_buffer_rdma(int proc, int tag) {
+	photonRemoteBuffer curr_remote_buffer;
+	photonRILedgerEntry curr_entry, entry_iterator;
+	struct photon_ri_ledger_entry_t tmp_entry;
+	int count;
+#ifdef DEBUG
+	time_t stime;
+#endif
+	int curr, num_entries, still_searching;
 
+	dbg_info("(%d, %d)", proc, tag);
+
+	// If we've received a Rendezvous-Start from processor "proc" that is still pending
+	curr_remote_buffer = ugni_processes[proc].curr_remote_buffer;
+	if ( curr_remote_buffer->request != NULL_COOKIE ) {
+		// If it is for the same tag, return without looking
+		if ( curr_remote_buffer->tag == tag ) {
+			goto normal_exit;
+		}
+		else {   // Otherwise it's an error.	We should never process a Rendezvous-Start before
+			// fully serving the previous ones.
+			goto error_exit;
+		}
+	}
+
+	curr = ugni_processes[proc].local_snd_info_ledger->curr;
+	curr_entry = &(ugni_processes[proc].local_snd_info_ledger->entries[curr]);
+
+	dbg_info("Spinning on info ledger looking for receive request");
+	dbg_info("looking in position %d/%p", curr, curr_entry);
+
+#ifdef DEBUG
+	stime = time(NULL);
+#endif
+	count = 1;
+	still_searching = 1;
+	entry_iterator = curr_entry;
+	do {
+		while(entry_iterator->header == 0 || entry_iterator->footer == 0) {
+#ifdef DEBUG
+			stime = _tictoc(stime, proc);
+#else
+			;
+#endif
+		}
+		if( (tag < 0) || (entry_iterator->tag == tag ) ) {
+			still_searching = 0;
+		}
+		else {
+			curr = (ugni_processes[proc].local_snd_info_ledger->curr + count++) % ugni_processes[proc].local_snd_info_ledger->num_entries;
+			entry_iterator = &(ugni_processes[proc].local_snd_info_ledger->entries[curr]);
+		}
+	}
+	while(still_searching);
+
+	// If it wasn't the first pending receive request, swap the one we will serve (entry_iterator) with
+	// the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
+	// (ugni_processes[proc].local_snd_info_ledger->curr) and skip the request we will serve without losing any
+	// pending requests.
+	if( entry_iterator != curr_entry ) {
+		tmp_entry = *entry_iterator;
+		*entry_iterator = *curr_entry;
+		*curr_entry = tmp_entry;
+	}
+
+	ugni_processes[proc].curr_remote_buffer->request = curr_entry->request;
+	ugni_processes[proc].curr_remote_buffer->rkey = curr_entry->rkey;
+	ugni_processes[proc].curr_remote_buffer->addr = curr_entry->addr;
+	ugni_processes[proc].curr_remote_buffer->size = curr_entry->size;
+	ugni_processes[proc].curr_remote_buffer->tag = curr_entry->tag;
+	ugni_processes[proc].curr_remote_buffer->mdh.qword1  = curr_entry->qword1;
+	ugni_processes[proc].curr_remote_buffer->mdh.qword2  = curr_entry->qword2;
+
+	dbg_info("Request: %u", curr_entry->request);
+	dbg_info("Context: %u", curr_entry->rkey);
+	dbg_info("Address: %p", (void *)curr_entry->addr);
+	dbg_info("Size: %u", curr_entry->size);
+	dbg_info("Tag: %d", curr_entry->tag);
+	dbg_info("MDH: 0x%016lx / 0x%016lx", curr_entry->qword1, curr_entry->qword2);
+
+	curr_entry->header = 0;
+	curr_entry->footer = 0;
+
+	num_entries = ugni_processes[proc].local_snd_info_ledger->num_entries;
+	curr = ugni_processes[proc].local_snd_info_ledger->curr;
+	curr = (curr + 1) % num_entries;
+	ugni_processes[proc].local_snd_info_ledger->curr = curr;
+
+	dbg_info("new curr == %d", ugni_processes[proc].local_snd_info_ledger->curr);
+
+normal_exit:
 	return PHOTON_OK;
+error_exit:
+	return PHOTON_ERROR;
 }
 
 static int ugni_wait_send_request_rdma(int tag) {
@@ -885,9 +1093,6 @@ static int ugni_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_
 			/* do some retries first */
 			goto error_exit;
 		}
-		/* the associated CQ events will eventually get popped by __ugni_nbpop_event() when app waits
-		   we could wait for it here but that means handling any other events that might pop up
-		   another option is to create separate CQs for these FMA ops */
 		
 		dbg_info("GNI_PostRdma data transfer successful: %"PRIx64, cookie);
 	}
@@ -930,8 +1135,102 @@ error_exit:
 }
 
 int ugni_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
+	photonRemoteBuffer drb;
+	photonBuffer db;
+	uint64_t cookie;
+	int err;
+	uint32_t request_id;
+
+	dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
+
+	drb = ugni_processes[proc].curr_remote_buffer;
+
+	if (drb->request == NULL_COOKIE) {
+		log_err("Tried posting an os_get() with no send buffer");
+		return -1;
+	}
+
+	if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+		log_err("Tried posting a os_get() into a buffer that's not registered");
+		return -1;
+	}
+
+	if ( (drb->size > 0) && ((size+remote_offset) > drb->size) ) {
+		log_err("Requested to get %u bytes from a %u buffer size at offset %u", size, drb->size, remote_offset);
+		return -2;
+	}
+
+	request_id = INC_COUNTER(curr_cookie);
+	dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+
+	cookie = (( (uint64_t)proc)<<32) | request_id;
+	dbg_info("Posted Cookie: %u/%u/%"PRIo64, proc, request_id, cookie);
+
+	{
+		gni_post_descriptor_t *rdma_desc;
+
+		rdma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
+		if (!rdma_desc) {
+			dbg_err("Could not allocate new post descriptor");
+			goto error_exit;
+		}
+		
+		rdma_desc->type = GNI_POST_RDMA_GET;
+		rdma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+		rdma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+        rdma_desc->local_addr = (uint64_t) ptr;
+        rdma_desc->local_mem_hndl = db->mdh;
+		rdma_desc->remote_addr = (uint64_t) drb->addr + (uint64_t) remote_offset;
+        rdma_desc->remote_mem_hndl = drb->mdh;
+        rdma_desc->length = size;
+        rdma_desc->post_id = cookie;
+		rdma_desc->rdma_mode = 0;
+        rdma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
+		
+		err = GNI_PostRdma(ugni_ctx.ep_handles[proc], rdma_desc);
+		if (err != GNI_RC_SUCCESS) {
+			log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+			/* do some retries first */
+			goto error_exit;
+		}
+		
+		dbg_info("GNI_PostRdma data transfer successful: %"PRIx64, cookie);		
+	}
+
+	if (request != NULL) {
+		photonRequest req;
+
+		*request = request_id;
+
+		req = __ugni_get_request();
+		if (!req) {
+			log_err("Couldn't allocate request\n");
+			goto error_exit;
+		}
+		req->id = request_id;
+		req->state = REQUEST_PENDING;
+		// ugni_post_os_get() causes an RDMA transfer, but its own completion is
+		// communicated to the task that posts it through a DTO completion event.
+		req->type = EVQUEUE;
+		req->proc = proc;
+		req->tag = tag;
+		SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
+
+		dbg_info("Inserting the OS get request into the request table: %d/%d/%p", proc, request_id, req);
+
+		if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
+			// this is bad, we've submitted the request, but we can't track it
+			log_err("Couldn't save request in hashtable");
+		}
+	}
 
 	return PHOTON_OK;
+
+error_exit:
+	if (request != NULL) {
+		*request = NULL_COOKIE;
+	}
+	return PHOTON_ERROR;
 }
 
 static int ugni_send_FIN(int proc) {
@@ -1023,6 +1322,60 @@ static int ugni_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 }
 
 static int ugni_probe_ledger(int proc, int *flag, int type, photonStatus status) {
+		photonRILedger ledger;
+	photonRILedgerEntry entry_iterator;
+	int i, j;
+	int start, end;
 
-	return PHOTON_OK;
+	dbg_info("(%d, %d)", proc, type);
+
+	*flag = -1;
+
+	if (proc == PHOTON_ANY_SOURCE) {
+		start = 0;
+		end = _photon_nproc;
+	}
+	else {
+		start = proc;
+		end = proc+1;
+	}
+
+	for (i=start; i<end; i++) {
+		
+		switch (type) {
+		case PHOTON_SEND_LEDGER:
+			ledger = ugni_processes[i].local_snd_info_ledger;
+			break;
+		case PHOTON_RECV_LEDGER:
+			ledger = ugni_processes[i].local_rcv_info_ledger;
+			break;
+		default:
+			dbg_err("unknown ledger type");
+			goto error_exit;
+		}
+		
+		for (j=0; j<ledger->num_entries; j++) {
+			entry_iterator = &(ledger->entries[j]);
+			if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
+				*flag = i;
+				status->src_addr = i;
+				status->request = entry_iterator->request;
+				status->tag = entry_iterator->tag;
+				status->size = entry_iterator->size;
+
+				dbg_info("Request: %u", entry_iterator->request);
+				dbg_info("Context: %u", entry_iterator->rkey);
+				dbg_info("Address: %p", (void *)entry_iterator->addr);
+				dbg_info("Size: %u", entry_iterator->size);
+				dbg_info("Tag: %d", entry_iterator->tag);
+
+				*flag = 1;
+
+				return PHOTON_OK;
+			}
+		}
+	}
+	
+ error_exit:
+	return PHOTON_ERROR;
 }
