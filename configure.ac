@@ -67,44 +67,42 @@ AC_CHECK_FUNCS([clock_gettime memset pow])
 dnl Allow users to build libitm with warnings treated as errors (disabled by
 dnl default). 
 AC_ARG_ENABLE([pedantic],
-    AS_HELP_STRING([--disable-pedantic], [Disable -pedantic (default=NO)]),
+    AS_HELP_STRING([--enable-pedantic], [Enable -pedantic @<:@default=yes@:>@]),
     [],
     [enable_pedantic=yes])
-
 AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
 
 dnl Allow users to build libitm with warnings treated as errors (disabled by
 dnl default). 
 AC_ARG_ENABLE([wall],
-    AS_HELP_STRING([--disable-wall], [Disable -Wall (defualt=NO)]),
+    AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@]),
     [],
     [enable_wall=yes])
-
 AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
 
 dnl Allow users to build libitm with warnings treated as errors (disabled by
 dnl default). 
 AC_ARG_ENABLE([werror],
-    AS_HELP_STRING([--disable-werror], [Disable -Werror (defualt=NO)]),
+    AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@]),
     [],
     [enable_werror=yes])
-    
 AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
 dnl Allow users to build libitm with link-time-optimization.
 AC_ARG_ENABLE([lto],
-    AS_HELP_STRING([--enable-lto], [Enable link-time optimization (defualt=NO)]),
+    AS_HELP_STRING([--enable-lto],
+                   [Enable link-time optimization @<:@default=no@:>@]),
     [],
     [enable_lto=no])
-
 AS_IF([test "x$enable_lto" != xno], AC_SUBST([HPX_F_LTO], [-flto]))
 
 dnl Use md5 from libcrypto to hash action string keys
 AC_ARG_WITH([openssl],
-    AS_HELP_STRING([--without-openssl], [Build without openssl for string hashing]),
+    AS_HELP_STRING([--with-openssl],
+                   [Build with openssl for string hashing @<:@default=yes@:>@]),
     [],
     [use_openssl=yes])
-AS_IF([test "x$use_openssl" = xyes], [
+AS_IF([test "x$use_openssl" != xno], [
   PKG_CHECK_MODULES([OPENSSL], [openssl])
   AC_DEFINE([WITH_OPENSSL], [], [Enable openssl for string hashing])
   AC_SUBST(OPENSSL_CFLAGS)
@@ -115,8 +113,12 @@ AC_SUBST(PAPI_CFLAGS)
 AC_SUBST(PAPI_LIBS)
 
 # Check for PAPI measurement support.
-AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
-AS_IF([test "x$use_papi" = xyes], [
+AC_ARG_WITH([papi],
+    [AS_HELP_STRING([--with-papi],
+                    [Build with PAPI measurement support @<:@default=no@:>@])],
+    [],
+    [use_papi=no])
+AS_IF([test "x$use_papi" != xno], [
   PKG_CHECK_MODULES([PAPI], [papi])
   AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
   AC_SUBST(PAPI_CFLAGS)
@@ -124,8 +126,12 @@ AS_IF([test "x$use_papi" = xyes], [
 ])
 
 # Check for HWLOC.
-AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
-AS_IF([test "x$use_hwloc" = xyes], [
+AC_ARG_WITH([hwloc],
+     [AS_HELP_STRING([--with-hwloc],
+                     [Build with HWLOC support @<:@default=no@:>@])],
+     [],
+     [use_hwloc=no])
+AS_IF([test "x$use_hwloc" != xno], [
   PKG_CHECK_MODULES([HWLOC], [hwloc])
   AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
   AC_SUBST(HWLOC_CFLAGS)
@@ -133,8 +139,12 @@ AS_IF([test "x$use_hwloc" = xyes], [
 ])
 
 # Check for TCMALLOC.
-AC_ARG_WITH([tcmalloc], AS_HELP_STRING([--with-tcmalloc], [Build with TCMALLOC support]), [use_tcmalloc=yes], [])
-AS_IF([test "x$use_tcmalloc" = xyes], [
+AC_ARG_WITH([tcmalloc],
+    [AS_HELP_STRING([--with-tcmalloc],
+                    [Build with TCMALLOC support @<:@default=no@:>@])],
+    [],
+    [use_tcmalloc=no])
+AS_IF([test "x$use_tcmalloc" != xno], [
   PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
   AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
   AC_SUBST(TCMALLOC_CFLAGS)
@@ -142,14 +152,26 @@ AS_IF([test "x$use_tcmalloc" = xyes], [
 ])
 
 # Check for MPI
-AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
-AS_IF([test "x$use_mpi" = xyes], [
-  AC_DEFINE([WITH_MPI], [], [Enable MPI support])
-])
+AC_ARG_WITH([mpi],
+    [AS_HELP_STRING([--with-mpi[[=PKGS]]],
+                    [Build with MPI support @<:@default=yes@:>@])],
+    [],
+    [with_mpi=yes])
+AS_IF([test "x$with_mpi" != xno],
+      [AC_DEFINE([WITH_MPI], [], [Enable MPI support])
+       AC_MSG_NOTICE([asking for mpi $with_mpi])
+       AS_IF([test "x$with_mpi" != xyes],
+             [PKG_CHECK_MODULES([MPI], $with_mpi)
+              AC_SUBST(MPI_CFLAGS)
+              AC_SUBST(MPI_LIBS)])])
 
 # Check for PHOTON
-AC_ARG_WITH([photon], AS_HELP_STRING([--with-photon], [Build with Photon support]), [use_photon=yes], [])
-AS_IF([test "x$use_photon" = xyes], [
+AC_ARG_WITH([photon],
+    [AS_HELP_STRING([--with-photon],
+                    [Build with Photon support @<:@default=no@:>@])],
+    [],
+    [use_photon=no])
+AS_IF([test "x$use_photon" != xno], [
   AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])
 ])
 
@@ -179,12 +201,12 @@ AC_SUBST(WITH_DOCS)
 
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
-AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
-AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
-AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" = xyes])
-AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
-AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
+AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" != xno])
+AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" != xno])
+AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" != xno])
+AM_CONDITIONAL([HAVE_MPI], [test "x$with_mpi" != xno])
+AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" != xno])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$use_photon" != xno]) # TODO: make this robust
 
 AC_CONFIG_FILES([
   Makefile
@@ -203,19 +225,24 @@ AS_IF([test -n "$DOXYGEN"],
 AS_IF([test -n "$CHECK"],
       [test_string="yes"],
       [test_string="no"])
-AS_IF([test "x$use_papi" = xyes],
+AS_IF([test "x$use_papi" != xno],
       [papi_string="yes"],
       [papi_string="no"])
-AS_IF([test "x$use_hwloc" = xyes],
+AS_IF([test "x$use_hwloc" != xno],
       [hwloc_string="yes"],
       [hwloc_string="no"])
-AS_IF([test "x$use_tcmalloc" = xyes],
+AS_IF([test "x$use_tcmalloc" != xno],
       [tcmalloc_string="yes"],
       [tcmalloc_string="no"])
-
-AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
-AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
-AS_IF([test "x$use_openssl" = xyes], [openssl_string="OpenSSL libcrypto"], [openssl_string="builtin"])
+AS_IF([test "x$with_mpi" != xno],
+      [networks_string="$networks_string MPI"],
+      [])
+AS_IF([test "x$use_photon" != xno],
+      [networks_string="$networks_string Photon"],
+      [])
+AS_IF([test "x$use_openssl" != xno],
+      [openssl_string="OpenSSL libcrypto"],
+      [openssl_string="builtin"])
 
 echo ""
 echo "================================================"
