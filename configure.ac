@@ -99,6 +99,18 @@ AC_ARG_ENABLE([lto],
 
 AS_IF([test "x$enable_lto" != xno], AC_SUBST([HPX_F_LTO], [-flto]))
 
+dnl Use md5 from libcrypto to hash action string keys
+AC_ARG_WITH([openssl],
+    AS_HELP_STRING([--without-openssl], [Build without openssl for string hashing]),
+    [],
+    [use_openssl=yes])
+AS_IF([test "x$use_openssl" = xyes], [
+  PKG_CHECK_MODULES([OPENSSL], [openssl])
+  AC_DEFINE([WITH_OPENSSL], [], [Enable openssl for string hashing])
+  AC_SUBST(OPENSSL_CFLAGS)
+  AC_SUBST(OPENSSL_LIBS)
+])
+
 AC_SUBST(PAPI_CFLAGS)
 AC_SUBST(PAPI_LIBS)
 
@@ -203,6 +215,7 @@ AS_IF([test "x$use_tcmalloc" = xyes],
 
 AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
 AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
+AS_IF([test "x$use_openssl" = xyes], [openssl_string="OpenSSL libcrypto"], [openssl_string="builtin"])
 
 echo ""
 echo "================================================"
@@ -210,6 +223,7 @@ echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
+echo "         String Hashing : $openssl_string"
 echo "               Networks : $networks_string"
 echo "              Profiling : $papi_string (PAPI)"
 echo "     Topology Awareness : $hwloc_string (HWLOC)"
