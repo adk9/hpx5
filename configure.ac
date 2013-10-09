@@ -18,7 +18,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -136,14 +136,21 @@ AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
 
 AM_CONDITIONAL([WITH_TESTSUITE], [test -n "$CHECK"])
-AM_COND_IF([WITH_TESTSUITE],
-	[AC_CONFIG_FILES([tests/Makefile])])
-AC_SUBST(WITH_DOCS)
-
+#dnl AM_CONF_IF macro is too recent for Cray
+#AM_COND_IF([WITH_TESTSUITE],
+#       [AC_CONFIG_FILES([tests/Makefile])])
+if test -n "$CHECK"; then
+   AC_CONFIG_FILES([tests/Makefile])
+fi
+AC_SUBST(WITH_TESTSUITE)
+ 
 AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
-AM_COND_IF([WITH_DOCS],
-	[AC_CONFIG_FILES([docs/Doxyfile
-			  docs/Makefile])])
+#AM_COND_IF([WITH_DOCS],
+#       [AC_CONFIG_FILES([docs/Doxyfile
+#                         docs/Makefile])])
+if test -n "$DOXYGEN"; then
+   AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])
+fi
 AC_SUBST(WITH_DOCS)
 
 AC_CONFIG_FILES([

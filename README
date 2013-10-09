@@ -32,6 +32,14 @@ The easiest way to configure HPX is as follows:
 
 * "./configure --with-mpi --with-photon"
 
+Example Configuration on Cray Systems
+---------------------
+* Install check dependency
+
+> module swap PrgEnv-cray PrgEnv-gnu
+
+> CFLAGS="-DDEBUG -I/home/users/p01900/check/include -I/home/users/p01900/Photon/include -I/opt/cray/mpt/default/gni/mpich2-cray/81/include/" LDFLAGS="-L/home/users/p01900/check/lib -L/home/users/p01900/Photon/lib -L/opt/cray/mpt/default/gni/mpich2-cray/81/lib" ./configure --with-mpi --with-photon --prefix=/home/users/p01900/hpx
+
 Building
 --------
 
@@ -57,6 +65,7 @@ or
 HPX_USE_ETH_DEV=roce0
 HPX_USE_IB_DEV=mlx4_1
 HPX_USE_CMA=1
+
 
 Notes
 ----- 

@@ -25,6 +25,7 @@
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/parcelhandler.h"
+#include "hpx.h"
 
 struct hsearch_data action_table;
 
@@ -142,14 +143,20 @@ hpx_error_t hpx_parcel_serialize(hpx_parcel_t *p, char** blob) {
   size_of_payload = p->payload_size;
   size_of_action_name = sizeof(char)*(strlen(p->action.name) + 1);
   size_of_blob = sizeof(hpx_parcel_t) + size_of_action_name + size_of_payload;
+  size_of_blob = FOURBYTE_ALIGN(size_of_blob);
 
   /* allocate space for binary blob */
-  *blob = hpx_alloc(size_of_blob);
+  hpx_alloc_align((void**)blob, 64, size_of_blob);
   if (*blob == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     ret = HPX_ERROR_NOMEM;
     goto error;
   }
+
+#ifdef HAVE_PHOTON
+  /* need to unpin this again somewhere */
+  __hpx_network_ops->pin((void*)*blob, size_of_blob);
+#endif
 
   /* copy the parcel struct to the blob */
   memcpy(*blob, (void*)p, sizeof(hpx_parcel_t));
