@@ -110,7 +110,7 @@ int _init_photon(void) {
 	  .eth_dev = eth_dev,
 	  .ib_dev = ib_dev,
 	  .ib_port = 1,
-	  .backend = "verbs"
+	  .backend = "ugni"
   };
 
   temp =  photon_init(&photon_conf);
@@ -301,8 +301,6 @@ int _unpin_photon(void* buffer, size_t len) {
   int retval;
 
   retval = HPX_ERROR;
-
-  printf("in UNPIN\n");
 
   temp = photon_unregister_buffer(buffer, len);
   if (temp != 0) {

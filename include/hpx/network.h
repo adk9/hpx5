@@ -32,6 +32,8 @@
 #define NETWORK_ANY_SOURCE -1
 #define NETWORK_ANY_LENGTH -1
 
+#define FOURBYTE_ALIGN(n) ((n + sizeof(uint32_t) - 1) & ~(sizeof(uint32_t) - 1))
+
 /**
  * Some basic underlying network types
  */

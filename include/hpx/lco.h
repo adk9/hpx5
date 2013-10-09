@@ -27,7 +27,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <immintrin.h>
+#include <emmintrin.h>
 
 #include "hpx/error.h"
 #include "hpx/mutex.h"

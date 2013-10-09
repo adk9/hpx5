@@ -1,13 +1,13 @@
 if WITH_TESTSUITE
 
-noinst_bindir=.
+noinst_bindir=$(abs_top_builddir)/tests
 noinst_bin_PROGRAMS = hpxtest
 #TESTS = hpxtest
 TESTS = 
 check_PROGRAMS = hpxtest
 hpxtest_SOURCES = 00_hpxtest.c
 hpxtest_CFLAGS = @CHECK_CFLAGS@ @PAPI_CFLAGS@
-hpxtest_LDADD = $(top_builddir)/src/libhpx.la -lm -lrt -lpthread -lcheck @CHECK_LIBS@ @PAPI_LIBS@
+hpxtest_LDADD = $(top_builddir)/src/libhpx.la -lm -lrt -lpthread -lcheck -lmpich -lmpl @CHECK_LIBS@ @PAPI_LIBS@
 
 if CPU_X86_64
   ARCH_SRC = arch/x86_64/99_hpxtest.S
