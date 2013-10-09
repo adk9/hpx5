@@ -63,7 +63,7 @@ typedef union {
 
 typedef hpx_future_value_t (*hpx_lco_future_pred_t)(void *, void *);
 
-typedef struct {
+typedef struct hpx_future {
   hpx_mutex_t           mtx;
   uint64_t              state;
   hpx_future_value_t    value;

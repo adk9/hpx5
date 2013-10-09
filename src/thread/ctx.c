@@ -26,7 +26,7 @@
 #include "hpx/kthread.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
-#include "hpx/timer.h"
+#include "hpx/utils/timer.h"
 #include "ctx.h"
 #include "thread/kthread.h"
 #include "sync/sync.h"

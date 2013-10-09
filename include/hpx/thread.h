@@ -121,7 +121,7 @@ struct hpx_thread_reusable_t {
  --------------------------------------------------------------------
 */
 
-struct hpx_thread_t {
+struct hpx_thread {
   hpx_context_t          *ctx;
   hpx_node_id_t           nid;
   hpx_thread_id_t         tid;

@@ -24,14 +24,13 @@
   ====================================================================
 */
 
-#include <stddef.h>                             /* size_t */
-#include <stddef.h>                             /* uintptr_t */
+#include <stdint.h>                             /* uintptr_t */
 
 /*
  * Hashes the passed, NULL-terminated string into a word-sized
  * integer, suitable for use in a hash table. This is not optimized
  * for speed, so should be used sparingly.
  */
-uintptr_t libhpx_hash_str_uip(char *str);
+const uintptr_t hashstr(const char * const str);
 
 #endif /* LIBHPX_PARCEL_HASHSTR_H_ */

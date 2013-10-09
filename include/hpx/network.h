@@ -20,16 +20,15 @@
 #ifndef LIBHPX_NETWORK_H_
 #define LIBHPX_NETWORK_H_
 
-#include <stdlib.h>
-#include "hpx/types.h"
-#include "hpx/runtime.h"
-
 #if HAVE_MPI
   #include <mpi.h>
 #endif
+
 #if HAVE_PHOTON
   #include <photon.h>
 #endif
+
+#include "hpx/runtime.h"                        /* hpx_locality_y */
 
 #define NETWORK_ANY_SOURCE -1
 #define NETWORK_ANY_LENGTH -1
@@ -38,7 +37,7 @@
  * Some basic underlying network types
  */
 
-typedef struct network_request_t {
+typedef struct network_request {
 #if HAVE_MPI
   MPI_Request mpi;
 #endif
