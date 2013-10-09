@@ -183,7 +183,7 @@ hpx_parcel_t* _hpx_request_list_curr_parcel(_hpx_request_list_t* list);
 void _hpx_request_list_next(_hpx_request_list_t* list);
 */
 
-network_request_t* _hpx_request_list_begin(_hpx_request_list_t* list);
+void _hpx_request_list_begin(_hpx_request_list_t* list);
 
 network_request_t* _hpx_request_list_curr(_hpx_request_list_t* list); 
 

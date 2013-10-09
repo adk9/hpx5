@@ -302,7 +302,7 @@ network_request_t* _hpx_request_list_append(_hpx_request_list_t* list, hpx_parce
   return HPX_SUCCESS;
 }
 
-inline network_request_t* _hpx_request_list_begin(_hpx_request_list_t* list) {
+inline _hpx_request_list_begin(_hpx_request_list_t* list) {
   list->prev = NULL;
   list->curr = list->head;
 } 
@@ -334,9 +334,9 @@ void _hpx_request_list_del(_hpx_request_list_t* list) {
 
     /* take care of head and tail if necessary */
     if (node == list->head) /* if curr is head, change head to next */
-      list->head == list->head->next;
+      list->head = list->head->next;
     if (node == list->tail) /* if curr is tail, change tail to prev */
-      list->tail == list->prev;
+      list->tail = list->prev;
 
     /* now fix up curr and prev */
     if (list->prev != NULL)
@@ -472,8 +472,10 @@ void * _hpx_parcelhandler_main(void) {
 	  network_size = sizeof(hpx_parcel_t) + (sizeof(char)*(strlen(parcel->action.name) + 1)); /* total size is parcel header size + action name + data: */
 	  if (parcel->payload_size < _HPX_PARCELHANDLER_GET_THRESHOLD) /* if size is under the eager limit, we send the payload also, so we need to add the size */
 	    network_size += parcel->payload_size;
+	  network_size = FOURBYTE_ALIGN(network_size);
 #ifdef HAVE_PHOTON
 	  __hpx_network_ops->unpin(parcel, network_size);
+	  printf("Unpinning/freeing %zd bytes from buffer at %tx\n", network_size, parcel);
 #endif	  
 	  hpx_free(parcel);
 	} /* if (curr_flag == 1) */
@@ -519,7 +521,7 @@ void * _hpx_parcelhandler_main(void) {
 	if(1) { 	/* TODO: check if size is over the eager limit, then use put() instead */
 	  network_size = FOURBYTE_ALIGN(network_size);
 #if DEBUG
-	  printf("Sending %z bytes from buffer at %xt\n", network_size, parcel_data);
+	  printf("Sending %zd bytes from buffer at %tx\n", network_size, parcel_data);
 #endif
 	  send_req = _hpx_request_list_append(&send_requests, parcel);
 	  __hpx_network_ops->send(network_rank, 
