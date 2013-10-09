@@ -73,7 +73,7 @@ hpx_error_t hpx_init(void) {
   *__hpx_network_ops = default_ops;
 #if HAVE_NETWORK
 #if HAVE_PHOTON
-#warning Building with photon...
+  //#warning Building with photon...
   *__hpx_network_ops = photon_ops;
 #elif HAVE_MPI
   *__hpx_network_ops = mpi_ops;
