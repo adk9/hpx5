@@ -23,12 +23,14 @@
 #include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
-#include "hpx/ctx.h"
-#include "hpx/timer.h"
+#include "hpx/utils/timer.h"
 #include "hpx/network.h"
 #include "hpx/thread/ctx.h"
-#include "runtime/ctx.h"                        /* libhpx_ctx_init(); */
+#include "thread/ctx.h"                         /* libhpx_ctx_init(); */
 #include "thread/thread.h"                      /* libhpx_thread_init() */
+#include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
+
+hpx_mconfig_t __mcfg;
 
 /**
  * Initializes data structures used by libhpx.  This function must

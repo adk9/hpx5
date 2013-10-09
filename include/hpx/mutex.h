@@ -36,7 +36,7 @@
  --------------------------------------------------------------------
 */
 
-typedef struct _hpx_mutex_t {
+typedef struct hpx_mutex {
   uint8_t __mtx;
   uint8_t __opt;
 } hpx_mutex_t;

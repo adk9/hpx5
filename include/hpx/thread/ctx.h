@@ -48,7 +48,7 @@
 typedef uint64_t hpx_context_id_t;
 
 /* the context handle */
-struct hpx_context_t {
+struct hpx_context {
   hpx_context_id_t    cid;
   hpx_kthread_t     **kths;
   uint32_t            kths_count;

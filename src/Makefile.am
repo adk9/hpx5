@@ -6,6 +6,10 @@ lib_LTLIBRARIES          = libhpx.la
 
 libhpx_la_SOURCES        = network/network.c \
                            bootstrap/bootstrap.c \
+                           parcel/parcelqueue.c \
+                           parcel/request_buffer.c \
+                           parcel/request_list.c \
+                           parcel/serialization.c \
                            parcel/action.c \
                            parcel/hashstr.c \
                            parcel/handler.c \
@@ -15,10 +19,10 @@ libhpx_la_SOURCES        = network/network.c \
                            thread/ctx.c     \
                            thread/thread.c   \
                            thread/kthread.c  \
-                           util/error.c      \
-                           util/timer.c      \
-                           util/config.c     \
-                           util/map.c        \
+                           utils/error.c      \
+                           utils/timer.c      \
+                           utils/config.c     \
+                           utils/map.c        \
                            sync/locks.c
 
 if CPU_X86_64
@@ -27,7 +31,7 @@ libhpx_la_SOURCES       += thread/arch/x86_64/mctx.S       \
                            thread/arch/x86_64/mctx_mk.c \
                            arch/x86_64/sync/nop.c
 
-libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/arch/x86_64/*.h
+libhpx_la_arch_x86_64_HEADERS = $(top_srcdir)/include/hpx/thread/arch/x86_64/*.h
 libhpx_la_arch_x86_64dir = $(includedir)/hpx/arch/x86_64
 endif
 

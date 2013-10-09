@@ -20,10 +20,11 @@
 */
 
 #include <config.h>                             /* WITH_OPENSSL */
+#include <stdint.h>                             /* uintptr_t */
 #include <string.h>                             /* strlen */
 #include <stdio.h>                              /* fprintf */
 #ifdef WITH_OPENSSL
-#include "openssl/md2.h"                        /* MD5 */
+#include "openssl/md5.h"                        /* MD5 */
 #endif
 #include "hashstr.h"
 
@@ -43,14 +44,14 @@ static void warn_len(const int len, const char * const str) {
  * use md5 to compute a 128 bit hash, and select part of it as our hash.
  * Otherwise, we use a custom (probably less well distributed) hash.
  */
-uintptr_t libhpx_hash_str_uip(char *str) {
+const uintptr_t hashstr(const char * const str) {
   const size_t len = strnlen(str, MAX_STR_LEN);
   if (len == MAX_STR_LEN)
     warn_len(len, str);
 
 #ifdef WITH_OPENSSL
   uintptr_t md[16 / sizeof(uintptr_t)];         /* space for 128 bits */
-  MD5(str, len, md);                            /* hash */
+MD5((const unsigned char*)str, len, (unsigned char*)md);
   return md[0];                                 /* just pick some subset */
 #else
 #error No custom hash string available yet.

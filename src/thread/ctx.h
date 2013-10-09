@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
-  Error Handling Functions
-  hpx_error.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Thread Function Definitions
+  hpx_thread.h
+
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -19,15 +19,10 @@
  ====================================================================
 */
 
-#include "hpx/error.h"
+#pragma once
+#ifndef LIBHPX_RUNTIME_CTX_H_
+#define LIBHPX_RUNTIME_CTX_H_
 
-hpx_error_t __hpx_errno;
+void libhpx_ctx_init();
 
-/*
- --------------------------------------------------------------------
-  __hpx_error
- --------------------------------------------------------------------
-*/
-hpx_error_t __hpx_error(void) {
-  return __hpx_errno;
-}
+#endif /* LIBHPX_RUNTIME_CTX_H_ */
