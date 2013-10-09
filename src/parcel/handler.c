@@ -87,7 +87,7 @@ inline bool request_queue_empty(request_queue_t* q) {
 network_request_t* request_queue_push(request_queue_t* q) {
   network_request_t* ret = NULL;
   if (!request_queue_full(q)) {
-    ret = &(q->requests[q->head + q->size]);
+    ret = &(q->requests[q->head + q->size % q->limit]);
     q->size++;
   }
   return ret;
@@ -185,7 +185,7 @@ int hpx_parcelqueue_push(hpx_parcelqueue_t* q, void* val) {
     ret = HPX_ERROR; /* TODO: more specific error */
     goto error;
   }
-
+  
   node = hpx_alloc(sizeof(hpx_parcelqueue_node_t));
   if (node == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
