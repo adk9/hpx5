@@ -18,7 +18,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -185,7 +185,12 @@ PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [
   AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
   AM_CONDITIONAL([WITH_TESTSUITE], false)])
 
-AM_COND_IF([WITH_TESTSUITE], [AC_CONFIG_FILES([tests/Makefile])])
+#dnl AM_CONF_IF macro is too recent for Cray
+#AM_COND_IF([WITH_TESTSUITE],
+#       [AC_CONFIG_FILES([tests/Makefile])])
+if test -n "$CHECK"; then
+   AC_CONFIG_FILES([tests/Makefile])
+fi
 
 # Check for doxygen (to build the documentation).
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -194,9 +199,12 @@ if test -z "$DOXYGEN";
 fi
 
 AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
-AM_COND_IF([WITH_DOCS],
-	[AC_CONFIG_FILES([docs/Doxyfile
-			  docs/Makefile])])
+#AM_COND_IF([WITH_DOCS],
+#       [AC_CONFIG_FILES([docs/Doxyfile
+#                         docs/Makefile])])
+if test -n "$DOXYGEN"; then
+   AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])
+fi
 AC_SUBST(WITH_DOCS)
 
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])

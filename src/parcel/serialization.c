@@ -26,7 +26,10 @@
 
 #include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
+#include "hpx/network.h"                        /* FOURBYTE_ALIGN */
 #include "hpx/parcel.h"                         /* struct parcel */
+
+extern network_ops_t *__hpx_network_ops;
 
 /**
  * Caller is responsible for freeing *out.  Will return HPX_ERROR if (1)
@@ -46,9 +49,15 @@ hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
   
   /* allocate space for binary blob */
   struct header *blob = *out;
-  blob = hpx_alloc(sizeof(*blob) + p->payload_size);
+  size_t size_of_blob = sizeof(*blob) + p->payload_size;
+  size_of_blob = FOURBYTE_ALIGN(size_of_blob); /* in case we're using UGNI */
+  blob = hpx_alloc(size_of_blob);
   if (blob == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
+#ifdef HAVE_PHOTON
+  /* need to unpin this again somewhere - right now the parcel handler does that*/
+  __hpx_network_ops->pin((void*)blob, size_of_blob);
+#endif
 
   /* copy the parcel struct, and the payload to the blob
      LD: note the first memcpy doesn't copy the payload pointer
