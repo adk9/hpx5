@@ -52,6 +52,8 @@ int _size_photon;
 
 static char* ETH_DEV_ROCE0 = "roce0";
 static char* IB_DEV_MLX4_1 = "mlx4_1";
+static char* BACKEND_UGNI = "ugni";
+//static char* BACKEND_VERBS = "verbs";
 
 uint32_t _get_rank_photon() {
   return (uint32_t)_rank_photon;
@@ -70,6 +72,7 @@ int _init_photon(void) {
   /* runtime configuration options */
   char* eth_dev;
   char* ib_dev;
+  char* backend;
   int use_cma;
 
   retval = HPX_ERROR;
@@ -90,11 +93,14 @@ int _init_photon(void) {
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
   ib_dev = getenv("HPX_USE_IB_DEV");
+  backend = getenv("HPX_USE_BACKEND");
 
   if (eth_dev == NULL)
     eth_dev = ETH_DEV_ROCE0;
   if (ib_dev == NULL)
     ib_dev = IB_DEV_MLX4_1;
+  if (backend == NULL)
+    backend = BACKEND_UGNI;
   if(getenv("HPX_USE_CMA") == NULL)
     use_cma = 1;
   else
@@ -110,7 +116,7 @@ int _init_photon(void) {
 	  .eth_dev = eth_dev,
 	  .ib_dev = ib_dev,
 	  .ib_port = 1,
-	  .backend = "ugni"
+	  .backend = backend
   };
 
   temp =  photon_init(&photon_conf);
