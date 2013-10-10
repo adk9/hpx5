@@ -82,7 +82,7 @@ hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t action,
   return NULL; /* TODO */
 }
 
-hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p) {
+hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
   hpx_error_t ret;
   struct header* serialized_parcel;
   ret = HPX_ERROR;
