@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "hpx.h"
 //#include <mpi.h>
@@ -302,7 +303,7 @@ network_request_t* _hpx_request_list_append(_hpx_request_list_t* list, hpx_parce
   return HPX_SUCCESS;
 }
 
-inline _hpx_request_list_begin(_hpx_request_list_t* list) {
+inline void _hpx_request_list_begin(_hpx_request_list_t* list) {
   list->prev = NULL;
   list->curr = list->head;
 } 
@@ -475,7 +476,9 @@ void * _hpx_parcelhandler_main(void) {
 	  network_size = FOURBYTE_ALIGN(network_size);
 #ifdef HAVE_PHOTON
 	  __hpx_network_ops->unpin(parcel, network_size);
-	  printf("Unpinning/freeing %zd bytes from buffer at %tx\n", network_size, parcel);
+#if DEBUG
+	  printf("Unpinning/freeing %zd bytes from buffer at %tx\n", network_size, (ptrdiff_t)parcel);
+#endif
 #endif	  
 	  hpx_free(parcel);
 	} /* if (curr_flag == 1) */
