@@ -24,6 +24,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>                           /* PRI* */
 #include <pthread.h>
 #include "hpx.h"
 #include "tests.h"
@@ -51,34 +52,34 @@ typedef struct {
 } hpxtest_ts_t;
 #endif
 
-hpx_mctx_context_t * main_mctx;
-hpx_mctx_context_t * mctx1;
-hpx_mctx_context_t * mctx2;
-hpx_mctx_context_t ** mctxs;
-char * swap_msg;
-int * context_counter;
-unsigned int swap_idx;
-unsigned int swap_pos;
-unsigned int num_mctxs;
+static hpx_mctx_context_t * main_mctx;
+static hpx_mctx_context_t * mctx1;
+static hpx_mctx_context_t * mctx2;
+static hpx_mctx_context_t ** mctxs;
+static char * swap_msg;
+static int * context_counter;
+static unsigned int swap_idx;
+static unsigned int swap_pos;
+static unsigned int num_mctxs;
 
 #ifdef __APPLE__
   /* https://developer.apple.com/library/mac/#qa/qa1398/_index.html */
   static mach_timebase_info_data_t tbi;
 #endif
 
-hpxtest_ts_t * main_ts;
-hpxtest_ts_t ** mctx_ts;
-uint64_t ts_elapsed;
-uint64_t ts_runs;
+static hpxtest_ts_t * main_ts;
+static hpxtest_ts_t ** mctx_ts;
+static uint64_t ts_elapsed;
+static uint64_t ts_runs;
 
-double mean_ts;
-double mode_ts;
-double med_ts;
-double stdev_ts;
-uint64_t min_ts;
-uint64_t max_ts;
+static double mean_ts;
+static double mode_ts;
+static double med_ts;
+static double stdev_ts;
+static uint64_t min_ts;
+static uint64_t max_ts;
 
-char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is the little-death that brings total obliteration. I will face my fear.  I will permit it to pass over me and through me.  And when it has gone past I will turn the inner eye to see its path.  Where the fear has gone there will be nothing... Only I will remain.";
+static char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is the little-death that brings total obliteration. I will face my fear.  I will permit it to pass over me and through me.  And when it has gone past I will turn the inner eye to see its path.  Where the fear has gone there will be nothing... Only I will remain.";
 
 
 /*
@@ -87,7 +88,7 @@ char swap_const_msg1[] = "I must not fear.  Fear is the mind-killer.  Fear is th
  --------------------------------------------------------------------
 */
 
-int register_crusher(int a, int b, char c) {
+static int register_crusher(int a, int b, char c) {
   FILE * dev_null;
   char msg[35];
 
@@ -109,7 +110,7 @@ int register_crusher(int a, int b, char c) {
  --------------------------------------------------------------------
 */
 
-extern volatile void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags);
+void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags) __asm("_fpu_crusher");
 
 
 /*
@@ -118,7 +119,7 @@ extern volatile void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags);
  --------------------------------------------------------------------
 */
 
-void thread_seed(int a, int b, char c) {
+static void thread_seed(int a, int b, char c) {
   register_crusher(a, b, c);
 }
 
@@ -130,12 +131,12 @@ void thread_seed(int a, int b, char c) {
 */
 
 
-void increment_context_counter0(void) {
+static void increment_context_counter0(void) {
   *context_counter += 440;
 }
 
 
-void increment_context_counter1(int a) {
+static void increment_context_counter1(int a) {
   char msg[128];
 
   *context_counter += a;
@@ -145,7 +146,7 @@ void increment_context_counter1(int a) {
 }
 
 
-void increment_context_counter2(int a, int b) {
+static void increment_context_counter2(int a, int b) {
   char msg[128];
 
   *context_counter += (a + b);
@@ -158,7 +159,7 @@ void increment_context_counter2(int a, int b) {
 }
 
 
-void increment_context_counter3(int a, int b, int c) {
+static void increment_context_counter3(int a, int b, int c) {
   char msg[128];
 
   *context_counter += (a + b + c);
@@ -174,7 +175,7 @@ void increment_context_counter3(int a, int b, int c) {
 }
 
 
-void increment_context_counter4(int a, int b, int c, int d) {
+static void increment_context_counter4(int a, int b, int c, int d) {
   char msg[128];
 
   *context_counter += (a + b + c + d);
@@ -193,7 +194,7 @@ void increment_context_counter4(int a, int b, int c, int d) {
 }
 
 
-void increment_context_counter5(int a, int b, int c, int d, int e) {
+static void increment_context_counter5(int a, int b, int c, int d, int e) {
   char msg[128];
  
   *context_counter += (a + b + c + d + e);
@@ -215,7 +216,7 @@ void increment_context_counter5(int a, int b, int c, int d, int e) {
 }
 
 
-void increment_context_counter6(int a, int b, int c, int d, int e, int f) {
+static void increment_context_counter6(int a, int b, int c, int d, int e, int f) {
   char msg[128];
 
   *context_counter += (a + b + c + d + e + f);
@@ -240,7 +241,7 @@ void increment_context_counter6(int a, int b, int c, int d, int e, int f) {
 }
 
 
-void increment_context_counter7(int a, int b, int c, int d, int e, int f, int g) {
+static void increment_context_counter7(int a, int b, int c, int d, int e, int f, int g) {
   char msg[128];
 
   *context_counter += (a + b + c + d + e + f + g);
@@ -268,7 +269,7 @@ void increment_context_counter7(int a, int b, int c, int d, int e, int f, int g)
 }
 
 
-void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g, int h) {
+static void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g, int h) {
   char msg[128];
 
   *context_counter += (a + b + c + d + e + f + g + h);
@@ -305,7 +306,7 @@ void increment_context_counter8(int a, int b, int c, int d, int e, int f, int g,
  --------------------------------------------------------------------
 */
 
-void run_getcontext(uint64_t mflags) {
+static void run_getcontext(uint64_t mflags) {
   hpx_mctx_context_t mctx;
   hpx_context_t * ctx;
   hpx_xmmreg_t * xmmreg;
@@ -329,7 +330,7 @@ void run_getcontext(uint64_t mflags) {
   memset(&mctx, 0, sizeof(hpx_mctx_context_t));
 
   /* crush that mean old FPU */
-  (void) _fpu_crusher(ctx->mcfg, mflags);
+  _fpu_crusher(ctx->mcfg, mflags);
 
   /* set some signals in the thread signal mask (if we care about that) */
   if (mflags & HPX_MCTX_SWITCH_SIGNALS) {
@@ -354,13 +355,19 @@ void run_getcontext(uint64_t mflags) {
   ck_assert_msg(mctx.regs.rip != 0, "Instruction pointer was not saved.");
 
   /* test function call registers */
-  sprintf(msg, "First argument passing register (RDI) was not saved (expected %ld, got %ld).", (uint64_t) &mctx, mctx.regs.rdi);
+  sprintf(msg,
+          "First argument passing register (RDI) was not saved (expected %" PRIu64
+          ", got %" PRIu64 ").", (uint64_t) &mctx, mctx.regs.rdi);
   ck_assert_msg(mctx.regs.rdi == (uint64_t) &mctx, msg);
 
-  sprintf(msg, "Second argument passing register (RSI) was not saved (expected %ld, got %ld).", (uint64_t) ctx->mcfg, mctx.regs.rsi);
+  sprintf(msg,
+          "Second argument passing register (RSI) was not saved (expected %"
+          PRIu64 ", got %"  PRIu64 ").", (uint64_t) ctx->mcfg, mctx.regs.rsi);
   ck_assert_msg(mctx.regs.rsi == (uint64_t) ctx->mcfg, msg);
 
-  sprintf(msg, "Third argument passing register (RDX) was not saved (expected %ld, got %ld).", mflags, mctx.regs.rdx);
+  sprintf(msg,
+          "Third argument passing register (RDX) was not saved (expected %"
+          PRIu64 ", got %" PRIu64 ").", mflags, mctx.regs.rdx);
   ck_assert_msg(mctx.regs.rdx == mflags, msg);
 
   /* test crushed FPU */
@@ -419,7 +426,7 @@ void run_getcontext(uint64_t mflags) {
  --------------------------------------------------------------------
 */
 
-void run_setcontext_counter(uint64_t mflags) {
+static void run_setcontext_counter(uint64_t mflags) {
   hpx_mctx_context_t mctx;
   hpx_context_t * ctx;
   hpx_config_t cfg;
@@ -468,7 +475,7 @@ void run_setcontext_counter(uint64_t mflags) {
  --------------------------------------------------------------------
 */
 
-void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int argc, ...) {
+static void run_makecontext_counter(uint64_t mflags, int mk_limit, void (*func)(), int argc, ...) {
   hpx_context_t * ctx;
   hpx_config_t cfg;
   char st1[8192] __attribute__((aligned (16)));
@@ -509,7 +516,8 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
   va_start(argv, argc);
 
   /* initialize a new context */
-  hpx_mctx_makecontext_va(mctx2, mctx1, st1, sizeof(st1), ctx->mcfg, mflags, func, argc, &argv);
+  hpx_mctx_makecontext_va(mctx2, mctx1, st1, sizeof(st1), ctx->mcfg, mflags,
+                          func, argc, &argv); 
   va_end(argv);
 
   /* crush some registers */
@@ -537,7 +545,7 @@ void run_makecontext_counter(uint64_t mflags, int mk_limit, void * func, int arg
  --------------------------------------------------------------------
 */
 
-void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * msg, unsigned int msg_len) {
+static void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * msg, unsigned int msg_len) {
   hpx_mctx_context_t * my_mctx = mctxs[swap_idx];
   hpx_mctx_context_t * next_mctx;
 
@@ -547,7 +555,8 @@ void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * m
    
     swap_msg[swap_pos] = '\0';
 
-    swap_idx = (++swap_idx % num_mctxs);
+    ++swap_idx;
+    swap_idx %= num_mctxs;
     next_mctx = mctxs[swap_idx];
 
     hpx_mctx_swapcontext(my_mctx, next_mctx, mcfg, mflags);
@@ -563,7 +572,7 @@ void swapcontext_copy_chain_worker(hpx_mconfig_t mcfg, uint64_t mflags, char * m
  --------------------------------------------------------------------
 */
 
-void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * orig_msg, unsigned int orig_len) {
+static void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * orig_msg, unsigned int orig_len) {
   hpx_mctx_context_t * mctx;
   hpx_context_t * ctx;
   hpx_config_t cfg;
@@ -643,7 +652,7 @@ void run_swapcontext_copy_chain(uint64_t mflags, unsigned int num_mctx, char * o
  --------------------------------------------------------------------
 */
 
-void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigned int start_idx, unsigned int end_idx) {
+static void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigned int start_idx, unsigned int end_idx) {
   hpx_mctx_context_t * my_mctx;
   unsigned int cur_idx = start_idx;
 
@@ -675,7 +684,7 @@ void swapcontext_memset_star_worker(hpx_mconfig_t mcfg, uint64_t mflags, unsigne
  --------------------------------------------------------------------
 */
 
-void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
+static void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
   hpx_mctx_context_t * mctx;
   hpx_context_t * ctx;
   hpx_config_t cfg;
@@ -730,7 +739,8 @@ void run_swapcontext_memset_star(uint64_t mflags, unsigned int num_mctxs) {
 
   while (swap_pos < (num_mctxs * 1024)) {
     hpx_mctx_swapcontext(main_mctx, mctxs[swap_idx], ctx->mcfg, mflags);
-    swap_idx = (++swap_idx % num_mctxs);
+    ++swap_idx;
+    swap_idx %= num_mctxs;
   }
 
   sprintf(msg, "Index was not incremented during context swap (expected %d, got %d).", (num_mctxs * 1024), swap_pos);
