@@ -109,7 +109,7 @@ static int register_crusher(int a, int b, char c) {
  --------------------------------------------------------------------
 */
 
-void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags) __asm("_fpu_crusher");
+extern void _fpu_crusher(hpx_mconfig_t mcfg, uint64_t mflags);
 
 
 /*
