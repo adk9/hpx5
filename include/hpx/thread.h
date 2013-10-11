@@ -142,7 +142,25 @@ struct hpx_thread {
 
 hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *);
 
-hpx_future_t * hpx_thread_create(hpx_context_t *, uint16_t, void (*)(void*), void *, hpx_thread_t **);
+/**
+ * Creates a user-level thread in the local virtual environment.
+ *
+ * Args:
+ *   IN ctx,
+ *   IN opts, thread options
+ *   IN entry, the function
+ *   IN args, arguments to the thread
+ *   OUT thread, the address of the thread structure
+ *
+ * Results:
+ *   a future that represents the returned value of the thread
+ */
+hpx_future_t *hpx_thread_create(hpx_context_t *ctx,
+                                uint16_t opts,
+                                void (*entry)(void*),
+                                void *,
+                                hpx_thread_t **thread);
+
 void hpx_thread_destroy(hpx_thread_t *);
 
 hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *);
