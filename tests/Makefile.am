@@ -36,7 +36,7 @@ if HAVE_PHOTON
     PHOTON_DEFS			= -DHAVE_PHOTON=1
 endif
 
-hpxtest_CPPFLAGS		= -I$(top_srcdir)/include
+hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
 hpxtest_CPPFLAGS	   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
