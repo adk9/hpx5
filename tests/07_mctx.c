@@ -24,7 +24,6 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
-#include <inttypes.h>                           /* PRI* */
 #include <pthread.h>
 #include "hpx.h"
 #include "tests.h"

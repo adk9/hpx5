@@ -2,6 +2,7 @@
 #define LIBHPX_TESTS_TESTS_H_
 
 #include <stdio.h>                              /* FILE, fopen, sprintf, ... */
+#include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
 
 void hpxtest_core_setup(void);
