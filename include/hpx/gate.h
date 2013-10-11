@@ -323,7 +323,7 @@ static inline hpx_future_t * hpx_lco_gate_get_future(hpx_gate_t * gate, size_t i
  --------------------------------------------------------------------
 */
 
-bool __hpx_lco_gate_wait_sync(void * target, void * arg) {
+static inline bool __hpx_lco_gate_wait_sync(void * target, void * arg) {
   hpx_gate_t * gate = (hpx_gate_t *) target;
   uint64_t gen = (uint64_t) arg;
   bool sync = false;
