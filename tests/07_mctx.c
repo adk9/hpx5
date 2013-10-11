@@ -1,6 +1,6 @@
 
 /*
- ====================================================================
+  ====================================================================
   High Performance ParalleX Library (libhpx)
   
   Library Unit Test Harness - Machine Context Switching
@@ -16,8 +16,8 @@
   Research in Extreme Scale Technologies (CREST).
 
   Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
- ====================================================================
+  Patrick K. Bohan <pbohan [at] indiana.edu>
+  ====================================================================
 */
 
 
@@ -26,13 +26,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "hpx.h"
-
-#ifdef __APPLE__
-  #include <mach/mach.h>
-  #include <mach/mach_time.h>
-#elif __linux__
-  #include <time.h>
-#endif
+#include "tests.h"
 
 
 /*
@@ -1618,3 +1612,97 @@ START_TEST (test_libhpx_mctx_swapcontext_star5000_ext_sig)
 END_TEST
 
 
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_07_mctx(TCase *tc, char *long_tests) {
+  tcase_add_test(tc, test_libhpx_mctx_getcontext);
+  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
+  tcase_add_test(tc, test_libhpx_mctx_getcontext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg);  
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain1);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain2);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain310);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain311);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain312);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain8000);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain90000);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_sig);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_sig);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_sig);
+  }
+
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext_sig);
+  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext_sig);
+
+  if (long_tests) {
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext_sig);
+    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext_sig);
+  }
+}

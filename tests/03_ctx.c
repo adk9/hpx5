@@ -22,6 +22,7 @@
 
 
 #include "hpx.h"
+#include "tests.h"
 
 
 /*
@@ -108,3 +109,15 @@ START_TEST (test_libhpx_ctx_cores)
   ctx = NULL;
 }
 END_TEST
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_03_ctx(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_ctx_create);
+  tcase_add_test(tc, test_libhpx_ctx_get_id);
+  tcase_add_test(tc, test_libhpx_ctx_cores);
+}

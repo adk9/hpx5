@@ -20,9 +20,9 @@
  ====================================================================
 */
 
-
 #include <string.h>
 #include "hpx.h"
+#include "tests.h"
 
 
 /*
@@ -31,16 +31,21 @@
  --------------------------------------------------------------------
 */
 
-char thread_msg1[] = "The open steppe, fleet horse, falcons at your wrist, and the wind in your hair.";
-char thread_msg2[] = "To crush your enemies, see them driven before you, and to hear the lamentation of their women.";
-char * test_buf;
+static char* messages[] = {
+  "The open steppe, fleet horse, falcons at your wrist, and the wind in your "
+  "hair.",
+  "To crush your enemies, see them driven before you, and to hear the "
+  "lamentation of their women."
+};
 
-char * thread_msgbuf;
-hpx_thread_t * th_self;
-void * thread_arg;
-int thread_counter;
+static char *test_buf;
 
-unsigned char * thread_buf;
+static char *thread_msgbuf;
+static hpx_thread_t *th_self;
+static void *thread_arg;
+static int thread_counter;
+
+static unsigned char *thread_buf;
 
 
 /*
@@ -76,7 +81,7 @@ void thread_self_ptr_worker(void) {
 */
 
 void thread_strcpy_worker(void) {
-  strcpy(thread_msgbuf, thread_msg1);
+  strcpy(thread_msgbuf, messages[0]);
 }
 
 
@@ -475,7 +480,7 @@ void main_hierarchy_worker0(void * ptr) {
  --------------------------------------------------------------------
 */
 
-run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
+void run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
   hpx_context_t * ctx = NULL;
   hpx_config_t cfg;
   hpx_future_t * ths[th_cnt];
@@ -1228,3 +1233,60 @@ START_TEST (test_libhpx_thread_return_value1000)
   run_return_value(0, 0, 1000);
 }
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_08_thread2(TCase *tc, char *long_tests, char *hardcore_tests) {
+  /* must run the futures test first */
+  tcase_add_test(tc, test_libhpx_lco_futures);
+  
+  tcase_add_test(tc, test_libhpx_thread_stack_size_verify);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext_sig);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_sig);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_args);
+  tcase_add_test(tc, test_libhpx_thread_args_ext);
+  tcase_add_test(tc, test_libhpx_thread_args_sig);
+  tcase_add_test(tc, test_libhpx_thread_args_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_return_value1000);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_sig);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield1);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield2);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x2);
+
+  if (long_tests || hardcore_tests) {
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_sig);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x32);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
+  }
+
+  if (hardcore_tests) {
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore1000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore1000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
+  }
+}

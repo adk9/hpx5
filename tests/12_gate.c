@@ -22,6 +22,7 @@
 
 #include "hpx.h"
 #include "hpx/gate.h"
+#include "tests.h"
 
 /* Globals */
 hpx_future_t * fut;
@@ -124,3 +125,12 @@ START_TEST (test_libhpx_gate_allreduce)
 END_TEST
 
 
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_12_gate(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_gate_allreduce);
+}

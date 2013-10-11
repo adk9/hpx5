@@ -22,6 +22,8 @@
 
 
 #include "hpx.h"
+#include "tests.h"
+
 
 void * __thread_test_func1(void) {
   return NULL;
@@ -60,3 +62,13 @@ START_TEST (test_libhpx_thread_create)
 } 
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_04_thread1(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_thread_create);
+}

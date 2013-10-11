@@ -21,8 +21,9 @@
 */
 
 #include <stdint.h>
-#include <check.h>
 #include "hpx/utils/map.h"
+#include "tests.h"
+
 
 /*
  --------------------------------------------------------------------
@@ -216,3 +217,17 @@ START_TEST (test_libhpx_map_delete)
   hpx_map_destroy(&map);  
 }
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_11_map(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_map_sizecount);
+  tcase_add_test(tc, test_libhpx_map_insert);
+  tcase_add_test(tc, test_libhpx_map_foreach);
+  tcase_add_test(tc, test_libhpx_map_delete);
+}
