@@ -14,7 +14,7 @@ static int     my_rank;
 static hpx_action_t fib_action;
 
 void fib(void *n) {
-  long num = *(long*) n;
+  long num = (long) n;
 
 
   /* handle our base case */

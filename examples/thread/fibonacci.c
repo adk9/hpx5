@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <hpx.h>
 
 hpx_context_t *ctx;
@@ -8,19 +9,22 @@ static int     nthreads;
 
 
 void fib(void *n) {
-  long n1, n2, num, sum;
+  long num, sum;
   hpx_future_t *fut1;
   hpx_future_t *fut2;
 
-  num = (long) n;
+  num = (long)n;
   /* handle our base case */
   if (num < 2) {
     hpx_thread_exit((void *) num);
   }
 
   /* create child threads */
-  fut1 = hpx_thread_create(ctx, 0, fib, (void*) num-1, NULL);
-  fut2 = hpx_thread_create(ctx, 0, fib, (void*) num-2, NULL);
+  long n1 = num - 1;
+  fut1 = hpx_thread_create(ctx, 0, fib, &n1, NULL);
+
+  long n2 = num - 2;
+  fut2 = hpx_thread_create(ctx, 0, fib, &n2, NULL);
 
   /* wait for threads to finish */
   // ADK: need an OR gate here. Also, why not just expose the future
@@ -31,10 +35,10 @@ void fib(void *n) {
   //  hpx_thread_join(th2, (void**) &n2);
   //  hpx_thread_join(th1, (void**) &n1);
 
-  n1 = (long) hpx_lco_future_get_value(fut1);
-  n2 = (long) hpx_lco_future_get_value(fut2);
+  long n3 = (long) hpx_lco_future_get_value(fut1);
+  long n4 = (long) hpx_lco_future_get_value(fut2);
 
-  sum = n1 + n2;
+  sum = n3 + n4;
   nthreads += 2;
   hpx_thread_exit((void *) sum);
 }
@@ -42,7 +46,7 @@ void fib(void *n) {
 int main(int argc, char *argv[]) {
   hpx_config_t cfg;
   hpx_future_t *fut;
-  long n, *result;
+  long n;
   uint32_t cores;
 
   /* validate our arguments */
@@ -81,7 +85,7 @@ int main(int argc, char *argv[]) {
   hpx_thread_wait(fut);
 
   printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
-         n, hpx_lco_future_get_value(fut), hpx_elapsed_us(timer)/1e3,
+         n, (long)hpx_lco_future_get_value(fut), hpx_elapsed_us(timer)/1e3,
 	 hpx_config_get_cores(&cfg), ++nthreads);
 
   /* cleanup */
