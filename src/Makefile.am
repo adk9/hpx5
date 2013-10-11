@@ -8,9 +8,7 @@ pkgconfigdir             = $(libdir)/pkgconfig
 nodist_pkgconfig_DATA    = libhpx.pc
 
 #network
-libhpx_la_SOURCES        = network/network.c \
-                           bootstrap/bootstrap.c \
-                           parcel/parcelqueue.c parcel/request_buffer.c \
+libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/request_list.c parcel/serialization.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
                            parcel/parcel.c \
@@ -35,6 +33,8 @@ endif
 
 if HAVE_NETWORK
     NETWORK_DEFS         = -DHAVE_NETWORK=1
+    libhpx_la_SOURCES   += network/network.c
+    libhpx_la_SOURCES   += bootstrap/bootstrap.c
 endif
 
 if HAVE_MPI
@@ -56,7 +56,7 @@ libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include
 libhpx_la_CPPFLAGS      += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-libhpx_la_CFLAGS        += $(HPX_F_LTO)
+libhpx_la_CFLAGS        += $(HPX_OPT_CFLAGS) $(HPX_F_LTO) $(HPX_SYM_CFLAGS)
 libhpx_la_CFLAGS        += @LIBCRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
 libhpx_la_CFLAGS        += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 libhpx_la_CFLAGS        += -std=c99
