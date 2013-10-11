@@ -784,7 +784,7 @@ END_TEST
 */
 
 
-void add_12_network(TCase *tc) {
+void add_12_parcelhandler(TCase *tc) {
   tcase_add_test(tc, test_libhpx_parcelqueue_create);
   tcase_add_test(tc, test_libhpx_parcelqueue_push);
   tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
