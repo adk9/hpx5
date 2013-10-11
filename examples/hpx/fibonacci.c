@@ -1,5 +1,7 @@
 
+
 #include <stdio.h>
+#include <inttypes.h>                           /* PRId64 */
 #include <hpx.h>
 
 hpx_context_t *ctx;
@@ -93,8 +95,7 @@ int main(int argc, char *argv[]) {
          n, *result, hpx_elapsed_us(timer)/1e3,
 	 hpx_config_get_localities(&cfg), ++nthreads);
 #endif
-  
-  printf("fib(%ld)=%ld\n", n, *(long*)hpx_lco_future_get_value(fut));
+  printf("fib(%ld)=%" PRId64 "\n", n, hpx_lco_future_get_value_i64(fut));
   printf("seconds: %.7f\n", hpx_elapsed_us(timer)/1e3);
   printf("localities:   %d\n", localities);
   printf("threads: %d\n", ++nthreads);
