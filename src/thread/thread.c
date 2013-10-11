@@ -39,7 +39,7 @@ static hpx_thread_id_t thread_next_id;
 
 /* called by hpx_init() to initialize this module---avoiding static
    constructors for now */
-void libhpx_init_thread() {
+void libhpx_thread_init() {
     hpx_sync_store(&thread_next_id, 1, HPX_SYNC_SEQ_CST);
 }
 
