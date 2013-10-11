@@ -38,7 +38,6 @@
 #include "hpx/mem.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
-#include "hpx/parcelhandler.h"
 #include "hpx/runtime.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"

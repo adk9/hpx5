@@ -42,7 +42,6 @@ hpx_mconfig_t __mcfg;
 hpx_error_t hpx_init(void) {
   hpx_error_t success;
   __hpx_global_cfg = NULL;
-  __hpx_global_ctx = NULL;
 
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;

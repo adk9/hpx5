@@ -9,40 +9,42 @@ static int     nthreads;
 static int     num_ranks;
 static int     my_rank;
 
+static hpx_action_t fib_action;
+
 void fib(void *n) {
-  long *n1, *n2, num, *sum;
-  hpx_thread_t *th1;
-  hpx_thread_t *th2;
-  hpx_locality_t *left, *right;
+  long num = *(long*) n;
 
-  sum = hpx_alloc(sizeof(long));
 
-  num = (long) n;
   /* handle our base case */
   if (num < 2)
     hpx_thread_exit(&num);
 
   /* create children parcels */
   my_rank = hpx_get_rank();
-  left = hpx_find_locality((my_rank+num_ranks-1)%num_ranks);
-  right = hpx_find_locality((my_rank+1)%num_ranks);
+  hpx_locality_t *left = hpx_find_locality((my_rank+num_ranks-1)%num_ranks);
+  hpx_locality_t *right = hpx_find_locality((my_rank+1)%num_ranks);
 
-  th1 = hpx_call(left, "fib", (void*) num-1, sizeof(long));
-  th2 = hpx_call(right, "fib", (void*) num-2, sizeof(long));
+  long n1 = num - 1;
+  hpx_thread_t *th1 = hpx_call(left, fib_action, &n1, sizeof(long));
+
+  long n2 = num - 2;
+  hpx_thread_t *th2 = hpx_call(right, fib_action, &n2, sizeof(long));
 
   /* wait for threads to finish */
   // ADK: need an OR gate here. Also, why not just expose the future
   //      interface and have such control constructs for them?
-  hpx_thread_join(th2, (void**) &n2);
-  hpx_thread_join(th1, (void**) &n1);
-  *sum = *n1 + *n2;
+  long n3; hpx_thread_join(th2, (void**)&n3);
+  long n4; hpx_thread_join(th1, (void**)&n4);
+
+  long *sum = hpx_alloc(sizeof(*sum));  
+  *sum = n3 + n4;
   nthreads += 2;
-  hpx_thread_exit(&sum);
+  hpx_thread_exit(sum);
 }
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg;
-  long n, *result;
+  long n;
   uint32_t localities;
 
   /* validate our arguments */
@@ -75,32 +77,29 @@ int main(int argc, char *argv[]) {
 //  ctx = hpx_ctx_create(&cfg);
 
   /* register the fib action */
-  int ret = hpx_action_register("fib", fib, &act);
-  if (ret != 0)
-    printf("FIBONACCI: Failed to register action\n");
-#if 0
-  if (act->action == NULL)
-    printf("FIBONACCI: Action is invalid\n");
-#endif
+  fib_action = hpx_action_register("fib", fib);
+
   /* get start time */
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  result = hpx_alloc(sizeof(long));
-  hpx_action_invoke(&act, (void*) n, (void**) &result);
-
-
+  hpx_future_t *fut = hpx_action_invoke(fib_action, (void*) n, NULL);
+  
+  /* wait for the thread to finish */
+  hpx_thread_wait(fut);
+                                       
 #if 0
   printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
          n, *result, hpx_elapsed_us(timer)/1e3,
 	 hpx_config_get_localities(&cfg), ++nthreads);
 #endif
-  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
-         n, *result, hpx_elapsed_us(timer)/1e3,
-	 localities, ++nthreads);
+  
+  printf("fib(%ld)=%ld\n", n, *(long*)hpx_lco_future_get_value(fut));
+  printf("seconds: %.7f\n", hpx_elapsed_us(timer)/1e3);
+  printf("localities:   %d\n", localities);
+  printf("threads: %d\n", ++nthreads);
 
   /* cleanup */
-  hpx_free(result);
 //  hpx_ctx_destroy(ctx);
   return 0;
 }
