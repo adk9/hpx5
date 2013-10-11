@@ -62,5 +62,6 @@ uint64_t hpx_map_count(hpx_map_t *);
 uint64_t hpx_map_size(hpx_map_t *);
 
 void hpx_map_insert(hpx_map_t * map, void *);
-
+void hpx_map_delete(hpx_map_t *map, void *ptr);
+void hpx_map_foreach(hpx_map_t *map, hpx_map_foreach_fn_t foreach_fn);
 #endif /* LIBHPX_MAP_H_ */
