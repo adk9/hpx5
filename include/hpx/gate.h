@@ -364,7 +364,6 @@ static inline void hpx_lco_gate_sync(hpx_gate_t * gate, uint64_t gen) {
 static inline void hpx_lco_gate_set(hpx_gate_t * gate) {
   hpx_future_t * g_fut;
   bool is_set = false;
-  uint64_t idx;
 
   /* if we haven't allocated a future yet, just return */
   if (gate->futures == NULL) {
