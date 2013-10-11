@@ -20,8 +20,7 @@
   ====================================================================
 */
 
-#include "config.h"
-#include "hpx/thread.h"
+#include "hpx.h"
 #include "tests.h"
 
 
@@ -36,8 +35,11 @@ typedef struct {
   UTILITY: initialize measurement functions
   --------------------------------------------------------------------
 */
+#ifdef __APPLE__
+static mach_timebase_info_data_t tbi;
+#endif
 
-void init_measurement(void) {
+static void init_measurement(void) {
 #ifdef WITH_PAPI
   PAPI_library_init(PAPI_VER_CURRENT);
 #else
@@ -59,7 +61,7 @@ void init_measurement(void) {
 #ifdef WITH_PAPI
 #define get_ns() PAPI_get_real_nsec()
 #else
-long long get_ns(void) {
+static long long get_ns(void) {
   long long ns = 0;
 
 #ifdef __linux__
@@ -83,7 +85,7 @@ long long get_ns(void) {
   --------------------------------------------------------------------
 */
 
-void loop_function(void * ptr){
+static void loop_function(void * ptr){
   hpx_thread_perf_t * perf = (hpx_thread_perf_t *) ptr;
   uint64_t i;
 
@@ -102,7 +104,7 @@ void loop_function(void * ptr){
   --------------------------------------------------------------------
 */  
 
-void loop_function2(void * ptr) {
+static void loop_function2(void * ptr) {
   hpx_thread_perf_t * perf = (hpx_thread_perf_t *) ptr;
   uint64_t i;
 
@@ -122,7 +124,7 @@ void loop_function2(void * ptr) {
   --------------------------------------------------------------------
 */
 
-void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint64_t iters, int delay) {
+static void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint64_t iters, int delay) {
   hpx_context_t * ctx = NULL;
   hpx_thread_perf_t perf;
   hpx_config_t cfg;
