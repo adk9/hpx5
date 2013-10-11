@@ -35,6 +35,7 @@
 #include "hpx/init.h"
 #include "hpx/kthread.h"
 #include "hpx/lco.h"
+#include "hpx/gate.h"
 #include "hpx/mem.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
