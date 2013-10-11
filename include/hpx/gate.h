@@ -34,20 +34,20 @@
 #define HPX_LCO_GATE_MODE_SPARSE                                   0
 #define HPX_LCO_GATE_MODE_DENSE                                    1
 
-#define HPX_LCO_GATE_DATATYPE_PTR                                  0
-#define HPX_LCO_GATE_DATATYPE_I8                                   2
-#define HPX_LCO_GATE_DATATYPE_I16                                  4
-#define HPX_LCO_GATE_DATATYPE_I32                                  8
-#define HPX_LCO_GATE_DATATYPE_I64                                 16
-#define HPX_LCO_GATE_DATATYPE_I128                                32
-#define HPX_LCO_GATE_DATATYPE_F32                                128
-#define HPX_LCO_GATE_DATATYPE_F64                                256
-#define HPX_LCO_GATE_DATATYPE_F80                                512
-#define HPX_LCO_GATE_DATATYPE_F128                              1024
+static const uint64_t HPX_LCO_GATE_DATATYPE_PTR  = UINT64_C(0);
+static const uint64_t HPX_LCO_GATE_DATATYPE_I8   = UINT64_C(1) << 1;
+static const uint64_t HPX_LCO_GATE_DATATYPE_I16  = UINT64_C(1) << 2;
+static const uint64_t HPX_LCO_GATE_DATATYPE_I32  = UINT64_C(1) << 3;
+static const uint64_t HPX_LCO_GATE_DATATYPE_I64  = UINT64_C(1) << 4;
+static const uint64_t HPX_LCO_GATE_DATATYPE_I128 = UINT64_C(1) << 5;
+static const uint64_t HPX_LCO_GATE_DATATYPE_F32  = UINT64_C(1) << 6;
+static const uint64_t HPX_LCO_GATE_DATATYPE_F64  = UINT64_C(1) << 7;
+static const uint64_t HPX_LCO_GATE_DATATYPE_F80  = UINT64_C(1) << 8;
+static const uint64_t HPX_LCO_GATE_DATATYPE_F128 = UINT64_C(1) << 9;
 
-#define HPX_LCO_GATE_HAS_PREDICATE               9223372036854775808
+static const uint64_t HPX_LCO_GATE_HAS_PREDICATE = UINT64_C(1) << 63;
 
-#define HPX_LCO_GATE_DEFAULT_SIZE                                 32
+static const uint64_t HPX_LCO_GATE_DEFAULT_SIZE  = UINT64_C(32);
 
 
 /*
@@ -102,7 +102,10 @@ typedef struct _hpx_gate_t {
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_gate_init(hpx_gate_t * gate, uint8_t g_type, uint64_t g_opts, void * f, void * ud) {
+static inline void hpx_lco_gate_init(hpx_gate_t * gate, uint8_t g_type,
+                                     uint64_t g_opts,
+                                     void *(*f)(void *, void *),
+                                     void * ud) {
   gate->gate_type = g_type;
   gate->gate_opts = g_opts;
   gate->f_gen = 0;
@@ -113,25 +116,25 @@ static inline void hpx_lco_gate_init(hpx_gate_t * gate, uint8_t g_type, uint64_t
   /* set our predicate function (if any) */
   if (f != NULL) {
     if (g_opts & HPX_LCO_GATE_DATATYPE_I8) {
-      gate->pred.i8f = f;
+      gate->pred.i8f = (__hpx_gate_pred_i8_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_I16) {
-      gate->pred.i16f = f;
+      gate->pred.i16f = (__hpx_gate_pred_i16_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_I32) {
-      gate->pred.i32f = f;
+      gate->pred.i32f = (__hpx_gate_pred_i32_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_I64) {
-      gate->pred.i64f = f;
+      gate->pred.i64f = (__hpx_gate_pred_i64_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_I128) {
-      gate->pred.i128f = f;
+      gate->pred.i128f = (__hpx_gate_pred_i128_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_F32) {
-      gate->pred.f32f = f;
+      gate->pred.f32f = (__hpx_gate_pred_f32_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_F64) {
-      gate->pred.f64f = f;
+      gate->pred.f64f = (__hpx_gate_pred_f64_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_F80) {
-      gate->pred.f80f = f;
+      gate->pred.f80f = (__hpx_gate_pred_f80_t)f;
     } else if (g_opts & HPX_LCO_GATE_DATATYPE_F128) {
-      gate->pred.f128f = f;
+      gate->pred.f128f = (__hpx_gate_pred_f128_t)f;
     } else {
-      gate->pred.vpf = f;
+      gate->pred.vpf = (__hpx_gate_pred_t)f;
     }
 
     gate->gate_opts |= HPX_LCO_GATE_HAS_PREDICATE;
@@ -159,7 +162,9 @@ static inline void hpx_lco_gate_init(hpx_gate_t * gate, uint8_t g_type, uint64_t
  --------------------------------------------------------------------
 */
 
-static inline hpx_gate_t * hpx_lco_gate_create(uint8_t g_type, uint8_t g_opts, void * f, void * ud) {
+static inline hpx_gate_t * hpx_lco_gate_create(uint8_t g_type, uint8_t g_opts,
+                                               void *(*f)(void *, void *),
+                                               void * ud) {
   hpx_gate_t * gate = NULL;
 
   /* allocate space */
