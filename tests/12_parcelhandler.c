@@ -20,8 +20,8 @@
  ====================================================================
 */
 
-#include <check.h>
 #include "hpx.h"
+#include "tests.h"
 
 /* meaningless arguments for parcels */
 struct args {
@@ -791,3 +791,26 @@ START_TEST (test_libhpx_parcel_senddata_large)
   //  hpx_free(cfg);
 } 
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+
+void add_12_network(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_parcelqueue_create);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
+  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded_concurrent);
+  tcase_add_test(tc, test_libhpx_parcelhandler_create);
+  tcase_add_test(tc, test_libhpx_action_register);
+  tcase_add_test(tc, test_libhpx_parcelsystem_init);
+  tcase_add_test(tc, test_libhpx_parcel_create);
+  tcase_add_test(tc, test_libhpx_parcel_serialize);
+  tcase_add_test(tc, test_libhpx_parcel_send);
+  tcase_add_test(tc, test_libhpx_parcel_senddata);
+  tcase_add_test(tc, test_libhpx_parcel_senddata_large);
+}

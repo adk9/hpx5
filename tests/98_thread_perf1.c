@@ -1,6 +1,6 @@
 
 /*
- ====================================================================
+  ====================================================================
   High Performance ParalleX Library (libhpx)
   
   Thread Performance Tests - Context Switching
@@ -16,30 +16,13 @@
   Research in Extreme Scale Technologies (CREST).
 
   Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
- ====================================================================
+  Patrick K. Bohan <pbohan [at] indiana.edu>
+  ====================================================================
 */
 
-
-#include "hpx/thread.h"
-
-/* from autoconf */
 #include "config.h"
-
-/* include a header for whatever timing functions we're using */
-#ifdef WITH_PAPI
-  #include <papi.h>
-#else
-  #ifdef __linux__
-    #include <time.h>
-  #endif
-  
-  #ifdef __APPLE__
-    #include <mach/mach_time.h>
-
-    static mach_timebase_info_data_t tbi;
-  #endif
-#endif
+#include "hpx/thread.h"
+#include "tests.h"
 
 
 typedef struct {
@@ -49,28 +32,28 @@ typedef struct {
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   UTILITY: initialize measurement functions
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 void init_measurement(void) {
 #ifdef WITH_PAPI
   PAPI_library_init(PAPI_VER_CURRENT);
 #else
-  #ifdef __APPLE__
+#ifdef __APPLE__
   if (tbi.denom == 0) {
     (void) mach_timebase_info(&tbi);
   }
-  #endif
+#endif
 #endif
 }
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   UTILITY: get a monotonic timestamp with nanosecond resolution
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 #ifdef WITH_PAPI
@@ -79,25 +62,25 @@ void init_measurement(void) {
 long long get_ns(void) {
   long long ns = 0;
 
-  #ifdef __linux__
+#ifdef __linux__
   struct timespec ts;
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
   ns = (ts.tv_sec * 1000000000) + ts.tv_nsec;  
-  #endif
+#endif
 
-  #ifdef __APPLE__
+#ifdef __APPLE__
   ns = mach_absolute_time() * tbi.numer / tbi.denom;
-  #endif
+#endif
 
   return ns;
 }
 #endif
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST HELPER: baseline timings
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 void loop_function(void * ptr){
@@ -114,9 +97,9 @@ void loop_function(void * ptr){
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST HELPER: yield timings
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */  
 
 void loop_function2(void * ptr) {
@@ -134,9 +117,9 @@ void loop_function2(void * ptr) {
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST HELPER: context switch timer
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint64_t iters, int delay) {
@@ -229,9 +212,9 @@ void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt, uint
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch)
@@ -246,9 +229,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving extended state
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_ext)
@@ -263,9 +246,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_sig)
@@ -280,9 +263,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_ext_sig)
@@ -297,10 +280,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on two
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_2th)
@@ -316,10 +299,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on two HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_2th_ext)
@@ -334,10 +317,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on two HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_2th_sig)
@@ -352,10 +335,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_2th_ext_sig)
@@ -370,10 +353,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on three
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_3th)
@@ -389,10 +372,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on three 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_3th_ext)
@@ -407,10 +390,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on three HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_3th_sig)
@@ -425,10 +408,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_3th_ext_sig)
@@ -443,10 +426,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on four
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_4th)
@@ -462,10 +445,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on four 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_4th_ext)
@@ -480,10 +463,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on four HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_4th_sig)
@@ -498,10 +481,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_4th_ext_sig)
@@ -516,10 +499,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on six
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_6th)
@@ -535,10 +518,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on six 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_6th_ext)
@@ -553,10 +536,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on six HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_6th_sig)
@@ -571,10 +554,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   six HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_6th_ext_sig)
@@ -589,10 +572,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on eight
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_8th)
@@ -608,10 +591,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on eight 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_8th_ext)
@@ -626,10 +609,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on eight HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_8th_sig)
@@ -644,10 +627,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   eight HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch_8th_ext_sig)
@@ -665,9 +648,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2)
@@ -682,9 +665,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving extended state
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_ext)
@@ -699,9 +682,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_sig)
@@ -716,9 +699,9 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_ext_sig)
@@ -733,10 +716,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on two
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_2th)
@@ -752,10 +735,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on two HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_2th_ext)
@@ -770,10 +753,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on two HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_2th_sig)
@@ -788,10 +771,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_2th_ext_sig)
@@ -806,10 +789,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on three
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_3th)
@@ -825,10 +808,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on three 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_3th_ext)
@@ -843,10 +826,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on three HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_3th_sig)
@@ -861,10 +844,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_3th_ext_sig)
@@ -879,10 +862,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on four
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_4th)
@@ -898,10 +881,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on four 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_4th_ext)
@@ -916,10 +899,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on four HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_4th_sig)
@@ -934,10 +917,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   two HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_4th_ext_sig)
@@ -952,10 +935,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on six
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_6th)
@@ -971,10 +954,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on six 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_6th_ext)
@@ -989,10 +972,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on six HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_6th_sig)
@@ -1007,10 +990,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   six HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_6th_ext_sig)
@@ -1025,10 +1008,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, no switching flags on eight
   HPX threads on one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_8th)
@@ -1044,10 +1027,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU state on eight 
   HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_8th_ext)
@@ -1062,10 +1045,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving signals on eight HPX
   threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_8th_sig)
@@ -1080,10 +1063,10 @@ END_TEST
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   TEST: thread context switch timings, saving FPU and signals with
   eight HPX threads, one core
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 
 START_TEST (test_libhpx_thread_perf_switch2_8th_ext_sig)
@@ -1096,3 +1079,62 @@ START_TEST (test_libhpx_thread_perf_switch2_8th_ext_sig)
 }
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+
+void add_98_thread_perf1(TCase *tc) {
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext_sig);
+
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th);
+  tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
+  //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
+}

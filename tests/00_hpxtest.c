@@ -21,28 +21,8 @@
 */
 
 
-#include <stdio.h>
-#include <check.h>
-
-/* Source files containing tests */
-/* This is suboptimal. So sue me. Actually, please don't. */
-#include "01_init.c"
-#include "02_mem.c"
-#include "03_ctx.c"
-#include "04_thread1.c"
-#include "05_queue.c"
-#include "06_kthread.c"
-#include "07_mctx.c"
-#include "08_thread2.c"
-#include "09_config.c"
-#include "10_list.c"
-#include "11_map.c"
-#include "12_gate.c"
-#if HAVE_NETWORK
-#include "12_parcelhandler.c"
-#endif
-#include "98_thread_perf1.c"
-
+#include <stdlib.h>                             /* getenv */
+#include "tests.h"
 
 /*
  --------------------------------------------------------------------
@@ -72,259 +52,24 @@ int main(int argc, char * argv[]) {
   /* set timeout */
   tcase_set_timeout(tc, 1200);
 
-  /* test configuration */
-  tcase_add_test(tc, test_libhpx_config_cores);
-  tcase_add_test(tc, test_libhpx_config_switch_fpu);
-  tcase_add_test(tc, test_libhpx_config_switch_sigmask);
-  tcase_add_test(tc, test_libhpx_config_thread_stack_size);
-
-
-  /* test memory management */
-  tcase_add_test(tc, test_libhpx_alloc);
-
-  /* test kernel threads */
-  /* NOTE: should come before context tests */
-  tcase_add_test(tc, test_libhpx_kthread_get_cores);
-  tcase_add_test(tc, test_libhpx_kthread_create);
-
-  /* test scheduling context management */
-  tcase_add_test(tc, test_libhpx_ctx_create);
-  tcase_add_test(tc, test_libhpx_ctx_get_id);
-  tcase_add_test(tc, test_libhpx_ctx_cores);
-
-  /* test threads (stage 1) */
-  //  tcase_add_test(tc, test_libhpx_thread_create);
-
-  /* test FIFO queues */
-  tcase_add_test(tc, test_libhpx_queue_size);
-  tcase_add_test(tc, test_libhpx_queue_insert);
-  tcase_add_test(tc, test_libhpx_queue_peek);
-  tcase_add_test(tc, test_libhpx_queue_pop);
-
-  /* test linked lists */
-  tcase_add_test(tc, test_libhpx_list_size);
-  tcase_add_test(tc, test_libhpx_list_insert);
-  tcase_add_test(tc, test_libhpx_list_peek);
-  tcase_add_test(tc, test_libhpx_list_pop);
-  tcase_add_test(tc, test_libhpx_list_iter);
-  tcase_add_test(tc, test_libhpx_list_delete);
-
-  /* test maps */
-  tcase_add_test(tc, test_libhpx_map_sizecount);
-  tcase_add_test(tc, test_libhpx_map_insert);
-  tcase_add_test(tc, test_libhpx_map_foreach);
-  tcase_add_test(tc, test_libhpx_map_delete);
-
-  /* test machine context switching */
-  tcase_add_test(tc, test_libhpx_mctx_getcontext);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_getcontext_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_setcontext);
-  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext);
-  tcase_add_test(tc, test_libhpx_mctx_setcontext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_setcontext_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg);  
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_0arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_1arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_2arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_3arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_4arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_5arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_6arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_7arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_makecontext_8arg_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain1);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain2);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain310);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain311);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain312);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain8000);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_chain90000);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10);
-
-  if (long_tests) {
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000);
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000);
-  }
-
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext);
-
-  if (long_tests) {
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext);
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext);
-  }
-
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_sig);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_sig);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_sig);
-
-  if (long_tests) {
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_sig);
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_sig);
-  }
-
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star2_ext_sig);
-  tcase_add_test(tc, test_libhpx_mctx_swapcontext_star10_ext_sig);
-
-  if (long_tests) {
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star1000_ext_sig);
-    tcase_add_test(tc, test_libhpx_mctx_swapcontext_star5000_ext_sig);
-  }
-
-  /* test LCOs */
-  tcase_add_test(tc, test_libhpx_lco_futures);
-
-  /* test threads (stage 2) */
-  tcase_add_test(tc, test_libhpx_thread_stack_size_verify);
-  tcase_add_test(tc, test_libhpx_thread_self_ptr);
-  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
-  tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
-  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext_sig);
-  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy);
-  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext);
-  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_sig);
-  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext_sig);
-  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1);
-  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext);
-  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_sig);
-  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext_sig);
-  tcase_add_test(tc, test_libhpx_thread_args);
-  tcase_add_test(tc, test_libhpx_thread_args_ext);
-  tcase_add_test(tc, test_libhpx_thread_args_sig);
-  tcase_add_test(tc, test_libhpx_thread_args_ext_sig);
-  tcase_add_test(tc, test_libhpx_thread_return_value1000);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_sig);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext_sig);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield1);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield2);
-  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x2);
-
-  if (long_tests || hardcore_tests) {
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_sig);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x32);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
-  }
-
-  if (hardcore_tests) {
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore1000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore5000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore1000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore5000);
-    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
-  }
-
-  /* gates */
-  tcase_add_test(tc, test_libhpx_gate_allreduce);
-
-  /* parcel handler tests */
+  
+  add_09_config(tc);                            /* test configuration */
+  add_02_mem(tc);                               /* test memory management */
+  add_06_kthread(tc);                           /* test kernel threads,
+                                                   NOTE: before ctx tests */
+  add_03_ctx(tc);                               /* scheduling ctx management */
+  /* add_04_thread1(tc); LD: why not? */        /* threads (stage 1) */
+  add_05_queue(tc);                             /* FIFO queues */
+  add_10_list(tc);                              /* linked lists */
+  add_11_map(tc);                               /* maps */
+  add_07_mctx(tc, long_tests);                  /* machine ctx switching */
+  add_08_thread2(tc, long_tests, hardcore_tests); /* LCOs, threads (stage 2) */
+  add_12_gate(tc);                              /* gates */
 #if HAVE_NETWORK
-  tcase_add_test(tc, test_libhpx_parcelqueue_create);
-  tcase_add_test(tc, test_libhpx_parcelqueue_push);
-  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded);
-  tcase_add_test(tc, test_libhpx_parcelqueue_push_multithreaded_concurrent);
-  tcase_add_test(tc, test_libhpx_parcelhandler_create);
-  tcase_add_test(tc, test_libhpx_action_register);
-  tcase_add_test(tc, test_libhpx_parcelsystem_init);
-  tcase_add_test(tc, test_libhpx_parcel_create);
-  tcase_add_test(tc, test_libhpx_parcel_serialize);
-  tcase_add_test(tc, test_libhpx_parcel_send);
-  tcase_add_test(tc, test_libhpx_parcel_senddata);
-  tcase_add_test(tc, test_libhpx_parcel_senddata_large);
+  add_12_parcelhandler(tc);                     /* parcel handler tests */
 #endif
-
-  /* performance tests */
-  if (perf_tests) {
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_ext_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_2th_ext_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_3th_ext_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_4th_ext_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_6th_ext_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch_8th_ext_sig);
-
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_2th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_3th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_4th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_6th_ext_sig);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th);
-    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_sig);
-    //    tcase_add_test(tc, test_libhpx_thread_perf_switch2_8th_ext_sig);
-
-  }
-
+  if (perf_tests)
+    add_98_thread_perf1(tc);
 
   suite_add_tcase(s, tc);
 
