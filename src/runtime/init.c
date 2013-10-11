@@ -31,6 +31,7 @@
 #include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
 
 hpx_mconfig_t __mcfg;
+hpx_parcelhandler_t *__hpx_parcelhandler = NULL;
 
 /**
  * Initializes data structures used by libhpx.  This function must
