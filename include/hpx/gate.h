@@ -27,12 +27,12 @@
 #include "hpx/mem.h"
 #include "hpx/lco.h"
 
-#define HPX_LCO_GATE_TYPE_AND                                   0x00
-#define HPX_LCO_GATE_TYPE_OR                                    0x01
+static const uint64_t HPX_LCO_GATE_TYPE_AND      = UINT64_C(0);
+static const uint64_t HPX_LCO_GATE_TYPE_OR       = UINT64_C(1);
 
 /* gate options */
-#define HPX_LCO_GATE_MODE_SPARSE                                   0
-#define HPX_LCO_GATE_MODE_DENSE                                    1
+static const uint64_t HPX_LCO_GATE_MODE_SPARSE   = UINT64_C(0);
+static const uint64_t HPX_LCO_GATE_MODE_DENSE    = UINT64_C(1);
 
 static const uint64_t HPX_LCO_GATE_DATATYPE_PTR  = UINT64_C(0);
 static const uint64_t HPX_LCO_GATE_DATATYPE_I8   = UINT64_C(1) << 1;

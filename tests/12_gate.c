@@ -21,12 +21,11 @@
 */
 
 #include "hpx.h"
-#include "hpx/gate.h"
 #include "tests.h"
 
 /* Globals */
-hpx_future_t * fut;
-hpx_gate_t * gate;
+static hpx_future_t * fut;
+static hpx_gate_t * gate;
 
 
 /*
@@ -35,7 +34,7 @@ hpx_gate_t * gate;
  --------------------------------------------------------------------
 */
 
-int32_t allreduce_pred(int32_t orig_val, void * my_val) {
+static int32_t allreduce_pred(int32_t orig_val, void * my_val) {
   if (orig_val == 0) {
     return 0;
   } else {
@@ -50,7 +49,7 @@ int32_t allreduce_pred(int32_t orig_val, void * my_val) {
  --------------------------------------------------------------------
 */
 
-void gate_allreduce_worker(void * ptr) {
+static void gate_allreduce_worker(void * ptr) { /*  */
   uint64_t gen = (uint64_t) ptr;
 
   /* synchronize the gate with this generation */
@@ -70,10 +69,10 @@ void gate_allreduce_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_gate_allreduce(hpx_context_t * ctx) {
-  hpx_thread_t * ths[8];
-  uint64_t gen;
-  uint64_t idx;
+static void run_gate_allreduce(hpx_context_t * ctx) {
+  hpx_thread_t *ths[8] = {NULL};
+  uint64_t gen = 0;
+  uint64_t idx = 0;
 
   /* get a future associated with the current generation on the gate */
   fut = hpx_lco_gate_get_future(gate, 8, &gen);
@@ -81,7 +80,7 @@ void run_gate_allreduce(hpx_context_t * ctx) {
 
   /* create some threads */
   for (idx = 0; idx < 8; idx++) {
-    hpx_thread_create(ctx, 0, (void *) gate_allreduce_worker, (void *) gen, NULL);
+    hpx_thread_create(ctx, 0, gate_allreduce_worker, (void *) gen, NULL);
   }
 
   /* wait for this generation's future to be triggered */
@@ -100,7 +99,10 @@ START_TEST (test_libhpx_gate_allreduce)
   hpx_context_t * ctx;
   hpx_config_t cfg;
   uint64_t idx;
-  uint32_t mydata = 73;
+  union {
+    uint32_t word;
+    uint8_t bytes[sizeof(void*)];               /* need at least a word */
+  } mydata = { .word = 73 };
 
   /* initialize a configuration */
   hpx_config_init(&cfg);
@@ -110,7 +112,9 @@ START_TEST (test_libhpx_gate_allreduce)
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create a gate */
-  gate = hpx_lco_gate_create(HPX_LCO_GATE_TYPE_AND, HPX_LCO_GATE_MODE_SPARSE | HPX_LCO_GATE_DATATYPE_I32, allreduce_pred, (void *) mydata);
+  gate = hpx_lco_gate_create(HPX_LCO_GATE_TYPE_AND,
+                             HPX_LCO_GATE_MODE_SPARSE | HPX_LCO_GATE_DATATYPE_I32,
+                             (__hpx_gate_pred_t)&allreduce_pred, mydata.bytes);
   ck_assert_msg(gate != NULL, "Gate was NULL.");
 
   /* run allreduce 73 times */
