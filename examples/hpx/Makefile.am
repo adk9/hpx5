@@ -28,3 +28,6 @@ AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_F_LTO)
 AM_CFLAGS           += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @LIBCRYPTO_CFLAGS@
 AM_CFLAGS           += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 AM_CFLAGS           += -std=c99
+
+# during development, for now
+AM_CFLAGS           += -Wno-unused -Wno-unused-but-set-variable
