@@ -16,6 +16,6 @@ if WITH_DOCS
 SUBDIRS += docs
 endif
 
-if WITH_TESTSUITE
+if ENABLE_TESTSUITE
 SUBDIRS += tests
 endif
