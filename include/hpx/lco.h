@@ -25,7 +25,6 @@
 
 #include <complex.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
 #ifdef __APPLE__
@@ -36,6 +35,7 @@
   #include <immintrin.h>
 #endif
 
+#include "hpx/types.h"
 #include "hpx/error.h"
 #include "hpx/mutex.h"
 
@@ -50,10 +50,10 @@
 
 typedef union {
   __m128i         i128;
-  int64_t         i64;
-  int32_t         i32;
-  int16_t         i16;
-  int8_t          i8;
+  int64           i64;
+  int32           i32;
+  int16           i16;
+  int8            i8;
   void           *vp;
   float           f32;
   double          f64;
@@ -65,7 +65,7 @@ typedef hpx_future_value_t (*hpx_lco_future_pred_t)(void *, void *);
 
 typedef struct hpx_future {
   hpx_mutex_t           mtx;
-  uint64_t              state;
+  uint64                state;
   hpx_future_value_t    value;
 } hpx_future_t __attribute__((aligned (8)));
 
@@ -285,7 +285,7 @@ static inline void hpx_lco_future_destroy(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set(hpx_future_t * fut, uint64_t state, void * value) {
+static inline void hpx_lco_future_set(hpx_future_t * fut, uint64 state, void * value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.vp = value;
@@ -305,7 +305,7 @@ static inline void hpx_lco_future_set(hpx_future_t * fut, uint64_t state, void *
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_i8(hpx_future_t * fut, uint64_t state, int8_t value) {
+static inline void hpx_lco_future_set_i8(hpx_future_t * fut, uint64 state, int8 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.i8 = value;
@@ -325,7 +325,7 @@ static inline void hpx_lco_future_set_i8(hpx_future_t * fut, uint64_t state, int
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_i16(hpx_future_t * fut, uint64_t state, int16_t value) {
+static inline void hpx_lco_future_set_i16(hpx_future_t * fut, uint64 state, int16 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.i16 = value;
@@ -345,7 +345,7 @@ static inline void hpx_lco_future_set_i16(hpx_future_t * fut, uint64_t state, in
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_i32(hpx_future_t * fut, uint64_t state, int32_t value) {
+static inline void hpx_lco_future_set_i32(hpx_future_t * fut, uint64 state, int32 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.i32 = value;
@@ -365,7 +365,7 @@ static inline void hpx_lco_future_set_i32(hpx_future_t * fut, uint64_t state, in
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_i64(hpx_future_t * fut, uint64_t state, int64_t value) {
+static inline void hpx_lco_future_set_i64(hpx_future_t * fut, uint64 state, int64 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.i64 = value;
@@ -385,7 +385,7 @@ static inline void hpx_lco_future_set_i64(hpx_future_t * fut, uint64_t state, in
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_i128(hpx_future_t * fut, uint64_t state, __m128i value) {
+static inline void hpx_lco_future_set_i128(hpx_future_t * fut, uint64 state, __m128i value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.i128 = value;
@@ -405,7 +405,7 @@ static inline void hpx_lco_future_set_i128(hpx_future_t * fut, uint64_t state, _
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_f32(hpx_future_t * fut, uint64_t state, float value) {
+static inline void hpx_lco_future_set_f32(hpx_future_t *fut, uint64 state, float value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.f32 = value;
@@ -425,7 +425,7 @@ static inline void hpx_lco_future_set_f32(hpx_future_t * fut, uint64_t state, fl
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_f64(hpx_future_t * fut, uint64_t state, double value) {
+static inline void hpx_lco_future_set_f64(hpx_future_t * fut, uint64 state, double value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.f64 = value;
@@ -445,7 +445,7 @@ static inline void hpx_lco_future_set_f64(hpx_future_t * fut, uint64_t state, do
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_f80(hpx_future_t * fut, uint64_t state, long double value) {
+static inline void hpx_lco_future_set_f80(hpx_future_t * fut, uint64 state, long double value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.f80 = value;
@@ -465,7 +465,7 @@ static inline void hpx_lco_future_set_f80(hpx_future_t * fut, uint64_t state, lo
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_f128(hpx_future_t * fut, uint64_t state, __m128d value) {
+static inline void hpx_lco_future_set_f128(hpx_future_t * fut, uint64 state, __m128d value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->state = (state | HPX_LCO_FUTURE_SETMASK);
   fut->value.f128 = value;
@@ -515,7 +515,7 @@ static inline void hpx_lco_future_set_value(hpx_future_t *fut, void *value) {
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_value_i8(hpx_future_t *fut, int8_t value) {
+static inline void hpx_lco_future_set_value_i8(hpx_future_t *fut, int8 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->value.i8 = value;
   hpx_lco_mutex_unlock(&fut->mtx);
@@ -532,7 +532,7 @@ static inline void hpx_lco_future_set_value_i8(hpx_future_t *fut, int8_t value) 
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_value_i16(hpx_future_t *fut, int16_t value) {
+static inline void hpx_lco_future_set_value_i16(hpx_future_t *fut, int16 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->value.i16 = value;
   hpx_lco_mutex_unlock(&fut->mtx);
@@ -549,7 +549,7 @@ static inline void hpx_lco_future_set_value_i16(hpx_future_t *fut, int16_t value
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_value_i32(hpx_future_t *fut, int32_t value) {
+static inline void hpx_lco_future_set_value_i32(hpx_future_t *fut, int32 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->value.i32 = value;
   hpx_lco_mutex_unlock(&fut->mtx);
@@ -566,7 +566,7 @@ static inline void hpx_lco_future_set_value_i32(hpx_future_t *fut, int32_t value
  --------------------------------------------------------------------
 */
 
-static inline void hpx_lco_future_set_value_i64(hpx_future_t *fut, int64_t value) {
+static inline void hpx_lco_future_set_value_i64(hpx_future_t *fut, int64 value) {
   hpx_lco_mutex_lock(&fut->mtx);
   fut->value.i64 = value;
   hpx_lco_mutex_unlock(&fut->mtx);
@@ -710,7 +710,7 @@ static inline void * hpx_lco_future_get_value(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline int8_t hpx_lco_future_get_value_i8(hpx_future_t *fut) {
+static inline int8 hpx_lco_future_get_value_i8(hpx_future_t *fut) {
   int8_t val;
 
   hpx_lco_mutex_lock(&fut->mtx);
@@ -731,7 +731,7 @@ static inline int8_t hpx_lco_future_get_value_i8(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline int16_t hpx_lco_future_get_value_i16(hpx_future_t *fut) {
+static inline int16 hpx_lco_future_get_value_i16(hpx_future_t *fut) {
   int16_t val;
 
   hpx_lco_mutex_lock(&fut->mtx);
@@ -752,7 +752,7 @@ static inline int16_t hpx_lco_future_get_value_i16(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline int32_t hpx_lco_future_get_value_i32(hpx_future_t *fut) {
+static inline int32 hpx_lco_future_get_value_i32(hpx_future_t *fut) {
   int32_t val;
 
   hpx_lco_mutex_lock(&fut->mtx);
@@ -773,7 +773,7 @@ static inline int32_t hpx_lco_future_get_value_i32(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline int64_t hpx_lco_future_get_value_i64(hpx_future_t *fut) {
+static inline int64 hpx_lco_future_get_value_i64(hpx_future_t *fut) {
   int64_t val;
 
   hpx_lco_mutex_lock(&fut->mtx);
@@ -897,8 +897,8 @@ static inline __m128d hpx_lco_future_get_value_f128(hpx_future_t *fut) {
  --------------------------------------------------------------------
 */
 
-static inline uint64_t hpx_lco_future_get_state(hpx_future_t *fut) {
-  uint64_t state;
+static inline uint64 hpx_lco_future_get_state(hpx_future_t *fut) {
+  uint64 state;
 
   hpx_lco_mutex_lock(&fut->mtx);
   state = fut->state;
