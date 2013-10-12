@@ -99,7 +99,7 @@ AC_ARG_ENABLE([testsuite],
         [Enable test suite (requires check) @<:@default=yes@:>@])],
     [], [enable_testsuite=yes])
     
-Dnl Use from libcrypto to hash action string keys
+dnl Use from libcrypto to hash action string keys
 AC_ARG_WITH([libcrypto],
     [AS_HELP_STRING([--with-libcrypto],
          [Build with openssl's libcrypto for string hashing @<:@default=yes@:>@])],
@@ -155,7 +155,6 @@ AC_ARG_WITH([mpi],
     [], [with_mpi=yes])
 AS_IF([test "x$with_mpi" != xno],
     [AC_DEFINE([WITH_MPI], [], [Enable MPI support])
-     AC_MSG_NOTICE([asking for mpi $with_mpi])
      AS_IF([test "x$with_mpi" != xyes],
          [PKG_CHECK_MODULES([MPI], $with_mpi)
           AC_SUBST(MPI_PKG, [$with_mpi])
@@ -198,19 +197,38 @@ AS_IF([test "x$enable_testsuite" != xno],
                 [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
                  AM_CONDITIONAL([ENABLE_TESTSUITE], false)])])])])
 AM_COND_IF([ENABLE_TESTSUITE],
-    [AC_CONFIG_FILES([tests/Makefile])
-     [test_string="yes"]],
-     [test_string="no"])
-                 
-# Check for doxygen (to build the documentation).
-AC_CHECK_PROGS([DOXYGEN], [doxygen])
-if test -z "$DOXYGEN";
-  then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
-fi
+    [AC_CONFIG_FILES([tests/Makefile]) test_string="yes"],
+    [test_string="no"])
 
-AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
-AM_COND_IF([WITH_DOCS], [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
-AC_SUBST(WITH_DOCS)
+# Check for doxygen (to build the documentation).
+AC_ARG_WITH([doxygen],
+    [AS_HELP_STRING([--with-doxygen[[=PKG]]],
+        [Use doxygen to build documentation @<:@default=no@:>@])],
+    [], [with_doxygen=no])
+    
+AS_IF([test "x$with_doxygen" != xno],
+    [AS_IF([test "x$with_doxygen" != xyes],
+        [PKG_CHECK_MODULES([DOXYGEN], [$with_doxygen],
+            [AM_CONDITIONAL([WITH_DOXYGEN], true)
+             AM_CONDITIONAL([ENABLE_DOCS], true)
+             AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])],
+            [AM_CONDITIONAL([ENABLE_DOCS], false)
+             AM_CONDITIONAL([WITH_DOXYGEN], false)
+             AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])],
+        [AC_CHECK_PROGS([DOXYGEN], [doxygen])
+         AS_IF([test -z "$DOXYGEN"],
+             [AM_CONDITIONAL([ENABLE_DOCS], false)
+              AM_CONDITIONAL([WITH_DOXYGEN], false)
+              AC_MSG_WARN([Doxygen not found, disabling source documentation build.])],
+             [AM_CONDITIONAL([WITH_DOXYGEN], true)
+              AM_CONDITIONAL([ENABLE_DOCS], true)
+              AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])])])],
+    [AM_CONDITIONAL([ENABLE_DOCS], false)
+     AM_CONDITIONAL([WITH_DOXYGEN], false)])
+AM_COND_IF([WITH_DOXYGEN],
+    [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile]) doc_string="yes"],
+    [doc_string="no"])
+AC_SUBST(WITH_DOXYGEN)
 
 dnl Defines the libs required by the platform, when it's linux
 AS_IF([test "x$host_os" = xlinux-gnu], [AC_SUBST([PLATFORM_LIBS], [-lrt])])
@@ -235,9 +253,6 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
-AS_IF([test -n "$DOXYGEN"],
-      [doc_string="yes"],
-      [doc_string="no"])
 AS_IF([test "x$with_papi" != xno],
       [papi_string="yes"],
       [papi_string="no"])
