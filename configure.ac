@@ -86,26 +86,6 @@ AC_ARG_ENABLE([werror],
     [], [enable_werror=yes])
 AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
-dnl Allow users to build libhpx with optimization.
-AC_ARG_ENABLE([symbols],
-    [AS_HELP_STRING([--enable-symbols],
-        [Enable debug symbols @<:@default=yes (-g)@:>@])],
-    [], [enable_symbols=yes])
-AS_IF([test "x$enable_symbols" != xno],
-    [AS_IF([test "x$enable_symbols" != xyes],
-         [AC_SUBST(HPX_SYM_CFLAGS, [$enable_symbols])],
-         [AC_SUBST(HPX_SYM_CFLAGS, [-g])])])
-
-dnl Allow users to build libhpx with optimization.
-AC_ARG_ENABLE([optimized],
-    [AS_HELP_STRING([--enable-optimized],
-        [Enable optimization @<:@default=yes (-O3)@:>@])],
-    [], [enable_optimized=yes])
-AS_IF([test "x$enable_optimized" != xno],
-    [AS_IF([test "x$enable_optimized" != xyes],
-         [AC_SUBST(HPX_OPT_CFLAGS, [$enable_optimized])],
-         [AC_SUBST(HPX_OPT_CFLAGS, [-O3])])])
-
 dnl Allow users to build libhpx with link-time-optimization.
 AC_ARG_ENABLE([lto],
     [AS_HELP_STRING([--enable-lto],
