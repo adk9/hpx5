@@ -42,7 +42,7 @@ hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
 hpxtest_CPPFLAGS	   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-hpxtest_CFLAGS		   += $(HPX_OPT_CFLAGS) $(HPX_F_LTO) $(HPX_SYM_CFLAGS)
+hpxtest_CFLAGS		   += $(HPX_F_LTO)
 hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS		   += @LIBCRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@

@@ -56,7 +56,7 @@ libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include
 libhpx_la_CPPFLAGS      += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-libhpx_la_CFLAGS        += $(HPX_OPT_CFLAGS) $(HPX_F_LTO) $(HPX_SYM_CFLAGS)
+libhpx_la_CFLAGS        += $(HPX_F_LTO)
 libhpx_la_CFLAGS        += @LIBCRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
 libhpx_la_CFLAGS        += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 libhpx_la_CFLAGS        += -std=c99
