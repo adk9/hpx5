@@ -30,15 +30,15 @@ static hpx_context_t *ctx;                      /**< a shared thread context */
 static int            nthreads;                 /**< for output */
 
 /**
- * The only thread action in this file, fib decomposes the problem of computing
- * fib(n) into computing fib(n - 1) + fib(n - 2). It uses the action void*
- * argument to directly pass n (and n -1, n -2, etc), rather than using it to
- * pass an address of n.
+ * This fib action decomposes the problem of computing fib(n) into computing
+ * fib(n - 1) + fib(n - 2). It uses the action void* argument to directly pass
+ * n (and n -1, n -2, etc), rather than using it to pass an address of n, and
+ * retrieved the computed results directly through thread joins.
  *
  * @param args The current number to compute, cast as void*.
  * @return The copmuted fib(n) directly, NOT an address.
  */
-void fib(void *args) {
+static void fib(void *args) {
   long n = (long) args;
   
   /* handle our base case */
@@ -52,6 +52,41 @@ void fib(void *args) {
   /* wait for threads to finish */
   long n1; hpx_thread_join(t1, (void**) &n1);
   long n2; hpx_thread_join(t2, (void**) &n2);
+
+  /* update the number of threads */
+  __atomic_fetch_add(&nthreads, 2, __ATOMIC_SEQ_CST);
+  
+  /* return the sum directly */
+  hpx_thread_exit((void *) (n1 + n2));
+}
+
+/**
+ * This fib action decomposes the problem of computing fib(n) into computing
+ * fib(n - 1) + fib(n - 2). It uses the action void* argument to directly pass
+ * n (and n -1, n -2, etc), rather than using it to pass an address of n, and
+ * retrieved the computed results using futures.
+ *
+ * @param args The current number to compute, cast as void*.
+ * @return The copmuted fib(n) directly, NOT an address.
+ */
+static void fib_futures(void *args) {
+  long n = (long) args;
+  
+  /* handle our base case */
+  if (n < 2)
+    hpx_thread_exit(args);
+
+  /* create child threads */
+  hpx_future_t *f1 = hpx_thread_create(ctx, 0, fib_futures, (void*) (n - 1), NULL);
+  hpx_future_t *f2 = hpx_thread_create(ctx, 0, fib_futures, (void*) (n - 2), NULL);
+
+  /* wait for threads to finish */
+  hpx_thread_wait(f1);
+  hpx_thread_wait(f2);
+
+  /* get the values */
+  long n1 = (long) hpx_lco_future_get_value(f1);
+  long n2 = (long) hpx_lco_future_get_value(f2);
 
   /* update the number of threads */
   __atomic_fetch_add(&nthreads, 2, __ATOMIC_SEQ_CST);
@@ -101,7 +136,8 @@ int main(int argc, char *argv[]) {
   nthreads = 1;
   
   /* create a fibonacci thread */
-  hpx_thread_t *t; hpx_thread_create(ctx, 0, fib, (void*) n, &t);
+  hpx_func_t f = (argc > 5) ? fib : fib_futures;
+  hpx_thread_t *t; hpx_thread_create(ctx, 0, f, (void*) n, &t);
 
   /* wait for the thread to finish */
   long fib_n; hpx_thread_join(t, (void**) &fib_n);
