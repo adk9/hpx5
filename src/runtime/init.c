@@ -102,6 +102,9 @@ hpx_error_t hpx_init(void) {
     return HPX_ERROR;
   }
 
+  /* initialize timer subsystem */
+  hpx_timer_init();
+
   /* initialize network */
   success = __hpx_network_ops->init();
   if (success != HPX_SUCCESS) {
@@ -117,9 +120,6 @@ hpx_error_t hpx_init(void) {
   __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
 #endif
 
-  /* initialize timer subsystem */
-  hpx_timer_init();
-
   return HPX_SUCCESS;
 }
 
@@ -133,9 +133,8 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
-#if HAVE_NETWORK
-  hpx_parcelhandler_destroy(__hpx_parcelhandler);
-#endif
+  if (__hpx_parcelhandler)
+    hpx_parcelhandler_destroy(__hpx_parcelhandler);
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
