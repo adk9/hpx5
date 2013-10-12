@@ -12,7 +12,7 @@ AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
 SUBDIRS = src examples
 
-if WITH_DOCS
+if ENABLE_DOCS
 SUBDIRS += docs
 endif
 
