@@ -63,7 +63,7 @@ libhpx_la_CFLAGS        += -std=c99
 
 libhpx_la_LIBADD         = @MPI_LIBS@ @PHOTON_LIBS@ @LIBCRYPTO_LIBS@
 libhpx_la_LIBADD        += @HWLOC_LIBS@ @PAPI_LIBS@ @TCMALLOC_LIBS@
-libhpx_la_LIBADD        += @PLATFORM_LIBS@ 
+libhpx_la_LIBADD        += @PLATFORM_LIBS@
 
 PKGCONFIG_REQUIRES       = @TCMALLOC_PKG@
 PKGCONFIG_REQUIRES_PRV   = @MPI_PKG@ @LIBCRYPTO_PKG@ @HWLOC_PKG@ @PAPI_PKG@

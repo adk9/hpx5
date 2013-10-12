@@ -93,7 +93,13 @@ AC_ARG_ENABLE([lto],
     [], [enable_lto=no])
 AS_IF([test "x$enable_lto" != xno], AC_SUBST([HPX_F_LTO], [-flto]))
 
-dnl Use md5 from libcrypto to hash action string keys
+dnl Allow users to build libhpx with link-time-optimization.
+AC_ARG_ENABLE([testsuite],
+    [AS_HELP_STRING([--enable-testsuite],
+        [Enable test suite (requires check) @<:@default=yes@:>@])],
+    [], [enable_testsuite=yes])
+    
+Dnl Use from libcrypto to hash action string keys
 AC_ARG_WITH([libcrypto],
     [AS_HELP_STRING([--with-libcrypto],
          [Build with openssl's libcrypto for string hashing @<:@default=yes@:>@])],
@@ -144,7 +150,7 @@ AS_IF([test "x$with_tcmalloc" != xno],
 
 # Check for MPI
 AC_ARG_WITH([mpi],
-    [AS_HELP_STRING([--with-mpi[[=PKGS]]],
+    [AS_HELP_STRING([--with-mpi[[=PKG]]],
         [Build with MPI support @<:@default=yes@:>@])],
     [], [with_mpi=yes])
 AS_IF([test "x$with_mpi" != xno],
@@ -167,17 +173,35 @@ AS_IF([test "x$with_photon" != xno],
      AC_SUBST([PHOTON_LIBS], [-lphoton -libverbs -lrdmacm])])
 
 # Check for check (and disable test-suite if not found).
-PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ],
-    [AC_DEFINE([WITH_TESTSUITE], [], [Enable test suite])
-     AM_CONDITIONAL([WITH_TESTSUITE], true)
-     AC_SUBST(CHECK, [check])
-     AC_SUBST(CHECK_PKG, [check])
-     AC_SUBST(CHECK_CFLAGS)
-     AC_SUBST(CHECK_LIBS)],
-     [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-      AM_CONDITIONAL([WITH_TESTSUITE], false)])
-AM_COND_IF([WITH_TESTSUITE], [AC_CONFIG_FILES([tests/Makefile])])
-
+# Check for MPI
+AC_ARG_WITH([check],
+    [AS_HELP_STRING([--with-check[[=PKG]]],
+        [Build with check unit testing @<:@default=yes@:>@])],
+    [], [with_check=yes])
+AS_IF([test "x$enable_testsuite" != xno],
+    [AS_IF([test "x$with_check" != xno],
+        [AS_IF([test "x$with_check" != xyes],
+            [PKG_CHECK_MODULES([CHECK], [$with_check],
+                [AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
+                 AM_CONDITIONAL([ENABLE_TESTSUITE], true)
+                 AC_SUBST(CHECK_PKG, [$with_check])
+                 AC_SUBST(CHECK_CFLAGS)
+                 AC_SUBST(CHECK_LIBS)],
+                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
+                 AM_CONDITIONAL([ENABLE_TESTSUITE], false)])],
+            [PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ],
+                [AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
+                 AM_CONDITIONAL([ENABLE_TESTSUITE], true)
+                 AC_SUBST(CHECK_PKG, [check])
+                 AC_SUBST(CHECK_CFLAGS)
+                 AC_SUBST(CHECK_LIBS)],
+                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
+                 AM_CONDITIONAL([ENABLE_TESTSUITE], false)])])])])
+AM_COND_IF([ENABLE_TESTSUITE],
+    [AC_CONFIG_FILES([tests/Makefile])
+     [test_string="yes"]],
+     [test_string="no"])
+                 
 # Check for doxygen (to build the documentation).
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
 if test -z "$DOXYGEN";
@@ -214,9 +238,6 @@ AC_OUTPUT
 AS_IF([test -n "$DOXYGEN"],
       [doc_string="yes"],
       [doc_string="no"])
-AS_IF([test -n "$CHECK"],
-      [test_string="yes"],
-      [test_string="no"])
 AS_IF([test "x$with_papi" != xno],
       [papi_string="yes"],
       [papi_string="no"])
