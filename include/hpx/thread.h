@@ -242,6 +242,10 @@ void hpx_thread_yield_skip(uint8);
  * xpi_thread_wait(f); // may yield
  * @endcode
  *
+ * @todo Is it safe to use this from main, which is *not* a thread but rather a
+ *       pthread? If it is, then we need to be more clear about where and why
+ *       this interface can be used.
+ *
  * @param[in] future; the future to wait for (NOT_NULL)
  */
 void hpx_thread_wait(hpx_future_t *future);
