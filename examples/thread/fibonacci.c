@@ -121,7 +121,8 @@ int main(int argc, char *argv[]) {
   /* set up our configuration */
   hpx_config_t cfg;
   hpx_config_init(&cfg);
-  hpx_config_set_thread_suspend_policy(&cfg, HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL);
+  hpx_config_set_thread_suspend_policy(&cfg,
+                                       HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL); 
 
   if (cores > 0)
     hpx_config_set_cores(&cfg, cores);
@@ -130,7 +131,8 @@ int main(int argc, char *argv[]) {
   ctx = hpx_ctx_create(&cfg);
 
   /* get start time */
-  hpx_timer_t timer; hpx_get_time(&timer);
+  hpx_timer_t timer;
+  hpx_get_time(&timer);
 
   /* initialize thread count */
   nthreads = 1;
@@ -141,9 +143,12 @@ int main(int argc, char *argv[]) {
 
   /* wait for the thread to finish */
   long fib_n; hpx_thread_join(t, (void**) &fib_n);
+
+  /* get the time */
+  float ms = hpx_elapsed_us(timer) / 1e3;
   
   printf("fib(%ld)=%ld\n", n, fib_n);
-  printf("seconds: %.7f\n", hpx_elapsed_us(timer) / 1e3);
+  printf("seconds: %.7f\n", ms);
   printf("cores:   %d\n", hpx_config_get_cores(&cfg));
   printf("threads: %d\n", nthreads);
 

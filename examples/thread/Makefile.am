@@ -1,9 +1,11 @@
 examplesdir			= $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS	= fibonacci
+examples_PROGRAMS	= fibonacci fibsmarter
 fibonacci_SOURCES	= fibonacci.c
-fibonacci_LDFLAGS   = -static
 fibonacci_LDADD		= $(top_builddir)/src/libhpx.la
+
+fibsmarter_SOURCES  = fibsmarter.c
+fibsmarter_LDADD    = $(top_builddir)/src/libhpx.la
 
 if HAVE_NETWORK
     NETWORK_DEFS	= -DHAVE_NETWORK=1
@@ -25,3 +27,5 @@ AM_CFLAGS		   += $(HPX_F_LTO)
 AM_CFLAGS		   += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @LIBCRYPTO_CFLAGS@
 AM_CFLAGS		   += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 AM_CFLAGS		   += -std=c99
+
+AM_LDFLAGS          = -static
