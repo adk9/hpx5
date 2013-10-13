@@ -119,6 +119,10 @@ struct hpx_thread {
 /**
  * Creates a user-level thread in the local virtual environment.
  *
+ * @todo Was the returned future malloced? Does it need to be freed? What if
+ *       the caller doesn't care? Should it be a parameter that we can test for
+ *       NULL inside the create call to suppress creation where we don't care?
+ *
  * @param[in] ctx
  * @param[in] opts (@see enum xpi_thread_options)
  * @param[in] entry Thread entry function
