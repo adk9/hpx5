@@ -83,7 +83,7 @@ void* parcelqueue_trypop(struct parcelqueue* q) {
   return val;
 }
 
-int hpx_parcelqueue_push(struct parcelqueue* q, void* val) {
+int parcelqueue_push(struct parcelqueue* q, void* val) {
   /* precondition, q != NULL */
   if (q == NULL)
     return (__hpx_errno = HPX_ERROR);           /*TODO: more specific error */
