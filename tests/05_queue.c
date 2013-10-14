@@ -20,8 +20,8 @@
  ====================================================================
 */
 
-#include <check.h>
 #include "hpx.h"
+#include "tests.h"
 
 
 /*
@@ -182,3 +182,17 @@ START_TEST (test_libhpx_queue_pop)
   hpx_queue_destroy(&q);
 }
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_05_queue(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_queue_size);
+  tcase_add_test(tc, test_libhpx_queue_insert);
+  tcase_add_test(tc, test_libhpx_queue_peek);
+  tcase_add_test(tc, test_libhpx_queue_pop);
+}

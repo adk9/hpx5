@@ -31,6 +31,10 @@
 #include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
 
 hpx_mconfig_t __mcfg;
+hpx_config_t *__hpx_global_cfg = NULL;
+network_ops_t *__hpx_network_ops = NULL;
+hpx_parcelhandler_t *__hpx_parcelhandler = NULL;
+bootstrap_ops_t *bootmgr = NULL;
 
 /**
  * Initializes data structures used by libhpx.  This function must
@@ -42,7 +46,6 @@ hpx_mconfig_t __mcfg;
 hpx_error_t hpx_init(void) {
   hpx_error_t success;
   __hpx_global_cfg = NULL;
-  __hpx_global_ctx = NULL;
 
   /* init hpx_errno */
   __hpx_errno = HPX_SUCCESS;
@@ -99,6 +102,9 @@ hpx_error_t hpx_init(void) {
     return HPX_ERROR;
   }
 
+  /* initialize timer subsystem */
+  hpx_timer_init();
+
   /* initialize network */
   success = __hpx_network_ops->init();
   if (success != HPX_SUCCESS) {
@@ -114,9 +120,6 @@ hpx_error_t hpx_init(void) {
   __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
 #endif
 
-  /* initialize timer subsystem */
-  hpx_timer_init();
-
   return HPX_SUCCESS;
 }
 
@@ -130,9 +133,8 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
-#if HAVE_NETWORK
-  hpx_parcelhandler_destroy(__hpx_parcelhandler);
-#endif
+  if (__hpx_parcelhandler)
+    hpx_parcelhandler_destroy(__hpx_parcelhandler);
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);

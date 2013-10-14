@@ -22,7 +22,7 @@
 
 
 #include "hpx.h"
-
+#include "tests.h"
 
 /*
  --------------------------------------------------------------------
@@ -42,3 +42,13 @@ START_TEST (test_libhpx_alloc)
 } 
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_02_mem(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_alloc);
+}

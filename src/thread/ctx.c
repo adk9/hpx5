@@ -21,6 +21,7 @@
 
 #include <string.h>
 
+#include "hpx/init.h"
 #include "hpx/mem.h"
 #include "hpx/error.h"
 #include "hpx/kthread.h"
@@ -33,6 +34,8 @@
 
 /* the global next context ID */
 static hpx_context_id_t ctx_next_id;
+
+hpx_context_t *__hpx_global_ctx = NULL;
 
 void libhpx_ctx_init() {
     hpx_sync_store(&ctx_next_id, 1, HPX_SYNC_SEQ_CST);
