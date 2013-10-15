@@ -23,6 +23,7 @@
 
 #include "hpx/action.h"
 #include "hpx/bootstrap.h"
+#include "hpx/init.h"
 #include "hpx/network.h"
 #include "hpx/parcel.h"
 
@@ -39,9 +40,10 @@ network_ops_t photon_ops = {
   .probe    = probe_photon,
   .send     = put_photon,
   .recv     = get_photon,
-  .test     = test_photon,
+  .sendrecv_test     = test_photon,
   .put      = put_photon,
   .get      = get_photon,
+  .putget_test     = test_photon,
   .pin      = pin_photon,
   .unpin    = unpin_photon,
   .phys_addr= phys_addr_photon,
@@ -60,7 +62,7 @@ static char* BACKEND_UGNI = "ugni";
 int init_photon(void) {
   int retval;
   int temp;
-  int thread_support_provided;
+  //  int thread_support_provided;
 
   /* runtime configuration options */
   char* eth_dev;
@@ -249,7 +251,7 @@ int probe_photon(int src, int *flag, network_status_t* status) {
 	int retval;
 	int temp;
 	int phot_src;
-	struct photon_status_t stat;
+	// struct photon_status_t stat;
 	
 	retval = HPX_ERROR;
 
