@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include "hpx.h"
+#include "tests.h"
 
 
 /*
@@ -132,3 +133,16 @@ START_TEST (test_libhpx_config_thread_stack_size)
 }
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_09_config(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_config_cores);
+  tcase_add_test(tc, test_libhpx_config_switch_fpu);
+  tcase_add_test(tc, test_libhpx_config_switch_sigmask);
+  tcase_add_test(tc, test_libhpx_config_thread_stack_size);
+}

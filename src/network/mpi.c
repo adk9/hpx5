@@ -47,9 +47,12 @@ network_ops_t mpi_ops = {
     .probe    = probe_mpi,
     .send     = send_mpi,
     .recv     = recv_mpi,
-    .test     = test_mpi,
+    .sendrecv_test     = test_mpi,
     .put      = put_mpi,
     .get      = get_mpi,
+    .putget_test = test_mpi,
+    .pin      = NULL,
+    .unpin    = NULL,
     .phys_addr= phys_addr_mpi,
 };
 
@@ -184,7 +187,6 @@ int init_mpi(void) {
   _rank_mpi = bootmgr->get_rank();
   _size_mpi = bootmgr->size();
 
- error:
   return retval;
 }
 
@@ -196,18 +198,19 @@ int send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
      else:
        send parcel using _send_mpi
   */
+  return HPX_ERROR;
 }
 
 /* status may NOT be NULL */
 int probe_mpi(int source, int* flag, network_status_t* status) {
   int retval;
   int temp;
-  int mpi_src;
-  int mpi_len;
+  /* int mpi_src; LD:unused */
+  /* int mpi_len; LD:unused */
 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE)
-    mpi_src = MPI_ANY_SOURCE;
+    /* mpi_src = MPI_ANY_SOURCE LD:unused */;
 
   temp = MPI_Iprobe(source, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
 
@@ -320,9 +323,11 @@ int test_mpi(network_request_t *request, int *flag, network_status_t *status) {
 }
 
 int put_mpi(int dest, void *buffer, size_t len, network_request_t *request) {
+  return HPX_ERROR;
 }
 
 int get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
+  return HPX_ERROR;
 }
 
 /* Return the physical network ID of the current process */

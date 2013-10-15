@@ -22,6 +22,7 @@
 
 
 #include "hpx.h"
+#include "tests.h"
 
 
 int some_data;
@@ -73,3 +74,14 @@ START_TEST (test_libhpx_kthread_create)
 } 
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_06_kthread(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_kthread_get_cores);
+  tcase_add_test(tc, test_libhpx_kthread_create);
+}
