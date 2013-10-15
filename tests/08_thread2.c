@@ -20,9 +20,9 @@
  ====================================================================
 */
 
-
 #include <string.h>
 #include "hpx.h"
+#include "tests.h"
 
 
 /*
@@ -31,16 +31,21 @@
  --------------------------------------------------------------------
 */
 
-char thread_msg1[] = "The open steppe, fleet horse, falcons at your wrist, and the wind in your hair.";
-char thread_msg2[] = "To crush your enemies, see them driven before you, and to hear the lamentation of their women.";
-char * test_buf;
+static char* messages[] = {
+  "The open steppe, fleet horse, falcons at your wrist, and the wind in your "
+  "hair.",
+  "To crush your enemies, see them driven before you, and to hear the "
+  "lamentation of their women."
+};
 
-char * thread_msgbuf;
-hpx_thread_t * th_self;
-void * thread_arg;
-int thread_counter;
+static char *test_buf;
 
-unsigned char * thread_buf;
+static char *thread_msgbuf;
+static hpx_thread_t *th_self;
+static void *thread_arg;
+static int thread_counter;
+
+static unsigned char *thread_buf;
 
 
 /*
@@ -49,7 +54,7 @@ unsigned char * thread_buf;
  --------------------------------------------------------------------
 */
 
-void thread_counter_arg1_worker(void * a) {
+static void thread_counter_arg1_worker(void * a) {
   int * a_ptr;
 
   thread_arg = a;
@@ -64,7 +69,7 @@ void thread_counter_arg1_worker(void * a) {
  --------------------------------------------------------------------
 */
 
-void thread_self_ptr_worker(void) {
+static void thread_self_ptr_worker(void *args) {
   th_self = hpx_thread_self();
 }
 
@@ -75,8 +80,8 @@ void thread_self_ptr_worker(void) {
  --------------------------------------------------------------------
 */
 
-void thread_strcpy_worker(void) {
-  strcpy(thread_msgbuf, thread_msg1);
+static void thread_strcpy_worker(void *args) {
+  strcpy(thread_msgbuf, messages[0]);
 }
 
 
@@ -86,7 +91,7 @@ void thread_strcpy_worker(void) {
  --------------------------------------------------------------------
 */
 
-void multi_thread_set_worker(void * ptr) {
+static void multi_thread_set_worker(void * ptr) {
   char * my_idx = (char *) ptr;
   uint32_t buf_idx;
   int idx;
@@ -104,7 +109,7 @@ void multi_thread_set_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
+static void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   hpx_context_t * ctx;
   hpx_future_t ** fts;
   hpx_config_t cfg;
@@ -125,7 +130,7 @@ void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
-  thread_buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
+  thread_buf = hpx_alloc(sizeof(thread_buf[0]) * th_cnt * 256);
   ck_assert_msg(thread_buf != NULL, "Could not allocate memory for test data.");
 
   memset(thread_buf, 0, sizeof(char) * th_cnt * 256);
@@ -164,7 +169,7 @@ void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
  --------------------------------------------------------------------
 */
 
-void multi_thread_set_yield_worker(void * ptr) {
+static void multi_thread_set_yield_worker(void * ptr) {
   char * my_idx = (char *) ptr;
   uint32_t buf_idx;
   int idx;
@@ -183,7 +188,7 @@ void multi_thread_set_yield_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
+static void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_cnt) {
   hpx_context_t * ctx;
   hpx_future_t ** ths;
   hpx_config_t cfg;
@@ -204,10 +209,10 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create & init our test data */
-  thread_buf = (char *) hpx_alloc(sizeof(char) * th_cnt * 256);
+  thread_buf = hpx_alloc(sizeof(thread_buf[0]) * th_cnt * 256);
   ck_assert_msg(thread_buf != NULL, "Could not allocate memory for test data.");
 
-  memset(thread_buf, 0, sizeof(char) * th_cnt * 256);
+  memset(thread_buf, 0, sizeof(thread_buf[0]) * th_cnt * 256);
 
   /* create HPX theads */
   ths = (hpx_future_t **) hpx_alloc(sizeof(hpx_future_t *) * th_cnt);
@@ -244,7 +249,7 @@ void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint32_t th_
  --------------------------------------------------------------------
 */
 
-void run_thread_args(uint64_t mflags) {
+static void run_thread_args(uint64_t mflags) {
   hpx_context_t * ctx;
   hpx_future_t * th1;
   hpx_config_t cfg;
@@ -282,7 +287,7 @@ void run_thread_args(uint64_t mflags) {
  --------------------------------------------------------------------
 */
 
-void stack_size_worker(void * ptr) {
+static void stack_size_worker(void * ptr) {
   volatile float num = 73 / 4;
 }
 
@@ -293,7 +298,7 @@ void stack_size_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char * orig_msg, size_t msg_len) {
+static void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char * orig_msg, size_t msg_len) {
   hpx_context_t * ctx;
   hpx_future_t * ths[th_cnt];
   hpx_config_t cfg;
@@ -339,7 +344,7 @@ void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cnt, char
  --------------------------------------------------------------------
 */
 
-void run_thread_self_get_ptr(uint64_t mflags) {
+static void run_thread_self_get_ptr(uint64_t mflags) {
   hpx_context_t * ctx;
   hpx_future_t * th;
   hpx_thread_id_t id1;
@@ -386,7 +391,7 @@ void run_thread_self_get_ptr(uint64_t mflags) {
  --------------------------------------------------------------------
 */
 
-void main_hierarchy_worker2(void * ptr) {
+static void main_hierarchy_worker2(void * ptr) {
   hpx_list_node_t * child = NULL;
   hpx_thread_t * parent = (hpx_thread_t *) ptr;
   hpx_thread_t * th = hpx_thread_self();
@@ -396,7 +401,12 @@ void main_hierarchy_worker2(void * ptr) {
   ck_assert_msg(th != NULL, "Thread data is NULL.");
   ck_assert_msg(th->parent != NULL, "Thread has no parent at hierarchy level 2.");
 
-  sprintf(msg, "Thread %ld has an incorrect parent at hierarchy level 2 (expected %ld, got %ld)", hpx_thread_get_id(th), hpx_thread_get_id(parent), hpx_thread_get_id(th->parent));
+  sprintf(msg, "Thread %" PRIu64
+          " has an incorrect parent at hierarchy level 2 (expected %" PRIu64
+          ", got %" PRIu64 ")",
+          hpx_thread_get_id(th),
+          hpx_thread_get_id(parent),
+          hpx_thread_get_id(th->parent));
   ck_assert_msg(th->parent == parent, msg);
 }
 
@@ -407,7 +417,7 @@ void main_hierarchy_worker2(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void main_hierarchy_worker1(void * ptr) {
+static void main_hierarchy_worker1(void * ptr) {
   hpx_list_node_t * child = NULL;
   hpx_thread_t * th = hpx_thread_self();
   hpx_thread_t * parent = (hpx_thread_t *) ptr;
@@ -419,12 +429,12 @@ void main_hierarchy_worker1(void * ptr) {
   ck_assert_msg(th != NULL, "Thread data is NULL.");
   ck_assert_msg(th->parent != NULL, "Thread has no parent at hierarchy level 1.");
 
-  sprintf(msg, "Thread %ld has an incorrect parent at hierarchy level 1 (expected %ld, got %ld)", hpx_thread_get_id(th), hpx_thread_get_id(parent), hpx_thread_get_id(th->parent));
+  sprintf(msg, "Thread %" PRIu64 " has an incorrect parent at hierarchy level 1 (expected %" PRIu64 ", got %" PRIu64 ")", hpx_thread_get_id(th), hpx_thread_get_id(parent), hpx_thread_get_id(th->parent));
   ck_assert_msg(th->parent == parent, msg);
 
   hpx_thread_yield();
 
-  sprintf(msg, "Parent for thread %ld is NULL when spawned from hierarchy level 1.", hpx_thread_get_id(th));
+  sprintf(msg, "Parent for thread %" PRIu64 " is NULL when spawned from hierarchy level 1.", hpx_thread_get_id(th));
   ck_assert_msg(th->parent != NULL, msg);
 
   /* create some child threads */
@@ -445,7 +455,7 @@ void main_hierarchy_worker1(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void main_hierarchy_worker0(void * ptr) {
+static void main_hierarchy_worker0(void * ptr) {
   hpx_thread_t * th = hpx_thread_self();
   uint32_t * th_cnt = (uint32_t *) ptr;
   hpx_future_t * clds[*th_cnt];
@@ -454,7 +464,7 @@ void main_hierarchy_worker0(void * ptr) {
 
   hpx_thread_yield();
 
-  sprintf(msg, "Parent for thread %ld is not NULL when spawned from main thread.", hpx_thread_get_id(th));
+  sprintf(msg, "Parent for thread %" PRIu64 " is not NULL when spawned from main thread.", hpx_thread_get_id(th));
   ck_assert_msg(th->parent == NULL, msg);
 
   /* create some child threads */
@@ -475,7 +485,7 @@ void main_hierarchy_worker0(void * ptr) {
  --------------------------------------------------------------------
 */
 
-run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
+static void run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
   hpx_context_t * ctx = NULL;
   hpx_config_t cfg;
   hpx_future_t * ths[th_cnt];
@@ -510,7 +520,7 @@ run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
  --------------------------------------------------------------------
 */
 
-void return_value_worker(void * ptr) {
+static void return_value_worker(void * ptr) {
   int * x = (int *) hpx_alloc(sizeof(int));
   ck_assert_msg(x != NULL, "Could not allocate a return value.");
 
@@ -525,7 +535,7 @@ void return_value_worker(void * ptr) {
  --------------------------------------------------------------------
 */
 
-void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt) {
+static void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt) {
   hpx_context_t * ctx;
   hpx_future_t * ths[th_cnt];
   hpx_config_t cfg;
@@ -575,7 +585,7 @@ void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt) {
 START_TEST (test_libhpx_thread_strcpy_th1_core1)
 {
   printf("RUNNING TEST test_libhpx_thread_strcpy_th1_core1\n  single thread string copy on a singal logical CPU with no switching flags.\n");
-  run_thread_strcpy(0, 1, 1, thread_msg1, strlen(thread_msg1));
+  run_thread_strcpy(0, 1, 1, messages[0], strlen(messages[0]));
   printf("DONE\n\n");
 }
 END_TEST
@@ -591,7 +601,7 @@ END_TEST
 START_TEST (test_libhpx_thread_strcpy_th1_core1_ext)
 {
   printf("RUNNING TEST test_libhpx_thread_strcpy_th1_core1_ext\n  single thread string copy on a single logical CPU, saving extended (FPU) state.\n");
-  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED, 1, 1, thread_msg1, strlen(thread_msg1));
+  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED, 1, 1, messages[0], strlen(messages[0]));
   printf("DONE\n\n");
 }
 END_TEST
@@ -606,7 +616,7 @@ END_TEST
 START_TEST (test_libhpx_thread_strcpy_th1_core1_sig)
 {
   printf("RUNNING TEST test_libhpx_thread_strcpy_th1_core1_sig\n   single thread string copy on a single logical CPU, saving the thread signal mask.\n");
-  run_thread_strcpy(HPX_MCTX_SWITCH_SIGNALS, 1, 1, thread_msg1, strlen(thread_msg1));
+  run_thread_strcpy(HPX_MCTX_SWITCH_SIGNALS, 1, 1, messages[0], strlen(messages[0]));
   printf("DONE\n\n");
 }
 END_TEST
@@ -621,7 +631,7 @@ END_TEST
 START_TEST (test_libhpx_thread_strcpy_th1_core1_ext_sig)
 {
   printf("RUNNING TEST test_libhpx_thread_strcpy_th1_core1_ext_sig\n  single thread string copy on a single logical CPU, saving extended (FPU) state and the signal mask.\n");
-  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1, 1, thread_msg1, strlen(thread_msg1));
+  run_thread_strcpy(HPX_MCTX_SWITCH_EXTENDED | HPX_MCTX_SWITCH_SIGNALS, 1, 1, messages[0], strlen(messages[0]));
   printf("DONE\n\n");
 }
 END_TEST
@@ -873,21 +883,21 @@ START_TEST (test_libhpx_lco_futures)
 
   /* initialize Future 1 */
   hpx_lco_future_init(&fut1);
-  sprintf(msg, "Future 1 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut1));
+  sprintf(msg, "Future 1 was not initialized in an UNSET state (expected 0, got %" PRIu64 ").", hpx_lco_future_get_state(&fut1));
   ck_assert_msg(!(hpx_lco_future_get_state(&fut1) & HPX_LCO_FUTURE_SETMASK), msg);
 
   /* set Future 1 to NULL */
   //  fut1.value = NULL;
   hpx_lco_future_set_state(&fut1);
-  sprintf(msg, "Future 1 was not set (expected %ld, got %ld).", HPX_LCO_FUTURE_SETMASK, hpx_lco_future_get_state(&fut1));
+  sprintf(msg, "Future 1 was not set (expected %ld, got %" PRIu64 ").", HPX_LCO_FUTURE_SETMASK, hpx_lco_future_get_state(&fut1));
   ck_assert_msg((hpx_lco_future_get_state(&fut1) & HPX_LCO_FUTURE_SETMASK) == HPX_LCO_FUTURE_SETMASK, msg);
   
-  sprintf(msg, "Future 1 was set with an incorrect value (expected NULL, got %ld).", (uint64_t) hpx_lco_future_get_value(&fut1));
+  sprintf(msg, "Future 1 was set with an incorrect value (expected NULL, got %" PRIu64 ").", (uint64_t) hpx_lco_future_get_value(&fut1));
   ck_assert_msg(hpx_lco_future_get_value(&fut1) == NULL, msg);
 
   /* initialize Future 2 */
   hpx_lco_future_init(&fut2);
-  sprintf(msg, "Future 2 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut2));
+  sprintf(msg, "Future 2 was not initialized in an UNSET state (expected 0, got %" PRIu64 ").", hpx_lco_future_get_state(&fut2));
   ck_assert_msg(!(hpx_lco_future_get_state(&fut2) & HPX_LCO_FUTURE_SETMASK), msg);
 
   /* set Future 2 to a value */
@@ -900,7 +910,7 @@ START_TEST (test_libhpx_lco_futures)
   /* initialize future 3 */
   hpx_lco_future_init(&fut3);
   
-  sprintf(msg, "Future 3 was not initialized in an UNSET state (expected 0, got %ld).", hpx_lco_future_get_state(&fut3));
+  sprintf(msg, "Future 3 was not initialized in an UNSET state (expected 0, got %" PRIu64 ").", hpx_lco_future_get_state(&fut3));
   ck_assert_msg(!(hpx_lco_future_get_state(&fut3) & HPX_LCO_FUTURE_SETMASK), msg);
 
   sprintf(msg, "Future 3 was not initialized with a NULL value (got %ld).", (unsigned long) hpx_lco_future_get_value(&fut3));
@@ -918,7 +928,7 @@ START_TEST (test_libhpx_lco_futures)
 
   /* set all values on future 3 */
   hpx_lco_future_set(&fut3, 294, (void *) 73);
-  sprintf(msg, "Future 3 was not set (expected %ld, got %ld).", (HPX_LCO_FUTURE_SETMASK + 294), hpx_lco_future_get_state(&fut3));
+  sprintf(msg, "Future 3 was not set (expected %ld, got %" PRIu64 ").", (HPX_LCO_FUTURE_SETMASK + 294), hpx_lco_future_get_state(&fut3));
   ck_assert_msg((hpx_lco_future_get_state(&fut3) & HPX_LCO_FUTURE_SETMASK) == HPX_LCO_FUTURE_SETMASK, msg);
 
   /* clean up */
@@ -1228,3 +1238,60 @@ START_TEST (test_libhpx_thread_return_value1000)
   run_return_value(0, 0, 1000);
 }
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_08_thread2(TCase *tc, char *long_tests, char *hardcore_tests) {
+  /* must run the futures test first */
+  tcase_add_test(tc, test_libhpx_lco_futures);
+  
+  tcase_add_test(tc, test_libhpx_thread_stack_size_verify);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_sig);
+  tcase_add_test(tc, test_libhpx_thread_self_ptr_ext_sig);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_sig);
+  //  tcase_add_test(tc, test_libhpx_thread_main_hierarchy_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_sig);
+  tcase_add_test(tc, test_libhpx_thread_strcpy_th1_core1_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_args);
+  tcase_add_test(tc, test_libhpx_thread_args_ext);
+  tcase_add_test(tc, test_libhpx_thread_args_sig);
+  tcase_add_test(tc, test_libhpx_thread_args_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_return_value1000);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_sig);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x2_ext_sig);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield1);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield2);
+  tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x2);
+
+  if (long_tests || hardcore_tests) {
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_sig);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_x32_ext_sig);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_x32);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_2core_5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_1024core_5000);
+  }
+
+  if (hardcore_tests) {
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore1000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_hardcore5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore1000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore5000);
+    tcase_add_test(tc, test_libhpx_thread_multi_thread_set_yield_hardcore10000);
+  }
+}

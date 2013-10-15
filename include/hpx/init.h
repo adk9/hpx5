@@ -27,7 +27,6 @@
 #include "hpx/config.h"
 #include "hpx/error.h"
 #include "hpx/network.h"
-#include "hpx/parcelhandler.h"
 #include "hpx/thread.h"
 
 /*
@@ -36,12 +35,11 @@
  --------------------------------------------------------------------
 */
 
-hpx_config_t *__hpx_global_cfg;
-hpx_context_t *__hpx_global_ctx;
-hpx_parcelhandler_t *__hpx_parcelhandler;
-network_ops_t *__hpx_network_ops;
-bootstrap_ops_t *bootmgr;
-static hpx_mconfig_t __mcfg;
+extern hpx_config_t *__hpx_global_cfg;
+extern hpx_context_t *__hpx_global_ctx;
+extern network_ops_t *__hpx_network_ops;
+extern bootstrap_ops_t *bootmgr;
+extern hpx_mconfig_t __mcfg;
 
 /*
  --------------------------------------------------------------------

@@ -20,8 +20,8 @@
  ====================================================================
 */
 
-#include <check.h>
 #include "hpx/utils/list.h"
+#include "tests.h"
 
 
 /*
@@ -311,3 +311,19 @@ START_TEST (test_libhpx_list_delete)
   hpx_list_destroy(&ll);
 }
 END_TEST
+
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_10_list(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_list_size);
+  tcase_add_test(tc, test_libhpx_list_insert);
+  tcase_add_test(tc, test_libhpx_list_peek);
+  tcase_add_test(tc, test_libhpx_list_pop);
+  tcase_add_test(tc, test_libhpx_list_iter);
+  tcase_add_test(tc, test_libhpx_list_delete);
+}

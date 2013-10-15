@@ -22,9 +22,10 @@
 
 
 #include "hpx.h"
+#include "tests.h"
 
-void * __thread_test_func1(void) {
-  return NULL;
+
+static void thread_test_func1(void *args) {
 }
 
 
@@ -44,7 +45,7 @@ START_TEST (test_libhpx_thread_create)
   ctx = hpx_ctx_create(0);
   ck_assert_msg(ctx != NULL, "Could not create context");
 
-  th = hpx_thread_create(ctx, 0, __thread_test_func1, 0, NULL);
+  th = hpx_thread_create(ctx, 0, thread_test_func1, 0, NULL);
   ck_assert_msg(th != NULL, "Could not create thread");
 
   //  state = hpx_thread_get_state(th);
@@ -60,3 +61,13 @@ START_TEST (test_libhpx_thread_create)
 } 
 END_TEST
 
+
+/*
+  --------------------------------------------------------------------
+  register tests from this file
+  --------------------------------------------------------------------
+*/
+
+void add_04_thread1(TCase *tc) {
+  tcase_add_test(tc, test_libhpx_thread_create);
+}

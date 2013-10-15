@@ -21,23 +21,27 @@ int opt_iter_limit = 1000;
 int opt_text_ping = 0;
 int opt_screen_out = 0;
 
-void _done_action(void* _args) {
+static hpx_action_t ping_action;
+static hpx_action_t pong_action;
+static hpx_action_t done_action;
+
+static void done(void* args) {
   hpx_lco_future_set_state(&done_fut);
 }
 
-void _ping_action(void* _args) {
-  int success;
+static void ping(void* args) {
+  /* int success; LD:never checked */
   hpx_parcel_t* p;
-  struct pingpong_args* in_args = (struct pingpong_args*)_args;
+  struct pingpong_args* in_args = (struct pingpong_args*)args;
   int ping_id = in_args->pong_id + 1;
   struct pingpong_args* out_args;
 
   //  if (global_count >= opt_iter_limit) {
   if (ping_id >= opt_iter_limit) {
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_done_action", (void*)NULL, 0, p);
-    success = hpx_send_parcel(other_loc, p);
-    hpx_action_invoke(a_done, NULL, NULL);
+    /* success = LD: never checked */ hpx_new_parcel(done_action, (void*)NULL, 0, p);
+    /* success = LD: never checked */ hpx_send_parcel(other_loc, p);
+    hpx_action_invoke(done_action, NULL, NULL);
   }
   else {
     out_args = hpx_alloc(sizeof(struct pingpong_args));
@@ -53,21 +57,21 @@ void _ping_action(void* _args) {
       printf("Ping acting; global_count=%d, message=%s\n", global_count, out_args->msg);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_pong_action", (void*)out_args, sizeof(struct pingpong_args), p);
-    success = hpx_send_parcel(other_loc, p);
+    /* success = LD: never checked */ hpx_new_parcel(pong_action, (void*)out_args, sizeof(struct pingpong_args), p);
+    /* success = LD: never checked */ hpx_send_parcel(other_loc, p);
   }
   
   hpx_free(in_args);
   global_count++;
 }
 
-void _pong_action(void* _args) {
-  int success;
+void pong(void* args) {
+  /* int success; LD:never checked */
   int str_length;
   char copy_buffer[BUFFER_SIZE];
   hpx_parcel_t* p;
   struct pingpong_args* out_args;
-  struct pingpong_args* in_args = (struct pingpong_args*)_args;
+  struct pingpong_args* in_args = (struct pingpong_args*)args;
   int ping_id = in_args->ping_id;
   int pong_id = ping_id;
 
@@ -116,33 +120,22 @@ void _pong_action(void* _args) {
       printf("Pong acting; global_count=%d, message=%s\n", global_count, out_args->msg);
     
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel("_ping_action", (void*)out_args, sizeof(struct pingpong_args), p);
-    success = hpx_send_parcel(other_loc, p);
+    /* success = LD: never checked */ hpx_new_parcel(ping_action, (void*)out_args, sizeof(struct pingpong_args), p);
+    /* success = LD: never checked */ hpx_send_parcel(other_loc, p);
   }
 
   global_count++;
 }
 
 void pingpong(void* _args) {
-  unsigned int num_ranks;
+  /* unsigned int num_ranks; LD:never used */
   unsigned int my_rank;
-  hpx_parcel_t* p;
+  /* hpx_parcel_t* p; LD:never used */
   struct pingpong_args* args;
-  hpx_action_t* a_ping;
-  hpx_action_t* a_pong;
 
-  num_ranks = hpx_get_num_localities();
+  /* num_ranks = LD:never used */ hpx_get_num_localities();
   my_loc = hpx_get_my_locality();
   my_rank = my_loc->rank;
-
-  /* register action for parcel (must be done by all ranks) */
-  a_ping = hpx_alloc(sizeof(hpx_action_t));
-  hpx_action_register("_ping_action", (hpx_func_t)_ping_action, a_ping);
-  a_pong = hpx_alloc(sizeof(hpx_action_t));
-  hpx_action_register("_pong_action", (hpx_func_t)_pong_action, a_pong);
-  a_done = hpx_alloc(sizeof(hpx_action_t));
-  hpx_action_register("_done_action", (hpx_func_t)_done_action, a_done);
-  hpx_network_barrier();
 
   if (my_rank == 0)
     other_loc = hpx_find_locality(1);
@@ -159,7 +152,7 @@ void pingpong(void* _args) {
     //    p = hpx_alloc(sizeof(hpx_parcel_t));
     //    success = hpx_new_parcel("_ping_action", (void*)args, sizeof(struct pingpong_args), p);
     //    success = hpx_send_parcel(other_loc, p);
-    hpx_action_invoke(a_ping, args, NULL);
+    hpx_action_invoke(ping_action, args, NULL);
   }
   else if (my_rank ==1) {
   }
@@ -169,21 +162,12 @@ void pingpong(void* _args) {
   hpx_thread_wait(&done_fut);
 
   hpx_locality_destroy(other_loc);
-  free(a_ping);
-  free(a_pong);
-  free(a_done);
-
-  return;
 }
 
 int main(int argc, char** argv) {
   int success;
-  struct timespec begin_ts;
-  struct timespec end_ts;
-  unsigned long elapsed;
-  double avg_oneway_latency;
   hpx_thread_t* th;
-
+  
   if (argc > 1)
     opt_iter_limit = atoi(argv[1]);
   if (opt_iter_limit < 0) {
@@ -199,13 +183,19 @@ int main(int argc, char** argv) {
   success = hpx_init();
   if (success != 0)
     exit(-1);
+  
+  /* register action for parcel (must be done by all ranks) */
+  ping_action = hpx_action_register("_ping_action", ping);
+  pong_action = hpx_action_register("_pong_action", pong);
+  done_action = hpx_action_register("_done_action", done);
+  hpx_network_barrier();
 
-  clock_gettime(CLOCK_MONOTONIC, &begin_ts);
+  hpx_timer_t ts;
+  hpx_get_time(&ts);
   hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)pingpong, 0, &th);
   hpx_thread_join(th, NULL);
-  clock_gettime(CLOCK_MONOTONIC, &end_ts);
-  elapsed = ((end_ts.tv_sec * 1000000000) + end_ts.tv_nsec) - ((begin_ts.tv_sec * 1000000000) + begin_ts.tv_nsec);
-  avg_oneway_latency = elapsed/((double)(opt_iter_limit*2));
+  double elapsed = hpx_elapsed_us(ts);
+  double avg_oneway_latency = elapsed/((double)(opt_iter_limit*2));
   printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
   
   hpx_cleanup();

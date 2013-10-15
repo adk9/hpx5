@@ -29,7 +29,8 @@
 
 #include <mpi.h>
 
-#define EAGER_THRESHOLD_MPI_DEFAULT 10240; /* TODO: make reasonable once we have puts/gets working */
+#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+/* TODO: make reasonable once we have puts/gets working */
 
 int init_mpi(void);
 int finalize_mpi(void);
