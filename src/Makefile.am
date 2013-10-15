@@ -52,7 +52,7 @@ libhpx_ladir             = $(includedir)/hpx
 nodist_libhpx_la_HEADERS = $(top_builddir)/include/config.h
 libhpx_la_HEADERS        = $(top_srcdir)/include/hpx/*.h
 
-libhpx_la_CPPFLAGS       = '-I$(top_srcdir)/include -D_GNU_SOURCE'
+libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include -D_GNU_SOURCE
 libhpx_la_CPPFLAGS      += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
