@@ -23,7 +23,6 @@ static const int base = 16;
 static const int multiplier = 2;
 static const int limit = 65536;
 
-
 /* Modern compilers are smart. No need to macro this. */
 static int min(int x, int y) {
     return (x < y) ? x : y;
@@ -36,12 +35,12 @@ static  __attribute__((noinline))
 void backoff(int *prev) {
     *prev = min(*prev * multiplier, limit);
     for (int i = 0, e = *prev; i < e; ++i)
-        hpx_sync_nop();
+        sync_nop();
 }
 
-void hpx_sync_tatas_acquire_slow(tatas_t *l) {
+void tatas_acquire_slow(struct tatas_lock *l) {
     int i = base;
     do {
         backoff(&i);
-    } while (hpx_sync_swap(&l->lock, 1, HPX_SYNC_ACQUIRE));
+    } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
 }

@@ -19,7 +19,7 @@
 #include <stdio.h>                              /* sprintf */
 #include <inttypes.h>                           /* PRI... */
 #include <hpx.h>
-#include <sync/sync.h>                          /* @todo: fix this */
+#include <sync/sync.h>                          /* sync access */
 
 /**
  * This file defines a basic fibonacci example, that uses HPX threads to
@@ -55,7 +55,7 @@ static void fib(void *args) {
   long n2; hpx_thread_join(t2, (void**) &n2);
 
   /* update the number of threads */
-  hpx_sync_fadd(&nthreads, 2, HPX_SYNC_SEQ_CST);
+  sync_fadd(&nthreads, 2, SYNC_SEQ_CST);
   
   /* return the sum directly */
   hpx_thread_exit((void *) (n1 + n2));
@@ -90,7 +90,7 @@ static void fib_futures(void *args) {
   long n2 = (long) hpx_lco_future_get_value(f2);
 
   /* update the number of threads */
-  hpx_sync_fadd(&nthreads, 2, HPX_SYNC_SEQ_CST);
+  sync_fadd(&nthreads, 2, SYNC_SEQ_CST);
   
   /* return the sum directly */
   hpx_thread_exit((void *) (n1 + n2));
