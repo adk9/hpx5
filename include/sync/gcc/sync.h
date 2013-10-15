@@ -14,8 +14,8 @@
 */
 
 #pragma once
-#ifndef LIBHPX_SYNC_GCC_BUILTIN_SYNC_H_
-#define LIBHPX_SYNC_GCC_BUILTIN_SYNC_H_
+#ifndef HPX_SYNC_GCC_SYNC_H_
+#define HPX_SYNC_GCC_SYNC_H_
 
 /*
   ====================================================================
@@ -26,12 +26,12 @@
 */
 
 /* no memory model */
-#define HPX_SYNC_RELAXED
-#define HPX_SYNC_CONSUME
-#define HPX_SYNC_ACQ_REL
-#define HPX_SYNC_SEQ_CST
-#define HPX_SYNC_ACQUIRE
-#define HPX_SYNC_RELEASE
+#define SYNC_RELAXED 0
+#define SYNC_CONSUME 0
+#define SYNC_ACQ_REL 0
+#define SYNC_SEQ_CST 0
+#define SYNC_ACQUIRE 0
+#define SYNC_RELEASE 0
 
 /*
  * I don't have a great way to implement an atomic load using macros, given the
@@ -40,7 +40,7 @@
  *
  * Not currently used in source, so we'll deal with it when we need it.
  */
-/* #define hpx_sync_load(addr, mm) *addr */
+#define sync_load(addr, mm) *addr
 
 /*
  * Synchronizing a store requires that all previous operations complete before
@@ -49,28 +49,26 @@
  * that the compiler understands not to reorder the store with previous
  * operations.
  */
-#define hpx_sync_store(addr, val, mm) do {      \
+#define sync_store(addr, val, mm) do {          \
     __asm volatile ("":::"memory");             \
     *addr = val;                                \
   } while (0)
 
-#define hpx_sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
+#define sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
 
-#define hpx_sync_cas(addr, from, to, onsuccess, onfailure)  \
+#define sync_cas(addr, from, to, onsuccess, onfailure)  \
   __sync_bool_compare_and_swap(addr, from, to)
 
-#define hpx_sync_cas_val(addr, from, to, onsuccess, onfailure)  \
+#define sync_cas_val(addr, from, to, onsuccess, onfailure)  \
   __sync_val_compare_and_swap(addr, from, to)
 
-#define hpx_sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
+#define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
 
-#define hpx_sync_fence(mm) __sync_synchronize()
+#define sync_fence(mm) __sync_synchronize()
 
-/*
-  ====================================================================
-  buitin_common.h implements all of the strongly-typed versions in
-  terms of the above generic versions.
-  ====================================================================
-*/
+/* ../generic.h implements all of the strongly-typed versions in
+ * terms of the above generic versions.
+ */
+#include "../generic.h"
 
-#endif /* LIBHPX_SYNC_GCC_BUILTIN_SYNC_H_ */
+#endif /* HPX_SYNC_GCC_SYNC_H_ */

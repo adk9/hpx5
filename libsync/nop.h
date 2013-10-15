@@ -14,18 +14,11 @@
 */
 
 #pragma once
-#ifndef LIBHPX_SYNC_CRAYCC_BUILTIN_SYNC_H_
-#define LIBHPX_SYNC_CRAYCC_BUILTIN_SYNC_H_
+#ifndef HPX_LIBSYNC_NOP_H_
+#define HPX_LIBSYNC_NOP_H_
 
-/*
-  ====================================================================
-  Defines our synchronization interface in terms of the craycc
-  __sync builtins defined in "Cray C and C++ Reference Manual."
+/* This file defines an interface to nop. */
 
-  http://docs.cray.com/books/S-2179-81/S-2179-81.pdf
-  ====================================================================
-*/
+void sync_nop();
 
-#error No synchronization support yet for craycc builtins.
-
-#endif /* LIBHPX_SYNC_CRAYCC_BUILTIN_SYNC_H_ */
+#endif /* HPX_LIBSYNC_NOP_H_ */

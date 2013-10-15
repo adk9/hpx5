@@ -238,6 +238,7 @@ AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != x
 
 AC_CONFIG_FILES([
   Makefile
+  libsync/Makefile
   src/Makefile
   include/Makefile
   examples/Makefile

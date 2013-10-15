@@ -10,7 +10,7 @@ EXTRA_DIST = autogen.sh      \
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = src examples
+SUBDIRS = libsync src examples
 
 if ENABLE_DOCS
 SUBDIRS += docs

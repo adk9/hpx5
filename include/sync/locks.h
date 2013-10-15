@@ -14,25 +14,27 @@
 */
 
 #pragma once
-#ifndef LIBHPX_SYNC_LOCKS_H_
-#define LIBHPX_SYNC_LOCKS_H_
+#ifndef HPX_SYNC_LOCKS_H_
+#define HPX_SYNC_LOCKS_H_
 
 #include <stdint.h>
 #include "sync.h"
 
 
-typedef struct {
+struct tatas_lock {
     uintptr_t lock;
-} tatas_t;
+};
 
-void hpx_sync_tatas_init(tatas_t *l);
-void hpx_sync_tatas_acquire_slow(tatas_t*);
-void hpx_sync_tatas_acquire(tatas_t* l) {
-    if (hpx_sync_swap(&l->lock, 1, HPX_SYNC_ACQUIRE))
-        hpx_sync_tatas_acquire_slow(l);
+void tatas_init(struct tatas_lock *l);
+
+void tatas_acquire_slow(struct tatas_lock *l);
+
+void tatas_acquire(struct tatas_lock *l) {
+    if (sync_swap(&l->lock, 1, SYNC_ACQUIRE))
+        tatas_acquire_slow(l);
 }
-void hpx_sync_tatas_release(tatas_t* l) {
-    hpx_sync_store(&l->lock, 0, HPX_SYNC_RELEASE);
+void tatas_release(struct tatas_lock *l) {
+    sync_store(&l->lock, 0, SYNC_RELEASE);
 }
 
-#endif /* LIBHPX_SYNC_LOCKS_H_ */
+#endif /* HPX_SYNC_LOCKS_H_ */

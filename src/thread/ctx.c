@@ -38,7 +38,7 @@ static hpx_context_id_t ctx_next_id;
 hpx_context_t *__hpx_global_ctx = NULL;
 
 void libhpx_ctx_init() {
-    hpx_sync_store(&ctx_next_id, 1, HPX_SYNC_SEQ_CST);
+    sync_store(&ctx_next_id, 1, SYNC_SEQ_CST);
 }
 
 /*
@@ -60,7 +60,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
 
     /* context ID */
-    ctx->cid = hpx_sync_fadd(&ctx_next_id, 1, HPX_SYNC_SEQ_CST);
+    ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
 
     /* kernel threads */
     libhpx_kthread_init();

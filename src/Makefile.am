@@ -15,15 +15,13 @@ libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            runtime/init.c runtime/locality.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
                            utils/error.c utils/timer.c utils/config.c \
-                           utils/map.c \
-                           sync/locks.c
+                           utils/map.c
 
 if CPU_X86_64
 
     libhpx_la_SOURCES   += thread/arch/x86_64/mctx.S \
                            thread/arch/x86_64/mconfig.S \
-                           thread/arch/x86_64/mctx_mk.c \
-                           arch/x86_64/sync/nop.c
+                           thread/arch/x86_64/mctx_mk.c
 
     libhpx_la_arch_x86_64_HEADERS \
                          = $(top_srcdir)/include/hpx/thread/arch/x86_64/*.h
@@ -59,9 +57,10 @@ libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 libhpx_la_CFLAGS        += $(HPX_F_LTO)
 libhpx_la_CFLAGS        += @LIBCRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
 libhpx_la_CFLAGS        += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
-libhpx_la_CFLAGS        += -std=c99 
+libhpx_la_CFLAGS        += -std=c99
 
-libhpx_la_LIBADD         = @MPI_LIBS@ @PHOTON_LIBS@ @LIBCRYPTO_LIBS@
+libhpx_la_LIBADD         = $(top_builddir)/libsync/libsync.la
+libhpx_la_LIBADD        += @MPI_LIBS@ @PHOTON_LIBS@ @LIBCRYPTO_LIBS@
 libhpx_la_LIBADD        += @HWLOC_LIBS@ @PAPI_LIBS@ @TCMALLOC_LIBS@
 libhpx_la_LIBADD        += @PLATFORM_LIBS@
 

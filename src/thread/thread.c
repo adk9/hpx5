@@ -32,6 +32,7 @@
 /* include the libhpx thread implementation */
 #include "thread.h"
 #include "kthread.h"
+
 #include "sync/sync.h"
 
 /* the next thread ID */
@@ -40,7 +41,7 @@ static hpx_thread_id_t thread_next_id;
 /* called by hpx_init() to initialize this module---avoiding static
    constructors for now */
 void libhpx_thread_init() {
-    hpx_sync_store(&thread_next_id, 1, HPX_SYNC_SEQ_CST);
+    sync_store(&thread_next_id, 1, SYNC_SEQ_CST);
 }
 
 /*
@@ -75,7 +76,7 @@ hpx_future_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
   hpx_kthread_mutex_lock(&ctx->mtx);
 
   /* increment the next thread ID */
-  th_id = hpx_sync_fadd(&thread_next_id, 1, HPX_SYNC_SEQ_CST);
+  th_id = sync_fadd(&thread_next_id, 1, SYNC_SEQ_CST);
 
   /* see if we can get a reusable section from a terminated thread */
   th_ru = hpx_queue_pop(&ctx->term_stks);
