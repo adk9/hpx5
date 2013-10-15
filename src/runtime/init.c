@@ -62,23 +62,18 @@ hpx_error_t hpx_init(void) {
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
-  __hpx_global_cfg = hpx_alloc(sizeof(hpx_config_t));
+  __hpx_global_cfg = hpx_alloc(sizeof(*__hpx_global_cfg));
+  if (!__hpx_global_cfg)
+    return (__hpx_errno = HPX_ERROR_NOMEM);
+    
+  hpx_config_init(__hpx_global_cfg);
 
-  if (__hpx_global_cfg != NULL) {
-    hpx_config_init(__hpx_global_cfg);
-    __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
-    if (__hpx_global_ctx == NULL) {
-      __hpx_errno = HPX_ERROR;
-      return HPX_ERROR;
-    }
-  }
-  else {
-    __hpx_errno = HPX_ERROR_NOMEM;
-    return HPX_ERROR_NOMEM;
-  }
-
+  __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
+  if (!__hpx_global_ctx)
+    return (__hpx_errno = HPX_ERROR);
+  
   /* initialize network */
-  __hpx_network_ops = hpx_alloc(sizeof(network_ops_t));
+  __hpx_network_ops = hpx_alloc(sizeof(*__hpx_network_ops));
   *__hpx_network_ops = default_net_ops;
 #if HAVE_NETWORK
 #if HAVE_PHOTON
@@ -88,7 +83,7 @@ hpx_error_t hpx_init(void) {
   *__hpx_network_ops = mpi_ops;
 #endif
 
-  bootmgr = hpx_alloc(sizeof(bootstrap_ops_t));
+  bootmgr = hpx_alloc(sizeof(*bootmgr));
 #if HAVE_MPI
   *bootmgr = mpi_boot_ops;
 #else
@@ -97,20 +92,16 @@ hpx_error_t hpx_init(void) {
 
   /* bootstrap the runtime */
   success = bootmgr->init();
-  if (success != HPX_SUCCESS) {
-    __hpx_errno = HPX_ERROR;
-    return HPX_ERROR;
-  }
+  if (success != HPX_SUCCESS)
+    return (__hpx_errno = HPX_ERROR);
 
   /* initialize timer subsystem */
   hpx_timer_init();
 
   /* initialize network */
   success = __hpx_network_ops->init();
-  if (success != HPX_SUCCESS) {
-    __hpx_errno = HPX_ERROR;
-    return HPX_ERROR;
-  }
+  if (success != HPX_SUCCESS)
+    return (__hpx_errno = HPX_ERROR);
 #endif
 
   /* initialize the parcel subsystem */
@@ -148,5 +139,4 @@ void hpx_cleanup(void) {
   /* tear down the bootstrap */
   bootmgr->finalize();
   hpx_free(bootmgr);
-
 }
