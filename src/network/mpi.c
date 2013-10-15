@@ -47,9 +47,12 @@ network_ops_t mpi_ops = {
     .probe    = probe_mpi,
     .send     = send_mpi,
     .recv     = recv_mpi,
-    .test     = test_mpi,
+    .sendrecv_test     = test_mpi,
     .put      = put_mpi,
     .get      = get_mpi,
+    .putget_test = test_mpi,
+    .pin      = NULL,
+    .unpin    = NULL,
     .phys_addr= phys_addr_mpi,
 };
 
