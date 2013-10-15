@@ -64,23 +64,20 @@ AC_FUNC_REALLOC
 AC_FUNC_STRERROR_R
 AC_CHECK_FUNCS([clock_gettime memset pow])
 
-dnl Allow users to build libhpx with warnings treated as errors (disabled by
-dnl default). 
+dnl Allow users to build libhpx with pedantic warnings.
 AC_ARG_ENABLE([pedantic],
     [AS_HELP_STRING([--enable-pedantic],
         [Enable -pedantic @<:@default=yes@:>@])],
     [], [enable_pedantic=yes])
 AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
 
-dnl Allow users to build libhpx with warnings treated as errors (disabled by
-dnl default). 
+dnl Allow users to build libhpx with -Wall warnings.
 AC_ARG_ENABLE([wall],
     [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
     [], [enable_wall=yes])
 AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
 
-dnl Allow users to build libhpx with warnings treated as errors (disabled by
-dnl default). 
+dnl Allow users to build libhpx with warnings treated as errors. 
 AC_ARG_ENABLE([werror],
     [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
     [], [enable_werror=yes])
@@ -93,13 +90,13 @@ AC_ARG_ENABLE([lto],
     [], [enable_lto=no])
 AS_IF([test "x$enable_lto" != xno], AC_SUBST([HPX_F_LTO], [-flto]))
 
-dnl Allow users to build libhpx with link-time-optimization.
+dnl Allow users to disable the testsuite.
 AC_ARG_ENABLE([testsuite],
     [AS_HELP_STRING([--enable-testsuite],
         [Enable test suite (requires check) @<:@default=yes@:>@])],
     [], [enable_testsuite=yes])
     
-dnl Use from libcrypto to hash action string keys
+dnl Use from libcrypto to hash action string keys.
 AC_ARG_WITH([libcrypto],
     [AS_HELP_STRING([--with-libcrypto],
          [Build with openssl's libcrypto for string hashing @<:@default=yes@:>@])],
@@ -176,36 +173,31 @@ AC_ARG_WITH([check],
     [AS_HELP_STRING([--with-check[[=PKG]]],
         [Build with check unit testing @<:@default=yes@:>@])],
     [], [with_check=yes])
+    
 AS_IF([test "x$enable_testsuite" != xno],
     [AS_IF([test "x$with_check" != xno],
         [AS_IF([test "x$with_check" != xyes],
             [PKG_CHECK_MODULES([CHECK], [$with_check],
-                [AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
-                 AM_CONDITIONAL([ENABLE_TESTSUITE], true)
+                [enable_tests=yes
                  AC_SUBST(CHECK_PKG, [$with_check])
                  AC_SUBST(CHECK_CFLAGS)
                  AC_SUBST(CHECK_LIBS)],
-                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-                 AM_CONDITIONAL([ENABLE_TESTSUITE], false)])],
+                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])])],
             [PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ],
-                [AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
-                 AM_CONDITIONAL([ENABLE_TESTSUITE], true)
+                [enable_tests=yes
                  AC_SUBST(CHECK_PKG, [check])
                  AC_SUBST(CHECK_CFLAGS)
                  AC_SUBST(CHECK_LIBS)],
-                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-                 AM_CONDITIONAL([ENABLE_TESTSUITE], false)])])])])
-#dnl AM_CONF_IF macro is too recent for Cray
-#AM_COND_IF([ENABLE_TESTSUITE],
-#    [AC_CONFIG_FILES([tests/Makefile]) test_string="yes"],
-#    [test_string="no"])
-if test -n "$CHECK"; then
-   AC_CONFIG_FILES([tests/Makefile])
-   test_string="yes"
-else
-   test_string="no"
-fi
+                [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])])])])])
 
+AS_IF([test "x$enable_tests" = xyes],
+    [AM_CONDITIONAL([ENABLE_TESTSUITE], true)
+     test_string="yes"
+     AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
+     AC_CONFIG_FILES([tests/Makefile])],
+    [AM_CONDITIONAL([ENABLE_TESTSUITE], false)
+     test_string="no"])
+     
 # Check for doxygen (to build the documentation).
 AC_ARG_WITH([doxygen],
     [AS_HELP_STRING([--with-doxygen[[=PKG]]],
@@ -215,31 +207,22 @@ AC_ARG_WITH([doxygen],
 AS_IF([test "x$with_doxygen" != xno],
     [AS_IF([test "x$with_doxygen" != xyes],
         [PKG_CHECK_MODULES([DOXYGEN], [$with_doxygen],
-            [AM_CONDITIONAL([WITH_DOXYGEN], true)
-             AM_CONDITIONAL([ENABLE_DOCS], true)
-             AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])],
-            [AM_CONDITIONAL([ENABLE_DOCS], false)
-             AM_CONDITIONAL([WITH_DOXYGEN], false)
-             AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])],
+             [enable_docs=yes],
+             [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])],
         [AC_CHECK_PROGS([DOXYGEN], [doxygen])
-         AS_IF([test -z "$DOXYGEN"],
-             [AM_CONDITIONAL([ENABLE_DOCS], false)
-              AM_CONDITIONAL([WITH_DOXYGEN], false)
-              AC_MSG_WARN([Doxygen not found, disabling source documentation build.])],
-             [AM_CONDITIONAL([WITH_DOXYGEN], true)
-              AM_CONDITIONAL([ENABLE_DOCS], true)
-              AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])])])],
-    [AM_CONDITIONAL([ENABLE_DOCS], false)
-     AM_CONDITIONAL([WITH_DOXYGEN], false)])
-AM_CONDITIONAL([ENABLE_DOCS], [test -n "$DOXYGEN"])
+         AS_IF([test -n "$DOXYGEN"],
+             [enable_docs=yes],
+             [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])])])
 
-AC_SUBST(ENABLE_DOCS)
-if test -n "$DOXYGEN"; then
-   AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])
-   doc_string=yes
-else
-   doc_string=no
-fi
+AS_IF([test "x$enable_docs" = xyes],
+   [AM_CONDITIONAL([WITH_DOXYGEN], true)
+    AM_CONDITIONAL([ENABLE_DOCS], true)
+    doc_string="yes"
+    AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])
+    AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])],
+   [AM_CONDITIONAL([ENABLE_DOCS], false)
+    AM_CONDITIONAL([WITH_DOXYGEN], false)
+    doc_string="no"])
 
 dnl Defines the libs required by the platform, when it's linux
 AS_IF([test "x$host_os" = xlinux-gnu], [AC_SUBST([PLATFORM_LIBS], [-lrt])])
