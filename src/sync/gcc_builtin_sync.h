@@ -51,13 +51,13 @@
  */
 #define hpx_sync_store(addr, val, mm) do {      \
     __asm volatile ("":::"memory");             \
-    addr = val;                                 \
-  } while (0);
+    *addr = val;                                \
+  } while (0)
 
 #define hpx_sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
 
 #define hpx_sync_cas(addr, from, to, onsuccess, onfailure)  \
-  __sync_bool_compare_and_swapn(addr, from, to)
+  __sync_bool_compare_and_swap(addr, from, to)
 
 #define hpx_sync_cas_val(addr, from, to, onsuccess, onfailure)  \
   __sync_val_compare_and_swap(addr, from, to)
@@ -72,8 +72,5 @@
   terms of the above generic versions.
   ====================================================================
 */
-
-
-#error No synchronization support yet for gcc __sync builtin platforms.
 
 #endif /* LIBHPX_SYNC_GCC_BUILTIN_SYNC_H_ */
