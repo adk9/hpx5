@@ -1,5 +1,3 @@
-if ENABLE_TESTSUITE
-
 noinst_bin_PROGRAMS = hpxtest
 noinst_bindir = $(abs_top_builddir)/tests
 #TESTS = hpxtest
@@ -42,7 +40,7 @@ hpxtest_LDADD			= $(top_builddir)/src/libhpx.la -lm
 hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
 hpxtest_CPPFLAGS	   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
-hpxtest_CFLAGS             = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
+hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 hpxtest_CFLAGS		   += $(HPX_F_LTO)
 hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS		   += @LIBCRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
@@ -50,5 +48,3 @@ hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@
 hpxtest_CFLAGS		   += -std=c99
 # Turn off some warnings for the tests
 hpxtest_CFLAGS		   += -Wno-unused
-
-endif
