@@ -28,6 +28,7 @@
 
 #ifdef HAVE_TCMALLOC
 #include <google/tcmalloc.h>
+#define hpx_alloc_align(u, a, s) tc_posix_memalign(u, a, s)
 #define hpx_alloc(u) tc_malloc(u)
 #define hpx_realloc(u, s) tc_realloc(u, s)
 #define hpx_free(u) tc_free(u)
