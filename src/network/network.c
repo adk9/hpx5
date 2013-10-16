@@ -19,9 +19,9 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include "network.h"
+#include "bootstrap/bootstrap.h"
 #include "hpx/action.h"
-#include "hpx/bootstrap.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h" /* for hpx_locality_t */
 
@@ -33,9 +33,10 @@ network_ops_t default_net_ops = {
     .probe    = hpx_network_probe,
     .send     = hpx_network_send,
     .recv     = hpx_network_recv,
-    .test     = hpx_network_test,
+    .sendrecv_test     = hpx_network_test,
     .put      = hpx_network_put,
     .get      = hpx_network_get,
+    .putget_test     = hpx_network_test,
     .pin      = hpx_network_pin,
     .unpin    = hpx_network_unpin,
     .phys_addr= hpx_network_phys_addr,

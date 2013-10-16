@@ -21,15 +21,16 @@
 #define LIBHPX_NETWORK_MPI_H_
 
 #include <stdlib.h>
+#include <mpi.h>
 
+#include "network/network.h"
 #include "hpx/action.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h"
 
-#include <mpi.h>
 
-#define EAGER_THRESHOLD_MPI_DEFAULT 10240; /* TODO: make reasonable once we have puts/gets working */
+#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+/* TODO: make reasonable once we have puts/gets working */
 
 int init_mpi(void);
 int finalize_mpi(void);

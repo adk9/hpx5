@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Scheduling Context Functions
   hpx_ctx.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -21,11 +21,25 @@
 
 #include <string.h>
 
+#include "hpx/init.h"
 #include "hpx/mem.h"
 #include "hpx/error.h"
 #include "hpx/kthread.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
+#include "hpx/utils/timer.h"
+#include "ctx.h"
+#include "thread/kthread.h"
+#include "sync/sync.h"
+
+/* the global next context ID */
+static hpx_context_id_t ctx_next_id;
+
+hpx_context_t *__hpx_global_ctx = NULL;
+
+void libhpx_ctx_init() {
+    sync_store(&ctx_next_id, 1, SYNC_SEQ_CST);
+}
 
 /*
  --------------------------------------------------------------------
@@ -37,7 +51,7 @@
 
 hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   hpx_context_t *ctx = NULL;
-  long cores;
+  long cores = -1;
   long x;
 
   ctx = (hpx_context_t *) hpx_alloc(sizeof(hpx_context_t));
@@ -46,11 +60,10 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
 
     /* context ID */
-    ctx->cid = __ctx_next_id;
-    __ctx_next_id += 1;
+    ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
 
     /* kernel threads */
-    _hpx_kthread_init();
+    libhpx_kthread_init();
     cores = hpx_config_get_cores(&ctx->cfg);
     if (cores <= 0) {
       __hpx_errno = HPX_ERROR_KTH_CORES;
@@ -83,10 +96,10 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
 
         if (ctx->kths[x] == NULL) {
           goto _hpx_ctx_create_FAIL0;
-	} else {
-	  hpx_kthread_set_affinity(ctx->kths[x], x);
-	}
-      }    
+    } else {
+      hpx_kthread_set_affinity(ctx->kths[x], x);
+    }
+      }
     } else {
       __hpx_errno = HPX_ERROR_NOMEM;
       goto _hpx_ctx_create_FAIL0;
@@ -113,21 +126,21 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   switch (hpx_config_get_thread_suspend_policy(cfg)) {
     case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
       for (x = 0; x < cores; x++) {
-        hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, _hpx_kthread_srv_susp_local, ctx, &ctx->srv_susp[x]);
+        hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, libhpx_kthread_srv_susp_local, ctx, &ctx->srv_susp[x]);
         ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
-      
-        _hpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);    
+
+        libhpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
       }
       break;
     case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
-      hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_susp_global, ctx, &ctx->srv_susp[0]);
+      hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, libhpx_kthread_srv_susp_global, ctx, &ctx->srv_susp[0]);
       break;
     default:
       break;
   }
 
   /* create service thread: workload rebalancer */
-  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, _hpx_kthread_srv_rebal, ctx, &ctx->srv_rebal);
+  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, libhpx_kthread_srv_rebal, ctx, &ctx->srv_rebal);
 
   return ctx;
 
@@ -178,7 +191,7 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
   /* destroy kernel threads */
   for (x = 0; x < ctx->kths_count; x++) {
     hpx_kthread_destroy(ctx->kths[x]);
-  }  
+  }
 
   /* destroy any remaining termianted threads */
   do {
@@ -209,7 +222,7 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
   //  hwloc_topology_destroy(ctx->hw_topo);
 
   hpx_lco_future_destroy(&ctx->f_srv_susp);
-  
+
   /* cleanup */
   hpx_kthread_mutex_destroy(&ctx->mtx);
 

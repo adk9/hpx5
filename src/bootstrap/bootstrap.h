@@ -19,10 +19,9 @@
 
 #include <stdlib.h>
 
-#include "hpx/network.h"
 #include "hpx/runtime.h"
 
-typedef struct bootstrap_ops_t {
+typedef struct bootstrap_ops {
   /* Initialize the bootstrap module */
   int (*init)(void);
   /* Get identifier/rank of the calling locality */
@@ -43,14 +42,14 @@ extern bootstrap_ops_t mpi_boot_ops;
 /**
  * Bootstrap components.
  */
-typedef struct bootstrap_comp_t {
+typedef struct bootstrap_comp {
   char             name[128];
   bootstrap_ops_t *ops;
   int             *flags;
   int              active;
 } bootstrap_comp_t;
 
-typedef struct bootstrap_mgr_t {
+typedef struct bootstrap_mgr {
   /* Default bootstrapping mechanism. */
   bootstrap_comp_t *defaults;
   int count;
