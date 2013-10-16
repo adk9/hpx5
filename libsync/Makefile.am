@@ -14,5 +14,4 @@ endif
 libsync_la_CPPFLAGS      = -I$(top_srcdir)/include/sync
 
 libsync_la_CFLAGS        = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-libsync_la_CFLAGS       += $(HPX_F_LTO)
 libsync_la_CFLAGS       += -std=c99 
