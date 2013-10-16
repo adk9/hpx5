@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
   ping_action = hpx_action_register("_ping_action", ping);
   pong_action = hpx_action_register("_pong_action", pong);
   done_action = hpx_action_register("_done_action", done);
-  hpx_network_barrier();
+  hpx_action_registration_complete();
 
   hpx_timer_t ts;
   hpx_get_time(&ts);

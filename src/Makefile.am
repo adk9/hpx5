@@ -30,20 +30,17 @@ if CPU_X86_64
 endif
 
 if HAVE_NETWORK
-    NETWORK_DEFS         = -DHAVE_NETWORK=1
     libhpx_la_SOURCES   += network/network.c
     libhpx_la_SOURCES   += bootstrap/bootstrap.c
 endif
 
 if HAVE_MPI
-    MPI_DEFS             = -DHAVE_MPI=1
     libhpx_la_SOURCES   += network/mpi.c
     libhpx_la_SOURCES   += bootstrap/mpirun.c
 endif
 
 if HAVE_PHOTON
-    PHOTON_DEFS              = -DHAVE_PHOTON=1
-    libhpx_la_SOURCES       += network/photon.c
+    libhpx_la_SOURCES   += network/photon.c
 endif
 
 libhpx_ladir             = $(includedir)/hpx

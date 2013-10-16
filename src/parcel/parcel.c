@@ -20,9 +20,9 @@
 
 #include "serialization.h"
 #include "parcelqueue.h"                        /* __send_queue */
+#include "network/network.h"
 #include "hpx/action.h"
 #include "hpx/error.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
 
 hpx_error_t hpx_parcel_init(void) {

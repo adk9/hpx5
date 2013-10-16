@@ -205,6 +205,7 @@ int main(int argc, char** argv) {
   op_action = hpx_action_register("reduction_op_action", op);
   recv_broadcast_action = hpx_action_register("recv_broadcast_action", recv_broadcast);
   done_action = hpx_action_register("done_action", done);
+  hpx_action_registration_complete();
   
   hpx_locality_t* my_loc = hpx_get_my_locality();
   unsigned int my_rank = my_loc->rank;

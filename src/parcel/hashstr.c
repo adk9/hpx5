@@ -19,11 +19,13 @@
   ====================================================================
 */
 
-#include <config.h>                             /* WITH_OPENSSL */
+#ifdef HAVE_CONFIG_H
+#include <config.h>                             /* HAVE_LIBCRYPTO */
+#endif
 #include <stdint.h>                             /* uintptr_t */
 #include <string.h>                             /* strlen */
 #include <stdio.h>                              /* fprintf */
-#ifdef WITH_LIBCRYPTO
+#ifdef HAVE_LIBCRYPTO
 #include "openssl/md5.h"                        /* MD5 */
 #endif
 #include "hashstr.h"
@@ -49,7 +51,7 @@ const uintptr_t hashstr(const char * const str) {
   if (len == MAX_STR_LEN)
     warn_len(len, str);
 
-#ifdef WITH_LIBCRYPTO
+#ifdef HAVE_LIBCRYPTO
   uintptr_t md[16 / sizeof(uintptr_t)];         /* space for 128 bits */
 MD5((const unsigned char*)str, len, (unsigned char*)md);
   return md[0];                                 /* just pick some subset */

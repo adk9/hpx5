@@ -22,7 +22,7 @@
 #include "request_buffer.h"
 #include "hpx/error.h"                          /* __hpx_errno HPX_* */
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
-#include "hpx/network.h"                        /* struct request_buffer */
+#include "network/network.h"                    /* struct request_buffer */
 
 int request_buffer_init(struct request_buffer* q, size_t limit) {
 

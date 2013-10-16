@@ -25,6 +25,7 @@
 #include "hpx/action.h"
 #include "hpx/parcel.h"
 #include "hashstr.h"
+#include "network/network.h"
 
 static const int ACTIONS_INITIAL_HT_SIZE = 256;
 static const int ACTIONS_PROBE_LIMIT = 3;
@@ -169,4 +170,8 @@ hpx_future_t* hpx_action_invoke(hpx_action_t action, void *args,
   // spawn a thread to invoke the action locally
   hpx_func_t f = hpx_action_lookup_local(action);
   return (f) ? hpx_thread_create(__hpx_global_ctx, 0, f, args, thp) : NULL;
+}
+
+void hpx_action_registration_complete(void) {
+  hpx_network_barrier();
 }
