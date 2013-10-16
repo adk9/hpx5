@@ -222,15 +222,18 @@ AS_IF([test "x$enable_docs" = xyes],
     doc_string="no"])
 
 dnl Do some host-specific stuff
-# [solaris*], [l1_dcashe_linesize=`prtpicl -v -c cpu | grep l1-dcache-line-size
-#                                  | uniq | awk '{print $2}'` 
 AS_CASE([$host_os],
     [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
                  l1_dcashe_linesize=`getconf LEVEL1_DCACHE_LINESIZE`],
     [darwin*],  [l1_dcashe_linesize=`sysctl -n hw.cachelinesize`],
+    [solaris*], [l1_dcashe_linesize=`prtpicl -v -c cpu | \
+                                     grep l1-dcache-line-size | uniq | \
+                                     awk '{print $2}'`]
                 [l1_dcashe_linesize=128])
 
-AC_DEFINE([LEVEL1_DCACHE_LINESIZE], $l1_dcashe_linesize, [L1 D$ Line size])
+dnl Add static, configure-time values for some data we might want
+AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], $l1_dcashe_linesize, [L1 D$ Line size])
+AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], `getconf PAGESIZE`, [OS memory page size])
 
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
