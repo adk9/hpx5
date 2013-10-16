@@ -19,8 +19,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "hpx/bootstrap.h"
-#include "hpx/network.h"
+#include "bootstrap.h"
+#include "network/network.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h" /* for hpx_locality_t */
 

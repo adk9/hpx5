@@ -23,7 +23,7 @@
 #ifndef LIBHPX_PARCEL_REQUEST_LIST_H_
 #define LIBHPX_PARCEL_REQUEST_LIST_H_
 
-#include "hpx/network.h"                        /* struct network_request */
+#include "network/network.h"                    /* struct network_request */
 
 struct hpx_parcel;                              /* forward declare */
 

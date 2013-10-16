@@ -27,6 +27,11 @@ typedef uintptr_t hpx_action_t;
  */
 hpx_action_t hpx_action_register(const char *name, hpx_func_t func);
 
+/**
+ * Call after all actions are registered.
+ */
+void hpx_action_registration_complete(void);
+
 /** 
  *  Lookup actions in the local action table by their name 
  */

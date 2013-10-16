@@ -80,7 +80,8 @@ int main(int argc, char *argv[]) {
 
   /* register the fib action */
   fib_action = hpx_action_register("fib", fib);
-
+  hpx_action_registration_complete();
+  
   /* get start time */
   hpx_get_time(&timer);
 

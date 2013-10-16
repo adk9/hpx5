@@ -23,10 +23,7 @@
 #ifndef LIBHPX_INIT_H_
 #define LIBHPX_INIT_H_
 
-#include "hpx/bootstrap.h"
-#include "hpx/config.h"
 #include "hpx/error.h"
-#include "hpx/network.h"
 #include "hpx/thread.h"
 
 /*
@@ -35,10 +32,15 @@
  --------------------------------------------------------------------
 */
 
-extern hpx_config_t *__hpx_global_cfg;
-extern hpx_context_t *__hpx_global_ctx;
-extern network_ops_t *__hpx_network_ops;
-extern bootstrap_ops_t *bootmgr;
+struct hpx_config;
+struct hpx_context;
+struct network_ops;
+struct bootstrap_ops;
+
+extern struct hpx_config *__hpx_global_cfg;
+extern struct hpx_context *__hpx_global_ctx;
+extern struct network_ops *__hpx_network_ops;
+extern struct bootstrap_ops *bootmgr;
 extern hpx_mconfig_t __mcfg;
 
 /*

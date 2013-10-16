@@ -597,6 +597,7 @@ END_TEST
 START_TEST (test_libhpx_action_register)
 {
   empty_action = hpx_action_register("_empty_action", empty);
+  hpx_action_registration_complete();
   ck_assert_msg(true, "TODO: fixme");
 } 
 END_TEST
@@ -630,7 +631,8 @@ START_TEST (test_libhpx_parcel_create)
   int success;
 
   empty_action = hpx_action_register("_empty_action", empty);
-
+  hpx_action_registration_complete();
+  
   p = hpx_alloc(sizeof(hpx_parcel_t));
   success = hpx_new_parcel(empty_action, (char*)&Args, sizeof(struct args), p);
 
@@ -695,6 +697,8 @@ START_TEST (test_libhpx_parcel_send)
   checkrank_action = hpx_action_register("_checkrank_action", checkrank);
   set_sendtest_future_action = hpx_action_register("_set_sendtest_future_action",
                                                    set_sendtest_future);
+  hpx_action_registration_complete();
+  
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
   //  ctx = hpx_ctx_create(cfg);
@@ -727,7 +731,7 @@ START_TEST (test_libhpx_parcel_senddata)
   set_future_action = hpx_action_register("_set_future_action", set_future);
   set_sendtest_data_future_action = hpx_action_register("_set_sendtest_data_future_action",
                                                         set_sendtest_data_future);
-  hpx_network_barrier();
+  hpx_action_registration_complete();
 
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
@@ -763,7 +767,8 @@ START_TEST (test_libhpx_parcel_senddata_large)
   set_sendtest_datalarge_future_action =
     hpx_action_register("_set_sendtest_datalarge_future_action",
                         set_sendtest_datalarge_future);
-
+  hpx_action_registration_complete();
+  
   //  cfg = hpx_alloc(sizeof(hpx_config_t));  
   //  hpx_config_init(cfg);
   //  ctx = hpx_ctx_create(cfg);

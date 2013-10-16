@@ -20,15 +20,19 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #if HAVE_MPI
 #include <mpi.h>
 #endif
 
+#include "bootstrap/bootstrap.h"
+#include "network/network.h"
 #include "hpx/action.h"
-#include "hpx/bootstrap.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
-#include "hpx/network.h"
 #include "hpx/runtime.h"
 
 #include "bootstrap_mpirun.h"

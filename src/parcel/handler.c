@@ -30,9 +30,9 @@
 #include "request_list.h"                       /* struct request_list */
 #include "serialization.h"                      /* struct header */
 #include "hashstr.h"                            /* hashstr() */
+#include "network/network.h"
 #include "hpx/action.h"
 #include "hpx/init.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/thread/ctx.h"                     /* struct hpx_context */
 

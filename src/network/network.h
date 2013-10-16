@@ -20,14 +20,19 @@
 #ifndef LIBHPX_NETWORK_H_
 #define LIBHPX_NETWORK_H_
 
+
 #include <stddef.h>
 
+#ifdef HAVE_CONFIG_H 
+#include <config.h>
+#endif
+
 #if HAVE_MPI
-  #include <mpi.h>
+#include <mpi.h>
 #endif
 
 #if HAVE_PHOTON
-  #include <photon.h>
+#include <photon.h>
 #endif
 
 #include "hpx/runtime.h"                        /* hpx_locality_y */
@@ -64,7 +69,7 @@ typedef struct network_status_t {
 /**
  * Network Operations
  */
-typedef struct network_ops_t {
+typedef struct network_ops {
   /* Initialize the network layer */
   int (*init)(void);
   /* Shutdown and clean up the network layer */
@@ -156,10 +161,8 @@ int hpx_network_phys_addr(hpx_locality_t *l);
 /* The network progress function */
 void hpx_network_progress(void *data);
 
-/**
- * Utility network operations
- */
-void hpx_network_barrier();
+/* Generic network barrier */
+void hpx_network_barrier(void);
 
 #endif /* LIBHPX_NETWORK_H_ */
 
