@@ -25,8 +25,9 @@
 #include <photon.h>
 
 #include "hpx/action.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
+
+#include "network/network.h"
 
 #include "network_mpi.h"
 

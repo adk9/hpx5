@@ -55,8 +55,7 @@ hpx_locality_t *hpx_get_my_locality(void) {
 }
 
 hpx_locality_t *hpx_find_locality(int rank) {
-  int ret;
-  hpx_locality_t *locs, *l, *m;
+  hpx_locality_t *l;
 
   l = hpx_locality_create();
 #if 0
@@ -67,6 +66,8 @@ hpx_locality_t *hpx_find_locality(int rank) {
      performance reasons. I suggest we just have an array of all
      localities created at startup and then instead of creating new
      localities, we can just give back a pointer to existing ones. */
+  int ret;
+  hpx_locality_t locs, *l, *m;
   ret = bootmgr->get_map(&locs);
   if (ret != 0)
     return NULL;
