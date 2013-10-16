@@ -1,9 +1,9 @@
-noinst_bin_PROGRAMS = hpxtest
-noinst_bindir = $(abs_top_builddir)/tests
-#TESTS = hpxtest
-TESTS = 
-check_PROGRAMS = hpxtest
-hpxtest_SOURCES	= 00_hpxtest.c \
+noinst_bin_PROGRAMS 	= hpxtest
+noinst_bindir 			= $(abs_top_builddir)/tests
+#TESTS 					= hpxtest
+TESTS 					= 
+check_PROGRAMS			= hpxtest
+hpxtest_SOURCES			= 00_hpxtest.c \
                           01_init.c \
                           02_mem.c \
                           03_ctx.c \
@@ -23,16 +23,7 @@ if CPU_X86_64
 endif
 
 if HAVE_NETWORK
-    NETWORK_DEFS		= -DHAVE_NETWORK=1
     hpxtest_SOURCES	   += 12_parcelhandler.c
-endif
-
-if HAVE_MPI
-    MPI_DEFS			= -DHAVE_MPI=1
-endif
-
-if HAVE_PHOTON
-    PHOTON_DEFS			= -DHAVE_PHOTON=1
 endif
 
 hpxtest_LDADD			= $(top_builddir)/src/libhpx.la -lm
@@ -41,7 +32,6 @@ hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
 hpxtest_CPPFLAGS	   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
 
 hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-hpxtest_CFLAGS		   += $(HPX_F_LTO)
 hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS		   += @LIBCRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@
