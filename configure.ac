@@ -271,6 +271,8 @@ AS_IF([test "x$with_mpi" != xno],
 AS_IF([test "x$with_photon" != xno],
     AC_DEFINE([HAVE_PHOTON], [1], [Enable Photon support]))
 
+AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
+    AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
     
 dnl ---------------------------------------------------------------------------
 dnl Any other custom #defines go here.
