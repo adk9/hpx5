@@ -34,8 +34,7 @@
 typedef uint8_t hpx_error_t;
 
 /* we'll have to make this thread safe some time */
-static hpx_error_t __hpx_errno;
-
+extern hpx_error_t __hpx_errno;
 
 /*
  --------------------------------------------------------------------

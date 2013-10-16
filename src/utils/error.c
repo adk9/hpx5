@@ -21,6 +21,8 @@
 
 #include "hpx/error.h"
 
+hpx_error_t __hpx_errno = HPX_SUCCESS;
+
 /*
  --------------------------------------------------------------------
   __hpx_error

@@ -50,7 +50,7 @@
  --------------------------------------------------------------------
 */
 
-typedef struct {
+typedef struct hpx_config {
   uint32_t cores;
   uint64_t mflags;
   uint32_t thread_ss;

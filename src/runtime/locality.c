@@ -18,12 +18,12 @@
 
 #include <stdlib.h>
 
+#include "bootstrap/bootstrap.h"
+#include "network/network.h"
 #include "hpx/action.h"
-#include "hpx/bootstrap.h"
 #include "hpx/agas.h"
 #include "hpx/error.h"
 #include "hpx/init.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h"
 
