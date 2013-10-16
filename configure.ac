@@ -235,13 +235,16 @@ dnl ---------------------------------------------------------------------------
 
 AS_CASE([$host_os],
     [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
-                 l1_dcashe_linesize=`getconf LEVEL1_DCACHE_LINESIZE`],
-    [darwin*],  [l1_dcashe_linesize=`sysctl -n hw.cachelinesize`],
-    [solaris*], [l1_dcashe_linesize=`prtpicl -v -c cpu | \
+                 l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+                 pagesize=`getconf PAGESIZE`],
+    [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
+                 pagesize=`getconf PAGESIZE`],
+    [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
                                      grep l1-dcache-line-size | uniq | \
                                      awk '{print $2}'`]
-                [l1_dcashe_linesize=128])
-
+    [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
+     l1d_linesize=128
+     pagesize=4096])
     
 dnl ---------------------------------------------------------------------------
 dnl In addition to CFLAGS and LIBS for the build process, some of the with
@@ -274,8 +277,9 @@ dnl Any other custom #defines go here.
 dnl
 dnl NB: Please only #define things that we actually use.
 dnl ---------------------------------------------------------------------------
-AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE],
-    [$l1_dcashe_linesize], [L1 D$ Line size])
+AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+
+AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
     
 dnl ---------------------------------------------------------------------------
