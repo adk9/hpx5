@@ -22,10 +22,11 @@
 #include <photon.h>
 
 #include "hpx/action.h"
-#include "hpx/bootstrap.h"
 #include "hpx/init.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
+
+#include "bootstrap/bootstrap.h"
+#include "network/network.h"
 
 #include "network_mpi.h"
 #include "network_photon.h"
