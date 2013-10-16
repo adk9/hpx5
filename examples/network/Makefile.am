@@ -4,18 +4,6 @@ examples_PROGRAMS	= pingpong
 pingpong_SOURCES	= pingpong.c
 pingpong_LDADD		= $(top_builddir)/src/libhpx.la
 
-if HAVE_NETWORK
-    NETWORK_DEFS	= -DHAVE_NETWORK=1
-endif
-
-if HAVE_MPI
-    MPI_DEFS		= -DHAVE_MPI=1
-endif
-
-if HAVE_PHOTON
-    PHOTON_DEFS		= -DHAVE_PHOTON=1
-endif
-
 AM_CPPFLAGS			= -I$(top_srcdir)/include
 AM_CPPFLAGS        += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS) 
 
