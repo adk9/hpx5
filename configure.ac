@@ -103,7 +103,7 @@ AC_ARG_WITH([libcrypto],
     [], [with_libcrypto=yes])
 AS_IF([test "x$with_libcrypto" != xno],
     [PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto])
-     AC_DEFINE([WITH_LIBCRYPTO], [], [Enable libcrypto for string hashing])
+     AC_DEFINE([HAVE_LIBCRYPTO], [], [Enable libcrypto for string hashing])
      AC_SUBST(LIBCRYPTO_PKG, [libcrypto])
      AC_SUBST(LIBCRYPTO_CFLAGS)
      AC_SUBST(LIBCRYPTO_LIBS)])
@@ -116,7 +116,7 @@ AC_ARG_WITH([papi],
     [], [with_papi=no])
 AS_IF([test "x$with_papi" != xno],
     [PKG_CHECK_MODULES([PAPI], [papi])
-     AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
+     AC_DEFINE([HAVE_PAPI], [], [Enable PAPI measurement support])
      AC_SUBST(PAPI_PKG, [papi])
      AC_SUBST(PAPI_CFLAGS)
      AC_SUBST(PAPI_LIBS)])
@@ -128,7 +128,7 @@ AC_ARG_WITH([hwloc],
      [], [with_hwloc=no])
 AS_IF([test "x$with_hwloc" != xno],
     [PKG_CHECK_MODULES([HWLOC], [hwloc])
-     AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
+     AC_DEFINE([HAVE_HWLOC], [], [Enable HWLOC support])
      AC_SUBST(HWLOC_PKG, [hwloc])
      AC_SUBST(HWLOC_CFLAGS)
      AC_SUBST(HWLOC_LIBS)])
@@ -140,7 +140,7 @@ AC_ARG_WITH([tcmalloc],
     [], [with_tcmalloc=no])
 AS_IF([test "x$with_tcmalloc" != xno],
     [PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
-     AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
+     AC_DEFINE([HAVE_TCMALLOC], [], [Enable TCMALLOC support])
      AC_SUBST(TCMALLOC_PKG, [libtcmalloc])
      AC_SUBST(TCMALLOC_CFLAGS)
      AC_SUBST(TCMALLOC_LIBS)])
@@ -151,7 +151,7 @@ AC_ARG_WITH([mpi],
         [Build with MPI support @<:@default=yes@:>@])],
     [], [with_mpi=yes])
 AS_IF([test "x$with_mpi" != xno],
-    [AC_DEFINE([WITH_MPI], [], [Enable MPI support])
+    [AC_DEFINE([HAVE_MPI], [1], [Enable MPI support])
      AS_IF([test "x$with_mpi" != xyes],
          [PKG_CHECK_MODULES([MPI], $with_mpi)
           AC_SUBST(MPI_PKG, [$with_mpi])
@@ -164,7 +164,7 @@ AC_ARG_WITH([photon],
         [Build with Photon support @<:@default=no@:>@])],
     [], [with_photon=no])
 AS_IF([test "x$with_photon" != xno],
-    [AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])
+    [AC_DEFINE([HAVE_PHOTON], [], [Enable Photon support])
      AC_SUBST([PHOTON_CFLAGS], [])
      AC_SUBST([PHOTON_LIBS], '-lphoton -libverbs -lrdmacm')])
 
@@ -191,12 +191,9 @@ AS_IF([test "x$enable_testsuite" != xno],
                 [AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])])])])])
 
 AS_IF([test "x$enable_tests" = xyes],
-    [AM_CONDITIONAL([ENABLE_TESTSUITE], true)
-     test_string="yes"
-     AC_DEFINE([ENABLE_TESTSUITE], [], [Enable test suite])
+    [AM_CONDITIONAL([ENABLE_TESTSUITE], true) test_string="yes"
      AC_CONFIG_FILES([tests/Makefile])],
-    [AM_CONDITIONAL([ENABLE_TESTSUITE], false)
-     test_string="no"])
+    [AM_CONDITIONAL([ENABLE_TESTSUITE], false) test_string="no"])
      
 # Check for doxygen (to build the documentation).
 AC_ARG_WITH([doxygen],
@@ -218,14 +215,22 @@ AS_IF([test "x$enable_docs" = xyes],
    [AM_CONDITIONAL([WITH_DOXYGEN], true)
     AM_CONDITIONAL([ENABLE_DOCS], true)
     doc_string="yes"
-    AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])
+    dnl AC_DEFINE([ENABLE_DOCS], [], [Enable source documentation])
     AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])],
    [AM_CONDITIONAL([ENABLE_DOCS], false)
     AM_CONDITIONAL([WITH_DOXYGEN], false)
     doc_string="no"])
 
-dnl Defines the libs required by the platform, when it's linux
-AS_IF([test "x$host_os" = xlinux-gnu], [AC_SUBST([PLATFORM_LIBS], [-lrt])])
+dnl Do some host-specific stuff
+# [solaris*], [l1_dcashe_linesize=`prtpicl -v -c cpu | grep l1-dcache-line-size
+#                                  | uniq | awk '{print $2}'` 
+AS_CASE([$host_os],
+    [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
+                 l1_dcashe_linesize=`getconf LEVEL1_DCACHE_LINESIZE`],
+    [darwin*],  [l1_dcashe_linesize=`sysctl -n hw.cachelinesize`],
+                [l1_dcashe_linesize=128])
+
+AC_DEFINE([LEVEL1_DCACHE_LINESIZE], $l1_dcashe_linesize, [L1 D$ Line size])
 
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
