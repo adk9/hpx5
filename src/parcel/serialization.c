@@ -62,7 +62,7 @@ hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
   /* copy the parcel struct, and the payload to the blob
      LD: note the first memcpy doesn't copy the payload pointer
   */
-  memcpy(blob, p, sizeof(*p));
+  memcpy(blob, p, sizeof(*blob));
   memcpy(&blob->payload, p->payload, p->payload_size);
   *out = blob;
   return HPX_SUCCESS;
@@ -84,7 +84,7 @@ hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out) {
   if (p == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
   
-  memcpy(p, blob, sizeof(*p));
+  memcpy(p, blob, sizeof(*blob));
   p->payload = (p->payload_size) ? hpx_alloc(p->payload_size) : NULL;
   if (p->payload_size && p->payload == NULL) {
     hpx_free(p);
