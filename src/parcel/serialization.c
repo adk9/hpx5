@@ -31,6 +31,14 @@
 
 extern network_ops_t *__hpx_network_ops;
 
+inline size_t get_parcel_size(struct header* header) {
+  size_t size;
+  size = sizeof(*header); /* total size is parcel header size + data: */
+  size += header->payload_size;
+  size = FOURBYTE_ALIGN(size);
+  return size;
+}
+
 /**
  * Caller is responsible for freeing *out.  Will return HPX_ERROR if (1)
  * payload size is not 0 and (2) payload is NULL (a NULL pointer is allowed if

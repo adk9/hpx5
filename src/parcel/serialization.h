@@ -51,4 +51,7 @@ struct hpx_parcel;
 hpx_error_t serialize(const struct hpx_parcel* parcel, struct header **out);
 hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out);
 
+/** Helper function for serialization; calculate the size of the parcel data */
+size_t get_parcel_size(struct header* header);
+
 #endif /* LIBHPX_PARCEL_SERIALIZATION_H_ */

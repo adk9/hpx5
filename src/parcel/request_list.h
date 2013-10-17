@@ -31,7 +31,7 @@ struct hpx_parcel;                              /* forward declare */
    We depend on the fact that the request_list_node ISA request. */
 struct request_list_node {
   struct network_request    request;            /* must be 1st */
-  struct hpx_parcel        *parcel;
+  struct header            *parcel;
   struct request_list_node *next;
 };
 
@@ -48,10 +48,10 @@ void request_list_init(struct request_list*);
 /* Perhaps confusingly, this function returns a network_request_t* so
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
-struct network_request* request_list_append(struct request_list*, struct hpx_parcel*);
+struct network_request* request_list_append(struct request_list*, struct header*);
 void request_list_begin(struct request_list*);
 struct network_request* request_list_curr(struct request_list*);
-struct hpx_parcel* request_list_curr_parcel(struct request_list*);
+struct header* request_list_curr_parcel(struct request_list*);
 void request_list_next(struct request_list*);
 void request_list_del(struct request_list*);
 

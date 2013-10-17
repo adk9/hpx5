@@ -40,6 +40,7 @@ struct hpx_future;
 typedef struct {
   struct hpx_context *ctx;
   struct hpx_thread *thread;  
+  struct hpx_future *quit; /* used to signal parcel handler to quit */
   struct hpx_future *fut;
 } hpx_parcelhandler_t;
 

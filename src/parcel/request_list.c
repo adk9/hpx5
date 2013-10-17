@@ -37,7 +37,7 @@ void request_list_init(struct request_list *list) {
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
 struct network_request* request_list_append(struct request_list *list,
-                                            struct hpx_parcel *parcel) {
+                                            struct header *parcel) {
   struct request_list_node* node = hpx_alloc(sizeof(*node));
   if (!node) {
     __hpx_errno = HPX_ERROR_NOMEM;
@@ -64,7 +64,7 @@ struct network_request* request_list_curr(struct request_list *list) {
   return (list->curr) ? &list->curr->request : NULL;
 } 
 
-struct hpx_parcel* request_list_curr_parcel(struct request_list *list) {
+struct header* request_list_curr_parcel(struct request_list *list) {
   return (list->curr) ? list->curr->parcel : NULL;
 } 
 
