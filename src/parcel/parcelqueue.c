@@ -62,6 +62,7 @@ int parcelqueue_create(struct parcelqueue** q_handle) {
   q->head->next = NULL;
   q->tail = q->head;
   q->lock = hpx_lco_mutex_create(0);
+  *q_handle = q;
   return HPX_SUCCESS;
 }
 
