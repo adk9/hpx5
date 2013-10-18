@@ -47,7 +47,7 @@ int sum(int count, int values[]) {
   return sum;
 }
 
-void recv(void* _args) {
+void reduce_recv(void* _args) {
   hpx_locality_t* my_loc = hpx_get_my_locality();
   int my_rank = my_loc->rank;
   //  printf("At %d in _reduction_recv_action\n", my_rank);
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
   }
 
   /* register action for parcel (must be done by all ranks) */
-  recv_action = hpx_action_register("reduction_recv_action", recv);
+  recv_action = hpx_action_register("reduction_recv_action", reduce_recv);
   op_action = hpx_action_register("reduction_op_action", op);
   recv_broadcast_action = hpx_action_register("recv_broadcast_action", recv_broadcast);
   done_action = hpx_action_register("done_action", done);
