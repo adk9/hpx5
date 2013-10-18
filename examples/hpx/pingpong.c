@@ -11,6 +11,7 @@ struct pingpong_args {
 
 #define BUFFER_SIZE 128
 
+int other_rank;
 int global_count = 0;
 hpx_locality_t* my_loc;
 hpx_locality_t* other_loc;
@@ -128,18 +129,15 @@ void pong(void* args) {
 }
 
 void pingpong(void* _args) {
-  /* unsigned int num_ranks; LD:never used */
   unsigned int my_rank;
-  /* hpx_parcel_t* p; LD:never used */
   struct pingpong_args* args;
 
-  /* num_ranks = LD:never used */ hpx_get_num_localities();
   my_loc = hpx_get_my_locality();
   my_rank = my_loc->rank;
 
   if (my_rank == 0)
-    other_loc = hpx_find_locality(1);
-  else if (my_rank == 1)
+    other_loc = hpx_find_locality(other_rank);
+  else if (my_rank == other_rank)
     other_loc = hpx_find_locality(0);
   else 
     {}
@@ -154,7 +152,7 @@ void pingpong(void* _args) {
     //    success = hpx_send_parcel(other_loc, p);
     hpx_action_invoke(ping_action, args, NULL);
   }
-  else if (my_rank ==1) {
+  else if (my_rank == other_rank) {
   }
   else
     {}
@@ -189,6 +187,11 @@ int main(int argc, char** argv) {
   pong_action = hpx_action_register("_pong_action", pong);
   done_action = hpx_action_register("_done_action", done);
   hpx_action_registration_complete();
+
+  unsigned int num_ranks;
+  num_ranks = hpx_get_num_localities();
+  other_rank = num_ranks - 1;
+  printf("Running pingpong on %d ranks between rank 0 and rank %d\n", num_ranks, other_rank);
 
   hpx_timer_t ts;
   hpx_get_time(&ts);

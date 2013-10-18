@@ -82,6 +82,10 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 	hpx_free(header);
       }
       else { /* this is a recv or get */
+#if DEBUG
+      printf("Received %zd bytes to buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+      fflush(stdout);
+#endif
 	parcel_process(header);
 	size = get_parcel_size(header);
 #ifdef HAVE_PHOTON
@@ -178,7 +182,9 @@ void _hpx_parcelhandler_main(void* args) {
       dst_rank = header->dest.locality.rank;
       size = get_parcel_size(header);
 #if DEBUG
-      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+      //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+      printf("Sending %zd bytes from buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+      fflush(stdout);
 #endif
       req = request_list_append(&send_requests, header);
       __hpx_network_ops->send(dst_rank, 
@@ -214,7 +220,7 @@ void _hpx_parcelhandler_main(void* args) {
 #if HAVE_PHOTON
     recv_size = (size_t)status.photon.size;
 #else
-    recv_size = curr_status.count;
+    recv_size = status.count;
     // recv_size = RECV_BUFFER_SIZE;
 #endif
     hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
