@@ -29,7 +29,6 @@
   Main
  --------------------------------------------------------------------
 */
-
 int main(int argc, char * argv[]) {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
@@ -65,9 +64,9 @@ int main(int argc, char * argv[]) {
   add_07_mctx(tc, long_tests);                  /* machine ctx switching */
   add_08_thread2(tc, long_tests, hardcore_tests); /* LCOs, threads (stage 2) */
   add_12_gate(tc);                              /* gates */
-#if HAVE_NETWORK
+  #if HAVE_NETWORK
   add_12_parcelhandler(tc);                     /* parcel handler tests */
-#endif
+  #endif
   if (perf_tests)
     add_98_thread_perf1(tc);
 

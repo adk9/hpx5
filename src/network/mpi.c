@@ -173,12 +173,15 @@ int init_mpi(void) {
 
   MPI_Initialized(&retval);
   if (!retval) {
-    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
+    //    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
+    temp = MPI_Init(NULL, NULL); thread_support_provided = 0;
     if (temp == MPI_SUCCESS)
       retval = 0;
     else
       __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
   }
+  else
+    retval = HPX_SUCCESS;
 
   #if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
@@ -206,14 +209,14 @@ int send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
 int probe_mpi(int source, int* flag, network_status_t* status) {
   int retval;
   int temp;
-  /* int mpi_src; LD:unused */
+  int mpi_src;
   /* int mpi_len; LD:unused */
 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE)
-    /* mpi_src = MPI_ANY_SOURCE LD:unused */;
+    mpi_src = MPI_ANY_SOURCE;
 
-  temp = MPI_Iprobe(source, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
+  temp = MPI_Iprobe(mpi_src, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
 
   if (temp == MPI_SUCCESS) {
     retval = 0;
