@@ -38,7 +38,7 @@ static hpx_context_id_t ctx_next_id;
 hpx_context_t *__hpx_global_ctx = NULL;
 
 void libhpx_ctx_init() {
-    sync_store(&ctx_next_id, 1, SYNC_SEQ_CST);
+    sync_store(&ctx_next_id, 0, SYNC_SEQ_CST);
 }
 
 /*
