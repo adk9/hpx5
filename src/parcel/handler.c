@@ -73,12 +73,10 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
       if (send) {
 	/* Free up the parcel as we don't need it anymore */
 	size = get_parcel_size(header);
-#ifdef HAVE_PHOTON
-	__hpx_network_ops->unpin(header, size);
 #if DEBUG
 	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
 #endif
-#endif	  
+	__hpx_network_ops->unpin(header, size);
 	hpx_free(header);
       }
       else { /* this is a recv or get */
@@ -88,12 +86,10 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 #endif
 	parcel_process(header);
 	size = get_parcel_size(header);
-#ifdef HAVE_PHOTON
-	__hpx_network_ops->unpin(header, size);
 #if DEBUG
 	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
 #endif
-#endif
+	__hpx_network_ops->unpin(header, size);
 	free(header);
       }
     } /* if (flag == 1) */
@@ -103,6 +99,8 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 }
 
 void _hpx_parcelhandler_main(void* args) {
+  int success;
+
   hpx_future_t* quit = ((hpx_parcelhandler_t*)args)->quit;
 
   struct request_list send_requests;
@@ -223,13 +221,16 @@ void _hpx_parcelhandler_main(void* args) {
     recv_size = status.count;
     // recv_size = RECV_BUFFER_SIZE;
 #endif
-    hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
-    if (recv_buffer == NULL) {
+    success = hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
+    if (success != 0 || recv_buffer == NULL) {
       __hpx_errno = HPX_ERROR_NOMEM;
       *retval = HPX_ERROR_NOMEM;
+      goto error;
     } 
-#ifdef HAVE_PHOTON
     __hpx_network_ops->pin(recv_buffer, recv_size);
+#if DEBUG
+    printf("Receiving %zd bytes to buffer at %tx\n", recv_size, (ptrdiff_t)recv_buffer);
+    fflush(stdout);
 #endif
     req = request_list_append(&recv_requests, recv_buffer);
     __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
@@ -257,7 +258,8 @@ void _hpx_parcelhandler_main(void* args) {
   printf("Handler done after iter %d\n", (int)i);
   fflush(stdout);
 #endif
-  
+
+ error:  
   hpx_thread_exit((void*)retval);
 }
 
