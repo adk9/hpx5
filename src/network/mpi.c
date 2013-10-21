@@ -52,8 +52,8 @@ network_ops_t mpi_ops = {
     .put      = put_mpi,
     .get      = get_mpi,
     .putget_test = test_mpi,
-    .pin      = NULL,
-    .unpin    = NULL,
+    .pin      = pin_mpi,
+    .unpin    = unpin_mpi,
     .phys_addr= phys_addr_mpi,
 };
 
@@ -173,8 +173,7 @@ int init_mpi(void) {
 
   MPI_Initialized(&retval);
   if (!retval) {
-    //    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &thread_support_provided);
-    temp = MPI_Init(NULL, NULL); thread_support_provided = 0;
+    temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &thread_support_provided);
     if (temp == MPI_SUCCESS)
       retval = 0;
     else
@@ -372,3 +371,12 @@ int finalize_mpi(void) {
 
   return retval;
 }
+
+int pin_mpi(void* buffer, size_t len) {
+  return 0;
+}
+
+int unpin_mpi(void* buffer, size_t len) {
+  return 0;
+}
+

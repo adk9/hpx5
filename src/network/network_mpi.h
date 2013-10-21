@@ -50,6 +50,8 @@ int recv_mpi(int src, void *buffer, size_t len, network_request_t *request);
 int test_mpi(network_request_t *request, int *flag, network_status_t *status);
 int put_mpi(int dest, void *buffer, size_t len, network_request_t *request);
 int get_mpi(int src, void *buffer, size_t len, network_request_t *request);
+int pin_mpi(void* buffer, size_t len);
+int unpin_mpi(void* buffer, size_t len);
 int phys_addr_mpi(hpx_locality_t *id);
 
 #endif
