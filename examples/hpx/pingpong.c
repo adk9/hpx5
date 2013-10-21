@@ -132,15 +132,7 @@ void pingpong(void* _args) {
   unsigned int my_rank;
   struct pingpong_args* args;
 
-  my_loc = hpx_get_my_locality();
   my_rank = my_loc->rank;
-
-  if (my_rank == 0)
-    other_loc = hpx_find_locality(other_rank);
-  else if (my_rank == other_rank)
-    other_loc = hpx_find_locality(0);
-  else 
-    {}
 
   hpx_lco_future_init(&done_fut);
 
@@ -181,17 +173,26 @@ int main(int argc, char** argv) {
   success = hpx_init();
   if (success != 0)
     exit(-1);
+
+  /* I'm cheating by putting this before action registrations to make sure this gets done at all processes... */
+  unsigned int num_ranks;
+  num_ranks = hpx_get_num_localities();
+  other_rank = num_ranks - 1;
+  printf("Running pingpong on %d ranks between rank 0 and rank %d\n", num_ranks, other_rank);
+  my_loc = hpx_get_my_locality();
+  int my_rank = my_loc->rank;
+  if (my_rank == 0)
+    other_loc = hpx_find_locality(other_rank);
+  else if (my_rank == other_rank)
+    other_loc = hpx_find_locality(0);
+  else 
+    {}
   
   /* register action for parcel (must be done by all ranks) */
   ping_action = hpx_action_register("_ping_action", ping);
   pong_action = hpx_action_register("_pong_action", pong);
   done_action = hpx_action_register("_done_action", done);
   hpx_action_registration_complete();
-
-  unsigned int num_ranks;
-  num_ranks = hpx_get_num_localities();
-  other_rank = num_ranks - 1;
-  printf("Running pingpong on %d ranks between rank 0 and rank %d\n", num_ranks, other_rank);
 
   hpx_timer_t ts;
   hpx_get_time(&ts);
