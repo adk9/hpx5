@@ -46,8 +46,7 @@ struct network_request* request_list_append(struct request_list *list,
 
   node->parcel = parcel;
   node->next = list->head;
-  if (list->head == NULL)
-    list->head = node;
+  list->head = node;
   if (list->tail == NULL)
     list->tail = node;
 
