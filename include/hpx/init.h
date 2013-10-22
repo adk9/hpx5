@@ -23,11 +23,7 @@
 #ifndef LIBHPX_INIT_H_
 #define LIBHPX_INIT_H_
 
-#include "hpx/bootstrap.h"
-#include "hpx/config.h"
 #include "hpx/error.h"
-#include "hpx/network.h"
-#include "hpx/parcelhandler.h"
 #include "hpx/thread.h"
 
 /*
@@ -36,12 +32,16 @@
  --------------------------------------------------------------------
 */
 
-hpx_config_t *__hpx_global_cfg;
-hpx_context_t *__hpx_global_ctx;
-hpx_parcelhandler_t *__hpx_parcelhandler;
-network_ops_t *__hpx_network_ops;
-bootstrap_ops_t *bootmgr;
-static hpx_mconfig_t __mcfg;
+struct hpx_config;
+struct hpx_context;
+struct network_ops;
+struct bootstrap_ops;
+
+extern struct hpx_config *__hpx_global_cfg;
+extern struct hpx_context *__hpx_global_ctx;
+extern struct network_ops *__hpx_network_ops;
+extern struct bootstrap_ops *bootmgr;
+extern hpx_mconfig_t __mcfg;
 
 /*
  --------------------------------------------------------------------

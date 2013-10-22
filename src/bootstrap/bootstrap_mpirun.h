@@ -19,9 +19,8 @@
 
 #include <stdlib.h>
 
-#include "hpx/network.h"
-#include "hpx/runtime.h"
-
+#include "bootstrap.h"
+struct hpx_locality;
 extern bootstrap_ops_t mpi_boot_ops;
 
 /**
@@ -30,9 +29,9 @@ extern bootstrap_ops_t mpi_boot_ops;
 
 int bootstrap_mpi_init(void);
 int bootstrap_mpi_get_rank(void);
-int bootstrap_mpi_get_addr(hpx_locality_t *);
+int bootstrap_mpi_get_addr(struct hpx_locality *);
 int bootstrap_mpi_size(void);
-int bootstrap_mpi_get_map(hpx_locality_t **);
+int bootstrap_mpi_get_map(struct hpx_locality **);
 int bootstrap_mpi_finalize(void);
 
 #endif /* LIBHPX_BOOTSTRAP_MPIRUN_H_ */

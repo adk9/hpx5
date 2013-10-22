@@ -20,25 +20,33 @@
 #ifndef LIBHPX_NETWORK_H_
 #define LIBHPX_NETWORK_H_
 
-#include <stdlib.h>
-#include "hpx/types.h"
-#include "hpx/runtime.h"
+
+#include <stddef.h>
+
+#ifdef HAVE_CONFIG_H 
+#include <config.h>
+#endif
 
 #if HAVE_MPI
-  #include <mpi.h>
+#include <mpi.h>
 #endif
+
 #if HAVE_PHOTON
-  #include <photon.h>
+#include <photon.h>
 #endif
+
+#include "hpx/runtime.h"                        /* hpx_locality_y */
 
 #define NETWORK_ANY_SOURCE -1
 #define NETWORK_ANY_LENGTH -1
+
+#define FOURBYTE_ALIGN(n) ((n + sizeof(uint32_t) - 1) & ~(sizeof(uint32_t) - 1))
 
 /**
  * Some basic underlying network types
  */
 
-typedef struct network_request_t {
+typedef struct network_request {
 #if HAVE_MPI
   MPI_Request mpi;
 #endif
@@ -61,7 +69,7 @@ typedef struct network_status_t {
 /**
  * Network Operations
  */
-typedef struct network_ops_t {
+typedef struct network_ops {
   /* Initialize the network layer */
   int (*init)(void);
   /* Shutdown and clean up the network layer */
@@ -73,12 +81,14 @@ typedef struct network_ops_t {
   int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
   /* Receive a raw payload */
   int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
+  /* test for completion of send or receive */
+  int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);
   /* RMA put */
   int (*put)(int dest, void *buffer, size_t len, network_request_t *request);
   /* RMA get */
   int (*get)(int dest, void *buffer, size_t len, network_request_t *request); 
   /* test for completion of communication */
-  int (*test)(network_request_t *request, int *flag, network_status_t *status);
+  int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
   /* pin memory for put/get */
   int (*pin)(void* buffer, size_t len);
   /* unpin memory for put/get */
@@ -151,10 +161,8 @@ int hpx_network_phys_addr(hpx_locality_t *l);
 /* The network progress function */
 void hpx_network_progress(void *data);
 
-/**
- * Utility network operations
- */
-void hpx_network_barrier();
+/* Generic network barrier */
+void hpx_network_barrier(void);
 
 #endif /* LIBHPX_NETWORK_H_ */
 

@@ -1,91 +1,161 @@
+/*
+  ====================================================================
+  High Performance ParalleX Library (libhpx)
+  
+  The thread-based fibonacci example
+  examples/thread/fibonacci.c
 
-#include <stdio.h>
+  Copyright (c) 2013, Trustees of Indiana University 
+  All rights reserved.
+
+  This software may be modified and distributed under the terms of 
+  the BSD license.  See the COPYING file for details.
+
+  This software was created at the Indiana University Center for
+  Research in Extreme Scale Technologies (CREST).
+  ====================================================================
+*/
+
+#include <stdio.h>                              /* sprintf */
+#include <inttypes.h>                           /* PRI... */
 #include <hpx.h>
+#include <sync/sync.h>                          /* sync access */
 
-hpx_context_t *ctx;
-hpx_timer_t    timer;
-static int     nthreads;
+/**
+ * This file defines a basic fibonacci example, that uses HPX threads to
+ * perform the naive recursive tree form of fibonnaci.
+ */
+static const char usage[] = "fibonacci cores n\n"
+                            "\t[cores=0=>use all available cores]\n";
+static hpx_context_t *ctx;                      /**< a shared thread context */
+static int            nthreads;                 /**< for output */
 
-void fib(void *n) {
-  long n1, n2, num, sum;
-  hpx_future_t *fut1;
-  hpx_future_t *fut2;
-
-  num = (long) n;
+/**
+ * This fib action decomposes the problem of computing fib(n) into computing
+ * fib(n - 1) + fib(n - 2). It uses the action void* argument to directly pass
+ * n (and n -1, n -2, etc), rather than using it to pass an address of n, and
+ * retrieved the computed results directly through thread joins.
+ *
+ * @param args The current number to compute, cast as void*.
+ * @return The copmuted fib(n) directly, NOT an address.
+ */
+static void fib(void *args) {
+  long n = (long) args;
+  
   /* handle our base case */
-  if (num < 2) {
-    hpx_thread_exit((void *) num);
-  }
+  if (n < 2)
+    hpx_thread_exit(args);
 
   /* create child threads */
-  fut1 = hpx_thread_create(ctx, 0, fib, (void*) num-1, NULL);
-  fut2 = hpx_thread_create(ctx, 0, fib, (void*) num-2, NULL);
+  hpx_thread_t *t1; hpx_thread_create(ctx, 0, fib, (void*) (n - 1), &t1);
+  hpx_thread_t *t2; hpx_thread_create(ctx, 0, fib, (void*) (n - 2), &t2);
 
   /* wait for threads to finish */
-  // ADK: need an OR gate here. Also, why not just expose the future
-  //      interface and have such control constructs for them?
-  hpx_thread_wait(fut1);
-  hpx_thread_wait(fut2);
+  long n1; hpx_thread_join(t1, (void**) &n1);
+  long n2; hpx_thread_join(t2, (void**) &n2);
 
-  //  hpx_thread_join(th2, (void**) &n2);
-  //  hpx_thread_join(th1, (void**) &n1);
-
-  n1 = (long) hpx_lco_future_get_value(fut1);
-  n2 = (long) hpx_lco_future_get_value(fut2);
-
-  sum = n1 + n2;
-  nthreads += 2;
-  hpx_thread_exit((void *) sum);
+  /* update the number of threads */
+  sync_fadd(&nthreads, 2, SYNC_SEQ_CST);
+  
+  /* return the sum directly */
+  hpx_thread_exit((void *) (n1 + n2));
 }
 
-int main(int argc, char *argv[]) {
-  hpx_config_t cfg;
-  hpx_future_t *fut;
-  long n, *result;
-  uint32_t cores;
+/**
+ * This fib action decomposes the problem of computing fib(n) into computing
+ * fib(n - 1) + fib(n - 2). It uses the action void* argument to directly pass
+ * n (and n -1, n -2, etc), rather than using it to pass an address of n, and
+ * retrieved the computed results using futures.
+ *
+ * @param args The current number to compute, cast as void*.
+ * @return The copmuted fib(n) directly, NOT an address.
+ */
+static void fib_futures(void *args) {
+  long n = (long) args;
+  
+  /* handle our base case */
+  if (n < 2)
+    hpx_thread_exit(args);
 
+  /* create child threads */
+  hpx_future_t *f1 = hpx_thread_create(ctx, 0, fib_futures, (void*) (n - 1), NULL);
+  hpx_future_t *f2 = hpx_thread_create(ctx, 0, fib_futures, (void*) (n - 2), NULL);
+
+  /* wait for threads to finish */
+  hpx_thread_wait(f1);
+  hpx_thread_wait(f2);
+
+  /* get the values */
+  long n1 = (long) hpx_lco_future_get_value(f1);
+  long n2 = (long) hpx_lco_future_get_value(f2);
+
+  /* update the number of threads */
+  sync_fadd(&nthreads, 2, SYNC_SEQ_CST);
+  
+  /* return the sum directly */
+  hpx_thread_exit((void *) (n1 + n2));
+}
+
+/**
+ * The main function parses the command line, sets up the HPX runtime system,
+ * and initiates the first HPX thread to perform fib(n).
+ *
+ * @param argc number of strings
+ * @param argv[0] fibonacci
+ * @param argv[1] number of cores to use, '0' means use all
+ * @param argv[2] n
+ */
+int main(int argc, char *argv[]) {
+  
   /* validate our arguments */
-  if (argc < 2) {
-    fprintf(stderr, "Invalid number of cores (set to 0 to use all available cores).\n");
-    return -1;
-  } else if (argc < 3) {
-    fprintf(stderr, "Invalid Fibonacci number.\n");
+  if (argc < 3) {
+    fprintf(stderr, usage);
     return -2;
-  } else {
-    cores = atoi(argv[1]);
-    n = atol(argv[2]);
   }
+  
+  uint32_t cores = atoi(argv[1]);
+  long n = atol(argv[2]);
 
   /* initialize hpx runtime */
   hpx_init();
 
   /* set up our configuration */
+  hpx_config_t cfg;
   hpx_config_init(&cfg);
-  hpx_config_set_thread_suspend_policy(&cfg, HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL);
+  hpx_config_set_thread_suspend_policy(&cfg,
+                                       HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL); 
 
-  if (cores > 0) {
+  if (cores > 0)
     hpx_config_set_cores(&cfg, cores);
-  }
 
   /* get a thread context */
   ctx = hpx_ctx_create(&cfg);
 
   /* get start time */
+  hpx_timer_t timer;
   hpx_get_time(&timer);
 
+  /* initialize thread count */
+  nthreads = 1;
+  
   /* create a fibonacci thread */
-  fut = hpx_thread_create(ctx, 0, fib, (void *)n, NULL);
+  hpx_func_t f = (argc > 5) ? fib : fib_futures;
+  hpx_thread_t *t; hpx_thread_create(ctx, 0, f, (void*) n, &t);
 
   /* wait for the thread to finish */
-  hpx_thread_wait(fut);
+  long fib_n; hpx_thread_join(t, (void**) &fib_n);
 
-  printf("fib(%ld)=%ld\nseconds: %.7f\ncores:   %d\nthreads: %d\n",
-         n, hpx_lco_future_get_value(fut), hpx_elapsed_us(timer)/1e3,
-	 hpx_config_get_cores(&cfg), ++nthreads);
+  /* get the time */
+  float ms = hpx_elapsed_us(timer) / 1e3;
+  
+  printf("fib(%ld)=%ld\n", n, fib_n);
+  printf("seconds: %.7f\n", ms);
+  printf("cores:   %d\n", hpx_config_get_cores(&cfg));
+  printf("threads: %d\n", nthreads);
 
   /* cleanup */
   hpx_ctx_destroy(ctx);
-
   hpx_cleanup();
+  
   return 0;
 }

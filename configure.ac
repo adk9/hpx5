@@ -18,7 +18,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar parallel-tests -Wall -Werror])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -35,148 +35,320 @@ AM_PROG_AS
 
 #AS_IF([test "x$CC" = "icc"], [CFLAGS += "-no-gcc"])
 
-AC_CHECK_LIB([m], [pow])
-AC_CHECK_LIB([pthread], [pthread_self])
+dnl ---------------------------------------------------------------------------
+dnl NB: Don't check for anything that we're not actually prepared to deal with
+dnl     in our source code. Add these commented-out checks later if we come up
+dnl     with platform-independent code that actually requires the result of
+dnl     these checks.
+dnl ---------------------------------------------------------------------------
+
+dnl AC_CHECK_LIB([m], [pow])
+dnl AC_CHECK_LIB([pthread], [pthread_self])
 
 # Checks for header files.
-AC_CHECK_HEADERS([limits.h mach/mach.h stdbool.h stdint.h stdlib.h string.h unistd.h])
+dnl AC_CHECK_HEADERS([limits.h mach/mach.h stdbool.h stdint.h stdlib.h string.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_CHECK_HEADER_STDBOOL
-AC_C_INLINE
-AC_TYPE_INT16_T
-AC_TYPE_INT32_T
-AC_TYPE_INT64_T
-AC_TYPE_INT8_T
-AC_TYPE_SIZE_T
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT64_T
-AC_TYPE_UINT8_T
-AC_C_CONST
-AC_TYPE_PID_T
+dnl AC_C_INLINE
+dnl AC_TYPE_INT16_T
+dnl AC_TYPE_INT32_T
+dnl AC_TYPE_INT64_T
+dnl AC_TYPE_INT8_T
+dnl AC_TYPE_SIZE_T
+dnl AC_TYPE_UINT16_T
+dnl AC_TYPE_UINT32_T
+dnl AC_TYPE_UINT64_T
+dnl AC_TYPE_UINT8_T
+dnl AC_C_CONST
+dnl AC_TYPE_PID_T
 
 # Checks for library functions.
-AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_MMAP
-AC_FUNC_REALLOC
-AC_FUNC_STRERROR_R
-AC_CHECK_FUNCS([clock_gettime memset pow])
+dnl AC_FUNC_FORK
+dnl AC_FUNC_MALLOC
+dnl AC_FUNC_MMAP
+dnl AC_FUNC_REALLOC
+dnl AC_FUNC_STRERROR_R
+dnl AC_CHECK_FUNCS([clock_gettime memset pow])
 
-# Check for PAPI measurement support.
-AC_ARG_WITH([papi], AS_HELP_STRING([--with-papi], [Build with PAPI measurement support]), [use_papi=yes], [])
-AS_IF([test "x$use_papi" = xyes], [
-  PKG_CHECK_MODULES([PAPI], [papi])
-  AC_DEFINE([WITH_PAPI], [], [Enable PAPI measurement support])
-  AC_SUBST(PAPI_CFLAGS)
-  AC_SUBST(PAPI_LIBS)
-])
 
-# Check for HWLOC.
-AC_ARG_WITH([hwloc], AS_HELP_STRING([--with-hwloc], [Build with HWLOC support]), [use_hwloc=yes], [])
-AS_IF([test "x$use_hwloc" = xyes], [
-  PKG_CHECK_MODULES([HWLOC], [hwloc])
-  AC_DEFINE([WITH_HWLOC], [], [Enable HWLOC support])
-  AC_SUBST(HWLOC_CFLAGS)
-  AC_SUBST(HWLOC_LIBS)
-])
+dnl ---------------------------------------------------------------------------
+dnl This section declares all of the HPX-specific --enable options. These are
+dnl entirely obvious and don't have extra comments.
+dnl ---------------------------------------------------------------------------
 
-# Check for TCMALLOC.
-AC_ARG_WITH([tcmalloc], AS_HELP_STRING([--with-tcmalloc], [Build with TCMALLOC support]), [use_tcmalloc=yes], [])
-AS_IF([test "x$use_tcmalloc" = xyes], [
-  PKG_CHECK_MODULES([TCMALLOC], [libtcmalloc])
-  AC_DEFINE([WITH_TCMALLOC], [], [Enable TCMALLOC support])
-  AC_SUBST(TCMALLOC_CFLAGS)
-  AC_SUBST(TCMALLOC_LIBS)
-])
+AC_ARG_ENABLE([pedantic],
+    [AS_HELP_STRING([--enable-pedantic],
+        [Enable -pedantic @<:@default=yes@:>@])],
+    [], [enable_pedantic=yes])
+AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
 
-# Check for MPI
-AC_ARG_WITH([mpi], AS_HELP_STRING([--with-mpi], [Build with MPI support]), [use_mpi=yes], [])
-AS_IF([test "x$use_mpi" = xyes], [
-  AC_DEFINE([WITH_MPI], [], [Enable MPI support])
-])
+AC_ARG_ENABLE([wall],
+    [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
+    [], [enable_wall=yes])
+AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
 
-# Check for PHOTON
-AC_ARG_WITH([photon], AS_HELP_STRING([--with-photon], [Build with Photon support]), [use_photon=yes], [])
-AS_IF([test "x$use_photon" = xyes], [
-  AC_DEFINE([WITH_PHOTON], [], [Enable Photon support])
-])
+AC_ARG_ENABLE([werror],
+    [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
+    [], [enable_werror=yes])
+AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
-# Check for check (and disable test-suite if not found).
-PKG_CHECK_MODULES([CHECK], [ check >= 0.9.4 ], [
-  AC_DEFINE([WITH_TESTSUITE], [], [Enable test suite])
-  AM_CONDITIONAL([WITH_TESTSUITE], true)
-  AC_SUBST(CHECK, [check])
-  AC_SUBST(CHECK_CFLAGS)
-  AC_SUBST(CHECK_LIBS)], [
-  AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])
-  AM_CONDITIONAL([WITH_TESTSUITE], false)])
+dnl This is combined with the --with-check option to compute an "enable_docs"
+dnl variable that we use to actually add doc support.
+AC_ARG_ENABLE([testsuite],
+    [AS_HELP_STRING([--enable-testsuite],
+        [Enable test suite (requires check) @<:@default=yes@:>@])],
+    [], [enable_testsuite=yes])
 
-AM_COND_IF([WITH_TESTSUITE], [AC_CONFIG_FILES([tests/Makefile])])
 
-# Check for doxygen (to build the documentation).
-AC_CHECK_PROGS([DOXYGEN], [doxygen])
-if test -z "$DOXYGEN";
-  then AC_MSG_WARN([Doxygen not found. Install Doxygen to build the documentation.])
-fi
+dnl ---------------------------------------------------------------------------
+dnl This section declares all of the HPX-specific --with options. Unless
+dnl otherwise specified we rely on pcg-config for all of these. If the user
+dnl provides --with-option without specifying a PKGS (pkg-config string), then
+dnl we provide a default.
+dnl
+dnl The goal of most of these is to compute CFLAGS and LIBS required by various
+dnl Makefile.am files for building.
+dnl ---------------------------------------------------------------------------
 
-AM_CONDITIONAL([WITH_DOCS], [test -n "$DOXYGEN"])
-AM_COND_IF([WITH_DOCS],
-	[AC_CONFIG_FILES([docs/Doxyfile
-			  docs/Makefile])])
-AC_SUBST(WITH_DOCS)
+AC_ARG_WITH([libcrypto],
+    [AS_HELP_STRING([--with-libcrypto[[=PKGS]]],
+         [for string hashing @<:@default=yes@:>@])],
+    [], [with_libcrypto=yes])
+
+AC_ARG_WITH([papi],
+    [AS_HELP_STRING([--with-papi[[=PKGS]]],
+        [build with profiling @<:@default=no@:>@])],
+    [], [with_papi=no])
+    
+AC_ARG_WITH([hwloc],
+     [AS_HELP_STRING([--with-hwloc[[=PKGS]]],
+         [build with topology awareness @<:@default=no@:>@])],
+     [], [with_hwloc=no])
+
+AC_ARG_WITH([tcmalloc],
+    [AS_HELP_STRING([--with-tcmalloc[[=PKGS]]],
+        [build with explicit tcmalloc @<:@default=no@:>@])],
+    [], [with_tcmalloc=no])
+
+AC_ARG_WITH([check],
+    [AS_HELP_STRING([--with-check[[=PKGS]]],
+        [build unit testing @<:@default=yes@:>@])],
+    [], [with_check=yes])
+
+AC_ARG_WITH([doxygen],
+    [AS_HELP_STRING([--with-doxygen],
+        [build documentation @<:@default=no@:>@])],
+    [], [with_doxygen=yes])
+
+AC_ARG_WITH([mpi],
+    [AS_HELP_STRING([--with-mpi[[=PKGS]]],
+        [build with networking @<:@default=yes@:>@])],
+    [], [with_mpi=yes])
+
+AC_ARG_WITH([photon],
+    [AS_HELP_STRING([--with-photon],
+        [build with IB networking @<:@default=no@:>@])],
+    [], [with_photon=no])
+
+    
+dnl ---------------------------------------------------------------------------
+dnl Here, we provide default packages for any --with option for which we have a
+dnl default. This cleans up the variables for the circumstances where the user
+dnl only said (e.g.,) --with-doxygen.
+dnl
+dnl NB: there is no default for --with-mpi, because lots of people won't need a
+dnl     package for it.
+dnl ---------------------------------------------------------------------------
+
+AS_IF([test "x$with_libcrypto" = xyes], with_libcrypto=libcrypto)
+AS_IF([test "x$with_papi" = xyes],      with_papi=papi)
+AS_IF([test "x$with_hwloc" = xyes],     with_hwloc=hwloc)
+AS_IF([test "x$with_tcmalloc" = xyes],  with_tcmalloc=libtcmalloc)
+AS_IF([test "x$with_check" = xyes],     with_check="check >= 0.9.4")
+
+
+dnl ---------------------------------------------------------------------------
+dnl For each optional package, compute the CFLAGS and LIBS that we need for
+dnl compilation. Some of these use the PKG_CHECK_MODULES functionality to do
+dnl this, while some of these are hardcoded.
+dnl ---------------------------------------------------------------------------
+
+AS_IF([test "x$with_libcrypto" != xno],
+    [PKG_CHECK_MODULES([LIBCRYPTO], [$with_libcrypto])
+     AC_SUBST(LIBCRYPTO_CFLAGS)
+     AC_SUBST(LIBCRYPTO_LIBS)
+     AC_SUBST(WITH_LIBCRYPTO, [$with_libcrypto])])
+
+AS_IF([test "x$with_papi" != xno],
+    [PKG_CHECK_MODULES([PAPI], [$with_papi])
+     AC_SUBST(PAPI_CFLAGS)
+     AC_SUBST(PAPI_LIBS)
+     AC_SUBST(WITH_PAPI, [$with_papi])])
+
+AS_IF([test "x$with_hwloc" != xno],
+    [PKG_CHECK_MODULES([HWLOC], [$with_hwloc])
+     AC_SUBST(HWLOC_CFLAGS)
+     AC_SUBST(HWLOC_LIBS)
+     AC_SUBST(WITH_HWLOC, [$with_hwloc])])
+    
+AS_IF([test "x$with_tcmalloc" != xno],
+    [PKG_CHECK_MODULES([TCMALLOC], [$with_tcmalloc])
+     AC_SUBST(TCMALLOC_CFLAGS)
+     AC_SUBST(TCMALLOC_LIBS)
+     AC_SUBST(WITH_TCMALLOC, [$with_tcmalloc])])    
+
+dnl Only check MPI if there is a package supplied for it.
+AS_IF([test "x$with_mpi" != xno -a "x$with_mpi" != xyes],
+    [PKG_CHECK_MODULES([MPI], [$with_mpi])
+     AC_SUBST(MPI_CFLAGS)
+     AC_SUBST(MPI_LIBS)
+     AC_SUBST(WITH_MPI, [$with_mpi])])
+
+AS_IF([test "x$with_photon" != xno],
+    [AC_SUBST([PHOTON_CFLAGS], [])
+     AC_SUBST([PHOTON_LIBS], ["-lphoton -libverbs -lrdmacm"])])
+
+dnl Only check the "check" package if we're trying to build the testsuite. Also
+dnl don't fail configuration if we can't find check, just print a nice warning
+dnl and move along. Define enable_tests correctly.
+AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
+    [PKG_CHECK_MODULES([CHECK], [$with_check],
+        [enable_tests=yes
+         AC_SUBST(CHECK_CFLAGS)
+         AC_SUBST(CHECK_LIBS)],
+        [enable_tests=no
+         AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])])],
+    [enable_tests=no])
+
+dnl Don't need CFLAGS or LIBS for doxygen. Just define "enable_docs" correctly
+dnl and move along if we can't find doxygen.
+AS_IF([test "x$with_doxygen" != xno], [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
+AS_IF([test "x$DOXYGEN" != x], [enable_docs=yes],
+    [enable_docs=no
+     AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])
+
+    
+dnl ---------------------------------------------------------------------------
+dnl Perform host-specific work here.
+dnl ---------------------------------------------------------------------------
+
+AS_CASE([$host_os],
+    [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
+                 l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+                 pagesize=`getconf PAGESIZE`],
+    [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
+                 pagesize=`getconf PAGESIZE`],
+    [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
+                                     grep l1-dcache-line-size | uniq | \
+                                     awk '{print $2}'`]
+    [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
+     l1d_linesize=128
+     pagesize=4096])
+    
+dnl ---------------------------------------------------------------------------
+dnl In addition to CFLAGS and LIBS for the build process, some of the with
+dnl packages result in different source-code logic through #defines. Generate
+dnl them now.
+dnl
+dnl NB: We already know we passed any PKG_CHECK_MODULES for these because the
+dnl     default behavior that we're using above is to fail. If we change the
+dnl     default, then we would use the _PKG_ERRORS variables to condition this
+dnl     section.
+dnl
+dnl NB: Please only #define things that we actually use.
+dnl ---------------------------------------------------------------------------
+
+AS_IF([test "x$with_libcrypto" != xno],
+    AC_DEFINE([HAVE_LIBCRYPTO], [1], [Enable libcrypto for string hashing]))
+    
+AS_IF([test "x$with_tcmalloc" != xno],
+    AC_DEFINE([HAVE_TCMALLOC], [1], [Enable TCMALLOC support]))
+    
+AS_IF([test "x$with_mpi" != xno],
+    AC_DEFINE([HAVE_MPI], [1], [Enable MPI support]))
+
+AS_IF([test "x$with_photon" != xno],
+    AC_DEFINE([HAVE_PHOTON], [1], [Enable Photon support]))
+
+AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
+    AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+    
+dnl ---------------------------------------------------------------------------
+dnl Any other custom #defines go here.
+dnl
+dnl NB: Please only #define things that we actually use.
+dnl ---------------------------------------------------------------------------
+AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+
+AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+
+    
+dnl ---------------------------------------------------------------------------
+dnl Set automake conditionals for use in Makefile.am settings.
+dnl
+dnl NB: Please only declare conditionals that we have actual uses of.
+dnl ---------------------------------------------------------------------------
 
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
-AM_CONDITIONAL([PLATFORM_LINUX], [test "x$host_os" = xlinux-gnu])
-AM_CONDITIONAL([HAVE_PAPI], [test "x$use_papi" = xyes])
-AM_CONDITIONAL([HAVE_HWLOC], [test "x$use_hwloc" = xyes])
-AM_CONDITIONAL([HAVE_TCMALLOC], [test "x$use_tcmalloc" = xyes])
-AM_CONDITIONAL([HAVE_MPI], [test "x$use_mpi" = xyes])
-AM_CONDITIONAL([HAVE_PHOTON], [test "x$use_photon" = xyes])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$use_mpi" = xyes -o "x$use_photon" = xyes]) # TODO: make this robust
+AM_CONDITIONAL([HAVE_MPI], [test "x$with_mpi" != xno])
+AM_CONDITIONAL([HAVE_PHOTON], [test "x$with_photon" != xno])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
+AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
+AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
+
+
+dnl ---------------------------------------------------------------------------
+dnl Set some Makefile.am substitutions used in generating libhpx.pc.in.
+dnl ---------------------------------------------------------------------------
+
+
+
+dnl ---------------------------------------------------------------------------
+dnl Use autoconf to configure all of the Makefiles that need to be
+dnl processed. First, add anything that weill be processed unconditionally, and
+dnl then at any configuration-specific files.
+dnl ---------------------------------------------------------------------------
 
 AC_CONFIG_FILES([
   Makefile
+  libsync/Makefile
   src/Makefile
+  src/libhpx.pc
   include/Makefile
   examples/Makefile
   examples/hpx/Makefile	
   examples/thread/Makefile
   examples/network/Makefile
 ])
+
+AS_IF([test "x$enable_docs" != xno],
+    AC_CONFIG_FILES([docs/Doxyfile docs/Makefile]))
+
+AS_IF([test "x$enable_tests" = xyes],
+    AC_CONFIG_FILES([tests/Makefile]))
+    
 AC_OUTPUT
 
-AS_IF([test -n "$DOXYGEN"],
-      [doc_string="yes"],
-      [doc_string="no"])
-AS_IF([test -n "$CHECK"],
-      [test_string="yes"],
-      [test_string="no"])
-AS_IF([test "x$use_papi" = xyes],
-      [papi_string="yes"],
-      [papi_string="no"])
-AS_IF([test "x$use_hwloc" = xyes],
-      [hwloc_string="yes"],
-      [hwloc_string="no"])
-AS_IF([test "x$use_tcmalloc" = xyes],
-      [tcmalloc_string="yes"],
-      [tcmalloc_string="no"])
+dnl ---------------------------------------------------------------------------
+dnl Output a summary of the results.
+dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$use_mpi" = xyes], [networks_string="$networks_string MPI"], [])
-AS_IF([test "x$use_photon" = xyes], [networks_string="$networks_string Photon"], [])
-
+AS_IF([test "x$with_mpi" != xno], [networks="$networks MPI"], [])
+AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
+      
 echo ""
 echo "================================================"
 echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
-echo "               Networks : $networks_string"
-echo "              Profiling : $papi_string (PAPI)"
-echo "     Topology Awareness : $hwloc_string (HWLOC)"
-echo "  Thread-Caching Malloc : $tcmalloc_string (TCMALLOC)"
-echo "          Documentation : $doc_string"
-echo "             Test Suite : $test_string"
+echo "         String Hashing : $with_libcrypto"
+echo "               Networks : $networks"
+echo "              Profiling : $with_papi"
+echo "     Topology Awareness : $with_hwloc"
+echo "  Thread-Caching Malloc : $with_tcmalloc"
+echo "          Documentation : $enable_docs"
+echo "             Test Suite : $enable_tests"
 echo "================================================"
 

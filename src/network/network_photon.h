@@ -25,8 +25,9 @@
 #include <photon.h>
 
 #include "hpx/action.h"
-#include "hpx/network.h"
 #include "hpx/parcel.h"
+
+#include "network/network.h"
 
 #include "network_mpi.h"
 
@@ -37,7 +38,7 @@ struct network_ops_t;
 struct network_request_t;
 struct network_status_t;
 
-#define EAGER_THRESHOLD_PHOTON_DEFAULT 256;
+#define EAGER_THRESHOLD_PHOTON_DEFAULT 256
 
 /* If using Photon, call this instead of _init_mpi */
 int init_photon(void);
@@ -67,5 +68,7 @@ int pin_photon(void* buffer, size_t len);
 
 /* unpin memory for put/get */
 int unpin_photon(void* buffer, size_t len);
+
+int phys_addr_photon(hpx_locality_t *l);
 
 #endif

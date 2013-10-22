@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   "Kernel" Thread Functions
   hpx_thread.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -19,32 +19,62 @@
  ====================================================================
 */
 
-#ifdef __linux__
-  #define _GNU_SOURCE
-#endif
+//#ifdef __linux__
+//  #define _GNU_SOURCE
+//#endif
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
+#include "kthread.h"
+
+static pthread_key_t errno_key;
+static pthread_key_t kth_key;
 
 /*
  --------------------------------------------------------------------
-  _hpx_kthread_sched
+ make_keys
+
+  Helper function to create TLS keys for pthreads.
+ --------------------------------------------------------------------
+*/
+static void make_keys(void) {
+  (void) pthread_key_create(&errno_key, NULL);
+  (void) pthread_key_create(&kth_key, NULL);
+}
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_init
+
+  Internal initialization function for kernel threads.
+ --------------------------------------------------------------------
+*/
+void libhpx_kthread_init(void) {
+    static pthread_once_t init_once = PTHREAD_ONCE_INIT;
+    pthread_once(&init_once, make_keys);
+}
+
+/*
+ --------------------------------------------------------------------
+  libhpx_kthread_sched
 
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, void *target, void *pred, void *arg) {
-  hpx_thread_t *exec_th = kth->exec_th;
-  hpx_context_t *ctx = kth->ctx;
-  uint64_t cnt;
+void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
+    void *target, bool (*pred)(void *, void *), void *arg) {
+  /* hpx_thread_t *exec_th = kth->exec_th; */
+  /* hpx_context_t *ctx = kth->ctx; */
+  /* uint64_t cnt; */
 
   pthread_mutex_lock(&kth->mtx);
 
@@ -58,19 +88,19 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, voi
         break;
       case HPX_THREAD_STATE_YIELD:
         th->state = HPX_THREAD_STATE_PENDING;
-	if (target != NULL) {
+    if (target != NULL) {
             th->skip = (uint8_t) (uint64_t) target;
-	}
+    }
 
         hpx_queue_push(&kth->pend_q, th);
-	break;
+    break;
       case HPX_THREAD_STATE_TERMINATED:
         th->state = HPX_THREAD_STATE_TERMINATED;
         break;
       case HPX_THREAD_STATE_SUSPENDED:
         th->state = HPX_THREAD_STATE_SUSPENDED;
         th->reuse->wait = target;
-        th->reuse->func = pred;
+        th->reuse->func = (void (*)())pred;
         th->reuse->args = arg;
         hpx_queue_push(&kth->susp_q, th);
         break;
@@ -93,18 +123,18 @@ void _hpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state, voi
 
 void * hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
-  hpx_thread_t *th = NULL;
-  hpx_context_t *ctx = kth->ctx;
+  /* hpx_thread_t *th = NULL; */
+  /* hpx_context_t *ctx = kth->ctx; */
   struct timespec ts;
   struct timeval tv;
-  uint64_t susp_idx = 0;
-  uint64_t cnt;
+  /* uint64_t susp_idx = 0; */
+  /* uint64_t cnt; */
 
   /* save a pointer to our data in TLS */
   pthread_setspecific(kth_key, kth);
 
   /* get our current machine context */
-  hpx_mctx_getcontext(kth->mctx, kth->mcfg, kth->mflags); 
+  hpx_mctx_getcontext(kth->mctx, kth->mcfg, kth->mflags);
 
   /* enter our critical section */
   pthread_mutex_lock(&kth->mtx);
@@ -114,14 +144,14 @@ void * hpx_kthread_seed_default(void *ptr) {
     if (kth->exec_th != NULL) {
       switch (kth->exec_th->state) {
         case HPX_THREAD_STATE_YIELD:
-	  kth->exec_th->state = HPX_THREAD_STATE_PENDING;
-	  hpx_queue_push(&kth->pend_q, kth->exec_th);
-	  break;
+      kth->exec_th->state = HPX_THREAD_STATE_PENDING;
+      hpx_queue_push(&kth->pend_q, kth->exec_th);
+      break;
       case HPX_THREAD_STATE_EXECUTING:
         _hpx_thread_terminate(kth->exec_th);
-	break;
+    break;
       case HPX_THREAD_STATE_TERMINATED:
-	_hpx_thread_terminate(kth->exec_th);
+    _hpx_thread_terminate(kth->exec_th);
         break;
       }
     }
@@ -132,14 +162,14 @@ void * hpx_kthread_seed_default(void *ptr) {
     if (kth->exec_th != NULL) {
       switch (kth->exec_th->state) {
         case HPX_THREAD_STATE_INIT:
-	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	  hpx_mctx_makecontext(kth->exec_th->reuse->mctx, kth->mctx, kth->exec_th->reuse->stk, kth->exec_th->reuse->ss, kth->mcfg, kth->mflags, kth->exec_th->reuse->func, 1, kth->exec_th->reuse->args);
-	  break;
+      kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+      hpx_mctx_makecontext(kth->exec_th->reuse->mctx, kth->mctx, kth->exec_th->reuse->stk, kth->exec_th->reuse->ss, kth->mcfg, kth->mflags, kth->exec_th->reuse->func, 1, kth->exec_th->reuse->args);
+      break;
         case HPX_THREAD_STATE_PENDING:
-	  kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-	  break;
+      kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+      break;
         default:
-	  break;
+      break;
       }
 
       pthread_mutex_unlock(&kth->mtx);
@@ -149,7 +179,7 @@ void * hpx_kthread_seed_default(void *ptr) {
       gettimeofday(&tv, NULL);
       ts.tv_sec = tv.tv_sec;
       ts.tv_nsec = (tv.tv_usec * 1000) + 5;
-      
+
       pthread_cond_timedwait(&kth->k_c, &kth->mtx, &ts);
     }
   }
@@ -157,7 +187,7 @@ void * hpx_kthread_seed_default(void *ptr) {
   /* leave */
   pthread_mutex_unlock(&kth->mtx);
 
-  return NULL;  
+  return NULL;
 }
 
 
@@ -171,7 +201,7 @@ void * hpx_kthread_seed_default(void *ptr) {
 
 hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
                                   hpx_mconfig_t mcfg, uint64_t mflags) {
-  pthread_mutexattr_t mtx_attr;
+  /* pthread_mutexattr_t mtx_attr; */
   hpx_kthread_t *kth = NULL;
   int err;
 
@@ -179,8 +209,8 @@ hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
   kth = (hpx_kthread_t *) hpx_alloc(sizeof(hpx_kthread_t));
   if (kth != NULL) {
     memset(kth, 0, sizeof(hpx_kthread_t));
-    
-    hpx_queue_init(&kth->pend_q);  
+
+    hpx_queue_init(&kth->pend_q);
     hpx_queue_init(&kth->susp_q);
 
     hpx_kthread_mutex_init(&kth->mtx);
@@ -204,17 +234,17 @@ hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
        switch (err) {
         case EAGAIN:
           __hpx_errno = HPX_ERROR_KTH_MAX;
-	  break;
+      break;
         case EINVAL:
           __hpx_errno = HPX_ERROR_KTH_ATTR;
-	  break;
+      break;
         default:
-	  __hpx_errno = HPX_ERROR_KTH_INIT;
-	  break;
+      __hpx_errno = HPX_ERROR_KTH_INIT;
+      break;
       }
 
        goto __hpx_kthread_create_FAIL2;
-    } 
+    }
   } else {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto __hpx_kthread_create_FAIL0;
@@ -227,7 +257,7 @@ hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
 
  __hpx_kthread_create_FAIL1:
   pthread_cond_destroy(&kth->k_c);
-  hpx_kthread_mutex_destroy(&kth->mtx);  
+  hpx_kthread_mutex_destroy(&kth->mtx);
 
   hpx_queue_destroy(&kth->susp_q);
   hpx_queue_destroy(&kth->pend_q);
@@ -298,7 +328,7 @@ void hpx_kthread_destroy(hpx_kthread_t *kth) {
   hpx_queue_destroy(&kth->pend_q);
 
   pthread_cond_destroy(&kth->k_c);
-  hpx_kthread_mutex_destroy(&kth->mtx);  
+  hpx_kthread_mutex_destroy(&kth->mtx);
 
   hpx_free(kth->mctx);
   hpx_free(kth);
@@ -323,32 +353,6 @@ long hpx_kthread_get_cores(void) {
 
   return cores;
 }
-
-
-/*
- --------------------------------------------------------------------
-  __hpx_kthread_make_keys
-
-  Helper function to create TLS keys for pthreads.
- --------------------------------------------------------------------
-*/
-static void __hpx_kthread_make_keys(void) {
-  (void) pthread_key_create(&errno_key, NULL);
-  (void) pthread_key_create(&kth_key, NULL);
-}
-
-
-/*
- --------------------------------------------------------------------
-  _hpx_kthread_init
-
-  Internal initialization function for kernel threads.
- --------------------------------------------------------------------
-*/
-void _hpx_kthread_init(void) {
-  pthread_once(&__kthread_init_once, __hpx_kthread_make_keys);
-}
-
 
 /*
  --------------------------------------------------------------------
@@ -415,13 +419,13 @@ void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *mtx) {
 
 /*
  --------------------------------------------------------------------
-  _hpx_kthread_srv_susp_local
+  hpx_kthread_srv_susp_local
 
   Service thread that wakes up suspended threads when the futures
   they are waiting are put into the SET state.
  --------------------------------------------------------------------
 */
-void _hpx_kthread_srv_susp_local(void *ptr) {
+void libhpx_kthread_srv_susp_local(void *ptr) {
   hpx_thread_wait_pred_t pred;
   hpx_context_t *ctx = (hpx_context_t *) ptr;
   hpx_future_t *fut = &ctx->f_srv_susp;
@@ -436,18 +440,18 @@ void _hpx_kthread_srv_susp_local(void *ptr) {
     do {
       th = hpx_queue_pop(&kth->susp_q);
       if (th != NULL) {
-        pred = th->reuse->func;
+        pred = (hpx_thread_wait_pred_t)th->reuse->func;
         if (pred(th->reuse->wait, th->reuse->args) == true) {
           th->state = HPX_THREAD_STATE_PENDING;
-	  hpx_queue_push(&kth->pend_q, th);
-	  cnt = 0;
-	} else {
-	  hpx_queue_push(&kth->susp_q, th);
-	  cnt -= 1;
-	}
+      hpx_queue_push(&kth->pend_q, th);
+      cnt = 0;
+    } else {
+      hpx_queue_push(&kth->susp_q, th);
+      cnt -= 1;
+    }
       } else {
-	cnt = 0;
-      } 
+    cnt = 0;
+      }
     } while (cnt > 0);
 
     hpx_kthread_mutex_unlock(&kth->mtx);
@@ -460,7 +464,7 @@ void _hpx_kthread_srv_susp_local(void *ptr) {
 
 /*
  --------------------------------------------------------------------
-  _hpx_kthread_srv_susp_global
+  libhpx_kthread_srv_susp_global
 
   (core global version)
 
@@ -469,7 +473,7 @@ void _hpx_kthread_srv_susp_local(void *ptr) {
  --------------------------------------------------------------------
 */
 
-void _hpx_kthread_srv_susp_global(void *ptr) {
+void libhpx_kthread_srv_susp_global(void *ptr) {
   hpx_thread_wait_pred_t pred;
   hpx_context_t * ctx = (hpx_context_t *) ptr;
   hpx_future_t * fut = &ctx->f_srv_susp;
@@ -488,18 +492,18 @@ void _hpx_kthread_srv_susp_global(void *ptr) {
       do {
         th = hpx_queue_pop(&kth->susp_q);
         if (th != NULL) {
-          pred = th->reuse->func;
-	  if (pred(th->reuse->wait, th->reuse->args) == true) {
+            pred = (hpx_thread_wait_pred_t)th->reuse->func;
+      if (pred(th->reuse->wait, th->reuse->args) == true) {
             th->state = HPX_THREAD_STATE_PENDING;
-	    hpx_queue_push(&kth->pend_q, th);
-	    cnt = 0;
-	  } else {
-	    hpx_queue_push(&kth->susp_q, th);
-	    cnt -= 1;
-	  }
+        hpx_queue_push(&kth->pend_q, th);
+        cnt = 0;
+      } else {
+        hpx_queue_push(&kth->susp_q, th);
+        cnt -= 1;
+      }
         } else {
-	  cnt = 0;
-        } 
+      cnt = 0;
+        }
       } while (cnt > 0);
 
       hpx_kthread_mutex_unlock(&kth->mtx);
@@ -515,25 +519,25 @@ void _hpx_kthread_srv_susp_global(void *ptr) {
 
 /*
  --------------------------------------------------------------------
-  _hpx_kthread_srv_rebal
+  libhpx_kthread_srv_rebal
 
   Service thread that rebalances workload between cores.
  --------------------------------------------------------------------
 */
 
-void _hpx_kthread_srv_rebal(void *ptr) {
+void libhpx_kthread_srv_rebal(void *ptr) {
   hpx_context_t * ctx = (hpx_context_t *) ptr;
   hpx_future_t * fut = &ctx->f_srv_rebal;
-  hpx_kthread_t * kth_high = NULL;
-  hpx_kthread_t * kth_low = NULL;
-  hpx_kthread_t * kth = NULL;
-  hpx_thread_t * th = NULL;
-  uint64_t cnt_high = 0;
-  uint64_t cnt_low = 0;
-  uint64_t core_high = 0;
-  uint64_t core_low = 0;
-  uint64_t idx;
-  uint64_t cnt;
+  /* hpx_kthread_t * kth_high = NULL; */
+  /* hpx_kthread_t * kth_low = NULL; */
+  /* hpx_kthread_t * kth = NULL; */
+  /* hpx_thread_t * th = NULL; */
+  /* uint64_t cnt_high = 0; */
+  /* uint64_t cnt_low = 0; */
+  /* uint64_t core_high = 0; */
+  /* uint64_t core_low = 0; */
+  /* uint64_t idx; */
+  /* uint64_t cnt; */
 
   while (hpx_lco_future_isset(fut) == false) {
     //    for (idx = 0; idx < ctx->kths_count; idx++) {
@@ -550,23 +554,23 @@ void _hpx_kthread_srv_rebal(void *ptr) {
     //      cnt = hpx_queue_size(&kth->pend_q);
     //
     //      if (cnt_high < cnt) {
-    //	cnt_high = cnt;
-    //	kth_high = kth;
-    //	core_high = idx;
+    //  cnt_high = cnt;
+    //  kth_high = kth;
+    //  core_high = idx;
     //      }
     //
     //      if (cnt_low >= cnt) {
-    //	cnt_low = cnt;
-    //	kth_low = kth;
-    //	core_low = idx;
+    //  cnt_low = cnt;
+    //  kth_low = kth;
+    //  core_low = idx;
     //      }
     //    }
     //
     //    if ((cnt_high - cnt_low) > 3) {
     //      th = hpx_queue_pop(&kth_high->pend_q);
     //      if (th != NULL) {
-    //	th->reuse->kth = kth_low;
-    //	hpx_queue_push(&kth_low->pend_q, th);
+    //  th->reuse->kth = kth_low;
+    //  hpx_queue_push(&kth_low->pend_q, th);
     //      }
     //    }
     //
