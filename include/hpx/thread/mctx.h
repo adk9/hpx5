@@ -1,14 +1,14 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Machine Context Switch Functions
   hpx_mctx.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -63,8 +63,8 @@ typedef struct _hpx_mctx_context_t {
 
 void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
 void hpx_mctx_setcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
-void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void *, int, ...);
-void hpx_mctx_makecontext_va(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void *, int, va_list *);
+void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, ...);
+void hpx_mctx_makecontext_va(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, va_list *);
 void hpx_mctx_swapcontext(hpx_mctx_context_t *, hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
 
 #endif /* LIBHPX_MCTX_H_ */

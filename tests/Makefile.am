@@ -1,32 +1,40 @@
-if WITH_TESTSUITE
-
-noinst_bin_PROGRAMS = hpxtest
-noinst_bindir = $(abs_top_builddir)/tests
-#TESTS = hpxtest
-TESTS = 
-check_PROGRAMS = hpxtest
-hpxtest_SOURCES = 00_hpxtest.c
-hpxtest_CFLAGS = @CHECK_CFLAGS@ @PAPI_CFLAGS@
-hpxtest_LDADD = $(top_builddir)/src/libhpx.la -lm -lrt -lpthread @CHECK_LIBS@ @PAPI_LIBS@
+noinst_bin_PROGRAMS 	= hpxtest
+noinst_bindir 			= $(abs_top_builddir)/tests
+#TESTS 					= hpxtest
+TESTS 					= 
+check_PROGRAMS			= hpxtest
+hpxtest_SOURCES			= 00_hpxtest.c \
+                          01_init.c \
+                          02_mem.c \
+                          03_ctx.c \
+                          04_thread1.c \
+                          05_queue.c \
+                          06_kthread.c \
+                          07_mctx.c \
+                          08_thread2.c \
+                          09_config.c \
+                          10_list.c \
+                          11_map.c \
+                          12_gate.c \
+                          98_thread_perf1.c
 
 if CPU_X86_64
-  ARCH_SRC = arch/x86_64/99_hpxtest.S
-endif
-
-hpxtest_SOURCES += $(ARCH_SRC)
-
-if HAVE_MPI
-  MPI_DEFS = -DHAVE_MPI=1
-endif
-
-if HAVE_PHOTON
-  PHOTON_DEFS = -DHAVE_PHOTON=1
+    hpxtest_SOURCES	   += arch/x86_64/99_hpxtest.S
 endif
 
 if HAVE_NETWORK
-  NETWORK_DEFS = -DHAVE_NETWORK=1
+    hpxtest_SOURCES	   += 12_parcelhandler.c
 endif
 
-AM_CPPFLAGS = $(MPI_DEFS) $(PHOTON_DEFS) $(NETWORK_DEFS)
+hpxtest_LDADD			= $(top_builddir)/src/libhpx.la -lm
 
-endif
+hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
+hpxtest_CPPFLAGS	   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
+
+hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
+hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
+hpxtest_CFLAGS		   += @LIBCRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@
+hpxtest_CFLAGS		   += -std=c99
+# Turn off some warnings for the tests
+hpxtest_CFLAGS		   += -Wno-unused

@@ -22,9 +22,11 @@
 #include <photon.h>
 
 #include "hpx/action.h"
-#include "hpx/bootstrap.h"
-#include "hpx/network.h"
+#include "hpx/init.h"
 #include "hpx/parcel.h"
+
+#include "bootstrap/bootstrap.h"
+#include "network/network.h"
 
 #include "network_mpi.h"
 #include "network_photon.h"
@@ -39,9 +41,10 @@ network_ops_t photon_ops = {
   .probe    = probe_photon,
   .send     = put_photon,
   .recv     = get_photon,
-  .test     = test_photon,
+  .sendrecv_test     = test_photon,
   .put      = put_photon,
   .get      = get_photon,
+  .putget_test     = test_photon,
   .pin      = pin_photon,
   .unpin    = unpin_photon,
   .phys_addr= phys_addr_photon,
@@ -53,16 +56,19 @@ int _size_photon;
 
 static char* ETH_DEV_ROCE0 = "roce0";
 static char* IB_DEV_MLX4_1 = "mlx4_1";
+static char* BACKEND_UGNI = "ugni";
+//static char* BACKEND_VERBS = "verbs";
 
 /* If using Photon, call this instead of _init_mpi */
 int init_photon(void) {
   int retval;
   int temp;
-  int thread_support_provided;
+  //  int thread_support_provided;
 
   /* runtime configuration options */
   char* eth_dev;
   char* ib_dev;
+  char* backend;
   int use_cma;
 
   retval = HPX_ERROR;
@@ -86,11 +92,14 @@ int init_photon(void) {
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
   ib_dev = getenv("HPX_USE_IB_DEV");
+  backend = getenv("HPX_USE_BACKEND");
 
   if (eth_dev == NULL)
     eth_dev = ETH_DEV_ROCE0;
   if (ib_dev == NULL)
     ib_dev = IB_DEV_MLX4_1;
+  if (backend == NULL)
+    backend = BACKEND_UGNI;
   if(getenv("HPX_USE_CMA") == NULL)
     use_cma = 1;
   else
@@ -106,7 +115,7 @@ int init_photon(void) {
 	  .eth_dev = eth_dev,
 	  .ib_dev = ib_dev,
 	  .ib_port = 1,
-	  .backend = "verbs"
+	  .backend = backend
   };
 
   temp =  photon_init(&photon_conf);
@@ -243,7 +252,7 @@ int probe_photon(int src, int *flag, network_status_t* status) {
 	int retval;
 	int temp;
 	int phot_src;
-	struct photon_status_t stat;
+	// struct photon_status_t stat;
 	
 	retval = HPX_ERROR;
 
@@ -298,8 +307,6 @@ int unpin_photon(void* buffer, size_t len) {
   int retval;
 
   retval = HPX_ERROR;
-
-  printf("in UNPIN\n");
 
   temp = photon_unregister_buffer(buffer, len);
   if (temp != 0) {
