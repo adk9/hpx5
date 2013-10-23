@@ -109,7 +109,7 @@ static inline photonRequest __ugni_get_request() {
 static int __ugni_nbpop_event(photonRequest req) {
 	int status;
 	uint32_t cookie;
-	gni_post_descriptor_t *event_post_desc_ptr;
+	gni_post_descriptor_t *event_post_desc_ptr = NULL;
 	gni_cq_entry_t current_event;	
 
 	dbg_info("(%d)", req->id);
@@ -162,11 +162,11 @@ static int __ugni_nbpop_event(photonRequest req) {
 				}
 			}
 		}
-	}
 
-	/* free up the descriptor we allocated for the operation */
-	if (event_post_desc_ptr) {
-		free(event_post_desc_ptr);
+		/* free up the descriptor we allocated for the operation */
+		if (event_post_desc_ptr) {
+			free(event_post_desc_ptr);
+		}
 	}
 
 	dbg_info("returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
