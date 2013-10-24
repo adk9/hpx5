@@ -63,7 +63,7 @@ hpx_error_t hpx_new_parcel(hpx_action_t act, void* args, size_t len,
     goto error;
   }
   */
-  
+  out->parcel_id = 0;
   out->action = act;
   out->payload = args;
   out->payload_size = len;

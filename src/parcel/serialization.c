@@ -59,8 +59,11 @@ hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
   struct header *blob = *out;
   size_t size_of_blob = sizeof(*blob) + p->payload_size;
   size_of_blob = FOURBYTE_ALIGN(size_of_blob); /* in case we're using UGNI */
-  blob = hpx_alloc(size_of_blob);
-  if (blob == NULL)
+  //blob = hpx_alloc(size_of_blob);
+  //  if (blob == NULL)
+  int success;
+  success = hpx_alloc_align((void**)&blob, 64, size_of_blob);
+  if (success != 0 || blob == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
 #ifdef HAVE_PHOTON
   /* need to unpin this again somewhere - right now the parcel handler does that*/
