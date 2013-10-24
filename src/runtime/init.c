@@ -67,13 +67,14 @@ hpx_error_t hpx_init(void) {
 
   __hpx_global_cfg = hpx_alloc(sizeof(*__hpx_global_cfg));
   if (!__hpx_global_cfg)
-    return (__hpx_errno = HPX_ERROR_NOMEM);
+    return __hpx_errno;
     
   hpx_config_init(__hpx_global_cfg);
+  hpx_config_set_cores(__hpx_global_cfg, 8);
 
   __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
   if (!__hpx_global_ctx)
-    return (__hpx_errno = HPX_ERROR);
+    return __hpx_errno;
   
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(*__hpx_network_ops));
@@ -95,7 +96,7 @@ hpx_error_t hpx_init(void) {
   /* bootstrap the runtime */
   success = bootmgr->init();
   if (success != HPX_SUCCESS)
-    return (__hpx_errno = HPX_ERROR);
+    return __hpx_errno;
 
   /* initialize timer subsystem */
   hpx_timer_init();
@@ -103,7 +104,7 @@ hpx_error_t hpx_init(void) {
   /* initialize network */
   success = __hpx_network_ops->init();
   if (success != HPX_SUCCESS)
-    return (__hpx_errno = HPX_ERROR);
+    return __hpx_errno;
 #endif
 
   /* initialize the parcel subsystem */

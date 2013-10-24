@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
   
   int success = hpx_init();
   if (success != 0) {
-    printf("Error in hpx_init!\n");
+    printf("Error %d in hpx_init!\n", success);
     exit(-1);
   }
 
