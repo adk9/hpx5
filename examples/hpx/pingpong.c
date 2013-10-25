@@ -162,9 +162,9 @@ int main(int argc, char** argv) {
   my_loc = hpx_get_my_locality();
   int my_rank = my_loc->rank;
   if (my_rank == 0)
-    other_loc = hpx_find_locality(other_rank);
+    other_loc =  hpx_locality_from_rank(other_rank);
   else if (my_rank == other_rank)
-    other_loc = hpx_find_locality(0);
+    other_loc =  hpx_locality_from_rank(0);
   else 
     {}
   

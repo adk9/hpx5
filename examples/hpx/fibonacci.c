@@ -23,8 +23,8 @@ void fib(void *n) {
 
   /* create children parcels */
   my_rank = hpx_get_rank();
-  hpx_locality_t *left = hpx_find_locality((my_rank+num_ranks-1)%num_ranks);
-  hpx_locality_t *right = hpx_find_locality((my_rank+1)%num_ranks);
+  hpx_locality_t *left = hpx_locality_from_rank((my_rank+num_ranks-1)%num_ranks);
+  hpx_locality_t *right = hpx_locality_from_rank((my_rank+1)%num_ranks);
 
   long n1 = num - 1;
   hpx_thread_t *th1 = hpx_call(left, fib_action, &n1, sizeof(long));

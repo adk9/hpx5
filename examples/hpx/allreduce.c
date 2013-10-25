@@ -89,7 +89,7 @@ void op(void* _args) {
 
   for (i = 0; i < args->count; i++) {
     p = hpx_alloc(sizeof(hpx_parcel_t));
-    loc = hpx_find_locality(i);
+    loc = hpx_locality_from_rank(i);
     success = hpx_new_parcel(recv_broadcast_action, (void*)value, sizeof(REDUCTION_TYPE), p);
     if (success != HPX_SUCCESS) {
       printf("Error creating parcel");
@@ -130,7 +130,7 @@ void allreduce(void *_value) {
   num_ranks = hpx_get_num_localities();
   my_loc = hpx_get_my_locality();
   my_rank = my_loc->rank;
-  root_loc = hpx_find_locality(0);
+  root_loc = hpx_locality_from_rank(0);
 
   hpx_lco_future_init(&done_fut);
   if (my_rank == 0) {

@@ -88,23 +88,23 @@ int bootstrap_mpi_size(void) {
 }
 
 int bootstrap_mpi_get_map(hpx_locality_t **map) {
-    int ret;
-    hpx_locality_t *loc;
+  int ret;
+  hpx_locality_t *loc;
 
+  *map = NULL;
+  loc = hpx_get_my_locality();
+  if (!loc) return HPX_ERROR;
+
+  *map = hpx_alloc(size * sizeof(hpx_locality_t));
+  if (*map == NULL) return HPX_ERROR_NOMEM;
+
+  ret = MPI_Allgather(loc, sizeof(*loc), MPI_BYTE, *map, sizeof(*loc), MPI_BYTE, MPI_COMM_WORLD);
+  if (ret != MPI_SUCCESS) {
+    free(*map);
     *map = NULL;
-    loc = hpx_get_my_locality();
-    if (!loc) return HPX_ERROR;
-
-    *map = hpx_alloc(size * sizeof(hpx_locality_t));
-    if (*map == NULL) return HPX_ERROR_NOMEM;
-
-    ret = MPI_Allgather(loc, sizeof(*loc), MPI_BYTE, *map, sizeof(*loc), MPI_BYTE, MPI_COMM_WORLD);
-    if (ret != MPI_SUCCESS) {
-        free(*map);
-        *map = NULL;
-        return HPX_ERROR;
-    }
-    return 0;
+    return HPX_ERROR;
+  }
+  return 0;
 }
 
 int bootstrap_mpi_finalize(void) {
