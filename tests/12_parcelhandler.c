@@ -354,7 +354,7 @@ static void _thread_main_parcelsenddata_large(void* args) {
     struct send_args* args = hpx_alloc(size_of_sendargs);
     args->fut = NULL; // &fut;
     args->src_rank = my_rank;
-    memcpy(args->in_data, &data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
+    memcpy(args->in_data, data_to_send, DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS);
 
     p = hpx_alloc(sizeof(hpx_parcel_t));
     success = hpx_new_parcel(checkdata_large_action, (char*)args, sizeof(struct send_args) + DATA_SIZE_FOR_PARCEL_SEND_LARGE_TESTS, p);   
