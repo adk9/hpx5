@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
   /* get start time */
   hpx_get_time(&timer);
 
-  hpx_locality_t *dst = hpx_find_locality((hpx_get_rank()+1)%num_ranks);
+  hpx_locality_t *dst = hpx_locality_from_rank((hpx_get_rank()+1)%num_ranks);
   assert(dst != NULL && "Destination cannot be null.");
 
   hpx_call(dst, ping_action, (void*)&p, sizeof(Packet));
