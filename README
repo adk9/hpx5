@@ -28,8 +28,6 @@ The easiest way to configure HPX is as follows:
 * Make sure photon.h is in an include path the compiler knows about,
   or set C_INCLUDE_PATH appropriately
 
-* Set CC to your MPI implementation's compiler wrapper (e.g. "export CC=mpicc")
-
 * "./configure --with-mpi --with-photon"
 
 Example Configuration on Cray Systems
@@ -53,7 +51,7 @@ other than using mpirun/mpiexec. E.g. to run the pingpong example,
 "mpirun examples/hpx/pingponghpx 100 0 0".
 
 When using Photon, some configuration of the environment is
-required. Three environment variables are recognized: HPX_USE_ETH_DEV,
+required. Four environment variables are recognized: HPX_USE_ETH_DEV,
 HPX_USE_IB_DEV, HPX_USE_CMA, HPX_USE_BACKEND. E.g.,
 
 HPX_USE_ETH_DEV=eth0
