@@ -2,9 +2,9 @@
   ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Platform-specific code used by public hpx headers.
+  Platform-specific attribute code used by hpx.
   
-  platform.h
+  include/hpx/system/attributes.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -20,8 +20,8 @@
   ====================================================================
 */
 
-#ifndef HPX_PLATFORM_H_
-#define HPX_PLATFORM_H_
+#ifndef HPX_SYSTEM_ATTRIBUTES_H_
+#define HPX_SYSTEM_ATTRIBUTES_H_
 
 /**
  * @file
@@ -153,4 +153,4 @@
 #define HPX_RETURNS_TWICE
 #endif
 
-#endif /* HPX_PLATFORM_H_ */
+#endif /* HPX_SYSTEM_ATTRIBUTES_H_ */
