@@ -171,7 +171,7 @@ AC_ARG_WITH([mpi_include],
 
 AC_ARG_WITH([mpi_lib],
     [AS_HELP_STRING([--with-mpi-lib=dir], [library path for MPI])],
-    [], [with_mpi_libs=no])
+    [], [with_mpi_lib=no])
 
 dnl make sure that arguments are passed
 AS_IF([test "x$with_mpi_include" = xyes],
@@ -181,7 +181,7 @@ AS_IF([test "x$with_mpi_lib" = xyes],
 
 dnl --with-mpi-include or --with-mpi-lib "force" --with-mpi=yes, if it's not set
 AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_include" != xno], [with_mpi=yes])
-AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_libs" != xno], [with_mpi=yes])
+AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_lib" != xno], [with_mpi=yes])
 
 dnl We can get access to Photon in one of three ways.
 dnl
@@ -206,7 +206,7 @@ AC_ARG_WITH([photon_include],
 
 AC_ARG_WITH([photon_lib],
     [AS_HELP_STRING([--with-photon-lib=dir], [library path for Photon])],
-    [], [with_photon_libs=no])
+    [], [with_photon_lib=no])
 
 dnl make sure that arguments are passed
 AS_IF([test "x$with_photon_include" = xyes],
@@ -216,7 +216,8 @@ AS_IF([test "x$with_photon_lib" = xyes],
 
 dnl --with-photon-include or --with-photon-lib "force" --with-photon=yes, if it's not set
 AS_IF([test "x$with_photon" = xno -a "x$with_photon_include" != xno], [with_photon=yes])
-AS_IF([test "x$with_photon" = xno -a "x$with_photon_libs" != xno], [with_photon=yes])
+AS_IF([test "x$with_photon" = xno -a "x$with_photon_lib" != xno], [with_photon=yes])
+
 
 dnl ---------------------------------------------------------------------------
 dnl Here, we provide default packages for any --with option for which we have a
