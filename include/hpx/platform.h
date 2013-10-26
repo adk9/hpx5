@@ -30,7 +30,7 @@
  */
 
 /**
- * @macro HPX_ATTRIBUTE(...)
+ * @macro HPX_ATTRIBUTE
  * @brief Abstract away the specific attribute syntax for the compiler.
  */
 #ifdef __GNUC__
@@ -42,7 +42,7 @@
 #endif
 
 /**
- * @macro HPX_ALIGNED(i)
+ * @macro HPX_ALIGNED
  * @brief The attribute for aligning data.
  */
 #ifdef __GNUC__
@@ -54,9 +54,11 @@
 #endif
 
 /**
- * @macro HPX_NON_NULL(i)
+ * @macro HPX_NON_NULL
  * @brief The attribute for declaring that a pointer parameter must not be
- *        NULL. No problem if it's not available.
+ *        NULL.
+ *
+ * No problem if it's not available.
  */
 #ifdef __GNUC__
 #define HPX_NON_NULL(...) nonnull(__VA_ARGS__)
@@ -67,7 +69,9 @@
 /**
  * @macro HPX_RETURNS_NON_NULL
  * @brief The attribute that declares that a function returns a pointer
- *        guaranteed to be non-NULL. No problem if it's not available.
+ *        guaranteed to be non-NULL.
+ *
+ * No problem if it's not available.
  */
 #ifdef __GNUC__
 #define HPX_RETURNS_NON_NULL /* __attribute__ ((returns_nonnull)) */
@@ -77,13 +81,76 @@
 
 /**
  * @macro HPX_VISIBILITY_INTERNAL
- * @brief The addtribute that declares that a symbol should have "hidden"
- *        visibility. Not a problem if it isn't available.
+ * @brief The attribute that declares that a symbol should have "hidden"
+ *        visibility.
+ *
+ * Not a problem if it isn't available.
  */
 #ifdef __GNUC__
 #define HPX_VISIBILITY_INTERNAL visibility("hidden")
 #else
 #define HPX_VISIBILITY_INTERNAL
+#endif
+
+/**
+ * @macro HPX_MALLOC
+ * @brief The attribute that declares that a function has "malloc" semantics
+ *        w.r.t. the aliasing behavior of the returned pointer value.
+ *
+ * Not a problem if it is unavailable.
+ */
+#ifdef __GNUC__
+#define HPX_MALLOC malloc
+#else
+#define HPX_MALLOC
+#endif
+
+/**
+ * @macro HPX_NORETURN
+ * @brief The attribute that declares that a function does not return.
+ *
+ * Not a problem if it is unavailable.
+ */
+#ifdef __GNUC__
+#define HPX_NORETURN noreturn
+#else
+#define HPX_NORETURN
+#endif
+
+/**
+ * @macro HPX_ALWAYS_INLINE
+ * @brief The attribute that declares that a function should always be inlined.
+ *
+ * Not a problem if it is unavailable.
+ */
+#ifdef __GNUC__
+#define HPX_ALWAYS_INLINE always_inline
+#else
+#define HPX_ALWAYS_INLINE
+#endif
+
+/**
+ * @macro HPX_ALLOC_SIZE
+ * @brief The attribute that declares that a function returns a pointer to a
+ *        specific size chunk of memory.
+ *
+ * Not a problem if it is unavailable.
+ */
+#ifdef __GNUC__
+#define HPX_ALLOC_SIZE(...) alloc_size(__VA_ARGS__)
+#else
+#define HPX_ALLOC_SIZE(...)
+#endif
+
+/**
+ * @macro HPX_RETURNS_TWICE
+ * @brief The attribute that declares that a function returns twice
+ *        (setjmp-style).
+ */
+#ifdef __GNUC__
+#define HPX_RETURNS_TWICE returns_twice
+#else
+#define HPX_RETURNS_TWICE
 #endif
 
 #endif /* HPX_PLATFORM_H_ */
