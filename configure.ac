@@ -93,6 +93,10 @@ AC_ARG_ENABLE([werror],
     [], [enable_werror=yes])
 AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
+AC_ARG_ENABLE([debug],
+    [AS_HELP_STRING([--enable-debug], [Enable debug build @<:@default=yes@:>@])],
+    [], [enable_werror=yes])
+
 dnl This is combined with the --with-check option to compute an "enable_docs"
 dnl variable that we use to actually add doc support.
 AC_ARG_ENABLE([testsuite],
@@ -111,10 +115,10 @@ dnl The goal of most of these is to compute CFLAGS and LIBS required by various
 dnl Makefile.am files for building.
 dnl ---------------------------------------------------------------------------
 
-AC_ARG_WITH([libcrypto],
-    [AS_HELP_STRING([--with-libcrypto[[=PKGS]]],
-         [for string hashing @<:@default=yes@:>@])],
-    [], [with_libcrypto=yes])
+AC_ARG_WITH([crypto],
+    [AS_HELP_STRING([--with-crypto[[=PKGS]]],
+         [use libcrypto for string hashing @<:@default=yes@:>@])],
+    [], [with_crypto=yes])
 
 AC_ARG_WITH([papi],
     [AS_HELP_STRING([--with-papi[[=PKGS]]],
@@ -141,27 +145,89 @@ AC_ARG_WITH([doxygen],
         [build documentation @<:@default=no@:>@])],
     [], [with_doxygen=yes])
 
+dnl We can get access to MPI in one of three ways.
+dnl
+dnl 1) It may be that the application developer is using a CC like mpicc that
+dnl    has MPI builtin. Then, all they need to do is set --with-mpi=yes in order
+dnl    to enable it (in fact, in this case --without-mpi won't do them any
+dnl    good). 
+dnl
+dnl 2) They may have a package installed that supports pkg-config, like the
+dnl    MacPorts installation for OpenMPI. In that case, they can pass the
+dnl    package identifier to --with-mpi, --with-mpi=ompi say.
+dnl
+dnl 3) The may have an MPI implementation installed that the compiler doesn't
+dnl    know about, but that isn't visible to pkg-config. In that case, they can
+dnl    set the include and lib directories using --with-mpi-include and/or
+dnl    --with-mpi-lib.
 AC_ARG_WITH([mpi],
     [AS_HELP_STRING([--with-mpi[[=PKGS]]],
-        [build with networking @<:@default=yes@:>@])],
+        [build with MPI @<:@default=yes@:>@])],
     [], [with_mpi=yes])
 
+AC_ARG_WITH([mpi_include],
+    [AS_HELP_STRING([--with-mpi-include=dir], [include path for MPI])],
+     [], [with_mpi_include=no])
+
+AC_ARG_WITH([mpi_lib],
+    [AS_HELP_STRING([--with-mpi-lib=dir], [library path for MPI])],
+    [], [with_mpi_libs=no])
+
+dnl make sure that arguments are passed
+AS_IF([test "x$with_mpi_include" = xyes],
+    [AC_MSG_ERROR(--with-mpi-include requires a path argument, use --with-mpi[[=yes]] if the MPI include path is in your path)])
+AS_IF([test "x$with_mpi_lib" = xyes],
+    [AC_MSG_ERROR(--with-mpi-lib requires a path argument, use --with-mpi[[=yes]] if the MPI library path is in your path)])
+
+dnl --with-mpi-include or --with-mpi-lib "force" --with-mpi=yes, if it's not set
+AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_include" != xno], [with_mpi=yes])
+AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_libs" != xno], [with_mpi=yes])
+
+dnl We can get access to Photon in one of three ways.
+dnl
+dnl 1) It may be that the application developer has Photon in their path
+dnl    already, in that case, they just need to use --with-photon[=yes]
+dnl
+dnl 2) They may have a Photon package installed that supports pkg-config. In
+dnl    this case they can pass the package name to --with-photon.
+dnl
+dnl 3) The may have an Photon implementation installed that the compiler doesn't
+dnl    know about, but that isn't visible to pkg-config. In that case, they can
+dnl    set the include and lib directories using --with-photon-include and/or
+dnl    --with-photon-lib.
 AC_ARG_WITH([photon],
     [AS_HELP_STRING([--with-photon],
-        [build with IB networking @<:@default=no@:>@])],
+        [build with Photon networking @<:@default=no@:>@])],
     [], [with_photon=no])
 
-    
+AC_ARG_WITH([photon_include],
+    [AS_HELP_STRING([--with-photon-include=dir], [include path for Photon])],
+     [], [with_photon_include=no])
+
+AC_ARG_WITH([photon_lib],
+    [AS_HELP_STRING([--with-photon-lib=dir], [library path for Photon])],
+    [], [with_photon_libs=no])
+
+dnl make sure that arguments are passed
+AS_IF([test "x$with_photon_include" = xyes],
+    [AC_MSG_ERROR(--with-photon-include requires a path argument, use --with-photon[[=yes]] if the PHOTON include path is in your path)])
+AS_IF([test "x$with_photon_lib" = xyes],
+    [AC_MSG_ERROR(--with-photon-lib requires a path argument, use --with-photon[[=yes]] if the PHOTON library path is in your path)])
+
+dnl --with-photon-include or --with-photon-lib "force" --with-photon=yes, if it's not set
+AS_IF([test "x$with_photon" = xno -a "x$with_photon_include" != xno], [with_photon=yes])
+AS_IF([test "x$with_photon" = xno -a "x$with_photon_libs" != xno], [with_photon=yes])
+
 dnl ---------------------------------------------------------------------------
 dnl Here, we provide default packages for any --with option for which we have a
 dnl default. This cleans up the variables for the circumstances where the user
 dnl only said (e.g.,) --with-doxygen.
 dnl
-dnl NB: there is no default for --with-mpi, because lots of people won't need a
-dnl     package for it.
+dnl NB: there is no default for --with-mpi or --with-photon, because we provide
+dnl     the -include,-lib interface for them.
 dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$with_libcrypto" = xyes], with_libcrypto=libcrypto)
+AS_IF([test "x$with_crypto" = xyes],    with_crypto=libcrypto)
 AS_IF([test "x$with_papi" = xyes],      with_papi=papi)
 AS_IF([test "x$with_hwloc" = xyes],     with_hwloc=hwloc)
 AS_IF([test "x$with_tcmalloc" = xyes],  with_tcmalloc=libtcmalloc)
@@ -174,40 +240,63 @@ dnl compilation. Some of these use the PKG_CHECK_MODULES functionality to do
 dnl this, while some of these are hardcoded.
 dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$with_libcrypto" != xno],
-    [PKG_CHECK_MODULES([LIBCRYPTO], [$with_libcrypto])
-     AC_SUBST(LIBCRYPTO_CFLAGS)
-     AC_SUBST(LIBCRYPTO_LIBS)
-     AC_SUBST(WITH_LIBCRYPTO, [$with_libcrypto])])
+AS_IF([test "x$with_crypto" != xno],
+    [PKG_CHECK_MODULES([CRYPTO], [$with_crypto])
+     AC_SUBST(CRYPTO_CFLAGS)
+     AC_SUBST(CRYPTO_LIBS)
+     AC_SUBST(CRYPTO_PKG, [$with_crypto])])
 
 AS_IF([test "x$with_papi" != xno],
     [PKG_CHECK_MODULES([PAPI], [$with_papi])
      AC_SUBST(PAPI_CFLAGS)
      AC_SUBST(PAPI_LIBS)
-     AC_SUBST(WITH_PAPI, [$with_papi])])
+     AC_SUBST(PAPI_PKG, [$with_papi])])
 
 AS_IF([test "x$with_hwloc" != xno],
     [PKG_CHECK_MODULES([HWLOC], [$with_hwloc])
      AC_SUBST(HWLOC_CFLAGS)
      AC_SUBST(HWLOC_LIBS)
-     AC_SUBST(WITH_HWLOC, [$with_hwloc])])
+     AC_SUBST(HWLOC_PKG, [$with_hwloc])])
     
 AS_IF([test "x$with_tcmalloc" != xno],
     [PKG_CHECK_MODULES([TCMALLOC], [$with_tcmalloc])
      AC_SUBST(TCMALLOC_CFLAGS)
      AC_SUBST(TCMALLOC_LIBS)
-     AC_SUBST(WITH_TCMALLOC, [$with_tcmalloc])])    
+     AC_SUBST(TCMALLOC_PKG, [$with_tcmalloc])])    
 
-dnl Only check MPI if there is a package supplied for it.
-AS_IF([test "x$with_mpi" != xno -a "x$with_mpi" != xyes],
-    [PKG_CHECK_MODULES([MPI], [$with_mpi])
-     AC_SUBST(MPI_CFLAGS)
-     AC_SUBST(MPI_LIBS)
-     AC_SUBST(WITH_MPI, [$with_mpi])])
+dnl Only pkg-config MPI if there is a package supplied for it, otherwise, use
+dnl the arguments passed to the --with-mpi-include and --with-mpi-lib
+dnl options. If the user uses a --with-mpi-lib option, then we assume that they
+dnl need -lmpi explicitly.
+AS_IF([test "x$with_mpi" != xno],
+    [AS_IF([test "x$with_mpi" != xyes],
+         [PKG_CHECK_MODULES([MPI], [$with_mpi])
+          AC_SUBST(MPI_CFLAGS)
+          AC_SUBST(MPI_LIBS)
+          AC_SUBST(MPI_PKG, [$with_mpi])
+          AS_IF([test "x$with_mpi_include" != xno -o "x$with_mpi_lib" != xno],
+              [AC_MSG_WARN([--with-mpi=$with_mpi overrides --with-mpi-include and --with-mpi-lib])])],
+         [AS_IF([test "x$with_mpi_include" != xno],
+              [AC_SUBST(MPI_CFLAGS, ["-I$with_mpi_include"])])
+          AS_IF([test "x$with_mpi_lib" != xno],
+              [AC_SUBST(MPI_LIBS, ["-L$with_mpi_lib -lmpi"])])])])
 
+dnl Only pkg-config PHOTON if there is a package supplied for it, otherwise, use
+dnl the arguments passed to the --with-photon-include and --with-photon-lib
+dnl options. If the user uses a --with-photon-lib option, then we assume that they
+dnl need -lphoton explicitly.
 AS_IF([test "x$with_photon" != xno],
-    [AC_SUBST([PHOTON_CFLAGS], [])
-     AC_SUBST([PHOTON_LIBS], ["-lphoton -libverbs -lrdmacm"])])
+    [AS_IF([test "x$with_photon" != xyes],
+         [PKG_CHECK_MODULES([PHOTON], [$with_photon])
+          AC_SUBST(PHOTON_CFLAGS)
+          AC_SUBST(PHOTON_LIBS)
+          AC_SUBST(PHOTON_PKG, [$with_photon])
+          AS_IF([test "x$with_photon_include" != xno -o "x$with_photon_lib" != xno],
+              [AC_MSG_WARN([--with-photon=$with_photon overrides --with-photon-include and --with-photon-lib])])],
+         [AS_IF([test "x$with_photon_include" != xno],
+              [AC_SUBST(PHOTON_CFLAGS, ["-I$with_photon_include"])])
+          AS_IF([test "x$with_photon_lib" != xno],
+              [AC_SUBST(PHOTON_LIBS, ["-L$with_photon_lib -lphoton -libverbs -lrdmacm"])])])])
 
 dnl Only check the "check" package if we're trying to build the testsuite. Also
 dnl don't fail configuration if we can't find check, just print a nice warning
@@ -259,12 +348,15 @@ dnl
 dnl NB: Please only #define things that we actually use.
 dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$with_libcrypto" != xno],
-    AC_DEFINE([HAVE_LIBCRYPTO], [1], [Enable libcrypto for string hashing]))
+AS_IF([test "x$with_crypto" != xno],
+    AC_DEFINE([HAVE_CRYPTO], [1], [Enable libcrypto for string hashing]))
     
 AS_IF([test "x$with_tcmalloc" != xno],
     AC_DEFINE([HAVE_TCMALLOC], [1], [Enable TCMALLOC support]))
     
+AS_IF([test "x$with_hwloc" != xno],
+    AC_DEFINE([HAVE_HWLOC], [1], [Enable hwloc support]))
+
 AS_IF([test "x$with_mpi" != xno],
     AC_DEFINE([HAVE_MPI], [1], [Enable MPI support]))
 
@@ -273,6 +365,9 @@ AS_IF([test "x$with_photon" != xno],
 
 AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
     AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+
+AS_IF([test "x$enable_debug" != xno],
+    AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
     
 dnl ---------------------------------------------------------------------------
 dnl Any other custom #defines go here.
@@ -296,7 +391,7 @@ AM_CONDITIONAL([HAVE_PHOTON], [test "x$with_photon" != xno])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
-
+AM_CONDITIONAL([ENABLE_EXPERIMENTAL], [test "x$enable_experimental" != xno])
 
 dnl ---------------------------------------------------------------------------
 dnl Set some Makefile.am substitutions used in generating libhpx.pc.in.
@@ -327,6 +422,9 @@ AS_IF([test "x$enable_docs" != xno],
 
 AS_IF([test "x$enable_tests" = xyes],
     AC_CONFIG_FILES([tests/Makefile]))
+
+AS_IF([test "x$enable_experimental" = xyes],
+    AC_CONFIG_FILES([libhpx/Makefile]))
     
 AC_OUTPUT
 
@@ -343,7 +441,7 @@ echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
-echo "         String Hashing : $with_libcrypto"
+echo "         String Hashing : $with_crypto"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
