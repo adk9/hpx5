@@ -94,8 +94,8 @@ AC_ARG_ENABLE([werror],
 AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
 AC_ARG_ENABLE([debug],
-    [AS_HELP_STRING([--enable-debug], [Enable debug build @<:@default=yes@:>@])],
-    [], [enable_werror=yes])
+    [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
+    [], [enable_debug=no])
 
 dnl This is combined with the --with-check option to compute an "enable_docs"
 dnl variable that we use to actually add doc support.
@@ -197,7 +197,7 @@ dnl    set the include and lib directories using --with-photon-include and/or
 dnl    --with-photon-lib.
 AC_ARG_WITH([photon],
     [AS_HELP_STRING([--with-photon],
-        [build with Photon networking @<:@default=no@:>@])],
+        [build with Photon[[=PKGS]] @<:@default=no@:>@])],
     [], [with_photon=no])
 
 AC_ARG_WITH([photon_include],
@@ -391,12 +391,6 @@ AM_CONDITIONAL([HAVE_PHOTON], [test "x$with_photon" != xno])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
-AM_CONDITIONAL([ENABLE_EXPERIMENTAL], [test "x$enable_experimental" != xno])
-
-dnl ---------------------------------------------------------------------------
-dnl Set some Makefile.am substitutions used in generating libhpx.pc.in.
-dnl ---------------------------------------------------------------------------
-
 
 
 dnl ---------------------------------------------------------------------------
@@ -422,9 +416,6 @@ AS_IF([test "x$enable_docs" != xno],
 
 AS_IF([test "x$enable_tests" = xyes],
     AC_CONFIG_FILES([tests/Makefile]))
-
-AS_IF([test "x$enable_experimental" = xyes],
-    AC_CONFIG_FILES([libhpx/Makefile]))
     
 AC_OUTPUT
 
@@ -432,7 +423,7 @@ dnl ---------------------------------------------------------------------------
 dnl Output a summary of the results.
 dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$with_mpi" != xno], [networks="$networks MPI"], [])
+AS_IF([test "x$with_mpi" != xno], [networks="MPI"], [])
 AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
       
 echo ""
