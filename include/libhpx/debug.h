@@ -27,15 +27,16 @@
 #include <config.h>
 #endif
 
-#ifdef WITH_DEBUG
+#ifdef HAVE_DEBUG
 #include <assert.h>
 #include <stdio.h>
+#include <hpx/system/abort.h>
 #endif
 
 /**
  * @brief dbg_printf 
  */
-#ifdef WITH_DEBUG
+#ifdef HAVE_DEBUG
 #define dbg_printf(...) printf(__VA_ARGS__)
 #else
 #define dbf_printf(...)
@@ -44,8 +45,12 @@
 /**
  * @brief dbg_print_error 
  */
-#ifdef WITH_DEBUG
-#define dbg_print_error(...) fprintf(stderr, __VA_ARGS__)
+#ifdef HAVE_DEBUG
+#define dbg_print_error(...)                    \
+  do {                                          \
+    fprintf(stderr, __VA_ARGS__);               \
+    hpx_abort();                                \
+  } while (0)
 #else
 #define dbg_print_error(...)
 #endif
@@ -53,18 +58,18 @@
 /**
  * @brief dbg_assert
  */
-#ifdef WITH_DEBUG
+#ifdef HAVE_DEBUG
 #define dbg_assert(statement) assert(statement)
 #else
-#define dbg_assert(s)
+#define dbg_assert(statement)
 #endif
 
 /**
  * @brief dbg_assert
  */
-#ifdef WITH_DEBUG
+#ifdef HAVE_DEBUG
 #define dbg_assert_precondition(check) \
-  assert(check && "Precondition violation" #check)
+  assert(check && "Precondition check failed")
 #else
 #define dbg_assert_precondition(check)
 #endif
