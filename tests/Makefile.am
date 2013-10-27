@@ -33,7 +33,7 @@ hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
 hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS		   += @CRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@
+hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@ @GLIB_CFLAGS@
 hpxtest_CFLAGS		   += -std=c99
 # Turn off some warnings for the tests
 hpxtest_CFLAGS		   += -Wno-unused

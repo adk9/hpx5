@@ -52,9 +52,10 @@ libhpx_la_CPPFLAGS      += -D_GNU_SOURCE
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 libhpx_la_CFLAGS        += @CRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
 libhpx_la_CFLAGS        += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
+libhpx_la_CFLAGS        += @GLIB_CFLAGS@ 
 libhpx_la_CFLAGS        += -std=c99
 
 libhpx_la_LIBADD         = $(top_builddir)/libsync/libsync.la
 libhpx_la_LIBADD        += @MPI_LIBS@ @PHOTON_LIBS@ @CRYPTO_LIBS@
 libhpx_la_LIBADD        += @HWLOC_LIBS@ @PAPI_LIBS@ @TCMALLOC_LIBS@
-libhpx_la_LIBADD        += @PLATFORM_LIBS@
+libhpx_la_LIBADD        += @GLIB_LIBS@ @PLATFORM_LIBS@

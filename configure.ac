@@ -219,6 +219,43 @@ AS_IF([test "x$with_photon" = xno -a "x$with_photon_include" != xno], [with_phot
 AS_IF([test "x$with_photon" = xno -a "x$with_photon_lib" != xno], [with_photon=yes])
 
 
+dnl We can get access to GLIB in one of three ways.
+dnl
+dnl 1) It may be that glib is just in the path, in which case we don't need to
+dnl    do anything special.
+dnl
+dnl 2) They may have a package installed that supports pkg-config. In that case,
+dnl    they can pass the package identifier to --with-glib, --with-glib=glib-2.0
+dnl    say.
+dnl
+dnl 3) The may have an GLIB implementation installed that the compiler doesn't
+dnl    know about, but that isn't visible to pkg-config. In that case, they can
+dnl    set the include and lib directories using --with-glib-include and/or
+dnl    --with-glib-lib.
+AC_ARG_WITH([glib],
+    [AS_HELP_STRING([--with-glib[[=PKGS]]],
+        [build with GLIB-2.0 @<:@default=yes@:>@])],
+    [], [with_glib=yes])
+
+AC_ARG_WITH([glib_include],
+    [AS_HELP_STRING([--with-glib-include=dir], [include path for GLIB-2.0])],
+     [], [with_glib_include=no])
+
+AC_ARG_WITH([glib_lib],
+    [AS_HELP_STRING([--with-glib-lib=dir], [library path for GLIB-2.0])],
+    [], [with_glib_lib=no])
+
+dnl make sure that arguments are passed
+AS_IF([test "x$with_glib_include" = xyes],
+    [AC_MSG_ERROR(--with-glib-include requires a path argument, use --with-glib[[=yes]] if the GLIB include path is in your path)])
+AS_IF([test "x$with_glib_lib" = xyes],
+    [AC_MSG_ERROR(--with-glib-lib requires a path argument, use --with-glib[[=yes]] if the GLIB library path is in your path)])
+
+dnl --with-glib-include or --with-glib-lib "force" --with-glib=yes, if it's not set
+AS_IF([test "x$with_glib" = xno -a "x$with_glib_include" != xno], [with_glib=yes])
+AS_IF([test "x$with_glib" = xno -a "x$with_glib_lib" != xno], [with_glib=yes])
+
+
 dnl ---------------------------------------------------------------------------
 dnl Here, we provide default packages for any --with option for which we have a
 dnl default. This cleans up the variables for the circumstances where the user
@@ -281,6 +318,22 @@ AS_IF([test "x$with_mpi" != xno],
               [AC_SUBST(MPI_CFLAGS, ["-I$with_mpi_include"])])
           AS_IF([test "x$with_mpi_lib" != xno],
               [AC_SUBST(MPI_LIBS, ["-L$with_mpi_lib -lmpi"])])])])
+
+dnl Only pkg-config GLIB if there is a package supplied for it, otherwise, use
+dnl the arguments passed to the --with-glib-include and --with-glib-lib
+dnl options.
+AS_IF([test "x$with_glib" != xno],
+    [AS_IF([test "x$with_glib" != xyes],
+         [PKG_CHECK_MODULES([GLIB], [$with_glib])
+          AC_SUBST(GLIB_CFLAGS)
+          AC_SUBST(GLIB_LIBS)
+          AC_SUBST(GLIB_PKG, [$with_glib])
+          AS_IF([test "x$with_glib_include" != xno -o "x$with_glib_lib" != xno],
+              [AC_MSG_WARN([--with-glib=$with_glib overrides --with-glib-include and --with-glib-lib])])],
+         [AS_IF([test "x$with_glib_include" != xno],
+              [AC_SUBST(GLIB_CFLAGS, ["-I$with_glib_include"])])
+          AS_IF([test "x$with_glib_lib" != xno],
+              [AC_SUBST(GLIB_LIBS, ["-L$with_glib_lib -lglib-2.0"])])])])
 
 dnl Only pkg-config PHOTON if there is a package supplied for it, otherwise, use
 dnl the arguments passed to the --with-photon-include and --with-photon-lib
@@ -367,9 +420,13 @@ AS_IF([test "x$with_photon" != xno],
 AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
     AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
 
+AS_IF([test "x$with_glib" != xno],
+    AC_DEFINE([HAVE_LIBGLIB], [1], [Enable GLIB stuff]))
+    
 AS_IF([test "x$enable_debug" != xno],
     AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
-    
+
+
 dnl ---------------------------------------------------------------------------
 dnl Any other custom #defines go here.
 dnl
