@@ -254,23 +254,7 @@ AC_ARG_WITH([crypto],
     [AS_HELP_STRING([--with-crypto[[=PKGS]]],
          [use libcrypto for string hashing @<:@default=yes@:>@])],
     [], [with_crypto=no])
-
-
-dnl ---------------------------------------------------------------------------
-dnl Here, we provide default packages for any --with option for which we have a
-dnl default. This cleans up the variables for the circumstances where the user
-dnl only said (e.g.,) --with-doxygen.
-dnl
-dnl NB: there is no default for --with-mpi or --with-photon, because we provide
-dnl     the -include,-lib interface for them.
-dnl ---------------------------------------------------------------------------
-
-AS_IF([test "x$with_papi" = xyes],      with_papi=papi)
-AS_IF([test "x$with_hwloc" = xyes],     with_hwloc=hwloc)
-AS_IF([test "x$with_tcmalloc" = xyes],  with_tcmalloc=libtcmalloc)
-AS_IF([test "x$with_check" = xyes],     with_check="check >= 0.9.4")
-AS_IF([test "x$with_crypto" = xyes],    with_crypto=libcrypto)
-
+    
 
 dnl ---------------------------------------------------------------------------
 dnl For each optional package, compute the CFLAGS and LIBS that we need for
@@ -483,14 +467,16 @@ dnl ---------------------------------------------------------------------------
 
 AS_IF([test "x$with_mpi" != xno], [networks="MPI"], [])
 AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
-      
+AS_IF([test "x$with_crypto" != xno], [hashing="$with_crypto"], [])
+AS_IF([test "x$with_glib" != xno], [hashing="$with_glib"], [])
+
 echo ""
 echo "================================================"
 echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
-echo "         String Hashing : $with_crypto"
+echo "         String Hashing : $hashing"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"

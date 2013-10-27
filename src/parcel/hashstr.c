@@ -57,7 +57,7 @@ warn_len(const int len, const char * const str)
  * 
  */
 const uintptr_t
-hashstr(const char * const str)
+hashstr(const char * str)
 {
   const size_t len = strnlen(str, MAX_STR_LEN);
   if (len == MAX_STR_LEN)
@@ -66,17 +66,17 @@ hashstr(const char * const str)
 #if defined(HAVE_GLIB)
   union {
     uintptr_t word;
-    GQuark    quarks[sizeof(uintptr_t)/sizeof(GQuark)];
+    GQuark    quark;
   } md = {0};
-  md.quarks[0] = g_quark_from_string(str);
+  md.quark = g_quark_from_string(str);          /* doesn't matter where this goes */
   return md.word;
 #elif defined(HAVE_CRYPTO)
   union {
-    uint8_t bytes[16];
-    uintptr_t words[sizeof(uint8_t[16])/sizeof(uintptr_t)]; 
-  } md = {0};                                   /* space for 128 bits */
-  MD5(str, len, md.bytes);
-  return md.words[0];                           /* just pick some subset */
+    uint8_t   bytes[16];
+    uintptr_t word; 
+  } md = {{0}};                                 /* space for 128 bits */
+  MD5((const unsigned char *)str, len, md.bytes);
+  return md.word;                               /* just pick some subset */
 #else
 #error No custom hash string available yet.
   return 0;
