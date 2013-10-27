@@ -7,7 +7,7 @@ Name: HPX
 Description: High Performance ParalleX Library (libhpx)
 URL: https://github.iu.edu/crest/hpx
 Version: @PACKAGE_VERSION@
-Requires: @TCMALLOC_PKG@
+Requires: @TCMALLOC_PKG@ @GLIB_PKG@
 Requires.private: @MPI_PKG@ @CRYPTO_PKG@ @HWLOC_PKG@ @PAPI_PKG@ @PHOTON_PKG@
 Conflicts:
 Cflags: -I${includedir}
