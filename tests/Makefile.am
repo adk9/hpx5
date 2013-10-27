@@ -19,21 +19,22 @@ hpxtest_SOURCES			= 00_hpxtest.c \
                           98_thread_perf1.c
 
 if CPU_X86_64
-    hpxtest_SOURCES	   += arch/x86_64/99_hpxtest.S
+    hpxtest_SOURCES    += arch/x86_64/99_hpxtest.S
 endif
 
 if HAVE_NETWORK
-    hpxtest_SOURCES	   += 12_parcelhandler.c
+    hpxtest_SOURCES    += 12_parcelhandler.c
 endif
 
-hpxtest_LDADD			= $(top_builddir)/src/libhpx.la -lm
+hpxtest_LDADD           = $(top_builddir)/src/libhpx.la -lm
 
-hpxtest_CPPFLAGS		= -I$(top_srcdir)/include -I$(top_srcdir)/src
+hpxtest_CPPFLAGS        = -I$(top_srcdir)/include -I$(top_srcdir)/src
+hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 
-hpxtest_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
-hpxtest_CFLAGS		   += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
-hpxtest_CFLAGS		   += @CRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-hpxtest_CFLAGS		   += @TCMALLOC_CFLAGS@ @GLIB_CFLAGS@
-hpxtest_CFLAGS		   += -std=c99
+hpxtest_CFLAGS          = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
+hpxtest_CFLAGS         += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
+hpxtest_CFLAGS         += @CRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+hpxtest_CFLAGS         += @TCMALLOC_CFLAGS@ @GLIB_CFLAGS@
+hpxtest_CFLAGS         += -std=c99
 # Turn off some warnings for the tests
-hpxtest_CFLAGS		   += -Wno-unused
+hpxtest_CFLAGS         += -Wno-unused
