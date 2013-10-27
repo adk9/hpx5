@@ -25,7 +25,7 @@
 #include "hpx/action.h"
 #include "hpx/parcel.h"
 #include "hashstr.h"
-#include "network/network.h"
+#include "network.h"
 
 static const int ACTIONS_INITIAL_HT_SIZE = 256;
 static const int ACTIONS_PROBE_LIMIT = 3;

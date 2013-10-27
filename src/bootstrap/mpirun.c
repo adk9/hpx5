@@ -29,7 +29,7 @@
 #endif
 
 #include "bootstrap/bootstrap.h"
-#include "network/network.h"
+#include "network.h"
 #include "hpx/action.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"

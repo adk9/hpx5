@@ -12,4 +12,4 @@ Requires.private: @MPI_PKG@ @CRYPTO_PKG@ @HWLOC_PKG@ @PAPI_PKG@ @PHOTON_PKG@
 Conflicts:
 Cflags: -I${includedir}
 Libs: -L${libdir} -lhpx
-Libs.private: @PHOTON_LIBS@ @PLATFORM_LIBS@
+Libs.private: @PLATFORM_LIBS@

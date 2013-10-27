@@ -26,7 +26,7 @@
 #include "bootstrap/bootstrap.h"
 #include "thread/ctx.h"                         /* libhpx_ctx_init(); */
 #include "thread/thread.h"                      /* libhpx_thread_init() */
-#include "network/network.h"
+#include "network.h"
 #include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
 #include "hpx/error.h"
 #include "hpx/init.h"
