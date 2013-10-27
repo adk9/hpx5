@@ -115,11 +115,6 @@ dnl The goal of most of these is to compute CFLAGS and LIBS required by various
 dnl Makefile.am files for building.
 dnl ---------------------------------------------------------------------------
 
-AC_ARG_WITH([crypto],
-    [AS_HELP_STRING([--with-crypto[[=PKGS]]],
-         [use libcrypto for string hashing @<:@default=yes@:>@])],
-    [], [with_crypto=yes])
-
 AC_ARG_WITH([papi],
     [AS_HELP_STRING([--with-papi[[=PKGS]]],
         [build with profiling @<:@default=no@:>@])],
@@ -255,6 +250,11 @@ dnl --with-glib-include or --with-glib-lib "force" --with-glib=yes, if it's not 
 AS_IF([test "x$with_glib" = xno -a "x$with_glib_include" != xno], [with_glib=yes])
 AS_IF([test "x$with_glib" = xno -a "x$with_glib_lib" != xno], [with_glib=yes])
 
+AC_ARG_WITH([crypto],
+    [AS_HELP_STRING([--with-crypto[[=PKGS]]],
+         [use libcrypto for string hashing @<:@default=yes@:>@])],
+    [], [with_crypto=no])
+
 
 dnl ---------------------------------------------------------------------------
 dnl Here, we provide default packages for any --with option for which we have a
@@ -265,11 +265,11 @@ dnl NB: there is no default for --with-mpi or --with-photon, because we provide
 dnl     the -include,-lib interface for them.
 dnl ---------------------------------------------------------------------------
 
-AS_IF([test "x$with_crypto" = xyes],    with_crypto=libcrypto)
 AS_IF([test "x$with_papi" = xyes],      with_papi=papi)
 AS_IF([test "x$with_hwloc" = xyes],     with_hwloc=hwloc)
 AS_IF([test "x$with_tcmalloc" = xyes],  with_tcmalloc=libtcmalloc)
 AS_IF([test "x$with_check" = xyes],     with_check="check >= 0.9.4")
+AS_IF([test "x$with_crypto" = xyes],    with_crypto=libcrypto)
 
 
 dnl ---------------------------------------------------------------------------
@@ -421,7 +421,7 @@ AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
     AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
 
 AS_IF([test "x$with_glib" != xno],
-    AC_DEFINE([HAVE_LIBGLIB], [1], [Enable GLIB stuff]))
+    AC_DEFINE([HAVE_GLIB], [1], [Enable GLIB stuff]))
     
 AS_IF([test "x$enable_debug" != xno],
     AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
