@@ -20,6 +20,9 @@
   ====================================================================
 */
 
+#ifdef __linux__
+#define _GNU_SOURCE
+#endif
 
 #include <math.h>
 #include <stdarg.h>

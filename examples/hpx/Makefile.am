@@ -6,11 +6,11 @@ fibonaccihpx_SOURCES = fibonacci.c
 pingponghpx_SOURCES  = pingpong.c
 allreduce_SOURCES    = allreduce.c
 
-allreduce_LDADD      = $(top_builddir)/src/libhpx.la
+allreduce_LDADD      = $(top_builddir)/src/libhpx.la 
 fibonaccihpx_LDADD   = $(top_builddir)/src/libhpx.la
 pingponghpx_LDADD    = $(top_builddir)/src/libhpx.la
 
-AM_CPPFLAGS          = -I$(top_srcdir)/include
+AM_CPPFLAGS          = -I$(top_srcdir)/include -D_POSIX_C_SOURCE=200809L
 
 AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 AM_CFLAGS           += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @CRYPTO_CFLAGS@
@@ -20,3 +20,6 @@ AM_CFLAGS           += -std=c99
 
 # during development, for now
 AM_CFLAGS           += -Wno-unused -Wno-unused-but-set-variable
+
+# allreduce uses MPI directly
+allreduce_LDADD     += @MPI_LIBS@
