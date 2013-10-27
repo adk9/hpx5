@@ -40,17 +40,17 @@ static struct hashtable {
   struct entry *table;
 } actions;
 
-static void expand(struct hashtable * const);
-static hpx_action_t insert(struct hashtable * const,
-                           const hpx_action_t, const hpx_func_t);
-static hpx_func_t lookup(const struct hashtable * const ,
-                         const hpx_action_t);
+static void         expand(struct hashtable *);
+static hpx_action_t insert(struct hashtable *, const hpx_action_t, const hpx_func_t);
+static hpx_func_t   lookup(const struct hashtable *, const hpx_action_t);
 
 /**
- * Slow expansion routine. Not important because it does what it needs to
+ * Slow expansion routine. Not important because it does whxat it needs to
  * do.
  */
-void expand(struct hashtable * const ht) {
+void
+expand(struct hashtable *ht)
+{
   /* remember the previous state of the table */
   const int e = ht->size;
   struct entry *copy = ht->table;
@@ -76,8 +76,9 @@ void expand(struct hashtable * const ht) {
  * operation because of the two-phased approach to the way that we use the
  * hashtable. 
  */
-hpx_action_t insert(struct hashtable * const ht, const hpx_action_t key,
-                    const hpx_func_t value) {
+hpx_action_t
+insert(struct hashtable *ht, const hpx_action_t key, const hpx_func_t value)
+{
   /* preconditions */
   assert(ht && "inserting into null hashtable");
   assert(value != NULL && "inserting invalid value (NULL indicates empty)");
@@ -121,7 +122,9 @@ hpx_action_t insert(struct hashtable * const ht, const hpx_action_t key,
  * lookups. We could implement a perfect hashing routine for this, but for
  * now we're using this simple option.
  */
-static hpx_func_t lookup(const struct hashtable *ht, const hpx_action_t key) {
+hpx_func_t
+lookup(const struct hashtable *ht, const hpx_action_t key)
+{
   /* preconditions */
   assert(ht && "looking up in NULL hashtable");
   
@@ -134,17 +137,17 @@ static hpx_func_t lookup(const struct hashtable *ht, const hpx_action_t key) {
   return NULL;
 }
 
-  /************************************************************************/
-  /* ADK: There are a few ways to handle action registration--The         */
-  /* simplest is under the naive assumption that we are executing in a    */
-  /* homogeneous, SPMD environment and parcels simply carry function      */
-  /* pointers around. The second is to have all interested localities     */
-  /* register the required functions and then simply pass tags            */
-  /* around. Finally, a simpler, yet practical alternative, is to have a  */
-  /* local registration scheme for exported functions. Eventually, we     */
-  /* would want to have a distributed namespace for parcels that provides */
-  /* all three options.                                                   */
-  /************************************************************************/
+/************************************************************************/
+/* ADK: There are a few ways to handle action registration--The         */
+/* simplest is under the naive assumption that we are executing in a    */
+/* homogeneous, SPMD environment and parcels simply carry function      */
+/* pointers around. The second is to have all interested localities     */
+/* register the required functions and then simply pass tags            */
+/* around. Finally, a simpler, yet practical alternative, is to have a  */
+/* local registration scheme for exported functions. Eventually, we     */
+/* would want to have a distributed namespace for parcels that provides */
+/* all three options.                                                   */
+/************************************************************************/
 
 /** 
  * Register an HPX action.
@@ -154,24 +157,30 @@ static hpx_func_t lookup(const struct hashtable *ht, const hpx_action_t key) {
  * 
  * @return HPX error code
  */
-hpx_action_t hpx_action_register(const char *name, hpx_func_t func) {
+hpx_action_t
+hpx_action_register(const char *name, hpx_func_t func)
+{
   /* preconditions */
   assert(name && "cannot use null name during registration");
   assert(func && "cannot register NULL action");
   return insert(&actions, hashstr(name), func);
 }
 
-hpx_func_t hpx_action_lookup_local(hpx_action_t action) {
+hpx_func_t
+hpx_action_lookup_local(hpx_action_t action) {
   return lookup(&actions, action);
 }
 
-hpx_future_t* hpx_action_invoke(hpx_action_t action, void *args,
-                                hpx_thread_t** thp) {
+hpx_future_t *
+hpx_action_invoke(hpx_action_t action, void *args, hpx_thread_t** thp)
+{
   // spawn a thread to invoke the action locally
   hpx_func_t f = hpx_action_lookup_local(action);
   return (f) ? hpx_thread_create(__hpx_global_ctx, 0, f, args, thp) : NULL;
 }
 
-void hpx_action_registration_complete(void) {
+void
+hpx_action_registration_complete(void)
+{
   hpx_network_barrier();
 }
