@@ -12,7 +12,6 @@ libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/request_list.c parcel/serialization.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
                            parcel/parcel.c \
-                           parcel-2.0/parcel.c \
                            runtime/init.c runtime/locality.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
                            utils/error.c utils/timer.c utils/config.c \
@@ -47,8 +46,8 @@ libhpx_ladir             = $(includedir)/hpx
 nodist_libhpx_la_HEADERS = $(top_builddir)/include/config.h
 libhpx_la_HEADERS        = $(top_srcdir)/include/hpx/*.h
 
-libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include -D_GNU_SOURCE
-libhpx_la_CPPFLAGS      += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS)
+libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhpx
+libhpx_la_CPPFLAGS      += -D_GNU_SOURCE
 
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 libhpx_la_CFLAGS        += @CRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@

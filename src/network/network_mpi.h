@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#include "network/network.h"
+#include "network.h"
 #include "hpx/action.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h"

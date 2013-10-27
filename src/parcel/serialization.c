@@ -27,7 +27,7 @@
 #include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "hpx/parcel.h"                         /* struct parcel */
-#include "network/network.h"                    /* FOURBYTE_ALIGN */
+#include "network.h"                    /* FOURBYTE_ALIGN */
 
 extern network_ops_t *__hpx_network_ops;
 

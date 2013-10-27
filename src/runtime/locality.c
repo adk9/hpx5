@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 #include "bootstrap/bootstrap.h"
-#include "network/network.h"
+#include "network.h"
 #include "hpx/action.h"
 #include "hpx/agas.h"
 #include "hpx/error.h"

@@ -26,7 +26,7 @@
 #include "hpx/parcel.h"
 
 #include "bootstrap/bootstrap.h"
-#include "network/network.h"
+#include "network.h"
 
 #include "network_mpi.h"
 #include "network_photon.h"

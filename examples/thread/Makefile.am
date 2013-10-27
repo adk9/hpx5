@@ -8,7 +8,6 @@ fibsmarter_SOURCES  = fibsmarter.c
 fibsmarter_LDADD    = $(top_builddir)/src/libhpx.la $(top_builddir)/libsync/libsync.la
 
 AM_CPPFLAGS			= -I$(top_srcdir)/include
-AM_CPPFLAGS		   += $(NETWORK_DEFS) $(MPI_DEFS) $(PHOTON_DEFS) 
 
 AM_CFLAGS			= $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 AM_CFLAGS		   += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @CRYPTO_CFLAGS@

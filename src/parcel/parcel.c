@@ -20,7 +20,7 @@
 
 #include "serialization.h"
 #include "parcelqueue.h"                        /* __send_queue */
-#include "network/network.h"
+#include "network.h"
 #include "hpx/action.h"
 #include "hpx/error.h"
 #include "hpx/parcel.h"
