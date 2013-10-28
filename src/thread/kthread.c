@@ -19,8 +19,8 @@
  ====================================================================
 */
 
-#ifdef __linux__
- #define _GNU_SOURCE
+#if defined(__linux__)
+#define _GNU_SOURCE
 #endif
 
 #include <errno.h>
