@@ -365,7 +365,8 @@ AS_CASE([$host_os],
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
                  pagesize=`getconf PAGESIZE`],
     [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
-                 pagesize=`getconf PAGESIZE`],
+                 pagesize=`getconf PAGESIZE`
+                 AC_DEFINE([_DARWIN_C_SOURCE], [200809L], [POSIX extensions on darwin])],
     [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
                                      grep l1-dcache-line-size | uniq | \
                                      awk '{print $2}'`]
@@ -385,6 +386,8 @@ dnl     section.
 dnl
 dnl NB: Please only #define things that we actually use.
 dnl ---------------------------------------------------------------------------
+
+AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
 
 AS_IF([test "x$with_crypto" != xno],
     AC_DEFINE([HAVE_CRYPTO], [1], [Enable libcrypto for string hashing]))
