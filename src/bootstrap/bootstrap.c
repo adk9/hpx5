@@ -15,6 +15,9 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <limits.h>
 #include <stdlib.h>

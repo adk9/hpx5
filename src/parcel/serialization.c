@@ -20,6 +20,10 @@
   ====================================================================
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint8_t */
 #include <string.h>                             /* memcpy */

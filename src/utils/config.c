@@ -18,6 +18,9 @@
     Patrick K. Bohan <pbohan [at] indiana.edu>
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include "hpx/config.h"
 #include "hpx/kthread.h"
