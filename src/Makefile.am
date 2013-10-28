@@ -47,7 +47,6 @@ nodist_libhpx_la_HEADERS = $(top_builddir)/include/config.h
 libhpx_la_HEADERS        = $(top_srcdir)/include/hpx/*.h
 
 libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhpx
-libhpx_la_CPPFLAGS      += -D_POSIX_C_SOURCE=200809L
 
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 libhpx_la_CFLAGS        += @CRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
