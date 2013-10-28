@@ -23,10 +23,6 @@
 #ifndef LIBHPX_MCTX_H_
 #define LIBHPX_MCTX_H_
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>                             /* move to include/libhpx */
-#endif
-
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
