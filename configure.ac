@@ -109,10 +109,10 @@ AC_ARG_WITH([doxygen],
         [build documentation @<:@default=no@:>@])],
     [], [with_doxygen=yes])
 
-# uses the "fancy with" macro to get some external dependencies
-HPX_FANCY_WITH([mpi],[yes],[MPI])
-HPX_FANCY_WITH([photon],[no],[PHOTON])
-HPX_FANCY_WITH([glib],[yes],[GLIB])
+# uses our custom macro to get some external dependencies
+HPX_WITH_PKG_EXT([mpi],[yes],[MPI],[-lmpi])
+HPX_WITH_PKG_EXT([photon],[no],[PHOTON],[-lphoton -libverbs -lrdmacm])
+HPX_WITH_PKG_EXT([glib],[yes],[GLIB],[-lglib-2.0])
 
 AC_ARG_WITH([crypto],
     [AS_HELP_STRING([--with-crypto[[=PKGS]]],
