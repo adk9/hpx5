@@ -33,65 +33,27 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AM_PROG_AS
 
-#AS_IF([test "x$CC" = "icc"], [CFLAGS += "-no-gcc"])
-
-dnl ---------------------------------------------------------------------------
 dnl NB: Don't check for anything that we're not actually prepared to deal with
 dnl     in our source code. Add these commented-out checks later if we come up
 dnl     with platform-independent code that actually requires the result of
 dnl     these checks.
-dnl ---------------------------------------------------------------------------
-
-dnl AC_CHECK_LIB([m], [pow])
-dnl AC_CHECK_LIB([pthread], [pthread_self])
-
-# Checks for header files.
-dnl AC_CHECK_HEADERS([limits.h mach/mach.h stdbool.h stdint.h stdlib.h string.h unistd.h])
-
-# Checks for typedefs, structures, and compiler characteristics.
-#AC_CHECK_HEADER_STDBOOL
-dnl AC_C_INLINE
-dnl AC_TYPE_INT16_T
-dnl AC_TYPE_INT32_T
-dnl AC_TYPE_INT64_T
-dnl AC_TYPE_INT8_T
-dnl AC_TYPE_SIZE_T
-dnl AC_TYPE_UINT16_T
-dnl AC_TYPE_UINT32_T
-dnl AC_TYPE_UINT64_T
-dnl AC_TYPE_UINT8_T
-dnl AC_C_CONST
-dnl AC_TYPE_PID_T
-
-# Checks for library functions.
-dnl AC_FUNC_FORK
-dnl AC_FUNC_MALLOC
-dnl AC_FUNC_MMAP
-dnl AC_FUNC_REALLOC
-dnl AC_FUNC_STRERROR_R
-dnl AC_CHECK_FUNCS([clock_gettime memset pow])
-
 
 dnl ---------------------------------------------------------------------------
 dnl This section declares all of the HPX-specific --enable options. These are
 dnl entirely obvious and don't have extra comments.
 dnl ---------------------------------------------------------------------------
-
 AC_ARG_ENABLE([pedantic],
     [AS_HELP_STRING([--enable-pedantic],
         [Enable -pedantic @<:@default=yes@:>@])],
     [], [enable_pedantic=yes])
-AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
 
 AC_ARG_ENABLE([wall],
     [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
     [], [enable_wall=yes])
-AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
 
 AC_ARG_ENABLE([werror],
     [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
     [], [enable_werror=yes])
-AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
@@ -104,6 +66,14 @@ AC_ARG_ENABLE([testsuite],
         [Enable test suite (requires check) @<:@default=yes@:>@])],
     [], [enable_testsuite=yes])
 
+    
+dnl ---------------------------------------------------------------------------
+dnl Set some CFLAGS based on the enabled options.
+dnl ---------------------------------------------------------------------------
+AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
+AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
+AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
+
 
 dnl ---------------------------------------------------------------------------
 dnl This section declares all of the HPX-specific --with options. Unless
@@ -114,7 +84,6 @@ dnl
 dnl The goal of most of these is to compute CFLAGS and LIBS required by various
 dnl Makefile.am files for building.
 dnl ---------------------------------------------------------------------------
-
 AC_ARG_WITH([papi],
     [AS_HELP_STRING([--with-papi[[=PKGS]]],
         [build with profiling @<:@default=no@:>@])],
@@ -213,7 +182,6 @@ dnl --with-photon-include or --with-photon-lib "force" --with-photon=yes, if it'
 AS_IF([test "x$with_photon" = xno -a "x$with_photon_include" != xno], [with_photon=yes])
 AS_IF([test "x$with_photon" = xno -a "x$with_photon_lib" != xno], [with_photon=yes])
 
-
 dnl We can get access to GLIB in one of three ways.
 dnl
 dnl 1) It may be that glib is just in the path, in which case we don't need to
@@ -261,7 +229,6 @@ dnl For each optional package, compute the CFLAGS and LIBS that we need for
 dnl compilation. Some of these use the PKG_CHECK_MODULES functionality to do
 dnl this, while some of these are hardcoded.
 dnl ---------------------------------------------------------------------------
-
 AS_IF([test "x$with_crypto" != xno],
     [PKG_CHECK_MODULES([CRYPTO], [$with_crypto])
      AC_SUBST(CRYPTO_CFLAGS)
@@ -359,7 +326,6 @@ AS_IF([test "x$DOXYGEN" != x], [enable_docs=yes],
 dnl ---------------------------------------------------------------------------
 dnl Perform host-specific work here.
 dnl ---------------------------------------------------------------------------
-
 AS_CASE([$host_os],
     [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
@@ -373,7 +339,8 @@ AS_CASE([$host_os],
     [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
      l1d_linesize=128
      pagesize=4096])
-    
+
+     
 dnl ---------------------------------------------------------------------------
 dnl In addition to CFLAGS and LIBS for the build process, some of the with
 dnl packages result in different source-code logic through #defines. Generate
@@ -386,7 +353,6 @@ dnl     section.
 dnl
 dnl NB: Please only #define things that we actually use.
 dnl ---------------------------------------------------------------------------
-
 AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
 
 AS_IF([test "x$with_crypto" != xno],
@@ -420,7 +386,6 @@ dnl
 dnl NB: Please only #define things that we actually use.
 dnl ---------------------------------------------------------------------------
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
-
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
     
@@ -429,7 +394,6 @@ dnl Set automake conditionals for use in Makefile.am settings.
 dnl
 dnl NB: Please only declare conditionals that we have actual uses of.
 dnl ---------------------------------------------------------------------------
-
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_MPI], [test "x$with_mpi" != xno])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$with_photon" != xno])
@@ -443,7 +407,6 @@ dnl Use autoconf to configure all of the Makefiles that need to be
 dnl processed. First, add anything that weill be processed unconditionally, and
 dnl then at any configuration-specific files.
 dnl ---------------------------------------------------------------------------
-
 AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
@@ -464,10 +427,10 @@ AS_IF([test "x$enable_tests" = xyes],
     
 AC_OUTPUT
 
+
 dnl ---------------------------------------------------------------------------
 dnl Output a summary of the results.
 dnl ---------------------------------------------------------------------------
-
 AS_IF([test "x$with_mpi" != xno], [networks="MPI"], [])
 AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
 AS_IF([test "x$with_crypto" != xno], [hashing="$with_crypto"], [])
