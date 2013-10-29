@@ -109,114 +109,10 @@ AC_ARG_WITH([doxygen],
         [build documentation @<:@default=no@:>@])],
     [], [with_doxygen=yes])
 
-dnl We can get access to MPI in one of three ways.
-dnl
-dnl 1) It may be that the application developer is using a CC like mpicc that
-dnl    has MPI builtin. Then, all they need to do is set --with-mpi=yes in order
-dnl    to enable it (in fact, in this case --without-mpi won't do them any
-dnl    good). 
-dnl
-dnl 2) They may have a package installed that supports pkg-config, like the
-dnl    MacPorts installation for OpenMPI. In that case, they can pass the
-dnl    package identifier to --with-mpi, --with-mpi=ompi say.
-dnl
-dnl 3) The may have an MPI implementation installed that the compiler doesn't
-dnl    know about, but that isn't visible to pkg-config. In that case, they can
-dnl    set the include and lib directories using --with-mpi-include and/or
-dnl    --with-mpi-lib.
-AC_ARG_WITH([mpi],
-    [AS_HELP_STRING([--with-mpi[[=PKGS]]],
-        [build with MPI @<:@default=yes@:>@])],
-    [], [with_mpi=yes])
-
-AC_ARG_WITH([mpi_include],
-    [AS_HELP_STRING([--with-mpi-include=dir], [include path for MPI])],
-     [], [with_mpi_include=no])
-
-AC_ARG_WITH([mpi_lib],
-    [AS_HELP_STRING([--with-mpi-lib=dir], [library path for MPI])],
-    [], [with_mpi_lib=no])
-
-dnl make sure that arguments are passed
-AS_IF([test "x$with_mpi_include" = xyes],
-    [AC_MSG_ERROR(--with-mpi-include requires a path argument, use --with-mpi[[=yes]] if the MPI include path is in your path)])
-AS_IF([test "x$with_mpi_lib" = xyes],
-    [AC_MSG_ERROR(--with-mpi-lib requires a path argument, use --with-mpi[[=yes]] if the MPI library path is in your path)])
-
-dnl --with-mpi-include or --with-mpi-lib "force" --with-mpi=yes, if it's not set
-AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_include" != xno], [with_mpi=yes])
-AS_IF([test "x$with_mpi" = xno -a "x$with_mpi_lib" != xno], [with_mpi=yes])
-
-dnl We can get access to Photon in one of three ways.
-dnl
-dnl 1) It may be that the application developer has Photon in their path
-dnl    already, in that case, they just need to use --with-photon[=yes]
-dnl
-dnl 2) They may have a Photon package installed that supports pkg-config. In
-dnl    this case they can pass the package name to --with-photon.
-dnl
-dnl 3) The may have an Photon implementation installed that the compiler doesn't
-dnl    know about, but that isn't visible to pkg-config. In that case, they can
-dnl    set the include and lib directories using --with-photon-include and/or
-dnl    --with-photon-lib.
-AC_ARG_WITH([photon],
-    [AS_HELP_STRING([--with-photon],
-        [build with Photon[[=PKGS]] @<:@default=no@:>@])],
-    [], [with_photon=no])
-
-AC_ARG_WITH([photon_include],
-    [AS_HELP_STRING([--with-photon-include=dir], [include path for Photon])],
-     [], [with_photon_include=no])
-
-AC_ARG_WITH([photon_lib],
-    [AS_HELP_STRING([--with-photon-lib=dir], [library path for Photon])],
-    [], [with_photon_lib=no])
-
-dnl make sure that arguments are passed
-AS_IF([test "x$with_photon_include" = xyes],
-    [AC_MSG_ERROR(--with-photon-include requires a path argument, use --with-photon[[=yes]] if the PHOTON include path is in your path)])
-AS_IF([test "x$with_photon_lib" = xyes],
-    [AC_MSG_ERROR(--with-photon-lib requires a path argument, use --with-photon[[=yes]] if the PHOTON library path is in your path)])
-
-dnl --with-photon-include or --with-photon-lib "force" --with-photon=yes, if it's not set
-AS_IF([test "x$with_photon" = xno -a "x$with_photon_include" != xno], [with_photon=yes])
-AS_IF([test "x$with_photon" = xno -a "x$with_photon_lib" != xno], [with_photon=yes])
-
-dnl We can get access to GLIB in one of three ways.
-dnl
-dnl 1) It may be that glib is just in the path, in which case we don't need to
-dnl    do anything special.
-dnl
-dnl 2) They may have a package installed that supports pkg-config. In that case,
-dnl    they can pass the package identifier to --with-glib, --with-glib=glib-2.0
-dnl    say.
-dnl
-dnl 3) The may have an GLIB implementation installed that the compiler doesn't
-dnl    know about, but that isn't visible to pkg-config. In that case, they can
-dnl    set the include and lib directories using --with-glib-include and/or
-dnl    --with-glib-lib.
-AC_ARG_WITH([glib],
-    [AS_HELP_STRING([--with-glib[[=PKGS]]],
-        [build with GLIB-2.0 @<:@default=yes@:>@])],
-    [], [with_glib=yes])
-
-AC_ARG_WITH([glib_include],
-    [AS_HELP_STRING([--with-glib-include=dir], [include path for GLIB-2.0])],
-     [], [with_glib_include=no])
-
-AC_ARG_WITH([glib_lib],
-    [AS_HELP_STRING([--with-glib-lib=dir], [library path for GLIB-2.0])],
-    [], [with_glib_lib=no])
-
-dnl make sure that arguments are passed
-AS_IF([test "x$with_glib_include" = xyes],
-    [AC_MSG_ERROR(--with-glib-include requires a path argument, use --with-glib[[=yes]] if the GLIB include path is in your path)])
-AS_IF([test "x$with_glib_lib" = xyes],
-    [AC_MSG_ERROR(--with-glib-lib requires a path argument, use --with-glib[[=yes]] if the GLIB library path is in your path)])
-
-dnl --with-glib-include or --with-glib-lib "force" --with-glib=yes, if it's not set
-AS_IF([test "x$with_glib" = xno -a "x$with_glib_include" != xno], [with_glib=yes])
-AS_IF([test "x$with_glib" = xno -a "x$with_glib_lib" != xno], [with_glib=yes])
+# uses the "fancy with" macro to get some external dependencies
+HPX_FANCY_WITH([mpi],[yes],[MPI])
+HPX_FANCY_WITH([photon],[no],[PHOTON])
+HPX_FANCY_WITH([glib],[yes],[GLIB])
 
 AC_ARG_WITH([crypto],
     [AS_HELP_STRING([--with-crypto[[=PKGS]]],
@@ -251,57 +147,7 @@ AS_IF([test "x$with_tcmalloc" != xno],
     [PKG_CHECK_MODULES([TCMALLOC], [$with_tcmalloc])
      AC_SUBST(TCMALLOC_CFLAGS)
      AC_SUBST(TCMALLOC_LIBS)
-     AC_SUBST(TCMALLOC_PKG, [$with_tcmalloc])])    
-
-dnl Only pkg-config MPI if there is a package supplied for it, otherwise, use
-dnl the arguments passed to the --with-mpi-include and --with-mpi-lib
-dnl options. If the user uses a --with-mpi-lib option, then we assume that they
-dnl need -lmpi explicitly.
-AS_IF([test "x$with_mpi" != xno],
-    [AS_IF([test "x$with_mpi" != xyes],
-         [PKG_CHECK_MODULES([MPI], [$with_mpi])
-          AC_SUBST(MPI_CFLAGS)
-          AC_SUBST(MPI_LIBS)
-          AC_SUBST(MPI_PKG, [$with_mpi])
-          AS_IF([test "x$with_mpi_include" != xno -o "x$with_mpi_lib" != xno],
-              [AC_MSG_WARN([--with-mpi=$with_mpi overrides --with-mpi-include and --with-mpi-lib])])],
-         [AS_IF([test "x$with_mpi_include" != xno],
-              [AC_SUBST(MPI_CFLAGS, ["-I$with_mpi_include"])])
-          AS_IF([test "x$with_mpi_lib" != xno],
-              [AC_SUBST(MPI_LIBS, ["-L$with_mpi_lib -lmpi"])])])])
-
-dnl Only pkg-config GLIB if there is a package supplied for it, otherwise, use
-dnl the arguments passed to the --with-glib-include and --with-glib-lib
-dnl options.
-AS_IF([test "x$with_glib" != xno],
-    [AS_IF([test "x$with_glib" != xyes],
-         [PKG_CHECK_MODULES([GLIB], [$with_glib])
-          AC_SUBST(GLIB_CFLAGS)
-          AC_SUBST(GLIB_LIBS)
-          AC_SUBST(GLIB_PKG, [$with_glib])
-          AS_IF([test "x$with_glib_include" != xno -o "x$with_glib_lib" != xno],
-              [AC_MSG_WARN([--with-glib=$with_glib overrides --with-glib-include and --with-glib-lib])])],
-         [AS_IF([test "x$with_glib_include" != xno],
-              [AC_SUBST(GLIB_CFLAGS, ["-I$with_glib_include"])])
-          AS_IF([test "x$with_glib_lib" != xno],
-              [AC_SUBST(GLIB_LIBS, ["-L$with_glib_lib -lglib-2.0"])])])])
-
-dnl Only pkg-config PHOTON if there is a package supplied for it, otherwise, use
-dnl the arguments passed to the --with-photon-include and --with-photon-lib
-dnl options. If the user uses a --with-photon-lib option, then we assume that they
-dnl need -lphoton explicitly.
-AS_IF([test "x$with_photon" != xno],
-    [AS_IF([test "x$with_photon" != xyes],
-         [PKG_CHECK_MODULES([PHOTON], [$with_photon])
-          AC_SUBST(PHOTON_CFLAGS)
-          AC_SUBST(PHOTON_LIBS)
-          AC_SUBST(PHOTON_PKG, [$with_photon])
-          AS_IF([test "x$with_photon_include" != xno -o "x$with_photon_lib" != xno],
-              [AC_MSG_WARN([--with-photon=$with_photon overrides --with-photon-include and --with-photon-lib])])],
-         [AS_IF([test "x$with_photon_include" != xno],
-              [AC_SUBST(PHOTON_CFLAGS, ["-I$with_photon_include"])])
-          AS_IF([test "x$with_photon_lib" != xno],
-              [AC_SUBST(PHOTON_LIBS, ["-L$with_photon_lib -lphoton -libverbs -lrdmacm"])])])])
+     AC_SUBST(TCMALLOC_PKG, [$with_tcmalloc])])
 
 dnl Only check the "check" package if we're trying to build the testsuite. Also
 dnl don't fail configuration if we can't find check, just print a nice warning
@@ -364,18 +210,10 @@ AS_IF([test "x$with_tcmalloc" != xno],
 AS_IF([test "x$with_hwloc" != xno],
     AC_DEFINE([HAVE_HWLOC], [1], [Enable hwloc support]))
 
-AS_IF([test "x$with_mpi" != xno],
-    AC_DEFINE([HAVE_MPI], [1], [Enable MPI support]))
-
-AS_IF([test "x$with_photon" != xno],
-    AC_DEFINE([HAVE_PHOTON], [1], [Enable Photon support]))
-
+# set in HPX_FANCY_WITH
 AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
     AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
 
-AS_IF([test "x$with_glib" != xno],
-    AC_DEFINE([HAVE_GLIB], [1], [Enable GLIB stuff]))
-    
 AS_IF([test "x$enable_debug" != xno],
     AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
 
@@ -395,8 +233,6 @@ dnl
 dnl NB: Please only declare conditionals that we have actual uses of.
 dnl ---------------------------------------------------------------------------
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
-AM_CONDITIONAL([HAVE_MPI], [test "x$with_mpi" != xno])
-AM_CONDITIONAL([HAVE_PHOTON], [test "x$with_photon" != xno])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
