@@ -34,8 +34,8 @@
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "network.h"                            /* typedef hpx_network_ops */
 
-static int the_rank;
-static int the_size;
+static int _rank;
+static int _size;
 
 static int init(void);
 static int get_rank(void);
@@ -67,10 +67,10 @@ int init(void) {
       goto err;
   }
 
-  if (MPI_Comm_size(MPI_COMM_WORLD, &the_size) != MPI_SUCCESS)
+  if (MPI_Comm_size(MPI_COMM_WORLD, &_size) != MPI_SUCCESS)
     goto err;
 
-  if (MPI_Comm_rank(MPI_COMM_WORLD, &the_rank) != MPI_SUCCESS)
+  if (MPI_Comm_rank(MPI_COMM_WORLD, &_rank) != MPI_SUCCESS)
     goto err;
 
   return 0;
@@ -80,7 +80,7 @@ err:
 }
 
 int get_rank(void) {
-  return the_rank;
+  return _rank;
 }
 
 int get_addr(hpx_locality_t *l) {
@@ -88,7 +88,7 @@ int get_addr(hpx_locality_t *l) {
 }
 
 int size(void) {
-  return the_size;
+  return _size;
 }
 
 int get_map(hpx_locality_t **map) {
