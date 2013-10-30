@@ -103,7 +103,7 @@ int get_map(hpx_locality_t **map) {
 
   ret = MPI_Allgather(loc, sizeof(*loc), MPI_BYTE, *map, sizeof(*loc), MPI_BYTE, MPI_COMM_WORLD);
   if (ret != MPI_SUCCESS) {
-    free(*map);
+    hpx_free(*map);
     *map = NULL;
     return HPX_ERROR;
   }
