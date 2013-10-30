@@ -31,6 +31,7 @@
 #include "bootstrap.h"
 #include "hpx/error.h"
 #include "hpx/globals.h"                        /* __hpx_network_ops */
+#include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "network.h"                            /* typedef hpx_network_ops */
 
 static int the_rank;

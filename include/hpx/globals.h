@@ -33,8 +33,6 @@
  * of the initial HPX design.
  */
 
-#include "hpx/thread.h"                         /* hpx_mconfig_t */
-
 /**
  * @brief Forward declarations where we can get away with it. These types are
  *        only exposed to the application through pointers.
@@ -58,7 +56,6 @@ extern struct hpx_config *__hpx_global_cfg;
 extern struct hpx_context *__hpx_global_ctx;
 extern struct network_ops *__hpx_network_ops;
 extern struct bootstrap_ops *bootmgr;
-extern hpx_mconfig_t __mcfg;
 /**
  * @}
  */

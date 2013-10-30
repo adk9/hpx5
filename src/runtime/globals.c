@@ -22,10 +22,9 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
+#include <stddef.h>                             /* NULL */
 #include "hpx/globals.h"
 
-hpx_mconfig_t __mcfg;
 struct hpx_context       *__hpx_global_ctx    = NULL;
 struct hpx_config        *__hpx_global_cfg    = NULL;
 struct network_ops       *__hpx_network_ops   = NULL;
