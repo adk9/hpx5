@@ -197,17 +197,6 @@ int init_mpi(void) {
   return retval;
 }
 
-int send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
-  /* pseudocode:
-     if size > eager_threshold:
-       send notice to other process of intent to put via rdma
-       put data via rdma
-     else:
-       send parcel using _send_mpi
-  */
-  return HPX_ERROR;
-}
-
 /* status may NOT be NULL */
 int probe_mpi(int source, int* flag, network_status_t* status) {
   int retval;
