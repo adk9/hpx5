@@ -69,7 +69,13 @@ hpx_init(void)
     return __hpx_errno;
     
   hpx_config_init(__hpx_global_cfg);
-  hpx_config_set_cores(__hpx_global_cfg, 8);
+  //  hpx_config_set_cores(__hpx_global_cfg, 8);
+
+  if(getenv("HPX_NUM_CORES") != NULL) {
+    int num_cores;
+    num_cores = atoi(getenv("HPX_NUM_CORES"));
+    hpx_config_set_cores(__hpx_global_cfg, num_cores);
+  }
 
   __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
   if (!__hpx_global_ctx)
