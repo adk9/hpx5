@@ -237,11 +237,6 @@ int test_photon(network_request_t *request, int *flag, network_status_t *status)
   return retval;  
 }
 
-int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
-	printf("in send parcel\n");
-	return HPX_SUCCESS;
-}
-
 int send_photon(int peer, void *payload, size_t len, network_request_t *request) {
 
 	return HPX_SUCCESS;
