@@ -58,9 +58,6 @@ hpx_init(void)
   libhpx_ctx_init();
   libhpx_thread_init();
 
-  /* get the global machine configuration */
-  __mcfg = hpx_mconfig_get();
-
   /* initialize kernel threads */
   //_hpx_kthread_init();
 
