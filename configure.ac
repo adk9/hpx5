@@ -33,15 +33,15 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 AM_PROG_AS
 
-dnl NB: Don't check for anything that we're not actually prepared to deal with
-dnl     in our source code. Add these commented-out checks later if we come up
-dnl     with platform-independent code that actually requires the result of
-dnl     these checks.
+# NB: Don't check for anything that we're not actually prepared to deal with
+#     in our source code. Add these commented-out checks later if we come up
+#     with platform-independent code that actually requires the result of
+#     these checks.
 
-dnl ---------------------------------------------------------------------------
-dnl This section declares all of the HPX-specific --enable options. These are
-dnl entirely obvious and don't have extra comments.
-dnl ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# This section declares all of the HPX-specific --enable options. These are
+# entirely obvious and don't have extra comments.
+# ---------------------------------------------------------------------------
 AC_ARG_ENABLE([pedantic],
     [AS_HELP_STRING([--enable-pedantic],
         [Enable -pedantic @<:@default=yes@:>@])],
@@ -59,119 +59,49 @@ AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
     [], [enable_debug=no])
 
-dnl This is combined with the --with-check option to compute an "enable_docs"
-dnl variable that we use to actually add doc support.
+# This is combined with the --with-check option to compute an "enable_docs"
+# variable that we use to actually add doc support.
 AC_ARG_ENABLE([testsuite],
     [AS_HELP_STRING([--enable-testsuite],
         [Enable test suite (requires check) @<:@default=yes@:>@])],
     [], [enable_testsuite=yes])
 
-    
-dnl ---------------------------------------------------------------------------
-dnl Set some CFLAGS based on the enabled options.
-dnl ---------------------------------------------------------------------------
 AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
 AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
 AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
 
 
-dnl ---------------------------------------------------------------------------
-dnl This section declares all of the HPX-specific --with options. Unless
-dnl otherwise specified we rely on pcg-config for all of these. If the user
-dnl provides --with-option without specifying a PKGS (pkg-config string), then
-dnl we provide a default.
-dnl
-dnl The goal of most of these is to compute CFLAGS and LIBS required by various
-dnl Makefile.am files for building.
-dnl ---------------------------------------------------------------------------
-AC_ARG_WITH([papi],
-    [AS_HELP_STRING([--with-papi[[=PKGS]]],
-        [build with profiling @<:@default=no@:>@])],
-    [], [with_papi=no])
+# ---------------------------------------------------------------------------
+# This section declares and handles all of the HPX-specific --with options.
+# ---------------------------------------------------------------------------
+HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
+HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
+HPX_WITH_PKG([tcmalloc],[tcmalloc],[build with explicit tcmalloc],[no],[TCMALLOC])
+HPX_WITH_PKG([crypto],[libcrypto],[use libcrypto for string hashing],[no],[CRYPTO])
+HPX_WITH_PKG([glib],[glib-2.0],[build with glib-2.0],[no],[GLIB])
+
+HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[yes],[MPI])
+HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
+AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
+    AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+
+HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
+AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
+  [enable_tests=yes],[enable_tests=no])
     
-AC_ARG_WITH([hwloc],
-     [AS_HELP_STRING([--with-hwloc[[=PKGS]]],
-         [build with topology awareness @<:@default=no@:>@])],
-     [], [with_hwloc=no])
-
-AC_ARG_WITH([tcmalloc],
-    [AS_HELP_STRING([--with-tcmalloc[[=PKGS]]],
-        [build with explicit tcmalloc @<:@default=no@:>@])],
-    [], [with_tcmalloc=no])
-
-AC_ARG_WITH([check],
-    [AS_HELP_STRING([--with-check[[=PKGS]]],
-        [build unit testing @<:@default=yes@:>@])],
-    [], [with_check=yes])
-
 AC_ARG_WITH([doxygen],
     [AS_HELP_STRING([--with-doxygen],
         [build documentation @<:@default=no@:>@])],
     [], [with_doxygen=yes])
-
-# uses our custom macro to get some external dependencies
-HPX_WITH_PKG_EXT([mpi],[yes],[MPI],[-lmpi])
-HPX_WITH_PKG_EXT([photon],[no],[PHOTON],[-lphoton -libverbs -lrdmacm])
-HPX_WITH_PKG_EXT([glib],[yes],[GLIB],[-lglib-2.0])
-
-AC_ARG_WITH([crypto],
-    [AS_HELP_STRING([--with-crypto[[=PKGS]]],
-         [use libcrypto for string hashing @<:@default=yes@:>@])],
-    [], [with_crypto=no])
-    
-
-dnl ---------------------------------------------------------------------------
-dnl For each optional package, compute the CFLAGS and LIBS that we need for
-dnl compilation. Some of these use the PKG_CHECK_MODULES functionality to do
-dnl this, while some of these are hardcoded.
-dnl ---------------------------------------------------------------------------
-AS_IF([test "x$with_crypto" != xno],
-    [PKG_CHECK_MODULES([CRYPTO], [$with_crypto])
-     AC_SUBST(CRYPTO_CFLAGS)
-     AC_SUBST(CRYPTO_LIBS)
-     AC_SUBST(CRYPTO_PKG, [$with_crypto])])
-
-AS_IF([test "x$with_papi" != xno],
-    [PKG_CHECK_MODULES([PAPI], [$with_papi])
-     AC_SUBST(PAPI_CFLAGS)
-     AC_SUBST(PAPI_LIBS)
-     AC_SUBST(PAPI_PKG, [$with_papi])])
-
-AS_IF([test "x$with_hwloc" != xno],
-    [PKG_CHECK_MODULES([HWLOC], [$with_hwloc])
-     AC_SUBST(HWLOC_CFLAGS)
-     AC_SUBST(HWLOC_LIBS)
-     AC_SUBST(HWLOC_PKG, [$with_hwloc])])
-    
-AS_IF([test "x$with_tcmalloc" != xno],
-    [PKG_CHECK_MODULES([TCMALLOC], [$with_tcmalloc])
-     AC_SUBST(TCMALLOC_CFLAGS)
-     AC_SUBST(TCMALLOC_LIBS)
-     AC_SUBST(TCMALLOC_PKG, [$with_tcmalloc])])
-
-dnl Only check the "check" package if we're trying to build the testsuite. Also
-dnl don't fail configuration if we can't find check, just print a nice warning
-dnl and move along. Define enable_tests correctly.
-AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
-    [PKG_CHECK_MODULES([CHECK], [$with_check],
-        [enable_tests=yes
-         AC_SUBST(CHECK_CFLAGS)
-         AC_SUBST(CHECK_LIBS)],
-        [enable_tests=no
-         AC_MSG_WARN([Check not found. Install Check to enable the test-suite.])])],
-    [enable_tests=no])
-
-dnl Don't need CFLAGS or LIBS for doxygen. Just define "enable_docs" correctly
-dnl and move along if we can't find doxygen.
 AS_IF([test "x$with_doxygen" != xno], [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
 AS_IF([test "x$DOXYGEN" != x], [enable_docs=yes],
     [enable_docs=no
      AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])
 
-    
-dnl ---------------------------------------------------------------------------
-dnl Perform host-specific work here.
-dnl ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Perform host-specific work here.
+# ---------------------------------------------------------------------------
 AS_CASE([$host_os],
     [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
@@ -187,62 +117,50 @@ AS_CASE([$host_os],
      pagesize=4096])
 
      
-dnl ---------------------------------------------------------------------------
-dnl In addition to CFLAGS and LIBS for the build process, some of the with
-dnl packages result in different source-code logic through #defines. Generate
-dnl them now.
-dnl
-dnl NB: We already know we passed any PKG_CHECK_MODULES for these because the
-dnl     default behavior that we're using above is to fail. If we change the
-dnl     default, then we would use the _PKG_ERRORS variables to condition this
-dnl     section.
-dnl
-dnl NB: Please only #define things that we actually use.
-dnl ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# In addition to CFLAGS and LIBS for the build process, some of the with
+# packages result in different source-code logic through #defines. Generate
+# them now.
+#
+# NB: We already know we passed any PKG_CHECK_MODULES for these because the
+#     default behavior that we're using above is to fail. If we change the
+#     default, then we would use the _PKG_ERRORS variables to condition this
+#     section.
+#
+# NB: Please only #define things that we actually use.
+# ---------------------------------------------------------------------------
 AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
 
-AS_IF([test "x$with_crypto" != xno],
-    AC_DEFINE([HAVE_CRYPTO], [1], [Enable libcrypto for string hashing]))
-    
-AS_IF([test "x$with_tcmalloc" != xno],
-    AC_DEFINE([HAVE_TCMALLOC], [1], [Enable TCMALLOC support]))
-    
-AS_IF([test "x$with_hwloc" != xno],
-    AC_DEFINE([HAVE_HWLOC], [1], [Enable hwloc support]))
-
-# set in HPX_FANCY_WITH
-AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
-    AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
 
 AS_IF([test "x$enable_debug" != xno],
     AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
 
 
-dnl ---------------------------------------------------------------------------
-dnl Any other custom #defines go here.
-dnl
-dnl NB: Please only #define things that we actually use.
-dnl ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Any other custom #defines go here.
+#
+# NB: Please only #define things that we actually use.
+# ---------------------------------------------------------------------------
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
     
-dnl ---------------------------------------------------------------------------
-dnl Set automake conditionals for use in Makefile.am settings.
-dnl
-dnl NB: Please only declare conditionals that we have actual uses of.
-dnl ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Set automake conditionals for use in Makefile.am settings.
+#
+# NB: Please only declare conditionals that we have actual uses of.
+# -----------------------------------------------------------------------------
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 
-dnl ---------------------------------------------------------------------------
-dnl Use autoconf to configure all of the Makefiles that need to be
-dnl processed. First, add anything that weill be processed unconditionally, and
-dnl then at any configuration-specific files.
-dnl ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Use autoconf to configure all of the Makefiles that need to be
+# processed. First, add anything that weill be processed unconditionally, and
+# then at any configuration-specific files.
+# -----------------------------------------------------------------------------
 AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
@@ -264,9 +182,9 @@ AS_IF([test "x$enable_tests" = xyes],
 AC_OUTPUT
 
 
-dnl ---------------------------------------------------------------------------
-dnl Output a summary of the results.
-dnl ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Output a summary of the results.
+# ---------------------------------------------------------------------------
 AS_IF([test "x$with_mpi" != xno], [networks="MPI"], [])
 AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
 AS_IF([test "x$with_crypto" != xno], [hashing="$with_crypto"], [])
