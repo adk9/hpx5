@@ -47,7 +47,7 @@
 
 typedef pthread_mutex_t hpx_kthread_mutex_t;
 
-struct hpx_kthread_t {
+struct hpx_kthread {
   hpx_kthread_mutex_t     mtx;
   pthread_cond_t          k_c;
   pthread_t               core_th;
@@ -70,7 +70,7 @@ typedef void *(*hpx_kthread_seed_t)(void *);
   Seed Function
  --------------------------------------------------------------------
 */
-void * hpx_kthread_seed_default(void *);
+void *hpx_kthread_seed_default(void *);
 
 
 /*
@@ -78,11 +78,11 @@ void * hpx_kthread_seed_default(void *);
   Kernel Thread Functions
  --------------------------------------------------------------------
 */
-hpx_kthread_t * hpx_kthread_create(hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
+hpx_kthread_t *hpx_kthread_create(hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 
-hpx_kthread_t * hpx_kthread_self(void);
+hpx_kthread_t *hpx_kthread_self(void);
 
 void hpx_kthread_mutex_init(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);

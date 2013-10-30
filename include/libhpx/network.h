@@ -67,7 +67,9 @@ typedef struct network_status_t {
 } network_status_t;
 
 /**
- * Network Operations
+ * Network Operations interface
+ *
+ * This defines the abstract interface for a network implementation.
  */
 typedef struct network_ops {
   /* Initialize the network layer */
@@ -97,9 +99,16 @@ typedef struct network_ops {
   int (*phys_addr)(hpx_locality_t *l);
 } network_ops_t;
 
+/**
+ * The concrete implementations of the network operations.
+ * @{
+ */
 extern network_ops_t default_net_ops;
 extern network_ops_t mpi_ops;
 extern network_ops_t photon_ops;
+/**
+ * @}
+ */
 
 /**
  * Network Transport
@@ -121,45 +130,6 @@ typedef struct network_mgr_t {
   /* List of configured transports  */
   network_trans_t *trans;
 } network_mgr_t;
-
-/**
- * Default network operations
- */
-
-/* Initialize the network layer */
-int hpx_network_init(void);
-
-/* Shutdown and clean up the network layer */
-int hpx_network_finalize(void);
-
-int hpx_network_probe(int source, int* flag, network_status_t* status);
-
-/* Send a raw payload */
-int hpx_network_send(int dest, void *buffer, size_t len, network_request_t* req);
-
-/* Receive a raw payload */
-int hpx_network_recv(int src, void *buffer, size_t len, network_request_t* req);
-
-/* RMA put */
-int hpx_network_put(int dest, void *buffer, size_t len, network_request_t* req);
-
-/* RMA get */
-int hpx_network_get(int src, void *buffer, size_t len, network_request_t* req);
-
-/* Test for completion of put/get */
-int hpx_network_test(network_request_t *request, int *flag, network_status_t *status);
-
-/* pin memory for put/get */
-int hpx_network_pin(void* buffer, size_t len);
-
-/* unpin memory for put/get */
-int hpx_network_unpin(void* buffer, size_t len);
-
-/* get the physical address of the current locality */
-int hpx_network_phys_addr(hpx_locality_t *l);
-
-/* The network progress function */
-void hpx_network_progress(void *data);
 
 /* Generic network barrier */
 void hpx_network_barrier(void);

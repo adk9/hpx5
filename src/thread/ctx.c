@@ -25,23 +25,21 @@
 
 #include <string.h>
 
-#include "hpx/init.h"
+#include "init.h"                               /* libhpx_ctx_init() */
+#include "kthread.h"
 #include "hpx/mem.h"
 #include "hpx/error.h"
 #include "hpx/kthread.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
 #include "hpx/utils/timer.h"
-#include "ctx.h"
-#include "thread/kthread.h"
 #include "sync/sync.h"
 
 /* the global next context ID */
 static hpx_context_id_t ctx_next_id;
 
-hpx_context_t *__hpx_global_ctx = NULL;
-
-void libhpx_ctx_init() {
+void
+libhpx_ctx_init() {
     sync_store(&ctx_next_id, 0, SYNC_SEQ_CST);
 }
 
@@ -53,7 +51,9 @@ void libhpx_ctx_init() {
  --------------------------------------------------------------------
 */
 
-hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
+hpx_context_t *
+hpx_ctx_create(hpx_config_t *cfg)
+{
   hpx_context_t *ctx = NULL;
   long cores = -1;
   long x;
@@ -168,7 +168,9 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   Destroy a previously allocated HPX context.
  --------------------------------------------------------------------
 */
-void hpx_ctx_destroy(hpx_context_t *ctx) {
+void
+hpx_ctx_destroy(hpx_context_t *ctx)
+{
   hpx_thread_reusable_t * th_ru;
   hpx_future_t * fut;
   hpx_thread_t *th;
@@ -242,6 +244,8 @@ void hpx_ctx_destroy(hpx_context_t *ctx) {
   Get the ID of this HPX context.
  --------------------------------------------------------------------
 */
-hpx_context_id_t hpx_ctx_get_id(hpx_context_t *ctx) {
+hpx_context_id_t
+hpx_ctx_get_id(hpx_context_t *ctx)
+{
   return ctx->cid;
 }

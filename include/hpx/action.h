@@ -14,8 +14,8 @@
 */
 
 #pragma once
-#ifndef LIBHPX_ACTION_H_
-#define LIBHPX_ACTION_H_
+#ifndef HPX_ACTION_H_
+#define HPX_ACTION_H_
 
 #include <stdint.h>
 #include "hpx/thread.h"
@@ -23,7 +23,10 @@
 typedef uintptr_t hpx_action_t;
 
 /**
- * Register a new action
+ * Register an action with the runtime.
+ *
+ * @param[in] name - a unique string name for the action
+ * @param[in] func - the local function pointer to associate with the action
  */
 hpx_action_t hpx_action_register(const char *name, hpx_func_t func);
 
@@ -32,16 +35,16 @@ hpx_action_t hpx_action_register(const char *name, hpx_func_t func);
  */
 void hpx_action_registration_complete(void);
 
-/** 
- *  Lookup actions in the local action table by their name 
- */
-hpx_func_t hpx_action_lookup_local(hpx_action_t action);
-
 /**
-   Invoke an action
-   Note: This is used to invoke an action locally. For remote action
-   invocations, see hpx_call(3).
-*/
-hpx_future_t* hpx_action_invoke(hpx_action_t action, void *args, hpx_thread_t** thp);
+ * Create a local thread to perform the action.
+ *
+ * @param[in]  action - the action id we want to perform
+ * @param[in]  args   - the argument buffer for the action
+ * @param[out] thp    - the thread created
+ *
+ * @returns a future representing the action's result
+ */
+hpx_future_t *
+hpx_action_invoke(hpx_action_t action, void *args, hpx_thread_t **thp);
 
-#endif /* LIBHPX_ACTION_H_ */
+#endif /* HPX_ACTION_H_ */

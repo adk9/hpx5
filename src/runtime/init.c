@@ -23,40 +23,39 @@
 #include <config.h>
 #endif
 
-#include "bootstrap/bootstrap.h"
-#include "thread/ctx.h"                         /* libhpx_ctx_init(); */
-#include "thread/thread.h"                      /* libhpx_thread_init() */
-#include "network.h"
-#include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
+#include "init.h"                               /* libhpx initializers */
+#include "hpx/init.h"                           /* hpx_init(), hpx_cleanup() */
+#include "hpx/globals.h"
 #include "hpx/error.h"
-#include "hpx/init.h"
 #include "hpx/parcel.h"
 #include "hpx/utils/timer.h"
 #include "hpx/thread/ctx.h"
+#include "bootstrap.h"                          /* struct bootstrap_ops */
+#include "network.h"
+#include "parcelhandler.h"                      /* struct parcelhandler */
 
-hpx_mconfig_t __mcfg;
-hpx_config_t *__hpx_global_cfg = NULL;
-network_ops_t *__hpx_network_ops = NULL;
-hpx_parcelhandler_t *__hpx_parcelhandler = NULL;
-bootstrap_ops_t *bootmgr = NULL;
 
 /**
- * Initializes data structures used by libhpx.  This function must
- * be called BEFORE any other functions in libhpx.  Not doing so
- * will cause all other functions to return HPX_ERROR_NOINIT.
+ * There's one parcelhandler per (UNIX) process at this point.
+ */
+static struct parcelhandler *the_parcelhandler = NULL;
+
+/**
+ * Initializes data structures used by libhpx.
+ *
+ * This function must be called BEFORE any other functions in libhpx. Not doing
+ * so will cause all other functions to return HPX_ERROR_NOINIT.
  *
  * @return error code.
  */
-hpx_error_t hpx_init(void) {
-  __hpx_global_cfg = NULL;
-
+hpx_error_t
+hpx_init(void)
+{
   /* init hpx_errno */
-  hpx_error_t success = __hpx_errno = HPX_SUCCESS;
+  hpx_error_t success = HPX_SUCCESS;
+  __hpx_errno         = HPX_SUCCESS;
 
-  /* init the next context ID */
   libhpx_ctx_init();
-
-  /* init the thread */
   libhpx_thread_init();
 
   /* get the global machine configuration */
@@ -109,9 +108,8 @@ hpx_error_t hpx_init(void) {
 
   /* initialize the parcel subsystem */
   hpx_parcel_init();
-  __hpx_parcelhandler = NULL;
 #if HAVE_NETWORK
-  __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
+  the_parcelhandler = parcelhandler_create(__hpx_global_ctx);
 #endif
 
   return success;
@@ -127,8 +125,7 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
-  if (__hpx_parcelhandler)
-    hpx_parcelhandler_destroy(__hpx_parcelhandler);
+  parcelhandler_destroy(the_parcelhandler); /* NULL param ok */
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
