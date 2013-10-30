@@ -25,38 +25,45 @@
 #include <mpi.h>
 #include <photon.h>
 
-#include "hpx/action.h"
-#include "hpx/init.h"
-#include "hpx/parcel.h"
-
-#include "bootstrap/bootstrap.h"
 #include "network.h"
-
-#include "network_mpi.h"
-#include "network_photon.h"
+#include "hpx/error.h"
+#include "hpx/globals.h"                        /* bootmgr */
+#include "bootstrap.h"                          /* typedef hpx_bootstrap_t */
 
 #define PHOTON_TAG 0xdead
+#define EAGER_THRESHOLD_PHOTON_DEFAULT 256
+
+static int init(void);
+static int finalize(void);
+static void progress(void *data);
+static int probe(int source, int* flag, network_status_t* status);
+static int put(int dest, void* buffer, size_t len, network_request_t *request);
+static int get(int src, void* buffer, size_t len, network_request_t *request);
+static int test(network_request_t *request, int *flag, network_status_t *status);
+static int pin(void* buffer, size_t len);
+static int unpin(void* buffer, size_t len);
+static int phys_addr(hpx_locality_t *l);
 
 /* Photon network operations */
 network_ops_t photon_ops = {
-  .init     = init_photon,
-  .finalize = finalize_photon,
-  .progress = progress_photon,
-  .probe    = probe_photon,
-  .send     = put_photon,
-  .recv     = get_photon,
-  .sendrecv_test     = test_photon,
-  .put      = put_photon,
-  .get      = get_photon,
-  .putget_test     = test_photon,
-  .pin      = pin_photon,
-  .unpin    = unpin_photon,
-  .phys_addr= phys_addr_photon,
+  .init     = init,
+  .finalize = finalize,
+  .progress = progress,
+  .probe    = probe,
+  .send     = put,
+  .recv     = get,
+  .sendrecv_test     = test,
+  .put      = put,
+  .get      = get,
+  .putget_test     = test,
+  .pin      = pin,
+  .unpin    = unpin,
+  .phys_addr= phys_addr,
 };
 
-int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT;
-int _rank_photon;
-int _size_photon;
+/* static int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT; */
+static int _rank;
+static int _size;
 
 static char* ETH_DEV_ROCE0 = "roce0";
 static char* IB_DEV_MLX4_1 = "mlx4_1";
@@ -64,7 +71,7 @@ static char* BACKEND_UGNI = "ugni";
 //static char* BACKEND_VERBS = "verbs";
 
 /* If using Photon, call this instead of _init_mpi */
-int init_photon(void) {
+int init(void) {
   int retval;
   int temp;
   //  int thread_support_provided;
@@ -90,8 +97,8 @@ int init_photon(void) {
     }
   }
 
-  _rank_photon = bootmgr->get_rank();
-  _size_photon = bootmgr->size();
+  _rank = bootmgr->get_rank();
+  _size = bootmgr->size();
 
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
@@ -111,8 +118,8 @@ int init_photon(void) {
 
   struct photon_config_t photon_conf = {
 	  .meta_exch = PHOTON_EXCH_MPI,
-	  .nproc = _size_photon,
-	  .address = _rank_photon,
+	  .nproc = _size,
+	  .address = _rank,
 	  .comm = MPI_COMM_WORLD,
 	  .use_forwarder = 0,
 	  .use_cma = use_cma,
@@ -133,7 +140,7 @@ int init_photon(void) {
 }
 
 /* If you're using Photon, call this instead of _finalize_mpi */
-int finalize_photon(void) {
+int finalize(void) {
   int retval;
   int temp;
   retval = HPX_ERROR;
@@ -157,7 +164,7 @@ int finalize_photon(void) {
 
 
 /* just tell the other side we have a buffer ready to be retrieved */
-int put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
+int put(int dst, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
 
@@ -179,7 +186,7 @@ int put_photon(int dst, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int get_photon(int src, void* buffer, size_t len, network_request_t *request) {
+int get(int src, void* buffer, size_t len, network_request_t *request) {
   int temp;
   int retval;
 
@@ -213,7 +220,7 @@ int get_photon(int src, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int test_photon(network_request_t *request, int *flag, network_status_t *status) {
+int test(network_request_t *request, int *flag, network_status_t *status) {
   int retval;
   int temp;
   struct photon_status_t stat;
@@ -237,22 +244,7 @@ int test_photon(network_request_t *request, int *flag, network_status_t *status)
   return retval;  
 }
 
-int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
-	printf("in send parcel\n");
-	return HPX_SUCCESS;
-}
-
-int send_photon(int peer, void *payload, size_t len, network_request_t *request) {
-
-	return HPX_SUCCESS;
-}
-
-int recv_photon(int src, void *buffer, size_t len, network_request_t *request) {
-	
-	return HPX_SUCCESS;
-}
-
-int probe_photon(int src, int *flag, network_status_t* status) {
+int probe(int src, int *flag, network_status_t* status) {
 	int retval;
 	int temp;
 	int phot_src;
@@ -285,11 +277,11 @@ int probe_photon(int src, int *flag, network_status_t* status) {
 	return retval;
 }
 
-void progress_photon(void *data) {	
+void progress(void *data) {	
 }
 
 /* pin memory for put/get */
-int pin_photon(void* buffer, size_t len) {
+int pin(void* buffer, size_t len) {
   int temp;
   int retval;
 
@@ -306,7 +298,7 @@ int pin_photon(void* buffer, size_t len) {
 }
 
 /* unpin memory for put/get */
-int unpin_photon(void* buffer, size_t len) {
+int unpin(void* buffer, size_t len) {
   int temp;
   int retval;
 
@@ -323,7 +315,7 @@ int unpin_photon(void* buffer, size_t len) {
 }
 
 /* Return the physical network ID of the current process */
-int phys_addr_photon(hpx_locality_t *l) {
+int phys_addr(hpx_locality_t *l) {
   int ret;
   ret = HPX_ERROR;
 
