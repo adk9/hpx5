@@ -74,20 +74,21 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 	/* Free up the parcel as we don't need it anymore */
 	size = get_parcel_size(header);
 #if DEBUG
-	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+	printf("%d: Unpinning/freeing %zd bytes from buffer at %tx\n", hpx_get_rank(), size, (ptrdiff_t)header);
 #endif
 	__hpx_network_ops->unpin(header, size);
 	hpx_free(header);
       }
       else { /* this is a recv or get */
 #if DEBUG
-      printf("Received %zd bytes to buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+	size = get_parcel_size(header);
+	printf("%d: Received %zd bytes to buffer at %tx with parcel_id=%u action=%tu\n", hpx_get_rank(), size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
       fflush(stdout);
 #endif
 	parcel_process(header);
 	size = get_parcel_size(header);
 #if DEBUG
-	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+	printf("%d: Unpinning/freeing %zd bytes from buffer at %tx\n", hpx_get_rank(), size, (ptrdiff_t)header);
 #endif
 	__hpx_network_ops->unpin(header, size);
 	free(header);
@@ -181,10 +182,15 @@ void _hpx_parcelhandler_main(void* args) {
       size = get_parcel_size(header);
 #if DEBUG
       //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
-      printf("Sending %zd bytes from buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+      printf("%d: Sending %zd bytes from buffer at %tx with parcel_id=%u action=%tu\n", hpx_get_rank(), size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
       fflush(stdout);
 #endif
       req = request_list_append(&send_requests, header);
+#if DEBUG
+      //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+      printf("%d: Sending with request at %#tx from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)header);
+      fflush(stdout);
+#endif
       __hpx_network_ops->send(dst_rank, 
 			      header, 
 			      size,
@@ -229,7 +235,7 @@ void _hpx_parcelhandler_main(void* args) {
     } 
     __hpx_network_ops->pin(recv_buffer, recv_size);
 #if DEBUG
-    printf("Receiving %zd bytes to buffer at %tx\n", recv_size, (ptrdiff_t)recv_buffer);
+    printf("%d: Receiving %zd bytes to buffer at %tx\n", hpx_get_rank(), recv_size, (ptrdiff_t)recv_buffer);
     fflush(stdout);
 #endif
     req = request_list_append(&recv_requests, recv_buffer);
@@ -254,8 +260,8 @@ void _hpx_parcelhandler_main(void* args) {
     hpx_thread_yield();    
   }
 
-#if DEBUG
-  printf("Handler done after iter %d\n", (int)i);
+#ifdef DEBUG
+  printf("%d: Handler done after iter %d\n", hpx_get_rank(), (int)i);
   fflush(stdout);
 #endif
 
