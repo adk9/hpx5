@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stddef.h>
 
+#include "hpx/globals.h"                        /* __hpx_network_ops */
 #include "parcelhandler.h"                      /*  */
 #include "parcelqueue.h"                        /* struct parcelqueue */
 #include "request_buffer.h"                     /* struct request_buffer */
@@ -49,6 +50,18 @@ struct parcelqueue *__hpx_send_queue = NULL;
 size_t REQUEST_BUFFER_SIZE = 2048; /* TODO: make configurable (and find a good, sane size) */
 
 size_t RECV_BUFFER_SIZE = 1024*1024*16; /* TODO: make configurable (and use a real size) */
+
+/**
+ * The parcel handler structure.
+ *
+ * This is what is returned by parcelhandler_create().
+ */
+struct parcelhandler {
+  struct hpx_context *ctx;
+  struct hpx_thread *thread;  
+  struct hpx_future *quit; /* used to signal parcel handler to quit */
+  struct hpx_future *fut;
+};
 
 hpx_error_t parcel_process(struct header* header) {
   hpx_parcel_t* parcel;
@@ -102,10 +115,12 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
   return count;
 }
 
-void _hpx_parcelhandler_main(void* args) {
+static void
+parcelhandler_main(struct parcelhandler *args)
+{
   int success;
 
-  hpx_future_t* quit = ((hpx_parcelhandler_t*)args)->quit;
+  hpx_future_t* quit = args->quit;
 
   struct request_list send_requests;
   struct request_list recv_requests;
@@ -267,9 +282,11 @@ void _hpx_parcelhandler_main(void* args) {
   hpx_thread_exit((void*)retval);
 }
 
-hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
+struct parcelhandler *
+parcelhandler_create(struct hpx_context *ctx)
+{
   int ret = HPX_ERROR;
-  hpx_parcelhandler_t *ph = NULL;
+  struct parcelhandler *ph = NULL;
 
   /* create and initialize send queue */
   ret = parcelqueue_create(&__hpx_send_queue);
@@ -285,7 +302,7 @@ hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
   hpx_lco_future_init(ph->quit);
   ph->fut = hpx_thread_create(ph->ctx,
                               HPX_THREAD_OPT_SERVICE_COREGLOBAL,
-                              _hpx_parcelhandler_main,
+                              (void(*)(void*))parcelhandler_main,
                               (void*)ph,
                               &ph->thread);
   /* TODO: error check */
@@ -294,7 +311,12 @@ hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
   return ph;
 }
 
-void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
+void
+parcelhandler_destroy(struct parcelhandler *ph)
+{
+  if (!ph)
+    return;
+  
   hpx_network_barrier();
 
   hpx_lco_future_set_state(ph->quit);

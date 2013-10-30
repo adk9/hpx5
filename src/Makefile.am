@@ -12,7 +12,7 @@ libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/request_list.c parcel/serialization.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
                            parcel/parcel.c \
-                           runtime/init.c runtime/locality.c \
+                           runtime/globals.c runtime/init.c runtime/locality.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
                            utils/error.c utils/timer.c utils/config.c \
                            utils/map.c
@@ -29,8 +29,8 @@ if CPU_X86_64
 endif
 
 if HAVE_NETWORK
-    libhpx_la_SOURCES   += network/network.c
-    libhpx_la_SOURCES   += bootstrap/bootstrap.c
+    libhpx_la_SOURCES   += network/default.c
+    libhpx_la_SOURCES   += bootstrap/default.c
 endif
 
 if HAVE_MPI

@@ -32,6 +32,7 @@
 #include "hpx/atomic.h"
 #include "hpx/config.h"
 #include "hpx/error.h"
+#include "hpx/globals.h"
 #include "hpx/init.h"
 #include "hpx/kthread.h"
 #include "hpx/lco.h"

@@ -24,7 +24,8 @@
 #include "tests.h"
 
 /* steal some internal headers so that we can actually write the test */
-#include "parcel/parcelhandler.h"
+#include "libhpx/init.h"
+#include "libhpx/parcelhandler.h"
 #include "parcel/parcelqueue.h"
 #include "parcel/serialization.h"
 
@@ -574,16 +575,21 @@ END_TEST
 
 START_TEST (test_libhpx_parcelhandler_create)
 {
-  if (__hpx_parcelhandler == NULL) { /* if we've run init, this won't work, and besides we know parcelhandler_create works anyway because it's called by init() */
-    hpx_parcelhandler_t * ph = NULL;
+  /* if (__hpx_parcelhandler == NULL) { /\* if we've run init, this won't work, and */
+  /*                                     * besides we know parcelhandler_create */
+  /*                                     * works anyway because it's called by */
+  /*                                     * init() *\/  */
+  /* LD: why doesn't this work? just allocating a parcelhandler (which we don't
+     do anything with, should be fine. */
+  struct parcelhandler *ph = NULL;
     
-    ph = hpx_parcelhandler_create(NULL);
-    ck_assert_msg(ph != NULL, "Could not create parcelhandler, TODO: need context");
-    if (ph != NULL)
-      hpx_parcelhandler_destroy(ph);
-
-    ph = NULL;
-  }
+  ph = parcelhandler_create(NULL);
+  ck_assert_msg(ph != NULL, "Could not create parcelhandler, TODO: need context");
+  if (ph != NULL)
+    parcelhandler_destroy(ph);
+  ph = NULL;
+  
+  /* } */
 } 
 END_TEST
 

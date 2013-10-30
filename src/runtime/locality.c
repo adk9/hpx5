@@ -22,33 +22,38 @@
 
 #include <stdlib.h>
 
-#include "bootstrap/bootstrap.h"
+#include "bootstrap.h"
 #include "network.h"
 #include "hpx/action.h"
 #include "hpx/agas.h"
 #include "hpx/error.h"
+#include "hpx/globals.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
 #include "hpx/runtime.h"
 
 static hpx_locality_t *my_locality = NULL;
 
-hpx_locality_t *hpx_locality_create(void) {
-  hpx_locality_t *loc = NULL;
-
-  loc = (hpx_locality_t*)hpx_alloc(sizeof(hpx_locality_t));
+hpx_locality_t *
+hpx_locality_create(void)
+{
+  hpx_locality_t *loc = hpx_alloc(sizeof(*loc));
   if (loc != NULL)
-    memset(loc, 0, sizeof(hpx_locality_t));
+    bzero(loc, sizeof(*loc));
   else
     __hpx_errno = HPX_ERROR_NOMEM;
   return loc;
 }
 
-void hpx_locality_destroy(hpx_locality_t* loc) {
+void
+hpx_locality_destroy(hpx_locality_t* loc)
+{
   hpx_free(loc);
 }
 
-hpx_locality_t *hpx_get_my_locality(void) {
+hpx_locality_t *
+hpx_get_my_locality(void)
+{
   if (my_locality == NULL) {
     my_locality = hpx_locality_create();
     /* TODO: replace with real runtime configured rank setting */
@@ -57,7 +62,9 @@ hpx_locality_t *hpx_get_my_locality(void) {
   return my_locality;
 }
 
-hpx_locality_t* hpx_locality_from_rank(int rank) {
+hpx_locality_t *
+hpx_locality_from_rank(int rank)
+{
   hpx_locality_t *l;
   l = hpx_locality_create();
   if (!l) return NULL;
@@ -65,7 +72,9 @@ hpx_locality_t* hpx_locality_from_rank(int rank) {
   return l;
 }
 
-hpx_locality_t *hpx_find_locality(int rank) {
+hpx_locality_t *
+hpx_find_locality(int rank)
+{
   int ret;
   hpx_locality_t *locs, *l, *m;
 
@@ -83,12 +92,16 @@ hpx_locality_t *hpx_find_locality(int rank) {
   return l;
 }
 
-uint32 hpx_get_num_localities(void) {
+uint32_t
+hpx_get_num_localities(void)
+{
   // ask the network layer for the number of localities
   /* TODO: replace with real runtime configured ranks */
   return (uint32)bootmgr->size();
 }
 
-uint32 hpx_get_rank(void) {
+uint32_t
+hpx_get_rank(void)
+{
   return hpx_get_my_locality()->rank;
 }

@@ -2,8 +2,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Networkunication Layer
-  network.c
+  Default boostrap implementation
+  default.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -19,54 +19,58 @@
 #include <config.h>
 #endif
 
-#include <limits.h>
-#include <stdlib.h>
+#include "hpx/error.h"                          /* __hpx_errno, HPX_ERROR */
+#include "bootstrap.h"                          /* default_boot_ops */
 
-#include "bootstrap.h"
-#include "network.h"
-#include "hpx/parcel.h"
-#include "hpx/runtime.h" /* for hpx_locality_t */
+static int init(void);
+static int get_rank(void);
+static int get_addr(hpx_locality_t *);
+static int size(void);
+static int get_map(hpx_locality_t **);
+static int finalize(void);
 
 /* Default bootstrap operations */
 bootstrap_ops_t default_boot_ops = {
-    .init     = hpx_bootstrap_init,
-    .get_rank = hpx_bootstrap_get_rank,
-    .get_addr = hpx_bootstrap_get_addr,
-    .get_map  = hpx_bootstrap_get_map,
-    .size     = hpx_bootstrap_size,
-    .finalize = hpx_bootstrap_finalize,
+    .init     = init,
+    .get_rank = get_rank,
+    .get_addr = get_addr,
+    .get_map  = get_map,
+    .size     = size,
+    .finalize = finalize,
 };
 
-/*
- * Stub versions
- */
-
-int hpx_bootstrap_init(void) {
+int
+init(void) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }
 
-int hpx_bootstrap_get_rank(void) {
+int
+finalize(void) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
+}
+
+int
+get_rank(void) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR; 
 }
 
-int hpx_bootstrap_get_addr(hpx_locality_t *l) {
+int
+get_addr(hpx_locality_t *l) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR; 
 }
 
-int hpx_bootstrap_size(void) {
+int
+size(void) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }
 
-int hpx_bootstrap_get_map(hpx_locality_t **map) {
-  __hpx_errno = HPX_ERROR;
-  return HPX_ERROR;
-}
-
-int hpx_bootstrap_finalize(void) {
+int
+get_map(hpx_locality_t **map) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }

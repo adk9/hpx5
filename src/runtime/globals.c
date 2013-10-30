@@ -2,8 +2,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
 
-  Thread Function Definitions
-  hpx_thread.h
+  Library initialization and cleanup functions
+  hpx_init.c
 
   Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
@@ -19,10 +19,15 @@
  ====================================================================
 */
 
-#pragma once
-#ifndef LIBHPX_THREAD_THREAD_H_
-#define LIBHPX_THREAD_THREAD_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-void libhpx_thread_init();
+#include "hpx/globals.h"
 
-#endif /* LIBHPX_THREAD_THREAD_H_ */
+hpx_mconfig_t __mcfg;
+struct hpx_context       *__hpx_global_ctx    = NULL;
+struct hpx_config        *__hpx_global_cfg    = NULL;
+struct network_ops       *__hpx_network_ops   = NULL;
+struct hpx_parcelhandler *__hpx_parcelhandler = NULL;
+struct bootstrap_ops     *bootmgr             = NULL;

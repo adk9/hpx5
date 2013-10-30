@@ -33,8 +33,7 @@
 #include "hpx/error.h"
 #include "hpx/mem.h"
 
-/* include the libhpx thread implementation */
-#include "thread.h"
+#include "init.h"                               /* lbihpx_thread_init() */
 #include "kthread.h"
 
 #include "sync/sync.h"
@@ -44,7 +43,9 @@ static hpx_thread_id_t thread_next_id;
 
 /* called by hpx_init() to initialize this module---avoiding static
    constructors for now */
-void libhpx_thread_init() {
+void
+libhpx_thread_init()
+{
     sync_store(&thread_next_id, 1, SYNC_SEQ_CST);
 }
 
@@ -55,7 +56,9 @@ void libhpx_thread_init() {
   Returns the Thread ID from the supplied thread data.
  --------------------------------------------------------------------
 */
-hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
+hpx_thread_id_t
+hpx_thread_get_id(hpx_thread_t *th)
+{
   return th->tid;
 }
 
@@ -66,8 +69,10 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *th) {
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_future_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
-    (*func)(void *), void *args, hpx_thread_t ** thp) {
+hpx_future_t *
+hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
+                  (*func)(void *), void *args, hpx_thread_t ** thp)
+{
   hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
   hpx_thread_id_t th_id;
@@ -190,7 +195,9 @@ hpx_future_t *hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
   Cleans up a previously created thread.
  --------------------------------------------------------------------
 */
-void hpx_thread_destroy(hpx_thread_t *th) {
+void
+hpx_thread_destroy(hpx_thread_t *th)
+{
   hpx_free(th);
 }
 
@@ -201,7 +208,9 @@ void hpx_thread_destroy(hpx_thread_t *th) {
   Returns the queuing state of the thread.
  --------------------------------------------------------------------
 */
-hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *th) {
+hpx_thread_state_t
+hpx_thread_get_state(hpx_thread_t *th)
+{
   return th->state;
 }
 
@@ -214,7 +223,9 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *th) {
   HPX thread.
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_thread_self(void) {
+hpx_thread_t *
+hpx_thread_self(void)
+{
   hpx_kthread_t *kth;
   hpx_thread_t *th = NULL;
 
@@ -235,7 +246,9 @@ hpx_thread_t *hpx_thread_self(void) {
   value (if any).
  --------------------------------------------------------------------
 */
-void hpx_thread_join(hpx_thread_t *th, void **value) {
+void
+hpx_thread_join(hpx_thread_t *th, void **value)
+{
   hpx_thread_t *self = hpx_thread_self();
   hpx_future_t *fut = th->f_ret;
 

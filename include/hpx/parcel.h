@@ -29,9 +29,6 @@ typedef struct hpx_parcel {
   void         *payload;
 } hpx_parcel_t;
 
-hpx_error_t hpx_parcel_init(void);
-void hpx_parcel_fini(void);
-
 /*
  --------------------------------------------------------------------
   Parcel Handling Routines

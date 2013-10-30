@@ -23,14 +23,43 @@
 #ifndef LIBHPX_THREAD_KTHREAD_H_
 #define LIBHPX_THREAD_KTHREAD_H_
 
-/*
- --------------------------------------------------------------------
-  Kernel Thread Functions
- --------------------------------------------------------------------
-*/
-void libhpx_kthread_sched(hpx_kthread_t *, hpx_thread_t *, uint8_t, void *,
-                              bool (*)(void *, void *), void *);
-void libhpx_kthread_push_pending(hpx_kthread_t *, hpx_thread_t *);
+#include <stdbool.h>
+#include <stdint.h>
+
+/**
+ * @file
+ * @brief Define the shared interface for kernel threads.
+ */
+
+/**
+ * Forward declarations of the struct type.
+ * @{
+ */
+struct hpx_kthread;
+struct hpx_thread;
+/**
+ * @}
+ */
+
+/**
+ * Schedule a thread.
+ *
+ * @param[in] kthread
+ * @param[in] thread
+ * @param[in] state
+ * @param[in] target
+ * @param[in] pred
+ * @param[in] arg
+ */
+void libhpx_kthread_sched(struct hpx_kthread *kthread,
+                          struct hpx_thread *thread,
+                          uint8_t state,
+                          void *target,
+                          bool (*pred)(void *, void *),
+                          void *arg);
+
+void libhpx_kthread_push_pending(struct hpx_kthread *kthread,
+                                 struct hpx_thread *thread);
 
 void libhpx_kthread_init(void);
 

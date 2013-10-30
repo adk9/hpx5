@@ -28,29 +28,32 @@
 #include <mpi.h>
 #endif
 
-#include "bootstrap/bootstrap.h"
-#include "network.h"
-#include "hpx/action.h"
-#include "hpx/init.h"
-#include "hpx/parcel.h"
-#include "hpx/runtime.h"
+#include "bootstrap.h"
+#include "hpx/error.h"
+#include "hpx/globals.h"                        /* __hpx_network_ops */
+#include "network.h"                            /* typedef hpx_network_ops */
 
-#include "bootstrap_mpirun.h"
+static int the_rank;
+static int the_size;
 
-static int rank;
-static int size;
+static int init(void);
+static int get_rank(void);
+static int get_addr(struct hpx_locality *);
+static int size(void);
+static int get_map(struct hpx_locality **);
+static int finalize(void);
 
 /* MPI network operations */
 bootstrap_ops_t mpi_boot_ops = {
-  .init     = bootstrap_mpi_init,
-  .get_rank = bootstrap_mpi_get_rank,
-  .get_addr = bootstrap_mpi_get_addr,
-  .get_map  = bootstrap_mpi_get_map,
-  .size     = bootstrap_mpi_size,
-  .finalize = bootstrap_mpi_finalize,
+  .init     = init,
+  .get_rank = get_rank,
+  .get_addr = get_addr,
+  .get_map  = get_map,
+  .size     = size,
+  .finalize = finalize,
 };
 
-int bootstrap_mpi_init(void) {
+int init(void) {
   int ret;
 
   ret = HPX_ERROR;
@@ -63,10 +66,10 @@ int bootstrap_mpi_init(void) {
       goto err;
   }
 
-  if (MPI_Comm_size(MPI_COMM_WORLD, &size) != MPI_SUCCESS)
+  if (MPI_Comm_size(MPI_COMM_WORLD, &the_size) != MPI_SUCCESS)
     goto err;
 
-  if (MPI_Comm_rank(MPI_COMM_WORLD, &rank) != MPI_SUCCESS)
+  if (MPI_Comm_rank(MPI_COMM_WORLD, &the_rank) != MPI_SUCCESS)
     goto err;
 
   return 0;
@@ -75,19 +78,19 @@ err:
   return HPX_ERROR;
 }
 
-int bootstrap_mpi_get_rank(void) {
-  return rank;
+int get_rank(void) {
+  return the_rank;
 }
 
-int bootstrap_mpi_get_addr(hpx_locality_t *l) {
+int get_addr(hpx_locality_t *l) {
   return __hpx_network_ops->phys_addr(l);
 }
 
-int bootstrap_mpi_size(void) {
-  return size;
+int size(void) {
+  return the_size;
 }
 
-int bootstrap_mpi_get_map(hpx_locality_t **map) {
+int get_map(hpx_locality_t **map) {
   int ret;
   hpx_locality_t *loc;
 
@@ -95,7 +98,7 @@ int bootstrap_mpi_get_map(hpx_locality_t **map) {
   loc = hpx_get_my_locality();
   if (!loc) return HPX_ERROR;
 
-  *map = hpx_alloc(size * sizeof(hpx_locality_t));
+  *map = hpx_alloc(size() * sizeof(hpx_locality_t));
   if (*map == NULL) return HPX_ERROR_NOMEM;
 
   ret = MPI_Allgather(loc, sizeof(*loc), MPI_BYTE, *map, sizeof(*loc), MPI_BYTE, MPI_COMM_WORLD);
@@ -107,7 +110,7 @@ int bootstrap_mpi_get_map(hpx_locality_t **map) {
   return 0;
 }
 
-int bootstrap_mpi_finalize(void) {
+int finalize(void) {
   int ret;
 
   MPI_Finalized(&ret);
