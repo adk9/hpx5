@@ -20,7 +20,8 @@
 #include <config.h>
 #endif
 
-#include <strings.h>
+#include <string.h>                             /* memcpy */
+#include <strings.h>                            /* bzero */
 
 #include "bootstrap.h"
 #include "network.h"
