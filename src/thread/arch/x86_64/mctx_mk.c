@@ -24,9 +24,12 @@
 #endif
 
 #include <string.h>
-#include "hpx/thread/mctx.h"
+#include "hpx/types.h"                          /* typedef hpx_mctx_context_t */
+#include "hpx/thread/mctx.h"                    /* struct hpx_mctx_context */
+#include "hpx/system/attributes.h"              /* HPX ATTRIBUTES */
 
-extern void _hpx_mctx_trampoline(void) __attribute__((noreturn));
+extern void _hpx_mctx_trampoline(void)
+  HPX_ATTRIBUTE(HPX_NORETURN);
 
 /*
  --------------------------------------------------------------------
