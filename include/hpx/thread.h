@@ -31,7 +31,7 @@ struct hpx_future;
 struct hpx_mctx_context;
 struct hpx_kthread;
 struct hpx_context;
-struct hpx_map;
+struct _hpx_map_t;
 /** @} */
 
 /** Typedefs @{ */
@@ -258,7 +258,7 @@ void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
  --------------------------------------------------------------------
 */
 
-uint64_t hpx_thread_map_hash(struct hpx_map *, void *);
+uint64_t hpx_thread_map_hash(struct _hpx_map_t *, void *);
 bool hpx_thread_map_cmp(void *, void *);
 
 
