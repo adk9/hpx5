@@ -26,7 +26,7 @@ void ping(void *arg) {
   else {
     dst = p->src;
     p->src = hpx_get_my_locality();
-    hpx_call(dst, ping_action, (void*) p, sizeof(*p));
+    hpx_call(dst, ping_action, (void*) p, sizeof(*p), NULL);
   }
 }
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   hpx_locality_t *dst = hpx_locality_from_rank((hpx_get_rank()+1)%num_ranks);
   assert(dst != NULL && "Destination cannot be null.");
 
-  hpx_call(dst, ping_action, (void*)&p, sizeof(Packet));
+  hpx_call(dst, ping_action, (void*)&p, sizeof(Packet), NULL);
   /* TODO: ?
   hpx_quiescence(); // ???
   */
