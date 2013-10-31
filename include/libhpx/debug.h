@@ -27,7 +27,7 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_DEBUG
+#ifdef ENABLE_DEBUG
 #include <assert.h>
 #include <stdio.h>
 #include <hpx/system/abort.h>
@@ -36,19 +36,23 @@
 /**
  * @brief dbg_printf 
  */
-#ifdef HAVE_DEBUG
-#define dbg_printf(...) printf(__VA_ARGS__)
+#ifdef ENABLE_DEBUG
+#define dbg_printf(...) do {                    \
+  printf(__VA_ARGS__);                          \
+  fflush(stdout);                               \
+  while (0)
 #else
-#define dbf_printf(...)
+#define dbg_printf(...)
 #endif
 
 /**
  * @brief dbg_print_error 
  */
-#ifdef HAVE_DEBUG
-#define dbg_print_error(...)                    \
+#ifdef ENABLE_DEBUG
+#define dbg_print_error(e, ...)                 \
   do {                                          \
     fprintf(stderr, __VA_ARGS__);               \
+    fflush(stderr);                             \
     hpx_abort();                                \
   } while (0)
 #else
@@ -58,7 +62,7 @@
 /**
  * @brief dbg_assert
  */
-#ifdef HAVE_DEBUG
+#ifdef ENABLE_DEBUG
 #define dbg_assert(statement) assert(statement)
 #else
 #define dbg_assert(statement)
@@ -67,11 +71,20 @@
 /**
  * @brief dbg_assert
  */
-#ifdef HAVE_DEBUG
+#ifdef ENABLE_DEBUG
 #define dbg_assert_precondition(check) \
   assert(check && "Precondition check failed")
 #else
 #define dbg_assert_precondition(check)
+#endif
+
+/**
+ * @brief
+ */
+#ifdef ENABLE_DEBUG
+#define HPX_DEBUG 1
+#else
+#define HPX_DEBUG 0
 #endif
 
 #endif /* HPX_DEBUG_H_ */
