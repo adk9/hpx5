@@ -128,8 +128,8 @@ int main(int argc, char *const argv[]) {
 
   /* spawn a single thread for each number */
   for (unsigned long i = 0, e = n + 1; i < e; ++i)
-    numbers[i] = hpx_thread_create(ctx, HPX_THREAD_OPT_DETACHED, fib, (void*)
-                                   i, NULL);
+    hpx_thread_create(ctx, HPX_THREAD_OPT_DETACHED, fib, (void*) i,
+                      &numbers[i], NULL); 
 
   /* wait for the last thread to complete */
   hpx_thread_wait(numbers[n]);
