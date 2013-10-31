@@ -198,13 +198,8 @@ int get_photon(int src, void* buffer, size_t len, network_request_t *request) {
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
-  /* tell the source ledger saying we retrieved its buffer */
-  temp = photon_send_FIN(src);
-  if (temp != 0) {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
-  }
 
+  retval = HPX_SUCCESS;
  error:
   return retval;
 }
@@ -232,6 +227,38 @@ int test_photon(network_request_t *request, int *flag, network_status_t *status)
 
   return retval;  
 }
+
+int test_get_photon(network_request_t *request, int *flag, network_status_t *status) {
+  int retval;
+  int temp;
+  struct photon_status_t stat;
+  int type; /* 0=RDMA completion event, 1=ledger entry */
+
+  retval = HPX_ERROR;
+
+  if (status == NULL) {
+    temp = photon_test((request->photon), flag, &type, &stat);
+  }
+  else {
+    temp = photon_test((request->photon), flag, &type, &(status->photon));
+	status->source = (int)status->photon.src_addr;
+  }
+
+  if (*flag == 1 && temp ==0) {
+    /* tell the source ledger saying we retrieved its buffer */
+    temp = photon_send_FIN((int)status->photon.src_addr);
+    if (temp != 0)
+      *(int*)0 = 0;
+  }
+
+  if (temp == 0)
+    retval = 0;
+  else
+    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+
+  return retval;  
+}
+
 
 int _send_parcel_photon(hpx_locality_t *loc, hpx_parcel_t *parc) {
 	printf("in send parcel\n");
