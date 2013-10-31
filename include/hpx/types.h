@@ -46,5 +46,6 @@ typedef struct hpx_kthread          hpx_kthread_t;
 typedef struct hpx_parcel           hpx_parcel_t;
 typedef struct hpx_thread           hpx_thread_t;
 typedef struct hpx_thread_reusable  hpx_thread_reusable_t;
+typedef struct hpx_mctx_context     hpx_mctx_context_t;
 
 #endif /* LIBHPX_TYPES_H_ */

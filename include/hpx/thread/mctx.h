@@ -46,14 +46,13 @@
  --------------------------------------------------------------------
 */
 
-typedef struct _hpx_mctx_context_t {
-  hpx_mregs_t                  regs;
-  sigset_t                     sigs;
-  void                        *sp;
-  uint64_t                     ss;
-  struct _hpx_mctx_context_t  *link;
-} hpx_mctx_context_t;
-
+struct hpx_mctx_context {
+  hpx_mregs_t               regs;
+  sigset_t                  sigs;
+  void                       *sp;
+  uint64_t                    ss;
+  struct hpx_mctx_context  *link;
+};
 
 /*
  --------------------------------------------------------------------
@@ -61,10 +60,10 @@ typedef struct _hpx_mctx_context_t {
  --------------------------------------------------------------------
 */
 
-void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
-void hpx_mctx_setcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
-void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, ...);
-void hpx_mctx_makecontext_va(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, va_list *);
-void hpx_mctx_swapcontext(hpx_mctx_context_t *, hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
+void hpx_mctx_getcontext(struct hpx_mctx_context *, hpx_mconfig_t, uint64_t);
+void hpx_mctx_setcontext(struct hpx_mctx_context *, hpx_mconfig_t, uint64_t);
+void hpx_mctx_makecontext(struct hpx_mctx_context *, struct hpx_mctx_context *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, ...);
+void hpx_mctx_makecontext_va(struct hpx_mctx_context *, struct hpx_mctx_context *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, va_list *);
+void hpx_mctx_swapcontext(struct hpx_mctx_context *, struct hpx_mctx_context *, hpx_mconfig_t, uint64_t);
 
 #endif /* LIBHPX_MCTX_H_ */
