@@ -16,22 +16,28 @@
  ====================================================================
 */
 
-#pragma once
 #ifndef LIBHPX_THREAD_H_
 #define LIBHPX_THREAD_H_
 
-#include <stdarg.h>
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
 
-#include "hpx/mem.h"
-#include "hpx/lco.h"
-#include "hpx/types.h"
-#include "hpx/thread/mctx.h"
-#include "hpx/utils/list.h"
-#include "hpx/utils/map.h"
+#include "hpx/utils/list.h"                     /* hpx_list_t */
 
-typedef uint64 hpx_node_id_t;
-typedef uint64 hpx_thread_id_t;
-typedef uint8  hpx_thread_state_t;
+/** Forward declarations @{ */
+struct hpx_future;
+struct hpx_mctx_context;
+struct hpx_kthread;
+struct hpx_context;
+struct hpx_map;
+/** @} */
+
+/** Typedefs @{ */
+typedef uint64_t hpx_node_id_t;
+typedef uint64_t hpx_thread_id_t;
+typedef uint8_t  hpx_thread_state_t;
+/** @} */
 
 /**
  * Thread States
@@ -74,7 +80,7 @@ enum hpx_thread_options {
  * An HPX function taking a single generic (void*) argument. This is the type
  * for HPX thread-entry functions.
  *
- * @param[in][out]
+ * @param[in,out]
  */
 typedef void (*hpx_func_t)(void *args);
 
@@ -90,62 +96,62 @@ typedef bool (*hpx_thread_wait_pred_t)(void *lhs, void *rhs);
 /**
  * The reusable user-level thread data.
  */
-struct hpx_thread_reusable_t {
-  hpx_func_t           func;                    /**< entry function  */
-  void                *args;                    /**< arguments */
-  void                *stk;                     /**< stack  */
-  size_t               ss;                      /**< stack size  */
-  hpx_mctx_context_t  *mctx;                   /**< machine context (jmpbuf) */
-  void                *wait;                    /**< waiting future  */
-  hpx_kthread_t       *kth;                     /**< kernel thread */
+struct hpx_thread_reusable {
+  hpx_func_t               func;                /**< entry function  */
+  void                    *args;                /**< arguments */
+  void                     *stk;                /**< stack  */
+  size_t                     ss;                /**< stack size  */
+  struct hpx_mctx_context *mctx;                /**< machine context (jmpbuf) */
+  void                    *wait;                /**< waiting future  */
+  struct hpx_kthread       *kth;                /**< kernel thread */
 };
 
 /**
  * The user-level thread data.
  */
 struct hpx_thread {
-  hpx_context_t          *ctx;                  /**< pointer to the context */
-  hpx_node_id_t           nid;                  /**< node id */
-  hpx_thread_id_t         tid;                  /**< thread id */
-  hpx_thread_state_t      state; /**< queuing state (@see hpx_thread_states) */
-  uint16                  opts;                 /**< thread option flags  */
-  uint8                   skip;                 /**< [reserved for future] */
-  hpx_thread_reusable_t  *reuse;             /**< @see hpx_thread_reusable_t */
-  hpx_future_t           *f_ret;                /**< return value (if any) */
-  hpx_thread_t           *parent;               /**< parent thread  */
-  hpx_list_t              children;             /**< list of children */
+  struct hpx_context           *ctx;            /**< pointer to the context */
+  hpx_node_id_t                 nid;            /**< node id */
+  hpx_thread_id_t               tid;            /**< thread id */
+  hpx_thread_state_t          state; /**< queuing state (@see hpx_thread_states) */
+  uint16_t                     opts;            /**< thread option flags  */
+  uint8_t                      skip;            /**< [reserved for future] */
+  struct hpx_thread_reusable *reuse;            /**< @see hpx_thread_reusable */
+  struct hpx_future          *f_ret;            /**< return value (if any) */
+  struct hpx_thread         *parent;            /**< parent thread  */
+  hpx_list_t               children;            /**< list of children */
 };
 
 /**
  * Creates a user-level thread in the local virtual environment.
  *
- * @todo Was the returned future malloced? Does it need to be freed? What if
- *       the caller doesn't care? Should it be a parameter that we can test for
- *       NULL inside the create call to suppress creation where we don't care?
+ * @todo Error return values need to be disambiguated.
  *
- * @param[in] ctx
- * @param[in] opts (@see enum xpi_thread_options)
- * @param[in] entry Thread entry function
- * @param[in] args Arguments to the thread, may be a pointer to an address, or
- *                 a word-sized value directly. The semantics of this parameter
- *                 are defined by the function, which users of the function
- *                 need to conform to. 
- * @param[out] thread Address of the thread structure
- * @returns a future that represents the returned value of the thread
+ * @param[in] ctx     - xpi_context structure 
+ * @param[in] opts    - xpi_thread_options enumeration
+ * @param[in] entry   - thread entry function
+ * @param[in] args    - arguments to the thread, may be a pointer to an address, 
+ *                      or a word-sized value directly. The semantics of this 
+ *                      parameter are defined by the function, which users of
+ *                      the function need to conform to.
+ * @param[out] result - future representing result
+ * @param[out] thread - address of the thread structure
+ * @returns 0 for success, non-0 for error
  */
-hpx_future_t *hpx_thread_create(hpx_context_t *ctx,
-                                uint16         opts,
-                                hpx_func_t     entry,
-                                void          *args,
-                                hpx_thread_t **thread);
+int hpx_thread_create(struct hpx_context    *ctx,
+                      uint16_t              opts,
+                      hpx_func_t           entry,
+                      void                 *args,
+                      struct hpx_future **result,
+                      struct hpx_thread **thread);
 
-void hpx_thread_destroy(hpx_thread_t *);
+void hpx_thread_destroy(struct hpx_thread *);
 
 
 /**
  * @returns a pointer to the current user thread
  */
-hpx_thread_t *hpx_thread_self(void);
+struct hpx_thread *hpx_thread_self(void);
 
 /**
  * Get a thread's id.
@@ -153,7 +159,7 @@ hpx_thread_t *hpx_thread_self(void);
  * @param[in] thread NOT_NULL
  * @returns the thread's id
  */
-hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *thread);
+hpx_thread_id_t hpx_thread_get_id(struct hpx_thread *thread);
 
 /**
  * Get a thread's state.
@@ -161,7 +167,7 @@ hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *thread);
  * @param[in] thread NOT_NULL
  * @returns The thread's state (@see hpx_thread_states)
  */
-hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *thread);
+hpx_thread_state_t hpx_thread_get_state(struct hpx_thread *thread);
 
 /**
  * Get a thread's options.
@@ -169,7 +175,7 @@ hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *thread);
  * @param[in] thread NOT_NULL
  * @returns The thread's options (@see hpx_thread_options)
  */
-uint16 hpx_thread_get_opt(hpx_thread_t *thread);
+uint16_t hpx_thread_get_opt(struct hpx_thread *thread);
 
 /**
  * Set a thread's options.
@@ -180,22 +186,7 @@ uint16 hpx_thread_get_opt(hpx_thread_t *thread);
  * @param[in] thread NOT_NULL
  * @param[in] opts The new options (@see hpx_thread_options)
  */
-void hpx_thread_set_opt(hpx_thread_t *thread, uint16 opts);
-
-/**
- * Wait for the thread to terminate.
- *
- * The thread must not have been created using the HPX_THREAD_OPT_DETACHED flag
- * (@see hpx_thread_options). This serves as a scheduler point and may result
- * in a yield, even if the thread that's being joined has already terminated.
- *
- * @todo is this really what HPX_THREAD_OPT_DETACHED means?
- *
- * @param[in] thread
- * @param[out] result The address of a location that will be set to the value
- *                    passed by thread to exit (@see hpx_thread_exit).
- */
-void hpx_thread_join(hpx_thread_t *thread, void **result);
+void hpx_thread_set_opt(struct hpx_thread *thread, uint16_t opts);
 
 /**
  * Terminates execution of the thread, with the passed return value.
@@ -209,7 +200,8 @@ void hpx_thread_join(hpx_thread_t *thread, void **result);
  * however if it sends a dynamically allocated buffer address then it will
  * never be freed.
  *
- * @param[in] result
+ * @param[in] result - the result will be passed to any hpx_thread_join ers and
+ *                     will set the return future
  */
 void hpx_thread_exit(void *result);
 
@@ -227,7 +219,7 @@ void hpx_thread_yield(void);
 /**
  * @todo document this
  */
-void hpx_thread_yield_skip(uint8);
+void hpx_thread_yield_skip(uint8_t);
 
 /**
  * Wait for a future to be ready.
@@ -248,7 +240,7 @@ void hpx_thread_yield_skip(uint8);
  *
  * @param[in] future; the future to wait for (NOT_NULL)
  */
-void hpx_thread_wait(hpx_future_t *future);
+void hpx_thread_wait(struct hpx_future *future);
 
 /*
  --------------------------------------------------------------------
@@ -256,7 +248,7 @@ void hpx_thread_wait(hpx_future_t *future);
  --------------------------------------------------------------------
 */
 
-void _hpx_thread_terminate(hpx_thread_t *);
+void _hpx_thread_terminate(struct hpx_thread *);
 void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
 
 /*
@@ -265,7 +257,15 @@ void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
  --------------------------------------------------------------------
 */
 
-uint64_t hpx_thread_map_hash(hpx_map_t *, void *);
+uint64_t hpx_thread_map_hash(struct hpx_map *, void *);
 bool hpx_thread_map_cmp(void *, void *);
+
+
+/**
+ * This exposes a global thread context. This is deprecated, but some existing
+ * code depends on the __hpx_global_ctx which we really don't want to expose.
+ */
+struct hpx_context *hpx_thread_get_global_ctx(void);
+
 
 #endif /* LIBHPX_THREAD_H_ */
