@@ -538,7 +538,7 @@ START_TEST (test_libhpx_parcelqueue_push_multithreaded_concurrent)
 
   /* create HPX theads */
   futs = hpx_calloc(count, sizeof(*futs));
-  ck_assert_msg(ths != NULL, "Could not allocate an array to hold thread data.");
+  ck_assert_msg(futs != NULL, "Could not allocate an array to hold thread data.");
 
   for(idx = 0; idx < count; idx++) {
     hpx_thread_create(ctx, 0, thread_queue_worker, (void*)q, &futs[idx], NULL);
