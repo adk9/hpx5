@@ -17,9 +17,16 @@
 #ifndef HPX_ACTION_H_
 #define HPX_ACTION_H_
 
-#include <stdint.h>
-#include "hpx/thread.h"
+#include "error.h"                              /* hpx_error_t */
+#include "thread.h"                             /* hpx_func_t */
 
+/** Forward declarations @{ */
+struct hpx_future;
+/** @} */
+
+/**
+ * The type that identifies a registered action.
+ */
 typedef uintptr_t hpx_action_t;
 
 /**
@@ -40,11 +47,10 @@ void hpx_action_registration_complete(void);
  *
  * @param[in]  action - the action id we want to perform
  * @param[in]  args   - the argument buffer for the action
- * @param[out] thp    - the thread created
+ * @param[out] future - a future to wait on
  *
- * @returns a future representing the action's result
+ * @returns error code
  */
-hpx_future_t *
-hpx_action_invoke(hpx_action_t action, void *args, hpx_thread_t **thp);
+hpx_error_t hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out);
 
 #endif /* HPX_ACTION_H_ */
