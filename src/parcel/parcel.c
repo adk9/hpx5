@@ -75,15 +75,17 @@ hpx_error_t hpx_new_parcel(hpx_action_t act, void* args, size_t len,
   return HPX_SUCCESS;
 }
 
-hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t action,
-                       void *args, size_t len) {
+int
+hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
+         hpx_future_t **result) {
   hpx_parcel_t *p = hpx_alloc(sizeof(*p));
   /* create a parcel from action, args, len */
   hpx_new_parcel(action, args, len, p);
   /* send parcel to the destination locality */
   hpx_send_parcel(dest, p);
-
-  return NULL; /* TODO */
+  if (result)
+    *result = NULL; /* TODO */
+  return HPX_SUCCESS;
 }
 
 hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
