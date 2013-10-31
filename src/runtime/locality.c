@@ -20,7 +20,7 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
+#include <strings.h>
 
 #include "bootstrap.h"
 #include "network.h"
