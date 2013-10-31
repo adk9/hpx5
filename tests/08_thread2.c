@@ -141,7 +141,8 @@ static void run_multi_thread_set(uint64_t mflags, uint32_t core_cnt, uint32_t th
 
   for(idx = 0; idx < th_cnt; idx++) {
     buf_idx = idx * 256;
-    fts[idx] = hpx_thread_create(ctx, 0, multi_thread_set_worker, &thread_buf[buf_idx], NULL);
+    hpx_thread_create(ctx, 0, multi_thread_set_worker, &thread_buf[buf_idx],
+                      &fts[idx], NULL);
   }
 
   /* wait until our threads are done */
@@ -220,7 +221,8 @@ static void run_multi_thread_set_yield(uint64_t mflags, uint32_t core_cnt, uint3
 
   for(idx = 0; idx < th_cnt; idx++) {
     buf_idx = idx * 256;
-    ths[idx] = hpx_thread_create(ctx, 0, multi_thread_set_yield_worker, &thread_buf[buf_idx], NULL);
+    hpx_thread_create(ctx, 0, multi_thread_set_yield_worker,
+                      &thread_buf[buf_idx], &ths[idx], NULL);
   }
 
   /* wait until our threads are done */
@@ -266,7 +268,7 @@ static void run_thread_args(uint64_t mflags) {
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create HPX thead */
-  th1 = hpx_thread_create(ctx, 0, thread_counter_arg1_worker, &th_arg, NULL);
+  hpx_thread_create(ctx, 0, thread_counter_arg1_worker, &th_arg, &th1, NULL);
 
   /* wait until our thread is done */
   hpx_thread_wait(th1);
@@ -321,7 +323,7 @@ static void run_thread_strcpy(uint64_t mflags, uint64_t th_cnt, uint64_t core_cn
 
   /* create HPX theads */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, thread_strcpy_worker, 0, NULL);
+    hpx_thread_create(ctx, 0, thread_strcpy_worker, 0, &ths[idx], NULL);
   }
 
   /* wait until our threads are done */
@@ -365,7 +367,7 @@ static void run_thread_self_get_ptr(uint64_t mflags) {
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create an HPX thead */
-  th = hpx_thread_create(ctx, 0, thread_self_ptr_worker, 0, NULL);
+  hpx_thread_create(ctx, 0, thread_self_ptr_worker, 0, &th, NULL);
 
   //  id1 = th->tid;
 
@@ -439,7 +441,8 @@ static void main_hierarchy_worker1(void * ptr) {
 
   /* create some child threads */
   for (idx = 0; idx < 10; idx++) {
-    clds[idx] = hpx_thread_create(th->ctx, 0, main_hierarchy_worker2, (void *) th, NULL);
+    hpx_thread_create(th->ctx, 0, main_hierarchy_worker2, (void *) th,
+                      &clds[idx], NULL);
   }
 
   /* wait for the children to finish */
@@ -469,7 +472,8 @@ static void main_hierarchy_worker0(void * ptr) {
 
   /* create some child threads */
   for (idx = 0; idx < *th_cnt; idx++) {
-    clds[idx] = hpx_thread_create(th->ctx, 0, main_hierarchy_worker1, (void *) th, NULL);
+    hpx_thread_create(th->ctx, 0, main_hierarchy_worker1, (void *) th,
+                      &clds[idx], NULL);
   }
 
   /* wait for the children to finish */
@@ -501,7 +505,7 @@ static void run_main_hierarchy(uint64_t mflags, uint32_t th_cnt) {
 
   /* create some threads */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, main_hierarchy_worker0, &th_cnt, NULL);
+    hpx_thread_create(ctx, 0, main_hierarchy_worker0, &th_cnt, &ths[idx], NULL);
   }
 
   /* wait until the threads are done */
@@ -557,7 +561,7 @@ static void run_return_value(uint64_t mflags, uint32_t core_cnt, uint64_t th_cnt
 
   /* create threads */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, return_value_worker, NULL, NULL);
+    hpx_thread_create(ctx, 0, return_value_worker, NULL, &ths[idx], NULL);
     ck_assert_msg(ths[idx] != NULL, "Could not create thread.");
   }
 
@@ -1150,7 +1154,7 @@ START_TEST (test_libhpx_thread_stack_size_verify)
   ck_assert_msg(ctx != NULL, "Could not get a thread context.");
 
   /* create a thread */
-  th = hpx_thread_create(ctx, 0, stack_size_worker, NULL, NULL);
+  hpx_thread_create(ctx, 0, stack_size_worker, NULL, &th, NULL);
   ck_assert_msg(th != NULL, "Could not create a thread.");
 
   /* wait for the thread to finish */
