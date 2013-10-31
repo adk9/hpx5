@@ -1,5 +1,6 @@
+include_HEADERS= hpx.h
+
 nobase_include_HEADERS=	\
-	hpx.h		\
 	hpx/action.h	\
 	hpx/agas.h	\
 	hpx/atomic.h	\
