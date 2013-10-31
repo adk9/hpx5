@@ -106,6 +106,7 @@ typedef struct network_ops {
 extern network_ops_t default_net_ops;
 extern network_ops_t mpi_ops;
 extern network_ops_t photon_ops;
+extern network_ops_t sim_ops;
 /**
  * @}
  */

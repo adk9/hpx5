@@ -30,6 +30,7 @@ endif
 
 if HAVE_NETWORK
     libhpx_la_SOURCES   += network/default.c
+    libhpx_la_SOURCES   += network/sim.c
     libhpx_la_SOURCES   += bootstrap/default.c
 endif
 
