@@ -55,19 +55,19 @@ static int phys_addr(hpx_locality_t *id);
 
 /* MPI network operations */
 network_ops_t mpi_ops = {
-    .init     = init,
-    .finalize = finalize,
-    .progress = progress,
-    .probe    = probe,
-    .send     = send,
-    .recv     = recv,
-    .sendrecv_test     = test,
-    .put      = put,
-    .get      = get,
-    .putget_test = test,
-    .pin      = pin,
-    .unpin    = unpin,
-    .phys_addr= phys_addr,
+    .init          = init,
+    .finalize      = finalize,
+    .progress      = progress,
+    .probe         = probe,
+    .send          = send,
+    .recv          = recv,
+    .sendrecv_test = test,
+    .put           = put,
+    .get           = get,
+    .putget_test   = test,
+    .pin           = pin,
+    .unpin         = unpin,
+    .phys_addr     = phys_addr,
 };
 
 static int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
