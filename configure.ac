@@ -63,7 +63,7 @@ AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
-  [AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff])])
+  [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
     
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite], [Enable test suite (requires check) @<:@default=yes@:>@])],
