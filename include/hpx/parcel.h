@@ -20,20 +20,15 @@
 #include "hpx/action.h"
 #include "hpx/agas.h"
 
-typedef struct hpx_parcel {
+struct hpx_parcel {
   unsigned int  parcel_id;    /*!< the parcel idenitifer. */
   hpx_action_t  action;       /*!< handle to the associated action. */
   hpx_addr_t    dest;         /*!< destination locality. */
   int           flags;        /*!< flags related to the parcel. */
   size_t        payload_size;
   void         *payload;
-} hpx_parcel_t;
+};
 
-/*
- --------------------------------------------------------------------
-  Parcel Handling Routines
-  -------------------------------------------------------------------
-*/
 hpx_error_t hpx_new_parcel(hpx_action_t, void *, size_t, hpx_parcel_t *);
 
 /* Helper to send a parcel structure */

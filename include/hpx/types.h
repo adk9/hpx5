@@ -40,9 +40,11 @@ typedef unsigned long ulong;
 typedef unsigned int uint;
 typedef unsigned short ushort;
 
-typedef struct hpx_thread hpx_thread_t;
-typedef struct hpx_thread_reusable_t hpx_thread_reusable_t;
-typedef struct hpx_kthread hpx_kthread_t;
-typedef struct hpx_context hpx_context_t;
+typedef struct hpx_context          hpx_context_t;
+typedef struct hpx_future           hpx_future_t;
+typedef struct hpx_kthread          hpx_kthread_t;
+typedef struct hpx_parcel           hpx_parcel_t;
+typedef struct hpx_thread           hpx_thread_t;
+typedef struct hpx_thread_reusable  hpx_thread_reusable_t;
 
 #endif /* LIBHPX_TYPES_H_ */

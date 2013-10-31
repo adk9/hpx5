@@ -35,9 +35,10 @@
   #include <immintrin.h>
 #endif
 
-#include "hpx/types.h"
 #include "hpx/error.h"
 #include "hpx/mutex.h"
+#include "hpx/types.h"
+#include "hpx/system/attributes.h"
 
 #define HPX_LCO_FUTURE_SETMASK    0x8000000000000000
 
@@ -63,11 +64,11 @@ typedef union {
 
 typedef hpx_future_value_t (*hpx_lco_future_pred_t)(void *, void *);
 
-typedef struct hpx_future {
+struct hpx_future {
   hpx_mutex_t           mtx;
   uint64                state;
   hpx_future_value_t    value;
-} hpx_future_t __attribute__((aligned (8)));
+} HPX_ATTRIBUTE(HPX_ALIGNED(8));
 
 
 /*
