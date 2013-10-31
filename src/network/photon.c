@@ -46,19 +46,19 @@ static int phys_addr(hpx_locality_t *l);
 
 /* Photon network operations */
 network_ops_t photon_ops = {
-  .init     = init,
-  .finalize = finalize,
-  .progress = progress,
-  .probe    = probe,
-  .send     = put,
-  .recv     = get,
-  .sendrecv_test     = test,
-  .put      = put,
-  .get      = get,
-  .putget_test     = test,
-  .pin      = pin,
-  .unpin    = unpin,
-  .phys_addr= phys_addr,
+  .init          = init,
+  .finalize      = finalize,
+  .progress      = progress,
+  .probe         = probe,
+  .send          = put,
+  .recv          = get,
+  .sendrecv_test = test,
+  .put           = put,
+  .get           = get,
+  .putget_test   = test,
+  .pin           = pin,
+  .unpin         = unpin,
+  .phys_addr     = phys_addr,
 };
 
 /* static int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT; */
@@ -71,7 +71,9 @@ static char* BACKEND_UGNI = "ugni";
 //static char* BACKEND_VERBS = "verbs";
 
 /* If using Photon, call this instead of _init_mpi */
-int init(void) {
+int
+init(void)
+{
   int retval;
   int temp;
   //  int thread_support_provided;
@@ -140,7 +142,9 @@ int init(void) {
 }
 
 /* If you're using Photon, call this instead of _finalize_mpi */
-int finalize(void) {
+int
+finalize(void)
+{
   int retval;
   int temp;
   retval = HPX_ERROR;
@@ -164,7 +168,9 @@ int finalize(void) {
 
 
 /* just tell the other side we have a buffer ready to be retrieved */
-int put(int dst, void* buffer, size_t len, network_request_t *request) {
+int
+put(int dst, void* buffer, size_t len, network_request_t *request)
+{
   int temp;
   int retval;
 
@@ -186,7 +192,9 @@ int put(int dst, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int get(int src, void* buffer, size_t len, network_request_t *request) {
+int
+get(int src, void* buffer, size_t len, network_request_t *request)
+{
   int temp;
   int retval;
 
@@ -220,7 +228,9 @@ int get(int src, void* buffer, size_t len, network_request_t *request) {
   return retval;
 }
 
-int test(network_request_t *request, int *flag, network_status_t *status) {
+int
+test(network_request_t *request, int *flag, network_status_t *status)
+{
   int retval;
   int temp;
   struct photon_status_t stat;
@@ -244,7 +254,10 @@ int test(network_request_t *request, int *flag, network_status_t *status) {
   return retval;  
 }
 
-int probe(int src, int *flag, network_status_t* status) {
+
+int
+probe(int src, int *flag, network_status_t *status)
+{
 	int retval;
 	int temp;
 	int phot_src;
@@ -277,11 +290,15 @@ int probe(int src, int *flag, network_status_t* status) {
 	return retval;
 }
 
-void progress(void *data) {	
+void
+progress(void *data)
+{  
 }
 
 /* pin memory for put/get */
-int pin(void* buffer, size_t len) {
+int
+pin(void* buffer, size_t len)
+{
   int temp;
   int retval;
 
@@ -298,7 +315,9 @@ int pin(void* buffer, size_t len) {
 }
 
 /* unpin memory for put/get */
-int unpin(void* buffer, size_t len) {
+int
+unpin(void* buffer, size_t len)
+{
   int temp;
   int retval;
 
@@ -315,7 +334,9 @@ int unpin(void* buffer, size_t len) {
 }
 
 /* Return the physical network ID of the current process */
-int phys_addr(hpx_locality_t *l) {
+int
+phys_addr(hpx_locality_t *l)
+{
   int ret;
   ret = HPX_ERROR;
 
