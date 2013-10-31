@@ -25,8 +25,6 @@
 
 #include <string.h>
 
-#include "init.h"                               /* libhpx_ctx_init() */
-#include "kthread.h"
 #include "hpx/mem.h"
 #include "hpx/error.h"
 #include "hpx/kthread.h"
@@ -34,6 +32,9 @@
 #include "hpx/thread/ctx.h"
 #include "hpx/utils/timer.h"
 #include "sync/sync.h"
+#include "init.h"                               /* libhpx_ctx_init() */
+#include "join.h"                               /* thread_join() */
+#include "kthread.h"
 
 /* the global next context ID */
 static hpx_context_id_t ctx_next_id;
@@ -58,9 +59,9 @@ hpx_ctx_create(hpx_config_t *cfg)
   long cores = -1;
   long x;
 
-  ctx = (hpx_context_t *) hpx_alloc(sizeof(hpx_context_t));
+  ctx = hpx_alloc(sizeof(*ctx));
   if (ctx != NULL) {
-    memset(ctx, 0, sizeof(hpx_context_t));
+    memset(ctx, 0, sizeof(*ctx));
     memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
 
     /* context ID */
@@ -93,16 +94,17 @@ hpx_ctx_create(hpx_config_t *cfg)
     //    hwloc_topology_init(&ctx->hw_topo);
     //    hwloc_topology_load(ctx->hw_topo);
 
-    ctx->kths = (hpx_kthread_t **) hpx_alloc(cores * sizeof(hpx_kthread_t *));
+    ctx->kths = hpx_calloc(cores, sizeof(ctx->kths[0]));
     if (ctx->kths != NULL) {
       for (x = 0; x < cores; x++) {
-        ctx->kths[x] = hpx_kthread_create(ctx, hpx_kthread_seed_default, ctx->mcfg, hpx_config_get_switch_flags(&ctx->cfg));
-
+        ctx->kths[x] = hpx_kthread_create(ctx, hpx_kthread_seed_default,
+                                          ctx->mcfg,
+                                          hpx_config_get_switch_flags(&ctx->cfg));
         if (ctx->kths[x] == NULL) {
           goto _hpx_ctx_create_FAIL0;
-    } else {
-      hpx_kthread_set_affinity(ctx->kths[x], x);
-    }
+        } else {
+          hpx_kthread_set_affinity(ctx->kths[x], x);
+        }
       }
     } else {
       __hpx_errno = HPX_ERROR_NOMEM;
@@ -121,39 +123,47 @@ hpx_ctx_create(hpx_config_t *cfg)
   hpx_lco_future_init(&ctx->f_srv_rebal);
 
   /* create service threads: suspended thread pruner */
-  ctx->srv_susp = (hpx_thread_t **) hpx_alloc(cores * sizeof(hpx_thread_t *));
+  ctx->srv_susp = hpx_calloc(cores, sizeof(ctx->srv_susp[0]));
   if (ctx->srv_susp == NULL) {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto _hpx_ctx_create_FAIL1;
   }
 
   switch (hpx_config_get_thread_suspend_policy(cfg)) {
-    case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
-      for (x = 0; x < cores; x++) {
-        hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL, libhpx_kthread_srv_susp_local, ctx, &ctx->srv_susp[x]);
-        ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
+  case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
+    for (x = 0; x < cores; x++) {
+      hpx_thread_create(ctx,
+                        HPX_THREAD_OPT_SERVICE_CORELOCAL,
+                        libhpx_kthread_srv_susp_local,
+                        ctx,
+                        NULL,
+                        &ctx->srv_susp[x]);
+      ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
 
-        libhpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
-      }
-      break;
-    case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
-      hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, libhpx_kthread_srv_susp_global, ctx, &ctx->srv_susp[0]);
-      break;
-    default:
-      break;
+      libhpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
+    }
+    break;
+  case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
+    hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
+                      libhpx_kthread_srv_susp_global, ctx, NULL,
+                      &ctx->srv_susp[0]);
+    break;
+  default:
+    break;
   }
 
   /* create service thread: workload rebalancer */
-  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL, libhpx_kthread_srv_rebal, ctx, &ctx->srv_rebal);
+  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
+                    libhpx_kthread_srv_rebal, ctx, NULL, &ctx->srv_rebal);
 
   return ctx;
 
- _hpx_ctx_create_FAIL1:
+_hpx_ctx_create_FAIL1:
   for (x = 0; x < cores; x++) {
     hpx_kthread_destroy(ctx->kths[x]);
   }
 
- _hpx_ctx_create_FAIL0:
+_hpx_ctx_create_FAIL0:
   hpx_free(ctx);
   ctx = NULL;
 
@@ -162,11 +172,11 @@ hpx_ctx_create(hpx_config_t *cfg)
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   hpx_ctx_destroy
 
   Destroy a previously allocated HPX context.
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 void
 hpx_ctx_destroy(hpx_context_t *ctx)
@@ -179,20 +189,20 @@ hpx_ctx_destroy(hpx_context_t *ctx)
   /* stop service threads & wait */
   hpx_lco_future_set_state(&ctx->f_srv_susp);
   switch (hpx_config_get_thread_suspend_policy(&ctx->cfg)) {
-    case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
-      for (x = 0; x < ctx->kths_count; x++) {
-        hpx_thread_join(ctx->srv_susp[x], NULL);
-      }
-      break;
-    case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
-      hpx_thread_join(ctx->srv_susp[0], NULL);
-      break;
-    default:
-      break;
+  case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
+    for (x = 0; x < ctx->kths_count; x++) {
+      thread_join(ctx->srv_susp[x], NULL);
+    }
+    break;
+  case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
+    thread_join(ctx->srv_susp[0], NULL);
+    break;
+  default:
+    break;
   }
 
   hpx_lco_future_set_state(&ctx->f_srv_rebal);
-  hpx_thread_join(ctx->srv_rebal, NULL);
+  thread_join(ctx->srv_rebal, NULL);
 
   /* destroy kernel threads */
   for (x = 0; x < ctx->kths_count; x++) {
@@ -238,11 +248,11 @@ hpx_ctx_destroy(hpx_context_t *ctx)
 
 
 /*
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
   hpx_ctx_get_id
 
   Get the ID of this HPX context.
- --------------------------------------------------------------------
+  --------------------------------------------------------------------
 */
 hpx_context_id_t
 hpx_ctx_get_id(hpx_context_t *ctx)

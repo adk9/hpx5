@@ -34,6 +34,7 @@
 #include "hpx/mem.h"
 
 #include "init.h"                               /* lbihpx_thread_init() */
+#include "join.h"                               /* thread_join() */
 #include "kthread.h"
 
 #include "sync/sync.h"
@@ -240,14 +241,14 @@ hpx_thread_self(void)
 
 /*
  --------------------------------------------------------------------
-  hpx_thread_join
+  thread_join
 
   Wait until the specified thread terminates and get its return
   value (if any).
  --------------------------------------------------------------------
 */
 void
-hpx_thread_join(hpx_thread_t *th, void **value)
+thread_join(hpx_thread_t *th, void **value)
 {
   hpx_thread_t *self = hpx_thread_self();
   hpx_future_t *fut = th->f_ret;

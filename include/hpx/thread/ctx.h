@@ -20,12 +20,10 @@
 */
 
 #pragma once
-#ifndef LIBHPX_CONTEXT_H_
-#define LIBHPX_CONTEXT_H_
+#ifndef HPX_CONTEXT_H_
+#define HPX_CONTEXT_H_
 
 #include <stdint.h>
-
-//#include <hwloc.h>
 
 #include "hpx/lco.h"                            /* struct hpx_future */
 #include "hpx/thread.h"
@@ -87,4 +85,4 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *);
 void hpx_ctx_destroy(hpx_context_t *);
 hpx_context_id_t hpx_ctx_get_id(hpx_context_t *);
 
-#endif /* LIBHPX_CONTEXT_H_ */
+#endif /* HPX_CONTEXT_H_ */
