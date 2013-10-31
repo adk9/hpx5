@@ -136,7 +136,7 @@ void pingpong(void* _args) {
 
 int main(int argc, char** argv) {
   int success;
-  hpx_thread_t* th;
+  hpx_future_t* fut;
   
   if (argc > 1)
     opt_iter_limit = atoi(argv[1]);
@@ -176,8 +176,8 @@ int main(int argc, char** argv) {
 
   hpx_timer_t ts;
   hpx_get_time(&ts);
-  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)pingpong, 0, &th);
-  hpx_thread_join(th, NULL);
+  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)pingpong, 0, &fut, NULL);
+  hpx_thread_wait(fut);
   double elapsed = hpx_elapsed_us(ts);
   double avg_oneway_latency = elapsed/((double)(opt_iter_limit*2));
   printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
