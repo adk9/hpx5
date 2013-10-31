@@ -24,8 +24,10 @@
 #define LIBHPX_CONTEXT_H_
 
 #include <stdint.h>
+
 //#include <hwloc.h>
 
+#include "hpx/lco.h"                            /* struct hpx_future */
 #include "hpx/thread.h"
 #include "hpx/kthread.h"
 #include "hpx/config.h"
