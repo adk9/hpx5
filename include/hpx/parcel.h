@@ -39,6 +39,7 @@ hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p);
   Generic Parcel Invocation
  --------------------------------------------------------------------
 */
-hpx_thread_t *hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len);
+int hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
+             struct hpx_future **result);
 
 #endif /* LIBHPX_PARCEL_H_ */
