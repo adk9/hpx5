@@ -41,7 +41,7 @@ void fib(void *n) {
   hpx_thread_wait(f2);
 
   long n3 = (long) hpx_lco_future_get_value(f1);
-  long n4 = (long) hpx_lco_future_get_value(f12;
+  long n4 = (long) hpx_lco_future_get_value(f2);
 
   long *sum = hpx_alloc(sizeof(*sum));  
   *sum = n3 + n4;
@@ -91,7 +91,8 @@ int main(int argc, char *argv[]) {
   hpx_get_time(&timer);
 
   /* create a fibonacci thread */
-  hpx_future_t *fut = hpx_action_invoke(fib_action, (void*) n, NULL);
+  hpx_future_t *fut;
+  hpx_action_invoke(fib_action, (void*) n, &fut);
   
   /* wait for the thread to finish */
   hpx_thread_wait(fut);
