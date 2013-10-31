@@ -23,21 +23,22 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-#include <string.h>
-
+#include "hpx/error.h"
+#include "hpx/kthread.h"
+#include "hpx/mem.h"
 #include "hpx/types.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
-#include "hpx/kthread.h"
-#include "hpx/error.h"
-#include "hpx/mem.h"
+#include "hpx/utils/map.h"
+#include "sync/sync.h"
 
 #include "init.h"                               /* lbihpx_thread_init() */
 #include "join.h"                               /* thread_join() */
 #include "kthread.h"
 
-#include "sync/sync.h"
+/** Forward declarations @{ */
+struct _hpx_map_t;
+/** @} */
 
 /* the next thread ID */
 static hpx_thread_id_t thread_next_id;
@@ -70,9 +71,13 @@ hpx_thread_get_id(hpx_thread_t *th)
   Creates and initializes a thread with variadic arguments.
  --------------------------------------------------------------------
 */
-hpx_future_t *
-hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
-                  (*func)(void *), void *args, hpx_thread_t ** thp)
+hpx_error_t
+hpx_thread_create(hpx_context_t    *ctx,
+                  uint16_t         opts,
+                  hpx_func_t       func,
+                  void            *args,
+                  hpx_future_t **result,
+                  hpx_thread_t    **thp)
 {
   hpx_thread_reusable_t *th_ru = NULL;
   hpx_thread_t *th = NULL;
@@ -93,7 +98,7 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
 
   /* if we didn't get a reusable area, create one */
   if (th_ru == NULL) {
-    th_ru = (hpx_thread_reusable_t *) hpx_alloc(sizeof(hpx_thread_reusable_t));
+    th_ru = hpx_alloc(sizeof(*th_ru));
     if (th_ru == NULL) {
       hpx_kthread_mutex_unlock(&ctx->mtx);
       __hpx_errno = HPX_ERROR_NOMEM;
@@ -110,7 +115,7 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
     }
 
     /* create a machine context switching area */
-    th_ru->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
+    th_ru->mctx = hpx_alloc(sizeof(*th_ru->mctx));
     if (th_ru->mctx == NULL) {
       hpx_kthread_mutex_unlock(&ctx->mtx);
       __hpx_errno = HPX_ERROR_NOMEM;
@@ -119,7 +124,7 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
   }
 
   /* create the non-reusable thread area */
-  th = (hpx_thread_t *) hpx_alloc(sizeof(hpx_thread_t));
+  th = hpx_alloc(sizeof(*th));
   if (th == NULL) {
     hpx_kthread_mutex_unlock(&ctx->mtx);
     __hpx_errno = HPX_ERROR_NOMEM;
@@ -139,7 +144,7 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
   th->reuse->args = args;
   th->reuse->wait = NULL;
 
-  th->f_ret = (hpx_future_t *) hpx_alloc(sizeof(hpx_future_t));
+  th->f_ret = hpx_alloc(sizeof(*th->f_ret));
   if (th->f_ret == NULL) {
     hpx_kthread_mutex_unlock(&ctx->mtx);
     __hpx_errno = HPX_ERROR_NOMEM;
@@ -166,11 +171,16 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
     libhpx_kthread_sched(th->reuse->kth, th, HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
   }
 
-  if (thp != NULL) {
-    *thp = th;
-  }
+  /* If the client wants access to the result lco, then we provide it here.
+   * TODO: the entire design here leaks futures, we should only allocate them
+   *       when future != NULL. */
+  if (result != NULL)
+    *result = th->f_ret;
 
-  return th->f_ret;
+  if (thp != NULL)
+    *thp = th;
+
+  return HPX_SUCCESS;
 
  _hpx_thread_create_FAIL4:
   hpx_free(th);
@@ -185,7 +195,7 @@ hpx_thread_create(hpx_context_t *ctx, uint16_t opts, void
   hpx_free(th_ru);
 
  _hpx_thread_create_FAIL0:
-  return NULL;
+  return HPX_ERROR;
 }
 
 
