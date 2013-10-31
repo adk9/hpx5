@@ -27,16 +27,21 @@ void fib(void *n) {
   hpx_locality_t *right = hpx_locality_from_rank((my_rank+1)%num_ranks);
 
   long n1 = num - 1;
-  hpx_thread_t *th1 = hpx_call(left, fib_action, &n1, sizeof(long));
+  hpx_future_t *f1 = NULL; 
+  hpx_call(left, fib_action, &n1, sizeof(long), &f1);
 
   long n2 = num - 2;
-  hpx_thread_t *th2 = hpx_call(right, fib_action, &n2, sizeof(long));
+  hpx_future_t *f2 = NULL;
+  hpx_call(right, fib_action, &n2, sizeof(long), &f2);
 
   /* wait for threads to finish */
   // ADK: need an OR gate here. Also, why not just expose the future
   //      interface and have such control constructs for them?
-  long n3; hpx_thread_join(th2, (void**)&n3);
-  long n4; hpx_thread_join(th1, (void**)&n4);
+  hpx_thread_wait(f1);
+  hpx_thread_wait(f2);
+
+  long n3 = (long) hpx_lco_future_get_value(f1);
+  long n4 = (long) hpx_lco_future_get_value(f12;
 
   long *sum = hpx_alloc(sizeof(*sum));  
   *sum = n3 + n4;
