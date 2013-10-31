@@ -212,9 +212,10 @@ int main(int argc, char** argv) {
 
   hpx_get_time(&timer);
 
-  hpx_thread_t* th;
-  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)allreduce, (void*)&my_rank, &th);
-  hpx_thread_join(th, NULL);
+  hpx_future_t *complete;
+  hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)allreduce, (void*)&my_rank,
+                    &complete, NULL);
+  hpx_thread_wait(complete);
 
   long elapsed = hpx_elapsed_us(timer);
   
