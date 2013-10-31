@@ -20,10 +20,9 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <assert.h>                             /* assert() */
+#include <stddef.h>                             /* NULL */
+#include <stdlib.h>                             /* calloc/free */
 
 #include "hpx/action.h"
 #include "hpx/globals.h"                        /* __hpx_global_ctx (yuck) */
@@ -215,14 +214,14 @@ hpx_action_registration_complete(void)
  *
  * @param[in]  action - the action id we want to perform
  * @param[in]  args   - the argument buffer for the action
- * @param[out] thp    - the thread created
+ * @param[out] out    - a future to wait on
  *
- * @returns a future representing the action's result
+ * @returns an error code
  */
-hpx_future_t *
-hpx_action_invoke(hpx_action_t action, void *args, hpx_thread_t **thp)
+hpx_error_t
+hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out)
 {
-  // spawn a thread to invoke the action locally
-  hpx_func_t f =   lookup(&actions, action);
-  return (f) ? hpx_thread_create(__hpx_global_ctx, 0, f, args, thp) : NULL;
+  hpx_func_t f = lookup(&actions, action);
+  dbg_assert(f && "Failed to find action");
+  return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
 }
