@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #endif
 
+#include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/utils/list.h"                     /* hpx_list_t */
 
 /** Forward declarations @{ */
@@ -138,12 +139,12 @@ struct hpx_thread {
  * @param[out] thread - address of the thread structure
  * @returns 0 for success, non-0 for error
  */
-int hpx_thread_create(struct hpx_context    *ctx,
-                      uint16_t              opts,
-                      hpx_func_t           entry,
-                      void                 *args,
-                      struct hpx_future **result,
-                      struct hpx_thread **thread);
+hpx_error_t hpx_thread_create(struct hpx_context    *ctx,
+                              uint16_t              opts,
+                              hpx_func_t           entry,
+                              void                 *args,
+                              struct hpx_future **result,
+                              struct hpx_thread **thread);
 
 void hpx_thread_destroy(struct hpx_thread *);
 
