@@ -31,9 +31,6 @@
 #include "serialization.h"                      /* struct header */
 #include "hashstr.h"                            /* hashstr() */
 #include "network/network.h"
-#if HAVE_PHOTON
-#include "network/network_photon.h"             /* test_get_photon() */
-#endif
 #include "hpx/action.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
@@ -214,11 +211,7 @@ void _hpx_parcelhandler_main(void* args) {
        ==================================
     */
   if (outstanding_recvs > 0) {
-#if HAVE_PHOTON
-    completions = complete_requests(&recv_requests, test_get_photon, false);
-#else
     completions = complete_requests(&recv_requests, __hpx_network_ops->sendrecv_test, false);
-#endif
     outstanding_recvs -= completions;
 #if DEBUG_HANDLER
     if (completions > 0) {
