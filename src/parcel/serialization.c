@@ -27,14 +27,12 @@
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint8_t */
 #include <string.h>                             /* memcpy */
-#if DEBUG
-#include <stdio.h>
-#endif
 
 #include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "hpx/parcel.h"                         /* struct parcel */
-#include "network.h"                    /* FOURBYTE_ALIGN */
+#include "debug.h"                              /* dbg_printf */
+#include "network.h"                            /* FOURBYTE_ALIGN */
 
 extern network_ops_t *__hpx_network_ops;
 
@@ -73,10 +71,8 @@ hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
   if (success != 0 || blob == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
   /* need to unpin this again somewhere - right now the parcel handler does that*/
-#if DEBUG
-	printf("%d: Pinning/allocating %zd bytes at %tx\n", hpx_get_rank(), size_of_blob, (ptrdiff_t)blob);
-	fflush(stdout);
-#endif
+  dbg_printf("%d: Pinning/allocating %zd bytes at %tx\n", hpx_get_rank(), size_of_blob, (ptrdiff_t)blob);
+
   __hpx_network_ops->pin((void*)blob, size_of_blob);
 
   /* copy the parcel struct, and the payload to the blob
@@ -111,10 +107,8 @@ hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out) {
     return (__hpx_errno = HPX_ERROR_NOMEM);
   }
 
-#if DEBUG
-  printf("%d: copying %zu bytes of memory at %#tx from blob at %#tx\n", hpx_get_rank(), (uintptr_t)blob->payload_size, (uintptr_t)&blob->payload, (uintptr_t)blob);
-  fflush(stdout);
-#endif
+  dbg_printf("%d: copying %zu bytes of memory at %#tx from blob at %#tx\n", hpx_get_rank(), (uintptr_t)blob->payload_size, (uintptr_t)&blob->payload, (uintptr_t)blob);
+
   memcpy(p->payload, &blob->payload, blob->payload_size);
   *out = p;
   return HPX_SUCCESS;
