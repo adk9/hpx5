@@ -22,6 +22,7 @@
 
 /** Forward declarations @{ */
 struct hpx_future;
+struct hpx_locality;
 /** @} */
 
 /**
@@ -52,5 +53,14 @@ void hpx_action_registration_complete(void);
  * @returns error code
  */
 hpx_error_t hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out);
+
+/**
+ * Perform an @p action at a @p location and get a result through a future.
+ *
+ * @todo 
+ *
+ * @param[in] location - the location at which to perform the action
+ */
+hpx_error_t hpx_call(struct hpx_locality *location, hpx_action_t action, void *args, size_t len, struct hpx_future **result);
 
 #endif /* HPX_ACTION_H_ */
