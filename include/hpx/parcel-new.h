@@ -26,12 +26,18 @@
  * @file @brief Provides the user-level parcel interface.
  */
 #include <stddef.h>                             /* size_t */
-#include "platform.h"                           /* MACROS */
+#include "system/attributes.h"                  /* MACROS */
 #include "action.h"                             /* hpx_action_t */
 
+/**
+ * Forward declarations @{
+ */
 struct hpx_future;
 struct hpx_parcel;
 struct hpx_address;
+/**
+ * @}
+ */
 
 /**
  * Acquire a user-level parcel from the runtime.

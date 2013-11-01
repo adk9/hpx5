@@ -3,7 +3,7 @@
   High Performance ParalleX Library (libhpx)
   
   User-Level Parcel Definition
-  parcel/parcel.h
+  parcel.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -23,9 +23,9 @@
 #define HPX_PARCEL_PARCEL_H_
 
 #include <stddef.h>                             /* size_t */
-#include "hpx2/action.h"                        /* hpx_action_t */
-#include "hpx2/platform.h"                      /* HPX_NON_NULL */
-#include "address.h"                            /* struct hpx_address */
+#include "hpx/action.h"                         /* hpx_action_t */
+#include "hpx/system/attribtes.h"               /* HPX_NON_NULL */
+#include "agas.h"                               /* struct hpx_address */
 
 /**
  * The hpx_parcel structure is what the user-level interacts with.
