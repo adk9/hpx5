@@ -26,6 +26,7 @@
 
 #include "hpx/action.h"
 #include "hpx/globals.h"                        /* __hpx_global_ctx (yuck) */
+#include "hpx/parcel.h"                         /* struct hpx_parcel */
 #include "debug.h"                              /* dbg_assert(_precondition) */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* hpx_network_barrier() */
@@ -224,4 +225,17 @@ hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out)
   hpx_func_t f = lookup(&actions, action);
   dbg_assert(f && "Failed to find action");
   return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
+}
+
+hpx_error_t
+hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
+         hpx_future_t **result) {
+  hpx_parcel_t *p = hpx_alloc(sizeof(*p));
+  /* create a parcel from action, args, len */
+  hpx_new_parcel(action, args, len, p);
+  /* send parcel to the destination locality */
+  hpx_send_parcel(dest, p);
+  if (result)
+    *result = NULL; /* TODO */
+  return HPX_SUCCESS;
 }

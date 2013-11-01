@@ -34,12 +34,4 @@ hpx_error_t hpx_new_parcel(hpx_action_t, void *, size_t, hpx_parcel_t *);
 /* Helper to send a parcel structure */
 hpx_error_t hpx_send_parcel(hpx_locality_t *loc, hpx_parcel_t *p);
 
-/*
- --------------------------------------------------------------------
-  Generic Parcel Invocation
- --------------------------------------------------------------------
-*/
-int hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
-             struct hpx_future **result);
-
 #endif /* LIBHPX_PARCEL_H_ */
