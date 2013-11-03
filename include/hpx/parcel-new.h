@@ -26,8 +26,8 @@
  * @file @brief Provides the user-level parcel interface.
  */
 #include <stddef.h>                             /* size_t */
-#include "system/attributes.h"                  /* MACROS */
-#include "action.h"                             /* hpx_action_t */
+#include "hpx/system/attributes.h"              /* MACROS */
+#include "hpx/action.h"                         /* hpx_action_t */
 
 /**
  * Forward declarations @{
@@ -72,7 +72,7 @@ struct hpx_parcel *hpx_parcel_acquire(size_t bytes);
  *
  * These conditions will not be checked, and produce undefined results.
  *
- * @param[in] parcel the parcel to free
+ * @param[in] parcel the parcel to release
  */
 void hpx_parcel_release(struct hpx_parcel *parcel);
 

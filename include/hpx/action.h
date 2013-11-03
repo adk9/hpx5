@@ -17,8 +17,8 @@
 #ifndef HPX_ACTION_H_
 #define HPX_ACTION_H_
 
-#include "error.h"                              /* hpx_error_t */
-#include "thread.h"                             /* hpx_func_t */
+#include "hpx/error.h"                          /* hpx_error_t */
+#include "hpx/thread.h"                         /* hpx_func_t */
 
 /** Forward declarations @{ */
 struct hpx_future;
