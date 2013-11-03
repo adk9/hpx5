@@ -13,29 +13,25 @@
  ====================================================================
 */
 
-#pragma once
 #ifndef HPX_AGAS_H_
 #define HPX_AGAS_H_
 
-#include <stdbool.h>
-#include "runtime.h"                            /* hpx_locality_t */
-
-// ADK: How do we effectively capture data distribution hints? A
-// straightforward way is to maintain a table mapping localities to
-// their local allocation size, and have functions to fill this table
-// up for common distributions such as cyclic, block-cyclic etc. 
+#include <stdbool.h>                            /* bool */
+#include "hpx/runtime.h"                        /* hpx_locality_t */
 
 /**
- * A data distribution.
+ * @brief A global virtual address.
+ *
+ * This is exposed as a value type to the application programmer. This has a
+ * number of implications, primarily that it breaks a level of abstraction and
+ * requires the application to be recompiled if the struct changes. This has
+ * some portability issues, but doesn't require that the application manage
+ * addresses using a create/destroy interface---an important concern when the
+ * application has to do address arithmetic.
  */
-typedef struct hpx_distribution hpx_distribution_t;
-
-/**
- * A global address.
- */
-typedef struct hpx_addr {
+struct hpx_addr {
   hpx_locality_t locality;
-} hpx_addr_t;
+};
 
 /**
  * Get a local address for a global address.
@@ -47,22 +43,6 @@ typedef struct hpx_addr {
  *         disambiguate between the local NULL address and a remote address
  *         during mapping
  */
-bool hpx_addr_get_local(hpx_addr_t addr, void **out);
-
-/**
- * Allocate a global array.
- *
- * @param[in] dist  - the distribution for the array
- * @param[in] count - the number of elements to allocate
- * @param[in] bytes - the size of each element, in bytes
- *
- * @returns the base global address for the array
- */
-hpx_addr_t hpx_malloc(hpx_distribution_t dist, size_t count, size_t bytes);
-
-/** Create distributions. @{ */
-int cyclic_distribution(uint32, hpx_distribution_t *);
-int block_cyclic_distribution(uint32, hpx_distribution_t *);
-/** @} */
+bool hpx_addr_get_local(struct hpx_addr addr, void **out);
 
 #endif /* HPX_AGAS_H_ */
