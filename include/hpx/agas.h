@@ -17,7 +17,6 @@
 #define HPX_AGAS_H_
 
 #include <stdbool.h>                            /* bool */
-#include "hpx/runtime.h"                        /* hpx_locality_t */
 
 /**
  * @brief A global virtual address.
@@ -30,7 +29,7 @@
  * application has to do address arithmetic.
  */
 struct hpx_addr {
-  hpx_locality_t locality;
+  __uint128_t addr;                             /**< global virtual address */
 };
 
 /**
