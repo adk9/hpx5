@@ -46,7 +46,7 @@ struct header {
  
  * @returns NULL if error, or the serialized parcel (needs to be free-d)
  */
-struct header *serialize(const struct hpx_parcel* parcel)
+struct header *serialize(const struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
@@ -57,7 +57,7 @@ struct header *serialize(const struct hpx_parcel* parcel)
  *
  * @returns the parcel (needs to be free-d), or NULL if there is an error
  */
-struct hpx_parcel* deserialize(const struct header* header)
+struct hpx_parcel *deserialize(const struct header *header)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
