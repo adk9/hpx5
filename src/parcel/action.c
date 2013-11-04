@@ -23,13 +23,16 @@
 #include <assert.h>                             /* assert() */
 #include <stddef.h>                             /* NULL */
 #include <stdlib.h>                             /* calloc/free */
+#include <string.h>                             /* memcpy */
 
 #include "hpx/action.h"
-#include "hpx/globals.h"                        /* __hpx_global_ctx (yuck) */
-#include "hpx/parcel.h"                         /* struct hpx_parcel */
-#include "debug.h"                              /* dbg_assert(_precondition) */
+#include "hpx/globals.h"                        /* __hpx_global_ctx */
+#include "hpx/parcel.h"                         /* hpx_parcel stuff */
+#include "debug.h"                              /* dbg_* stuff */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* hpx_network_barrier() */
+
+typedef struct hpx_parcel parcel_t;
 
 /**
  * Some constants that we use to govern the behavior of the action table.
@@ -207,7 +210,7 @@ hpx_action_registration_complete(void)
   /* currently we perform a full network barrier in order to make sure that the
    * action table has been installed globally, so that we don't wind up with an
    * hpx_action_invoke() request before local action invocation is complete. */
-  hpx_network_barrier();
+  __hpx_network_ops->barrier();
 }
 
 /**
@@ -227,15 +230,34 @@ hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out)
   return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
 }
 
+/**
+ * Call to perform a possibly-remote procedure call.
+ *
+ * @param[in] dest   - the destination locality
+ * @param[in] action - the action to invoke
+ * @param[in] args - the argument data buffer
+ * @param[in] len - the length of the argument data buffer
+ * @param[in] result - a future for the RPC result (if desired)
+ *
+ * @returns HPX_SUCCESS or an error code
+ */
 hpx_error_t
 hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
-         hpx_future_t **result) {
-  hpx_parcel_t *p = hpx_alloc(sizeof(*p));
-  /* create a parcel from action, args, len */
-  hpx_new_parcel(action, args, len, p);
-  /* send parcel to the destination locality */
-  hpx_send_parcel(dest, p);
-  if (result)
-    *result = NULL; /* TODO */
-  return HPX_SUCCESS;
+         hpx_future_t **result)
+{
+  dbg_assert_precondition(dest);
+  dbg_assert_precondition(action);
+  dbg_assert_precondition(len && args);
+  
+  parcel_t *p = hpx_parcel_acquire(len);
+  if (!p) {
+    dbg_print_error("Could not allocate a %u-byte parcel in hpx_call.\n", len);
+    return HPX_ERROR;
+  }
+  
+  hpx_parcel_set_action(p, action);
+  memcpy(hpx_parcel_get_data(p), args, len);
+  int success = hpx_parcel_send(dest, p, NULL, NULL, result);
+  hpx_parcel_release(p);
+  return success;
 }
