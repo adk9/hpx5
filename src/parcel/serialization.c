@@ -37,7 +37,7 @@
 #include "debug.h"                              /* dbg_printf */
 #include "network.h"                            /* struct network_mgr */
 
-typedef struct header header_t;
+typedef struct header     header_t;
 typedef struct hpx_parcel parcel_t;
 
 static size_t
@@ -63,10 +63,7 @@ header_alloc(size_t bytes)
     return NULL;
   }
 
-  /* Need to remember the size of the header */
-  header->size = size;
-  
-  dbg_printf("%d: Pinning %zd bytes at %p\n", hpx_get_rank(), size, header);
+  header->size = size;  /* need to remember the actual size of the header */
   __hpx_network_ops->pin(header, size);
   return header;
 }
@@ -113,19 +110,17 @@ serialize(const parcel_t *parcel)
 parcel_t *
 deserialize(const header_t *header)
 {
-  /* preconditions */
-  if (!header)
-    return NULL;  
+  dbg_assert_precondition(header);
 
   parcel_t *out = hpx_parcel_acquire(header->payload_size);
   if (!out)
-    return NULL;
+    dbg_print_error(__hpx_errno, "Could not deserialize a network header.");
   
   out->address = header->dest;
   out->action  = header->action;
   dbg_printf("%d: copying %zu bytes from %p to parcel at %p\n",
-             hpx_get_rank(), header->payload_size, &header->payload,
-             out);
+             hpx_get_rank(), header->payload_size, (void*)&header->payload,
+             (void*)out);
   memcpy(out->data, &header->payload, header->payload_size);
   return out;
 }
