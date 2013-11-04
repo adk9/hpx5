@@ -17,6 +17,8 @@
 #ifndef HPX_ACTION_H_
 #define HPX_ACTION_H_
 
+#include <stdint.h>                             /* uintptr_t */
+#include <inttypes.h>                           /* PRI* */
 #include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/thread.h"                         /* hpx_func_t */
 
@@ -29,6 +31,12 @@ struct hpx_locality;
  * The type that identifies a registered action.
  */
 typedef uintptr_t hpx_action_t;
+
+#define HPX_PRIx_hpx_action_t PRIxPTR
+#define HPX_PRId_hpx_action_t PRIdPTR
+#define HPX_PRIX_hpx_action_t PRIXPTR
+#define HPX_PRIu_hpx_action_t PRIuPTR
+#define HPX_PRIo_hpx_action_t PRIoPTR
 
 /**
  * Register an action with the runtime.
