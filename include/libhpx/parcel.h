@@ -40,10 +40,11 @@
  *     with it.
  */
 struct hpx_parcel {
-  void              *data;                      /*!< a pointer to the data */
-  struct hpx_addr address;                      /*!< target virtual address */
-  hpx_action_t     action;                      /*!< target action key */
-  uint8_t       payload[];                      /*!< an in-place payload */
+  void             *data;                       /*!< a pointer to the data */
+  hpx_action_t    action;                       /*!< target action key */
+  struct hpx_addr target;                       /*!< target virtual address */
+  struct hpx_addr   cont;                       /*!< continuation address */
+  uint8_t      payload[];                       /*!< an in-place payload */
 };
 
 /**

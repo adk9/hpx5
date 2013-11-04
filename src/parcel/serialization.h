@@ -21,6 +21,7 @@
 #include "hpx/agas.h"                           /* struct hpx_addr */
 #include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
+#include "address.h"                            /* struct address */
 
 /** Forward declarations @{ */
 struct hpx_parcel;
@@ -32,8 +33,10 @@ struct hpx_parcel;
 struct header {
   size_t            size;                       /*!< size of the header */
   unsigned int parcel_id;                       /*!< the parcel idenitifer */
+  struct address    dest;                       /*!< HACK! target PA */
   hpx_action_t    action;                       /*!< action key */
-  struct hpx_addr   dest;                       /*!< destination locality */
+  struct hpx_addr target;                       /*!< target address */
+  struct hpx_addr   cont;                       /*!< continuation address */
   int              flags;                       /*!< flags */
   size_t    payload_size;                       /*!< sizeof payload */
   uint8_t      payload[];                       /*!< flexible array member */
