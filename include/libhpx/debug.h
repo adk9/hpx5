@@ -92,7 +92,7 @@
     hpx_error_t e = (check);                                            \
     if (e != HPX_SUCCESS)                                               \
       dbg_print_error(e, "Unhandled error found during dbg_check_success"); \
-  } while (0);
+  } while (0)
 #else
 #define dbg_check_success(check) check
 #endif
