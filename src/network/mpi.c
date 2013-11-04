@@ -36,6 +36,7 @@
 #include "hpx/error.h"                          /* __hpx_errno, HPX_ERROR */
 #include "hpx/globals.h"                        /* bootmgr */
 #include "bootstrap.h"                          /* bootstrap_ops_t */
+#include "debug.h"                              /* dbg_ stuff */
 
 #define EAGER_THRESHOLD_MPI_DEFAULT 10240
 /* TODO: make reasonable once we have puts/gets working */
@@ -406,12 +407,18 @@ finalize(void)
 int
 pin(void* buffer, size_t len)
 {
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Pinning %zd bytes at %p (MPI no-op)\n",
+             hpx_get_rank(), len, buffer); 
   return 0;
 }
 
 int
 unpin(void* buffer, size_t len)
 {
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Unpinning/freeing %zd bytes from buffer at %p (MPI no-op)\n",
+             hpx_get_rank(), len, buffer);
   return 0;
 }
 
