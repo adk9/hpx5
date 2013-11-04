@@ -48,7 +48,7 @@
 #define sync_cas(addr, from, to, onsuccess, onfailure)              \
     __atomic_compare_exchange_n(addr, from, to, false, onsuccess, onfailure)
 #define sync_cas_val(addr, from, to, onsuccess, onfailure)          \
-    { __atomic_compare_exchange_n(addr, from, to, false, onsuccess, onfailure) ? from : to }
+    __atomic_compare_exchange_n(addr, from, to, false, onsuccess, onfailure) ? from : to
 #define sync_fadd(addr, val, mm) __atomic_fetch_add(addr, val, mm)
 #define sync_fence(mm) __atomic_thread_fence(mm)
 
