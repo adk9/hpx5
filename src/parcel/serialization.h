@@ -30,46 +30,34 @@ struct hpx_parcel;
  * Represents a serializated parcel.
  */
 struct header {
+  size_t            size;                       /*!< size of the header */
   unsigned int parcel_id;                       /*!< the parcel idenitifer */
   hpx_action_t    action;                       /*!< action key */
   struct hpx_addr   dest;                       /*!< destination locality */
   int              flags;                       /*!< flags */
-  size_t    payload_size;                       /*!< sizeof payload  */
+  size_t    payload_size;                       /*!< sizeof payload */
   uint8_t      payload[];                       /*!< flexible array member */
-};
+} HPX_ATTRIBUTE(HPX_ALIGNED(HPX_CACHELINE_SIZE));
 
 /**
  * Serialize a parcel.
  *
  * @param[in]  parcel - the parcel to serialize
- * @param[out] out    - the serialized parcel (needs to be free-d)
- * 
- * @returns HPX_SUCCESS or an error
+ 
+ * @returns NULL if error, or the serialized parcel (needs to be free-d)
  */
-hpx_error_t serialize(const struct hpx_parcel* parcel, struct header **out)
+struct header *serialize(const struct hpx_parcel* parcel)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                HPX_NON_NULL(1, 2));
+                HPX_NON_NULL(1));
 
 /**
  * Deserialize a parcel.
  *
- * @param[in]  blob - the header to deserialize
- * @param[out] out  - the parcel (needs to be free-d)
+ * @param[in] header - the header to deserialize
  *
- * @returns HPX_SUCCESS or an error condition
+ * @returns the parcel (needs to be free-d), or NULL if there is an error
  */
-hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out)
-  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                HPX_NON_NULL(1, 2));
-
-/**
- * Calculate the size of the parcel data.
- *
- * @param[in] blob - the serialized data
- *
- * @returns the size of the payload
- */
-size_t get_parcel_size(struct header* blob)
+struct hpx_parcel* deserialize(const struct header* header)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 

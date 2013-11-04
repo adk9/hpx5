@@ -19,8 +19,8 @@
   ====================================================================
 */
 
-#ifndef HPX_PARCEL_H_
-#define HPX_PARCEL_H_
+#ifndef LIBHPX_PARCEL_H_
+#define LIBHPX_PARCEL_H_
 
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint8_t */
@@ -39,7 +39,7 @@
  * NB: if you change the layout here, make sure that the network system can deal
  *     with it.
  */
-struct parcel {
+struct hpx_parcel {
   void              *data;                      /*!< a pointer to the data */
   struct hpx_addr address;                      /*!< target virtual address */
   hpx_action_t     action;                      /*!< target action key */
@@ -61,4 +61,4 @@ void *parcel_get_send_offset(const struct hpx_parcel *parcel)
                 HPX_RETURNS_NON_NULL,
                 HPX_VISIBILITY_INTERNAL);
 
-#endif /* HPX_PARCEL_H_ */
+#endif /* LIBHPX_PARCEL_H_ */
