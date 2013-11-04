@@ -216,7 +216,7 @@ struct network_ops {
   /**
    * Network-specific barrier implementation.
    */
-  void (*barrier)(void)
+  void (*barrier)(void);
 };
 typedef struct network_ops network_ops_t;
 
