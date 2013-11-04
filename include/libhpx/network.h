@@ -21,7 +21,7 @@
 #define LIBHPX_NETWORK_H_
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>                             /* HAVE_* */
+#include <config.h>                             /* HAVE_{NETWORK,MPI,PHOTON} */
 #endif
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint32_t */
@@ -32,10 +32,12 @@
 #include <photon.h>
 #endif
 
-#include "hpx/runtime.h"                        /* hpx_locality_y */
-
 #define NETWORK_ANY_SOURCE -1
 #define NETWORK_ANY_LENGTH -1
+
+/** Forward declarations @{ */
+struct hpx_locality;
+/** @} */
 
 /**
  * The network request type.
@@ -198,7 +200,7 @@ struct network_ops {
    *
    * @returns HPX_SUCCESS or an error code
    */
-  int (*phys_addr)(hpx_locality_t *locality);
+  int (*phys_addr)(struct hpx_locality *locality);
 
   /**
    * Adjust the number of bytes for a network operation.
