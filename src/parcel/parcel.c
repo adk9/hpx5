@@ -22,20 +22,24 @@
 
 #include <stdlib.h>
 
-#include "serialization.h"
-#include "parcelqueue.h"                        /* __send_queue */
-#include "network.h"
 #include "hpx/action.h"
 #include "hpx/error.h"
 #include "hpx/parcel.h"
+#include "serialization.h"
+#include "parcelqueue.h"                        /* __send_queue */
+#include "network.h"
 
-hpx_error_t hpx_parcel_init(void) {
+hpx_error_t
+hpx_parcel_init(void)
+{
   /* LD: action table is initialized lazilty, nothing to do */
     return HPX_SUCCESS;
 }
 
 
-void hpx_parcel_fini(void) {
+void
+hpx_parcel_fini(void)
+{
   /* destroy the action table */
   /* shutdown the parcel handler thread */
 }
@@ -49,9 +53,9 @@ void hpx_parcel_fini(void) {
   locality if we are running under the SPMD/symmetric heap assumption.
   -------------------------------------------------------------------
 */
-hpx_error_t hpx_new_parcel(hpx_action_t act, void* args, size_t len,
-                           hpx_parcel_t *out) {
-
+hpx_error_t
+hpx_new_parcel(hpx_action_t act, void* args, size_t len, hpx_parcel_t *out)
+{
   /* where do args go? to what does len refer to (i.e. args or data or either)? */
   /* I'm going to assume args is args or payload, depending
      Also, I'm going to assume new_parcel doesn't allocate it... */
@@ -75,7 +79,9 @@ hpx_error_t hpx_new_parcel(hpx_action_t act, void* args, size_t len,
   return HPX_SUCCESS;
 }
 
-hpx_error_t hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p) {
+hpx_error_t
+hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p)
+{
   hpx_error_t ret;
   struct header* serialized_parcel;
   ret = HPX_ERROR;
