@@ -172,28 +172,53 @@ int hpx_parcel_resize(struct hpx_parcel **parcel, size_t size)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
- * Get the current address for a parcel.
+ * Get the target address for a parcel.
  *
  * This does not provide a scheduling opportunity, and does not have any side
  * effects.
  *
  * @param[in] parcel - the parcel to query
  *
- * @returns the current address
+ * @returns the current target address
  */
-struct hpx_addr hpx_parcel_get_address(struct hpx_parcel *parcel)
+struct hpx_addr hpx_parcel_get_target(const struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
- * Set the current address for a parcel.
+ * Set the target address for a parcel.
+ *
+ * This does not provide a scheduling opportunity, and does not have any side
+ * effects.
+ *
+ * @param[in] parcel - the parcel to update
+ * @param[in]   addr - the new target address
+ */
+void hpx_parcel_set_target(struct hpx_parcel *parcel, struct hpx_addr addr)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
+
+/**
+ * Get the continuation address for a parcel.
  *
  * This does not provide a scheduling opportunity, and does not have any side
  * effects.
  *
  * @param[in] parcel - the parcel to query
- * @param[in]   addr - the address
+ *
+ * @returns the current continuation address
  */
-void hpx_parcel_set_address(struct hpx_parcel *parcel, struct hpx_addr addr)
+struct hpx_addr hpx_parcel_get_cont(const struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
+
+/**
+ * Set the continuation address for a parcel.
+ *
+ * This does not provide a scheduling opportunity, and does not have any side
+ * effects.
+ *
+ * @param[in] parcel - the parcel to update
+ * @param[in]   addr - the new continuation address
+ */
+void hpx_parcel_set_cont(struct hpx_parcel *parcel, struct hpx_addr addr)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
