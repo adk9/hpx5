@@ -14,32 +14,37 @@
 */
 
 #pragma once
-#ifndef LIBHPX_RUNTIME_H_
-#define LIBHPX_RUNTIME_H_
+#ifndef HPX_RUNTIME_H_
+#define HPX_RUNTIME_H_
 
-#include "hpx/types.h"
+#include <stdint.h>                             /* uint32_t */
 
-typedef struct hpx_locality {
-  /* char *hostname; */ /* BDM: If we put this in, we need to change parcel serialization. Since this is referenced nowhere else, I've taken it out for now. Do we need this? */
-    uint32 rank;
+/* LD: this entire file needs to be documented. Also, why isn't there a
+ * locality.h file that is seperate? */
+
+struct hpx_locality {
+  /* char *hostname; */
+  /* BDM: If we put this in, we need to change parcel serialization. Since this
+     is referenced nowhere else, I've taken it out for now. Do we need this? */ 
+    uint32_t rank;
     union {
-        uint32 nid;
-        uint32 pid;
+        uint32_t nid;
+        uint32_t pid;
     } physical;
-} hpx_locality_t;
+};
 
-hpx_locality_t* hpx_locality_create(void);
+struct hpx_locality *hpx_locality_create(void);
 
-hpx_locality_t* hpx_locality_from_rank(int);
+struct hpx_locality *hpx_locality_from_rank(int);
 
-void hpx_locality_destroy(hpx_locality_t*);
+void hpx_locality_destroy(struct hpx_locality *);
 
-hpx_locality_t *hpx_get_my_locality(void);
+struct hpx_locality *hpx_get_my_locality(void);
 
-hpx_locality_t *hpx_find_locality(int rank);
+struct hpx_locality *hpx_find_locality(int rank);
 
-uint32 hpx_get_num_localities(void);
+uint32_t hpx_get_num_localities(void);
 
-uint32 hpx_get_rank(void);
+uint32_t hpx_get_rank(void);
 
-#endif
+#endif /* HPX_RUNTIME_H_ */
