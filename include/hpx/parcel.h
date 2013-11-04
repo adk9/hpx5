@@ -125,19 +125,21 @@ struct hpx_parcel *hpx_parcel_copy(struct hpx_parcel * restrict to,
  * parcel may be reused once @p local_complete has triggered. Either future can
  * be set to NULL, in which case the runtime does not generate those events.
  *
- * @param[in] parcel   - the parcel to send, must be non-NULL
+ * @param[in]     dest - the destination locality (HACK)
+ * @param[in]   parcel - the parcel to send, must be non-NULL
  * @param[in] complete - a future that will be triggered when the send completes
  *                       locally, may be NULL 
- * @param[in] thread   - a future that will be triggered with the address of the
+ * @param[in]   thread - a future that will be triggered with the address of the
  *                       remot thread when the send is complete, may be NULL
- * @param[in] result   - a future that will be triggered when the thread spawned
+ * @param[in]   result - a future that will be triggered when the thread spawned
  *                       as a result of this future returns, may be NULL
  * @returns an error indicating a problem with the runtime
  */
-int hpx_parcel_send(const struct hpx_parcel * const parcel,
-                    struct hpx_future ** const complete,
-                    struct hpx_future ** const thread,
-                    struct hpx_future ** const result)
+int hpx_parcel_send(struct hpx_locality *dest,
+                    const struct hpx_parcel *parcel,
+                    struct hpx_future **complete,
+                    struct hpx_future **thread,
+                    struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -173,16 +175,26 @@ int hpx_parcel_resize(struct hpx_parcel **parcel, size_t size)
  * Get the current address for a parcel.
  *
  * This does not provide a scheduling opportunity, and does not have any side
- * effects. The returned value can be used to update the address. The pointer
- * will continue to point at the source parcel after an hpx_parcel_copy() or
- * hpx_parcel_clone(). The pointer should not be retained across a call to
- * hpx_parcel_resize(), as the address of the @ref hpx_address_t can change.
+ * effects.
  *
  * @param[in] parcel - the parcel to query
+ *
  * @returns the current address
  */
-struct hpx_address * const hpx_parcel_address(struct hpx_parcel * const parcel)
-  HPX_ATTRIBUTE(HPX_NON_NULL(1), HPX_RETURNS_NON_NULL);
+struct hpx_addr hpx_parcel_get_address(struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
+
+/**
+ * Set the current address for a parcel.
+ *
+ * This does not provide a scheduling opportunity, and does not have any side
+ * effects.
+ *
+ * @param[in] parcel - the parcel to query
+ * @param[in]   addr - the address
+ */
+void hpx_parcel_set_address(struct hpx_parcel *parcel, struct hpx_addr addr)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Get a copy of the current action for a parcel.
@@ -193,8 +205,8 @@ struct hpx_address * const hpx_parcel_address(struct hpx_parcel * const parcel)
  * @param[in] parcel - the parcel to query
  * @returns the current action
  */
-hpx_action_t hpx_parcel_get_action(const struct hpx_parcel * const parcel)
-  HPX_ATTRIBUTE(HPX_NON_NULL(1), HPX_RETURNS_NON_NULL);
+hpx_action_t hpx_parcel_get_action(const struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Set the current action for a parcel.
@@ -205,8 +217,7 @@ hpx_action_t hpx_parcel_get_action(const struct hpx_parcel * const parcel)
  * @param[in] parcel - the parcel to query
  * @param[in] action - the new action
  */
-void hpx_parcel_set_action(struct hpx_parcel * const parcel,
-                           const hpx_action_t action)
+void hpx_parcel_set_action(struct hpx_parcel *parcel, hpx_action_t action)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -223,7 +234,7 @@ void hpx_parcel_set_action(struct hpx_parcel * const parcel,
  * @param[in] parcel - the parcel to query
  * @returns a pointer to the payload
  */
-void * const hpx_parcel_get_data(struct hpx_parcel * const parcel)
-  HPX_ATTRIBUTE(HPX_NON_NULL(1), HPX_RETURNS_NON_NULL);
+void *hpx_parcel_get_data(struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 #endif /* HPX_PARCEL_H_ */
