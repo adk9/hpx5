@@ -251,7 +251,7 @@ hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
   
   parcel_t *p = hpx_parcel_acquire(len);
   if (!p) {
-    dbg_print_error("Could not allocate a %u-byte parcel in hpx_call.\n", len);
+    dbg_printf("Could not allocate a %lu-byte parcel in hpx_call.\n", len);
     return HPX_ERROR;
   }
   
