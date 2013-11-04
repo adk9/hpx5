@@ -29,6 +29,7 @@
 #include "hpx/error.h"
 #include "hpx/globals.h"                        /* bootmgr */
 #include "bootstrap.h"                          /* typedef hpx_bootstrap_t */
+#include "debug.h"
 
 #define PHOTON_TAG 0xdead
 #define EAGER_THRESHOLD_PHOTON_DEFAULT 256
@@ -303,38 +304,25 @@ progress(void *data)
 int
 pin(void* buffer, size_t len)
 {
-  int temp;
-  int retval;
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Pinning %zd bytes at %p\n", hpx_get_rank(), len, buffer);
 
-  retval = HPX_ERROR;
-
-  temp = photon_register_buffer(buffer, len);
-  if (temp != 0) {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
-  }
-
- error:
-  return retval;
+  /* TODO: replace with more specific error */
+  return (!photon_register_buffer(buffer, len)) ? HPX_SUCCESS :
+    (__hpx_errno = HPX_ERROR);
 }
 
 /* unpin memory for put/get */
 int
 unpin(void* buffer, size_t len)
 {
-  int temp;
-  int retval;
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Unpinning/freeing %zd bytes from buffer at %p\n",
+             hpx_get_rank(), len, buffer);
 
-  retval = HPX_ERROR;
-
-  temp = photon_unregister_buffer(buffer, len);
-  if (temp != 0) {
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-    goto error;
-  }
-
- error:
-  return retval;
+/* TODO: replace with more specific error */
+  return (!photon_unregister_buffer(buffer, len)) ? HPX_SUCCESS :
+    (__hpx_errno = HPX_ERROR);
 }
 
 /* Return the physical network ID of the current process */
