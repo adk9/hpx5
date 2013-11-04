@@ -24,104 +24,108 @@
 #include <config.h>
 #endif
 
+#include <errno.h>                              /* ENOMEM/EINVAL */
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint8_t */
 #include <string.h>                             /* memcpy */
 
 #include "serialization.h"
+#include "hpx/globals.h"                        /* __hpx_network_ops */
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
-#include "hpx/parcel.h"                         /* struct parcel */
+#include "hpx/parcel.h"                         /* hpx_parcel_acquire */
+#include "parcel.h"                             /* struct parcel */
 #include "debug.h"                              /* dbg_printf */
-#include "network.h"                            /* FOURBYTE_ALIGN */
+#include "network.h"                            /* struct network_mgr */
 
-extern network_ops_t *__hpx_network_ops;
+typedef struct header header_t;
+typedef struct hpx_parcel parcel_t;
 
-inline size_t get_parcel_size(struct header* header) {
-  size_t size;
-  size = sizeof(*header); /* total size is parcel header size + data: */
-  size += header->payload_size;
-  size = FOURBYTE_ALIGN(size);
-  return size;
+static size_t
+header_size(size_t bytes)
+{
+  size_t size = sizeof(header_t) + bytes;
+  return __hpx_network_ops->get_network_bytes(size);
+}
+
+static header_t *
+header_alloc(size_t bytes)
+{
+  header_t* header = NULL;
+  size_t size      = header_size(bytes);
+  int success      = hpx_alloc_align((void**)&header, HPX_CACHELINE_SIZE, size);
+  if (success == ENOMEM) {
+    __hpx_errno = HPX_ERROR_NOMEM;
+    return NULL;
+  }
+  
+  if (success == EINVAL) {
+    __hpx_errno = HPX_ERROR;
+    return NULL;
+  }
+
+  /* Need to remember the size of the header */
+  header->size = size;
+  
+  dbg_printf("%d: Pinning %zd bytes at %p\n", hpx_get_rank(), size, header);
+  __hpx_network_ops->pin(header, size);
+  return header;
+}
+
+static header_t *
+header_init(header_t *header, const parcel_t *parcel)
+{
+  header->parcel_id    = 0;
+  header->action       = parcel->action;
+  header->dest         = parcel->address;
+  header->flags        = 0;
+  header->payload_size = parcel_get_data_size(parcel);
+  memcpy(&header->payload, parcel->data, parcel_get_data_size(parcel));
+  return header;
 }
 
 /**
- * Caller is responsible for freeing *out.  Will return HPX_ERROR if (1)
- * payload size is not 0 and (2) payload is NULL (a NULL pointer is allowed if
- * payload size is 0)
+ * Caller is responsible for freeing *out. Will return NULL if (1) payload size
+ * is not 0 and (2) payload is NULL (a NULL pointer is allowed if payload size
+ * is 0)
  */
-hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
+header_t *
+serialize(const parcel_t *parcel)
+{
   /* preconditions */
-  if (!p)
-    return (__hpx_errno = HPX_ERROR);
-  
+  if (!parcel)
+    return NULL;
+
+  size_t bytes = parcel_get_data_size(parcel);
+  if (bytes && !parcel->data)
+    return NULL;
+
+  /* allocate a "big enough" header and initialize it */
+  header_t *out = header_alloc(bytes);
   if (!out)
-    return (__hpx_errno = HPX_ERROR);
-
-  if (p->payload_size && !p->payload)
-    return (__hpx_errno = HPX_ERROR);
+    return NULL;
   
-  /* allocate space for binary blob */
-  struct header *blob = *out;
-  size_t size_of_blob = sizeof(*blob) + p->payload_size;
-  size_of_blob = FOURBYTE_ALIGN(size_of_blob); /* in case we're using UGNI */
-  //blob = hpx_alloc(size_of_blob);
-  //  if (blob == NULL)
-  int success;
-  success = hpx_alloc_align((void**)&blob, 64, size_of_blob);
-  if (success != 0 || blob == NULL)
-    return (__hpx_errno = HPX_ERROR_NOMEM);
-  /* need to unpin this again somewhere - right now the parcel handler does that*/
-  dbg_printf("%d: Pinning/allocating %zd bytes at %tx\n", hpx_get_rank(), size_of_blob, (ptrdiff_t)blob);
-
-  __hpx_network_ops->pin((void*)blob, size_of_blob);
-
-  /* copy the parcel struct, and the payload to the blob
-     LD: note the first memcpy doesn't copy the payload pointer
-  */
-  memcpy(blob, p, sizeof(*blob));
-  memcpy(&blob->payload, p->payload, p->payload_size);
-  *out = blob;
-  return HPX_SUCCESS;
+  return header_init(out, parcel);
 }
 
 /**
  * caller is reponsible for free()ing *p and *p->payload
  */
-hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out) {
+parcel_t *
+deserialize(const header_t *header)
+{
   /* preconditions */
-  if (!blob)
-    return (__hpx_errno = HPX_ERROR);
-  
+  if (!header)
+    return NULL;  
+
+  parcel_t *out = hpx_parcel_acquire(header->payload_size);
   if (!out)
-    return (__hpx_errno = HPX_ERROR);
-
-  struct hpx_parcel *p = *out;
-  p =  hpx_alloc(sizeof(*p));
-  if (p == NULL)
-    return (__hpx_errno = HPX_ERROR_NOMEM);
+    return NULL;
   
-  memcpy(p, blob, sizeof(*blob));
-  p->payload = (p->payload_size) ? hpx_alloc(p->payload_size) : NULL;
-  if (p->payload_size && p->payload == NULL) {
-    hpx_free(p);
-    return (__hpx_errno = HPX_ERROR_NOMEM);
-  }
-
-  dbg_printf("%d: copying %zu bytes of memory at %#tx from blob at %#tx\n", hpx_get_rank(), (uintptr_t)blob->payload_size, (uintptr_t)&blob->payload, (uintptr_t)blob);
-
-  memcpy(p->payload, &blob->payload, blob->payload_size);
-  *out = p;
-  return HPX_SUCCESS;
+  out->address = header->dest;
+  out->action  = header->action;
+  dbg_printf("%d: copying %zu bytes from %p to parcel at %p\n",
+             hpx_get_rank(), header->payload_size, &header->payload,
+             out);
+  memcpy(out->data, &header->payload, header->payload_size);
+  return out;
 }
-
-
-/* DO NOT FREE THE RETURN VALUE */
-/* FIXME CAUTION for some reason using this causes a bug (alisaing
- * issues?). gcc interprets the return value as a 32 bit integer and sign
- * extends it to 64 bits resulting in BAD THINGS happening...
- *
- * LD: this doesn't appear to be used?
- */
-/* static hpx_parcel_t* read_header(char* blob) { */
-/*   return (hpx_parcel_t*)blob; */
-/* } */
