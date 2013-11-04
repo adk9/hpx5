@@ -31,6 +31,7 @@
 #if HAVE_PHOTON
 #include <photon.h>
 #endif
+#include "hpx/system/attributes.h"              /* HPX MACROS */
 
 #define NETWORK_ANY_SOURCE -1
 #define NETWORK_ANY_LENGTH -1
@@ -65,7 +66,7 @@ struct network_status {
   struct photon_status_t photon;
 #endif
 };
-typedef struct network_request network_status_t;
+typedef struct network_status network_status_t;
 
 /**
  * Network Operations interface
@@ -228,6 +229,11 @@ extern network_ops_t mpi_ops;
 extern network_ops_t photon_ops;
 extern network_ops_t sim_ops;
 /** @} */
+
+/**
+ * Wraps the current installed network barrier implementation.
+ */
+void network_barrier(void) HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
 #endif /* LIBHPX_NETWORK_H_ */
 

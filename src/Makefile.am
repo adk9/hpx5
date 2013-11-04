@@ -7,7 +7,6 @@ lib_LTLIBRARIES          = libhpx.la
 pkgconfigdir             = $(libdir)/pkgconfig
 nodist_pkgconfig_DATA    = libhpx.pc
 
-#network
 libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/request_list.c parcel/serialization.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
@@ -29,6 +28,7 @@ if CPU_X86_64
 endif
 
 if HAVE_NETWORK
+    libhpx_la_SOURCES   += network/forwards.c
     libhpx_la_SOURCES   += network/default.c
     libhpx_la_SOURCES   += network/sim.c
     libhpx_la_SOURCES   += bootstrap/default.c
