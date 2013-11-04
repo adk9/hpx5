@@ -30,7 +30,8 @@
 #ifdef ENABLE_DEBUG
 #include <assert.h>
 #include <stdio.h>
-#include <hpx/system/abort.h>
+#include "hpx/error.h"
+#include "hpx/system/abort.h"
 #endif
 
 /**
@@ -76,6 +77,22 @@
   assert(check && "Precondition check failed")
 #else
 #define dbg_assert_precondition(check)
+#endif
+
+/**
+ * @brief dbg_check_success
+ *
+ * When debugging is enabled, this ensures that the result of a function is
+ * HPX_SUCCESS. When it fails, it uses dbg_print_error to abort.
+ */
+#ifdef ENABLE_DEBUG
+#define dbg_check_success(check)                                        \
+  do {                                                                  \
+    if ((hpx_error_t e = (check)) != HPX_SUCCESS)                       \
+      dbg_print_error(e, "Unhandled error found during dbg_check_success"); \
+  } while (0);
+#else
+#define dbg_check_success(check) check
 #endif
 
 /**
