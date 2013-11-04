@@ -1,110 +1,164 @@
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
-  
-  Parcel Registration
-  register.c
+#include <stdint.h>                             /* uint */
+#include <string.h>                             /* memcpy, bzero */
+#include <stdio.h>                              /* fprintf */
 
-  Copyright (c) 2013, Trustees of Indiana University 
-  All rights reserved.
+#include "libhpx/debug.h"                       /* DEBUG */
+#include "libhpx/parcel.h"                      /* struct hpx_parcel */
+#include "allocator.h"                          /* parcel_{get,set} */
+#include "hpx2/action.h"                        /* hpx_action_invoke */
+#include "hpx2/error.h"                         /* HPX_{SUCCESS,ERROR} */
+#include "hpx2/future.h"                        /* hpx_future_* */
+#include "hpx2/parcel.h"                        /* hpx_parcel_* */
+#include "hpx2/thread.h"                        /* hpx_thread_create */
 
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
- ====================================================================
-*/
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <stdlib.h>
-
-#include "hpx/action.h"
-#include "hpx/error.h"
-#include "hpx/parcel.h"
-#include "serialization.h"
-#include "parcelqueue.h"                        /* __send_queue */
-#include "network.h"
-
-hpx_error_t
-hpx_parcel_init(void)
+/**
+ * Forward the request for a parcel to the parcel allocator.
+ */
+struct hpx_parcel *
+hpx_parcel_acquire(size_t bytes)
 {
-  /* LD: action table is initialized lazilty, nothing to do */
-    return HPX_SUCCESS;
-}
-
-
-void
-hpx_parcel_fini(void)
-{
-  /* destroy the action table */
-  /* shutdown the parcel handler thread */
+  return parcel_get(bytes);
 }
 
 /**
- --------------------------------------------------------------------
-  hpx_new_parcel
-
-  Create a new parcel. We pass in an action @act, instead of the
-  action's name so that we can save the lookup cost at the remote
-  locality if we are running under the SPMD/symmetric heap assumption.
-  -------------------------------------------------------------------
-*/
-hpx_error_t
-hpx_new_parcel(hpx_action_t act, void* args, size_t len, hpx_parcel_t *out)
+ * Forward the parcel release to the parcel allocator.
+ *
+ * The parcel_put() interface doesn't want a NULL pointer, while the
+ * hpx_parcel_release() interface doesn't care. Match those internally.
+ */
+void
+hpx_parcel_release(struct hpx_parcel *parcel)
 {
-  /* where do args go? to what does len refer to (i.e. args or data or either)? */
-  /* I'm going to assume args is args or payload, depending
-     Also, I'm going to assume new_parcel doesn't allocate it... */
-
-  
-  /* TODO: set parcel_id */
-
-  /* put this back in if we're responsibe for allocating room for data
-  handle->payload = hpx_alloc(len);
-  if (handle->payload == NULL) {
-    __hpx_errno = HPX_ERROR_NOMEM;
-    ret = HPX_ERROR_NOMEM;
-    goto error;
-  }
-  */
-  out->parcel_id = 0;
-  out->action = act;
-  out->payload = args;
-  out->payload_size = len;
-
-  return HPX_SUCCESS;
+  if (parcel)
+    parcel_put(parcel);
 }
 
-hpx_error_t
-hpx_send_parcel(hpx_locality_t * loc, hpx_parcel_t *p)
+/**
+ * Allocate a new parcel and copy the passed parcel into it.
+ */
+struct hpx_parcel *
+hpx_parcel_clone(struct hpx_parcel *parcel)
 {
-  hpx_error_t ret;
-  struct header* serialized_parcel;
-  ret = HPX_ERROR;
+  size_t size = parcel_get_data_size(parcel);
+  struct hpx_parcel *p = parcel_get(size);
+  if (!p)
+    return NULL;
+  return hpx_parcel_copy(p, parcel);
+}
 
-  if (loc->rank != hpx_get_rank()) {
-    p->dest.locality = *loc;
-    ret = serialize(p, &serialized_parcel);
-    if (ret != 0) {   
-      __hpx_errno = ret;
-      return ret;
+/**
+ * Copy @p from to @p to. Copies the maximum amount of data possible when the @p
+ * to data is a different size than the @p from data. Zeros out the @p to data
+ * block if there is extra data.
+ */
+struct hpx_parcel *
+hpx_parcel_copy(struct hpx_parcel * restrict to,
+                const struct hpx_parcel * restrict from)
+{
+  size_t to_size = parcel_get_data_size(to);
+  size_t from_size = parcel_get_data_size(from);
+  size_t min_size = (to_size < from_size) ? to_size : from_size;
+
+  to->action = from->action;
+  to->address = from->address;
+  memcpy(to->data, from->data, min_size);
+  bzero((uint8_t*)to->data + min_size, to_size - min_size);
+  return to;
+}                     
+
+/**
+ * Sends the parcel.
+ *
+ * If the parcel is targeted at a NULL address, or a local address, then we
+ * create a new local thread, otherwise we ask the network to send the parcel on
+ * our behalf.
+ */
+int
+hpx_parcel_send(const struct hpx_parcel * const parcel,
+                struct hpx_future ** const complete,
+                struct hpx_future ** const thread,
+                struct hpx_future ** const result)
+{
+  /* initialize the out parameters */
+  if (complete)
+    *complete = hpx_future_create();    
+  if (thread)
+    *thread = hpx_future_create();
+  if (result)
+    *result = NULL;
+
+  /* if the address is local, then just invoke the local action, on this path we
+     can set the complete and thread futures synchronously, before returning */
+  void* target = NULL;
+  if (get_local_address(&parcel->address, &target)) {
+    struct hpx_thread *t = NULL;
+    hpx_func_t f = hpx_action_lookup(parcel->action);
+    if (!f) {
+      if (DEBUG)
+        fprintf(stderr,
+                "Could not find an action registered for %p\n", parcel->action);
+      return HPX_ERROR;
     }
     
-    ret = parcelqueue_push(__hpx_send_queue, serialized_parcel);
-    if (ret != 0) {   
-      __hpx_errno = ret;
-      return ret;
-    }
+    int e = hpx_thread_create(NULL, HPX_THREAD_OPT_NONE, f, parcel->data,
+                              result, &t);
+    if (e)
+      return e;
+    if (complete)
+      hpx_future_set(*complete);
+    if (thread)
+      hpx_future_setv(*thread, sizeof(t), &t);
+    return HPX_SUCCESS;
   }
-  else {
-    hpx_action_invoke(p->action, p->payload, NULL);
-    hpx_free(p);
-  }  
 
-  ret = HPX_SUCCESS;
-  return ret;
+  /* otherwise the address is remote, we'll have to make a request from the
+     network service */  
+  return hpx_network_send(parcel, complete, thread, result);
+}
+
+/**
+ * Resizes the data segment for the parcel. The current implementation doesn't
+ * shrink the data block if @p size is less than the parcel's existing data
+ * size.
+ */
+int
+hpx_parcel_resize(struct hpx_parcel **parcel, size_t size)
+{
+  size_t psize = parcel_get_data_size(*parcel);
+  if (psize >= size)
+    return 0;
+
+  struct hpx_parcel *p = hpx_parcel_acquire(size);
+  if (!p)
+    return -1;
+
+  hpx_parcel_copy(p, *parcel);
+  hpx_parcel_release(*parcel);
+  *parcel = p;
+  return 0;
+}
+
+struct hpx_address * const
+hpx_parcel_address(struct hpx_parcel * const parcel)
+{
+  return &parcel->address;
+}
+
+hpx_action_t
+hpx_parcel_get_action(const struct hpx_parcel * const parcel)
+{
+  return parcel->action;
+}
+
+void
+hpx_parcel_set_action(struct hpx_parcel * const parcel,
+                      const hpx_action_t action)
+{
+  parcel->action = action;
+}
+
+void * const
+hpx_parcel_get_data(struct hpx_parcel * const parcel)
+{
+  return parcel->data;
 }
