@@ -36,22 +36,26 @@ static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
 static int phys_addr(hpx_locality_t *l);
 static void progress(void *data);
+static size_t get_network_bytes(size_t n);
+static void barrier(void);
 
 /* Default network operations */
 network_ops_t default_net_ops = {
-    .init     = init,
-    .finalize = finalize,
-    .progress = progress,
-    .probe    = probe,
-    .send     = send,
-    .recv     = recv,
-    .sendrecv_test     = test,
-    .put      = put,
-    .get      = get,
-    .putget_test     = test,
-    .pin      = pin,
-    .unpin    = unpin,
-    .phys_addr= phys_addr,
+  .init              = init,
+  .finalize          = finalize,
+  .progress          = progress,
+  .probe             = probe,
+  .send              = send,
+  .recv              = recv,
+  .sendrecv_test     = test,
+  .put               = put,
+  .get               = get,
+  .putget_test       = test,
+  .pin               = pin,
+  .unpin             = unpin,
+  .phys_addr         = phys_addr,
+  .get_network_bytes = get_network_bytes,
+  .barrier           = barrier
 };
 
 /*
@@ -111,9 +115,15 @@ int phys_addr(hpx_locality_t *l) {
   return 0;
 }
 
-/**********************************************************/
+size_t
+get_network_bytes(size_t n)
+{
+  return n;
+}
 
-void hpx_network_barrier() {
+void
+barrier(void)
+{
 #if HAVE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
 #endif

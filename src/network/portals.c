@@ -18,52 +18,97 @@
 
 #include <stdlib.h>
 #include <portals4.h>
+#include "network."
+#include "hpx/error.h"
 
-#include "hpx/action.h"
-#include "hpx/bootstrap.h"
-#include "hpx/network.h"
-#include "hpx/parcel.h"
+static int init(void);
+static int finalize(void);
+static int probe(int source, int* flag, network_status_t* status);
+static int send(int dest, void *buffer, size_t len, network_request_t* req);
+static int recv(int src, void *buffer, size_t len, network_request_t* req);
+static int put(int dest, void *buffer, size_t len, network_request_t* req);
+static int get(int src, void *buffer, size_t len, network_request_t* req);
+static int test(network_request_t *request, int *flag, network_status_t *status);
+static int pin(void* buffer, size_t len);
+static int unpin(void* buffer, size_t len);
+static int phys_addr(hpx_locality_t *l);
+static void progress(void *data);
+static size_t get_network_bytes(size_t n);
+static void barrier(void);
 
 /* Portals communication operations */
 network_ops_t portals_ops = {
-    .init     = portals_init,
-    .finalize = portals_finalize,
-    .progress = portals_progress,
-    .probe    = portals_probe,
-    .send     = portals_send,
-    .recv     = portals_recv,
-    .test     = portals_test,
-    .put      = portals_put,
-    .get      = portals_get,
-    .phys_addr= portals_phys_addr,
+  .init              = init,
+  .finalize          = finalize,
+  .progress          = progress,
+  .probe             = probe,
+  .send              = send,
+  .recv              = recv,
+  .test              = test,
+  .put               = put,
+  .get               = get,
+  .phys_addr         = phys_addr,
+  .get_network_bytes = get_network_bytes,
+  .barrier           = barrier
 };
 
-int portals_init(void) {
+int
+init(void)
+{
 }
 
-int portals_send_parcel(hpx_locality_t *, hpx_parcel_t *) {
+int
+send_parcel(hpx_locality_t *, hpx_parcel_t *)
+{
 }
 
-int portals_send(int peer, void *payload, size_t len) {
+int
+send(int peer, void *payload, size_t len)
+{
 }
 
-int portals_put(int peer, void *dst, void *src, size_t len) {
+int
+put(int peer, void *dst, void *src, size_t len)
+{
 }
 
-int portals_get(void *dst, int peer, void *src, size_t len) {
+int
+get(void *dst, int peer, void *src, size_t len)
+{
 }
 
-void portals_progress(void *data) {
+void
+progress(void *data)
+{
 }
 
-void portals_finalize(void) {
+void
+finalize(void)
+{
 }
 
-int portals_probe(int source, int* flag, network_status_t *status) {
+int
+probe(int source, int* flag, network_status_t *status)
+{
 }
 
-int portals_test(network_request_t *request, int *flag, network_status_t *status) {
+int
+test(network_request_t *request, int *flag, network_status_t *status)
+{
 }
 
-int portals_phys_addr(hpx_locality_t *id) {
+int
+phys_addr(hpx_locality_t *id)
+{
+}
+
+size_t
+get_network_bytes(size_t n)
+{
+  return n;
+}
+
+void
+barrier(void)
+{
 }

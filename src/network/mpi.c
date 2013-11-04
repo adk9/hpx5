@@ -13,7 +13,7 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
- ====================================================================
+  ====================================================================
 */
 
 #ifdef HAVE_CONFIG_H
@@ -52,22 +52,26 @@ static int get(int src, void *buffer, size_t len, network_request_t *request);
 static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
 static int phys_addr(hpx_locality_t *id);
+static size_t get_network_bytes(size_t n);
+static void barrier(void);
 
 /* MPI network operations */
 network_ops_t mpi_ops = {
-    .init          = init,
-    .finalize      = finalize,
-    .progress      = progress,
-    .probe         = probe,
-    .send          = send,
-    .recv          = recv,
-    .sendrecv_test = test,
-    .put           = put,
-    .get           = get,
-    .putget_test   = test,
-    .pin           = pin,
-    .unpin         = unpin,
-    .phys_addr     = phys_addr,
+  .init              = init,
+  .finalize          = finalize,
+  .progress          = progress,
+  .probe             = probe,
+  .send              = send,
+  .recv              = recv,
+  .sendrecv_test     = test,
+  .put               = put,
+  .get               = get,
+  .putget_test       = test,
+  .pin               = pin,
+  .unpin             = unpin,
+  .phys_addr         = phys_addr,
+  .get_network_bytes = get_network_bytes,
+  .barrier           = barrier
 };
 
 static int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
@@ -91,7 +95,7 @@ init(void)
   /* BDM: TODO: Move to utils. Or throw out. MPI_Init can be given
      NULL, NULL so this isn't strictly necessary. */
 #if __linux__
-    int _argc = 0;
+  int _argc = 0;
 
   /* TODO: find way to do this when NOT on Linux, since /proc is Linux-specific */
 
@@ -173,9 +177,9 @@ init(void)
     _argc++;
   }
 
- read_fail:
+read_fail:
   free(_argv_buffer);
- fail:
+fail:
   if (fallback) {
     _argc = 0;
     _argv = NULL;
@@ -202,9 +206,9 @@ init(void)
   else
     retval = HPX_SUCCESS;
 
-  #if DEBUG
+#if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
-  #endif
+#endif
 
   /* cache size and rank */
   _rank_mpi = bootmgr->get_rank();
@@ -286,12 +290,12 @@ recv(int source, void* buffer, size_t len, network_request_t *request)
 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE) {
-	  mpi_src = MPI_ANY_SOURCE;
-	  tag = 0;
+    mpi_src = MPI_ANY_SOURCE;
+    tag = 0;
   }
   else {
-	  mpi_src = source;
-	  tag = source;
+    mpi_src = source;
+    tag = source;
   }
   
   /* This may go away eventually. If we take this out, we need to use MPI_Get_count to get the size (which introduces problems with threading, should we ever change that) or we need to change sending to send the size first. */
@@ -314,7 +318,7 @@ recv(int source, void* buffer, size_t len, network_request_t *request)
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
 
- error:
+error:
   return retval;  
 }
 
@@ -411,3 +415,16 @@ unpin(void* buffer, size_t len)
   return 0;
 }
 
+size_t
+get_network_bytes(size_t n)
+{
+  return n;
+}
+
+void
+barrier(void)
+{
+#if HAVE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}

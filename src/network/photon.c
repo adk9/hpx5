@@ -43,22 +43,26 @@ static int test(network_request_t *request, int *flag, network_status_t *status)
 static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
 static int phys_addr(hpx_locality_t *l);
+static size_t get_network_bytes(size_t n);
+static void barrier(void);
 
 /* Photon network operations */
 network_ops_t photon_ops = {
-  .init          = init,
-  .finalize      = finalize,
-  .progress      = progress,
-  .probe         = probe,
-  .send          = put,
-  .recv          = get,
-  .sendrecv_test = test,
-  .put           = put,
-  .get           = get,
-  .putget_test   = test,
-  .pin           = pin,
-  .unpin         = unpin,
-  .phys_addr     = phys_addr,
+  .init              = init,
+  .finalize          = finalize,
+  .progress          = progress,
+  .probe             = probe,
+  .send              = put,
+  .recv              = get,
+  .sendrecv_test     = test,
+  .put               = put,
+  .get               = get,
+  .putget_test       = test,
+  .pin               = pin,
+  .unpin             = unpin,
+  .phys_addr         = phys_addr,
+  .get_network_bytes = get_network_bytes,
+  .barrier           = barrier
 };
 
 /* static int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT; */
@@ -348,4 +352,25 @@ phys_addr(hpx_locality_t *l)
 
   l->rank = bootmgr->get_rank();
   return 0;
+}
+
+/**
+ * When Photon is running on ugni, we need to have a message size that's a
+ * multiple of four bytes. This performs that adjustment.
+ *
+ * @todo This isn't necessary for VERBS, so when we're using infiniband we
+ *       shouldn't do this.
+ */
+size_t
+get_network_bytes(size_t n)
+{
+  return ((n + sizeof(uint32_t) - 1) & ~(sizeof(uint32_t) - 1));
+}
+
+void
+barrier(void)
+{
+#if HAVE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
