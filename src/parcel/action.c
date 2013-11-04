@@ -30,16 +30,20 @@
 #include "hpx/parcel.h"                         /* hpx_parcel stuff */
 #include "debug.h"                              /* dbg_* stuff */
 #include "hashstr.h"                            /* hashstr() */
-#include "network.h"                            /* hpx_network_barrier() */
+#include "network.h"                            /* struct network_mgr */
 
-typedef struct hpx_parcel parcel_t;
+/** Typedefs that we use for convenience in this source. */
+typedef struct hpx_parcel   parcel_t;
+typedef struct hpx_locality locality_t;
+typedef struct hpx_future   future_t;
+/** @} */
 
 /**
  * Some constants that we use to govern the behavior of the action table.
  * @{
  */
 static const int ACTIONS_INITIAL_HT_SIZE = 256; /**< initial table size */
-static const int ACTIONS_PROBE_LIMIT = 2;       /**< when to expand table */
+static const int ACTIONS_PROBE_LIMIT     = 2;   /**< when to expand table */
 /**
  * @}
  */
@@ -223,7 +227,7 @@ hpx_action_registration_complete(void)
  * @returns an error code
  */
 hpx_error_t
-hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out)
+hpx_action_invoke(hpx_action_t action, void *args, future_t **out)
 {
   hpx_func_t f = lookup(&actions, action);
   dbg_assert(f && "Failed to find action");
@@ -242,8 +246,8 @@ hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out)
  * @returns HPX_SUCCESS or an error code
  */
 hpx_error_t
-hpx_call(hpx_locality_t *dest, hpx_action_t action, void *args, size_t len,
-         hpx_future_t **result)
+hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
+         future_t **result)
 {
   dbg_assert_precondition(dest);
   dbg_assert_precondition(action);
