@@ -26,6 +26,7 @@
 #include <string.h>                             /* memcpy */
 
 #include "hpx/action.h"
+#include "action.h"                             /* action_lookup */
 #include "hpx/globals.h"                        /* __hpx_global_ctx */
 #include "hpx/parcel.h"                         /* hpx_parcel stuff */
 #include "debug.h"                              /* dbg_* stuff */
@@ -189,6 +190,13 @@ lookup(const struct hashtable *ht, const hpx_action_t key)
 /* all three options.                                                   */
 /************************************************************************/
 
+
+hpx_func_t
+action_lookup(hpx_action_t key)
+{
+  return lookup(&actions, key);
+}
+
 /**
  * Register an HPX action.
  * 
@@ -229,7 +237,7 @@ hpx_action_registration_complete(void)
 hpx_error_t
 hpx_action_invoke(hpx_action_t action, void *args, future_t **out)
 {
-  hpx_func_t f = lookup(&actions, action);
+  hpx_func_t f = action_lookup(action);
   dbg_assert(f && "Failed to find action");
   return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
 }
