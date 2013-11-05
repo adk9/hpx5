@@ -16,10 +16,10 @@
 
   Authors:
     Benjamin D. Martin <benjmart [at] indiana.edu>
+    Luke Dalessandro   <ldalessa [at] indiana.edu>
  ====================================================================
 */
 
-#pragma once
 #ifndef LIBHPX_PARCEL_PARCELHANDLER_H_
 #define LIBHPX_PARCEL_PARCELHANDLER_H_
 
@@ -30,11 +30,13 @@
 
 #include "hpx/system/attributes.h"
 
-/**
- * Forward declare the pointer types used in this header.
- */
+/** Forward declarations @{ */
 struct hpx_context;
+struct hpx_locality;
+struct hpx_future;
+struct hpx_parcel;
 struct parcelhandler HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
+/** @} */
 
 /**
  * Create the parcel handler. Returns a newly allocated and initialized
@@ -59,5 +61,32 @@ struct parcelhandler *parcelhandler_create(struct hpx_context *ctx)
  */
 void parcelhandler_destroy(struct parcelhandler *ph)
   HPX_ATTRIBUTE(/* HPX_VISIBILITY_INTERNAL LD: testsuite wants this */);
+
+
+/**
+ * Make a parcel handler request to send a parcel.
+ *
+ * This should only be called to put a parcel onto the network, i.e., it does
+ * not do a special check to see if the target address is local. Loopback should
+ * work fine, but is less efficient than just spawning a thread locally.
+ *
+ * @param[in]     dest - destination locality (HACK for virtual address)
+ * @param[in]   parcel - the parcel to send
+ * @param[in] complete - a 0-size future to trigger when send completes locally
+ *                       (optional)
+ * @param[in]   thread - a sizeof(struct hpx_thread *)-size future to trigger
+ *                       when a thread has been generated to handle the action
+ *                       (optional)
+ * @param[out]  result - a future for the result
+ *
+ * @returns HPX_SUCCESS or an error code (@see error.h).
+ */
+int parcelhandler_send(struct hpx_locality *dest,
+                       const struct hpx_parcel *parcel,
+                       struct hpx_future **complete,
+                       struct hpx_future **thread,
+                       struct hpx_future **result)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1, 2));
 
 #endif /* LIBHPX_PARCEL_PARCELHANDLER_H_ */
