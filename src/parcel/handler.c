@@ -50,6 +50,7 @@ static const size_t RECV_BUFFER_SIZE        = 1024*1024*16;
 
 /** Typedefs used in this source file @{ */
 typedef struct hpx_context   context_t;
+typedef struct hpx_locality locality_t;
 typedef struct hpx_thread     thread_t;
 typedef struct hpx_future     future_t;
 typedef struct hpx_parcel     parcel_t;
@@ -136,7 +137,7 @@ complete_requests(reqlist_t* list, test_function_t test, bool send)
 }
 
 static void
-parcelhandler_main(struct parcelhandler *args)
+parcelhandler_main(handler_t *args)
 {
   int success;
 
@@ -298,17 +299,17 @@ error:
   hpx_thread_exit((void*)retval);
 }
 
-struct parcelhandler *
-parcelhandler_create(struct hpx_context *ctx)
+handler_t *
+parcelhandler_create(context_t *ctx)
 {
   int ret = HPX_ERROR;
-  struct parcelhandler *ph = NULL;
+  handler_t *ph = NULL;
 
   /* create and initialize send queue */
   ret = parcelqueue_create(&__hpx_send_queue);
   if (ret != 0) {
     __hpx_errno = HPX_ERROR;
-    goto error;
+    return NULL;
   }
 
   /* create thread */
@@ -316,21 +317,19 @@ parcelhandler_create(struct hpx_context *ctx)
   ph->ctx = ctx;
   ph->quit = hpx_alloc(sizeof(hpx_future_t));
   hpx_lco_future_init(ph->quit);
-  hpx_error_t e = hpx_thread_create(ph->ctx,
-                                    HPX_THREAD_OPT_SERVICE_COREGLOBAL,
-                                    (void(*)(void*))parcelhandler_main,
+  hpx_error_t e = hpx_thread_create(ph->ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
+                                    (hpx_func_t)parcelhandler_main,
                                     (void*)ph,
                                     &ph->fut,
                                     &ph->thread);
   if (e == HPX_ERROR)
     dbg_print_error(e, "Failed to start the parcel handler core service");
-
-error:
+  
   return ph;
 }
 
 void
-parcelhandler_destroy(struct parcelhandler *ph)
+parcelhandler_destroy(handler_t *ph)
 {
   if (!ph)
     return;
@@ -346,4 +345,13 @@ parcelhandler_destroy(struct parcelhandler *ph)
   parcelqueue_destroy(&__hpx_send_queue);
 
   return;
+}
+
+int
+parcelhandler_send(locality_t *dest, const parcel_t *parcel,
+                   future_t **complete,
+                   future_t **thread,
+                   future_t **result)
+{
+  return HPX_ERROR;
 }
