@@ -9,7 +9,7 @@
 
 AC_PREREQ([2.63])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
-CLEANFILES="*~ .\#* .gdb_history"
+CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 AC_CONFIG_SRCDIR([include/hpx.h])
@@ -79,6 +79,9 @@ HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
 HPX_WITH_PKG([tcmalloc],[tcmalloc],[build with explicit tcmalloc],[no],[TCMALLOC])
 HPX_WITH_PKG([crypto],[libcrypto],[use libcrypto for string hashing],[no],[CRYPTO])
 HPX_WITH_PKG([glib],[glib-2.0],[build with glib-2.0],[no],[GLIB])
+HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
+
+AC_CHECK_HEADER(pmi_cray_ext.h, [AC_DEFINE(HAVE_PMI_CRAY_EXT, [1])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[yes],[MPI])
 HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
@@ -88,7 +91,7 @@ AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=yes],[enable_tests=no])
-    
+
 AC_ARG_WITH([doxygen],
     [AS_HELP_STRING([--with-doxygen],
         [build documentation @<:@default=no@:>@])],
