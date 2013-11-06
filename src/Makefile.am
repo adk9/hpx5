@@ -30,12 +30,16 @@ endif
 
 if HAVE_NETWORK
     libhpx_la_SOURCES   += network/network.c
-    libhpx_la_SOURCES   += bootstrap/bootstrap.c
+                           bootstrap/bootstrap.c
 endif
 
 if HAVE_MPI
     libhpx_la_SOURCES   += network/mpi.c
     libhpx_la_SOURCES   += bootstrap/mpirun.c
+endif
+
+if HAVE_PMI
+    libhpx_la_SOURCES   += bootstrap/pmi.c
 endif
 
 if HAVE_PHOTON
@@ -51,10 +55,10 @@ libhpx_la_CPPFLAGS       = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhp
 libhpx_la_CFLAGS         = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 libhpx_la_CFLAGS        += @CRYPTO_CFLAGS@ @MPI_CFLAGS@ @PHOTON_CFLAGS@
 libhpx_la_CFLAGS        += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
-libhpx_la_CFLAGS        += @GLIB_CFLAGS@ 
+libhpx_la_CFLAGS        += @GLIB_CFLAGS@ @PMI_CFLAGS@
 libhpx_la_CFLAGS        += -std=c99
 
 libhpx_la_LIBADD         = $(top_builddir)/libsync/libsync.la
 libhpx_la_LIBADD        += @MPI_LIBS@ @PHOTON_LIBS@ @CRYPTO_LIBS@
 libhpx_la_LIBADD        += @HWLOC_LIBS@ @PAPI_LIBS@ @TCMALLOC_LIBS@
-libhpx_la_LIBADD        += @GLIB_LIBS@ @PLATFORM_LIBS@
+libhpx_la_LIBADD        += @GLIB_LIBS@ @PMI_LIBS@ @PLATFORM_LIBS@
