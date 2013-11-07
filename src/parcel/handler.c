@@ -160,7 +160,7 @@ void _hpx_parcelhandler_main(void* args) {
 
     /* cleanup outstanding sends/puts */
     if (outstanding_sends > 0) {
-     completions = complete_requests(&send_requests, __hpx_network_ops->sendrecv_test, true);
+     completions = complete_requests(&send_requests, __hpx_network_ops->send_test, true);
      outstanding_sends -= completions;
 #if DEBUG_HANDLER
      if (completions > 0) {
@@ -195,7 +195,7 @@ void _hpx_parcelhandler_main(void* args) {
 #if HAVE_PHOTON
       printf("%d: Sending with request at %#tx (%zu) from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (size_t)req->photon, (ptrdiff_t)header);
 #else
-      printf("%d: Sending with request at %#tx from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)header);
+      printf("%d: Sending with request at %#tx (%#tx) from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)req->mpi, (ptrdiff_t)header);
 #endif
       fflush(stdout);
 #endif
@@ -203,7 +203,14 @@ void _hpx_parcelhandler_main(void* args) {
 			      header, 
 			      size,
 			      req);
-    outstanding_sends++;
+#if 0
+      int temp_flag;
+      int temp_ret;
+      network_status_t temp_status;
+      temp_ret = __hpx_network_ops->sendrecv_test(req, &temp_flag, &temp_status);
+      printf("%d: send for req %#tx: temp_ret_ = %d temp_flag = %d\n", hpx_get_rank(), (ptrdiff_t)req, temp_ret, temp_flag);
+#endif
+      outstanding_sends++;
     }
 
     /* ==================================
@@ -211,7 +218,7 @@ void _hpx_parcelhandler_main(void* args) {
        ==================================
     */
   if (outstanding_recvs > 0) {
-    completions = complete_requests(&recv_requests, __hpx_network_ops->sendrecv_test, false);
+    completions = complete_requests(&recv_requests, __hpx_network_ops->recv_test, false);
     outstanding_recvs -= completions;
 #if DEBUG_HANDLER
     if (completions > 0) {
@@ -242,13 +249,24 @@ void _hpx_parcelhandler_main(void* args) {
       goto error;
     } 
     __hpx_network_ops->pin(recv_buffer, recv_size);
-#if DEBUG_HANDLER
-    printf("%d: Receiving %zd bytes to buffer at %tx\n", hpx_get_rank(), recv_size, (ptrdiff_t)recv_buffer);
-    fflush(stdout);
-#endif
     req = request_list_append(&recv_requests, recv_buffer);
     __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
     outstanding_recvs++;
+#if 0
+    int temp_flag;
+    int temp_ret;
+    network_status_t temp_status;
+    temp_ret = __hpx_network_ops->sendrecv_test(req, &temp_flag, &temp_status);
+    printf("%d: recv for req %#tx: temp_ret_ = %d temp_flag = %d\n", hpx_get_rank(), (ptrdiff_t)req, temp_ret, temp_flag);
+#endif
+#if DEBUG_HANDLER
+#if HAVE_PHOTON
+    printf("%d: Receiving with request at %#tx (%zu) %zd bytes to buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (size_t)req->photon, recv_size, (ptrdiff_t)recv_buffer);
+#else
+    printf("%d: Receiving with request at %#tx (%#tx) %zd bytes to buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)req->mpi, recv_size, (ptrdiff_t)recv_buffer);
+#endif
+    fflush(stdout);
+#endif
   }
   
   

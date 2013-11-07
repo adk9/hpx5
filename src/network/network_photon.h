@@ -57,6 +57,8 @@ int get_photon(int src, void* buffer, size_t len, network_request_t *request);
 
 int test_photon(network_request_t *request, int *flag, network_status_t *status);
 
+int test_get_photon(network_request_t *request, int *flag, network_status_t *status);
+
 int send_parcel_photon(hpx_locality_t *, hpx_parcel_t *);
 
 int send_photon(int peer, void *payload, size_t len, network_request_t *request);

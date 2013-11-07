@@ -56,13 +56,16 @@ int bootstrap_mpi_init(void) {
   ret = HPX_ERROR;
   MPI_Initialized(&ret);
   if (!ret) {
+#if 1
     int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_SERIALIZED, &provided))
+    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
       goto err;
-    if (provided != MPI_THREAD_SERIALIZED)
+    if (provided != MPI_THREAD_MULTIPLE)
       goto err;
-  }
+#endif
+    //  MPI_Init(0, NULL);
 
+  }
   if (MPI_Comm_size(MPI_COMM_WORLD, &size) != MPI_SUCCESS)
     goto err;
 

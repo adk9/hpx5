@@ -83,6 +83,10 @@ typedef struct network_ops {
   int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
   /* test for completion of send or receive */
   int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);
+
+  int (*send_test)(network_request_t *request, int *flag, network_status_t *status);
+
+  int (*recv_test)(network_request_t *request, int *flag, network_status_t *status);
   /* RMA put */
   int (*put)(int dest, void *buffer, size_t len, network_request_t *request);
   /* RMA get */
