@@ -19,13 +19,13 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "hpx/init.h"
 #include "hpx/action.h"
 #include "hpx/parcel.h"
 #include "hashstr.h"
 #include "network/network.h"
+#include "parcel/parcelhandler.h"
 
 static const int ACTIONS_INITIAL_HT_SIZE = 256;
 static const int ACTIONS_PROBE_LIMIT = 3;
@@ -173,5 +173,6 @@ hpx_future_t* hpx_action_invoke(hpx_action_t action, void *args,
 }
 
 void hpx_action_registration_complete(void) {
-  hpx_network_barrier();
+  hpx_lco_future_set_state(&action_registration_complete);
+  //  hpx_network_barrier();
 }

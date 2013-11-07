@@ -180,13 +180,12 @@ int init_mpi(void) {
       retval = 0;
     else
       __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-  }
-  else
-    retval = HPX_SUCCESS;
-
   #if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
   #endif
+  }
+  else
+    retval = HPX_SUCCESS;
 
   /* cache size and rank */
   _rank_mpi = bootmgr->get_rank();

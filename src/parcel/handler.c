@@ -101,6 +101,9 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 }
 
 void _hpx_parcelhandler_main(void* args) {
+  //  printf("Waiting on action registration to complete\n");
+  hpx_thread_wait(&action_registration_complete); /* make sure action registration is done or else the parcel handler can't invoke actions */
+
   int success;
 
   hpx_future_t* quit = ((hpx_parcelhandler_t*)args)->quit;
@@ -229,7 +232,7 @@ void _hpx_parcelhandler_main(void* args) {
   }
   
   /* Now check for new receives */
-  __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
+  success = __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
   if (flag > 0) { /* there is a message to receive */
 #if DEBUG_HANDLER
     initiated_something = 1;
@@ -298,7 +301,7 @@ void _hpx_parcelhandler_main(void* args) {
 hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
   int ret = HPX_ERROR;
   hpx_parcelhandler_t *ph = NULL;
-
+  
   /* create and initialize send queue */
   ret = parcelqueue_create(&__hpx_send_queue);
   if (ret != 0) {
