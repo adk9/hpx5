@@ -60,8 +60,9 @@ int bootstrap_mpi_init(void) {
     int provided;
     if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
       goto err;
-    if (provided != MPI_THREAD_MULTIPLE)
+    if (provided < MPI_THREAD_SERIALIZED)
       goto err;
+    printf("provided = %d\n", provided);
 #endif
     //  MPI_Init(0, NULL);
 

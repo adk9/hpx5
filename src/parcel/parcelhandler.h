@@ -45,6 +45,7 @@ typedef struct {
 } hpx_parcelhandler_t;
 
 extern hpx_parcelhandler_t *__hpx_parcelhandler;
+struct hpx_future action_registration_complete;
 
 /*
  --------------------------------------------------------------------
