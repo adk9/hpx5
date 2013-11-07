@@ -66,7 +66,7 @@ struct network_request* request_list_append(struct request_list *list,
   list->size++;
 
 #if DEBUG
-  printf("%d: Request list at %p appended parcel at %p with id %d; new size is %d\n", hpx_get_rank(), (void*)list, (void*)parcel, parcel->parcel_id, list->size);
+  printf("%d: Request list at %p appended parcel at %p with id %d and action %zu; new size is %d\n", hpx_get_rank(), (void*)list, (void*)parcel, parcel->parcel_id, (size_t)parcel->action, list->size);
   fflush(stdout);
 #endif
 
@@ -79,7 +79,7 @@ void request_list_begin(struct request_list *list) {
 
 #if DEBUG
   if (list->curr != NULL)
-    printf("%d: -- Request list at %p begin() == %p with id %d; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, list->size);
+    printf("%d: -- Request list at %p begin() == %p with id %d and action %zu; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, (size_t)list->curr->parcel->action, list->size);
   else
     printf("%d: -- Request list at %p begin() == NULL;          size is %d\n", hpx_get_rank(), (void*)list, list->size);
   fflush(stdout);
@@ -107,7 +107,7 @@ void request_list_next(struct request_list *list) {
 
 #if DEBUG
   if (list->curr != NULL)
-    printf("%d: -- Request list at %p next() == %p with id %d; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, list->size);
+    printf("%d: -- Request list at %p next() == %p with id %d and action %zu; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, (size_t)list->curr->parcel->action, list->size);
   else
     printf("%d: -- Request list at %p next() == NULL;          size is %d\n", hpx_get_rank(), (void*)list, list->size);
   fflush(stdout);
@@ -132,7 +132,7 @@ void request_list_del(struct request_list *list) {
   list->curr = list->prev; /* do this instead of making it next since we want next() to still work in a for loop if we delete */
   list->size--;
 #if DEBUG
-  printf("%d: Request list at %p deleted parcel at %p with id %d; new size is %d\n", hpx_get_rank(), (void*)list, (void*)node->parcel, node->parcel->parcel_id, list->size);
+  printf("%d: Request list at %p deleted parcel at %p with id %d and action %zu; new size is %d\n", hpx_get_rank(), (void*)list, (void*)node->parcel, node->parcel->parcel_id, (size_t)node->parcel->action, list->size);
   fflush(stdout);
 #endif
   hpx_free(node);
