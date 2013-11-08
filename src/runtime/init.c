@@ -28,11 +28,10 @@
 #include "thread/thread.h"                      /* libhpx_thread_init() */
 #include "network/network.h"
 #include "parcel/parcelhandler.h"               /* __hpx_parcelhandler and action_registration_complete */
-#include "parcel/predefined_actions.h"          /* init_predefined(), action_set_shutdown_future, and parcel_shutdown_futures*/
+#include "parcel/predefined_actions.h"          /* init_predefined() */
 #include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
-#include "hpx/runtime.h" /* hpx_get_num_localities() */
 #include "hpx/utils/timer.h"
 #include "hpx/thread/ctx.h"
 
@@ -135,34 +134,11 @@ hpx_error_t hpx_init(void) {
  *
  */
 void hpx_cleanup(void) {
-  /* Make sure all other ranks are ready to quit also */
-
-#if HAVE_NETWORK
-  unsigned i;
-  unsigned num_localities;
-
-  num_localities = hpx_get_num_localities();
-
-  for (i = 0; i < num_localities; i++) {
-    hpx_parcel_t* p = hpx_alloc(sizeof(hpx_parcel_t));
-    if (p == NULL) {
-      __hpx_errno = HPX_ERROR_NOMEM;
-      return;
-    }
-    size_t *arg = hpx_alloc(sizeof(size_t));
-    *arg = (size_t)i;
-    hpx_new_parcel(action_set_shutdown_future, arg, sizeof(*arg), p); /* should check error but how would we handle it? */
-    hpx_send_parcel(hpx_find_locality(i), p); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
-  }
-  for (i = 1; i < num_localities; i++)
-    hpx_thread_wait(&shutdown_futures[i]);
-#endif
+  if (__hpx_parcelhandler)
+    hpx_parcelhandler_destroy(__hpx_parcelhandler);
 
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
-
-  if (__hpx_parcelhandler)
-    hpx_parcelhandler_destroy(__hpx_parcelhandler);
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
