@@ -64,7 +64,6 @@ void set_shutdown_future(void* voidp_arg) {
   //  size_t rank = *(size_t*)arg;
   struct {size_t rank;} *arg = voidp_arg;
   size_t rank = arg->rank;
-  printf("On rank %d setting future %zu\n", hpx_get_rank(), rank);
   hpx_lco_future_set_state(&shutdown_futures[rank]);
   free(voidp_arg);
 #if 0
