@@ -21,6 +21,7 @@
 */
 
 #include <assert.h>
+#include <stdbool.h>
 #include "parcelqueue.h"
 #include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
@@ -139,4 +140,19 @@ int parcelqueue_destroy(struct parcelqueue** q_handle) {
   hpx_free(q);
   q = NULL;
   return HPX_SUCCESS;
+}
+
+bool parcelqueue_empty(struct parcelqueue* q) {
+  if (q == NULL) {
+    __hpx_errno = HPX_ERROR;                    /*TODO: more specific error */
+    return NULL;
+  }
+  
+  hpx_lco_mutex_lock(q->head_lock);
+  struct pq_node *next = q->head->next;
+  hpx_lco_mutex_unlock(q->head_lock);
+  if (next == NULL)
+    return true;                     
+  else
+    return false;
 }

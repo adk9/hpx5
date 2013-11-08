@@ -26,6 +26,7 @@
 
 #include "parcelhandler.h"                      /*  */
 #include "parcelqueue.h"                        /* struct parcelqueue */
+#include "predefined_actions.h"                 /* action_set_shutdown_future, and parcel_shutdown_futures*/
 #include "request_buffer.h"                     /* struct request_buffer */
 #include "request_list.h"                       /* struct request_list */
 #include "serialization.h"                      /* struct header */
@@ -34,6 +35,7 @@
 #include "hpx/action.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
+#include "hpx/runtime.h" /* hpx_get_num_localities() */
 #include "hpx/thread/ctx.h"                     /* struct hpx_context */
 
 // #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
@@ -281,7 +283,7 @@ void _hpx_parcelhandler_main(void* args) {
   }
 #endif
   
-  if (hpx_lco_future_isset(quit) == true)
+  if (hpx_lco_future_isset(quit) == true && outstanding_sends == 0 && outstanding_recvs == 0 && parcelqueue_empty(__hpx_send_queue))
     break;
   /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. */
   i++;
@@ -326,7 +328,25 @@ hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-  hpx_network_barrier();
+  unsigned i;
+  unsigned num_localities;
+  
+  num_localities = hpx_get_num_localities();
+
+  for (i = 0; i < num_localities; i++) {
+    hpx_parcel_t* p = hpx_alloc(sizeof(hpx_parcel_t));
+    if (p == NULL) {
+      __hpx_errno = HPX_ERROR_NOMEM;
+      return;
+    }
+    struct {size_t rank;} *arg;
+    arg = hpx_alloc(sizeof(*arg));
+    arg->rank = (size_t)hpx_get_rank();
+    hpx_new_parcel(action_set_shutdown_future, arg, sizeof(*arg), p); /* should check error but how would we handle it? */
+    hpx_send_parcel(hpx_find_locality(i), p); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
+  }
+  for (i = 0; i < num_localities; i++)
+    hpx_thread_wait(&shutdown_futures[i]);
 
   hpx_lco_future_set_state(ph->quit);
   hpx_thread_wait(ph->fut);

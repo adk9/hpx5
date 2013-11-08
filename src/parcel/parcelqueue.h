@@ -58,6 +58,7 @@
 */
 #define CACHE_LINE_SIZE 64                      /* TODO: get this for real */
 
+#include <stdbool.h>
 #include "hpx/types.h"                          /* uint8 */
 
 struct hpx_mutex;                               /* forward declare */
@@ -100,5 +101,7 @@ void* parcelqueue_trypop(struct parcelqueue*);
  * This pushes an element onto the queue. It is blocking. It is threadsafe.
  */
 int parcelqueue_push(struct parcelqueue*, void* val);
+
+bool parcelqueue_empty(struct parcelqueue*);
 
 #endif /* LIBHPX_PARCEL_PARCELQUEUE_H_ */

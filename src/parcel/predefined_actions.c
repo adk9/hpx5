@@ -28,13 +28,15 @@ hpx_error_t init_shutdown_futures();
 
 void set_shutdown_future(void* arg);
 
-static hpx_error_t alloc_and_init_futures(hpx_future_t **futs, unsigned n) {
+static hpx_error_t alloc_and_init_futures(hpx_future_t **fut_arr, unsigned n) {
   unsigned i;
-  *futs = hpx_alloc(sizeof(hpx_future_t)*n);
-  if (*futs == NULL)
+  hpx_future_t *futs = hpx_alloc(sizeof(hpx_future_t)*n);
+  if (futs == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
   for (i = 0; i < n; i++)
-    hpx_lco_future_init(&*futs[i]);
+    hpx_lco_future_init(&(futs[i]));
+
+  *fut_arr = futs;
 
   return HPX_SUCCESS;
 }
@@ -56,11 +58,15 @@ hpx_error_t init_shutdown_futures() {
   return alloc_and_init_futures(&shutdown_futures, num_processes);
 }
 
-void set_shutdown_future(void* arg) {
-  size_t rank = *(size_t*)arg;
+void set_shutdown_future(void* voidp_arg) {
+  //  struct si {size_t rank;}
+
+  //  size_t rank = *(size_t*)arg;
+  struct {size_t rank;} *arg = voidp_arg;
+  size_t rank = arg->rank;
   printf("On rank %d setting future %zu\n", hpx_get_rank(), rank);
   hpx_lco_future_set_state(&shutdown_futures[rank]);
-
+  free(voidp_arg);
 #if 0
   struct shutdown_parcel_args* args = (struct shutdown_parcel_args*)voidp_args;
   if (hpx_get_rank() != 0)
