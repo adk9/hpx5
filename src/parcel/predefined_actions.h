@@ -27,10 +27,12 @@ struct shutdown_parcel_args {
 };
 #endif
 
-hpx_action_t action_set_shutdown_future;
+hpx_action_t action_set_shutdown_future;      /* set the shutdown_futures for the appropriate rank/locality */
+hpx_future_t *shutdown_futures;               /* futures for each rank for shutdown sequence; for use with action_set_shutdown_future */
 
-hpx_future_t *shutdown_futures;
-
+/**
+ * Do any intialization needed by predefined actions.
+ */
 hpx_error_t init_predefined();
 
 #endif
