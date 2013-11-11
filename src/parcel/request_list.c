@@ -23,7 +23,10 @@
 #include "request_list.h"
 #include "hpx/error.h"                          /* __hpx_errno, HPX_* */
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
-
+#if DEBUG
+#include <stdio.h>
+#include "serialization.h"
+#endif
 
 void request_list_init(struct request_list *list) {
   list->head = NULL;
@@ -43,20 +46,45 @@ struct network_request* request_list_append(struct request_list *list,
     __hpx_errno = HPX_ERROR_NOMEM;
     return NULL;
   }    
-
+#if 0
   node->parcel = parcel;
   node->next = list->head;
   list->head = node;
   if (list->tail == NULL)
     list->tail = node;
+#endif
+  //
+  node->parcel = parcel;
+  node->next = NULL;
+  if (list->head == NULL)
+    list->head = node;
+  if (list->tail != NULL)
+    list->tail->next = node;
+  list->tail = node;
+  //
 
   list->size++;
+
+#if DEBUG
+  printf("%d: Request list at %p appended parcel at %p with id %d and action %zu; new size is %d\n", hpx_get_rank(), (void*)list, (void*)parcel, parcel->parcel_id, (size_t)parcel->action, list->size);
+  fflush(stdout);
+#endif
+
   return &node->request;
 }
 
 void request_list_begin(struct request_list *list) {
   list->prev = NULL;
   list->curr = list->head;
+
+#if DEBUG
+  if (list->curr != NULL)
+    printf("%d: -- Request list at %p begin() == %p with id %d and action %zu; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, (size_t)list->curr->parcel->action, list->size);
+  else
+    printf("%d: -- Request list at %p begin() == NULL;          size is %d\n", hpx_get_rank(), (void*)list, list->size);
+  fflush(stdout);
+#endif
+
 } 
 
 struct network_request* request_list_curr(struct request_list *list) {
@@ -72,6 +100,19 @@ void request_list_next(struct request_list *list) {
     list->prev = list->curr;
     list->curr = list->curr->next;
   }
+  else if (list->size > 0) {
+    list->prev = NULL;
+    list->curr = list->head;
+    }
+
+#if DEBUG
+  if (list->curr != NULL)
+    printf("%d: -- Request list at %p next() == %p with id %d and action %zu; size is %d\n", hpx_get_rank(), (void*)list, (void*)list->curr->parcel, list->curr->parcel->parcel_id, (size_t)list->curr->parcel->action, list->size);
+  else
+    printf("%d: -- Request list at %p next() == NULL;          size is %d\n", hpx_get_rank(), (void*)list, list->size);
+  fflush(stdout);
+#endif
+
 }
 
 void request_list_del(struct request_list *list) {
@@ -90,5 +131,9 @@ void request_list_del(struct request_list *list) {
     list->prev->next = node->next; 
   list->curr = list->prev; /* do this instead of making it next since we want next() to still work in a for loop if we delete */
   list->size--;
+#if DEBUG
+  printf("%d: Request list at %p deleted parcel at %p with id %d and action %zu; new size is %d\n", hpx_get_rank(), (void*)list, (void*)node->parcel, node->parcel->parcel_id, (size_t)node->parcel->action, list->size);
+  fflush(stdout);
+#endif
   hpx_free(node);
 }

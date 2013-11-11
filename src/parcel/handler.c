@@ -30,6 +30,7 @@
 
 #include "parcelhandler.h"                      /*  */
 #include "parcelqueue.h"                        /* struct parcelqueue */
+#include "predefined_actions.h"                 /* action_set_shutdown_future, and parcel_shutdown_futures*/
 #include "request_buffer.h"                     /* struct request_buffer */
 #include "request_list.h"                       /* struct request_list */
 #include "serialization.h"                      /* struct header */
@@ -38,11 +39,12 @@
 #include "hpx/action.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
+#include "hpx/runtime.h"                        /* hpx_get_num_localities() */
 #include "hpx/thread/ctx.h"                     /* struct hpx_context */
 
 // #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
 /* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
-#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
+#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX /* SIZE_MAX ensures all parcels go through send/recv not put/get */
 
 struct parcelqueue *__hpx_send_queue = NULL;
 
@@ -66,32 +68,34 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
   int count = 0;
   struct header* header;
   size_t size;
+  int success;
 
   request_list_begin(list);
   while ((req = request_list_curr(list)) != NULL) {
-    test_func(req, &flag, &status);
-    if (flag == 1) {
+    success = test_func(req, &flag, &status);
+    if (flag == 1 && success == 0) {
       count++;
       header = request_list_curr_parcel(list);
       request_list_del(list);
       if (send) {
 	/* Free up the parcel as we don't need it anymore */
 	size = get_parcel_size(header);
-#if DEBUG
-	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+#if DEBUG_HANDLER
+	printf("%d: Unpinning/freeing %zd bytes from buffer at %tx (parcel_id=%d)\n", hpx_get_rank(), size, (ptrdiff_t)header, header->parcel_id);
 #endif
 	__hpx_network_ops->unpin(header, size);
 	hpx_free(header);
       }
       else { /* this is a recv or get */
-#if DEBUG
-      printf("Received %zd bytes to buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+#if DEBUG_HANDLER
+	size = get_parcel_size(header);
+	printf("%d: Received %zd bytes to buffer at %tx with parcel_id=%u action=%tu\n", hpx_get_rank(), size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
       fflush(stdout);
 #endif
 	parcel_process(header);
 	size = get_parcel_size(header);
-#if DEBUG
-	printf("Unpinning/freeing %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
+#if DEBUG_HANDLER
+	printf("%d: Unpinning/freeing %zd bytes from buffer at %tx\n", hpx_get_rank(), size, (ptrdiff_t)header);
 #endif
 	__hpx_network_ops->unpin(header, size);
 	free(header);
@@ -103,6 +107,9 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 }
 
 void _hpx_parcelhandler_main(void* args) {
+  //  printf("Waiting on action registration to complete\n");
+  hpx_waitfor_action_registration_complete(); /* make sure action registration is done or else the parcel handler can't invoke actions */
+
   int success;
 
   hpx_future_t* quit = ((hpx_parcelhandler_t*)args)->quit;
@@ -118,7 +125,7 @@ void _hpx_parcelhandler_main(void* args) {
 
   network_request_t* req;
 
-  #if DEBUG
+  #if DEBUG_HANDLER
     size_t probe_successes, recv_successes, send_successes;
     int initiated_something, completed_something;
   #endif
@@ -141,7 +148,7 @@ void _hpx_parcelhandler_main(void* args) {
   *retval = 0;
 
   i = 0;
-#if DEBUG
+#if DEBUG_HANDLER
   probe_successes= 0;
   recv_successes = 0;
   send_successes = 0;
@@ -162,9 +169,9 @@ void _hpx_parcelhandler_main(void* args) {
 
     /* cleanup outstanding sends/puts */
     if (outstanding_sends > 0) {
-     completions = complete_requests(&send_requests, __hpx_network_ops->sendrecv_test, true);
+     completions = complete_requests(&send_requests, __hpx_network_ops->send_test, true);
      outstanding_sends -= completions;
-#if DEBUG
+#if DEBUG_HANDLER
      if (completions > 0) {
        completed_something = 1;
        send_successes++;
@@ -175,7 +182,7 @@ void _hpx_parcelhandler_main(void* args) {
     /* check send queue */
     header = parcelqueue_trypop(__hpx_send_queue);
     if (header != NULL) {
-#if DEBUG
+#if DEBUG_HANDLER
       initiated_something = 1;
 #endif
       if (header == NULL) {
@@ -183,17 +190,36 @@ void _hpx_parcelhandler_main(void* args) {
       }
       dst_rank = header->dest.locality.rank;
       size = get_parcel_size(header);
-#if DEBUG
-      //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
-      printf("Sending %zd bytes from buffer at %tx with parcel_id=%u action=%tu\n", size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
+#if DEBUG_HANDLER
+      printf("%d: Pinning/allocating %zd bytes at %tx\n", hpx_get_rank(), get_parcel_size(header), (ptrdiff_t)header);
+      fflush(stdout);
+#endif
+      __hpx_network_ops->pin((void*)header, get_parcel_size(header));
+#if DEBUG_HANDLER
+      printf("%d: Sending %zd bytes from buffer at %tx with parcel_id=%u action=%tu\n", hpx_get_rank(), size, (ptrdiff_t)header, header->parcel_id, (uintptr_t)header->action);
       fflush(stdout);
 #endif
       req = request_list_append(&send_requests, header);
+#if DEBUG_HANDLER
+#if HAVE_PHOTON
+      printf("%d: Sending with request at %#tx (%zu) from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (size_t)req->photon, (ptrdiff_t)header);
+#else
+      printf("%d: Sending with request at %#tx (%#tx) from buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)req->mpi, (ptrdiff_t)header);
+#endif
+      fflush(stdout);
+#endif
       __hpx_network_ops->send(dst_rank, 
 			      header, 
 			      size,
 			      req);
-    outstanding_sends++;
+#if 0
+      int temp_flag;
+      int temp_ret;
+      network_status_t temp_status;
+      temp_ret = __hpx_network_ops->sendrecv_test(req, &temp_flag, &temp_status);
+      printf("%d: send for req %#tx: temp_ret_ = %d temp_flag = %d\n", hpx_get_rank(), (ptrdiff_t)req, temp_ret, temp_flag);
+#endif
+      outstanding_sends++;
     }
 
     /* ==================================
@@ -201,9 +227,9 @@ void _hpx_parcelhandler_main(void* args) {
        ==================================
     */
   if (outstanding_recvs > 0) {
-    completions = complete_requests(&recv_requests, __hpx_network_ops->sendrecv_test, false);
+    completions = complete_requests(&recv_requests, __hpx_network_ops->recv_test, false);
     outstanding_recvs -= completions;
-#if DEBUG
+#if DEBUG_HANDLER
     if (completions > 0) {
       completed_something = 1;
       recv_successes += completions;
@@ -212,9 +238,9 @@ void _hpx_parcelhandler_main(void* args) {
   }
   
   /* Now check for new receives */
-  __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
+  success = __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
   if (flag > 0) { /* there is a message to receive */
-#if DEBUG
+#if DEBUG_HANDLER
     initiated_something = 1;
     probe_successes++;
 #endif
@@ -232,17 +258,28 @@ void _hpx_parcelhandler_main(void* args) {
       goto error;
     } 
     __hpx_network_ops->pin(recv_buffer, recv_size);
-#if DEBUG
-    printf("Receiving %zd bytes to buffer at %tx\n", recv_size, (ptrdiff_t)recv_buffer);
-    fflush(stdout);
-#endif
     req = request_list_append(&recv_requests, recv_buffer);
     __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
     outstanding_recvs++;
+#if 0
+    int temp_flag;
+    int temp_ret;
+    network_status_t temp_status;
+    temp_ret = __hpx_network_ops->sendrecv_test(req, &temp_flag, &temp_status);
+    printf("%d: recv for req %#tx: temp_ret_ = %d temp_flag = %d\n", hpx_get_rank(), (ptrdiff_t)req, temp_ret, temp_flag);
+#endif
+#if DEBUG_HANDLER
+#if HAVE_PHOTON
+    printf("%d: Receiving with request at %#tx (%zu) %zd bytes to buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (size_t)req->photon, recv_size, (ptrdiff_t)recv_buffer);
+#else
+    printf("%d: Receiving with request at %#tx (%#tx) %zd bytes to buffer at %tx\n", hpx_get_rank(), (ptrdiff_t)req, (ptrdiff_t)req->mpi, recv_size, (ptrdiff_t)recv_buffer);
+#endif
+    fflush(stdout);
+#endif
   }
   
   
-#if DEBUG
+#if DEBUG_HANDLER
   if (initiated_something != 0 || completed_something != 0) {
     printf("rank %d: initiated: %d\tcompleted %d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(), initiated_something, completed_something, (int)probe_successes, (int)recv_successes, (int)send_successes);
     initiated_something = 0;
@@ -250,7 +287,7 @@ void _hpx_parcelhandler_main(void* args) {
   }
 #endif
   
-  if (hpx_lco_future_isset(quit) == true)
+  if (hpx_lco_future_isset(quit) == true && outstanding_sends == 0 && outstanding_recvs == 0 && parcelqueue_empty(__hpx_send_queue))
     break;
   /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. */
   i++;
@@ -258,8 +295,8 @@ void _hpx_parcelhandler_main(void* args) {
     hpx_thread_yield();    
   }
 
-#if DEBUG
-  printf("Handler done after iter %d\n", (int)i);
+#ifdef DEBUG_HANDLER
+  printf("%d: Handler done after iter %d\n", hpx_get_rank(), (int)i);
   fflush(stdout);
 #endif
 
@@ -270,7 +307,7 @@ void _hpx_parcelhandler_main(void* args) {
 hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
   int ret = HPX_ERROR;
   hpx_parcelhandler_t *ph = NULL;
-
+  
   /* create and initialize send queue */
   ret = parcelqueue_create(&__hpx_send_queue);
   if (ret != 0) {
@@ -295,11 +332,34 @@ hpx_parcelhandler_t *hpx_parcelhandler_create(struct hpx_context *ctx) {
 }
 
 void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
-  hpx_network_barrier();
+  unsigned i;
+  unsigned num_localities;
+  
+  /* First, we need to wait for all other localities to reach this point. */
+  num_localities = hpx_get_num_localities();
 
+  for (i = 0; i < num_localities; i++) {
+    hpx_parcel_t* p = hpx_alloc(sizeof(hpx_parcel_t));
+    if (p == NULL) {
+      __hpx_errno = HPX_ERROR_NOMEM;
+      return;
+    }
+    struct {size_t rank;} *arg;
+    arg = hpx_alloc(sizeof(*arg));
+    arg->rank = (size_t)hpx_get_rank();
+    hpx_new_parcel(action_set_shutdown_future, arg, sizeof(*arg), p); /* should check error but how would we handle it? */
+    hpx_locality_t *loc = hpx_find_locality(i); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
+    hpx_send_parcel(loc, p); 
+    hpx_locality_destroy(loc);
+  }
+  for (i = 0; i < num_localities; i++)
+    hpx_thread_wait(&shutdown_futures[i]);
+
+  /* Now shut down the parcel handler */
   hpx_lco_future_set_state(ph->quit);
   hpx_thread_wait(ph->fut);
 
+  /* Now cleanup any remaining variables */
   hpx_lco_future_destroy(ph->quit);
   hpx_free(ph->quit);
   hpx_free(ph);

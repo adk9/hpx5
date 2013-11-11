@@ -27,6 +27,9 @@
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint8_t */
 #include <string.h>                             /* memcpy */
+#if DEBUG_HANDLER
+#include <stdio.h>
+#endif
 
 #include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
@@ -69,8 +72,12 @@ hpx_error_t serialize(const struct hpx_parcel *p, struct header **out) {
   success = hpx_alloc_align((void**)&blob, 64, size_of_blob);
   if (success != 0 || blob == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
-#ifdef HAVE_PHOTON
+#if 0
   /* need to unpin this again somewhere - right now the parcel handler does that*/
+#if DEBUG_HANDLER
+	printf("%d: Pinning/allocating %zd bytes at %tx\n", hpx_get_rank(), size_of_blob, (ptrdiff_t)blob);
+	fflush(stdout);
+#endif
   __hpx_network_ops->pin((void*)blob, size_of_blob);
 #endif
 
@@ -106,6 +113,10 @@ hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out) {
     return (__hpx_errno = HPX_ERROR_NOMEM);
   }
 
+#if DEBUG_HANDLER
+  printf("%d: copying %zu bytes of memory at %#tx from blob at %#tx\n", hpx_get_rank(), (uintptr_t)blob->payload_size, (uintptr_t)&blob->payload, (uintptr_t)blob);
+  fflush(stdout);
+#endif
   memcpy(p->payload, &blob->payload, blob->payload_size);
   *out = p;
   return HPX_SUCCESS;

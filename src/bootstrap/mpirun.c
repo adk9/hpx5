@@ -57,12 +57,11 @@ int bootstrap_mpi_init(void) {
   MPI_Initialized(&ret);
   if (!ret) {
     int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_SERIALIZED, &provided))
+    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
       goto err;
-    if (provided != MPI_THREAD_SERIALIZED)
+    if (provided < MPI_THREAD_SERIALIZED)
       goto err;
   }
-
   if (MPI_Comm_size(MPI_COMM_WORLD, &size) != MPI_SUCCESS)
     goto err;
 

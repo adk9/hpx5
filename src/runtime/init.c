@@ -28,6 +28,7 @@
 #include "thread/thread.h"                      /* libhpx_thread_init() */
 #include "network.h"
 #include "parcel/parcelhandler.h"               /* __hpx_parcelhandler */
+#include "parcel/predefined_actions.h"          /* init_predefined() */
 #include "hpx/error.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
@@ -39,6 +40,8 @@ hpx_config_t *__hpx_global_cfg = NULL;
 network_ops_t *__hpx_network_ops = NULL;
 hpx_parcelhandler_t *__hpx_parcelhandler = NULL;
 bootstrap_ops_t *bootmgr = NULL;
+
+extern hpx_future_t *action_registration_complete;
 
 /**
  * Initializes data structures used by libhpx.  This function must
@@ -70,7 +73,13 @@ hpx_error_t hpx_init(void) {
     return __hpx_errno;
     
   hpx_config_init(__hpx_global_cfg);
-  hpx_config_set_cores(__hpx_global_cfg, 8);
+  //  hpx_config_set_cores(__hpx_global_cfg, 8);
+
+  if(getenv("HPX_NUM_CORES") != NULL) {
+    int num_cores;
+    num_cores = atoi(getenv("HPX_NUM_CORES"));
+    hpx_config_set_cores(__hpx_global_cfg, num_cores);
+  }
 
   __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
   if (!__hpx_global_ctx)
@@ -107,13 +116,19 @@ hpx_error_t hpx_init(void) {
     return __hpx_errno;
 #endif
 
+  /* initialize actions - must be done before parcel system is initialized */
+  action_registration_complete = hpx_alloc(sizeof(*action_registration_complete));
+  if (action_registration_complete == NULL)
+    return __hpx_errno = HPX_ERROR_NOMEM;
+  hpx_lco_future_init(action_registration_complete);
+  init_predefined();
+
   /* initialize the parcel subsystem */
   hpx_parcel_init();
   __hpx_parcelhandler = NULL;
 #if HAVE_NETWORK
   __hpx_parcelhandler = hpx_parcelhandler_create(__hpx_global_ctx);
 #endif
-
   return success;
 }
 
@@ -124,14 +139,17 @@ hpx_error_t hpx_init(void) {
  *
  */
 void hpx_cleanup(void) {
-  /* shutdown the parcel subsystem */
-  //hpx_parcel_fini();
-
   if (__hpx_parcelhandler)
     hpx_parcelhandler_destroy(__hpx_parcelhandler);
 
+  /* shutdown the parcel subsystem */
+  //hpx_parcel_fini();
+
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
+
+  hpx_lco_future_destroy(action_registration_complete);
+  hpx_free(action_registration_complete);
 
   /* finalize the network */
 #if HAVE_NETWORK
