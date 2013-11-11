@@ -20,6 +20,7 @@
 #ifndef LIBHPX_NETWORK_MPI_H_
 #define LIBHPX_NETWORK_MPI_H_
 
+#include <limits.h>
 #include <stdlib.h>
 #include <mpi.h>
 
@@ -29,7 +30,8 @@
 #include "hpx/runtime.h"
 
 
-#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+//#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+#define EAGER_THRESHOLD_MPI_DEFAULT INT_MAX
 /* TODO: make reasonable once we have puts/gets working */
 
 int init_mpi(void);

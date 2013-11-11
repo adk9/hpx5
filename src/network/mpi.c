@@ -53,6 +53,8 @@ network_ops_t mpi_ops = {
     .send     = send_mpi,
     .recv     = recv_mpi,
     .sendrecv_test     = test_mpi,
+    .send_test     = test_mpi,
+    .recv_test     = test_mpi,
     .put      = put_mpi,
     .get      = get_mpi,
     .putget_test = test_mpi,
@@ -182,13 +184,12 @@ int init_mpi(void) {
       retval = 0;
     else
       __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-  }
-  else
-    retval = HPX_SUCCESS;
-
   #if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
   #endif
+  }
+  else
+    retval = HPX_SUCCESS;
 
   /* cache size and rank */
   _rank_mpi = bootmgr->get_rank();

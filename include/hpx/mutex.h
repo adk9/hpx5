@@ -24,6 +24,7 @@
 #define LIBHPX_MUTEX_H_
 
 #include "hpx/error.h"
+#include "hpx/mem.h"
 
 #define HPX_LCO_MUTEX_OPT_RECURSIVE                              0x01
 #define HPX_LCO_MUTEX_OPT_INITLOCKED                             0x02

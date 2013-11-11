@@ -29,9 +29,12 @@
 #include "hpx/error.h"
 #include "hpx/parcel.h"
 
+size_t parcel_counter;
+
 hpx_error_t hpx_parcel_init(void) {
   /* LD: action table is initialized lazilty, nothing to do */
-    return HPX_SUCCESS;
+  parcel_counter = 0;
+  return HPX_SUCCESS;
 }
 
 
@@ -67,7 +70,7 @@ hpx_error_t hpx_new_parcel(hpx_action_t act, void* args, size_t len,
     goto error;
   }
   */
-  out->parcel_id = 0;
+  out->parcel_id = (hpx_get_rank() << 23) | parcel_counter++;
   out->action = act;
   out->payload = args;
   out->payload_size = len;
