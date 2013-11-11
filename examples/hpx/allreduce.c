@@ -210,8 +210,6 @@ int main(int argc, char** argv) {
   hpx_locality_t* my_loc = hpx_get_my_locality();
   unsigned int my_rank = my_loc->rank;
 
-  printf("Global context has %d kthreads\n", __hpx_global_ctx->kths_count);
-
   hpx_get_time(&timer);
 
   hpx_thread_t* th;

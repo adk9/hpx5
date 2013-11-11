@@ -46,14 +46,6 @@ struct network_request* request_list_append(struct request_list *list,
     __hpx_errno = HPX_ERROR_NOMEM;
     return NULL;
   }    
-#if 0
-  node->parcel = parcel;
-  node->next = list->head;
-  list->head = node;
-  if (list->tail == NULL)
-    list->tail = node;
-#endif
-  //
   node->parcel = parcel;
   node->next = NULL;
   if (list->head == NULL)
@@ -61,7 +53,6 @@ struct network_request* request_list_append(struct request_list *list,
   if (list->tail != NULL)
     list->tail->next = node;
   list->tail = node;
-  //
 
   list->size++;
 

@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #include "hpx.h"
 
@@ -136,12 +135,6 @@ void pingpong(void* _args) {
 }
 
 int main(int argc, char** argv) {
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  sleep(12);
-
   int success;
   hpx_thread_t* th;
   
@@ -187,7 +180,7 @@ int main(int argc, char** argv) {
   hpx_thread_join(th, NULL);
   double elapsed = hpx_elapsed_us(ts);
   double avg_oneway_latency = elapsed/((double)(opt_iter_limit*2));
-  printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency);
+  printf("average oneway latency (MPI):   %f μs\n", avg_oneway_latency);
   
   hpx_cleanup();
 
