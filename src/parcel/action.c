@@ -25,7 +25,8 @@
 #include "hpx/parcel.h"
 #include "hashstr.h"
 #include "network/network.h"
-#include "parcel/parcelhandler.h"
+
+struct hpx_future *action_registration_complete; /* not static since actual allocation and initialization is done by hpx_init() */
 
 static const int ACTIONS_INITIAL_HT_SIZE = 256;
 static const int ACTIONS_PROBE_LIMIT = 3;
@@ -161,6 +162,18 @@ hpx_action_t hpx_action_register(const char *name, hpx_func_t func) {
   return insert(&actions, hashstr(name), func);
 }
 
+void hpx_action_registration_complete(void) {
+  hpx_lco_future_set_state(action_registration_complete);
+}
+
+bool hpx_is_action_registration_complete(void) {
+  return hpx_lco_future_isset(action_registration_complete);
+}
+
+void hpx_waitfor_action_registration_complete(void) {
+  hpx_thread_wait(action_registration_complete);
+}
+
 hpx_func_t hpx_action_lookup_local(hpx_action_t action) {
   return lookup(&actions, action);
 }
@@ -172,7 +185,3 @@ hpx_future_t* hpx_action_invoke(hpx_action_t action, void *args,
   return (f) ? hpx_thread_create(__hpx_global_ctx, 0, f, args, thp) : NULL;
 }
 
-void hpx_action_registration_complete(void) {
-  hpx_lco_future_set_state(&action_registration_complete);
-  //  hpx_network_barrier();
-}

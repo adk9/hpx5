@@ -28,6 +28,9 @@ hpx_error_t init_shutdown_futures();
 
 void set_shutdown_future(void* arg);
 
+/**
+ * Allocate and initialize an array of n futures.
+ */
 static hpx_error_t alloc_and_init_futures(hpx_future_t **fut_arr, unsigned n) {
   unsigned i;
   hpx_future_t *futs = hpx_alloc(sizeof(hpx_future_t)*n);
@@ -53,35 +56,20 @@ hpx_error_t init_predefined() {
   return HPX_SUCCESS;
 }
 
+/*
+ * Initialize shutdown_futures used by set_shutdown_future (and action action_set_shutdown_future)
+ */
 hpx_error_t init_shutdown_futures() {
   unsigned int num_processes = hpx_get_num_localities(); /* TODO: Once we can add dynamic processes we will need to change this BDM */
   return alloc_and_init_futures(&shutdown_futures, num_processes);
 }
 
+/*
+ * Set the shutdown_futures for rank i (to be invoked by rank i at all other ranks). Takes an argument of type struct {size_t rank}
+ */
 void set_shutdown_future(void* voidp_arg) {
-  //  struct si {size_t rank;}
-
-  //  size_t rank = *(size_t*)arg;
   struct {size_t rank;} *arg = voidp_arg;
   size_t rank = arg->rank;
   hpx_lco_future_set_state(&shutdown_futures[rank]);
   free(voidp_arg);
-#if 0
-  struct shutdown_parcel_args* args = (struct shutdown_parcel_args*)voidp_args;
-  if (hpx_get_rank() != 0)
-    hpx_lco_future_set_state(args->ret_fut);
-  else {
-    unsigned i;
-    hpx_lco_future_set_state(parcel_shutdown_futures[args->rank]);
-    for (i = 1; i < hpx_get_num_processes; i++)
-      thread_wait(parcel_shutdown_futures[i]);
-    hpx_parcel_t* p = hpx_alloc(sizeof(hpx_parcel_t));
-    if (p == NULL) {
-      __hpx_errno = HPX_ERROR_NOMEM;
-      return;
-    }
-    hpx_new_parcel(action_shutdown_parcel, args, sizeof(*args), p); /* should check error but how would we handle it? */
-    hpx_send_parcel(hpx_find_locality(args->rank, p)); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
-  }
-#endif
 }

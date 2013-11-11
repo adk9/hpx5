@@ -92,8 +92,8 @@ int parcelqueue_destroy(struct parcelqueue**);
 
 /** 
     This pops an element off the queue if one is available, and
-    returns NULL otherwise. This function does not block. It should be
-    called only by a single consumer.
+    returns NULL otherwise. 
+    It is blocking. It is threadsafe.
  */
 void* parcelqueue_trypop(struct parcelqueue*);
 
@@ -102,6 +102,9 @@ void* parcelqueue_trypop(struct parcelqueue*);
  */
 int parcelqueue_push(struct parcelqueue*, void* val);
 
+/**
+ * Indicates whether the parcelqueue is empty. It is blocking. It is threadsafe.
+ */
 bool parcelqueue_empty(struct parcelqueue*);
 
 #endif /* LIBHPX_PARCEL_PARCELQUEUE_H_ */

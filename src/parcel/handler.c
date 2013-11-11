@@ -35,12 +35,12 @@
 #include "hpx/action.h"
 #include "hpx/init.h"
 #include "hpx/parcel.h"
-#include "hpx/runtime.h" /* hpx_get_num_localities() */
+#include "hpx/runtime.h"                        /* hpx_get_num_localities() */
 #include "hpx/thread/ctx.h"                     /* struct hpx_context */
 
 // #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
 /* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
-#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
+#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX /* SIZE_MAX ensures all parcels go through send/recv not put/get */
 
 struct parcelqueue *__hpx_send_queue = NULL;
 
@@ -104,7 +104,7 @@ int complete_requests(struct request_list* list,  test_function_t test_func, boo
 
 void _hpx_parcelhandler_main(void* args) {
   //  printf("Waiting on action registration to complete\n");
-  hpx_thread_wait(&action_registration_complete); /* make sure action registration is done or else the parcel handler can't invoke actions */
+  hpx_waitfor_action_registration_complete(); /* make sure action registration is done or else the parcel handler can't invoke actions */
 
   int success;
 
@@ -331,6 +331,7 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
   unsigned i;
   unsigned num_localities;
   
+  /* First, we need to wait for all other localities to reach this point. */
   num_localities = hpx_get_num_localities();
 
   for (i = 0; i < num_localities; i++) {
@@ -343,14 +344,18 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
     arg = hpx_alloc(sizeof(*arg));
     arg->rank = (size_t)hpx_get_rank();
     hpx_new_parcel(action_set_shutdown_future, arg, sizeof(*arg), p); /* should check error but how would we handle it? */
-    hpx_send_parcel(hpx_find_locality(i), p); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
+    hpx_locality_t *loc = hpx_find_locality(i); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
+    hpx_send_parcel(loc, p); 
+    hpx_locality_destroy(loc);
   }
   for (i = 0; i < num_localities; i++)
     hpx_thread_wait(&shutdown_futures[i]);
 
+  /* Now shut down the parcel handler */
   hpx_lco_future_set_state(ph->quit);
   hpx_thread_wait(ph->fut);
 
+  /* Now cleanup any remaining variables */
   hpx_lco_future_destroy(ph->quit);
   hpx_free(ph->quit);
   hpx_free(ph);
