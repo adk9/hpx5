@@ -28,7 +28,7 @@
  * @brief Provides stdlib.h-ish abort() in hpx.
  */
 
-#include "attributes.h"
+#include "hpx/system/attributes.h"
 
 void hpx_abort(void) HPX_ATTRIBUTE(HPX_NORETURN);
 
