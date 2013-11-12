@@ -24,9 +24,9 @@
 
 static int init(void);
 static int get_rank(void);
-static int get_addr(hpx_locality_t *);
+static int get_addr(struct hpx_locality *);
 static int size(void);
-static int get_map(hpx_locality_t **);
+static int get_map(struct hpx_locality **);
 static int finalize(void);
 
 /* Default bootstrap operations */
@@ -58,7 +58,7 @@ get_rank(void) {
 }
 
 int
-get_addr(hpx_locality_t *l) {
+get_addr(struct hpx_locality *l) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR; 
 }
@@ -70,7 +70,7 @@ size(void) {
 }
 
 int
-get_map(hpx_locality_t **map) {
+get_map(struct hpx_locality **map) {
   __hpx_errno = HPX_ERROR;
   return HPX_ERROR;
 }
