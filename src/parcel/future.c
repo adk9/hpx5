@@ -22,6 +22,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <stddef.h>                             /* size_t */
 
 /** typedefs used locally in this source file @{ */
 typedef struct hpx_future future_t;
