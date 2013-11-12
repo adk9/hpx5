@@ -32,11 +32,12 @@
 #endif
 #include <mpi.h>
 
-#include "network.h"
 #include "hpx/error.h"                          /* __hpx_errno, HPX_ERROR */
 #include "hpx/globals.h"                        /* bootmgr */
+#include "hpx/types.h"
 #include "bootstrap.h"                          /* bootstrap_ops_t */
 #include "debug.h"                              /* dbg_ stuff */
+#include "network.h"
 
 #define EAGER_THRESHOLD_MPI_DEFAULT 10240
 /* TODO: make reasonable once we have puts/gets working */
