@@ -19,19 +19,16 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
 #include <string.h>                             /* memcpy */
 #include <strings.h>                            /* bzero */
 
-#include "bootstrap.h"
-#include "network.h"
-#include "hpx/action.h"
-#include "hpx/agas.h"
-#include "hpx/error.h"
-#include "hpx/globals.h"
-#include "hpx/init.h"
-#include "hpx/parcel.h"
-#include "hpx/runtime.h"
+#include "hpx/error.h"                          /* __hpx_errno */
+#include "hpx/globals.h"                        /* __hpx_network_ops */
+#include "hpx/mem.h"                            /* hpx_alloc/free */
+#include "hpx/runtime.h"                        /* struct hpx_locality */
+#include "hpx/types.h"                          /* hpx_locality_t */
+#include "bootstrap.h"                          /* struct bootmgr */
+#include "network.h"                            /* struct hpx_network_ops */
 
 static hpx_locality_t *my_locality = NULL;
 

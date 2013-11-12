@@ -34,7 +34,7 @@ static int get(int src, void *buffer, size_t len, network_request_t* req);
 static int test(network_request_t *request, int *flag, network_status_t *status);
 static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
-static int phys_addr(hpx_locality_t *l);
+static int phys_addr(struct hpx_locality *l);
 static void progress(void *data);
 static size_t get_network_bytes(size_t n);
 static void barrier(void);
@@ -111,7 +111,7 @@ int unpin(void* buffer, size_t len) {
   return 0;
 }
 
-int phys_addr(hpx_locality_t *l) {
+int phys_addr(struct hpx_locality *l) {
   return 0;
 }
 

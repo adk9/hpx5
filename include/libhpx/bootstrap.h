@@ -35,11 +35,11 @@ typedef struct bootstrap_ops {
   /* Get identifier/rank of the calling locality */
   int (*get_rank)(void);
   /* Get the physical network address of current locality */
-  int (*get_addr)(hpx_locality_t *);
+  int (*get_addr)(struct hpx_locality *);
   /* Get the total number of participating ranks */
   int (*size)(void);
   /* Get the logical (rank -> addr) map of the bootstrapped network */
-  int (*get_map)(hpx_locality_t **);
+  int (*get_map)(struct hpx_locality **);
   /* Shutdown and clean up the bootstrap module */
   int (*finalize)(void);
 } bootstrap_ops_t;
