@@ -26,9 +26,9 @@
 #include "hpx/error.h"
 #include "hpx/kthread.h"
 #include "hpx/mem.h"
-#include "hpx/types.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
+#include "hpx/thread/mctx.h"                    /* sizeof(mctx) */
 #include "hpx/utils/map.h"
 #include "sync/sync.h"
 

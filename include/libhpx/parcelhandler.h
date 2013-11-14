@@ -3,7 +3,7 @@
   High Performance ParalleX Library (libhpx)
   
   Parcel Handler Function Definitions
-  hpx_parcelhandler.h
+  libhpx/parcelhandler.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.

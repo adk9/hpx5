@@ -29,12 +29,12 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "hpx/types.h"                          /* typedef hpx_kthread_t */
 #include "hpx/kthread.h"
 #include "hpx/error.h"
 #include "hpx/mem.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
+#include "hpx/thread/mctx.h"
 #include "kthread.h"
 
 static pthread_key_t errno_key;

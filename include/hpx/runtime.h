@@ -17,7 +17,9 @@
 #ifndef HPX_RUNTIME_H_
 #define HPX_RUNTIME_H_
 
-#include <stdint.h>                             /* uint32_t */
+#include <stdint.h>
+
+typedef struct hpx_locality hpx_locality_t;
 
 /* LD: this entire file needs to be documented. Also, why isn't there a
  * locality.h file that is seperate? */
@@ -33,18 +35,12 @@ struct hpx_locality {
     } physical;
 };
 
-struct hpx_locality *hpx_locality_create(void);
-
-struct hpx_locality *hpx_locality_from_rank(int);
-
-void hpx_locality_destroy(struct hpx_locality *);
-
-struct hpx_locality *hpx_get_my_locality(void);
-
-struct hpx_locality *hpx_find_locality(int rank);
-
-uint32_t hpx_get_num_localities(void);
-
-uint32_t hpx_get_rank(void);
+hpx_locality_t *hpx_locality_create(void);
+void            hpx_locality_destroy(hpx_locality_t *);
+hpx_locality_t *hpx_locality_from_rank(int);
+hpx_locality_t *hpx_get_my_locality(void);
+hpx_locality_t *hpx_find_locality(int rank);
+uint32_t        hpx_get_num_localities(void);
+uint32_t        hpx_get_rank(void);
 
 #endif /* HPX_RUNTIME_H_ */

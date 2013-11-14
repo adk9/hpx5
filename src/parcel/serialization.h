@@ -23,6 +23,8 @@
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
 #include "address.h"                            /* struct address */
 
+typedef struct header header_t;
+
 /** Forward declarations @{ */
 struct hpx_parcel;
 /** @} */

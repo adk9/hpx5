@@ -41,6 +41,7 @@
  */
 struct hpx_parcel {
   void             *data;                       /*!< a pointer to the data */
+  size_t            size;                       /*!< temporarily keep size */
   hpx_action_t    action;                       /*!< target action key */
   struct hpx_addr target;                       /*!< target virtual address */
   struct hpx_addr   cont;                       /*!< continuation address */

@@ -38,6 +38,8 @@ typedef uintptr_t hpx_action_t;
 #define HPX_PRIu_hpx_action_t PRIuPTR
 #define HPX_PRIo_hpx_action_t PRIoPTR
 
+#define HPX_ACTION_NULL 0
+
 /**
  * Register an action with the runtime.
  *

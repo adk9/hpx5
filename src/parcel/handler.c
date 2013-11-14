@@ -25,8 +25,8 @@
 
 #include "parcelhandler.h"                      /* public interface */
 #include "hpx/globals.h"                        /* __hpx_network_ops */
-#include "hpx/lco.h"                            /* struct hpx_future */
-#include "hpx/thread/ctx.h"                     /* struct hpx_context */
+#include "hpx/lco.h"                            /* hpx_future_t */
+#include "hpx/thread/ctx.h"                     /* hpx_context_t */
 #include "debug.h"                              /* dbg_ routines */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* struct network_status */
@@ -48,17 +48,6 @@ static const size_t REQUEST_BUFFER_SIZE     = 2048;
 /* TODO: make configurable (and use a real size) */ 
 static const size_t RECV_BUFFER_SIZE        = 1024*1024*16; 
 
-/** Typedefs used in this source file @{ */
-typedef struct hpx_context   context_t;
-typedef struct hpx_locality locality_t;
-typedef struct hpx_thread     thread_t;
-typedef struct hpx_future     future_t;
-typedef struct hpx_parcel     parcel_t;
-typedef struct header         header_t;
-typedef struct parcelhandler handler_t;
-typedef struct request_list  reqlist_t;
-/** @} */
-
 /**
  * The send queue for this locality.
  */
@@ -69,12 +58,12 @@ struct parcelqueue *__hpx_send_queue = NULL;
  *
  * This is what is returned by parcelhandler_create().
  */
-struct parcelhandler {
-  context_t   *ctx;
-  thread_t *thread;  
-  future_t   *quit;                       /*!< signals parcel handler to quit */
-  future_t    *fut;
-};
+typedef struct parcelhandler {
+  hpx_context_t        *ctx;
+  struct hpx_thread *thread;  
+  hpx_future_t        *quit;              /*!< signals parcel handler to quit */
+  hpx_future_t         *fut;
+} parcelhandler_t;
 
 /**
  * Take a header from the network and create a local thread to process it.
@@ -101,7 +90,7 @@ complete(header_t* header, bool send)
              header->parcel_id, header->action);
 
   /* deserialize and free the header */
-  parcel_t* parcel = deserialize(header);
+  struct hpx_parcel* parcel = deserialize(header);
   __hpx_network_ops->unpin(header, header->size);
   hpx_free(header);
 
@@ -117,7 +106,7 @@ complete(header_t* header, bool send)
 typedef int(*test_function_t)(network_request_t*, int*, network_status_t*);
 
 static int
-complete_requests(reqlist_t* list, test_function_t test, bool send)
+complete_requests(request_list_t* list, test_function_t test, bool send)
 {
   int count = 0;
   request_list_begin(list);
@@ -137,14 +126,14 @@ complete_requests(reqlist_t* list, test_function_t test, bool send)
 }
 
 static void
-parcelhandler_main(handler_t *args)
+parcelhandler_main(parcelhandler_t *args)
 {
   int success;
 
   hpx_future_t* quit = args->quit;
 
-  reqlist_t send_requests;
-  reqlist_t recv_requests;
+  request_list_t send_requests;
+  request_list_t recv_requests;
   request_list_init(&send_requests);
   request_list_init(&recv_requests);
 
@@ -299,11 +288,11 @@ error:
   hpx_thread_exit((void*)retval);
 }
 
-handler_t *
-parcelhandler_create(context_t *ctx)
+parcelhandler_t *
+parcelhandler_create(hpx_context_t *ctx)
 {
   int ret = HPX_ERROR;
-  handler_t *ph = NULL;
+  parcelhandler_t *ph = NULL;
 
   /* create and initialize send queue */
   ret = parcelqueue_create(&__hpx_send_queue);
@@ -329,7 +318,7 @@ parcelhandler_create(context_t *ctx)
 }
 
 void
-parcelhandler_destroy(handler_t *ph)
+parcelhandler_destroy(parcelhandler_t *ph)
 {
   if (!ph)
     return;
@@ -348,10 +337,10 @@ parcelhandler_destroy(handler_t *ph)
 }
 
 int
-parcelhandler_send(locality_t *dest, const parcel_t *parcel,
-                   future_t **complete,
-                   future_t **thread,
-                   future_t **result)
+parcelhandler_send(hpx_locality_t *dest, const struct hpx_parcel *parcel,
+                   hpx_future_t **complete,
+                   hpx_future_t **thread,
+                   hpx_future_t **result)
 {
   return HPX_ERROR;
 }

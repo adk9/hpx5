@@ -30,9 +30,12 @@
 #include <stddef.h>                             /* size_t */
 #include "system/attributes.h"                  /* HPX MACROS */
 
-/** Forward declarations @{ */
-struct hpx_future;
-/** @} */
+/** typedefs provided by this header
+    @{
+*/
+typedef struct hpx_future hpx_future_t;
+/** @}
+ */
 
 /**
  * Allocate a future.
@@ -41,14 +44,14 @@ struct hpx_future;
  *
  * @returns the future, or NULL if there was an error
  */
-struct hpx_future *hpx_future_create(size_t bytes);
+hpx_future_t *hpx_future_create(size_t bytes);
 
 /**
  * Free a future.
  *
  * @param[in] future - the future to free, may be NULLo
  */
-void hpx_future_destroy(struct hpx_future *future);
+void hpx_future_destroy(hpx_future_t *future);
 
 /**
  * Set the future, which will wake up any threads that are waiting for it. Does
@@ -56,7 +59,7 @@ void hpx_future_destroy(struct hpx_future *future);
  *
  * @param[in] future - the future to set
  */
-void hpx_future_set(struct hpx_future *future)
+void hpx_future_set(hpx_future_t *future)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -69,7 +72,7 @@ void hpx_future_set(struct hpx_future *future)
  * @param[in]  bytes - the number of bytes pointed to by value
  * @param[in]  value - a pointer to the data
  */
-void hpx_future_setv(struct hpx_future *future, size_t bytes, const void *value)
+void hpx_future_setv(hpx_future_t *future, size_t bytes, const void *value)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 #endif /* HPX_FUTURE_H_ */

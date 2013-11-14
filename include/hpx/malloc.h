@@ -18,13 +18,13 @@
 
 #include <stddef.h>                             /* size_t */
 #include <stdint.h>                             /* uint32_t */
-#include "hpx/agas.h"                           /* struct hpx_addr */
+#include "hpx/agas.h"                           /* hpx_addr_t */
 
-struct hpx_distribution;
+typedef struct hpx_distribution hpx_distribution_t;
 
 /** Create distributions. @{ */
-int cyclic_distribution(uint32_t, struct hpx_distribution *);
-int block_cyclic_distribution(uint32_t, struct hpx_distribution *);
+int cyclic_distribution(uint32_t, hpx_distribution_t *);
+int block_cyclic_distribution(uint32_t, hpx_distribution_t *);
 /** @} */
 
 /**
@@ -36,6 +36,6 @@ int block_cyclic_distribution(uint32_t, struct hpx_distribution *);
  *
  * @returns the base global address for the array
  */
-struct hpx_addr hpx_malloc(struct hpx_distribution *dist, size_t count, size_t bytes);
+hpx_addr_t hpx_malloc(hpx_distribution_t *dist, size_t count, size_t bytes);
 
 #endif /* HPX_MALLOC_H_ */

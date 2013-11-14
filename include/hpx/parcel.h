@@ -29,15 +29,16 @@
 #include "hpx/system/attributes.h"              /* MACROS */
 #include "hpx/action.h"                         /* hpx_action_t */
 
-/**
- * Forward declarations @{
- */
+/** typedefs provided by this header
+    @{ */
+typedef struct hpx_parcel hpx_parcel_t;
+/** @} */
+
+/** forward declarations
+    @{ */
 struct hpx_future;
-struct hpx_parcel;
 struct hpx_address;
-/**
- * @}
- */
+/** @} */
 
 /**
  * Acquire a user-level parcel from the runtime.
@@ -53,7 +54,7 @@ struct hpx_address;
  * @param[in] bytes - the number of bytes in the payload to allocate
  * @returns a pointer to an allocated hpx_parcel, or NULL if there is an error
  */
-struct hpx_parcel *hpx_parcel_acquire(size_t bytes);
+hpx_parcel_t *hpx_parcel_acquire(size_t bytes);
 
 /**
  * Release a user-level parcel back to the runtime.
@@ -74,7 +75,7 @@ struct hpx_parcel *hpx_parcel_acquire(size_t bytes);
  *
  * @param[in] parcel the parcel to release
  */
-void hpx_parcel_release(struct hpx_parcel *parcel);
+void hpx_parcel_release(hpx_parcel_t *parcel);
 
 /**
  * Create a clone of a parcel.
@@ -89,7 +90,7 @@ void hpx_parcel_release(struct hpx_parcel *parcel);
  * @param[in] parcel - the parcel to clone
  * @returns the clone, or NULL if there was an error during cloning
  */
-struct hpx_parcel *hpx_parcel_clone(struct hpx_parcel *parcel)
+hpx_parcel_t *hpx_parcel_clone(hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -108,8 +109,8 @@ struct hpx_parcel *hpx_parcel_clone(struct hpx_parcel *parcel)
  * @param[in] from - the source parcel
  * @returns @p to, or NULL if there was an error
  */
-struct hpx_parcel *hpx_parcel_copy(struct hpx_parcel * restrict to,
-                                   const struct hpx_parcel * restrict from)
+hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
+                                   const hpx_parcel_t * restrict from)
   HPX_ATTRIBUTE(HPX_NON_NULL(1, 2), HPX_RETURNS_NON_NULL);
 
 /**
@@ -136,7 +137,7 @@ struct hpx_parcel *hpx_parcel_copy(struct hpx_parcel * restrict to,
  * @returns an error indicating a problem with the runtime
  */
 int hpx_parcel_send(struct hpx_locality *dest,
-                    const struct hpx_parcel *parcel,
+                    const hpx_parcel_t *parcel,
                     struct hpx_future **complete,
                     struct hpx_future **thread,
                     struct hpx_future **result)
@@ -168,7 +169,7 @@ int hpx_parcel_send(struct hpx_locality *dest,
  * @param[in] size   - the target size
  * @returns non-zero if an error condition occurred
  */
-int hpx_parcel_resize(struct hpx_parcel **parcel, size_t size)
+int hpx_parcel_resize(hpx_parcel_t **parcel, size_t size)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -181,7 +182,7 @@ int hpx_parcel_resize(struct hpx_parcel **parcel, size_t size)
  *
  * @returns the current target address
  */
-struct hpx_addr hpx_parcel_get_target(const struct hpx_parcel *parcel)
+struct hpx_addr hpx_parcel_get_target(const hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -193,7 +194,7 @@ struct hpx_addr hpx_parcel_get_target(const struct hpx_parcel *parcel)
  * @param[in] parcel - the parcel to update
  * @param[in]   addr - the new target address
  */
-void hpx_parcel_set_target(struct hpx_parcel *parcel, struct hpx_addr addr)
+void hpx_parcel_set_target(hpx_parcel_t *parcel, struct hpx_addr addr)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -206,7 +207,7 @@ void hpx_parcel_set_target(struct hpx_parcel *parcel, struct hpx_addr addr)
  *
  * @returns the current continuation address
  */
-struct hpx_addr hpx_parcel_get_cont(const struct hpx_parcel *parcel)
+struct hpx_addr hpx_parcel_get_cont(const hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -218,7 +219,7 @@ struct hpx_addr hpx_parcel_get_cont(const struct hpx_parcel *parcel)
  * @param[in] parcel - the parcel to update
  * @param[in]   addr - the new continuation address
  */
-void hpx_parcel_set_cont(struct hpx_parcel *parcel, struct hpx_addr addr)
+void hpx_parcel_set_cont(hpx_parcel_t *parcel, struct hpx_addr addr)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -230,7 +231,7 @@ void hpx_parcel_set_cont(struct hpx_parcel *parcel, struct hpx_addr addr)
  * @param[in] parcel - the parcel to query
  * @returns the current action
  */
-hpx_action_t hpx_parcel_get_action(const struct hpx_parcel *parcel)
+hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -242,7 +243,7 @@ hpx_action_t hpx_parcel_get_action(const struct hpx_parcel *parcel)
  * @param[in] parcel - the parcel to query
  * @param[in] action - the new action
  */
-void hpx_parcel_set_action(struct hpx_parcel *parcel, hpx_action_t action)
+void hpx_parcel_set_action(hpx_parcel_t *parcel, hpx_action_t action)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -259,7 +260,7 @@ void hpx_parcel_set_action(struct hpx_parcel *parcel, hpx_action_t action)
  * @param[in] parcel - the parcel to query
  * @returns a pointer to the payload
  */
-void *hpx_parcel_get_data(struct hpx_parcel *parcel)
+void *hpx_parcel_get_data(hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 #endif /* HPX_PARCEL_H_ */
