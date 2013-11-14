@@ -336,8 +336,12 @@ parcelhandler_destroy(parcelhandler_t *ph)
   return;
 }
 
+/**
+ *
+ */
 int
-parcelhandler_send(hpx_locality_t *dest, const struct hpx_parcel *parcel,
+parcelhandler_send(hpx_locality_t *dest,
+                   const struct hpx_parcel *parcel,
                    hpx_future_t **complete,
                    hpx_future_t **thread,
                    hpx_future_t **result)

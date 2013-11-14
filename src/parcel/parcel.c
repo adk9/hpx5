@@ -151,16 +151,29 @@ local_send(const hpx_parcel_t *parcel, hpx_future_t **complete,
   if (result)
     *result = NULL;
 
-  /* perform translation on the action */
   hpx_func_t f = action_lookup(parcel->action);
   if (!f)
     dbg_print_error(HPX_ERROR, "Could not find an action registered for %"
                     HPX_PRIu_hpx_action_t "\n", parcel->action);
 
-  /* spawn the thread */
+  /* LD: hpx_thread_create does not know what to do with the argument data, so
+     for now we copy and leak it.
+     TODO: the entire thread creation pipeline needs to be fixed
+  */
+  uint8_t *leaked_buffer = NULL;
+  if (parcel->size) {
+    leaked_buffer = hpx_alloc(parcel->size);
+    memcpy(leaked_buffer, parcel->data, parcel->size);
+  }
+
   struct hpx_thread *t = NULL;
-  int e = hpx_thread_create(__hpx_global_ctx, HPX_THREAD_OPT_NONE, f,
-                            parcel->data, result, &t);
+  int e = hpx_thread_create(__hpx_global_ctx,
+                            HPX_THREAD_OPT_NONE,
+                            f,
+                            leaked_buffer,
+                            result,
+                            &t);
+  
   if (e) {
     /* cleanup unused futures */
     if (complete) {
