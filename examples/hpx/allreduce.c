@@ -11,19 +11,16 @@ static REDUCTION_TYPE* local_reduction_values;
 static hpx_future_t* local_reduction_futures;
 static hpx_future_t done_fut;
 
-static hpx_action_t done_action;
-static hpx_action_t op_action;
-static hpx_action_t recv_action;
-static hpx_action_t recv_broadcast_action;
+static hpx_action_t done_action = HPX_ACTION_NULL;
+static hpx_action_t op_action = HPX_ACTION_NULL;
+static hpx_action_t recv_action = HPX_ACTION_NULL;
+static hpx_action_t recv_broadcast_action = HPX_ACTION_NULL;
 
-void done(void* args) {
+void
+done(void* args)
+{
   hpx_lco_future_set_state(&done_fut);
 }
-
-struct reduction_recv_args {
-  int index;
-  REDUCTION_TYPE value;
-};
 
 struct reduction_op_args {
   int count;
@@ -46,6 +43,12 @@ int sum(int count, int values[]) {
   }
   return sum;
 }
+
+
+struct reduction_recv_args {
+  int index;
+  REDUCTION_TYPE value;
+};
 
 void reduce_recv(void* _args) {
   hpx_locality_t* my_loc = hpx_get_my_locality();
@@ -73,8 +76,6 @@ void op(void* _args) {
   int i;
   REDUCTION_TYPE *value;
   struct reduction_op_args* args = (struct reduction_op_args*)_args;
-  hpx_parcel_t* p;
-  hpx_locality_t* loc;
 
   //  printf("  _reduction_op_action waiting on %d futures\n", args->count);
 
@@ -88,21 +89,22 @@ void op(void* _args) {
   *value = args->op(args->count, args->in_values);
 
   for (i = 0; i < args->count; i++) {
-    p = hpx_alloc(sizeof(hpx_parcel_t));
-    loc = hpx_locality_from_rank(i);
-    success = hpx_new_parcel(recv_broadcast_action, (void*)value, sizeof(REDUCTION_TYPE), p);
-    if (success != HPX_SUCCESS) {
+    hpx_parcel_t *p = hpx_parcel_acquire(sizeof(REDUCTION_TYPE));
+    if (!p) {
       printf("Error creating parcel");
       exit(-1);
     }
-    success = hpx_send_parcel(loc, p);
+
+    hpx_parcel_set_action(p, recv_broadcast_action);
+    void *data = hpx_parcel_get_data(p);
+    memcpy(data, &value, sizeof(REDUCTION_TYPE));
+    success = hpx_parcel_send(hpx_locality_from_rank(i), p, NULL, NULL, NULL);
     if (success != HPX_SUCCESS) {
       printf("Error sending parcel\n");
       exit(-1);
     }
-    hpx_locality_destroy(loc);
+    hpx_parcel_release(p);
   }
-  //  hpx_free(_args);
 }
 
 void recv_broadcast(void* _args) {
@@ -162,36 +164,35 @@ void allreduce(void *_value) {
     hpx_action_invoke(recv_action, args, NULL);   
   }
   else {
-    args = hpx_alloc(sizeof(struct reduction_recv_args));
-    hpx_parcel_t* p;
-    hpx_locality_t* loc;
-
+    hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
+    if (!p) {
+      fprintf(stderr, "Error creating parcel\n");
+      exit(-1);
+    }
+    
+    hpx_parcel_set_action(p, recv_action);
+    args = (struct reduction_recv_args*)hpx_parcel_get_data(p);
     args->index = my_rank;
     args->value = value;
-
-    p = hpx_alloc(sizeof(hpx_parcel_t));
-    success = hpx_new_parcel(recv_action, (void*)args, sizeof(struct reduction_recv_args), p);
+    success = hpx_parcel_send(root_loc, p, NULL, NULL, NULL);
     if (success != HPX_SUCCESS) {
-      printf("Error creating parcel");
+      fprintf(stderr, "Error sending parcel\n");
       exit(-1);
     }
-    success = hpx_send_parcel(root_loc, p);
-    if (success != HPX_SUCCESS) {
-      printf("Error sending parcel\n");
-      exit(-1);
-    }
+    hpx_parcel_release(p);
   }
 
   hpx_thread_wait(&done_fut);
 
   printf("At rank %d received value %lld\n", my_rank, (long long)local_reduction_result);
-
   hpx_locality_destroy(root_loc);
 
   // TODO: get a return value instead of printing
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv)
+{
   hpx_timer_t timer;
   
   int success = hpx_init();
@@ -201,10 +202,10 @@ int main(int argc, char** argv) {
   }
 
   /* register action for parcel (must be done by all ranks) */
-  recv_action = hpx_action_register("reduction_recv_action", reduce_recv);
-  op_action = hpx_action_register("reduction_op_action", op);
-  recv_broadcast_action = hpx_action_register("recv_broadcast_action", recv_broadcast);
-  done_action = hpx_action_register("done_action", done);
+  recv_action = hpx_action_register("reduction_recv", (hpx_func_t)reduce_recv);
+  op_action = hpx_action_register("reduction_op",     (hpx_func_t)op);
+  recv_broadcast_action = hpx_action_register("recv_broadcast", (hpx_func_t)recv_broadcast);
+  done_action = hpx_action_register("done",           (hpx_func_t)done);
   hpx_action_registration_complete();
   
   hpx_locality_t* my_loc = hpx_get_my_locality();
