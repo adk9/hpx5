@@ -26,6 +26,8 @@
 #include "hpx/runtime.h"                        /* struct hpx_locality */
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
 
+typedef struct address address_t;
+
 /**
  * @file @brief A physical address for use in the network.
  */
@@ -33,7 +35,5 @@
 struct address {
   struct hpx_locality locality;
 };
-
-typedef struct address address_t;
 
 #endif /* LIBHPX_ADDRESS_H_ */

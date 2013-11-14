@@ -21,10 +21,20 @@
 
 #ifndef __cplusplus
 #include <stdbool.h>
+#include <stdint.h>
 #endif
 
 #include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/utils/list.h"                     /* hpx_list_t */
+#include "hpx/system/attributes.h"              /* HPX_MACROS */
+
+/** typedefs owned by this header. @{ */
+typedef uint64_t                            hpx_node_id_t;
+typedef uint64_t                          hpx_thread_id_t;
+typedef uint8_t                        hpx_thread_state_t;
+typedef struct hpx_thread                    hpx_thread_t;
+typedef struct hpx_thread_reusable  hpx_thread_reusable_t;
+/** @} */
 
 /** Forward declarations @{ */
 struct hpx_future;
@@ -32,12 +42,6 @@ struct hpx_mctx_context;
 struct hpx_kthread;
 struct hpx_context;
 struct _hpx_map_t;
-/** @} */
-
-/** Typedefs @{ */
-typedef uint64_t hpx_node_id_t;
-typedef uint64_t hpx_thread_id_t;
-typedef uint8_t  hpx_thread_state_t;
 /** @} */
 
 /**
@@ -111,16 +115,16 @@ struct hpx_thread_reusable {
  * The user-level thread data.
  */
 struct hpx_thread {
-  struct hpx_context           *ctx;            /**< pointer to the context */
-  hpx_node_id_t                 nid;            /**< node id */
-  hpx_thread_id_t               tid;            /**< thread id */
-  hpx_thread_state_t          state; /**< queuing state (@see hpx_thread_states) */
-  uint16_t                     opts;            /**< thread option flags  */
-  uint8_t                      skip;            /**< [reserved for future] */
-  struct hpx_thread_reusable *reuse;            /**< @see hpx_thread_reusable */
-  struct hpx_future          *f_ret;            /**< return value (if any) */
-  struct hpx_thread         *parent;            /**< parent thread  */
-  hpx_list_t               children;            /**< list of children */
+  struct hpx_context       *ctx;                /**< pointer to the context */
+  hpx_node_id_t             nid;                /**< node id */
+  hpx_thread_id_t           tid;                /**< thread id */
+  hpx_thread_state_t      state;                /**< queuing state */
+  uint16_t                 opts;                /**< thread option flags  */
+  uint8_t                  skip;                /**< [reserved for future] */
+  hpx_thread_reusable_t  *reuse;                /**< @see hpx_thread_reusable */
+  struct hpx_future      *f_ret;                /**< return value (if any) */
+  hpx_thread_t          *parent;                /**< parent thread  */
+  hpx_list_t           children;                /**< list of children */
 };
 
 /**
@@ -128,10 +132,10 @@ struct hpx_thread {
  *
  * @todo Error return values need to be disambiguated.
  *
- * @param[in] ctx     - xpi_context structure 
- * @param[in] opts    - xpi_thread_options enumeration
- * @param[in] entry   - thread entry function
- * @param[in] args    - arguments to the thread, may be a pointer to an address, 
+ * @param[in]     ctx - context structure (thread container)
+ * @param[in]    opts - hpx_thread_options enumeration
+ * @param[in]   entry - thread entry function
+ * @param[in]    args - arguments to the thread, may be a pointer to an address, 
  *                      or a word-sized value directly. The semantics of this 
  *                      parameter are defined by the function, which users of
  *                      the function need to conform to.
@@ -144,39 +148,44 @@ hpx_error_t hpx_thread_create(struct hpx_context    *ctx,
                               hpx_func_t           entry,
                               void                 *args,
                               struct hpx_future **result,
-                              struct hpx_thread **thread);
+                              hpx_thread_t      **thread)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
-void hpx_thread_destroy(struct hpx_thread *);
+void hpx_thread_destroy(hpx_thread_t *);
 
 
 /**
  * @returns a pointer to the current user thread
  */
-struct hpx_thread *hpx_thread_self(void);
+hpx_thread_t *hpx_thread_self(void)
+  HPX_ATTRIBUTE(HPX_RETURNS_NON_NULL);
 
 /**
  * Get a thread's id.
  *
- * @param[in] thread NOT_NULL
+ * @param[in] thread
  * @returns the thread's id
  */
-hpx_thread_id_t hpx_thread_get_id(struct hpx_thread *thread);
+hpx_thread_id_t hpx_thread_get_id(hpx_thread_t *thread)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Get a thread's state.
  *
- * @param[in] thread NOT_NULL
+ * @param[in] thread
  * @returns The thread's state (@see hpx_thread_states)
  */
-hpx_thread_state_t hpx_thread_get_state(struct hpx_thread *thread);
+hpx_thread_state_t hpx_thread_get_state(hpx_thread_t *thread)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Get a thread's options.
  *
- * @param[in] thread NOT_NULL
+ * @param[in] thread
  * @returns The thread's options (@see hpx_thread_options)
  */
-uint16_t hpx_thread_get_opt(struct hpx_thread *thread);
+uint16_t hpx_thread_get_opt(hpx_thread_t *thread)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Set a thread's options.
@@ -184,10 +193,11 @@ uint16_t hpx_thread_get_opt(struct hpx_thread *thread);
  * @todo does this overwrite the thread's options or does it | the passed opts
  *       into the current set?
  *
- * @param[in] thread NOT_NULL
+ * @param[in] thread
  * @param[in] opts The new options (@see hpx_thread_options)
  */
-void hpx_thread_set_opt(struct hpx_thread *thread, uint16_t opts);
+void hpx_thread_set_opt(hpx_thread_t *thread, uint16_t opts)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
  * Terminates execution of the thread, with the passed return value.
@@ -239,9 +249,10 @@ void hpx_thread_yield_skip(uint8_t);
  *       pthread? If it is, then we need to be more clear about where and why
  *       this interface can be used.
  *
- * @param[in] future; the future to wait for (NOT_NULL)
+ * @param[in] future; the future to wait for
  */
-void hpx_thread_wait(struct hpx_future *future);
+void hpx_thread_wait(struct hpx_future *future)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /*
  --------------------------------------------------------------------
@@ -249,7 +260,7 @@ void hpx_thread_wait(struct hpx_future *future);
  --------------------------------------------------------------------
 */
 
-void _hpx_thread_terminate(struct hpx_thread *);
+void _hpx_thread_terminate(hpx_thread_t *);
 void _hpx_thread_wait(void *, hpx_thread_wait_pred_t, void *);
 
 /*

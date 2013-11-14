@@ -19,6 +19,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+#include <stdint.h>
 #include <string.h>                             /* memcpy */
 #include <strings.h>                            /* bzero */
 
@@ -26,21 +27,31 @@
 #include "hpx/globals.h"                        /* __hpx_network_ops */
 #include "hpx/mem.h"                            /* hpx_alloc/free */
 #include "hpx/runtime.h"                        /* struct hpx_locality */
-#include "hpx/types.h"                          /* hpx_locality_t */
 #include "bootstrap.h"                          /* struct bootmgr */
+#include "debug.h"
 #include "network.h"                            /* struct hpx_network_ops */
 
+/* LD: The initialization of this is not thread-safe. This seems dangerous
+ * because it's initialized lazily in hpx_get_my_locality(), but is ok if we
+ * know that the first instance of this happens sequentially.
+ *
+ * It's possibly also ok if the hpx_locality_create() call is idempotent, then
+ * we just leak some memory.
+ *
+ * Ultimately, if this needs to become thread safe then we have a bit of a
+ * problem, since the constructor calls out to the __hpx_network_ops.
+ */
 static hpx_locality_t *my_locality = NULL;
 
 hpx_locality_t *
 hpx_locality_create(void)
 {
   hpx_locality_t *loc = hpx_alloc(sizeof(*loc));
-  if (loc != NULL)
+  if (loc)
     bzero(loc, sizeof(*loc));
-  else
+  else 
     __hpx_errno = HPX_ERROR_NOMEM;
-  return loc;
+  return NULL;
 }
 
 void
@@ -52,8 +63,9 @@ hpx_locality_destroy(hpx_locality_t* loc)
 hpx_locality_t *
 hpx_get_my_locality(void)
 {
-  if (my_locality == NULL) {
+  if (!my_locality) {
     my_locality = hpx_locality_create();
+    dbg_assert(my_locality && "Failed to create a locality");
     /* TODO: replace with real runtime configured rank setting */
     __hpx_network_ops->phys_addr(my_locality);
   }
@@ -63,30 +75,28 @@ hpx_get_my_locality(void)
 hpx_locality_t *
 hpx_locality_from_rank(int rank)
 {
-  hpx_locality_t *l;
-  l = hpx_locality_create();
-  if (!l) return NULL;
-  l->rank = rank;
-  return l;
+  hpx_locality_t *l = hpx_locality_create();
+  if (l)
+    l->rank = rank;
+  return l;                                     /* LD: error? */
 }
 
 hpx_locality_t *
 hpx_find_locality(int rank)
 {
-  int ret;
-  hpx_locality_t *locs, *l, *m;
-
-  l = hpx_locality_create();
-  if (!l) return NULL;
-  ret = bootmgr->get_map(&locs);
-  if (ret != 0)
+  hpx_locality_t *l = hpx_locality_create();
+  if (!l)
     return NULL;
 
-  m = &locs[rank];
+  hpx_locality_t *locs = NULL;
+  if (bootmgr->get_map(&locs))
+    return NULL;
+  
+  hpx_locality_t *m = &locs[rank];
   if (!m)
     memcpy(l, m, sizeof(*l));
 
-  free(locs);
+  free(locs);                                   /* LD: free vs hpx_free? */
   return l;
 }
 
@@ -95,7 +105,7 @@ hpx_get_num_localities(void)
 {
   // ask the network layer for the number of localities
   /* TODO: replace with real runtime configured ranks */
-  return (uint32)bootmgr->size();
+  return (uint32_t)bootmgr->size();
 }
 
 uint32_t

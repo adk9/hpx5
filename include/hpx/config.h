@@ -20,11 +20,12 @@
 */
 
 #pragma once
-#ifndef LIBHPX_CONFIG_H_
-#define LIBHPX_CONFIG_H_
+#ifndef HPX_CONFIG_H_
+#define HPX_CONFIG_H_
 
 #include <stdint.h>
 
+typedef struct hpx_config hpx_config_t;
 
 /*
   --------------------------------------------------------------------
@@ -50,12 +51,12 @@
  --------------------------------------------------------------------
 */
 
-typedef struct hpx_config {
+struct hpx_config {
   uint32_t cores;
   uint64_t mflags;
   uint32_t thread_ss;
   uint8_t  srv_susp_policy;
-} hpx_config_t;
+};
 
 
 /*
@@ -75,4 +76,4 @@ void hpx_config_set_switch_flags(hpx_config_t *, uint64_t);
 void hpx_config_set_thread_stack_size(hpx_config_t *, uint32_t);
 void hpx_config_set_thread_suspend_policy(hpx_config_t *, uint8_t);
 
-#endif /* LIBHPX_CONFIG_H_ */
+#endif /* HPX_CONFIG_H_ */

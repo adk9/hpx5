@@ -37,11 +37,6 @@
 #include "debug.h"                              /* dbg_printf */
 #include "network.h"                            /* struct network_mgr */
 
-/** Typedefs used for convenience in this source file @{ */
-typedef struct header     header_t;
-typedef struct hpx_parcel parcel_t;
-/** @} */
-
 static size_t
 header_size(size_t bytes)
 {
@@ -71,7 +66,7 @@ header_alloc(size_t bytes)
 }
 
 static header_t *
-header_init(header_t *header, const parcel_t *parcel)
+header_init(header_t *header, const hpx_parcel_t *parcel)
 {
   header->parcel_id    = 0;
   header->action       = parcel->action;
@@ -89,7 +84,7 @@ header_init(header_t *header, const parcel_t *parcel)
  * is 0)
  */
 header_t *
-serialize(const parcel_t *parcel)
+serialize(const hpx_parcel_t *parcel)
 {
   /* preconditions */
   if (!parcel)
@@ -110,12 +105,12 @@ serialize(const parcel_t *parcel)
 /**
  * caller is reponsible for free()ing *p and *p->payload
  */
-parcel_t *
+hpx_parcel_t *
 deserialize(const header_t *header)
 {
   dbg_assert_precondition(header);
 
-  parcel_t *out = hpx_parcel_acquire(header->payload_size);
+  hpx_parcel_t *out = hpx_parcel_acquire(header->payload_size);
   if (!out)
     dbg_print_error(__hpx_errno, "Could not deserialize a network header.");
 

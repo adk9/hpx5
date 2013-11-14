@@ -12,6 +12,7 @@ libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
                            parcel/parcel.c parcel/future.c \
                            runtime/globals.c runtime/init.c runtime/locality.c \
+                           runtime/abort.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
                            utils/error.c utils/timer.c utils/config.c \
                            utils/map.c
