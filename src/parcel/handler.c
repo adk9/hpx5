@@ -348,7 +348,7 @@ void hpx_parcelhandler_destroy(hpx_parcelhandler_t * ph) {
     arg = hpx_alloc(sizeof(*arg));
     arg->rank = (size_t)hpx_get_rank();
     hpx_new_parcel(action_set_shutdown_future, arg, sizeof(*arg), p); /* should check error but how would we handle it? */
-    hpx_locality_t *loc = hpx_find_locality(i); /* FIXME change hpx_find_locality to something more appropriate when merging with up to date code */
+    hpx_locality_t *loc = hpx_locality_from_rank(i);
     hpx_send_parcel(loc, p); 
     hpx_locality_destroy(loc);
   }
