@@ -83,8 +83,8 @@ void parcelhandler_destroy(struct parcelhandler *ph)
  */
 int parcelhandler_send(struct hpx_locality *dest,
                        const struct hpx_parcel *parcel,
-                       struct hpx_future **complete,
-                       struct hpx_future **thread,
+                       struct hpx_future *complete,
+                       struct hpx_future *thread,
                        struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1, 2));

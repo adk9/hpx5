@@ -132,14 +132,15 @@ hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
  *                       locally, may be NULL 
  * @param[in]   thread - a future that will be triggered with the address of the
  *                       remot thread when the send is complete, may be NULL
- * @param[in]   result - a future that will be triggered when the thread spawned
- *                       as a result of this future returns, may be NULL
+ * @param[in]   result - the address of a future that will be triggered when the
+ *                       thread spawned  as a result of this future returns, may
+ *                       be NULL 
  * @returns an error indicating a problem with the runtime
  */
 int hpx_parcel_send(struct hpx_locality *dest,
                     const hpx_parcel_t *parcel,
-                    struct hpx_future **complete,
-                    struct hpx_future **thread,
+                    struct hpx_future *complete,
+                    struct hpx_future *thread,
                     struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
@@ -262,5 +263,15 @@ void hpx_parcel_set_action(hpx_parcel_t *parcel, hpx_action_t action)
  */
 void *hpx_parcel_get_data(hpx_parcel_t *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
+
+/**
+ * Set a parcel's data payload block.
+ *
+ * @param[in] parcel - the parcel to query
+ * @param[in]   data - the address of the data to set
+ * @param[in] length - the number of bytes of data to set
+ */
+void hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1,2));
 
 #endif /* HPX_PARCEL_H_ */

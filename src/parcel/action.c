@@ -260,7 +260,7 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
   dbg_assert_precondition(dest);
   dbg_assert_precondition(action);
   dbg_assert_precondition(len && args);
-  
+
   parcel_t *p = hpx_parcel_acquire(len);
   if (!p) {
     dbg_printf("Could not allocate a %lu-byte parcel in hpx_call.\n", len);
@@ -268,7 +268,7 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
   }
   
   hpx_parcel_set_action(p, action);
-  memcpy(hpx_parcel_get_data(p), args, len);
+  hpx_parcel_set_data(p, args, len);
   int success = hpx_parcel_send(dest, p, NULL, NULL, result);
   hpx_parcel_release(p);
   return success;
