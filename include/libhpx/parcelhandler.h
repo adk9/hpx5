@@ -35,7 +35,7 @@ struct hpx_context;
 struct hpx_locality;
 struct hpx_future;
 struct hpx_parcel;
-struct parcelhandler HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
+struct HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL) parcelhandler;
 /** @} */
 
 /**

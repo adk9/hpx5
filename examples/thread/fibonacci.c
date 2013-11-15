@@ -27,8 +27,7 @@
  */
 static const char usage[] = "fibonacci cores n\n"
                             "\t[cores=0=>use all available cores]\n";
-static hpx_context_t *ctx;                      /**< a shared thread context */
-static int            nthreads;                 /**< for output */
+static int nthreads;                            /**< for output */
 
 
 /**
@@ -52,8 +51,8 @@ void fib(void *args)
   /* create child threads */
   hpx_future_t *f1 = NULL; 
   hpx_future_t *f2 = NULL;
-  hpx_thread_create(ctx, 0, fib, (void*) (n - 1), &f1, NULL);
-  hpx_thread_create(ctx, 0, fib, (void*) (n - 2), &f2, NULL);
+  hpx_thread_create(NULL, 0, fib, (void*) (n - 1), &f1, NULL);
+  hpx_thread_create(NULL, 0, fib, (void*) (n - 2), &f2, NULL);
   
   /* wait for threads to finish */
   hpx_thread_wait(f1);
@@ -79,8 +78,9 @@ void fib(void *args)
  * @param argv[1] number of cores to use, '0' means use all
  * @param argv[2] n
  */
-int main(int argc, char *argv[]) {
-  
+int
+main(int argc, char *argv[])
+{  
   /* validate our arguments */
   if (argc < 3) {
     fprintf(stderr, usage);
@@ -94,16 +94,11 @@ int main(int argc, char *argv[]) {
   hpx_init();
 
   /* set up our configuration */
-  hpx_config_t cfg;
-  hpx_config_init(&cfg);
-  hpx_config_set_thread_suspend_policy(&cfg,
-                                       HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL); 
+  hpx_config_set_thread_suspend_policy(__hpx_global_cfg,
+                                       HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL);
 
   if (cores > 0)
-    hpx_config_set_cores(&cfg, cores);
-
-  /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
+    hpx_config_set_cores(__hpx_global_cfg, cores);
 
   /* get start time */
   hpx_timer_t timer;
@@ -114,7 +109,7 @@ int main(int argc, char *argv[]) {
   
   /* create a fibonacci thread */
   hpx_future_t *f;
-  hpx_thread_create(ctx, 0, fib, (void*) n, &f, NULL);
+  hpx_thread_create(NULL, 0, fib, (void*) n, &f, NULL);
 
   /* wait for the thread to finish */
   hpx_thread_wait(f);
@@ -125,11 +120,10 @@ int main(int argc, char *argv[]) {
   
   printf("fib(%ld)=%ld\n", n, fib_n);
   printf("seconds: %.7f\n", ms);
-  printf("cores:   %d\n", hpx_config_get_cores(&cfg));
+  printf("cores:   %d\n", hpx_config_get_cores(__hpx_global_cfg));
   printf("threads: %d\n", nthreads);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx);
   hpx_cleanup();
   
   return 0;

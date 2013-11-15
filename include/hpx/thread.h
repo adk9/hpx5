@@ -148,8 +148,7 @@ hpx_error_t hpx_thread_create(struct hpx_context    *ctx,
                               hpx_func_t           entry,
                               void                 *args,
                               struct hpx_future **result,
-                              hpx_thread_t      **thread)
-  HPX_ATTRIBUTE(HPX_NON_NULL(1));
+                              hpx_thread_t      **thread);
 
 void hpx_thread_destroy(hpx_thread_t *);
 

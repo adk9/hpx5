@@ -224,7 +224,7 @@ probe(int source, int* flag, network_status_t* status)
 {
   int retval;
   int temp;
-  int mpi_src;
+  int mpi_src = -1;
   /* int mpi_len; LD:unused */
 
   retval = HPX_ERROR;

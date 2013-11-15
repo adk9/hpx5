@@ -147,7 +147,6 @@ parcelhandler_main(parcelhandler_t *args)
   int initiated_something, completed_something;
 
   int dst_rank; /* raw network address as opposed to internal hpx address */
-  size_t size;
 
   int outstanding_recvs;
   int outstanding_sends;
@@ -215,7 +214,7 @@ parcelhandler_main(parcelhandler_t *args)
                  hpx_get_rank(), (void*)req, (void*)header); 
       __hpx_network_ops->send(dst_rank, 
                               header,
-                              size,
+                              header->size,
                               req);
       outstanding_sends++;
     }
