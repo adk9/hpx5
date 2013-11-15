@@ -27,7 +27,7 @@ LT_INIT
 AC_LANG([C])
 
 # Checks for programs.
-AC_PROG_CC([icc gcc])
+AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O

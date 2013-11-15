@@ -24,6 +24,7 @@
 #endif
 
 #include "hpx/error.h"
+#include "hpx/globals.h"                        /* __hpx_global_ctx */
 #include "hpx/kthread.h"
 #include "hpx/mem.h"
 #include "hpx/thread.h"
@@ -87,6 +88,10 @@ hpx_thread_create(hpx_context_t    *ctx,
   if (opts == 0) {
     opts = HPX_THREAD_OPT_NONE;
   }
+
+  /* use the global context if none was set */
+  if (!ctx)
+    ctx = __hpx_global_ctx;
 
   hpx_kthread_mutex_lock(&ctx->mtx);
 

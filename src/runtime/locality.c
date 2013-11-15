@@ -22,10 +22,13 @@
 #include <stdint.h>
 #include <string.h>                             /* memcpy */
 #include <strings.h>                            /* bzero */
+#include <stdlib.h>
+#define hpx_alloc malloc
+#define hpx_free free
 
 #include "hpx/error.h"                          /* __hpx_errno */
 #include "hpx/globals.h"                        /* __hpx_network_ops */
-#include "hpx/mem.h"                            /* hpx_alloc/free */
+//#include "hpx/mem.h"                            /* hpx_alloc/free */
 #include "hpx/runtime.h"                        /* struct hpx_locality */
 #include "bootstrap.h"                          /* struct bootmgr */
 #include "debug.h"
@@ -47,11 +50,10 @@ hpx_locality_t *
 hpx_locality_create(void)
 {
   hpx_locality_t *loc = hpx_alloc(sizeof(*loc));
-  if (loc)
-    bzero(loc, sizeof(*loc));
-  else 
-    __hpx_errno = HPX_ERROR_NOMEM;
-  return NULL;
+  if (!loc)
+    dbg_print_error(HPX_ERROR, "Failed to allocate a locality");
+  bzero(loc, sizeof(*loc));
+  return loc;
 }
 
 void
