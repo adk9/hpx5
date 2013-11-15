@@ -137,20 +137,15 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
 }                     
 
 /**
- * Implement send as a local thread spawn.
+ * Implement hpx_parcel_send as a local thread spawn.
  */
 static int
-local_send(const hpx_parcel_t *parcel, hpx_future_t **complete,
-           hpx_future_t **thread, hpx_future_t **result)
+local_send(const hpx_parcel_t *parcel,
+           hpx_future_t *complete,
+           hpx_future_t *thread,
+           hpx_future_t **result)
 {
   /* allocate any extra futures that the sender wants */
-  if (complete)
-    *complete = hpx_future_create(0);    
-  if (thread)
-    *thread = hpx_future_create(sizeof(struct hpx_thread *));
-  if (result)
-    *result = NULL;
-
   hpx_func_t f = action_lookup(parcel->action);
   if (!f)
     dbg_print_error(HPX_ERROR, "Could not find an action registered for %"
@@ -160,40 +155,24 @@ local_send(const hpx_parcel_t *parcel, hpx_future_t **complete,
      for now we copy and leak it.
      TODO: the entire thread creation pipeline needs to be fixed
   */
-  uint8_t *leaked_buffer = NULL;
+  uint8_t *data = NULL;
   if (parcel->size) {
-    leaked_buffer = hpx_alloc(parcel->size);
-    memcpy(leaked_buffer, parcel->data, parcel->size);
+    data = hpx_alloc(parcel->size);
+    memcpy(data, parcel->data, parcel->size);
+    dbg_printf("FIXME: Leaking %lu bytes of data in 'local_send'\n",
+               parcel->size); 
   }
 
   struct hpx_thread *t = NULL;
-  int e = hpx_thread_create(__hpx_global_ctx,
-                            HPX_THREAD_OPT_NONE,
-                            f,
-                            leaked_buffer,
-                            result,
-                            &t);
-  
-  if (e) {
-    /* cleanup unused futures */
-    if (complete) {
-      hpx_future_destroy(*complete);
-      *complete = NULL;
-    }
-    if (thread) {
-      hpx_future_destroy(*thread);
-      *thread = NULL;
-    }
-    return e;
-  }
+  int e = hpx_thread_create(__hpx_global_ctx, HPX_THREAD_OPT_NONE, f, data,
+                            result, &t);  
 
   /* if necessary, signal that the send is complete both locally and globally */
   if (complete)
-    hpx_future_set(*complete);
+    hpx_future_set(complete);
   if (thread)
-    hpx_future_setv(*thread, sizeof(t), &t);
-
-  return HPX_SUCCESS;
+    hpx_future_setv(thread, sizeof(t), &t);
+  return e;
 }
 
 /**
@@ -205,14 +184,14 @@ local_send(const hpx_parcel_t *parcel, hpx_future_t **complete,
  */
 int
 hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
-                hpx_future_t **complete,
-                hpx_future_t **thread,
+                hpx_future_t *complete,
+                hpx_future_t *thread,
                 hpx_future_t **result)
 {
   dbg_assert_precondition(dest);
   dbg_assert_precondition(parcel);
   
-  return (hpx_get_my_locality() == dest) ?
+  return (hpx_locality_equal(hpx_get_my_locality(), dest)) ?
     local_send(parcel, complete, thread, result) : 
     parcelhandler_send(dest, parcel, complete, thread, result);
 }
@@ -286,6 +265,16 @@ void *
 hpx_parcel_get_data(hpx_parcel_t *parcel)
 {
   return parcel->data;
+}
+
+void
+hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+{
+  dbg_assert_precondition(parcel);
+  dbg_assert_precondition(length <= parcel->size);
+  dbg_assert_precondition(!data || length);
+  
+  memcpy(parcel->data, data, length);
 }
 
 /**

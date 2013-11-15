@@ -112,3 +112,9 @@ hpx_get_rank(void)
 {
   return hpx_get_my_locality()->rank;
 }
+
+bool
+hpx_locality_equal(const hpx_locality_t *lhs, const hpx_locality_t *rhs)
+{
+  return (lhs->rank == lhs->rank) && (lhs->physical.nid == rhs->physical.nid);
+}
