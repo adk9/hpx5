@@ -1,10 +1,8 @@
-
-
+#include <unistd.h>
 #include <stdio.h>
 #include <inttypes.h>                           /* PRId64 */
 #include <hpx.h>
 
-hpx_context_t *ctx;
 hpx_action_t   act;
 hpx_timer_t    timer;
 static int     nthreads;
@@ -13,9 +11,10 @@ static int     my_rank;
 
 static hpx_action_t fib_action;
 
-void fib(void *n) {
+void
+fib(void *n)
+{
   long num = (long) n;
-
 
   /* handle our base case */
   if (num < 2)
@@ -49,7 +48,9 @@ void fib(void *n) {
   hpx_thread_exit(sum);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
   hpx_config_t cfg;
   long n;
   uint32_t localities;
@@ -69,6 +70,16 @@ int main(int argc, char *argv[]) {
   /* initialize hpx runtime */
   hpx_init();
 
+  {
+    int i = 0;
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+    printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    fflush(stdout);
+    while (0 == i)
+      sleep(5);
+  }
+
   /* set up our configuration */
   hpx_config_init(&cfg);
 
@@ -79,9 +90,6 @@ int main(int argc, char *argv[]) {
 
   /* get the number of localities */
   num_ranks = hpx_get_num_localities();
-
-  /* get a thread context */
-//  ctx = hpx_ctx_create(&cfg);
 
   /* register the fib action */
   fib_action = hpx_action_register("fib", fib);
@@ -108,6 +116,5 @@ int main(int argc, char *argv[]) {
   printf("threads: %d\n", ++nthreads);
 
   /* cleanup */
-//  hpx_ctx_destroy(ctx);
   return 0;
 }
