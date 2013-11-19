@@ -345,5 +345,18 @@ parcelhandler_send(hpx_locality_t *dest,
                    hpx_future_t *thread,
                    hpx_future_t **result)
 {
-  return HPX_ERROR;
+  header_t *h = serialize(parcel);
+  if (!h) {
+    dbg_printf("Failed to serialize a parcel.");
+    return __hpx_errno;
+  }
+
+  int e = parcelqueue_push(__hpx_send_queue, h);
+  if (e != HPX_SUCCESS) {
+    dbg_print_error(e, "Failed to add a parcel to the send queue");
+    __hpx_errno = e;
+    return e;
+  }
+
+  return HPX_SUCCESS;
 }
