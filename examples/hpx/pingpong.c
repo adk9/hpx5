@@ -1,3 +1,20 @@
+/*
+ ====================================================================
+  High Performance ParalleX Library (libhpx)
+  
+  Pingong example
+  examples/hpx/pingpong.c
+
+  Copyright (c) 2013, Trustees of Indiana University 
+  All rights reserved.
+
+  This software may be modified and distributed under the terms of 
+  the BSD license.  See the COPYING file for details.
+
+  This software was created at the Indiana University Center for
+  Research in Extreme Scale Technologies (CREST).
+ ====================================================================
+*/
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +43,7 @@ static int count                 = 0;      /*!< per-locality count of actions */
 static void print_usage(FILE *stream);
 static void process_args(int argc, char *argv[]);
 static void wait_for_debugger();
+static void init_other_loc();
 static void register_actions();
 
 /* utility macros */
@@ -45,6 +63,12 @@ int main(int argc, char *argv[]) {
 
   process_args(argc, argv);
   wait_for_debugger();
+    /* I'm cheating by putting this before action registrations to make sure this
+     gets done at all processes...
+
+     LD: this seems like a persistent issue that we have, and is related to a
+         SPMD programming mindset */
+  init_other_loc();
   register_actions();
   
   hpx_timer_t ts;
@@ -62,15 +86,21 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+/** the pingpong message type */
 typedef struct {
-  int id;
-  char msg[BUFFER_SIZE];
+  int id;                                       /*!< the message ide  */
+  char msg[BUFFER_SIZE];                        /*!< the text string (if -t) */
 } args_t;
 
+/**
+ * The main action for each locality. Rank 0 initiates the pingpong operation,
+ * and cleans up unused MPI processes.
+ */
 static void action_pingpong(void *unused) {  
   hpx_lco_future_init(&done_fut);
 
-  if (hpx_get_my_locality()->rank == 0) {
+  unsigned int my_rank = hpx_get_my_locality()->rank;
+  if (my_rank == 0) {
     printf("Running pingpong on %d ranks between rank 0 and rank %d\n",
            hpx_get_num_localities(),
            other_loc->rank); 
@@ -79,14 +109,40 @@ static void action_pingpong(void *unused) {
     args_t args = { -1, {0}};
     hpx_action_invoke(ping, &args, NULL);
   }
-  
+
   hpx_thread_wait(&done_fut);
+
+  /* make sure any non-participating localities shut down */
+  if (my_rank == 0) {
+    for (int i = 1; i < hpx_get_num_localities() - 1; ++i) {
+      if (arg_screen_out)
+        printf("0: sending done to loc %d\n", i);
+   
+      hpx_parcel_t *p = hpx_parcel_acquire(0);
+      CHECK_NOT_NULL(p, "Failed to acquire parcel in 'pingpong' action");
+      hpx_parcel_set_action(p, done);
+      hpx_parcel_send(hpx_locality_from_rank(i), p, NULL, NULL, NULL);
+      hpx_parcel_release(p);
+    }
+  }
+  
+  hpx_thread_exit(0);
 }
 
+/**
+ * Sets the done future.
+ */
 static void action_done(void* args) {
+  if (arg_screen_out)
+    printf("%d: recieved done\n", hpx_get_my_locality()->rank);
+
   hpx_lco_future_set_state(&done_fut);
+  hpx_thread_exit(0);
 }
 
+/**
+ * Send a ping message.
+ */
 static void action_ping(args_t* args) {
   if (arg_screen_out)
     printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
@@ -120,8 +176,12 @@ static void action_ping(args_t* args) {
 
   /* unsynchronized is ok because we only have one thread per locality */
   ++count;
+  hpx_thread_exit(0);
 }
 
+/**
+ * Send a pong argument.
+ */
 static void action_pong(args_t* args) {
   if (arg_screen_out)
     printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
@@ -149,8 +209,13 @@ static void action_pong(args_t* args) {
   }
 
   count++;
+  hpx_thread_exit(0);
 }
 
+/**
+ * Used for debugging. Causes a process to wait for a debugger to attach, and
+ * set the value if i != 0.
+ */
 void wait_for_debugger() {
   if (arg_debug) {
     int i = 0;
@@ -163,6 +228,9 @@ void wait_for_debugger() {
   }
 }
 
+/**
+ * Dump the usage string to the relevant file.
+ */
 void print_usage(FILE *stream) {
   fprintf(stream, "\n"
           "Usage: pingponghpx [-tvdh] <iterations>\n"
@@ -173,6 +241,9 @@ void print_usage(FILE *stream) {
           "\n");
 }
 
+/**
+ * Extract the arg_ values from the arguments strings.
+ */
 void process_args(int argc, char *argv[]) {
   int opt = 0;
   while ((opt = getopt(argc, argv, "tvdh")) != -1) {
@@ -212,25 +283,20 @@ void process_args(int argc, char *argv[]) {
          arg_iter_limit, arg_text_ping, arg_screen_out);
 }
 
-void register_actions(void) {
-  static const char *pingpong_id = "_pingpong_action";
-  static const char *ping_id = "_ping_action";
-  static const char *pong_id = "_pong_action";
-  static const char *done_id = "_done_action";
-
-  /* I'm cheating by putting this before action registrations to make sure this
-     gets done at all processes...
-
-     LD: this seems like a persistent issue that we have, and is related to a
-         SPMD programming mindset */
+void init_other_loc(void) {
   unsigned int num_ranks = hpx_get_num_localities();
   unsigned int my_rank = hpx_get_my_locality()->rank;
-  other_loc = hpx_locality_from_rank((my_rank == 0) ? num_ranks - 1 : 0);
-  
+  other_loc = hpx_locality_from_rank((my_rank == 0) ? num_ranks - 1 : 0);  
+}
+
+/**
+ * Registers functions as actions.
+ */
+void register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  pingpong = hpx_action_register(pingpong_id, (hpx_func_t)action_pingpong);
-  ping = hpx_action_register(ping_id, (hpx_func_t)action_ping);
-  pong = hpx_action_register(pong_id, (hpx_func_t)action_pong);
-  done = hpx_action_register(done_id, (hpx_func_t)action_done);
+  pingpong = hpx_action_register("pingpong", (hpx_func_t)action_pingpong);
+  ping = hpx_action_register("ping", (hpx_func_t)action_ping);
+  pong = hpx_action_register("pong", (hpx_func_t)action_pong);
+  done = hpx_action_register("done", (hpx_func_t)action_done);
   hpx_action_registration_complete();
 }
