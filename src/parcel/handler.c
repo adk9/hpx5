@@ -351,6 +351,9 @@ parcelhandler_send(hpx_locality_t *dest,
     return __hpx_errno;
   }
 
+  /* need this hack for now, because we don't have global addresses */
+  h->dest.locality = *dest;
+  
   int e = parcelqueue_push(__hpx_send_queue, h);
   if (e != HPX_SUCCESS) {
     dbg_print_error(e, "Failed to add a parcel to the send queue");

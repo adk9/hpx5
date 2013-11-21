@@ -233,6 +233,7 @@ get(int src, void* buffer, size_t len, network_request_t *request)
   return retval;
 }
 
+/* status may be NULL */
 int
 test(network_request_t *request, int *flag, network_status_t *status)
 {
