@@ -51,9 +51,9 @@ struct reduction_recv_args {
 };
 
 void reduce_recv(void* _args) {
-  hpx_locality_t* my_loc = hpx_get_my_locality();
-  int my_rank = my_loc->rank;
-  //  printf("At %d in _reduction_recv_action\n", my_rank);
+  /* hpx_locality_t* my_loc = hpx_get_my_locality(); */
+  /* int my_rank = my_loc->rank; */
+  /* // printf("At %d in _reduction_recv_action\n", my_rank); */
 
   struct reduction_recv_args* args = (struct reduction_recv_args*)_args;
   //  printf("At %d received value to reduce %d\n", my_rank, args->value);
@@ -63,8 +63,8 @@ void reduce_recv(void* _args) {
 }
 
 void op(void* _args) {
-  hpx_locality_t* my_loc = hpx_get_my_locality();
-  int my_rank = my_loc->rank;
+  /* hpx_locality_t* my_loc = hpx_get_my_locality(); */
+  /* int my_rank = my_loc->rank; */
 
   /*
   char hostname[256];
@@ -109,8 +109,8 @@ void op(void* _args) {
 
 void recv_broadcast(void* _args) {
   REDUCTION_TYPE* value = (REDUCTION_TYPE*)_args;
-  hpx_locality_t* my_loc = hpx_get_my_locality();
-  int my_rank = my_loc->rank;
+  /* hpx_locality_t* my_loc = hpx_get_my_locality(); */
+  /* int my_rank = my_loc->rank; */
   //  printf("At %d received reduction value %lld\n", my_rank, (long long)*value);
   local_reduction_result = *value;
 
@@ -218,7 +218,7 @@ main(int argc, char** argv)
                     &complete, NULL);
   hpx_thread_wait(complete);
 
-  long elapsed = hpx_elapsed_us(timer);
+  /* long elapsed = hpx_elapsed_us(timer); */
   
   hpx_cleanup();
 
