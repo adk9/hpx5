@@ -327,24 +327,19 @@ error:
 int
 test(network_request_t *request, int *flag, network_status_t *status)
 {
-  int retval;
-  int temp;
-  retval = HPX_ERROR;
+  MPI_Status *s = (status) ? &(status->mpi) : MPI_STATUS_IGNORE;
+  int test_result = MPI_Test(&(request->mpi), flag, s);
 
-  if (status == NULL)
-    temp = MPI_Test(&(request->mpi), flag, MPI_STATUS_IGNORE);
-  else
-    temp = MPI_Test(&(request->mpi), flag, &(status->mpi));
+  if (test_result != MPI_SUCCESS)
+    return (__hpx_errno = HPX_ERROR);
 
-  if (temp == MPI_SUCCESS) {
-    retval = 0;
-    if (*flag == true)
-      status->source = status->mpi.MPI_SOURCE;
-  }
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-
-  return retval;  
+  if (!status)
+    return HPX_SUCCESS;
+  
+  if (*flag == true)
+    status->source = status->mpi.MPI_SOURCE;
+  
+  return HPX_SUCCESS;
 }
 
 int

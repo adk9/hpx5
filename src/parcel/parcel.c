@@ -159,8 +159,8 @@ local_send(const hpx_parcel_t *parcel,
   if (parcel->size) {
     data = hpx_alloc(parcel->size);
     memcpy(data, parcel->data, parcel->size);
-    dbg_printf("FIXME: Leaking %lu bytes of data in 'local_send'\n",
-               parcel->size); 
+    /* dbg_printf("FIXME: Leaking %lu bytes of data in 'local_send'\n", */
+    /*            parcel->size);  */
   }
 
   struct hpx_thread *t = NULL;
@@ -191,7 +191,8 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
   dbg_assert_precondition(dest);
   dbg_assert_precondition(parcel);
   
-  return (hpx_locality_equal(hpx_get_my_locality(), dest)) ?
+  return (false) ?
+    /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
     local_send(parcel, complete, thread, result) : 
     parcelhandler_send(dest, parcel, complete, thread, result);
 }

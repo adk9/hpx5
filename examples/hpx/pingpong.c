@@ -18,7 +18,6 @@ static hpx_action_t pong     = HPX_ACTION_NULL;
 static hpx_action_t done     = HPX_ACTION_NULL;
 
 /* globals */
-static hpx_locality_t* my_loc    = NULL;
 static hpx_locality_t* other_loc = NULL;
 static hpx_future_t done_fut     = {{0}};  /*!< main thread waits on this */
 static int count                 = 0;      /*!< per-locality count of actions */
@@ -38,14 +37,13 @@ static void register_actions();
     }                                                         \
   } while (0)
 
-int main(int argc, char *argv[]) {
-  process_args(argc, argv);
-  
+int main(int argc, char *argv[]) {  
   if (hpx_init()) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
 
+  process_args(argc, argv);
   wait_for_debugger();
   register_actions();
   
@@ -58,7 +56,6 @@ int main(int argc, char *argv[]) {
   double avg_oneway_latency = elapsed/((double)(arg_iter_limit*2));
   printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
 
-  hpx_locality_destroy(my_loc);
   hpx_locality_destroy(other_loc);
   hpx_cleanup();
 
@@ -70,13 +67,16 @@ typedef struct {
   char msg[BUFFER_SIZE];
 } args_t;
 
-static void action_pingpong(void *unused) {
-  unsigned int my_rank = my_loc->rank;
+static void action_pingpong(void *unused) {  
   hpx_lco_future_init(&done_fut);
 
-  if (my_rank == 0) {
+  if (hpx_get_my_locality()->rank == 0) {
+    printf("Running pingpong on %d ranks between rank 0 and rank %d\n",
+           hpx_get_num_localities(),
+           other_loc->rank); 
+  
     /* ok to use the stack, since we're waiting on the done future */
-    args_t args = { 0, {0}};
+    args_t args = { -1, {0}};
     hpx_action_invoke(ping, &args, NULL);
   }
   
@@ -88,16 +88,19 @@ static void action_done(void* args) {
 }
 
 static void action_ping(args_t* args) {
+  if (arg_screen_out)
+    printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
+
   int id = args->id + 1;
 
   if (id < arg_iter_limit) {
     args->id = id;
     if (arg_text_ping)
-      snprintf(args->msg, BUFFER_SIZE, "Message %d from proc 0", args->id);
+      snprintf(args->msg, BUFFER_SIZE, "ping %d from proc 0", args->id);
 
     if (arg_screen_out)
-      printf("Ping acting; count=%d, message=%s\n", count,
-             args->msg);
+      printf("%d: sending ping to loc %d, count=%d, message='%s'\n",
+             hpx_get_my_locality()->rank, other_loc->rank, count, args->msg);
     
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
@@ -120,18 +123,22 @@ static void action_ping(args_t* args) {
 }
 
 static void action_pong(args_t* args) {
+  if (arg_screen_out)
+    printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
+
   if (args->id < arg_iter_limit) {
     args->id = args->id + 1;
-    
-    if (arg_screen_out)
-      printf("Pong acting; count=%d, message=%s\n", count, args->msg);
 
     if (arg_text_ping) {
       char copy_buffer[BUFFER_SIZE];
       snprintf(copy_buffer, BUFFER_SIZE,
-               "At %d, received from proc 0 message: '%s'", args->id, args->msg);
+               "Received ping at %d: '%s'", args->id, args->msg);
       strncpy(args->msg, copy_buffer, BUFFER_SIZE);
     }
+    
+    if (arg_screen_out)
+      printf("%d: sending pong to loc %d, count=%d, message='%s'\n",
+             hpx_get_my_locality()->rank, other_loc->rank, count, args->msg);
 
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
@@ -158,9 +165,8 @@ void wait_for_debugger() {
 
 void print_usage(FILE *stream) {
   fprintf(stream, "\n"
-          "Usage: pingponghpx [-cldh] #i\n"
-          "\t#i\tnumber of iterations to execute\n"
-          "\t-t\ttext length to send in messages\n"
+          "Usage: pingponghpx [-tvdh] <iterations>\n"
+          "\t-t\tsend text in message\n"
           "\t-v\tprint verbose output \n"
           "\t-d\twait for debugger\n"
           "\t-h\tthis help display\n"
@@ -169,13 +175,13 @@ void print_usage(FILE *stream) {
 
 void process_args(int argc, char *argv[]) {
   int opt = 0;
-  while ((opt = getopt(argc, argv, "t:vdh")) != -1) {
+  while ((opt = getopt(argc, argv, "tvdh")) != -1) {
     switch (opt) {
     case 't':
-      arg_text_ping = strtol(optarg, NULL, 10);
+      arg_text_ping = true;
       break;
     case 'v':
-      arg_screen_out = strtol(optarg, NULL, 10);
+      arg_screen_out = true;
       break;
     case 'd':
       arg_debug = true;
@@ -199,7 +205,9 @@ void process_args(int argc, char *argv[]) {
     exit(-1);
   }
   arg_iter_limit = strtol(argv[0], NULL, 10);
-  printf("Running with options: "
+
+  if (hpx_get_my_locality()->rank == 0)
+    printf("Running with options: "
          "{iter limit: %d}, {text_ping: %d}, {screen_out: %d}\n",
          arg_iter_limit, arg_text_ping, arg_screen_out);
 }
@@ -216,10 +224,8 @@ void register_actions(void) {
      LD: this seems like a persistent issue that we have, and is related to a
          SPMD programming mindset */
   unsigned int num_ranks = hpx_get_num_localities();
-  my_loc = hpx_get_my_locality();
-  other_loc = hpx_locality_from_rank((my_loc->rank == 0) ? num_ranks - 1 : 0);
-  printf("Running pingpong on %d ranks between rank 0 and rank %d\n", num_ranks,
-         other_loc->rank); 
+  unsigned int my_rank = hpx_get_my_locality()->rank;
+  other_loc = hpx_locality_from_rank((my_rank == 0) ? num_ranks - 1 : 0);
   
   /* register action for parcel (must be done by all ranks) */
   pingpong = hpx_action_register(pingpong_id, (hpx_func_t)action_pingpong);
