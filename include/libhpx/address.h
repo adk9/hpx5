@@ -1,10 +1,9 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-
-  An hpx-compatible implementation of stdlib.h abort().
   
-  include/libhpx/system/abort.h
+  User-Level Parcel Definition
+  parcel.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -20,16 +19,21 @@
   ====================================================================
 */
 
-#ifndef HPX_SYSTEM_ABORT_H_
-#define HPX_SYSTEM_ABORT_H_
+#ifndef LIBHPX_ADDRESS_H_
+#define LIBHPX_ADDRESS_H_
+
+#include "hpx/agas.h"                           /* struct hpx_addr */
+#include "hpx/runtime.h"                        /* struct hpx_locality */
+#include "hpx/system/attributes.h"              /* HPX_MACROS */
+
+typedef struct address address_t;
 
 /**
- * @file
- * @brief Provides stdlib.h-ish abort() in hpx.
+ * @file @brief A physical address for use in the network.
  */
 
-#include "hpx/system/attributes.h"
+struct address {
+  struct hpx_locality locality;
+};
 
-void hpx_abort(void) HPX_ATTRIBUTE(HPX_NORETURN);
-
-#endif /* HPX_SYSTEM_ABORT_H_ */
+#endif /* LIBHPX_ADDRESS_H_ */

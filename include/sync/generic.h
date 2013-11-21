@@ -22,21 +22,27 @@
   static inline T sync_load_##s(T *addr, int mm) {  \
     return sync_load(addr, mm);                     \
   }
+#define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                       \
   static inline void sync_store_##s(T *addr, T val, int mm) {   \
     sync_store(addr, val, mm);                                  \
   }
+#define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                   \
   static inline T sync_swap_##s(T *addr, T val, int mm) {   \
     return sync_swap(addr, val, mm);                        \
   }
+#define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                       \
@@ -45,7 +51,9 @@
   {                                                             \
     return sync_cas(addr, from, to, onsuccess, onfailure);      \
   }
+#define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                           \
@@ -54,14 +62,18 @@
   {                                                                 \
     return sync_cas_val(addr, from, to, onsuccess, onfailure);      \
   }
+#define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                   \
   static inline T sync_fadd_##s(T *addr, T val, int mm) {   \
     return sync_fadd(addr, val, mm);                        \
   }
+#define SYNC_PTR_TY(T, s)
 #include "types.def"
+#undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 #undef SYNC_FLOAT_TY
 

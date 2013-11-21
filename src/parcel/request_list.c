@@ -23,9 +23,19 @@
 #include "request_list.h"
 #include "hpx/error.h"                          /* __hpx_errno, HPX_* */
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
+#include "network.h"                            /* network_request_t */
 
+/* !order matters for this struct!
+   We depend on the fact that the request_list_node ISA request. */
+struct request_list_node {
+  network_request_t      request;               /* must be 1st */
+  struct header          *parcel;
+  struct request_list_node *next;
+};
 
-void request_list_init(struct request_list *list) {
+void
+request_list_init(request_list_t *list)
+{
   list->head = NULL;
   list->tail = NULL;
   list->prev = NULL;
@@ -36,9 +46,10 @@ void request_list_init(struct request_list *list) {
 /* Perhaps confusingly, this function returns a struct network_request* so
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
-struct network_request* request_list_append(struct request_list *list,
-                                            struct header *parcel) {
-  struct request_list_node* node = hpx_alloc(sizeof(*node));
+struct network_request*
+request_list_append(request_list_t *list, struct header *parcel)
+{
+  request_list_node_t* node = hpx_alloc(sizeof(*node));
   if (!node) {
     __hpx_errno = HPX_ERROR_NOMEM;
     return NULL;
@@ -54,28 +65,38 @@ struct network_request* request_list_append(struct request_list *list,
   return &node->request;
 }
 
-void request_list_begin(struct request_list *list) {
+void
+request_list_begin(request_list_t *list)
+{
   list->prev = NULL;
   list->curr = list->head;
 } 
 
-struct network_request* request_list_curr(struct request_list *list) {
+struct network_request*
+request_list_curr(request_list_t *list)
+{
   return (list->curr) ? &list->curr->request : NULL;
 } 
 
-struct header* request_list_curr_parcel(struct request_list *list) {
+struct header*
+request_list_curr_parcel(request_list_t *list)
+{
   return (list->curr) ? list->curr->parcel : NULL;
 } 
 
-void request_list_next(struct request_list *list) {
+void
+request_list_next(request_list_t *list)
+{
   if (list->curr != NULL) {
     list->prev = list->curr;
     list->curr = list->curr->next;
   }
 }
 
-void request_list_del(struct request_list *list) {
-  struct request_list_node* node = list->curr;
+void
+request_list_del(request_list_t *list)
+{
+  request_list_node_t* node = list->curr;
   if (!node)
     return;
   
@@ -88,7 +109,8 @@ void request_list_del(struct request_list *list) {
   /* now fix up curr and prev */
   if (list->prev != NULL)
     list->prev->next = node->next; 
-  list->curr = list->prev; /* do this instead of making it next since we want next() to still work in a for loop if we delete */
+  list->curr = list->prev; /* do this instead of making it next since we want
+                              next() to still work in a for loop if we delete */ 
   list->size--;
   hpx_free(node);
 }

@@ -7,30 +7,29 @@ static hpx_context_t *ctx;
 static hpx_timer_t    timer;
 static int     num_ranks;
 static int     my_rank;
-static hpx_action_t ping_action;
-static hpx_action_t pong_action;
+static hpx_action_t ping_action = HPX_ACTION_NULL;
+static hpx_action_t pong_action = HPX_ACTION_NULL;
 
 typedef struct Packet {
   hpx_locality_t *src;
   int token;
 } Packet;
 
-void ping(void *arg) {
-  Packet *p;
-  hpx_locality_t *dst;
-
-  p = (Packet*)arg;
+void
+ping(Packet *arg)
+{
   /* handle our base case */
-  if (p->token++ > 100)
+  if (arg->token++ > 100)
     hpx_thread_exit(0);
-  else {
-    dst = p->src;
-    p->src = hpx_get_my_locality();
-    hpx_call(dst, ping_action, (void*) p, sizeof(*p));
-  }
+ 
+  hpx_locality_t *dst = arg->src;
+  arg->src = hpx_get_my_locality();
+  hpx_call(dst, ping_action, arg, sizeof(*arg), NULL);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
   uint32_t localities;
 
   /* validate our arguments */
@@ -45,7 +44,8 @@ int main(int argc, char *argv[]) {
   hpx_init();
 
   /* set up our configuration */
-  hpx_config_t cfg; hpx_config_init(&cfg);
+  hpx_config_t cfg;
+  hpx_config_init(&cfg);
 
   /* TODO:
   if (localities > 0)
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   };
   
   /* register the actions */
-  ping_action = hpx_action_register("ping", ping);
+  ping_action = hpx_action_register("ping", (hpx_func_t)ping);
 
   /* get start time */
   hpx_get_time(&timer);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   hpx_locality_t *dst = hpx_locality_from_rank((hpx_get_rank()+1)%num_ranks);
   assert(dst != NULL && "Destination cannot be null.");
 
-  hpx_call(dst, ping_action, (void*)&p, sizeof(Packet));
+  hpx_call(dst, ping_action, (void*)&p, sizeof(p), NULL);
   /* TODO: ?
   hpx_quiescence(); // ???
   */

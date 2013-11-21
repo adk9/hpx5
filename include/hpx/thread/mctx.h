@@ -26,12 +26,10 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include "hpx/thread/arch/mconfig.h"
+#include "hpx/thread/arch/x86_64/mregs.h"
 
-#ifdef __x86_64__
-  #include "arch/x86_64/mconfig.h"
-  #include "arch/x86_64/mregs.h"
-#endif
-
+typedef struct hpx_mctx_context hpx_mctx_context_t;
 
 /* save/restore FPU registers during context switches */
 #define HPX_MCTX_SWITCH_EXTENDED  1
@@ -40,27 +38,21 @@
 #define HPX_MCTX_SWITCH_SIGNALS   2
 
 
-/*
- --------------------------------------------------------------------
-  Machine Context Data
- --------------------------------------------------------------------
-*/
+/**
+ * Machine Context Data
+ * @todo what is this?
+ */
+struct hpx_mctx_context {
+  hpx_mregs_t               regs;
+  sigset_t                  sigs;
+  void                       *sp;
+  uint64_t                    ss;
+  struct hpx_mctx_context  *link;
+};
 
-typedef struct _hpx_mctx_context_t {
-  hpx_mregs_t                  regs;
-  sigset_t                     sigs;
-  void                        *sp;
-  uint64_t                     ss;
-  struct _hpx_mctx_context_t  *link;
-} hpx_mctx_context_t;
-
-
-/*
- --------------------------------------------------------------------
-  Machine Context Functions
- --------------------------------------------------------------------
-*/
-
+/**
+ * Machine Context Functions
+ */
 void hpx_mctx_getcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
 void hpx_mctx_setcontext(hpx_mctx_context_t *, hpx_mconfig_t, uint64_t);
 void hpx_mctx_makecontext(hpx_mctx_context_t *, hpx_mctx_context_t *, void *, size_t, hpx_mconfig_t, uint64_t, void (*)(), int, ...);

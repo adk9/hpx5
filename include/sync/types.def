@@ -10,7 +10,7 @@ SYNC_INT_TY(uint32_t,    ui32)
 SYNC_INT_TY(uint64_t,    ui64)
 SYNC_INT_TY(__uint128_t, ui128)
 SYNC_INT_TY(uintptr_t,   uip)
-SYNC_INT_TY(void*,       p)
+SYNC_PTR_TY(void*,       p)
 SYNC_FLOAT_TY(float,     f)
 SYNC_FLOAT_TY(double,    d)
 

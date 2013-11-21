@@ -45,8 +45,8 @@ START_TEST (test_libhpx_thread_create)
   ctx = hpx_ctx_create(0);
   ck_assert_msg(ctx != NULL, "Could not create context");
 
-  th = hpx_thread_create(ctx, 0, thread_test_func1, 0, NULL);
-  ck_assert_msg(th != NULL, "Could not create thread");
+  hpx_error_t e = hpx_thread_create(ctx, 0, thread_test_func1, 0, &th, NULL);
+  ck_assert_msg(e == HPX_SUCCESS, "Could not create thread");
 
   //  state = hpx_thread_get_state(th);
   //  sprintf(msg, "New thread has an invalid queuing state (expected %d, got %d)", HPX_THREAD_STATE_PENDING, (int) state);
