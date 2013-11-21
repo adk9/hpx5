@@ -32,6 +32,7 @@
 #include "hpx/atomic.h"
 #include "hpx/config.h"
 #include "hpx/error.h"
+#include "hpx/globals.h"
 #include "hpx/gate.h"
 #include "hpx/init.h"
 #include "hpx/kthread.h"
@@ -45,18 +46,15 @@
 #include "hpx/thread/ctx.h"
 #include "hpx/thread/mctx.h"
 #include "hpx/thread.h"
-#include "hpx/types.h"
 #include "hpx/utils/heap.h"
 #include "hpx/utils/list.h"
 #include "hpx/utils/map.h"
 #include "hpx/utils/queue.h"
 #include "hpx/utils/timer.h"
 
-#ifdef __x86_64__
-#include "hpx/thread/arch/x86_64/mconfig_defs.h"
-#include "hpx/thread/arch/x86_64/mconfig.h"
-#include "hpx/thread/arch/x86_64/mregs.h"
-#endif
+#include "hpx/thread/arch/mconfig_defs.h"
+#include "hpx/thread/arch/mconfig.h"
+#include "hpx/thread/arch/mregs.h"
 
 #undef _HPX_H_INSIDE
 

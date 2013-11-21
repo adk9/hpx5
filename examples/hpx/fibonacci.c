@@ -1,107 +1,129 @@
-
-
+#include <unistd.h>
 #include <stdio.h>
 #include <inttypes.h>                           /* PRId64 */
 #include <hpx.h>
 
-hpx_context_t *ctx;
-hpx_action_t   act;
-hpx_timer_t    timer;
-static int     nthreads;
-static int     num_ranks;
-static int     my_rank;
-
-static hpx_action_t fib_action;
-
-void fib(void *n) {
-  long num = (long) n;
-
-
-  /* handle our base case */
-  if (num < 2)
-    hpx_thread_exit(&num);
-
-  /* create children parcels */
-  my_rank = hpx_get_rank();
-  hpx_locality_t *left = hpx_locality_from_rank((my_rank+num_ranks-1)%num_ranks);
-  hpx_locality_t *right = hpx_locality_from_rank((my_rank+1)%num_ranks);
-
-  long n1 = num - 1;
-  hpx_thread_t *th1 = hpx_call(left, fib_action, &n1, sizeof(long));
-
-  long n2 = num - 2;
-  hpx_thread_t *th2 = hpx_call(right, fib_action, &n2, sizeof(long));
-
-  /* wait for threads to finish */
-  // ADK: need an OR gate here. Also, why not just expose the future
-  //      interface and have such control constructs for them?
-  long n3; hpx_thread_join(th2, (void**)&n3);
-  long n4; hpx_thread_join(th1, (void**)&n4);
-
-  long *sum = hpx_alloc(sizeof(*sum));  
-  *sum = n3 + n4;
-  nthreads += 2;
-  hpx_thread_exit(sum);
+/**
+ * Prints a usage string to stderr.
+ *
+ * @returns -1, for error cases where the caller wants to say "return usage()."
+ */
+static int usage() {
+   fprintf(stderr,
+           "\n"
+           "Usage: fibonaccihpx [-cldh] n\n"
+           "\t n\tfibonacci number to compute\n"
+           "\t-c\tnumber of cores\n"
+           "\t-d\twait for debugger\n"
+           "\t-h\tthis help display\n"
+           "\n");
+   return -1;
 }
 
-int main(int argc, char *argv[]) {
-  hpx_config_t cfg;
-  long n;
-  uint32_t localities;
+static int num_ranks = -1;
+static hpx_action_t fib_action = HPX_ACTION_NULL;
 
-  /* validate our arguments */
-  if (argc < 2) {
-    fprintf(stderr, "Invalid number of localities (set to 0 to use all available localities).\n");
-    return -1;
-  } else if (argc < 3) {
-    fprintf(stderr, "Invalid Fibonacci number.\n");
-    return -2;
-  } else {
-    localities = atoi(argv[1]);
-    n = atol(argv[2]);
+void
+fib(long *n)
+{
+  /* handle our base case */
+  if (*n < 2)
+    hpx_thread_exit((void*)*n);
+
+  int my_rank = hpx_get_rank();
+  hpx_locality_t *l = hpx_locality_from_rank((my_rank + num_ranks - 1) % num_ranks);
+  hpx_locality_t *r = hpx_locality_from_rank((my_rank + 1) % num_ranks);
+  
+  long n1 = *n - 1;
+  long n2 = *n - 2;
+  
+  hpx_future_t *ffn1 = NULL;
+  hpx_future_t *ffn2 = NULL;
+  
+  hpx_call(l, fib_action, &n1, sizeof(n1), &ffn1);
+  hpx_call(r, fib_action, &n2, sizeof(n2), &ffn2);
+  
+  hpx_thread_wait(ffn1);
+  hpx_thread_wait(ffn2);
+
+  long fn1 = (long) hpx_lco_future_get_value(ffn1);
+  long fn2 = (long) hpx_lco_future_get_value(ffn2);
+  long fn = fn1 + fn2;
+  
+  hpx_thread_exit((void*) fn);
+}
+
+int
+main(int argc, char *argv[])
+{
+  unsigned long cores = 0;                      /* # of cores from -c */
+  bool debug = false;                           /* flag from -d */
+  unsigned long n = 0;                          /* fib(n) from argv */
+
+  /* handle command line */
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "c:dh")) != -1) {
+    switch (opt) {
+    case 'c':
+      cores = strtol(optarg, NULL, 10);
+      break;
+    case 'd':
+      debug = true;
+      break;
+    case 'h':
+      usage();
+      break;
+    case '?':
+    default:
+      return usage();
+    }
   }
+
+  argc -= optind;
+  argv += optind;
+
+  if (argc == 0) {
+    fprintf(stderr, "Missing fib number to compute\n");
+    return usage();
+  }
+  n = strtol(argv[0], NULL, 10);
 
   /* initialize hpx runtime */
   hpx_init();
 
-  /* set up our configuration */
-  hpx_config_init(&cfg);
+  if (debug) {
+    int i = 0;
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+    printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    fflush(stdout);
+    while (0 == i)
+      sleep(5);
+  }
 
-#if 0
-  if (localities > 0)
-    hpx_config_set_localities(&cfg, localities);
-#endif
-
-  /* get the number of localities */
   num_ranks = hpx_get_num_localities();
 
-  /* get a thread context */
-//  ctx = hpx_ctx_create(&cfg);
-
   /* register the fib action */
-  fib_action = hpx_action_register("fib", fib);
+  fib_action = hpx_action_register("fib", (hpx_func_t)fib);
   hpx_action_registration_complete();
   
   /* get start time */
+  hpx_timer_t timer;
   hpx_get_time(&timer);
 
-  /* create a fibonacci thread */
-  hpx_future_t *fut = hpx_action_invoke(fib_action, (void*) n, NULL);
-  
-  /* wait for the thread to finish */
+  hpx_future_t *fut;
+  hpx_action_invoke(fib_action, &n, &fut);
   hpx_thread_wait(fut);
-                                       
-#if 0
-  printf("fib(%ld)=%ld\nseconds: %.7f\nlocalities:   %d\nthreads: %d\n",
-         n, *result, hpx_elapsed_us(timer)/1e3,
-	 hpx_config_get_localities(&cfg), ++nthreads);
-#endif
-  printf("fib(%ld)=%" PRId64 "\n", n, hpx_lco_future_get_value_i64(fut));
-  printf("seconds: %.7f\n", hpx_elapsed_us(timer)/1e3);
-  printf("localities:   %d\n", localities);
-  printf("threads: %d\n", ++nthreads);
+
+  long result = (long) hpx_lco_future_get_value_i64(fut);
+  printf("fib(%ld)=%ld\n", n, result);
+
+  double time = hpx_elapsed_us(timer)/1e3;
+  printf("seconds: %.7f\n", time);
+         
+  printf("localities:   %d\n", num_ranks);
 
   /* cleanup */
-//  hpx_ctx_destroy(ctx);
+  hpx_cleanup();
   return 0;
 }

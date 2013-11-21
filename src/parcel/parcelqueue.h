@@ -23,11 +23,13 @@
 #ifndef LIBHPX_PARCEL_PARCELQUEUE_H_
 #define LIBHPX_PARCEL_PARCELQUEUE_H_
 
-/*
---------------------------------------------------------------------
- Parcel Queue 
---------------------------------------------------------------------
-*/
+#ifdef HAVE_CONFIG_H
+#include "config.h"                             /* HPX_CACHELINE_SIZE */
+#endif
+#include <stdint.h>
+
+typedef struct parcelqueue parcelqueue_t;
+
 /** 
    The handler needs an efficient way to get parcels from other
    threads. This queue is designed to meet that goal. The design
@@ -56,30 +58,26 @@
    the queue. Is that possible at present? So it may not actually be
    that safe...
 */
-#define CACHE_LINE_SIZE 64                      /* TODO: get this for real */
-
-#include "hpx/types.h"                          /* uint8 */
-
 struct hpx_mutex;                               /* forward declare */
 struct pq_node;                                 /* forward declare */
 
 struct parcelqueue {
   struct pq_node* head;
-  uint8 padding[CACHE_LINE_SIZE - sizeof(struct pq_node*)];
+  uint8_t padding[HPX_CACHELINE_SIZE - sizeof(struct pq_node*)];
   /* padding should improve performance by a fair margin */
   struct pq_node* tail;  
   //  hpx_kthread_mutex_t lock;
   struct hpx_mutex* lock;
 };
 
-extern struct parcelqueue* __hpx_send_queue; /* holds hpx_parcel_serialized_t */
+extern parcelqueue_t* __hpx_send_queue; /* holds hpx_parcel_serialized_t */
 
 /**
  * This creates the queue (including any allocation) and initialized its data
  * structures.
  */ 
-int parcelqueue_create(struct parcelqueue**);
-int parcelqueue_destroy(struct parcelqueue**);
+int parcelqueue_create(parcelqueue_t**);
+int parcelqueue_destroy(parcelqueue_t**);
 
 /**
  * This destroys the queue (including any allocation) and initialized its data
@@ -91,17 +89,17 @@ int parcelqueue_destroy(struct parcelqueue**);
     returns NULL otherwise. This function does not block. It should be
     called only by a single consumer.
  */
-void* parcelqueue_trypop(struct parcelqueue*);
+void* parcelqueue_trypop(parcelqueue_t*);
 
 /**
  * This pushes an element onto the queue. It is blocking. It is threadsafe.
  */
-int parcelqueue_push(struct parcelqueue*, void* val);
+int parcelqueue_push(parcelqueue_t*, void* val);
 
 /**
  * This pushes an element onto the queue. Is is only safe for single-threaded
  * use.
  */
-int parcelqueue_push_nb(struct parcelqueue*, void* val);
+int parcelqueue_push_nb(parcelqueue_t*, void* val);
 
 #endif /* LIBHPX_PARCEL_PARCELQUEUE_H_ */

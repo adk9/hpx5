@@ -2,8 +2,8 @@
  ====================================================================
   High Performance ParalleX Library (libhpx)
   
-  Portals Network Interface 
-  portals.c
+  Network Layer
+  network.c
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -16,9 +16,12 @@
  ====================================================================
 */
 
-#include <stdlib.h>
-#include <portals4.h>
-#include "network."
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+#include <stdbool.h>
+
+#include "network.h"
 #include "hpx/error.h"
 
 static int init(void);
@@ -31,75 +34,85 @@ static int get(int src, void *buffer, size_t len, network_request_t* req);
 static int test(network_request_t *request, int *flag, network_status_t *status);
 static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
-static int phys_addr(hpx_locality_t *l);
+static int phys_addr(struct hpx_locality *l);
 static void progress(void *data);
 static size_t get_network_bytes(size_t n);
 static void barrier(void);
 
-/* Portals communication operations */
-network_ops_t portals_ops = {
+/* Default network operations */
+network_ops_t default_net_ops = {
   .init              = init,
   .finalize          = finalize,
   .progress          = progress,
   .probe             = probe,
   .send              = send,
   .recv              = recv,
-  .test              = test,
+  .sendrecv_test     = test,
   .put               = put,
   .get               = get,
+  .putget_test       = test,
+  .pin               = pin,
+  .unpin             = unpin,
   .phys_addr         = phys_addr,
   .get_network_bytes = get_network_bytes,
   .barrier           = barrier
 };
 
-int
-init(void)
-{
+/*
+ * Stub versions
+ */
+
+int init(void) {
+  return 0;
 }
 
-int
-send_parcel(hpx_locality_t *, hpx_parcel_t *)
-{
+int finalize(void) {
+  return 0;
 }
 
-int
-send(int peer, void *payload, size_t len)
-{
+void progress(void *data) {
 }
 
-int
-put(int peer, void *dst, void *src, size_t len)
-{
+int probe(int source, int* flag, network_status_t* status) {
+  *flag = false;
+  return 0;
 }
 
-int
-get(void *dst, int peer, void *src, size_t len)
-{
+int send(int dest, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-void
-progress(void *data)
-{
+int recv(int src, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-void
-finalize(void)
-{
+int put(int dest, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-int
-probe(int source, int* flag, network_status_t *status)
-{
+int get(int src, void *buffer, size_t len, network_request_t* req) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
 }
 
-int
-test(network_request_t *request, int *flag, network_status_t *status)
-{
+int test(network_request_t *request, int *flag, network_status_t *status) {
+  __hpx_errno = HPX_ERROR;
+  return HPX_ERROR;
+}  
+
+int pin(void* buffer, size_t len) {
+  return 0;
 }
 
-int
-phys_addr(hpx_locality_t *id)
-{
+int unpin(void* buffer, size_t len) {
+  return 0;
+}
+
+int phys_addr(struct hpx_locality *l) {
+  return 0;
 }
 
 size_t
@@ -111,4 +124,7 @@ get_network_bytes(size_t n)
 void
 barrier(void)
 {
+#if HAVE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }

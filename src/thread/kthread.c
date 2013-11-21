@@ -34,6 +34,7 @@
 #include "hpx/mem.h"
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
+#include "hpx/thread/mctx.h"
 #include "kthread.h"
 
 static pthread_key_t errno_key;

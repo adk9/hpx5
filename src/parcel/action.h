@@ -13,25 +13,19 @@
  ====================================================================
 */
 
-#pragma once
-#ifndef LIBHPX_BOOTSTRAP_MPIRUN_H_
-#define LIBHPX_BOOTSTRAP_MPIRUN_H_
+#ifndef LIBHPX_PARCEL_ACTION_H_
+#define LIBHPX_PARCEL_ACTION_H_
 
-#include <stdlib.h>
-
-#include "bootstrap.h"
-struct hpx_locality;
-extern bootstrap_ops_t mpi_boot_ops;
+#include "hpx/action.h"                         /* hpx_action_t */
+#include "hpx/system/attributes.h"
 
 /**
- * mpirun bootstrap operations
+ * Find the local mapping for an action.
+ *
+ * @param[in] key - the key we're looking up
+ * @returns the function we found
  */
+hpx_func_t action_lookup(hpx_action_t key)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
-int bootstrap_mpi_init(void);
-int bootstrap_mpi_get_rank(void);
-int bootstrap_mpi_get_addr(struct hpx_locality *);
-int bootstrap_mpi_size(void);
-int bootstrap_mpi_get_map(struct hpx_locality **);
-int bootstrap_mpi_finalize(void);
-
-#endif /* LIBHPX_BOOTSTRAP_MPIRUN_H_ */
+#endif /* LIBHPX_PARCEL_ACTION_H_ */

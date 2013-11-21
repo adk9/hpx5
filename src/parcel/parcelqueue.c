@@ -23,12 +23,12 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include <assert.h>
 #include "parcelqueue.h"
-#include "serialization.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
+#include "hpx/mutex.h"                          /* hpx_lco_mutex_* */
 #include "hpx/error.h"                          /* __hpx_errno */
+#include "debug.h"
+#include "serialization.h"
 
 /*
   ====================================================================
@@ -47,7 +47,9 @@ struct pq_node {
   void* value;
 };
 
-int parcelqueue_create(struct parcelqueue** q_handle) {
+int
+parcelqueue_create(struct parcelqueue** q_handle)
+{
   struct parcelqueue *q = *q_handle;
 
   /* allocate a queue */
@@ -70,7 +72,9 @@ int parcelqueue_create(struct parcelqueue** q_handle) {
   return HPX_SUCCESS;
 }
 
-void* parcelqueue_trypop(struct parcelqueue* q) {
+void *
+parcelqueue_trypop(struct parcelqueue* q)
+{
   /* precondition, q != NULL */
   if (q == NULL) {
     __hpx_errno = HPX_ERROR;                    /*TODO: more specific error */
@@ -88,7 +92,9 @@ void* parcelqueue_trypop(struct parcelqueue* q) {
   return val;
 }
 
-int parcelqueue_push(struct parcelqueue* q, void* val) {
+int
+parcelqueue_push(struct parcelqueue* q, void* val)
+{
   /* precondition, q != NULL */
   if (q == NULL)
     return (__hpx_errno = HPX_ERROR);           /*TODO: more specific error */
@@ -119,7 +125,9 @@ int parcelqueue_push(struct parcelqueue* q, void* val) {
 }
 
 /* for use with single reader and writer ONLY!!!! */
-int parcelqueue_push_nb(struct parcelqueue* q, void* val) {
+int
+parcelqueue_push_nb(struct parcelqueue* q, void* val)
+{
   /* precondition, q != NULL */
   if (q == NULL)
     return (__hpx_errno = HPX_ERROR);           /* TODO: more specific error */
@@ -135,7 +143,9 @@ int parcelqueue_push_nb(struct parcelqueue* q, void* val) {
   return HPX_SUCCESS;
 }
 
-int parcelqueue_destroy(struct parcelqueue** q_handle) {
+int
+parcelqueue_destroy(struct parcelqueue** q_handle)
+{
   struct parcelqueue* q = *q_handle;
 
   /* precondition, *q_handle != NULL */
@@ -146,8 +156,8 @@ int parcelqueue_destroy(struct parcelqueue** q_handle) {
   while (parcelqueue_trypop(q))
     /* empty on purpose*/;
 
-  assert(q->head && "Expected sentinel node");
-  assert(q->head == q->tail && "Expected sentinel node");
+  dbg_assert_precondition(q->head != NULL);
+  dbg_assert_precondition(q->head == q->tail);
 
   hpx_lco_mutex_destroy(q->lock);
   hpx_free(q->head);

@@ -17,41 +17,53 @@
 #ifndef LIBHPX_PARCEL_SERIALIZATION_H_
 #define LIBHPX_PARCEL_SERIALIZATION_H_
 
-#include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/action.h"                         /* hpx_action_t */
-#include "hpx/agas.h"                           /* hpx_address_t */
+#include "hpx/agas.h"                           /* struct hpx_addr */
+#include "hpx/error.h"                          /* hpx_error_t */
+#include "hpx/system/attributes.h"              /* HPX_MACROS */
+#include "address.h"                            /* struct address */
 
-/*
- ====================================================================
- Parcel serialization routines.
- ====================================================================
-*/
+typedef struct header header_t;
 
+/** Forward declarations @{ */
+struct hpx_parcel;
+/** @} */
 
 /**
- * Represents a serializated parcel. Should be kept in sync with the
- * struct parcel from hpx/parcel.h"
+ * Represents a serializated parcel.
  */
 struct header {
-  unsigned int  parcel_id;             /*!< the parcel idenitifer. */
-  hpx_action_t  action;                /*!< handle to the associated action. */
-  hpx_addr_t    dest;                  /*!< destination locality. */
-  int           flags;                 /*!< flags related to the parcel. */
-  size_t        payload_size;
-  uint8_t       payload[];             /*!< flexible array member */
-};
-
-struct hpx_parcel;
-
+  size_t            size;                       /*!< size of the header */
+  unsigned int parcel_id;                       /*!< the parcel idenitifer */
+  struct address    dest;                       /*!< HACK! target PA */
+  hpx_action_t    action;                       /*!< action key */
+  struct hpx_addr target;                       /*!< target address */
+  struct hpx_addr   cont;                       /*!< continuation address */
+  int              flags;                       /*!< flags */
+  size_t    payload_size;                       /*!< sizeof payload */
+  uint8_t      payload[];                       /*!< flexible array member */
+} HPX_ATTRIBUTE(HPX_ALIGNED(HPX_CACHELINE_SIZE));
 
 /**
-   Helper function for sending; combines parcel plus it's payload into
-   blob.
-  */
-hpx_error_t serialize(const struct hpx_parcel* parcel, struct header **out);
-hpx_error_t deserialize(const struct header* blob, struct hpx_parcel** out);
+ * Serialize a parcel.
+ *
+ * @param[in]  parcel - the parcel to serialize
+ 
+ * @returns NULL if error, or the serialized parcel (needs to be free-d)
+ */
+struct header *serialize(const struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
 
-/** Helper function for serialization; calculate the size of the parcel data */
-size_t get_parcel_size(struct header* header);
+/**
+ * Deserialize a parcel.
+ *
+ * @param[in] header - the header to deserialize
+ *
+ * @returns the parcel (needs to be free-d), or NULL if there is an error
+ */
+struct hpx_parcel *deserialize(const struct header *header)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
 
 #endif /* LIBHPX_PARCEL_SERIALIZATION_H_ */

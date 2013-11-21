@@ -18,8 +18,7 @@ AM_CFLAGS           += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 AM_CFLAGS           += @GLIB_CFLAGS@
 AM_CFLAGS           += -std=c99
 
-# during development, for now
-AM_CFLAGS           += -Wno-unused -Wno-unused-but-set-variable
+AM_LDFLAGS          = -static
 
 # allreduce uses MPI directly
 allreduce_LDADD     += @MPI_LIBS@

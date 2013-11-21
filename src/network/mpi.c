@@ -13,7 +13,7 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
- ====================================================================
+  ====================================================================
 */
 
 #ifdef HAVE_CONFIG_H
@@ -32,40 +32,59 @@
 #endif
 #include <mpi.h>
 
-#include "bootstrap/bootstrap.h"
+#include "hpx/error.h"                          /* __hpx_errno, HPX_ERROR */
+#include "hpx/globals.h"                        /* bootmgr */
+#include "bootstrap.h"                          /* bootstrap_ops_t */
+#include "debug.h"                              /* dbg_ stuff */
 #include "network.h"
-#include "hpx/action.h"
-#include "hpx/init.h"
-#include "hpx/parcel.h"
 
-#include "network_mpi.h"
+#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+/* TODO: make reasonable once we have puts/gets working */
 
-int _argc;
-char **_argv;
-char *_argv_buffer;
+static int init(void);
+static int finalize(void);
+static void progress(void *data);
+static int probe(int source, int* flag, network_status_t* status);
+static int send(int dest, void *data, size_t len, network_request_t *request);
+static int recv(int src, void *buffer, size_t len, network_request_t *request);
+static int test(network_request_t *request, int *flag, network_status_t *status);
+static int put(int dest, void *buffer, size_t len, network_request_t *request);
+static int get(int src, void *buffer, size_t len, network_request_t *request);
+static int pin(void* buffer, size_t len);
+static int unpin(void* buffer, size_t len);
+static int phys_addr(hpx_locality_t *id);
+static size_t get_network_bytes(size_t n);
+static void barrier(void);
 
 /* MPI network operations */
 network_ops_t mpi_ops = {
-    .init     = init_mpi,
-    .finalize = finalize_mpi,
-    .progress = progress_mpi,
-    .probe    = probe_mpi,
-    .send     = send_mpi,
-    .recv     = recv_mpi,
-    .sendrecv_test     = test_mpi,
-    .put      = put_mpi,
-    .get      = get_mpi,
-    .putget_test = test_mpi,
-    .pin      = pin_mpi,
-    .unpin    = unpin_mpi,
-    .phys_addr= phys_addr_mpi,
+  .init              = init,
+  .finalize          = finalize,
+  .progress          = progress,
+  .probe             = probe,
+  .send              = send,
+  .recv              = recv,
+  .sendrecv_test     = test,
+  .put               = put,
+  .get               = get,
+  .putget_test       = test,
+  .pin               = pin,
+  .unpin             = unpin,
+  .phys_addr         = phys_addr,
+  .get_network_bytes = get_network_bytes,
+  .barrier           = barrier
 };
 
-int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
-int _rank_mpi;
-int _size_mpi;
+static int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
+static int _rank_mpi = -1;
+static int _size_mpi = -1;
 
-int init_mpi(void) {
+static char **_argv = NULL;
+static char *_argv_buffer = NULL;
+
+int
+init(void)
+{
   int retval;
   int temp;
   int thread_support_provided;
@@ -77,6 +96,8 @@ int init_mpi(void) {
   /* BDM: TODO: Move to utils. Or throw out. MPI_Init can be given
      NULL, NULL so this isn't strictly necessary. */
 #if __linux__
+  int _argc = 0;
+
   /* TODO: find way to do this when NOT on Linux, since /proc is Linux-specific */
 
   /* Procedure:
@@ -157,9 +178,9 @@ int init_mpi(void) {
     _argc++;
   }
 
- read_fail:
+read_fail:
   free(_argv_buffer);
- fail:
+fail:
   if (fallback) {
     _argc = 0;
     _argv = NULL;
@@ -186,9 +207,9 @@ int init_mpi(void) {
   else
     retval = HPX_SUCCESS;
 
-  #if DEBUG
+#if DEBUG
   printf("thread_support_provided = %d\n", thread_support_provided);
-  #endif
+#endif
 
   /* cache size and rank */
   _rank_mpi = bootmgr->get_rank();
@@ -197,22 +218,13 @@ int init_mpi(void) {
   return retval;
 }
 
-int send_parcel_mpi(hpx_locality_t * loc, hpx_parcel_t * parc) {
-  /* pseudocode:
-     if size > eager_threshold:
-       send notice to other process of intent to put via rdma
-       put data via rdma
-     else:
-       send parcel using _send_mpi
-  */
-  return HPX_ERROR;
-}
-
 /* status may NOT be NULL */
-int probe_mpi(int source, int* flag, network_status_t* status) {
+int
+probe(int source, int* flag, network_status_t* status)
+{
   int retval;
   int temp;
-  int mpi_src;
+  int mpi_src = -1;
   /* int mpi_len; LD:unused */
 
   retval = HPX_ERROR;
@@ -235,7 +247,9 @@ int probe_mpi(int source, int* flag, network_status_t* status) {
 }
 
 /* Send data via MPI. Presumably this will be an "eager" send. Don't use "data" until it's done! */
-int send_mpi(int dest, void *data, size_t len, network_request_t *request) {
+int
+send(int dest, void *data, size_t len, network_request_t *request)
+{
   int retval;
   int temp;
 
@@ -266,7 +280,9 @@ int send_mpi(int dest, void *data, size_t len, network_request_t *request) {
 }
 
 /* this is non-blocking recv - user must test/wait on the request */
-int recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
+int
+recv(int source, void* buffer, size_t len, network_request_t *request)
+{
   int retval;
   int temp;
   int tag;
@@ -275,12 +291,12 @@ int recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
 
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE) {
-	  mpi_src = MPI_ANY_SOURCE;
-	  tag = 0;
+    mpi_src = MPI_ANY_SOURCE;
+    tag = 0;
   }
   else {
-	  mpi_src = source;
-	  tag = source;
+    mpi_src = source;
+    tag = source;
   }
   
   /* This may go away eventually. If we take this out, we need to use MPI_Get_count to get the size (which introduces problems with threading, should we ever change that) or we need to change sending to send the size first. */
@@ -303,42 +319,45 @@ int recv_mpi(int source, void* buffer, size_t len, network_request_t *request) {
   else
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
 
- error:
+error:
   return retval;  
 }
 
 /* status may be NULL */
-int test_mpi(network_request_t *request, int *flag, network_status_t *status) {
-  int retval;
-  int temp;
-  retval = HPX_ERROR;
+int
+test(network_request_t *request, int *flag, network_status_t *status)
+{
+  MPI_Status *s = (status) ? &(status->mpi) : MPI_STATUS_IGNORE;
+  int test_result = MPI_Test(&(request->mpi), flag, s);
 
-  if (status == NULL)
-    temp = MPI_Test(&(request->mpi), flag, MPI_STATUS_IGNORE);
-  else
-    temp = MPI_Test(&(request->mpi), flag, &(status->mpi));
+  if (test_result != MPI_SUCCESS)
+    return (__hpx_errno = HPX_ERROR);
 
-  if (temp == MPI_SUCCESS) {
-    retval = 0;
-    if (*flag == true)
-      status->source = status->mpi.MPI_SOURCE;
-  }
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-
-  return retval;  
+  if (!status)
+    return HPX_SUCCESS;
+  
+  if (*flag == true)
+    status->source = status->mpi.MPI_SOURCE;
+  
+  return HPX_SUCCESS;
 }
 
-int put_mpi(int dest, void *buffer, size_t len, network_request_t *request) {
+int
+put(int dest, void *buffer, size_t len, network_request_t *request)
+{
   return HPX_ERROR;
 }
 
-int get_mpi(int src, void *buffer, size_t len, network_request_t *request) {
+int
+get(int src, void *buffer, size_t len, network_request_t *request)
+{
   return HPX_ERROR;
 }
 
 /* Return the physical network ID of the current process */
-int phys_addr_mpi(hpx_locality_t *l) {
+int
+phys_addr(hpx_locality_t *l)
+{
   int ret;
   ret = HPX_ERROR;
 
@@ -352,10 +371,14 @@ int phys_addr_mpi(hpx_locality_t *l) {
   return 0;
 }
 
-void progress_mpi(void *data) {
+void
+progress(void *data)
+{
 }
 
-int finalize_mpi(void) {
+int
+finalize(void)
+{
   int retval;
   int temp;
   retval = HPX_ERROR;
@@ -376,11 +399,34 @@ int finalize_mpi(void) {
   return retval;
 }
 
-int pin_mpi(void* buffer, size_t len) {
+int
+pin(void* buffer, size_t len)
+{
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Pinning %zd bytes at %p (MPI no-op)\n",
+             hpx_get_rank(), len, buffer); 
   return 0;
 }
 
-int unpin_mpi(void* buffer, size_t len) {
+int
+unpin(void* buffer, size_t len)
+{
+  dbg_assert_precondition(len && buffer);
+  dbg_printf("%d: Unpinning/freeing %zd bytes from buffer at %p (MPI no-op)\n",
+             hpx_get_rank(), len, buffer);
   return 0;
 }
 
+size_t
+get_network_bytes(size_t n)
+{
+  return n;
+}
+
+void
+barrier(void)
+{
+#if HAVE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
