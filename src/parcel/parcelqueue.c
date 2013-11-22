@@ -23,6 +23,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <stdbool.h>
 #include "parcelqueue.h"
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "hpx/mutex.h"                          /* hpx_lco_mutex_* */
@@ -67,7 +69,8 @@ parcelqueue_create(struct parcelqueue** q_handle)
   /* initialize the fields */
   q->head->next = NULL;
   q->tail = q->head;
-  q->lock = hpx_lco_mutex_create(0);
+  q->head_lock = hpx_lco_mutex_create(0);
+  q->tail_lock = hpx_lco_mutex_create(0);
   *q_handle = q;
   return HPX_SUCCESS;
 }
@@ -81,13 +84,17 @@ parcelqueue_trypop(struct parcelqueue* q)
     return NULL;
   }
   
+  hpx_lco_mutex_lock(q->head_lock);
   struct pq_node *node = q->head;
-  struct pq_node *next = node->next;            /* LD: don't like this, we */
-  if (!next)                                    /* race with push here but */
-    return NULL;                                /* we're assuming that's ok */
-  
+  struct pq_node *next = node->next; 
+  if (next == NULL) {                       
+    hpx_lco_mutex_unlock(q->head_lock);
+    return NULL;                     
+  }  
+
   void* val = next->value;
   q->head = next;                               /* LD: atomic? */
+  hpx_lco_mutex_unlock(q->head_lock);
   hpx_free(node);
   return val;
 }
@@ -114,32 +121,13 @@ parcelqueue_push(struct parcelqueue* q, void* val)
      TODO: FIX THIS!
   */
   /* CRITICAL SECTION */
-  hpx_lco_mutex_lock(q->lock);
+  hpx_lco_mutex_lock(q->tail_lock);
 
   q->tail->next = node;
   q->tail = node;
 
-  hpx_lco_mutex_unlock(q->lock);
+  hpx_lco_mutex_unlock(q->tail_lock);
   /* END CRITICAL SECTION */
-  return HPX_SUCCESS;
-}
-
-/* for use with single reader and writer ONLY!!!! */
-int
-parcelqueue_push_nb(struct parcelqueue* q, void* val)
-{
-  /* precondition, q != NULL */
-  if (q == NULL)
-    return (__hpx_errno = HPX_ERROR);           /* TODO: more specific error */
-
-  struct pq_node *node = hpx_alloc(sizeof(*node));
-  if (node == NULL)
-    return (__hpx_errno = HPX_ERROR_NOMEM);
-
-  node->next = NULL;
-  node->value = val;
-  q->tail->next = node;
-  q->tail = node;
   return HPX_SUCCESS;
 }
 
@@ -159,9 +147,25 @@ parcelqueue_destroy(struct parcelqueue** q_handle)
   dbg_assert_precondition(q->head != NULL);
   dbg_assert_precondition(q->head == q->tail);
 
-  hpx_lco_mutex_destroy(q->lock);
+  hpx_lco_mutex_destroy(q->head_lock);
+  hpx_lco_mutex_destroy(q->tail_lock);
   hpx_free(q->head);
   hpx_free(q);
   q = NULL;
   return HPX_SUCCESS;
+}
+
+bool parcelqueue_empty(struct parcelqueue* q) {
+  if (q == NULL) {
+    __hpx_errno = HPX_ERROR;                    /*TODO: more specific error */
+    return NULL;
+  }
+  
+  hpx_lco_mutex_lock(q->head_lock);
+  struct pq_node *next = q->head->next;
+  hpx_lco_mutex_unlock(q->head_lock);
+  if (next == NULL)
+    return true;                     
+  else
+    return false;
 }

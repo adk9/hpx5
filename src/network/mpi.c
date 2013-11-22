@@ -38,7 +38,7 @@
 #include "debug.h"                              /* dbg_ stuff */
 #include "network.h"
 
-#define EAGER_THRESHOLD_MPI_DEFAULT 10240
+#define EAGER_THRESHOLD_MPI_DEFAULT INT_MAX /* make sure all messages go through send/recv and not put/get (which are not implemented) */
 /* TODO: make reasonable once we have puts/gets working */
 
 static int init(void);
@@ -65,9 +65,13 @@ network_ops_t mpi_ops = {
   .send              = send,
   .recv              = recv,
   .sendrecv_test     = test,
+  .send_test         = test,
+  .recv_test         = test,
   .put               = put,
   .get               = get,
   .putget_test       = test,
+  .put_test          = test,
+  .get_test          = test,
   .pin               = pin,
   .unpin             = unpin,
   .phys_addr         = phys_addr,
@@ -203,13 +207,10 @@ fail:
       retval = 0;
     else
       __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+    dbg_printf("thread_support_provided = %d\n", thread_support_provided);
   }
   else
     retval = HPX_SUCCESS;
-
-#if DEBUG
-  printf("thread_support_provided = %d\n", thread_support_provided);
-#endif
 
   /* cache size and rank */
   _rank_mpi = bootmgr->get_rank();

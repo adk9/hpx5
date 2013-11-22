@@ -54,6 +54,17 @@ hpx_action_t hpx_action_register(const char *name, hpx_func_t func);
 void hpx_action_registration_complete(void);
 
 /**
+ * Indicate if action registration is complete.
+ */
+bool hpx_is_action_registration_complete(void);
+
+/**
+ * Suspend execution of this thread until registration is complete.
+ */
+void hpx_waitfor_action_registration_complete(void);
+
+/** 
+ *  Lookup actions in the local action table by their name 
  * Create a local thread to perform the action.
  *
  * @param[in]  action - the action id we want to perform

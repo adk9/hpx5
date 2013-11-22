@@ -41,6 +41,7 @@ static int probe(int source, int* flag, network_status_t* status);
 static int put(int dest, void* buffer, size_t len, network_request_t *request);
 static int get(int src, void* buffer, size_t len, network_request_t *request);
 static int test(network_request_t *request, int *flag, network_status_t *status);
+static int test_get(network_request_t *request, int *flag, network_status_t *status);
 static int pin(void* buffer, size_t len);
 static int unpin(void* buffer, size_t len);
 static int phys_addr(hpx_locality_t *l);
@@ -56,9 +57,13 @@ network_ops_t photon_ops = {
   .send              = put,
   .recv              = get,
   .sendrecv_test     = test,
+  .send_test         = test,
+  .recv_test         = test_get,
   .put               = put,
   .get               = get,
   .putget_test       = test,
+  .put_test          = test,
+  .get_test          = test_get,
   .pin               = pin,
   .unpin             = unpin,
   .phys_addr         = phys_addr,
@@ -222,13 +227,16 @@ get(int src, void* buffer, size_t len, network_request_t *request)
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
-  /* tell the source ledger saying we retrieved its buffer */
+
+#if 0
   temp = photon_send_FIN(src);
   if (temp != 0) {
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
+#endif
 
+  retval = HPX_SUCCESS;
  error:
   return retval;
 }
@@ -240,7 +248,7 @@ test(network_request_t *request, int *flag, network_status_t *status)
   int retval;
   int temp;
   struct photon_status_t stat;
-  int type; /* 0=RDMA completion event, 1=ledger entry */
+  int type = 0; /* 0=RDMA completion event, 1=ledger entry */
 
   retval = HPX_ERROR;
 
@@ -249,15 +257,42 @@ test(network_request_t *request, int *flag, network_status_t *status)
   }
   else {
     temp = photon_test((request->photon), flag, &type, &(status->photon));
-	status->source = (int)status->photon.src_addr;
+    status->source = (int)status->photon.src_addr;
+    status->count = status->photon.size;
   }
 
-  if (temp == 0)
-    retval = 0;
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
+  if (temp != 0)
+    return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
 
-  return retval;  
+  return HPX_SUCCESS;  
+}
+
+int 
+test_get(network_request_t *request, int *flag, network_status_t *status) {
+  int temp;
+  struct photon_status_t stat;
+  int type = 0; /* 0=RDMA completion event, 1=ledger entry */
+
+  if (status == NULL) {
+    temp = photon_test((request->photon), flag, &type, &stat);
+  }
+  else {
+    temp = photon_test((request->photon), flag, &type, &(status->photon));
+    status->source = (int)status->photon.src_addr;
+    status->count = status->photon.size;
+  }
+
+  if (temp == 0 && *flag == 1 && type == 0) {
+    temp = photon_send_FIN(status->photon.src_addr);
+    if (temp != 0) {
+      return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
+    }
+  }
+
+  if (temp != 0)
+    return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
+
+  return HPX_SUCCESS;
 }
 
 
@@ -284,14 +319,13 @@ probe(int src, int *flag, network_status_t *status)
 	else {
 		temp = photon_probe_ledger(phot_src, flag, PHOTON_SEND_LEDGER, &status->photon);
 		status->source = (int)status->photon.src_addr;
+		status->count = status->photon.size;
 	}
 
 	if (temp == 0)
 		retval = HPX_SUCCESS;
 	else
 		__hpx_errno = HPX_ERROR;
-
-	status->count = status->photon.size;
 
 	return retval;
 }

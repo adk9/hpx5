@@ -54,14 +54,16 @@ request_list_append(request_list_t *list, struct header *parcel)
     __hpx_errno = HPX_ERROR_NOMEM;
     return NULL;
   }    
-
   node->parcel = parcel;
-  node->next = list->head;
-  list->head = node;
-  if (list->tail == NULL)
-    list->tail = node;
+  node->next = NULL;
+  if (list->head == NULL)
+    list->head = node;
+  if (list->tail != NULL)
+    list->tail->next = node;
+  list->tail = node;
 
   list->size++;
+
   return &node->request;
 }
 
@@ -91,6 +93,10 @@ request_list_next(request_list_t *list)
     list->prev = list->curr;
     list->curr = list->curr->next;
   }
+  else if (list->size > 0) {
+    list->prev = NULL;
+    list->curr = list->head;
+    }
 }
 
 void

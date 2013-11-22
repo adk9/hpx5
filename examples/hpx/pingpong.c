@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   hpx_thread_wait(fut);
   double elapsed = hpx_elapsed_us(ts);
   double avg_oneway_latency = elapsed/((double)(arg_iter_limit*2));
-  printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000000.0);
+  printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000.0);
 
   hpx_locality_destroy(other_loc);
   hpx_cleanup();
@@ -121,8 +121,10 @@ static void action_pingpong(void *unused) {
       hpx_parcel_t *p = hpx_parcel_acquire(0);
       CHECK_NOT_NULL(p, "Failed to acquire parcel in 'pingpong' action");
       hpx_parcel_set_action(p, done);
-      hpx_parcel_send(hpx_locality_from_rank(i), p, NULL, NULL, NULL);
+      hpx_locality_t* loc = hpx_locality_from_rank(i);
+      hpx_parcel_send(loc, p, NULL, NULL, NULL);
       hpx_parcel_release(p);
+      hpx_locality_destroy(loc);
     }
   }
   
