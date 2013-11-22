@@ -131,8 +131,10 @@ struct network_ops {
   int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
 
   /**
-   * Test for completion of send or receive.
-   *
+   * Test for completion of send or receive. (For now the more
+   * specific send_test and recv_test should be used. In the future,
+   * that may change.)
+   * 
    * @param[in] request -
    * @param[out]   flag -
    * @param[out] status -
@@ -141,6 +143,28 @@ struct network_ops {
    */
   int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);
 
+  /**
+   * Test for completion of send.
+   *
+   * @param[in] request -
+   * @param[out]   flag -
+   * @param[out] status -
+   *
+   * @returns HPX_SUCCESS or an error code
+   */
+  int (*send_test)(network_request_t *request, int *flag, network_status_t *status);
+
+  /**
+   * Test for completion of receive.
+   *
+   * @param[in] request -
+   * @param[out]   flag -
+   * @param[out] status -
+   *
+   * @returns HPX_SUCCESS or an error code
+   */
+  int (*recv_test)(network_request_t *request, int *flag, network_status_t *status);
+  /* RMA put */
   /**
    * An asynchronous RMA put operation.
    *
@@ -166,7 +190,10 @@ struct network_ops {
   int (*get)(int dest, void *buffer, size_t len, network_request_t *request); 
 
   /**
-   * Test for completion of communication.
+   * Test for completion of communication. (For now the more
+   * specific put_test and get_test should be used. In the future,
+   * that may change.)
+
    *
    * @param[in] request - the request to check
    * @param[out]   flag - LD: not sure
@@ -175,6 +202,28 @@ struct network_ops {
    * @returns HPX_SUCCESS or an error code
    */
   int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
+
+  /**
+   * Test for completion of put communication.
+   *
+   * @param[in] request - the request to check
+   * @param[out]   flag - LD: not sure
+   * @param[out] status - LD: not sure
+   *
+   * @returns HPX_SUCCESS or an error code
+   */
+  int (*put_test)(network_request_t *request, int *flag, network_status_t *status);
+
+  /**
+   * Test for completion of get communication.
+   *
+   * @param[in] request - the request to check
+   * @param[out]   flag - LD: not sure
+   * @param[out] status - LD: not sure
+   *
+   * @returns HPX_SUCCESS or an error code
+   */
+  int (*get_test)(network_request_t *request, int *flag, network_status_t *status);
 
   /**
    * Pin memory for put() or get().

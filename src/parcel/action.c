@@ -28,6 +28,7 @@
 #include "hpx/action.h"
 #include "action.h"                             /* action_lookup */
 #include "hpx/globals.h"                        /* __hpx_global_ctx */
+#include "hpx/lco.h"
 #include "hpx/parcel.h"                         /* hpx_parcel stuff */
 #include "debug.h"                              /* dbg_* stuff */
 #include "hashstr.h"                            /* hashstr() */
@@ -67,6 +68,11 @@ static struct hashtable {
   size_t        size;
   struct entry *table;
 } actions;
+
+/**
+ * Action registration completion future. Needs to be visible elsewhere.
+ */
+struct hpx_future *action_registration_complete; /* not static since actual allocation and initialization is done by hpx_init() */
 
 static void         expand(struct hashtable *);
 static hpx_action_t insert(struct hashtable *, const hpx_action_t, const hpx_func_t);
@@ -216,13 +222,25 @@ hpx_action_register(const char *name, hpx_func_t func)
 /**
  * Called after all action registration is complete.
  */
-void
-hpx_action_registration_complete(void)
-{
-  /* currently we perform a full network barrier in order to make sure that the
-   * action table has been installed globally, so that we don't wind up with an
-   * hpx_action_invoke() request before local action invocation is complete. */
-  __hpx_network_ops->barrier();
+void 
+hpx_action_registration_complete(void) {
+  hpx_lco_future_set_state(action_registration_complete);
+}
+
+/**
+ * Called to determine if action registration is complete.
+ */
+bool 
+hpx_is_action_registration_complete(void) {
+  return hpx_lco_future_isset(action_registration_complete);
+}
+
+/**
+ * Called to wait for action registration to complete.
+ */
+void 
+hpx_waitfor_action_registration_complete(void) {
+  hpx_thread_wait(action_registration_complete);
 }
 
 /**

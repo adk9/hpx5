@@ -24,8 +24,10 @@
 #endif
 
 #include "parcelhandler.h"                      /* public interface */
+#include "hpx/error.h"
 #include "hpx/globals.h"                        /* __hpx_network_ops */
 #include "hpx/lco.h"                            /* hpx_future_t */
+#include "hpx/parcel.h"                         /* hpx_parcel_* */
 #include "hpx/thread/ctx.h"                     /* hpx_context_t */
 #include "debug.h"                              /* dbg_ routines */
 #include "hashstr.h"                            /* hashstr() */
@@ -36,12 +38,9 @@
 #include "request_list.h"                       /* struct request_list */
 #include "serialization.h"                      /* struct header */
 
-// #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent
-// via put/get 
-/* At present, the threshold is used with the payload_size. BUT doesn't it make
-// more sense to compare against total parcel size? The action name factors in
-// then... */ 
-#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX
+// #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
+/* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
+#define HPX_PARCELHANDLER_GET_THRESHOLD SIZE_MAX /* SIZE_MAX ensures all parcels go through send/recv not put/get */
 
 /* TODO: make configurable (and find a good, sane size) */
 static const size_t REQUEST_BUFFER_SIZE     = 2048;
@@ -109,12 +108,13 @@ static int
 complete_requests(request_list_t* list, test_function_t test, bool send)
 {
   int count = 0;
+
   request_list_begin(list);
   network_request_t* req;                       /* loop iterator */
   int flag;                                     /* used in test */
   while ((req = request_list_curr(list)) != NULL) {
-    dbg_check_success(test(req, &flag, NULL));
-    if (flag == 1) {
+    int success = test(req, &flag, NULL);
+    if (flag == 1 && success == 0) {
       header_t* header = request_list_curr_parcel(list);
       request_list_del(list);
       dbg_check_success(complete(header, send));
@@ -128,6 +128,8 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
 static void
 parcelhandler_main(parcelhandler_t *args)
 {
+  hpx_waitfor_action_registration_complete(); /* make sure action registration is done or else the parcel handler can't invoke actions */
+
   int success;
 
   hpx_future_t* quit = args->quit;
@@ -185,7 +187,7 @@ parcelhandler_main(parcelhandler_t *args)
 
     /* cleanup outstanding sends/puts */
     if (outstanding_sends > 0) {
-      completions = complete_requests(&send_requests, __hpx_network_ops->sendrecv_test, true);
+      completions = complete_requests(&send_requests, __hpx_network_ops->send_test, true);
       outstanding_sends -= completions;
       if (HPX_DEBUG && (completions > 0)) {
         completed_something = 1;
@@ -203,13 +205,11 @@ parcelhandler_main(parcelhandler_t *args)
         /* TODO: signal error to somewhere else! */
       }
       dst_rank = header->dest.locality.rank;
-      //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
       dbg_printf("%d: Sending %zd bytes from buffer at %p with "
                  "parcel_id=%u action=%" HPX_PRIu_hpx_action_t "\n",
                  hpx_get_rank(), header->size, (void*)header, header->parcel_id,
                  header->action);
       req = request_list_append(&send_requests, header);
-      //      printf("Sending %zd bytes from buffer at %tx\n", size, (ptrdiff_t)header);
       dbg_printf("%d: Sending with request at %p from buffer at %p\n",
                  hpx_get_rank(), (void*)req, (void*)header); 
       __hpx_network_ops->send(dst_rank, 
@@ -224,7 +224,7 @@ parcelhandler_main(parcelhandler_t *args)
        ==================================
     */
     if (outstanding_recvs > 0) {
-      completions = complete_requests(&recv_requests, __hpx_network_ops->sendrecv_test, false);
+      completions = complete_requests(&recv_requests, __hpx_network_ops->recv_test, false);
       outstanding_recvs -= completions;
       if (HPX_DEBUG && (completions > 0)) {
         completed_something = 1;
@@ -233,19 +233,17 @@ parcelhandler_main(parcelhandler_t *args)
     }
   
     /* Now check for new receives */
-    __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
-    if (flag > 0) { /* there is a message to receive */
+    success = __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
+    if (success == 0 && flag > 0) { /* there is a message to receive */
       if (HPX_DEBUG) {
         initiated_something = 1;
         probe_successes++;
       }
+      else {
+	/* TODO: handle error */
+      }
     
-#if HAVE_PHOTON
-      recv_size = (size_t)status.photon.size;
-#else
       recv_size = status.count;
-      // recv_size = RECV_BUFFER_SIZE;
-#endif
       success = hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
       if (success != 0 || recv_buffer == NULL) {
         __hpx_errno = HPX_ERROR_NOMEM;
@@ -273,7 +271,7 @@ parcelhandler_main(parcelhandler_t *args)
       }
     }
   
-    if (hpx_lco_future_isset(quit) == true)
+  if (hpx_lco_future_isset(quit) == true && outstanding_sends == 0 && outstanding_recvs == 0 && parcelqueue_empty(__hpx_send_queue))
       break;
     /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. */
     i++;
@@ -322,11 +320,11 @@ parcelhandler_destroy(parcelhandler_t *ph)
   if (!ph)
     return;
   
-  network_barrier();
-
+  /* Now shut down the parcel handler */
   hpx_lco_future_set_state(ph->quit);
   hpx_thread_wait(ph->fut);
 
+  /* Now cleanup any remaining variables */
   hpx_lco_future_destroy(ph->quit);
   hpx_free(ph->quit);
   hpx_free(ph);

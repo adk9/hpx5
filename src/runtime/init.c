@@ -33,12 +33,48 @@
 #include "bootstrap.h"                          /* struct bootstrap_ops */
 #include "network.h"
 #include "parcelhandler.h"                      /* struct parcelhandler */
-
+#include "predefined_actions.h"                 /* init_predefined() */
 
 /**
  * There's one parcelhandler per (UNIX) process at this point.
  */
 static struct parcelhandler *the_parcelhandler = NULL;
+
+extern hpx_future_t *action_registration_complete;
+
+/**
+ * Wait for all other ranks to signal shutdown
+ */
+void
+waitfor_shutdown() 
+{
+  unsigned i;
+  unsigned num_localities;
+  
+  /* First, we need to wait for all other localities to reach this point. */
+  num_localities = hpx_get_num_localities();
+
+  for (i = 0; i < num_localities; i++) {
+    struct {size_t rank;} *arg;
+    arg = hpx_alloc(sizeof(*arg));
+    arg->rank = (size_t)hpx_get_rank();
+    struct hpx_parcel* p = hpx_parcel_acquire(sizeof(*arg));
+    if (p == NULL) {
+      __hpx_errno = HPX_ERROR;
+      return;
+    }
+    hpx_parcel_set_action(p, action_set_shutdown_future);
+    hpx_parcel_set_data(p, arg, sizeof(*arg));
+    hpx_locality_t *loc = hpx_locality_from_rank(i);
+    hpx_parcel_send(loc, p, NULL, NULL, NULL);
+    hpx_parcel_release(p);
+    hpx_locality_destroy(loc);
+  }
+  for (i = 0; i < num_localities; i++)
+    hpx_thread_wait(&shutdown_futures[i]);
+
+  return;
+}
 
 /**
  * Initializes data structures used by libhpx.
@@ -109,12 +145,18 @@ hpx_init(void)
     return __hpx_errno;
 #endif
 
+  /* initialize actions - must be done before parcel system is initialized */
+  action_registration_complete = hpx_alloc(sizeof(*action_registration_complete));
+  if (action_registration_complete == NULL)
+    return __hpx_errno = HPX_ERROR_NOMEM;
+  hpx_lco_future_init(action_registration_complete);
+  init_predefined();
+
   /* initialize the parcel subsystem */
   hpx_parcel_init();
 #if HAVE_NETWORK
   the_parcelhandler = parcelhandler_create(__hpx_global_ctx);
 #endif
-
   return success;
 }
 
@@ -128,10 +170,18 @@ void hpx_cleanup(void) {
   /* shutdown the parcel subsystem */
   //hpx_parcel_fini();
 
+  waitfor_shutdown(); /* should be done before destroying parcelhandler */
+
   parcelhandler_destroy(the_parcelhandler); /* NULL param ok */
+
+  /* shutdown the parcel subsystem */
+  //hpx_parcel_fini();
 
   hpx_ctx_destroy(__hpx_global_ctx); /* note we don't need to free the context - destroy does that */
   hpx_free(__hpx_global_cfg);
+
+  hpx_lco_future_destroy(action_registration_complete);
+  hpx_free(action_registration_complete);
 
   /* finalize the network */
 #if HAVE_NETWORK
