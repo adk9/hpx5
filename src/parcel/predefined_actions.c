@@ -15,25 +15,25 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
-
 #include "hpx/error.h"
 #include "hpx/lco.h"
-#include "hpx/mem.h"
-#include "hpx/runtime.h" /* hpx_get_num_localities() */
+#include "hpx/mem.h"                            /*  */
+#include "hpx/runtime.h"                        /* hpx_get_num_localities() */
 #include "predefined_actions.h"
 
-#include <stdio.h>
+hpx_action_t action_set_shutdown_future = HPX_ACTION_NULL;
+hpx_future_t *shutdown_futures = NULL;
 
-hpx_error_t init_shutdown_futures();
+static hpx_error_t init_shutdown_futures();
 
-void set_shutdown_future(void* arg);
+static void set_shutdown_future(void* arg);
 
 /**
  * Allocate and initialize an array of n futures.
  */
 static hpx_error_t alloc_and_init_futures(hpx_future_t **fut_arr, unsigned n) {
   unsigned i;
-  hpx_future_t *futs = hpx_alloc(sizeof(hpx_future_t)*n);
+  hpx_future_t *futs = hpx_alloc(sizeof(*futs) * n);
   if (futs == NULL)
     return (__hpx_errno = HPX_ERROR_NOMEM);
   for (i = 0; i < n; i++)

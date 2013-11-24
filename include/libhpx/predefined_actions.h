@@ -20,8 +20,8 @@
 #include "hpx/action.h"
 #include "hpx/error.h"
 
-hpx_action_t action_set_shutdown_future;      /* set the shutdown_futures for the appropriate rank/locality */
-hpx_future_t *shutdown_futures;               /* futures for each rank for shutdown sequence; for use with action_set_shutdown_future */
+extern hpx_action_t action_set_shutdown_future;      /* set the shutdown_futures for the appropriate rank/locality */
+extern hpx_future_t *shutdown_futures;               /* futures for each rank for shutdown sequence; for use with action_set_shutdown_future */
 
 /**
  * Do any intialization needed by predefined actions.
