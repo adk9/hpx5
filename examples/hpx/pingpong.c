@@ -55,6 +55,12 @@ static void register_actions();
     }                                                         \
   } while (0)
 
+#define RANK_PRINTF(format, ...)                                        \
+  do {                                                                  \
+    if (arg_screen_out)                                                 \
+      printf("\t%d: " format, hpx_get_my_locality()->rank, __VA_ARGS__); \
+  } while (0)
+
 int main(int argc, char *argv[]) {  
   if (hpx_init()) {
     fprintf(stderr, "Failed to initialize hpx\n");
@@ -101,9 +107,9 @@ static void action_pingpong(void *unused) {
 
   unsigned int my_rank = hpx_get_my_locality()->rank;
   if (my_rank == 0) {
-    printf("Running pingpong on %d ranks between rank 0 and rank %d\n",
-           hpx_get_num_localities(),
-           other_loc->rank); 
+    RANK_PRINTF("Running pingpong on %d ranks between rank 0 and rank %d\n",
+                 hpx_get_num_localities(),
+                 other_loc->rank); 
   
     /* ok to use the stack, since we're waiting on the done future */
     args_t args = { -1, {0}};
@@ -115,9 +121,7 @@ static void action_pingpong(void *unused) {
   /* make sure any non-participating localities shut down */
   if (my_rank == 0) {
     for (int i = 1; i < hpx_get_num_localities() - 1; ++i) {
-      if (arg_screen_out)
-        printf("0: sending done to loc %d\n", i);
-   
+      RANK_PRINTF("sending done to loc %d\n", i);
       hpx_parcel_t *p = hpx_parcel_acquire(0);
       CHECK_NOT_NULL(p, "Failed to acquire parcel in 'pingpong' action");
       hpx_parcel_set_action(p, done);
@@ -135,9 +139,7 @@ static void action_pingpong(void *unused) {
  * Sets the done future.
  */
 static void action_done(void* args) {
-  if (arg_screen_out)
-    printf("%d: recieved done\n", hpx_get_my_locality()->rank);
-
+  RANK_PRINTF("received %s\n", "done");
   hpx_lco_future_set_state(&done_fut);
   hpx_thread_exit(0);
 }
@@ -146,9 +148,7 @@ static void action_done(void* args) {
  * Send a ping message.
  */
 static void action_ping(args_t* args) {
-  if (arg_screen_out)
-    printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
-
+  RANK_PRINTF("received '%s'\n", args->msg);
   int id = args->id + 1;
 
   if (id < arg_iter_limit) {
@@ -156,9 +156,8 @@ static void action_ping(args_t* args) {
     if (arg_text_ping)
       snprintf(args->msg, BUFFER_SIZE, "ping %d from proc 0", args->id);
 
-    if (arg_screen_out)
-      printf("%d: sending ping to loc %d, count=%d, message='%s'\n",
-             hpx_get_my_locality()->rank, other_loc->rank, count, args->msg);
+    RANK_PRINTF("sending ping to loc %d, count=%d, message='%s'\n",
+                 other_loc->rank, count, args->msg);
     
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
@@ -185,22 +184,19 @@ static void action_ping(args_t* args) {
  * Send a pong argument.
  */
 static void action_pong(args_t* args) {
-  if (arg_screen_out)
-    printf("%d: received '%s'\n", hpx_get_my_locality()->rank, args->msg);
-
+  RANK_PRINTF("received '%s'\n", args->msg);
   if (args->id < arg_iter_limit) {
     args->id = args->id + 1;
 
     if (arg_text_ping) {
       char copy_buffer[BUFFER_SIZE];
-      snprintf(copy_buffer, BUFFER_SIZE,
-               "Received ping at %d: '%s'", args->id, args->msg);
+      snprintf(copy_buffer, BUFFER_SIZE, "Received ping at %d: '%s'", args->id,
+               args->msg); 
       strncpy(args->msg, copy_buffer, BUFFER_SIZE);
     }
     
-    if (arg_screen_out)
-      printf("%d: sending pong to loc %d, count=%d, message='%s'\n",
-             hpx_get_my_locality()->rank, other_loc->rank, count, args->msg);
+    RANK_PRINTF("sending pong to loc %d, count=%d, message='%s'\n",
+                other_loc->rank, count, args->msg); 
 
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
