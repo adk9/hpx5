@@ -34,7 +34,8 @@ struct hpx_parcel;
  * @returns A pointer to a parcel, or NULL if there is an error. The parcel will
  *          have its fields initialized to their default value.
  */
-struct hpx_parcel *parcel_get(size_t bytes);
+struct hpx_parcel *parcel_get(size_t bytes)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
 /**
  * Return a parcel to the allocator.
@@ -43,6 +44,7 @@ struct hpx_parcel *parcel_get(size_t bytes);
  *                     parcel_get, and must not be NULL
  */
 void parcel_put(struct hpx_parcel *parcel)
-  HPX_ATTRIBUTE(HPX_NON_NULL(1));
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
 
 #endif /* LIBHPX_PARCEL_ALLOCATOR_H_ */
