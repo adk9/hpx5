@@ -13,9 +13,6 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-  Luke Dalessandro   <ldalessa [at] indiana.edu>
   ====================================================================
 */
 
@@ -35,6 +32,7 @@
 #include "hpx/thread.h"                         /* hpx_thread_create */
 #include "action.h"                             /* action_lookup */
 #include "address.h"                            /* get_local_address */
+#include "allocator.h"                          /* parcel_put/get */
 #include "debug.h"                              /* dbg_ suff */
 #include "init.h"                               /* hpx_parcel_init/fini */
 #include "parcel.h"                             /* struct hpx_parcel */
@@ -43,28 +41,9 @@
 struct hpx_locality;
 struct hpx_thread;
 
-/** temporary get/put interfaces @{ */
-static hpx_parcel_t *
-parcel_get(size_t bytes)
-{
-  hpx_parcel_t *p = malloc(sizeof(hpx_parcel_t) + bytes);
-  p->data         = &p->payload;
-  p->size         = bytes;
-  p->action       = HPX_ACTION_NULL;
-  p->target       = HPX_NULL;
-  p->cont         = HPX_NULL;
-  bzero(&p->payload, bytes);
-  return p;
-}
-
-static void
-parcel_put(hpx_parcel_t *parcel)
-{
-  dbg_assert_precondition(parcel);
-  free(parcel);
-}
-/** @} */
-
+/** Parcel subsystem initializer and finalizer.
+ *  @{
+ */
 hpx_error_t
 hpx_parcel_init(void)
 {
@@ -76,6 +55,7 @@ hpx_parcel_fini(void)
 {
   /* shutdown the parcel handler thread */
 }
+/** @} */
 
 /**
  * Forward the request for a parcel to the parcel allocator.
