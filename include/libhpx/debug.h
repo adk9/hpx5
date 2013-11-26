@@ -48,6 +48,19 @@
 #endif
 
 /**
+ * @brief dbg_logf
+ */
+#ifdef ENABLE_DEBUG
+#define dbg_logf(...)                           \
+  do {                                          \
+    fprintf(stdout, "\tLog: "__VA_ARGS__);      \
+    fflush(stdout);                             \
+  } while (0)
+#else
+#define dbg_logf(...)
+#endif
+
+/**
  * @brief dbg_print_error 
  */
 #ifdef ENABLE_DEBUG

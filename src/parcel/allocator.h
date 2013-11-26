@@ -22,7 +22,6 @@
 #ifndef LIBHPX_PARCEL_ALLOCATOR_H_
 #define LIBHPX_PARCEL_ALLOCATOR_H_
 
-#include <stddef.h>
 #include "hpx/system/attributes.h"
 
 struct hpx_parcel;
@@ -34,7 +33,7 @@ struct hpx_parcel;
  * @returns A pointer to a parcel, or NULL if there is an error. The parcel will
  *          have its fields initialized to their default value.
  */
-struct hpx_parcel *parcel_get(size_t bytes)
+struct hpx_parcel *parcel_get(int bytes)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
 /**
@@ -46,5 +45,8 @@ struct hpx_parcel *parcel_get(size_t bytes)
 void parcel_put(struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
+
+int parcel_allocator_initialize(void);
+int parcel_allocator_finalize(void);
 
 #endif /* LIBHPX_PARCEL_ALLOCATOR_H_ */

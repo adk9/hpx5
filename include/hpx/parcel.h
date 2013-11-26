@@ -25,7 +25,6 @@
 /**
  * @file @brief Provides the user-level parcel interface.
  */
-#include <stddef.h>                             /* size_t */
 #include "hpx/system/attributes.h"              /* MACROS */
 #include "hpx/action.h"                         /* hpx_action_t */
 
@@ -54,7 +53,7 @@ struct hpx_address;
  * @param[in] bytes - the number of bytes in the payload to allocate
  * @returns a pointer to an allocated hpx_parcel, or NULL if there is an error
  */
-hpx_parcel_t *hpx_parcel_acquire(size_t bytes);
+hpx_parcel_t *hpx_parcel_acquire(int bytes);
 
 /**
  * Release a user-level parcel back to the runtime.
@@ -151,7 +150,7 @@ int hpx_parcel_send(struct hpx_locality *dest,
  *
  * @code
  * hpx_parcel_t *parcel = {...};
- * size_t size = {...};
+ * int size = {...};
  * hpx_parcel_t *q = hpx_parcel_acquire(size);
  * hpx_parcel_copy(q, parcel);
  * hpx_parcel_release(parcel);
@@ -170,7 +169,7 @@ int hpx_parcel_send(struct hpx_locality *dest,
  * @param[in] size   - the target size
  * @returns non-zero if an error condition occurred
  */
-int hpx_parcel_resize(hpx_parcel_t **parcel, size_t size)
+int hpx_parcel_resize(hpx_parcel_t **parcel, int size)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -271,7 +270,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *parcel)
  * @param[in]   data - the address of the data to set
  * @param[in] length - the number of bytes of data to set
  */
-void hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+void hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, int length)
   HPX_ATTRIBUTE(HPX_NON_NULL(1,2));
 
 #endif /* HPX_PARCEL_H_ */

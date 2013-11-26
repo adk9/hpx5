@@ -20,20 +20,23 @@
 #include <stdint.h>
 #include "sync.h"
 
-
 struct tatas_lock {
     uintptr_t lock;
 };
 
-void tatas_init(struct tatas_lock *l);
+typedef struct tatas_lock tatas_lock_t;
 
-void tatas_acquire_slow(struct tatas_lock *l);
+#define TATAS_INIT {0}
 
-void tatas_acquire(struct tatas_lock *l) {
+void tatas_init(tatas_lock_t *l);
+
+void tatas_acquire_slow(tatas_lock_t *l);
+
+static inline void tatas_acquire(tatas_lock_t *l) {
     if (sync_swap(&l->lock, 1, SYNC_ACQUIRE))
         tatas_acquire_slow(l);
 }
-void tatas_release(struct tatas_lock *l) {
+static inline void tatas_release(tatas_lock_t *l) {
     sync_store(&l->lock, 0, SYNC_RELEASE);
 }
 

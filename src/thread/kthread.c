@@ -40,6 +40,17 @@
 static pthread_key_t errno_key;
 static pthread_key_t kth_key;
 
+typedef struct snode {
+  struct snode *next;
+  void (*f)(void);
+} snode_t;
+
+static struct {
+  snode_t *head;
+  snode_t *tail;
+} on_init = { NULL, NULL },
+  on_fini = { NULL, NULL };
+
 /*
  --------------------------------------------------------------------
  make_keys
@@ -52,6 +63,16 @@ static void make_keys(void) {
   (void) pthread_key_create(&kth_key, NULL);
 }
 
+static void init(void) {
+  for (snode_t *i = on_init.head, *e = on_init.tail; i != e; i = i->next)
+    i->f();
+}
+
+/* static void fini(void) { */
+/*   for (snode_t *i = on_fini.head, *e = on_fini.tail; i != e; i = i->next) */
+/*     i->f(); */
+/* } */
+
 /*
  --------------------------------------------------------------------
   hpx_kthread_init
@@ -62,6 +83,7 @@ static void make_keys(void) {
 void libhpx_kthread_init(void) {
     static pthread_once_t init_once = PTHREAD_ONCE_INIT;
     pthread_once(&init_once, make_keys);
+    pthread_once(&init_once, init);
 }
 
 /*
@@ -584,4 +606,18 @@ void libhpx_kthread_srv_rebal(void *ptr) {
   }
 
   hpx_thread_exit(NULL);
+}
+
+void kthread_on_initialize(void (*f)(void)) {
+  snode_t *node = malloc(sizeof(*node));
+  node->next = on_init.head;
+  node->f = f;
+  on_init.head = node;
+}
+
+void kthread_on_finalize(void (*f)(void)) {
+  snode_t *node = malloc(sizeof(*node));
+  node->next = on_fini.head;
+  node->f = f;
+  on_fini.head = node;
 }

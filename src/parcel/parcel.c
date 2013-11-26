@@ -47,13 +47,14 @@ struct hpx_thread;
 hpx_error_t
 hpx_parcel_init(void)
 {
-  return HPX_SUCCESS;
+  return parcel_allocator_initialize();
 }
 
 void
 hpx_parcel_fini(void)
 {
   /* shutdown the parcel handler thread */
+  parcel_allocator_finalize();
 }
 /** @} */
 
@@ -61,7 +62,7 @@ hpx_parcel_fini(void)
  * Forward the request for a parcel to the parcel allocator.
  */
 hpx_parcel_t *
-hpx_parcel_acquire(size_t bytes)
+hpx_parcel_acquire(int bytes)
 {
   return parcel_get(bytes);
 }
@@ -85,7 +86,7 @@ hpx_parcel_release(hpx_parcel_t *parcel)
 hpx_parcel_t *
 hpx_parcel_clone(hpx_parcel_t *parcel)
 {
-  size_t size = parcel_get_data_size(parcel);
+  int size = parcel_get_data_size(parcel);
   hpx_parcel_t *p = parcel_get(size);
   if (!p)
     return NULL;
@@ -104,9 +105,9 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
   dbg_assert_precondition(to);
   dbg_assert_precondition(from);
   
-  size_t to_size = parcel_get_data_size(to);
-  size_t from_size = parcel_get_data_size(from);
-  size_t min_size = (to_size < from_size) ? to_size : from_size;
+  int to_size = parcel_get_data_size(to);
+  int from_size = parcel_get_data_size(from);
+  int min_size = (to_size < from_size) ? to_size : from_size;
 
   to->action = from->action;
   to->target = from->target;
@@ -188,11 +189,11 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
  * @returns HPX_SUCCESS or an error code
  */
 int
-hpx_parcel_resize(hpx_parcel_t **parcel, size_t size)
+hpx_parcel_resize(hpx_parcel_t **parcel, int size)
 {
   dbg_assert_precondition(parcel);
 
-  size_t psize = parcel_get_data_size(*parcel);
+  int psize = parcel_get_data_size(*parcel);
   if (psize >= size)
     return HPX_SUCCESS;
 
@@ -249,7 +250,7 @@ hpx_parcel_get_data(hpx_parcel_t *parcel)
 }
 
 void
-hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, int length)
 {
   dbg_assert_precondition(parcel);
   dbg_assert_precondition(length <= parcel->size);
@@ -261,7 +262,7 @@ hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t
 /**
  * From libhpx/parcel.h.
  */
-size_t
+int
 parcel_get_data_size(const hpx_parcel_t *parcel)
 {
   return parcel->size;
