@@ -43,25 +43,27 @@ enum hpx_kthread_state {
 };
 
 struct hpx_kthread {
-  hpx_kthread_mutex_t       mtx;                /**< */
-  pthread_cond_t            k_c;                /**< */
-  pthread_t             core_th;                /**< */
-  hpx_queue_t            pend_q;                /**< */
-  hpx_queue_t            susp_q;                /**< */
-  struct hpx_thread    *exec_th;                /**< */
-  struct hpx_context       *ctx;                /**< */
-  uint8_t                  k_st;                /**< */
-  struct hpx_mctx_context *mctx;                /**< */
-  hpx_mconfig_t            mcfg;                /**< */
-  uint64_t               mflags;                /**< */
-  uint64_t            pend_load;                /**< */
-  uint64_t            wait_load;                /**< */
+  hpx_kthread_mutex_t       mtx;                /*!< */
+  pthread_cond_t            k_c;                /*!< */
+  pthread_t             core_th;                /*!< */
+  hpx_queue_t            pend_q;                /*!< */
+  hpx_queue_t            susp_q;                /*!< */
+  struct hpx_thread    *exec_th;                /*!< */
+  struct hpx_context       *ctx;                /*!< */
+  uint8_t                  k_st;                /*!< */
+  struct hpx_mctx_context *mctx;                /*!< */
+  hpx_mconfig_t            mcfg;                /*!< */
+  uint64_t               mflags;                /*!< */
+  uint64_t            pend_load;                /*!< */
+  uint64_t            wait_load;                /*!< */
+  int                       tid;                /*!< 0-based, dense thread id  */
 };
 
 
 void *hpx_kthread_seed_default(void *);
 
-hpx_kthread_t *hpx_kthread_create(struct hpx_context *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
+hpx_kthread_t *hpx_kthread_create(struct hpx_context *, hpx_kthread_seed_t,
+                                  hpx_mconfig_t, uint64_t, int tid);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
 hpx_kthread_t *hpx_kthread_self(void);

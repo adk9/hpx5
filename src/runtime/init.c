@@ -34,6 +34,7 @@
 #include "network.h"
 #include "parcelhandler.h"                      /* struct parcelhandler */
 #include "predefined_actions.h"                 /* init_predefined() */
+#include "sync/barriers.h"
 
 /**
  * There's one parcelhandler per (UNIX) process at this point.
@@ -157,6 +158,10 @@ hpx_init(void)
 #if HAVE_NETWORK
   the_parcelhandler = parcelhandler_create(__hpx_global_ctx);
 #endif
+
+  /* allow all of the worker threads to begin execution */
+  sr_barrier_join(__hpx_global_ctx->barrier, __hpx_global_ctx->kths_count);
+  
   return success;
 }
 
