@@ -16,7 +16,7 @@ libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            runtime/abort.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
                            utils/error.c utils/timer.c utils/config.c \
-                           utils/map.c
+                           utils/map.c 
 
 if CPU_X86_64
     libhpx_la_SOURCES   += thread/arch/x86_64/mctx.S \

@@ -40,12 +40,13 @@
  *     with it.
  */
 struct hpx_parcel {
-  void             *data;                       /*!< a pointer to the data */
-  size_t            size;                       /*!< temporarily keep size */
-  hpx_action_t    action;                       /*!< target action key */
-  struct hpx_addr target;                       /*!< target virtual address */
-  struct hpx_addr   cont;                       /*!< continuation address */
-  uint8_t      payload[];                       /*!< an in-place payload */
+  struct hpx_parcel *next;
+  void              *data;                      /*!< a pointer to the data */
+  int                size;                      /*!< temporarily keep size */
+  hpx_action_t     action;                      /*!< target action key */
+  struct hpx_addr  target;                      /*!< target virtual address */
+  struct hpx_addr    cont;                      /*!< continuation address */
+  uint8_t       payload[];                      /*!< an in-place payload */
 };
 
 /**
@@ -54,7 +55,7 @@ struct hpx_parcel {
  * @param[in] parcel - the parcel to query
  * @returns the size of parcel->data
  */
-size_t parcel_get_data_size(const struct hpx_parcel *parcel)
+int parcel_get_data_size(const struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1),
                 HPX_VISIBILITY_INTERNAL);
 
