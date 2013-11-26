@@ -31,10 +31,12 @@
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
 #include "hpx/utils/timer.h"
-#include "sync/sync.h"
 #include "init.h"                               /* libhpx_ctx_init() */
+#include "debug.h"
 #include "join.h"                               /* thread_join() */
 #include "kthread.h"
+#include "sync/barriers.h"                      /* sense-reversing barrier */
+#include "sync/sync.h"                          /* sync ops */
 
 /* the global next context ID */
 static hpx_context_id_t ctx_next_id;
@@ -51,69 +53,73 @@ libhpx_ctx_init() {
   Create & initialize a new HPX context.
  --------------------------------------------------------------------
 */
-
 hpx_context_t *
 hpx_ctx_create(hpx_config_t *cfg)
 {
-  hpx_context_t *ctx = NULL;
-  long cores = -1;
-  long x;
-
-  ctx = hpx_alloc(sizeof(*ctx));
-  if (ctx != NULL) {
-    memset(ctx, 0, sizeof(*ctx));
-    memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
-
-    /* context ID */
-    ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
-
-    /* kernel threads */
-    libhpx_kthread_init();
-    cores = hpx_config_get_cores(&ctx->cfg);
-    if (cores <= 0) {
-      __hpx_errno = HPX_ERROR_KTH_CORES;
-      goto _hpx_ctx_create_FAIL0;
-    }
-
-    /* context mutex */
-    hpx_kthread_mutex_init(&ctx->mtx);
-
-    /* terminated thread queue */
-    hpx_queue_init(&ctx->term_ths);
-
-    /* reusable stack queue */
-    hpx_queue_init(&ctx->term_stks);
-
-    /* LCOs to destroy */
-    hpx_queue_init(&ctx->term_lcos);
-
-    /* get the CPU configuration and set switching flags */
-    ctx->mcfg = hpx_mconfig_get();
-
-    /* hardware topology */
-    //    hwloc_topology_init(&ctx->hw_topo);
-    //    hwloc_topology_load(ctx->hw_topo);
-
-    ctx->kths = hpx_calloc(cores, sizeof(ctx->kths[0]));
-    if (ctx->kths != NULL) {
-      for (x = 0; x < cores; x++) {
-        ctx->kths[x] = hpx_kthread_create(ctx, hpx_kthread_seed_default,
-                                          ctx->mcfg,
-                                          hpx_config_get_switch_flags(&ctx->cfg));
-        if (ctx->kths[x] == NULL) {
-          goto _hpx_ctx_create_FAIL0;
-        } else {
-          hpx_kthread_set_affinity(ctx->kths[x], x);
-        }
-      }
-    } else {
-      __hpx_errno = HPX_ERROR_NOMEM;
-      goto _hpx_ctx_create_FAIL0;
-    }
-  } else {
-    __hpx_errno = HPX_ERROR_NOMEM;
+  int cores = hpx_config_get_cores(cfg);
+  if (cores <= 0) {
+    dbg_printf("Configuration should specify positive cores, got %i\n", cores);
+    __hpx_errno = HPX_ERROR_KTH_CORES;
+    goto error0;
   }
 
+  /* make sure that kernel threads are initialized in this address space
+     LD: should this just be done in init?
+   */
+  libhpx_kthread_init();
+  
+  hpx_context_t *ctx = hpx_alloc(sizeof(*ctx));
+  if (!ctx) {
+    dbg_printf("Could not allocate a context.\n");
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto error0;
+  }
+  
+  bzero(ctx, sizeof(*ctx));
+  memcpy(&ctx->cfg, cfg, sizeof(hpx_config_t));
+
+  ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
+  hpx_kthread_mutex_init(&ctx->mtx);
+  hpx_queue_init(&ctx->term_ths);
+  hpx_queue_init(&ctx->term_stks);
+  hpx_queue_init(&ctx->term_lcos);
+  ctx->mcfg = hpx_mconfig_get();
+
+  /* hardware topology */
+  //    hwloc_topology_init(&ctx->hw_topo);
+  //    hwloc_topology_load(ctx->hw_topo);
+
+  /* allocate the kthreads structures */
+  ctx->kths = hpx_calloc(cores, sizeof(*ctx->kths));
+  if (!ctx->kths) {
+    dbg_printf("Could not allocate %i kthreads.\n", cores);
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto error1;
+  }
+
+  int id = 0;
+  
+  /* allocate a barrier for all of the threads in the context, which will be
+     joined by the main thread after it's done initialization */
+  ctx->barrier = sr_barrier_create(cores + 1);
+  if (!ctx->barrier) {
+    dbg_printf("Could not allocate an SR barrier for the context.\n");
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto error2;
+  }
+  
+  /* create threads for each of the kthreads */
+  for (id = 0; id < cores; ++id) {
+    ctx->kths[id] = hpx_kthread_create(ctx, hpx_kthread_seed_default, ctx->mcfg,
+                                       hpx_config_get_switch_flags(&ctx->cfg),
+                                       id);
+    if (!ctx->kths[id]) {
+      dbg_printf("Could not create kthread %i in context.\n", id);
+      goto error3;
+    }
+    hpx_kthread_set_affinity(ctx->kths[id], id);
+  }
+  
   /* set the core count and index */
   ctx->kths_count = cores;
   ctx->kths_idx = 0;
@@ -124,49 +130,61 @@ hpx_ctx_create(hpx_config_t *cfg)
 
   /* create service threads: suspended thread pruner */
   ctx->srv_susp = hpx_calloc(cores, sizeof(ctx->srv_susp[0]));
-  if (ctx->srv_susp == NULL) {
+  if (!ctx->srv_susp) {
+    dbg_printf("Could not allocate service threads.\n");
     __hpx_errno = HPX_ERROR_NOMEM;
-    goto _hpx_ctx_create_FAIL1;
+    goto error4;
   }
 
   switch (hpx_config_get_thread_suspend_policy(cfg)) {
+  default:
+    dbg_printf("Unknown thread suspension policy %i.\n",
+               hpx_config_get_thread_suspend_policy(cfg));
+    break;
   case HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL:
-    for (x = 0; x < cores; x++) {
+    for (int i = 0; i < cores; ++i) {
       hpx_thread_create(ctx,
                         HPX_THREAD_OPT_SERVICE_CORELOCAL,
                         libhpx_kthread_srv_susp_local,
                         ctx,
                         NULL,
-                        &ctx->srv_susp[x]);
-      ctx->srv_susp[x]->reuse->kth = ctx->kths[x];
+                        &ctx->srv_susp[i]);
+      ctx->srv_susp[i]->reuse->kth = ctx->kths[i];
 
-      libhpx_kthread_sched(ctx->kths[x], ctx->srv_susp[x], HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
+      libhpx_kthread_sched(ctx->kths[i], ctx->srv_susp[i],
+                           HPX_THREAD_STATE_CREATE, NULL, NULL, NULL); 
     }
     break;
   case HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL:
-    hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
-                      libhpx_kthread_srv_susp_global, ctx, NULL,
+    hpx_thread_create(ctx,
+                      HPX_THREAD_OPT_SERVICE_COREGLOBAL,
+                      libhpx_kthread_srv_susp_global,
+                      ctx,
+                      NULL,
                       &ctx->srv_susp[0]);
-    break;
-  default:
     break;
   }
 
   /* create service thread: workload rebalancer */
-  hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
-                    libhpx_kthread_srv_rebal, ctx, NULL, &ctx->srv_rebal);
-
+  hpx_thread_create(ctx,
+                    HPX_THREAD_OPT_SERVICE_COREGLOBAL,
+                    libhpx_kthread_srv_rebal,
+                    ctx,
+                    NULL,
+                    &ctx->srv_rebal);
   return ctx;
 
-_hpx_ctx_create_FAIL1:
-  for (x = 0; x < cores; x++) {
-    hpx_kthread_destroy(ctx->kths[x]);
-  }
-
-_hpx_ctx_create_FAIL0:
+error4:
+  hpx_lco_future_destroy(&ctx->f_srv_rebal);
+  hpx_lco_future_destroy(&ctx->f_srv_susp);
+error3:
+  sr_barrier_destroy(ctx->barrier);
+error2:
+  for (int i = 0; i < id; ++i)
+    hpx_kthread_destroy(ctx->kths[i]);
+error1:
   hpx_free(ctx);
-  ctx = NULL;
-
+error0:
   return NULL;
 }
 

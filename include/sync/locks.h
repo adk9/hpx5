@@ -17,11 +17,10 @@
 #ifndef HPX_SYNC_LOCKS_H_
 #define HPX_SYNC_LOCKS_H_
 
-#include <stdint.h>
 #include "sync.h"
 
 struct tatas_lock {
-    uintptr_t lock;
+    int lock;
 };
 
 typedef struct tatas_lock tatas_lock_t;

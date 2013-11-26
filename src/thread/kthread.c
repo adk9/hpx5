@@ -35,7 +35,9 @@
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
 #include "hpx/thread/mctx.h"
+#include "debug.h"
 #include "kthread.h"
+#include "sync/barriers.h"
 
 static pthread_key_t errno_key;
 static pthread_key_t kth_key;
@@ -63,16 +65,6 @@ static void make_keys(void) {
   (void) pthread_key_create(&kth_key, NULL);
 }
 
-static void init(void) {
-  for (snode_t *i = on_init.head, *e = on_init.tail; i != e; i = i->next)
-    i->f();
-}
-
-/* static void fini(void) { */
-/*   for (snode_t *i = on_fini.head, *e = on_fini.tail; i != e; i = i->next) */
-/*     i->f(); */
-/* } */
-
 /*
  --------------------------------------------------------------------
   hpx_kthread_init
@@ -83,7 +75,6 @@ static void init(void) {
 void libhpx_kthread_init(void) {
     static pthread_once_t init_once = PTHREAD_ONCE_INIT;
     pthread_once(&init_once, make_keys);
-    pthread_once(&init_once, init);
 }
 
 /*
@@ -213,6 +204,31 @@ void * hpx_kthread_seed_default(void *ptr) {
   return NULL;
 }
 
+typedef struct {
+  hpx_kthread_seed_t seed;
+  hpx_kthread_t   *thread;
+  sr_barrier_t   *barrier;
+} entry_t;
+
+static void *call(entry_t *args) {
+  return args->seed(args->thread);
+}
+
+/**
+ * All of our kthreads enter using this function. It performs all relevant
+ * kthread dynamic initialization, like calling all of the on_init callbacks.
+ */
+static void *entry(void *args) {
+  entry_t *e = args;
+
+  dbg_printf("Thread %i entry, joining barrier.\n", e->thread->tid);
+  sr_barrier_join(e->barrier, e->thread->tid);
+
+  for (snode_t *i = on_init.head, *e = on_init.tail; i != e; i = i->next)
+    i->f();
+  
+  return call(e);                               /* hopefully sibling call */
+}
 
 /*
  --------------------------------------------------------------------
@@ -223,71 +239,67 @@ void * hpx_kthread_seed_default(void *ptr) {
 */
 
 hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
-                                  hpx_mconfig_t mcfg, uint64_t mflags) {
-  /* pthread_mutexattr_t mtx_attr; */
-  hpx_kthread_t *kth = NULL;
-  int err;
-
+                                  hpx_mconfig_t mcfg, uint64_t mflags, int tid)
+{
   /* allocate and init the handle */
-  kth = (hpx_kthread_t *) hpx_alloc(sizeof(hpx_kthread_t));
-  if (kth != NULL) {
-    memset(kth, 0, sizeof(hpx_kthread_t));
-
-    hpx_queue_init(&kth->pend_q);
-    hpx_queue_init(&kth->susp_q);
-
-    hpx_kthread_mutex_init(&kth->mtx);
-    pthread_cond_init(&kth->k_c, 0);
-
-    kth->ctx = ctx;
-    kth->k_st = HPX_KTHREAD_STATE_RUNNING;
-    kth->mcfg = mcfg;
-    kth->mflags = mflags;
-    kth->pend_load = 0;
-
-    /* create a machine context buffer */
-    kth->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-    if (kth->mctx == NULL) {
-      goto __hpx_kthread_create_FAIL1;
-    }
-
-    /* create the thread */
-    err = pthread_create(&kth->core_th, NULL, seed, (void *) kth);
-    if (err != 0) {
-       switch (err) {
-        case EAGAIN:
-          __hpx_errno = HPX_ERROR_KTH_MAX;
-      break;
-        case EINVAL:
-          __hpx_errno = HPX_ERROR_KTH_ATTR;
-      break;
-        default:
-      __hpx_errno = HPX_ERROR_KTH_INIT;
-      break;
-      }
-
-       goto __hpx_kthread_create_FAIL2;
-    }
-  } else {
+  hpx_kthread_t *kth = hpx_alloc(sizeof(*kth));
+  if (!kth) {
+    dbg_printf("Could not allocate a kthread.\n");
     __hpx_errno = HPX_ERROR_NOMEM;
-    goto __hpx_kthread_create_FAIL0;
+    goto error0;
+  }
+  
+  bzero(kth, sizeof(hpx_kthread_t));
+    
+  hpx_queue_init(&kth->pend_q);
+  hpx_queue_init(&kth->susp_q);
+
+  hpx_kthread_mutex_init(&kth->mtx);
+  pthread_cond_init(&kth->k_c, 0);
+
+  kth->ctx = ctx;
+  kth->k_st = HPX_KTHREAD_STATE_RUNNING;
+  kth->mcfg = mcfg;
+  kth->mflags = mflags;
+  kth->pend_load = 0;
+  kth->tid = tid;
+    
+  /* create a machine context buffer */
+  kth->mctx = hpx_alloc(sizeof(*kth->mctx));
+  if (!kth->mctx) {
+    dbg_printf("Could not allocate a machine context.\n");
+    __hpx_errno = HPX_ERROR_NOMEM;
+    goto error1;
   }
 
-  return kth;
-
- __hpx_kthread_create_FAIL2:
+  /* create the thread */
+  entry_t *args = hpx_alloc(sizeof(*args));
+  args->seed = seed;
+  args->thread = kth;
+  args->barrier = ctx->barrier;
+  int err = pthread_create(&kth->core_th, NULL, entry, args);
+  if (!err)
+    return kth;
+  
+  switch (err) {
+  case EAGAIN:
+    __hpx_errno = HPX_ERROR_KTH_MAX;
+    break;
+  case EINVAL:
+    __hpx_errno = HPX_ERROR_KTH_ATTR;
+    break;
+  default:
+    __hpx_errno = HPX_ERROR_KTH_INIT;
+    break;
+  }
   hpx_free(kth->mctx);
-
- __hpx_kthread_create_FAIL1:
+ error1:
   pthread_cond_destroy(&kth->k_c);
   hpx_kthread_mutex_destroy(&kth->mtx);
-
   hpx_queue_destroy(&kth->susp_q);
   hpx_queue_destroy(&kth->pend_q);
-
   hpx_free(kth);
-
- __hpx_kthread_create_FAIL0:
+ error0:
   return NULL;
 }
 
@@ -609,6 +621,8 @@ void libhpx_kthread_srv_rebal(void *ptr) {
 }
 
 void kthread_on_initialize(void (*f)(void)) {
+  dbg_assert_precondition(f);
+  dbg_logf("Adding %p to the do_init callbacks\n", f);
   snode_t *node = malloc(sizeof(*node));
   node->next = on_init.head;
   node->f = f;
