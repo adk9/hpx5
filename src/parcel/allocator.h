@@ -24,6 +24,7 @@
 
 #include "hpx/system/attributes.h"
 
+struct hpx_context;
 struct hpx_parcel;
 
 /**
@@ -46,7 +47,8 @@ void parcel_put(struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
-int parcel_allocator_initialize(void);
+
+int parcel_allocator_initialize(struct hpx_context *ctx);
 int parcel_allocator_finalize(void);
 
 #endif /* LIBHPX_PARCEL_ALLOCATOR_H_ */

@@ -154,7 +154,7 @@ hpx_init(void)
   init_predefined();
 
   /* initialize the parcel subsystem */
-  hpx_parcel_init();
+  hpx_parcel_init(__hpx_global_ctx);
 #if HAVE_NETWORK
   the_parcelhandler = parcelhandler_create(__hpx_global_ctx);
 #endif

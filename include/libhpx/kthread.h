@@ -73,20 +73,4 @@ void libhpx_kthread_srv_susp_local(void *);
 void libhpx_kthread_srv_susp_global(void *);
 void libhpx_kthread_srv_rebal(void *);
 
-
-/** Register functions that need to be run when a kthread is initialized or
- *  finalized. These usually include thread-local storage initialization and
- *  finalization. These need to be called during hpx_init in order to always be
- *  run.
- *  @{
- */
-void kthread_on_initialize(void (*f)(void))
-  HPX_ATTRIBUTE(HPX_NON_NULL(1),
-                HPX_VISIBILITY_INTERNAL);
-
-void kthread_on_finalize(void (*f)(void))
-  HPX_ATTRIBUTE(HPX_NON_NULL(1),
-                HPX_VISIBILITY_INTERNAL);
-/** @} */
-
 #endif /* LIBHPX_THREAD_KTHREAD_H_ */

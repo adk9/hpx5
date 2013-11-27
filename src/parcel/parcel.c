@@ -45,9 +45,9 @@ struct hpx_thread;
  *  @{
  */
 hpx_error_t
-hpx_parcel_init(void)
+hpx_parcel_init(struct hpx_context *ctx)
 {
-  return parcel_allocator_initialize();
+  return parcel_allocator_initialize(ctx);
 }
 
 void

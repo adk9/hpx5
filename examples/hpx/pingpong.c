@@ -42,6 +42,7 @@ static int count                 = 0;      /*!< per-locality count of actions */
 /* helper functions */
 static void print_usage(FILE *stream);
 static void process_args(int argc, char *argv[]);
+static void print_options();
 static void wait_for_debugger();
 static void init_other_loc();
 static void register_actions();
@@ -61,19 +62,19 @@ static void register_actions();
       printf("\t%d: " format, hpx_get_my_locality()->rank, __VA_ARGS__); \
   } while (0)
 
-int main(int argc, char *argv[]) {  
+int main(int argc, char *argv[]) {
+  process_args(argc, argv);
+  wait_for_debugger();
   if (hpx_init()) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
-
-  process_args(argc, argv);
-  wait_for_debugger();
-    /* I'm cheating by putting this before action registrations to make sure this
+  print_options();
+  /* I'm cheating by putting this before action registrations to make sure this
      gets done at all processes...
 
      LD: this seems like a persistent issue that we have, and is related to a
-         SPMD programming mindset */
+     SPMD programming mindset */
   init_other_loc();
   register_actions();
   
@@ -274,11 +275,13 @@ void process_args(int argc, char *argv[]) {
     exit(-1);
   }
   arg_iter_limit = strtol(argv[0], NULL, 10);
+}
 
+void print_options() {
   if (hpx_get_my_locality()->rank == 0)
     printf("Running with options: "
-         "{iter limit: %d}, {text_ping: %d}, {screen_out: %d}\n",
-         arg_iter_limit, arg_text_ping, arg_screen_out);
+           "{iter limit: %d}, {text_ping: %d}, {screen_out: %d}\n",
+           arg_iter_limit, arg_text_ping, arg_screen_out);
 }
 
 void init_other_loc(void) {

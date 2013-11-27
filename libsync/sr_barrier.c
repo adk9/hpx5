@@ -25,7 +25,7 @@ struct sr_barrier {
   int senses[];
 };
 
-sr_barrier_t *sr_barrier_create(int n) {
+sr_barrier_t *sr_barrier_new(int n) {
   sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
   assert(barrier && "Could not allocate a sense-reversing barrier.");
   barrier->count = 0;
@@ -36,7 +36,7 @@ sr_barrier_t *sr_barrier_create(int n) {
   return barrier;
 }
 
-void sr_barrier_destroy(sr_barrier_t *barrier) {
+void sr_barrier_delete(sr_barrier_t *barrier) {
   free(barrier);
 }
 
