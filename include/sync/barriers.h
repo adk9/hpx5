@@ -18,8 +18,8 @@
 
 typedef struct sr_barrier sr_barrier_t;
 
-sr_barrier_t *sr_barrier_create(int n_threads);
-void sr_barrier_destroy(sr_barrier_t *barrier);
+sr_barrier_t *sr_barrier_new(int n_threads);
+void sr_barrier_delete(sr_barrier_t *barrier);
 void sr_barrier_join(sr_barrier_t *barrier, int thread_id);
 
 #endif /* HPX_SYNC_BARRIERS_H_ */

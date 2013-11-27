@@ -26,8 +26,8 @@
 
 #include "hpx/parcel.h"                         /* hpx_parcel_t */
 #include "allocator.h"
+#include "ctx.h"                                /* ctx_add_kthread_init/fini */
 #include "debug.h"
-#include "kthread.h"                            /* kthread_on_init/fini */
 #include "parcel.h"                             /* struct hpx_parcel */
 #include "sync/locks.h"
 
@@ -178,9 +178,9 @@ static void my_parcels_finalize(void) {
   cache_finalize(&my_parcels);
 }
 
-int parcel_allocator_initialize(void) {
-  kthread_on_initialize(my_parcels_initialize);
-  kthread_on_finalize(my_parcels_finalize);
+int parcel_allocator_initialize(struct hpx_context *ctx) {
+  ctx_add_kthread_init(ctx, my_parcels_initialize);
+  ctx_add_kthread_fini(ctx, my_parcels_finalize);
   
   cache_initialize(&parcels);
   return HPX_SUCCESS;
