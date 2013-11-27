@@ -277,9 +277,7 @@ static void destroy_arguments(hpx_context_t *ctx) {
   Create & initialize a new HPX context.
  --------------------------------------------------------------------
 */
-hpx_context_t *
-hpx_ctx_create(hpx_config_t *cfg)
-{
+hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   /* make sure that kernel threads are initialized in this address space
      LD: should this just be done in init?
    */
@@ -392,6 +390,16 @@ unwind0:
   return NULL;
 }
 
+void ctx_start(hpx_context_t *ctx) {
+  sr_barrier_join(ctx->barrier, ctx->kths_count);
+
+  /* This is a little bit weird---the thread calling this routine isn't really a
+     kthread, but it's used off-and-on as a kthread by various parts of the
+     code. We run kthread initializers here to make sure that any local data
+     structures that the rest of the system assumes are initialized have really
+     been initialized. */
+  do_all(&ctx->kthread_on_init);
+}
 
 /*
   --------------------------------------------------------------------
@@ -408,6 +416,11 @@ hpx_ctx_destroy(hpx_context_t *ctx)
   hpx_thread_t *th;
   uint32_t x;
 
+  /* Just like during initialization, we have to run the kthread finalizers in
+     this thread. This is stupid, and depends on the fact that the same hardware
+     thread runs both ctx_create and ctx_destroy. */
+  do_all(&ctx->kthread_on_fini);
+  
   /* stop service threads & wait */
   hpx_lco_future_set_state(&ctx->f_srv_susp);
   switch (hpx_config_get_thread_suspend_policy(&ctx->cfg)) {

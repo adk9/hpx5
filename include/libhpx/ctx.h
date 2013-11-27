@@ -28,4 +28,8 @@ void ctx_add_kthread_fini(struct hpx_context *ctx, void (*callback)(void))
     HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
+void ctx_start(struct hpx_context *ctx)
+    HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                  HPX_NON_NULL(1));
+
 #endif /* LIBHPX_CONTEXT_H_ */

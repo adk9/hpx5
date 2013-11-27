@@ -27,6 +27,7 @@
 #include "hpx/parcel.h"                         /* hpx_parcel_t */
 #include "allocator.h"
 #include "ctx.h"                                /* ctx_add_kthread_init/fini */
+#include "clz.h"
 #include "debug.h"
 #include "parcel.h"                             /* struct hpx_parcel */
 #include "sync/locks.h"
@@ -53,7 +54,9 @@ typedef struct block {
   char data[];
 } block_t;
 
-static hpx_parcel_t *allocate_parcel_block(block_t *next, int size);
+static hpx_parcel_t *block_allocate(block_t *next, int size);
+static block_t* get_block_for(hpx_parcel_t *parcel);
+static int block_payload_size(hpx_parcel_t *parcel);
 
 /**
  * From http://planetmath.org/goodhashtableprimes. Used to resize our cache of
@@ -71,16 +74,16 @@ static const int capacities[] = {
 typedef struct {
   int capacity;                                 /*!< index into capacities[] */
   int size;                                     /*!< # used buckets */
-  hpx_parcel_t *table;                          /*!< table of lists */
+  hpx_parcel_t **table;                         /*!< table of lists */
 } cache_t;
 
-static hpx_parcel_t *cache_get(cache_t *this, int bytes);
-static void cache_put(cache_t *this, hpx_parcel_t *parcel);
+static hpx_parcel_t *cache_get(cache_t *cache, int bytes);
+static void cache_put(cache_t *cache, hpx_parcel_t *parcel);
 
 /** Data */
-static block_t             *blocks = NULL;
-static tatas_lock_t parcels_lock   = TATAS_INIT;
-static cache_t parcels             = { 0, 0, NULL };
+static block_t *blocks = NULL;
+static tatas_lock_t parcels_lock = TATAS_INIT;
+static cache_t parcels = { 0, 0, NULL };
 static __thread cache_t my_parcels = { 0, 0, NULL };
 
 hpx_parcel_t *parcel_get(int size) {
@@ -96,7 +99,7 @@ hpx_parcel_t *parcel_get(int size) {
     p = cache_get(&parcels, aligned_size);
     if (!p) {
       dbg_logf("Did not find on in global cache, allocating block\n");
-      p = allocate_parcel_block(blocks, aligned_size);
+      p = block_allocate(blocks, aligned_size);
       cache_put(&parcels, p->next);
     }
     tatas_release(&parcels_lock);
@@ -114,10 +117,10 @@ void parcel_put(hpx_parcel_t *parcel) {
   cache_put(&my_parcels, parcel);
 }
 
-hpx_parcel_t *allocate_parcel_block(block_t *next, int payload_size) {
+hpx_parcel_t *block_allocate(block_t *next, int payload_size) {
   int parcel_size = sizeof(hpx_parcel_t) + payload_size;
-  int space       = HPX_PAGE_SIZE - sizeof(block_t);
-  int n           = (parcel_size > space) ? 1 : space / parcel_size;
+  int space = HPX_PAGE_SIZE - sizeof(*next);
+  int n = (parcel_size > space) ? 1 : space / parcel_size;
   dbg_logf("Allocating a parcel block of %i %i-byte parcels\n", n, parcel_size);
     
   int bytes       = sizeof(block_t) + n * parcel_size;
@@ -146,11 +149,23 @@ hpx_parcel_t *allocate_parcel_block(block_t *next, int payload_size) {
   return curr;
 }
 
-hpx_parcel_t *cache_get(cache_t *this, int bytes) {
+hpx_parcel_t *cache_get(cache_t *cache, int bytes) {
+  dbg_assert_precondition(cache);
+  dbg_assert_precondition(cache->table);
+  hpx_parcel_t **list = &cache->table[bytes % capacities[cache->capacity]];
+  if (!*list)
+    return NULL;
+
+  int payload_size = block_payload_size(*list);
+  if (bytes != payload_size) {
+    dbg_logf("Collision in cache between %i and %i", bytes, payload_size); 
+    return NULL;
+  }
+  
   return NULL;
 }
 
-void cache_put(cache_t *this, hpx_parcel_t *parcel) {
+void cache_put(cache_t *cache, hpx_parcel_t *parcel) {
 }
 
 
@@ -158,15 +173,14 @@ void cache_put(cache_t *this, hpx_parcel_t *parcel) {
  * Initialization and finalization.
  * @{
  */
-static void cache_initialize(cache_t *this) {
-  dbg_assert_precondition(this);
-  dbg_logf("Initializing parcels cache\n");
-  this->table = calloc(capacities[this->capacity], sizeof(*this->table));
+static void cache_initialize(cache_t *cache) {
+  dbg_assert_precondition(cache);
+  cache->table = calloc(capacities[cache->capacity], sizeof(cache->table[0]));
 }
 
-static void cache_finalize(cache_t *this) {
-  dbg_assert_precondition(this);
-  free(this->table);
+static void cache_finalize(cache_t *cache) {
+  dbg_assert_precondition(cache);
+  free(cache->table);
 }
 
 static void my_parcels_initialize(void) {
@@ -175,6 +189,7 @@ static void my_parcels_initialize(void) {
 }
 
 static void my_parcels_finalize(void) {
+  dbg_logf("Finalizing my_parcels cache\n");
   cache_finalize(&my_parcels);
 }
 
@@ -189,7 +204,7 @@ int parcel_allocator_initialize(struct hpx_context *ctx) {
 int parcel_allocator_finalize(void) {
   cache_finalize(&parcels);
 
-  for (block_t *top = blocks; blocks != NULL; top = blocks) {
+  for (block_t *top = blocks; blocks; top = blocks) {
     blocks = top->header.next;
     free(top);
   }
@@ -200,7 +215,17 @@ int parcel_allocator_finalize(void) {
  * @}
  */
 
-static int parcel_get_aligned_size(int size) {
+int parcel_get_aligned_size(int size) {
     int bytes = sizeof(hpx_parcel_t) + size;
     return size + PAD_TO_CACHELINE(bytes);
+}
+
+block_t *get_block_for(hpx_parcel_t *parcel) {
+  const uintptr_t MASK = ~0 << ctz(HPX_PAGE_SIZE);
+  return (block_t*)((uintptr_t)parcel & MASK);
+}
+
+int block_payload_size(hpx_parcel_t *parcel) {
+  block_t *block = get_block_for(parcel);
+  return block->header.max_payload_size;
 }

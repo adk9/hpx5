@@ -31,6 +31,7 @@
 #include "hpx/utils/timer.h"
 #include "hpx/thread/ctx.h"
 #include "bootstrap.h"                          /* struct bootstrap_ops */
+#include "ctx.h"                                /* ctx_start */
 #include "network.h"
 #include "parcelhandler.h"                      /* struct parcelhandler */
 #include "predefined_actions.h"                 /* init_predefined() */
@@ -49,29 +50,25 @@ extern hpx_future_t *action_registration_complete;
 void
 waitfor_shutdown() 
 {
-  unsigned i;
-  unsigned num_localities;
-  
   /* First, we need to wait for all other localities to reach this point. */
-  num_localities = hpx_get_num_localities();
-
-  for (i = 0; i < num_localities; i++) {
-    struct {size_t rank;} *arg;
-    arg = hpx_alloc(sizeof(*arg));
-    arg->rank = (size_t)hpx_get_rank();
-    struct hpx_parcel* p = hpx_parcel_acquire(sizeof(*arg));
+  for (int i = 0, e = hpx_get_num_localities(); i < e; ++i) {
+    struct {
+      size_t rank;
+    } arg = { hpx_get_rank() };
+    struct hpx_parcel* p = hpx_parcel_acquire(sizeof(arg));
     if (p == NULL) {
       __hpx_errno = HPX_ERROR;
       return;
     }
     hpx_parcel_set_action(p, action_set_shutdown_future);
-    hpx_parcel_set_data(p, arg, sizeof(*arg));
+    hpx_parcel_set_data(p, &arg, sizeof(arg));
     hpx_locality_t *loc = hpx_locality_from_rank(i);
     hpx_parcel_send(loc, p, NULL, NULL, NULL);
     hpx_parcel_release(p);
     hpx_locality_destroy(loc);
   }
-  for (i = 0; i < num_localities; i++)
+  
+  for (int i = 0, e = hpx_get_num_localities(); i < e; ++i)
     hpx_thread_wait(&shutdown_futures[i]);
 
   return;
@@ -160,7 +157,7 @@ hpx_init(void)
 #endif
 
   /* allow all of the worker threads to begin execution */
-  sr_barrier_join(__hpx_global_ctx->barrier, __hpx_global_ctx->kths_count);
+  ctx_start(__hpx_global_ctx);
   
   return success;
 }
