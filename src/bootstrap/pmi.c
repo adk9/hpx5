@@ -40,6 +40,11 @@
 static int rank;
 static int size;
 
+typedef struct hpx_pmi_loc_t {
+  uint32_t rank;
+  hpx_locality_t loc;
+} hpx_pmi_loc_t;
+
 /* PMI bootstrap operations */
 bootstrap_ops_t pmi_boot_ops = {
   .init     = bootstrap_pmi_init,
@@ -61,10 +66,10 @@ int bootstrap_pmi_init(void) {
       goto err;
   if (spawned) {} else {}
 
-  if (PMI_Get_size(&size) != PMI_SUCCESS)
+  if (PMI_Get_rank(&rank) != PMI_SUCCESS)
     goto err;
 
-  if (PMI_Get_rank(&rank) != PMI_SUCCESS)
+  if (PMI_Get_size(&size) != PMI_SUCCESS)
     goto err;
 
   return 0;
@@ -88,23 +93,29 @@ int bootstrap_pmi_size(void) {
 int bootstrap_pmi_get_map(hpx_locality_t **map) {
   int ret;
   hpx_locality_t *loc;
+  hpx_pmi_loc_t ploc;
 
   *map = NULL;
   loc = hpx_get_my_locality();
   if (!loc) return HPX_ERROR;
 
-  *map = hpx_alloc(size * sizeof(hpx_locality_t));
+  ploc.rank = rank;
+  ploc.loc = *loc;
+  
+  *map = hpx_alloc(size * sizeof(hpx_pmi_loc_t));
   if (*map == NULL) return HPX_ERROR_NOMEM;
 
 #if HAVE_PMI_CRAY_EXT
   /* ADK: NB. the data gathered is not necessarily in process
      rank order. it could also be different across all ranks. */
-  ret = PMI_Allgather(loc, *map, sizeof(*loc));
+  ret = PMI_Allgather(&ploc, *map, sizeof(ploc));
   if (ret != PMI_SUCCESS) {
     free(*map);
     *map = NULL;
     return HPX_ERROR;
   }
+  // TODO: Sort based on PMI rank.
+#else
 #endif
 
   return 0;

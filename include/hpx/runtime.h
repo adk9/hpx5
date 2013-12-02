@@ -19,6 +19,11 @@
 
 #include "hpx/types.h"
 
+#define HPX_LOC_PHYSICAL (1 << 1) /* Physically-addressed locality
+                                   * endpoints */
+#define HPX_LOC_LOGICAL  (1 << 2) /* Logically-addressed locality
+                                   * endpoints */
+
 typedef struct hpx_locality {
   /* char *hostname; */ /* BDM: If we put this in, we need to change parcel serialization. Since this is referenced nowhere else, I've taken it out for now. Do we need this? */
     uint32 rank;

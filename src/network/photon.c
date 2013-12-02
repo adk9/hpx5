@@ -55,8 +55,8 @@ network_ops_t photon_ops = {
 };
 
 int eager_threshold_PHOTON = EAGER_THRESHOLD_PHOTON_DEFAULT;
-int _rank_photon;
-int _size_photon;
+static int rank;
+static int size;
 
 static char* ETH_DEV_ROCE0 = "roce0";
 static char* IB_DEV_MLX4_1 = "mlx4_1";
@@ -90,8 +90,8 @@ int init_photon(void) {
     }
   }
 
-  _rank_photon = bootmgr->get_rank();
-  _size_photon = bootmgr->size();
+  rank = bootmgr->get_rank();
+  size = bootmgr->size();
 
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
@@ -333,6 +333,6 @@ int phys_addr_photon(hpx_locality_t *l) {
     return ret;
   }
 
-  l->rank = bootmgr->get_rank();
+  l->rank = rank;
   return 0;
 }
