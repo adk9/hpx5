@@ -10,8 +10,9 @@ nodist_pkgconfig_DATA    = libhpx.pc
 libhpx_la_SOURCES        = parcel/parcelqueue.c parcel/request_buffer.c \
                            parcel/request_list.c parcel/serialization.c \
                            parcel/action.c parcel/hashstr.c parcel/handler.c \
-                           parcel/parcel.c parcel/future.c \
+                           parcel/parcel.c parcel/future.c parcel/cache.c \
                            parcel/predefined_actions.c parcel/allocator.c \
+                           parcel/block.c \
                            runtime/globals.c runtime/init.c runtime/locality.c \
                            runtime/abort.c \
                            thread/ctx.c thread/thread.c thread/kthread.c \
