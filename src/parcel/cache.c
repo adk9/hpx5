@@ -1,11 +1,11 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   ParcelQueue Functions
   src/parcel/cache.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -19,6 +19,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <assert.h>
 #include "block.h"                              /* block_payload_size */
 #include "cache.h"
 #include "debug.h"
@@ -66,10 +67,10 @@ hpx_parcel_t *cache_get(parcel_cache_t *cache, int bytes) {
 
   int payload_size = block_payload_size(*stack);
   if (bytes != payload_size) {
-    dbg_logf("Collision in cache between %i and %i", bytes, payload_size); 
+    dbg_logf("Collision in cache between %i and %i", bytes, payload_size);
     return NULL;
   }
-  
+
   return pop(stack);
 }
 
@@ -96,7 +97,7 @@ void cache_put(parcel_cache_t *cache, hpx_parcel_t *parcel) {
   hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
   if (*bucket && (size != block_payload_size(*bucket)))
     resize(cache);
-  assert(!*bucket || (size == block_payload_size(*bucket)) && "resize failed");
+  assert((!*bucket || (size == block_payload_size(*bucket))) && "resize failed");
   parcel->next = *bucket;
   *bucket = parcel;
 }
@@ -109,6 +110,6 @@ void cache_refill(parcel_cache_t *cache, hpx_parcel_t *parcel) {
   hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
   if (*bucket && (size != block_payload_size(*bucket)))
     resize(cache);
-  assert(!*bucket || (size == block_payload_size(*bucket)) && "resize failed");
+  assert((!*bucket || (size == block_payload_size(*bucket))) && "resize failed");
   *bucket = parcel;
 }

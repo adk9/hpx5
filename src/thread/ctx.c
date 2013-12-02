@@ -23,6 +23,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <string.h>
 
 #include "hpx/mem.h"
@@ -96,10 +97,10 @@ static void prepend(callback_list_t *list, void (*callback)(void*),
 
 /**
  * Execute all of the callbacks in a list.
- */ 
+ */
 static void do_all(callback_list_t *list) {
   dbg_assert_precondition(list);
-  tatas_acquire(&list->lock);  
+  tatas_acquire(&list->lock);
   for (callback_list_node_t *i = list->head; i; i = i->next)
     i->callback(i->args);
   tatas_release(&list->lock);
@@ -166,7 +167,7 @@ static int create_kthreads(hpx_context_t *ctx) {
       return __hpx_errno;
     }
   }
-  
+
   return HPX_SUCCESS;
 }
 
@@ -177,13 +178,13 @@ static int create_suspension_service(hpx_context_t *ctx) {
     return hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
                              libhpx_kthread_srv_susp_global, ctx, NULL,
                              &ctx->srv_susp[0]);
-  
+
   if (policy != HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL) {
     dbg_printf("Unknown thread suspension policy.\n");
     return HPX_SUCCESS;
   }
-  
-  
+
+
   for (int i = 0, e = ctx->kths_count; i < e; ++i) {
     int err = hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_CORELOCAL,
                                 libhpx_kthread_srv_susp_local, ctx, NULL,
@@ -192,16 +193,16 @@ static int create_suspension_service(hpx_context_t *ctx) {
       dbg_print_error(err, "Could not start local suspsension service.");
       return err;
     }
-    
+
     ctx->srv_susp[i]->reuse->kth = ctx->kths[i];
     libhpx_kthread_sched(ctx->kths[i], ctx->srv_susp[i],
-                         HPX_THREAD_STATE_CREATE, NULL, NULL, NULL); 
+                         HPX_THREAD_STATE_CREATE, NULL, NULL, NULL);
   }
-  
+
   return HPX_SUCCESS;
 }
 
-static int create_rebalance_service(hpx_context_t *ctx) {  
+static int create_rebalance_service(hpx_context_t *ctx) {
   return hpx_thread_create(ctx, HPX_THREAD_OPT_SERVICE_COREGLOBAL,
                            libhpx_kthread_srv_rebal,
                            ctx, NULL, &ctx->srv_rebal);
@@ -233,7 +234,7 @@ static void *call(entry_t *args) {
  */
 static void *entry_stub(void *args) {
   entry_t *e = args;
-  
+
   /* wait for everyone else---in particular, make sure that all of the
    * initializer and finalizer callbacks have been registered */
   sr_barrier_join(e->barrier, e->thread->tid);
@@ -261,7 +262,7 @@ static int create_arguments(hpx_context_t *ctx) {
       dbg_printf("Could not allocate a kthread argument structure\n");
       return (__hpx_errno = HPX_ERROR_NOMEM);
     }
-    
+
     entry->ctx = ctx;
     entry->seed = hpx_kthread_seed_default;
     entry->thread = ctx->kths[i];
@@ -288,7 +289,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
      LD: should this just be done in init?
    */
   libhpx_kthread_init();
-  
+
   int cores = hpx_config_get_cores(cfg);
   if (cores <= 0) {
     dbg_printf("Configuration should specify positive cores, got %i\n", cores);
@@ -304,7 +305,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     goto unwind0;
   }
   bzero(ctx, sizeof(*ctx));
-  
+
   /* allocate the kthreads structure */
   ctx->kths = hpx_calloc(cores, sizeof(*ctx->kths));
   if (!ctx->kths) {
@@ -316,7 +317,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     /* allocate the kthread arguments */
   ctx->kths_args = hpx_calloc(cores, sizeof(*ctx->kths_args));
   if (!ctx->kths) {
-    dbg_printf("Could not allocate %i argument structures.\n", cores); 
+    dbg_printf("Could not allocate %i argument structures.\n", cores);
     __hpx_errno = HPX_ERROR_NOMEM;
     goto unwind2;
   }
@@ -328,7 +329,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto unwind3;
   }
-  
+
   /* allocate a barrier for all of the threads in the context, which will be
      joined by the main thread after it's done initialization */
   ctx->barrier = sr_barrier_new(cores + 1);
@@ -337,7 +338,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     __hpx_errno = HPX_ERROR_NOMEM;
     goto unwind4;
   }
-  
+
   /* intialize the context (already zeroed) */
   ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
   ctx->kths_count = cores;
@@ -354,7 +355,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
 
   init(&ctx->kthread_on_init);
   init(&ctx->kthread_on_fini);
-  
+
   if (create_kthreads(ctx))
     goto unwind5;
 
@@ -366,9 +367,9 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
 
   if (create_arguments(ctx))
     goto unwind6;
-  
+
   start_kthreads(ctx);
-  
+
   return ctx;
 
 unwind6:
@@ -426,7 +427,7 @@ hpx_ctx_destroy(hpx_context_t *ctx)
      this thread. This is stupid, and depends on the fact that the same hardware
      thread runs both ctx_create and ctx_destroy. */
   do_all(&ctx->kthread_on_fini);
-  
+
   /* stop service threads & wait */
   hpx_lco_future_set_state(&ctx->f_srv_susp);
   switch (hpx_config_get_thread_suspend_policy(&ctx->cfg)) {
@@ -482,7 +483,7 @@ hpx_ctx_destroy(hpx_context_t *ctx)
   /* cleanup */
   hpx_kthread_mutex_destroy(&ctx->mtx);
 
-  
+
   free_all(&ctx->kthread_on_fini);
   free_all(&ctx->kthread_on_init);
 
