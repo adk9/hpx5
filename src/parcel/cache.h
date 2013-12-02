@@ -1,11 +1,11 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   ParcelQueue Functions
   src/parcel/cache.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -24,17 +24,18 @@
 
 #define PARCEL_CACHE_INIT { 0, 0, NULL }
 
+struct HPX_INTERNAL parcel_cache;
+typedef struct parcel_cache parcel_cache_t;
+
 /**
  * A hashtable cache of parcels. Each entry in the table is a stack of free
  * parcels.
  */
-struct HPX_INTERNAL parcel_cache {
+struct parcel_cache {
   int capindex;
   int capacity;
   hpx_parcel_t **table;
 };
-
-typedef struct  parcel_cache parcel_cache_t;
 
 HPX_INTERNAL void cache_init(parcel_cache_t *cache);
 HPX_INTERNAL void cache_fini(parcel_cache_t *cache);
