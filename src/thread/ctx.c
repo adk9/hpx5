@@ -23,6 +23,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <string.h>
 
 #include "hpx/mem.h"
