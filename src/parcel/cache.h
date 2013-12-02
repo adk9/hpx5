@@ -22,13 +22,14 @@
 #include "hpx/parcel.h"
 #include "hpx/system/attributes.h"
 
-#define PARCEL_CACHE_INIT { 0, NULL }
+#define PARCEL_CACHE_INIT { 0, 0, NULL }
 
 /**
  * A hashtable cache of parcels. Each entry in the table is a stack of free
  * parcels.
  */
 struct HPX_INTERNAL parcel_cache {
+  int capindex;
   int capacity;
   hpx_parcel_t **table;
 };
@@ -39,5 +40,6 @@ HPX_INTERNAL void cache_init(parcel_cache_t *cache);
 HPX_INTERNAL void cache_fini(parcel_cache_t *cache);
 HPX_INTERNAL hpx_parcel_t *cache_get(parcel_cache_t *cache, int payload);
 HPX_INTERNAL void cache_put(parcel_cache_t *cache, hpx_parcel_t *parcel);
+HPX_INTERNAL void cache_refill(parcel_cache_t *cache, hpx_parcel_t *parcel);
 
 #endif
