@@ -19,6 +19,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <assert.h>
 #include "block.h"                              /* block_payload_size */
 #include "cache.h"
 #include "debug.h"
