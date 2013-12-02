@@ -47,14 +47,14 @@ struct hpx_thread;
 hpx_error_t
 hpx_parcel_init(struct hpx_context *ctx)
 {
-  return parcel_allocator_initialize(ctx);
+  return parcel_allocator_init(ctx);
 }
 
 void
 hpx_parcel_fini(void)
 {
   /* shutdown the parcel handler thread */
-  parcel_allocator_finalize();
+  parcel_allocator_fini();
 }
 /** @} */
 
@@ -64,20 +64,20 @@ hpx_parcel_fini(void)
 hpx_parcel_t *
 hpx_parcel_acquire(int bytes)
 {
-  return parcel_get(bytes);
+  return parcel_allocator_get(bytes);
 }
 
 /**
  * Forward the parcel release to the parcel allocator.
  *
- * The parcel_put() interface doesn't want a NULL pointer, while the
+ * The parcel_allocator_put() interface doesn't want a NULL pointer, while the
  * hpx_parcel_release() interface doesn't care. Match those internally.
  */
 void
 hpx_parcel_release(hpx_parcel_t *parcel)
 {
   if (parcel)
-    parcel_put(parcel);
+    parcel_allocator_put(parcel);
 }
 
 /**
@@ -87,7 +87,7 @@ hpx_parcel_t *
 hpx_parcel_clone(hpx_parcel_t *parcel)
 {
   int size = parcel_get_data_size(parcel);
-  hpx_parcel_t *p = parcel_get(size);
+  hpx_parcel_t *p = parcel_allocator_get(size);
   if (!p)
     return NULL;
   return hpx_parcel_copy(p, parcel);

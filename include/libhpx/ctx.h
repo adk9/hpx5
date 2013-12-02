@@ -18,18 +18,21 @@
 #ifndef LIBHPX_CONTEXT_H_
 #define LIBHPX_CONTEXT_H_
 
+#include "hpx/system/attributes.h"
+
 struct hpx_context;
 
-void ctx_add_kthread_init(struct hpx_context *ctx, void (*callback)(void))
-  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                HPX_NON_NULL(1));
+HPX_INTERNAL void ctx_add_kthread_init(struct hpx_context *ctx,
+                                       void (*callback)(void *),
+                                       void *data)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1, 2));
 
-void ctx_add_kthread_fini(struct hpx_context *ctx, void (*callback)(void))
-    HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                HPX_NON_NULL(1));
+HPX_INTERNAL void ctx_add_kthread_fini(struct hpx_context *ctx,
+                                       void (*callback)(void *),
+                                       void *data)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1, 2));
 
-void ctx_start(struct hpx_context *ctx)
-    HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                  HPX_NON_NULL(1));
+HPX_INTERNAL void ctx_start(struct hpx_context *ctx)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 #endif /* LIBHPX_CONTEXT_H_ */

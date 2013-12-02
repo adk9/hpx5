@@ -44,7 +44,8 @@
  */
 struct callback_list_node {
   callback_list_node_t *next;
-  void (*callback)(void);
+  void (*callback)(void *);
+  void *args;
 };
 
 static void init(callback_list_t *list) {
@@ -56,13 +57,14 @@ static void init(callback_list_t *list) {
 /**
  * Append a callback to a list.
  */
-static void append(callback_list_t *list, void (*callback)(void)) {
+static void append(callback_list_t *list, void (*callback)(void*), void *args) {
   dbg_assert_precondition(list);
   dbg_assert_precondition(callback);
   callback_list_node_t *node = malloc(sizeof(*node));
   assert(node && "Could not allocate a node for a callback list.");
   node->callback = callback;
   node->next = NULL;
+  node->args = args;
   tatas_acquire(&list->lock);
   if (list->tail)                               /* no dummy nodes */
     list->tail->next = node;
@@ -75,13 +77,15 @@ static void append(callback_list_t *list, void (*callback)(void)) {
 /**
  * Prepend a callback to a list.
  */
-static void prepend(callback_list_t *list, void (*callback)(void)) {
+static void prepend(callback_list_t *list, void (*callback)(void*),
+                    void *args) {
   dbg_assert_precondition(list);
   dbg_assert_precondition(callback);
   callback_list_node_t *node = malloc(sizeof(*node));
   assert(node && "Could not allocate a node for a callback list.");
   node->callback = callback;
   node->next = NULL;
+  node->args = args;
   tatas_acquire(&list->lock);
   node->next = list->head;
   list->head = node;
@@ -97,7 +101,7 @@ static void do_all(callback_list_t *list) {
   dbg_assert_precondition(list);
   tatas_acquire(&list->lock);  
   for (callback_list_node_t *i = list->head; i; i = i->next)
-    i->callback();
+    i->callback(i->args);
   tatas_release(&list->lock);
 }
 
@@ -121,20 +125,22 @@ static void free_all(callback_list_t *list) {
  * Add an initialization callback (for all kthreads in this address
  * space). Intializers are run in FIFO order.
  */
-void ctx_add_kthread_init(hpx_context_t *ctx, void (*callback)(void)) {
+void ctx_add_kthread_init(hpx_context_t *ctx, void (*callback)(void*),
+                          void *args) {
   dbg_assert_precondition(ctx);
   dbg_assert_precondition(callback);
-  append(&ctx->kthread_on_init, callback);
+  append(&ctx->kthread_on_init, callback, args);
 }
 
 /**
  * Add a finalization callback (for all kthreads in this address
  * space). Finalizers are run in LIFO order.
  */
-void ctx_add_kthread_fini(hpx_context_t *ctx, void (*callback)(void)) {
+void ctx_add_kthread_fini(hpx_context_t *ctx, void (*callback)(void*),
+                          void * args) {
   dbg_assert_precondition(ctx);
   dbg_assert_precondition(callback);
-  prepend(&ctx->kthread_on_fini, callback);
+  prepend(&ctx->kthread_on_fini, callback, args);
 }
 
 /* the global next context ID */

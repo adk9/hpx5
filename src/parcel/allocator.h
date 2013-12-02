@@ -27,6 +27,9 @@
 struct hpx_context;
 struct hpx_parcel;
 
+HPX_INTERNAL int parcel_allocator_init(struct hpx_context *ctx);
+HPX_INTERNAL int parcel_allocator_fini(void);
+
 /**
  * Get a parcel from the allocator.
  *
@@ -34,8 +37,7 @@ struct hpx_parcel;
  * @returns A pointer to a parcel, or NULL if there is an error. The parcel will
  *          have its fields initialized to their default value.
  */
-struct hpx_parcel *parcel_get(int bytes)
-  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
+HPX_INTERNAL struct hpx_parcel *parcel_allocator_get(int bytes);
 
 /**
  * Return a parcel to the allocator.
@@ -43,12 +45,7 @@ struct hpx_parcel *parcel_get(int bytes)
  * @param[in] parcel - the parcel to return, must be an address received via
  *                     parcel_get, and must not be NULL
  */
-void parcel_put(struct hpx_parcel *parcel)
-  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
-                HPX_NON_NULL(1));
-
-
-int parcel_allocator_initialize(struct hpx_context *ctx);
-int parcel_allocator_finalize(void);
+HPX_INTERNAL void parcel_allocator_put(struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 #endif /* LIBHPX_PARCEL_ALLOCATOR_H_ */
