@@ -38,7 +38,7 @@ typedef uint64_t hpx_context_id_t;
 
 struct hpx_thread;
 
-struct HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL) callback_list_node;
+struct HPX_INTERNAL callback_list_node;
 typedef struct callback_list_node callback_list_node_t;
 
 /**
@@ -47,11 +47,14 @@ typedef struct callback_list_node callback_list_node_t;
  * does all of the appending and free-ing at this point, however it's better to
  * be safe than sorry.
  */
-typedef struct HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL) callback_list {
+struct HPX_INTERNAL callback_list;
+typedef struct callback_list callback_list_t;
+
+struct callback_list {
   tatas_lock_t lock;
   callback_list_node_t *head;
   callback_list_node_t *tail;
-} callback_list_t;
+};
 
 /**
  * the context handle
