@@ -62,8 +62,8 @@ network_ops_t mpi_ops = {
 };
 
 int eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
-int _rank_mpi;
-int _size_mpi;
+static int rank;
+static int size;
 
 int init_mpi(void) {
   int retval;
@@ -190,9 +190,8 @@ int init_mpi(void) {
   printf("thread_support_provided = %d\n", thread_support_provided);
   #endif
 
-  /* cache size and rank */
-  _rank_mpi = bootmgr->get_rank();
-  _size_mpi = bootmgr->size();
+  rank = bootmgr->get_rank();
+  size = bootmgr->size();
 
   return retval;
 }
@@ -255,7 +254,7 @@ int send_mpi(int dest, void *data, size_t len, network_request_t *request) {
   }
 #endif
 
-  temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, _rank_mpi, MPI_COMM_WORLD, &(request->mpi));
+  temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, rank, MPI_COMM_WORLD, &(request->mpi));
 
   if (temp == MPI_SUCCESS)
     retval = 0;
@@ -348,7 +347,7 @@ int phys_addr_mpi(hpx_locality_t *l) {
     return ret;
   }
 
-  l->rank = bootmgr->get_rank();
+  l->rank = rank;
   return 0;
 }
 
