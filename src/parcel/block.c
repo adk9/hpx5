@@ -40,7 +40,8 @@ hpx_parcel_t *block_new(parcel_block_t *next, int payload_size) {
   int parcel_size = sizeof(hpx_parcel_t) + payload_size;
   int space = HPX_PAGE_SIZE - sizeof(*next);
   int n = (parcel_size > space) ? 1 : space / parcel_size;
-  dbg_logf("Allocating a parcel block of %i %i-byte parcels\n", n, parcel_size);
+  dbg_logf("Allocating a parcel block of %i %i-byte parcels (payload %i)\n",
+           n, parcel_size, payload_size);
     
   int bytes = sizeof(parcel_block_t) + n * parcel_size;
   parcel_block_t *b = valloc(bytes);

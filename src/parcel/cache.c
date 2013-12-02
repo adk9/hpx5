@@ -40,7 +40,9 @@ static const int capacities[] = {
  */
 void cache_init(parcel_cache_t *cache) {
   dbg_assert_precondition(cache);
-  cache->table = calloc(capacities[cache->capacity], sizeof(cache->table[0]));
+  dbg_assert_precondition(cache->capindex < sizeof(capacities));
+  cache->capacity = capacities[cache->capindex];
+  cache->table = calloc(cache->capacity, sizeof(cache->table[0]));
 }
 
 void cache_fini(parcel_cache_t *cache) {
@@ -50,14 +52,15 @@ void cache_fini(parcel_cache_t *cache) {
 
 static hpx_parcel_t *pop(hpx_parcel_t **parcel) {
   hpx_parcel_t *p = *parcel;
-  *parcel = (*parcel)->next;
+  *parcel = p->next;
+  p->next = NULL;
   return p;
 }
 
 hpx_parcel_t *cache_get(parcel_cache_t *cache, int bytes) {
   dbg_assert_precondition(cache);
   dbg_assert_precondition(cache->table);
-  hpx_parcel_t **stack = &cache->table[bytes % capacities[cache->capacity]];
+  hpx_parcel_t **stack = &cache->table[bytes % cache->capacity];
   if (!*stack)
     return NULL;
 
@@ -70,21 +73,42 @@ hpx_parcel_t *cache_get(parcel_cache_t *cache, int bytes) {
   return pop(stack);
 }
 
-static void push(hpx_parcel_t **bucket, hpx_parcel_t *parcel) {
-  dbg_assert_precondition(bucket);
-  dbg_assert_precondition(parcel);
-  parcel->next = *bucket;
-  *bucket = parcel->next;
+static void resize(parcel_cache_t *cache) {
+  dbg_assert_precondition(cache);
+  dbg_assert_precondition(cache->table);
+  dbg_logf("Resizing parcel cache\n");
+  hpx_parcel_t **table = cache->table;
+  int cap = cache->capacity;
+  ++cache->capindex;
+  cache_init(cache);
+  for (int i = 0; i < cap; ++i)
+    if (table[i])
+      cache_refill(cache, table[i]);
+  free(table);
 }
 
 void cache_put(parcel_cache_t *cache, hpx_parcel_t *parcel) {
   dbg_assert_precondition(cache);
   dbg_assert_precondition(cache->table);
   dbg_assert_precondition(parcel);
-  int cap = capacities[cache->capacity];
+  dbg_assert_precondition(!parcel->next);
   int size = block_payload_size(parcel);
-  hpx_parcel_t **bucket = &cache->table[size % cap];
-  assert(!*bucket || (size == block_payload_size(*bucket)) && "collision");
-  assert(!*bucket || !parcel->next && "Cannot concat bucket list yet.");
-  push(bucket, parcel);
+  hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
+  if (*bucket && (size != block_payload_size(*bucket)))
+    resize(cache);
+  assert(!*bucket || (size == block_payload_size(*bucket)) && "resize failed");
+  parcel->next = *bucket;
+  *bucket = parcel;
+}
+
+void cache_refill(parcel_cache_t *cache, hpx_parcel_t *parcel) {
+  dbg_assert_precondition(cache);
+  dbg_assert_precondition(cache->table);
+  dbg_assert_precondition(parcel);
+  int size = block_payload_size(parcel);
+  hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
+  if (*bucket && (size != block_payload_size(*bucket)))
+    resize(cache);
+  assert(!*bucket || (size == block_payload_size(*bucket)) && "resize failed");
+  *bucket = parcel;
 }
