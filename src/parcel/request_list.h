@@ -1,9 +1,9 @@
 /*
- ====================================================================
+  ====================================================================
   High Performance ParalleX Library (libhpx)
   
   Parcel Handler Function Definitions
-  hpx_parcelhandler.h
+  libhpx/reuest_list.h
 
   Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
@@ -13,46 +13,55 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-    Benjamin D. Martin <benjmart [at] indiana.edu>
- ====================================================================
+  ====================================================================
 */
 
 #pragma once
 #ifndef LIBHPX_PARCEL_REQUEST_LIST_H_
 #define LIBHPX_PARCEL_REQUEST_LIST_H_
 
-#include "network.h"                    /* struct network_request */
+#include "hpx/system/attributes.h"              /* HPX_ATTRIBUTES() */
 
-struct hpx_parcel;                              /* forward declare */
+struct header;                                  /* forward declare */
+struct network_request;                         /* forward declare */
 
-/* !order matters for this struct!
-   We depend on the fact that the request_list_node ISA request. */
-struct request_list_node {
-  struct network_request    request;            /* must be 1st */
-  struct header            *parcel;
-  struct request_list_node *next;
-};
+typedef struct request_list_node request_list_node_t;
 
-struct request_list {
+typedef struct {
   int size;
-  struct request_list_node *head;
-  struct request_list_node *tail;
-  struct request_list_node *prev;
-  struct request_list_node *curr;
-};
+  request_list_node_t *head;
+  request_list_node_t *tail;
+  request_list_node_t *prev;
+  request_list_node_t *curr;
+} request_list_t;
 
-void request_list_init(struct request_list*);
+void request_list_init(request_list_t*);
 
 /* Perhaps confusingly, this function returns a network_request_t* so
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
-struct network_request* request_list_append(struct request_list*, struct header*);
-void request_list_begin(struct request_list*);
-struct network_request* request_list_curr(struct request_list*);
-struct header* request_list_curr_parcel(struct request_list*);
-void request_list_next(struct request_list*);
-void request_list_del(struct request_list*);
+struct network_request* request_list_append(request_list_t*, struct header*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1, 2));
+
+void request_list_begin(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
+
+struct network_request* request_list_curr(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
+
+struct header* request_list_curr_parcel(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
+
+void request_list_next(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
+
+void request_list_del(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
+                HPX_NON_NULL(1));
 
 #endif /* LIBHPX_PARCEL_REQUEST_LIST_H_ */

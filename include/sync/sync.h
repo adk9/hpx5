@@ -43,6 +43,8 @@
 #include "gcc/atomic.h"
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)
 #include "gcc/sync.h"
+#elif defined(__INTEL_COMPILER)
+#include "gcc/sync.h"
 #elif defined(_CRAYC)
 #include "craycc/sync.h"
 #else

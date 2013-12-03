@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
+  
+  MPI Network Interface 
+  mpi.c
 
-  Thread Function Definitions
-  hpx_thread.h
-
-  Copyright (c) 2013, Trustees of Indiana University
+  Copyright (c) 2013, Trustees of Indiana University 
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -13,16 +13,18 @@
 
   This software was created at the Indiana University Center for
   Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
- ====================================================================
+  ====================================================================
 */
 
-#pragma once
-#ifndef LIBHPX_THREAD_THREAD_H_
-#define LIBHPX_THREAD_THREAD_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-void libhpx_thread_init();
+#include "hpx/globals.h"
+#include "network.h"
 
-#endif /* LIBHPX_THREAD_THREAD_H_ */
+void
+network_barrier(void)
+{
+  __hpx_network_ops->barrier();
+}

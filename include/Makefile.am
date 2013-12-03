@@ -15,11 +15,13 @@ nobase_include_HEADERS=	\
 	hpx/parcel.h	\
 	hpx/runtime.h	\
 	hpx/thread.h	\
-	hpx/types.h	\
 	hpx/system/abort.h	\
 	hpx/system/attributes.h \
 	hpx/thread/ctx.h	\
 	hpx/thread/mctx.h	\
+	hpx/thread/arch/mconfig_defs.h	\
+	hpx/thread/arch/mconfig.h	\
+	hpx/thread/arch/mregs.h \
 	hpx/utils/heap.h	\
 	hpx/utils/list.h	\
 	hpx/utils/map.h		\
