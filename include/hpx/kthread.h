@@ -75,7 +75,7 @@ hpx_kthread_t *hpx_kthread_new(struct hpx_context *ctx, int tid);
  * Deletes the thread structure. If the thread is running, then it is terminated
  * and joined inside of this call.
  *
- * 
+ *
  */
 void hpx_kthread_delete(hpx_kthread_t *thread);
 
@@ -88,8 +88,6 @@ void hpx_kthread_delete(hpx_kthread_t *thread);
  * @returns - HPX_SUCCESS, or an error code
  */
 int hpx_kthread_start(hpx_kthread_t *thread, void* (*f)(void *), void *args);
-
-void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 
 hpx_kthread_t *hpx_kthread_self(void);
 
@@ -107,7 +105,7 @@ void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_destroy(hpx_kthread_mutex_t *);
 /** @} */
-   
+
 
 /*
  --------------------------------------------------------------------

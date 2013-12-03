@@ -19,9 +19,9 @@
 #include "barriers.h"
 
 struct sr_barrier {
-  int count;
+  SYNC_ATOMIC(int count);
   int threads;
-  int sense;
+  SYNC_ATOMIC(int sense);
   int senses[];
 };
 
