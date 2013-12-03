@@ -27,7 +27,7 @@ LT_INIT
 AC_LANG([C])
 
 # Checks for programs.
-AC_PROG_CC([icc gcc])
+AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
@@ -39,40 +39,38 @@ AM_PROG_AS
 #     these checks.
 
 # ---------------------------------------------------------------------------
-# This section declares all of the HPX-specific --enable options. These are
-# entirely obvious and don't have extra comments.
+# --enable options
 # ---------------------------------------------------------------------------
 AC_ARG_ENABLE([pedantic],
-    [AS_HELP_STRING([--enable-pedantic],
-        [Enable -pedantic @<:@default=yes@:>@])],
-    [], [enable_pedantic=yes])
+  [AS_HELP_STRING([--enable-pedantic], [Enable -pedantic @<:@default=yes@:>@])],
+  [], [enable_pedantic=yes])
+AS_IF([test "x$enable_pedantic" != xno],
+  [AC_SUBST([HPX_PEDANTIC], [-pedantic])])
 
 AC_ARG_ENABLE([wall],
-    [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
-    [], [enable_wall=yes])
+  [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
+  [], [enable_wall=yes])
+AS_IF([test "x$enable_wall" != xno],
+  [AC_SUBST([HPX_W_ALL], [-Wall])])
 
 AC_ARG_ENABLE([werror],
-    [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
-    [], [enable_werror=yes])
+  [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
+  [], [enable_werror=yes])
+AS_IF([test "x$enable_werror" != xno],
+  [AC_SUBST([HPX_W_ERROR], [-Werror])])
 
 AC_ARG_ENABLE([debug],
-    [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
-    [], [enable_debug=no])
-
-# This is combined with the --with-check option to compute an "enable_docs"
-# variable that we use to actually add doc support.
+  [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
+  [], [enable_debug=no])
+AS_IF([test "x$enable_debug" != xno],
+  [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
+    
 AC_ARG_ENABLE([testsuite],
-    [AS_HELP_STRING([--enable-testsuite],
-        [Enable test suite (requires check) @<:@default=yes@:>@])],
-    [], [enable_testsuite=yes])
-
-AS_IF([test "x$enable_pedantic" != xno], AC_SUBST([HPX_PEDANTIC], [-pedantic]))
-AS_IF([test "x$enable_wall" != xno], AC_SUBST([HPX_W_ALL], [-Wall]))
-AS_IF([test "x$enable_werror" != xno], AC_SUBST([HPX_W_ERROR], [-Werror]))
-
+  [AS_HELP_STRING([--enable-testsuite], [Enable test suite (requires check) @<:@default=yes@:>@])],
+  [], [enable_testsuite=yes])
 
 # ---------------------------------------------------------------------------
-# This section declares and handles all of the HPX-specific --with options.
+# --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
 HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
@@ -85,33 +83,34 @@ AC_CHECK_HEADER(pmi_cray_ext.h, [AC_DEFINE(HAVE_PMI_CRAY_EXT, [1])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[yes],[MPI])
 HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
-AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno])
-    AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
-
+AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno],
+  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
+    
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
-  [enable_tests=yes],[enable_tests=no])
-
+  [enable_tests=yes],
+  [enable_tests=no])
+    
 AC_ARG_WITH([doxygen],
-    [AS_HELP_STRING([--with-doxygen],
-        [build documentation @<:@default=no@:>@])],
-    [], [with_doxygen=yes])
-AS_IF([test "x$with_doxygen" != xno], [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
-AS_IF([test "x$DOXYGEN" != x], [enable_docs=yes],
-    [enable_docs=no
-     AC_MSG_WARN([Doxygen not found, disabling source documentation build.])])
-
+  [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
+  [], [with_doxygen=yes])
+AS_IF([test "x$with_doxygen" != xno],
+  [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
+AS_IF([test "x$DOXYGEN" != x],
+  [enable_docs=yes],
+  [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
+   enable_docs=no])
 
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
 AS_CASE([$host_os],
     [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
+                 AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
                  pagesize=`getconf PAGESIZE`],
     [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
-                 pagesize=`getconf PAGESIZE`
-                 AC_DEFINE([_DARWIN_C_SOURCE], [200809L], [POSIX extensions on darwin])],
+                 pagesize=`getconf PAGESIZE`],
     [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
                                      grep l1-dcache-line-size | uniq | \
                                      awk '{print $2}'`]
@@ -119,50 +118,19 @@ AS_CASE([$host_os],
      l1d_linesize=128
      pagesize=4096])
 
-     
-# -----------------------------------------------------------------------------
-# In addition to CFLAGS and LIBS for the build process, some of the with
-# packages result in different source-code logic through #defines. Generate
-# them now.
-#
-# NB: We already know we passed any PKG_CHECK_MODULES for these because the
-#     default behavior that we're using above is to fail. If we change the
-#     default, then we would use the _PKG_ERRORS variables to condition this
-#     section.
-#
-# NB: Please only #define things that we actually use.
-# ---------------------------------------------------------------------------
-AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-
-
-AS_IF([test "x$enable_debug" != xno],
-    AC_DEFINE([HAVE_DEBUG], [1], [Enable debugging stuff]))
-
-
-# ---------------------------------------------------------------------------
-# Any other custom #defines go here.
-#
-# NB: Please only #define things that we actually use.
-# ---------------------------------------------------------------------------
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
-
     
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
-#
-# NB: Please only declare conditionals that we have actual uses of.
 # -----------------------------------------------------------------------------
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
-
 # -----------------------------------------------------------------------------
-# Use autoconf to configure all of the Makefiles that need to be
-# processed. First, add anything that weill be processed unconditionally, and
-# then at any configuration-specific files.
+# Use autoconf to configure all of the Makefiles that need to be processed.
 # -----------------------------------------------------------------------------
 AC_CONFIG_FILES([
   Makefile
@@ -177,21 +145,27 @@ AC_CONFIG_FILES([
 ])
 
 AS_IF([test "x$enable_docs" != xno],
-    AC_CONFIG_FILES([docs/Doxyfile docs/Makefile]))
-
-AS_IF([test "x$enable_tests" = xyes],
-    AC_CONFIG_FILES([tests/Makefile]))
+  [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
+AS_IF([test "x$enable_tests" != xno],
+  [AC_CONFIG_FILES([tests/Makefile])])
     
 AC_OUTPUT
-
 
 # ---------------------------------------------------------------------------
 # Output a summary of the results.
 # ---------------------------------------------------------------------------
-AS_IF([test "x$with_mpi" != xno], [networks="MPI"], [])
-AS_IF([test "x$with_photon" != xno], [networks="$networks Photon"], [])
-AS_IF([test "x$with_crypto" != xno], [hashing="$with_crypto"], [])
-AS_IF([test "x$with_glib" != xno], [hashing="$with_glib"], [])
+AS_IF([test "x$with_mpi" != xno],
+  [networks="MPI"],
+  [])
+AS_IF([test "x$with_photon" != xno],
+  [networks="$networks Photon"],
+  [])
+AS_IF([test "x$with_crypto" != xno],
+  [hashing="$with_crypto"],
+  [])
+AS_IF([test "x$with_glib" != xno],
+  [hashing="$with_glib"],
+  [])
 
 echo ""
 echo "================================================"

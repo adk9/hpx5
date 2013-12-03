@@ -20,10 +20,11 @@
 */
 
 #pragma once
-#ifndef LIBHPX_MUTEX_H_
-#define LIBHPX_MUTEX_H_
+#ifndef HPX_MUTEX_H_
+#define HPX_MUTEX_H_
 
 #include "hpx/error.h"
+#include "hpx/mem.h"                            /* hpx_{alloc,free} */
 
 #define HPX_LCO_MUTEX_OPT_RECURSIVE                              0x01
 #define HPX_LCO_MUTEX_OPT_INITLOCKED                             0x02
@@ -67,7 +68,7 @@ static inline void hpx_lco_mutex_init(hpx_mutex_t * mtx, uint8_t opts) {
 static inline hpx_mutex_t * hpx_lco_mutex_create(uint8_t opts) {
   hpx_mutex_t * mtx = NULL;
 
-  mtx = (hpx_mutex_t *) hpx_alloc(sizeof(hpx_mutex_t));
+  mtx = hpx_alloc(sizeof(hpx_mutex_t));
   if (mtx != NULL) {
     hpx_lco_mutex_init(mtx, opts);
   }
@@ -132,4 +133,4 @@ static inline void hpx_lco_mutex_unlock(hpx_mutex_t * mtx) {
 #endif
 }
 
-#endif /* LIBHPX_MUTEX_H_ */
+#endif /* HPX_MUTEX_H_ */

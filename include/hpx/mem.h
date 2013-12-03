@@ -30,11 +30,13 @@
 #include <google/tcmalloc.h>
 #define hpx_alloc_align(u, a, s) tc_posix_memalign(u, a, s)
 #define hpx_alloc(u) tc_malloc(u)
+#define hpx_calloc(count, size) tc_calloc(count, size)
 #define hpx_realloc(u, s) tc_realloc(u, s)
 #define hpx_free(u) tc_free(u)
 #else
 #define hpx_alloc_align(u, a, s) posix_memalign(u, a, s)
 #define hpx_alloc(u) malloc(u)
+#define hpx_calloc(count, size) calloc(count, size)
 #define hpx_realloc(u, s) realloc(u, s)
 #define hpx_free(u)  free(u)
 #endif

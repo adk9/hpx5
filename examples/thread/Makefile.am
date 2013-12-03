@@ -1,11 +1,11 @@
 examplesdir			= $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS	= fibonacci fibsmarter
+examples_PROGRAMS	= fibonacci fiblinear
 fibonacci_SOURCES	= fibonacci.c
 fibonacci_LDADD		= $(top_builddir)/src/libhpx.la $(top_builddir)/libsync/libsync.la
 
-fibsmarter_SOURCES  = fibsmarter.c
-fibsmarter_LDADD    = $(top_builddir)/src/libhpx.la $(top_builddir)/libsync/libsync.la
+fiblinear_SOURCES   = fiblinear.c
+fiblinear_LDADD     = $(top_builddir)/src/libhpx.la $(top_builddir)/libsync/libsync.la
 
 AM_CPPFLAGS			= -I$(top_srcdir)/include -D_POSIX_C_SOURCE=200809L
 

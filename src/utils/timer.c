@@ -72,10 +72,10 @@ double hpx_elapsed_us(hpx_timer_t start_time) {
   hpx_get_time(&end_time);
 #ifdef __APPLE__
   assert(tbi.denom!=0);
-  return (((end_time - start_time) * tbi.numer / tbi.denom) / 1e6);
+  return (((end_time-start_time)*tbi.numer/tbi.denom)/1e3);
 #endif
 #ifdef __linux__
-  unsigned long elapsed = ((end_time.tv_sec * 1e9) + end_time.tv_nsec) - ((start_time.tv_sec * 1e9) + start_time.tv_nsec);
-  return (elapsed / 1e6);
+  unsigned long elapsed = ((end_time.tv_sec-start_time.tv_sec)*1e9)+(end_time.tv_nsec-start_time.tv_nsec);
+  return (elapsed/1e3);
 #endif
 }

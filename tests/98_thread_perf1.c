@@ -156,7 +156,7 @@ static void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cn
 
   /* run the baseline once before measuring, to limit cache misses */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, loop_function, &perf, NULL);
+    hpx_thread_create(ctx, 0, loop_function, &perf, &ths[idx], NULL);
   }
 
   /* wait for the threads to finish */
@@ -168,7 +168,7 @@ static void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cn
 
   /* create threads for the baseline measurement */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, loop_function, &perf, NULL);
+    hpx_thread_create(ctx, 0, loop_function, &perf, &ths[idx], NULL);
   }  
 
   /* wait for the baseline threads to complete */
@@ -181,7 +181,7 @@ static void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cn
 
   /* run the yielding threads once to get data locality */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, loop_function2, &perf, NULL);
+    hpx_thread_create(ctx, 0, loop_function2, &perf, &ths[idx], NULL);
   }
 
   /* wait for them to finish */
@@ -193,7 +193,7 @@ static void run_yield_timings(uint64_t mflags, uint32_t core_cnt, uint64_t th_cn
 
   /* create threads for the yield measurement */
   for (idx = 0; idx < th_cnt; idx++) {
-    ths[idx] = hpx_thread_create(ctx, 0, loop_function2, &perf, NULL);
+    hpx_thread_create(ctx, 0, loop_function2, &perf, &ths[idx], NULL);
   }  
 
   /* wait for the baseline threads to complete */

@@ -24,21 +24,19 @@
 #endif
 
 #include <string.h>
-#include "hpx/thread/mctx.h"
+#include "hpx/thread/mctx.h"                    /* struct hpx_mctx_context */
+#include "hpx/system/attributes.h"              /* HPX_ATTRIBUTE */
 
-extern void _hpx_mctx_trampoline(void) __attribute__((noreturn));
+extern void _hpx_mctx_trampoline(void)
+  HPX_ATTRIBUTE(HPX_NORETURN);
 
-/*
- --------------------------------------------------------------------
-  hpx_mctx_makecontext_va
-
-  Replacement for the deprecated POSIX makecontext() function.
-
-  We do this in C because we have to work with variadic arguments,
-  which are implemented by the compiler via macros.  They're
-  cumbersome and error-prone in assembly.
- --------------------------------------------------------------------
-*/
+/**
+ * Replacement for the deprecated POSIX makecontext() function.
+ *
+ * We do this in C because we have to work with variadic arguments, which are
+ * implemented by the compiler via macros.  They're cumbersome and error-prone
+ * in assembly.
+ */
 void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx,
                              void *stk, size_t ss, hpx_mconfig_t mcfg, uint64_t mflags,
                              void (*func)(), int argc, va_list *argv) {
@@ -105,13 +103,9 @@ void hpx_mctx_makecontext_va(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_
 }
 
 
-/*
- --------------------------------------------------------------------
-  hpx_mctx_makecontext
-
-  Wrapper for hpx_mctx_makecontext_va.
- --------------------------------------------------------------------
-*/
+/**
+ * Wrapper for hpx_mctx_makecontext_va.
+ */
 void hpx_mctx_makecontext(hpx_mctx_context_t *mctx, hpx_mctx_context_t *link_mctx, void *stk,
                           size_t ss, hpx_mconfig_t mcfg, uint64_t mflags, void (*func)(),
                           int argc, ...) {

@@ -25,69 +25,57 @@
 
 #include <stdint.h>
 #include <pthread.h>
-#include "hpx/types.h"
-#include "hpx/thread/mctx.h"
+#include "hpx/thread/arch/mconfig.h"
 #include "hpx/utils/queue.h"
 
-/*
- --------------------------------------------------------------------
-  Kernel Thread States
- --------------------------------------------------------------------
-*/
-
-#define HPX_KTHREAD_STATE_STOPPED   0
-#define HPX_KTHREAD_STATE_RUNNING   1
-#define HPX_KTHREAD_STATE_BUSY      2
-
-/*
- --------------------------------------------------------------------
-  Kernel Thread Data
- --------------------------------------------------------------------
-*/
-
+typedef struct hpx_kthread hpx_kthread_t;
 typedef pthread_mutex_t hpx_kthread_mutex_t;
+typedef void *(*hpx_kthread_seed_t)(void*);
 
-struct hpx_kthread_t {
-  hpx_kthread_mutex_t     mtx;
-  pthread_cond_t          k_c;
-  pthread_t               core_th;
-  hpx_queue_t             pend_q;
-  hpx_queue_t             susp_q;
-  hpx_thread_t           *exec_th;
-  hpx_context_t          *ctx;
-  uint8_t                 k_st;
-  hpx_mctx_context_t     *mctx;
-  hpx_mconfig_t           mcfg;
-  uint64_t                mflags;
-  uint64_t                pend_load;
-  uint64_t                wait_load;
+struct hpx_context;
+struct hpx_mctx_context;
+struct hpx_thread;
+
+enum hpx_kthread_state {
+  HPX_KTHREAD_STATE_STOPPED = 0,
+  HPX_KTHREAD_STATE_RUNNING = 1,
+  HPX_KTHREAD_STATE_BUSY    = 2
 };
 
-typedef void *(*hpx_kthread_seed_t)(void *);
+struct hpx_kthread {
+  hpx_kthread_mutex_t       mtx;                /**< */
+  pthread_cond_t            k_c;                /**< */
+  pthread_t             core_th;                /**< */
+  hpx_queue_t            pend_q;                /**< */
+  hpx_queue_t            susp_q;                /**< */
+  struct hpx_thread    *exec_th;                /**< */
+  struct hpx_context       *ctx;                /**< */
+  uint8_t                  k_st;                /**< */
+  struct hpx_mctx_context *mctx;                /**< */
+  hpx_mconfig_t            mcfg;                /**< */
+  uint64_t               mflags;                /**< */
+  uint64_t            pend_load;                /**< */
+  uint64_t            wait_load;                /**< */
+};
 
-/*
- --------------------------------------------------------------------
-  Seed Function
- --------------------------------------------------------------------
-*/
-void * hpx_kthread_seed_default(void *);
 
+void *hpx_kthread_seed_default(void *);
 
-/*
- --------------------------------------------------------------------
-  Kernel Thread Functions
- --------------------------------------------------------------------
-*/
-hpx_kthread_t * hpx_kthread_create(hpx_context_t *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
+hpx_kthread_t *hpx_kthread_create(struct hpx_context *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
 void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
 void hpx_kthread_destroy(hpx_kthread_t *);
+hpx_kthread_t *hpx_kthread_self(void);
 
-hpx_kthread_t * hpx_kthread_self(void);
-
+/**
+ * kthread mutex interface
+ * @{
+ */
 void hpx_kthread_mutex_init(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_destroy(hpx_kthread_mutex_t *);
+/** @} */
+   
 
 /*
  --------------------------------------------------------------------

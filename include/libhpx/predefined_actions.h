@@ -14,24 +14,18 @@
 */
 
 #pragma once
-#ifndef LIBHPX_BOOTSTRAP_MPIRUN_H_
-#define LIBHPX_BOOTSTRAP_MPIRUN_H_
+#ifndef LIBHPX_PREDEFINED_H_
+#define LIBHPX_PREDEFINED_H_
 
-#include <stdlib.h>
+#include "hpx/action.h"
+#include "hpx/error.h"
 
-#include "bootstrap.h"
-struct hpx_locality;
-extern bootstrap_ops_t mpi_boot_ops;
+extern hpx_action_t action_set_shutdown_future;      /* set the shutdown_futures for the appropriate rank/locality */
+extern hpx_future_t *shutdown_futures;               /* futures for each rank for shutdown sequence; for use with action_set_shutdown_future */
 
 /**
- * mpirun bootstrap operations
+ * Do any intialization needed by predefined actions.
  */
+hpx_error_t init_predefined();
 
-int bootstrap_mpi_init(void);
-int bootstrap_mpi_get_rank(void);
-int bootstrap_mpi_get_addr(struct hpx_locality *);
-int bootstrap_mpi_size(void);
-int bootstrap_mpi_get_map(struct hpx_locality **);
-int bootstrap_mpi_finalize(void);
-
-#endif /* LIBHPX_BOOTSTRAP_MPIRUN_H_ */
+#endif

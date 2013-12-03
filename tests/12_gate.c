@@ -80,7 +80,7 @@ static void run_gate_allreduce(hpx_context_t * ctx) {
 
   /* create some threads */
   for (idx = 0; idx < 8; idx++) {
-    hpx_thread_create(ctx, 0, gate_allreduce_worker, (void *) gen, NULL);
+    hpx_thread_create(ctx, 0, gate_allreduce_worker, (void *) gen, NULL, NULL);
   }
 
   /* wait for this generation's future to be triggered */
