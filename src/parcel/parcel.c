@@ -1,11 +1,11 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   ParcelQueue Functions
   src/parcel/serialization.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -104,7 +104,7 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
 {
   dbg_assert_precondition(to);
   dbg_assert_precondition(from);
-  
+
   int to_size = parcel_get_data_size(to);
   int from_size = parcel_get_data_size(from);
   int min_size = (to_size < from_size) ? to_size : from_size;
@@ -115,7 +115,7 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
   memcpy(to->data, from->data, min_size);
   bzero((uint8_t*)to->data + min_size, to_size - min_size);
   return to;
-}                     
+}
 
 /**
  * Implement hpx_parcel_send as a local thread spawn.
@@ -146,7 +146,7 @@ local_send(const hpx_parcel_t *parcel,
 
   struct hpx_thread *t = NULL;
   int e = hpx_thread_create(__hpx_global_ctx, HPX_THREAD_OPT_NONE, f, data,
-                            result, &t);  
+                            result, &t);
 
   /* if necessary, signal that the send is complete both locally and globally */
   if (complete)
@@ -171,10 +171,10 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
 {
   dbg_assert_precondition(dest);
   dbg_assert_precondition(parcel);
-  
+
   return (false) ?
     /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
-    local_send(parcel, complete, thread, result) : 
+    local_send(parcel, complete, thread, result) :
     parcelhandler_send(dest, parcel, complete, thread, result);
 }
 
@@ -254,8 +254,8 @@ hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, int le
 {
   dbg_assert_precondition(parcel);
   dbg_assert_precondition(length <= parcel->size);
-  dbg_assert_precondition(!data || length);
-  
+  dbg_assert_precondition((!data || length));
+
   memcpy(parcel->data, data, length);
 }
 

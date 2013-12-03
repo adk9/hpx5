@@ -35,9 +35,30 @@
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
 #include "hpx/thread/mctx.h"
+#include "ctx.h"                                /* ctx_add_kthread_init */
 #include "debug.h"
 #include "kthread.h"
 #include "sync/barriers.h"
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_set_affinity
+
+  Sets the logical CPU affinity for a given kernel thread.
+ --------------------------------------------------------------------
+*/
+static void set_affinity(void *args) {
+#ifdef __linux__
+  hpx_kthread_t *kth = args;
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(kth->tid, &cpuset);
+
+  pthread_setaffinity_np(kth->core_th, sizeof(cpu_set_t), &cpuset);
+#endif
+}
+
 
 static pthread_key_t errno_key;
 static pthread_key_t kth_key;
@@ -179,7 +200,7 @@ void *hpx_kthread_seed_default(void *ptr) {
 
       pthread_mutex_unlock(&kth->mtx);
       hpx_mctx_swapcontext(kth->mctx, kth->exec_th->reuse->mctx, kth->mcfg,
-                           kth->mflags); 
+                           kth->mflags);
       pthread_mutex_lock(&kth->mtx);
     } else {
       gettimeofday(&tv, NULL);
@@ -236,7 +257,7 @@ hpx_kthread_t *hpx_kthread_new(hpx_context_t *ctx, int id) {
     return NULL;
   }
   bzero(kth->mctx, sizeof(*kth->mctx));
-  
+
   /* initialize the rest of the kthread (already zeroed) */
   hpx_kthread_mutex_init(&kth->mtx);
   pthread_cond_init(&kth->k_c, 0);
@@ -248,8 +269,8 @@ hpx_kthread_t *hpx_kthread_new(hpx_context_t *ctx, int id) {
   kth->mflags = hpx_config_get_switch_flags(&ctx->cfg);
   kth->tid = id;
 
-  /* set my affinity */
-  hpx_kthread_set_affinity(kth, id);
+  /* set my affinity once I've started */
+  ctx_add_kthread_init(ctx, set_affinity, kth);
   return kth;
 }
 
@@ -281,10 +302,10 @@ static void terminate(hpx_kthread_t *thread) {
 void hpx_kthread_delete(hpx_kthread_t *thread) {
   if (!thread)
     return;
-  
+
   if (thread->k_st != HPX_KTHREAD_STATE_NEW)
     terminate(thread);
-  
+
   hpx_queue_destroy(&thread->susp_q);
   hpx_queue_destroy(&thread->pend_q);
 
@@ -292,25 +313,6 @@ void hpx_kthread_delete(hpx_kthread_t *thread) {
   hpx_kthread_mutex_destroy(&thread->mtx);
   hpx_free(thread->mctx);
   hpx_free(thread);
-}
-
-
-/*
- --------------------------------------------------------------------
-  hpx_kthread_set_affinity
-
-  Sets the logical CPU affinity for a given kernel thread.
- --------------------------------------------------------------------
-*/
-void hpx_kthread_set_affinity(hpx_kthread_t *kth, uint16_t aff) {
-#ifdef __linux__
-  cpu_set_t cpuset;
-
-  CPU_ZERO(&cpuset);
-  CPU_SET(aff, &cpuset);
-
-  pthread_setaffinity_np(kth->core_th, sizeof(cpu_set_t), &cpuset);
-#endif
 }
 
 /*
