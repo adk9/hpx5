@@ -230,6 +230,7 @@ int hpx_kthread_start(hpx_kthread_t *thread, void* (*f)(void*), void *args) {
   default:
     return (__hpx_errno = HPX_ERROR_KTH_INIT);
   case 0:
+    thread->k_st = HPX_KTHREAD_STATE_RUNNING;
     return HPX_SUCCESS;
   case EAGAIN:
     return (__hpx_errno = HPX_ERROR_KTH_MAX);
