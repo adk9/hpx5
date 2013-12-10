@@ -30,6 +30,7 @@
 struct request_list_node {
   network_request_t      request;               /* must be 1st */
   struct header          *parcel;
+  size_t                 size;
   struct request_list_node *next;
 };
 
@@ -84,6 +85,12 @@ struct header*
 request_list_curr_parcel(request_list_t *list)
 {
   return (list->curr) ? list->curr->parcel : NULL;
+} 
+
+size_t
+request_list_curr_size(request_list_t *list)
+{
+  return (list->curr) ? list->curr->size : 0;
 } 
 
 void

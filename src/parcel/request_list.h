@@ -20,6 +20,7 @@
 #ifndef LIBHPX_PARCEL_REQUEST_LIST_H_
 #define LIBHPX_PARCEL_REQUEST_LIST_H_
 
+#include <stddef.h>
 #include "hpx/system/attributes.h"              /* HPX_ATTRIBUTES() */
 
 struct header;                                  /* forward declare */
@@ -55,6 +56,9 @@ struct network_request* request_list_curr(request_list_t*)
 struct header* request_list_curr_parcel(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
+
+size_t request_list_curr_size(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
 void request_list_next(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,

@@ -130,8 +130,8 @@ init(void)
 
   struct photon_config_t photon_conf = {
 	  .meta_exch = PHOTON_EXCH_MPI,
-	  .nproc = _size,
-	  .address = _rank,
+	  .nproc = size,
+	  .address = rank,
 	  .comm = MPI_COMM_WORLD,
 	  .use_forwarder = 0,
 	  .use_cma = use_cma,
@@ -245,12 +245,9 @@ get(int src, void* buffer, size_t len, network_request_t *request)
 int
 test(network_request_t *request, int *flag, network_status_t *status)
 {
-  int retval;
   int temp;
   struct photon_status_t stat;
   int type = 0; /* 0=RDMA completion event, 1=ledger entry */
-
-  retval = HPX_ERROR;
 
   if (status == NULL) {
     temp = photon_test((request->photon), flag, &type, &stat);
