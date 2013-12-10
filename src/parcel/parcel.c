@@ -171,7 +171,7 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
   dbg_assert_precondition(dest);
   dbg_assert_precondition(parcel);
   
-  return (false) ?
+  return (dest->rank == hpx_get_rank()) ?
     /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
     local_send(parcel, complete, thread, result) : 
     parcelhandler_send(dest, parcel, complete, thread, result);

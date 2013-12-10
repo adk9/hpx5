@@ -79,7 +79,7 @@ HPX_WITH_PKG([crypto],[libcrypto],[use libcrypto for string hashing],[no],[CRYPT
 HPX_WITH_PKG([glib],[glib-2.0],[build with glib-2.0],[no],[GLIB])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
-AC_CHECK_HEADER(pmi_cray_ext.h, [AC_DEFINE(HAVE_PMI_CRAY_EXT, [1])])
+#AC_CHECK_HEADER(pmi_cray_ext.h, [AC_DEFINE(HAVE_PMI_CRAY_EXT, [1])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[yes],[MPI])
 HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
