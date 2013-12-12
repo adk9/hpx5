@@ -21,7 +21,7 @@
 #include "hpx/agas.h"                           /* struct hpx_addr */
 #include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
-#include "address.h"                            /* struct address */
+#include "libhpx/address.h"                      /* struct address */
 
 typedef struct header header_t;
 
