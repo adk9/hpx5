@@ -194,6 +194,8 @@ put(int dst, void* buffer, size_t len, network_request_t *request)
 
   temp = photon_post_send_buffer_rdma(dst, buffer, (uint32_t)len, PHOTON_TAG, &(request->photon));
   if (temp != 0) {
+    dbg_printf("%d: error in put() from photon_post_send_buffer_rdma to %d (called for request at %p)\n",
+	       hpx_get_rank(), dst, (void*)request);
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
@@ -218,12 +220,16 @@ get(int src, void* buffer, size_t len, network_request_t *request)
   /* make sure we have remote buffer metadata */
   temp = photon_wait_send_buffer_rdma(src, PHOTON_TAG);
   if (temp != 0) {
+    dbg_printf("%d: error in get() from photon_wait_send_buffer_rdma from %d (called for request at %p)\n",
+	       hpx_get_rank(), src, (void*)request);
 	  __hpx_errno = HPX_ERROR;
 	  goto error;
   }
   /* get the remote buffer */
   temp = photon_post_os_get(src, buffer, (uint32_t)len, PHOTON_TAG, 0, &(request->photon));
   if (temp != 0) {
+    dbg_printf("%d: error in get() from photon_post_os_get from %d for buffer %p of length %zu (called for request at %p)\n",
+	       hpx_get_rank(), src, (void*)buffer, len, (void*)request);
     __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
     goto error;
   }
@@ -258,8 +264,11 @@ test(network_request_t *request, int *flag, network_status_t *status)
     status->count = status->photon.size;
   }
 
-  if (temp != 0)
+  if (temp != 0) {
+    dbg_printf("%d: error in test from photon_test (called for request at %p)\n",
+	       hpx_get_rank(), (void*)request);
     return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
+  }
 
   return HPX_SUCCESS;  
 }
@@ -268,26 +277,34 @@ int
 test_get(network_request_t *request, int *flag, network_status_t *status) {
   int temp;
   struct photon_status_t stat;
+  uint64_t src_addr;
   int type = 0; /* 0=RDMA completion event, 1=ledger entry */
 
   if (status == NULL) {
     temp = photon_test((request->photon), flag, &type, &stat);
+    src_addr = stat.src_addr;
   }
   else {
     temp = photon_test((request->photon), flag, &type, &(status->photon));
     status->source = (int)status->photon.src_addr;
     status->count = status->photon.size;
+    src_addr = status->photon.src_addr;
   }
 
   if (temp == 0 && *flag == 1 && type == 0) {
-    temp = photon_send_FIN(status->photon.src_addr);
+    temp = photon_send_FIN(src_addr);
     if (temp != 0) {
+      dbg_printf("%d: error in test_get from photon_send_FIN to %zu (called for request at %p)\n",
+	     hpx_get_rank(), src_addr, (void*)request);
       return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
     }
   }
 
-  if (temp != 0)
+  if (temp != 0) {
+    dbg_printf("%d: error in test_get from photon_test (called for request at %p)\n",
+	       hpx_get_rank(), (void*)request);
     return (__hpx_errno = HPX_ERROR); /* TODO: replace with more specific error */
+  }
 
   return HPX_SUCCESS;
 }
@@ -319,11 +336,15 @@ probe(int src, int *flag, network_status_t *status)
 		status->count = status->photon.size;
 	}
 
+	return HPX_SUCCESS;
+	/* BDM I think probe errors when it should not? or I don't understand it */
 	if (temp == 0)
 		retval = HPX_SUCCESS;
-	else
-		__hpx_errno = HPX_ERROR;
-
+	else {
+	  dbg_printf("%d: error in probe from photon_probe_ledger\n", hpx_get_rank());
+	  __hpx_errno = HPX_ERROR;
+	  retval = HPX_ERROR;
+	}
 	return retval;
 }
 
@@ -340,8 +361,17 @@ pin(void* buffer, size_t len)
   dbg_printf("%d: Pinning %zd bytes at %p\n", hpx_get_rank(), len, buffer);
 
   /* TODO: replace with more specific error */
+  if (!photon_register_buffer(buffer, len))
+    return HPX_SUCCESS;
+  else {
+    dbg_printf("%d: error in pin() from photon_register_buffer for buffer %p of length %zu\n",
+	       hpx_get_rank(), (void*)buffer, len);
+    return (__hpx_errno = HPX_ERROR);
+  }
+  /*
   return (!photon_register_buffer(buffer, len)) ? HPX_SUCCESS :
     (__hpx_errno = HPX_ERROR);
+  */
 }
 
 /* unpin memory for put/get */
@@ -353,8 +383,17 @@ unpin(void* buffer, size_t len)
              hpx_get_rank(), len, buffer);
 
 /* TODO: replace with more specific error */
+  if (!photon_unregister_buffer(buffer, len))
+    return HPX_SUCCESS;
+  else {
+    dbg_printf("%d: error in unpin() from photon_unregister_buffer for buffer %p of length %zu\n",
+	       hpx_get_rank(), (void*)buffer, len);
+    return (__hpx_errno = HPX_ERROR);
+  }
+    /*
   return (!photon_unregister_buffer(buffer, len)) ? HPX_SUCCESS :
     (__hpx_errno = HPX_ERROR);
+    */
 }
 
 /* Return the physical network ID of the current process */

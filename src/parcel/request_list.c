@@ -48,7 +48,7 @@ request_list_init(request_list_t *list)
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
 struct network_request*
-request_list_append(request_list_t *list, struct header *parcel)
+request_list_append(request_list_t *list, struct header *parcel, size_t size)
 {
   request_list_node_t* node = hpx_alloc(sizeof(*node));
   if (!node) {
@@ -57,6 +57,7 @@ request_list_append(request_list_t *list, struct header *parcel)
   }    
   node->parcel = parcel;
   node->next = NULL;
+  node->size = size;
   if (list->head == NULL)
     list->head = node;
   if (list->tail != NULL)

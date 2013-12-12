@@ -26,10 +26,9 @@
 /* steal some internal headers so that we can actually write the test */
 #include "libhpx/init.h"
 #include "libhpx/parcelhandler.h"
+#include "libhpx/parcel.h"
 #include "parcel/parcelqueue.h"
 #include "parcel/serialization.h"
-
-typedef struct parcelqueue parcelqueue_t;
 
 /* meaningless arguments for parcels */
 struct args {
@@ -122,7 +121,7 @@ static void thread_queue_worker(void* a) {
   int success;
   hpx_parcel_t* val;
   for (i = 0; i < 7; i++) {
-    val = hpx_alloc(sizeof(hpx_parcel_t));
+    val = hpx_alloc(sizeof(struct hpx_parcel));
     success = parcelqueue_push(q, val);
     ck_assert_msg(success == 0, "Could not push to parcelqueue");
   }

@@ -41,7 +41,8 @@ void request_list_init(request_list_t*);
 /* Perhaps confusingly, this function returns a network_request_t* so
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
-struct network_request* request_list_append(request_list_t*, struct header*)
+/* size is the total size of the header to be transferred */
+struct network_request* request_list_append(request_list_t*, struct header*, size_t size)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1, 2));
 
