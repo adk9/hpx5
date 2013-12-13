@@ -27,6 +27,7 @@
 #include "hpx/action.h"                         /* hpx_action_t */
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
 #include "hpx/agas.h"                           /* struct hpx_addr */
+#include "libhpx/address.h"                     /* struct address */
 
 /**
  * The hpx_parcel structure is what the user-level interacts with.
@@ -43,6 +44,7 @@ struct hpx_parcel {
   struct hpx_parcel *next;
   void              *data;                      /*!< a pointer to the data */
   int                size;                      /*!< temporarily keep size */
+  struct address     dest;                       /*!< HACK! target PA */
   hpx_action_t     action;                      /*!< target action key */
   struct hpx_addr  target;                      /*!< target virtual address */
   struct hpx_addr    cont;                      /*!< continuation address */
@@ -62,6 +64,16 @@ int parcel_get_data_size(const struct hpx_parcel *parcel)
 void *parcel_get_send_offset(const struct hpx_parcel *parcel)
   HPX_ATTRIBUTE(HPX_NON_NULL(1),
                 HPX_RETURNS_NON_NULL,
+                HPX_VISIBILITY_INTERNAL);
+
+/**
+ * Get the total size of the parcel (header + data)
+ *
+ * @param[in] parcel - the parcel to query
+ * @returns the size of parcel
+ */
+int parcel_size(const struct hpx_parcel *parcel)
+  HPX_ATTRIBUTE(HPX_NON_NULL(1),
                 HPX_VISIBILITY_INTERNAL);
 
 #endif /* LIBHPX_PARCEL_H_ */

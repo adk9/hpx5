@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   hpx_timer_t ts;
   hpx_get_time(&ts);
   hpx_future_t *fut = NULL;
-  hpx_action_invoke(pingpong, NULL, &fut);
+  hpx_call(hpx_get_my_locality(), pingpong, NULL, 0, &fut);
   hpx_thread_wait(fut);
   double elapsed = hpx_elapsed_us(ts);
   double avg_oneway_latency = elapsed/((double)(arg_iter_limit*2));
@@ -114,7 +114,7 @@ static void action_pingpong(void *unused) {
   
     /* ok to use the stack, since we're waiting on the done future */
     args_t args = { -1, {0}};
-    hpx_action_invoke(ping, &args, NULL);
+    hpx_call(hpx_get_my_locality(), ping, &args, sizeof(args), NULL);
   }
 
   hpx_thread_wait(&done_fut);
@@ -173,7 +173,7 @@ static void action_ping(args_t* args) {
     hpx_parcel_set_action(p, done);
     hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
     hpx_parcel_release(p);
-    hpx_action_invoke(done, NULL, NULL);
+    hpx_call(hpx_get_my_locality(), done, NULL, 0, NULL);
   }
 
   /* unsynchronized is ok because we only have one thread per locality */
