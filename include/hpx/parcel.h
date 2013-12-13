@@ -137,7 +137,7 @@ hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
  * @returns an error indicating a problem with the runtime
  */
 int hpx_parcel_send(struct hpx_locality *dest,
-                    const hpx_parcel_t *parcel,
+                    hpx_parcel_t *parcel,
                     struct hpx_future *complete,
                     struct hpx_future *thread,
                     struct hpx_future **result)

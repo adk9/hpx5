@@ -121,38 +121,22 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
  * Implement hpx_parcel_send as a local thread spawn.
  */
 static int
-local_send(const hpx_parcel_t *parcel,
+local_send(hpx_parcel_t *parcel,
            hpx_future_t *complete,
            hpx_future_t *thread,
            hpx_future_t **result)
 {
-  /* allocate any extra futures that the sender wants */
-  hpx_func_t f = action_lookup(parcel->action);
-  if (!f)
-    dbg_print_error(HPX_ERROR, "Could not find an action registered for %"
-                    HPX_PRIu_hpx_action_t "\n", parcel->action);
+  hpx_error_t e = hpx_action_invoke_parcel(parcel, result);
 
-  /* LD: hpx_thread_create does not know what to do with the argument data, so
-     for now we copy and leak it.
-     TODO: the entire thread creation pipeline needs to be fixed
-  */
-  uint8_t *data = NULL;
-  if (parcel->size) {
-    data = hpx_alloc(parcel->size);
-    memcpy(data, parcel->data, parcel->size);
-    /* dbg_printf("FIXME: Leaking %lu bytes of data in 'local_send'\n", */
-    /*            parcel->size);  */
-  }
-
-  struct hpx_thread *t = NULL;
-  int e = hpx_thread_create(__hpx_global_ctx, HPX_THREAD_OPT_NONE, f, data,
-                            result, &t);
 
   /* if necessary, signal that the send is complete both locally and globally */
+  /* FIXME TODO: put back in */
+  /*
   if (complete)
     hpx_future_set(complete);
   if (thread)
     hpx_future_setv(thread, sizeof(t), &t);
+  */ 
   return e;
 }
 
@@ -164,7 +148,7 @@ local_send(const hpx_parcel_t *parcel,
  * our behalf.
  */
 int
-hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
+hpx_parcel_send(struct hpx_locality *dest, hpx_parcel_t *parcel,
                 hpx_future_t *complete,
                 hpx_future_t *thread,
                 hpx_future_t **result)
@@ -172,7 +156,7 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
   dbg_assert_precondition(dest);
   dbg_assert_precondition(parcel);
 
-  return (false) ?
+  return (dest->rank == hpx_get_rank()) ?
     /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
     local_send(parcel, complete, thread, result) :
     parcelhandler_send(dest, parcel, complete, thread, result);
@@ -266,4 +250,9 @@ int
 parcel_get_data_size(const hpx_parcel_t *parcel)
 {
   return parcel->size;
+}
+
+int parcel_size(const hpx_parcel_t *parcel)
+{
+  return parcel->size + sizeof(*parcel);
 }

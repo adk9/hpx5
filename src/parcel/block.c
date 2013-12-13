@@ -19,22 +19,14 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include "libhpx/parcel.h"                      /* hpx_parcel_t */
 #include <stdlib.h>
 #include <strings.h>                            /* bzero */
 #include "block.h"
 #include "clz.h"
 #include "debug.h"
 #include "padding.h"                            /* PAD_TO_CACHELINE */
-#include "parcel.h"
 
-struct parcel_block {
-  struct header {
-    int max_payload_size;
-    parcel_block_t *next;
-  } header;
-  const char padding[PAD_TO_CACHELINE(sizeof(struct header))];
-  char data[];
-};
 
 hpx_parcel_t *block_new(parcel_block_t *next, int payload_size) {
   int parcel_size = sizeof(hpx_parcel_t) + payload_size;
@@ -52,6 +44,7 @@ hpx_parcel_t *block_new(parcel_block_t *next, int payload_size) {
   }
   bzero(b, bytes);
   b->header.max_payload_size = payload_size;
+  b->header.pinned = false;
   b->header.next = next;
 
   /* initialize the parcels we just allocated, chaining them together */
@@ -78,9 +71,19 @@ void block_delete(parcel_block_t *chain) {
   }
 }
 
-static parcel_block_t *get_block(hpx_parcel_t *parcel) {
+parcel_block_t *get_block(hpx_parcel_t *parcel) {
   const uintptr_t MASK = ~0 << ctz(HPX_PAGE_SIZE);
   return (parcel_block_t*)((uintptr_t)parcel & MASK);
+}
+
+int get_block_size(parcel_block_t *block) {
+  int payload_size = block->header.max_payload_size;
+  int parcel_size = sizeof(hpx_parcel_t) + payload_size;
+  int space = HPX_PAGE_SIZE - sizeof(*block);
+  if (parcel_size < space)
+    return space;
+  else
+    return parcel_size;
 }
 
 int block_payload_size(hpx_parcel_t *parcel) {

@@ -25,6 +25,7 @@
 /** Forward declarations @{ */
 struct hpx_future;
 struct hpx_locality;
+struct hpx_parcel;
 /** @} */
 
 /**
@@ -74,6 +75,20 @@ void hpx_waitfor_action_registration_complete(void);
  * @returns error code
  */
 hpx_error_t hpx_action_invoke(hpx_action_t action, void *args, struct hpx_future **out);
+
+/** 
+ * Lookup actions in the local action table by their name 
+ * Create a local thread to perform the action.
+ * This variant takes a parcel (which is automatically released upon
+ * conclusion). The parcel should have an action and an argument (if
+ * not NULL) set.
+ *
+ * @param[in]  parcel - the parcel containing the action to be executed and its arguments (if any)
+ * @param[out] future - a future to wait on
+ *
+ * @returns error code
+ */
+hpx_error_t hpx_action_invoke_parcel(struct hpx_parcel *parcel, struct hpx_future **out);
 
 /**
  * Perform an @p action at a @p location and get a result through a future.

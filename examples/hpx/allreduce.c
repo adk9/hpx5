@@ -114,7 +114,7 @@ void recv_broadcast(void* _args) {
   //  printf("At %d received reduction value %lld\n", my_rank, (long long)*value);
   local_reduction_result = *value;
 
-  hpx_action_invoke(done_action, NULL, NULL);
+  hpx_call(hpx_get_my_locality(), done_action, NULL, 0, NULL);
 }
 
 void allreduce(void *_value) {
@@ -155,13 +155,13 @@ void allreduce(void *_value) {
     op_args->futs      = local_reduction_futures;
     op_args->op        = sum;
 
-    hpx_action_invoke(op_action, op_args, NULL);   
+    hpx_call(hpx_get_my_locality(), op_action, op_args, sizeof(*op_args), NULL);   
 
     args = hpx_alloc(sizeof(struct reduction_recv_args));
     args->index = 0;
     args->value = value;
 
-    hpx_action_invoke(recv_action, args, NULL);   
+    hpx_call(hpx_get_my_locality(), recv_action, args, sizeof(*args), NULL);   
   }
   else {
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
