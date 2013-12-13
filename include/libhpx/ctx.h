@@ -35,4 +35,6 @@ HPX_INTERNAL void ctx_add_kthread_fini(struct hpx_context *ctx,
 HPX_INTERNAL void ctx_start(struct hpx_context *ctx)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
+HPX_INTERNAL long ctx_get_next_tls_id(struct hpx_context *ctx);
+
 #endif /* LIBHPX_CONTEXT_H_ */
