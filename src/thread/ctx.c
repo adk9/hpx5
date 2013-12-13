@@ -305,6 +305,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     goto unwind0;
   }
   bzero(ctx, sizeof(*ctx));
+  ctx->in_init = 1;
 
   /* allocate the kthreads structure */
   ctx->kths = hpx_calloc(cores, sizeof(*ctx->kths));
@@ -342,7 +343,6 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
   /* intialize the context (already zeroed) */
   ctx->cid = sync_fadd(&ctx_next_id, 1, SYNC_SEQ_CST);
   ctx->kths_count = cores;
-  ctx->kths_idx = 0;
   hpx_kthread_mutex_init(&ctx->mtx);
   memcpy(&ctx->cfg, cfg, sizeof(*cfg));
   ctx->mcfg = hpx_mconfig_get();
@@ -369,6 +369,7 @@ hpx_context_t *hpx_ctx_create(hpx_config_t *cfg) {
     goto unwind6;
 
   start_kthreads(ctx);
+  ctx->in_init = 0;
 
   return ctx;
 
@@ -505,4 +506,15 @@ hpx_context_id_t
 hpx_ctx_get_id(hpx_context_t *ctx)
 {
   return ctx->cid;
+}
+
+/**
+ * Get the next tls ID from a context.
+ */
+long
+ctx_get_next_tls_id(hpx_context_t *ctx) {
+  if (ctx->in_init)
+    return __LONG_MAX__;
+  else
+    return sync_fadd(&ctx->next_tls_id, 1, SYNC_SEQ_CST);
 }

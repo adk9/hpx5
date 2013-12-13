@@ -62,6 +62,7 @@ struct callback_list {
  */
 struct hpx_context {
   hpx_context_id_t            cid;              /*!<  */
+
   hpx_kthread_t            **kths;              /*!< kthread descriptors */
   void                **kths_args;              /*!< kthread arguments */
   uint32_t             kths_count;              /*!<  */
@@ -87,6 +88,9 @@ struct hpx_context {
   callback_list_t kthread_on_init;              /*!< kthread initializers */
   callback_list_t kthread_on_fini;              /*!< kthread finalizers  */
   struct sr_barrier      *barrier;              /*!< kthread barrier */
+
+  int                    in_init;       /*!< flag set during init */
+  hpx_thread_id_t     next_tls_id;              /*!< the next TLS id in this context  */
 };
 
 hpx_context_t *hpx_ctx_create(hpx_config_t *context);
