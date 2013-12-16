@@ -104,6 +104,7 @@ hpx_parcel_t *parcel_allocator_get(int payload) {
       sync_fadd(&local_hits, 1, SYNC_ACQ_REL);
   }
   
+  p->data = &p->payload; /* normally, a parcel's data is stored in it's payload field */
   p->size   = payload;
   p->action = HPX_ACTION_NULL;
   p->target = HPX_NULL;
