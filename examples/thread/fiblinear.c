@@ -1,14 +1,14 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   The thread-based fibonacci example
   examples/thread/fibonacci.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -65,7 +65,7 @@ void fib(void *args) {
   }
   hpx_lco_future_set_value(numbers[n], (void*) fibn);
 }
-  
+
 
 /**
  * The main function processes the command line, initializes HPX, and spawns
@@ -96,9 +96,6 @@ int main(int argc, char *const argv[]) {
   }
   n = strtol(argv[0], NULL, 10);
 
-  /* intialize HPX */
-  hpx_init();
-
   /* configure HPX */
   hpx_config_t cfg = {0};
   hpx_config_init(&cfg);
@@ -110,8 +107,8 @@ int main(int argc, char *const argv[]) {
     hpx_config_set_cores(&cfg, cores);
   cores = hpx_config_get_cores(&cfg);
 
-  /* create a thread context */
-  hpx_context_t *ctx = hpx_ctx_create(&cfg);
+  /* intialize HPX */
+  hpx_init(&cfg);
 
   /* report our run type */
   printf("Computing fib(%lu) on %lu cores\n", n, cores);
@@ -119,7 +116,7 @@ int main(int argc, char *const argv[]) {
   /* get start time */
   hpx_timer_t timer;
   hpx_get_time(&timer);
-    
+
   /* allocate the array we'll use for storage */
   if ((numbers = malloc((n + 1) * sizeof(numbers[0]))) == NULL) {
     fprintf(stderr, "Could not alloc number array.\n");
@@ -128,8 +125,8 @@ int main(int argc, char *const argv[]) {
 
   /* spawn a single thread for each number */
   for (unsigned long i = 0, e = n + 1; i < e; ++i)
-    hpx_thread_create(ctx, HPX_THREAD_OPT_DETACHED, fib, (void*) i,
-                      &numbers[i], NULL); 
+    hpx_thread_create(NULL, HPX_THREAD_OPT_DETACHED, fib, (void*) i,
+                      &numbers[i], NULL);
 
   /* wait for the last thread to complete */
   hpx_thread_wait(numbers[n]);
@@ -143,13 +140,12 @@ int main(int argc, char *const argv[]) {
 
   /* get the elapsed time before we start calling printf */
   float ms = hpx_elapsed_us(timer) / 1e3;
-  
+
   printf("fib(%lu)=%lu\n", n, fibn);
   printf("seconds: %.7f\n", ms);
   printf("cores:   %lu\n", cores);
   /* printf("threads: %lu\n", n + 2); */
 
-  hpx_ctx_destroy(ctx);
   hpx_cleanup();
   return 0;
 }
