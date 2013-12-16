@@ -64,6 +64,24 @@ typedef struct parcelhandler {
   hpx_future_t         *fut;
 } parcelhandler_t;
 
+/* Check if the block this parcel belongs to is pinned, and if not, pin it */
+/* BDM At present, this is done by the parcel handler. For a variety
+of reasons, including performance and simplicity, it might be
+preferable to do this elsewhere (e.g. when parcels are
+allocated). HOWEVER, network backends that both (1) require
+pinning/registration and (2) are not thread safe will blow up. */ 
+static void 
+pin_if_necessary(struct hpx_parcel_t* parcel) 
+{
+  /* pin this parcel's block, if necessary */
+  parcel_block_t *block = get_block(parcel);
+  if (block->header.pinned == false) {
+    int block_size = get_block_size(block);
+    __hpx_network_ops->pin(block, block_size);
+  }
+  return;
+}
+
 /**
  * Take a header from the network and create a local thread to process it.
  *
@@ -78,7 +96,6 @@ complete(struct hpx_parcel* header, bool send)
 
   /* just free the header on a send completion */
   if (send) {
-    __hpx_network_ops->unpin(header, parcel_size(header));
     hpx_parcel_release(header);
     return HPX_SUCCESS;
   }
@@ -142,9 +159,9 @@ parcelhandler_main(parcelhandler_t *args)
   int outstanding_recvs;
   int outstanding_sends;
 
-  void* recv_buffer;
+  hpx_parcel_t *recv_buffer;
   size_t recv_size;
-  int * retval;
+  int *retval;
   int flag;
   network_status_t status;
 
@@ -193,12 +210,7 @@ parcelhandler_main(parcelhandler_t *args)
       if (header == NULL) {
         /* TODO: signal error to somewhere else! */
       }
-      /* pin this parcel's block, if necessary */
-      parcel_block_t *block = get_block(header);
-      if (block->header.pinned == false) {
-	int block_size = get_block_size(block);
-	__hpx_network_ops->pin(block, block_size);
-      }
+      pin_if_necessary(header);
       /* now send */
       dst_rank = header->dest.locality.rank;
       dbg_printf("%d: Sending %d bytes from buffer at %p with "
@@ -239,16 +251,15 @@ parcelhandler_main(parcelhandler_t *args)
       }
     
       recv_size = status.count;
-      hpx_parcel_acquire(recv_size - sizeof(struct hpx_parcel));
-      success = hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
-      if (success != 0 || recv_buffer == NULL) {
+      recv_buffer = hpx_parcel_acquire(recv_size - sizeof(struct hpx_parcel));
+      if (recv_buffer == NULL) {
         __hpx_errno = HPX_ERROR_NOMEM;
         *retval = HPX_ERROR_NOMEM;
         goto error;
       } 
-      __hpx_network_ops->pin(recv_buffer, recv_size);
-      dbg_printf("%d: Receiving %zd bytes to buffer at %tx\n", hpx_get_rank(),
-                 recv_size, (ptrdiff_t)recv_buffer); 
+      pin_if_necessary(recv_buffer);
+      dbg_printf("%d: Receiving %zd bytes to buffer at %p\n", hpx_get_rank(),
+                 recv_size, (void*)recv_buffer); 
       req = request_list_append(&recv_requests, recv_buffer);
       __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
       outstanding_recvs++;
