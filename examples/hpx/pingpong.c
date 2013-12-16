@@ -163,7 +163,7 @@ static void action_ping(args_t* args) {
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
     hpx_parcel_set_action(p, pong);
-    hpx_parcel_set_data(p, args, sizeof(*args));
+    memcpy(hpx_parcel_get_data(p), args, sizeof(*args)); /* write data to parcel */
     hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
     hpx_parcel_release(p);
   }
@@ -202,7 +202,7 @@ static void action_pong(args_t* args) {
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
     CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
     hpx_parcel_set_action(p, ping);
-    hpx_parcel_set_data(p, args, sizeof(*args));
+    memcpy(hpx_parcel_get_data(p), args, sizeof(*args)); /* write data to parcel */
     hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
     hpx_parcel_release(p);
   }
@@ -222,8 +222,8 @@ void wait_for_debugger() {
     gethostname(hostname, sizeof(hostname));
     printf("PID %d on %s ready for attach\n", getpid(), hostname);
     fflush(stdout);
-    while (0 == i)
-      sleep(5);
+    //    while (0 == i)
+      sleep(12);
   }
 }
 
