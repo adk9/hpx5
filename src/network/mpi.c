@@ -337,9 +337,11 @@ test(network_request_t *request, int *flag, network_status_t *status)
   if (!status)
     return HPX_SUCCESS;
   
-  if (*flag == true)
+  if (*flag == true) {
     status->source = status->mpi.MPI_SOURCE;
-  
+    MPI_Get_count(&(status->mpi), MPI_BYTE, &(status->count));
+  }
+
   return HPX_SUCCESS;
 }
 

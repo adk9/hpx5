@@ -85,7 +85,7 @@ void op(void* _args) {
     hpx_thread_wait(&args->futs[i]);
     //    printf("  _reduction_op_action done waiting on future %d\n", i);
   }
-  
+
   *value = args->op(args->count, args->in_values);
 
   for (i = 0; i < args->count; i++) {
@@ -114,7 +114,7 @@ void recv_broadcast(void* _args) {
   //  printf("At %d received reduction value %lld\n", my_rank, (long long)*value);
   local_reduction_result = *value;
 
-  hpx_action_invoke(done_action, NULL, NULL);
+  hpx_call(hpx_get_my_locality(), done_action, NULL, 0, NULL);
 }
 
 void allreduce(void *_value) {
@@ -155,13 +155,14 @@ void allreduce(void *_value) {
     op_args->futs      = local_reduction_futures;
     op_args->op        = sum;
 
-    hpx_action_invoke(op_action, op_args, NULL);   
+    hpx_call(hpx_get_my_locality(), op_action, op_args, sizeof(*op_args), NULL);   
+
 
     args = hpx_alloc(sizeof(struct reduction_recv_args));
     args->index = 0;
     args->value = value;
 
-    hpx_action_invoke(recv_action, args, NULL);   
+    hpx_call(hpx_get_my_locality(), recv_action, args, sizeof(*args), NULL);   
   }
   else {
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
@@ -169,7 +170,7 @@ void allreduce(void *_value) {
       fprintf(stderr, "Error creating parcel\n");
       exit(-1);
     }
-    
+
     hpx_parcel_set_action(p, recv_action);
     args = (struct reduction_recv_args*)hpx_parcel_get_data(p);
     args->index = my_rank;
@@ -194,8 +195,8 @@ int
 main(int argc, char** argv)
 {
   hpx_timer_t timer;
-  
-  int success = hpx_init();
+
+  int success = hpx_init(NULL);
   if (success != 0) {
     printf("Error %d in hpx_init!\n", success);
     exit(-1);
@@ -207,7 +208,7 @@ main(int argc, char** argv)
   recv_broadcast_action = hpx_action_register("recv_broadcast", (hpx_func_t)recv_broadcast);
   done_action = hpx_action_register("done",           (hpx_func_t)done);
   hpx_action_registration_complete();
-  
+
   hpx_locality_t* my_loc = hpx_get_my_locality();
   unsigned int my_rank = my_loc->rank;
 
@@ -219,7 +220,7 @@ main(int argc, char** argv)
   hpx_thread_wait(complete);
 
   /* long elapsed = hpx_elapsed_us(timer); */
-  
+
   hpx_cleanup();
 
   return 0;

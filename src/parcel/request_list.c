@@ -29,8 +29,10 @@
    We depend on the fact that the request_list_node ISA request. */
 struct request_list_node {
   network_request_t      request;               /* must be 1st */
-  struct header          *parcel;
-  size_t                 size;
+  struct hpx_parcel      *parcel;
+  size_t                    size;               /* we keep track of the size so that we
+						   can start receiving an incoming request
+						   after a delay */
   struct request_list_node *next;
 };
 
@@ -48,7 +50,7 @@ request_list_init(request_list_t *list)
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
 struct network_request*
-request_list_append(request_list_t *list, struct header *parcel, size_t size)
+request_list_append(request_list_t *list, struct hpx_parcel *parcel, size_t size)
 {
   request_list_node_t* node = hpx_alloc(sizeof(*node));
   if (!node) {
@@ -82,7 +84,7 @@ request_list_curr(request_list_t *list)
   return (list->curr) ? &list->curr->request : NULL;
 } 
 
-struct header*
+struct hpx_parcel*
 request_list_curr_parcel(request_list_t *list)
 {
   return (list->curr) ? list->curr->parcel : NULL;

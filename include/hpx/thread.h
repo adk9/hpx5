@@ -118,6 +118,7 @@ struct hpx_thread {
   struct hpx_context       *ctx;                /**< pointer to the context */
   hpx_node_id_t             nid;                /**< node id */
   hpx_thread_id_t           tid;                /**< thread id */
+  long                   tls_id;                /**< TLS thread id */
   hpx_thread_state_t      state;                /**< queuing state */
   uint16_t                 opts;                /**< thread option flags  */
   uint8_t                  skip;                /**< [reserved for future] */
@@ -135,8 +136,8 @@ struct hpx_thread {
  * @param[in]     ctx - context structure (thread container)
  * @param[in]    opts - hpx_thread_options enumeration
  * @param[in]   entry - thread entry function
- * @param[in]    args - arguments to the thread, may be a pointer to an address, 
- *                      or a word-sized value directly. The semantics of this 
+ * @param[in]    args - arguments to the thread, may be a pointer to an address,
+ *                      or a word-sized value directly. The semantics of this
  *                      parameter are defined by the function, which users of
  *                      the function need to conform to.
  * @param[out] result - future representing result
@@ -252,6 +253,12 @@ void hpx_thread_yield_skip(uint8_t);
  */
 void hpx_thread_wait(struct hpx_future *future)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
+
+
+/**
+ * Returns the TLS id for the current thread.
+ */
+long hpx_thread_get_index(void);
 
 /*
  --------------------------------------------------------------------
