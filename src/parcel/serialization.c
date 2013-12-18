@@ -63,7 +63,8 @@ header_alloc(size_t bytes)
   header->size = size;  /* need to remember the actual size of the header */
 #if !HAVE_PHOTON 
   /* photon doesn't like if we do this on a separate thread */
-  __hpx_network_ops->pin(header, size);
+  if (header->data != &header->payload) /* only pin if data is external, otherwise the parcel block is pinned elsewhere */
+    __hpx_network_ops->pin(header->data, header->size);
 #endif
   return header;
 }
