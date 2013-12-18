@@ -18,8 +18,8 @@
 */
 
 #pragma once
-#ifndef LIBHPX_LIST_H_
-#define LIBHPX_LIST_H_
+#ifndef HPX_LIST_H_
+#define HPX_LIST_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -225,4 +225,4 @@ static inline void hpx_list_delete(hpx_list_t *ll, void *val) {
   }
 }
 
-#endif /* LIBHPX_LIST_H_ */
+#endif /* HPX_LIST_H_ */

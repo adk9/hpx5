@@ -25,6 +25,7 @@
 
 struct header;                                  /* forward declare */
 struct network_request;                         /* forward declare */
+struct hpx_parcel;                              /* forward declare */
 
 typedef struct request_list_node request_list_node_t;
 
@@ -42,7 +43,7 @@ void request_list_init(request_list_t*);
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
 /* size is the total size of the header to be transferred */
-struct network_request* request_list_append(request_list_t*, struct header*, size_t size)
+struct network_request* request_list_append(request_list_t*, struct hpx_parcel*, size_t size)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1, 2));
 
@@ -54,7 +55,7 @@ struct network_request* request_list_curr(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
-struct header* request_list_curr_parcel(request_list_t*)
+struct hpx_parcel* request_list_curr_parcel(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
