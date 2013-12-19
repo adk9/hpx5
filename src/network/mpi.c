@@ -293,7 +293,7 @@ recv(int source, void* buffer, size_t len, network_request_t *request)
   retval = HPX_ERROR;
   if (source == NETWORK_ANY_SOURCE) {
     mpi_src = MPI_ANY_SOURCE;
-    tag = 0;
+    tag = -1;
   }
   else {
     mpi_src = source;
