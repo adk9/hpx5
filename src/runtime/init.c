@@ -35,6 +35,7 @@
 #include "network.h"
 #include "parcelhandler.h"                      /* struct parcelhandler */
 #include "predefined_actions.h"                 /* init_predefined() */
+#include "libhpx/debug.h"
 #include "sync/barriers.h"
 
 /**
@@ -135,6 +136,7 @@ hpx_init(struct hpx_config* cfg)
 
   /* bootstrap the runtime */
   success = bootmgr->init();
+  dbg_assert(!success);
   if (success != HPX_SUCCESS)
     return __hpx_errno;
 
@@ -143,6 +145,7 @@ hpx_init(struct hpx_config* cfg)
 
   /* initialize network */
   success = __hpx_network_ops->init();
+  dbg_assert(!success);
   if (success != HPX_SUCCESS)
     return __hpx_errno;
 #endif
