@@ -116,9 +116,10 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
   int flag;                                     /* used in test */
   while ((req = request_list_curr(list)) != NULL) {
     int success = test(req, &flag, NULL);
+    dbg_assert(success == 0);
     if (flag == 1 && success == 0) {
       struct hpx_parcel* header = request_list_curr_parcel(list);
-      request_list_del(list);
+
       if (send)
 	dbg_printf("%d: Completed sending %d bytes from buffer at %p (request at %p) "
 		   "with action=%" HPX_PRIu_hpx_action_t "\n",
@@ -131,6 +132,7 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
 		   hpx_get_rank(), parcel_size(header), (void*)header, (void*)req,
 		   header->action);
       ++count;
+      request_list_del(list);
     } 
     request_list_next(list);
   }
@@ -300,7 +302,6 @@ parcelhandler_main(parcelhandler_t *args)
                               parcel_size(header),
                               req);
 #else
-      __hpx_network_ops->pin(header, parcel_size(header));
       req = request_list_append(&send_request_arr[dst_rank], header, parcel_size(header));
       if (send_request_counts[dst_rank] == 0) {
 	dbg_printf("%d: Sending with request at %p from buffer at %p (request at %p)\n",
