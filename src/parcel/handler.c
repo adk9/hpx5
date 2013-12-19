@@ -94,9 +94,7 @@ complete(struct hpx_parcel* header, bool send)
 {
   dbg_assert_precondition(header);
 
-  /* just free the header on a send completion */
   if (send) {
-    hpx_parcel_release(header);
     return HPX_SUCCESS;
   }
 
@@ -133,7 +131,7 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
 		   header->action);
       ++count;
       request_list_del(list);
-    } 
+    }
     request_list_next(list);
   }
   return count;

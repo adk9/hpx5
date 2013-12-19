@@ -33,6 +33,7 @@
 #include "hpx/globals.h"                        /* __hpx_network_ops */
 #include "hpx/mem.h"                            /* hpx_{alloc,free} */
 #include "network.h"                            /* typedef hpx_network_ops */
+#include "libhpx/debug.h"
 
 static int _rank;
 static int _size;
@@ -63,8 +64,9 @@ int init(void) {
     int provided;
     if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
       goto err;
-    if (provided < MPI_THREAD_SERIALIZED)
-      goto err;
+    dbg_printf("MPI Thread level = %d\n", provided);
+    //    if (provided < MPI_THREAD_SERIALIZED)
+    //      goto err;
   }
 
   if (MPI_Comm_size(MPI_COMM_WORLD, &_size) != MPI_SUCCESS)
