@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
   hpx_thread_wait(fut);
   double elapsed = hpx_elapsed_us(ts);
   double avg_oneway_latency = elapsed/((double)(arg_iter_limit*2));
-  printf("average oneway latency (MPI):   %f ms\n", avg_oneway_latency/1000.0);
+  printf("average oneway latency (MPI):   %f μs\n", avg_oneway_latency);
 
   hpx_locality_destroy(other_loc);
   hpx_cleanup();
