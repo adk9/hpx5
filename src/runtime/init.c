@@ -112,7 +112,7 @@ hpx_init(void)
 
   __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
   if (!__hpx_global_ctx)
-    return __hpx_errno = HPX_ERROR;
+    return __hpx_errno; // __hpx_errno is set by hpx_ctx_create on failure
   
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(*__hpx_network_ops));
