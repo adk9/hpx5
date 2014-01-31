@@ -61,22 +61,21 @@ int init(void) {
   MPI_Initialized(&ret);
   if (!ret) {
     int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
-      goto err;
-    if (provided < MPI_THREAD_SERIALIZED)
-      goto err;
+    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided) != MPI_SUCCESS)
+	return HPX_ERROR;
+    if (provided < MPI_THREAD_SERIALIZED))
+      return HPX_ERROR;
   }
 
   if (MPI_Comm_size(MPI_COMM_WORLD, &_size) != MPI_SUCCESS)
-    goto err;
+    return HPX_ERROR;
+
 
   if (MPI_Comm_rank(MPI_COMM_WORLD, &_rank) != MPI_SUCCESS)
-    goto err;
+    return HPX_ERROR;
 
   return 0;
 
-err:
-  return HPX_ERROR;
 }
 
 int get_rank(void) {
