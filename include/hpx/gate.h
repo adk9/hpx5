@@ -247,7 +247,7 @@ static inline hpx_future_t * hpx_lco_gate_get_future(hpx_gate_t * gate, size_t i
   }
 
   /* allocate & initialize a new future */
-  g_fut = (hpx_future_t *) hpx_alloc(sizeof(hpx_future_t *));
+  g_fut = (hpx_future_t *) hpx_alloc(sizeof(*g_fut));
   if (g_fut == NULL) {
     goto __hpx_lco_gate_get_future_FAIL0;
   }
