@@ -61,7 +61,6 @@ header_alloc(size_t bytes)
   }
 
   header->size = size;  /* need to remember the actual size of the header */
-  __hpx_network_ops->pin(header, size);
   return header;
 }
 

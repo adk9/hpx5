@@ -10,6 +10,6 @@ Version: @PACKAGE_VERSION@
 Requires: @TCMALLOC_PKG@ @GLIB_PKG@
 Requires.private: @MPI_PKG@ @CRYPTO_PKG@ @HWLOC_PKG@ @PAPI_PKG@ @PHOTON_PKG@
 Conflicts:
-Cflags: -I${includedir}
+Cflags: -I${includedir} -std=c99 -D_GNU_SOURCE
 Libs: -L${libdir} -lhpx
 Libs.private: @PLATFORM_LIBS@

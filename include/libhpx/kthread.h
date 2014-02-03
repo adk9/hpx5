@@ -23,13 +23,14 @@
 #ifndef LIBHPX_THREAD_KTHREAD_H_
 #define LIBHPX_THREAD_KTHREAD_H_
 
-#include <stdbool.h>
-#include <stdint.h>
-
 /**
  * @file
  * @brief Define the shared interface for kernel threads.
  */
+
+#include <stdbool.h>
+#include <stdint.h>
+#include "hpx/system/attributes.h"
 
 /**
  * Forward declarations of the struct type.
@@ -71,7 +72,5 @@ void libhpx_kthread_init(void);
 void libhpx_kthread_srv_susp_local(void *);
 void libhpx_kthread_srv_susp_global(void *);
 void libhpx_kthread_srv_rebal(void *);
-
-
 
 #endif /* LIBHPX_THREAD_KTHREAD_H_ */

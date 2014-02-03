@@ -32,8 +32,11 @@ typedef struct hpx_config hpx_config_t;
   Thread Suspension Policies
  --------------------------------------------------------------------
 */
-#define HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL   0
-#define HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL  1
+typedef enum {
+  HPX_CONFIG_THREAD_SUSPEND_SRV_LOCAL = 0,
+  HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL,
+  HPX_CONFIG_THREAD_SUSPEND_SRV_MAX
+} thread_suspend_service_t;
 
 
 /*
@@ -43,7 +46,7 @@ typedef struct hpx_config hpx_config_t;
 */
 #define HPX_CONFIG_DEFAULT_THREAD_SS              16384
 #define HPX_CONFIG_DEFAULT_SWITCH_FLAG            0
-#define HPX_CONFIG_DEFAULT_THREAD_SUSPEND_POLICY  1
+#define HPX_CONFIG_DEFAULT_THREAD_SUSPEND_POLICY  HPX_CONFIG_THREAD_SUSPEND_SRV_GLOBAL
 
 /*
  --------------------------------------------------------------------
