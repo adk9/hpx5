@@ -38,9 +38,13 @@ void backoff(int *prev) {
         sync_nop();
 }
 
-void tatas_acquire_slow(struct tatas_lock *l) {
+void tatas_acquire_slow(tatas_lock_t *l) {
     int i = base;
     do {
         backoff(&i);
     } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
+}
+
+void tatas_init(tatas_lock_t *l) {
+  l->lock = 0;
 }

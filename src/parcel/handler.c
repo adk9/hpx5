@@ -29,6 +29,7 @@
 #include "hpx/lco.h"                            /* hpx_future_t */
 #include "hpx/parcel.h"                         /* hpx_parcel_* */
 #include "hpx/thread/ctx.h"                     /* hpx_context_t */
+#include "block.h"                              /* parcel_block_t and get_block()  */
 #include "debug.h"                              /* dbg_ routines */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* struct network_status */
@@ -36,7 +37,6 @@
 #include "parcelqueue.h"                        /* struct parcelqueue */
 #include "request_buffer.h"                     /* struct request_buffer */
 #include "request_list.h"                       /* struct request_list */
-#include "serialization.h"                      /* struct header */
 
 // #define HPX_PARCELHANDLER_GET_THRESHOLD 0 // force all payloads to be sent via put/get
 /* At present, the threshold is used with the payload_size. BUT doesn't it make more sense to compare against total parcel size? The action name factors in then... */
@@ -64,6 +64,24 @@ typedef struct parcelhandler {
   hpx_future_t         *fut;
 } parcelhandler_t;
 
+/* Check if the block this parcel belongs to is pinned, and if not, pin it */
+/* BDM At present, this is done by the parcel handler. For a variety
+of reasons, including performance and simplicity, it might be
+preferable to do this elsewhere (e.g. when parcels are
+allocated). HOWEVER, network backends that both (1) require
+pinning/registration and (2) are not thread safe will blow up. */ 
+static void 
+pin_if_necessary(struct hpx_parcel* parcel) 
+{
+  /* pin this parcel's block, if necessary */
+  parcel_block_t *block = get_block(parcel);
+  if (block->header.pinned == false) {
+    int block_size = get_block_size(block);
+    __hpx_network_ops->pin(block, block_size);
+  }
+  return;
+}
+
 /**
  * Take a header from the network and create a local thread to process it.
  *
@@ -72,38 +90,20 @@ typedef struct parcelhandler {
  * @returns HPX_SUCCESS or an error code
  */
 static hpx_error_t
-complete(header_t* header, bool send)
+complete(struct hpx_parcel* header, bool send)
 {
   dbg_assert_precondition(header);
 
-  /* just free the header on a send completion */
   if (send) {
-    __hpx_network_ops->unpin(header, header->size);
-    hpx_free(header);
     return HPX_SUCCESS;
   }
 
-  dbg_printf("%d: Received %zd bytes to buffer at %p "
-             "with parcel_id=%u action=%" HPX_PRIu_hpx_action_t "\n",
-             hpx_get_rank(), header->size, (void*)header,
-             header->parcel_id, header->action);
-
-  /* deserialize and free the header */
-  struct hpx_parcel* parcel = deserialize(header);
-  __hpx_network_ops->unpin(header, header->size);
-  hpx_free(header);
-
-  if (!parcel) {
-    dbg_printf("Could not complete a recv or get request.\n");
-    return HPX_ERROR;
-  }
-  
-  hpx_action_invoke(parcel->action, parcel->payload, NULL);
-  return HPX_SUCCESS;
+  return hpx_action_invoke_parcel(header, NULL);
 }
 
 typedef int(*test_function_t)(network_request_t*, int*, network_status_t*);
 
+#if !HAVE_PHOTON
 static int
 complete_requests(request_list_t* list, test_function_t test, bool send)
 {
@@ -114,16 +114,81 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
   int flag;                                     /* used in test */
   while ((req = request_list_curr(list)) != NULL) {
     int success = test(req, &flag, NULL);
+    dbg_assert(success == 0);
     if (flag == 1 && success == 0) {
-      header_t* header = request_list_curr_parcel(list);
-      request_list_del(list);
+      struct hpx_parcel* header = request_list_curr_parcel(list);
+
+      if (send)
+	dbg_printf("%d: Completed sending %d bytes from buffer at %p (request at %p) "
+		   "with action=%" HPX_PRIu_hpx_action_t "\n",
+		   hpx_get_rank(), parcel_size(header), (void*)header, (void*)req,
+		   header->action);
       dbg_check_success(complete(header, send));
+      if (!send)
+	dbg_printf("%d: Received %d bytes to buffer at %p (request at %p) "
+		   "with action=%" HPX_PRIu_hpx_action_t "\n",
+		   hpx_get_rank(), parcel_size(header), (void*)header, (void*)req,
+		   header->action);
       ++count;
-    } 
+      request_list_del(list);
+    }
     request_list_next(list);
   }
   return count;
 }
+#else
+static int *recv_request_counts;
+static int *send_request_counts;
+
+static int
+complete_requests_photon(request_list_t* lists, int *count_lists, test_function_t test, bool send)
+{
+  int num_processes = hpx_get_num_localities();
+  int count = 0;
+  for (int i = 0; i < num_processes; ++i) {
+    request_list_t* list = &lists[i];
+    request_list_begin(list);
+    network_request_t* req;                       /* loop iterator */
+    int flag;                                     /* used in test */
+    if ((req = request_list_curr(list)) != NULL) {
+      int success = test(req, &flag, NULL);
+      
+      if (flag == 1 && success == 0) {
+	struct hpx_parcel* header = request_list_curr_parcel(list);
+	if (send) {
+	  dbg_printf("%d: Completed sending %d bytes from buffer at %p (request at %p) "
+		     "with action=%" HPX_PRIu_hpx_action_t "\n",
+		     hpx_get_rank(), parcel_size(header), (void*)header, (void*)req,
+		     header->action);
+	}
+	dbg_check_success(complete(header, send));
+	if (!send)
+	  dbg_printf("%d: Received %d bytes to buffer at %p (request at %p) "
+		     "with action=%" HPX_PRIu_hpx_action_t "\n",
+		     hpx_get_rank(), parcel_size(header), (void*)header, (void*)req,
+		     header->action);
+	++count;
+	request_list_del(list);
+	--count_lists[i];
+	if (send) {
+	  if (count_lists[i] > 0) {
+	    request_list_next(list);
+	    req = request_list_curr(list);
+	    struct hpx_parcel *header = request_list_curr_parcel(list);
+	    size_t size = request_list_curr_size(list);
+	    if (send)
+	      __hpx_network_ops->send(i, header, parcel_size(header), req);
+	    else
+	      __hpx_network_ops->recv(i, header, size, req);
+	  }
+	} /* if (send) */
+
+      } /*if (flag == 1 && success == 0) */
+    } /* if (flag == 1 && success == 0) */
+  } /* for(i) */
+  return count;
+}
+#endif
 
 static void
 parcelhandler_main(parcelhandler_t *args)
@@ -135,11 +200,23 @@ parcelhandler_main(parcelhandler_t *args)
   hpx_future_t* quit = args->quit;
 
   request_list_t send_requests;
-  request_list_t recv_requests;
   request_list_init(&send_requests);
+#if !HAVE_PHOTON 
+  request_list_t recv_requests;
   request_list_init(&recv_requests);
+#else
+  int num_processes = hpx_get_num_localities();
+  request_list_t* recv_request_arr = hpx_alloc(num_processes*sizeof(request_list_t));
+  for (int i = 0; i < num_processes;  ++i)
+    request_list_init(&recv_request_arr[i]);
+  recv_request_counts = hpx_calloc(num_processes, sizeof(recv_request_counts[0]));
+  request_list_t* send_request_arr = hpx_alloc(num_processes*sizeof(request_list_t));
+  for (int i = 0; i < num_processes;  ++i)
+    request_list_init(&send_request_arr[i]);
+  send_request_counts = hpx_calloc(num_processes, sizeof(send_request_counts[0]));
+#endif
 
-  header_t* header;
+  struct hpx_parcel* header;
   size_t i;
   int completions;
 
@@ -153,9 +230,9 @@ parcelhandler_main(parcelhandler_t *args)
   int outstanding_recvs;
   int outstanding_sends;
 
-  void* recv_buffer;
-  size_t recv_size;
-  int * retval;
+  hpx_parcel_t *recv_buffer;
+  int recv_size;
+  int *retval;
   int flag;
   network_status_t status;
 
@@ -187,7 +264,11 @@ parcelhandler_main(parcelhandler_t *args)
 
     /* cleanup outstanding sends/puts */
     if (outstanding_sends > 0) {
+#if !HAVE_PHOTON
       completions = complete_requests(&send_requests, __hpx_network_ops->send_test, true);
+#else
+      completions = complete_requests_photon(send_request_arr, send_request_counts, __hpx_network_ops->send_test, true);      
+#endif
       outstanding_sends -= completions;
       if (HPX_DEBUG && (completions > 0)) {
         completed_something = 1;
@@ -204,18 +285,32 @@ parcelhandler_main(parcelhandler_t *args)
       if (header == NULL) {
         /* TODO: signal error to somewhere else! */
       }
+      pin_if_necessary(header);
+      /* now send */
       dst_rank = header->dest.locality.rank;
-      dbg_printf("%d: Sending %zd bytes from buffer at %p with "
-                 "parcel_id=%u action=%" HPX_PRIu_hpx_action_t "\n",
-                 hpx_get_rank(), header->size, (void*)header, header->parcel_id,
-                 header->action);
-      req = request_list_append(&send_requests, header);
+      dbg_printf("%d: Sending %d bytes from buffer at %p with "
+                 "action=%" HPX_PRIu_hpx_action_t "\n",
+                 hpx_get_rank(), parcel_size(header), (void*)header, header->action);
+#if !HAVE_PHOTON
+      req = request_list_append(&send_requests, header, parcel_size(header));
       dbg_printf("%d: Sending with request at %p from buffer at %p\n",
                  hpx_get_rank(), (void*)req, (void*)header); 
       __hpx_network_ops->send(dst_rank, 
                               header,
-                              header->size,
+                              parcel_size(header),
                               req);
+#else
+      req = request_list_append(&send_request_arr[dst_rank], header, parcel_size(header));
+      if (send_request_counts[dst_rank] == 0) {
+	dbg_printf("%d: Sending with request at %p from buffer at %p (request at %p)\n",
+		   hpx_get_rank(), (void*)req, (void*)header, (void*)req); 
+	__hpx_network_ops->send(dst_rank, 
+				header,
+				parcel_size(header),
+				req);
+      }
+      ++send_request_counts[dst_rank];
+#endif
       outstanding_sends++;
     }
 
@@ -224,7 +319,11 @@ parcelhandler_main(parcelhandler_t *args)
        ==================================
     */
     if (outstanding_recvs > 0) {
+#if !HAVE_PHOTON
       completions = complete_requests(&recv_requests, __hpx_network_ops->recv_test, false);
+#else
+      completions = complete_requests_photon(recv_request_arr, recv_request_counts, __hpx_network_ops->recv_test, false);      
+#endif
       outstanding_recvs -= completions;
       if (HPX_DEBUG && (completions > 0)) {
         completed_something = 1;
@@ -244,17 +343,24 @@ parcelhandler_main(parcelhandler_t *args)
       }
     
       recv_size = status.count;
-      success = hpx_alloc_align((void**)&recv_buffer, 64, recv_size);
-      if (success != 0 || recv_buffer == NULL) {
+      recv_buffer = hpx_parcel_acquire(recv_size - sizeof(struct hpx_parcel));
+      if (recv_buffer == NULL) {
         __hpx_errno = HPX_ERROR_NOMEM;
         *retval = HPX_ERROR_NOMEM;
         goto error;
       } 
-      __hpx_network_ops->pin(recv_buffer, recv_size);
-      dbg_printf("%d: Receiving %zd bytes to buffer at %tx\n", hpx_get_rank(),
-                 recv_size, (ptrdiff_t)recv_buffer); 
-      req = request_list_append(&recv_requests, recv_buffer);
+      pin_if_necessary(recv_buffer);
+#if !HAVE_PHOTON
+      req = request_list_append(&recv_requests, recv_buffer, recv_size);
       __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
+#else
+      req = request_list_append(&recv_request_arr[status.source], recv_buffer, recv_size);
+      if (recv_request_counts[status.source] == 0)
+	__hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
+      ++recv_request_counts[status.source];
+#endif
+      dbg_printf("%d: Receiving %d bytes to buffer at %p with request %p\n", hpx_get_rank(),
+                 recv_size, (void*)recv_buffer, (void*)req); 
       outstanding_recvs++;
     }
   
@@ -338,26 +444,22 @@ parcelhandler_destroy(parcelhandler_t *ph)
  */
 int
 parcelhandler_send(hpx_locality_t *dest,
-                   const struct hpx_parcel *parcel,
+                   struct hpx_parcel *parcel,
                    hpx_future_t *complete,
                    hpx_future_t *thread,
                    hpx_future_t **result)
 {
-  header_t *h = serialize(parcel);
-  if (!h) {
-    dbg_printf("Failed to serialize a parcel.");
-    return __hpx_errno;
-  }
-
   /* need this hack for now, because we don't have global addresses */
-  h->dest.locality = *dest;
+  parcel->dest.locality = *dest;
   
-  int e = parcelqueue_push(__hpx_send_queue, h);
+  int e = parcelqueue_push(__hpx_send_queue, parcel);
   if (e != HPX_SUCCESS) {
     dbg_print_error(e, "Failed to add a parcel to the send queue");
     __hpx_errno = e;
     return e;
   }
+
+  /* TODO FIXME: where are futures for complete and thread??? */
 
   return HPX_SUCCESS;
 }

@@ -33,23 +33,23 @@ fib(long *n)
   int my_rank = hpx_get_rank();
   hpx_locality_t *l = hpx_locality_from_rank((my_rank + num_ranks - 1) % num_ranks);
   hpx_locality_t *r = hpx_locality_from_rank((my_rank + 1) % num_ranks);
-  
+
   long n1 = *n - 1;
   long n2 = *n - 2;
-  
+
   hpx_future_t *ffn1 = NULL;
   hpx_future_t *ffn2 = NULL;
-  
+
   hpx_call(l, fib_action, &n1, sizeof(n1), &ffn1);
   hpx_call(r, fib_action, &n2, sizeof(n2), &ffn2);
-  
+
   hpx_thread_wait(ffn1);
   hpx_thread_wait(ffn2);
 
   long fn1 = (long) hpx_lco_future_get_value(ffn1);
   long fn2 = (long) hpx_lco_future_get_value(ffn2);
   long fn = fn1 + fn2;
-  
+
   hpx_thread_exit((void*) fn);
 }
 
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
   n = strtol(argv[0], NULL, 10);
 
   /* initialize hpx runtime */
-  hpx_init();
+  hpx_init(NULL);
 
   if (debug) {
     int i = 0;
@@ -106,7 +106,7 @@ main(int argc, char *argv[])
   /* register the fib action */
   fib_action = hpx_action_register("fib", (hpx_func_t)fib);
   hpx_action_registration_complete();
-  
+
   /* get start time */
   hpx_timer_t timer;
   hpx_get_time(&timer);
@@ -120,7 +120,7 @@ main(int argc, char *argv[])
 
   double time = hpx_elapsed_us(timer)/1e3;
   printf("seconds: %.7f\n", time);
-         
+
   printf("localities:   %d\n", num_ranks);
 
   /* cleanup */

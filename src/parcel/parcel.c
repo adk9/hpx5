@@ -1,11 +1,11 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   ParcelQueue Functions
   src/parcel/serialization.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -45,15 +45,16 @@ struct hpx_thread;
  *  @{
  */
 hpx_error_t
-hpx_parcel_init(void)
+hpx_parcel_init(struct hpx_context *ctx)
 {
-  return HPX_SUCCESS;
+  return parcel_allocator_init(ctx);
 }
 
 void
 hpx_parcel_fini(void)
 {
   /* shutdown the parcel handler thread */
+  parcel_allocator_fini();
 }
 /** @} */
 
@@ -61,22 +62,22 @@ hpx_parcel_fini(void)
  * Forward the request for a parcel to the parcel allocator.
  */
 hpx_parcel_t *
-hpx_parcel_acquire(size_t bytes)
+hpx_parcel_acquire(int bytes)
 {
-  return parcel_get(bytes);
+  return parcel_allocator_get(bytes);
 }
 
 /**
  * Forward the parcel release to the parcel allocator.
  *
- * The parcel_put() interface doesn't want a NULL pointer, while the
+ * The parcel_allocator_put() interface doesn't want a NULL pointer, while the
  * hpx_parcel_release() interface doesn't care. Match those internally.
  */
 void
 hpx_parcel_release(hpx_parcel_t *parcel)
 {
   if (parcel)
-    parcel_put(parcel);
+    parcel_allocator_put(parcel);
 }
 
 /**
@@ -85,8 +86,8 @@ hpx_parcel_release(hpx_parcel_t *parcel)
 hpx_parcel_t *
 hpx_parcel_clone(hpx_parcel_t *parcel)
 {
-  size_t size = parcel_get_data_size(parcel);
-  hpx_parcel_t *p = parcel_get(size);
+  int size = parcel_get_data_size(parcel);
+  hpx_parcel_t *p = parcel_allocator_get(size);
   if (!p)
     return NULL;
   return hpx_parcel_copy(p, parcel);
@@ -103,10 +104,10 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
 {
   dbg_assert_precondition(to);
   dbg_assert_precondition(from);
-  
-  size_t to_size = parcel_get_data_size(to);
-  size_t from_size = parcel_get_data_size(from);
-  size_t min_size = (to_size < from_size) ? to_size : from_size;
+
+  int to_size = parcel_get_data_size(to);
+  int from_size = parcel_get_data_size(from);
+  int min_size = (to_size < from_size) ? to_size : from_size;
 
   to->action = from->action;
   to->target = from->target;
@@ -114,44 +115,28 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
   memcpy(to->data, from->data, min_size);
   bzero((uint8_t*)to->data + min_size, to_size - min_size);
   return to;
-}                     
+}
 
 /**
  * Implement hpx_parcel_send as a local thread spawn.
  */
 static int
-local_send(const hpx_parcel_t *parcel,
+local_send(hpx_parcel_t *parcel,
            hpx_future_t *complete,
            hpx_future_t *thread,
            hpx_future_t **result)
 {
-  /* allocate any extra futures that the sender wants */
-  hpx_func_t f = action_lookup(parcel->action);
-  if (!f)
-    dbg_print_error(HPX_ERROR, "Could not find an action registered for %"
-                    HPX_PRIu_hpx_action_t "\n", parcel->action);
+  hpx_error_t e = hpx_action_invoke_parcel(parcel, result);
 
-  /* LD: hpx_thread_create does not know what to do with the argument data, so
-     for now we copy and leak it.
-     TODO: the entire thread creation pipeline needs to be fixed
-  */
-  uint8_t *data = NULL;
-  if (parcel->size) {
-    data = hpx_alloc(parcel->size);
-    memcpy(data, parcel->data, parcel->size);
-    /* dbg_printf("FIXME: Leaking %lu bytes of data in 'local_send'\n", */
-    /*            parcel->size);  */
-  }
-
-  struct hpx_thread *t = NULL;
-  int e = hpx_thread_create(__hpx_global_ctx, HPX_THREAD_OPT_NONE, f, data,
-                            result, &t);  
 
   /* if necessary, signal that the send is complete both locally and globally */
+  /* FIXME TODO: put back in */
+  /*
   if (complete)
     hpx_future_set(complete);
   if (thread)
     hpx_future_setv(thread, sizeof(t), &t);
+  */ 
   return e;
 }
 
@@ -163,7 +148,7 @@ local_send(const hpx_parcel_t *parcel,
  * our behalf.
  */
 int
-hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
+hpx_parcel_send(struct hpx_locality *dest, hpx_parcel_t *parcel,
                 hpx_future_t *complete,
                 hpx_future_t *thread,
                 hpx_future_t **result)
@@ -173,7 +158,7 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
 
   return (dest->rank == hpx_get_rank()) ?
     /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
-    local_send(parcel, complete, thread, result) : 
+    local_send(parcel, complete, thread, result) :
     parcelhandler_send(dest, parcel, complete, thread, result);
 }
 
@@ -188,11 +173,11 @@ hpx_parcel_send(struct hpx_locality *dest, const hpx_parcel_t *parcel,
  * @returns HPX_SUCCESS or an error code
  */
 int
-hpx_parcel_resize(hpx_parcel_t **parcel, size_t size)
+hpx_parcel_resize(hpx_parcel_t **parcel, int size)
 {
   dbg_assert_precondition(parcel);
 
-  size_t psize = parcel_get_data_size(*parcel);
+  int psize = parcel_get_data_size(*parcel);
   if (psize >= size)
     return HPX_SUCCESS;
 
@@ -249,20 +234,25 @@ hpx_parcel_get_data(hpx_parcel_t *parcel)
 }
 
 void
-hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, int length)
 {
   dbg_assert_precondition(parcel);
   dbg_assert_precondition(length <= parcel->size);
-  dbg_assert_precondition(!data || length);
-  
+  dbg_assert_precondition((!data || length));
+
   memcpy(parcel->data, data, length);
 }
 
 /**
  * From libhpx/parcel.h.
  */
-size_t
+int
 parcel_get_data_size(const hpx_parcel_t *parcel)
 {
   return parcel->size;
+}
+
+int parcel_size(const hpx_parcel_t *parcel)
+{
+  return parcel->size + sizeof(*parcel);
 }

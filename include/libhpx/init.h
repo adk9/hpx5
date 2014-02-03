@@ -27,13 +27,15 @@
  */
 
 #include "hpx/error.h"                          /* hpx_error_t */
- 
+
+struct hpx_context;
+
 /**
  * Initialize the parcel subsystem.
  *
  * @todo What errors can this produce and what are we supposed to do about it?
  */
-hpx_error_t hpx_parcel_init(void);
+hpx_error_t hpx_parcel_init(struct hpx_context *ctx);
 
 /**
  * Clean up the parcel subsystem.

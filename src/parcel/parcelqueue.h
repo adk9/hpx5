@@ -44,15 +44,8 @@ typedef struct parcelqueue parcelqueue_t;
    - it should be as efficient for the producers as possible given
      the other constraints.
 
-   It is a locking queue for simplicity. Fortunately, as there is only
-   one consumer, we only need a lock on the tail and not one on the
-   head. Like in Michael & Scott, we use dummy nodes so that producers
-   and the consumer do not block each other. This is especially
-   helpful in our case, since pop is supposed to be fast.
-
-   (In fact, in the final implementation, it pretty much is the
-   two-lock queue from Michael & Scott with no head lock. See
-   http://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html)
+   It is a locking queue for simplicity. This could be changed to
+   something faster, potentially.
 
    One known issue with the current queue implementation is that one
    thread being killed or dying while pushing to the queue can lock up

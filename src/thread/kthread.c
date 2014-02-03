@@ -35,7 +35,30 @@
 #include "hpx/thread.h"
 #include "hpx/thread/ctx.h"
 #include "hpx/thread/mctx.h"
+#include "ctx.h"                                /* ctx_add_kthread_init */
+#include "debug.h"
 #include "kthread.h"
+#include "sync/barriers.h"
+
+/*
+ --------------------------------------------------------------------
+  hpx_kthread_set_affinity
+
+  Sets the logical CPU affinity for a given kernel thread.
+ --------------------------------------------------------------------
+*/
+static void set_affinity(void *args) {
+#ifdef __linux__
+  hpx_kthread_t *kth = args;
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(kth->tid, &cpuset);
+
+  pthread_setaffinity_np(kth->core_th, sizeof(cpu_set_t), &cpuset);
+#endif
+}
+
 
 static pthread_key_t errno_key;
 static pthread_key_t kth_key;
@@ -121,8 +144,7 @@ void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
   A default seed function for new kernel threads.
  --------------------------------------------------------------------
 */
-
-void * hpx_kthread_seed_default(void *ptr) {
+void *hpx_kthread_seed_default(void *ptr) {
   hpx_kthread_t *kth = (hpx_kthread_t *) ptr;
   /* hpx_thread_t *th = NULL; */
   /* hpx_context_t *ctx = kth->ctx; */
@@ -142,17 +164,17 @@ void * hpx_kthread_seed_default(void *ptr) {
 
   /* if we are running and have something to do, get to it.  otherwise, wait. */
   while (kth->k_st != HPX_KTHREAD_STATE_STOPPED) {
-    if (kth->exec_th != NULL) {
+    if (kth->exec_th) {
       switch (kth->exec_th->state) {
-        case HPX_THREAD_STATE_YIELD:
-      kth->exec_th->state = HPX_THREAD_STATE_PENDING;
-      hpx_queue_push(&kth->pend_q, kth->exec_th);
-      break;
+      case HPX_THREAD_STATE_YIELD:
+        kth->exec_th->state = HPX_THREAD_STATE_PENDING;
+        hpx_queue_push(&kth->pend_q, kth->exec_th);
+        break;
       case HPX_THREAD_STATE_EXECUTING:
         _hpx_thread_terminate(kth->exec_th);
-    break;
+        break;
       case HPX_THREAD_STATE_TERMINATED:
-    _hpx_thread_terminate(kth->exec_th);
+        _hpx_thread_terminate(kth->exec_th);
         break;
       }
     }
@@ -160,21 +182,25 @@ void * hpx_kthread_seed_default(void *ptr) {
     kth->exec_th = (hpx_thread_t *) hpx_queue_pop(&kth->pend_q);
 
     /* if we have an next thread, put it in the EXECUTING state */
-    if (kth->exec_th != NULL) {
+    if (kth->exec_th) {
       switch (kth->exec_th->state) {
-        case HPX_THREAD_STATE_INIT:
-      kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-      hpx_mctx_makecontext(kth->exec_th->reuse->mctx, kth->mctx, kth->exec_th->reuse->stk, kth->exec_th->reuse->ss, kth->mcfg, kth->mflags, kth->exec_th->reuse->func, 1, kth->exec_th->reuse->args);
-      break;
-        case HPX_THREAD_STATE_PENDING:
-      kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
-      break;
-        default:
-      break;
+      case HPX_THREAD_STATE_INIT:
+        kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+        hpx_mctx_makecontext(kth->exec_th->reuse->mctx, kth->mctx,
+                             kth->exec_th->reuse->stk, kth->exec_th->reuse->ss,
+                             kth->mcfg, kth->mflags, kth->exec_th->reuse->func,
+                             1, kth->exec_th->reuse->args);
+        break;
+      case HPX_THREAD_STATE_PENDING:
+        kth->exec_th->state = HPX_THREAD_STATE_EXECUTING;
+        break;
+      default:
+        break;
       }
 
       pthread_mutex_unlock(&kth->mtx);
-      hpx_mctx_swapcontext(kth->mctx, kth->exec_th->reuse->mctx, kth->mcfg, kth->mflags);
+      hpx_mctx_swapcontext(kth->mctx, kth->exec_th->reuse->mctx, kth->mcfg,
+                           kth->mflags);
       pthread_mutex_lock(&kth->mtx);
     } else {
       gettimeofday(&tv, NULL);
@@ -191,7 +217,6 @@ void * hpx_kthread_seed_default(void *ptr) {
   return NULL;
 }
 
-
 /*
  --------------------------------------------------------------------
   hpx_kthread_create
@@ -200,141 +225,96 @@ void * hpx_kthread_seed_default(void *ptr) {
  --------------------------------------------------------------------
 */
 
-hpx_kthread_t *hpx_kthread_create(hpx_context_t *ctx, hpx_kthread_seed_t seed,
-                                  hpx_mconfig_t mcfg, uint64_t mflags) {
-  /* pthread_mutexattr_t mtx_attr; */
-  hpx_kthread_t *kth = NULL;
-  int err;
-
-  /* allocate and init the handle */
-  kth = (hpx_kthread_t *) hpx_alloc(sizeof(hpx_kthread_t));
-  if (kth != NULL) {
-    memset(kth, 0, sizeof(hpx_kthread_t));
-
-    hpx_queue_init(&kth->pend_q);
-    hpx_queue_init(&kth->susp_q);
-
-    hpx_kthread_mutex_init(&kth->mtx);
-    pthread_cond_init(&kth->k_c, 0);
-
-    kth->ctx = ctx;
-    kth->k_st = HPX_KTHREAD_STATE_RUNNING;
-    kth->mcfg = mcfg;
-    kth->mflags = mflags;
-    kth->pend_load = 0;
-
-    /* create a machine context buffer */
-    kth->mctx = (hpx_mctx_context_t *) hpx_alloc(sizeof(hpx_mctx_context_t));
-    if (kth->mctx == NULL) {
-      goto __hpx_kthread_create_FAIL1;
-    }
-
-    /* create the thread */
-    err = pthread_create(&kth->core_th, NULL, seed, (void *) kth);
-    if (err != 0) {
-       switch (err) {
-        case EAGAIN:
-          __hpx_errno = HPX_ERROR_KTH_MAX;
-      break;
-        case EINVAL:
-          __hpx_errno = HPX_ERROR_KTH_ATTR;
-      break;
-        default:
-      __hpx_errno = HPX_ERROR_KTH_INIT;
-      break;
-      }
-
-       goto __hpx_kthread_create_FAIL2;
-    }
-  } else {
-    __hpx_errno = HPX_ERROR_NOMEM;
-    goto __hpx_kthread_create_FAIL0;
+int hpx_kthread_start(hpx_kthread_t *thread, void* (*f)(void*), void *args) {
+  switch (pthread_create(&thread->core_th, NULL, f, args)) {
+  default:
+    return (__hpx_errno = HPX_ERROR_KTH_INIT);
+  case 0:
+    thread->k_st = HPX_KTHREAD_STATE_RUNNING;
+    return HPX_SUCCESS;
+  case EAGAIN:
+    return (__hpx_errno = HPX_ERROR_KTH_MAX);
+  case EINVAL:
+    return (__hpx_errno = HPX_ERROR_KTH_ATTR);
   }
+}
 
+hpx_kthread_t *hpx_kthread_new(hpx_context_t *ctx, int id) {
+  /* allocate and init the handle */
+  hpx_kthread_t *kth = hpx_alloc(sizeof(*kth));
+  if (!kth) {
+    dbg_printf("Could not allocate a kthread.\n");
+    __hpx_errno = HPX_ERROR_NOMEM;
+    return NULL;
+  }
+  bzero(kth, sizeof(*kth));
+
+  /* create a machine context buffer */
+  kth->mctx = hpx_alloc(sizeof(*kth->mctx));
+  if (!kth->mctx) {
+    dbg_printf("Could not allocate a machine context.\n");
+    __hpx_errno = HPX_ERROR_NOMEM;
+    hpx_free(kth);
+    return NULL;
+  }
+  bzero(kth->mctx, sizeof(*kth->mctx));
+
+  /* initialize the rest of the kthread (already zeroed) */
+  hpx_kthread_mutex_init(&kth->mtx);
+  pthread_cond_init(&kth->k_c, 0);
+  hpx_queue_init(&kth->pend_q);
+  hpx_queue_init(&kth->susp_q);
+  kth->ctx = ctx;
+  kth->k_st = HPX_KTHREAD_STATE_NEW;
+  memcpy(&kth->mcfg, &ctx->mcfg, sizeof(ctx->mcfg));
+  kth->mflags = hpx_config_get_switch_flags(&ctx->cfg);
+  kth->tid = id;
+
+  /* set my affinity once I've started */
+  ctx_add_kthread_init(ctx, set_affinity, kth);
   return kth;
-
- __hpx_kthread_create_FAIL2:
-  hpx_free(kth->mctx);
-
- __hpx_kthread_create_FAIL1:
-  pthread_cond_destroy(&kth->k_c);
-  hpx_kthread_mutex_destroy(&kth->mtx);
-
-  hpx_queue_destroy(&kth->susp_q);
-  hpx_queue_destroy(&kth->pend_q);
-
-  hpx_free(kth);
-
- __hpx_kthread_create_FAIL0:
-  return NULL;
 }
 
-
-/*
- --------------------------------------------------------------------
-  hpx_kthread_set_affinity
-
-  Sets the logical CPU affinity for a given kernel thread.
- --------------------------------------------------------------------
-*/
-void hpx_kthread_set_affinity(hpx_kthread_t *kth, uint16_t aff) {
-#ifdef __linux__
-  cpu_set_t cpuset;
-
-  CPU_ZERO(&cpuset);
-  CPU_SET(aff, &cpuset);
-
-  pthread_setaffinity_np(kth->core_th, sizeof(cpu_set_t), &cpuset);
-#endif
-}
-
-
-/*
- --------------------------------------------------------------------
-  hpx_kthread_destroy
-
-  Terminates and destroys a previously created kernel thread.
- --------------------------------------------------------------------
-*/
-void hpx_kthread_destroy(hpx_kthread_t *kth) {
-  hpx_thread_t *th;
-
-  /* shut down the kernel thread */
-  pthread_mutex_lock(&kth->mtx);
-  kth->k_st = HPX_KTHREAD_STATE_STOPPED;
-  pthread_cond_signal(&kth->k_c);
-  pthread_mutex_unlock(&kth->mtx);
+/**
+ * Helper function that terminates a kernel thread.
+ */
+static void terminate(hpx_kthread_t *thread) {
+  pthread_mutex_lock(&thread->mtx);
+  thread->k_st = HPX_KTHREAD_STATE_STOPPED;
+  pthread_cond_signal(&thread->k_c);
+  pthread_mutex_unlock(&thread->mtx);
 
   /* wait for our kernel thread to terminate */
-  pthread_join(kth->core_th, NULL);
+  pthread_join(thread->core_th, NULL);
 
+  hpx_thread_t *th = NULL;
   /* destroy any remaining HPX threads in the pending queue */
-  do {
-    th = hpx_queue_pop(&kth->pend_q);
-    if (th != NULL) {
-      hpx_thread_destroy(th);
-    }
-  } while (th != NULL);
+  while ((th = hpx_queue_pop(&thread->pend_q)))
+    hpx_thread_destroy(th);
 
   /* destroy any remaining threads in the suspended queue */
-  do {
-    th = hpx_queue_pop(&kth->susp_q);
-    if (th != NULL) {
-      hpx_thread_destroy(th);
-    }
-  } while (th != NULL);
-
-  /* cleanup */
-  hpx_queue_destroy(&kth->susp_q);
-  hpx_queue_destroy(&kth->pend_q);
-
-  pthread_cond_destroy(&kth->k_c);
-  hpx_kthread_mutex_destroy(&kth->mtx);
-
-  hpx_free(kth->mctx);
-  hpx_free(kth);
+  while ((th = hpx_queue_pop(&thread->susp_q)))
+    hpx_thread_destroy(th);
 }
 
+/**
+ * Delete the thread structure.
+ */
+void hpx_kthread_delete(hpx_kthread_t *thread) {
+  if (!thread)
+    return;
+
+  if (thread->k_st != HPX_KTHREAD_STATE_NEW)
+    terminate(thread);
+
+  hpx_queue_destroy(&thread->susp_q);
+  hpx_queue_destroy(&thread->pend_q);
+
+  pthread_cond_destroy(&thread->k_c);
+  hpx_kthread_mutex_destroy(&thread->mtx);
+  hpx_free(thread->mctx);
+  hpx_free(thread);
+}
 
 /*
  --------------------------------------------------------------------
@@ -585,3 +565,4 @@ void libhpx_kthread_srv_rebal(void *ptr) {
 
   hpx_thread_exit(NULL);
 }
+

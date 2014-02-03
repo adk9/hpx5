@@ -1,8 +1,8 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
-  Copyright (c) 2013, Trustees of Indiana University 
+
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -21,7 +21,7 @@
 #include "hpx/agas.h"                           /* struct hpx_addr */
 #include "hpx/error.h"                          /* hpx_error_t */
 #include "hpx/system/attributes.h"              /* HPX_MACROS */
-#include "address.h"                            /* struct address */
+#include "libhpx/address.h"                     /* struct address */
 
 typedef struct header header_t;
 
@@ -48,7 +48,7 @@ struct header {
  * Serialize a parcel.
  *
  * @param[in]  parcel - the parcel to serialize
- 
+
  * @returns NULL if error, or the serialized parcel (needs to be free-d)
  */
 struct header *serialize(const struct hpx_parcel *parcel)
