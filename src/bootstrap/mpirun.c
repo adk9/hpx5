@@ -62,16 +62,14 @@ int init(void) {
   MPI_Initialized(&ret);
   if (!ret) {
     int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
-      goto err;
+    int success = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided)
     dbg_printf("MPI Thread level = %d\n", provided);
-    //    if (provided < MPI_THREAD_SERIALIZED)
-    //      goto err;
+    if (success != MPI_SUCCESS)
+      return HPX_ERROR;
   }
 
   if (MPI_Comm_size(MPI_COMM_WORLD, &_size) != MPI_SUCCESS)
     return HPX_ERROR;
-
 
   if (MPI_Comm_rank(MPI_COMM_WORLD, &_rank) != MPI_SUCCESS)
     return HPX_ERROR;
