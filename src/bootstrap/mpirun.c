@@ -62,7 +62,7 @@ int init(void) {
   MPI_Initialized(&ret);
   if (!ret) {
     int provided;
-    int success = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided)
+    int success = MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided);
     dbg_printf("MPI Thread level = %d\n", provided);
     if (success != MPI_SUCCESS)
       return HPX_ERROR;

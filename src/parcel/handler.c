@@ -95,10 +95,11 @@ complete(struct hpx_parcel* header, bool send)
   dbg_assert_precondition(header);
 
   if (send) {
+    hpx_parcel_release(header);
     return HPX_SUCCESS;
   }
 
-  return hpx_action_invoke_parcel(header, NULL);
+  return hpx_action_invoke_parcel(header, NULL, NULL);
 }
 
 typedef int(*test_function_t)(network_request_t*, int*, network_status_t*);
@@ -445,7 +446,6 @@ parcelhandler_destroy(parcelhandler_t *ph)
 int
 parcelhandler_send(hpx_locality_t *dest,
                    struct hpx_parcel *parcel,
-                   hpx_future_t *complete,
                    hpx_future_t *thread,
                    hpx_future_t **result)
 {
@@ -459,7 +459,7 @@ parcelhandler_send(hpx_locality_t *dest,
     return e;
   }
 
-  /* TODO FIXME: where are futures for complete and thread??? */
+  // TODO FIXME set thread and result
 
   return HPX_SUCCESS;
 }
