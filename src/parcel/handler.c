@@ -344,12 +344,8 @@ parcelhandler_destroy(parcelhandler_t *ph)
  *
  */
 int
-parcelhandler_send(hpx_locality_t *dest,
-                   hpx_parcel_t *parcel,
-                   hpx_future_t *complete,
-                   hpx_future_t *thread,
-                   hpx_future_t **result)
-{
+parcelhandler_send(hpx_locality_t *dest, hpx_parcel_t *parcel,
+                   hpx_future_t *thread, hpx_future_t **result) {
   /* need this hack for now, because we don't have global addresses */
   parcel->dest.locality = *dest;
 

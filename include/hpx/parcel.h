@@ -1,14 +1,14 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   User-Level Parcel Definition
   hpx/parcel.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -59,7 +59,7 @@ hpx_parcel_t *hpx_parcel_acquire(int bytes);
  * Release a user-level parcel back to the runtime.
  *
  * This function does not provide a scheduling opportunity to the runtime,
- * i.e., the calling thread will not be context switched during its execution. 
+ * i.e., the calling thread will not be context switched during its execution.
  *
  * It is not an error to release a NULL pointer.
  *
@@ -118,27 +118,18 @@ hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
  * This operation does not provide a scheduling opportunity to the runtime,
  * i.e., the calling thread will not be context switched during its execution.
  *
- * The only valid operation on @p parcel during the send is
- * hpx_parcel_release(). The interface provides two different future
- * parameters, @p local_complete and @p remote_complete, which can be used with
- * the hpx_thread_wait() interface to wait for either condition to occur. The
- * parcel may be reused once @p local_complete has triggered. Either future can
- * be set to NULL, in which case the runtime does not generate those events.
  *
  * @param[in]     dest - the destination locality (HACK)
  * @param[in]   parcel - the parcel to send, must be non-NULL
- * @param[in] complete - a future that will be triggered when the send completes
- *                       locally, may be NULL 
  * @param[in]   thread - a future that will be triggered with the address of the
- *                       remot thread when the send is complete, may be NULL
- * @param[in]   result - the address of a future that will be triggered when the
+ *                       remote thread when the send is complete, may be NULL
+ * @param[out]  result - the address of a future that will be triggered when the
  *                       thread spawned  as a result of this future returns, may
- *                       be NULL 
+ *                       be NULL
  * @returns an error indicating a problem with the runtime
  */
 int hpx_parcel_send(struct hpx_locality *dest,
                     hpx_parcel_t *parcel,
-                    struct hpx_future *complete,
                     struct hpx_future *thread,
                     struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));

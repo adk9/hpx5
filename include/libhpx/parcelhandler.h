@@ -1,14 +1,14 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Parcel Handler Function Definitions
   libhpx/parcelhandler.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -40,7 +40,7 @@ struct HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL) parcelhandler;
 
 /**
  * Create the parcel handler. Returns a newly allocated and initialized
- * parcel handler. 
+ * parcel handler.
  *
  * NB: In the present implementation, there should only ever be one parcel
  *     handler per context, or the system will break.
@@ -83,7 +83,6 @@ void parcelhandler_destroy(struct parcelhandler *ph)
  */
 int parcelhandler_send(struct hpx_locality *dest,
                        struct hpx_parcel *parcel,
-                       struct hpx_future *complete,
                        struct hpx_future *thread,
                        struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,

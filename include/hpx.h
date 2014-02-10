@@ -1,14 +1,14 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Thread Function Definitions
   hpx_thread.h
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
-  This software may be modified and distributed under the terms of 
+  This software may be modified and distributed under the terms of
   the BSD license.  See the COPYING file for details.
 
   This software was created at the Indiana University Center for
@@ -16,46 +16,93 @@
  ====================================================================
 */
 
-#pragma once
-#ifndef _HPX_H_
-#define _HPX_H_
+#ifndef HPX_H_
+#define HPX_H_
 
-#include <stdarg.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
-#define _HPX_H_INSIDE
+typedef uintptr_t hpx_addr_t;
+#define HPX_NULL        ((uintptr_t)NULL)
 
-// TODO: Cut down on the number of internal headers.
+/**
+ * The type of the key we use for actions.
+ */
+typedef uintptr_t hpx_action_t;
 
-#include "hpx/action.h"
-#include "hpx/agas.h"
-#include "hpx/atomic.h"
-#include "hpx/config.h"
-#include "hpx/error.h"
-#include "hpx/globals.h"
-#include "hpx/gate.h"
-#include "hpx/init.h"
-#include "hpx/kthread.h"
-#include "hpx/lco.h"
-#include "hpx/mem.h"
-#include "hpx/mutex.h"
-#include "hpx/parcel.h"
-#include "hpx/runtime.h"
-#include "hpx/system/abort.h"
-#include "hpx/system/attributes.h"
-#include "hpx/thread/ctx.h"
-#include "hpx/thread/mctx.h"
-#include "hpx/thread.h"
-#include "hpx/utils/heap.h"
-#include "hpx/utils/list.h"
-#include "hpx/utils/map.h"
-#include "hpx/utils/queue.h"
-#include "hpx/utils/timer.h"
+/**
+ * This is the C-type for action handlers.
+ */
+typedef int (*hpx_action_handler_t)(void *);
 
-#include "hpx/thread/arch/mconfig_defs.h"
-#include "hpx/thread/arch/mconfig.h"
-#include "hpx/thread/arch/mregs.h"
+/**
+ * printf format arguments for the action
+ */
+#define HPX_PRIx_hpx_action_t PRIxPTR
+#define HPX_PRId_hpx_action_t PRIdPTR
+#define HPX_PRIX_hpx_action_t PRIXPTR
+#define HPX_PRIu_hpx_action_t PRIuPTR
+#define HPX_PRIo_hpx_action_t PRIoPTR
 
-#undef _HPX_H_INSIDE
+/**
+ * The NULL action.
+ */
+#define HPX_ACTION_NULL ((uintptr_t)NULL)
 
-#endif /* _HPX_H */
+/**
+ * Register an action with the runtime.
+ *
+ * @param[in]   id - a unique string name for the action
+ * @param[in] func - the local function pointer to associate with the action
+ * @returns        - a key to be used for the action when needed
+ */
+hpx_action_t hpx_action_register(const char *id, hpx_action_handler_t func);
+
+/**
+ * Call after all actions are registered.
+ */
+void hpx_action_registration_complete(void);
+
+hpx_action_t hpx_action_register();
+
+int hpx_init(int argc, char * const argv[argc]);
+int hpx_run(void (*f)(void*), void *args, unsigned size);
+void hpx_exit(int);
+
+int hpx_get_my_rank(void);
+int hpx_get_num_ranks(void);
+
+void hpx_thread_wait(hpx_addr_t future, void *value);
+void hpx_thread_wait_all(unsigned n, hpx_addr_t futures[], void *values[]);
+void hpx_thread_yield(void);
+void hpx_thread_exit(void *value);
+
+hpx_addr_t hpx_future_new(int size);
+void hpx_future_delete(hpx_addr_t future);
+
+/**
+ * Perform an @p action at a @p location and get a result through a future.
+ *
+ * @todo
+ *
+ * @param[in] location - the location at which to perform the action
+ */
+void hpx_call(int rank, hpx_action_t action, void *args, size_t len, hpx_addr_t result);
+
+
+typedef uint64_t hpx_time_t;
+hpx_time_t hpx_time_now(void);
+uint64_t hpx_time_to_us(hpx_time_t);
+uint64_t hpx_time_to_ms(hpx_time_t);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* HPX_H */

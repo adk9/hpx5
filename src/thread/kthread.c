@@ -94,43 +94,47 @@ void libhpx_kthread_init(void) {
   The HPX Thread Scheduler.
  --------------------------------------------------------------------
 */
-void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th, uint8_t state,
-    void *target, bool (*pred)(void *, void *), void *arg) {
+void libhpx_kthread_sched(hpx_kthread_t *kth, hpx_thread_t *th,
+                          uint8_t state, void *target,
+                          bool (*pred)(void *, void *), void *arg) {
   /* hpx_thread_t *exec_th = kth->exec_th; */
   /* hpx_context_t *ctx = kth->ctx; */
   /* uint64_t cnt; */
 
+  // If we don't have a thread specified, gthen don't do anything.
+  if (!th)
+    return;
+
   pthread_mutex_lock(&kth->mtx);
 
   /* if we have a thread specified, do something with it */
-  if (th != NULL) {
-    switch (state) {
-      case HPX_THREAD_STATE_CREATE:
-        th->state = HPX_THREAD_STATE_INIT;
-        hpx_queue_push(&kth->pend_q, th);
-        pthread_cond_signal(&kth->k_c);
-        break;
-      case HPX_THREAD_STATE_YIELD:
-        th->state = HPX_THREAD_STATE_PENDING;
+  switch (state) {
+   case HPX_THREAD_STATE_CREATE:
+    th->state = HPX_THREAD_STATE_INIT;
+    hpx_queue_push(&kth->pend_q, th);
+    pthread_cond_signal(&kth->k_c);
+    break;
+   case HPX_THREAD_STATE_YIELD:
+    th->state = HPX_THREAD_STATE_PENDING;
     if (target != NULL) {
-            th->skip = (uint8_t) (uint64_t) target;
+      th->skip = (uint8_t) (uint64_t) target;
     }
 
-        hpx_queue_push(&kth->pend_q, th);
+    hpx_queue_push(&kth->pend_q, th);
     break;
-      case HPX_THREAD_STATE_TERMINATED:
-        th->state = HPX_THREAD_STATE_TERMINATED;
-        break;
-      case HPX_THREAD_STATE_SUSPENDED:
-        th->state = HPX_THREAD_STATE_SUSPENDED;
-        th->reuse->wait = target;
-        th->reuse->func = (void (*)())pred;
-        th->reuse->args = arg;
-        hpx_queue_push(&kth->susp_q, th);
-        break;
-      default:
-        break;
-    }
+   case HPX_THREAD_STATE_TERMINATED:
+    th->state = HPX_THREAD_STATE_TERMINATED;
+    break;
+   case HPX_THREAD_STATE_SUSPENDED:
+    th->state = HPX_THREAD_STATE_SUSPENDED;
+    th->reuse->wait = target;
+    th->reuse->func = (void (*)())pred;
+    th->reuse->args = arg;
+    hpx_queue_push(&kth->susp_q, th);
+    break;
+   default:
+    fprintf(stderr, "Scheduler received bad state, %d, aborting.\n", state);
+    abort();
   }
 
   pthread_mutex_unlock(&kth->mtx);

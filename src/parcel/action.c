@@ -1,11 +1,11 @@
 /*
  ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Actions
   action.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -93,7 +93,7 @@ void
 expand(struct hashtable *ht)
 {
   dbg_assert_precondition(ht != NULL);
-  
+
   /* remember the previous state of the table */
   const int e = ht->size;
   struct entry *copy = ht->table;
@@ -133,25 +133,25 @@ insert(struct hashtable *ht, const hpx_action_t key, const hpx_func_t value)
   dbg_assert_precondition(ht != NULL);
   dbg_assert_precondition(key != 0);
   dbg_assert_precondition(value != NULL);
-  
+
   /* lazy initialization of the action table */
   if (!ht->table) {
     ht->size = ACTIONS_INITIAL_HT_SIZE;
     ht->table = calloc(ACTIONS_INITIAL_HT_SIZE, sizeof(ht->table[0]));
   }
-  
+
   size_t i = key % ht->size;
   size_t j = 0;
 
   /* search for the correct bucket, which is just a linear search, bounded by
-     ACTIONS_PROBE_LIMIT */ 
+     ACTIONS_PROBE_LIMIT */
   while (ht->table[i].key != 0) {
-    assert(((ht->table[i].key != key) || (ht->table[i].value == value)) && 
+    assert(((ht->table[i].key != key) || (ht->table[i].value == value)) &&
            "attempting to overwrite key during registration");
-    
+
     i = (i + 1) % ht->size;                     /* linear probing */
     j = j + 1;
-    
+
     if (ACTIONS_PROBE_LIMIT < j) {              /* stop probing */
       expand(ht);
       i = key % ht->size;
@@ -206,10 +206,10 @@ action_lookup(hpx_action_t key)
 
 /**
  * Register an HPX action.
- * 
+ *
  * @param[in] name - Action Name
  * @param[in] func - The HPX function that is represented by this action.
- * 
+ *
  * @return HPX error code
  */
 hpx_action_t
@@ -223,7 +223,7 @@ hpx_action_register(const char *name, hpx_func_t func)
 /**
  * Called after all action registration is complete.
  */
-void 
+void
 hpx_action_registration_complete(void) {
   hpx_lco_future_set_state(action_registration_complete);
 }
@@ -231,7 +231,7 @@ hpx_action_registration_complete(void) {
 /**
  * Called to determine if action registration is complete.
  */
-bool 
+bool
 hpx_is_action_registration_complete(void) {
   return hpx_lco_future_isset(action_registration_complete);
 }
@@ -239,7 +239,7 @@ hpx_is_action_registration_complete(void) {
 /**
  * Called to wait for action registration to complete.
  */
-void 
+void
 hpx_waitfor_action_registration_complete(void) {
   hpx_thread_wait(action_registration_complete);
 }
@@ -261,7 +261,8 @@ hpx_action_invoke(hpx_action_t action, void *args, future_t **out)
   return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
 }
 
-void action_wrap(void *arg) {
+static void
+action_wrap(void *arg) {
   struct hpx_parcel *parcel = (struct hpx_parcel*)arg;
   hpx_func_t f = action_lookup(parcel->action);
   dbg_assert(f && "Failed to find action");
@@ -307,7 +308,7 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
     dbg_printf("Could not allocate a %lu-byte parcel in hpx_call.\n", len);
     return HPX_ERROR;
   }
-  
+
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_data(p, args, len);
   int success = hpx_parcel_send(dest, p, NULL, NULL, result);
