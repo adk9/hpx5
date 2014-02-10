@@ -295,9 +295,9 @@ void init_other_loc(void) {
  */
 void register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  pingpong = hpx_action_register("pingpong", (hpx_func_t)action_pingpong);
-  ping = hpx_action_register("ping", (hpx_func_t)action_ping);
-  pong = hpx_action_register("pong", (hpx_func_t)action_pong);
-  done = hpx_action_register("done", (hpx_func_t)action_done);
+  pingpong = hpx_action_register("pingpong", (hpx_action_handler_t)action_pingpong);
+  ping = hpx_action_register("ping", (hpx_action_handler_t)action_ping);
+  pong = hpx_action_register("pong", (hpx_action_handler_t)action_pong);
+  done = hpx_action_register("done", (hpx_action_handler_t)action_done);
   hpx_action_registration_complete();
 }

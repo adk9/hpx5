@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>                           /* PRId64 */
 #include <hpx.h>
 
@@ -20,7 +21,6 @@ static int usage() {
    return -1;
 }
 
-static int num_ranks = -1;
 static hpx_action_t fib_action = HPX_ACTION_NULL;
 
 void
@@ -30,32 +30,48 @@ fib(long *n)
   if (*n < 2)
     hpx_thread_exit((void*)*n);
 
-  int my_rank = hpx_get_rank();
-  hpx_locality_t *l = hpx_locality_from_rank((my_rank + num_ranks - 1) % num_ranks);
-  hpx_locality_t *r = hpx_locality_from_rank((my_rank + 1) % num_ranks);
+  int rank = hpx_get_my_rank();
+  int ranks = hpx_get_num_ranks();
 
-  long n1 = *n - 1;
-  long n2 = *n - 2;
+  int peers[] = {
+    (rank + ranks - 1) % ranks,
+    (rank + 1) % ranks
+  };
 
-  hpx_future_t *ffn1 = NULL;
-  hpx_future_t *ffn2 = NULL;
+  long ns[] = {
+    *n - 1,
+    *n - 2
+  };
 
-  hpx_call(l, fib_action, &n1, sizeof(n1), &ffn1);
-  hpx_call(r, fib_action, &n2, sizeof(n2), &ffn2);
+  hpx_addr_t futures[] = {
+    hpx_future_new(sizeof(long)),
+    hpx_future_new(sizeof(long))
+  };
 
-  hpx_thread_wait(ffn1);
-  hpx_thread_wait(ffn2);
+  long fns[] = {
+    0,
+    0
+  };
 
-  long fn1 = (long) hpx_lco_future_get_value(ffn1);
-  long fn2 = (long) hpx_lco_future_get_value(ffn2);
-  long fn = fn1 + fn2;
+  void *addrs[] = {
+    &fns[0],
+    &fns[1]
+  };
+
+  hpx_call(peers[0], fib_action, &ns[0], sizeof(long), futures[0]);
+  hpx_call(peers[1], fib_action, &ns[1], sizeof(long), futures[1]);
+  hpx_thread_wait_all(2, futures, addrs);
+  hpx_future_delete(futures[0]);
+  hpx_future_delete(futures[1]);
+
+  long fn = fns[0] + fns[1];
 
   hpx_thread_exit((void*) fn);
 }
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+  hpx_init(argc, argv);
+
   unsigned long cores = 0;                      /* # of cores from -c */
   bool debug = false;                           /* flag from -d */
   unsigned long n = 0;                          /* fib(n) from argv */
@@ -88,9 +104,6 @@ main(int argc, char *argv[])
   }
   n = strtol(argv[0], NULL, 10);
 
-  /* initialize hpx runtime */
-  hpx_init(NULL);
-
   if (debug) {
     int i = 0;
     char hostname[256];
@@ -101,27 +114,22 @@ main(int argc, char *argv[])
       sleep(5);
   }
 
-  num_ranks = hpx_get_num_localities();
-
   /* register the fib action */
-  fib_action = hpx_action_register("fib", (hpx_func_t)fib);
+  fib_action = hpx_action_register("fib", (hpx_action_handler_t)fib);
   hpx_action_registration_complete();
 
   /* get start time */
-  hpx_timer_t timer;
-  hpx_get_time(&timer);
+  hpx_time_t clock = hpx_time_now();
+  long fn          = 0;
+  hpx_addr_t fut   = hpx_future_new(sizeof(long));
+  hpx_call(hpx_get_my_rank(), fib_action, &n, sizeof(n), &fut);
+  hpx_thread_wait(fut, &fn);
 
-  hpx_future_t *fut;
-  hpx_action_invoke(fib_action, &n, &fut);
-  hpx_thread_wait(fut);
+  double time = hpx_time_to_us(clock - hpx_time_now())/1e3;
 
-  long result = (long) hpx_lco_future_get_value_i64(fut);
-  printf("fib(%ld)=%ld\n", n, result);
-
-  double time = hpx_elapsed_us(timer)/1e3;
+  printf("fib(%ld)=%ld\n", n, fn);
   printf("seconds: %.7f\n", time);
-
-  printf("localities:   %d\n", num_ranks);
+  printf("localities:   %d\n", hpx_get_num_ranks());
 
   /* cleanup */
   hpx_cleanup();

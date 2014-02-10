@@ -122,7 +122,6 @@ hpx_parcel_copy(hpx_parcel_t * restrict to,
  */
 static int
 local_send(hpx_parcel_t *parcel,
-           hpx_future_t *complete,
            hpx_future_t *thread,
            hpx_future_t **result)
 {
@@ -136,7 +135,7 @@ local_send(hpx_parcel_t *parcel,
     hpx_future_set(complete);
   if (thread)
     hpx_future_setv(thread, sizeof(t), &t);
-  */ 
+  */
   return e;
 }
 
@@ -149,7 +148,6 @@ local_send(hpx_parcel_t *parcel,
  */
 int
 hpx_parcel_send(struct hpx_locality *dest, hpx_parcel_t *parcel,
-                hpx_future_t *complete,
                 hpx_future_t *thread,
                 hpx_future_t **result)
 {
@@ -158,8 +156,8 @@ hpx_parcel_send(struct hpx_locality *dest, hpx_parcel_t *parcel,
 
   return (dest->rank == hpx_get_rank()) ?
     /* (hpx_locality_equal(hpx_get_my_locality(), dest)) ? */
-    local_send(parcel, complete, thread, result) :
-    parcelhandler_send(dest, parcel, complete, thread, result);
+    local_send(parcel, thread, result) :
+    parcelhandler_send(dest, parcel, thread, result);
 }
 
 /**
