@@ -74,9 +74,9 @@ int main(int argc, char *argv[]) {
         photon_gettime_(&total_start);
         photon_post_recv_buffer_rdma(prev,recv,arraySize,13,&recvReq);
         kernel(smallAmountOfWork);
-        photon_wait_recv_buffer_rdma(next,13);
-        photon_post_os_put(next,send,arraySize,13,0,&sendReq);
-        photon_send_FIN(next);
+        photon_wait_recv_buffer_rdma(next,13,&sendReq);
+        photon_post_os_put(sendReq,next,send,arraySize,13,0);
+        photon_send_FIN(sendReq,next);
         photon_gettime_(&kernel_start);
         kernel(workSize);
         photon_gettime_(&kernel_end);
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
               break;
             }
             else {
-//							fprintf(stderr,"%d: Busy waiting for recv\n", rank);
+              //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
               usleep(10*1000); // 1/100th of a second
             }
           }
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
               break;
             }
             else {
-//							fprintf(stderr,"%d: Busy waiting for send\n", rank);
+              //fprintf(stderr,"%d: Busy waiting for send\n", rank);
               usleep(10*1000); // 1/100th of a second
             }
           }

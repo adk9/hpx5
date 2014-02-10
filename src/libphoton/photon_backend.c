@@ -36,16 +36,16 @@ static int _photon_register_buffer(void *buffer, uint64_t size);
 static int _photon_unregister_buffer(void *buffer, uint64_t size);
 static int _photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 static int _photon_wait(uint32_t request);
-static int _photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-static int _photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-static int _photon_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request);
-static int _photon_wait_recv_buffer_rdma(int proc, int tag);
-static int _photon_wait_send_buffer_rdma(int proc, int tag);
+static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
+static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request);
+static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
 static int _photon_wait_send_request_rdma(int tag);
-static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
-static int _photon_send_FIN(int proc);
+static int _photon_send_FIN(uint32_t request, int proc);
 static int _photon_wait_any(int *ret_proc, uint32_t *ret_req);
 static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
@@ -753,7 +753,7 @@ static int _photon_wait(uint32_t request) {
 #endif
 }
 
-static int _photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
+static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
   photonBuffer db;
   uint64_t cookie;
   photonRILedgerEntry entry;
@@ -868,7 +868,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
   photonBuffer db;
   photonRILedgerEntry entry;
   int curr, num_entries, rc;
@@ -972,7 +972,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
+static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request) {
   photonRILedgerEntry entry;
   int curr, num_entries, rc;
   uint64_t cookie;
@@ -1069,7 +1069,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_recv_buffer_rdma(int proc, int tag) {
+static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
   photonRemoteBuffer curr_remote_buffer;
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
@@ -1178,7 +1178,7 @@ error_exit:
 // and the corresponding photon_post_os_get() for the same proc.
 // In other words if photon_processes[proc].curr_remote_buffer is full, photon_wait_send_buffer_rdma()
 // should not be called.
-static int _photon_wait_send_buffer_rdma(int proc, int tag) {
+static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
   photonRemoteBuffer curr_remote_buffer;
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
@@ -1351,14 +1351,14 @@ static int _photon_wait_send_request_rdma(int tag) {
   return PHOTON_OK;
 }
 
-static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
+static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   photonRemoteBuffer drb;
   photonBuffer db;
   uint64_t cookie;
   int rc;
   uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
+  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, r_offset, request);
 
   drb = photon_processes[proc].curr_remote_buffer;
 
@@ -1372,8 +1372,8 @@ static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint
     goto error_exit;
   }
 
-  if (drb->size > 0 && size + remote_offset > drb->size) {
-    log_err("Requested to send %u bytes to a %u buffer size at offset %u", size, drb->size, remote_offset);
+  if (drb->size > 0 && size + r_offset > drb->size) {
+    log_err("Requested to send %lu bytes to a %lu buffer size at offset %lu", size, drb->size, r_offset);
     goto error_exit;
   }
 
@@ -1384,7 +1384,7 @@ static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint
   dbg_info("Posted Cookie: %u/%u/%"PRIo64, proc, request_id, cookie);
 
   {
-    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, drb->addr + (uintptr_t)remote_offset,
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, drb->addr + (uintptr_t)r_offset,
                                     size, db, drb, cookie);
 
     if (rc != PHOTON_OK) {
@@ -1393,6 +1393,7 @@ static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint
     }
   }
 
+  /*
   if (request != NULL) {
     photonRequest req;
 
@@ -1421,23 +1422,27 @@ static int _photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint
     }
   }
 
+  */
+
   return PHOTON_OK;
 
 error_exit:
+  /*
   if (request != NULL) {
     *request = NULL_COOKIE;
   }
+  */
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
+static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   photonRemoteBuffer drb;
   photonBuffer db;
   uint64_t cookie;
   int rc;
   uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, remote_offset, request);
+  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, r_offset, request);
 
   drb = photon_processes[proc].curr_remote_buffer;
 
@@ -1451,8 +1456,8 @@ static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint
     return -1;
   }
 
-  if ( (drb->size > 0) && ((size+remote_offset) > drb->size) ) {
-    log_err("Requested to get %u bytes from a %u buffer size at offset %u", size, drb->size, remote_offset);
+  if ( (drb->size > 0) && ((size+r_offset) > drb->size) ) {
+    log_err("Requested to get %lu bytes from a %lu buffer size at offset %lu", size, drb->size, r_offset);
     return -2;
   }
 
@@ -1464,7 +1469,7 @@ static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint
 
   {
 
-    rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, drb->addr + (uintptr_t)remote_offset,
+    rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, drb->addr + (uintptr_t)r_offset,
                                     size, db, drb, cookie);
 
     if (rc != PHOTON_OK) {
@@ -1473,6 +1478,7 @@ static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint
     }
   }
 
+  /*
   if (request != NULL) {
     photonRequest req;
 
@@ -1500,12 +1506,16 @@ static int _photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint
     }
   }
 
+  */
+
   return PHOTON_OK;
 
 error_exit:
+  /*
   if (request != NULL) {
     *request = NULL_COOKIE;
   }
+  */
   return PHOTON_ERROR;
 }
 
@@ -1580,7 +1590,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_send_FIN(int proc) {
+static int _photon_send_FIN(uint32_t request, int proc) {
   photonRemoteBuffer drb;
   photonFINLedgerEntry entry;
   int curr, num_entries, rc;

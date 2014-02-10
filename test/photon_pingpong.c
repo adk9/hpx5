@@ -45,8 +45,8 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
 
   if (pp_test == PHOTON_TEST) {
     //photon_post_send_buffer_rdma(dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, &send_req);
-    photon_wait_recv_buffer_rdma(dst, PHOTON_TAG);
-    photon_post_os_put(dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, 0, &send_req);
+    photon_wait_recv_buffer_rdma(dst, PHOTON_TAG, &send_req);
+    photon_post_os_put(send_req, dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, 0);
     while (1) {
       int flag, type;
       struct photon_status_t stat;
@@ -59,7 +59,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
         //usleep(10);
       }
     }
-    photon_send_FIN(dst);
+    photon_send_FIN(send_req, dst);
   }
   else if (pp_test == MPI_TEST) {
     MPI_Request mpi_r;
@@ -111,8 +111,8 @@ void *receiver(void *args) {
     */
 
     if (pp_test == PHOTON_TEST) {
-      //photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG);
-      //photon_post_os_get(other_rank, (char*)recv_args, sizeof(*recv_args), PHOTON_TAG, 0, &recv_req);
+      //photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
+      //photon_post_os_get(recv_req, other_rank, (char*)recv_args, sizeof(*recv_args), PHOTON_TAG, 0);
       gettimeofday(&start, NULL);
       photon_post_recv_buffer_rdma(other_rank, (char*)recv_args, sizeof(*recv_args), PHOTON_TAG, &recv_req);
       while (1) {
@@ -129,7 +129,7 @@ void *receiver(void *args) {
       }
       gettimeofday(&end, NULL);
       //printf("%d: post_recv time: %f\n", rank, SUBTRACT_TV(end, start));
-      //photon_send_FIN(other_rank);
+      //photon_send_FIN(recv_req, other_rank);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Request mpi_r;

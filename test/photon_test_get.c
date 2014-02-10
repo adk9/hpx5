@@ -49,11 +49,11 @@ int main(int argc, char *argv[]) {
   //sleep(1);
 
   // wait for the send buffer that was posted from the previous rank
-  photon_wait_send_buffer_rdma(prev, PHOTON_TAG);
+  photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
 
   // get that posted send buffer
-  photon_post_os_get(prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0, &recvReq);
-  photon_send_FIN(prev);
+  photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
+  photon_send_FIN(recvReq, prev);
 
   while(1) {
     int flag, type;

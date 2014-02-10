@@ -32,7 +32,7 @@ typedef struct photon_remote_buffer_t {
   uintptr_t addr;
   uint32_t  lkey;
   uint32_t  rkey;
-  uint32_t  size;
+  uint64_t  size;
   int       tag;
 #ifdef HAVE_UGNI
   gni_mem_handle_t mdh;

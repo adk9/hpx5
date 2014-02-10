@@ -50,6 +50,7 @@ typedef struct photon_req_t {
   int type;
   int proc;
   int tag;
+  photonRemoteBuffer remote_buffer;
   pthread_mutex_t mtx;
   pthread_cond_t completed;
 } photon_req;
@@ -67,8 +68,8 @@ typedef struct photon_event_status_t * photonEventStatus;
 /* photon memory registration requests */
 struct photon_mem_register_req {
   SLIST_ENTRY(photon_mem_register_req) list;
-  char *buffer;
-  int buffer_size;
+  void *buffer;
+  uint64_t buffer_size;
 };
 
 /* TODO: fix parameters and generalize API */
@@ -86,16 +87,16 @@ struct photon_backend_t {
   int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
   int (*wait)(uint32_t request);
   int (*wait_ledger)(uint32_t request);
-  int (*post_recv_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-  int (*post_send_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-  int (*post_send_request_rdma)(int proc, uint32_t size, int tag, uint32_t *request);
-  int (*wait_recv_buffer_rdma)(int proc, int tag);
-  int (*wait_send_buffer_rdma)(int proc, int tag);
+  int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+  int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+  int (*post_send_request_rdma)(int proc, uint64_t size, int tag, uint32_t *request);
+  int (*wait_recv_buffer_rdma)(int proc, int tag, uint32_t *request);
+  int (*wait_send_buffer_rdma)(int proc, int tag, uint32_t *request);
   int (*wait_send_request_rdma)(int tag);
-  int (*post_os_put)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-  int (*post_os_get)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+  int (*post_os_put)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+  int (*post_os_get)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
   int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
-  int (*send_FIN)(int proc);
+  int (*send_FIN)(uint32_t request, int proc);
   int (*wait_any)(int *ret_proc, uint32_t *ret_req);
   int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
