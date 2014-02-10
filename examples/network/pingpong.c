@@ -3,10 +3,10 @@
 #include <assert.h>
 #include <hpx.h>
 
-static hpx_context_t *ctx;
-static hpx_timer_t    timer;
-static int     num_ranks;
-static int     my_rank;
+static hpx_context_t       *ctx = NULL;
+static hpx_timer_t        timer = {0};
+static int            num_ranks = -1;
+static int              my_rank = -1;
 static hpx_action_t ping_action = HPX_ACTION_NULL;
 static hpx_action_t pong_action = HPX_ACTION_NULL;
 
@@ -39,7 +39,6 @@ main(int argc, char *argv[])
   } else {
     localities = atoi(argv[1]);
   }
-
 
   /* initialize hpx runtime */
   hpx_init(NULL);
