@@ -1,11 +1,11 @@
 /*
   ====================================================================
   High Performance ParalleX Library (libhpx)
-  
+
   Parcel Handler Functions
   hpx_parcelhandler.c
 
-  Copyright (c) 2013, Trustees of Indiana University 
+  Copyright (c) 2013, Trustees of Indiana University
   All rights reserved.
 
   This software may be modified and distributed under the terms of
@@ -44,8 +44,8 @@
 
 /* TODO: make configurable (and find a good, sane size) */
 static const size_t REQUEST_BUFFER_SIZE     = 2048;
-/* TODO: make configurable (and use a real size) */ 
-static const size_t RECV_BUFFER_SIZE        = 1024*1024*16; 
+/* TODO: make configurable (and use a real size) */
+static const size_t RECV_BUFFER_SIZE        = 1024*1024*16;
 
 /**
  * The send queue for this locality.
@@ -59,7 +59,7 @@ struct parcelqueue *__hpx_send_queue = NULL;
  */
 typedef struct parcelhandler {
   hpx_context_t        *ctx;
-  struct hpx_thread *thread;  
+  struct hpx_thread *thread;
   hpx_future_t        *quit;              /*!< signals parcel handler to quit */
   hpx_future_t         *fut;
 } parcelhandler_t;
@@ -69,9 +69,9 @@ typedef struct parcelhandler {
 of reasons, including performance and simplicity, it might be
 preferable to do this elsewhere (e.g. when parcels are
 allocated). HOWEVER, network backends that both (1) require
-pinning/registration and (2) are not thread safe will blow up. */ 
-static void 
-pin_if_necessary(struct hpx_parcel_t* parcel) 
+pinning/registration and (2) are not thread safe will blow up. */
+static void
+pin_if_necessary(hpx_parcel_t* parcel)
 {
   /* pin this parcel's block, if necessary */
   parcel_block_t *block = get_block(parcel);
@@ -90,7 +90,7 @@ pin_if_necessary(struct hpx_parcel_t* parcel)
  * @returns HPX_SUCCESS or an error code
  */
 static hpx_error_t
-complete(struct hpx_parcel* header, bool send)
+complete(hpx_parcel_t* header, bool send)
 {
   dbg_assert_precondition(header);
 
@@ -121,11 +121,11 @@ complete_requests(request_list_t* list, test_function_t test, bool send)
   while ((req = request_list_curr(list)) != NULL) {
     int success = test(req, &flag, NULL);
     if (flag == 1 && success == 0) {
-      struct hpx_parcel* header = request_list_curr_parcel(list);
+      hpx_parcel_t* header = request_list_curr_parcel(list);
       request_list_del(list);
       dbg_check_success(complete(header, send));
       ++count;
-    } 
+    }
     request_list_next(list);
   }
   return count;
@@ -145,7 +145,7 @@ parcelhandler_main(parcelhandler_t *args)
   request_list_init(&send_requests);
   request_list_init(&recv_requests);
 
-  struct hpx_parcel* header;
+  hpx_parcel_t* header;
   size_t i;
   int completions;
 
@@ -181,11 +181,11 @@ parcelhandler_main(parcelhandler_t *args)
   }
 
   while (1) {
-    
+
     /* ==================================
-       Phase 1: Deal with sends 
+       Phase 1: Deal with sends
        ==================================
-       
+
        (1) cleanup outstanding sends/puts
        (2) check __hpx_send_queue
        + call network ops to send
@@ -200,7 +200,7 @@ parcelhandler_main(parcelhandler_t *args)
         send_successes++;
       }
     } /* if (outstanding_sends > 0) */
-    
+
     /* check send queue */
     header = parcelqueue_trypop(__hpx_send_queue);
     if (header != NULL) {
@@ -218,8 +218,8 @@ parcelhandler_main(parcelhandler_t *args)
                  hpx_get_rank(), parcel_size(header), (void*)header, header->action);
       req = request_list_append(&send_requests, header);
       dbg_printf("%d: Sending with request at %p from buffer at %p\n",
-                 hpx_get_rank(), (void*)req, (void*)header); 
-      __hpx_network_ops->send(dst_rank, 
+                 hpx_get_rank(), (void*)req, (void*)header);
+      __hpx_network_ops->send(dst_rank,
                               header,
                               parcel_size(header),
                               req);
@@ -227,7 +227,7 @@ parcelhandler_main(parcelhandler_t *args)
     }
 
     /* ==================================
-       Phase 2: Deal with remote parcels 
+       Phase 2: Deal with remote parcels
        ==================================
     */
     if (outstanding_recvs > 0) {
@@ -238,7 +238,7 @@ parcelhandler_main(parcelhandler_t *args)
         recv_successes += completions;
       }
     }
-  
+
     /* Now check for new receives */
     success = __hpx_network_ops->probe(NETWORK_ANY_SOURCE, &flag, &status);
     if (success == 0 && flag > 0) { /* there is a message to receive */
@@ -247,48 +247,48 @@ parcelhandler_main(parcelhandler_t *args)
         probe_successes++;
       }
       else {
-	/* TODO: handle error */
+    /* TODO: handle error */
       }
-    
+
       recv_size = status.count;
-      recv_buffer = hpx_parcel_acquire(recv_size - sizeof(struct hpx_parcel));
+      recv_buffer = hpx_parcel_acquire(recv_size - sizeof(hpx_parcel_t));
       if (recv_buffer == NULL) {
         __hpx_errno = HPX_ERROR_NOMEM;
         *retval = HPX_ERROR_NOMEM;
         goto error;
-      } 
+      }
       pin_if_necessary(recv_buffer);
       dbg_printf("%d: Receiving %zd bytes to buffer at %p\n", hpx_get_rank(),
-                 recv_size, (void*)recv_buffer); 
+                 recv_size, (void*)recv_buffer);
       req = request_list_append(&recv_requests, recv_buffer);
       __hpx_network_ops->recv(status.source, recv_buffer, recv_size, req);
       outstanding_recvs++;
     }
-  
-  
+
+
     if (HPX_DEBUG) {
       if (initiated_something != 0 || completed_something != 0) {
         dbg_printf("rank %d: initiated: %d\tcompleted "
                    "%d\tprobes=%d\trecvs=%d\tsend=%d\n", hpx_get_rank(),
-                   initiated_something, 
-                   completed_something, (int)probe_successes, (int)recv_successes, 
-                   (int)send_successes); 
+                   initiated_something,
+                   completed_something, (int)probe_successes, (int)recv_successes,
+                   (int)send_successes);
         initiated_something = 0;
         completed_something = 0;
       }
     }
-  
+
   if (hpx_lco_future_isset(quit) == true && outstanding_sends == 0 && outstanding_recvs == 0 && parcelqueue_empty(__hpx_send_queue))
       break;
     /* If we don't yield occasionally, any thread that get scheduled to this core will get stuck. */
     i++;
     if (i % 1000 == 0)
-      hpx_thread_yield();    
+      hpx_thread_yield();
   }
-  
+
   dbg_printf("%d: Handler done after iter %d\n", hpx_get_rank(), (int)i);
 
-error:  
+error:
   hpx_thread_exit((void*)retval);
 }
 
@@ -317,7 +317,7 @@ parcelhandler_create(hpx_context_t *ctx)
                                     &ph->thread);
   if (e == HPX_ERROR)
     dbg_print_error(e, "Failed to start the parcel handler core service");
-  
+
   return ph;
 }
 
@@ -326,7 +326,7 @@ parcelhandler_destroy(parcelhandler_t *ph)
 {
   if (!ph)
     return;
-  
+
   /* Now shut down the parcel handler */
   hpx_lco_future_set_state(ph->quit);
   hpx_thread_wait(ph->fut);
@@ -345,14 +345,14 @@ parcelhandler_destroy(parcelhandler_t *ph)
  */
 int
 parcelhandler_send(hpx_locality_t *dest,
-                   struct hpx_parcel *parcel,
+                   hpx_parcel_t *parcel,
                    hpx_future_t *complete,
                    hpx_future_t *thread,
                    hpx_future_t **result)
 {
   /* need this hack for now, because we don't have global addresses */
   parcel->dest.locality = *dest;
-  
+
   int e = parcelqueue_push(__hpx_send_queue, parcel);
   if (e != HPX_SUCCESS) {
     dbg_print_error(e, "Failed to add a parcel to the send queue");
