@@ -7,12 +7,14 @@
 
 static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx);
 static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx);
+static int __ugni_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv);
 
 struct photon_buffer_interface_t ugni_buffer_interface = {
 	.buffer_create = _photon_buffer_create,
 	.buffer_free = _photon_buffer_free,
 	.buffer_register = __ugni_buffer_register,
-	.buffer_unregister = __ugni_buffer_unregister
+	.buffer_unregister = __ugni_buffer_unregister,
+	.buffer_get_private = __ugni_buffer_get_private
 };
 
 static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx) {
@@ -54,5 +56,15 @@ static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx) {
 	return PHOTON_OK;
 
  error_exit:
+	return PHOTON_ERROR;
+}
+
+static int __ugni_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv) {
+	if (buf->is_registered) {
+		(*ret_priv).key0 = buf->mdh.qword1;
+		(*ret_priv).key1 = buf->mdh.qword2;
+		return PHOTON_OK;
+	}
+
 	return PHOTON_ERROR;
 }

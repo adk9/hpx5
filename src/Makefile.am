@@ -2,22 +2,23 @@ AM_CFLAGS = @CFLAGS@                         \
 	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include           \
 	    -I@top_srcdir@/src/util          \
-	    -I@top_srcdir@/src/libphoton
+	    -I@top_srcdir@/src/libphoton     \
+	    -I@top_srcdir@/src/forwarder
 #-DPHOTON_MULTITHREADED
 SUBDIRS = .
 
 lib_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c           \
 		       libphoton/photon_backend.c              \
+		       libphoton/photon_exchange.c             \
 		       libphoton/photon_buffer.c               \
 		       libphoton/photon_buffertable.c          \
 		       libphoton/photon_rdma_FIN_ledger.c      \
 		       libphoton/photon_rdma_INFO_ledger.c
 
 libphoton_ladir = @top_srcdir@/src/libphoton
-libphoton_la_HEADERS = 
-libphoton_la_LDFLAGS = @THREAD_LIBS@ @top_srcdir@/src/util/libutil.la 
-libphoton_la_LIBADD = 
+libphoton_la_LDFLAGS = @THREAD_LIBS@ @MPI_LIBS@
+libphoton_la_LIBADD = @top_srcdir@/src/util/libutil.la
 
 if HAVE_VERBS
 AM_CFLAGS += -I@top_srcdir@/src/verbs
@@ -42,4 +43,10 @@ noinst_bin_PROGRAMS = ugni_test
 ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
 ugni_test_LDFLAGS = @MPI_LIBS@ @UGNI_LIBS@
 ugni_test_SOURCES = ugni/ugni_test.c ugni/utility_functions.c
+endif
+
+if HAVE_XSP
+AM_CFLAGS += @XSP_CFLAGS@
+libphoton_la_LDFLAGS += @XSP_LIBS@
+libphoton_la_SOURCES += forwarder/photon_xsp_forwarder.c
 endif

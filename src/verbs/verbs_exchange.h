@@ -4,8 +4,6 @@
 #include "verbs.h"
 
 int __verbs_exchange_ri_ledgers(ProcessInfo *verbs_processes);
-int __verbs_setup_ri_ledgers(ProcessInfo *verbs_processes, char *buf, int num_entries);
 int __verbs_exchange_FIN_ledger(ProcessInfo *verbs_processes);
-int __verbs_setup_FIN_ledger(ProcessInfo *verbs_processes, char *buf, int num_entries);
 
 #endif

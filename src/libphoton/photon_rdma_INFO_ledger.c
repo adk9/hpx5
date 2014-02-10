@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "photon_rdma_INFO_ledger.h"
+#include "photon_backend.h"
 #include "logging.h"
 
 photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size) {

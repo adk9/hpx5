@@ -54,6 +54,15 @@ int photon_buffer_unregister(photonBuffer buf, void *ctx) {
 	return bi->buffer_unregister(buf, ctx);
 }
 
+int photon_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv) {
+	if (!bi) {
+		log_err("Buffer interface not set!");
+		return PHOTON_ERROR;
+	}
+	
+	return bi->buffer_get_private(buf, ret_priv);
+}
+
 /* remote buffers */
 photonRemoteBuffer photon_remote_buffer_create() {
 	photonRemoteBuffer drb;

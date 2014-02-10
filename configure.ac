@@ -162,17 +162,52 @@ AC_ARG_WITH([mpi-ld-path], [AC_HELP_STRING([--with-mpi-ld-path[=PATH]],
                    [with_mpi_lib=no])
 
 if test "$with_mpi_lib" != "no"; then
-   AC_MSG_CHECKING(for MPI libs in $with_mpi_lib with $LDFLAGS)
+   #AC_MSG_CHECKING(for MPI libs in $with_mpi_lib with $LDFLAGS)
    save_LDFLAGS=$LDFLAGS
    LDFLAGS="-L$with_mpi_lib"
    AC_CHECK_LIB([mpi], [MPI_Init], [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpi")],
-   		       		     [AC_CHECK_LIB([mpich], [MPI_Init],
-				       [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich -lmpl")],
+   		       		    [AC_CHECK_LIB([mpich], [MPI_Init],
+				       [AC_SUBST(MPI_LIBS, "-L$with_mpi_lib -lmpich")],
 				       [AC_MSG_ERROR(No MPI libs found!)],
-				       [-lmpl -lpthread])],
+				       [ -lpthread])],
 				   [-lpthread])
    LDFLAGS=$save_LDFLAGS
 fi
+
+dnl CHeck for user defined XSP
+AC_ARG_WITH([xsp-include-path], [AC_HELP_STRING([--with-xsp-include-path[=PATH]],
+				   [find XSP headers in PATH])], 
+				   [with_xsp_include=$withval], 
+				   [with_xsp_include=no])
+
+if test "$with_xsp_include" != "no"; then
+   AC_MSG_CHECKING(for libxsp_client.h in $with_xsp_include)
+   if test -f $with_xsp_include/libxsp_client.h; then
+   	  AC_MSG_RESULT(yes)
+	  AC_SUBST(XSP_CFLAGS, "-I$with_xsp_include")
+	  AC_DEFINE(HAVE_XSP, 1, "Build with XSP support")
+	  have_xsp=yes
+   else
+	  AC_MSG_RESULT(no)
+      AC_MSG_ERROR(No MPI headers found!)
+   fi
+fi
+
+AC_ARG_WITH([xsp-ld-path], [AC_HELP_STRING([--with-xsp-ld-path[=PATH]],
+                   [find XSP libraries in PATH])],
+                   [with_xsp_lib=$withval],
+                   [with_xsp_lib=no])
+
+dnl -- Need a separate check for SSL instead of assuming it's there
+if test "$with_xsp_lib" != "no"; then
+   #AC_MSG_CHECKING(for XSP libs in $with_xsp_lib)
+   save_LDFLAGS=$LDFLAGS
+   LDFLAGS="-L$with_xsp_lib"
+   AC_CHECK_LIB([xsp_client], [libxsp_init], [AC_SUBST(XSP_LIBS, "-L$with_xsp_lib -lxsp_client -lssl")],
+                [AC_SUBST(XSP_LIBS, "-lxsp_client")], [-lssl])
+   LDFLAGS=$save_LDFLAGS
+fi
+AM_CONDITIONAL(HAVE_XSP, test x$have_xsp = xyes)
 
 AC_CONFIG_FILES([
 	Makefile

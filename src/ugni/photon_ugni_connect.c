@@ -23,10 +23,6 @@
 #define GEMINI_DEVICE_ID         0x0
 #define MAX_CQ_ENTRIES           1000
 
-extern int _photon_myrank;
-extern int _photon_nproc;
-extern int _photon_forwarder;
-
 int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info);
 
 int __ugni_init_context(ugni_cnct_ctx *ctx) {

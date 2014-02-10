@@ -1,7 +1,5 @@
 #include <strings.h>
 #include "libphoton.h"
-#include "photon_buffer.h"
-#include "photon_buffertable.h"
 #include "logging.h"
 
 #ifdef HAVE_VERBS
@@ -12,12 +10,20 @@
 #include "photon_ugni.h"
 #endif
 
+#ifdef HAVE_XSP
+#include "photon_xsp_forwarder.h"
+#endif
+
 /* Globals */
+photonConfig __photon_config = NULL;
+photonBackend __photon_backend = NULL;
+photonForwarder __photon_forwarder = NULL;
+
 int _photon_myrank;
 int _photon_nproc;
-int _photon_forwarder;
-
-static SLIST_HEAD(pendingmemregs, photon_mem_register_req) pending_mem_register_list;
+int _photon_nforw;
+int _photon_fproc;
+int _forwarder;
 
 #ifdef DEBUG
 int _photon_start_debugging=1;
@@ -28,13 +34,18 @@ FILE *_phot_ofp;
 #endif
 /* END Globals */
 
+/* this default beckend will do our ledger work */
+static photonBackend __photon_default = &photon_default_backend;
 
 int photon_init(photonConfig cfg) {
+	photonBackend be;
 
+	/* we can override the default with the tech-specific backends,
+	   but we just use their RDMA methods for now */
 	if (cfg->backend != NULL) {
 		if (!strncasecmp(cfg->backend, "verbs", 10)) {
 #ifdef HAVE_VERBS
-			__photon_backend = &photon_verbs_backend;
+			__photon_backend = be = &photon_verbs_backend;
 			photon_buffer_init(&verbs_buffer_interface);
 #else
 			goto error_exit;
@@ -42,7 +53,7 @@ int photon_init(photonConfig cfg) {
 		}
 		else if (!strncasecmp(cfg->backend, "ugni", 10)) {
 #ifdef HAVE_UGNI
-			__photon_backend = &photon_ugni_backend;
+			__photon_backend = be = &photon_ugni_backend;
 			photon_buffer_init(&ugni_buffer_interface);
 #else
 			goto error_exit;
@@ -54,21 +65,67 @@ int photon_init(photonConfig cfg) {
 	}
 	else {
 		log_warn("photon_init(): backend not specified, using default test backend!");
-		__photon_backend = &photon_default_backend;
 	}
 
+	/* set globals */
+	_photon_nproc = cfg->nproc;
+	_photon_nforw = cfg->use_forwarder;
+	_photon_myrank = (int)cfg->address;
+
+	/* figure out forwarder info */
+	if (cfg->use_forwarder) {
+		/* if init is called with a rank greater than or equal to nproc, then we are a forwarder 
+		   TODO: fix this in the case of non-MPI */
+		if ((int)cfg->address >= cfg->nproc) {
+			_photon_fproc = (int)cfg->address;
+			_forwarder = 1;
+		}
+		/* otherwise we are a proc that wants to use a forwarder */
+		else {
+			/* do some magic to determing which forwarder to use for this rank
+			   right now every rank gets the first forwarder */
+			_photon_fproc = cfg->nproc;
+			_forwarder = 0;
+		}
+#ifdef HAVE_XSP
+		__photon_forwarder = &xsp_forwarder;
+#else
+		log_warn("No forwarder enabled!");
+#endif
+	}
+	
 	__photon_config = cfg;
 
-	/* register any buffers that were requested before init */
-	while( !SLIST_EMPTY(&pending_mem_register_list) ) {
-		struct photon_mem_register_req *mem_reg_req;
-		dbg_info("registering buffer in queue");
-		mem_reg_req = SLIST_FIRST(&pending_mem_register_list);
-		SLIST_REMOVE_HEAD(&pending_mem_register_list, list);
-		photon_register_buffer(mem_reg_req->buffer, mem_reg_req->buffer_size);
+	/* check if the selected backend defines its own API methods and use those instead */
+	__photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
+	__photon_default->register_buffer = (be->register_buffer)?(be->register_buffer):__photon_default->register_buffer;
+	__photon_default->unregister_buffer = (be->unregister_buffer)?(be->unregister_buffer):__photon_default->unregister_buffer;
+	__photon_default->test = (be->test)?(be->test):__photon_default->test;
+	__photon_default->wait = (be->wait)?(be->wait):__photon_default->wait;
+	__photon_default->wait_ledger = (be->wait_ledger)?(be->wait_ledger):__photon_default->wait_ledger;
+	__photon_default->post_recv_buffer_rdma = (be->post_recv_buffer_rdma)?(be->post_recv_buffer_rdma):__photon_default->post_recv_buffer_rdma;
+	__photon_default->post_send_buffer_rdma = (be->post_send_buffer_rdma)?(be->post_send_buffer_rdma):__photon_default->post_send_buffer_rdma;
+	__photon_default->post_send_request_rdma = (be->post_send_request_rdma)?(be->post_send_request_rdma):__photon_default->post_send_request_rdma;
+	__photon_default->wait_recv_buffer_rdma = (be->wait_recv_buffer_rdma)?(be->wait_recv_buffer_rdma):__photon_default->wait_recv_buffer_rdma;
+	__photon_default->wait_send_buffer_rdma = (be->wait_send_buffer_rdma)?(be->wait_send_buffer_rdma):__photon_default->wait_send_buffer_rdma;
+	__photon_default->wait_send_request_rdma = (be->wait_send_request_rdma)?(be->wait_send_request_rdma):__photon_default->wait_send_request_rdma;
+	__photon_default->post_os_put = (be->post_os_put)?(be->post_os_put):__photon_default->post_os_put;
+	__photon_default->post_os_get = (be->post_os_get)?(be->post_os_get):__photon_default->post_os_get;
+	__photon_default->post_os_get_direct = (be->post_os_get_direct)?(be->post_os_get_direct):__photon_default->post_os_get_direct;
+	__photon_default->send_FIN = (be->send_FIN)?(be->send_FIN):__photon_default->send_FIN;
+	__photon_default->wait_any = (be->wait_any)?(be->wait_any):__photon_default->wait_any;
+	__photon_default->wait_any_ledger = (be->wait_any_ledger)?(be->wait_any_ledger):__photon_default->wait_any_ledger;
+	__photon_default->probe_ledger = (be->probe_ledger)?(be->probe_ledger):__photon_default->probe_ledger;
+	__photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
+	__photon_default->io_finalize = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
+
+	if(__photon_backend->initialized() == PHOTON_OK) {
+		log_warn("Photon already initialized");
+		return PHOTON_OK;
 	}
 
-	return __photon_backend->init(cfg);
+	/* the configured backend init gets called from within the default library init */
+	return __photon_default->init(cfg, NULL, NULL);
 
 error_exit:
 	log_err("photon_init(): %s support not present", cfg->backend);
@@ -76,224 +133,161 @@ error_exit:
 }
 
 int photon_finalize() {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
-
-	return __photon_backend->finalize();
+	
+	return __photon_default->finalize();
 }
 
-int photon_register_buffer(char *buffer, int buffer_size) {
-	static int first_time = 1;
-	photonBuffer db;
-
-	dbg_info("(%p, %d)",buffer, buffer_size);
-
-	if(__photon_backend->initialized() != PHOTON_OK) {
-		struct photon_mem_register_req *mem_reg_req;
-		if( first_time ) {
-			SLIST_INIT(&pending_mem_register_list);
-			first_time = 0;
-		}
-		mem_reg_req = malloc( sizeof(struct photon_mem_register_req) );
-		mem_reg_req->buffer = buffer;
-		mem_reg_req->buffer_size = buffer_size;
-
-		SLIST_INSERT_HEAD(&pending_mem_register_list, mem_reg_req, list);
-		dbg_info("called before init, queueing buffer info");
-		goto normal_exit;
-	}
-
-	if (buffertable_find_exact((void *)buffer, buffer_size, &db) == 0) {
-		dbg_info("we had an existing buffer, reusing it");
-		db->ref_count++;
-		goto normal_exit;
-	}
-
-	db = photon_buffer_create(buffer, buffer_size);
-	if (!db) {
-		log_err("Couldn't register shared storage");
-		goto error_exit;
-	}
-
-	dbg_info("created buffer: %p", db);
-
-	if (photon_buffer_register(db, __photon_backend->context) != 0) {
-		log_err("Couldn't register buffer");
-		goto error_exit_db;
-	}
-
-	dbg_info("registered buffer");
-
-	if (buffertable_insert(db) != 0) {
-		goto error_exit_db;
-	}
-
-	dbg_info("added buffer to hash table");
-
-normal_exit:
-	return PHOTON_OK;
-error_exit_db:
-	photon_buffer_free(db);
-error_exit:
-	return PHOTON_ERROR;
+int photon_register_buffer(char *buffer, int size) {
+	return __photon_default->register_buffer((void *)buffer, (uint64_t)size);
 }
 
 int photon_unregister_buffer(char *buffer, int size) {
-	photonBuffer db;
-
-	dbg_info();
-
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	if (buffertable_find_exact((void *)buffer, size, &db) != 0) {
-		dbg_info("no such buffer is registered");
-		goto error_exit;
-	}
-
-	if (--(db->ref_count) == 0) {
-		if (photon_buffer_unregister(db, __photon_backend->context) != 0) {
-			goto error_exit;
-		}
-		buffertable_remove( db );
-		photon_buffer_free(db);
-	}
-
-	return PHOTON_OK;
-
-error_exit:
-	return PHOTON_ERROR;
+	return __photon_default->unregister_buffer((void *)buffer, (uint64_t)size);
 }
 
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->test(request, flag, type, status);
+	return __photon_default->test(request, flag, type, status);
 }
 
 int photon_wait(uint32_t request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->wait(request);
+	return __photon_default->wait(request);
 }
 
 int photon_wait_ledger(uint32_t request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->wait_ledger(request);
+	return __photon_default->wait_ledger(request);
 }
 
 int photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->post_recv_buffer_rdma(proc, ptr, size, tag, request);
+	return __photon_default->post_recv_buffer_rdma(proc, ptr, size, tag, request);
 }
 
 int photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->post_send_buffer_rdma(proc, ptr, size, tag, request);
+	return __photon_default->post_send_buffer_rdma(proc, ptr, size, tag, request);
 }
 
 int photon_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->post_send_request_rdma(proc, size, tag, request);
+	return __photon_default->post_send_request_rdma(proc, size, tag, request);
 }
 
 int photon_wait_recv_buffer_rdma(int proc, int tag) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->wait_recv_buffer_rdma(proc, tag);
+	return __photon_default->wait_recv_buffer_rdma(proc, tag);
 }
 
 int photon_wait_send_buffer_rdma(int proc, int tag) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->wait_send_buffer_rdma(proc, tag);
+	return __photon_default->wait_send_buffer_rdma(proc, tag);
 }
 
 int photon_wait_send_request_rdma(int tag) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->wait_send_request_rdma(tag);
+	return __photon_default->wait_send_request_rdma(tag);
 }
 
 int photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->post_os_put(proc, ptr, size, tag, remote_offset, request);
+	return __photon_default->post_os_put(proc, ptr, size, tag, remote_offset, request);
 }
 
 int photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->post_os_get(proc, ptr, size, tag, remote_offset, request);
+	return __photon_default->post_os_get(proc, ptr, size, tag, remote_offset, request);
+}
+
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request) {
+	if(__photon_default->initialized() != PHOTON_OK) {
+		init_err();
+		return PHOTON_ERROR_NOINIT;
+	}
+	
+	return __photon_default->post_os_get_direct(proc, ptr, size, tag, rbuf, request);
 }
 
 int photon_send_FIN(int proc) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->send_FIN(proc);
+	return __photon_default->send_FIN(proc);
 }
 
 int photon_wait_any(int *ret_proc, uint32_t *ret_req) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
 #ifdef PHOTON_MULTITHREADED
-	// TODO: These can probably be implemented by having
-	//	 a condition var for the unreaped lists
+	/* TODO: These can probably be implemented by having
+	   a condition var for the unreaped lists */
 	return PHOTON_ERROR;
 #else
-	return __photon_backend->wait_any(ret_proc, ret_req);
+	return __photon_default->wait_any(ret_proc, ret_req);
 #endif
 }
 
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
@@ -301,34 +295,45 @@ int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
 #ifdef PHOTON_MULTITHREADED
 	return PHOTON_ERROR;
 #else
-	return __photon_backend->wait_any_ledger(ret_proc, ret_req);
+	return __photon_default->wait_any_ledger(ret_proc, ret_req);
 #endif
 }
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
-	if(__photon_backend->initialized() != PHOTON_OK) {
+	if(__photon_default->initialized() != PHOTON_OK) {
 		init_err();
 		return PHOTON_ERROR_NOINIT;
 	}
 
-	return __photon_backend->probe_ledger(proc, flag, type, status);
+	return __photon_default->probe_ledger(proc, flag, type, status);
 }
 
-/*
-  int photon_post_recv(int proc, char *ptr, uint32_t size, uint32_t *request) {
+/* begin I/O */
+int photon_io_init(char *file, int amode, MPI_Datatype view, int niter) {
+	if(__photon_default->initialized() != PHOTON_OK) {
+		init_err();
+		return PHOTON_ERROR_NOINIT;
+	}
+	
+	return __photon_default->io_init(file, amode, view, niter);
+}
 
-  }
+int photon_io_finalize() {
+	if(__photon_default->initialized() != PHOTON_OK) {
+		init_err();
+		return PHOTON_ERROR_NOINIT;
+	}
+	
+	return __photon_default->io_finalize();
+}
 
-  int photon_post_send(int proc, char *ptr, uint32_t size, uint32_t *request) {
+void photon_io_print_info(void *io) {
+	if (__photon_forwarder != NULL) {
+		__photon_forwarder->io_print(io);
+	}
+}
 
-  }
-
-  int photon_wait_remaining() {
-
-  }
-
-  int photon_wait_remaining_ledger() {
-
-  }
-*/
-
+/* utility API method to get backend-specific buffer info */
+int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
+	return _photon_get_buffer_private(buf, size, ret_priv);
+}

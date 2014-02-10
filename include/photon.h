@@ -10,6 +10,7 @@ struct photon_config_t {
 
 	int use_cma;
 	int use_forwarder;
+	char **forwarder_eids;
 
 	MPI_Comm comm;
 
@@ -30,12 +31,21 @@ struct photon_status_t {
 	int error;
 };
 
+struct photon_buffer_priv_t {
+	uint64_t key0;
+	uint64_t key1;
+};
+
+struct photon_descriptor_t {
+	uintptr_t addr;
+	uint64_t size;
+	struct photon_buffer_priv_t priv;
+};
+	
 typedef struct photon_config_t * photonConfig;
 typedef struct photon_status_t * photonStatus;
-
-#ifdef WITH_XSP
-#include "photon_xsp.h"
-#endif
+typedef struct photon_buffer_priv_t * photonBufferPriv;
+typedef struct photon_descriptor_t * photonDescriptor;
 
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
@@ -56,6 +66,7 @@ int photon_finalize();
 
 int photon_register_buffer(char *buffer, int buffer_size);
 int photon_unregister_buffer(char *buffer, int size);
+int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
 
 int photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
 int photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
@@ -65,6 +76,7 @@ int photon_wait_send_buffer_rdma(int proc, int tag);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
 int photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
 int photon_send_FIN(int proc);
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 
@@ -75,12 +87,5 @@ int photon_wait_any(int *ret_proc, uint32_t *ret_req);
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
-
-// The following 4 functions are implemented over DAPL
-// only and will not be supported in the future.
-int photon_post_recv(int proc, char *ptr, uint32_t size, uint32_t *request);
-int photon_post_send(int proc, char *ptr, uint32_t size, uint32_t *request);
-int photon_wait_remaining();
-int photon_wait_remaining_ledger();
 
 #endif

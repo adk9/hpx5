@@ -15,10 +15,10 @@ extern FILE *_phot_ofp;
 #endif
 
 #ifdef DEBUG
-#define dbg_err(fmt, args...)   do{ if(!_photon_start_debugging){break;} fprintf(stderr, "ALL:ERR: %d (%d): > %s(): "fmt"\n", _photon_myrank, (int)pthread_self(), __FUNCTION__, ##args); } while(0)
-#define dbg_info(fmt, args...)  do{ if(!_photon_start_debugging){break;} _photon_open_ofp(); fprintf(_phot_ofp, "ALL:INF: %d (%d): > %s(): "fmt"\n", _photon_myrank, (int)pthread_self(), __FUNCTION__, ##args); fflush(_phot_ofp); } while(0)
+#define dbg_err(fmt, args...)   do{ if(!_photon_start_debugging){break;} fprintf(stderr, "ALL:ERR: %d (%u): > %s(): "fmt"\n", _photon_myrank, (unsigned)pthread_self(), __FUNCTION__, ##args); } while(0)
+#define dbg_info(fmt, args...)  do{ if(!_photon_start_debugging){break;} _photon_open_ofp(); fprintf(_phot_ofp, "ALL:INF: %d (%u): > %s(): "fmt"\n", _photon_myrank, (unsigned)pthread_self(), __FUNCTION__, ##args); fflush(_phot_ofp); } while(0)
 
-#define dbg_warn(fmt, args...)  do{ if(!_photon_start_debugging){break;} fprintf(stderr, "ALL:WRN: %d (%d): > %s(): "fmt"\n", _photon_myrank, (int)pthread_self(), __FUNCTION__, ##args); } while(0)
+#define dbg_warn(fmt, args...)  do{ if(!_photon_start_debugging){break;} fprintf(stderr, "ALL:WRN: %d (%u): > %s(): "fmt"\n", _photon_myrank, (unsigned)pthread_self(), __FUNCTION__, ##args); } while(0)
 #else
 #define dbg_err(fmt, args...)
 #define dbg_info(fmt, args...)

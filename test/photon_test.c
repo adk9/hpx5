@@ -53,11 +53,11 @@ int main(int argc, char *argv[]) {
 		.address = rank,
 		.comm = MPI_COMM_WORLD,
 		.use_forwarder = 0,
-		.use_cma = 1,
-		.eth_dev = NULL,
-		.ib_dev = "mlx4_1",
+		.use_cma = 0,
+		.eth_dev = "roce0",
+		.ib_dev = "qib0",
 		.ib_port = 1,
-		.backend = "ugni"
+		.backend = "verbs"
 	};
 
 	photon_init(&cfg);
@@ -137,6 +137,9 @@ int main(int argc, char *argv[]) {
 			free(recv);
 		}
 	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	photon_finalize();
 	MPI_Finalize();
 	return 0;

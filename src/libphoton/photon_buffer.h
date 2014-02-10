@@ -2,7 +2,8 @@
 #define PHOTON_BUFFER_H
 
 #include <stdint.h>
-#include "libphoton.h"
+#include "config.h"
+#include "photon.h"
 
 #ifdef HAVE_VERBS
 #include <infiniband/verbs.h>
@@ -46,6 +47,7 @@ struct photon_buffer_interface_t {
 	void (*buffer_free)(photonBuffer buf);
 	int (*buffer_register)(photonBuffer buf, void *ctx);
 	int (*buffer_unregister)(photonBuffer buf, void *ctx);
+	int (*buffer_get_private)(photonBuffer buf, photonBufferPriv ret_priv);
 };
 
 typedef struct photon_buffer_interface_t * photonBufferInterface;
@@ -56,6 +58,7 @@ photonBuffer photon_buffer_create(void *buf, uint64_t size);
 void photon_buffer_free(photonBuffer buf);
 int photon_buffer_register(photonBuffer buf, void *ctx);
 int photon_buffer_unregister(photonBuffer buf, void *ctx);
+int photon_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv);
 
 /* including the remote buffers */
 photonRemoteBuffer photon_remote_buffer_create();

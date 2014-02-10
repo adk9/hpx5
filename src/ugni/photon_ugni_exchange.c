@@ -7,12 +7,9 @@
 #include "photon_ugni_exchange.h"
 #include "photon_ugni_buffer.h"
 
-extern int _photon_myrank;
-extern int _photon_nproc;
-extern int _photon_forwarder;
 extern photonBuffer shared_storage;
 
-int __ugni_exchange_ri_ledgers(UgniProcessInfo *ugni_processes) {
+int __ugni_exchange_ri_ledgers(ProcessInfo *ugni_processes) {
 	int i;
 	MPI_Request *req;
 	MPI_Comm _photon_comm = __photon_config->comm;
@@ -115,63 +112,7 @@ int __ugni_exchange_ri_ledgers(UgniProcessInfo *ugni_processes) {
 	return 0;
 }
 
-int __ugni_setup_ri_ledgers(UgniProcessInfo *ugni_processes, void *buf, int num_entries) {
-	int i;
-	int ledger_size, offset;
-
-	dbg_info();
-
-	ledger_size = sizeof(struct photon_ri_ledger_entry_t) * num_entries;
-
-	// Allocate the receive info ledgers
-	for(i = 0; i < _photon_nproc + _photon_forwarder; i++) {
-		dbg_info("allocating rcv info ledger for %d: %p", i, (buf + ledger_size * i));
-		dbg_info("Offset: %d", ledger_size * i);
-
-		// allocate the ledger
-		ugni_processes[i].local_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * i), num_entries);
-		if (!ugni_processes[i].local_rcv_info_ledger) {
-			log_err("couldn't create local rcv info ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote ri ledger for %d: %p", i, buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-		dbg_info("Offset: %d", ledger_size * _photon_nproc + ledger_size * i);
-
-		ugni_processes[i].remote_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!ugni_processes[i].remote_rcv_info_ledger) {
-			log_err("couldn't create remote rcv info ledger for process %d", i);
-			return -1;
-		}
-	}
-
-	// Allocate the send info ledgers
-	offset = 2 * ledger_size * (_photon_nproc+_photon_forwarder);
-	for(i = 0; i < _photon_nproc+_photon_forwarder; i++) {
-		dbg_info("allocating snd info ledger for %d: %p", i, (buf + offset + ledger_size * i));
-		dbg_info("Offset: %d", offset + ledger_size * i);
-
-		// allocate the ledger
-		ugni_processes[i].local_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * i), num_entries);
-		if (!ugni_processes[i].local_snd_info_ledger) {
-			log_err("couldn't create local snd info ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote ri ledger for %d: %p", i, buf + offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-		dbg_info("Offset: %d", offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i);
-
-		ugni_processes[i].remote_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!ugni_processes[i].remote_snd_info_ledger) {
-			log_err("couldn't create remote snd info ledger for process %d", i);
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-int __ugni_exchange_FIN_ledger(UgniProcessInfo *ugni_processes) {
+int __ugni_exchange_FIN_ledger(ProcessInfo *ugni_processes) {
 	int i;
 	uintptr_t   *va;
 	MPI_Request *req;
@@ -222,36 +163,6 @@ int __ugni_exchange_FIN_ledger(UgniProcessInfo *ugni_processes) {
 	}
 	for(i = 0; i < _photon_nproc; i++) {
 		ugni_processes[i].remote_FIN_ledger->remote.addr = va[i];
-	}
-
-	return 0;
-}
-
-int __ugni_setup_FIN_ledger(UgniProcessInfo *ugni_processes, void *buf, int num_entries) {
-	int i;
-	int ledger_size;
-
-	dbg_info();
-
-	ledger_size = sizeof(struct photon_rdma_FIN_ledger_entry_t) * num_entries;
-
-	for(i = 0; i < (_photon_nproc+_photon_forwarder); i++) {
-		// allocate the ledger
-		dbg_info("allocating local FIN ledger for %d", i);
-
-		ugni_processes[i].local_FIN_ledger = photon_rdma_FIN_ledger_create_reuse((photonFINLedgerEntry) (buf + ledger_size * i), num_entries);
-		if (!ugni_processes[i].local_FIN_ledger) {
-			log_err("couldn't create local FIN ledger for process %d", i);
-			return -1;
-		}
-
-		dbg_info("allocating remote FIN ledger for %d", i);
-
-		ugni_processes[i].remote_FIN_ledger = photon_rdma_FIN_ledger_create_reuse((photonFINLedgerEntry) (buf + ledger_size * (_photon_nproc+_photon_forwarder) + ledger_size * i), num_entries);
-		if (!ugni_processes[i].remote_FIN_ledger) {
-			log_err("couldn't create remote FIN ledger for process %d", i);
-			return -1;
-		}
 	}
 
 	return 0;

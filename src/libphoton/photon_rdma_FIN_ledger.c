@@ -3,6 +3,7 @@
 
 #include "logging.h"
 #include "photon_rdma_FIN_ledger.h"
+#include "photon_backend.h"
 #include "photon_buffer.h"
 
 photonFINLedger photon_rdma_FIN_ledger_create_reuse(photonFINLedgerEntry ledger_buffer, int num_entries) {
