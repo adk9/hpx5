@@ -112,7 +112,7 @@ main(int argc, char *argv[])
   hpx_get_time(&timer);
 
   hpx_future_t *fut;
-  hpx_action_invoke(fib_action, &n, &fut);
+  hpx_action_invoke(fib_action, &n, NULL, &fut);
   hpx_thread_wait(fut);
 
   long result = (long) hpx_lco_future_get_value_i64(fut);

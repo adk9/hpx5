@@ -98,12 +98,11 @@ void op(void* _args) {
     hpx_parcel_set_action(p, recv_broadcast_action);
     void *data = hpx_parcel_get_data(p);
     memcpy(data, &value, sizeof(REDUCTION_TYPE));
-    success = hpx_parcel_send(hpx_locality_from_rank(i), p, NULL, NULL, NULL);
+    success = hpx_parcel_send(hpx_locality_from_rank(i), p, NULL, NULL);
     if (success != HPX_SUCCESS) {
       printf("Error sending parcel\n");
       exit(-1);
     }
-    hpx_parcel_release(p);
   }
 }
 
@@ -124,8 +123,8 @@ void allreduce(void *_value) {
   unsigned int my_rank;
   hpx_locality_t* my_loc;
   hpx_locality_t* root_loc;
-  REDUCTION_TYPE local_reduction_value;
-  int local_reduction_count;
+  // REDUCTION_TYPE local_reduction_value;
+  //  int local_reduction_count;
   struct reduction_op_args* op_args;
   struct reduction_recv_args* args;
 
@@ -142,8 +141,8 @@ void allreduce(void *_value) {
     for (i = 0; i < num_ranks; i++) {
       hpx_lco_future_init(&local_reduction_futures[i]);
     }
-    local_reduction_value = 0;
-    local_reduction_count = num_ranks;
+    // local_reduction_value = 0;
+    //    local_reduction_count = num_ranks;
   }
 
   MPI_Barrier(MPI_COMM_WORLD); // TODO: replace with something more appropriate
@@ -175,12 +174,11 @@ void allreduce(void *_value) {
     args = (struct reduction_recv_args*)hpx_parcel_get_data(p);
     args->index = my_rank;
     args->value = value;
-    success = hpx_parcel_send(root_loc, p, NULL, NULL, NULL);
+    success = hpx_parcel_send(root_loc, p, NULL, NULL);
     if (success != HPX_SUCCESS) {
       fprintf(stderr, "Error sending parcel\n");
       exit(-1);
     }
-    hpx_parcel_release(p);
   }
 
   hpx_thread_wait(&done_fut);

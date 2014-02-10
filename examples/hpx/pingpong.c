@@ -127,8 +127,7 @@ static void action_pingpong(void *unused) {
       CHECK_NOT_NULL(p, "Failed to acquire parcel in 'pingpong' action");
       hpx_parcel_set_action(p, done);
       hpx_locality_t* loc = hpx_locality_from_rank(i);
-      hpx_parcel_send(loc, p, NULL, NULL, NULL);
-      hpx_parcel_release(p);
+      hpx_parcel_send(loc, p, NULL, NULL);
       hpx_locality_destroy(loc);
     }
   }
@@ -164,15 +163,13 @@ static void action_ping(args_t* args) {
     CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
     hpx_parcel_set_action(p, pong);
     memcpy(hpx_parcel_get_data(p), args, sizeof(*args)); /* write data to parcel */
-    hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
-    hpx_parcel_release(p);
+    hpx_parcel_send(other_loc, p, NULL, NULL);
   }
   else {
     hpx_parcel_t *p = hpx_parcel_acquire(0);
     CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
     hpx_parcel_set_action(p, done);
-    hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
-    hpx_parcel_release(p);
+    hpx_parcel_send(other_loc, p, NULL, NULL);
     hpx_call(hpx_get_my_locality(), done, NULL, 0, NULL);
   }
 
@@ -203,8 +200,7 @@ static void action_pong(args_t* args) {
     CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
     hpx_parcel_set_action(p, ping);
     memcpy(hpx_parcel_get_data(p), args, sizeof(*args)); /* write data to parcel */
-    hpx_parcel_send(other_loc, p, NULL, NULL, NULL);
-    hpx_parcel_release(p);
+    hpx_parcel_send(other_loc, p, NULL, NULL);
   }
 
   count++;

@@ -64,8 +64,7 @@ waitfor_shutdown()
     hpx_parcel_set_action(p, action_set_shutdown_future);
     hpx_parcel_set_data(p, &arg, sizeof(arg));
     hpx_locality_t *loc = hpx_locality_from_rank(i);
-    hpx_parcel_send(loc, p, NULL, NULL, NULL);
-    hpx_parcel_release(p);
+    hpx_parcel_send(loc, p, NULL, NULL);
     hpx_locality_destroy(loc);
   }
 
