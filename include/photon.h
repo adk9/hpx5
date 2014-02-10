@@ -5,43 +5,43 @@
 #include <mpi.h>
 
 struct photon_config_t {
-	uint64_t address;
-	int nproc;
+  uint64_t address;
+  int nproc;
 
-	int use_cma;
-	int use_forwarder;
-	char **forwarder_eids;
+  int use_cma;
+  int use_forwarder;
+  char **forwarder_eids;
 
-	MPI_Comm comm;
+  MPI_Comm comm;
 
-	char *backend;
-	int meta_exch;
+  char *backend;
+  int meta_exch;
 
-	char *eth_dev;
-	char *ib_dev;
-	int ib_port;
+  char *eth_dev;
+  char *ib_dev;
+  int ib_port;
 };
 
 struct photon_status_t {
-	uint64_t src_addr;
-	uint64_t size;
-	int request;
-	int tag;
-	int count;
-	int error;
+  uint64_t src_addr;
+  uint64_t size;
+  int request;
+  int tag;
+  int count;
+  int error;
 };
 
 struct photon_buffer_priv_t {
-	uint64_t key0;
-	uint64_t key1;
+  uint64_t key0;
+  uint64_t key1;
 };
 
 struct photon_descriptor_t {
-	uintptr_t addr;
-	uint64_t size;
-	struct photon_buffer_priv_t priv;
+  uintptr_t addr;
+  uint64_t size;
+  struct photon_buffer_priv_t priv;
 };
-	
+
 typedef struct photon_config_t * photonConfig;
 typedef struct photon_status_t * photonStatus;
 typedef struct photon_buffer_priv_t * photonBufferPriv;

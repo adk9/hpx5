@@ -4,18 +4,18 @@
 #include "photon_buffer.h"
 
 typedef struct photon_rdma_FIN_ledger_entry_t {
-	volatile uint8_t header;
-	uint32_t request;
-	volatile uint16_t filler;
-	volatile uint8_t footer;
+  volatile uint8_t header;
+  uint32_t request;
+  volatile uint16_t filler;
+  volatile uint8_t footer;
 } photon_rdma_FIN_ledger_entry;
 
 typedef struct photon_rdma_FIN_ledger_t {
-	photon_rdma_FIN_ledger_entry *entries;
-	int num_entries;
-	photonBuffer local;
-	photon_remote_buffer remote;
-	int curr;
+  photon_rdma_FIN_ledger_entry *entries;
+  int num_entries;
+  photonBuffer local;
+  photon_remote_buffer remote;
+  int curr;
 } photon_rdma_FIN_ledger;
 
 typedef struct photon_rdma_FIN_ledger_entry_t * photonFINLedgerEntry;

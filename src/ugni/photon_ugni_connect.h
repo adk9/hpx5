@@ -5,18 +5,18 @@
 #include "photon_ugni.h"
 
 typedef struct ugni_cnct_ctx_t {
-	char               *gemini_dev;
-	uint32_t            cdm_id;
-	gni_cdm_handle_t    cdm_handle;
-	gni_nic_handle_t    nic_handle;
-	gni_cq_handle_t     local_cq_handle;
-	gni_cq_handle_t     remote_cq_handle;
-	gni_ep_handle_t    *ep_handles;
+  char               *gemini_dev;
+  uint32_t            cdm_id;
+  gni_cdm_handle_t    cdm_handle;
+  gni_nic_handle_t    nic_handle;
+  gni_cq_handle_t     local_cq_handle;
+  gni_cq_handle_t     remote_cq_handle;
+  gni_ep_handle_t    *ep_handles;
 } ugni_cnct_ctx;
 
 typedef struct ugni_cnct_info_t {
-	unsigned int lid;
-	struct in_addr ip;
+  unsigned int lid;
+  struct in_addr ip;
 } ugni_cnct_info;
 
 int __ugni_init_context(ugni_cnct_ctx *ctx);

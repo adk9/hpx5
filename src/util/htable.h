@@ -5,17 +5,17 @@
 #include <pthread.h>
 
 typedef struct hash_element {
-	uint64_t key;
-	void *value;
-	struct hash_element *prev;
-	struct hash_element *next;
+  uint64_t key;
+  void *value;
+  struct hash_element *prev;
+  struct hash_element *next;
 } hash_element_t;
 
 typedef struct htable {
-	hash_element_t **table;
-	int size;
-	int elements;
-	pthread_mutex_t mtx;
+  hash_element_t **table;
+  int size;
+  int elements;
+  pthread_mutex_t mtx;
 } htable_t;
 
 htable_t *htable_create(int size);

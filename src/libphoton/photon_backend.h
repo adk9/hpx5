@@ -27,90 +27,90 @@
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
 typedef struct proc_info_t {
-	photonRILedger  local_snd_info_ledger;
-	photonRILedger  remote_snd_info_ledger;
-	photonRILedger  local_rcv_info_ledger;
-	photonRILedger  remote_rcv_info_ledger;
-	photonFINLedger local_FIN_ledger;
-	photonFINLedger remote_FIN_ledger;
+  photonRILedger  local_snd_info_ledger;
+  photonRILedger  remote_snd_info_ledger;
+  photonRILedger  local_rcv_info_ledger;
+  photonRILedger  remote_rcv_info_ledger;
+  photonFINLedger local_FIN_ledger;
+  photonFINLedger remote_FIN_ledger;
 
-	photonRemoteBuffer curr_remote_buffer;
+  photonRemoteBuffer curr_remote_buffer;
 
 #ifdef HAVE_XSP
-	libxspSess *sess;
-	PhotonIOInfo *io_info;
+  libxspSess *sess;
+  PhotonIOInfo *io_info;
 #endif
 } ProcessInfo;
 
 /* photon transfer requests */
 typedef struct photon_req_t {
-	LIST_ENTRY(photon_req_t) list;
-	uint32_t id;
-	int state;
-	int type;
-	int proc;
-	int tag;
-	pthread_mutex_t mtx;
-	pthread_cond_t completed;
+  LIST_ENTRY(photon_req_t) list;
+  uint32_t id;
+  int state;
+  int type;
+  int proc;
+  int tag;
+  pthread_mutex_t mtx;
+  pthread_cond_t completed;
 } photon_req;
 
 typedef struct photon_req_t * photonRequest;
 
 typedef struct photon_event_status_t {
-	uint64_t id;
-	int proc;
-	void *priv;
+  uint64_t id;
+  int proc;
+  void *priv;
 } photon_event_status;
 
 typedef struct photon_event_status_t * photonEventStatus;
 
 /* photon memory registration requests */
 struct photon_mem_register_req {
-	SLIST_ENTRY(photon_mem_register_req) list;
-	char *buffer;
-	int buffer_size;
+  SLIST_ENTRY(photon_mem_register_req) list;
+  char *buffer;
+  int buffer_size;
 };
 
 /* TODO: fix parameters and generalize API */
 struct photon_backend_t {
-	void *context;
-	int (*initialized)(void);
-	int (*init)(photonConfig cfg, ProcessInfo *info, photonBuffer ss);
-	int (*finalize)(void);
-	int (*connect)(void *local_ci, void *remote_ci, int pindex, void **ret_ci, int *ret_len, photon_connect_mode_t);
-	int (*get_info)(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
-	int (*set_info)(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
-	/* API */
-	int (*register_buffer)(void *buffer, uint64_t size);
-	int (*unregister_buffer)(void *buffer, uint64_t size);
-	int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
-	int (*wait)(uint32_t request);
-	int (*wait_ledger)(uint32_t request);
-	int (*post_recv_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-	int (*post_send_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-	int (*post_send_request_rdma)(int proc, uint32_t size, int tag, uint32_t *request);
-	int (*wait_recv_buffer_rdma)(int proc, int tag);
-	int (*wait_send_buffer_rdma)(int proc, int tag);
-	int (*wait_send_request_rdma)(int tag);
-	int (*post_os_put)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-	int (*post_os_get)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-	int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
-	int (*send_FIN)(int proc);
-	int (*wait_any)(int *ret_proc, uint32_t *ret_req);
-	int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
-	int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
-	int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
-	int (*io_finalize)();
-	/* data movement */
-	int (*rdma_put)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-					photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-	int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-					photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-	int (*rdma_send)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-					 photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-	int (*rdma_recv)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-					 photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-	int (*get_event)(photonEventStatus stat);
+  void *context;
+  int (*initialized)(void);
+  int (*init)(photonConfig cfg, ProcessInfo *info, photonBuffer ss);
+  int (*finalize)(void);
+  int (*connect)(void *local_ci, void *remote_ci, int pindex, void **ret_ci, int *ret_len, photon_connect_mode_t);
+  int (*get_info)(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
+  int (*set_info)(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
+  /* API */
+  int (*register_buffer)(void *buffer, uint64_t size);
+  int (*unregister_buffer)(void *buffer, uint64_t size);
+  int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
+  int (*wait)(uint32_t request);
+  int (*wait_ledger)(uint32_t request);
+  int (*post_recv_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
+  int (*post_send_buffer_rdma)(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
+  int (*post_send_request_rdma)(int proc, uint32_t size, int tag, uint32_t *request);
+  int (*wait_recv_buffer_rdma)(int proc, int tag);
+  int (*wait_send_buffer_rdma)(int proc, int tag);
+  int (*wait_send_request_rdma)(int tag);
+  int (*post_os_put)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+  int (*post_os_get)(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+  int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
+  int (*send_FIN)(int proc);
+  int (*wait_any)(int *ret_proc, uint32_t *ret_req);
+  int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
+  int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
+  int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
+  int (*io_finalize)();
+  /* data movement */
+  int (*rdma_put)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+                  photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+  int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+                  photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+  int (*rdma_send)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+                   photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+  int (*rdma_recv)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+                   photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+  int (*get_event)(photonEventStatus stat);
 };
 
 typedef struct photon_backend_t * photonBackend;

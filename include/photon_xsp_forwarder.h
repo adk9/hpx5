@@ -23,24 +23,24 @@
  */
 
 enum PhotonMPITypes {
-    PHOTON_MPI_DOUBLE = 52,
+  PHOTON_MPI_DOUBLE = 52,
 };
 
 typedef struct photon_mpi_datatype_t {
-	int combiner;
-	int nints;
-	int *integers;
-	int naddrs;
-	MPI_Aint *addresses;
-	int ndatatypes;
-	int *datatypes;
+  int combiner;
+  int nints;
+  int *integers;
+  int naddrs;
+  MPI_Aint *addresses;
+  int ndatatypes;
+  int *datatypes;
 } PhotonMPIDatatype;
 
 typedef struct photon_io_info_t {
-	char *fileURI;
-	int amode;
-	int niter;
-	PhotonMPIDatatype view;
+  char *fileURI;
+  int amode;
+  int niter;
+  PhotonMPIDatatype view;
 } PhotonIOInfo;
 
 int photon_xsp_register_session(libxspSess *sess);
