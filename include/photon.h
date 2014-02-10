@@ -64,20 +64,20 @@ int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 
-int photon_register_buffer(char *buffer, int buffer_size);
-int photon_unregister_buffer(char *buffer, int size);
+int photon_register_buffer(void *buf, uint64_t size);
+int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
 
-int photon_post_recv_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-int photon_post_send_buffer_rdma(int proc, char *ptr, uint32_t size, int tag, uint32_t *request);
-int photon_post_send_request_rdma(int proc, uint32_t size, int tag, uint32_t *request);
-int photon_wait_recv_buffer_rdma(int proc, int tag);
-int photon_wait_send_buffer_rdma(int proc, int tag);
-int photon_wait_send_request_rdma(int tag);
-int photon_post_os_put(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
-int photon_post_os_get(int proc, char *ptr, uint32_t size, int tag, uint32_t remote_offset, uint32_t *request);
+int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
+int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
+int photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *oper);
+int photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *oper);
+int photon_wait_send_request_rdma(int tag, uint43_t *request);
+int photon_post_os_put(int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset, uint32_t oper, uint32_t *request);
+int photon_post_os_get(int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset, uint32_t oper, uint32_t *request);
 int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
-int photon_send_FIN(int proc);
+int photon_send_FIN(int proc, uint32_t oper);
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 
 int photon_wait(uint32_t request);
