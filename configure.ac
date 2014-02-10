@@ -54,8 +54,8 @@ AS_IF([test "x$enable_wall" != xno],
   [AC_SUBST([HPX_W_ALL], [-Wall])])
 
 AC_ARG_ENABLE([werror],
-  [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=yes@:>@])],
-  [], [enable_werror=yes])
+  [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=no@:>@])],
+  [], [enable_werror=no])
 AS_IF([test "x$enable_werror" != xno],
   [AC_SUBST([HPX_W_ERROR], [-Werror])])
 
