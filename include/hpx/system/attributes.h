@@ -93,6 +93,12 @@
 #endif
 
 /**
+ * @macro HPX_INTERNAL
+ * @brief Convenience wrapper for the internal visibility attribute
+ */
+#define HPX_INTERNAL HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL)
+
+/**
  * @macro HPX_MALLOC
  * @brief The attribute that declares that a function has "malloc" semantics
  *        w.r.t. the aliasing behavior of the returned pointer value.

@@ -33,6 +33,7 @@
 #include "debug.h"                              /* dbg_* stuff */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* struct network_mgr */
+#include "libhpx/parcel.h"                      /* struct hpx_parcel */
 
 /** Typedefs that we use for convenience in this source. */
 typedef struct hpx_parcel   parcel_t;
@@ -260,6 +261,28 @@ hpx_action_invoke(hpx_action_t action, void *args, future_t **out)
   return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
 }
 
+void action_wrap(void *arg) {
+  struct hpx_parcel *parcel = (struct hpx_parcel*)arg;
+  hpx_func_t f = action_lookup(parcel->action);
+  dbg_assert(f && "Failed to find action");
+  f(parcel->payload);
+  hpx_parcel_release(parcel);
+}
+
+/**
+ * Call to invoke an action locally.
+ *
+ * @param[in]  parcel - the parcel that contains the action and arguments
+ * @param[out] out    - a future to wait on
+ *
+ * @returns an error code
+ */
+hpx_error_t
+hpx_action_invoke_parcel(struct hpx_parcel *parcel, future_t **out)
+{
+  return hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)action_wrap, parcel, out, NULL);
+}
+
 /**
  * Call to perform a possibly-remote procedure call.
  *
@@ -277,7 +300,7 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
 {
   dbg_assert_precondition(dest);
   dbg_assert_precondition(action);
-  dbg_assert_precondition(len && args);
+  dbg_assert_precondition(((len && args) || ((args && len) == 0)));
 
   parcel_t *p = hpx_parcel_acquire(len);
   if (!p) {
