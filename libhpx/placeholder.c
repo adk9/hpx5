@@ -94,3 +94,22 @@ uint64_t
 hpx_time_to_ms(hpx_time_t time) {
   return time;
 }
+
+hpx_parcel_t *
+hpx_parcel_acquire(unsigned size) {
+  return NULL;
+}
+
+void
+hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) {
+}
+
+void *
+hpx_parcel_get_data(hpx_parcel_t *p) {
+  return NULL;
+}
+
+void
+hpx_parcel_send(int rank, hpx_parcel_t *p, hpx_addr_t thread,
+                hpx_addr_t result) {
+}
