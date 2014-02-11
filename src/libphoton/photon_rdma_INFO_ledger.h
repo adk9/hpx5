@@ -8,7 +8,7 @@ typedef struct photon_ri_ledger_entry_t {
   uint32_t request;
   uint32_t rkey;
   uintptr_t addr;
-  uint32_t size;
+  uint64_t size;
   int tag;
   uint64_t qword1;
   uint64_t qword2;

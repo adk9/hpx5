@@ -27,11 +27,11 @@ int main(int argc, char *argv[]) {
     .address = rank,
     .comm = MPI_COMM_WORLD,
     .use_forwarder = 0,
-    .use_cma = 0,
+    .use_cma = 1,
     .eth_dev = "roce0",
     .ib_dev = "qib0",
     .ib_port = 1,
-    .backend = "ugni"
+    .backend = "verbs"
   };
 
   photon_init(&cfg);

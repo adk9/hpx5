@@ -20,13 +20,9 @@ static htable_t *reqtable, *ledger_reqtable;
 static photonRequest requests;
 static int num_requests;
 static LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
-static LIST_HEAD(unreapedevdreqs, photon_req_t) unreaped_evd_reqs_list;
-static LIST_HEAD(unreapedledgerreqs, photon_req_t) unreaped_ledger_reqs_list;
-static LIST_HEAD(pendingreqs, photon_req_t) pending_reqs_list;
 static SLIST_HEAD(pendingmemregs, photon_mem_register_req) pending_mem_register_list;
 
 DEFINE_COUNTER(curr_cookie, uint32_t)
-DEFINE_COUNTER(handshake_rdma_write, uint32_t)
 
 /* default backend methods */
 static int _photon_initialized(void);
@@ -56,6 +52,8 @@ static int __photon_nbpop_ledger(photonRequest req);
 static int __photon_wait_ledger(photonRequest req);
 static int __photon_wait_event(photonRequest req);
 static int __photon_nbpop_event(photonRequest req);
+
+static int __photon_setup_buffer_request(photonRILedgerEntry ri_entry, uint32_t *request);
 
 static int _photon_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                             photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
@@ -115,14 +113,68 @@ static inline photonRequest __photon_get_request() {
   if (req)
     LIST_REMOVE(req, list);
   LIST_UNLOCK(&free_reqs_list);
-
+  
   if (!req) {
+    log_err("Request list is empty, this should rarely happen");
     req = malloc(sizeof(struct photon_req_t));
-    pthread_mutex_init(&req->mtx, NULL);
-    pthread_cond_init (&req->completed, NULL);
   }
 
+  req->flags = REQUEST_FLAG_NIL;
+
   return req;
+}
+
+static int __photon_setup_buffer_request(photonRILedgerEntry ri_entry, uint32_t *request) {
+  photonRequest req;
+  uint32_t request_id;
+
+  request_id = INC_COUNTER(curr_cookie);
+  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+
+  *request = request_id;
+  
+  req = __photon_get_request();
+  if (!req) {
+    log_err("Couldn't allocate request\n");
+    goto error_exit;
+  }
+  req->id = request_id;
+  req->state = REQUEST_NEW;
+  
+  /* save the remote buffer in the request */
+  req->remote_buffer.request     = ri_entry->request;
+  req->remote_buffer.rkey        = ri_entry->rkey;
+  req->remote_buffer.addr        = ri_entry->addr;
+  req->remote_buffer.size        = ri_entry->size;
+  req->remote_buffer.tag	 = ri_entry->tag;
+#ifdef HAVE_UGNI
+  req->remote_buffer.mdh.qword1  = ri_entry->qword1;
+  req->remote_buffer.mdh.qword2  = ri_entry->qword2;
+#endif
+  
+  dbg_info("Remote request: %u", ri_entry->request);
+  dbg_info("rkey: %u", ri_entry->rkey);
+  dbg_info("Addr: %p", (void *)ri_entry->addr);
+  dbg_info("Size: %lu", ri_entry->size);
+  dbg_info("Tag: %d",	ri_entry->tag);
+#ifdef HAVE_UGNI
+  dbg_info("MDH: 0x%016lx / 0x%016lx", ri_entry->qword1, ri_entry->qword2);
+#endif
+  
+  dbg_info("Inserting the new send buffer request into the request table: %d/%p", request_id, req);
+  if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
+    /* this is bad, we've submitted the request, but we can't track it */
+    log_err("Couldn't save request in hashtable");
+    goto error_exit;
+  }
+
+  return PHOTON_OK;
+  
+ error_exit:
+  if (request != NULL) {
+    *request = NULL_COOKIE;
+  }
+  return PHOTON_ERROR;
 }
 
 static int _photon_initialized() {
@@ -143,7 +195,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBuffer ss) {
   dbg_info("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
 
   INIT_COUNTER(curr_cookie, 1);
-  INIT_COUNTER(handshake_rdma_write, 0);
 
   requests = malloc(sizeof(struct photon_req_t) * DEF_NUM_REQUESTS);
   if (!requests) {
@@ -153,9 +204,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBuffer ss) {
 
   num_requests = DEF_NUM_REQUESTS;
   LIST_INIT(&free_reqs_list);
-  LIST_INIT(&unreaped_evd_reqs_list);
-  LIST_INIT(&unreaped_ledger_reqs_list);
-  LIST_INIT(&pending_reqs_list);
 
   for(i = 0; i < num_requests; i++) {
     LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
@@ -191,14 +239,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBuffer ss) {
 
   // Set it to zero, so that we know if it ever got initialized
   memset(photon_processes, 0, sizeof(ProcessInfo) * (_photon_nproc + _photon_nforw));
-
-  for(i = 0; i < (_photon_nproc + _photon_nforw); i++) {
-    photon_processes[i].curr_remote_buffer = photon_remote_buffer_create();
-    if(!photon_processes[i].curr_remote_buffer) {
-      log_err("Couldn't allocate process remote buffer information");
-      goto error_exit_gp;
-    }
-  }
 
   dbg_info("alloc'd process info");
 
@@ -264,12 +304,6 @@ error_exit_buf:
   if (buf)
     free(buf);
 error_exit_crb:
-  for(i = 0; i < (_photon_nproc + _photon_nforw); i++) {
-    if (photon_processes[i].curr_remote_buffer != NULL) {
-      photon_remote_buffer_free(photon_processes[i].curr_remote_buffer);
-    }
-  }
-error_exit_gp:
   free(photon_processes);
 error_exit_lrt:
   htable_free(ledger_reqtable);
@@ -280,7 +314,6 @@ error_exit_bt:
 error_exit_req:
   free(requests);
   DESTROY_COUNTER(curr_cookie);
-  DESTROY_COUNTER(handshake_rdma_write);
 
   return PHOTON_ERROR;
 }
@@ -388,7 +421,7 @@ error_exit:
 //	1 if either no event was in the queue, or there was an event but not for the specified request (req).
 static int __photon_nbpop_event(photonRequest req) {
   int rc;
-
+  
   dbg_info("(%d)",req->id);
 
   if(req->state == REQUEST_PENDING) {
@@ -403,32 +436,28 @@ static int __photon_nbpop_event(photonRequest req) {
 
     cookie = (uint32_t)( (event.id<<32)>>32);
     if (cookie == req->id) {
+      dbg_info("setting request completed with cookie:%u", cookie);
       req->state = REQUEST_COMPLETED;
-
-      dbg_info("removing event with cookie:%u", cookie);
-      htable_remove(reqtable, (uint64_t)req->id, NULL);
-      SAFE_LIST_REMOVE(req, list);
-      SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-      dbg_info("%d requests left in reqtable", htable_count(reqtable));
     }
+    /* handle any other request completions we might get from the backend event queue */
     else if (cookie != NULL_COOKIE) {
-      void *test;
-
-      if (htable_lookup(reqtable, (uint64_t)cookie, &test) == 0) {
-        photonRequest tmp_req = test;
-
+      photonRequest tmp_req;
+      if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) == 0) {
+        dbg_info("setting request completed with cookie:%u", cookie);
         tmp_req->state = REQUEST_COMPLETED;
-        SAFE_LIST_REMOVE(tmp_req, list);
-        SAFE_LIST_INSERT_HEAD(&unreaped_evd_reqs_list, tmp_req, list);
-      }
-      else if (htable_lookup(ledger_reqtable, (uint64_t)cookie, &test) == 0) {
-        if( DEC_COUNTER(handshake_rdma_write) <= 0 ) {
-          log_err("handshake_rdma_write_count is negative");
-        }
       }
     }
   }
-
+  
+  /* clean up a completed request if the FIN has already been sent
+     otherwise, we clean up in send_FIN() */
+  if ((req->state == REQUEST_COMPLETED) && (req->flags & REQUEST_FLAG_FIN)) {
+    dbg_info("Removing request %u for remote buffer request", req->id);
+    htable_remove(reqtable, (uint64_t)req->id, NULL);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+    dbg_info("%d requests left in reqtable", htable_count(reqtable));
+  } 
+  
   dbg_info("returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
   return (req->state == REQUEST_COMPLETED)?0:1;
 
@@ -444,68 +473,53 @@ error_exit:
 //		call to __photon_nbpop_ledger() poped the FIN that corresponds to "req".
 //	1 if the request is pending and the FIN has not arrived yet
 static int __photon_nbpop_ledger(photonRequest req) {
-  void *test;
+  int num, new_curr;
   int curr, i=-1;
 
-  dbg_info("(%d)",req->id);
-
-  //#ifdef DEBUG
-  //		for(i = 0; i < _photon_nproc; i++) {
-  //				photon_rdma_FIN_ledger_entry_t *curr_entry;
-  //				curr = photon_processes[i].local_FIN_ledger->curr;
-  //				curr_entry = &(photon_processes[i].local_FIN_ledger->entries[curr]);
-  //				dbg_info("__photon_nbpop_ledger() curr_entry(proc==%d)=%p",i,curr_entry);
-  //		}
-  //#endif
+  dbg_info("(%d)", req->id, req->state);
 
   if(req->state == REQUEST_PENDING) {
-
+    
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonFINLedgerEntry curr_entry;
       curr = photon_processes[i].local_FIN_ledger->curr;
       curr_entry = &(photon_processes[i].local_FIN_ledger->entries[curr]);
       if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
-        dbg_info("Found curr:%d req:%u while looking for req:%u", curr, curr_entry->request, req->id);
+        dbg_info("Found curr: %d req: %u while looking for req: %u", curr, curr_entry->request, req->id);
         curr_entry->header = 0;
         curr_entry->footer = 0;
 
         if (curr_entry->request == req->id) {
           req->state = REQUEST_COMPLETED;
-          dbg_info("removing RDMA i:%u req:%u", i, req->id);
-          htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
-          LIST_REMOVE(req, list);
-          LIST_INSERT_HEAD(&free_reqs_list, req, list);
-          int num = photon_processes[i].local_FIN_ledger->num_entries;
-          int new_curr = (photon_processes[i].local_FIN_ledger->curr + 1) % num;
-          photon_processes[i].local_FIN_ledger->curr = new_curr;
-          dbg_info("returning 0");
-          return 0;
         }
+        /* handle any other request completions we might get from the backend event queue */
         else {
           photonRequest tmp_req;
-
-          if (htable_lookup(ledger_reqtable, (uint64_t)curr_entry->request, &test) == 0) {
-            tmp_req = test;
-
+          if (htable_lookup(ledger_reqtable, (uint64_t)curr_entry->request, (void**)&tmp_req) == 0) {
+            dbg_info("setting request completed with cookie:%u", curr_entry->request);
             tmp_req->state = REQUEST_COMPLETED;
-            LIST_REMOVE(tmp_req, list);
-            LIST_INSERT_HEAD(&unreaped_ledger_reqs_list, tmp_req, list);
           }
         }
-
-        int num = photon_processes[i].local_FIN_ledger->num_entries;
-        int new_curr = (photon_processes[i].local_FIN_ledger->curr + 1) % num;
+        num = photon_processes[i].local_FIN_ledger->num_entries;
+        new_curr = (photon_processes[i].local_FIN_ledger->curr + 1) % num;
         photon_processes[i].local_FIN_ledger->curr = new_curr;
       }
-    }
+    } 
   }
-  else {
-    dbg_info("req->state != PENDING, returning 0");
+  
+  if (req->state == REQUEST_COMPLETED) {
+    dbg_info("removing RDMA i: %u req: %u", i, req->id);
+    htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+  }
+  
+  if ((req->state != REQUEST_COMPLETED) && (req->state != REQUEST_PENDING)) {
+    dbg_info("req->state != (PENDING | COMPLETE), returning 0");
     return 0;
   }
-
-  dbg_info("at end, returning %d",(req->state == REQUEST_COMPLETED)?0:1);
+  
+  dbg_info("at end, returning %d", (req->state == REQUEST_COMPLETED)?0:1);
   return (req->state == REQUEST_COMPLETED)?0:1;
 }
 
@@ -523,7 +537,7 @@ static int __photon_wait_ledger(photonRequest req) {
     dbg_info("curr_entry(proc==%d)=%p",i,curr_entry);
   }
 #endif
-  while(req->state == REQUEST_PENDING) {
+  while (req->state == REQUEST_PENDING) {
 
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
@@ -540,13 +554,10 @@ static int __photon_wait_ledger(photonRequest req) {
         }
         else {
           photonRequest tmp_req;
-
+          
           if (htable_lookup(ledger_reqtable, (uint64_t)curr_entry->request, &test) == 0) {
             tmp_req = test;
-
             tmp_req->state = REQUEST_COMPLETED;
-            SAFE_LIST_REMOVE(tmp_req, list);
-            SAFE_LIST_INSERT_HEAD(&unreaped_ledger_reqs_list, tmp_req, list);
           }
         }
 
@@ -559,7 +570,6 @@ static int __photon_wait_ledger(photonRequest req) {
   }
   dbg_info("removing RDMA: %u/%u", i, req->id);
   htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
-  SAFE_LIST_REMOVE(req, list);
   SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
   dbg_info("%d requests left in reqtable", htable_count(ledger_reqtable));
 
@@ -567,17 +577,9 @@ static int __photon_wait_ledger(photonRequest req) {
 }
 
 static int __photon_wait_event(photonRequest req) {
-  //fprintf(stderr,"[%d/%d] __photon_wait_event(): req->state:%d, req->id:%d\n", _photon_myrank, _photon_nproc, req->state, req->id);
-
-  // I think here we should check if the request is in the unreaped_evd_reqs_list
-  // (i.e. already completed) and if so, move it to the free_reqs_list:
-  //		if(req->state == REQUEST_COMPLETED){
-  //				LIST_REMOVE(req, list);
-  //				LIST_INSERT_HEAD(&free_reqs_list, req, list);
-  //		}
   int rc;
-
-  while(req->state == REQUEST_PENDING) {
+  
+  while (req->state == REQUEST_PENDING) {
     uint32_t cookie;
     photon_event_status event;
 
@@ -586,32 +588,11 @@ static int __photon_wait_event(photonRequest req) {
       dbg_err("Could not get event");
       goto error_exit;
     }
-
+    
     cookie = (uint32_t)( (event.id<<32)>>32);
     if (cookie == req->id) {
       req->state = REQUEST_COMPLETED;
-
-      dbg_info("removing event with cookie:%u", cookie);
-      htable_remove(reqtable, (uint64_t)req->id, NULL);
-      SAFE_LIST_REMOVE(req, list);
-      SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-      dbg_info("%d requests left in reqtable", htable_count(reqtable));
-    }
-    else if (cookie != NULL_COOKIE) {
-      void *test;
-
-      if (htable_lookup(reqtable, (uint64_t)cookie, &test) == 0) {
-        photonRequest tmp_req = test;
-
-        tmp_req->state = REQUEST_COMPLETED;
-        SAFE_LIST_REMOVE(tmp_req, list);
-        SAFE_LIST_INSERT_HEAD(&unreaped_evd_reqs_list, tmp_req, list);
-      }
-      else if (htable_lookup(ledger_reqtable, (uint64_t)cookie, &test) == 0) {
-        if( DEC_COUNTER(handshake_rdma_write) <= 0 ) {
-          log_err("handshake_rdma_write_count is negative");
-        }
-      }
+      dbg_info("setting request complete with cookie:%u", cookie);
     }
   }
 
@@ -726,7 +707,6 @@ static int _photon_wait(uint32_t request) {
       if (htable_lookup(ledger_reqtable, (uint64_t)req->id, NULL) != -1) {
         dbg_info("removing ledger RDMA: %u", req->id);
         htable_remove(ledger_reqtable, (uint64_t)req->id, NULL);
-        SAFE_LIST_REMOVE(req, list);
         SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
         dbg_info("%d requests left in ledgertable", htable_count(ledger_reqtable));
       }
@@ -735,7 +715,6 @@ static int _photon_wait(uint32_t request) {
       if (htable_lookup(reqtable, (uint64_t)req->id, NULL) != -1) {
         dbg_info("removing event with cookie:%u", req->id);
         htable_remove(reqtable, (uint64_t)req->id, NULL);
-        SAFE_LIST_REMOVE(req, list);
         SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
         dbg_info("%d requests left in reqtable", htable_count(reqtable));
       }
@@ -760,8 +739,9 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
   int curr, num_entries, rc;
   uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
+  dbg_info("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
 
+  
   if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
     log_err("Requested recv from ptr not in table");
     goto error_exit;
@@ -770,10 +750,10 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
   request_id = INC_COUNTER(curr_cookie);
   dbg_info("Incrementing curr_cookie_count to: %d", request_id);
 
-  // proc == -1 means ANY_SOURCE.	 In this case all potential senders must post a send request
-  // which will write into our snd_info ledger entries such that:
-  // rkey == 0
-  // addr == (uintptr_t)0
+  /* proc == -1 means ANY_SOURCE.  In this case all potential senders must post a send request
+     which will write into our snd_info ledger entries such that:
+     rkey == 0
+     addr == (uintptr_t)0  */
   if( proc == -1 ) {
     proc = photon_wait_send_request_rdma(tag);
   }
@@ -781,7 +761,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
   curr = photon_processes[proc].remote_rcv_info_ledger->curr;
   entry = &photon_processes[proc].remote_rcv_info_ledger->entries[curr];
 
-  // fill in what we're going to transfer
+  /* fill in what we're going to transfer */
   entry->header = 1;
   entry->request = request_id;
   if (db->mr)
@@ -799,7 +779,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
   dbg_info("Request: %u", entry->request);
   dbg_info("rkey: %u", entry->rkey);
   dbg_info("Address: %p", (void *)entry->addr);
-  dbg_info("Size: %u", entry->size);
+  dbg_info("Size: %lu", entry->size);
   dbg_info("Tag: %d", entry->tag);
 #ifdef HAVE_UGNI
   dbg_info("MDH: 0x%016lx / 0x%016lx", entry->qword1, entry->qword2);
@@ -819,11 +799,6 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     }
   }
 
-  // TODO: I don't think that this is a sufficient solution.
-  // Keep track of the dat_ep_post_rdma_write()s that do not insert an entry into "reqtable", so
-  // that __photon_wait_one() is able to wait on this event's completion
-  INC_COUNTER(handshake_rdma_write);
-
   if (request != NULL) {
     photonRequest req;
 
@@ -841,10 +816,8 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     req->type = LEDGER;
     req->proc = proc;
     req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
 
     dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
-
     if (htable_insert(ledger_reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -875,7 +848,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   uint64_t cookie;
   uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %d, %p)", proc, ptr, size, tag, request);
+  dbg_info("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
 
   if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
     log_err("Requested post of send buffer for ptr not in table");
@@ -906,7 +879,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   dbg_info("Request: %u", entry->request);
   dbg_info("rkey: %u", entry->rkey);
   dbg_info("Addr: %p", (void *)entry->addr);
-  dbg_info("Size: %u", entry->size);
+  dbg_info("Size: %lu", entry->size);
   dbg_info("Tag: %d", entry->tag);
 #ifdef HAVE_UGNI
   dbg_info("MDH: 0x%016lx / 0x%016lx", entry->qword1, entry->qword2);
@@ -925,10 +898,6 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     }
   }
 
-  // Keep track of the dat_ep_post_rdma_write()s that do not insert an entry into "reqtable", so
-  // that __photon_wait_one() is able to wait on this event's completion
-  INC_COUNTER(handshake_rdma_write);
-
   if (request != NULL) {
     photonRequest req;
 
@@ -946,10 +915,8 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     req->type = LEDGER;
     req->proc = proc;
     req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
-
+    
     dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
-
     if (htable_insert(ledger_reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -978,7 +945,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint
   uint64_t cookie;
   uint32_t request_id;
 
-  dbg_info("(%d, %u, %d, %p)", proc, size, tag, request);
+  dbg_info("(%d, %lu, %d, %p)", proc, size, tag, request);
 
   request_id = INC_COUNTER(curr_cookie);
   dbg_info("Incrementing curr_cookie_count to: %d", request_id);
@@ -1003,7 +970,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint
   dbg_info("Request: %u", entry->request);
   dbg_info("rkey: %u", entry->rkey);
   dbg_info("Addr: %p", (void *)entry->addr);
-  dbg_info("Size: %u", entry->size);
+  dbg_info("Size: %lu", entry->size);
   dbg_info("Tag: %d", entry->tag);
 #ifdef HAVE_UGNI
   dbg_info("MDH: 0x%016lx / 0x%016lx", entry->qword1, entry->qword2);
@@ -1022,10 +989,6 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint
     }
   }
 
-  // Keep track of the dat_ep_post_rdma_write()s that do not insert an entry into "reqtable", so
-  // that __photon_wait_one() is able to wait on this event's completion
-  INC_COUNTER(handshake_rdma_write);
-
   if (request != NULL) {
     photonRequest req;
 
@@ -1043,10 +1006,8 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint
     req->type = EVQUEUE;
     req->proc = proc;
     req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
 
     dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
-
     if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -1070,30 +1031,11 @@ error_exit:
 }
 
 static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
-  photonRemoteBuffer curr_remote_buffer;
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
-  int count;
-#ifdef DEBUG
-  time_t stime;
-#endif
-  int curr, num_entries, still_searching;
+  int ret, count, curr, num_entries, still_searching;
 
   dbg_info("(%d, %d)", proc, tag);
-
-  // If we've received a Rendezvous-Start from processor "proc" that is still pending
-  curr_remote_buffer = photon_processes[proc].curr_remote_buffer;
-  if ( curr_remote_buffer->request != NULL_COOKIE ) {
-    // If it is for the same tag, return without looking
-    if ( curr_remote_buffer->tag == tag ) {
-      goto normal_exit;
-    }
-    else {   // Otherwise it's an error.	We should never process a Rendezvous-Start before
-      // fully serving the previous ones.
-      goto error_exit;
-    }
-  }
-
   dbg_info("Spinning on info ledger looking for receive request");
   dbg_info("curr == %d", photon_processes[proc].local_rcv_info_ledger->curr);
 
@@ -1102,19 +1044,12 @@ static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
 
   dbg_info("looking in position %d/%p", photon_processes[proc].local_rcv_info_ledger->curr, curr_entry);
 
-#ifdef DEBUG
-  stime = time(NULL);
-#endif
   count = 1;
   still_searching = 1;
   entry_iterator = curr_entry;
   do {
-    while(entry_iterator->header == 0 || entry_iterator->footer == 0) {
-#ifdef DEBUG
-      stime = _tictoc(stime, proc);
-#else
+    while (entry_iterator->header == 0 || entry_iterator->footer == 0) {
       ;
-#endif
     }
     if( (tag < 0) || (entry_iterator->tag == tag ) ) {
       still_searching = 0;
@@ -1128,37 +1063,26 @@ static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
   }
   while(still_searching);
 
-  // If it wasn't the first pending receive request, swap the one we will serve ( entry_iterator) with
-  // the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
-  // (photon_processes[proc].local_rcv_info_ledger->curr) and skip the request we will serve without losing any
-  // pending requests.
+  /* If it wasn't the first pending receive request, swap the one we will serve ( entry_iterator) with
+     the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
+     (photon_processes[proc].local_rcv_info_ledger->curr) and skip the request we will serve without losing any
+     pending requests. */
   if( entry_iterator != curr_entry ) {
     tmp_entry = *entry_iterator;
     *entry_iterator = *curr_entry;
     *curr_entry = tmp_entry;
   }
 
-  photon_processes[proc].curr_remote_buffer->request = curr_entry->request;
-  photon_processes[proc].curr_remote_buffer->rkey = curr_entry->rkey;
-  photon_processes[proc].curr_remote_buffer->addr = curr_entry->addr;
-  photon_processes[proc].curr_remote_buffer->size = curr_entry->size;
-  photon_processes[proc].curr_remote_buffer->tag	 = curr_entry->tag;
-#ifdef HAVE_UGNI
-  photon_processes[proc].curr_remote_buffer->mdh.qword1  = curr_entry->qword1;
-  photon_processes[proc].curr_remote_buffer->mdh.qword2  = curr_entry->qword2;
-#endif
-
-  dbg_info("Request: %u", curr_entry->request);
-  dbg_info("rkey: %u", curr_entry->rkey);
-  dbg_info("Addr: %p", (void *)curr_entry->addr);
-  dbg_info("Size: %u", curr_entry->size);
-  dbg_info("Tag: %d",	curr_entry->tag);
-#ifdef HAVE_UGNI
-  dbg_info("MDH: 0x%016lx / 0x%016lx", curr_entry->qword1, curr_entry->qword2);
-#endif
-
   curr_entry->header = 0;
   curr_entry->footer = 0;
+
+  if (request != NULL) {
+    ret = __photon_setup_buffer_request(curr_entry, request);
+    if (ret != PHOTON_OK) {
+      log_err("Could not setup request");
+      goto error_exit;
+    }
+  }
 
   num_entries = photon_processes[proc].local_rcv_info_ledger->num_entries;
   curr = photon_processes[proc].local_rcv_info_ledger->curr;
@@ -1166,42 +1090,18 @@ static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
   photon_processes[proc].local_rcv_info_ledger->curr = curr;
 
   dbg_info("new curr == %d", photon_processes[proc].local_rcv_info_ledger->curr);
-
-normal_exit:
+  
   return PHOTON_OK;
-error_exit:
+ error_exit:
   return PHOTON_ERROR;
 }
 
-// photon_wait_send_buffer_rdma() should never be called between a photon_wait_recv_buffer_rdma()
-// and the corresponding photon_post_os_put(), or between an other photon_wait_send_buffer_rdma()
-// and the corresponding photon_post_os_get() for the same proc.
-// In other words if photon_processes[proc].curr_remote_buffer is full, photon_wait_send_buffer_rdma()
-// should not be called.
 static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
-  photonRemoteBuffer curr_remote_buffer;
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
-  int count;
-#ifdef DEBUG
-  time_t stime;
-#endif
-  int curr, num_entries, still_searching;
+  int ret, count, curr, num_entries, still_searching;
 
   dbg_info("(%d, %d)", proc, tag);
-
-  // If we've received a Rendezvous-Start from processor "proc" that is still pending
-  curr_remote_buffer = photon_processes[proc].curr_remote_buffer;
-  if ( curr_remote_buffer->request != NULL_COOKIE ) {
-    // If it is for the same tag, return without looking
-    if ( curr_remote_buffer->tag == tag ) {
-      goto normal_exit;
-    }
-    else {   // Otherwise it's an error.	We should never process a Rendezvous-Start before
-      // fully serving the previous ones.
-      goto error_exit;
-    }
-  }
 
   curr = photon_processes[proc].local_snd_info_ledger->curr;
   curr_entry = &(photon_processes[proc].local_snd_info_ledger->entries[curr]);
@@ -1209,19 +1109,12 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
   dbg_info("Spinning on info ledger looking for receive request");
   dbg_info("looking in position %d/%p", curr, curr_entry);
 
-#ifdef DEBUG
-  stime = time(NULL);
-#endif
   count = 1;
   still_searching = 1;
   entry_iterator = curr_entry;
   do {
     while(entry_iterator->header == 0 || entry_iterator->footer == 0) {
-#ifdef DEBUG
-      stime = _tictoc(stime, proc);
-#else
       ;
-#endif
     }
     if( (tag < 0) || (entry_iterator->tag == tag ) ) {
       still_searching = 0;
@@ -1232,38 +1125,27 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
     }
   }
   while(still_searching);
-
-  // If it wasn't the first pending receive request, swap the one we will serve (entry_iterator) with
-  // the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
-  // (photon_processes[proc].local_snd_info_ledger->curr) and skip the request we will serve without losing any
-  // pending requests.
+  
+  /* If it wasn't the first pending receive request, swap the one we will serve (entry_iterator) with
+     the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
+     (photon_processes[proc].local_snd_info_ledger->curr) and skip the request we will serve without losing any
+     pending requests. */
   if( entry_iterator != curr_entry ) {
     tmp_entry = *entry_iterator;
     *entry_iterator = *curr_entry;
     *curr_entry = tmp_entry;
   }
 
-  photon_processes[proc].curr_remote_buffer->request = curr_entry->request;
-  photon_processes[proc].curr_remote_buffer->rkey = curr_entry->rkey;
-  photon_processes[proc].curr_remote_buffer->addr = curr_entry->addr;
-  photon_processes[proc].curr_remote_buffer->size = curr_entry->size;
-  photon_processes[proc].curr_remote_buffer->tag = curr_entry->tag;
-#ifdef HAVE_UGNI
-  photon_processes[proc].curr_remote_buffer->mdh.qword1  = curr_entry->qword1;
-  photon_processes[proc].curr_remote_buffer->mdh.qword2  = curr_entry->qword2;
-#endif
-
-  dbg_info("Request: %u", curr_entry->request);
-  dbg_info("Context: %u", curr_entry->rkey);
-  dbg_info("Address: %p", (void *)curr_entry->addr);
-  dbg_info("Size: %u", curr_entry->size);
-  dbg_info("Tag: %d", curr_entry->tag);
-#ifdef HAVE_UGNI
-  dbg_info("MDH: 0x%016lx / 0x%016lx", curr_entry->qword1, curr_entry->qword2);
-#endif
-
   curr_entry->header = 0;
   curr_entry->footer = 0;
+
+  if (request != NULL) {
+    ret = __photon_setup_buffer_request(curr_entry, request);
+    if (ret != PHOTON_OK) {
+      log_err("Could not setup request");
+      goto error_exit;
+    }
+  }
 
   num_entries = photon_processes[proc].local_snd_info_ledger->num_entries;
   curr = photon_processes[proc].local_snd_info_ledger->curr;
@@ -1272,7 +1154,6 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
 
   dbg_info("new curr == %d", photon_processes[proc].local_snd_info_ledger->curr);
 
-normal_exit:
   return PHOTON_OK;
 error_exit:
   return PHOTON_ERROR;
@@ -1352,21 +1233,34 @@ static int _photon_wait_send_request_rdma(int tag) {
 }
 
 static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+  photonRequest req;
   photonRemoteBuffer drb;
   photonBuffer db;
   uint64_t cookie;
   int rc;
-  uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, r_offset, request);
+  dbg_info("(%d, %p, %lu, %lu, %u)", proc, ptr, size, r_offset, request);
 
-  drb = photon_processes[proc].curr_remote_buffer;
-
-  if (drb->request == NULL_COOKIE) {
-    log_err("Tried posting a send with no recv buffer. Have you called photon_wait_recv_buffer_rdma() first?");
+  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+    log_err("Could not find request");
     goto error_exit;
   }
+  
+  if (request != req->id) {
+    log_err("Request mismatch encountered!");
+    goto error_exit;
+  }
+  
+  /* photon_post_os_put() causes an RDMA transfer, but its own completion is
+     communicated to the task that posts it through a completion event. */
+  req->type = EVQUEUE;
+  req->tag = tag;
+  req->proc = proc;
+  req->state = REQUEST_PENDING;
 
+  /* get the remote buffer saved in the request */
+  drb = &(req->remote_buffer);
+  
   if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
     log_err("Tried posting a send for a buffer not registered");
     goto error_exit;
@@ -1377,11 +1271,8 @@ static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t s
     goto error_exit;
   }
 
-  request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
-
-  cookie = (( (uint64_t)proc)<<32) | request_id;
-  dbg_info("Posted Cookie: %u/%u/%"PRIo64, proc, request_id, cookie);
+  cookie = (( (uint64_t)proc)<<32) | request;
+  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request, cookie);
 
   {
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, drb->addr + (uintptr_t)r_offset,
@@ -1393,63 +1284,40 @@ static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t s
     }
   }
 
-  /*
-  if (request != NULL) {
-    photonRequest req;
-
-    *request = request_id;
-
-    req = __photon_get_request();
-    if (!req) {
-      log_err("Couldn't allocate request\n");
-      goto error_exit;
-    }
-    req->id = request_id;
-    req->state = REQUEST_PENDING;
-    // photon_post_os_put() causes an RDMA transfer, but its own completion is
-    // communicated to the task that posts it through a completion event.
-    req->type = EVQUEUE;
-    req->proc = proc;
-    req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
-
-    dbg_info("Inserting the OS send request into the request table: %d/%d/%p", proc, request_id, req);
-
-    if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
-      // this is bad, we've submitted the request, but we can't track it
-      log_err("Couldn't save request in hashtable");
-      goto error_exit;
-    }
-  }
-
-  */
-
   return PHOTON_OK;
-
-error_exit:
-  /*
-  if (request != NULL) {
-    *request = NULL_COOKIE;
-  }
-  */
+  
+ error_exit:
   return PHOTON_ERROR;
 }
 
 static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+  photonRequest req;
   photonRemoteBuffer drb;
   photonBuffer db;
   uint64_t cookie;
   int rc;
-  uint32_t request_id;
 
-  dbg_info("(%d, %p, %u, %u, %p)", proc, ptr, size, r_offset, request);
+  dbg_info("(%d, %p, %lu, %lu, %u)", proc, ptr, size, r_offset, request);
 
-  drb = photon_processes[proc].curr_remote_buffer;
-
-  if (drb->request == NULL_COOKIE) {
-    log_err("Tried posting an os_get() with no send buffer");
-    return -1;
+  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+    log_err("Could not find request");
+    goto error_exit;
   }
+  
+  if (request != req->id) {
+    log_err("Request mismatch encountered!");
+    goto error_exit;
+  }
+  
+  /* photon_post_os_get() causes an RDMA transfer, but its own completion is
+     communicated to the task that posts it through a completion event. */
+  req->type = EVQUEUE;
+  req->tag = tag;
+  req->proc = proc;
+  req->state = REQUEST_PENDING;
+
+  /* get the remote buffer saved in the request */
+  drb = &(req->remote_buffer);
 
   if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
     log_err("Tried posting a os_get() into a buffer that's not registered");
@@ -1461,11 +1329,8 @@ static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t s
     return -2;
   }
 
-  request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
-
-  cookie = (( (uint64_t)proc)<<32) | request_id;
-  dbg_info("Posted Cookie: %u/%u/%"PRIo64, proc, request_id, cookie);
+  cookie = (( (uint64_t)proc)<<32) | request;
+  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request, cookie);
 
   {
 
@@ -1478,44 +1343,9 @@ static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t s
     }
   }
 
-  /*
-  if (request != NULL) {
-    photonRequest req;
-
-    *request = request_id;
-
-    req = __photon_get_request();
-    if (!req) {
-      log_err("Couldn't allocate request\n");
-      goto error_exit;
-    }
-    req->id = request_id;
-    req->state = REQUEST_PENDING;
-    // photon_post_os_get() causes an RDMA transfer, but its own completion is
-    // communicated to the task that posts it through a DTO completion event.
-    req->type = EVQUEUE;
-    req->proc = proc;
-    req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
-
-    dbg_info("Inserting the OS get request into the request table: %d/%d/%p", proc, request_id, req);
-
-    if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
-      // this is bad, we've submitted the request, but we can't track it
-      log_err("Couldn't save request in hashtable");
-    }
-  }
-
-  */
-
   return PHOTON_OK;
-
-error_exit:
-  /*
-  if (request != NULL) {
-    *request = NULL_COOKIE;
-  }
-  */
+  
+ error_exit:
   return PHOTON_ERROR;
 }
 
@@ -1541,7 +1371,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int ta
   dbg_info("Incrementing curr_cookie_count to: %d", request_id);
 
   cookie = (( (uint64_t)proc)<<32) | request_id;
-  dbg_info("Posted Cookie: %u/%u/%"PRIo64, proc, request_id, cookie);
+  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
 
   {
 
@@ -1571,10 +1401,8 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int ta
     req->type = EVQUEUE;
     req->proc = proc;
     req->tag = tag;
-    SAFE_LIST_INSERT_HEAD(&pending_reqs_list, req, list);
 
     dbg_info("Inserting the OS get request into the request table: %d/%d/%p", proc, request_id, req);
-
     if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -1591,30 +1419,38 @@ error_exit:
 }
 
 static int _photon_send_FIN(uint32_t request, int proc) {
-  photonRemoteBuffer drb;
+  photonRequest req;
   photonFINLedgerEntry entry;
   int curr, num_entries, rc;
   uint64_t cookie;
 
   dbg_info("(%d)", proc);
 
-  if (photon_processes[proc].curr_remote_buffer->request == NULL_COOKIE) {
-    log_err("Cannot send FIN, curr_remote_buffer->request is NULL_COOKIE");
+  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+    dbg_info("Could not find request: %u", request);
     goto error_exit;
   }
 
-  drb = photon_processes[proc].curr_remote_buffer;
+  if (req->state != REQUEST_COMPLETED) {
+    dbg_info("Warning: sending FIN for a request (EVQUEUE) that has not yet completed");
+  }
+  
+  if (req->remote_buffer.request == NULL_COOKIE) {
+    log_err("Trying to FIN a remote buffer request that was never set!");
+    goto error_exit;
+  }
+
   curr = photon_processes[proc].remote_FIN_ledger->curr;
   entry = &photon_processes[proc].remote_FIN_ledger->entries[curr];
   dbg_info("photon_processes[%d].remote_FIN_ledger->curr==%d",proc, curr);
-
+  
   if( entry == NULL ) {
     log_err("entry is NULL for proc=%d",proc);
-    return 1;
+    goto error_exit;
   }
-
+  
   entry->header = 1;
-  entry->request = drb->request;
+  entry->request = req->remote_buffer.request;
   entry->footer = 1;
 
   {
@@ -1636,7 +1472,15 @@ static int _photon_send_FIN(uint32_t request, int proc) {
   curr = (curr + 1) % num_entries;
   photon_processes[proc].remote_FIN_ledger->curr = curr;
 
-  drb->request = NULL_COOKIE;
+  if (req->state == REQUEST_COMPLETED) {
+    dbg_info("Removing request %u for remote buffer request %u", request, req->remote_buffer.request);
+    htable_remove(reqtable, (uint64_t)req->id, NULL);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+    dbg_info("%d requests left in reqtable", htable_count(reqtable));
+  }    
+
+  req->flags = REQUEST_FLAG_FIN;
+  req->remote_buffer.request = NULL_COOKIE;
 
   return PHOTON_OK;
 
@@ -1678,7 +1522,6 @@ static int _photon_wait_any(int *ret_proc, uint32_t *ret_req) {
       dbg_info("removing event with cookie:%u", cookie);
       existed = htable_remove(ledger_reqtable, (uint64_t)cookie, &test);
       req = test;
-      SAFE_LIST_REMOVE(req, list);
       SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
     }
     else {
@@ -1737,7 +1580,6 @@ static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
         req = test;
         *ret_req = curr_entry->request;
         *ret_proc = i;
-        SAFE_LIST_REMOVE(req, list);
         SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
         break;
       }
@@ -1801,7 +1643,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
         dbg_info("Request: %u", entry_iterator->request);
         dbg_info("Context: %u", entry_iterator->rkey);
         dbg_info("Address: %p", (void *)entry_iterator->addr);
-        dbg_info("Size: %u", entry_iterator->size);
+        dbg_info("Size: %lu", entry_iterator->size);
         dbg_info("Tag: %d", entry_iterator->tag);
 
         *flag = 1;
@@ -1870,11 +1712,10 @@ static inline int __photon_complete_ledger_req(uint32_t cookie) {
   if (htable_lookup(ledger_reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
     return -1;
 
-  dbg_info("completing ledger req %"PRIo32, cookie);
+  dbg_info("completing ledger req %"PRIx32, cookie);
   pthread_mutex_lock(&tmp_req->mtx);
   {
     tmp_req->state = REQUEST_COMPLETED;
-    SAFE_LIST_REMOVE(tmp_req, list);
     SAFE_LIST_INSERT_HEAD(&unreaped_ledger_reqs_list, tmp_req, list);
     pthread_cond_broadcast(&tmp_req->completed);
   }
@@ -1889,11 +1730,10 @@ static inline int __photon_complete_evd_req(uint32_t cookie) {
   if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
     return -1;
 
-  dbg_info("completing event req %"PRIo32, cookie);
+  dbg_info("completing event req %"PRIx32, cookie);
   pthread_mutex_lock(&tmp_req->mtx);
   {
     tmp_req->state = REQUEST_COMPLETED;
-    SAFE_LIST_REMOVE(tmp_req, list);
     SAFE_LIST_INSERT_HEAD(&unreaped_evd_reqs_list, tmp_req, list);
     pthread_cond_broadcast(&tmp_req->completed);
   }

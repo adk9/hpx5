@@ -12,17 +12,21 @@
 #include "photon_xsp_forwarder.h"
 #endif
 
-#define NULL_COOKIE			    0x0
-#define DEF_QUEUE_LENGTH 		5*512
-#define DEF_NUM_REQUESTS 		5*512
-#define LEDGER_SIZE			    512
+#define NULL_COOKIE          0x0
+#define DEF_QUEUE_LENGTH     5*512
+#define DEF_NUM_REQUESTS     5*512
+#define LEDGER_SIZE          512
 
-#define LEDGER				    1
-#define EVQUEUE				    2
+#define LEDGER               1
+#define EVQUEUE              2
 
-#define REQUEST_PENDING			1
-#define REQUEST_FAILED			2
-#define REQUEST_COMPLETED		3
+#define REQUEST_NEW          0
+#define REQUEST_PENDING      1
+#define REQUEST_FAILED       2
+#define REQUEST_COMPLETED    3
+
+#define REQUEST_FLAG_NIL     0x00
+#define REQUEST_FLAG_FIN     0x01
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
@@ -33,8 +37,6 @@ typedef struct proc_info_t {
   photonRILedger  remote_rcv_info_ledger;
   photonFINLedger local_FIN_ledger;
   photonFINLedger remote_FIN_ledger;
-
-  photonRemoteBuffer curr_remote_buffer;
 
 #ifdef HAVE_XSP
   libxspSess *sess;
@@ -47,12 +49,11 @@ typedef struct photon_req_t {
   LIST_ENTRY(photon_req_t) list;
   uint32_t id;
   int state;
+  int flags;
   int type;
   int proc;
   int tag;
-  photonRemoteBuffer remote_buffer;
-  pthread_mutex_t mtx;
-  pthread_cond_t completed;
+  struct photon_remote_buffer_t remote_buffer;
 } photon_req;
 
 typedef struct photon_req_t * photonRequest;
