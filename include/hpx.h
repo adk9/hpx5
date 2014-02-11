@@ -29,6 +29,8 @@ extern "C" {
 
 #include "attributes.h"
 
+#define HPX_SUCCESS 0
+
 typedef uintptr_t hpx_addr_t;
 #define HPX_NULL ((uintptr_t)NULL)
 
@@ -65,13 +67,6 @@ typedef int (*hpx_action_handler_t)(void *);
  */
 hpx_action_t hpx_action_register(const char *id, hpx_action_handler_t func);
 
-/**
- * Call after all actions are registered.
- */
-void hpx_action_registration_complete(void);
-
-hpx_action_t hpx_action_register();
-
 int hpx_init(int argc, char * const argv[argc]);
 int hpx_run(hpx_action_t f, void *args, unsigned size);
 void hpx_shutdown(int) HPX_NORETURN;
@@ -96,11 +91,17 @@ void hpx_future_delete(hpx_addr_t future);
  */
 void hpx_call(int rank, hpx_action_t action, void *args, size_t len, hpx_addr_t result);
 
-
 typedef uint64_t hpx_time_t;
 hpx_time_t hpx_time_now(void);
 uint64_t hpx_time_to_us(hpx_time_t);
 uint64_t hpx_time_to_ms(hpx_time_t);
+
+typedef struct hpx_parcel hpx_parcel_t;
+
+hpx_parcel_t *hpx_parcel_acquire(unsigned);
+void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action);
+void *hpx_parcel_get_data(hpx_parcel_t *p);
+void hpx_parcel_send(int rank, hpx_parcel_t *p, hpx_addr_t thread, hpx_addr_t result);
 
 #ifdef __cplusplus
 }
