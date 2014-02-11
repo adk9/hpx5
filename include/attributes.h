@@ -1,0 +1,18 @@
+#ifndef HPX_ATTRIBUTES_H
+#define HPX_ATTRIBUTES_H
+
+#define HPX_ALIGNED(N)    __attribute__((aligned(N)))
+
+#define HPX_INTERNAL      __attribute__((visibility("internal")))
+#define HPX_RETURNS_TWICE __attribute__((returns_twice))
+#define HPX_NORETURN      __attribute__((noreturn))
+#define HPX_NOINLINE      __attribute__((noinline))
+#define HPX_AWAYS_INLINE  __attribute__((always_inline))
+#define HPX_OPTIMIZE(S)   __attribute__((optimize(S)))
+#define HPX_MALLOC        __attribute__((malloc))
+#define HPX_USED          __attribute__((used))
+#define HPX_UNUSED        __attribute__((unused))
+#define HPX_ASM(S)        __asm__(#S)
+#define HPX_PACKED        __attribute__((packed))
+
+#endif

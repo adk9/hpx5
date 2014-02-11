@@ -12,7 +12,7 @@ EXTRA_DIST = \
 AUTOMAKE_OPTIONS= foreign
 ACLOCAL_AMFLAGS = -I config
 
-SUBDIRS         = libsync src include examples
+SUBDIRS         = libsync libhpx include examples
 
 if ENABLE_DOCS
     SUBDIRS    += docs
