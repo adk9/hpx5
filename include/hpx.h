@@ -27,8 +27,10 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "attributes.h"
+
 typedef uintptr_t hpx_addr_t;
-#define HPX_NULL        ((uintptr_t)NULL)
+#define HPX_NULL ((uintptr_t)NULL)
 
 /**
  * The type of the key we use for actions.
@@ -71,8 +73,8 @@ void hpx_action_registration_complete(void);
 hpx_action_t hpx_action_register();
 
 int hpx_init(int argc, char * const argv[argc]);
-int hpx_run(void (*f)(void*), void *args, unsigned size);
-void hpx_exit(int);
+int hpx_run(hpx_action_t f, void *args, unsigned size);
+void hpx_shutdown(int) HPX_NORETURN;
 
 int hpx_get_my_rank(void);
 int hpx_get_num_ranks(void);
@@ -80,7 +82,7 @@ int hpx_get_num_ranks(void);
 void hpx_thread_wait(hpx_addr_t future, void *value);
 void hpx_thread_wait_all(unsigned n, hpx_addr_t futures[], void *values[]);
 void hpx_thread_yield(void);
-void hpx_thread_exit(void *value);
+int hpx_thread_exit(void *value, unsigned size);
 
 hpx_addr_t hpx_future_new(int size);
 void hpx_future_delete(hpx_addr_t future);
@@ -100,9 +102,8 @@ hpx_time_t hpx_time_now(void);
 uint64_t hpx_time_to_us(hpx_time_t);
 uint64_t hpx_time_to_ms(hpx_time_t);
 
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* HPX_H */
+#endif  // HPX_H

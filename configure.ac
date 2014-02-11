@@ -135,14 +135,15 @@ AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
-  src/Makefile
-  src/libhpx.pc
+  libhpx/Makefile
   include/Makefile
   examples/Makefile
   examples/hpx/Makefile	
-  examples/thread/Makefile
-  examples/network/Makefile
 ])
+# src/Makefile
+# src/libhpx.pc
+# examples/thread/Makefile
+# examples/network/Makefile
 
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
