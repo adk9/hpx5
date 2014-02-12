@@ -24,28 +24,26 @@
 #define BUFFER_SIZE 128
 
 /* command line arguments */
-static int arg_iter_limit  = 1000;        /*!< the number of iterations */
-static bool arg_text_ping  = false;       /*!< send text data with the ping */
+static int  arg_iter_limit = 1000;        /*!< the number of iterations */
+static bool  arg_text_ping = false;       /*!< send text data with the ping */
 static bool arg_screen_out = false;       /*!< print messages to the terminal */
-static bool arg_debug      = false;       /*!< wait for a debugger to attach */
+static bool      arg_debug = false;       /*!< wait for a debugger to attach */
 
 /* actions */
-static hpx_action_t pingpong = HPX_ACTION_NULL;
-static hpx_action_t ping     = HPX_ACTION_NULL;
-static hpx_action_t pong     = HPX_ACTION_NULL;
+static hpx_action_t   ping = HPX_ACTION_NULL;
+static hpx_action_t   pong = HPX_ACTION_NULL;
 
 /* globals */
-static int count = 0;                      /*!< per-locality count of actions */
-static hpx_addr_t start = 0;               //!< keeps track of timing
+static int           count = 0;           //!< per-locality count of actions
+static hpx_addr_t    start = 0;           //!< keeps track of timing
 
 /* helper functions */
 static void print_usage(FILE *stream);
 static void process_args(int argc, char *argv[]);
 static void print_options(void);
 static void wait_for_debugger(void);
-static void init_other_loc(void);
 static void register_actions(void);
-static int  partner(void);
+static hpx_addr_t partner(void);
 
 /** the pingpong message type */
 typedef struct {
@@ -98,7 +96,7 @@ action_ping(void *msg) {
     int rank = hpx_get_my_rank();
     int ranks = hpx_get_num_ranks();
     RANK_PRINTF("Running pingpong on %d ranks between rank %d and rank %d\n",
-                ranks, rank, partner());
+                ranks, rank, hpx_addr_to_rank(partner()));
     start = hpx_time_now();
   }
 
@@ -122,15 +120,16 @@ action_ping(void *msg) {
   hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
   CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
   hpx_parcel_set_action(p, pong);
+  hpx_parcel_set_target(p, partner());
   args_t *a = hpx_parcel_get_data(p);
   a->id = id;
   if (arg_text_ping)
     snprintf(a->msg, BUFFER_SIZE, "ping %d from proc 0", id);
 
   RANK_PRINTF("sending ping to loc %d, count=%d, message='%s'\n",
-              partner(), count, a->msg);
+              hpx_addr_to_rank(partner()), count, a->msg);
 
-  hpx_parcel_send(partner(), p, HPX_NULL, HPX_NULL);
+  hpx_parcel_send(p, HPX_NULL);
   ++count;
   return HPX_SUCCESS;
 }
@@ -145,6 +144,7 @@ action_pong(void *msg) {
   hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
   CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
   hpx_parcel_set_action(p, ping);
+  hpx_parcel_set_target(p, partner());
   args_t *a = hpx_parcel_get_data(p);
   a->id = args->id + 1;
   if (arg_text_ping) {
@@ -155,8 +155,8 @@ action_pong(void *msg) {
   }
 
   RANK_PRINTF("sending pong to loc %d, count=%d, message='%s'\n",
-              partner(), count, args->msg);
-  hpx_parcel_send(partner(), p, HPX_NULL, HPX_NULL);
+              hpx_addr_to_rank(partner()), count, args->msg);
+  hpx_parcel_send(p, HPX_NULL);
   ++count;
   return HPX_SUCCESS;
 }
@@ -247,9 +247,9 @@ register_actions(void) {
   pong = hpx_action_register("pong", action_pong);
 }
 
-int
+hpx_addr_t
 partner(void) {
   int rank = hpx_get_my_rank();
   int ranks = hpx_get_num_ranks();
-  return (rank) ? 0 : ranks - 1;
+              return hpx_addr_from_rank((rank) ? 0 : ranks - 1);
 }

@@ -104,12 +104,25 @@ void
 hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) {
 }
 
+void
+hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) {
+}
+
 void *
 hpx_parcel_get_data(hpx_parcel_t *p) {
   return NULL;
 }
 
 void
-hpx_parcel_send(int rank, hpx_parcel_t *p, hpx_addr_t thread,
-                hpx_addr_t result) {
+hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t result) {
+}
+
+hpx_addr_t
+hpx_addr_from_rank(int rank) {
+  return HPX_NULL;
+}
+
+int
+hpx_addr_to_rank(hpx_addr_t rank) {
+  return -1;
 }
