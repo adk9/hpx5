@@ -57,8 +57,9 @@ static verbs_cnct_ctx verbs_ctx = {
   .qp = NULL,
   .psn = 0,
   .num_qp = 0,
-  .tx_depth = 16,
-  .rx_depth = 16
+  .tx_depth = LEDGER_SIZE,
+  .rx_depth = LEDGER_SIZE,
+  .atomic_depth = 16
 };
 
 /* we are now a Photon backend */
@@ -301,10 +302,10 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
   };
 
   struct ibv_send_wr wr = {
-    .wr_id			     = args->id,
-    .sg_list		     = &list,
-    .num_sge		     = 1,
-    .opcode			     = opcode,
+    .wr_id               = args->id,
+    .sg_list             = &list,
+    .num_sge             = 1,
+    .opcode              = opcode,
     .send_flags          = IBV_SEND_SIGNALED,
     .wr.rdma.remote_addr = args->raddr,
     .wr.rdma.rkey        = args->rkey

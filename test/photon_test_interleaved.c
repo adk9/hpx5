@@ -10,7 +10,7 @@
 #define PHOTON_SEND_SIZE 16777216 // 16MB
 #define PHOTON_TAG       13
 
-#define NUM_REQ          6
+#define NUM_REQ          9
 
 int main(int argc, char *argv[]) {
   uint32_t recvReq[NUM_REQ], sendReq[NUM_REQ];
@@ -68,8 +68,7 @@ int main(int argc, char *argv[]) {
     photon_post_os_get(recvReq[i+2], prev, recv[i+2], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
     photon_send_FIN(recvReq[i+2], prev);
 
-    photon_send_FIN(recvReq[i], prev);
-    
+    photon_send_FIN(recvReq[i], prev);    
   }
   
   /* check that all the os_gets completed */

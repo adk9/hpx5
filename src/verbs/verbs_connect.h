@@ -30,6 +30,7 @@ typedef struct verbs_cnct_ctx_t {
 
   int                        tx_depth;
   int                        rx_depth;
+  int                        atomic_depth;
 
   verbs_cnct_info           **local_ci;
   verbs_cnct_info           **remote_ci;

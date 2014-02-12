@@ -15,6 +15,8 @@
 #define NULL_COOKIE          0x0
 #define DEF_QUEUE_LENGTH     5*512
 #define DEF_NUM_REQUESTS     5*512
+
+/* this should not exceed MCA max_qp_wr (typically 16k) */
 #define LEDGER_SIZE          512
 
 #define LEDGER               1

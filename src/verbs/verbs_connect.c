@@ -192,6 +192,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
           .max_send_sge   = 1, // scatter gather element
           .max_recv_wr	= ctx->rx_depth,
           .max_recv_sge   = 1, // scatter gather element
+          .max_inline_data = 0
         },
         .qp_type    = IBV_QPT_RC
         //.sq_sig_all = 0
@@ -448,7 +449,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       .max_inline_data = 0
     },
     .qp_type = IBV_QPT_RC,
-    .sq_sig_all = 1,
+    //.sq_sig_all = 0,
     .srq = NULL
   };
 
@@ -583,8 +584,8 @@ static void *__rdma_cma_listener_thread(void *arg) {
       ctx->qp[pindex] = child_cm_id->qp;
 
       memset(&conn_param, 0, sizeof conn_param);
-      conn_param.responder_resources = ctx->tx_depth;
-      conn_param.initiator_depth = ctx->rx_depth;
+      conn_param.responder_resources =ctx->atomic_depth;
+      conn_param.initiator_depth = ctx->atomic_depth;
       // don't send any private data back
       conn_param.private_data = NULL;
       conn_param.private_data_len = 0;
@@ -724,8 +725,8 @@ retry_route:
   };
 
   memset(&conn_param, 0, sizeof conn_param);
-  conn_param.responder_resources = ctx->tx_depth;
-  conn_param.initiator_depth = ctx->rx_depth;
+  conn_param.responder_resources = ctx->atomic_depth;
+  conn_param.initiator_depth = ctx->atomic_depth;
   conn_param.retry_count = RDMA_CMA_RETRIES;
   conn_param.private_data = &priv_data;
   conn_param.private_data_len = sizeof(struct rdma_cma_priv);
