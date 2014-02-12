@@ -96,6 +96,7 @@ struct photon_backend_t {
   int (*wait_send_request_rdma)(int tag);
   int (*post_os_put)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
   int (*post_os_get)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+  int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
   int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
   int (*send_FIN)(uint32_t request, int proc);
   int (*wait_any)(int *ret_proc, uint32_t *ret_req);
@@ -126,5 +127,6 @@ int photon_xsp_unused_proc(ProcessInfo **ret_pi, int *index);
 
 /* util */
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
+int _photon_get_buffer_remote_descriptor(uint32_t request, photonDescriptor ret_desc);
 
 #endif

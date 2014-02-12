@@ -10,7 +10,7 @@
 #define PHOTON_SEND_SIZE 16777216 // 16MB
 #define PHOTON_TAG       13
 
-#define NUM_REQ          3
+#define NUM_REQ          6
 
 int main(int argc, char *argv[]) {
   uint32_t recvReq[NUM_REQ], sendReq[NUM_REQ];

@@ -37,8 +37,10 @@ struct photon_buffer_priv_t {
 };
 
 struct photon_descriptor_t {
+  uint32_t request;
   uintptr_t addr;
   uint64_t size;
+  int tag;
   struct photon_buffer_priv_t priv;
 };
 
@@ -67,6 +69,7 @@ int photon_finalize();
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
+int photon_get_buffer_remote_descriptor(uint32_t request, photonDescriptor ret_desc);
 int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
@@ -75,6 +78,7 @@ int photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
 int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
 int photon_send_FIN(uint32_t request, int proc);
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status);

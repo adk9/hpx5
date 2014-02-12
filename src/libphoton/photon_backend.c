@@ -40,6 +40,7 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
 static int _photon_wait_send_request_rdma(int tag);
 static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
 static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
 static int _photon_send_FIN(uint32_t request, int proc);
 static int _photon_wait_any(int *ret_proc, uint32_t *ret_req);
@@ -91,6 +92,7 @@ struct photon_backend_t photon_default_backend = {
   .wait_send_request_rdma = _photon_wait_send_request_rdma,
   .post_os_put = _photon_post_os_put,
   .post_os_get = _photon_post_os_get,
+  .post_os_put_direct = _photon_post_os_put_direct,
   .post_os_get_direct = _photon_post_os_get_direct,
   .send_FIN = _photon_send_FIN,
   .wait_any = _photon_wait_any,
@@ -115,7 +117,7 @@ static inline photonRequest __photon_get_request() {
   LIST_UNLOCK(&free_reqs_list);
   
   if (!req) {
-    log_err("Request list is empty, this should rarely happen");
+    dbg_info("Request list is empty, this should rarely happen");
     req = malloc(sizeof(struct photon_req_t));
   }
 
@@ -476,7 +478,7 @@ static int __photon_nbpop_ledger(photonRequest req) {
   int num, new_curr;
   int curr, i=-1;
 
-  dbg_info("(%d)", req->id, req->state);
+  dbg_info("(%d)", req->id);
 
   if(req->state == REQUEST_PENDING) {
     
@@ -1349,6 +1351,94 @@ static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t s
   return PHOTON_ERROR;
 }
 
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request) {
+  photon_remote_buffer drb;
+  photonBuffer db;
+  uint64_t cookie;
+  int rc;
+  uint32_t request_id;
+
+  dbg_info("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
+
+  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+    log_err("Tried posting a os_put_direct() into a buffer that's not registered");
+    return -1;
+  }
+
+  /* TODO: factor out backend-dependent memory handles */
+  drb.lkey = rbuf->priv.key0;
+  drb.rkey = rbuf->priv.key1;
+
+  request_id = INC_COUNTER(curr_cookie);
+  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+
+  cookie = (( (uint64_t)proc)<<32) | request_id;
+  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
+
+  {
+
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, rbuf->addr,
+                                    rbuf->size, db, &drb, cookie);
+
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA GET failed for %lu\n", cookie);
+      goto error_exit;
+    }
+  }
+
+  if (request != NULL) {
+    photonRequest req;
+
+    *request = request_id;
+
+    req = __photon_get_request();
+    if (!req) {
+      log_err("Couldn't allocate request\n");
+      goto error_exit;
+    }
+    req->id = request_id;
+    req->state = REQUEST_PENDING;
+    // photon_post_os_put() causes an RDMA transfer, but its own completion is
+    // communicated to the task that posts it through a DTO completion event.
+    req->type = EVQUEUE;
+    req->proc = proc;
+    req->tag = tag;
+
+    req->remote_buffer.request     = rbuf->request;
+    req->remote_buffer.rkey        = rbuf->priv.key1;
+    req->remote_buffer.addr        = rbuf->addr;
+    req->remote_buffer.size        = rbuf->size;
+    req->remote_buffer.tag         = rbuf->tag;
+#ifdef HAVE_UGNI
+    req->remote_buffer.mdh.qword1  = rbuf->priv.key0;
+    req->remote_buffer.mdh.qword2  = rbuf->priv.key1;
+#endif
+    
+    dbg_info("Remote request: %u", rbuf->request);
+    dbg_info("rkey: %lu", rbuf->priv.key1);
+    dbg_info("Addr: %p", (void *)rbuf->addr);
+    dbg_info("Size: %lu", rbuf->size);
+    dbg_info("Tag: %d",	rbuf->tag);
+#ifdef HAVE_UGNI
+    dbg_info("MDH: 0x%016lx / 0x%016lx", rbuf->qword1, rbuf->qword2);
+#endif
+    
+    dbg_info("Inserting the OS put request into the request table: %d/%d/%p", proc, request_id, req);
+    if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
+      // this is bad, we've submitted the request, but we can't track it
+      log_err("Couldn't save request in hashtable");
+    }
+  }
+
+  return PHOTON_OK;
+
+error_exit:
+  if (request != NULL) {
+    *request = NULL_COOKIE;
+  }
+  return PHOTON_ERROR;
+}
+
 static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request) {
   photon_remote_buffer drb;
   photonBuffer db;
@@ -1799,7 +1889,6 @@ static void *__photon_req_watcher(void *arg) {
 
 #endif
 
-/* utility method to get backend-specific buffer info */
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
   photonBuffer db;
 
@@ -1810,6 +1899,36 @@ int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pr
     return PHOTON_ERROR;
   }
 }
+
+int _photon_get_buffer_remote_descriptor(uint32_t request, photonDescriptor ret_desc) {
+  photonRequest req;
+
+  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+    dbg_info("Could not find request: %u", request);
+    goto error_exit;
+  }
+
+  if ((req->state != REQUEST_NEW) && (req->state != REQUEST_PENDING)) {
+    dbg_info("Request has already trasitioned, can not return remote buffer info");
+    goto error_exit;
+  }
+  
+  if (ret_desc) {
+    (*ret_desc).request = req->remote_buffer.request;
+    (*ret_desc).addr = req->remote_buffer.addr;
+    (*ret_desc).size = req->remote_buffer.size;
+    (*ret_desc).tag = req->remote_buffer.tag;
+    (*ret_desc).priv.key0 = req->remote_buffer.lkey;
+    (*ret_desc).priv.key1 = req->remote_buffer.rkey;
+  }
+
+  return PHOTON_OK;
+
+ error_exit:
+  ret_desc = NULL;
+  return PHOTON_ERROR;
+}
+
 
 #ifdef HAVE_XSP
 int photon_xsp_lookup_proc(libxspSess *sess, ProcessInfo **ret_pi, int *index) {
