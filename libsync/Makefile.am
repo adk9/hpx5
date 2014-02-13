@@ -5,7 +5,7 @@
 noinst_LTLIBRARIES       = libsync.la
 
 #network
-libsync_la_SOURCES       = locks.c sr_barrier.c
+libsync_la_SOURCES       = locks.c sr_barrier.c ms_queue.c
 
 if CPU_X86_64
 libsync_la_SOURCES		+= arch/x86_64/nop.c
