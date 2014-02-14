@@ -7,9 +7,9 @@
 #include "verbs_connect.h"
 #include "logging.h"
 
-static int __verbs_buffer_register(photonBuffer dbuffer, void *ctx);
-static int __verbs_buffer_unregister(photonBuffer dbuffer, void *ctx);
-static int __verbs_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv);
+static int __verbs_buffer_register(photonBI dbuffer, void *ctx);
+static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx);
+static int __verbs_buffer_get_private(photonBI buf, photonBufferPriv ret_priv);
 
 struct photon_buffer_interface_t verbs_buffer_interface = {
   .buffer_create = _photon_buffer_create,
@@ -19,8 +19,9 @@ struct photon_buffer_interface_t verbs_buffer_interface = {
   .buffer_get_private = __verbs_buffer_get_private
 };
 
-static int __verbs_buffer_register(photonBuffer dbuffer, void *ctx) {
+static int __verbs_buffer_register(photonBI dbuffer, void *ctx) {
   enum ibv_access_flags flags;
+  struct ibv_mr *mr;
 
   dbg_info("buffer address: %p", dbuffer);
 
@@ -28,41 +29,45 @@ static int __verbs_buffer_register(photonBuffer dbuffer, void *ctx) {
     return 0;
 
   flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_READ|IBV_ACCESS_REMOTE_WRITE;
-  dbuffer->mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, dbuffer->buffer, dbuffer->size, flags);
-  if (!dbuffer->mr) {
+  mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, (void *)dbuffer->buf.addr, dbuffer->buf.size, flags);
+  if (!mr) {
     log_err("Could not allocate MR\n");
     goto error_exit;
   }
 
+  dbuffer->buf.priv.key0 = mr->lkey;
+  dbuffer->buf.priv.key1 = mr->rkey;
+  dbuffer->priv_ptr = (void*)mr;
+  dbuffer->priv_size = sizeof(*mr);
   dbuffer->is_registered = 1;
-  return 0;
+
+  return PHOTON_OK;
 
 error_exit:
   dbuffer->is_registered = 0;
-  dbuffer->mr = NULL;
-  return -1;
+  return PHOTON_ERROR;
 }
 
-static int __verbs_buffer_unregister(photonBuffer dbuffer, void *ctx) {
+static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx) {
   int retval;
 
   dbg_info();
 
-  retval = ibv_dereg_mr(dbuffer->mr);
+  retval = ibv_dereg_mr((struct ibv_mr *)dbuffer->priv_ptr);
   if(retval) {
     return retval;
   }
 
   dbuffer->is_registered = 0;
-  dbuffer->mr = NULL;
 
-  return 0;
+  return PHOTON_OK;
 }
 
-static int __verbs_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv) {
-  if (buf->is_registered) {
-    (*ret_priv).key0 = buf->mr->lkey;
-    (*ret_priv).key1 = buf->mr->rkey;
+static int __verbs_buffer_get_private(photonBI buf, photonBufferPriv ret_priv) {
+  struct ibv_mr *mr = (struct ibv_mr *)buf->priv_ptr;
+  if (buf->is_registered && mr) {
+    (*ret_priv).key0 = mr->lkey;
+    (*ret_priv).key1 = mr->rkey;
     return PHOTON_OK;
   }
 

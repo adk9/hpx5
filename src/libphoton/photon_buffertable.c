@@ -1,11 +1,11 @@
 #include "photon_buffertable.h"
 
-static photonBuffer* registered_buffers=NULL;
+static photonBI* registered_buffers=NULL;
 static int buffertable_size;
 static int num_registered_buffers;
 
 static int buffertable_resize(int new_buffertable_size) {
-  photonBuffer* new_registered_buffer = realloc(registered_buffers,sizeof(struct photon_buffer_t*)*new_buffertable_size);
+  photonBI* new_registered_buffer = realloc(registered_buffers,sizeof(struct photon_buffer_internal_t*)*new_buffertable_size);
   if (!new_registered_buffer)
     return 1;
   registered_buffers = new_registered_buffer;
@@ -25,13 +25,13 @@ void buffertable_finalize() {
   buffertable_size = 0;
 }
 
-int buffertable_find_containing(void* start, int size, photonBuffer* result) {
+int buffertable_find_containing(void* start, int size, photonBI* result) {
   int i, cond;
 
   for(i=0; i<num_registered_buffers; i++) {
-    photonBuffer tmpbuf = registered_buffers[i];
-    cond =  ((void *)(tmpbuf->buffer) <= start);
-    cond &= ((void *)(tmpbuf->buffer+tmpbuf->size) >= start+size);
+    photonBI tmpbuf = registered_buffers[i];
+    cond =  ((void *)(tmpbuf->buf.addr) <= start);
+    cond &= ((void *)(tmpbuf->buf.addr+tmpbuf->buf.size) >= start+size);
     if ( cond ) {
       if( result )
         *result = tmpbuf;
@@ -41,13 +41,13 @@ int buffertable_find_containing(void* start, int size, photonBuffer* result) {
   return 1;
 }
 
-int buffertable_find_exact(void* start, int size, photonBuffer* result) {
+int buffertable_find_exact(void* start, int size, photonBI* result) {
   int i, cond;
 
   for(i=0; i<num_registered_buffers; i++) {
-    photonBuffer tmpbuf = registered_buffers[i];
-    cond =  ((void *)(tmpbuf->buffer) == start);
-    cond &= (tmpbuf->size == size);
+    photonBI tmpbuf = registered_buffers[i];
+    cond =  ((void *)(tmpbuf->buf.addr) == start);
+    cond &= (tmpbuf->buf.size == size);
     if ( cond ) {
       if( result )
         *result = tmpbuf;
@@ -57,7 +57,7 @@ int buffertable_find_exact(void* start, int size, photonBuffer* result) {
   return 1;
 }
 
-int buffertable_insert(photonBuffer buffer) {
+int buffertable_insert(photonBI buffer) {
   if (!registered_buffers) {
     log_err("buffertable_insert(): Buffertable not initialized. Call buffertable_init() first.");
     return 1;
@@ -71,7 +71,7 @@ int buffertable_insert(photonBuffer buffer) {
 }
 
 
-int buffertable_remove(photonBuffer buffer) {
+int buffertable_remove(photonBI buffer) {
   int i;
 
   if (!registered_buffers) {
@@ -80,7 +80,7 @@ int buffertable_remove(photonBuffer buffer) {
   }
 
   for(i=0; i<num_registered_buffers; i++) {
-    photonBuffer tmpbuf = registered_buffers[i];
+    photonBI tmpbuf = registered_buffers[i];
     if ( tmpbuf == buffer ) {
       registered_buffers[i] = registered_buffers[--num_registered_buffers];
       return 0;

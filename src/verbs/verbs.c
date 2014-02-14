@@ -28,17 +28,17 @@ struct rdma_args_t {
 static int __initialized = 0;
 
 static int verbs_initialized(void);
-static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBuffer ss);
+static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss);
 static int verbs_finalize(void);
 static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, void **ret_ci, int *ret_len, photon_connect_mode_t mode);
 static int verbs_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
 static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
 static int verbs_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+                           photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
 static int verbs_get_event(photonEventStatus stat);
 
 static int __verbs_do_rdma(struct rdma_args_t *args, int opcode);
@@ -106,7 +106,7 @@ static int verbs_initialized() {
     return PHOTON_ERROR_NOINIT;
 }
 
-static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBuffer ss) {
+static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
 
   /* __initialized: 0 - not; -1 - initializing; 1 - initialized */
   __initialized = -1;
@@ -204,8 +204,8 @@ static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, voi
 
 static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_size, photon_info_t type) {
   int i;
-  photon_remote_buffer *info;
-  extern photonBuffer shared_storage;
+  struct photon_buffer_t *info;
+  extern photonBI shared_storage;
 
   switch (type) {
   case PHOTON_CI: {
@@ -218,19 +218,19 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
       memcpy(&cinfo[i], verbs_ctx.local_ci[proc], sizeof(verbs_cnct_info));
     }
     *ret_info = (void*)cinfo;
-    *ret_size = MAX_QP * sizeof(verbs_cnct_info);
+    *ret_size = MAX_QP * sizeof(*cinfo);
   }
   break;
   case PHOTON_RI:
   case PHOTON_SI:
   case PHOTON_FI: {
-    info = (photon_remote_buffer*)malloc(sizeof(photon_remote_buffer));
+    info = (struct photon_buffer_t *)malloc(sizeof(struct photon_buffer_t));
     if (!info) {
       goto error_exit;
     }
-    info->rkey = shared_storage->mr->rkey;
+    info->priv = shared_storage->buf.priv;
     *ret_info = (void*)info;
-    *ret_size = sizeof(photon_remote_buffer);
+    *ret_size = sizeof(*info);
   }
   break;
   default:
@@ -258,7 +258,7 @@ error_exit:
 }
 
 static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type) {
-  photon_remote_buffer *li = (photon_remote_buffer*)info;
+  photonBuffer li = (photonBuffer)info;
 
   switch (type) {
   case PHOTON_CI: {
@@ -270,15 +270,15 @@ static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photo
   break;
   case PHOTON_RI:
     pi->remote_rcv_info_ledger->remote.addr = li->addr;
-    pi->remote_rcv_info_ledger->remote.rkey = li->rkey;
+    pi->remote_rcv_info_ledger->remote.priv = li->priv;
     break;
   case PHOTON_SI:
     pi->remote_snd_info_ledger->remote.addr = li->addr;
-    pi->remote_snd_info_ledger->remote.rkey = li->rkey;
+    pi->remote_snd_info_ledger->remote.priv = li->priv;
     break;
   case PHOTON_FI:
     pi->remote_FIN_ledger->remote.addr = li->addr;
-    pi->remote_FIN_ledger->remote.rkey = li->rkey;
+    pi->remote_FIN_ledger->remote.priv = li->priv;
     break;
   default:
     goto error_exit;
@@ -326,41 +326,41 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
 }
 
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
   args.laddr = laddr;
   args.raddr = raddr;
   args.size = size;
-  args.lkey = lbuf->mr->lkey;
-  args.rkey = rbuf->rkey;
+  args.lkey = lbuf->priv.key0;
+  args.rkey = rbuf->priv.key1;
   return __verbs_do_rdma(&args, IBV_WR_RDMA_WRITE);
 }
 
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
   args.laddr = laddr;
   args.raddr = raddr;
   args.size = size;
-  args.lkey = lbuf->mr->lkey;
-  args.rkey = rbuf->rkey;
+  args.lkey = lbuf->priv.key0;
+  args.rkey = rbuf->priv.key1;
   return __verbs_do_rdma(&args, IBV_WR_RDMA_READ);
 }
 
 static int verbs_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
+                           photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
   args.laddr = laddr;
   args.raddr = raddr;
   args.size = size;
-  args.lkey = lbuf->mr->lkey;
-  args.rkey = rbuf->rkey;
+  args.lkey = lbuf->priv.key0;
+  args.rkey = rbuf->priv.key1;
   return __verbs_do_rdma(&args, IBV_WR_SEND);
 }
 

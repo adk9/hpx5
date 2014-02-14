@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   photon_register_buffer(recv, PHOTON_RECV_SIZE);
 
   int alloc_size = 1024*1024;
-  struct photon_descriptor_t desc;
+  struct photon_buffer_t desc;
   desc.addr = (uintptr_t)0x00007f6605bff000;
   desc.size = alloc_size;
   desc.priv.key0 = 2576896;

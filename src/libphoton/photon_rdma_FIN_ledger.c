@@ -26,7 +26,6 @@ photonFINLedger photon_rdma_FIN_ledger_create_reuse(photonFINLedgerEntry ledger_
 
   new->curr = 0;
   new->num_entries = num_entries;
-  new->remote.request = NULL_COOKIE;
 
   return new;
 
@@ -35,9 +34,5 @@ error_exit:
 }
 
 void photon_rdma_FIN_ledger_free(photonFINLedger ledger) {
-  if (ledger->local) {
-    photon_buffer_free(ledger->local);
-    free(ledger->entries);
-  }
   free(ledger);
 }

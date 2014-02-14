@@ -22,6 +22,7 @@ struct photon_config_t {
   int ib_port;
 };
 
+/* status for photon requests */
 struct photon_status_t {
   uint64_t src_addr;
   uint64_t size;
@@ -31,23 +32,25 @@ struct photon_status_t {
   int error;
 };
 
+/* registered buffer keys 
+   current abstraction is two 64b values, this covers existing photon backends
+   we don't want this to be ptr/size because then our ledger size is variable */
 struct photon_buffer_priv_t {
   uint64_t key0;
   uint64_t key1;
 };
 
-struct photon_descriptor_t {
-  uint32_t request;
+/* use to track both local and remote buffers */
+struct photon_buffer_t {
   uintptr_t addr;
   uint64_t size;
-  int tag;
   struct photon_buffer_priv_t priv;
 };
 
 typedef struct photon_config_t * photonConfig;
 typedef struct photon_status_t * photonStatus;
 typedef struct photon_buffer_priv_t * photonBufferPriv;
-typedef struct photon_descriptor_t * photonDescriptor;
+typedef struct photon_buffer_t * photonBuffer;
 
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
@@ -69,7 +72,7 @@ int photon_finalize();
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
-int photon_get_buffer_remote_descriptor(uint32_t request, photonDescriptor ret_desc);
+int photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf);
 int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
@@ -78,8 +81,8 @@ int photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request);
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
 int photon_send_FIN(uint32_t request, int proc);
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 

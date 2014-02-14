@@ -254,7 +254,7 @@ int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int
   return __photon_default->post_os_get(request, proc, ptr, size, tag, r_offset);
 }
 
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request) {
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -263,7 +263,7 @@ int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photo
   return __photon_default->post_os_put_direct(proc, ptr, size, tag, rbuf, request);
 }
 
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonDescriptor rbuf, uint32_t *request) {
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -349,6 +349,6 @@ int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pri
 }
 
 /* utility method to get the remote buffer info set after a wait buffer request */
-int photon_get_buffer_remote_descriptor(uint32_t request, photonDescriptor ret_desc) {
-  return _photon_get_buffer_remote_descriptor(request, ret_desc);
+int photon_get_buffer_remote(uint32_t request, photonBuffer ret_desc) {
+  return _photon_get_buffer_remote(request, ret_desc);
 }
