@@ -1,3 +1,15 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 #ifndef HPX_ATTRIBUTES_H
 #define HPX_ATTRIBUTES_H
 
@@ -14,5 +26,6 @@
 #define HPX_UNUSED        __attribute__((unused))
 #define HPX_ASM(S)        __asm__(#S)
 #define HPX_PACKED        __attribute__((packed))
+#define HPX_NON_NULL(...) __attribute__((nonnull(__VA_ARGS__)))
 
-#endif
+#endif // HPX_ATTRIBUTES_H

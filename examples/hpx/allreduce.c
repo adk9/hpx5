@@ -64,7 +64,8 @@ action_allreduce(void *unused) {
     hpx_parcel_t *p = hpx_parcel_acquire(0);
     hpx_parcel_set_action(p, get_value);
     hpx_parcel_set_target(p, hpx_addr_from_rank(i));
-    hpx_parcel_send(p, futures[i]);
+    hpx_parcel_set_cont(p, futures[i]);
+    hpx_parcel_send(p);
   }
 
   hpx_thread_wait_all(num_ranks, futures, (void**)values);
@@ -77,9 +78,9 @@ action_allreduce(void *unused) {
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(value));
     hpx_parcel_set_action(p, set_value);
     hpx_parcel_set_target(p, hpx_addr_from_rank(i));
-    T* data = hpx_parcel_get_data(p);
-    *data = value;
-    hpx_parcel_send(p, futures[i]);
+    hpx_parcel_set_cont(p, futures[i]);
+    *(T*)hpx_parcel_get_data(p) = value;
+    hpx_parcel_send(p);
   }
 
   hpx_thread_wait_all(num_ranks, futures, NULL);

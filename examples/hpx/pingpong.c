@@ -129,7 +129,7 @@ action_ping(void *msg) {
   RANK_PRINTF("sending ping to loc %d, count=%d, message='%s'\n",
               hpx_addr_to_rank(partner()), count, a->msg);
 
-  hpx_parcel_send(p, HPX_NULL);
+  hpx_parcel_send(p);
   ++count;
   return HPX_SUCCESS;
 }
@@ -156,7 +156,7 @@ action_pong(void *msg) {
 
   RANK_PRINTF("sending pong to loc %d, count=%d, message='%s'\n",
               hpx_addr_to_rank(partner()), count, args->msg);
-  hpx_parcel_send(p, HPX_NULL);
+  hpx_parcel_send(p);
   ++count;
   return HPX_SUCCESS;
 }
@@ -251,5 +251,5 @@ hpx_addr_t
 partner(void) {
   int rank = hpx_get_my_rank();
   int ranks = hpx_get_num_ranks();
-              return hpx_addr_from_rank((rank) ? 0 : ranks - 1);
+  return hpx_addr_from_rank((rank) ? 0 : ranks - 1);
 }
