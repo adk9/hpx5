@@ -69,13 +69,13 @@ photonBI _photon_buffer_create(void *buf, uint64_t size) {
 
   dbg_info();
 
-  new_buf = malloc(sizeof(struct photon_buffer_t));
+  new_buf = malloc(sizeof(struct photon_buffer_internal_t));
   if (!new_buf) {
     log_err("malloc failed");
     return NULL;
   }
 
-  memset(new_buf, 0, sizeof(struct photon_buffer_t));
+  memset(new_buf, 0, sizeof(*new_buf));
 
   dbg_info("allocated buffer struct: %p", new_buf);
   dbg_info("contains buffer pointer: %p of size %" PRIu64, buf, size);
