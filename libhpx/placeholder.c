@@ -15,23 +15,45 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <hpx.h>
+#include "scheduler.h"
+#include "ustack.h"
 
-hpx_action_t
-hpx_action_register(const char *id, hpx_action_handler_t func) {
-  return HPX_ACTION_NULL;
+
+static int _null_startup_action(void *unused) {
+  return HPX_SUCCESS;
 }
+
+static hpx_action_t _null_startup = HPX_ACTION_NULL;
 
 int
 hpx_init(int argc, char * const argv[argc]) {
-  return 0;
+  int e = 0;
+  if ((e = ustack_init()))
+    return e;
+  if ((e = scheduler_init()))
+    return e;
+  _null_startup = hpx_action_register("hpx_null_startup", _null_startup_action);
+  if (_null_startup == HPX_ACTION_NULL)
+    return 1;
+  return HPX_SUCCESS;
 }
 
 int
-hpx_run(hpx_action_t f, void *args, unsigned size) {
-  return 0;
+hpx_run(hpx_action_t act, const void *args, unsigned size) {
+  int e = 0;
+  if ((e = ustack_init_thread()))
+    return e;
+  if ((e = scheduler_init_thread()))
+    return e;
+  assert(!args || act);
+  return scheduler_startup((act) ? act : _null_startup, args, size);
 }
 
 void
@@ -93,28 +115,6 @@ hpx_time_to_us(hpx_time_t time) {
 uint64_t
 hpx_time_to_ms(hpx_time_t time) {
   return time;
-}
-
-hpx_parcel_t *
-hpx_parcel_acquire(unsigned size) {
-  return NULL;
-}
-
-void
-hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) {
-}
-
-void
-hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) {
-}
-
-void *
-hpx_parcel_get_data(hpx_parcel_t *p) {
-  return NULL;
-}
-
-void
-hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t result) {
 }
 
 hpx_addr_t

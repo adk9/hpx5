@@ -4,7 +4,11 @@
 
 lib_LTLIBRARIES		= libhpx.la
 
-libhpx_la_SOURCES	= placeholder.c
+libhpx_la_SOURCES	= placeholder.c scheduler.c parcel.c network.c action.c ustack.c
+
+if CPU_X86_64
+libhpx_la_SOURCES  += arch/x86_64/transfer.S arch/x86_64/asm.S
+endif
 
 libhpx_la_CPPFLAGS  = -I$(top_srcdir)/include
 
