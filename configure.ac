@@ -143,7 +143,6 @@ AC_CONFIG_FILES([
 # src/Makefile
 # src/libhpx.pc
 # examples/thread/Makefile
-# examples/network/Makefile
 
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
