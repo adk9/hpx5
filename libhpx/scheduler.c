@@ -44,15 +44,131 @@
 static ms_queue_t _new_parcels;
 
 /// ----------------------------------------------------------------------------
+/// The main scheduler loop.
+///
+/// The purpose of the scheduler loop is to select a new stack to execute. It
+/// returns a stack pointer appropriate for the first parameter of
+/// ustack_transfer(). If there are no stacks to transfer to at this locality,
+/// then this will loop, so callers should be careful to put themselves into the
+/// _next queue before scheduling, if they'd like to run again. This is an
+/// internal function so we're not worried about misuse out of this file.
+///
+/// @returns - the stack to transfer to
+/// ----------------------------------------------------------------------------
+static ustack_t *_schedule(void);
+
+/// ----------------------------------------------------------------------------
+/// Try and steal threads (i.e., active stacks).
+///
+/// @returns - the number of stolen threads.
+/// ----------------------------------------------------------------------------
+static int _steal(void) {
+  return 0;
+}
+
+/// ----------------------------------------------------------------------------
+/// Wait for a while, in the native thread context.
+/// ----------------------------------------------------------------------------
+static void _wait(int seconds) {
+  sleep(seconds);
+}
+
+/// ----------------------------------------------------------------------------
+/// All user-level threads start in this entry function.
+///
+/// This function executes the specified parcel, deals with any continuation
+/// data, frees the parcel, schedules the next thread, and then transfers to the
+/// next thread while freeing the current stack.
+/// ----------------------------------------------------------------------------
+static void HPX_NORETURN _entry(hpx_parcel_t *parcel) {
+  hpx_action_handler_t f = action_for_key(parcel->action);
+  f(parcel->data);
+  parcel_release(parcel);
+  ustack_t *to = _schedule();
+  ustack_transfer(to->sp, ustack_transfer_delete);
+  unreachable();
+}
+
+/// ----------------------------------------------------------------------------
+/// A ustack_transfer() continuation that checkpoints the native stack.
+///
+/// The native stack isn't suitable for use as a user-level stack, because we
+/// can't guarantee that it's large enough or that it has the right
+/// alignment. When we first transfer away from it, we record the stack pointer
+/// (in _native_stack) so that we can transfer back to it at shutdown, or for
+/// any other native-style operations (e.g., during preemptive scheduling if
+/// that is implemented).
+///
+/// This is executed on the original user-level stack.
+/// ----------------------------------------------------------------------------
+/// @{
+static __thread void  *_native_stack = NULL;
+
+static int _post_startup(void *sp) {
+  _native_stack = sp;
+  return HPX_SUCCESS;
+}
+/// @}
+
+/// ----------------------------------------------------------------------------
+/// A ustack_transfer() continuation that returns the exit code.
+///
+/// When scheduler_shutdown() is called, it records the passed exit code in
+/// _exit_code and then transfers back to the native stack. This continuation
+/// performs any per-scheduler thread cleanup required, like freeing any
+/// allocated user-level stacks, etc., and then returns the _exit_code().
+///
+/// This is executed on the native stack.
+/// ----------------------------------------------------------------------------
+/// @{
+static __thread int _exit_code = HPX_SUCCESS;
+
+static int _post_shutdown(void *sp) {
+  return _exit_code;
+}
+/// @}
+
+/// ----------------------------------------------------------------------------
 /// Thread local scheduler structures.
 /// ----------------------------------------------------------------------------
-static __thread hpx_parcel_t  *_ready = NULL;
-static __thread hpx_parcel_t   *_next = NULL;
+static __thread ustack_t *_ready = NULL;
+static __thread ustack_t *_next = NULL;
 
-static void *_schedule(void);
-static int _steal_parcels(void);
-static void _useful_wait(void);
-static void _thread_entry(hpx_parcel_t *) HPX_NORETURN;
+/// ----------------------------------------------------------------------------
+/// The main scheduler loop.
+///
+/// The purpose of the scheduler loop is to select a new stack to execute. It
+/// returns a stack pointer appropriate for the first parameter of
+/// ustack_transfer(). If there are no stacks to transfer to at this locality,
+/// then this will loop, so callers should be careful to put themselves into the
+/// _next queue before scheduling, if they'd like to run again. This is an
+/// internal function so we're not worried about misuse out of this file.
+/// ----------------------------------------------------------------------------
+static ustack_t *_schedule(void) {
+  while (1) {
+    ustack_t *stack = _ready;
+    if (stack) {
+      _ready = _ready->next;
+      return stack;
+    }
+
+    // epoch transition
+    _ready = _next;
+    _next = NULL;
+
+    hpx_parcel_t *parcel = sync_ms_queue_dequeue(&_new_parcels);
+    if (parcel)
+      return ustack_new(_entry, parcel);
+
+    if (_ready)
+      continue;
+
+    if (_steal())
+      continue;
+
+    _wait(1);
+  }
+}
 
 int
 scheduler_init(void) {
@@ -72,59 +188,34 @@ scheduler_startup(hpx_action_t action, const void *args, unsigned size) {
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, HPX_NULL);
   memcpy(hpx_parcel_get_data(p), args, sizeof(size));
-  ustack_t *stack = ustack_new(_thread_entry, p);
-  return ustack_transfer(stack->sp, ustack_transfer_null);
+  ustack_t *stack = ustack_new(_entry, p);
+  return ustack_transfer(stack->sp, _post_startup);
 }
 
 void
 scheduler_shutdown(int code) {
-  abort();
+  _exit_code = code;
+  ustack_transfer(_native_stack, _post_shutdown);
+  unreachable();
 }
 
 void
 scheduler_yield(unsigned n, hpx_addr_t lcos[n]) {
-}
+  ustack_t *from = ustack_current();
 
-void *_schedule(void) {
-  hpx_parcel_t *thread = NULL;
-
- loop:
-  thread = _ready;
-  if (thread) {
-    _ready = _ready->next;
-    return thread->stack->sp;
+  if (n) {
+    for (unsigned i = 0; i < n; ++i) {
+      ((void)lcos[i]);
+    }
+  }
+  else {
+    from->next = _next;
+    _next = from;
   }
 
-  // epoch transition
-  _ready = _next;
-  _next = NULL;
+  ustack_t *to = _schedule();
 
-  thread = sync_ms_queue_dequeue(&_new_parcels);
-  if (thread)
-    return ustack_new(_thread_entry, thread)->sp;
-
-  if (_ready)
-    goto loop;
-
-  if (_steal_parcels())
-    goto loop;
-
-  _useful_wait();
-  goto loop;
-}
-
-void _thread_entry(hpx_parcel_t *parcel) {
-  hpx_action_handler_t f = action_for_key(parcel->action);
-  f(parcel->data);
-  parcel_release(parcel);
-  ustack_transfer(_schedule(), ustack_transfer_delete);
-  unreachable();
-}
-
-void _useful_wait(void) {
-  sleep(1);
-}
-
-int _steal_parcels(void) {
-  return 0;
+  // if we're transferring to the same stack we're on, elide the tranfer
+  if (from != to)
+    ustack_transfer(to->sp, ustack_transfer_checkpoint);
 }

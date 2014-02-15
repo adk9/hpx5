@@ -73,8 +73,19 @@ static __thread uint16_t _fpucw = 0;
 /// ----------------------------------------------------------------------------
 static __thread ustack_t *_stacks = NULL;
 
-static _frame_t *_get_top_frame(ustack_t *stack);
-static ustack_t *_get_from_sp(void *sp);
+static _frame_t *_get_top_frame(ustack_t *stack) {
+  assert(sizeof(_frame_t) == 80);
+  return (_frame_t*)&stack->stack[LIBHPX_USTACK_SIZE - sizeof(ustack_t) -
+                                  sizeof(_frame_t)];
+}
+
+static ustack_t *_get_from_sp(void *sp) {
+  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(LIBHPX_USTACK_SIZE);
+  uintptr_t addr = (uintptr_t)sp;
+  addr &= MASK;
+  ustack_t *stack = (ustack_t*)addr;
+  return stack;
+}
 
 int
 ustack_init(void) {
@@ -119,6 +130,11 @@ ustack_new(ustack_entry_t entry, hpx_parcel_t *parcel) {
   return stack;
 }
 
+ustack_t *
+ustack_current(void) {
+  return _get_from_sp(get_sp());
+}
+
 void
 ustack_delete(ustack_t *stack) {
   stack->next = _stacks;
@@ -137,23 +153,4 @@ ustack_transfer_checkpoint(void *sp) {
   ustack_t *stack = _get_from_sp(sp);
   stack->sp = sp;
   return HPX_SUCCESS;
-}
-
-int
-ustack_transfer_null(void *sp) {
-  return HPX_SUCCESS;
-}
-
-_frame_t *_get_top_frame(ustack_t *stack) {
-  assert(sizeof(_frame_t) == 80);
-  return (_frame_t*)&stack->stack[LIBHPX_USTACK_SIZE - sizeof(ustack_t) -
-                                  sizeof(_frame_t)];
-}
-
-ustack_t *_get_from_sp(void *sp) {
-  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(LIBHPX_USTACK_SIZE);
-  uintptr_t addr = (uintptr_t)sp;
-  addr &= MASK;
-  ustack_t *stack = (ustack_t*)addr;
-  return stack;
 }

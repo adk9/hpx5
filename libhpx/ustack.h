@@ -74,6 +74,11 @@ HPX_INTERNAL ustack_t *ustack_new(ustack_entry_t entry, hpx_parcel_t *parcel)
 HPX_INTERNAL void ustack_delete(ustack_t *stack) HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
+/// Get the current stack.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL ustack_t *ustack_current(void);
+
+/// ----------------------------------------------------------------------------
 /// The actual routine to transfer between stacks.
 ///
 /// This pushes the callee-saves state on the current state, swaps the stack
@@ -93,7 +98,6 @@ HPX_INTERNAL int ustack_transfer(void *sp, int (*c)(void*)) HPX_NON_NULL(1, 2);
 /// @{
 HPX_INTERNAL int ustack_transfer_delete(void *sp);
 HPX_INTERNAL int ustack_transfer_checkpoint(void *sp);
-HPX_INTERNAL int ustack_transfer_null(void *sp);
 /// @}
 
 #endif  // LIBHPX_USTACK_H
