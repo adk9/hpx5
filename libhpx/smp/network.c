@@ -15,45 +15,47 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file network.c
-/// @brief Manages the HPX network.
+/// @file network/smp.c
 ///
-/// This file deals with the complexities of the HPX network interface,
-/// shielding it from the
+/// The smp network is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
-#include "network.h"
+#include <stdlib.h>
+#include "scheduler.h"
 #include "networks.h"
 
-static network_t *network = NULL;
-
-int
-network_init(void) {
-  network = smp_new();
+static int _init(void) {
   return HPX_SUCCESS;
 }
 
-int
-network_init_thread(void) {
-  return HPX_SUCCESS;
+static void _fini(void) {
+}
+
+network_t *
+smp_new(void) {
+  network_t *smp = malloc(sizeof(*smp));
+  smp->init = _init;
+  smp->fini = _fini;
+  smp->progress = NULL;
+  smp->probe = NULL;
+  smp->send = NULL;
+  smp->recv = NULL;
+  smp->test_sendrecv = NULL;
+  smp->test_send = NULL;
+  smp->test_recv = NULL;
+  smp->put = NULL;
+  smp->get = NULL;
+  smp->test_putget = NULL;
+  smp->test_put = NULL;
+  smp->test_get = NULL;
+  smp->pin = NULL;
+  smp->unpin = NULL;
+  smp->phys_addr = NULL;
+  smp->get_network_bytes = NULL;
+  smp->barrier = NULL;
+  return smp;
 }
 
 void
-network_fini(void) {
-  smp_delete(network);
-}
-
-void
-network_fini_thread(void) {
-}
-
-void
-network_send(hpx_parcel_t *p) {
-}
-
-void
-network_send_sync(hpx_parcel_t *p) {
-}
-
-void
-network_berrier(void) {
+smp_delete(network_t *smp) {
+  free(smp);
 }

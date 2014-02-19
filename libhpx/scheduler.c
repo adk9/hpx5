@@ -176,9 +176,17 @@ scheduler_init(void) {
   return HPX_SUCCESS;
 }
 
+void
+scheduler_fini(void) {
+}
+
 int
 scheduler_init_thread(void) {
   return HPX_SUCCESS;
+}
+
+void
+scheduler_fini_thread(void) {
 }
 
 int

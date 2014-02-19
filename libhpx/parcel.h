@@ -17,6 +17,11 @@
 
 struct ustack;                                  // a user-level stack
 
+HPX_INTERNAL int parcel_init(void);
+HPX_INTERNAL int parcel_init_thread(void);
+HPX_INTERNAL void parcel_fini(void);
+HPX_INTERNAL void parcel_fini_thread(void);
+
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///

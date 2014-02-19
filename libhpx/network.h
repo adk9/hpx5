@@ -10,13 +10,29 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
 #include "hpx.h"
 
-HPX_INTERNAL void libhpx_network_send(hpx_parcel_t *p);
-HPX_INTERNAL void libhpx_network_send_sync(hpx_parcel_t *p);
+/// ----------------------------------------------------------------------------
+/// @file network.h
+///
+/// This file defines the interface to the network subsystem in HPX.
+/// ----------------------------------------------------------------------------
+
+/// ----------------------------------------------------------------------------
+/// Network initialization and finalization.
+/// ----------------------------------------------------------------------------
+/// @{
+HPX_INTERNAL int network_init(void);
+HPX_INTERNAL int network_init_thread(void);
+HPX_INTERNAL void network_fini(void);
+HPX_INTERNAL void network_fini_thread(void);
+/// @}
+
+HPX_INTERNAL void network_send(hpx_parcel_t *p);
+HPX_INTERNAL void network_send_sync(hpx_parcel_t *p);
+HPX_INTERNAL void network_barrier(void);
 
 #endif // LIBHPX_NETWORK_H

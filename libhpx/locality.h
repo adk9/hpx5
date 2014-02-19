@@ -10,21 +10,18 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BUILTINS_H
-#define LIBHPX_BUILTINS_H
+#ifndef LIBHPX_LOCALITY_H
+#define LIBHPX_LOCALITY_H
 
 /// ----------------------------------------------------------------------------
-/// @file builtins.h
+/// @file locality.h
 ///
-/// This file encapsulates some operations that are builtin compiler functions
-/// in order to support multiple compilers.
-///
-/// @todo Deal with non-gcc compatible compilers.
-/// @todo Deal with this during configuration.
+/// This is libhpx's interface to the hardware locality, providing hardware
+/// thread and topology information.
 /// ----------------------------------------------------------------------------
+#include "attributes.h"
 
-#define likely(S) (__builtin_expect(S, 1))
-#define unlikely(S) (__builtin_expect(S, 0))
-#define unreachable() __builtin_unreachable()
+HPX_INTERNAL int locality_init(int threads);
+HPX_INTERNAL void locality_fini(void);
 
-#endif
+#endif // LIBHPX_LOCALITY_H

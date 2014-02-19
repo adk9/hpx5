@@ -22,42 +22,70 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <hpx.h>
+#include "builtins.h"
+#include "locality.h"
+#include "parcel.h"
+#include "network.h"
 #include "scheduler.h"
 #include "ustack.h"
 
-
-static int _null_startup_action(void *unused) {
-  return HPX_SUCCESS;
-}
-
-static hpx_action_t _null_startup = HPX_ACTION_NULL;
-
 int
 hpx_init(int argc, char * const argv[argc]) {
-  int e = 0;
-  if ((e = ustack_init()))
-    return e;
-  if ((e = scheduler_init()))
-    return e;
-  _null_startup = hpx_action_register("hpx_null_startup", _null_startup_action);
-  if (_null_startup == HPX_ACTION_NULL)
-    return 1;
-  return HPX_SUCCESS;
+  // start by initializing all of the subsystems
+  int e = HPX_SUCCESS;
+  if (unlikely(e == locality_init(0)))
+    goto unwind0;
+  if (unlikely(e = parcel_init()))
+    goto unwind1;
+  if (unlikely(e = ustack_init()))
+    goto unwind2;
+  if (unlikely(e = scheduler_init()))
+    goto unwind3;
+  if (unlikely(e = network_init()))
+    goto unwind4;
+
+  return e;
+
+ unwind4:
+  scheduler_fini();
+ unwind3:
+  ustack_fini();
+ unwind2:
+  parcel_fini();
+ unwind1:
+  locality_fini();
+ unwind0:
+  return e;
 }
 
 int
 hpx_run(hpx_action_t act, const void *args, unsigned size) {
+  assert(act);
   int e = 0;
-  if ((e = ustack_init_thread()))
-    return e;
-  if ((e = scheduler_init_thread()))
-    return e;
-  assert(!args || act);
-  return scheduler_startup((act) ? act : _null_startup, args, size);
+  if (unlikely(e = network_init_thread()))
+    goto unwind0;
+  if (unlikely(e = parcel_init_thread()))
+    goto unwind1;
+  if (unlikely(e = ustack_init_thread()))
+    goto unwind2;
+  if (unlikely(e = scheduler_init_thread()))
+    goto unwind3;
+
+  return scheduler_startup(act, args, size);
+
+ unwind3:
+  ustack_fini_thread();
+ unwind2:
+  parcel_fini_thread();
+ unwind1:
+  network_fini_thread();
+ unwind0:
+  return e;
 }
 
 void
 hpx_shutdown(int value) {
+
   exit(value);
 }
 
