@@ -25,6 +25,8 @@
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL int ustack_init(void);
 HPX_INTERNAL int ustack_init_thread(void);
+HPX_INTERNAL void ustack_fini(void);
+HPX_INTERNAL void ustack_fini_thread(void);
 
 /// ----------------------------------------------------------------------------
 /// A user level stack.

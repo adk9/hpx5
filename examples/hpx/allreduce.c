@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <hpx.h>
-#include <mpi.h>
 
 #define T int
 

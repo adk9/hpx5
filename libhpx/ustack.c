@@ -92,11 +92,24 @@ ustack_init(void) {
   return HPX_SUCCESS;
 }
 
+void
+ustack_fini(void) {
+  ustack_t *stack = NULL;
+  while ((stack = _stacks)) {
+    _stacks = _stacks->next;
+    free(stack);
+  }
+}
+
 int
 ustack_init_thread(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
   return HPX_SUCCESS;
+}
+
+void
+ustack_fini_thread(void) {
 }
 
 ustack_t *

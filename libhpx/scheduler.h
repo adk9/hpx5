@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
@@ -29,6 +28,7 @@
 /// @returns - 0 on success, non-zero on failure
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL int scheduler_init(void);
+HPX_INTERNAL void scheduler_fini(void);
 
 /// ----------------------------------------------------------------------------
 /// Initializes thread-local scheduler data for this address space.
@@ -36,6 +36,7 @@ HPX_INTERNAL int scheduler_init(void);
 /// @returns - 0 on success, non-zero on failure
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL int scheduler_init_thread(void);
+HPX_INTERNAL void scheduler_fini_thread(void);
 
 /// ----------------------------------------------------------------------------
 /// Start a scheduler thread.
@@ -66,6 +67,11 @@ HPX_INTERNAL int scheduler_startup(hpx_action_t act, const void *args, unsigned 
 HPX_INTERNAL void scheduler_shutdown(int code) HPX_NORETURN;
 
 /// ----------------------------------------------------------------------------
+/// Spawn a new user-level thread for the parcel.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+/// ----------------------------------------------------------------------------
 /// Yield a user-level thread.
 ///
 /// The core of the cooperative scheduler. A user-level thread can call
@@ -89,6 +95,5 @@ HPX_INTERNAL void scheduler_shutdown(int code) HPX_NORETURN;
 ///               wait for.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_yield(unsigned n, hpx_addr_t lcos[n]);
-
 
 #endif // LIBHPX_SCHEDULER_H

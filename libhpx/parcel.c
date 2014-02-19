@@ -24,6 +24,25 @@
 #include "parcel.h"
 #include "network.h"
 
+int
+parcel_init(void) {
+  return HPX_SUCCESS;
+}
+
+int
+parcel_init_thread(void) {
+  return HPX_SUCCESS;
+}
+
+void
+parcel_fini(void) {
+}
+
+void
+parcel_fini_thread(void) {
+}
+
+
 void
 parcel_release(hpx_parcel_t *parcel) {
   free(parcel);
@@ -73,10 +92,10 @@ hpx_parcel_get_data(hpx_parcel_t *p) {
 
 void
 hpx_parcel_send(hpx_parcel_t *p) {
-  libhpx_network_send(p);
+  network_send(p);
 }
 
 void
 hpx_parcel_send_sync(hpx_parcel_t *p) {
-  libhpx_network_send_sync(p);
+  network_send_sync(p);
 }

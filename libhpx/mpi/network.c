@@ -10,21 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BUILTINS_H
-#define LIBHPX_BUILTINS_H
-
-/// ----------------------------------------------------------------------------
-/// @file builtins.h
-///
-/// This file encapsulates some operations that are builtin compiler functions
-/// in order to support multiple compilers.
-///
-/// @todo Deal with non-gcc compatible compilers.
-/// @todo Deal with this during configuration.
-/// ----------------------------------------------------------------------------
-
-#define likely(S) (__builtin_expect(S, 1))
-#define unlikely(S) (__builtin_expect(S, 0))
-#define unreachable() __builtin_unreachable()
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
+
+/// ----------------------------------------------------------------------------
+/// @file network/mpi.c
+///
+/// The MPI network implements the HPX network interface on top of MPI.
+/// ----------------------------------------------------------------------------
