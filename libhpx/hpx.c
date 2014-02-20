@@ -21,7 +21,8 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <hpx.h>
+#include <string.h>
+#include "hpx.h"
 #include "builtins.h"
 #include "locality.h"
 #include "parcel.h"
@@ -111,9 +112,19 @@ void
 hpx_thread_yield(void) {
 }
 
-int
-hpx_thread_exit(void *value, unsigned size) {
-  return 0;
+void
+hpx_thread_exit(int status, const void *value, unsigned size) {
+  ustack_t *stack = ustack_current();
+  hpx_parcel_t *parcel = stack->parcel;
+  hpx_addr_t cont = parcel->cont;
+  if (cont != HPX_NULL) {
+    hpx_parcel_t *c = hpx_parcel_acquire(size);
+    hpx_parcel_set_action(c, hpx_future_signal);
+    hpx_parcel_set_target(c, cont);
+    memcpy(hpx_parcel_get_data(c), value, size);
+    hpx_parcel_send(c);
+  }
+  scheduler_exit(parcel);
 }
 
 hpx_addr_t

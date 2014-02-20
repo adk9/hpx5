@@ -4,7 +4,7 @@
 
 lib_LTLIBRARIES		= libhpx.la
 
-libhpx_la_SOURCES	= hpx.c locality.c scheduler.c parcel.c action.c ustack.c network.c smp/network.c
+libhpx_la_SOURCES	= hpx.c locality.c scheduler.c parcel.c action.c ustack.c network.c future.c smp/network.c
 
 if CPU_X86_64
 libhpx_la_SOURCES  += arch/x86_64/transfer.S arch/x86_64/asm.S

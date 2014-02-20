@@ -96,4 +96,12 @@ HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p) HPX_NON_NULL(1);
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_yield(unsigned n, hpx_addr_t lcos[n]);
 
+/// ----------------------------------------------------------------------------
+/// Exit a user level thread.
+///
+/// @param parcel - the parcel bound to the current stack (will be released)
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_exit(hpx_parcel_t *parcel)
+  HPX_NON_NULL(1) HPX_NORETURN;
+
 #endif // LIBHPX_SCHEDULER_H

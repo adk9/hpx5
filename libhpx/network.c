@@ -47,13 +47,18 @@ network_fini_thread(void) {
 }
 
 void
-network_send(hpx_parcel_t *p) {
+hpx_parcel_send(hpx_parcel_t *p) {
 }
 
 void
-network_send_sync(hpx_parcel_t *p) {
+hpx_parcel_send_sync(hpx_parcel_t *p) {
 }
 
 void
 network_berrier(void) {
+}
+
+bool
+network_addr_is_local(hpx_addr_t addr, void **out) {
+  return false;
 }
