@@ -63,7 +63,7 @@ int init(void) {
     int provided;
     if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided) != MPI_SUCCESS)
 	return HPX_ERROR;
-    if (provided < MPI_THREAD_SERIALIZED))
+    if (provided < MPI_THREAD_SERIALIZED)
       return HPX_ERROR;
   }
 
