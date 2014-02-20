@@ -55,10 +55,14 @@ action_allreduce(void *unused) {
   int my_rank = hpx_get_my_rank();
   assert(my_rank == 0);
 
-  T values[num_ranks];
+  T          values[num_ranks];
+  void      *addrs[num_ranks];
+  int        sizes[num_ranks];
   hpx_addr_t futures[num_ranks];
 
   for (int i = 0; i < num_ranks; ++i) {
+    addrs[i] = &values[i];
+    sizes[i] = sizeof(T);
     futures[i] = hpx_future_new(sizeof(T));
     hpx_parcel_t *p = hpx_parcel_acquire(0);
     hpx_parcel_set_action(p, get_value);
@@ -67,7 +71,7 @@ action_allreduce(void *unused) {
     hpx_parcel_send(p);
   }
 
-  hpx_thread_wait_all(num_ranks, futures, (void**)values);
+  hpx_future_get_all(num_ranks, futures, addrs, sizes);
 
   value = sum(num_ranks, values);
 
@@ -82,7 +86,11 @@ action_allreduce(void *unused) {
     hpx_parcel_send(p);
   }
 
-  hpx_thread_wait_all(num_ranks, futures, NULL);
+  hpx_future_get_all(num_ranks, futures, NULL, NULL);
+
+  for (int i = 0; i < num_ranks; ++i)
+    hpx_future_delete(futures[i]);
+
   hpx_shutdown(0);
 }
 

@@ -35,18 +35,11 @@ struct ustack;
 /// The second is a set-able value. The value is set by the signaler, and is
 /// retrieved by all of the waiters after the signal.
 /// ----------------------------------------------------------------------------
-typedef struct {
+typedef struct future future_t;
+struct future {
   struct ustack *waitq;
   void *value;
-} future_t;
-
-/// ----------------------------------------------------------------------------
-/// Lock and unlock the future.
-/// ----------------------------------------------------------------------------
-/// @{
-HPX_INTERNAL void future_lock(future_t *future);
-HPX_INTERNAL void future_unlock(future_t *future);
-/// @}
+};
 
 /// ----------------------------------------------------------------------------
 /// Signal a future.
@@ -69,41 +62,11 @@ HPX_INTERNAL struct ustack *future_signal(future_t *future, const void *data,
   HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
-/// For remote future signaling, we need an action wrapper for signal.
 ///
-/// This is it, and it is the only user-level mechanism for signaling a future.
-///
-/// @param args - the value to signal the future with (see hpx.h)
-/// @returns    - HPX_SUCCESS, or an error code
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int future_signal_action(hpx_future_signal_args_t *args);
-
-/// ----------------------------------------------------------------------------
-/// Get the value of the future.
-///
-/// Does not acquire the lock. It will always return the value of its value
-/// field. If @p out is non-NULL, and the future is not INPLACE, it will memcpy
-/// @p size bytes from the value address to @out. If @p out is non-NULL, and the
-/// future is INPLACE, it will use memcpy to copy the actual bits of the value
-/// field to @out.
-///
-/// @param      future - the future to query
-/// @param[out]    out - the data out
-/// @param        size - the number of bytes to copy
-/// @returns           - the value of the future's value field
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL const void *future_get_value(const future_t *future, void *out,
-                                          int size)
+HPX_INTERNAL void future_wait(future_t *future, struct ustack *stack)
   HPX_NON_NULL(1, 2);
 
-/// ----------------------------------------------------------------------------
-/// Enqueues the stack on the wait queue for the future.
-///
-/// Must be called while holding the future's lock. Will release the lock.
-///
-/// @param future - the future to wait on
-/// @param  stack - the stack to enqueue
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void future_wait(future_t *future, struct ustack *stack);
+HPX_INTERNAL void future_lock(future_t *future) HPX_NON_NULL(1);
 
 #endif // LIBHPX_FUTURE_H
