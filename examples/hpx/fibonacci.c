@@ -76,9 +76,14 @@ fib_action(void *args) {
     &fns[1]
   };
 
+  int sizes[] = {
+    sizeof(long),
+    sizeof(long)
+  };
+
   hpx_call(peers[0], fib, &ns[0], sizeof(long), futures[0]);
   hpx_call(peers[1], fib, &ns[1], sizeof(long), futures[1]);
-  hpx_thread_wait_all(2, futures, addrs);
+  hpx_future_get_all(2, futures, addrs, sizes);
   hpx_future_delete(futures[0]);
   hpx_future_delete(futures[1]);
 
@@ -93,7 +98,7 @@ fib_main_action(void *args) {
   hpx_time_t clock = hpx_time_now();
   hpx_addr_t future = hpx_future_new(sizeof(long));
   hpx_call(hpx_get_my_rank(), fib, &n, sizeof(n), future);
-  hpx_thread_wait(future, &fn);
+  hpx_future_get(future, &fn, sizeof(fn));
 
   double time = hpx_time_to_us(clock - hpx_time_now())/1e3;
 

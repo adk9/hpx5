@@ -209,13 +209,11 @@ scheduler_shutdown(int code) {
 }
 
 void
-scheduler_yield(unsigned n, hpx_addr_t lcos[n]) {
+scheduler_yield(future_t *future) {
   ustack_t *from = ustack_current();
 
-  if (n) {
-    for (unsigned i = 0; i < n; ++i) {
-      ((void)lcos[i]);
-    }
+  if (future) {
+    future_wait(future, from);
   }
   else {
     from->next = _next;
@@ -227,6 +225,9 @@ scheduler_yield(unsigned n, hpx_addr_t lcos[n]) {
   // if we're transferring to the same stack we're on, elide the tranfer
   if (from != to)
     ustack_transfer(to->sp, ustack_transfer_checkpoint);
+
+  if (future)
+    future_lock(future);
 }
 
 void
@@ -237,31 +238,34 @@ scheduler_exit(hpx_parcel_t *parcel) {
   unreachable();
 }
 
+// static int
+// future_signal_action(hpx_future_signal_args_t *args) {
+//   // figure out which future we need to signal
+//   ustack_t *thread = ustack_current();
+//   hpx_parcel_t *parcel = thread->parcel;
+//   hpx_addr_t addr = parcel->target;
+//   future_t *future;
+//   if (!(network_addr_is_local(addr, (void**)&future))) {
+//     fprintf(stderr, "future_trigger_action() failed to map future address.\n");
+//     return 1;
+//   }
 
-int
-future_signal_action(hpx_future_signal_args_t *args) {
-  // figure out which future we need to signal
-  ustack_t *thread = ustack_current();
-  hpx_parcel_t *parcel = thread->parcel;
-  hpx_addr_t addr = parcel->target;
-  future_t *future;
-  if (!(network_addr_is_local(addr, (void**)&future))) {
-    fprintf(stderr, "future_trigger_action() failed to map future address.\n");
-    return 1;
-  }
+//   // signal the future, returns the threads that were waiting
+//   ustack_t *stack = future_signal(future, &args->bytes, args->size);
 
-  // signal the future, returns the threads that were waiting
-  ustack_t *stack = future_signal(future, &args->bytes, args->size);
+//   while (stack) {
+//     // pop the stack
+//     ustack_t *thread = stack;
+//     stack = thread->next;
 
-  while (stack) {
-    // pop the stack
-    ustack_t *thread = stack;
-    stack = thread->next;
+//     // push the thread onto the ready list
+//     thread->next = _ready;
+//     _ready = thread;
+//   }
 
-    // push the thread onto the ready list
-    thread->next = _ready;
-    _ready = thread;
-  }
+//   return HPX_SUCCESS;
+// }
 
-  return HPX_SUCCESS;
+void
+hpx_future_set(hpx_addr_t future, const void *value, int size) {
 }

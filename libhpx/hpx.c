@@ -101,39 +101,16 @@ hpx_get_num_ranks(void) {
 }
 
 void
-hpx_thread_wait(hpx_addr_t future, void *value) {
-}
-
-void
-hpx_thread_wait_all(unsigned n, hpx_addr_t futures[], void *values[]) {
-}
-
-void
-hpx_thread_yield(void) {
-}
-
-void
 hpx_thread_exit(int status, const void *value, unsigned size) {
+  // if there's a continuation future, then we set it
   ustack_t *stack = ustack_current();
   hpx_parcel_t *parcel = stack->parcel;
   hpx_addr_t cont = parcel->cont;
-  if (cont != HPX_NULL) {
-    hpx_parcel_t *c = hpx_parcel_acquire(size);
-    hpx_parcel_set_action(c, hpx_future_signal);
-    hpx_parcel_set_target(c, cont);
-    memcpy(hpx_parcel_get_data(c), value, size);
-    hpx_parcel_send(c);
-  }
+  if (cont != HPX_NULL)
+    hpx_future_set(cont, value, size);
+
+  // exit terminates this thread
   scheduler_exit(parcel);
-}
-
-hpx_addr_t
-hpx_future_new(int size) {
-  return HPX_NULL;
-}
-
-void
-hpx_future_delete(hpx_addr_t future) {
 }
 
 void

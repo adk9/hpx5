@@ -18,6 +18,8 @@
 #define LIBHPX_SCHEDULER_COOPERATIVE 0
 #define LIBHPX_SCHEDULER_PREEMPTIVE 1
 
+struct future;
+
 /// ----------------------------------------------------------------------------
 /// Initializes global scheduler data for this address space.
 ///
@@ -90,11 +92,9 @@ HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p) HPX_NON_NULL(1);
 /// to work correctly and the thread will become blocked until all of the LCOs
 /// designated in @p lco are signaled.
 ///
-/// @param    n - The number of LCOs that the thread wants to wait for.
-/// @param lcos - The global addresses for the LCOs that the thread wants to
-///               wait for.
+/// @param future - (optional) yield while holding a future's lock
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_yield(unsigned n, hpx_addr_t lcos[n]);
+HPX_INTERNAL void scheduler_yield(struct future *future);
 
 /// ----------------------------------------------------------------------------
 /// Exit a user level thread.
