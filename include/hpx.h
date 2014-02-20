@@ -73,11 +73,19 @@ hpx_addr_t hpx_addr_from_rank(int rank);
 /// HPX user-level threading interface
 void hpx_thread_wait(hpx_addr_t future, void *value);
 void hpx_thread_wait_all(unsigned n, hpx_addr_t futures[], void *values[]);
-int  hpx_thread_exit(void *value, unsigned size);
+void hpx_thread_exit(int status, const void *value, unsigned size) HPX_NORETURN;
 
 /// Futures are a kind of LCO and are native to HPX.
 hpx_addr_t hpx_future_new(int size);
 void       hpx_future_delete(hpx_addr_t future);
+
+///
+typedef struct {
+  int size;
+  char bytes[];
+} hpx_future_signal_args_t;
+
+extern hpx_action_t hpx_future_signal;
 
 /// HPX high-resolution timer interface
 hpx_time_t hpx_time_now(void);

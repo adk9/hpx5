@@ -46,7 +46,7 @@ fib_action(void *args) {
   long n = *(long*)args;
 
   if (n < 2)
-    return hpx_thread_exit(&n, sizeof(n));
+    hpx_thread_exit(HPX_SUCCESS, &n, sizeof(n));
 
   int rank = hpx_get_my_rank();
   int ranks = hpx_get_num_ranks();
@@ -83,8 +83,7 @@ fib_action(void *args) {
   hpx_future_delete(futures[1]);
 
   long fn = fns[0] + fns[1];
-
-  return hpx_thread_exit(&fn, sizeof(fn));
+  hpx_thread_exit(HPX_SUCCESS, &fn, sizeof(fn));
 }
 
 static int

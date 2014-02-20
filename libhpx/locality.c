@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <hpx.h>
+#include "hpx.h"
 #include "locality.h"
 #include "scheduler.h"
+#include "future.h"
 #include "sync/barriers.h"
 
 /// ----------------------------------------------------------------------------
@@ -36,6 +37,8 @@ static pthread_t *_threads = NULL;
 static pthread_attr_t *_attributes = NULL;
 static int *_args = NULL;
 static sr_barrier_t *_barrier = NULL;
+
+hpx_action_t hpx_future_signal = HPX_ACTION_NULL;
 static hpx_action_t _null_startup = HPX_ACTION_NULL;
 
 /// ----------------------------------------------------------------------------
@@ -64,8 +67,12 @@ int
 locality_init(int n) {
   _n = (n) ? n : _get_num_pu();
 
-  // register the null startup action for the non-prime scheduler threads
-  _null_startup = hpx_action_register("hpx_null_startup", _null_startup_action);
+  // register actions
+  hpx_future_signal = hpx_action_register("future_signal_action", (hpx_action_handler_t)future_signal_action);
+  if (hpx_future_signal == HPX_ACTION_NULL)
+    return 1;
+
+  _null_startup = hpx_action_register("_null_startup_action", _null_startup_action);
   if (_null_startup == HPX_ACTION_NULL)
     return 1;
 

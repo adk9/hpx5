@@ -39,14 +39,14 @@ sum(T count, T values[count]) {
 
 static int
 action_get_value(void *args) {
-  return hpx_thread_exit(&value, sizeof(value));
+  hpx_thread_exit(HPX_SUCCESS, &value, sizeof(value));
 }
 
 static int
 action_set_value(void *args) {
   value = *(T*)args;
   printf("At rank %d received value %lld\n", hpx_get_my_rank(), (long long)value);
-  return hpx_thread_exit(NULL, 0);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 static int

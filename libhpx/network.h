@@ -31,8 +31,25 @@ HPX_INTERNAL void network_fini(void);
 HPX_INTERNAL void network_fini_thread(void);
 /// @}
 
-HPX_INTERNAL void network_send(hpx_parcel_t *p);
-HPX_INTERNAL void network_send_sync(hpx_parcel_t *p);
+/// ----------------------------------------------------------------------------
+/// Wrap a network barrier.
+/// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_barrier(void);
+
+
+// The global addressing mechanism is the network's responsibility.
+
+/// ----------------------------------------------------------------------------
+/// Get the local address for a global address.
+///
+/// HPX_NULL will always return true and set @p out to NULL. A remote address
+/// will return false, but possibly leaves the out parameter in an undefined
+/// state.
+///
+/// @param     addr - the global address to check
+/// @param[out] out - the local address (possibly NULL)
+/// @returns        - true if the address is local, false if it is not
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL bool network_addr_is_local(hpx_addr_t addr, void **out);
 
 #endif // LIBHPX_NETWORK_H

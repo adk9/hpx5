@@ -30,11 +30,14 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "scheduler.h"
 #include "ustack.h"
 #include "parcel.h"
 #include "action.h"
+#include "future.h"
+#include "network.h"
 #include "builtins.h"
 #include "sync/ms_queue.h"
 
@@ -82,11 +85,9 @@ static void _wait(int seconds) {
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN _entry(hpx_parcel_t *parcel) {
   hpx_action_handler_t f = action_for_key(parcel->action);
-  f(parcel->data);
-  parcel_release(parcel);
-  ustack_t *to = _schedule();
-  ustack_transfer(to->sp, ustack_transfer_delete);
-  unreachable();
+  int status = f(parcel->data);
+  ((void)status); /// @todo Do something with this?
+  scheduler_exit(parcel);
 }
 
 /// ----------------------------------------------------------------------------
@@ -226,4 +227,41 @@ scheduler_yield(unsigned n, hpx_addr_t lcos[n]) {
   // if we're transferring to the same stack we're on, elide the tranfer
   if (from != to)
     ustack_transfer(to->sp, ustack_transfer_checkpoint);
+}
+
+void
+scheduler_exit(hpx_parcel_t *parcel) {
+  parcel_release(parcel);
+  ustack_t *to = _schedule();
+  ustack_transfer(to->sp, ustack_transfer_delete);
+  unreachable();
+}
+
+
+int
+future_signal_action(hpx_future_signal_args_t *args) {
+  // figure out which future we need to signal
+  ustack_t *thread = ustack_current();
+  hpx_parcel_t *parcel = thread->parcel;
+  hpx_addr_t addr = parcel->target;
+  future_t *future;
+  if (!(network_addr_is_local(addr, (void**)&future))) {
+    fprintf(stderr, "future_trigger_action() failed to map future address.\n");
+    return 1;
+  }
+
+  // signal the future, returns the threads that were waiting
+  ustack_t *stack = future_signal(future, &args->bytes, args->size);
+
+  while (stack) {
+    // pop the stack
+    ustack_t *thread = stack;
+    stack = thread->next;
+
+    // push the thread onto the ready list
+    thread->next = _ready;
+    _ready = thread;
+  }
+
+  return HPX_SUCCESS;
 }

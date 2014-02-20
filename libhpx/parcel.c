@@ -89,13 +89,3 @@ hpx_parcel_get_data(hpx_parcel_t *p) {
   assert(p->data);
   return p->data;
 }
-
-void
-hpx_parcel_send(hpx_parcel_t *p) {
-  network_send(p);
-}
-
-void
-hpx_parcel_send_sync(hpx_parcel_t *p) {
-  network_send_sync(p);
-}
