@@ -21,7 +21,7 @@ ping(Packet *arg)
   /* handle our base case */
   if (arg->token++ > 100)
     hpx_thread_exit(0);
- 
+
   hpx_locality_t *dst = arg->src;
   arg->src = hpx_get_my_locality();
   hpx_call(dst, ping_action, arg, sizeof(*arg), NULL);
@@ -40,12 +40,9 @@ main(int argc, char *argv[])
     localities = atoi(argv[1]);
   }
 
-  /* initialize hpx runtime */
-  hpx_init();
 
-  /* set up our configuration */
-  hpx_config_t cfg;
-  hpx_config_init(&cfg);
+  /* initialize hpx runtime */
+  hpx_init(NULL);
 
   /* TODO:
   if (localities > 0)
@@ -55,14 +52,11 @@ main(int argc, char *argv[])
   /* get the number of localities */
   num_ranks = hpx_get_num_localities();
 
-  /* get a thread context */
-  ctx = hpx_ctx_create(&cfg);
-
   Packet p = {
     .src = hpx_get_my_locality(),
     .token = 0
   };
-  
+
   /* register the actions */
   ping_action = hpx_action_register("ping", (hpx_func_t)ping);
 
@@ -79,7 +73,6 @@ main(int argc, char *argv[])
   printf("elapsed time: %.7f\n", hpx_elapsed_us(timer)/1e3);
 
   /* cleanup */
-  hpx_ctx_destroy(ctx);
 
   hpx_cleanup();
 

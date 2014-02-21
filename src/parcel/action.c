@@ -33,6 +33,7 @@
 #include "debug.h"                              /* dbg_* stuff */
 #include "hashstr.h"                            /* hashstr() */
 #include "network.h"                            /* struct network_mgr */
+#include "libhpx/parcel.h"                      /* struct hpx_parcel */
 
 /** Typedefs that we use for convenience in this source. */
 typedef struct hpx_parcel   parcel_t;
@@ -248,16 +249,56 @@ hpx_waitfor_action_registration_complete(void) {
  *
  * @param[in]  action - the action id we want to perform
  * @param[in]  args   - the argument buffer for the action
- * @param[out] out    - a future to wait on
+o * @param[in]  thread - a future that will be triggered with the address of the
+ *                      remote thread when the send is complete, may be NULL
+ * @param[out] out    - a future to wait on, may be NULL
  *
  * @returns an error code
  */
 hpx_error_t
-hpx_action_invoke(hpx_action_t action, void *args, future_t **out)
+hpx_action_invoke(hpx_action_t action, void *args,  hpx_future_t *thread, future_t **out)
 {
   hpx_func_t f = action_lookup(action);
   dbg_assert(f && "Failed to find action");
-  return hpx_thread_create(__hpx_global_ctx, 0, f, args, out, NULL);
+  hpx_thread_t *th;
+  hpx_error_t success = hpx_thread_create(__hpx_global_ctx, 0, f, args, out, &th);
+  if (thread != NULL)
+    hpx_lco_future_set(thread, HPX_LCO_FUTURE_SETMASK, th);
+  return success;
+}
+
+static void action_wrap(void *arg) {
+  struct hpx_parcel *parcel = (struct hpx_parcel*)arg;
+  hpx_func_t f = action_lookup(parcel->action);
+  dbg_assert(f && "Failed to find action");
+  f(parcel->payload);
+  hpx_parcel_release(parcel);
+  // TODO call thread_exit() to set the result future?
+}
+
+/**
+ * Call to invoke an action locally.
+ *
+ * @param[in]  parcel - the parcel that contains the action and arguments
+ * @param[in]  thread - a future that will be triggered with the address of the
+ *                      remote thread when the send is complete, may be NULL
+ * @param[out] out    - a future to wait on, may be NULL
+ *
+ * @returns an error code
+ */
+hpx_error_t
+hpx_action_invoke_parcel(struct hpx_parcel *parcel, hpx_future_t *thread, future_t **out)
+{
+  hpx_func_t f = action_lookup(parcel->action);
+  dbg_assert(f && "Failed to find action");
+  if (f!= NULL) {
+    hpx_thread_t *th;
+    hpx_error_t success = hpx_thread_create(__hpx_global_ctx, 0, (hpx_func_t)action_wrap, parcel, out, &th);
+    if (thread != NULL)
+      hpx_lco_future_set(thread, HPX_LCO_FUTURE_SETMASK, th);
+    return success;
+  }
+  return HPX_ERROR;
 }
 
 /**
@@ -277,7 +318,7 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
 {
   dbg_assert_precondition(dest);
   dbg_assert_precondition(action);
-  dbg_assert_precondition(len && args);
+  dbg_assert_precondition(((len && args) || ((args && len) == 0)));
 
   parcel_t *p = hpx_parcel_acquire(len);
   if (!p) {
@@ -287,7 +328,6 @@ hpx_call(locality_t *dest, hpx_action_t action, void *args, size_t len,
   
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_data(p, args, len);
-  int success = hpx_parcel_send(dest, p, NULL, NULL, result);
-  hpx_parcel_release(p);
+  int success = hpx_parcel_send(dest, p, NULL, result);
   return success;
 }

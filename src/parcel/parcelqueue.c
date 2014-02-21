@@ -35,12 +35,6 @@
 /*
   ====================================================================
   This implements the parcel queue.
-
-  LD: This is basically broken for multithreaded use. It needs proper
-  synchronization so that it doesn't have any data races. It won't
-  be too hard to fix, but I don't have time at the moment.
-  Basically, we just need to implement the M&S queue for pushers,
-  and properly synchronize the trypop read operations.
   ====================================================================
 */
 

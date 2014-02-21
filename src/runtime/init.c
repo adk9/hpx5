@@ -31,9 +31,12 @@
 #include "hpx/utils/timer.h"
 #include "hpx/thread/ctx.h"
 #include "bootstrap.h"                          /* struct bootstrap_ops */
+#include "ctx.h"                                /* ctx_start */
 #include "network.h"
 #include "parcelhandler.h"                      /* struct parcelhandler */
 #include "predefined_actions.h"                 /* init_predefined() */
+#include "libhpx/debug.h"
+#include "sync/barriers.h"
 
 /**
  * There's one parcelhandler per (UNIX) process at this point.
@@ -46,31 +49,26 @@ extern hpx_future_t *action_registration_complete;
  * Wait for all other ranks to signal shutdown
  */
 void
-waitfor_shutdown() 
+waitfor_shutdown()
 {
-  unsigned i;
-  unsigned num_localities;
-  
   /* First, we need to wait for all other localities to reach this point. */
-  num_localities = hpx_get_num_localities();
-
-  for (i = 0; i < num_localities; i++) {
-    struct {size_t rank;} *arg;
-    arg = hpx_alloc(sizeof(*arg));
-    arg->rank = (size_t)hpx_get_rank();
-    struct hpx_parcel* p = hpx_parcel_acquire(sizeof(*arg));
+  for (int i = 0, e = hpx_get_num_localities(); i < e; ++i) {
+    struct {
+      size_t rank;
+    } arg = { hpx_get_rank() };
+    struct hpx_parcel* p = hpx_parcel_acquire(sizeof(arg));
     if (p == NULL) {
       __hpx_errno = HPX_ERROR;
       return;
     }
     hpx_parcel_set_action(p, action_set_shutdown_future);
-    hpx_parcel_set_data(p, arg, sizeof(*arg));
+    hpx_parcel_set_data(p, &arg, sizeof(arg));
     hpx_locality_t *loc = hpx_locality_from_rank(i);
-    hpx_parcel_send(loc, p, NULL, NULL, NULL);
-    hpx_parcel_release(p);
+    hpx_parcel_send(loc, p, NULL, NULL);
     hpx_locality_destroy(loc);
   }
-  for (i = 0; i < num_localities; i++)
+
+  for (int i = 0, e = hpx_get_num_localities(); i < e; ++i)
     hpx_thread_wait(&shutdown_futures[i]);
 
   return;
@@ -85,7 +83,7 @@ waitfor_shutdown()
  * @return error code.
  */
 hpx_error_t
-hpx_init(void)
+hpx_init(struct hpx_config* cfg)
 {
   /* init hpx_errno */
   hpx_error_t success = HPX_SUCCESS;
@@ -100,7 +98,6 @@ hpx_init(void)
   __hpx_global_cfg = hpx_alloc(sizeof(*__hpx_global_cfg));
   if (!__hpx_global_cfg)
     return __hpx_errno = HPX_ERROR;
-    
   hpx_config_init(__hpx_global_cfg);
   //  hpx_config_set_cores(__hpx_global_cfg, 8);
 
@@ -110,10 +107,14 @@ hpx_init(void)
     hpx_config_set_cores(__hpx_global_cfg, num_cores);
   }
 
+  if (cfg) {
+    memcpy(__hpx_global_cfg, cfg, sizeof(*__hpx_global_cfg));
+  }
+
   __hpx_global_ctx = hpx_ctx_create(__hpx_global_cfg);
   if (!__hpx_global_ctx)
     return __hpx_errno; // __hpx_errno is set by hpx_ctx_create on failure
-  
+
   /* initialize network */
   __hpx_network_ops = hpx_alloc(sizeof(*__hpx_network_ops));
   *__hpx_network_ops = default_net_ops;
@@ -133,6 +134,7 @@ hpx_init(void)
 
   /* bootstrap the runtime */
   success = bootmgr->init();
+  dbg_assert(!success);
   if (success != HPX_SUCCESS)
     return __hpx_errno = success;
 
@@ -141,6 +143,7 @@ hpx_init(void)
 
   /* initialize network */
   success = __hpx_network_ops->init();
+  dbg_assert(!success);
   if (success != HPX_SUCCESS)
     return __hpx_errno = success;
 #endif
@@ -153,10 +156,14 @@ hpx_init(void)
   init_predefined();
 
   /* initialize the parcel subsystem */
-  hpx_parcel_init();
+  hpx_parcel_init(__hpx_global_ctx);
 #if HAVE_NETWORK
   the_parcelhandler = parcelhandler_create(__hpx_global_ctx);
 #endif
+
+  /* allow all of the worker threads to begin execution */
+  ctx_start(__hpx_global_ctx);
+
   return success;
 }
 

@@ -30,7 +30,6 @@
 
 typedef struct hpx_kthread hpx_kthread_t;
 typedef pthread_mutex_t hpx_kthread_mutex_t;
-typedef void *(*hpx_kthread_seed_t)(void*);
 
 struct hpx_context;
 struct hpx_mctx_context;
@@ -39,32 +38,63 @@ struct hpx_thread;
 enum hpx_kthread_state {
   HPX_KTHREAD_STATE_STOPPED = 0,
   HPX_KTHREAD_STATE_RUNNING = 1,
-  HPX_KTHREAD_STATE_BUSY    = 2
+  HPX_KTHREAD_STATE_BUSY    = 2,
+  HPX_KTHREAD_STATE_NEW     = 3
 };
 
 struct hpx_kthread {
-  hpx_kthread_mutex_t       mtx;                /**< */
-  pthread_cond_t            k_c;                /**< */
-  pthread_t             core_th;                /**< */
-  hpx_queue_t            pend_q;                /**< */
-  hpx_queue_t            susp_q;                /**< */
-  struct hpx_thread    *exec_th;                /**< */
-  struct hpx_context       *ctx;                /**< */
-  uint8_t                  k_st;                /**< */
-  struct hpx_mctx_context *mctx;                /**< */
-  hpx_mconfig_t            mcfg;                /**< */
-  uint64_t               mflags;                /**< */
-  uint64_t            pend_load;                /**< */
-  uint64_t            wait_load;                /**< */
+  hpx_kthread_mutex_t       mtx;                /*!< */
+  pthread_cond_t            k_c;                /*!< */
+  pthread_t             core_th;                /*!< */
+  hpx_queue_t            pend_q;                /*!< */
+  hpx_queue_t            susp_q;                /*!< */
+  struct hpx_thread    *exec_th;                /*!< */
+  struct hpx_context       *ctx;                /*!< */
+  uint8_t                  k_st;                /*!< */
+  struct hpx_mctx_context *mctx;                /*!< */
+  hpx_mconfig_t            mcfg;                /*!< */
+  uint64_t               mflags;                /*!< */
+  uint64_t            pend_load;                /*!< */
+  uint64_t            wait_load;                /*!< */
+  int                       tid;                /*!< 0-based, dense thread id  */
 };
 
+/**
+ * Allocate and initialize a new kthread structure. The thread's state is
+ * HPX_KTHREAD_STATE_NEW. To run the thread, call hpx_kthread_start().
+ *
+ * @param[in]    ctx - the context that contains the thread
+ * @param[in]   mcfg - the machine configuration
+ * @param[in] mflags - the machine flags
+ * @param[in]    tid - the thread id
+ * @returns - a newly allocated and initialized hpx_kthread_t
+ */
+hpx_kthread_t *hpx_kthread_new(struct hpx_context *ctx, int tid);
 
-void *hpx_kthread_seed_default(void *);
+/**
+ * Deletes the thread structure. If the thread is running, then it is terminated
+ * and joined inside of this call.
+ *
+ *
+ */
+void hpx_kthread_delete(hpx_kthread_t *thread);
 
-hpx_kthread_t *hpx_kthread_create(struct hpx_context *, hpx_kthread_seed_t, hpx_mconfig_t, uint64_t);
-void hpx_kthread_set_affinity(hpx_kthread_t *, uint16_t);
-void hpx_kthread_destroy(hpx_kthread_t *);
+/**
+ * Start a kernel thread.
+ *
+ * @param[in] thread - the thread descriptor
+ * @param[in]      f - the thread entry function
+ * @param[in]   args - the entry function's arguments
+ * @returns - HPX_SUCCESS, or an error code
+ */
+int hpx_kthread_start(hpx_kthread_t *thread, void* (*f)(void *), void *args);
+
 hpx_kthread_t *hpx_kthread_self(void);
+
+/**
+ * A default event loop for kthreads.
+ */
+void *hpx_kthread_seed_default(void *ptr);
 
 /**
  * kthread mutex interface
@@ -75,7 +105,7 @@ void hpx_kthread_mutex_lock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_unlock(hpx_kthread_mutex_t *);
 void hpx_kthread_mutex_destroy(hpx_kthread_mutex_t *);
 /** @} */
-   
+
 
 /*
  --------------------------------------------------------------------

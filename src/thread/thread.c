@@ -33,8 +33,10 @@
 #include "hpx/utils/map.h"
 #include "sync/sync.h"
 
-#include "init.h"                               /* lbihpx_thread_init() */
+#include "debug.h"
+#include "init.h"                               /* libhpx_thread_init() */
 #include "join.h"                               /* thread_join() */
+#include "ctx.h"                                /* ctx_get_next_tls_id() */
 #include "kthread.h"
 
 /** Forward declarations @{ */
@@ -42,7 +44,7 @@ struct _hpx_map_t;
 /** @} */
 
 /* the next thread ID */
-static hpx_thread_id_t thread_next_id;
+static hpx_thread_id_t thread_next_id = 0;
 
 /* called by hpx_init() to initialize this module---avoiding static
    constructors for now */
@@ -63,6 +65,11 @@ hpx_thread_id_t
 hpx_thread_get_id(hpx_thread_t *th)
 {
   return th->tid;
+}
+
+long
+hpx_thread_get_index(void) {
+  return hpx_thread_self()->tls_id;
 }
 
 /*
@@ -143,6 +150,8 @@ hpx_thread_create(hpx_context_t    *ctx,
   th->opts = opts;
   th->parent = hpx_thread_self();
   th->skip = 0;
+  th->tls_id = ctx_get_next_tls_id(ctx);
+  dbg_logf("Create a thread with TLS id: %lu\n", th->tls_id);
 
   th->reuse = th_ru;
   th->reuse->func = func;

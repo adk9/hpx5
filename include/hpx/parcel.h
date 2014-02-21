@@ -25,7 +25,6 @@
 /**
  * @file @brief Provides the user-level parcel interface.
  */
-#include <stddef.h>                             /* size_t */
 #include "hpx/system/attributes.h"              /* MACROS */
 #include "hpx/action.h"                         /* hpx_action_t */
 
@@ -54,7 +53,7 @@ struct hpx_address;
  * @param[in] bytes - the number of bytes in the payload to allocate
  * @returns a pointer to an allocated hpx_parcel, or NULL if there is an error
  */
-hpx_parcel_t *hpx_parcel_acquire(size_t bytes);
+hpx_parcel_t *hpx_parcel_acquire(int bytes);
 
 /**
  * Release a user-level parcel back to the runtime.
@@ -114,22 +113,15 @@ hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
   HPX_ATTRIBUTE(HPX_NON_NULL(1, 2), HPX_RETURNS_NON_NULL);
 
 /**
- * Initiate a parcel send operation.
+ * Initiate a parcel send operation. Note that Calling this function transfers                                                                                                                                                   
+ * ownership of the parcel to the runtime system which will release it.
  *
  * This operation does not provide a scheduling opportunity to the runtime,
  * i.e., the calling thread will not be context switched during its execution.
  *
- * The only valid operation on @p parcel during the send is
- * hpx_parcel_release(). The interface provides two different future
- * parameters, @p local_complete and @p remote_complete, which can be used with
- * the hpx_thread_wait() interface to wait for either condition to occur. The
- * parcel may be reused once @p local_complete has triggered. Either future can
- * be set to NULL, in which case the runtime does not generate those events.
- *
- * @param[in]     dest - the destination locality (HACK)
+ * @param[in]     dest - the destination locality; may be freed immediately upon 
+ *                       return (HACK)
  * @param[in]   parcel - the parcel to send, must be non-NULL
- * @param[in] complete - a future that will be triggered when the send completes
- *                       locally, may be NULL 
  * @param[in]   thread - a future that will be triggered with the address of the
  *                       remot thread when the send is complete, may be NULL
  * @param[in]   result - the address of a future that will be triggered when the
@@ -138,8 +130,7 @@ hpx_parcel_t *hpx_parcel_copy(hpx_parcel_t * restrict to,
  * @returns an error indicating a problem with the runtime
  */
 int hpx_parcel_send(struct hpx_locality *dest,
-                    const hpx_parcel_t *parcel,
-                    struct hpx_future *complete,
+                    hpx_parcel_t *parcel,
                     struct hpx_future *thread,
                     struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
@@ -151,7 +142,7 @@ int hpx_parcel_send(struct hpx_locality *dest,
  *
  * @code
  * hpx_parcel_t *parcel = {...};
- * size_t size = {...};
+ * int size = {...};
  * hpx_parcel_t *q = hpx_parcel_acquire(size);
  * hpx_parcel_copy(q, parcel);
  * hpx_parcel_release(parcel);
@@ -170,7 +161,7 @@ int hpx_parcel_send(struct hpx_locality *dest,
  * @param[in] size   - the target size
  * @returns non-zero if an error condition occurred
  */
-int hpx_parcel_resize(hpx_parcel_t **parcel, size_t size)
+int hpx_parcel_resize(hpx_parcel_t **parcel, int size)
   HPX_ATTRIBUTE(HPX_NON_NULL(1));
 
 /**
@@ -271,7 +262,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *parcel)
  * @param[in]   data - the address of the data to set
  * @param[in] length - the number of bytes of data to set
  */
-void hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, size_t length)
+void hpx_parcel_set_data(hpx_parcel_t * restrict parcel, void * restrict data, int length)
   HPX_ATTRIBUTE(HPX_NON_NULL(1,2));
 
 #endif /* HPX_PARCEL_H_ */
