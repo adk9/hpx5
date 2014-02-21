@@ -224,7 +224,8 @@ scheduler_startup(hpx_action_t action, const void *args, unsigned size) {
   hpx_parcel_t *p = hpx_parcel_acquire(size);
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, HPX_NULL);
-  memcpy(hpx_parcel_get_data(p), args, sizeof(size));
+  if (size)
+    memcpy(hpx_parcel_get_data(p), args, size);
   thread_t *thread = thread_new(_entry, p);
   return thread_transfer(thread->sp, &_native_stack, _post_startup);
 }

@@ -86,6 +86,5 @@ hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t cont) {
 void *
 hpx_parcel_get_data(hpx_parcel_t *p) {
   assert(p);
-  assert(p->data);
   return p->data;
 }

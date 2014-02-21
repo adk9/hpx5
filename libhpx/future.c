@@ -149,10 +149,11 @@ static void _get_local(future_t *f, void *out, int size) {
 /// ----------------------------------------------------------------------------
 static hpx_addr_t _spawn_get_remote(hpx_addr_t future, int size) {
   hpx_addr_t cont = hpx_future_new(size);
-  hpx_parcel_t *p = hpx_parcel_acquire(0);
+  hpx_parcel_t *p = hpx_parcel_acquire(sizeof(size));
   hpx_parcel_set_target(p, future);
   hpx_parcel_set_action(p, _future_get_proxy);
   hpx_parcel_set_cont(p, cont);
+  memcpy(hpx_parcel_get_data(p), &size, sizeof(size));
   hpx_parcel_send(p);
   return cont;
 }
