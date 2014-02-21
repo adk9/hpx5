@@ -20,16 +20,22 @@
 #include <stdint.h>
 #include "hpx.h"
 
+HPX_INTERNAL int future_init_module(void);
+HPX_INTERNAL void future_fini_module(void);
+
+HPX_INTERNAL int future_init_thread(void);
+HPX_INTERNAL void future_fini_module(void);
+
 /// ----------------------------------------------------------------------------
-/// Forward declare the stack type for the wait queue.
+/// Forward declare the thread type for the wait queue.
 /// ----------------------------------------------------------------------------
-struct ustack;
+struct thread;
 
 /// ----------------------------------------------------------------------------
 /// Future structure.
 ///
 /// Futures basically implement two things. The first is a scheduler wait
-/// queue. Threads can wait for futures to be signaled by putting their stacks
+/// queue. Threads can wait for futures to be signaled by putting their threads
 /// into the queue.
 ///
 /// The second is a set-able value. The value is set by the signaler, and is
@@ -37,36 +43,34 @@ struct ustack;
 /// ----------------------------------------------------------------------------
 typedef struct future future_t;
 struct future {
-  struct ustack *waitq;
+  struct thread *waitq;                         // packed pointer stack
   void *value;
 };
 
 /// ----------------------------------------------------------------------------
-/// Signal a future.
+/// Sets a future's value.
 ///
-/// This will lock the future, copy the @p data, set the state to TRIGGERED and
-/// unlock the future, and return the list of waiting threads (i.e., the stack
-/// of waiting stacks).
+/// This will lock the future, copy the @p data, mark it as set, unlock the
+/// future, and return the list of waiting threads (i.e., the stack of waiting
+/// threads).
 ///
 /// @nb It is only called from the scheduler at this point. All of the threads
 ///     in the returned stack must be notified that a future that they are
 ///     waiting for has been signaled.
 ///
-/// @param future - the future to signal
-/// @param   data - the data to set the future's value to, WILL BE COPIED
-/// @param   size - the number of bytes of @p data
-/// @returns      - a stack of threads that were waiting for this signal
+/// @param    f - the future to signal
+/// @param data - the data to set the future's value to, WILL BE COPIED
+/// @param size - the number of bytes of @p data
+/// @returns    - a stack of threads that were waiting for this signal
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL struct ustack *future_signal(future_t *future, const void *data,
-                                          int size)
+HPX_INTERNAL struct thread *future_set(future_t *f, const void *data, int size)
   HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
+/// Acquire the future's lock.
 ///
+/// Used by the scheduler to reacquire the future after a wait.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void future_wait(future_t *future, struct ustack *stack)
-  HPX_NON_NULL(1, 2);
-
 HPX_INTERNAL void future_lock(future_t *future) HPX_NON_NULL(1);
 
 #endif // LIBHPX_FUTURE_H

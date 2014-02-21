@@ -25,7 +25,7 @@
 #include "network.h"
 
 int
-parcel_init(void) {
+parcel_init_module(void) {
   return HPX_SUCCESS;
 }
 
@@ -35,7 +35,7 @@ parcel_init_thread(void) {
 }
 
 void
-parcel_fini(void) {
+parcel_fini_module(void) {
 }
 
 void
@@ -53,7 +53,7 @@ hpx_parcel_acquire(unsigned size) {
   hpx_parcel_t *p = malloc(sizeof(*p) + size);
 
   p->next   = NULL;
-  p->stack  = NULL;
+  p->thread = NULL;
   p->data   = (size) ? &p->payload : NULL;
 
   p->size   = size;

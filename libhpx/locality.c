@@ -29,6 +29,11 @@
 #include "sync/barriers.h"
 
 /// ----------------------------------------------------------------------------
+/// This locality's NULL ACTION.
+/// ----------------------------------------------------------------------------
+hpx_action_t HPX_ACTION_NULL = 0;
+
+/// ----------------------------------------------------------------------------
 /// Locality data.
 /// ----------------------------------------------------------------------------
 static int _n = 0;
@@ -37,17 +42,15 @@ static pthread_attr_t *_attributes = NULL;
 static int *_args = NULL;
 static sr_barrier_t *_barrier = NULL;
 
-static hpx_action_t _null_startup = HPX_ACTION_NULL;
-
 /// ----------------------------------------------------------------------------
 /// Thread local data.
 /// ----------------------------------------------------------------------------
 static __thread int _id = 0;
 
 /// ----------------------------------------------------------------------------
-/// Startup action for locality threads.
+/// THE NULL ACTION
 /// ----------------------------------------------------------------------------
-static int _null_startup_action(void *unused) {
+static int _null_action(void *unused) {
   return HPX_SUCCESS;
 }
 
@@ -57,18 +60,16 @@ static int _get_num_pu(void) {
 
 static void *_entry(void *args) {
   _id = *(int*)args;
-  int e = scheduler_startup(_null_startup, NULL, 0);
+  int e = scheduler_startup(HPX_ACTION_NULL, NULL, 0);
   return *(void**)&e;
 }
 
 int
-locality_init(int n) {
+locality_init_module(int n) {
   _n = (n) ? n : _get_num_pu();
 
-  // register actions
-  _null_startup = hpx_action_register("_null_startup_action", _null_startup_action);
-  if (_null_startup == HPX_ACTION_NULL)
-    return 1;
+  // register the null action for this locality
+  HPX_ACTION_NULL = hpx_action_register("_null_action", _null_action);
 
   _threads = calloc(_n, sizeof(*_threads));
   if (!_threads) {
@@ -129,7 +130,7 @@ locality_init(int n) {
 }
 
 void
-locality_fini(void) {
+locality_fini_module(void) {
   for (int i = 1; i < _n; ++i)
     if (pthread_join(_threads[i], NULL))
       fprintf(stderr, "locality_init() could not clean up thread #%d.\n", i);

@@ -30,8 +30,8 @@ static bool arg_screen_out = false;       /*!< print messages to the terminal */
 static bool      arg_debug = false;       /*!< wait for a debugger to attach */
 
 /* actions */
-static hpx_action_t   ping = HPX_ACTION_NULL;
-static hpx_action_t   pong = HPX_ACTION_NULL;
+static hpx_action_t   ping = 0;
+static hpx_action_t   pong = 0;
 
 /* globals */
 static int           count = 0;           //!< per-locality count of actions

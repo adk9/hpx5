@@ -25,9 +25,9 @@
 
 static T value;
 
-static hpx_action_t set_value = HPX_ACTION_NULL;
-static hpx_action_t get_value = HPX_ACTION_NULL;
-static hpx_action_t allreduce = HPX_ACTION_NULL;
+static hpx_action_t set_value = 0;
+static hpx_action_t get_value = 0;
+static hpx_action_t allreduce = 0;
 
 static T
 sum(T count, T values[count]) {
