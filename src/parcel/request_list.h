@@ -20,10 +20,12 @@
 #ifndef LIBHPX_PARCEL_REQUEST_LIST_H_
 #define LIBHPX_PARCEL_REQUEST_LIST_H_
 
+#include <stddef.h>
 #include "hpx/system/attributes.h"              /* HPX_ATTRIBUTES() */
 
 struct header;                                  /* forward declare */
 struct network_request;                         /* forward declare */
+struct hpx_parcel;                              /* forward declare */
 
 typedef struct request_list_node request_list_node_t;
 
@@ -40,7 +42,8 @@ void request_list_init(request_list_t*);
 /* Perhaps confusingly, this function returns a network_request_t* so
    that it can be used in the get() call. It's done this way so we can
    avoid an extra alloc() we really don't need. */
-struct network_request* request_list_append(request_list_t*, struct header*)
+/* size is the total size of the header to be transferred */
+struct network_request* request_list_append(request_list_t*, struct hpx_parcel*, size_t size)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1, 2));
 
@@ -52,9 +55,12 @@ struct network_request* request_list_curr(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
 
-struct header* request_list_curr_parcel(request_list_t*)
+struct hpx_parcel* request_list_curr_parcel(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,
                 HPX_NON_NULL(1));
+
+size_t request_list_curr_size(request_list_t*)
+  HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
 
 void request_list_next(request_list_t*)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,

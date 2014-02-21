@@ -52,6 +52,7 @@
 #define sync_fadd(addr, val, mm) __atomic_fetch_add(addr, val, mm)
 #define sync_fence(mm) __atomic_thread_fence(mm)
 
+#define SYNC_ATOMIC(decl) decl
 
 /* ../generic.h implements all of the strongly-typed versions in
  * terms of the above generic versions.

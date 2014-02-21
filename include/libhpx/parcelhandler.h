@@ -72,8 +72,6 @@ void parcelhandler_destroy(struct parcelhandler *ph)
  *
  * @param[in]     dest - destination locality (HACK for virtual address)
  * @param[in]   parcel - the parcel to send
- * @param[in] complete - a 0-size future to trigger when send completes locally
- *                       (optional)
  * @param[in]   thread - a sizeof(struct hpx_thread *)-size future to trigger
  *                       when a thread has been generated to handle the action
  *                       (optional)
@@ -82,8 +80,7 @@ void parcelhandler_destroy(struct parcelhandler *ph)
  * @returns HPX_SUCCESS or an error code (@see error.h).
  */
 int parcelhandler_send(struct hpx_locality *dest,
-                       const struct hpx_parcel *parcel,
-                       struct hpx_future *complete,
+                       struct hpx_parcel *parcel,
                        struct hpx_future *thread,
                        struct hpx_future **result)
   HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL,

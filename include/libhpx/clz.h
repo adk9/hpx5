@@ -29,11 +29,22 @@
  *        floor(log_2(int)).
  **/
 #if defined(__GNUC__)
-static inline unsigned long clz(iunsigned long l) {
+static inline unsigned long clz(unsigned long l) {
   return __builtin_clzl(l);
 }
 #else
-unsigned long clz(iunsigned long l);
+unsigned long clz(unsigned long l);
+#endif
+
+/**
+ * @brief The related ctz instruction.
+ */
+#if defined(__GNUC__)
+static inline unsigned long ctz(unsigned long l) {
+  return __builtin_ctzl(l);
+}
+#else
+unsigned long ctz(unsigned long l);
 #endif
 
 #endif /* HPX_CLZ_H_ */
