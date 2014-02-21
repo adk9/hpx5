@@ -35,15 +35,15 @@ int
 hpx_init(int argc, char * const argv[argc]) {
   // start by initializing all of the subsystems
   int e = HPX_SUCCESS;
-  if (unlikely(e == locality_init_module(0)))
-    goto unwind0;
   if (unlikely(e = parcel_init_module()))
-    goto unwind1;
+    goto unwind0;
   if (unlikely(e = thread_init_module()))
-    goto unwind2;
+    goto unwind1;
   if (unlikely(e = scheduler_init_module()))
-    goto unwind3;
+    goto unwind2;
   if (unlikely(e = future_init_module()))
+    goto unwind3;
+  if (unlikely(e == locality_init_module(0)))
     goto unwind4;
   if (unlikely(e = network_init()))
     goto unwind5;
@@ -51,15 +51,15 @@ hpx_init(int argc, char * const argv[argc]) {
   return e;
 
  unwind5:
-  future_fini_module();
- unwind4:
-  scheduler_fini_module();
- unwind3:
-  thread_fini_module();
- unwind2:
-  parcel_fini_module();
- unwind1:
   locality_fini_module();
+ unwind4:
+  future_fini_module();
+ unwind3:
+  scheduler_fini_module();
+ unwind2:
+  thread_fini_module();
+ unwind1:
+  parcel_fini_module();
  unwind0:
   return e;
 }
