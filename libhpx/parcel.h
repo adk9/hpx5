@@ -15,11 +15,11 @@
 
 #include "hpx.h"
 
-struct ustack;                                  // a user-level stack
+struct thread;                                  // a user-level thread
 
-HPX_INTERNAL int parcel_init(void);
+HPX_INTERNAL int parcel_init_module(void);
 HPX_INTERNAL int parcel_init_thread(void);
-HPX_INTERNAL void parcel_fini(void);
+HPX_INTERNAL void parcel_fini_module(void);
 HPX_INTERNAL void parcel_fini_thread(void);
 
 /// ----------------------------------------------------------------------------
@@ -34,7 +34,7 @@ HPX_INTERNAL void parcel_fini_thread(void);
 /// with it.
 ///
 /// @field    next - intrusive parcel list pointer
-/// @field   stack - stack executing this active message
+/// @field  thread - thread executing this active message
 /// @field    data - the data payload associated with this parcel
 /// @field    size - the data size in bytes
 /// @field  action - the target action identifier
@@ -45,7 +45,7 @@ HPX_INTERNAL void parcel_fini_thread(void);
 struct hpx_parcel {
   // these fields are only valid within a locality
   hpx_parcel_t *next;
-  struct ustack *stack;
+  struct thread *thread;
   void *data;
 
   // fields below are sent on wire

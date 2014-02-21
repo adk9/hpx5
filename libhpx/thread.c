@@ -20,8 +20,9 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "ustack.h"
+#include "thread.h"
 #include "parcel.h"
+#include "locks.h"
 #include "asm.h"
 
 /// ----------------------------------------------------------------------------
@@ -29,14 +30,14 @@
 ///
 /// @todo These need to be configurable at runtime.
 /// ----------------------------------------------------------------------------
-#define LIBHPX_USTACK_PAGE_SIZE 4096
-#define LIBHPX_USTACK_PAGES 4
-#define LIBHPX_USTACK_SIZE (LIBHPX_USTACK_PAGE_SIZE * LIBHPX_USTACK_PAGES)
+#define LIBHPX_THREAD_PAGE_SIZE 4096
+#define LIBHPX_THREAD_PAGES 4
+#define LIBHPX_THREAD_SIZE (LIBHPX_THREAD_PAGE_SIZE * LIBHPX_THREAD_PAGES)
 
 /// ----------------------------------------------------------------------------
 /// A structure describing the initial frame on a stack.
 ///
-/// This must match the ustack_transfer.S asm file usage.
+/// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner, but we are just worried
 /// about x86-64 at the moment.
@@ -55,115 +56,107 @@ typedef struct {
   void          *r12;
   void          *rbx;
   void          *rbp;
-  ustack_entry_t rip;
-  void    *alignment[1];
+  thread_entry_t rip;
+  void *alignment[1];
 } HPX_PACKED _frame_t;
 #endif
 
 /// ----------------------------------------------------------------------------
-/// Captured for new stack allocation in ustack_init_thread().
+/// Captured for new stack allocation in thread_init_thread().
 /// ----------------------------------------------------------------------------
 /// @{
 static __thread uint32_t _mxcsr = 0;
 static __thread uint16_t _fpucw = 0;
 /// @}
 
-/// ----------------------------------------------------------------------------
-/// Freelist for thread-local stacks.
-/// ----------------------------------------------------------------------------
-static __thread ustack_t *_stacks = NULL;
-
-static _frame_t *_get_top_frame(ustack_t *stack) {
+static _frame_t *_get_top_frame(thread_t *thread) {
   assert(sizeof(_frame_t) == 80);
-  return (_frame_t*)&stack->stack[LIBHPX_USTACK_SIZE - sizeof(ustack_t) -
-                                  sizeof(_frame_t)];
+  return (_frame_t*)&thread->stack[LIBHPX_THREAD_SIZE - sizeof(thread_t) -
+                                   sizeof(_frame_t)];
 }
 
-static ustack_t *_get_from_sp(void *sp) {
-  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(LIBHPX_USTACK_SIZE);
+static thread_t *_get_from_sp(void *sp) {
+  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(LIBHPX_THREAD_SIZE);
   uintptr_t addr = (uintptr_t)sp;
   addr &= MASK;
-  ustack_t *stack = (ustack_t*)addr;
-  return stack;
+  thread_t *thread = (thread_t*)addr;
+  return thread;
 }
 
 int
-ustack_init(void) {
+thread_init_module(void) {
   return HPX_SUCCESS;
 }
 
 void
-ustack_fini(void) {
-  ustack_t *stack = NULL;
-  while ((stack = _stacks)) {
-    _stacks = _stacks->next;
-    free(stack);
-  }
+thread_fini_module(void) {
 }
 
 int
-ustack_init_thread(void) {
+thread_init_thread(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
   return HPX_SUCCESS;
 }
 
 void
-ustack_fini_thread(void) {
+thread_fini_thread(void) {
 }
 
-ustack_t *
-ustack_new(ustack_entry_t entry, hpx_parcel_t *parcel) {
-  // try to get a freelisted stack, or allocate a new, properly-aligned one
-  ustack_t *stack = _stacks;
-  if (stack) {
-    _stacks = _stacks->next;
-  }
-  else {
-    if (posix_memalign((void**)&stack, LIBHPX_USTACK_SIZE, LIBHPX_USTACK_SIZE))
-      assert(false);
-  }
-
+thread_t *
+thread_init(thread_t *thread, thread_entry_t entry, hpx_parcel_t *parcel) {
   // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(stack);
-  frame->mxcsr  = _mxcsr;
-  frame->fpucw  = _fpucw;
-  frame->rdi    = parcel;
-  frame->rbp    = &frame->rip;
-  frame->rip    = entry;
+  _frame_t *frame = _get_top_frame(thread);
+  frame->mxcsr   = _mxcsr;
+  frame->fpucw   = _fpucw;
+  frame->rdi     = parcel;
+  frame->rbp     = &frame->rip;
+  frame->rip     = entry;
 
-  // set up the stack information
-  stack->sp     = frame;
-  stack->parcel = parcel;
-  stack->next   = NULL;
+  // set up the thread information
+  thread->sp     = frame;
+  thread->parcel = parcel;
+  thread->next   = NULL;
 
   // set up the parcel information
-  parcel->stack = stack;
-
-  return stack;
+  parcel->thread = thread;
+  return thread;
 }
 
-ustack_t *
-ustack_current(void) {
+thread_t *
+thread_new(thread_entry_t entry, hpx_parcel_t *parcel) {
+  // try to get a freelisted thread, or allocate a new, properly-aligned one
+  thread_t *t = NULL;
+  if (posix_memalign((void**)&t, LIBHPX_THREAD_SIZE, LIBHPX_THREAD_SIZE))
+    assert(false);
+  return thread_init(t, entry, parcel);
+}
+
+thread_t *
+thread_current(void) {
   return _get_from_sp(get_sp());
 }
 
 void
-ustack_delete(ustack_t *stack) {
-  stack->next = _stacks;
-  _stacks = stack;
+thread_delete(thread_t *thread) {
+  free(thread);
 }
 
 int
-ustack_transfer_delete(void *sp) {
-  ustack_t *stack = _get_from_sp(sp);
-  ustack_delete(stack);
+thread_transfer_push(void *sp, void *env) {
+  thread_t **stack = env;
+  thread_t *thread = _get_from_sp(sp);
+  thread->sp = sp;
+  thread->next = *stack;
+  *stack = thread;
   return HPX_SUCCESS;
 }
 
 int
-ustack_transfer_checkpoint(void *sp) {
-  ustack_t *stack = _get_from_sp(sp);
-  stack->sp = sp;
+thread_transfer_push_unlock(void *sp, void *env) {
+  thread_t **stack = env;
+  thread_t *thread = _get_from_sp(sp);
+  thread->sp = sp;
+  LOCKABLE_PACKED_STACK_PUSH_AND_UNLOCK(stack, thread);
   return HPX_SUCCESS;
 }

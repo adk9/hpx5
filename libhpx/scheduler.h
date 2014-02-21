@@ -29,8 +29,8 @@ struct future;
 ///
 /// @returns - 0 on success, non-zero on failure
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_init(void);
-HPX_INTERNAL void scheduler_fini(void);
+HPX_INTERNAL int scheduler_init_module(void);
+HPX_INTERNAL void scheduler_fini_module(void);
 
 /// ----------------------------------------------------------------------------
 /// Initializes thread-local scheduler data for this address space.
@@ -76,25 +76,28 @@ HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p) HPX_NON_NULL(1);
 /// ----------------------------------------------------------------------------
 /// Yield a user-level thread.
 ///
-/// The core of the cooperative scheduler. A user-level thread can call
-/// libhpx_sched_yield() in order to suspend execution of the current thread,
-/// and engage the scheduling algorithm.
-///
-/// libhpx_sched_yield() might be call proactively by libhpx code in order to
-/// ensure that scheduling occurs periodically. When this happens, the thread is
-/// simply resumed again in the next epoch. In this situation, @p n should be
-/// 0, and @p lco should be NULL.
-///
-/// libhpx_sched_yield() might also be called explicitly by the HPX application
-/// layer through the hpx_thread_wait() or hpx_thread_wait_all() routine, in
-/// which case the application is attempting to wait for an LCO, or set of LCOs,
-/// to be set before proceeding. The scheduler is responsible for arranging this
-/// to work correctly and the thread will become blocked until all of the LCOs
-/// designated in @p lco are signaled.
-///
-/// @param future - (optional) yield while holding a future's lock
+/// This triggers a scheduling event, and possibly selects a new user-level
+/// thread to run. If a new thread is selected, this moves the thread into the
+/// next local epoch, and also makes the thread available to be stolen within
+/// the locality.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_yield(struct future *future);
+HPX_INTERNAL void scheduler_yield(void);
+
+/// ----------------------------------------------------------------------------
+/// Wait for a future.
+///
+/// This suspends execution of the current user level thread until the future is
+/// signaled. The calling thread must hold the lock on the future. A new
+/// user-level thread will be executed. This may generate a new user-level
+/// thread that just sits in a scheduling loop if there is nothing else to.
+///
+/// This releases the lock on future during the wait, but reacquires it before
+/// returning.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_wait(struct future *future) HPX_NON_NULL(1);
+
+HPX_INTERNAL void scheduler_signal(struct future *f, const void *val, int size)
+  HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
 /// Exit a user level thread.

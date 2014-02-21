@@ -38,8 +38,8 @@ static int usage() {
    return -1;
 }
 
-static hpx_action_t fib = HPX_ACTION_NULL;
-static hpx_action_t fib_main = HPX_ACTION_NULL;
+static hpx_action_t fib = 0;
+static hpx_action_t fib_main = 0;
 
 static int
 fib_action(void *args) {

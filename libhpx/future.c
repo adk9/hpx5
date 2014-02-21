@@ -18,56 +18,86 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include "parcel.h"
 #include "future.h"
-#include "ustack.h"
+#include "thread.h"
 #include "scheduler.h"
 #include "network.h"
-#include "sync/locks.h"
+#include "locks.h"
+
+typedef struct {
+  int size;
+  char data[];
+} _future_set_args_t;
+
+static hpx_action_t _future_set = 0;
+static hpx_action_t _future_get_proxy = 0;
+
+static int
+_future_set_action(void *args) {
+  _future_set_args_t *a = args;
+  thread_t *t = thread_current();
+  hpx_parcel_t *p = t->parcel;
+  hpx_future_set(p->target, &a->data, a->size);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+}
+
+static int
+_future_get_proxy_action(void *args) {
+  thread_t *t = thread_current();
+  hpx_parcel_t *p = t->parcel;
+  int n = *(int*)args;
+  char buffer[n];
+  hpx_future_get(p->target, buffer, n);
+  hpx_thread_exit(HPX_SUCCESS, buffer, n);
+}
+
+int
+future_init_module(void) {
+  _future_set = hpx_action_register("_future_set", _future_set_action);
+  _future_get_proxy = hpx_action_register("_future_get_proxy",
+                                          _future_get_proxy_action);
+  return HPX_SUCCESS;
+}
+
+void
+future_fini_module(void) {
+}
+
+int
+future_init_thread(void) {
+  return HPX_SUCCESS;
+}
+
+void
+future_fini_thread(void) {
+}
 
 /// ----------------------------------------------------------------------------
 /// Futures have three distinct state bits, they can be locked or unlocked, they
 /// can be triggered or not, and they can have in place our out of place
 /// data. These states are packed into the lowest three bits of the wait queue
 /// (which always contains 8-byte aligned pointer values).
-///
-/// These flags read and write the state. Note that _LOCKED must be the
-/// least-significant-bit in order to use the lsb_lock/unlock functionality in
-/// sync.
 /// ----------------------------------------------------------------------------
 /// @{
-static const uintptr_t _LOCKED     = 0x1;
-static const uintptr_t _SET  = 0x2;
+static const uintptr_t _SET        = 0x2;
 static const uintptr_t _INPLACE    = 0x4;
-static const uintptr_t _STATE_MASK = 0x7;
 /// @}
 
-/// ----------------------------------------------------------------------------
-/// Mask out the state so we can read the real wait queue address.
-///
-/// @prarm future - the future to query
-/// @returns      - @p stack, with the state masked out
-/// ----------------------------------------------------------------------------
-static ustack_t *_get_queue(const future_t *future) {
-  return (ustack_t*)((uintptr_t)future->waitq & ~_STATE_MASK);
+static bool _is_state(const future_t *f, uintptr_t state) {
+  return packed_ptr_is_set(&f->waitq, state);
 }
 
-/// ----------------------------------------------------------------------------
-/// Gets the composite state from the future.
-/// ----------------------------------------------------------------------------
-static uintptr_t _get_state(const future_t *future) {
-  return (uintptr_t)future->waitq & _STATE_MASK;
+static void _set_state(future_t *f, uintptr_t state) {
+  packed_ptr_set((void**)&f->waitq, state);
 }
 
-/// ----------------------------------------------------------------------------
-/// Query the state of the future.
-///
-/// Composite state works fine here, at the cost of an additional equals check.
-///
-/// @param future - the future to query
-/// @returns      - true, if all of the bits in state are set in future->waitq
-/// ----------------------------------------------------------------------------
-static bool _is_state(const future_t *future, uintptr_t state) {
-  return ((uintptr_t)future->waitq & state) == state;
+static void _lock(future_t *f) {
+  packed_ptr_lock((void**)&f->waitq);
+}
+
+static void _unlock(future_t *f) {
+  packed_ptr_unlock((void**)&f->waitq);
 }
 
 /// ----------------------------------------------------------------------------
@@ -82,18 +112,6 @@ static void _get_value(const future_t *f, void *out, int size) {
 }
 
 /// ----------------------------------------------------------------------------
-/// Sets the state bits in @p stack to match those in @p future->waitq.
-///
-/// Should only be called with a "clean" @p stack value, i.e., one with no bits
-/// set. We could relax this requirement by masking out the low bits of stack
-/// first, but we don't bother.
-/// ----------------------------------------------------------------------------
-static ustack_t *_set_state_bits(ustack_t *stack, uintptr_t state) {
-  return (ustack_t*)((uintptr_t)stack | state);
-}
-
-
-/// ----------------------------------------------------------------------------
 /// Sets the future's value (does not modify state).
 /// ----------------------------------------------------------------------------
 static void _set_value(future_t *f, const void *from, int size) {
@@ -102,28 +120,6 @@ static void _set_value(future_t *f, const void *from, int size) {
 
   void *to = (_is_state(f, _INPLACE)) ? &f->value : f->value;
   memcpy(to, from, size);
-}
-
-/// ----------------------------------------------------------------------------
-/// Composes the act of unlocking the future, with modifying its queue and
-/// state.
-///
-/// @param future - the future to unlock
-/// @param  stack - the new head of the wait queue (should be linked already)
-/// @param  state - a state to set
-/// ----------------------------------------------------------------------------
-static void _unlock(future_t *future, ustack_t *stack, uintptr_t state) {
-  // create the new state as the composite of the old state and the new state,
-  // but unlocked
-  uintptr_t current = _get_state(future);
-  current |= state;
-  current &= ~_LOCKED;
-
-  // set the state bits in the stack pointer
-  stack = _set_state_bits(stack, current);
-
-  // perform the atomic unlock
-  lsb_unlock_with_value((void**)&future->waitq, stack);
 }
 
 /// ----------------------------------------------------------------------------
@@ -137,21 +133,12 @@ static void _unlock(future_t *future, ustack_t *stack, uintptr_t state) {
 /// @param        size - the size of the data
 /// ----------------------------------------------------------------------------
 static void _get_local(future_t *f, void *out, int size) {
-  future_lock(f);
+  _lock(f);
   if (!_is_state(f, _SET))
-    scheduler_yield(f);
-
-  assert(_is_state(f, _SET | _LOCKED));
-  assert(_get_queue(f) == NULL);
+    scheduler_wait(f);
   _get_value(f, out, size);
-  _unlock(f, NULL, 0);
-  return;
+  _unlock(f);
 }
-
-/// ----------------------------------------------------------------------------
-/// An action that a thread can run to serve as a remote proxy for a get.
-/// ----------------------------------------------------------------------------
-static hpx_action_t _future_get_proxy = HPX_ACTION_NULL;
 
 /// ----------------------------------------------------------------------------
 /// Initiate a remote get operation.
@@ -183,50 +170,18 @@ static void _sync_get_remote(hpx_addr_t op, void *out, int size) {
 }
 
 /// ----------------------------------------------------------------------------
-/// Allocate a future.
-/// ----------------------------------------------------------------------------
-hpx_addr_t
-hpx_future_new(int size) {
-  return HPX_NULL;
-}
-
-/// ----------------------------------------------------------------------------
-/// Free a future.
-/// ----------------------------------------------------------------------------
-void
-hpx_future_delete(hpx_addr_t future) {
-}
-
-/// ----------------------------------------------------------------------------
-/// Signal a future.
-///
-/// This needs to 1) set the future's value, 2) set the future _SET flag,
-/// 3) unlock the future, and 4) return the wait queue to the caller so that
-/// waiting threads can be woken up.
-///
-/// We must acquire the future lock for this operation.
-/// ----------------------------------------------------------------------------
-ustack_t *
-future_signal(future_t *future, const void *data, int size) {
-  ustack_t *waiters = NULL;
-  future_lock(future);
-  assert(!_is_state(future, _SET));
-  _set_value(future, data, size);
-  waiters = _get_queue(future);
-  _unlock(future, NULL, _SET);
-  return waiters;
-}
-
-/// ----------------------------------------------------------------------------
 /// Get the value of a future.
 /// ----------------------------------------------------------------------------
 void
 hpx_future_get(hpx_addr_t future, void *out, int size) {
   future_t *f = NULL;
-  if (network_addr_is_local(future, (void**)&f))
+  if (network_addr_is_local(future, (void**)&f)) {
     _get_local(f, out, size);
-  else
-    _sync_get_remote(_spawn_get_remote(future, size), out, size);
+  }
+  else {
+    hpx_addr_t val = _spawn_get_remote(future, size);
+    _sync_get_remote(val, out, size);
+  }
 }
 
 /// ----------------------------------------------------------------------------
@@ -275,22 +230,61 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
 }
 
 /// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+void
+hpx_future_set(hpx_addr_t future, const void *value, int size) {
+  future_t *f = NULL;
+  if (network_addr_is_local(future, (void**)&f)) {
+    scheduler_signal(f, value, size);
+    return;
+  }
+
+  hpx_parcel_t *p = hpx_parcel_acquire(sizeof(_future_set_args_t) + size);
+  hpx_parcel_set_target(p, future);
+  hpx_parcel_set_action(p, _future_set);
+  _future_set_args_t *args = hpx_parcel_get_data(p);
+  args->size = size;
+  memcpy(&args->data, value, size);
+  hpx_parcel_send(p);
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Use the sync library's least-significant-bit lock to lock the future.
 /// ----------------------------------------------------------------------------
 void
 future_lock(future_t *future) {
-  lsb_lock((void**)&future->waitq);
+  _lock(future);
 }
 
 /// ----------------------------------------------------------------------------
-/// Enqueue stack, and release the lock.
+/// Signal a future.
 ///
-/// Must mask out the state for setting the stack->next pointer, and then mask
-/// the state back into the stack bits, before using the lsb_unlock_with_value()
-/// interface.
+/// This needs to 1) set the future's value, 2) set the future _SET flag,
+/// 3) unlock the future, and 4) return the wait queue to the caller so that
+/// waiting threads can be woken up.
+///
+/// We must acquire the future lock for this operation.
+/// ----------------------------------------------------------------------------
+thread_t *
+future_set(future_t *f, const void *data, int size) {
+  _lock(f);
+  _set_value(f, data, size);
+  _set_state(f, _SET);
+  return LOCKABLE_PACKED_STACK_POP_ALL_AND_UNLOCK(&f->waitq);
+}
+
+/// ----------------------------------------------------------------------------
+/// Allocate a future.
+/// ----------------------------------------------------------------------------
+hpx_addr_t
+hpx_future_new(int size) {
+  return HPX_NULL;
+}
+
+/// ----------------------------------------------------------------------------
+/// Free a future.
 /// ----------------------------------------------------------------------------
 void
-future_wait(future_t *future, ustack_t *stack) {
-  stack->next = _get_queue(future);
-  _unlock(future, stack, 0);
+hpx_future_delete(hpx_addr_t future) {
 }

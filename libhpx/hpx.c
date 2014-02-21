@@ -28,33 +28,38 @@
 #include "parcel.h"
 #include "network.h"
 #include "scheduler.h"
-#include "ustack.h"
+#include "thread.h"
+#include "future.h"
 
 int
 hpx_init(int argc, char * const argv[argc]) {
   // start by initializing all of the subsystems
   int e = HPX_SUCCESS;
-  if (unlikely(e == locality_init(0)))
+  if (unlikely(e == locality_init_module(0)))
     goto unwind0;
-  if (unlikely(e = parcel_init()))
+  if (unlikely(e = parcel_init_module()))
     goto unwind1;
-  if (unlikely(e = ustack_init()))
+  if (unlikely(e = thread_init_module()))
     goto unwind2;
-  if (unlikely(e = scheduler_init()))
+  if (unlikely(e = scheduler_init_module()))
     goto unwind3;
-  if (unlikely(e = network_init()))
+  if (unlikely(e = future_init_module()))
     goto unwind4;
+  if (unlikely(e = network_init()))
+    goto unwind5;
 
   return e;
 
+ unwind5:
+  future_fini_module();
  unwind4:
-  scheduler_fini();
+  scheduler_fini_module();
  unwind3:
-  ustack_fini();
+  thread_fini_module();
  unwind2:
-  parcel_fini();
+  parcel_fini_module();
  unwind1:
-  locality_fini();
+  locality_fini_module();
  unwind0:
   return e;
 }
@@ -67,7 +72,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
     goto unwind0;
   if (unlikely(e = parcel_init_thread()))
     goto unwind1;
-  if (unlikely(e = ustack_init_thread()))
+  if (unlikely(e = thread_init_thread()))
     goto unwind2;
   if (unlikely(e = scheduler_init_thread()))
     goto unwind3;
@@ -75,7 +80,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
   return scheduler_startup(act, args, size);
 
  unwind3:
-  ustack_fini_thread();
+  thread_fini_thread();
  unwind2:
   parcel_fini_thread();
  unwind1:
@@ -103,8 +108,8 @@ hpx_get_num_ranks(void) {
 void
 hpx_thread_exit(int status, const void *value, unsigned size) {
   // if there's a continuation future, then we set it
-  ustack_t *stack = ustack_current();
-  hpx_parcel_t *parcel = stack->parcel;
+  thread_t *thread = thread_current();
+  hpx_parcel_t *parcel = thread->parcel;
   hpx_addr_t cont = parcel->cont;
   if (cont != HPX_NULL)
     hpx_future_set(cont, value, size);
@@ -114,7 +119,7 @@ hpx_thread_exit(int status, const void *value, unsigned size) {
 }
 
 void
-hpx_call(int rank, hpx_action_t action, void *args, size_t len,
+hpx_call(hpx_addr_t target, hpx_action_t action, void *args, size_t len,
          hpx_addr_t result) {
 }
 
