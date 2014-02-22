@@ -102,7 +102,7 @@ hpx_get_my_rank(void) {
 
 int
 hpx_get_num_ranks(void) {
-  return 0;
+  return 1;
 }
 
 void
@@ -119,8 +119,14 @@ hpx_thread_exit(int status, const void *value, unsigned size) {
 }
 
 void
-hpx_call(hpx_addr_t target, hpx_action_t action, void *args, size_t len,
-         hpx_addr_t result) {
+hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
+         size_t len, hpx_addr_t result) {
+  hpx_parcel_t *p = hpx_parcel_acquire(len);
+  hpx_parcel_set_action(p, action);
+  hpx_parcel_set_target(p, target);
+  hpx_parcel_set_cont(p, result);
+  hpx_parcel_set_data(p, args, len);
+  hpx_parcel_send(p);
 }
 
 hpx_time_t
