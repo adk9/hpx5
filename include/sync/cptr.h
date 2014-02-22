@@ -50,11 +50,11 @@ typedef struct {
 static inline void
 sync_cptr_cas_val(volatile cptr_t *ptr, cptr_t *from, void *to) {
   __asm__ __volatile__("lock\t  cmpxchg16b %[addr]\n"
-                       : [addr] "+m" (ptr),
+                       : [addr] "+m" (*ptr),
                                 "+d" (from->c),
                                 "+a" (from->p)
-                       :        "c" (from->c + 1),
-                                "b" (to)
+                       :        "c"  (from->c + 1),
+                                "b"  (to)
                        : "cc");
 }
 
@@ -70,11 +70,11 @@ sync_cptr_cas(volatile cptr_t *ptr, cptr_t from, void *to) {
   __asm__ __volatile__("lock\t  cmpxchg16b %[addr]\n"
                        "setz\t  %[result]\n"
                        : [result] "=q" (result),
-                           [addr] "+m" (ptr),
+                           [addr] "+m" (*ptr),
                                   "+d" (from.c),
                                   "+a" (from.p)
-                       :          "c" (from.c + 1),
-                                  "b" (to)
+                       :          "c"  (from.c + 1),
+                                  "b"  (to)
                        : "cc");
   return result;
 }
@@ -107,11 +107,11 @@ sync_cptr_is_consistent(volatile cptr_t *ptr, cptr_t *val) {
   __asm__ __volatile__("lock\t  cmpxchg16b %[addr]\n"
                        "setz\t  %[result]\n"
                        : [result] "=q" (result),
-                           [addr] "+m" (ptr),
+                           [addr] "+m" (*ptr),
                                   "+d" (val->c),
                                   "+a" (val->p)
-                       :          "c" (val->p),
-                                  "b" (val->c)
+                       :          "c"  (val->c),
+                                  "b"  (val->p)
                        : "cc");
   return result;
 }

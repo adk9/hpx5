@@ -65,6 +65,7 @@ void hpx_shutdown(int code) HPX_NORETURN;
 
 /// HPX locality interface
 int hpx_get_my_rank(void);
+int hpx_get_my_thread_id(void);
 int hpx_get_num_ranks(void);
 
 /// HPX address interface
@@ -91,6 +92,7 @@ hpx_parcel_t *hpx_parcel_acquire(unsigned);
 void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action);
 void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr);
 void hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t lco);
+void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size);
 void *hpx_parcel_get_data(hpx_parcel_t *p);
 void hpx_parcel_send(hpx_parcel_t *p);
 void hpx_parcel_send_sync(hpx_parcel_t *p);

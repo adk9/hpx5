@@ -22,12 +22,18 @@
 #include <stdlib.h>
 #include "scheduler.h"
 #include "networks.h"
+#include "parcel.h"
 
 static int _init(void) {
   return HPX_SUCCESS;
 }
 
 static void _fini(void) {
+}
+
+static int _send(int dest, void *buffer, unsigned size,
+                  network_request_t *request) {
+  return 0;
 }
 
 network_t *
@@ -37,7 +43,7 @@ smp_new(void) {
   smp->fini = _fini;
   smp->progress = NULL;
   smp->probe = NULL;
-  smp->send = NULL;
+  smp->send = _send;
   smp->recv = NULL;
   smp->test_sendrecv = NULL;
   smp->test_send = NULL;
