@@ -61,13 +61,13 @@ static int _get_num_pu(void) {
 static void *_entry(void *args) {
   _id = *(int*)args;
   int e = scheduler_startup(HPX_ACTION_NULL, NULL, 0);
-  return *(void**)&e;
+  return (void*)(intptr_t)e;
 }
 
 int
 locality_init_module(int n) {
   _n = (n) ? n : _get_num_pu();
-
+  _n = 0;
   // register the null action for this locality
   HPX_ACTION_NULL = hpx_action_register("_null_action", _null_action);
 
@@ -138,4 +138,10 @@ locality_fini_module(void) {
   free(_args);
   free(_attributes);
   free(_threads);
+}
+
+
+int
+hpx_get_my_thread_id(void) {
+  return _id;
 }

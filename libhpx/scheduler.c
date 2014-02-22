@@ -120,7 +120,7 @@ static int _post_startup(void *sp, void *env) {
 /// ----------------------------------------------------------------------------
 /// @{
 static int _post_shutdown(void *sp, void *env) {
-  int code = *(int*)&env;
+  int code = (int)(intptr_t)env;
   return code;
 }
 /// @}
@@ -232,8 +232,14 @@ scheduler_startup(hpx_action_t action, const void *args, unsigned size) {
 
 void
 scheduler_shutdown(int code) {
-  thread_transfer(_native_stack, *(void**)&code, _post_shutdown);
+  thread_transfer(_native_stack, (void*)(intptr_t)code, _post_shutdown);
   unreachable();
+}
+
+void
+scheduler_spawn(hpx_parcel_t *p) {
+  assert(p);
+  sync_ms_queue_enqueue(&_new_parcels, p);
 }
 
 void

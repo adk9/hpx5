@@ -22,9 +22,9 @@ typedef struct {
 static _node_t *
 _node_new(void *value) {
   _node_t *node = malloc(sizeof(*node));
-  node->next.p = value;
+  node->next.p = NULL;
   node->next.c = 0;
-  node->value = NULL;
+  node->value = value;
   return node;
 }
 

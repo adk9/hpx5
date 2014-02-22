@@ -83,8 +83,16 @@ hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t cont) {
   p->cont = HPX_NULL;
 }
 
+void
+hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
+  assert(p);
+  if (size)
+    memcpy(p->data, data, size);
+}
+
 void *
 hpx_parcel_get_data(hpx_parcel_t *p) {
   assert(p);
   return p->data;
 }
+
