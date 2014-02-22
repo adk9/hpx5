@@ -98,7 +98,8 @@ void hpx_parcel_send(hpx_parcel_t *p);
 void hpx_parcel_send_sync(hpx_parcel_t *p);
 
 /// HPX rpc interface
-void hpx_call(hpx_addr_t addr, hpx_action_t action, void *args, size_t len, hpx_addr_t result);
+void hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
+              size_t len, hpx_addr_t result);
 
 #ifdef __cplusplus
 }

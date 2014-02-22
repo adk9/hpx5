@@ -10,6 +10,9 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 /// ----------------------------------------------------------------------------
 /// @file future.h
@@ -17,6 +20,8 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "parcel.h"
 #include "future.h"
@@ -275,12 +280,30 @@ future_set(future_t *f, const void *data, int size) {
   return LOCKABLE_PACKED_STACK_POP_ALL_AND_UNLOCK(&f->waitq);
 }
 
+static future_t *_new(int size) {
+  future_t *f = NULL;
+  int e = posix_memalign((void**)&f, sizeof(*f), sizeof(*f));
+  if (e) {
+    fprintf(stderr, "failed future allocation\n");
+    abort();
+  }
+
+  f->waitq = NULL;
+  if (size > sizeof(f->value))
+    f->value = malloc(size);
+  else
+    _set_state(f, _INPLACE);
+
+  return f;
+}
+
 /// ----------------------------------------------------------------------------
 /// Allocate a future.
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_future_new(int size) {
-  return HPX_NULL;
+  future_t *f = _new(size);
+  return (hpx_addr_t)f;
 }
 
 /// ----------------------------------------------------------------------------
@@ -288,4 +311,8 @@ hpx_future_new(int size) {
 /// ----------------------------------------------------------------------------
 void
 hpx_future_delete(hpx_addr_t future) {
+  future_t *f = (future_t*)future;
+  if (!_is_state(f, _INPLACE))
+    free(f->value);
+  free(f);
 }

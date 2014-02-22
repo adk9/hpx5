@@ -79,5 +79,6 @@ network_berrier(void) {
 
 bool
 network_addr_is_local(hpx_addr_t addr, void **out) {
-  return false;
+  *out = (void*)addr;
+  return true;
 }
