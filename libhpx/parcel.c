@@ -80,7 +80,7 @@ hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) {
 void
 hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t cont) {
   assert(p);
-  p->cont = HPX_NULL;
+  p->cont = cont;
 }
 
 void
