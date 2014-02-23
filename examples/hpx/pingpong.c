@@ -63,7 +63,7 @@ typedef struct {
 #define RANK_PRINTF(format, ...)                                        \
   do {                                                                  \
     if (arg_screen_out)                                                 \
-      printf("\t%d: " format, hpx_get_my_rank(), __VA_ARGS__);          \
+      printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), __VA_ARGS__); \
   } while (0)
 
 int main(int argc, char *argv[]) {
