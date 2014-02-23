@@ -90,7 +90,7 @@ static const uintptr_t _INPLACE    = 0x4;
 /// @}
 
 static bool _is_state(const future_t *f, uintptr_t state) {
-  return packed_ptr_is_set(&f->waitq, state);
+  return packed_ptr_is_set(f->waitq, state);
 }
 
 static void _set_state(future_t *f, uintptr_t state) {
