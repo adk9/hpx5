@@ -67,7 +67,7 @@ static void *_entry(void *args) {
 int
 locality_init_module(int n) {
   _n = (n) ? n : _get_num_pu();
-  _n = 0;
+
   // register the null action for this locality
   HPX_ACTION_NULL = hpx_action_register("_null_action", _null_action);
 
