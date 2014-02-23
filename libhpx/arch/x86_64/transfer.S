@@ -76,27 +76,27 @@
 	    INTERNAL(thread_transfer)
         GLOBAL(thread_transfer)
 LABEL(thread_transfer)
-	    push %rbp
-	    push %rbx
-	    push %r12
-	    push %r13
-	    push %r14
-	    push %r15
-        ;; push %rdi
-	    sub $16, %rsp
-	    fnstcw 4(%rsp)
-	    stmxcsr	(%rsp)
+	    push %rbp                               // 1
+	    push %rbx                               // 2
+	    push %r12                               // 3
+	    push %r13                               // 4
+	    push %r14                               // 5
+	    push %r15                               // 6
+        //push %rdi                             // 7
+	    sub $16, %rsp                           // 
+	    fnstcw 4(%rsp)                          // 8.5
+	    stmxcsr	(%rsp)                          // 8
 	    xchg %rsp, %rdi
 	    call *%rdx
-	    ldmxcsr	(%rsp)
-	    fldcw 4(%rsp)
-	    add $8, %rsp
-        pop %rdi
-	    pop	%r15
-        pop	%r14
-	    pop	%r13
-	    pop	%r12
-	    pop	%rbx
-	    pop	%rbp
+	    ldmxcsr	(%rsp)                          // 8
+	    fldcw 4(%rsp)                           // 8.5
+	    add $8, %rsp                            // 
+        pop %rdi                                // 7
+	    pop	%r15                                // 6
+        pop	%r14                                // 5
+	    pop	%r13                                // 4
+	    pop	%r12                                // 3
+	    pop	%rbx                                // 2
+	    pop	%rbp                                // 1
         ret
         SIZE(thread_transfer)
