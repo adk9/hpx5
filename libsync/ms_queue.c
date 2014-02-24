@@ -64,7 +64,7 @@ sync_ms_queue_enqueue(ms_queue_t *q, void *val) {
 
   // no active enqueue, try and perform the first half of ours (updating
   // tail->next), if we fail we try again
-  if (!sync_cptr_cas(tail_next, next, node))
+  if (!sync_cptr_cas(tail_next, &next, node))
     goto retry;
 
   // perform the second half of our enqueue (updating the queue itself)
@@ -102,7 +102,7 @@ sync_ms_queue_dequeue(ms_queue_t *q) {
   // and then try and swing head---read first so that a concurrent next.p
   // dereference doesn't delete it before we get to it
   void *result = ((_node_t*)next.p)->value;
-  if (!sync_cptr_cas(&q->head, head, next.p))
+  if (!sync_cptr_cas(&q->head, &head, next.p))
     goto retry;
 
   // delete the node that we just dequeued, and return the result

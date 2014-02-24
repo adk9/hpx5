@@ -96,7 +96,8 @@ action_allreduce(void *unused) {
 
 int
 main(int argc, char** argv) {
-  int success = hpx_init(argc, argv);
+  hpx_config_t config = { .scheduler_threads = 1 };
+  int success = hpx_init(&config);
   if (success != 0) {
     printf("Error %d in hpx_init!\n", success);
     exit(-1);

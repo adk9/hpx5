@@ -68,7 +68,8 @@ typedef struct {
 
 int main(int argc, char *argv[]) {
   wait_for_debugger();
-  if (hpx_init(argc, argv)) {
+  hpx_config_t config = { .scheduler_threads = 1 };
+  if (hpx_init(&config)) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
