@@ -8,7 +8,7 @@ noinst_LTLIBRARIES       = libsync.la
 libsync_la_SOURCES       = locks.c sr_barrier.c ms_queue.c
 
 if CPU_X86_64
-libsync_la_SOURCES		+= arch/x86_64/nop.c
+libsync_la_SOURCES		+= arch/x86_64/nop.c arch/x86_64/cptr.S
 endif
 
 libsync_la_CPPFLAGS      = -I$(top_srcdir)/include/sync

@@ -31,21 +31,75 @@
 #include "thread.h"
 #include "future.h"
 
+// static struct argp_option _opts[] = {
+//   {"hpx-threads",  'n', "THREADS", OPTION_ARG_OPTIONAL,
+//    "The number of HPX scheduler threads to run per locality" },
+//   { 0 }
+// };
+
+// static error_t _parse_opts(int key, char *arg, struct argp_state *state)
+// {
+//   /* Get the input argument from argp_parse, which we
+//      know is a pointer to our arguments structure. */
+//   hpx_config_t *config = state->input;
+
+//   switch (key) {
+//    default:
+//     return ARGP_ERR_UNKNOWN;
+
+//    case 'n':
+//     config->scheduler_threads = (arg) ? atoi(arg) : 0;
+//     break;
+
+//   }
+//   return 0;
+// }
+
+// void *
+// hpx_argp_parser_new(void) {
+//   struct argp *parser = malloc(sizeof(*parser));
+//   if (!parser)
+//     return NULL;
+
+//   memset(parser, 0, sizeof(*parser));
+//   parser->options = _opts;
+//   parser->parser = _parse_opts;
+//   return parser;
+// }
+
+// void
+// hpx_argp_parser_delete(void *config) {
+//   free(config);
+// }
+
+// int
+// hpx_parse_and_init(int argc, char * argv[argc]) {
+//   hpx_config_t config = {0};
+//   struct argp *parser = hpx_argp_parser_new();
+//   int e = argp_parse(parser, argc, argv, 0, 0, &config);
+//   hpx_argp_parser_delete(parser);
+//   if (!e)
+//     hpx_init(&config);
+//   return e;
+// }
+
 int
-hpx_init(int argc, char * const argv[argc]) {
+hpx_init(const hpx_config_t *config) {
   // start by initializing all of the subsystems
   int e = HPX_SUCCESS;
-  if (unlikely(e = parcel_init_module()))
+
+  // extract some hpx-related arguments from the command line.
+  if ((e = parcel_init_module()))
     goto unwind0;
-  if (unlikely(e = thread_init_module()))
+  if ((e = thread_init_module()))
     goto unwind1;
-  if (unlikely(e = scheduler_init_module()))
+  if ((e = scheduler_init_module()))
     goto unwind2;
-  if (unlikely(e = future_init_module()))
+  if ((e = future_init_module()))
     goto unwind3;
-  if (unlikely(e == locality_init_module(0)))
+  if ((e = locality_init_module(config->scheduler_threads)))
     goto unwind4;
-  if (unlikely(e = network_init()))
+  if ((e = network_init()))
     goto unwind5;
 
   return e;

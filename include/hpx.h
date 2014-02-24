@@ -49,18 +49,44 @@ extern hpx_action_t HPX_ACTION_NULL;
 #define HPX_PRIo_hpx_action_t PRIoPTR
 /// @}
 
-/**
- * Register an action with the runtime.
- *
- * @param[in]   id - a unique string name for the action
- * @param[in] func - the local function pointer to associate with the action
- * @returns        - a key to be used for the action when needed
- */
+
+/// Register an action with the runtime. Should be called by the main native
+/// thread only, between the execution of hpx_init() and hpx_run(). Should not
+/// be called from an HPX lightweight thread.
+///
+/// @param   id - a unique string name for the action
+/// @param func - the local function pointer to associate with the action
+/// @returns    - a key to be used for the action when needed
 hpx_action_t hpx_action_register(const char *id, hpx_action_handler_t func);
 
-/// HPX runtime interface
-int hpx_init(int argc, char * const argv[]);
+/// The HPX configuration type. This can be allocated and set manually by the
+/// application, or used with the provided argp functionality to extract the
+/// configuration using a set of HPX-standard command line arguments.
+///
+/// see <argp.h>
+typedef struct {
+  int scheduler_threads;
+} hpx_config_t;
+
+/// Initializes HPX. This call creates native threads for all of the scheduler
+/// threads, and initializes the network. After this call, all of the scheduler
+/// threads are running, except for the calling thread, which is still a native
+/// thread. The native thread "converts" to a pthread at hpx_run().
+int hpx_init(const hpx_config_t *config);
+
+/// Called from the native thread after hpx_init(), this finalizes action
+/// registration, and transfers all control into the HPX scheduler, beginning
+/// execution in @p entry. Returns the hpx_shutdown() code.
+///
+/// The @p entry paramter may be HPX_ACTION_NULL, in which case this entire
+/// scheduler instance is running, waiting for a successful inter-locality steal
+/// operation (if that is implemented) or a network parcel.
 int hpx_run(hpx_action_t entry, const void *args, unsigned size);
+
+/// Called from an HPX lightweight thread to terminate execution. Returns to
+/// hpx_run with the designated code. The returned thread is executing the
+/// original native thread, and all supplementary scheduler threads and network
+/// will have been shutdown.
 void hpx_shutdown(int code) HPX_NORETURN;
 
 /// HPX locality interface

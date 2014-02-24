@@ -46,14 +46,15 @@ static int send_action(void *args) {
   return HPX_SUCCESS;
 }
 
-int main(int argc, char * const argv[argc]) {
-  if (argc != 2) {
-    abort();
-  }
-
+int main(int argc, char * argv[argc]) {
   int n = atoi(argv[1]);
+  int t = atoi(argv[2]);
 
-  hpx_init(argc, argv);
+  hpx_config_t config = { .scheduler_threads = t };
+  if (hpx_init(&config)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
   send = hpx_action_register("send", send_action);
   return hpx_run(send, &n, sizeof(n));
 }

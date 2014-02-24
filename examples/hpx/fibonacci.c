@@ -15,27 +15,55 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#include <argp.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <hpx.h>
 
-/**
- * Prints a usage string to stderr.
- *
- * @returns -1, for error cases where the caller wants to say "return usage()."
- */
-static int usage() {
-   fprintf(stderr,
-           "\n"
-           "Usage: fibonaccihpx [-cldh] n\n"
-           "\t n\tfibonacci number to compute\n"
-           "\t-c\tnumber of cores\n"
-           "\t-d\twait for debugger\n"
-           "\t-h\tthis help display\n"
-           "\n");
-   return -1;
+/// The command line arguments for fibonacci
+typedef struct {
+  int n;
+  int debug;
+} args_t;
+
+/// The options that fibonacci understands.
+static struct argp_option opts[] = {
+  {"debug", 'd', 0, 0, "Wait for the debugger"},
+  { 0 }
+};
+
+static char doc[] = "Fibonnaci: A simple fibonacci example using HPX.";
+static char args_doc[] = "ARG1";
+
+// Our argument parser.
+static int parse(int key, char *arg, struct argp_state *state) {
+  args_t *args = (args_t*)state->input;
+
+  switch (key) {
+   default:
+    return ARGP_ERR_UNKNOWN;
+
+   case 'd':
+    args->debug = 1;
+    break;
+
+   case ARGP_KEY_NO_ARGS:
+    argp_usage(state);
+    break;
+
+   case ARGP_KEY_ARG:
+    if (state->arg_num > 1)
+      argp_usage(state);
+
+    if (!arg)
+      abort();
+
+    args->n = atoi(arg);
+    break;
+  }
+  return 0;
 }
 
 static hpx_action_t fib = 0;
@@ -89,6 +117,7 @@ fib_action(void *args) {
 
   long fn = fns[0] + fns[1];
   hpx_thread_exit(HPX_SUCCESS, &fn, sizeof(fn));
+  return HPX_SUCCESS;
 }
 
 static int
@@ -106,44 +135,18 @@ fib_main_action(void *args) {
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   hpx_shutdown(0);
+  return HPX_SUCCESS;
 }
 
 int main(int argc, char *argv[]) {
-  hpx_init(argc, argv);
+  hpx_config_t config = { .scheduler_threads = 1 };
+  args_t args = {0};
+  struct argp parser = { opts, parse, args_doc, doc };
+  int e = argp_parse(&parser, argc, argv, 0, 0, &args);
+  if (e)
+    return e;
 
-  unsigned long cores = 0;                      // # of cores from -c
-  bool debug = false;                           // flag from -d
-  unsigned long n = 0;                          // fib(n) from argv
-
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "c:dh")) != -1) {
-    switch (opt) {
-    case 'c':
-      cores = strtol(optarg, NULL, 10);
-      ((void)cores);                            // suppress unused
-      break;
-    case 'd':
-      debug = true;
-      break;
-    case 'h':
-      usage();
-      break;
-    case '?':
-    default:
-      return usage();
-    }
-  }
-
-  argc -= optind;
-  argv += optind;
-
-  if (argc == 0) {
-    fprintf(stderr, "Missing fib number to compute\n");
-    return usage();
-  }
-  n = strtol(argv[0], NULL, 10);
-
-  if (debug) {
+  if (args.debug) {
     int i = 0;
     char hostname[256];
     gethostname(hostname, sizeof(hostname));
@@ -153,10 +156,17 @@ int main(int argc, char *argv[]) {
       sleep(5);
   }
 
+  e = hpx_init(&config);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
+
+
   // register the fib action
   fib = hpx_action_register("fib", fib_action);
   fib_main = hpx_action_register("fib_main", fib_main_action);
 
   // run the main action
-  return hpx_run(fib_main, &n, sizeof(n));
+  return hpx_run(fib_main, &args.n, sizeof(args.n));
 }
