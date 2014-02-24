@@ -152,7 +152,10 @@ int main(int argc, char *argv[]) {
   if (e)
     return e;
 
-  hpx_config_t config = { .scheduler_threads = args.threads };
+  hpx_config_t config = {
+    .scheduler_threads = args.threads,
+    .stack_bytes = 0
+  };
 
   if (args.debug) {
     int i = 0;

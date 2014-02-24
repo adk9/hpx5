@@ -91,7 +91,7 @@ hpx_init(const hpx_config_t *config) {
   // extract some hpx-related arguments from the command line.
   if ((e = parcel_init_module()))
     goto unwind0;
-  if ((e = thread_init_module()))
+  if ((e = thread_init_module(config->stack_bytes)))
     goto unwind1;
   if ((e = scheduler_init_module()))
     goto unwind2;

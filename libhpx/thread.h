@@ -23,7 +23,7 @@
 /// ----------------------------------------------------------------------------
 /// Initializes the stack subsystem.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_init_module(void);
+HPX_INTERNAL int thread_init_module(int stack_size);
 HPX_INTERNAL int thread_init_thread(void);
 HPX_INTERNAL void thread_fini_module(void);
 HPX_INTERNAL void thread_fini_thread(void);
