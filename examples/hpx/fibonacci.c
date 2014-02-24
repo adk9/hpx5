@@ -85,9 +85,9 @@ fib_action(void *args) {
   int rank = hpx_get_my_rank();
   int ranks = hpx_get_num_ranks();
 
-  int peers[] = {
-    (rank + ranks - 1) % ranks,
-    (rank + 1) % ranks
+  hpx_addr_t peers[] = {
+    hpx_addr_from_rank((rank + ranks - 1) % ranks),
+    hpx_addr_from_rank((rank + 1) % ranks)
   };
 
   long ns[] = {
@@ -132,7 +132,7 @@ fib_main_action(void *args) {
   long fn = 0;                                  // fib result
   hpx_time_t clock = hpx_time_now();
   hpx_addr_t future = hpx_future_new(sizeof(long));
-  hpx_call(hpx_get_my_rank(), fib, &n, sizeof(n), future);
+  hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), fib, &n, sizeof(n), future);
   hpx_future_get(future, &fn, sizeof(fn));
 
   double time = hpx_time_to_us(clock - hpx_time_now())/1e3;

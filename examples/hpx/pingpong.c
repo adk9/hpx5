@@ -35,7 +35,7 @@ static hpx_action_t   pong = 0;
 
 /* globals */
 static int           count = 0;           //!< per-locality count of actions
-static hpx_addr_t    start = 0;           //!< keeps track of timing
+static hpx_time_t    start = 0;           //!< keeps track of timing
 
 /* helper functions */
 static void print_usage(FILE *stream);

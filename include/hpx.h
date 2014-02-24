@@ -25,7 +25,6 @@ extern "C" {
 
 /// External HPX typedefs
 /// @{
-typedef         uintptr_t hpx_addr_t;
 typedef          uint64_t hpx_time_t;
 typedef         uintptr_t hpx_action_t;
 typedef            int (* hpx_action_handler_t)(void *);
@@ -37,7 +36,6 @@ extern hpx_action_t HPX_ACTION_NULL;
 /// Extern HPX macros
 /// @{
 #define           HPX_SUCCESS 0
-#define              HPX_NULL ((uintptr_t)NULL)
 /// @}
 
 /// printf formats
@@ -49,6 +47,15 @@ extern hpx_action_t HPX_ACTION_NULL;
 #define HPX_PRIo_hpx_action_t PRIoPTR
 /// @}
 
+// An HPX global address.
+typedef struct {
+  void *local;
+  int rank;
+} hpx_addr_t;
+
+extern const hpx_addr_t HPX_NULL;
+
+bool hpx_addr_eq(hpx_addr_t lhs, hpx_addr_t rhs);
 
 /// Register an action with the runtime. Should be called by the main native
 /// thread only, between the execution of hpx_init() and hpx_run(). Should not
