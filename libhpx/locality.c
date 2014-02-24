@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <unistd.h>                             // sysconf(...)
 #include "hpx.h"
 #include "locality.h"
 #include "scheduler.h"
@@ -55,7 +56,7 @@ static int _null_action(void *unused) {
 }
 
 static int _get_num_pu(void) {
-  return 8;
+  return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 static void *_entry(void *args) {
