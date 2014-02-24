@@ -15,13 +15,13 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file network/smp.c
+/// @file smp/transport.c
 ///
-/// The smp network is used by default when no other network is defined.
+/// The smp transport is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
 #include "scheduler.h"
-#include "networks.h"
+#include "transport.h"
 #include "parcel.h"
 
 static int _init(void) {
@@ -32,13 +32,13 @@ static void _fini(void) {
 }
 
 static int _send(int dest, void *buffer, unsigned size,
-                  network_request_t *request) {
+                  transport_request_t *request) {
   return 0;
 }
 
-network_t *
+transport_t *
 smp_new(void) {
-  network_t *smp = malloc(sizeof(*smp));
+  transport_t *smp = malloc(sizeof(*smp));
   smp->init = _init;
   smp->fini = _fini;
   smp->progress = NULL;
@@ -56,12 +56,12 @@ smp_new(void) {
   smp->pin = NULL;
   smp->unpin = NULL;
   smp->phys_addr = NULL;
-  smp->get_network_bytes = NULL;
+  smp->get_transport_bytes = NULL;
   smp->barrier = NULL;
   return smp;
 }
 
 void
-smp_delete(network_t *smp) {
+smp_delete(transport_t *smp) {
   free(smp);
 }
