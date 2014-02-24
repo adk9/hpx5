@@ -26,11 +26,13 @@
 typedef struct {
   int n;
   int debug;
+  int threads;
 } args_t;
 
 /// The options that fibonacci understands.
 static struct argp_option opts[] = {
   {"debug", 'd', 0, 0, "Wait for the debugger"},
+  {"threads", 't', "HPX_THREADS", 0, "HPX scheduler threads"},
   { 0 }
 };
 
@@ -47,6 +49,10 @@ static int parse(int key, char *arg, struct argp_state *state) {
 
    case 'd':
     args->debug = 1;
+    break;
+
+   case 't':
+    args->threads = atoi(arg);
     break;
 
    case ARGP_KEY_NO_ARGS:
@@ -134,17 +140,19 @@ fib_main_action(void *args) {
   printf("fib(%ld)=%ld\n", n, fn);
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
+  printf("threads:      %d\n", hpx_get_num_threads());
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }
 
 int main(int argc, char *argv[]) {
-  hpx_config_t config = { .scheduler_threads = 1 };
   args_t args = {0};
   struct argp parser = { opts, parse, args_doc, doc };
   int e = argp_parse(&parser, argc, argv, 0, 0, &args);
   if (e)
     return e;
+
+  hpx_config_t config = { .scheduler_threads = args.threads };
 
   if (args.debug) {
     int i = 0;
