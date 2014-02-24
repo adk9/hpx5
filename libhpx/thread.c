@@ -25,14 +25,15 @@
 #include "locks.h"
 #include "asm.h"
 
+#define _PAGE_SIZE 4096
+#define _DEFAULT_PAGES 4
+
 /// ----------------------------------------------------------------------------
-/// Stack sizes.
-///
-/// @todo These need to be configurable at runtime.
+/// Stack sizes. Can be configured at runtime.
 /// ----------------------------------------------------------------------------
-#define LIBHPX_THREAD_PAGE_SIZE 4096
-#define LIBHPX_THREAD_PAGES 4
-#define LIBHPX_THREAD_SIZE (LIBHPX_THREAD_PAGE_SIZE * LIBHPX_THREAD_PAGES)
+static int _thread_size = 0;
+static int _thread_alignment = 0;
+static int _stack_size = 0;
 
 /// ----------------------------------------------------------------------------
 /// A structure describing the initial frame on a stack.
@@ -71,12 +72,11 @@ static __thread uint16_t _fpucw = 0;
 
 static _frame_t *_get_top_frame(thread_t *thread) {
   assert(sizeof(_frame_t) == 80);
-  return (_frame_t*)&thread->stack[LIBHPX_THREAD_SIZE - sizeof(thread_t) -
-                                   sizeof(_frame_t)];
+  return (_frame_t*)&thread->stack[_stack_size - sizeof(_frame_t)];
 }
 
 static thread_t *_get_from_sp(void *sp) {
-  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(LIBHPX_THREAD_SIZE);
+  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(_thread_alignment);
   uintptr_t addr = (uintptr_t)sp;
   addr &= MASK;
   thread_t *thread = (thread_t*)addr;
@@ -84,7 +84,21 @@ static thread_t *_get_from_sp(void *sp) {
 }
 
 int
-thread_init_module(void) {
+thread_init_module(int stack_bytes) {
+  // don't care about performance
+  if (!stack_bytes) {
+    _thread_size = _PAGE_SIZE * _DEFAULT_PAGES;
+    _thread_alignment = _thread_size;
+  }
+  else {
+    int pages = stack_bytes / _PAGE_SIZE;
+    pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
+    _thread_size = _PAGE_SIZE * pages;
+    _thread_alignment = 1 << __builtin_ctzl(_thread_size);
+    if (_thread_alignment < _thread_size)
+      _thread_alignment <<= 1;
+  }
+  _stack_size = _thread_size - sizeof(thread_t);
   return HPX_SUCCESS;
 }
 
@@ -127,7 +141,7 @@ thread_t *
 thread_new(thread_entry_t entry, hpx_parcel_t *parcel) {
   // try to get a freelisted thread, or allocate a new, properly-aligned one
   thread_t *t = NULL;
-  if (posix_memalign((void**)&t, LIBHPX_THREAD_SIZE, LIBHPX_THREAD_SIZE))
+  if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
     assert(false);
   return thread_init(t, entry, parcel);
 }

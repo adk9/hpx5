@@ -96,7 +96,22 @@ action_allreduce(void *unused) {
 
 int
 main(int argc, char** argv) {
-  hpx_config_t config = { .scheduler_threads = 1 };
+  hpx_config_t config = {
+    .scheduler_threads = 0,
+    .stack_bytes = 0
+  };
+
+  switch (argc) {
+   default:
+    fprintf(stderr, "Usage: allreduce [optional THREADS].\n");
+    return -1;
+   case (2):
+    config.scheduler_threads = atoi(argv[2]);
+    break;
+   case (1):
+    break;
+  }
+
   int success = hpx_init(&config);
   if (success != 0) {
     printf("Error %d in hpx_init!\n", success);

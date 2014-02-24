@@ -52,7 +52,7 @@ int main(int argc, char * argv[argc]) {
   switch (argc) {
    default:
     fprintf(stderr, "Usage: countdown ROUNDS [optional THREADS]\n");
-    return 1;
+    return -1;
    case (3):
     threads = atoi(argv[2]);
    case (2):

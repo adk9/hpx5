@@ -65,7 +65,8 @@ hpx_action_t hpx_action_register(const char *id, hpx_action_handler_t func);
 ///
 /// see <argp.h>
 typedef struct {
-  int scheduler_threads;
+  int scheduler_threads;                // number of HPX scheduler threads
+  int stack_bytes;                      // minimum stack size in bytes
 } hpx_config_t;
 
 /// Initializes HPX. This call creates native threads for all of the scheduler
