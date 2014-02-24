@@ -15,7 +15,7 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file network/mpi.c
+/// @file mpi/transport.c
 ///
 /// The MPI network implements the HPX network interface on top of MPI.
 /// ----------------------------------------------------------------------------

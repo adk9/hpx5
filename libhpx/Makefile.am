@@ -4,18 +4,19 @@
 
 lib_LTLIBRARIES		= libhpx.la
 
-libhpx_la_SOURCES	= hpx.c locks.c locality.c scheduler.c parcel.c action.c thread.c network.c future.c smp/network.c
+libhpx_la_SOURCES	= hpx.c locks.c locality.c scheduler.c parcel.c action.c \
+					  thread.c network.c future.c smp/transport.c 
 
 if CPU_X86_64
 libhpx_la_SOURCES  += arch/x86_64/transfer.S arch/x86_64/asm.S
 endif
 
 if HAVE_MPI
-libhpx_la_SOURCES  += mpi/network.c
+libhpx_la_SOURCES  += mpi/transport.c
 endif
 
 if HAVE_PHOTON
-libhpx_la_SOURCES  += photon/network.c
+libhpx_la_SOURCES  += photon/transport.c
 endif
 
 libhpx_la_CPPFLAGS  = -I$(top_srcdir)/include

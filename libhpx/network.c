@@ -19,18 +19,19 @@
 /// @brief Manages the HPX network.
 ///
 /// This file deals with the complexities of the HPX network interface,
-/// shielding it from the
+/// shielding it from the details of the underlying transport interface.
 /// ----------------------------------------------------------------------------
 #include "network.h"
-#include "networks.h"
+#include "transport.h"
 #include "parcel.h"
 #include "scheduler.h"
+#include "debug.h"
 
-static network_t *_network = NULL;
+static transport_t *_transport = NULL;
 
 int
 network_init(void) {
-  _network = smp_new();
+  _transport = smp_new();
   return HPX_SUCCESS;
 }
 
@@ -41,7 +42,7 @@ network_init_thread(void) {
 
 void
 network_fini(void) {
-  smp_delete(_network);
+  smp_delete(_transport);
 }
 
 void
@@ -63,10 +64,10 @@ network_fini_thread(void) {
 
 void
 hpx_parcel_send(hpx_parcel_t *p) {
-  scheduler_spawn(p);
-  // int rank = hpx_addr_to_rank(p->target);
-  // _network->send(rank, _send_offset(p), _send_size(p), NULL);
-  // parcel_release(p);
+  if (network_addr_is_local(p->target, NULL))
+    scheduler_spawn(p);
+  else
+    UNIMPLEMENTED();
 }
 
 void
@@ -79,6 +80,7 @@ network_berrier(void) {
 
 bool
 network_addr_is_local(hpx_addr_t addr, void **out) {
-  *out = (void*)addr;
+  if (out)
+    *out = (void*)addr;
   return true;
 }

@@ -27,4 +27,4 @@
 #define unlikely(S) (__builtin_expect(S, 0))
 #define unreachable() __builtin_unreachable()
 
-#endif
+#endif // LIBHPX_BUILTINS_H
