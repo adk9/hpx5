@@ -37,6 +37,7 @@ typedef struct {
 
 static hpx_action_t _future_set = 0;
 static hpx_action_t _future_get_proxy = 0;
+static hpx_action_t _future_free = 0;
 
 static int
 _future_set_action(void *args) {
@@ -57,11 +58,23 @@ _future_get_proxy_action(void *args) {
   hpx_thread_exit(HPX_SUCCESS, buffer, n);
 }
 
+
+static void _free(future_t *f);
+
+static int
+_future_free_action(void *args) {
+  thread_t *thread = thread_current();
+  hpx_parcel_t *parcel = thread->parcel;
+  _free(parcel->target.local);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+}
+
 int
 future_init_module(void) {
   _future_set = hpx_action_register("_future_set", _future_set_action);
   _future_get_proxy = hpx_action_register("_future_get_proxy",
                                           _future_get_proxy_action);
+  _future_free = hpx_action_register("_future_free", _future_free_action);
   return HPX_SUCCESS;
 }
 
@@ -227,7 +240,7 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
 
   // deal with the remote futures sequentially
   for (unsigned i = 0; i < n; ++i) {
-    if (remote[i] != HPX_NULL) {
+    if (!hpx_addr_eq(remote[i], HPX_NULL)) {
       void *addr = (values[i]) ? values[i] : NULL;
       int size = (sizes[i]) ? sizes[i] : 0;
       _sync_get_remote(futures[i], addr, size);
@@ -280,21 +293,18 @@ future_set(future_t *f, const void *data, int size) {
   return LOCKABLE_PACKED_STACK_POP_ALL_AND_UNLOCK(&f->waitq);
 }
 
-static future_t *_new(int size) {
-  future_t *f = NULL;
-  int e = posix_memalign((void**)&f, sizeof(*f), sizeof(*f));
-  if (e) {
-    fprintf(stderr, "failed future allocation\n");
-    abort();
-  }
+void _free(future_t *f) {
+  if (!_is_state(f, _INPLACE))
+    free(f->value);
+  free(f);
+}
 
+static void _init(future_t *f, int size) {
   f->waitq = NULL;
   if (size > sizeof(f->value))
     f->value = malloc(size);
   else
     _set_state(f, _INPLACE);
-
-  return f;
 }
 
 /// ----------------------------------------------------------------------------
@@ -302,8 +312,9 @@ static future_t *_new(int size) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_future_new(int size) {
-  future_t *f = _new(size);
-  return (hpx_addr_t)f;
+  hpx_addr_t f = network_malloc(sizeof(future_t), sizeof(future_t));
+  _init(f.local, size);
+  return f;
 }
 
 /// ----------------------------------------------------------------------------
@@ -311,8 +322,7 @@ hpx_future_new(int size) {
 /// ----------------------------------------------------------------------------
 void
 hpx_future_delete(hpx_addr_t future) {
-  future_t *f = (future_t*)future;
-  if (!_is_state(f, _INPLACE))
-    free(f->value);
-  free(f);
+  if (future.rank == hpx_get_my_rank)
+    _free(future.local);
+  hpx_call(future, _future_free, NULL, 0, HPX_NULL);
 }

@@ -149,23 +149,13 @@ hpx_shutdown(int value) {
   exit(value);
 }
 
-int
-hpx_get_my_rank(void) {
-  return 0;
-}
-
-int
-hpx_get_num_ranks(void) {
-  return 1;
-}
-
 void
 hpx_thread_exit(int status, const void *value, unsigned size) {
   // if there's a continuation future, then we set it
   thread_t *thread = thread_current();
   hpx_parcel_t *parcel = thread->parcel;
   hpx_addr_t cont = parcel->cont;
-  if (cont != HPX_NULL)
+  if (!hpx_addr_eq(cont, HPX_NULL))
     hpx_future_set(cont, value, size);
 
   // exit terminates this thread
@@ -196,14 +186,4 @@ hpx_time_to_us(hpx_time_t time) {
 uint64_t
 hpx_time_to_ms(hpx_time_t time) {
   return time;
-}
-
-hpx_addr_t
-hpx_addr_from_rank(int rank) {
-  return HPX_NULL;
-}
-
-int
-hpx_addr_to_rank(hpx_addr_t rank) {
-  return -1;
 }

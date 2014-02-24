@@ -36,9 +36,6 @@ HPX_INTERNAL void network_fini_thread(void);
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_barrier(void);
 
-
-// The global addressing mechanism is the network's responsibility.
-
 /// ----------------------------------------------------------------------------
 /// Get the local address for a global address.
 ///
@@ -51,5 +48,13 @@ HPX_INTERNAL void network_barrier(void);
 /// @returns        - true if the address is local, false if it is not
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL bool network_addr_is_local(hpx_addr_t addr, void **out);
+
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_addr_t network_malloc(int size, int alignment);
+
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_free(hpx_addr_t addr);
 
 #endif // LIBHPX_NETWORK_H
