@@ -145,3 +145,8 @@ int
 hpx_get_my_thread_id(void) {
   return _id;
 }
+
+int
+hpx_get_num_threads(void) {
+  return _n;
+}

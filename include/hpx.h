@@ -93,6 +93,7 @@ void hpx_shutdown(int code) HPX_NORETURN;
 int hpx_get_my_rank(void);
 int hpx_get_my_thread_id(void);
 int hpx_get_num_ranks(void);
+int hpx_get_num_threads(void);
 
 /// HPX address interface
 int hpx_addr_to_rank(hpx_addr_t addr);

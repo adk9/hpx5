@@ -47,10 +47,20 @@ static int send_action(void *args) {
 }
 
 int main(int argc, char * argv[argc]) {
-  int n = atoi(argv[1]);
-  int t = atoi(argv[2]);
+  int n = 0;
+  int threads = 0;
+  switch (argc) {
+   default:
+    fprintf(stderr, "Usage: countdown ROUNDS [optional THREADS]\n");
+    return 1;
+   case (3):
+    threads = atoi(argv[2]);
+   case (2):
+    n = atoi(argv[1]);
+    break;
+  }
 
-  hpx_config_t config = { .scheduler_threads = t };
+  hpx_config_t config = { .scheduler_threads = threads };
   if (hpx_init(&config)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
