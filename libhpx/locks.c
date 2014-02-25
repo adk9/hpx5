@@ -25,7 +25,7 @@ static uintptr_t _get_state(void *addr) {
 }
 
 static void *_get_addr(void *addr) {
-  return (void*)((uintptr_t)addr & _ADDR_MASK);
+  return packed_ptr_get_ptr(addr);
 }
 
 static uintptr_t _as_unlocked(uintptr_t state) {
@@ -42,26 +42,6 @@ static uintptr_t _as_locked(uintptr_t state) {
 
 static void *_set_state(void *addr, uintptr_t state) {
   return (void*)((uintptr_t)addr | state);
-}
-
-
-void
-lockable_packed_stack_push_and_unlock(void **stack, void *element, void **next) {
-    void *top = *stack;
-    *next = _get_addr(top);
-    uintptr_t state = _get_state(top);
-    state = _as_unlocked(state);
-    element = _set_state(element, state);
-    sync_store(stack, element, SYNC_RELEASE);
-}
-
-void *
-lockable_packed_stack_pop_all_and_unlock(void **stack) {
-  void *top = *stack;
-  uintptr_t state = _get_state(top);
-  state = _as_unlocked(state);
-  sync_store(stack, _set_state(NULL, state), SYNC_RELEASE);
-  return _get_addr(top);
 }
 
 
@@ -107,4 +87,29 @@ packed_ptr_set(void **ptr, uintptr_t state) {
 bool
 packed_ptr_is_set(const void *ptr, uintptr_t state) {
   return (uintptr_t)ptr & state;
+}
+
+
+void *
+packed_ptr_get_ptr(const void *ptr) {
+  return (void*)((uintptr_t)ptr & _ADDR_MASK);
+}
+
+void
+lockable_packed_stack_push_and_unlock(void **stack, void *element, void **next) {
+    void *top = *stack;
+    *next = _get_addr(top);
+    uintptr_t state = _get_state(top);
+    state = _as_unlocked(state);
+    element = _set_state(element, state);
+    sync_store(stack, element, SYNC_RELEASE);
+}
+
+void *
+lockable_packed_stack_pop_all_and_unlock(void **stack) {
+  void *top = *stack;
+  uintptr_t state = _get_state(top);
+  state = _as_unlocked(state);
+  sync_store(stack, _set_state(NULL, state), SYNC_RELEASE);
+  return _get_addr(top);
 }

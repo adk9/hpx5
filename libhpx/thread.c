@@ -66,12 +66,11 @@ typedef struct {
 /// Captured for new stack allocation in thread_init_thread().
 /// ----------------------------------------------------------------------------
 /// @{
-static __thread uint32_t _mxcsr = 0;
-static __thread uint16_t _fpucw = 0;
+static uint32_t _mxcsr = 0;
+static uint16_t _fpucw = 0;
 /// @}
 
 static _frame_t *_get_top_frame(thread_t *thread) {
-  assert(sizeof(_frame_t) == 80);
   return (_frame_t*)&thread->stack[_stack_size - sizeof(_frame_t)];
 }
 
@@ -99,6 +98,9 @@ thread_init_module(int stack_bytes) {
       _thread_alignment <<= 1;
   }
   _stack_size = _thread_size - sizeof(thread_t);
+
+  get_mxcsr(&_mxcsr);
+  get_fpucw(&_fpucw);
   return HPX_SUCCESS;
 }
 
@@ -108,8 +110,8 @@ thread_fini_module(void) {
 
 int
 thread_init_thread(void) {
-  get_mxcsr(&_mxcsr);
-  get_fpucw(&_fpucw);
+
+
   return HPX_SUCCESS;
 }
 

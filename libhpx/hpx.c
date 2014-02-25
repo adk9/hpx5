@@ -25,14 +25,14 @@
 #include "scheduler.h"
 #include "thread.h"
 #include "future.h"
-#include "time.h"
+#include "platform/platform.h"
 
 int
 hpx_init(const hpx_config_t *config) {
   // start by initializing all of the subsystems
   int e = HPX_SUCCESS;
 
-  if ((e = time_init_module()))
+  if ((e = platform_init_module()))
     goto unwind0;
   if ((e = parcel_init_module()))
     goto unwind1;
@@ -60,7 +60,7 @@ hpx_init(const hpx_config_t *config) {
  unwind2:
   parcel_fini_module();
  unwind1:
-  time_fini_module();
+  platform_fini_module();
  unwind0:
   return e;
 }
@@ -70,7 +70,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
   assert(act);
   int e = 0;
 
-  if ((e = time_init_thread()))
+  if ((e = platform_init_thread()))
     goto unwind0;
   if ((e = parcel_init_thread()))
     goto unwind1;
@@ -90,7 +90,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
  unwind2:
   parcel_fini_thread();
  unwind1:
-  time_fini_thread();
+  platform_fini_thread();
  unwind0:
   return e;
 }

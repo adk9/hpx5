@@ -25,7 +25,6 @@ extern "C" {
 
 /// External HPX typedefs
 /// @{
-typedef          uint64_t hpx_time_t;
 typedef         uintptr_t hpx_action_t;
 typedef            int (* hpx_action_handler_t)(void *);
 typedef struct hpx_parcel hpx_parcel_t;
@@ -117,11 +116,6 @@ void hpx_future_get(hpx_addr_t future, void *value, int size);
 void hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[], const int sizes[]);
 void hpx_future_set(hpx_addr_t future, const void *value, int size);
 
-/// HPX high-resolution timer interface
-hpx_time_t hpx_time_now(void);
-uint64_t hpx_time_to_us(hpx_time_t);
-uint64_t hpx_time_to_ms(hpx_time_t);
-
 /// HoPX parcel interface
 hpx_parcel_t *hpx_parcel_acquire(unsigned);
 void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action);
@@ -135,6 +129,21 @@ void hpx_parcel_send_sync(hpx_parcel_t *p);
 /// HPX rpc interface
 void hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
               size_t len, hpx_addr_t result);
+
+/// HPX high-resolution timer interface
+#if defined(__linux__)
+#include <time.h>
+typedef struct timespec hpx_time_t;
+#define HPX_TIME_INIT {0}
+#elif defined(__APPLE__)
+#include <stdint.h>
+typedef uint64_t hpx_time_t;
+#define HPX_TIME_INIT (0)
+#endif
+
+hpx_time_t hpx_time_now(void);
+double hpx_time_elapsed_us(hpx_time_t);
+double hpx_time_elapsed_ms(hpx_time_t);
 
 #ifdef __cplusplus
 }

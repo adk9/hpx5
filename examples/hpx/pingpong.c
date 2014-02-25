@@ -34,8 +34,8 @@ static hpx_action_t   ping = 0;
 static hpx_action_t   pong = 0;
 
 /* globals */
-static int           count = 0;           //!< per-locality count of actions
-static hpx_time_t    start = 0;           //!< keeps track of timing
+static int           count = 0;               //!< per-locality count of actions
+static hpx_time_t    start = HPX_TIME_INIT;   //!< keeps track of timing
 
 /* helper functions */
 static void print_usage(FILE *stream);
@@ -112,8 +112,7 @@ action_ping(void *msg) {
   // If we completed the number of ping-pong operations that we set out to do,
   // then output the latency and terminate execution.
   if (args->id >= arg_iter_limit) {
-    hpx_time_t end = hpx_time_now();
-    double elapsed = (double)hpx_time_to_ms(start - end);
+    double elapsed = (double)hpx_time_elapsed_ms(start);
     double latency = elapsed/(arg_iter_limit * 2);
     printf("average oneway latency (MPI):   %f ms\n", latency);
     hpx_shutdown(0);

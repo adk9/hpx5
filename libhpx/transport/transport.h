@@ -13,6 +13,7 @@
 #ifndef LIBHPX_TRANSPORT_H
 #define LIBHPX_TRANSPORT_H
 
+#include "attributes.h"
 
 typedef struct transport_status transport_status_t;
 typedef struct transport_request transport_request_t;
