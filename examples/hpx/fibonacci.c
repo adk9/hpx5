@@ -135,7 +135,7 @@ fib_main_action(void *args) {
   hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), fib, &n, sizeof(n), future);
   hpx_future_get(future, &fn, sizeof(fn));
 
-  double time = hpx_time_to_us(clock - hpx_time_now())/1e3;
+  double time = hpx_time_elapsed_ms(clock)/1e3;
 
   printf("fib(%ld)=%ld\n", n, fn);
   printf("seconds: %.7f\n", time);

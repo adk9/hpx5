@@ -10,45 +10,63 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifndef __linux__
+#error The HPX time implementation is configured incorrectly
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
+/// ----------------------------------------------------------------------------
+/// @file libhpx/platform/linux/time.c
+/// @brief Implements HPX's time interface on linux.
+/// ----------------------------------------------------------------------------
+#include <assert.h>
+#include <stdio.h>
+#include <stdint.h>
 #include "hpx.h"
+#include "platform.h"
 
-/// ----------------------------------------------------------------------------
-/// @file libhpx/time.c
-/// @brief Implements HPX's time interface.
-/// ----------------------------------------------------------------------------
 int
-time_init_module(void) {
+platform_init_module(void) {
   return HPX_SUCCESS;
 }
 
 void
-time_fini_module(void) {
+platform_fini_module(void) {
 }
 
 int
-time_init_thread(void) {
+platform_init_thread(void) {
   return HPX_SUCCESS;
 }
 
 void
-time_fini_thread(void) {
+platform_fini_thread(void) {
 }
 
 hpx_time_t
 hpx_time_now(void) {
-  return 0;
-}
-
-uint64_t
-hpx_time_to_us(hpx_time_t time) {
+  hpx_time_t time;
+  if (clock_gettime(CLOCK_MONOTONIC, &time)) {
+    fprintf(stderr, "hpx_time_now() failed to get time.\n");
+  }
   return time;
 }
 
-uint64_t
-hpx_time_to_ms(hpx_time_t time) {
-  return time;
+static double
+_elapsed_ns(hpx_time_t from) {
+  hpx_time_t now = hpx_time_now();
+  return (double)(((now.tv_sec - from.tv_sec) * 1e9) + (now.tv_nsec - from.tv_nsec));
+}
+
+double
+hpx_time_elapsed_us(hpx_time_t from) {
+  return _elapsed_ns(from)/1e3;
+}
+
+double
+hpx_time_elapsed_ms(hpx_time_t from) {
+  return _elapsed_ns(from)/1e6;
 }

@@ -32,6 +32,7 @@ HPX_INTERNAL void packed_ptr_lock(void **ptr);
 HPX_INTERNAL void packed_ptr_unlock(void **ptr);
 HPX_INTERNAL void packed_ptr_set(void **ptr, uintptr_t state);
 HPX_INTERNAL bool packed_ptr_is_set(const void *ptr, uintptr_t state);
+HPX_INTERNAL void *packed_ptr_get_ptr(const void *ptr);
 
 HPX_INTERNAL void lockable_packed_stack_push_and_unlock(void **stack, void *element, void **next);
 HPX_INTERNAL void *lockable_packed_stack_pop_all_and_unlock(void **stack);

@@ -37,7 +37,7 @@ typedef struct {
 
 static hpx_action_t _future_set = 0;
 static hpx_action_t _future_get_proxy = 0;
-static hpx_action_t _future_free = 0;
+static hpx_action_t _future_delete = 0;
 
 static int
 _future_set_action(void *args) {
@@ -59,13 +59,14 @@ _future_get_proxy_action(void *args) {
 }
 
 
-static void _free(future_t *f);
+static void _delete(future_t *f);
 
 static int
-_future_free_action(void *args) {
+_future_delete_action(void *args) {
   thread_t *thread = thread_current();
   hpx_parcel_t *parcel = thread->parcel;
-  _free(parcel->target.local);
+  assert(parcel);
+  _delete(parcel->target.local);
   hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
@@ -74,7 +75,7 @@ future_init_module(void) {
   _future_set = hpx_action_register("_future_set", _future_set_action);
   _future_get_proxy = hpx_action_register("_future_get_proxy",
                                           _future_get_proxy_action);
-  _future_free = hpx_action_register("_future_free", _future_free_action);
+  _future_delete = hpx_action_register("_future_delete", _future_delete_action);
   return HPX_SUCCESS;
 }
 
@@ -116,6 +117,10 @@ static void _lock(future_t *f) {
 
 static void _unlock(future_t *f) {
   packed_ptr_unlock((void**)&f->waitq);
+}
+
+static thread_t *_get_queue(future_t *f) {
+  return (thread_t*)packed_ptr_get_ptr(f->waitq);
 }
 
 /// ----------------------------------------------------------------------------
@@ -293,7 +298,13 @@ future_set(future_t *f, const void *data, int size) {
   return LOCKABLE_PACKED_STACK_POP_ALL_AND_UNLOCK(&f->waitq);
 }
 
-void _free(future_t *f) {
+void _delete(future_t *f) {
+  if (!f)
+    return;
+
+  // acquire the lock for the future
+  _lock(f);
+  assert(!_get_queue(f));
   if (!_is_state(f, _INPLACE))
     free(f->value);
   free(f);
@@ -322,7 +333,8 @@ hpx_future_new(int size) {
 /// ----------------------------------------------------------------------------
 void
 hpx_future_delete(hpx_addr_t future) {
-  if (future.rank == hpx_get_my_rank)
-    _free(future.local);
-  hpx_call(future, _future_free, NULL, 0, HPX_NULL);
+  if (future.rank == hpx_get_my_rank())
+    _delete(future.local);
+  else
+    hpx_call(future, _future_delete, NULL, 0, HPX_NULL);
 }

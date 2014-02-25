@@ -105,8 +105,7 @@ AS_IF([test "x$DOXYGEN" != x],
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
 AS_CASE([$host_os],
-    [linux*],   [AC_SUBST([PLATFORM_LIBS], [-lrt])
-                 AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+    [linux*],   [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
                  pagesize=`getconf PAGESIZE`],
     [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
@@ -124,6 +123,7 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
 # -----------------------------------------------------------------------------
+AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
@@ -136,6 +136,8 @@ AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
   libhpx/Makefile
+  libhpx/transport/Makefile
+  libhpx/platform/Makefile
   include/Makefile
   examples/Makefile
   examples/hpx/Makefile	

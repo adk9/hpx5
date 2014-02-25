@@ -10,14 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_TIME_H
-#define LIBHPX_TIME_H
+#ifndef LIBHPX_PLATFORM_H
+#define LIBHPX_PLATFORM_H
 
 #include "attributes.h"
 
-HPX_INTERNAL int time_init_module(void);
-HPX_INTERNAL void time_fini_module(void);
-HPX_INTERNAL int time_init_thread(void);
-HPX_INTERNAL void time_fini_thread(void);
+HPX_INTERNAL int platform_init_module(void);
+HPX_INTERNAL void platform_fini_module(void);
+HPX_INTERNAL int platform_init_thread(void);
+HPX_INTERNAL void platform_fini_thread(void);
 
-#endif // LIBHPX_TIME_H
+#endif // LIBHPX_PLATFORM_H
