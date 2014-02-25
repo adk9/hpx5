@@ -17,7 +17,5 @@
 
 HPX_INTERNAL int platform_init_module(void);
 HPX_INTERNAL void platform_fini_module(void);
-HPX_INTERNAL int platform_init_thread(void);
-HPX_INTERNAL void platform_fini_thread(void);
 
 #endif // LIBHPX_PLATFORM_H

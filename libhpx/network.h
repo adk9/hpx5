@@ -25,10 +25,8 @@
 /// Network initialization and finalization.
 /// ----------------------------------------------------------------------------
 /// @{
-HPX_INTERNAL int network_init(void);
-HPX_INTERNAL int network_init_thread(void);
-HPX_INTERNAL void network_fini(void);
-HPX_INTERNAL void network_fini_thread(void);
+HPX_INTERNAL int network_init_module(void);
+HPX_INTERNAL void network_fini_module(void);
 /// @}
 
 /// ----------------------------------------------------------------------------

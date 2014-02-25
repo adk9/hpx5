@@ -204,19 +204,16 @@ void
 scheduler_fini_module(void) {
 }
 
-int
-scheduler_init_thread(void) {
-  return HPX_SUCCESS;
-}
-
-void
-scheduler_fini_thread(void) {
-  while (_free_threads) {
-    thread_t *t = _free_threads;
-    _free_threads = _free_threads->next;
-    thread_delete(t);
-  }
-}
+// @todo: thread intiailizer and destructor registration
+//
+// static void
+// _fini_thread(void) {
+//   while (_free_threads) {
+//     thread_t *t = _free_threads;
+//     _free_threads = _free_threads->next;
+//     thread_delete(t);
+//   }
+// }
 
 int
 scheduler_startup(hpx_action_t action, const void *args, unsigned size) {

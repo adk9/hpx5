@@ -44,7 +44,7 @@ hpx_init(const hpx_config_t *config) {
     goto unwind4;
   if ((e = locality_init_module(config->scheduler_threads)))
     goto unwind5;
-  if ((e = network_init()))
+  if ((e = network_init_module()))
     goto unwind6;
 
   return e;
@@ -68,30 +68,14 @@ hpx_init(const hpx_config_t *config) {
 int
 hpx_run(hpx_action_t act, const void *args, unsigned size) {
   assert(act);
-  int e = 0;
-
-  if ((e = platform_init_thread()))
-    goto unwind0;
-  if ((e = parcel_init_thread()))
-    goto unwind1;
-  if ((e = thread_init_thread()))
-    goto unwind2;
-  if ((e = scheduler_init_thread()))
-    goto unwind3;
-  if ((e = network_init_thread()))
-    goto unwind4;
-
-  return scheduler_startup(act, args, size);
-
- unwind4:
-  scheduler_fini_thread();
- unwind3:
-  thread_fini_thread();
- unwind2:
-  parcel_fini_thread();
- unwind1:
-  platform_fini_thread();
- unwind0:
+  int e = scheduler_startup(act, args, size);
+  network_fini_module();
+  locality_fini_module();
+  future_fini_module();
+  scheduler_fini_module();
+  thread_fini_module();
+  parcel_fini_module();
+  platform_fini_module();
   return e;
 }
 

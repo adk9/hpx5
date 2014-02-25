@@ -83,15 +83,6 @@ void
 future_fini_module(void) {
 }
 
-int
-future_init_thread(void) {
-  return HPX_SUCCESS;
-}
-
-void
-future_fini_thread(void) {
-}
-
 /// ----------------------------------------------------------------------------
 /// Futures have three distinct state bits, they can be locked or unlocked, they
 /// can be triggered or not, and they can have in place our out of place
