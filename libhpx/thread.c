@@ -108,17 +108,6 @@ void
 thread_fini_module(void) {
 }
 
-int
-thread_init_thread(void) {
-
-
-  return HPX_SUCCESS;
-}
-
-void
-thread_fini_thread(void) {
-}
-
 thread_t *
 thread_init(thread_t *thread, thread_entry_t entry, hpx_parcel_t *parcel) {
   // set up the initial stack frame

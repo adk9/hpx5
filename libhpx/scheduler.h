@@ -33,14 +33,6 @@ HPX_INTERNAL int scheduler_init_module(void);
 HPX_INTERNAL void scheduler_fini_module(void);
 
 /// ----------------------------------------------------------------------------
-/// Initializes thread-local scheduler data for this address space.
-///
-/// @returns - 0 on success, non-zero on failure
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_init_thread(void);
-HPX_INTERNAL void scheduler_fini_thread(void);
-
-/// ----------------------------------------------------------------------------
 /// Start a scheduler thread.
 ///
 /// This starts a low-level scheduler thread. It will run the scheduling

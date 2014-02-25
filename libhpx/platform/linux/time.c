@@ -37,15 +37,6 @@ void
 platform_fini_module(void) {
 }
 
-int
-platform_init_thread(void) {
-  return HPX_SUCCESS;
-}
-
-void
-platform_fini_thread(void) {
-}
-
 hpx_time_t
 hpx_time_now(void) {
   hpx_time_t time;

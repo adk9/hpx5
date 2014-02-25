@@ -40,7 +40,7 @@ static hpx_action_t _network_free = 0;
 static int _network_free_action(void *args);
 
 int
-network_init(void) {
+network_init_module(void) {
   _transport = smp_new();
   _rank = 0;
   _num_ranks = 1;
@@ -48,32 +48,10 @@ network_init(void) {
   return HPX_SUCCESS;
 }
 
-int
-network_init_thread(void) {
-  return HPX_SUCCESS;
-}
-
 void
-network_fini(void) {
+network_fini_module(void) {
   smp_delete(_transport);
 }
-
-void
-network_fini_thread(void) {
-}
-
-// static void *_send_offset(hpx_parcel_t *parcel) {
-//   return &parcel->size;
-// }
-
-// static int _send_size(hpx_parcel_t *parcel) {
-//   int size = parcel->size;
-//   size += sizeof(parcel->size);
-//   size += sizeof(parcel->action);
-//   size += sizeof(parcel->target);
-//   size += sizeof(parcel->cont);
-//   return size;
-// }
 
 void
 hpx_parcel_send(hpx_parcel_t *p) {

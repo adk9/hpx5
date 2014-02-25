@@ -23,9 +23,6 @@
 HPX_INTERNAL int future_init_module(void);
 HPX_INTERNAL void future_fini_module(void);
 
-HPX_INTERNAL int future_init_thread(void);
-HPX_INTERNAL void future_fini_module(void);
-
 /// ----------------------------------------------------------------------------
 /// Forward declare the thread type for the wait queue.
 /// ----------------------------------------------------------------------------

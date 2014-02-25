@@ -29,19 +29,9 @@ parcel_init_module(void) {
   return HPX_SUCCESS;
 }
 
-int
-parcel_init_thread(void) {
-  return HPX_SUCCESS;
-}
-
 void
 parcel_fini_module(void) {
 }
-
-void
-parcel_fini_thread(void) {
-}
-
 
 void
 parcel_release(hpx_parcel_t *parcel) {

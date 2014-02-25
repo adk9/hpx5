@@ -18,9 +18,7 @@
 struct thread;                                  // a user-level thread
 
 HPX_INTERNAL int parcel_init_module(void);
-HPX_INTERNAL int parcel_init_thread(void);
 HPX_INTERNAL void parcel_fini_module(void);
-HPX_INTERNAL void parcel_fini_thread(void);
 
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
