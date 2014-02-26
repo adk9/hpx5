@@ -77,7 +77,7 @@ static hpx_action_t fib_main = 0;
 
 static int
 fib_action(void *args) {
-  long n = *(long*)args;
+  int n = *(int*)args;
 
   if (n < 2)
     hpx_thread_exit(HPX_SUCCESS, &n, sizeof(n));
@@ -90,17 +90,17 @@ fib_action(void *args) {
     hpx_addr_from_rank((rank + 1) % ranks)
   };
 
-  long ns[] = {
+  int ns[] = {
     n - 1,
     n - 2
   };
 
   hpx_addr_t futures[] = {
-    hpx_future_new(sizeof(long)),
-    hpx_future_new(sizeof(long))
+    hpx_future_new(sizeof(int)),
+    hpx_future_new(sizeof(int))
   };
 
-  long fns[] = {
+  int fns[] = {
     0,
     0
   };
@@ -111,33 +111,34 @@ fib_action(void *args) {
   };
 
   int sizes[] = {
-    sizeof(long),
-    sizeof(long)
+    sizeof(int),
+    sizeof(int)
   };
 
-  hpx_call(peers[0], fib, &ns[0], sizeof(long), futures[0]);
-  hpx_call(peers[1], fib, &ns[1], sizeof(long), futures[1]);
+  hpx_call(peers[0], fib, &ns[0], sizeof(int), futures[0]);
+  hpx_call(peers[1], fib, &ns[1], sizeof(int), futures[1]);
   hpx_future_get_all(2, futures, addrs, sizes);
   hpx_future_delete(futures[0]);
   hpx_future_delete(futures[1]);
 
-  long fn = fns[0] + fns[1];
+  int fn = fns[0] + fns[1];
   hpx_thread_exit(HPX_SUCCESS, &fn, sizeof(fn));
   return HPX_SUCCESS;
 }
 
 static int
 fib_main_action(void *args) {
-  long n = *(long*)args;
-  long fn = 0;                                  // fib result
+  int n = *(int*)args;
+  int fn = 0;                                   // fib result
+  printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t clock = hpx_time_now();
-  hpx_addr_t future = hpx_future_new(sizeof(long));
+  hpx_addr_t future = hpx_future_new(sizeof(int));
   hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), fib, &n, sizeof(n), future);
   hpx_future_get(future, &fn, sizeof(fn));
 
   double time = hpx_time_elapsed_ms(clock)/1e3;
 
-  printf("fib(%ld)=%ld\n", n, fn);
+  printf("%d\n", fn);
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   printf("threads:      %d\n", hpx_get_num_threads());
@@ -172,7 +173,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
 
   // register the fib action
   fib = hpx_action_register("fib", fib_action);
