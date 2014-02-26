@@ -21,9 +21,33 @@
 /// ----------------------------------------------------------------------------
 #include "attributes.h"
 
+/// ----------------------------------------------------------------------------
+/// Initialize the locality.
+///
+/// @param threads - the number of native threads to spawn.
+/// ----------------------------------------------------------------------------
 HPX_INTERNAL int locality_init_module(int threads);
-HPX_INTERNAL void locality_fini_module(void);
-HPX_INTERNAL void locality_register_thread_callbacks(int (*init)(void), void(*fini)(void));
 
+/// ----------------------------------------------------------------------------
+/// Clean up the locality.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void locality_fini_module(void);
+
+/// ----------------------------------------------------------------------------
+/// Register initializers and finalizers for native threads.
+///
+/// Initializers will be executed in FIFO order, and finalizers will be executed
+/// in LIFO order. If an initializer fails to run (returns non-0), then
+/// finalizers for initializers that were successful will be run before the
+/// thread exits.
+///
+/// Initializers and finalizers must be registered before the locality is
+/// initialized using locality_init_module().
+///
+/// @param init - an initialization callback
+/// @param fini - a finalization callback
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void locality_register_thread_callbacks(int (*init)(void),
+                                                     void (*fini)(void));
 
 #endif // LIBHPX_LOCALITY_H
