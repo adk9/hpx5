@@ -19,9 +19,11 @@
 /// This is libhpx's interface to the hardware locality, providing hardware
 /// thread and topology information.
 /// ----------------------------------------------------------------------------
-#include "hpx.h"
+#include "attributes.h"
 
 HPX_INTERNAL int locality_init_module(int threads);
 HPX_INTERNAL void locality_fini_module(void);
+HPX_INTERNAL void locality_register_thread_callbacks(int (*init)(void), void(*fini)(void));
+
 
 #endif // LIBHPX_LOCALITY_H
