@@ -17,4 +17,6 @@
 
 #define UNIMPLEMENTED() abort()
 
+#define trace printf
+
 #endif // LIBHPX_DEBUG_H

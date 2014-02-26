@@ -23,9 +23,9 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdio.h>
-#include "transport/transport.h"
 #include "network.h"
 #include "parcel.h"
+#include "transport.h"
 #include "scheduler.h"
 #include "thread.h"
 #include "debug.h"
