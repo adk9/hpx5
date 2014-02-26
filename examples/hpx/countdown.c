@@ -23,7 +23,8 @@ static __thread unsigned seed = 0;
 
 static hpx_addr_t rand_rank(void) {
   int r = rand_r(&seed);
-  return hpx_addr_from_rank(r);
+  int n = hpx_get_num_ranks();
+  return hpx_addr_from_rank(r % n);
 }
 
 static hpx_action_t send = 0;
