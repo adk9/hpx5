@@ -29,6 +29,67 @@
 #include "scheduler.h"
 #include "sync/barriers.h"
 
+typedef int (*_init_t)(void);
+typedef void (*_fini_t)(void);
+
+typedef struct _node {
+  struct _node *next;
+  _init_t init;
+  _fini_t fini;
+} _node_t;
+
+static _node_t *_initializers = NULL;
+
+void
+locality_register_thread_callbacks(_init_t init, _fini_t fini) {
+  _node_t *node = malloc(sizeof(*node));
+  node->next = _initializers;
+  node->init = init;
+  node->fini = fini;
+  _initializers = node;
+}
+
+static void
+_free_thread_callbacks(void) {
+  while (_initializers) {
+    _node_t *node = _initializers;
+    _initializers = node->next;
+    free(node);
+  }
+}
+
+static void
+_do_fini(_node_t *node) {
+  if (!node)
+    return;
+
+  if (node->fini)
+    node->fini();
+
+  _do_fini(node->next);
+}
+
+static int
+_do_init(_node_t *node) {
+  int e = 0;
+
+  if (!node)
+    return e;
+
+  // do child initialization first
+  if ((e = _do_init(node->next)))
+    return e;
+
+  if (!node->init)
+    return e;
+
+  // if my initialization fails, finalize my children
+  if ((e = node->init()))
+    _do_fini(node->next);
+
+  return e;
+}
+
 /// ----------------------------------------------------------------------------
 /// This locality's NULL ACTION.
 /// ----------------------------------------------------------------------------
@@ -61,7 +122,9 @@ static int _get_num_pu(void) {
 
 static void *_entry(void *args) {
   _id = *(int*)args;
-  int e = scheduler_startup(HPX_ACTION_NULL, NULL, 0);
+  int e = _do_init(_initializers);
+  if (!e)
+    e = scheduler_startup(HPX_ACTION_NULL, NULL, 0);
   return (void*)(intptr_t)e;
 }
 
@@ -113,6 +176,13 @@ locality_init_module(int n) {
     }
   }
 
+  for (int i = 0; i < _n; ++i) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(_id, &cpuset);
+    pthread_setaffinity_np(_threads[_id], sizeof(cpuset), &cpuset);
+  }
+
   return 0;
 
  unwind4:
@@ -139,8 +209,8 @@ locality_fini_module(void) {
   free(_args);
   free(_attributes);
   free(_threads);
+  _free_thread_callbacks();
 }
-
 
 int
 hpx_get_my_thread_id(void) {
