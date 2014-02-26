@@ -39,6 +39,7 @@
 #include "future.h"
 #include "network.h"
 #include "builtins.h"
+#include "locality.h"
 #include "sync/ms_queue.h"
 
 /// ----------------------------------------------------------------------------
@@ -194,26 +195,29 @@ static thread_t *_schedule(bool fast, thread_t *final) {
   return _new(hpx_parcel_acquire(0));
 }
 
+/// Each scheduler thread needs to be finalized by having any of its allocated
+/// thread structures freed. This is a finalization handler registered in
+/// scheduler_init_module().
+static void _fini_scheduler_thread(void) {
+  while (_free_threads) {
+    thread_t *t = _free_threads;
+    _free_threads = _free_threads->next;
+    thread_delete(t);
+  }
+}
+
+/// Initialize the global data for the scheduler. Also register the
+/// per-scheduler-thread finalizers with the locality.
 int
 scheduler_init_module(void) {
   sync_ms_queue_init(&_new_parcels);
+  locality_register_thread_callbacks(NULL, _fini_scheduler_thread);
   return HPX_SUCCESS;
 }
 
 void
 scheduler_fini_module(void) {
 }
-
-// @todo: thread intiailizer and destructor registration
-//
-// static void
-// _fini_thread(void) {
-//   while (_free_threads) {
-//     thread_t *t = _free_threads;
-//     _free_threads = _free_threads->next;
-//     thread_delete(t);
-//   }
-// }
 
 int
 scheduler_startup(hpx_action_t action, const void *args, unsigned size) {
