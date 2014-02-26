@@ -25,7 +25,7 @@
 #include "scheduler.h"
 #include "thread.h"
 #include "future.h"
-#include "platform/platform.h"
+#include "platform.h"
 
 int
 hpx_init(const hpx_config_t *config) {
