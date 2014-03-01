@@ -141,7 +141,6 @@ fib_main_action(void *args) {
   printf("%d\n", fn);
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
-  printf("threads:      %d\n", hpx_get_num_threads());
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }
