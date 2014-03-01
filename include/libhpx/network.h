@@ -1,287 +1,94 @@
-/*
-  ====================================================================
-  High Performance ParalleX Library (libhpx)
-  
-  Network Functions
-  network.h
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+#ifndef LIBHPX_NETWORK_H
+#define LIBHPX_NETWORK_H
 
-  Copyright (c) 2013, Trustees of Indiana University 
-  All rights reserved.
+#include "hpx.h"
 
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
+/// ----------------------------------------------------------------------------
+/// @file network.h
+///
+/// This file defines the interface to the network subsystem in HPX.
+/// ----------------------------------------------------------------------------
 
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
-  ====================================================================
-*/
+/// ----------------------------------------------------------------------------
+/// Network initialization and finalization.
+/// ----------------------------------------------------------------------------
+/// @{
+HPX_INTERNAL int network_init_module(const hpx_config_t *config);
+HPX_INTERNAL void network_fini_module(void);
+/// @}
 
-#pragma once
-#ifndef LIBHPX_NETWORK_H_
-#define LIBHPX_NETWORK_H_
+/// ----------------------------------------------------------------------------
+/// The hpx_parcel structure is what the user-level interacts with.
+///
+/// The layout of this structure is both important and subtle. The go out onto
+/// the network directly, hopefully without being copied in any way. We make sure
+/// that the relevent parts of the parcel (i.e., those that need to be sent) are
+/// arranged contiguously.
+///
+/// NB: if you change the layout here, make sure that the network system can deal
+/// with it.
+///
+/// @field    next - intrusive parcel list pointer
+/// @field  thread - thread executing this active message
+/// @field    data - the data payload associated with this parcel
+/// @field    size - the data size in bytes
+/// @field  action - the target action identifier
+/// @field  target - the target address for parcel_send()
+/// @field    cont - the continuation address
+/// @field payload - possible in-place payload
+/// ----------------------------------------------------------------------------
+struct hpx_parcel {
+  // these fields are only valid within a locality
+  hpx_parcel_t *next;
+  struct thread *thread;
+  void *data;
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>                             /* HAVE_{NETWORK,MPI,PHOTON} */
-#endif
-#include <stddef.h>                             /* size_t */
-#include <stdint.h>                             /* uint32_t */
-#if HAVE_MPI
-#include <mpi.h>
-#endif
-#if HAVE_PHOTON
-#include <photon.h>
-#endif
-#include "hpx/system/attributes.h"              /* HPX MACROS */
-
-#define NETWORK_ANY_SOURCE -1
-#define NETWORK_ANY_LENGTH -1
-
-/** Forward declarations @{ */
-struct hpx_locality;
-/** @} */
-
-/**
- * The network request type.
- */
-struct network_request {
-#if HAVE_MPI
-  MPI_Request mpi;
-#endif
-#if HAVE_PHOTON
-  uint32_t photon;
-#endif
+  // fields below are sent on wire
+  int size;
+  hpx_action_t action;
+  hpx_addr_t target;
+  hpx_addr_t cont;
+  char payload[];
 };
-typedef struct network_request network_request_t;
 
-/**
- *
- */
-struct network_status {
-  int source;
-  int count;
-#if HAVE_MPI
-  MPI_Status mpi;
-#endif
-#if HAVE_PHOTON
-  struct photon_status_t photon;
-#endif
-};
-typedef struct network_status network_status_t;
+HPX_INTERNAL void network_release(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 
-/**
- * Network Operations interface
- *
- * This defines the abstract interface for a network implementation.
- */
-struct network_ops {
-  /**
-   * Initialize the network layer.
-   *
-   * @returns HPX_SUCCESS or an error condition
-   */
-  int (*init)(void);
+/// ----------------------------------------------------------------------------
+/// Wrap a network barrier.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_barrier(void);
 
-  /**
-   * Teardown the network layer.
-   *
-   * @returns HPX_SUCCESS or an error condition
-   */
-  int (*finalize)(void);
-  
-  /**
-   * The network progress function.
-   *
-   * @param[in] data - 
-   */
-  void (*progress)(void *data);
+/// ----------------------------------------------------------------------------
+/// Get the local address for a global address.
+///
+/// HPX_NULL will always return true and set @p out to NULL. A remote address
+/// will return false, but possibly leaves the out parameter in an undefined
+/// state.
+///
+/// @param     addr - the global address to check
+/// @param[out] out - the local address (possibly NULL)
+/// @returns        - true if the address is local, false if it is not
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL bool network_addr_is_local(hpx_addr_t addr, void **out);
 
-  /**
-   * Probe the network layer for events.
-   *
-   * @param[in]    src -
-   * @param[out] flags -
-   * @param[in] status -
-   *
-   * @returns HPX_SUCCESS or an error condition
-   */
-  int (*probe)(int src, int* flag, network_status_t* status);
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_addr_t network_malloc(int size, int alignment);
 
-  /**
-   * Send a network message.
-   *
-   * @param[in] dest    - the destination id
-   * @param[in] buffer  - the bytes to send
-   * @param[in] len     - the number of bytes
-   * @param[in] request - a request identifier
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*send)(int dest, void *buffer, size_t len, network_request_t *request);
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_free(hpx_addr_t addr);
 
-  /**
-   * Receive a raw payload.
-   *
-   * @param[in] src     - LD: not sure
-   * @param[in] buffer  - the buffer to receive into
-   * @param[in] len     - the length to receive
-   * @param[in] request - a request identifier
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*recv)(int src, void *buffer, size_t len, network_request_t *request);
-
-  /**
-   * Test for completion of send or receive. (For now the more
-   * specific send_test and recv_test should be used. In the future,
-   * that may change.)
-   * 
-   * @param[in] request -
-   * @param[out]   flag -
-   * @param[out] status -
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*sendrecv_test)(network_request_t *request, int *flag, network_status_t *status);
-
-  /**
-   * Test for completion of send.
-   *
-   * @param[in] request -
-   * @param[out]   flag -
-   * @param[out] status -
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*send_test)(network_request_t *request, int *flag, network_status_t *status);
-
-  /**
-   * Test for completion of receive.
-   *
-   * @param[in] request -
-   * @param[out]   flag -
-   * @param[out] status -
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*recv_test)(network_request_t *request, int *flag, network_status_t *status);
-  /* RMA put */
-  /**
-   * An asynchronous RMA put operation.
-   *
-   * @param[in]    dest - LD: not sure
-   * @param[in]  buffer - the buffer to send
-   * @param[in]     len - the length to send
-   * @param[in] request - a request identifier
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*put)(int dest, void *buffer, size_t len, network_request_t *request);
-
-  /**
-   * An aysnchronous RMA get operation.
-   *
-   * @param[in]    dest - LD: not sure
-   * @param[in]  buffer - the buffer to write
-   * @param[in]     len - the number of bytes
-   * @param[in] request - a request identifier
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*get)(int dest, void *buffer, size_t len, network_request_t *request); 
-
-  /**
-   * Test for completion of communication. (For now the more
-   * specific put_test and get_test should be used. In the future,
-   * that may change.)
-
-   *
-   * @param[in] request - the request to check
-   * @param[out]   flag - LD: not sure
-   * @param[out] status - LD: not sure
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*putget_test)(network_request_t *request, int *flag, network_status_t *status);
-
-  /**
-   * Test for completion of put communication.
-   *
-   * @param[in] request - the request to check
-   * @param[out]   flag - LD: not sure
-   * @param[out] status - LD: not sure
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*put_test)(network_request_t *request, int *flag, network_status_t *status);
-
-  /**
-   * Test for completion of get communication.
-   *
-   * @param[in] request - the request to check
-   * @param[out]   flag - LD: not sure
-   * @param[out] status - LD: not sure
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*get_test)(network_request_t *request, int *flag, network_status_t *status);
-
-  /**
-   * Pin memory for put() or get().
-   *
-   * @param[in] buffer - buffer address
-   * @param[in]    len - the extent to pin
-   *
-   * @return HPX_SUCCESS or an error code
-   */
-  int (*pin)(void* buffer, size_t len);
-
-  /**
-   * Unpin memory after a put() or get().
-   *
-   * @param[in] buffer - the buffer address
-   * @param[in]    len - the extent
-   */
-  int (*unpin)(void* buffer, size_t len);
-
-  /**
-   * Get the physical address of the current locality.
-   *
-   * @param[out] locality - the locality
-   *
-   * @returns HPX_SUCCESS or an error code
-   */
-  int (*phys_addr)(struct hpx_locality *locality);
-
-  /**
-   * Adjust the number of bytes for a network operation.
-   *
-   * Some networks have strict requirements on the size of messages. For
-   * instance, the message length for ugni appears to be four bytes. This
-   * encapsulates the network-specific functionality.
-   *
-   * @param[in] n - number of bytes we want to send
-   *
-   * @returns the number of bytes that the network requires that we send.
-   */
-  size_t (*get_network_bytes)(size_t n);
-
-  /**
-   * Network-specific barrier implementation.
-   */
-  void (*barrier)(void);
-};
-typedef struct network_ops network_ops_t;
-
-/** The concrete implementations of the network operations. @{ */
-extern network_ops_t default_net_ops;
-extern network_ops_t mpi_ops;
-extern network_ops_t photon_ops;
-/** @} */
-
-/**
- * Wraps the current installed network barrier implementation.
- */
-void network_barrier(void) HPX_ATTRIBUTE(HPX_VISIBILITY_INTERNAL);
-
-#endif /* LIBHPX_NETWORK_H_ */
-
+#endif // LIBHPX_NETWORK_H

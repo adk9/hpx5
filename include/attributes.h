@@ -27,5 +27,6 @@
 #define HPX_ASM(S)        __asm__(#S)
 #define HPX_PACKED        __attribute__((packed))
 #define HPX_NON_NULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#define HPX_WEAK          __attribute__((weak))
 
 #endif // HPX_ATTRIBUTES_H

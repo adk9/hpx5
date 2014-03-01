@@ -27,7 +27,6 @@ extern "C" {
 /// @{
 typedef         uintptr_t hpx_action_t;
 typedef            int (* hpx_action_handler_t)(void *);
-typedef struct hpx_parcel hpx_parcel_t;
 /// @}
 
 extern hpx_action_t HPX_ACTION_NULL;
@@ -98,9 +97,8 @@ void hpx_shutdown(int code) HPX_NORETURN;
 
 /// HPX locality interface
 int hpx_get_my_rank(void);
-int hpx_get_my_thread_id(void);
 int hpx_get_num_ranks(void);
-int hpx_get_num_threads(void);
+int hpx_get_my_thread_id(void);
 
 /// HPX address interface
 int hpx_addr_to_rank(hpx_addr_t addr);
@@ -116,15 +114,19 @@ void hpx_future_get(hpx_addr_t future, void *value, int size);
 void hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[], const int sizes[]);
 void hpx_future_set(hpx_addr_t future, const void *value, int size);
 
-/// HoPX parcel interface
-hpx_parcel_t *hpx_parcel_acquire(unsigned);
-void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action);
-void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr);
-void hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t lco);
-void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size);
-void *hpx_parcel_get_data(hpx_parcel_t *p);
-void hpx_parcel_send(hpx_parcel_t *p);
-void hpx_parcel_send_sync(hpx_parcel_t *p);
+/// HPX parcel interface
+typedef struct hpx_parcel hpx_parcel_t;
+hpx_parcel_t *hpx_parcel_acquire(unsigned) HPX_MALLOC;
+void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) HPX_NON_NULL(1);
+void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) HPX_NON_NULL(1);
+void hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t lco) HPX_NON_NULL(1);
+void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) HPX_NON_NULL(1);
+hpx_action_t hpx_parcel_get_action(hpx_parcel_t *p) HPX_NON_NULL(1);
+hpx_addr_t hpx_parcel_get_target(hpx_parcel_t *p) HPX_NON_NULL(1);
+hpx_addr_t hpx_parcel_get_cont(hpx_parcel_t *p) HPX_NON_NULL(1);
+void *hpx_parcel_get_data(hpx_parcel_t *p) HPX_NON_NULL(1);
+void hpx_parcel_send(hpx_parcel_t *p) HPX_NON_NULL(1);
+void hpx_parcel_send_sync(hpx_parcel_t *p) HPX_NON_NULL(1);
 
 /// HPX rpc interface
 void hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,

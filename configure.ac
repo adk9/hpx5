@@ -136,8 +136,12 @@ AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
   libhpx/Makefile
-  libhpx/transport/Makefile
-  libhpx/platform/Makefile
+  libhpx/network/Makefile
+  libhpx/network/transport/Makefile
+  libhpx/locality/Makefile
+  libhpx/locality/platform/Makefile
+  libhpx/scheduler/Makefile
+  libhpx/scheduler/arch/Makefile
   include/Makefile
   examples/Makefile
   examples/hpx/Makefile	
