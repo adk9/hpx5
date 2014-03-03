@@ -297,3 +297,12 @@ scheduler_current_target(void) {
   hpx_parcel_t *p = scheduler_current_parcel();
   return p->target;
 }
+
+void
+scheduler_thread_cancel(void *arg) {
+  while (_free_threads) {
+    thread_t *t = _free_threads;
+    _free_threads = t->next;
+    thread_delete(t);
+  }
+}

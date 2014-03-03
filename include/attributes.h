@@ -29,5 +29,6 @@
 #define HPX_NON_NULL(...) __attribute__((nonnull(__VA_ARGS__)))
 #define HPX_WEAK          __attribute__((weak))
 #define HPX_CONSTRUCTOR   __attribute__((constructor))
+#define HPX_PRINTF(f, s)  __attribute__((format (printf, f, s)))
 
 #endif // HPX_ATTRIBUTES_H

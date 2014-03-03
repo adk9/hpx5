@@ -40,19 +40,19 @@ hpx_init(const hpx_config_t *config) {
   // start by initializing all of the subsystems
   int e = locality_startup(config);
   if (e) {
-    printe("failed to start locality.\n");
+    locality_printe("failed to start locality.\n");
     goto unwind0;
   }
 
   e = scheduler_startup(config);
   if (e) {
-    printe("failed to start the scheduler.\n");
+    locality_printe("failed to start the scheduler.\n");
     goto unwind1;
   }
 
   e = network_startup(config);
   if (e) {
-    printe("failed to start the network.\n");
+    locality_printe("failed to start the network.\n");
     goto unwind2;
   }
 
@@ -76,7 +76,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
 
   hpx_parcel_t *p = hpx_parcel_acquire(size);
   if (!p) {
-    printe("failed to allocate a parcel.\n");
+    locality_printe("failed to allocate a parcel.\n");
   }
   else {
     hpx_parcel_set_action(p, act);

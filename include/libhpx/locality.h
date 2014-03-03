@@ -45,4 +45,11 @@ HPX_INTERNAL int locality_get_rank(void);
 HPX_INTERNAL int locality_get_n_ranks(void);
 HPX_INTERNAL int locality_get_n_processors(void);
 
+/// Some output wrappers
+HPX_INTERNAL void locality_logf1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+HPX_INTERNAL void locality_printe1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+
+#define locality_logf(...) locality_logf1(__func__, __VA_ARGS__)
+#define locality_printe(...) locality_printe1(__func__, __VA_ARGS__)
+
 #endif // LIBHPX_LOCALITY_H

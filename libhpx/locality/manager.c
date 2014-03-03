@@ -10,29 +10,43 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#include <stddef.h>
-#include "attributes.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/locality/manager.c
-/// @brief "placeholder" weak implementations to prevent linker complaints
+/// @brief Handles manager initialization.
 /// ----------------------------------------------------------------------------
+#include "locality.h"
+#include "manager.h"
 
-HPX_INTERNAL void *manager_new_mpirun(void) HPX_WEAK;
-HPX_INTERNAL void *manager_new_pmi(void) HPX_WEAK;
-HPX_INTERNAL void *manager_new_smp(void) HPX_WEAK;
+manager_t *
+manager_new(void) {
+  manager_t *manager = NULL;
 
-void *
-manager_new_mpirun(void) {
-  return NULL;
-}
+#ifdef HAVE_PMI
+  manager = manager_new_pmi();
+  if (manager) {
+    locality_logf("initialized PMI process manager.\n");
+    return manager;
+  }
+#endif
 
-void *
-manager_new_pmi(void) {
-  return NULL;
-}
+#ifdef HAVE_MPI
+  manager = manager_new_mpirun();
+  if (manager) {
+    locality_logf("initialized MPI-run process manager.\n");
+    return manager;
+  }
+#endif
 
-void *
-manager_new_smp(void) {
+  manager = manager_new_smp();
+  if (manager) {
+    locality_logf("initialized the SMP process manager.\n");
+    return manager;
+  }
+
+  locality_printe("failed to initialize a process manager.\n");
   return NULL;
 }

@@ -18,18 +18,4 @@
 
 #define UNIMPLEMENTED() abort()
 
-#define logf(...)                               \
-  do {                                          \
-    printf("%s() ", __func__);                  \
-    printf(__VA_ARGS__);                        \
-    fflush(stdout);                             \
-  } while (0)
-
-#define printe(...)                             \
-  do {                                          \
-    fprintf(stderr, "%s() ", __func__);         \
-    fprintf(stderr,  __VA_ARGS__);              \
-    fflush(stderr);                             \
-  } while (0)
-
 #endif // LIBHPX_DEBUG_H
