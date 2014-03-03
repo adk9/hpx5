@@ -20,19 +20,26 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "libhpx/network.h"
+#include "network.h"
 #include "thread.h"
 #include "asm.h"
 
 #define _PAGE_SIZE 4096
 #define _DEFAULT_PAGES 4
 
-/// ----------------------------------------------------------------------------
-/// Stack sizes. Can be configured at runtime.
-/// ----------------------------------------------------------------------------
 static int _thread_size = 0;
 static int _thread_alignment = 0;
 static int _stack_size = 0;
+static uint32_t _mxcsr = 0;
+static uint16_t _fpucw = 0;
+
+static void HPX_CONSTRUCTOR _init_thread(void) {
+  get_mxcsr(&_mxcsr);
+  get_fpucw(&_fpucw);
+  _thread_size = _PAGE_SIZE * _DEFAULT_PAGES;
+  _thread_alignment = _thread_size;
+  _stack_size = _thread_size - sizeof(thread_t);
+}
 
 /// ----------------------------------------------------------------------------
 /// A structure describing the initial frame on a stack.
@@ -61,42 +68,20 @@ typedef struct {
 } HPX_PACKED _frame_t;
 #endif
 
-/// ----------------------------------------------------------------------------
-/// Captured for new stack allocation in thread_init_thread().
-/// ----------------------------------------------------------------------------
-/// @{
-static uint32_t _mxcsr = 0;
-static uint16_t _fpucw = 0;
-/// @}
-
 static _frame_t *_get_top_frame(thread_t *thread) {
   return (_frame_t*)&thread->stack[_stack_size - sizeof(_frame_t)];
 }
 
-int
-thread_init_module(int stack_bytes) {
-  // don't care about performance
-  if (!stack_bytes) {
-    _thread_size = _PAGE_SIZE * _DEFAULT_PAGES;
-    _thread_alignment = _thread_size;
-  }
-  else {
-    int pages = stack_bytes / _PAGE_SIZE;
-    pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
-    _thread_size = _PAGE_SIZE * pages;
-    _thread_alignment = 1 << __builtin_ctzl(_thread_size);
-    if (_thread_alignment < _thread_size)
-      _thread_alignment <<= 1;
-  }
-  _stack_size = _thread_size - sizeof(thread_t);
-
-  get_mxcsr(&_mxcsr);
-  get_fpucw(&_fpucw);
-  return HPX_SUCCESS;
-}
-
 void
-thread_fini_module(void) {
+thread_set_stack_size(int stack_bytes) {
+  // don't care about performance
+  int pages = stack_bytes / _PAGE_SIZE;
+  pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
+  _thread_size = _PAGE_SIZE * pages;
+  _thread_alignment = 1 << __builtin_ctzl(_thread_size);
+  if (_thread_alignment < _thread_size)
+    _thread_alignment <<= 1;
+  _stack_size = _thread_size - sizeof(thread_t);
 }
 
 thread_t *

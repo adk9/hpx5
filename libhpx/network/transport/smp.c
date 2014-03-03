@@ -20,23 +20,32 @@
 /// The smp transport is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
-#include "libhpx/scheduler.h"
-#include "../transport.h"
+#include "scheduler.h"
+#include "transport.h"
+
 
 static int _init(void) {
   return HPX_SUCCESS;
 }
 
+
 static void _fini(void) {
 }
+
 
 static int _send(int dest, void *buffer, unsigned size,
                   transport_request_t *request) {
   return 0;
 }
 
+
+static void _delete(transport_t *smp) {
+  free(smp);
+}
+
+
 transport_t *
-smp_new(void) {
+transport_new_smp(void) {
   transport_t *smp = malloc(sizeof(*smp));
   smp->init = _init;
   smp->fini = _fini;
@@ -57,10 +66,6 @@ smp_new(void) {
   smp->phys_addr = NULL;
   smp->get_transport_bytes = NULL;
   smp->barrier = NULL;
+  smp->delete = _delete;
   return smp;
-}
-
-void
-smp_delete(transport_t *smp) {
-  free(smp);
 }

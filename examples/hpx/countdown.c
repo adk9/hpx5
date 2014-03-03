@@ -66,6 +66,6 @@ int main(int argc, char * argv[argc]) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
-  send = hpx_action_register("send", send_action);
+  send = hpx_register_action("send", send_action);
   return hpx_run(send, &n, sizeof(n));
 }

@@ -23,33 +23,50 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdio.h>
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
+#include "network.h"
+#include "scheduler.h"
+#include "locality.h"
 #include "transport.h"
-//#include "thread.h"
-#include "../debug.h"
+#include "debug.h"
 
 const hpx_addr_t HPX_NULL = { NULL, -1 };
-
 static transport_t *_transport = NULL;
-static int _rank = -1;
-static int _num_ranks = -1;
+
 static hpx_action_t _network_free = 0;
 
 static int _network_free_action(void *args);
 
+static void HPX_CONSTRUCTOR _register_actions(void) {
+  _network_free = hpx_register_action("_network_free", _network_free_action);
+}
+
 int
-network_init_module(const hpx_config_t *config) {
-  _transport = smp_new();
-  _rank = 0;
-  _num_ranks = 1;
-  _network_free = hpx_action_register("_network_free", _network_free_action);
-  return HPX_SUCCESS;
+network_startup(const hpx_config_t *config) {
+  _transport = transport_new_photon();
+  if (_transport) {
+    logf("initialed the Photon transport.\n");
+    return HPX_SUCCESS;
+  }
+
+  _transport = transport_new_mpi();
+  if (_transport) {
+    logf("initialed the MPI transport.\n");
+    return HPX_SUCCESS;
+  }
+
+  _transport = transport_new_smp();
+  if (_transport) {
+    logf("initialed the SMP transport.\n");
+    return HPX_SUCCESS;
+  }
+
+  printe("failed to initialize a transport.\n");
+  return 1;
 }
 
 void
-network_fini_module(void) {
-  smp_delete(_transport);
+network_shutdown(void) {
+  _transport->delete(_transport);
 }
 
 void
@@ -81,7 +98,7 @@ network_addr_is_local(hpx_addr_t addr, void **out) {
 
 hpx_addr_t
 network_malloc(int size, int alignment) {
-  hpx_addr_t addr = { NULL, _rank };
+  hpx_addr_t addr = { NULL, hpx_get_my_rank() };
   int e = posix_memalign(&addr.local, alignment, size);
   if (e) {
     fprintf(stderr, "failed global allocation\n");
@@ -103,7 +120,7 @@ _network_free_action(void *args) {
 
 void
 network_free(hpx_addr_t addr) {
-  if (addr.rank == _rank)
+  if (addr.rank == hpx_get_my_rank() )
     _free(addr);
   hpx_call(addr, _network_free, NULL, 0, HPX_NULL);
 }

@@ -17,11 +17,12 @@
 
 typedef struct transport_status transport_status_t;
 typedef struct transport_request transport_request_t;
+typedef struct transport transport_t;
 
 /// ----------------------------------------------------------------------------
 /// The transport interface is defined as an abstract class.
 /// ----------------------------------------------------------------------------
-typedef struct {
+struct transport {
   int (*init)(void);
   void (*fini)(void);
   void (*progress)(void *data);
@@ -41,15 +42,11 @@ typedef struct {
   int (*phys_addr)(int *locality);
   unsigned (*get_transport_bytes)(unsigned n);
   void (*barrier)(void);
-} transport_t;
+  void (*delete)(transport_t *);
+};
 
-HPX_INTERNAL transport_t *smp_new(void);
-HPX_INTERNAL void smp_delete(transport_t *smp);
-
-HPX_INTERNAL transport_t *mpi_new(void);
-HPX_INTERNAL void smp_delete(transport_t *mpi);
-
-HPX_INTERNAL transport_t *photon_new(void);
-HPX_INTERNAL void photon_delete(transport_t *photon);
+HPX_INTERNAL transport_t *transport_new_photon(void);
+HPX_INTERNAL transport_t *transport_new_mpi(void);
+HPX_INTERNAL transport_t *transport_new_smp(void);
 
 #endif // LIBHPX_TRANSPORT_H

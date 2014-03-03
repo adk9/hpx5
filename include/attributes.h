@@ -28,5 +28,6 @@
 #define HPX_PACKED        __attribute__((packed))
 #define HPX_NON_NULL(...) __attribute__((nonnull(__VA_ARGS__)))
 #define HPX_WEAK          __attribute__((weak))
+#define HPX_CONSTRUCTOR   __attribute__((constructor))
 
 #endif // HPX_ATTRIBUTES_H

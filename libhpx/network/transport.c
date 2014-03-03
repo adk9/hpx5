@@ -10,27 +10,29 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_FUTURE_H
-#define LIBHPX_FUTURE_H
-
-/// ----------------------------------------------------------------------------
-/// @file future.h
-/// Declares the future structure, and its internal interface.
-/// ----------------------------------------------------------------------------
+#include <stddef.h>
 #include "attributes.h"
-#include "lco.h"
-
-HPX_INTERNAL int future_init_module(void);
-HPX_INTERNAL void future_fini_module(void);
-
 
 /// ----------------------------------------------------------------------------
-/// Future structure.
+/// @file libhpx/network/transport.c
+/// @brief "placeholder" weak implementations to prevent linker complaints
 /// ----------------------------------------------------------------------------
-typedef struct future future_t;
-struct future {
-  lco_t lco;                                    // future "is-an" lco
-  void *value;
-};
 
-#endif // LIBHPX_FUTURE_H
+HPX_INTERNAL void *transport_new_photon(void) HPX_WEAK;
+HPX_INTERNAL void *transport_new_mpi(void) HPX_WEAK;
+HPX_INTERNAL void *manager_new_smp(void) HPX_WEAK;
+
+void *
+transport_new_photon(void) {
+  return NULL;
+}
+
+void *
+transport_new_mpi(void) {
+  return NULL;
+}
+
+void *
+manager_new_smp(void) {
+  return NULL;
+}

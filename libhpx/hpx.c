@@ -15,12 +15,14 @@
 #endif
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
+#include "locality.h"
+#include "network.h"
+#include "scheduler.h"
+#include "debug.h"
 
 hpx_action_t HPX_ACTION_NULL = 0;
 
@@ -28,46 +30,77 @@ static int _null_action(void *args) {
   return HPX_SUCCESS;
 }
 
+static void HPX_CONSTRUCTOR _init_hpx(void) {
+  HPX_ACTION_NULL = locality_action_register("_null_action", _null_action);
+}
+
 // We initialize the three primary modules here.
 int
 hpx_init(const hpx_config_t *config) {
   // start by initializing all of the subsystems
-  int e = HPX_SUCCESS;
-
-  if ((e = locality_init_module(config)))
+  int e = locality_startup(config);
+  if (e) {
+    printe("failed to start locality.\n");
     goto unwind0;
-  if ((e = scheduler_init_module(config)))
-    goto unwind1;
-  if ((e = network_init_module(config)))
-    goto unwind2;
+  }
 
-  HPX_ACTION_NULL = locality_action_register("_null_action", _null_action);
+  e = scheduler_startup(config);
+  if (e) {
+    printe("failed to start the scheduler.\n");
+    goto unwind1;
+  }
+
+  e = network_startup(config);
+  if (e) {
+    printe("failed to start the network.\n");
+    goto unwind2;
+  }
+
   return e;
 
  unwind2:
-  scheduler_fini_module();
+  scheduler_shutdown();
  unwind1:
-  locality_fini_module();
+  locality_shutdown();
  unwind0:
   return e;
 }
 
-/// Starts scheduling on the main thread.
+static int _status = HPX_SUCCESS;
+static pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  _condition = PTHREAD_COND_INITIALIZER;
+
 int
 hpx_run(hpx_action_t act, const void *args, unsigned size) {
-  assert(act);
-  int e = scheduler_start(act, args, size);
-  network_fini_module();
-  scheduler_fini_module();
-  locality_fini_module();
-  return e;
+  pthread_mutex_lock(&_mutex);
+
+  hpx_parcel_t *p = hpx_parcel_acquire(size);
+  if (!p) {
+    printe("failed to allocate a parcel.\n");
+  }
+  else {
+    hpx_parcel_set_action(p, act);
+    if (size)
+      hpx_parcel_set_data(p, args, size);
+    scheduler_spawn(p);
+    pthread_cond_wait(&_condition, &_mutex);
+  }
+
+  pthread_mutex_unlock(&_mutex);
+  network_shutdown();
+  scheduler_shutdown();
+  locality_shutdown();
+  return _status;
 }
 
 /// Called by the application to shutdown the scheduler and network.
 void
-hpx_shutdown(int value) {
-  abort();
-  exit(value);
+hpx_shutdown(int code) {
+  pthread_mutex_lock(&_mutex);
+  _status = code;
+  pthread_cond_signal(&_condition);
+  pthread_mutex_unlock(&_mutex);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 /// Exits an HPX user-level thread, with a status and optionally providing a
@@ -84,19 +117,25 @@ hpx_thread_exit(int status, const void *value, unsigned size) {
 }
 
 /// Encapsulates a remote-procedure-call.
-void
+int
 hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
          size_t len, hpx_addr_t result) {
   hpx_parcel_t *p = hpx_parcel_acquire(len);
+  if (!p) {
+    fprintf(stderr, "hpx_call() could not allocate parcel.\n");
+    return 1;
+  }
+
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_cont(p, result);
   hpx_parcel_set_data(p, args, len);
   hpx_parcel_send(p);
+  return HPX_SUCCESS;
 }
 
 hpx_action_t
-hpx_action_register(const char *id, hpx_action_handler_t func) {
+hpx_register_action(const char *id, hpx_action_handler_t func) {
   return locality_action_register(id, func);
 }
 

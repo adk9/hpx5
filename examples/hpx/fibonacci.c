@@ -174,8 +174,8 @@ int main(int argc, char *argv[]) {
   }
 
   // register the fib action
-  fib = hpx_action_register("fib", fib_action);
-  fib_main = hpx_action_register("fib_main", fib_main_action);
+  fib = hpx_register_action("fib", fib_action);
+  fib_main = hpx_register_action("fib_main", fib_main_action);
 
   // run the main action
   return hpx_run(fib_main, &args.n, sizeof(args.n));

@@ -80,7 +80,7 @@ HPX_INTERNAL void lco_unlock(lco_t *lco) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
-/// Atomically sets the LCO as triggered and returns the wait queue.
+/// Atomically sets the LCO and returns the wait queue.
 ///
 /// This does not try to acquire or release the lco's lock.
 ///

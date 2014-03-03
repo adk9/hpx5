@@ -21,12 +21,6 @@
 #include "hpx.h"
 
 /// ----------------------------------------------------------------------------
-/// Initializes the stack subsystem.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_init_module(int stack_bytes);
-HPX_INTERNAL void thread_fini_module(void);
-
-/// ----------------------------------------------------------------------------
 /// A user level thread.
 ///
 /// @field     sp - the checkpointed stack pointer for thread_transfer()
@@ -41,6 +35,15 @@ struct thread {
   thread_t *next;
   char stack[];
 };
+
+
+/// ----------------------------------------------------------------------------
+/// Sets the size of a stack.
+///
+/// All of the stacks in the system need to have the same size.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
+
 
 /// ----------------------------------------------------------------------------
 /// The type of the stack entry function.

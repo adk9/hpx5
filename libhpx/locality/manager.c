@@ -13,9 +13,14 @@
 #include <stddef.h>
 #include "attributes.h"
 
-void *manager_new_mpirun(void) HPX_INTERNAL HPX_WEAK;
-void *manager_new_pmi(void) HPX_INTERNAL HPX_WEAK;
-void *manager_new_smp(void) HPX_INTERNAL HPX_WEAK;
+/// ----------------------------------------------------------------------------
+/// @file libhpx/locality/manager.c
+/// @brief "placeholder" weak implementations to prevent linker complaints
+/// ----------------------------------------------------------------------------
+
+HPX_INTERNAL void *manager_new_mpirun(void) HPX_WEAK;
+HPX_INTERNAL void *manager_new_pmi(void) HPX_WEAK;
+HPX_INTERNAL void *manager_new_smp(void) HPX_WEAK;
 
 void *
 manager_new_mpirun(void) {
