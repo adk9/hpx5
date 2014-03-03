@@ -45,8 +45,13 @@ struct transport {
   void (*delete)(transport_t *);
 };
 
+
+/// concrete network constructors
 HPX_INTERNAL transport_t *transport_new_photon(void);
 HPX_INTERNAL transport_t *transport_new_mpi(void);
 HPX_INTERNAL transport_t *transport_new_smp(void);
+
+/// selects the best transport available.
+HPX_INTERNAL transport_t *transport_new(void);
 
 #endif // LIBHPX_TRANSPORT_H

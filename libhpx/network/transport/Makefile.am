@@ -6,7 +6,7 @@ libtransport_la_CPPFLAGS = -I$(top_srcdir)/include \
                            -I$(top_srcdir)/include/libhpx \
                            -I$(top_srcdir)/libhpx/network
 libtransport_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
-libtransport_la_SOURCES  = smp.c
+libtransport_la_SOURCES  = transport.c smp.c
 libtransport_la_LIBADD   =
 
 # if HAVE_MPI

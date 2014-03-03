@@ -6,7 +6,7 @@ noinst_LTLIBRARIES	  = liblocality.la
 # liblocality files and flags
 liblocality_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhpx
 liblocality_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
-liblocality_la_SOURCES  = manager.c locality.c smp.c
+liblocality_la_SOURCES  = locality.c smp.c
 liblocality_la_LIBADD   = platform/libplatform.la
 
 if HAVE_MPI

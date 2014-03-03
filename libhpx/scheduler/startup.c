@@ -25,9 +25,9 @@
 #include "entry.h"
 #include "debug.h"
 
-static int _thread = 0;
 static int _n_threads = 0;
 static pthread_t *_threads = NULL;
+static __thread int _thread = 0;
 
 /// ----------------------------------------------------------------------------
 /// A thread_transfer() continuation that runs after the first transfer.
@@ -53,6 +53,7 @@ static int _on_entry(void *sp, void *env) {
 /// @returns   - the result of the initial thread_transfer
 /// ----------------------------------------------------------------------------
 static void *_thread_entry(void *arg) {
+  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
   _thread = (int)(intptr_t)arg;
 
   hpx_parcel_t *p = hpx_parcel_acquire(0);

@@ -30,14 +30,18 @@
 #include "builtins.h"
 
 // global queue of new parcels
-static ms_queue_t _new_parcels = SYNC_MS_QUEUE_INITIALIZER;
+static ms_queue_t _new_parcels;
 
-/// Spawns a thread by just pushing the parcel onto the new parcels queue.
+static void HPX_CONSTRUCTOR _init_scheduler(void) {
+  SYNC_MS_QUEUE_INIT(&_new_parcels);
+}
+
+/// Spawns a thread by just pushing the parcel onto the _new_parcels queue.
 void
 scheduler_spawn(hpx_parcel_t *p) {
   assert(p);
-  assert(hpx_addr_to_rank(p->target) == hpx_get_my_rank());
-  sync_ms_queue_enqueue(&_new_parcels, p);
+  assert(network_addr_is_local(p->target, NULL));
+  SYNC_MS_QUEUE_ENQUEUE(&_new_parcels, p);
 }
 
 /// ----------------------------------------------------------------------------
@@ -130,7 +134,8 @@ static thread_t *_schedule(bool fast, thread_t *final) {
   _next = NULL;
 
   // try and add a new thread at the epoch boundary
-  hpx_parcel_t *parcel = sync_ms_queue_dequeue(&_new_parcels);
+  hpx_parcel_t *parcel = NULL;
+  SYNC_MS_QUEUE_DEQUEUE(&_new_parcels, parcel);
   if (parcel)
     return _new(parcel);
 

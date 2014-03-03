@@ -15,7 +15,7 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file network.c
+/// @file libhpx/libhpx/network.c
 /// @brief Manages the HPX network.
 ///
 /// This file deals with the complexities of the HPX network interface,
@@ -42,26 +42,8 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 
 int
 network_startup(const hpx_config_t *config) {
-  _transport = transport_new_photon();
-  if (_transport) {
-    logf("initialed the Photon transport.\n");
-    return HPX_SUCCESS;
-  }
-
-  _transport = transport_new_mpi();
-  if (_transport) {
-    logf("initialed the MPI transport.\n");
-    return HPX_SUCCESS;
-  }
-
-  _transport = transport_new_smp();
-  if (_transport) {
-    logf("initialed the SMP transport.\n");
-    return HPX_SUCCESS;
-  }
-
-  printe("failed to initialize a transport.\n");
-  return 1;
+  _transport = transport_new();
+  return (_transport != NULL) ? HPX_SUCCESS : 1;
 }
 
 void
@@ -87,6 +69,13 @@ network_berrier(void) {
 
 bool
 network_addr_is_local(hpx_addr_t addr, void **out) {
+  if (addr.rank == -1) {
+    if (out)
+      *out = NULL;
+
+    return true;
+  }
+
   if (addr.rank != hpx_get_my_rank())
     return false;
 
