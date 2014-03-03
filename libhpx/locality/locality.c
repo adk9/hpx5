@@ -19,6 +19,7 @@
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <unistd.h>                             // sysconf(...)
 #include "hpx.h"
 #include "locality.h"
@@ -31,24 +32,8 @@ static manager_t *_manager = NULL;
 ///
 int
 locality_startup(const hpx_config_t *cfg) {
-#ifdef HAVE_MPI
-  _manager = manager_new_mpirun();
-  if (_manager)
-    return HPX_SUCCESS;
-#endif
-
-#ifdef HAVE_PMI
-  _manager = manager_new_pmi();
-  if (_manager)
-    return HPX_SUCCESS;
-#endif
-
-  _manager = manager_new_smp();
-  if (_manager)
-    return HPX_SUCCESS;
-
-  printe("failed to initialize a process manager.\n");
-  return 1;
+  _manager = manager_new();
+  return (_manager != 0) ? HPX_SUCCESS : 1;
 }
 
 
@@ -88,6 +73,27 @@ locality_action_lookup(hpx_action_t key) {
   return (hpx_action_handler_t)key;
 }
 
+void
+locality_logf1(const char *f, const char *fmt, ...) {
+  printf("LIBHPX: %s() ", f);
+
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+  fflush(stdout);
+}
+
+void locality_printe1(const char *f, const char *fmt, ...) {
+  fprintf(stderr, "LIBHPX: %s() ", f);
+
+  va_list args;
+  va_start(args, fmt);
+  vfprintf(stderr, fmt, args);
+  va_end(args);
+
+  fflush(stderr);
+}
 
 int
 hpx_get_my_rank(void) {

@@ -21,8 +21,14 @@ typedef struct manager {
   int n_ranks;
 } manager_t;
 
+/// Available project manager interface
+/// @{
 HPX_INTERNAL manager_t *manager_new_mpirun(void);
 HPX_INTERNAL manager_t *manager_new_pmi(void);
 HPX_INTERNAL manager_t *manager_new_smp(void);
+/// @}
+
+/// Picks out the right project manager
+HPX_INTERNAL manager_t *manager_new(void);
 
 #endif // LIBHPX_MANAGER_H

@@ -53,22 +53,31 @@ static int _on_entry(void *sp, void *env) {
 /// @returns   - the result of the initial thread_transfer
 /// ----------------------------------------------------------------------------
 static void *_thread_entry(void *arg) {
-  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
   _thread = (int)(intptr_t)arg;
 
   hpx_parcel_t *p = hpx_parcel_acquire(0);
   if (!p) {
-    printe("failed to allocate a parcel in scheduler thread entry %d.\n", _thread);
+    locality_printe("failed to allocate a parcel in scheduler thread entry"
+                    " %d.\n", _thread);
     return (void*)(intptr_t)errno;
   }
+
   thread_t *t = thread_new(scheduler_thread_entry, p);
   if (!t) {
-    printe("failed to allocate a thread in scheduler thread entry %d.\n", _thread);
+    locality_printe("failed to allocate a thread in scheduler thread entry"
+                    " %d.\n", _thread);
     network_release(p);
     return (void*)(intptr_t)errno;
   }
 
-  return (void*)(intptr_t) thread_transfer(t->sp, NULL, _on_entry);
+  // we need asynchronous cancellation to shutdown the HPX scheduler correctly,
+  // this should be reevaluated later
+  int e = HPX_SUCCESS;
+  pthread_cleanup_push(scheduler_thread_cancel, arg);
+  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+  e = thread_transfer(t->sp, NULL, _on_entry);
+  pthread_cleanup_pop(1);
+  return (void*)(intptr_t)e;
 }
 
 
@@ -86,7 +95,7 @@ scheduler_startup(const hpx_config_t *cfg) {
   // allocate the array of pthread descriptors
   _threads = calloc(_n_threads, sizeof(_threads[0]));
   if (!_threads) {
-    printe("failed to allocate thread table.\n");
+    locality_printe("failed to allocate thread table.\n");
     return errno;
   }
 
@@ -98,12 +107,20 @@ scheduler_startup(const hpx_config_t *cfg) {
       continue;
 
     // error branch
-    printe("failed to create scheduler thread #%d.\n", i);
+    locality_printe("failed to create scheduler thread #%d.\n", i);
     for (int j = 0; j < i; ++j)
       if (pthread_cancel(_threads[j]) || pthread_join(_threads[j], NULL))
-        printe("could not clean up thread #%d.\n", j);
+        locality_printe("could not clean up thread #%d.\n", j);
 
     return e;
+  }
+
+  // set all of the affinities
+  for (int i = 0; i < _n_threads; ++i) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(i % locality_get_n_processors(), &cpuset);
+    pthread_setaffinity_np(_threads[i], sizeof(cpuset), &cpuset);
   }
 
   return HPX_SUCCESS;
@@ -119,7 +136,7 @@ void
 scheduler_shutdown(void) {
   for (int i = 0; i < _n_threads; ++i)
     if (pthread_cancel(_threads[i]) || pthread_join(_threads[i], NULL))
-      printe("could not clean up thread #%d.\n", i);
+      locality_printe("could not clean up thread #%d.\n", i);
 }
 
 
