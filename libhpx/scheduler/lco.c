@@ -19,7 +19,7 @@
 /// ----------------------------------------------------------------------------
 #include <stdint.h>
 #include "sync/sync.h"
-#include "libhpx/scheduler.h"
+#include "scheduler.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -121,3 +121,4 @@ lco_enqueue_and_unlock(lco_t *lco, thread_t *thread) {
   thread = (thread_t *)bits2;
   sync_store(&lco->queue, thread, SYNC_RELEASE);
 }
+

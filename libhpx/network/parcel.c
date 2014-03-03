@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hpx.h"
-#include "libhpx/network.h"
+#include "network.h"
 
 hpx_parcel_t *
 hpx_parcel_acquire(unsigned size) {

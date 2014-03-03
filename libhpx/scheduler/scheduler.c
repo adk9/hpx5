@@ -19,16 +19,18 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "sync/ms_queue.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"                     // hpx_parcel_t
+#include "scheduler.h"
+#include "locality.h"
+#include "network.h"
 #include "thread.h"
+#include "entry.h"
 #include "lco.h"
-#include "future.h"
-#include "../builtins.h"
+#include "builtins.h"
 
-static ms_queue_t _new_parcels;                 // global queue of new parcels
+// global queue of new parcels
+static ms_queue_t _new_parcels = SYNC_MS_QUEUE_INITIALIZER;
 
 /// Spawns a thread by just pushing the parcel onto the new parcels queue.
 void
@@ -44,11 +46,12 @@ scheduler_spawn(hpx_parcel_t *p) {
 /// The purpose of the scheduler loop is to select a new thread to execute. It
 /// returns a thread that can be transferred to. It will not block---ultimately
 /// it will select @p final if it has to. If @p is NULL, but the scheduler can't
-/// find other work to do, then it will return an appropriate thread to transfer
-/// to.
+/// find other work to do, then it will return a thread that will run the
+/// HPX_ACTION_NULL action.
 ///
 /// The @fast flag tells the scheduler if the caller really needs to complete
-/// quickly (probably because it is holding a lock).
+/// quickly (probably because it is holding a lock)---this is used by the
+/// scheduler_wait() interface that is trying to block on an LCO.
 ///
 /// @param  fast - true, if the caller wants to return quickly
 /// @param final - a thread to select if all else fails
@@ -66,25 +69,17 @@ static int _steal(void) {
   return 0;
 }
 
-
-/// ----------------------------------------------------------------------------
-/// All user-level threads start in this entry function.
-///
-/// This function executes the specified parcel's action on its arguments. If
-/// the action returns, it's because either a) the action doesn't need to return
-/// a value, or b) the action encountered an error condition and returned an
-/// error.
-///
-/// We deal with the returned status, and then exit the current thread's
-/// execution using scheduler_exit().
-///
-/// @param parcel - the parcel that describes this thread's task
-/// ----------------------------------------------------------------------------
-static void HPX_NORETURN _user_level_thread_entry(hpx_parcel_t *parcel) {
+void
+scheduler_thread_entry(hpx_parcel_t *parcel) {
   hpx_action_handler_t action = locality_action_lookup(parcel->action);
   int status = action(parcel->data);
-  ((void)status); /// @todo Do something with this?
-  scheduler_exit(parcel);
+  if (status != HPX_SUCCESS) {
+    fprintf(stderr, "_user_level_thread_entry(): action produced unhandled "
+            "error\n");
+    hpx_shutdown(status);
+  }
+  hpx_thread_exit(status, NULL, 0);
+  unreachable();
 }
 
 
@@ -98,10 +93,10 @@ static __thread thread_t *_free_threads = NULL;
 static thread_t *_new(hpx_parcel_t *p) {
   thread_t *thread = _free_threads;
   if (!thread)
-    return thread_new(_user_level_thread_entry, p);
+    return thread_new(scheduler_thread_entry, p);
 
   _free_threads = _free_threads->next;
-  thread_init(thread, _user_level_thread_entry, p);
+  thread_init(thread, scheduler_thread_entry, p);
   return thread;
 }
 
@@ -160,34 +155,52 @@ static thread_t *_schedule(bool fast, thread_t *final) {
 
 
 /// ----------------------------------------------------------------------------
-/// A transfer continuation that pushes the previous thread onto a queue.
+/// A transfer continuation that checkpoints the previous stack, and pushes the
+/// previous thread onto the thread list designated in @p env.
+///
+/// @param  sp - the previous stack pointer to checkpoint
+/// @param env - a pointer to a list of threads
+/// @returns   - success
 /// ----------------------------------------------------------------------------
-static int
-_transfer_push(void *sp, void *env) {
-  thread_t **stack = env;
+static int _transfer_push(void *sp, void *env) {
+  thread_t **list = env;
   thread_t *thread = thread_from_sp(sp);
+
+  // checkpoint previous stack
   thread->sp = sp;
-  thread->next = *stack;
-  *stack = thread;
+
+  // push onto the list
+  thread->next = *list;
+  *list = thread;
+
   return HPX_SUCCESS;
 }
 
 
-/// Yields the current thread. Used to avoid busy-waiting in user-level
-/// threads.
+/// Yields the current thread.
+///
+/// This doesn't block the current thread, but just gives the scheduler the
+/// opportunity to do something else for a while. It's usually used to avoid
+/// busy waiting in user-level threads, when the even we're waiting for isn't an
+/// LCO (like user-level lock-based synchronization).
 void
 scheduler_yield(void) {
   thread_t *from = thread_current();
   thread_t *to = _schedule(false, from);
   if (from == to)
     return;
+
+  // transfer to the new thread, using the _transfer_push() transfer
+  // continuation to checkpoint the current stack and to push the current thread
+  // onto the _next epoch list.
   thread_transfer(to->sp, &_next, _transfer_push);
 }
 
 
 /// Exits a user-level thread. This releases the underlying parcel, and deletes
 /// the thread structure as the transfer continuation. This will never return,
-/// because the thread isn't put into a runnable queue anywhere.
+/// because the current thread is put into the _free_threads ilst and not
+/// into a runnable list.
 void
 scheduler_exit(hpx_parcel_t *parcel) {
   network_release(parcel);
@@ -198,34 +211,58 @@ scheduler_exit(hpx_parcel_t *parcel) {
 
 
 /// ----------------------------------------------------------------------------
-/// A transfer continuation that pushes the previous thread onto a locked
-/// queue.
+/// A transfer continuation that pushes the previous thread onto a an lco list.
+///
+/// @param  sp - the stack pointer to checkpoint in the current thread
+/// @param env - the lco the thread wants to wait on
+/// @returns   - success
 /// ----------------------------------------------------------------------------
-static int
-_transfer_wait(void *sp, void *env) {
+static int _transfer_lco(void *sp, void *env) {
   lco_t *lco = env;
   thread_t *thread = thread_from_sp(sp);
+
+  // checkpoint the thread's stack
   thread->sp = sp;
+
+  // atomically enqueue the thread and release the lco's lock
   lco_enqueue_and_unlock(lco, thread);
-  // LOCKABLE_PACKED_STACK_PUSH_AND_UNLOCK(stack, thread);
+
   return HPX_SUCCESS;
 }
 
 
-/// Waits for an LCO to be signaled, by using the _transfer_push_unlock
-/// continuation. Reacquires the lock on the LCO before it returns.
+/// Waits for an LCO to be signaled, by using the _transfer_lco() continuation.
+///
+/// Uses the "fast" form of _schedule(), meaning that schedule will not try very
+/// hard to acquire more work if it doesn't have anything else to do right
+/// now. This avoids the situation where this thread is holding an LCO's lock
+/// much longer than necessary. The scheduler can't choose this thread because
+/// it doesn't know about it (it's not in _ready or _next, and it's not passed
+/// as the @p final parameter to _schedule).
+///
+/// We reacquire the lock before returning, which maintains the atomicity
+/// requirements for LCO actions.
+///
+/// @precondition The calling thread must hold @p lco's lock.
 void
 scheduler_wait(lco_t *lco) {
   thread_t *to = _schedule(true, NULL);
-  thread_transfer(to->sp, lco, _transfer_wait);
+  thread_transfer(to->sp, lco, _transfer_lco);
   lco_lock(lco);
 }
 
 
 /// Signals an LCO.
+///
+/// This uses lco_trigger() to set the LCO and get it its queued threads
+/// back. It then goes through the queue and makes all of the queued threads
+/// runnable. It does not release the LCO's lock, that must be done by the
+/// caller.
+///
+/// @precondition The calling thread must hold @p lco's lock.
 void
-scheduler_signal(lco_t *f) {
-  thread_t *top = lco_trigger(f);
+scheduler_signal(lco_t *lco) {
+  thread_t *top = lco_trigger(lco);
   if (!top)
     return;
 
@@ -243,111 +280,6 @@ scheduler_signal(lco_t *f) {
   return;
 }
 
-
-/// An array of native scheduler threads.
-static int _n_native_threads = 0;
-static int *_native_threads = NULL;
-static int __thread _native_thread = 0;
-
-int
-hpx_get_my_thread_id(void) {
-  return _native_thread;
-}
-
-/// Initialize the global data for the scheduler.
-int
-scheduler_init_module(const hpx_config_t *cfg) {
-  int e = HPX_SUCCESS;
-  if ((e = thread_init_module(cfg->stack_bytes)))
-    goto unwind0;
-  if ((e = future_init_module()))
-    goto unwind1;
-
-  // Prepare global parcel queue
-  sync_ms_queue_init(&_new_parcels);
-
-  _n_native_threads = (cfg->scheduler_threads) ? cfg->scheduler_threads :
-                         locality_get_n_processors();
-
-  _native_threads = calloc(_n_native_threads, sizeof(*_native_threads));
-  if (!_native_threads) {
-    e = 1;
-    goto unwind2;
-  }
-
-  return HPX_SUCCESS;
-
- unwind2:
-  future_fini_module();
- unwind1:
-  thread_fini_module();
- unwind0:
-  return e;
-}
-
-
-/// Finalizes the global data for the scheduler.
-void
-scheduler_fini_module(void) {
-  future_fini_module();
-  thread_fini_module();
-}
-
-
-/// ----------------------------------------------------------------------------
-/// The native stack pointer.
-///
-/// This is checkpointed in scheduler_start() and restored during
-/// scheduler_exit().
-/// ----------------------------------------------------------------------------
-static void *_native_stack = NULL;
-
-
-/// ----------------------------------------------------------------------------
-/// A thread_transfer() continuation that runs after the first transfer.
-///
-/// The native stack isn't suitable for use as the stack for a user-level
-/// thread, because we can't guarantee that it's large enough or that it has the
-/// right alignment. When we first transfer away from it, we record the stack
-/// pointer (in _native_stack) so that we can transfer back to it at shutdown,
-/// or for any other native-style operations (e.g., during preemptive scheduling
-/// if that is implemented).
-///
-/// This can be used to perform any other on-startup events that the initial
-/// user-level thread should run, before performing the user-designated action.
-/// ----------------------------------------------------------------------------
-static int _on_start(void *sp, void *env) {
-  void **addr = env;
-  *addr = sp;
-  return HPX_SUCCESS;
-}
-
-
-/// Called by the main native thread to start execution.
-///
-/// We simulate a scheduler spawn by allocating a new parcel, and binding a new
-/// user-level thread to it. We can then transfer to this new thread. We don't
-/// completely abandon the main user-level stack though, we checkpoint it's
-/// stack pointer in _native_stack using the _on_start() transfer continuation.
-///
-/// This stored stack pointer can be used later to transfer back to the native
-/// stack, if it becomes necessary. We need to do this differently than other
-/// transfers because the native stack isn't guaranteed to be laid out in the
-/// same way that a user-level thread's stack is, and we can't just push it onto
-/// the _ready or _next queues.
-int
-scheduler_start(hpx_action_t action, const void *args, unsigned size) {
-  assert(action);
-  hpx_parcel_t *p = hpx_parcel_acquire(size);
-  hpx_parcel_set_action(p, action);
-  hpx_parcel_set_target(p, HPX_NULL);
-  if (size)
-    hpx_parcel_set_data(p, args, size);
-  thread_t *thread = thread_new(_user_level_thread_entry, p);
-  return thread_transfer(thread->sp, &_native_stack, _on_start);
-}
-
-
 hpx_parcel_t *
 scheduler_current_parcel(void) {
   thread_t *thread = thread_current();
@@ -360,57 +292,3 @@ scheduler_current_target(void) {
   hpx_parcel_t *p = scheduler_current_parcel();
   return p->target;
 }
-
-
-/// Each scheduler thread needs to be finalized by having any of its allocated
-/// thread structures freed. This is a finalization handler registered in
-/// scheduler_init_module().
-static void
-_thread_fini(void) {
-  while (_free_threads) {
-    thread_t *t = _free_threads;
-    _free_threads = _free_threads->next;
-    thread_delete(t);
-  }
-}
-
-
-/// ----------------------------------------------------------------------------
-/// A thread_transfer() continuation that runs after the scheduler stops.
-///
-/// This continuation performs any per-scheduler thread cleanup required, like
-/// freeing any allocated user-level stacks, etc., and then returns the exit
-/// code which it extracts from the environment.
-///
-/// This makes sure to delete the hpx thread that we were previously executing
-/// on, so we don't leak its memory.
-///
-/// This is executed on the native thread's stack.
-/// ----------------------------------------------------------------------------
-static int _on_stop(void *sp, void *env) {
-  thread_t *thread = thread_from_sp(sp);
-  network_release(thread->parcel);
-  thread_delete(thread);
-  _thread_fini();
-  int code = (int)(intptr_t)env;
-  return code;
-}
-
-
-/// Called by an HPX user-level thread to shutdown the scheduler.
-///
-/// We use the native stack pointer checkpointed in _on_start() as the transfer
-/// target. We use the _on_stop() transfer continuation to pass the exit code
-/// through to the call site of scheduler_start().
-///
-/// The _on_stop() transfer continuation can perform any shutdown actions that
-/// are necessary for this thread, that need to run from the context of the
-/// native thread stack for whatever reason.
-///
-/// The
-void
-scheduler_stop(int code) {
-  thread_transfer(_native_stack, (void*)(intptr_t)code, _on_stop);
-  unreachable();
-}
-

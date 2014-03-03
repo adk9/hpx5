@@ -23,15 +23,21 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "libhpx/scheduler.h"
-#include "libhpx/network.h"
-#include "future.h"
+#include "locality.h"
+#include "scheduler.h"
+#include "network.h"
+#include "lco.h"
 #include "thread.h"
 
 /// ----------------------------------------------------------------------------
 /// Local future interface.
 /// ----------------------------------------------------------------------------
 /// @{
+typedef struct {
+  lco_t lco;                                    // future "is-an" lco
+  void *value;
+} future_t;
+
 static void _init(future_t *f, int size) {
   bool inplace = (size <= sizeof(f->value));
   lco_init(&f->lco, inplace);
@@ -116,17 +122,11 @@ static int _future_delete_action(void *args) {
 }
 /// @}
 
-int
-future_init_module(void) {
-  _future_set = hpx_action_register("_future_set", _future_set_action);
-  _future_get_proxy = hpx_action_register("_future_get_proxy",
+static void HPX_CONSTRUCTOR _register_actions(void) {
+  _future_set = locality_action_register("_future_set", _future_set_action);
+  _future_get_proxy = locality_action_register("_future_get_proxy",
                                           _future_get_proxy_action);
-  _future_delete = hpx_action_register("_future_delete", _future_delete_action);
-  return HPX_SUCCESS;
-}
-
-void
-future_fini_module(void) {
+  _future_delete = locality_action_register("_future_delete", _future_delete_action);
 }
 
 /// ----------------------------------------------------------------------------

@@ -20,47 +20,27 @@
 
 struct lco;
 
+
 /// ----------------------------------------------------------------------------
-/// Initializes global scheduler data for this address space.
+/// Starts the scheduler.
 ///
-/// This performs global initialization for a scheduler instance, and is not
-/// idempotent. It must be run before any system thread calls
-/// libhpx_sched_startup(), and must be run only once.
+/// This starts all of the low-level scheduler threads. After this call, threads
+/// can be spawned using the scheduler_spawn() routine. Parcels for this queue
+/// may come from the network, or from the main thread.
 ///
-/// @returns - 0 on success, non-zero on failure
+/// @param config - the configuration object
+/// @returns      - non-0 if there is a startup problem
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_init_module(const hpx_config_t *config);
-HPX_INTERNAL void scheduler_fini_module(void);
+HPX_INTERNAL int scheduler_startup(const hpx_config_t *config);
 
 
 /// ----------------------------------------------------------------------------
-/// Start a scheduler thread.
+/// Stops the scheduler.
 ///
-/// This starts a low-level scheduler thread. It will run the scheduling
-/// algorithm for user-level threading until libhpx_sched_shutdown() is called
-/// by a user-level thread running on top of this scheduler thread, at which
-/// point it will return.
-///
-/// @param  act - An initial HPX user-level action to execute.
-/// @param args - Arguments for the intial action.
-/// @param size - Number of bytes for @p args.
-/// @returns    - The value provided to scheduler_shutdown().
+/// This cancels and joins all of the scheduler threads, and then returns. It
+/// should only be called by the main thread that called scheduler_startup().
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_start(hpx_action_t act, const void *args, unsigned size);
-
-
-/// ----------------------------------------------------------------------------
-/// Stops scheduling at a locality.
-///
-/// This can be called by a user-level thread to shutdown a scheduler
-/// thread. When it is called, the scheduler will resume the
-/// scheduler_startup() routine, and return @p code from it.
-///
-/// As with longjmp(), this routine does not return to the caller.
-///
-/// @param code - The return code, to return from scheduler_start().
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_stop(int code) HPX_NORETURN;
+HPX_INTERNAL void scheduler_shutdown(void);
 
 
 /// ----------------------------------------------------------------------------

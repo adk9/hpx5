@@ -25,8 +25,8 @@
 /// Network initialization and finalization.
 /// ----------------------------------------------------------------------------
 /// @{
-HPX_INTERNAL int network_init_module(const hpx_config_t *config);
-HPX_INTERNAL void network_fini_module(void);
+HPX_INTERNAL int network_startup(const hpx_config_t *config);
+HPX_INTERNAL void network_shutdown(void);
 /// @}
 
 /// ----------------------------------------------------------------------------

@@ -119,9 +119,9 @@ main(int argc, char** argv) {
   }
 
   // register action for parcel
-  set_value = hpx_action_register("set_value", action_set_value);
-  get_value = hpx_action_register("get_value", action_get_value);
-  allreduce = hpx_action_register("allreduce", action_allreduce);
+  set_value = hpx_register_action("set_value", action_set_value);
+  get_value = hpx_register_action("get_value", action_get_value);
+  allreduce = hpx_register_action("allreduce", action_allreduce);
 
   // Initialize the values that we want to reduce
   value = hpx_get_my_rank();

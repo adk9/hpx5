@@ -248,8 +248,8 @@ print_options(void) {
 void
 register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  ping = hpx_action_register("ping", action_ping);
-  pong = hpx_action_register("pong", action_pong);
+  ping = hpx_register_action("ping", action_ping);
+  pong = hpx_register_action("pong", action_pong);
 }
 
 hpx_addr_t

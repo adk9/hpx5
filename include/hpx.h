@@ -55,15 +55,6 @@ extern const hpx_addr_t HPX_NULL;
 
 bool hpx_addr_eq(hpx_addr_t lhs, hpx_addr_t rhs);
 
-/// Register an action with the runtime. Should be called by the main native
-/// thread only, between the execution of hpx_init() and hpx_run(). Should not
-/// be called from an HPX lightweight thread.
-///
-/// @param   id - a unique string name for the action
-/// @param func - the local function pointer to associate with the action
-/// @returns    - a key to be used for the action when needed
-hpx_action_t hpx_action_register(const char *id, hpx_action_handler_t func);
-
 /// The HPX configuration type. This can be allocated and set manually by the
 /// application, or used with the provided argp functionality to extract the
 /// configuration using a set of HPX-standard command line arguments.
@@ -74,47 +65,95 @@ typedef struct {
   int stack_bytes;                      // minimum stack size in bytes
 } hpx_config_t;
 
-/// Initializes HPX. This call creates native threads for all of the scheduler
-/// threads, and initializes the network. After this call, all of the scheduler
-/// threads are running, except for the calling thread, which is still a native
-/// thread. The native thread "converts" to a pthread at hpx_run().
+
+/// ----------------------------------------------------------------------------
+/// HPX system interface.
+///
+/// hpx_init() initializes the scheduler, network, and locality.
+///
+/// hpx_register_action() register a user-level action with the runtime.
+///
+/// hpx_run() is called from the native thread after hpx_init() and action
+/// registration is complete, in order
+///
+/// hpx_shutdown() is called from an HPX lightweight thread to terminate
+/// scheduler execution.
+/// ----------------------------------------------------------------------------
 int hpx_init(const hpx_config_t *config);
 
-/// Called from the native thread after hpx_init(), this finalizes action
-/// registration, and transfers all control into the HPX scheduler, beginning
-/// execution in @p entry. Returns the hpx_shutdown() code.
+/// Should be called by the main native thread only, between the execution of
+/// hpx_init() and hpx_run(). Should not be called from an HPX lightweight
+/// thread.
+///
+/// @param   id - a unique string name for the action
+/// @param func - the local function pointer to associate with the action
+/// @returns    - a key to be used for the action when needed
+hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func);
+
+/// This finalizes action registration, starts up any scheduler and native
+/// threads that need to run, and transfers all control into the HPX scheduler,
+/// beginning execution in @p entry. Returns the hpx_shutdown() code.
 ///
 /// The @p entry paramter may be HPX_ACTION_NULL, in which case this entire
 /// scheduler instance is running, waiting for a successful inter-locality steal
 /// operation (if that is implemented) or a network parcel.
 int hpx_run(hpx_action_t entry, const void *args, unsigned size);
 
-/// Called from an HPX lightweight thread to terminate execution. Returns to
-/// hpx_run with the designated code. The returned thread is executing the
-/// original native thread, and all supplementary scheduler threads and network
-/// will have been shutdown.
+/// This causes the main native thread to return the @p code from hpx_run(). The
+/// returned thread is executing the original native thread, and all
+/// supplementary scheduler threads and network will have been shutdown, and any
+/// library resources will have been cleaned up.
 void hpx_shutdown(int code) HPX_NORETURN;
 
-/// HPX locality interface
+
+/// HPX system interface
 int hpx_get_my_rank(void);
 int hpx_get_num_ranks(void);
 int hpx_get_my_thread_id(void);
+
 
 /// HPX address interface
 int hpx_addr_to_rank(hpx_addr_t addr);
 hpx_addr_t hpx_addr_from_rank(int rank);
 
-/// HPX user-level threading interface
+
+/// ----------------------------------------------------------------------------
+/// HPX thread interface.
+///
+/// HPX threads are spawned as a result of hpx_parcel_send{_sync}(). The may
+/// return values to their LCO continuations using this hpx_thread_exit() call,
+/// which terminates the thread's execution.
+/// ----------------------------------------------------------------------------
 void hpx_thread_exit(int status, const void *value, unsigned size) HPX_NORETURN;
 
-/// Futures are a kind of LCO and are native to HPX.
+
+/// ----------------------------------------------------------------------------
+/// LCO's are local control objects.
+///
+/// LCO's are used for data-driven execution.
+///
+/// The hpx_lco_get{_all}() operations will block the calling thread until the
+/// target LCO has been set using an hpx_lco_set() that has the effect of moving
+/// the LCO to set.
+/// ----------------------------------------------------------------------------
+
+
+/// ----------------------------------------------------------------------------
+/// Futures are builtin LCOs that represent values returned from asynchronous
+/// computation.
+/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_future_new(int size);
 void hpx_future_delete(hpx_addr_t future);
 void hpx_future_get(hpx_addr_t future, void *value, int size);
-void hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[], const int sizes[]);
+void hpx_future_get_all(unsigned n, hpx_addr_t future[], void *values[], const int sizes[]);
 void hpx_future_set(hpx_addr_t future, const void *value, int size);
 
-/// HPX parcel interface
+
+/// ----------------------------------------------------------------------------
+/// HPX parcel interface.
+///
+/// Parcels are the HPX message type.
+/// ----------------------------------------------------------------------------
 typedef struct hpx_parcel hpx_parcel_t;
 hpx_parcel_t *hpx_parcel_acquire(unsigned) HPX_MALLOC;
 void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) HPX_NON_NULL(1);
@@ -128,11 +167,27 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) HPX_NON_NULL(1);
 void hpx_parcel_send(hpx_parcel_t *p) HPX_NON_NULL(1);
 void hpx_parcel_send_sync(hpx_parcel_t *p) HPX_NON_NULL(1);
 
-/// HPX rpc interface
-void hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-              size_t len, hpx_addr_t result);
 
+/// ----------------------------------------------------------------------------
+/// HPX call interface.
+///
+/// Performs @p action on @p args at @p addr, and sets @p result with the
+/// resulting value. HPX_NULL is value for @p result, in which case no return
+/// value is generated.
+///
+/// @param   addr - the address that defines where the action is executed
+/// @param action - the action to perform
+/// @param   args - the argument data for @p action
+/// @param    len - the length of @p args
+/// @param result - an address of an LCO to trigger with the result
+/// ----------------------------------------------------------------------------
+int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
+             size_t len, hpx_addr_t result);
+
+
+/// ----------------------------------------------------------------------------
 /// HPX high-resolution timer interface
+/// ----------------------------------------------------------------------------
 #if defined(__linux__)
 #include <time.h>
 typedef struct timespec hpx_time_t;

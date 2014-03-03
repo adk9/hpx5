@@ -34,6 +34,8 @@ typedef struct {
   uint64_t c;
 } cptr_t __attribute__((aligned(16)));
 
+#define SYNC_CPTR_INITIALIZER { .p = NULL, .c = 0 }
+
 /// ----------------------------------------------------------------------------
 /// CAS a counter pointer.
 ///
