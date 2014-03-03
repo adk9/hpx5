@@ -31,13 +31,17 @@ static manager_t *_manager = NULL;
 ///
 int
 locality_startup(const hpx_config_t *cfg) {
+#ifdef HAVE_MPI
   _manager = manager_new_mpirun();
   if (_manager)
     return HPX_SUCCESS;
+#endif
 
+#ifdef HAVE_PMI
   _manager = manager_new_pmi();
   if (_manager)
     return HPX_SUCCESS;
+#endif
 
   _manager = manager_new_smp();
   if (_manager)

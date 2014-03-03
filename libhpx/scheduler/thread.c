@@ -36,9 +36,7 @@ static uint16_t _fpucw = 0;
 static void HPX_CONSTRUCTOR _init_thread(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
-  _thread_size = _PAGE_SIZE * _DEFAULT_PAGES;
-  _thread_alignment = _thread_size;
-  _stack_size = _thread_size - sizeof(thread_t);
+  thread_set_stack_size(0);
 }
 
 /// ----------------------------------------------------------------------------
@@ -74,6 +72,11 @@ static _frame_t *_get_top_frame(thread_t *thread) {
 
 void
 thread_set_stack_size(int stack_bytes) {
+  if (!stack_bytes) {
+    thread_set_stack_size(_PAGE_SIZE * _DEFAULT_PAGES);
+    return;
+  }
+
   // don't care about performance
   int pages = stack_bytes / _PAGE_SIZE;
   pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
