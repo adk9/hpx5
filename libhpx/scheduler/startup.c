@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <signal.h>
+#include <setjmp.h>
 #include "locality.h"
 #include "scheduler.h"
 #include "network.h"
@@ -25,18 +27,26 @@
 #include "entry.h"
 #include "debug.h"
 
+
 static int _n_threads = 0;
 static pthread_t *_threads = NULL;
 static __thread int _thread = 0;
+static __thread sigjmp_buf _native_stack;
 
 /// ----------------------------------------------------------------------------
 /// A thread_transfer() continuation that runs after the first transfer.
-///
-/// @todo: We could do something intelligent with this, like checkpointing the
-///        native stack so that we could transfer back to it on shutdown.
 /// ----------------------------------------------------------------------------
 static int _on_entry(void *sp, void *env) {
   return HPX_SUCCESS;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// A signal handler that deals with the shutdown signal.
+/// ----------------------------------------------------------------------------
+static void _shutdown(int sig, siginfo_t *info, void *ctx) {
+  assert(sig == SIGUSR1);
+  siglongjmp(_native_stack, 1);
 }
 
 
@@ -53,6 +63,12 @@ static int _on_entry(void *sp, void *env) {
 /// @returns   - the result of the initial thread_transfer
 /// ----------------------------------------------------------------------------
 static void *_thread_entry(void *arg) {
+  // the native stack is used during shutdown
+  if (sigsetjmp(_native_stack, 1)) {
+    scheduler_thread_shutdown();
+    pthread_exit(0);
+  }
+
   _thread = (int)(intptr_t)arg;
 
   hpx_parcel_t *p = hpx_parcel_acquire(0);
@@ -72,11 +88,7 @@ static void *_thread_entry(void *arg) {
 
   // we need asynchronous cancellation to shutdown the HPX scheduler correctly,
   // this should be reevaluated later
-  int e = HPX_SUCCESS;
-  pthread_cleanup_push(scheduler_thread_cancel, arg);
-  pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-  e = thread_transfer(t->sp, NULL, _on_entry);
-  pthread_cleanup_pop(1);
+  int e = thread_transfer(t->sp, NULL, _on_entry);
   return (void*)(intptr_t)e;
 }
 
@@ -84,6 +96,8 @@ static void *_thread_entry(void *arg) {
 /// Starts the scheduler.
 int
 scheduler_startup(const hpx_config_t *cfg) {
+  int e = HPX_SUCCESS;
+
   // set the stack size
   thread_set_stack_size(cfg->stack_bytes);
 
@@ -96,34 +110,60 @@ scheduler_startup(const hpx_config_t *cfg) {
   _threads = calloc(_n_threads, sizeof(_threads[0]));
   if (!_threads) {
     locality_printe("failed to allocate thread table.\n");
-    return errno;
+    e = errno;
+    goto unwind0;
+  }
+
+  // register the shutdown signal
+  struct sigaction sa;
+  sa.sa_sigaction = _shutdown;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_SIGINFO;
+  e = sigaction(SIGUSR1, &sa, NULL);
+  if (e) {
+    locality_printe("failed to register the shutdown handler.\n");
+    goto unwind1;
   }
 
   // start all of the scheduler threads
-  for (int i = 0; i < _n_threads; ++i) {
+  int i;
+
+  for (i = 0; i < _n_threads; ++i) {
     void *arg = (void*)(intptr_t)i;
     int e = pthread_create(&_threads[i], NULL, _thread_entry, arg);
-    if (!e)
-      continue;
-
-    // error branch
-    locality_printe("failed to create scheduler thread #%d.\n", i);
-    for (int j = 0; j < i; ++j)
-      if (pthread_cancel(_threads[j]) || pthread_join(_threads[j], NULL))
-        locality_printe("could not clean up thread #%d.\n", j);
-
-    return e;
+    if (e) {
+      locality_printe("failed to create scheduler thread #%d.\n", i);
+      goto unwind2;
+    }
   }
 
   // set all of the affinities
-  for (int i = 0; i < _n_threads; ++i) {
+  for (i = 0; i < _n_threads; ++i) {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(i % locality_get_n_processors(), &cpuset);
-    pthread_setaffinity_np(_threads[i], sizeof(cpuset), &cpuset);
+    e = pthread_setaffinity_np(_threads[i], sizeof(cpuset), &cpuset);
+    if (e) {
+      locality_printe("failed to bind thread affinity for %d", i);
+      goto unwind3;
+    }
   }
 
   return HPX_SUCCESS;
+
+ unwind3:
+  i = _n_threads;
+
+ unwind2:
+  for (int j = 0; j < i; ++j)
+    if (pthread_kill(_threads[j], SIGUSR1) || pthread_join(_threads[j], NULL))
+      locality_printe("could not clean up thread #%d.\n", j);
+
+ unwind1:
+  free(_threads);
+
+ unwind0:
+  return e;
 }
 
 
@@ -135,7 +175,7 @@ scheduler_startup(const hpx_config_t *cfg) {
 void
 scheduler_shutdown(void) {
   for (int i = 0; i < _n_threads; ++i)
-    if (pthread_cancel(_threads[i]) || pthread_join(_threads[i], NULL))
+    if (pthread_kill(_threads[i], SIGUSR1) || pthread_join(_threads[i], NULL))
       locality_printe("could not clean up thread #%d.\n", i);
 }
 

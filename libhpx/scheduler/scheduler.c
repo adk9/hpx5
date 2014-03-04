@@ -299,7 +299,8 @@ scheduler_current_target(void) {
 }
 
 void
-scheduler_thread_cancel(void *arg) {
+scheduler_thread_shutdown(void) {
+  locality_logf("thread %d shutdown\n", hpx_get_my_thread_id());
   while (_free_threads) {
     thread_t *t = _free_threads;
     _free_threads = t->next;

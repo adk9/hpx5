@@ -1,25 +1,40 @@
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
-
-  MPI Network Interface
-  mpi.c
-
-  Copyright (c) 2013, Trustees of Indiana University
-  All rights reserved.
-
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
-  ====================================================================
-*/
-
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#include <stdlib.h>
+#include <mpi.h>
+#include "transport.h"
+
+static void _delete(transport_t *mpi) {
+  int finalized;
+  MPI_Finalized(&finalized);
+  if (!finalized)
+    MPI_Finalize();
+  free(mpi);
+}
+
+transport_t *
+transport_new_mpi(void) {
+  transport_t *mpi = malloc(sizeof(*mpi));
+  mpi->delete = _delete;
+  return NULL;
+}
+
+
+#if 0
 #include <stdbool.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -325,3 +340,4 @@ void
 barrier(void) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
+#endif

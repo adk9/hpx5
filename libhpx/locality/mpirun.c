@@ -18,18 +18,18 @@
 #include <mpi.h>
 #include "manager.h"
 
-static void _delete(manager_t *pmi) {
+static void _delete(manager_t *mpi) {
   int finalized;
   MPI_Finalized(&finalized);
   if (!finalized)
     MPI_Finalize();
-  free(pmi);
+  free(mpi);
 }
 
 manager_t *
 manager_new_mpirun(void) {
   int init;
-  MPI_Initialized(init);
+  MPI_Initialized(&init);
   if (!init) {
     int provided;
     if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))

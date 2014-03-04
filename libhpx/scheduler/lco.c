@@ -114,11 +114,10 @@ lco_trigger(lco_t *lco) {
 void
 lco_enqueue_and_unlock(lco_t *lco, thread_t *thread) {
   uintptr_t bits = (uintptr_t)lco->queue;
+  uintptr_t state = bits & _STATE_MASK & _UNLOCK_MASK;
   thread_t *queue = (thread_t*)(bits & _QUEUE_MASK);
   thread->next = queue;
-  uintptr_t bits2 = (uintptr_t)thread;
-  bits2 &= _UNLOCK_MASK;
-  thread = (thread_t *)bits2;
+  thread = (thread_t*)((uintptr_t)thread | state);
   sync_store(&lco->queue, thread, SYNC_RELEASE);
 }
 
