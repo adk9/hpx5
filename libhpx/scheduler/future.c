@@ -42,7 +42,7 @@ static void _init(future_t *f, int size) {
   bool inplace = (size <= sizeof(f->value));
   lco_init(&f->lco, inplace);
   f->value = (inplace) ? NULL : malloc(size);
-  assert(!inplace || f->value);
+  assert(!inplace || !f->value);
 }
 
 static void _lock(future_t *f) {

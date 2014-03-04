@@ -36,6 +36,6 @@ HPX_INTERNAL void scheduler_thread_entry(hpx_parcel_t *parcel) HPX_NORETURN;
 /// This is a callback that can be used to clean up resources from a canceled
 /// scheduler thread.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_thread_cancel(void *args);
+HPX_INTERNAL void scheduler_thread_shutdown(void);
 
 #endif // LIBHPX_SCHEDULER_ENTRY_H
