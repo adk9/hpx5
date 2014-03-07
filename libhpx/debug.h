@@ -13,9 +13,20 @@
 #ifndef LIBHPX_DEBUG_H
 #define LIBHPX_DEBUG_H
 
-#include "stdlib.h"
-#include "stdio.h"
+#include "hpx.h"
 
-#define UNIMPLEMENTED() abort()
+#ifdef HPX_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+/// Some output wrappers
+HPX_INTERNAL void dbg_log1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+HPX_INTERNAL void dbg_error1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+
+#define dbg_log(...) dbg_log1(__func__, __VA_ARGS__)
+#define dbg_error(...) dbg_error1(__func__, __VA_ARGS__)
+
 
 #endif // LIBHPX_DEBUG_H

@@ -15,7 +15,7 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
-#include <argp.h>
+// #include <argp.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,47 +30,47 @@ typedef struct {
 } args_t;
 
 /// The options that fibonacci understands.
-static struct argp_option opts[] = {
-  {"debug", 'd', 0, 0, "Wait for the debugger"},
-  {"threads", 't', "HPX_THREADS", 0, "HPX scheduler threads"},
-  { 0 }
-};
+// static struct argp_option opts[] = {
+//   {"debug", 'd', 0, 0, "Wait for the debugger"},
+//   {"threads", 't', "HPX_THREADS", 0, "HPX scheduler threads"},
+//   { 0 }
+// };
 
-static char doc[] = "Fibonnaci: A simple fibonacci example using HPX.";
-static char args_doc[] = "ARG1";
+// static char doc[] = "Fibonnaci: A simple fibonacci example using HPX.";
+// static char args_doc[] = "ARG1";
 
-// Our argument parser.
-static int parse(int key, char *arg, struct argp_state *state) {
-  args_t *args = (args_t*)state->input;
+// // Our argument parser.
+// static int parse(int key, char *arg, struct argp_state *state) {
+//   args_t *args = (args_t*)state->input;
 
-  switch (key) {
-   default:
-    return ARGP_ERR_UNKNOWN;
+//   switch (key) {
+//    default:
+//     return ARGP_ERR_UNKNOWN;
 
-   case 'd':
-    args->debug = 1;
-    break;
+//    case 'd':
+//     args->debug = 1;
+//     break;
 
-   case 't':
-    args->threads = atoi(arg);
-    break;
+//    case 't':
+//     args->threads = atoi(arg);
+//     break;
 
-   case ARGP_KEY_NO_ARGS:
-    argp_usage(state);
-    break;
+//    case ARGP_KEY_NO_ARGS:
+//     argp_usage(state);
+//     break;
 
-   case ARGP_KEY_ARG:
-    if (state->arg_num > 1)
-      argp_usage(state);
+//    case ARGP_KEY_ARG:
+//     if (state->arg_num > 1)
+//       argp_usage(state);
 
-    if (!arg)
-      abort();
+//     if (!arg)
+//       abort();
 
-    args->n = atoi(arg);
-    break;
-  }
-  return 0;
-}
+//     args->n = atoi(arg);
+//     break;
+//   }
+//   return 0;
+// }
 
 static hpx_action_t fib = 0;
 static hpx_action_t fib_main = 0;
@@ -147,27 +147,32 @@ fib_main_action(void *args) {
 
 int main(int argc, char *argv[]) {
   args_t args = {0};
-  struct argp parser = { opts, parse, args_doc, doc };
-  int e = argp_parse(&parser, argc, argv, 0, 0, &args);
-  if (e)
-    return e;
+  // struct argp parser = { opts, parse, args_doc, doc };
+  // int e = argp_parse(&parser, argc, argv, 0, 0, &args);
+  // if (e)
+  //   return e;
+
+  // hpx_config_t config = {
+  //   .scheduler_threads = args.threads,
+  //   .stack_bytes = 0
+  // };
+
+  // if (args.debug) {
+  //   int i = 0;
+  //   char hostname[256];
+  //   gethostname(hostname, sizeof(hostname));
+  //   printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  //   fflush(stdout);
+  //   while (0 == i)
+  //     sleep(5);
+  // }
 
   hpx_config_t config = {
-    .scheduler_threads = args.threads,
+    .scheduler_threads = 1,
     .stack_bytes = 0
   };
 
-  if (args.debug) {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    while (0 == i)
-      sleep(5);
-  }
-
-  e = hpx_init(&config);
+  int e = hpx_init(&config);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;

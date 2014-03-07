@@ -25,8 +25,8 @@ extern "C" {
 
 /// External HPX typedefs
 /// @{
-typedef         uintptr_t hpx_action_t;
-typedef            int (* hpx_action_handler_t)(void *);
+typedef uintptr_t hpx_action_t;
+typedef     int (*hpx_action_handler_t)(void *);
 /// @}
 
 extern hpx_action_t HPX_ACTION_NULL;
@@ -52,8 +52,47 @@ typedef struct {
 } hpx_addr_t;
 
 extern const hpx_addr_t HPX_NULL;
+extern const hpx_addr_t HPX_ANYWHERE;
+extern hpx_addr_t HPX_HERE;
 
-bool hpx_addr_eq(hpx_addr_t lhs, hpx_addr_t rhs);
+/// Allocate global memory.
+///
+/// This is not a collective operation, the returned address is returned only to
+/// the calling thread, and must either be written into already-allocated global
+/// memory, or sent via a parcel, for anyone else to address the allocation.
+hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size, size_t alignment);
+
+
+/// Free a global allocation.
+void hpx_global_free(hpx_addr_t addr);
+
+
+/// returns true if the addresses are equal
+bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
+
+
+/// Performs address translation.
+///
+/// This will try and perform a global-to-local translation on the global @p
+/// addr, and set @p out to the local address if it is successful. If @p local
+/// is NULL, then this only performs address translation. If the address is not
+/// local, or @p is not NULL and the pin fails, this will return false,
+/// otherwise it will return true.
+///
+/// @param       addr - the global address
+/// @param[out] local - the pinned local address
+/// @returns          - { true; if @p addr is local and @p local is NULL
+///                       true; if @p addr is local and @p is not NULL and pin
+///                             is successful
+///                       false; if @p is not local
+///                       flase; if @p is local and @local is not NULL and pin
+///                              fails
+bool hpx_addr_try_pin(const hpx_addr_t addr, void **local);
+
+
+/// Allows the address to be remapped.
+void hpx_addr_unpin(const hpx_addr_t addr);
+
 
 /// The HPX configuration type. This can be allocated and set manually by the
 /// application, or used with the provided argp functionality to extract the
@@ -69,17 +108,21 @@ typedef struct {
 /// ----------------------------------------------------------------------------
 /// HPX system interface.
 ///
-/// hpx_init() initializes the scheduler, network, and locality.
+/// hpx_init() initializes the scheduler, network, and locality
 ///
 /// hpx_register_action() register a user-level action with the runtime.
 ///
 /// hpx_run() is called from the native thread after hpx_init() and action
 /// registration is complete, in order
 ///
+/// hpx_abort() is called from an HPX lightweight thread to terminate scheduler
+/// execution asynchronously
+///
 /// hpx_shutdown() is called from an HPX lightweight thread to terminate
-/// scheduler execution.
+/// scheduler execution
 /// ----------------------------------------------------------------------------
 int hpx_init(const hpx_config_t *config);
+
 
 /// Should be called by the main native thread only, between the execution of
 /// hpx_init() and hpx_run(). Should not be called from an HPX lightweight
@@ -90,6 +133,7 @@ int hpx_init(const hpx_config_t *config);
 /// @returns    - a key to be used for the action when needed
 hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func);
 
+
 /// This finalizes action registration, starts up any scheduler and native
 /// threads that need to run, and transfers all control into the HPX scheduler,
 /// beginning execution in @p entry. Returns the hpx_shutdown() code.
@@ -99,11 +143,26 @@ hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func);
 /// operation (if that is implemented) or a network parcel.
 int hpx_run(hpx_action_t entry, const void *args, unsigned size);
 
+
 /// This causes the main native thread to return the @p code from hpx_run(). The
 /// returned thread is executing the original native thread, and all
 /// supplementary scheduler threads and network will have been shutdown, and any
 /// library resources will have been cleaned up.
+///
+/// This call is cooperative and synchronous, so it may not return if there are
+/// misbehaving HPX lightweight threads.
 void hpx_shutdown(int code) HPX_NORETURN;
+
+
+/// This causes the main native thread to return the @p code from hpx_run(). The
+/// returned thread is executing the original native thread, and all
+/// supplementary scheduler threads an network will ahve been shutdown.
+///
+/// This is not cooperative, and will not clean up any resources. Furthermore,
+/// the state of the system after the return is not well defined. The
+/// application's main native thread should only rely on the async-safe
+/// interface provided in signal(7).
+void hpx_abort(int code) HPX_NORETURN;
 
 
 /// HPX system interface
@@ -124,7 +183,9 @@ hpx_addr_t hpx_addr_from_rank(int rank);
 /// return values to their LCO continuations using this hpx_thread_exit() call,
 /// which terminates the thread's execution.
 /// ----------------------------------------------------------------------------
-void hpx_thread_exit(int status, const void *value, unsigned size) HPX_NORETURN;
+void hpx_thread_exit(int status, const void *value, size_t size) HPX_NORETURN;
+const hpx_addr_t hpx_thread_current_target(void);
+const hpx_addr_t hpx_thread_current_cont(void);
 
 
 /// ----------------------------------------------------------------------------
@@ -155,17 +216,23 @@ void hpx_future_set(hpx_addr_t future, const void *value, int size);
 /// Parcels are the HPX message type.
 /// ----------------------------------------------------------------------------
 typedef struct hpx_parcel hpx_parcel_t;
-hpx_parcel_t *hpx_parcel_acquire(unsigned) HPX_MALLOC;
-void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) HPX_NON_NULL(1);
-void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) HPX_NON_NULL(1);
-void hpx_parcel_set_cont(hpx_parcel_t *p, hpx_addr_t lco) HPX_NON_NULL(1);
-void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) HPX_NON_NULL(1);
-hpx_action_t hpx_parcel_get_action(hpx_parcel_t *p) HPX_NON_NULL(1);
-hpx_addr_t hpx_parcel_get_target(hpx_parcel_t *p) HPX_NON_NULL(1);
-hpx_addr_t hpx_parcel_get_cont(hpx_parcel_t *p) HPX_NON_NULL(1);
-void *hpx_parcel_get_data(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+/// allocate a parcel with the given payload size
+hpx_parcel_t *hpx_parcel_acquire(size_t payload_bytes) HPX_MALLOC;
+
+/// release the parcel, either directly, or by sending it
+void hpx_parcel_release(hpx_parcel_t *p) HPX_NON_NULL(1);
 void hpx_parcel_send(hpx_parcel_t *p) HPX_NON_NULL(1);
-void hpx_parcel_send_sync(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) HPX_NON_NULL(1);
+void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr) HPX_NON_NULL(1);
+void hpx_parcel_set_cont(hpx_parcel_t *p, const hpx_addr_t lco) HPX_NON_NULL(1);
+void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) HPX_NON_NULL(1);
+
+hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *p) HPX_NON_NULL(1);
+hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p) HPX_NON_NULL(1);
+hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p) HPX_NON_NULL(1);
+void *hpx_parcel_get_data(hpx_parcel_t *p) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
