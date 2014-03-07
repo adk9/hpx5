@@ -95,8 +95,10 @@ void cache_put(parcel_cache_t *cache, hpx_parcel_t *parcel) {
   dbg_assert_precondition(!parcel->next);
   int size = block_payload_size(parcel);
   hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
-  if (*bucket && (size != block_payload_size(*bucket)))
+  while (*bucket && (size != block_payload_size(*bucket))) {
     resize(cache);
+    bucket = &cache->table[size % cache->capacity];
+  }
   assert((!*bucket || (size == block_payload_size(*bucket))) && "resize failed");
   parcel->next = *bucket;
   *bucket = parcel;
@@ -108,8 +110,10 @@ void cache_refill(parcel_cache_t *cache, hpx_parcel_t *parcel) {
   dbg_assert_precondition(parcel);
   int size = block_payload_size(parcel);
   hpx_parcel_t **bucket = &cache->table[size % cache->capacity];
-  if (*bucket && (size != block_payload_size(*bucket)))
+  while (*bucket && (size != block_payload_size(*bucket))) {
     resize(cache);
+    bucket = &cache->table[size % cache->capacity];
+  }
   assert((!*bucket || (size == block_payload_size(*bucket))) && "resize failed");
   *bucket = parcel;
 }
