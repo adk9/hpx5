@@ -15,16 +15,15 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file libhpx/system.c
+/// @file libhpx/locality.c
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <unistd.h>                             // sysconf(...)
 #include "hpx.h"
 #include "locality.h"
 #include "manager.h"
-#include "debug.h"
+
+hpx_addr_t HPX_HERE = { NULL, -1 };
 
 /// Locality data.
 static manager_t *_manager = NULL;
@@ -33,7 +32,10 @@ static manager_t *_manager = NULL;
 int
 locality_startup(const hpx_config_t *cfg) {
   _manager = manager_new();
-  return (_manager != 0) ? HPX_SUCCESS : 1;
+  if (!_manager)
+    return 1;
+  HPX_HERE.rank = _manager->rank;
+  return HPX_SUCCESS;
 }
 
 
@@ -71,28 +73,6 @@ locality_action_register(const char *id, hpx_action_handler_t f) {
 hpx_action_handler_t
 locality_action_lookup(hpx_action_t key) {
   return (hpx_action_handler_t)key;
-}
-
-void
-locality_logf1(const char *f, const char *fmt, ...) {
-  printf("LIBHPX: %s() ", f);
-
-  va_list args;
-  va_start(args, fmt);
-  vprintf(fmt, args);
-  va_end(args);
-  fflush(stdout);
-}
-
-void locality_printe1(const char *f, const char *fmt, ...) {
-  fprintf(stderr, "LIBHPX: %s() ", f);
-
-  va_list args;
-  va_start(args, fmt);
-  vfprintf(stderr, fmt, args);
-  va_end(args);
-
-  fflush(stderr);
 }
 
 int

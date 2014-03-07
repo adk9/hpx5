@@ -52,7 +52,7 @@ HPX_INTERNAL void network_shutdown(void);
 struct hpx_parcel {
   // these fields are only valid within a locality
   hpx_parcel_t *next;
-  struct thread *thread;
+  // struct thread *thread;
   void *data;
 
   // fields below are sent on wire
@@ -64,31 +64,10 @@ struct hpx_parcel {
 };
 
 HPX_INTERNAL void network_release(hpx_parcel_t *parcel) HPX_NON_NULL(1);
+HPX_INTERNAL void network_send(hpx_parcel_t *parcel) HPX_NON_NULL(1);
+HPX_INTERNAL void network_send_sync(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// Wrap a network barrier.
-/// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_barrier(void);
 
-/// ----------------------------------------------------------------------------
-/// Get the local address for a global address.
-///
-/// HPX_NULL will always return true and set @p out to NULL. A remote address
-/// will return false, but possibly leaves the out parameter in an undefined
-/// state.
-///
-/// @param     addr - the global address to check
-/// @param[out] out - the local address (possibly NULL)
-/// @returns        - true if the address is local, false if it is not
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL bool network_addr_is_local(hpx_addr_t addr, void **out);
-
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_addr_t network_malloc(int size, int alignment);
-
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_free(hpx_addr_t addr);
 
 #endif // LIBHPX_NETWORK_H

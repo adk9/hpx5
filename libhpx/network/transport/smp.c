@@ -20,7 +20,7 @@
 /// The smp transport is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
-#include "scheduler.h"
+#include "hpx.h"
 #include "transport.h"
 
 

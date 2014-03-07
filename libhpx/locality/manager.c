@@ -20,6 +20,7 @@
 /// ----------------------------------------------------------------------------
 #include "locality.h"
 #include "manager.h"
+#include "debug.h"
 
 manager_t *
 manager_new(void) {
@@ -28,7 +29,7 @@ manager_new(void) {
 #ifdef HAVE_PMI
   manager = manager_new_pmi();
   if (manager) {
-    locality_logf("initialized PMI process manager.\n");
+    dbg_log("initialized PMI process manager.\n");
     return manager;
   }
 #endif
@@ -36,17 +37,17 @@ manager_new(void) {
 #ifdef HAVE_MPI
   manager = manager_new_mpirun();
   if (manager) {
-    locality_logf("initialized MPI-run process manager.\n");
+    dbg_log("initialized MPI-run process manager.\n");
     return manager;
   }
 #endif
 
   manager = manager_new_smp();
   if (manager) {
-    locality_logf("initialized the SMP process manager.\n");
+    dbg_log("initialized the SMP process manager.\n");
     return manager;
   }
 
-  locality_printe("failed to initialize a process manager.\n");
+  dbg_error("failed to initialize a process manager.\n");
   return NULL;
 }

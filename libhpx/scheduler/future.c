@@ -25,7 +25,6 @@
 #include <string.h>
 #include "locality.h"
 #include "scheduler.h"
-#include "network.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -41,26 +40,19 @@ typedef struct {
 static void _init(future_t *f, int size) {
   bool inplace = (size <= sizeof(f->value));
   lco_init(&f->lco, inplace);
-  f->value = (inplace) ? NULL : malloc(size);
+  f->value = (inplace) ? NULL : malloc(size);   // allocate if necessary
   assert(!inplace || !f->value);
 }
 
-static void _lock(future_t *f) {
-  lco_lock(&f->lco);
-}
+/// Wrap the LCO's interface into a slightly nicer one
+/// @{
+static void _lock(future_t *f)            { lco_lock(&f->lco); }
+static void _unlock(future_t *f)          { lco_unlock(&f->lco); }
+static int _is_inplace(const future_t *f) { return lco_is_user(&f->lco); }
+static int _is_set(const future_t *f)     { return lco_is_set(&f->lco); }
+/// @}
 
-static void _unlock(future_t *f) {
-  lco_unlock(&f->lco);
-}
-
-static int _is_inplace(const future_t *f) {
-  return lco_is_user(&f->lco);
-}
-
-static int _is_set(const future_t *f) {
-  return lco_is_set(&f->lco);
-}
-
+/// Copies the appropriate value into @p out
 static void _get_value(const future_t *f, void *out, int size) {
   if (!out || !size)
     return;
@@ -69,6 +61,7 @@ static void _get_value(const future_t *f, void *out, int size) {
   memcpy(out, from, size);
 }
 
+/// Copies @p from into the appropriate location
 static void _set_value(future_t *f, const void *from, int size) {
   if (!from || !size)
     return;
@@ -77,6 +70,7 @@ static void _set_value(future_t *f, const void *from, int size) {
   memcpy(to, from, size);
 }
 
+/// Deletes the future and it's out of place data, if necessary. Grabs the lock.
 static void _delete(future_t *f) {
   if (!f)
     return;
@@ -89,36 +83,49 @@ static void _delete(future_t *f) {
 }
 /// @}
 
+
 /// ----------------------------------------------------------------------------
-/// Future actions.
+/// Future actions for remote future interaction.
 /// ----------------------------------------------------------------------------
 /// @{
 static hpx_action_t _future_set = 0;
 static hpx_action_t _future_get_proxy = 0;
 static hpx_action_t _future_delete = 0;
 
+/// Encapsulates hpx_future_set in an action interface
 typedef struct {
   int size;
   char data[];
 } _future_set_args_t;
 
 static int _future_set_action(void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
   _future_set_args_t *a = args;
-  hpx_future_set(scheduler_current_target(), &a->data, a->size);
-  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+  hpx_future_set(target, &a->data, a->size);
+  return HPX_SUCCESS;
 }
 
+
+/// Performs a get action on behalf of a remote thread, and sets the
+/// continuation buffer with the result.
 static int _future_get_proxy_action(void *args) {
   int n = *(int*)args;
   char buffer[n];
-  hpx_future_get(scheduler_current_target(), buffer, n);
+  hpx_addr_t target = hpx_thread_current_target();
+  hpx_future_get(target, buffer, n);
   hpx_thread_exit(HPX_SUCCESS, buffer, n);
 }
 
+
+/// Deletes a future by translating it into a local address and calling delete.
 static int _future_delete_action(void *args) {
-  hpx_addr_t target = scheduler_current_target();
-  _delete(target.local);
-  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+  hpx_addr_t target = hpx_thread_current_target();
+  void *local = NULL;
+  if (!hpx_addr_try_pin(target, local))
+    hpx_abort(1);
+
+  _delete(local);
+  return HPX_SUCCESS;
 }
 /// @}
 
@@ -166,8 +173,9 @@ static hpx_addr_t _spawn_get_proxy(hpx_addr_t future, int size) {
 void
 hpx_future_get(hpx_addr_t future, void *out, int size) {
   future_t *f = NULL;
-  if (network_addr_is_local(future, (void**)&f)) {
+  if (hpx_addr_try_pin(future, (void**)&f)) {
     _get_local(f, out, size);
+    hpx_addr_unpin(future);
   }
   else {
     hpx_addr_t val = _spawn_get_proxy(future, size);
@@ -193,7 +201,7 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
   // future->values->sizes... actually we could compact them if we wanted to
   // store more information
   for (unsigned i = 0; i < n; ++i) {
-    if (network_addr_is_local(futures[i], (void**)&local[i])) {
+    if (hpx_addr_try_pin(futures[i], (void**)&local[i])) {
       proxies[i] = HPX_NULL;
     }
     else {
@@ -208,6 +216,7 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
       void *addr = (values[i]) ? values[i] : NULL;
       int size = (sizes[i]) ? sizes[i] : 0;
       _get_local(local[i], addr, size);
+      hpx_addr_unpin(futures[i]);
     }
   }
 
@@ -232,11 +241,12 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
 void
 hpx_future_set(hpx_addr_t future, const void *value, int size) {
   future_t *f = NULL;
-  if (network_addr_is_local(future, (void**)&f)) {
+  if (hpx_addr_try_pin(future, (void**)&f)) {
     _lock(f);
     _set_value(f, value, size);
     scheduler_signal(&f->lco);
     _unlock(f);
+    hpx_addr_unpin(future);
     return;
   }
 
@@ -251,21 +261,33 @@ hpx_future_set(hpx_addr_t future, const void *value, int size) {
 
 /// ----------------------------------------------------------------------------
 /// Allocate a future.
+///
+/// Malloc enough local space, with the right alignment, and then use the
+/// initializer.
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_future_new(int size) {
-  hpx_addr_t f = network_malloc(sizeof(future_t), sizeof(future_t));
-  _init(f.local, size);
+  hpx_addr_t f = hpx_global_calloc(1, sizeof(future_t), 1, sizeof(future_t));
+  void *local;
+  if (!hpx_addr_try_pin(f, &local))
+    hpx_abort(1);
+  _init(local, size);
   return f;
 }
 
 /// ----------------------------------------------------------------------------
 /// Free a future.
+///
+/// If the future is local, go ahead and delete it, otherwise generate a parcel
+/// to do it.
 /// ----------------------------------------------------------------------------
 void
 hpx_future_delete(hpx_addr_t future) {
-  if (future.rank == hpx_get_my_rank())
-    _delete(future.local);
+  void *local;
+  if (hpx_addr_try_pin(future, &local)) {
+    _delete(local);
+    hpx_addr_unpin(future);
+  }
   else
     hpx_call(future, _future_delete, NULL, 0, HPX_NULL);
 }

@@ -25,24 +25,24 @@ static const int limit = 65536;
 
 /* Modern compilers are smart. No need to macro this. */
 static int min(int x, int y) {
-    return (x < y) ? x : y;
+  return (x < y) ? x : y;
 }
 
 /*  Backoff for now just does some wasted work. Make sure that this is
  *  not optimized.
-*/
+ */
 static  __attribute__((noinline))
 void backoff(int *prev) {
-    *prev = min(*prev * multiplier, limit);
-    for (int i = 0, e = *prev; i < e; ++i)
-        sync_nop();
+  *prev = min(*prev * multiplier, limit);
+  for (int i = 0, e = *prev; i < e; ++i)
+    sync_nop();
 }
 
 void tatas_acquire_slow(tatas_lock_t *l) {
-    int i = base;
-    do {
-        backoff(&i);
-    } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
+  int i = base;
+  do {
+    backoff(&i);
+  } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
 }
 
 void tatas_init(tatas_lock_t *l) {

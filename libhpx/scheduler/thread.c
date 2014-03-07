@@ -20,12 +20,17 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "network.h"
 #include "thread.h"
+#include "locality.h"
+#include "scheduler.h"
+#include "lco.h"
 #include "asm.h"
+#include "builtins.h"
+#include "debug.h"
 
 #define _PAGE_SIZE 4096
 #define _DEFAULT_PAGES 4
+
 
 static int _thread_size = 0;
 static int _thread_alignment = 0;
@@ -33,11 +38,18 @@ static int _stack_size = 0;
 static uint32_t _mxcsr = 0;
 static uint16_t _fpucw = 0;
 
+
 static void HPX_CONSTRUCTOR _init_thread(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
   thread_set_stack_size(0);
 }
+
+/// ----------------------------------------------------------------------------
+/// This is the type of an HPX thread entry function.
+/// ----------------------------------------------------------------------------
+typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
+
 
 /// ----------------------------------------------------------------------------
 /// A structure describing the initial frame on a stack.
@@ -66,9 +78,25 @@ typedef struct {
 } HPX_PACKED _frame_t;
 #endif
 
+
 static _frame_t *_get_top_frame(thread_t *thread) {
   return (_frame_t*)&thread->stack[_stack_size - sizeof(_frame_t)];
 }
+
+
+static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  hpx_action_t action = hpx_parcel_get_action(parcel);
+  hpx_action_handler_t handler = locality_action_lookup(action);
+  void *data = hpx_parcel_get_data(parcel);
+  int status = handler(data);
+  if (status != HPX_SUCCESS) {
+    dbg_error("action produced unhandled error\n");
+    hpx_shutdown(status);
+  }
+  hpx_thread_exit(status, NULL, 0);
+  unreachable();
+}
+
 
 void
 thread_set_stack_size(int stack_bytes) {
@@ -87,15 +115,16 @@ thread_set_stack_size(int stack_bytes) {
   _stack_size = _thread_size - sizeof(thread_t);
 }
 
+
 thread_t *
-thread_init(thread_t *thread, thread_entry_t entry, hpx_parcel_t *parcel) {
+thread_init(thread_t *thread, hpx_parcel_t *parcel) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
   frame->rdi     = parcel;
   frame->rbp     = &frame->rip;
-  frame->rip     = entry;
+  frame->rip     = _thread_enter;
 
   // set up the thread information
   thread->sp     = frame;
@@ -103,18 +132,20 @@ thread_init(thread_t *thread, thread_entry_t entry, hpx_parcel_t *parcel) {
   thread->next   = NULL;
 
   // set up the parcel information
-  parcel->thread = thread;
+  // parcel->thread = thread;
   return thread;
 }
 
+
 thread_t *
-thread_new(thread_entry_t entry, hpx_parcel_t *parcel) {
+thread_new(hpx_parcel_t *parcel) {
   // try to get a freelisted thread, or allocate a new, properly-aligned one
   thread_t *t = NULL;
   if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
     assert(false);
-  return thread_init(t, entry, parcel);
+  return thread_init(t, parcel);
 }
+
 
 thread_t *
 thread_from_sp(void *sp) {
@@ -125,21 +156,100 @@ thread_from_sp(void *sp) {
   return thread;
 }
 
+
 thread_t *
 thread_current(void) {
   return thread_from_sp(get_sp());
 }
 
 
-hpx_addr_t
-thread_current_cont(void) {
-  thread_t *me = thread_current();
-  hpx_parcel_t *parcel = me->parcel;
-  return parcel->cont;
+hpx_parcel_t *
+thread_current_parcel(void) {
+  return thread_current()->parcel;
 }
+
 
 void
 thread_delete(thread_t *thread) {
   free(thread);
 }
 
+
+void
+hpx_thread_exit(int status, const void *value, size_t size) {
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = thread_current_parcel();
+  hpx_addr_t cont = hpx_parcel_get_cont(parcel);
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_future_set(cont, value, size);
+
+  // exit terminates this thread
+  scheduler_exit(parcel);
+}
+
+thread_t *
+thread_pop(thread_t **list) {
+  assert(list);
+  thread_t *head = *list;
+  if (head)
+    *list = head->next;
+  return head;
+}
+
+void
+thread_push(thread_t **list, thread_t *thread) {
+  assert(list);
+  assert(thread);
+  thread->next = *list;
+  *list = thread;
+}
+
+void
+thread_cat(thread_t **lhs, thread_t *rhs) {
+  // find the end of list
+  thread_t *end = rhs;
+  while (end->next)
+    end = end->next;
+
+  // link in the list
+  end->next = *lhs;
+  *lhs = rhs;
+}
+
+static int _checkpoint_push(void *sp, thread_t **list) {
+  thread_t *thread = thread_from_sp(sp);
+  thread->sp = sp;
+  thread_push(list, thread);
+  return HPX_SUCCESS;
+}
+
+static int _exit_push(void *sp, thread_t **list) {
+  thread_t *thread = thread_from_sp(sp);
+  hpx_parcel_release(thread->parcel);
+  thread_push(list, thread);
+  return HPX_SUCCESS;
+}
+
+
+static int _checkpoint_enqueue(void *sp, lco_t *lco) {
+  thread_t *thread = thread_from_sp(sp);
+  thread->sp = sp;
+  lco_enqueue_and_unlock(lco, thread);
+  return HPX_SUCCESS;
+}
+
+thread_transfer_cont_t thread_checkpoint_push = (thread_transfer_cont_t)_checkpoint_push;
+thread_transfer_cont_t thread_exit_push = (thread_transfer_cont_t)_exit_push;
+thread_transfer_cont_t thread_checkpoint_enqueue = (thread_transfer_cont_t)_checkpoint_enqueue;
+
+const hpx_addr_t
+hpx_thread_current_target(void) {
+  return hpx_parcel_get_target(thread_current_parcel());
+}
+
+
+const hpx_addr_t
+hpx_thread_current_cont(void) {
+  return hpx_parcel_get_cont(thread_current_parcel());
+}

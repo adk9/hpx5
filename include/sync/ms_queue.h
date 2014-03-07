@@ -29,8 +29,4 @@ void  sync_ms_queue_init(ms_queue_t *q);
 void  sync_ms_queue_enqueue(ms_queue_t *q, void *val);
 void *sync_ms_queue_dequeue(ms_queue_t *queue);
 
-#define SYNC_MS_QUEUE_INIT(queue) sync_ms_queue_init(queue)
-#define SYNC_MS_QUEUE_ENQUEUE(queue, val) sync_ms_queue_enqueue(queue, val)
-#define SYNC_MS_QUEUE_DEQUEUE(queue, val) val = sync_ms_queue_dequeue(queue)
-
 #endif // LIBHPX_MS_QUEUE_H

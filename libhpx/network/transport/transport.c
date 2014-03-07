@@ -18,8 +18,8 @@
 /// @file libhpx/network/transport/transport.c
 /// @brief Handles transport initialization.
 /// ----------------------------------------------------------------------------
-#include "locality.h"
 #include "transport.h"
+#include "debug.h"
 
 transport_t *
 transport_new(void) {
@@ -28,7 +28,7 @@ transport_new(void) {
 #ifdef HAVE_PHOTON
   transport = transport_new_photon();
   if (transport) {
-    locality_logf("initialized the Photon transport.\n");
+    dbg_log("initialized the Photon transport.\n");
     return transport;
   }
 #endif
@@ -36,17 +36,17 @@ transport_new(void) {
 #ifdef HAVE_MPI
   transport = transport_new_mpi();
   if (transport) {
-    locality_logf("initialized the MPI transport.\n");
+    dbg_log("initialized the MPI transport.\n");
     return transport;
   }
 #endif
 
   transport = transport_new_smp();
   if (transport) {
-    locality_logf("initialized the SMP transport.\n");
+    dbg_log("initialized the SMP transport.\n");
     return transport;
   }
 
-  locality_printe("failed to initialize a transport.\n");
+  dbg_error("failed to initialize a transport.\n");
   return NULL;
 }

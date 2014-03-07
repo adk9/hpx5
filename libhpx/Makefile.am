@@ -6,7 +6,7 @@ SUBDIRS = locality network scheduler
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
 
-libhpx_la_SOURCES  = hpx.c
+libhpx_la_SOURCES  = hpx.c debug.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhpx
 libhpx_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99

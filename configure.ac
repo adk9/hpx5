@@ -135,6 +135,7 @@ AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 AC_CONFIG_FILES([
   Makefile
   libsync/Makefile
+  libsync/arch/Makefile
   libhpx/Makefile
   libhpx/network/Makefile
   libhpx/network/transport/Makefile

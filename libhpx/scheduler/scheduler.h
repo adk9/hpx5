@@ -15,10 +15,28 @@
 
 #include "hpx.h"
 
-#define LIBHPX_SCHEDULER_COOPERATIVE 0
-#define LIBHPX_SCHEDULER_PREEMPTIVE 1
+/// ----------------------------------------------------------------------------
+/// @file libhpx/scheduler/scheduler.h
+/// @brief The internal interface to the scheduler.
+///
+/// The HPX scheduler is a multithreaded application that provides lighweight
+/// threads and local-control-objects (monitor/condition variables). It is
+/// designed to work as part of a distributed set of schedulers to support a
+/// large-scale, lightweight thread-based application.
+/// ----------------------------------------------------------------------------
 
+
+/// Preprocessor define that tells us if the scheduler is cooperative or
+/// preemptive. Unused at this point
+#define LIBHPX_SCHEDULER_COOPERATIVE 1
+//#define LIBHPX_SCHEDULER_PREEMPTIVE 1
+
+
+/// Forward declarations
+/// @{
 struct lco;
+struct thread;
+/// @}
 
 
 /// ----------------------------------------------------------------------------
@@ -35,12 +53,26 @@ HPX_INTERNAL int scheduler_startup(const hpx_config_t *config);
 
 
 /// ----------------------------------------------------------------------------
-/// Stops the scheduler.
+/// Stops the scheduler cooperatively.
+///
+/// This asks all of the threads to shutdown the next time they get a chance to
+/// schedule. It is both cooperative and blocking, and may not return if there
+/// is a misbehaving HPX lightweight thread that does not return to the
+/// scheduler.
+///
+/// @todo This should be non-blocking, either through a timeout or through a
+///       test_shutdown() routine.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_shutdown(void);
+
+
+/// ----------------------------------------------------------------------------
+/// Stops the scheduler asynchronously.
 ///
 /// This cancels and joins all of the scheduler threads, and then returns. It
 /// should only be called by the main thread that called scheduler_startup().
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_shutdown(void);
+HPX_INTERNAL void scheduler_abort(void);
 
 
 /// ----------------------------------------------------------------------------
@@ -91,22 +123,15 @@ HPX_INTERNAL void scheduler_signal(struct lco *lco) HPX_NON_NULL(1);
 /// ----------------------------------------------------------------------------
 /// Exit a user level thread.
 ///
+/// Currently takes the parcel pointer for the current thread as a performance
+/// optimization, since everywhere this is used we already have the parcel. This
+/// isn't necessary, as we can always extract the current parcel using
+/// scheduler_current_parcel().
+///
 /// @param parcel - the parcel bound to the current stack (will be released)
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_exit(hpx_parcel_t *parcel)
   HPX_NON_NULL(1) HPX_NORETURN;
-
-
-/// ----------------------------------------------------------------------------
-/// Get the parcel for the current thread.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *scheduler_current_parcel(void);
-
-
-/// ----------------------------------------------------------------------------
-/// Get the target for the current thread.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_addr_t scheduler_current_target(void);
 
 
 #endif // LIBHPX_SCHEDULER_H
