@@ -22,6 +22,7 @@
 #include "locality.h"
 #include "network/network.h"
 #include "scheduler/scheduler.h"
+#include "parcel.h"
 #include "debug.h"
 
 enum {

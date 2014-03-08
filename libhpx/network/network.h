@@ -24,44 +24,8 @@
 /// ----------------------------------------------------------------------------
 /// Network initialization and finalization.
 /// ----------------------------------------------------------------------------
-/// @{
 HPX_INTERNAL int network_startup(const hpx_config_t *config);
 HPX_INTERNAL void network_shutdown(void);
-/// @}
-
-/// ----------------------------------------------------------------------------
-/// The hpx_parcel structure is what the user-level interacts with.
-///
-/// The layout of this structure is both important and subtle. The go out onto
-/// the network directly, hopefully without being copied in any way. We make sure
-/// that the relevent parts of the parcel (i.e., those that need to be sent) are
-/// arranged contiguously.
-///
-/// NB: if you change the layout here, make sure that the network system can deal
-/// with it.
-///
-/// @field    next - intrusive parcel list pointer
-/// @field  thread - thread executing this active message
-/// @field    data - the data payload associated with this parcel
-/// @field    size - the data size in bytes
-/// @field  action - the target action identifier
-/// @field  target - the target address for parcel_send()
-/// @field    cont - the continuation address
-/// @field payload - possible in-place payload
-/// ----------------------------------------------------------------------------
-struct hpx_parcel {
-  // these fields are only valid within a locality
-  hpx_parcel_t *next;
-  // struct thread *thread;
-  void *data;
-
-  // fields below are sent on wire
-  int size;
-  hpx_action_t action;
-  hpx_addr_t target;
-  hpx_addr_t cont;
-  char payload[];
-};
 
 HPX_INTERNAL void network_release(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 HPX_INTERNAL void network_send(hpx_parcel_t *parcel) HPX_NON_NULL(1);

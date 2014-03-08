@@ -16,19 +16,22 @@
 
 /// ----------------------------------------------------------------------------
 /// @brief The parcel layer.
+///
+/// Parcels are the foundation of HPX. The parcel structure serves as both the
+/// actual, "on-the-wire," network data structure, as well as the
+/// "thread-control-block" descriptor for the threading subsystem.
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hpx.h"
-#include "network.h"
+#include "parcel.h"
 
 hpx_parcel_t *
 hpx_parcel_acquire(size_t size) {
   hpx_parcel_t *p = malloc(sizeof(*p) + size);
 
   p->next   = NULL;
-  // p->thread = NULL;
   p->data   = (size) ? &p->payload : NULL;
 
   p->size   = size;
