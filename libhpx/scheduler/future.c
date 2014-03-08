@@ -130,10 +130,9 @@ static int _future_delete_action(void *args) {
 /// @}
 
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  _future_set = locality_action_register("_future_set", _future_set_action);
-  _future_get_proxy = locality_action_register("_future_get_proxy",
-                                          _future_get_proxy_action);
-  _future_delete = locality_action_register("_future_delete", _future_delete_action);
+  _future_set = hpx_register_action("_future_set", _future_set_action);
+  _future_get_proxy = hpx_register_action("_future_get_proxy", _future_get_proxy_action);
+  _future_delete = hpx_register_action("_future_delete", _future_delete_action);
 }
 
 /// ----------------------------------------------------------------------------
