@@ -23,6 +23,7 @@
 #include "thread.h"
 #include "locality.h"
 #include "scheduler.h"
+#include "parcel.h"
 #include "lco.h"
 #include "asm.h"
 #include "builtins.h"
@@ -85,9 +86,9 @@ static _frame_t *_get_top_frame(thread_t *thread) {
 
 
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  hpx_action_t action = hpx_parcel_get_action(parcel);
+  hpx_action_t action = parcel->action;
   hpx_action_handler_t handler = locality_action_lookup(action);
-  void *data = hpx_parcel_get_data(parcel);
+  void *data = parcel->data;
   int status = handler(data);
   if (status != HPX_SUCCESS) {
     dbg_error("action produced unhandled error\n");
@@ -180,7 +181,7 @@ hpx_thread_exit(int status, const void *value, size_t size) {
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = thread_current_parcel();
-  hpx_addr_t cont = hpx_parcel_get_cont(parcel);
+  hpx_addr_t cont = parcel->cont;
   if (!hpx_addr_eq(cont, HPX_NULL))
     hpx_future_set(cont, value, size);
 
@@ -245,11 +246,11 @@ thread_transfer_cont_t thread_checkpoint_enqueue = (thread_transfer_cont_t)_chec
 
 const hpx_addr_t
 hpx_thread_current_target(void) {
-  return hpx_parcel_get_target(thread_current_parcel());
+  return thread_current_parcel()->target;
 }
 
 
 const hpx_addr_t
 hpx_thread_current_cont(void) {
-  return hpx_parcel_get_cont(thread_current_parcel());
+  return thread_current_parcel()->cont;
 }
