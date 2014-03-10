@@ -143,6 +143,7 @@ AC_CONFIG_FILES([
   libhpx/locality/platform/Makefile
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
+  libhpx/parcel/Makefile
   include/Makefile
   examples/Makefile
   examples/hpx/Makefile	

@@ -37,11 +37,11 @@
 typedef SYNC_ATOMIC(int) atomic_int_t;
 typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 
-static __thread int                    _id = 0;
-static __thread void                  *_sp = 0;
-static __thread thread_t            *_free = NULL;
-static __thread thread_t           *_ready = NULL;
-static __thread thread_t            *_next = NULL;
+static __thread int                _id = 0;
+static __thread void              *_sp = 0;
+static __thread thread_t        *_free = NULL;
+static __thread thread_t       *_ready = NULL;
+static __thread thread_t        *_next = NULL;
 static __thread atomic_int_t _shutdown = 0;
 
 static int _worker_on_start(void *sp, void *env);

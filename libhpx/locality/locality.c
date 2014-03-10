@@ -47,13 +47,13 @@ locality_shutdown(void) {
 
 int
 locality_get_rank(void) {
-  return _manager->rank;
+  return (_manager) ? _manager->rank : -1;
 }
 
 
 int
 locality_get_n_ranks(void) {
-  return _manager->n_ranks;
+  return (_manager) ? _manager->n_ranks : -1;
 }
 
 

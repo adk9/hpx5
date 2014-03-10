@@ -168,6 +168,7 @@ void hpx_abort(int code) HPX_NORETURN;
 /// HPX system interface
 int hpx_get_my_rank(void);
 int hpx_get_num_ranks(void);
+int hpx_get_num_threads(void);
 int hpx_get_my_thread_id(void);
 
 

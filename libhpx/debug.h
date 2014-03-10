@@ -15,7 +15,7 @@
 
 #include "hpx.h"
 
-#ifdef HPX_DEBUG
+#ifdef ENABLE_DEBUG
 #define DEBUG 1
 #else
 #define DEBUG 0
@@ -25,8 +25,12 @@
 HPX_INTERNAL void dbg_log1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
 HPX_INTERNAL void dbg_error1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
 
+#ifdef ENABLE_DEBUG
 #define dbg_log(...) dbg_log1(__func__, __VA_ARGS__)
 #define dbg_error(...) dbg_error1(__func__, __VA_ARGS__)
-
+#else
+#define dbg_log(...)
+#define dbg_error(...) dbg_error1(__func__, __VA_ARGS__)
+#endif
 
 #endif // LIBHPX_DEBUG_H

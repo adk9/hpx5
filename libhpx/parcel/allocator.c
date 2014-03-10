@@ -1,0 +1,53 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <stddef.h>
+#include <stdlib.h>
+
+#include "allocator.h"
+#include "parcel.h"
+#include "cache.h"
+#include "padding.h"
+#include "debug.h"
+
+// thread local parcel cache
+static __thread cache_t *_parcels = NULL;
+
+hpx_parcel_t *
+parcel_allocator_get(int payload) {
+  if (!_parcels)
+      _parcels = cache_new(1);
+
+  dbg_log("Getting a parcel of payload size %i...\n", payload);
+
+  // try to get a parcel of the right size from the cache, this will deal with
+  // misses internally by potentially allocating a new block
+  hpx_parcel_t *p = cache_get(_parcels, payload);
+  if (!p) {
+    dbg_error("could not allocate a parcel for %i bytes.\n", payload);
+    return NULL;
+  }
+
+  parcel_init(p, payload);
+  return p;
+}
+
+
+void
+parcel_allocator_put(hpx_parcel_t *p) {
+  parcel_fini(p);
+  cache_put(_parcels, p);
+}

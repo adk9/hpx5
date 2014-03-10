@@ -10,22 +10,24 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BUILTINS_H
-#define LIBHPX_BUILTINS_H
+#ifndef LIBHPX_PARCEL_BLOCK_H
+#define LIBHPX_PARCEL_BLOCK_H
+
+#include "hpx.h"
 
 /// ----------------------------------------------------------------------------
-/// @file builtins.h
+/// @file libhpx/parcel/block.h
+/// @brief Represents a block of parcels.
 ///
-/// This file encapsulates some operations that are builtin compiler functions
-/// in order to support multiple compilers.
-///
-/// @todo Deal with non-gcc compatible compilers.
-/// @todo Deal with this during configuration.
+/// Parcels are allocated in blocks.
 /// ----------------------------------------------------------------------------
+typedef struct block block_t;
 
-#define likely(S) (__builtin_expect(S, 1))
-#define unlikely(S) (__builtin_expect(S, 0))
-#define unreachable() __builtin_unreachable()
-#define ctzl(N) __builtin_ctzl(N)
+HPX_INTERNAL hpx_parcel_t *block_new(block_t **list, int size);
+HPX_INTERNAL void block_delete(block_t *block);
+HPX_INTERNAL int block_size(block_t *block);
+HPX_INTERNAL int block_payload_size(hpx_parcel_t *parcel);
 
-#endif // LIBHPX_BUILTINS_H
+HPX_INTERNAL block_t *parcel_get_block(hpx_parcel_t *parcel);
+
+#endif // LIBHPX_PARCEL_BLOCK_H

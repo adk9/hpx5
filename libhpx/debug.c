@@ -20,7 +20,7 @@
 
 void
 dbg_log1(const char *f, const char *fmt, ...) {
-  printf("LIBHPX: %s() ", f);
+  printf("LIBHPX<%d,%d>: %s() ", hpx_get_my_rank(), hpx_get_my_thread_id(), f);
 
   va_list args;
   va_start(args, fmt);
@@ -31,7 +31,7 @@ dbg_log1(const char *f, const char *fmt, ...) {
 
 void
 dbg_error1(const char *f, const char *fmt, ...) {
-  fprintf(stderr, "LIBHPX: %s() ", f);
+  fprintf(stderr, "LIBHPX<%d,%d>: %s() ", hpx_get_my_rank(), hpx_get_my_thread_id(), f);
 
   va_list args;
   va_start(args, fmt);
