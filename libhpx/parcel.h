@@ -27,7 +27,6 @@
 /// with it.
 ///
 /// @field    next - intrusive parcel list pointer
-/// @field  thread - thread executing this active message
 /// @field    data - the data payload associated with this parcel
 /// @field    size - the data size in bytes
 /// @field  action - the target action identifier
@@ -36,17 +35,29 @@
 /// @field payload - possible in-place payload
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
-  // these fields are only valid within a locality
-  hpx_parcel_t *next;
-  // struct thread *thread;
+  //
+  // NB: this pointer is overloaded quite a lot
   void *data;
 
-  // fields below are sent on wire
+  // fields below are actually sent by the network
   int size;
   hpx_action_t action;
   hpx_addr_t target;
   hpx_addr_t cont;
   char payload[];
 };
+
+HPX_INTERNAL void parcel_init(hpx_parcel_t *p, int size) HPX_NON_NULL(1);
+HPX_INTERNAL void parcel_fini(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+HPX_INTERNAL hpx_parcel_t *parcel_get_next(hpx_parcel_t *p) HPX_NON_NULL(1);
+HPX_INTERNAL void parcel_set_next(hpx_parcel_t *p, hpx_parcel_t *n) HPX_NON_NULL(1, 2);
+HPX_INTERNAL void parcel_set_data(hpx_parcel_t *p, void *n) HPX_NON_NULL(1, 2);
+HPX_INTERNAL void parcel_set_inplace(hpx_parcel_t *p) HPX_NON_NULL(1);
+HPX_INTERNAL int parcel_is_inplace(const hpx_parcel_t *p) HPX_NON_NULL(1);
+
+HPX_INTERNAL hpx_parcel_t *parcel_pop(hpx_parcel_t **list) HPX_NON_NULL(1);
+HPX_INTERNAL void parcel_push(hpx_parcel_t **list, hpx_parcel_t *p) HPX_NON_NULL(1, 2);
+HPX_INTERNAL void parcel_cat(hpx_parcel_t **list, hpx_parcel_t *p) HPX_NON_NULL(1, 2);
 
 #endif // LIBHPX_PARCEL_H

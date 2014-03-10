@@ -86,9 +86,9 @@ static _frame_t *_get_top_frame(thread_t *thread) {
 
 
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  hpx_action_t action = parcel->action;
+  hpx_action_t action = hpx_parcel_get_action(parcel);
   hpx_action_handler_t handler = locality_action_lookup(action);
-  void *data = parcel->data;
+  void *data = hpx_parcel_get_data(parcel);
   int status = handler(data);
   if (status != HPX_SUCCESS) {
     dbg_error("action produced unhandled error\n");
@@ -110,7 +110,7 @@ thread_set_stack_size(int stack_bytes) {
   int pages = stack_bytes / _PAGE_SIZE;
   pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
   _thread_size = _PAGE_SIZE * pages;
-  _thread_alignment = 1 << __builtin_ctzl(_thread_size);
+  _thread_alignment = 1 << ctzl(_thread_size);
   if (_thread_alignment < _thread_size)
     _thread_alignment <<= 1;
   _stack_size = _thread_size - sizeof(thread_t);

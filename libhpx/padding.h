@@ -10,22 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BUILTINS_H
-#define LIBHPX_BUILTINS_H
+#ifndef LIBHPX_PADDING_H
+#define LIBHPX_PADDING_H
 
 /// ----------------------------------------------------------------------------
-/// @file builtins.h
-///
-/// This file encapsulates some operations that are builtin compiler functions
-/// in order to support multiple compilers.
-///
-/// @todo Deal with non-gcc compatible compilers.
-/// @todo Deal with this during configuration.
+/// Given a number of bytes, how many bytes of padding do we need to get a size
+/// that is a multiple of HPX_CACHELINE_SIZE? Macro because it's used in
+/// structure definitions for padding.
 /// ----------------------------------------------------------------------------
 
-#define likely(S) (__builtin_expect(S, 1))
-#define unlikely(S) (__builtin_expect(S, 0))
-#define unreachable() __builtin_unreachable()
-#define ctzl(N) __builtin_ctzl(N)
+#define PAD_TO_CACHELINE(N_)                                            \
+  ((HPX_CACHELINE_SIZE - (N_ % HPX_CACHELINE_SIZE)) % HPX_CACHELINE_SIZE)
 
-#endif // LIBHPX_BUILTINS_H
+#endif // LIBHPX_PADDING_H

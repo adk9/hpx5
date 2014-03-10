@@ -1,7 +1,7 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = locality network scheduler
+SUBDIRS = locality network scheduler parcel
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -10,7 +10,8 @@ libhpx_la_SOURCES  = hpx.c debug.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/libhpx
 libhpx_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
-libhpx_la_LIBADD   = locality/liblocality.la network/libnetwork.la scheduler/libscheduler.la
+libhpx_la_LIBADD   = locality/liblocality.la network/libnetwork.la \
+                     scheduler/libscheduler.la parcel/libparcel.la
 libhpx_la_LDFLAGS  = -pthread
 
 if HAVE_PAPI

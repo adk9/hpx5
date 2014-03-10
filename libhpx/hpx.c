@@ -92,8 +92,7 @@ hpx_run(hpx_action_t act, const void *args, unsigned size) {
   }
   else {
     hpx_parcel_set_action(p, act);
-    if (size)
-      hpx_parcel_set_data(p, args, size);
+    hpx_parcel_set_data(p, args, size);
     hpx_parcel_send(p);
     pthread_cond_wait(&_condition, &_mutex);
   }
