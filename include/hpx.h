@@ -33,17 +33,9 @@ extern hpx_action_t HPX_ACTION_NULL;
 
 /// Extern HPX macros
 /// @{
-#define           HPX_SUCCESS 0
+#define HPX_SUCCESS 0
 /// @}
 
-/// printf formats
-/// @{
-#define HPX_PRIx_hpx_action_t PRIxPTR
-#define HPX_PRId_hpx_action_t PRIdPTR
-#define HPX_PRIX_hpx_action_t PRIXPTR
-#define HPX_PRIu_hpx_action_t PRIuPTR
-#define HPX_PRIo_hpx_action_t PRIoPTR
-/// @}
 
 // An HPX global address.
 typedef struct {
@@ -266,9 +258,11 @@ typedef uint64_t hpx_time_t;
 #define HPX_TIME_INIT (0)
 #endif
 
+
 hpx_time_t hpx_time_now(void);
 double hpx_time_elapsed_us(hpx_time_t);
 double hpx_time_elapsed_ms(hpx_time_t);
+
 
 #ifdef __cplusplus
 }

@@ -79,11 +79,6 @@ network_malloc(int size, int alignment) {
 
 
 void
-network_release(hpx_parcel_t *p) {
-  free(p);
-}
-
-void
 network_send(hpx_parcel_t *p) {
   assert(p);
   sync_ms_queue_enqueue(&_send, p);
