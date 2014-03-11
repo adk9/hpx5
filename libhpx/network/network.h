@@ -27,7 +27,6 @@
 HPX_INTERNAL int network_startup(const hpx_config_t *config);
 HPX_INTERNAL void network_shutdown(void);
 
-HPX_INTERNAL void network_release(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 HPX_INTERNAL void network_send(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 HPX_INTERNAL void network_send_sync(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 
