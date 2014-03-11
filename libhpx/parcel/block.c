@@ -21,6 +21,8 @@
 #include "padding.h"
 #include "builtins.h"
 
+#define BLOCK_SIZE 4 * HPX_PAGE_SIZE
+
 static int _max(int lhs, int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -51,7 +53,7 @@ block_new(block_t **list, int size) {
   // compute how many parcels we can fit in a block (taking the size of the
   // block header into account, and given that we want to allocate one block per
   // page).
-  int space = HPX_PAGE_SIZE - sizeof(block_t);
+  int space = BLOCK_SIZE - sizeof(block_t);
   int n = _max(1, space / padded_size);
   dbg_log("Allocating a parcel block of %i %i-byte parcels (payload %i)\n",
           n, padded_size, size);
@@ -61,7 +63,7 @@ block_new(block_t **list, int size) {
   // header for any parcel
   int block_size = sizeof(block_t) + n * padded_size;
   block_t *b = NULL;
-  if (posix_memalign((void**)&b, HPX_PAGE_SIZE, block_size)) {
+  if (posix_memalign((void**)&b, BLOCK_SIZE, block_size)) {
     dbg_error("parcel block allocation failed for payload size %d\n", size);
     return NULL;
   }
@@ -100,18 +102,9 @@ block_delete(block_t *block) {
 
 block_t *
 get_block(hpx_parcel_t *parcel) {
-  const uintptr_t MASK = ~0 << ctzl(HPX_PAGE_SIZE);
+  const uintptr_t MASK = ~0 << ctzl(BLOCK_SIZE);
   return (block_t*)((uintptr_t)parcel & MASK);
 }
-
-
-// int
-// get_block_size(block_t *block) {
-//   int payload_size = block->header.max_payload_size;
-//   int parcel_size = sizeof(hpx_parcel_t) + payload_size;
-//   int space = HPX_PAGE_SIZE - sizeof(*block);
-//   return _max(parcel_size, space);
-// }
 
 
 int
