@@ -25,7 +25,6 @@ typedef struct block block_t;
 
 HPX_INTERNAL hpx_parcel_t *block_new(block_t **list, int size);
 HPX_INTERNAL void block_delete(block_t *block);
-HPX_INTERNAL int block_size(block_t *block);
 HPX_INTERNAL int block_payload_size(hpx_parcel_t *parcel);
 
 HPX_INTERNAL block_t *parcel_get_block(hpx_parcel_t *parcel);
