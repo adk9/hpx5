@@ -24,7 +24,7 @@
 #include "transport.h"
 
 
-static int _init(void) {
+static int _init(struct manager *m) {
   return HPX_SUCCESS;
 }
 

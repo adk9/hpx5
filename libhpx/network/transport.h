@@ -15,6 +15,7 @@
 
 #include "attributes.h"
 
+struct manager;
 typedef struct transport_status transport_status_t;
 typedef struct transport_request transport_request_t;
 typedef struct transport transport_t;
@@ -23,7 +24,7 @@ typedef struct transport transport_t;
 /// The transport interface is defined as an abstract class.
 /// ----------------------------------------------------------------------------
 struct transport {
-  int (*init)(void);
+  int (*init)(struct manager *);
   void (*fini)(void);
   void (*progress)(void *data);
   int (*probe)(int src, int *flag, transport_status_t *status);

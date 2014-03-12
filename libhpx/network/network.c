@@ -46,10 +46,12 @@ static int _free_action(void *args) {
   return HPX_SUCCESS;
 }
 
+
 static void HPX_CONSTRUCTOR _init_network(void) {
   sync_ms_queue_init(&_send);
   _free = hpx_register_action("_hpx_free_action", _free_action);
 }
+
 
 int
 network_startup(const hpx_config_t *config) {
@@ -57,14 +59,17 @@ network_startup(const hpx_config_t *config) {
   return (_transport) ? HPX_SUCCESS : 1;
 }
 
+
 void
 network_shutdown(void) {
   _transport->delete(_transport);
 }
 
+
 void
-network_berrier(void) {
+network_barrier(void) {
 }
+
 
 hpx_addr_t
 network_malloc(int size, int alignment) {

@@ -34,6 +34,7 @@ extern hpx_action_t HPX_ACTION_NULL;
 /// Extern HPX macros
 /// @{
 #define HPX_SUCCESS 0
+#define HPX_ERROR -1
 /// @}
 
 
