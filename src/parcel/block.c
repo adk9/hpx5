@@ -81,9 +81,9 @@ int get_block_size(parcel_block_t *block) {
   int parcel_size = sizeof(hpx_parcel_t) + payload_size;
   int space = HPX_PAGE_SIZE - sizeof(*block);
   if (parcel_size < space)
-    return space;
+    return space + sizeof(*block);
   else
-    return parcel_size;
+    return parcel_size + sizeof(*block);
 }
 
 int block_payload_size(hpx_parcel_t *parcel) {
