@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#include <contrib/uthash/src/utlist.h>
 #include <sync/sync.h>
 #include <sync/barriers.h>
 #include <hpx.h>
@@ -98,8 +99,14 @@ static int _on_start(void *sp, void *env) {
 /// @returns - a new lightweight thread, as defined by the parcel
 /// ----------------------------------------------------------------------------
 static thread_t *_bind(hpx_parcel_t *p) {
-  thread_t *thread = thread_pop(&self.free);
-  return (thread) ? thread_init(thread, p) : thread_new(p);
+  thread_t *thread = self.free;
+  if (thread) {
+    LL_DELETE(self.free, thread);
+    return thread_init(thread, p);
+  }
+  else {
+    return thread_new(p);
+  }
 }
 
 
@@ -147,9 +154,11 @@ static thread_t *_schedule(bool fast, thread_t *final) {
     thread_transfer(self.sp, &self.next, thread_checkpoint_push);
 
   // if there are ready threads, select the next one
-  thread_t *t = thread_pop(&self.ready);
-  if (t)
+  thread_t *t = self.ready;
+  if (t) {
+    LL_DELETE(self.ready, t);
     return t;
+  }
 
   // no ready threads, perform an internal epoch transition
   self.ready = self.next;
@@ -335,9 +344,10 @@ void worker_cancel(worker_t *worker) {
 
 /// Spawn a user-level thread.
 void scheduler_spawn(hpx_parcel_t *p) {
+  assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
-  abort();
+  LL_PREPEND(self.next, _bind(p));
 }
 
 
@@ -397,7 +407,7 @@ void scheduler_wait(lco_t *lco) {
 void scheduler_signal(lco_t *lco) {
   thread_t *q = lco_trigger(lco);
   if (q)
-    thread_cat(&self.next, q);
+    LL_CONCAT(self.next, q);
 }
 
 
