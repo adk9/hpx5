@@ -169,12 +169,16 @@ int hpx_init(const hpx_config_t *cfg) {
   return HPX_ERROR;
 }
 
-/// called to run HPX---the main thread sleeps until hpx_shutdown or hpx_abort
-/// is called from an HPX thread
+/// Called to run HPX.
+///
+/// Currently the main thread sleeps until hpx_shutdown or hpx_abort is called
+/// from an HPX thread.
 int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   pthread_mutex_lock(&_mutex);
 
-  // check to see if there was a problem in hpx_init() that the
+  // Check to see if there was a problem in hpx_init() that the user didn't
+  // respond to, of if hpx_init() wasn't called at all. Note we hold _mutex for
+  // this check.
   if (_state != HPX_INIT) {
     dbg_error("called with invalid state %d.\n", _state);
     goto unwind0;
@@ -188,7 +192,11 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   }
   hpx_parcel_set_action(p, act);
   hpx_parcel_set_data(p, args, size);
-  hpx_parcel_send(p);
+
+  // Don't use hpx_parcel_send() here, because that will try and enqueue the
+  // parcel locally, but we're not a scheduler thread. We rely on network
+  // loopback for this to work.
+  network_send(_network, p);
 
   // wait for a shutdown or abort to occur
   pthread_cond_wait(&_condition, &_mutex);
