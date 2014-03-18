@@ -139,14 +139,4 @@ HPX_INTERNAL thread_transfer_cont_t thread_exit_push;
 HPX_INTERNAL thread_transfer_cont_t thread_checkpoint_enqueue;
 
 
-/// ----------------------------------------------------------------------------
-/// Simple interface for interacting with the thread's embedded list.
-/// ----------------------------------------------------------------------------
-/// @{
-HPX_INTERNAL thread_t *thread_pop(thread_t **list);
-HPX_INTERNAL void thread_cat(thread_t **lhs, thread_t *rhs);
-HPX_INTERNAL void thread_push(thread_t **list, thread_t *thread);
-/// @}
-
-
 #endif  // LIBHPX_THREAD_H

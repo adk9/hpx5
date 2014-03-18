@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <contrib/uthash/src/utlist.h>
+
 #include "libhpx/action.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
@@ -191,46 +193,17 @@ hpx_thread_exit(int status, const void *value, size_t size) {
   scheduler_exit(parcel);
 }
 
-thread_t *
-thread_pop(thread_t **list) {
-  assert(list);
-  thread_t *head = *list;
-  if (head)
-    *list = head->next;
-  return head;
-}
-
-void
-thread_push(thread_t **list, thread_t *thread) {
-  assert(list);
-  assert(thread);
-  thread->next = *list;
-  *list = thread;
-}
-
-void
-thread_cat(thread_t **lhs, thread_t *rhs) {
-  // find the end of list
-  thread_t *end = rhs;
-  while (end->next)
-    end = end->next;
-
-  // link in the list
-  end->next = *lhs;
-  *lhs = rhs;
-}
-
 static int _checkpoint_push(void *sp, thread_t **list) {
   thread_t *thread = thread_from_sp(sp);
   thread->sp = sp;
-  thread_push(list, thread);
+  LL_PREPEND(*list, thread);
   return HPX_SUCCESS;
 }
 
 static int _exit_push(void *sp, thread_t **list) {
   thread_t *thread = thread_from_sp(sp);
   hpx_parcel_release(thread->parcel);
-  thread_push(list, thread);
+  LL_PREPEND(*list, thread);
   return HPX_SUCCESS;
 }
 
