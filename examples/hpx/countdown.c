@@ -17,6 +17,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <hpx.h>
 
 static __thread unsigned seed = 0;
@@ -47,30 +48,58 @@ static int send_action(void *args) {
   return HPX_SUCCESS;
 }
 
-int main(int argc, char * argv[argc]) {
-  int n = 0;
-  int threads = 0;
-  switch (argc) {
-   default:
-    fprintf(stderr, "Usage: countdown ROUNDS [optional THREADS]\n");
-    return -1;
-   case (3):
-    threads = atoi(argv[2]);
-   case (2):
-    n = atoi(argv[1]);
-    break;
-  }
+static void usage(FILE *f) {
+  fprintf(f,
+          "Usage: countdown [options] ROUNDS \n"
+          "\t-c, cores\n"
+          "\t-t, threads\n"
+          "\t-h, show help\n");
+}
 
-  hpx_config_t config = {
+int main(int argc, char * argv[argc]) {
+  hpx_config_t cfg = {
     .cores = 0,
-    .threads = threads,
+    .threads = 0,
     .stack_bytes = 0
   };
 
-  if (hpx_init(&config)) {
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "c:t:h")) != -1) {
+    switch (opt) {
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'h':
+      usage(stdout);
+      return 0;
+     case '?':
+     default:
+      usage(stderr);
+      return -1;
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  int n = 0;
+  switch (argc) {
+   default:
+    usage(stderr);
+    return -1;
+   case (1):
+    n = atoi(argv[0]);
+    break;
+  }
+
+  if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
+
   send = hpx_register_action("send", send_action);
   return hpx_run(send, &n, sizeof(n));
 }
