@@ -13,7 +13,7 @@
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
-#include "hpx.h"
+#include <hpx.h>
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/scheduler.h
@@ -36,7 +36,39 @@
 /// @{
 struct lco;
 struct thread;
+struct network;
+typedef struct scheduler scheduler_t;
+typedef int (*process_map_t)(scheduler_t *, int);
 /// @}
+
+
+/// ----------------------------------------------------------------------------
+/// Allocate and initialize a new scheduler.
+///
+/// @param    network - a network for remote operations
+/// @param      cores - the number of processors this scheduler will run on
+/// @param    workers - the number of worker threads to start
+/// @param stack_size - the size of the stacks to allocate
+/// @param       pmap - a function to map worker id to processor
+/// @returns          - the scheduler object, or NULL if there was an error.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL scheduler_t *scheduler_new(struct network *network, int cores,
+                                        int workers, int stack_size,
+                                        process_map_t pmap)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Finalize and free the scheduler object.
+///
+/// The scheduler must already have been shutdown with
+/// scheduler_shutdown(). Shutting down a scheduler that is active, or was
+/// aborted with scheduler_abort(), results in undefined behavior.
+///
+/// @param s - the scheduler to free.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_delete(scheduler_t *s)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
@@ -49,7 +81,7 @@ struct thread;
 /// @param config - the configuration object
 /// @returns      - non-0 if there is a startup problem
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_startup(const hpx_config_t *config);
+HPX_INTERNAL int scheduler_startup(scheduler_t*);
 
 
 /// ----------------------------------------------------------------------------
@@ -63,7 +95,7 @@ HPX_INTERNAL int scheduler_startup(const hpx_config_t *config);
 /// @todo This should be non-blocking, either through a timeout or through a
 ///       test_shutdown() routine.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_shutdown(void);
+HPX_INTERNAL void scheduler_shutdown(scheduler_t*);
 
 
 /// ----------------------------------------------------------------------------
@@ -72,13 +104,38 @@ HPX_INTERNAL void scheduler_shutdown(void);
 /// This cancels and joins all of the scheduler threads, and then returns. It
 /// should only be called by the main thread that called scheduler_startup().
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_abort(void);
+HPX_INTERNAL void scheduler_abort(scheduler_t*);
+
+
+/// ----------------------------------------------------------------------------
+/// Join the scheduler's barrier.
+///
+/// This implements a "global" barrier within the scheduler's set of worker
+/// threads.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_barrier(scheduler_t*, int)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Get a parcel from the network.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_parcel_t *scheduler_network_recv(scheduler_t *)
+  HPX_NON_NULL(1) HPX_RETURNS_NON_NULL;
+
+
+/// ----------------------------------------------------------------------------
+/// Get the number of workers in the scheduler.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL int scheduler_get_n_workers(const scheduler_t *)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
 /// Spawn a new user-level thread for the parcel.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p) HPX_NON_NULL(1);
+HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
@@ -103,7 +160,8 @@ HPX_INTERNAL void scheduler_yield(void);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_wait(struct lco *lco) HPX_NON_NULL(1);
+HPX_INTERNAL void scheduler_wait(struct lco *lco)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
@@ -117,7 +175,8 @@ HPX_INTERNAL void scheduler_wait(struct lco *lco) HPX_NON_NULL(1);
 ///   3) it will release the LCO's lock
 ///   4) each of the previously waiting threads will be rescheduled
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal(struct lco *lco) HPX_NON_NULL(1);
+HPX_INTERNAL void scheduler_signal(struct lco *lco)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------

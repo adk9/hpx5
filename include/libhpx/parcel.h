@@ -18,46 +18,66 @@
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
-/// The layout of this structure is both important and subtle. The go out onto
-/// the network directly, hopefully without being copied in any way. We make sure
-/// that the relevent parts of the parcel (i.e., those that need to be sent) are
-/// arranged contiguously.
-///
-/// NB: if you change the layout here, make sure that the network system can deal
-/// with it.
-///
-/// @field    next - intrusive parcel list pointer
-/// @field    data - the data payload associated with this parcel
 /// @field    size - the data size in bytes
+/// @field   state - tracks if the data is in-place
 /// @field  action - the target action identifier
 /// @field  target - the target address for parcel_send()
 /// @field    cont - the continuation address
-/// @field payload - possible in-place payload
+/// @field    data - either an in-place payload, or a pointer
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
-  //
-  // NB: this pointer is overloaded quite a lot
-  void *data;
-
-  // fields below are actually sent by the network
-  int size;
+  int            size;
+  int           state;
   hpx_action_t action;
-  hpx_addr_t target;
-  hpx_addr_t cont;
-  char payload[];
+  hpx_addr_t   target;
+  hpx_addr_t     cont;
+  char         data[];
 };
 
-HPX_INTERNAL void parcel_init(hpx_parcel_t *p, int size) HPX_NON_NULL(1);
-HPX_INTERNAL void parcel_fini(hpx_parcel_t *p) HPX_NON_NULL(1);
 
-HPX_INTERNAL hpx_parcel_t *parcel_get_next(hpx_parcel_t *p) HPX_NON_NULL(1);
-HPX_INTERNAL void parcel_set_next(hpx_parcel_t *p, hpx_parcel_t *n) HPX_NON_NULL(1, 2);
-HPX_INTERNAL void parcel_set_data(hpx_parcel_t *p, void *n) HPX_NON_NULL(1, 2);
-HPX_INTERNAL void parcel_set_inplace(hpx_parcel_t *p) HPX_NON_NULL(1);
-HPX_INTERNAL int parcel_is_inplace(const hpx_parcel_t *p) HPX_NON_NULL(1);
+/// ----------------------------------------------------------------------------
+/// Initialize a parcel.
+///
+/// Parcels may be in place or out of place, and may have a larger data capacity
+/// than necessary. This call initializes the parcel correctly.
+///
+/// @param    p - the parcel pointer
+/// @param size - the payload size for the parcel
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void parcel_init(hpx_parcel_t *p, int size)
+  HPX_NON_NULL(1);
 
-HPX_INTERNAL hpx_parcel_t *parcel_pop(hpx_parcel_t **list) HPX_NON_NULL(1);
-HPX_INTERNAL void parcel_push(hpx_parcel_t **list, hpx_parcel_t *p) HPX_NON_NULL(1, 2);
-HPX_INTERNAL void parcel_cat(hpx_parcel_t **list, hpx_parcel_t *p) HPX_NON_NULL(1, 2);
+
+/// ----------------------------------------------------------------------------
+/// Finalize a parcel.
+///
+/// If the parcel is out of place, this will de-allocate the buffer.
+///
+/// @param p - the parcel pointer
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void parcel_fini(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Perform a pop operation on a list of parcels.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_parcel_t *parcel_pop(hpx_parcel_t **list)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Perform a push operation on a list of parcels.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void parcel_push(hpx_parcel_t **list, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2);
+
+
+/// ----------------------------------------------------------------------------
+/// Perform a concatenation of two parcel lists.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void parcel_cat(hpx_parcel_t **list, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2);
+
 
 #endif // LIBHPX_PARCEL_H

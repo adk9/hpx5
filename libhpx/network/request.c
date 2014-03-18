@@ -10,16 +10,27 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_BOOT_H
-#define LIBHPX_BOOT_BOOT_H
+#include <stdlib.h>
+#include "libhpx/debug.h"
+#include "request.h"
 
-#include "attributes.h"
+request_t *request_init(request_t *request, hpx_parcel_t *p) {
+  request->parcel = p;
+  return request;
+}
 
-typedef struct boot boot_t;
 
-HPX_INTERNAL boot_t *boot_new(void);
-HPX_INTERNAL void boot_delete(boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_rank(const boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_n_ranks(const boot_t*) HPX_NON_NULL(1);
+request_t *request_new(hpx_parcel_t *p, int request) {
+  request_t *r = malloc(sizeof(*r) + request);
+  if (!r) {
+    dbg_error("could not allocate request.\n");
+    return NULL;
+  }
+  return request_init(r, p);
+}
 
-#endif // LIBHPX_BOOT_BOOT_H
+void request_delete(request_t *r) {
+  if (!r)
+    return;
+  free(r);
+}

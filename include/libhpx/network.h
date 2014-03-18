@@ -13,24 +13,80 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
-#include "hpx.h"
-
 /// ----------------------------------------------------------------------------
 /// @file network.h
 ///
-/// This file defines the interface to the network subsystem in HPX.
+/// This file defines the interface to the network subsystem in HPX. The
+/// network's primary responsibility is to accept send requests from the
+/// scheduler, and send them out via the configured transport.
 /// ----------------------------------------------------------------------------
+#include <hpx.h>
+
+
+struct boot;
+struct transport;
+typedef struct network network_t;
+
 
 /// ----------------------------------------------------------------------------
-/// Network initialization and finalization.
+/// Create a new network.
+///
+/// @param b - the boot object (contains rank, nranks, etc)
+/// @param t - the byte transport object to
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int network_startup(const hpx_config_t *config);
-HPX_INTERNAL void network_shutdown(void);
+HPX_INTERNAL network_t *network_new(const struct boot *b, struct transport *t)
+  HPX_NON_NULL(1, 2);
 
-HPX_INTERNAL void network_send(hpx_parcel_t *parcel) HPX_NON_NULL(1);
-HPX_INTERNAL void network_send_sync(hpx_parcel_t *parcel) HPX_NON_NULL(1);
 
-HPX_INTERNAL void network_barrier(void);
+/// ----------------------------------------------------------------------------
+/// Delete the network object.
+///
+/// This does not synchronize. The caller is required to ensure that no other
+/// threads may be operating on the network before making this call.
+///
+/// @param network - the network to delete
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_delete(network_t *network)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Send a parcel using the network.
+///
+/// This may loopback in the network, so it is safe to call for every
+/// parcel. On loopback, the parcel will become available through
+/// network_recv(). This can act as a poor man's load balancing scheme.
+///
+/// @param network - the network object to send through
+/// @param  parcel - the parcel to send
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_send(network_t *network, hpx_parcel_t *parcel)
+  HPX_NON_NULL(1, 2);
+
+
+/// ----------------------------------------------------------------------------
+/// Receive a parcel from the network.
+///
+/// @param network - the network to receive from
+/// @returns       - NULL, or a parcel received from the network
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_parcel_t *network_recv(network_t *network)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// The main network operation.
+///
+/// As usual, the network_progress() function "does stuff" in the network layer
+/// to make sure that everything else works correctly. This needs to be called
+/// periodically, or nothing will happen in the network.
+///
+/// NB: OTHER NETWORK OPERATIONS DO NOT CALL THIS FUNCTION.
+///
+/// @param network - the network to manage
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_progress(network_t *network)
+  HPX_NON_NULL(1);
 
 
 #endif // LIBHPX_NETWORK_H

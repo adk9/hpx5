@@ -97,7 +97,8 @@ action_allreduce(void *unused) {
 int
 main(int argc, char** argv) {
   hpx_config_t config = {
-    .scheduler_threads = 0,
+    .cores = 0,
+    .threads = 0,
     .stack_bytes = 0
   };
 
@@ -106,7 +107,7 @@ main(int argc, char** argv) {
     fprintf(stderr, "Usage: allreduce [optional THREADS].\n");
     return -1;
    case (2):
-    config.scheduler_threads = atoi(argv[2]);
+    config.threads = atoi(argv[2]);
     break;
    case (1):
     break;

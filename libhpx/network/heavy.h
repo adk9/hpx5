@@ -10,16 +10,11 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_BOOT_H
-#define LIBHPX_BOOT_BOOT_H
+#ifndef LIBHPX_NETWORK_HEAVY_H
+#define LIBHPX_NETWORK_HEAVY_H
 
 #include "attributes.h"
 
-typedef struct boot boot_t;
+HPX_INTERNAL void *heavy_network(void *handler);
 
-HPX_INTERNAL boot_t *boot_new(void);
-HPX_INTERNAL void boot_delete(boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_rank(const boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_n_ranks(const boot_t*) HPX_NON_NULL(1);
-
-#endif // LIBHPX_BOOT_BOOT_H
+#endif // LIBHPX_NETWORK_HEAVY_H

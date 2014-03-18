@@ -10,13 +10,24 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_PARCEL_ALLOCATOR_H
-#define LIBHPX_PARCEL_ALLOCATOR_H
+#ifndef LIBHPX_NETWORK_PARCEL_ALLOCATOR_H
+#define LIBHPX_NETWORK_PARCEL_ALLOCATOR_H
 
-#include "hpx.h"
+#include <hpx.h>
 
-HPX_INTERNAL int parcel_allocator_init(void);
-HPX_INTERNAL int parcel_allocator_fini(void);
+struct transport;
+typedef struct allocator allocator_t;
+
+/// ----------------------------------------------------------------------------
+/// Allocate and initialize a parcel allocator.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL allocator_t *parcel_allocator_new(struct transport *transport);
+
+/// ----------------------------------------------------------------------------
+/// Delete a parcel allocator.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void parcel_allocator_delete(allocator_t *allocator)
+  HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
 /// Get a parcel from the allocator.
@@ -26,7 +37,8 @@ HPX_INTERNAL int parcel_allocator_fini(void);
 ///                parcel will have its fields initialized to their default
 ///                value.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *parcel_allocator_get(int bytes);
+HPX_INTERNAL hpx_parcel_t *parcel_allocator_get(allocator_t *, int bytes)
+  HPX_NON_NULL(1) HPX_MALLOC;
 
 /// ----------------------------------------------------------------------------
 /// Return a parcel to the allocator.
@@ -34,6 +46,7 @@ HPX_INTERNAL hpx_parcel_t *parcel_allocator_get(int bytes);
 /// @param parcel - the parcel to return, must be an address received via
 ///                 parcel_allocator_get(), and must not be NULL
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void parcel_allocator_put(hpx_parcel_t *parcel) HPX_NON_NULL(1);
+HPX_INTERNAL void parcel_allocator_put(allocator_t *, hpx_parcel_t *parcel)
+  HPX_NON_NULL(1, 2);
 
-#endif // LIBHPX_PARCEL_ALLOCATOR_H
+#endif // LIBHPX_NETWORK_PARCEL_ALLOCATOR_H

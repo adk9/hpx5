@@ -16,7 +16,8 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include "debug.h"
+
+#include "libhpx/debug.h"
 
 void
 dbg_log1(const char *f, const char *fmt, ...) {

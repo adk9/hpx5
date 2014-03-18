@@ -15,39 +15,50 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file libhpx/locality/manager.c
-/// @brief Handles manager initialization.
+/// @file libhpx/locality/boot.c
+/// @brief Handles boot initialization.
 /// ----------------------------------------------------------------------------
-#include "locality.h"
-#include "manager.h"
-#include "debug.h"
+#include "libhpx/boot.h"
+#include "libhpx/debug.h"
+#include "managers.h"
 
-manager_t *
-manager_new(void) {
-  manager_t *manager = NULL;
+boot_t *boot_new(void) {
+  boot_t *boot = NULL;
 
 #ifdef HAVE_PMI
-  manager = manager_new_pmi();
-  if (manager) {
-    dbg_log("initialized PMI process manager.\n");
-    return manager;
+  boot = boot_new_pmi();
+  if (boot) {
+    dbg_log("initialized PMI process boot manager.\n");
+    return boot;
   }
 #endif
 
 #ifdef HAVE_MPI
-  manager = manager_new_mpirun();
-  if (manager) {
-    dbg_log("initialized MPI-run process manager.\n");
-    return manager;
+  boot = boot_new_mpirun();
+  if (boot) {
+    dbg_log("initialized MPI-run process boot manager.\n");
+    return boot;
   }
 #endif
 
-  manager = manager_new_smp();
-  if (manager) {
-    dbg_log("initialized the SMP process manager.\n");
-    return manager;
+  boot = boot_new_smp();
+  if (boot) {
+    dbg_log("initialized the SMP process boot manager.\n");
+    return boot;
   }
 
-  dbg_error("failed to initialize a process manager.\n");
+  dbg_error("failed to initialize a process boot manager.\n");
   return NULL;
+}
+
+void boot_delete(boot_t *boot) {
+  boot->delete(boot);
+}
+
+int boot_rank(const boot_t *boot) {
+  return boot->rank(boot);
+}
+
+int boot_n_ranks(const boot_t *boot) {
+  return boot->n_ranks(boot);
 }

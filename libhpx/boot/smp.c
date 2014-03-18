@@ -15,17 +15,36 @@
 #endif
 
 #include <stdlib.h>
-#include "manager.h"
 
-static void _delete(manager_t *smp) {
-  free(smp);
+#include "libhpx/boot.h"
+#include "managers.h"
+
+typedef struct {
+  boot_t vtable;
+  int rank;
+  int n_ranks;
+} smp_t;
+
+static void _delete(boot_t *boot) {
+  free(boot);
 }
 
-manager_t *
-manager_new_smp(void) {
-  manager_t *smp = malloc(sizeof(*smp));
-  smp->delete    = _delete;
-  smp->rank      = 0;
-  smp->n_ranks   = 1;
-  return smp;
+static int _rank(const boot_t *boot) {
+  const smp_t *smp = (const smp_t*)boot;
+  return smp->rank;
+}
+
+static int _n_ranks(const boot_t *boot) {
+  const smp_t *smp = (const smp_t*)boot;
+  return smp->n_ranks;
+}
+
+boot_t *boot_new_smp(void) {
+  smp_t *smp = malloc(sizeof(*smp));
+  smp->vtable.delete  = _delete;
+  smp->vtable.rank    = _rank;
+  smp->vtable.n_ranks = _n_ranks;
+  smp->rank           = 0;
+  smp->n_ranks        = 1;
+  return &smp->vtable;
 }

@@ -70,7 +70,8 @@ int main(int argc, char *argv[]) {
   wait_for_debugger();
 
   hpx_config_t config = {
-    .scheduler_threads = 0,
+    .cores = 0,
+    .threads = 0,
     .stack_bytes = 0
   };
 

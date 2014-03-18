@@ -156,7 +156,8 @@ int main(int argc, char *argv[]) {
     return e;
 
   hpx_config_t config = {
-    .scheduler_threads = args.threads,
+    .cores = 0,
+    .threads = args.threads,
     .stack_bytes = 0
   };
 

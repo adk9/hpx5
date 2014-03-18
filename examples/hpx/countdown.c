@@ -61,7 +61,12 @@ int main(int argc, char * argv[argc]) {
     break;
   }
 
-  hpx_config_t config = { .scheduler_threads = threads };
+  hpx_config_t config = {
+    .cores = 0,
+    .threads = threads,
+    .stack_bytes = 0
+  };
+
   if (hpx_init(&config)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;

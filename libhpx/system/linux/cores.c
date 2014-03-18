@@ -10,16 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_BOOT_H
-#define LIBHPX_BOOT_BOOT_H
+#ifndef __linux__
+#error The HPX time implementation is configured incorrectly
+#endif
 
-#include "attributes.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-typedef struct boot boot_t;
+#include <unistd.h>
+#include "libhpx/system.h"
 
-HPX_INTERNAL boot_t *boot_new(void);
-HPX_INTERNAL void boot_delete(boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_rank(const boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_n_ranks(const boot_t*) HPX_NON_NULL(1);
-
-#endif // LIBHPX_BOOT_BOOT_H
+int system_get_cores(void) {
+  return sysconf(_SC_NPROCESSORS_ONLN);
+}
