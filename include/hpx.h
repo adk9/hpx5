@@ -93,8 +93,9 @@ void hpx_addr_unpin(const hpx_addr_t addr);
 ///
 /// see <argp.h>
 typedef struct {
-  int scheduler_threads;                // number of HPX scheduler threads
-  int stack_bytes;                      // minimum stack size in bytes
+  int cores;                                  // number of cores to use
+  int threads;                                // number of HPX scheduler threads
+  int stack_bytes;                            // minimum stack size in bytes
 } hpx_config_t;
 
 

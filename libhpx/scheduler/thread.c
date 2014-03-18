@@ -20,14 +20,16 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "thread.h"
-#include "locality.h"
-#include "scheduler.h"
-#include "parcel.h"
-#include "lco.h"
+
+#include "libhpx/action.h"
+#include "libhpx/builtins.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "asm.h"
-#include "builtins.h"
-#include "debug.h"
+#include "lco.h"
+#include "thread.h"
+
 
 #define _PAGE_SIZE 4096
 #define _DEFAULT_PAGES 4
@@ -87,7 +89,7 @@ static _frame_t *_get_top_frame(thread_t *thread) {
 
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
   hpx_action_t action = hpx_parcel_get_action(parcel);
-  hpx_action_handler_t handler = locality_action_lookup(action);
+  hpx_action_handler_t handler = action_lookup(action);
   void *data = hpx_parcel_get_data(parcel);
   int status = handler(data);
   if (status != HPX_SUCCESS) {

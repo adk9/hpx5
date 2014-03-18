@@ -16,20 +16,28 @@
 
 #include <assert.h>
 #include <stdlib.h>
+
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
 #include "cache.h"
 #include "block.h"
-#include "debug.h"
 #include "padding.h"
-#include "parcel.h"
 
-/// each cache is a hashtable table of lists of parcels, keyed by the parcel's
-/// aligned size
+
+/// I have implemented a simple probed hashtable. This constant bounds the
+/// number of probes that we do before we decide to expand the cache.
+static const int PROBES = 2;
+
+
+/// Each cache is a hashtable table of lists of parcels, keyed by the parcel's
+/// aligned size.
 struct cache {
   block_t *blocks;
   int capindex;
   int capacity;
   hpx_parcel_t **table;
 };
+
 
 // From http://planetmath.org/goodhashtableprimes. Used to resize our cache of
 // parcel freelists when we the load gets too high.
@@ -40,34 +48,54 @@ static const int capacities[] = {
 };
 
 
-/// grow the cache
+/// Grow the cache.
+///
+/// This will increase the capacity of the cache according to the capacities
+/// array, and then insert everything into the new cache. It may happen
+/// recursively during this internal insert.
 static void _expand(cache_t *cache);
 
 
-// find the right list in the cache, may resize the cache, returns non-null
-static hpx_parcel_t **_find(cache_t *cache, int size) {
-  int probes = 2;
+/// Find the right list in the cache.
+///
+/// This may resize the cache if it detects a collision during the search. The
+/// resulting list might be empty, but it won't be NULL.
+static HPX_RETURNS_NON_NULL hpx_parcel_t **_find(cache_t *cache, int size) {
+  int probes = PROBES;
   int i = size % cache->capacity;
   hpx_parcel_t *value = cache->table[i];
 
-  while (value && (block_payload_size(value) != size)) {
-    // if we didn't find a parcel fast enough, expand the table and perform the
-    // get again
+  // if a list already exists in this bucket, we need to determine if it's the
+  // right size list, or if we need to probe (and possibly expand the cache)
+  while (value) {
+
+    // did we find an existing block?
+    block_t *block = block_from_parcel(value);
+    int max_payload = block_get_max_payload_size(block);
+    if (max_payload == size)
+      break;                                    // yes
+
+    // have we probed too many times?
     if (!probes--) {
-      _expand(cache);
-      return _find(cache, size);
+      _expand(cache);                           // yes, expand the cache and
+      return _find(cache, size);                // retry the find
     }
 
-    // otherwise probe
+    // probe to get a new bucket to check (i^2 % prime size)
     i = (i * i) % cache->capacity;
     value = cache->table[i];
   }
 
+  // return the list that we found, by address so that it can be updated
+  // directly
   return &cache->table[i];
 }
 
 
-/// expand the table (might recursively expand the table)
+/// Expand the table.
+///
+/// We use the static "capacities" array of small primes as hashtable sizes. See
+/// the link in the comments above as to why.
 static void _expand(cache_t *cache) {
   // remember the old table
   hpx_parcel_t **table = cache->table;
@@ -75,15 +103,24 @@ static void _expand(cache_t *cache) {
 
   // increase the size of the cache
   ++cache->capindex;
+
+  // unrecoverable error if the cache is too big for our table
+  // NB: this is an extremely unexpected situation---if this becomes a problem,
+  //     there are three ways to fix it.
+  //       1) increase PROBES and recompile
+  //       2) increase the number of primes in capacities
+  //       3) use a different hashtable implementation
   if (cache->capindex >= sizeof(capacities)) {
     dbg_error("could not expand a cache to size %i.\n", cache->capindex);
+    hpx_abort(-1);
   }
 
+  // allocate the new table
   cache->capacity = capacities[cache->capindex];
   cache->table = calloc(cache->capacity, sizeof(cache->table[0]));
   if (!cache->table) {
     dbg_error("failed to expand a cache table, %i.\n", cache->capacity);
-    hpx_abort(1);
+    hpx_abort(-1);
   }
 
   // insert anything from the old table into the new table
@@ -99,23 +136,17 @@ static void _expand(cache_t *cache) {
 
 
 /// allocate a cache, with an initial table size
-cache_t*
-cache_new(int capindex) {
-  if (capindex >= sizeof(capacities)) {
-    dbg_error("requested capacity is too large, %i.\n", capindex);
-    return NULL;
-  }
-
+cache_t *cache_new(void) {
   cache_t *cache = malloc(sizeof(*cache));
   if (!cache) {
     dbg_error("failed to allocate a parcel cache.\n");
     return NULL;
   }
 
-  cache->blocks = NULL;
-  cache->capindex = capindex;
-  cache->capacity = capacities[capindex];
-  cache->table = calloc(cache->capacity, sizeof(cache->table[0]));
+  cache->blocks   = NULL;
+  cache->capindex = 0;
+  cache->capacity = capacities[cache->capindex];
+  cache->table    = calloc(cache->capacity, sizeof(cache->table[0]));
   if (!cache->table) {
     dbg_error("failed to allocate a cache table, %i.\n", cache->capacity);
     free(cache);
@@ -127,21 +158,22 @@ cache_new(int capindex) {
 
 
 /// delete a cache
-void
-cache_delete(cache_t *cache) {
+void cache_delete(cache_t *cache) {
   if (!cache)
     return;
+
   if (cache->table)
     free(cache->table);
-  if (cache->blocks)
-    block_delete(cache->blocks);
+
+  while (cache->blocks)
+    block_delete(block_pop(&cache->blocks));
+
   free(cache);
 }
 
 
 /// Find the list for the payload size requested.
-hpx_parcel_t *
-cache_get(cache_t *cache, int size) {
+hpx_parcel_t *cache_get(cache_t *cache, int size) {
   // we only allocate cache-line aligned parcels using this cache
   int parcel_size = sizeof(hpx_parcel_t) + size;
   int padding = PAD_TO_CACHELINE(parcel_size);
@@ -150,7 +182,9 @@ cache_get(cache_t *cache, int size) {
   hpx_parcel_t **list = _find(cache, padded_size);
   hpx_parcel_t *p = parcel_pop(list);
   if (!p) {
-    parcel_cat(list, block_new(&cache->blocks, size));
+    block_t *b = block_new(size);
+    assert(b);
+    parcel_cat(list, block_get_free(b));
     p = parcel_pop(list);
   }
   return p;
@@ -158,8 +192,9 @@ cache_get(cache_t *cache, int size) {
 
 
 /// return a parcel to the cache
-void
-cache_put(cache_t *cache, hpx_parcel_t *parcel) {
-  hpx_parcel_t **list = _find(cache, block_payload_size(parcel));
+void cache_put(cache_t *cache, hpx_parcel_t *parcel) {
+  block_t *block = block_from_parcel(parcel);
+  int max_payload = block_get_max_payload_size(block);
+  hpx_parcel_t **list = _find(cache, max_payload);
   parcel_push(list, parcel);
 }

@@ -17,150 +17,173 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <mpi.h>
-#include "transport.h"
-#include "debug.h"
-#include "locality/manager.h"
 
-#define EAGER_THRESHOLD_MPI_DEFAULT INT_MAX /* make sure all messages go through
-                                               send/recv and not put/get (which
-                                               are not implemented) */
+#include "libhpx/boot.h"
+#include "libhpx/debug.h"
+#include "libhpx/transport.h"
+#include "transports.h"
 
-static int _eager_threshold_mpi = EAGER_THRESHOLD_MPI_DEFAULT;
-static int _rank = -1;
-static int _size = -1;
+/// make sure all messages go through send/recv and not put/get (which are not
+/// implemented)
+static const int EAGER_THRESHOLD_MPI_DEFAULT = INT_MAX;
 
-static char **_argv = NULL;
-static char *_argv_buffer = NULL;
+/// the MPI transport caches the number of ranks
+typedef struct {
+  transport_t vtable;
+  int rank;
+  int n_ranks;
+} mpi_t;
 
-static int _init(manager_t *manager) {
+
+/// ----------------------------------------------------------------------------
+/// Use MPI barrier directly.
+/// ----------------------------------------------------------------------------
+static void _barrier(void) {
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Return the size of an MPI request.
+/// ----------------------------------------------------------------------------
+static int _request_size(void) {
+  return sizeof(MPI_Request);
+}
+
+
+static int _adjust_size(int size) {
+  return size;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Shut down MPI, and delete the transport.
+/// ----------------------------------------------------------------------------
+static void _delete(transport_t *transport) {
+  int finalized;
+  MPI_Finalized(&finalized);
+  if (!finalized)
+    MPI_Finalize();
+  free(transport);
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Pinning not necessary.
+/// ----------------------------------------------------------------------------
+static void _pin(transport_t *transport, const void* buffer, size_t len) {
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Unpinning not necessary.
+/// ----------------------------------------------------------------------------
+static void _unpin(transport_t *transport, const void* buffer, size_t len) {
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Send data via MPI.
+///
+/// Presumably this will be an "eager" send. Don't use "data" until it's done!
+/// ----------------------------------------------------------------------------
+static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
+{
+  int src = t->rank();
+  MPI_Request *request = r;
+  if (MPI_Isend(data, n, MPI_BYTE, dest, src, MPI_COMM_WORLD, request) ==
+      MPI_SUCCESS)
+      return HPX_SUCCESS;
+
+  dbg_error("MPI could not send %d bytes to %i.\n", n, dest);
+  return HPX_ERROR;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Probe MPI to see if anything has been received.
+/// ----------------------------------------------------------------------------
+static size_t _probe(transport_t *transport, int *source) {
+  if (*source != TRANSPORT_ANY_SOURCE) {
+    dbg_error("mpi transport can not currently probe source %d\n", d);
+    return 0;
+  }
+
+  int flag = 0;
+  MPI_status status;
+  if (MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status) !=
+      MPI_SUCCESS) {
+    dbg_error("mpi failed Iprobe.\n");
+    return 0;
+  }
+
+  if (!flag)
+    return 0;
+
+  size_t bytes = 0;
+  if (MPI_Get_count(&status, MPI_BYTE, bytes) != MPI_SUCCESS) {
+    dbg_error("could not extract bytes from mpi.\n");
+    return 0;
+  }
+
+  // update the source to the actual source, and return the number of bytes
+  // available
+  *source = status.MPI_SOURCE;
+  return bytes;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Receive a buffer.
+/// ----------------------------------------------------------------------------
+static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
+  assert(src != TRANSPORT_ANY_SOURCE);
+  assert(src >= 0);
+  assert(src < transport->n_ranks());
+
+  MPI_Request *req = r;
+
+  if (MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r) ==
+      MPI_SUCCESS)
+    return HPX_SUCCESS;
+
+  dbg_error("could not receive %d bytes from %i", n, src);
+  return HPX_ERROR;
+}
+
+
+transport_t *transport_new_mpi(boot_t *boot) {
   int val = 0;
   MPI_Initialized(&val);
 
   if (!val) {
-    int thread_support_provided = 0;
-    int temp = MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &thread_support_provided);
-    if (temp == MPI_SUCCESS)
-      val = 0;
-    else
-      dbg_log("thread_support_provided = %d\n", thread_support_provided);
-  }
-  else {
-    val = HPX_SUCCESS;
+    int threading = 0;
+    if (MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &threading) !=
+        MPI_SUCCESS)
+      return NULL;
+
+    dbg_log("thread_support_provided = %d\n", threading);
   }
 
-  /* cache size and rank */
-  _rank = manager->rank;
-  _size = manager->n_ranks;
+  transport_t *mpi = malloc(sizeof(*mpi));
+  mpi->vtable->barrier      = _barrier;
+  mpi->vtable->request_size = _request_size;
+  mpi->vtable->adjust_size  = _adjust_size;
 
-  return val;
+  mpi->vtable->delete       = _delete;
+  mpi->vtable->pin          = _pin;
+  mpi->vtable->unpin        = _unpin;
+  mpi->vtable->send         = _send;
+  mpi->vtable->probe        = _probe;
+  mpi->vtable->recv         = _recv;
+
+  mpi->rank                 = boot_rank(boot);
+  mpi->n_ranks              = boot_n_ranks(boot);
+  return &mpi->vtable;
 }
 
-/* status may NOT be NULL */
-static int _probe(int source, int* flag, transport_status_t* status) {
-  int retval;
-  int temp;
-  int mpi_src = -1;
-  /* int mpi_len; LD:unused */
-
-  retval = HPX_ERROR;
-  if (source == TRANSPORT_ANY_SOURCE)
-    mpi_src = MPI_ANY_SOURCE;
-
-  temp = MPI_Iprobe(mpi_src, MPI_ANY_TAG, MPI_COMM_WORLD, flag, &(status->mpi));
-
-  if (temp == MPI_SUCCESS) {
-    retval = 0;
-    if (*flag == true) {
-      status->source = status->mpi.MPI_SOURCE;
-      MPI_Get_count(&(status->mpi), MPI_BYTE, &(status->count));
-    }
-  }
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-
-  return retval;
-}
-
-/* Send data via MPI. Presumably this will be an "eager" send. Don't use "data"
-   until it's done! */
-static int _send(int dest, void *data, size_t len, transport_request_t *request)
-{
-  int retval;
-  int temp;
-
-  retval = HPX_ERROR;
-
-  /* TODO: move this when checking for eager_threshhold boundary */
-  if (len > INT_MAX) {
-    __hpx_errno = HPX_ERROR;
-    retval = HPX_ERROR;
-  }
-  /* not necessary because of eager_threshold */
+// LD: below archived temporarily
 #if 0
-  /* TODO: put this back in - but maybe make this automatically call put() in place of the send */
-  if (len > eager_threshold_mpi) { /* need to use _transport_put_* for that */
-    __hpx_errno = HPX_ERROR;
-    retval = HPX_ERROR;
-  }
-#endif
-
-  temp = MPI_Isend(data, (int)len, MPI_BYTE, dest, rank, MPI_COMM_WORLD, &(request->mpi));
-
-  if (temp == MPI_SUCCESS)
-    retval = 0;
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-
-  return retval;
-}
-
-/* this is non-blocking recv - user must test/wait on the request */
-static int _recv(int source, void* buffer, size_t len,
-                 transport_request_t *request) {
-  int retval;
-  int temp;
-  int tag;
-  int mpi_src;
-  int mpi_len;
-
-  retval = HPX_ERROR;
-  if (source == TRANSPORT_ANY_SOURCE) {
-    mpi_src = MPI_ANY_SOURCE;
-    tag = 0;
-  }
-  else {
-    mpi_src = source;
-    tag = source;
-  }
-
-  /* This may go away eventually. If we take this out, we need to use
-     MPI_Get_count to get the size (which introduces problems with threading,
-     should we ever change that) or we need to change sending to send the size
-     first. */
-  if (len == TRANSPORT_ANY_LENGTH)
-    mpi_len = eager_threshold_mpi;
-  else {
-    if (len > eager_threshold_mpi) { /* need to use _transport_put_* for that */
-      __hpx_errno = HPX_ERROR;
-      retval = HPX_ERROR;
-      goto error;
-    }
-    else
-      mpi_len = len;
-  }
-
-  temp = MPI_Irecv(buffer, (int)mpi_len, MPI_BYTE, mpi_src, tag, MPI_COMM_WORLD,
-                   &(request->mpi));
-
-  if (temp == MPI_SUCCESS)
-    retval = 0;
-  else
-    __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-
-error:
-  return retval;
-}
-
 /* status may be NULL */
 static int _test(transport_request_t *request, int *flag, transport_status_t *status) {
   MPI_Status *s = (status) ? &(status->mpi) : MPI_STATUS_IGNORE;
@@ -228,65 +251,4 @@ static int _fini(void) {
 
   return retval;
 }
-
-
-static int _pin(void* buffer, size_t len) {
-  dbg_assert_precondition(len && buffer);
-  dbg_printf("%d: Pinning %zd bytes at %p (MPI no-op)\n",
-             hpx_get_rank(), len, buffer);
-  return 0;
-}
-
-
-static int _unpin(void* buffer, size_t len) {
-  dbg_assert_precondition(len && buffer);
-  dbg_printf("%d: Unpinning/freeing %zd bytes from buffer at %p (MPI no-op)\n",
-             hpx_get_rank(), len, buffer);
-  return 0;
-}
-
-
-static size_t _get_transport_bytes(size_t n) {
-  return n;
-}
-
-
-static void _barrier(void) {
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-
-static void _delete(transport_t *mpi) {
-  int finalized;
-  MPI_Finalized(&finalized);
-  if (!finalized)
-    MPI_Finalize();
-  free(mpi);
-}
-
-
-transport_t *
-transport_new_mpi(void) {
-  transport_t *mpi = malloc(sizeof(*mpi));
-  mpi->delete              = _delete;
-  mpi->init                = _init;
-  mpi->fini                = _fini;
-  mpi->progress            = _progress;
-  mpi->probe               = _probe;
-  mpi->send                = _send;
-  mpi->recv                = _recv;
-  mpi->sendrecv_test       = _test;
-  mpi->send_test           = _test;
-  mpi->recv_test           = _test;
-  mpi->put                 = _put;
-  mpi->get                 = _get;
-  mpi->putget_test         = _test;
-  mpi->put_test            = _test;
-  mpi->get_test            = _test;
-  mpi->pin                 = _pin;
-  mpi->unpin               = _unpin;
-  mpi->phys_addr           = _phys_addr;
-  mpi->get_transport_bytes = _get_transport_bytes;
-  mpi->barrier             = _barrier;
-  return mpi;
-}
+#endif

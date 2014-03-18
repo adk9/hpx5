@@ -10,16 +10,20 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_BOOT_H
-#define LIBHPX_BOOT_BOOT_H
+#ifndef LIBHPX_NETWORK_REQUEST_H
+#define LIBHPX_NETWORK_REQUEST_H
 
-#include "attributes.h"
+#include <hpx.h>
 
-typedef struct boot boot_t;
+typedef struct request request_t;
+struct request {
+  request_t      *next;
+  hpx_parcel_t *parcel;
+  char       request[];
+};
 
-HPX_INTERNAL boot_t *boot_new(void);
-HPX_INTERNAL void boot_delete(boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_rank(const boot_t*) HPX_NON_NULL(1);
-HPX_INTERNAL int boot_n_ranks(const boot_t*) HPX_NON_NULL(1);
+HPX_INTERNAL request_t *request_new(hpx_parcel_t *p, int request) HPX_NON_NULL(1) HPX_MALLOC;
+HPX_INTERNAL request_t *request_init(request_t *r, hpx_parcel_t *p) HPX_NON_NULL(1, 2);
+HPX_INTERNAL void request_delete(request_t *r) HPX_NON_NULL(1);
 
-#endif // LIBHPX_BOOT_BOOT_H
+#endif // LIBHPX_NETWORK_REQUEST_H

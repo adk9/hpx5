@@ -16,39 +16,64 @@
 
 #include <stdlib.h>
 #include <mpi.h>
-#include "manager.h"
 
-static void _delete(manager_t *mpi) {
+#include "libhpx/boot.h"
+#include "libhpx/debug.h"
+#include "managers.h"
+
+
+typedef struct {
+  boot_t vtable;
+  int rank;
+  int n_ranks;
+} mpi_t;
+
+
+static void _delete(boot_t *boot) {
   int finalized;
   MPI_Finalized(&finalized);
   if (!finalized)
     MPI_Finalize();
-  free(mpi);
+  free(boot);
 }
 
-manager_t *
-manager_new_mpirun(void) {
+
+static int _rank(const boot_t *boot) {
+  const mpi_t *mpi = (const mpi_t *)boot;
+  return mpi->rank;
+}
+
+
+static int _n_ranks(const boot_t *boot) {
+}
+
+
+boot_t *boot_new_mpirun(void) {
   int init;
   MPI_Initialized(&init);
   if (!init) {
+    dbg_log("initializing MPI... ");
     int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided))
+    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided)) {
+      dbg_log("not available.\n");
       return NULL;
-    if (provided < MPI_THREAD_SERIALIZED)
+    }
+    if (provided < MPI_THREAD_SERIALIZED) {
+      dbg_log("not compatible.\n");
       return NULL;
+    }
   }
 
-  int n_ranks;
-  if (MPI_Comm_size(MPI_COMM_WORLD, &n_ranks) != MPI_SUCCESS)
-    return NULL;
+  mpi_t *mpi = malloc(sizeof(*mpi));
+  mpi->vtable->delete  = _delete;
+  mpi->vtable->rank    = _rank;
+  mpi->vtable->n_ranks = _n_ranks;
 
-  int rank;
-  if (MPI_Comm_rank(MPI_COMM_WORLD, &rank) != MPI_SUCCESS)
+  if ((MPI_Comm_rank(MPI_COMM_WORLD, &mpi->rank) != MPI_SUCCESS) ||
+      (MPI_Comm_size(MPI_COMM_WORLD, &mpi->n_ranks) != MPI_SUCCESS)) {
+    free(mpi);
     return NULL;
+  }
 
-  manager_t *mpi = malloc(sizeof(*mpi));
-  mpi->delete    = _delete;
-  mpi->rank      = rank;
-  mpi->n_ranks   = n_ranks;
   return mpi;
 }

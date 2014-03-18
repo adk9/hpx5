@@ -10,24 +10,28 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_MS_QUEUE_H
-#define LIBHPX_MS_QUEUE_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <hpx.h>
 
 /// ----------------------------------------------------------------------------
-/// @file ms_queue.h
-/// @brief A simple, macro-based interface to an M&S Queue.
-///
+/// "Home" location for the HPX_ACTION_NULL action..
 /// ----------------------------------------------------------------------------
-#include "cptr.h"
 
-typedef struct {
-  volatile cptr_t head;
-  volatile cptr_t tail;
-} ms_queue_t;
 
-void  sync_ms_queue_init(ms_queue_t *q);
-void  sync_ms_queue_fini(ms_queue_t *q);
-void  sync_ms_queue_enqueue(ms_queue_t *q, void *val);
-void *sync_ms_queue_dequeue(ms_queue_t *queue);
+hpx_action_t HPX_ACTION_NULL = 0;
 
-#endif // LIBHPX_MS_QUEUE_H
+
+/// Global null action doesn't do anything.
+static int _null_action(void *args) {
+  return HPX_SUCCESS;
+}
+
+
+/// Register the global actions.
+static void HPX_CONSTRUCTOR _init(void) {
+  HPX_ACTION_NULL = hpx_register_action("_null_action", _null_action);
+}
+

@@ -20,52 +20,74 @@
 /// The smp transport is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
-#include "hpx.h"
-#include "transport.h"
+#include <hpx.h>
+#include "libhpx/debug.h"
+#include "libhpx/transport.h"
+#include "transports.h"
 
 
-static int _init(struct manager *m) {
-  return HPX_SUCCESS;
+static void _barrier(void) {
 }
 
 
-static void _fini(void) {
-}
-
-
-static int _send(int dest, void *buffer, unsigned size,
-                  transport_request_t *request) {
+static int _request_size(void) {
   return 0;
 }
 
 
-static void _delete(transport_t *smp) {
-  free(smp);
+static int _adjust_size(int size) {
+  return size;
 }
 
 
-transport_t *
-transport_new_smp(void) {
+static void _delete(transport_t *transport) {
+  free(transport);
+}
+
+
+static void _pin(transport_t *transport, const void* buffer, size_t len) {
+}
+
+
+static void _unpin(transport_t *transpor, const void* buffer, size_t len) {
+}
+
+
+static int _send(transport_t *t, int d, const void *b, size_t n, void *r) {
+  dbg_error("should never call send in smp network.\n");
+  return HPX_ERROR;
+}
+
+
+static size_t _probe(transport_t *transport, int *src) {
+  return 0;
+}
+
+
+static int _recv(transport_t *t, int src, void *buffer, size_t size, void *r) {
+  dbg_error("should never receive a parcel in smp network.\n");
+  return HPX_ERROR;
+}
+
+
+static int _test(transport_t *t, const void *request, int *success) {
+  dbg_error("should never call test in smp network.\n");
+  return HPX_ERROR;
+}
+
+transport_t *transport_new_smp(const struct boot *boot) {
   transport_t *smp = malloc(sizeof(*smp));
-  smp->init = _init;
-  smp->fini = _fini;
-  smp->progress = NULL;
-  smp->probe = NULL;
-  smp->send = _send;
-  smp->recv = NULL;
-  smp->test_sendrecv = NULL;
-  smp->test_send = NULL;
-  smp->test_recv = NULL;
-  smp->put = NULL;
-  smp->get = NULL;
-  smp->test_putget = NULL;
-  smp->test_put = NULL;
-  smp->test_get = NULL;
-  smp->pin = NULL;
-  smp->unpin = NULL;
-  smp->phys_addr = NULL;
-  smp->get_transport_bytes = NULL;
-  smp->barrier = NULL;
-  smp->delete = _delete;
+
+  smp->barrier      = _barrier;
+  smp->request_size = _request_size;
+  smp->adjust_size  = _adjust_size;
+
+  smp->delete       = _delete;
+  smp->pin          = _pin;
+  smp->unpin        = _unpin;
+  smp->send         = _send;
+  smp->probe        = _probe;
+  smp->recv         = _recv;
+  smp->test         = _test;
   return smp;
 }

@@ -41,6 +41,13 @@ sync_ms_queue_init(ms_queue_t *q) {
 }
 
 void
+sync_ms_queue_fini(ms_queue_t *q) {
+  while (sync_ms_queue_dequeue(q))
+    ;
+  _node_delete(q->head.p);
+}
+
+void
 sync_ms_queue_enqueue(ms_queue_t *q, void *val) {
   _node_t *node = _node_new(val);
   cptr_t tail, next;

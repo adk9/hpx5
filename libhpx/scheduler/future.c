@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "locality.h"
-#include "scheduler.h"
+
+#include "libhpx/scheduler.h"
 #include "lco.h"
 #include "thread.h"
 

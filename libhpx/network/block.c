@@ -14,27 +14,41 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
-#include "parcel.h"
+#include <string.h>
+
+#include "libhpx/builtins.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
 #include "block.h"
-#include "debug.h"
 #include "padding.h"
-#include "builtins.h"
 
 #define BLOCK_SIZE 4 * HPX_PAGE_SIZE
 
+
+/// Local max function.
 static int _max(int lhs, int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
 
 
+/// The block header structure
+///
+/// This takes up the front of the block, and contains metadata about the block.
 typedef struct {
   int max_payload_size;
+  int block_size;
   bool pinned;
+  hpx_parcel_t *free;
   block_t *next;                                // for garbage collection
 } header_t;
 
 
+/// The block itself.
+///
+/// All parcels in the block are both cache-line aligned, and padded to
+/// cache-lines.
 struct block {
   header_t header;
   const char padding[PAD_TO_CACHELINE(sizeof(header_t))];
@@ -42,25 +56,30 @@ struct block {
 };
 
 
-hpx_parcel_t *
-block_new(block_t **list, int size) {
-  // compute the parcel size we want to allocate---we only allocate
-  // cache-aligned size parcels at the moment.
+/// When we allocate a new block we need to:
+///   1) compute the padded parcel size to allocate
+///   2) compute how many parcels we can fit in the block
+///   3) malloc the block itself
+///   4) initialize the block header
+///   5) assemble the block's freelist
+///   6) initialize the parcels as needed
+block_t *block_new(int size) {
+  // 1) make sure there's at least one word
   int parcel_size = sizeof(hpx_parcel_t) + size;
   int padding = PAD_TO_CACHELINE(parcel_size);
   int padded_size = parcel_size + padding;
+  if (padded_size - sizeof(hpx_parcel_t) < sizeof(void*)) {
+    dbg_error("free space expected, check sizeof(hpx_parcel_t).\n");
+    return NULL;
+  }
 
-  // compute how many parcels we can fit in a block (taking the size of the
-  // block header into account, and given that we want to allocate one block per
-  // page).
+  // 2)
   int space = BLOCK_SIZE - sizeof(block_t);
   int n = _max(1, space / padded_size);
   dbg_log("Allocating a parcel block of %i %i-byte parcels (payload %i)\n",
           n, padded_size, size);
 
-  // allocate the block---it might be more than one page big if padded_size is
-  // large, but it's always a page aligned address so that we can find the block
-  // header for any parcel
+  // 3) make sure the block is aligned correctly
   int block_size = sizeof(block_t) + n * padded_size;
   block_t *b = NULL;
   if (posix_memalign((void**)&b, BLOCK_SIZE, block_size)) {
@@ -68,47 +87,73 @@ block_new(block_t **list, int size) {
     return NULL;
   }
 
-  // initialize the block header
+  // 4)
   b->header.max_payload_size = padded_size;
-  b->header.pinned = false;
-  b->header.next = *list;
-  *list = b;
+  b->header.block_size       = block_size;
+  b->header.pinned           = false;
+  b->header.free             = NULL;
+  b->header.next             = NULL;
 
-  // initialize the parcels we just allocated, chaining them together---we only
-  // allocate in-place parcels right now
+  // 5 & 6)
   hpx_parcel_t *prev = NULL;
   for (int i = 0; i < n; ++i) {
     hpx_parcel_t *p = (hpx_parcel_t*)(b->parcels + (i * padded_size));
-    parcel_set_inplace(p);
-    parcel_set_next(p, prev);
+    parcel_push(&prev, p);
     prev = p;
   }
+  b->header.free = prev;
 
-  // return the last parcel, which is the head of the freelist now
-  return prev;
+  // return the block
+  return b;
 }
 
 
-void
-block_delete(block_t *block) {
-  if (!block)
-    return;
-
-  block_t *next = block->header.next;
+/// The block is just one contiguous chunk of space, and it didn't allocate
+/// anything else out-of-place, so we can just free it.
+void block_delete(block_t *block) {
   free(block);
-  block_delete(next);
 }
 
 
-block_t *
-get_block(hpx_parcel_t *parcel) {
+hpx_parcel_t *block_get_free(const block_t *block) {
+  return block->header.free;
+}
+
+
+bool block_is_pinned(const block_t *block) {
+  return block->header.pinned;
+}
+
+
+void block_set_pinned(block_t *block, bool val) {
+  block->header.pinned = val;
+}
+
+
+int block_get_size(const block_t *block) {
+  return block->header.block_size;
+}
+
+
+int block_get_max_payload_size(const block_t *block) {
+  return block->header.max_payload_size;
+}
+
+
+block_t *block_from_parcel(hpx_parcel_t *parcel) {
   const uintptr_t MASK = ~0 << ctzl(BLOCK_SIZE);
   return (block_t*)((uintptr_t)parcel & MASK);
 }
 
 
-int
-block_payload_size(hpx_parcel_t *parcel) {
-  block_t *block = get_block(parcel);
-  return block->header.max_payload_size;
+void block_push(block_t** list, block_t *block) {
+  block->header.next = *list;
+  *list = block;
+}
+
+
+block_t *block_pop(block_t **list) {
+  block_t *block = *list;
+  *list = block->header.next;
+  return block;
 }

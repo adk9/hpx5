@@ -14,139 +14,201 @@
 #include "config.h"
 #endif
 
+/// ----------------------------------------------------------------------------
+/// @file libhpx/hpx.c
+/// @brief Implements much of hpx.h using libhpx.
+///
+/// This file implements the "glue" between the HPX public interface, and
+/// libhpx.
+/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hpx.h"
-#include "locality.h"
-#include "network/network.h"
-#include "scheduler/scheduler.h"
-#include "parcel.h"
-#include "debug.h"
+#include <hpx.h>
 
-enum {
-  HPX_SHUTDOWN = 0,
-  HPX_ABORT
-};
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/boot.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/system.h"
+#include "libhpx/transport.h"
 
-hpx_action_t HPX_ACTION_NULL = 0;
+#include "network/allocator.h"                  // LD: this is off a bit
 
-static int _shutdown_reason = 0;
-static int _status = HPX_SUCCESS;
-static pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  _condition = PTHREAD_COND_INITIALIZER;
+/// ----------------------------------------------------------------------------
+/// libhpx objects
+/// ----------------------------------------------------------------------------
+static boot_t             *_boot = NULL;
+static transport_t   *_transport = NULL;
+static allocator_t   *_allocator = NULL;
+static network_t       *_network = NULL;
+static scheduler_t       *_sched = NULL;
 
-/// Global null action doesn't do anything.
-static int _null_action(void *args) {
-  return HPX_SUCCESS;
-}
+/// ----------------------------------------------------------------------------
+/// used to synchronize the main thread during shutdown
+/// ----------------------------------------------------------------------------
+static int               _status = HPX_SUCCESS;
+static pthread_mutex_t    _mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t _condition = PTHREAD_COND_INITIALIZER;
 
-/// Register the global actions.
-static void HPX_CONSTRUCTOR _init_actions(void) {
-  HPX_ACTION_NULL = hpx_register_action("_null_action", _null_action);
-}
+/// ----------------------------------------------------------------------------
+/// action for use in global free
+/// ----------------------------------------------------------------------------
+static int _free_action(void *args);
+static hpx_action_t        _free = 0;
 
 
-/// We initialize the three primary modules here.
-int
-hpx_init(const hpx_config_t *config) {
-  // start by initializing all of the subsystems
-  int e = locality_startup(config);
-  if (e) {
-    dbg_error("failed to start locality.\n");
-    goto unwind0;
-  }
+/// ----------------------------------------------------------------------------
+/// The global here object.
+/// ----------------------------------------------------------------------------
+hpx_addr_t HPX_HERE = { NULL, -1 };
 
-  e = scheduler_startup(config);
-  if (e) {
-    dbg_error("failed to start the scheduler.\n");
-    goto unwind1;
-  }
+static enum {
+  HPX_NEW = 0,
+  HPX_INIT,
+  HPX_RUN,
+  HPX_SHUTDOWN,
+  HPX_ABORT,
+  HPX_DONE,
+  HPX_INAVLID
+} _state = HPX_NEW;
 
-  e = network_startup(config);
-  if (e) {
-    dbg_error("failed to start the network.\n");
-    goto unwind2;
-  }
-
-  return e;
-
- unwind2:
-  scheduler_shutdown();
- unwind1:
-  locality_shutdown();
- unwind0:
-  return e;
-}
-
-/// called to run HPX---the main thread sleeps until hpx_shutdown or hpx_abort
-/// is called from an HPX thread
-int
-hpx_run(hpx_action_t act, const void *args, unsigned size) {
-
+static void _set_state(int state) {
   pthread_mutex_lock(&_mutex);
-  hpx_parcel_t *p = hpx_parcel_acquire(size);
-  if (!p) {
-    dbg_error("failed to allocate a parcel.\n");
-  }
-  else {
-    hpx_parcel_set_action(p, act);
-    hpx_parcel_set_data(p, args, size);
-    hpx_parcel_send(p);
-    pthread_cond_wait(&_condition, &_mutex);
-  }
+  _state = state;
   pthread_mutex_unlock(&_mutex);
-
-  // shut these down in the right order
-  network_shutdown();
-
-  switch (_shutdown_reason) {
-   default:
-    dbg_error("shutting down for unknown reason %d.\n", _shutdown_reason);
-    break;
-   case (HPX_ABORT):
-    scheduler_abort();
-    break;
-   case (HPX_SHUTDOWN):
-    scheduler_shutdown();
-    break;
-  }
-
-  locality_shutdown();
-
-  // return the status that was set out of band
-  return _status;
 }
+
 
 /// common code to support hpx_abort and hpx_shutdown
-static void HPX_NORETURN _shutdown_scheduler(int code, int reason) {
+static void HPX_NORETURN _shutdown(int code, int state) {
   pthread_mutex_lock(&_mutex);
-  _status = code;
-  _shutdown_reason = reason;
+  assert(HPX_INIT < _state && _state < HPX_DONE);
+  if (state > _state) {
+    _state = state;
+    _status = code;
+  }
   pthread_cond_signal(&_condition);
   pthread_mutex_unlock(&_mutex);
   hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 
-/// Called by the application to shutdown the scheduler and network.
-void
-hpx_abort(int code) {
-  _shutdown_scheduler(code, HPX_ABORT);
+/// Called by the application to shutdown the scheduler and network. May be
+/// called from any lightweight HPX thread. Should not be called from the main
+/// thread.
+void hpx_abort(int code) {
+  _shutdown(code, HPX_SHUTDOWN);
 }
 
 
-void
-hpx_shutdown(int code) {
-  _shutdown_scheduler(code, HPX_SHUTDOWN);
+/// Called by the application to terminate the scheduler and network. Called
+/// from an HPX lightweight thread.
+void hpx_shutdown(int code) {
+  _shutdown(code, HPX_SHUTDOWN);
 }
 
+
+/// Allocate and link together all of the library objects.
+int hpx_init(const hpx_config_t *cfg) {
+  _free = action_register("_hpx_free_action", _free_action);
+
+  _boot = boot_new();
+  if (!_boot) {
+    dbg_error("failed to create boot manager.\n");
+    goto unwind0;
+  }
+
+  // update the here address
+  HPX_HERE.rank = boot_rank(_boot);
+
+  _transport = transport_new(_boot);
+  if (!_transport) {
+    dbg_error("failed to create transport.\n");
+    goto unwind1;
+  }
+
+  _allocator = parcel_allocator_new(_transport);
+  if (!_allocator) {
+    dbg_error("failed to create parcel allocator.\n");
+    goto unwind2;
+  }
+
+  _network = network_new(_boot, _transport);
+  if (!_network) {
+    dbg_error("failed to create network.\n");
+    goto unwind3;
+  }
+
+  int cores = (cfg->cores) ? cfg->cores : system_get_cores();
+  int workers = (cfg->threads) ? cfg->threads : cfg->cores;
+  int stack_size = cfg->stack_bytes;
+  _sched = scheduler_new(_network, cores, workers, stack_size, NULL);
+  if (!_sched) {
+    dbg_error("failed to create scheduler.\n");
+    goto unwind4;
+  }
+
+  _set_state(HPX_INIT);
+
+  return HPX_SUCCESS;
+
+ unwind4:
+  network_delete(_network);
+ unwind3:
+  parcel_allocator_delete(_allocator);
+ unwind2:
+  transport_delete(_transport);
+ unwind1:
+  boot_delete(_boot);
+ unwind0:
+  return HPX_ERROR;
+}
+
+/// called to run HPX---the main thread sleeps until hpx_shutdown or hpx_abort
+/// is called from an HPX thread
+int hpx_run(hpx_action_t act, const void *args, unsigned size) {
+  pthread_mutex_lock(&_mutex);
+
+  // check to see if there was a problem in hpx_init() that the
+  if (_state != HPX_INIT) {
+    dbg_error("called with invalid state %d.\n", _state);
+    goto unwind0;
+  }
+
+  // allocate and initialize a parcel for the original action
+  hpx_parcel_t *p = hpx_parcel_acquire(size);
+  if (!p) {
+    dbg_error("failed to allocate an initial parcel.\n");
+    goto unwind0;
+  }
+  hpx_parcel_set_action(p, act);
+  hpx_parcel_set_data(p, args, size);
+  hpx_parcel_send(p);
+
+  // wait for a shutdown or abort to occur
+  pthread_cond_wait(&_condition, &_mutex);
+
+  // shut down the system in the correct order
+  scheduler_delete(_sched);
+  network_delete(_network);
+  parcel_allocator_delete(_allocator);
+  transport_delete(_transport);
+  boot_delete(_boot);
+
+ unwind0:
+  // return the status that was set out of band
+  pthread_mutex_unlock(&_mutex);
+  return _status;
+}
 
 /// Encapsulates a remote-procedure-call.
-int
-hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
-         size_t len, hpx_addr_t result) {
+int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
+             size_t len, hpx_addr_t result) {
   hpx_parcel_t *p = hpx_parcel_acquire(len);
   if (!p) {
     dbg_error("could not allocate parcel.\n");
@@ -161,16 +223,79 @@ hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
   return HPX_SUCCESS;
 }
 
-hpx_action_t
-hpx_register_action(const char *id, hpx_action_handler_t func) {
-  return locality_action_register(id, func);
+
+hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func) {
+  return action_register(id, func);
 }
 
 
-void
-hpx_parcel_send(hpx_parcel_t *p) {
+void hpx_parcel_send(hpx_parcel_t *p) {
   if (hpx_addr_try_pin(p->target, NULL))
     scheduler_spawn(p);
   else
-    network_send(p);
+    network_send(_network, p);
+}
+
+
+/// Allocate a global, block cyclic array.
+///
+/// The block size is ignored at this point. The entire allocated region is on
+/// the calling locality.
+hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size,
+                             size_t alignment) {
+  hpx_addr_t addr = {
+    NULL,
+    hpx_get_my_rank()
+  };
+
+  if (posix_memalign(&addr.local, alignment, n * bytes))
+    dbg_error("failed global allocation.\n");
+  return addr;
+}
+
+
+int _free_action(void *args) {
+  hpx_addr_t addr = hpx_thread_current_target();
+  void *local = NULL;
+  if (hpx_addr_try_pin(addr, &local))
+    free(local);
+  hpx_call(addr, _free, NULL, 0, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+void hpx_global_free(hpx_addr_t addr) {
+  hpx_call(addr, _free, NULL, 0, HPX_NULL);
+}
+
+
+hpx_parcel_t *hpx_parcel_acquire(size_t size) {
+  // get a parcel of the right size from the allocator, the returned parcel
+  // already has its data pointer and size set appropriately
+  hpx_parcel_t *p = parcel_allocator_get(_allocator, size);
+  if (!p) {
+    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
+    return NULL;
+  }
+
+  p->action = HPX_ACTION_NULL;
+  p->target = HPX_HERE;
+  p->cont   = HPX_NULL;
+  return p;
+}
+
+
+void hpx_parcel_release(hpx_parcel_t *p) {
+  parcel_allocator_put(_allocator, p);
+}
+
+int hpx_get_my_rank(void) {
+  return boot_rank(_boot);
+}
+
+int hpx_get_num_ranks(void) {
+  return boot_n_ranks(_boot);
+}
+
+int hpx_get_num_threads(void) {
+  return scheduler_get_n_workers(_sched);
 }
