@@ -13,7 +13,7 @@
 #ifndef LIBHPX_TRANSPORTS_H
 #define LIBHPX_TRANSPORTS_H
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 #include "libhpx/transport.h"
 
 

@@ -13,7 +13,7 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 struct thread;
 

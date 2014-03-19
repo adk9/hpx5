@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 hpx_time_t
 hpx_time_now(void) {

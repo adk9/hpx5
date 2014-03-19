@@ -14,7 +14,7 @@
 #include "config.h"
 #endif
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 bool
 hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {

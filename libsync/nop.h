@@ -16,8 +16,8 @@
 #define HPX_LIBSYNC_NOP_H_
 
 /* This file defines an interface to nop. */
-#include "attributes.h"
-#include "sync/sync.h"
+#include "hpx/attributes.h"
+#include "libsync/sync.h"
 
 /// ----------------------------------------------------------------------------
 /// Your basic no-op.

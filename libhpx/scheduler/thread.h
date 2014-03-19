@@ -18,7 +18,7 @@
 /// @brief Defines the stack structure and interface for user level threads.
 /// ----------------------------------------------------------------------------
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
 /// A user level thread.

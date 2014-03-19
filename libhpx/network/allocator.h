@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_PARCEL_ALLOCATOR_H
 #define LIBHPX_NETWORK_PARCEL_ALLOCATOR_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 struct transport;
 typedef struct allocator allocator_t;

@@ -18,8 +18,8 @@
 /// @file libhpx/scheduler/lco.c
 /// ----------------------------------------------------------------------------
 #include <stdint.h>
-#include <sync/sync.h>
 
+#include "libsync/sync.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 #include "thread.h"

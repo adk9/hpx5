@@ -13,7 +13,7 @@
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/scheduler.h

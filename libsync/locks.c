@@ -13,7 +13,7 @@
   ====================================================================
 */
 
-#include "sync/locks.h"
+#include "libsync/locks.h"
 #include "nop.h"
 
 /**

@@ -13,7 +13,7 @@
 #ifndef LIBHPX_BOOT_BOOT_H
 #define LIBHPX_BOOT_BOOT_H
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 typedef struct boot boot_t;
 

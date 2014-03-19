@@ -14,7 +14,7 @@
 #define LIBHPX_ASM_H
 
 #include <stdint.h>
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 /// ----------------------------------------------------------------------------
 /// This file is the header that declares all of our generic assembly

@@ -21,8 +21,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sync/barriers.h>
 
+#include "libsync/barriers.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/network.h"

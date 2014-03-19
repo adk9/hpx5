@@ -24,8 +24,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <contrib/uthash/src/utlist.h>
-#include <sync/ms_queue.h>
+#include "contrib/uthash/src/utlist.h"
+#include "libsync/ms_queue.h"
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"

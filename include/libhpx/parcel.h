@@ -13,7 +13,7 @@
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.

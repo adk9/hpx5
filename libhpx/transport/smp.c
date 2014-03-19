@@ -20,7 +20,7 @@
 /// The smp transport is used by default when no other network is defined.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
-#include <hpx.h>
+#include "hpx/hpx.h"
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 #include "transports.h"

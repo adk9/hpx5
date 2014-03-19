@@ -20,7 +20,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 /// ----------------------------------------------------------------------------
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 
 struct boot;

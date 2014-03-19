@@ -18,7 +18,7 @@
 
 #include <stdio.h>                              /* sprintf */
 #include <inttypes.h>                           /* PRI... */
-#include <hpx.h>
+#include "hpx/hpx.h"
 #include <sync/sync.h>                          /* sync access */
 
 /**

@@ -13,7 +13,7 @@
 #ifndef LIBHPX_DEBUG_H
 #define LIBHPX_DEBUG_H
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 
 #ifdef ENABLE_DEBUG
 #define DEBUG 1

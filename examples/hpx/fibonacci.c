@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 #include "debug.h"
 
