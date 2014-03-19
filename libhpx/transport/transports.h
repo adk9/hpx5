@@ -46,7 +46,7 @@ struct transport {
   int (*recv)(transport_t *t, int src, void *buffer, size_t size, void *request)
     HPX_NON_NULL(1, 3);
 
-  int (*test)(transport_t *t, const void *request, int *out)
+  int (*test)(transport_t *t, void *request, int *out)
     HPX_NON_NULL(1, 2, 3);
 
 

@@ -115,14 +115,13 @@ HPX_INTERNAL int transport_recv(transport_t *t, int src, void *buffer,
 /// ----------------------------------------------------------------------------
 /// Test to see if a send/recv operation is complete.
 ///
-/// @param        t - the transport
-/// @param  request - the request identifier
-/// @param complete - 0 if still active, non-0 otherwise
-/// @returns        - HPX_SUCCESS or HPX_ERROR
+/// @param      t - the transport
+/// @param    req - the request identifier
+/// @param[out] o - 0 if still active, non-0 otherwise
+/// @returns      - HPX_SUCCESS or HPX_ERROR
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_test_sendrecv(transport_t *t, const void *request,
-                                         int *complete)
-  HPX_NON_NULL(1, 2);
+HPX_INTERNAL int transport_test_sendrecv(transport_t *t, void *req, int *out)
+  HPX_NON_NULL(1, 2, 3);
 
 
 /// ----------------------------------------------------------------------------
