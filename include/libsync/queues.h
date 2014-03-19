@@ -10,13 +10,11 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_MS_QUEUE_H
-#define LIBHPX_MS_QUEUE_H
+#ifndef LIBHPX_QUEUES_H
+#define LIBHPX_QUEUES_H
 
 /// ----------------------------------------------------------------------------
-/// @file ms_queue.h
-/// @brief A simple, macro-based interface to an M&S Queue.
-///
+/// @file include/libsync/queues.h
 /// ----------------------------------------------------------------------------
 #include "hpx/attributes.h"
 #include "cptr.h"
@@ -54,4 +52,4 @@ void  sync_ms_queue_fini(ms_queue_t *q) HPX_NON_NULL(1);
 void  sync_ms_queue_enqueue(ms_queue_t *q, void *val) HPX_NON_NULL(1);
 void *sync_ms_queue_dequeue(ms_queue_t *q) HPX_NON_NULL(1);
 
-#endif // LIBHPX_MS_QUEUE_H
+#endif // LIBHPX_QUEUES_H
