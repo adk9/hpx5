@@ -266,6 +266,8 @@ double hpx_time_elapsed_us(hpx_time_t);
 double hpx_time_elapsed_ms(hpx_time_t);
 
 
+const char* hpx_get_network_id(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -25,6 +25,9 @@
 #include "libhpx/transport.h"
 #include "transports.h"
 
+static const char *_id(void) {
+  return "SMP";
+}
 
 static void _barrier(void) {
 }
@@ -41,7 +44,6 @@ static int _adjust_size(int size) {
 
 
 static void _delete(transport_t *transport) {
-  free(transport);
 }
 
 
@@ -75,19 +77,20 @@ static int _test(transport_t *t, const void *request, int *success) {
   return HPX_ERROR;
 }
 
+static transport_t _smp = {
+  .id           = _id,
+  .barrier      = _barrier,
+  .request_size = _request_size,
+  .adjust_size  = _adjust_size,
+  .delete       = _delete,
+  .pin          = _pin,
+  .unpin        = _unpin,
+  .send         = _send,
+  .probe        = _probe,
+  .recv         = _recv,
+  .test         = _test,
+};
+
 transport_t *transport_new_smp(const struct boot *boot) {
-  transport_t *smp = malloc(sizeof(*smp));
-
-  smp->barrier      = _barrier;
-  smp->request_size = _request_size;
-  smp->adjust_size  = _adjust_size;
-
-  smp->delete       = _delete;
-  smp->pin          = _pin;
-  smp->unpin        = _unpin;
-  smp->send         = _send;
-  smp->probe        = _probe;
-  smp->recv         = _recv;
-  smp->test         = _test;
-  return smp;
+  return &_smp;
 }

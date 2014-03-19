@@ -51,6 +51,9 @@ transport_t *transport_new(const struct boot *boot) {
   return NULL;
 }
 
+const char *transport_id(transport_t *transport) {
+  return transport->id();
+}
 
 void transport_delete(transport_t *transport) {
   transport->delete(transport);

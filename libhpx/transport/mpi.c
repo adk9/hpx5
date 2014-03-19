@@ -36,6 +36,14 @@ typedef struct {
 
 
 /// ----------------------------------------------------------------------------
+/// Get the ID for an MPI transport.
+/// ----------------------------------------------------------------------------
+static const char *_id(void) {
+  return "MPI";
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Use MPI barrier directly.
 /// ----------------------------------------------------------------------------
 static void _barrier(void) {
@@ -165,7 +173,8 @@ transport_t *transport_new_mpi(boot_t *boot) {
     dbg_log("thread_support_provided = %d\n", threading);
   }
 
-  transport_t *mpi = malloc(sizeof(*mpi));
+  static mpi_t *mpi = malloc(sizeof(*mpi));
+  mpi->vtable->id           = _id;
   mpi->vtable->barrier      = _barrier;
   mpi->vtable->request_size = _request_size;
   mpi->vtable->adjust_size  = _adjust_size;
@@ -179,6 +188,7 @@ transport_t *transport_new_mpi(boot_t *boot) {
 
   mpi->rank                 = boot_rank(boot);
   mpi->n_ranks              = boot_n_ranks(boot);
+
   return &mpi->vtable;
 }
 
