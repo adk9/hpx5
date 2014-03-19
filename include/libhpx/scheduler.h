@@ -38,7 +38,7 @@ struct lco;
 struct thread;
 struct network;
 struct worker;
-struct sr_barrier;
+struct barrier;
 typedef struct scheduler scheduler_t;
 typedef int (*process_map_t)(scheduler_t *, int);
 /// @}
@@ -59,12 +59,12 @@ typedef int (*process_map_t)(scheduler_t *, int);
 /// not implemented.
 /// ----------------------------------------------------------------------------
 struct scheduler {
-  process_map_t         pmap;
-  int                  cores;
-  struct network    *network;
-  int              n_workers;
-  struct worker    **workers;
-  struct sr_barrier *barrier;
+  process_map_t      pmap;
+  int               cores;
+  struct network *network;
+  int           n_workers;
+  struct worker **workers;
+  struct barrier *barrier;
 };
 
 

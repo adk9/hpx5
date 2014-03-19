@@ -77,7 +77,7 @@ void scheduler_delete(scheduler_t *sched) {
     return;
 
   if (sched->barrier)
-    sr_barrier_delete(sched->barrier);
+    barrier_delete(sched->barrier);
 
   if (sched->workers)
     free(sched->workers);

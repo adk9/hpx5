@@ -75,6 +75,16 @@ HPX_INTERNAL hpx_parcel_t *network_recv(network_t *network)
 
 
 /// ----------------------------------------------------------------------------
+/// A network barrier.
+///
+/// Should only be called by one thread per locality. For a full system barrier,
+/// callers should use the scheduler barrier first.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_barrier(network_t *network)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
 /// The main network operation.
 ///
 /// As usual, the network_progress() function "does stuff" in the network layer
