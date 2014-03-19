@@ -245,9 +245,9 @@ hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func) {
 
 
 void hpx_parcel_send(hpx_parcel_t *p) {
-  if (hpx_addr_try_pin(p->target, NULL))
-    scheduler_spawn(p);
-  else
+  // if (hpx_addr_try_pin(p->target, NULL))
+  //   scheduler_spawn(p);
+  // else
     network_send(_network, p);
 }
 
@@ -313,4 +313,11 @@ int hpx_get_num_ranks(void) {
 
 int hpx_get_num_threads(void) {
   return scheduler_get_n_workers(_sched);
+}
+
+const char *hpx_get_network_id(void) {
+  if (_transport)
+    return transport_id(_transport);
+  else
+    return "cannot query network now";
 }

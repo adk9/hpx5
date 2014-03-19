@@ -21,9 +21,11 @@
 /// The transport interface is defined as an abstract class.
 /// ----------------------------------------------------------------------------
 struct transport {
-  /* static */ void (*barrier)(void);
-  /* static */ int (*request_size)(void);
-  /* static */ int (*adjust_size)(int size);
+  void (*barrier)(void);
+  int (*request_size)(void);
+  int (*adjust_size)(int size);
+  const char *(*id)(void)
+    HPX_RETURNS_NON_NULL;
 
   void (*delete)(transport_t*)
     HPX_NON_NULL(1);
