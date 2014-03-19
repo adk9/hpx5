@@ -20,7 +20,11 @@
 #include "heavy.h"
 
 /// ----------------------------------------------------------------------------
+/// The heavy network thread just loops in network_progress(), and tests for
+/// cancellation and yields each time through the loop.
 ///
+/// This structure isn't great, but is not terrible for a funneled transport
+/// implementation.
 /// ----------------------------------------------------------------------------
 void* heavy_network(void *args) {
   network_t *network = args;
