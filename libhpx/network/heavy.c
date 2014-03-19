@@ -28,6 +28,7 @@
 /// ----------------------------------------------------------------------------
 void* heavy_network(void *args) {
   network_t *network = args;
+  network_barrier(network);
 
   while (1) {
     pthread_testcancel();
