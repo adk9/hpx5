@@ -13,7 +13,7 @@
 #ifndef LIBHPX_PARCEL_CACHE_H
 #define LIBHPX_PARCEL_CACHE_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 /// A hashtable cache of parcels. Each entry in the table is a freelist of
 /// parcels of a single size.

@@ -12,7 +12,7 @@
 // =============================================================================
 #include <stddef.h>
 #include <stdlib.h>
-#include "sync/ms_queue.h"
+#include "libsync/ms_queue.h"
 
 typedef struct {
   cptr_t next;

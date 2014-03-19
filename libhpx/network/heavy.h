@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_HEAVY_H
 #define LIBHPX_NETWORK_HEAVY_H
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 HPX_INTERNAL void *heavy_network(void *network);
 

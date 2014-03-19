@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_PARCEL_BLOCK_H
 #define LIBHPX_NETWORK_PARCEL_BLOCK_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/parcel/block.h

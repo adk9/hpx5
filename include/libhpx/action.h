@@ -13,7 +13,7 @@
 #ifndef LIBHPX_ACTION_H
 #define LIBHPX_ACTION_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 HPX_INTERNAL hpx_action_t action_register(const char * key,
                                           hpx_action_handler_t f)

@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 #include "libhpx/debug.h"
 

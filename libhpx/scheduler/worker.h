@@ -13,7 +13,7 @@
 #ifndef LIBHPX_WORKER_H
 #define LIBHPX_WORKER_H
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 struct scheduler;
 typedef struct worker worker_t;

@@ -18,7 +18,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 /**
  * This file defines a smarter fibonacci example, that uses many malloced

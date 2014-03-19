@@ -14,7 +14,7 @@
 #include "config.h"
 #endif
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
 /// "Home" location for the HPX_ACTION_NULL action..

@@ -15,8 +15,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "sync/barriers.h"
-#include "sync/sync.h"
+#include "libsync/barriers.h"
+#include "libsync/sync.h"
 #include "nop.h"
 
 /// The sense-reversing barrier.

@@ -22,11 +22,11 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "hpx/hpx.h"
 
-#include <contrib/uthash/src/utlist.h>
-#include <sync/sync.h>
-#include <sync/barriers.h>
-#include <hpx.h>
+#include "contrib/uthash/src/utlist.h"
+#include "libsync/sync.h"
+#include "libsync/barriers.h"
 
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"

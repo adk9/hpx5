@@ -12,7 +12,7 @@ AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
-AC_CONFIG_SRCDIR([include/hpx.h])
+AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
@@ -144,6 +144,9 @@ AC_CONFIG_FILES([
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
   include/Makefile
+  include/hpx/Makefile
+  include/libsync/Makefile
+  include/libhpx/Makefile
   examples/Makefile
   examples/hpx/Makefile	
 ])

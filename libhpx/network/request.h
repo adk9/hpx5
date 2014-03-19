@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_REQUEST_H
 #define LIBHPX_NETWORK_REQUEST_H
 
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 typedef struct request request_t;
 struct request {

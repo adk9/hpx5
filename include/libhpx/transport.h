@@ -14,7 +14,7 @@
 #define LIBHPX_TRANSPORT_H
 
 #include <stddef.h>
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 struct boot;
 typedef struct transport transport_t;

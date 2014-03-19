@@ -16,7 +16,7 @@
 #define HPX_SYNC_LOCKS_H_
 
 #include "sync.h"
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 struct tatas_lock {
     volatile int lock;

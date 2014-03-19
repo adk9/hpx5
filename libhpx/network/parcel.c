@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hpx.h>
+#include "hpx/hpx.h"
 
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"

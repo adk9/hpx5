@@ -21,7 +21,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "attributes.h"
+#include "hpx/attributes.h"
 
 /// External HPX typedefs
 /// @{
