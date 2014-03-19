@@ -23,7 +23,7 @@
 
 /// Some output wrappers
 HPX_INTERNAL void dbg_log1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
-HPX_INTERNAL void dbg_error1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+HPX_INTERNAL int dbg_error1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
 
 #ifdef ENABLE_DEBUG
 #define dbg_log(...) dbg_log1(__func__, __VA_ARGS__)
