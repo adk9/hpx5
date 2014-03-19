@@ -74,6 +74,9 @@ hpx_parcel_t *parcel_allocator_get(allocator_t *allocator, int payload) {
 
 
 void parcel_allocator_put(allocator_t *allocator, hpx_parcel_t *p) {
+  if (!_parcels)
+    _parcels = cache_new();
+
   parcel_fini(p);
   cache_put(_parcels, p);
 }
