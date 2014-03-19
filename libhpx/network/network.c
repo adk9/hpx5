@@ -299,10 +299,10 @@ void network_delete(network_t *network) {
 
 void network_send(network_t *network, hpx_parcel_t *p) {
   // check loopback via rank, on loopback push into the recv queue
-  // hpx_addr_t target = hpx_parcel_get_target(p);
-  // if (hpx_addr_try_pin(target, NULL))
-  //   sync_ms_queue_enqueue(&network->recvs, p);
-  // else
+  hpx_addr_t target = hpx_parcel_get_target(p);
+  if (hpx_addr_try_pin(target, NULL))
+    sync_ms_queue_enqueue(&network->recvs, p);
+  else
     sync_ms_queue_enqueue(&network->sends, p);
 }
 
