@@ -77,6 +77,7 @@ static int _test(transport_t *t, const void *request, int *success) {
   return HPX_ERROR;
 }
 
+
 static transport_t _smp = {
   .id           = _id,
   .barrier      = _barrier,
@@ -90,6 +91,7 @@ static transport_t _smp = {
   .recv         = _recv,
   .test         = _test,
 };
+
 
 transport_t *transport_new_smp(const struct boot *boot) {
   return &_smp;
