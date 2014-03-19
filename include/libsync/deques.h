@@ -51,10 +51,10 @@ typedef struct chase_lev_ws_deque {
   SYNC_ATOMIC(uint64_t) bottom;
   SYNC_ATOMIC(uint64_t) top;
   SYNC_ATOMIC(size_t) size;
-  void * SYNC_ATOMIC(*) array;
+  void * SYNC_ATOMIC(*) buffer;
 } chase_lev_ws_deque_t;
 
-HPX_INTERNAL chase_lev_ws_deque_t * sync_chase_lev_ws_deque_new(int size);
+HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(int size);
 
 HPX_INTERNAL void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d,
                                                int size)
