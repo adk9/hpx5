@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <hpx.h>
 
 #include "libhpx/debug.h"
 
@@ -30,7 +31,7 @@ dbg_log1(const char *f, const char *fmt, ...) {
   fflush(stdout);
 }
 
-void
+int
 dbg_error1(const char *f, const char *fmt, ...) {
   fprintf(stderr, "LIBHPX<%d,%d>: %s() ", hpx_get_my_rank(), hpx_get_my_thread_id(), f);
 
@@ -40,4 +41,5 @@ dbg_error1(const char *f, const char *fmt, ...) {
   va_end(args);
 
   fflush(stderr);
+  return HPX_ERROR;
 }
