@@ -65,9 +65,9 @@ boot_t *boot_new_mpirun(void) {
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable->delete  = _delete;
-  mpi->vtable->rank    = _rank;
-  mpi->vtable->n_ranks = _n_ranks;
+  mpi->vtable.delete  = _delete;
+  mpi->vtable.rank    = _rank;
+  mpi->vtable.n_ranks = _n_ranks;
 
   if ((MPI_Comm_rank(MPI_COMM_WORLD, &mpi->rank) != MPI_SUCCESS) ||
       (MPI_Comm_size(MPI_COMM_WORLD, &mpi->n_ranks) != MPI_SUCCESS)) {
