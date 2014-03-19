@@ -45,6 +45,8 @@ static int _rank(const boot_t *boot) {
 
 
 static int _n_ranks(const boot_t *boot) {
+  const mpi_t *mpi = (const mpi_t*)boot;
+  return mpi->n_ranks;
 }
 
 
@@ -75,5 +77,5 @@ boot_t *boot_new_mpirun(void) {
     return NULL;
   }
 
-  return mpi;
+  return &mpi->vtable;
 }
