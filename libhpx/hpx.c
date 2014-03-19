@@ -145,7 +145,7 @@ int hpx_init(const hpx_config_t *cfg) {
   }
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
-  int workers = (cfg->threads) ? cfg->threads : cfg->cores;
+  int workers = (cfg->threads) ? cfg->threads : cores;
   int stack_size = cfg->stack_bytes;
   _sched = scheduler_new(_network, cores, workers, stack_size, NULL);
   if (!_sched) {
@@ -208,6 +208,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 
   // shut down the system in the correct order
   if (_state == HPX_SHUTDOWN) {
+    scheduler_shutdown(_sched);
     scheduler_delete(_sched);
     network_delete(_network);
     parcel_allocator_delete(_allocator);
