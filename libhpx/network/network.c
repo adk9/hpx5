@@ -240,6 +240,7 @@ static int _test(network_t *network, void (*finish)(network_t*, request_t*),
   return _test(network, finish, curr, n + 1);
 }
 
+
 network_t *network_new(const boot_t *boot, transport_t *transport) {
   network_t *n = malloc(sizeof(*n));
   n->boot          = boot;
@@ -253,6 +254,7 @@ network_t *network_new(const boot_t *boot, transport_t *transport) {
   n->free          = NULL;
   return n;
 }
+
 
 void network_delete(network_t *network) {
   if (!network)
@@ -294,6 +296,7 @@ void network_delete(network_t *network) {
   free(network);
 }
 
+
 void network_send(network_t *network, hpx_parcel_t *p) {
   // check loopback via rank, on loopback push into the recv queue
   hpx_addr_t target = hpx_parcel_get_target(p);
@@ -302,6 +305,7 @@ void network_send(network_t *network, hpx_parcel_t *p) {
   else
     sync_ms_queue_enqueue(&network->sends, p);
 }
+
 
 hpx_parcel_t *network_recv(network_t *network) {
   return sync_ms_queue_dequeue(&network->recvs);
@@ -324,4 +328,9 @@ void network_progress(network_t *network) {
   bool recv = _try_start_recv(network);
   if (recv)
     dbg_log("started a recv.\n");
+}
+
+
+void network_barrier(network_t *network) {
+  transport_barrier(network->transport);
 }

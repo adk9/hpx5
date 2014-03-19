@@ -87,7 +87,9 @@ static int _on_start(void *sp, void *env) {
   self.sp = sp;
 
   // wait for the rest of the scheduler to catch up to me
-  barrier_join(self.scheduler->barrier, self.id);
+  if (barrier_join(self.scheduler->barrier, self.id))
+      network_barrier(self.network);
+
   return HPX_SUCCESS;
 }
 

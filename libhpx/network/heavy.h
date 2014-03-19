@@ -15,6 +15,6 @@
 
 #include "attributes.h"
 
-HPX_INTERNAL void *heavy_network(void *handler);
+HPX_INTERNAL void *heavy_network(void *network);
 
 #endif // LIBHPX_NETWORK_HEAVY_H

@@ -143,6 +143,7 @@ HPX_INTERNAL void transport_barrier(transport_t *t)
 HPX_INTERNAL int transport_adjust_size(transport_t *t, int size)
   HPX_NON_NULL(1);
 
+
 /// ----------------------------------------------------------------------------
 /// Get the transport id.
 /// ----------------------------------------------------------------------------
