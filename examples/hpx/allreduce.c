@@ -15,11 +15,17 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <hpx.h>
+
+#include "debug.h"
 
 #define T int
 
@@ -94,8 +100,7 @@ action_allreduce(void *unused) {
   hpx_shutdown(0);
 }
 
-int
-main(int argc, char** argv) {
+int main(int argc, char** argv) {
   hpx_config_t config = {
     .cores = 0,
     .threads = 0,

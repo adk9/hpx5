@@ -15,11 +15,17 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <hpx.h>
+
+#include "debug.h"
 
 #define BUFFER_SIZE 128
 
@@ -33,7 +39,6 @@ static hpx_action_t _pong = 0;
 
 /* helper functions */
 static void _usage(FILE *stream);
-static void _wait_for_debugger(void);
 static void _register_actions(void);
 static hpx_addr_t _partner(void);
 
@@ -117,7 +122,7 @@ int main(int argc, char *argv[]) {
          args.id, _text, _verbose);
 
   if (debug)
-    _wait_for_debugger();
+    wait_for_debugger();
 
   int e = hpx_init(&cfg);
   if (e) {
@@ -190,21 +195,6 @@ static int _action_pong(void *msg) {
   RANK_PRINTF("ponging rank %d, msg='%s'\n", hpx_addr_to_rank(to), args->msg);
   hpx_parcel_send(p);
   return HPX_SUCCESS;
-}
-
-
-/**
- * Used for debugging. Causes a process to wait for a debugger to attach, and
- * set the value if i != 0.
- */
-void _wait_for_debugger(void) {
-  int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  while (0 == i)
-    sleep(12);
 }
 
 
