@@ -25,7 +25,7 @@
 #include <stdlib.h>
 
 #include "contrib/uthash/src/utlist.h"
-#include "libsync/ms_queue.h"
+#include "libsync/queues.h"
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
