@@ -12,13 +12,26 @@
   Research in Extreme Scale Technologies (CREST).
   ====================================================================
 */
-
-#pragma once
 #ifndef HPX_LIBSYNC_NOP_H_
 #define HPX_LIBSYNC_NOP_H_
 
 /* This file defines an interface to nop. */
+#include "attributes.h"
+#include "sync/sync.h"
 
-void sync_nop();
+/// ----------------------------------------------------------------------------
+/// Your basic no-op.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void sync_nop(void);
+
+
+/// ----------------------------------------------------------------------------
+/// An mwait style no-op.
+///
+/// This has no-op semantics, but could possibly be smarter in a system that has
+/// an intelligent wait state, like x86 MONITOR/MWAIT.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void sync_nop_mwait(SYNC_ATOMIC(void*));
+
 
 #endif /* HPX_LIBSYNC_NOP_H_ */

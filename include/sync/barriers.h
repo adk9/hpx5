@@ -16,10 +16,36 @@
 #ifndef HPX_SYNC_BARRIERS_H_
 #define HPX_SYNC_BARRIERS_H_
 
-typedef struct sr_barrier sr_barrier_t;
+/// ----------------------------------------------------------------------------
+/// The barrier class.
+///
+/// A barrier has two member functions, delete() and join().
+/// ----------------------------------------------------------------------------
+typedef struct barrier {
+  void (*delete)(struct barrier*);
+  int (*join)(struct barrier*, int i);
+} barrier_t;
 
-sr_barrier_t *sr_barrier_new(int n_threads);
-void sr_barrier_delete(sr_barrier_t *barrier);
-void sr_barrier_join(sr_barrier_t *barrier, int thread_id);
+/// ----------------------------------------------------------------------------
+/// Forward to the barrier's specific delete function.
+/// ----------------------------------------------------------------------------
+static inline void barrier_delete(barrier_t *barrier) {
+  barrier->delete(barrier);
+}
+
+/// ----------------------------------------------------------------------------
+/// Forward to the barrier's specific join function.
+/// ----------------------------------------------------------------------------
+static inline int barrier_join(barrier_t *barrier, int i) {
+  return barrier->join(barrier, i);
+}
+
+/// ----------------------------------------------------------------------------
+/// Allocate a simple sense-reversing barrier.
+///
+/// This isn't the most scalable barrier in the world, but it's not terrible for
+/// occasional use, and it's really easy to implement and use.
+/// ----------------------------------------------------------------------------
+barrier_t *sr_barrier_new(int n_threads);
 
 #endif /* HPX_SYNC_BARRIERS_H_ */
