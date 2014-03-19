@@ -96,10 +96,10 @@ static enum {
 } _state = HPX_NEW;
 
 /// ----------------------------------------------------------------------------
-/// Common code to support hpx_abort() and hpx_shutdown().
+/// An action to support hpx_shutdown().
 ///
 /// Acquires the lock, sets the state correctly, and then signals the
-/// condition.
+/// condition. This allows remote shutdown requests (see hpx_shutdown()).
 /// ----------------------------------------------------------------------------
 static int _shutdown_action(void *args) {
   int code = *(int*)args;
@@ -115,6 +115,7 @@ static int _shutdown_action(void *args) {
 }
 
 
+/// Generate an address for a rank.
 hpx_addr_t HPX_THERE(int i) {
   hpx_addr_t there = {
     .rank = i,
@@ -123,11 +124,11 @@ hpx_addr_t HPX_THERE(int i) {
   return there;
 }
 
+
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(int code) {
   abort();
-  // _shutdown(code, HPX_SHUTDOWN);
 }
 
 
