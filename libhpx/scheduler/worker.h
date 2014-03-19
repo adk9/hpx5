@@ -22,13 +22,11 @@ typedef struct worker worker_t;
 /// Starts a worker thread associated with a scheduler.
 ///
 /// @param      id - the worker's id
-/// @param core_id - the core id this worker's native thread should run on
 /// @param   sched - the sched instance this worker is associated with
-/// @returns       - a worker object
+/// @returns       - HPX_SUCCESS or HPX_ERROR
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL worker_t *worker_start(int id, int core_id,
-                                    struct scheduler *sched)
-  HPX_NON_NULL(3);
+HPX_INTERNAL int worker_start(int id, struct scheduler *s)
+  HPX_NON_NULL(2);
 
 
 /// ----------------------------------------------------------------------------
