@@ -14,6 +14,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <mpi.h>
@@ -97,13 +98,13 @@ static void _unpin(transport_t *transport, const void* buffer, size_t len) {
 /// ----------------------------------------------------------------------------
 static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
-  int src = t->rank();
-  MPI_Request *request = r;
-  if (MPI_Isend(data, n, MPI_BYTE, dest, src, MPI_COMM_WORLD, request) ==
+  mpi_t *mpi = (mpi_t*)t;
+  void *b = (void*)data;
+  if (MPI_Isend(b, n, MPI_BYTE, dest, mpi->rank, MPI_COMM_WORLD, r) ==
       MPI_SUCCESS)
       return HPX_SUCCESS;
 
-  dbg_error("MPI could not send %d bytes to %i.\n", n, dest);
+  dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
   return HPX_ERROR;
 }
 
@@ -113,12 +114,12 @@ static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 /// ----------------------------------------------------------------------------
 static size_t _probe(transport_t *transport, int *source) {
   if (*source != TRANSPORT_ANY_SOURCE) {
-    dbg_error("mpi transport can not currently probe source %d\n", d);
+    dbg_error("mpi transport can not currently probe source %d\n", *source);
     return 0;
   }
 
   int flag = 0;
-  MPI_status status;
+  MPI_Status status;
   if (MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status) !=
       MPI_SUCCESS) {
     dbg_error("mpi failed Iprobe.\n");
@@ -128,8 +129,8 @@ static size_t _probe(transport_t *transport, int *source) {
   if (!flag)
     return 0;
 
-  size_t bytes = 0;
-  if (MPI_Get_count(&status, MPI_BYTE, bytes) != MPI_SUCCESS) {
+  int bytes = 0;
+  if (MPI_Get_count(&status, MPI_BYTE, &bytes) != MPI_SUCCESS) {
     dbg_error("could not extract bytes from mpi.\n");
     return 0;
   }
@@ -145,22 +146,22 @@ static size_t _probe(transport_t *transport, int *source) {
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
 static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
+  mpi_t *mpi = (mpi_t*)t;
+
   assert(src != TRANSPORT_ANY_SOURCE);
   assert(src >= 0);
-  assert(src < transport->n_ranks());
-
-  MPI_Request *req = r;
+  assert(src < mpi->n_ranks);
 
   if (MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r) ==
       MPI_SUCCESS)
     return HPX_SUCCESS;
 
-  dbg_error("could not receive %d bytes from %i", n, src);
+  dbg_error("could not receive %lu bytes from %i", n, src);
   return HPX_ERROR;
 }
 
 
-transport_t *transport_new_mpi(boot_t *boot) {
+transport_t *transport_new_mpi(const boot_t *boot) {
   int val = 0;
   MPI_Initialized(&val);
 
@@ -173,21 +174,21 @@ transport_t *transport_new_mpi(boot_t *boot) {
     dbg_log("thread_support_provided = %d\n", threading);
   }
 
-  static mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable->id           = _id;
-  mpi->vtable->barrier      = _barrier;
-  mpi->vtable->request_size = _request_size;
-  mpi->vtable->adjust_size  = _adjust_size;
+  mpi_t *mpi = malloc(sizeof(*mpi));
+  mpi->vtable.id           = _id;
+  mpi->vtable.barrier      = _barrier;
+  mpi->vtable.request_size = _request_size;
+  mpi->vtable.adjust_size  = _adjust_size;
 
-  mpi->vtable->delete       = _delete;
-  mpi->vtable->pin          = _pin;
-  mpi->vtable->unpin        = _unpin;
-  mpi->vtable->send         = _send;
-  mpi->vtable->probe        = _probe;
-  mpi->vtable->recv         = _recv;
+  mpi->vtable.delete       = _delete;
+  mpi->vtable.pin          = _pin;
+  mpi->vtable.unpin        = _unpin;
+  mpi->vtable.send         = _send;
+  mpi->vtable.probe        = _probe;
+  mpi->vtable.recv         = _recv;
 
-  mpi->rank                 = boot_rank(boot);
-  mpi->n_ranks              = boot_n_ranks(boot);
+  mpi->rank                = boot_rank(boot);
+  mpi->n_ranks             = boot_n_ranks(boot);
 
   return &mpi->vtable;
 }
