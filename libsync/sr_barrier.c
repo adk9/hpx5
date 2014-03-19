@@ -15,43 +15,65 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "sync.h"
-#include "barriers.h"
+#include "sync/barriers.h"
+#include "sync/sync.h"
+#include "nop.h"
 
-struct sr_barrier {
+/// The sense-reversing barrier.
+///
+/// Could use some padding here, if we ever wanted this to be useful for
+/// common-case code. On the other hand, the sense-reversing barrier is never
+/// going to be super-scalable, so we're not worried about it.
+typedef struct {
+  barrier_t vtable;
   SYNC_ATOMIC(int count);
   int threads;
   SYNC_ATOMIC(int sense);
   int senses[];
-};
+} sr_barrier_t;
 
-sr_barrier_t *sr_barrier_new(int n) {
-  sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
-  assert(barrier && "Could not allocate a sense-reversing barrier.");
-  barrier->count = 0;
-  barrier->threads = n;
-  barrier->sense = 1;
-  for (int i = 0; i < n; ++i)
-    barrier->senses[i] = 1;
-  return barrier;
-}
-
-void sr_barrier_delete(sr_barrier_t *barrier) {
+/// Delete member function.
+static void _delete(barrier_t *barrier) {
   free(barrier);
 }
 
-void sr_barrier_join(sr_barrier_t *barrier, int tid) {
-  int sense = 1 - barrier->senses[tid];
-  barrier->senses[tid] = sense;
 
-  if (sync_fadd(&barrier->count, 1, SYNC_ACQ_REL) == (barrier->threads - 1)) {
-    sync_store(&barrier->count, 0, SYNC_RELAXED);
-    sync_store(&barrier->sense, sense, SYNC_RELEASE);
+/// Sense-reversing join member function.
+///
+/// see: http://www.morganclaypool.com/doi/abs/10.2200/S00499ED1V01Y201304CAC023
+static int _join(barrier_t *barrier, int i) {
+  sr_barrier_t *this = (sr_barrier_t*)barrier;
+  int sense = 1 - this->senses[i];
+  this->senses[i] = sense;
+
+  // If I'm the last joiner, release everyone and return 1
+  if (sync_fadd(&this->count, 1, SYNC_ACQ_REL) == (this->threads - 1)) {
+    sync_store(&this->count, 0, SYNC_RELAXED);
+    sync_store(&this->sense, sense, SYNC_RELEASE);
+    return 1;
   }
-  else {
-    while (sync_load(&barrier->sense, SYNC_ACQUIRE) != sense)
-      /* nop */;
-  }
+
+  // Otherwise wait.
+  while (sync_load(&this->sense, SYNC_ACQUIRE) != sense)
+    sync_nop_mwait(&this->sense);
   sync_fence(SYNC_RELEASE);
+  return 0;
 }
+
+
+barrier_t *sr_barrier_new(int n) {
+  sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
+  assert(barrier && "Could not allocate a sense-reversing barrier.");
+  barrier->vtable.delete = _delete;
+  barrier->vtable.join   = _join;
+  barrier->count         = 0;
+  barrier->threads       = n;
+  barrier->sense         = 1;
+
+  for (int i = 0; i < n; ++i)
+    barrier->senses[i]   = 1;
+
+  return &barrier->vtable;
+}
+
 
