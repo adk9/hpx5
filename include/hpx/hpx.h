@@ -47,6 +47,7 @@ typedef struct {
 extern const hpx_addr_t HPX_NULL;
 extern const hpx_addr_t HPX_ANYWHERE;
 extern hpx_addr_t HPX_HERE;
+hpx_addr_t HPX_THERE(int i);
 
 /// Allocate global memory.
 ///

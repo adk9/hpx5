@@ -26,8 +26,8 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hpx/hpx.h"
 
+#include "hpx/hpx.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/boot.h"
@@ -40,8 +40,11 @@
 #include "network/allocator.h"
 #include "network/heavy.h"
 
+
 /// ----------------------------------------------------------------------------
-/// libhpx objects
+/// Global libhpx module objects.
+///
+/// These are the global objects we allocate and link together in hpx_init().
 /// ----------------------------------------------------------------------------
 static boot_t           *_boot = NULL;
 static transport_t *_transport = NULL;
@@ -49,25 +52,39 @@ static allocator_t *_allocator = NULL;
 static network_t     *_network = NULL;
 static scheduler_t     *_sched = NULL;
 
+
 /// ----------------------------------------------------------------------------
-/// used to synchronize the main thread during shutdown
+/// Used to synchronize the main thread during shutdown.
 /// ----------------------------------------------------------------------------
 static int               _status = HPX_SUCCESS;
 static pthread_mutex_t    _mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t _condition = PTHREAD_COND_INITIALIZER;
 
+
 /// ----------------------------------------------------------------------------
-/// action for use in global free
+/// Action for use in global free and shutdown.
+///
+/// TODO: shutdown isn't handled well, in particular, if the scheduler is
+///       overloaded then the shutdown action may never happen---ideally the
+///       network_progress() loop should deal with shutdown.
 /// ----------------------------------------------------------------------------
 static int _free_action(void *args);
-static hpx_action_t _free = 0;
+static int _shutdown_action(void *args);
 
+static hpx_action_t _free = 0;
+static hpx_action_t _shutdown = 0;
 
 /// ----------------------------------------------------------------------------
-/// The global here object.
+/// The global "here" address.
+///
+/// This is set with the current rank after _boot is intialized, in hpx_init().
 /// ----------------------------------------------------------------------------
 hpx_addr_t HPX_HERE = { NULL, -1 };
 
+
+/// ----------------------------------------------------------------------------
+/// The current system state.
+/// ----------------------------------------------------------------------------
 static enum {
   HPX_NEW = 0,
   HPX_INIT,
@@ -78,19 +95,18 @@ static enum {
   HPX_INAVLID
 } _state = HPX_NEW;
 
-static void _set_state(int state) {
-  pthread_mutex_lock(&_mutex);
-  _state = state;
-  pthread_mutex_unlock(&_mutex);
-}
-
-
-/// common code to support hpx_abort and hpx_shutdown
-static void HPX_NORETURN _shutdown(int code, int state) {
+/// ----------------------------------------------------------------------------
+/// Common code to support hpx_abort() and hpx_shutdown().
+///
+/// Acquires the lock, sets the state correctly, and then signals the
+/// condition.
+/// ----------------------------------------------------------------------------
+static int _shutdown_action(void *args) {
+  int code = *(int*)args;
   pthread_mutex_lock(&_mutex);
   assert(HPX_INIT < _state && _state < HPX_DONE);
-  if (state > _state) {
-    _state = state;
+  if (HPX_SHUTDOWN > _state) {
+    _state = HPX_SHUTDOWN;
     _status = code;
   }
   pthread_cond_signal(&_condition);
@@ -99,25 +115,39 @@ static void HPX_NORETURN _shutdown(int code, int state) {
 }
 
 
+hpx_addr_t HPX_THERE(int i) {
+  hpx_addr_t there = {
+    .rank = i,
+    .local = NULL
+  };
+  return there;
+}
+
 /// Called by the application to shutdown the scheduler and network. May be
-/// called from any lightweight HPX thread. Should not be called from the main
-/// thread.
+/// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(int code) {
-  _shutdown(code, HPX_SHUTDOWN);
+  abort();
+  // _shutdown(code, HPX_SHUTDOWN);
 }
 
 
 /// Called by the application to terminate the scheduler and network. Called
 /// from an HPX lightweight thread.
 void hpx_shutdown(int code) {
-  _shutdown(code, HPX_SHUTDOWN);
+  for (int i = 0, e = boot_n_ranks(_boot); i < e; ++i) {
+    hpx_addr_t l = HPX_THERE(i);
+    if (!hpx_addr_eq(l, HPX_HERE))
+      hpx_call(l, _shutdown, &code, sizeof(code), HPX_NULL);
+  }
+  hpx_call(HPX_HERE, _shutdown, &code, sizeof(code), HPX_NULL);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 
 /// Allocate and link together all of the library objects.
 int hpx_init(const hpx_config_t *cfg) {
   _free = action_register("_hpx_free_action", _free_action);
-
+  _shutdown = action_register("_hpx_shutdown_action", _shutdown_action);
   _boot = boot_new();
   if (!_boot) {
     dbg_error("failed to create boot manager.\n");
@@ -154,7 +184,9 @@ int hpx_init(const hpx_config_t *cfg) {
     goto unwind4;
   }
 
-  _set_state(HPX_INIT);
+  pthread_mutex_lock(&_mutex);
+  _state = HPX_INIT;
+  pthread_mutex_unlock(&_mutex);
 
   return HPX_SUCCESS;
 
