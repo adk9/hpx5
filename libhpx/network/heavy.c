@@ -10,6 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <pthread.h>
+
 #include "libhpx/network.h"
 #include "heavy.h"
 
@@ -20,7 +26,8 @@ void* heavy_network(void *args) {
   network_t *network = args;
 
   while (1) {
+    pthread_testcancel();
     network_progress(network);
+    pthread_yield();
   }
 }
-
