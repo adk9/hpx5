@@ -21,65 +21,18 @@
 #include <inttypes.h>
 #include <hpx.h>
 
-/// The command line arguments for fibonacci
-typedef struct {
-  int n;
-  int debug;
-  int threads;
-} args_t;
-
-static void print_usage(FILE *stream) {
-  fprintf(stream, "\n"
-          "Usage: fibonaccihpx [-tdh] NUMBER\n"
-          "\t-t\tnumber of HPX scheduler threads\n"
-          "\t-d\twait for debugger\n"
-          "\t-h\tthis help display\n"
-          "\n");
+static void _usage(FILE *stream) {
+  fprintf(stream, "Usage: fibonaccihpx [options] NUMBER\n"
+          "\t-c, number of cores to run on\n"
+          "\t-t, number of scheduler threads\n"
+          "\t-d, wait for debugger\n"
+          "\t-h, this help display\n");
 }
 
-// Our argument parser.
-static int parse(int argc, char *argv[argc], args_t *args) {
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "dt:h")) != -1) {
-    switch (opt) {
-     case 'd':
-      args->debug = 1;
-      break;
-     case 't':
-      args->threads = atoi(optarg);
-      break;
-     case 'h':
-      print_usage(stdout);
-      return 1;
-     case '?':
-     default:
-      print_usage(stderr);
-      return -1;
-    }
-  }
+static hpx_action_t _fib = 0;
+static hpx_action_t _fib_main = 0;
 
-  argc -= optind;
-  argv += optind;
-
-  switch (argc) {
-   default:
-    print_usage(stderr);
-    return -1;
-   case 1:
-     args->n = atoi(argv[0]);
-     return 0;
-   case 0:
-    fprintf(stderr, "Missing fib number.\n");
-    print_usage(stderr);
-    return -1;
-  }
-}
-
-static hpx_action_t fib = 0;
-static hpx_action_t fib_main = 0;
-
-static int
-fib_action(void *args) {
+static int _fib_action(void *args) {
   int n = *(int*)args;
 
   if (n < 2)
@@ -118,8 +71,8 @@ fib_action(void *args) {
     sizeof(int)
   };
 
-  hpx_call(peers[0], fib, &ns[0], sizeof(int), futures[0]);
-  hpx_call(peers[1], fib, &ns[1], sizeof(int), futures[1]);
+  hpx_call(peers[0], _fib, &ns[0], sizeof(int), futures[0]);
+  hpx_call(peers[1], _fib, &ns[1], sizeof(int), futures[1]);
   hpx_future_get_all(2, futures, addrs, sizes);
   hpx_future_delete(futures[0]);
   hpx_future_delete(futures[1]);
@@ -129,14 +82,13 @@ fib_action(void *args) {
   return HPX_SUCCESS;
 }
 
-static int
-fib_main_action(void *args) {
+static int _fib_main_action(void *args) {
   int n = *(int*)args;
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t clock = hpx_time_now();
   hpx_addr_t future = hpx_future_new(sizeof(int));
-  hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), fib, &n, sizeof(n), future);
+  hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), _fib, &n, sizeof(n), future);
   hpx_future_get(future, &fn, sizeof(fn));
 
   double time = hpx_time_elapsed_ms(clock)/1e3;
@@ -150,18 +102,51 @@ fib_main_action(void *args) {
 }
 
 int main(int argc, char *argv[]) {
-  args_t args = {0};
-  int e = parse(argc, argv, &args);
-  if (e)
-    return e;
-
-  hpx_config_t config = {
+  hpx_config_t cfg = {
     .cores = 0,
-    .threads = args.threads,
+    .threads = 0,
     .stack_bytes = 0
   };
 
-  if (args.debug) {
+  bool debug = false;
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
+    switch (opt) {
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'd':
+      debug = true;
+      break;
+     case 'h':
+      _usage(stdout);
+      return 0;
+     case '?':
+     default:
+      _usage(stderr);
+      return -1;
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  int n = 0;
+  switch (argc) {
+   case 0:
+    fprintf(stderr, "\nMissing fib number.\n"); // fall through
+   default:
+    _usage(stderr);
+    return -1;
+   case 1:
+     n = atoi(argv[0]);
+     break;
+  }
+
+  if (debug) {
     int i = 0;
     char hostname[256];
     gethostname(hostname, sizeof(hostname));
@@ -171,16 +156,16 @@ int main(int argc, char *argv[]) {
       sleep(5);
   }
 
-  e = hpx_init(&config);
+  int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
 
   // register the fib action
-  fib = hpx_register_action("fib", fib_action);
-  fib_main = hpx_register_action("fib_main", fib_main_action);
+  _fib = hpx_register_action("_fib", _fib_action);
+  _fib_main = hpx_register_action("_fib_main", _fib_main_action);
 
   // run the main action
-  return hpx_run(fib_main, &args.n, sizeof(args.n));
+  return hpx_run(_fib_main, &n, sizeof(n));
 }
