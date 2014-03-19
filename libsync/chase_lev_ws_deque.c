@@ -19,3 +19,4 @@
 /// "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
 /// @url http://dl.acm.org/citation.cfm?id=1073974.
 /// ----------------------------------------------------------------------------
+#include "libsync/deques.h"
