@@ -15,11 +15,17 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <hpx.h>
+
+#include "debug.h"
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fibonaccihpx [options] NUMBER\n"
@@ -146,15 +152,8 @@ int main(int argc, char *argv[]) {
      break;
   }
 
-  if (debug) {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    while (0 == i)
-      sleep(5);
-  }
+  if (debug)
+    wait_for_debugger();
 
   int e = hpx_init(&cfg);
   if (e) {

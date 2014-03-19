@@ -15,10 +15,16 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <hpx.h>
+
+#include "debug.h"
 
 static __thread unsigned seed = 0;
 
@@ -49,10 +55,10 @@ static int send_action(void *args) {
 }
 
 static void usage(FILE *f) {
-  fprintf(f,
-          "Usage: countdown [options] ROUNDS \n"
+  fprintf(f, "Usage: countdown [options] ROUNDS \n"
           "\t-c, cores\n"
-          "\t-t, threads\n"
+          "\t-t, scheduler threads\n"
+          "\t-d, wait for debugger\n"
           "\t-h, show help\n");
 }
 
@@ -63,14 +69,18 @@ int main(int argc, char * argv[argc]) {
     .stack_bytes = 0
   };
 
+  bool debug = false;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'd':
+      debug = true;
       break;
      case 'h':
       usage(stdout);
@@ -94,6 +104,9 @@ int main(int argc, char * argv[argc]) {
     n = atoi(argv[0]);
     break;
   }
+
+  if (debug)
+    wait_for_debugger();
 
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
