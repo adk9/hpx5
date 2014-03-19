@@ -186,6 +186,7 @@ transport_t *transport_new_mpi(const boot_t *boot) {
   mpi->vtable.send         = _send;
   mpi->vtable.probe        = _probe;
   mpi->vtable.recv         = _recv;
+  mpi->vtable.test         = NULL;
 
   mpi->rank                = boot_rank(boot);
   mpi->n_ranks             = boot_n_ranks(boot);
