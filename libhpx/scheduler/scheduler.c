@@ -31,32 +31,6 @@
 #include "worker.h"
 
 /// ----------------------------------------------------------------------------
-/// The scheduler class.
-///
-/// The scheduler class represents the shared-memory state of the entire
-/// scheduling process. It serves as a collection of native worker threads, and
-/// a network port, and allows them to communicate with each other and the
-/// network.
-///
-/// It is possible to have multiple scheduler instances active within the same
-/// memory space---though it is unclear why we would need or want that at this
-/// time---and it is theoretically possible to move workers between schedulers
-/// by updating the worker's scheduler pointer and the scheduler's worker
-/// table, though all of the functionality that is required to make this work is
-/// not implemented.
-/// ----------------------------------------------------------------------------
-/// @{
-struct scheduler {
-  process_map_t      pmap;
-  int               cores;
-  struct network *network;
-  int           n_workers;
-  worker_t      **workers;
-  sr_barrier_t   *barrier;
-};
-
-
-/// ----------------------------------------------------------------------------
 /// A basic worker->core mapping.
 ///
 /// Just round robin workers through the processors attached to the scheduler.
@@ -115,14 +89,13 @@ void scheduler_delete(scheduler_t *sched) {
 int scheduler_startup(scheduler_t *sched) {
   // start all of the worker threads
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    int core = sched->pmap(sched, i);
-    if ((sched->workers[i] = worker_start(i, core, sched)))
-      continue;
-
-    dbg_error("could not start worker %d.\n", i);
-    for (int j = 0; j < i; ++j)
-      worker_cancel(sched->workers[j]);
-    return HPX_ERROR;
+    int e = worker_start(i, sched);
+    if (e){
+      dbg_error("could not start worker %d.\n", i);
+      for (int j = 0; j < i; ++j)
+        worker_cancel(sched->workers[j]);
+      return HPX_ERROR;
+    }
   }
 
   // return success
@@ -145,19 +118,4 @@ void scheduler_shutdown(scheduler_t *sched) {
 void scheduler_abort(scheduler_t *sched) {
   for (int i = 0, e = sched->n_workers; i < e; ++i)
     worker_cancel(sched->workers[i]);
-}
-
-
-void scheduler_barrier(scheduler_t *sched, int i) {
-  sr_barrier_join(sched->barrier, i);
-}
-
-
-int scheduler_get_n_workers(const scheduler_t *sched) {
-  return sched->n_workers;
-}
-
-
-hpx_parcel_t *scheduler_network_recv(scheduler_t *sched) {
-  return network_recv(sched->network);
 }

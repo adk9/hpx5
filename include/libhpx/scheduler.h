@@ -37,9 +37,35 @@
 struct lco;
 struct thread;
 struct network;
+struct worker;
+struct sr_barrier;
 typedef struct scheduler scheduler_t;
 typedef int (*process_map_t)(scheduler_t *, int);
 /// @}
+
+/// ----------------------------------------------------------------------------
+/// The scheduler class.
+///
+/// The scheduler class represents the shared-memory state of the entire
+/// scheduling process. It serves as a collection of native worker threads, and
+/// a network port, and allows them to communicate with each other and the
+/// network.
+///
+/// It is possible to have multiple scheduler instances active within the same
+/// memory space---though it is unclear why we would need or want that at this
+/// time---and it is theoretically possible to move workers between schedulers
+/// by updating the worker's scheduler pointer and the scheduler's worker
+/// table, though all of the functionality that is required to make this work is
+/// not implemented.
+/// ----------------------------------------------------------------------------
+struct scheduler {
+  process_map_t         pmap;
+  int                  cores;
+  struct network    *network;
+  int              n_workers;
+  struct worker    **workers;
+  struct sr_barrier *barrier;
+};
 
 
 /// ----------------------------------------------------------------------------
@@ -105,30 +131,6 @@ HPX_INTERNAL void scheduler_shutdown(scheduler_t*);
 /// should only be called by the main thread that called scheduler_startup().
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_abort(scheduler_t*);
-
-
-/// ----------------------------------------------------------------------------
-/// Join the scheduler's barrier.
-///
-/// This implements a "global" barrier within the scheduler's set of worker
-/// threads.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_barrier(scheduler_t*, int)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
-/// Get a parcel from the network.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *scheduler_network_recv(scheduler_t *)
-  HPX_NON_NULL(1) HPX_RETURNS_NON_NULL;
-
-
-/// ----------------------------------------------------------------------------
-/// Get the number of workers in the scheduler.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_get_n_workers(const scheduler_t *)
-  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------

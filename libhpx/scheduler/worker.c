@@ -30,6 +30,7 @@
 
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
+#include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 #include "thread.h"
@@ -59,6 +60,7 @@ static __thread struct worker {
   thread_t         *next;                       // local active threads
   atomic_int_t  shutdown;                       // cooperative shutdown flag
   scheduler_t *scheduler;                       // the scheduler we belong to
+  network_t     *network;                       // could have per-worker port
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -68,7 +70,8 @@ static __thread struct worker {
   .ready     = NULL,
   .next      = NULL,
   .shutdown  = 0,
-  .scheduler = NULL
+  .scheduler = NULL,
+  .network   = NULL
 };
 
 
@@ -84,7 +87,7 @@ static int _on_start(void *sp, void *env) {
   self.sp = sp;
 
   // wait for the rest of the scheduler to catch up to me
-  scheduler_barrier(self.scheduler, self.id);
+  sr_barrier_join(self.scheduler->barrier, self.id);
   return HPX_SUCCESS;
 }
 
@@ -122,7 +125,7 @@ static thread_t *_steal(void) {
 /// Check the network during scheduling.
 /// ----------------------------------------------------------------------------
 static thread_t *_network(void) {
-  hpx_parcel_t *p = scheduler_network_recv(self.scheduler);
+  hpx_parcel_t *p = network_recv(self.network);
   return (p) ? _bind(p) : NULL;
 }
 
@@ -195,30 +198,25 @@ static thread_t *_schedule(bool fast, thread_t *final) {
 /// ----------------------------------------------------------------------------
 typedef struct {
   int id;
-  int core_id;
-  scheduler_t *scheduler;
-  sr_barrier_t *barrier;
-  worker_t **worker;
+  scheduler_t *sched;
 } _run_args_t;
 
 void *_run(void *run_args) {
   _run_args_t *args = run_args;
 
-  // output
-  *args->worker  = &self;
-
+  // initialize my worker structure
   self.thread    = pthread_self();
   self.id        = args->id;
-  self.core_id   = args->core_id;
-  self.scheduler = args->scheduler;
+  self.core_id   = args->sched->pmap(args->sched, args->id);
+  self.scheduler = args->sched;
+  self.network   = args->sched->network;
 
-  // don't need my arguments anymore
-  free(args);
+  self.scheduler->workers[self.id] = &self;
 
   // set this thread's affinity
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(args->core_id, &cpuset);
+  CPU_SET(self.core_id, &cpuset);
   int e = pthread_setaffinity_np(self.thread, sizeof(cpuset), &cpuset);
   if (e) {
     dbg_error("failed to bind thread affinity for %d", self.id);
@@ -231,10 +229,6 @@ void *_run(void *run_args) {
     dbg_error("failed to become async cancellable.\n");
     return NULL;
   }
-
-  // I'm a real thread that can be canceled at this point, join the
-  // synchronization barrier to let the parent thread return.
-  sr_barrier_join(args->barrier, 0);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = hpx_parcel_acquire(0);
@@ -283,42 +277,29 @@ void *_run(void *run_args) {
   return NULL;
 }
 
-worker_t *worker_start(int id, int core_id, scheduler_t *scheduler) {
-  sr_barrier_t *barrier = sr_barrier_new(2);
-  if (!barrier) {
-    dbg_error("could not allocate a barrier in worker_start.\n");
-    goto unwind0;
-  }
-
+int worker_start(int id, scheduler_t *sched) {
   _run_args_t *args = malloc(sizeof(*args));
   if (!args) {
     dbg_error("could not allocate arguments for pthread entry, _run.\n");
-    goto unwind1;
+    goto unwind0;
   }
 
-  worker_t *out   = NULL;
-  args->id        = id;
-  args->core_id   = core_id;
-  args->scheduler = scheduler;
-  args->barrier   = barrier;
-  args->worker    = &out;
+  args->id = id;
+  args->sched = sched;
 
   pthread_t thread;
   int e = pthread_create(&thread, NULL, _run, args);
   if (e) {
     dbg_error("failed to create worker thread #%d.\n", self.id);
-    goto unwind2;
+    goto unwind1;
   }
 
-  sr_barrier_join(barrier, 1);
-  return out;
+  return HPX_SUCCESS;
 
- unwind2:
-  free(args);
  unwind1:
-  sr_barrier_delete(barrier);
+  free(args);
  unwind0:
-  return NULL;
+  return HPX_ERROR;
 }
 
 

@@ -313,7 +313,9 @@ int hpx_get_num_ranks(void) {
 }
 
 int hpx_get_num_threads(void) {
-  return scheduler_get_n_workers(_sched);
+  if (!_sched)
+    return 0;
+  return _sched->n_workers;
 }
 
 const char *hpx_get_network_id(void) {
