@@ -91,7 +91,7 @@ int transport_recv(transport_t *transport, int src, void *buffer, size_t n,
   return transport->recv(transport, src, buffer, n, r);
 }
 
-int transport_test_sendrecv(transport_t *transport, const void *request, int *out) {
+int transport_test_sendrecv(transport_t *transport, void *request, int *out) {
   return transport->test(transport, request, out);
 }
 

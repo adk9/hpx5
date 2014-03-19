@@ -72,7 +72,7 @@ static int _recv(transport_t *t, int src, void *buffer, size_t size, void *r) {
 }
 
 
-static int _test(transport_t *t, const void *request, int *success) {
+static int _test(transport_t *t, void *request, int *success) {
   dbg_error("should never call test in smp network.\n");
   return HPX_ERROR;
 }

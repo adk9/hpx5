@@ -100,12 +100,11 @@ static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
   mpi_t *mpi = (mpi_t*)t;
   void *b = (void*)data;
-  if (MPI_Isend(b, n, MPI_BYTE, dest, mpi->rank, MPI_COMM_WORLD, r) ==
-      MPI_SUCCESS)
-      return HPX_SUCCESS;
+  int e = MPI_Isend(b, n, MPI_BYTE, dest, mpi->rank, MPI_COMM_WORLD, r);
+  if (e != MPI_SUCCESS)
+    return dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
 
-  dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
-  return HPX_ERROR;
+  return HPX_SUCCESS;
 }
 
 
@@ -120,8 +119,10 @@ static size_t _probe(transport_t *transport, int *source) {
 
   int flag = 0;
   MPI_Status status;
-  if (MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status) !=
-      MPI_SUCCESS) {
+  int e = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag,
+                     &status);
+
+  if (e != MPI_SUCCESS) {
     dbg_error("mpi failed Iprobe.\n");
     return 0;
   }
@@ -130,7 +131,8 @@ static size_t _probe(transport_t *transport, int *source) {
     return 0;
 
   int bytes = 0;
-  if (MPI_Get_count(&status, MPI_BYTE, &bytes) != MPI_SUCCESS) {
+  e = MPI_Get_count(&status, MPI_BYTE, &bytes);
+  if (e != MPI_SUCCESS) {
     dbg_error("could not extract bytes from mpi.\n");
     return 0;
   }
@@ -152,12 +154,20 @@ static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
   assert(src >= 0);
   assert(src < mpi->n_ranks);
 
-  if (MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r) ==
-      MPI_SUCCESS)
-    return HPX_SUCCESS;
+  int e = MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r);
+  if (e != MPI_SUCCESS)
+    return dbg_error("could not receive %lu bytes from %i", n, src);
 
-  dbg_error("could not receive %lu bytes from %i", n, src);
-  return HPX_ERROR;
+  return HPX_SUCCESS;
+}
+
+
+static int _test(transport_t *t, void *request, int *success) {
+  int e = MPI_Test(request, success, MPI_STATUS_IGNORE);
+  if (e != MPI_SUCCESS)
+    return dbg_error("failed MPI_Test.\n");
+
+  return HPX_SUCCESS;
 }
 
 
@@ -186,7 +196,7 @@ transport_t *transport_new_mpi(const boot_t *boot) {
   mpi->vtable.send         = _send;
   mpi->vtable.probe        = _probe;
   mpi->vtable.recv         = _recv;
-  mpi->vtable.test         = NULL;
+  mpi->vtable.test         = _test;
 
   mpi->rank                = boot_rank(boot);
   mpi->n_ranks             = boot_n_ranks(boot);
