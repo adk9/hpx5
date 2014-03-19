@@ -37,16 +37,17 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
-#include "network/allocator.h"                  // LD: this is off a bit
+#include "network/allocator.h"
+#include "network/heavy.h"
 
 /// ----------------------------------------------------------------------------
 /// libhpx objects
 /// ----------------------------------------------------------------------------
-static boot_t             *_boot = NULL;
-static transport_t   *_transport = NULL;
-static allocator_t   *_allocator = NULL;
-static network_t       *_network = NULL;
-static scheduler_t       *_sched = NULL;
+static boot_t           *_boot = NULL;
+static transport_t *_transport = NULL;
+static allocator_t *_allocator = NULL;
+static network_t     *_network = NULL;
+static scheduler_t     *_sched = NULL;
 
 /// ----------------------------------------------------------------------------
 /// used to synchronize the main thread during shutdown
@@ -59,7 +60,7 @@ static pthread_cond_t _condition = PTHREAD_COND_INITIALIZER;
 /// action for use in global free
 /// ----------------------------------------------------------------------------
 static int _free_action(void *args);
-static hpx_action_t        _free = 0;
+static hpx_action_t _free = 0;
 
 
 /// ----------------------------------------------------------------------------
@@ -186,19 +187,30 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 
   _state = HPX_RUN;
 
-  // allocate and initialize a parcel for the original action
-  hpx_parcel_t *p = hpx_parcel_acquire(size);
-  if (!p) {
-    dbg_error("failed to allocate an initial parcel.\n");
-    goto exit;
-  }
-  hpx_parcel_set_action(p, act);
-  hpx_parcel_set_data(p, args, size);
+  // the rank-0 process starts the application by sending a single parcel to
+  // itself
+  if (boot_rank(_boot) == 0) {
+    // allocate and initialize a parcel for the original action
+    hpx_parcel_t *p = hpx_parcel_acquire(size);
+    if (!p) {
+      dbg_error("failed to allocate an initial parcel.\n");
+      goto exit;
+    }
+    hpx_parcel_set_action(p, act);
+    hpx_parcel_set_data(p, args, size);
 
-  // Don't use hpx_parcel_send() here, because that will try and enqueue the
-  // parcel locally, but we're not a scheduler thread. We rely on network
-  // loopback for this to work.
-  network_send(_network, p);
+    // Don't use hpx_parcel_send() here, because that will try and enqueue the
+    // parcel locally, but we're not a scheduler thread. We rely on network
+    // loopback for this to work.
+    network_send(_network, p);
+  }
+
+  // start the network
+  pthread_t heavy;
+  int e = pthread_create(&heavy, NULL, heavy_network, _network);
+  if (e) {
+    abort();
+  }
 
   // start the scheduler
   scheduler_startup(_sched);
@@ -208,6 +220,8 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 
   // shut down the system in the correct order
   if (_state == HPX_SHUTDOWN) {
+    pthread_cancel(heavy);
+    pthread_join(heavy, NULL);
     scheduler_shutdown(_sched);
     scheduler_delete(_sched);
     network_delete(_network);
