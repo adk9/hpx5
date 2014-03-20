@@ -29,14 +29,14 @@ typedef struct barrier {
 /// ----------------------------------------------------------------------------
 /// Forward to the barrier's specific delete function.
 /// ----------------------------------------------------------------------------
-static inline void barrier_delete(barrier_t *barrier) {
+static inline void sync_barrier_delete(barrier_t *barrier) {
   barrier->delete(barrier);
 }
 
 /// ----------------------------------------------------------------------------
 /// Forward to the barrier's specific join function.
 /// ----------------------------------------------------------------------------
-static inline int barrier_join(barrier_t *barrier, int i) {
+static inline int sync_barrier_join(barrier_t *barrier, int i) {
   return barrier->join(barrier, i);
 }
 
