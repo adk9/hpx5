@@ -21,6 +21,7 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "libsync/deques.h"
 
@@ -45,6 +46,7 @@ static _buffer_t *_buffer_new(_buffer_t *parent, size_t capacity) {
   assert(capacity > 0);
   _buffer_t *b = malloc(sizeof(_buffer_t) + capacity * sizeof(void*));
   assert(b);
+  memset(&b->buffer, 0, capacity * sizeof(void*));
   b->parent = parent;
   b->capacity = capacity;
   return b;
@@ -185,16 +187,14 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   _deque_set_bottom(d, bottom + 1);
 }
 
-
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
-  uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
-  bottom = bottom - 1;
-  _deque_set_bottom(d, bottom);
-
-  // read top
+  uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
   int64_t size = bottom - top;
+
+  // update bound
+  d->top_bound = top;
 
   // if the queue was empty, reset bottom
   if (size < 0) {
@@ -205,11 +205,11 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // if the queue becomes empty, then try and race with a steal()er who might be
   // taking our last element, by updating top
   if (size == 0) {
-    // if we win this race, then we need to update bottom to tpo, or it lags
-    // behind release to steal()
+    // if we win this race, then we need to update bottom to top (which is top +
+    // 1 after the successful cas), or it lags behind release to steal()
     if (!_deque_try_inc_top(d, top))
       return NULL;
-    _deque_set_bottom(d, bottom + 1);
+    _deque_set_bottom(d, top + 1);
   }
 
   // otherwise we successfully popped from the deque, just read the buffer and
@@ -220,31 +220,31 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
 
 
 void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
-  while (true) {
-    // read top and bottom
-    // acquire from push()/pop()
-    uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
-    uint64_t bottom = sync_load(&d->bottom, SYNC_ACQUIRE);
+  // read top and bottom
+  // acquire from push()/pop()
+  uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
+  uint64_t bottom = sync_load(&d->bottom, SYNC_ACQUIRE);
+  int64_t size = bottom - top;
+  // if the deque seems to be empty, fail the steal
+  if (size <= 0)
+    return NULL;
 
-    // if the deque seems to be empty, fail the steal
-    if (bottom - top <= 0)
-      return NULL;
+  // read the buffer and the value, have to read the value before the CAS,
+  // otherwise we could miss some push-pops and get the wrong value due to the
+  // underlying cyclic array (see Chase-Lev 2.2)
+  //
+  // NB: it doesn't matter if the buffer grows a number of times between these
+  //     two operations, because _buffer_get(top) will always return the same
+  //     value---this is a result of the magic and beauty of this
+  //     algorithm. If we want to shrink the buffer then we'll have to pay
+  //     more attention.
+  _buffer_t *buffer = sync_load(&d->buffer, SYNC_ACQUIRE);
+  void *val = _buffer_get(buffer, top);
 
-    // read the buffer and the value, have to read the value before the CAS,
-    // otherwise we could miss some push-pops and get the wrong value due to the
-    // underlying cyclic array (see Chase-Lev 2.2)
-    //
-    // NB: it doesn't matter if the buffer grows a number of times between these
-    //     two operations, because _buffer_get(top) will always return the same
-    //     value---this is a result of the magic and beauty of this
-    //     algorithm. If we want to shrink the buffer then we'll have to pay
-    //     more attention.
-    _buffer_t *buffer = sync_load(&d->buffer, SYNC_ACQUIRE);
-    void *val = _buffer_get(buffer, top);
+  // if we update the bottom, return the stolen value, otherwise retry
+  // release to push()/pop()
+  if (_deque_try_inc_top(d, top))
+    return val;
 
-    // if we update the bottom, return the stolen value, otherwise retry
-    // release to push()/pop()
-    if (_deque_try_inc_top(d, top))
-      return val;
-  }
+  return NULL;
 }
