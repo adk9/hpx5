@@ -64,6 +64,8 @@
 
 #define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
 
+#define sync_addf(addr, val, mm) __sync_add_and_fetch(addr, val)
+
 #define sync_fence(mm) __sync_synchronize()
 
 #define SYNC_ATOMIC(decl) volatile decl
