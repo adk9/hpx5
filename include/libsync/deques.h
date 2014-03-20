@@ -46,18 +46,25 @@ static inline HPX_NON_NULL(1) void *sync_ws_deque_steal(ws_deque_t *d) {
   return d->steal(d);
 }
 
+/// ----------------------------------------------------------------------------
+/// A workstealing deque implementation based on the design presented in
+/// "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
+/// @url http://dl.acm.org/citation.cfm?id=1073974.
+/// ----------------------------------------------------------------------------
+struct chase_lev_ws_deque_buffer;
+
 typedef struct chase_lev_ws_deque {
   ws_deque_t vtable;
-  SYNC_ATOMIC(uint64_t) bottom;
-  SYNC_ATOMIC(uint64_t) top;
-  SYNC_ATOMIC(size_t) size;
-  void * SYNC_ATOMIC(*) buffer;
+  SYNC_ATOMIC(uint64_t bottom);
+  SYNC_ATOMIC(uint64_t top);
+  struct chase_lev_ws_deque_buffer* SYNC_ATOMIC(buffer);
+  uint64_t top_bound;
 } chase_lev_ws_deque_t;
 
-HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(int size);
+HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t capacity);
 
 HPX_INTERNAL void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d,
-                                               int size)
+                                               size_t capacity)
   HPX_NON_NULL(1);
 
 HPX_INTERNAL void sync_chase_lev_ws_deque_fini(chase_lev_ws_deque_t *d)
