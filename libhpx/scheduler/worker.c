@@ -159,7 +159,7 @@ static thread_t *_network(void) {
 static thread_t *_schedule(bool fast, thread_t *final) {
   // if we're supposed to shutdown, then do so
   if (sync_load(&self.shutdown, SYNC_ACQUIRE))
-    thread_transfer(self.sp, &self.free, thread_checkpoint_push);
+    thread_transfer(self.sp, &self.free, thread_exit_push);
 
   // if there are ready threads, select the next one
   thread_t *t = sync_chase_lev_ws_deque_pop(&self.work);
