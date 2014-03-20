@@ -29,7 +29,7 @@
 /// A Chase-Lev WS Deque buffer.
 ///
 /// The buffer contains its capacity, and an inline block for the buffer
-/// itself. Buffer's can't be resized themselves, they can only be replaced with
+/// itself. Buffers can't be resized themselves, they can only be replaced with
 /// larger or smaller buffers.
 /// ----------------------------------------------------------------------------
 typedef struct chase_lev_ws_deque_buffer {
