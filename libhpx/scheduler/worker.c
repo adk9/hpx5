@@ -27,6 +27,7 @@
 #include "contrib/uthash/src/utlist.h"
 #include "libsync/sync.h"
 #include "libsync/barriers.h"
+#include "libsync/deques.h"
 
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
@@ -51,24 +52,23 @@ typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 /// ----------------------------------------------------------------------------
 /// @{
 static __thread struct worker {
-  pthread_t       thread;                       // this worker's native thread
-  int                 id;                       // this workers's id
-  int            core_id;                       // useful for "smart" stealing
-  void               *sp;                       // this worker's native stack
-  thread_t         *free;                       // local thread freelist
-  thread_t        *ready;                       // local active threads
-  thread_t         *next;                       // local active threads
-  atomic_int_t  shutdown;                       // cooperative shutdown flag
-  scheduler_t *scheduler;                       // the scheduler we belong to
-  network_t     *network;                       // could have per-worker port
+  pthread_t          thread;                    // this worker's native thread
+  int                    id;                    // this workers's id
+  int               core_id;                    // useful for "smart" stealing
+  unsigned int         seed;                    // my random seed
+  void                  *sp;                    // this worker's native stack
+  thread_t            *free;                    // local thread freelist
+  chase_lev_ws_deque_t work;                    // my work
+  atomic_int_t     shutdown;                    // cooperative shutdown flag
+  scheduler_t    *scheduler;                    // the scheduler we belong to
+  network_t        *network;                    // could have per-worker port
 } self = {
   .thread    = 0,
   .id        = -1,
   .core_id   = -1,
   .sp        = NULL,
   .free      = NULL,
-  .ready     = NULL,
-  .next      = NULL,
+  .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
   .scheduler = NULL,
   .network   = NULL
@@ -118,6 +118,10 @@ static thread_t *_bind(hpx_parcel_t *p) {
 /// Steal a lightweight thread during scheduling.
 /// ----------------------------------------------------------------------------
 static thread_t *_steal(void) {
+  // int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
+  // worker_t *victim = self.scheduler->workers[victim_id];
+  // thread_t *t = sync_chase_lev_ws_deque_steal(&victim->work);
+  // return t;
   return NULL;
 }
 
@@ -155,27 +159,18 @@ static thread_t *_network(void) {
 static thread_t *_schedule(bool fast, thread_t *final) {
   // if we're supposed to shutdown, then do so
   if (sync_load(&self.shutdown, SYNC_ACQUIRE))
-    thread_transfer(self.sp, &self.next, thread_checkpoint_push);
+    thread_transfer(self.sp, &self.free, thread_checkpoint_push);
 
   // if there are ready threads, select the next one
-  thread_t *t = self.ready;
-  if (t) {
-    LL_DELETE(self.ready, t);
+  thread_t *t = sync_chase_lev_ws_deque_pop(&self.work);
+  if (t)
     return t;
-  }
 
-  // no ready threads, perform an internal epoch transition
-  self.ready = self.next;
-  self.next = NULL;
-
-  // try to get some work from the network, if we're not in a hurry
+  // no ready threads try to get some work from the network, if we're not in a
+  // hurry
   if (!fast)
     if ((t = _network()))
       return t;
-
-  // if the epoch switch has given us some work to do, go do it
-  if (self.ready)
-    return _schedule(fast, final);
 
   // try to steal some work, if we're not in a hurry
   if (!fast)
@@ -209,9 +204,17 @@ void *_run(void *run_args) {
   self.thread    = pthread_self();
   self.id        = args->id;
   self.core_id   = args->sched->pmap(args->sched, args->id);
+  self.seed      = args->id;
   self.scheduler = args->sched;
   self.network   = args->sched->network;
 
+  // don't need these anymore
+  free(args);
+
+  // initialize my work structure
+  sync_chase_lev_ws_deque_init(&self.work, 64);
+
+  // publish my self structure so other people can steal from me
   self.scheduler->workers[self.id] = &self;
 
   // set this thread's affinity
@@ -255,22 +258,13 @@ void *_run(void *run_args) {
 
   // cleanup the thread's resources---we only return here under normal shutdown
   // termination, otherwise we're canceled and vanish
-  while (self.ready) {
-    thread_t *t = self.ready;
-    self.ready = self.ready->next;
-    hpx_parcel_release(t->parcel);
-    thread_delete(t);
-  }
-
-  while (self.next) {
-    thread_t *t = self.next;
-    self.next = self.next->next;
+  while ((t = sync_chase_lev_ws_deque_pop(&self.work))) {
     hpx_parcel_release(t->parcel);
     thread_delete(t);
   }
 
   while (self.free) {
-    thread_t *t = self.free;
+    t = self.free;
     self.free = self.free->next;
     thread_delete(t);
   }
@@ -329,9 +323,16 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
-  LL_PREPEND(self.next, _bind(p));
+  sync_chase_lev_ws_deque_push(&self.work, _bind(p));
 }
 
+static int HPX_NON_NULL(1, 2) _checkpoint_ws_push(void *sp, void *env) {
+  thread_t *thread = thread_from_sp(sp);
+  thread->sp = sp;
+  ws_deque_t *deque = env;
+  sync_ws_deque_push(deque, thread);
+  return HPX_SUCCESS;
+}
 
 /// Yields the current thread.
 ///
@@ -347,10 +348,8 @@ void scheduler_yield(void) {
   if (from == to)
     return;
 
-  // transfer to the new thread, using the thread_checkpoint_push() transfer
-  // continuation to checkpoint the current stack and to push the current thread
-  // onto the self.next epoch list.
-  thread_transfer(to->sp, &self.next, thread_checkpoint_push);
+  // transfer to the new thread
+  thread_transfer(to->sp, &self.work, _checkpoint_ws_push);
 }
 
 
@@ -388,8 +387,10 @@ void scheduler_wait(lco_t *lco) {
 /// @precondition The calling thread must hold @p lco's lock.
 void scheduler_signal(lco_t *lco) {
   thread_t *q = lco_trigger(lco);
-  if (q)
-    LL_CONCAT(self.next, q);
+  while (q) {
+    sync_chase_lev_ws_deque_push(&self.work, q);
+    q = q->next;
+  }
 }
 
 
