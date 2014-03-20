@@ -203,20 +203,22 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
     return NULL;
   }
 
+  _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
+  void *val = _buffer_get(buffer, bottom);
+
   // if the queue becomes empty, then try and race with a steal()er who might be
   // taking our last element, by updating top
   if (bottom == top) {
     // if we win this race, then we need to update bottom to top (which is top +
     // 1 after the successful cas), or it lags behind release to steal()
     if (!_deque_try_inc_top(d, top))
-      return NULL;
+      val = NULL;
     _deque_set_bottom(d, top + 1);
   }
 
   // otherwise we successfully popped from the deque, just read the buffer and
   // return the value at the bottom
-  _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
-  return _buffer_get(buffer, bottom);
+  return val;
 }
 
 
