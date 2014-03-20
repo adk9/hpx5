@@ -34,9 +34,9 @@ chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(int size) {
 
 void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, int size) {
   d->vtable.delete = (__typeof__(d->vtable.delete))sync_chase_lev_ws_deque_delete;
-  d->vtable.push_left = (__typeof__(d->vtable.push_left))sync_chase_lev_ws_deque_push_left;
-  d->vtable.pop_left = (__typeof__(d->vtable.pop_left))sync_chase_lev_ws_deque_pop_left;
-  d->vtable.pop_left = (__typeof__(d->vtable.pop_right))sync_chase_lev_ws_deque_pop_right;
+  d->vtable.push = (__typeof__(d->vtable.push))sync_chase_lev_ws_deque_push;
+  d->vtable.pop = (__typeof__(d->vtable.pop))sync_chase_lev_ws_deque_pop;
+  d->vtable.steal = (__typeof__(d->vtable.steal))sync_chase_lev_ws_deque_steal;
   sync_store(&d->bottom, 0, SYNC_RELAXED);
   sync_store(&d->top, 0, SYNC_RELAXED);
   sync_store(&d->size, size, SYNC_RELAXED);
@@ -59,13 +59,13 @@ void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) {
   free(d);
 }
 
-void sync_chase_lev_ws_deque_push_left(chase_lev_ws_deque_t *d, void *val) {
+void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
 }
 
-void *sync_chase_lev_ws_deque_pop_left(chase_lev_ws_deque_t *d) {
+void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   return NULL;
 }
 
-void *sync_chase_lev_ws_deque_pop_right(chase_lev_ws_deque_t *d) {
+void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   return NULL;
 }
