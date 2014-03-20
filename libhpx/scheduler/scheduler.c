@@ -77,7 +77,7 @@ void scheduler_delete(scheduler_t *sched) {
     return;
 
   if (sched->barrier)
-    barrier_delete(sched->barrier);
+    sync_barrier_delete(sched->barrier);
 
   if (sched->workers)
     free(sched->workers);
@@ -107,6 +107,10 @@ void scheduler_shutdown(scheduler_t *sched) {
   // signal all of the shutdown requests
   for (int i = 0; i < sched->n_workers; ++i)
     worker_shutdown(sched->workers[i]);
+
+  // wait for the workers to shutdown
+  for (int i = 0; i < sched->n_workers; ++i)
+    worker_join(sched->workers[i]);
 }
 
 

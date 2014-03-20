@@ -21,7 +21,9 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
+
 #include "hpx/hpx.h"
 
 #include "contrib/uthash/src/utlist.h"
@@ -62,6 +64,8 @@ static __thread struct worker {
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_t    *scheduler;                    // the scheduler we belong to
   network_t        *network;                    // could have per-worker port
+  unsigned long spawns;
+  unsigned long steals;
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -71,7 +75,9 @@ static __thread struct worker {
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
   .scheduler = NULL,
-  .network   = NULL
+  .network   = NULL,
+  .spawns    = 0,
+  .steals    = 0
 };
 
 
@@ -87,7 +93,7 @@ static int _on_start(void *sp, void *env) {
   self.sp = sp;
 
   // wait for the rest of the scheduler to catch up to me
-  barrier_join(self.scheduler->barrier, self.id);
+  sync_barrier_join(self.scheduler->barrier, self.id);
 
   return HPX_SUCCESS;
 }
@@ -118,11 +124,16 @@ static thread_t *_bind(hpx_parcel_t *p) {
 /// Steal a lightweight thread during scheduling.
 /// ----------------------------------------------------------------------------
 static thread_t *_steal(void) {
-  // int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
-  // worker_t *victim = self.scheduler->workers[victim_id];
-  // thread_t *t = sync_chase_lev_ws_deque_steal(&victim->work);
-  // return t;
-  return NULL;
+  int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
+  if (victim_id == self.id)
+    return NULL;
+
+  worker_t *victim = self.scheduler->workers[victim_id];
+  thread_t *t = sync_chase_lev_ws_deque_steal(&victim->work);
+  if (t)
+    ++self.steals;
+
+  return t;
 }
 
 
@@ -269,6 +280,13 @@ void *_run(void *run_args) {
     thread_delete(t);
   }
 
+  // have to join the barrier before deleting my deque because someone might be
+  // in the middle of a steal operation
+  sync_barrier_join(self.scheduler->barrier, self.id);
+  sync_chase_lev_ws_deque_fini(&self.work);
+
+  printf("thread %d, spawns:%lu steals:%lu\n", self.id, self.spawns, self.steals);
+
   return NULL;
 }
 
@@ -300,6 +318,10 @@ int worker_start(int id, scheduler_t *sched) {
 
 void worker_shutdown(worker_t *worker) {
   sync_store(&worker->shutdown, 1, SYNC_RELEASE);
+}
+
+
+void worker_join(worker_t *worker) {
   if (pthread_join(worker->thread, NULL))
     dbg_error("cannot join worker thread %d.\n", worker->id);
 }
@@ -323,6 +345,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
+  self.spawns++;
   sync_chase_lev_ws_deque_push(&self.work, _bind(p));
 }
 

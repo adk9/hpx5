@@ -32,11 +32,24 @@ HPX_INTERNAL int worker_start(int id, struct scheduler *s)
 /// ----------------------------------------------------------------------------
 /// Cooperatively shutdown a worker.
 ///
-/// This will block until the worker's native thread exits.
+/// This does not block.
 ///
 /// @param worker - the worker to shutdown
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void worker_shutdown(worker_t *worker)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Joins a worker after worker_shutdown().
+///
+/// This is done separately to allow for cleanup to happen. Also improves
+/// shutdown performance because all of the workers can be shutting down and
+/// cleaning up in parallel. Workers don't generate values at this point.
+///
+/// @param worker - the worker to join
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void worker_join(worker_t *worker)
   HPX_NON_NULL(1);
 
 
