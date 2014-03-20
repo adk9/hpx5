@@ -170,14 +170,15 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // read bottom and top, and capacity
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
-  uint64_t top = d->top_bound;                  // Chase-Lev 2.3
+  int64_t size = bottom - d->top_bound;         // Chase-Lev 2.3
 
   // if the deque seems to be full then update its top bound
-  if (bottom - top + 1 >= buffer->capacity) {
-    top = d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
+  if (size + 1 >= buffer->capacity) {
+    d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
+    size = bottom - d->top_bound;
     // if the deque is *really* full then expand its capacity
-    if (bottom - top + 1 >= buffer->capacity) {
-      buffer = _buffer_grow(buffer, bottom, top);
+    if (size + 1 >= buffer->capacity) {
+      buffer = _buffer_grow(buffer, bottom, d->top_bound);
       _deque_set_buffer(d, buffer);
     }
   }
