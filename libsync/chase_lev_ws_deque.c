@@ -170,14 +170,12 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // read bottom and top, and capacity
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
-  int64_t size = bottom - d->top_bound;         // Chase-Lev 2.3
 
   // if the deque seems to be full then update its top bound
-  if (size + 1 >= buffer->capacity) {
+  if (bottom + 1 >= buffer->capacity + d->top_bound) { // Chase-Lev 2.3
     d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
-    size = bottom - d->top_bound;
     // if the deque is *really* full then expand its capacity
-    if (size + 1 >= buffer->capacity) {
+    if (bottom + 1 >= buffer->capacity + d->top_bound) {
       buffer = _buffer_grow(buffer, bottom, d->top_bound);
       _deque_set_buffer(d, buffer);
     }
@@ -192,20 +190,19 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
   uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
-  int64_t size = bottom - top;
 
   // update bound
   d->top_bound = top;
 
   // if the queue was empty, reset bottom
-  if (size < 0) {
+  if (bottom < top) {
     _deque_set_bottom(d, top);
     return NULL;
   }
 
   // if the queue becomes empty, then try and race with a steal()er who might be
   // taking our last element, by updating top
-  if (size == 0) {
+  if (bottom == top) {
     // if we win this race, then we need to update bottom to top (which is top +
     // 1 after the successful cas), or it lags behind release to steal()
     if (!_deque_try_inc_top(d, top))
@@ -225,9 +222,9 @@ void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   // acquire from push()/pop()
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
   uint64_t bottom = sync_load(&d->bottom, SYNC_ACQUIRE);
-  int64_t size = bottom - top;
+
   // if the deque seems to be empty, fail the steal
-  if (size <= 0)
+  if (bottom <= top)
     return NULL;
 
   // read the buffer and the value, have to read the value before the CAS,
