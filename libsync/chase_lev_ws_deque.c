@@ -172,6 +172,8 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
 
   // if the deque seems to be full then update its top bound
+  // (bottom - d->top_bound + 1 >= buffer->capacity) is rewritten to avoid
+  // unsigned underflow when bottom < top.
   if (bottom + 1 >= buffer->capacity + d->top_bound) { // Chase-Lev 2.3
     d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
     // if the deque is *really* full then expand its capacity
@@ -189,9 +191,10 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
   uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
+  assert(bottom != UINT64_MAX);
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
 
-  // update bound
+  // update bound, since we just read it anyway
   d->top_bound = top;
 
   // if the queue was empty, reset bottom
