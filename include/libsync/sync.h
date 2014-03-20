@@ -259,6 +259,33 @@
 
 /*
   ====================================================================
+  Atomic add-and-fetch for integer types.
+  ====================================================================
+*/
+
+#define SYNC_INT_TY(T, s) T sync_addf_##s(T *addr, T val, int mm);
+#include "types.def"
+#undef SYNC_INT_TY
+
+#if __STDC_VERSION__ == 201112L
+#define sync_addf(addr, val, mm)                        \
+    _Generic((addr),                                        \
+        int8_t*      :sync_addf_i8,                     \
+        int16_t*     :sync_addf_i16,                    \
+        int32_t*     :sync_addf_i32,                    \
+        int64_t*     :sync_addf_i64,                    \
+        __int128_t*  :sync_addf_i128,                   \
+        uint8_t*     :sync_addf_ui8,                    \
+        uint16_t*    :sync_addf_ui16,                   \
+        uint32_t*    :sync_addf_ui32,                   \
+        uint64_t*    :sync_addf_ui64,                   \
+        __uint128_t* :sync_addf_ui128)(addr, val, mm)
+#else
+#warning No support for generic synchronization for your platform.
+#endif
+
+/*
+  ====================================================================
   Implements a fence based on the memory model.
   ====================================================================
 */

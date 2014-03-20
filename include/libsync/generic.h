@@ -75,6 +75,15 @@
 #include "types.def"
 #undef SYNC_PTR_TY
 #undef SYNC_INT_TY
+
+#define SYNC_INT_TY(T, s)                                   \
+  static inline T sync_addf_##s(T *addr, T val, int mm) {   \
+    return sync_addf(addr, val, mm);                        \
+  }
+#define SYNC_PTR_TY(T, s)
+#include "types.def"
+#undef SYNC_PTR_TY
+#undef SYNC_INT_TY
 #undef SYNC_FLOAT_TY
 
 #endif /* HPX_SYNC_GENERIC_H_ */
