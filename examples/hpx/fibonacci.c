@@ -44,12 +44,12 @@ static int _fib_action(void *args) {
   if (n < 2)
     hpx_thread_exit(HPX_SUCCESS, &n, sizeof(n));
 
-  int rank = hpx_get_my_rank();
-  int ranks = hpx_get_num_ranks();
+  // int rank = hpx_get_my_rank();
+  // int ranks = hpx_get_num_ranks();
 
   hpx_addr_t peers[] = {
-    hpx_addr_from_rank((rank + ranks - 1) % ranks),
-    hpx_addr_from_rank((rank + 1) % ranks)
+    HPX_HERE, // hpx_addr_from_rank((rank + ranks - 1) % ranks),
+    HPX_HERE // hpx_addr_from_rank((rank + 1) % ranks)
   };
 
   int ns[] = {
