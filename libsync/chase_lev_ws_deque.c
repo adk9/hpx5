@@ -182,7 +182,7 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
 
   // update the bottom
   _buffer_put(buffer, bottom, val);
-  _deque_set_bottom(d, bottom);
+  _deque_set_bottom(d, bottom + 1);
 }
 
 
