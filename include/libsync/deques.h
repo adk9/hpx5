@@ -29,6 +29,13 @@ typedef struct ws_deque {
   void *(*steal)(struct ws_deque*) HPX_NON_NULL(1);
 } ws_deque_t;
 
+#define SYNC_WS_DEQUE_INIT { \
+    .delete = NULL,          \
+    .push = NULL,            \
+    .pop = NULL,             \
+    .steal = NULL            \
+    }
+
 static inline HPX_NON_NULL(1) void sync_ws_deque_delete(ws_deque_t *d) {
   d->delete(d);
 }
@@ -60,6 +67,14 @@ typedef struct chase_lev_ws_deque {
   struct chase_lev_ws_deque_buffer* SYNC_ATOMIC(buffer);
   uint64_t top_bound;
 } chase_lev_ws_deque_t;
+
+#define SYNC_CHASE_LEV_WS_DEQUE_INIT {          \
+    .vtable = SYNC_WS_DEQUE_INIT,               \
+    .bottom = 1,                                \
+    .top = 1,                                   \
+    .buffer = NULL,                             \
+    .top_bound = 1                              \
+    }
 
 HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t capacity);
 
