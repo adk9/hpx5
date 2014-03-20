@@ -411,8 +411,12 @@ void scheduler_wait(lco_t *lco) {
 void scheduler_signal(lco_t *lco) {
   thread_t *q = lco_trigger(lco);
   while (q) {
+    // as soon as we push the thread into the work queue, it could be stolen, so
+    // make sure we get it's next first
+    thread_t *next = q->next;
+    q->next = NULL;
     sync_chase_lev_ws_deque_push(&self.work, q);
-    q = q->next;
+    q = next;
   }
 }
 
