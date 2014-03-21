@@ -14,6 +14,7 @@
 #define LIBHPX_SCHEDULER_H
 
 #include "hpx/hpx.h"
+#include "libsync/sync.h"
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/scheduler.h
@@ -39,8 +40,6 @@ struct thread;
 struct network;
 struct worker;
 struct barrier;
-typedef struct scheduler scheduler_t;
-typedef int (*process_map_t)(scheduler_t *, int);
 /// @}
 
 /// ----------------------------------------------------------------------------
@@ -58,14 +57,14 @@ typedef int (*process_map_t)(scheduler_t *, int);
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 /// ----------------------------------------------------------------------------
-struct scheduler {
-  process_map_t      pmap;
-  int               cores;
-  struct network *network;
-  int           n_workers;
-  struct worker **workers;
-  struct barrier *barrier;
-};
+typedef struct scheduler {
+  SYNC_ATOMIC(int) next_id;
+  int                cores;
+  struct network  *network;
+  int            n_workers;
+  struct worker  **workers;
+  struct barrier  *barrier;
+} scheduler_t;
 
 
 /// ----------------------------------------------------------------------------
@@ -79,8 +78,7 @@ struct scheduler {
 /// @returns          - the scheduler object, or NULL if there was an error.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL scheduler_t *scheduler_new(struct network *network, int cores,
-                                        int workers, int stack_size,
-                                        process_map_t pmap)
+                                        int workers, int stack_size)
   HPX_NON_NULL(1);
 
 
@@ -114,14 +112,17 @@ HPX_INTERNAL int scheduler_startup(scheduler_t*);
 /// Stops the scheduler cooperatively.
 ///
 /// This asks all of the threads to shutdown the next time they get a chance to
-/// schedule. It is both cooperative and blocking, and may not return if there
-/// is a misbehaving HPX lightweight thread that does not return to the
-/// scheduler.
-///
-/// @todo This should be non-blocking, either through a timeout or through a
-///       test_shutdown() routine.
+/// schedule. It is nonblocking.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_shutdown(scheduler_t*);
+
+
+/// ----------------------------------------------------------------------------
+/// Join the scheduler at shutdown.
+///
+/// This will wait until all of the scheduler's worker threads have shutdown.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_join(scheduler_t*);
 
 
 /// ----------------------------------------------------------------------------
