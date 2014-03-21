@@ -171,13 +171,12 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
 
-  // if the deque seems to be full then update its top bound
-  // (bottom - d->top_bound + 1 >= buffer->capacity) is rewritten to avoid
-  // unsigned underflow when bottom < top.
-  if (bottom + 1 >= buffer->capacity + d->top_bound) {
+  // if the deque seems to be full then update its top bound, if the deque is
+  // *really* full then expand its capacity---no underflow potential here
+  // because pop() and steal() leave the queue canonical
+  if (bottom - d->top_bound >= buffer->capacity) {
     d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
-    // if the deque is *really* full then expand its capacity
-    if (bottom + 1 >= buffer->capacity + d->top_bound) {
+    if (bottom - d->top_bound >= buffer->capacity) {
       buffer = _buffer_grow(buffer, bottom, d->top_bound);
       _deque_set_buffer(d, buffer);
     }
@@ -191,7 +190,6 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
   uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
-  assert(bottom != UINT64_MAX);
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
 
   // update bound, since we just read it anyway
@@ -203,21 +201,18 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
     return NULL;
   }
 
+  // read the value from the buffer
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
   void *val = _buffer_get(buffer, bottom);
+  if (bottom > top)
+    return val;
 
-  // if the queue becomes empty, then try and race with a steal()er who might be
-  // taking our last element, by updating top
-  if (bottom == top) {
-    // if we win this race, then we need to update bottom to top (which is top +
-    // 1 after the successful cas), or it lags behind release to steal()
-    if (!_deque_try_inc_top(d, top))
-      val = NULL;
-    _deque_set_bottom(d, top + 1);
-  }
+  // we're popping the last element, need to race with concurrent
+  // steal()s on top. Either way, canonicalize the list after the CAS.
+  if (!_deque_try_inc_top(d, top))
+    val = NULL;
 
-  // otherwise we successfully popped from the deque, just read the buffer and
-  // return the value at the bottom
+  _deque_set_bottom(d, top + 1);
   return val;
 }
 
@@ -231,9 +226,9 @@ void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   if (bottom <= top)
     return NULL;
 
-  // read the buffer and the value, have to read the value before the CAS,
+  // Read the buffer and the value. Have to read the value before the CAS,
   // otherwise we could miss some push-pops and get the wrong value due to the
-  // underlying cyclic array (see Chase-Lev 2.2)
+  // underlying cyclic array (see Chase-Lev 2.2).
   //
   // NB: it doesn't matter if the buffer grows a number of times between these
   //     two operations, because _buffer_get(top) will always return the same
