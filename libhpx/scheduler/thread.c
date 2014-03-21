@@ -141,8 +141,7 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
 }
 
 
-thread_t *
-thread_new(hpx_parcel_t *parcel) {
+thread_t *thread_new(hpx_parcel_t *parcel) {
   // try to get a freelisted thread, or allocate a new, properly-aligned one
   thread_t *t = NULL;
   if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
@@ -151,54 +150,19 @@ thread_new(hpx_parcel_t *parcel) {
 }
 
 
-thread_t *
-thread_from_sp(void *sp) {
-  const uintptr_t MASK = ~(uintptr_t)0 << __builtin_ctzl(_thread_alignment);
-  uintptr_t addr = (uintptr_t)sp;
-  addr &= MASK;
-  thread_t *thread = (thread_t*)addr;
-  return thread;
-}
-
-
-thread_t *
-thread_current(void) {
-  return thread_from_sp(get_sp());
-}
-
-
-hpx_parcel_t *
-thread_current_parcel(void) {
-  return thread_current()->parcel;
-}
-
-
-void
-thread_delete(thread_t *thread) {
+void thread_delete(thread_t *thread) {
   free(thread);
 }
 
 
-void
-hpx_thread_exit(int status, const void *value, size_t size) {
+void hpx_thread_exit(int status, const void *value, size_t size) {
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
-  hpx_parcel_t *parcel = thread_current_parcel();
+  hpx_parcel_t *parcel = scheduler_current_parcel();
   hpx_addr_t cont = parcel->cont;
   if (!hpx_addr_eq(cont, HPX_NULL))
     hpx_future_set(cont, value, size);
 
   // exit terminates this thread
   scheduler_exit(parcel);
-}
-
-const hpx_addr_t
-hpx_thread_current_target(void) {
-  return thread_current_parcel()->target;
-}
-
-
-const hpx_addr_t
-hpx_thread_current_cont(void) {
-  return thread_current_parcel()->cont;
 }

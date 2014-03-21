@@ -59,6 +59,7 @@ static __thread struct worker {
   int               core_id;                    // useful for "smart" stealing
   unsigned int         seed;                    // my random seed
   void                  *sp;                    // this worker's native stack
+  thread_t         *current;                    // current thread
   thread_t            *free;                    // local thread freelist
   chase_lev_ws_deque_t work;                    // my work
   atomic_int_t     shutdown;                    // cooperative shutdown flag
@@ -71,6 +72,7 @@ static __thread struct worker {
   .id        = -1,
   .core_id   = -1,
   .sp        = NULL,
+  .current   = NULL,
   .free      = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
@@ -91,6 +93,7 @@ static int _on_start(thread_t *to, void *sp, void *env) {
 
   // checkpoint my native stack pointer
   self.sp = sp;
+  self.current = to;
 
   // wait for the rest of the scheduler to catch up to me
   sync_barrier_join(self.scheduler->barrier, self.id);
@@ -146,9 +149,10 @@ static thread_t *_network(void) {
 }
 
 static int _exit_free(thread_t *to, void *sp, void *env) {
-  thread_t *thread = thread_from_sp(sp);
-  hpx_parcel_release(thread->parcel);
-  LL_PREPEND(self.free, thread);
+  thread_t *prev = self.current;
+  self.current = to;
+  hpx_parcel_release(prev->parcel);
+  LL_PREPEND(self.free, prev);
   return HPX_SUCCESS;
 }
 
@@ -357,9 +361,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
 }
 
 static int _checkpoint_ws_push(thread_t *to, void *sp, void *env) {
-  thread_t *thread = thread_from_sp(sp);
-  thread->sp = sp;
-  sync_chase_lev_ws_deque_push(&self.work, thread);
+  thread_t *prev = self.current;
+  self.current = to;
+  prev->sp = sp;
+  sync_chase_lev_ws_deque_push(&self.work, prev);
   return HPX_SUCCESS;
 }
 
@@ -372,7 +377,7 @@ static int _checkpoint_ws_push(thread_t *to, void *sp, void *env) {
 /// synchronization).
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
-  thread_t *from = thread_current();
+  thread_t *from = self.current;
   thread_t *to = _schedule(false, from);
   if (from == to)
     return;
@@ -388,9 +393,10 @@ void scheduler_yield(void) {
 /// ----------------------------------------------------------------------------
 static int _checkpoint_lco(thread_t *to, void *sp, void *env) {
   lco_t *lco = env;
-  thread_t *thread = thread_from_sp(sp);
-  thread->sp = sp;
-  lco_enqueue_and_unlock(lco, thread);
+  thread_t *prev = self.current;
+  self.current = to;
+  prev->sp = sp;
+  lco_enqueue_and_unlock(lco, prev);
   return HPX_SUCCESS;
 }
 
@@ -453,6 +459,26 @@ void scheduler_exit(hpx_parcel_t *parcel) {
 }
 
 
+thread_t *scheduler_current_thread(void) {
+  return self.current;
+}
+
+
+hpx_parcel_t *scheduler_current_parcel(void) {
+  return self.current->parcel;
+}
+
+
 int hpx_get_my_thread_id(void) {
   return self.id;
+}
+
+
+const hpx_addr_t hpx_thread_current_target(void) {
+  return hpx_parcel_get_target(self.current->parcel);
+}
+
+
+const hpx_addr_t hpx_thread_current_cont(void) {
+  return hpx_parcel_get_cont(self.current->parcel);
 }

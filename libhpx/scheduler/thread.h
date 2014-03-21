@@ -81,25 +81,6 @@ HPX_INTERNAL void thread_delete(thread_t *stack) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
-/// Get the thread for a particular stack address.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_t *thread_from_sp(void *sp);
-
-
-/// ----------------------------------------------------------------------------
-/// Get the current thread.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_t *thread_current(void);
-
-
-/// ----------------------------------------------------------------------------
-/// Get the current parcel.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *thread_current_parcel(void)
-  HPX_RETURNS_NON_NULL;
-
-
-/// ----------------------------------------------------------------------------
 /// Exit the current user-level thread, possibly with a return value.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
