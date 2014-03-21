@@ -27,7 +27,7 @@
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
   int            size;
-  int           state;
+  int             pid;
   hpx_action_t action;
   hpx_addr_t   target;
   hpx_addr_t     cont;

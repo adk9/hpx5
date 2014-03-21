@@ -229,7 +229,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
       dbg_error("failed to allocate an initial parcel.\n");
       goto exit;
     }
-    hpx_parcel_set_action(p, act);
+    p->action = act;
     hpx_parcel_set_data(p, args, size);
 
     // Don't use hpx_parcel_send() here, because that will try and enqueue the
@@ -278,9 +278,9 @@ int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
     return 1;
   }
 
-  hpx_parcel_set_action(p, action);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_cont(p, result);
+  p->action = action;
+  p->target = target;
+  p->cont = result;
   hpx_parcel_set_data(p, args, len);
   hpx_parcel_send(p);
   return HPX_SUCCESS;
@@ -340,6 +340,7 @@ hpx_parcel_t *hpx_parcel_acquire(size_t size) {
     return NULL;
   }
 
+  p->pid    = -1;
   p->action = HPX_ACTION_NULL;
   p->target = HPX_HERE;
   p->cont   = HPX_NULL;

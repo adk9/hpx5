@@ -465,7 +465,7 @@ thread_t *scheduler_current_thread(void) {
 
 
 hpx_parcel_t *scheduler_current_parcel(void) {
-  return self.current->parcel;
+  return (self.current) ? self.current->parcel : NULL;
 }
 
 
