@@ -112,31 +112,17 @@ typedef int (*thread_transfer_cont_t)(void *, void *);
 /// The actual routine to transfer between thread.
 ///
 /// This pushes the callee-saves state on the current stack, and swaps the stack
-/// pointer to @p sp. It calls the provided continuation with the old stack
+/// pointer to @p t->sp. It calls the provided continuation with the old stack
 /// pointer, passing through the provided environment, which might be null.
 ///
 /// The continuation's return value is also returned by transfer.
 ///
-/// @param  sp - the stack pointer to transfer to
+/// @param   t - the thread to transfer to (really void **sp)
 /// @param env - the environment for the continuation
 /// @param   c - a continuation function to handle the old stack pointer
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_transfer(void *sp, void *env, thread_transfer_cont_t c)
+HPX_INTERNAL int thread_transfer(thread_t *t, void *env, thread_transfer_cont_t c)
   HPX_NON_NULL(1, 3);
-
-
-/// ----------------------------------------------------------------------------
-/// A transfer continuation that checkpoints the previous stack, and pushes the
-/// previous thread onto the thread list designated in @p env.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_transfer_cont_t thread_checkpoint_push;
-HPX_INTERNAL thread_transfer_cont_t thread_exit_push;
-
-
-/// ----------------------------------------------------------------------------
-/// A transfer continuation that pushes the previous thread onto a an lco list.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_transfer_cont_t thread_checkpoint_enqueue;
 
 
 #endif  // LIBHPX_THREAD_H

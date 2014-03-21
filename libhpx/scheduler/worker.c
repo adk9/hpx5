@@ -145,6 +145,12 @@ static thread_t *_network(void) {
   return (p) ? _bind(p) : NULL;
 }
 
+static int _exit_free(void *sp, void *env) {
+  thread_t *thread = thread_from_sp(sp);
+  hpx_parcel_release(thread->parcel);
+  LL_PREPEND(self.free, thread);
+  return HPX_SUCCESS;
+}
 
 /// ----------------------------------------------------------------------------
 /// The main scheduling "loop."
@@ -169,8 +175,9 @@ static thread_t *_network(void) {
 /// ----------------------------------------------------------------------------
 static thread_t *_schedule(bool fast, thread_t *final) {
   // if we're supposed to shutdown, then do so
+  // NB: leverages non-public knowledge about transfer asm
   if (sync_load(&self.shutdown, SYNC_ACQUIRE))
-    thread_transfer(self.sp, &self.free, thread_exit_push);
+    thread_transfer((thread_t*)&self.sp, NULL, _exit_free);
 
   // if there are ready threads, select the next one
   thread_t *t = sync_chase_lev_ws_deque_pop(&self.work);
@@ -261,7 +268,7 @@ void *_run(void *run_args) {
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  e = thread_transfer(t->sp, NULL, _on_start);
+  e = thread_transfer(t, NULL, _on_start);
   if (e) {
     dbg_error("shutdown returned error\n");
     return NULL;
@@ -352,8 +359,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 static int HPX_NON_NULL(1, 2) _checkpoint_ws_push(void *sp, void *env) {
   thread_t *thread = thread_from_sp(sp);
   thread->sp = sp;
-  ws_deque_t *deque = env;
-  sync_ws_deque_push(deque, thread);
+  sync_chase_lev_ws_deque_push(&self.work, thread);
   return HPX_SUCCESS;
 }
 
@@ -372,7 +378,20 @@ void scheduler_yield(void) {
     return;
 
   // transfer to the new thread
-  thread_transfer(to->sp, &self.work, _checkpoint_ws_push);
+  thread_transfer(to, NULL, _checkpoint_ws_push);
+}
+
+
+/// ----------------------------------------------------------------------------
+/// A transfer continuation that pushes the previous thread onto a an lco
+/// queue.
+/// ----------------------------------------------------------------------------
+static int _checkpoint_lco(void *sp, void *env) {
+  lco_t *lco = env;
+  thread_t *thread = thread_from_sp(sp);
+  thread->sp = sp;
+  lco_enqueue_and_unlock(lco, thread);
+  return HPX_SUCCESS;
 }
 
 
@@ -391,7 +410,7 @@ void scheduler_yield(void) {
 /// @precondition The calling thread must hold @p lco's lock.
 void scheduler_wait(lco_t *lco) {
   thread_t *to = _schedule(true, NULL);
-  thread_transfer(to->sp, lco, thread_checkpoint_enqueue);
+  thread_transfer(to, lco, _checkpoint_lco);
   lco_lock(lco);
 }
 
@@ -428,9 +447,8 @@ void scheduler_signal(lco_t *lco) {
 /// put into the _free threads list and not into a runnable list (self.ready,
 /// self.next, or an lco).
 void scheduler_exit(hpx_parcel_t *parcel) {
-  // hpx_parcel_release(parcel);
   thread_t *to = _schedule(false, NULL);
-  thread_transfer(to->sp, &self.free, thread_exit_push);
+  thread_transfer(to, NULL, _exit_free);
   unreachable();
 }
 
