@@ -29,7 +29,6 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 #include "asm.h"
-#include "lco.h"
 #include "thread.h"
 
 
@@ -192,32 +191,6 @@ hpx_thread_exit(int status, const void *value, size_t size) {
   // exit terminates this thread
   scheduler_exit(parcel);
 }
-
-static int _checkpoint_push(void *sp, thread_t **list) {
-  thread_t *thread = thread_from_sp(sp);
-  thread->sp = sp;
-  LL_PREPEND(*list, thread);
-  return HPX_SUCCESS;
-}
-
-static int _exit_push(void *sp, thread_t **list) {
-  thread_t *thread = thread_from_sp(sp);
-  hpx_parcel_release(thread->parcel);
-  LL_PREPEND(*list, thread);
-  return HPX_SUCCESS;
-}
-
-
-static int _checkpoint_enqueue(void *sp, lco_t *lco) {
-  thread_t *thread = thread_from_sp(sp);
-  thread->sp = sp;
-  lco_enqueue_and_unlock(lco, thread);
-  return HPX_SUCCESS;
-}
-
-thread_transfer_cont_t thread_checkpoint_push = (thread_transfer_cont_t)_checkpoint_push;
-thread_transfer_cont_t thread_exit_push = (thread_transfer_cont_t)_exit_push;
-thread_transfer_cont_t thread_checkpoint_enqueue = (thread_transfer_cont_t)_checkpoint_enqueue;
 
 const hpx_addr_t
 hpx_thread_current_target(void) {
