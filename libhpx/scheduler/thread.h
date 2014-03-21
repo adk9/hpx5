@@ -106,7 +106,7 @@ HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 
-typedef int (*thread_transfer_cont_t)(void *, void *);
+typedef int (*thread_transfer_cont_t)(thread_t *t, void *sp, void *env);
 
 /// ----------------------------------------------------------------------------
 /// The actual routine to transfer between thread.
@@ -121,8 +121,8 @@ typedef int (*thread_transfer_cont_t)(void *, void *);
 /// @param env - the environment for the continuation
 /// @param   c - a continuation function to handle the old stack pointer
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_transfer(thread_t *t, void *env, thread_transfer_cont_t c)
-  HPX_NON_NULL(1, 3);
+HPX_INTERNAL int thread_transfer(thread_t *t, thread_transfer_cont_t c, void *env)
+  HPX_NON_NULL(1, 2);
 
 
 #endif  // LIBHPX_THREAD_H
