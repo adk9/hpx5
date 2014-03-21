@@ -16,13 +16,19 @@
   ====================================================================
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <argp.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <unistd.h>
 #include "hpx/hpx.h"
-#include <sync/sync.h>
+#include "sync/sync.h"
+
+#include "debug.h"
 
 /**
  * This file defines a simple sequential spawn, that uses HPX threads to
@@ -38,12 +44,14 @@ static int nthreads;                           /**< the number of threads  */
 typedef struct {
   int n;
   int debug;
+  int cores;
   int threads;
 } args_t;
 
 /// The options that fibonacci understands.
 static struct argp_option opts[] = {
   {"debug", 'd', 0, 0, "Wait for the debugger"},
+  {"cores", 't', "HPX_CORES", 0, "Number of cores to use."},
   {"threads", 't', "HPX_THREADS", 0, "HPX scheduler threads"},
   { 0 }
 };
@@ -56,30 +64,27 @@ static int parse(int key, char *arg, struct argp_state *state) {
   args_t *args = (args_t*)state->input;
 
   switch (key) {
-   default:
-    return ARGP_ERR_UNKNOWN;
-
    case 'd':
     args->debug = 1;
     break;
-
+   case 'c':
+    args->cores = atoi(arg);
+    break;
    case 't':
     args->threads = atoi(arg);
     break;
-
    case ARGP_KEY_NO_ARGS:
     argp_usage(state);
     break;
-
    case ARGP_KEY_ARG:
     if (state->arg_num > 1)
       argp_usage(state);
-
     if (!arg)
       abort();
-
     args->n = atoi(arg);
     break;
+   default:
+     return ARGP_ERR_UNKNOWN;
   }
   return 0;
 }
@@ -134,19 +139,13 @@ main(int argc, char *argv[])
     return e;
 
   hpx_config_t config = {
-    .scheduler_threads = args.threads,
+    .cores = args.cores,
+    .threads = args.threads,
     .stack_bytes = 0
   };
 
-  if (args.debug) {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    while (0 == i)
-      sleep(5);
-  }
+  if (args.debug)
+    wait_for_debugger();
 
   /* initialize thread count */
   nthreads = 0;
