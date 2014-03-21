@@ -20,14 +20,7 @@
 /// gcc-compatible inline asm implementations, but we care about CrayCC and we
 /// haven't seen such support there yet. This costs us a function call (and
 /// associated caller-side register churn) for these operations. 
-/// ----------------------------------------------------------------------------        
-	    INTERNAL(get_sp)
-	    GLOBAL(get_sp)
-LABEL(get_sp)
-	    mov %rsp, %rax
-        ret
-	    SIZE(get_sp)
-
+/// ----------------------------------------------------------------------------
 	    INTERNAL(get_mxcsr)
 	    GLOBAL(get_mxcsr)
 LABEL(get_mxcsr)
