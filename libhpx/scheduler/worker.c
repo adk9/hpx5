@@ -296,7 +296,7 @@ void *_run(void *run_args) {
   sync_barrier_join(self.scheduler->barrier, self.id);
   sync_chase_lev_ws_deque_fini(&self.work);
 
-  printf("thread %d, spawns:%lu steals:%lu\n", self.id, self.spawns, self.steals);
+  printf("node %d, thread %d, spawns:%lu steals:%lu\n", hpx_get_my_rank(), self.id, self.spawns, self.steals);
 
   return NULL;
 }
