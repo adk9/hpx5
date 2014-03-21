@@ -18,6 +18,17 @@
 struct scheduler;
 typedef struct worker worker_t;
 
+
+/// ----------------------------------------------------------------------------
+/// The main entry function for a scheduler worker thread.
+///
+/// Each worker will self-assign an ID. IDs are guaranteed to be dense,
+/// contiguous integers.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void *worker_run(struct scheduler *sched)
+  HPX_NON_NULL(1);
+
+
 /// ----------------------------------------------------------------------------
 /// Starts a worker thread associated with a scheduler.
 ///
@@ -25,8 +36,8 @@ typedef struct worker worker_t;
 /// @param   sched - the sched instance this worker is associated with
 /// @returns       - HPX_SUCCESS or HPX_ERROR
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int worker_start(int id, struct scheduler *s)
-  HPX_NON_NULL(2);
+HPX_INTERNAL int worker_start(struct scheduler *s)
+  HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
@@ -56,9 +67,9 @@ HPX_INTERNAL void worker_join(worker_t *worker)
 /// ----------------------------------------------------------------------------
 /// Preemptively shutdown a worker.
 ///
-/// This will block until the worker's native thread exits. This will leave the
-/// (UNIX) process in an undefined state. Only async-safe functions can be used
-/// after this routine.
+/// This will leave the (UNIX) process in an undefined state. Only async-safe
+/// functions can be used after this routine. This is non-blocking, canceled
+/// threads should be joined if you need to wait for them.
 ///
 /// @param worker - the worker to cancel
 /// ----------------------------------------------------------------------------
