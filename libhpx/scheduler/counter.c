@@ -59,7 +59,7 @@ static void _delete(counter_t *c) {
 
 // Try to atomically increment the count associated with the counter.
 static bool _try_inc_count(counter_t *c, uint64_t count, uint64_t amount) {
-  return sync_cas(&c->count, count, count + amount, SYNC_RELEASE, SYNC_RELAXED);
+  return sync_fadd(&c->count, amount, SYNC_RELEASE);
 }
 /// @}
 
