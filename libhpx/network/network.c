@@ -183,7 +183,7 @@ static bool _try_start_send(network_t *network) {
 /// ----------------------------------------------------------------------------
 static bool _recv_network(network_t *n, int src, int size) {
   char request[transport_request_size(n->transport)];
-  char event = NETWORK_NULL;
+  network_event_t event = NETWORK_NULL;
   int e = transport_recv(n->transport, src, &event, sizeof(event), request);
   if (e) {
     dbg_error("error when recieving a network event.\n");
