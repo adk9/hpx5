@@ -30,28 +30,18 @@
 #include "thread.h"
 #include "worker.h"
 
-/// ----------------------------------------------------------------------------
-/// A basic worker->core mapping.
-///
-/// Just round robin workers through the processors attached to the scheduler.
-/// ----------------------------------------------------------------------------
-static int _mod_pmap(scheduler_t *sched, int i) {
-  return i % sched->cores;
-}
-
 scheduler_t *
-scheduler_new(struct network *network, int cores, int workers, int stack_size,
-              process_map_t pmap)
-{
+scheduler_new(struct network *network, int cores, int workers, int stack_size) {
   scheduler_t *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("could not allocate a scheduler.\n");
     return NULL;
   }
-  s->network   = network;
+
+  sync_store(&s->next_id, 0, SYNC_RELEASE);
+
   s->cores     = cores;
   s->n_workers = workers;
-  s->pmap      = (pmap) ? pmap : _mod_pmap;
   s->workers   = calloc(workers, sizeof(s->workers[0]));
   if (!s->workers) {
     dbg_error("could not allocate an array of workers.\n");
@@ -65,6 +55,8 @@ scheduler_new(struct network *network, int cores, int workers, int stack_size,
     scheduler_delete(s);
     return NULL;
   }
+
+  s->network   = network;
 
   thread_set_stack_size(stack_size);
   dbg_log("Initialized a new scheduler.\n");
@@ -85,20 +77,24 @@ void scheduler_delete(scheduler_t *sched) {
   free(sched);
 }
 
-
 int scheduler_startup(scheduler_t *sched) {
-  // start all of the worker threads
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    int e = worker_start(i, sched);
-    if (e){
-      dbg_error("could not start worker %d.\n", i);
-      for (int j = 0; j < i; ++j)
-        worker_cancel(sched->workers[j]);
-      return HPX_ERROR;
-    }
+  // start all of the other worker threads
+  for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
+    if (worker_start(sched) == 0)
+      continue;
+
+    dbg_error("could not start worker %d.\n", i);
+
+    for (int j = 0; j < i; ++j)
+      worker_cancel(sched->workers[j]);
+
+    for (int j = 0; j < i; ++j)
+      worker_join(sched->workers[j]);
+
+    return HPX_ERROR;
   }
 
-  // return success
+  worker_run(sched);
   return HPX_SUCCESS;
 }
 
@@ -107,7 +103,10 @@ void scheduler_shutdown(scheduler_t *sched) {
   // signal all of the shutdown requests
   for (int i = 0; i < sched->n_workers; ++i)
     worker_shutdown(sched->workers[i]);
+}
 
+
+void scheduler_join(scheduler_t *sched) {
   // wait for the workers to shutdown
   for (int i = 0; i < sched->n_workers; ++i)
     worker_join(sched->workers[i]);

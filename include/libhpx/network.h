@@ -39,6 +39,15 @@ HPX_INTERNAL network_t *network_new(const struct boot *b, struct transport *t)
 
 
 /// ----------------------------------------------------------------------------
+/// Cooperatively ask the network to shutdown.
+///
+/// Broadcasts shutdown across the system.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_shutdown(network_t *network)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
 /// Delete the network object.
 ///
 /// This does not synchronize. The caller is required to ensure that no other
@@ -94,8 +103,9 @@ HPX_INTERNAL void network_barrier(network_t *network)
 /// NB: OTHER NETWORK OPERATIONS DO NOT CALL THIS FUNCTION.
 ///
 /// @param network - the network to manage
+/// @returns       - non-0 to indicate that the network has been shutdown.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_progress(network_t *network)
+HPX_INTERNAL int network_progress(network_t *network)
   HPX_NON_NULL(1);
 
 

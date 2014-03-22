@@ -65,6 +65,7 @@ static __thread struct worker {
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_t    *scheduler;                    // the scheduler we belong to
   network_t        *network;                    // could have per-worker port
+  unsigned long  spins;
   unsigned long spawns;
   unsigned long steals;
 } self = {
@@ -78,6 +79,7 @@ static __thread struct worker {
   .shutdown  = 0,
   .scheduler = NULL,
   .network   = NULL,
+  .spins     = 0,
   .spawns    = 0,
   .steals    = 0
 };
@@ -200,7 +202,11 @@ static thread_t *_schedule(bool fast, thread_t *final) {
       return t;
 
   // as a last resort, return final, or a new empty action
-  return (final) ? (final) : _bind(hpx_parcel_acquire(0));
+  if (final)
+    return final;
+
+  ++self.spins;
+  return _bind(hpx_parcel_acquire(0));
 }
 
 
@@ -214,24 +220,15 @@ static thread_t *_schedule(bool fast, thread_t *final) {
 /// Under normal HPX shutdown, we return to the original transfer site and
 /// cleanup.
 /// ----------------------------------------------------------------------------
-typedef struct {
-  int id;
-  scheduler_t *sched;
-} _run_args_t;
-
-void *_run(void *run_args) {
-  _run_args_t *args = run_args;
-
+void *worker_run(scheduler_t *sched) {
   // initialize my worker structure
   self.thread    = pthread_self();
-  self.id        = args->id;
-  self.core_id   = args->sched->pmap(args->sched, args->id);
-  self.seed      = args->id;
-  self.scheduler = args->sched;
-  self.network   = args->sched->network;
-
-  // don't need these anymore
-  free(args);
+  self.id        = sync_fadd(&sched->next_id, 1, SYNC_ACQREL);
+  self.core_id   = -1; // let linux do this for now
+  // self.core_id   = self.id % hpx_get_n_ranks(); // round robin
+  self.seed      = self.id;
+  self.scheduler = sched;
+  self.network   = sched->network;
 
   // initialize my work structure
   sync_chase_lev_ws_deque_init(&self.work, 64);
@@ -240,20 +237,13 @@ void *_run(void *run_args) {
   self.scheduler->workers[self.id] = &self;
 
   // set this thread's affinity
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(self.core_id, &cpuset);
-  int e = pthread_setaffinity_np(self.thread, sizeof(cpuset), &cpuset);
-  if (e) {
-    dbg_error("failed to bind thread affinity for %d", self.id);
-    return NULL;
-  }
-
-  // make myself asynchronously cancellable
-  e = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-  if (e) {
-    dbg_error("failed to become async cancellable.\n");
-    return NULL;
+  if (self.core_id > 0) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(self.core_id, &cpuset);
+    int e = pthread_setaffinity_np(self.thread, sizeof(cpuset), &cpuset);
+    if (e) // not fatal
+      dbg_error("failed to bind thread affinity for %d.\n", self.id);
   }
 
   // get a parcel to start the scheduler loop with
@@ -272,7 +262,7 @@ void *_run(void *run_args) {
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  e = thread_transfer(t, _on_start, NULL);
+  int e = thread_transfer(t, _on_start, NULL);
   if (e) {
     dbg_error("shutdown returned error\n");
     return NULL;
@@ -296,34 +286,16 @@ void *_run(void *run_args) {
   sync_barrier_join(self.scheduler->barrier, self.id);
   sync_chase_lev_ws_deque_fini(&self.work);
 
-  printf("thread %d, spawns:%lu steals:%lu\n", self.id, self.spawns, self.steals);
+  printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu\n",
+         hpx_get_my_rank(), self.id, self.spins, self.spawns, self.steals);
 
   return NULL;
 }
 
-int worker_start(int id, scheduler_t *sched) {
-  _run_args_t *args = malloc(sizeof(*args));
-  if (!args) {
-    dbg_error("could not allocate arguments for pthread entry, _run.\n");
-    goto unwind0;
-  }
-
-  args->id = id;
-  args->sched = sched;
-
+int worker_start(scheduler_t *sched) {
   pthread_t thread;
-  int e = pthread_create(&thread, NULL, _run, args);
-  if (e) {
-    dbg_error("failed to create worker thread #%d.\n", self.id);
-    goto unwind1;
-  }
-
-  return HPX_SUCCESS;
-
- unwind1:
-  free(args);
- unwind0:
-  return HPX_ERROR;
+  int e = pthread_create(&thread, NULL, (void* (*)(void*))worker_run, sched);
+  return (e) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 
@@ -339,15 +311,8 @@ void worker_join(worker_t *worker) {
 
 
 void worker_cancel(worker_t *worker) {
-  if (!worker)
-    return;
-
-  if (pthread_cancel(worker->thread)) {
+  if (worker && pthread_cancel(worker->thread))
     dbg_error("cannot cancel worker thread %d.\n", worker->id);
-  }
-  else if (pthread_join(worker->thread, NULL)) {
-    dbg_error("cannot join worker thread %d.\n", worker->id);
-  }
 }
 
 
