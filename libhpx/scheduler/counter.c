@@ -120,7 +120,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_counter_new(uint64_t limit) {
-  hpx_addr_t counter = hpx_global_calloc(1, sizeof(counter_t), 1, 8);
+  hpx_addr_t counter = hpx_global_calloc(1, sizeof(counter_t), 1, sizeof(counter_t));
   counter_t *c = NULL;
   int pinned = hpx_addr_try_pin(counter, (void**)&c);
   assert(pinned);
@@ -176,7 +176,7 @@ void
 hpx_lco_counter_incr(hpx_addr_t counter, const uint64_t amount) {
   counter_t *c = NULL;
   if (hpx_addr_try_pin(counter, (void**)&c)) {
-    if (_counter_dec(c, amount) != 0) {
+    if (_counter_dec(c, amount) == 0) {
       _counter_lock(c);
       _counter_signal(c);
       _counter_unlock(c);
