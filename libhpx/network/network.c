@@ -33,7 +33,6 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
-#include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "block.h"
 #include "request.h"
@@ -64,23 +63,24 @@ struct network {
 
 
 /// ----------------------------------------------------------------------------
-/// Characters for network-network communcation.
+/// Event for network-network messages.
 /// ----------------------------------------------------------------------------
 typedef enum {
-  NETWORK_SHUTDOWN = 0
-} network_code_t;
+  NETWORK_SHUTDOWN = 0,
+  NETWORK_NULL
+} network_event_t;
 
 
-static void _network_do(network_t *n, network_code_t code) {
-  switch (code) {
+static void _network_handle_event(network_t *n, network_event_t event) {
+  switch (event) {
    default:
-    dbg_error("unrecognized network code.\n");
+    dbg_error("unrecognized network event.\n");
     return;
    case NETWORK_SHUTDOWN:
     // on the shutdown code, the network switches its state, and then shuts down
-    // the system
+    // the scheduler
     sync_store(&n->shutdown, 1, SYNC_RELEASE);
-    system_shutdown(0);
+    hpx_shutdown(0);
     return;
   }
 }
@@ -177,31 +177,38 @@ static bool _try_start_send(network_t *network) {
 
 
 /// ----------------------------------------------------------------------------
-/// Called during network progress when we get a low-level message.
+/// Called during network progress when we need to receive an event.
 ///
-/// Blocks until the recv has completed.
+/// Blocks until the recv has completed, and handles the event.
 /// ----------------------------------------------------------------------------
 static bool _recv_network(network_t *n, int src, int size) {
   char request[transport_request_size(n->transport)];
-  char code = 'X';
-  int e = transport_recv(n->transport, src, &code, sizeof(code), request);
+  char event = NETWORK_NULL;
+  int e = transport_recv(n->transport, src, &event, sizeof(event), request);
   if (e) {
-    dbg_error("error when recieving a network message.\n");
+    dbg_error("error when recieving a network event.\n");
     return false;
   }
+
   int done = 0;
   do {
     e = transport_test_sendrecv(n->transport, request, &done);
     if (e) {
-      dbg_error("error when testing a network message.\n");
+      dbg_error("error when testing a network event.\n");
       return false;
     }
   } while (!done);
 
-  _network_do(n, code);
+  _network_handle_event(n, event);
   return true;
 }
 
+
+/// ----------------------------------------------------------------------------
+/// Called during network progress when we need to receive a parcel.
+///
+/// Does not block.
+/// ----------------------------------------------------------------------------
 static bool _recv_parcel(network_t *n, int src, int size) {
   // allocate a parcel to provide the buffer to receive into
   hpx_parcel_t *p = hpx_parcel_acquire(size - sizeof(hpx_parcel_t));
@@ -252,10 +259,9 @@ static bool _try_start_recv(network_t *network) {
   assert(src != TRANSPORT_ANY_SOURCE);
 
   // network-network communication is done with messages smaller than parcels
-  if (bytes < sizeof(hpx_parcel_t))
-    return _recv_network(network, src, bytes);
-  else
-    return _recv_parcel(network, src, bytes);
+  return (bytes < sizeof(hpx_parcel_t)) ?
+    _recv_network(network, src, bytes) :
+    _recv_parcel(network, src, bytes);
 }
 
 
@@ -351,8 +357,8 @@ void network_shutdown(network_t *network) {
       dbg_error("error allocating request in network shutdown, %d.\n", i);
       abort();
     }
-    network_code_t code = NETWORK_SHUTDOWN;
-    int e = transport_send(network->transport, i, &code, sizeof(code),
+    network_event_t event = NETWORK_SHUTDOWN;
+    int e = transport_send(network->transport, i, &event, sizeof(event),
                            &r->request);
     if (e) {
       dbg_error("error sending shutdown request to %d.\n", i);
