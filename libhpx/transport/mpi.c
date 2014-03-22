@@ -66,6 +66,14 @@ static int _adjust_size(int size) {
 
 
 /// ----------------------------------------------------------------------------
+/// Cancel an active MPI request.
+/// ----------------------------------------------------------------------------
+static int _request_cancel(void *request) {
+  return MPI_Cancel(request);
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Shut down MPI, and delete the transport.
 /// ----------------------------------------------------------------------------
 static void _delete(transport_t *transport) {
@@ -103,7 +111,6 @@ static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
   int e = MPI_Isend(b, n, MPI_BYTE, dest, mpi->rank, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
     return dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
-
   return HPX_SUCCESS;
 }
 
@@ -185,21 +192,22 @@ transport_t *transport_new_mpi(const boot_t *boot) {
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable.id           = _id;
-  mpi->vtable.barrier      = _barrier;
-  mpi->vtable.request_size = _request_size;
-  mpi->vtable.adjust_size  = _adjust_size;
+  mpi->vtable.id             = _id;
+  mpi->vtable.barrier        = _barrier;
+  mpi->vtable.request_size   = _request_size;
+  mpi->vtable.request_cancel = _request_cancel;
+  mpi->vtable.adjust_size    = _adjust_size;
 
-  mpi->vtable.delete       = _delete;
-  mpi->vtable.pin          = _pin;
-  mpi->vtable.unpin        = _unpin;
-  mpi->vtable.send         = _send;
-  mpi->vtable.probe        = _probe;
-  mpi->vtable.recv         = _recv;
-  mpi->vtable.test         = _test;
+  mpi->vtable.delete         = _delete;
+  mpi->vtable.pin            = _pin;
+  mpi->vtable.unpin          = _unpin;
+  mpi->vtable.send           = _send;
+  mpi->vtable.probe          = _probe;
+  mpi->vtable.recv           = _recv;
+  mpi->vtable.test           = _test;
 
-  mpi->rank                = boot_rank(boot);
-  mpi->n_ranks             = boot_n_ranks(boot);
+  mpi->rank                  = boot_rank(boot);
+  mpi->n_ranks               = boot_n_ranks(boot);
 
   return &mpi->vtable;
 }

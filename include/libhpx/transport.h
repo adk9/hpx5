@@ -48,6 +48,14 @@ HPX_INTERNAL int transport_request_size(const transport_t *t)
 
 
 /// ----------------------------------------------------------------------------
+/// Cancels a pending send/receive operation associated with the given
+/// request.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL int transport_request_cancel(const transport_t *t, void *request)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
 /// Pin a block of memory
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void transport_pin(transport_t *t, const void *buffer, size_t len)

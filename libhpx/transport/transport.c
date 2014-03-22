@@ -64,6 +64,9 @@ int transport_request_size(const transport_t *transport) {
   return transport->request_size();
 }
 
+int transport_request_cancel(const transport_t *transport, void *request) {
+  return transport->request_cancel(request);
+}
 
 void transport_pin(transport_t *transport, const void *buffer, size_t len) {
   transport->pin(transport, buffer, len);

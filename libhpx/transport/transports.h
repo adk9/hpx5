@@ -23,6 +23,7 @@
 struct transport {
   void (*barrier)(void);
   int (*request_size)(void);
+  int (*request_cancel)(void *request);
   int (*adjust_size)(int size);
   const char *(*id)(void)
     HPX_RETURNS_NON_NULL;
@@ -48,7 +49,6 @@ struct transport {
 
   int (*test)(transport_t *t, void *request, int *out)
     HPX_NON_NULL(1, 2, 3);
-
 
   // int (*init)(void);
   // void (*fini)(void);

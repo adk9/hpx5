@@ -38,6 +38,11 @@ static int _request_size(void) {
 }
 
 
+static int _request_cancel(void *request) {
+  return 0;
+}
+
+
 static int _adjust_size(int size) {
   return size;
 }
@@ -79,17 +84,18 @@ static int _test(transport_t *t, void *request, int *success) {
 
 
 static transport_t _smp = {
-  .id           = _id,
-  .barrier      = _barrier,
-  .request_size = _request_size,
-  .adjust_size  = _adjust_size,
-  .delete       = _delete,
-  .pin          = _pin,
-  .unpin        = _unpin,
-  .send         = _send,
-  .probe        = _probe,
-  .recv         = _recv,
-  .test         = _test,
+  .id             = _id,
+  .barrier        = _barrier,
+  .request_size   = _request_size,
+  .request_cancel = _request_cancel,
+  .adjust_size    = _adjust_size,
+  .delete         = _delete,
+  .pin            = _pin,
+  .unpin          = _unpin,
+  .send           = _send,
+  .probe          = _probe,
+  .recv           = _recv,
+  .test           = _test,
 };
 
 
