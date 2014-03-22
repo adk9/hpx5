@@ -301,16 +301,20 @@ const char *hpx_get_network_id(void) {
     return "cannot query network now";
 }
 
-/// Called by the application to terminate the scheduler and network.
-void hpx_shutdown(int code) {
+void system_shutdown(int code) {
   if (_sched) {
     scheduler_shutdown(_sched);
-    hpx_thread_exit(HPX_SUCCESS, NULL, 0);
   }
   else {
     dbg_error("hpx_shutdown called without a scheduler.\n");
     abort();
   }
+}
+
+/// Called by the application to terminate the scheduler and network.
+void hpx_shutdown(int code) {
+  system_shutdown(code);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 

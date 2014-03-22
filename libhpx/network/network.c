@@ -32,7 +32,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "block.h"
 #include "request.h"
@@ -80,7 +80,7 @@ static void _network_handle_event(network_t *n, network_event_t event) {
     // on the shutdown code, the network switches its state, and then shuts down
     // the scheduler
     sync_store(&n->shutdown, 1, SYNC_RELEASE);
-    hpx_shutdown(0);
+    system_shutdown(0);
     return;
   }
 }
@@ -349,6 +349,7 @@ void network_shutdown(network_t *network) {
   // going to use the exiting request_t structure for tracking the broadcast,
   // even though we don't have a parcel involved.
   request_t *requests = NULL;
+  network_event_t event = NETWORK_SHUTDOWN;
 
   // for each rank, create a new request and send the shutdown code
   for (int i = 0, e = boot_n_ranks(network->boot); i < e; ++i) {
@@ -357,7 +358,6 @@ void network_shutdown(network_t *network) {
       dbg_error("error allocating request in network shutdown, %d.\n", i);
       abort();
     }
-    network_event_t event = NETWORK_SHUTDOWN;
     int e = transport_send(network->transport, i, &event, sizeof(event),
                            &r->request);
     if (e) {
