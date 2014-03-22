@@ -30,9 +30,10 @@ void* heavy_network(void *args) {
   network_t *network = args;
   network_barrier(network);
 
-  while (1) {
+  for (int shutdown = 0; !shutdown; shutdown = network_progress(network)) {
     pthread_testcancel();
-    network_progress(network);
     pthread_yield();
   }
+
+  return NULL;
 }
