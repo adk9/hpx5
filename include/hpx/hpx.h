@@ -207,6 +207,17 @@ void hpx_future_set(hpx_addr_t future, const void *value, int size);
 
 
 /// ----------------------------------------------------------------------------
+/// Counter LCOs represent monotonically increasing values. The get
+/// operation blocks the calling thread until the "counted" value
+/// reaches the limit.
+/// ----------------------------------------------------------------------------
+hpx_addr_t hpx_lco_counter_new(uint64_t limit);
+void hpx_lco_counter_delete(hpx_addr_t counter);
+uint64_t hpx_lco_counter_wait(hpx_addr_t counter);
+void hpx_lco_counter_incr(hpx_addr_t counter, const uint64_t amount);
+
+
+/// ----------------------------------------------------------------------------
 /// HPX parcel interface.
 ///
 /// Parcels are the HPX message type.
