@@ -35,32 +35,38 @@
 /// @{
 typedef struct {
   lco_t lco;                                    // counter "is-an" lco
-  hpx_addr_t future;                            // set when limit is reached
-  uint64_t count;                               // current count
-  uint64_t limit;                               // the threshold
+  uint64_t value;                               // the threshold
 } counter_t;
 
 /// Initializes the counter LCO.
-static void _init(counter_t *c, uint64_t limit) {
-  lco_init(&c->lco, true);
-  c->future = hpx_future_new(sizeof(c->count));
-  c->count = 0;
-  c->limit = limit;
+static void HPX_NON_NULL(1) _counter_init(counter_t *c, uint64_t value) {
+  lco_init(&c->lco, 0);
+  c->value = value;
 }
 
-/// Deletes the counter.
-static void _delete(counter_t *c) {
-  if (!c)
-    return;
-
-  hpx_future_delete(c->future);
-  free(c);
+// Atomically increment the count associated with the counter.
+static uint64_t HPX_NON_NULL(1) _counter_dec(counter_t *c, uint64_t amount) {
+  int64_t diff = 0 - amount;
+  return sync_addf(&c->value, diff, SYNC_RELEASE);
 }
 
-// Try to atomically increment the count associated with the counter.
-static bool _try_inc_count(counter_t *c, uint64_t count, uint64_t amount) {
-  return sync_fadd(&c->count, amount, SYNC_RELEASE);
+// Wrap the counter's lco.
+static void HPX_NON_NULL(1) _counter_lock(counter_t *c) {
+  lco_lock(&c->lco);
 }
+
+static void HPX_NON_NULL(1) _counter_unlock(counter_t *c) {
+  lco_unlock(&c->lco);
+}
+
+static void HPX_NON_NULL(1) _counter_wait(counter_t *c) {
+  scheduler_wait(&c->lco);
+}
+
+static void HPX_NON_NULL(1) _counter_signal(counter_t *c) {
+  scheduler_signal(&c->lco);
+}
+
 /// @}
 
 
@@ -68,137 +74,116 @@ static bool _try_inc_count(counter_t *c, uint64_t count, uint64_t amount) {
 /// Counter actions for remote counter interaction.
 /// ----------------------------------------------------------------------------
 /// @{
-static hpx_action_t _counter_incr = 0;
-static hpx_action_t _counter_wait_proxy = 0;
-static hpx_action_t _counter_delete = 0;
+static hpx_action_t _counter_incr_remote = 0;
+static hpx_action_t _counter_wait_remote = 0;
+static hpx_action_t _counter_delete_remote = 0;
 
-
-static int _counter_incr_action(void *args) {
-  assert(args != NULL);
+/// Forwards to hpx_lco_counter_delete().
+static int _counter_delete_remote_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  uint64_t amount = *(uint64_t*)args;
+  hpx_lco_counter_delete(target);
+  return HPX_SUCCESS;
+}
+
+
+/// Forwards to hpx_lco_counter_incr().
+static int _counter_incr_remote_action(void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  int64_t amount = *(int64_t*)args;
   hpx_lco_counter_incr(target, amount);
   return HPX_SUCCESS;
 }
 
-/// Performs a wait action on behalf of a remote thread, and sets the
-/// continuation buffer with the result.
-static int _counter_wait_proxy_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  uint64_t value = hpx_lco_counter_wait(target);
-  hpx_thread_exit(HPX_SUCCESS, &value, sizeof(value));
-}
 
-/// Deletes a counter by translating it into a local address and calling delete.
-static int _counter_delete_action(void *args) {
+/// Forwards to hpx_lco_counter_wait().
+static int _counter_wait_remote_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  void *local = NULL;
-  if (!hpx_addr_try_pin(target, local))
-    hpx_abort(1);
-
-  _delete(local);
-  return HPX_SUCCESS;
+  hpx_lco_counter_wait(target);
+  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 /// @}
 
+
+/// Register the actions that we need to interact with remote counters.
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  _counter_incr = hpx_register_action("_counter_incr", _counter_incr_action);
-  _counter_wait_proxy = hpx_register_action("_counter_wait_proxy", _counter_wait_proxy_action);
-  _counter_delete = hpx_register_action("_counter_delete", _counter_delete_action);
+  _counter_incr_remote = hpx_register_action("_counter_incr_remote_action",
+                                             _counter_incr_remote_action);
+  _counter_wait_remote = hpx_register_action("_counter_wait_remote_action",
+                                             _counter_wait_remote_action);
+  _counter_delete_remote = hpx_register_action("_counter_delete_remote_action",
+                                               _counter_delete_remote_action);
 }
 
-/// ----------------------------------------------------------------------------
-/// Initiate a remote wait operation.
-///
-/// @param future - the global address of the remote counter (may be local)
-/// @returns      - the global address of a future to wait on for the completion
-/// ----------------------------------------------------------------------------
-static hpx_addr_t _spawn_wait_proxy(hpx_addr_t counter) {
-  hpx_addr_t cont = hpx_future_new(sizeof(uint64_t));
-  hpx_call(counter, _counter_wait_proxy, NULL, 0, cont);
-  return cont;
-}
 
 /// ----------------------------------------------------------------------------
-/// Allocate a counter LCO.
-///
-/// Malloc enough local space, with the right alignment, and then use the
-/// initializer.
+/// Allocate a counter LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_counter_new(uint64_t limit) {
-  hpx_addr_t c = hpx_global_calloc(1, sizeof(counter_t), 1, 8);
-  void *local;
-  if (!hpx_addr_try_pin(c, &local))
-    hpx_abort(1);
-  _init(local, limit);
-  return c;
+  hpx_addr_t counter = hpx_global_calloc(1, sizeof(counter_t), 1, 8);
+  counter_t *c = NULL;
+  int pinned = hpx_addr_try_pin(counter, (void**)&c);
+  assert(pinned);
+  _counter_init(c, limit);
+  hpx_addr_unpin(counter);
+  return counter;
 }
 
+
 /// ----------------------------------------------------------------------------
-/// Free a counter LCO.
-///
-/// If the counter LCO is local, go ahead and delete it, otherwise
-/// generate a parcel to do it.
+/// Free a counter LCO. This is asynchronous. This does not clean up any waiting
+/// threads, in the case where we're freeing before we've reached the
+/// limit. Also, it's not properly synchronized with wait or inc.
 /// ----------------------------------------------------------------------------
 void
 hpx_lco_counter_delete(hpx_addr_t counter) {
-  void *local;
-  if (hpx_addr_try_pin(counter, &local)) {
-    _delete(local);
+  counter_t *c = NULL;
+  if (hpx_addr_try_pin(counter, (void**)&c)) {
+    free(c);
     hpx_addr_unpin(counter);
   }
-  else
-    hpx_call(counter, _counter_delete, NULL, 0, HPX_NULL);
+  else {
+    hpx_call(counter, _counter_delete_remote, NULL, 0, HPX_NULL);
+  }
 }
 
 /// ----------------------------------------------------------------------------
 /// Block until the counter LCO's internal count is incremented to its
-/// limit. This simply does a future get which handles both, the local
-/// and remote cases.
+/// limit. This is synchronous by its nature.
 /// ----------------------------------------------------------------------------
-uint64_t
+void
 hpx_lco_counter_wait(hpx_addr_t counter) {
   counter_t *c = NULL;
-  uint64_t value;
   if (hpx_addr_try_pin(counter, (void**)&c)) {
-    hpx_future_get(c->future, &value, sizeof(value));
+    _counter_lock(c);
+    if (c->value != 0)
+      _counter_wait(c);
+    _counter_unlock(c);
     hpx_addr_unpin(counter);
-  } else {
-    hpx_addr_t val = _spawn_wait_proxy(counter);
-    hpx_future_get(val, &value, sizeof(value));
-    hpx_future_delete(val);
   }
-  return value;
+  else {
+    hpx_addr_t sync = hpx_future_new(0);
+    hpx_call(counter, _counter_wait_remote, NULL, 0, sync);
+    hpx_future_get(sync, NULL, 0);
+    hpx_future_delete(sync);
+  }
 }
 
 /// ----------------------------------------------------------------------------
-/// If the counter LCO is local, increment its value and only signal
-/// when the incremented value reaches the limit, while holding the
-/// lock. Otherwise, send a parcel to its locality to perform a remote
-/// counter increment.
+/// Increment the counter. This is asynchronous.
 /// ----------------------------------------------------------------------------
 void
 hpx_lco_counter_incr(hpx_addr_t counter, const uint64_t amount) {
   counter_t *c = NULL;
-  uint64_t count;
   if (hpx_addr_try_pin(counter, (void**)&c)) {
-    bool success = false;
-    do {
-      count = sync_load(&c->count, SYNC_ACQUIRE);
-      success = _try_inc_count(c, count, amount);
-    } while (!success);
-
-    if (count + amount >= c->limit)
-      hpx_future_set(c->future, &count, sizeof(count));
+    if (_counter_dec(c, amount) != 0) {
+      _counter_lock(c);
+      _counter_signal(c);
+      _counter_unlock(c);
+    }
     hpx_addr_unpin(counter);
-    return;
   }
-
-  hpx_parcel_t *p = hpx_parcel_acquire(sizeof(amount));
-  hpx_parcel_set_target(p, counter);
-  hpx_parcel_set_action(p, _counter_incr);
-  void *args = hpx_parcel_get_data(p);
-  memcpy(args, &amount, sizeof(amount));
-  hpx_parcel_send(p);
+  else {
+    hpx_call(counter, _counter_incr_remote, &amount, sizeof(amount), HPX_NULL);
+  }
 }
