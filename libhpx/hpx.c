@@ -152,6 +152,12 @@ int hpx_init(const hpx_config_t *cfg) {
 
 /// Called to run HPX.
 int hpx_run(hpx_action_t act, const void *args, unsigned size) {
+  // start the network
+  pthread_t heavy;
+  int e = pthread_create(&heavy, NULL, heavy_network, _network);
+  if (e)
+    return _cleanup(dbg_error("could not start the network thread.\n"));
+
   // the rank-0 process starts the application by sending a single parcel to
   // itself
   if (boot_rank(_boot) == 0) {
@@ -164,23 +170,24 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     hpx_parcel_set_data(p, args, size);
 
     // Don't use hpx_parcel_send() here, because that will try and enqueue the
-    // parcel locally, but we're not a scheduler thread. We rely on network
-    // loopback for this to work.
+    // parcel locally, but we're not a scheduler thread yet, and haven't
+    // initialized the appropriate structures. Network loopback will get this to
+    // us once we start progressing and receive from the network.
     network_send(_network, p);
   }
 
-  // start the network
-  pthread_t heavy;
-  int e = pthread_create(&heavy, NULL, heavy_network, _network);
-  if (e)
-    return _cleanup(dbg_error("could not start the network thread.\n"));
-
-  // start the scheduler
+  // start the scheduler, this will return after scheduler_shutdown()
   e = scheduler_startup(_sched);
 
-  // shutdown the network thread
-  pthread_cancel(heavy);
-  pthread_join(heavy, NULL);
+  // shutdown the network
+  network_shutdown(_network);
+
+  // wait for the network to shutdown
+  e = pthread_join(heavy, NULL);
+  if (e) {
+    dbg_error("could not join the heavy network thread.\n");
+    return e;
+  }
 
   // and cleanup the system
   return _cleanup(e);
@@ -294,22 +301,16 @@ const char *hpx_get_network_id(void) {
     return "cannot query network now";
 }
 
-/// Called by the runtime to terminate the scheduler and network.
-void system_shutdown(int code) {
+/// Called by the application to terminate the scheduler and network.
+void hpx_shutdown(int code) {
   if (_sched) {
     scheduler_shutdown(_sched);
+    hpx_thread_exit(HPX_SUCCESS, NULL, 0);
   }
   else {
     dbg_error("hpx_shutdown called without a scheduler.\n");
     abort();
   }
-  network_shutdown(_network);
-}
-
-/// Called by the application to terminate the scheduler and network.
-void hpx_shutdown(int code) {
-  system_shutdown(code);
-  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
 }
 
 
