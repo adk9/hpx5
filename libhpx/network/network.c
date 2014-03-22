@@ -373,6 +373,20 @@ void network_shutdown(network_t *network) {
     _test(network, _finish_sendrecv, &requests, 0);
 }
 
+static void _network_cancel(network_t *network) {
+  request_t *r = NULL;
+
+  // cancel pending sends
+  LL_FOREACH(network->pending_sends, r) {
+    transport_request_cancel(network->transport, r);
+  }
+
+  // cancel pending receives
+  LL_FOREACH(network->pending_recvs, r) {
+    transport_request_cancel(network->transport, r);
+  }
+}
+
 
 void network_delete(network_t *network) {
   if (!network)
@@ -432,8 +446,10 @@ hpx_parcel_t *network_recv(network_t *network) {
 
 int network_progress(network_t *network) {
   int shutdown = sync_load(&network->shutdown, SYNC_ACQUIRE);
-  if (shutdown)
+  if (shutdown) {
+    _network_cancel(network);
     return shutdown;
+  }
 
   int sends = _test(network, _finish_send, &network->pending_sends, 0);
   if (sends)
