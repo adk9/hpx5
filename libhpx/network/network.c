@@ -45,41 +45,50 @@ const hpx_addr_t HPX_ANYWHERE = { NULL, -1 };
 
 
 /// ----------------------------------------------------------------------------
-/// The network class data.
-/// ----------------------------------------------------------------------------
-struct network {
-  const boot_t        *boot;                    // rank, n_ranks
-  transport_t    *transport;                    // byte-based send/recv
-
-  ms_queue_t          sends;                    // half duplex port for send
-  ms_queue_t          recvs;                    // half duplex port for recv
-
-  request_t           *free;                    // request freelist
-  request_t  *pending_sends;                    // outstanding send requests
-  request_t  *pending_recvs;                    // outstanding recv requests
-
-  SYNC_ATOMIC(int) shutdown;                    // shutdown flag for progress
-};
-
-
-/// ----------------------------------------------------------------------------
 /// Event for network-network messages.
 /// ----------------------------------------------------------------------------
 typedef enum {
-  NETWORK_SHUTDOWN = 0,
-  NETWORK_NULL
-} network_event_t;
+  _EVENT_SHUTDOWN = 0,
+  _EVENT_MAX
+} _network_event_t;
 
 
-static void _network_handle_event(network_t *n, network_event_t event) {
+typedef enum {
+  _STATE_RUNNING = 0,
+  _STATE_SHUTDOWN_PENDING,
+  _STATE_SHUTDOWN,
+  _STATE_MAX
+} _network_state_t;
+
+
+/// ----------------------------------------------------------------------------
+/// The network class data.
+/// ----------------------------------------------------------------------------
+struct network {
+  const boot_t       *boot;                     // rank, n_ranks
+  transport_t   *transport;                     // byte-based send/recv
+
+  ms_queue_t         sends;                     // half duplex port for send
+  ms_queue_t         recvs;                     // half duplex port for recv
+
+  request_t          *free;                     // request freelist
+  request_t *pending_sends;                     // outstanding send requests
+  request_t *pending_recvs;                     // outstanding recv requests
+
+  SYNC_ATOMIC(_network_state_t) state;          // state for progress
+};
+
+
+static void _network_handle_event(network_t *n, _network_event_t event) {
   switch (event) {
    default:
     dbg_error("unrecognized network event.\n");
     return;
-   case NETWORK_SHUTDOWN:
+   case _EVENT_SHUTDOWN:
     // on the shutdown code, the network switches its state, and then shuts down
     // the scheduler
-    sync_store(&n->shutdown, 1, SYNC_RELEASE);
+    sync_cas(&n->state, _STATE_RUNNING, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
+             SYNC_RELAXED);
     system_shutdown(0);
     return;
   }
@@ -138,13 +147,25 @@ static HPX_MALLOC request_t *_new_request(network_t *network, hpx_parcel_t *p) {
 
 /// ----------------------------------------------------------------------------
 /// Frees a previously allocated request.
+///
+/// This uses a freelist algorithm for request nodes.
+///
+/// @param network - the network
+/// @param request - the request
 /// ----------------------------------------------------------------------------
 static void _delete_request(network_t *network, request_t *request) {
   LL_PREPEND(network->free, request);
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Called during network progress to initiate a send with the transport.
+///
+/// Try and pop a network request off of the send queue, allocate a request node
+/// for it, and initiate a byte-send with the transport.
+///
+/// @param network - the network object
+/// @returns       - true if we initiated a send
 /// ----------------------------------------------------------------------------
 static bool _try_start_send(network_t *network) {
   hpx_parcel_t *p = sync_ms_queue_dequeue(&network->sends);
@@ -179,25 +200,24 @@ static bool _try_start_send(network_t *network) {
 /// ----------------------------------------------------------------------------
 /// Called during network progress when we need to receive an event.
 ///
-/// Blocks until the recv has completed, and handles the event.
+/// Blocks until the recv has completed, and handles the event synchronously.
 /// ----------------------------------------------------------------------------
 static bool _recv_event(network_t *n, int src, int size) {
   char request[transport_request_size(n->transport)];
-  network_event_t event = NETWORK_NULL;
-  int e = transport_recv(n->transport, src, &event, sizeof(event), request);
+  _network_event_t event = _EVENT_MAX;
+  transport_t *t = n->transport;
+  int e = transport_recv(t, src, &event, sizeof(event), request);
   if (e) {
     dbg_error("error when recieving a network event.\n");
     return false;
   }
 
-  int done = 0;
-  do {
-    e = transport_test_sendrecv(n->transport, request, &done);
+  for (int done = 0; !done; e = transport_test_sendrecv(t, request, &done)) {
     if (e) {
       dbg_error("error when testing a network event.\n");
       return false;
     }
-  } while (!done);
+  }
 
   _network_handle_event(n, event);
   return true;
@@ -258,7 +278,8 @@ static bool _try_start_recv(network_t *network) {
   assert(src < boot_n_ranks(network->boot));
   assert(src != TRANSPORT_ANY_SOURCE);
 
-  // network-network communication is done with messages smaller than parcels
+  // network-network communication is done with events, which are always smaller
+  // than parcels---this is a hack and should be revisited, but it works for now
   return (bytes < sizeof(hpx_parcel_t)) ?
     _recv_event(network, src, bytes) :
     _recv_parcel(network, src, bytes);
@@ -316,59 +337,50 @@ static void _finish_recv(network_t *n, request_t *r) {
 /// @param       n - the current number of completed requests
 /// @returns       - the total number of completed requests
 /// ----------------------------------------------------------------------------
-static int _test(network_t *network, void (*finish)(network_t*, request_t*),
-                  request_t **curr, int n) {
+static int HPX_NON_NULL(1, 2, 3) _test(network_t *network,
+                                       void (*finish)(network_t*, request_t*),
+                                       request_t **curr, int n)
+{
   request_t *i = *curr;
+
+  // base case, return the number of finished requests
   if (i == NULL)
     return n;
 
+  // test this request
   int complete = 0;
   int e = transport_test_sendrecv(network->transport, &i->request, &complete);
   if (e)
     dbg_error("transport test failed.\n");
 
+  // test next request, do not increment n
   if (!complete)
     return _test(network, finish, &i->next, n);
 
+  // remove and finish this request, test new next request, increment n
   *curr = i->next;
   finish(network, i);
   return _test(network, finish, curr, n + 1);
 }
 
 
-network_t *network_new(const boot_t *boot, transport_t *transport) {
-  network_t *n = malloc(sizeof(*n));
-  n->boot          = boot;
-  n->transport     = transport;
-
-  sync_ms_queue_init(&n->sends);
-  sync_ms_queue_init(&n->recvs);
-
-  n->pending_sends = NULL;
-  n->pending_recvs = NULL;
-  n->free          = NULL;
-
-  sync_store(&n->shutdown, 0, SYNC_RELEASE);
-
-  return n;
-}
-
-
-/// Network shutdown tries to set the network's shutdown flag (which is read in
-/// network_progress()). If it was not previously set, then this locality
-/// broadcasts the NETWORK_SHUTDOWN event to the entire network, which will
-/// trigger remote shutdowns. This broadcast is done synchronously, so that the
-/// thread that returns from network_shutdown() is guaranteed that the entire
-/// system will know about the shutdown.
+/// ----------------------------------------------------------------------------
+/// Broadcast an event.
 ///
-void network_shutdown(network_t *network) {
-  if (sync_swap(&network->shutdown, 1, SYNC_ACQ_REL))
-    return;
-
+/// Event broadcasts are done locally synchronously, i.e., this won't return
+/// until the transport has verified that all of the events were sent. This
+/// doesn't guarantee anything about the receive operations.
+///
+/// Currently, this includes the current rank as part of the broadcast.
+///
+/// @param network - the network to broadcast to
+/// @param   event - the even to broadcast
+/// ----------------------------------------------------------------------------
+static void _broadcast_event(network_t *network, _network_event_t event) {
   // going to use the exiting request_t structure for tracking the broadcast,
-  // even though we don't have a parcel involved.
+  // even though we don't have a parcel involved---this lets us use the existing
+  // _test functionality to wait
   request_t *requests = NULL;
-  network_event_t event = NETWORK_SHUTDOWN;
 
   // for each rank, create a new request and send the shutdown code
   for (int i = 0, e = boot_n_ranks(network->boot); i < e; ++i) {
@@ -387,7 +399,7 @@ void network_shutdown(network_t *network) {
     LL_PREPEND(requests, r);
   }
 
-  // loop until all of the requests have completed
+  // wait until all of the requests have completed
   while (requests)
     _test(network, _finish_request, &requests, 0);
 }
@@ -404,6 +416,37 @@ static void _network_cancel(network_t *network) {
   LL_FOREACH(network->pending_recvs, r) {
     transport_request_cancel(network->transport, r);
   }
+}
+
+
+/// Allocate a new network. The network currently consists of a single, shared
+/// Tx/Rx port---implemented as tewo M&S queus, two lists of pending transport
+/// requests, and a freelist for request. There's also a shutdown flag that is
+/// set asynchronously and tested in the progress loop.
+network_t *network_new(const boot_t *boot, transport_t *transport) {
+  network_t *n = malloc(sizeof(*n));
+  n->boot          = boot;
+  n->transport     = transport;
+
+  sync_ms_queue_init(&n->sends);
+  sync_ms_queue_init(&n->recvs);
+
+  n->pending_sends = NULL;
+  n->pending_recvs = NULL;
+  n->free          = NULL;
+
+  sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
+
+  return n;
+}
+
+
+/// Network shutdown does a blind CAS on the shutdown flag. If this succeeds
+/// then the next time network_progress() is called, it will broadcast the
+/// _EVENT_SHUTDOWN event.
+void network_shutdown(network_t *network) {
+  sync_cas(&network->state, _STATE_RUNNING, _STATE_SHUTDOWN_PENDING,
+           SYNC_RELEASE, SYNC_RELAXED);
 }
 
 
@@ -464,10 +507,14 @@ hpx_parcel_t *network_recv(network_t *network) {
 
 
 int network_progress(network_t *network) {
-  int shutdown = sync_load(&network->shutdown, SYNC_ACQUIRE);
-  if (shutdown) {
-    _network_cancel(network);
-    return shutdown;
+  _network_state_t state = sync_load(&network->state, SYNC_ACQUIRE);
+  if (state != _STATE_RUNNING) {
+    if (sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
+                 SYNC_RELEASE, SYNC_RELAXED)) {
+      _network_cancel(network);
+      _broadcast_event(network, _EVENT_SHUTDOWN);
+    }
+    return state;
   }
 
   int sends = _test(network, _finish_send, &network->pending_sends, 0);
@@ -486,7 +533,7 @@ int network_progress(network_t *network) {
   if (recv)
     dbg_log("started a recv.\n");
 
-  return 0;
+  return state;
 }
 
 
