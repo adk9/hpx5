@@ -181,7 +181,7 @@ static bool _try_start_send(network_t *network) {
 ///
 /// Blocks until the recv has completed, and handles the event.
 /// ----------------------------------------------------------------------------
-static bool _recv_network(network_t *n, int src, int size) {
+static bool _recv_event(network_t *n, int src, int size) {
   char request[transport_request_size(n->transport)];
   network_event_t event = NETWORK_NULL;
   int e = transport_recv(n->transport, src, &event, sizeof(event), request);
@@ -260,7 +260,7 @@ static bool _try_start_recv(network_t *network) {
 
   // network-network communication is done with messages smaller than parcels
   return (bytes < sizeof(hpx_parcel_t)) ?
-    _recv_network(network, src, bytes) :
+    _recv_event(network, src, bytes) :
     _recv_parcel(network, src, bytes);
 }
 
@@ -268,26 +268,38 @@ static bool _try_start_recv(network_t *network) {
 /// ----------------------------------------------------------------------------
 /// Finish a generic request.
 /// ----------------------------------------------------------------------------
-static void _finish_sendrecv(network_t *n, request_t *r) {
+static void _finish_request(network_t *n, request_t *r) {
   _delete_request(n, r);
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Finish a send request.
+///
+/// This finishes a send by freeing the request's parcel, and then calling the
+/// generic finish handler.
+///
+/// @param n - the network
+/// @param r - the request to finish
 /// ----------------------------------------------------------------------------
 static void _finish_send(network_t *n, request_t *r) {
   hpx_parcel_release(r->parcel);
-  _finish_sendrecv(n, r);
+  _finish_request(n, r);
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Finish a receive request.
+///
+/// This finishes a receive by pushing the request's parcel into the receive
+/// queue, and then calling the generic finish handler.
+///
+/// @param n - the network
+/// @param r - the request to finish
 /// ----------------------------------------------------------------------------
 static void _finish_recv(network_t *n, request_t *r) {
   sync_ms_queue_enqueue(&n->recvs, r->parcel);
-  _finish_sendrecv(n, r);
+  _finish_request(n, r);
 }
 
 
@@ -295,7 +307,14 @@ static void _finish_recv(network_t *n, request_t *r) {
 /// Recursively test a list of requests.
 ///
 /// Tail recursive so it won't use any stack space. Uses the passed function
-/// pointer to finish the request.
+/// pointer to finish the request, so that this can be used for different kinds
+/// of requests.
+///
+/// @param network - the network used for testing
+/// @param  finish - a callback to finish the request
+/// @param    curr - the current request to test
+/// @param       n - the current number of completed requests
+/// @returns       - the total number of completed requests
 /// ----------------------------------------------------------------------------
 static int _test(network_t *network, void (*finish)(network_t*, request_t*),
                   request_t **curr, int n) {
@@ -337,10 +356,10 @@ network_t *network_new(const boot_t *boot, transport_t *transport) {
 
 /// Network shutdown tries to set the network's shutdown flag (which is read in
 /// network_progress()). If it was not previously set, then this locality
-/// broadcasts the NETWORK_SHUTDOWN code to the entire network, which will
+/// broadcasts the NETWORK_SHUTDOWN event to the entire network, which will
 /// trigger remote shutdowns. This broadcast is done synchronously, so that the
 /// thread that returns from network_shutdown() is guaranteed that the entire
-/// system knows about the shutdown.
+/// system will know about the shutdown.
 ///
 void network_shutdown(network_t *network) {
   if (sync_swap(&network->shutdown, 1, SYNC_ACQ_REL))
@@ -370,7 +389,7 @@ void network_shutdown(network_t *network) {
 
   // loop until all of the requests have completed
   while (requests)
-    _test(network, _finish_sendrecv, &requests, 0);
+    _test(network, _finish_request, &requests, 0);
 }
 
 static void _network_cancel(network_t *network) {
