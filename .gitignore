@@ -33,12 +33,6 @@
 /examples/Makefile
 /examples/Makefile.in
 
-# /examples/network
-/examples/network/.deps
-/examples/network/pingpong
-/examples/network/Makefile
-/examples/network/Makefile.in
-
 # /examples/thread
 /examples/thread/.deps
 /examples/thread/fibonacci
@@ -49,6 +43,10 @@
 /examples/hpx/.deps
 /examples/hpx/fibonaccihpx
 /examples/hpx/pingponghpx
+/examples/hpx/allreduce
+/examples/hpx/countdown
+/examples/hpx/seqspawn
+/examples/hpx/parspawn
 /examples/hpx/Makefile
 /examples/hpx/Makefile.in
 
@@ -60,45 +58,25 @@
 /include/Makefile
 /include/Makefile.in
 
-# /include/arch/
-/include/arch/.deps
-/include/arch/Makefile
-/include/arch/Makefile.in
-
-# /include/arch/x86_64/
-/include/arch/x86_64/.deps
-/include/arch/x86_64/Makefile
-/include/arch/x86_64/Makefile.in
-
 # /include/contrib/
 /include/contrib/.deps
 /include/contrib/Makefile
 /include/contrib/Makefile.in
 
-# /include/contrib/freebsd/
-/include/contrib/freebsd/.deps
-/include/contrib/freebsd/Makefile
-/include/contrib/freebsd/Makefile.in
+include/hpx/Makefile
+include/libhpx/Makefile
+include/libsync/Makefile
 
-# /include/contrib/sglib/
-/include/contrib/sglib/.deps
-/include/contrib/sglib/Makefile
-/include/contrib/sglib/Makefile.in
-
-# /include/xpi/
-/include/xpi/.deps
-/include/xpi/Makefile
-/include/xpi/Makefile.in
-
-# /src/
-/src/.deps
-/src/Makefile
-/src/Makefile.in
-
-# /src/libxpi/
-/src/libxpi/.deps
-/src/libxpi/Makefile
-/src/libxpi/Makefile.in
+libhpx/Makefile
+libhpx/boot/Makefile
+libhpx/gas/Makefile
+libhpx/network/Makefile
+libhpx/scheduler/Makefile
+libhpx/scheduler/arch/Makefile
+libhpx/system/Makefile
+libhpx/transport/Makefile
+libsync/Makefile
+libsync/arch/Makefile
 
 # /tests/
 /tests/.deps
