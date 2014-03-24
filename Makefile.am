@@ -5,8 +5,6 @@
 EXTRA_DIST = \
         autogen.sh           \
         README NEWS TODO     \
-        examples/Makefile    \
-        examples/fibonacci.c \
         docs
 
 AUTOMAKE_OPTIONS= foreign
