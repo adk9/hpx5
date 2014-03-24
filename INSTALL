@@ -17,7 +17,7 @@ Example build assuming --prefix=/home/kissel/<package>
  > make && make install
 
 --Photon--
- > git clone git@github.iu.edu:damsl/photon.git
+ > git clone git@gitlab.crest.iu.edu:damsl/photon.git
  > git checkout request-track
  > ./autogen
  > ./configure --with-mpi-include-path=/home/kissel/openmpi-1.6.3/include/ \
