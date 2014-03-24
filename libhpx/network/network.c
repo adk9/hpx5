@@ -384,6 +384,8 @@ static void _broadcast_event(network_t *network, _network_event_t event) {
 
   // for each rank, create a new request and send the shutdown code
   for (int i = 0, e = boot_n_ranks(network->boot); i < e; ++i) {
+    if (i == hpx_get_my_rank())
+      continue;
     request_t *r = _new_request(network, NULL);
     if (!r) {
       dbg_error("error allocating request in network shutdown, %d.\n", i);
