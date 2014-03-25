@@ -35,16 +35,7 @@ typedef struct network network_t;
 /// @param t - the byte transport object to
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL network_t *network_new(const struct boot *b, struct transport *t)
-  HPX_NON_NULL(1, 2);
-
-
-/// ----------------------------------------------------------------------------
-/// Cooperatively ask the network to shutdown.
-///
-/// Broadcasts shutdown across the system.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_shutdown(network_t *network)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1, 2) HPX_MALLOC;
 
 
 /// ----------------------------------------------------------------------------
@@ -56,6 +47,15 @@ HPX_INTERNAL void network_shutdown(network_t *network)
 /// @param network - the network to delete
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_delete(network_t *network)
+  HPX_NON_NULL(1);
+
+/// ----------------------------------------------------------------------------
+/// Shuts down the network.
+///
+/// This simply shuts down the local network progress thread, if there
+/// is one.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_shutdown(network_t *network)
   HPX_NON_NULL(1);
 
 
@@ -88,6 +88,8 @@ HPX_INTERNAL hpx_parcel_t *network_recv(network_t *network)
 ///
 /// Should only be called by one thread per locality. For a full system barrier,
 /// callers should use the scheduler barrier first.
+///
+/// @param  status - the status future that tracks completion
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_barrier(network_t *network)
   HPX_NON_NULL(1);
@@ -108,5 +110,16 @@ HPX_INTERNAL void network_barrier(network_t *network)
 HPX_INTERNAL int network_progress(network_t *network)
   HPX_NON_NULL(1);
 
+///
+HPX_INTERNAL void network_tx_enqueue(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+///
+HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(void);
+
+///
+HPX_INTERNAL void network_rx_enqueue(hpx_parcel_t *p) HPX_NON_NULL(1);
+
+///
+HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(void);
 
 #endif // LIBHPX_NETWORK_H

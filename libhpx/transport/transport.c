@@ -41,6 +41,14 @@ transport_t *transport_new(const struct boot *boot) {
   }
 #endif
 
+#ifdef HAVE_PORTALS
+  transport = transport_new_portals(boot);
+  if (transport) {
+    dbg_log("initialized the Portals transport.\n");
+    return transport;
+  }
+#endif
+
   transport = transport_new_smp(boot);
   if (transport) {
     dbg_log("initialized the SMP transport.\n");
@@ -94,7 +102,11 @@ int transport_recv(transport_t *transport, int src, void *buffer, size_t n,
   return transport->recv(transport, src, buffer, n, r);
 }
 
-int transport_test_sendrecv(transport_t *transport, void *request, int *out) {
+void transport_progress(transport_t *transport, bool flush) {
+  transport->progress(transport, flush);
+}
+
+int transport_test(transport_t *transport, void *request, int *out) {
   return transport->test(transport, request, out);
 }
 
