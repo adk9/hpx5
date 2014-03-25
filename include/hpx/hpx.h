@@ -196,6 +196,15 @@ const hpx_addr_t hpx_thread_current_cont(void);
 
 
 /// ----------------------------------------------------------------------------
+/// Semaphores are builtin LCOs that represent resource usage.
+/// ----------------------------------------------------------------------------
+hpx_addr_t hpx_sema_new(unsigned init);
+void hpx_sema_delete(hpx_addr_t sema);
+void hpx_sema_v(hpx_addr_t sema);        // increments the semaphore, async
+void hpx_sema_p(hpx_addr_t sema);        // decrement the semaphore, blocks if 0
+
+
+/// ----------------------------------------------------------------------------
 /// Futures are builtin LCOs that represent values returned from asynchronous
 /// computation.
 /// ----------------------------------------------------------------------------

@@ -98,4 +98,5 @@ HPX_INTERNAL struct thread *lco_trigger(lco_t *lco)
 HPX_INTERNAL void lco_enqueue_and_unlock(lco_t *lco, struct thread *thread)
   HPX_NON_NULL(1, 2);
 
+
 #endif // LIBHPX_LCO_H

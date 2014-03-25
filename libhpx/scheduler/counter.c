@@ -147,6 +147,7 @@ hpx_lco_counter_delete(hpx_addr_t counter) {
   }
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Block until the counter LCO's internal count is incremented to its
 /// limit. This is synchronous by its nature.
