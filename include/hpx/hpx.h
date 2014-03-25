@@ -426,6 +426,17 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 
 
 /// ----------------------------------------------------------------------------
+/// HPX collective operations.
+///
+/// This is a parallel call interface that performs an @p action on @p
+/// args at all available localities. The output values are not
+/// returned, but the completion of the broadcast operation can be
+/// tracked through the @p lco LCO.
+/// ----------------------------------------------------------------------------
+int hpx_bcast(hpx_action_t action, const void *args, size_t len, hpx_addr_t lco);
+
+
+/// ----------------------------------------------------------------------------
 /// HPX high-resolution timer interface
 /// ----------------------------------------------------------------------------
 #if defined(__linux__)

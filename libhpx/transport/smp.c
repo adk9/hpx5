@@ -82,6 +82,8 @@ static int _test(transport_t *t, void *request, int *success) {
   return HPX_ERROR;
 }
 
+static void _progress(transport_t *transport, bool flush) {
+}
 
 static transport_t _smp = {
   .id             = _id,
@@ -96,6 +98,7 @@ static transport_t _smp = {
   .probe          = _probe,
   .recv           = _recv,
   .test           = _test,
+  .progress       = _progress,
 };
 
 

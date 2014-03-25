@@ -22,17 +22,16 @@
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
+#include "progress.h"
 #include "transports.h"
 
-/// make sure all messages go through send/recv and not put/get (which are not
-/// implemented)
-static const int EAGER_THRESHOLD_MPI_DEFAULT = INT_MAX;
 
 /// the MPI transport caches the number of ranks
 typedef struct {
-  transport_t vtable;
-  int rank;
-  int n_ranks;
+  transport_t  vtable;
+  int          rank;
+  int          n_ranks;
+  progress_t  *progress;
 } mpi_t;
 
 
@@ -77,6 +76,8 @@ static int _request_cancel(void *request) {
 /// Shut down MPI, and delete the transport.
 /// ----------------------------------------------------------------------------
 static void _delete(transport_t *transport) {
+  mpi_t *mpi = (mpi_t*)transport;
+  network_progress_delete(mpi->progress);
   int finalized;
   MPI_Finalized(&finalized);
   if (!finalized)
@@ -177,6 +178,12 @@ static int _test(transport_t *t, void *request, int *success) {
   return HPX_SUCCESS;
 }
 
+static void _progress(transport_t *t, bool flush) {
+  mpi_t *mpi = (mpi_t*)t;
+  network_progress_poll(mpi->progress);
+  if (flush)
+    network_progress_flush(mpi->progress);
+}
 
 transport_t *transport_new_mpi(const boot_t *boot) {
   int val = 0;
@@ -205,80 +212,15 @@ transport_t *transport_new_mpi(const boot_t *boot) {
   mpi->vtable.probe          = _probe;
   mpi->vtable.recv           = _recv;
   mpi->vtable.test           = _test;
+  mpi->vtable.progress       = _progress;
 
   mpi->rank                  = boot_rank(boot);
   mpi->n_ranks               = boot_n_ranks(boot);
 
+  mpi->progress              = network_progress_new(boot, &mpi->vtable);
+  if (!mpi->progress) {
+    dbg_error("failed to start the transport progress loop.\n");
+    hpx_abort();
+  }
   return &mpi->vtable;
 }
-
-// LD: below archived temporarily
-#if 0
-/* status may be NULL */
-static int _test(transport_request_t *request, int *flag, transport_status_t *status) {
-  MPI_Status *s = (status) ? &(status->mpi) : MPI_STATUS_IGNORE;
-  int test_result = MPI_Test(&(request->mpi), flag, s);
-
-  if (test_result != MPI_SUCCESS)
-    return (__hpx_errno = HPX_ERROR);
-
-  if (!status)
-    return HPX_SUCCESS;
-
-  if (*flag == true)
-    status->source = status->mpi.MPI_SOURCE;
-
-  return HPX_SUCCESS;
-}
-
-static int _put(int dest, void *buffer, size_t len,
-                transport_request_t *request) {
-  return HPX_ERROR;
-}
-
-static int _get(int src, void *buffer, size_t len, transport_request_t *request)
-{
-  return HPX_ERROR;
-}
-
-/* Return the physical transport ID of the current process */
-static int _phys_addr(int *l) {
-  int ret;
-  ret = HPX_ERROR;
-
-  if (!l) {
-    /* TODO: replace with more specific error */
-    __hpx_errno = HPX_ERROR;
-    return ret;
-  }
-
-  l->rank = rank;
-  return 0;
-}
-
-
-static void _progress(void *data) {
-}
-
-
-static int _fini(void) {
-  int retval;
-  int temp;
-  retval = HPX_ERROR;
-
-  MPI_Finalized(&retval);
-  if (!retval) {
-    temp = MPI_Finalize();
-
-    if (temp == MPI_SUCCESS)
-      retval = 0;
-    else
-      __hpx_errno = HPX_ERROR; /* TODO: replace with more specific error */
-  }
-
-  free(_argv_buffer);
-  free(_argv);
-
-  return retval;
-}
-#endif

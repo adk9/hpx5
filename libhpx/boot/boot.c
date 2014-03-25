@@ -34,7 +34,7 @@ boot_t *boot_new(void) {
 #endif
 
 #ifdef HAVE_MPI
-  boot = boot_new_mpirun();
+  boot = boot_new_mpi();
   if (boot) {
     dbg_log("initialized MPI-run process boot manager.\n");
     return boot;
@@ -61,4 +61,12 @@ int boot_rank(const boot_t *boot) {
 
 int boot_n_ranks(const boot_t *boot) {
   return (boot ? boot->n_ranks(boot) : -1);
+}
+
+int boot_barrier(const boot_t *boot) {
+  return boot->barrier();
+}
+
+int boot_allgather(const boot_t *boot, const void *in, void *out, int n) {
+  return boot->allgather(boot, in, out, n);
 }
