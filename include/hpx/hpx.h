@@ -26,7 +26,7 @@ extern "C" {
 /// External HPX typedefs
 /// @{
 typedef uintptr_t hpx_action_t;
-typedef     int (*hpx_action_handler_t)(void *);
+typedef int (*hpx_action_handler_t)(void *);
 /// @}
 
 extern hpx_action_t HPX_ACTION_NULL;
@@ -38,23 +38,41 @@ extern hpx_action_t HPX_ACTION_NULL;
 /// @}
 
 
-// An HPX global address.
+/// An HPX global address. At release, this could be encapsulated in a more
+/// opaque structure, like a 128 bit integer, or a 16 byte character array. This
+/// would protect the API, and compiled application code, from address algorithm
+/// changes.
 typedef struct {
-  void *local;
-  int rank;
+  uint64_t offset;                              // absolute offset
+  uint32_t id;                                  // unique allocation identifier
+  uint32_t block_bytes;                         // number of bytes per block
 } hpx_addr_t;
 
+#define HPX_ADDR_INIT { \
+    .offset = 0,        \
+    .id = 0,            \
+    .block_bytes = 0    \
+}
+
 extern const hpx_addr_t HPX_NULL;
-extern const hpx_addr_t HPX_ANYWHERE;
+//extern const hpx_addr_t HPX_ANYWHERE;
 extern hpx_addr_t HPX_HERE;
 hpx_addr_t HPX_THERE(int i);
+int HPX_WHERE(hpx_addr_t addr);
 
 /// Allocate global memory.
 ///
 /// This is not a collective operation, the returned address is returned only to
 /// the calling thread, and must either be written into already-allocated global
 /// memory, or sent via a parcel, for anyone else to address the allocation.
-hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size, size_t alignment);
+///
+/// In UPC-land, the returned global address would have the following
+/// distribution.
+///
+/// shared [block_size] T[n]; where sizeof(T) == bytes
+///
+hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size,
+                             size_t alignment);
 
 
 /// Free a global allocation.
@@ -63,6 +81,10 @@ void hpx_global_free(hpx_addr_t addr);
 
 /// returns true if the addresses are equal
 bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
+
+
+/// global address arithmetic
+hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes);
 
 
 /// Performs address translation.
@@ -167,11 +189,6 @@ int hpx_get_num_threads(void);
 int hpx_get_my_thread_id(void);
 
 
-/// HPX address interface
-int hpx_addr_to_rank(hpx_addr_t addr);
-hpx_addr_t hpx_addr_from_rank(int rank);
-
-
 /// ----------------------------------------------------------------------------
 /// HPX thread interface.
 ///
@@ -214,6 +231,8 @@ void hpx_future_get(hpx_addr_t future, void *value, int size);
 void hpx_future_get_all(unsigned n, hpx_addr_t future[], void *values[], const int sizes[]);
 void hpx_future_set(hpx_addr_t future, const void *value, int size);
 
+hpx_addr_t *hpx_future_new_array(int number, int size);
+void hpx_future_delete_array(hpx_addr_t *futures);
 
 /// ----------------------------------------------------------------------------
 /// Counter LCOs represent monotonically increasing values. The get

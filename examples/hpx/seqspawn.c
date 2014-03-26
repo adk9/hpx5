@@ -53,7 +53,7 @@ nop_action(void *args)
 static int
 seq_main_action(void *args) {
   int n = *(int*)args;
-  hpx_addr_t addr = hpx_addr_from_rank(hpx_get_my_rank());
+  hpx_addr_t addr = HPX_HERE;
   printf("seqspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();

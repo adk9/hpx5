@@ -37,12 +37,6 @@
 #include "block.h"
 #include "request.h"
 
-/// ----------------------------------------------------------------------------
-/// Define some of the global constant addresses.
-/// ----------------------------------------------------------------------------
-const hpx_addr_t HPX_NULL = { NULL, 0 };
-const hpx_addr_t HPX_ANYWHERE = { NULL, -1 };
-
 
 /// ----------------------------------------------------------------------------
 /// Event for network-network messages.
@@ -179,7 +173,7 @@ static bool _try_start_send(network_t *network) {
     goto unwind0;
   }
 
-  int dest = hpx_addr_to_rank(p->target);
+  int dest = HPX_WHERE(p->target);
   int size = sizeof(*p) + p->size;
   if (transport_send(network->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");

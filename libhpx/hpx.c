@@ -53,35 +53,6 @@ static scheduler_t     *_sched = NULL;
 
 
 /// ----------------------------------------------------------------------------
-/// Action for use in global free and shutdown.
-///
-/// TODO: shutdown isn't handled well, in particular, if the scheduler is
-///       overloaded then the shutdown action may never happen---ideally the
-///       network_progress() loop should deal with shutdown.
-/// ----------------------------------------------------------------------------
-static int _free_action(void *args);
-static hpx_action_t _free = 0;
-
-
-/// ----------------------------------------------------------------------------
-/// The global "here" address.
-///
-/// This is set with the current rank after _boot is intialized, in hpx_init().
-/// ----------------------------------------------------------------------------
-hpx_addr_t HPX_HERE = { NULL, -1 };
-
-
-/// Generate an address for a rank.
-hpx_addr_t HPX_THERE(int i) {
-  hpx_addr_t there = {
-    .rank = i,
-    .local = NULL
-  };
-  return there;
-}
-
-
-/// ----------------------------------------------------------------------------
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated, and return
@@ -119,14 +90,12 @@ static int _cleanup(int code) {
 
 /// Allocate and link together all of the library objects.
 int hpx_init(const hpx_config_t *cfg) {
-  _free = action_register("_hpx_free_action", _free_action);
-
   _boot = boot_new();
   if (_boot == NULL)
     return _cleanup(dbg_error("failed to create boot manager.\n"));
 
   // update the here address
-  HPX_HERE.rank = boot_rank(_boot);
+  HPX_HERE = HPX_THERE(boot_rank(_boot));
 
   _transport = transport_new(_boot);
   if (_transport == NULL)
@@ -221,37 +190,6 @@ void hpx_parcel_send(hpx_parcel_t *p) {
     scheduler_spawn(p);
   else
     network_send(_network, p);
-}
-
-
-/// Allocate a global, block cyclic array.
-///
-/// The block size is ignored at this point. The entire allocated region is on
-/// the calling locality.
-hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size,
-                             size_t alignment) {
-  hpx_addr_t addr = {
-    NULL,
-    hpx_get_my_rank()
-  };
-
-  if (posix_memalign(&addr.local, alignment, n * bytes))
-    dbg_error("failed global allocation.\n");
-  return addr;
-}
-
-
-int _free_action(void *args) {
-  hpx_addr_t addr = hpx_thread_current_target();
-  void *local = NULL;
-  if (hpx_addr_try_pin(addr, &local))
-    free(local);
-  hpx_call(addr, _free, NULL, 0, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-void hpx_global_free(hpx_addr_t addr) {
-  hpx_call(addr, _free, NULL, 0, HPX_NULL);
 }
 
 

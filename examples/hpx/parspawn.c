@@ -59,7 +59,7 @@ nop_action(void *args)
 static int
 par_for_action(void *args) {
   int n = *(int*)args;
-  hpx_addr_t addr = hpx_addr_from_rank(hpx_get_my_rank());
+  hpx_addr_t addr = HPX_HERE;
 
   if (n <= SEQ_CUTOFF) {
     for (int i = 0; i < SEQ_CUTOFF; i++)
@@ -79,7 +79,7 @@ par_for_action(void *args) {
 static int
 par_main_action(void *args) {
   int n = *(int*)args;
-  hpx_addr_t addr = hpx_addr_from_rank(hpx_get_my_rank());
+  hpx_addr_t addr = HPX_HERE;
   printf("parspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();

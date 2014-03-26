@@ -26,19 +26,19 @@ typedef struct tatas_lock tatas_lock_t;
 
 #define TATAS_INIT {0}
 
-HPX_INTERNAL void tatas_init(tatas_lock_t *l) HPX_NON_NULL(1);
-HPX_INTERNAL void tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1);
-static inline void tatas_acquire(tatas_lock_t *l) HPX_NON_NULL(1);
-static inline void tatas_release(tatas_lock_t *l) HPX_NON_NULL(1);
+HPX_INTERNAL void sync_tatas_init(tatas_lock_t *l) HPX_NON_NULL(1);
+HPX_INTERNAL void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1);
+static inline void sync_tatas_acquire(tatas_lock_t *l) HPX_NON_NULL(1);
+static inline void sync_tatas_release(tatas_lock_t *l) HPX_NON_NULL(1);
 
 void
-tatas_acquire(tatas_lock_t *l) {
+sync_tatas_acquire(tatas_lock_t *l) {
   if (sync_swap(&l->lock, 1, SYNC_ACQUIRE))
-    tatas_acquire_slow(l);
+    sync_tatas_acquire_slow(l);
 }
 
 void
-tatas_release(tatas_lock_t *l) {
+sync_tatas_release(tatas_lock_t *l) {
   sync_store(&l->lock, 0, SYNC_RELEASE);
 }
 

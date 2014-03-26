@@ -94,7 +94,7 @@ static int _fib_main_action(void *args) {
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t clock = hpx_time_now();
   hpx_addr_t future = hpx_future_new(sizeof(int));
-  hpx_call(hpx_addr_from_rank(hpx_get_my_rank()), _fib, &n, sizeof(n), future);
+  hpx_call(HPX_HERE, _fib, &n, sizeof(n), future);
   hpx_future_get(future, &fn, sizeof(fn));
 
   double time = hpx_time_elapsed_ms(clock)/1e3;

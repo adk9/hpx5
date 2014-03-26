@@ -206,9 +206,10 @@ hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
 
   // need the local offset
   int ranks = hpx_get_num_ranks();
-  int block = (addr.offset / addr.block_bytes); // yuck
-  int phase = block / ranks;                    // double yuck
-  int o = (phase * addr.block_bytes) + (addr.offset % addr.block_bytes);
+  int block = (addr.offset / addr.block_bytes); // really?
+  int phase = block / ranks;                    // REALLY?
+  int block_offset = (addr.offset % addr.block_bytes);
+  int o = (phase * addr.block_bytes) + block_offset;
   *local = (char*)map->base + o;
 
   return true;
@@ -245,5 +246,7 @@ hpx_addr_t HPX_THERE(int i) {
 
 
 int HPX_WHERE(hpx_addr_t addr) {
-  return (addr.offset % addr.block_bytes);
+  int block = (addr.offset / addr.block_bytes); // really?
+  int ranks = hpx_get_num_ranks();
+  return (block % ranks);
 }

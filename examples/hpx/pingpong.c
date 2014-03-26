@@ -167,7 +167,7 @@ static int _action_ping(void *msg) {
   hpx_parcel_set_action(p, _pong);
   hpx_parcel_set_target(p, to);
   hpx_parcel_set_data(p, args, sizeof(*args));
-  RANK_PRINTF("pinging rank %d, msg= '%s'\n", hpx_addr_to_rank(to), args->msg);
+  RANK_PRINTF("pinging rank %d, msg= '%s'\n", HPX_WHERE(to), args->msg);
   hpx_parcel_send(p);
   return HPX_SUCCESS;
 }
@@ -192,7 +192,7 @@ static int _action_pong(void *msg) {
   hpx_parcel_set_action(p, _ping);
   hpx_parcel_set_target(p, to);
   hpx_parcel_set_data(p, args, sizeof(*args));
-  RANK_PRINTF("ponging rank %d, msg='%s'\n", hpx_addr_to_rank(to), args->msg);
+  RANK_PRINTF("ponging rank %d, msg='%s'\n", HPX_WHERE(to), args->msg);
   hpx_parcel_send(p);
   return HPX_SUCCESS;
 }
@@ -225,5 +225,5 @@ void _register_actions(void) {
 hpx_addr_t _partner(void) {
   int rank = hpx_get_my_rank();
   int ranks = hpx_get_num_ranks();
-  return hpx_addr_from_rank((rank) ? 0 : ranks - 1);
+  return HPX_THERE((rank) ? 0 : ranks - 1);
 }
