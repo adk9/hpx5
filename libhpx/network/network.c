@@ -503,7 +503,7 @@ hpx_parcel_t *network_recv(network_t *network) {
 
 
 int network_progress(network_t *network) {
-  _network_state_t state = sync_load(&network->state, SYNC_ACQUIRE);
+  _network_state_t state; sync_load(state, &network->state, SYNC_ACQUIRE);
   if (state != _STATE_RUNNING) {
     if (sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
                  SYNC_RELEASE, SYNC_RELAXED)) {

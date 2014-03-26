@@ -34,13 +34,13 @@
 #define SYNC_RELEASE 0
 
 /*
- * I don't have a great way to implement an atomic load using macros, given the
- * interface that we're dealign with. We'll probably have to extend the
- * interface to take a type or something awkward...
- *
- * Not currently used in source, so we'll deal with it when we need it.
+ * Extremely annoying that val is required here, but without using GNU
+ * extensions I can't figure out a good way to deal with the compiler barrier.
  */
-#define sync_load(addr, mm) *addr
+#define sync_load(val, addr, mm) do {           \
+    __asm volatile ("":::"memory");             \
+    val = *addr;                                \
+  } while (0)
 
 /*
  * Synchronizing a store requires that all previous operations complete before
@@ -49,9 +49,9 @@
  * that the compiler understands not to reorder the store with previous
  * operations.
  */
-#define sync_store(addr, val, mm) do {          \
-    __asm volatile ("":::"memory");             \
-    *addr = val;                                \
+#define sync_store(addr, val, mm) do {              \
+    *addr = val;                                    \
+    __asm volatile ("":::"memory");                 \
   } while (0)
 
 #define sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
