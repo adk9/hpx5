@@ -68,7 +68,7 @@ void
 lco_lock(lco_t *lco) {
   while (true) {
     // load the queue pointer
-    thread_t *from = sync_load(&lco->queue, SYNC_RELAXED);
+    thread_t *from; sync_load(from, &lco->queue, SYNC_RELAXED);
 
     // if the lock bit is set, yield and then try again
     uintptr_t bits = (uintptr_t)from;

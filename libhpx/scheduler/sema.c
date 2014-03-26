@@ -106,7 +106,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// Allocate a semaphore LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_sema_new(unsigned count) {
-  hpx_addr_t sema = hpx_global_calloc(1, sizeof(sema_t), 1, sizeof(sema_t));
+  hpx_addr_t sema = hpx_alloc(1, sizeof(sema_t), sizeof(sema_t));
   sema_t *s = NULL;
   int pinned = hpx_addr_try_pin(sema, (void**)&s);
   assert(pinned);

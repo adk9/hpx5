@@ -266,7 +266,7 @@ hpx_future_set(hpx_addr_t future, const void *value, int size) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_future_new(int size) {
-  hpx_addr_t f = hpx_global_calloc(1, sizeof(future_t), 1, sizeof(future_t));
+  hpx_addr_t f = hpx_alloc(1, sizeof(future_t), sizeof(future_t));
   void *local;
   if (!hpx_addr_try_pin(f, &local))
     hpx_abort(1);

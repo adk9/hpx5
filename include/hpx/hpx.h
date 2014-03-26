@@ -60,7 +60,7 @@ extern hpx_addr_t HPX_HERE;
 hpx_addr_t HPX_THERE(int i);
 int HPX_WHERE(hpx_addr_t addr);
 
-/// Allocate global memory.
+/// Allocate distributed global memory.
 ///
 /// This is not a collective operation, the returned address is returned only to
 /// the calling thread, and must either be written into already-allocated global
@@ -71,9 +71,14 @@ int HPX_WHERE(hpx_addr_t addr);
 ///
 /// shared [block_size] T[n]; where sizeof(T) == bytes
 ///
-hpx_addr_t hpx_global_calloc(size_t n, size_t bytes, size_t block_size,
+hpx_addr_t hpx_global_alloc(size_t n, size_t bytes, size_t block_size,
                              size_t alignment);
 
+/// Allocate local global memory.
+///
+/// The returned address is local to the calling rank, and not distributed, but
+/// can be used from any rank.
+hpx_addr_t hpx_alloc(size_t n, size_t bytes, size_t alignment);
 
 /// Free a global allocation.
 void hpx_global_free(hpx_addr_t addr);

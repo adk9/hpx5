@@ -182,7 +182,8 @@ static int _exit_free(thread_t *to, void *sp, void *env) {
 static thread_t *_schedule(bool fast, thread_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
-  if (sync_load(&self.shutdown, SYNC_ACQUIRE))
+  atomic_int_t shutdown; sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
+  if (shutdown)
     thread_transfer((thread_t*)&self.sp, _exit_free, NULL);
 
   // if there are ready threads, select the next one

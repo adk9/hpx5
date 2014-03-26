@@ -20,7 +20,9 @@
 #define SYNC_FLOAT_TY(T, s)
 #define SYNC_INT_TY(T, s)                           \
   static inline T sync_load_##s(T *addr, int mm) {  \
-    return sync_load(addr, mm);                     \
+    T t;                                            \
+    sync_load(t, addr, mm);                         \
+    return t;                                       \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"

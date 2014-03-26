@@ -54,8 +54,12 @@ static int _join(barrier_t *barrier, int i) {
   }
 
   // Otherwise wait.
-  while (sync_load(&this->sense, SYNC_ACQUIRE) != sense)
+  int t;
+  sync_load(t, &this->sense, SYNC_ACQUIRE);
+  while (t != sense) {
     sync_nop_mwait(&this->sense);
+    sync_load(t, &this->sense, SYNC_ACQUIRE);
+  }
   sync_fence(SYNC_RELEASE);
   return 0;
 }

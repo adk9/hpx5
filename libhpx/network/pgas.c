@@ -22,6 +22,7 @@
 /// addresses.
 /// ----------------------------------------------------------------------------
 #include <assert.h>
+#include <limits.h>
 #include <stdlib.h>
 #include "hpx/hpx.h"
 #include "contrib/uthash/src/uthash.h"
@@ -64,7 +65,7 @@ static int _next_allocation_id(void) {
   if (id < NULL_ID) {
     int ranks = hpx_get_num_ranks();
     int rank = hpx_get_my_rank();
-    int ids_per_rank = ranks / rank;
+    int ids_per_rank = INT_MAX / ranks;
     id = rank * ids_per_rank;
 
     // we reserve a couple of low allocation IDs for the system
@@ -75,6 +76,29 @@ static int _next_allocation_id(void) {
   }
   sync_tatas_release(&_lock);
   return id;
+}
+
+static void *_malloc_local(int id, int bytes) {
+  // perform the local allocation
+  void *allocation = malloc(bytes);
+  if (!allocation) {
+    dbg_error("Could not allocate %d bytes.\n", bytes);
+    hpx_abort(-1);
+  }
+
+  // insert the local mapping for this id
+  _map_t *m = malloc(sizeof(*m));
+  if (!m) {
+    dbg_error("Could not allocate mapping.\n");
+    hpx_abort(-1);
+  }
+  m->id = id;
+  m->base = allocation;
+  sync_tatas_acquire(&_lock);
+  HASH_ADD_INT(_map, id, m);
+  sync_tatas_release(&_lock);
+
+  return allocation;
 }
 
 
@@ -94,22 +118,7 @@ static int _malloc_remote_action(void *args) {
   int *a = args;
   int id = a[0];
   int bytes = a[1];
-
-  // perform the local allocation
-  void *allocation = malloc(bytes);
-  if (!allocation) {
-    dbg_error("Could not allocate %d bytes.\n", bytes);
-    hpx_abort(-1);
-  }
-
-  // insert the local mapping for this id
-  _map_t *m = malloc(sizeof(*m));
-  m->id = id;
-  m->base = allocation;
-  sync_tatas_acquire(&_lock);
-  HASH_ADD_INT(_map, id, m);
-  sync_tatas_release(&_lock);
-
+  _malloc_local(id, bytes);
   return HPX_SUCCESS;
 }
 
@@ -131,7 +140,7 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
 /// shared [block_size] T[n]; where sizeof(T) == bytes
 /// ----------------------------------------------------------------------------
 hpx_addr_t
-hpx_global_calloc(size_t n, size_t bytes, size_t block_size, size_t alignment) {
+hpx_global_alloc(size_t n, size_t bytes, size_t block_size, size_t alignment) {
   // need to know the number of ranks
   int ranks = hpx_get_num_ranks();
 
@@ -178,6 +187,29 @@ hpx_global_calloc(size_t n, size_t bytes, size_t block_size, size_t alignment) {
   };
 
   // and return the structure.
+  return addr;
+}
+
+
+hpx_addr_t
+hpx_alloc(size_t n, size_t bytes, size_t alignment) {
+  int block_bytes = n * bytes;
+  int id = _next_allocation_id();
+  void *local = _malloc_local(id, block_bytes);
+  if (!local) {
+    dbg_error("failed to allocate %d bytes.\n", block_bytes);
+    hpx_abort(-1);
+  }
+
+  int rank = hpx_get_my_rank();
+  int offset = rank * block_bytes;
+
+  hpx_addr_t addr = {
+    .offset = offset,
+    .id = id,
+    .block_bytes = block_bytes
+  };
+
   return addr;
 }
 

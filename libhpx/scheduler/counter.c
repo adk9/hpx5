@@ -120,7 +120,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_counter_new(uint64_t limit) {
-  hpx_addr_t counter = hpx_global_calloc(1, sizeof(counter_t), 1, sizeof(counter_t));
+  hpx_addr_t counter = hpx_alloc(1, sizeof(counter_t), sizeof(counter_t));
   counter_t *c = NULL;
   int pinned = hpx_addr_try_pin(counter, (void**)&c);
   assert(pinned);
