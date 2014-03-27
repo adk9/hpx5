@@ -147,6 +147,7 @@ static int _future_block_init_action(void *args) {
   for (int i = 0; i < block_size; ++i)
     _init(&futures[i], size);
 
+  hpx_addr_unpin(target);
   return HPX_SUCCESS;
 }
 /// @}
