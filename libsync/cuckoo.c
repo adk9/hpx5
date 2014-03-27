@@ -89,6 +89,12 @@ sync_cuckoo_hashtable_lookup(cuckoo_hashtable_t *ht, long key) {
 void
 sync_cuckoo_hashtable_remove(cuckoo_hashtable_t *ht, long key) {
   _cuckoo_lock(ht);
+  cuckoo_bucket_t *entry;
+  HASH_FIND_INT(ht->table, &key, entry);
+  if (entry) {
+    HASH_DEL(ht->table, entry);
+    free(entry);
+  }
   _cuckoo_unlock(ht);
 }
 

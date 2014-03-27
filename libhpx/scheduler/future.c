@@ -91,6 +91,7 @@ static void _delete(future_t *f) {
 static hpx_action_t _future_set = 0;
 static hpx_action_t _future_get_proxy = 0;
 static hpx_action_t _future_delete = 0;
+static hpx_action_t _future_block_init = 0;
 
 /// Encapsulates hpx_future_set in an action interface
 typedef struct {
@@ -120,19 +121,44 @@ static int _future_get_proxy_action(void *args) {
 /// Deletes a future by translating it into a local address and calling delete.
 static int _future_delete_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  void *local = NULL;
-  if (!hpx_addr_try_pin(target, local))
+  future_t *local = NULL;
+  if (!hpx_addr_try_pin(target, (void**)&local))
     hpx_abort(1);
 
   _delete(local);
   return HPX_SUCCESS;
 }
+
+
+/// Initialize a block of futures.
+static int _future_block_init_action(void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  future_t *futures = NULL;
+  if (!hpx_addr_try_pin(target, (void**)&futures)) {
+    hpx_addr_t cont = hpx_thread_current_cont();
+    hpx_call(target, _future_block_init, args, 2 * sizeof(int), cont);
+    return HPX_SUCCESS;
+  }
+
+  int *a = args;
+  int size = a[0];
+  int block_size = a[1];
+  for (int i = 0; i < block_size; ++i)
+    _init(&futures[i], size);
+
+  return HPX_SUCCESS;
+}
 /// @}
 
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  _future_set = hpx_register_action("_future_set", _future_set_action);
-  _future_get_proxy = hpx_register_action("_future_get_proxy", _future_get_proxy_action);
-  _future_delete = hpx_register_action("_future_delete", _future_delete_action);
+  _future_set = hpx_register_action("_hpx_future_set_action",
+                                    _future_set_action);
+  _future_get_proxy = hpx_register_action("_hpx_future_get_proxy_action",
+                                          _future_get_proxy_action);
+  _future_delete = hpx_register_action("_hpx_future_delete_action",
+                                       _future_delete_action);
+  _future_block_init = hpx_register_action("_hpx_future_block_init_action",
+                                           _future_block_init_action);
 }
 
 /// ----------------------------------------------------------------------------
@@ -272,6 +298,41 @@ hpx_future_new(int size) {
     hpx_abort(1);
   _init(local, size);
   return f;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Allocate a global array of futures.
+///
+/// Each of the futures needs to be initialized correctly, and if they need to
+/// be out of place, then each locality needs to allocate the out-of-place size
+/// required.
+///
+/// @param          n - the (total) number of futures to allocate
+/// @param       size - the payload size for the futures
+/// @param block_size - the number of futures per block
+/// ----------------------------------------------------------------------------
+hpx_addr_t
+hpx_future_new_array(int n, int size, int block_size) {
+  // perform the global allocation
+  hpx_addr_t base = hpx_global_alloc(n, sizeof(future_t), block_size, 0);
+
+  // for each block, send an initialization message
+  int block_bytes = n * sizeof(future_t);
+  int blocks = (n / block_size) + (n % block_size) ? 1 : 0;
+  int args[2] = { size, block_size };
+  hpx_addr_t f[blocks];
+  for (int i = 0; i < blocks; ++i) {
+    hpx_addr_t block = hpx_addr_add(base, i * block_bytes);
+    f[i] = hpx_future_new(0);
+    hpx_call(block, _future_block_init, args, sizeof(args), f[i]);
+  }
+
+  hpx_future_get_all(blocks, f, NULL, NULL);
+  for (int i = 0; i < blocks; ++i)
+    hpx_future_delete(f[i]);
+
+  return base;
 }
 
 /// ----------------------------------------------------------------------------
