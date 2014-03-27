@@ -86,6 +86,10 @@ static void *_malloc_local(int id, int bytes) {
 }
 
 
+// static void _free_local(int id) {
+
+// }
+
 static hpx_action_t _free_remote = 0;
 static hpx_action_t _malloc_remote = 0;
 
@@ -197,6 +201,10 @@ hpx_alloc(size_t n, size_t bytes, size_t alignment) {
   return addr;
 }
 
+// void
+// hpx_free(hpx_addr_t addr) {
+
+// }
 
 bool
 hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
@@ -264,4 +272,15 @@ int HPX_WHERE(hpx_addr_t addr) {
   int block = (addr.offset / addr.block_bytes); // really?
   int ranks = hpx_get_num_ranks();
   return (block % ranks);
+}
+
+
+hpx_addr_t
+hpx_addr_add(const hpx_addr_t addr, int bytes) {
+  hpx_addr_t a = {
+    .offset = addr.offset + bytes,
+    .id = addr.id,
+    .block_bytes = addr.block_bytes
+  };
+  return a;
 }
