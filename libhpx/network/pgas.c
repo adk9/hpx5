@@ -25,10 +25,11 @@
 #include <limits.h>
 #include <stdlib.h>
 #include "hpx/hpx.h"
-#include "contrib/uthash/src/uthash.h"
 #include "libsync/locks.h"
+#include "libsync/hashtables.h"
 #include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
+
 
 // reserved allocations
 enum {
@@ -37,19 +38,10 @@ enum {
   NEXT_ID
 };
 
-/// ----------------------------------------------------------------------------
-/// We're using the uthash infrastructure for mapping at this point.
-/// ----------------------------------------------------------------------------
-typedef struct {
-  int id;
-  void *base;
-  UT_hash_handle hh;
-} _map_t;
 
-
-static tatas_lock_t _lock = TATAS_INIT;
+static tatas_lock_t _lock = SYNC_TATAS_LOCK_INIT;
 static int _next_id = -1;
-static _map_t *_map = NULL;
+static cuckoo_hashtable_t _map = SYNC_CUCKOO_HASHTABLE_INIT;
 
 
 /// ----------------------------------------------------------------------------
@@ -78,6 +70,7 @@ static int _next_allocation_id(void) {
   return id;
 }
 
+
 static void *_malloc_local(int id, int bytes) {
   // perform the local allocation
   void *allocation = malloc(bytes);
@@ -87,17 +80,8 @@ static void *_malloc_local(int id, int bytes) {
   }
 
   // insert the local mapping for this id
-  _map_t *m = malloc(sizeof(*m));
-  if (!m) {
-    dbg_error("Could not allocate mapping.\n");
-    hpx_abort(-1);
-  }
-  m->id = id;
-  m->base = allocation;
-  sync_tatas_acquire(&_lock);
-  HASH_ADD_INT(_map, id, m);
-  sync_tatas_release(&_lock);
-
+  int success = sync_cuckoo_hashtable_insert(&_map, id, allocation);
+  assert(success);
   return allocation;
 }
 
@@ -232,9 +216,8 @@ hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
     return true;
 
   // lookup the mapping
-  _map_t *map = NULL;
-  HASH_FIND_INT(_map, &addr.id, map);
-  assert(map);
+  void *base = sync_cuckoo_hashtable_lookup(&_map, addr.id);
+  assert(base);
 
   // need the local offset
   int ranks = hpx_get_num_ranks();
@@ -242,7 +225,7 @@ hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
   int phase = block / ranks;                    // REALLY?
   int block_offset = (addr.offset % addr.block_bytes);
   int o = (phase * addr.block_bytes) + block_offset;
-  *local = (char*)map->base + o;
+  *local = (char*)base + o;
 
   return true;
 }
