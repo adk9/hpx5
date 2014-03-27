@@ -303,6 +303,30 @@ hpx_future_new(int size) {
 
 
 /// ----------------------------------------------------------------------------
+/// Free a future.
+///
+/// If the future is local, go ahead and delete it, otherwise generate a parcel
+/// to do it.
+/// ----------------------------------------------------------------------------
+void
+hpx_future_delete(hpx_addr_t future) {
+  void *local;
+  if (hpx_addr_try_pin(future, &local)) {
+    _delete(local);
+    hpx_addr_unpin(future);
+  }
+  else
+    hpx_call(future, _future_delete, NULL, 0, HPX_NULL);
+}
+
+
+void
+hpx_future_array_delete(hpx_addr_t array) {
+  dbg_log("unimplemented");
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Allocate a global array of futures.
 ///
 /// Each of the futures needs to be initialized correctly, and if they need to
@@ -314,7 +338,7 @@ hpx_future_new(int size) {
 /// @param block_size - the number of futures per block
 /// ----------------------------------------------------------------------------
 hpx_addr_t
-hpx_future_new_array(int n, int size, int block_size) {
+hpx_future_array_new(int n, int size, int block_size) {
   // perform the global allocation
   hpx_addr_t base = hpx_global_alloc(n, sizeof(future_t), block_size, 0);
 
@@ -337,31 +361,7 @@ hpx_future_new_array(int n, int size, int block_size) {
 }
 
 
-/// ----------------------------------------------------------------------------
-/// Free a future.
-///
-/// If the future is local, go ahead and delete it, otherwise generate a parcel
-/// to do it.
-/// ----------------------------------------------------------------------------
-void
-hpx_future_delete(hpx_addr_t future) {
-  void *local;
-  if (hpx_addr_try_pin(future, &local)) {
-    _delete(local);
-    hpx_addr_unpin(future);
-  }
-  else
-    hpx_call(future, _future_delete, NULL, 0, HPX_NULL);
-}
-
-
-void
-hpx_future_delete_array(hpx_addr_t array) {
-  dbg_log("unimplemented");
-}
-
-
 hpx_addr_t
-hpx_future_at(hpx_addr_t array, int i) {
+hpx_future_array_at(hpx_addr_t array, int i) {
   return hpx_addr_add(array, i * sizeof(future_t));
 }
