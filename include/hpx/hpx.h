@@ -231,11 +231,14 @@ void hpx_sema_p(hpx_addr_t sema);        // decrement the semaphore, blocks if 0
 /// computation.
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_future_new(int size);
-hpx_addr_t hpx_future_new_array(int n, int size, int block_size);
 void hpx_future_delete(hpx_addr_t future);
 void hpx_future_get(hpx_addr_t future, void *value, int size);
 void hpx_future_get_all(unsigned n, hpx_addr_t future[], void *values[], const int sizes[]);
 void hpx_future_set(hpx_addr_t future, const void *value, int size);
+
+hpx_addr_t hpx_future_new_array(int n, int size, int block_size);
+hpx_addr_t hpx_future_at(hpx_addr_t base, int i);
+void hpx_future_delete_array(hpx_addr_t array);
 
 /// ----------------------------------------------------------------------------
 /// Counter LCOs represent monotonically increasing values. The get

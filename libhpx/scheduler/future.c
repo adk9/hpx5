@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "libhpx/scheduler.h"
+#include "libhpx/debug.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -335,6 +336,7 @@ hpx_future_new_array(int n, int size, int block_size) {
   return base;
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Free a future.
 ///
@@ -350,4 +352,16 @@ hpx_future_delete(hpx_addr_t future) {
   }
   else
     hpx_call(future, _future_delete, NULL, 0, HPX_NULL);
+}
+
+
+void
+hpx_future_delete_array(hpx_addr_t array) {
+  dbg_log("unimplemented");
+}
+
+
+hpx_addr_t
+hpx_future_at(hpx_addr_t array, int i) {
+  return hpx_addr_add(array, i * sizeof(future_t));
 }
