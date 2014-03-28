@@ -240,8 +240,8 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
   // deal with the local futures sequentially
   for (unsigned i = 0; i < n; ++i) {
     if (local[i] != NULL) {
-      void *addr = (values[i]) ? values[i] : NULL;
-      int size = (sizes[i]) ? sizes[i] : 0;
+      void *addr = (values && values[i]) ? values[i] : NULL;
+      int size = (sizes && sizes[i]) ? sizes[i] : 0;
       _get_local(local[i], addr, size);
       hpx_addr_unpin(futures[i]);
     }
@@ -251,8 +251,8 @@ hpx_future_get_all(unsigned n, hpx_addr_t futures[], void *values[],
   for (unsigned i = 0; i < n; ++i) {
     hpx_addr_t proxy = proxies[i];
     if (!hpx_addr_eq(proxy, HPX_NULL)) {
-      void *addr = (values[i]) ? values[i] : NULL;
-      int size = (sizes[i]) ? sizes[i] : 0;
+      void *addr = (values && values[i]) ? values[i] : NULL;
+      int size = (sizes && sizes[i]) ? sizes[i] : 0;
       hpx_future_get(proxy, addr, size);
       hpx_future_delete(proxy);
     }
