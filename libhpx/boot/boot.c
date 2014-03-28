@@ -56,9 +56,9 @@ void boot_delete(boot_t *boot) {
 }
 
 int boot_rank(const boot_t *boot) {
-  return boot->rank(boot);
+  return (boot ? boot->rank(boot) : -1);
 }
 
 int boot_n_ranks(const boot_t *boot) {
-  return boot->n_ranks(boot);
+  return (boot ? boot->n_ranks(boot) : -1);
 }

@@ -57,9 +57,6 @@ hpx_parcel_t *parcel_allocator_get(allocator_t *allocator, int payload) {
 
   int size = transport_adjust_size(allocator->transport, payload);
 
-  dbg_log("Getting a parcel of payload size %i, adjusted to %i by the "
-          "transport layer.\n", payload, size);
-
   // try to get a parcel of the right size from the cache, this will deal with
   // misses internally by potentially allocating a new block
   hpx_parcel_t *p = cache_get(_parcels, size);
