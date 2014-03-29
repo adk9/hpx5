@@ -138,12 +138,12 @@ hpx_global_alloc(size_t n, size_t bytes, size_t block_size, size_t alignment) {
   // figure out the total number of blocks that I need for the
   // allocation---there are n elements, and each block has block_size elements,
   // so there need to be n / block_size + (n % block_size) ? 1 : 0 blocks
-  size_t blocks = n / block_size + (n % block_size) ? 1 : 0;
+  size_t blocks = n / block_size + ((n % block_size) ? 1 : 0);
 
   // figure out how many blocks we'll allocate on each rank---there are blocks
   // blocks, and ranks ranks, so there need to be (blocks / ranks) + (block %
   // ranks) ? 1 : 0; blocks allocated on each rank
-  size_t blocks_per_rank = (blocks / ranks) + (blocks % ranks) ? 1 : 0;
+  size_t blocks_per_rank = (blocks / ranks) + ((blocks % ranks) ? 1 : 0);
 
   // each block has block_size * bytes bytes, so figure out the total allocation
   // at each rank
