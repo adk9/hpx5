@@ -344,8 +344,8 @@ hpx_future_array_new(int n, int size, int block_size) {
   hpx_addr_t base = hpx_global_alloc(n, sizeof(future_t), block_size, 0);
 
   // for each block, send an initialization message
-  int block_bytes = n * sizeof(future_t);
-  int blocks = (n / block_size) + (n % block_size) ? 1 : 0;
+  int block_bytes = sizeof(future_t) * block_size;
+  int blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
   int args[2] = { size, block_size };
   hpx_addr_t f[blocks];
   for (int i = 0; i < blocks; ++i) {
