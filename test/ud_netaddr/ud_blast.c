@@ -341,6 +341,7 @@ int main(int argc, char *argv[])
 	struct timeval           start, end;
 	char                    *ib_devname = NULL;
 	char                    *servername = NULL;
+	char                    *dgid = NULL;
 	int                      port = 18515;
 	int                      ib_port = 1;
 	int                      size = 1024;
@@ -374,7 +375,7 @@ int main(int argc, char *argv[])
 			{ 0 }
 		};
 
-		c = getopt_long(argc, argv, "p:d:i:s:r:n:l:eg:q:", long_options, NULL);
+		c = getopt_long(argc, argv, "p:d:i:s:r:n:l:eg:q:m:", long_options, NULL);
 		if (c == -1)
 			break;
 
@@ -427,6 +428,10 @@ int main(int argc, char *argv[])
                         remote_qpn = strtol(optarg, NULL, 0);
                         break;
 
+		case 'm':
+		        dgid = strdup(optarg);
+			break;
+
 		default:
 			usage(argv[0]);
 			return 1;
@@ -440,6 +445,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if (!dgid) {
+	        fprintf(stderr, "Destination GID required!\n");
+		return 1;
+	}
         if (remote_qpn < 0) {
                 fprintf(stderr, "Remote QPN required!\n");
                 return 1;
@@ -513,17 +522,17 @@ int main(int argc, char *argv[])
 
         int ret;
         union ibv_gid mgid;
-        inet_pton(AF_INET6, "ff0e::ffff:e000:20", mgid.raw);
+        inet_pton(AF_INET6, dgid, mgid.raw);
         
 	if (servername) {
 	        // sender joins mcast group
-	        ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
-		if (ret) {
-		  printf("error: %s\n", strerror(ret));
-		}
+	        //ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
+		//if (ret) {
+		//  printf("error: %s\n", strerror(ret));
+		//}
 	  
                 char buf[40];
-                inet_pton(AF_INET6, "ff0e::ffff:e000:20", rem_dest.gid.raw);
+                inet_pton(AF_INET6, dgid, rem_dest.gid.raw);
                 inet_ntop(AF_INET6, rem_dest.gid.raw, buf, 40);
                 printf("  --> reset remote GID: %s\n", buf);
 
@@ -541,11 +550,11 @@ int main(int argc, char *argv[])
 		}
 
                 char buf[40];
-                inet_pton(AF_INET6, "fe80::11:7500:73:afa8", rem_dest.gid.raw);
+                inet_pton(AF_INET6, dgid, rem_dest.gid.raw);
                 inet_ntop(AF_INET6, rem_dest.gid.raw, buf, 40);
                 printf("  --> reset remote GID: %s\n", buf);
 
-		rem_dest.lid = 0xc000;
+		rem_dest.lid = 0x010;
 
                 if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, &rem_dest, gidx, 1))
                         return 1;
