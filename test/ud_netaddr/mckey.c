@@ -290,6 +290,8 @@ static int join_handler(struct cmatest_node *node,
                 inet_ntop(AF_INET6, param->ah_attr.grh.dgid.raw, buf, 40);
                 printf("mckey: reset dgid: %s\n", buf);
         }
+
+	printf("dlid: %x\n", param->ah_attr.dlid);
         
 	node->remote_qpn = param->qp_num;
 	node->remote_qkey = param->qkey;

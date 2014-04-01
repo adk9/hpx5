@@ -509,21 +509,43 @@ int main(int argc, char *argv[])
 	       my_dest.lid, my_dest.qpn, my_dest.qpn, my_dest.psn, gid);
 
         rem_dest.lid = 0;
+	rem_dest.qpn = remote_qpn;
+
+        int ret;
+        union ibv_gid mgid;
+        inet_pton(AF_INET6, "ff0e::ffff:e000:20", mgid.raw);
         
 	if (servername) {
+	        // sender joins mcast group
+	        ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
+		if (ret) {
+		  printf("error: %s\n", strerror(ret));
+		}
+	  
                 char buf[40];
-                inet_pton(AF_INET6, "fe80::202:deff:ffad:beef", rem_dest.gid.raw);
+                inet_pton(AF_INET6, "ff0e::ffff:e000:20", rem_dest.gid.raw);
                 inet_ntop(AF_INET6, rem_dest.gid.raw, buf, 40);
                 printf("  --> reset remote GID: %s\n", buf);
+
+		// MLID update
+		rem_dest.lid = 0xc000;
                 
                 if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, &rem_dest, gidx, 1))
                         return 1;
         }
         else {
+	        // receiver joins mcast group
+	        ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
+		if (ret) {
+		  printf("error: %s\n", strerror(ret));
+		}
+
                 char buf[40];
-                inet_pton(AF_INET6, "fe80::202:caff:fffe:babe", rem_dest.gid.raw);
+                inet_pton(AF_INET6, "fe80::11:7500:73:afa8", rem_dest.gid.raw);
                 inet_ntop(AF_INET6, rem_dest.gid.raw, buf, 40);
                 printf("  --> reset remote GID: %s\n", buf);
+
+		rem_dest.lid = 0xc000;
 
                 if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, &rem_dest, gidx, 1))
                         return 1;
@@ -532,12 +554,14 @@ int main(int argc, char *argv[])
 
 	inet_ntop(AF_INET6, &rem_dest.gid, gid, sizeof gid);
 	printf("  remote address: LID 0x%04x, QPN 0x%06x (%d), PSN 0x%06x, GID %s\n",
-	       rem_dest.lid, remote_qpn, remote_qpn, rem_dest.psn, gid);
+	       rem_dest.lid, rem_dest.qpn, rem_dest.qpn, rem_dest.psn, gid);
                 
 	ctx->pending = PINGPONG_RECV_WRID;
 
+	sleep(2);
+
 	if (servername) {
-		if (pp_post_send(ctx, remote_qpn)) {
+		if (pp_post_send(ctx, rem_dest.qpn)) {
 			fprintf(stderr, "Couldn't post send\n");
 			return 1;
 		}
@@ -593,6 +617,8 @@ int main(int argc, char *argv[])
 					return 1;
 				}
                                 
+				printf("got event: %lu\n", wc[i].wr_id);
+
 				switch ((int) wc[i].wr_id) {
 				case PINGPONG_SEND_WRID:
 					++scnt;
@@ -620,7 +646,7 @@ int main(int argc, char *argv[])
 
 				ctx->pending &= ~(int) wc[i].wr_id;
 				if (scnt < iters && !ctx->pending) {
-					if (pp_post_send(ctx, remote_qpn)) {
+					if (pp_post_send(ctx, rem_dest.qpn)) {
 						fprintf(stderr, "Couldn't post send\n");
 						return 1;
 					}
