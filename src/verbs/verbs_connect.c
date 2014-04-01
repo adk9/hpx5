@@ -16,6 +16,7 @@
 #include "libphoton.h"
 #include "logging.h"
 #include "verbs_connect.h"
+#include "verbs_exchange.h"
 
 #define MAX_CQ_ENTRIES      1000
 #define RDMA_CMA_BASE_PORT  18000
@@ -159,7 +160,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       // create shared receive queue
       struct ibv_srq_init_attr attr = {
         .attr = {
-          .max_wr	 = 500,
+          .max_wr  = 500,
           .max_sge = 1
         }
       };
@@ -171,6 +172,12 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       }
     }
 
+    // if we are in UD mode, sync QP numbers first
+    // for network addr translation usage when we don't know the destination rank
+    if (ctx->qp_type == IBV_QPT_UD) {
+      __verbs_sync_qpn(ctx);
+    }
+    
     // create QPs in the non-CMA case and transition to INIT state
     // RDMA CMA does this transition for us when we connect
     for (iproc = 0; iproc < (_photon_nproc + _photon_nforw); ++iproc) {
@@ -183,18 +190,18 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       }
 
       struct ibv_qp_init_attr attr = {
-        .qp_context = ctx,
-        .send_cq    = ctx->ib_cq,
-        .recv_cq    = ctx->ib_cq,
-        .srq        = ctx->ib_srq,
-        .cap	    = {
-          .max_send_wr	= ctx->tx_depth,
-          .max_send_sge   = 1, // scatter gather element
-          .max_recv_wr	= ctx->rx_depth,
-          .max_recv_sge   = 1, // scatter gather element
+        .qp_context     = ctx,
+        .send_cq        = ctx->ib_cq,
+        .recv_cq        = ctx->ib_cq,
+        .srq            = ctx->ib_srq,
+        .cap            = {
+          .max_send_wr	   = ctx->tx_depth,
+          .max_send_sge    = 1, // scatter gather element
+          .max_recv_wr     = ctx->rx_depth,
+          .max_recv_sge    = 1, // scatter gather element
           .max_inline_data = 0
         },
-        .qp_type    = IBV_QPT_RC
+        .qp_type        = IBV_QPT_RC
         //.sq_sig_all = 0
       };
 
@@ -771,18 +778,18 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
              ctx->qp[pindex]->qp_num);
 
     struct ibv_qp_attr attr = {
-      .qp_state	        = IBV_QPS_RTR,
-      .path_mtu	        = 3, // (3 == IBV_MTU_1024) which means 1024. Is this a good value?
-      .dest_qp_num	    = remote_info[i].qpn,
-      .rq_psn		        = remote_info[i].psn,
+      .qp_state	          = IBV_QPS_RTR,
+      .path_mtu	          = 3, // (3 == IBV_MTU_1024) which means 1024. Is this a good value?
+      .dest_qp_num        = remote_info[i].qpn,
+      .rq_psn             = remote_info[i].psn,
       .max_dest_rd_atomic = 1,
-      .min_rnr_timer	    = 12,
+      .min_rnr_timer	  = 12,
       .ah_attr = {
-        .is_global      = 0,
-        .dlid	        = remote_info[i].lid,
-        .sl	            = 0,
-        .src_path_bits  = 0,
-        .port_num       = ctx->ib_port
+        .is_global        = 0,
+        .dlid	          = remote_info[i].lid,
+        .sl	          = 0,
+        .src_path_bits    = 0,
+        .port_num         = ctx->ib_port
       }
     };
     err=ibv_modify_qp(ctx->qp[pindex], &attr,
@@ -794,7 +801,7 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
                       IBV_QP_MAX_DEST_RD_ATOMIC |
                       IBV_QP_MIN_RNR_TIMER);
     if (err) {
-      dbg_err("Failed to modify QP[%d] to RTR. Reason:%d", i, err);
+      dbg_err("Failed to modify QP[%d] to RTR. Reason: %s", i, strerror(err));
       return PHOTON_ERROR;
     }
 
@@ -812,7 +819,7 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
                       IBV_QP_SQ_PSN    |
                       IBV_QP_MAX_QP_RD_ATOMIC);
     if (err) {
-      dbg_err("Failed to modify QP[%d] to RTS. Reason:%d", i, err);
+      dbg_err("Failed to modify QP[%d] to RTS. Reason: %s", i, strerror(err));
       return PHOTON_ERROR;
     }
   }

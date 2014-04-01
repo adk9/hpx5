@@ -27,6 +27,8 @@ typedef struct verbs_cnct_ctx_t {
   struct ibv_qp             **qp;
   int                        psn;
   int                        num_qp;
+  int                        qp_type;
+  
 
   int                        tx_depth;
   int                        rx_depth;

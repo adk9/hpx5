@@ -57,6 +57,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .qp = NULL,
   .psn = 0,
   .num_qp = 0,
+  .qp_type = IBV_QPT_RC,
   .tx_depth = LEDGER_SIZE,
   .rx_depth = LEDGER_SIZE,
   .atomic_depth = 16
@@ -120,6 +121,10 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   if (cfg->use_cma && !cfg->eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
     goto error_exit;
+  }
+
+  if (!strcasecmp(cfg->mode, "UD")) {
+    verbs_ctx.qp_type = IBV_QPT_UD;
   }
 
   if(__verbs_init_context(&verbs_ctx)) {

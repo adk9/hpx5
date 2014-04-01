@@ -15,6 +15,7 @@ struct photon_config_t {
   MPI_Comm comm;
 
   char *backend;
+  char *mode;
   int meta_exch;
 
   char *eth_dev;
