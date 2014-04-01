@@ -36,7 +36,7 @@ int system_get_cores(void)
   return cores;
 }
 
-int system_set_affinity(struct thread *thread, int core_id) {
+int system_set_affinity(pthread_t *thread, int core_id) {
   // there's no good way to do this on darwin yet, so we do nothing.
   return HPX_SUCCESS;
 }

@@ -21,8 +21,9 @@
 #endif
 
 #include <unistd.h>
-#include <pthread.h>
+#include "libhpx/debug.h"
 #include "libhpx/system.h"
+#include "hpx/hpx.h"
 
 int system_get_cores(void) {
   return sysconf(_SC_NPROCESSORS_ONLN);
