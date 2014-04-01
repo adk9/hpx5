@@ -10,34 +10,33 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifndef __APPLE__
+#error The HPX CPU implementation is configured incorrectly
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <pthread.h>
-
-#include "libhpx/network.h"
-#include "heavy.h"
+#include <sys/types.h> 
+#include <sys/sysctl.h> 
+#include "libhpx/system.h"
+#include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
-/// The heavy network thread just loops in network_progress(), and tests for
-/// cancellation and yields each time through the loop.
-///
-/// This structure isn't great, but is not terrible for a funneled transport
-/// implementation.
+/// @file libhpx/platform/darwin/cpu.c
+/// @brief Implements HPX's CPU interface on Darwin (Mac OS X).
 /// ----------------------------------------------------------------------------
-void* heavy_network(void *args) {
-  network_t *network = args;
-  network_barrier(network);
 
-  for (int shutdown = 0; !shutdown; shutdown = network_progress(network)) {
-    pthread_testcancel();
-#if defined(__APPLE__) || defined(__MACH__)
-    pthread_yield_np();
-#else
-    pthread_yield();
-#endif
-  }
+int system_get_cores(void) 
+{ 
+  int cores;
+  size_t length = sizeof(cores);
+  sysctlbyname("hw.ncpu", &cores, &length, NULL, 0);
+  return cores;
+}
 
-  return NULL;
+int system_set_affinity(struct thread *thread, int core_id) {
+  // there's no good way to do this on darwin yet, so we do nothing.
+  return HPX_SUCCESS;
 }
