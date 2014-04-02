@@ -123,7 +123,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     goto error_exit;
   }
 
-  if (!strncasecmp(cfg->mode, "UD", 2)) {
+  if (cfg->mode && !strncasecmp(cfg->mode, "UD", 2)) {
     verbs_ctx.qp_type = IBV_QPT_UD;
   }
 

@@ -9,6 +9,7 @@ typedef struct verbs_cnct_info_t {
   int psn;
   int cma_port;
   struct in_addr ip;
+  union ibv_gid gid;
 } verbs_cnct_info;
 
 typedef struct verbs_cnct_ctx_t {
