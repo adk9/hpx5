@@ -90,6 +90,8 @@ struct photon_backend_t {
   int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
   int (*wait)(uint32_t request);
   int (*wait_ledger)(uint32_t request);
+  int (*send)(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
+  int (*recv)(uint32_t request, void *ptr, uint64_t size, int flags);
   int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
   int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
   int (*post_send_request_rdma)(int proc, uint64_t size, int tag, uint32_t *request);
@@ -104,6 +106,7 @@ struct photon_backend_t {
   int (*wait_any)(int *ret_proc, uint32_t *ret_req);
   int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
+  int (*probe)(photon_addr addr, int *flag, int type, photonStatus status);
   int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
   int (*io_finalize)();
   /* data movement */

@@ -703,7 +703,7 @@ static int _photon_test(uint32_t request, int *flag, int *type, photonStatus sta
 
   if( !ret_val ) {
     *flag = 1;
-    status->src_addr = req->proc;
+    status->src_addr.global.proc_id = req->proc;
     status->tag = req->tag;
     status->count = 1;
     status->error = 0;
@@ -1689,7 +1689,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
       entry_iterator = &(ledger->entries[j]);
       if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
         *flag = i;
-        status->src_addr = i;
+        status->src_addr.global.proc_id = i;
         status->request = entry_iterator->request;
         status->tag = entry_iterator->tag;
         status->size = entry_iterator->size;

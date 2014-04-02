@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     .ib_dev = "mlx4_1",
     .ib_port = 1,
     .backend = "verbs",
-    .mode = "UD"
+    .mode = "RC"
   };
 
   photon_init(&cfg);
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
       }
       else {
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
       }
       else {

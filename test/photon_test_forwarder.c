@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %u completed successfully\n", rank, (int)stat.src_addr, stat.tag, alloc_size);
+        fprintf(stderr,"%d: recv(%d, %d) of size %u completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, alloc_size);
         break;
       }
       else {

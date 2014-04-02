@@ -23,9 +23,25 @@ struct photon_config_t {
   int ib_port;
 };
 
+union photon_addr_t {
+  uint8_t     raw[16];
+  struct {
+    uint64_t  subnet_prefix;
+    uint64_t  proc_id;
+  } global;
+  struct {
+    uint32_t  blk0;
+    uint32_t  blk1;
+    uint32_t  blk2;
+    uint32_t  blk3;
+  } blkaddr;
+};
+
+typedef union photon_addr_t photon_addr;
+
 /* status for photon requests */
 struct photon_status_t {
-  uint64_t src_addr;
+  union photon_addr_t src_addr;
   uint64_t size;
   int request;
   int tag;
@@ -70,6 +86,9 @@ int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 
+int photon_send(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
+int photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
+
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
@@ -94,5 +113,6 @@ int photon_wait_any(int *ret_proc, uint32_t *ret_req);
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
+int photon_probe(photon_addr addr, int *flag, int type, photonStatus status);
 
 #endif

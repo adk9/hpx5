@@ -117,8 +117,11 @@ int photon_init(photonConfig cfg) {
   __photon_default->wait_any = (be->wait_any)?(be->wait_any):__photon_default->wait_any;
   __photon_default->wait_any_ledger = (be->wait_any_ledger)?(be->wait_any_ledger):__photon_default->wait_any_ledger;
   __photon_default->probe_ledger = (be->probe_ledger)?(be->probe_ledger):__photon_default->probe_ledger;
+  __photon_default->probe = (be->probe)?(be->probe):__photon_default->probe;
+  __photon_default->send = (be->send)?(be->send):__photon_default->send;
+  __photon_default->recv = (be->recv)?(be->recv):__photon_default->recv;
   __photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
-  __photon_default->io_finalize = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
+  __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
 
   if(__photon_backend->initialized() == PHOTON_OK) {
     log_warn("Photon already initialized");
@@ -316,6 +319,33 @@ int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   }
 
   return __photon_default->probe_ledger(proc, flag, type, status);
+}
+
+int photon_probe(photon_addr addr, int *flag, int type, photonStatus status) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->probe(addr, flag, type, status);
+}
+
+int photon_send(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->send(addr, ptr, size, flags, request);
+}
+
+int photon_recv(uint32_t request, void *ptr, uint64_t size, int flags) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->recv(request, ptr, size, flags);
 }
 
 /* begin I/O */
