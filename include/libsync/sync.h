@@ -39,7 +39,7 @@
 #include <stdbool.h>
 #endif
 
-#if defined(__ATOMIC_ACQUIRE)
+#if defined(__ATOMIC_ACQUIRE) && !defined(__clang__)
 #include "gcc/atomic.h"
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)
 #include "gcc/sync.h"

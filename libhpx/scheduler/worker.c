@@ -10,8 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#define _GNU_SOURCE /* pthread_setaffinity_np */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -35,6 +33,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
 #include "libhpx/scheduler.h"
+#include "libhpx/system.h"
 #include "lco.h"
 #include "thread.h"
 #include "worker.h"
@@ -238,14 +237,8 @@ void *worker_run(scheduler_t *sched) {
   self.scheduler->workers[self.id] = &self;
 
   // set this thread's affinity
-  if (self.core_id > 0) {
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(self.core_id, &cpuset);
-    int e = pthread_setaffinity_np(self.thread, sizeof(cpuset), &cpuset);
-    if (e) // not fatal
-      dbg_error("failed to bind thread affinity for %d.\n", self.id);
-  }
+  if (self.core_id > 0)
+    system_set_affinity(&self.thread, self.core_id);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = hpx_parcel_acquire(0);
