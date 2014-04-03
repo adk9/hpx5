@@ -56,7 +56,8 @@ hpx_locality_create(void)
 void
 hpx_locality_destroy(hpx_locality_t* loc)
 {
-  hpx_free(loc);
+  if (loc != my_locality)
+    hpx_free(loc);
 }
 
 hpx_locality_t *
