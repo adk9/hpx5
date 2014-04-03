@@ -143,6 +143,9 @@ void gas_init(const boot_t *boot) {
   // register the actions that we use
   _gasbrk = HPX_REGISTER_ACTION(_gasbrk_action);
   _block_alloc = HPX_REGISTER_ACTION(_block_alloc_action);
+
+  // update the HERE address
+  HPX_HERE = HPX_THERE(boot_rank(boot));
 }
 
 
