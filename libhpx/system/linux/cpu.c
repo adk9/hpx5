@@ -11,16 +11,30 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifndef __linux__
-#error The HPX time implementation is configured incorrectly
+#error The HPX CPU implementation is configured incorrectly
 #endif
+
+#define _GNU_SOURCE /* pthread_setaffinity_np */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <unistd.h>
+#include "libhpx/debug.h"
 #include "libhpx/system.h"
+#include "hpx/hpx.h"
 
 int system_get_cores(void) {
   return sysconf(_SC_NPROCESSORS_ONLN);
+}
+
+int system_set_affinity(pthread_t *thread, int core_id) {
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(core_id, &cpuset);
+  int e = pthread_setaffinity_np(*thread, sizeof(cpuset), &cpuset);
+  if (e) // not fatal
+    return dbg_error("failed to bind thread affinity.\n");
+  return HPX_SUCCESS;
 }

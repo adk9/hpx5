@@ -19,7 +19,7 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file libhpx/platform/darwon/time.c
+/// @file libhpx/platform/darwin/time.c
 /// @brief Implements HPX's time interface on Darwin (Mac OS X).
 /// ----------------------------------------------------------------------------
 #include <assert.h>
@@ -34,7 +34,7 @@ hpx_time_now(void) {
 static uint64_t
 _elapsed_ns(hpx_time_t from) {
   static mach_timebase_info_data_t tbi;
-  if (unlikely(tbi.denom == 0))
+  if (tbi.denom == 0)
     (void) mach_timebase_info(&tbi);
 
   hpx_time_t now = hpx_time_now();
@@ -44,11 +44,11 @@ _elapsed_ns(hpx_time_t from) {
 
 double
 hpx_time_elapsed_us(hpx_time_t from) {
-  return _elapsed_us(from) / 1e3;
+  return _elapsed_ns(from)/1e3;
 }
 
 double
 hpx_time_elapsed_ms(hpx_time_t from) {
-  return _elapsed_us(from) / 1e6;
+  return _elapsed_ns(from)/1e6;
 }
 
