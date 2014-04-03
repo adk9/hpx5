@@ -94,8 +94,7 @@ int hpx_init(const hpx_config_t *cfg) {
   if (_boot == NULL)
     return _cleanup(dbg_error("failed to create boot manager.\n"));
 
-  // update the here address
-  HPX_HERE = HPX_THERE(boot_rank(_boot));
+  gas_init(_boot);
 
   _transport = transport_new(_boot);
   if (_transport == NULL)
