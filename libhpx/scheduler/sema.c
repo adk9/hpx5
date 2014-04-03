@@ -19,7 +19,6 @@
 /// @brief Implements the semaphore LCO.
 /// ----------------------------------------------------------------------------
 #include <assert.h>
-#include <stdlib.h>
 #include "hpx/hpx.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
@@ -31,145 +30,137 @@
 /// @{
 typedef struct {
   lco_t lco;
-  volatile unsigned count;                      // NB: volatile good enough?
-} sema_t;
+  unsigned count;
+} _sema_t;
 
 
-static void HPX_NON_NULL(1) _sema_init(sema_t *sema, unsigned count) {
-  lco_init(&sema->lco, 0);
-  sema->count = count;
-}
+static void _delete(_sema_t *sema) {
+  if (!sema)
+    return;
 
-
-static void HPX_NON_NULL(1) _sema_lock(sema_t *sema) {
   lco_lock(&sema->lco);
+  lco_fini(&sema->lco);
 }
 
 
-static void HPX_NON_NULL(1) _sema_unlock(sema_t *sema) {
+/// Get is equivalent to P in a semaphore.
+static void _get(_sema_t *sema, int size, void *out) {
+  lco_lock(&sema->lco);
+
+  // wait until the count is non-zero
+  unsigned count = sema->count;
+  while (count == 0) {
+    scheduler_wait(&sema->lco);
+    count = sema->count;
+  }
+
+  // if I'm going to make the count 0, then reset the semaphore so that
+  // lco_wait()s will work
+  if (count == 1)
+    lco_reset(&sema->lco);
+
+  sema->count = count - 1;
   lco_unlock(&sema->lco);
 }
 
 
-static void HPX_NON_NULL(1) _sema_wait(sema_t *sema) {
-  scheduler_wait(&sema->lco);
+/// Get is equivalent to V in the semaphore.
+static void _set(_sema_t *sema, int size, const void *from) {
+  lco_lock(&sema->lco);
+  unsigned count = sema->count++;
+  if (count == 0)
+    scheduler_signal(&sema->lco);
+  lco_unlock(&sema->lco);
 }
 
 
-static void HPX_NON_NULL(1) _sema_signal(sema_t *sema) {
-  scheduler_signal(&sema->lco);
+/// The semaphore vtable.
+static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
+
+
+static void _init(_sema_t *sema, unsigned count) {
+  lco_init(&sema->lco, &_vtable, 0);
+  sema->count = count;
+
+  // if the count is non-zero, then signal the semaphore to make sure that
+  // waiters don't wait---waiting on a semaphore is a bit of an odd operation
+  // anyway
+  if (count != 0) {
+    lco_lock(&sema->lco);
+    scheduler_signal(&sema->lco);
+    lco_unlock(&sema->lco);
+  }
 }
-/// @}
 
 
-/// ----------------------------------------------------------------------------
-/// Remote actions for the HPX semaphore interface.
-/// ----------------------------------------------------------------------------
-/// @{
-static hpx_action_t _sema_p_remote = 0;
-static hpx_action_t _sema_v_remote = 0;
-static hpx_action_t _sema_delete_remote = 0;
+static hpx_action_t _p = 0;
+static hpx_action_t _v = 0;
 
 
-static int _sema_p_remote_action(void *args) {
+static int _p_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_sema_p(target);
+  hpx_lco_sema_p(target);
   return HPX_SUCCESS;
 }
 
 
-static int _sema_v_remote_action(void *args) {
+static int _v_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_sema_v(target);
-  return HPX_SUCCESS;
-}
-
-
-static int _sema_delete_remote_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  hpx_sema_delete(target);
+  hpx_addr_t cont = hpx_thread_current_cont();
+  hpx_lco_sema_v(target, cont);
   return HPX_SUCCESS;
 }
 
 
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  _sema_p_remote = hpx_register_action("_sema_p_remote_action",
-                                       _sema_p_remote_action);
-  _sema_v_remote = hpx_register_action("_sema_v_remote_action",
-                                       _sema_v_remote_action);
-  _sema_delete_remote = hpx_register_action("_sema_delete_remote_action",
-                                            _sema_delete_remote_action);
+  _p = HPX_REGISTER_ACTION(_p_action);
+  _v = HPX_REGISTER_ACTION(_v_action);
 }
+
+/// @}
 
 
 /// ----------------------------------------------------------------------------
 /// Allocate a semaphore LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_sema_new(unsigned count) {
-  hpx_addr_t sema = hpx_alloc(1, sizeof(sema_t), sizeof(sema_t));
-  sema_t *s = NULL;
-  int pinned = hpx_addr_try_pin(sema, (void**)&s);
-  assert(pinned);
-  _sema_init(s, count);
+  hpx_addr_t sema = hpx_alloc(sizeof(_sema_t));
+  _sema_t *s = NULL;
+  if (!hpx_addr_try_pin(sema, (void**)&s))
+    assert(false);
+  _init(s, count);
   hpx_addr_unpin(sema);
   return sema;
 }
 
 
-void hpx_sema_delete(hpx_addr_t sema) {
-  sema_t *s = NULL;
+/// ----------------------------------------------------------------------------
+/// Decrement a semaphore.
+/// ----------------------------------------------------------------------------
+void hpx_sema_p(hpx_addr_t sema) {
+  _sema_t *s = NULL;
   if (hpx_addr_try_pin(sema, (void**)&s)) {
-    free(s);
+    _get(s, 0, NULL);
     hpx_addr_unpin(sema);
   }
   else {
-    hpx_call(sema, _sema_delete_remote, NULL, 0, HPX_NULL);
+    hpx_call(sema, _p, NULL, 0, HPX_NULL);
   }
 }
 
 
 /// ----------------------------------------------------------------------------
-/// Decrement a semaphore. Must block if the semaphore is at 0.
+/// Increment a semaphore.
 /// ----------------------------------------------------------------------------
-void hpx_sema_p(hpx_addr_t sema) {
-  sema_t *s = NULL;
-  if (!hpx_addr_try_pin(sema, (void**)&s)) {
-    hpx_addr_t f = hpx_future_new(0);
-    hpx_call(sema, _sema_p_remote, NULL, 0, f);
-    hpx_future_get(f, NULL, 0);
-    hpx_future_delete(f);
-    return;
+void hpx_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
+  _sema_t *s = NULL;
+  if (hpx_addr_try_pin(sema, (void**)&s)) {
+    _set(s, 0, NULL);
+    if (!hpx_addr_eq(sync, HPX_NULL))
+      hpx_lco_set(sync, NULL, 0, HPX_NULL);
+    hpx_addr_unpin(sema);
   }
-
-  _sema_lock(s);
-  unsigned count = s->count;
-  while (count == 0) {
-    _sema_wait(s);
-    count = s->count;
+  else {
+    hpx_call(sema, _v, NULL, 0, sync);
   }
-  s->count = count - 1;
-  _sema_unlock(s);
-
-  hpx_addr_unpin(sema);
-}
-
-
-/// ----------------------------------------------------------------------------
-/// Increment a semaphore. Signals the semaphore if the transition is from 0 to
-/// 1.
-/// ----------------------------------------------------------------------------
-void hpx_sema_v(hpx_addr_t sema) {
-  sema_t *s = NULL;
-  if (!hpx_addr_try_pin(sema, (void**)&s)) {
-    hpx_call(sema, _sema_v_remote, NULL, 0, HPX_NULL);
-    return;
-  }
-
-  _sema_lock(s);
-  unsigned count = s->count;
-  s->count = count + 1;
-  if (count == 0)
-    _sema_signal(s);
-  _sema_unlock(s);
-  hpx_addr_unpin(sema);
 }

@@ -440,11 +440,11 @@ int hpx_get_my_thread_id(void) {
 }
 
 
-const hpx_addr_t hpx_thread_current_target(void) {
+hpx_addr_t hpx_thread_current_target(void) {
   return hpx_parcel_get_target(self.current->parcel);
 }
 
 
-const hpx_addr_t hpx_thread_current_cont(void) {
+hpx_addr_t hpx_thread_current_cont(void) {
   return hpx_parcel_get_cont(self.current->parcel);
 }

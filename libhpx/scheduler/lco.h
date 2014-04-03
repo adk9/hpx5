@@ -13,13 +13,43 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
+#include <stdbool.h>
 #include "hpx/attributes.h"
 
-struct thread;
 
-typedef struct lco {
+struct thread;
+typedef struct lco lco_t;
+
+/// ----------------------------------------------------------------------------
+/// The LCO abstract class interface.
+///
+/// The concrete class implementation is responsible for ensuring that these are
+/// serializable, and that set() and get() properly wait/signal the LCO, as
+/// needed.
+/// ----------------------------------------------------------------------------
+typedef struct {
+  void (*delete)(lco_t *lco);                           // blocking
+  void (*set)(lco_t *lco, int size, const void *value); // non-blocking
+  void (*get)(lco_t *lco, int size, void *value);       // blocking
+} lco_class_t;
+
+#define LCO_CLASS_INIT(d, s, g) {                    \
+    .delete = (void (*)(lco_t*))d,                   \
+    .set = (void (*)(lco_t*, int, const void *))s,   \
+    .get = (void (*)(lco_t*, int, void *))g          \
+    }
+
+
+/// ----------------------------------------------------------------------------
+/// The base class for LCOs. As we expand the virtual interface, it might make
+/// sense to use a vtable pointer here to save space, as we expect lots of LCOs
+/// to churn through the system.
+/// ----------------------------------------------------------------------------
+struct lco {
+  const lco_class_t *vtable;
   struct thread *queue;
-} lco_t;
+};
+
 
 /// ----------------------------------------------------------------------------
 /// Initializes an LCO.
@@ -27,7 +57,15 @@ typedef struct lco {
 /// If @p user is non-null, then the initial value of the USER state bit is set,
 /// otherwise it is unset.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_init(lco_t *lco, int user) HPX_NON_NULL(1);
+HPX_INTERNAL void lco_init(lco_t *lco, const lco_class_t *class, int user)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Finalizes an lco.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void lco_fini(lco_t *lco) HPX_NON_NULL(1);
+
 
 /// ----------------------------------------------------------------------------
 /// Set the USER state bit on the LCO.
@@ -58,6 +96,18 @@ HPX_INTERNAL int lco_is_user(const lco_t *lco) HPX_NON_NULL(1);
 /// return 1.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL int lco_is_set(const lco_t *lco) HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Resets the set state for the LCO.
+///
+/// This is not synchronized. The caller should already hold the lock on the LCO
+/// if the call might be concurrent with any other operations on the LCO. The
+/// set state is set during lco_trigger().
+///
+/// @param lco - the LCO to reset
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void lco_reset(lco_t *lco) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------

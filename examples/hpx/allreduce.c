@@ -45,14 +45,14 @@ sum(T count, T values[count]) {
 
 static int
 action_get_value(void *args) {
-  hpx_thread_exit(HPX_SUCCESS, &value, sizeof(value));
+  HPX_THREAD_CONTINUE(value);
 }
 
 static int
 action_set_value(void *args) {
   value = *(T*)args;
   printf("At rank %d received value %lld\n", hpx_get_my_rank(), (long long)value);
-  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+  return HPX_SUCCESS;
 }
 
 static int
@@ -69,7 +69,7 @@ action_allreduce(void *unused) {
   for (int i = 0; i < num_ranks; ++i) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(T);
-    futures[i] = hpx_future_new(sizeof(T));
+    futures[i] = hpx_lco_future_new(sizeof(T));
     hpx_parcel_t *p = hpx_parcel_acquire(0);
     hpx_parcel_set_action(p, get_value);
     hpx_parcel_set_target(p, HPX_THERE(i));
@@ -77,13 +77,13 @@ action_allreduce(void *unused) {
     hpx_parcel_send(p);
   }
 
-  hpx_future_get_all(num_ranks, futures, addrs, sizes);
+  hpx_lco_get_all(num_ranks, futures, addrs, sizes);
 
   value = sum(num_ranks, values);
 
   for (int i = 0; i < num_ranks; ++i) {
-    hpx_future_delete(futures[i]);
-    futures[i] = hpx_future_new(0);
+    hpx_lco_delete(futures[i], HPX_NULL);
+    futures[i] = hpx_lco_future_new(0);
     hpx_parcel_t *p = hpx_parcel_acquire(sizeof(value));
     hpx_parcel_set_action(p, set_value);
     hpx_parcel_set_target(p, HPX_THERE(i));
@@ -92,10 +92,10 @@ action_allreduce(void *unused) {
     hpx_parcel_send(p);
   }
 
-  hpx_future_get_all(num_ranks, futures, NULL, NULL);
+  hpx_lco_get_all(num_ranks, futures, NULL, NULL);
 
   for (int i = 0; i < num_ranks; ++i)
-    hpx_future_delete(futures[i]);
+    hpx_lco_delete(futures[i], HPX_NULL);
 
   hpx_shutdown(0);
 }

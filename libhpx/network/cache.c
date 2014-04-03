@@ -112,7 +112,7 @@ static void _expand(cache_t *cache) {
   //       3) use a different hashtable implementation
   if (cache->capindex >= sizeof(capacities)) {
     dbg_error("could not expand a cache to size %i.\n", cache->capindex);
-    hpx_abort(-1);
+    hpx_abort();
   }
 
   // allocate the new table
@@ -120,7 +120,7 @@ static void _expand(cache_t *cache) {
   cache->table = calloc(cache->capacity, sizeof(cache->table[0]));
   if (!cache->table) {
     dbg_error("failed to expand a cache table, %i.\n", cache->capacity);
-    hpx_abort(-1);
+    hpx_abort();
   }
 
   // insert anything from the old table into the new table

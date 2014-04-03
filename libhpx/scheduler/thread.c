@@ -89,15 +89,20 @@ static _frame_t *_get_top_frame(thread_t *thread) {
 
 
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  hpx_action_t action = hpx_parcel_get_action(parcel);
+  hpx_action_t action = parcel->action;
   hpx_action_handler_t handler = action_lookup(action);
-  void *data = hpx_parcel_get_data(parcel);
-  int status = handler(data);
-  if (status != HPX_SUCCESS) {
-    dbg_error("action produced unhandled error\n");
+  int status = handler(&parcel->data);
+  switch (status) {
+   default:
+    dbg_error("action produced unhandled error, %i\n", (int)status);
     hpx_shutdown(status);
+   case HPX_ERROR:
+    dbg_error("action produced error\n");
+    hpx_shutdown(status);
+   case HPX_RESEND:
+   case HPX_SUCCESS:
+    hpx_thread_continue(0, NULL);
   }
-  hpx_thread_exit(status, NULL, 0);
   unreachable();
 }
 
@@ -143,9 +148,9 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
 
 thread_t *thread_new(hpx_parcel_t *parcel) {
   // try to get a freelisted thread, or allocate a new, properly-aligned one
-  thread_t *t = NULL;
-  if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
-    assert(false);
+  thread_t *t = malloc(_thread_size);
+  // if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
+  assert(t);
   return thread_init(t, parcel);
 }
 
@@ -155,13 +160,28 @@ void thread_delete(thread_t *thread) {
 }
 
 
-void hpx_thread_exit(int status, const void *value, size_t size) {
+void hpx_thread_continue(size_t size, const void *value) {
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = scheduler_current_parcel();
   hpx_addr_t cont = parcel->cont;
   if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_future_set(cont, value, size);
+    hpx_lco_set(cont, value, size, HPX_NULL);   // async
+
+  // exit terminates this thread
+  scheduler_exit(parcel);
+}
+
+
+void hpx_thread_exit(int status) {
+  assert(status == HPX_SUCCESS);
+
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = scheduler_current_parcel();
+  hpx_addr_t cont = parcel->cont;
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_lco_set(cont, NULL, 0, HPX_NULL);   // async
 
   // exit terminates this thread
   scheduler_exit(parcel);
