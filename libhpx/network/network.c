@@ -35,6 +35,7 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "block.h"
+#include "gas.h"
 #include "request.h"
 
 
@@ -173,7 +174,7 @@ static bool _try_start_send(network_t *network) {
     goto unwind0;
   }
 
-  int dest = HPX_WHERE(p->target);
+  int dest = gas_where(p->target);
   int size = sizeof(*p) + p->size;
   if (transport_send(network->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");

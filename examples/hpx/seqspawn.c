@@ -40,13 +40,13 @@ static void _usage(FILE *stream) {
 static hpx_action_t nop = 0;
 static hpx_action_t seq_main = 0;
 
-static hpx_addr_t counter;
+static hpx_addr_t and;
 
 // The empty action
 static int
 nop_action(void *args)
 {
-  hpx_lco_counter_incr(counter, 1);
+  hpx_lco_and_set(and, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -57,16 +57,16 @@ seq_main_action(void *args) {
   printf("seqspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();
-  counter = hpx_lco_counter_new(n);
+  and = hpx_lco_and_new(n);
   for (int i = 0; i < n; i++)
     hpx_call(addr, nop, 0, 0, HPX_NULL);
-  hpx_lco_counter_wait(counter);
+  hpx_lco_wait(and);
   double time = hpx_time_elapsed_ms(clock)/1e3;
 
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_lco_counter_delete(counter);
+  hpx_lco_delete(and, HPX_NULL);
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }

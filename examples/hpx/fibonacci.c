@@ -42,7 +42,7 @@ static int _fib_action(void *args) {
   int n = *(int*)args;
 
   if (n < 2)
-    hpx_thread_exit(HPX_SUCCESS, &n, sizeof(n));
+    hpx_thread_continue(sizeof(n), &n);
 
   // int rank = hpx_get_my_rank();
   // int ranks = hpx_get_num_ranks();
@@ -58,8 +58,8 @@ static int _fib_action(void *args) {
   };
 
   hpx_addr_t futures[] = {
-    hpx_future_new(sizeof(int)),
-    hpx_future_new(sizeof(int))
+    hpx_lco_future_new(sizeof(int)),
+    hpx_lco_future_new(sizeof(int))
   };
 
   int fns[] = {
@@ -79,12 +79,12 @@ static int _fib_action(void *args) {
 
   hpx_call(peers[0], _fib, &ns[0], sizeof(int), futures[0]);
   hpx_call(peers[1], _fib, &ns[1], sizeof(int), futures[1]);
-  hpx_future_get_all(2, futures, addrs, sizes);
-  hpx_future_delete(futures[0]);
-  hpx_future_delete(futures[1]);
+  hpx_lco_get_all(2, futures, addrs, sizes);
+  hpx_lco_delete(futures[0], HPX_NULL);
+  hpx_lco_delete(futures[1], HPX_NULL);
 
   int fn = fns[0] + fns[1];
-  hpx_thread_exit(HPX_SUCCESS, &fn, sizeof(fn));
+  hpx_thread_continue(sizeof(fn), &fn);
   return HPX_SUCCESS;
 }
 
@@ -93,9 +93,10 @@ static int _fib_main_action(void *args) {
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t clock = hpx_time_now();
-  hpx_addr_t future = hpx_future_new(sizeof(int));
+  hpx_addr_t future = hpx_lco_future_new(sizeof(int));
   hpx_call(HPX_HERE, _fib, &n, sizeof(n), future);
-  hpx_future_get(future, &fn, sizeof(fn));
+  hpx_lco_get(future, &fn, sizeof(fn));
+  hpx_lco_delete(future, HPX_NULL);
 
   double time = hpx_time_elapsed_ms(clock)/1e3;
 

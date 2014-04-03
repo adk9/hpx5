@@ -41,7 +41,7 @@ static hpx_action_t nop = 0;
 static hpx_action_t par_for = 0;
 static hpx_action_t par_main = 0;
 
-static hpx_addr_t counter;
+static hpx_addr_t and;
 
 // Threads are launched sequentially below this cutoff.
 #define SEQ_CUTOFF 1000
@@ -51,7 +51,7 @@ static hpx_addr_t counter;
 static int
 nop_action(void *args)
 {
-  hpx_lco_counter_incr(counter, 1);
+  hpx_lco_and_set(and, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -83,15 +83,15 @@ par_main_action(void *args) {
   printf("parspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();
-  counter = hpx_lco_counter_new(n);
+  and = hpx_lco_and_new(n);
   hpx_call(addr, par_for, &n, sizeof(n), HPX_NULL);
-  hpx_lco_counter_wait(counter);
+  hpx_lco_wait(and);
   double time = hpx_time_elapsed_ms(clock)/1e3;
 
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_lco_counter_delete(counter);
+  hpx_lco_delete(and, HPX_NULL);
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }

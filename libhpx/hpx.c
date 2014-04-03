@@ -38,7 +38,7 @@
 
 #include "network/allocator.h"
 #include "network/heavy.h"
-
+#include "network/gas.h"
 
 /// ----------------------------------------------------------------------------
 /// Global libhpx module objects.
@@ -252,12 +252,12 @@ void system_shutdown(int code) {
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
   system_shutdown(code);
-  hpx_thread_exit(HPX_SUCCESS, NULL, 0);
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
-void hpx_abort(int code) {
+void hpx_abort(void) {
   abort();
 }
