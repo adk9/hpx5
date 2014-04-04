@@ -37,11 +37,17 @@ typedef struct {
 } _and_t;
 
 
+// Freelist
+static __thread _and_t *_free = NULL;
+
+
 static void _delete(_and_t *and) {
   if (!and)
     return;
   lco_lock(&and->lco);
   lco_fini(&and->lco);
+  and->lco.vtable = (lco_class_t*)_free;
+  _free = and;
 }
 
 
@@ -90,10 +96,22 @@ static void _init(_and_t *and, uint64_t value) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_and_new(uint64_t limit) {
-  hpx_addr_t target = hpx_alloc(sizeof(_and_t));
-  _and_t *and = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&and))
-      assert(false);
+  hpx_addr_t target;
+  _and_t *and = _free;
+  if (and) {
+    _free = (_and_t*)and->lco.vtable;
+    target = HPX_HERE;
+    char *base;
+    if (!hpx_addr_try_pin(target, (void**)&base))
+      hpx_abort();
+    target.offset = (char*)and - base;
+    assert(target.offset < target.block_bytes);
+  }
+  else {
+    target = hpx_alloc(sizeof(_and_t));
+    if (!hpx_addr_try_pin(target, (void**)&and))
+      hpx_abort();
+  }
 
   _init(and, limit);
   hpx_addr_unpin(target);
