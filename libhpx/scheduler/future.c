@@ -156,12 +156,12 @@ hpx_lco_future_new(int size) {
   if (local) {
     _free = (_future_t*)local->lco.vtable;
     f = HPX_HERE;
-    void *base;
-    if (!hpx_addr_try_pin(f, &base)) {
+    char *base;
+    if (!hpx_addr_try_pin(f, (void**)&base)) {
       dbg_error("Could not translate local block.\n");
       hpx_abort();
     }
-    f.offset = (char*)local - (char*)base;
+    f.offset = (char*)local - base;
     assert(f.offset < f.block_bytes);
   }
   else {
