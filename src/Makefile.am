@@ -26,7 +26,8 @@ libphoton_la_LDFLAGS += @VERBS_LIBS@
 libphoton_la_SOURCES += verbs/verbs.c                  \
 		    verbs/verbs_exchange.c                     \
 		    verbs/verbs_connect.c                      \
-		    verbs/verbs_buffer.c
+		    verbs/verbs_buffer.c                       \
+	            verbs/verbs_ud.c
 endif
 
 if HAVE_UGNI

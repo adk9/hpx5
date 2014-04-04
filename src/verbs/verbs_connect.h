@@ -18,25 +18,26 @@ typedef struct verbs_cnct_ctx_t {
   struct ibv_context        *ib_context;
   struct ibv_pd             *ib_pd;
   struct ibv_cq             *ib_cq;
+  struct ibv_cp             *ib_ud_cq;
   struct ibv_srq            *ib_srq;
   struct ibv_comp_channel   *ib_cc;
   int                        ib_lid;
 
   struct rdma_event_channel *cm_schannel;
-  struct rdma_cm_id         **cm_id;
+  struct rdma_cm_id        **cm_id;
 
-  struct ibv_qp             **qp;
+  struct ibv_qp            **qp;
+  struct ibv_qp             *ud_qp;
   int                        psn;
   int                        num_qp;
-  int                        qp_type;
-  
+  int                        use_ud;
 
   int                        tx_depth;
   int                        rx_depth;
   int                        atomic_depth;
 
-  verbs_cnct_info           **local_ci;
-  verbs_cnct_info           **remote_ci;
+  verbs_cnct_info          **local_ci;
+  verbs_cnct_info          **remote_ci;
 } verbs_cnct_ctx;
 
 int __verbs_init_context(verbs_cnct_ctx *ctx);

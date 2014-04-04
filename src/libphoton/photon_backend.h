@@ -21,6 +21,7 @@
 
 #define LEDGER               1
 #define EVQUEUE              2
+#define SENDRECV             3
 
 #define REQUEST_NEW          0
 #define REQUEST_PENDING      1

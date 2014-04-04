@@ -26,7 +26,7 @@ int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
       .max_recv_wr     = 1,
       .max_recv_sge    = 1,
     },
-    .qp_type        = ctx->qp_type
+    .qp_type        = IBV_QPT_UD
   };
   
   tmp_qp = ibv_create_qp(ctx->ib_pd, &attr);

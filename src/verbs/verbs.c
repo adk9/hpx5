@@ -11,6 +11,7 @@
 #include "verbs.h"
 #include "verbs_connect.h"
 #include "verbs_exchange.h"
+#include "verbs_ud.h"
 #include "logging.h"
 
 #define MAX_RETRIES 1
@@ -61,7 +62,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .qp = NULL,
   .psn = 0,
   .num_qp = 0,
-  .qp_type = IBV_QPT_RC,
+  .use_ud = 0,
   .tx_depth = LEDGER_SIZE,
   .rx_depth = LEDGER_SIZE,
   .atomic_depth = 16
@@ -132,8 +133,8 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     goto error_exit;
   }
 
-  if (cfg->mode && !strncasecmp(cfg->mode, "UD", 2)) {
-    verbs_ctx.qp_type = IBV_QPT_UD;
+  if (cfg->use_ud) {
+    verbs_ctx.use_ud = cfg->use_ud;
   }
 
   if(__verbs_init_context(&verbs_ctx)) {
@@ -412,11 +413,23 @@ error_exit:
 }
 
 static int verbs_register_addr(photonAddr addr, int af) {
+  if (verbs_ctx.use_ud) {
+    return __verbs_ud_attach_addr(&verbs_ctx, (union ibv_gid*)addr);
+  }
+  else {
+    dbg_warn("Unknown action");
+  }
   
   return PHOTON_OK;
 }
 
 static int verbs_unregister_addr(photonAddr addr, int af) {
+  if (verbs_ctx.use_ud) {
+    return __verbs_ud_detach_addr(&verbs_ctx, (union ibv_gid*)addr);
+  }
+  else {
+    dbg_warn("Unknown action");
+  }
 
   return PHOTON_OK;
 }

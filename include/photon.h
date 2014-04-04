@@ -9,6 +9,7 @@ struct photon_config_t {
   int nproc;
 
   int use_cma;
+  int use_ud;
   int use_forwarder;
   char **forwarder_eids;
 

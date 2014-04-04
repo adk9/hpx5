@@ -17,6 +17,7 @@
 #include "logging.h"
 #include "verbs_connect.h"
 #include "verbs_exchange.h"
+#include "verbs_ud.h"
 
 #define MAX_CQ_ENTRIES      1000
 #define RDMA_CMA_BASE_PORT  18000
@@ -172,12 +173,6 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       }
     }
 
-    // if we are in UD mode, sync QP numbers first
-    // for network addr translation usage when we don't know the destination rank
-    if (ctx->qp_type == IBV_QPT_UD) {
-      //__verbs_sync_qpn(ctx);
-    }
-    
     // create QPs in the non-CMA case and transition to INIT state
     // RDMA CMA does this transition for us when we connect
     for (iproc = 0; iproc < (_photon_nproc + _photon_nforw); ++iproc) {
@@ -201,7 +196,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
           .max_recv_sge    = 1, // scatter gather element
           .max_inline_data = 0
         },
-        .qp_type        = ctx->qp_type
+        .qp_type        = IBV_QPT_RC
       };
 
       ctx->qp[iproc] = ibv_create_qp(ctx->ib_pd, &attr);
@@ -227,6 +222,11 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
           return PHOTON_ERROR;
         }
       }
+    }
+   
+    // create a UD QP as well if requested
+    if (ctx->use_ud) {
+      __verbs_ud_create_qp(ctx);
     }
   }
 
