@@ -105,7 +105,6 @@ static int _fib_main_action(void *args) {
   printf("localities: %d\n", hpx_get_num_ranks());
   printf("threads/locality: %d\n", hpx_get_num_threads());
   hpx_shutdown(0);
-  return HPX_SUCCESS;
 }
 
 int main(int argc, char *argv[]) {
