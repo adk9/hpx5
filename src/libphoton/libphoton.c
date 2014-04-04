@@ -160,7 +160,7 @@ int photon_unregister_buffer(void *buf, uint64_t size) {
   return __photon_default->unregister_buffer(buf, size);
 }
 
-int photon_register_addr(photon_addr addr, int af) {
+int photon_register_addr(photonAddr addr, int af) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -169,7 +169,7 @@ int photon_register_addr(photon_addr addr, int af) {
   return __photon_default->register_addr(addr, af);
 }
 
-int photon_unregister_addr(photon_addr addr, int af) {
+int photon_unregister_addr(photonAddr addr, int af) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -341,7 +341,7 @@ int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   return __photon_default->probe_ledger(proc, flag, type, status);
 }
 
-int photon_probe(photon_addr addr, int *flag, int type, photonStatus status) {
+int photon_probe(photonAddr addr, int *flag, int type, photonStatus status) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -350,7 +350,7 @@ int photon_probe(photon_addr addr, int *flag, int type, photonStatus status) {
   return __photon_default->probe(addr, flag, type, status);
 }
 
-int photon_send(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {
+int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;

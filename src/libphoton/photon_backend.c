@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include "libphoton.h"
 #include "photon_backend.h"
@@ -32,6 +33,8 @@ static int _photon_register_buffer(void *buffer, uint64_t size);
 static int _photon_unregister_buffer(void *buffer, uint64_t size);
 static int _photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 static int _photon_wait(uint32_t request);
+static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
+static int _photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
 static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
@@ -46,6 +49,7 @@ static int _photon_send_FIN(uint32_t request, int proc);
 static int _photon_wait_any(int *ret_proc, uint32_t *ret_req);
 static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
+static int _photon_probe(photonAddr addr, int *flag, int type, photonStatus status);
 static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter);
 static int _photon_io_finalize();
 
@@ -56,16 +60,6 @@ static int __photon_nbpop_event(photonRequest req);
 
 static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request);
 static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc, uint32_t *request);
-
-static int _photon_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                            photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-static int _photon_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                            photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-static int _photon_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                             photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-static int _photon_rdma_recv(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                             photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-static int _photon_get_event(photonEventStatus stat);
 
 /*
    We only want to spawn a dedicated thread for ledgers on
@@ -85,6 +79,8 @@ struct photon_backend_t photon_default_backend = {
   .test = _photon_test,
   .wait = _photon_wait,
   .wait_ledger = _photon_wait,
+  .send = _photon_send,
+  .recv = _photon_recv,
   .post_recv_buffer_rdma = _photon_post_recv_buffer_rdma,
   .post_send_buffer_rdma = _photon_post_send_buffer_rdma,
   .post_send_request_rdma = _photon_post_send_request_rdma,
@@ -99,13 +95,14 @@ struct photon_backend_t photon_default_backend = {
   .wait_any = _photon_wait_any,
   .wait_any_ledger = _photon_wait_any_ledger,
   .probe_ledger = _photon_probe_ledger,
+  .probe = _photon_probe,
   .io_init = _photon_io_init,
   .io_finalize = _photon_io_finalize,
-  .rdma_get = _photon_rdma_get,
-  .rdma_put = _photon_rdma_put,
-  .rdma_send = _photon_rdma_send,
-  .rdma_recv = _photon_rdma_recv,
-  .get_event = _photon_get_event
+  .rdma_get = NULL,
+  .rdma_put = NULL,
+  .rdma_send = NULL,
+  .rdma_recv = NULL,
+  .get_event = NULL
 };
 
 static inline photonRequest __photon_get_request() {
@@ -768,6 +765,21 @@ static int _photon_wait(uint32_t request) {
   else
     return __photon_wait_event(req);
 #endif
+}
+
+static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {
+  char buf[40];
+  inet_ntop(AF_INET6, addr->raw, buf, 40);
+  dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+
+  return PHOTON_OK;
+}
+
+static int _photon_recv(uint32_t request, void *ptr, uint64_t size, int flags) {
+
+  dbg_info("(%u, %p, %lu, %d)", request, ptr, size, flags);
+
+  return PHOTON_OK;
 }
 
 static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
@@ -1710,6 +1722,14 @@ error_exit:
   return PHOTON_ERROR;
 }
 
+static int _photon_probe(photonAddr addr, int *flag, int type, photonStatus status) {
+  char buf[40];
+  inet_ntop(AF_INET6, addr->raw, buf, 40);
+  dbg_info("(%s)", buf);
+
+  return PHOTON_OK;
+}
+
 /* begin I/O */
 static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter) {
   /* forwarders do our I/O for now */
@@ -1729,32 +1749,6 @@ static int _photon_io_finalize() {
   else {
     return PHOTON_ERROR;
   }
-}
-
-static int _photon_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                            photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
-  return PHOTON_OK;
-}
-
-static int _photon_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                            photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
-  return PHOTON_OK;
-}
-
-
-static int _photon_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                             photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
-  return PHOTON_OK;
-}
-
-static int _photon_rdma_recv(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                             photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
-  return PHOTON_OK;
-}
-
-static int _photon_get_event(photonEventStatus stat) {
-
-  return PHOTON_OK;
 }
 
 /* TODO */

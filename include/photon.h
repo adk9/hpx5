@@ -38,8 +38,6 @@ union photon_addr_t {
   } blkaddr;
 };
 
-typedef union photon_addr_t photon_addr;
-
 /* status for photon requests */
 struct photon_status_t {
   union photon_addr_t src_addr;
@@ -65,10 +63,11 @@ struct photon_buffer_t {
   struct photon_buffer_priv_t priv;
 };
 
-typedef struct photon_config_t * photonConfig;
-typedef struct photon_status_t * photonStatus;
+typedef union photon_addr_t         * photonAddr;
+typedef struct photon_config_t      * photonConfig;
+typedef struct photon_status_t      * photonStatus;
 typedef struct photon_buffer_priv_t * photonBufferPriv;
-typedef struct photon_buffer_t * photonBuffer;
+typedef struct photon_buffer_t      * photonBuffer;
 
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
@@ -87,13 +86,13 @@ int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 
-int photon_send(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
+int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
 int photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
 
 /* tell photon that we want to accept messages for certain addresses
    identified by address family af */
-int photon_register_addr(photon_addr addr, int af);
-int photon_unregister_addr(photon_addr addr, int af);
+int photon_register_addr(photonAddr addr, int af);
+int photon_unregister_addr(photonAddr addr, int af);
 
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
@@ -119,6 +118,6 @@ int photon_wait_any(int *ret_proc, uint32_t *ret_req);
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
-int photon_probe(photon_addr addr, int *flag, int type, photonStatus status);
+int photon_probe(photonAddr addr, int *flag, int type, photonStatus status);
 
 #endif
