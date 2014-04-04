@@ -220,7 +220,7 @@ hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
 
   // If the programmer wants the mapping, output it.
   if (local)
-    *local = base;
+    *local = ((char*)base + addr.offset);
 
   return true;
 }
