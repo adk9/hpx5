@@ -24,7 +24,7 @@ struct photon_config_t {
   int ib_port;
 };
 
-union photon_addr_t {
+typedef union photon_addr_t {
   uint8_t       raw[16];
   unsigned long s_addr;
   struct {
@@ -37,7 +37,7 @@ union photon_addr_t {
     uint32_t    blk2;
     uint32_t    blk3;
   } blkaddr;
-};
+} photon_addr;
 
 /* status for photon requests */
 struct photon_status_t {
@@ -119,6 +119,6 @@ int photon_wait_any(int *ret_proc, uint32_t *ret_req);
 int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
-int photon_probe(photonAddr addr, int *flag, int type, photonStatus status);
+int photon_probe(photonAddr addr, int *flag, photonStatus status);
 
 #endif

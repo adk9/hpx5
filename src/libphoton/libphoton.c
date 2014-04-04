@@ -341,13 +341,13 @@ int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   return __photon_default->probe_ledger(proc, flag, type, status);
 }
 
-int photon_probe(photonAddr addr, int *flag, int type, photonStatus status) {
+int photon_probe(photonAddr addr, int *flag, photonStatus status) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->probe(addr, flag, type, status);
+  return __photon_default->probe(addr, flag, status);
 }
 
 int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {

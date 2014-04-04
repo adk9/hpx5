@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <arpa/inet.h>
+
+#include "util.h"
 
 #ifdef DEBUG
 time_t _tictoc(time_t stime, int proc) {
@@ -26,3 +29,9 @@ void photon_gettime_(double *s) {
   *s = ((double)tp.tv_sec) + ( ((double)tp.tv_usec) / 1000000.0);
   return;
 }
+
+const char *photon_addr_getstr(photon_addr *addr, int af) {
+  char *buf = malloc(40);
+  return inet_ntop(AF_INET6, addr->raw, buf, 40);
+}
+  

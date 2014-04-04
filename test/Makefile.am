@@ -2,7 +2,14 @@ AM_CFLAGS = @CFLAGS@                         \
 	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include
 
-bin_PROGRAMS = photon_test photon_test_get photon_test_put photon_test_forwarder photon_test_interleaved photon_pingpong
+bin_PROGRAMS = photon_test             \
+	       photon_test_get         \
+	       photon_test_put         \
+	       photon_test_forwarder   \
+	       photon_test_interleaved \
+	       photon_pingpong         \
+	       photon_ud_blockid
+
 AM_LDFLAGS = @top_srcdir@/src/libphoton.la -lm @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@
 
 photon_test_SOURCES = kernel.c photon_test.c

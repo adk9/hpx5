@@ -419,6 +419,10 @@ error_exit:
 }
 
 static int verbs_register_addr(photonAddr addr, int af) {
+  char buf[40];
+  inet_ntop(AF_INET6, addr->raw, buf, 40);
+  dbg_info("(%s)", buf);
+
   if (verbs_ctx.use_ud) {
     return __verbs_ud_attach_addr(&verbs_ctx, (union ibv_gid*)addr);
   }
@@ -430,6 +434,10 @@ static int verbs_register_addr(photonAddr addr, int af) {
 }
 
 static int verbs_unregister_addr(photonAddr addr, int af) {
+  char buf[40];
+  inet_ntop(AF_INET6, addr->raw, buf, 40);
+  dbg_info("(%s)", buf);
+
   if (verbs_ctx.use_ud) {
     return __verbs_ud_detach_addr(&verbs_ctx, (union ibv_gid*)addr);
   }

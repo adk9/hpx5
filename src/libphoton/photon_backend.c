@@ -51,7 +51,7 @@ static int _photon_send_FIN(uint32_t request, int proc);
 static int _photon_wait_any(int *ret_proc, uint32_t *ret_req);
 static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
-static int _photon_probe(photonAddr addr, int *flag, int type, photonStatus status);
+static int _photon_probe(photonAddr addr, int *flag, photonStatus status);
 static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter);
 static int _photon_io_finalize();
 
@@ -76,6 +76,8 @@ struct photon_backend_t photon_default_backend = {
   .initialized = _photon_initialized,
   .init = _photon_init,
   .finalize = _photon_finalize,
+  .register_addr = NULL,
+  .unregister_addr = NULL,
   .register_buffer = _photon_register_buffer,
   .unregister_buffer = _photon_unregister_buffer,
   .test = _photon_test,
@@ -1769,7 +1771,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_probe(photonAddr addr, int *flag, int type, photonStatus status) {
+static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
   char buf[40];
   inet_ntop(AF_INET6, addr->raw, buf, 40);
   dbg_info("(%s)", buf);

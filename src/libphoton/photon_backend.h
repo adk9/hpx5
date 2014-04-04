@@ -113,7 +113,7 @@ struct photon_backend_t {
   int (*wait_any)(int *ret_proc, uint32_t *ret_req);
   int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
-  int (*probe)(photonAddr addr, int *flag, int type, photonStatus status);
+  int (*probe)(photonAddr addr, int *flag, photonStatus status);
   int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
   int (*io_finalize)();
   /* data movement -- needs to be split out */
