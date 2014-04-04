@@ -35,6 +35,11 @@ typedef struct {
   void *value[2];                               // 2 in-place words/future
 } _future_t;
 
+
+/// Freelist allocation for futures.
+static __thread _future_t *_free = NULL;
+
+
 /// Remote block initializer.
 static hpx_action_t _block_init = 0;
 
@@ -54,6 +59,11 @@ static void _delete(_future_t *f) {
   if (!_is_inplace(f))
     free(f->value[0]);
   lco_fini(&f->lco);
+
+  // overload the vtable pointer for freelisting---not perfect, but it's
+  // reinitialized in _init(), so it's not the end of the world
+  f->lco.vtable = (lco_class_t*)_free;
+  _free = f;
 }
 
 
@@ -128,6 +138,7 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
   _block_init = HPX_REGISTER_ACTION(_block_init_action);
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Allocate a future.
 ///
@@ -140,11 +151,25 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_future_new(int size) {
-  hpx_addr_t f = hpx_alloc(sizeof(_future_t));
-  _future_t *local = NULL;
-  if (!hpx_addr_try_pin(f, (void**)&local)) {
-    dbg_error("Could not pin newly allocated future of size %d.\n", size);
-    hpx_abort();
+  hpx_addr_t f;
+  _future_t *local = _free;
+  if (local) {
+    _free = (_future_t*)local->lco.vtable;
+    f = HPX_HERE;
+    void *base;
+    if (!hpx_addr_try_pin(f, &base)) {
+      dbg_error("Could not translate local block.\n");
+      hpx_abort();
+    }
+    f.offset = (char*)local - (char*)base;
+    assert(f.offset < f.block_bytes);
+  }
+  else {
+    f = hpx_alloc(sizeof(_future_t));
+    if (!hpx_addr_try_pin(f, (void**)&local)) {
+      dbg_error("Could not pin newly allocated future of size %d.\n", size);
+      hpx_abort();
+    }
   }
   _init(local, size);
   hpx_addr_unpin(f);
