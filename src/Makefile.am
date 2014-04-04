@@ -12,6 +12,7 @@ libphoton_la_SOURCES = libphoton/libphoton.c           \
 		       libphoton/photon_backend.c              \
 		       libphoton/photon_exchange.c             \
 		       libphoton/photon_buffer.c               \
+		       libphoton/photon_msgbuffer.c            \
 		       libphoton/photon_buffertable.c          \
 		       libphoton/photon_rdma_FIN_ledger.c      \
 		       libphoton/photon_rdma_INFO_ledger.c

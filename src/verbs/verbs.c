@@ -223,6 +223,12 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   extern photonBI shared_storage;
 
   switch (type) {
+  case PHOTON_MTU:
+    {
+      *ret_info = &verbs_ctx.ib_mtu;
+      *ret_size = sizeof(verbs_ctx.ib_mtu);
+    }
+    break;
   case PHOTON_CI: {
     verbs_cnct_info *cinfo;
     cinfo = (verbs_cnct_info *)malloc(MAX_QP * sizeof(verbs_cnct_info));

@@ -4,6 +4,7 @@
 #include "photon.h"
 #include "photon_io.h"
 #include "photon_buffer.h"
+#include "photon_msgbuffer.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "photon_rdma_FIN_ledger.h"
 #include "squeue.h"
@@ -18,6 +19,7 @@
 
 /* this should not exceed MCA max_qp_wr (typically 16k) */
 #define LEDGER_SIZE          512
+#define SMSG_SIZE            (4 * 4096)
 
 #define LEDGER               1
 #define EVQUEUE              2
@@ -40,6 +42,8 @@ typedef struct proc_info_t {
   photonRILedger  remote_rcv_info_ledger;
   photonFINLedger local_FIN_ledger;
   photonFINLedger remote_FIN_ledger;
+
+  photonMsgBuf    smsgbuf;
 
 #ifdef HAVE_XSP
   libxspSess *sess;

@@ -16,6 +16,8 @@
 
 photonBI shared_storage;
 
+static photonMsgBuf sendbuf;
+static photonMsgBuf recvbuf;
 static ProcessInfo *photon_processes;
 static htable_t *reqtable, *ledger_reqtable;
 static photonRequest requests;
@@ -313,7 +315,46 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     goto error_exit_ss;
   }
 
-  /* register any buffers that were requested before init */
+  // allocate buffers for send/recv operations (after backend initializes)
+  uint64_t msgbuf_size;
+  uint64_t p_size;
+  int p_offset;
+  if (cfg->use_ud) {
+    // we need to ask the backend about the max msg size it can support for UD
+    int *mtu;
+    int size;
+    if (__photon_backend->get_info(photon_processes, PHOTON_ANY_SOURCE, (void**)&mtu, &size, PHOTON_MTU)) {
+      dbg_err("Could not get mtu for UD service");
+      goto error_exit_ss;
+    }
+    p_size = *mtu;
+    // gross hack, should ask backend again...
+    p_offset = 40;
+  }
+  else {
+    p_size = SMSG_SIZE;
+    p_offset = 0;
+  }
+  dbg_info("SMSG size: %lu", p_size);
+
+  // create enough space to accomodate every rank sending LEDGER_SIZE messages
+  msgbuf_size = LEDGER_SIZE * (p_size + p_offset) * _photon_nproc;
+  
+  sendbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset);
+  if (!sendbuf) {
+    dbg_err("could not create send message buffer");
+    goto error_exit_ss;
+  }
+  photon_buffer_register(sendbuf->db, __photon_backend->context);
+
+  recvbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset);
+  if (!recvbuf) {
+    dbg_err("could not create recv message buffer");
+    goto error_exit_sb;
+  }
+  photon_buffer_register(recvbuf->db, __photon_backend->context);
+
+  // register any buffers that were requested before init
   while( !SLIST_EMPTY(&pending_mem_register_list) ) {
     struct photon_mem_register_req *mem_reg_req;
     dbg_info("registering buffer in queue");
@@ -325,7 +366,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 #ifdef PHOTON_MULTITHREADED
   if (pthread_create(&ledger_watcher, NULL, __photon_req_watcher, NULL)) {
     log_err("pthread_create() failed");
-    goto error_exit_ss;
+    goto error_exit_rb;
   }
 #endif
 
@@ -333,23 +374,29 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   return PHOTON_OK;
 
-error_exit_ss:
+#ifdef PHOTON_MULTITHREADED  
+ error_exit_rb:
+  photon_msgbuffer_free(recvbuf);
+#endif
+ error_exit_sb:
+  photon_msgbuffer_free(sendbuf);
+ error_exit_ss:
   photon_buffer_free(shared_storage);
-error_exit_buf:
+ error_exit_buf:
   if (buf)
     free(buf);
-error_exit_crb:
+ error_exit_crb:
   free(photon_processes);
-error_exit_lrt:
+ error_exit_lrt:
   htable_free(ledger_reqtable);
-error_exit_rt:
+ error_exit_rt:
   htable_free(reqtable);
-error_exit_bt:
+ error_exit_bt:
   buffertable_finalize();
-error_exit_req:
+ error_exit_req:
   free(requests);
   DESTROY_COUNTER(curr_cookie);
-
+  
   return PHOTON_ERROR;
 }
 
@@ -393,7 +440,7 @@ static int _photon_register_buffer(void *buffer, uint64_t size) {
 
   db = photon_buffer_create(buffer, size);
   if (!db) {
-    log_err("Couldn't register shared storage");
+    log_err("could not create photon buffer");
     goto error_exit;
   }
 

@@ -141,6 +141,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       return PHOTON_ERROR;
     }
     ctx->ib_lid = attr.lid;
+    ctx->ib_mtu = 1 << (attr.active_mtu + 7);
 
     ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
     if (!ctx->ib_pd) {
@@ -223,13 +224,12 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
         }
       }
     }
-   
     // create a UD QP as well if requested
     if (ctx->use_ud) {
       __verbs_ud_create_qp(ctx);
     }
   }
-
+  
   // init context also creates connect info for all procs
   return __verbs_create_connect_info(ctx);
 }
@@ -272,16 +272,17 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
     }
 
     for(i=0; i<MAX_QP; ++i) {
-
-      if (ibv_query_gid(ctx->ib_context, ctx->ib_port, 0, &(ctx->local_ci[iproc][i].gid))) {
-        dbg_info("Could not get local gid for gid index 0");
-        memset(&(ctx->local_ci[iproc][i].gid.raw), 0, sizeof(union ibv_gid));
-      }
-
+      
+      memset(&(ctx->local_ci[iproc][i].gid.raw), 0, sizeof(union ibv_gid));
+      
       if (__photon_config->use_cma) {
         ctx->local_ci[iproc][i].qpn = 0x0;
       }
       else {
+        // can only query gid in in non-CMA mode, CMA will exchange this for us
+        if (ibv_query_gid(ctx->ib_context, ctx->ib_port, 0, &(ctx->local_ci[iproc][i].gid))) {
+          dbg_info("Could not get local gid for gid index 0");
+        }
         ctx->local_ci[iproc][i].qpn = ctx->qp[iproc]->qp_num;
       }
 
@@ -440,6 +441,19 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     if (ibv_req_notify_cq(ctx->ib_cq, 0)) {
       dbg_err("could not request CQ notifications");
       goto error_exit;
+    }
+    
+    struct ibv_port_attr port_attr;
+    if (ibv_query_port(cm_id->verbs, cm_id->port_num, &port_attr)) {
+      dbg_err("could not query port");
+      goto error_exit;
+    }
+    ctx->ib_lid = port_attr.lid;
+    ctx->ib_mtu = 1 << (port_attr.active_mtu + 7);    
+
+    // create a UD QP as well if requested
+    if (ctx->use_ud) {
+      __verbs_ud_create_qp(ctx);
     }
   }
   else {
