@@ -100,6 +100,8 @@ int photon_init(photonConfig cfg) {
   __photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
   __photon_default->register_buffer = (be->register_buffer)?(be->register_buffer):__photon_default->register_buffer;
   __photon_default->unregister_buffer = (be->unregister_buffer)?(be->unregister_buffer):__photon_default->unregister_buffer;
+  __photon_default->register_addr = (be->register_addr)?(be->register_addr):__photon_default->register_addr;
+  __photon_default->unregister_addr = (be->unregister_addr)?(be->unregister_addr):__photon_default->unregister_addr;
   __photon_default->test = (be->test)?(be->test):__photon_default->test;
   __photon_default->wait = (be->wait)?(be->wait):__photon_default->wait;
   __photon_default->wait_ledger = (be->wait_ledger)?(be->wait_ledger):__photon_default->wait_ledger;
@@ -156,6 +158,24 @@ int photon_unregister_buffer(void *buf, uint64_t size) {
   }
 
   return __photon_default->unregister_buffer(buf, size);
+}
+
+int photon_register_addr(photon_addr addr, int af) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->register_addr(addr, af);
+}
+
+int photon_unregister_addr(photon_addr addr, int af) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->unregister_addr(addr, af);
 }
 
 int photon_test(uint32_t request, int *flag, int *type, photonStatus status) {

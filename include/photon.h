@@ -24,16 +24,17 @@ struct photon_config_t {
 };
 
 union photon_addr_t {
-  uint8_t     raw[16];
+  uint8_t       raw[16];
+  unsigned long s_addr;
   struct {
-    uint64_t  subnet_prefix;
-    uint64_t  proc_id;
+    uint64_t    subnet_prefix;
+    uint64_t    proc_id;
   } global;
   struct {
-    uint32_t  blk0;
-    uint32_t  blk1;
-    uint32_t  blk2;
-    uint32_t  blk3;
+    uint32_t    blk0;
+    uint32_t    blk1;
+    uint32_t    blk2;
+    uint32_t    blk3;
   } blkaddr;
 };
 
@@ -88,6 +89,11 @@ int photon_finalize();
 
 int photon_send(photon_addr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
 int photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
+
+/* tell photon that we want to accept messages for certain addresses
+   identified by address family af */
+int photon_register_addr(photon_addr addr, int af);
+int photon_unregister_addr(photon_addr addr, int af);
 
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
