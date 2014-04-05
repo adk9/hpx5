@@ -123,7 +123,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// ----------------------------------------------------------------------------
 /// Allocate a semaphore LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_sema_new(unsigned count) {
+hpx_addr_t hpx_lco_sema_new(unsigned count) {
   hpx_addr_t sema = hpx_alloc(sizeof(_sema_t));
   _sema_t *s = NULL;
   if (!hpx_addr_try_pin(sema, (void**)&s))
@@ -137,7 +137,7 @@ hpx_addr_t hpx_sema_new(unsigned count) {
 /// ----------------------------------------------------------------------------
 /// Decrement a semaphore.
 /// ----------------------------------------------------------------------------
-void hpx_sema_p(hpx_addr_t sema) {
+void hpx_lco_sema_p(hpx_addr_t sema) {
   _sema_t *s = NULL;
   if (hpx_addr_try_pin(sema, (void**)&s)) {
     _get(s, 0, NULL);
@@ -152,7 +152,7 @@ void hpx_sema_p(hpx_addr_t sema) {
 /// ----------------------------------------------------------------------------
 /// Increment a semaphore.
 /// ----------------------------------------------------------------------------
-void hpx_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
+void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
   _sema_t *s = NULL;
   if (hpx_addr_try_pin(sema, (void**)&s)) {
     _set(s, 0, NULL);
