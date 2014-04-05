@@ -59,7 +59,7 @@ hpx_addr_t HPX_HERE = HPX_ADDR_INIT(0, 0, UINT32_MAX);
 /// Uses the well-known, low-order, block mappings to construct a "there
 /// address."
 hpx_addr_t HPX_THERE(int i) {
-  hpx_addr_t addr = HPX_ADDR_INIT(0, i * UINT32_MAX, UINT32_MAX);
+  hpx_addr_t addr = hpx_addr_init(0, i * UINT32_MAX, UINT32_MAX);
   return addr;
 }
 
@@ -77,6 +77,7 @@ static SYNC_ATOMIC(uint32_t _next);
 
 
 static uint32_t _block_id(hpx_addr_t addr) {
+  assert(addr.block_bytes);
   return addr.base_id + (addr.offset / addr.block_bytes);
 }
 
@@ -92,15 +93,14 @@ static uint32_t _owner(uint32_t block_id) {
 
 
 /// The action that performs the global sbrk.
-static int _gasbrk_action(void *args) {
+static int _gasbrk_action(size_t *args) {
   if (!hpx_addr_eq(HPX_HERE, HPX_THERE(0)))
     return dbg_error("Centralized allocation expects rank 0");
 
   // bump the next block id by the required number of blocks---always bump a
   // ranks-aligned value
   int ranks = hpx_get_num_ranks();
-  size_t n = *(size_t*)args;
-  n += (n % ranks);
+  size_t n = *args + (*args % ranks);
   int next = sync_fadd(&_next_block, n, SYNC_ACQ_REL);
   if (UINT32_MAX - next < n) {
     dbg_error("rank out of blocks for allocation size %lu\n", n);
@@ -114,9 +114,8 @@ static int _gasbrk_action(void *args) {
 
 
 /// The action that performs a global allocation for a block.
-static int _block_alloc_action(void *args) {
-  uint32_t bytes = *(uint32_t*)args;
-  void *block = malloc(bytes);
+static int _block_alloc_action(uint32_t *bytes) {
+  void *block = malloc(*bytes);
   assert(block);
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t block_id = _block_id(target);
@@ -174,7 +173,7 @@ hpx_global_alloc(size_t n, uint32_t bytes) {
   // and LCO for the reduction, since I want to wait for them all to finish.
   hpx_addr_t and = hpx_lco_and_new(n);
   for (size_t i = 0; i < n; ++i) {
-    hpx_addr_t addr = HPX_ADDR_INIT(0, base_id + i, bytes);
+    hpx_addr_t addr = hpx_addr_init(0, base_id + i, bytes);
     hpx_call(addr, _block_alloc, &bytes, sizeof(bytes), and);
   }
 
@@ -183,7 +182,7 @@ hpx_global_alloc(size_t n, uint32_t bytes) {
   hpx_lco_delete(and, HPX_NULL);
 
   // Return the base address.
-  hpx_addr_t base_addr = HPX_ADDR_INIT(0, base_id, bytes);
+  hpx_addr_t base_addr = hpx_addr_init(0, base_id, bytes);
   return base_addr;
 }
 
@@ -218,9 +217,10 @@ hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
   if (!base)
     return false;
 
-  // If the programmer wants the mapping, output it.
+  // If the programmer wants the mapping, output it, by offsetting from the base
+  // as much as we need to.
   if (local)
-    *local = ((char*)base + addr.offset);
+    *local = ((char*)base + addr.offset % addr.block_bytes);
 
   return true;
 }
@@ -241,7 +241,7 @@ hpx_addr_t
 hpx_addr_add(const hpx_addr_t addr, int bytes) {
   // not checking overflow
   uint64_t offset = addr.offset + bytes;
-  hpx_addr_t result = HPX_ADDR_INIT(offset, addr.base_id, addr.block_bytes);
+  hpx_addr_t result = hpx_addr_init(offset, addr.base_id, addr.block_bytes);
   return result;
 }
 
