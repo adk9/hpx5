@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,6 +52,13 @@ typedef struct {
     .base_id = (BASE),                           \
     .block_bytes = (BYTES)                       \
     }
+
+static inline hpx_addr_t hpx_addr_init(uint64_t offset, uint32_t base,
+                                       uint32_t bytes) {
+  assert(bytes != 0);
+  hpx_addr_t addr = HPX_ADDR_INIT(offset, base, bytes);
+  return addr;
+}
 
 extern const hpx_addr_t HPX_NULL;
 extern hpx_addr_t HPX_HERE;
