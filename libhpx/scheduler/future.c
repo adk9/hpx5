@@ -56,8 +56,11 @@ static void _delete(_future_t *f) {
     return;
 
   lco_lock(&f->lco);
-  if (!_is_inplace(f))
-    free(f->value[0]);
+  if (!_is_inplace(f)) {
+    void *ptr = NULL;
+    memcpy(&ptr, &f->value[0], sizeof(ptr));    // strict aliasing
+    free(ptr);
+  }
   lco_fini(&f->lco);
 
   // overload the vtable pointer for freelisting---not perfect, but it's
@@ -71,13 +74,25 @@ static void _delete(_future_t *f) {
 /// so we only do this if the future isn't set yet.
 static void _set(_future_t *f, int size, const void *from) {
   lco_lock(&f->lco);
-  if (!lco_is_set(&f->lco)) {
-    if (from) {
-      void *to = (_is_inplace(f)) ? &f->value[0] : f->value[0];
-      memcpy(to, from, size);
-    }
-    scheduler_signal(&f->lco);
+  if (lco_is_set(&f->lco))
+    goto exit;
+
+  if (!from)
+    goto signal;
+
+  if (_is_inplace(f)) {
+    memcpy(&f->value[0], from, size);
   }
+  else {
+    void *ptr = NULL;
+    memcpy(&ptr, &f->value[0], sizeof(ptr));    // strict aliasing
+    memcpy(ptr, from, size);
+  }
+
+ signal:
+  scheduler_signal(&f->lco);
+
+ exit:
   lco_unlock(&f->lco);
 }
 
@@ -88,11 +103,22 @@ static void _get(_future_t *f, int size, void *out) {
   if (!lco_is_set(&f->lco))
     scheduler_wait(&f->lco);
 
+  // even though future's are single-assignment, we're still going to hold the
+  // lock during the memcpy. This is because we want to make sure that the
+  // future doesn't get deleted while we're copying.
   if (out == NULL)
-    return;
+    goto exit;
 
-  const void *from = (_is_inplace(f)) ? &f->value[0] : f->value[0];
-  memcpy(out, from, size);
+  if (_is_inplace(f)) {
+    memcpy(out, &f->value[0], size);
+  }
+  else {
+    void *ptr = NULL;
+    memcpy(&ptr, &f->value[0], sizeof(ptr));  // strict aliasing
+    memcpy(out, ptr, size);
+  }
+
+ exit:
   lco_unlock(&f->lco);
 }
 
