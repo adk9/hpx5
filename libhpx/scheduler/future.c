@@ -191,7 +191,7 @@ hpx_lco_future_new(int size) {
 hpx_addr_t
 hpx_lco_future_array_new(int n, int size, int block_size) {
   // perform the global allocation
-  int blocks = (n / block_size) + (n % block_size) ? 1 : 0;
+  int blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
   int block_bytes = block_size * sizeof(_future_t);
   hpx_addr_t base = hpx_global_alloc(blocks, block_bytes);
 
@@ -203,18 +203,11 @@ hpx_lco_future_array_new(int n, int size, int block_size) {
 
   // We want to do this in parallel, but wait for them all to complete---we
   // don't need any values from this broadcast, so we can use the and
-  // reduction. The last iteration might be different, because the last block
-  // might not have so many elements in it.
-  int i;
-  hpx_addr_t block;
+  // reduction. We may initialize too many futures in the last block, but that's
+  // no problem.
   hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (i = 0; i < blocks - 1; ++i) {
-    block = hpx_addr_add(base, i * block_bytes);
-    hpx_call(block, _block_init, args, sizeof(args), and);
-  }
-  {
-    args[1] = n % block_size;
-    block = hpx_addr_add(base, i * block_bytes);
+  for (int i = 0; i < blocks; ++i) {
+    hpx_addr_t block = hpx_addr_add(base, i * block_bytes);
     hpx_call(block, _block_init, args, sizeof(args), and);
   }
 
