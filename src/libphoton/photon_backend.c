@@ -19,7 +19,7 @@ photonBI shared_storage;
 static photonMsgBuf sendbuf;
 static photonMsgBuf recvbuf;
 static ProcessInfo *photon_processes;
-static htable_t *reqtable, *ledger_reqtable;
+static htable_t *reqtable, *ledger_reqtable, *sr_reqtable;
 static photonRequest requests;
 static int num_requests;
 static LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
@@ -62,6 +62,7 @@ static int __photon_nbpop_event(photonRequest req);
 
 static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request);
 static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc, uint32_t *request);
+static int __photon_setup_request_sendrecv(photonAddr addr, uint32_t request);
 
 /*
    We only want to spawn a dedicated thread for ledgers on
@@ -216,6 +217,35 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc,
   return PHOTON_ERROR;
 }
 
+/* generates a new request for the send/recv event */
+static int __photon_setup_request_sendrecv(photonAddr addr, uint32_t request) {
+  photonRequest req;
+
+  req = __photon_get_request();
+  if (!req) {
+    log_err("Couldn't allocate request\n");
+    goto error_exit;
+  }
+
+  req->id = request;
+  req->state = REQUEST_PENDING;
+  req->type = SENDRECV;
+  memcpy(&req->addr, addr, sizeof(*addr));
+  
+  dbg_info("Inserting the new send/recv request into the sr table: 0x%016lx/%d/%p",
+           addr->global.proc_id, request, req);
+  if (htable_insert(sr_reqtable, (uint64_t)request, req) != 0) {
+    /* this is bad, we've submitted the request, but we can't track it */
+    log_err("Couldn't save request in hashtable");
+    goto error_exit;
+  }
+
+  return PHOTON_OK;
+  
+ error_exit:
+  return PHOTON_ERROR;
+}
+
 static int _photon_initialized() {
   if (__photon_backend && __photon_config)
     return __photon_backend->initialized();
@@ -270,10 +300,18 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     goto error_exit_rt;
   }
 
+  dbg_info("create_sr_reqtable()");
+
+  sr_reqtable = htable_create(193);
+  if (!sr_reqtable) {
+    log_err("Failed to allocate request table");
+    goto error_exit_lrt;
+  }
+  
   photon_processes = (ProcessInfo *) malloc(sizeof(ProcessInfo) * (_photon_nproc + _photon_nforw));
   if (!photon_processes) {
     log_err("Couldn't allocate process information");
-    goto error_exit_lrt;
+    goto error_exit_srt;
   }
 
   // Set it to zero, so that we know if it ever got initialized
@@ -356,9 +394,12 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   }
   photon_buffer_register(recvbuf->db, __photon_backend->context);
 
-  photon_addr myaddr = {.s_addr = _photon_myrank};
-  for (i = 0; i < recvbuf->p_count; i++) {
-    __photon_backend->rdma_recv(&myaddr, 0, 0, NULL, recvbuf, i);
+  // pre-post the receive buffers when UD service is requested
+  if (cfg->use_ud) {
+    photon_addr myaddr = {.s_addr = _photon_myrank};
+    for (i = 0; i < recvbuf->p_count; i++) {
+      __photon_backend->rdma_recv(&myaddr, 0, 0, NULL, recvbuf, i);
+    }
   }
 
   // register any buffers that were requested before init
@@ -394,6 +435,8 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     free(buf);
  error_exit_crb:
   free(photon_processes);
+ error_exit_srt:
+  htable_free(sr_reqtable);
  error_exit_lrt:
   htable_free(ledger_reqtable);
  error_exit_rt:
@@ -718,16 +761,18 @@ static int _photon_test(uint32_t request, int *flag, int *type, photonStatus sta
 
   if (htable_lookup(reqtable, (uint64_t)request, &test) != 0) {
     if (htable_lookup(ledger_reqtable, (uint64_t)request, &test) != 0) {
-      dbg_info("Request is not in either request-table");
-      // Unlike photon_wait(), we might call photon_test() multiple times on a request,
-      // e.g., in an unguarded loop.	flag==-1 will signify that the operation is
-      // not pending.	 This means, it might be completed, it might have never been
-      // issued.	It's up to the application to guarantee correctness, by keeping
-      // track, of	what's going on.	Unless you know what you are doing, consider
-      // (flag==-1 && return_value==1) to be an error case.
-      dbg_info("returning 1, flag:-1");
-      *flag = -1;
-      return 1;
+      if (htable_lookup(sr_reqtable, (uint64_t)request, &test) != 0) {
+        dbg_info("Request is not in any request-table");
+        // Unlike photon_wait(), we might call photon_test() multiple times on a request,
+        // e.g., in an unguarded loop.	flag==-1 will signify that the operation is
+        // not pending.	 This means, it might be completed, it might have never been
+        // issued.	It's up to the application to guarantee correctness, by keeping
+        // track, of	what's going on.	Unless you know what you are doing, consider
+        // (flag==-1 && return_value==1) to be an error case.
+        dbg_info("returning 1, flag:-1");
+        *flag = -1;
+        return 1;
+      }
     }
   }
 
@@ -826,7 +871,31 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   inet_ntop(AF_INET6, addr->raw, buf, 40);
   dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
 
+  uint32_t request_id;
+  uint64_t cookie;
+  int rc;
+
+  request_id = INC_COUNTER(curr_cookie);
+  
+  // build a unique id that allows us to track the send requests
+  cookie = (( (uint64_t)REQUEST_COOK_SR)<<32) | request_id;
+  // we let the backend segment the message if necessary (hopefully)
+  __photon_backend->rdma_send(addr, (uintptr_t)ptr, size, &sendbuf->db->buf, sendbuf, cookie);
+
+  if (request != NULL) {
+    *request = request_id;
+    
+    rc = __photon_setup_request_sendrecv(addr, request_id);
+    if (rc != PHOTON_OK) {
+      dbg_info("Could not setup sendrecv request");
+      goto error_exit;
+    }
+  }  
+  
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 static int _photon_recv(uint32_t request, void *ptr, uint64_t size, int flags) {

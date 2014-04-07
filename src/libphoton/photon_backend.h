@@ -33,6 +33,8 @@
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
 
+#define REQUEST_COOK_SR      0xcafebabe
+
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
 typedef struct proc_info_t {
@@ -60,6 +62,7 @@ typedef struct photon_req_t {
   int type;
   int proc;
   int tag;
+  photon_addr addr;
   struct photon_buffer_internal_t remote_buffer;
 } photon_req;
 
