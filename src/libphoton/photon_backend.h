@@ -83,6 +83,7 @@ struct photon_mem_register_req {
 /* header for UD message */
 typedef struct photon_ud_hdr_t {
   uint32_t request;
+  uint32_t src_addr;
   uint16_t msn;
   uint16_t maxn;
 } photon_ud_hdr;
@@ -128,10 +129,10 @@ struct photon_backend_t {
                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
   int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-  int (*rdma_send)(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
-  int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+  int (*rdma_send)(photonAddr addr, uintptr_t laddr, uint64_t size,
+                   photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
+  int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
+                   photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
   int (*get_event)(photonEventStatus stat);
 };
 
