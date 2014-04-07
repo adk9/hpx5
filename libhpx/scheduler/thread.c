@@ -20,6 +20,9 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
 #include <contrib/uthash/src/utlist.h>
 
@@ -148,15 +151,24 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
 
 thread_t *thread_new(hpx_parcel_t *parcel) {
   // try to get a freelisted thread, or allocate a new, properly-aligned one
-  thread_t *t = malloc(_thread_size);
-  // if (posix_memalign((void**)&t, _thread_alignment, _thread_size))
-  assert(t);
+  char *m = valloc(HPX_PAGE_SIZE +_thread_size);
+  // if (posix_memalign((void**)&m, _thread_alignment, _thread_size))
+  assert(m);
+
+  // set up the guard page at the top of the thread structure
+  int e = mprotect((void*)m, HPX_PAGE_SIZE, PROT_NONE);
+  if (e) {
+    dbg_error("failed to mark a guard page for the thread.\n");
+    hpx_abort();
+  }
+  thread_t *t = (thread_t *)(m + HPX_PAGE_SIZE);
   return thread_init(t, parcel);
 }
 
 
 void thread_delete(thread_t *thread) {
-  free(thread);
+  char *block = (char*)thread;
+  free(block - HPX_PAGE_SIZE);
 }
 
 
