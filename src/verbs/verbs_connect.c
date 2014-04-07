@@ -192,9 +192,9 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
         .srq            = ctx->ib_srq,
         .cap            = {
           .max_send_wr	   = ctx->tx_depth,
-          .max_send_sge    = 1, // scatter gather element
           .max_recv_wr     = ctx->rx_depth,
-          .max_recv_sge    = 1, // scatter gather element
+          .max_send_sge    = ctx->max_sge, // scatter gather element
+          .max_recv_sge    = ctx->max_sge,
           .max_inline_data = 0
         },
         .qp_type        = IBV_QPT_RC
@@ -470,8 +470,8 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     .cap     = {
       .max_send_wr  = ctx->tx_depth,
       .max_recv_wr  = ctx->rx_depth,
-      .max_send_sge = 1,
-      .max_recv_sge = 1,
+      .max_send_sge = ctx->max_sge,
+      .max_recv_sge = ctx->max_sge,
       .max_inline_data = 0
     },
     .qp_type = IBV_QPT_RC,

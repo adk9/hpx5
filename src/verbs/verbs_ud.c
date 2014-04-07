@@ -7,16 +7,22 @@
 
 int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
   
+  struct ibv_device_attr dattr;
+  if (ibv_query_device(ctx->ib_context, &dattr)) {
+    dbg_err("Could not query IB device");
+    return PHOTON_ERROR;
+  }
+  
   struct ibv_qp_init_attr attr = {
     .qp_context     = ctx,
     .send_cq        = ctx->ib_cq,
     .recv_cq        = ctx->ib_cq,
-    .srq            = ctx->ib_srq,
+    .srq            = NULL,
     .cap            = {
-      .max_send_wr     = ctx->tx_depth,
-      .max_recv_wr     = ctx->rx_depth,
-      .max_send_sge    = 1,
-      .max_recv_sge    = 1,
+      .max_send_wr     = dattr.max_qp_wr,
+      .max_recv_wr     = dattr.max_qp_wr,
+      .max_send_sge    = dattr.max_sge,
+      .max_recv_sge    = dattr.max_sge,
       .max_inline_data = 0
     },
     .qp_type        = IBV_QPT_UD

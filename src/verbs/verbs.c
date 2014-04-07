@@ -71,12 +71,14 @@ static verbs_cnct_ctx verbs_ctx = {
   .cm_schannel = NULL,
   .cm_id = NULL,
   .qp = NULL,
+  .ud_qp = NULL,
   .psn = 0,
   .num_qp = 0,
   .use_ud = 0,
   .tx_depth = LEDGER_SIZE,
   .rx_depth = LEDGER_SIZE,
-  .atomic_depth = 16
+  .atomic_depth = 16,
+  .max_sge = 16
 };
 
 /* we are now a Photon backend */
@@ -351,6 +353,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
   return PHOTON_OK;
 }
 
+// send/recv use UD service_qp by default at the moment
 static int __verbs_do_send(struct sr_args_t *args) {
   int err, retries;
   struct ibv_send_wr *bad_wr;
@@ -392,6 +395,7 @@ static int __verbs_do_recv(struct sr_args_t *args) {
     .wr_id               = args->id,
     .sg_list             = args->sg_list,
     .num_sge             = args->num_sge,
+    .next                = NULL
   };
   
   retries = MAX_RETRIES;
@@ -401,7 +405,7 @@ static int __verbs_do_recv(struct sr_args_t *args) {
   while(err && --retries);
 
   if (err != 0) {
-    dbg_err("Failure in ibv_post_recv(): %s", strerror(err));
+    dbg_err("Failure in ibv_post_recv(): (%d) %s", err, strerror(err));
     return PHOTON_ERROR;
   }
 

@@ -356,6 +356,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   }
   photon_buffer_register(recvbuf->db, __photon_backend->context);
 
+  photon_addr myaddr = {.s_addr = _photon_myrank};
+  for (i = 0; i < recvbuf->p_count; i++) {
+    __photon_backend->rdma_recv(&myaddr, 0, 0, NULL, recvbuf, i);
+  }
+
   // register any buffers that were requested before init
   while( !SLIST_EMPTY(&pending_mem_register_list) ) {
     struct photon_mem_register_req *mem_reg_req;
