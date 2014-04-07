@@ -32,7 +32,6 @@
 #include "thread.h"
 
 
-#define _PAGE_SIZE 4096
 #define _DEFAULT_PAGES 4
 
 
@@ -48,6 +47,7 @@ static void HPX_CONSTRUCTOR _init_thread(void) {
   get_fpucw(&_fpucw);
   thread_set_stack_size(0);
 }
+
 
 /// ----------------------------------------------------------------------------
 /// This is the type of an HPX thread entry function.
@@ -110,14 +110,14 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 void
 thread_set_stack_size(int stack_bytes) {
   if (!stack_bytes) {
-    thread_set_stack_size(_PAGE_SIZE * _DEFAULT_PAGES);
+    thread_set_stack_size(HPX_PAGE_SIZE * _DEFAULT_PAGES);
     return;
   }
 
   // don't care about performance
-  int pages = stack_bytes / _PAGE_SIZE;
-  pages += (stack_bytes % _PAGE_SIZE) ? 1 : 0;
-  _thread_size = _PAGE_SIZE * pages;
+  int pages = stack_bytes / HPX_PAGE_SIZE;
+  pages += (stack_bytes % HPX_PAGE_SIZE) ? 1 : 0;
+  _thread_size = HPX_PAGE_SIZE * pages;
   _thread_alignment = 1 << ctzl(_thread_size);
   if (_thread_alignment < _thread_size)
     _thread_alignment <<= 1;
