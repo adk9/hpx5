@@ -150,9 +150,9 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
 
 
 thread_t *thread_new(hpx_parcel_t *parcel) {
-  // try to get a freelisted thread, or allocate a new, properly-aligned one
-  char *m = valloc(HPX_PAGE_SIZE +_thread_size);
-  // if (posix_memalign((void**)&m, _thread_alignment, _thread_size))
+  // Allocate a page-aligned thread structure, along with a guard page to detect
+  // stack overflow.
+  char *m = valloc(HPX_PAGE_SIZE + _thread_size);
   assert(m);
 
   // set up the guard page at the top of the thread structure
@@ -167,8 +167,13 @@ thread_t *thread_new(hpx_parcel_t *parcel) {
 
 
 void thread_delete(thread_t *thread) {
-  char *block = (char*)thread;
-  free(block - HPX_PAGE_SIZE);
+  char *block = (char*)thread - HPX_PAGE_SIZE;
+  int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
+  if (e) {
+    dbg_error("failed to unprotect a guard page.\n");
+    // don't abort
+  }
+  free(block);
 }
 
 
