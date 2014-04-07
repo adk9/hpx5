@@ -80,6 +80,13 @@ struct photon_mem_register_req {
   uint64_t buffer_size;
 };
 
+/* header for UD message */
+typedef struct photon_ud_hdr_t {
+  uint32_t request;
+  uint16_t msn;
+  uint16_t maxn;
+} photon_ud_hdr;
+
 /* TODO: fix parameters and generalize API */
 struct photon_backend_t {
   void *context;

@@ -6,7 +6,7 @@
 #include "logging.h"
 #include "photon_msgbuffer.h"
 
-photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset) {
+photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize) {
 
   photonMsgBuf mbuf;
   void *bptr;
@@ -36,8 +36,9 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset) 
     goto error_exit_buf;
   }
 
-  mbuf->p_size = p_size + p_offset;
+  mbuf->p_size = p_size;
   mbuf->p_offset = p_offset;
+  mbuf->p_hsize = p_hsize;
   mbuf->p_count = (int)(size / mbuf->p_size);
 
   // create metadata to track buffer offsets

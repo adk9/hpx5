@@ -318,38 +318,38 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   }
 
   // allocate buffers for send/recv operations (after backend initializes)
-  uint64_t msgbuf_size;
-  uint64_t p_size;
-  int p_offset;
+  uint64_t msgbuf_size, p_size;
+  int p_offset, p_hsize;
   if (cfg->use_ud) {
     // we need to ask the backend about the max msg size it can support for UD
-    int *mtu;
-    int size;
+    int *mtu, size;
     if (__photon_backend->get_info(photon_processes, PHOTON_ANY_SOURCE, (void**)&mtu, &size, PHOTON_MTU)) {
       dbg_err("Could not get mtu for UD service");
       goto error_exit_ss;
     }
-    p_size = *mtu;
     // gross hack, should ask backend again...
     p_offset = 40;
+    p_hsize = sizeof(photon_ud_hdr);
+    p_size = p_offset + p_hsize + *mtu;
   }
   else {
-    p_size = SMSG_SIZE;
     p_offset = 0;
+    p_hsize = 0;
+    p_size = p_offset + p_hsize + SMSG_SIZE;
   }
   dbg_info("SMSG size: %lu", p_size);
 
   // create enough space to accomodate every rank sending LEDGER_SIZE messages
-  msgbuf_size = LEDGER_SIZE * (p_size + p_offset) * _photon_nproc;
+  msgbuf_size = LEDGER_SIZE * p_size * _photon_nproc;
   
-  sendbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset);
+  sendbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset, p_hsize);
   if (!sendbuf) {
     dbg_err("could not create send message buffer");
     goto error_exit_ss;
   }
   photon_buffer_register(sendbuf->db, __photon_backend->context);
 
-  recvbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset);
+  recvbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset, p_hsize);
   if (!recvbuf) {
     dbg_err("could not create recv message buffer");
     goto error_exit_sb;

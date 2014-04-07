@@ -22,13 +22,22 @@ struct photon_msgbuffer_t {
   photonBI db;
   uint64_t p_size;
   int p_offset;
+  int p_hsize;
   
   pthread_mutex_t buf_lock;
 } photon_msgbuf;
 
 typedef struct photon_msgbuffer_t * photonMsgBuf;
 
-photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset);
+/* 
+   @param size:    - total allocated buffer space
+   @param p_size   - size of the partitions (includes offset and header)
+   @param p_offset - bytes in front of each message
+   @param p_hsize  - bytes of header
+
+   .base          .mptr
+   |...p_offset...|...p_hsize...|......msg......| */
+photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize);
 int photon_msgbuffer_free(photonMsgBuf mbuf);
 
 #endif
