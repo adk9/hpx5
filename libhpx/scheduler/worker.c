@@ -64,9 +64,11 @@ static __thread struct worker {
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_t    *scheduler;                    // the scheduler we belong to
   network_t        *network;                    // could have per-worker port
-  unsigned long  spins;
-  unsigned long spawns;
-  unsigned long steals;
+
+  // statistics
+  unsigned long       spins;
+  unsigned long      spawns;
+  unsigned long      steals;
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -332,7 +334,7 @@ static int _checkpoint_ws_push(thread_t *to, void *sp, void *env) {
 /// This doesn't block the current thread, but gives the scheduler the
 /// opportunity to suspend it ans select a different thread to run for a
 /// while. It's usually used to avoid busy waiting in user-level threads, when
-/// the even we're waiting for isn't an LCO (like user-level lock-based
+/// the event we're waiting for isn't an LCO (like user-level lock-based
 /// synchronization).
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
