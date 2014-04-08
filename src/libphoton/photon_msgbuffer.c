@@ -37,6 +37,7 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   }
 
   mbuf->p_size = p_size;
+  mbuf->m_size = p_size - p_offset - p_hsize;
   mbuf->p_offset = p_offset;
   mbuf->p_hsize = p_hsize;
   mbuf->p_count = (int)(size / mbuf->p_size);
@@ -50,7 +51,8 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
 
   for (i = 0; i < mbuf->p_count; i++) {
     mbuf->entries[i].base = (void*)(mbuf->db)->buf.addr + (i * p_size);
-    mbuf->entries[i].mptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset;
+    mbuf->entries[i].hptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset;
+    mbuf->entries[i].mptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset + p_hsize;
     mbuf->entries[i].empty = false;
   }
 

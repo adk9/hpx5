@@ -9,6 +9,7 @@
 
 typedef struct photon_msgbuffer_entry_t {
   void *base;
+  void *hptr;
   void *mptr;
   bool empty;
 } photon_mbe;
@@ -21,6 +22,7 @@ struct photon_msgbuffer_t {
 
   photonBI db;
   uint64_t p_size;
+  uint64_t m_size;
   int p_offset;
   int p_hsize;
   
@@ -35,7 +37,7 @@ typedef struct photon_msgbuffer_t * photonMsgBuf;
    @param p_offset - bytes in front of each message
    @param p_hsize  - bytes of header
 
-   .base          .mptr
+   .base          .hptr         .mptr
    |...p_offset...|...p_hsize...|......msg......| */
 photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize);
 int photon_msgbuffer_free(photonMsgBuf mbuf);

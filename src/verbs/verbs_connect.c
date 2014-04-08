@@ -19,7 +19,7 @@
 #include "verbs_exchange.h"
 #include "verbs_ud.h"
 
-#define MAX_CQ_ENTRIES      1000
+#define MAX_CQ_ENTRIES      16384
 #define RDMA_CMA_BASE_PORT  18000
 #define RDMA_CMA_FORW_OFFS  1000
 #define RDMA_CMA_TIMEOUT    2000

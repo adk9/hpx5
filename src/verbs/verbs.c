@@ -48,9 +48,9 @@ static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
+                           photonBuffer lbuf, uint64_t id);
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
+                           photonBuffer lbuf, uint64_t id);
 static int verbs_get_event(photonEventStatus stat);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
@@ -397,7 +397,7 @@ static int __verbs_do_recv(struct sr_args_t *args) {
     .num_sge             = args->num_sge,
     .next                = NULL
   };
-  
+
   retries = MAX_RETRIES;
   do {
     err = ibv_post_recv(verbs_ctx.ud_qp, &wr, &bad_wr);
@@ -449,36 +449,33 @@ static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
 }
 
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id) {
+                           photonBuffer lbuf, uint64_t id) {
   struct sr_args_t args;
-  memcpy(mbuf->entries[0].mptr + mbuf->p_hsize, (void*)laddr, size);
-
   struct ibv_sge list = {
-    .addr = (uintptr_t)mbuf->entries[0].mptr,
-    .length = size + mbuf->p_hsize,
-    .lkey = mbuf->db->buf.priv.key0
+    .addr = laddr,
+    .length = size,
+    .lkey = lbuf->priv.key0
   };
-  
-  __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0xC000, &args.ah);
+
+  __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
 
   args.proc = addr->global.proc_id;
   args.id = id;
   args.sg_list = &list;
   args.num_sge = 1;
+  args.qpn = 0xffffff;
+  args.qkey = 0x11111111;
   return __verbs_do_send(&args);
 }
 
 // 32 least-significant bits of id should index the mbuf entries
-// addr may contain the sending proc
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id) {
+                           photonBuffer lbuf, uint64_t id) {
   struct sr_args_t args;
-  uint32_t ind = (uint32_t)((id<<32)>>32);
-
   struct ibv_sge list = {
-    .addr = (uintptr_t)mbuf->entries[ind].base,
-    .length = mbuf->p_size,
-    .lkey = mbuf->db->buf.priv.key0
+    .addr = laddr,
+    .length = size,
+    .lkey = lbuf->priv.key0
   };
   
   args.proc = addr->global.proc_id;
@@ -510,7 +507,7 @@ static int verbs_get_event(photonEventStatus stat) {
     log_err("(status==%d) != IBV_WC_SUCCESS: %s", wc.status, strerror(wc.status));
     goto error_exit;
   }
-
+  
   dbg_err("got event: 0x%016lx", wc.wr_id);
   
   stat->id = wc.wr_id;

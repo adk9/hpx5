@@ -27,7 +27,7 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
     },
     .qp_type        = IBV_QPT_UD
   };
-  
+
   ctx->ud_qp = ibv_create_qp(ctx->ib_pd, &attr);
   if (!(ctx->ud_qp)) {
     dbg_err("Could not create UD QP!");
@@ -39,7 +39,7 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
     
     attr.qp_state        = IBV_QPS_INIT;
     attr.pkey_index	 = 0;
-    attr.qkey            = 0xcafebabe;
+    attr.qkey            = 0x11111111;
     attr.port_num	 = ctx->ib_port;
     
     if (ibv_modify_qp(ctx->ud_qp, &attr,
@@ -110,7 +110,7 @@ struct ibv_ah *__verbs_ud_create_ah(verbs_cnct_ctx *ctx, union ibv_gid *gid, int
 }
 int __verbs_ud_attach_addr(verbs_cnct_ctx *ctx, union ibv_gid *gid) {
   int ret;
-  ret = ibv_attach_mcast(ctx->ud_qp, gid, 0xC000);
+  ret = ibv_attach_mcast(ctx->ud_qp, gid, 0x0);
   if (ret) {
     dbg_err("%s", strerror(ret));
     return PHOTON_ERROR;
@@ -121,7 +121,7 @@ int __verbs_ud_attach_addr(verbs_cnct_ctx *ctx, union ibv_gid *gid) {
 
 int __verbs_ud_detach_addr(verbs_cnct_ctx *ctx, union ibv_gid *gid) {
   int ret;
-  ret = ibv_detach_mcast(ctx->ud_qp, gid, 0xC000);
+  ret = ibv_detach_mcast(ctx->ud_qp, gid, 0x0);
   if (ret) {
     dbg_err("%s", strerror(ret));
     return PHOTON_ERROR;

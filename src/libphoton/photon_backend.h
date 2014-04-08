@@ -33,7 +33,8 @@
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
 
-#define REQUEST_COOK_SR      0xcafebabe
+#define REQUEST_COOK_SEND    0xbeef
+#define REQUEST_COOK_RECV    0xcafebabe
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
@@ -133,9 +134,9 @@ struct photon_backend_t {
   int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
   int (*rdma_send)(photonAddr addr, uintptr_t laddr, uint64_t size,
-                   photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
+                   photonBuffer lbuf, uint64_t id);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
-                   photonBuffer lbuf, photonMsgBuf mbuf, uint64_t id);
+                   photonBuffer lbuf, uint64_t id);
   int (*get_event)(photonEventStatus stat);
 };
 

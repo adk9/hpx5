@@ -368,14 +368,14 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     // gross hack, should ask backend again...
     p_offset = 40;
     p_hsize = sizeof(photon_ud_hdr);
-    p_size = p_offset + p_hsize + *mtu;
+    p_size = p_offset + *mtu;
   }
   else {
     p_offset = 0;
     p_hsize = 0;
-    p_size = p_offset + p_hsize + SMSG_SIZE;
+    p_size = p_offset + SMSG_SIZE;
   }
-  dbg_info("SMSG size: %lu", p_size);
+  dbg_info("sr partition size: %lu", p_size);
 
   // create enough space to accomodate every rank sending LEDGER_SIZE messages
   msgbuf_size = LEDGER_SIZE * p_size * _photon_nproc;
@@ -398,7 +398,8 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   if (cfg->use_ud) {
     photon_addr myaddr = {.s_addr = _photon_myrank};
     for (i = 0; i < recvbuf->p_count; i++) {
-      __photon_backend->rdma_recv(&myaddr, 0, 0, NULL, recvbuf, i);
+      __photon_backend->rdma_recv(&myaddr, (uintptr_t)recvbuf->entries[i].base, recvbuf->p_size,
+                                  &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | i);
     }
   }
 
@@ -873,15 +874,54 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
 
   uint32_t request_id;
   uint64_t cookie;
-  int rc;
+  uint64_t bytes_remaining, bytes_sent;
+  uintptr_t buf_addr;
+  int send_bytes;
+  int rc, m_count, num_msgs;
 
   request_id = INC_COUNTER(curr_cookie);
   
-  // build a unique id that allows us to track the send requests
-  cookie = (( (uint64_t)REQUEST_COOK_SR)<<32) | request_id;
-  // we let the backend segment the message if necessary (hopefully)
-  __photon_backend->rdma_send(addr, (uintptr_t)ptr, size, &sendbuf->db->buf, sendbuf, cookie);
+  // segment and send as entries of the sendbuf
+  bytes_remaining = size;
+  bytes_sent = 0;
+  m_count = 0;
+  num_msgs = size / sendbuf->m_size + 1;
+  do {
+    // build a unique id that allows us to track the send requests
+    // 0xcafeXXXXYYYYYYYY
+    // XXXX     = message sequence number
+    // YYYYYYYY = request id 
+    cookie = (((uint64_t)REQUEST_COOK_SEND)<<48) | request_id;
+    cookie |= (((uint64_t)m_count)<<32);
 
+    if (bytes_remaining > sendbuf->m_size) {
+      send_bytes = sendbuf->m_size;
+    }
+    else {
+      send_bytes = bytes_remaining;
+    }
+
+    // copy data into one message
+    memcpy(sendbuf->entries[m_count].mptr, ptr + bytes_sent, send_bytes);
+    
+    if (__photon_config->use_ud) {
+      // create the header
+      photon_ud_hdr *hdr = (photon_ud_hdr*)sendbuf->entries[m_count].hptr;
+      hdr->request = request_id;
+      hdr->src_addr = _photon_myrank;
+      hdr->msn = m_count;
+      hdr->maxn = num_msgs;
+    }
+
+    buf_addr = (uintptr_t)sendbuf->entries[m_count].hptr;
+    __photon_backend->rdma_send(addr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie);
+
+    m_count++;
+    bytes_sent += send_bytes;
+    bytes_remaining -= send_bytes;
+    // track cookies to add to request handle
+  } while (bytes_remaining);
+  
   if (request != NULL) {
     *request = request_id;
     
@@ -1850,7 +1890,23 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
   inet_ntop(AF_INET6, addr->raw, buf, 40);
   dbg_info("(%s)", buf);
 
+  photon_event_status event;
+  int rc;
+
+  while (1) {
+    rc = __photon_backend->get_event(&event);
+    if (rc != PHOTON_OK) {
+      dbg_err("Could not get event");
+      goto error_exit;
+    }
+
+    *flag = 1;
+    usleep(10000);
+  }
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 /* begin I/O */
