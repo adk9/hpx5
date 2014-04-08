@@ -182,25 +182,4 @@ HPX_INTERNAL void scheduler_signal(struct lco *lco)
   HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
-/// Exit a user level thread.
-///
-/// Currently takes the parcel pointer for the current thread as a performance
-/// optimization, since everywhere this is used we already have the parcel. This
-/// isn't necessary, as we can always extract the current parcel using
-/// scheduler_current_parcel().
-///
-/// @param parcel - the parcel bound to the current stack (will be released)
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_exit(hpx_parcel_t *parcel)
-  HPX_NON_NULL(1) HPX_NORETURN;
-
-
-/// ----------------------------------------------------------------------------
-/// Get the current parcel.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *scheduler_current_parcel(void)
-  HPX_RETURNS_NON_NULL;
-
-
 #endif // LIBHPX_SCHEDULER_H
