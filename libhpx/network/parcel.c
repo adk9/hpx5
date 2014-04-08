@@ -76,8 +76,8 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 
 
 void parcel_init(hpx_parcel_t *p, int size) {
-  p->sp   = NULL;
-  p->size = size;
+  p->stack = NULL;
+  p->size  = size;
 }
 
 

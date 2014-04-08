@@ -15,6 +15,8 @@
 
 #include "hpx/hpx.h"
 
+struct ustack;
+
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
@@ -27,13 +29,13 @@
 /// @field    data - either an in-place payload, or a pointer
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
-  void            *sp;
-  int            size;
-  int             pid;
-  hpx_action_t action;
-  hpx_addr_t   target;
-  hpx_addr_t     cont;
-  char         data[];
+  struct ustack *stack;
+  int             size;
+  int              pid;
+  hpx_action_t  action;
+  hpx_addr_t    target;
+  hpx_addr_t      cont;
+  char          data[];
 };
 
 

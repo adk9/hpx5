@@ -175,7 +175,7 @@ static bool _try_start_send(network_t *network) {
   }
 
   int dest = gas_where(p->target);
-  int size = sizeof(*p) + p->size - sizeof(p->sp);
+  int size = sizeof(*p) + p->size - sizeof(p->stack);
   if (transport_send(network->transport, dest, &p->size, size, &r->request)) {
     dbg_error("transport failed send.\n");
     goto unwind1;
@@ -226,7 +226,7 @@ static bool _recv_event(network_t *n, int src, int size) {
 /// ----------------------------------------------------------------------------
 static bool _recv_parcel(network_t *n, int src, int size) {
   // allocate a parcel to provide the buffer to receive into
-  int data_size = size - sizeof(hpx_parcel_t) + sizeof(void*); // see _try_send
+  int data_size = size - sizeof(hpx_parcel_t) + sizeof(struct ustack*);
   hpx_parcel_t *p = hpx_parcel_acquire(data_size);
   if (!p) {
     dbg_error("could not acquire a parcel of size %d during receive.\n", size);
