@@ -21,6 +21,11 @@
 #include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
+/// This is the type of an HPX thread entry function.
+/// ----------------------------------------------------------------------------
+typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
+
+/// ----------------------------------------------------------------------------
 /// Sets the size of a stack.
 ///
 /// All of the stacks in the system need to have the same size.
@@ -36,9 +41,12 @@ HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
 ///
 /// @param thread - The thread to initialize.
 /// @param parcel - The parcel that is generating this thread.
-/// @returns      - @p thread, for convenience
+/// @param      f - The entry function for the thread.
+/// @returns      - NULL if there is an error, or a pointer to the stack pointer
+///                 to transfer to in order to start this thread
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL char *thread_init(char *thread, hpx_parcel_t *parcel)
+HPX_INTERNAL void *thread_init(char *thread, hpx_parcel_t *parcel,
+                               thread_entry_t f)
   HPX_NON_NULL(1, 2);
 
 
@@ -48,10 +56,11 @@ HPX_INTERNAL char *thread_init(char *thread, hpx_parcel_t *parcel)
 /// This allocates and initializes a new user-level stack.
 ///
 /// @param parcel - The parcel that is generating this thread.
-/// @returns      - NULL if there is an error, or a pointer to the new stack
-///                 structure.
+/// @param      f - The entry function for the thread.
+/// @returns      - NULL if there is an error, or a pointer to the stack pointer
+///                 to transfer to in order to start this thread
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL char *thread_new(hpx_parcel_t *parcel)
+HPX_INTERNAL void *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
   HPX_NON_NULL(1) HPX_MALLOC;
 
 
@@ -71,6 +80,7 @@ HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
 
 
 typedef int (*thread_transfer_cont_t)(hpx_parcel_t *t, void *sp, void *env);
+
 
 /// ----------------------------------------------------------------------------
 /// The actual routine to transfer between thread.
