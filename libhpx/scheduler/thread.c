@@ -26,10 +26,8 @@
 
 #include <contrib/uthash/src/utlist.h>
 
-#include "libhpx/action.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
-#include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 #include "asm.h"
 #include "thread.h"
@@ -48,12 +46,6 @@ static void HPX_CONSTRUCTOR _init_thread(void) {
   get_fpucw(&_fpucw);
   thread_set_stack_size(0);
 }
-
-
-/// ----------------------------------------------------------------------------
-/// This is the type of an HPX thread entry function.
-/// ----------------------------------------------------------------------------
-typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
 
 
 /// ----------------------------------------------------------------------------
@@ -89,25 +81,6 @@ static _frame_t *_get_top_frame(char *thread) {
 }
 
 
-static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  hpx_action_t action = parcel->action;
-  hpx_action_handler_t handler = action_lookup(action);
-  int status = handler(&parcel->data);
-  switch (status) {
-   default:
-    dbg_error("action produced unhandled error, %i\n", (int)status);
-    hpx_shutdown(status);
-   case HPX_ERROR:
-    dbg_error("action produced error\n");
-    hpx_shutdown(status);
-   case HPX_RESEND:
-   case HPX_SUCCESS:
-    hpx_thread_continue(0, NULL);
-  }
-  unreachable();
-}
-
-
 void
 thread_set_stack_size(int stack_bytes) {
   if (!stack_bytes) {
@@ -122,32 +95,24 @@ thread_set_stack_size(int stack_bytes) {
 }
 
 
-char *thread_init(char *thread, hpx_parcel_t *parcel) {
+void *thread_init(char *thread, hpx_parcel_t *parcel, thread_entry_t f) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
   frame->rdi     = parcel;
   frame->rbp     = &frame->rip;
-  frame->rip     = _thread_enter;
+  frame->rip     = f;
 
-  // set up the thread information
-  // thread->sp     = frame;
-  // thread->parcel = parcel;
-  // thread->next   = NULL;
-
-  // set up the parcel information
-  parcel->sp = frame;
-
-  // return the thread (should change later)
-  return thread;
+  // return the stack pointer
+  return frame;
 }
 
 #include "libsync/sync.h"
 
 static uint64_t _stacks = 0;
 
-char *thread_new(hpx_parcel_t *parcel) {
+void *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   sync_fadd(&_stacks, 1, SYNC_ACQ_REL);
   // Allocate a page-aligned thread structure, along with a guard page to detect
   // stack overflow.
@@ -163,7 +128,7 @@ char *thread_new(hpx_parcel_t *parcel) {
     hpx_abort();
   }
 
-  return thread_init(m + HPX_PAGE_SIZE, parcel);
+  return thread_init(m + HPX_PAGE_SIZE, parcel, f);
 }
 
 void thread_delete(char *thread) {
@@ -174,32 +139,4 @@ void thread_delete(char *thread) {
     // don't abort
   }
   free(block);
-}
-
-
-void hpx_thread_continue(size_t size, const void *value) {
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
-  hpx_parcel_t *parcel = scheduler_current_parcel();
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set(cont, value, size, HPX_NULL);   // async
-
-  // exit terminates this thread
-  scheduler_exit(parcel);
-}
-
-
-void hpx_thread_exit(int status) {
-  assert(status == HPX_SUCCESS);
-
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
-  hpx_parcel_t *parcel = scheduler_current_parcel();
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set(cont, NULL, 0, HPX_NULL);   // async
-
-  // exit terminates this thread
-  scheduler_exit(parcel);
 }
