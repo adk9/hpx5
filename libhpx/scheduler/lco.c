@@ -25,7 +25,6 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
 #include "lco.h"
-#include "thread.h"
 
 
 /// We pack state into the LCO. The least-significant bit is the LOCK bit, the
@@ -140,7 +139,7 @@ void
 lco_init(lco_t *lco, const lco_class_t *class, int user) {
   lco->vtable = class;
   uintptr_t bits = (user) ? _USER_MASK : 0;
-  lco->queue = (thread_t *)bits;
+  lco->queue = (lco_node_t *)bits;
 }
 
 
@@ -153,7 +152,7 @@ void
 lco_set_user(lco_t *lco) {
   uintptr_t bits = (uintptr_t)lco->queue;
   bits |= _USER_MASK;
-  lco->queue = (thread_t *)bits;
+  lco->queue = (lco_node_t *)bits;
 }
 
 
@@ -175,13 +174,13 @@ void
 lco_reset(lco_t *lco) {
   uintptr_t bits = (uintptr_t)lco->queue;
   bits &= _UNSET_MASK;
-  lco->queue = (thread_t*)bits;
+  lco->queue = (lco_node_t*)bits;
 }
 
 
 void
 lco_lock(lco_t *lco) {
-  thread_t *from = NULL;
+  lco_node_t *from = NULL;
 
   while (true) {
     // load the queue pointer
@@ -196,7 +195,7 @@ lco_lock(lco_t *lco) {
 
     // generate a locked "to" value for the packed queue pointer, and try and
     // CAS it into the queue
-    thread_t *to = (thread_t *)(bits | _LOCK_MASK);
+    lco_node_t *to = (lco_node_t *)(bits | _LOCK_MASK);
     if (!sync_cas(&lco->queue, from, to, SYNC_ACQUIRE, SYNC_RELAXED)) {
       scheduler_yield();
       continue;
@@ -213,31 +212,31 @@ lco_unlock(lco_t *lco) {
   // assume we hold the lco, create an unlocked version of the packed queue
   // pointer, and release with the value
   uintptr_t bits = (uintptr_t)lco->queue;
-  thread_t *to = (thread_t *)(bits & _UNLOCK_MASK);
+  lco_node_t *to = (lco_node_t *)(bits & _UNLOCK_MASK);
   sync_store(&lco->queue, to, SYNC_RELEASE);
 }
 
 
-thread_t *
+lco_node_t *
 lco_trigger(lco_t *lco) {
   uintptr_t bits = (uintptr_t)lco->queue;
-  thread_t *queue = (thread_t*)(bits & _QUEUE_MASK);
+  lco_node_t *queue = (lco_node_t*)(bits & _QUEUE_MASK);
   bits &= _STATE_MASK;
   bits |= _SET_MASK;
-  thread_t *to = (thread_t*)bits;
+  lco_node_t *to = (lco_node_t*)bits;
   sync_store(&lco->queue, to, SYNC_RELAXED);
   return queue;
 }
 
 
 void
-lco_enqueue_and_unlock(lco_t *lco, thread_t *thread) {
+lco_enqueue_and_unlock(lco_t *lco, lco_node_t *node) {
   uintptr_t bits = (uintptr_t)lco->queue;
   uintptr_t state = bits & _STATE_MASK & _UNLOCK_MASK;
-  thread_t *queue = (thread_t*)(bits & _QUEUE_MASK);
-  thread->next = queue;
-  thread = (thread_t*)((uintptr_t)thread | state);
-  sync_store(&lco->queue, thread, SYNC_RELEASE);
+  lco_node_t *queue = (lco_node_t*)(bits & _QUEUE_MASK);
+  node->next = queue;
+  node = (lco_node_t*)((uintptr_t)node | state);
+  sync_store(&lco->queue, node, SYNC_RELEASE);
 }
 
 

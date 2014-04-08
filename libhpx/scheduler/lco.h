@@ -16,9 +16,9 @@
 #include <stdbool.h>
 #include "hpx/attributes.h"
 
-
-struct thread;
+typedef struct lco_node lco_node_t;
 typedef struct lco lco_t;
+
 
 /// ----------------------------------------------------------------------------
 /// The LCO abstract class interface.
@@ -41,13 +41,21 @@ typedef struct {
 
 
 /// ----------------------------------------------------------------------------
+/// LCOs contain queues of waiting stuff.
+/// ----------------------------------------------------------------------------
+struct lco_node {
+  lco_node_t *next;
+  void       *data;
+};
+
+/// ----------------------------------------------------------------------------
 /// The base class for LCOs. As we expand the virtual interface, it might make
 /// sense to use a vtable pointer here to save space, as we expect lots of LCOs
 /// to churn through the system.
 /// ----------------------------------------------------------------------------
 struct lco {
   const lco_class_t *vtable;
-  struct thread *queue;
+  lco_node_t *queue;
 };
 
 
@@ -136,7 +144,7 @@ HPX_INTERNAL void lco_unlock(lco_t *lco) HPX_NON_NULL(1);
 ///
 /// @precondition The calling thread must hold the lco's lock already.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL struct thread *lco_trigger(lco_t *lco)
+HPX_INTERNAL lco_node_t *lco_trigger(lco_t *lco)
   HPX_NON_NULL(1);
 
 
@@ -145,7 +153,7 @@ HPX_INTERNAL struct thread *lco_trigger(lco_t *lco)
 ///
 /// @precondition The calling thread must hold the lco's lock already.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_enqueue_and_unlock(lco_t *lco, struct thread *thread)
+HPX_INTERNAL void lco_enqueue_and_unlock(lco_t *lco, lco_node_t *node)
   HPX_NON_NULL(1, 2);
 
 
