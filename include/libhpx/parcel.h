@@ -18,6 +18,7 @@
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
+/// @field      sp - a saved stack pointer
 /// @field    size - the data size in bytes
 /// @field   state - tracks if the data is in-place
 /// @field  action - the target action identifier
@@ -26,6 +27,7 @@
 /// @field    data - either an in-place payload, or a pointer
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
+  void            *sp;
   int            size;
   int             pid;
   hpx_action_t action;
