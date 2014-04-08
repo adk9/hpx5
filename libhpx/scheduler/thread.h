@@ -21,14 +21,6 @@
 #include "hpx/hpx.h"
 
 /// ----------------------------------------------------------------------------
-/// A user level thread.
-///
-/// @field  stack - the actual stack bytes (grows down)
-/// ----------------------------------------------------------------------------
-typedef char *thread_t;
-
-
-/// ----------------------------------------------------------------------------
 /// Sets the size of a stack.
 ///
 /// All of the stacks in the system need to have the same size.
@@ -46,7 +38,7 @@ HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
 /// @param parcel - The parcel that is generating this thread.
 /// @returns      - @p thread, for convenience
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_t *thread_init(thread_t *thread, hpx_parcel_t *parcel)
+HPX_INTERNAL char *thread_init(char *thread, hpx_parcel_t *parcel)
   HPX_NON_NULL(1, 2);
 
 
@@ -59,7 +51,7 @@ HPX_INTERNAL thread_t *thread_init(thread_t *thread, hpx_parcel_t *parcel)
 /// @returns      - NULL if there is an error, or a pointer to the new stack
 ///                 structure.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL thread_t *thread_new(hpx_parcel_t *parcel)
+HPX_INTERNAL char *thread_new(hpx_parcel_t *parcel)
   HPX_NON_NULL(1) HPX_MALLOC;
 
 
@@ -68,7 +60,7 @@ HPX_INTERNAL thread_t *thread_new(hpx_parcel_t *parcel)
 ///
 /// @param thread - The thread pointer.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_delete(thread_t *stack) HPX_NON_NULL(1);
+HPX_INTERNAL void thread_delete(char *stack) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------

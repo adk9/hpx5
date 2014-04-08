@@ -84,8 +84,8 @@ typedef struct {
 #endif
 
 
-static _frame_t *_get_top_frame(thread_t *thread) {
-  return (_frame_t*)&thread[_thread_size - sizeof(thread_t) - sizeof(_frame_t)];
+static _frame_t *_get_top_frame(char *thread) {
+  return (_frame_t*)(thread + _thread_size - sizeof(_frame_t));
 }
 
 
@@ -122,8 +122,7 @@ thread_set_stack_size(int stack_bytes) {
 }
 
 
-thread_t *
-thread_init(thread_t *thread, hpx_parcel_t *parcel) {
+char *thread_init(char *thread, hpx_parcel_t *parcel) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread);
   frame->mxcsr   = _mxcsr;
@@ -148,8 +147,7 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
 
 static uint64_t _stacks = 0;
 
-
-thread_t *thread_new(hpx_parcel_t *parcel) {
+char *thread_new(hpx_parcel_t *parcel) {
   sync_fadd(&_stacks, 1, SYNC_ACQ_REL);
   // Allocate a page-aligned thread structure, along with a guard page to detect
   // stack overflow.
@@ -164,12 +162,12 @@ thread_t *thread_new(hpx_parcel_t *parcel) {
     dbg_error("failed to mark a guard page for the thread, %lu.\n", stacks);
     hpx_abort();
   }
-  thread_t *t = (thread_t *)(m + HPX_PAGE_SIZE);
-  return thread_init(t, parcel);
+
+  return thread_init(m + HPX_PAGE_SIZE, parcel);
 }
 
-void thread_delete(thread_t *thread) {
-  char *block = (char*)thread - HPX_PAGE_SIZE;
+void thread_delete(char *thread) {
+  char *block = thread - HPX_PAGE_SIZE;
   int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
   if (e) {
     dbg_error("failed to unprotect a guard page.\n");
