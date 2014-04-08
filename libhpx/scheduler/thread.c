@@ -85,7 +85,7 @@ typedef struct {
 
 
 static _frame_t *_get_top_frame(thread_t *thread) {
-  return (_frame_t*)&thread->stack[_thread_size - sizeof(thread_t) - sizeof(_frame_t)];
+  return (_frame_t*)&thread[_thread_size - sizeof(thread_t) - sizeof(_frame_t)];
 }
 
 
@@ -133,12 +133,14 @@ thread_init(thread_t *thread, hpx_parcel_t *parcel) {
   frame->rip     = _thread_enter;
 
   // set up the thread information
-  thread->sp     = frame;
-  thread->parcel = parcel;
-  thread->next   = NULL;
+  // thread->sp     = frame;
+  // thread->parcel = parcel;
+  // thread->next   = NULL;
 
   // set up the parcel information
-  // parcel->thread = thread;
+  parcel->sp = frame;
+
+  // return the thread (should change later)
   return thread;
 }
 
