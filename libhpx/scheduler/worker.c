@@ -29,9 +29,11 @@
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
 
+#include "libhpx/action.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
+#include "libhpx/parcel.h"                      // serves us as thread-control
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "lco.h"
@@ -58,8 +60,9 @@ static __thread struct worker {
   int               core_id;                    // useful for "smart" stealing
   unsigned int         seed;                    // my random seed
   void                  *sp;                    // this worker's native stack
-  thread_t         *current;                    // current thread
-  thread_t            *free;                    // local thread freelist
+  hpx_parcel_t     *current;                    // current thread
+  lco_node_t     *lco_nodes;                    // free LCO nodes
+  // thread_t            *free;                    // local thread freelist
   chase_lev_ws_deque_t work;                    // my work
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_t    *scheduler;                    // the scheduler we belong to
@@ -75,7 +78,8 @@ static __thread struct worker {
   .core_id   = -1,
   .sp        = NULL,
   .current   = NULL,
-  .free      = NULL,
+  .lco_nodes = NULL,
+  // .free      = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
   .scheduler = NULL,
@@ -87,10 +91,32 @@ static __thread struct worker {
 
 
 /// ----------------------------------------------------------------------------
+/// The entry function for all of the threads.
+/// ----------------------------------------------------------------------------
+static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  hpx_action_t action = parcel->action;
+  hpx_action_handler_t handler = action_lookup(action);
+  int status = handler(&parcel->data);
+  switch (status) {
+   default:
+    dbg_error("action produced unhandled error, %i\n", (int)status);
+    hpx_shutdown(status);
+   case HPX_ERROR:
+    dbg_error("action produced error\n");
+    hpx_shutdown(status);
+   case HPX_RESEND:
+   case HPX_SUCCESS:
+    hpx_thread_continue(0, NULL);
+  }
+  unreachable();
+}
+
+
+/// ----------------------------------------------------------------------------
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
 /// ----------------------------------------------------------------------------
-static int _on_start(thread_t *to, void *sp, void *env) {
+static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
   assert(sp);
   assert(self.scheduler);
 
@@ -114,50 +140,52 @@ static int _on_start(thread_t *to, void *sp, void *env) {
 /// @param p - the parcel that is generating this thread.
 /// @returns - a new lightweight thread, as defined by the parcel
 /// ----------------------------------------------------------------------------
-static thread_t *_bind(hpx_parcel_t *p) {
-  thread_t *thread = self.free;
-  if (thread) {
-    LL_DELETE(self.free, thread);
-    return thread_init(thread, p);
-  }
-  else {
-    return thread_new(p);
-  }
+static hpx_parcel_t *_bind(hpx_parcel_t *p) {
+  assert(!p->sp);
+  p->sp = thread_new(p, _thread_enter);
+  return p;
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Steal a lightweight thread during scheduling.
+///
+/// NB: we can be much smarter about who to steal from and how much to
+/// steal. Ultimately though, we're building a distributed
 /// ----------------------------------------------------------------------------
-static thread_t *_steal(void) {
+static hpx_parcel_t *_steal(void) {
   int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
   if (victim_id == self.id)
     return NULL;
 
   worker_t *victim = self.scheduler->workers[victim_id];
-  thread_t *t = sync_chase_lev_ws_deque_steal(&victim->work);
-  if (t)
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
+  if (p)
     ++self.steals;
 
-  return t;
+  return p;
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Check the network during scheduling.
 /// ----------------------------------------------------------------------------
-static thread_t *_network(void) {
+static hpx_parcel_t *_network(void) {
   hpx_parcel_t *p = network_recv(self.network);
   return (p) ? _bind(p) : NULL;
 }
 
-static int _exit_free(thread_t *to, void *sp, void *env) {
-  thread_t *prev = self.current;
+
+/// ----------------------------------------------------------------------------
+/// The final transfer continuation that we use to exit the scheduler.
+/// ----------------------------------------------------------------------------
+static int _exit_free(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self.current;
   self.current = to;
-  hpx_parcel_release(prev->parcel);
-  LL_PREPEND(self.free, prev);
+  hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
+
 
 /// ----------------------------------------------------------------------------
 /// The main scheduling "loop."
@@ -180,28 +208,29 @@ static int _exit_free(thread_t *to, void *sp, void *env) {
 /// @param final - a final option if the scheduler wants to give up
 /// @returns     - a thread to transfer to
 /// ----------------------------------------------------------------------------
-static thread_t *_schedule(bool fast, thread_t *final) {
+static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
-  atomic_int_t shutdown; sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
+  atomic_int_t shutdown;
+  sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
   if (shutdown)
-    thread_transfer((thread_t*)&self.sp, _exit_free, NULL);
+    thread_transfer((hpx_parcel_t*)&self.sp, _exit_free, NULL);
 
   // if there are ready threads, select the next one
-  thread_t *t = sync_chase_lev_ws_deque_pop(&self.work);
-  if (t)
-    return t;
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
+  if (p)
+    return p;
 
   // no ready threads try to get some work from the network, if we're not in a
   // hurry
   if (!fast)
-    if ((t = _network()))
-      return t;
+    if ((p = _network()))
+      return p;
 
   // try to steal some work, if we're not in a hurry
   if (!fast)
-    if ((t = _steal()))
-      return t;
+    if ((p = _steal()))
+      return p;
 
   // as a last resort, return final, or a new empty action
   if (final)
@@ -249,16 +278,16 @@ void *worker_run(scheduler_t *sched) {
     return NULL;
   }
 
-  // get a thread to transfer to
-  thread_t *t = _bind(p);
-  if (!t) {
-    dbg_error("failed to bind an initial thread.\n");
+  // bind a stack to transfer to
+  _bind(p);
+  if (!p) {
+    dbg_error("failed to bind an initial stack.\n");
     hpx_parcel_release(p);
     return NULL;
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  int e = thread_transfer(t, _on_start, NULL);
+  int e = thread_transfer(p, _on_start, NULL);
   if (e) {
     dbg_error("shutdown returned error\n");
     return NULL;
@@ -266,16 +295,15 @@ void *worker_run(scheduler_t *sched) {
 
   // cleanup the thread's resources---we only return here under normal shutdown
   // termination, otherwise we're canceled and vanish
-  while ((t = sync_chase_lev_ws_deque_pop(&self.work))) {
-    hpx_parcel_release(t->parcel);
-    thread_delete(t);
+  while ((p = sync_chase_lev_ws_deque_pop(&self.work))) {
+    hpx_parcel_release(p);
   }
 
-  while (self.free) {
-    t = self.free;
-    self.free = self.free->next;
-    thread_delete(t);
-  }
+  // while (self.free) {
+  //   t = self.free;
+  //   self.free = self.free->next;
+  //   thread_delete(t);
+  // }
 
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
@@ -321,8 +349,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
   sync_chase_lev_ws_deque_push(&self.work, _bind(p));
 }
 
-static int _checkpoint_ws_push(thread_t *to, void *sp, void *env) {
-  thread_t *prev = self.current;
+static int _checkpoint_ws_push(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self.current;
   self.current = to;
   prev->sp = sp;
   sync_chase_lev_ws_deque_push(&self.work, prev);
@@ -338,8 +366,8 @@ static int _checkpoint_ws_push(thread_t *to, void *sp, void *env) {
 /// synchronization).
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
-  thread_t *from = self.current;
-  thread_t *to = _schedule(false, from);
+  hpx_parcel_t *from = self.current;
+  hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
     return;
 
@@ -352,12 +380,22 @@ void scheduler_yield(void) {
 /// A transfer continuation that pushes the previous thread onto a an lco
 /// queue.
 /// ----------------------------------------------------------------------------
-static int _checkpoint_lco(thread_t *to, void *sp, void *env) {
+static int _checkpoint_lco(hpx_parcel_t *to, void *sp, void *env) {
   lco_t *lco = env;
-  thread_t *prev = self.current;
+  hpx_parcel_t *prev = self.current;
   self.current = to;
   prev->sp = sp;
-  lco_enqueue_and_unlock(lco, prev);
+
+  lco_node_t *n = self.lco_nodes;
+  if (n) {
+    self.lco_nodes = n->next;
+  }
+  else {
+    n = malloc(sizeof(*n));
+  }
+  n->next = NULL;
+  n->data = prev;
+  lco_enqueue_and_unlock(lco, n);
   return HPX_SUCCESS;
 }
 
@@ -376,7 +414,7 @@ static int _checkpoint_lco(thread_t *to, void *sp, void *env) {
 ///
 /// @precondition The calling thread must hold @p lco's lock.
 void scheduler_wait(lco_t *lco) {
-  thread_t *to = _schedule(true, NULL);
+  hpx_parcel_t *to = _schedule(true, NULL);
   thread_transfer(to, _checkpoint_lco, lco);
   lco_lock(lco);
 }
@@ -395,33 +433,61 @@ void scheduler_wait(lco_t *lco) {
 ///
 /// @precondition The calling thread must hold @p lco's lock.
 void scheduler_signal(lco_t *lco) {
-  thread_t *q = lco_trigger(lco);
+  lco_node_t *q = lco_trigger(lco);
   while (q) {
-    // as soon as we push the thread into the work queue, it could be stolen, so
-    // make sure we get it's next first
-    thread_t *next = q->next;
-    q->next = NULL;
-    sync_chase_lev_ws_deque_push(&self.work, q);
+    // As soon as we push the thread into the work queue, it could be stolen, so
+    // make sure we get it's next first.
+    lco_node_t *next = q->next;
+    sync_chase_lev_ws_deque_push(&self.work, q->data);
+    free(q);
     q = next;
   }
 }
 
 
+/// ----------------------------------------------------------------------------
 /// Exits a user-level thread.
 ///
 /// This releases the underlying parcel, and deletes the thread structure as the
 /// transfer continuation. This will never return, because the current thread is
 /// put into the _free threads list and not into a runnable list (self.ready,
 /// self.next, or an lco).
-void scheduler_exit(hpx_parcel_t *parcel) {
-  thread_t *to = _schedule(false, NULL);
+/// ----------------------------------------------------------------------------
+static void HPX_NORETURN _thread_exit(void) {
+  hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _exit_free, NULL);
   unreachable();
 }
 
 
+void hpx_thread_continue(size_t size, const void *value) {
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = self.current;
+  hpx_addr_t cont = parcel->cont;
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_lco_set(cont, value, size, HPX_NULL);   // async
+
+  _thread_exit();
+}
+
+
+void hpx_thread_exit(int status) {
+  assert(status == HPX_SUCCESS);
+
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = self.current;
+  hpx_addr_t cont = parcel->cont;
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_lco_set(cont, NULL, 0, HPX_NULL);   // async
+
+  _thread_exit();
+}
+
+
 hpx_parcel_t *scheduler_current_parcel(void) {
-  return (self.current) ? self.current->parcel : NULL;
+  return self.current;
 }
 
 
@@ -431,10 +497,11 @@ int hpx_get_my_thread_id(void) {
 
 
 hpx_addr_t hpx_thread_current_target(void) {
-  return hpx_parcel_get_target(self.current->parcel);
+  return self.current->target;
 }
 
 
 hpx_addr_t hpx_thread_current_cont(void) {
-  return hpx_parcel_get_cont(self.current->parcel);
+  return self.current->cont;
 }
+
