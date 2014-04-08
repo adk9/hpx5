@@ -23,18 +23,9 @@
 /// ----------------------------------------------------------------------------
 /// A user level thread.
 ///
-/// @field     sp - the checkpointed stack pointer for thread_transfer()
-/// @field parcel - the parcel associated with the thread
-/// @field   next - a list pointer
 /// @field  stack - the actual stack bytes (grows down)
 /// ----------------------------------------------------------------------------
-typedef struct thread thread_t;
-struct thread {
-  void *sp;
-  hpx_parcel_t *parcel;
-  thread_t *next;
-  char stack[];
-};
+typedef char *thread_t;
 
 
 /// ----------------------------------------------------------------------------
@@ -87,7 +78,7 @@ HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 
-typedef int (*thread_transfer_cont_t)(thread_t *t, void *sp, void *env);
+typedef int (*thread_transfer_cont_t)(hpx_parcel_t *t, void *sp, void *env);
 
 /// ----------------------------------------------------------------------------
 /// The actual routine to transfer between thread.
@@ -98,11 +89,11 @@ typedef int (*thread_transfer_cont_t)(thread_t *t, void *sp, void *env);
 ///
 /// The continuation's return value is also returned by transfer.
 ///
-/// @param   t - the thread to transfer to (really void **sp)
+/// @param   t - the parcel to transfer to (really void **sp)
 /// @param env - the environment for the continuation
 /// @param   c - a continuation function to handle the old stack pointer
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_transfer(thread_t *t, thread_transfer_cont_t c, void *env)
+HPX_INTERNAL int thread_transfer(hpx_parcel_t *t, thread_transfer_cont_t c, void *env)
   HPX_NON_NULL(1, 2);
 
 
