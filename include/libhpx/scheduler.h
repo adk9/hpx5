@@ -197,12 +197,6 @@ HPX_INTERNAL void scheduler_exit(hpx_parcel_t *parcel)
 
 
 /// ----------------------------------------------------------------------------
-/// Get the current thread.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL struct thread *scheduler_current_thread(void);
-
-
-/// ----------------------------------------------------------------------------
 /// Get the current parcel.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL hpx_parcel_t *scheduler_current_parcel(void)

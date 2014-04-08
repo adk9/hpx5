@@ -420,11 +420,6 @@ void scheduler_exit(hpx_parcel_t *parcel) {
 }
 
 
-thread_t *scheduler_current_thread(void) {
-  return self.current;
-}
-
-
 hpx_parcel_t *scheduler_current_parcel(void) {
   return (self.current) ? self.current->parcel : NULL;
 }
