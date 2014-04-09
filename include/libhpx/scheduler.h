@@ -58,12 +58,13 @@ struct barrier;
 /// not implemented.
 /// ----------------------------------------------------------------------------
 typedef struct scheduler {
-  SYNC_ATOMIC(int) next_id;
-  int                cores;
-  struct network  *network;
-  int            n_workers;
-  struct worker  **workers;
-  struct barrier  *barrier;
+  SYNC_ATOMIC(int)     next_id;
+  SYNC_ATOMIC(int) next_tls_id;
+  int                    cores;
+  struct network      *network;
+  int                n_workers;
+  struct worker      **workers;
+  struct barrier      *barrier;
 } scheduler_t;
 
 

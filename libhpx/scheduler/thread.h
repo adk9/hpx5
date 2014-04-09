@@ -24,14 +24,17 @@
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
 typedef struct ustack {
-  void *sp;
+  void      *sp;
+  int    tls_id;
   char  stack[];
 } ustack_t;
+
 
 /// ----------------------------------------------------------------------------
 /// This is the type of an HPX thread entry function.
 /// ----------------------------------------------------------------------------
 typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
+
 
 /// ----------------------------------------------------------------------------
 /// Sets the size of a stack.
@@ -39,6 +42,7 @@ typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
 /// All of the stacks in the system need to have the same size.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
+
 
 /// ----------------------------------------------------------------------------
 /// Initializes a thread.

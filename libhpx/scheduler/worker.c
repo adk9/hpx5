@@ -534,3 +534,12 @@ hpx_addr_t hpx_thread_current_cont(void) {
   return self.current->cont;
 }
 
+
+int hpx_thread_get_tls_id(void) {
+  ustack_t *stack = self.current->stack;
+  if (stack->tls_id < 0) {
+    scheduler_t *sched = self.scheduler;
+    stack->tls_id = sync_fadd(&sched->next_tls_id, 1, SYNC_ACQ_REL);
+  }
+  return stack->tls_id;
+}
