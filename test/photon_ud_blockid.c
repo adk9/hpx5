@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <mpi.h>
 #include <sys/time.h>
@@ -7,17 +8,23 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#include <openssl/md5.h>
+
 #include "photon.h"
 
-#define PHOTON_SEND_SIZE 8192
+#define PHOTON_SEND_SIZE 16384
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq,sendReq,sendReq2;
+  uint64_t recvReq,sendReq,sendReq2;
   char *send,*recv;
   int rank,size,prev,next;
 
+  MD5_CTX ctx;
+  unsigned char hash[16];
   photon_addr mgid;
+
+  srand(time(NULL));
 
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -43,7 +50,26 @@ int main(int argc, char *argv[]) {
 
   posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
   posix_memalign((void **) &recv, 64, PHOTON_SEND_SIZE*sizeof(char));
-  
+
+  int i;
+  for (i=0; i<PHOTON_SEND_SIZE; i++) {
+    send[i] = rand() % 26 + 97;
+  }
+
+  send[0] = rank + 97;
+
+  //printf("%d: send (%d): %s\n", rank, strlen(send), send);
+
+  MD5_Init(&ctx);
+  MD5_Update(&ctx, send, strlen(send));
+  MD5_Final(hash, &ctx);
+
+  printf("%d: sending message with md5 sig: ", rank);
+  for (i=0; i<16; i++) {
+    printf("%x", hash[i]);
+  }
+  printf("\n");
+
   // everyone register to receive on the same address (224.0.2.2)
   inet_pton(AF_INET6, "ff0e::ffff:e000:0202", &mgid.raw);
   photon_register_addr(&mgid, AF_INET6);
@@ -96,7 +122,9 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        // probe says we got some message, let's get it
+        photon_recv(stat.request, recv, stat.size, 0);
+        fprintf(stderr,"%d: recv(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
         break;
       }
       else {
@@ -106,10 +134,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // probe says we got some message, let's get it
-  photon_recv(stat.request, recv, PHOTON_SEND_SIZE, 0);
-  
-  // do something with message...
+  //printf("%d: recv (%d): %s\n", rank, strlen(recv), recv);
+
+  MD5_Init(&ctx);
+  MD5_Update(&ctx, recv, strlen(recv));
+  MD5_Final(hash, &ctx);
+
+  printf("%d: received message with md5 sig: ", rank);
+  for (i=0; i<16; i++) {
+    printf("%x", hash[i]);
+  }
+  printf("\n");
 
   MPI_Barrier(MPI_COMM_WORLD);
 
