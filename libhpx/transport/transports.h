@@ -50,27 +50,14 @@ struct transport {
   int (*test)(transport_t *t, void *request, int *out)
     HPX_NON_NULL(1, 2, 3);
 
-  // int (*init)(void);
-  // void (*fini)(void);
-  // void (*progress)(void *data);
-  // int (*probe)(int src, int *flag, transport_status_t *status);
-  // int (*recv)(int src, void *buffer, unsigned size, transport_request_t *request);
-  // int (*test_sendrecv)(transport_request_t *request, int *flag, transport_status_t *status);
-  // int (*test_send)(transport_request_t *request, int *flag, transport_status_t *status);
-  // int (*test_recv)(transport_request_t *request, int *flag, transport_status_t *status);
-  // int (*put)(int dest, void *buffer, unsigned len, transport_request_t *request);
-  // int (*get)(int dest, void *buffer, unsigned len, transport_request_t *request);
-  // int (*test_putget)(transport_request_t *request, int *flag, transport_status_t *status);
-  // int (*test_put)(transport_request_t *request, int *flag, transport_status_t *status);
-  // int (*test_get)(transport_request_t *request, int *flag, transport_status_t *status);
-
-  // int (*phys_addr)(int *locality);
-  // unsigned (*get_transport_bytes)(unsigned n);
+  void (*progress)(transport_t *t, bool flush)
+    HPX_NON_NULL(1);
 };
 
 
 HPX_INTERNAL transport_t *transport_new_photon(const struct boot *boot) HPX_NON_NULL(1);
 HPX_INTERNAL transport_t *transport_new_mpi(const struct boot *boot) HPX_NON_NULL(1);
+HPX_INTERNAL transport_t *transport_new_portals(const struct boot *boot) HPX_NON_NULL(1);
 HPX_INTERNAL transport_t *transport_new_smp(const struct boot *boot) HPX_NON_NULL(1);
 
 #endif // LIBHPX_TRANSPORTS_H

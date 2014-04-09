@@ -9,7 +9,7 @@ libboot_la_LIBADD   =
 
 if HAVE_MPI
 libboot_la_CFLAGS  += @MPI_CFLAGS@
-libboot_la_SOURCES += mpirun.c
+libboot_la_SOURCES += mpi.c
 libboot_la_LIBADD  += @MPI_LIBS@
 endif
 

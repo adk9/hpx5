@@ -21,5 +21,6 @@ HPX_INTERNAL boot_t *boot_new(void);
 HPX_INTERNAL void boot_delete(boot_t*) HPX_NON_NULL(1);
 HPX_INTERNAL int boot_rank(const boot_t*) HPX_NON_NULL(1);
 HPX_INTERNAL int boot_n_ranks(const boot_t*) HPX_NON_NULL(1);
+HPX_INTERNAL int boot_allgather(const boot_t *boot, const void *in, void *out, int n);
 
 #endif // LIBHPX_BOOT_BOOT_H

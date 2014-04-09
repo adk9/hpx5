@@ -147,9 +147,6 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // start the scheduler, this will return after scheduler_shutdown()
   e = scheduler_startup(_sched);
 
-  // shutdown the network
-  network_shutdown(_network);
-
   // wait for the network to shutdown
   e = pthread_join(heavy, NULL);
   if (e) {
@@ -175,6 +172,21 @@ int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
   p->cont = result;
   hpx_parcel_set_data(p, args, len);
   hpx_parcel_send(p);
+  return HPX_SUCCESS;
+}
+
+/// Encapsulates a RPC called on all available localities.
+int hpx_bcast(hpx_action_t action, const void *args, size_t len, hpx_addr_t lco) {
+  int ranks  = hpx_get_num_ranks();
+  int me = hpx_get_my_rank();
+
+  if (!hpx_addr_eq(lco, HPX_NULL))
+    lco = hpx_lco_and_new(ranks-1);
+  for (int i = 0; i < ranks; ++i) {
+    if (i == me)
+      continue;
+    hpx_call(HPX_THERE(i), action, args, len, lco);
+  }
   return HPX_SUCCESS;
 }
 
@@ -248,9 +260,29 @@ void system_shutdown(int code) {
   }
 }
 
+
+static hpx_action_t _shutdown_local = 0;
+static int _shutdown_local_action(void *args) {
+  network_shutdown(_network);
+  system_shutdown(0);
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// Register the remote actions that we need.
+/// ----------------------------------------------------------------------------
+static void HPX_CONSTRUCTOR _register_actions(void) {
+  _shutdown_local = HPX_REGISTER_ACTION(_shutdown_local_action);
+}
+
+
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
-  system_shutdown(code);
+  // do an asynchronous broadcast of shutdown requests
+  hpx_bcast(_shutdown_local, NULL, 0, HPX_NULL);
+  _shutdown_local_action(NULL);
+  // flush out the pending parcels
+  transport_progress(_transport, true);
   hpx_thread_exit(HPX_SUCCESS);
 }
 

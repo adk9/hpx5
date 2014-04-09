@@ -1,114 +1,432 @@
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
-  
-  Portals Network Interface 
-  portals.c
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-  Copyright (c) 2013, Trustees of Indiana University 
-  All rights reserved.
-
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
- ====================================================================
-*/
-
+#include <assert.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 #include <portals4.h>
-#include "network."
-#include "hpx/error.h"
 
-static int init(void);
-static int finalize(void);
-static int probe(int source, int* flag, network_status_t* status);
-static int send(int dest, void *buffer, size_t len, network_request_t* req);
-static int recv(int src, void *buffer, size_t len, network_request_t* req);
-static int put(int dest, void *buffer, size_t len, network_request_t* req);
-static int get(int src, void *buffer, size_t len, network_request_t* req);
-static int test(network_request_t *request, int *flag, network_status_t *status);
-static int pin(void* buffer, size_t len);
-static int unpin(void* buffer, size_t len);
-static int phys_addr(hpx_locality_t *l);
-static void progress(void *data);
-static size_t get_network_bytes(size_t n);
-static void barrier(void);
+#include "libhpx/boot.h"
+#include "libhpx/debug.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"
+#include "libhpx/transport.h"
+#include "transports.h"
+#include "gas.h"
 
-/* Portals communication operations */
-network_ops_t portals_ops = {
-  .init              = init,
-  .finalize          = finalize,
-  .progress          = progress,
-  .probe             = probe,
-  .send              = send,
-  .recv              = recv,
-  .test              = test,
-  .put               = put,
-  .get               = get,
-  .phys_addr         = phys_addr,
-  .get_network_bytes = get_network_bytes,
-  .barrier           = barrier
+/// Portals resource limits
+static const int PORTALS_RES_LIMIT_MAX = INT_MAX;
+typedef struct _portals_lim _portals_lim_t;
+struct _portals_lim {
+  ptl_ni_limits_t rlim_cur;  // Soft limit (currently available)
+  ptl_ni_limits_t rlim_max;  // Hard limit (requested)
 };
 
-int
-init(void)
-{
+static const uint64_t PORTALS_EVENTQ_SIZE = UINT_MAX;
+static const uint64_t PORTALS_BUFFER_SIZE = (1UL << 20);
+
+/// Portals data buffer
+static const int PORTALS_NUM_BUF_MAX   = 16;
+typedef struct _portals_buf _portals_buf_t;
+struct _portals_buf {
+  ptl_handle_me_t handle;
+  void           *data;
+};
+
+
+/// the Portals transport caches the rank and size.
+typedef struct {
+  transport_t     vtable;
+  ptl_process_t   id;                  // my (physical) ID
+  int             rank;                // my (logical) rank
+  int             n_ranks;             // total number of ranks
+
+  _portals_lim_t  limits;              // portals transport resource limits
+  ptl_handle_ni_t interface;           // handle to the non-matching interface
+
+  ptl_handle_eq_t sendq;               // the send event queue
+  ptl_handle_eq_t recvq;               // the recv event queue
+  ptl_pt_index_t  pte;                 // table entry for messages
+  ptl_handle_md_t bufdesc;             // buffer descriptor
+  _portals_buf_t *buffer;              // parcel buffer
+} portals_t;
+
+
+/// ----------------------------------------------------------------------------
+/// Get the ID for the Portals transport.
+/// ----------------------------------------------------------------------------
+static const char *_id(void) {
+  return "Portals 4";
 }
 
-int
-send_parcel(hpx_locality_t *, hpx_parcel_t *)
-{
+/// ----------------------------------------------------------------------------
+/// Get the physical ID for the Portals transport.
+///
+/// Presently, Portals relies on the IPoIB transport to get a valid IP
+/// address to use as the physical identifier of the locality.
+/// ----------------------------------------------------------------------------
+static int _get_physical_id(portals_t *portals, ptl_process_t *id) {
+  assert(portals != NULL);
+  if (PtlGetPhysId(portals->interface, id) != PTL_OK)
+    return dbg_error("could not get the physical id.\n");
+  return HPX_SUCCESS;
 }
 
-int
-send(int peer, void *payload, size_t len)
-{
+/// ----------------------------------------------------------------------------
+/// Initialize the Portals transport.
+///
+/// At the moment, we only initialize and use the "matching"
+/// interface. Maximum resource limits are requested during
+/// initialization.
+/// ----------------------------------------------------------------------------
+static int _portals_init(portals_t *portals) {
+  assert(portals != NULL);
+
+  int e = PtlInit();
+  if (e != PTL_OK)
+    return dbg_error("failed to initialize Portals.\n");
+
+  ptl_ni_limits_t *nl = &(portals->limits.rlim_max);
+
+  nl->max_entries            = PORTALS_RES_LIMIT_MAX;
+  nl->max_unexpected_headers = PORTALS_RES_LIMIT_MAX;
+  nl->max_mds                = PORTALS_RES_LIMIT_MAX;
+  nl->max_eqs                = PORTALS_RES_LIMIT_MAX;
+  nl->max_cts                = PORTALS_RES_LIMIT_MAX;
+  nl->max_pt_index           = PORTALS_RES_LIMIT_MAX;
+  nl->max_iovecs             = PORTALS_RES_LIMIT_MAX;
+  nl->max_list_size          = PORTALS_RES_LIMIT_MAX;
+  nl->max_triggered_ops      = PORTALS_RES_LIMIT_MAX;
+  nl->max_msg_size           = LONG_MAX;
+  nl->max_atomic_size        = PORTALS_RES_LIMIT_MAX;
+  nl->max_fetch_atomic_size  = PORTALS_RES_LIMIT_MAX;
+  nl->max_waw_ordered_size   = PORTALS_RES_LIMIT_MAX;
+  nl->max_war_ordered_size   = PORTALS_RES_LIMIT_MAX;
+  nl->max_volatile_size      = PORTALS_RES_LIMIT_MAX;
+  nl->features               = 0;
+
+  e = PtlNIInit(PTL_IFACE_DEFAULT, PTL_NI_MATCHING|PTL_NI_LOGICAL, PTL_PID_ANY,
+                nl, &(portals->limits.rlim_cur), &portals->interface);
+  if (e != PTL_OK)
+    return dbg_error("failed to initialize Portals.\n");
+
+  return HPX_SUCCESS;
 }
 
-int
-put(int peer, void *dst, void *src, size_t len)
-{
+
+/// ----------------------------------------------------------------------------
+/// Set the portals locality map (Rank X PhysID) appropriately.
+/// ----------------------------------------------------------------------------
+static int _set_map(portals_t *ptl, const boot_t *boot) {
+  ptl_process_t *nidpid_map = malloc(sizeof(*nidpid_map) * ptl->n_ranks);
+
+#ifdef HAVE_PMI_CRAY_EXT
+  if ((PMI_Portals_get_nidpid_map(&nidpid_map)) != PMI_SUCCESS) {
+    free(nidpid_map);
+    return dbg_error("failed to get nidpid map from PMI.\n");
+  }
+#else
+  _get_physical_id(ptl, &ptl->id);
+  boot_allgather(boot, (void*)&ptl->id, nidpid_map, sizeof(*nidpid_map));
+#endif
+
+  int e = PtlSetMap(ptl->interface, ptl->n_ranks, nidpid_map);
+  if (e != PTL_OK) {
+    free(nidpid_map);
+    dbg_error("failed to set portals nidpid map.\n");
+    hpx_abort();
+  }
+
+  free(nidpid_map);
+  return HPX_SUCCESS;
 }
 
-int
-get(void *dst, int peer, void *src, size_t len)
-{
+
+/// ----------------------------------------------------------------------------
+/// This sets up Portals for sending and receiving messages. We create
+/// event queues for send and receive events, set up portal table
+/// entries, bind memory descriptors and append match-list entries to
+/// the priority list.
+/// ----------------------------------------------------------------------------
+static int _setup_portals(portals_t *ptl) {
+  // create an event queue for send events
+  int e = PtlEQAlloc(ptl->interface, PORTALS_EVENTQ_SIZE, &ptl->sendq);
+  if (e != PTL_OK)
+    return dbg_error("failed to allocate portals send event queue.\n");
+
+  // create an event queue for receive events
+  e = PtlEQAlloc(ptl->interface, PORTALS_EVENTQ_SIZE, &ptl->recvq);
+  if (e != PTL_OK)
+    return dbg_error("failed to allocate portals receive event queue.\n");
+
+  // create a portal table entry for receiving data
+  e = PtlPTAlloc(ptl->interface, 0, ptl->recvq, PTL_PT_ANY, &ptl->pte);
+  if (e != PTL_OK)
+    return dbg_error("failed to allocate portals table entry.\n");
+
+  // allocate a memory descriptor. (we assume that the underlying
+  // Portals 4 implementation supports binding a descriptor that spans
+  // the entire virtual address-space.)
+  ptl_md_t bd = {
+    .start     = 0,
+    .length    = PTL_SIZE_MAX,
+    .options   = PTL_MD_UNORDERED | PTL_MD_EVENT_SEND_DISABLE,
+    .eq_handle = ptl->sendq,
+    .ct_handle = PTL_CT_NONE,
+  };
+  e = PtlMDBind(ptl->interface, &bd, &ptl->bufdesc);
+  if (e != PTL_OK)
+    return dbg_error("failed to allocate memory buffer descriptor.\n");
+
+  // append match-list entries for parcel buffers
+  ptl->buffer = malloc(sizeof(_portals_buf_t) * PORTALS_NUM_BUF_MAX);
+  for (int i = 0; i < PORTALS_NUM_BUF_MAX; i++) {
+    _portals_buf_t *b = &ptl->buffer[i];
+    b->data = malloc(PORTALS_BUFFER_SIZE);
+
+    ptl_me_t me = {
+      .start         = b->data,
+      .length        = PORTALS_BUFFER_SIZE,
+      .ct_handle     = PTL_CT_NONE,
+      .uid           = PTL_UID_ANY,
+      .options       = PTL_ME_OP_PUT | PTL_ME_MANAGE_LOCAL
+                     | PTL_ME_MAY_ALIGN | PTL_ME_EVENT_LINK_DISABLE,
+      .match_id.rank = PTL_RANK_ANY,
+      .match_bits    = 0,
+      .ignore_bits   = ~(0ULL),
+      .min_free      = 1024, // need space for a few parcels at least?
+    };
+    e = PtlMEAppend(ptl->interface, ptl->pte, &me, PTL_PRIORITY_LIST,
+                    b, &b->handle);
+    if (e != PTL_OK)
+      return dbg_error("failed to append match list entry.\n");
+  }
+  return HPX_SUCCESS;
 }
 
-void
-progress(void *data)
-{
+/// ----------------------------------------------------------------------------
+/// A global synchronizing barrier.
+/// ----------------------------------------------------------------------------
+static void _barrier(void) {
+  dbg_log("portals: barrier unsupported.");
 }
 
-void
-finalize(void)
-{
+/// ----------------------------------------------------------------------------
+/// Return the size of a Portals request.
+/// ----------------------------------------------------------------------------
+static int _request_size(void) {
+  return 0;
 }
 
-int
-probe(int source, int* flag, network_status_t *status)
-{
+
+static int _adjust_size(int size) {
+  return size;
 }
 
-int
-test(network_request_t *request, int *flag, network_status_t *status)
-{
+/// ----------------------------------------------------------------------------
+/// Cancel an active transport request.
+/// ----------------------------------------------------------------------------
+static int _request_cancel(void *request) {
+  return 0;
 }
 
-int
-phys_addr(hpx_locality_t *id)
-{
+/// ----------------------------------------------------------------------------
+/// Pinning not necessary.
+/// ----------------------------------------------------------------------------
+static void _pin(transport_t *transport, const void* buffer, size_t len) {
 }
 
-size_t
-get_network_bytes(size_t n)
-{
-  return n;
+/// ----------------------------------------------------------------------------
+/// Unpinning not necessary.
+/// ----------------------------------------------------------------------------
+static void _unpin(transport_t *transport, const void* buffer, size_t len) {
 }
 
-void
-barrier(void)
+/// ----------------------------------------------------------------------------
+/// Send data via Portals.
+/// ----------------------------------------------------------------------------
+static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
+  dbg_log("portals: send unsupported.\n");
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// Test for request completion.
+/// ----------------------------------------------------------------------------
+static int _test(transport_t *t, void *request, int *success) {
+  dbg_log("portals: test unsupported.\n");
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// Probe the Portals transport to see if anything has been received.
+/// ----------------------------------------------------------------------------
+static size_t _probe(transport_t *t, int *source) {
+  dbg_log("portals: probe unsupported.\n");
+  return 0;
+}
+
+/// ----------------------------------------------------------------------------
+/// Receive a buffer.
+/// ----------------------------------------------------------------------------
+static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
+  dbg_log("portals: recv unsupported.\n");
+  return HPX_SUCCESS;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Shut down Portals, and delete the transport.
+/// ----------------------------------------------------------------------------
+static void _delete(transport_t *transport) {
+  portals_t *ptl = (portals_t*)transport;
+
+  for (int i = 0; i < PORTALS_NUM_BUF_MAX; ++i)
+    PtlMEUnlink(ptl->buffer[i].handle);
+  free(ptl->buffer);
+
+  PtlMDRelease(ptl->bufdesc);
+  PtlPTFree(ptl->interface, ptl->pte);
+
+  PtlEQFree(ptl->sendq);
+  PtlEQFree(ptl->recvq);
+
+  PtlNIFini(ptl->interface);
+  PtlFini();
+}
+
+static bool _try_start_send(transport_t *transport) {
+  portals_t *ptl = (portals_t*)transport;
+
+  // try to deque a packet from the network's Tx port.
+  hpx_parcel_t *p = network_tx_dequeue();
+  if (!p)
+    return false;
+
+  int dest = gas_where(p->target);
+  ptl_process_t peer = { .rank = dest };
+
+  int size = sizeof(*p) + p->size;
+  //int e = PtlPut(ptl->bufdesc, (ptl_size_t)p, size, PTL_ACK_REQ, peer,
+  //               ptl->pte, 0, 0, p, 0);
+  int e = PtlPut(ptl->bufdesc, (ptl_size_t)p, size, PTL_ACK_REQ, peer,
+                 ptl->pte, 0, 0, p, 0);
+  if (e != PTL_OK) {
+    hpx_parcel_release(p);
+    dbg_error("Portals could not send %d bytes to %i.\n", size, dest);
+    return false;
+  }
+
+  return true;
+}
+
+
+static void _progress(transport_t *t, bool flush) {
+  portals_t *ptl = (portals_t*)t;
+  ptl_event_t pe;
+
+  bool send = _try_start_send(t);
+  if (send)
+    dbg_log("started a send.\n");
+
+  int e = PtlEQGet(ptl->sendq, &pe);
+  if (e == PTL_OK) {
+    hpx_parcel_t *p = (hpx_parcel_t*)pe.user_ptr;
+    switch (pe.type) {
+      default:
+        dbg_log("portals: unknown send queue event (%d).\n", pe.type);
+        break;
+      case PTL_EVENT_ACK:
+        if (pe.ni_fail_type == PTL_NI_OK)
+          hpx_parcel_release(p);
+        else {
+          dbg_error("Portals failed to send %lu bytes to %i.\n",
+                    pe.rlength, pe.initiator.rank);
+          // perhaps we should try to retransmit?
+          network_tx_enqueue(p);
+        }
+        break;
+      case PTL_EVENT_SEND:
+        if (pe.ni_fail_type != PTL_NI_OK) {
+          dbg_error("Portals failed to send %lu bytes to %i.\n",
+                    pe.rlength, pe.initiator.rank);
+          // perhaps we should try to retransmit?
+          network_tx_enqueue(p);
+        }
+        break;
+    }
+  }
+
+  e = PtlEQGet(ptl->recvq, &pe);
+  if (e == PTL_OK) {
+    if (pe.type == PTL_EVENT_PUT) {
+      if (pe.ni_fail_type != PTL_NI_OK) {
+        dbg_error("Portals failed to recv %lu bytes from %i.\n",
+                  pe.mlength, pe.initiator.rank);
+      }
+      else {
+        assert(pe.rlength == pe.mlength);
+
+        // allocate a parcel to provide the buffer to receive into
+        hpx_parcel_t *p = hpx_parcel_acquire(pe.mlength - sizeof(hpx_parcel_t));
+        if (!p)
+          dbg_error("could not acquire a parcel of size %lu during receive.\n", pe.mlength);
+
+        // TODO: get rid of this extra copy.
+        memcpy(p, pe.start, pe.mlength);
+        network_rx_enqueue(p);
+      }
+    }
+    else {
+      dbg_log("portals: unknown recv queue event (%d).\n", pe.type);
+    }
+  }
+}
+
+transport_t *transport_new_portals(const boot_t *boot) {
+  portals_t *portals = malloc(sizeof(*portals));
+
+  portals->vtable.id             = _id;
+  portals->vtable.barrier        = _barrier;
+  portals->vtable.request_size   = _request_size;
+  portals->vtable.request_cancel = _request_cancel;
+  portals->vtable.adjust_size    = _adjust_size;
+
+  portals->vtable.delete         = _delete;
+  portals->vtable.pin            = _pin;
+  portals->vtable.unpin          = _unpin;
+  portals->vtable.send           = _send;
+  portals->vtable.probe          = _probe;
+  portals->vtable.recv           = _recv;
+  portals->vtable.test           = _test;
+  portals->vtable.progress       = _progress;
+
+  portals->rank                  = boot_rank(boot);
+  portals->n_ranks               = boot_n_ranks(boot);
+  portals->interface             = PTL_INVALID_HANDLE;
+  portals->sendq                 = PTL_INVALID_HANDLE;
+  portals->recvq                 = PTL_INVALID_HANDLE;
+  portals->pte                   = PTL_PT_ANY;
+  portals->bufdesc               = PTL_INVALID_HANDLE;
+
+  _portals_init(portals);
+  _set_map(portals, boot);
+  _setup_portals(portals);
+
+  return &portals->vtable;
 }

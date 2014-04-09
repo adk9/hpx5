@@ -128,9 +128,17 @@ HPX_INTERNAL int transport_recv(transport_t *t, int src, void *buffer,
 /// @param[out] o - 0 if still active, non-0 otherwise
 /// @returns      - HPX_SUCCESS or HPX_ERROR
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_test_sendrecv(transport_t *t, void *req, int *out)
+HPX_INTERNAL int transport_test(transport_t *t, void *req, int *out)
   HPX_NON_NULL(1, 2, 3);
 
+/// ----------------------------------------------------------------------------
+/// Polls to ensure progress of the transport.
+///
+/// @param           t - the transport
+/// @param       flush - flush the transport and finish all pending sends/recvs
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void transport_progress(transport_t *t, bool flush)
+  HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
 /// A low-level transport barrier.

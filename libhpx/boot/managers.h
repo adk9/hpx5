@@ -17,9 +17,11 @@ struct boot {
   void (*delete)(boot_t*);
   int (*rank)(const boot_t*);
   int (*n_ranks)(const boot_t*);
+  int (*barrier)(void);
+  int (*allgather)(const boot_t*, const void*, void*, int);
 };
 
-HPX_INTERNAL boot_t *boot_new_mpirun(void);
+HPX_INTERNAL boot_t *boot_new_mpi(void);
 HPX_INTERNAL boot_t *boot_new_pmi(void);
 HPX_INTERNAL boot_t *boot_new_smp(void);
 

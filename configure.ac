@@ -83,7 +83,8 @@ AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
-AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno],
+HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
+AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
     
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
@@ -126,7 +127,7 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -169,7 +170,10 @@ AS_IF([test "x$with_mpi" != xno],
   [networks="MPI"],
   [])
 AS_IF([test "x$with_photon" != xno],
-  [networks="$networks Photon"],
+  [networks="Photon $networks"],
+  [])
+AS_IF([test "x$with_portals" != xno],
+  [networks="Portals $networks"],
   [])
 AS_IF([test "x$with_crypto" != xno],
   [hashing="$with_crypto"],
