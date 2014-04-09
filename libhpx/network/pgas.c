@@ -71,7 +71,7 @@ static void *_local;                            /// The local block.
 /// Right now, this action runs at rank 0, and simply allocates a bunch of
 /// consecutive blocks for an allocation.
 static hpx_action_t _gasbrk;
-static hpx_action_t _block_alloc;
+static hpx_action_t _alloc_blocks;
 static SYNC_ATOMIC(uint32_t _next_block);
 static SYNC_ATOMIC(uint32_t _next);
 
@@ -113,14 +113,26 @@ static int _gasbrk_action(size_t *args) {
 }
 
 
-/// The action that performs a global allocation for a block.
-static int _block_alloc_action(uint32_t *bytes) {
-  void *block = malloc(*bytes);
-  assert(block);
+/// The action that performs a global allocation for a rank.
+static int _alloc_blocks_action(uint32_t *args) {
+  uint32_t n = args[0];
+  uint32_t size = args[1];
+
+  // Blocks are all allocated contiguously, and densely, at the rank. Do the
+  // malloc.
+  uint64_t bytes = n * size;
+  char *blocks = malloc(bytes);
+  assert(blocks);
+
+  // Insert all of the mappings (always block cyclic allocations).
   hpx_addr_t target = hpx_thread_current_target();
-  uint32_t block_id = _block_id(target);
-  uint32_t row = _row(block_id);
-  sync_store(&_btt[row], block, SYNC_RELEASE);
+  uint32_t base_id = _block_id(target);
+  int ranks = hpx_get_num_ranks();
+  for (int i = 0; i < n; ++i) {
+    uint32_t row = _row(base_id + i * ranks);
+    sync_store(&_btt[row], &blocks[size * i], SYNC_RELEASE);
+  }
+
   return HPX_SUCCESS;
 }
 
@@ -141,7 +153,7 @@ void gas_init(const boot_t *boot) {
 
   // register the actions that we use
   _gasbrk = HPX_REGISTER_ACTION(_gasbrk_action);
-  _block_alloc = HPX_REGISTER_ACTION(_block_alloc_action);
+  _alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
 
   // update the HERE address
   HPX_HERE = HPX_THERE(boot_rank(boot));
@@ -169,15 +181,23 @@ hpx_global_alloc(size_t n, uint32_t bytes) {
   hpx_lco_get(f, &base_id, sizeof(base_id));
   hpx_lco_delete(f, HPX_NULL);
 
-  // For each of the blocks, I need to broadcast an allocation request... use a
-  // and LCO for the reduction, since I want to wait for them all to finish.
-  hpx_addr_t and = hpx_lco_and_new(n);
-  for (size_t i = 0; i < n; ++i) {
+  // For each locality, I need to broadcast an allocation request for the right
+  // number of blocks.
+  int ranks = hpx_get_num_ranks();
+  hpx_addr_t and = hpx_lco_and_new(ranks);
+  uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
+  uint32_t args[2] = {
+    blocks_per_locality,
+    bytes
+  };
+
+  for (int i = 0; i < ranks; ++i) {
     hpx_addr_t addr = hpx_addr_init(0, base_id + i, bytes);
-    hpx_call(addr, _block_alloc, &bytes, sizeof(bytes), and);
+    hpx_call(addr, _alloc_blocks, &args, sizeof(args), and);
   }
 
-  // The global alloc is currently synchronous.
+  // The global alloc is currently synchronous, because the btt mappings aren't
+  // complete until the allocation is complete.
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
 
