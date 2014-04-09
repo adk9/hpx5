@@ -86,10 +86,11 @@ LABEL(thread_transfer)
 	    sub $16, %rsp                           // 
 	    fnstcw 4(%rsp)                          // 8.5
 	    stmxcsr	(%rsp)                          // 8
-        mov %rsi, %rbx
-        mov (%rdi), %rsi
+        mov %rsi, %rbx                          // cont
+        mov (%rdi), %rsi                        // p->stack
+        mov (%rsi), %rsi                        // p->stack->sp
 	    xchg %rsp, %rsi
-	    call *%rbx
+	    call *%rbx                              // cont(p, sp, env)
 	    ldmxcsr	(%rsp)                          // 8
 	    fldcw 4(%rsp)                           // 8.5
 	    add $8, %rsp                            // 
