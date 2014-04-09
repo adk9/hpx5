@@ -9,11 +9,11 @@
 
 #include "photon.h"
 
-#define PHOTON_SEND_SIZE 2048
+#define PHOTON_SEND_SIZE 8192
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq,sendReq;
+  uint32_t recvReq,sendReq,sendReq2;
   char *send,*recv;
   int rank,size,prev,next;
 
@@ -48,8 +48,12 @@ int main(int argc, char *argv[]) {
   inet_pton(AF_INET6, "ff0e::ffff:e000:0202", &mgid.raw);
   photon_register_addr(&mgid, AF_INET6);
 
+  // need each node to be ready to receive before we send...
+  MPI_Barrier(MPI_COMM_WORLD);
+
   // send to the address
   photon_send(&mgid, send, PHOTON_SEND_SIZE, 0, &sendReq);
+  //photon_send(&mgid, send, PHOTON_SEND_SIZE, 0, &sendReq2);
 
   while(1) {
     int flag, type;
@@ -110,8 +114,6 @@ int main(int argc, char *argv[]) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   photon_unregister_addr(&mgid, AF_INET6);
-  photon_unregister_buffer(send, PHOTON_SEND_SIZE);
-  photon_unregister_buffer(recv, PHOTON_SEND_SIZE);
   free(send);
   free(recv);
 

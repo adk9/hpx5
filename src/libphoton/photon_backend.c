@@ -244,12 +244,14 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int b
   req->id = request_id;
   req->state = REQUEST_PENDING;
   req->type = SENDRECV;
+  req->proc = addr->global.proc_id;
   req->num_entries = nbufs;
   req->mmask |= (1<<msn);
   req->bentries[msn] = bindex;
+  memcpy(&req->addr, addr, sizeof(*addr));
   
-  dbg_info("Inserting the new recv request into the sr table: %u/0x%016lx/%p",
-           request_id, request, req);
+  dbg_info("Inserting the new recv request into the sr table: %lu/%u/0x%016lx/%p",
+           addr->global.proc_id, request_id, request, req);
   if (htable_insert(sr_reqtable, request, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
@@ -723,7 +725,8 @@ static int __photon_handle_recv_event(uint64_t id) {
   }
   else {
     // create a new request for the message
-    req = __photon_setup_request_recv(NULL, hdr->msn, bindex, hdr->nmsg, cookie);
+    photon_addr addr = {.global.proc_id = hdr->src_addr};
+    req = __photon_setup_request_recv(&addr, hdr->msn, bindex, hdr->nmsg, cookie);
   }
   
   // now check if we have the whole message
@@ -2111,14 +2114,28 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
   inet_ntop(AF_INET6, addr->raw, buf, 40);
   dbg_info("(%s)", buf);
 
-  __photon_nbpop_sr(NULL);
-
-  *flag = 0;
-
-  return PHOTON_OK;
-
- error_exit:
-  return PHOTON_ERROR;
+  photonRequest req;
+  int rc;
+ 
+  req = SLIST_FIRST(&pending_recv_list);
+  if (req) {
+    *flag = 1;
+    status->src_addr.global.proc_id = req->proc;
+    status->request = req->id;
+    status->tag = -1;
+    status->count = 1;
+    status->error = 0;
+    dbg_info("returning 0, flag:1");
+    return 0;
+  }
+  else {
+    *flag = 0;
+    rc = __photon_nbpop_sr(NULL);
+    if (rc < 0)
+      return rc;
+    else
+      return 0;
+  }
 }
 
 /* begin I/O */
