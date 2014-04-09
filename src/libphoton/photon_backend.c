@@ -36,8 +36,8 @@ static int _photon_register_buffer(void *buffer, uint64_t size);
 static int _photon_unregister_buffer(void *buffer, uint64_t size);
 static int _photon_test(uint32_t request, int *flag, int *type, photonStatus status);
 static int _photon_wait(uint32_t request);
-static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
-static int _photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
+static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
+static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
 static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
@@ -65,7 +65,7 @@ static int __photon_wait_event(photonRequest req);
 static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request);
 static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc, uint32_t *request);
 static int __photon_setup_request_send(photonAddr addr, char *bufs, int nbufs, uint32_t request);
-static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int bindex, int nbufs, uint64_t request);
+static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize, int bindex, int nbufs, uint64_t request);
 
 static int __photon_handle_send_event(photonRequest req, uint64_t id);
 static int __photon_handle_recv_event(uint64_t id);
@@ -228,12 +228,8 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc,
    we know the recv mbuf entry index
    we inspected the UD hdr and determined the current sequence number
    this setup method also returns the request pointer... */
-static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int bindex, int nbufs, uint64_t request) {
+static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize, int bindex, int nbufs, uint64_t request) {
   photonRequest req;
-  uint32_t request_id;
-
-  request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
 
   req = __photon_get_request();
   if (!req) {
@@ -241,17 +237,19 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int b
     goto error_exit;
   }
 
-  req->id = request_id;
+  req->id = request;
+  req->tag = -1;
   req->state = REQUEST_PENDING;
   req->type = SENDRECV;
   req->proc = addr->global.proc_id;
   req->num_entries = nbufs;
   req->mmask |= (1<<msn);
+  req->length = msize;
   req->bentries[msn] = bindex;
   memcpy(&req->addr, addr, sizeof(*addr));
   
-  dbg_info("Inserting the new recv request into the sr table: %lu/%u/0x%016lx/%p",
-           addr->global.proc_id, request_id, request, req);
+  dbg_info("Inserting the new recv request into the sr table: %lu/0x%016lx/%p",
+           addr->global.proc_id, request, req);
   if (htable_insert(sr_reqtable, request, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
@@ -275,10 +273,12 @@ static int __photon_setup_request_send(photonAddr addr, char *bufs, int nbufs, u
   }
 
   req->id = request;
+  req->tag = -1;
   req->state = REQUEST_PENDING;
   req->type = SENDRECV;
   req->num_entries = nbufs;
   req->mmask = 0x0;
+  req->length = 0;
   memcpy(&req->addr, addr, sizeof(*addr));
   memcpy(req->bentries, bufs, MAX_BUF_ENTRIES);
   
@@ -673,6 +673,7 @@ static int __photon_handle_send_event(photonRequest req, uint64_t id) {
       msn = (uint16_t)((id<<16)>>48);
       req->mmask |= (1<<msn);
       if (!( req->mmask ^ ~(~0<<req->num_entries))) {
+        // additional condition would be ACK from receiver
         creq->state = REQUEST_COMPLETED;
       }
     }
@@ -722,21 +723,23 @@ static int __photon_handle_recv_event(uint64_t id) {
   if (htable_lookup(sr_reqtable, cookie, (void**)&req) == 0) {
     // update existing req
     req->mmask |= (1<<hdr->msn);
+    req->length += hdr->length;
+    req->bentries[hdr->msn] = bindex;
   }
   else {
     // create a new request for the message
     photon_addr addr = {.global.proc_id = hdr->src_addr};
-    req = __photon_setup_request_recv(&addr, hdr->msn, bindex, hdr->nmsg, cookie);
+    req = __photon_setup_request_recv(&addr, hdr->msn, hdr->length, bindex, hdr->nmsg, cookie);
   }
   
   // now check if we have the whole message
   // if so, add to pending recv list and remove from htable
   if (req) {
     if (!( req->mmask ^ ~(~((uint64_t)0)<<req->num_entries))) {
-      dbg_info("removing recv request %lu/0x%016lx", req->id, cookie);
-      htable_remove(sr_reqtable, cookie, NULL);
+      dbg_info("adding recv request to pending recv list: %lu/0x%016lx", req->id, cookie);
       SAFE_SLIST_INSERT_HEAD(&pending_recv_list, req, slist);
       req->state = REQUEST_COMPLETED;
+      // send an ACK back to sender here
     }
   }
   else {
@@ -1076,7 +1079,7 @@ static int _photon_wait(uint32_t request) {
 #endif
 }
 
-static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request) {
+static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request) {
   char buf[40];
   inet_ntop(AF_INET6, addr->raw, buf, 40);
   dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
@@ -1147,7 +1150,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   } while (bytes_remaining);
   
   if (request != NULL) {
-    *request = request_id;
+    *request = (uint64_t)request_id;
     
     rc = __photon_setup_request_send(addr, bufs, m_count, request_id);
     if (rc != PHOTON_OK) {
@@ -1162,11 +1165,62 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   return PHOTON_ERROR;
 }
 
-static int _photon_recv(uint32_t request, void *ptr, uint64_t size, int flags) {
+static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
+  photonRequest req;
 
-  dbg_info("(%u, %p, %lu, %d)", request, ptr, size, flags);
+  dbg_info("(0x%016lx, %p, %lu, %d)", request, ptr, size, flags);
+  
+  if (htable_lookup(sr_reqtable, request, (void**)&req) == 0) {
+    if (request != req->id) {
+      dbg_err("request id mismatch!");
+      goto error_exit;
+    }
+    
+    uint64_t bytes_remaining;
+    uint64_t bytes_copied;
+    uint64_t copy_bytes;
+    
+    int rc, m_count, bind;
+
+    bytes_remaining = size;
+    bytes_copied = 0;
+    m_count = 0;
+    while (bytes_remaining) {
+      if (bytes_remaining > recvbuf->m_size) {
+        copy_bytes = recvbuf->m_size;
+      }
+      else {
+        copy_bytes = bytes_remaining;
+      }
+      
+      bind = req->bentries[m_count];
+      memcpy(ptr + bytes_copied, recvbuf->entries[bind].mptr, copy_bytes);
+
+      // re-arm this buffer entry for another recv
+      rc = __photon_backend->rdma_recv(NULL, (uintptr_t)recvbuf->entries[bind].base, recvbuf->p_size,
+                                       &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | bind);
+      if (rc != PHOTON_OK) {
+        dbg_err("could not post_recv() buffer entry");
+        goto error_exit;
+      }
+
+      m_count++;
+      bytes_copied += copy_bytes;
+      bytes_remaining -= copy_bytes;
+    }
+
+    dbg_info("removing recv request from sr_reqtable: 0x%016lx", request);
+    htable_remove(sr_reqtable, request, NULL);
+  }
+  else {
+    dbg_info("request not found in sr_reqtable");
+    goto error_exit;
+  }
 
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
@@ -2122,7 +2176,8 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
     *flag = 1;
     status->src_addr.global.proc_id = req->proc;
     status->request = req->id;
-    status->tag = -1;
+    status->tag = req->tag;
+    status->size = req->length;
     status->count = 1;
     status->error = 0;
     dbg_info("returning 0, flag:1");

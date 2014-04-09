@@ -42,8 +42,8 @@ typedef union photon_addr_t {
 /* status for photon requests */
 struct photon_status_t {
   union photon_addr_t src_addr;
+  uint64_t request;
   uint64_t size;
-  int request;
   int tag;
   int count;
   int error;
@@ -87,8 +87,8 @@ int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 
-int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
-int photon_recv(uint32_t request, void *ptr, uint64_t size, int flags);
+int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
+int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
 
 /* tell photon that we want to accept messages for certain addresses
    identified by address family af */

@@ -68,6 +68,7 @@ typedef struct photon_req_t {
   int bentries[MAX_BUF_ENTRIES];
   int num_entries;
   uint64_t mmask;
+  uint64_t length;
   photon_addr addr;
   struct photon_buffer_internal_t remote_buffer;
 } photon_req;
@@ -115,8 +116,8 @@ struct photon_backend_t {
   int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
   int (*wait)(uint32_t request);
   int (*wait_ledger)(uint32_t request);
-  int (*send)(photonAddr addr, void *ptr, uint64_t size, int flags, uint32_t *request);
-  int (*recv)(uint32_t request, void *ptr, uint64_t size, int flags);
+  int (*send)(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
+  int (*recv)(uint64_t request, void *ptr, uint64_t size, int flags);
   int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
   int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
   int (*post_send_request_rdma)(int proc, uint64_t size, int tag, uint32_t *request);
