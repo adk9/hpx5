@@ -39,12 +39,22 @@ static int _n_ranks(const boot_t *boot) {
   return smp->n_ranks;
 }
 
+static int _barrier(void) {
+  return 0;
+}
+
+static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
+  return 0;
+}
+
 boot_t *boot_new_smp(void) {
   smp_t *smp = malloc(sizeof(*smp));
-  smp->vtable.delete  = _delete;
-  smp->vtable.rank    = _rank;
-  smp->vtable.n_ranks = _n_ranks;
-  smp->rank           = 0;
-  smp->n_ranks        = 1;
+  smp->vtable.delete    = _delete;
+  smp->vtable.rank      = _rank;
+  smp->vtable.n_ranks   = _n_ranks;
+  smp->vtable.barrier   = _barrier;
+  smp->vtable.allgather = _allgather;
+  smp->rank             = 0;
+  smp->n_ranks          = 1;
   return &smp->vtable;
 }

@@ -50,26 +50,38 @@ static int _n_ranks(const boot_t *boot) {
 }
 
 
-boot_t *boot_new_mpirun(void) {
+static int _barrier(void) {
+  if (MPI_Barrier(MPI_COMM_WORLD) != MPI_SUCCESS)
+    return HPX_ERROR;
+  return HPX_SUCCESS;
+}
+
+
+static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
+  int e = MPI_Allgather((void*)in, n, MPI_BYTE, out, n, MPI_BYTE, MPI_COMM_WORLD);
+  if (e != MPI_SUCCESS)
+    return dbg_error("failed mpi->allgather().\n");
+  return HPX_SUCCESS;
+}
+
+
+boot_t *boot_new_mpi(void) {
   int init;
   MPI_Initialized(&init);
   if (!init) {
-    dbg_log("initializing MPI... ");
-    int provided;
-    if (MPI_Init_thread(0, NULL, MPI_THREAD_MULTIPLE, &provided)) {
-      dbg_log("not available.\n");
-      return NULL;
-    }
-    if (provided < MPI_THREAD_SERIALIZED) {
-      dbg_log("not compatible.\n");
+    dbg_log("initializing MPI boostrap... ");
+    if (MPI_Init(0, NULL) != MPI_SUCCESS) {
+      dbg_error("failed to bootstrap with MPI.\n");
       return NULL;
     }
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable.delete  = _delete;
-  mpi->vtable.rank    = _rank;
-  mpi->vtable.n_ranks = _n_ranks;
+  mpi->vtable.delete    = _delete;
+  mpi->vtable.rank      = _rank;
+  mpi->vtable.n_ranks   = _n_ranks;
+  mpi->vtable.barrier   = _barrier;
+  mpi->vtable.allgather = _allgather;
 
   if ((MPI_Comm_rank(MPI_COMM_WORLD, &mpi->rank) != MPI_SUCCESS) ||
       (MPI_Comm_size(MPI_COMM_WORLD, &mpi->n_ranks) != MPI_SUCCESS)) {
