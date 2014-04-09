@@ -230,6 +230,10 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc,
    this setup method also returns the request pointer... */
 static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int bindex, int nbufs, uint64_t request) {
   photonRequest req;
+  uint32_t request_id;
+
+  request_id = INC_COUNTER(curr_cookie);
+  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
 
   req = __photon_get_request();
   if (!req) {
@@ -237,15 +241,15 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int b
     goto error_exit;
   }
 
-  req->id = request;
+  req->id = request_id;
   req->state = REQUEST_PENDING;
   req->type = SENDRECV;
   req->num_entries = nbufs;
   req->mmask |= (1<<msn);
   req->bentries[msn] = bindex;
   
-  dbg_info("Inserting the new recv request into the sr table: 0x%016lx/%p",
-           request, req);
+  dbg_info("Inserting the new recv request into the sr table: %u/0x%016lx/%p",
+           request_id, request, req);
   if (htable_insert(sr_reqtable, request, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
@@ -726,8 +730,8 @@ static int __photon_handle_recv_event(uint64_t id) {
   // if so, add to pending recv list and remove from htable
   if (req) {
     if (!( req->mmask ^ ~(~((uint64_t)0)<<req->num_entries))) {
-      dbg_info("removing recv request 0x%016lx", req->id);
-      htable_remove(sr_reqtable, req->id, NULL);
+      dbg_info("removing recv request %lu/0x%016lx", req->id, cookie);
+      htable_remove(sr_reqtable, cookie, NULL);
       SAFE_SLIST_INSERT_HEAD(&pending_recv_list, req, slist);
       req->state = REQUEST_COMPLETED;
     }
