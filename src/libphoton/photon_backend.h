@@ -58,6 +58,7 @@ typedef struct proc_info_t {
 /* photon transfer requests */
 typedef struct photon_req_t {
   LIST_ENTRY(photon_req_t) list;
+  SLIST_ENTRY(photon_req_t) slist;
   uint64_t id;
   int state;
   int flags;
@@ -94,7 +95,7 @@ typedef struct photon_ud_hdr_t {
   uint32_t src_addr;
   uint32_t length;
   uint16_t msn;
-  uint16_t maxn;
+  uint16_t nmsg;
 } photon_ud_hdr;
 
 /* TODO: fix parameters and generalize API */

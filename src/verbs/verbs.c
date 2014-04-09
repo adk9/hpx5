@@ -478,7 +478,8 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
     .lkey = lbuf->priv.key0
   };
   
-  args.proc = addr->global.proc_id;
+  if (addr)
+    args.proc = addr->global.proc_id;
   args.id = id;
   args.sg_list = &list;
   args.num_sge = 1;
