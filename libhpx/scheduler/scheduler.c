@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "libsync/sync.h"
 #include "libsync/barriers.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
@@ -29,6 +30,7 @@
 #include "libhpx/scheduler.h"
 #include "thread.h"
 #include "worker.h"
+
 
 scheduler_t *
 scheduler_new(struct network *network, int cores, int workers, int stack_size) {
@@ -39,6 +41,7 @@ scheduler_new(struct network *network, int cores, int workers, int stack_size) {
   }
 
   sync_store(&s->next_id, 0, SYNC_RELEASE);
+  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
 
   s->cores     = cores;
   s->n_workers = workers;
@@ -122,3 +125,4 @@ void scheduler_abort(scheduler_t *sched) {
   for (int i = 0, e = sched->n_workers; i < e; ++i)
     worker_cancel(sched->workers[i]);
 }
+

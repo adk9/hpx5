@@ -235,7 +235,6 @@ int hpx_get_num_ranks(void);
 int hpx_get_num_threads(void);
 int hpx_get_my_thread_id(void);
 
-
 /// ----------------------------------------------------------------------------
 /// HPX thread interface.
 ///
@@ -245,6 +244,19 @@ int hpx_get_my_thread_id(void);
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_thread_current_target(void);
 hpx_addr_t hpx_thread_current_cont(void);
+
+
+/// ----------------------------------------------------------------------------
+/// Generates a consecutive new ID for a thread.
+///
+/// The first time this is called in a lightweight thread, it assigns the thread
+/// the next available ID. Each time it's called after that it returns that same
+/// id.
+///
+/// @returns < 0 if there is an error, otherwise a unique, compact id for the
+///          calling thread
+/// ----------------------------------------------------------------------------
+int hpx_thread_get_tls_id(void);
 
 
 /// ----------------------------------------------------------------------------

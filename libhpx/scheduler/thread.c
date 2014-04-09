@@ -37,8 +37,8 @@
 
 
 static int _thread_size = 0;
-static uint32_t _mxcsr = 0;
-static uint16_t _fpucw = 0;
+static uint32_t  _mxcsr = 0;
+static uint16_t  _fpucw = 0;
 
 
 static void HPX_CONSTRUCTOR _init_thread(void) {
@@ -104,8 +104,9 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
   frame->rbp     = &frame->rip;
   frame->rip     = f;
 
-  // set the stack pointer
+  // set the stack stuff
   stack->sp      = frame;
+  stack->tls_id  = -1;
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
