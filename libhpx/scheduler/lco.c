@@ -106,7 +106,7 @@ static int _get_action(int *n) {
 static int _wait_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&args))
+  if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   _wait_local(lco);
@@ -118,7 +118,7 @@ static int _wait_action(void *args) {
 static int _delete_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&args))
+  if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   lco->vtable->delete(lco);
