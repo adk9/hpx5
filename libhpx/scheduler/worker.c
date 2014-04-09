@@ -179,8 +179,7 @@ static hpx_parcel_t *_steal(void) {
 /// Check the network during scheduling.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_network(void) {
-  hpx_parcel_t *p = network_recv(self.network);
-  return (p) ? _bind(p) : NULL;
+  return network_recv(self.network);
 }
 
 
@@ -234,25 +233,32 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if there are ready threads, select the next one
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
   if (p)
-    return p;
+    goto exit;
 
   // no ready threads try to get some work from the network, if we're not in a
   // hurry
   if (!fast)
     if ((p = _network()))
-      return p;
+      goto exit;
 
   // try to steal some work, if we're not in a hurry
   if (!fast)
     if ((p = _steal()))
-      return p;
+      goto exit;
 
   // as a last resort, return final, or a new empty action
-  if (final)
-    return final;
+  if (final) {
+    p = final;
+    goto exit;
+  }
 
   ++self.spins;
-  return _bind(hpx_parcel_acquire(0));
+  p = hpx_parcel_acquire(0);
+
+  // lazy stack binding
+ exit:
+  assert(p);
+  return (p->stack) ? p : _bind(p);
 }
 
 
@@ -361,7 +367,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
   self.spawns++;
-  sync_chase_lev_ws_deque_push(&self.work, _bind(p));
+  sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
 
 
