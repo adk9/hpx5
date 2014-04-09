@@ -24,7 +24,6 @@
 
 #include "hpx/hpx.h"
 
-#include "contrib/uthash/src/utlist.h"
 #include "libsync/sync.h"
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
@@ -33,7 +32,7 @@
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
-#include "libhpx/parcel.h"                      // serves us as thread-control
+#include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "lco.h"
@@ -62,7 +61,7 @@ static __thread struct worker {
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
   lco_node_t     *lco_nodes;                    // free LCO nodes
-  // thread_t            *free;                    // local thread freelist
+  ustack_t          *stacks;                    // local free stacks
   chase_lev_ws_deque_t work;                    // my work
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_t    *scheduler;                    // the scheduler we belong to
@@ -79,7 +78,7 @@ static __thread struct worker {
   .sp        = NULL,
   .current   = NULL,
   .lco_nodes = NULL,
-  // .free      = NULL,
+  .stacks    = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
   .scheduler = NULL,
@@ -141,8 +140,16 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns - a new lightweight thread, as defined by the parcel
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_bind(hpx_parcel_t *p) {
-  assert(!p->sp);
-  p->sp = thread_new(p, _thread_enter);
+  assert(!p->stack);
+  ustack_t *stack = self.stacks;
+  if (stack) {
+    self.stacks = stack->sp;
+    thread_init(stack, p, _thread_enter);
+  }
+  else {
+    stack = thread_new(p, _thread_enter);
+  }
+  p->stack = stack;
   return p;
 }
 
@@ -151,7 +158,8 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 /// Steal a lightweight thread during scheduling.
 ///
 /// NB: we can be much smarter about who to steal from and how much to
-/// steal. Ultimately though, we're building a distributed
+/// steal. Ultimately though, we're building a distributed runtime though, so
+/// SMP work stealing isn't that big a deal.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_steal(void) {
   int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
@@ -177,11 +185,16 @@ static hpx_parcel_t *_network(void) {
 
 
 /// ----------------------------------------------------------------------------
-/// The final transfer continuation that we use to exit the scheduler.
+/// The final transfer continuation that we use to exit a thread.
+///
+/// We push the stack associated with the previous parcel onto the stack
+/// freelist, release the previous parcel, and then update the current parcel.
 /// ----------------------------------------------------------------------------
 static int _exit_free(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = self.current;
   self.current = to;
+  hpx_parcel_t *prev = env;
+  prev->stack->sp = self.stacks;
+  self.stacks = prev->stack;
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
@@ -213,8 +226,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // NB: leverages non-public knowledge about transfer asm
   atomic_int_t shutdown;
   sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
-  if (shutdown)
-    thread_transfer((hpx_parcel_t*)&self.sp, _exit_free, NULL);
+  if (shutdown) {
+    void **temp = &self.sp;
+    thread_transfer((hpx_parcel_t*)&temp, _exit_free, self.current);
+  }
 
   // if there are ready threads, select the next one
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
@@ -349,13 +364,15 @@ void scheduler_spawn(hpx_parcel_t *p) {
   sync_chase_lev_ws_deque_push(&self.work, _bind(p));
 }
 
+
 static int _checkpoint_ws_push(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = self.current;
   self.current = to;
-  prev->sp = sp;
+  hpx_parcel_t *prev = env;
+  prev->stack->sp = sp;
   sync_chase_lev_ws_deque_push(&self.work, prev);
   return HPX_SUCCESS;
 }
+
 
 /// Yields the current thread.
 ///
@@ -372,7 +389,7 @@ void scheduler_yield(void) {
     return;
 
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_ws_push, NULL);
+  thread_transfer(to, _checkpoint_ws_push, self.current);
 }
 
 
@@ -380,22 +397,12 @@ void scheduler_yield(void) {
 /// A transfer continuation that pushes the previous thread onto a an lco
 /// queue.
 /// ----------------------------------------------------------------------------
-static int _checkpoint_lco(hpx_parcel_t *to, void *sp, void *env) {
+static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
   lco_t *lco = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
-  prev->sp = sp;
-
-  lco_node_t *n = self.lco_nodes;
-  if (n) {
-    self.lco_nodes = n->next;
-  }
-  else {
-    n = malloc(sizeof(*n));
-  }
-  n->next = NULL;
-  n->data = prev;
-  lco_enqueue_and_unlock(lco, n);
+  prev->stack->sp = sp;
+  lco_unlock(lco);
   return HPX_SUCCESS;
 }
 
@@ -415,7 +422,19 @@ static int _checkpoint_lco(hpx_parcel_t *to, void *sp, void *env) {
 /// @precondition The calling thread must hold @p lco's lock.
 void scheduler_wait(lco_t *lco) {
   hpx_parcel_t *to = _schedule(true, NULL);
-  thread_transfer(to, _checkpoint_lco, lco);
+
+  lco_node_t *n = self.lco_nodes;
+  if (n) {
+    self.lco_nodes = n->next;
+  }
+  else {
+    n = malloc(sizeof(*n));
+  }
+  n->next = NULL;
+  n->data = self.current;
+  lco_enqueue(lco, n);
+
+  thread_transfer(to, _unlock_lco, lco);
   lco_lock(lco);
 }
 
@@ -455,7 +474,7 @@ void scheduler_signal(lco_t *lco) {
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN _thread_exit(void) {
   hpx_parcel_t *to = _schedule(false, NULL);
-  thread_transfer(to, _exit_free, NULL);
+  thread_transfer(to, _exit_free, self.current);
   unreachable();
 }
 
