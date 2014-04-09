@@ -68,9 +68,10 @@ static __thread struct worker {
   network_t        *network;                    // could have per-worker port
 
   // statistics
-  unsigned long       spins;
-  unsigned long      spawns;
-  unsigned long      steals;
+  unsigned long     n_spins;
+  unsigned long    n_spawns;
+  unsigned long    n_steals;
+  unsigned long    n_stacks;
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -83,9 +84,10 @@ static __thread struct worker {
   .shutdown  = 0,
   .scheduler = NULL,
   .network   = NULL,
-  .spins     = 0,
-  .spawns    = 0,
-  .steals    = 0
+  .n_spins   = 0,
+  .n_spawns  = 0,
+  .n_steals  = 0,
+  .n_stacks  = 0,
 };
 
 
@@ -148,6 +150,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   }
   else {
     stack = thread_new(p, _thread_enter);
+    ++self.n_stacks;
   }
   p->stack = stack;
   return p;
@@ -169,7 +172,7 @@ static hpx_parcel_t *_steal(void) {
   worker_t *victim = self.scheduler->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p)
-    ++self.steals;
+    ++self.n_steals;
 
   return p;
 }
@@ -252,7 +255,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
-  ++self.spins;
+  ++self.n_spins;
   p = hpx_parcel_acquire(0);
 
   // lazy stack binding
@@ -331,8 +334,9 @@ void *worker_run(scheduler_t *sched) {
   sync_barrier_join(self.scheduler->barrier, self.id);
   sync_chase_lev_ws_deque_fini(&self.work);
 
-  printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu\n",
-         hpx_get_my_rank(), self.id, self.spins, self.spawns, self.steals);
+  printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu, stacks:%lu\n",
+         hpx_get_my_rank(), self.id, self.n_spins, self.n_spawns,
+         self.n_steals, self.n_stacks);
 
   return NULL;
 }
@@ -366,7 +370,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
-  self.spawns++;
+  self.n_spawns++;
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
 
