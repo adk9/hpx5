@@ -508,8 +508,6 @@ static int verbs_get_event(photonEventStatus stat) {
     goto error_exit;
   }
   
-  dbg_err("got event: 0x%016lx", wc.wr_id);
-  
   stat->id = wc.wr_id;
   stat->proc = 0x0;
   stat->priv = NULL;

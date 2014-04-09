@@ -20,6 +20,7 @@
 /* this should not exceed MCA max_qp_wr (typically 16k) */
 #define LEDGER_SIZE          512
 #define SMSG_SIZE            (4 * 4096)
+#define MAX_BUF_ENTRIES      64
 
 #define LEDGER               1
 #define EVQUEUE              2
@@ -57,12 +58,15 @@ typedef struct proc_info_t {
 /* photon transfer requests */
 typedef struct photon_req_t {
   LIST_ENTRY(photon_req_t) list;
-  uint32_t id;
+  uint64_t id;
   int state;
   int flags;
   int type;
   int proc;
   int tag;
+  int bentries[MAX_BUF_ENTRIES];
+  int num_entries;
+  uint64_t mmask;
   photon_addr addr;
   struct photon_buffer_internal_t remote_buffer;
 } photon_req;
@@ -88,6 +92,7 @@ struct photon_mem_register_req {
 typedef struct photon_ud_hdr_t {
   uint32_t request;
   uint32_t src_addr;
+  uint32_t length;
   uint16_t msn;
   uint16_t maxn;
 } photon_ud_hdr;

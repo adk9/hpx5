@@ -53,11 +53,13 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
     mbuf->entries[i].base = (void*)(mbuf->db)->buf.addr + (i * p_size);
     mbuf->entries[i].hptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset;
     mbuf->entries[i].mptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset + p_hsize;
-    mbuf->entries[i].empty = false;
+    mbuf->entries[i].empty = true;
   }
 
   mbuf->s_index = 0;
   mbuf->status = 0;
+
+  pthread_mutex_init(&mbuf->buf_lock, NULL);
 
   return mbuf;
 
@@ -79,4 +81,31 @@ int photon_msgbuffer_free(photonMsgBuf mbuf) {
     return PHOTON_OK;
   }
   return PHOTON_ERROR;
+}
+
+photon_mbe *photon_msgbuffer_get_entry(photonMsgBuf mbuf, int *ind) {
+  pthread_mutex_lock(&mbuf->buf_lock);
+  {
+    while (mbuf->entries[mbuf->s_index].empty == false) {
+      mbuf->s_index++;
+      if (mbuf->s_index == mbuf->p_count)
+        mbuf->s_index = 0;
+    }
+    mbuf->entries[mbuf->s_index].empty = false;
+  }
+  pthread_mutex_unlock(&mbuf->buf_lock);
+
+  *ind = mbuf->s_index;
+  return &mbuf->entries[mbuf->s_index];
+}
+
+int photon_msgbuffer_free_entry(photonMsgBuf mbuf, int ind) {
+  if ((ind < 0) || (ind >= mbuf->p_count)) {
+    dbg_err("index is out of bounds");
+    return PHOTON_ERROR;
+  }
+
+  mbuf->entries[ind].empty = true;
+
+  return PHOTON_OK;
 }
