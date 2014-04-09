@@ -230,6 +230,17 @@ lco_trigger(lco_t *lco) {
 
 
 void
+lco_enqueue(lco_t *lco, lco_node_t *node) {
+  uintptr_t bits = (uintptr_t)lco->queue;
+  uintptr_t state = bits & _STATE_MASK;
+  lco_node_t *queue = (lco_node_t*)(bits & _QUEUE_MASK);
+  node->next = queue;
+  node = (lco_node_t*)((uintptr_t)node | state);
+  sync_store(&lco->queue, node, SYNC_RELEASE);
+}
+
+
+void
 lco_enqueue_and_unlock(lco_t *lco, lco_node_t *node) {
   uintptr_t bits = (uintptr_t)lco->queue;
   uintptr_t state = bits & _STATE_MASK & _UNLOCK_MASK;

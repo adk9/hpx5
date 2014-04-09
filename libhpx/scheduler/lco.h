@@ -148,6 +148,9 @@ HPX_INTERNAL lco_node_t *lco_trigger(lco_t *lco)
   HPX_NON_NULL(1);
 
 
+HPX_INTERNAL void lco_enqueue(lco_t *lco, lco_node_t *node)
+  HPX_NON_NULL(1, 2);
+
 /// ----------------------------------------------------------------------------
 /// Atomically add a thread to the LCO's wait queue, and unlock the LCO.
 ///
