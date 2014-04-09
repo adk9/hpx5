@@ -76,8 +76,8 @@ typedef struct {
 #endif
 
 
-static _frame_t *_get_top_frame(char *thread) {
-  return (_frame_t*)(thread + _thread_size - sizeof(_frame_t));
+static _frame_t *_get_top_frame(ustack_t *stack) {
+  return (_frame_t*)((char*)stack + _thread_size - sizeof(_frame_t));
 }
 
 
@@ -95,24 +95,24 @@ thread_set_stack_size(int stack_bytes) {
 }
 
 
-void *thread_init(char *thread, hpx_parcel_t *parcel, thread_entry_t f) {
+void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
   // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(thread);
+  _frame_t *frame = _get_top_frame(stack);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
   frame->rdi     = parcel;
   frame->rbp     = &frame->rip;
   frame->rip     = f;
 
-  // return the stack pointer
-  return frame;
+  // set the stack pointer
+  stack->sp      = frame;
 }
 
 #include "libsync/sync.h"
 
 static uint64_t _stacks = 0;
 
-void *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
+ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   sync_fadd(&_stacks, 1, SYNC_ACQ_REL);
   // Allocate a page-aligned thread structure, along with a guard page to detect
   // stack overflow.
@@ -128,11 +128,13 @@ void *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
     hpx_abort();
   }
 
-  return thread_init(m + HPX_PAGE_SIZE, parcel, f);
+  ustack_t *stack = (ustack_t*)(m + HPX_PAGE_SIZE);
+  thread_init(stack, parcel, f);
+  return stack;
 }
 
-void thread_delete(char *thread) {
-  char *block = thread - HPX_PAGE_SIZE;
+void thread_delete(ustack_t *stack) {
+  char *block = (char*)stack - HPX_PAGE_SIZE;
   int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
   if (e) {
     dbg_error("failed to unprotect a guard page.\n");

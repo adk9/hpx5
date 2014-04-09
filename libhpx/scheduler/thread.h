@@ -20,6 +20,14 @@
 
 #include "hpx/hpx.h"
 
+
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+typedef struct ustack {
+  void *sp;
+  char  stack[];
+} ustack_t;
+
 /// ----------------------------------------------------------------------------
 /// This is the type of an HPX thread entry function.
 /// ----------------------------------------------------------------------------
@@ -45,8 +53,8 @@ HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
 /// @returns      - NULL if there is an error, or a pointer to the stack pointer
 ///                 to transfer to in order to start this thread
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void *thread_init(char *thread, hpx_parcel_t *parcel,
-                               thread_entry_t f)
+HPX_INTERNAL void thread_init(ustack_t *stack, hpx_parcel_t *parcel,
+                              thread_entry_t f)
   HPX_NON_NULL(1, 2);
 
 
@@ -57,10 +65,10 @@ HPX_INTERNAL void *thread_init(char *thread, hpx_parcel_t *parcel,
 ///
 /// @param parcel - The parcel that is generating this thread.
 /// @param      f - The entry function for the thread.
-/// @returns      - NULL if there is an error, or a pointer to the stack pointer
-///                 to transfer to in order to start this thread
+/// @returns      - NULL if there is an error, or a pointer to the sp for the
+///                 stack
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
+HPX_INTERNAL ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
   HPX_NON_NULL(1) HPX_MALLOC;
 
 
@@ -69,7 +77,7 @@ HPX_INTERNAL void *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
 ///
 /// @param thread - The thread pointer.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_delete(char *stack) HPX_NON_NULL(1);
+HPX_INTERNAL void thread_delete(ustack_t *stack) HPX_NON_NULL(1);
 
 
 /// ----------------------------------------------------------------------------
@@ -79,7 +87,10 @@ HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 
-typedef int (*thread_transfer_cont_t)(hpx_parcel_t *t, void *sp, void *env);
+/// ----------------------------------------------------------------------------
+/// The transfer continuation function type.
+/// ----------------------------------------------------------------------------
+typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 
 
 /// ----------------------------------------------------------------------------
@@ -91,12 +102,14 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *t, void *sp, void *env);
 ///
 /// The continuation's return value is also returned by transfer.
 ///
-/// @param   t - the parcel to transfer to (really void **sp)
-/// @param env - the environment for the continuation
-/// @param   c - a continuation function to handle the old stack pointer
+/// @param    p - the parcel to transfer to
+/// @param cont - a continuation function to handle the old stack pointer
+/// @param  env - the environment for the continuation
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_transfer(hpx_parcel_t *t, thread_transfer_cont_t c, void *env)
+HPX_INTERNAL int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont,
+                                 void *env)
   HPX_NON_NULL(1, 2);
+
 
 
 #endif  // LIBHPX_THREAD_H
