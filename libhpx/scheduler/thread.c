@@ -108,6 +108,17 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
   stack->sp      = frame;
 }
 
+ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
+  ustack_t *stack = valloc(_thread_size);
+  thread_init(stack, parcel, f);
+  return stack;
+}
+
+void thread_delete(ustack_t *stack) {
+  free(stack);
+}
+
+#if 0
 #include "libsync/sync.h"
 
 static uint64_t _stacks = 0;
@@ -142,3 +153,5 @@ void thread_delete(ustack_t *stack) {
   }
   free(block);
 }
+
+#endif
