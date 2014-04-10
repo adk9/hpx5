@@ -16,7 +16,6 @@
 #include "hpx/attributes.h"
 #include "libhpx/transport.h"
 
-
 /// ----------------------------------------------------------------------------
 /// The transport interface is defined as an abstract class.
 /// ----------------------------------------------------------------------------
@@ -55,9 +54,24 @@ struct transport {
 };
 
 
-HPX_INTERNAL transport_t *transport_new_photon(const struct boot *boot) HPX_NON_NULL(1);
-HPX_INTERNAL transport_t *transport_new_mpi(const struct boot *boot) HPX_NON_NULL(1);
-HPX_INTERNAL transport_t *transport_new_portals(const struct boot *boot) HPX_NON_NULL(1);
-HPX_INTERNAL transport_t *transport_new_smp(const struct boot *boot) HPX_NON_NULL(1);
+HPX_INTERNAL transport_t *transport_new_photon(const struct boot *boot,
+                                               struct gas *gas)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL transport_t *transport_new_mpi(const struct boot *boot,
+                                            struct gas *gas)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL transport_t *transport_new_portals(const struct boot *boot,
+                                                struct gas *gas)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL transport_t *transport_new_smp(const struct boot *boot,
+                                            struct gas *gas)
+  HPX_NON_NULL(1);
+
 
 #endif // LIBHPX_TRANSPORTS_H

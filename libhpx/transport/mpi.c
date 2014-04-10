@@ -29,9 +29,9 @@
 /// the MPI transport caches the number of ranks
 typedef struct {
   transport_t  vtable;
-  int          rank;
-  int          n_ranks;
-  progress_t  *progress;
+  int            rank;
+  int         n_ranks;
+  progress_t*progress;
 } mpi_t;
 
 
@@ -185,7 +185,7 @@ static void _progress(transport_t *t, bool flush) {
     network_progress_flush(mpi->progress);
 }
 
-transport_t *transport_new_mpi(const boot_t *boot) {
+transport_t *transport_new_mpi(const boot_t *boot, struct gas *gas) {
   int val = 0;
   MPI_Initialized(&val);
 
@@ -217,7 +217,7 @@ transport_t *transport_new_mpi(const boot_t *boot) {
   mpi->rank                  = boot_rank(boot);
   mpi->n_ranks               = boot_n_ranks(boot);
 
-  mpi->progress              = network_progress_new(boot, &mpi->vtable);
+  mpi->progress              = network_progress_new(boot, &mpi->vtable, gas);
   if (!mpi->progress) {
     dbg_error("failed to start the transport progress loop.\n");
     hpx_abort();

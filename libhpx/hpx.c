@@ -30,6 +30,7 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/boot.h"
+#include "libhpx/gas.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -38,7 +39,6 @@
 
 #include "network/allocator.h"
 #include "network/heavy.h"
-#include "network/gas.h"
 
 /// ----------------------------------------------------------------------------
 /// Global libhpx module objects.
@@ -46,6 +46,7 @@
 /// These are the global objects we allocate and link together in hpx_init().
 /// ----------------------------------------------------------------------------
 static boot_t           *_boot = NULL;
+static gas_t             *_gas = NULL;
 static transport_t *_transport = NULL;
 static allocator_t *_allocator = NULL;
 static network_t     *_network = NULL;
@@ -79,6 +80,11 @@ static int _cleanup(int code) {
     _transport = NULL;
   }
 
+  if (_gas) {
+    gas_delete(_gas);
+    _gas = NULL;
+  }
+
   if (_boot) {
     boot_delete(_boot);
     _boot = NULL;
@@ -94,9 +100,11 @@ int hpx_init(const hpx_config_t *cfg) {
   if (_boot == NULL)
     return _cleanup(dbg_error("failed to create boot manager.\n"));
 
-  gas_init(_boot);
+  _gas = gas_pgas_new(_boot);
+  if(_gas == NULL)
+    return _cleanup(dbg_error("failed to create global address space.\n"));
 
-  _transport = transport_new(_boot);
+  _transport = transport_new(_boot, _gas);
   if (_transport == NULL)
     return _cleanup(dbg_error("failed to create transport.\n"));
 
@@ -291,4 +299,23 @@ void hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
   abort();
+}
+
+
+hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes) {
+  return gas_global_alloc(n, bytes, _gas);
+}
+
+bool hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
+  return gas_try_pin(addr, local, _gas);
+}
+
+
+void hpx_addr_unpin(const hpx_addr_t addr) {
+  gas_unpin(addr, _gas);
+}
+
+
+hpx_addr_t hpx_alloc(size_t bytes) {
+  return gas_alloc(bytes, _gas);
 }

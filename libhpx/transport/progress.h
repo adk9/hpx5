@@ -15,25 +15,42 @@
 
 #include "hpx/hpx.h"
 
+struct gas;
+
 typedef struct request request_t;
 struct request {
-  request_t    *next;
+  request_t      *next;
   hpx_parcel_t *parcel;
-  char          request[];
+  char       request[];
 };
 
 typedef struct progress progress_t;
 struct progress {
   const boot_t      *boot;
   transport_t       *transport;
+  struct gas        *gas;
   request_t         *free;              // request freelist
   request_t         *pending_sends;     // outstanding send requests
   request_t         *pending_recvs;     // outstanding recv requests
 };
 
-HPX_INTERNAL progress_t *network_progress_new(const boot_t *boot, transport_t *transport) HPX_NON_NULL(1) HPX_MALLOC;
-HPX_INTERNAL void network_progress_poll(progress_t *p) HPX_NON_NULL(1);
-HPX_INTERNAL void network_progress_flush(progress_t *p) HPX_NON_NULL(1);
-HPX_INTERNAL void network_progress_delete(progress_t *p) HPX_NON_NULL(1);
+
+HPX_INTERNAL progress_t *network_progress_new(const boot_t *boot,
+                                              transport_t *transport,
+                                              struct gas *gas)
+  HPX_NON_NULL(1) HPX_MALLOC;
+
+
+HPX_INTERNAL void network_progress_poll(progress_t *p)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL void network_progress_flush(progress_t *p)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL void network_progress_delete(progress_t *p)
+  HPX_NON_NULL(1);
+
 
 #endif // LIBHPX_TRANSPORT_PROGRESS_H

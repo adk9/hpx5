@@ -140,6 +140,7 @@ AC_CONFIG_FILES([
   libsync/arch/Makefile
   libhpx/Makefile
   libhpx/boot/Makefile
+  libhpx/gas/Makefile
   libhpx/transport/Makefile
   libhpx/network/Makefile
   libhpx/system/Makefile

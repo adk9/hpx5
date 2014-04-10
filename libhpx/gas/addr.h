@@ -10,14 +10,15 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_GAS_H
-#define LIBHPX_NETWORK_GAS_H
+#ifndef LIBHPX_GAS_ADDR_H
+#define LIBHPX_GAS_ADDR_H
 
 #include "hpx/hpx.h"
 
-struct boot;
+static inline uint32_t addr_block_id(hpx_addr_t addr) {
+  assert(addr.block_bytes);
+  return addr.base_id + (addr.offset / addr.block_bytes);
+}
 
-void gas_init(const struct boot *boot);
-int gas_where(const hpx_addr_t addr);
 
-#endif // LIBHPX_NETWORK_GAS_H
+#endif // LIBHPX_GAS_ADDR_H
