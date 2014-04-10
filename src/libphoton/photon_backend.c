@@ -64,7 +64,7 @@ static int __photon_wait_event(photonRequest req);
 
 static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request);
 static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int proc, uint32_t *request);
-static int __photon_setup_request_send(photonAddr addr, char *bufs, int nbufs, uint32_t request);
+static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, uint32_t request);
 static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize, int bindex, int nbufs, uint64_t request);
 
 static int __photon_handle_send_event(photonRequest req, uint64_t id);
@@ -83,6 +83,7 @@ struct photon_backend_t photon_default_backend = {
   .initialized = _photon_initialized,
   .init = _photon_init,
   .finalize = _photon_finalize,
+  .get_dev_addr = NULL,
   .register_addr = NULL,
   .unregister_addr = NULL,
   .register_buffer = _photon_register_buffer,
@@ -263,7 +264,7 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int m
 }
 
 /* generates a new request for the send wr */
-static int __photon_setup_request_send(photonAddr addr, char *bufs, int nbufs, uint32_t request) {
+static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, uint32_t request) {
   photonRequest req;
 
   req = __photon_get_request();
@@ -651,6 +652,7 @@ error_exit:
 static int __photon_handle_send_event(photonRequest req, uint64_t id) {
   photonRequest creq = NULL;
   uint32_t cookie;
+  int i;
 
   dbg_info("handling send completion with id: 0x%016lx", id);
 
@@ -675,6 +677,10 @@ static int __photon_handle_send_event(photonRequest req, uint64_t id) {
       if (!( req->mmask ^ ~(~0<<req->num_entries))) {
         // additional condition would be ACK from receiver
         creq->state = REQUEST_COMPLETED;
+        // mark sendbuf entries as available again
+        for (i=0; i<req->num_entries; i++) {
+          photon_msgbuffer_free_entry(sendbuf, req->bentries[i]);
+        }
       }
     }
     else {
@@ -1080,11 +1086,11 @@ static int _photon_wait(uint32_t request) {
 }
 
 static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request) {
-  char buf[40];
-  inet_ntop(AF_INET6, addr->raw, buf, 40);
-  dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+  //char buf[40];
+  //inet_ntop(AF_INET6, addr->raw, buf, 40);
+  //dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
 
-  char bufs[MAX_BUF_ENTRIES];
+  int bufs[MAX_BUF_ENTRIES];
   uint32_t request_id;
   uint64_t cookie;
   uint64_t bytes_remaining, bytes_sent, send_bytes;
@@ -1137,6 +1143,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     }
 
     dbg_info("sending mbuf [%d/%d], size=%lu, header size=%d", m_count, num_msgs-1, send_bytes, sendbuf->p_hsize);
+
     buf_addr = (uintptr_t)bentry->hptr;
     rc = __photon_backend->rdma_send(addr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie);
     if (rc != PHOTON_OK) {
@@ -1192,7 +1199,7 @@ static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
       else {
         copy_bytes = bytes_remaining;
       }
-      
+
       bind = req->bentries[m_count];
       memcpy(ptr + bytes_copied, recvbuf->entries[bind].mptr, copy_bytes);
 
@@ -2164,15 +2171,16 @@ error_exit:
 }
 
 static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
-  char buf[40];
-  inet_ntop(AF_INET6, addr->raw, buf, 40);
-  dbg_info("(%s)", buf);
+  //char buf[40];
+  //inet_ntop(AF_INET6, addr->raw, buf, 40);
+  //dbg_info("(%s)", buf);
 
   photonRequest req;
   int rc;
  
   req = SLIST_FIRST(&pending_recv_list);
   if (req) {
+    SAFE_SLIST_REMOVE_HEAD(&pending_recv_list, slist);
     *flag = 1;
     status->src_addr.global.proc_id = req->proc;
     status->request = req->id;

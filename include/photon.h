@@ -95,6 +95,10 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
 int photon_register_addr(photonAddr addr, int af);
 int photon_unregister_addr(photonAddr addr, int af);
 
+/* fill in addr with the local device address, using af as the hint
+   default will be AF_INET6 and port gid */
+int photon_get_dev_addr(int af, photonAddr addr);
+
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);

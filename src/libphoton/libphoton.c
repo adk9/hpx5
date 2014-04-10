@@ -100,6 +100,7 @@ int photon_init(photonConfig cfg) {
   __photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
   __photon_default->register_buffer = (be->register_buffer)?(be->register_buffer):__photon_default->register_buffer;
   __photon_default->unregister_buffer = (be->unregister_buffer)?(be->unregister_buffer):__photon_default->unregister_buffer;
+  __photon_default->get_dev_addr = (be->get_dev_addr)?(be->get_dev_addr):__photon_default->get_dev_addr;
   __photon_default->register_addr = (be->register_addr)?(be->register_addr):__photon_default->register_addr;
   __photon_default->unregister_addr = (be->unregister_addr)?(be->unregister_addr):__photon_default->unregister_addr;
   __photon_default->test = (be->test)?(be->test):__photon_default->test;
@@ -158,6 +159,15 @@ int photon_unregister_buffer(void *buf, uint64_t size) {
   }
 
   return __photon_default->unregister_buffer(buf, size);
+}
+
+int photon_get_dev_addr(int af, photonAddr addr) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->get_dev_addr(af, addr);
 }
 
 int photon_register_addr(photonAddr addr, int af) {

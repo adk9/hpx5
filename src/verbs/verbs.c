@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "photon_backend.h"
 #include "photon_buffer.h"
@@ -52,6 +53,7 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id);
 static int verbs_get_event(photonEventStatus stat);
+static int verbs_get_dev_addr(int af, photonAddr addr);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
 
@@ -91,6 +93,7 @@ struct photon_backend_t photon_verbs_backend = {
   .get_info = verbs_get_info,
   .set_info = verbs_set_info,
   /* API */
+  .get_dev_addr = verbs_get_dev_addr,
   .register_addr = verbs_register_addr,
   .unregister_addr = verbs_unregister_addr,
   .register_buffer = NULL,
@@ -517,6 +520,19 @@ static int verbs_get_event(photonEventStatus stat) {
 
 error_exit:
   return PHOTON_ERROR;
+}
+
+static int verbs_get_dev_addr(int af, photonAddr addr) {
+  if (!addr) {
+    return PHOTON_ERROR;
+  }
+  if (af == AF_INET) {
+    addr->s_addr = verbs_ctx.local_ci[_photon_myrank][0].ip.s_addr;
+  }
+  else {
+    memcpy(addr, &(verbs_ctx.local_ci[_photon_myrank][0].gid), sizeof(union ibv_gid));
+  }
+  return PHOTON_OK;
 }
 
 static int verbs_register_addr(photonAddr addr, int af) {

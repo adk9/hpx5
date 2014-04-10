@@ -101,7 +101,7 @@ photon_mbe *photon_msgbuffer_get_entry(photonMsgBuf mbuf, int *ind) {
 
 int photon_msgbuffer_free_entry(photonMsgBuf mbuf, int ind) {
   if ((ind < 0) || (ind >= mbuf->p_count)) {
-    dbg_err("index is out of bounds");
+    dbg_err("index %d is out of bounds", ind);
     return PHOTON_ERROR;
   }
 
