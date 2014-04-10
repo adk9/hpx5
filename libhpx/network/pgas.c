@@ -265,12 +265,6 @@ hpx_addr_add(const hpx_addr_t addr, int bytes) {
   return result;
 }
 
-
-/// ----------------------------------------------------------------------------
-/// sbrk style allocation for the local block.
-/// ----------------------------------------------------------------------------
-static SYNC_ATOMIC(uint32_t _next);
-
 /// ----------------------------------------------------------------------------
 /// Local allocation is done from our designated block. Allocation is always
 /// done to 8 byte alignment.
