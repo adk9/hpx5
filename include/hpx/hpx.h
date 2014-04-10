@@ -136,14 +136,19 @@ bool hpx_addr_try_pin(const hpx_addr_t addr, void **local);
 /// ----------------------------------------------------------------------------
 void hpx_addr_unpin(const hpx_addr_t addr);
 
+typedef enum {
+  HPX_GAS_PGAS = 0,
+  HPX_GAS_AGAS
+} hpx_gas_t;
 
 /// ----------------------------------------------------------------------------
 /// The HPX configuration type.
 /// ----------------------------------------------------------------------------
 typedef struct {
-  int cores;                                  // number of cores to use
-  int threads;                                // number of HPX scheduler threads
+  int       cores;                            // number of cores to use
+  int     threads;                            // number of HPX scheduler threads
   int stack_bytes;                            // minimum stack size in bytes
+  hpx_gas_t   gas;                            // GAS algorithm
 } hpx_config_t;
 
 

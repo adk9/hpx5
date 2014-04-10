@@ -100,7 +100,16 @@ int hpx_init(const hpx_config_t *cfg) {
   if (_boot == NULL)
     return _cleanup(dbg_error("failed to create boot manager.\n"));
 
-  _gas = gas_pgas_new(_boot);
+  switch (cfg->gas) {
+   default:
+   case (HPX_GAS_PGAS):
+    _gas = gas_pgas_new(_boot);
+    break;
+   case (HPX_GAS_AGAS):
+    _gas = gas_agas_new(_boot);
+    break;
+  }
+
   if(_gas == NULL)
     return _cleanup(dbg_error("failed to create global address space.\n"));
 
