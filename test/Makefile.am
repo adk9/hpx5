@@ -8,7 +8,8 @@ bin_PROGRAMS = photon_test             \
 	       photon_test_forwarder   \
 	       photon_test_interleaved \
 	       photon_pingpong         \
-	       photon_ud_blockid
+	       photon_ud_blockid       \
+	       photon_ud_pingpong
 
 AM_LDFLAGS = @top_srcdir@/src/libphoton.la -lm @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@
 
@@ -18,3 +19,5 @@ photon_test_put_SOURCES = photon_test_put.c
 photon_test_forwarder_SOURCES = photon_test_forwarder.c
 photon_test_interleaved_SOURCES = photon_test_interleaved.c
 photon_pingpong_SOURCES = photon_pingpong.c
+photon_ud_blockid_SOURCES = ud_bravo_tests/photon_ud_blockid.c
+photon_ud_pingpong_SOURCES = ud_bravo_tests/photon_ud_pingpong.c

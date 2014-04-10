@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
 #include <mpi.h>
 #include <sys/time.h>
 #include <time.h>
@@ -11,6 +12,7 @@
 #include <openssl/md5.h>
 
 #include "photon.h"
+#include "bravo_ids.h"
 
 #define PHOTON_SEND_SIZE 16384
 #define PHOTON_TAG       13
@@ -22,8 +24,9 @@ int main(int argc, char *argv[]) {
 
   MD5_CTX ctx;
   unsigned char hash[16];
-  photon_addr mgid;
-
+  photon_addr naddr;
+  char buf[INET_ADDRSTRLEN];
+  
   srand(time(NULL));
 
   MPI_Init(&argc,&argv);
@@ -70,16 +73,47 @@ int main(int argc, char *argv[]) {
   }
   printf("\n");
 
-  // everyone register to receive on the same address (224.0.2.2)
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0202", &mgid.raw);
-  photon_register_addr(&mgid, AF_INET6);
+  photon_get_dev_addr(AF_INET, &naddr);
+
+  inet_ntop(AF_INET, &naddr.s_addr, buf, sizeof(buf));
+  printf("%d: dev addr: %s\n", rank, buf);
+
+  bravo_node *dnode = NULL, *mynode = NULL;
+  init_bravo_ids();
+  mynode = find_bravo_node(&naddr);
+
+  if (!mynode) {
+    printf("could not find my node\n");
+    return 1;
+  }
+
+  switch (mynode->index) {
+  case B005:
+    dnode = get_bravo_node(B006);
+    break;
+  case B006:
+    dnode = get_bravo_node(B005);
+    break;
+  default:
+    break;
+  }
+  
+  if (!dnode) {
+    printf("could not find dest node\n");
+    return 1;
+  }
+
+  photon_register_addr(&mynode->mgid, AF_INET6);
 
   // need each node to be ready to receive before we send...
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // send to the address
-  photon_send(&mgid, send, PHOTON_SEND_SIZE, 0, &sendReq);
-  //photon_send(&mgid, send, PHOTON_SEND_SIZE, 0, &sendReq2);
+  char buf2[40];
+  inet_ntop(AF_INET6, dnode->mgid.raw, buf2, 40);
+  printf("%d: sending mgid (%d): %s\n", rank, dnode->index+1, buf2);
+ 
+  // send to the destination node
+  photon_send(&dnode->mgid, send, PHOTON_SEND_SIZE, 0, &sendReq);
 
   while(1) {
     int flag, type;
@@ -109,7 +143,7 @@ int main(int argc, char *argv[]) {
   struct photon_status_t stat;
   while(1) {
     photon_addr addr = {.s_addr = 0};
-    int flag, type;
+    int flag;
     int tst = photon_probe(&addr, &flag, &stat);
     //int tst = photon_test(recvReq, &flag, &type, &stat);
     if( tst < 0 ) {
@@ -148,7 +182,7 @@ int main(int argc, char *argv[]) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  photon_unregister_addr(&mgid, AF_INET6);
+  photon_unregister_addr(&mynode->mgid, AF_INET6);
   free(send);
   free(recv);
 
