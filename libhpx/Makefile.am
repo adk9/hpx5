@@ -1,7 +1,7 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = system boot transport network scheduler
+SUBDIRS = system boot gas transport network scheduler
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -12,6 +12,7 @@ libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpx_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
 libhpx_la_LIBADD   = system/libsystem.la \
                      boot/libboot.la \
+                     gas/libgas.la \
                      transport/libtransport.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la

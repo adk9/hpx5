@@ -23,12 +23,12 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "block.h"
-#include "gas.h"
 #include "progress.h"
 
 
@@ -52,6 +52,7 @@ void request_delete(request_t *r) {
   free(r);
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Some transports care about pinning data before sending it. The transport
 /// isn't supposed to depend on the parcel implementation or interface though,
@@ -73,6 +74,7 @@ static void _pin(transport_t *transport, hpx_parcel_t *parcel) {
     block_set_pinned(block, true);
   }
 }
+
 
 /// ----------------------------------------------------------------------------
 /// Requests associate parcels to transport send and receive operations, and
@@ -169,7 +171,7 @@ static bool _try_start_send(progress_t *progress) {
     goto unwind0;
   }
 
-  int dest = gas_where(p->target);
+  int dest = gas_where(p->target, progress->gas);
   int size = sizeof(*p) + p->size;
   if (transport_send(progress->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");
@@ -231,7 +233,7 @@ static bool _try_start_recv(progress_t *progress) {
   _delete_request(progress, r);
  unwind0:
   hpx_parcel_release(p);
-  return false;  
+  return false;
 }
 
 
@@ -301,10 +303,12 @@ void network_progress_poll(progress_t *p) {
     dbg_log("started a recv.\n");
 }
 
-progress_t *network_progress_new(const boot_t *boot, transport_t *transport) {
+progress_t *network_progress_new(const boot_t *boot, transport_t *transport,
+                                 gas_t *gas) {
   progress_t *p = malloc(sizeof(*p));
   p->boot          = boot;
   p->transport     = transport;
+  p->gas           = gas;
   p->pending_sends = NULL;
   p->pending_recvs = NULL;
   p->free          = NULL;

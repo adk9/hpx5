@@ -102,6 +102,6 @@ static transport_t _smp = {
 };
 
 
-transport_t *transport_new_smp(const struct boot *boot) {
+transport_t *transport_new_smp(const struct boot *boot, struct gas *gas) {
   return &_smp;
 }

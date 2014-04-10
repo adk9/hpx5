@@ -17,6 +17,7 @@
 #include "hpx/attributes.h"
 
 struct boot;
+struct gas;
 typedef struct transport transport_t;
 
 
@@ -29,7 +30,8 @@ typedef struct transport transport_t;
 /// This is a factory method that actually picks concrete networks based on what
 /// is currently available.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL transport_t *transport_new(const struct boot *boot)
+HPX_INTERNAL transport_t *transport_new(const struct boot *boot,
+                                        struct gas *gas)
   HPX_NON_NULL(1);
 
 

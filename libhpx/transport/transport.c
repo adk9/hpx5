@@ -22,11 +22,11 @@
 #include "libhpx/transport.h"
 #include "transports.h"
 
-transport_t *transport_new(const struct boot *boot) {
+transport_t *transport_new(const struct boot *boot, struct gas *gas) {
   transport_t *transport = NULL;
 
 #ifdef HAVE_PHOTON
-  transport = transport_new_photon(boot);
+  transport = transport_new_photon(boot, gas);
   if (transport) {
     dbg_log("initialized the Photon transport.\n");
     return transport;
@@ -34,7 +34,7 @@ transport_t *transport_new(const struct boot *boot) {
 #endif
 
 #ifdef HAVE_MPI
-  transport = transport_new_mpi(boot);
+  transport = transport_new_mpi(boot, gas);
   if (transport) {
     dbg_log("initialized the MPI transport.\n");
     return transport;
@@ -42,14 +42,14 @@ transport_t *transport_new(const struct boot *boot) {
 #endif
 
 #ifdef HAVE_PORTALS
-  transport = transport_new_portals(boot);
+  transport = transport_new_portals(boot, gas);
   if (transport) {
     dbg_log("initialized the Portals transport.\n");
     return transport;
   }
 #endif
 
-  transport = transport_new_smp(boot);
+  transport = transport_new_smp(boot, gas);
   if (transport) {
     dbg_log("initialized the SMP transport.\n");
     return transport;
