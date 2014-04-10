@@ -152,9 +152,9 @@ int network_progress(network_t *network) {
   _network_state_t state;
   sync_load(state, &network->state, SYNC_ACQUIRE);
   if (state != _STATE_RUNNING) {
-    if (sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
-                 SYNC_RELEASE, SYNC_RELAXED))
-      return state;
+    sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
+             SYNC_RELEASE, SYNC_RELAXED);
+    return state;
   }
 
   transport_progress(network->transport, false);
