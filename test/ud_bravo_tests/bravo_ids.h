@@ -48,14 +48,14 @@ inline bravo_node *init_bravo_ids() {
   inet_pton(AF_INET6, "ff0e::ffff:e000:0208", node[B008].mgid.raw);
   
   // node   OF_port   MAC (for rewrite)
-  // B001   12        c9ff:fe4b:1c9c
-  // B002   13        c9ff:fe35:0350
-  // B003   14        c9ff:fe17:c5d0
-  // B004   15        c9ff:fe18:0700
-  // B005   16        c9ff:fe18:1d50
-  // B006   17        c9ff:fe18:1040
-  // B007   18        14ff:fe01:7170
-  // B008   19        14ff:fe01:6ff0
+  // B001   12        c9:ff:fe:4b:1c:9c
+  // B002   13        c9:ff:fe:35:03:50
+  // B003   14        c9:ff:fe:17:c5:d0
+  // B004   15        c9:ff:fe:18:07:00
+  // B005   16        c9:ff:fe:18:1d:50
+  // B006   17        c9:ff:fe:18:10:40
+  // B007   20        14:ff:fe:01:71:70
+  // B008   19        14:ff:fe:01:6f:f0
   
   return node;
 }
