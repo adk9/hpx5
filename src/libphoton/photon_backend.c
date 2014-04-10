@@ -1114,7 +1114,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     photon_mbe *bentry;
     int b_ind;
     bentry = photon_msgbuffer_get_entry(sendbuf, &b_ind);
-
+    
     // build a unique id that allows us to track the send requests
     // 0xcafeXXXXYYYYYYYY
     // XXXX     = message sequence number

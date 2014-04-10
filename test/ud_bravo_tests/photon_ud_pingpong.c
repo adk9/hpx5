@@ -40,7 +40,7 @@ bravo_node *mynode = NULL;
 photon_addr naddr;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
-  //struct timeval start, end;
+  struct timeval start, end;
   uint32_t send_req;
 
   send_args->type = pp_type;
@@ -78,12 +78,17 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     photon_send_FIN(send_req, dst);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
-    //printf("%d: send_FIN time: %f\n", rank, SUBTRACT_TV(end, start));
+    //  printf("%d: send_FIN time: %f\n", rank, SUBTRACT_TV(end, start));
   }
   else if (pp_test == PHOTON_UD_TEST) {
     uint64_t send_req;
 
+    //gettimeofday(&start, NULL);
     photon_send(&dnode->mgid, (void*)send_args, sizeof(*send_args), 0, &send_req);
+    //gettimeofday(&end, NULL);
+    //if (rank == 0)
+    //  printf("%d: send time: %f\n", rank, SUBTRACT_TV(end, start));
+    //gettimeofday(&start, NULL);
     while (1) {
       int flag, type;
       struct photon_status_t stat;
@@ -97,6 +102,9 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
         //usleep(10);
       }
     }
+    //gettimeofday(&end, NULL);
+    //if (rank == 0)
+    //  printf("%d: send_wait time: %f\n", rank, SUBTRACT_TV(end, start));
   }
   else if (pp_test == MPI_TEST) {
     MPI_Request mpi_r;
@@ -119,7 +127,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
 }
 
 void *receiver(void *args) {
-  //struct timeval start, end;
+  struct timeval start, end;
 
   while (1) {
     uint32_t recv_req;
@@ -168,6 +176,7 @@ void *receiver(void *args) {
     else if (pp_test == PHOTON_UD_TEST) {
       int flag;
       struct photon_status_t stat;
+      //gettimeofday(&start, NULL);
       while (1) {
         photon_addr addr = {.s_addr = 0};
         photon_probe(&addr, &flag, &stat);
@@ -175,7 +184,14 @@ void *receiver(void *args) {
           break;
         }
       }
+      //gettimeofday(&end, NULL);
+      //if (rank == 0)
+      //  printf("%d: probe time: %f\n", rank, SUBTRACT_TV(end, start));
+      //gettimeofday(&start, NULL);
       photon_recv(stat.request, recv_args, stat.size, 0);
+      //gettimeofday(&end, NULL);
+      //if (rank == 0)
+      //  printf("%d: recv time: %f\n", rank, SUBTRACT_TV(end, start));
       dbg_printf("%d: recv(%d<-%d) of size %lu completed successfully\n",
                  rank, mynode->index+1, dnode->index+1, stat.size);
     }

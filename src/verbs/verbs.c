@@ -13,6 +13,7 @@
 #include "verbs_connect.h"
 #include "verbs_exchange.h"
 #include "verbs_ud.h"
+#include "htable.h"
 #include "logging.h"
 
 #define MAX_RETRIES 1
@@ -37,6 +38,7 @@ struct sr_args_t {
 };
 
 static int __initialized = 0;
+static htable_t *ah_table;
 
 static int verbs_initialized(void);
 static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss);
@@ -151,6 +153,13 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
 
   if (cfg->use_ud) {
     verbs_ctx.use_ud = cfg->use_ud;
+    
+    dbg_info("create ah_table");
+    ah_table = htable_create(1009);
+    if (!ah_table) {
+      log_err("Failed to allocate AH table");
+      goto error_exit;
+    }
   }
 
   if(__verbs_init_context(&verbs_ctx)) {
@@ -213,7 +222,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       goto error_exit;
     }
   }
-
+  
   __initialized = 1;
 
   dbg_info("ended successfully =============");
@@ -459,9 +468,13 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
     .length = size,
     .lkey = lbuf->priv.key0
   };
-
-  __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
-
+  
+  // cache the address handles since it takes forever to create them
+  if (htable_lookup(ah_table, addr->s_addr, (void**)&args.ah) != 0) {
+    __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
+    htable_insert(ah_table, addr->s_addr, args.ah);
+  }
+  
   args.proc = addr->global.proc_id;
   args.id = id;
   args.sg_list = &list;
