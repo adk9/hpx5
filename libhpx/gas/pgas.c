@@ -31,7 +31,7 @@
 #include "libhpx/gas.h"
 #include "libhpx/scheduler.h"
 #include "addr.h"
-
+#include "sbrk.h"
 
 /// ----------------------------------------------------------------------------
 /// This may not be the most elegant way to deal with the global address space
@@ -42,9 +42,7 @@ static void  **_btt = NULL;                     // the block translation table
 static void *_local = NULL;                     // the local block
 
 static SYNC_ATOMIC(uint32_t _next_byte);        // the next local byte offset
-static SYNC_ATOMIC(uint32_t _next_block);       // the next global block id
 
-static hpx_action_t _gasbrk       = 0;
 static hpx_action_t _alloc_blocks = 0;
 
 
@@ -55,27 +53,6 @@ static uint32_t _row(uint32_t block_id) {
 
 static uint32_t _owner(uint32_t block_id) {
   return block_id % hpx_get_num_ranks();
-}
-
-
-/// The action that performs the global sbrk.
-static int _gasbrk_action(size_t *args) {
-  if (!hpx_addr_eq(HPX_HERE, HPX_THERE(0)))
-    return dbg_error("Centralized allocation expects rank 0");
-
-  // bump the next block id by the required number of blocks---always bump a
-  // ranks-aligned value
-  int ranks = hpx_get_num_ranks();
-  size_t n = *args + (*args % ranks);
-  int next = sync_fadd(&_next_block, n, SYNC_ACQ_REL);
-  if (UINT32_MAX - next < n) {
-    dbg_error("rank out of blocks for allocation size %lu\n", n);
-    hpx_abort();
-  }
-
-  // return the base block id of the allocated blocks, the caller can use this
-  // to initialize block addresses
-  hpx_thread_continue(sizeof(next), &next);
 }
 
 
@@ -134,18 +111,9 @@ static hpx_addr_t _alloc(size_t bytes, gas_t *gas) {
 /// shared [1] T foo[n]; where sizeof(T) == bytes
 /// ----------------------------------------------------------------------------
 static hpx_addr_t _global_alloc(size_t n, uint32_t bytes, gas_t *gas) {
-  uint32_t base_id;
-
-  // Start by getting the blocks that I need, _gasbrk returns the base block id
-  // for the allocation, and ensures that at least the next "n" blocks are
-  // available.
-  hpx_addr_t f = hpx_lco_future_new(sizeof(base_id));
-  hpx_call(HPX_THERE(0), _gasbrk, &n, sizeof(n), f);
-  hpx_lco_get(f, &base_id, sizeof(base_id));
-  hpx_lco_delete(f, HPX_NULL);
-
   // For each locality, I need to broadcast an allocation request for the right
   // number of blocks.
+  uint32_t base_id = gas_sbrk(n);
   int ranks = hpx_get_num_ranks();
   hpx_addr_t and = hpx_lco_and_new(ranks);
   uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
@@ -210,6 +178,8 @@ static void _unpin(const hpx_addr_t addr, gas_t *gas) {
 
 
 static void _init(const struct boot *boot) {
+  gas_sbrk_init(boot_n_ranks(boot));
+
   int prot = PROT_READ | PROT_WRITE;
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | MAP_NONBLOCK;
 
@@ -219,10 +189,8 @@ static void _init(const struct boot *boot) {
 
   // set the local block base
   sync_store(&_next_byte, 0, SYNC_RELEASE);
-  sync_store(&_next_block, boot_n_ranks(boot), SYNC_RELEASE);
 
   // register the actions that we use
-  _gasbrk = HPX_REGISTER_ACTION(_gasbrk_action);
   _alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
 
   // update the HERE address
