@@ -462,6 +462,7 @@ static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
 
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id) {
+  void *rc;
   struct sr_args_t args;
   struct ibv_sge list = {
     .addr = laddr,
@@ -471,7 +472,10 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
   
   // cache the address handles since it takes forever to create them
   if (htable_lookup(ah_table, addr->s_addr, (void**)&args.ah) != 0) {
-    __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
+    rc = __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
+    if (!rc) {
+      return PHOTON_ERROR;
+    }
     htable_insert(ah_table, addr->s_addr, args.ah);
   }
   

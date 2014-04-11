@@ -10,6 +10,7 @@ struct photon_config_t {
 
   int use_cma;
   int use_ud;
+  char *ud_gid_prefix;
   int use_forwarder;
   char **forwarder_eids;
 
@@ -28,7 +29,7 @@ typedef union photon_addr_t {
   uint8_t       raw[16];
   unsigned long s_addr;
   struct {
-    uint64_t    subnet_prefix;
+    uint64_t    prefix;
     uint64_t    proc_id;
   } global;
   struct {

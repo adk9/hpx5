@@ -1,5 +1,6 @@
-#include "photon.h"
+#include <stdio.h>
 #include <arpa/inet.h>
+#include "photon.h"
 
 #define NUM_NODES 8
 
@@ -15,6 +16,7 @@
 typedef struct bravo_node_t {
   int           index;
   uint32_t      s_addr;
+  photon_addr   block;
   photon_addr   mgid;
 } bravo_node;
 
@@ -22,6 +24,7 @@ static bravo_node *node;
 
 inline bravo_node *init_bravo_ids() {
   int i;
+
   node = malloc(NUM_NODES * sizeof(bravo_node));
 
   for (i=0; i<NUM_NODES; i++) {
@@ -46,7 +49,16 @@ inline bravo_node *init_bravo_ids() {
   inet_pton(AF_INET6, "ff0e::ffff:e000:0206", node[B006].mgid.raw);
   inet_pton(AF_INET6, "ff0e::ffff:e000:0207", node[B007].mgid.raw);
   inet_pton(AF_INET6, "ff0e::ffff:e000:0208", node[B008].mgid.raw);
-  
+
+  node[B001].block.blkaddr.blk3 = (uint32_t)0xe0000201;
+  node[B002].block.blkaddr.blk3 = (uint32_t)0xe0000202;
+  node[B003].block.blkaddr.blk3 = (uint32_t)0xe0000203;
+  node[B004].block.blkaddr.blk3 = (uint32_t)0xe0000204;
+  node[B005].block.blkaddr.blk3 = (uint32_t)0xe0000205;
+  node[B006].block.blkaddr.blk3 = (uint32_t)0xe0000206;
+  node[B007].block.blkaddr.blk3 = (uint32_t)0xe0000207;
+  node[B008].block.blkaddr.blk3 = (uint32_t)0xe0000208;
+
   // node   OF_port   MAC (for rewrite)
   // B001   12        c9:ff:fe:4b:1c:9c
   // B002   13        c9:ff:fe:35:03:50

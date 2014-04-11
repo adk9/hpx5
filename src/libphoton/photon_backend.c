@@ -1090,12 +1090,32 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   //inet_ntop(AF_INET6, addr->raw, buf, 40);
   //dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
 
+  photon_addr saddr;
   int bufs[MAX_BUF_ENTRIES];
   uint32_t request_id;
   uint64_t cookie;
   uint64_t bytes_remaining, bytes_sent, send_bytes;
   uintptr_t buf_addr;
   int rc, m_count, num_msgs;
+
+  // see if we have a block_id to send to
+  if (!(addr->blkaddr.blk0) &&
+      !(addr->blkaddr.blk1) &&
+      !(addr->blkaddr.blk2) && addr->blkaddr.blk3) {
+    if (__photon_config->ud_gid_prefix) {
+      inet_pton(AF_INET6, __photon_config->ud_gid_prefix, saddr.raw);
+      uint32_t *iptr = (uint32_t*)&saddr.raw[12];
+      *iptr = htonl(addr->blkaddr.blk3);
+    }
+    else {
+      dbg_err("unrecognized address format");
+      goto error_exit;
+    }
+  }
+  else {
+    saddr.global.prefix = addr->global.prefix;
+    saddr.global.proc_id = addr->global.proc_id;
+  }
 
   request_id = INC_COUNTER(curr_cookie);
   
@@ -1145,9 +1165,9 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     dbg_info("sending mbuf [%d/%d], size=%lu, header size=%d", m_count, num_msgs-1, send_bytes, sendbuf->p_hsize);
 
     buf_addr = (uintptr_t)bentry->hptr;
-    rc = __photon_backend->rdma_send(addr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie);
+    rc = __photon_backend->rdma_send(&saddr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA SEND failed for %lu\n", cookie);
+      dbg_err("RDMA SEND failed for 0x%016lx\n", cookie);
       goto error_exit;
     }
     

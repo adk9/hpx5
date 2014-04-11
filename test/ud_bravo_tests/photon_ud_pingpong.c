@@ -84,7 +84,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     uint64_t send_req;
 
     //gettimeofday(&start, NULL);
-    photon_send(&dnode->mgid, (void*)send_args, sizeof(*send_args), 0, &send_req);
+    photon_send(&dnode->block, (void*)send_args, sizeof(*send_args), 0, &send_req);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
     //  printf("%d: send time: %f\n", rank, SUBTRACT_TV(end, start));
@@ -272,6 +272,7 @@ int main(int argc, char **argv) {
     .use_forwarder = 0,
     .use_cma = 0,
     .use_ud = 1,
+    .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
     .eth_dev = "roce0",
     .ib_dev = "mlx4_1",
     .ib_port = 1,
@@ -282,12 +283,9 @@ int main(int argc, char **argv) {
 
   send_args = malloc(sizeof(struct pingpong_args));
   recv_args = malloc(sizeof(struct pingpong_args));
-  
+
   photon_get_dev_addr(AF_INET, &naddr);
   
-  inet_ntop(AF_INET, &naddr.s_addr, buf, sizeof(buf));
-  printf("%d: dev addr: %s\n", rank, buf);
-
   if (pp_test == PHOTON_TEST) {
     photon_register_buffer((char*)send_args, sizeof(*send_args));
     photon_register_buffer((char*)recv_args, sizeof(*recv_args));
@@ -296,12 +294,15 @@ int main(int argc, char **argv) {
   if (pp_test == PHOTON_UD_TEST) {
     init_bravo_ids();
     mynode = find_bravo_node(&naddr);
-    
     if (!mynode) {
       printf("could not find my node\n");
       return 1;
     }
-    
+
+    inet_ntop(AF_INET, &naddr.s_addr, buf, sizeof(buf));    
+    printf("%d: dev addr: %s, block_id: 0x%08x\n", rank, buf, mynode->block.blkaddr.blk3);
+
+
     switch (mynode->index) {
     case B001:
       dnode = get_bravo_node(B002);
