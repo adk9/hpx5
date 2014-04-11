@@ -537,24 +537,24 @@ int main(int argc, char *argv[])
                 printf("  --> reset remote GID: %s\n", buf);
 
 		// MLID update
-		rem_dest.lid = 0xc000;
+		rem_dest.lid = 0x0;
                 
                 if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, &rem_dest, gidx, 1))
                         return 1;
         }
         else {
 	        // receiver joins mcast group
-	        ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
-		if (ret) {
-		  printf("error: %s\n", strerror(ret));
-		}
+          //ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
+          //	if (ret) {
+          //	  printf("error: %s\n", strerror(ret));
+          //	}
 
                 char buf[40];
                 inet_pton(AF_INET6, dgid, rem_dest.gid.raw);
                 inet_ntop(AF_INET6, rem_dest.gid.raw, buf, 40);
                 printf("  --> reset remote GID: %s\n", buf);
 
-		rem_dest.lid = 0x010;
+		rem_dest.lid = 0x0;
 
                 if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, &rem_dest, gidx, 1))
                         return 1;

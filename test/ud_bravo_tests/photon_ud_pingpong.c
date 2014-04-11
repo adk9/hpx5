@@ -303,16 +303,34 @@ int main(int argc, char **argv) {
     }
     
     switch (mynode->index) {
+    case B001:
+      dnode = get_bravo_node(B002);
+      break;
+    case B002:
+      dnode = get_bravo_node(B001);
+      break;
+    case B003:
+      dnode = get_bravo_node(B004);
+      break;
+    case B004:
+      dnode = get_bravo_node(B003);
+      break;
     case B005:
       dnode = get_bravo_node(B006);
       break;
     case B006:
       dnode = get_bravo_node(B005);
       break;
+    case B007:
+      dnode = get_bravo_node(B008);
+      break;
+    case B008:
+      dnode = get_bravo_node(B007);
+      break;
     default:
       break;
     }
-    
+
     if (!dnode) {
       printf("could not find dest node\n");
       return 1;
@@ -326,7 +344,7 @@ int main(int argc, char **argv) {
   
   gettimeofday(&start, NULL);
 
-  if (rank == 0) {
+  if (rank%2 == 0) {
     send_pingpong(other_rank, 0, -1, PING);
   }
 

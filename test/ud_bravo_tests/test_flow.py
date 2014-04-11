@@ -33,11 +33,11 @@ node['b006'] = {'mac': "00:02:C9:18:10:40",
                 'mcmac': "33:33:e0:00:02:06",
                 'port': 17}
 node['b007'] = {'mac': "F4:52:14:01:71:70",
-                'ibmac': "14:ff:fe:01:71:70",
+                'ibmac': "c9:ff:fe:01:71:70",
                 'mcmac': "33:33:e0:00:02:07",
                 'port': 20}
 node['b008'] = {'mac': "F4:52:14:01:6F:F0",
-                'ibmac': "14:ff:fe:01:6f:f0",
+                'ibmac': "c9:ff:fe:01:6f:f0",
                 'mcmac': "33:33:e0:00:02:08",
                 'port': 19}
 
@@ -91,7 +91,8 @@ def make_rewrite_flow(entry, name, vlan):
             'active': 'true',
             'vlan-id': vlan,
             'dst-mac': entry['mcmac'],
-            'actions': 'set-dst-mac='+str(entry['ibmac'])+',output='+str(entry['port'])
+            #'actions': 'set-dst-mac='+str(entry['ibmac'])+',output='+str(entry['port'])
+            'actions': 'output='+str(entry['port'])
             }
 
 usage_desc = """
