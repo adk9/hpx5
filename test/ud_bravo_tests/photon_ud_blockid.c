@@ -14,7 +14,7 @@
 #include "photon.h"
 #include "bravo_ids.h"
 
-#define PHOTON_SEND_SIZE 1024*8
+#define PHOTON_SEND_SIZE 1024*240
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
     .use_forwarder = 0,
     .use_cma = 0,
     .use_ud = 1,
+    .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
     .eth_dev = "roce0",
     .ib_dev = "mlx4_1",
     .ib_port = 1,
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]) {
   printf("%d: dev addr: %s\n", rank, buf);
 
   bravo_node *dnode = NULL, *mynode = NULL;
-  init_bravo_ids();
+  init_bravo_ids(10);
   mynode = find_bravo_node(&naddr);
 
   if (!mynode) {
@@ -103,17 +104,17 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  photon_register_addr(&mynode->mgid, AF_INET6);
-
+  for (i=0; i<mynode->nblocks; i++) {
+    photon_register_addr(&mynode->block[i], AF_INET6);
+  }
+  
   // need each node to be ready to receive before we send...
   MPI_Barrier(MPI_COMM_WORLD);
 
-  char buf2[40];
-  inet_ntop(AF_INET6, dnode->mgid.raw, buf2, 40);
-  printf("%d: sending mgid (%d): %s\n", rank, dnode->index+1, buf2);
- 
+  printf("%d: sending to block (%d): 0x%08x\n", rank, dnode->index+1, dnode->block[0].blkaddr.blk3);
+
   // send to the destination node
-  photon_send(&dnode->mgid, send, PHOTON_SEND_SIZE, 0, &sendReq);
+  photon_send(&dnode->block[0], send, PHOTON_SEND_SIZE, 0, &sendReq);
 
   while(1) {
     int flag, type;
@@ -182,7 +183,7 @@ int main(int argc, char *argv[]) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  photon_unregister_addr(&mynode->mgid, AF_INET6);
+  photon_unregister_addr(&mynode->block[0], AF_INET6);
   free(send);
   free(recv);
 

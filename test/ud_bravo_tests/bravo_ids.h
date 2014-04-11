@@ -16,19 +16,21 @@
 typedef struct bravo_node_t {
   int           index;
   uint32_t      s_addr;
-  photon_addr   block;
-  photon_addr   mgid;
+  photon_addr  *block;
+  int           nblocks;
 } bravo_node;
 
 static bravo_node *node;
 
-inline bravo_node *init_bravo_ids() {
-  int i;
+inline bravo_node *init_bravo_ids(int num_blocks) {
+  int i, j;
 
   node = malloc(NUM_NODES * sizeof(bravo_node));
 
   for (i=0; i<NUM_NODES; i++) {
+    node[i].block = calloc(num_blocks, sizeof(photon_addr));
     node[i].index = i;
+    node[i].nblocks = num_blocks;
   }
 
   inet_pton(AF_INET, "10.1.20.10", &node[B001].s_addr);
@@ -40,25 +42,16 @@ inline bravo_node *init_bravo_ids() {
   inet_pton(AF_INET, "10.1.20.70", &node[B007].s_addr);
   inet_pton(AF_INET, "10.1.20.80", &node[B008].s_addr);
 
-  // 224.0.2.X
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0201", node[B001].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0202", node[B002].mgid.raw);    
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0203", node[B003].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0204", node[B004].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0205", node[B005].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0206", node[B006].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0207", node[B007].mgid.raw);
-  inet_pton(AF_INET6, "ff0e::ffff:e000:0208", node[B008].mgid.raw);
-
-  node[B001].block.blkaddr.blk3 = (uint32_t)0xe0000201;
-  node[B002].block.blkaddr.blk3 = (uint32_t)0xe0000202;
-  node[B003].block.blkaddr.blk3 = (uint32_t)0xe0000203;
-  node[B004].block.blkaddr.blk3 = (uint32_t)0xe0000204;
-  node[B005].block.blkaddr.blk3 = (uint32_t)0xe0000205;
-  node[B006].block.blkaddr.blk3 = (uint32_t)0xe0000206;
-  node[B007].block.blkaddr.blk3 = (uint32_t)0xe0000207;
-  node[B008].block.blkaddr.blk3 = (uint32_t)0xe0000208;
-
+  for (i=0; i<NUM_NODES; i++) {
+    for (j=0; j<num_blocks; j++) {
+      uint32_t bid = ((uint32_t)(i+1)<<16) | (uint32_t)j;
+      if (j==0) {
+        //printf("B00%d base block: 0x%08x\n", i+1, bid);
+      }
+      node[i].block[j].blkaddr.blk3 = bid;
+    }
+  }
+    
   // node   OF_port   MAC (for rewrite)
   // B001   12        c9:ff:fe:4b:1c:9c
   // B002   13        c9:ff:fe:35:03:50

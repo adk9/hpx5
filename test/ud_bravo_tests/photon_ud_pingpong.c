@@ -84,7 +84,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     uint64_t send_req;
 
     //gettimeofday(&start, NULL);
-    photon_send(&dnode->block, (void*)send_args, sizeof(*send_args), 0, &send_req);
+    photon_send(&dnode->block[0], (void*)send_args, sizeof(*send_args), 0, &send_req);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
     //  printf("%d: send time: %f\n", rank, SUBTRACT_TV(end, start));
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
   }
 
   if (pp_test == PHOTON_UD_TEST) {
-    init_bravo_ids();
+    init_bravo_ids(1);
     mynode = find_bravo_node(&naddr);
     if (!mynode) {
       printf("could not find my node\n");
@@ -300,8 +300,8 @@ int main(int argc, char **argv) {
     }
 
     inet_ntop(AF_INET, &naddr.s_addr, buf, sizeof(buf));    
-    printf("%d: dev addr: %s, block_id: 0x%08x\n", rank, buf, mynode->block.blkaddr.blk3);
-
+    printf("%d: dev addr: %s, block_id: 0x%08x\n", rank, buf, mynode->block[0].blkaddr.blk3);
+    
 
     switch (mynode->index) {
     case B001:
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
       return 1;
     } 
     
-    photon_register_addr(&mynode->mgid, AF_INET6);
+    photon_register_addr(&mynode->block[0], AF_INET6);
   }
 
   // get everyone initialized before we start sending
