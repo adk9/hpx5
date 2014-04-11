@@ -673,8 +673,8 @@ static int __photon_handle_send_event(photonRequest req, uint64_t id) {
     if (creq->state == REQUEST_PENDING) {
       uint16_t msn;
       msn = (uint16_t)((id<<16)>>48);
-      req->mmask |= (1<<msn);
-      if (!( req->mmask ^ ~(~0<<req->num_entries))) {
+      req->mmask |= ((uint64_t)1<<msn);
+      if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
         // additional condition would be ACK from receiver
         creq->state = REQUEST_COMPLETED;
         // mark sendbuf entries as available again
@@ -728,7 +728,7 @@ static int __photon_handle_recv_event(uint64_t id) {
   cookie = ((uint64_t)(~hdr->src_addr)<<32) | hdr->request;
   if (htable_lookup(sr_reqtable, cookie, (void**)&req) == 0) {
     // update existing req
-    req->mmask |= (1<<hdr->msn);
+    req->mmask |= ((uint64_t)1<<hdr->msn);
     req->length += hdr->length;
     req->bentries[hdr->msn] = bindex;
   }
@@ -741,7 +741,7 @@ static int __photon_handle_recv_event(uint64_t id) {
   // now check if we have the whole message
   // if so, add to pending recv list and remove from htable
   if (req) {
-    if (!( req->mmask ^ ~(~((uint64_t)0)<<req->num_entries))) {
+    if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
       dbg_info("adding recv request to pending recv list: %lu/0x%016lx", req->id, cookie);
       SAFE_SLIST_INSERT_HEAD(&pending_recv_list, req, slist);
       req->state = REQUEST_COMPLETED;

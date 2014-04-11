@@ -14,7 +14,7 @@
 #include "photon.h"
 #include "bravo_ids.h"
 
-#define PHOTON_SEND_SIZE 16384
+#define PHOTON_SEND_SIZE 1024*8
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
