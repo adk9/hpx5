@@ -553,8 +553,14 @@ static int verbs_get_dev_addr(int af, photonAddr addr) {
 }
 
 static int verbs_register_addr(photonAddr addr, int af) {
+  int rc;
+  photon_addr saddr;
   if (verbs_ctx.use_ud) {
-    return __verbs_ud_attach_addr(&verbs_ctx, (union ibv_gid*)addr);
+    rc = _photon_handle_addr(addr, &saddr);
+    if (rc != PHOTON_OK) {
+      return PHOTON_ERROR;
+    }
+    return __verbs_ud_attach_addr(&verbs_ctx, (union ibv_gid*)&saddr);
   }
   else {
     dbg_warn("Unknown action");
@@ -564,8 +570,14 @@ static int verbs_register_addr(photonAddr addr, int af) {
 }
 
 static int verbs_unregister_addr(photonAddr addr, int af) {
+  int rc;
+  photon_addr saddr;
   if (verbs_ctx.use_ud) {
-    return __verbs_ud_detach_addr(&verbs_ctx, (union ibv_gid*)addr);
+    rc = _photon_handle_addr(addr, &saddr);
+    if (rc != PHOTON_OK) {
+      return PHOTON_ERROR;
+    }
+    return __verbs_ud_detach_addr(&verbs_ctx, (union ibv_gid*)&saddr);
   }
   else {
     dbg_warn("Unknown action");

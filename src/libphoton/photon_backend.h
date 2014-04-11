@@ -160,5 +160,6 @@ int photon_xsp_unused_proc(ProcessInfo **ret_pi, int *index);
 /* util */
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
 int _photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf);
+int _photon_handle_addr(photonAddr addr, photonAddr ret_addr);
 
 #endif

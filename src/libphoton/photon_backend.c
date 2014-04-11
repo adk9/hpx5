@@ -1098,23 +1098,9 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   uintptr_t buf_addr;
   int rc, m_count, num_msgs;
 
-  // see if we have a block_id to send to
-  if (!(addr->blkaddr.blk0) &&
-      !(addr->blkaddr.blk1) &&
-      !(addr->blkaddr.blk2) && addr->blkaddr.blk3) {
-    if (__photon_config->ud_gid_prefix) {
-      inet_pton(AF_INET6, __photon_config->ud_gid_prefix, saddr.raw);
-      uint32_t *iptr = (uint32_t*)&saddr.raw[12];
-      *iptr = htonl(addr->blkaddr.blk3);
-    }
-    else {
-      dbg_err("unrecognized address format");
-      goto error_exit;
-    }
-  }
-  else {
-    saddr.global.prefix = addr->global.prefix;
-    saddr.global.proc_id = addr->global.proc_id;
+  rc = _photon_handle_addr(addr, &saddr);
+  if (rc != PHOTON_OK) {
+    goto error_exit;
   }
 
   request_id = INC_COUNTER(curr_cookie);
@@ -2337,6 +2323,34 @@ static void *__photon_req_watcher(void *arg) {
 
 #endif
 
+/* begin util */
+int _photon_handle_addr(photonAddr addr, photonAddr raddr) {
+  if (!raddr) {
+    return PHOTON_ERROR;
+  }
+
+  // see if we have a block_id to send to
+  if (!(addr->blkaddr.blk0) &&
+      !(addr->blkaddr.blk1) &&
+      !(addr->blkaddr.blk2) && addr->blkaddr.blk3) {
+    if (__photon_config->ud_gid_prefix) {
+      inet_pton(AF_INET6, __photon_config->ud_gid_prefix, raddr->raw);
+      uint32_t *iptr = (uint32_t*)&(raddr->raw[12]);
+      *iptr = htonl(addr->blkaddr.blk3);
+    }
+    else {
+      dbg_err("block_id, missing ud_gid_prefix?");
+      return PHOTON_ERROR;
+    }
+  }
+  else {
+    raddr->global.prefix = addr->global.prefix;
+    raddr->global.proc_id = addr->global.proc_id;
+  }
+
+  return PHOTON_OK;
+}
+
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
   photonBI db;
 
@@ -2373,7 +2387,7 @@ int _photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf) {
   ret_buf = NULL;
   return PHOTON_ERROR;
 }
-
+/* end util */
 
 #ifdef HAVE_XSP
 int photon_xsp_lookup_proc(libxspSess *sess, ProcessInfo **ret_pi, int *index) {
