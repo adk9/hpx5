@@ -13,6 +13,12 @@ libboot_la_SOURCES += mpi.c
 libboot_la_LIBADD  += @MPI_LIBS@
 endif
 
+if HAVE_PHOTON
+libboot_la_CFLAGS  += @MPI_CFLAGS@
+libboot_la_SOURCES += mpi.c
+libboot_la_LIBADD  += @MPI_LIBS@
+endif
+
 if HAVE_PMI
 libboot_la_CFLAGS  += @PMI_CFLAGS@
 libboot_la_SOURCES += pmi.c

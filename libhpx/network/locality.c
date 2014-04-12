@@ -19,6 +19,7 @@
 /// Implement the locality actions.
 /// ----------------------------------------------------------------------------
 #include <stdlib.h>
+#include <stdbool.h>
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -30,6 +31,8 @@ locality_t *here = NULL;
 hpx_action_t locality_shutdown = 0;
 hpx_action_t locality_global_sbrk = 0;
 hpx_action_t locality_alloc_blocks = 0;
+hpx_action_t locality_invalidate = 0;
+hpx_action_t locality_move_block = 0;
 
 
 /// The action that performs a global allocation for a rank.
@@ -78,9 +81,43 @@ static int _shutdown_action(void *args) {
   return HPX_SUCCESS;
 }
 
+/// The action that invalidates a block mapping on a given locality.
+static int _invalidate_action(hpx_addr_t *args) {
+  hpx_addr_t addr = hpx_thread_current_target();
+  // call btt invalidate here.
+  // bool success = btt_invalidate(here->btt, addr);
+  // hpx_thread_continue(sizeof(success), &success);
+  return HPX_SUCCESS;
+}
+
+static int _move_block_action(hpx_addr_t *args) {
+  hpx_addr_t src = *args;
+
+  bool success;
+  // 1. invalidate the block mapping at the source locality.
+  hpx_addr_t done = hpx_lco_future_new(sizeof(success));
+  hpx_call(src, locality_invalidate, NULL, 0, HPX_NULL);
+
+  // 2. allocate local memory for the block.
+  char *block = malloc(src.block_bytes);
+  assert(block);
+
+  hpx_lco_get(done, &success, sizeof(success));
+  hpx_lco_delete(done, HPX_NULL);
+  if (!success) {
+    free(block);
+    hpx_thread_continue(0, NULL);
+  }
+
+  // 3. Insert an entry into the block translation table.
+  btt_insert(here->btt, src, block);
+  hpx_thread_continue(0, NULL);
+}
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  locality_shutdown = HPX_REGISTER_ACTION(_shutdown_action);
-  locality_global_sbrk = HPX_REGISTER_ACTION(_global_sbrk_action);
+  locality_shutdown     = HPX_REGISTER_ACTION(_shutdown_action);
+  locality_global_sbrk  = HPX_REGISTER_ACTION(_global_sbrk_action);
   locality_alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
+  locality_invalidate   = HPX_REGISTER_ACTION(_invalidate_action);
+  locality_move_block   = HPX_REGISTER_ACTION(_move_block_action);
 }

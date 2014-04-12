@@ -20,6 +20,8 @@
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
+#include "libhpx/network.h"
+#include "libhpx/routing.h"
 #include "addr.h"
 
 static const uint64_t _TABLE_SIZE = UINT32_MAX * sizeof(void*);
@@ -38,6 +40,8 @@ static uint32_t _row(hpx_addr_t addr) {
 
 
 static uint32_t _pgas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
+  if (btt->type == HPX_GAS_PGAS_SWITCH)
+    return addr_block_id(addr);
   return addr_block_id(addr) % here->ranks;
 }
 
@@ -54,13 +58,14 @@ static void _pgas_btt_delete(btt_class_t *btt) {
   free(pgas);
 }
 
-
 static bool _pgas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
-  // If I don't own this addr, then I don't have a mapping for it.
-  if (_pgas_btt_owner(btt, addr) != here->rank)
-    return false;
+  if (btt->type != HPX_GAS_PGAS_SWITCH) {
+    // If I don't own this addr, then I don't have a mapping for it.
+    if (_pgas_btt_owner(btt, addr) != here->rank)
+      return false;
+  }
 
   // Look up the mapping
   void *base;
@@ -89,16 +94,21 @@ static void *_pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
 static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
+  if (btt->type = HPX_GAS_PGAS_SWITCH) {
+    uint32_t blockid = addr_block_id(addr);
+    uint64_t dst = block_id_macaddr(blockid);
+    routing_t *routing = network_get_routing(here->network);
+
+    routing_register_addr(routing, dst);
+    // update the routing table
+    int port = routing_my_port(routing);
+    routing_add_flow(routing, HPX_SWADDR_WILDCARD, dst, port);
+  }
+
   // Just find the row, and store the base pointer there.
   sync_store(&pgas->table[_row(addr)], base, SYNC_RELEASE);
 }
 
-static void _pgas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
-                            hpx_addr_t lco) {
-  // noop for PGAS
-  if (!hpx_addr_eq(lco, HPX_NULL))
-    hpx_lco_set(lco, NULL, 0, HPX_NULL);
-}
 
 
 btt_class_t *btt_pgas_new(void) {
@@ -115,7 +125,6 @@ btt_class_t *btt_pgas_new(void) {
   btt->class.unpin      = _pgas_btt_unpin;
   btt->class.invalidate = _pgas_btt_invalidate;
   btt->class.insert     = _pgas_btt_insert;
-  btt->class.remap      = _pgas_btt_remap;
   btt->class.owner      = _pgas_btt_owner;
   btt->class.home       = _pgas_btt_owner;
 

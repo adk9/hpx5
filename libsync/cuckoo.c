@@ -16,7 +16,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include "contrib/uthash/src/uthash.h"          // HACK, will fix
+#include "contrib/uthash/src/uthash.h"
 #include "libsync/hashtables.h"
 
 struct cuckoo_bucket {

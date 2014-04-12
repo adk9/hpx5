@@ -34,6 +34,7 @@
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
+#include "libhpx/routing.h"
 
 typedef enum {
   _STATE_RUNNING = 0,
@@ -59,6 +60,8 @@ struct network_class {
   ms_queue_t         recvs;                     // half duplex port for recv
 
   SYNC_ATOMIC(_network_state_t) state;          // state for progress
+
+  routing_t         *routing;                   // for adaptive routing
 };
 
 
@@ -96,6 +99,13 @@ network_class_t *network_new(void) {
   sync_ms_queue_init(network_rx_port);
 
   sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
+
+  n->routing = routing_new();
+  if (!n->routing) {
+    dbg_error("failed to start routing update manager.\n");
+    free(n);
+    return NULL;
+  }
   return n;
 }
 
@@ -127,6 +137,9 @@ void network_delete(network_class_t *network) {
     hpx_parcel_release(p);
   sync_ms_queue_fini(&network->recvs);
   network_rx_port = NULL;
+
+  if (network->routing)
+    routing_delete(network->routing);
 
   free(network);
 }
@@ -166,4 +179,8 @@ int network_progress(network_class_t *network) {
 
 void network_barrier(network_class_t *network) {
   transport_barrier(here->transport);
+}
+
+routing_t *network_get_routing(network_class_t *network) {
+  return network->routing;
 }
