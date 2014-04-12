@@ -85,7 +85,6 @@ static int _test(transport_class_t *t, void *request, int *success) {
 static void _progress(transport_class_t *transport, bool flush) {
 }
 
-
 static transport_class_t _smp = {
   .id             = _id,
   .barrier        = _barrier,

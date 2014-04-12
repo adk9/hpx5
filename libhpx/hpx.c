@@ -147,15 +147,7 @@ int hpx_init(const hpx_config_t *cfg) {
   if (here->btt == NULL)
     return _cleanup(here, dbg_error("failed to create the block translation table.\n"));
 
-  // 6) insert the base mapping for our local data segment, and pin it so that
-  //    it doesn't go anywhere, ever....
-  btt_insert(here->btt, HPX_HERE, here);
-  void *local;
-  bool pinned = hpx_addr_try_pin(HPX_HERE, &local);
-  assert(local == here);
-  assert(pinned);
-
-  // 7) allocate the transport
+  // 6) allocate the transport
   here->transport = transport_new(cfg->transport);
   if (here->transport == NULL)
     return _cleanup(here, dbg_error("failed to create transport.\n"));
@@ -165,6 +157,14 @@ int hpx_init(const hpx_config_t *cfg) {
   if (here->network == NULL)
     return _cleanup(here, dbg_error("failed to create network.\n"));
   dbg_log("initialized the network.\n");
+
+  // 7) insert the base mapping for our local data segment, and pin it so that
+  //    it doesn't go anywhere, ever....
+  btt_insert(here->btt, HPX_HERE, here);
+  void *local;
+  bool pinned = hpx_addr_try_pin(HPX_HERE, &local);
+  assert(local == here);
+  assert(pinned);
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
@@ -401,6 +401,9 @@ hpx_addr_t hpx_alloc(size_t bytes) {
 }
 
 void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  btt_remap(here->btt, src, dst, lco);
-}
+  hpx_gas_t type = btt_type(here->btt);
+  if (type == HPX_GAS_PGAS || HPX_GAS_PGAS_SWITCH)
+    return;
 
+  hpx_call(dst, locality_move_block, &src, sizeof(src), lco);
+}

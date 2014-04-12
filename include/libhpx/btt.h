@@ -17,6 +17,7 @@
 
 typedef struct btt_class btt_class_t;
 struct btt_class {
+  hpx_gas_t type;
   void (*delete)(btt_class_t *btt);
   bool (*try_pin)(btt_class_t *btt, hpx_addr_t addr, void **out);
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
@@ -33,8 +34,6 @@ struct btt_class {
   /// --------------------------------------------------------------------------
   void *(*invalidate)(btt_class_t *btt, hpx_addr_t addr);
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
-  void (*remap)(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
-                hpx_addr_t lco);
 
   uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
   uint32_t (*home)(btt_class_t *btt, hpx_addr_t addr);
@@ -51,6 +50,9 @@ inline static void btt_delete(btt_class_t *btt) {
   btt->delete(btt);
 }
 
+inline static hpx_gas_t btt_type(btt_class_t *btt) {
+  return btt->type;
+}
 
 inline static bool btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   return btt->try_pin(btt, addr, out);
@@ -71,9 +73,6 @@ inline static void btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   btt->insert(btt, addr, base);
 }
 
-inline static void btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  btt->remap(btt, src, dst, lco);
-}
 
 inline static uint32_t btt_owner(btt_class_t *btt, hpx_addr_t addr) {
   return btt->owner(btt, addr);

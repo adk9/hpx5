@@ -22,6 +22,7 @@
 /// ----------------------------------------------------------------------------
 #include "hpx/hpx.h"
 
+struct routing;
 
 typedef struct network_class network_class_t;
 
@@ -119,5 +120,8 @@ HPX_INTERNAL void network_rx_enqueue(hpx_parcel_t *p) HPX_NON_NULL(1);
 
 ///
 HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(void);
+
+///
+HPX_INTERNAL struct routing *network_get_routing(network_class_t *network);
 
 #endif // LIBHPX_NETWORK_H

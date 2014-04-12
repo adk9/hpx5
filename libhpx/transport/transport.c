@@ -41,7 +41,7 @@ transport_class_t *transport_new(hpx_transport_t transport) {
   switch (transport) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    return transport_new_photon()
+    return transport_new_photon();
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
     break;

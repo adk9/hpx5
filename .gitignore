@@ -47,6 +47,8 @@
 /examples/hpx/countdown
 /examples/hpx/seqspawn
 /examples/hpx/parspawn
+/examples/hpx/future
+/examples/hpx/agas_test
 /examples/hpx/Makefile
 /examples/hpx/Makefile.in
 

@@ -46,6 +46,8 @@ typedef struct {
 HPX_INTERNAL extern hpx_action_t locality_shutdown;
 HPX_INTERNAL extern hpx_action_t locality_global_sbrk;
 HPX_INTERNAL extern hpx_action_t locality_alloc_blocks;
+HPX_INTERNAL extern hpx_action_t locality_invalidate;
+HPX_INTERNAL extern hpx_action_t locality_move_block;
 
 /// ----------------------------------------------------------------------------
 /// The global locality is exposed through this "here" pointer.

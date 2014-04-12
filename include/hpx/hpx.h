@@ -153,7 +153,9 @@ void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 typedef enum {
   HPX_GAS_DEFAULT = 0,
   HPX_GAS_PGAS,
-  HPX_GAS_AGAS
+  HPX_GAS_AGAS,
+  HPX_GAS_PGAS_SWITCH,
+  HPX_GAS_AGAS_SWITCH
 } hpx_gas_t;
 
 typedef enum {

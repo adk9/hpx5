@@ -32,7 +32,7 @@ boot_class_t *boot_new(void) {
   }
 #endif
 
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) || defined(HAVE_PHOTON)
   boot = boot_new_mpi();
   if (boot) {
     dbg_log("initialized MPI-run process boot manager.\n");

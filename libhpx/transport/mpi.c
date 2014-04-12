@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 #include <mpi.h>
 
 #include "libhpx/boot.h"
@@ -26,7 +27,7 @@
 #include "progress.h"
 
 
-/// the MPI transport caches the number of ranks
+/// the MPI transport
 typedef struct {
   transport_class_t class;
   progress_t *progress;

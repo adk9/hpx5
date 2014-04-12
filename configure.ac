@@ -70,6 +70,20 @@ AC_ARG_ENABLE([testsuite],
   [], [enable_testsuite=yes])
 
 # ---------------------------------------------------------------------------
+# Openflow options.
+# ---------------------------------------------------------------------------
+HPX_WITH_PKG([trema],[libtrema],[use the Trema OF controller API],[no],[TREMA])
+HPX_WITH_PKG([jansson],[jansson],[use libjansson for JSON parsing],[no],[JANSSON])
+HPX_WITH_PKG([curl],[libcurl],[use libcurl for OF REST calls],[no],[CURL])
+AC_ARG_ENABLE([floodlight],
+  [AS_HELP_STRING([--enable-floodlight], [Enable Floodlight controller support @<:@default=no@:>@])],
+  [], [enable_floodlight=no])
+AS_IF([test "x$enable_floodlight" != xno],
+  AS_IF([test "x$with_jansson" != xno -a "x$with_curl" != xno],
+   [AC_DEFINE([HAVE_FLOODLIGHT],[1],[Enable Floodlight support])]))
+AM_CONDITIONAL([HAVE_FLOODLIGHT], [test "xwith_jansson" != xno -a "x$with_curl" != xno])
+
+# ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
 HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
@@ -86,7 +100,7 @@ HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
-    
+
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=yes],
@@ -194,6 +208,7 @@ echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
 echo "  Thread-Caching Malloc : $with_tcmalloc"
+echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "             Test Suite : $enable_tests"
 echo "================================================"

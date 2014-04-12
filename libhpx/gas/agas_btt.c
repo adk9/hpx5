@@ -21,6 +21,8 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
+#include "libhpx/network.h"
+#include "libhpx/routing.h"
 #include "addr.h"
 
 typedef struct {
@@ -165,15 +167,20 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
     hpx_abort();
   }
 
+  if (btt->type = HPX_GAS_AGAS_SWITCH) {
+    uint32_t blockid = addr_block_id(addr);
+    uint64_t dst = block_id_macaddr(blockid);
+    routing_t *routing = network_get_routing(here->network);
+
+    routing_register_addr(routing, dst);
+    // update the routing table
+    int port = routing_my_port(routing);
+    routing_add_flow(routing, HPX_SWADDR_WILDCARD, dst, port);
+  }
+
   agas->table[block_id].base = base;
   sync_store(&agas->table[block_id].count, 1, SYNC_RELEASE);
 }
-
-
-static void _agas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
-                            hpx_addr_t lco) {
-}
-
 
 
 static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
@@ -216,7 +223,6 @@ btt_class_t *btt_agas_new(void) {
   btt->class.unpin      = _agas_btt_unpin;
   btt->class.invalidate = _agas_btt_invalidate;
   btt->class.insert     = _agas_btt_insert;
-  btt->class.remap      = _agas_btt_remap;
   btt->class.owner      = _agas_btt_owner;
   btt->class.home       = _agas_btt_home;
 

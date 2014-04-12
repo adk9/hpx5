@@ -74,7 +74,8 @@ int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = {
     .cores = 0,
     .threads = 0,
-    .stack_bytes = 0
+    .stack_bytes = 0,
+    .gas = HPX_GAS_PGAS_SWITCH
   };
 
   bool debug = false;
@@ -111,7 +112,6 @@ int main(int argc, char *argv[argc]) {
   int ranks = hpx_get_num_ranks();
   if (ranks < 2) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.");
-    hpx_shutdown(0);
     return -1;
   }
 
