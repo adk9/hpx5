@@ -17,6 +17,6 @@
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 
-btt_class_t *btt_dynamic_new(void) {
+btt_class_t *btt_agas_new(void) {
   return NULL;
 }

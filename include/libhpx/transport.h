@@ -126,7 +126,7 @@ transport_progress(transport_class_t *t, bool flush) {
 
 
 inline static int
-transport_class_test(transport_class_t *t, void *request, int *out) {
+transport_test(transport_class_t *t, void *request, int *out) {
   return t->test(t, request, out);
 }
 

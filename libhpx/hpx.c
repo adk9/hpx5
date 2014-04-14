@@ -111,6 +111,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   _bcast = HPX_REGISTER_ACTION(_bcast_action);
 }
 
+
 int hpx_init(const hpx_config_t *cfg) {
   // 1) start by initializing the entire local data segment
   here = _map_local(UINT32_MAX);
@@ -316,7 +317,6 @@ void system_shutdown(int code) {
 void hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-  hpx_call(HPX_HERE, locality_shutdown, NULL, 0, HPX_NULL);
 
   // flush out the pending parcels
   transport_progress(here->transport, true);

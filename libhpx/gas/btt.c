@@ -22,8 +22,8 @@ btt_class_t *btt_new(hpx_gas_t type) {
    default:
     dbg_log("HPX GAS defaults to PGAS.\n");
    case (HPX_GAS_PGAS):
-    return btt_static_new();
+    return btt_pgas_new();
    case (HPX_GAS_AGAS):
-    return btt_dynamic_new();
+    return btt_agas_new();
   };
 }
