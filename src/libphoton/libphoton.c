@@ -37,6 +37,21 @@ FILE *_phot_ofp;
 /* this default beckend will do our ledger work */
 static photonBackend __photon_default = &photon_default_backend;
 
+/* return 1==initialized, 0==not initialized */
+int photon_initialized() {
+  int rc;
+  if (!__photon_backend) {
+    return 0;
+  }
+  rc = __photon_backend->initialized();
+  if (rc == PHOTON_OK) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
 int photon_init(photonConfig cfg) {
   photonBackend be;
 
