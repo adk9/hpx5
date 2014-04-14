@@ -25,12 +25,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/mman.h>
 
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
-#include "libhpx/debug.h"
 #include "libhpx/boot.h"
-#include "libhpx/gas.h"
+#include "libhpx/btt.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -40,18 +42,6 @@
 #include "network/allocator.h"
 #include "network/heavy.h"
 
-/// ----------------------------------------------------------------------------
-/// Global libhpx module objects.
-///
-/// These are the global objects we allocate and link together in hpx_init().
-/// ----------------------------------------------------------------------------
-static boot_t           *_boot = NULL;
-static gas_t             *_gas = NULL;
-static transport_t *_transport = NULL;
-static allocator_t *_allocator = NULL;
-static network_t     *_network = NULL;
-static scheduler_t     *_sched = NULL;
-
 
 /// ----------------------------------------------------------------------------
 /// Cleanup utility function.
@@ -59,93 +49,137 @@ static scheduler_t     *_sched = NULL;
 /// This will delete the global objects, if they've been allocated, and return
 /// the passed code.
 /// ----------------------------------------------------------------------------
-static int _cleanup(int code) {
-  if (_sched) {
-    scheduler_delete(_sched);
-    _sched = NULL;
+static int _cleanup(locality_t *l, int code) {
+  if (l->sched) {
+    scheduler_delete(l->sched);
+    l->sched = NULL;
   }
 
-  if (_network) {
-    network_delete(_network);
-    _network = NULL;
+  if (l->network) {
+    network_delete(l->network);
+    l->network = NULL;
   }
 
-  if (_allocator) {
-    parcel_allocator_delete(_allocator);
-    _allocator = NULL;
+  if (l->transport) {
+    transport_delete(l->transport);
+    l->transport = NULL;
   }
 
-  if (_transport) {
-    transport_delete(_transport);
-    _transport = NULL;
+  if (l->btt) {
+    btt_delete(l->btt);
+    l->btt = NULL;
   }
 
-  if (_gas) {
-    gas_delete(_gas);
-    _gas = NULL;
-  }
-
-  if (_boot) {
-    boot_delete(_boot);
-    _boot = NULL;
+  if (l->boot) {
+    boot_delete(l->boot);
+    l->boot = NULL;
   }
 
   return code;
 }
 
 
-/// Allocate and link together all of the library objects.
+static void *_map_local(uint32_t bytes) {
+  int prot = PROT_READ | PROT_WRITE;
+  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | MAP_NONBLOCK;
+  return mmap(NULL, bytes, prot, flags, -1, 0);
+}
+
+
+static hpx_action_t _bcast;
+
+
+typedef struct {
+  hpx_action_t action;
+  size_t len;
+  char *data[];
+} _bcast_args_t;
+
+
+static int _bcast_action(_bcast_args_t *args) {
+  hpx_addr_t and = hpx_lco_and_new(here->ranks);
+  for (int i = 0, e = here->ranks; i < e; ++i)
+    hpx_call(HPX_THERE(i), args->action, args->data, args->len, and);
+
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+
+static HPX_CONSTRUCTOR void _init_actions(void) {
+  _bcast = HPX_REGISTER_ACTION(_bcast_action);
+}
+
 int hpx_init(const hpx_config_t *cfg) {
-  _boot = boot_new();
-  if (_boot == NULL)
-    return _cleanup(dbg_error("failed to create boot manager.\n"));
+  // 1) start by initializing the entire local data segment
+  here = _map_local(UINT32_MAX);
+  if (!here)
+    return dbg_error("failed to map the local data segment.\n");
 
-  switch (cfg->gas) {
-   default:
-   case (HPX_GAS_PGAS):
-    _gas = gas_pgas_new(_boot);
-    break;
-   case (HPX_GAS_AGAS):
-    _gas = gas_agas_new(_boot);
-    break;
-  }
+  // 1a) set the local allocation sbrk
+  sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
 
-  if(_gas == NULL)
-    return _cleanup(dbg_error("failed to create global address space.\n"));
+  // 2) bootstrap, to figure out some topology information
+  here->boot = boot_new();
+  if (here->boot == NULL)
+    return _cleanup(here, dbg_error("failed to create boot manager.\n"));
 
-  _transport = transport_new(_boot, _gas);
-  if (_transport == NULL)
-    return _cleanup(dbg_error("failed to create transport.\n"));
+  // 3) grab the rank and ranks, these are used all over the place so we expose
+  //    them directly
+  here->rank = boot_rank(here->boot);
+  here->ranks = boot_n_ranks(here->boot);
 
-  _allocator = parcel_allocator_new(_transport);
-  if (_allocator == NULL)
-    return _cleanup(dbg_error("failed to create parcel allocator.\n"));
+  // 3a) set the global allocation sbrk
+  sync_store(&here->global_sbrk, here->ranks, SYNC_RELEASE);
 
-  _network = network_new(_boot, _transport);
-  if (_network == NULL)
-    return _cleanup(dbg_error("failed to create network.\n"));
+  // 4) update the HPX_HERE global address
+  HPX_HERE = HPX_THERE(here->rank);
+
+  // 5) allocate our block translation table
+  here->btt = btt_new(cfg->gas);
+  if (here->btt == NULL)
+    return _cleanup(here, dbg_error("failed to create the block translation table.\n"));
+
+  // 6) insert the base mapping for our local data segment, and pin it so that
+  //    it doesn't go anywhere, ever....
+  btt_insert(here->btt, HPX_HERE, here);
+  void *local;
+  bool pinned = hpx_addr_try_pin(HPX_HERE, &local);
+  assert(local == here);
+  assert(pinned);
+
+  // 7) allocate the transport
+  here->transport = transport_new(cfg->transport);
+  if (here->transport == NULL)
+    return _cleanup(here, dbg_error("failed to create transport.\n"));
+
+  here->network = network_new();
+  if (here->network == NULL)
+    return _cleanup(here, dbg_error("failed to create network.\n"));
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
   int stack_size = cfg->stack_bytes;
-  _sched = scheduler_new(_network, cores, workers, stack_size);
-  if (_sched == NULL)
-    return _cleanup(dbg_error("failed to create scheduler.\n"));
+  here->sched = scheduler_new(cores, workers, stack_size);
+  if (here->sched == NULL)
+    return _cleanup(here, dbg_error("failed to create scheduler.\n"));
 
   return HPX_SUCCESS;
 }
+
 
 /// Called to run HPX.
 int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // start the network
   pthread_t heavy;
-  int e = pthread_create(&heavy, NULL, heavy_network, _network);
+  int e = pthread_create(&heavy, NULL, heavy_network, here->network);
   if (e)
-    return _cleanup(dbg_error("could not start the network thread.\n"));
+    return _cleanup(here, dbg_error("could not start the network thread.\n"));
 
   // the rank-0 process starts the application by sending a single parcel to
   // itself
-  if (boot_rank(_boot) == 0) {
+  if (here->rank == 0) {
     // allocate and initialize a parcel for the original action
     hpx_parcel_t *p = hpx_parcel_acquire(size);
     if (!p)
@@ -158,11 +192,11 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     // parcel locally, but we're not a scheduler thread yet, and haven't
     // initialized the appropriate structures. Network loopback will get this to
     // us once we start progressing and receive from the network.
-    network_send(_network, p);
+    network_send(here->network, p);
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
-  e = scheduler_startup(_sched);
+  e = scheduler_startup(here->sched);
 
   // wait for the network to shutdown
   e = pthread_join(heavy, NULL);
@@ -172,7 +206,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   }
 
   // and cleanup the system
-  return _cleanup(e);
+  return _cleanup(here, e);
 }
 
 /// Encapsulates a remote-procedure-call.
@@ -192,18 +226,20 @@ int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
   return HPX_SUCCESS;
 }
 
-/// Encapsulates a RPC called on all available localities.
-int hpx_bcast(hpx_action_t action, const void *args, size_t len, hpx_addr_t lco) {
-  int ranks  = hpx_get_num_ranks();
-  int me = hpx_get_my_rank();
 
-  if (!hpx_addr_eq(lco, HPX_NULL))
-    lco = hpx_lco_and_new(ranks-1);
-  for (int i = 0; i < ranks; ++i) {
-    if (i == me)
-      continue;
-    hpx_call(HPX_THERE(i), action, args, len, lco);
-  }
+/// Encapsulates a RPC called on all available localities.
+int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
+  hpx_parcel_t *p = hpx_parcel_acquire(len + sizeof(_bcast_args_t));
+  p->target = HPX_HERE;
+  p->action = _bcast;
+  p->cont = lco;
+
+  _bcast_args_t *args = (_bcast_args_t *)p->data;
+  args->action = action;
+  args->len = len;
+  memcpy(&args->data, data, len);
+  hpx_parcel_send(p);
+
   return HPX_SUCCESS;
 }
 
@@ -217,14 +253,14 @@ void hpx_parcel_send(hpx_parcel_t *p) {
   if (hpx_addr_try_pin(p->target, NULL))
     scheduler_spawn(p);
   else
-    network_send(_network, p);
+    network_send(here->network, p);
 }
 
 
 hpx_parcel_t *hpx_parcel_acquire(size_t size) {
   // get a parcel of the right size from the allocator, the returned parcel
   // already has its data pointer and size set appropriately
-  hpx_parcel_t *p = parcel_allocator_get(_allocator, size);
+  hpx_parcel_t *p = parcel_allocator_get(size);
   if (!p) {
     dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
     return NULL;
@@ -239,67 +275,51 @@ hpx_parcel_t *hpx_parcel_acquire(size_t size) {
 
 
 void hpx_parcel_release(hpx_parcel_t *p) {
-  parcel_allocator_put(_allocator, p);
+  parcel_allocator_put(p);
 }
 
 
 int hpx_get_my_rank(void) {
-  return boot_rank(_boot);
+  return here->rank;
 }
 
 
 int hpx_get_num_ranks(void) {
-  return boot_n_ranks(_boot);
+  return here->ranks;
 }
 
 
 int hpx_get_num_threads(void) {
-  if (!_sched)
+  if (!here || !here->sched)
     return 0;
-  return _sched->n_workers;
+  return here->sched->n_workers;
 }
 
 
 const char *hpx_get_network_id(void) {
-  if (_transport)
-    return transport_id(_transport);
-  else
+  if (!here || !here->transport)
     return "cannot query network now";
+  return transport_id(here->transport);
 }
 
 void system_shutdown(int code) {
-  if (_sched) {
-    scheduler_shutdown(_sched);
-  }
-  else {
+  if (!here || !here->sched) {
     dbg_error("hpx_shutdown called without a scheduler.\n");
     abort();
   }
-}
 
-
-static hpx_action_t _shutdown_local = 0;
-static int _shutdown_local_action(void *args) {
-  network_shutdown(_network);
-  system_shutdown(0);
-  return HPX_SUCCESS;
-}
-
-/// ----------------------------------------------------------------------------
-/// Register the remote actions that we need.
-/// ----------------------------------------------------------------------------
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  _shutdown_local = HPX_REGISTER_ACTION(_shutdown_local_action);
+  scheduler_shutdown(here->sched);
 }
 
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
-  hpx_bcast(_shutdown_local, NULL, 0, HPX_NULL);
-  _shutdown_local_action(NULL);
+  hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
+  hpx_call(HPX_HERE, locality_shutdown, NULL, 0, HPX_NULL);
+
   // flush out the pending parcels
-  transport_progress(_transport, true);
+  transport_progress(here->transport, true);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -311,20 +331,65 @@ void hpx_abort(void) {
 }
 
 
+/// ----------------------------------------------------------------------------
+/// This is currently trying to provide the layout:
+///
+/// shared [1] T foo[n]; where sizeof(T) == bytes
+/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes) {
-  return gas_global_alloc(n, bytes, _gas);
+  // Get a set of @p n contiguous block ids.
+  uint32_t base_id;
+  hpx_addr_t f = hpx_lco_future_new(sizeof(base_id));
+  hpx_call(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), f);
+  hpx_lco_get(f, &base_id, sizeof(base_id));
+  hpx_lco_delete(f, HPX_NULL);
+
+  int ranks = here->ranks;
+  uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
+  uint32_t args[3] = {
+    base_id,
+    blocks_per_locality,
+    bytes
+  };
+
+  // The global alloc is currently synchronous, because the btt mappings aren't
+  // complete until the allocation is complete.
+  hpx_addr_t and = hpx_lco_and_new(ranks);
+  for (int i = 0; i < ranks; ++i)
+    hpx_call(HPX_THERE(i), locality_alloc_blocks, &args, sizeof(args), and);
+
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+
+  // Return the base id to the caller.
+  return hpx_addr_init(0, base_id, bytes);
 }
 
+
 bool hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
-  return gas_try_pin(addr, local, _gas);
+  return btt_try_pin(here->btt, addr, local);
 }
 
 
 void hpx_addr_unpin(const hpx_addr_t addr) {
-  gas_unpin(addr, _gas);
+  btt_unpin(here->btt, addr);
 }
 
 
+
+/// ----------------------------------------------------------------------------
+/// Local allocation is done from our designated local block. Allocation is
+/// always done to 8 byte alignment. Here we're using a simple sbrk allocator
+/// with no free functionality for now.
+/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_alloc(size_t bytes) {
-  return gas_alloc(bytes, _gas);
+  bytes += bytes % 8;
+  uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
+  if (UINT32_MAX - offset < bytes) {
+    dbg_error("exhausted local allocation limit with %lu-byte allocation.\n",
+              bytes);
+    hpx_abort();
+  }
+
+  return hpx_addr_add(HPX_HERE, offset);
 }

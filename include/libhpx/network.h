@@ -23,9 +23,7 @@
 #include "hpx/hpx.h"
 
 
-struct boot;
-struct transport;
-typedef struct network network_t;
+typedef struct network_class network_class_t;
 
 
 /// ----------------------------------------------------------------------------
@@ -34,8 +32,8 @@ typedef struct network network_t;
 /// @param b - the boot object (contains rank, nranks, etc)
 /// @param t - the byte transport object to
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL network_t *network_new(const struct boot *b, struct transport *t)
-  HPX_NON_NULL(1, 2) HPX_MALLOC;
+HPX_INTERNAL network_class_t *network_new(void)
+  HPX_MALLOC;
 
 
 /// ----------------------------------------------------------------------------
@@ -46,7 +44,7 @@ HPX_INTERNAL network_t *network_new(const struct boot *b, struct transport *t)
 ///
 /// @param network - the network to delete
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_delete(network_t *network)
+HPX_INTERNAL void network_delete(network_class_t *network)
   HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
@@ -55,7 +53,7 @@ HPX_INTERNAL void network_delete(network_t *network)
 /// This simply shuts down the local network progress thread, if there
 /// is one.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_shutdown(network_t *network)
+HPX_INTERNAL void network_shutdown(network_class_t *network)
   HPX_NON_NULL(1);
 
 
@@ -69,7 +67,7 @@ HPX_INTERNAL void network_shutdown(network_t *network)
 /// @param network - the network object to send through
 /// @param  parcel - the parcel to send
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_send(network_t *network, hpx_parcel_t *parcel)
+HPX_INTERNAL void network_send(network_class_t *network, hpx_parcel_t *parcel)
   HPX_NON_NULL(1, 2);
 
 
@@ -79,7 +77,7 @@ HPX_INTERNAL void network_send(network_t *network, hpx_parcel_t *parcel)
 /// @param network - the network to receive from
 /// @returns       - NULL, or a parcel received from the network
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *network_recv(network_t *network)
+HPX_INTERNAL hpx_parcel_t *network_recv(network_class_t *network)
   HPX_NON_NULL(1);
 
 
@@ -91,7 +89,7 @@ HPX_INTERNAL hpx_parcel_t *network_recv(network_t *network)
 ///
 /// @param  status - the status future that tracks completion
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_barrier(network_t *network)
+HPX_INTERNAL void network_barrier(network_class_t *network)
   HPX_NON_NULL(1);
 
 
@@ -107,7 +105,7 @@ HPX_INTERNAL void network_barrier(network_t *network)
 /// @param network - the network to manage
 /// @returns       - non-0 to indicate that the network has been shutdown.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL int network_progress(network_t *network)
+HPX_INTERNAL int network_progress(network_class_t *network)
   HPX_NON_NULL(1);
 
 ///

@@ -141,14 +141,22 @@ typedef enum {
   HPX_GAS_AGAS
 } hpx_gas_t;
 
+typedef enum {
+  HPX_TRANSPORT_SMP = 0,
+  HPX_TRANSPORT_MPI,
+  HPX_TRANSPORT_PORTALS,
+  HPX_TRANSPORT_PHOTON
+} hpx_transport_t;
+
 /// ----------------------------------------------------------------------------
 /// The HPX configuration type.
 /// ----------------------------------------------------------------------------
 typedef struct {
-  int       cores;                            // number of cores to use
-  int     threads;                            // number of HPX scheduler threads
-  int stack_bytes;                            // minimum stack size in bytes
-  hpx_gas_t   gas;                            // GAS algorithm
+  int                 cores;                  // number of cores to run on
+  int               threads;                  // number of HPX scheduler threads
+  int           stack_bytes;                  // minimum stack size in bytes
+  hpx_gas_t             gas;                  // GAS algorithm
+  hpx_transport_t transport;                  // transport to use
 } hpx_config_t;
 
 
@@ -273,6 +281,7 @@ int hpx_thread_get_tls_id(void);
 /// ----------------------------------------------------------------------------
 void hpx_thread_continue(size_t size, const void *value) HPX_NORETURN;
 #define HPX_THREAD_CONTINUE(v) hpx_thread_continue(sizeof(v), &v)
+
 
 /// ----------------------------------------------------------------------------
 /// Finish the current thread's execution.
@@ -445,10 +454,9 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 /// ----------------------------------------------------------------------------
 /// HPX collective operations.
 ///
-/// This is a parallel call interface that performs an @p action on @p
-/// args at all available localities. The output values are not
-/// returned, but the completion of the broadcast operation can be
-/// tracked through the @p lco LCO.
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all available localities. The output values are not returned, but the
+/// completion of the broadcast operation can be tracked through the @p lco LCO.
 /// ----------------------------------------------------------------------------
 int hpx_bcast(hpx_action_t action, const void *args, size_t len, hpx_addr_t lco);
 

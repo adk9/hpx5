@@ -29,6 +29,7 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
@@ -53,10 +54,7 @@ static ms_queue_t *network_rx_port = NULL;
 /// ----------------------------------------------------------------------------
 /// The network class data.
 /// ----------------------------------------------------------------------------
-struct network {
-  const boot_t       *boot;                     // rank, n_ranks
-  transport_t   *transport;                     // byte-based send/recv
-
+struct network_class {
   ms_queue_t         sends;                     // half duplex port for send
   ms_queue_t         recvs;                     // half duplex port for recv
 
@@ -85,15 +83,16 @@ hpx_parcel_t *network_rx_dequeue(void) {
 /// Tx/Rx port---implemented as two M&S queues, two lists of pending transport
 /// requests, and a freelist for request. There's also a shutdown flag that is
 /// set asynchronously and tested in the progress loop.
-network_t *network_new(const boot_t *boot, transport_t *transport) {
-  network_t *n = malloc(sizeof(*n));
-  n->boot         = boot;
-  n->transport    = transport;
+network_class_t *network_new(void) {
+  network_class_t *n = malloc(sizeof(*n));
+
+  assert(!network_tx_port);
+  assert(!network_rx_port);
 
   network_tx_port = &n->sends;
-  sync_ms_queue_init(network_tx_port);
-
   network_rx_port = &n->recvs;
+
+  sync_ms_queue_init(network_tx_port);
   sync_ms_queue_init(network_rx_port);
 
   sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
@@ -107,13 +106,13 @@ network_t *network_new(const boot_t *boot, transport_t *transport) {
 /// address is set to HPX_NULL. In that case, we simply skip the
 /// parcel creation and shutdown the network progress thread.
 /// ----------------------------------------------------------------------------
-void network_shutdown(network_t *network) {
+void network_shutdown(network_class_t *network) {
   // shutdown the network progress thread.
   sync_cas(&network->state, _STATE_RUNNING, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
            SYNC_RELAXED);
 }
 
-void network_delete(network_t *network) {
+void network_delete(network_class_t *network) {
   if (!network)
     return;
 
@@ -133,7 +132,7 @@ void network_delete(network_t *network) {
 }
 
 
-void network_send(network_t *network, hpx_parcel_t *p) {
+void network_send(network_class_t *network, hpx_parcel_t *p) {
   // check loopback via rank, on loopback push into the recv queue
   hpx_addr_t target = hpx_parcel_get_target(p);
   if (hpx_addr_try_pin(target, NULL))
@@ -143,12 +142,12 @@ void network_send(network_t *network, hpx_parcel_t *p) {
 }
 
 
-hpx_parcel_t *network_recv(network_t *network) {
+hpx_parcel_t *network_recv(network_class_t *network) {
   return network_rx_dequeue();
 }
 
 
-int network_progress(network_t *network) {
+int network_progress(network_class_t *network) {
   _network_state_t state;
   sync_load(state, &network->state, SYNC_ACQUIRE);
   if (state != _STATE_RUNNING) {
@@ -157,11 +156,11 @@ int network_progress(network_t *network) {
     return state;
   }
 
-  transport_progress(network->transport, false);
+  transport_progress(here->transport, false);
   return state;
 }
 
 
-void network_barrier(network_t *network) {
-  transport_barrier(network->transport);
+void network_barrier(network_class_t *network) {
+  transport_barrier(here->transport);
 }

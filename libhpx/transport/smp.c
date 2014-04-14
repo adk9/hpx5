@@ -23,7 +23,6 @@
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
-#include "transports.h"
 
 static const char *_id(void) {
   return "SMP";
@@ -48,44 +47,46 @@ static int _adjust_size(int size) {
 }
 
 
-static void _delete(transport_t *transport) {
+static void _delete(transport_class_t *transport) {
 }
 
 
-static void _pin(transport_t *transport, const void* buffer, size_t len) {
+static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 
-static void _unpin(transport_t *transpor, const void* buffer, size_t len) {
+static void _unpin(transport_class_t *transpor, const void* buffer, size_t len) {
 }
 
 
-static int _send(transport_t *t, int d, const void *b, size_t n, void *r) {
+static int _send(transport_class_t *t, int d, const void *b, size_t n, void *r) {
   dbg_error("should never call send in smp network.\n");
   return HPX_ERROR;
 }
 
 
-static size_t _probe(transport_t *transport, int *src) {
+static size_t _probe(transport_class_t *transport, int *src) {
   return 0;
 }
 
 
-static int _recv(transport_t *t, int src, void *buffer, size_t size, void *r) {
+static int _recv(transport_class_t *t, int src, void *buffer, size_t size, void *r) {
   dbg_error("should never receive a parcel in smp network.\n");
   return HPX_ERROR;
 }
 
 
-static int _test(transport_t *t, void *request, int *success) {
+static int _test(transport_class_t *t, void *request, int *success) {
   dbg_error("should never call test in smp network.\n");
   return HPX_ERROR;
 }
 
-static void _progress(transport_t *transport, bool flush) {
+
+static void _progress(transport_class_t *transport, bool flush) {
 }
 
-static transport_t _smp = {
+
+static transport_class_t _smp = {
   .id             = _id,
   .barrier        = _barrier,
   .request_size   = _request_size,
@@ -102,6 +103,6 @@ static transport_t _smp = {
 };
 
 
-transport_t *transport_new_smp(const struct boot *boot, struct gas *gas) {
+transport_class_t *transport_new_smp(void) {
   return &_smp;
 }

@@ -37,7 +37,6 @@
 /// @{
 struct lco;
 struct thread;
-struct network;
 struct worker;
 struct barrier;
 /// @}
@@ -61,7 +60,6 @@ typedef struct scheduler {
   SYNC_ATOMIC(int)     next_id;
   SYNC_ATOMIC(int) next_tls_id;
   int                    cores;
-  struct network      *network;
   int                n_workers;
   struct worker      **workers;
   struct barrier      *barrier;
@@ -71,16 +69,13 @@ typedef struct scheduler {
 /// ----------------------------------------------------------------------------
 /// Allocate and initialize a new scheduler.
 ///
-/// @param    network - a network for remote operations
 /// @param      cores - the number of processors this scheduler will run on
 /// @param    workers - the number of worker threads to start
 /// @param stack_size - the size of the stacks to allocate
 /// @param       pmap - a function to map worker id to processor
 /// @returns          - the scheduler object, or NULL if there was an error.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL scheduler_t *scheduler_new(struct network *network, int cores,
-                                        int workers, int stack_size)
-  HPX_NON_NULL(1);
+HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size);
 
 
 /// ----------------------------------------------------------------------------

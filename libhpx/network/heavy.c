@@ -27,7 +27,7 @@
 /// implementation.
 /// ----------------------------------------------------------------------------
 void* heavy_network(void *args) {
-  network_t *network = args;
+  network_class_t *network = args;
 
   for (int shutdown = 0; !shutdown; shutdown = network_progress(network)) {
     pthread_testcancel();

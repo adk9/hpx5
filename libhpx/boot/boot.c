@@ -20,10 +20,9 @@
 /// ----------------------------------------------------------------------------
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
-#include "managers.h"
 
-boot_t *boot_new(void) {
-  boot_t *boot = NULL;
+boot_class_t *boot_new(void) {
+  boot_class_t *boot = NULL;
 
 #ifdef HAVE_PMI
   boot = boot_new_pmi();
@@ -51,22 +50,3 @@ boot_t *boot_new(void) {
   return NULL;
 }
 
-void boot_delete(boot_t *boot) {
-  boot->delete(boot);
-}
-
-int boot_rank(const boot_t *boot) {
-  return (boot ? boot->rank(boot) : -1);
-}
-
-int boot_n_ranks(const boot_t *boot) {
-  return (boot ? boot->n_ranks(boot) : -1);
-}
-
-int boot_barrier(const boot_t *boot) {
-  return boot->barrier();
-}
-
-int boot_allgather(const boot_t *boot, const void *in, void *out, int n) {
-  return boot->allgather(boot, in, out, n);
-}

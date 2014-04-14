@@ -26,35 +26,32 @@
 #include "libhpx/debug.h"
 #include "managers.h"
 
-typedef struct {
-  boot_t vtable;
-  int rank;
-  int n_ranks;
-} pmi_t;
 
-
-static void _delete(boot_t *boot) {
+static void _delete(boot_class_t *boot) {
   PMI_Finalize();
-  free(boot);
 }
 
 
-static int _rank(const boot_t *boot) {
-  const pmi_t *pmi = (const pmi_t *)boot;
-  return pmi->rank;
+static int _rank(const boot_class_t *boot) {
+  int rank;
+  if (PMI_Get_rank(&rank) != PMI_SUCCESS)
+    hpx_abort();
+  return rank;
 }
 
 
-static int _n_ranks(const boot_t *boot) {
-  const pmi_t *pmi = (const pmi_t*)boot;
-  return pmi->n_ranks;
+static int _n_ranks(const boot_class_t *boot) {
+  int ranks;
+  if (PMI_Get_size(&ranks) != PMI_SUCCESS)
+    hpx_abort();
+  return ranks;
 }
+
 
 static int _barrier(void) {
-  if (PMI_Barrier() != PMI_SUCCESS)
-    return HPX_ERROR;
-  return HPX_SUCCESS;
+  return (PMI_Barrier() != PMI_SUCCESS) ? HPX_ERROR : HPX_SUCCESS;
 }
+
 
 /// ----------------------------------------------------------------------------
 /// Base64 string encoding.
@@ -203,7 +200,7 @@ error:
 }
 
 
-static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
+static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
   const pmi_t *pmi = (const pmi_t*)boot;
 
 #if HAVE_PMI_CRAY_EXT
@@ -253,32 +250,30 @@ static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
   return HPX_SUCCESS;
 }
 
-boot_t *boot_new_pmi(void) {
+
+static boot_class_t _pmi = {
+  .delete    = _delete,
+  .rank      = _rank,
+  .n_ranks   = _n_ranks,
+  .barrier   = _barrier,
+  .allgather = _allgather
+};
+
+
+boot_class_t *boot_new_pmi(void) {
   int init;
   PMI_Initialized(&init);
-  if (init == 0) {
-    dbg_log("initializing PMI boostrap... ");
-    int spawned;
-    if (PMI_Init(&spawned) != PMI_SUCCESS)
-      return NULL;
+  if (init)
+    return &_pmi;
+
+
+  dbg_log("initializing PMI boostrap... ");
+  int spawned;
+  if (PMI_Init(&spawned) == PMI_SUCCESS) {
+    dbg_log("success.\n");
+    return &_pmi;
   }
 
-  pmi_t *pmi = malloc(sizeof(*pmi));
-  pmi->vtable.delete    = _delete;
-  pmi->vtable.rank      = _rank;
-  pmi->vtable.n_ranks   = _n_ranks;
-  pmi->vtable.barrier   = _barrier;
-  pmi->vtable.allgather = _allgather;
-
-  if (PMI_Get_rank(&pmi->rank) != PMI_SUCCESS) {
-    free(pmi);
-    return NULL;
-  }
-
-  if (PMI_Get_size(&pmi->n_ranks) != PMI_SUCCESS) {
-    free(pmi);
-    return NULL;
-  }
-
-  return &pmi->vtable;
+  dbg_error("failed.\n");
+  return NULL;
 }

@@ -20,100 +20,54 @@
 /// ----------------------------------------------------------------------------
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
-#include "transports.h"
 
-transport_t *transport_new(const struct boot *boot, struct gas *gas) {
-  transport_t *transport = NULL;
 
+transport_class_t *transport_new(hpx_transport_t transport) {
+  transport_class_t *t = NULL;
+  switch (transport) {
+   case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-  transport = transport_new_photon(boot, gas);
-  if (transport) {
-    dbg_log("initialized the Photon transport.\n");
-    return transport;
-  }
+    if ((t = transport_new_photon(void)) == NULL)
+      dbg_error("Photon transport failed to initialize.\n");
+#else
+    dbg_error("Photon transport not supported in current configuration.\n");
 #endif
+    break;
 
+   case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-  transport = transport_new_mpi(boot, gas);
-  if (transport) {
-    dbg_log("initialized the MPI transport.\n");
-    return transport;
-  }
+    if ((t = transport_new_mpi()) == NULL)
+      dbg_error("MPI transport failed to initialize.\n");
+#else
+    dbg_error("MPI transport not supported in current configuration.\n");
 #endif
+    break;
 
+   case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-  transport = transport_new_portals(boot, gas);
-  if (transport) {
-    dbg_log("initialized the Portals transport.\n");
-    return transport;
-  }
+    if ((t = transport_new_portals()) == NULL)
+      dbg_error("Portals transport failed to initialize.\n");
+#else
+    dbg_error("Portals transport not supported in current configuration.\n");
 #endif
+    break;
 
-  transport = transport_new_smp(boot, gas);
-  if (transport) {
-    dbg_log("initialized the SMP transport.\n");
-    return transport;
+   default:
+   case (HPX_TRANSPORT_SMP):
+    t = transport_new_smp();
+    break;
+  };
+
+  if (!t)
+    t = transport_new_smp();
+
+  if (!t) {
+    dbg_error("Failed to initialize transport.\n");
+    return NULL;
   }
 
-  dbg_error("failed to initialize a transport.\n");
-  return NULL;
-}
-
-const char *transport_id(transport_t *transport) {
-  return transport->id();
-}
-
-void transport_delete(transport_t *transport) {
-  transport->delete(transport);
+  dbg_log("initialized the %s transport.\n" t->id());
+  return t;
 }
 
 
-int transport_request_size(const transport_t *transport) {
-  return transport->request_size();
-}
-
-int transport_request_cancel(const transport_t *transport, void *request) {
-  return transport->request_cancel(request);
-}
-
-void transport_pin(transport_t *transport, const void *buffer, size_t len) {
-  transport->pin(transport, buffer, len);
-}
-
-
-void transport_unpin(transport_t *transport, const void *buffer, size_t len) {
-  transport->pin(transport, buffer, len);
-}
-
-
-int transport_send(transport_t *transport, int dest, const void *buffer,
-                   size_t size, void *request) {
-  return transport->send(transport, dest, buffer, size, request);
-}
-
-
-size_t transport_probe(transport_t *transport, int *src) {
-  return transport->probe(transport, src);
-}
-
-
-int transport_recv(transport_t *transport, int src, void *buffer, size_t n,
-                   void *r) {
-  return transport->recv(transport, src, buffer, n, r);
-}
-
-void transport_progress(transport_t *transport, bool flush) {
-  transport->progress(transport, flush);
-}
-
-int transport_test(transport_t *transport, void *request, int *out) {
-  return transport->test(transport, request, out);
-}
-
-int transport_adjust_size(transport_t *transport, int size) {
-  return transport->adjust_size(size);
-}
-
-void transport_barrier(transport_t *transport) {
-  transport->barrier();
-}

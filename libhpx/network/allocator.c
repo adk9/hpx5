@@ -18,44 +18,23 @@
 #include <stdlib.h>
 
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/transport.h"
 #include "allocator.h"
 #include "cache.h"
 #include "padding.h"
 
-struct allocator {
-  transport_t *transport;
-};
-
 
 /// thread local parcel cache is lazily allocated
-/// TODO: allocate this during initialization
 static __thread cache_t *_parcels = NULL;
 
 
-allocator_t *parcel_allocator_new(transport_t *transport) {
-  allocator_t *allocator = malloc(sizeof(*allocator));
-  if (!allocator) {
-    dbg_error("could not allocate allocator (ironically).\n");
-    return NULL;
-  }
-
-  allocator->transport = transport;
-  return allocator;
-}
-
-
-void parcel_allocator_delete(allocator_t *allocator) {
-  free(allocator);
-}
-
-
-hpx_parcel_t *parcel_allocator_get(allocator_t *allocator, int payload) {
+hpx_parcel_t *parcel_allocator_get(int payload) {
   if (!_parcels)
       _parcels = cache_new();
 
-  int size = transport_adjust_size(allocator->transport, payload);
+  int size = transport_adjust_size(here->transport, payload);
 
   // try to get a parcel of the right size from the cache, this will deal with
   // misses internally by potentially allocating a new block
@@ -70,7 +49,7 @@ hpx_parcel_t *parcel_allocator_get(allocator_t *allocator, int payload) {
 }
 
 
-void parcel_allocator_put(allocator_t *allocator, hpx_parcel_t *p) {
+void parcel_allocator_put(hpx_parcel_t *p) {
   if (!_parcels)
     _parcels = cache_new();
 

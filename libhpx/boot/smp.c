@@ -14,47 +14,42 @@
 #include "config.h"
 #endif
 
-#include <stdlib.h>
-
 #include "libhpx/boot.h"
-#include "managers.h"
 
-typedef struct {
-  boot_t vtable;
-  int rank;
-  int n_ranks;
-} smp_t;
 
-static void _delete(boot_t *boot) {
-  free(boot);
+static void _delete(boot_class_t *boot) {
 }
 
-static int _rank(const boot_t *boot) {
-  const smp_t *smp = (const smp_t*)boot;
-  return smp->rank;
+
+static int _rank(const boot_class_t *boot) {
+  return 0;
 }
 
-static int _n_ranks(const boot_t *boot) {
-  const smp_t *smp = (const smp_t*)boot;
-  return smp->n_ranks;
+
+static int _n_ranks(const boot_class_t *boot) {
+  return 1;
 }
+
 
 static int _barrier(void) {
   return 0;
 }
 
-static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
+
+static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
   return 0;
 }
 
-boot_t *boot_new_smp(void) {
-  smp_t *smp = malloc(sizeof(*smp));
-  smp->vtable.delete    = _delete;
-  smp->vtable.rank      = _rank;
-  smp->vtable.n_ranks   = _n_ranks;
-  smp->vtable.barrier   = _barrier;
-  smp->vtable.allgather = _allgather;
-  smp->rank             = 0;
-  smp->n_ranks          = 1;
-  return &smp->vtable;
+
+static boot_class_t _smp = {
+  .delete    = _delete,
+  .rank      = _rank,
+  .n_ranks   = _n_ranks,
+  .barrier   = _barrier,
+  .allgather = _allgather
+};
+
+
+boot_class_t *boot_new_smp(void) {
+  return &_smp;
 }
