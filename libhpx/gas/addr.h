@@ -20,5 +20,8 @@ static inline uint32_t addr_block_id(hpx_addr_t addr) {
   return addr.base_id + (addr.offset / addr.block_bytes);
 }
 
+static inline void *addr_to_local(hpx_addr_t addr, void *base) {
+  return (void*)((char*)base + addr.offset % addr.block_bytes);
+}
 
 #endif // LIBHPX_GAS_ADDR_H

@@ -10,20 +10,13 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_MANAGERS_H
-#define LIBHPX_BOOT_MANAGERS_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-struct boot {
-  void (*delete)(boot_t*);
-  int (*rank)(const boot_t*);
-  int (*n_ranks)(const boot_t*);
-  int (*barrier)(void);
-  int (*allgather)(const boot_t*, const void*, void*, int);
-};
+#include "libhpx/btt.h"
+#include "libhpx/debug.h"
 
-HPX_INTERNAL boot_t *boot_new_mpi(void);
-HPX_INTERNAL boot_t *boot_new_pmi(void);
-HPX_INTERNAL boot_t *boot_new_smp(void);
-
-
-#endif // LIBHPX_BOOT_MANAGERS_H
+btt_class_t *btt_dynamic_new(void) {
+  return NULL;
+}

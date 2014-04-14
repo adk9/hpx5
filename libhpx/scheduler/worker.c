@@ -31,6 +31,7 @@
 #include "libhpx/action.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
@@ -64,8 +65,6 @@ static __thread struct worker {
   ustack_t          *stacks;                    // local free stacks
   chase_lev_ws_deque_t work;                    // my work
   atomic_int_t     shutdown;                    // cooperative shutdown flag
-  scheduler_t    *scheduler;                    // the scheduler we belong to
-  network_t        *network;                    // could have per-worker port
 
   // statistics
   unsigned long     n_spins;
@@ -82,8 +81,6 @@ static __thread struct worker {
   .stacks    = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .shutdown  = 0,
-  .scheduler = NULL,
-  .network   = NULL,
   .n_spins   = 0,
   .n_spawns  = 0,
   .n_steals  = 0,
@@ -119,14 +116,13 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 /// ----------------------------------------------------------------------------
 static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
   assert(sp);
-  assert(self.scheduler);
 
   // checkpoint my native stack pointer
   self.sp = sp;
   self.current = to;
 
   // wait for the rest of the scheduler to catch up to me
-  sync_barrier_join(self.scheduler->barrier, self.id);
+  sync_barrier_join(here->sched->barrier, self.id);
 
   return HPX_SUCCESS;
 }
@@ -165,11 +161,11 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 /// SMP work stealing isn't that big a deal.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_steal(void) {
-  int victim_id = rand_r(&self.seed) % self.scheduler->n_workers;
+  int victim_id = rand_r(&self.seed) % here->sched->n_workers;
   if (victim_id == self.id)
     return NULL;
 
-  worker_t *victim = self.scheduler->workers[victim_id];
+  worker_t *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p)
     ++self.n_steals;
@@ -182,7 +178,7 @@ static hpx_parcel_t *_steal(void) {
 /// Check the network during scheduling.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_network(void) {
-  return network_recv(self.network);
+  return network_recv(here->network);
 }
 
 
@@ -282,14 +278,12 @@ void *worker_run(scheduler_t *sched) {
   self.core_id   = -1; // let linux do this for now
   // self.core_id   = self.id % hpx_get_n_ranks(); // round robin
   self.seed      = self.id;
-  self.scheduler = sched;
-  self.network   = sched->network;
 
   // initialize my work structure
   sync_chase_lev_ws_deque_init(&self.work, 64);
 
   // publish my self structure so other people can steal from me
-  self.scheduler->workers[self.id] = &self;
+  here->sched->workers[self.id] = &self;
 
   // set this thread's affinity
   if (self.core_id > 0)
@@ -331,7 +325,7 @@ void *worker_run(scheduler_t *sched) {
 
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
-  sync_barrier_join(self.scheduler->barrier, self.id);
+  sync_barrier_join(here->sched->barrier, self.id);
   sync_chase_lev_ws_deque_fini(&self.work);
 
   printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu, stacks:%lu\n",
@@ -537,9 +531,8 @@ hpx_addr_t hpx_thread_current_cont(void) {
 
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = self.current->stack;
-  if (stack->tls_id < 0) {
-    scheduler_t *sched = self.scheduler;
-    stack->tls_id = sync_fadd(&sched->next_tls_id, 1, SYNC_ACQ_REL);
-  }
+  if (stack->tls_id < 0)
+    stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
+
   return stack->tls_id;
 }

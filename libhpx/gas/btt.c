@@ -10,14 +10,20 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_SBRK_H
-#define LIBHPX_GAS_SBRK_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
-#include "hpx/attributes.h"
+#include "libhpx/btt.h"
+#include "libhpx/debug.h"
 
-HPX_INTERNAL void gas_sbrk_init(uint32_t ranks);
-HPX_INTERNAL uint32_t gas_sbrk(size_t n);
-
-#endif // LIBHPX_GAS_SBRK_H
+btt_class_t *btt_new(hpx_gas_t type) {
+  switch (type) {
+   default:
+    dbg_log("HPX GAS defaults to PGAS.\n");
+   case (HPX_GAS_PGAS):
+    return btt_static_new();
+   case (HPX_GAS_AGAS):
+    return btt_dynamic_new();
+  };
+}

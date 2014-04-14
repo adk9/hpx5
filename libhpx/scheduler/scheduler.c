@@ -26,14 +26,13 @@
 #include "libsync/barriers.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
-#include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 #include "worker.h"
 
 
 scheduler_t *
-scheduler_new(struct network *network, int cores, int workers, int stack_size) {
+scheduler_new(int cores, int workers, int stack_size) {
   scheduler_t *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("could not allocate a scheduler.\n");
@@ -58,8 +57,6 @@ scheduler_new(struct network *network, int cores, int workers, int stack_size) {
     scheduler_delete(s);
     return NULL;
   }
-
-  s->network   = network;
 
   thread_set_stack_size(stack_size);
   dbg_log("Initialized a new scheduler.\n");

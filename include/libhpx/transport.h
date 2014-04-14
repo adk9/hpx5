@@ -13,159 +13,133 @@
 #ifndef LIBHPX_TRANSPORT_H
 #define LIBHPX_TRANSPORT_H
 
-#include <stddef.h>
-#include "hpx/attributes.h"
-
-struct boot;
-struct gas;
-typedef struct transport transport_t;
-
+#include "hpx/hpx.h"
 
 #define TRANSPORT_ANY_SOURCE -1
 
+typedef struct transport_class transport_class_t;
+struct transport_class {
+  void (*barrier)(void);
 
-/// ----------------------------------------------------------------------------
-/// Allocate and initialize a network.
-///
-/// This is a factory method that actually picks concrete networks based on what
-/// is currently available.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL transport_t *transport_new(const struct boot *boot,
-                                        struct gas *gas)
-  HPX_NON_NULL(1);
+  int (*request_size)(void);
 
+  int (*request_cancel)(void *request);
 
-/// ----------------------------------------------------------------------------
-/// Delete the transport.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void transport_delete(transport_t*)
-  HPX_NON_NULL(1);
+  int (*adjust_size)(int size);
 
+  const char *(*id)(void)
+    HPX_RETURNS_NON_NULL;
 
-/// ----------------------------------------------------------------------------
-/// Determine how much space needs to be allocated for a request.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_request_size(const transport_t *t)
-  HPX_NON_NULL(1);
+  void (*delete)(transport_class_t*)
+    HPX_NON_NULL(1);
 
+  void (*pin)(transport_class_t*, const void* buffer, size_t len)
+    HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// Cancels a pending send/receive operation associated with the given
-/// request.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_request_cancel(const transport_t *t, void *request)
-  HPX_NON_NULL(1);
+  void (*unpin)(transport_class_t*, const void* buffer, size_t len)
+    HPX_NON_NULL(1);
 
+  int (*send)(transport_class_t*, int dest, const void *buffer, size_t size,
+              void *request)
+    HPX_NON_NULL(1, 3);
 
-/// ----------------------------------------------------------------------------
-/// Pin a block of memory
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void transport_pin(transport_t *t, const void *buffer, size_t len)
-  HPX_NON_NULL(1, 2);
+  size_t (*probe)(transport_class_t *t, int *src)
+    HPX_NON_NULL(1, 2);
 
+  int (*recv)(transport_class_t *t, int src, void *buffer, size_t size, void *request)
+    HPX_NON_NULL(1, 3);
 
-/// ----------------------------------------------------------------------------
-/// Unpin a block of memory
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void transport_unpin(transport_t *t, const void *buffer,
-                                  size_t len)
-  HPX_NON_NULL(1, 2);
+  int (*test)(transport_class_t *t, void *request, int *out)
+    HPX_NON_NULL(1, 2, 3);
+
+  void (*progress)(transport_class_t *t, bool flush)
+    HPX_NON_NULL(1);
+};
 
 
-/// ----------------------------------------------------------------------------
-/// Send a buffer to a destination.
-///
-/// The buffer must not be modified between this operation and successful
-/// completion of the request.
-///
-/// @param       t - the transport object
-/// @param    dest - the destination rank
-/// @param  buffer - the buffer to send
-/// @param    size - the number of bytes in the buffer
-/// @param request - a transport-specific object that can be used to reference
-///                  this send operation later
-/// @returns       - HPX_SUCCESS or HPX_ERROR
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_send(transport_t *t, int dest, const void *buffer,
-                                size_t size, void *request)
-  HPX_NON_NULL(1, 3);
+HPX_INTERNAL transport_class_t *transport_new_photon(void);
+HPX_INTERNAL transport_class_t *transport_new_mpi(void);
+HPX_INTERNAL transport_class_t *transport_new_portals(void);
+HPX_INTERNAL transport_class_t *transport_new_smp(void);
+HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport);
 
 
-/// ----------------------------------------------------------------------------
-/// Polls to see if any bytes are ready for us.
-///
-/// @param           p - the transport
-/// @param[in/out] src - the source we'd like to probe (TRANSPORT_ANY_SOURCE
-///                      normally), returns the source to recv from, if anything
-///                      is ready
-/// @returns           - the number of ready bytes to receive from src
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL size_t transport_probe(transport_t *t, int *src)
-  HPX_NON_NULL(1, 2);
+inline static const char *
+transport_id(transport_class_t *t) {
+  return t->id();
+}
 
 
-/// ----------------------------------------------------------------------------
-/// Receive parcel data from a source.
-///
-/// It is expected that the @p src and @p size of the receive values are the
-/// result of a successful transport_probe() operation.
-///
-/// @param       t - the transport object
-/// @param     src - the source rank
-/// @param  buffer - the target buffer
-/// @param    size - the number of bytes available
-/// @param request - an appropriately sized request to poll completion with
-/// @returns       - HPX_SUCCESS or HPX_ERROR
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_recv(transport_t *t, int src, void *buffer,
-                                size_t size, void *request)
-  HPX_NON_NULL(1, 3);
+inline static void
+transport_delete(transport_class_t *t) {
+  t->delete(t);
+}
 
 
-/// ----------------------------------------------------------------------------
-/// Test to see if a send/recv operation is complete.
-///
-/// @param      t - the transport
-/// @param    req - the request identifier
-/// @param[out] o - 0 if still active, non-0 otherwise
-/// @returns      - HPX_SUCCESS or HPX_ERROR
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_test(transport_t *t, void *req, int *out)
-  HPX_NON_NULL(1, 2, 3);
-
-/// ----------------------------------------------------------------------------
-/// Polls to ensure progress of the transport.
-///
-/// @param           t - the transport
-/// @param       flush - flush the transport and finish all pending sends/recvs
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void transport_progress(transport_t *t, bool flush)
-  HPX_NON_NULL(1);
-
-/// ----------------------------------------------------------------------------
-/// A low-level transport barrier.
-///
-/// @param t - the transport
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void transport_barrier(transport_t *t)
-  HPX_NON_NULL(1);
+inline static int
+transport_request_size(const transport_class_t *t) {
+  return t->request_size();
+}
 
 
-/// ----------------------------------------------------------------------------
-/// Give the transport an opportunity to adjust a size to something that it can
-/// send.
-///
-/// This is used during parcel allocation.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int transport_adjust_size(transport_t *t, int size)
-  HPX_NON_NULL(1);
+inline static int
+transport_request_cancel(const transport_class_t *t, void *request) {
+  return t->request_cancel(request);
+}
 
 
-/// ----------------------------------------------------------------------------
-/// Get the transport id.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL const char *transport_id(transport_t *transport)
-  HPX_NON_NULL(1) HPX_RETURNS_NON_NULL;
+inline static void
+transport_pin(transport_class_t *t, const void *buffer, size_t len) {
+  t->pin(t, buffer, len);
+}
 
+
+inline static void
+transport_unpin(transport_class_t *t, const void *buffer, size_t len) {
+  t->pin(t, buffer, len);
+}
+
+
+inline static int
+transport_send(transport_class_t *t, int dest, const void *buffer, size_t size,
+               void *request) {
+  return t->send(t, dest, buffer, size, request);
+}
+
+
+inline static size_t
+transport_probe(transport_class_t *t, int *src) {
+  return t->probe(t, src);
+}
+
+
+inline static int
+transport_recv(transport_class_t *t, int src, void *buffer, size_t n, void *r) {
+  return t->recv(t, src, buffer, n, r);
+}
+
+
+inline static void
+transport_progress(transport_class_t *t, bool flush) {
+  t->progress(t, flush);
+}
+
+
+inline static int
+transport_class_test(transport_class_t *t, void *request, int *out) {
+  return t->test(t, request, out);
+}
+
+
+inline static int
+transport_adjust_size(transport_class_t *t, int size) {
+  return t->adjust_size(size);
+}
+
+
+inline static void
+transport_barrier(transport_class_t *t) {
+  t->barrier();
+}
 
 #endif // LIBHPX_TRANSPORT_H
