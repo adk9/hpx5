@@ -29,7 +29,7 @@ typedef void* SYNC_ATOMIC() atomic_word_t;
 typedef struct {
   btt_class_t    class;
   atomic_word_t *table;
-} static_btt_t;
+} pgas_btt_t;
 
 
 static uint32_t _row(hpx_addr_t addr) {
@@ -37,13 +37,13 @@ static uint32_t _row(hpx_addr_t addr) {
 }
 
 
-static uint32_t _owner(hpx_addr_t addr) {
+static uint32_t _pgas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
   return addr_block_id(addr) % here->ranks;
 }
 
 
-static void _static_btt_delete(btt_class_t *btt) {
-  static_btt_t *pgas = (static_btt_t*)btt;
+static void _pgas_btt_delete(btt_class_t *btt) {
+  pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
   if (!pgas)
     return;
@@ -55,11 +55,11 @@ static void _static_btt_delete(btt_class_t *btt) {
 }
 
 
-static bool _static_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
-  static_btt_t *pgas = (static_btt_t*)btt;
+static bool _pgas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
+  pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
   // If I don't own this addr, then I don't have a mapping for it.
-  if (_owner(addr) != here->rank)
+  if (_pgas_btt_owner(btt, addr) != here->rank)
     return false;
 
   // Look up the mapping
@@ -76,38 +76,40 @@ static bool _static_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
 }
 
 
-static void _static_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
+static void _pgas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
   // noop for PGAS
 }
 
 
-static void _static_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
+static void _pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   // noop for PGAS
 }
 
 
-static void _static_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
-  static_btt_t *pgas = (static_btt_t*)btt;
+static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
+  pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
   // Just find the row, and store the base pointer there.
   sync_store(&pgas->table[_row(addr)], base, SYNC_RELEASE);
 }
 
 
-btt_class_t *btt_static_new(void) {
+btt_class_t *btt_pgas_new(void) {
   // Allocate the object
-  static_btt_t *btt = malloc(sizeof(*btt));
+  pgas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
     dbg_error("could not allocate PGAS block-translation-table.\n");
     return NULL;
   }
 
   // set up class
-  btt->class.delete     = _static_btt_delete;
-  btt->class.try_pin    = _static_btt_try_pin;
-  btt->class.unpin      = _static_btt_unpin;
-  btt->class.invalidate = _static_btt_invalidate;
-  btt->class.insert     = _static_btt_insert;
+  btt->class.delete     = _pgas_btt_delete;
+  btt->class.try_pin    = _pgas_btt_try_pin;
+  btt->class.unpin      = _pgas_btt_unpin;
+  btt->class.invalidate = _pgas_btt_invalidate;
+  btt->class.insert     = _pgas_btt_insert;
+  btt->class.owner      = _pgas_btt_owner;
+  btt->class.home       = _pgas_btt_owner;
 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;

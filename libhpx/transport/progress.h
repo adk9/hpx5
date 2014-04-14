@@ -26,19 +26,14 @@ struct request {
 
 typedef struct progress progress_t;
 struct progress {
-  const boot_t      *boot;
-  transport_t       *transport;
-  struct gas        *gas;
   request_t         *free;              // request freelist
   request_t         *pending_sends;     // outstanding send requests
   request_t         *pending_recvs;     // outstanding recv requests
 };
 
 
-HPX_INTERNAL progress_t *network_progress_new(const boot_t *boot,
-                                              transport_t *transport,
-                                              struct gas *gas)
-  HPX_NON_NULL(1) HPX_MALLOC;
+HPX_INTERNAL progress_t *network_progress_new(void)
+  HPX_MALLOC;
 
 
 HPX_INTERNAL void network_progress_poll(progress_t *p)

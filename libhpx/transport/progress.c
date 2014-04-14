@@ -21,9 +21,9 @@
 #include "libsync/queues.h"
 #include "libsync/sync.h"
 
-#include "libhpx/boot.h"
+#include "libhpx/btt.h"
 #include "libhpx/debug.h"
-#include "libhpx/gas.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
@@ -67,7 +67,7 @@ void request_delete(request_t *r) {
 /// purposes (e.g., valgrind might complain about transport-layer resource
 /// allocation if we don't unpin them).
 /// ----------------------------------------------------------------------------
-static void _pin(transport_t *transport, hpx_parcel_t *parcel) {
+static void _pin(transport_class_t *transport, hpx_parcel_t *parcel) {
   block_t *block = block_from_parcel(parcel);
   if (!block_is_pinned(block)) {
     transport_pin(transport, block, block_get_size(block));
@@ -96,7 +96,7 @@ static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
     request_init(r, p);
   }
   else {
-    int bytes = transport_request_size(progress->transport);
+    int bytes = transport_request_size(here->transport);
     r = request_new(p, bytes);
   }
   return r;
@@ -163,7 +163,7 @@ static bool _try_start_send(progress_t *progress) {
   hpx_parcel_t *p = network_tx_dequeue();
   if (!p)
     return false;
-  _pin(progress->transport, p);
+  _pin(here->transport, p);
 
   request_t *r = _new_request(progress, p);
   if (!r) {
@@ -171,9 +171,9 @@ static bool _try_start_send(progress_t *progress) {
     goto unwind0;
   }
 
-  int dest = gas_where(p->target, progress->gas);
+  uint32_t dest = btt_owner(here->btt, p->target);
   int size = sizeof(*p) + p->size;
-  if (transport_send(progress->transport, dest, p, size, &r->request)) {
+  if (transport_send(here->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");
     goto unwind1;
   }
@@ -194,13 +194,13 @@ static bool _try_start_send(progress_t *progress) {
 /// ----------------------------------------------------------------------------
 static bool _try_start_recv(progress_t *progress) {
   int src = TRANSPORT_ANY_SOURCE;
-  int size = transport_probe(progress->transport, &src);
+  int size = transport_probe(here->transport, &src);
   if (size < 1)
     return false;
 
   // make sure things happened like we expected
   assert(src >= 0);
-  assert(src < boot_n_ranks(progress->boot));
+  assert(src < here->ranks);
   assert(src != TRANSPORT_ANY_SOURCE);
 
   // allocate a parcel to provide the buffer to receive into
@@ -209,7 +209,7 @@ static bool _try_start_recv(progress_t *progress) {
     dbg_error("could not acquire a parcel of size %d during receive.\n", size);
     return false;
   }
-  _pin(progress->transport, p);
+  _pin(here->transport, p);
 
   // allocate a request to track this transport operation
   request_t *r = _new_request(progress, p);
@@ -220,7 +220,7 @@ static bool _try_start_recv(progress_t *progress) {
 
   // get the buffer inside the parcel that we're supposed to receive to, and
   // perform the receive
-  if (transport_recv(progress->transport, src, p, size, &r->request)) {
+  if (transport_recv(here->transport, src, p, size, &r->request)) {
     dbg_error("could not receive from transport.\n");
     goto unwind1;
   }
@@ -262,7 +262,7 @@ static int HPX_NON_NULL(1, 2, 3) _test(progress_t *p,
 
   // test this request
   int complete = 0;
-  int e = transport_test(p->transport, &i->request, &complete);
+  int e = transport_test(here->transport, &i->request, &complete);
   if (e)
     dbg_error("transport test failed.\n");
 
@@ -303,12 +303,9 @@ void network_progress_poll(progress_t *p) {
     dbg_log("started a recv.\n");
 }
 
-progress_t *network_progress_new(const boot_t *boot, transport_t *transport,
-                                 gas_t *gas) {
+progress_t *network_progress_new() {
   progress_t *p = malloc(sizeof(*p));
-  p->boot          = boot;
-  p->transport     = transport;
-  p->gas           = gas;
+  assert(p);
   p->pending_sends = NULL;
   p->pending_recvs = NULL;
   p->free          = NULL;
@@ -327,7 +324,7 @@ void network_progress_delete(progress_t *p) {
     dbg_log("abandoning active send.\n");
 
   LL_FOREACH_SAFE(p->pending_sends, i, tmp) {
-    transport_request_cancel(p->transport, i);
+    transport_request_cancel(here->transport, i);
     LL_DELETE(p->pending_sends, i);
     request_delete(i);
   }
@@ -336,7 +333,7 @@ void network_progress_delete(progress_t *p) {
     dbg_log("abandoning active recv.\n");
 
   LL_FOREACH_SAFE(p->pending_recvs, i, tmp) {
-    transport_request_cancel(p->transport, i);
+    transport_request_cancel(here->transport, i);
     LL_DELETE(p->pending_recvs, i);
     request_delete(i);
   }

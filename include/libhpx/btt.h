@@ -22,12 +22,16 @@ struct btt_class {
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
   void (*invalidate)(btt_class_t *btt, hpx_addr_t addr);
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
+
+  uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
+  uint32_t (*home)(btt_class_t *btt, hpx_addr_t addr);
 };
 
 
-HPX_INTERNAL btt_class_t *btt_static_new(void);
-HPX_INTERNAL btt_class_t *btt_dynamic_new(void);
+HPX_INTERNAL btt_class_t *btt_pgas_new(void);
+HPX_INTERNAL btt_class_t *btt_agas_new(void);
 HPX_INTERNAL btt_class_t *btt_new(hpx_gas_t type);
+
 
 /// Convenience interface.
 inline static void btt_delete(btt_class_t *btt) {
@@ -52,6 +56,16 @@ inline static void btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
 
 inline static void btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   btt->insert(btt, addr, base);
+}
+
+
+inline static uint32_t btt_owner(btt_class_t *btt, hpx_addr_t addr) {
+  return btt->owner(btt, addr);
+}
+
+
+inline static uint32_t btt_home(btt_class_t *btt, hpx_addr_t addr) {
+  return btt->home(btt, addr);
 }
 
 

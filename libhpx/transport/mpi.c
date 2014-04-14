@@ -21,17 +21,15 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "progress.h"
-#include "transports.h"
 
 
 /// the MPI transport caches the number of ranks
 typedef struct {
-  transport_t  vtable;
-  int            rank;
-  int         n_ranks;
-  progress_t*progress;
+  transport_class_t class;
+  progress_t *progress;
 } mpi_t;
 
 
@@ -75,7 +73,7 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Shut down MPI, and delete the transport.
 /// ----------------------------------------------------------------------------
-static void _delete(transport_t *transport) {
+static void _delete(transport_class_t *transport) {
   mpi_t *mpi = (mpi_t*)transport;
   network_progress_delete(mpi->progress);
   int finalized;
@@ -89,14 +87,14 @@ static void _delete(transport_t *transport) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _pin(transport_t *transport, const void* buffer, size_t len) {
+static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Unpinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_t *transport, const void* buffer, size_t len) {
+static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 
@@ -105,11 +103,11 @@ static void _unpin(transport_t *transport, const void* buffer, size_t len) {
 ///
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
 /// ----------------------------------------------------------------------------
-static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
+static int _send(transport_class_t *t, int dest, const void *data, size_t n,
+                 void *r)
 {
-  mpi_t *mpi = (mpi_t*)t;
   void *b = (void*)data;
-  int e = MPI_Isend(b, n, MPI_BYTE, dest, mpi->rank, MPI_COMM_WORLD, r);
+  int e = MPI_Isend(b, n, MPI_BYTE, dest, here->rank, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
     return dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
@@ -119,7 +117,7 @@ static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 /// ----------------------------------------------------------------------------
 /// Probe MPI to see if anything has been received.
 /// ----------------------------------------------------------------------------
-static size_t _probe(transport_t *transport, int *source) {
+static size_t _probe(transport_class_t *transport, int *source) {
   if (*source != TRANSPORT_ANY_SOURCE) {
     dbg_error("mpi transport can not currently probe source %d\n", *source);
     return 0;
@@ -155,12 +153,11 @@ static size_t _probe(transport_t *transport, int *source) {
 /// ----------------------------------------------------------------------------
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
-static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
-  mpi_t *mpi = (mpi_t*)t;
-
+static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+{
   assert(src != TRANSPORT_ANY_SOURCE);
   assert(src >= 0);
-  assert(src < mpi->n_ranks);
+  assert(src < here->ranks);
 
   int e = MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
@@ -170,7 +167,7 @@ static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
 }
 
 
-static int _test(transport_t *t, void *request, int *success) {
+static int _test(transport_class_t *t, void *request, int *success) {
   int e = MPI_Test(request, success, MPI_STATUS_IGNORE);
   if (e != MPI_SUCCESS)
     return dbg_error("failed MPI_Test.\n");
@@ -178,14 +175,14 @@ static int _test(transport_t *t, void *request, int *success) {
   return HPX_SUCCESS;
 }
 
-static void _progress(transport_t *t, bool flush) {
+static void _progress(transport_class_t *t, bool flush) {
   mpi_t *mpi = (mpi_t*)t;
   network_progress_poll(mpi->progress);
   if (flush)
     network_progress_flush(mpi->progress);
 }
 
-transport_t *transport_new_mpi(const boot_t *boot, struct gas *gas) {
+transport_class_t *transport_new_mpi(void) {
   int val = 0;
   MPI_Initialized(&val);
 
@@ -199,28 +196,25 @@ transport_t *transport_new_mpi(const boot_t *boot, struct gas *gas) {
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable.id             = _id;
-  mpi->vtable.barrier        = _barrier;
-  mpi->vtable.request_size   = _request_size;
-  mpi->vtable.request_cancel = _request_cancel;
-  mpi->vtable.adjust_size    = _adjust_size;
+  mpi->class.id             = _id;
+  mpi->class.barrier        = _barrier;
+  mpi->class.request_size   = _request_size;
+  mpi->class.request_cancel = _request_cancel;
+  mpi->class.adjust_size    = _adjust_size;
 
-  mpi->vtable.delete         = _delete;
-  mpi->vtable.pin            = _pin;
-  mpi->vtable.unpin          = _unpin;
-  mpi->vtable.send           = _send;
-  mpi->vtable.probe          = _probe;
-  mpi->vtable.recv           = _recv;
-  mpi->vtable.test           = _test;
-  mpi->vtable.progress       = _progress;
+  mpi->class.delete         = _delete;
+  mpi->class.pin            = _pin;
+  mpi->class.unpin          = _unpin;
+  mpi->class.send           = _send;
+  mpi->class.probe          = _probe;
+  mpi->class.recv           = _recv;
+  mpi->class.test           = _test;
+  mpi->class.progress       = _progress;
 
-  mpi->rank                  = boot_rank(boot);
-  mpi->n_ranks               = boot_n_ranks(boot);
-
-  mpi->progress              = network_progress_new(boot, &mpi->vtable, gas);
+  mpi->progress             = network_progress_new();
   if (!mpi->progress) {
     dbg_error("failed to start the transport progress loop.\n");
     hpx_abort();
   }
-  return &mpi->vtable;
+  return &mpi->class;
 }
