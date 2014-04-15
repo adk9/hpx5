@@ -153,6 +153,9 @@ int network_progress(network_class_t *network) {
   if (state != _STATE_RUNNING) {
     sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
              SYNC_RELEASE, SYNC_RELAXED);
+
+    // flush out the pending parcels
+    transport_progress(here->transport, true);
     return state;
   }
 

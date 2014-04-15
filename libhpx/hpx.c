@@ -317,9 +317,6 @@ void system_shutdown(int code) {
 void hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-
-  // flush out the pending parcels
-  transport_progress(here->transport, true);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
