@@ -244,7 +244,7 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int m
   req->type = SENDRECV;
   req->proc = addr->global.proc_id;
   req->num_entries = nbufs;
-  req->mmask |= (1<<msn);
+  req->mmask = (uint64_t)1<<msn;
   req->length = msize;
   req->bentries[msn] = bindex;
   memcpy(&req->addr, addr, sizeof(*addr));
