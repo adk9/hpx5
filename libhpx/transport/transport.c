@@ -21,53 +21,57 @@
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 
+static transport_class_t *_default(void) {
+#ifdef HAVE_PHOTON
+  return transport_new_photon();
+#endif
+
+#ifdef HAVE_PORTALS
+  return transport_new_portals();
+#endif
+
+#ifdef HAVE_MPI
+  return transport_new_mpi();
+#endif
+
+  return transport_new_smp();
+}
 
 transport_class_t *transport_new(hpx_transport_t transport) {
-  transport_class_t *t = NULL;
   switch (transport) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    if ((t = transport_new_photon(void)) == NULL)
-      dbg_error("Photon transport failed to initialize.\n");
+    return transport_new_photon()
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
-#endif
     break;
+#endif
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    if ((t = transport_new_mpi()) == NULL)
-      dbg_error("MPI transport failed to initialize.\n");
+    return transport_new_mpi();
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
-#endif
     break;
+#endif
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    if ((t = transport_new_portals()) == NULL)
-      dbg_error("Portals transport failed to initialize.\n");
+    return transport_new_portals();
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
-#endif
     break;
+#endif
 
-   default:
    case (HPX_TRANSPORT_SMP):
-    t = transport_new_smp();
+    return transport_new_smp();
+
+   case (HPX_TRANSPORT_DEFAULT):
+   default:
     break;
   };
 
-  if (!t)
-    t = transport_new_smp();
-
-  if (!t) {
-    dbg_error("Failed to initialize transport.\n");
-    return NULL;
-  }
-
-  dbg_log("initialized the %s transport.\n", t->id());
-  return t;
+  return _default();
 }
 
 
