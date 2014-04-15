@@ -392,6 +392,6 @@ hpx_addr_t hpx_alloc(size_t bytes) {
 }
 
 void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  return btt_remap(here->btt, src, dst, lco);
+  btt_remap(here->btt, src, dst, lco);
 }
 
