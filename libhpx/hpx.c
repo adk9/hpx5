@@ -159,10 +159,12 @@ int hpx_init(const hpx_config_t *cfg) {
   here->transport = transport_new(cfg->transport);
   if (here->transport == NULL)
     return _cleanup(here, dbg_error("failed to create transport.\n"));
+  dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
   here->network = network_new();
   if (here->network == NULL)
     return _cleanup(here, dbg_error("failed to create network.\n"));
+  dbg_log("initialized the network.\n");
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
