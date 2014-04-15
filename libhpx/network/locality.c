@@ -43,11 +43,12 @@ static int _alloc_blocks_action(uint32_t *args) {
   char *blocks = malloc(bytes);
   assert(blocks);
 
-  // Insert all of the mappings (always block cyclic allocations)---we're
-  // cheating here by looking inside the addr structure to do the math.
+  // Insert all of the mappings (always block cyclic allocations).
   for (int i = 0; i < n; ++i) {
-    hpx_addr_t addr = hpx_addr_init(0, base_id + i * here->rank, size);
-    btt_insert(here->btt, addr, blocks);
+    uint32_t block_id = base_id + i * here->ranks + here->rank;
+    hpx_addr_t addr = hpx_addr_init(0, block_id, size);
+    char *block = blocks + i * size;
+    btt_insert(here->btt, addr, block);
   }
 
   return HPX_SUCCESS;
