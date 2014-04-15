@@ -66,7 +66,7 @@ transport_class_t *transport_new(hpx_transport_t transport) {
     return NULL;
   }
 
-  dbg_log("initialized the %s transport.\n" t->id());
+  dbg_log("initialized the %s transport.\n", t->id());
   return t;
 }
 
