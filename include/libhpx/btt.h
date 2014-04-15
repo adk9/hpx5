@@ -20,7 +20,7 @@ struct btt_class {
   void (*delete)(btt_class_t *btt);
   bool (*try_pin)(btt_class_t *btt, hpx_addr_t addr, void **out);
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
-  void (*invalidate)(btt_class_t *btt, hpx_addr_t addr);
+  void *(*invalidate)(btt_class_t *btt, hpx_addr_t addr);
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
   void (*remap)(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
@@ -50,8 +50,8 @@ inline static void btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-inline static void btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
-  btt->invalidate(btt, addr);
+inline static void *btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
+  return btt->invalidate(btt, addr);
 }
 
 

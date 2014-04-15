@@ -23,8 +23,8 @@
 #include "addr.h"
 
 typedef struct {
-  SYNC_ATOMIC(void *base);
-  SYNC_ATOMIC(uint64_t count);
+  SYNC_ATOMIC(int64_t count);
+  void * SYNC_ATOMIC() base;
 } _record_t;
 
 static const uint64_t _TABLE_SIZE = UINT32_MAX * sizeof(_record_t);
@@ -58,22 +58,67 @@ static void _agas_btt_delete(btt_class_t *btt) {
 
 
 static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
-  return false;
+  // if !owner
+  //   return false
+  // else if move locked
+  //   return false
+  // else
+  //   bump ref count
+  //   output mapping
+  //   return true
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  uint32_t block_id = addr_block_id(addr);
+  int64_t count;
+  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+
+  // if move locked, return false
+  if (count < 0)
+    return false;
+
+  // if not owner
+  if (count % 2)
+    return false;
+
+  // if not ref count success, retry (could have changed arbitrarily)
+  if (!sync_cas(&agas->table[block_id].count, count, count + 2, SYNC_RELEASE,
+                SYNC_RELAXED))
+    return _agas_btt_try_pin(btt, addr, out);
+
+  // if the virtual address is required, return it
+  if (out) {
+    void *base = agas->table[block_id].base;
+    *out = addr_to_local(addr, base);
+  }
+
+  return true;
 }
 
 
 static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
-  // noop for AGAS
+  // assume that the programmer knows what they're talking about, just blindly
+  // decrement by two
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  uint32_t block_id = addr_block_id(addr);
+  int64_t count = sync_fadd(&agas->table[block_id].count, -2, SYNC_ACQ_REL);
+
 }
 
 
-static void _agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
-  // noop for AGAS
+static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  uint32_t block_id = addr_block_id(addr);
+  int64_t count;
+  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+
+  // if there is an invalidation in process
+  if (count < 0)
+    return NULL;
 }
 
 
 static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
 }
+
 
 static void _agas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
                             hpx_addr_t lco) {
