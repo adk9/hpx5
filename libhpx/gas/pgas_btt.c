@@ -81,8 +81,8 @@ static void _pgas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-static void _pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
-  // noop for PGAS
+static void *_pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
+  return NULL;
 }
 
 
