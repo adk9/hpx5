@@ -488,7 +488,6 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
   return __verbs_do_send(&args);
 }
 
-// 32 least-significant bits of id should index the mbuf entries
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id) {
   struct sr_args_t args;
@@ -525,7 +524,11 @@ static int verbs_get_event(photonEventStatus stat) {
   }
   while ((ne < 1) && --retries);
 
-  if (wc.status != IBV_WC_SUCCESS) {
+  // CQ is empty
+  if (ne == 0) {
+    return 1;
+  }
+  else if (wc.status != IBV_WC_SUCCESS) {
     log_err("(status==%d) != IBV_WC_SUCCESS: %s", wc.status, strerror(wc.status));
     goto error_exit;
   }
@@ -537,7 +540,7 @@ static int verbs_get_event(photonEventStatus stat) {
   return PHOTON_OK;
 
 error_exit:
-  return PHOTON_ERROR;
+  return -1;
 }
 
 static int verbs_get_dev_addr(int af, photonAddr addr) {

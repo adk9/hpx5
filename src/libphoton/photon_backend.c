@@ -771,9 +771,12 @@ static int __photon_nbpop_sr(photonRequest req) {
     photon_event_status event;
     
     rc = __photon_backend->get_event(&event);
-    if (rc != PHOTON_OK) {
-      dbg_err("Could not get event");
+    if (rc < 0) {
+      dbg_err("Error getting event, rc=%d", rc);
       goto error_exit;
+    }
+    else if (rc != PHOTON_OK) {
+      return 1;
     }
 
     prefix = (uint32_t)(event.id>>32);
@@ -947,7 +950,7 @@ error_exit:
 //	0 if the event associated with "request" was in the queue and was successfully poped.
 //	1 if "request" was not in the request tables.	 This is not an error if photon_test()
 //		is called in a loop and is called multiple times for each request.
-// -1 if an error occured.
+//     -1 if an error occured.
 //
 // When photon_test() returns zero (success) the "flag" parameter has the value:
 //	0 if the event that was poped does not correspond to "request", or if none of the operations completed.
@@ -2176,6 +2179,10 @@ error_exit:
   return PHOTON_ERROR;
 }
 
+/* similar to photon_test()
+   0 if some request ready to pop
+   1 if no request found
+  -1 on error */
 static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
   //char buf[40];
   //inet_ntop(AF_INET6, addr->raw, buf, 40);
@@ -2195,15 +2202,13 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
     status->count = 1;
     status->error = 0;
     dbg_info("returning 0, flag:1");
-    return 0;
+    return PHOTON_OK;
   }
   else {
     *flag = 0;
     rc = __photon_nbpop_sr(NULL);
-    if (rc < 0)
-      return rc;
-    else
-      return 0;
+    dbg_info("returning %d, flag:0", rc);
+    return rc;
   }
 }
 
