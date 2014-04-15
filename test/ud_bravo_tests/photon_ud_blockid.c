@@ -152,8 +152,8 @@ int main(int argc, char *argv[]) {
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
-      exit(0);
+      //fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      //exit(0);
     }
     else {
       if( flag ) {

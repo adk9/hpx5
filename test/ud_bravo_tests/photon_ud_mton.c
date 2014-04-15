@@ -62,16 +62,31 @@ int main(int argc, char *argv[]) {
     printf("could not find my node\n");
     return 1;
   }
-
+  
   switch (mynode->index) {
+  case B001:
+    dnode = get_bravo_node(B004);
+    break;
+  case B002:
+    dnode = get_bravo_node(B004);
+    break;
+  case B003:
+    dnode = get_bravo_node(B004);
+    break;
   case B004:
-    // listener
+    // receiver in this test
     dnode = get_bravo_node(B004);
     break;
   case B005:
     dnode = get_bravo_node(B004);
     break;
   case B006:
+    dnode = get_bravo_node(B004);
+    break;
+  case B007:
+    dnode = get_bravo_node(B004);
+    break;
+  case B008:
     dnode = get_bravo_node(B004);
     break;
   default:
