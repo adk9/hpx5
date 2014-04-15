@@ -93,11 +93,13 @@ static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   sync_store(&pgas->table[_row(addr)], base, SYNC_RELEASE);
 }
 
-static void _pgas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+static void _pgas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
+                            hpx_addr_t lco) {
   // noop for PGAS
   if (!hpx_addr_eq(lco, HPX_NULL))
     hpx_lco_set(lco, NULL, 0, HPX_NULL);
 }
+
 
 btt_class_t *btt_pgas_new(void) {
   // Allocate the object
