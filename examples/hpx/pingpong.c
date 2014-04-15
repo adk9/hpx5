@@ -38,7 +38,16 @@ static hpx_action_t _ping = 0;
 static hpx_action_t _pong = 0;
 
 /* helper functions */
-static void _usage(FILE *stream);
+static void _usage(FILE *stream) {
+  fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
+          "\t-c, the number of cores to run on\n"
+          "\t-t, the number of scheduler threads\n"
+          "\t-m, send text in message\n"
+          "\t-v, print verbose output \n"
+          "\t-d, wait for debugger on given rank\n"
+          "\t-h, show help\n");
+}
+
 static void _register_actions(void);
 static hpx_addr_t _partner(void);
 
@@ -60,19 +69,22 @@ typedef struct {
 #define RANK_PRINTF(format, ...)                                        \
   do {                                                                  \
     if (_verbose)                                                       \
-      printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), __VA_ARGS__); \
+      printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), \
+             __VA_ARGS__);                                              \
   } while (0)
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
-    .stack_bytes = 0
+    .cores       = 0,
+    .threads     = 0,
+    .stack_bytes = 0,
+    .gas         = HPX_GAS_PGAS,
+    .transport   = HPX_TRANSPORT_MPI
   };
 
-  bool debug = false;
+  int debug = -1;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:mvdh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:mvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -86,7 +98,7 @@ int main(int argc, char *argv[]) {
       _verbose = true;
       break;
      case 'd':
-      debug = true;
+      debug = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -121,14 +133,15 @@ int main(int argc, char *argv[]) {
   printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.id, _text, _verbose);
 
-  if (debug)
-    wait_for_debugger();
-
   int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
+
+  if (debug > 0)
+    if (hpx_get_my_rank() == debug)
+      wait_for_debugger();
 
   _register_actions();
 
@@ -196,20 +209,6 @@ static int _action_pong(void *msg) {
   RANK_PRINTF("ponging block (%d,%lu), msg='%s'\n", to.base_id, to.offset, args->msg);
   hpx_parcel_send(p);
   return HPX_SUCCESS;
-}
-
-
-/**
- * Dump the usage string to the relevant stream
- */
-void _usage(FILE *stream) {
-  fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
-          "\t-c, the number of cores to run on\n"
-          "\t-t, the number of scheduler threads\n"
-          "\t-m, send text in message\n"
-          "\t-v, print verbose output \n"
-          "\t-d, wait for debugger\n"
-          "\t-h, show help\n");
 }
 
 
