@@ -508,6 +508,7 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 
 static int verbs_get_event(photonEventStatus stat) {
   int ne;
+  int retries = MAX_RETRIES;
   struct ibv_wc wc;
 
   if (!stat) {
@@ -522,7 +523,7 @@ static int verbs_get_event(photonEventStatus stat) {
       goto error_exit;
     }
   }
-  while (ne < 1);
+  while ((ne < 1) && --retries);
 
   if (wc.status != IBV_WC_SUCCESS) {
     log_err("(status==%d) != IBV_WC_SUCCESS: %s", wc.status, strerror(wc.status));
