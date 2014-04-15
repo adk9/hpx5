@@ -118,8 +118,13 @@ int hpx_init(const hpx_config_t *cfg) {
   if (!here)
     return dbg_error("failed to map the local data segment.\n");
 
+  // for debugging
+  here->rank = -1;
+  here->ranks = -1;
+
   // 1a) set the local allocation sbrk
   sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
+
 
   // 2) bootstrap, to figure out some topology information
   here->boot = boot_new();
@@ -281,11 +286,13 @@ void hpx_parcel_release(hpx_parcel_t *p) {
 
 
 int hpx_get_my_rank(void) {
+  assert(here);
   return here->rank;
 }
 
 
 int hpx_get_num_ranks(void) {
+  assert(here);
   return here->ranks;
 }
 
