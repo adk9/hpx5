@@ -22,6 +22,7 @@ struct btt_class {
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
   void (*invalidate)(btt_class_t *btt, hpx_addr_t addr);
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
+  void (*remap)(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
   uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
   uint32_t (*home)(btt_class_t *btt, hpx_addr_t addr);
@@ -58,6 +59,9 @@ inline static void btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   btt->insert(btt, addr, base);
 }
 
+inline static void btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+  btt->remap(btt, src, dst, lco);
+}
 
 inline static uint32_t btt_owner(btt_class_t *btt, hpx_addr_t addr) {
   return btt->owner(btt, addr);

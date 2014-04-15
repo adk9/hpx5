@@ -125,7 +125,7 @@ hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes);
 ///                       true; if @p addr is local and @p is not NULL and pin
 ///                             is successful
 ///                       false; if @p is not local
-///                       flase; if @p is local and @local is not NULL and pin
+///                       false; if @p is local and @local is not NULL and pin
 ///                              fails
 /// ----------------------------------------------------------------------------
 bool hpx_addr_try_pin(const hpx_addr_t addr, void **local);
@@ -135,6 +135,20 @@ bool hpx_addr_try_pin(const hpx_addr_t addr, void **local);
 /// Allows the address to be remapped.
 /// ----------------------------------------------------------------------------
 void hpx_addr_unpin(const hpx_addr_t addr);
+
+/// ----------------------------------------------------------------------------
+/// Change the locality-affinity of a global distributed memory address.
+///
+/// This operation is only valid in the AGAS GAS mode. For PGAS, it is effectively
+/// a no-op.
+///
+/// @param         src - the source address to move
+/// @param         dst - the address pointing to the target locality to move the
+///                      source address @p src to move to.
+/// @param[out]    lco - LCO object to check the completion of move.
+/// ----------------------------------------------------------------------------
+void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
+
 
 typedef enum {
   HPX_GAS_PGAS = 0,
