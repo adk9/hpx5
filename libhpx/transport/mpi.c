@@ -36,7 +36,7 @@ typedef struct {
 /// ----------------------------------------------------------------------------
 /// Get the ID for an MPI transport.
 /// ----------------------------------------------------------------------------
-static const char *_id(void) {
+static const char *_mpi_id(void) {
   return "MPI";
 }
 
@@ -44,7 +44,7 @@ static const char *_id(void) {
 /// ----------------------------------------------------------------------------
 /// Use MPI barrier directly.
 /// ----------------------------------------------------------------------------
-static void _barrier(void) {
+static void _mpi_barrier(void) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -52,12 +52,12 @@ static void _barrier(void) {
 /// ----------------------------------------------------------------------------
 /// Return the size of an MPI request.
 /// ----------------------------------------------------------------------------
-static int _request_size(void) {
+static int _mpi_request_size(void) {
   return sizeof(MPI_Request);
 }
 
 
-static int _adjust_size(int size) {
+static int _mpi_adjust_size(int size) {
   return size;
 }
 
@@ -65,7 +65,7 @@ static int _adjust_size(int size) {
 /// ----------------------------------------------------------------------------
 /// Cancel an active MPI request.
 /// ----------------------------------------------------------------------------
-static int _request_cancel(void *request) {
+static int _mpi_request_cancel(void *request) {
   return MPI_Cancel(request);
 }
 
@@ -73,7 +73,7 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Shut down MPI, and delete the transport.
 /// ----------------------------------------------------------------------------
-static void _delete(transport_class_t *transport) {
+static void _mpi_delete(transport_class_t *transport) {
   mpi_t *mpi = (mpi_t*)transport;
   network_progress_delete(mpi->progress);
   int finalized;
@@ -87,14 +87,16 @@ static void _delete(transport_class_t *transport) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static void _mpi_pin(transport_class_t *transport, const void* buffer,
+                     size_t len) {
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Unpinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
+static void _mpi_unpin(transport_class_t *transport, const void* buffer,
+                       size_t len) {
 }
 
 
@@ -103,7 +105,7 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 ///
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
 /// ----------------------------------------------------------------------------
-static int _send(transport_class_t *t, int dest, const void *data, size_t n,
+static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
                  void *r)
 {
   void *b = (void*)data;
@@ -117,7 +119,7 @@ static int _send(transport_class_t *t, int dest, const void *data, size_t n,
 /// ----------------------------------------------------------------------------
 /// Probe MPI to see if anything has been received.
 /// ----------------------------------------------------------------------------
-static size_t _probe(transport_class_t *transport, int *source) {
+static size_t _mpi_probe(transport_class_t *transport, int *source) {
   if (*source != TRANSPORT_ANY_SOURCE) {
     dbg_error("mpi transport can not currently probe source %d\n", *source);
     return 0;
@@ -153,7 +155,7 @@ static size_t _probe(transport_class_t *transport, int *source) {
 /// ----------------------------------------------------------------------------
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
-static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
 {
   assert(src != TRANSPORT_ANY_SOURCE);
   assert(src >= 0);
@@ -167,7 +169,7 @@ static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
 }
 
 
-static int _test(transport_class_t *t, void *request, int *success) {
+static int _mpi_test(transport_class_t *t, void *request, int *success) {
   int e = MPI_Test(request, success, MPI_STATUS_IGNORE);
   if (e != MPI_SUCCESS)
     return dbg_error("failed MPI_Test.\n");
@@ -175,7 +177,7 @@ static int _test(transport_class_t *t, void *request, int *success) {
   return HPX_SUCCESS;
 }
 
-static void _progress(transport_class_t *t, bool flush) {
+static void _mpi_progress(transport_class_t *t, bool flush) {
   mpi_t *mpi = (mpi_t*)t;
   network_progress_poll(mpi->progress);
   if (flush)
@@ -196,20 +198,20 @@ transport_class_t *transport_new_mpi(void) {
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
-  mpi->class.id             = _id;
-  mpi->class.barrier        = _barrier;
-  mpi->class.request_size   = _request_size;
-  mpi->class.request_cancel = _request_cancel;
-  mpi->class.adjust_size    = _adjust_size;
+  mpi->class.id             = _mpi_id;
+  mpi->class.barrier        = _mpi_barrier;
+  mpi->class.request_size   = _mpi_request_size;
+  mpi->class.request_cancel = _mpi_request_cancel;
+  mpi->class.adjust_size    = _mpi_adjust_size;
 
-  mpi->class.delete         = _delete;
-  mpi->class.pin            = _pin;
-  mpi->class.unpin          = _unpin;
-  mpi->class.send           = _send;
-  mpi->class.probe          = _probe;
-  mpi->class.recv           = _recv;
-  mpi->class.test           = _test;
-  mpi->class.progress       = _progress;
+  mpi->class.delete         = _mpi_delete;
+  mpi->class.pin            = _mpi_pin;
+  mpi->class.unpin          = _mpi_unpin;
+  mpi->class.send           = _mpi_send;
+  mpi->class.probe          = _mpi_probe;
+  mpi->class.recv           = _mpi_recv;
+  mpi->class.test           = _mpi_test;
+  mpi->class.progress       = _mpi_progress;
 
   mpi->progress             = network_progress_new();
   if (!mpi->progress) {
