@@ -390,3 +390,8 @@ hpx_addr_t hpx_alloc(size_t bytes) {
 
   return hpx_addr_add(HPX_HERE, offset);
 }
+
+void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+  return btt_remap(here->btt, src, dst, lco);
+}
+
