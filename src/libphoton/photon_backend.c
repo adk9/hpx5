@@ -613,9 +613,12 @@ static int __photon_nbpop_event(photonRequest req) {
     photon_event_status event;
 
     rc = __photon_backend->get_event(&event);
-    if (rc != PHOTON_OK) {
-      dbg_err("Could not get event");
+    if (rc < 0) {
+      dbg_err("Error getting event");
       goto error_exit;
+    }
+    else if (rc != PHOTON_OK) {
+      return 1;
     }
 
     cookie = (uint32_t)( (event.id<<32)>>32);
