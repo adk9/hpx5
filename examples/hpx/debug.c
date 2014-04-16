@@ -16,13 +16,10 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <hpx/hpx.h>
 #include "debug.h"
 
-/**
- * Used for debugging. Causes a process to wait for a debugger to attach, and
- * set the value if i != 0.
- */
-void wait_for_debugger(void) {
+static void _wait(void) {
   int i = 0;
   char hostname[256];
   gethostname(hostname, sizeof(hostname));
@@ -32,3 +29,13 @@ void wait_for_debugger(void) {
     sleep(12);
 }
 
+/**
+ * Used for debugging. Causes a process to wait for a debugger to attach, and
+ * set the value if i != 0.
+ */
+void wait_for_debugger(int rank) {
+  if ((rank == ALL_RANKS) || (rank == hpx_get_my_rank()))
+    _wait();
+
+  return;
+}

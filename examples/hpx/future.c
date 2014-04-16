@@ -61,7 +61,8 @@ static void usage(FILE *f) {
   fprintf(f, "Usage: countdown [options] ROUNDS \n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
-          "\t-d, wait for debugger\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
 
@@ -72,9 +73,9 @@ int main(int argc, char * argv[argc]) {
     .stack_bytes = 0
   };
 
-  bool debug = false;
+  int debug = NO_RANKS;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -82,8 +83,11 @@ int main(int argc, char * argv[argc]) {
      case 't':
       cfg.threads = atoi(optarg);
       break;
+     case 'D':
+      debug = ALL_RANKS;
+      break;
      case 'd':
-      debug = true;
+      debug = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
@@ -108,8 +112,7 @@ int main(int argc, char * argv[argc]) {
     break;
   }
 
-  if (debug)
-    wait_for_debugger();
+  wait_for_debugger(debug);
 
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");

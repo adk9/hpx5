@@ -44,7 +44,8 @@ static void _usage(FILE *stream) {
           "\t-t, the number of scheduler threads\n"
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
-          "\t-d, wait for debugger on given rank\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
 
   int debug = -1;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:mvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -96,6 +97,9 @@ int main(int argc, char *argv[]) {
       _text = true;
      case 'v':
       _verbose = true;
+      break;
+     case 'D':
+      debug = ALL_RANKS;
       break;
      case 'd':
       debug = atoi(optarg);
@@ -139,9 +143,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  if (debug > 0)
-    if (hpx_get_my_rank() == debug)
-      wait_for_debugger();
+  wait_for_debugger(debug);
 
   _register_actions();
 
