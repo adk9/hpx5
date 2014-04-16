@@ -39,9 +39,8 @@ static int root_action(void *args) {
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
-  hpx_addr_t f = HPX_NULL;
   int r = 0;
-  f = hpx_lco_future_new(sizeof(int));
+  hpx_addr_t f = hpx_lco_future_new(sizeof(int));
   hpx_call(other, get_rank, NULL, 0, f);
   hpx_lco_get(f, &r, sizeof(r));
   hpx_lco_delete(f, HPX_NULL);
@@ -55,7 +54,9 @@ static int root_action(void *args) {
          other.offset, other.base_id, other.block_bytes,
          HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
   hpx_move(other, HPX_HERE, done);
-  hpx_lco_wait(done);
+  if (hpx_lco_wait(done) != HPX_SUCCESS)
+    printf("error in hpx_move().\n");
+
   hpx_lco_delete(done, HPX_NULL);
 
   f = hpx_lco_future_new(sizeof(int));
