@@ -74,6 +74,11 @@ inline static void btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
+inline static void *btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
+{
+  return btt->update(btt, addr, rank);
+}
+
 inline static void *btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   return btt->invalidate(btt, addr);
 }
