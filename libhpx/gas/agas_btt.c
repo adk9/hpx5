@@ -20,6 +20,7 @@
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
+#include "libhpx/scheduler.h"
 #include "addr.h"
 
 typedef struct {
@@ -29,18 +30,25 @@ typedef struct {
 
 static const uint64_t _TABLE_SIZE = UINT32_MAX * sizeof(_record_t);
 
+static const int64_t _WRITE_LOCK = 1 << sizeof(int64_t);
+
 typedef struct {
   btt_class_t class;
   _record_t  *table;
 } agas_btt_t;
 
-static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
-  return 0;
+static bool _invalid(int64_t count) {
+  return (count % 2 == 0);
 }
 
 
 static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
   return addr_block_id(addr) % here->ranks;
+}
+
+
+static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
+  return _agas_btt_home(btt, addr);
 }
 
 
@@ -58,9 +66,9 @@ static void _agas_btt_delete(btt_class_t *btt) {
 
 
 static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
-  // if !owner
+  // if invalid
   //   return false
-  // else if move locked
+  // else if locked
   //   return false
   // else
   //   bump ref count
@@ -71,12 +79,12 @@ static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   int64_t count;
   sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
 
-  // if move locked, return false
-  if (count < 0)
+  // if not valid
+  if (_invalid(count))
     return false;
 
-  // if not owner
-  if (count % 2)
+  // if locked, return false
+  if (count < 0)
     return false;
 
   // if not ref count success, retry (could have changed arbitrarily)
@@ -99,8 +107,7 @@ static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
   // decrement by two
   agas_btt_t *agas = (agas_btt_t *)btt;
   uint32_t block_id = addr_block_id(addr);
-  int64_t count = sync_fadd(&agas->table[block_id].count, -2, SYNC_ACQ_REL);
-
+  sync_fadd(&agas->table[block_id].count, -2, SYNC_ACQ_REL);
 }
 
 
@@ -110,13 +117,55 @@ static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   int64_t count;
   sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
 
+  if (_invalid(count))
+    return NULL;
+
   // if there is an invalidation in process
   if (count < 0)
     return NULL;
+
+  // otherwise acquire the write lock
+  if (!sync_cas(&agas->table[block_id].count, count, count | _WRITE_LOCK,
+                SYNC_RELEASE, SYNC_RELAXED))
+    return _agas_btt_invalidate(btt, addr);
+
+  // wait until the readers drain away
+  while (count != _WRITE_LOCK) {
+    scheduler_yield();
+    sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+  }
+
+  // clear the mapping
+  void *base = agas->table[block_id].base;
+  agas->table[block_id].base = NULL;
+
+  // mark the row as invalid
+  sync_store(&agas->table[block_id].count, 0, SYNC_RELEASE);
+
+  // return the old mapping
+  return base;
 }
 
 
 static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  uint32_t block_id = addr_block_id(addr);
+
+  if (DEBUG) {
+    int64_t count;
+    sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+    assert(_invalid(count));
+  }
+
+  // acquire the write lock
+  if (!sync_cas(&agas->table[block_id].count, 0, _WRITE_LOCK, SYNC_RELEASE,
+                SYNC_RELAXED)) {
+    dbg_error("btt insert for existing mapping.\n");
+    hpx_abort();
+  }
+
+  agas->table[block_id].base = base;
+  sync_store(&agas->table[block_id].count, 1, SYNC_RELEASE);
 }
 
 
