@@ -284,7 +284,7 @@ static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, ui
   req->mmask = 0x0;
   req->length = 0;
   memcpy(&req->addr, addr, sizeof(*addr));
-  memcpy(req->bentries, bufs, MAX_BUF_ENTRIES);
+  memcpy(req->bentries, bufs, sizeof(int)*MAX_BUF_ENTRIES);
   
   dbg_info("Inserting the new send request into the sr table: 0x%016lx/%u/%p",
            addr->global.proc_id, request, req);
