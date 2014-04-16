@@ -60,15 +60,6 @@ static int64_t _readers(int64_t count) {
   return (count & _READERS);
 }
 
-static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
-  return addr_block_id(addr) % here->ranks;
-}
-
-
-static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
-  return _agas_btt_home(btt, addr);
-}
-
 
 static void _agas_btt_delete(btt_class_t *btt) {
   agas_btt_t *agas = (agas_btt_t*)btt;
@@ -181,6 +172,33 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
 
 static void _agas_btt_remap(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
                             hpx_addr_t lco) {
+}
+
+
+
+static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
+  return addr_block_id(addr) % here->ranks;
+}
+
+
+static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  uint32_t block_id = addr_block_id(addr);
+  int64_t count;
+  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+
+  // if I don't have a valid mapping for this, then assume it's at the home
+  // locality
+  if (_invalid(count))
+    return _agas_btt_home(btt, addr);
+
+  // if I have a cached forwarding address for this, then return it---doesn't
+  // matter if this is wrong
+  if (_forward(count))
+    return (uint32_t)(uintptr_t)agas->table[block_id].base;
+
+  // otherwise, it's mine
+  return here->rank;
 }
 
 
