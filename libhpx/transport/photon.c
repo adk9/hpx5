@@ -166,8 +166,8 @@ static int _test(transport_class_t *t, void *request, int *success) {
   struct photon_status_t status;
   uint32_t *id = (uint32_t*)request;
   int e = photon_test(*id, success, &type, &status);
-  if (e != PHOTON_OK)
-    return dbg_error("failed PHOTON_Test.\n");
+  if (e < 0)
+    return dbg_error("failed photon_test.\n");
 
   return HPX_SUCCESS;
 }
