@@ -47,6 +47,8 @@ static int root_action(void *args) {
   hpx_lco_delete(f, HPX_NULL);
   printf("target locality's rank (before move): %d\n", r);
 
+  printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "failed" : "passed"));
+
   hpx_addr_t done = hpx_lco_future_new(0);
   // move address to our locality.
   printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
