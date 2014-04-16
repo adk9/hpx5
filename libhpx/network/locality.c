@@ -98,7 +98,6 @@ static int _invalidate_action(hpx_addr_t *args) {
 static int _move_block_action(hpx_addr_t *args) {
   hpx_addr_t src = *args;
 
-  void *rblock = NULL;
   int size = src.block_bytes;
 
   // 1. invalidate the block mapping at the source locality.
@@ -109,10 +108,11 @@ static int _move_block_action(hpx_addr_t *args) {
   char *block = malloc(size);
   assert(block);
 
-  hpx_lco_get(done, rblock, size);
+  hpx_lco_get(done, block, size);
   hpx_lco_delete(done, HPX_NULL);
-  if (!rblock) {
+  if (!block) {
     free(block);
+    dbg_error("failed to invalidate old mapping.\n");
     hpx_thread_continue(0, NULL);
   }
 
