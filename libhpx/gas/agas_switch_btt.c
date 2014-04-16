@@ -220,6 +220,7 @@ btt_class_t *btt_agas_switch_new(void) {
   btt->class.try_pin    = _agas_btt_try_pin;
   btt->class.unpin      = _agas_btt_unpin;
   btt->class.invalidate = _agas_btt_invalidate;
+  btt->class.update     = NULL;
   btt->class.insert     = _agas_btt_insert;
   btt->class.owner      = _agas_btt_owner;
   btt->class.home       = _agas_btt_home;
