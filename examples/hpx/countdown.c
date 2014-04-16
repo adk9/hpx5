@@ -109,12 +109,12 @@ int main(int argc, char * argv[argc]) {
     break;
   }
 
-  wait_for_debugger(debug);
-
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
+
+  wait_for_debugger(debug);
 
   send = hpx_register_action("send", send_action);
   return hpx_run(send, &n, sizeof(n));
