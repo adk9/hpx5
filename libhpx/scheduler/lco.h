@@ -28,15 +28,16 @@ typedef struct lco lco_t;
 /// needed.
 /// ----------------------------------------------------------------------------
 typedef struct {
-  void (*delete)(lco_t *lco);                           // blocking
-  void (*set)(lco_t *lco, int size, const void *value); // non-blocking
-  void (*get)(lco_t *lco, int size, void *value);       // blocking
+  void (*delete)(lco_t *lco);
+  void (*set)(lco_t *lco, int size, const void *value, hpx_status_t status);
+  hpx_status_t (*get)(lco_t *lco, int size, void *value);
 } lco_class_t;
 
-#define LCO_CLASS_INIT(d, s, g) {                    \
-    .delete = (void (*)(lco_t*))d,                   \
-    .set = (void (*)(lco_t*, int, const void *))s,   \
-    .get = (void (*)(lco_t*, int, void *))g          \
+
+#define LCO_CLASS_INIT(d, s, g) {                                   \
+    .delete = (void (*)(lco_t*))d,                                  \
+    .set = (void (*)(lco_t*, int, const void *, hpx_status_t))s,    \
+    .get = (hpx_status_t (*)(lco_t*, int, void *))g                 \
     }
 
 
@@ -48,10 +49,9 @@ struct lco_node {
   void       *data;
 };
 
+
 /// ----------------------------------------------------------------------------
-/// The base class for LCOs. As we expand the virtual interface, it might make
-/// sense to use a vtable pointer here to save space, as we expect lots of LCOs
-/// to churn through the system.
+/// The base class for LCOs.
 /// ----------------------------------------------------------------------------
 struct lco {
   const lco_class_t *vtable;
@@ -106,6 +106,10 @@ HPX_INTERNAL int lco_is_user(const lco_t *lco) HPX_NON_NULL(1);
 HPX_INTERNAL int lco_is_set(const lco_t *lco) HPX_NON_NULL(1);
 
 
+HPX_INTERNAL hpx_status_t lco_get_status(const lco_t *lco)
+  HPX_NON_NULL(1);
+
+
 /// ----------------------------------------------------------------------------
 /// Resets the set state for the LCO.
 ///
@@ -144,12 +148,13 @@ HPX_INTERNAL void lco_unlock(lco_t *lco) HPX_NON_NULL(1);
 ///
 /// @precondition The calling thread must hold the lco's lock already.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL lco_node_t *lco_trigger(lco_t *lco)
+HPX_INTERNAL lco_node_t *lco_trigger(lco_t *lco, hpx_status_t status)
   HPX_NON_NULL(1);
 
 
 HPX_INTERNAL void lco_enqueue(lco_t *lco, lco_node_t *node)
   HPX_NON_NULL(1, 2);
+
 
 /// ----------------------------------------------------------------------------
 /// Atomically add a thread to the LCO's wait queue, and unlock the LCO.

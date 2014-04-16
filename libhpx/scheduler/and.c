@@ -52,29 +52,32 @@ static void _delete(_and_t *and) {
 
 
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
-static void _set(_and_t *and, int size, const void *from) {
+static void _set(_and_t *and, int size, const void *from, hpx_status_t status) {
   uint64_t val; sync_load(val, &and->value, SYNC_ACQUIRE);
   if (val == 0)
     return;
 
   if (!sync_cas(&and->value, val, val - 1, SYNC_RELEASE, SYNC_RELAXED))
-    _set(and, size, from);
+    _set(and, size, from, status);
 
   if (val - 1 != 0)
     return;
 
   lco_lock(&and->lco);
-  scheduler_signal(&and->lco);
+  scheduler_signal(&and->lco, status);
   lco_unlock(&and->lco);
 }
 
 
 /// Basic get functionality.
-static void _get(_and_t *and, int size, void *out) {
+static hpx_status_t _get(_and_t *and, int size, void *out) {
+  hpx_status_t status;
   lco_lock(&and->lco);
   if (!lco_is_set(&and->lco))
     scheduler_wait(&and->lco);
+  status = lco_get_status(&and->lco);
   lco_unlock(&and->lco);
+  return status;
 }
 
 

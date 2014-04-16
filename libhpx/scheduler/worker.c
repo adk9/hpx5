@@ -101,10 +101,13 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
     hpx_shutdown(status);
    case HPX_ERROR:
     dbg_error("action produced error\n");
-    hpx_shutdown(status);
+    hpx_abort();
    case HPX_RESEND:
+    dbg_error("not prepared to handle resend yet.\n");
+    hpx_abort();
    case HPX_SUCCESS:
-    hpx_thread_continue(0, NULL);
+   case HPX_LCO_EXCEPTION:
+    hpx_thread_exit(status);
   }
   unreachable();
 }
@@ -411,7 +414,7 @@ static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-/// Waits for an LCO to be signaled, by using the _transfer_lco() continuation.
+/// Waits for an LCO to be signaled, by using the _unlock_lco() continuation.
 ///
 /// Uses the "fast" form of _schedule(), meaning that schedule will not try very
 /// hard to acquire more work if it doesn't have anything else to do right
@@ -424,7 +427,7 @@ static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
 /// requirements for LCO actions.
 ///
 /// @precondition The calling thread must hold @p lco's lock.
-void scheduler_wait(lco_t *lco) {
+hpx_status_t scheduler_wait(lco_t *lco) {
   hpx_parcel_t *to = _schedule(true, NULL);
 
   lco_node_t *n = self.lco_nodes;
@@ -440,6 +443,7 @@ void scheduler_wait(lco_t *lco) {
 
   thread_transfer(to, _unlock_lco, lco);
   lco_lock(lco);
+  return lco_get_status(lco);
 }
 
 
@@ -455,8 +459,8 @@ void scheduler_wait(lco_t *lco) {
 ///       running when they waited.
 ///
 /// @precondition The calling thread must hold @p lco's lock.
-void scheduler_signal(lco_t *lco) {
-  lco_node_t *q = lco_trigger(lco);
+void scheduler_signal(lco_t *lco, hpx_status_t status) {
+  lco_node_t *q = lco_trigger(lco, status);
   while (q) {
     // As soon as we push the thread into the work queue, it could be stolen, so
     // make sure we get it's next first.
@@ -495,6 +499,23 @@ void hpx_thread_continue(size_t size, const void *value) {
 }
 
 
+
+void hpx_thread_continue_cleanup(size_t size, const void *value,
+                                 void (*cleanup)(void*), void *env) {
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = self.current;
+  hpx_addr_t cont = parcel->cont;
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_lco_set(cont, value, size, HPX_NULL);   // async
+
+  // run the cleanup handler
+  cleanup(env);
+
+  _thread_exit();
+}
+
+
 void hpx_thread_exit(int status) {
   assert(status == HPX_SUCCESS);
 
@@ -503,7 +524,7 @@ void hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = self.current;
   hpx_addr_t cont = parcel->cont;
   if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set(cont, NULL, 0, HPX_NULL);   // async
+    hpx_lco_set_status(cont, NULL, 0, status, HPX_NULL); // async
 
   _thread_exit();
 }

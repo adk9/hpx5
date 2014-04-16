@@ -39,9 +39,8 @@ static int root_action(void *args) {
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
-  hpx_addr_t f = HPX_NULL;
   int r = 0;
-  f = hpx_lco_future_new(sizeof(int));
+  hpx_addr_t f = hpx_lco_future_new(sizeof(int));
   hpx_call(other, get_rank, NULL, 0, f);
   hpx_lco_get(f, &r, sizeof(r));
   hpx_lco_delete(f, HPX_NULL);
@@ -58,7 +57,9 @@ static int root_action(void *args) {
          other.offset, other.base_id, other.block_bytes,
          HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
   hpx_move(other, HPX_HERE, done);
-  hpx_lco_wait(done);
+  if (hpx_lco_wait(done) != HPX_SUCCESS)
+    printf("error in hpx_move().\n");
+
   hpx_lco_delete(done, HPX_NULL);
 
   f = hpx_lco_future_new(sizeof(int));
@@ -75,7 +76,8 @@ static void usage(FILE *f) {
   fprintf(f, "Usage: countdown [options] ROUNDS \n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
-          "\t-d, wait for debugger\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
 
@@ -84,12 +86,12 @@ int main(int argc, char *argv[argc]) {
     .cores = 0,
     .threads = 0,
     .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS_SWITCH
+    .gas = HPX_GAS_PGAS
   };
 
-  bool debug = false;
+  int debug = NO_RANKS;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -97,8 +99,11 @@ int main(int argc, char *argv[argc]) {
      case 't':
       cfg.threads = atoi(optarg);
       break;
+     case 'D':
+      debug = ALL_RANKS;
+      break;
      case 'd':
-      debug = true;
+      debug = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
@@ -110,13 +115,12 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
-  if (debug)
-    wait_for_debugger();
-
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
+
+  wait_for_debugger(debug);
 
   int ranks = hpx_get_num_ranks();
   if (ranks < 2) {

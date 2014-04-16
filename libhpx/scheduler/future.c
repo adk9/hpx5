@@ -51,6 +51,8 @@ static int _is_inplace(const _future_t *f) {
 
 
 /// Deletes the future's out of place data, if necessary.
+///
+/// NB: deadlock issue here
 static void _delete(_future_t *f) {
   if (!f)
     return;
@@ -63,6 +65,7 @@ static void _delete(_future_t *f) {
   }
   lco_fini(&f->lco);
 
+
   // overload the vtable pointer for freelisting---not perfect, but it's
   // reinitialized in _init(), so it's not the end of the world
   f->lco.vtable = (lco_class_t*)_free;
@@ -72,7 +75,8 @@ static void _delete(_future_t *f) {
 
 /// Copies @p from into the appropriate location. Futures are single-assignment,
 /// so we only do this if the future isn't set yet.
-static void _set(_future_t *f, int size, const void *from) {
+static void _set(_future_t *f, int size, const void *from, hpx_status_t status)
+{
   lco_lock(&f->lco);
   if (lco_is_set(&f->lco))
     goto exit;
@@ -90,7 +94,7 @@ static void _set(_future_t *f, int size, const void *from) {
   }
 
  signal:
-  scheduler_signal(&f->lco);
+  scheduler_signal(&f->lco, status);
 
  exit:
   lco_unlock(&f->lco);
@@ -98,7 +102,8 @@ static void _set(_future_t *f, int size, const void *from) {
 
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static void _get(_future_t *f, int size, void *out) {
+static hpx_action_t _get(_future_t *f, int size, void *out) {
+  hpx_status_t status;
   lco_lock(&f->lco);
   if (!lco_is_set(&f->lco))
     scheduler_wait(&f->lco);
@@ -119,7 +124,9 @@ static void _get(_future_t *f, int size, void *out) {
   }
 
  exit:
+  status = lco_get_status(&f->lco);
   lco_unlock(&f->lco);
+  return status;
 }
 
 
