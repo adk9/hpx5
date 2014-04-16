@@ -274,7 +274,7 @@ hpx_parcel_t *hpx_parcel_acquire(size_t size) {
     return NULL;
   }
 
-  p->pid    = -1;
+  p->src    = -1;
   p->action = HPX_ACTION_NULL;
   p->target = HPX_HERE;
   p->cont   = HPX_NULL;
