@@ -30,7 +30,7 @@ typedef struct {
 
 static const uint64_t _TABLE_SIZE = UINT32_MAX * sizeof(_record_t);
 
-static const int64_t _WRITE_LOCK = 1 << sizeof(int64_t);
+static const int64_t _WRITE_LOCK = 0X8000000000000000;
 
 typedef struct {
   btt_class_t class;
