@@ -400,6 +400,7 @@ hpx_addr_t hpx_alloc(size_t bytes) {
   return hpx_addr_add(HPX_HERE, offset);
 }
 
+
 void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_gas_t type = btt_type(here->btt);
   if (type == HPX_GAS_PGAS || HPX_GAS_PGAS_SWITCH)

@@ -27,9 +27,11 @@ extern "C" {
 /// Extern HPX macros
 /// @{
 typedef enum {
-  HPX_ERROR = -1,
-  HPX_SUCCESS = 0,
-  HPX_RESEND = 1
+  HPX_ERROR         = -1,
+  HPX_SUCCESS       = 0,
+  HPX_RESEND        = 1,
+  HPX_LCO_EXCEPTION = 2,                        //
+  HPX_USER          = 127
 } hpx_status_t;
 /// @}
 
@@ -317,17 +319,19 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 /// The behavior of this call depends on the @p status parameter, and is
 /// equivalent to returning @p status from the action.
 ///
-///   HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to the
-///                thread's continuation address.
+///       HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to
+///                    the thread's continuation address.
 ///
-///     HPX_ERROR: Abnormal termination. Currently ignores the thread's
-///                continuation.
+///         HPX_ERROR: Abnormal termination. Terminates execution.
 ///
-///    HPX_RESEND: Terminate execution, and resend the thread's parcel (NOT the
-///                continuation parcel). This can be used for application-level
-///                forwarding when hpx_addr_try_pin() fails.
+///        HPX_RESEND: Terminate execution, and resend the thread's parcel (NOT
+///                    the continuation parcel). This can be used for
+///                    application-level forwarding when hpx_addr_try_pin()
+///                    fails.
+///
+/// HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
 /// ----------------------------------------------------------------------------
-void hpx_thread_exit(hpx_status_t status)
+void hpx_thread_exit(int status)
   HPX_NORETURN;
 
 
@@ -336,6 +340,18 @@ void hpx_thread_exit(hpx_status_t status)
 /// action interface, while subclasses, might provide more specific interfaces.
 /// ----------------------------------------------------------------------------
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t sync);
+
+
+/// ----------------------------------------------------------------------------
+/// Set an LCO with a status.
+/// ----------------------------------------------------------------------------
+void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
+                        hpx_status_t status, hpx_addr_t sync);
+
+
+/// ----------------------------------------------------------------------------
+/// Set an LCO, optionally with data.
+/// ----------------------------------------------------------------------------
 void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 
 
@@ -346,8 +362,9 @@ void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 /// LCO type has its own semantics for the state under which this occurs.
 ///
 /// @param lco - the LCO we're processing
+/// @returns   - the LCO's status
 /// ----------------------------------------------------------------------------
-void hpx_lco_wait(hpx_addr_t lco);
+hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
 
 /// ----------------------------------------------------------------------------
@@ -359,8 +376,9 @@ void hpx_lco_wait(hpx_addr_t lco);
 /// @param      lco - the LCO we're processing
 /// @param[out] out - the output location (may be null)
 /// @param     size - the size of the data
+/// @returns        - the LCO's status
 /// ----------------------------------------------------------------------------
-void hpx_lco_get(hpx_addr_t lco, void *value, int size);
+hpx_status_t hpx_lco_get(hpx_addr_t lco, void *value, int size);
 
 
 /// ----------------------------------------------------------------------------

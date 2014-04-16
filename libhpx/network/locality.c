@@ -91,7 +91,7 @@ static int _invalidate_action(hpx_addr_t *args) {
   if (base)
     hpx_thread_continue_cleanup(addr.block_bytes, base, free, base);
   else
-    hpx_thread_continue(0, NULL);
+    return HPX_LCO_EXCEPTION;
 }
 
 
@@ -118,7 +118,7 @@ static int _move_block_action(hpx_addr_t *args) {
 
   // 3. Insert an entry into the block translation table.
   btt_insert(here->btt, src, block);
-  hpx_thread_continue(0, NULL);
+  return HPX_SUCCESS;
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {

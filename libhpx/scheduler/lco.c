@@ -31,10 +31,14 @@
 /// second least significant bit is the SET bit, and the third least significant
 /// bit is the USER bit, which can be used by "subclasses" to store subclass
 /// specific date, if desired.
+///
+/// Furthermore, when an LCO has been set, we store an hpx_status_t in the high
+/// order 4 bytes of the list pointer.
 #define _LOCK_MASK   (0x1)
 #define _SET_MASK    (0x2)
 #define _USER_MASK   (0x4)
 #define _STATE_MASK  (0x7)
+#define _STATUS_MASK (0xFFFFFFFF00000000)
 #define _QUEUE_MASK  ~_STATE_MASK
 #define _UNSET_MASK  ~_SET_MASK
 #define _UNLOCK_MASK ~_LOCK_MASK
@@ -48,15 +52,19 @@ static hpx_action_t _delete = 0;
 
 /// Wait on a local LCO. This properly acquires and releases the LCO's lock, and
 /// signals the LCO if necessary.
-static void _wait_local(lco_t *lco) {
+static hpx_status_t _wait_local(lco_t *lco) {
+  hpx_status_t status;
   lco_lock(lco);
   if (!lco_is_set(lco))
     scheduler_wait(lco);
+  status = lco_get_status(lco);
   lco_unlock(lco);
+  return status;
 }
 
 
 typedef struct {
+  hpx_status_t status;
   int size;
   char data[];
 } _set_args_t;
@@ -73,7 +81,7 @@ static int _set_action(_set_args_t *args) {
   if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  lco->vtable->set(lco, args->size, &args->data); // just unpack arguments
+  lco->vtable->set(lco, args->size, &args->data, args->status); // unpack args
   hpx_addr_unpin(target);
   return HPX_SUCCESS;
 }
@@ -87,14 +95,17 @@ static int _set_action(_set_args_t *args) {
 /// ----------------------------------------------------------------------------
 static int _get_action(int *n) {
   hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
+  lco_t *lco;
   if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   char buffer[*n];                  // ouch---rDMA, or preallocate continuation?
-  lco->vtable->get(lco, *n, buffer);
+  hpx_status_t status = lco->vtable->get(lco, *n, buffer);
   hpx_addr_unpin(target);
-  hpx_thread_continue(*n, buffer);
+  if (status == HPX_SUCCESS)
+    hpx_thread_continue(*n, buffer);
+  else
+    hpx_thread_exit(status);
 }
 
 
@@ -109,9 +120,9 @@ static int _wait_action(void *args) {
   if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  _wait_local(lco);
+  hpx_action_t status = _wait_local(lco);
   hpx_addr_unpin(target);
-  return HPX_SUCCESS;
+  hpx_thread_exit(status);
 }
 
 
@@ -145,6 +156,7 @@ lco_init(lco_t *lco, const lco_class_t *class, int user) {
 
 void
 lco_fini(lco_t *lco) {
+  lco_unlock(lco);
 }
 
 
@@ -167,6 +179,13 @@ int
 lco_is_set(const lco_t *lco) {
   uintptr_t bits = (uintptr_t)lco->queue;
   return bits & _SET_MASK;
+}
+
+
+hpx_status_t
+lco_get_status(const lco_t *lco) {
+  uintptr_t bits = (uintptr_t)lco->queue;
+  return (hpx_status_t)(bits >> 32);
 }
 
 
@@ -218,14 +237,18 @@ lco_unlock(lco_t *lco) {
 
 
 lco_node_t *
-lco_trigger(lco_t *lco) {
+lco_trigger(lco_t *lco, hpx_status_t status) {
   uintptr_t bits = (uintptr_t)lco->queue;
-  lco_node_t *queue = (lco_node_t*)(bits & _QUEUE_MASK);
-  bits &= _STATE_MASK;
-  bits |= _SET_MASK;
+  lco_node_t *queue = (lco_node_t*)(bits & _QUEUE_MASK); // extract the queue
+
+  assert(sizeof(status) == 4);
+  bits &= _STATE_MASK;                          // preserve state
+  bits |= _SET_MASK;                            // set the "set" bit
+  bits |= (uint64_t)status << 32;               // set the status
   lco_node_t *to = (lco_node_t*)bits;
-  sync_store(&lco->queue, to, SYNC_RELAXED);
-  return queue;
+  sync_store(&lco->queue, to, SYNC_RELAXED);    // update the queue bits
+
+  return queue;                                 // return the queue
 }
 
 
@@ -271,14 +294,15 @@ hpx_lco_delete(hpx_addr_t target, hpx_addr_t sync) {
 
 
 /// ----------------------------------------------------------------------------
-/// If the LCO is local, then we use the set action handler. If it's not local,
+/// If the LCO is local, then we use the set aciton handler, If it's not local,
 /// then we forward to a set proxy and wait for it to complete.
 /// ----------------------------------------------------------------------------
 void
-hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t sync) {
+hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
+                   hpx_status_t status, hpx_addr_t sync) {
   lco_t *lco = NULL;
   if (hpx_addr_try_pin(target, (void**)&lco)) {
-    lco->vtable->set(lco, size, value);
+    lco->vtable->set(lco, size, value, status);
     hpx_addr_unpin(target);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -299,6 +323,7 @@ hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t sync) {
 
     // perform the single serialization
     _set_args_t *args = (_set_args_t *)p->data;
+    args->status = HPX_SUCCESS;
     args->size = size;
     memcpy(&args->data, value, size);
 
@@ -309,22 +334,34 @@ hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t sync) {
 
 
 /// ----------------------------------------------------------------------------
+/// If the LCO is local, then we use the set action handler. If it's not local,
+/// then we forward to a set proxy and wait for it to complete.
+/// ----------------------------------------------------------------------------
+void
+hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t sync) {
+  hpx_lco_set_status(target, value, size, HPX_SUCCESS, sync);
+}
+
+
+/// ----------------------------------------------------------------------------
 /// If the LCO is local, then we use the local wait functionality. Otherwise, we
 /// allocate a local proxy lco to wait on, and wait for the remote target.
 /// ----------------------------------------------------------------------------
-void
+hpx_status_t
 hpx_lco_wait(hpx_addr_t target) {
-  lco_t *lco = NULL;
+  hpx_status_t status;
+  lco_t *lco;
   if (hpx_addr_try_pin(target, (void**)&lco)) {
-    _wait_local(lco);
+    status = _wait_local(lco);
     hpx_addr_unpin(target);
   }
   else {
     hpx_addr_t proxy = hpx_lco_future_new(0);
     hpx_call(target, _wait, NULL, 0, proxy);
-    hpx_lco_wait(proxy);
+    status = hpx_lco_wait(proxy);
     hpx_lco_delete(proxy, HPX_NULL);
   }
+  return status;
 }
 
 
@@ -332,19 +369,21 @@ hpx_lco_wait(hpx_addr_t target) {
 /// If the LCO is local, then we use the local get functionality. Otherwise, we
 /// allocate a local LCO to wait on, and then initiate the remote operation.
 /// ----------------------------------------------------------------------------
-void
+hpx_status_t
 hpx_lco_get(hpx_addr_t target, void *value, int size) {
-  lco_t *lco = NULL;
+  hpx_status_t status;
+  lco_t *lco;
   if (hpx_addr_try_pin(target, (void**)&lco)) {
-    lco->vtable->get(lco, size, value);
+    status = lco->vtable->get(lco, size, value);
     hpx_addr_unpin(target);
   }
   else {
     hpx_addr_t proxy = hpx_lco_future_new(size);
     hpx_call(target, _get, &size, sizeof(size), proxy);
-    hpx_lco_get(proxy, value, size);
+    status = hpx_lco_get(proxy, value, size);
     hpx_lco_delete(proxy, HPX_NULL);
   }
+  return status;
 }
 
 

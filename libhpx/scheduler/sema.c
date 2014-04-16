@@ -44,15 +44,20 @@ static void _delete(_sema_t *sema) {
 
 
 /// Get is equivalent to P in a semaphore.
-static void _get(_sema_t *sema, int size, void *out) {
+static hpx_status_t _get(_sema_t *sema, int size, void *out) {
+  hpx_status_t status = HPX_SUCCESS;
   lco_lock(&sema->lco);
 
   // wait until the count is non-zero
   unsigned count = sema->count;
-  while (count == 0) {
+  while (count == 0 && status == HPX_SUCCESS) {
     scheduler_wait(&sema->lco);
     count = sema->count;
+    status = lco_get_status(&sema->lco);
   }
+
+  if (status != HPX_SUCCESS)
+    goto exit;
 
   // if I'm going to make the count 0, then reset the semaphore so that
   // lco_wait()s will work
@@ -60,16 +65,20 @@ static void _get(_sema_t *sema, int size, void *out) {
     lco_reset(&sema->lco);
 
   sema->count = count - 1;
+
+ exit:
   lco_unlock(&sema->lco);
+  return status;
 }
 
 
 /// Get is equivalent to V in the semaphore.
-static void _set(_sema_t *sema, int size, const void *from) {
+static void _set(_sema_t *sema, int size, const void *from, hpx_status_t status)
+{
   lco_lock(&sema->lco);
   unsigned count = sema->count++;
-  if (count == 0)
-    scheduler_signal(&sema->lco);
+  if (count == 0 || status != HPX_SUCCESS)
+    scheduler_signal(&sema->lco, status);
   lco_unlock(&sema->lco);
 }
 
@@ -87,7 +96,7 @@ static void _init(_sema_t *sema, unsigned count) {
   // anyway
   if (count != 0) {
     lco_lock(&sema->lco);
-    scheduler_signal(&sema->lco);
+    scheduler_signal(&sema->lco, HPX_SUCCESS);
     lco_unlock(&sema->lco);
   }
 }
@@ -138,7 +147,7 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 /// Decrement a semaphore.
 /// ----------------------------------------------------------------------------
 void hpx_lco_sema_p(hpx_addr_t sema) {
-  _sema_t *s = NULL;
+  _sema_t *s;
   if (hpx_addr_try_pin(sema, (void**)&s)) {
     _get(s, 0, NULL);
     hpx_addr_unpin(sema);
@@ -153,9 +162,9 @@ void hpx_lco_sema_p(hpx_addr_t sema) {
 /// Increment a semaphore.
 /// ----------------------------------------------------------------------------
 void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
-  _sema_t *s = NULL;
+  _sema_t *s;
   if (hpx_addr_try_pin(sema, (void**)&s)) {
-    _set(s, 0, NULL);
+    _set(s, 0, NULL, HPX_SUCCESS);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
     hpx_addr_unpin(sema);
