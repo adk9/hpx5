@@ -28,6 +28,7 @@
 #include "libsync/sync.h"
 
 #include "libhpx/boot.h"
+#include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
@@ -148,7 +149,8 @@ void network_delete(network_class_t *network) {
 void network_send(network_class_t *network, hpx_parcel_t *p) {
   // check loopback via rank, on loopback push into the recv queue
   hpx_addr_t target = hpx_parcel_get_target(p);
-  if (hpx_addr_try_pin(target, NULL))
+  uint32_t owner = btt_owner(here->btt, target);
+  if (owner == here->rank)
     network_rx_enqueue(p);
   else
     network_tx_enqueue(p);
