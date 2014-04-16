@@ -13,6 +13,11 @@
 #ifndef LIBHPX_EXAMPLES_DEBUG_H
 #define LIBHPX_EXAMPLES_DEBUG_H
 
-void wait_for_debugger(void);
+#include <limits.h>
+
+#define ALL_RANKS INT_MAX
+#define NO_RANKS -1
+
+void wait_for_debugger(int rank);
 
 #endif // LIBHPX_EXAMPLES_DEBUG_H
