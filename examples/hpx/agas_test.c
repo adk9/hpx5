@@ -86,12 +86,12 @@ int main(int argc, char *argv[argc]) {
     .cores = 0,
     .threads = 0,
     .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS_SWITCH
+    .gas = HPX_GAS_PGAS
   };
 
   int debug = NO_RANKS;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -115,12 +115,12 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
-  wait_for_debugger(debug);
-
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
+
+  wait_for_debugger(debug);
 
   int ranks = hpx_get_num_ranks();
   if (ranks < 2) {
