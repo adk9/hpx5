@@ -84,27 +84,27 @@ static int _shutdown_action(void *args) {
 /// The action that invalidates a block mapping on a given locality.
 static int _invalidate_action(hpx_addr_t *args) {
   hpx_addr_t addr = hpx_thread_current_target();
-  // call btt invalidate here.
-  // bool success = btt_invalidate(here->btt, addr);
-  // hpx_thread_continue(sizeof(success), &success);
-  return HPX_SUCCESS;
+  void *old_mapping = btt_invalidate(here->btt, addr);
+  hpx_thread_continue(old_mapping ? addr.block_bytes : 0,
+                      old_mapping);
 }
 
 static int _move_block_action(hpx_addr_t *args) {
   hpx_addr_t src = *args;
 
-  bool success;
+  void *rblock = NULL;
+  int size = src.block_bytes;
   // 1. invalidate the block mapping at the source locality.
-  hpx_addr_t done = hpx_lco_future_new(sizeof(success));
-  hpx_call(src, locality_invalidate, NULL, 0, HPX_NULL);
+  hpx_addr_t done = hpx_lco_future_new(size);
+  hpx_call(src, locality_invalidate, NULL, 0, done);
 
   // 2. allocate local memory for the block.
-  char *block = malloc(src.block_bytes);
+  char *block = malloc(size);
   assert(block);
 
-  hpx_lco_get(done, &success, sizeof(success));
+  hpx_lco_get(done, rblock, size);
   hpx_lco_delete(done, HPX_NULL);
-  if (!success) {
+  if (!rblock) {
     free(block);
     hpx_thread_continue(0, NULL);
   }
