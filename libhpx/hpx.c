@@ -402,8 +402,11 @@ hpx_addr_t hpx_alloc(size_t bytes) {
 
 void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_gas_t type = btt_type(here->btt);
-  if (type == HPX_GAS_PGAS || HPX_GAS_PGAS_SWITCH)
+  if ((type == HPX_GAS_PGAS) || (type == HPX_GAS_PGAS_SWITCH)) {
+    if (!hpx_addr_eq(lco, HPX_NULL))
+      hpx_lco_set(lco, NULL, 0, HPX_NULL);
     return;
+  }
 
   hpx_call(dst, locality_move_block, &src, sizeof(src), lco);
 }
