@@ -1197,13 +1197,26 @@ static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
   photonRequest req;
 
   dbg_info("(0x%016lx, %p, %lu, %d)", request, ptr, size, flags);
-  
-  if (htable_lookup(sr_reqtable, request, (void**)&req) == 0) {
-    if (request != req->id) {
+
+  //FIXME: assume recv called right after probe to get the same req
+  req = SLIST_FIRST(&pending_recv_list);
+
+  if (req) {
+    SAFE_SLIST_REMOVE_HEAD(&pending_recv_list, slist);
+
+    if (req->length != size) {
+      dbg_err("popped message does not match requested size");
+      goto error_exit;
+    }
+
+    /*
+    if (htable_lookup(sr_reqtable, request, (void**)&req) == 0) {
+      if (request != req->id) {
       dbg_err("request id mismatch!");
       goto error_exit;
     }
-    
+    */
+
     uint64_t bytes_remaining;
     uint64_t bytes_copied;
     uint64_t copy_bytes;
@@ -1237,8 +1250,8 @@ static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
       bytes_remaining -= copy_bytes;
     }
 
-    dbg_info("removing recv request from sr_reqtable: 0x%016lx", request);
-    htable_remove(sr_reqtable, request, NULL);
+    dbg_info("removing recv request from sr_reqtable: 0x%016lx", req->id);
+    htable_remove(sr_reqtable, req->id, NULL);
   }
   else {
     dbg_info("request not found in sr_reqtable");
@@ -2205,7 +2218,7 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
  
   req = SLIST_FIRST(&pending_recv_list);
   if (req) {
-    SAFE_SLIST_REMOVE_HEAD(&pending_recv_list, slist);
+    //SAFE_SLIST_REMOVE_HEAD(&pending_recv_list, slist);
     *flag = 1;
     status->src_addr.global.proc_id = req->proc;
     status->request = req->id;
