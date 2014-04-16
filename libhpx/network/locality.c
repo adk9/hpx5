@@ -107,18 +107,20 @@ static int _move_block_action(hpx_addr_t *args) {
   // 2. allocate local memory for the block.
   char *block = malloc(size);
   assert(block);
-
-  hpx_lco_get(done, block, size);
+  hpx_status_t status = hpx_lco_get(done, block, size);
   hpx_lco_delete(done, HPX_NULL);
-  if (!block) {
+
+  // 3. If the invalidate was successful, insert an entry into the block
+  //    translation table.
+  if (status != HPX_SUCCESS) {
+    dbg_log("failed to invalidate old mapping.\n");
     free(block);
-    dbg_error("failed to invalidate old mapping.\n");
-    hpx_thread_continue(0, NULL);
+  }
+  else {
+    btt_insert(here->btt, src, block);
   }
 
-  // 3. Insert an entry into the block translation table.
-  btt_insert(here->btt, src, block);
-  return HPX_SUCCESS;
+  hpx_thread_exit(status);
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
