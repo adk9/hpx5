@@ -132,7 +132,7 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
 
 /// Send a POST request and get a response from the Floodlight controller.
 static int _post_request(const floodlight_t *fl, const char *url, uint64_t size, json_t *post,
-                         json_t *response) {
+                         json_t **response) {
 
   char *data = malloc(sizeof(char) * size);
   struct _json_buf_t wbuf = { .data = data, .pos = 0, .size = size };
@@ -162,16 +162,15 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
     free(data);
     return dbg_error("invalid response %ld.\n", code);
   }
-
   data[wbuf.pos] = '\0';
 
-  json_error_t error;
-  json_t *json = json_loads(data, 0, &error);
+  if (wbuf.pos > 0) {
+    json_error_t error;
+    *response = json_loads(data, 0, &error);
+    if (*response == NULL)
+      dbg_error("unable to parse json response.\n");
+  }
   free(data);
-  
-  if (!json)
-    dbg_error("unable to parse json response.\n");
-
   return HPX_SUCCESS;
 }
 
@@ -339,11 +338,11 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
 
   char url[256];
   snprintf(url, 512, "%s" PUSH_URL, caddr);
-  json_t response;
-  int e = _post_request(fl, url, 2048, flow, &response);
-
+  json_t *response;
+  _post_request(fl, url, 2048, flow, &response);
   // do something with the response here.
-  json_decref(&response);
+  // should we retry if the _post_request fails.
+  json_decref(response);
   return HPX_SUCCESS;
 }
 
