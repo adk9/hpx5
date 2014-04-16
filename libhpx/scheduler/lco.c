@@ -65,7 +65,6 @@ static hpx_status_t _wait_local(lco_t *lco) {
 
 typedef struct {
   hpx_status_t status;
-  int size;
   char data[];
 } _set_args_t;
 
@@ -81,7 +80,8 @@ static int _set_action(_set_args_t *args) {
   if (!hpx_addr_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  lco->vtable->set(lco, args->size, &args->data, args->status); // unpack args
+  uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t);
+  lco->vtable->set(lco, size, &args->data, args->status); // unpack args
   hpx_addr_unpin(target);
   return HPX_SUCCESS;
 }
@@ -324,7 +324,6 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
     // perform the single serialization
     _set_args_t *args = (_set_args_t *)p->data;
     args->status = HPX_SUCCESS;
-    args->size = size;
     memcpy(&args->data, value, size);
 
     // and send the parcel, waiting for completion
