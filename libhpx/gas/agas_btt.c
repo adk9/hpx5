@@ -30,7 +30,7 @@ typedef struct {
   void * SYNC_ATOMIC() base;
 } _record_t;
 
-#define _TABLE_SIZE UINT32_MAX * sizeof(_record_t)
+static const uint64_t _TABLE_SIZE = (uint64_t)UINT32_MAX * sizeof(_record_t);
 #define _WRITE_LOCK 0X8000000000000000
 #define _STATE 0x3
 #define _READERS ~_WRITE_LOCK & ~_STATE
