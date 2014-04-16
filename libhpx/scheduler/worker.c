@@ -103,8 +103,6 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
     dbg_error("action produced error\n");
     hpx_abort();
    case HPX_RESEND:
-    dbg_error("not prepared to handle resend yet.\n");
-    hpx_abort();
    case HPX_SUCCESS:
    case HPX_LCO_EXCEPTION:
     hpx_thread_exit(status);
@@ -184,19 +182,30 @@ static hpx_parcel_t *_network(void) {
   return network_recv(here->network);
 }
 
+static void _free_stack(ustack_t *stack) {
+  assert(stack);
+  stack->sp = self.stacks;
+  self.stacks = stack;
+}
 
 /// ----------------------------------------------------------------------------
-/// The final transfer continuation that we use to exit a thread.
-///
-/// We push the stack associated with the previous parcel onto the stack
-/// freelist, release the previous parcel, and then update the current parcel.
 /// ----------------------------------------------------------------------------
-static int _exit_free(hpx_parcel_t *to, void *sp, void *env) {
+static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  prev->stack->sp = self.stacks;
-  self.stacks = prev->stack;
+  _free_stack(prev->stack);
   hpx_parcel_release(prev);
+  return HPX_SUCCESS;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
+  self.current = to;
+  hpx_parcel_t *prev = env;
+  _free_stack(prev->stack);
+  hpx_parcel_send(prev);
   return HPX_SUCCESS;
 }
 
@@ -229,7 +238,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
   if (shutdown) {
     void **temp = &self.sp;
-    thread_transfer((hpx_parcel_t*)&temp, _exit_free, self.current);
+    thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
   }
 
   // if there are ready threads, select the next one
@@ -471,62 +480,53 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
   }
 }
 
+/// unified continuation handler
+static void HPX_NORETURN _continue(hpx_status_t status,
+                                   size_t size, const void *value,
+                                   void (*cleanup)(void*), void *env) {
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = self.current;
+  hpx_addr_t cont = parcel->cont;
+  if (likely(!hpx_addr_eq(cont, HPX_NULL)))
+    hpx_lco_set_status(cont, value, size, status, HPX_NULL);   // async
 
-/// ----------------------------------------------------------------------------
-/// Exits a user-level thread.
-///
-/// This releases the underlying parcel, and deletes the thread structure as the
-/// transfer continuation. This will never return, because the current thread is
-/// put into the _free threads list and not into a runnable list (self.ready,
-/// self.next, or an lco).
-/// ----------------------------------------------------------------------------
-static void HPX_NORETURN _thread_exit(void) {
+  // run the cleanup handler
+  if (unlikely(cleanup != NULL))
+    cleanup(env);
+
   hpx_parcel_t *to = _schedule(false, NULL);
-  thread_transfer(to, _exit_free, self.current);
+  thread_transfer(to, _free_parcel, parcel);
   unreachable();
 }
 
 
 void hpx_thread_continue(size_t size, const void *value) {
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
-  hpx_parcel_t *parcel = self.current;
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set(cont, value, size, HPX_NULL);   // async
-
-  _thread_exit();
+  _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
-
 
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
-  hpx_parcel_t *parcel = self.current;
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set(cont, value, size, HPX_NULL);   // async
-
-  // run the cleanup handler
-  cleanup(env);
-
-  _thread_exit();
+  _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
 
 
 void hpx_thread_exit(int status) {
-  assert(status == HPX_SUCCESS);
+  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_EXCEPTION)) {
+    _continue(status, 0, NULL, NULL, NULL);
+    unreachable();
+  }
 
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
-  hpx_parcel_t *parcel = self.current;
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set_status(cont, NULL, 0, status, HPX_NULL); // async
+  if (status == HPX_RESEND) {
+    hpx_parcel_t *parcel = self.current;
+    hpx_parcel_t *to = _schedule(false, NULL);
+    thread_transfer(to, _resend_parcel, parcel);
+    unreachable();
+  }
 
-  _thread_exit();
+  dbg_error("unexpected status, %d.\n", status);
+  hpx_abort();
 }
 
 
