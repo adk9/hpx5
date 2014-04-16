@@ -211,6 +211,9 @@ static bool _try_start_recv(progress_t *progress) {
   }
   _pin(here->transport, p);
 
+  // remember the source
+  p->src = src;
+
   // allocate a request to track this transport operation
   request_t *r = _new_request(progress, p);
   if (!r) {
