@@ -28,19 +28,37 @@ typedef struct {
   void * SYNC_ATOMIC() base;
 } _record_t;
 
-static const uint64_t _TABLE_SIZE = UINT32_MAX * sizeof(_record_t);
-
-static const int64_t _WRITE_LOCK = 0X8000000000000000;
+#define _TABLE_SIZE UINT32_MAX * sizeof(_record_t)
+#define _WRITE_LOCK 0X8000000000000000
+#define _STATE 0x3
+#define _READERS ~_WRITE_LOCK & ~_STATE
 
 typedef struct {
   btt_class_t class;
   _record_t  *table;
 } agas_btt_t;
 
+
 static bool _invalid(int64_t count) {
+  // least significant bit indicates a valid mapping
   return (count % 2 == 0);
 }
 
+
+static bool _forward(int64_t count) {
+  // second least significant bit indicates a forward
+  return ((count >> 1) % 2 != 0);
+}
+
+
+static bool _locked(int64_t count) {
+  // most significant bit indicates lock
+  return (count < 0);
+}
+
+static int64_t _readers(int64_t count) {
+  return (count & _READERS);
+}
 
 static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
   return addr_block_id(addr) % here->ranks;
@@ -70,6 +88,8 @@ static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   //   return false
   // else if locked
   //   return false
+  // else if forward
+  //   return false
   // else
   //   bump ref count
   //   output mapping
@@ -79,16 +99,17 @@ static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   int64_t count;
   sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
 
-  // if not valid
   if (_invalid(count))
     return false;
 
-  // if locked, return false
-  if (count < 0)
+  if (_forward(count))
+    return false;
+
+  if (_locked(count))
     return false;
 
   // if not ref count success, retry (could have changed arbitrarily)
-  if (!sync_cas(&agas->table[block_id].count, count, count + 2, SYNC_RELEASE,
+  if (!sync_cas(&agas->table[block_id].count, count, count + 4, SYNC_RELEASE,
                 SYNC_RELAXED))
     return _agas_btt_try_pin(btt, addr, out);
 
@@ -107,7 +128,7 @@ static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
   // decrement by two
   agas_btt_t *agas = (agas_btt_t *)btt;
   uint32_t block_id = addr_block_id(addr);
-  sync_fadd(&agas->table[block_id].count, -2, SYNC_ACQ_REL);
+  sync_fadd(&agas->table[block_id].count, -4, SYNC_ACQ_REL);
 }
 
 
@@ -120,8 +141,7 @@ static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   if (_invalid(count))
     return NULL;
 
-  // if there is an invalidation in process
-  if (count < 0)
+  if (_locked(count))
     return NULL;
 
   // otherwise acquire the write lock
@@ -129,8 +149,7 @@ static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
                 SYNC_RELEASE, SYNC_RELAXED))
     return _agas_btt_invalidate(btt, addr);
 
-  // wait until the readers drain away
-  while (count != _WRITE_LOCK) {
+  while (_readers(count)) {
     scheduler_yield();
     sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
   }
