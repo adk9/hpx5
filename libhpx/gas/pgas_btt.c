@@ -40,6 +40,12 @@ static uint32_t _row(hpx_addr_t addr) {
 
 
 static uint32_t _pgas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
+  uint32_t block_id = addr_block_id(addr);
+  return (btt->type == HPX_GAS_PGAS_SWITCH) ? block_id : block_id % here->ranks;
+}
+
+
+static uint32_t _pgas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
   return addr_block_id(addr) % here->ranks;
 }
 
@@ -59,8 +65,8 @@ static void _pgas_btt_delete(btt_class_t *btt) {
 static bool _pgas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
-  // If I don't own this addr, then I don't have a mapping for it.
-  if (_pgas_btt_owner(btt, addr) != here->rank)
+  // If I'm not the home for this addr, then I don't have a mapping for it.
+  if (_pgas_btt_home(btt, addr) != here->rank)
     return false;
 
   // Look up the mapping
@@ -122,7 +128,7 @@ btt_class_t *btt_pgas_new(void) {
   btt->class.invalidate = _pgas_btt_invalidate;
   btt->class.insert     = _pgas_btt_insert;
   btt->class.owner      = _pgas_btt_owner;
-  btt->class.home       = _pgas_btt_owner;
+  btt->class.home       = _pgas_btt_home;
 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;
