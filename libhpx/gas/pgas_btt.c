@@ -40,8 +40,6 @@ static uint32_t _row(hpx_addr_t addr) {
 
 
 static uint32_t _pgas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
-  if (btt->type == HPX_GAS_PGAS_SWITCH)
-    return addr_block_id(addr);
   return addr_block_id(addr) % here->ranks;
 }
 
@@ -61,11 +59,9 @@ static void _pgas_btt_delete(btt_class_t *btt) {
 static bool _pgas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
-  if (btt->type != HPX_GAS_PGAS_SWITCH) {
-    // If I don't own this addr, then I don't have a mapping for it.
-    if (_pgas_btt_owner(btt, addr) != here->rank)
-      return false;
-  }
+  // If I don't own this addr, then I don't have a mapping for it.
+  if (_pgas_btt_owner(btt, addr) != here->rank)
+    return false;
 
   // Look up the mapping
   void *base;
