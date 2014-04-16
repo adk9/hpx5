@@ -84,16 +84,6 @@ static void _agas_btt_delete(btt_class_t *btt) {
 
 
 static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
-  // if invalid
-  //   return false
-  // else if locked
-  //   return false
-  // else if forward
-  //   return false
-  // else
-  //   bump ref count
-  //   output mapping
-  //   return true
   agas_btt_t *agas = (agas_btt_t *)btt;
   uint32_t block_id = addr_block_id(addr);
   int64_t count;
@@ -108,17 +98,17 @@ static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   if (_locked(count))
     return false;
 
+  // don't pin this if the client doesn't provide an output
+  if (!out)
+    return true;
+
   // if not ref count success, retry (could have changed arbitrarily)
   if (!sync_cas(&agas->table[block_id].count, count, count + 4, SYNC_RELEASE,
                 SYNC_RELAXED))
     return _agas_btt_try_pin(btt, addr, out);
 
-  // if the virtual address is required, return it
-  if (out) {
-    void *base = agas->table[block_id].base;
-    *out = addr_to_local(addr, base);
-  }
-
+  void *base = agas->table[block_id].base;
+  *out = addr_to_local(addr, base);
   return true;
 }
 
