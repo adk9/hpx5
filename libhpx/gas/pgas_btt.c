@@ -94,7 +94,7 @@ static void *_pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
 static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   pgas_btt_t *pgas = (pgas_btt_t*)btt;
 
-  if (btt->type = HPX_GAS_PGAS_SWITCH) {
+  if (btt->type == HPX_GAS_PGAS_SWITCH) {
     uint32_t blockid = addr_block_id(addr);
     uint64_t dst = block_id_macaddr(blockid);
     routing_t *routing = network_get_routing(here->network);

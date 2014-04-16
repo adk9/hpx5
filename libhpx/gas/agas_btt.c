@@ -167,7 +167,7 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
     hpx_abort();
   }
 
-  if (btt->type = HPX_GAS_AGAS_SWITCH) {
+  if (btt->type == HPX_GAS_AGAS_SWITCH) {
     uint32_t blockid = addr_block_id(addr);
     uint64_t dst = block_id_macaddr(blockid);
     routing_t *routing = network_get_routing(here->network);

@@ -24,16 +24,12 @@ btt_class_t *btt_new(hpx_gas_t type) {
    case (HPX_GAS_DEFAULT):
     dbg_log("HPX GAS defaults to PGAS.\n");
    case (HPX_GAS_PGAS):
-    btt = btt_pgas_new();
-    break;
-   case (HPX_GAS_AGAS):
-    btt = btt_agas_new();
-    break;
    case (HPX_GAS_PGAS_SWITCH):
     btt = btt_pgas_new();
     break;
+   case (HPX_GAS_AGAS):
    case (HPX_GAS_AGAS_SWITCH):
-    btt = btt_agas_switch_new();
+    btt = btt_agas_new();
     break;
   };
   btt->type = type;

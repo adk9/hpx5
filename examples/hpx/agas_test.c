@@ -47,7 +47,7 @@ static int root_action(void *args) {
     f = hpx_lco_future_new(sizeof(int));
     // move address after 15 puts.
     if (i % 15 == 0) {
-      printf("initiating AGAS move from (%u,%u,%u) to (%u,%u,%u).\n",
+      printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
              other.offset, other.base_id, other.block_bytes,
              HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
       hpx_move(other, HPX_HERE, HPX_NULL);
