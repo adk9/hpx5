@@ -39,5 +39,6 @@ struct of_switch {
 
 HPX_INTERNAL routing_t *routing_new_trema(void);
 HPX_INTERNAL routing_t *routing_new_floodlight(void);
+HPX_INTERNAL routing_t *routing_new_dummy(void);
 
 #endif // LIBHPX_NETWORK_ROUTING_MANAGERS_H
