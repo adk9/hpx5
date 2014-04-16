@@ -110,6 +110,7 @@ network_class_t *network_new(void) {
   return n;
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Shuts down the network.
 ///
@@ -122,6 +123,7 @@ void network_shutdown(network_class_t *network) {
   sync_cas(&network->state, _STATE_RUNNING, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
            SYNC_RELAXED);
 }
+
 
 void network_delete(network_class_t *network) {
   if (!network)
