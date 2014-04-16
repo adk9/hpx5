@@ -25,15 +25,23 @@
 #include "libhpx/routing.h"
 #include "addr.h"
 
+
 typedef struct {
-  SYNC_ATOMIC(int64_t count);
-  void * SYNC_ATOMIC() base;
+  SYNC_ATOMIC(uint64_t state);
+  void *base;
 } _record_t;
 
-static const uint64_t _TABLE_SIZE = (uint64_t)UINT32_MAX * sizeof(_record_t);
-#define _WRITE_LOCK 0X8000000000000000
-#define _STATE 0x3
-#define _READERS ~_WRITE_LOCK & ~_STATE
+
+static const uint64_t _VALID    = 1;
+static const uint64_t _LOCKED   = 2;
+static const uint64_t _STATE    = 3;
+static const uint64_t _COUNT    = 4;
+static const uint64_t _REFCOUNT = (UINT64_MAX - 3);
+
+static bool _try_lock(_record_t *record, uint64_t state) {
+  return sync_cas(&record->state, state, state | _LOCKED, SYNC_ACQUIRE,
+                  SYNC_RELAXED);
+}
 
 typedef struct {
   btt_class_t class;
@@ -41,25 +49,21 @@ typedef struct {
 } agas_btt_t;
 
 
-static bool _invalid(int64_t count) {
-  // least significant bit indicates a valid mapping
-  return (count % 2 == 0);
+static const uint64_t _TABLE_SIZE = (uint64_t)UINT32_MAX * sizeof(_record_t);
+
+
+static bool _valid(uint64_t state) {
+  return (state & _VALID) == _VALID;
 }
 
 
-static bool _forward(int64_t count) {
-  // second least significant bit indicates a forward
-  return ((count >> 1) % 2 != 0);
+static bool _locked(uint64_t state) {
+  return (state & _LOCKED) == _LOCKED;
 }
 
 
-static bool _locked(int64_t count) {
-  // most significant bit indicates lock
-  return (count < 0);
-}
-
-static int64_t _readers(int64_t count) {
-  return (count & _READERS);
+static uint64_t _readers(uint64_t state) {
+  return (state & _REFCOUNT);
 }
 
 
@@ -78,29 +82,30 @@ static void _agas_btt_delete(btt_class_t *btt) {
 
 static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   agas_btt_t *agas = (agas_btt_t *)btt;
-  uint32_t block_id = addr_block_id(addr);
-  int64_t count;
-  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+  _record_t *record = &agas->table[addr_block_id(addr)];
+  uint64_t state;
+  sync_load(state, &record->state, SYNC_ACQUIRE);
 
-  if (_invalid(count))
+  if (!_valid(state))
     return false;
 
-  if (_forward(count))
-    return false;
-
-  if (_locked(count))
+  if (_locked(state))
     return false;
 
   // don't pin this if the client doesn't provide an output
   if (!out)
     return true;
 
+  // load the base address now, the refcount bump below will assure that we've
+  // read this consistently with the state
+  void *base = record->base;
+
   // if not ref count success, retry (could have changed arbitrarily)
-  if (!sync_cas(&agas->table[block_id].count, count, count + 4, SYNC_RELEASE,
+  if (!sync_cas(&record->state, state, state + _COUNT, SYNC_RELEASE,
                 SYNC_RELAXED))
     return _agas_btt_try_pin(btt, addr, out);
 
-  void *base = agas->table[block_id].base;
+  // if the client wanted the base, then output it
   *out = addr_to_local(addr, base);
   return true;
 }
@@ -108,66 +113,73 @@ static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
 
 static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
   // assume that the programmer knows what they're talking about, just blindly
-  // decrement by two
+  // decrement by the amount we need to reduce a reference count
   agas_btt_t *agas = (agas_btt_t *)btt;
-  uint32_t block_id = addr_block_id(addr);
-  sync_fadd(&agas->table[block_id].count, -4, SYNC_ACQ_REL);
+  _record_t *record = &agas->table[addr_block_id(addr)];
+  sync_fadd(&record->state, - _COUNT, SYNC_ACQ_REL);
 }
 
 
 static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   agas_btt_t *agas = (agas_btt_t *)btt;
-  uint32_t block_id = addr_block_id(addr);
-  int64_t count;
-  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+  _record_t *record = &agas->table[addr_block_id(addr)];
+  int64_t state;
+  sync_load(state, &record->state, SYNC_ACQUIRE);
 
-  if (_invalid(count))
+  if (!_valid(state))
     return NULL;
 
-  if (_locked(count))
+  // should we wait?
+  if (_locked(state))
     return NULL;
 
   // otherwise acquire the write lock
-  if (!sync_cas(&agas->table[block_id].count, count, count | _WRITE_LOCK,
-                SYNC_RELEASE, SYNC_RELAXED))
+  if (!_try_lock(record, state))
     return _agas_btt_invalidate(btt, addr);
 
   // wait for the readers to drain away---must use scheduler_yield for this
-  while (_readers(count)) {
+  while (_readers(state)) {
     scheduler_yield();
-    sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
+    sync_load(state, &record->state, SYNC_ACQUIRE);
   }
 
-  // clear the mapping
-  void *base = agas->table[block_id].base;
-  agas->table[block_id].base = NULL;
+  // we want to return and clear the mapping
+  void *local = record->base;
+  record->base = NULL;
 
   // mark the row as invalid
-  sync_store(&agas->table[block_id].count, 0, SYNC_RELEASE);
+  sync_store(&record->state, 0, SYNC_RELEASE);
 
   // if the old mapping wasn't a forward, return it
-  return (_forward(count)) ? NULL : base;
+  return local;
+}
+
+
+static void *_agas_btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
+{
+  // don't care about the rank---it's only for forwarding, which we don't do
+  // with agas_switch
+  return _agas_btt_invalidate(btt, addr);
 }
 
 
 static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   agas_btt_t *agas = (agas_btt_t *)btt;
-  uint32_t block_id = addr_block_id(addr);
-
-  if (DEBUG) {
-    int64_t count;
-    sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
-    assert(_invalid(count));
-  }
-
-  // acquire the write lock
-  if (!sync_cas(&agas->table[block_id].count, 0, _WRITE_LOCK, SYNC_RELEASE,
-                SYNC_RELAXED)) {
-    dbg_error("btt insert for existing mapping.\n");
-    hpx_abort();
-  }
-
   uint32_t blockid = addr_block_id(addr);
+  _record_t *record = &agas->table[blockid];
+  int64_t state;
+  sync_load(state, &record->state, SYNC_ACQUIRE);
+
+  // should we wait?
+  if (_locked(state))
+    return;
+
+  // really want this to be tail recursive
+  if (!_try_lock(record, state)) {
+    _agas_btt_insert(btt, addr, base);
+    return;
+  }
+
   uint64_t dst = block_id_macaddr(blockid);
   routing_t *routing = network_get_routing(here->network);
 
@@ -176,8 +188,8 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   int port = routing_my_port(routing);
   routing_add_flow(routing, HPX_SWADDR_WILDCARD, dst, port);
 
-  agas->table[block_id].base = base;
-  sync_store(&agas->table[block_id].count, 1, SYNC_RELEASE);
+  record->base = base;
+  sync_store(&record->state, _VALID, SYNC_RELEASE);
 }
 
 
@@ -187,23 +199,7 @@ static uint32_t _agas_btt_home(btt_class_t *btt, hpx_addr_t addr) {
 
 
 static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
-  agas_btt_t *agas = (agas_btt_t *)btt;
-  uint32_t block_id = addr_block_id(addr);
-  int64_t count;
-  sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
-
-  // if I don't have a valid mapping for this, then assume it's at the home
-  // locality
-  if (_invalid(count))
-    return _agas_btt_home(btt, addr);
-
-  // if I have a cached forwarding address for this, then return it---doesn't
-  // matter if this is wrong
-  if (_forward(count))
-    return (uint32_t)(uintptr_t)agas->table[block_id].base;
-
-  // otherwise, it's mine
-  return here->rank;
+  return addr_block_id(addr);
 }
 
 
@@ -220,7 +216,7 @@ btt_class_t *btt_agas_switch_new(void) {
   btt->class.try_pin    = _agas_btt_try_pin;
   btt->class.unpin      = _agas_btt_unpin;
   btt->class.invalidate = _agas_btt_invalidate;
-  btt->class.update     = NULL;
+  btt->class.update     = _agas_btt_update;
   btt->class.insert     = _agas_btt_insert;
   btt->class.owner      = _agas_btt_owner;
   btt->class.home       = _agas_btt_home;
