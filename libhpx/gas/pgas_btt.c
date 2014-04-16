@@ -88,6 +88,11 @@ static void _pgas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
+static void *_pgas_btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
+{
+  return NULL;
+}
+
 static void *_pgas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   return NULL;
 }
@@ -126,6 +131,7 @@ btt_class_t *btt_pgas_new(void) {
   btt->class.try_pin    = _pgas_btt_try_pin;
   btt->class.unpin      = _pgas_btt_unpin;
   btt->class.invalidate = _pgas_btt_invalidate;
+  btt->class.update     = _pgas_btt_update;
   btt->class.insert     = _pgas_btt_insert;
   btt->class.owner      = _pgas_btt_owner;
   btt->class.home       = _pgas_btt_home;

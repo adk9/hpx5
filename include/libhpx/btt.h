@@ -33,6 +33,15 @@ struct btt_class {
   /// return NULL.
   /// --------------------------------------------------------------------------
   void *(*invalidate)(btt_class_t *btt, hpx_addr_t addr);
+
+  /// --------------------------------------------------------------------------
+  /// Update a mapping to be a forward.
+  ///
+  /// Returns the old local mapping, if there was one. If there was an old
+  /// forwarding rank, or the mapping was invalid, we return NULL.
+  /// --------------------------------------------------------------------------
+  void *(*update)(btt_class_t *btt, hpx_addr_t addr, uint32_t rank);
+
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
 
   uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
