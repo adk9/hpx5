@@ -550,6 +550,11 @@ hpx_addr_t hpx_thread_current_cont(void) {
 }
 
 
+uint32_t hpx_thread_current_args_size(void) {
+  return self.current->size;
+}
+
+
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = self.current->stack;
   if (stack->tls_id < 0)

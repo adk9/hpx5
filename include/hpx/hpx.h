@@ -277,6 +277,7 @@ int hpx_get_my_thread_id(void);
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_thread_current_target(void);
 hpx_addr_t hpx_thread_current_cont(void);
+uint32_t   hpx_thread_current_args_size(void);
 
 
 /// ----------------------------------------------------------------------------
