@@ -41,8 +41,8 @@ routing_t *routing_new(void) {
   }
 #endif
 
-  dbg_error("failed to initialize a route controller.\n");
-  return NULL;
+  routing = routing_new_dummy();
+  return routing;
 }
 
 void routing_delete(routing_t *routing) {
