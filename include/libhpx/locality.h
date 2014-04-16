@@ -46,7 +46,9 @@ typedef struct {
 HPX_INTERNAL extern hpx_action_t locality_shutdown;
 HPX_INTERNAL extern hpx_action_t locality_global_sbrk;
 HPX_INTERNAL extern hpx_action_t locality_alloc_blocks;
-HPX_INTERNAL extern hpx_action_t locality_invalidate;
+HPX_INTERNAL extern hpx_action_t locality_gas_invalidate;
+HPX_INTERNAL extern hpx_action_t locality_gas_acquire;
+HPX_INTERNAL extern hpx_action_t locality_gas_update;
 HPX_INTERNAL extern hpx_action_t locality_move_block;
 
 /// ----------------------------------------------------------------------------
