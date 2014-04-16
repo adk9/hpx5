@@ -158,8 +158,11 @@ HPX_INTERNAL void scheduler_yield(void);
 ///
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
+///
+/// @param lco - the lco we'd like to wait on
+/// @returns   - the status set during scheduler_signal
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_wait(struct lco *lco)
+HPX_INTERNAL hpx_status_t scheduler_wait(struct lco *lco)
   HPX_NON_NULL(1);
 
 
@@ -173,8 +176,11 @@ HPX_INTERNAL void scheduler_wait(struct lco *lco)
 ///   2) it will set the LCO's wait queue to NULL
 ///   3) it will release the LCO's lock
 ///   4) each of the previously waiting threads will be rescheduled
+///
+/// @param    lco - the lco we'd like to signal
+/// @param status - the status we're signaling
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal(struct lco *lco)
+HPX_INTERNAL void scheduler_signal(struct lco *lco, hpx_status_t status)
   HPX_NON_NULL(1);
 
 
