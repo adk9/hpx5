@@ -33,7 +33,8 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: seqspawn [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
-          "\t-d, wait for debugger\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-h, this help display\n");
 }
 
@@ -89,9 +90,9 @@ main(int argc, char *argv[])
     .stack_bytes = 0
   };
 
-  bool debug = false;
+  int debug = NO_RANKS;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -99,8 +100,11 @@ main(int argc, char *argv[])
      case 't':
       cfg.threads = atoi(optarg);
       break;
+     case 'D':
+      debug = ALL_RANKS;
+      break;
      case 'd':
-      debug = true;
+      debug = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -127,8 +131,7 @@ main(int argc, char *argv[])
      break;
   }
 
-  if (debug)
-    wait_for_debugger();
+  wait_for_debugger(debug);
 
   int e = hpx_init(&cfg);
   if (e) {
