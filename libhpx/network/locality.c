@@ -28,12 +28,13 @@
 
 locality_t *here = NULL;
 
-hpx_action_t locality_shutdown           = 0;
-hpx_action_t locality_global_sbrk        = 0;
-hpx_action_t locality_alloc_blocks       = 0;
-hpx_action_t locality_move_block         = 0;
-static hpx_action_t _locality_invalidate = 0;
+hpx_action_t locality_shutdown     = 0;
+hpx_action_t locality_global_sbrk  = 0;
+hpx_action_t locality_alloc_blocks = 0;
+hpx_action_t locality_move_block   = 0;
 
+static hpx_action_t _gas_invalidate = 0;
+static hpx_action_t _gas_acquire    = 0;
 
 /// The action that performs a global allocation for a rank.
 static int _alloc_blocks_action(uint32_t *args) {
@@ -81,8 +82,23 @@ static int _shutdown_action(void *args) {
 }
 
 
+static int _gas_acquire_action(uint32_t *rank) {
+  assert(rank);
+  assert(*rank < here->ranks);
+  hpx_addr_t addr = hpx_thread_current_target();
+  void *base = btt_update(here->btt, addr, *rank);
+
+  // Continue the actual bytes from the block, so that the caller can remap the
+  // block.
+  if (base)
+    hpx_thread_continue_cleanup(addr.block_bytes, base, free, base);
+  else
+    return HPX_LCO_EXCEPTION;
+}
+
+
 /// The action that invalidates a block mapping on a given locality.
-static int _invalidate_action(hpx_addr_t *args) {
+static int _invalidate_action(void *args) {
   hpx_addr_t addr = hpx_thread_current_target();
   void *base = btt_invalidate(here->btt, addr);
 
@@ -99,10 +115,11 @@ static int _move_block_action(hpx_addr_t *args) {
   hpx_addr_t src = *args;
 
   int size = src.block_bytes;
+  uint32_t rank = here->rank;
 
   // 1. invalidate the block mapping at the source locality.
   hpx_addr_t done = hpx_lco_future_new(size);
-  hpx_call(src, _locality_invalidate, NULL, 0, done);
+  hpx_call(src, _gas_acquire, &rank, sizeof(rank), done);
 
   // 2. allocate local memory for the block.
   char *block = malloc(size);
@@ -128,5 +145,6 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_global_sbrk  = HPX_REGISTER_ACTION(_global_sbrk_action);
   locality_alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
   locality_move_block   = HPX_REGISTER_ACTION(_move_block_action);
-  _locality_invalidate  = HPX_REGISTER_ACTION(_invalidate_action);
+  _gas_invalidate  = HPX_REGISTER_ACTION(_invalidate_action);
+  _gas_acquire = HPX_REGISTER_ACTION(_gas_acquire_action);
 }
