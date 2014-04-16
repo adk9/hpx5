@@ -42,7 +42,7 @@
 #define SYNC_RELEASE __ATOMIC_RELEASE
 #endif
 
-#define sync_load(addr, mm) __atomic_load_n(addr, mm)
+#define sync_load(val, addr, mm) val = __atomic_load_n(addr, mm)
 #define sync_store(addr, val, mm) __atomic_store_n(addr, val, mm)
 #define sync_swap(addr, val, mm) __atomic_exchange_n(addr, val, mm)
 #define sync_cas(addr, from, to, onsuccess, onfailure)              \
