@@ -495,6 +495,23 @@ void hpx_thread_continue(size_t size, const void *value) {
 }
 
 
+
+void hpx_thread_continue_cleanup(size_t size, const void *value,
+                                 void (*cleanup)(void*), void *env) {
+  // if there's a continuation future, then we set it, which could spawn a
+  // message if the future isn't local
+  hpx_parcel_t *parcel = self.current;
+  hpx_addr_t cont = parcel->cont;
+  if (!hpx_addr_eq(cont, HPX_NULL))
+    hpx_lco_set(cont, value, size, HPX_NULL);   // async
+
+  // run the cleanup handler
+  cleanup(env);
+
+  _thread_exit();
+}
+
+
 void hpx_thread_exit(int status) {
   assert(status == HPX_SUCCESS);
 
