@@ -26,8 +26,6 @@
 
 #include "debug.h"
 
-const static int MAX_TRIES = 50;
-
 static hpx_action_t root = 0;
 static hpx_action_t get_rank = 0;
 
@@ -42,21 +40,27 @@ static int root_action(void *args) {
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
   hpx_addr_t f = HPX_NULL;
-  int r = 1;
-  for (int i = 0; i < MAX_TRIES; ++i) {
-    f = hpx_lco_future_new(sizeof(int));
-    // move address after 15 puts.
-    if (i % 15 == 0) {
-      printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
-             other.offset, other.base_id, other.block_bytes,
-             HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
-      hpx_move(other, HPX_HERE, HPX_NULL);
-    }
-    hpx_call(other, get_rank, NULL, 0, f);
-    hpx_lco_get(f, &r, sizeof(r));
-    hpx_lco_delete(f, HPX_NULL);
-    printf("%i: remote locality's rank: %d\n", i, r);
-  }
+  int r = 0;
+  f = hpx_lco_future_new(sizeof(int));
+  hpx_call(other, get_rank, NULL, 0, f);
+  hpx_lco_get(f, &r, sizeof(r));
+  hpx_lco_delete(f, HPX_NULL);
+  printf("target locality's rank (before move): %d\n", r);
+
+  hpx_addr_t done = hpx_lco_future_new(0);
+  // move address to our locality.
+  printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
+         other.offset, other.base_id, other.block_bytes,
+         HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
+  hpx_move(other, HPX_HERE, done);
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+
+  f = hpx_lco_future_new(sizeof(int));
+  hpx_call(other, get_rank, NULL, 0, f);
+  hpx_lco_get(f, &r, sizeof(r));
+  hpx_lco_delete(f, HPX_NULL);
+  printf("target locality's rank (after move): %d\n", r);
 
   printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "passed" : "failed"));
   hpx_shutdown(0);
