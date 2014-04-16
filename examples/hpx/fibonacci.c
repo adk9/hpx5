@@ -156,13 +156,13 @@ int main(int argc, char *argv[]) {
      break;
   }
 
-  wait_for_debugger(debug);
-
   int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
+
+  wait_for_debugger(debug);
 
   // register the fib action
   _fib = hpx_register_action("_fib", _fib_action);
