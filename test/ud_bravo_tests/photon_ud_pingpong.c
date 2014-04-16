@@ -16,6 +16,8 @@
 //#define dbg_printf(format, args...) fprintf(stderr, format, ## args);
 #define dbg_printf(format, args...)
 
+#define MSG_SIZE 1024*8
+
 enum test_type {PHOTON_TEST,
                 PHOTON_UD_TEST,
                 MPI_TEST,
@@ -29,7 +31,7 @@ struct pingpong_args {
   int type;
   int ping_id;
   int pong_id;
-  char msg[1024];
+  char msg[MSG_SIZE];
 };
 
 struct pingpong_args *send_args;
@@ -352,12 +354,22 @@ int main(int argc, char **argv) {
   pthread_create(&th, NULL, receiver, NULL);
   pthread_join(th, NULL);
 
-  MPI_Barrier(MPI_COMM_WORLD);
-
   gettimeofday(&end, NULL);
 
-  if (rank == 0)
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (rank == 0) {
     printf("%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
+    
+    float usec = (end.tv_sec - start.tv_sec) * 1000000 +
+      (end.tv_usec - start.tv_usec);
+    long long bytes = (long long) MSG_SIZE * global_iters * 2;
+    
+    printf("%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
+           bytes, usec / 1000000., bytes * 8. / usec);
+    printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+           global_iters, usec / 1000000., usec / global_iters);
+  }
 
   if (pp_test == PHOTON_TEST || pp_test == PHOTON_UD_TEST)
     photon_finalize();
