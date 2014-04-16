@@ -139,6 +139,7 @@ static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
                 SYNC_RELEASE, SYNC_RELAXED))
     return _agas_btt_invalidate(btt, addr);
 
+  // wait for the readers to drain away---must use scheduler_yield for this
   while (_readers(count)) {
     scheduler_yield();
     sync_load(count, &agas->table[block_id].count, SYNC_ACQUIRE);
@@ -151,8 +152,8 @@ static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
   // mark the row as invalid
   sync_store(&agas->table[block_id].count, 0, SYNC_RELEASE);
 
-  // return the old mapping
-  return base;
+  // if the old mapping wasn't a forward, return it
+  return (_forward(count)) ? NULL : base;
 }
 
 
