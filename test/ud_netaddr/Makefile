@@ -2,7 +2,7 @@ CC = gcc
 BASIC_FILES = 
 BASIC_HEADERS = 
 
-PROGS=mckey ud_blast ud_pingpong
+PROGS=mckey ud_blast ud_pingpong rc_pingpong
 
 all: $(PROGS)
 all: BASIC_FILES += pingpong.c

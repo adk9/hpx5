@@ -16,7 +16,7 @@
 //#define dbg_printf(format, args...) fprintf(stderr, format, ## args);
 #define dbg_printf(format, args...)
 
-#define MSG_SIZE 1024*8
+#define MSG_SIZE 1024*1
 
 enum test_type {PHOTON_TEST,
                 PHOTON_UD_TEST,
@@ -28,10 +28,10 @@ int global_iters = 100;
 int rank, other_rank, size;
 
 struct pingpong_args {
-  int type;
-  int ping_id;
-  int pong_id;
-  char msg[MSG_SIZE];
+  uint32_t type;
+  uint32_t ping_id;
+  uint32_t pong_id;
+  char msg[MSG_SIZE-12];
 };
 
 struct pingpong_args *send_args;

@@ -74,7 +74,10 @@ static int __photon_handle_recv_event(uint64_t id);
    We only want to spawn a dedicated thread for ledgers on
    multithreaded instantiations of the library (e.g. in xspd).
 */
+
 #ifdef PHOTON_MULTITHREADED
+static pthread_t event_watcher;
+static void *__photon_event_watcher(void *arg);
 static pthread_t ledger_watcher;
 static void *__photon_req_watcher(void *arg);
 #endif
@@ -464,6 +467,10 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   }
 
 #ifdef PHOTON_MULTITHREADED
+  if (pthread_create(&event_watcher, NULL, __photon_event_watcher, NULL)) {
+    log_err("pthread_create() failed");
+    goto error_exit_sb;
+  }
   if (pthread_create(&ledger_watcher, NULL, __photon_req_watcher, NULL)) {
     log_err("pthread_create() failed");
     goto error_exit_rb;
@@ -670,19 +677,19 @@ static int __photon_handle_send_event(photonRequest req, uint64_t id) {
       creq = tmp_req;
     }
   }
-  
+
   // we have a request to update
   if (creq) {
     if (creq->state == REQUEST_PENDING) {
       uint16_t msn;
       msn = (uint16_t)((id<<16)>>48);
-      req->mmask |= ((uint64_t)1<<msn);
-      if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
+      creq->mmask |= ((uint64_t)1<<msn);
+      if (!( creq->mmask ^ ~(~(uint64_t)0<<creq->num_entries))) {
         // additional condition would be ACK from receiver
         creq->state = REQUEST_COMPLETED;
         // mark sendbuf entries as available again
-        for (i=0; i<req->num_entries; i++) {
-          photon_msgbuffer_free_entry(sendbuf, req->bentries[i]);
+        for (i=0; i<creq->num_entries; i++) {
+          photon_msgbuffer_free_entry(sendbuf, creq->bentries[i]);
         }
       }
     }
@@ -742,7 +749,7 @@ static int __photon_handle_recv_event(uint64_t id) {
   }
   
   // now check if we have the whole message
-  // if so, add to pending recv list and remove from htable
+  // if so, add to pending recv list
   if (req) {
     if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
       dbg_info("adding recv request to pending recv list: %lu/0x%016lx", req->id, cookie);
@@ -790,7 +797,7 @@ static int __photon_nbpop_sr(photonRequest req) {
     }
     else {
       __photon_handle_send_event(req, event.id);
-    }    
+    }
   }
 
   if (req && req->state == REQUEST_COMPLETED) {
@@ -1145,7 +1152,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
 
     // copy data into one message
     memcpy(bentry->mptr, ptr + bytes_sent, send_bytes);
-    
+
     if (__photon_config->use_ud) {
       // create the header
       photon_ud_hdr *hdr = (photon_ud_hdr*)bentry->hptr;
@@ -2274,6 +2281,36 @@ static inline int __photon_complete_evd_req(uint32_t cookie) {
   pthread_mutex_unlock(&tmp_req->mtx);
 
   return 0;
+}
+
+static void *__photon_event_watcher(void *arg) {
+  int rc;
+  uint32_t prefix;
+  photon_event_status event;
+
+  while(1) {
+    //should get more events per call here
+    rc = __photon_backend->get_event(&event);
+    if (rc < 0) {
+      dbg_err("Error getting event, rc=%d", rc);
+      goto error_exit;
+    }
+    else if (rc != PHOTON_OK) {
+      continue;
+    }
+
+    prefix = (uint32_t)(event.id>>32);
+
+    if (prefix == REQUEST_COOK_RECV) {
+      __photon_handle_recv_event(event.id);
+    }
+    else {
+      __photon_handle_send_event(NULL, event.id);
+    }    
+  }
+
+ error_exit:
+  pthread_exit(NULL);
 }
 
 static void *__photon_req_watcher(void *arg) {
