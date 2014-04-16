@@ -382,7 +382,6 @@ void hpx_addr_unpin(const hpx_addr_t addr) {
 }
 
 
-
 /// ----------------------------------------------------------------------------
 /// Local allocation is done from our designated local block. Allocation is
 /// always done to 8 byte alignment. Here we're using a simple sbrk allocator
