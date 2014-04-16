@@ -761,12 +761,14 @@ static int __photon_handle_recv_event(uint64_t id) {
 static int __photon_nbpop_sr(photonRequest req) {
   int rc;
 
+  /*
   if (req) {
     dbg_info("(%lu)", req->id);
   }
   else {
     dbg_info("(probing)");
   }
+  */
 
   if (!req || (req && req->state == REQUEST_PENDING)) {
 
@@ -2210,7 +2212,7 @@ static int _photon_probe(photonAddr addr, int *flag, photonStatus status) {
   else {
     *flag = 0;
     rc = __photon_nbpop_sr(NULL);
-    dbg_info("returning %d, flag:0", rc);
+    //dbg_info("returning %d, flag:0", rc);
     return rc;
   }
 }
@@ -2340,7 +2342,7 @@ int _photon_handle_addr(photonAddr addr, photonAddr raddr) {
   // see if we have a block_id to send to
   if (!(addr->blkaddr.blk0) &&
       !(addr->blkaddr.blk1) &&
-      !(addr->blkaddr.blk2) && addr->blkaddr.blk3) {
+      !(addr->blkaddr.blk2)) {
     if (__photon_config->ud_gid_prefix) {
       inet_pton(AF_INET6, __photon_config->ud_gid_prefix, raddr->raw);
       uint32_t *iptr = (uint32_t*)&(raddr->raw[12]);
