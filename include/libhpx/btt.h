@@ -20,9 +20,21 @@ struct btt_class {
   void (*delete)(btt_class_t *btt);
   bool (*try_pin)(btt_class_t *btt, hpx_addr_t addr, void **out);
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
+
+  /// --------------------------------------------------------------------------
+  /// Invalidate a mapping.
+  ///
+  /// Invalidate has slightly complicated semantics. It invalidates a mapping
+  /// for the @p addr regardless of the current state for the mapping. If the
+  /// mapping was valid, and local, it will return the old mapped value. If the
+  /// mapping was invalid, it will return NULL. If the mapping was valid, but it
+  /// was a forward to another rank (i.e., a cached mapping), then it will
+  /// return NULL.
+  /// --------------------------------------------------------------------------
   void *(*invalidate)(btt_class_t *btt, hpx_addr_t addr);
   void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
-  void (*remap)(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
+  void (*remap)(btt_class_t *btt, hpx_addr_t src, hpx_addr_t dst,
+                hpx_addr_t lco);
 
   uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
   uint32_t (*home)(btt_class_t *btt, hpx_addr_t addr);
