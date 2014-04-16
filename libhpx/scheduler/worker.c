@@ -29,6 +29,7 @@
 #include "libsync/deques.h"
 
 #include "libhpx/action.h"
+#include "libhpx/btt.h"
 #include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -518,8 +519,20 @@ void hpx_thread_exit(int status) {
     unreachable();
   }
 
+  // If we're supposed to be resending, we want to send back an invalidation
+  // our estimated owner for the parcel's target address, and then resend the
+  // parcel.
   if (status == HPX_RESEND) {
     hpx_parcel_t *parcel = self.current;
+
+    if (here->btt->type == HPX_GAS_AGAS) {
+      // Who do we think owns this parcel?
+      uint32_t rank = btt_owner(here->btt, parcel->target);
+      // Send that as an update to the src of the parcel.
+      hpx_call(HPX_THERE(parcel->src), locality_gas_update, &rank, sizeof(rank),
+               HPX_NULL);
+    }
+    // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
