@@ -12,23 +12,11 @@
   Research in Extreme Scale Technologies (CREST).
   ====================================================================
 */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef LIBSYNC_BACKOFF_H
+#define LIBSYNC_BACKOFF_H
 
-#include "libsync/locks.h"
-#include "backoff.h"
+#include "hpx/attributes.h"
 
-void
-sync_tatas_acquire_slow(tatas_lock_t *l) {
-  static const int base = 16;
-  int i = base;
-  do {
-    backoff(&i);
-  } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
-}
+void backoff(int *prev) HPX_NOINLINE;
 
-void
-sync_tatas_init(tatas_lock_t *l) {
-  l->lock = 0;
-}
+#endif // LIBSYNC_BACKOFF_H
