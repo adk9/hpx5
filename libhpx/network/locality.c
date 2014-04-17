@@ -126,26 +126,25 @@ static int _move_block_action(hpx_addr_t *args) {
   int size = src.block_bytes;
   uint32_t rank = here->rank;
 
-  // 1. invalidate the block mapping at the source locality.
-  hpx_addr_t done = hpx_lco_future_new(size);
-  hpx_call(src, locality_gas_acquire, &rank, sizeof(rank), done);
-
-  // 2. allocate local memory for the block.
+  // 1. allocate local memory for the block.
   char *block = malloc(size);
   assert(block);
-  hpx_status_t status = hpx_lco_get(done, block, size);
-  hpx_lco_delete(done, HPX_NULL);
+
+  hpx_status_t status = HPX_SUCCESS;
+  do {
+    // 2. invalidate the block mapping at the source locality.
+    hpx_addr_t done = hpx_lco_future_new(size);
+    hpx_call(src, locality_gas_acquire, &rank, sizeof(rank), done);
+    status = hpx_lco_get(done, block, size);
+    if (status != HPX_SUCCESS)
+      dbg_log("failed move operation, retrying.\n");
+
+    hpx_lco_delete(done, HPX_NULL);
+  } while(status != HPX_SUCCESS);
 
   // 3. If the invalidate was successful, insert an entry into the block
   //    translation table.
-  if (status != HPX_SUCCESS) {
-    dbg_log("failed to invalidate old mapping.\n");
-    free(block);
-  }
-  else {
-    btt_insert(here->btt, src, block);
-  }
-
+  btt_insert(here->btt, src, block);
   hpx_thread_exit(status);
 }
 
