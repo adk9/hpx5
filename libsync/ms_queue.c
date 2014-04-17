@@ -44,7 +44,7 @@ static _node_t * _node_new(void *value) {
 static void _node_delete(void *node) {
   _node_t *n = node;
   n->next.p = _free;
-  _free = node;
+  _free = n;
 }
 
 
