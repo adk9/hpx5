@@ -37,11 +37,12 @@
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
 
-#define _QUEUE_T ms_queue_t
-#define _QUEUE_INIT sync_ms_queue_init
-#define _QUEUE_FINI sync_ms_queue_fini
-#define _QUEUE_ENQUEUE sync_ms_queue_enqueue
-#define _QUEUE_DEQUEUE sync_ms_queue_dequeue
+#define _QUEUE(pre, post) pre##ms_queue##post
+#define _QUEUE_T _QUEUE(, _t)
+#define _QUEUE_INIT _QUEUE(sync_, _init)
+#define _QUEUE_FINI _QUEUE(sync_, _fini)
+#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
+#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
 
 typedef enum {
   _STATE_RUNNING = 0,
