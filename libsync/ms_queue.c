@@ -20,9 +20,16 @@ typedef struct {
   void *value;
 } _node_t;
 
+static __thread _node_t *_free = NULL;
 
 static _node_t * _node_new(void *value) {
-  _node_t *node = malloc(sizeof(*node));
+  _node_t *node = _free;
+  if (node) {
+    _free = node->next.p;
+  }
+  else {
+    node = malloc(sizeof(*node));
+  }
   node->next.p = NULL;
   node->next.c = 0;
   node->value = value;
@@ -31,7 +38,9 @@ static _node_t * _node_new(void *value) {
 
 
 static void _node_delete(void *node) {
-  free(node);
+  _node_t *n = node;
+  n->next.p = _free;
+  _free = node;
 }
 
 
@@ -60,12 +69,14 @@ void sync_ms_queue_fini(ms_queue_t *q) {
   _node_delete(q->head.p);
 }
 
+
 void sync_ms_queue_delete(ms_queue_t *q) {
   if (!q)
     return;
   sync_ms_queue_fini(q);
   free(q);
 }
+
 
 void sync_ms_queue_enqueue(ms_queue_t *q, void *val) {
   _node_t *node = _node_new(val);
