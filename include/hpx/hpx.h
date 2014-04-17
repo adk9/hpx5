@@ -77,7 +77,7 @@ hpx_addr_t HPX_THERE(int i);
 /// In UPC-land, the returned global address would have the following
 /// distribution.
 ///
-/// shared [1] T foo[n]; where sizeof(T) == bytes
+/// shared [bytes] char foo[n * bytes];
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes);
 
