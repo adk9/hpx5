@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 
@@ -40,8 +41,9 @@ typedef struct {
 static __thread _future_t *_free = NULL;
 
 
-/// Remote block initializer.
+/// Remote block initialization
 static hpx_action_t _block_init = 0;
+static hpx_action_t _blocks_init = 0;
 
 
 /// Use the LCO's "user" state to remember if the future is in-place or not.
@@ -147,7 +149,7 @@ static void _init(_future_t *f, int size) {
 
 
 /// Initialize a block of futures.
-static int _block_init_action(void *args) {
+static int _block_init_action(uint32_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
   _future_t *futures = NULL;
 
@@ -156,10 +158,9 @@ static int _block_init_action(void *args) {
     return HPX_RESEND;
 
   // sequentially initialize each future
-  int *a = args;
-  int size = a[0];
-  int block_size = a[1];
-  for (int i = 0; i < block_size; ++i)
+  uint32_t size = args[0];
+  uint32_t block_size = args[1];
+  for (uint32_t i = 0; i < block_size; ++i)
     _init(&futures[i], size);
 
   hpx_addr_unpin(target);
@@ -167,8 +168,28 @@ static int _block_init_action(void *args) {
 }
 
 
+/// Initialize a strided block of futures
+static int _blocks_init_action(uint32_t *args) {
+  hpx_addr_t base = hpx_thread_current_target();
+  uint32_t block_size = args[1];
+  uint32_t block_bytes = block_size * sizeof(_future_t);
+  uint32_t blocks = args[2];
+
+  hpx_addr_t and = hpx_lco_and_new(blocks);
+  for (uint32_t i = 0; i < blocks; i++) {
+    hpx_addr_t block = hpx_addr_add(base, i * here->ranks * block_bytes);
+    hpx_call(block, _block_init, args, 2 * sizeof(*args), and);
+  }
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+
 static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  _block_init = HPX_REGISTER_ACTION(_block_init_action);
+  _block_init  = HPX_REGISTER_ACTION(_block_init_action);
+  _blocks_init = HPX_REGISTER_ACTION(_blocks_init_action);
 }
 
 
@@ -224,29 +245,41 @@ hpx_lco_future_new(int size) {
 hpx_addr_t
 hpx_lco_future_array_new(int n, int size, int block_size) {
   // perform the global allocation
-  int blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
-  int block_bytes = block_size * sizeof(_future_t);
+  uint32_t blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
+  uint32_t block_bytes = block_size * sizeof(_future_t);
   hpx_addr_t base = hpx_global_alloc(blocks, block_bytes);
 
-  // for each block, send an initialization message
-  int args[2] = {
+  // for each rank, send an initialization message
+  uint32_t args[3] = {
     size,
-    block_size
+    block_size,
+    (blocks / here->ranks) // bks per rank
   };
 
   // We want to do this in parallel, but wait for them all to complete---we
   // don't need any values from this broadcast, so we can use the and
-  // reduction. We may initialize too many futures in the last block, but that's
-  // no problem.
-  hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (int i = 0; i < blocks; ++i) {
-    hpx_addr_t block = hpx_addr_add(base, i * block_bytes);
-    hpx_call(block, _block_init, args, sizeof(args), and);
+  // reduction.
+  int ranks = here->ranks;
+  int rem = blocks % here->ranks;
+  hpx_addr_t and[2] = {
+    hpx_lco_and_new(ranks),
+    hpx_lco_and_new(rem)
+  };
+
+  for (int i = 0; i < ranks; ++i) {
+    hpx_addr_t there = hpx_addr_add(base, i * block_bytes);
+    hpx_call(there, _blocks_init, args, sizeof(args), and[0]);
   }
 
-  // wait for the initialization to complete
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
+  for (int i = 0; i < rem; ++i) {
+    hpx_addr_t block = hpx_addr_add(base, args[2] * here->ranks + i *
+                                    block_bytes);
+    hpx_call(block, _block_init, args, 2 * sizeof(args[0]), and[1]);
+
+  }
+  hpx_lco_wait_all(2, and);
+  hpx_lco_delete(and[0], HPX_NULL);
+  hpx_lco_delete(and[1], HPX_NULL);
 
   // return the base address of the allocation
   return base;
