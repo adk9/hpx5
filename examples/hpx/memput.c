@@ -71,7 +71,7 @@ static int _memput_action(void *args) {
 }
 
 static int _main_action(void *args) {
-  double t_start, t_end;
+  double t_start = 0.0, t_end = 0.0;
   int rank = hpx_get_my_rank();
   int size = hpx_get_num_ranks();
   int peerid = (rank+1)%size;
