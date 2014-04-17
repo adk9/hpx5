@@ -37,15 +37,22 @@ static inline void *sync_queue_dequeue(queue_t *q) {
   return q->dequeue(q);
 }
 
-typedef struct queue_node queue_node_t;
+/// M&S two lock queue from
+/// http://www.cs.rochester.edu/u/scott/papers/1996_PODC_queues.pdf, implemented
+/// based on
+/// https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html#tlq
 
+typedef struct two_lock_queue_node two_lock_queue_node_t;
+
+/// Using SWAP on the head and tail pointers for locking. Could use something
+/// more scalable if higher contention.
 typedef struct {
   queue_t vtable;
   const char *_paddinga[64 - sizeof(queue_t)];
-  queue_node_t *head;
-  const char *_paddingb[64 - sizeof(queue_node_t*)];
-  queue_node_t *tail;
-  const char *_paddingc[64 - sizeof(queue_node_t*)];
+  two_lock_queue_node_t *head;
+  const char *_paddingb[64 - sizeof(two_lock_queue_node_t*)];
+  two_lock_queue_node_t *tail;
+  const char *_paddingc[64 - sizeof(two_lock_queue_node_t*)];
 } HPX_ALIGNED(64) two_lock_queue_t;
 
 two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
