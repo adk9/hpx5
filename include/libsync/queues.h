@@ -37,6 +37,24 @@ static inline void *sync_queue_dequeue(queue_t *q) {
   return q->dequeue(q);
 }
 
+typedef struct queue_node queue_node_t;
+
+typedef struct {
+  queue_t vtable;
+  const char *_paddinga[64 - sizeof(queue_t)];
+  queue_node_t *head;
+  const char *_paddingb[64 - sizeof(queue_node_t*)];
+  queue_node_t *tail;
+  const char *_paddingc[64 - sizeof(queue_node_t*)];
+} HPX_ALIGNED(64) two_lock_queue_t;
+
+two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
+void sync_two_lock_queue_delete(two_lock_queue_t *q) HPX_NON_NULL(1);
+
+void  sync_two_lock_queue_init(two_lock_queue_t *q) HPX_NON_NULL(1);
+void  sync_two_lock_queue_fini(two_lock_queue_t *q) HPX_NON_NULL(1);
+void  sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) HPX_NON_NULL(1);
+void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) HPX_NON_NULL(1);
 
 typedef struct {
   queue_t vtable;
