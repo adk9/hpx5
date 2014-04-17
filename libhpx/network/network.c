@@ -37,6 +37,12 @@
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
 
+#define _QUEUE_T ms_queue_t
+#define _QUEUE_INIT sync_ms_queue_init
+#define _QUEUE_FINI sync_ms_queue_fini
+#define _QUEUE_ENQUEUE sync_ms_queue_enqueue
+#define _QUEUE_DEQUEUE sync_ms_queue_dequeue
+
 typedef enum {
   _STATE_RUNNING = 0,
   _STATE_SHUTDOWN_PENDING,
@@ -50,15 +56,15 @@ typedef enum {
 // maintains global references to these ports and exports functions to
 // manipulate them.
 
-static ms_queue_t *network_tx_port = NULL;
-static ms_queue_t *network_rx_port = NULL;
+static _QUEUE_T *network_tx_port = NULL;
+static _QUEUE_T *network_rx_port = NULL;
 
 /// ----------------------------------------------------------------------------
 /// The network class data.
 /// ----------------------------------------------------------------------------
 struct network_class {
-  ms_queue_t         sends;                     // half duplex port for send
-  ms_queue_t         recvs;                     // half duplex port for recv
+  _QUEUE_T         sends;                     // half duplex port for send
+  _QUEUE_T         recvs;                     // half duplex port for recv
 
   SYNC_ATOMIC(_network_state_t) state;          // state for progress
 
@@ -67,19 +73,19 @@ struct network_class {
 
 
 void network_tx_enqueue(hpx_parcel_t *p) {
-  sync_ms_queue_enqueue(network_tx_port, p);
+  _QUEUE_ENQUEUE(network_tx_port, p);
 }
 
 hpx_parcel_t *network_tx_dequeue(void) {
-  return (hpx_parcel_t*)sync_ms_queue_dequeue(network_tx_port);
+  return (hpx_parcel_t*)_QUEUE_DEQUEUE(network_tx_port);
 }
 
 void network_rx_enqueue(hpx_parcel_t *p) {
-  sync_ms_queue_enqueue(network_rx_port, p);
+  _QUEUE_ENQUEUE(network_rx_port, p);
 }
 
 hpx_parcel_t *network_rx_dequeue(void) {
-  return (hpx_parcel_t*)sync_ms_queue_dequeue(network_rx_port);
+  return (hpx_parcel_t*)_QUEUE_DEQUEUE(network_rx_port);
 }
 
 
@@ -96,8 +102,8 @@ network_class_t *network_new(void) {
   network_tx_port = &n->sends;
   network_rx_port = &n->recvs;
 
-  sync_ms_queue_init(network_tx_port);
-  sync_ms_queue_init(network_rx_port);
+  _QUEUE_INIT(network_tx_port);
+  _QUEUE_INIT(network_rx_port);
 
   sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
 
@@ -131,14 +137,14 @@ void network_delete(network_class_t *network) {
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = sync_ms_queue_dequeue(&network->sends)))
+  while ((p = _QUEUE_DEQUEUE(&network->sends)))
     hpx_parcel_release(p);
-  sync_ms_queue_fini(&network->sends);
+  _QUEUE_FINI(&network->sends);
   network_tx_port = NULL;
 
-  while ((p = sync_ms_queue_dequeue(&network->recvs)))
+  while ((p =_QUEUE_DEQUEUE(&network->recvs)))
     hpx_parcel_release(p);
-  sync_ms_queue_fini(&network->recvs);
+  _QUEUE_FINI(&network->recvs);
   network_rx_port = NULL;
 
   if (network->routing)
