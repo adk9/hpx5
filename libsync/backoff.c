@@ -16,19 +16,28 @@
 #include "config.h"
 #endif
 
-#include "libsync/locks.h"
 #include "backoff.h"
+#include "nop.h"
 
-void
-sync_tatas_acquire_slow(tatas_lock_t *l) {
-  static const int base = 16;
-  int i = base;
-  do {
-    backoff(&i);
-  } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
+
+/**
+ *  "Magic" backoff constants.
+ */
+static const int multiplier = 2;
+static const int limit = 65536;
+
+
+/* Modern compilers are smart. No need to macro this. */
+static int min(int x, int y) {
+  return (x < y) ? x : y;
 }
 
-void
-sync_tatas_init(tatas_lock_t *l) {
-  l->lock = 0;
+/*  Backoff for now just does some wasted work. Make sure that this is
+ *  not optimized.
+ */
+void backoff(int *prev) {
+  *prev = min(*prev * multiplier, limit);
+  for (int i = 0, e = *prev; i < e; ++i)
+    sync_nop();
 }
+
