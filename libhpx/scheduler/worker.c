@@ -28,9 +28,9 @@
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
 
+#include "hpx/builtins.h"
 #include "libhpx/action.h"
 #include "libhpx/btt.h"
-#include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"

@@ -26,7 +26,7 @@
 
 #include <contrib/uthash/src/utlist.h>
 
-#include "libhpx/builtins.h"
+#include "hpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
 #include "asm.h"

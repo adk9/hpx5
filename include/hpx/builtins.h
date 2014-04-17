@@ -10,8 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BUILTINS_H
-#define LIBHPX_BUILTINS_H
+#ifndef HPX_BUILTINS_H
+#define HPX_BUILTINS_H
 
 /// ----------------------------------------------------------------------------
 /// @file builtins.h
@@ -28,4 +28,4 @@
 #define unreachable() __builtin_unreachable()
 #define ctzl(N) __builtin_ctzl(N)
 
-#endif // LIBHPX_BUILTINS_H
+#endif // HPX_BUILTINS_H
