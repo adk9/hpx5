@@ -74,7 +74,7 @@ static int _main_action(void *args) {
   double t_start, t_end;
   int rank = hpx_get_my_rank();
   int size = hpx_get_num_ranks();
-  int peerid = (rank+1)%size; 
+  int peerid = (rank+1)%size;
   int i;
 
   if (size == 1 ) {
@@ -83,7 +83,7 @@ static int _main_action(void *args) {
   }
 
   hpx_addr_t data = hpx_global_alloc(size, MAX_MSG_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 + peerid);
+  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
 
   fprintf(stdout, HEADER);
   fprintf(stdout, "# [ pairs: %d ]\n", size/2);
@@ -93,7 +93,7 @@ static int _main_action(void *args) {
   hpx_addr_t lfut;
   hpx_addr_t rfut;
   hpx_addr_t done;
-  for (int size = 1; size <= MAX_MSG_SIZE; size*=2) {
+  for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     char *local;
     lfut = hpx_lco_future_new(sizeof(void*));
     rfut = hpx_lco_future_new(sizeof(void*));
@@ -123,7 +123,7 @@ static int _main_action(void *args) {
     hpx_lco_delete(rfut, HPX_NULL);
 
     double latency = (t_end - t_start)/(1.0 * loop);
-    fprintf(stdout, "%-*d%*.*f\n", 10, size, FIELD_WIDTH,
+    fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
@@ -134,7 +134,8 @@ static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
-          "\t-d, wait for debugger\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
 
