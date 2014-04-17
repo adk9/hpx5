@@ -294,7 +294,7 @@ hpx_lco_delete(hpx_addr_t target, hpx_addr_t sync) {
 
 
 /// ----------------------------------------------------------------------------
-/// If the LCO is local, then we use the set aciton handler, If it's not local,
+/// If the LCO is local, then we use the set action handler, If it's not local,
 /// then we forward to a set proxy and wait for it to complete.
 /// ----------------------------------------------------------------------------
 void
