@@ -12,6 +12,9 @@
   Research in Extreme Scale Technologies (CREST).
   ====================================================================
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "libsync/locks.h"
 #include "nop.h"
