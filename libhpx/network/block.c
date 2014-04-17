@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libhpx/builtins.h"
+#include "hpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
 #include "block.h"

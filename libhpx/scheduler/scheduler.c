@@ -22,9 +22,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "hpx/builtins.h"
 #include "libsync/sync.h"
 #include "libsync/barriers.h"
-#include "libhpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
