@@ -37,7 +37,8 @@
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
 
-#define _QUEUE(pre, post) pre##ms_queue##post
+#define _QUEUE(pre, post) pre##two_lock_queue##post
+//#define _QUEUE(pre, post) pre##ms_queue##post
 #define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
