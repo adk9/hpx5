@@ -88,6 +88,12 @@ static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
 static void _init(_and_t *and, uint64_t value) {
   lco_init(&and->lco, &_vtable, 0);
   and->value = value;
+  if (value != 0)
+    return;
+
+  lco_lock(&and->lco);
+  scheduler_signal(&and->lco, HPX_SUCCESS);
+  lco_unlock(&and->lco);
 }
 
 /// @}
