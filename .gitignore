@@ -49,6 +49,8 @@
 /examples/hpx/parspawn
 /examples/hpx/future
 /examples/hpx/agas_test
+/examples/hpx/memput
+/examples/hpx/memget
 /examples/hpx/Makefile
 /examples/hpx/Makefile.in
 

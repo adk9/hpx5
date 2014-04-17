@@ -5,7 +5,7 @@ libexamples_la_SOURCES = debug.c
 libexamples_la_CFLAGS  = -O0 -g -std=c99 
 
 examples_PROGRAMS    = fibonaccihpx pingponghpx allreduce countdown seqspawn \
-                       parspawn future agas_test memput
+                       parspawn future agas_test memput memget
 
 fibonaccihpx_SOURCES = fibonacci.c
 pingponghpx_SOURCES  = pingpong.c
