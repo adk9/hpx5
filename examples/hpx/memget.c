@@ -60,7 +60,7 @@ static int _init_array_action(size_t *args) {
   hpx_thread_continue(sizeof(local), &local);
 }
 
-static int _memget_action(void *args) {
+static int _memget_action(size_t *args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
