@@ -68,7 +68,8 @@ block_t *block_new(int size) {
   int parcel_size = sizeof(hpx_parcel_t) + size;
   int padding = PAD_TO_CACHELINE(parcel_size);
   int padded_size = parcel_size + padding;
-  if (padded_size - sizeof(hpx_parcel_t) < sizeof(void*)) {
+  int max_payload_size = padded_size - sizeof(hpx_parcel_t);
+  if (max_payload_size < sizeof(void*)) {
     dbg_error("free space expected, check sizeof(hpx_parcel_t).\n");
     return NULL;
   }
@@ -88,7 +89,7 @@ block_t *block_new(int size) {
   }
 
   // 4)
-  b->header.max_payload_size = padded_size;
+  b->header.max_payload_size = max_payload_size;
   b->header.block_size       = block_size;
   b->header.pinned           = false;
   b->header.free             = NULL;

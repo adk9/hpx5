@@ -71,8 +71,8 @@ static HPX_RETURNS_NON_NULL hpx_parcel_t **_find(cache_t *cache, int size) {
 
     // did we find an existing block?
     block_t *block = block_from_parcel(value);
-    int max_payload = block_get_max_payload_size(block);
-    if (max_payload == size)
+    int found = block_get_max_payload_size(block) + sizeof(hpx_parcel_t);
+    if (found == size)
       break;                                    // yes
 
     // have we probed too many times?
@@ -195,6 +195,7 @@ hpx_parcel_t *cache_get(cache_t *cache, int size) {
 void cache_put(cache_t *cache, hpx_parcel_t *parcel) {
   block_t *block = block_from_parcel(parcel);
   int max_payload = block_get_max_payload_size(block);
-  hpx_parcel_t **list = _find(cache, max_payload);
+  int parcel_size = sizeof(hpx_parcel_t) + max_payload;
+  hpx_parcel_t **list = _find(cache, parcel_size);
   parcel_push(list, parcel);
 }
