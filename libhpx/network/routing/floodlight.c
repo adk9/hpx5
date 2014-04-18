@@ -132,7 +132,7 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
 
 /// Send a POST request and get a response from the Floodlight controller.
 static int _post_request(const floodlight_t *fl, const char *url, uint64_t size, json_t *post,
-                         json_t **response) {
+                         json_t **response, int delete) {
 
   char *data = malloc(sizeof(char) * size);
   struct _json_buf_t wbuf = { .data = data, .pos = 0, .size = size };
@@ -141,9 +141,13 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
   int postsize = strlen(postdata)+1;
   struct _json_buf_t rbuf = { .data = postdata, .pos = 0, .size = postsize };
 
+  if (delete)
+    curl_easy_setopt(fl->curl, CURLOPT_CUSTOMREQUEST, "DELETE"); 
+  else
+    curl_easy_setopt(fl->curl, CURLOPT_POST, 1L);
+
   curl_easy_setopt(fl->curl, CURLOPT_URL, url);
   curl_easy_setopt(fl->curl, CURLOPT_HTTPHEADER, fl->useragent);
-  curl_easy_setopt(fl->curl, CURLOPT_POST, 1L);
   curl_easy_setopt(fl->curl, CURLOPT_READFUNCTION, _read_buf);
   curl_easy_setopt(fl->curl, CURLOPT_READDATA, &rbuf);
   curl_easy_setopt(fl->curl, CURLOPT_POSTFIELDSIZE, postsize);
@@ -339,7 +343,7 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
   char url[256];
   snprintf(url, 512, "%s" PUSH_URL, caddr);
   json_t *response;
-  _post_request(fl, url, 2048, flow, &response);
+  _post_request(fl, url, 2048, flow, &response, 0);
   // do something with the response here.
   // should we retry if the _post_request fails.
   json_decref(response);
@@ -347,8 +351,22 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
 }
 
 static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
-  // TODO
-  dbg_log("unsupported.");
+  const floodlight_t *fl = (const floodlight_t*)r;
+  switch_t *s = fl->myswitch;
+  assert(s);
+
+  json_t *flow = _create_flow_mod(s, src, dst, port);
+  assert(flow);
+
+  dbg_error("flow entry: %s\n", json_dumps(flow, JSON_INDENT(2)));
+
+  char url[256];
+  snprintf(url, 512, "%s" PUSH_URL, caddr);
+  json_t *response;
+  _post_request(fl, url, 2048, flow, &response, 1);
+  // do something with the response here.
+  // should we retry if the _post_request fails.
+  json_decref(response);
   return HPX_SUCCESS;
 }
 
