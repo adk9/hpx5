@@ -21,7 +21,8 @@ typedef struct routing routing_t;
 
 #define HPX_SWADDR_WILDCARD 0x0
 
-#define block_id_macaddr(b) ((uint64_t)((uint64_t)0x3333 << 32)|b);
+#define block_id_macaddr(b) ((uint64_t)((uint64_t)0x01005e << 24)|b);
+#define block_id_ipv4mc(b) ((uint64_t)((uint64_t)0xe << 28)|b);
 
 HPX_INTERNAL routing_t *routing_new(void);
 HPX_INTERNAL void routing_delete(routing_t*) HPX_NON_NULL(1);
