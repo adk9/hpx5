@@ -97,7 +97,8 @@ static int _bitwiseor_action(uint64_t *args) {
   if (!hpx_addr_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  *local ^= value;
+  value ^= *local;
+  memcpy(local, &value, sizeof(value));
   hpx_thread_exit(HPX_SUCCESS);
 }
 
