@@ -35,7 +35,7 @@ AM_CFLAGS           += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @CRYPTO_CFLAGS@
 AM_CFLAGS           += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @TCMALLOC_CFLAGS@
 AM_CFLAGS           += @GLIB_CFLAGS@
 
-AM_LDFLAGS          = -static
+AM_LDFLAGS          = -static @TREMA_LIBS@ # FIXME
 
 # allreduce uses MPI directly
 allreduce_LDADD    += @MPI_LIBS@
