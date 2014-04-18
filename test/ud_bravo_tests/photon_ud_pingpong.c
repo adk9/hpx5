@@ -6,7 +6,8 @@
 #include <sys/time.h>
 
 #include "photon.h"
-#include "bravo_ids.h"
+//#include "bravo_ids.h"
+#include "cutter_ids.h"
 
 #define PHOTON_TAG  13
 #define PING         0
@@ -276,7 +277,7 @@ int main(int argc, char **argv) {
     .use_ud = 1,
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_1",
+    .ib_dev = "mlx4_0",
     .ib_port = 1,
     .backend = "verbs"
   };
@@ -304,7 +305,6 @@ int main(int argc, char **argv) {
     inet_ntop(AF_INET, &naddr.s_addr, buf, sizeof(buf));    
     printf("%d: dev addr: %s, block_id: 0x%08x\n", rank, buf, mynode->block[0].blkaddr.blk3);
     
-
     switch (mynode->index) {
     case B001:
       dnode = get_bravo_node(B002);
@@ -329,6 +329,30 @@ int main(int argc, char **argv) {
       break;
     case B008:
       dnode = get_bravo_node(B007);
+      break;
+    case B009:
+      dnode = get_bravo_node(B010);
+      break;
+    case B010:
+      dnode = get_bravo_node(B009);
+      break;
+    case B011:
+      dnode = get_bravo_node(B012);
+      break;
+    case B012:
+      dnode = get_bravo_node(B011);
+      break;
+    case B013:
+      dnode = get_bravo_node(B014);
+      break;
+    case B014:
+      dnode = get_bravo_node(B013);
+      break;
+    case B015:
+      dnode = get_bravo_node(B016);
+      break;
+    case B016:
+      dnode = get_bravo_node(B015);
       break;
     default:
       break;

@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     .use_cma = 0,
     .use_ud = 1,
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_1",
+    .ib_dev = "mlx4_0",
     .ib_port = 1,
     .backend = "verbs"
   };

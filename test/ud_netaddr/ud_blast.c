@@ -544,10 +544,10 @@ int main(int argc, char *argv[])
         }
         else {
 	        // receiver joins mcast group
-          //ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
-          //	if (ret) {
-          //	  printf("error: %s\n", strerror(ret));
-          //	}
+                ret = ibv_attach_mcast(ctx->qp, &mgid, 0x0);
+		if (ret) {
+          	  printf("error: %s\n", strerror(ret));
+          	}
 
                 char buf[40];
                 inet_pton(AF_INET6, dgid, rem_dest.gid.raw);
