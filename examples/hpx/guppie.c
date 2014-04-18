@@ -28,7 +28,7 @@ struct tms t;
 // (suggested: half of global memory)
 #ifndef LTABSIZE
 //#define LTABSIZE 25L
-#define LTABSIZE 5L
+#define LTABSIZE 10L
 #endif
 #define TABSIZE (1L << LTABSIZE)
 
@@ -211,6 +211,7 @@ void _update_table_action(guppie_config_t *args)
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
   }
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
 void _main_action(guppie_config_t *args)
