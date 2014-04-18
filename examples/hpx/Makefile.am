@@ -5,7 +5,7 @@ libexamples_la_SOURCES = debug.c
 libexamples_la_CFLAGS  = -O0 -g -std=c99 
 
 examples_PROGRAMS    = fibonaccihpx pingponghpx allreduce countdown seqspawn \
-                       parspawn future agas_test memput memget
+                       parspawn future agas_test memput memget guppie
 
 fibonaccihpx_SOURCES = fibonacci.c
 pingponghpx_SOURCES  = pingpong.c
@@ -17,6 +17,7 @@ future_SOURCES       = future.c
 agas_test_SOURCES    = agas_test.c
 memput_SOURCES       = memput.c
 memget_SOURCES       = memget.c
+guppie_SOURCES       = guppie.c
 
 allreduce_LDADD      = libexamples.la $(top_builddir)/libhpx/libhpx.la
 fibonaccihpx_LDADD   = libexamples.la $(top_builddir)/libhpx/libhpx.la
@@ -28,6 +29,7 @@ future_LDADD         = libexamples.la $(top_builddir)/libhpx/libhpx.la
 agas_test_LDADD      = libexamples.la $(top_builddir)/libhpx/libhpx.la
 memput_LDADD         = libexamples.la $(top_builddir)/libhpx/libhpx.la
 memget_LDADD         = libexamples.la $(top_builddir)/libhpx/libhpx.la
+guppie_LDADD         = libexamples.la $(top_builddir)/libhpx/libhpx.la
 
 AM_CPPFLAGS          = -I$(top_srcdir)/include
 AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
