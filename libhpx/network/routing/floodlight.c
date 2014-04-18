@@ -20,6 +20,7 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -40,7 +41,7 @@
 
 // Hack. FIXME.
 #if HAVE_PHOTON
-  #include "bravo_ids.h"
+  #include "cutter_ids.h"
 #endif
 
 typedef struct floodlight floodlight_t;
@@ -52,7 +53,7 @@ struct floodlight {
   struct curl_slist *useragent;    // HTTP user-agent
 };
 
-#define CTRL_ADDR  "http://172.29.202.11:8080"
+#define CTRL_ADDR  "http://192.168.1.100:8080"
 
 #define SWITCH_URL "/wm/core/controller/switches/json"
 #define   PUSH_URL "/wm/staticflowentrypusher/json"
@@ -260,7 +261,7 @@ static switch_t *_add_switch(json_t *json) {
 }
 
 static int _get_switches(const floodlight_t *fl) {
-  char url[256];
+  char url[512];
   json_t *response;
   switch_t *sw;
 
@@ -340,7 +341,7 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
 
   dbg_error("flow entry: %s\n", json_dumps(flow, JSON_INDENT(2)));
 
-  char url[256];
+  char url[512];
   snprintf(url, 512, "%s" PUSH_URL, caddr);
   json_t *response;
   _post_request(fl, url, 2048, flow, &response, 0);
