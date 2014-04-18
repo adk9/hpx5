@@ -23,6 +23,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
+#include "libhpx/routing.h"
 #include "progress.h"
 
 
@@ -104,8 +105,9 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 /// ----------------------------------------------------------------------------
 static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
+  uint64_t saddr = block_id_ipv4mc(dest);
   photon_t *photon = (photon_t*)t;
-  photon_addr daddr = {.blkaddr.blk3 = dest};
+  photon_addr daddr = {.blkaddr.blk3 = saddr};
   void *b = (void*)data;
   int e = photon_send(&daddr, b, n, 0, r);
   if (e != PHOTON_OK)

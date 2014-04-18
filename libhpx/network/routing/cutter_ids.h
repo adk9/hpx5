@@ -71,10 +71,7 @@ bravo_node *init_bravo_ids(int num_blocks) {
       node[i].block[j].blkaddr.blk3 = bid;
     }
   }
-
-  node[B007].block[0].blkaddr.blk3 = 0xe0000202;
-  node[B008].block[0].blkaddr.blk3 = 0xe0000203;
-
+  
   // node   OF_port   
   // B001   2
   // B002   3

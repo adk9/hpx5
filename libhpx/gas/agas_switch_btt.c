@@ -181,9 +181,10 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   }
 
   uint64_t dst = block_id_macaddr(blockid);
+  uint64_t bmc = block_id_ipv4mc(blockid);
   routing_t *routing = network_get_routing(here->network);
 
-  routing_register_addr(routing, dst);
+  routing_register_addr(routing, bmc);
   // update the routing table
   int port = routing_my_port(routing);
   routing_add_flow(routing, HPX_SWADDR_WILDCARD, dst, port);
