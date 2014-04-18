@@ -289,7 +289,7 @@ void *worker_run(scheduler_t *sched) {
   self.thread    = pthread_self();
   self.id        = sync_fadd(&sched->next_id, 1, SYNC_ACQREL);
   self.core_id   = -1; // let linux do this for now
-  // self.core_id   = self.id % hpx_get_n_ranks(); // round robin
+  // self.core_id   = self.id % here->ranks;       // round robin
   self.seed      = self.id;
 
   // initialize my work structure
@@ -338,12 +338,13 @@ void *worker_run(scheduler_t *sched) {
 
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
-  sync_barrier_join(here->sched->barrier, self.id);
-  sync_chase_lev_ws_deque_fini(&self.work);
-
   printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu, stacks:%lu\n",
          hpx_get_my_rank(), self.id, self.n_spins, self.n_spawns,
          self.n_steals, self.n_stacks);
+  fflush(stdout);
+
+  sync_barrier_join(here->sched->barrier, self.id);
+  sync_chase_lev_ws_deque_fini(&self.work);
 
   return NULL;
 }
