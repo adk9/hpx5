@@ -213,7 +213,7 @@ transport_class_t *transport_new_photon(void) {
   cfg->use_ud          = 1;
   cfg->ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->eth_dev         = "roce0";
-  cfg->ib_dev          = "mlx4_1";
+  cfg->ib_dev          = "mlx4_0";
   cfg->ib_port         = 1;
   cfg->backend         = "verbs";
 
