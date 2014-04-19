@@ -137,7 +137,7 @@ uint64_t startr(long n)
     temp = (temp << 1) ^ ((long) temp < 0 ? POLY : 0);
     temp = (temp << 1) ^ ((long) temp < 0 ? POLY : 0);
   }
-    
+
   for (i=62; i>=0; i--)
     if ((n >> i) & 1)
       break;
@@ -153,9 +153,9 @@ uint64_t startr(long n)
     if ((n >> i) & 1)
       ran = (ran << 1) ^ ((long) ran < 0 ? POLY : 0);
   }
-  
+
   return ran;
-}    
+}
 
 // divide up total size (loop iters or space amount) in a blocked way
 void Block(int mype, int npes, long totalsize, long *start,
@@ -227,7 +227,7 @@ void _main_action(guppie_config_t *args)
   long j;
   hpx_addr_t lco;
   hpx_addr_t there;
-  
+
   // Allocate main table.
   cfg.table = hpx_global_alloc(cfg.tabsize, sizeof(uint64_t));
 
@@ -240,7 +240,7 @@ void _main_action(guppie_config_t *args)
   hpx_bcast(_init_table, &cfg, sizeof(cfg), lco);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
-  
+
   // Begin timing here
   icputime += CPUSEC();
   is += WSEC();
@@ -281,7 +281,7 @@ void _main_action(guppie_config_t *args)
 
   printf ("Found %d errors in %d locations (%s).\n",
           j, cfg.tabsize, (j <= 0.01*cfg.tabsize) ? "passed" : "failed");
-  
+
   hpx_shutdown(0);
 }
 
@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 {
   hpx_config_t hpx_cfg = {
     .cores       = 0,
-    .threads     = 0, 
+    .threads     = 0,
     .stack_bytes = 0,
     .gas         = HPX_GAS_PGAS
   };
@@ -313,11 +313,11 @@ int main(int argc, char *argv[])
   };
 
   int debug = NO_RANKS;
-  int opt = 0; 
+  int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:s:d:Dh")) != -1) {
     switch (opt) {
       case 'c':
-        hpx_cfg.cores = atoi(optarg); 
+        hpx_cfg.cores = atoi(optarg);
         break;
       case 't':
         hpx_cfg.threads = atoi(optarg);
@@ -334,23 +334,26 @@ int main(int argc, char *argv[])
       case 'h':
         _usage(stdout);
         return 0;
-      case '?': 
-      default: 
-        _usage(stderr); 
+      case '?':
+      default:
+        _usage(stderr);
         return -1;
     }
   }
 
   argc -= optind;
   argv += optind;
-    
-  if (argc >= 2) {
-    guppie_cfg.ltabsize = (atoi(argv[1]));
+
+  switch (argc) {
+   default:
+    _usage(stderr);
+    return -1;
+   case (2):
+    guppie_cfg.nupdate = 1L << (atoi(argv[1]));
+   case (1):
+    guppie_cfg.ltabsize = (atoi(argv[0]));
     guppie_cfg.tabsize = 1L << guppie_cfg.ltabsize;
-  }
-    
-  if (argc >= 3)
-    guppie_cfg.nupdate = 1L << (atoi(argv[2]));	
+  };
 
   int e = hpx_init(&hpx_cfg);
   if (e) {
