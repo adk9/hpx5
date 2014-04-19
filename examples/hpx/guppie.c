@@ -50,6 +50,7 @@ static hpx_action_t _bitwiseor = 0;
 static hpx_action_t _main = 0;
 static hpx_action_t _memput = 0;
 static hpx_action_t _memget = 0;
+static hpx_action_t _mover = 0;
 
 static int _memput_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
@@ -178,6 +179,30 @@ void Block(int mype, int npes, long totalsize, long *start,
   }
 }
 
+static int _mover_action(guppie_config_t *args) {
+  guppie_config_t cfg = *args;
+  uint64_t src;
+  int dst;
+  hpx_addr_t lco;
+
+  int size = hpx_get_num_ranks();
+
+  while (1) {
+    // get a random number
+    src = ((13719 * rand()) % (cfg.tabsize/sizeof(uint64_t)))-1;
+    dst = (rand()%size)-1;
+
+    // get the random address into the table.
+    hpx_addr_t there = hpx_addr_add(cfg.table, src*sizeof(uint64_t));
+    lco = hpx_lco_future_new(0);
+    // initiate a move
+    hpx_move(there, HPX_THERE(dst), lco);
+    hpx_lco_wait(lco);
+    hpx_lco_delete(lco, HPX_NULL);
+    hpx_thread_exit(HPX_SUCCESS);
+  }
+}
+
 void _update_table_action(guppie_config_t *args)
 {
   guppie_config_t cfg = *args;
@@ -240,6 +265,9 @@ void _main_action(guppie_config_t *args)
   hpx_bcast(_init_table, &cfg, sizeof(cfg), lco);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
+
+  // Spawn a mover.
+  hpx_call(HPX_HERE, _mover, &cfg, sizeof(cfg), HPX_NULL);
   
   // Begin timing here
   icputime += CPUSEC();
@@ -374,6 +402,7 @@ int main(int argc, char *argv[])
   _update_table = HPX_REGISTER_ACTION(_update_table_action);
   _memput       = HPX_REGISTER_ACTION(_memput_action);
   _memget       = HPX_REGISTER_ACTION(_memget_action);
+  _mover        = HPX_REGISTER_ACTION(_mover_action);
 
   // run the update_table action
   return hpx_run(_main, &guppie_cfg, sizeof(guppie_cfg));
