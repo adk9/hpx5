@@ -21,32 +21,58 @@
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 
-boot_class_t *boot_new(void) {
+static boot_class_t *_default(void) {
+#ifdef HAVE_PMI
+  return boot_new_pmi();
+#endif
+
+#ifdef HAVE_MPI
+  return boot_new_mpi();
+#endif
+
+  return boot_new_smp();
+}
+
+boot_class_t *boot_new(hpx_boot_t type) {
   boot_class_t *boot = NULL;
 
+  switch (type) {
+   case (HPX_BOOT_PMI):
 #ifdef HAVE_PMI
-  boot = boot_new_pmi();
-  if (boot) {
-    dbg_log("initialized PMI process boot manager.\n");
-    return boot;
-  }
+    boot = boot_new_pmi();
+    if (boot)
+      dbg_log("initialized PMI process boot manager.\n");
+#else
+    dbg_error("PMI bootstrap not supported in current configuration.\n");
 #endif
+    break;
 
-#if defined(HAVE_MPI) || defined(HAVE_PHOTON)
-  boot = boot_new_mpi();
-  if (boot) {
-    dbg_log("initialized MPI-run process boot manager.\n");
-    return boot;
-  }
+   case (HPX_BOOT_MPI):
+#ifdef HAVE_MPI
+    boot = boot_new_mpi();
+    if (boot)
+      dbg_log("initialized MPI-run process boot manager.\n");
+#else
+    dbg_error("MPI bootstrap not supported in current configuration.\n");
 #endif
+    break;
 
-  boot = boot_new_smp();
-  if (boot) {
-    dbg_log("initialized the SMP process boot manager.\n");
-    return boot;
+   case (HPX_BOOT_SMP):
+    boot = boot_new_smp();
+    if (boot)
+      dbg_log("initialized the SMP process boot manager.\n");
+    break;
+
+   case HPX_BOOT_DEFAULT:
+   default:
+    boot = _default();
+    break;
   }
 
-  dbg_error("failed to initialize a process boot manager.\n");
-  return NULL;
+  if (!boot) {
+    dbg_error("failed to initialize a process boot manager.\n");
+    hpx_abort();
+  }
+  return boot;
 }
 

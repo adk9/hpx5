@@ -183,6 +183,7 @@ static void _progress(transport_class_t *t, bool flush) {
 
 transport_class_t *transport_new_photon(void) {
   photon_t *photon = malloc(sizeof(*photon));
+  photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
   photon->class.barrier        = _barrier;
   photon->class.request_size   = _request_size;

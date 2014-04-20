@@ -42,6 +42,7 @@ static int _allgather(const boot_class_t *boot, const void *in, void *out, int n
 
 
 static boot_class_t _smp = {
+  .type      = HPX_BOOT_SMP,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,

@@ -10,13 +10,15 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_BOOT_BOOT_H
-#define LIBHPX_BOOT_BOOT_H
+#ifndef LIBHPX_BOOT_H
+#define LIBHPX_BOOT_H
 
 #include "hpx/attributes.h"
+#include "hpx/hpx.h"
 
 typedef struct boot_class boot_class_t;
 struct boot_class {
+  hpx_boot_t type;
   void (*delete)(boot_class_t*);
   int (*rank)(const boot_class_t*);
   int (*n_ranks)(const boot_class_t*);
@@ -29,13 +31,16 @@ struct boot_class {
 HPX_INTERNAL boot_class_t *boot_new_mpi(void);
 HPX_INTERNAL boot_class_t *boot_new_pmi(void);
 HPX_INTERNAL boot_class_t *boot_new_smp(void);
-HPX_INTERNAL boot_class_t *boot_new(void);
+HPX_INTERNAL boot_class_t *boot_new(hpx_boot_t type);
 
 
 static inline void boot_delete(boot_class_t *boot) {
   boot->delete(boot);
 }
 
+static inline hpx_boot_t boot_type(boot_class_t *boot) {
+  return boot->type;
+}
 
 static inline int boot_rank(const boot_class_t *boot) {
   return boot->rank(boot);
@@ -53,4 +58,4 @@ static inline int boot_allgather(const boot_class_t *boot, const void *in,
 }
 
 
-#endif // LIBHPX_BOOT_BOOT_H
+#endif // LIBHPX_BOOT_H
