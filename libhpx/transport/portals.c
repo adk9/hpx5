@@ -20,13 +20,14 @@
 #include <string.h>
 #include <portals4.h>
 
+#include "libhpx/btt.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
+#include "libhpx/system.h"
 #include "libhpx/transport.h"
-#include "transports.h"
-#include "gas.h"
 
 /// Portals resource limits
 static const int PORTALS_RES_LIMIT_MAX = INT_MAX;
@@ -48,21 +49,18 @@ struct _portals_buf {
 };
 
 
-/// the Portals transport caches the rank and size.
+/// the Portals transport.
 typedef struct {
-  transport_t     vtable;
-  ptl_process_t   id;                  // my (physical) ID
-  int             rank;                // my (logical) rank
-  int             n_ranks;             // total number of ranks
+  transport_class_t class;
+  ptl_process_t     id;                 // my (physical) ID
+  _portals_lim_t    limits;             // portals transport resource limits
+  ptl_handle_ni_t   interface;          // handle to the non-matching interface
 
-  _portals_lim_t  limits;              // portals transport resource limits
-  ptl_handle_ni_t interface;           // handle to the non-matching interface
-
-  ptl_handle_eq_t sendq;               // the send event queue
-  ptl_handle_eq_t recvq;               // the recv event queue
-  ptl_pt_index_t  pte;                 // table entry for messages
-  ptl_handle_md_t bufdesc;             // buffer descriptor
-  _portals_buf_t *buffer;              // parcel buffer
+  ptl_handle_eq_t   sendq;              // the send event queue
+  ptl_handle_eq_t   recvq;              // the recv event queue
+  ptl_pt_index_t    pte;                // table entry for messages
+  ptl_handle_md_t   bufdesc;            // buffer descriptor
+  _portals_buf_t   *buffer;             // parcel buffer
 } portals_t;
 
 
@@ -131,8 +129,8 @@ static int _portals_init(portals_t *portals) {
 /// ----------------------------------------------------------------------------
 /// Set the portals locality map (Rank X PhysID) appropriately.
 /// ----------------------------------------------------------------------------
-static int _set_map(portals_t *ptl, const boot_t *boot) {
-  ptl_process_t *nidpid_map = malloc(sizeof(*nidpid_map) * ptl->n_ranks);
+static int _set_map(portals_t *ptl) {
+  ptl_process_t *nidpid_map = malloc(sizeof(*nidpid_map) * here->ranks);
 
 #ifdef HAVE_PMI_CRAY_EXT
   if ((PMI_Portals_get_nidpid_map(&nidpid_map)) != PMI_SUCCESS) {
@@ -141,10 +139,11 @@ static int _set_map(portals_t *ptl, const boot_t *boot) {
   }
 #else
   _get_physical_id(ptl, &ptl->id);
-  boot_allgather(boot, (void*)&ptl->id, nidpid_map, sizeof(*nidpid_map));
+  boot_allgather(here->boot, (void*)&ptl->id, nidpid_map,
+                 sizeof(*nidpid_map));
 #endif
 
-  int e = PtlSetMap(ptl->interface, ptl->n_ranks, nidpid_map);
+  int e = PtlSetMap(ptl->interface, here->ranks, nidpid_map);
   if (e != PTL_OK) {
     free(nidpid_map);
     dbg_error("failed to set portals nidpid map.\n");
@@ -247,19 +246,19 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _pin(transport_t *transport, const void* buffer, size_t len) {
+static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 /// ----------------------------------------------------------------------------
 /// Unpinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_t *transport, const void* buffer, size_t len) {
+static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 /// ----------------------------------------------------------------------------
 /// Send data via Portals.
 /// ----------------------------------------------------------------------------
-static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
+static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
   dbg_log("portals: send unsupported.\n");
   return HPX_SUCCESS;
@@ -268,7 +267,7 @@ static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 /// ----------------------------------------------------------------------------
 /// Test for request completion.
 /// ----------------------------------------------------------------------------
-static int _test(transport_t *t, void *request, int *success) {
+static int _test(transport_class_t *t, void *request, int *success) {
   dbg_log("portals: test unsupported.\n");
   return HPX_SUCCESS;
 }
@@ -276,7 +275,7 @@ static int _test(transport_t *t, void *request, int *success) {
 /// ----------------------------------------------------------------------------
 /// Probe the Portals transport to see if anything has been received.
 /// ----------------------------------------------------------------------------
-static size_t _probe(transport_t *t, int *source) {
+static size_t _probe(transport_class_t *t, int *source) {
   dbg_log("portals: probe unsupported.\n");
   return 0;
 }
@@ -284,7 +283,7 @@ static size_t _probe(transport_t *t, int *source) {
 /// ----------------------------------------------------------------------------
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
-static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
+static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
   dbg_log("portals: recv unsupported.\n");
   return HPX_SUCCESS;
 }
@@ -293,7 +292,7 @@ static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
 /// ----------------------------------------------------------------------------
 /// Shut down Portals, and delete the transport.
 /// ----------------------------------------------------------------------------
-static void _delete(transport_t *transport) {
+static void _delete(transport_class_t *transport) {
   portals_t *ptl = (portals_t*)transport;
 
   for (int i = 0; i < PORTALS_NUM_BUF_MAX; ++i)
@@ -310,7 +309,7 @@ static void _delete(transport_t *transport) {
   PtlFini();
 }
 
-static bool _try_start_send(transport_t *transport) {
+static bool _try_start_send(transport_class_t *transport) {
   portals_t *ptl = (portals_t*)transport;
 
   // try to deque a packet from the network's Tx port.
@@ -318,7 +317,7 @@ static bool _try_start_send(transport_t *transport) {
   if (!p)
     return false;
 
-  int dest = gas_where(p->target);
+  uint32_t dest = btt_owner(here->btt, p->target);
   ptl_process_t peer = { .rank = dest };
 
   int size = sizeof(*p) + p->size;
@@ -336,7 +335,7 @@ static bool _try_start_send(transport_t *transport) {
 }
 
 
-static void _progress(transport_t *t, bool flush) {
+static void _progress(transport_class_t *t, bool flush) {
   portals_t *ptl = (portals_t*)t;
   ptl_event_t pe;
 
@@ -398,35 +397,33 @@ static void _progress(transport_t *t, bool flush) {
   }
 }
 
-transport_t *transport_new_portals(const boot_t *boot) {
+transport_class_t *transport_new_portals(void) {
   portals_t *portals = malloc(sizeof(*portals));
 
-  portals->vtable.id             = _id;
-  portals->vtable.barrier        = _barrier;
-  portals->vtable.request_size   = _request_size;
-  portals->vtable.request_cancel = _request_cancel;
-  portals->vtable.adjust_size    = _adjust_size;
+  portals->class.id             = _id;
+  portals->class.barrier        = _barrier;
+  portals->class.request_size   = _request_size;
+  portals->class.request_cancel = _request_cancel;
+  portals->class.adjust_size    = _adjust_size;
 
-  portals->vtable.delete         = _delete;
-  portals->vtable.pin            = _pin;
-  portals->vtable.unpin          = _unpin;
-  portals->vtable.send           = _send;
-  portals->vtable.probe          = _probe;
-  portals->vtable.recv           = _recv;
-  portals->vtable.test           = _test;
-  portals->vtable.progress       = _progress;
+  portals->class.delete         = _delete;
+  portals->class.pin            = _pin;
+  portals->class.unpin          = _unpin;
+  portals->class.send           = _send;
+  portals->class.probe          = _probe;
+  portals->class.recv           = _recv;
+  portals->class.test           = _test;
+  portals->class.progress       = _progress;
 
-  portals->rank                  = boot_rank(boot);
-  portals->n_ranks               = boot_n_ranks(boot);
-  portals->interface             = PTL_INVALID_HANDLE;
-  portals->sendq                 = PTL_INVALID_HANDLE;
-  portals->recvq                 = PTL_INVALID_HANDLE;
-  portals->pte                   = PTL_PT_ANY;
-  portals->bufdesc               = PTL_INVALID_HANDLE;
+  portals->interface            = PTL_INVALID_HANDLE;
+  portals->sendq                = PTL_INVALID_HANDLE;
+  portals->recvq                = PTL_INVALID_HANDLE;
+  portals->pte                  = PTL_PT_ANY;
+  portals->bufdesc              = PTL_INVALID_HANDLE;
 
   _portals_init(portals);
-  _set_map(portals, boot);
+  _set_map(portals);
   _setup_portals(portals);
 
-  return &portals->vtable;
+  return &portals->class;
 }
