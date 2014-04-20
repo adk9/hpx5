@@ -23,8 +23,8 @@
 #include <pmi.h>
 
 #include "libhpx/boot.h"
+#include "libhpx/locality.h"
 #include "libhpx/debug.h"
-#include "managers.h"
 
 
 static void _delete(boot_class_t *boot) {
@@ -201,20 +201,18 @@ error:
 
 
 static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
-  const pmi_t *pmi = (const pmi_t*)boot;
-
 #if HAVE_PMI_CRAY_EXT
   // nb: Cray PMI allgather does not guarantee process-rank
   // order. Here, we assume that the ordering is, at least,
   // deterministic for all allgather invocations.
 
-  int *nranks = malloc(sizeof(*nranks) * pmi->n_ranks);
-  if ((PMI_Allgather(&pmi->rank, nranks, pmi->n_ranks)) != PMI_SUCCESS) {
+  int *nranks = malloc(sizeof(*nranks) * here->ranks);
+  if ((PMI_Allgather(&here->rank, nranks, here->ranks)) != PMI_SUCCESS) {
     free(nranks);
     return dbg_error("failed in pmi->allgather.\n");
   }
 
-  void *buf = malloc(sizeof(void*) * n * pmi->n_ranks);
+  void *buf = malloc(sizeof(void*) * n * here->ranks);
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
@@ -222,7 +220,7 @@ static int _allgather(const boot_class_t *boot, const void *in, void *out, int n
     return dbg_error("failed in pmi->allgather.\n");
   }
 
-  for (int i = 0; i < pmi->n_ranks; i++)
+  for (int i = 0; i < here->ranks; i++)
     memcpy(out+i, buf+nranks[i], n);
 
   free(buf);
@@ -241,9 +239,9 @@ static int _allgather(const boot_class_t *boot, const void *in, void *out, int n
     return dbg_error("failed to get kvs name.\n");
   }
 
-  _put_buffer(name, pmi->rank, (void*)in, n);
+  _put_buffer(name, here->rank, (void*)in, n);
 
-  for (int r = 0; r < pmi->n_ranks; r++)
+  for (int r = 0; r < here->ranks; r++)
     _get_buffer(name, r, (char*)out+(r*n), n);
 
 #endif
