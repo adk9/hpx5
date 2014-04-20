@@ -116,6 +116,7 @@ AC_ARG_ENABLE([testsuite],
 # ---------------------------------------------------------------------------
 # Openflow options.
 # ---------------------------------------------------------------------------
+HPX_WITH_PKG([openflow],[libopenflow],[use the Openflow reference implementation],[no],[OPENFLOW])
 HPX_WITH_PKG([trema],[libtrema],[use the Trema OF controller API],[no],[TREMA])
 HPX_WITH_PKG([jansson],[jansson],[use libjansson for JSON parsing],[no],[JANSSON])
 HPX_WITH_PKG([curl],[libcurl],[use libcurl for OF REST calls],[no],[CURL])

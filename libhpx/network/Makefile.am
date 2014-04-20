@@ -16,6 +16,12 @@ if HAVE_PHOTON
 libnetwork_la_CFLAGS   += @PHOTON_CFLAGS@ @MPI_CFLAGS@
 endif
 
+if HAVE_OPENFLOW
+libnetwork_la_SOURCES  += routing/openflow.c
+libnetwork_la_CFLAGS   += @OPENFLOW_CFLAGS@
+libnetwork_la_LIBADD   += @OPENFLOW_LIBS@
+endif
+
 if HAVE_TREMA
 libnetwork_la_SOURCES  += routing/trema.c
 libnetwork_la_CFLAGS   += @TREMA_CFLAGS@

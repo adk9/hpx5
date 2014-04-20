@@ -188,6 +188,7 @@ typedef enum {
 
 typedef enum {
   HPX_ROUTING_DEFAULT = 0,
+  HPX_ROUTING_OPENFLOW,
   HPX_ROUTING_TREMA,
   HPX_ROUTING_FLOODLIGHT
 } hpx_routing_t;
