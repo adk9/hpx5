@@ -44,6 +44,8 @@ typedef struct guppie_config {
   hpx_addr_t table;              // global address of the table
 } guppie_config_t;
 
+static int _move = 0;
+
 static hpx_action_t _update_table = 0;
 static hpx_action_t _init_table = 0;
 static hpx_action_t _bitwiseor = 0;
@@ -59,7 +61,8 @@ static int _memput_action(void *args) {
     return HPX_RESEND;
 
   memcpy(local, args, hpx_thread_current_args_size());
-  hpx_thread_continue(0, NULL);
+  hpx_addr_unpin(target);
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
 static int _memget_action(size_t *args) {
@@ -68,6 +71,8 @@ static int _memget_action(size_t *args) {
   char *local;
   if (!hpx_addr_try_pin(target, (void**)&local))
     return HPX_RESEND;
+
+  hpx_addr_unpin(target);
   hpx_thread_continue(n, local);
 }
 
@@ -100,11 +105,12 @@ static int _bitwiseor_action(uint64_t *args) {
 
   value ^= *local;
   memcpy(local, &value, sizeof(value));
+  hpx_addr_unpin(target);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
-static int _init_table_action(guppie_config_t *args) {
-  guppie_config_t cfg = *args;
+
+static int _init_table_action(guppie_config_t *cfg) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_addr_try_pin(target, (void**)&local))
@@ -112,14 +118,18 @@ static int _init_table_action(guppie_config_t *args) {
 
   int me = hpx_get_my_rank();
   int nranks = hpx_get_num_ranks();
+  long r = cfg->tabsize % nranks;
+  long blocks = cfg->tabsize / nranks + ((me < r) ? 1 : 0);
+  hpx_addr_t and = hpx_lco_and_new(blocks);
+  for (long b = 0, i = me; b < blocks; ++b, i += nranks)
+    table_set(cfg->table, i, i, and);
 
-  hpx_addr_t and = hpx_lco_and_new(cfg.tabsize/nranks);
-  for (long i = me; i < cfg.tabsize; i+= nranks)
-    table_set(cfg.table, i, i, and);
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
+  hpx_addr_unpin(target);
   hpx_thread_exit(HPX_SUCCESS);
 }
+
 
 // Utility routine to start random number generator at Nth step
 uint64_t startr(long n)
@@ -179,8 +189,7 @@ void Block(int mype, int npes, long totalsize, long *start,
   }
 }
 
-static int _mover_action(guppie_config_t *args) {
-  guppie_config_t cfg = *args;
+static int _mover_action(guppie_config_t *cfg) {
   uint64_t src;
   int dst;
   hpx_addr_t lco;
@@ -189,23 +198,22 @@ static int _mover_action(guppie_config_t *args) {
 
   while (1) {
     // get a random number
-    src = ((13719 * rand()) % (cfg.tabsize/sizeof(uint64_t)))-1;
-    dst = (rand()%size)-1;
+    src = ((13719 * rand()) % (cfg->tabsize/sizeof(uint64_t)))-1;
+    dst = (rand() % size);
 
     // get the random address into the table.
-    hpx_addr_t there = hpx_addr_add(cfg.table, src*sizeof(uint64_t));
+    hpx_addr_t there = hpx_addr_add(cfg->table, src*sizeof(uint64_t));
     lco = hpx_lco_future_new(0);
     // initiate a move
     hpx_move(there, HPX_THERE(dst), lco);
     hpx_lco_wait(lco);
     hpx_lco_delete(lco, HPX_NULL);
-    hpx_thread_exit(HPX_SUCCESS);
   }
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
-void _update_table_action(guppie_config_t *args)
+void _update_table_action(guppie_config_t *cfg)
 {
-  guppie_config_t cfg = *args;
 #define VLEN 32
   uint64_t ran[VLEN];              /* Current random numbers */
   uint64_t t1[VLEN];
@@ -217,7 +225,7 @@ void _update_table_action(guppie_config_t *args)
   int me = hpx_get_my_rank();
   int nranks = hpx_get_num_ranks();
 
-  Block(me, nranks, cfg.nupdate, &start, &stop, &size);
+  Block(me, nranks, cfg->nupdate, &start, &stop, &size);
 
   for (j=0; j<VLEN; j++)
     ran[j] = startr(start + (j * (size/VLEN)));
@@ -226,23 +234,23 @@ void _update_table_action(guppie_config_t *args)
       ran[j] = (ran[j] << 1) ^ ((long) ran[j] < 0 ? POLY : 0);
     }
     for (j=0; j<VLEN; j++)
-      t1[j] = table_get(cfg.table, ran[j] & (cfg.tabsize-1));
+      t1[j] = table_get(cfg->table, ran[j] & (cfg->tabsize-1));
 
     for (j=0; j<VLEN; j++)
       t1[j] ^= ran[j];
 
     and = hpx_lco_and_new(VLEN);
     for (j=0; j<VLEN; j++)
-      table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j], and);
+      table_set(cfg->table, ran[j] & (cfg->tabsize-1), t1[j], and);
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
   }
   hpx_thread_exit(HPX_SUCCESS);
 }
 
-void _main_action(guppie_config_t *args)
+void _main_action(guppie_config_t *cfg)
 {
-  guppie_config_t cfg = *args;
+
   double icputime;               // CPU time to init table
   double is;
   double cputime;                // CPU time to update table
@@ -253,8 +261,13 @@ void _main_action(guppie_config_t *args)
   hpx_addr_t lco;
   hpx_addr_t there;
 
+  printf("nThreads = %d\n", hpx_get_num_ranks());
+  printf("Main table size = 2^%ld = %ld words\n", cfg->ltabsize, cfg->tabsize);
+  printf("Number of updates = %ld\n", cfg->nupdate);
+  fflush(stdout);
+
   // Allocate main table.
-  cfg.table = hpx_global_alloc(cfg.tabsize, sizeof(uint64_t));
+  cfg->table = hpx_global_alloc(cfg->tabsize, sizeof(uint64_t));
 
   // Begin timing here
   icputime = -CPUSEC();
@@ -262,13 +275,17 @@ void _main_action(guppie_config_t *args)
 
   // Initialize main table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_table, &cfg, sizeof(cfg), lco);
+  hpx_bcast(_init_table, cfg, sizeof(*cfg), lco);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
+  printf("Initialization complete.\n");
+  fflush(stdout);
+
   // Spawn a mover.
-  hpx_call(HPX_HERE, _mover, &cfg, sizeof(cfg), HPX_NULL);
-  
+  if (_move)
+    hpx_call(HPX_HERE, _mover, cfg, sizeof(*cfg), HPX_NULL);
+
   // Begin timing here
   icputime += CPUSEC();
   is += WSEC();
@@ -279,36 +296,39 @@ void _main_action(guppie_config_t *args)
 
   // Update the table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_update_table, &cfg, sizeof(cfg), lco);
+  hpx_bcast(_update_table, cfg, sizeof(*cfg), lco);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
+
+  printf("Completed updates.\n");
+  fflush(stdout);
 
   // End timed section
   cputime += CPUSEC();
   s += WSEC();
   // Print timing results
   printf ("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf) up/sec= %.0lf\n",
-          icputime, is, cputime, s, ((double)cfg.nupdate / s));
+          icputime, is, cputime, s, ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
   temp = 0x1;
-  lco = hpx_lco_and_new(cfg.nupdate);
-  for (i=0; i<cfg.nupdate; i++) {
+  lco = hpx_lco_and_new(cfg->nupdate);
+  for (i=0; i<cfg->nupdate; i++) {
     temp = (temp << 1) ^ (((long) temp < 0) ? POLY : 0);
-    there = hpx_addr_add(cfg.table, (temp & (cfg.tabsize-1))*sizeof(uint64_t));
+    there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))*sizeof(uint64_t));
     hpx_call(there, _bitwiseor, &temp, sizeof(temp), lco);
   }
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
   j = 0;
-  for (i=0; i<cfg.tabsize; i++) {
-    if (table_get(cfg.table, i) != i)
+  for (i=0; i<cfg->tabsize; i++) {
+    if (table_get(cfg->table, i) != i)
       j++;
   }
 
-  printf ("Found %d errors in %d locations (%s).\n",
-          j, cfg.tabsize, (j <= 0.01*cfg.tabsize) ? "passed" : "failed");
+  printf ("Found %lu errors in %lu locations (%s).\n",
+          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
   hpx_shutdown(0);
 }
@@ -330,7 +350,7 @@ int main(int argc, char *argv[])
     .cores       = 0,
     .threads     = 0,
     .stack_bytes = 0,
-    .gas         = HPX_GAS_PGAS
+    .gas         = HPX_GAS_AGAS
   };
 
   guppie_config_t guppie_cfg = {
@@ -342,30 +362,33 @@ int main(int argc, char *argv[])
 
   int debug = NO_RANKS;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:s:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:s:d:DMh")) != -1) {
     switch (opt) {
-      case 'c':
-        hpx_cfg.cores = atoi(optarg);
-        break;
-      case 't':
-        hpx_cfg.threads = atoi(optarg);
-        break;
-      case 's':
-        hpx_cfg.stack_bytes = atoi(optarg);
-        break;
-      case 'D':
-        debug = ALL_RANKS;
-        break;
-      case 'd':
-        debug = atoi(optarg);
-        break;
-      case 'h':
-        _usage(stdout);
-        return 0;
-      case '?':
-      default:
-        _usage(stderr);
-        return -1;
+     case 'c':
+      hpx_cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      hpx_cfg.threads = atoi(optarg);
+      break;
+     case 's':
+      hpx_cfg.stack_bytes = atoi(optarg);
+      break;
+     case 'D':
+      debug = ALL_RANKS;
+      break;
+     case 'M':
+      _move = 1;
+      break;
+     case 'd':
+      debug = atoi(optarg);
+      break;
+     case 'h':
+      _usage(stdout);
+      return 0;
+     case '?':
+     default:
+      _usage(stderr);
+      return -1;
     }
   }
 
@@ -390,13 +413,6 @@ int main(int argc, char *argv[])
   }
 
   wait_for_debugger(debug);
-
-  if (hpx_get_my_rank() == 0) {
-    printf("nThreads = %d\n", hpx_get_num_ranks());
-    printf("Main table size = 2^%ld = %ld words\n", guppie_cfg.ltabsize,
-           guppie_cfg.tabsize);
-    printf("Number of updates = %ld\n", guppie_cfg.nupdate);
-  }
 
   // register the actions
   _main         = HPX_REGISTER_ACTION(_main_action);
