@@ -101,7 +101,7 @@ static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
     uint32_t blockid = addr_block_id(addr);
     uint64_t bmc = block_id_ipv4mc(blockid);
     uint64_t dst = block_id_macaddr(blockid);
-    routing_t *routing = network_get_routing(here->network);
+    routing_class_t *routing = network_get_routing(here->network);
 
     routing_register_addr(routing, bmc);
     // update the routing table

@@ -139,5 +139,4 @@ struct routing;
 HPX_INTERNAL struct routing *network_get_routing(network_class_t *network)
   HPX_NON_NULL(1);
 
-
 #endif // LIBHPX_NETWORK_H

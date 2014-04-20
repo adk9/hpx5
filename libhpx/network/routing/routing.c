@@ -20,55 +20,53 @@
 /// ----------------------------------------------------------------------------
 #include "libhpx/routing.h"
 #include "libhpx/debug.h"
-#include "managers.h"
 
-routing_t *routing_new(void) {
-  routing_t *routing = NULL;
+static routing_class_t *_default(void) {
+#ifdef HAVE_FLOODLIGHT
+  return routing_new_floodlight();
+#endif
 
 #ifdef HAVE_TREMA
-  routing = routing_new_trema();
-  if (routing) {
-    dbg_log("initialized Trema (OpenFlow) routing control.\n");
-    return routing;
-  }
+  return routing_new_trema();
 #endif
 
+  return routing_new_dummy();
+}
+
+
+routing_class_t *routing_new(hpx_routing_t type) {
+  routing_class_t *routing = NULL;
+
+  switch (type) {
+   case (HPX_ROUTING_TREMA):
+#ifdef HAVE_TREMA
+    routing = routing_new_trema();
+    if (routing) {
+      dbg_log("initialized Trema (OpenFlow) routing control.\n");
+      return routing;
+    }
+#else
+    dbg_error("Trema routing control not supported in current configuration.\n");
+    break;
+#endif
+
+   case (HPX_ROUTING_FLOODLIGHT):
 #if HAVE_FLOODLIGHT
-  routing = routing_new_floodlight();
-  if (routing) {
-    dbg_log("initialized Floodlight (OpenFlow) routing control.\n");
-    return routing;
-  }
+     routing = routing_new_floodlight();
+     if (routing) {
+       dbg_log("initialized Floodlight (OpenFlow) routing control.\n");
+       return routing;
+     }
+#else
+     dbg_error("Floodlight routing control not supported in current configuration.\n");
+     break;
 #endif
 
-  routing = routing_new_dummy();
+   case HPX_BOOT_DEFAULT:
+   default:
+     routing = _default();
+     return routing;
+  }
   return routing;
 }
 
-void routing_delete(routing_t *routing) {
-  routing->delete(routing);
-}
-
-int routing_add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
-  return r->add_flow(r, src, dst, port);
-}
-
-int routing_delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
-  return r->delete_flow(r, src, dst, port);
-}
-
-int routing_update_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
-  return r->update_flow(r, src, dst, port);
-}
-
-int routing_my_port(const routing_t *r) {
-  return r->my_port(r);
-}
-
-int routing_register_addr(const routing_t *r, uint64_t addr) {
-  return r->register_addr(r, addr);
-}
-
-int routing_unregister_addr(const routing_t *r, uint64_t addr) {
-  return r->unregister_addr(r, addr);
-}

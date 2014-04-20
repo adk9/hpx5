@@ -33,7 +33,6 @@
 #include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/routing.h"
-#include "managers.h"
 #include "contrib/uthash/src/utlist.h"
 
 #include <jansson.h>
@@ -46,11 +45,10 @@
 
 typedef struct floodlight floodlight_t;
 struct floodlight {
-  routing_t          vtable;
+  routing_class_t    class;
   switch_t          *myswitch;
   switch_t          *switches;     // List of available switches
   CURL              *curl;         // CURL context
-  struct curl_slist *useragent;    // HTTP user-agent
 };
 
 #define CTRL_ADDR  "http://192.168.1.100:8080"
@@ -96,12 +94,13 @@ static size_t _read_buf(void *ptr, size_t size, size_t nmemb, void *userp) {
 
 /// Send a GET request to the Floodlight controller.
 static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, json_t **json) {
+  struct curl_slist *useragent = curl_slist_append(NULL, "User-Agent: HPX5");
 
   char *data = malloc(sizeof(char) * size);
   struct _json_buf_t buf = { .data = data, .pos = 0, .size = size };
 
   curl_easy_setopt(fl->curl, CURLOPT_URL, url);
-  curl_easy_setopt(fl->curl, CURLOPT_HTTPHEADER, fl->useragent);
+  curl_easy_setopt(fl->curl, CURLOPT_HTTPHEADER, useragent);
   curl_easy_setopt(fl->curl, CURLOPT_WRITEFUNCTION, _write_buf);
   curl_easy_setopt(fl->curl, CURLOPT_WRITEDATA, &buf);
 
@@ -123,6 +122,7 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
   json_error_t error;
   *json = json_loads(data, 0, &error);
   free(data);
+  curl_slist_free_all(useragent);
 
   if (!*json) {
     return dbg_error("could not load json data: %s\n", error.text);
@@ -134,7 +134,7 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
 /// Send a POST request and get a response from the Floodlight controller.
 static int _post_request(const floodlight_t *fl, const char *url, uint64_t size, json_t *post,
                          json_t **response, int delete) {
-
+  struct curl_slist *useragent = curl_slist_append(NULL, "User-Agent: HPX5");
   char *data = malloc(sizeof(char) * size);
   struct _json_buf_t wbuf = { .data = data, .pos = 0, .size = size };
   
@@ -148,7 +148,7 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
     curl_easy_setopt(fl->curl, CURLOPT_POST, 1L);
 
   curl_easy_setopt(fl->curl, CURLOPT_URL, url);
-  curl_easy_setopt(fl->curl, CURLOPT_HTTPHEADER, fl->useragent);
+  curl_easy_setopt(fl->curl, CURLOPT_HTTPHEADER, useragent);
   curl_easy_setopt(fl->curl, CURLOPT_READFUNCTION, _read_buf);
   curl_easy_setopt(fl->curl, CURLOPT_READDATA, &rbuf);
   curl_easy_setopt(fl->curl, CURLOPT_POSTFIELDSIZE, postsize);
@@ -176,6 +176,7 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
       dbg_error("unable to parse json response.\n");
   }
   free(data);
+  curl_slist_free_all(useragent)
   return HPX_SUCCESS;
 }
 
@@ -304,8 +305,6 @@ static void _init(floodlight_t *fl) {
     return;
   }
 
-  fl->useragent = curl_slist_append(NULL, "User-Agent: HPX5");
-
   _get_switches(fl);
   // FIXME:
   fl->myswitch = fl->switches;
@@ -315,7 +314,7 @@ static void _init(floodlight_t *fl) {
   return;
 }
 
-static void _delete(routing_t *routing) {
+static void _delete(routing_class_t *routing) {
   const floodlight_t *fl = (const floodlight_t*)routing;
   switch_t *s = NULL, *tmp = NULL;
   // delete all switches
@@ -325,13 +324,12 @@ static void _delete(routing_t *routing) {
     free(s);
   }
 
-  curl_slist_free_all(fl->useragent);
   curl_easy_cleanup(fl->curl);
   curl_global_cleanup();
   free(routing);
 }
 
-static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _add_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   const floodlight_t *fl = (const floodlight_t*)r;
   switch_t *s = fl->myswitch;
   assert(s);
@@ -351,7 +349,7 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
   return HPX_SUCCESS;
 }
 
-static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _delete_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   const floodlight_t *fl = (const floodlight_t*)r;
   switch_t *s = fl->myswitch;
   assert(s);
@@ -371,11 +369,11 @@ static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t
   return HPX_SUCCESS;
 }
 
-static int _update_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _update_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   return _add_flow(r, src, dst, port);
 }
 
-static int _my_port(const routing_t *r) {
+static int _my_port(const routing_class_t *r) {
   photon_addr addr;
   photon_get_dev_addr(AF_INET, &addr);
   bravo_node *b = find_bravo_node(&addr);
@@ -383,32 +381,33 @@ static int _my_port(const routing_t *r) {
   return b->of_port;  
 }
 
-static int _register_addr(const routing_t *r, uint64_t addr) {
+static int _register_addr(const routing_class_t *r, uint64_t addr) {
   photon_addr daddr = {.blkaddr.blk3 = addr};
   photon_register_addr(&daddr, AF_INET6);
   return HPX_SUCCESS;
 }
 
-static int _unregister_addr(const routing_t *r, uint64_t addr) {
+static int _unregister_addr(const routing_class_t *r, uint64_t addr) {
   photon_addr daddr = {.blkaddr.blk3 = addr};
   photon_unregister_addr(&daddr, AF_INET6);
   return HPX_SUCCESS;
 }
 
-routing_t *routing_new_floodlight(void) {
+routing_class_t *routing_new_floodlight(void) {
   floodlight_t *floodlight = malloc(sizeof(*floodlight));
-  floodlight->vtable.delete          = _delete;
-  floodlight->vtable.add_flow        = _add_flow;
-  floodlight->vtable.delete_flow     = _delete_flow;
-  floodlight->vtable.update_flow     = _update_flow;
-  floodlight->vtable.my_port         = _my_port;
-  floodlight->vtable.register_addr   = _register_addr;
-  floodlight->vtable.unregister_addr = _unregister_addr;
+  floodlight->class.type            = HPX_ROUTING_FLOODLIGHT;
+  floodlight->class.delete          = _delete;
+  floodlight->class.add_flow        = _add_flow;
+  floodlight->class.delete_flow     = _delete_flow;
+  floodlight->class.update_flow     = _update_flow;
+  floodlight->class.my_port         = _my_port;
+  floodlight->class.register_addr   = _register_addr;
+  floodlight->class.unregister_addr = _unregister_addr;
 
   floodlight->myswitch = NULL;
   floodlight->switches = NULL;
 
   _init(floodlight);
 
-  return &floodlight->vtable;
+  return &floodlight->class;
 }

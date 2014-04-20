@@ -33,7 +33,6 @@
 #include "libhpx/routing.h"
 #include "contrib/uthash/src/utlist.h"
 
-#include "managers.h"
 #include "trema.h"
 
 
@@ -43,10 +42,10 @@
 
 typedef struct trema trema_t;
 struct trema {
-  routing_t vtable;
-  switch_t *myswitch;
-  switch_t *switches;   // List of available switches.
-  pthread_t cthread;    // The OF controller thread.
+  routing_class_t  class;
+  switch_t        *myswitch;
+  switch_t        *switches;            // List of available switches.
+  pthread_t        cthread;             // The OF controller thread.
 };
 
 
@@ -152,7 +151,7 @@ static void *_start(void *args) {
   pthread_exit(NULL);
 }
 
-static void _delete(routing_t *routing) {
+static void _delete(routing_class_t *routing) {
   const trema_t *trema = (const trema_t*)routing;
   switch_t *s = NULL, *tmp = NULL;
   // delete all switches
@@ -169,7 +168,7 @@ static void _delete(routing_t *routing) {
     dbg_error("could not join the OF controller thread.\n");
 }
 
-static int _send_of_msg(const routing_t *r, const uint16_t cmd, struct ofp_match *match, uint16_t port) {
+static int _send_of_msg(const routing_class_t *r, const uint16_t cmd, struct ofp_match *match, uint16_t port) {
   const trema_t *trema = (const trema_t*)r;
   switch_t *s = trema->myswitch;
   assert(s);
@@ -194,7 +193,7 @@ static int _send_of_msg(const routing_t *r, const uint16_t cmd, struct ofp_match
   return HPX_SUCCESS;  
 }
 
-static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _add_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   // create the match request
   struct ofp_match match;
   dbg_log("Adding flow, output=%d\n", port);
@@ -207,7 +206,7 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
   return _send_of_msg(r, OFPFC_ADD, &match, port);
 }
 
-static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _delete_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
     // create the match request
   struct ofp_match match;
   memset(&match, 0, sizeof(match));
@@ -219,7 +218,7 @@ static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t
   return _send_of_msg(r, OFPFC_DELETE_STRICT, &match, port);
 }
 
-static int _update_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _update_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   // create the match request
   struct ofp_match match;
   memset(&match, 0, sizeof(match));
@@ -231,7 +230,7 @@ static int _update_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t
   return _send_of_msg(r, OFPFC_MODIFY_STRICT, &match, port);
 }
 
-static int _my_port(const routing_t *r) {
+static int _my_port(const routing_class_t *r) {
   photon_addr addr;
   photon_get_dev_addr(AF_INET, &addr);
   bravo_node *b = find_bravo_node(&addr);
@@ -239,25 +238,26 @@ static int _my_port(const routing_t *r) {
   return b->of_port;
 }
 
-static int _register_addr(const routing_t *r, uint64_t addr) {
+static int _register_addr(const routing_class_t *r, uint64_t addr) {
   photon_addr daddr = {.blkaddr.blk3 = addr};
   return photon_register_addr(&daddr, AF_INET6);
 }
 
-static int _unregister_addr(const routing_t *r, uint64_t addr) {
+static int _unregister_addr(const routing_class_t *r, uint64_t addr) {
   photon_addr daddr = {.blkaddr.blk3 = addr};
   return photon_unregister_addr(&daddr, AF_INET6);
 }
 
-routing_t *routing_new_trema(void) {
+routing_class_t *routing_new_trema(void) {
   trema_t *trema = malloc(sizeof(*trema));
-  trema->vtable.delete          = _delete;
-  trema->vtable.add_flow        = _add_flow;
-  trema->vtable.delete_flow     = _delete_flow;
-  trema->vtable.update_flow     = _update_flow;
-  trema->vtable.my_port         = _my_port;
-  trema->vtable.register_addr   = _register_addr;
-  trema->vtable.unregister_addr = _unregister_addr;
+  trema->class.type            = HPX_ROUTING_TREMA;
+  trema->class.delete          = _delete;
+  trema->class.add_flow        = _add_flow;
+  trema->class.delete_flow     = _delete_flow;
+  trema->class.update_flow     = _update_flow;
+  trema->class.my_port         = _my_port;
+  trema->class.register_addr   = _register_addr;
+  trema->class.unregister_addr = _unregister_addr;
 
   trema->myswitch = NULL;
   trema->switches = NULL;
@@ -268,5 +268,5 @@ routing_t *routing_new_trema(void) {
     return NULL;
   }
   
-  return &trema->vtable;
+  return &trema->class;
 }

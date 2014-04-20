@@ -22,36 +22,36 @@
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
 #include "libhpx/routing.h"
-#include "managers.h"
 
-static void _delete(routing_t *routing) {
+static void _delete(routing_class_t *routing) {
 }
 
-static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _add_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   return HPX_SUCCESS;
 }
 
-static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _delete_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   return HPX_SUCCESS;
 }
 
-static int _update_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
+static int _update_flow(const routing_class_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   return HPX_SUCCESS;
 }
 
-static int _my_port(const routing_t *r) {
+static int _my_port(const routing_class_t *r) {
   return 0;
 }
 
-static int _register_addr(const routing_t *r, uint64_t addr) {
+static int _register_addr(const routing_class_t *r, uint64_t addr) {
   return HPX_SUCCESS;
 }
 
-static int _unregister_addr(const routing_t *r, uint64_t addr) {
+static int _unregister_addr(const routing_class_t *r, uint64_t addr) {
   return HPX_SUCCESS;
 }
 
-static routing_t _routing = {
+static routing_class_t _routing = {
+  .type            = HPX_ROUTING_DEFAULT,
   .delete          = _delete,
   .add_flow        = _add_flow,
   .delete_flow     = _delete_flow,
@@ -61,6 +61,6 @@ static routing_t _routing = {
   .unregister_addr = _unregister_addr,
 };
 
-routing_t *routing_new_dummy(void) {
+routing_class_t *routing_new_dummy(void) {
   return &_routing;
 }

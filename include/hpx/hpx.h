@@ -186,6 +186,13 @@ typedef enum {
   HPX_LOCALITY_ALL = -1
 } hpx_locality_t;
 
+typedef enum {
+  HPX_ROUTING_DEFAULT = 0,
+  HPX_ROUTING_TREMA,
+  HPX_ROUTING_FLOODLIGHT
+} hpx_routing_t;
+
+
 /// ----------------------------------------------------------------------------
 /// The HPX configuration type.
 /// ----------------------------------------------------------------------------

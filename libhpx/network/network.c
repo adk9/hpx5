@@ -51,7 +51,7 @@
 struct network_class {
   _QUEUE_T                         tx;          // half duplex port for send
   _QUEUE_T                         rx;          // half duplex port for recv
-  routing_t                  *routing;          // for adaptive routing
+  routing_class_t            *routing;          // for adaptive routing
 };
 
 
@@ -86,7 +86,7 @@ network_class_t *network_new(void) {
   _QUEUE_INIT(&n->tx, NULL);
   _QUEUE_INIT(&n->rx, NULL);
 
-  n->routing = routing_new();
+  n->routing = routing_new(HPX_ROUTING_DEFAULT);
   if (!n->routing) {
     dbg_error("failed to start routing update manager.\n");
     free(n);
