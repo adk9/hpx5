@@ -250,6 +250,7 @@ static int _allgather(const boot_class_t *boot, const void *in, void *out, int n
 
 
 static boot_class_t _pmi = {
+  .type      = HPX_BOOT_PMI,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,

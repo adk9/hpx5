@@ -213,6 +213,7 @@ btt_class_t *btt_agas_switch_new(void) {
   }
 
   // set up class
+  btt->class.type       = HPX_GAS_AGAS_SWITCH;
   btt->class.delete     = _agas_btt_delete;
   btt->class.try_pin    = _agas_btt_try_pin;
   btt->class.unpin      = _agas_btt_unpin;

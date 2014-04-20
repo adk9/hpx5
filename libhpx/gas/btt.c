@@ -18,7 +18,7 @@
 #include "libhpx/debug.h"
 
 btt_class_t *btt_new(hpx_gas_t type) {
-  btt_class_t *btt;
+  btt_class_t *btt = NULL;
   switch (type) {
    default:
    case (HPX_GAS_DEFAULT):
@@ -26,14 +26,11 @@ btt_class_t *btt_new(hpx_gas_t type) {
    case (HPX_GAS_PGAS):
    case (HPX_GAS_PGAS_SWITCH):
     btt = btt_pgas_new();
-    break;
+    btt->type = type;
+    return btt;
    case (HPX_GAS_AGAS):
-     btt = btt_agas_new();
-     break;
+     return btt_agas_new();
    case (HPX_GAS_AGAS_SWITCH):
-    btt = btt_agas_switch_new();
-    break;
+    return btt_agas_switch_new();
   };
-  btt->type = type;
-  return btt;
 }

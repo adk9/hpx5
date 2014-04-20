@@ -168,6 +168,13 @@ typedef enum {
   HPX_TRANSPORT_PHOTON
 } hpx_transport_t;
 
+typedef enum {
+  HPX_BOOT_DEFAULT = 0,
+  HPX_BOOT_SMP,
+  HPX_BOOT_MPI,
+  HPX_BOOT_PMI
+} hpx_boot_t;
+
 /// ----------------------------------------------------------------------------
 /// The HPX configuration type.
 /// ----------------------------------------------------------------------------

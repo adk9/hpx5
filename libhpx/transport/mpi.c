@@ -199,6 +199,7 @@ transport_class_t *transport_new_mpi(void) {
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
+  mpi->class.type           = HPX_TRANSPORT_MPI;
   mpi->class.id             = _mpi_id;
   mpi->class.barrier        = _mpi_barrier;
   mpi->class.request_size   = _mpi_request_size;

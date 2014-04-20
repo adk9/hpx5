@@ -28,6 +28,7 @@
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
+#include "hpx/hpx.h"
 
 /// Portals resource limits
 static const int PORTALS_RES_LIMIT_MAX = INT_MAX;
@@ -398,8 +399,14 @@ static void _progress(transport_class_t *t, bool flush) {
 }
 
 transport_class_t *transport_new_portals(void) {
+  if (boot_type(here->boot) != HPX_BOOT_PMI) {
+    dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
+    hpx_abort();
+  }
+
   portals_t *portals = malloc(sizeof(*portals));
 
+  portals->class.type           = HPX_TRANSPORT_PORTALS;
   portals->class.id             = _id;
   portals->class.barrier        = _barrier;
   portals->class.request_size   = _request_size;

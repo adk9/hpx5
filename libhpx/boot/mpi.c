@@ -62,6 +62,7 @@ static int _allgather(const boot_class_t *boot, const void *in, void *out, int n
 
 
 static boot_class_t _mpi = {
+  .type      = HPX_BOOT_MPI,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,

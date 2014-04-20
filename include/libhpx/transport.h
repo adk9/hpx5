@@ -19,6 +19,7 @@
 
 typedef struct transport_class transport_class_t;
 struct transport_class {
+  hpx_transport_t type;
   void (*barrier)(void);
 
   int (*request_size)(void);
@@ -75,6 +76,9 @@ transport_delete(transport_class_t *t) {
   t->delete(t);
 }
 
+inline static hpx_transport_t transport_type(transport_class_t *t) {
+  return t->type;
+}
 
 inline static int
 transport_request_size(const transport_class_t *t) {
