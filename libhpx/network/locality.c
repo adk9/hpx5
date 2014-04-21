@@ -31,10 +31,10 @@ locality_t *here = NULL;
 hpx_action_t locality_shutdown     = 0;
 hpx_action_t locality_global_sbrk  = 0;
 hpx_action_t locality_alloc_blocks = 0;
-hpx_action_t locality_move_block   = 0;
-hpx_action_t locality_gas_invalidate = 0;
-hpx_action_t locality_gas_update     = 0;
-hpx_action_t locality_gas_acquire    = 0;
+hpx_action_t locality_gas_move     = 0;
+hpx_action_t locality_gas_acquire  = 0;
+hpx_action_t locality_gas_forward  = 0;
+
 
 /// The action that performs a global allocation for a rank.
 static int _alloc_blocks_action(uint32_t *args) {
@@ -82,45 +82,25 @@ static int _shutdown_action(void *args) {
 }
 
 
+/// Updates a mapping to a forward, and continues the block data.
 static int _gas_acquire_action(uint32_t *rank) {
-  assert(rank);
-  assert(*rank < here->ranks);
   hpx_addr_t addr = hpx_thread_current_target();
-  void *base = btt_update(here->btt, addr, *rank);
-
-  // Continue the actual bytes from the block, so that the caller can remap the
-  // block.
-  if (base)
-    hpx_thread_continue_cleanup(addr.block_bytes, base, free, base);
+  void *block = NULL;
+  if (btt_forward(here->btt, addr, *rank, &block))
+    hpx_thread_continue_cleanup(addr.block_bytes, block, free, block);
   else
-    return HPX_LCO_EXCEPTION;
+    hpx_thread_exit(HPX_LCO_EXCEPTION);
 }
 
 
-/// The action that invalidates a block mapping on a given locality.
-static int _gas_invalidate_action(void *args) {
-  hpx_addr_t addr = hpx_thread_current_target();
-  void *base = btt_invalidate(here->btt, addr);
-
-  // Continue the actual bytes from the block, so that the caller can remap the
-  // block.
-  if (base)
-    hpx_thread_continue_cleanup(addr.block_bytes, base, free, base);
-  else
-    return HPX_LCO_EXCEPTION;
-}
-
-
-/// The action that updates a forward.
-static int _gas_update_action(uint32_t *rank) {
-  hpx_addr_t addr = hpx_thread_current_target();
-  void *base = btt_update(here->btt, addr, *rank);
-  assert(base == NULL);
+/// Updates a mapping to a forward.
+static int _gas_forward_action(locality_gas_forward_args_t *args) {
+  btt_forward(here->btt, args->addr, args->rank, NULL);
   return HPX_SUCCESS;
 }
 
 
-static int _move_block_action(hpx_addr_t *args) {
+static int _gas_move_action(hpx_addr_t *args) {
   hpx_addr_t src = *args;
 
   int size = src.block_bytes;
@@ -130,30 +110,28 @@ static int _move_block_action(hpx_addr_t *args) {
   char *block = malloc(size);
   assert(block);
 
-  hpx_status_t status = HPX_SUCCESS;
-  do {
-    // 2. invalidate the block mapping at the source locality.
-    hpx_addr_t done = hpx_lco_future_new(size);
-    hpx_call(src, locality_gas_acquire, &rank, sizeof(rank), done);
-    status = hpx_lco_get(done, block, size);
-    if (status != HPX_SUCCESS)
-      dbg_log("failed move operation, retrying.\n");
+  // 2. invalidate the block mapping at the source locality.
+  hpx_addr_t done = hpx_lco_future_new(size);
+  hpx_call(src, locality_gas_acquire, &rank, sizeof(rank), done);
+  hpx_status_t status = hpx_lco_get(done, block, size);
+  hpx_lco_delete(done, HPX_NULL);
+  if (status != HPX_SUCCESS) {
+    dbg_log("failed move operation.\n");
+    hpx_thread_exit(status);
+  }
 
-    hpx_lco_delete(done, HPX_NULL);
-  } while(status != HPX_SUCCESS);
-
-  // 3. If the invalidate was successful, insert an entry into the block
-  //    translation table.
+  // 3. If the invalidate was successful, insert an entry into the local block
+  //    translation table
   btt_insert(here->btt, src, block);
-  hpx_thread_exit(status);
+  return HPX_SUCCESS;
 }
 
+
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  locality_shutdown       = HPX_REGISTER_ACTION(_shutdown_action);
-  locality_global_sbrk    = HPX_REGISTER_ACTION(_global_sbrk_action);
-  locality_alloc_blocks   = HPX_REGISTER_ACTION(_alloc_blocks_action);
-  locality_move_block     = HPX_REGISTER_ACTION(_move_block_action);
-  locality_gas_invalidate = HPX_REGISTER_ACTION(_gas_invalidate_action);
-  locality_gas_update     = HPX_REGISTER_ACTION(_gas_update_action);
-  locality_gas_acquire    = HPX_REGISTER_ACTION(_gas_acquire_action);
+  locality_shutdown     = HPX_REGISTER_ACTION(_shutdown_action);
+  locality_global_sbrk  = HPX_REGISTER_ACTION(_global_sbrk_action);
+  locality_alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
+  locality_gas_move     = HPX_REGISTER_ACTION(_gas_move_action);
+  locality_gas_acquire  = HPX_REGISTER_ACTION(_gas_acquire_action);
+  locality_gas_forward  = HPX_REGISTER_ACTION(_gas_forward_action);
 }

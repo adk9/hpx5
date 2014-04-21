@@ -198,18 +198,19 @@ static int _mover_action(guppie_config_t *cfg) {
 
   while (1) {
     // get a random number
-    src = ((13719 * rand()) % (cfg->tabsize/sizeof(uint64_t)))-1;
+    src = (13719 * rand()) % (cfg->tabsize / sizeof(uint64_t));
+    assert(src < cfg->tabsize);
     dst = (rand() % size);
 
     // get the random address into the table.
-    hpx_addr_t there = hpx_addr_add(cfg->table, src*sizeof(uint64_t));
+    hpx_addr_t there = hpx_addr_add(cfg->table, src * sizeof(uint64_t));
     lco = hpx_lco_future_new(0);
     // initiate a move
     hpx_move(there, HPX_THERE(dst), lco);
     hpx_lco_wait(lco);
     hpx_lco_delete(lco, HPX_NULL);
   }
-  hpx_thread_exit(HPX_SUCCESS);
+  // gets killed at shutdown
 }
 
 void _update_table_action(guppie_config_t *cfg)

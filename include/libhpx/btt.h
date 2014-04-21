@@ -22,29 +22,26 @@ struct btt_class {
   bool (*try_pin)(btt_class_t *btt, hpx_addr_t addr, void **out);
   void (*unpin)(btt_class_t *btt, hpx_addr_t addr);
 
+
   /// --------------------------------------------------------------------------
-  /// Invalidate a mapping.
-  ///
-  /// Invalidate has slightly complicated semantics. It invalidates a mapping
-  /// for the @p addr regardless of the current state for the mapping. If the
-  /// mapping was valid, and local, it will return the old mapped value. If the
-  /// mapping was invalid, it will return NULL. If the mapping was valid, but it
-  /// was a forward to another rank (i.e., a cached mapping), then it will
-  /// return NULL.
+  /// Inserts a mapping in the BTT.
   /// --------------------------------------------------------------------------
-  void *(*invalidate)(btt_class_t *btt, hpx_addr_t addr);
+  void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
+
 
   /// --------------------------------------------------------------------------
   /// Update a mapping to be a forward.
   ///
-  /// Returns the old local mapping, if there was one. If there was an old
-  /// forwarding rank, or the mapping was invalid, we return NULL.
+  ///   if (invalid) abort
+  ///   if (rank == here->rank) return false
+  ///   if (out) *out = map(addr)
+  ///   map(addr) = rank
+  ///   return local
   /// --------------------------------------------------------------------------
-  void *(*update)(btt_class_t *btt, hpx_addr_t addr, uint32_t rank);
-
-  void (*insert)(btt_class_t *btt, hpx_addr_t addr, void *base);
+  bool (*forward)(btt_class_t *btt, hpx_addr_t addr, uint32_t rank, void **out);
 
   uint32_t (*owner)(btt_class_t *btt, hpx_addr_t addr);
+
   uint32_t (*home)(btt_class_t *btt, hpx_addr_t addr);
 };
 
@@ -74,18 +71,14 @@ inline static void btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-inline static void *btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
-{
-  return btt->update(btt, addr, rank);
-}
-
-inline static void *btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
-  return btt->invalidate(btt, addr);
-}
-
-
 inline static void btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   btt->insert(btt, addr, base);
+}
+
+
+inline static bool btt_forward(btt_class_t *btt, hpx_addr_t addr, uint32_t rank,
+                               void **out) {
+  return btt->forward(btt, addr, rank, out);
 }
 
 

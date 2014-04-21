@@ -46,10 +46,14 @@ typedef struct {
 HPX_INTERNAL extern hpx_action_t locality_shutdown;
 HPX_INTERNAL extern hpx_action_t locality_global_sbrk;
 HPX_INTERNAL extern hpx_action_t locality_alloc_blocks;
-HPX_INTERNAL extern hpx_action_t locality_gas_invalidate;
+
 HPX_INTERNAL extern hpx_action_t locality_gas_acquire;
-HPX_INTERNAL extern hpx_action_t locality_gas_update;
-HPX_INTERNAL extern hpx_action_t locality_move_block;
+HPX_INTERNAL extern hpx_action_t locality_gas_move;
+typedef struct {
+  hpx_addr_t addr;
+  uint32_t rank;
+} locality_gas_forward_args_t;
+HPX_INTERNAL extern hpx_action_t locality_gas_forward;
 
 /// ----------------------------------------------------------------------------
 /// The global locality is exposed through this "here" pointer.
