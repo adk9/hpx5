@@ -22,15 +22,15 @@
 #endif
 
 /// Some output wrappers
-HPX_INTERNAL void dbg_log1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
-HPX_INTERNAL int dbg_error1(const char *f, const char *fmt, ...) HPX_PRINTF(2, 3);
+HPX_INTERNAL void dbg_log1(unsigned line, const char *f, const char *fmt, ...) HPX_PRINTF(3, 4);
+HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) HPX_PRINTF(3, 4);
 
 #ifdef ENABLE_DEBUG
-#define dbg_log(...) dbg_log1(__func__, __VA_ARGS__)
-#define dbg_error(...) dbg_error1(__func__, __VA_ARGS__)
+#define dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
+#define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
 #else
 #define dbg_log(...)
-#define dbg_error(...) dbg_error1(__func__, __VA_ARGS__)
+#define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
 #endif
 
 #endif // LIBHPX_DEBUG_H

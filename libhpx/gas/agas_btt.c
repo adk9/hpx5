@@ -43,6 +43,7 @@ static bool _try_lock(_record_t *record, uint64_t state) {
                   SYNC_RELAXED);
 }
 
+
 typedef struct {
   btt_class_t class;
   _record_t  *table;
@@ -70,6 +71,36 @@ static bool _locked(uint64_t state) {
 
 static uint64_t _readers(uint64_t state) {
   return (state & _REFCOUNT);
+}
+
+
+static uint64_t _write_lock(_record_t *record) {
+  int64_t state;
+  sync_load(state, &record->state, SYNC_ACQUIRE);
+
+  // spin while the line is locked
+  if (_locked(state)) {
+    scheduler_yield();
+    return _write_lock(record);
+  }
+
+  // need the write lock for an update
+  if (!_try_lock(record, state)) {
+    scheduler_yield();
+    return _write_lock(record);
+  }
+
+  // wait for the number of readers to drop to 0
+  while (_readers(state)) {
+    scheduler_yield();
+    sync_load(state, &record->state, SYNC_ACQUIRE);
+  }
+
+  return state;
+}
+
+static void _unlock(_record_t *record, uint64_t state) {
+  sync_store(&record->state, state & ~_LOCKED, SYNC_RELEASE);
 }
 
 
@@ -129,99 +160,37 @@ static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-static void *_agas_btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
-{
-  assert(rank < here->ranks);
-  agas_btt_t *agas = (agas_btt_t *)btt;
-  _record_t *record = &agas->table[addr_block_id(addr)];
-  uint64_t state;
-  sync_load(state, &record->state, SYNC_ACQUIRE);
-
-  // should we wait?
-  if (_locked(state))
-    return NULL;
-
-  // need the write lock for an update
-  if (!_try_lock(record, state))
-    return _agas_btt_update(btt, addr, rank);
-
-  // wait for the number of readers to drop to 0
-  while (_readers(state)) {
-    scheduler_yield();
-    sync_load(state, &record->state, SYNC_ACQUIRE);
-  }
-
-  // if the line is local, then we'll want to return the current mapping
-  void *local = NULL;
-  if (_local(state))
-    local = record->base;
-
-  record->base = (void*)(uintptr_t)rank;
-
-  // and update the line's state
-  sync_store(&record->state, _VALID, SYNC_RELEASE);
-  return local;
-}
-
-
-static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
-  agas_btt_t *agas = (agas_btt_t *)btt;
-  _record_t *record = &agas->table[addr_block_id(addr)];
-  int64_t state;
-  sync_load(state, &record->state, SYNC_ACQUIRE);
-
-  if (!_valid(state))
-    return NULL;
-
-  // should we wait?
-  if (_locked(state))
-    return NULL;
-
-  // otherwise acquire the write lock
-  if (!_try_lock(record, state))
-    return _agas_btt_invalidate(btt, addr);
-
-  // wait for the readers to drain away---must use scheduler_yield for this
-  while (_readers(state)) {
-    scheduler_yield();
-    sync_load(state, &record->state, SYNC_ACQUIRE);
-  }
-
-  // if the line is local, we want to return the mapping
-  void *local = NULL;
-  if (_local(state))
-    local = record->base;
-
-  // clear the mapping
-  record->base = NULL;
-
-  // mark the row as invalid
-  sync_store(&record->state, 0, SYNC_RELEASE);
-
-  // if the old mapping wasn't a forward, return it
-  return local;
-}
-
-
+/// Update the row to be a valid local mapping.
 static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   agas_btt_t *agas = (agas_btt_t *)btt;
   _record_t *record = &agas->table[addr_block_id(addr)];
-  int64_t state;
-  sync_load(state, &record->state, SYNC_ACQUIRE);
+  _write_lock(record);                          // don't care about state
+  record->base = base;
+  _unlock(record, _VALID + _LOCAL);
+}
 
-  // should we wait?
-  if (_locked(state))
-    return;
 
-  if (!_try_lock(record, state)) {
-    _agas_btt_insert(btt, addr, base);
-    return;
+static bool _agas_btt_forward(btt_class_t *btt, hpx_addr_t addr, uint32_t rank,
+                              void **out) {
+  agas_btt_t *agas = (agas_btt_t *)btt;
+  _record_t *record = &agas->table[addr_block_id(addr)];
+  uint64_t state = _write_lock(record);
+
+  // if the rank is us, don't do anything
+  if (here->rank == rank) {
+    _unlock(record, state);
+    return false;
   }
 
-  assert(!_valid(state) || !_local(state));
+  // if the user wants the base, give it to them, update the entry, and release
+  // the write lock
+  if (out)
+    *out = record->base;
+  record->base = (void*)(uintptr_t)rank;
+  _unlock(record, _VALID);
 
-  record->base = base;
-  sync_store(&record->state, _VALID | _LOCAL, SYNC_RELEASE);
+  // if the old state was local, then the output value is the old base
+  return (_local(state));
 }
 
 
@@ -259,14 +228,13 @@ btt_class_t *btt_agas_new(void) {
   }
 
   // set up class
-  btt->class.delete     = _agas_btt_delete;
-  btt->class.try_pin    = _agas_btt_try_pin;
-  btt->class.unpin      = _agas_btt_unpin;
-  btt->class.invalidate = _agas_btt_invalidate;
-  btt->class.update     = _agas_btt_update;
-  btt->class.insert     = _agas_btt_insert;
-  btt->class.owner      = _agas_btt_owner;
-  btt->class.home       = _agas_btt_home;
+  btt->class.delete  = _agas_btt_delete;
+  btt->class.try_pin = _agas_btt_try_pin;
+  btt->class.unpin   = _agas_btt_unpin;
+  btt->class.forward = _agas_btt_forward;
+  btt->class.insert  = _agas_btt_insert;
+  btt->class.owner   = _agas_btt_owner;
+  btt->class.home    = _agas_btt_home;
 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;

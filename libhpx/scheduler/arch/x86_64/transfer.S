@@ -66,9 +66,9 @@
         /// optimize. The trampoline can be evaluated later if we need to
         /// slightly diminish context switch time or checkpoint space.
 	    ///
-        /// @param %rdi - the stack pointer to transfer to
-	    /// @param %rsi - the environment for the continutation
-        /// @param %rdx - the continuation to call after the sp exchange
+        /// @param %rdi - a pointer to the stack pointer to transfer to
+	    /// @param %rsi - the continuation to call after the sp exchange
+        /// @param %rdx - the environment for the continutation
         /// @returns    - %rax from the continuation call
 	    /// --------------------------------------------------------------------
         .file "transfer.S"
