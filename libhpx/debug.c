@@ -21,8 +21,9 @@
 #include "libhpx/debug.h"
 
 void
-dbg_log1(const char *f, const char *fmt, ...) {
-  printf("LIBHPX<%d,%d>: %s() ", hpx_get_my_rank(), hpx_get_my_thread_id(), f);
+dbg_log1(unsigned line, const char *f, const char *fmt, ...) {
+  printf("LIBHPX<%d,%d>: (%s:%u) ", hpx_get_my_rank(),
+         hpx_get_my_thread_id(), f, line);
 
   va_list args;
   va_start(args, fmt);
@@ -32,8 +33,9 @@ dbg_log1(const char *f, const char *fmt, ...) {
 }
 
 int
-dbg_error1(const char *f, const char *fmt, ...) {
-  fprintf(stderr, "LIBHPX<%d,%d>: %s() ", hpx_get_my_rank(), hpx_get_my_thread_id(), f);
+dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
+  fprintf(stderr, "LIBHPX<%d,%d>: (%s:%u) ", hpx_get_my_rank(),
+          hpx_get_my_thread_id(), f, line);
 
   va_list args;
   va_start(args, fmt);
