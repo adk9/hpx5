@@ -206,6 +206,10 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
   _free_stack(prev->stack);
+
+  // if this parcel gets looped back for some reason, make sure it gets a new
+  // stack
+  prev->stack = NULL;
   hpx_parcel_send(prev);
   return HPX_SUCCESS;
 }
@@ -239,15 +243,17 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
   if (shutdown) {
     void **temp = &self.sp;
+    assert(temp);
+    assert(*temp != NULL);
     thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
   }
 
-  // if there are ready threads, select the next one
+  // if there are ready parcels, select the next one
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
   if (p)
     goto exit;
 
-  // no ready threads try to get some work from the network, if we're not in a
+  // no ready parcels try to get some work from the network, if we're not in a
   // hurry
   if (!fast)
     if ((p = _network()))
@@ -270,7 +276,11 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // lazy stack binding
  exit:
   assert(p);
-  return (p->stack) ? p : _bind(p);
+  if (!p->stack)
+    return _bind(p);
+
+  assert(p->stack->sp);
+  return p;
 }
 
 
@@ -377,7 +387,7 @@ void worker_cancel(worker_t *worker) {
 void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
-  assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL));
+  assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
   self.n_spawns++;
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
@@ -406,6 +416,9 @@ void scheduler_yield(void) {
   if (from == to)
     return;
 
+  assert(to);
+  assert(to->stack);
+  assert(to->stack->sp);
   // transfer to the new thread
   thread_transfer(to, _checkpoint_ws_push, self.current);
 }
@@ -440,6 +453,9 @@ static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
 /// @precondition The calling thread must hold @p lco's lock.
 hpx_status_t scheduler_wait(lco_t *lco) {
   hpx_parcel_t *to = _schedule(true, NULL);
+  assert(to);
+  assert(to->stack);
+  assert(to->stack->sp);
 
   lco_node_t *n = self.lco_nodes;
   if (n) {
@@ -490,14 +506,17 @@ static void HPX_NORETURN _continue(hpx_status_t status,
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
   hpx_addr_t cont = parcel->cont;
-  if (likely(!hpx_addr_eq(cont, HPX_NULL)))
+  if (!hpx_addr_eq(cont, HPX_NULL))
     hpx_lco_set_status(cont, value, size, status, HPX_NULL);   // async
 
   // run the cleanup handler
-  if (unlikely(cleanup != NULL))
+  if (cleanup != NULL)
     cleanup(env);
 
   hpx_parcel_t *to = _schedule(false, NULL);
+  assert(to);
+  assert(to->stack);
+  assert(to->stack->sp);
   thread_transfer(to, _free_parcel, parcel);
   unreachable();
 }
@@ -530,11 +549,18 @@ void hpx_thread_exit(int status) {
       // Who do we think owns this parcel?
       uint32_t rank = btt_owner(here->btt, parcel->target);
       // Send that as an update to the src of the parcel.
-      hpx_call(HPX_THERE(parcel->src), locality_gas_update, &rank, sizeof(rank),
+      locality_gas_forward_args_t args = {
+        parcel->target,
+        rank
+      };
+      hpx_call(HPX_THERE(parcel->src), locality_gas_forward, &args, sizeof(args),
                HPX_NULL);
     }
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
+    assert(to);
+    assert(to->stack);
+    assert(to->stack->sp);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }

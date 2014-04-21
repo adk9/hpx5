@@ -408,5 +408,5 @@ void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
     return;
   }
 
-  hpx_call(dst, locality_move_block, &src, sizeof(src), lco);
+  hpx_call(dst, locality_gas_move, &src, sizeof(src), lco);
 }

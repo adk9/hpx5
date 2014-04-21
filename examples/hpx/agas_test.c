@@ -86,7 +86,7 @@ int main(int argc, char *argv[argc]) {
     .cores = 0,
     .threads = 0,
     .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS
+    .gas = HPX_GAS_AGAS
   };
 
   int debug = NO_RANKS;

@@ -67,6 +67,36 @@ static uint64_t _readers(uint64_t state) {
 }
 
 
+static uint64_t _write_lock(_record_t *record) {
+  int64_t state;
+  sync_load(state, &record->state, SYNC_ACQUIRE);
+
+  // spin while the line is locked
+  if (_locked(state)) {
+    scheduler_yield();
+    return _write_lock(record);
+  }
+
+  // need the write lock for an update
+  if (!_try_lock(record, state)) {
+    scheduler_yield();
+    return _write_lock(record);
+  }
+
+  // wait for the number of readers to drop to 0
+  while (_readers(state)) {
+    scheduler_yield();
+    sync_load(state, &record->state, SYNC_ACQUIRE);
+  }
+
+  return state;
+}
+
+static void _unlock(_record_t *record, uint64_t state) {
+  sync_store(&record->state, state & ~_LOCKED, SYNC_RELEASE);
+}
+
+
 static void _agas_btt_delete(btt_class_t *btt) {
   agas_btt_t *agas = (agas_btt_t*)btt;
 
@@ -120,46 +150,32 @@ static void _agas_btt_unpin(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-static void *_agas_btt_invalidate(btt_class_t *btt, hpx_addr_t addr) {
+static bool _agas_btt_forward(btt_class_t *btt, hpx_addr_t addr, uint32_t rank,
+                              void **out) {
   agas_btt_t *agas = (agas_btt_t *)btt;
   _record_t *record = &agas->table[addr_block_id(addr)];
-  int64_t state;
-  sync_load(state, &record->state, SYNC_ACQUIRE);
+  uint64_t state = _write_lock(record);
 
-  if (!_valid(state))
-    return NULL;
-
-  // should we wait?
-  if (_locked(state))
-    return NULL;
-
-  // otherwise acquire the write lock
-  if (!_try_lock(record, state))
-    return _agas_btt_invalidate(btt, addr);
-
-  // wait for the readers to drain away---must use scheduler_yield for this
-  while (_readers(state)) {
-    scheduler_yield();
-    sync_load(state, &record->state, SYNC_ACQUIRE);
+  if (!_valid(state)) {
+    dbg_error("cannot forward an invalid block\n");
+    hpx_abort();
   }
 
-  // we want to return and clear the mapping
-  void *local = record->base;
+  // if the rank is us, don't do anything
+  if (here->rank == rank) {
+    _unlock(record, state);
+    return false;
+  }
+
+  // if the user wants the base, give it to them
+  if (out)
+    *out = record->base;
+
+  // agas-switch doesn't maintain forwarding information, so we invalidate this
+  // line, and we return true (since the only valid mappings were local)
   record->base = NULL;
-
-  // mark the row as invalid
-  sync_store(&record->state, 0, SYNC_RELEASE);
-
-  // if the old mapping wasn't a forward, return it
-  return local;
-}
-
-
-static void *_agas_btt_update(btt_class_t *btt, hpx_addr_t addr, uint32_t rank)
-{
-  // don't care about the rank---it's only for forwarding, which we don't do
-  // with agas_switch
-  return _agas_btt_invalidate(btt, addr);
+  _unlock(record, 0);
+  return true;
 }
 
 
@@ -167,18 +183,7 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   agas_btt_t *agas = (agas_btt_t *)btt;
   uint32_t blockid = addr_block_id(addr);
   _record_t *record = &agas->table[blockid];
-  int64_t state;
-  sync_load(state, &record->state, SYNC_ACQUIRE);
-
-  // should we wait?
-  if (_locked(state))
-    return;
-
-  // really want this to be tail recursive
-  if (!_try_lock(record, state)) {
-    _agas_btt_insert(btt, addr, base);
-    return;
-  }
+  _write_lock(record);                          // don't care about state
 
   uint64_t dst = block_id_macaddr(blockid);
   uint64_t bmc = block_id_ipv4mc(blockid);
@@ -190,7 +195,7 @@ static void _agas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
   routing_add_flow(routing, HPX_SWADDR_WILDCARD, dst, port);
 
   record->base = base;
-  sync_store(&record->state, _VALID, SYNC_RELEASE);
+  _unlock(record, _VALID);
 }
 
 
@@ -213,15 +218,13 @@ btt_class_t *btt_agas_switch_new(void) {
   }
 
   // set up class
-  btt->class.type       = HPX_GAS_AGAS_SWITCH;
-  btt->class.delete     = _agas_btt_delete;
-  btt->class.try_pin    = _agas_btt_try_pin;
-  btt->class.unpin      = _agas_btt_unpin;
-  btt->class.invalidate = _agas_btt_invalidate;
-  btt->class.update     = _agas_btt_update;
-  btt->class.insert     = _agas_btt_insert;
-  btt->class.owner      = _agas_btt_owner;
-  btt->class.home       = _agas_btt_home;
+  btt->class.delete  = _agas_btt_delete;
+  btt->class.try_pin = _agas_btt_try_pin;
+  btt->class.unpin   = _agas_btt_unpin;
+  btt->class.forward = _agas_btt_forward;
+  btt->class.insert  = _agas_btt_insert;
+  btt->class.owner   = _agas_btt_owner;
+  btt->class.home    = _agas_btt_home;
 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;
