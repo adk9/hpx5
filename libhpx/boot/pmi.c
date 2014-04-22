@@ -121,7 +121,7 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
 /// be a string buffer, it is first encoded using base64 encoding
 /// before doing a KVS put.
 /// ----------------------------------------------------------------------------
-static int _put_buffer(char *kvs, int rank, void *buffer, size_t len)
+static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
 
@@ -165,7 +165,7 @@ error:
 /// This retrieves a buffer from PMI's key-value store. The buffer is
 /// base64 decoded before it is returned.
 /// ----------------------------------------------------------------------------
-static int _get_buffer(char *kvs, int rank, void *buffer, size_t len)
+static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
 
@@ -200,7 +200,7 @@ error:
 }
 
 
-static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
+static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
 #if HAVE_PMI_CRAY_EXT
   // nb: Cray PMI allgather does not guarantee process-rank
   // order. Here, we assume that the ordering is, at least,
