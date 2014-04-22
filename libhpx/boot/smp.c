@@ -36,7 +36,7 @@ static int _barrier(void) {
 }
 
 
-static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
+static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out, int n) {
   return 0;
 }
 
