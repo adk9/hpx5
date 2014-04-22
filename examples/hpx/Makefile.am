@@ -29,7 +29,7 @@ memget_LDADD         = $(top_builddir)/libhpx/libhpx.la
 guppie_LDADD         = $(top_builddir)/libhpx/libhpx.la
 
 AM_CPPFLAGS          = -I$(top_srcdir)/include
-AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
+AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 AM_CFLAGS           += @PHOTON_CFLAGS@ @MPI_CFLAGS@ @CRYPTO_CFLAGS@
 AM_CFLAGS           += @HWLOC_CFLAGS@ @PAPI_CFLAGS@ @GLIB_CFLAGS@
 

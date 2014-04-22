@@ -3,7 +3,7 @@ noinst_LTLIBRARIES	   = libsystem.la
 
 # libsystem files and flags
 libsystem_la_CPPFLAGS  = -I$(top_srcdir)/include
-libsystem_la_CFLAGS    = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
+libsystem_la_CFLAGS    = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 libsystem_la_SOURCES   = null.c
 libsystem_la_LIBADD    =
 

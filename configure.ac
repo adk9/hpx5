@@ -28,6 +28,7 @@ AC_LANG([C])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
@@ -58,6 +59,8 @@ AC_ARG_ENABLE([werror],
   [], [enable_werror=no])
 AS_IF([test "x$enable_werror" != xno],
   [AC_SUBST([HPX_W_ERROR], [-Werror])])
+
+AC_SUBST([HPX_C99], [$ac_cv_prog_cc_c99])
 
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],

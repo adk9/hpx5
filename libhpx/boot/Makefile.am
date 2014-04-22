@@ -3,7 +3,7 @@ noinst_LTLIBRARIES	  = libboot.la
 
 # libboot files and flags
 libboot_la_CPPFLAGS = -I$(top_srcdir)/include
-libboot_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
+libboot_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 libboot_la_SOURCES  = boot.c smp.c 
 libboot_la_LIBADD   =
 
