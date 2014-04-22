@@ -1,9 +1,9 @@
 noinst_bin_PROGRAMS 	= hpxtest
-noinst_bindir 			= $(abs_top_builddir)/tests
-#TESTS 					= hpxtest
-TESTS 					= 
-check_PROGRAMS			= hpxtest
-hpxtest_SOURCES			= 00_hpxtest.c \
+noinst_bindir 		= $(abs_top_builddir)/tests
+#TESTS 			= hpxtest
+TESTS 			= 
+check_PROGRAMS		= hpxtest
+hpxtest_SOURCES		= 00_hpxtest.c \
                           01_init.c \
                           02_mem.c \
                           03_ctx.c \
@@ -35,7 +35,7 @@ hpxtest_CFLAGS          = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR)
 hpxtest_CFLAGS         += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS         += @CRYPTO_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxtest_CFLAGS         += @GLIB_CFLAGS@
-hpxtest_CFLAGS         += -std=c99
+hpxtest_CFLAGS         += $(HPX_C99)
 
 # Turn off some warnings for the tests
 hpxtest_CFLAGS         += -Wno-unused

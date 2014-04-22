@@ -3,7 +3,7 @@ noinst_LTLIBRARIES	= libtransport.la
 
 # libtransport files and flags
 libtransport_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/libhpx/network/
-libtransport_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) -std=c99
+libtransport_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 libtransport_la_SOURCES  = smp.c transport.c
 libtransport_la_LIBADD   =
 
