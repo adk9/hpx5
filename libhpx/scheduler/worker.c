@@ -297,7 +297,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 void *worker_run(scheduler_t *sched) {
   // initialize my worker structure
   self.thread    = pthread_self();
-  self.id        = sync_fadd(&sched->next_id, 1, SYNC_ACQREL);
+  self.id        = sync_fadd(&sched->next_id, 1, SYNC_ACQ_REL);
   self.core_id   = -1; // let linux do this for now
   // self.core_id   = self.id % here->ranks;       // round robin
   self.seed      = self.id;

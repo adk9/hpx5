@@ -23,7 +23,7 @@ struct boot_class {
   int (*rank)(const boot_class_t*);
   int (*n_ranks)(const boot_class_t*);
   int (*barrier)(void);
-  int (*allgather)(const boot_class_t*, const void*, void*, int);
+  int (*allgather)(const boot_class_t*, /* const */ void*, void*, int);
 };
 
 
@@ -52,7 +52,7 @@ static inline int boot_n_ranks(const boot_class_t *boot) {
 }
 
 
-static inline int boot_allgather(const boot_class_t *boot, const void *in,
+static inline int boot_allgather(const boot_class_t *boot, /* const */ void *in,
                                  void *out, int n) {
   return boot->allgather(boot, in, out, n);
 }
