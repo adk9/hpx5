@@ -30,7 +30,6 @@ struct transport_class;
 typedef struct {
   int                          rank;            // this locality's rank
   int                         ranks;            // the total number of ranks
-  void                       *local;            // the local data segment
   struct boot_class           *boot;            // the bootstrap object
   struct btt_class             *btt;            // the block translation table
   struct transport_class *transport;            // the byte transport

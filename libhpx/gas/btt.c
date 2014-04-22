@@ -26,11 +26,14 @@ btt_class_t *btt_new(hpx_gas_t type) {
    case (HPX_GAS_PGAS):
    case (HPX_GAS_PGAS_SWITCH):
     btt = btt_pgas_new();
-    btt->type = type;
-    return btt;
    case (HPX_GAS_AGAS):
-     return btt_agas_new();
+    btt = btt_agas_new();
    case (HPX_GAS_AGAS_SWITCH):
-    return btt_agas_switch_new();
+    btt = btt_agas_switch_new();
+   case (HPX_GAS_NOGLOBAL):
+    btt = btt_local_only_new();
   };
+  assert(btt);
+  btt->type = type;
+  return btt;
 }

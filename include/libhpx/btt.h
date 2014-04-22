@@ -46,6 +46,7 @@ struct btt_class {
 };
 
 
+HPX_INTERNAL btt_class_t *btt_local_only_new(void);
 HPX_INTERNAL btt_class_t *btt_pgas_new(void);
 HPX_INTERNAL btt_class_t *btt_agas_new(void);
 HPX_INTERNAL btt_class_t *btt_agas_switch_new(void);
