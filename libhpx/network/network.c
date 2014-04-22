@@ -128,7 +128,8 @@ network_class_t *network_new(void) {
 /// ----------------------------------------------------------------------------
 void network_shutdown(network_class_t *network) {
   // shutdown the network progress thread.
-  sync_cas(&network->state, _STATE_RUNNING, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
+  _network_state_t running = _STATE_RUNNING; // atomic.h workaround
+  sync_cas(&network->state, running, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
            SYNC_RELAXED);
 }
 
@@ -176,8 +177,9 @@ int network_progress(network_class_t *network) {
   _network_state_t state;
   sync_load(state, &network->state, SYNC_ACQUIRE);
   if (state != _STATE_RUNNING) {
-    sync_cas(&network->state, _STATE_SHUTDOWN_PENDING, _STATE_SHUTDOWN,
-             SYNC_RELEASE, SYNC_RELAXED);
+    state = _STATE_SHUTDOWN_PENDING; // atomic.h workaround
+    sync_cas(&network->state, state, _STATE_SHUTDOWN, SYNC_RELEASE,
+        SYNC_RELAXED);
 
     // flush out the pending parcels
     transport_progress(here->transport, true);

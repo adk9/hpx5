@@ -51,7 +51,7 @@
   static inline bool sync_cas_##s(T *addr, T from, T to, int    \
                                   onsuccess, int onfailure)     \
   {                                                             \
-    return sync_cas(addr, from, to, onsuccess, onfailure);      \
+      return sync_cas(addr, from, to, onsuccess, onfailure);    \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
@@ -62,7 +62,7 @@
   static inline T sync_cas_val_##s(T *addr, T from, T to,           \
                                    int onsuccess, int onfailure)    \
   {                                                                 \
-    return sync_cas_val(addr, from, to, onsuccess, onfailure);      \
+      return sync_cas_val(addr, from, to, onsuccess, onfailure);    \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
 #include "types.def"
