@@ -343,6 +343,8 @@ void hpx_abort(void) {
 /// shared [1] T foo[n]; where sizeof(T) == bytes
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes) {
+  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+
   // Get a set of @p n contiguous block ids.
   uint32_t base_id;
   hpx_addr_t f = hpx_lco_future_new(sizeof(base_id));

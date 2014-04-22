@@ -67,7 +67,8 @@ int main(int argc, char * argv[argc]) {
   hpx_config_t cfg = {
     .cores = 0,
     .threads = 0,
-    .stack_bytes = 0
+    .stack_bytes = 0,
+    .gas = HPX_GAS_PGAS
   };
 
   int debug = NO_RANKS;
