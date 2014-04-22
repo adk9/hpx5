@@ -53,7 +53,7 @@ static int _barrier(void) {
 }
 
 
-static int _allgather(const boot_class_t *boot, const void *in, void *out, int n) {
+static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out, int n) {
   int e = MPI_Allgather((void*)in, n, MPI_BYTE, out, n, MPI_BYTE, MPI_COMM_WORLD);
   if (e != MPI_SUCCESS)
     return dbg_error("failed mpi->allgather().\n");
