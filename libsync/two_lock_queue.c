@@ -21,11 +21,6 @@
 #include "libsync/queues.h"
 #include "backoff.h"
 
-struct two_lock_queue_node {
-  two_lock_queue_node_t *next;
-  void *value;
-};
-
 static __thread two_lock_queue_node_t *_free = NULL;
 
 static two_lock_queue_node_t *_node_new(void *value) {
@@ -93,15 +88,20 @@ void sync_two_lock_queue_delete(two_lock_queue_t *q) {
 }
 
 
-void sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) {
-  two_lock_queue_node_t *node = _node_new(val);
+void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
+                                      two_lock_queue_node_t *node) {
   two_lock_queue_node_t *tail = _acquire(&q->tail);
   tail->next = node;
   sync_store(&q->tail, node, SYNC_RELEASE);
 }
 
 
-void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) {
+void sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) {
+  sync_two_lock_queue_enqueue_node(q, _node_new(val));
+}
+
+
+two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q) {
   two_lock_queue_node_t *head = _acquire(&q->head);
   two_lock_queue_node_t *next = head->next;
   if (next == NULL) {
@@ -111,6 +111,15 @@ void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) {
 
   void *value = next->value;
   sync_store(&q->head, next, SYNC_RELEASE);
-  _node_delete(head);
+  next->value = value;
+  return next;
+}
+
+void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) {
+  two_lock_queue_node_t *n = sync_two_lock_queue_dequeue_node(q);
+  if (!n)
+    return NULL;
+  void *value = n->value;
+  _node_delete(n);
   return value;
 }
