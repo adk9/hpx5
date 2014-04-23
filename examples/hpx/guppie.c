@@ -13,8 +13,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 // Macros for timing
 struct tms t;
 #define WSEC() (times(&t) / (double)sysconf(_SC_CLK_TCK))
@@ -361,7 +359,6 @@ int main(int argc, char *argv[])
     .table    = HPX_NULL,
   };
 
-  int debug = NO_RANKS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:s:d:DMh")) != -1) {
     switch (opt) {
@@ -375,13 +372,15 @@ int main(int argc, char *argv[])
       hpx_cfg.stack_bytes = atoi(optarg);
       break;
      case 'D':
-      debug = ALL_RANKS;
+      hpx_cfg.wait = HPX_WAIT;
+      hpx_cfg.wait_at = HPX_LOCALITY_ALL;
+      break;
+     case 'd':
+      hpx_cfg.wait = HPX_WAIT;
+      hpx_cfg.wait_at = atoi(optarg);
       break;
      case 'M':
       _move = 1;
-      break;
-     case 'd':
-      debug = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -412,8 +411,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
-  wait_for_debugger(debug);
 
   // register the actions
   _main         = HPX_REGISTER_ACTION(_main_action);

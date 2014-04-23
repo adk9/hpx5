@@ -21,8 +21,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 /// ----------------------------------------------------------------------------
 /// @file examples/hpx/seqspawn.c
 /// This file implements a sequential task spawn microbenchmark. A
@@ -90,7 +88,6 @@ main(int argc, char *argv[])
     .stack_bytes = 0
   };
 
-  int debug = NO_RANKS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
@@ -101,10 +98,12 @@ main(int argc, char *argv[])
       cfg.threads = atoi(optarg);
       break;
      case 'D':
-      debug = ALL_RANKS;
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-      debug = atoi(optarg);
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -130,8 +129,6 @@ main(int argc, char *argv[])
      n = atoi(argv[0]);
      break;
   }
-
-  wait_for_debugger(debug);
 
   int e = hpx_init(&cfg);
   if (e) {

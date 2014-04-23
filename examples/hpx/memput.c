@@ -11,8 +11,6 @@
 #include <sys/time.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 #define MAX_MSG_SIZE         (1<<22)
 #define SKIP_LARGE  10
 #define LOOP_LARGE  100
@@ -147,7 +145,6 @@ int main(int argc, char *argv[argc]) {
     .gas = HPX_GAS_PGAS
   };
 
-  int debug = NO_RANKS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
@@ -158,10 +155,12 @@ int main(int argc, char *argv[argc]) {
       cfg.threads = atoi(optarg);
       break;
      case 'D':
-      debug = ALL_RANKS;
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-       debug = atoi(optarg);
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
@@ -178,10 +177,7 @@ int main(int argc, char *argv[argc]) {
     return 1;
   }
 
-  wait_for_debugger(debug);
-
-  int ranks = hpx_get_num_ranks();
-  if (ranks < 2) {
+  if (HPX_LOCALITIES < 2) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.\n");
     return -1;
   }

@@ -25,8 +25,6 @@
 #include <inttypes.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fibonaccihpx [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
@@ -115,7 +113,6 @@ int main(int argc, char *argv[]) {
     .stack_bytes = 0
   };
 
-  int debug = NO_RANKS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
@@ -126,10 +123,12 @@ int main(int argc, char *argv[]) {
       cfg.threads = atoi(optarg);
       break;
      case 'D':
-      debug = ALL_RANKS;
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-      debug = atoi(optarg);
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -161,8 +160,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
-  wait_for_debugger(debug);
 
   // register the fib action
   _fib = hpx_register_action("_fib", _fib_action);
