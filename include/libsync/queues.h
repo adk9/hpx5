@@ -43,6 +43,10 @@ static inline void *sync_queue_dequeue(queue_t *q) {
 /// https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html#tlq
 
 typedef struct two_lock_queue_node two_lock_queue_node_t;
+struct two_lock_queue_node {
+  two_lock_queue_node_t *next;
+  void *value;
+};
 
 /// Using SWAP on the head and tail pointers for locking. Could use something
 /// more scalable if higher contention.
@@ -62,6 +66,8 @@ void  sync_two_lock_queue_init(two_lock_queue_t *q) HPX_NON_NULL(1);
 void  sync_two_lock_queue_fini(two_lock_queue_t *q) HPX_NON_NULL(1);
 void  sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) HPX_NON_NULL(1);
 void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) HPX_NON_NULL(1);
+void  sync_two_lock_queue_enqueue_node(two_lock_queue_t *q, two_lock_queue_node_t *node) HPX_NON_NULL(2);
+two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q) HPX_NON_NULL(1);
 
 typedef struct {
   queue_t vtable;
