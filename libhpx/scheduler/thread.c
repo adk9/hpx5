@@ -111,6 +111,7 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   ustack_t *stack = valloc(_thread_size);
+  assert(stack);
   thread_init(stack, parcel, f);
   return stack;
 }

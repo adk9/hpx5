@@ -533,14 +533,14 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
     // make sure we get it's next first.
     lco_node_t *next = q->next;
     uint32_t id = q->tid;
-    if (id != self.id) {
-      two_lock_queue_node_t *n = (two_lock_queue_node_t *)q;
-      sync_two_lock_queue_enqueue_node(&(here->sched->workers[id]->lcos), n);
-    }
-    else {
+    /* if (id != self.id) { */
+    /*   two_lock_queue_node_t *n = (two_lock_queue_node_t *)q; */
+    /*   sync_two_lock_queue_enqueue_node(&(here->sched->workers[id]->lcos), n); */
+    /* } */
+    /* else { */
       hpx_parcel_t *p = _lco_node_put(q);
       sync_chase_lev_ws_deque_push(&self.work, p);
-    }
+    /* } */
     q = next;
   }
 }
