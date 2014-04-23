@@ -48,6 +48,7 @@ struct two_lock_queue_node {
   void *value;
 };
 
+
 /// Using SWAP on the head and tail pointers for locking. Could use something
 /// more scalable if higher contention.
 typedef struct {
