@@ -111,8 +111,8 @@ two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q) {
 
   void *value = next->value;
   sync_store(&q->head, next, SYNC_RELEASE);
-  next->value = value;
-  return next;
+  head->value = value;
+  return head;
 }
 
 void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) {
