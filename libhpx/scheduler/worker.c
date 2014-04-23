@@ -27,6 +27,7 @@
 #include "libsync/sync.h"
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
+#include "libsync/queues.h"
 
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
@@ -65,6 +66,7 @@ static __thread struct worker {
   lco_node_t     *lco_nodes;                    // free LCO nodes
   ustack_t          *stacks;                    // local free stacks
   chase_lev_ws_deque_t work;                    // my work
+  two_lock_queue_t     lcos;                    // LCOs that have been triggered
   atomic_int_t     shutdown;                    // cooperative shutdown flag
 
   // statistics
@@ -81,6 +83,7 @@ static __thread struct worker {
   .lco_nodes = NULL,
   .stacks    = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
+  .lcos      = {{0}},
   .shutdown  = 0,
   .n_spins   = 0,
   .n_spawns  = 0,
@@ -88,6 +91,31 @@ static __thread struct worker {
   .n_stacks  = 0,
 };
 
+
+static lco_node_t *_lco_node_get(hpx_parcel_t *p) {
+  lco_node_t *n = self.lco_nodes;
+  if (n) {
+    self.lco_nodes = n->next;
+  }
+  else {
+    n = malloc(sizeof(*n));
+  }
+  n->next = NULL;
+  n->data = p;
+  n->tid  = self.id;
+  return n;
+}
+
+
+static void* _lco_node_put(lco_node_t *n) {
+  assert(n->tid == self.id);
+  hpx_parcel_t *p = n->data;
+  n->data = 0;
+  n->tid = UINT32_MAX;
+  n->next = self.lco_nodes;
+  self.lco_nodes = n;
+  return p;
+}
 
 /// ----------------------------------------------------------------------------
 /// The entry function for all of the threads.
@@ -183,6 +211,19 @@ static hpx_parcel_t *_network(void) {
   return network_recv(here->network);
 }
 
+
+/// ----------------------------------------------------------------------------
+/// Check my LCO queue during scheduling.
+/// ----------------------------------------------------------------------------
+static hpx_parcel_t *_lcos(void) {
+  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue_node(&self.lcos);
+  if (!node)
+    return NULL;
+  hpx_parcel_t *p = _lco_node_put(node);
+  return p;
+}
+
+
 static void _free_stack(ustack_t *stack) {
   assert(stack);
   stack->sp = self.stacks;
@@ -250,14 +291,21 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 
   // if there are ready parcels, select the next one
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
-  if (p)
+  if (p) {
+    assert(!p->stack || p->stack->sp);
+    goto exit;
+  }
+
+  if ((p = _lcos()))
     goto exit;
 
   // no ready parcels try to get some work from the network, if we're not in a
   // hurry
   if (!fast)
-    if ((p = _network()))
+    if ((p = _network())) {
+      assert(!p->stack || p->stack->sp);
       goto exit;
+    }
 
   // try to steal some work, if we're not in a hurry
   if (!fast)
@@ -275,11 +323,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 
   // lazy stack binding
  exit:
-  assert(p);
+  assert(!p->stack || p->stack->sp);
   if (!p->stack)
     return _bind(p);
 
-  assert(p->stack->sp);
   return p;
 }
 
@@ -302,8 +349,9 @@ void *worker_run(scheduler_t *sched) {
   // self.core_id   = self.id % here->ranks;       // round robin
   self.seed      = self.id;
 
-  // initialize my work structure
+  // initialize my work structures
   sync_chase_lev_ws_deque_init(&self.work, 64);
+  sync_two_lock_queue_init(&self.lcos, (two_lock_queue_node_t*)_lco_node_get(NULL));
 
   // publish my self structure so other people can steal from me
   here->sched->workers[self.id] = &self;
@@ -457,16 +505,7 @@ hpx_status_t scheduler_wait(lco_t *lco) {
   assert(to->stack);
   assert(to->stack->sp);
 
-  lco_node_t *n = self.lco_nodes;
-  if (n) {
-    self.lco_nodes = n->next;
-  }
-  else {
-    n = malloc(sizeof(*n));
-  }
-  n->next = NULL;
-  n->data = self.current;
-  n->rank = here->rank;
+  lco_node_t *n = _lco_node_get(self.current);
   lco_enqueue(lco, n);
 
   thread_transfer(to, _unlock_lco, lco);
@@ -493,8 +532,15 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
     // As soon as we push the thread into the work queue, it could be stolen, so
     // make sure we get it's next first.
     lco_node_t *next = q->next;
-    sync_chase_lev_ws_deque_push(&self.work, q->data);
-    free(q);
+    uint32_t id = q->tid;
+    if (id != self.id) {
+      two_lock_queue_node_t *n = (two_lock_queue_node_t *)q;
+      sync_two_lock_queue_enqueue_node(&(here->sched->workers[id]->lcos), n);
+    }
+    else {
+      hpx_parcel_t *p = _lco_node_put(q);
+      sync_chase_lev_ws_deque_push(&self.work, p);
+    }
     q = next;
   }
 }

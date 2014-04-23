@@ -57,19 +57,19 @@ static two_lock_queue_node_t *_acquire(two_lock_queue_node_t **ptr) {
 }
 
 
-void sync_two_lock_queue_init(two_lock_queue_t *q) {
+void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *n) {
   q->vtable.delete  = (__typeof__(q->vtable.delete))sync_two_lock_queue_delete;
   q->vtable.enqueue = (__typeof__(q->vtable.enqueue))sync_two_lock_queue_enqueue;
   q->vtable.dequeue = (__typeof__(q->vtable.dequeue))sync_two_lock_queue_dequeue;
 
-  q->head = q->tail = _node_new(NULL);
+  q->head = q->tail = (n) ? n : _node_new(NULL);
 }
 
 two_lock_queue_t *sync_two_lock_queue_new(void) {
   two_lock_queue_t *q;
   int e = posix_memalign((void**)&q, HPX_CACHELINE_SIZE, sizeof(*q));
   if (e == 0)
-    sync_two_lock_queue_init(q);
+    sync_two_lock_queue_init(q, NULL);
   return q;
 }
 

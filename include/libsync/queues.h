@@ -63,7 +63,8 @@ typedef struct {
 two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
 void sync_two_lock_queue_delete(two_lock_queue_t *q) HPX_NON_NULL(1);
 
-void  sync_two_lock_queue_init(two_lock_queue_t *q) HPX_NON_NULL(1);
+void  sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *init)
+  HPX_NON_NULL(1);
 void  sync_two_lock_queue_fini(two_lock_queue_t *q) HPX_NON_NULL(1);
 void  sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) HPX_NON_NULL(1);
 void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) HPX_NON_NULL(1);

@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include "hpx/attributes.h"
 
+
 typedef struct lco_node lco_node_t;
 typedef struct lco lco_t;
 
@@ -47,7 +48,7 @@ typedef struct {
 struct lco_node {
   lco_node_t *next;
   void       *data;
-  uint32_t    rank;
+  uint32_t     tid;
 };
 
 
