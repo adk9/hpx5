@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 #define T int
 
 static T value;
