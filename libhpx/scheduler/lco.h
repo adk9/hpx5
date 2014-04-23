@@ -47,6 +47,7 @@ typedef struct {
 struct lco_node {
   lco_node_t *next;
   void       *data;
+  uint32_t    rank;
 };
 
 

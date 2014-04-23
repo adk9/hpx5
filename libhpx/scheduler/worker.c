@@ -466,6 +466,7 @@ hpx_status_t scheduler_wait(lco_t *lco) {
   }
   n->next = NULL;
   n->data = self.current;
+  n->rank = here->rank;
   lco_enqueue(lco, n);
 
   thread_transfer(to, _unlock_lco, lco);
