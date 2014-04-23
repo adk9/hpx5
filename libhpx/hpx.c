@@ -136,6 +136,11 @@ int hpx_init(const hpx_config_t *cfg) {
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
 
+  // 3a) wait if the user wants us to
+  if (cfg->wait == HPX_WAIT)
+    if (cfg->wait_at == HPX_LOCALITY_ALL || cfg->wait_at == here->rank)
+      dbg_wait();
+
   // 3a) set the global allocation sbrk
   sync_store(&here->global_sbrk, here->ranks, SYNC_RELEASE);
 

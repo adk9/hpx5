@@ -33,4 +33,6 @@ HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) 
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
 #endif
 
+HPX_INTERNAL void dbg_wait(void);
+
 #endif // LIBHPX_DEBUG_H

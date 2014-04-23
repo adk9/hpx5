@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "hpx/hpx.h"
 
 #include "libhpx/debug.h"
@@ -44,4 +45,19 @@ dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
 
   fflush(stderr);
   return HPX_ERROR;
+}
+
+
+/**
+ * Used for debugging. Causes a process to wait for a debugger to attach, and
+ * set the value if i != 0.
+ */
+void dbg_wait(void) {
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(12);
 }

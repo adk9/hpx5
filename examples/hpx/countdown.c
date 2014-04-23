@@ -24,8 +24,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 static __thread unsigned seed = 0;
 
 static hpx_addr_t rand_rank(void) {
@@ -67,11 +65,9 @@ int main(int argc, char * argv[argc]) {
   hpx_config_t cfg = {
     .cores = 0,
     .threads = 0,
-    .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS
+    .stack_bytes = 0
   };
 
-  int debug = NO_RANKS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
     switch (opt) {
@@ -82,10 +78,12 @@ int main(int argc, char * argv[argc]) {
       cfg.threads = atoi(optarg);
       break;
      case 'D':
-      debug = ALL_RANKS;
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-      debug = atoi(optarg);
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
@@ -114,8 +112,6 @@ int main(int argc, char * argv[argc]) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
-
-  wait_for_debugger(debug);
 
   send = hpx_register_action("send", send_action);
   return hpx_run(send, &n, sizeof(n));

@@ -85,8 +85,8 @@ hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes);
 /// ----------------------------------------------------------------------------
 /// Allocate local global memory.
 ///
-/// The returned address is local to the calling rank, and not distributed, but
-/// can be used from any rank.
+/// The returned address is local to the calling locality, and not distributed,
+/// but can be used from any locality.
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_alloc(size_t bytes);
 
@@ -176,6 +176,16 @@ typedef enum {
   HPX_BOOT_PMI
 } hpx_boot_t;
 
+typedef enum {
+  HPX_WAIT_NONE = 0,
+  HPX_WAIT
+} hpx_wait_t;
+
+typedef enum {
+  HPX_LOCALITY_NONE = -2,
+  HPX_LOCALITY_ALL = -1
+} hpx_locality_t;
+
 /// ----------------------------------------------------------------------------
 /// The HPX configuration type.
 /// ----------------------------------------------------------------------------
@@ -185,6 +195,8 @@ typedef struct {
   int           stack_bytes;                  // minimum stack size in bytes
   hpx_gas_t             gas;                  // GAS algorithm
   hpx_transport_t transport;                  // transport to use
+  hpx_wait_t           wait;                  // when to wait for a debugger
+  hpx_locality_t    wait_at;                  // locality to wait on
 } hpx_config_t;
 
 
@@ -271,10 +283,16 @@ void hpx_abort(void) HPX_NORETURN;
 /// ----------------------------------------------------------------------------
 /// HPX topology interface
 /// ----------------------------------------------------------------------------
-int hpx_get_my_rank(void);
+hpx_locality_t hpx_get_my_rank(void);
 int hpx_get_num_ranks(void);
 int hpx_get_num_threads(void);
 int hpx_get_my_thread_id(void);
+
+#define HPX_LOCALITY_ID hpx_get_my_rank()
+#define HPX_LOCALITIES hpx_get_num_ranks()
+#define HPX_THREAD_ID hpx_get_my_thread_id()
+#define HPX_THREADS hpx_get_num_threads()
+
 
 /// ----------------------------------------------------------------------------
 /// HPX thread interface.
