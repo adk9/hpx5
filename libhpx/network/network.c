@@ -104,8 +104,8 @@ network_class_t *network_new(void) {
   network_tx_port = &n->sends;
   network_rx_port = &n->recvs;
 
-  _QUEUE_INIT(network_tx_port);
-  _QUEUE_INIT(network_rx_port);
+  _QUEUE_INIT(network_tx_port, NULL);
+  _QUEUE_INIT(network_rx_port, NULL);
 
   sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
 
