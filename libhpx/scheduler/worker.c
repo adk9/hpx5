@@ -27,6 +27,7 @@
 #include "libsync/sync.h"
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
+#include "libsync/locks.h"
 #include "libsync/queues.h"
 
 #include "hpx/builtins.h"
@@ -46,6 +47,45 @@
 typedef SYNC_ATOMIC(int) atomic_int_t;
 typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 
+typedef struct {
+  unsigned long    spins;
+  unsigned long   spawns;
+  unsigned long   steals;
+  unsigned long   stacks;
+  unsigned long     lcos;
+  unsigned long  started;
+  unsigned long finished;
+} _counts_t;
+
+static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
+  lhs->spins += rhs->spins;
+  lhs->spawns += rhs->spawns;
+  lhs->steals += rhs->steals;
+  lhs->stacks += rhs->stacks;
+  lhs->lcos += rhs->lcos;
+  lhs->started += rhs->started;
+  lhs->finished += rhs->finished;
+}
+
+static _counts_t _total_counts = {0};
+
+static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
+  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
+  sync_tatas_acquire(&lock);
+  printf("node %d, ", loc);
+  printf("thread %d, ", id);
+  printf("spins: %lu, ", counts->spins);
+  printf("spawns: %lu, ", counts->spawns);
+  printf("steals: %lu, ", counts->steals);
+  printf("stacks: %lu, ", counts->stacks);
+  printf("lcos: %lu, ", counts->lcos);
+  printf("started: %lu, ", counts->started);
+  printf("finished: %lu", counts->finished);
+  printf("\n");
+  fflush(stdout);
+  _accum_counts(&_total_counts, counts);
+  sync_tatas_release(&lock);
+}
 
 /// ----------------------------------------------------------------------------
 /// Class representing a worker thread's state.
@@ -70,10 +110,7 @@ static __thread struct worker {
   atomic_int_t     shutdown;                    // cooperative shutdown flag
 
   // statistics
-  unsigned long     n_spins;
-  unsigned long    n_spawns;
-  unsigned long    n_steals;
-  unsigned long    n_stacks;
+  _counts_t          counts;
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -85,10 +122,7 @@ static __thread struct worker {
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .lcos      = {{0}},
   .shutdown  = 0,
-  .n_spins   = 0,
-  .n_spawns  = 0,
-  .n_steals  = 0,
-  .n_stacks  = 0,
+  .counts    = {0}
 };
 
 
@@ -111,7 +145,7 @@ static void* _lco_node_put(lco_node_t *n) {
   assert(n->tid == self.id);
   hpx_parcel_t *p = n->data;
   n->data = 0;
-  n->tid = UINT32_MAX;
+  n->tid = -1;
   n->next = self.lco_nodes;
   self.lco_nodes = n;
   return p;
@@ -121,6 +155,7 @@ static void* _lco_node_put(lco_node_t *n) {
 /// The entry function for all of the threads.
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  ++self.counts.started;
   hpx_action_t action = parcel->action;
   hpx_action_handler_t handler = action_lookup(action);
   int status = handler(&parcel->data);
@@ -176,7 +211,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   }
   else {
     stack = thread_new(p, _thread_enter);
-    ++self.n_stacks;
+    ++self.counts.stacks;
   }
   p->stack = stack;
   return p;
@@ -198,7 +233,7 @@ static hpx_parcel_t *_steal(void) {
   worker_t *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p)
-    ++self.n_steals;
+    ++self.counts.steals;
 
   return p;
 }
@@ -216,9 +251,10 @@ static hpx_parcel_t *_network(void) {
 /// Check my LCO queue during scheduling.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_lcos(void) {
-  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue_node(&self.lcos);
+  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.lcos);
   if (!node)
     return NULL;
+  ++self.counts.lcos;
   hpx_parcel_t *p = _lco_node_put(node);
   return p;
 }
@@ -318,7 +354,8 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
-  ++self.n_spins;
+  if (!fast)
+    ++self.counts.spins;
   p = hpx_parcel_acquire(0);
 
   // lazy stack binding
@@ -351,7 +388,7 @@ void *worker_run(scheduler_t *sched) {
 
   // initialize my work structures
   sync_chase_lev_ws_deque_init(&self.work, 64);
-  sync_two_lock_queue_init(&self.lcos, (two_lock_queue_node_t*)_lco_node_get(NULL));
+  sync_two_lock_queue_init(&self.lcos, NULL);
 
   // publish my self structure so other people can steal from me
   here->sched->workers[self.id] = &self;
@@ -396,12 +433,13 @@ void *worker_run(scheduler_t *sched) {
 
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
-  printf("node %d, thread %d, spins: %lu, spawns:%lu steals:%lu, stacks:%lu\n",
-         hpx_get_my_rank(), self.id, self.n_spins, self.n_spawns,
-         self.n_steals, self.n_stacks);
-  fflush(stdout);
+  _print_counts(here->rank, self.id, &self.counts);
 
-  sync_barrier_join(here->sched->barrier, self.id);
+  if (sync_barrier_join(here->sched->barrier, self.id)) {
+    printf("<totals> ");
+    _print_counts(here->rank, -1, &_total_counts);
+  }
+
   sync_chase_lev_ws_deque_fini(&self.work);
 
   return NULL;
@@ -436,7 +474,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
-  self.n_spawns++;
+  self.counts.
+  spawns++;
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
 
@@ -533,14 +572,14 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
     // make sure we get it's next first.
     lco_node_t *next = q->next;
     uint32_t id = q->tid;
-    /* if (id != self.id) { */
-    /*   two_lock_queue_node_t *n = (two_lock_queue_node_t *)q; */
-    /*   sync_two_lock_queue_enqueue_node(&(here->sched->workers[id]->lcos), n); */
-    /* } */
-    /* else { */
+    if (id != self.id) {
+      two_lock_queue_node_t *n = (two_lock_queue_node_t *)q;
+      sync_two_lock_queue_enqueue(&(here->sched->workers[id]->lcos), n);
+    }
+    else {
       hpx_parcel_t *p = _lco_node_put(q);
       sync_chase_lev_ws_deque_push(&self.work, p);
-    /* } */
+    }
     q = next;
   }
 }
@@ -549,6 +588,7 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
 static void HPX_NORETURN _continue(hpx_status_t status,
                                    size_t size, const void *value,
                                    void (*cleanup)(void*), void *env) {
+  ++self.counts.finished;
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
@@ -590,6 +630,7 @@ void hpx_thread_exit(int status) {
   // our estimated owner for the parcel's target address, and then resend the
   // parcel.
   if (status == HPX_RESEND) {
+    ++self.counts.finished;
     hpx_parcel_t *parcel = self.current;
 
     if (here->btt->type == HPX_GAS_AGAS) {
