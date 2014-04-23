@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include "hpx/hpx.h"
 
-#include "debug.h"
-
 #define BUFFER_SIZE 128
 
 /* command line options */
@@ -79,11 +77,8 @@ int main(int argc, char *argv[]) {
     .cores       = 0,
     .threads     = 0,
     .stack_bytes = 0,
-    .gas         = HPX_GAS_PGAS,
-    .transport   = HPX_TRANSPORT_MPI
   };
 
-  int debug = -1;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
     switch (opt) {
@@ -99,10 +94,12 @@ int main(int argc, char *argv[]) {
       _verbose = true;
       break;
      case 'D':
-      debug = ALL_RANKS;
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-      debug = atoi(optarg);
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -142,8 +139,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
-
-  wait_for_debugger(debug);
 
   _register_actions();
 
