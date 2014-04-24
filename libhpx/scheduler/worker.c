@@ -155,7 +155,6 @@ static void* _lco_node_put(lco_node_t *n) {
 /// The entry function for all of the threads.
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  ++self.counts.started;
   hpx_action_t action = parcel->action;
   hpx_action_handler_t handler = action_lookup(action);
   int status = handler(&parcel->data);
@@ -588,7 +587,6 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
 static void HPX_NORETURN _continue(hpx_status_t status,
                                    size_t size, const void *value,
                                    void (*cleanup)(void*), void *env) {
-  ++self.counts.finished;
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
@@ -630,7 +628,6 @@ void hpx_thread_exit(int status) {
   // our estimated owner for the parcel's target address, and then resend the
   // parcel.
   if (status == HPX_RESEND) {
-    ++self.counts.finished;
     hpx_parcel_t *parcel = self.current;
 
     if (here->btt->type == HPX_GAS_AGAS) {
