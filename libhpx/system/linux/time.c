@@ -37,17 +37,26 @@ hpx_time_now(void) {
 }
 
 static double
-_elapsed_ns(hpx_time_t from) {
-  hpx_time_t now = hpx_time_now();
-  return (double)(((now.tv_sec - from.tv_sec) * 1e9) + (now.tv_nsec - from.tv_nsec));
+_ns(hpx_time_t from, hpx_time_t to) {
+  return (double)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
+}
+
+double
+hpx_time_us(hpx_time_t from, hpx_time_t to) {
+  return _ns(from, to)/1e3;
+}
+
+double
+hpx_time_ms(hpx_time_t from, hpx_time_t to) {
+  return _ns(from, to)/1e6;
 }
 
 double
 hpx_time_elapsed_us(hpx_time_t from) {
-  return _elapsed_ns(from)/1e3;
+  return hpx_time_us(from, hpx_time_now());
 }
 
 double
 hpx_time_elapsed_ms(hpx_time_t from) {
-  return _elapsed_ns(from)/1e6;
+  return hpx_time_ms(from, hpx_time_now());
 }
