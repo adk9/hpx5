@@ -17,7 +17,7 @@
 #include <pthread.h>
 
 #include "libhpx/network.h"
-#include "heavy.h"
+#include "servers.h"
 
 /// ----------------------------------------------------------------------------
 /// The heavy network thread just loops in network_progress(), and tests for

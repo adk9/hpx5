@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_HEAVY_H
-#define LIBHPX_NETWORK_HEAVY_H
+#ifndef LIBHPX_NETWORK_SERVERS_H
+#define LIBHPX_NETWORK_SERVERS_H
 
-#include "hpx/attributes.h"
+#include "hpx/hpx.h"
 
 HPX_INTERNAL void *heavy_network(void *network);
+HPX_INTERNAL extern hpx_action_t light_network;
 
-#endif // LIBHPX_NETWORK_HEAVY_H
+#endif // LIBHPX_NETWORK_SERVERS_H

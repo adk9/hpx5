@@ -40,7 +40,7 @@
 #include "libhpx/transport.h"
 
 #include "network/allocator.h"
-#include "network/heavy.h"
+#include "network/servers.h"
 
 
 /// ----------------------------------------------------------------------------
@@ -185,10 +185,11 @@ int hpx_init(const hpx_config_t *cfg) {
 /// Called to run HPX.
 int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // start the network
-  pthread_t heavy;
-  int e = pthread_create(&heavy, NULL, heavy_network, here->network);
-  if (e)
-    return _cleanup(here, dbg_error("could not start the network thread.\n"));
+  // pthread_t heavy;
+  // int e = pthread_create(&heavy, NULL, heavy_network, here->network);
+  // if (e)
+  //   return _cleanup(here, dbg_error("could not start the network
+  //   thread.\n"));
 
   // the rank-0 process starts the application by sending a single parcel to
   // itself
@@ -199,6 +200,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
       return dbg_error("failed to allocate an initial parcel.\n");
 
     p->action = act;
+    p->target = HPX_HERE;
     hpx_parcel_set_data(p, args, size);
 
     // Don't use hpx_parcel_send() here, because that will try and enqueue the
@@ -208,15 +210,22 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     network_send(here->network, p);
   }
 
+  hpx_parcel_t *p = hpx_parcel_acquire(0);
+  if (!p)
+    return dbg_error("could not allocate a network server parcel");
+  p->action = light_network;
+  p->target = HPX_HERE;
+  network_send(here->network, p);
+
   // start the scheduler, this will return after scheduler_shutdown()
-  e = scheduler_startup(here->sched);
+  int e = scheduler_startup(here->sched);
 
   // wait for the network to shutdown
-  e = pthread_join(heavy, NULL);
-  if (e) {
-    dbg_error("could not join the heavy network thread.\n");
-    return e;
-  }
+  // e = pthread_join(heavy, NULL);
+  // if (e) {
+  //   dbg_error("could not join the heavy network thread.\n");
+  //   return e;
+  // }
 
   // and cleanup the system
   return _cleanup(here, e);
