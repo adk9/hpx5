@@ -203,19 +203,23 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     p->target = HPX_HERE;
     hpx_parcel_set_data(p, args, size);
 
-    // Don't use hpx_parcel_send() here, because that will try and enqueue the
-    // parcel locally, but we're not a scheduler thread yet, and haven't
-    // initialized the appropriate structures. Enqueue the parcel directly on
-    // the receive queue.
+    // enqueue directly---network exists but schedulers don't yet
     network_rx_enqueue(here->network, p);
   }
 
-  hpx_parcel_t *p = hpx_parcel_acquire(0);
-  if (!p)
-    return dbg_error("could not allocate a network server parcel");
-  p->action = light_network;
-  p->target = HPX_HERE;
-  network_rx_enqueue(here->network, p);
+  // we start a transport server for the transport, if necessary
+  // FIXME: move this functionality into the transport initialization, rather
+  //        than branching here
+  if (here->transport->type != HPX_TRANSPORT_SMP) {
+    hpx_parcel_t *p = hpx_parcel_acquire(0);
+    if (!p)
+      return dbg_error("could not allocate a network server parcel");
+    p->action = light_network;
+    p->target = HPX_HERE;
+
+    // enqueue directly---network exists but schedulers don't yet
+    network_rx_enqueue(here->network, p);
+  }
 
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
