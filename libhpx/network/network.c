@@ -52,42 +52,32 @@ typedef enum {
   _STATE_MAX
 } _network_state_t;
 
-// The Tx/Rx ports need to be accessed by the transport layer for
-// parcel communication. As such, this creates a circular dependency
-// between the network and transport objects. The network object
-// maintains global references to these ports and exports functions to
-// manipulate them.
-
-static _QUEUE_T *network_tx_port = NULL;
-static _QUEUE_T *network_rx_port = NULL;
 
 /// ----------------------------------------------------------------------------
 /// The network class data.
 /// ----------------------------------------------------------------------------
 struct network_class {
-  _QUEUE_T         sends;                     // half duplex port for send
-  _QUEUE_T         recvs;                     // half duplex port for recv
-
   SYNC_ATOMIC(_network_state_t) state;          // state for progress
-
-  routing_t         *routing;                   // for adaptive routing
+  _QUEUE_T                         tx;          // half duplex port for send
+  _QUEUE_T                         rx;          // half duplex port for recv
+  routing_t                  *routing;          // for adaptive routing
 };
 
 
-void network_tx_enqueue(hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(network_tx_port, p);
+void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p) {
+  _QUEUE_ENQUEUE(&network->tx, p);
 }
 
-hpx_parcel_t *network_tx_dequeue(void) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(network_tx_port);
+hpx_parcel_t *network_tx_dequeue(network_class_t *network) {
+  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->tx);
 }
 
-void network_rx_enqueue(hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(network_rx_port, p);
+void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p) {
+  _QUEUE_ENQUEUE(&network->rx, p);
 }
 
-hpx_parcel_t *network_rx_dequeue(void) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(network_rx_port);
+hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
+  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->rx);
 }
 
 
@@ -97,15 +87,13 @@ hpx_parcel_t *network_rx_dequeue(void) {
 /// set asynchronously and tested in the progress loop.
 network_class_t *network_new(void) {
   network_class_t *n = malloc(sizeof(*n));
+  if (!n) {
+    dbg_error("failed to allocate a network.\n");
+    return NULL;
+  }
 
-  assert(!network_tx_port);
-  assert(!network_rx_port);
-
-  network_tx_port = &n->sends;
-  network_rx_port = &n->recvs;
-
-  _QUEUE_INIT(network_tx_port, NULL);
-  _QUEUE_INIT(network_rx_port, NULL);
+  _QUEUE_INIT(&n->tx, NULL);
+  _QUEUE_INIT(&n->rx, NULL);
 
   sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
 
@@ -140,30 +128,18 @@ void network_delete(network_class_t *network) {
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = _QUEUE_DEQUEUE(&network->sends)))
+  while ((p = _QUEUE_DEQUEUE(&network->tx)))
     hpx_parcel_release(p);
-  _QUEUE_FINI(&network->sends);
-  network_tx_port = NULL;
+  _QUEUE_FINI(&network->tx);
 
-  while ((p =_QUEUE_DEQUEUE(&network->recvs)))
+  while ((p =_QUEUE_DEQUEUE(&network->rx)))
     hpx_parcel_release(p);
-  _QUEUE_FINI(&network->recvs);
-  network_rx_port = NULL;
+  _QUEUE_FINI(&network->rx);
 
   if (network->routing)
     routing_delete(network->routing);
 
   free(network);
-}
-
-
-void network_send(network_class_t *network, hpx_parcel_t *p) {
-    network_tx_enqueue(p);
-}
-
-
-hpx_parcel_t *network_recv(network_class_t *network) {
-  return network_rx_dequeue();
 }
 
 

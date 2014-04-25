@@ -48,6 +48,7 @@ HPX_INTERNAL network_class_t *network_new(void)
 HPX_INTERNAL void network_delete(network_class_t *network)
   HPX_NON_NULL(1);
 
+
 /// ----------------------------------------------------------------------------
 /// Shuts down the network.
 ///
@@ -55,30 +56,6 @@ HPX_INTERNAL void network_delete(network_class_t *network)
 /// is one.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void network_shutdown(network_class_t *network)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
-/// Send a parcel using the network.
-///
-/// This may loopback in the network, so it is safe to call for every
-/// parcel. On loopback, the parcel will become available through
-/// network_recv(). This can act as a poor man's load balancing scheme.
-///
-/// @param network - the network object to send through
-/// @param  parcel - the parcel to send
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_send(network_class_t *network, hpx_parcel_t *parcel)
-  HPX_NON_NULL(1, 2);
-
-
-/// ----------------------------------------------------------------------------
-/// Receive a parcel from the network.
-///
-/// @param network - the network to receive from
-/// @returns       - NULL, or a parcel received from the network
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *network_recv(network_class_t *network)
   HPX_NON_NULL(1);
 
 
@@ -109,19 +86,25 @@ HPX_INTERNAL void network_barrier(network_class_t *network)
 HPX_INTERNAL int network_progress(network_class_t *network)
   HPX_NON_NULL(1);
 
-///
-HPX_INTERNAL void network_tx_enqueue(hpx_parcel_t *p) HPX_NON_NULL(1);
 
-///
-HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(void);
+HPX_INTERNAL void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2);
 
-///
-HPX_INTERNAL void network_rx_enqueue(hpx_parcel_t *p) HPX_NON_NULL(1);
 
-///
-HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(void);
+HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(network_class_t *network)
+  HPX_NON_NULL(1);
 
-///
-HPX_INTERNAL struct routing *network_get_routing(network_class_t *network);
+
+HPX_INTERNAL void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2);
+
+
+HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(network_class_t *network)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL struct routing *network_get_routing(network_class_t *network)
+  HPX_NON_NULL(1);
+
 
 #endif // LIBHPX_NETWORK_H
