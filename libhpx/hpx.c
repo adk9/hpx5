@@ -272,7 +272,10 @@ hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func) {
 
 
 void hpx_parcel_send(hpx_parcel_t *p) {
-  if (hpx_addr_try_pin(p->target, NULL))
+  // check loopback via rank
+  hpx_addr_t target = p->target;
+  uint32_t owner = btt_owner(here->btt, target);
+  if (owner == here->rank)
     scheduler_spawn(p);
   else
     network_send(here->network, p);
