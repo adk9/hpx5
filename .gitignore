@@ -20,6 +20,7 @@
 
 # /config/
 /config/*
+!/config/pkg.m4
 
 # /docs/
 /docs/Doxyfile
