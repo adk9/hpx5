@@ -95,7 +95,7 @@ static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
   printf("lcos: %lu, ", counts->lcos);
   printf("started: %lu, ", counts->started);
   printf("finished: %lu", counts->finished);
-  printf("backoff (us): %.7f\n", counts->backoff);
+  printf("backoff (us): %.7f", counts->backoff);
   printf("\n");
   fflush(stdout);
   _accum_counts(&_total_counts, counts);
