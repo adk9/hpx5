@@ -19,7 +19,7 @@
 
 #include "hpx/builtins.h"
 #include "libsync/queues.h"
-#include "backoff.h"
+#include "libsync/backoff.h"
 
 static __thread two_lock_queue_node_t *_free = NULL;
 
@@ -44,12 +44,12 @@ static void _node_delete(two_lock_queue_node_t *node) {
 
 
 static two_lock_queue_node_t *_acquire(two_lock_queue_node_t **ptr) {
-  static const int base = 16;
-  int i = base;
+  static const unsigned int base = 16;
+  unsigned int i = base;
   two_lock_queue_node_t *node = sync_swap(ptr, (void*)1, SYNC_ACQUIRE);
 
   while (unlikely(node == (void*)1)) {
-    backoff(&i);
+    sync_backoff_exp_r(&i);
     node = sync_swap(ptr, (void*)1, SYNC_ACQUIRE);
   }
 

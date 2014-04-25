@@ -17,14 +17,14 @@
 #endif
 
 #include "libsync/locks.h"
-#include "backoff.h"
+#include "libsync/backoff.h"
 
 void
 sync_tatas_acquire_slow(tatas_lock_t *l) {
-  static const int base = 16;
-  int i = base;
+  static const unsigned int base = 16;
+  unsigned int i = base;
   do {
-    backoff(&i);
+    sync_backoff_exp_r(&i);
   } while (sync_swap(&l->lock, 1, SYNC_ACQUIRE));
 }
 

@@ -17,6 +17,13 @@
 
 #include "hpx/attributes.h"
 
-void backoff(int *prev) HPX_NOINLINE;
+
+HPX_INTERNAL void sync_backoff(unsigned int i)
+  HPX_NOINLINE;
+
+
+HPX_INTERNAL void sync_backoff_exp_r(unsigned int *prev)
+  HPX_NOINLINE HPX_NON_NULL(1);
+
 
 #endif // LIBSYNC_BACKOFF_H

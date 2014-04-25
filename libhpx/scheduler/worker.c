@@ -25,6 +25,7 @@
 #include "hpx/hpx.h"
 
 #include "libsync/sync.h"
+#include "libsync/backoff.h"
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
 #include "libsync/locks.h"
@@ -55,7 +56,19 @@ typedef struct {
   unsigned long     lcos;
   unsigned long  started;
   unsigned long finished;
+  double         backoff;
 } _counts_t;
+
+#define _COUNTS_INIT {                          \
+    .spins = 0,                                 \
+    .spawns = 0,                                \
+    .steals = 0,                                \
+    .stacks = 0,                                \
+    .lcos = 0,                                  \
+    .started = 0,                               \
+    .finished = 0,                              \
+    .backoff = 0.0                              \
+    }
 
 static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
   lhs->spins += rhs->spins;
@@ -65,6 +78,7 @@ static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
   lhs->lcos += rhs->lcos;
   lhs->started += rhs->started;
   lhs->finished += rhs->finished;
+  lhs->backoff += rhs->backoff;
 }
 
 static _counts_t _total_counts = {0};
@@ -81,6 +95,7 @@ static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
   printf("lcos: %lu, ", counts->lcos);
   printf("started: %lu, ", counts->started);
   printf("finished: %lu", counts->finished);
+  printf("backoff (us): %.7f\n", counts->backoff);
   printf("\n");
   fflush(stdout);
   _accum_counts(&_total_counts, counts);
@@ -101,6 +116,7 @@ static __thread struct worker {
   int                    id;                    // this workers's id
   int               core_id;                    // useful for "smart" stealing
   unsigned int         seed;                    // my random seed
+  unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
   lco_node_t     *lco_nodes;                    // free LCO nodes
@@ -115,6 +131,8 @@ static __thread struct worker {
   .thread    = 0,
   .id        = -1,
   .core_id   = -1,
+  .seed      = UINT32_MAX,
+  .backoff   = 0,
   .sp        = NULL,
   .current   = NULL,
   .lco_nodes = NULL,
@@ -122,7 +140,7 @@ static __thread struct worker {
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .lcos      = {{0}},
   .shutdown  = 0,
-  .counts    = {0}
+  .counts    = _COUNTS_INIT
 };
 
 
@@ -218,6 +236,22 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 
 
 /// ----------------------------------------------------------------------------
+/// Backoff is called when there is nothing to do.
+///
+/// This is a place where we could do system maintenance for optimization, etc.,
+/// but was is important is that we not try and run any lightweight threads,
+/// based on our backoff integer.
+///
+/// Right now we just use the synchronization library's backoff.
+/// ----------------------------------------------------------------------------
+static void _backoff(void) {
+  /* hpx_time_t now = hpx_time_now(); */
+  sync_backoff(self.backoff);
+  /* here.stats.backoff += hpx_time_elapsed_us(now); */
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Steal a lightweight thread during scheduling.
 ///
 /// NB: we can be much smarter about who to steal from and how much to
@@ -231,8 +265,13 @@ static hpx_parcel_t *_steal(void) {
 
   worker_t *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
-  if (p)
+  if (p) {
+    self.backoff >>= 1;
     ++self.counts.steals;
+  }
+  else {
+    self.backoff <<= 1;
+  }
 
   return p;
 }
@@ -347,14 +386,25 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     if ((p = _steal()))
       goto exit;
 
-  // as a last resort, return final, or a new empty action
+  // statistically-speaking, we consider this condition to be a spin
+  ++self.counts.spins;
+
+  // return final, if it was specified
   if (final) {
     p = final;
     goto exit;
   }
 
+  // We didn't find any new work to do, even given our ability to
+  // _steal()---this means that the network didn't have anything for us to do,
+  // and the victim we randomly selected didn't have anything to do, and we
+  // don't have a thread that yielded().
+  //
+  // If we're not in a hurry, we'd like to backoff so that we don't thrash the
+  // network port and other people's scheduler queues.
   if (!fast)
-    ++self.counts.spins;
+    _backoff();
+
   p = hpx_parcel_acquire(0);
 
   // lazy stack binding
@@ -384,6 +434,7 @@ void *worker_run(scheduler_t *sched) {
   self.core_id   = -1; // let linux do this for now
   // self.core_id   = self.id % here->ranks;       // round robin
   self.seed      = self.id;
+  self.backoff   = 0;
 
   // initialize my work structures
   sync_chase_lev_ws_deque_init(&self.work, 64);

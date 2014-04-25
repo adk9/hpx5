@@ -16,7 +16,7 @@
 #include "config.h"
 #endif
 
-#include "backoff.h"
+#include "libsync/backoff.h"
 #include "nop.h"
 
 
@@ -35,9 +35,13 @@ static int min(int x, int y) {
 /*  Backoff for now just does some wasted work. Make sure that this is
  *  not optimized.
  */
-void backoff(int *prev) {
-  *prev = min(*prev * multiplier, limit);
-  for (int i = 0, e = *prev; i < e; ++i)
-    sync_nop();
+void sync_backoff_exp_r(unsigned int *prev) {
+  *prev = *prev << 1;
+  *prev = min(*prev, limit);
+  sync_backoff(*prev);
 }
 
+void sync_backoff(unsigned int N) {
+  for (int i = 0; i < N; ++i)
+    sync_nop();
+}
