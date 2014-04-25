@@ -146,7 +146,7 @@ static void _finish_send(progress_t *progress, request_t *r) {
 /// @param r - the request to finish
 /// ----------------------------------------------------------------------------
 static void _finish_recv(progress_t *progress, request_t *r) {
-  network_rx_enqueue(r->parcel);
+  network_rx_enqueue(here->network, r->parcel);
   _finish_request(progress, r);
 }
 
@@ -160,7 +160,7 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// @returns       - true if we initiated a send
 /// ----------------------------------------------------------------------------
 static bool _try_start_send(progress_t *progress) {
-  hpx_parcel_t *p = network_tx_dequeue();
+  hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
     return false;
   _pin(here->transport, p);

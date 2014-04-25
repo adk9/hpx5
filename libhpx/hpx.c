@@ -205,9 +205,9 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 
     // Don't use hpx_parcel_send() here, because that will try and enqueue the
     // parcel locally, but we're not a scheduler thread yet, and haven't
-    // initialized the appropriate structures. Network loopback will get this to
-    // us once we start progressing and receive from the network.
-    network_send(here->network, p);
+    // initialized the appropriate structures. Enqueue the parcel directly on
+    // the receive queue.
+    network_rx_enqueue(here->network, p);
   }
 
   hpx_parcel_t *p = hpx_parcel_acquire(0);
@@ -215,7 +215,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     return dbg_error("could not allocate a network server parcel");
   p->action = light_network;
   p->target = HPX_HERE;
-  network_send(here->network, p);
+  network_rx_enqueue(here->network, p);
 
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
@@ -278,7 +278,7 @@ void hpx_parcel_send(hpx_parcel_t *p) {
   if (owner == here->rank)
     scheduler_spawn(p);
   else
-    network_send(here->network, p);
+    network_tx_enqueue(here->network, p);
 }
 
 

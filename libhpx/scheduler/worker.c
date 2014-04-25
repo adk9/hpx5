@@ -242,7 +242,7 @@ static hpx_parcel_t *_steal(void) {
 /// Check the network during scheduling.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_network(void) {
-  return network_recv(here->network);
+  return network_rx_dequeue(here->network);
 }
 
 
