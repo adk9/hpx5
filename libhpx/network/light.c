@@ -15,16 +15,18 @@
 #endif
 
 #include <pthread.h>
-#include "libhpx/network.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
+#include "libhpx/transport.h"
 #include "servers.h"
 
 hpx_action_t light_network = 0;
 
 static int _light_network_action(void *args) {
-  for (int shutdown = 0; !shutdown; shutdown = network_progress(here->network))
+  while (true) {
+    transport_progress(here->transport, false);
     scheduler_yield();
+  }
   return HPX_SUCCESS;
 }
 

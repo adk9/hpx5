@@ -25,7 +25,6 @@
 #include <stdlib.h>
 
 #include "libsync/queues.h"
-#include "libsync/sync.h"
 
 #include "libhpx/boot.h"
 #include "libhpx/btt.h"
@@ -45,19 +44,11 @@
 #define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
 #define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
 
-typedef enum {
-  _STATE_RUNNING = 0,
-  _STATE_SHUTDOWN_PENDING,
-  _STATE_SHUTDOWN,
-  _STATE_MAX
-} _network_state_t;
-
 
 /// ----------------------------------------------------------------------------
 /// The network class data.
 /// ----------------------------------------------------------------------------
 struct network_class {
-  SYNC_ATOMIC(_network_state_t) state;          // state for progress
   _QUEUE_T                         tx;          // half duplex port for send
   _QUEUE_T                         rx;          // half duplex port for recv
   routing_t                  *routing;          // for adaptive routing
@@ -95,8 +86,6 @@ network_class_t *network_new(void) {
   _QUEUE_INIT(&n->tx, NULL);
   _QUEUE_INIT(&n->rx, NULL);
 
-  sync_store(&n->state, _STATE_RUNNING, SYNC_RELEASE);
-
   n->routing = routing_new();
   if (!n->routing) {
     dbg_error("failed to start routing update manager.\n");
@@ -104,21 +93,6 @@ network_class_t *network_new(void) {
     return NULL;
   }
   return n;
-}
-
-
-/// ----------------------------------------------------------------------------
-/// Shuts down the network.
-///
-/// If network_shutdown() is called directly, the continuation
-/// address is set to HPX_NULL. In that case, we simply skip the
-/// parcel creation and shutdown the network progress thread.
-/// ----------------------------------------------------------------------------
-void network_shutdown(network_class_t *network) {
-  // shutdown the network progress thread.
-  _network_state_t running = _STATE_RUNNING; // atomic.h workaround
-  sync_cas(&network->state, running, _STATE_SHUTDOWN_PENDING, SYNC_RELEASE,
-           SYNC_RELAXED);
 }
 
 
@@ -140,24 +114,6 @@ void network_delete(network_class_t *network) {
     routing_delete(network->routing);
 
   free(network);
-}
-
-
-int network_progress(network_class_t *network) {
-  _network_state_t state;
-  sync_load(state, &network->state, SYNC_ACQUIRE);
-  if (state != _STATE_RUNNING) {
-    state = _STATE_SHUTDOWN_PENDING; // atomic.h workaround
-    sync_cas(&network->state, state, _STATE_SHUTDOWN, SYNC_RELEASE,
-        SYNC_RELAXED);
-
-    // flush out the pending parcels
-    transport_progress(here->transport, true);
-    return state;
-  }
-
-  transport_progress(here->transport, false);
-  return state;
 }
 
 

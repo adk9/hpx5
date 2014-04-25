@@ -24,6 +24,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
+#include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 
 locality_t *here = NULL;
@@ -76,8 +77,7 @@ static int _global_sbrk_action(size_t *args) {
 
 
 static int _shutdown_action(void *args) {
-  network_shutdown(here->network);
-  system_shutdown(0);
+  scheduler_shutdown(here->sched);
   return HPX_SUCCESS;
 }
 
