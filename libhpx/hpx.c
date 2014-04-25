@@ -224,6 +224,9 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
 
+  // need to flush the transport
+  transport_progress(here->transport, true);
+
   // wait for the network to shutdown
   // e = pthread_join(heavy, NULL);
   // if (e) {
