@@ -56,6 +56,7 @@ typedef struct {
   unsigned long     lcos;
   unsigned long  started;
   unsigned long finished;
+  unsigned long backoffs;
   double         backoff;
 } _counts_t;
 
@@ -67,6 +68,7 @@ typedef struct {
     .lcos = 0,                                  \
     .started = 0,                               \
     .finished = 0,                              \
+    .backoffs = 0,                              \
     .backoff = 0.0                              \
     }
 
@@ -78,6 +80,7 @@ static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
   lhs->lcos += rhs->lcos;
   lhs->started += rhs->started;
   lhs->finished += rhs->finished;
+  lhs->backoffs += rhs->backoffs;
   lhs->backoff += rhs->backoff;
 }
 
@@ -95,11 +98,19 @@ static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
   printf("lcos: %lu, ", counts->lcos);
   printf("started: %lu, ", counts->started);
   printf("finished: %lu, ", counts->finished);
-  printf("backoff (us): %.7f", counts->backoff);
+  printf("backoffs: %lu (%.1fus)", counts->backoffs, counts->backoff);
   printf("\n");
   fflush(stdout);
   _accum_counts(&_total_counts, counts);
   sync_tatas_release(&lock);
+}
+
+static unsigned int _max(unsigned int lhs, unsigned int rhs) {
+  return (lhs > rhs) ? lhs : rhs;
+}
+
+static unsigned int _min(unsigned int lhs, unsigned int rhs) {
+  return (lhs < rhs) ? lhs : rhs;
 }
 
 /// ----------------------------------------------------------------------------
@@ -245,9 +256,10 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 /// Right now we just use the synchronization library's backoff.
 /// ----------------------------------------------------------------------------
 static void _backoff(void) {
-  /* hpx_time_t now = hpx_time_now(); */
+  hpx_time_t now = hpx_time_now();
   sync_backoff(self.backoff);
-  /* here.stats.backoff += hpx_time_elapsed_us(now); */
+  self.counts.backoff += hpx_time_elapsed_ms(now);
+  ++self.counts.backoffs;
 }
 
 
@@ -266,11 +278,11 @@ static hpx_parcel_t *_steal(void) {
   worker_t *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
-    self.backoff >>= 1;
+    self.backoff = _max(1, self.backoff >> 1);
     ++self.counts.steals;
   }
   else {
-    self.backoff <<= 1;
+    self.backoff = _min(1 << 16, self.backoff << 1);
   }
 
   return p;
@@ -487,7 +499,7 @@ void *worker_run(scheduler_t *sched) {
 
   if (sync_barrier_join(here->sched->barrier, self.id)) {
     printf("<totals> ");
-    _print_counts(here->rank, -1, &_total_counts);
+    _print_counts(here->rank, self.id, &_total_counts);
   }
 
   sync_chase_lev_ws_deque_fini(&self.work);
