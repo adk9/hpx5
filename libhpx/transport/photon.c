@@ -134,7 +134,7 @@ static size_t _probe(transport_class_t *transport, int *source) {
     dbg_error("photon probe failed.\n");
     return 0;
   }
-  
+
   if (flag) {
     // update the source to the actual source, and return the number of bytes
     // available
@@ -197,6 +197,7 @@ transport_class_t *transport_new_photon(void) {
   photon->class.probe          = _probe;
   photon->class.recv           = _recv;
   photon->class.test           = _test;
+  photon->class.testsome       = NULL;
   photon->class.progress       = _progress;
 
   int val = 0;

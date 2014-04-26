@@ -53,6 +53,20 @@ struct transport_class {
   int (*test)(transport_class_t *t, void *request, int *out)
     HPX_NON_NULL(1, 2, 3);
 
+  /// Tests the array of requests to see if they are complete.
+  ///
+  /// Will output the indices of the elements that are complete in the array,
+  /// and output the number of completed requests in the output array. The
+  /// output array is dense.
+  ///
+  /// @param[in]         t - the transport to test
+  /// @param[in]         n - the number of requests in @p requests
+  /// @param[in]  requests - an @p n-element array of requests
+  /// @param[out] complete - an @p n-element array of integers
+  /// @returns             - the number of valid entries in complete
+  int (*testsome)(transport_class_t *t, int n, char requests[], int complete[])
+    HPX_NON_NULL(1, 3, 4);
+
   void (*progress)(transport_class_t *t, bool flush)
     HPX_NON_NULL(1);
 };
@@ -132,6 +146,13 @@ transport_progress(transport_class_t *t, bool flush) {
 inline static int
 transport_test(transport_class_t *t, void *request, int *out) {
   return t->test(t, request, out);
+}
+
+
+inline static int
+transport_testsome(transport_class_t *t, int n, char requests[], int complete[])
+{
+  return t->testsome(t, n, requests, complete);
 }
 
 

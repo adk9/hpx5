@@ -99,6 +99,7 @@ static transport_class_t _smp = {
   .probe          = _probe,
   .recv           = _recv,
   .test           = _test,
+  .testsome       = NULL,
   .progress       = _progress,
 };
 
