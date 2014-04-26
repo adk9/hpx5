@@ -289,19 +289,23 @@ void network_progress_flush(progress_t *p) {
 }
 
 void network_progress_poll(progress_t *p) {
-  int sends = _test(p, _finish_send, &p->pending_sends, 0);
+  //int sends =
+  _test(p, _finish_send, &p->pending_sends, 0);
   // if (sends)
   //   dbg_log("finished %d sends.\n", sends);
 
-  bool send = _try_start_send(p);
+  //bool send =
+  _try_start_send(p);
   // if (send)
   //   dbg_log("started a send.\n");
 
-  int recvs = _test(p, _finish_recv, &p->pending_recvs, 0);
+  // int recvs =
+  _test(p, _finish_recv, &p->pending_recvs, 0);
   // if (recvs)
   //   dbg_log("finished %d receives.\n", recvs);
 
-  bool recv = _try_start_recv(p);
+  // bool recv =
+  _try_start_recv(p);
   // if (recv)
   //   dbg_log("started a recv.\n");
 }
