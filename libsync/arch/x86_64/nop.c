@@ -16,10 +16,11 @@
 
 #include "nop.h"
 
-void sync_nop() {
+void sync_nop(void) {
   __asm__ volatile ("nop");
 }
 
-void sync_nop_mwait(SYNC_ATOMIC(void*) addr) {
-  __asm__ volatile ("nop");
+void sync_pause(void) {
+  __asm__ volatile ("pause");
 }
+
