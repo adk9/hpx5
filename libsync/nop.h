@@ -26,12 +26,9 @@ HPX_INTERNAL void sync_nop(void);
 
 
 /// ----------------------------------------------------------------------------
-/// An mwait style no-op.
-///
-/// This has no-op semantics, but could possibly be smarter in a system that has
-/// an intelligent wait state, like x86 MONITOR/MWAIT.
+/// Like a nop, but with fancier semantics.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void sync_nop_mwait(SYNC_ATOMIC(void*));
+HPX_INTERNAL void sync_pause(void);
 
 
 #endif /* HPX_LIBSYNC_NOP_H_ */

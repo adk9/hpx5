@@ -43,5 +43,5 @@ void sync_backoff_exp_r(unsigned int *prev) {
 
 void sync_backoff(unsigned int N) {
   for (int i = 0; i < N; ++i)
-    sync_nop();
+    sync_pause();
 }

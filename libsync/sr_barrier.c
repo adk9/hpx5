@@ -61,7 +61,7 @@ static int _join(barrier_t *barrier, int i) {
   int t;
   sync_load(t, &this->sense, SYNC_ACQUIRE);
   while (t != sense) {
-    sync_nop_mwait(&this->sense);
+    sync_pause();
     sync_load(t, &this->sense, SYNC_ACQUIRE);
   }
   sync_fence(SYNC_RELEASE);
