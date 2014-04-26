@@ -420,6 +420,7 @@ transport_class_t *transport_new_portals(void) {
   portals->class.probe          = _probe;
   portals->class.recv           = _recv;
   portals->class.test           = _test;
+  portals->class.testsome       = NULL;
   portals->class.progress       = _progress;
 
   portals->interface            = PTL_INVALID_HANDLE;

@@ -213,6 +213,7 @@ transport_class_t *transport_new_mpi(void) {
   mpi->class.probe          = _mpi_probe;
   mpi->class.recv           = _mpi_recv;
   mpi->class.test           = _mpi_test;
+  mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
 
   mpi->progress             = network_progress_new();
