@@ -32,7 +32,8 @@
 
 
 scheduler_t *
-scheduler_new(int cores, int workers, int stack_size) {
+scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max)
+{
   scheduler_t *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("could not allocate a scheduler.\n");
@@ -42,16 +43,17 @@ scheduler_new(int cores, int workers, int stack_size) {
   sync_store(&s->next_id, 0, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
 
-  s->cores     = cores;
-  s->n_workers = workers;
-  s->workers   = calloc(workers, sizeof(s->workers[0]));
+  s->cores       = cores;
+  s->n_workers   = workers;
+  s->backoff_max = backoff_max;
+  s->workers     = calloc(workers, sizeof(s->workers[0]));
   if (!s->workers) {
     dbg_error("could not allocate an array of workers.\n");
     scheduler_delete(s);
     return NULL;
   }
 
-  s->barrier   = sr_barrier_new(workers);
+  s->barrier = sr_barrier_new(workers);
   if (!s->barrier) {
     dbg_error("failed to allocate the startup barrier.\n");
     scheduler_delete(s);
