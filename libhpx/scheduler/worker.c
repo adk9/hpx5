@@ -282,8 +282,8 @@ static hpx_parcel_t *_steal(void) {
     ++self.counts.steals;
   }
   else {
-    self.backoff = _min(1 << 16, self.backoff << 1);
-  }
+    self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
+  } //
 
   return p;
 }

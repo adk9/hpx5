@@ -61,6 +61,7 @@ typedef struct scheduler {
   SYNC_ATOMIC(int) next_tls_id;
   int                    cores;
   int                n_workers;
+  unsigned int     backoff_max;
   struct worker      **workers;
   struct barrier      *barrier;
 } scheduler_t;
@@ -75,7 +76,8 @@ typedef struct scheduler {
 /// @param       pmap - a function to map worker id to processor
 /// @returns          - the scheduler object, or NULL if there was an error.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size);
+HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size,
+                                        unsigned int backoff_max);
 
 
 /// ----------------------------------------------------------------------------

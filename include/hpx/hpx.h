@@ -192,6 +192,7 @@ typedef enum {
 typedef struct {
   int                 cores;                  // number of cores to run on
   int               threads;                  // number of HPX scheduler threads
+  unsigned int  backoff_max;                  // upper bound for backoff
   int           stack_bytes;                  // minimum stack size in bytes
   hpx_gas_t             gas;                  // GAS algorithm
   hpx_transport_t transport;                  // transport to use
@@ -199,6 +200,16 @@ typedef struct {
   hpx_locality_t    wait_at;                  // locality to wait on
 } hpx_config_t;
 
+#define HPX_CONFIG_DEFAULTS {                   \
+    .cores = 0,                                 \
+    .threads = 0,                               \
+    .backoff_max = 1024,                        \
+    .stack_bytes = 65536,                       \
+    .gas = HPX_GAS_PGAS,                        \
+    .transport = HPX_TRANSPORT_DEFAULT,         \
+    .wait = HPX_WAIT_NONE,                      \
+    .wait_at = HPX_LOCALITY_NONE                \
+    }
 
 /// ----------------------------------------------------------------------------
 /// HPX system interface.

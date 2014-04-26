@@ -173,8 +173,8 @@ int hpx_init(const hpx_config_t *cfg) {
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
-  int stack_size = cfg->stack_bytes;
-  here->sched = scheduler_new(cores, workers, stack_size);
+  here->sched = scheduler_new(cores, workers, cfg->stack_bytes,
+                              cfg->backoff_max);
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("failed to create scheduler.\n"));
 
