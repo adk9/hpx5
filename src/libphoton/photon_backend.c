@@ -1118,6 +1118,9 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     goto error_exit;
   }
 
+  //inet_ntop(AF_INET6, saddr.raw, buf, 40);
+  //dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+
   request_id = INC_COUNTER(curr_cookie);
   
   // segment and send as entries of the sendbuf

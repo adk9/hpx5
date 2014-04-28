@@ -19,8 +19,8 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
     .recv_cq        = ctx->ib_cq,
     .srq            = NULL,
     .cap            = {
-      .max_send_wr     = dattr.max_qp_wr,
-      .max_recv_wr     = dattr.max_qp_wr,
+      .max_send_wr     = dattr.max_qp_wr - 16,
+      .max_recv_wr     = dattr.max_qp_wr - 16,
       .max_send_sge    = dattr.max_sge,
       .max_recv_sge    = dattr.max_sge,
       .max_inline_data = 0
@@ -30,7 +30,7 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
 
   ctx->ud_qp = ibv_create_qp(ctx->ib_pd, &attr);
   if (!(ctx->ud_qp)) {
-    dbg_err("Could not create UD QP!");
+    log_err("Could not create UD QP!");
     return PHOTON_ERROR;
   }
   
@@ -109,6 +109,11 @@ struct ibv_ah *__verbs_ud_create_ah(verbs_cnct_ctx *ctx, union ibv_gid *gid, int
   return ah;
 }
 int __verbs_ud_attach_addr(verbs_cnct_ctx *ctx, union ibv_gid *gid) {
+
+  //char buf[40];
+  //inet_ntop(AF_INET6, gid->raw, buf, 40);
+  //dbg_info("(%s)", buf);
+
   int ret;
   ret = ibv_attach_mcast(ctx->ud_qp, gid, 0x0);
   if (ret) {
