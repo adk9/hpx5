@@ -156,6 +156,7 @@ static __thread struct worker {
 
 
 static lco_node_t *_lco_node_get(hpx_parcel_t *p) {
+  assert(self.current);
   lco_node_t *n = self.lco_nodes;
   if (n) {
     self.lco_nodes = n->next;
@@ -165,7 +166,10 @@ static lco_node_t *_lco_node_get(hpx_parcel_t *p) {
   }
   n->next = NULL;
   n->data = p;
-  n->tid  = self.id;
+
+  ustack_t *thread = self.current->stack;
+  assert(thread);
+  n->tid  = (thread->affinity < 0) ? self.id : thread->affinity;
   return n;
 }
 
