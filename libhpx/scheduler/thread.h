@@ -26,6 +26,7 @@
 typedef struct ustack {
   void      *sp;
   int    tls_id;
+  int  affinity;
   char  stack[];
 } ustack_t;
 
