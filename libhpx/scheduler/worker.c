@@ -760,3 +760,34 @@ int hpx_thread_get_tls_id(void) {
 
   return stack->tls_id;
 }
+
+
+/// ----------------------------------------------------------------------------
+/// A thread_transfer() continuation that runs when a thread changes its
+/// affinity. This puts the current thread into the mailbox specified in env.
+/// ----------------------------------------------------------------------------
+static int _send_mail(hpx_parcel_t *to, void *sp, void *env) {
+  two_lock_queue_t *mailbox = env;
+  hpx_parcel_t *prev = self.current;
+  self.current = to;
+  prev->stack->sp = sp;
+
+  // we're currently overloading lco nodes for the two lock queue
+  two_lock_queue_node_t *n = (two_lock_queue_node_t *)_lco_node_get(prev);
+  sync_two_lock_queue_enqueue(mailbox, n);
+  return HPX_SUCCESS;
+}
+
+
+void hpx_thread_set_affinity(int affinity) {
+  assert(affinity >= -1);
+  assert(affinity < here->sched->n_workers);
+  assert(self.current);
+  ustack_t *stack = self.current->stack;
+  assert(stack);
+  stack->affinity = affinity;
+  if (affinity != self.id) {
+    hpx_parcel_t *to = _schedule(NULL, false);
+    thread_transfer(to, _send_mail, &(here->sched->workers[affinity]->inbox));
+  }
+}
