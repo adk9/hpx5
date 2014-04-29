@@ -298,15 +298,16 @@ static hpx_parcel_t *_network(void) {
 
 
 /// ----------------------------------------------------------------------------
-/// Check my LCO queue during scheduling.
+/// Process my mail queue.
 /// ----------------------------------------------------------------------------
-static hpx_parcel_t *_inbox(void) {
+static void _get_mail(void) {
   lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
-  if (!node)
-    return NULL;
-  ++self.counts.mail;
-  hpx_parcel_t *p = _lco_node_put(node);
-  return p;
+  while (node) {
+    ++self.counts.mail;
+    hpx_parcel_t *p = _lco_node_put(node);
+    sync_chase_lev_ws_deque_push(&self.work, p);
+    node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
+  }
 }
 
 
@@ -375,15 +376,21 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
   }
 
+
+  // messages in my inbox are "in limbo" until I receive them---while this call
+  // can cause problems with stealing, we currently feel like it is better
+  // (heuristically speaking), to maintain work visibility by cleaning out our
+  // inbox as fast as possible
+  if (!fast)
+    _get_mail();
+
   // if there are ready parcels, select the next one
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
+  hpx_parcel_t *p =sync_chase_lev_ws_deque_pop(&self.work);
+
   if (p) {
     assert(!p->stack || p->stack->sp);
     goto exit;
   }
-
-  if ((p = _inbox()))
-    goto exit;
 
   // no ready parcels try to get some work from the network, if we're not in a
   // hurry
