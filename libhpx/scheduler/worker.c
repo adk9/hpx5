@@ -53,7 +53,7 @@ typedef struct {
   unsigned long   spawns;
   unsigned long   steals;
   unsigned long   stacks;
-  unsigned long     lcos;
+  unsigned long     mail;
   unsigned long  started;
   unsigned long finished;
   unsigned long backoffs;
@@ -65,7 +65,7 @@ typedef struct {
     .spawns = 0,                                \
     .steals = 0,                                \
     .stacks = 0,                                \
-    .lcos = 0,                                  \
+    .mail = 0,                                  \
     .started = 0,                               \
     .finished = 0,                              \
     .backoffs = 0,                              \
@@ -77,7 +77,7 @@ static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
   lhs->spawns += rhs->spawns;
   lhs->steals += rhs->steals;
   lhs->stacks += rhs->stacks;
-  lhs->lcos += rhs->lcos;
+  lhs->mail += rhs->mail;
   lhs->started += rhs->started;
   lhs->finished += rhs->finished;
   lhs->backoffs += rhs->backoffs;
@@ -95,7 +95,7 @@ static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
   printf("spawns: %lu, ", counts->spawns);
   printf("steals: %lu, ", counts->steals);
   printf("stacks: %lu, ", counts->stacks);
-  printf("lcos: %lu, ", counts->lcos);
+  printf("mail: %lu, ", counts->mail);
   printf("started: %lu, ", counts->started);
   printf("finished: %lu, ", counts->finished);
   printf("backoffs: %lu (%.1fms)", counts->backoffs, counts->backoff);
@@ -133,7 +133,7 @@ static __thread struct worker {
   lco_node_t     *lco_nodes;                    // free LCO nodes
   ustack_t          *stacks;                    // local free stacks
   chase_lev_ws_deque_t work;                    // my work
-  two_lock_queue_t     lcos;                    // LCOs that have been triggered
+  two_lock_queue_t    inbox;                    // work sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
 
   // statistics
@@ -149,7 +149,7 @@ static __thread struct worker {
   .lco_nodes = NULL,
   .stacks    = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
-  .lcos      = {{0}},
+  .inbox     = {{0}},
   .shutdown  = 0,
   .counts    = _COUNTS_INIT
 };
@@ -300,11 +300,11 @@ static hpx_parcel_t *_network(void) {
 /// ----------------------------------------------------------------------------
 /// Check my LCO queue during scheduling.
 /// ----------------------------------------------------------------------------
-static hpx_parcel_t *_lcos(void) {
-  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.lcos);
+static hpx_parcel_t *_inbox(void) {
+  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
   if (!node)
     return NULL;
-  ++self.counts.lcos;
+  ++self.counts.mail;
   hpx_parcel_t *p = _lco_node_put(node);
   return p;
 }
@@ -382,7 +382,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
-  if ((p = _lcos()))
+  if ((p = _inbox()))
     goto exit;
 
   // no ready parcels try to get some work from the network, if we're not in a
@@ -450,7 +450,7 @@ void *worker_run(scheduler_t *sched) {
 
   // initialize my work structures
   sync_chase_lev_ws_deque_init(&self.work, 64);
-  sync_two_lock_queue_init(&self.lcos, NULL);
+  sync_two_lock_queue_init(&self.inbox, NULL);
 
   // publish my self structure so other people can steal from me
   here->sched->workers[self.id] = &self;
@@ -636,7 +636,7 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
     uint32_t id = q->tid;
     if (id != self.id) {
       two_lock_queue_node_t *n = (two_lock_queue_node_t *)q;
-      sync_two_lock_queue_enqueue(&(here->sched->workers[id]->lcos), n);
+      sync_two_lock_queue_enqueue(&(here->sched->workers[id]->inbox), n);
     }
     else {
       hpx_parcel_t *p = _lco_node_put(q);

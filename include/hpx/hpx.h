@@ -331,6 +331,29 @@ int hpx_thread_get_tls_id(void);
 
 
 /// ----------------------------------------------------------------------------
+/// Set a lightweight thread's affinity.
+///
+/// This isn't generally useful for dataflow-style execution, but can be useful
+/// for long running threads where the application programmer has a good idea
+/// about the distribution of work that they want.
+///
+/// This is not a hard guarantee for actual affinity. Various conditions at
+/// runtime @i{actually} control where threads execute, including system
+/// load. The scheduler will do its best to return a thread to it's assigned
+/// locality though. Using affinity badly can cause excessive thread movement
+/// and should be used carefully.
+///
+/// This may block the calling thread in order to induce a context switch. This
+/// may be called as frequently as necessary---the most recent affinity will
+/// take precedence.
+///
+/// @param thread_id - the scheduler thread id we'd like to set the affinity to,
+///                    must be in the range [0, hpx_get_num_threads()).
+/// ----------------------------------------------------------------------------
+void hpx_thread_set_affinity(int thread_id);
+
+
+/// ----------------------------------------------------------------------------
 /// Finishes the current thread's execution, sending @p value to the thread's
 /// continuation address.
 /// ----------------------------------------------------------------------------
