@@ -376,7 +376,6 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
   }
 
-
   // messages in my inbox are "in limbo" until I receive them---while this call
   // can cause problems with stealing, we currently feel like it is better
   // (heuristically speaking), to maintain work visibility by cleaning out our
