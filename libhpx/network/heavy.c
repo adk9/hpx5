@@ -16,7 +16,8 @@
 
 #include <pthread.h>
 
-#include "libhpx/network.h"
+#include "libhpx/locality.h"
+#include "libhpx/transport.h"
 #include "servers.h"
 
 /// ----------------------------------------------------------------------------
@@ -27,9 +28,8 @@
 /// implementation.
 /// ----------------------------------------------------------------------------
 void* heavy_network(void *args) {
-  network_class_t *network = args;
-
-  for (int shutdown = 0; !shutdown; shutdown = network_progress(network)) {
+  while (true) {
+    transport_progress(here->transport, false);
     pthread_testcancel();
 #if defined(__APPLE__) || defined(__MACH__)
     pthread_yield_np();

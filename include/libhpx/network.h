@@ -71,22 +71,6 @@ HPX_INTERNAL void network_barrier(network_class_t *network)
   HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
-/// The main network operation.
-///
-/// As usual, the network_progress() function "does stuff" in the network layer
-/// to make sure that everything else works correctly. This needs to be called
-/// periodically, or nothing will happen in the network.
-///
-/// NB: OTHER NETWORK OPERATIONS DO NOT CALL THIS FUNCTION.
-///
-/// @param network - the network to manage
-/// @returns       - non-0 to indicate that the network has been shutdown.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int network_progress(network_class_t *network)
-  HPX_NON_NULL(1);
-
-
 HPX_INTERNAL void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p)
   HPX_NON_NULL(1, 2);
 
