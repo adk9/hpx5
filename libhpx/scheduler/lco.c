@@ -208,7 +208,7 @@ lco_lock(lco_t *lco) {
     // if the lock bit is set, yield and then try again
     uintptr_t bits = (uintptr_t)from;
     if (bits & _LOCK_MASK) {
-      scheduler_yield();
+      //scheduler_yield();
       continue;
     }
 
@@ -216,7 +216,7 @@ lco_lock(lco_t *lco) {
     // CAS it into the queue
     lco_node_t *to = (lco_node_t *)(bits | _LOCK_MASK);
     if (!sync_cas(&lco->queue, from, to, SYNC_ACQUIRE, SYNC_RELAXED)) {
-      scheduler_yield();
+      //scheduler_yield();
       continue;
     }
 
