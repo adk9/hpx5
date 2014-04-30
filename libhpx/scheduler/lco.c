@@ -50,8 +50,7 @@ static hpx_action_t _set    = 0;
 static hpx_action_t _delete = 0;
 
 
-/// Wait on a local LCO. This properly acquires and releases the LCO's lock, and
-/// signals the LCO if necessary.
+/// Wait on a local LCO. This properly acquires and releases the LCO's lock.
 static hpx_status_t _wait_local(lco_t *lco) {
   hpx_status_t status;
   lco_lock(lco);
