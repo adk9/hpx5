@@ -1,20 +1,16 @@
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 
-  Pingong example
-  examples/hpx/pingpong.c
-
-  Copyright (c) 2013, Trustees of Indiana University
-  All rights reserved.
-
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
- ====================================================================
-*/
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -24,6 +20,16 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 
+/// ----------------------------------------------------------------------------
+/// @file examples/hpx/agas_test.c
+///
+/// This file implements a simple AGAS test. A thread on the root
+/// locality allocates two futures with a cyclic distribution, one on
+/// the root locality and the other on a remote locality. It invokes a
+/// "get-rank" action on the remote future, initiates a synchronous
+/// move of the remote future address to the root locality, and
+/// re-executes the "get-rank" action on the address.
+/// ----------------------------------------------------------------------------
 
 static hpx_action_t root = 0;
 static hpx_action_t get_rank = 0;
@@ -72,7 +78,7 @@ static int root_action(void *args) {
 }
 
 static void usage(FILE *f) {
-  fprintf(f, "Usage: countdown [options] ROUNDS \n"
+  fprintf(f, "Usage: agas_test [options] ROUNDS \n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
