@@ -29,16 +29,16 @@ struct rdma_args_t {
 static int __initialized = 0;
 
 static int ugni_initialized(void);
-static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBuffer ss);
+static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss);
 static int ugni_finalize(void);
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
+                          photonBuffer lbuf, uint64_t id);
+static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
+                          photonBuffer lbuf, uint64_t id);
 static int ugni_get_event(photonEventStatus stat);
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode);
@@ -53,11 +53,16 @@ struct photon_backend_t photon_ugni_backend = {
   .init = ugni_init,
   .finalize = ugni_finalize,
   /* API */
+  .get_dev_addr = NULL,
+  .register_addr = NULL,
+  .unregister_addr = NULL,
   .register_buffer = NULL,
   .unregister_buffer = NULL,
   .test = NULL,
   .wait = NULL,
   .wait_ledger = NULL,
+  .send = NULL,
+  .recv = NULL,
   .post_recv_buffer_rdma = NULL,
   .post_send_buffer_rdma = NULL,
   .post_send_request_rdma = NULL,
@@ -68,13 +73,14 @@ struct photon_backend_t photon_ugni_backend = {
   .post_os_get = NULL,
   .send_FIN = NULL,
   .probe_ledger = NULL,
+  .probe = NULL,
   .wait_any = NULL,
   .wait_any_ledger = NULL,
   .io_init = NULL,
   .io_finalize = NULL,
   /* data movement */
-  .rdma_put = ugni_rdma_send,
-  .rdma_get = ugni_rdma_recv,
+  .rdma_put = ugni_rdma_put,
+  .rdma_get = ugni_rdma_get,
   .rdma_send = ugni_rdma_send,
   .rdma_recv = ugni_rdma_recv,
   .get_event = ugni_get_event
@@ -87,7 +93,7 @@ static int ugni_initialized() {
     return PHOTON_ERROR_NOINIT;
 }
 
-static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBuffer ss) {
+static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
 
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
@@ -215,55 +221,43 @@ error_exit:
 }
 
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
   args.laddr = (uint64_t)laddr;
   args.raddr = (uint64_t)raddr;
   args.size = size;
-  args.lmdh = lbuf->mdh;
-  args.rmdh = rbuf->mdh;
+  args.lmdh.qword1 = lbuf->priv.key0;
+  args.lmdh.qword2 = lbuf->priv.key1;
+  args.rmdh.qword1 = rbuf->priv.key0;
+  args.rmdh.qword2 = rbuf->priv.key1;
   return __ugni_do_rdma(&args, GNI_POST_RDMA_PUT);
 }
 
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
   args.laddr = (uint64_t)laddr;
   args.raddr = (uint64_t)raddr;
   args.size = size;
-  args.lmdh = lbuf->mdh;
-  args.rmdh = rbuf->mdh;
+  args.lmdh.qword1 = lbuf->priv.key0;
+  args.lmdh.qword2 = lbuf->priv.key1;
+  args.rmdh.qword1 = rbuf->priv.key0;
+  args.rmdh.qword2 = rbuf->priv.key1;
   return __ugni_do_rdma(&args, GNI_POST_RDMA_GET);
 }
 
-static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
-  struct rdma_args_t args;
-  args.proc = addr->global.proc_id;
-  args.id = id;
-  args.laddr = (uint64_t)laddr;
-  args.raddr = (uint64_t)raddr;
-  args.size = size;
-  args.lmdh = lbuf->mdh;
-  args.rmdh = rbuf->mdh;
-  return __ugni_do_fma(&args, GNI_POST_FMA_PUT);
+static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
+                          photonBuffer lbuf, uint64_t id) {
+  return PHOTON_OK;
 }
 
-static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
-  struct rdma_args_t args;
-  args.proc = addr->global.proc_id;
-  args.id = id;
-  args.laddr = (uint64_t)laddr;
-  args.raddr = (uint64_t)raddr;
-  args.size = size;
-  args.lmdh = lbuf->mdh;
-  args.rmdh = rbuf->mdh;
-  return __ugni_do_fma(&args, GNI_POST_FMA_GET);
+static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
+                          photonBuffer lbuf, uint64_t id) {
+  return PHOTON_OK;
 }
 
 static int ugni_get_event(photonEventStatus stat) {
