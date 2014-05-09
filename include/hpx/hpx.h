@@ -316,6 +316,7 @@ hpx_addr_t hpx_thread_current_target(void);
 hpx_addr_t hpx_thread_current_cont(void);
 uint32_t   hpx_thread_current_args_size(void);
 
+void hpx_thread_yield(void);
 
 /// ----------------------------------------------------------------------------
 /// Generates a consecutive new ID for a thread.
