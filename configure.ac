@@ -88,7 +88,6 @@ AM_CONDITIONAL([HAVE_FLOODLIGHT], [test "xwith_jansson" != xno -a "x$with_curl" 
 # ---------------------------------------------------------------------------
 HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
-HPX_WITH_PKG([tcmalloc],[tcmalloc],[build with explicit tcmalloc],[no],[TCMALLOC])
 HPX_WITH_PKG([crypto],[libcrypto],[use libcrypto for string hashing],[no],[CRYPTO])
 HPX_WITH_PKG([glib],[glib-2.0],[build with glib-2.0],[no],[GLIB])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
