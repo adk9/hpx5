@@ -22,8 +22,3 @@ if HAVE_PAPI
 libhpx_la_CFLAGS  += @PAPI_CFLAGS@
 libhpx_la_LIBADD  += @PAPI_LIBS@
 endif
-
-if HAVE_TCMALLOC
-libhpx_la_CFLAGS  += @TCMALLOC_CFLAGS@
-libhpx_la_LIBADD  += @TCMALLOC_LIBS@
-endif
