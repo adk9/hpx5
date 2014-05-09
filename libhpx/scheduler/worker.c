@@ -585,6 +585,10 @@ void scheduler_yield(void) {
   thread_transfer(to, _checkpoint_ws_push, self.current);
 }
 
+void hpx_thread_yield(void) {
+  scheduler_yield();
+}
+
 
 /// ----------------------------------------------------------------------------
 /// A transfer continuation that pushes the previous thread onto a an lco
