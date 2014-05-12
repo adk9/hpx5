@@ -30,6 +30,9 @@
 #include "libhpx/transport.h"
 #include "hpx/hpx.h"
 
+static hpx_action_t _send_progress_action;
+static hpx_action_t _recv_progress_action;
+
 /// Portals resource limits
 static const int PORTALS_RES_LIMIT_MAX = INT_MAX;
 typedef struct _portals_lim _portals_lim_t;
@@ -310,9 +313,7 @@ static void _delete(transport_class_t *transport) {
   PtlFini();
 }
 
-static bool _try_start_send(transport_class_t *transport) {
-  portals_t *ptl = (portals_t*)transport;
-
+static bool _try_start_send(portals_t *ptl) {
   // try to deque a packet from the network's Tx port.
   hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
@@ -335,44 +336,72 @@ static bool _try_start_send(transport_class_t *transport) {
   return true;
 }
 
+static int _handle_send_event(ptl_event_t *pe) {
+  hpx_parcel_t *p = (hpx_parcel_t*)pe->user_ptr;
+  switch (pe->type) {
+    default:
+      dbg_log("portals: unknown send queue event (%d).\n", pe->type);
+      return PTL_FAIL;
+    case PTL_EVENT_ACK:
+      if (pe->ni_fail_type == PTL_NI_OK)
+        hpx_parcel_release(p);
+      else {
+        dbg_error("Portals failed to ack send of %lu bytes to %i.\n",
+                  pe->mlength, pe->initiator.rank);
+        // perhaps we should try to retransmit?
+        // network_tx_enqueue(here->network, p);
+        return pe->ni_fail_type;
+      }
+      break;
+    case PTL_EVENT_SEND:
+      if (pe->ni_fail_type != PTL_NI_OK) {
+        dbg_error("Portals failed to send %lu bytes to %i.\n",
+                  pe->mlength, pe->initiator.rank);
+        // perhaps we should try to retransmit?
+        // network_tx_enqueue(here->network, p);
+        return pe->ni_fail_type;
+      }
+      break;
+  }
+  return PTL_OK;
+}
 
-static void _progress(transport_class_t *t, bool flush) {
-  portals_t *ptl = (portals_t*)t;
-  ptl_event_t pe;
+static int _send_progress(transport_class_t **t) {
+  portals_t *ptl = (portals_t*)*t;
 
-  bool send = _try_start_send(t);
+  bool send = _try_start_send(ptl);
   if (send)
     dbg_log("started a send.\n");
 
+  ptl_event_t pe;
   int e = PtlEQGet(ptl->sendq, &pe);
-  if (e == PTL_OK) {
-    hpx_parcel_t *p = (hpx_parcel_t*)pe.user_ptr;
-    switch (pe.type) {
-      default:
-        dbg_log("portals: unknown send queue event (%d).\n", pe.type);
-        break;
-      case PTL_EVENT_ACK:
-        if (pe.ni_fail_type == PTL_NI_OK)
-          hpx_parcel_release(p);
-        else {
-          dbg_error("Portals failed to send %lu bytes to %i.\n",
-                    pe.rlength, pe.initiator.rank);
-          // perhaps we should try to retransmit?
-          network_tx_enqueue(here->network, p);
-        }
-        break;
-      case PTL_EVENT_SEND:
-        if (pe.ni_fail_type != PTL_NI_OK) {
-          dbg_error("Portals failed to send %lu bytes to %i.\n",
-                    pe.rlength, pe.initiator.rank);
-          // perhaps we should try to retransmit?
-          network_tx_enqueue(here->network, p);
-        }
-        break;
-    }
-  }
+  if (e == PTL_OK)
+    _handle_send_event(&pe);
 
-  e = PtlEQGet(ptl->recvq, &pe);
+  return HPX_SUCCESS;
+}
+
+static void _send_flush(transport_class_t *t) {
+  portals_t *ptl = (portals_t*)t;
+
+  bool send = true;
+  while (send)
+    send = _try_start_send(ptl);
+
+  int e;
+  ptl_event_t pe;
+  do {
+    e = PtlEQGet(ptl->sendq, &pe);
+    if (e == PTL_OK)
+      _handle_send_event(&pe);
+  } while (e != PTL_EQ_EMPTY);
+}
+
+static int _recv_progress(transport_class_t **t) {
+  portals_t *ptl = (portals_t*)*t;
+  ptl_event_t pe;
+
+  int e = PtlEQGet(ptl->recvq, &pe);
   if (e == PTL_OK) {
     if (pe.type == PTL_EVENT_PUT) {
       if (pe.ni_fail_type != PTL_NI_OK) {
@@ -396,6 +425,20 @@ static void _progress(transport_class_t *t, bool flush) {
       dbg_log("portals: unknown recv queue event (%d).\n", pe.type);
     }
   }
+  return HPX_SUCCESS;
+}
+
+static void _progress(transport_class_t *t, bool flush) {
+  if (flush) {
+    _send_flush(t);
+    return;
+  }
+
+  hpx_addr_t and = hpx_lco_and_new(2);
+  hpx_call(HPX_HERE, _send_progress_action, &t, sizeof(t), and);
+  hpx_call(HPX_HERE, _recv_progress_action, &t, sizeof(t), and);
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
 }
 
 transport_class_t *transport_new_portals(void) {
@@ -429,6 +472,9 @@ transport_class_t *transport_new_portals(void) {
   portals->pte                  = PTL_PT_ANY;
   portals->bufdesc              = PTL_INVALID_HANDLE;
 
+  _send_progress_action = HPX_REGISTER_ACTION(_send_progress);
+  _recv_progress_action = HPX_REGISTER_ACTION(_recv_progress);
+  
   _portals_init(portals);
   _set_map(portals);
   _setup_portals(portals);
