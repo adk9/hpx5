@@ -5,13 +5,11 @@
 
 typedef struct photon_ri_ledger_entry_t {
   volatile uint8_t header;
-  uint32_t request;
-  uint32_t rkey;
   uintptr_t addr;
-  uint32_t size;
+  uint64_t size;
+  struct photon_buffer_priv_t priv;
+  uint32_t request;
   int tag;
-  uint64_t qword1;
-  uint64_t qword2;
   volatile uint16_t filler;
   volatile uint8_t footer;
 } photon_ri_ledger_entry;
@@ -19,8 +17,8 @@ typedef struct photon_ri_ledger_entry_t {
 typedef struct photon_ri_ledger_t {
   photon_ri_ledger_entry *entries;
   int num_entries;
-  photon_remote_buffer remote;
   int curr;
+  struct photon_buffer_t remote;
 } photon_ri_ledger;
 
 typedef struct photon_ri_ledger_entry_t * photonRILedgerEntry;

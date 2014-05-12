@@ -41,12 +41,19 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   send_args->type = pp_type;
   send_args->msg[0] = '\0';
 
-  gettimeofday(&start, NULL);
-
   if (pp_test == PHOTON_TEST) {
     //photon_post_send_buffer_rdma(dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, &send_req);
-    photon_wait_recv_buffer_rdma(dst, PHOTON_TAG);
-    photon_post_os_put(dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, 0, &send_req);
+    //gettimeofday(&start, NULL);
+    photon_wait_recv_buffer_rdma(dst, PHOTON_TAG, &send_req);
+    //gettimeofday(&end, NULL);
+    //if (rank == 0)
+    //  printf("%d: wait_recv time: %f\n", rank, SUBTRACT_TV(end, start));
+    
+    //gettimeofday(&start, NULL);
+    photon_post_os_put(send_req, dst, (void*)send_args, sizeof(*send_args), PHOTON_TAG, 0);
+    //gettimeofday(&end, NULL);
+    //if (rank == 0)
+    //  printf("%d: os_put time: %f\n", rank, SUBTRACT_TV(end, start));
     while (1) {
       int flag, type;
       struct photon_status_t stat;
@@ -59,7 +66,11 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
         //usleep(10);
       }
     }
-    photon_send_FIN(dst);
+    //gettimeofday(&start, NULL);
+    photon_send_FIN(send_req, dst);
+    //gettimeofday(&end, NULL);
+    //if (rank == 0)
+    //printf("%d: send_FIN time: %f\n", rank, SUBTRACT_TV(end, start));
   }
   else if (pp_test == MPI_TEST) {
     MPI_Request mpi_r;
@@ -78,11 +89,6 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     }
   }
 
-  gettimeofday(&end, NULL);
-
-  //if (rank == 0)
-  //	printf("%d: rdma_put time: %f\n", rank, SUBTRACT_TV(end, start));
-
   return 0;
 }
 
@@ -93,28 +99,29 @@ void *receiver(void *args) {
     uint32_t recv_req;
 
     /* check if we have something to receive first, mimicking HPX parcel handler
-       instead of blocking in wait_send_buffer...
+       instead of blocking in wait_send_buffer... */
+    /*
     if (pp_test == PHOTON_TEST) {
       struct photon_status_t stat;
       int flag, ret;
       do {
-    		ret = photon_probe_ledger(other_rank, &flag, PHOTON_SEND_LEDGER, &stat);
+        ret = photon_probe_ledger(other_rank, &flag, PHOTON_SEND_LEDGER, &stat);
       } while (flag != 1);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Status stat;
       int flag, ret;
       do {
-    		ret = MPI_Iprobe(other_rank, other_rank, MPI_COMM_WORLD, &flag, &stat);
+        ret = MPI_Iprobe(other_rank, other_rank, MPI_COMM_WORLD, &flag, &stat);
       } while (flag != 1);
     }
     */
 
     if (pp_test == PHOTON_TEST) {
-      //photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG);
-      //photon_post_os_get(other_rank, (char*)recv_args, sizeof(*recv_args), PHOTON_TAG, 0, &recv_req);
-      gettimeofday(&start, NULL);
-      photon_post_recv_buffer_rdma(other_rank, (char*)recv_args, sizeof(*recv_args), PHOTON_TAG, &recv_req);
+      //photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
+      //photon_post_os_get(recv_req, other_rank, (void*)recv_args, sizeof(*recv_args), PHOTON_TAG, 0);
+      //gettimeofday(&start, NULL);
+      photon_post_recv_buffer_rdma(other_rank, (void*)recv_args, sizeof(*recv_args), PHOTON_TAG, &recv_req);
       while (1) {
         int flag, type;
         struct photon_status_t stat;
@@ -127,9 +134,9 @@ void *receiver(void *args) {
           //usleep(10);
         }
       }
-      gettimeofday(&end, NULL);
+      //gettimeofday(&end, NULL);
       //printf("%d: post_recv time: %f\n", rank, SUBTRACT_TV(end, start));
-      //photon_send_FIN(other_rank);
+      //photon_send_FIN(recv_req, other_rank);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Request mpi_r;
@@ -182,7 +189,7 @@ int main(int argc, char **argv) {
     test = strdup(argv[1]);
     global_iters = atoi(argv[2]);
   }
-  if (global_iters < 2) {
+  if (global_iters < 1) {
     printf("Usage: %s <type> <iters>\n", argv[0]);
     exit(-1);
   }

@@ -35,9 +35,9 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                          photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-static int ugni_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
-static int ugni_rdma_recv(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id);
 static int ugni_get_event(photonEventStatus stat);
 
@@ -240,10 +240,10 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   return __ugni_do_rdma(&args, GNI_POST_RDMA_GET);
 }
 
-static int ugni_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
-  args.proc = proc;
+  args.proc = addr->global.proc_id;
   args.id = id;
   args.laddr = (uint64_t)laddr;
   args.raddr = (uint64_t)raddr;
@@ -253,10 +253,10 @@ static int ugni_rdma_send(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
   return __ugni_do_fma(&args, GNI_POST_FMA_PUT);
 }
 
-static int ugni_rdma_recv(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
+static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonRemoteBuffer rbuf, uint64_t id) {
   struct rdma_args_t args;
-  args.proc = proc;
+  args.proc = addr->global.proc_id;
   args.id = id;
   args.laddr = (uint64_t)laddr;
   args.raddr = (uint64_t)raddr;

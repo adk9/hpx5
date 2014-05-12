@@ -25,7 +25,6 @@ photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, 
 
   new->curr = 0;
   new->num_entries = ledger_size;
-  new->remote.request = NULL_COOKIE;
 
   return new;
 

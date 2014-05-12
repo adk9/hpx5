@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   photon_register_buffer(recv, PHOTON_RECV_SIZE);
 
   int alloc_size = 1024*1024;
-  struct photon_descriptor_t desc;
+  struct photon_buffer_t desc;
   desc.addr = (uintptr_t)0x00007f6605bff000;
   desc.size = alloc_size;
   desc.priv.key0 = 2576896;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %u completed successfully\n", rank, (int)stat.src_addr, stat.tag, alloc_size);
+        fprintf(stderr,"%d: recv(%d, %d) of size %u completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, alloc_size);
         break;
       }
       else {

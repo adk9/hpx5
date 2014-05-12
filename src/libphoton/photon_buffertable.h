@@ -10,11 +10,11 @@
 int buffertable_init(int max_buffers);
 void buffertable_finalize();
 
-int buffertable_find_containing(void* start, int size, photonBuffer* result);
-int buffertable_find_exact(void* start, int size, photonBuffer* result);
+int buffertable_find_containing(void* start, int size, photonBI* result);
+int buffertable_find_exact(void* start, int size, photonBI* result);
 
-int buffertable_insert(photonBuffer buffer);
-int buffertable_remove(photonBuffer buffer);
+int buffertable_insert(photonBI buffer);
+int buffertable_remove(photonBI buffer);
 
 #endif
 

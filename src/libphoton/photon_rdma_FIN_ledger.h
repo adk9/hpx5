@@ -13,8 +13,7 @@ typedef struct photon_rdma_FIN_ledger_entry_t {
 typedef struct photon_rdma_FIN_ledger_t {
   photon_rdma_FIN_ledger_entry *entries;
   int num_entries;
-  photonBuffer local;
-  photon_remote_buffer remote;
+  struct photon_buffer_t remote;
   int curr;
 } photon_rdma_FIN_ledger;
 

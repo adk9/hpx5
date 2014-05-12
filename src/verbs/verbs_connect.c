@@ -16,8 +16,10 @@
 #include "libphoton.h"
 #include "logging.h"
 #include "verbs_connect.h"
+#include "verbs_exchange.h"
+#include "verbs_ud.h"
 
-#define MAX_CQ_ENTRIES      1000
+#define MAX_CQ_ENTRIES      16384
 #define RDMA_CMA_BASE_PORT  18000
 #define RDMA_CMA_FORW_OFFS  1000
 #define RDMA_CMA_TIMEOUT    2000
@@ -139,6 +141,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       return PHOTON_ERROR;
     }
     ctx->ib_lid = attr.lid;
+    ctx->ib_mtu = 1 << (attr.active_mtu + 7);
 
     ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
     if (!ctx->ib_pd) {
@@ -159,7 +162,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       // create shared receive queue
       struct ibv_srq_init_attr attr = {
         .attr = {
-          .max_wr	 = 500,
+          .max_wr  = 500,
           .max_sge = 1
         }
       };
@@ -174,7 +177,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     // create QPs in the non-CMA case and transition to INIT state
     // RDMA CMA does this transition for us when we connect
     for (iproc = 0; iproc < (_photon_nproc + _photon_nforw); ++iproc) {
-
+      
       // only one QP supported
       ctx->qp[iproc] = (struct ibv_qp*)malloc(sizeof(struct ibv_qp));
       if (!ctx->qp[iproc]) {
@@ -183,18 +186,18 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       }
 
       struct ibv_qp_init_attr attr = {
-        .qp_context = ctx,
-        .send_cq    = ctx->ib_cq,
-        .recv_cq    = ctx->ib_cq,
-        .srq        = ctx->ib_srq,
-        .cap	    = {
-          .max_send_wr	= ctx->tx_depth,
-          .max_send_sge   = 1, // scatter gather element
-          .max_recv_wr	= ctx->rx_depth,
-          .max_recv_sge   = 1, // scatter gather element
+        .qp_context     = ctx,
+        .send_cq        = ctx->ib_cq,
+        .recv_cq        = ctx->ib_cq,
+        .srq            = ctx->ib_srq,
+        .cap            = {
+          .max_send_wr	   = ctx->tx_depth,
+          .max_recv_wr     = ctx->rx_depth,
+          .max_send_sge    = ctx->max_sge, // scatter gather element
+          .max_recv_sge    = ctx->max_sge,
+          .max_inline_data = 0
         },
-        .qp_type    = IBV_QPT_RC
-        //.sq_sig_all = 0
+        .qp_type        = IBV_QPT_RC
       };
 
       ctx->qp[iproc] = ibv_create_qp(ctx->ib_pd, &attr);
@@ -216,13 +219,17 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
                           IBV_QP_PKEY_INDEX	 |
                           IBV_QP_PORT		 |
                           IBV_QP_ACCESS_FLAGS)) {
-          dbg_err("Failed to modify QP for task:%d to INIT", iproc);
+          dbg_err("Failed to modify QP for task:%d to INIT: %s", iproc, strerror(errno));
           return PHOTON_ERROR;
         }
       }
     }
+    // create a UD QP as well if requested
+    if (ctx->use_ud) {
+      __verbs_ud_create_qp(ctx);
+    }
   }
-
+  
   // init context also creates connect info for all procs
   return __verbs_create_connect_info(ctx);
 }
@@ -265,10 +272,17 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
     }
 
     for(i=0; i<MAX_QP; ++i) {
+      
+      memset(&(ctx->local_ci[iproc][i].gid.raw), 0, sizeof(union ibv_gid));
+      
       if (__photon_config->use_cma) {
         ctx->local_ci[iproc][i].qpn = 0x0;
       }
       else {
+        // can only query gid in in non-CMA mode, CMA will exchange this for us
+        if (ibv_query_gid(ctx->ib_context, ctx->ib_port, 0, &(ctx->local_ci[iproc][i].gid))) {
+          dbg_info("Could not get local gid for gid index 0");
+        }
         ctx->local_ci[iproc][i].qpn = ctx->qp[iproc]->qp_num;
       }
 
@@ -428,6 +442,19 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       dbg_err("could not request CQ notifications");
       goto error_exit;
     }
+    
+    struct ibv_port_attr port_attr;
+    if (ibv_query_port(cm_id->verbs, cm_id->port_num, &port_attr)) {
+      dbg_err("could not query port");
+      goto error_exit;
+    }
+    ctx->ib_lid = port_attr.lid;
+    ctx->ib_mtu = 1 << (port_attr.active_mtu + 7);    
+
+    // create a UD QP as well if requested
+    if (ctx->use_ud) {
+      __verbs_ud_create_qp(ctx);
+    }
   }
   else {
     if (ctx->ib_context != cm_id->verbs) {
@@ -443,12 +470,12 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     .cap     = {
       .max_send_wr  = ctx->tx_depth,
       .max_recv_wr  = ctx->rx_depth,
-      .max_send_sge = 1,
-      .max_recv_sge = 1,
+      .max_send_sge = ctx->max_sge,
+      .max_recv_sge = ctx->max_sge,
       .max_inline_data = 0
     },
     .qp_type = IBV_QPT_RC,
-    .sq_sig_all = 1,
+    //.sq_sig_all = 0,
     .srq = NULL
   };
 
@@ -583,8 +610,8 @@ static void *__rdma_cma_listener_thread(void *arg) {
       ctx->qp[pindex] = child_cm_id->qp;
 
       memset(&conn_param, 0, sizeof conn_param);
-      conn_param.responder_resources = ctx->tx_depth;
-      conn_param.initiator_depth = ctx->rx_depth;
+      conn_param.responder_resources =ctx->atomic_depth;
+      conn_param.initiator_depth = ctx->atomic_depth;
       // don't send any private data back
       conn_param.private_data = NULL;
       conn_param.private_data_len = 0;
@@ -724,8 +751,8 @@ retry_route:
   };
 
   memset(&conn_param, 0, sizeof conn_param);
-  conn_param.responder_resources = ctx->tx_depth;
-  conn_param.initiator_depth = ctx->rx_depth;
+  conn_param.responder_resources = ctx->atomic_depth;
+  conn_param.initiator_depth = ctx->atomic_depth;
   conn_param.retry_count = RDMA_CMA_RETRIES;
   conn_param.private_data = &priv_data;
   conn_param.private_data_len = sizeof(struct rdma_cma_priv);
@@ -762,27 +789,38 @@ error_exit:
 static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp) {
   int i;
   int err;
+  char gid[40];
 
   for (i = 0; i < num_qp; ++i) {
-    dbg_info("[%d/%d], i=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x",
-             _photon_myrank, _photon_nproc, i,
+    dbg_info("[%d/%d], pindex=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x, gid=%s",
+             _photon_myrank, _photon_nproc, pindex,
              remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
-             ctx->qp[pindex]->qp_num);
+             ctx->qp[pindex]->qp_num,
+             inet_ntop(AF_INET6, remote_info[i].gid.raw, gid, 40));
 
+    struct ibv_ah_attr ah_attr = {
+      .is_global     = 0,
+      .dlid          = remote_info[i].lid,
+      .sl            = 0,
+      .src_path_bits = 0,
+      .port_num      = ctx->ib_port
+    };
+    
+    if (remote_info[i].gid.global.interface_id) {
+      ah_attr.is_global = 1;
+      ah_attr.grh.hop_limit = 1;
+      ah_attr.grh.dgid = remote_info[i].gid;
+      ah_attr.grh.sgid_index = 0;
+    }
+    
     struct ibv_qp_attr attr = {
-      .qp_state	        = IBV_QPS_RTR,
-      .path_mtu	        = 3, // (3 == IBV_MTU_1024) which means 1024. Is this a good value?
-      .dest_qp_num	    = remote_info[i].qpn,
-      .rq_psn		        = remote_info[i].psn,
+      .qp_state	          = IBV_QPS_RTR,
+      .path_mtu	          = IBV_MTU_4096,
+      .dest_qp_num        = remote_info[i].qpn,
+      .rq_psn             = remote_info[i].psn,
       .max_dest_rd_atomic = 1,
-      .min_rnr_timer	    = 12,
-      .ah_attr = {
-        .is_global      = 0,
-        .dlid	        = remote_info[i].lid,
-        .sl	            = 0,
-        .src_path_bits  = 0,
-        .port_num       = ctx->ib_port
-      }
+      .min_rnr_timer	  = 12,
+      .ah_attr = ah_attr
     };
     err=ibv_modify_qp(ctx->qp[pindex], &attr,
                       IBV_QP_STATE              |
@@ -793,7 +831,7 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
                       IBV_QP_MAX_DEST_RD_ATOMIC |
                       IBV_QP_MIN_RNR_TIMER);
     if (err) {
-      dbg_err("Failed to modify QP[%d] to RTR. Reason:%d", i, err);
+      dbg_err("Failed to modify QP[%d] to RTR. Reason: %s", i, strerror(err));
       return PHOTON_ERROR;
     }
 
@@ -811,7 +849,7 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
                       IBV_QP_SQ_PSN    |
                       IBV_QP_MAX_QP_RD_ATOMIC);
     if (err) {
-      dbg_err("Failed to modify QP[%d] to RTS. Reason:%d", i, err);
+      dbg_err("Failed to modify QP[%d] to RTS. Reason: %s", i, strerror(err));
       return PHOTON_ERROR;
     }
   }
@@ -823,11 +861,12 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
   MPI_Request *rreq;
   MPI_Comm _photon_comm = __photon_config->comm;
   int peer;
-  char smsg[ sizeof "00000000:00000000:00000000:00000000:00000000"];
+  char smsg[ sizeof "00000000:00000000:00000000:00000000:00000000:00000000000000000000000000000000"];
   char **rmsg;
   int i, iproc;
   verbs_cnct_info **remote_info = ctx->remote_ci;
-  int msg_size = sizeof "00000000:00000000:00000000:00000000:00000000";
+  int msg_size = sizeof smsg;
+  char gid[sizeof "00000000000000000000000000000000" + 1];
 
   rreq = (MPI_Request *)malloc( _photon_nproc * sizeof(MPI_Request) );
   if( !rreq ) goto err_exit;
@@ -861,8 +900,9 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
       if( peer == _photon_myrank ) {
         continue;
       }
-      sprintf(smsg, "%08x:%08x:%08x:%08x:%08d", local_info[peer][i].lid, local_info[peer][i].qpn,
-              local_info[peer][i].psn, local_info[peer][i].ip.s_addr, local_info[peer][i].cma_port);
+      inet_ntop(AF_INET6, local_info[peer][i].gid.raw, gid, sizeof gid);
+      sprintf(smsg, "%08x:%08x:%08x:%08x:%08d:%s", local_info[peer][i].lid, local_info[peer][i].qpn,
+              local_info[peer][i].psn, local_info[peer][i].ip.s_addr, local_info[peer][i].cma_port, gid);
       //fprintf(stderr,"[%d/%d] Sending lid:qpn:psn:ip = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
       if( MPI_Send(smsg, msg_size , MPI_BYTE, peer, 0, _photon_comm ) != MPI_SUCCESS ) {
         dbg_err("Could not send local address");
@@ -880,15 +920,17 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
         dbg_err("Could not wait() to receive remote address");
         goto err_exit;
       }
-      sscanf(rmsg[peer], "%x:%x:%x:%x:%d",
+      sscanf(rmsg[peer], "%x:%x:%x:%x:%d:%s",
              &remote_info[peer][i].lid,
              &remote_info[peer][i].qpn,
              &remote_info[peer][i].psn,
              &remote_info[peer][i].ip.s_addr,
-             &remote_info[peer][i].cma_port);
+             &remote_info[peer][i].cma_port,
+             gid);
+      inet_pton(AF_INET6, gid, &remote_info[peer][i].gid.raw);
     }
   }
-
+  
   for (i = 0; i < _photon_nproc; i++) {
     free(rmsg[i]);
   }

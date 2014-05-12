@@ -27,11 +27,11 @@ int main(int argc, char *argv[]) {
     .address = rank,
     .comm = MPI_COMM_WORLD,
     .use_forwarder = 0,
-    .use_cma = 0,
+    .use_cma = 1,
     .eth_dev = "roce0",
     .ib_dev = "qib0",
     .ib_port = 1,
-    .backend = "ugni"
+    .backend = "verbs"
   };
 
   photon_init(&cfg);
@@ -49,11 +49,11 @@ int main(int argc, char *argv[]) {
   //sleep(1);
 
   // wait for the send buffer that was posted from the previous rank
-  photon_wait_send_buffer_rdma(prev, PHOTON_TAG);
+  photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
 
   // get that posted send buffer
-  photon_post_os_get(prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0, &recvReq);
-  photon_send_FIN(prev);
+  photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
+  photon_send_FIN(recvReq, prev);
 
   while(1) {
     int flag, type;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: post_send_buf(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: post_send_buf(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
       }
       else {
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: get(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: get(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
       }
       else {
