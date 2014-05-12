@@ -314,7 +314,7 @@ static bool _try_start_send(transport_class_t *transport) {
   portals_t *ptl = (portals_t*)transport;
 
   // try to deque a packet from the network's Tx port.
-  hpx_parcel_t *p = network_tx_dequeue();
+  hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
     return false;
 
@@ -358,7 +358,7 @@ static void _progress(transport_class_t *t, bool flush) {
           dbg_error("Portals failed to send %lu bytes to %i.\n",
                     pe.rlength, pe.initiator.rank);
           // perhaps we should try to retransmit?
-          network_tx_enqueue(p);
+          network_tx_enqueue(here->network, p);
         }
         break;
       case PTL_EVENT_SEND:
@@ -366,7 +366,7 @@ static void _progress(transport_class_t *t, bool flush) {
           dbg_error("Portals failed to send %lu bytes to %i.\n",
                     pe.rlength, pe.initiator.rank);
           // perhaps we should try to retransmit?
-          network_tx_enqueue(p);
+          network_tx_enqueue(here->network, p);
         }
         break;
     }
@@ -389,7 +389,7 @@ static void _progress(transport_class_t *t, bool flush) {
 
         // TODO: get rid of this extra copy.
         memcpy(p, pe.start, pe.mlength);
-        network_rx_enqueue(p);
+        network_rx_enqueue(here->network, p);
       }
     }
     else {
