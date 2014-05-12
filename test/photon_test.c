@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include "photon.h"
+#include "test_cfg.h"
 
 // @@ need a kernel that takes an integer input that varies the amount of
 //    work that the kernel performs (ie. a loop index)
@@ -46,21 +46,10 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&size);
   next = (rank+1) % size;
   prev = (size+rank-1) % size;
-
-  struct photon_config_t cfg = {
-    .meta_exch = PHOTON_EXCH_MPI,
-    .nproc = size,
-    .address = rank,
-    .comm = MPI_COMM_WORLD,
-    .use_forwarder = 0,
-    .use_cma = 0,
-    .use_ud = 1,
-    .eth_dev = "roce0",
-    .ib_dev = "mlx4_0",
-    .ib_port = 1,
-    .backend = "verbs"
-  };
-
+  
+  cfg.nproc = size;
+  cfg.address = rank;
+  
   photon_init(&cfg);
   maxSize = 104857600; // 100 Mb
   smallAmountOfWork = estimateKernelSize(5000); // 5 milliseconds (i think)

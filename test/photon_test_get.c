@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include "photon.h"
+#include "test_cfg.h"
 
 #define PHOTON_SEND_SIZE 16777216 // 16MB
 #define PHOTON_TAG       13
@@ -21,18 +21,8 @@ int main(int argc, char *argv[]) {
   next = (rank+1) % size;
   prev = (size+rank-1) % size;
 
-  struct photon_config_t cfg = {
-    .meta_exch = PHOTON_EXCH_MPI,
-    .nproc = size,
-    .address = rank,
-    .comm = MPI_COMM_WORLD,
-    .use_forwarder = 0,
-    .use_cma = 1,
-    .eth_dev = "roce0",
-    .ib_dev = "qib0",
-    .ib_port = 1,
-    .backend = "verbs"
-  };
+  cfg.nproc = size;
+  cfg.address = rank;
 
   photon_init(&cfg);
 

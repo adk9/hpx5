@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include "photon.h"
+#include "test_cfg.h"
 
 #define PHOTON_RECV_SIZE 1024*1024*1024 // 1GB                                                                                                                
 #define PHOTON_TAG       13
@@ -25,19 +25,10 @@ int main(int argc, char *argv[]) {
   char **forwarders = malloc(sizeof(char**));
   forwarders[0] = "b001/5006";
 
-  struct photon_config_t cfg = {
-    .meta_exch = PHOTON_EXCH_MPI,
-    .nproc = size,
-    .address = rank,
-    .comm = MPI_COMM_WORLD,
-    .use_forwarder = 1,
-    .forwarder_eids = forwarders,
-    .use_cma = 1,
-    .eth_dev = "roce0",
-    .ib_dev = "qib0",
-    .ib_port = 1,
-    .backend = "verbs"
-  };
+  cfg.nproc = size;
+  cfg.address = rank;
+  cfg.use_forwarder = 1;
+  cfg.forwarder_eids = forwarders;
 
   photon_init(&cfg);
 

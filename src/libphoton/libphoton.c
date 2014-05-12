@@ -105,7 +105,7 @@ int photon_init(photonConfig cfg) {
 #ifdef HAVE_XSP
     __photon_forwarder = &xsp_forwarder;
 #else
-    log_warn("No forwarder enabled!");
+    log_warn("Photon was built without forwarder support!");
 #endif
   }
 
