@@ -346,8 +346,8 @@ static int _handle_send_event(ptl_event_t *pe) {
       if (pe->ni_fail_type == PTL_NI_OK)
         hpx_parcel_release(p);
       else {
-        dbg_error("Portals failed to ack send of %lu bytes to %i.\n",
-                  pe->mlength, pe->initiator.rank);
+        dbg_error("Portals failed to ack send of %u bytes to %i.\n",
+                  p->size, btt_owner(here->btt, p->target));
         // perhaps we should try to retransmit?
         // network_tx_enqueue(here->network, p);
         return pe->ni_fail_type;
@@ -355,8 +355,8 @@ static int _handle_send_event(ptl_event_t *pe) {
       break;
     case PTL_EVENT_SEND:
       if (pe->ni_fail_type != PTL_NI_OK) {
-        dbg_error("Portals failed to send %lu bytes to %i.\n",
-                  pe->mlength, pe->initiator.rank);
+        dbg_error("Portals failed to send %u bytes to %i.\n",
+                  p->size, btt_owner(here->btt, p->target));
         // perhaps we should try to retransmit?
         // network_tx_enqueue(here->network, p);
         return pe->ni_fail_type;
