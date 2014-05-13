@@ -12,27 +12,48 @@ AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
+# ---------------------------------------------------------------------------
+# Detect the programming environment.
+# ---------------------------------------------------------------------------
+cflags_save="$CFLAGS"
+AC_MSG_CHECKING([for programming environment])
+AS_CASE([$PE_ENV],
+    [CRAY*],  [AC_SUBST([CC],["craycc"])
+              # ADK: We need this for ASM labels.
+              CFLAGS="-hgnu"
+              hpx_pe_env="CRAY"],
+    [PGI*],   [AC_SUBST([CC],["pgcc"])
+              hpx_pe_env="PGI"],
+    [INTEL*], [AC_SUBST([CC],["icc"])
+              hpx_pe_env="INTEL"],
+    [AC_SUBST([CC],["gcc"])
+     hpx_pe_env="GNU"])
+CFLAGS="$CFLAGS $cflags_save"
+AC_MSG_RESULT([$hpx_pe_env])
+
+AC_LANG([C])
+
 AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
+
+# Checks for programs.
+cflags_save="$CFLAGS"
+AC_PROG_CC
+AC_PROG_CC_C99
+AM_PROG_CC_C_O
+AC_PROG_INSTALL
+AM_PROG_AS
+CFLAGS="$cflags_save"
+
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT
-
-AC_LANG([C])
-
-# Checks for programs.
-AC_PROG_CC
-AC_PROG_CC_C99
-AC_PROG_INSTALL
-AC_PROG_LIBTOOL
-AM_PROG_CC_C_O
-AM_PROG_AS
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code. Add these commented-out checks later if we come up
@@ -45,19 +66,19 @@ AM_PROG_AS
 AC_ARG_ENABLE([pedantic],
   [AS_HELP_STRING([--enable-pedantic], [Enable -pedantic @<:@default=yes@:>@])],
   [], [enable_pedantic=yes])
-AS_IF([test "x$enable_pedantic" != xno],
+AS_IF([test "x$enable_pedantic" != xno -a "x$hpx_pe_env" = xgnu],
   [AC_SUBST([HPX_PEDANTIC], [-pedantic])])
 
 AC_ARG_ENABLE([wall],
   [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
   [], [enable_wall=yes])
-AS_IF([test "x$enable_wall" != xno],
+AS_IF([test "x$enable_wall" != xno -a "x$hpx_pe_env" = xgnu],
   [AC_SUBST([HPX_W_ALL], [-Wall])])
 
 AC_ARG_ENABLE([werror],
   [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=no@:>@])],
   [], [enable_werror=no])
-AS_IF([test "x$enable_werror" != xno],
+AS_IF([test "x$enable_werror" != xno -a "x$hpx_pe_env" = xgnu],
   [AC_SUBST([HPX_W_ERROR], [-Werror])])
 
 AC_SUBST([HPX_C99], [$ac_cv_prog_cc_c99])
@@ -146,6 +167,11 @@ AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
+
+AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
+AM_CONDITIONAL([CRAY_PE_ENV], [test "x$hpx_pe_env" = xCRAY])
+AM_CONDITIONAL([PGI_PE_ENV], [test "x$hpx_pe_env" = xPGI])
+AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

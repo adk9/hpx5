@@ -8,4 +8,10 @@ libscheduler_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99
 libscheduler_la_SOURCES  = scheduler.c worker.c thread.c lco.c future.c and.c \
                            sema.c
 libscheduler_la_LIBADD   = arch/libarch.la $(top_builddir)/libsync/libsync.la
+
+if GNU_PE_ENV
 libscheduler_la_LDFLAGS  = -pthread
+else
+libscheduler_la_LDFLAGS  = -lpthread
+endif
+
