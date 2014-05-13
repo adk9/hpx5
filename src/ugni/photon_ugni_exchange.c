@@ -29,7 +29,8 @@ int __ugni_exchange_ri_ledgers(ProcessInfo *ugni_processes) {
   // Prepare to receive the receive-info ledger rkey and pointers.  The rkey is also used for the send-info ledgers.
   for(i = 0; i < _photon_nproc; i++) {
 
-    if( MPI_Irecv(&(ugni_processes[i].remote_rcv_info_ledger->remote.mdh), sizeof(gni_mem_handle_t), MPI_BYTE, i, 0, _photon_comm, &req[2*i]) != MPI_SUCCESS ) {
+    if( MPI_Irecv(&(ugni_processes[i].remote_rcv_info_ledger->remote.priv), sizeof(struct photon_buffer_priv_t),
+		  MPI_BYTE, i, 0, _photon_comm, &req[2*i]) != MPI_SUCCESS ) {
       log_err("Couldn't post irecv() for receive-info ledger from task %d", i);
       return -1;
     }
@@ -44,7 +45,8 @@ int __ugni_exchange_ri_ledgers(ProcessInfo *ugni_processes) {
   for(i = 0; i < _photon_nproc; i++) {
     uintptr_t tmp_va;
 
-    if( MPI_Send(&(shared_storage->mdh), sizeof(gni_mem_handle_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
+    if( MPI_Send(&(shared_storage->priv), sizeof(struct photon_buffer_priv_t),
+		 MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
       log_err("Couldn't send receive-info ledger to process %d", i);
       return -1;
     }
@@ -66,7 +68,7 @@ int __ugni_exchange_ri_ledgers(ProcessInfo *ugni_processes) {
   }
   for(i = 0; i < _photon_nproc; i++) {
     // snd_info and rcv_info ledgers are all stored in the same contiguous memory region and share a common memory handle
-    ugni_processes[i].remote_snd_info_ledger->remote.mdh = ugni_processes[i].remote_rcv_info_ledger->remote.mdh;
+    ugni_processes[i].remote_snd_info_ledger->remote.priv = ugni_processes[i].remote_rcv_info_ledger->remote.priv;
     ugni_processes[i].remote_rcv_info_ledger->remote.addr = va[i];
   }
 
@@ -130,7 +132,8 @@ int __ugni_exchange_FIN_ledger(ProcessInfo *ugni_processes) {
   memset(req, 0, 2*_photon_nproc*sizeof(MPI_Request));
 
   for(i = 0; i < _photon_nproc; i++) {
-    if( MPI_Irecv(&(ugni_processes[i].remote_FIN_ledger->remote.mdh), sizeof(gni_mem_handle_t), MPI_BYTE, i, 0, _photon_comm, &(req[2*i])) != MPI_SUCCESS) {
+    if( MPI_Irecv(&(ugni_processes[i].remote_FIN_ledger->remote.priv), sizeof(struct photon_buffer_priv_t),
+		  MPI_BYTE, i, 0, _photon_comm, &(req[2*i])) != MPI_SUCCESS) {
       log_err("Couldn't send rdma info ledger to process %d", i);
       return -1;
     }
@@ -144,7 +147,8 @@ int __ugni_exchange_FIN_ledger(ProcessInfo *ugni_processes) {
   for(i = 0; i < _photon_nproc; i++) {
     uintptr_t tmp_va;
 
-    if( MPI_Send(&shared_storage->mdh, sizeof(gni_mem_handle_t), MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
+    if( MPI_Send(&shared_storage->priv, sizeof(struct photon_buffer_priv_t),
+		 MPI_BYTE, i, 0, _photon_comm) != MPI_SUCCESS) {
       log_err("Couldn't send rdma send ledger to process %d", i);
       return -1;
     }

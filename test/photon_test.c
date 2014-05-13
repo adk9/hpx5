@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD,&size);
   next = (rank+1) % size;
   prev = (size+rank-1) % size;
-  
+
   cfg.nproc = size;
   cfg.address = rank;
   

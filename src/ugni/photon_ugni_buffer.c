@@ -5,9 +5,9 @@
 #include "photon_ugni_connect.h"
 #include "logging.h"
 
-static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx);
-static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx);
-static int __ugni_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv);
+static int __ugni_buffer_register(photonBI dbuffer, void *ctx);
+static int __ugni_buffer_unregister(photonBI dbuffer, void *ctx);
+static int __ugni_buffer_get_private(photonBI buf, photonBufferPriv ret_priv);
 
 struct photon_buffer_interface_t ugni_buffer_interface = {
   .buffer_create = _photon_buffer_create,
@@ -17,21 +17,29 @@ struct photon_buffer_interface_t ugni_buffer_interface = {
   .buffer_get_private = __ugni_buffer_get_private
 };
 
-static int __ugni_buffer_register(photonBuffer dbuffer, void *ctx) {
+static int __ugni_buffer_register(photonBI dbuffer, void *ctx) {
   int status;
+  gni_mem_handle_t mdh, *smdh;
 
   if (dbuffer->is_registered)
     return PHOTON_OK;
 
-  status = GNI_MemRegister(((ugni_cnct_ctx*)ctx)->nic_handle, (uint64_t)dbuffer->buffer, dbuffer->size,
-                           NULL, GNI_MEM_READWRITE, -1, &dbuffer->mdh);
+  status = GNI_MemRegister(((ugni_cnct_ctx*)ctx)->nic_handle, (uint64_t)dbuffer->buf.addr,
+			   dbuffer->buf.size, NULL, GNI_MEM_READWRITE, -1, &mdh);
   if (status != GNI_RC_SUCCESS) {
     dbg_err("GNI_MemRegister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
 
-  dbg_info("GNI_MemRegister size: %lu address: %p", dbuffer->size, dbuffer->buffer);
+  dbg_info("GNI_MemRegister size: %lu address: %p", dbuffer->buf.size, dbuffer->buf.addr);
 
+  smdh = malloc(sizeof(mdh));
+  *smdh = mdh;
+
+  dbuffer->buf.priv.key0 = mdh.qword1;
+  dbuffer->buf.priv.key1 = mdh.qword2;
+  dbuffer->priv_ptr = smdh;
+  dbuffer->priv_size = sizeof(*smdh);
   dbuffer->is_registered = 1;
 
   return PHOTON_OK;
@@ -41,15 +49,15 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __ugni_buffer_unregister(photonBuffer dbuffer, void *ctx) {
+static int __ugni_buffer_unregister(photonBI dbuffer, void *ctx) {
   int status;
 
-  status = GNI_MemDeregister(((ugni_cnct_ctx*)ctx)->nic_handle, &dbuffer->mdh);
+  status = GNI_MemDeregister(((ugni_cnct_ctx*)ctx)->nic_handle, (gni_mem_handle_t*)dbuffer->priv_ptr);
   if (status != GNI_RC_SUCCESS) {
     dbg_err("GNI_MemDeregister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
-  dbg_info("GNI_MemDeregister (%p)", (void *)dbuffer->buffer);
+  dbg_info("GNI_MemDeregister (%p)", (void *)dbuffer->buf.addr);
 
   dbuffer->is_registered = 0;
 
@@ -59,10 +67,11 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __ugni_buffer_get_private(photonBuffer buf, photonBufferPriv ret_priv) {
+static int __ugni_buffer_get_private(photonBI buf, photonBufferPriv ret_priv) {
+  gni_mem_handle_t *mdh = (gni_mem_handle_t*)buf->priv_ptr;
   if (buf->is_registered) {
-    (*ret_priv).key0 = buf->mdh.qword1;
-    (*ret_priv).key1 = buf->mdh.qword2;
+    (*ret_priv).key0 = mdh->qword1;
+    (*ret_priv).key1 = mdh->qword2;
     return PHOTON_OK;
   }
 
