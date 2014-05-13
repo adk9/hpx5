@@ -25,7 +25,11 @@
 
 #define likely(S) (__builtin_expect(S, 1))
 #define unlikely(S) (__builtin_expect(S, 0))
+#if (GCC_VERSION >= 40500) || defined(__INTEL_COMPILER)
 #define unreachable() __builtin_unreachable()
+#else
+#define unreachable()
+#endif
 #define ctzl(N) __builtin_ctzl(N)
 
 #endif // HPX_BUILTINS_H
