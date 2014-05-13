@@ -25,7 +25,7 @@
 
 #define likely(S) (__builtin_expect(S, 1))
 #define unlikely(S) (__builtin_expect(S, 0))
-#if (GCC_VERSION >= 40500) || defined(__INTEL_COMPILER)
+#if (GCC_VERSION >= 40500) || defined(__INTEL_COMPILER) || defined(__clang__)
 #define unreachable() __builtin_unreachable()
 #else
 #define unreachable()
