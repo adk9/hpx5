@@ -15,6 +15,15 @@ AC_SUBST(CLEANFILES)
 # ---------------------------------------------------------------------------
 # Detect the programming environment.
 # ---------------------------------------------------------------------------
+
+AS_IF([test -z "$PE_ENV"],
+ [AS_CASE([$CC],
+   [craycc*], [AC_SUBST([PE_ENV],["CRAY"])],
+     [pgcc*], [AC_SUBST([PE_ENV],["PGI"])],
+      [icc*], [AC_SUBST([PE_ENV],["INTEL"])],
+      [gcc*], [AC_SUBST([PE_ENV],["GNU"])],
+              [AC_SUBST([PE_ENV],["UNKNOWN"])])])
+
 cflags_save="$CFLAGS"
 AC_MSG_CHECKING([for programming environment])
 AS_CASE([$PE_ENV],
@@ -26,8 +35,9 @@ AS_CASE([$PE_ENV],
               hpx_pe_env="PGI"],
     [INTEL*], [AC_SUBST([CC],["icc"])
               hpx_pe_env="INTEL"],
-    [AC_SUBST([CC],["gcc"])
-     hpx_pe_env="GNU"])
+    [GNU*],   [AC_SUBST([CC],["gcc"])
+              hpx_pe_env="GNU"],
+    [hpx_pe_env="GNU"])
 CFLAGS="$CFLAGS $cflags_save"
 AC_MSG_RESULT([$hpx_pe_env])
 
