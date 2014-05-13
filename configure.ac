@@ -30,6 +30,10 @@ AS_CASE([$PE_ENV],
     [CRAY*],  [AC_SUBST([CC],["craycc"])
               # ADK: We need this for ASM labels.
               CFLAGS="-hgnu"
+              # Force static linking with craycc as it does not support
+              # flags that LT adds for building a shared library.
+              AC_DISABLE_SHARED
+              AC_ENABLE_STATIC
               hpx_pe_env="CRAY"],
     [PGI*],   [AC_SUBST([CC],["pgcc"])
               hpx_pe_env="PGI"],
@@ -167,7 +171,7 @@ AS_CASE([$host_os],
 
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
-    
+
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
 # -----------------------------------------------------------------------------
