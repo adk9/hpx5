@@ -49,7 +49,7 @@
   } while (0)
 
 #define sync_swap(addr, val, mm)                \
-  __sync_val_compare_and_swap(addr, *addr, val)
+  __sync_lock_test_and_set(addr, val)
 
 #define sync_cas(addr, from, to, onsuccess, onfailure) \
   (__sync_val_compare_and_swap(addr, from, to) == from)
