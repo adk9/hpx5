@@ -207,11 +207,9 @@ AC_CONFIG_FILES([
   include/libsync/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  examples/hpx/Makefile	
 ])
 # src/Makefile
 # src/libhpx.pc
-# examples/thread/Makefile
 
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
