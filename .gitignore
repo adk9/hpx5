@@ -33,27 +33,17 @@
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
-
-# /examples/thread
-/examples/thread/.deps
-/examples/thread/fibonacci
-/examples/thread/Makefile
-/examples/thread/Makefile.in
-
-# /examples/hpx
-/examples/hpx/.deps
-/examples/hpx/fibonaccihpx
-/examples/hpx/pingponghpx
-/examples/hpx/allreduce
-/examples/hpx/countdown
-/examples/hpx/seqspawn
-/examples/hpx/parspawn
-/examples/hpx/future
-/examples/hpx/agas_test
-/examples/hpx/memput
-/examples/hpx/memget
-/examples/hpx/Makefile
-/examples/hpx/Makefile.in
+/examples/fibonaccihpx
+/examples/pingponghpx
+/examples/allreduce
+/examples/countdown
+/examples/seqspawn
+/examples/parspawn
+/examples/future
+/examples/agas_test
+/examples/memput
+/examples/memget
+/examples/guppie
 
 # /include/
 /include/stamp-h1
