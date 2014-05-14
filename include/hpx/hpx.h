@@ -53,7 +53,7 @@ typedef struct {
     .offset = (OFFSET),                          \
     .base_id = (BASE),                           \
     .block_bytes = (BYTES)                       \
-    }
+  }
 
 static inline hpx_addr_t hpx_addr_init(uint64_t offset, uint32_t base,
                                        uint32_t bytes) {
@@ -198,18 +198,20 @@ typedef struct {
   hpx_transport_t transport;                  // transport to use
   hpx_wait_t           wait;                  // when to wait for a debugger
   hpx_locality_t    wait_at;                  // locality to wait on
+  int            statistics;                  // print statistics
 } hpx_config_t;
 
 #define HPX_CONFIG_DEFAULTS {                   \
-    .cores = 0,                                 \
-    .threads = 0,                               \
+    .cores       = 0,                           \
+    .threads     = 0,                           \
     .backoff_max = 1024,                        \
     .stack_bytes = 65536,                       \
-    .gas = HPX_GAS_PGAS,                        \
-    .transport = HPX_TRANSPORT_DEFAULT,         \
-    .wait = HPX_WAIT_NONE,                      \
-    .wait_at = HPX_LOCALITY_NONE                \
-    }
+    .gas         = HPX_GAS_PGAS,                \
+    .transport   = HPX_TRANSPORT_DEFAULT,       \
+    .wait        = HPX_WAIT_NONE,               \
+    .wait_at     = HPX_LOCALITY_NONE            \
+    .statistics  = true                         \
+  }
 
 /// ----------------------------------------------------------------------------
 /// HPX system interface.

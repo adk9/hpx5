@@ -15,6 +15,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libhpx/stats.h"
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/scheduler.h
@@ -64,20 +65,22 @@ typedef struct scheduler {
   unsigned int     backoff_max;
   struct worker      **workers;
   struct barrier      *barrier;
+  scheduler_stats_t      stats;
 } scheduler_t;
 
 
 /// ----------------------------------------------------------------------------
 /// Allocate and initialize a new scheduler.
 ///
-/// @param      cores - the number of processors this scheduler will run on
-/// @param    workers - the number of worker threads to start
-/// @param stack_size - the size of the stacks to allocate
-/// @param       pmap - a function to map worker id to processor
-/// @returns          - the scheduler object, or NULL if there was an error.
+/// @param       cores - the number of processors this scheduler will run on
+/// @param     workers - the number of worker threads to start
+/// @param  stack_size - the size of the stacks to allocate
+/// @param backoff_max - the upper bound for worker backoff
+/// @param  statistics - the flag that indicates if statistics are on or off.
+/// @returns           - the scheduler object, or NULL if there was an error.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size,
-                                        unsigned int backoff_max);
+                                        unsigned int backoff_max, bool stats);
 
 
 /// ----------------------------------------------------------------------------
@@ -184,6 +187,5 @@ HPX_INTERNAL hpx_status_t scheduler_wait(struct lco *lco)
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL void scheduler_signal(struct lco *lco, hpx_status_t status)
   HPX_NON_NULL(1);
-
 
 #endif // LIBHPX_SCHEDULER_H
