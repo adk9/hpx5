@@ -32,7 +32,8 @@
 
 
 scheduler_t *
-scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max)
+scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
+              bool stats)
 {
   scheduler_t *s = malloc(sizeof(*s));
   if (!s) {
@@ -59,6 +60,8 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max)
     scheduler_delete(s);
     return NULL;
   }
+
+  s->stats = (scheduler_stats_t) SCHEDULER_STATS_INIT;
 
   thread_set_stack_size(stack_size);
   dbg_log("Initialized a new scheduler.\n");
@@ -109,9 +112,13 @@ void scheduler_shutdown(scheduler_t *sched) {
 
 
 void scheduler_join(scheduler_t *sched) {
+  int me = hpx_get_my_thread_id();
   // wait for the workers to shutdown
-  for (int i = 0; i < sched->n_workers; ++i)
+  for (int i = 0; i < sched->n_workers; ++i) {
+    if (i == me)
+      continue;
     worker_join(sched->workers[i]);
+  }
 }
 
 
