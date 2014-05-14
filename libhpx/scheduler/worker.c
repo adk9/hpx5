@@ -39,6 +39,7 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
+#include "libhpx/stats.h"
 #include "libhpx/system.h"
 #include "lco.h"
 #include "thread.h"
@@ -48,62 +49,6 @@
 typedef SYNC_ATOMIC(int) atomic_int_t;
 typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 
-typedef struct {
-  unsigned long    spins;
-  unsigned long   spawns;
-  unsigned long   steals;
-  unsigned long   stacks;
-  unsigned long     mail;
-  unsigned long  started;
-  unsigned long finished;
-  unsigned long backoffs;
-  double         backoff;
-} _counts_t;
-
-#define _COUNTS_INIT {                          \
-    .spins = 0,                                 \
-    .spawns = 0,                                \
-    .steals = 0,                                \
-    .stacks = 0,                                \
-    .mail = 0,                                  \
-    .started = 0,                               \
-    .finished = 0,                              \
-    .backoffs = 0,                              \
-    .backoff = 0.0                              \
-    }
-
-static void _accum_counts(_counts_t *lhs, const _counts_t *rhs) {
-  lhs->spins += rhs->spins;
-  lhs->spawns += rhs->spawns;
-  lhs->steals += rhs->steals;
-  lhs->stacks += rhs->stacks;
-  lhs->mail += rhs->mail;
-  lhs->started += rhs->started;
-  lhs->finished += rhs->finished;
-  lhs->backoffs += rhs->backoffs;
-  lhs->backoff += rhs->backoff;
-}
-
-static _counts_t _total_counts = {0};
-
-static void _print_counts(hpx_locality_t loc, int id, const _counts_t *counts) {
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  sync_tatas_acquire(&lock);
-  printf("node %d, ", loc);
-  printf("thread %d, ", id);
-  printf("spins: %lu, ", counts->spins);
-  printf("spawns: %lu, ", counts->spawns);
-  printf("steals: %lu, ", counts->steals);
-  printf("stacks: %lu, ", counts->stacks);
-  printf("mail: %lu, ", counts->mail);
-  printf("started: %lu, ", counts->started);
-  printf("finished: %lu, ", counts->finished);
-  printf("backoffs: %lu (%.1fms)", counts->backoffs, counts->backoff);
-  printf("\n");
-  fflush(stdout);
-  _accum_counts(&_total_counts, counts);
-  sync_tatas_release(&lock);
-}
 
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
@@ -135,9 +80,7 @@ static __thread struct worker {
   chase_lev_ws_deque_t work;                    // my work
   two_lock_queue_t    inbox;                    // work sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
-
-  // statistics
-  _counts_t          counts;
+  scheduler_stats_t   stats;                    // scheduler statistics
 } self = {
   .thread    = 0,
   .id        = -1,
@@ -151,7 +94,7 @@ static __thread struct worker {
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox     = {{0}},
   .shutdown  = 0,
-  .counts    = _COUNTS_INIT
+  .stats     = SCHEDULER_STATS_INIT
 };
 
 
@@ -246,7 +189,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   }
   else {
     stack = thread_new(p, _thread_enter);
-    ++self.counts.stacks;
+    ++self.stats.stacks;
   }
   p->stack = stack;
   return p;
@@ -265,8 +208,8 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 static void _backoff(void) {
   hpx_time_t now = hpx_time_now();
   sync_backoff(self.backoff);
-  self.counts.backoff += hpx_time_elapsed_ms(now);
-  ++self.counts.backoffs;
+  self.stats.backoff += hpx_time_elapsed_ms(now);
+  ++self.stats.backoffs;
 }
 
 
@@ -286,7 +229,7 @@ static hpx_parcel_t *_steal(void) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
     self.backoff = _max(1, self.backoff >> 1);
-    ++self.counts.steals;
+    ++self.stats.steals;
   }
   else {
     self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
@@ -310,7 +253,7 @@ static hpx_parcel_t *_network(void) {
 static void _get_mail(void) {
   lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
   while (node) {
-    ++self.counts.mail;
+    ++self.stats.mail;
     hpx_parcel_t *p = _lco_node_put(node);
     sync_chase_lev_ws_deque_push(&self.work, p);
     node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
@@ -412,7 +355,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
       goto exit;
 
   // statistically-speaking, we consider this condition to be a spin
-  ++self.counts.spins;
+  ++self.stats.spins;
 
   // return final, if it was specified
   if (final) {
@@ -466,7 +409,7 @@ void *worker_run(scheduler_t *sched) {
   sync_two_lock_queue_init(&self.inbox, NULL);
 
   // publish my self structure so other people can steal from me
-  here->sched->workers[self.id] = &self;
+  sched->workers[self.id] = &self;
 
   // set this thread's affinity
   if (self.core_id > 0)
@@ -508,11 +451,15 @@ void *worker_run(scheduler_t *sched) {
 
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
-  _print_counts(here->rank, self.id, &self.counts);
 
-  if (sync_barrier_join(here->sched->barrier, self.id)) {
-    printf("<totals> ");
-    _print_counts(here->rank, self.id, &_total_counts);
+  // print worker stats and accumulate into total stats 
+  scheduler_print_stats(self.id, &self.stats);
+  scheduler_accum_stats(sched, &self.stats);
+
+  // print scheduler statistics, if requested.
+  if (!sync_barrier_join(sched->barrier, self.id)) {
+    printf("<totals>");
+    scheduler_print_stats(0, &sched->stats);
   }
 
   sync_chase_lev_ws_deque_fini(&self.work);
@@ -549,8 +496,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
-  self.counts.
-  spawns++;
+  self.stats.spawns++;
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
 
@@ -734,6 +680,9 @@ void hpx_thread_exit(int status) {
   hpx_abort();
 }
 
+scheduler_stats_t *thread_get_stats(void) {
+  return &self.stats;
+}
 
 hpx_parcel_t *scheduler_current_parcel(void) {
   return self.current;
