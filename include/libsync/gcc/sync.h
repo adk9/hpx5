@@ -25,22 +25,26 @@
   ====================================================================
 */
 
-/* no memory model */
+/* only pay attention in sync_load/sync_store */
 #define SYNC_RELAXED 0
-#define SYNC_CONSUME 0
-#define SYNC_ACQ_REL 0
-#define SYNC_SEQ_CST 0
-#define SYNC_ACQUIRE 0
-#define SYNC_RELEASE 0
+#define SYNC_CONSUME 1
+#define SYNC_ACQ_REL 2
+#define SYNC_SEQ_CST 3
+#define SYNC_ACQUIRE 4
+#define SYNC_RELEASE 5
 
 /*
  * Extremely annoying that val is required here, but without using GNU
  * extensions I can't figure out a good way to deal with the compiler barrier.
  */
+#ifdef __x86_64__
 #define sync_load(val, addr, mm) do {           \
     __asm volatile ("":::"memory");             \
     val = *addr;                                \
   } while (0)
+#else
+#error sync_load not implemented for your processor
+#endif
 
 /*
  * Synchronizing a store requires that all previous operations complete before
@@ -49,10 +53,14 @@
  * that the compiler understands not to reorder the store with previous
  * operations.
  */
+#ifdef __x86_64__
 #define sync_store(addr, val, mm) do {              \
-    *addr = val;                                    \
     __asm volatile ("":::"memory");                 \
+    *addr = val;                                    \
   } while (0)
+#else
+#error sync store not implemented for your processor
+#endif
 
 #define sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
 
