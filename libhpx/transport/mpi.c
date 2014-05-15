@@ -185,6 +185,20 @@ static void _mpi_progress(transport_class_t *t, bool flush) {
     network_progress_flush(mpi->progress);
 }
 
+
+static void *_mpi_malloc(transport_class_t *t, size_t bytes, size_t align) {
+  void *p = NULL;
+  if (posix_memalign(&p, align, bytes))
+    dbg_log("failed network allocation.\n");
+  return p;
+}
+
+
+static void _mpi_free(transport_class_t *t, void *p) {
+  free(p);
+}
+
+
 transport_class_t *transport_new_mpi(void) {
   int val = 0;
   MPI_Initialized(&val);
@@ -215,6 +229,8 @@ transport_class_t *transport_new_mpi(void) {
   mpi->class.test           = _mpi_test;
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
+  mpi->class.malloc         = _mpi_malloc;
+  mpi->class.free           = _mpi_free;
 
   mpi->progress             = network_progress_new();
   if (!mpi->progress) {

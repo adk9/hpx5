@@ -85,6 +85,20 @@ static int _test(transport_class_t *t, void *request, int *success) {
 static void _progress(transport_class_t *transport, bool flush) {
 }
 
+
+static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
+  void *p = NULL;
+  if (posix_memalign(&p, align, bytes))
+    dbg_log("failed network allocation.\n");
+  return p;
+}
+
+
+static void _free(transport_class_t *t, void *p) {
+  free(p);
+}
+
+
 static transport_class_t _smp = {
   .type           = HPX_TRANSPORT_SMP,
   .id             = _id,
@@ -101,6 +115,8 @@ static transport_class_t _smp = {
   .test           = _test,
   .testsome       = NULL,
   .progress       = _progress,
+  .malloc         = _malloc,
+  .free           = _free
 };
 
 

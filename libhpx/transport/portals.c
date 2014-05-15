@@ -441,6 +441,20 @@ static void _progress(transport_class_t *t, bool flush) {
   hpx_lco_delete(and, HPX_NULL);
 }
 
+
+static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
+  void *p = NULL;
+  if (posix_memalign(&p, align, bytes))
+    dbg_log("failed network allocation.\n");
+  return p;
+}
+
+
+static void _free(transport_class_t *t, void *p) {
+  free(p);
+}
+
+
 transport_class_t *transport_new_portals(void) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
@@ -465,6 +479,8 @@ transport_class_t *transport_new_portals(void) {
   portals->class.test           = _test;
   portals->class.testsome       = NULL;
   portals->class.progress       = _progress;
+  portals->class.malloc         = _malloc;
+  portals->class.free           = _free;
 
   portals->interface            = PTL_INVALID_HANDLE;
   portals->sendq                = PTL_INVALID_HANDLE;
@@ -474,7 +490,7 @@ transport_class_t *transport_new_portals(void) {
 
   _send_progress_action = HPX_REGISTER_ACTION(_send_progress);
   _recv_progress_action = HPX_REGISTER_ACTION(_recv_progress);
-  
+
   _portals_init(portals);
   _set_map(portals);
   _setup_portals(portals);

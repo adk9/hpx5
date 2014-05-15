@@ -114,6 +114,13 @@ HPX_INTERNAL void *network_malloc(size_t bytes, size_t alignment)
 
 
 /// ----------------------------------------------------------------------------
+/// Free network allocated memory.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void network_free(void *p)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
 /// Complete a parcel send over the network.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(network_class_t *network)
