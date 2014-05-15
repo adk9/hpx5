@@ -1,7 +1,7 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 examples_PROGRAMS    = fibonaccihpx pingponghpx allreduce countdown seqspawn \
-                       parspawn future agas_test memput memget guppie
+                       parspawn future agas_test memput memget guppie sendrecv
 
 fibonaccihpx_SOURCES = fibonacci.c
 pingponghpx_SOURCES  = pingpong.c
@@ -14,6 +14,7 @@ agas_test_SOURCES    = agas_test.c
 memput_SOURCES       = memput.c
 memget_SOURCES       = memget.c
 guppie_SOURCES       = guppie.c
+sendrecv_SOURCES     = sendrecv.c
 
 # allreduce uses MPI directly
 allreduce_LDADD      = $(top_builddir)/libhpx/libhpx.la @MPI_LIBS@
@@ -27,6 +28,7 @@ agas_test_LDADD      = $(top_builddir)/libhpx/libhpx.la
 memput_LDADD         = $(top_builddir)/libhpx/libhpx.la
 memget_LDADD         = $(top_builddir)/libhpx/libhpx.la
 guppie_LDADD         = $(top_builddir)/libhpx/libhpx.la
+sendrecv_LDADD       = $(top_builddir)/libhpx/libhpx.la
 
 AM_CPPFLAGS          = -I$(top_srcdir)/include
 AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)

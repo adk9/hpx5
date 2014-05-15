@@ -44,6 +44,7 @@
 /examples/memput
 /examples/memget
 /examples/guppie
+/examples/sendrecv
 
 # /include/
 /include/stamp-h1
