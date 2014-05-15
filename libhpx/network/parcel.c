@@ -28,8 +28,6 @@
 
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "allocator.h"
-
 
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
   p->action = action;
