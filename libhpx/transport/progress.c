@@ -28,7 +28,6 @@
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
-#include "block.h"
 #include "progress.h"
 
 
@@ -68,11 +67,11 @@ void request_delete(request_t *r) {
 /// allocation if we don't unpin them).
 /// ----------------------------------------------------------------------------
 static void _pin(transport_class_t *transport, hpx_parcel_t *parcel) {
-  block_t *block = block_from_parcel(parcel);
-  if (!block_is_pinned(block)) {
-    transport_pin(transport, block, block_get_size(block));
-    block_set_pinned(block, true);
-  }
+  // block_t *block = block_from_parcel(parcel);
+  // if (!block_is_pinned(block)) {
+  //   transport_pin(transport, block, block_get_size(block));
+  //   block_set_pinned(block, true);
+  // }
 }
 
 
