@@ -56,7 +56,6 @@ static __thread _chan_t *_free = NULL;
 /// Internal actions.
 static hpx_action_t _send        = 0;
 static hpx_action_t _recv        = 0;
-static hpx_action_t _async_set   = 0;
 static hpx_action_t _block_init  = 0;
 static hpx_action_t _blocks_init = 0;
 
@@ -79,39 +78,19 @@ static void _delete(_chan_t *c) {
 }
 
 
-typedef struct {
-  _chan_t      *chan;
-  hpx_status_t  status;
-  void         *src;
-  int           size;
-} _set_args_t;
-
-
-static int _async_set_action(_set_args_t *args) {
-  _chan_t *c = args->chan;
-
-  void *buf = malloc(args->size);
-  assert(buf);
-  memcpy(buf, args->src, args->size);
-
-  lco_lock(&c->lco);
-  _QUEUE_ENQUEUE(&c->buf, buf);
-
-  if (!lco_is_set(&c->lco))
-    scheduler_signal(&c->lco, args->status);
-
-  lco_unlock(&c->lco);
-  hpx_thread_continue(0, NULL);
-}
-
 /// Copies the @p from pointer into channel's buffer. This is
 /// equivalent to the send operation on a channel.
 static void _set(_chan_t *c, int size, const void *from, hpx_status_t status, hpx_addr_t sync)
 {
   assert(from);
-  _set_args_t args = { .chan = c, .status = status,
-                       .src = (void*)from, .size = size };
-  hpx_call(HPX_HERE, _async_set, &args, sizeof(_set_args_t), sync);
+  lco_lock(&c->lco);
+
+  _QUEUE_ENQUEUE(&c->buf, (void*)from);
+
+  if (!lco_is_set(&c->lco))
+    scheduler_signal(&c->lco, status);
+
+  lco_unlock(&c->lco);
 }
 
 
@@ -152,15 +131,16 @@ static void _init(_chan_t *c) {
 
 static int _send_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont();
   _chan_t *chan;
   if (!hpx_gas_try_pin(target, (void**)&chan))
     return HPX_RESEND;
 
   uint32_t size = hpx_thread_current_args_size();
-  _set_args_t sargs = { .chan = chan, .status = HPX_SUCCESS,
-                        .src = (void*)args, .size = size };
-  _async_set_action(&sargs);
+  void *value = malloc(size);
+  assert(value);
+  memcpy(value, args, size);
+
+  _set(chan, size, value, HPX_SUCCESS);
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
@@ -175,8 +155,7 @@ static int _recv_action(int *size) {
     return HPX_RESEND;
 
   uintptr_t ptr;
-  hpx_status_t status = _get(chan, *size, &ptr);
-  // free ptr?
+  hpx_status_t status = _get(chan, *size, &value);
   hpx_gas_unpin(target);
   if (status == HPX_SUCCESS)
     hpx_thread_continue(*size, (void*)ptr);
@@ -224,7 +203,6 @@ static int _blocks_init_action(uint32_t *args) {
 static void HPX_CONSTRUCTOR _register_actions(void) {
   _send        = HPX_REGISTER_ACTION(_send_action);
   _recv        = HPX_REGISTER_ACTION(_recv_action);
-  _async_set   = HPX_REGISTER_ACTION(_async_set_action);
   _block_init  = HPX_REGISTER_ACTION(_block_init_action);
   _blocks_init = HPX_REGISTER_ACTION(_blocks_init_action);
 }
@@ -289,8 +267,7 @@ void hpx_lco_chan_send(hpx_addr_t chan, const void *value, int size, hpx_addr_t 
     hpx_gas_unpin(chan);
   }
   else {
-    // ugh, we don't have local completion semantics for parcels.
-    hpx_call(chan, _send, value, size, HPX_NULL);
+    hpx_call(chan, _send, value, size, sync);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
   }

@@ -79,6 +79,7 @@ static int _receiver_action(hpx_addr_t *args) {
   hpx_thread_set_affinity(1);
 
   for (int i=0;i<LIMIT;++i) {
+    double *buf;
     for (int k=0;k<avg;k++) {
       hpx_addr_t done = hpx_lco_future_new(0);
       // 10.6 microseconds
@@ -87,12 +88,12 @@ static int _receiver_action(hpx_addr_t *args) {
       // 106 microseconds
       int delay = 10000;
       hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
-      double *buf = hpx_lco_chan_recv(chan, 0);
+      buf = hpx_lco_chan_recv(chan, 0);
       assert(buf);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
-      free(buf);
     }
+    free(buf);
   }
   hpx_thread_continue(0, NULL);
 }
@@ -130,7 +131,6 @@ static int _main_action(void *args) {
       hpx_lco_wait(sfut[k]);
       hpx_lco_delete(sfut[k], HPX_NULL);
     }
-    free(buf);
   }
 
   hpx_lco_wait(done);
