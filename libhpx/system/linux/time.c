@@ -37,26 +37,41 @@ hpx_time_now(void) {
 }
 
 static double
-_ns(hpx_time_t from, hpx_time_t to) {
+_diff_ns(hpx_time_t from, hpx_time_t to) {
   return (double)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
 }
 
 double
-hpx_time_us(hpx_time_t from, hpx_time_t to) {
-  return _ns(from, to)/1e3;
+hpx_time_diff_us(hpx_time_t from, hpx_time_t to) {
+  return _diff_ns(from, to)/1e3;
 }
 
 double
-hpx_time_ms(hpx_time_t from, hpx_time_t to) {
-  return _ns(from, to)/1e6;
+hpx_time_diff_ms(hpx_time_t from, hpx_time_t to) {
+  return _diff_ns(from, to)/1e6;
 }
 
 double
 hpx_time_elapsed_us(hpx_time_t from) {
-  return hpx_time_us(from, hpx_time_now());
+  return hpx_time_diff_us(from, hpx_time_now());
 }
 
 double
 hpx_time_elapsed_ms(hpx_time_t from) {
-  return hpx_time_ms(from, hpx_time_now());
+  return hpx_time_diff_ms(from, hpx_time_now());
+}
+
+static double
+_ns(hpx_time_t time) {
+  return (time.tv_sec * 1e9) + time.tv_nsec;
+}
+
+double
+hpx_time_us(hpx_time_t time) {
+  return _ns(time)/1e3;
+}
+
+double
+hpx_time_ms(hpx_time_t time) {
+  return _ns(time)/1e6;
 }

@@ -589,8 +589,10 @@ typedef uint64_t hpx_time_t;
 
 
 hpx_time_t hpx_time_now(void);
-double hpx_time_us(hpx_time_t from, hpx_time_t to);
-double hpx_time_ms(hpx_time_t from, hpx_time_t to);
+double hpx_time_us(hpx_time_t from);
+double hpx_time_ms(hpx_time_t from);
+double hpx_time_diff_us(hpx_time_t from, hpx_time_t to);
+double hpx_time_diff_ms(hpx_time_t from, hpx_time_t to);
 double hpx_time_elapsed_us(hpx_time_t from);
 double hpx_time_elapsed_ms(hpx_time_t from);
 

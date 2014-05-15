@@ -32,23 +32,52 @@ hpx_time_now(void) {
 }
 
 static uint64_t
-_elapsed_ns(hpx_time_t from) {
+_diff_ns(hpx_time_t from, hpx_time_t to) {
   static mach_timebase_info_data_t tbi;
   if (tbi.denom == 0)
     (void) mach_timebase_info(&tbi);
-
-  hpx_time_t now = hpx_time_now();
   assert(tbi.denom != 0);
-  return ((now - from) * tbi.numer/tbi.denom);
+
+  return ((to - from) * tbi.numer/tbi.denom);
+}
+
+double
+hpx_time_diff_us(hpx_time_t from, hpx_time_t to) {
+  return _diff_ns(from, to)/1e3;
+}
+
+double
+hpx_time_diff_ms(hpx_time_t from, hpx_time_t to) {
+  return _diff_ns(from, to)/1e6;
 }
 
 double
 hpx_time_elapsed_us(hpx_time_t from) {
-  return _elapsed_ns(from)/1e3;
+  return hpx_time_diff_us(from, hpx_time_now());
 }
 
 double
 hpx_time_elapsed_ms(hpx_time_t from) {
-  return _elapsed_ns(from)/1e6;
+  return hpx_time_diff_ms(from, hpx_time_now());
+}
+
+static uint64_t
+_ns(hpx_time_t time) {
+  static mach_timebase_info_data_t tbi;
+  if (tbi.denom == 0)
+    (void) mach_timebase_info(&tbi);
+  assert(tbi.denom != 0);
+
+  return (time * tbi.numer)/tbi.denom;
+}
+
+double
+hpx_time_us(hpx_time_t time) {
+  return _ns(time)/1e3;
+}
+
+double
+hpx_time_ms(hpx_time_t time) {
+  return _ns(time)/1e6;
 }
 
