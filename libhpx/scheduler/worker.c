@@ -452,14 +452,15 @@ void *worker_run(scheduler_t *sched) {
   // have to join the barrier before deleting my deque because someone might be
   // in the middle of a steal operation
 
-  // print worker stats and accumulate into total stats 
+  // print worker stats and accumulate into total stats
   scheduler_print_stats(self.id, &self.stats);
   scheduler_accum_stats(sched, &self.stats);
 
-  // print scheduler statistics, if requested.
-  if (!sync_barrier_join(sched->barrier, self.id)) {
-    printf("<totals>");
-    scheduler_print_stats(0, &sched->stats);
+  // print scheduler statistics, if requested (the barrier call returns non-zero
+  // to the last thread to arrive
+  if (sync_barrier_join(sched->barrier, self.id)) {
+    printf("<totals> ");
+    scheduler_print_stats(-1, &sched->stats);
   }
 
   sync_chase_lev_ws_deque_fini(&self.work);
