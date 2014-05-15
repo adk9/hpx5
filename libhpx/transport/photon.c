@@ -181,6 +181,20 @@ static void _progress(transport_class_t *t, bool flush) {
     network_progress_flush(photon->progress);
 }
 
+
+static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
+  void *p = NULL;
+  if (posix_memalign(&p, align, bytes))
+    dbg_log("failed network allocation.\n");
+  return p;
+}
+
+
+static void _free(transport_class_t *t, void *p) {
+  free(p);
+}
+
+
 transport_class_t *transport_new_photon(void) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
@@ -199,6 +213,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.test           = _test;
   photon->class.testsome       = NULL;
   photon->class.progress       = _progress;
+  photon->class.malloc         = _malloc;
+  photon->class.free           = _free;
 
   int val = 0;
   MPI_Initialized(&val);

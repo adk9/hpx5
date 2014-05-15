@@ -18,6 +18,7 @@
 #define TRANSPORT_ANY_SOURCE -1
 
 typedef struct transport_class transport_class_t;
+
 struct transport_class {
   hpx_transport_t type;
   void (*barrier)(void);
@@ -68,6 +69,12 @@ struct transport_class {
     HPX_NON_NULL(1, 3, 4);
 
   void (*progress)(transport_class_t *t, bool flush)
+    HPX_NON_NULL(1);
+
+  void *(*malloc)(transport_class_t *, size_t, size_t)
+    HPX_NON_NULL(1);
+
+  void (*free)(transport_class_t *t, void *p)
     HPX_NON_NULL(1);
 };
 
@@ -166,5 +173,18 @@ inline static void
 transport_barrier(transport_class_t *t) {
   t->barrier();
 }
+
+
+inline static void *
+transport_malloc(transport_class_t *t, size_t bytes, size_t align) {
+  return t->malloc(t, bytes, align);
+}
+
+
+inline static void
+transport_free(transport_class_t *t, void *p) {
+  t->free(t, p);
+}
+
 
 #endif // LIBHPX_TRANSPORT_H
