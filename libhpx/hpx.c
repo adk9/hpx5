@@ -39,7 +39,6 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
-#include "network/allocator.h"
 #include "network/servers.h"
 
 
@@ -292,12 +291,13 @@ void hpx_parcel_send(hpx_parcel_t *p) {
 hpx_parcel_t *hpx_parcel_acquire(size_t size) {
   // get a parcel of the right size from the allocator, the returned parcel
   // already has its data pointer and size set appropriately
-  hpx_parcel_t *p = parcel_allocator_get(size);
+  // hpx_parcel_t *p = parcel_allocator_get(size);
+  hpx_parcel_t *p = malloc(sizeof(*p) + size);
   if (!p) {
     dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
     return NULL;
   }
-
+  memset(p, 0, sizeof(*p) + size);
   p->src    = here->rank;
   p->action = HPX_ACTION_NULL;
   p->target = HPX_HERE;
@@ -307,7 +307,8 @@ hpx_parcel_t *hpx_parcel_acquire(size_t size) {
 
 
 void hpx_parcel_release(hpx_parcel_t *p) {
-  parcel_allocator_put(p);
+  // parcel_allocator_put(p);
+  free(p);
 }
 
 
