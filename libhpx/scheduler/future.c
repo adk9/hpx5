@@ -104,7 +104,7 @@ static void _set(_future_t *f, int size, const void *from, hpx_status_t status)
 
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static hpx_action_t _get(_future_t *f, int size, void *out) {
+static hpx_status_t _get(_future_t *f, int size, void *out) {
   hpx_status_t status;
   lco_lock(&f->lco);
   if (!lco_is_set(&f->lco))
