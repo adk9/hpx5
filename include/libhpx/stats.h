@@ -13,10 +13,19 @@
 #ifndef LIBHPX_STATS_H
 #define LIBHPX_STATS_H
 
+#include "hpx/hpx.h"
+
 /// ----------------------------------------------------------------------------
-/// @file libhpx/scheduler/scheduler.h
+/// @file libhpx/scheduler/stats.h
 /// @brief The libhpx stats definitions.
 /// ----------------------------------------------------------------------------
+
+
+#ifdef ENABLE_PROFILING
+#define profile_ctr(e) e
+#else
+#define profile_ctr(e)
+#endif
 
 /// Forward declarations
 /// @{
