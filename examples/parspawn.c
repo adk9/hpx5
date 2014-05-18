@@ -37,9 +37,9 @@ static void _usage(FILE *stream) {
           "\t-h, this help display\n");
 }
 
-static hpx_action_t nop = 0;
-static hpx_action_t par_for = 0;
-static hpx_action_t par_main = 0;
+static hpx_action_t _nop     = 0;
+static hpx_action_t _par_for = 0;
+static hpx_action_t _main    = 0;
 
 static hpx_addr_t and;
 
@@ -48,50 +48,44 @@ static hpx_addr_t and;
 
 
 // The empty action
-static int
-nop_action(void *args)
-{
+static int _nop_action(void *args) {
   hpx_lco_and_set(and, HPX_NULL);
-  return HPX_SUCCESS;
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
 // A parallel-for operation.
-static int
-par_for_action(void *args) {
-  int n = *(int*)args;
-  hpx_addr_t addr = HPX_HERE;
+static int _par_for_action(int *args) {
+  int n = *args;
 
   if (n <= SEQ_CUTOFF) {
-    for (int i = 0; i < SEQ_CUTOFF; i++)
-      hpx_call(addr, nop, 0, 0, HPX_NULL);
-    return 0;
+    for (int i = 0; i < SEQ_CUTOFF; ++i)
+      hpx_call(HPX_HERE, _nop, 0, 0, HPX_NULL);
+    hpx_thread_exit(HPX_SUCCESS);
   }
 
   int nn = n/4;
-  hpx_call(addr, par_for, &nn, sizeof(nn), HPX_NULL);
-  hpx_call(addr, par_for, &nn, sizeof(nn), HPX_NULL);
-  hpx_call(addr, par_for, &nn, sizeof(nn), HPX_NULL);
+  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
+  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
+  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
   nn = n - (n/4)*3;
-  hpx_call(addr, par_for, &nn, sizeof(nn), HPX_NULL);
-  return HPX_SUCCESS;
+  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
+  hpx_thread_exit(HPX_SUCCESS);
 }
 
-static int
-par_main_action(void *args) {
-  int n = *(int*)args;
-  hpx_addr_t addr = HPX_HERE;
+static int _main_action(int *args) {
+  int n = *args;
   printf("parspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();
   and = hpx_lco_and_new(n);
-  hpx_call(addr, par_for, &n, sizeof(n), HPX_NULL);
+  hpx_call(HPX_HERE, _par_for, &n, sizeof(n), HPX_NULL);
   hpx_lco_wait(and);
   double time = hpx_time_elapsed_ms(clock)/1e3;
 
+  hpx_lco_delete(and, HPX_NULL);
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_lco_delete(and, HPX_NULL);
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }
@@ -109,9 +103,10 @@ int
 main(int argc, char *argv[])
 {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
-    .stack_bytes = 0
+    .cores       = 0,
+    .threads     = 0,
+    .stack_bytes = 0,
+    .gas         = HPX_GAS_NOGLOBAL
   };
 
   int opt = 0;
@@ -156,17 +151,16 @@ main(int argc, char *argv[])
      break;
   }
 
-  int e = hpx_init(&cfg);
-  if (e) {
+  if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
+    return 1;
   }
 
-  // register the fib action
-  nop = hpx_register_action("nop", nop_action);
-  par_main = hpx_register_action("par_main", par_main_action);
-  par_for = hpx_register_action("par_for", par_for_action);
+  // register the actions
+  _nop     = HPX_REGISTER_ACTION(_nop_action);
+  _main    = HPX_REGISTER_ACTION(_main_action);
+  _par_for = HPX_REGISTER_ACTION(_par_for_action);
 
   // run the main action
-  return hpx_run(par_main, &n, sizeof(n));
+  return hpx_run(_main, &n, sizeof(n));
 }

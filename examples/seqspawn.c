@@ -36,36 +36,29 @@ static void _usage(FILE *stream) {
           "\t-h, this help display\n");
 }
 
-static hpx_action_t nop = 0;
-static hpx_action_t seq_main = 0;
-
-static hpx_addr_t and;
+static hpx_action_t _nop  = 0;
+static hpx_action_t _main = 0;
 
 // The empty action
-static int
-nop_action(void *args)
-{
-  hpx_lco_and_set(and, HPX_NULL);
-  return HPX_SUCCESS;
+static int _nop_action(hpx_addr_t *args) {
+  hpx_thread_continue(0, NULL);
 }
 
-static int
-seq_main_action(void *args) {
-  int n = *(int*)args;
-  hpx_addr_t addr = HPX_HERE;
+static int _main_action(int *args) {
+  int n = *args;
   printf("seqspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t clock = hpx_time_now();
-  and = hpx_lco_and_new(n);
+  hpx_addr_t and = hpx_lco_and_new(n);
   for (int i = 0; i < n; i++)
-    hpx_call(addr, nop, 0, 0, HPX_NULL);
+    hpx_call(HPX_HERE, _nop, 0, 0, and);
   hpx_lco_wait(and);
   double time = hpx_time_elapsed_ms(clock)/1e3;
 
+  hpx_lco_delete(and, HPX_NULL);
   printf("seconds: %.7f\n", time);
   printf("localities:   %d\n", hpx_get_num_ranks());
   printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_lco_delete(and, HPX_NULL);
   hpx_shutdown(0);
   return HPX_SUCCESS;
 }
@@ -79,13 +72,12 @@ seq_main_action(void *args) {
 /// @param argv[1] - number of cores to use, '0' means use all
 /// @param argv[2] - n
 /// ----------------------------------------------------------------------------
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
-    .stack_bytes = 0
+    .cores       = 0,
+    .threads     = 0,
+    .stack_bytes = 0,
+    .gas         = HPX_GAS_NOGLOBAL
   };
 
   int opt = 0;
@@ -130,16 +122,15 @@ main(int argc, char *argv[])
      break;
   }
 
-  int e = hpx_init(&cfg);
-  if (e) {
+  if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
+    return 1;
   }
 
-  // register the fib action
-  nop = hpx_register_action("nop", nop_action);
-  seq_main = hpx_register_action("seq_main", seq_main_action);
+  // register the actions
+  _nop  = HPX_REGISTER_ACTION(_nop_action);
+  _main = HPX_REGISTER_ACTION(_main_action);
 
   // run the main action
-  return hpx_run(seq_main, &n, sizeof(n));
+  return hpx_run(_main, &n, sizeof(n));
 }
