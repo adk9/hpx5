@@ -189,7 +189,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   }
   else {
     stack = thread_new(p, _thread_enter);
-    ++self.stats.stacks;
+    profile_ctr(++self.stats.stacks);
   }
   p->stack = stack;
   return p;
@@ -209,7 +209,7 @@ static void _backoff(void) {
   hpx_time_t now = hpx_time_now();
   sync_backoff(self.backoff);
   self.stats.backoff += hpx_time_elapsed_ms(now);
-  ++self.stats.backoffs;
+  profile_ctr(++self.stats.backoffs);
 }
 
 
@@ -229,7 +229,7 @@ static hpx_parcel_t *_steal(void) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
     self.backoff = _max(1, self.backoff >> 1);
-    ++self.stats.steals;
+    profile_ctr(++self.stats.steals);
   }
   else {
     self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
@@ -253,7 +253,7 @@ static hpx_parcel_t *_network(void) {
 static void _get_mail(void) {
   lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
   while (node) {
-    ++self.stats.mail;
+    profile_ctr(++self.stats.mail);
     hpx_parcel_t *p = _lco_node_put(node);
     sync_chase_lev_ws_deque_push(&self.work, p);
     node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
@@ -355,7 +355,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
       goto exit;
 
   // statistically-speaking, we consider this condition to be a spin
-  ++self.stats.spins;
+  profile_ctr(++self.stats.spins);
 
   // return final, if it was specified
   if (final) {
@@ -497,7 +497,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
   assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
-  self.stats.spawns++;
+  profile_ctr(self.stats.spawns++);
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
 

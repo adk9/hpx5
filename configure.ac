@@ -102,7 +102,13 @@ AC_ARG_ENABLE([debug],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
-    
+
+AC_ARG_ENABLE([profiling],
+  [AS_HELP_STRING([--enable-profiling], [Enable profiling support @<:@default=no@:>@])],
+  [], [enable_profiling=no])
+AS_IF([test "x$enable_profiling" != xno],
+  [AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])])
+
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite], [Enable test suite (requires check) @<:@default=yes@:>@])],
   [], [enable_testsuite=yes])
