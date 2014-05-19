@@ -40,30 +40,6 @@ struct hpx_parcel {
 
 
 /// ----------------------------------------------------------------------------
-/// Initialize a parcel.
-///
-/// Parcels may be in place or out of place, and may have a larger data capacity
-/// than necessary. This call initializes the parcel correctly.
-///
-/// @param    p - the parcel pointer
-/// @param size - the payload size for the parcel
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void parcel_init(hpx_parcel_t *p, int size)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
-/// Finalize a parcel.
-///
-/// If the parcel is out of place, this will de-allocate the buffer.
-///
-/// @param p - the parcel pointer
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void parcel_fini(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
 /// Perform a pop operation on a list of parcels.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL hpx_parcel_t *parcel_pop(hpx_parcel_t **list)

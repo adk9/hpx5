@@ -73,16 +73,6 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 }
 
 
-void parcel_init(hpx_parcel_t *p, int size) {
-  p->stack = NULL;
-  p->size  = size;
-}
-
-
-void parcel_fini(hpx_parcel_t *p) {
-}
-
-
 static void _set_next(hpx_parcel_t *p, hpx_parcel_t *next) {
   memcpy(&p->data, &next, sizeof(next));
 }
