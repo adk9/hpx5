@@ -201,9 +201,10 @@ static bool _try_start_recv(progress_t *progress) {
   assert(src >= 0);
   assert(src < here->ranks);
   assert(src != TRANSPORT_ANY_SOURCE);
+  assert(size > 0);
 
   // allocate a parcel to provide the buffer to receive into
-  hpx_parcel_t *p = hpx_parcel_acquire(size - sizeof(hpx_parcel_t));
+  hpx_parcel_t *p = hpx_parcel_acquire(size - sizeof(*p));
   if (!p) {
     dbg_error("could not acquire a parcel of size %d during receive.\n", size);
     return false;

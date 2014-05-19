@@ -27,7 +27,7 @@ AS_IF([test -z "$PE_ENV"],
 cflags_save="$CFLAGS"
 AC_MSG_CHECKING([for programming environment])
 AS_CASE([$PE_ENV],
-    [CRAY*],  [AC_SUBST([CC],["craycc"])
+    [CRAY*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["craycc"])])
               # ADK: We need this for ASM labels.
               CFLAGS="-hgnu"
               # Force static linking with craycc as it does not support
@@ -35,11 +35,11 @@ AS_CASE([$PE_ENV],
               AC_DISABLE_SHARED
               AC_ENABLE_STATIC
               hpx_pe_env="CRAY"],
-    [PGI*],   [AC_SUBST([CC],["pgcc"])
+    [PGI*],   [AS_IF([test -z "$CC"], [AC_SUBST([CC],["pgcc"])])
               hpx_pe_env="PGI"],
-    [INTEL*], [AC_SUBST([CC],["icc"])
+    [INTEL*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["icc"])])
               hpx_pe_env="INTEL"],
-    [GNU*],   [AC_SUBST([CC],["gcc"])
+    [GNU*],   [AS_IF([test -z "$CC"], [AC_SUBST([CC],["gcc"])])
               hpx_pe_env="GNU"],
     [hpx_pe_env="GNU"])
 CFLAGS="$CFLAGS $cflags_save"
