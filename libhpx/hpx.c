@@ -296,8 +296,9 @@ hpx_parcel_t *hpx_parcel_acquire(size_t size) {
     dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
     return NULL;
   }
-  memset(p, 0, sizeof(*p) + size);
+  p->stack  = NULL;
   p->src    = here->rank;
+  p->size   = size;
   p->action = HPX_ACTION_NULL;
   p->target = HPX_HERE;
   p->cont   = HPX_NULL;
