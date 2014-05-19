@@ -1,7 +1,7 @@
 hpxdocdir=$(top_srcdir)/docs/man/man3/
 
-dist_man3_MANS = $(hpxdocdir)/hpx_parcel_t.3
-$(hpxdocdir)/hpx_parcel_t.3: doxyfile.stamp
+dist_man3_MANS = $(hpxdocdir)/hpx_parcel.3
+$(hpxdocdir)/hpx_parcel.3: doxyfile.stamp
 
 doxyfile.stamp:
 	$(DOXYGEN) Doxyfile
