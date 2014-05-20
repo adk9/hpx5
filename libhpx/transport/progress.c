@@ -279,13 +279,26 @@ static int HPX_NON_NULL(1, 2, 3) _test(progress_t *p,
   return _test(p, finish, curr, n + 1);
 }
 
+
+/// ----------------------------------------------------------------------------
+/// This call tries to "flush" the transport progress queues. It
+/// ensures that all of the pending sends are finished. This is
+/// particularly useful during shutdown where we need the
+/// "shutdown-action" parcels to go out before shutting down the
+/// scheduler.
+/// ----------------------------------------------------------------------------
 void network_progress_flush(progress_t *p) {
   bool send = true;
   while (send)
     send = _try_start_send(p);
 
+  // flush the pending sends
   while (p->pending_sends)
     _test(p, _finish_send, &p->pending_sends, 0);
+
+  // if we have any pending receives, we wait for those to finish as well
+  while (p->pending_recvs)
+    _test(p, _finish_recv, &p->pending_recvs, 0);
 }
 
 void network_progress_poll(progress_t *p) {
