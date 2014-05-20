@@ -79,9 +79,9 @@ uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
   hpx_addr_t lco = hpx_lco_future_new(n);
-  hpx_addr_t there = hpx_addr_add(table, i*sizeof(uint64_t));
+  hpx_addr_t there = hpx_addr_add(table, i*n);
   hpx_call(there, _memget, &n, sizeof(n), lco);
-  hpx_lco_get(lco, &val, sizeof(val));
+  hpx_lco_get(lco, &val, n);
   hpx_lco_delete(lco, HPX_NULL);
   return val;
 }
@@ -306,8 +306,8 @@ void _main_action(guppie_config_t *cfg)
   cputime += CPUSEC();
   s += WSEC();
   // Print timing results
-  printf ("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf) up/sec= %.0lf\n",
-          icputime, is, cputime, s, ((double)cfg->nupdate / s));
+  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf) up/sec= %.0lf\n",
+         icputime, is, cputime, s, ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
   temp = 0x1;
@@ -326,8 +326,8 @@ void _main_action(guppie_config_t *cfg)
       j++;
   }
 
-  printf ("Found %lu errors in %lu locations (%s).\n",
-          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
+  printf("Found %lu errors in %lu locations (%s).\n",
+         j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
   hpx_shutdown(0);
 }
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
     .cores       = 0,
     .threads     = 0,
     .stack_bytes = 0,
-    .gas         = HPX_GAS_AGAS
+    .gas         = HPX_GAS_PGAS
   };
 
   guppie_config_t guppie_cfg = {
