@@ -122,7 +122,7 @@ void network_barrier(network_class_t *network) {
 }
 
 
-routing_t *network_get_routing(network_class_t *network) {
+routing_class_t *network_get_routing(network_class_t *network) {
   return network->routing;
 }
 

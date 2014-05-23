@@ -135,8 +135,8 @@ HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(network_class_t *network)
   HPX_NON_NULL(1);
 
 
-struct routing;
-HPX_INTERNAL struct routing *network_get_routing(network_class_t *network)
+typedef struct routing_class routing_class_t;
+HPX_INTERNAL routing_class_t *network_get_routing(network_class_t *network)
   HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_H
