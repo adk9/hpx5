@@ -16,8 +16,7 @@ memget_SOURCES       = memget.c
 guppie_SOURCES       = guppie.c
 sendrecv_SOURCES     = sendrecv.c
 
-# allreduce uses MPI directly
-allreduce_LDADD      = $(top_builddir)/libhpx/libhpx.la @MPI_LIBS@
+allreduce_LDADD      = $(top_builddir)/libhpx/libhpx.la
 fibonaccihpx_LDADD   = $(top_builddir)/libhpx/libhpx.la
 pingponghpx_LDADD    = $(top_builddir)/libhpx/libhpx.la
 countdown_LDADD      = $(top_builddir)/libhpx/libhpx.la
