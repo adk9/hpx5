@@ -154,14 +154,14 @@ static int _send_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   hpx_addr_t cont = hpx_thread_current_cont();
   _chan_t *chan;
-  if (!hpx_addr_try_pin(target, (void**)&chan))
+  if (!hpx_gas_try_pin(target, (void**)&chan))
     return HPX_RESEND;
 
   uint32_t size = hpx_thread_current_args_size();
   _set_args_t sargs = { .chan = chan, .status = HPX_SUCCESS,
                         .src = (void*)args, .size = size };
   _async_set_action(&sargs);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -171,13 +171,13 @@ static int _recv_action(int *size) {
   hpx_addr_t cont = hpx_thread_current_cont();
 
   _chan_t *chan;
-  if (!hpx_addr_try_pin(target, (void**)&chan))
+  if (!hpx_gas_try_pin(target, (void**)&chan))
     return HPX_RESEND;
 
   uintptr_t ptr;
   hpx_status_t status = _get(chan, *size, &ptr);
   // free ptr?
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   if (status == HPX_SUCCESS)
     hpx_thread_continue(*size, (void*)ptr);
   else
@@ -191,7 +191,7 @@ static int _block_init_action(uint32_t *args) {
   _chan_t *channels = NULL;
 
   // application level forwarding if the future block has moved
-  if (!hpx_addr_try_pin(target, (void**)&channels))
+  if (!hpx_gas_try_pin(target, (void**)&channels))
     return HPX_RESEND;
 
   // sequentially initialize each future
@@ -199,7 +199,7 @@ static int _block_init_action(uint32_t *args) {
   for (uint32_t i = 0; i < block_size; ++i)
     _init(&channels[i]);
 
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -249,7 +249,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// Channels, unlike futures, can be written to multiple times. More
 /// notably, channels transfer the ownership of the buffer that is
 /// sent on a channel. It is the responsibility of the receiver to
-/// free a buffer that it receives on the channel. 
+/// free a buffer that it receives on the channel.
 ///
 /// @returns    - the global address of the allocated channel
 /// ----------------------------------------------------------------------------
@@ -260,7 +260,7 @@ hpx_addr_t hpx_lco_chan_new(void) {
     _free = (_chan_t*)local->lco.vtable;
     chan = HPX_HERE;
     char *base;
-    if (!hpx_addr_try_pin(chan, (void**)&base)) {
+    if (!hpx_gas_try_pin(chan, (void**)&base)) {
       dbg_error("Could not translate local block.\n");
       hpx_abort();
     }
@@ -268,14 +268,14 @@ hpx_addr_t hpx_lco_chan_new(void) {
     assert(chan.offset < chan.block_bytes);
   }
   else {
-    chan = hpx_alloc(sizeof(_chan_t));
-    if (!hpx_addr_try_pin(chan, (void**)&local)) {
+    chan = hpx_gas_alloc(sizeof(_chan_t));
+    if (!hpx_gas_try_pin(chan, (void**)&local)) {
       dbg_error("Could not pin newly allocated channel.\n");
       hpx_abort();
     }
   }
   _init(local);
-  hpx_addr_unpin(chan);
+  hpx_gas_unpin(chan);
   return chan;
 }
 
@@ -284,9 +284,9 @@ hpx_addr_t hpx_lco_chan_new(void) {
 /// ----------------------------------------------------------------------------
 void hpx_lco_chan_send(hpx_addr_t chan, const void *value, int size, hpx_addr_t sync) {
   _chan_t *c;
-  if (hpx_addr_try_pin(chan, (void**)&c)) {
+  if (hpx_gas_try_pin(chan, (void**)&c)) {
     _set(c, size, value, HPX_SUCCESS, sync);
-    hpx_addr_unpin(chan);
+    hpx_gas_unpin(chan);
   }
   else {
     // ugh, we don't have local completion semantics for parcels.
@@ -304,9 +304,9 @@ void *hpx_lco_chan_recv(hpx_addr_t chan, int size) {
   _chan_t *c;
   uintptr_t ptr;
 
-  if (hpx_addr_try_pin(chan, (void**)&c)) {
+  if (hpx_gas_try_pin(chan, (void**)&c)) {
     status = _get(c, size, &ptr);
-    hpx_addr_unpin(chan);
+    hpx_gas_unpin(chan);
   }
   else {
     hpx_addr_t proxy = hpx_lco_future_new(size);
@@ -330,7 +330,7 @@ hpx_lco_chan_array_new(int n, int block_size) {
   // perform the global allocation
   uint32_t blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
   uint32_t block_bytes = block_size * sizeof(_chan_t);
-  hpx_addr_t base = hpx_global_alloc(blocks, block_bytes);
+  hpx_addr_t base = hpx_gas_global_alloc(blocks, block_bytes);
 
   int ranks = here->ranks;
   // for each rank, send an initialization message
