@@ -14,8 +14,8 @@
 #define HPX_RUNTIME_H
 
 #include "hpx/attributes.h"
-#include "hpx/hpx_action.h"
-#include "hpx/hpx_config.h"
+#include "hpx/action.h"
+#include "hpx/config.h"
 
 /// ----------------------------------------------------------------------------
 /// HPX system interface.

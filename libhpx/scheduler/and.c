@@ -52,13 +52,13 @@ static void _delete(_and_t *and) {
 
 
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
-static void _set(_and_t *and, int size, const void *from, hpx_status_t status) {
+static void _set(_and_t *and, int size, const void *from, hpx_status_t status, hpx_addr_t sync) {
   uint64_t val; sync_load(val, &and->value, SYNC_ACQUIRE);
   if (val == 0)
     return;
 
   if (!sync_cas(&and->value, val, val - 1, SYNC_RELEASE, SYNC_RELAXED))
-    _set(and, size, from, status);
+    _set(and, size, from, status, sync);
 
   if (val - 1 != 0)
     return;

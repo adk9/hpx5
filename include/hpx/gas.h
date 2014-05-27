@@ -13,7 +13,7 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
-#include "hpx_addr.h"
+#include "hpx/addr.h"
 
 /// ----------------------------------------------------------------------------
 /// Performs address translation.

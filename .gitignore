@@ -45,6 +45,7 @@
 /examples/memget
 /examples/guppie
 /examples/sendrecv
+/examples/sendrecv-chan
 
 # /include/
 /include/stamp-h1

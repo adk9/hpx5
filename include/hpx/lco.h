@@ -13,8 +13,8 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
-#include "hpx/hpx_addr.h"
-#include "hpx/hpx_types.h"
+#include "hpx/addr.h"
+#include "hpx/types.h"
 
 /// ----------------------------------------------------------------------------
 /// LCO's are local control objects. All LCOs support the "set" and "delete"
@@ -138,5 +138,18 @@ hpx_addr_t hpx_lco_future_new(int size);
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i);
 void hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync);
+
+
+/// ----------------------------------------------------------------------------
+/// Channels.
+/// ----------------------------------------------------------------------------
+hpx_addr_t hpx_lco_chan_new(void);
+void hpx_lco_chan_send(hpx_addr_t chan, const void *value, int size, hpx_addr_t sync);
+void *hpx_lco_chan_recv(hpx_addr_t chan, int size);
+
+hpx_addr_t hpx_lco_chan_array_new(int n, int block_size);
+hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i);
+void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
+
 
 #endif

@@ -13,8 +13,8 @@
 #ifndef HPX_PARCEL_H
 #define HPX_PARCEL_H
 
-#include "hpx/hpx_action.h"
-#include "hpx/hpx_addr.h"
+#include "hpx/action.h"
+#include "hpx/addr.h"
 
 /// ----------------------------------------------------------------------------
 /// HPX parcel interface.
