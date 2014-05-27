@@ -77,7 +77,7 @@ static void _delete(_future_t *f) {
 
 /// Copies @p from into the appropriate location. Futures are single-assignment,
 /// so we only do this if the future isn't set yet.
-static void _set(_future_t *f, int size, const void *from, hpx_status_t status)
+static void _set(_future_t *f, int size, const void *from, hpx_status_t status, hpx_addr_t sync)
 {
   lco_lock(&f->lco);
   if (lco_is_set(&f->lco))
