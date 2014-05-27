@@ -204,7 +204,7 @@ static bool _try_start_recv(progress_t *progress) {
   assert(size > 0);
 
   // allocate a parcel to provide the buffer to receive into
-  hpx_parcel_t *p = hpx_parcel_acquire(size - sizeof(*p));
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size - sizeof(*p));
   if (!p) {
     dbg_error("could not acquire a parcel of size %d during receive.\n", size);
     return false;

@@ -154,7 +154,7 @@ static int _block_init_action(uint32_t *args) {
   _future_t *futures = NULL;
 
   // application level forwarding if the future block has moved
-  if (!hpx_addr_try_pin(target, (void**)&futures))
+  if (!hpx_gas_try_pin(target, (void**)&futures))
     return HPX_RESEND;
 
   // sequentially initialize each future
@@ -163,7 +163,7 @@ static int _block_init_action(uint32_t *args) {
   for (uint32_t i = 0; i < block_size; ++i)
     _init(&futures[i], size);
 
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -211,7 +211,7 @@ hpx_lco_future_new(int size) {
     _free = (_future_t*)local->lco.vtable;
     f = HPX_HERE;
     char *base;
-    if (!hpx_addr_try_pin(f, (void**)&base)) {
+    if (!hpx_gas_try_pin(f, (void**)&base)) {
       dbg_error("Could not translate local block.\n");
       hpx_abort();
     }
@@ -219,14 +219,14 @@ hpx_lco_future_new(int size) {
     assert(f.offset < f.block_bytes);
   }
   else {
-    f = hpx_alloc(sizeof(_future_t));
-    if (!hpx_addr_try_pin(f, (void**)&local)) {
+    f = hpx_gas_alloc(sizeof(_future_t));
+    if (!hpx_gas_try_pin(f, (void**)&local)) {
       dbg_error("Could not pin newly allocated future of size %d.\n", size);
       hpx_abort();
     }
   }
   _init(local, size);
-  hpx_addr_unpin(f);
+  hpx_gas_unpin(f);
   return f;
 }
 
@@ -247,7 +247,7 @@ hpx_lco_future_array_new(int n, int size, int block_size) {
   // perform the global allocation
   uint32_t blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
   uint32_t block_bytes = block_size * sizeof(_future_t);
-  hpx_addr_t base = hpx_global_alloc(blocks, block_bytes);
+  hpx_addr_t base = hpx_gas_global_alloc(blocks, block_bytes);
 
   // for each rank, send an initialization message
   uint32_t args[3] = {

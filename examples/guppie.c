@@ -55,11 +55,11 @@ static hpx_action_t _mover = 0;
 static int _memput_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   memcpy(local, args, hpx_thread_current_args_size());
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -67,10 +67,10 @@ static int _memget_action(size_t *args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   hpx_thread_continue(n, local);
 }
 
@@ -98,12 +98,12 @@ static int _bitwiseor_action(uint64_t *args) {
   uint64_t value = *args;
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   value ^= *local;
   memcpy(local, &value, sizeof(value));
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -111,7 +111,7 @@ static int _bitwiseor_action(uint64_t *args) {
 static int _init_table_action(guppie_config_t *cfg) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   int me = hpx_get_my_rank();
@@ -124,7 +124,7 @@ static int _init_table_action(guppie_config_t *cfg) {
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -204,7 +204,7 @@ static int _mover_action(guppie_config_t *cfg) {
     hpx_addr_t there = hpx_addr_add(cfg->table, src * sizeof(uint64_t));
     lco = hpx_lco_future_new(0);
     // initiate a move
-    hpx_move(there, HPX_THERE(dst), lco);
+    hpx_gas_move(there, HPX_THERE(dst), lco);
     hpx_lco_wait(lco);
     hpx_lco_delete(lco, HPX_NULL);
   }
@@ -266,7 +266,7 @@ void _main_action(guppie_config_t *cfg)
   fflush(stdout);
 
   // Allocate main table.
-  cfg->table = hpx_global_alloc(cfg->tabsize, sizeof(uint64_t));
+  cfg->table = hpx_gas_global_alloc(cfg->tabsize, sizeof(uint64_t));
 
   // Begin timing here
   icputime = -CPUSEC();

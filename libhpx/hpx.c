@@ -166,7 +166,7 @@ int hpx_init(const hpx_config_t *cfg) {
   //    it doesn't go anywhere, ever....
   btt_insert(here->btt, HPX_HERE, here);
   void *local;
-  bool pinned = hpx_addr_try_pin(HPX_HERE, &local);
+  bool pinned = hpx_gas_try_pin(HPX_HERE, &local);
   assert(local == here);
   assert(pinned);
 
@@ -194,7 +194,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // itself
   if (here->rank == 0) {
     // allocate and initialize a parcel for the original action
-    hpx_parcel_t *p = hpx_parcel_acquire(size);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
     if (!p)
       return dbg_error("failed to allocate an initial parcel.\n");
 
@@ -210,7 +210,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
   if (here->transport->type != HPX_TRANSPORT_SMP) {
-    hpx_parcel_t *p = hpx_parcel_acquire(0);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     if (!p)
       return dbg_error("could not allocate a network server parcel");
     p->action = light_network;
@@ -240,7 +240,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 /// Encapsulates a remote-procedure-call.
 int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
              size_t len, hpx_addr_t result) {
-  hpx_parcel_t *p = hpx_parcel_acquire(len);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len);
   if (!p) {
     dbg_error("could not allocate parcel.\n");
     return 1;
@@ -257,7 +257,7 @@ int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
 
 /// Encapsulates a RPC called on all available localities.
 int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
-  hpx_parcel_t *p = hpx_parcel_acquire(len + sizeof(_bcast_args_t));
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
   p->target = HPX_HERE;
   p->action = _bcast;
   p->cont = lco;
@@ -340,7 +340,7 @@ hpx_abort(void) {
 /// shared [1] T foo[n]; where sizeof(T) == bytes
 /// ----------------------------------------------------------------------------
 hpx_addr_t
-hpx_global_alloc(size_t n, uint32_t bytes) {
+hpx_gas_global_alloc(size_t n, uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
   // Get a set of @p n contiguous block ids.
@@ -373,13 +373,13 @@ hpx_global_alloc(size_t n, uint32_t bytes) {
 
 
 bool
-hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
+hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
   return btt_try_pin(here->btt, addr, local);
 }
 
 
 void
-hpx_addr_unpin(const hpx_addr_t addr) {
+hpx_gas_unpin(const hpx_addr_t addr) {
   btt_unpin(here->btt, addr);
 }
 
@@ -390,7 +390,7 @@ hpx_addr_unpin(const hpx_addr_t addr) {
 /// with no free functionality for now.
 /// ----------------------------------------------------------------------------
 hpx_addr_t
-hpx_alloc(size_t bytes) {
+hpx_gas_alloc(size_t bytes) {
   bytes += bytes % 8;
   uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
   if (UINT32_MAX - offset < bytes) {
@@ -404,7 +404,7 @@ hpx_alloc(size_t bytes) {
 
 
 void
-hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_gas_t type = btt_type(here->btt);
   if ((type == HPX_GAS_PGAS) || (type == HPX_GAS_PGAS_SWITCH)) {
     if (!hpx_addr_eq(lco, HPX_NULL))
@@ -413,4 +413,11 @@ hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   }
 
   hpx_call(dst, locality_gas_move, &src, sizeof(src), lco);
+}
+
+hpx_addr_t
+hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
+  assert(bytes != 0);
+  hpx_addr_t addr = HPX_ADDR_INIT(offset, base, bytes);
+  return addr;
 }

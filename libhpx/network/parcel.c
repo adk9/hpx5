@@ -98,7 +98,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 
 hpx_parcel_t *
-hpx_parcel_acquire(size_t size) {
+hpx_parcel_acquire(void *data, size_t size) {
   // get a parcel of the right size from the allocator, the returned parcel
   // already has its data pointer and size set appropriately
   hpx_parcel_t *p = network_malloc(sizeof(*p) + size, HPX_CACHELINE_SIZE);

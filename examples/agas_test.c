@@ -61,7 +61,7 @@ static int root_action(void *args) {
   printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
          other.offset, other.base_id, other.block_bytes,
          HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
-  hpx_move(other, HPX_HERE, done);
+  hpx_gas_move(other, HPX_HERE, done);
   if (hpx_lco_wait(done) != HPX_SUCCESS)
     printf("error in hpx_move().\n");
 

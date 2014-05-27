@@ -375,7 +375,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   if (!fast)
     _backoff();
 
-  p = hpx_parcel_acquire(0);
+  p = hpx_parcel_acquire(NULL, 0);
 
   // lazy stack binding
  exit:
@@ -418,7 +418,7 @@ void *worker_run(scheduler_t *sched) {
     system_set_affinity(&self.thread, self.core_id);
 
   // get a parcel to start the scheduler loop with
-  hpx_parcel_t *p = hpx_parcel_acquire(0);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
   if (!p) {
     dbg_error("failed to acquire an initial parcel.\n");
     return NULL;
@@ -498,7 +498,7 @@ void worker_cancel(worker_t *worker) {
 void scheduler_spawn(hpx_parcel_t *p) {
   assert(self.id >= 0);
   assert(p);
-  assert(hpx_addr_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
+  assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
   profile_ctr(self.stats.spawns++);
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 }
