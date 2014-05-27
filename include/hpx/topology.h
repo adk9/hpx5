@@ -13,7 +13,7 @@
 #ifndef HPX_TOPOLOGY_H
 #define HPX_TOPOLOGY_H
 
-#include "hpx/hpx_config.h"
+#include "hpx/config.h"
 
 /// ----------------------------------------------------------------------------
 /// HPX topology interface

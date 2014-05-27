@@ -30,14 +30,14 @@ typedef struct lco lco_t;
 /// ----------------------------------------------------------------------------
 typedef struct {
   void (*delete)(lco_t *lco);
-  void (*set)(lco_t *lco, int size, const void *value, hpx_status_t status);
+  void (*set)(lco_t *lco, int size, const void *value, hpx_status_t status, hpx_addr_t sync);
   hpx_status_t (*get)(lco_t *lco, int size, void *value);
 } lco_class_t;
 
 
 #define LCO_CLASS_INIT(d, s, g) {                                   \
     .delete = (void (*)(lco_t*))d,                                  \
-    .set = (void (*)(lco_t*, int, const void *, hpx_status_t))s,    \
+    .set = (void (*)(lco_t*, int, const void *, hpx_status_t, hpx_addr_t))s, \
     .get = (hpx_status_t (*)(lco_t*, int, void *))g                 \
     }
 

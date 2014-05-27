@@ -73,7 +73,7 @@ static hpx_status_t _get(_sema_t *sema, int size, void *out) {
 
 
 /// Get is equivalent to V in the semaphore.
-static void _set(_sema_t *sema, int size, const void *from, hpx_status_t status)
+static void _set(_sema_t *sema, int size, const void *from, hpx_status_t status, hpx_addr_t sync)
 {
   lco_lock(&sema->lco);
   unsigned count = sema->count++;
@@ -164,7 +164,7 @@ void hpx_lco_sema_p(hpx_addr_t sema) {
 void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
   _sema_t *s;
   if (hpx_gas_try_pin(sema, (void**)&s)) {
-    _set(s, 0, NULL, HPX_SUCCESS);
+    _set(s, 0, NULL, HPX_SUCCESS, sync);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
     hpx_gas_unpin(sema);

@@ -75,12 +75,13 @@ typedef struct {
 /// ----------------------------------------------------------------------------
 static int _set_action(_set_args_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
+  hpx_addr_t cont = hpx_thread_current_cont();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t);
-  lco->vtable->set(lco, size, &args->data, args->status); // unpack args
+  lco->vtable->set(lco, size, &args->data, args->status, cont); // unpack args
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
@@ -301,7 +302,7 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
                    hpx_status_t status, hpx_addr_t sync) {
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    lco->vtable->set(lco, size, value, status);
+    lco->vtable->set(lco, size, value, status, sync);
     hpx_gas_unpin(target);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
