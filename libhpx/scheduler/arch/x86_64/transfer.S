@@ -88,6 +88,7 @@ LABEL(thread_transfer)
         stmxcsr	(%rsp)                          // 8
         mov %rsi, %rbx                          // cont
         mov (%rdi), %rsi                        // p->stack
+        and $0xfffffffffffffffc, %rsi           // p->stack & ~sizeof(void*)
         mov (%rsi), %rsi                        // p->stack->sp
         xchg %rsp, %rsi
         call *%rbx                              // cont(p, sp, env)
