@@ -29,13 +29,16 @@ struct ustack;
 /// @field    data - either an in-place payload, or a pointer
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
-  struct ustack *stack;
-  int              src;
-  uint32_t        size;
-  hpx_action_t  action;
-  hpx_addr_t    target;
-  hpx_addr_t      cont;
-  char          data[];
+  struct ustack *ustack;
+  int               src;
+  uint32_t         size;
+  hpx_action_t   action;
+  hpx_addr_t     target;
+  hpx_addr_t       cont;
+  char           data[];
 };
+
+void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack);
+struct ustack *parcel_get_stack(hpx_parcel_t *p);
 
 #endif // LIBHPX_PARCEL_H

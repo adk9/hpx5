@@ -209,8 +209,6 @@ AC_CONFIG_FILES([
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
   include/Makefile
-  include/hpx/Makefile
-  include/libsync/Makefile
   include/libhpx/Makefile
   examples/Makefile
 ])
