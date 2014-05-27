@@ -530,9 +530,70 @@ void hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync);
 /// Parcels are the HPX message type.
 /// ----------------------------------------------------------------------------
 typedef struct hpx_parcel hpx_parcel_t;
-hpx_parcel_t *hpx_parcel_acquire(size_t payload_bytes) HPX_MALLOC;
-void hpx_parcel_release(hpx_parcel_t *p) HPX_NON_NULL(1);
-void hpx_parcel_send(hpx_parcel_t *p) HPX_NON_NULL(1); // implies release
+
+/// ----------------------------------------------------------------------------
+/// Acquire a parcel with @p payload_bytes data.
+///
+/// Parcels are runtime resources and must be released, either explicitly using
+/// hpx_parcel_release() or implicitly through hpx_parcel_send() or
+/// hpx_parcel_send_sync().
+///
+/// @param payload_bytes - the data to acquire
+/// @returns             - a pointer to the payload structure, or NULL on error
+/// ----------------------------------------------------------------------------
+hpx_parcel_t *hpx_parcel_acquire(size_t payload_bytes)
+  HPX_MALLOC;
+
+/// ----------------------------------------------------------------------------
+/// Explicitly release a parcel.
+///
+/// The @p p argument must correspond to a parcel pointer returned from
+/// hpx_parcel_acquire().
+///
+/// @param p - the parcel to release
+/// ----------------------------------------------------------------------------
+void hpx_parcel_release(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Send a parcel with asynchronous local completion semantics.
+///
+/// hpx_parcel_send() has asynchronous local semantics. After returning from
+/// this function, the caller must test the @p done future if it cares about
+/// local completion. The @p done future may be HPX_NULL if such a test is not
+/// performed---this may result in better performance.
+///
+/// Sending a parcel transfers ownership of the parcel to the runtime. The
+/// parcel pointed to by @p p may not be reused and must not be
+/// hpx_parcel_release()d.
+///
+/// @param    p - the parcel to send, must correspond to a parcel returned from
+///               hpx_parcel_acquire()
+/// @param done - the address of an LCO to set once the send has completed
+///               locally, or HPX_NULL if the caller does not care
+/// ----------------------------------------------------------------------------
+void hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Send a parcel with synchronous local completion semantics.
+///
+/// hpx_parcel_send_sync() performs a synchronous local send. After returning
+/// from this function, the caller is guaranteed that the local send has
+/// completed.
+///
+/// Sending a parcel transfers ownership of the parcel to the runtime. The
+/// parcel pointed to by @p p may not be reused and must not be
+/// hpx_parcel_release()d.
+///
+/// @param p - the parcel to send, must correspond to a parcel returned from
+///            hpx_parcel_acquire().
+/// ----------------------------------------------------------------------------
+void hpx_parcel_send_sync(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
 hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *p) HPX_NON_NULL(1);
 hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p) HPX_NON_NULL(1);
 hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p) HPX_NON_NULL(1);

@@ -288,7 +288,9 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   // if this parcel gets looped back for some reason, make sure it gets a new
   // stack
   prev->stack = NULL;
-  hpx_parcel_send(prev);
+
+  // I have nothing left to do, so I use sync send
+  hpx_parcel_send_sync(prev);
   return HPX_SUCCESS;
 }
 

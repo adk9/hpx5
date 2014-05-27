@@ -44,7 +44,7 @@ static int send_action(void *args) {
   hpx_parcel_set_target(p, rand_rank());
   hpx_parcel_set_action(p, send);
   hpx_parcel_set_data(p, &n, sizeof(n));
-  hpx_parcel_send(p);
+  hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 
