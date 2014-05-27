@@ -110,7 +110,7 @@ static lco_node_t *_lco_node_get(hpx_parcel_t *p) {
   n->next = NULL;
   n->data = p;
 
-  ustack_t *thread = p->stack;
+  ustack_t *thread = parcel_get_stack(p);
   n->tid = (thread) ? ((thread->affinity >= 0) ? thread->affinity : self.id) : self.id;
   return n;
 }
@@ -181,7 +181,7 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns - a new lightweight thread, as defined by the parcel
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_bind(hpx_parcel_t *p) {
-  assert(!p->stack);
+  assert(!parcel_get_stack(p));
   ustack_t *stack = self.stacks;
   if (stack) {
     self.stacks = stack->sp;
@@ -191,7 +191,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
     stack = thread_new(p, _thread_enter);
     profile_ctr(++self.stats.stacks);
   }
-  p->stack = stack;
+  parcel_set_stack(p, stack);
   return p;
 }
 
@@ -272,7 +272,7 @@ static void _free_stack(ustack_t *stack) {
 static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  _free_stack(prev->stack);
+  _free_stack(parcel_get_stack(prev));
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
@@ -283,11 +283,11 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  _free_stack(prev->stack);
+  _free_stack(parcel_get_stack(prev));
 
   // if this parcel gets looped back for some reason, make sure it gets a new
   // stack
-  prev->stack = NULL;
+  parcel_set_stack(prev, NULL);
 
   // I have nothing left to do, so I use sync send
   hpx_parcel_send_sync(prev);
@@ -339,7 +339,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   hpx_parcel_t *p =sync_chase_lev_ws_deque_pop(&self.work);
 
   if (p) {
-    assert(!p->stack || p->stack->sp);
+    assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
     goto exit;
   }
 
@@ -347,7 +347,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // hurry
   if (!fast)
     if ((p = _network())) {
-      assert(!p->stack || p->stack->sp);
+      assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
       goto exit;
     }
 
@@ -379,8 +379,8 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 
   // lazy stack binding
  exit:
-  assert(!p->stack || p->stack->sp);
-  if (!p->stack)
+  assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
+  if (!parcel_get_stack(p))
     return _bind(p);
 
   return p;
@@ -507,7 +507,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 static int _checkpoint_ws_push(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  prev->stack->sp = sp;
+  parcel_get_stack(prev)->sp = sp;
   sync_chase_lev_ws_deque_push(&self.work, prev);
   return HPX_SUCCESS;
 }
@@ -528,8 +528,8 @@ void scheduler_yield(void) {
     return;
 
   assert(to);
-  assert(to->stack);
-  assert(to->stack->sp);
+  assert(parcel_get_stack(to));
+  assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
   thread_transfer(to, _checkpoint_ws_push, self.current);
 }
@@ -547,7 +547,7 @@ static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
   lco_t *lco = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
-  prev->stack->sp = sp;
+  parcel_get_stack(prev)->sp = sp;
   lco_unlock(lco);
   return HPX_SUCCESS;
 }
@@ -569,8 +569,8 @@ static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
 hpx_status_t scheduler_wait(lco_t *lco) {
   hpx_parcel_t *to = _schedule(true, NULL);
   assert(to);
-  assert(to->stack);
-  assert(to->stack->sp);
+  assert(parcel_get_stack(to));
+  assert(parcel_get_stack(to)->sp);
 
   lco_node_t *n = _lco_node_get(self.current);
   lco_enqueue(lco, n);
@@ -629,8 +629,8 @@ static void HPX_NORETURN _continue(hpx_status_t status,
 
   hpx_parcel_t *to = _schedule(false, NULL);
   assert(to);
-  assert(to->stack);
-  assert(to->stack->sp);
+  assert(parcel_get_stack(to));
+  assert(parcel_get_stack(to)->sp);
   thread_transfer(to, _free_parcel, parcel);
   unreachable();
 }
@@ -673,8 +673,8 @@ void hpx_thread_exit(int status) {
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
     assert(to);
-    assert(to->stack);
-    assert(to->stack->sp);
+    assert(parcel_get_stack(to));
+    assert(parcel_get_stack(to)->sp);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }
@@ -713,7 +713,7 @@ uint32_t hpx_thread_current_args_size(void) {
 
 
 int hpx_thread_get_tls_id(void) {
-  ustack_t *stack = self.current->stack;
+  ustack_t *stack = parcel_get_stack(self.current);
   if (stack->tls_id < 0)
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
 
@@ -729,7 +729,7 @@ static int _send_mail(hpx_parcel_t *to, void *sp, void *env) {
   two_lock_queue_t *mailbox = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
-  prev->stack->sp = sp;
+  parcel_get_stack(prev)->sp = sp;
 
   // we're currently overloading lco nodes for the two lock queue
   lco_node_t *lco = _lco_node_get(prev);
@@ -743,8 +743,8 @@ void hpx_thread_set_affinity(int affinity) {
   assert(affinity >= -1);
   assert(affinity < here->sched->n_workers);
   assert(self.current);
-  assert(self.current->stack);
-  self.current->stack->affinity = affinity;
+  assert(parcel_get_stack(self.current));
+  parcel_get_stack(self.current)->affinity = affinity;
   if (affinity != self.id) {
     hpx_parcel_t *to = _schedule(NULL, false);
     thread_transfer(to, _send_mail, &(here->sched->workers[affinity]->inbox));

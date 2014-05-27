@@ -33,6 +33,10 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
+static uintptr_t _INPLACE_MASK = 0x1;
+static uintptr_t _OWNED_MASK   = 0x2;
+static uintptr_t _STATE_MASK   = 0x3;
+
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
   p->action = action;
 }
@@ -72,8 +76,7 @@ hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p) {
 
 
 void *hpx_parcel_get_data(hpx_parcel_t *p) {
-  return &p->data;
-
+  return ((uintptr_t)p->ustack & _INPLACE_MASK) ? &p->data : (void*)p->data;
 }
 
 
@@ -106,7 +109,7 @@ hpx_parcel_acquire(void *data, size_t size) {
     dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
     return NULL;
   }
-  p->stack  = NULL;
+  p->ustack = (struct ustack*)(_INPLACE_MASK | _OWNED_MASK);
   p->src    = here->rank;
   p->size   = size;
   p->action = HPX_ACTION_NULL;
@@ -121,3 +124,14 @@ hpx_parcel_release(hpx_parcel_t *p) {
   network_free(p);
 }
 
+void
+parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
+  assert((uintptr_t)stack % sizeof(void*) == 0);
+  uintptr_t state = (uintptr_t)p->ustack & _STATE_MASK;
+  p->ustack = (struct ustack*)(state | (uintptr_t)stack);
+}
+
+struct ustack *
+parcel_get_stack(hpx_parcel_t *p) {
+  return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
+}
