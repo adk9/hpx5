@@ -23,18 +23,18 @@ extern "C" {
 #include <stdint.h>
 
 #include "hpx/attributes.h"
-#include "hpx/hpx_types.h"
-#include "hpx/hpx_config.h"
-#include "hpx/hpx_action.h"
-#include "hpx/hpx_addr.h"
-#include "hpx/hpx_gas.h"
-#include "hpx/hpx_lco.h"
-#include "hpx/hpx_parcel.h"
-#include "hpx/hpx_rpc.h"
-#include "hpx/hpx_runtime.h"
-#include "hpx/hpx_thread.h"
-#include "hpx/hpx_time.h"
-#include "hpx/hpx_topology.h"
+#include "hpx/types.h"
+#include "hpx/config.h"
+#include "hpx/action.h"
+#include "hpx/addr.h"
+#include "hpx/gas.h"
+#include "hpx/lco.h"
+#include "hpx/parcel.h"
+#include "hpx/rpc.h"
+#include "hpx/runtime.h"
+#include "hpx/thread.h"
+#include "hpx/time.h"
+#include "hpx/topology.h"
 
 #ifdef __cplusplus
 }

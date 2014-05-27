@@ -13,8 +13,8 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
-#include "hpx/hpx_addr.h"
-#include "hpx/hpx_types.h"
+#include "hpx/addr.h"
+#include "hpx/types.h"
 
 /// ----------------------------------------------------------------------------
 /// LCO's are local control objects. All LCOs support the "set" and "delete"
