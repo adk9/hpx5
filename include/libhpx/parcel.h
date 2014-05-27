@@ -38,26 +38,4 @@ struct hpx_parcel {
   char          data[];
 };
 
-
-/// ----------------------------------------------------------------------------
-/// Perform a pop operation on a list of parcels.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *parcel_pop(hpx_parcel_t **list)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
-/// Perform a push operation on a list of parcels.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void parcel_push(hpx_parcel_t **list, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2);
-
-
-/// ----------------------------------------------------------------------------
-/// Perform a concatenation of two parcel lists.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void parcel_cat(hpx_parcel_t **list, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2);
-
-
 #endif // LIBHPX_PARCEL_H
