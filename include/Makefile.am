@@ -1,23 +1,29 @@
 SUBDIRS = libhpx
 
-nobase_include_HEADERS = hpx/attributes.h \
-                         hpx/builtins.h \
-                         hpx/hpx.h \
-                         hpx/types.h \
-                         hpx/config.h \
-                         hpx/action.h \
+nobase_include_HEADERS = hpx/action.h \
                          hpx/addr.h \
+                         hpx/attributes.h \
+                         hpx/builtins.h \
+                         hpx/config.h \
                          hpx/gas.h \
+                         hpx/hpx.h \
                          hpx/lco.h \
                          hpx/parcel.h \
+                         hpx/rpc.h \
                          hpx/runtime.h \
                          hpx/thread.h \
                          hpx/time.h \
                          hpx/topology.h \
-                         libsync/sync.h \
+                         hpx/types.h \
+                         libsync/backoff.h \
                          libsync/barriers.h \
+                         libsync/cptr.h \
+                         libsync/deques.h \
                          libsync/generic.h \
+                         libsync/hashtables.h \
                          libsync/locks.h \
+                         libsync/queues.h \
+                         libsync/sync.h \
                          libsync/types.def \
                          libsync/gcc/sync.h \
                          libsync/gcc/atomic.h \
