@@ -1,10 +1,10 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS    = fibonaccihpx pingponghpx allreduce countdown seqspawn \
+examples_PROGRAMS    = fibonacci pingpong allreduce countdown seqspawn \
                        parspawn future agas_test memput memget guppie sendrecv
 
-fibonaccihpx_SOURCES = fibonacci.c
-pingponghpx_SOURCES  = pingpong.c
+fibonacci_SOURCES    = fibonacci.c
+pingpong_SOURCES     = pingpong.c
 allreduce_SOURCES    = allreduce.c
 countdown_SOURCES    = countdown.c
 seqspawn_SOURCES     = seqspawn.c
@@ -17,8 +17,8 @@ guppie_SOURCES       = guppie.c
 sendrecv_SOURCES     = sendrecv.c
 
 allreduce_LDADD      = $(top_builddir)/libhpx/libhpx.la
-fibonaccihpx_LDADD   = $(top_builddir)/libhpx/libhpx.la
-pingponghpx_LDADD    = $(top_builddir)/libhpx/libhpx.la
+fibonacci_LDADD      = $(top_builddir)/libhpx/libhpx.la
+pingpong_LDADD    	 = $(top_builddir)/libhpx/libhpx.la
 countdown_LDADD      = $(top_builddir)/libhpx/libhpx.la
 seqspawn_LDADD       = $(top_builddir)/libhpx/libhpx.la
 parspawn_LDADD       = $(top_builddir)/libhpx/libhpx.la
