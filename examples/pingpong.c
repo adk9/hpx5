@@ -179,7 +179,7 @@ static int _action_ping(void *msg) {
   hpx_parcel_set_data(p, args, sizeof(*args));
   RANK_PRINTF("pinging block (%d,%lu), msg= '%s'\n", to.base_id, to.offset,
               args->msg);
-  hpx_parcel_send(p);
+  hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 
@@ -204,7 +204,7 @@ static int _action_pong(void *msg) {
   hpx_parcel_set_target(p, to);
   hpx_parcel_set_data(p, args, sizeof(*args));
   RANK_PRINTF("ponging block (%d,%lu), msg='%s'\n", to.base_id, to.offset, args->msg);
-  hpx_parcel_send(p);
+  hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 

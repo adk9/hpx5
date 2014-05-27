@@ -325,8 +325,9 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
     args->status = HPX_SUCCESS;
     memcpy(&args->data, value, size);
 
-    // and send the parcel, waiting for completion
-    hpx_parcel_send(p);
+    // and send the parcel, waiting for completion, don't care about local
+    // completion for this one since we serialized
+    hpx_parcel_send(p, HPX_NULL);
   }
 }
 

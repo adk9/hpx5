@@ -250,7 +250,7 @@ int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
   p->target = target;
   p->cont = result;
   hpx_parcel_set_data(p, args, len);
-  hpx_parcel_send(p);
+  hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 
@@ -266,71 +266,42 @@ int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco)
   args->action = action;
   args->len = len;
   memcpy(&args->data, data, len);
-  hpx_parcel_send(p);
+  hpx_parcel_send_sync(p);
 
   return HPX_SUCCESS;
 }
 
 
-hpx_action_t hpx_register_action(const char *id, hpx_action_handler_t func) {
+hpx_action_t
+hpx_register_action(const char *id, hpx_action_handler_t func) {
   return action_register(id, func);
 }
 
 
-void hpx_parcel_send(hpx_parcel_t *p) {
-  // check loopback via rank
-  hpx_addr_t target = p->target;
-  uint32_t owner = btt_owner(here->btt, target);
-  if (owner == here->rank)
-    scheduler_spawn(p);
-  else
-    network_tx_enqueue(here->network, p);
-}
-
-
-hpx_parcel_t *hpx_parcel_acquire(size_t size) {
-  // get a parcel of the right size from the allocator, the returned parcel
-  // already has its data pointer and size set appropriately
-  hpx_parcel_t *p = network_malloc(sizeof(*p) + size, HPX_CACHELINE_SIZE);
-  if (!p) {
-    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
-    return NULL;
-  }
-  p->stack  = NULL;
-  p->src    = here->rank;
-  p->size   = size;
-  p->action = HPX_ACTION_NULL;
-  p->target = HPX_HERE;
-  p->cont   = HPX_NULL;
-  return p;
-}
-
-
-void hpx_parcel_release(hpx_parcel_t *p) {
-  network_free(p);
-}
-
-
-int hpx_get_my_rank(void) {
+int
+hpx_get_my_rank(void) {
   assert(here);
   return here->rank;
 }
 
 
-int hpx_get_num_ranks(void) {
+int
+hpx_get_num_ranks(void) {
   assert(here);
   return here->ranks;
 }
 
 
-int hpx_get_num_threads(void) {
+int
+hpx_get_num_threads(void) {
   if (!here || !here->sched)
     return 0;
   return here->sched->n_workers;
 }
 
 
-const char *hpx_get_network_id(void) {
+const char *
+hpx_get_network_id(void) {
   if (!here || !here->transport)
     return "cannot query network now";
   return transport_id(here->transport);
@@ -347,7 +318,8 @@ void system_shutdown(int code) {
 
 
 /// Called by the application to terminate the scheduler and network.
-void hpx_shutdown(int code) {
+void
+hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
   hpx_thread_exit(HPX_SUCCESS);
@@ -356,7 +328,8 @@ void hpx_shutdown(int code) {
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
-void hpx_abort(void) {
+void
+hpx_abort(void) {
   abort();
 }
 
@@ -366,7 +339,8 @@ void hpx_abort(void) {
 ///
 /// shared [1] T foo[n]; where sizeof(T) == bytes
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes) {
+hpx_addr_t
+hpx_global_alloc(size_t n, uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
   // Get a set of @p n contiguous block ids.
@@ -398,12 +372,14 @@ hpx_addr_t hpx_global_alloc(size_t n, uint32_t bytes) {
 }
 
 
-bool hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
+bool
+hpx_addr_try_pin(const hpx_addr_t addr, void **local) {
   return btt_try_pin(here->btt, addr, local);
 }
 
 
-void hpx_addr_unpin(const hpx_addr_t addr) {
+void
+hpx_addr_unpin(const hpx_addr_t addr) {
   btt_unpin(here->btt, addr);
 }
 
@@ -413,7 +389,8 @@ void hpx_addr_unpin(const hpx_addr_t addr) {
 /// always done to 8 byte alignment. Here we're using a simple sbrk allocator
 /// with no free functionality for now.
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_alloc(size_t bytes) {
+hpx_addr_t
+hpx_alloc(size_t bytes) {
   bytes += bytes % 8;
   uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
   if (UINT32_MAX - offset < bytes) {
@@ -426,7 +403,8 @@ hpx_addr_t hpx_alloc(size_t bytes) {
 }
 
 
-void hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+void
+hpx_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_gas_t type = btt_type(here->btt);
   if ((type == HPX_GAS_PGAS) || (type == HPX_GAS_PGAS_SWITCH)) {
     if (!hpx_addr_eq(lco, HPX_NULL))

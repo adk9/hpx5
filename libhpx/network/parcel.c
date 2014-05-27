@@ -26,8 +26,12 @@
 #include <string.h>
 #include "hpx/hpx.h"
 
+#include "libhpx/btt.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/network.h"
 #include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
   p->action = action;
@@ -73,6 +77,51 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 }
 
 
+void
+hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done) {
+  hpx_parcel_send_sync(p);
+  if (!hpx_addr_eq(done, HPX_NULL))
+    hpx_lco_set(done, NULL, 0, HPX_NULL);
+}
+
+
+void
+hpx_parcel_send_sync(hpx_parcel_t *p) {
+  // check loopback via rank
+  hpx_addr_t target = p->target;
+  uint32_t owner = btt_owner(here->btt, target);
+  if (owner == here->rank)
+    scheduler_spawn(p);
+  else
+    network_tx_enqueue(here->network, p);
+}
+
+
+hpx_parcel_t *
+hpx_parcel_acquire(size_t size) {
+  // get a parcel of the right size from the allocator, the returned parcel
+  // already has its data pointer and size set appropriately
+  hpx_parcel_t *p = network_malloc(sizeof(*p) + size, HPX_CACHELINE_SIZE);
+  if (!p) {
+    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
+    return NULL;
+  }
+  p->stack  = NULL;
+  p->src    = here->rank;
+  p->size   = size;
+  p->action = HPX_ACTION_NULL;
+  p->target = HPX_HERE;
+  p->cont   = HPX_NULL;
+  return p;
+}
+
+
+void
+hpx_parcel_release(hpx_parcel_t *p) {
+  network_free(p);
+}
+
+
 static void _set_next(hpx_parcel_t *p, hpx_parcel_t *next) {
   memcpy(&p->data, &next, sizeof(next));
 }
@@ -114,4 +163,3 @@ void parcel_cat(hpx_parcel_t **list, hpx_parcel_t *p) {
   _set_next(end, *list);
   *list = p;
 }
-
