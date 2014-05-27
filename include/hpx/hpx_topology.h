@@ -10,34 +10,22 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef HPX_H
-#define HPX_H
+#ifndef HPX_TOPOLOGY_H
+#define HPX_TOPOLOGY_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <assert.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "hpx/attributes.h"
-#include "hpx/hpx_types.h"
 #include "hpx/hpx_config.h"
-#include "hpx/hpx_action.h"
-#include "hpx/hpx_addr.h"
-#include "hpx/hpx_gas.h"
-#include "hpx/hpx_lco.h"
-#include "hpx/hpx_parcel.h"
-#include "hpx/hpx_rpc.h"
-#include "hpx/hpx_runtime.h"
-#include "hpx/hpx_thread.h"
-#include "hpx/hpx_time.h"
-#include "hpx/hpx_topology.h"
 
-#ifdef __cplusplus
-}
+/// ----------------------------------------------------------------------------
+/// HPX topology interface
+/// ----------------------------------------------------------------------------
+hpx_locality_t hpx_get_my_rank(void);
+int hpx_get_num_ranks(void);
+int hpx_get_num_threads(void);
+int hpx_get_my_thread_id(void);
+
+#define HPX_LOCALITY_ID hpx_get_my_rank()
+#define HPX_LOCALITIES hpx_get_num_ranks()
+#define HPX_THREAD_ID hpx_get_my_thread_id()
+#define HPX_THREADS hpx_get_num_threads()
+
 #endif
-
-#endif // HPX_H
