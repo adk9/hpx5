@@ -275,8 +275,8 @@ hpx_lco_future_array_new(int n, int size, int block_size) {
     hpx_addr_t block = hpx_addr_add(base, args[2] * here->ranks + i *
                                     block_bytes);
     hpx_call(block, _block_init, args, 2 * sizeof(args[0]), and[1]);
-
   }
+
   hpx_lco_wait_all(2, and);
   hpx_lco_delete(and[0], HPX_NULL);
   hpx_lco_delete(and[1], HPX_NULL);
