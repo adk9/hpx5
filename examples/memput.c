@@ -50,7 +50,7 @@ static int _init_array_action(size_t *args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   for(int i = 0; i < n; i++)
@@ -61,7 +61,7 @@ static int _init_array_action(size_t *args) {
 static int _memput_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
-  if (!hpx_addr_try_pin(target, (void**)&local))
+  if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   memcpy(local, args, hpx_thread_current_args_size());
@@ -80,7 +80,7 @@ static int _main_action(void *args) {
     hpx_shutdown(0);
   }
 
-  hpx_addr_t data = hpx_global_alloc(size, MAX_MSG_SIZE*2);
+  hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
   hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
 
   fprintf(stdout, HEADER);

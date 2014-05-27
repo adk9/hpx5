@@ -76,12 +76,12 @@ typedef struct {
 static int _set_action(_set_args_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&lco))
+  if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t);
   lco->vtable->set(lco, size, &args->data, args->status); // unpack args
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -95,12 +95,12 @@ static int _set_action(_set_args_t *args) {
 static int _get_action(int *n) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco;
-  if (!hpx_addr_try_pin(target, (void**)&lco))
+  if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   char buffer[*n];                  // ouch---rDMA, or preallocate continuation?
   hpx_status_t status = lco->vtable->get(lco, *n, buffer);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   if (status == HPX_SUCCESS)
     hpx_thread_continue(*n, buffer);
   else
@@ -116,11 +116,11 @@ static int _get_action(int *n) {
 static int _wait_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&lco))
+  if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   hpx_action_t status = _wait_local(lco);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   hpx_thread_exit(status);
 }
 
@@ -128,11 +128,11 @@ static int _wait_action(void *args) {
 static int _delete_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
-  if (!hpx_addr_try_pin(target, (void**)&lco))
+  if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   lco->vtable->delete(lco);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -280,9 +280,9 @@ lco_enqueue_and_unlock(lco_t *lco, lco_node_t *node) {
 void
 hpx_lco_delete(hpx_addr_t target, hpx_addr_t sync) {
   lco_t *lco = NULL;
-  if (hpx_addr_try_pin(target, (void**)&lco)) {
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
     lco->vtable->delete(lco);
-    hpx_addr_unpin(target);
+    hpx_gas_unpin(target);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
     return;
@@ -300,9 +300,9 @@ void
 hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
                    hpx_status_t status, hpx_addr_t sync) {
   lco_t *lco = NULL;
-  if (hpx_addr_try_pin(target, (void**)&lco)) {
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
     lco->vtable->set(lco, size, value, status);
-    hpx_addr_unpin(target);
+    hpx_gas_unpin(target);
     if (!hpx_addr_eq(sync, HPX_NULL))
       hpx_lco_set(sync, NULL, 0, HPX_NULL);
   }
@@ -314,7 +314,7 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
     // us to serialize directly into it. We could provide an HPX call interface
     // that is varargs or something, but that makes the active message
     // instantiation tricky.
-    hpx_parcel_t *p = hpx_parcel_acquire(sizeof(_set_args_t) + size);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_set_args_t) + size);
     assert(p);
     p->target = target;
     p->action = _set;
@@ -350,9 +350,9 @@ hpx_status_t
 hpx_lco_wait(hpx_addr_t target) {
   hpx_status_t status;
   lco_t *lco;
-  if (hpx_addr_try_pin(target, (void**)&lco)) {
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
     status = _wait_local(lco);
-    hpx_addr_unpin(target);
+    hpx_gas_unpin(target);
   }
   else {
     hpx_addr_t proxy = hpx_lco_future_new(0);
@@ -372,9 +372,9 @@ hpx_status_t
 hpx_lco_get(hpx_addr_t target, void *value, int size) {
   hpx_status_t status;
   lco_t *lco;
-  if (hpx_addr_try_pin(target, (void**)&lco)) {
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
     status = lco->vtable->get(lco, size, value);
-    hpx_addr_unpin(target);
+    hpx_gas_unpin(target);
   }
   else {
     hpx_addr_t proxy = hpx_lco_future_new(size);
@@ -398,7 +398,7 @@ hpx_lco_wait_all(int n, hpx_addr_t lcos[]) {
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_addr_try_pin(lcos[i], (void**)&locals[i])) {
+    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
       hpx_call(lcos[i], _wait, NULL, 0, remotes[i]);
@@ -411,7 +411,7 @@ hpx_lco_wait_all(int n, hpx_addr_t lcos[]) {
   for (int i = 0; i < n; ++i) {
     if (locals[i] != NULL) {
       _wait_local(locals[i]);
-      hpx_addr_unpin(lcos[i]);
+      hpx_gas_unpin(lcos[i]);
     }
     else {
       hpx_lco_wait(remotes[i]);
@@ -433,7 +433,7 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], void *values[], int sizes[]) {
   // aren't local, allocate a proxy future and initiate the remote get. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_addr_try_pin(lcos[i], (void**)&locals[i])) {
+    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
       hpx_call(lcos[i], _get, &sizes[i], sizeof(sizes[i]), remotes[i]);
@@ -446,7 +446,7 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], void *values[], int sizes[]) {
   for (int i = 0; i < n; ++i) {
     if (locals[i] != NULL) {
       locals[i]->vtable->get(locals[i], sizes[i], values[i]);
-      hpx_addr_unpin(lcos[i]);
+      hpx_gas_unpin(lcos[i]);
     }
     else {
       hpx_lco_get(remotes[i], values[i], sizes[i]);

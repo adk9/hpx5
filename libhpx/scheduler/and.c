@@ -111,19 +111,19 @@ hpx_lco_and_new(uint64_t limit) {
     _free = (_and_t*)and->lco.vtable;
     target = HPX_HERE;
     char *base;
-    if (!hpx_addr_try_pin(target, (void**)&base))
+    if (!hpx_gas_try_pin(target, (void**)&base))
       hpx_abort();
     target.offset = (char*)and - base;
     assert(target.offset < target.block_bytes);
   }
   else {
-    target = hpx_alloc(sizeof(_and_t));
-    if (!hpx_addr_try_pin(target, (void**)&and))
+    target = hpx_gas_alloc(sizeof(_and_t));
+    if (!hpx_gas_try_pin(target, (void**)&and))
       hpx_abort();
   }
 
   _init(and, limit);
-  hpx_addr_unpin(target);
+  hpx_gas_unpin(target);
   return target;
 }
 

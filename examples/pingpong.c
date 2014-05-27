@@ -172,7 +172,7 @@ static int _action_ping(void *msg) {
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();
-  hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(*args));
   CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
   hpx_parcel_set_action(p, _pong);
   hpx_parcel_set_target(p, to);
@@ -198,7 +198,7 @@ static int _action_pong(void *msg) {
 
 
   hpx_addr_t to = _partner();
-  hpx_parcel_t *p = hpx_parcel_acquire(sizeof(*args));
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(*args));
   CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
   hpx_parcel_set_action(p, _ping);
   hpx_parcel_set_target(p, to);
