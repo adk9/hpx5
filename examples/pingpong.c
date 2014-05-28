@@ -155,8 +155,7 @@ int main(int argc, char *argv[]) {
 /**
  * Send a ping message.
  */
-static int _action_ping(void *msg) {
-  args_t *args = msg;
+static int _action_ping(args_t *args) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // Reuse the message space for the next ping message.
@@ -170,15 +169,19 @@ static int _action_ping(void *msg) {
   if (args->id < 0)
     hpx_shutdown(0);
 
+
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(*args));
+  RANK_PRINTF("pinging block (%d,%lu), msg= '%s'\n", to.base_id, to.offset,
+              args->msg);
+
+  hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
   hpx_parcel_set_action(p, _pong);
   hpx_parcel_set_target(p, to);
-  hpx_parcel_set_data(p, args, sizeof(*args));
-  RANK_PRINTF("pinging block (%d,%lu), msg= '%s'\n", to.base_id, to.offset,
-              args->msg);
+
+  // use synchronous send because we'd need to wait to return anyway, otherwise
+  // the args buffer will be cleaned up early
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
@@ -187,8 +190,7 @@ static int _action_ping(void *msg) {
 /**
  * Handle a pong action.
  */
-static int _action_pong(void *msg) {
-  args_t *args = msg;
+static int _action_pong(args_t *args) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // reuse args
@@ -198,12 +200,16 @@ static int _action_pong(void *msg) {
 
 
   hpx_addr_t to = _partner();
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(*args));
+  RANK_PRINTF("ponging block (%d,%lu), msg='%s'\n", to.base_id, to.offset,
+              args->msg);
+
+  hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");
   hpx_parcel_set_action(p, _ping);
   hpx_parcel_set_target(p, to);
-  hpx_parcel_set_data(p, args, sizeof(*args));
-  RANK_PRINTF("ponging block (%d,%lu), msg='%s'\n", to.base_id, to.offset, args->msg);
+
+  // use synchronous send because we have to wait to return anyway, or we'll
+  // deallocate the args buffer early
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
@@ -214,8 +220,8 @@ static int _action_pong(void *msg) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  _ping = hpx_register_action("ping", _action_ping);
-  _pong = hpx_register_action("pong", _action_pong);
+  _ping = HPX_REGISTER_ACTION(_action_ping);
+  _pong = HPX_REGISTER_ACTION(_action_pong);
 }
 
 
