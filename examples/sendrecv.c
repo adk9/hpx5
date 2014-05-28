@@ -83,16 +83,32 @@ static int _main_action(void *args) {
   printf(" Tick: %g\n", hpx_time_us(tick));
 
   for (int i=0;i<24;++i) {
-    double *buf = (double *) malloc(sizeof(double)*counts[i]);
+    double *buf = malloc(sizeof(double)*counts[i]);
     for (int j=0;j<counts[i];++j)
       buf[j] = j*rand();
 
     hpx_time_t t1 = hpx_time_now();
-    for (int k=0; k<avg; ++k)
-      hpx_call(HPX_HERE, _receiver, buf, sizeof(double)*counts[i], HPX_NULL);
+
+    // for completing the operation
+    hpx_addr_t *done = malloc(avg * sizeof(done[0]));
+
+    for (int k=0; k<avg; ++k) {
+      done[k] = hpx_lco_future_new(0);
+      hpx_parcel_t *p = hpx_parcel_acquire(buf, sizeof(double)*counts[i]);
+      assert(p);
+      hpx_parcel_set_target(p, HPX_HERE);
+      hpx_parcel_set_action(p, _receiver);
+      hpx_parcel_set_cont(p, HPX_NULL);
+      hpx_parcel_send(p, done[k]);
+    }
+
+    for (int k = 0; k < avg; ++k) {
+      hpx_lco_wait(done[k]);
+      hpx_lco_delete(done[k], HPX_NULL);
+    }
 
     double elapsed = hpx_time_elapsed_ms(t1);
-    printf(" Elapsed: %g\n",elapsed/avg);
+    printf(" Elapsed %d: %g\n", i, elapsed/avg);
     free(buf);
   }
 
