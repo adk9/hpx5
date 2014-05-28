@@ -322,7 +322,7 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
     p->cont = sync;
 
     // perform the single serialization
-    _set_args_t *args = (_set_args_t *)p->data;
+    _set_args_t *args = (_set_args_t *)hpx_parcel_get_data(p);
     args->status = HPX_SUCCESS;
     memcpy(&args->data, value, size);
 

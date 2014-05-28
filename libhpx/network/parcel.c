@@ -32,10 +32,15 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
+#include "padding.h"
 
-static uintptr_t _INPLACE_MASK = 0x1;
-static uintptr_t _OWNED_MASK   = 0x2;
-static uintptr_t _STATE_MASK   = 0x3;
+static const uintptr_t _INPLACE_MASK = 0x1;
+static const uintptr_t   _STATE_MASK = 0x1;
+static const size_t _SMALL_THRESHOLD = PAD_TO_CACHELINE(sizeof(hpx_parcel_t));
+
+static size_t _max(size_t lhs, size_t rhs) {
+  return (lhs > rhs) ? lhs : rhs;
+}
 
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
   p->action = action;
@@ -76,12 +81,99 @@ hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p) {
 
 
 void *hpx_parcel_get_data(hpx_parcel_t *p) {
-  return ((uintptr_t)p->ustack & _INPLACE_MASK) ? &p->data : (void*)p->data;
+  if (p->size == 0)
+    return NULL;
+
+  void *buffer = NULL;
+  uintptr_t inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
+  if (inplace)
+    buffer = &p->buffer;
+  else
+    memcpy(&buffer, &p->buffer, sizeof(buffer));
+  return buffer;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Acquire a parcel structure.
+///
+/// Parcels are always acquired with enough inline space to support
+/// serialization of @p bytes bytes. If @p buffer is NULL, then the parcel is
+/// marked as inplace, meaning that the parcel's buffer is being used directly
+/// (or not at all if @p bytes is 0). If the @p buffer pointer is non-NULL, then
+/// the parcel is marked as out-of-place---we will keep the @p buffer pointer in
+/// the lowest sizeof(void*) bytes of the parcel's in-place buffer.
+///
+/// At hpx_parcel_send() or hpx_parcel_send_sync() the runtime will copy an
+/// out-of-place buffer into the parcel's inline buffer, either synchronously or
+/// asynchronously depending on which interface is used, and how big the buffer
+/// is.
+/// ----------------------------------------------------------------------------
+hpx_parcel_t *
+hpx_parcel_acquire(void *buffer, size_t bytes) {
+  // figure out how big a parcel buffer I actually need
+  size_t size = sizeof(hpx_parcel_t);
+  if (bytes != 0)
+    size += _max(sizeof(void*), bytes);
+
+  // allocate a parcel with enough space to buffer the @p buffer
+  hpx_parcel_t *p = network_malloc(size, HPX_CACHELINE_SIZE);
+  if (!p) {
+    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", bytes);
+    return NULL;
+  }
+
+  // initialize the structure with defaults
+  p->ustack = (struct ustack*)_INPLACE_MASK;
+  p->src    = here->rank;
+  p->size   = bytes;
+  p->action = HPX_ACTION_NULL;
+  p->target = HPX_HERE;
+  p->cont   = HPX_NULL;
+
+  // if there's a user-defined buffer, then remember it
+  if (buffer) {
+    p->ustack = NULL;
+    memcpy(&p->buffer, &buffer, sizeof(buffer));
+  }
+
+  return p;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Perform an asynchronous send operation.
+///
+/// Simply wraps the send operation in an asynchronous interface.
+///
+/// @param   p - the parcel to send (may need serialization)
+/// @continues - NULL
+/// @returns   - HPX_SUCCESS
+/// ----------------------------------------------------------------------------
+static hpx_action_t _send_async = 0;
+
+static int _send_async_action(hpx_parcel_t *p) {
+  hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
+}
+
+static HPX_CONSTRUCTOR void _init_actions(void) {
+  _send_async = HPX_REGISTER_ACTION(_send_async_action);
 }
 
 
 void
 hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done) {
+  bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
+  bool small = p->size < _SMALL_THRESHOLD;
+
+  // do a true async send, if we should
+  if (!inplace && !small) {
+    hpx_call(HPX_HERE, _send_async, &p, sizeof(p), done);
+    return;
+  }
+
+  // otherwise, do a synchronous send and set the done LCO, if there is one
   hpx_parcel_send_sync(p);
   if (!hpx_addr_eq(done, HPX_NULL))
     hpx_lco_set(done, NULL, 0, HPX_NULL);
@@ -90,32 +182,25 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done) {
 
 void
 hpx_parcel_send_sync(hpx_parcel_t *p) {
-  // check loopback via rank
-  hpx_addr_t target = p->target;
-  uint32_t owner = btt_owner(here->btt, target);
-  if (owner == here->rank)
-    scheduler_spawn(p);
-  else
-    network_tx_enqueue(here->network, p);
-}
-
-
-hpx_parcel_t *
-hpx_parcel_acquire(void *data, size_t size) {
-  // get a parcel of the right size from the allocator, the returned parcel
-  // already has its data pointer and size set appropriately
-  hpx_parcel_t *p = network_malloc(sizeof(*p) + size, HPX_CACHELINE_SIZE);
-  if (!p) {
-    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", size);
-    return NULL;
+  // an out-of-place parcel always needs to be serialized, either for a local or
+  // remote send---parcel's are always allocated with a serialization buffer for
+  // this purpose
+  bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
+  if (!inplace && p->size) {
+    void *buffer = hpx_parcel_get_data(p);
+    memcpy(&p->buffer, buffer, p->size);
+    p->ustack = (struct ustack*)((uintptr_t)p->ustack & ~_INPLACE_MASK);
   }
-  p->ustack = (struct ustack*)(_INPLACE_MASK | _OWNED_MASK);
-  p->src    = here->rank;
-  p->size   = size;
-  p->action = HPX_ACTION_NULL;
-  p->target = HPX_HERE;
-  p->cont   = HPX_NULL;
-  return p;
+
+  // do a local send through loopback
+  bool local = (btt_owner(here->btt, p->target) == here->rank);
+  if (local) {
+    scheduler_spawn(p);
+    return;
+  }
+
+  // do a network send
+  network_tx_enqueue(here->network, p);
 }
 
 
@@ -123,6 +208,7 @@ void
 hpx_parcel_release(hpx_parcel_t *p) {
   network_free(p);
 }
+
 
 void
 parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
