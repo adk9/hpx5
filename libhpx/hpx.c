@@ -262,7 +262,7 @@ int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco)
   p->action = _bcast;
   p->cont = lco;
 
-  _bcast_args_t *args = (_bcast_args_t *)p->data;
+  _bcast_args_t *args = (_bcast_args_t *)hpx_parcel_get_data(p);
   args->action = action;
   args->len = len;
   memcpy(&args->data, data, len);

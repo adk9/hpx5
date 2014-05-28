@@ -35,7 +35,7 @@ struct hpx_parcel {
   hpx_action_t   action;
   hpx_addr_t     target;
   hpx_addr_t       cont;
-  char           data[];
+  char         buffer[];
 };
 
 void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack);
