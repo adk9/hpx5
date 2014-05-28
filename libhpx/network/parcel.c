@@ -184,13 +184,13 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done) {
 void
 hpx_parcel_send_sync(hpx_parcel_t *p) {
   // an out-of-place parcel always needs to be serialized, either for a local or
-  // remote send---parcel's are always allocated with a serialization buffer for
+  // remote send---parcels are always allocated with a serialization buffer for
   // this purpose
   bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
   if (!inplace && p->size) {
     void *buffer = hpx_parcel_get_data(p);
     memcpy(&p->buffer, buffer, p->size);
-    p->ustack = (struct ustack*)((uintptr_t)p->ustack & ~_INPLACE_MASK);
+    p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
 
   // do a local send through loopback
