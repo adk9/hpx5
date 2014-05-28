@@ -36,7 +36,8 @@
 
 static const uintptr_t _INPLACE_MASK = 0x1;
 static const uintptr_t   _STATE_MASK = 0x1;
-static const size_t _SMALL_THRESHOLD = PAD_TO_CACHELINE(sizeof(hpx_parcel_t));
+static const size_t _SMALL_THRESHOLD = PAD_TO_CACHELINE(sizeof(hpx_parcel_t)) +
+                                       HPX_CACHELINE_SIZE;
 
 static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
