@@ -33,9 +33,10 @@
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
-/examples/fibonaccihpx
-/examples/pingponghpx
+/examples/fibonacci
+/examples/pingpong
 /examples/allreduce
+/examples/allreduce-chan
 /examples/countdown
 /examples/seqspawn
 /examples/parspawn
