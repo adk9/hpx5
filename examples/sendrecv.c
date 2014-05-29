@@ -74,7 +74,7 @@ static int _receiver_action(double *args) {
 }
 
 
-static int _main_action(void *args) {
+static int _main_action(int *n) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);
@@ -82,7 +82,7 @@ static int _main_action(void *args) {
   hpx_time_t tick = hpx_time_now();
   printf(" Tick: %g\n", hpx_time_us(tick));
 
-  for (int i=0;i<24;++i) {
+  for (int i = 0, e = *n; i < e; ++i) {
     double *buf = malloc(sizeof(double)*counts[i]);
     for (int j=0;j<counts[i];++j)
       buf[j] = j*rand();
@@ -114,7 +114,7 @@ static int _main_action(void *args) {
 
 
 static void usage(FILE *f) {
-  fprintf(f, "Usage: [options]\n"
+  fprintf(f, "Usage: [options] [LEVELS < 24]\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
@@ -158,9 +158,29 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
+  argc -= optind;
+  argv += optind;
+
+  int n = 24;
+  switch (argc) {
+   case 1:
+     n = atoi(argv[0]);
+     break;
+   case 0:
+     break;
+   default:
+    usage(stderr);
+    return -1;
+  }
+
+  if (n < 0 || n >= 24) {
+    usage(stderr);
+    return -1;
+  }
+
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
+    return -1;
   }
 
   if (HPX_LOCALITIES != 1 || HPX_THREADS < 2) {
@@ -171,5 +191,5 @@ int main(int argc, char *argv[argc]) {
   _main     = HPX_REGISTER_ACTION(_main_action);
   _worker   = HPX_REGISTER_ACTION(_worker_action);
   _receiver = HPX_REGISTER_ACTION(_receiver_action);
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(_main, &n, sizeof(n));
 }
