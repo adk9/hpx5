@@ -38,43 +38,16 @@ static int counts[24] = {
 };
 
 static hpx_action_t _main     = 0;
-static hpx_action_t _worker   = 0;
 static hpx_action_t _receiver = 0;
 
-static int _worker_action(int *args) {
-  int delay = *args;
-  double volatile d = 0.;
-
-  hpx_thread_set_affinity(1);
-
-  for (int i=0;i<delay;++i) {
-    d += 1./(2.*i+1.);
-  }
-  hpx_thread_continue(0, NULL);
-}
 
 static int _receiver_action(double *args) {
-  double *buf = args;
-  int avg = 10000;
-
   hpx_thread_set_affinity(1);
-
-  for (int k=0;k<avg;k++) {
-    hpx_addr_t done = hpx_lco_future_new(0);
-    // 10.6 microseconds
-    // int delay = 1000;
-    // hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
-    // 106 microseconds
-    int delay = 10000;
-    hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
-    hpx_lco_wait(done);
-    hpx_lco_delete(done, HPX_NULL);
-  }
   return HPX_SUCCESS;
 }
 
 
-static int _main_action(int *n) {
+static int _main_action(int *args) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);
@@ -82,30 +55,41 @@ static int _main_action(int *n) {
   hpx_time_t tick = hpx_time_now();
   printf(" Tick: %g\n", hpx_time_us(tick));
 
-  for (int i = 0, e = *n; i < e; ++i) {
+  for (int i = 0, e = args[0]; i < e; ++i) {
     double *buf = malloc(sizeof(double)*counts[i]);
     for (int j=0;j<counts[i];++j)
       buf[j] = j*rand();
 
+    printf("%d, %d: ", i, counts[i]);
     hpx_time_t t1 = hpx_time_now();
 
-    // for completing the operation
+    // for completing the entire loop
     hpx_addr_t done = hpx_lco_and_new(avg);
 
     for (int k=0; k<avg; ++k) {
+      // set up the asynchronous send
+      hpx_addr_t send = hpx_lco_future_new(0);
       hpx_parcel_t *p = hpx_parcel_acquire(buf, sizeof(double)*counts[i]);
       assert(p);
       hpx_parcel_set_target(p, HPX_HERE);
       hpx_parcel_set_action(p, _receiver);
-      hpx_parcel_set_cont(p, HPX_NULL);
-      hpx_parcel_send(p, done);
+      hpx_parcel_set_cont(p, done);
+      hpx_parcel_send(p, send);
+
+      // do the useless work
+      double volatile d = 0.;
+      for (int i = 0, e = args[1]; i < e; ++i)
+        d += 1./(2.*i+1.);
+
+      // and wait for the most recent send to complete
+      hpx_lco_wait(send);
     }
 
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
 
     double elapsed = hpx_time_elapsed_ms(t1);
-    printf("%d, %d: Elapsed: %g\n", i, counts[i], elapsed/avg);
+    printf("Elapsed: %g\n", elapsed/avg);
     free(buf);
   }
 
@@ -115,6 +99,7 @@ static int _main_action(int *n) {
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: [options] [LEVELS < 24]\n"
+          "\t-w, amount of work\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
@@ -131,40 +116,43 @@ int main(int argc, char *argv[argc]) {
     .gas           = HPX_GAS_NOGLOBAL
   };
 
+  int args[2] = {24, 10000};
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "w:c:t:d:Dh")) != -1) {
     switch (opt) {
-      case 'c':
-        cfg.cores = atoi(optarg);
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
-      case 'h':
-        usage(stdout);
-        return 0;
-      case '?':
-      default:
-        usage(stderr);
-        return -1;
+     case 'w':
+      args[1] = atoi(optarg);
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'D':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
+      break;
+     case 'd':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
+      break;
+     case 'h':
+      usage(stdout);
+      return 0;
+     case '?':
+     default:
+      usage(stderr);
+      return -1;
     }
   }
 
   argc -= optind;
   argv += optind;
 
-  int n = 24;
   switch (argc) {
    case 1:
-     n = atoi(argv[0]);
+     args[0] = atoi(argv[0]);
      break;
    case 0:
      break;
@@ -173,7 +161,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  if (n < 0 || n >= 24) {
+  if (args[0] > 24) {
     usage(stderr);
     return -1;
   }
@@ -189,7 +177,6 @@ int main(int argc, char *argv[argc]) {
   }
 
   _main     = HPX_REGISTER_ACTION(_main_action);
-  _worker   = HPX_REGISTER_ACTION(_worker_action);
   _receiver = HPX_REGISTER_ACTION(_receiver_action);
-  return hpx_run(_main, &n, sizeof(n));
+  return hpx_run(_main, args, sizeof(args));
 }
