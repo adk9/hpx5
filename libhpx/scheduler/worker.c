@@ -76,7 +76,6 @@ static __thread struct worker {
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
   lco_node_t     *lco_nodes;                    // free LCO nodes
-  ustack_t          *stacks;                    // local free stacks
   chase_lev_ws_deque_t work;                    // my work
   two_lock_queue_t    inbox;                    // work sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
@@ -90,7 +89,6 @@ static __thread struct worker {
   .sp        = NULL,
   .current   = NULL,
   .lco_nodes = NULL,
-  .stacks    = NULL,
   .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox     = {{0}},
   .shutdown  = 0,
@@ -183,15 +181,7 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
-  ustack_t *stack = self.stacks;
-  if (stack) {
-    self.stacks = stack->sp;
-    thread_init(stack, p, _thread_enter);
-  }
-  else {
-    stack = thread_new(p, _thread_enter);
-    profile_ctr(++self.stats.stacks);
-  }
+  ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
   return p;
 }
@@ -262,35 +252,39 @@ static void _get_mail(void) {
 }
 
 
-static void _free_stack(ustack_t *stack) {
-  assert(stack);
-  stack->sp = self.stacks;
-  self.stacks = stack;
-}
-
 /// ----------------------------------------------------------------------------
+/// A transfer continuation that frees the current parcel.
+///
+/// During normal thread termination, the current thread and parcel need to be
+/// freed. This can only be done safely once we've transferred away from that
+/// thread (otherwise we've freed a stack that we're currently running on). This
+/// continuation performs that operation.
 /// ----------------------------------------------------------------------------
 static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  _free_stack(parcel_get_stack(prev));
+  ustack_t *stack = parcel_get_stack(prev);
+  parcel_set_stack(prev, NULL);
+  thread_delete(stack);
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
 
 
 /// ----------------------------------------------------------------------------
+/// A transfer continuation that resends the current parcel.
+///
+/// If a parcel has arrived at the wrong locality because it's target address
+/// has been moved, then the application user will want to resend the parcel and
+/// terminate the running thread. This transfer continuation performs that
+/// operation.
 /// ----------------------------------------------------------------------------
 static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
-  _free_stack(parcel_get_stack(prev));
-
-  // if this parcel gets looped back for some reason, make sure it gets a new
-  // stack
+  ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
-
-  // I have nothing left to do, so I use sync send
+  thread_delete(stack);
   hpx_parcel_send_sync(prev);
   return HPX_SUCCESS;
 }
@@ -442,31 +436,23 @@ void *worker_run(scheduler_t *sched) {
 
   // cleanup the thread's resources---we only return here under normal shutdown
   // termination, otherwise we're canceled and vanish
-  while ((p = sync_chase_lev_ws_deque_pop(&self.work))) {
+  while ((p = sync_chase_lev_ws_deque_pop(&self.work)))
     hpx_parcel_release(p);
+
+  // print my stats and accumulate into total stats
+  {
+    char str[16] = {0};
+    snprintf(str, 16, "%d", self.id);
+    scheduler_print_stats(str, &self.stats);
+    scheduler_accum_stats(sched, &self.stats);
   }
 
-  // while (self.free) {
-  //   t = self.free;
-  //   self.free = self.free->next;
-  //   thread_delete(t);
-  // }
-
-  // have to join the barrier before deleting my deque because someone might be
-  // in the middle of a steal operation
-
-  // print worker stats and accumulate into total stats
-  char str[16] = {0};
-  snprintf(str, 16, "%d", self.id);
-  scheduler_print_stats(str, &self.stats);
-  scheduler_accum_stats(sched, &self.stats);
-
-  // print scheduler statistics, if requested (the barrier call returns non-zero
-  // to the last thread to arrive
-  if (sync_barrier_join(sched->barrier, self.id)) {
+  // join the barrier, last one to the barrier prints the totals
+  if (sync_barrier_join(sched->barrier, self.id))
     scheduler_print_stats("<totals>", &sched->stats);
-  }
 
+  // delete my deque last, as someone might be stealing from it up until the
+  // point where everyone has joined the barrier
   sync_chase_lev_ws_deque_fini(&self.work);
 
   return NULL;
