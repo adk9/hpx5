@@ -79,7 +79,7 @@ HPX_INTERNAL void scheduler_accum_stats(struct scheduler*, const scheduler_stats
 /// ----------------------------------------------------------------------------
 /// Print scheduler stats.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_print_stats(int, const scheduler_stats_t*)
+HPX_INTERNAL void scheduler_print_stats(const char *, const scheduler_stats_t*)
   HPX_NON_NULL(2);
 
 

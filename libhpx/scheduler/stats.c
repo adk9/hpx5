@@ -49,12 +49,12 @@ void scheduler_accum_stats(scheduler_t *sched, const scheduler_stats_t *worker) 
 }
 
 
-void scheduler_print_stats(int id, const scheduler_stats_t *counts) {
+void scheduler_print_stats(const char *id, const scheduler_stats_t *counts) {
 #ifdef ENABLE_PROFILING
   static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
   sync_tatas_acquire(&lock);
   printf("node %d, ", here->rank);
-  printf("thread %d, ", id);
+  printf("thread %s, ", id);
   printf("spins: %lu, ", counts->spins);
   printf("spawns: %lu, ", counts->spawns);
   printf("steals: %lu, ", counts->steals);

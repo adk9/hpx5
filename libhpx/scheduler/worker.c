@@ -456,14 +456,15 @@ void *worker_run(scheduler_t *sched) {
   // in the middle of a steal operation
 
   // print worker stats and accumulate into total stats
-  scheduler_print_stats(self.id, &self.stats);
+  char str[16] = {0};
+  snprintf(str, 16, "%d", self.id);
+  scheduler_print_stats(str, &self.stats);
   scheduler_accum_stats(sched, &self.stats);
 
   // print scheduler statistics, if requested (the barrier call returns non-zero
   // to the last thread to arrive
   if (sync_barrier_join(sched->barrier, self.id)) {
-    printf("<totals> ");
-    scheduler_print_stats(-1, &sched->stats);
+    scheduler_print_stats("<totals>", &sched->stats);
   }
 
   sync_chase_lev_ws_deque_fini(&self.work);
