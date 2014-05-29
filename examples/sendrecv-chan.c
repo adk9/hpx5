@@ -115,21 +115,14 @@ static int _main_action(void *args) {
     for (int j=0;j<counts[i];++j)
       buf[j] = j*rand();
 
-    hpx_addr_t *sfut = (hpx_addr_t*)malloc(sizeof(hpx_addr_t) * avg);
-
     hpx_time_t t1 = hpx_time_now();
-    for (int k=0; k<avg; ++k) {
-      sfut[k] = hpx_lco_future_new(0);
-      hpx_lco_chan_send(chan, buf, sizeof(double)*counts[i], sfut[k]);
-    }
-
+    hpx_addr_t sfut = hpx_lco_and_new(avg);
+    for (int k=0; k<avg; ++k)
+      hpx_lco_chan_send(chan, buf, sizeof(double)*counts[i], sfut);
+    hpx_lco_wait(sfut);
+    hpx_lco_delete(sfut, HPX_NULL);
     double elapsed = hpx_time_elapsed_ms(t1);
     printf(" Elapsed: %g\n",elapsed/avg);
-
-    for (int k=0; k<avg; ++k) {
-      hpx_lco_wait(sfut[k]);
-      hpx_lco_delete(sfut[k], HPX_NULL);
-    }
     free(buf);
   }
 
