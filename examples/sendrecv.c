@@ -99,6 +99,7 @@ static int _main_action(void *args) {
       hpx_parcel_set_target(p, HPX_HERE);
       hpx_parcel_set_action(p, _receiver);
       hpx_parcel_set_cont(p, HPX_NULL);
+      //hpx_parcel_send_sync(p);
       hpx_parcel_send(p, done[k]);
     }
 
@@ -108,7 +109,7 @@ static int _main_action(void *args) {
     }
 
     double elapsed = hpx_time_elapsed_ms(t1);
-    printf(" Elapsed %d: %g\n", i, elapsed/avg);
+    printf("%d, %d: Elapsed: %g\n", i, counts[i], elapsed/avg);
     free(buf);
   }
 
