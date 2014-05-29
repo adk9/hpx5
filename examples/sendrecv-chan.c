@@ -122,7 +122,7 @@ static int _main_action(void *args) {
     hpx_lco_wait(sfut);
     hpx_lco_delete(sfut, HPX_NULL);
     double elapsed = hpx_time_elapsed_ms(t1);
-    printf(" Elapsed: %g\n",elapsed/avg);
+    printf("%d, %d: Elapsed: %g\n", i, counts[i], elapsed/avg);
     free(buf);
   }
 
