@@ -90,23 +90,19 @@ static int _main_action(void *args) {
     hpx_time_t t1 = hpx_time_now();
 
     // for completing the operation
-    hpx_addr_t *done = malloc(avg * sizeof(done[0]));
+    hpx_addr_t done = hpx_lco_and_new(avg);
 
     for (int k=0; k<avg; ++k) {
-      done[k] = hpx_lco_future_new(0);
       hpx_parcel_t *p = hpx_parcel_acquire(buf, sizeof(double)*counts[i]);
       assert(p);
       hpx_parcel_set_target(p, HPX_HERE);
       hpx_parcel_set_action(p, _receiver);
       hpx_parcel_set_cont(p, HPX_NULL);
-      //hpx_parcel_send_sync(p);
-      hpx_parcel_send(p, done[k]);
+      hpx_parcel_send(p, done);
     }
 
-    for (int k = 0; k < avg; ++k) {
-      hpx_lco_wait(done[k]);
-      hpx_lco_delete(done[k], HPX_NULL);
-    }
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
 
     double elapsed = hpx_time_elapsed_ms(t1);
     printf("%d, %d: Elapsed: %g\n", i, counts[i], elapsed/avg);
