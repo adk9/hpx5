@@ -24,3 +24,8 @@ hpx_action_t action_register(const char * key, hpx_action_handler_t f) {
 hpx_action_handler_t action_lookup(hpx_action_t id) {
   return (hpx_action_handler_t)id;
 }
+
+int action_invoke(hpx_action_t action, void *args) {
+  hpx_action_handler_t handler = action_lookup(action);
+  return handler(args);
+}
