@@ -289,10 +289,13 @@ void hpx_lco_chan_send(hpx_addr_t chan, const void *value, int size, hpx_addr_t 
     hpx_gas_unpin(chan);
   }
   else {
-    // ugh, we don't have local completion semantics for parcels.
-    hpx_call(chan, _send, value, size, HPX_NULL);
-    if (!hpx_addr_eq(sync, HPX_NULL))
-      hpx_lco_set(sync, NULL, 0, HPX_NULL);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
+    assert(p);
+
+    hpx_parcel_set_action(p, _send);
+    hpx_parcel_set_target(p, chan);
+    hpx_parcel_set_data(p, value, size);
+    hpx_parcel_send(p, sync);
   }
 }
 
