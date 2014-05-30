@@ -26,6 +26,12 @@
 #include "libhpx/routing.h"
 #include "progress.h"
 
+#define PHOTON_DEFAULT_TAG 13
+
+static char* photon_default_eth_dev = "roce0";
+static char* photon_default_ib_dev = "mlx4_0";
+static int   photon_default_ib_port = 1;
+static char* photon_default_backend = "verbs";
 
 /// the Photon transport
 typedef struct {
@@ -85,16 +91,22 @@ static void _delete(transport_class_t *transport) {
 
 
 /// ----------------------------------------------------------------------------
-/// Pinning not necessary.
+/// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
+  void *b = (void*)buffer;
+  if (photon_register_buffer(b, len))
+    dbg_error("Could not pin buffer of size %i for photon", len);
 }
 
 
 /// ----------------------------------------------------------------------------
-/// Unpinning not necessary.
+/// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
+  void *b = (void*)buffer;
+  if (photon_unregister_buffer(b, len))
+    dbg_error("Could not un-pin buffer of size %i for photon", len);
 }
 
 
@@ -105,11 +117,13 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 /// ----------------------------------------------------------------------------
 static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
-  uint64_t saddr = block_id_ipv4mc(dest);
-  photon_t *photon = (photon_t*)t;
-  photon_addr daddr = {.blkaddr.blk3 = saddr};
+  //uint64_t saddr = block_id_ipv4mc(dest);
+  //photon_t *photon = (photon_t*)t;
+  //photon_addr daddr = {.blkaddr.blk3 = saddr};
   void *b = (void*)data;
-  int e = photon_send(&daddr, b, n, 0, r);
+
+  //int e = photon_send(&daddr, b, n, 0, r);
+  int e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK)
     return dbg_error("Photon could not send %lu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
@@ -117,19 +131,21 @@ static int _send(transport_class_t *t, int dest, const void *data, size_t n, voi
 
 
 /// ----------------------------------------------------------------------------
-/// Probe MPI to see if anything has been received.
+/// Probe Photon ledger to see if anything has been received.
 /// ----------------------------------------------------------------------------
 static size_t _probe(transport_class_t *transport, int *source) {
-  if (*source != TRANSPORT_ANY_SOURCE) {
-    dbg_error("photon transport can not currently probe source %d\n", *source);
-    return 0;
-  }
-
+  int photon_src = *source;
   int flag = 0;
   struct photon_status_t status;
   // receive from anyone. is this correct?
-  photon_addr addr = {.s_addr = 0};
-  int e = photon_probe(&addr, &flag, &status);
+  //photon_addr addr = {.s_addr = 0};
+  //int e = photon_probe(&addr, &flag, &status);
+
+  if (*source == TRANSPORT_ANY_SOURCE) {
+    photon_src = PHOTON_ANY_SOURCE;
+  }
+
+  int e = photon_probe_ledger(photon_src, &flag, PHOTON_SEND_LEDGER, &status);
   if (e < 0) {
     dbg_error("photon probe failed.\n");
     return 0;
@@ -138,8 +154,8 @@ static size_t _probe(transport_class_t *transport, int *source) {
   if (flag) {
     // update the source to the actual source, and return the number of bytes
     // available
-    // TODO: pass back the request ID for the subsequent photon_recv() (status.request)
-    *source = status.src_addr.global.proc_id;
+    *source = (int)status.src_addr.global.proc_id;
+    printf("SOURCE: %d\n", *source);
     return status.size;
   }
   else {
@@ -152,10 +168,19 @@ static size_t _probe(transport_class_t *transport, int *source) {
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
 static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
-  photon_t *photon = (photon_t*)t;
-  uint64_t *id = (uint64_t*)r;
+  //photon_t *photon = (photon_t*)t;
+  //uint64_t *id = (uint64_t*)r;
 
-  int e = photon_recv(*id, buffer, n, 0);
+  //int e = photon_recv(*id, buffer, n, 0);
+  
+  /* make sure we have remote buffer metadata */
+  int e = photon_wait_send_buffer_rdma(src, PHOTON_DEFAULT_TAG, r);
+  if (e != PHOTON_OK) {
+    return dbg_error("%d: error in wait_send_buffer for %i", src);
+  }
+  
+  /* get the remote buffer */
+  e = photon_post_os_get(*(uint32_t*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
     return dbg_error("could not receive %lu bytes from %i", n, src);
 
@@ -216,6 +241,13 @@ transport_class_t *transport_new_photon(void) {
   photon->class.malloc         = _malloc;
   photon->class.free           = _free;
 
+  /* runtime configuration options */
+  char* eth_dev;
+  char* ib_dev;
+  char* backend;
+  int ib_port;
+  int use_cma;
+  
   int val = 0;
   MPI_Initialized(&val);
   if (!val) {
@@ -223,6 +255,26 @@ transport_class_t *transport_new_photon(void) {
     return NULL;
   }
 
+  // TODO: make eth_dev and ib_dev runtime configurable!
+  eth_dev = getenv("HPX_USE_ETH_DEV");
+  ib_dev = getenv("HPX_USE_IB_DEV");
+  backend = getenv("HPX_USE_BACKEND");
+
+  if (eth_dev == NULL)
+    eth_dev = photon_default_eth_dev;
+  if (ib_dev == NULL)
+    ib_dev = photon_default_ib_dev;
+  if (backend == NULL)
+    backend = photon_default_backend;
+  if(getenv("HPX_USE_CMA") == NULL)
+    use_cma = 1;
+  else
+    use_cma = atoi(getenv("HPX_USE_CMA"));
+  if (getenv("HPX_IB_PORT") == NULL)
+    ib_port = photon_default_ib_port;
+  else
+    ib_port = atoi(getenv("HPX_USE_IB_PORT"));
+  
   struct photon_config_t *cfg = &photon->cfg;
   cfg->meta_exch       = PHOTON_EXCH_MPI;
   cfg->nproc           = here->ranks;
@@ -230,12 +282,12 @@ transport_class_t *transport_new_photon(void) {
   cfg->comm            = MPI_COMM_WORLD;
   cfg->use_forwarder   = 0;
   cfg->use_cma         = 0;
-  cfg->use_ud          = 1;
+  cfg->use_ud          = 0;
   cfg->ud_gid_prefix   = "ff0e::ffff:0000:0000";
-  cfg->eth_dev         = "roce0";
-  cfg->ib_dev          = "mlx4_0";
-  cfg->ib_port         = 1;
-  cfg->backend         = "verbs";
+  cfg->eth_dev         = eth_dev;
+  cfg->ib_dev          = ib_dev;
+  cfg->ib_port         = ib_port;
+  cfg->backend         = backend;
 
   val = photon_initialized();
   if (!val) {
