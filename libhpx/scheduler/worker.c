@@ -132,10 +132,9 @@ static void* _lco_node_put(lco_node_t *n) {
 /// The entry function for all of the threads.
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  hpx_action_t action = parcel->action;
-  hpx_action_handler_t handler = action_lookup(action);
+  hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
-  int status = handler(args);
+  int status = action_invoke(action, args);
   switch (status) {
    default:
     dbg_error("action produced unhandled error, %i\n", (int)status);
