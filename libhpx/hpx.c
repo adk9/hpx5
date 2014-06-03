@@ -415,6 +415,10 @@ hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_call(dst, locality_gas_move, &src, sizeof(src), lco);
 }
 
+void hpx_gas_global_free(hpx_addr_t addr) {
+  dbg_log("unimplemented");
+}
+
 hpx_addr_t
 hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
   assert(bytes != 0);
