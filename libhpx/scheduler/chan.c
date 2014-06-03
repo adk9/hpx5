@@ -152,7 +152,6 @@ static void _init(_chan_t *c) {
 
 static int _send_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont();
   _chan_t *chan;
   if (!hpx_gas_try_pin(target, (void**)&chan))
     return HPX_RESEND;
@@ -168,7 +167,6 @@ static int _send_action(void *args) {
 
 static int _recv_action(int *size) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont();
 
   _chan_t *chan;
   if (!hpx_gas_try_pin(target, (void**)&chan))

@@ -25,8 +25,7 @@ hpx_action_t light_network = 0;
 
 static int _light_network_action(void *args) {
   while (true) {
-    scheduler_stats_t *s = thread_get_stats();
-    profile_ctr(s->progress++);
+    profile_ctr(thread_get_stats()->progress++);
     transport_progress(here->transport, false);
     scheduler_yield();
   }
