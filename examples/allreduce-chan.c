@@ -40,7 +40,7 @@ static int _allreduce_action(hpx_addr_t *args) {
   hpx_lco_chan_send(root, &buf, sizeof(buf), HPX_NULL);
 
   hpx_addr_t chan = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
-  double *result = hpx_lco_chan_recv(chan, 0);
+  double *result = hpx_lco_chan_recv(chan, sizeof(*result));
   assert(result);
   printf("rank %d (in %f, out %f).\n", HPX_LOCALITY_ID, buf, *result);
   free(result);
@@ -72,7 +72,7 @@ static int _main_action(void *args) {
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
-    buf = hpx_lco_chan_recv(rank, sizeof(double));
+    buf = hpx_lco_chan_recv(rank, sizeof(*buf));
     accum += *buf; // reduce
     free(buf);
   }
