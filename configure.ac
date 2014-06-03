@@ -80,19 +80,19 @@ LT_INIT
 AC_ARG_ENABLE([pedantic],
   [AS_HELP_STRING([--enable-pedantic], [Enable -pedantic @<:@default=yes@:>@])],
   [], [enable_pedantic=yes])
-AS_IF([test "x$enable_pedantic" != xno -a "x$hpx_pe_env" = xgnu],
+AS_IF([test "x$enable_pedantic" != xno -a "x$hpx_pe_env" = xGNU],
   [AC_SUBST([HPX_PEDANTIC], [-pedantic])])
 
 AC_ARG_ENABLE([wall],
   [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
   [], [enable_wall=yes])
-AS_IF([test "x$enable_wall" != xno -a "x$hpx_pe_env" = xgnu],
+AS_IF([test "x$enable_wall" != xno -a "x$hpx_pe_env" = xGNU],
   [AC_SUBST([HPX_W_ALL], [-Wall])])
 
 AC_ARG_ENABLE([werror],
   [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=no@:>@])],
   [], [enable_werror=no])
-AS_IF([test "x$enable_werror" != xno -a "x$hpx_pe_env" = xgnu],
+AS_IF([test "x$enable_werror" != xno -a "x$hpx_pe_env" = xGNU],
   [AC_SUBST([HPX_W_ERROR], [-Werror])])
 
 AC_SUBST([HPX_C99], [$ac_cv_prog_cc_c99])
