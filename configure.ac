@@ -97,6 +97,10 @@ AS_IF([test "x$enable_werror" != xno -a "x$hpx_pe_env" = xGNU],
 
 AC_SUBST([HPX_C99], [$ac_cv_prog_cc_c99])
 
+AC_ARG_ENABLE([apps],
+  [AS_HELP_STRING([--enable-apps], [Enable mini-apps @<:@default=no@:>@])],
+  [], [enable_apps=no])
+
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
@@ -185,6 +189,7 @@ AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno])
+AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -215,6 +220,8 @@ AC_CONFIG_FILES([
 # src/Makefile
 # src/libhpx.pc
 
+AS_IF([test "x$enable_apps" != xno],
+  [AC_CONFIG_FILES([apps/Makefile apps/lulesh/Makefile apps/lulesh/parcels/Makefile])])
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
 AS_IF([test "x$enable_tests" != xno],

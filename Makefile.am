@@ -5,7 +5,7 @@
 EXTRA_DIST = \
         autogen.sh           \
         README NEWS TODO     \
-        docs
+        docs apps
 
 AUTOMAKE_OPTIONS= foreign
 ACLOCAL_AMFLAGS = -I config
@@ -18,4 +18,8 @@ endif
 
 if ENABLE_TESTS
     SUBDIRS    += tests
+endif
+
+if ENABLE_APPS
+    SUBDIRS    += apps
 endif
