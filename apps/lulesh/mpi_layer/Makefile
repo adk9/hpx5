@@ -63,11 +63,11 @@ LIBS.epicx     := #-lgcov
 #CXXFLAGS.hpx   := $(shell pkg-config --cflags-only-other libhpx)
 #LDFLAGS.hpx    := $(shell pkg-config --libs-only-L libhpx)
 #LIBS.hpx       := $(shell pkg-config --libs-only-l libhpx)
-CPPFLAGS.hpx   := -I$(HOME)/hpx5_rethread/include  
-CFLAGS.hpx     := -I$(HOME)/hpx5_rethread/include  
-CXXFLAGS.hpx   := -I$(HOME)/hpx5_rethread/include  
-LDFLAGS.hpx    := -L/opt/apps/intel14/mvapich2/2.0b/lib/ -L$(HOME)/hpx5_rethread/lib
-LIBS.hpx       := $(HOME)/hpx5_rethread/lib/libhpx.a -lmpich #-lhpx 
+CPPFLAGS.hpx   := -I$(HOME)/hpx_3jun2014/hpx/hpx5/include  
+CFLAGS.hpx     := -I$(HOME)/hpx_3jun2014/hpx/hpx5/include  
+CXXFLAGS.hpx   := -I$(HOME)/hpx_3jun2014/hpx/hpx5/include  
+LDFLAGS.hpx    := -L/opt/openmpi/intel/1.7.5/lib/ -L$(HOME)/hpx_3jun2014/hpx/hpx5/lib
+LIBS.hpx       := -lhpx -lmpi #-lhpx 
 
 # Set up some flags for the 3T transformation
 THREADS.3t     := 32
