@@ -29,7 +29,7 @@
 #define PHOTON_DEFAULT_TAG 13
 
 static char* photon_default_eth_dev = "roce0";
-static char* photon_default_ib_dev = "mlx4_0";
+static char* photon_default_ib_dev = "qib0";
 static int   photon_default_ib_port = 1;
 static char* photon_default_backend = "verbs";
 
@@ -96,7 +96,8 @@ static void _delete(transport_class_t *transport) {
 static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
-    dbg_error("Could not pin buffer of size %i for photon", len);
+    dbg_error("Could not pin buffer of size %lu for photon\n", len);
+  //dbg_error("pinning address: 0x%016lx (%lu)\n", (uintptr_t)b, len);
 }
 
 
@@ -106,7 +107,7 @@ static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
-    dbg_error("Could not un-pin buffer of size %i for photon", len);
+    dbg_error("Could not un-pin buffer of size %lu for photon", len);
 }
 
 
@@ -155,7 +156,6 @@ static size_t _probe(transport_class_t *transport, int *source) {
     // update the source to the actual source, and return the number of bytes
     // available
     *source = (int)status.src_addr.global.proc_id;
-    printf("SOURCE: %d\n", *source);
     return status.size;
   }
   else {
@@ -170,19 +170,17 @@ static size_t _probe(transport_class_t *transport, int *source) {
 static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
   //photon_t *photon = (photon_t*)t;
   //uint64_t *id = (uint64_t*)r;
-
-  //int e = photon_recv(*id, buffer, n, 0);
-  
-  /* make sure we have remote buffer metadata */
+  //int e = photon_recv(*id, buffer, n, 0);  
+  // make sure we have remote buffer metadata
   int e = photon_wait_send_buffer_rdma(src, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK) {
-    return dbg_error("%d: error in wait_send_buffer for %i", src);
+    return dbg_error("error in wait_send_buffer for %i\n", src);
   }
   
-  /* get the remote buffer */
+  // get the remote buffer
   e = photon_post_os_get(*(uint32_t*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
-    return dbg_error("could not receive %lu bytes from %i", n, src);
+    return dbg_error("could not receive %lu bytes from %i\n", n, src);
 
   return HPX_SUCCESS;
 }
@@ -196,14 +194,23 @@ static int _test(transport_class_t *t, void *request, int *success) {
   if (e < 0)
     return dbg_error("failed photon_test.\n");
 
+  // send back the FIN message for local EVQUEUE completions (type==0)
+  if ((*success == 1) && (type == 0)) {
+    e = photon_send_FIN(*id, status.src_addr.global.proc_id);
+    if (e != PHOTON_OK) {
+      return dbg_error("could not send FIN back to %lu\n",
+                       status.src_addr.global.proc_id);
+    }
+  }
+  
   return HPX_SUCCESS;
 }
 
 static void _progress(transport_class_t *t, bool flush) {
   photon_t *photon = (photon_t*)t;
   network_progress_poll(photon->progress);
-  if (flush)
-    network_progress_flush(photon->progress);
+  //if (flush)
+  //  network_progress_flush(photon->progress);
 }
 
 
@@ -211,6 +218,7 @@ static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
   void *p = NULL;
   if (posix_memalign(&p, align, bytes))
     dbg_log("failed network allocation.\n");
+  //dbg_error("allocated address: 0x%016lx (%lu)\n", (uintptr_t)p, bytes);
   return p;
 }
 
@@ -240,8 +248,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.progress       = _progress;
   photon->class.malloc         = _malloc;
   photon->class.free           = _free;
-
-  /* runtime configuration options */
+  
+  // runtime configuration options
   char* eth_dev;
   char* ib_dev;
   char* backend;
@@ -270,7 +278,7 @@ transport_class_t *transport_new_photon(void) {
     use_cma = 1;
   else
     use_cma = atoi(getenv("HPX_USE_CMA"));
-  if (getenv("HPX_IB_PORT") == NULL)
+  if (getenv("HPX_USE_IB_PORT") == NULL)
     ib_port = photon_default_ib_port;
   else
     ib_port = atoi(getenv("HPX_USE_IB_PORT"));
@@ -281,7 +289,7 @@ transport_class_t *transport_new_photon(void) {
   cfg->address         = here->rank;
   cfg->comm            = MPI_COMM_WORLD;
   cfg->use_forwarder   = 0;
-  cfg->use_cma         = 0;
+  cfg->use_cma         = use_cma;
   cfg->use_ud          = 0;
   cfg->ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->eth_dev         = eth_dev;

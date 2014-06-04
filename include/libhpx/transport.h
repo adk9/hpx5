@@ -121,7 +121,7 @@ transport_pin(transport_class_t *t, const void *buffer, size_t len) {
 
 inline static void
 transport_unpin(transport_class_t *t, const void *buffer, size_t len) {
-  t->pin(t, buffer, len);
+  t->unpin(t, buffer, len);
 }
 
 
@@ -185,6 +185,5 @@ inline static void
 transport_free(transport_class_t *t, void *p) {
   t->free(t, p);
 }
-
 
 #endif // LIBHPX_TRANSPORT_H
