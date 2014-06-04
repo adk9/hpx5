@@ -1,7 +1,7 @@
 CC = mpicc
 CFLAGS = -g
-INCLUDES = -I/home1/00626/tg457945/hpx_3jun2014/hpx5/include
-LIBS = -L/home1/00626/tg457945/hpx_3jun2014/hpx5/lib -lhpx
+INCLUDES = -I/home/manderson/hpx_3jun2014/hpx/hpx5/include
+LIBS = -L/home/manderson/hpx_3jun2014/hpx/hpx5/lib -lhpx
 
 SRC = $(shell ls *.c)
 OBJ = $(SRC:.c=.o)
