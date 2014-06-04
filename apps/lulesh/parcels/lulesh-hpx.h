@@ -65,6 +65,13 @@ typedef struct Advance {
   int cores;
 } Advance; 
 
+typedef struct Nodal {
+  int srcLocalIdx;
+  hpx_addr_t *address;
+  double *buf;
+  int rank;
+} Nodal; 
+
 typedef struct Domain {
   // Elem-centered 
   int *matElemlist;  // material indexset
