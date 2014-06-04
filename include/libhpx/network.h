@@ -116,7 +116,7 @@ HPX_INTERNAL void *network_malloc(size_t bytes, size_t alignment)
 /// ----------------------------------------------------------------------------
 /// Free network allocated memory.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_free(void *p)
+HPX_INTERNAL void network_free(void *p, size_t bytes)
   HPX_NON_NULL(1);
 
 
