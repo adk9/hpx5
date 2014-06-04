@@ -39,7 +39,7 @@ static int _advanceDomain_action(Advance *advance) {
 
   Domain *ld;
 
-  hpx_gas_try_pin(local,(void**) ld);
+  hpx_gas_try_pin(local,(void**) &ld);
 
   Init(tp,nx);
   int col = index%tp;
@@ -47,7 +47,7 @@ static int _advanceDomain_action(Advance *advance) {
   int plane = index/(tp*tp);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
-  SBN1(local,ld,index);
+//  SBN1(local,ld,index);
 
   hpx_gas_unpin(local);
 
