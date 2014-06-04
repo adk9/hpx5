@@ -63,7 +63,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
     nodal[i].address = &address;
     
     hpx_addr_t send = hpx_lco_future_new(0);
-    hpx_parcel_t *p = hpx_parcel_acquire(nodal[i], sizeof(nodal[i]));
+    hpx_parcel_t *p = hpx_parcel_acquire(&nodal[i], sizeof(nodal[i]));
     hpx_parcel_set_target(p, HPX_THERE(to_rank));
     hpx_parcel_set_action(p, _updateNodalMass);
     hpx_parcel_set_cont(p, done);
@@ -78,6 +78,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
+
 }
 
 static int _advanceDomain_action(Advance *advance) {
