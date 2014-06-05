@@ -73,6 +73,8 @@ typedef struct Nodal {
 } Nodal; 
 
 typedef struct Domain {
+  hpx_addr_t sem;
+
   // Elem-centered 
   int *matElemlist;  // material indexset
   int *nodelist;     // elemToNode connectivity
