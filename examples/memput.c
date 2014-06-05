@@ -11,10 +11,10 @@
 #include <sys/time.h>
 #include "hpx/hpx.h"
 
-#define MAX_MSG_SIZE         (1<<22)
-#define SKIP_LARGE  10
-#define LOOP_LARGE  100
-#define LARGE_MESSAGE_SIZE  8192
+#define MAX_MSG_SIZE        (1<<22)
+#define SKIP_LARGE          10
+#define LOOP_LARGE          100
+#define LARGE_MESSAGE_SIZE  (1<<13)
 
 int skip = 1000;
 int loop = 10000;
@@ -54,8 +54,8 @@ static int _init_array_action(size_t *args) {
     return HPX_RESEND;
 
   for(int i = 0; i < n; i++)
-    local[i] = (hpx_get_my_rank() == 0) ? 'a' : 'b';
-  hpx_thread_continue(sizeof(local), &local);
+    local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
+  HPX_THREAD_CONTINUE(local);
 }
 
 static int _memput_action(void *args) {
@@ -65,19 +65,19 @@ static int _memput_action(void *args) {
     return HPX_RESEND;
 
   memcpy(local, args, hpx_thread_current_args_size());
-  hpx_thread_continue(0, NULL);
+  return HPX_SUCCESS;
 }
 
 static int _main_action(void *args) {
   double t_start = 0.0, t_end = 0.0;
-  int rank = hpx_get_my_rank();
-  int size = hpx_get_num_ranks();
+  int rank = HPX_LOCALITY_ID;
+  int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
   int i;
 
-  if (size == 1 ) {
+  if (size == 1) {
     fprintf(stderr, "This test requires at least two HPX threads\n");
-    hpx_shutdown(0);
+    hpx_shutdown(HPX_ERROR);
   }
 
   hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
@@ -88,18 +88,15 @@ static int _main_action(void *args) {
   fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
   fflush(stdout);
 
-  hpx_addr_t lfut;
   hpx_addr_t rfut;
-  hpx_addr_t done;
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     char *local;
-    lfut = hpx_lco_future_new(sizeof(void*));
-    rfut = hpx_lco_future_new(sizeof(void*));
 
+    rfut = hpx_lco_future_new(sizeof(void*));
     hpx_call(remote, _init_array, &size, sizeof(size), rfut);
-    hpx_call(data, _init_array, &size, sizeof(size), lfut);
-    hpx_lco_get(lfut, &local, sizeof(local));
+    hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
     hpx_lco_wait(rfut);
+    hpx_lco_delete(rfut, HPX_NULL);
 
     if (size > LARGE_MESSAGE_SIZE) {
       loop = LOOP_LARGE;
@@ -110,22 +107,17 @@ static int _main_action(void *args) {
       if(i == skip)
         wtime(&t_start);
 
-      done = hpx_lco_future_new(0);
-      hpx_call(remote, _memput, local, size, done);
-      hpx_lco_wait(done);
-      hpx_lco_delete(done, HPX_NULL);
+      hpx_call_sync(remote, _memput, local, size, NULL, 0);
     }
 
     wtime(&t_end);
-    hpx_lco_delete(lfut, HPX_NULL);
-    hpx_lco_delete(rfut, HPX_NULL);
 
     double latency = (t_end - t_start)/(1.0 * loop);
     fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 static void usage(FILE *f) {
@@ -139,10 +131,10 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
+    .cores       = 0,
+    .threads     = 0,
     .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS
+    .gas         = HPX_GAS_PGAS
   };
 
   int opt = 0;
@@ -182,8 +174,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  _main = HPX_REGISTER_ACTION(_main_action);
+  _main       = HPX_REGISTER_ACTION(_main_action);
   _init_array = HPX_REGISTER_ACTION(_init_array_action);
-  _memput = HPX_REGISTER_ACTION(_memput_action);
+  _memput     = HPX_REGISTER_ACTION(_memput_action);
   return hpx_run(_main, NULL, 0);
 }

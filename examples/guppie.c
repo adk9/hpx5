@@ -45,12 +45,12 @@ typedef struct guppie_config {
 static int _move = 0;
 
 static hpx_action_t _update_table = 0;
-static hpx_action_t _init_table = 0;
-static hpx_action_t _bitwiseor = 0;
-static hpx_action_t _main = 0;
-static hpx_action_t _memput = 0;
-static hpx_action_t _memget = 0;
-static hpx_action_t _mover = 0;
+static hpx_action_t _init_table   = 0;
+static hpx_action_t _bitwiseor    = 0;
+static hpx_action_t _main         = 0;
+static hpx_action_t _memput       = 0;
+static hpx_action_t _memget       = 0;
+static hpx_action_t _mover        = 0;
 
 static int _memput_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
@@ -60,7 +60,7 @@ static int _memput_action(void *args) {
 
   memcpy(local, args, hpx_thread_current_args_size());
   hpx_gas_unpin(target);
-  hpx_thread_exit(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 static int _memget_action(size_t *args) {
@@ -78,11 +78,8 @@ static int _memget_action(size_t *args) {
 uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
-  hpx_addr_t lco = hpx_lco_future_new(n);
   hpx_addr_t there = hpx_addr_add(table, i*n);
-  hpx_call(there, _memget, &n, sizeof(n), lco);
-  hpx_lco_get(lco, &val, n);
-  hpx_lco_delete(lco, HPX_NULL);
+  hpx_call_sync(there, _memget, &n, sizeof(n), &val, n);
   return val;
 }
 
@@ -104,7 +101,7 @@ static int _bitwiseor_action(uint64_t *args) {
   value ^= *local;
   memcpy(local, &value, sizeof(value));
   hpx_gas_unpin(target);
-  hpx_thread_exit(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 
@@ -114,8 +111,8 @@ static int _init_table_action(guppie_config_t *cfg) {
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  int me = hpx_get_my_rank();
-  int nranks = hpx_get_num_ranks();
+  int me = HPX_LOCALITY_ID;
+  int nranks = HPX_LOCALITIES;
   long r = cfg->tabsize % nranks;
   long blocks = cfg->tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and = hpx_lco_and_new(blocks);
@@ -125,7 +122,7 @@ static int _init_table_action(guppie_config_t *cfg) {
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
   hpx_gas_unpin(target);
-  hpx_thread_exit(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 
@@ -192,7 +189,7 @@ static int _mover_action(guppie_config_t *cfg) {
   int dst;
   hpx_addr_t lco;
 
-  int size = hpx_get_num_ranks();
+  int size = HPX_LOCALITIES;
 
   while (1) {
     // get a random number
@@ -211,8 +208,7 @@ static int _mover_action(guppie_config_t *cfg) {
   // gets killed at shutdown
 }
 
-void _update_table_action(guppie_config_t *cfg)
-{
+static int _update_table_action(guppie_config_t *cfg) {
 #define VLEN 32
   uint64_t ran[VLEN];              /* Current random numbers */
   uint64_t t1[VLEN];
@@ -221,8 +217,8 @@ void _update_table_action(guppie_config_t *cfg)
   long j;
   hpx_addr_t and;
 
-  int me = hpx_get_my_rank();
-  int nranks = hpx_get_num_ranks();
+  int me = HPX_LOCALITY_ID;
+  int nranks = HPX_LOCALITIES;
 
   Block(me, nranks, cfg->nupdate, &start, &stop, &size);
 
@@ -244,7 +240,7 @@ void _update_table_action(guppie_config_t *cfg)
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
   }
-  hpx_thread_exit(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 void _main_action(guppie_config_t *cfg)
@@ -329,7 +325,7 @@ void _main_action(guppie_config_t *cfg)
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 static void _usage(FILE *stream) {
