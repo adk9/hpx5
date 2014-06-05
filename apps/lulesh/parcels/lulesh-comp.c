@@ -1,9 +1,7 @@
 #include "lulesh-hpx.h"
 
-void CalcForceForNodes(int rank)
+void CalcForceForNodes(Domain *domain,int rank)
 {
-#if 0
-  Domain *domain = &DOMAINS[rank]; 
   int numNode = domain->numNode; 
   int i; 
 
@@ -13,15 +11,14 @@ void CalcForceForNodes(int rank)
     domain->fz[i] = 0.0;
   }
 
-  CalcVolumeForceForElems(rank); 
+  CalcVolumeForceForElems(domain,rank); 
 
-  SBN3(rank);
-#endif
+ // FIXME
+ // SBN3(rank);
 }
 
-void CalcVolumeForceForElems(int rank)
+void CalcVolumeForceForElems(Domain *domain,int rank)
 {
-  Domain *domain = &DOMAINS[rank]; 
   int numElem = domain->numElem; 
 
   if (numElem != 0) {

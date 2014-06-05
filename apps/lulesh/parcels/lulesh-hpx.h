@@ -225,9 +225,9 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(int rank);
+void CalcForceForNodes(Domain *domain,int rank);
 
-void CalcVolumeForceForElems(int rank);
+void CalcVolumeForceForElems(Domain *domain,int rank);
 
 void CalcQForElems(int rank);
 
