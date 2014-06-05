@@ -66,8 +66,6 @@ typedef struct Advance {
 
 typedef struct Nodal {
   int srcLocalIdx;
-  hpx_addr_t address;
-  int rank;
   double buf[];                                // inline, variable length buffer
 } Nodal;
 
