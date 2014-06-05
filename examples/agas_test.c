@@ -35,23 +35,20 @@ static hpx_action_t root = 0;
 static hpx_action_t get_rank = 0;
 
 static int get_rank_action(void *args) {
-  int rank = hpx_get_my_rank();
-  hpx_thread_continue(sizeof(rank), &rank);
+  int rank = HPX_LOCALITY_ID;
+  HPX_THREAD_CONTINUE(rank);
 }
 
 static int root_action(void *args) {
-  printf("root locality: %d, thread: %d.\n", hpx_get_my_rank(), hpx_get_my_thread_id());
+  printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
   int r = 0;
-  hpx_addr_t f = hpx_lco_future_new(sizeof(int));
-  hpx_call(other, get_rank, NULL, 0, f);
-  hpx_lco_get(f, &r, sizeof(r));
-  hpx_lco_delete(f, HPX_NULL);
-  printf("target locality's rank (before move): %d\n", r);
+  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
+  printf("target locality's ID (before move): %d\n", r);
 
-  if (r == hpx_get_my_rank()) {
+  if (r == HPX_LOCALITY_ID) {
     printf("AGAS test: failed.\n");
     hpx_shutdown(0);
   }
@@ -67,14 +64,11 @@ static int root_action(void *args) {
 
   hpx_lco_delete(done, HPX_NULL);
 
-  f = hpx_lco_future_new(sizeof(int));
-  hpx_call(other, get_rank, NULL, 0, f);
-  hpx_lco_get(f, &r, sizeof(r));
-  hpx_lco_delete(f, HPX_NULL);
+  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
   printf("target locality's rank (after move): %d\n", r);
 
   printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "passed" : "failed"));
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 static void usage(FILE *f) {
@@ -88,10 +82,10 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
+    .cores       = 0,
+    .threads     = 0,
     .stack_bytes = 0,
-    .gas = HPX_GAS_AGAS
+    .gas         = HPX_GAS_AGAS
   };
 
   int opt = 0;
@@ -126,13 +120,13 @@ int main(int argc, char *argv[argc]) {
     return 1;
   }
 
-  int ranks = hpx_get_num_ranks();
+  int ranks = HPX_LOCALITIES;
   if (ranks < 2) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.");
     return -1;
   }
 
-  root = HPX_REGISTER_ACTION(root_action);
+  root     = HPX_REGISTER_ACTION(root_action);
   get_rank = HPX_REGISTER_ACTION(get_rank_action);
   return hpx_run(root, NULL, 0);
 }

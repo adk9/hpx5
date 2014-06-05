@@ -119,16 +119,19 @@ void hpx_parcel_send_sync(hpx_parcel_t *p)
 hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+hpx_action_t hpx_parcel_get_cont_action(const hpx_parcel_t *p)
+  HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p)
+hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------
@@ -141,7 +144,6 @@ void *hpx_parcel_get_data(hpx_parcel_t *p)
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action)
   HPX_NON_NULL(1);
 
-
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
 void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr)
@@ -149,7 +151,12 @@ void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr)
 
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
-void hpx_parcel_set_cont(hpx_parcel_t *p, const hpx_addr_t lco)
+void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action)
+  HPX_NON_NULL(1);
+
+/// ----------------------------------------------------------------------------
+/// ----------------------------------------------------------------------------
+void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
   HPX_NON_NULL(1);
 
 /// ----------------------------------------------------------------------------

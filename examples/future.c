@@ -35,24 +35,20 @@ static hpx_addr_t rand_rank(void) {
 static hpx_action_t send = 0;
 static hpx_action_t increment = 0;
 
-static int increment_action(void *args) {
-  int n = *(int*)args + 1;
-  hpx_thread_continue(sizeof(n), &n);
+static int increment_action(int *args) {
+  int n = *args + 1;
+  HPX_THREAD_CONTINUE(n);
 }
 
 
-static int send_action(void *args) {
-  int n = *(int*)args;
+static int send_action(int *args) {
+  int n = *args;
   int i = 0;
   while (i < n) {
-    printf("locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
-           hpx_get_my_thread_id(), i);
-    hpx_addr_t future = hpx_lco_future_new(sizeof(n));
-    hpx_call(rand_rank(), increment, &i, sizeof(i), future);
-    hpx_lco_get(future, &i, sizeof(i));
-    hpx_lco_delete(future, HPX_NULL);
+    printf("locality: %d, thread: %d, count: %d\n", HPX_LOCALITY_ID, HPX_THREAD_ID, i);
+    hpx_call_sync(rand_rank(), increment, &i, sizeof(i), &i, sizeof(i));
   }
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 static void usage(FILE *f) {
@@ -66,8 +62,8 @@ static void usage(FILE *f) {
 
 int main(int argc, char * argv[argc]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
+    .cores       = 0,
+    .threads     = 0,
     .stack_bytes = 0
   };
 
@@ -116,7 +112,7 @@ int main(int argc, char * argv[argc]) {
     return 1;
   }
 
-  send = hpx_register_action("send", send_action);
-  increment = hpx_register_action("increment", increment_action);
+  send      = HPX_REGISTER_ACTION(send_action);
+  increment = HPX_REGISTER_ACTION(increment_action);
   return hpx_run(send, &n, sizeof(n));
 }
