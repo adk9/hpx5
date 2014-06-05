@@ -80,7 +80,7 @@ typedef struct {
 ms_queue_t *sync_ms_queue_new(void) HPX_MALLOC;
 void sync_ms_queue_delete(ms_queue_t *q) HPX_NON_NULL(1);
 
-void  sync_ms_queue_init(ms_queue_t *q) HPX_NON_NULL(1);
+void  sync_ms_queue_init(ms_queue_t *q, void *val) HPX_NON_NULL(1);
 void  sync_ms_queue_fini(ms_queue_t *q) HPX_NON_NULL(1);
 void  sync_ms_queue_enqueue(ms_queue_t *q, void *val) HPX_NON_NULL(1);
 void *sync_ms_queue_dequeue(ms_queue_t *q) HPX_NON_NULL(1);
