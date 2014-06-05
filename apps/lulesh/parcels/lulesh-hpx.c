@@ -50,43 +50,40 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
   // for completing the entire loop
   hpx_addr_t done = hpx_lco_and_new(nsTF);
 
-  Nodal nodal[nsTF];
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
-    double *data = malloc(BUFSZ[destLocalIdx]);
+    // acquire a "large-enough buffer to pack into," NULL first parameter means
+    // it comes with the parcel and is managed by the parcel and freed by the
+    // system inside of send()
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(Nodal) +
+                                         BUFSZ[destLocalIdx]);
+    assert(p);
+
+    // "interpret the parcel buffer as a Nodal"
+    Nodal *nodal = hpx_parcel_get_data(p);
 
     send_t pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, domain->nodalMass, data);
+    pack(nx, ny, nz, domain->nodalMass, nodal->buf);
 
     // the neighbor this is being sent to
     int srcRemoteIdx = destLocalIdx;
     int srcLocalIdx = 25 - srcRemoteIdx;
     int to_rank = rank - OFFSET[srcLocalIdx];
 
-    nodal[i].rank = to_rank;
-    nodal[i].srcLocalIdx = srcLocalIdx;
-    nodal[i].buf = data;
-    nodal[i].address = address;
+    nodal->rank = to_rank;
+    nodal->srcLocalIdx = srcLocalIdx;
+    nodal->address = address;
 
-    hpx_addr_t send = hpx_lco_future_new(0);
-    hpx_parcel_t *p = hpx_parcel_acquire(&nodal[i], sizeof(nodal[i]));
     hpx_parcel_set_target(p, HPX_THERE(to_rank));
     hpx_parcel_set_action(p, _updateNodalMass);
     hpx_parcel_set_cont(p, done);
-    hpx_parcel_send(p, send);
+    hpx_parcel_send(p, HPX_NULL);
 
     hpx_lco_sema_v(domain->sem, HPX_NULL);
-
-    // overlap work here if desired
-
-    // and wait for the most recent send to complete
-    hpx_lco_wait(send);
-    free(data);
   }
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
-
 }
 
 static int _advanceDomain_action(Advance *advance) {
