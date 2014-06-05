@@ -200,6 +200,14 @@ typedef struct Domain {
   int recvFF[14];
 } Domain;
 
+typedef struct pSBN1 {
+  Domain *domain;
+  hpx_addr_t local;
+  int destLocalIdx;
+  hpx_addr_t done;
+  int rank;
+} pSBN1;
+
 int OFFSET[26], BUFSZ[26], XFERCNT[26], MAXEDGESIZE, MAXPLANESIZE;
 Domain *DOMAINS;
 send_t SENDER[26];

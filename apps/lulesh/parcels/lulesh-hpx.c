@@ -4,6 +4,7 @@ static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _initDomain    = 0;
 static hpx_action_t _updateNodalMass = 0;
+static hpx_action_t _SBN1_sends = 0;
 
 static int _updateNodalMass_action(Nodal *nodal) {
   hpx_addr_t local = hpx_thread_current_target();
@@ -32,13 +33,52 @@ static int _updateNodalMass_action(Nodal *nodal) {
   return HPX_SUCCESS;
 }
 
+static int _SBN1_sends_action(pSBN1 *psbn1)
+{
+  Domain *domain;
+  domain = psbn1->domain;
+  hpx_addr_t local = psbn1->local;
+  int destLocalIdx = psbn1->destLocalIdx;
+  hpx_addr_t done = psbn1->done;
+  int rank = psbn1->rank;
+
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(Nodal) +
+                                         BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  Nodal *nodal = hpx_parcel_get_data(p);
+
+  send_t pack = SENDER[destLocalIdx];
+
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  pack(nx, ny, nz, domain->nodalMass, nodal->buf);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int to_rank = rank - OFFSET[srcLocalIdx];
+  int distance = to_rank - domain->rank;
+  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
+
+  nodal->srcLocalIdx = srcLocalIdx;
+
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _updateNodalMass);
+  hpx_parcel_set_cont(p, done);
+  hpx_parcel_send(p, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
 void SBN1(hpx_addr_t local, Domain *domain, int index)
 {
   int i;
   int rank = index;
-  int nx = domain->sizeX + 1;
-  int ny = domain->sizeY + 1;
-  int nz = domain->sizeZ + 1;
 
   // protect the domain
   hpx_lco_sema_p(domain->sem);
@@ -50,34 +90,15 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   // for completing the entire loop
   hpx_addr_t done = hpx_lco_and_new(nsTF);
 
+  pSBN1 psbn1[nsTF];
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
-    // Acquire a large-enough buffer to pack into.
-    // - NULL first parameter means it comes with the parcel and is managed by
-    //   the parcel and freed by the system inside of send()
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(Nodal) +
-                                         BUFSZ[destLocalIdx]);
-    assert(p);
-
-    // "interpret the parcel buffer as a Nodal"
-    Nodal *nodal = hpx_parcel_get_data(p);
-
-    send_t pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, domain->nodalMass, nodal->buf);
-
-    // the neighbor this is being sent to
-    int srcRemoteIdx = destLocalIdx;
-    int srcLocalIdx = 25 - srcRemoteIdx;
-    int to_rank = rank - OFFSET[srcLocalIdx];
-    int distance = to_rank - domain->rank;
-    hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
-
-    nodal->srcLocalIdx = srcLocalIdx;
-
-    hpx_parcel_set_target(p, neighbor);
-    hpx_parcel_set_action(p, _updateNodalMass);
-    hpx_parcel_set_cont(p, done);
-    hpx_parcel_send(p, HPX_NULL);
+    psbn1[i].domain = domain;
+    psbn1[i].local = local;
+    psbn1[i].destLocalIdx = destLocalIdx;
+    psbn1[i].done = done;
+    psbn1[i].rank = rank;
+    hpx_call(local, _SBN1_sends, &psbn1[i], sizeof(psbn1[i]),HPX_NULL);
   }
 
   // release the domain lock here, so we don't get deadlock when a
@@ -254,6 +275,7 @@ int main(int argc, char **argv)
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
   _updateNodalMass = HPX_REGISTER_ACTION(_updateNodalMass_action);
+  _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
 
   int input[4];
   input[0] = nDoms;
