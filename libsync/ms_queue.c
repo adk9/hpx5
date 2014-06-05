@@ -55,7 +55,7 @@ void sync_ms_queue_init(ms_queue_t *q, void *val) {
 
   q->head.c             = 0;
   q->tail.c             = 0;
-  q->head.p = q->tail.p = (val) ? val : _node_new(val);
+  q->head.p = q->tail.p = _node_new(val);
 }
 
 
