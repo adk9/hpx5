@@ -37,7 +37,7 @@ static int _SBN1_sends_action(pSBN1 *psbn1)
 {
   Domain *domain;
   domain = psbn1->domain;
-  hpx_addr_t local = psbn1->local;
+  hpx_addr_t local = hpx_thread_current_target();
   int destLocalIdx = psbn1->destLocalIdx;
   hpx_addr_t done = psbn1->done;
   int rank = psbn1->rank;
@@ -94,7 +94,6 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
     psbn1[i].domain = domain;
-    psbn1[i].local = local;
     psbn1[i].destLocalIdx = destLocalIdx;
     psbn1[i].done = done;
     psbn1[i].rank = rank;

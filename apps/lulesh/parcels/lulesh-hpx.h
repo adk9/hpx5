@@ -202,7 +202,6 @@ typedef struct Domain {
 
 typedef struct pSBN1 {
   Domain *domain;
-  hpx_addr_t local;
   int destLocalIdx;
   hpx_addr_t done;
   int rank;
