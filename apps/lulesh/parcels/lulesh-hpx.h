@@ -58,7 +58,7 @@ typedef void (*recv_t)(int nx, int ny, int nz, double *src, double *dest, int ty
 
 typedef struct Advance {
   int index;
-  hpx_addr_t *address;
+  hpx_addr_t address;
   int nDoms;
   int nx;
   int maxcycles;
@@ -67,7 +67,7 @@ typedef struct Advance {
 
 typedef struct Nodal {
   int srcLocalIdx;
-  hpx_addr_t *address;
+  hpx_addr_t address;
   double *buf;
   int rank;
 } Nodal; 
