@@ -371,8 +371,10 @@ void CalcHydroConstraintForElems(int *matElemlist, double *vdov, double dvovmax,
 
 double CalcElemVolume(const double x[8], const double y[8], const double z[8]);
 
-//void SBN1(void *data);
-//void SBN1(hpx_addr_t *,int, Domain *);
+int _updateNodalMass_action(Nodal *nodal);
+extern hpx_action_t _updateNodalMass;
+int _SBN1_sends_action(pSBN1 *psbn1);
+extern hpx_action_t _SBN1_sends;
 void SBN1(hpx_addr_t address,Domain *domain, int index);
 
 void SBN3(int rank);
