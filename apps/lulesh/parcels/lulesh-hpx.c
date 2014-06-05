@@ -5,7 +5,7 @@ static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _updateNodalMass = 0;
 
 static int _updateNodalMass_action(Nodal *nodal) {
-  hpx_addr_t domain = *(nodal->address);
+  hpx_addr_t domain = nodal->address;
   int srcLocalIdx = nodal->srcLocalIdx;
   double *src = nodal->buf;
   int rank = nodal->rank;
@@ -66,7 +66,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
     nodal[i].rank = to_rank;
     nodal[i].srcLocalIdx = srcLocalIdx;
     nodal[i].buf = data;
-    nodal[i].address = &address;
+    nodal[i].address = address;
     
     hpx_addr_t send = hpx_lco_future_new(0);
     hpx_parcel_t *p = hpx_parcel_acquire(&nodal[i], sizeof(nodal[i]));
@@ -90,7 +90,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 }
 
 static int _advanceDomain_action(Advance *advance) {
-  hpx_addr_t domain = *(advance->address);
+  hpx_addr_t domain = advance->address;
   int nx = advance->nx;
   int nDoms = advance->nDoms;
   int maxcycles = advance->maxcycles;
@@ -148,7 +148,7 @@ static int _main_action(int *input)
     advance[k].nx = nx;
     advance[k].maxcycles = maxcycles;
     advance[k].cores = cores;
-    advance[k].address = &domain;
+    advance[k].address = domain;
     hpx_call(HPX_THERE(k), _advanceDomain, &advance[k], sizeof(advance[k]), and);
   }
   hpx_lco_wait(and);
