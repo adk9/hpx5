@@ -33,13 +33,14 @@ static int _updateNodalMass_action(Nodal *nodal) {
 
 void SBN1(hpx_addr_t local, Domain *domain, int index)
 {
-  hpx_lco_sema_p(domain->sem);
-
   int i;
   int rank = index;
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
   int nz = domain->sizeZ + 1;
+
+  // protect the domain
+  hpx_lco_sema_p(domain->sem);
 
   // pack outgoing data
   int nsTF = domain->sendTF[0];
