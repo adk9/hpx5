@@ -2,6 +2,7 @@
 
 static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
+static hpx_action_t _initDomain    = 0;
 static hpx_action_t _updateNodalMass = 0;
 
 static int _updateNodalMass_action(Nodal *nodal) {
@@ -94,6 +95,20 @@ static int _advanceDomain_action(Advance *advance) {
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
+  int index = advance->index;
+
+  SBN1(local,ld,index);
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+static int _initDomain_action(Advance *advance) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
   int nx = advance->nx;
   int nDoms = advance->nDoms;
   int maxcycles = advance->maxcycles;
@@ -108,10 +123,8 @@ static int _advanceDomain_action(Advance *advance) {
   int plane = index/(tp*tp);
   ld->sem = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
-
-  SBN1(local,ld,index);
-
   hpx_gas_unpin(local);
+
   return HPX_SUCCESS;
 }
 
@@ -144,9 +157,21 @@ static int _main_action(int *input)
     advance[k].maxcycles = maxcycles;
     advance[k].cores = cores;
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
+    hpx_call(block, _initDomain, &advance[k], sizeof(advance[k]), and);
   }
   hpx_lco_wait(and);
+
+  for (k=0;k<nDoms;k++) {
+    advance[k].index = k;
+    advance[k].nDoms = nDoms;
+    advance[k].nx = nx;
+    advance[k].maxcycles = maxcycles;
+    advance[k].cores = cores;
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
+  }
+
+
   hpx_lco_delete(and, HPX_NULL);
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
@@ -226,6 +251,7 @@ int main(int argc, char **argv)
   }
 
   _main      = HPX_REGISTER_ACTION(_main_action);
+  _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
   _updateNodalMass = HPX_REGISTER_ACTION(_updateNodalMass_action);
 
