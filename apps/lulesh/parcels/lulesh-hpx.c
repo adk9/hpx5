@@ -76,14 +76,17 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 
     hpx_parcel_set_target(p, HPX_THERE(to_rank));
     hpx_parcel_set_action(p, _updateNodalMass);
-    // hpx_parcel_set_cont(p, HPX_NULL);
-    hpx_parcel_send(p, done);
+    hpx_parcel_set_cont(p, done);
+    hpx_parcel_send(p, HPX_NULL);
   }
 
+  // release the domain lock here, so we don't get deadlock when a
+  // _updateNodalMass_action tries to acquire it
+  hpx_lco_sema_v(domain->sem, HPX_NULL);
+
+  // wait for all of the _updateNodalMass_action to complete
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
-
-  hpx_lco_sema_v(domain->sem, HPX_NULL);
 }
 
 static int _advanceDomain_action(Advance *advance) {
