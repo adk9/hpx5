@@ -5,18 +5,16 @@ static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _updateNodalMass = 0;
 
 static int _updateNodalMass_action(Nodal *nodal) {
-  hpx_addr_t domain = nodal->address;
-  int srcLocalIdx = nodal->srcLocalIdx;
-  double *src = nodal->buf;
-  int rank = nodal->rank;
-
-  recv_t unpack = RECEIVER[srcLocalIdx];
-
-  hpx_addr_t local = hpx_addr_add(domain, sizeof(Domain)*rank);
+  hpx_addr_t local = hpx_thread_current_target();
   Domain *ld;
 
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
+
+  int srcLocalIdx = nodal->srcLocalIdx;
+  double *src = nodal->buf;
+
+  recv_t unpack = RECEIVER[srcLocalIdx];
 
   int nx = ld->sizeX + 1;
   int ny = ld->sizeY + 1;
@@ -33,7 +31,7 @@ static int _updateNodalMass_action(Nodal *nodal) {
   return HPX_SUCCESS;
 }
 
-void SBN1(hpx_addr_t address,Domain *domain, int index)
+void SBN1(hpx_addr_t local, Domain *domain, int index)
 {
   hpx_lco_sema_p(domain->sem);
 
@@ -52,9 +50,9 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
-    // acquire a "large-enough buffer to pack into," NULL first parameter means
-    // it comes with the parcel and is managed by the parcel and freed by the
-    // system inside of send()
+    // Acquire a large-enough buffer to pack into.
+    // - NULL first parameter means it comes with the parcel and is managed by
+    //   the parcel and freed by the system inside of send()
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(Nodal) +
                                          BUFSZ[destLocalIdx]);
     assert(p);
@@ -69,12 +67,12 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
     int srcRemoteIdx = destLocalIdx;
     int srcLocalIdx = 25 - srcRemoteIdx;
     int to_rank = rank - OFFSET[srcLocalIdx];
+    int distance = domain->rank - to_rank;
+    hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
-    nodal->rank = to_rank;
     nodal->srcLocalIdx = srcLocalIdx;
-    nodal->address = address;
 
-    hpx_parcel_set_target(p, HPX_THERE(to_rank));
+    hpx_parcel_set_target(p, neighbor);
     hpx_parcel_set_action(p, _updateNodalMass);
     hpx_parcel_set_cont(p, done);
     hpx_parcel_send(p, HPX_NULL);
