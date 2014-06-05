@@ -90,14 +90,19 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   // for completing the entire loop
   hpx_addr_t done = hpx_lco_and_new(nsTF);
 
-  pSBN1 psbn1[nsTF];
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
-    psbn1[i].domain = domain;
-    psbn1[i].destLocalIdx = destLocalIdx;
-    psbn1[i].done = done;
-    psbn1[i].rank = rank;
-    hpx_call(local, _SBN1_sends, &psbn1[i], sizeof(psbn1[i]),HPX_NULL);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN1));
+    assert(p);
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _SBN1_sends);
+
+    pSBN1 *psbn1 = hpx_parcel_get_data(p);
+    psbn1->domain = domain;
+    psbn1->destLocalIdx = destLocalIdx;
+    psbn1->done = done;
+    psbn1->rank = rank;
+    hpx_parcel_send(p, HPX_NULL);
   }
 
   // release the domain lock here, so we don't get deadlock when a
