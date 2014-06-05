@@ -87,7 +87,7 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   int nsTF = domain->sendTF[0];
   int *sendTF = &domain->sendTF[1];
 
-  // for completing the entire loop
+  // for completing the entire loop of _updateNodalMass_action operations
   hpx_addr_t done = hpx_lco_and_new(nsTF);
 
   // for completing the parallel _SBN1_sends operations, so that we don't
@@ -108,7 +108,7 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
     psbn1->done = done;
     psbn1->rank = rank;
 
-    // sync is fine, since we're waiting on sends below
+    // async is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
   }
 
