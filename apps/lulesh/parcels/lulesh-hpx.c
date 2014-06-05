@@ -90,20 +90,32 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   // for completing the entire loop
   hpx_addr_t done = hpx_lco_and_new(nsTF);
 
+  // for completing the parallel _SBN1_sends operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsTF);
+
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN1));
     assert(p);
     hpx_parcel_set_target(p, local);
     hpx_parcel_set_action(p, _SBN1_sends);
+    hpx_parcel_set_cont(p, sends);
 
     pSBN1 *psbn1 = hpx_parcel_get_data(p);
     psbn1->domain = domain;
     psbn1->destLocalIdx = destLocalIdx;
     psbn1->done = done;
     psbn1->rank = rank;
+
+    // sync is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
   }
+
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
   // release the domain lock here, so we don't get deadlock when a
   // _updateNodalMass_action tries to acquire it
