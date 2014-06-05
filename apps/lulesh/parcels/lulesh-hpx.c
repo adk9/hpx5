@@ -68,7 +68,7 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
     int srcRemoteIdx = destLocalIdx;
     int srcLocalIdx = 25 - srcRemoteIdx;
     int to_rank = rank - OFFSET[srcLocalIdx];
-    int distance = domain->rank - to_rank;
+    int distance = to_rank - domain->rank;
     hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
     nodal->srcLocalIdx = srcLocalIdx;
