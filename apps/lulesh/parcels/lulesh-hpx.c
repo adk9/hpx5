@@ -76,14 +76,14 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 
     hpx_parcel_set_target(p, HPX_THERE(to_rank));
     hpx_parcel_set_action(p, _updateNodalMass);
-    hpx_parcel_set_cont(p, done);
-    hpx_parcel_send(p, HPX_NULL);
-
-    hpx_lco_sema_v(domain->sem, HPX_NULL);
+    // hpx_parcel_set_cont(p, HPX_NULL);
+    hpx_parcel_send(p, done);
   }
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
+
+  hpx_lco_sema_v(domain->sem, HPX_NULL);
 }
 
 static int _advanceDomain_action(Advance *advance) {
