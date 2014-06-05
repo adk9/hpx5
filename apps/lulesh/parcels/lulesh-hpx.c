@@ -22,7 +22,11 @@ static int _updateNodalMass_action(Nodal *nodal) {
   int ny = ld->sizeY + 1;
   int nz = ld->sizeZ + 1; 
 
+  hpx_lco_sema_p(ld->sem);
+
   unpack(nx, ny, nz, src, ld->nodalMass, 0);
+
+  hpx_lco_sema_v(ld->sem, HPX_NULL);
 
   hpx_gas_unpin(local);
   
@@ -31,6 +35,8 @@ static int _updateNodalMass_action(Nodal *nodal) {
 
 void SBN1(hpx_addr_t address,Domain *domain, int index)
 {
+  hpx_lco_sema_p(domain->sem);
+
   int i;
   int rank = index;
   int nx = domain->sizeX + 1;
@@ -69,6 +75,8 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
     hpx_parcel_set_cont(p, done);
     hpx_parcel_send(p, send);
 
+    hpx_lco_sema_v(domain->sem, HPX_NULL);
+
     // overlap work here if desired
 
     // and wait for the most recent send to complete
@@ -102,6 +110,7 @@ static int _advanceDomain_action(Advance *advance) {
   int col = index%tp;
   int row = (index/tp)%tp;
   int plane = index/(tp*tp);
+  ld->sem = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   SBN1(local,ld,index);
