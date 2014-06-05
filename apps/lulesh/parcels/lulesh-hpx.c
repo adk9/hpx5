@@ -10,7 +10,7 @@ static int _updateNodalMass_action(Nodal *nodal) {
   double *src = nodal->buf;
   int rank = nodal->rank;
 
-  recv_t unpack = RECEIVER[srcLocalIdx]; 
+  recv_t unpack = RECEIVER[srcLocalIdx];
 
   hpx_addr_t local = hpx_addr_add(domain, sizeof(Domain)*rank);
   Domain *ld;
@@ -20,7 +20,7 @@ static int _updateNodalMass_action(Nodal *nodal) {
 
   int nx = ld->sizeX + 1;
   int ny = ld->sizeY + 1;
-  int nz = ld->sizeZ + 1; 
+  int nz = ld->sizeZ + 1;
 
   hpx_lco_sema_p(ld->sem);
 
@@ -29,7 +29,7 @@ static int _updateNodalMass_action(Nodal *nodal) {
   hpx_lco_sema_v(ld->sem, HPX_NULL);
 
   hpx_gas_unpin(local);
-  
+
   return HPX_SUCCESS;
 }
 
@@ -41,7 +41,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
   int rank = index;
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
-  int nz = domain->sizeZ + 1; 
+  int nz = domain->sizeZ + 1;
 
   // pack outgoing data
   int nsTF = domain->sendTF[0];
@@ -54,7 +54,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
     double *data = malloc(BUFSZ[destLocalIdx]);
-  
+
     send_t pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
 
@@ -67,7 +67,7 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
     nodal[i].srcLocalIdx = srcLocalIdx;
     nodal[i].buf = data;
     nodal[i].address = address;
-    
+
     hpx_addr_t send = hpx_lco_future_new(0);
     hpx_parcel_t *p = hpx_parcel_acquire(&nodal[i], sizeof(nodal[i]));
     hpx_parcel_set_target(p, HPX_THERE(to_rank));
@@ -90,7 +90,11 @@ void SBN1(hpx_addr_t address,Domain *domain, int index)
 }
 
 static int _advanceDomain_action(Advance *advance) {
-  hpx_addr_t domain = advance->address;
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
   int nx = advance->nx;
   int nDoms = advance->nDoms;
   int maxcycles = advance->maxcycles;
@@ -98,13 +102,6 @@ static int _advanceDomain_action(Advance *advance) {
   int index = advance->index;
 
   int tp = (int) (cbrt(nDoms) + 0.5);
-
-  hpx_addr_t local = hpx_addr_add(domain, sizeof(Domain)*index);
-
-  Domain *ld;
-
-  if (!hpx_gas_try_pin(local, (void**)&ld))
-    return HPX_RESEND;
 
   Init(tp,nx);
   int col = index%tp;
@@ -116,8 +113,7 @@ static int _advanceDomain_action(Advance *advance) {
   SBN1(local,ld,index);
 
   hpx_gas_unpin(local);
-
-  hpx_thread_continue(0, NULL);
+  return HPX_SUCCESS;
 }
 
 static int _main_action(int *input)
@@ -127,13 +123,13 @@ static int _main_action(int *input)
 
   hpx_time_t t1 = hpx_time_now();
 
-  int nDoms, nx, maxcycles, cores, tp, i, j, k; 
+  int nDoms, nx, maxcycles, cores, tp, i, j, k;
   nDoms = input[0];
   nx = input[1];
   maxcycles = input[2];
   cores = input[3];
 
-  tp = (int) (cbrt(nDoms) + 0.5); 
+  tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
     return -1;
@@ -148,8 +144,8 @@ static int _main_action(int *input)
     advance[k].nx = nx;
     advance[k].maxcycles = maxcycles;
     advance[k].cores = cores;
-    advance[k].address = domain;
-    hpx_call(HPX_THERE(k), _advanceDomain, &advance[k], sizeof(advance[k]), and);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
@@ -185,8 +181,8 @@ int main(int argc, char **argv)
   nDoms = 8;
   nx = 15;
   maxcycles = 10;
-  cores = 8; 
-  cfg.cores = cores; 
+  cores = 8;
+  cfg.cores = cores;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
@@ -233,12 +229,12 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
   _updateNodalMass = HPX_REGISTER_ACTION(_updateNodalMass_action);
- 
+
   int input[4];
-  input[0] = nDoms; 
-  input[1] = nx; 
-  input[2] = maxcycles; 
-  input[3] = cores; 
+  input[0] = nDoms;
+  input[1] = nx;
+  input[2] = maxcycles;
+  input[3] = cores;
   printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
 
   return hpx_run(_main, input, 4*sizeof(int));
