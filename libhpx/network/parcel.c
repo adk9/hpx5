@@ -96,7 +96,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 }
 
 
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 /// Acquire a parcel structure.
 ///
 /// Parcels are always acquired with enough inline space to support
@@ -110,7 +110,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 /// out-of-place buffer into the parcel's inline buffer, either synchronously or
 /// asynchronously depending on which interface is used, and how big the buffer
 /// is.
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 hpx_parcel_t *
 hpx_parcel_acquire(void *buffer, size_t bytes) {
   // figure out how big a parcel buffer I actually need
@@ -143,15 +143,15 @@ hpx_parcel_acquire(void *buffer, size_t bytes) {
 }
 
 
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 /// Perform an asynchronous send operation.
 ///
 /// Simply wraps the send operation in an asynchronous interface.
 ///
-/// @param   p - the parcel to send (may need serialization)
-/// @continues - NULL
-/// @returns   - HPX_SUCCESS
-/// ----------------------------------------------------------------------------
+/// @param   p the parcel to send (may need serialization)
+/// @continues NULL
+/// @returns   HPX_SUCCESS
+// ----------------------------------------------------------------------------
 static hpx_action_t _send_async = 0;
 
 

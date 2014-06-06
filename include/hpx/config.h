@@ -13,21 +13,25 @@
 #ifndef HPX_CONFIG_H
 #define HPX_CONFIG_H
 
+/// \file
+
+//! Configuration options for which global memory model to use.
 typedef enum {
-  HPX_GAS_DEFAULT = 0,
-  HPX_GAS_NOGLOBAL,
-  HPX_GAS_PGAS,
-  HPX_GAS_AGAS,
-  HPX_GAS_PGAS_SWITCH,
-  HPX_GAS_AGAS_SWITCH
+  HPX_GAS_DEFAULT = 0, //!< Let HPX choose what memory model to use.
+  HPX_GAS_NOGLOBAL,    //!< Do not use global memory.
+  HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed)
+  HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move)
+  HPX_GAS_PGAS_SWITCH, //!< @todo Document this
+  HPX_GAS_AGAS_SWITCH  //!< @todo Document this
 } hpx_gas_t;
 
+//! Configuration options for the network transports HPX can use.
 typedef enum {
-  HPX_TRANSPORT_DEFAULT = 0,
-  HPX_TRANSPORT_SMP,
-  HPX_TRANSPORT_MPI,
-  HPX_TRANSPORT_PORTALS,
-  HPX_TRANSPORT_PHOTON
+  HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
+  HPX_TRANSPORT_SMP,         //!< Do not use a network transport.
+  HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
+  HPX_TRANSPORT_PORTALS,     //!< Use Portals for network transport.
+  HPX_TRANSPORT_PHOTON       //!< Use Photon for network transport.
 } hpx_transport_t;
 
 typedef enum {
@@ -37,31 +41,37 @@ typedef enum {
   HPX_BOOT_PMI
 } hpx_boot_t;
 
+//! Configuration option for whether to wait for a debugger.
 typedef enum {
-  HPX_WAIT_NONE = 0,
-  HPX_WAIT
+  HPX_WAIT_NONE = 0,  //!< Do not wait
+  HPX_WAIT            //!< Wait
 } hpx_wait_t;
 
+//! Configuration option for whether to wait for a debugger.
 typedef enum {
-  HPX_LOCALITY_NONE = -2,
-  HPX_LOCALITY_ALL = -1
+  HPX_LOCALITY_NONE = -2,  //!< Don't wait after all.
+  HPX_LOCALITY_ALL = -1    //!< Wait at all localities.
 } hpx_locality_t;
 
-/// ----------------------------------------------------------------------------
-/// The HPX configuration type.
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+/// The HPX configuration type (to give hpx_init()).
+// ----------------------------------------------------------------------------
+/// This configuration can be passed to hpx_init() to control some
+/// runtime parameters for the HPX system.
+
 typedef struct {
-  int                 cores;                  // number of cores to run on
-  int               threads;                  // number of HPX scheduler threads
-  unsigned int  backoff_max;                  // upper bound for backoff
-  int           stack_bytes;                  // minimum stack size in bytes
-  hpx_gas_t             gas;                  // GAS algorithm
-  hpx_transport_t transport;                  // transport to use
-  hpx_wait_t           wait;                  // when to wait for a debugger
-  hpx_locality_t    wait_at;                  // locality to wait on
-  int            statistics;                  // print statistics
+  int                 cores;                  //!< number of cores to run on
+  int               threads;                  //!< number of HPX scheduler threads
+  unsigned int  backoff_max;                  //!< upper bound for backoff
+  int           stack_bytes;                  //!< minimum stack size in bytes
+  hpx_gas_t             gas;                  //!< GAS algorithm
+  hpx_transport_t transport;                  //!< transport to use
+  hpx_wait_t           wait;                  //!< when to wait for a debugger
+  hpx_locality_t    wait_at;                  //!< locality to wait on
+  int            statistics;                  //!< print statistics
 } hpx_config_t;
 
+/// The default configuration parameters HPX will start with.
 #define HPX_CONFIG_DEFAULTS {                   \
     .cores       = 0,                           \
     .threads     = 0,                           \
