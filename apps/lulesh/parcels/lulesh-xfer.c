@@ -57,7 +57,8 @@ int _SBN1_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int to_rank = rank - OFFSET[srcLocalIdx];
-  int distance = to_rank - domain->rank;
+  //int distance = to_rank - domain->rank;
+  int distance = -OFFSET[srcLocalIdx];
   hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
   nodal->srcLocalIdx = srcLocalIdx;
@@ -186,7 +187,8 @@ int _SBN3_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int to_rank = rank - OFFSET[srcLocalIdx];
-  int distance = to_rank - domain->rank;
+  //int distance = to_rank - domain->rank;
+  int distance = -OFFSET[srcLocalIdx];
   hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
   nodal->srcLocalIdx = srcLocalIdx;
