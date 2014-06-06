@@ -3,8 +3,10 @@
 static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _initDomain    = 0;
-hpx_action_t _updateNodalMass = 0;
 hpx_action_t _SBN1_sends = 0;
+hpx_action_t _SBN1_result = 0;
+hpx_action_t _SBN3_sends = 0;
+hpx_action_t _SBN3_result = 0;
 
 static int _advanceDomain_action(Advance *advance) {
   hpx_addr_t local = hpx_thread_current_target();
@@ -33,7 +35,7 @@ static int _advanceDomain_action(Advance *advance) {
         //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
     }
     
-    CalcForceForNodes(domain,rank);
+    CalcForceForNodes(local,domain,rank);
   }
 
   hpx_gas_unpin(local);
@@ -58,7 +60,8 @@ static int _initDomain_action(Advance *advance) {
   int col = index%tp;
   int row = (index/tp)%tp;
   int plane = index/(tp*tp);
-  ld->sem = hpx_lco_sema_new(1);
+  ld->sem_sbn1 = hpx_lco_sema_new(0);
+  ld->sem_sbn3 = hpx_lco_sema_new(0);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
   hpx_gas_unpin(local);
 
@@ -203,8 +206,10 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
-  _updateNodalMass = HPX_REGISTER_ACTION(_updateNodalMass_action);
   _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
+  _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
+  _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);
+  _SBN3_result = HPX_REGISTER_ACTION(_SBN3_result_action);
 
   int input[4];
   input[0] = nDoms;

@@ -70,7 +70,8 @@ typedef struct Nodal {
 } Nodal;
 
 typedef struct Domain {
-  hpx_addr_t sem;
+  hpx_addr_t sem_sbn1;
+  hpx_addr_t sem_sbn3;
 
   // Elem-centered
   int *matElemlist;  // material indexset
@@ -200,12 +201,12 @@ typedef struct Domain {
   int recvFF[14];
 } Domain;
 
-typedef struct pSBN1 {
+typedef struct pSBN {
   Domain *domain;
   int destLocalIdx;
   hpx_addr_t done;
   int rank;
-} pSBN1;
+} pSBN;
 
 int OFFSET[26], BUFSZ[26], XFERCNT[26], MAXEDGESIZE, MAXPLANESIZE;
 Domain *DOMAINS;
@@ -225,7 +226,7 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(Domain *domain,int rank);
+void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank);
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 
@@ -371,13 +372,17 @@ void CalcHydroConstraintForElems(int *matElemlist, double *vdov, double dvovmax,
 
 double CalcElemVolume(const double x[8], const double y[8], const double z[8]);
 
-int _updateNodalMass_action(Nodal *nodal);
-extern hpx_action_t _updateNodalMass;
-int _SBN1_sends_action(pSBN1 *psbn1);
+int _SBN1_result_action(Nodal *nodal);
+extern hpx_action_t _SBN1_result;
+int _SBN1_sends_action(pSBN *psbn);
 extern hpx_action_t _SBN1_sends;
 void SBN1(hpx_addr_t address,Domain *domain, int index);
 
-void SBN3(int rank);
+int _SBN3_sends_action(pSBN *psbn);
+extern hpx_action_t _SBN3_sends;
+int _SBN3_result_action(Nodal *nodal);
+extern hpx_action_t _SBN3_result;
+void SBN3(hpx_addr_t address,Domain *domain, int index);
 
 void PosVel(int rank);
 
