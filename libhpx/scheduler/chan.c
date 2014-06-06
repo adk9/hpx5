@@ -59,7 +59,7 @@ static hpx_action_t _recv        = 0;
 static hpx_action_t _async_set   = 0;
 static hpx_action_t _block_init  = 0;
 static hpx_action_t _blocks_init = 0;
-
+static hpx_action_t _select      = 0;
 
 /// Deletes a channel and its internal buffers.
 ///
@@ -139,6 +139,21 @@ static hpx_status_t _get(_chan_t *c, int size, void *out) {
 }
 
 
+static hpx_status_t _peek(_chan_t *c, int size, void *out) {
+  assert(out);
+
+  void *ptr = NULL;
+  lco_lock(&c->lco);
+  ptr = _QUEUE_DEQUEUE(&c->buf);
+  if (ptr != NULL)
+    memcpy(out, &ptr, sizeof(ptr));
+
+  hpx_status_t status = lco_get_status(&c->lco);
+  lco_unlock(&c->lco);
+  return status;
+}
+
+
 /// The channel vtable.
 static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
 
@@ -183,6 +198,23 @@ static int _recv_action(int *size) {
 }
 
 
+static int _select_action(int *size) {
+  hpx_addr_t target = hpx_thread_current_target();
+
+  _chan_t *chan;
+  if (!hpx_gas_try_pin(target, (void**)&chan))
+    return HPX_RESEND;
+
+  uintptr_t ptr;
+  hpx_status_t status = _peek(chan, *size, &ptr);
+  hpx_gas_unpin(target);
+  if (status == HPX_SUCCESS)
+    hpx_thread_continue(*size, (void*)ptr);
+  else
+    hpx_thread_continue(0, NULL);
+}
+
+
 /// Initialize a block of futures.
 static int _block_init_action(uint32_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
@@ -219,12 +251,14 @@ static int _blocks_init_action(uint32_t *args) {
   return HPX_SUCCESS;
 }
 
+
 static void HPX_CONSTRUCTOR _register_actions(void) {
   _send        = HPX_REGISTER_ACTION(_send_action);
   _recv        = HPX_REGISTER_ACTION(_recv_action);
   _async_set   = HPX_REGISTER_ACTION(_async_set_action);
   _block_init  = HPX_REGISTER_ACTION(_block_init_action);
   _blocks_init = HPX_REGISTER_ACTION(_blocks_init_action);
+  _select      = HPX_REGISTER_ACTION(_select_action);
 }
 
 /// @}
@@ -377,3 +411,38 @@ hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
+
+hpx_status_t
+hpx_lco_chan_array_select(hpx_addr_t chans[], int n, int size, int *index,
+                          void **out) {
+  _chan_t *c;
+  hpx_status_t status;
+
+  for (int retries = 0; retries < 3; ++retries) {
+    for (int i = 0; i < n; ++i) {
+      if (!hpx_gas_try_pin(chans[i], (void**)&c)) {
+        hpx_addr_t proxy = hpx_lco_future_new(size);
+        hpx_call(chans[i], _select, &size, sizeof(size), proxy);
+        void *ptr = calloc(1, size);
+        assert(ptr);
+        status = hpx_lco_get(proxy, (void*)ptr, size);
+        hpx_lco_delete(proxy, HPX_NULL);
+        if (ptr != NULL) {
+          *index = i;
+          *out = ptr;
+          return status;
+        }
+      } else {
+        *out = NULL;
+        status = _peek(c, size, out);
+        hpx_gas_unpin(chans[i]);
+        if (*out != NULL) {
+          *index = i;
+          return status;
+        }
+      }
+    }
+  }
+  return HPX_ERROR;
+}
+

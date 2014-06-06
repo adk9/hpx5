@@ -150,6 +150,7 @@ void *hpx_lco_chan_recv(hpx_addr_t chan, int size);
 hpx_addr_t hpx_lco_chan_array_new(int n, int block_size);
 hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
-
+hpx_status_t hpx_lco_chan_array_select(hpx_addr_t chans[], int n, int size, int *index,
+                                       void **out);
 
 #endif
