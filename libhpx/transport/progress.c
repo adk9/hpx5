@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "contrib/uthash/src/utlist.h"
 #include "libsync/queues.h"
 #include "libsync/sync.h"
 
@@ -91,7 +90,7 @@ static void _pin(transport_class_t *transport, hpx_parcel_t *parcel) {
 static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p) {
   request_t *r = progress->free;
   if (r) {
-    LL_DELETE(progress->free, r);
+    progress->free = progress->free->next;
     request_init(r, p);
   }
   else {
@@ -111,7 +110,8 @@ static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
 /// @param request - the request
 /// ----------------------------------------------------------------------------
 static void _delete_request(progress_t *progress, request_t *request) {
-  LL_PREPEND(progress->free, request);
+  request->next = progress->free;
+  progress->free = request->next;
 }
 
 /// ----------------------------------------------------------------------------
@@ -177,7 +177,8 @@ static bool _try_start_send(progress_t *progress) {
     goto unwind1;
   }
 
-  LL_PREPEND(progress->pending_sends, r);
+  r->next = progress->pending_sends;
+  progress->pending_sends = r;
   return true;
 
  unwind1:
@@ -229,7 +230,8 @@ static bool _try_start_recv(progress_t *progress) {
   }
 
   // remember that this receive is pending so that we can poll it later
-  LL_PREPEND(progress->pending_recvs, r);
+  r->next = progress->pending_recvs;
+  progress->pending_recvs = r;
   return true;
 
  unwind1:
@@ -333,28 +335,28 @@ progress_t *network_progress_new() {
 }
 
 void network_progress_delete(progress_t *p) {
-  request_t *i = NULL, *tmp = NULL;
+  request_t *i = NULL;
 
-  LL_FOREACH_SAFE(p->free, i, tmp) {
-    LL_DELETE(p->free, i);
+  while ((i = p->free) != NULL) {
+    p->free = p->free->next;
     request_delete(i);
   }
 
   if (p->pending_sends)
     dbg_log("abandoning active send.\n");
 
-  LL_FOREACH_SAFE(p->pending_sends, i, tmp) {
+  while ((i = p->pending_sends) != NULL) {
     transport_request_cancel(here->transport, i);
-    LL_DELETE(p->pending_sends, i);
+    p->pending_sends = p->pending_sends->next;
     request_delete(i);
   }
 
   if (p->pending_recvs)
     dbg_log("abandoning active recv.\n");
 
-  LL_FOREACH_SAFE(p->pending_recvs, i, tmp) {
+  while ((i = p->pending_recvs) != NULL) {
     transport_request_cancel(here->transport, i);
-    LL_DELETE(p->pending_recvs, i);
+    p->pending_recvs = p->pending_recvs->next;
     request_delete(i);
   }
 }

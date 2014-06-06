@@ -5,7 +5,7 @@ LIBS = -L/home/manderson/hpx_3jun2014/hpx5/lib -lhpx
 
 SRC = $(shell ls *.c)
 OBJ = $(SRC:.c=.o)
-TARGET = luleshHPX
+TARGET = mg
 
 .PHONY: clean help
 
@@ -20,5 +20,5 @@ $(TARGET): $(OBJ)
 clean:
 	rm -f $(OBJ) $(TARGET) *~
 help:
-	@echo "Usage: ./$(TARGET) [nDoms] [nx] [maxcycles] [nCores]"
+	@echo "Usage: ./$(TARGET) [options]"
 
