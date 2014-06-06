@@ -68,11 +68,7 @@ action_allreduce(void *unused) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(T);
     futures[i] = hpx_lco_future_new(sizeof(T));
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL,0);
-    hpx_parcel_set_action(p, get_value);
-    hpx_parcel_set_target(p, HPX_THERE(i));
-    hpx_parcel_set_cont(p, futures[i]);
-    hpx_parcel_send_sync(p);
+    hpx_call(HPX_THERE(i), get_value, NULL, 0, futures[i]);
   }
 
   hpx_lco_get_all(num_ranks, futures, addrs, sizes);
@@ -82,12 +78,7 @@ action_allreduce(void *unused) {
   for (int i = 0; i < num_ranks; ++i) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(value));
-    hpx_parcel_set_action(p, set_value);
-    hpx_parcel_set_target(p, HPX_THERE(i));
-    hpx_parcel_set_cont(p, futures[i]);
-    *(T*)hpx_parcel_get_data(p) = value;
-    hpx_parcel_send_sync(p);
+    hpx_call(HPX_THERE(i), set_value, &value, sizeof(value), futures[i]);
   }
 
   hpx_lco_get_all(num_ranks, futures, NULL, NULL);

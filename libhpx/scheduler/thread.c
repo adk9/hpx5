@@ -20,11 +20,6 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-
-#include <contrib/uthash/src/utlist.h>
 
 #include "hpx/builtins.h"
 #include "libhpx/debug.h"

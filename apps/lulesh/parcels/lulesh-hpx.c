@@ -2,95 +2,50 @@
 
 static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
-static hpx_action_t _updateNodalMass = 0;
+static hpx_action_t _initDomain    = 0;
+hpx_action_t _updateNodalMass = 0;
+hpx_action_t _SBN1_sends = 0;
 
-static int _updateNodalMass_action(Nodal *nodal) {
-  hpx_addr_t domain = *(nodal->address);
-  int srcLocalIdx = nodal->srcLocalIdx;
-  double *src = nodal->buf;
-  int rank = nodal->rank;
-
-  recv_t unpack = RECEIVER[srcLocalIdx]; 
-
-  hpx_addr_t local = hpx_addr_add(domain, sizeof(Domain)*rank);
-  Domain *ld;
-
-  if (!hpx_gas_try_pin(local, (void**)&ld))
+static int _advanceDomain_action(Advance *advance) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *domain = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
 
-  int nx = ld->sizeX + 1;
-  int ny = ld->sizeY + 1;
-  int nz = ld->sizeZ + 1; 
+  int rank = advance->index;
 
-  hpx_lco_sema_p(ld->sem);
+  SBN1(local,domain,rank);
 
-  unpack(nx, ny, nz, src, ld->nodalMass, 0);
+  while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) { 
+    double targetdt = domain->stoptime - domain->time;
 
-  hpx_lco_sema_v(ld->sem, HPX_NULL);
+    if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {
+      double gnewdt = 1.0e+20;
+      if (domain->dtcourant < gnewdt)
+        gnewdt = domain->dtcourant/2.0;
+      if (domain->dthydro < gnewdt)
+        gnewdt = domain->dthydro*2.0/3.0;
+
+      if (deltaTimeVal[domain->cycle] > gnewdt)
+        deltaTimeVal[domain->cycle] = gnewdt;
+      deltaTimeCnt[domain->cycle]++;
+      //if (deltaTimeCnt[domain->cycle] == domain->nDomains)
+        //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
+    }
+    
+    CalcForceForNodes(domain,rank);
+  }
 
   hpx_gas_unpin(local);
-  
   return HPX_SUCCESS;
 }
 
-void SBN1(hpx_addr_t address,Domain *domain, int index)
-{
-  hpx_lco_sema_p(domain->sem);
+static int _initDomain_action(Advance *advance) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
 
-  int i;
-  int rank = index;
-  int nx = domain->sizeX + 1;
-  int ny = domain->sizeY + 1;
-  int nz = domain->sizeZ + 1; 
-
-  // pack outgoing data
-  int nsTF = domain->sendTF[0];
-  int *sendTF = &domain->sendTF[1];
-
-  // for completing the entire loop
-  hpx_addr_t done = hpx_lco_and_new(nsTF);
-
-  Nodal nodal[nsTF];
-  for (i = 0; i < nsTF; i++) {
-    int destLocalIdx = sendTF[i];
-    double *data = malloc(BUFSZ[destLocalIdx]);
-  
-    send_t pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, domain->nodalMass, data);
-
-    // the neighbor this is being sent to
-    int srcRemoteIdx = destLocalIdx;
-    int srcLocalIdx = 25 - srcRemoteIdx;
-    int to_rank = rank - OFFSET[srcLocalIdx];
-
-    nodal[i].rank = to_rank;
-    nodal[i].srcLocalIdx = srcLocalIdx;
-    nodal[i].buf = data;
-    nodal[i].address = &address;
-    
-    hpx_addr_t send = hpx_lco_future_new(0);
-    hpx_parcel_t *p = hpx_parcel_acquire(&nodal[i], sizeof(nodal[i]));
-    hpx_parcel_set_target(p, HPX_THERE(to_rank));
-    hpx_parcel_set_action(p, _updateNodalMass);
-    hpx_parcel_set_cont(p, done);
-    hpx_parcel_send(p, send);
-
-    hpx_lco_sema_v(domain->sem, HPX_NULL);
-
-    // overlap work here if desired
-
-    // and wait for the most recent send to complete
-    hpx_lco_wait(send);
-    free(data);
-  }
-
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
-}
-
-static int _advanceDomain_action(Advance *advance) {
-  hpx_addr_t domain = *(advance->address);
   int nx = advance->nx;
   int nDoms = advance->nDoms;
   int maxcycles = advance->maxcycles;
@@ -99,25 +54,15 @@ static int _advanceDomain_action(Advance *advance) {
 
   int tp = (int) (cbrt(nDoms) + 0.5);
 
-  hpx_addr_t local = hpx_addr_add(domain, sizeof(Domain)*index);
-
-  Domain *ld;
-
-  if (!hpx_gas_try_pin(local, (void**)&ld))
-    return HPX_RESEND;
-
   Init(tp,nx);
   int col = index%tp;
   int row = (index/tp)%tp;
   int plane = index/(tp*tp);
   ld->sem = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
-
-  SBN1(local,ld,index);
-
   hpx_gas_unpin(local);
 
-  hpx_thread_continue(0, NULL);
+  return HPX_SUCCESS;
 }
 
 static int _main_action(int *input)
@@ -127,17 +72,26 @@ static int _main_action(int *input)
 
   hpx_time_t t1 = hpx_time_now();
 
-  int nDoms, nx, maxcycles, cores, tp, i, j, k; 
+  int nDoms, nx, maxcycles, cores, tp, i, j, k;
   nDoms = input[0];
   nx = input[1];
   maxcycles = input[2];
   cores = input[3];
 
-  tp = (int) (cbrt(nDoms) + 0.5); 
+  tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
     return -1;
   }
+
+  deltaTimeCnt = malloc(sizeof(int)*maxcycles);
+  deltaTimeVal = malloc(sizeof(double)*maxcycles);
+
+  for (i = 0; i < maxcycles; i++) {
+    deltaTimeCnt[i] = 0;
+    deltaTimeVal[i] = DBL_MAX;
+  }
+
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t and = hpx_lco_and_new(nDoms);
@@ -148,13 +102,29 @@ static int _main_action(int *input)
     advance[k].nx = nx;
     advance[k].maxcycles = maxcycles;
     advance[k].cores = cores;
-    advance[k].address = &domain;
-    hpx_call(HPX_THERE(k), _advanceDomain, &advance[k], sizeof(advance[k]), and);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _initDomain, &advance[k], sizeof(advance[k]), and);
   }
   hpx_lco_wait(and);
+
+  for (k=0;k<nDoms;k++) {
+    advance[k].index = k;
+    advance[k].nDoms = nDoms;
+    advance[k].nx = nx;
+    advance[k].maxcycles = maxcycles;
+    advance[k].cores = cores;
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
+  }
+
+
   hpx_lco_delete(and, HPX_NULL);
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
+
+  free(deltaTimeCnt);
+  free(deltaTimeVal);
+
   hpx_shutdown(0);
 }
 
@@ -185,8 +155,8 @@ int main(int argc, char **argv)
   nDoms = 8;
   nx = 15;
   maxcycles = 10;
-  cores = 8; 
-  cfg.cores = cores; 
+  cores = 8;
+  cfg.cores = cores;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
@@ -231,14 +201,16 @@ int main(int argc, char **argv)
   }
 
   _main      = HPX_REGISTER_ACTION(_main_action);
+  _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
   _updateNodalMass = HPX_REGISTER_ACTION(_updateNodalMass_action);
- 
+  _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
+
   int input[4];
-  input[0] = nDoms; 
-  input[1] = nx; 
-  input[2] = maxcycles; 
-  input[3] = cores; 
+  input[0] = nDoms;
+  input[1] = nx;
+  input[2] = maxcycles;
+  input[3] = cores;
   printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
 
   return hpx_run(_main, input, 4*sizeof(int));

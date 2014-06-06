@@ -1,50 +1,127 @@
 #include "lulesh-hpx.h"
-#if 0
-void SBN1(void *data)
+
+// this action is associated with SBN1
+int _updateNodalMass_action(Nodal *nodal) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld;
+
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  int srcLocalIdx = nodal->srcLocalIdx;
+  double *src = nodal->buf;
+
+  recv_t unpack = RECEIVER[srcLocalIdx];
+
+  int nx = ld->sizeX + 1;
+  int ny = ld->sizeY + 1;
+  int nz = ld->sizeZ + 1;
+
+  hpx_lco_sema_p(ld->sem);
+
+  unpack(nx, ny, nz, src, ld->nodalMass, 0);
+
+  hpx_lco_sema_v(ld->sem, HPX_NULL);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _SBN1_sends_action(pSBN1 *psbn1)
 {
-  // doRecv = T, doSend = T, planeOnly = F, data = nodalMass
-  long rank = (long) data; 
-  Domain *domain = &DOMAINS[rank]; 
-  int nx = domain->sizeX + 1; 
-  int ny = domain->sizeY + 1; 
-  int nz = domain->sizeZ + 1; 
-  int i; 
+  Domain *domain;
+  domain = psbn1->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn1->destLocalIdx;
+  hpx_addr_t done = psbn1->done;
+  int rank = psbn1->rank;
+
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(Nodal) +
+                                         BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  Nodal *nodal = hpx_parcel_get_data(p);
+
+  send_t pack = SENDER[destLocalIdx];
+
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  pack(nx, ny, nz, domain->nodalMass, nodal->buf);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int to_rank = rank - OFFSET[srcLocalIdx];
+  int distance = to_rank - domain->rank;
+  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
+
+  nodal->srcLocalIdx = srcLocalIdx;
+
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _updateNodalMass);
+  hpx_parcel_set_cont(p, done);
+  hpx_parcel_send(p, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+void SBN1(hpx_addr_t local, Domain *domain, int index)
+{
+  int i;
+  int rank = index;
+
+  // protect the domain
+  hpx_lco_sema_p(domain->sem);
 
   // pack outgoing data
-  int nsTF = domain->sendTF[0]; 
-  int *sendTF = &domain->sendTF[1]; 
+  int nsTF = domain->sendTF[0];
+  int *sendTF = &domain->sendTF[1];
+
+  // for completing the entire loop of _updateNodalMass_action operations
+  hpx_addr_t done = hpx_lco_and_new(nsTF);
+
+  // for completing the parallel _SBN1_sends operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsTF);
 
   for (i = 0; i < nsTF; i++) {
-    int destLocalIdx = sendTF[i]; 
-    double *data = hpx_alloc(BUFSZ[destLocalIdx]);
+    int destLocalIdx = sendTF[i];
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN1));
+    assert(p);
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _SBN1_sends);
+    hpx_parcel_set_cont(p, sends);
 
-    send_t pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, domain->nodalMass, data);
+    pSBN1 *psbn1 = hpx_parcel_get_data(p);
+    psbn1->domain = domain;
+    psbn1->destLocalIdx = destLocalIdx;
+    psbn1->done = done;
+    psbn1->rank = rank;
 
-    hpx_future_t *fut = &domain->SBN1[destLocalIdx]; 
-    hpx_lco_future_set(fut, 0, (void *)data);
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
   }
 
-  // wait for incoming data
-  int nrTF = domain->recvTF[0]; 
-  int *recvTF = &domain->recvTF[1]; 
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
-  for (i = 0; i < nrTF; i++) {
-    int srcLocalIdx = recvTF[i];
-    int fromDomain = OFFSET[srcLocalIdx] + rank;
-    int srcRemoteIdx = 25 - srcLocalIdx;
-    hpx_future_t *fut = &DOMAINS[fromDomain].SBN1[srcRemoteIdx];
+  // release the domain lock here, so we don't get deadlock when a
+  // _updateNodalMass_action tries to acquire it
+  hpx_lco_sema_v(domain->sem, HPX_NULL);
 
-    hpx_thread_wait(fut);
-    double *src = (double *) hpx_lco_future_get_value(fut);
-
-    recv_t unpack = RECEIVER[srcLocalIdx];
-    unpack(nx, ny, nz, src, domain->nodalMass, 0);
-
-    hpx_free(src);
-  }
-  hpx_thread_exit(NULL);
+  // wait for all of the _updateNodalMass_action to complete
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 }
+
+#if 0
 void SBN3(int rank)
 {
   // doRecv = T, doSend = T, planeOnly = F, data = fx, fy, fz

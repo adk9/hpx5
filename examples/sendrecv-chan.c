@@ -87,7 +87,7 @@ static int _receiver_action(hpx_addr_t *args) {
       // 106 microseconds
       int delay = 10000;
       hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
-      double *buf = hpx_lco_chan_recv(chan, 0);
+      double *buf = hpx_lco_chan_recv(chan, sizeof(*buf));
       assert(buf);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);

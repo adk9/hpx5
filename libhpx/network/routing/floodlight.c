@@ -34,7 +34,6 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/routing.h"
 #include "managers.h"
-#include "contrib/uthash/src/utlist.h"
 
 #include <jansson.h>
 #include <curl/curl.h>
@@ -137,13 +136,13 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
 
   char *data = malloc(sizeof(char) * size);
   struct _json_buf_t wbuf = { .data = data, .pos = 0, .size = size };
-  
+
   char *postdata = json_dumps(post, JSON_COMPACT);
   int postsize = strlen(postdata)+1;
   struct _json_buf_t rbuf = { .data = postdata, .pos = 0, .size = postsize };
 
   if (delete)
-    curl_easy_setopt(fl->curl, CURLOPT_CUSTOMREQUEST, "DELETE"); 
+    curl_easy_setopt(fl->curl, CURLOPT_CUSTOMREQUEST, "DELETE");
   else
     curl_easy_setopt(fl->curl, CURLOPT_POST, 1L);
 
@@ -213,7 +212,7 @@ static json_t *_create_flow_mod(switch_t *s, uint64_t src, uint64_t dst, uint16_
   json_object_set_new(obj, "switch", json_string((char*)s->dpid));
   char *name;
   asprintf(&name, "hpx-%d-%lu-%lu-%u", hpx_get_my_rank(), src, dst, port);
-  json_object_set_new(obj, "name", json_string(name));  
+  json_object_set_new(obj, "name", json_string(name));
 
   if (src != HPX_SWADDR_WILDCARD) {
     char srcmac[18];
@@ -283,7 +282,10 @@ static int _get_switches(const floodlight_t *fl) {
     }
     sw = _add_switch(s);
     if (sw) {
-      LL_PREPEND(((floodlight_t*)fl)->switches, sw);
+      // cast because fl is const
+      // LD: why is it const if it's not actually const?
+      sw->next = ((floodlight_t*)fl)->switches;
+      ((floodlight_t*)fl)->switches = sw;
       dbg_log("New switch %s added.\n", (char*)sw->dpid);
     }
   }
@@ -295,7 +297,7 @@ static void _disable_switch(uint64_t dpid) {
   // todo.
 }
 
-static void _init(floodlight_t *fl) {  
+static void _init(floodlight_t *fl) {
 
   curl_global_init(CURL_GLOBAL_ALL);
   fl->curl = curl_easy_init();
@@ -316,11 +318,11 @@ static void _init(floodlight_t *fl) {
 }
 
 static void _delete(routing_t *routing) {
-  const floodlight_t *fl = (const floodlight_t*)routing;
+  floodlight_t *fl = (floodlight_t*)routing;
   switch_t *s = NULL, *tmp = NULL;
   // delete all switches
-  LL_FOREACH_SAFE(((floodlight_t*)fl)->switches, s, tmp) {
-    LL_DELETE(((floodlight_t*)fl)->switches, s);
+  while ((s = fl->switches) != NULL) {
+    fl->switches = fl->switches->next;
     free(s->dpid);
     free(s);
   }
@@ -380,7 +382,7 @@ static int _my_port(const routing_t *r) {
   photon_get_dev_addr(AF_INET, &addr);
   bravo_node *b = find_bravo_node(&addr);
   assert(b);
-  return b->of_port;  
+  return b->of_port;
 }
 
 static int _register_addr(const routing_t *r, uint64_t addr) {
