@@ -1,32 +1,23 @@
-Building and Running a Network-capable HPX
+Building and Running HPX
 ========================================== 
 
 HPX will build and run successfully without any network backend, but
-to be able to use HPX with multiple processes, there are several
+to be able to use HPX with multiple seperate processes, there are several
 pre-requisites.
 
 Requirements
 ------------
-* MPI
-* Photon (optional)
+* MPI (optional)
+* Photon (optional, requires MPI also)
 
 At present, MPI is required for networking by HPX. However, Photon may
-be used in addition to take advantage of RDMA over IB. The MPI-only
-implementation requires at present Open MPI. The Photon-based network
-implementation should work with MPICH, Open MPI, and MVAPICH, but,
-naturally, Photon is required.
+be used in addition to take advantage of RDMA over IB.
 
 Configuration
 -------------
 The easiest way to configure HPX is as follows: 
 
 * Download and build Photon 
-
-* Make sure the built Photon is in a directory the linker will look,
-  or set LD_LIBRARY_PATH appropriately
-
-* Make sure photon.h is in an include path the compiler knows about,
-  or set C_INCLUDE_PATH appropriately
 
 * "./configure --with-mpi --with-photon"
 
@@ -36,42 +27,13 @@ Example Configuration on Cray Systems
 
 > module swap PrgEnv-cray PrgEnv-gnu
 
-> CFLAGS="-DDEBUG -I/home/users/p01900/check/include -I/home/users/p01900/Photon/include -I/opt/cray/mpt/default/gni/mpich2-cray/81/include/" LDFLAGS="-L/home/users/p01900/check/lib -L/home/users/p01900/Photon/lib -L/opt/cray/mpt/default/gni/mpich2-cray/81/lib" ./configure --with-mpi --with-photon --prefix=/home/users/p01900/hpx
-
 Building
 --------
-
 * make
 
 Running
 -------
 
-When using just MPI, nothing further is needed to run HPX programs
-other than using mpirun/mpiexec. E.g. to run the pingpong example,
-"mpirun examples/hpx/pingponghpx 100 0 0".
+try running pingpong in hpx/examples:
+"./pingpong 100"
 
-When using Photon, some configuration of the environment is
-required. Four environment variables are recognized: HPX_USE_ETH_DEV,
-HPX_USE_IB_DEV, HPX_USE_CMA, HPX_USE_BACKEND. E.g.,
-
-HPX_USE_ETH_DEV=eth0
-HPX_USE_IB_DEV=qib0
-HPX_USE_CMA=0
-HPX_USE_BACKEND=verbs
-
-or
-
-HPX_USE_ETH_DEV=roce0
-HPX_USE_IB_DEV=mlx4_1
-HPX_USE_CMA=1
-HPX_USE_BACKEND=ugni
-
-Notes
------ 
-
-The network-enabled tests can not be run automatically. "make check"
-will build them, but then they must be run manually so that they can
-be run using MPI.
-
-Also, check's forking does not work properly in the networked tests,
-so set CK_FORK=no before running the tests.
