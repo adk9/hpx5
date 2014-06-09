@@ -19,9 +19,8 @@
 /// @brief HPX topology interface
 
 /// Get the "rank" the current code is running on
-/// @returns the rank at which the current code is executing, as represented
-///          by an @ref hpx_locality_t
-hpx_locality_t hpx_get_my_rank(void);
+/// @returns the rank at which the current code is executing
+int hpx_get_my_rank(void);
 
 /// Get the number of ranks currently available
 /// @returns the number of ranks in the system
