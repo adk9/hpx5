@@ -24,8 +24,10 @@ int _SBN1_result_action(Nodal *nodal) {
 
   hpx_gas_unpin(local);
 
+  hpx_lco_and_set(ld->sbn1_and,HPX_NULL);
   return HPX_SUCCESS;
 }
+
 int _SBN1_sends_action(pSBN *psbn)
 {
   Domain *domain;
@@ -88,6 +90,8 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   // release the lock too early
   hpx_addr_t sends = hpx_lco_and_new(nsTF);
 
+  domain->sbn1_and = hpx_lco_and_new(domain->nDomains-1);
+
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
@@ -118,6 +122,10 @@ void SBN1(hpx_addr_t local, Domain *domain, int index)
   // wait for all of the _SBN1_result_action to complete
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
+
+  // confirm receipt is done
+  hpx_lco_wait(domain->sbn1_and);
+  hpx_lco_delete(domain->sbn1_and,HPX_NULL);
 
   // get ready for the next generation
   hpx_lco_sema_p(domain->sem_sbn1);
