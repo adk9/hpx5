@@ -18,6 +18,7 @@ static int _advanceDomain_action(Advance *advance) {
 
   SBN1(local,domain,rank);
 
+#if 0
   while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) {
     double targetdt = domain->stoptime - domain->time;
 
@@ -37,6 +38,7 @@ static int _advanceDomain_action(Advance *advance) {
 
     CalcForceForNodes(local,domain,rank);
   }
+#endif
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
