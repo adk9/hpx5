@@ -47,6 +47,7 @@
 /examples/guppie
 /examples/sendrecv
 /examples/sendrecv-chan
+/examples/pingpong-chan
 
 # /include/
 /include/stamp-h1
