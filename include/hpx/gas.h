@@ -13,7 +13,9 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
-/// \file
+/// @file
+/// @brief Functions for allocating and using memory in the HPX global address 
+/// space
 
 #include "hpx/addr.h"
 

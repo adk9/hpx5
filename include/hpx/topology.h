@@ -15,17 +15,53 @@
 
 #include "hpx/config.h"
 
-/// ----------------------------------------------------------------------------
-/// HPX topology interface
-/// ----------------------------------------------------------------------------
+/// @file
+/// @brief HPX topology interface
+
+/// Get the "rank" the current code is running on
+/// @returns the rank at which the current code is executing, as represented
+///          by an @ref hpx_locality_t
 hpx_locality_t hpx_get_my_rank(void);
+
+/// Get the number of ranks currently available
+/// @returns the number of ranks in the system
 int hpx_get_num_ranks(void);
+
+/// Get the number of heavy-weight threads at the current locality
+/// These threads are the heavy-weight threads used internally by HPX
+/// and are not the same as HPX threads
+/// @returns the number of heavy-weight threads at the current locality
 int hpx_get_num_threads(void);
+
+/// Get the thread id of the current heavy-weight thread
+/// These threads are the heavy-weight threads used internally by HPX
+/// and are not the same as HPX threads.
+/// If you need an id for a light-weight HPX thread use
+/// hpx_thread_get_tls_id().
+/// @returns an id number representing the current heavy-weight thread
 int hpx_get_my_thread_id(void);
 
+/// Get the "rank" the current code is running on
+/// @returns the rank at which the current code is executing, as represented
+///          by an hpx_locality_t
 #define HPX_LOCALITY_ID hpx_get_my_rank()
+
+/// Get the number of ranks currently available
+/// @returns the number of ranks in the system
 #define HPX_LOCALITIES hpx_get_num_ranks()
-#define HPX_THREAD_ID hpx_get_my_thread_id()
+
+/// Get the number of heavy-weight threads at the current locality
+/// These threads are the heavy-weight threads used internally by HPX
+/// and are not the same as HPX threads
+/// @returns the number of heavy-weight threads at the current locality
 #define HPX_THREADS hpx_get_num_threads()
+
+/// Get the thread id of the current heavy-weight thread
+/// These threads are the heavy-weight threads used internally by HPX
+/// and are not the same as HPX threads.
+/// If you need an id for a light-weight HPX thread use
+/// hpx_thread_get_tls_id().
+/// @returns an id number representing the current heavy-weight thread
+#define HPX_THREAD_ID hpx_get_my_thread_id()
 
 #endif
