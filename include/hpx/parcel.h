@@ -16,11 +16,12 @@
 #include "hpx/action.h"
 #include "hpx/addr.h"
 
-// ----------------------------------------------------------------------------
-/// HPX parcel interface.
+/// @file
+/// @brief HPX parcel interface.
 ///
 /// Parcels are the HPX message type.
-// ----------------------------------------------------------------------------
+
+/// HPX parcel type
 typedef struct hpx_parcel hpx_parcel_t;
 
 // ----------------------------------------------------------------------------
@@ -45,15 +46,15 @@ typedef struct hpx_parcel hpx_parcel_t;
 /// between hpx_parcel_send() and hpx_parcel_send_sync().
 ///
 /// If the @p data pointer is NULL, and the @p bytes is 0, then
-/// hpx_parcel_{get,set}_data() may fail.
+/// hpx_parcel_get_data() or hpx_parcel_set_data() may fail.
 ///
 /// If the @p data pointer is non-NULL, then the runtime assumes that @p bytes
 /// is an accurate size of @p data, and will use it as the buffer to be
 /// sent. The runtime does not claim ownership of @p data, but does make it
-/// available through the standard hpx_parcel_{get,set}_data() interface. The @p
-/// data buffer MAY be concurrently associated with more than one parcel,
-/// however the @p data buffer MUST NOT be written to while any of the parcels
-/// that it is associated with has an outstanding hpx_parcel_send()
+/// available through the standard hpx_parcel_get_data()/hpx_parcel_set_data() 
+/// interface. The @p data buffer MAY be concurrently associated with more than 
+/// one parcel, however the @p data buffer MUST NOT be written to while any of 
+/// the parcels that it is associated with has an outstanding hpx_parcel_send()
 /// operation, or concurrently with an hpx_parcel_send_sync().
 ///
 /// @param  data a possibly NULL buffer to associate with the parcel
@@ -84,8 +85,8 @@ void hpx_parcel_release(hpx_parcel_t *p)
 /// performed---this may result in better performance.
 ///
 /// Sending a parcel transfers ownership of the parcel to the runtime. The
-/// parcel pointed to by @p p may not be reused and must not be
-/// hpx_parcel_release()d.
+/// parcel pointed to by @p p may not be reused and must not be released with
+/// hpx_parcel_release().
 ///
 /// @param    p the parcel to send, must correspond to a parcel returned from
 ///             hpx_parcel_acquire()
@@ -104,8 +105,8 @@ void hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done)
 /// completed.
 ///
 /// Sending a parcel transfers ownership of the parcel to the runtime. The
-/// parcel pointed to by @p p may not be reused and must not be
-/// hpx_parcel_release()d.
+/// parcel pointed to by @p p may not be reused and must not be released with
+/// hpx_parcel_release().
 ///
 /// @param p the parcel to send, must correspond to a parcel returned from
 ///          hpx_parcel_acquire().

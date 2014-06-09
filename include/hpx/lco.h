@@ -13,7 +13,8 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
-/// \file
+/// @file
+/// @brief The HPX LCO interface.
 
 #include "hpx/addr.h"
 #include "hpx/types.h"

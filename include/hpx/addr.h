@@ -14,7 +14,7 @@
 #define HPX_ADDR_H
 
 /// @file
-/// Types and functions specific to dealing with global addresses.
+/// @brief Types and functions specific to dealing with global addresses.
 
 /// An HPX global address.
 ///

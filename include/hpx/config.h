@@ -13,7 +13,8 @@
 #ifndef HPX_CONFIG_H
 #define HPX_CONFIG_H
 
-/// \file
+/// @file
+/// @brief Types and constants needed for configuring HPX at run-time.
 
 //! Configuration options for which global memory model to use.
 typedef enum {
