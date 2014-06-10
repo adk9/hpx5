@@ -48,19 +48,18 @@ static int _main_action(int *args) {
   int n = *args;
   printf("seqspawn(%d)\n", n); fflush(stdout);
 
-  hpx_time_t clock = hpx_time_now();
   hpx_addr_t and = hpx_lco_and_new(n);
+  hpx_time_t now = hpx_time_now();
   for (int i = 0; i < n; i++)
     hpx_call(HPX_HERE, _nop, 0, 0, and);
   hpx_lco_wait(and);
-  double time = hpx_time_elapsed_ms(clock)/1e3;
-
+  double elapsed = hpx_time_elapsed_ms(now)/1e3;
   hpx_lco_delete(and, HPX_NULL);
-  printf("seconds: %.7f\n", time);
-  printf("localities:   %d\n", hpx_get_num_ranks());
-  printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_shutdown(0);
-  return HPX_SUCCESS;
+
+  printf("seconds: %.7f\n", elapsed);
+  printf("localities:   %d\n", HPX_LOCALITIES);
+  printf("threads:      %d\n", HPX_THREADS);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 /// ----------------------------------------------------------------------------

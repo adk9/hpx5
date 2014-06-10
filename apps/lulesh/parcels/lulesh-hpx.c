@@ -18,7 +18,8 @@ static int _advanceDomain_action(Advance *advance) {
 
   SBN1(local,domain,rank);
 
-  while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) { 
+#if 0
+  while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) {
     double targetdt = domain->stoptime - domain->time;
 
     if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {
@@ -34,9 +35,10 @@ static int _advanceDomain_action(Advance *advance) {
       //if (deltaTimeCnt[domain->cycle] == domain->nDomains)
         //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
     }
-    
+
     CalcForceForNodes(local,domain,rank);
   }
+#endif
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -109,6 +111,8 @@ static int _main_action(int *input)
     hpx_call(block, _initDomain, &advance[k], sizeof(advance[k]), and);
   }
   hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+  and = hpx_lco_and_new(nDoms);
 
   for (k=0;k<nDoms;k++) {
     advance[k].index = k;
@@ -119,9 +123,9 @@ static int _main_action(int *input)
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
   }
-
-
+  hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
+
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
 
