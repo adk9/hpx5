@@ -16,6 +16,10 @@
 
 #include "libhpx/action.h"
 
+bool hpx_action_eq(const hpx_action_t lhs, const hpx_action_t rhs) {
+  return (lhs == rhs);
+}
+
 hpx_action_t action_register(const char * key, hpx_action_handler_t f) {
   return (hpx_action_t)f;
 }

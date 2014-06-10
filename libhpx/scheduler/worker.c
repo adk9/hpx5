@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "hpx/hpx.h"
 
@@ -599,6 +600,38 @@ void scheduler_signal(lco_t *lco, hpx_status_t status) {
   }
 }
 
+
+static void _call_lco_set(hpx_addr_t target, const void *args,
+                          size_t len, hpx_status_t status) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(hpx_lco_set_args_t) + len);
+    assert(p);
+    hpx_parcel_set_target(p, target);
+    hpx_parcel_set_action(p, hpx_lco_set_action);
+
+    // perform the single serialization
+    hpx_lco_set_args_t *cargs = (hpx_lco_set_args_t *)hpx_parcel_get_data(p);
+    cargs->status = status;
+    memcpy(&cargs->data, args, len);
+    hpx_parcel_send(p, HPX_NULL);
+}
+
+
+static void _call_continuation(hpx_addr_t target, hpx_action_t action,
+                               const void *args, size_t len, hpx_status_t status) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
+    assert(p);
+    hpx_parcel_set_target(p, target);
+    hpx_parcel_set_action(p, locality_call_continuation);
+
+    // perform the single serialization
+    locality_cont_args_t *cargs = (locality_cont_args_t *)hpx_parcel_get_data(p);
+    cargs->action = action;
+    cargs->status = status;
+    memcpy(&cargs->data, args, len);
+    hpx_parcel_send(p, HPX_NULL);
+}
+
+
 /// unified continuation handler
 static void HPX_NORETURN _continue(hpx_status_t status,
                                    size_t size, const void *value,
@@ -606,9 +639,16 @@ static void HPX_NORETURN _continue(hpx_status_t status,
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
-  hpx_addr_t cont = parcel->cont;
-  if (!hpx_addr_eq(cont, HPX_NULL))
-    hpx_lco_set_status(cont, value, size, status, HPX_NULL);   // async
+  hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
+  hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
+  if (!hpx_addr_eq(c_target, HPX_NULL) &&
+      !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+    if (hpx_action_eq(c_act, hpx_lco_set_action)) {
+      _call_lco_set(c_target, value, size, status);
+    } else {
+      _call_continuation(c_target, c_act, value, size, status);
+    }
+  }
 
   // run the cleanup handler
   if (cleanup != NULL)
@@ -689,8 +729,13 @@ hpx_addr_t hpx_thread_current_target(void) {
 }
 
 
-hpx_addr_t hpx_thread_current_cont(void) {
-  return self.current->cont;
+hpx_addr_t hpx_thread_current_cont_target(void) {
+  return self.current->c_target;
+}
+
+
+hpx_action_t hpx_thread_current_cont_action(void) {
+  return self.current->c_action;
 }
 
 

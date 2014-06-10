@@ -20,9 +20,10 @@
 /// return values to their LCO continuations using this hpx_thread_exit() call,
 /// which terminates the thread's execution.
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_thread_current_target(void);
-hpx_addr_t hpx_thread_current_cont(void);
-uint32_t   hpx_thread_current_args_size(void);
+hpx_addr_t   hpx_thread_current_target(void);
+hpx_addr_t   hpx_thread_current_cont_target(void);
+hpx_action_t hpx_thread_current_cont_action(void);
+uint32_t     hpx_thread_current_args_size(void);
 
 void hpx_thread_yield(void);
 

@@ -35,6 +35,12 @@ void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
 /// ----------------------------------------------------------------------------
 void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 
+typedef struct {
+  hpx_status_t status;
+  char data[];
+} hpx_lco_set_args_t;
+extern hpx_action_t hpx_lco_set_action;
+
 
 /// ----------------------------------------------------------------------------
 /// Perform a wait operation.

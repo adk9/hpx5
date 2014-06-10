@@ -34,21 +34,18 @@ static void _usage(FILE *stream) {
           "\t-h, this help display\n");
 }
 
-static hpx_action_t _fib = 0;
+static hpx_action_t _fib      = 0;
 static hpx_action_t _fib_main = 0;
 
-static int _fib_action(void *args) {
-  int n = *(int*)args;
+static int _fib_action(int *args) {
+  int n = *args;
 
   if (n < 2)
-    hpx_thread_continue(sizeof(n), &n);
-
-  // int rank = hpx_get_my_rank();
-  // int ranks = hpx_get_num_ranks();
+    HPX_THREAD_CONTINUE(n);
 
   hpx_addr_t peers[] = {
-    HPX_HERE, // hpx_addr_from_rank((rank + ranks - 1) % ranks),
-    HPX_HERE // hpx_addr_from_rank((rank + 1) % ranks)
+    HPX_HERE,
+    HPX_HERE
   };
 
   int ns[] = {
@@ -83,33 +80,29 @@ static int _fib_action(void *args) {
   hpx_lco_delete(futures[1], HPX_NULL);
 
   int fn = fns[0] + fns[1];
-  hpx_thread_continue(sizeof(fn), &fn);
+  HPX_THREAD_CONTINUE(fn);
   return HPX_SUCCESS;
 }
 
-static int _fib_main_action(void *args) {
-  int n = *(int*)args;
+static int _fib_main_action(int *args) {
+  int n = *args;
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
-  hpx_time_t clock = hpx_time_now();
-  hpx_addr_t future = hpx_lco_future_new(sizeof(int));
-  hpx_call(HPX_HERE, _fib, &n, sizeof(n), future);
-  hpx_lco_get(future, &fn, sizeof(fn));
-  hpx_lco_delete(future, HPX_NULL);
-
-  double time = hpx_time_elapsed_ms(clock)/1e3;
+  hpx_time_t now = hpx_time_now();
+  hpx_call_sync(HPX_HERE, _fib, &n, sizeof(n), &fn, sizeof(fn));
+  double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
   printf("%d\n", fn);
-  printf("seconds: %.7f\n", time);
-  printf("localities: %d\n", hpx_get_num_ranks());
-  printf("threads/locality: %d\n", hpx_get_num_threads());
-  hpx_shutdown(0);
+  printf("seconds: %.7f\n", elapsed);
+  printf("localities: %d\n", HPX_LOCALITIES);
+  printf("threads/locality: %d\n", HPX_THREADS);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = {
-    .cores = 0,
-    .threads = 0,
+    .cores       = 0,
+    .threads     = 0,
     .stack_bytes = 0
   };
 
@@ -162,8 +155,8 @@ int main(int argc, char *argv[]) {
   }
 
   // register the fib action
-  _fib = hpx_register_action("_fib", _fib_action);
-  _fib_main = hpx_register_action("_fib_main", _fib_main_action);
+  _fib      = HPX_REGISTER_ACTION(_fib_action);
+  _fib_main = HPX_REGISTER_ACTION(_fib_main_action);
 
   // run the main action
   return hpx_run(_fib_main, &n, sizeof(n));
