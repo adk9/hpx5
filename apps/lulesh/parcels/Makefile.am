@@ -1,6 +1,6 @@
-luleshparcelsdir       = $(top_builddir)/apps/lulesh/parcels
+noinst_appsdir         = $(abs_top_builddir)/apps/
 
-luleshparcels_PROGRAMS = luleshparcels
+noinst_apps_PROGRAMS   = luleshparcels
 
 luleshparcels_SOURCES  = lulesh-comp.c  lulesh-hpx.c  lulesh-util.c  lulesh-xfer.c
 
