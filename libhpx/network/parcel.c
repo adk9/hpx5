@@ -53,9 +53,12 @@ void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr) {
   p->target = addr;
 }
 
+void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action) {
+  p->c_action = action;
+}
 
-void hpx_parcel_set_cont(hpx_parcel_t *p, const hpx_addr_t cont) {
-  p->cont = cont;
+void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
+  p->c_target = cont;
 }
 
 
@@ -77,8 +80,13 @@ hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p) {
 }
 
 
-hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p) {
-  return p->cont;
+hpx_action_t hpx_parcel_get_cont_action(const hpx_parcel_t *p) {
+  return p->c_action;
+}
+
+
+hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p) {
+  return p->c_target;
 }
 
 
@@ -126,12 +134,13 @@ hpx_parcel_acquire(void *buffer, size_t bytes) {
   }
 
   // initialize the structure with defaults
-  p->ustack = (struct ustack*)_INPLACE_MASK;
-  p->src    = here->rank;
-  p->size   = bytes;
-  p->action = HPX_ACTION_NULL;
-  p->target = HPX_HERE;
-  p->cont   = HPX_NULL;
+  p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->src      = here->rank;
+  p->size     = bytes;
+  p->action   = HPX_ACTION_NULL;
+  p->target   = HPX_HERE;
+  p->c_action = HPX_ACTION_NULL;
+  p->c_target = HPX_NULL;
 
   // if there's a user-defined buffer, then remember it
   if (buffer) {
@@ -213,6 +222,24 @@ hpx_parcel_release(hpx_parcel_t *p) {
   network_free(p, p->size + sizeof(*p));
 }
 
+
+hpx_parcel_t *
+parcel_create(hpx_addr_t target, hpx_action_t action, void *args, size_t len,
+              hpx_addr_t c_target, hpx_action_t c_action, bool inplace) {
+  hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
+  if (!p) {
+    dbg_error("could not allocate parcel.\n");
+    return NULL;
+  }
+
+  hpx_parcel_set_action(p, action);
+  hpx_parcel_set_target(p, target);
+  hpx_parcel_set_cont_action(p, c_action);
+  hpx_parcel_set_cont_target(p, c_target);
+  if (inplace)
+    hpx_parcel_set_data(p, args, len);
+  return p;
+}
 
 void
 parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {

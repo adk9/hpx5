@@ -55,8 +55,8 @@ action_set_value(void *args) {
 
 static int
 action_allreduce(void *unused) {
-  int num_ranks = hpx_get_num_ranks();
-  int my_rank = hpx_get_my_rank();
+  int num_ranks = HPX_LOCALITIES;
+  int my_rank = HPX_LOCALITY_ID;
   assert(my_rank == 0);
 
   T          values[num_ranks];
@@ -86,13 +86,13 @@ action_allreduce(void *unused) {
   for (int i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
 
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 int main(int argc, char** argv) {
   hpx_config_t config = {
-    .cores = 0,
-    .threads = 0,
+    .cores       = 0,
+    .threads     = 0,
     .stack_bytes = 0
   };
 

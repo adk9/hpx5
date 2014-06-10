@@ -29,12 +29,13 @@
 
 locality_t *here = NULL;
 
-hpx_action_t locality_shutdown     = 0;
-hpx_action_t locality_global_sbrk  = 0;
-hpx_action_t locality_alloc_blocks = 0;
-hpx_action_t locality_gas_move     = 0;
-hpx_action_t locality_gas_acquire  = 0;
-hpx_action_t locality_gas_forward  = 0;
+hpx_action_t locality_shutdown          = 0;
+hpx_action_t locality_global_sbrk       = 0;
+hpx_action_t locality_alloc_blocks      = 0;
+hpx_action_t locality_gas_move          = 0;
+hpx_action_t locality_gas_acquire       = 0;
+hpx_action_t locality_gas_forward       = 0;
+hpx_action_t locality_call_continuation = 0;
 
 
 /// The action that performs a global allocation for a rank.
@@ -111,10 +112,8 @@ static int _gas_move_action(hpx_addr_t *args) {
   assert(block);
 
   // 2. invalidate the block mapping at the source locality.
-  hpx_addr_t done = hpx_lco_future_new(size);
-  hpx_call(src, locality_gas_acquire, &rank, sizeof(rank), done);
-  hpx_status_t status = hpx_lco_get(done, block, size);
-  hpx_lco_delete(done, HPX_NULL);
+  hpx_status_t status = hpx_call_sync(src, locality_gas_acquire, &rank, sizeof(rank),
+                                      block, size);
   if (status != HPX_SUCCESS) {
     dbg_log("failed move operation.\n");
     hpx_thread_exit(status);
@@ -123,15 +122,27 @@ static int _gas_move_action(hpx_addr_t *args) {
   // 3. If the invalidate was successful, insert an entry into the local block
   //    translation table
   btt_insert(here->btt, src, block);
-  return HPX_SUCCESS;
+  return status;
+}
+
+
+static int _call_cont_action(locality_cont_args_t *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  if (!hpx_gas_try_pin(target, NULL))
+    return HPX_RESEND;
+
+  uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t) - sizeof(hpx_action_t);
+  // handle status here: args->status;
+  return hpx_call(target, args->action, args->data, size, HPX_NULL);
 }
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  locality_shutdown     = HPX_REGISTER_ACTION(_shutdown_action);
-  locality_global_sbrk  = HPX_REGISTER_ACTION(_global_sbrk_action);
-  locality_alloc_blocks = HPX_REGISTER_ACTION(_alloc_blocks_action);
-  locality_gas_move     = HPX_REGISTER_ACTION(_gas_move_action);
-  locality_gas_acquire  = HPX_REGISTER_ACTION(_gas_acquire_action);
-  locality_gas_forward  = HPX_REGISTER_ACTION(_gas_forward_action);
+  locality_shutdown          = HPX_REGISTER_ACTION(_shutdown_action);
+  locality_global_sbrk       = HPX_REGISTER_ACTION(_global_sbrk_action);
+  locality_alloc_blocks      = HPX_REGISTER_ACTION(_alloc_blocks_action);
+  locality_gas_move          = HPX_REGISTER_ACTION(_gas_move_action);
+  locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
+  locality_gas_forward       = HPX_REGISTER_ACTION(_gas_forward_action);
+  locality_call_continuation = HPX_REGISTER_ACTION(_call_cont_action);
 }
