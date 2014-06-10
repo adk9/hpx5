@@ -58,7 +58,7 @@ static int _par_for_action(int *args) {
   int n = *args;
 
   if (n <= SEQ_CUTOFF) {
-    for (int i = 0; i < SEQ_CUTOFF; ++i)
+    for (int i = 0; i < n; ++i)
       hpx_call(HPX_HERE, _nop, 0, 0, HPX_NULL);
     hpx_thread_exit(HPX_SUCCESS);
   }
