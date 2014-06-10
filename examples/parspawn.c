@@ -58,7 +58,7 @@ static int _par_for_action(int *args) {
   int n = *args;
 
   if (n <= SEQ_CUTOFF) {
-    for (int i = 0; i < SEQ_CUTOFF; ++i)
+    for (int i = 0; i < n; ++i)
       hpx_call(HPX_HERE, _nop, 0, 0, HPX_NULL);
     hpx_thread_exit(HPX_SUCCESS);
   }
@@ -69,25 +69,24 @@ static int _par_for_action(int *args) {
   hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
   nn = n - (n/4)*3;
   hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
-  hpx_thread_exit(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 static int _main_action(int *args) {
   int n = *args;
   printf("parspawn(%d)\n", n); fflush(stdout);
 
-  hpx_time_t clock = hpx_time_now();
   and = hpx_lco_and_new(n);
+  hpx_time_t now = hpx_time_now();
   hpx_call(HPX_HERE, _par_for, &n, sizeof(n), HPX_NULL);
   hpx_lco_wait(and);
-  double time = hpx_time_elapsed_ms(clock)/1e3;
-
+  double elapsed = hpx_time_elapsed_ms(now)/1e3;
   hpx_lco_delete(and, HPX_NULL);
-  printf("seconds: %.7f\n", time);
-  printf("localities:   %d\n", hpx_get_num_ranks());
-  printf("threads:      %d\n", hpx_get_num_threads());
-  hpx_shutdown(0);
-  return HPX_SUCCESS;
+
+  printf("seconds: %.7f\n", elapsed);
+  printf("localities:   %d\n", HPX_LOCALITIES);
+  printf("threads:      %d\n", HPX_THREADS);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 /// ----------------------------------------------------------------------------

@@ -198,8 +198,8 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     if (!p)
       return dbg_error("failed to allocate an initial parcel.\n");
 
-    p->action = act;
-    p->target = HPX_HERE;
+    hpx_parcel_set_action(p, act);
+    hpx_parcel_set_target(p, HPX_HERE);
     hpx_parcel_set_data(p, args, size);
 
     // enqueue directly---network exists but schedulers don't yet
@@ -213,8 +213,8 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     if (!p)
       return dbg_error("could not allocate a network server parcel");
-    p->action = light_network;
-    p->target = HPX_HERE;
+    hpx_parcel_set_action(p, light_network);
+    hpx_parcel_set_target(p, HPX_HERE);
 
     // enqueue directly---network exists but schedulers don't yet
     network_rx_enqueue(here->network, p);
@@ -237,30 +237,53 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   return _cleanup(here, e);
 }
 
-/// Encapsulates a remote-procedure-call.
-int hpx_call(hpx_addr_t target, hpx_action_t action, const void *args,
-             size_t len, hpx_addr_t result) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len);
-  if (!p) {
-    dbg_error("could not allocate parcel.\n");
-    return 1;
-  }
+/// A RPC call with a user-specified continuation action.
+int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                               const void *args, size_t len,
+                               hpx_addr_t c_target, hpx_action_t c_action) {
+  hpx_parcel_t *p = parcel_create(addr, action, (void*)args, len, c_target, c_action, true);
+  if (!p)
+    return dbg_error("hpx_call_with_continuation failed.\n");
 
-  p->action = action;
-  p->target = target;
-  p->cont = result;
-  hpx_parcel_set_data(p, args, len);
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+
+/// Encapsulates an asynchronous remote-procedure-call.
+int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
+             size_t len, hpx_addr_t result) {
+  return hpx_call_with_continuation(addr, action, args, len, result, hpx_lco_set_action);
+}
+
+
+int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
+                  size_t alen, void *out, size_t olen) {
+  hpx_addr_t result = hpx_lco_future_new(olen);
+  hpx_call(addr, action, args, alen, result);
+  int status = hpx_lco_get(result, out, olen);
+  hpx_lco_delete(result, HPX_NULL);
+  return status;
+}
+
+int hpx_call_async(hpx_addr_t addr, hpx_action_t action, void *args,
+                   size_t len, hpx_addr_t args_reuse, hpx_addr_t result) {
+  hpx_parcel_t *p = parcel_create(addr, action, args, len, result, hpx_lco_set_action, false);
+  if (!p)
+    return dbg_error("hpx_call_async failed.\n");
+
+  hpx_parcel_send(p, args_reuse);
+  return HPX_SUCCESS;
+}
+
 
 
 /// Encapsulates a RPC called on all available localities.
 int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
-  p->target = HPX_HERE;
-  p->action = _bcast;
-  p->cont = lco;
+  hpx_parcel_set_target(p, HPX_HERE);
+  hpx_parcel_set_action(p, _bcast);
+  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+  hpx_parcel_set_cont_target(p, lco);
 
   _bcast_args_t *args = (_bcast_args_t *)hpx_parcel_get_data(p);
   args->action = action;
@@ -322,7 +345,7 @@ void
 hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-  hpx_thread_exit(HPX_SUCCESS);
+  hpx_thread_exit(code);
 }
 
 
@@ -345,10 +368,7 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
 
   // Get a set of @p n contiguous block ids.
   uint32_t base_id;
-  hpx_addr_t f = hpx_lco_future_new(sizeof(base_id));
-  hpx_call(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), f);
-  hpx_lco_get(f, &base_id, sizeof(base_id));
-  hpx_lco_delete(f, HPX_NULL);
+  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
 
   int ranks = here->ranks;
   uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
