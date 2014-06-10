@@ -199,6 +199,8 @@ typedef struct Domain {
   int recvTT[7];
   int recvTF[27];
   int recvFF[14];
+
+  hpx_addr_t sbn1_and;
 } Domain;
 
 typedef struct pSBN {

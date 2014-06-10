@@ -69,12 +69,7 @@ static int _main_action(int *args) {
     for (int k=0; k<avg; ++k) {
       // set up the asynchronous send
       hpx_addr_t send = hpx_lco_future_new(0);
-      hpx_parcel_t *p = hpx_parcel_acquire(buf, sizeof(double)*counts[i]);
-      assert(p);
-      hpx_parcel_set_target(p, HPX_HERE);
-      hpx_parcel_set_action(p, _receiver);
-      hpx_parcel_set_cont(p, done);
-      hpx_parcel_send(p, send);
+      hpx_call_async(HPX_HERE, _receiver, buf, sizeof(double)*counts[i], send, HPX_NULL);
 
       // do the useless work
       double volatile d = 0.;
@@ -83,6 +78,7 @@ static int _main_action(int *args) {
 
       // and wait for the most recent send to complete
       hpx_lco_wait(send);
+      hpx_lco_delete(send, HPX_NULL);
     }
 
     hpx_lco_wait(done);

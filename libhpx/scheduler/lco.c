@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "libsync/sync.h"
+#include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
 #include "lco.h"
@@ -46,9 +47,11 @@
 /// Remote action interface to a future
 static hpx_action_t _wait   = 0;
 static hpx_action_t _get    = 0;
-static hpx_action_t _set    = 0;
 static hpx_action_t _delete = 0;
 
+// The LCO set action is exposed so that it can be used by the
+// explicit parcel interface as a continuation action.
+hpx_action_t hpx_lco_set_action = 0;
 
 /// Wait on a local LCO. This properly acquires and releases the LCO's lock.
 static hpx_status_t _wait_local(lco_t *lco) {
@@ -62,20 +65,14 @@ static hpx_status_t _wait_local(lco_t *lco) {
 }
 
 
-typedef struct {
-  hpx_status_t status;
-  char data[];
-} _set_args_t;
-
-
 /// ----------------------------------------------------------------------------
 /// Set tries to perform a local set operation. If it fails, it means that the
 /// future was moved at some point, so we just resend the parcel, which will
 /// ultimately get to the actual LCO and pin it so we can set its value.
 /// ----------------------------------------------------------------------------
-static int _set_action(_set_args_t *args) {
+static int _set_action(hpx_lco_set_args_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont();
+  hpx_addr_t cont = hpx_thread_current_cont_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
@@ -140,9 +137,9 @@ static int _delete_action(void *args) {
 
 static void HPX_CONSTRUCTOR _initialize_actions(void) {
   _get    = HPX_REGISTER_ACTION(_get_action);
-  _set    = HPX_REGISTER_ACTION(_set_action);
   _wait   = HPX_REGISTER_ACTION(_wait_action);
   _delete = HPX_REGISTER_ACTION(_delete_action);
+  hpx_lco_set_action = HPX_REGISTER_ACTION(_set_action);
 }
 
 
@@ -315,14 +312,15 @@ hpx_lco_set_status(hpx_addr_t target, const void *value, int size,
     // us to serialize directly into it. We could provide an HPX call interface
     // that is varargs or something, but that makes the active message
     // instantiation tricky.
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_set_args_t) + size);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(hpx_lco_set_args_t) + size);
     assert(p);
-    p->target = target;
-    p->action = _set;
-    p->cont = sync;
+    hpx_parcel_set_target(p, target);
+    hpx_parcel_set_action(p, hpx_lco_set_action);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_set_cont_target(p, sync);
 
     // perform the single serialization
-    _set_args_t *args = (_set_args_t *)hpx_parcel_get_data(p);
+    hpx_lco_set_args_t *args = (hpx_lco_set_args_t *)hpx_parcel_get_data(p);
     args->status = HPX_SUCCESS;
     memcpy(&args->data, value, size);
 
@@ -356,10 +354,7 @@ hpx_lco_wait(hpx_addr_t target) {
     hpx_gas_unpin(target);
   }
   else {
-    hpx_addr_t proxy = hpx_lco_future_new(0);
-    hpx_call(target, _wait, NULL, 0, proxy);
-    status = hpx_lco_wait(proxy);
-    hpx_lco_delete(proxy, HPX_NULL);
+    status = hpx_call_sync(target, _wait, NULL, 0, NULL, 0);
   }
   return status;
 }
@@ -378,10 +373,7 @@ hpx_lco_get(hpx_addr_t target, void *value, int size) {
     hpx_gas_unpin(target);
   }
   else {
-    hpx_addr_t proxy = hpx_lco_future_new(size);
-    hpx_call(target, _get, &size, sizeof(size), proxy);
-    status = hpx_lco_get(proxy, value, size);
-    hpx_lco_delete(proxy, HPX_NULL);
+    status = hpx_call_sync(target, _get, &size, sizeof(size), value, size);
   }
   return status;
 }

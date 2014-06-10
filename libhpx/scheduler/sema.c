@@ -115,7 +115,7 @@ static int _p_action(void *args) {
 
 static int _v_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont();
+  hpx_addr_t cont = hpx_thread_current_cont_target();
   hpx_lco_sema_v(target, cont);
   return HPX_SUCCESS;
 }

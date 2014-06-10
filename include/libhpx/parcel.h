@@ -34,10 +34,13 @@ struct hpx_parcel {
   uint32_t         size;
   hpx_action_t   action;
   hpx_addr_t     target;
-  hpx_addr_t       cont;
+  hpx_action_t c_action;
+  hpx_addr_t   c_target;
   char         buffer[];
 };
 
+hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action, void *args, size_t len,
+                            hpx_addr_t c_target, hpx_action_t c_action, bool inplace);
 void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack);
 struct ustack *parcel_get_stack(hpx_parcel_t *p);
 
