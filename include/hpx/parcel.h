@@ -131,12 +131,18 @@ hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *p)
 hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-// ----------------------------------------------------------------------------
-/// Get the continuation associated with a parcel
+/// Get the continuation action of a parcel
+/// @param p the parcel
+/// @returns the continuation action of the parcel
+hpx_action_t hpx_parcel_get_cont_action(const hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+
+/// Get the address of the continuation associated with a parcel
 /// @param p the parcel
 /// @returns the global address of the continuation of @p p
 // ----------------------------------------------------------------------------
-hpx_addr_t hpx_parcel_get_cont(const hpx_parcel_t *p)
+hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 // ----------------------------------------------------------------------------
@@ -157,7 +163,6 @@ void *hpx_parcel_get_data(hpx_parcel_t *p)
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action)
   HPX_NON_NULL(1);
 
-
 // ----------------------------------------------------------------------------
 /// Set a target to a parcel, for it to be sent to
 /// @param    p the parcel
@@ -167,11 +172,19 @@ void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr)
   HPX_NON_NULL(1);
 
 // ----------------------------------------------------------------------------
-/// Set the continuation for a parcel
-/// @param   p the parcel
-/// @param lco the address of the continuation
+/// Set the continuation action for a parcel
+/// @param      p the parcel
+/// @param action the continuation action to set for the parcel
 // ----------------------------------------------------------------------------
-void hpx_parcel_set_cont(hpx_parcel_t *p, const hpx_addr_t lco)
+void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action)
+  HPX_NON_NULL(1);
+
+// ----------------------------------------------------------------------------
+/// Set the continuation for a parcel
+/// @param    p the parcel
+/// @param addr the address of the continuation
+// ----------------------------------------------------------------------------
+void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
   HPX_NON_NULL(1);
 
 // ----------------------------------------------------------------------------

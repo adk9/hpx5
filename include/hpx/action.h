@@ -29,6 +29,14 @@ typedef int (*hpx_action_handler_t)(void *);
 extern hpx_action_t HPX_ACTION_NULL;
 
 // ----------------------------------------------------------------------------
+/// Determine whether two actions are the same
+/// @param lhs one action
+/// @param rhs a second action
+/// @returns   true if the actions are equal
+// ----------------------------------------------------------------------------
+bool hpx_action_eq(const hpx_action_t lhs, const hpx_action_t rhs);
+
+// ----------------------------------------------------------------------------
 /// Should be called by the main native thread only, between the execution of
 /// hpx_init() and hpx_run(). Should not be called from an HPX lightweight
 /// thread.

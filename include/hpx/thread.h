@@ -27,9 +27,13 @@
 /// @returns the address of the thread's target
 hpx_addr_t hpx_thread_current_target(void);
 
-/// Get the continuation of the current thread
+/// Get the address of the continuation for the current thread
 /// @returns the address of the current thread's continuation
-hpx_addr_t hpx_thread_current_cont(void);
+hpx_addr_t   hpx_thread_current_cont_target(void);
+
+/// Get the continuation action for the current thread
+/// @returns the continuation action for the current thread
+hpx_action_t hpx_thread_current_cont_action(void);
 
 /// Get the size of the arguments passed to the current thread
 /// @returns the size of the current thread's argument
@@ -37,7 +41,6 @@ uint32_t   hpx_thread_current_args_size(void);
 
 /// Pause execution and gives other threads the opportunity to be scheduled
 void hpx_thread_yield(void);
-
 
 /// Generates a consecutive new ID for a thread.
 ///
