@@ -34,11 +34,12 @@
 ///
 /// @param       addr the global address
 /// @param[out] local the pinned local address
-/// @returns          { true; if @p addr is local and @p local is NULL
-///                     true; if @p addr is local and @p local is not NULL
+/// @returns          
+///                   - true; if @p addr is local and @p local is NULL
+///                   - true; if @p addr is local and @p local is not NULL
 ///                           and pin is successful
-///                     false; if @p is not local
-///                     false; if @p is local and @local is not NULL and pin
+///                   - false; if @p is not local
+///                   - false; if @p is local and @local is not NULL and pin
 ///                            fails
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local);
 
