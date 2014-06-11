@@ -108,17 +108,18 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 /// The behavior of this call depends on the @p status parameter, and is
 /// equivalent to returning @p status from the action.
 ///
-/// * HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to
+/// Possible status codes:
+/// - HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to
 ///                the thread's continuation address.
 ///
-/// * HPX_ERROR: Abnormal termination. Terminates execution.
+/// - HPX_ERROR: Abnormal termination. Terminates execution.
 ///
-/// * HPX_RESEND: Terminate execution, and resend the thread's parcel (NOT
+/// - HPX_RESEND: Terminate execution, and resend the thread's parcel (NOT
 ///               the continuation parcel). This can be used for
 ///               application-level forwarding when hpx_addr_try_pin()
 ///               fails.
 ///
-/// * HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
+/// - HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
 ///
 /// @param status a status to be returned to the function that created this 
 ///        thread
