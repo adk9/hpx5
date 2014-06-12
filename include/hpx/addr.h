@@ -16,8 +16,9 @@
 /// ----------------------------------------------------------------------------
 /// An HPX global address.
 ///
-/// HPX manages global addresses on a per-block basis. Blocks are allocated
-/// during hpx_alloc or hpx_global_alloc, and can be up to 2^32 bytes large.
+/// HPX manages global addresses on a per-block basis. Blocks are
+/// allocated during hpx_gas_alloc or hpx_gas_global_alloc, and can be
+/// up to 2^32 bytes large.
 /// ----------------------------------------------------------------------------
 typedef struct {
   uint64_t offset;                              // absolute offset

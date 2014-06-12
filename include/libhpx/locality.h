@@ -68,4 +68,10 @@ HPX_INTERNAL extern hpx_action_t locality_gas_forward;
 HPX_INTERNAL extern locality_t *here;
 
 
+/// ----------------------------------------------------------------------------
+/// Allocate immovable local memory that is addressable globally.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_addr_t locality_malloc(size_t bytes);
+
+
 #endif // LIBHPX_LOCALITY_H
