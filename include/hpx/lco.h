@@ -25,6 +25,12 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t sync);
 
 /// ----------------------------------------------------------------------------
 /// Set an LCO with a status.
+///
+/// @param    lco - the LCO's global address
+/// @param  value - the address of the value to set
+/// @param   size - the size of the value to set
+/// @param status - the status to return to anyone who waits/gets from this LCO
+/// @param   sync - a future for local completion
 /// ----------------------------------------------------------------------------
 void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
                         hpx_status_t status, hpx_addr_t sync);
@@ -32,6 +38,11 @@ void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
 
 /// ----------------------------------------------------------------------------
 /// Set an LCO, optionally with data.
+///
+/// @param   lco - the LCO to set
+/// @param value - the address of the value to set
+/// @param  size - the size of the data
+/// @param  sync - a future for local completion
 /// ----------------------------------------------------------------------------
 void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 
@@ -158,5 +169,48 @@ hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 hpx_status_t hpx_lco_chan_array_select(hpx_addr_t chans[], int n, int size, int *index,
                                        void **out);
+
+/// ----------------------------------------------------------------------------
+/// Allocate a new generation counter.
+///
+/// A generation counter allows an application programmer to efficiently wait
+/// for a counter. The @p depth indicates a bound on the typical number of
+/// generations that are explicitly active---it does not impact correctness,
+/// merely performance.
+///
+/// As an example, if there are typically three generations active (i.e.,
+/// threads may exist for up to three generations ahead of the current
+/// generation), then depth should be set to three. If it is set to two, then
+/// the runtime will perform some extra work testing threads that should not be
+/// tested.
+///
+/// @param depth - the typical number of active generations
+/// ----------------------------------------------------------------------------
+hpx_addr_t hpx_lco_gencount_new(unsigned int depth);
+
+/// ----------------------------------------------------------------------------
+/// Increment the generation counter.
+///
+/// @param gencnt - the counter to increment
+/// ----------------------------------------------------------------------------
+void hpx_lco_gencount_inc(hpx_addr_t gencnt);
+
+/// ----------------------------------------------------------------------------
+/// Wait for the generation counter to reach a certain value.
+///
+/// It is OK to wait for any generation. If the generation has already passed,
+/// this will probably not block. If the generation is far in the future (far in
+/// this case means more than the depth value provided in the counters
+/// allocator) then the thread may (transparently) wake up more often than it
+/// needs to.
+///
+/// When this returns, it is guaranteed that the current count is <= @p gen, and
+/// progress is guaranteed (that is, all threads waiting for @p gen will run in
+/// some bounded amount of time when the counter reaches @p gen).
+///
+/// @param gencnt - the counter to wait for
+/// @param    gen - the generation to wait for
+/// ----------------------------------------------------------------------------
+void hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 
 #endif
