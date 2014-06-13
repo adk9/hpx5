@@ -15,6 +15,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libsync/lockable_ptr.h"
 #include "libhpx/stats.h"
 
 /// ----------------------------------------------------------------------------
@@ -36,10 +37,10 @@
 
 /// Forward declarations
 /// @{
-struct lco;
 struct thread;
 struct worker;
 struct barrier;
+struct cvar;
 /// @}
 
 /// ----------------------------------------------------------------------------
@@ -154,38 +155,34 @@ HPX_INTERNAL void scheduler_yield(void);
 
 
 /// ----------------------------------------------------------------------------
-/// Wait for an LCO.
+/// Wait for an condition.
 ///
-/// This suspends execution of the current user level thread until the LCO is
-/// signaled. The calling thread must hold the lock on the LCO. This releases
-/// the lock on the lco during the wait, but reacquires it before the user-level
-/// thread returns.
+/// This suspends execution of the current user level thread until the condition
+/// is signaled. The calling thread must hold the lock. This releases the lock
+/// during the wait, but reacquires it before the user-level thread returns.
 ///
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param lco - the lco we'd like to wait on
-/// @returns   - the status set during scheduler_signal
+/// @param  lco - the lco containing the condition
+/// @param cvar - the LCO condition we'd like to wait for
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_status_t scheduler_wait(struct lco *lco)
-  HPX_NON_NULL(1);
+HPX_INTERNAL void scheduler_wait(lockable_ptr_t *lock, struct cvar *cond)
+  HPX_NON_NULL(1, 2);
 
 
 /// ----------------------------------------------------------------------------
-/// Signal an LCO.
+/// Signal a condition.
 ///
-/// The calling thread must hold the lock on the LCO. This will modify the LCO
-/// in the following way.
+/// The calling thread must hold the lock on whatever LCO is protecting the
+/// condition. This call is synchronous and all of the waiting threads will be
+/// rescheduled (i.e., MESA semantics).
 ///
-///   1) it will mark the LCO as SET
-///   2) it will set the LCO's wait queue to NULL
-///   3) it will release the LCO's lock
-///   4) each of the previously waiting threads will be rescheduled
-///
-/// @param    lco - the lco we'd like to signal
+/// @param   cvar - the LCO condition we'd like to signal
 /// @param status - the status we're signaling
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal(struct lco *lco, hpx_status_t status)
+HPX_INTERNAL void scheduler_signal(struct cvar *cond, hpx_status_t status)
   HPX_NON_NULL(1);
+
 
 #endif // LIBHPX_SCHEDULER_H

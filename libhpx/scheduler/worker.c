@@ -25,11 +25,9 @@
 
 #include "hpx/hpx.h"
 
-#include "libsync/sync.h"
 #include "libsync/backoff.h"
 #include "libsync/barriers.h"
 #include "libsync/deques.h"
-#include "libsync/locks.h"
 #include "libsync/queues.h"
 
 #include "hpx/builtins.h"
@@ -42,7 +40,7 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/stats.h"
 #include "libhpx/system.h"
-#include "lco.h"
+#include "cvar.h"
 #include "thread.h"
 #include "worker.h"
 
@@ -50,6 +48,8 @@
 typedef SYNC_ATOMIC(int) atomic_int_t;
 typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 
+typedef two_lock_queue_t _mailbox_t;
+typedef two_lock_queue_node_t _envelope_t;
 
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
@@ -76,58 +76,66 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  lco_node_t     *lco_nodes;                    // free LCO nodes
+  cvar_node_t   *cvar_nodes;                    // free cvar nodes
+  _envelope_t    *envelopes;                    // free envelopes
   chase_lev_ws_deque_t work;                    // my work
-  two_lock_queue_t    inbox;                    // work sent to me
+  _mailbox_t          inbox;                    // envelopes sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 } self = {
-  .thread    = 0,
-  .id        = -1,
-  .core_id   = -1,
-  .seed      = UINT32_MAX,
-  .backoff   = 0,
-  .sp        = NULL,
-  .current   = NULL,
-  .lco_nodes = NULL,
-  .work      = SYNC_CHASE_LEV_WS_DEQUE_INIT,
-  .inbox     = {{0}},
-  .shutdown  = 0,
-  .stats     = SCHEDULER_STATS_INIT
+  .thread     = 0,
+  .id         = -1,
+  .core_id    = -1,
+  .seed       = UINT32_MAX,
+  .backoff    = 0,
+  .sp         = NULL,
+  .current    = NULL,
+  .cvar_nodes = NULL,
+  .envelopes  = NULL,
+  .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
+  .inbox      = {{0}},
+  .shutdown   = 0,
+  .stats      = SCHEDULER_STATS_INIT
 };
 
 
-static lco_node_t *_lco_node_get(hpx_parcel_t *p) {
-  assert(self.current);
-  lco_node_t *n = self.lco_nodes;
-  if (n) {
-    self.lco_nodes = n->next;
-  }
-  else {
+static cvar_node_t *_acquire_cvar_node(worker_t *w) {
+  cvar_node_t *n = w->cvar_nodes;
+  if (n)
+    w->cvar_nodes = n->next;
+  else
     n = malloc(sizeof(*n));
-  }
-  n->next = NULL;
-  n->data = p;
-
-  ustack_t *thread = parcel_get_stack(p);
-  n->tid = (thread) ? ((thread->affinity >= 0) ? thread->affinity : self.id) : self.id;
   return n;
 }
 
 
-static void* _lco_node_put(lco_node_t *n) {
-  if (n->tid != self.id) {
-    dbg_error("received an lco node with affinity to %d.\n", n->tid);
-  }
-
-  // assert((n->tid == self.id) || (n=>tid == -1));
-  hpx_parcel_t *p = n->data;
+static void _release_cvar_node(worker_t *w, cvar_node_t *n) {
+  n->next = w->cvar_nodes;
   n->data = 0;
   n->tid = -1;
-  n->next = self.lco_nodes;
-  self.lco_nodes = n;
-  return p;
+  w->cvar_nodes = n;
 }
+
+
+static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
+  _envelope_t *envelope = w->envelopes;
+  if (envelope != NULL)
+    w->envelopes = w->envelopes->next;
+  else
+    envelope = malloc(sizeof(*envelope));
+
+  envelope->next  = NULL;
+  envelope->value = p;
+  return envelope;
+}
+
+
+static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
+  mail->next = w->envelopes;
+  w->envelopes = mail;
+  return mail->value;
+}
+
 
 /// ----------------------------------------------------------------------------
 /// The entry function for all of the threads.
@@ -239,15 +247,24 @@ static hpx_parcel_t *_network(void) {
 
 
 /// ----------------------------------------------------------------------------
+/// Send a mail message to another worker.
+/// ----------------------------------------------------------------------------
+static void _send_mail(uint32_t id, hpx_parcel_t *p) {
+  worker_t    *w = here->sched->workers[id];
+  _envelope_t *letter = _enclose(&self, p);
+  sync_two_lock_queue_enqueue(&(w->inbox), letter);
+}
+
+
+/// ----------------------------------------------------------------------------
 /// Process my mail queue.
 /// ----------------------------------------------------------------------------
-static void _get_mail(void) {
-  lco_node_t *node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
-  while (node) {
+static void _handle_mail(void) {
+  _envelope_t *letter = NULL;
+  while ((letter = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
-    hpx_parcel_t *p = _lco_node_put(node);
+    hpx_parcel_t *p = _open(&self, letter);
     sync_chase_lev_ws_deque_push(&self.work, p);
-    node = (lco_node_t *)sync_two_lock_queue_dequeue(&self.inbox);
   }
 }
 
@@ -328,10 +345,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // (heuristically speaking), to maintain work visibility by cleaning out our
   // inbox as fast as possible
   if (!fast)
-    _get_mail();
+    _handle_mail();
 
   // if there are ready parcels, select the next one
-  hpx_parcel_t *p =sync_chase_lev_ws_deque_pop(&self.work);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
 
   if (p) {
     assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
@@ -528,76 +545,63 @@ void hpx_thread_yield(void) {
 
 
 /// ----------------------------------------------------------------------------
-/// A transfer continuation that pushes the previous thread onto a an lco
-/// queue.
+/// A transfer continuation that unlocks a lock.
 /// ----------------------------------------------------------------------------
-static int _unlock_lco(hpx_parcel_t *to, void *sp, void *env) {
-  lco_t *lco = env;
+static int
+_unlock(hpx_parcel_t *to, void *sp, void *env) {
+  lockable_ptr_t *lock = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
   parcel_get_stack(prev)->sp = sp;
-  lco_unlock(lco);
+  sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
 }
 
 
-/// Waits for an LCO to be signaled, by using the _unlock_lco() continuation.
-///
-/// Uses the "fast" form of _schedule(), meaning that schedule will not try very
-/// hard to acquire more work if it doesn't have anything else to do right
-/// now. This avoids the situation where this thread is holding an LCO's lock
-/// much longer than necessary. Furthermore, _schedule() can't try to select the
-/// calling thread because it doesn't know about it (it's not in self.ready or
-/// self.next, and it's not passed as the @p final parameter to _schedule).
-///
-/// We reacquire the lock before returning, which maintains the atomicity
-/// requirements for LCO actions.
+/// Waits for a condition to be signaled.
 ///
 /// @precondition The calling thread must hold @p lco's lock.
-hpx_status_t scheduler_wait(lco_t *lco) {
+void
+scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+  // 0. figure out who we're transferring to
   hpx_parcel_t *to = _schedule(true, NULL);
-  assert(to);
-  assert(parcel_get_stack(to));
-  assert(parcel_get_stack(to)->sp);
 
-  lco_node_t *n = _lco_node_get(self.current);
-  lco_enqueue(lco, n);
+  // 1. get a cvar node
+  cvar_node_t *n = _acquire_cvar_node(&self);
 
-  thread_transfer(to, _unlock_lco, lco);
-  lco_lock(lco);
-  return lco_get_status(lco);
+  // 2. figure out what affinity to use when we enqueue the current thread,
+  //    record the current parcel, and push the node onto the cvar
+  ustack_t *thread = parcel_get_stack(self.current);
+  if (0 <= thread->affinity)
+    n->tid = thread->affinity;
+  else
+    n->tid = self.id;
+
+  n->data = self.current;
+  n->next = condition->top;
+  condition->top = n;
+
+  // 3. the unlock continuation will release the LCO's lock
+  thread_transfer(to, _unlock, (void*)lock);
+
+  // 4. reacquire the lock before we return
+  sync_lockable_ptr_lock(lock);
 }
 
 
-/// Signals an LCO.
-///
-/// This uses lco_trigger() to set the LCO and get it its queued threads
-/// back. It then goes through the queue and makes all of the queued threads
-/// runnable. It does not release the LCO's lock, that must be done by the
-/// caller.
-///
-/// @todo This does not acknowledge locality in any way. We might want to put
-///       the woken threads back up into the worker thread where they were
-///       running when they waited.
+/// Signals a condition.
 ///
 /// @precondition The calling thread must hold @p lco's lock.
-void scheduler_signal(lco_t *lco, hpx_status_t status) {
-  lco_node_t *q = lco_trigger(lco, status);
-  while (q) {
-    // As soon as we push the thread into the work queue, it could be stolen, so
-    // make sure we get it's next first.
-    lco_node_t *next = q->next;
-    uint32_t id = q->tid;
-    if (id != self.id) {
-      two_lock_queue_node_t *n = (two_lock_queue_node_t *)q;
-      sync_two_lock_queue_enqueue(&(here->sched->workers[id]->inbox), n);
-    }
-    else {
-      hpx_parcel_t *p = _lco_node_put(q);
-      sync_chase_lev_ws_deque_push(&self.work, p);
-    }
-    q = next;
+void
+scheduler_signal(cvar_t *cvar, hpx_status_t status) {
+  for (cvar_node_t *i = cvar->top; i != NULL; i = cvar->top = cvar->top->next) {
+    if (i->tid != self.id)
+      _send_mail(i->tid, i->data);
+    else
+      sync_chase_lev_ws_deque_push(&self.work, i->data);
+    _release_cvar_node(&self, i);
   }
+  cvar->status = status;
 }
 
 
@@ -757,16 +761,13 @@ int hpx_thread_get_tls_id(void) {
 /// A thread_transfer() continuation that runs when a thread changes its
 /// affinity. This puts the current thread into the mailbox specified in env.
 /// ----------------------------------------------------------------------------
-static int _send_mail(hpx_parcel_t *to, void *sp, void *env) {
-  two_lock_queue_t *mailbox = env;
+static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = self.current;
   self.current = to;
   parcel_get_stack(prev)->sp = sp;
 
-  // we're currently overloading lco nodes for the two lock queue
-  lco_node_t *lco = _lco_node_get(prev);
-  two_lock_queue_node_t *n = (two_lock_queue_node_t *)lco;
-  sync_two_lock_queue_enqueue(mailbox, n);
+  // just send the previous parcel to the targeted worker
+  _send_mail((int)(intptr_t)env, prev);
   return HPX_SUCCESS;
 }
 
@@ -779,6 +780,6 @@ void hpx_thread_set_affinity(int affinity) {
   parcel_get_stack(self.current)->affinity = affinity;
   if (affinity != self.id) {
     hpx_parcel_t *to = _schedule(NULL, false);
-    thread_transfer(to, _send_mail, &(here->sched->workers[affinity]->inbox));
+    thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
   }
 }
