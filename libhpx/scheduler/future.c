@@ -153,10 +153,7 @@ _future_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _future_t *f = (_future_t *)lco;
   _lock(f);
-
-  if (_trigger(f))
-    scheduler_signal(&f->full, code);
-
+  scheduler_signal(&f->full, code);
   _unlock(f);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
