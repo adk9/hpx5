@@ -167,7 +167,8 @@ HPX_INTERNAL void scheduler_yield(void);
 /// @param  lco - the lco containing the condition
 /// @param cvar - the LCO condition we'd like to wait for
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_wait(lockable_ptr_t *lock, struct cvar *cond)
+HPX_INTERNAL hpx_status_t scheduler_wait(lockable_ptr_t *lock,
+                                         struct cvar *cond)
   HPX_NON_NULL(1, 2);
 
 

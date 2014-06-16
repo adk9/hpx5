@@ -35,7 +35,7 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t sync);
 /// @param code - a user-defined error code
 /// @param sync - a future for local completion
 /// ----------------------------------------------------------------------------
-void hpx_lco_error(hpx_addr_t lco, uintptr_t code, hpx_addr_t sync);
+void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t sync);
 
 
 /// ----------------------------------------------------------------------------
