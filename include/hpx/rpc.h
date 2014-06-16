@@ -34,7 +34,7 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
 
 /// ----------------------------------------------------------------------------
 /// HPX call interface.
-/// 
+///
 /// This is a locally-synchronous, globally-asynchronous variant of
 /// the remote-procedure call interface. If @p result is not HPX_NULL,
 /// hpx_call puts the the resulting value in @p result at some point
@@ -52,7 +52,7 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 
 /// ----------------------------------------------------------------------------
 /// HPX call interface (completely asynchronous).
-/// 
+///
 /// This is a completely asynchronous variant of the remote-procedure
 /// call interface. If @p result is not HPX_NULL, hpx_call puts the
 /// the resulting value in @p result at some point in the future. This
@@ -68,7 +68,7 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 ///                     argument buffer is safe to be reused (local completion)
 /// @param result     - an address of an LCO to trigger with the result
 /// ----------------------------------------------------------------------------
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action, void *args,
+int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
                    size_t len, hpx_addr_t args_reuse, hpx_addr_t result);
 
 
