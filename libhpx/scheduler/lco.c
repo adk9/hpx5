@@ -73,7 +73,7 @@ _lco_set_local(lco_t *lco, size_t size, const void *data, hpx_addr_t sync)
 
 
 static void
-_lco_error_local(lco_t *lco, uintptr_t code, hpx_addr_t sync)
+_lco_error_local(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _lco_class(lco)->on_error(lco, code, sync);
 }
@@ -131,7 +131,7 @@ _lco_set(void *data)
 
 
 static int
-_lco_error(uintptr_t *code)
+_lco_error(hpx_status_t *code)
 {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
@@ -271,7 +271,7 @@ hpx_lco_delete(hpx_addr_t target, hpx_addr_t sync)
 
 
 void
-hpx_lco_error(hpx_addr_t target, uintptr_t code, hpx_addr_t sync)
+hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t sync)
 {
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
