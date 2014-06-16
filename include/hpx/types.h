@@ -19,7 +19,7 @@ typedef enum {
   HPX_ERROR         = -1,
   HPX_SUCCESS       = 0,
   HPX_RESEND        = 1,
-  HPX_LCO_EXCEPTION = 2,
+  HPX_LCO_ERROR     = 2,
   HPX_USER          = 127
 } hpx_status_t;
 /// @}
