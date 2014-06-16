@@ -561,7 +561,7 @@ _unlock(hpx_parcel_t *to, void *sp, void *env) {
 /// Waits for a condition to be signaled.
 ///
 /// @precondition The calling thread must hold @p lco's lock.
-void
+hpx_status_t
 scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // 0. figure out who we're transferring to
   hpx_parcel_t *to = _schedule(true, NULL);
@@ -586,6 +586,9 @@ scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   // 4. reacquire the lock before we return
   sync_lockable_ptr_lock(lock);
+
+  // 5. return the status of the condition variable
+  return condition->status;
 }
 
 
