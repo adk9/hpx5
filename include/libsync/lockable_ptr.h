@@ -21,17 +21,8 @@
 typedef const void * SYNC_ATOMIC() lockable_ptr_t;
 #define SYNC_LOCKABLE_PTR(T) const T * SYNC_ATOMIC()
 
-HPX_INTERNAL lockable_ptr_t *sync_lockable_ptr_lock(lockable_ptr_t *p);
+HPX_INTERNAL lockable_ptr_t sync_lockable_ptr_lock(lockable_ptr_t *p);
 HPX_INTERNAL void sync_lockable_ptr_unlock(lockable_ptr_t *p);
-HPX_INTERNAL lockable_ptr_t *sync_lockable_ptr_read_ptr(lockable_ptr_t *p);
-
-#define SYNC_LOCKABLE_PTR_LOCK(ptr) \
-  (__typeof__(ptr))sync_lockable_ptr_lock((lockable_ptr_t*)ptr)
-
-#define SYNC_LOCKABLE_PTR_UNLOCK(ptr) \
-  sync_lockable_ptr_unlock((lockable_ptr_t*)ptr)
-
-#define SYNC_LOCKABLE_PTR_READ_PTR(ptr) \
-  (__typeof__(ptr))sync_lockable_ptr_read_ptr(ptr)
+HPX_INTERNAL lockable_ptr_t sync_lockable_ptr_read(lockable_ptr_t *p);
 
 #endif // HPX_SYNC_LOCKABLE_PTR_H
