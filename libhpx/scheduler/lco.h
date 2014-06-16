@@ -28,7 +28,7 @@ typedef SYNC_LOCKABLE_PTR(lco_class_t) lco_t;
 /// ----------------------------------------------------------------------------
 typedef void (*lco_fini_t)(lco_t *lco, hpx_addr_t sync);
 typedef void (*lco_set_t)(lco_t *lco, int size, const void *value, hpx_addr_t sync);
-typedef void (*lco_error_t)(lco_t *lco, uintptr_t code, hpx_addr_t sync);
+typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code, hpx_addr_t sync);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 
