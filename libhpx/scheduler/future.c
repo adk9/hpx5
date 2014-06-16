@@ -40,7 +40,7 @@ typedef struct {
 
 
 /// Freelist allocation for futures.
-static __thread _future_t *_free = NULL;
+static __thread _future_t *_free_futures = NULL;
 
 
 /// Remote block initialization
@@ -50,13 +50,13 @@ static hpx_action_t _future_blocks_init = 0;
 
 /// Use the LCO's "user" state to remember if the future is in-place or not.
 static uintptr_t
-_future_is_inplace(const _future_t *f) {
+_is_inplace(const _future_t *f) {
   return lco_get_user(&f->vtable);
 }
 
 
 static hpx_status_t
-_future_wait_triggered(_future_t *f) {
+_wait(_future_t *f) {
   if (!lco_get_triggered(&f->vtable))
     return scheduler_wait((lockable_ptr_t*)f, &f->full);
   else
@@ -65,7 +65,7 @@ _future_wait_triggered(_future_t *f) {
 
 
 static bool
-_future_trigger(_future_t *f) {
+_trigger(_future_t *f) {
   if (lco_get_triggered(&f->vtable))
     return false;
   lco_set_triggered(&f->vtable);
@@ -74,23 +74,23 @@ _future_trigger(_future_t *f) {
 
 
 static void
-_future_lock(_future_t *f) {
+_lock(_future_t *f) {
   sync_lockable_ptr_lock((lockable_ptr_t*)&f->vtable);
 }
 
 
 static void
-_future_unlock(_future_t *f) {
+_unlock(_future_t *f) {
   sync_lockable_ptr_unlock((lockable_ptr_t*)&f->vtable);
 }
 
 
 static void
-_future_free(_future_t *f) {
+_free(_future_t *f) {
   // overload the vtable pointer for freelisting---not perfect, but it's
   // reinitialized in _init(), so it's not the end of the world
-  f->vtable = (lco_t)_free;
-  _free = f;
+  f->vtable = (lco_t)_free_futures;
+  _free_futures = f;
 }
 
 
@@ -104,15 +104,15 @@ _future_fini(lco_t *lco, hpx_addr_t sync)
     return;
 
   _future_t *f = (_future_t *)lco;
-  _future_lock(f);
+  _lock(f);
 
-  if (!_future_is_inplace(f)) {
+  if (!_is_inplace(f)) {
     void *ptr = NULL;
     memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     free(ptr);
   }
 
-  _future_free(f);
+  _free(f);
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
@@ -124,12 +124,12 @@ static void
 _future_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
 {
   _future_t *f = (_future_t *)lco;
-  _future_lock(f);
+  _lock(f);
 
-  if (!_future_trigger(f))
+  if (!_trigger(f))
     goto unlock;
 
-  if (from && _future_is_inplace(f)) {
+  if (from && _is_inplace(f)) {
     memcpy(&f->value, from, size);
   }
   else if (from) {
@@ -141,7 +141,7 @@ _future_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
   scheduler_signal(&f->full, HPX_SUCCESS);
 
  unlock:
-  _future_unlock(f);
+  _unlock(f);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -152,15 +152,13 @@ static void
 _future_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _future_t *f = (_future_t *)lco;
-  _future_lock(f);
+  _lock(f);
 
-  if (!_future_trigger(f))
-    goto unlock;
+  if (_trigger(f))
+    scheduler_signal(&f->full, code);
 
-  scheduler_signal(&f->full, code);
+  _unlock(f);
 
- unlock:
-  _future_unlock(f);
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
@@ -171,13 +169,13 @@ static hpx_status_t
 _future_get(lco_t *lco, int size, void *out)
 {
   _future_t *f = (_future_t *)lco;
-  _future_lock(f);
-  hpx_status_t status = _future_wait_triggered(f);
+  _lock(f);
+  hpx_status_t status = _wait(f);
 
   if (status != HPX_SUCCESS)
     goto unlock;
 
-  if (out && _future_is_inplace(f)) {
+  if (out && _is_inplace(f)) {
     memcpy(out, &f->value, size);
     goto unlock;
   }
@@ -189,7 +187,7 @@ _future_get(lco_t *lco, int size, void *out)
   }
 
  unlock:
-  _future_unlock(f);
+  _unlock(f);
   return status;
 }
 
@@ -197,9 +195,9 @@ static hpx_status_t
 _future_wait(lco_t *lco)
 {
   _future_t *f = (_future_t *)lco;
-  _future_lock(f);
-  hpx_status_t status = _future_wait_triggered(f);
-  _future_unlock(f);
+  _lock(f);
+  hpx_status_t status = _wait(f);
+  _unlock(f);
   return status;
 }
 
@@ -283,9 +281,9 @@ _future_initialize_actions(void) {
 hpx_addr_t
 hpx_lco_future_new(int size) {
   hpx_addr_t f;
-  _future_t *local = _free;
+  _future_t *local = _free_futures;
   if (local) {
-    _free = (_future_t*)local->vtable;
+    _free_futures = (_future_t*)local->vtable;
     f = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(f, (void**)&base)) {
