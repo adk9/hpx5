@@ -90,7 +90,7 @@ static int _gas_acquire_action(uint32_t *rank) {
   if (btt_forward(here->btt, addr, *rank, &block))
     hpx_thread_continue_cleanup(addr.block_bytes, block, free, block);
   else
-    hpx_thread_exit(HPX_LCO_EXCEPTION);
+    hpx_thread_exit(HPX_LCO_ERROR);
 }
 
 

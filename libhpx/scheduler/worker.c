@@ -153,7 +153,7 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
     hpx_abort();
    case HPX_RESEND:
    case HPX_SUCCESS:
-   case HPX_LCO_EXCEPTION:
+   case HPX_LCO_ERROR:
     hpx_thread_exit(status);
   }
   unreachable();
@@ -605,23 +605,10 @@ scheduler_signal(cvar_t *cvar, hpx_status_t status) {
 }
 
 
-static void _call_lco_set(hpx_addr_t target, const void *args,
-                          size_t len, hpx_status_t status) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(hpx_lco_set_args_t) + len);
-    assert(p);
-    hpx_parcel_set_target(p, target);
-    hpx_parcel_set_action(p, hpx_lco_set_action);
-
-    // perform the single serialization
-    hpx_lco_set_args_t *cargs = (hpx_lco_set_args_t *)hpx_parcel_get_data(p);
-    cargs->status = status;
-    memcpy(&cargs->data, args, len);
-    hpx_parcel_send(p, HPX_NULL);
-}
-
-
-static void _call_continuation(hpx_addr_t target, hpx_action_t action,
-                               const void *args, size_t len, hpx_status_t status) {
+static void
+_call_continuation(hpx_addr_t target, hpx_action_t action,
+                   const void *args, size_t len, hpx_status_t status)
+{
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
     assert(p);
     hpx_parcel_set_target(p, target);
@@ -648,7 +635,7 @@ static void HPX_NORETURN _continue(hpx_status_t status,
   if (!hpx_addr_eq(c_target, HPX_NULL) &&
       !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
     if (hpx_action_eq(c_act, hpx_lco_set_action)) {
-      _call_lco_set(c_target, value, size, status);
+      hpx_call(c_target, c_act, value, size, HPX_NULL);
     } else {
       _call_continuation(c_target, c_act, value, size, status);
     }
@@ -679,7 +666,7 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 
 
 void hpx_thread_exit(int status) {
-  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_EXCEPTION)) {
+  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR)) {
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
   }
