@@ -26,14 +26,16 @@
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
+#include "cvar.h"
 
 /// ----------------------------------------------------------------------------
 /// Local future interface.
 /// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
-  lco_t lco;                                    // future "is-an" lco
-  void *value[2];                               // 2 in-place words/future
+  lco_t vtable;                                 //
+  cvar_t  full;                                 //
+  void  *value;                                 // 1 in-place word
 } _future_t;
 
 
@@ -42,114 +44,187 @@ static __thread _future_t *_free = NULL;
 
 
 /// Remote block initialization
-static hpx_action_t _block_init = 0;
-static hpx_action_t _blocks_init = 0;
+static hpx_action_t _future_block_init = 0;
+static hpx_action_t _future_blocks_init = 0;
 
 
 /// Use the LCO's "user" state to remember if the future is in-place or not.
-static int _is_inplace(const _future_t *f) {
-  return lco_is_user(&f->lco);
+static uintptr_t
+_future_is_inplace(const _future_t *f) {
+  return lco_get_user(&f->vtable);
+}
+
+
+static hpx_status_t
+_future_wait_triggered(_future_t *f) {
+  if (!lco_get_triggered(&f->vtable))
+    return scheduler_wait((lockable_ptr_t*)f, &f->full);
+  else
+    return f->full.status;
+}
+
+
+static bool
+_future_trigger(_future_t *f) {
+  if (lco_get_triggered(&f->vtable))
+    return false;
+  lco_set_triggered(&f->vtable);
+  return true;
+}
+
+
+static void
+_future_lock(_future_t *f) {
+  sync_lockable_ptr_lock((lockable_ptr_t*)&f->vtable);
+}
+
+
+static void
+_future_unlock(_future_t *f) {
+  sync_lockable_ptr_unlock((lockable_ptr_t*)&f->vtable);
+}
+
+
+static void
+_future_free(_future_t *f) {
+  // overload the vtable pointer for freelisting---not perfect, but it's
+  // reinitialized in _init(), so it's not the end of the world
+  f->vtable = (lco_t)_free;
+  _free = f;
 }
 
 
 /// Deletes the future's out of place data, if necessary.
 ///
 /// NB: deadlock issue here
-static void _delete(_future_t *f) {
-  if (!f)
+static void
+_future_fini(lco_t *lco, hpx_addr_t sync)
+{
+  if (!lco)
     return;
 
-  lco_lock(&f->lco);
-  if (!_is_inplace(f)) {
+  _future_t *f = (_future_t *)lco;
+  _future_lock(f);
+
+  if (!_future_is_inplace(f)) {
     void *ptr = NULL;
-    memcpy(&ptr, &f->value[0], sizeof(ptr));    // strict aliasing
+    memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     free(ptr);
   }
-  lco_fini(&f->lco);
 
-
-  // overload the vtable pointer for freelisting---not perfect, but it's
-  // reinitialized in _init(), so it's not the end of the world
-  f->lco.vtable = (lco_class_t*)_free;
-  _free = f;
+  _future_free(f);
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
 
 
 /// Copies @p from into the appropriate location. Futures are single-assignment,
 /// so we only do this if the future isn't set yet.
-static void _set(_future_t *f, int size, const void *from, hpx_status_t status, hpx_addr_t sync)
+static void
+_future_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
 {
-  lco_lock(&f->lco);
-  if (lco_is_set(&f->lco))
-    goto exit;
+  _future_t *f = (_future_t *)lco;
+  _future_lock(f);
 
-  if (!from)
-    goto signal;
+  if (!_future_trigger(f))
+    goto unlock;
 
-  if (_is_inplace(f)) {
-    memcpy(&f->value[0], from, size);
+  if (from && _future_is_inplace(f)) {
+    memcpy(&f->value, from, size);
   }
-  else {
+  else if (from) {
     void *ptr = NULL;
-    memcpy(&ptr, &f->value[0], sizeof(ptr));    // strict aliasing
+    memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     memcpy(ptr, from, size);
   }
 
- signal:
-  scheduler_signal(&f->lco, status);
+  scheduler_signal(&f->full, HPX_SUCCESS);
 
- exit:
-  lco_unlock(&f->lco);
+ unlock:
+  _future_unlock(f);
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+}
+
+
+static void
+_future_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
+{
+  _future_t *f = (_future_t *)lco;
+  _future_lock(f);
+
+  if (!_future_trigger(f))
+    goto unlock;
+
+  scheduler_signal(&f->full, code);
+
+ unlock:
+  _future_unlock(f);
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
 
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static hpx_status_t _get(_future_t *f, int size, void *out) {
-  hpx_status_t status;
-  lco_lock(&f->lco);
-  if (!lco_is_set(&f->lco))
-    scheduler_wait(&f->lco);
+static hpx_status_t
+_future_get(lco_t *lco, int size, void *out)
+{
+  _future_t *f = (_future_t *)lco;
+  _future_lock(f);
+  hpx_status_t status = _future_wait_triggered(f);
 
-  // even though future's are single-assignment, we're still going to hold the
-  // lock during the memcpy. This is because we want to make sure that the
-  // future doesn't get deleted while we're copying.
-  if (out == NULL)
-    goto exit;
+  if (status != HPX_SUCCESS)
+    goto unlock;
 
-  if (_is_inplace(f)) {
-    memcpy(out, &f->value[0], size);
+  if (out && _future_is_inplace(f)) {
+    memcpy(out, &f->value, size);
+    goto unlock;
   }
-  else {
+
+  if (out) {
     void *ptr = NULL;
-    memcpy(&ptr, &f->value[0], sizeof(ptr));  // strict aliasing
+    memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     memcpy(out, ptr, size);
   }
 
- exit:
-  status = lco_get_status(&f->lco);
-  lco_unlock(&f->lco);
+ unlock:
+  _future_unlock(f);
+  return status;
+}
+
+static hpx_status_t
+_future_wait(lco_t *lco)
+{
+  _future_t *f = (_future_t *)lco;
+  _future_lock(f);
+  hpx_status_t status = _future_wait_triggered(f);
+  _future_unlock(f);
   return status;
 }
 
 
-/// The future vtable.
-static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
-
-
 /// initialize the future
-static void _init(_future_t *f, int size) {
+static void
+_future_init(_future_t *f, int size) {
+  static const lco_class_t vtable = { _future_fini, _future_error, _future_set,
+                                      _future_get, _future_wait };
+
   bool inplace = (size <= sizeof(f->value));
-  lco_init(&f->lco, &_vtable, inplace);
-  memset(&f->value, 0, sizeof(f->value));
+  lco_init(&f->vtable, &vtable, inplace);
   if (!inplace) {
-    f->value[0] = malloc(size);   // allocate if necessary
-    assert(f->value[0]);
+    f->value = malloc(size);                    // allocate if necessary
+    assert(f->value);
+  }
+  else {
+    memset(&f->value, 0, sizeof(f->value));
   }
 }
 
 
 /// Initialize a block of futures.
-static int _block_init_action(uint32_t *args) {
+static int
+_future_block_init_action(uint32_t *args) {
   hpx_addr_t target = hpx_thread_current_target();
   _future_t *futures = NULL;
 
@@ -161,7 +236,7 @@ static int _block_init_action(uint32_t *args) {
   uint32_t size = args[0];
   uint32_t block_size = args[1];
   for (uint32_t i = 0; i < block_size; ++i)
-    _init(&futures[i], size);
+    _future_init(&futures[i], size);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -169,7 +244,8 @@ static int _block_init_action(uint32_t *args) {
 
 
 /// Initialize a strided block of futures
-static int _blocks_init_action(uint32_t *args) {
+static int
+_future_blocks_init_action(uint32_t *args) {
   hpx_addr_t base = hpx_thread_current_target();
   uint32_t block_size = args[1];
   uint32_t block_bytes = block_size * sizeof(_future_t);
@@ -178,7 +254,7 @@ static int _blocks_init_action(uint32_t *args) {
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (uint32_t i = 0; i < blocks; i++) {
     hpx_addr_t block = hpx_addr_add(base, i * here->ranks * block_bytes);
-    hpx_call(block, _block_init, args, 2 * sizeof(*args), and);
+    hpx_call(block, _future_block_init, args, 2 * sizeof(*args), and);
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
@@ -187,9 +263,10 @@ static int _blocks_init_action(uint32_t *args) {
 }
 
 
-static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  _block_init  = HPX_REGISTER_ACTION(_block_init_action);
-  _blocks_init = HPX_REGISTER_ACTION(_blocks_init_action);
+static void HPX_CONSTRUCTOR
+_future_initialize_actions(void) {
+  _future_block_init  = HPX_REGISTER_ACTION(_future_block_init_action);
+  _future_blocks_init = HPX_REGISTER_ACTION(_future_blocks_init_action);
 }
 
 
@@ -208,7 +285,7 @@ hpx_lco_future_new(int size) {
   hpx_addr_t f;
   _future_t *local = _free;
   if (local) {
-    _free = (_future_t*)local->lco.vtable;
+    _free = (_future_t*)local->vtable;
     f = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(f, (void**)&base)) {
@@ -225,7 +302,7 @@ hpx_lco_future_new(int size) {
       hpx_abort();
     }
   }
-  _init(local, size);
+  _future_init(local, size);
   hpx_gas_unpin(f);
   return f;
 }
@@ -268,13 +345,13 @@ hpx_lco_future_array_new(int n, int size, int block_size) {
 
   for (int i = 0; i < ranks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes);
-    hpx_call(there, _blocks_init, args, sizeof(args), and[0]);
+    hpx_call(there, _future_blocks_init, args, sizeof(args), and[0]);
   }
 
   for (int i = 0; i < rem; ++i) {
     hpx_addr_t block = hpx_addr_add(base, args[2] * here->ranks + i *
                                     block_bytes);
-    hpx_call(block, _block_init, args, 2 * sizeof(args[0]), and[1]);
+    hpx_call(block, _future_block_init, args, 2 * sizeof(args[0]), and[1]);
   }
 
   hpx_lco_wait_all(2, and);
