@@ -107,9 +107,68 @@ static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
-    dbg_error("Could not un-pin buffer of size %lu for photon", len);
+    dbg_error("Could not un-pin buffer of size %lu for photon\n", len);
 }
 
+/// ----------------------------------------------------------------------------
+/// Put data via Photon
+/// ----------------------------------------------------------------------------
+static int _put(transport_class_t *t, int dest, const void *data, size_t n,
+                void *rbuffer, size_t rn, void *r)
+{
+  int rc;
+  void *b = (void*)data;
+  struct photon_buffer_priv_t priv;
+  struct photon_buffer_t pbuf;
+
+  rc = photon_get_buffer_private(rbuffer, rn, &priv);
+  if (rc != PHOTON_OK) {
+    return dbg_error("Could not get buffer metadata for put: 0x%016lx (%lu)\n",
+                     (uintptr_t)rbuffer, rn);
+  }
+
+  pbuf.addr = (uintptr_t)rbuffer;
+  pbuf.size = rn;
+  pbuf.priv = priv;
+  
+  rc = photon_post_os_put_direct(dest, b, n, PHOTON_DEFAULT_TAG, &pbuf, r);
+  if (rc != PHOTON_OK) {
+    return dbg_error("Could not complete put operation: 0x%016lx (%lu)\n",
+                     (uintptr_t)rbuffer, rn);
+  }
+
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// Get data via Photon
+/// ----------------------------------------------------------------------------
+static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
+                const void *rdata, size_t rn, void *r)
+{
+  int rc;
+  void *b = (void*)rdata;
+  struct photon_buffer_priv_t priv;
+  struct photon_buffer_t pbuf;
+
+  rc = photon_get_buffer_private(b, rn, &priv);
+  if (rc != PHOTON_OK) {
+    return dbg_error("Could not get buffer metadata for get: 0x%016lx (%lu)\n",
+                     (uintptr_t)b, rn);
+  }
+
+  pbuf.addr = (uintptr_t)b;
+  pbuf.size = rn;
+  pbuf.priv = priv;
+  
+  rc = photon_post_os_get_direct(dest, buffer, n, PHOTON_DEFAULT_TAG, &pbuf, r);
+  if (rc != PHOTON_OK) {
+    return dbg_error("Could not complete get operation: 0x%016lx (%lu)\n",
+                     (uintptr_t)b, rn);
+  }
+
+  return HPX_SUCCESS;
+}
 
 /// ----------------------------------------------------------------------------
 /// Send data via Photon.
@@ -240,6 +299,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.delete         = _delete;
   photon->class.pin            = _pin;
   photon->class.unpin          = _unpin;
+  photon->class.put            = _put;
+  photon->class.get            = _get;
   photon->class.send           = _send;
   photon->class.probe          = _probe;
   photon->class.recv           = _recv;
