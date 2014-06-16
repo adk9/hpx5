@@ -16,24 +16,26 @@
 #include "hpx/addr.h"
 #include "hpx/types.h"
 
+
 /// ----------------------------------------------------------------------------
-/// LCO's are local control objects. All LCOs support the "set" and "delete"
-/// action interface, while subclasses, might provide more specific interfaces.
+/// An action-based interface to the LCO set operation.
+/// ----------------------------------------------------------------------------
+extern hpx_action_t hpx_lco_set_action;
+
+/// ----------------------------------------------------------------------------
+/// LCO's are local control objects.
 /// ----------------------------------------------------------------------------
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t sync);
 
 
 /// ----------------------------------------------------------------------------
-/// Set an LCO with a status.
+/// Propagate an error to an LCO.
 ///
-/// @param    lco - the LCO's global address
-/// @param  value - the address of the value to set
-/// @param   size - the size of the value to set
-/// @param status - the status to return to anyone who waits/gets from this LCO
-/// @param   sync - a future for local completion
+/// @param  lco - the LCO's global address
+/// @param code - a user-defined error code
+/// @param sync - a future for local completion
 /// ----------------------------------------------------------------------------
-void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
-                        hpx_status_t status, hpx_addr_t sync);
+void hpx_lco_error(hpx_addr_t lco, uintptr_t code, hpx_addr_t sync);
 
 
 /// ----------------------------------------------------------------------------
@@ -46,18 +48,15 @@ void hpx_lco_set_status(hpx_addr_t lco, const void *value, int size,
 /// ----------------------------------------------------------------------------
 void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 
-typedef struct {
-  hpx_status_t status;
-  char data[];
-} hpx_lco_set_args_t;
-extern hpx_action_t hpx_lco_set_action;
-
 
 /// ----------------------------------------------------------------------------
 /// Perform a wait operation.
 ///
-/// The LCO blocks the caller until an LCO set operation signals the LCO. Each
+/// The LCO blocks the caller until an LCO set operation triggers the LCO. Each
 /// LCO type has its own semantics for the state under which this occurs.
+///
+/// If the return status is HPX_LCO_ERROR then the LCO was triggered by
+/// hpx_lco_error() rather than hpx_lco_set().
 ///
 /// @param lco - the LCO we're processing
 /// @returns   - the LCO's status
@@ -70,6 +69,9 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 ///
 /// An LCO blocks the caller until the future is set, and then copies its value
 /// data into the provided buffer.
+///
+/// If the return status is HPX_LCO_ERROR then the LCO was triggered by
+/// hpx_lco_error() rather than hpx_lco_set().
 ///
 /// @param      lco - the LCO we're processing
 /// @param[out] out - the output location (may be null)
