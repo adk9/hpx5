@@ -23,77 +23,145 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
-
+#include "cvar.h"
 
 /// ----------------------------------------------------------------------------
 /// And LCO class interface.
 /// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
-  lco_t lco;                                    // and "is-an" lco
-  SYNC_ATOMIC(uint64_t value);                  // the threshold
+  lco_t   vtable;
+  cvar_t barrier;
+  SYNC_ATOMIC(int64_t value);                   // the threshold
 } _and_t;
 
 
 // Freelist
-static __thread _and_t *_free = NULL;
+static __thread _and_t *_free_ands = NULL;
 
 
-static void _delete(_and_t *and) {
-  if (!and)
-    return;
-  lco_lock(&and->lco);
-  lco_fini(&and->lco);
-  and->lco.vtable = (lco_class_t*)_free;
-  _free = and;
+static void
+_lock(_and_t *and)
+{
+  sync_lockable_ptr_lock((lockable_ptr_t*)&and->vtable);
 }
 
+
+static void
+_unlock(_and_t *and)
+{
+  sync_lockable_ptr_unlock((lockable_ptr_t*)&and->vtable);
+}
+
+static hpx_status_t
+_wait(_and_t *and)
+{
+  // Still use sync to load the value even though we're holding the LCO lock
+  // because it is atomically decremented without holding the lock and we don't
+  // want to induce a race on it.
+  //
+  // NB: we're holding the lock here, so even if a concurrent set reduces the
+  //     count to zero, we will still be woken up
+  int64_t val;
+  sync_load(val, &and->value, SYNC_ACQUIRE);
+  if (val)
+    return scheduler_wait((lockable_ptr_t*)and, &and->barrier);
+  else
+    return and->barrier.status;
+}
+
+
+static void
+_free(_and_t *and) {
+  // repurpose vtable as a freelist "next" pointer
+  and->vtable = (lco_class_t*)_free_ands;
+  _free_ands = and;
+}
+
+
+static void
+_and_fini(lco_t *lco, hpx_addr_t sync)
+{
+  if (!lco)
+    return;
+
+  _and_t *and = (_and_t *)lco;
+  _lock(and);
+  _free(and);
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+}
+
+
+static void
+_and_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
+{
+  _and_t *and = (_and_t *)lco;
+  _lock(and);
+  scheduler_signal(&and->barrier, code);
+  _unlock(and);
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+}
 
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
-static void _set(_and_t *and, int size, const void *from, hpx_status_t status, hpx_addr_t sync) {
-  uint64_t val; sync_load(val, &and->value, SYNC_ACQUIRE);
-  if (val == 0)
+static void
+_and_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
+{
+  _and_t *and = (_and_t *)lco;
+  int64_t val = sync_fadd(&and->value, -1, SYNC_ACQ_REL);
+
+  if (val < 1) {
+    dbg_error("Too many threads joined AND lco\n");
+    return;
+  }
+
+  if (val > 1)
     return;
 
-  if (!sync_cas(&and->value, val, val - 1, SYNC_RELEASE, SYNC_RELAXED))
-    _set(and, size, from, status, sync);
+  _lock(and);
+  scheduler_signal(&and->barrier, HPX_SUCCESS);
+  _unlock(and);
 
-  if (val - 1 != 0)
-    return;
-
-  lco_lock(&and->lco);
-  scheduler_signal(&and->lco, status);
-  lco_unlock(&and->lco);
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
 
 
-/// Basic get functionality.
-static hpx_status_t _get(_and_t *and, int size, void *out) {
-  hpx_status_t status;
-  lco_lock(&and->lco);
-  if (!lco_is_set(&and->lco))
-    scheduler_wait(&and->lco);
-  status = lco_get_status(&and->lco);
-  lco_unlock(&and->lco);
+static hpx_status_t
+_and_wait(lco_t *lco) {
+  _and_t *and = (_and_t *)lco;
+  _lock(and);
+  hpx_status_t status = _wait(and);
+  _unlock(and);
   return status;
 }
 
 
-/// The AND vtable.
-static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
+static hpx_status_t
+_and_get(lco_t *lco, int size, void *out) {
+  return _and_wait(lco);
+}
 
 
-static void _init(_and_t *and, uint64_t value) {
-  lco_init(&and->lco, &_vtable, 0);
+static void
+_and_init(_and_t *and, int64_t value) {
+  static const lco_class_t vtable = { _and_fini, _and_error, _and_set, _and_get,
+                                      _and_wait };
+  assert(value >= 0);
+  lco_init(&and->vtable, &vtable, 0);
   and->value = value;
   if (value != 0)
     return;
 
-  lco_lock(&and->lco);
-  scheduler_signal(&and->lco, HPX_SUCCESS);
-  lco_unlock(&and->lco);
+  _lock(and);
+  scheduler_signal(&and->barrier, HPX_SUCCESS);
+  _unlock(and);
 }
 
 /// @}
@@ -106,9 +174,9 @@ static void _init(_and_t *and, uint64_t value) {
 hpx_addr_t
 hpx_lco_and_new(uint64_t limit) {
   hpx_addr_t target;
-  _and_t *and = _free;
+  _and_t *and = _free_ands;
   if (and) {
-    _free = (_and_t*)and->lco.vtable;
+    _free_ands = (_and_t*)and->vtable;
     target = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(target, (void**)&base))
@@ -122,7 +190,7 @@ hpx_lco_and_new(uint64_t limit) {
       hpx_abort();
   }
 
-  _init(and, limit);
+  _and_init(and, (int64_t)limit);
   hpx_gas_unpin(target);
   return target;
 }
