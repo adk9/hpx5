@@ -124,4 +124,9 @@ HPX_INTERNAL void lco_reset_triggered(lco_t *lco);
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL uintptr_t lco_get_triggered(const lco_t *lco);
 
+
+#define LCO_LOCK(lco) sync_lockable_ptr_lock((lockable_ptr_t*)lco)
+#define LCO_UNLOCK(lco) sync_lockable_ptr_unlock((lockable_ptr_t*)lco)
+
+
 #endif // LIBHPX_LCO_H

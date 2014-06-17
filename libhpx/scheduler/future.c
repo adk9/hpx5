@@ -74,18 +74,6 @@ _trigger(_future_t *f) {
 
 
 static void
-_lock(_future_t *f) {
-  sync_lockable_ptr_lock((lockable_ptr_t*)&f->vtable);
-}
-
-
-static void
-_unlock(_future_t *f) {
-  sync_lockable_ptr_unlock((lockable_ptr_t*)&f->vtable);
-}
-
-
-static void
 _free(_future_t *f) {
   // overload the vtable pointer for freelisting---not perfect, but it's
   // reinitialized in _init(), so it's not the end of the world
@@ -104,7 +92,7 @@ _future_fini(lco_t *lco, hpx_addr_t sync)
     return;
 
   _future_t *f = (_future_t *)lco;
-  _lock(f);
+  LCO_LOCK(&f->vtable);
 
   if (!_is_inplace(f)) {
     void *ptr = NULL;
@@ -124,7 +112,7 @@ static void
 _future_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
 {
   _future_t *f = (_future_t *)lco;
-  _lock(f);
+  LCO_LOCK(&f->vtable);
 
   if (!_trigger(f))
     goto unlock;
@@ -141,7 +129,7 @@ _future_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
   scheduler_signal(&f->full, HPX_SUCCESS);
 
  unlock:
-  _unlock(f);
+  LCO_UNLOCK(&f->vtable);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -152,9 +140,9 @@ static void
 _future_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _future_t *f = (_future_t *)lco;
-  _lock(f);
+  LCO_LOCK(&f->vtable);
   scheduler_signal(&f->full, code);
-  _unlock(f);
+  LCO_UNLOCK(&f->vtable);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -166,7 +154,7 @@ static hpx_status_t
 _future_get(lco_t *lco, int size, void *out)
 {
   _future_t *f = (_future_t *)lco;
-  _lock(f);
+  LCO_LOCK(&f->vtable);
   hpx_status_t status = _wait(f);
 
   if (status != HPX_SUCCESS)
@@ -184,7 +172,7 @@ _future_get(lco_t *lco, int size, void *out)
   }
 
  unlock:
-  _unlock(f);
+  LCO_UNLOCK(&f->vtable);
   return status;
 }
 
@@ -192,9 +180,9 @@ static hpx_status_t
 _future_wait(lco_t *lco)
 {
   _future_t *f = (_future_t *)lco;
-  _lock(f);
+  LCO_LOCK(&f->vtable);
   hpx_status_t status = _wait(f);
-  _unlock(f);
+  LCO_UNLOCK(&f->vtable);
   return status;
 }
 

@@ -45,20 +45,6 @@ static __thread _sema_t *_free_semas = NULL;
 
 
 static void
-_lock(_sema_t *sema)
-{
-  sync_lockable_ptr_lock((lockable_ptr_t*)&sema->vtable);
-}
-
-
-static void
-_unlock(_sema_t *sema)
-{
-  sync_lockable_ptr_unlock((lockable_ptr_t*)&sema->vtable);
-}
-
-
-static void
 _free(_sema_t *sema)
 {
   // repurpose vtable as a freelist "next" pointer
@@ -74,7 +60,7 @@ _sema_fini(lco_t *lco, hpx_addr_t sync)
     return;
 
   _sema_t *sema = (_sema_t *)lco;
-  _lock(sema);
+  LCO_LOCK(&sema->vtable);
   _free(sema);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
@@ -86,9 +72,9 @@ static void
 _sema_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _sema_t *sema = (_sema_t *)lco;
-  _lock(sema);
+  LCO_LOCK(&sema->vtable);
   scheduler_signal(&sema->available, code);
-  _unlock(sema);
+  LCO_UNLOCK(&sema->vtable);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -100,12 +86,12 @@ static void
 _sema_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
 {
   _sema_t *sema = (_sema_t *)lco;
-  _lock(sema);
+  LCO_LOCK(&sema->vtable);
   if (sema->count++ == 0) {
     hpx_status_t status = sema->available.status;
     scheduler_signal(&sema->available, status);
   }
-  _unlock(sema);
+  LCO_UNLOCK(&sema->vtable);
 }
 
 
@@ -114,7 +100,7 @@ static hpx_status_t
 _sema_get(lco_t *lco, int size, void *out) {
   hpx_status_t status = HPX_SUCCESS;
   _sema_t *sema = (_sema_t *)lco;
-  _lock(sema);
+  LCO_LOCK(&sema->vtable);
 
   // wait until the count is non-zero---MESA semantics mean we re-read count
   unsigned count = sema->count;
@@ -127,7 +113,7 @@ _sema_get(lco_t *lco, int size, void *out) {
   if (status == HPX_SUCCESS)
     sema->count = count - 1;
 
-  _unlock(sema);
+  LCO_UNLOCK(&sema->vtable);
   return status;
 }
 
