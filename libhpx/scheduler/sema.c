@@ -20,110 +20,164 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include "hpx/hpx.h"
+#include "libhpx/debug.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
-
+#include "cvar.h"
 
 /// ----------------------------------------------------------------------------
 /// Local semaphore interface.
 /// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
-  lco_t lco;
-  unsigned count;
+  lco_t     vtable;
+  cvar_t available;
+  unsigned   count;
 } _sema_t;
 
 
-static void _delete(_sema_t *sema) {
-  if (!sema)
-    return;
+static hpx_action_t _sema_p_action = 0;
+static hpx_action_t _sema_v_action = 0;
 
-  lco_lock(&sema->lco);
-  lco_fini(&sema->lco);
+
+// Freelist
+static __thread _sema_t *_free_semas = NULL;
+
+
+static void
+_lock(_sema_t *sema)
+{
+  sync_lockable_ptr_lock((lockable_ptr_t*)&sema->vtable);
 }
 
 
-/// Get is equivalent to P in a semaphore.
-static hpx_status_t _get(_sema_t *sema, int size, void *out) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(&sema->lco);
+static void
+_unlock(_sema_t *sema)
+{
+  sync_lockable_ptr_unlock((lockable_ptr_t*)&sema->vtable);
+}
 
-  // wait until the count is non-zero
+
+static void
+_free(_sema_t *sema)
+{
+  // repurpose vtable as a freelist "next" pointer
+  sema->vtable = (lco_class_t*)_free_semas;
+  _free_semas = sema;
+}
+
+
+static void
+_sema_fini(lco_t *lco, hpx_addr_t sync)
+{
+  if (!lco)
+    return;
+
+  _sema_t *sema = (_sema_t *)lco;
+  _lock(sema);
+  _free(sema);
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+}
+
+
+static void
+_sema_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
+{
+  _sema_t *sema = (_sema_t *)lco;
+  _lock(sema);
+  scheduler_signal(&sema->available, code);
+  _unlock(sema);
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+}
+
+
+/// Set is equivalent to returning a resource to the semaphore.
+static void
+_sema_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
+{
+  _sema_t *sema = (_sema_t *)lco;
+  _lock(sema);
+  if (sema->count++ == 0) {
+    hpx_status_t status = sema->available.status;
+    scheduler_signal(&sema->available, status);
+  }
+  _unlock(sema);
+}
+
+
+/// Get is equivalent to acquiring a resource from the semaphore.
+static hpx_status_t
+_sema_get(lco_t *lco, int size, void *out) {
+  hpx_status_t status = HPX_SUCCESS;
+  _sema_t *sema = (_sema_t *)lco;
+  _lock(sema);
+
+  // wait until the count is non-zero---MESA semantics mean we re-read count
   unsigned count = sema->count;
   while (count == 0 && status == HPX_SUCCESS) {
-    scheduler_wait(&sema->lco);
+    status = scheduler_wait((lockable_ptr_t*)sema, &sema->available);
     count = sema->count;
-    status = lco_get_status(&sema->lco);
   }
 
-  if (status != HPX_SUCCESS)
-    goto exit;
+  // reduce the count
+  if (status == HPX_SUCCESS)
+    sema->count = count - 1;
 
-  // if I'm going to make the count 0, then reset the semaphore so that
-  // lco_wait()s will work
-  if (count == 1)
-    lco_reset(&sema->lco);
-
-  sema->count = count - 1;
-
- exit:
-  lco_unlock(&sema->lco);
+  _unlock(sema);
   return status;
 }
 
 
-/// Get is equivalent to V in the semaphore.
-static void _set(_sema_t *sema, int size, const void *from, hpx_status_t status, hpx_addr_t sync)
+static hpx_status_t
+_sema_wait(lco_t *lco) {
+  return _sema_get(lco, 0, NULL);
+}
+
+
+static void
+_sema_init(_sema_t *sema, unsigned count)
 {
-  lco_lock(&sema->lco);
-  unsigned count = sema->count++;
-  if (count == 0 || status != HPX_SUCCESS)
-    scheduler_signal(&sema->lco, status);
-  lco_unlock(&sema->lco);
-}
+  // the semaphore vtable
+  static const lco_class_t vtable = {
+    _sema_fini,
+    _sema_error,
+    _sema_set,
+    _sema_get,
+    _sema_wait
+  };
 
-
-/// The semaphore vtable.
-static lco_class_t _vtable = LCO_CLASS_INIT(_delete, _set, _get);
-
-
-static void _init(_sema_t *sema, unsigned count) {
-  lco_init(&sema->lco, &_vtable, 0);
+  lco_init(&sema->vtable, &vtable, 0);
   sema->count = count;
-
-  // if the count is non-zero, then signal the semaphore to make sure that
-  // waiters don't wait---waiting on a semaphore is a bit of an odd operation
-  // anyway
-  if (count != 0) {
-    lco_lock(&sema->lco);
-    scheduler_signal(&sema->lco, HPX_SUCCESS);
-    lco_unlock(&sema->lco);
-  }
 }
 
 
-static hpx_action_t _p = 0;
-static hpx_action_t _v = 0;
-
-
-static int _p_action(void *args) {
+static int
+_sema_p(void *args)
+{
   hpx_addr_t target = hpx_thread_current_target();
   hpx_lco_sema_p(target);
   return HPX_SUCCESS;
 }
 
 
-static int _v_action(void *args) {
+static int
+_sema_v(void *args)
+{
   hpx_addr_t target = hpx_thread_current_target();
-  hpx_addr_t cont = hpx_thread_current_cont_target();
-  hpx_lco_sema_v(target, cont);
+  hpx_lco_sema_v(target);
   return HPX_SUCCESS;
 }
 
 
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  _p = HPX_REGISTER_ACTION(_p_action);
-  _v = HPX_REGISTER_ACTION(_v_action);
+static void HPX_CONSTRUCTOR
+_initialize_actions(void)
+{
+  _sema_p_action = HPX_REGISTER_ACTION(_sema_p);
+  _sema_v_action = HPX_REGISTER_ACTION(_sema_v);
 }
 
 /// @}
@@ -132,12 +186,31 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// ----------------------------------------------------------------------------
 /// Allocate a semaphore LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  hpx_addr_t sema = hpx_gas_alloc(sizeof(_sema_t));
-  _sema_t *s = NULL;
-  if (!hpx_gas_try_pin(sema, (void**)&s))
-    assert(false);
-  _init(s, count);
+hpx_addr_t
+hpx_lco_sema_new(unsigned count)
+{
+  hpx_addr_t sema;
+  _sema_t *local = _free_semas;
+  if (local) {
+    _free_semas = (_sema_t *)local->vtable;
+    sema = HPX_HERE;
+    char *base;
+    if (!hpx_gas_try_pin(sema, (void**)&base)) {
+      dbg_error("Could not translate local block.\n");
+      hpx_abort();
+    }
+    hpx_gas_unpin(sema);
+    sema.offset = (char*)local - base;
+    assert(sema.offset < sema.block_bytes);
+  }
+  else {
+    sema = hpx_gas_alloc(sizeof(_sema_t));
+    if (!hpx_gas_try_pin(sema, (void**)&local)) {
+      dbg_error("Could not pin newly allocated semaphore.\n");
+      hpx_abort();
+    }
+  }
+  _sema_init(local, count);
   hpx_gas_unpin(sema);
   return sema;
 }
@@ -145,31 +218,46 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 
 /// ----------------------------------------------------------------------------
 /// Decrement a semaphore.
+///
+/// If the semaphore is local, then we can use the _sema_get operation directly,
+/// otherwise we perform the operation as a synchronous remote call using the
+/// _sema_p action.
+///
+/// @param sema - the global address of the semaphore we're reducing
+/// @returns    - HPX_SUCCESS, or an error code if the sema is in an error state
 /// ----------------------------------------------------------------------------
-void hpx_lco_sema_p(hpx_addr_t sema) {
-  _sema_t *s;
+hpx_status_t
+hpx_lco_sema_p(hpx_addr_t sema)
+{
+  lco_t *s;
   if (hpx_gas_try_pin(sema, (void**)&s)) {
-    _get(s, 0, NULL);
+    hpx_status_t status = _sema_get(s, 0, NULL);
     hpx_gas_unpin(sema);
+    return status;
   }
-  else {
-    hpx_call(sema, _p, NULL, 0, HPX_NULL);
-  }
+
+  return hpx_call_sync(sema, _sema_p_action, NULL, 0, NULL, 0);
 }
 
 
 /// ----------------------------------------------------------------------------
 /// Increment a semaphore.
+///
+/// If the semaphore is local, then we can use the _sema_set operation directly,
+/// otherwise we perform the operation as an asynchronous remote call using the
+/// _sema_v action.
+///
+/// @param sema - the global address of the semaphore we're incrementing
 /// ----------------------------------------------------------------------------
-void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t sync) {
-  _sema_t *s;
+void
+hpx_lco_sema_v(hpx_addr_t sema)
+{
+  lco_t *s;
   if (hpx_gas_try_pin(sema, (void**)&s)) {
-    _set(s, 0, NULL, HPX_SUCCESS, sync);
-    if (!hpx_addr_eq(sync, HPX_NULL))
-      hpx_lco_set(sync, NULL, 0, HPX_NULL);
+    _sema_set(s, 0, NULL, HPX_NULL);
     hpx_gas_unpin(sema);
+    return;
   }
-  else {
-    hpx_call(sema, _v, NULL, 0, sync);
-  }
+
+  hpx_call_async(sema, _sema_v_action, NULL, 0, HPX_NULL, HPX_NULL);
 }
