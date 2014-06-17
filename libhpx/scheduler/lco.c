@@ -53,47 +53,6 @@ _lco_class(lco_t *lco)
 
 
 /// ----------------------------------------------------------------------------
-/// Local LCO event handler wrappers.
-///
-/// These extract the LCO class pointer and forward to the function pointers
-/// that it contains.
-/// ----------------------------------------------------------------------------
-static void
-_lco_fini_local(lco_t *lco, hpx_addr_t sync)
-{
-  _lco_class(lco)->on_fini(lco, sync);
-}
-
-
-static void
-_lco_set_local(lco_t *lco, size_t size, const void *data, hpx_addr_t sync)
-{
-  _lco_class(lco)->on_set(lco, size, data, sync);
-}
-
-
-static void
-_lco_error_local(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
-{
-  _lco_class(lco)->on_error(lco, code, sync);
-}
-
-
-static hpx_status_t
-_lco_get_local(lco_t *lco, size_t n, void *buffer)
-{
-  return _lco_class(lco)->on_get(lco, n, buffer);
-}
-
-
-static hpx_status_t
-_lco_wait_local(lco_t *lco)
-{
-  return _lco_class(lco)->on_wait(lco);
-}
-
-
-/// ----------------------------------------------------------------------------
 /// Action LCO event handler wrappers.
 ///
 /// These try and pin the LCO, and then forward to the local event handler
@@ -108,7 +67,7 @@ _lco_fini(void *args)
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  _lco_fini_local(lco, HPX_NULL);
+  _lco_class(lco)->on_fini(lco);
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
@@ -122,9 +81,8 @@ _lco_set(void *data)
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  // for now, we don't care about local completion because we know that the
-  // action interface guarantees that we have exclusive access to the data
-  _lco_set_local(lco, hpx_thread_current_args_size(), data, HPX_NULL);
+  size_t size = hpx_thread_current_args_size();
+  _lco_class(lco)->on_set(lco, size, data);
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
@@ -140,7 +98,7 @@ _lco_error(hpx_status_t *code)
 
   // for now, we don't care about local completion because we know that the
   // action interface guarantees that we have exclusive access to the data
-  _lco_error_local(lco, *code, HPX_NULL);
+  _lco_class(lco)->on_error(lco, *code);
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
@@ -150,12 +108,12 @@ static int
 _lco_get(int *n)
 {
   hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco;
+  lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
   char buffer[*n];                  // ouch---rDMA, or preallocate continuation?
-  hpx_status_t status = _lco_get_local(lco, *n, buffer);
+  hpx_status_t status = _lco_class(lco)->on_get(lco, *n, buffer);
   hpx_gas_unpin(target);
   if (status == HPX_SUCCESS)
     hpx_thread_continue(*n, buffer);
@@ -172,7 +130,7 @@ _lco_wait(void *args)
   if (!hpx_gas_try_pin(target, (void**)&lco))
     return HPX_RESEND;
 
-  hpx_action_t status = _lco_wait_local(lco);
+  hpx_action_t status = _lco_class(lco)->on_wait(lco);
   hpx_gas_unpin(target);
   hpx_thread_exit(status);
 }
@@ -195,6 +153,20 @@ _initialize_actions(void)
 /// ----------------------------------------------------------------------------
 /// LCO bit packing and manipulation
 /// ----------------------------------------------------------------------------
+const lco_class_t *
+lco_lock(lco_t *lco)
+{
+  return sync_lockable_ptr_lock((lockable_ptr_t*)lco);
+}
+
+
+void
+lco_unlock(lco_t *lco)
+{
+  sync_lockable_ptr_unlock((lockable_ptr_t*)lco);
+}
+
+
 void
 lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
 {
@@ -257,45 +229,55 @@ lco_get_triggered(const lco_t *lco)
 
 
 void
-hpx_lco_delete(hpx_addr_t target, hpx_addr_t sync)
+hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
 {
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _lco_fini_local(lco, sync);
-    hpx_gas_unpin(target);
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_call_async(target, _lco_fini_action, NULL, 0, HPX_NULL, rsync);
     return;
   }
 
-  hpx_call_async(target, _lco_fini_action, NULL, 0, sync, HPX_NULL);
+  _lco_class(lco)->on_fini(lco);
+  hpx_gas_unpin(target);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
 }
 
 
 void
-hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t sync)
+hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync)
 {
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _lco_error_local(lco, code, sync);
-    hpx_gas_unpin(target);
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_call_async(target, _lco_error_action, &code, sizeof(code),
+                   HPX_NULL, rsync);
     return;
   }
 
-  hpx_call_async(target, _lco_error_action, &code, sizeof(code), sync,
-                 HPX_NULL);
+  _lco_class(lco)->on_error(lco, code);
+  hpx_gas_unpin(target);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
 }
 
 
 void
-hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t sync)
+hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t lsync,
+            hpx_addr_t rsync)
 {
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _lco_set_local(lco, size, value, sync);
-    hpx_gas_unpin(target);
+  if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco))
+  {
+    hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
     return;
   }
 
-  hpx_call_async(target, hpx_lco_set_action, value, size, sync, HPX_NULL);
+  _lco_class(lco)->on_set(lco, size, value);
+  hpx_gas_unpin(target);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, NULL, 0, HPX_NULL, HPX_NULL);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
 }
 
 
@@ -303,13 +285,12 @@ hpx_status_t
 hpx_lco_wait(hpx_addr_t target)
 {
   lco_t *lco;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_status_t status = _lco_wait_local(lco);
-    hpx_gas_unpin(target);
-    return status;
-  }
+  if (!hpx_gas_try_pin(target, (void**)&lco))
+    return hpx_call_sync(target, _lco_wait_action, NULL, 0, NULL, 0);
 
-  return hpx_call_sync(target, _lco_wait_action, NULL, 0, NULL, 0);
+  hpx_status_t status = _lco_class(lco)->on_wait(lco);
+  hpx_gas_unpin(target);
+  return status;
 }
 
 
@@ -320,20 +301,18 @@ hpx_status_t
 hpx_lco_get(hpx_addr_t target, void *value, int size)
 {
   lco_t *lco;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_status_t status =  _lco_get_local(lco, size, value);
-    hpx_gas_unpin(target);
-    return status;
+  if (!hpx_gas_try_pin(target, (void**)&lco))
+    return hpx_call_sync(target, _lco_get_action, &size, sizeof(size),
+                         value, size);
 
-  }
-
-  return hpx_call_sync(target, _lco_get_action, &size, sizeof(size),
-                       value, size);
+  hpx_status_t status =  _lco_class(lco)->on_get(lco, size, value);
+  hpx_gas_unpin(target);
+  return status;
 }
 
 
-void
-hpx_lco_wait_all(int n, hpx_addr_t lcos[])
+int
+hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
 {
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
@@ -355,21 +334,31 @@ hpx_lco_wait_all(int n, hpx_addr_t lcos[])
   // Wait on all of the lcos sequentially. If the lco is local (i.e., we have a
   // local translation for it) we use the local get operation, otherwise we wait
   // for the completion of the remote proxy.
+  int errors = 0;
   for (int i = 0; i < n; ++i) {
+    hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      _lco_wait_local(locals[i]);
+      const lco_class_t *lco = _lco_class(locals[i]);
+      status = lco->on_wait(locals[i]);
       hpx_gas_unpin(lcos[i]);
     }
     else {
-      hpx_lco_wait(remotes[i]);
+      status = hpx_lco_wait(remotes[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    if (status != HPX_SUCCESS)
+      ++errors;
+    if (statuses)
+      statuses[i] = status;
   }
+  return errors;
 }
 
 
-void
-hpx_lco_get_all(int n, hpx_addr_t lcos[], void *values[], int sizes[]) {
+int
+hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
+                hpx_status_t statuses[])
+{
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
@@ -391,14 +380,22 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], void *values[], int sizes[]) {
   // Wait on all of the lcos sequentially. If the lco is local (i.e., we have a
   // local translation for it) we use the local get operation, otherwise we wait
   // for the completion of the remote proxy.
+  int errors = 0;
   for (int i = 0; i < n; ++i) {
+    hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      _lco_get_local(locals[i], sizes[i], values[i]);
+      const lco_class_t *lco = _lco_class(locals[i]);
+      status = lco->on_get(locals[i], sizes[i], values[i]);
       hpx_gas_unpin(lcos[i]);
     }
     else {
-      hpx_lco_get(remotes[i], values[i], sizes[i]);
+      status = hpx_lco_get(remotes[i], values[i], sizes[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    if (status != HPX_SUCCESS)
+      ++errors;
+    if (statuses)
+      statuses[i] = status;
   }
+  return errors;
 }

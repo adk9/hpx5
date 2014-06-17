@@ -176,20 +176,20 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 
 
 void
-hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done) {
+hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
   bool small = p->size < _SMALL_THRESHOLD;
 
   // do a true async send, if we should
   if (!inplace && !small) {
-    hpx_call(HPX_HERE, _send_async, &p, sizeof(p), done);
+    hpx_call(HPX_HERE, _send_async, &p, sizeof(p), lsync);
     return;
   }
 
-  // otherwise, do a synchronous send and set the done LCO, if there is one
+  // otherwise, do a synchronous send and set the lsync LCO, if there is one
   hpx_parcel_send_sync(p);
-  if (!hpx_addr_eq(done, HPX_NULL))
-    hpx_lco_set(done, NULL, 0, HPX_NULL);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+      hpx_lco_set(lsync, NULL, 0, HPX_NULL, HPX_NULL);
 }
 
 
