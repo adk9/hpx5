@@ -219,7 +219,7 @@ hpx_lco_future_new(int size) {
     assert(f.offset < f.block_bytes);
   }
   else {
-    f = hpx_gas_alloc(sizeof(_future_t));
+    f = locality_malloc(sizeof(_future_t));
     if (!hpx_gas_try_pin(f, (void**)&local)) {
       dbg_error("Could not pin newly allocated future of size %d.\n", size);
       hpx_abort();

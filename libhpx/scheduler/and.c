@@ -23,6 +23,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 
@@ -117,7 +118,7 @@ hpx_lco_and_new(uint64_t limit) {
     assert(target.offset < target.block_bytes);
   }
   else {
-    target = hpx_gas_alloc(sizeof(_and_t));
+    target = locality_malloc(sizeof(_and_t));
     if (!hpx_gas_try_pin(target, (void**)&and))
       hpx_abort();
   }

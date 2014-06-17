@@ -260,6 +260,26 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 }
 
 /// ----------------------------------------------------------------------------
+/// Put data via Portals.
+/// ----------------------------------------------------------------------------
+static int _put(transport_class_t *t, int dest, const void *data, size_t n,
+                void *rbuffer, size_t rn, void *r)
+{
+  dbg_log("portals: put unsupported.\n");
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// Get data via Portals.
+/// ----------------------------------------------------------------------------
+static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
+                const void *rdata, size_t rn, void *r)
+{
+  dbg_log("portals: get unsupported.\n");
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
 /// Send data via Portals.
 /// ----------------------------------------------------------------------------
 static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
@@ -473,6 +493,8 @@ transport_class_t *transport_new_portals(void) {
   portals->class.delete         = _delete;
   portals->class.pin            = _pin;
   portals->class.unpin          = _unpin;
+  portals->class.put            = _put;
+  portals->class.get            = _get;
   portals->class.send           = _send;
   portals->class.probe          = _probe;
   portals->class.recv           = _recv;
