@@ -25,17 +25,25 @@ extern hpx_action_t hpx_lco_set_action;
 /// ----------------------------------------------------------------------------
 /// LCO's are local control objects.
 /// ----------------------------------------------------------------------------
-void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t sync);
+
+
+/// ----------------------------------------------------------------------------
+/// Delete an LCO.
+///
+/// @param   lco - the address of the LCO to delete
+/// @param rsync - an LCO to signal remote completion
+/// ----------------------------------------------------------------------------
+void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
 
 /// ----------------------------------------------------------------------------
 /// Propagate an error to an LCO.
 ///
-/// @param  lco - the LCO's global address
-/// @param code - a user-defined error code
-/// @param sync - a future for local completion
+/// @param   lco - the LCO's global address
+/// @param  code - a user-defined error code
+/// @param rsync - an LCO to signal remote completion
 /// ----------------------------------------------------------------------------
-void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t sync);
+void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 
 
 /// ----------------------------------------------------------------------------
@@ -44,9 +52,11 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t sync);
 /// @param   lco - the LCO to set
 /// @param value - the address of the value to set
 /// @param  size - the size of the data
-/// @param  sync - a future for local completion
+/// @param lsync - an LCO to signal local completion (HPX_NULL == don't wait)
+/// @param rsync - an LCO to signal remote completion (HPX_NULL == don't wait)
 /// ----------------------------------------------------------------------------
-void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
+void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t lsync,
+                 hpx_addr_t rsync);
 
 
 /// ----------------------------------------------------------------------------
@@ -59,7 +69,8 @@ void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t sync);
 /// hpx_lco_error() rather than hpx_lco_set().
 ///
 /// @param lco - the LCO we're processing
-/// @returns   - the LCO's status
+/// @returns   - the LCO's status, HPX_SUCCESS or the code passed to
+///              hpx_lco_error()
 /// ----------------------------------------------------------------------------
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
@@ -70,13 +81,15 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// An LCO blocks the caller until the future is set, and then copies its value
 /// data into the provided buffer.
 ///
-/// If the return status is HPX_LCO_ERROR then the LCO was triggered by
-/// hpx_lco_error() rather than hpx_lco_set().
+/// If the return status is not HPX_SUCCESS then the LCO was triggered by
+/// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
+/// to by @p out will not be inspected.
 ///
 /// @param      lco - the LCO we're processing
 /// @param[out] out - the output location (may be null)
 /// @param     size - the size of the data
-/// @returns        - the LCO's status
+/// @returns        - the LCO's status, HPX_SUCCESS or the code passed to
+///                   hpx_lco_error()
 /// ----------------------------------------------------------------------------
 hpx_status_t hpx_lco_get(hpx_addr_t lco, void *value, int size);
 
@@ -87,11 +100,17 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, void *value, int size);
 /// This admits some parallelism in the implementation, and is preferable to
 /// using hpx_lco_wait() in a loop.
 ///
-/// @param    n - the number of LCOs in @p lcos
-/// @param lcos - an array of LCO addresses (must be uniformly non-HPX_NULL, and
-///               correspond to global addresses associated with real LCOs)
+/// @param             n - the number of LCOs in @p lcos
+/// @param          lcos - an array of LCO addresses (must be uniformly
+///                        non-HPX_NULL, and correspond to global addresses
+///                        associated with real LCOs)
+/// @param[out] statuses - an array of statuses, pass NULL if statuses are not
+///                        required
+/// @returns             - the number of entries in @p statuses that have
+///                        non-HPX_SUCCESS values, will be set irrespective of
+///                        if @p statuses is NULL
 /// ----------------------------------------------------------------------------
-void hpx_lco_wait_all(int n, hpx_addr_t lcos[]);
+int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
 
 
 /// ----------------------------------------------------------------------------
@@ -101,14 +120,20 @@ void hpx_lco_wait_all(int n, hpx_addr_t lcos[]);
 /// This admits some parallelism in the implementation, and is preferable to
 /// using hpx_lco_get() in a loop.
 ///
-/// @param           n - the number of LCOs
-/// @param        lcos - an array of @p n global LCO addresses
-/// @param[out] values - an array of @p n local buffers with sizes corresponding
-///                      to @p sizes
-/// @param       sizes - an @p n element array of sizes that must corrsepond to
-///                      @p lcos and @p values
+/// @param             n - the number of LCOs
+/// @param          lcos - an array of @p n global LCO addresses
+/// @param         sizes - an @p n element array of sizes that must correspond
+///                        to @p lcos and @p values
+/// @param[out]   values - an array of @p n local buffers with sizes
+///                        corresponding to @p sizes
+/// @param[out] statuses - an array of statuses, pass NULL if statuses are not
+///                        required
+/// @returns             - the number of entries in @p statuses that have
+///                        non-HPX_SUCCESS values, will be set irrespective of
+///                        if @p statuses is NULL
 /// ----------------------------------------------------------------------------
-void hpx_lco_get_all(int n, hpx_addr_t lcos[], void *values[], int sizes[]);
+int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
+                     hpx_status_t statuses[]);
 
 
 /// ----------------------------------------------------------------------------
@@ -144,8 +169,25 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 /// ----------------------------------------------------------------------------
 /// An and LCO represents an AND gate.
 /// ----------------------------------------------------------------------------
+/// @{
+
+/// ----------------------------------------------------------------------------
+/// Create an AND gate.
+///
+/// @param inputs - the number of inputs to the and
+/// @returns      - the global address of the and gate
+/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_lco_and_new(uint64_t inputs);
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
+
+/// ----------------------------------------------------------------------------
+/// Join an AND lco.
+///
+/// @param   and - the LCO's global address
+/// @param rsync - an LCO to signal remote completion
+/// ----------------------------------------------------------------------------
+void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+
+/// @}
 
 
 /// ----------------------------------------------------------------------------
