@@ -15,6 +15,17 @@
   Research in Extreme Scale Technologies (CREST).
  ====================================================================
 */
+/// @file
+/// A simple fibonacci number computation to demonstrate HPX
+/// This example calculates a fibonacci number using recursion, where each 
+/// level of recursion is executed by a different HPX thread. (Of course, this
+/// is not an efficient way to calculate a fibonacci number but it does 
+/// demonstrate some of the basic of HPX and it may demonstrate a 
+/// <em>pattern of computation</em> that might be used in the real world.)
+
+
+
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -25,8 +36,9 @@
 #include <inttypes.h>
 #include "hpx/hpx.h"
 
+
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: fibonaccihpx [options] NUMBER\n"
+  fprintf(stream, "Usage: fibonacci [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
@@ -161,3 +173,4 @@ int main(int argc, char *argv[]) {
   // run the main action
   return hpx_run(_fib_main, &n, sizeof(n));
 }
+
