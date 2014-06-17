@@ -16,6 +16,12 @@
 #include "hpx/attributes.h"
 #include "libsync/lockable_ptr.h"
 
+/// ----------------------------------------------------------------------------
+/// This constant is used to determine when a set should be performed
+/// asynchronously, even if the set is actually local.
+/// ----------------------------------------------------------------------------
+static const int HPX_LCO_SET_ASYNC = 512;
+
 typedef struct lco_class lco_class_t;
 typedef SYNC_LOCKABLE_PTR(lco_class_t) lco_t;
 
@@ -25,10 +31,13 @@ typedef SYNC_LOCKABLE_PTR(lco_class_t) lco_t;
 /// All LCOs will implement this interface, which is accessible through the
 /// hpx_lco set of generic actions. Concrete classes may implement extended
 /// interfaces as well.
+///
+/// This interface is locally synchronous, but will be invoked externally
+/// through the set of hpx_lco_* operations that may use them asynchronously.
 /// ----------------------------------------------------------------------------
-typedef void (*lco_fini_t)(lco_t *lco, hpx_addr_t sync);
-typedef void (*lco_set_t)(lco_t *lco, int size, const void *value, hpx_addr_t sync);
-typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code, hpx_addr_t sync);
+typedef void (*lco_fini_t)(lco_t *lco);
+typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
+typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 
@@ -45,6 +54,25 @@ struct lco_class {
 /// ----------------------------------------------------------------------------
 /// LCO operations merely operate on the bits of an lco vtable pointer.
 /// ----------------------------------------------------------------------------
+
+/// ----------------------------------------------------------------------------
+/// Lock an LCO.
+///
+/// @param lco - the LCO to lock
+/// @returns   - the vtable pointer for the LCO, with any packed state removed
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL const lco_class_t *lco_lock(lco_t *lco) HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Unlock an LCO.
+///
+/// The calling thread must currently hold the LCO's lock.
+///
+/// @param lco - the LCO to unlock
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void lco_unlock(lco_t* lco) HPX_NON_NULL(1);
+
 
 /// ----------------------------------------------------------------------------
 /// Initialize an LCO vtable pointer.
@@ -123,10 +151,6 @@ HPX_INTERNAL void lco_reset_triggered(lco_t *lco);
 /// @returns   - non-zero if the triggered bit is set, zero otherwise
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL uintptr_t lco_get_triggered(const lco_t *lco);
-
-
-#define LCO_LOCK(lco) sync_lockable_ptr_lock((lockable_ptr_t*)lco)
-#define LCO_UNLOCK(lco) sync_lockable_ptr_unlock((lockable_ptr_t*)lco)
 
 
 #endif // LIBHPX_LCO_H
