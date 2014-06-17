@@ -43,19 +43,6 @@ typedef struct {
 static __thread _and_t *_free_ands = NULL;
 
 
-static void
-_lock(_and_t *and)
-{
-  sync_lockable_ptr_lock((lockable_ptr_t*)&and->vtable);
-}
-
-
-static void
-_unlock(_and_t *and)
-{
-  sync_lockable_ptr_unlock((lockable_ptr_t*)&and->vtable);
-}
-
 static hpx_status_t
 _wait(_and_t *and)
 {
@@ -89,7 +76,7 @@ _and_fini(lco_t *lco, hpx_addr_t sync)
     return;
 
   _and_t *and = (_and_t *)lco;
-  _lock(and);
+  LCO_LOCK(&and->vtable);
   _free(and);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
@@ -101,9 +88,9 @@ static void
 _and_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
 {
   _and_t *and = (_and_t *)lco;
-  _lock(and);
+  LCO_LOCK(&and->vtable);
   scheduler_signal(&and->barrier, code);
-  _unlock(and);
+  LCO_UNLOCK(&and->vtable);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -124,9 +111,9 @@ _and_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
   if (val > 1)
     return;
 
-  _lock(and);
+  LCO_LOCK(&and->vtable);
   scheduler_signal(&and->barrier, HPX_SUCCESS);
-  _unlock(and);
+  LCO_UNLOCK(&and->vtable);
 
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, NULL, 0, HPX_NULL);
@@ -136,9 +123,9 @@ _and_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
 static hpx_status_t
 _and_wait(lco_t *lco) {
   _and_t *and = (_and_t *)lco;
-  _lock(and);
+  LCO_LOCK(&and->vtable);
   hpx_status_t status = _wait(and);
-  _unlock(and);
+  LCO_UNLOCK(&and->vtable);
   return status;
 }
 
@@ -159,9 +146,9 @@ _and_init(_and_t *and, int64_t value) {
   if (value != 0)
     return;
 
-  _lock(and);
+  LCO_LOCK(&and->vtable);
   scheduler_signal(&and->barrier, HPX_SUCCESS);
-  _unlock(and);
+  LCO_UNLOCK(&and->vtable);
 }
 
 /// @}
