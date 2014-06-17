@@ -201,9 +201,16 @@ _future_wait(lco_t *lco)
 
 /// initialize the future
 static void
-_future_init(_future_t *f, int size) {
-  static const lco_class_t vtable = { _future_fini, _future_error, _future_set,
-                                      _future_get, _future_wait };
+_future_init(_future_t *f, int size)
+{
+  // the future vtable
+  static const lco_class_t vtable = {
+    _future_fini,
+    _future_error,
+    _future_set,
+    _future_get,
+    _future_wait
+  };
 
   bool inplace = (size <= sizeof(f->value));
   lco_init(&f->vtable, &vtable, inplace);
