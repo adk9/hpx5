@@ -366,11 +366,13 @@ hpx_addr_t
 hpx_gas_global_alloc(size_t n, uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
-  // Get a set of @p n contiguous block ids.
-  uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
-
   int ranks = here->ranks;
+
+  // Get a set of @p n contiguous block ids.
+  size_t nr = n + (n % ranks);
+  uint32_t base_id;
+  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &nr, sizeof(nr), &base_id, sizeof(base_id));
+
   uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
   uint32_t args[3] = {
     base_id,
@@ -392,6 +394,29 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
 }
 
 
+/// ----------------------------------------------------------------------------
+/// This is a non-collective, local call to allocate memory in the
+/// global address space that can be moved.
+/// ----------------------------------------------------------------------------
+hpx_addr_t
+hpx_gas_alloc(size_t n, uint32_t bytes) {
+  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+
+  // Get a set of @p n contiguous block ids.
+  uint32_t base_id;
+  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
+
+  uint32_t args[3] = { base_id, n, bytes };
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_call(HPX_HERE, locality_alloc_blocks, &args, sizeof(args), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+
+  // Return the base id to the caller.
+  return hpx_addr_init(0, base_id, bytes);
+}
+
+
 bool
 hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
   return btt_try_pin(here->btt, addr, local);
@@ -401,25 +426,6 @@ hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
 void
 hpx_gas_unpin(const hpx_addr_t addr) {
   btt_unpin(here->btt, addr);
-}
-
-
-/// ----------------------------------------------------------------------------
-/// Local allocation is done from our designated local block. Allocation is
-/// always done to 8 byte alignment. Here we're using a simple sbrk allocator
-/// with no free functionality for now.
-/// ----------------------------------------------------------------------------
-hpx_addr_t
-hpx_gas_alloc(size_t bytes) {
-  bytes += bytes % 8;
-  uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
-  if (UINT32_MAX - offset < bytes) {
-    dbg_error("exhausted local allocation limit with %lu-byte allocation.\n",
-              bytes);
-    hpx_abort();
-  }
-
-  return hpx_addr_add(HPX_HERE, offset);
 }
 
 

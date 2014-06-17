@@ -66,7 +66,7 @@ hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bytes);
 /// The returned address is local to the calling locality, and not distributed,
 /// but can be used from any locality.
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_gas_alloc(size_t bytes);
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bytes);
 
 
 /// ----------------------------------------------------------------------------
