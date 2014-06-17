@@ -27,6 +27,8 @@
 /// @param   alen - the length of @p args
 /// @param    out - address of  the result
 /// @param   olen - the length of the @p output
+/// @returns      - HPX_SUCCESS, or an error code if the action generated an
+///                 error that could not be handled remotely
 /// ----------------------------------------------------------------------------
 int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
                   size_t alen, void *out, size_t olen);
