@@ -20,6 +20,8 @@
 /// ----------------------------------------------------------------------------
 #include <assert.h>
 #include "hpx/hpx.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 
@@ -32,6 +34,10 @@ typedef struct {
   lco_t lco;
   unsigned count;
 } _sema_t;
+
+
+/// Freelist allocation for semaphores.
+static __thread _sema_t *_free = NULL;
 
 
 static void _delete(_sema_t *sema) {
@@ -133,13 +139,30 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 /// Allocate a semaphore LCO. This is synchronous.
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  hpx_addr_t sema = hpx_gas_alloc(sizeof(_sema_t));
-  _sema_t *s = NULL;
-  if (!hpx_gas_try_pin(sema, (void**)&s))
-    assert(false);
-  _init(s, count);
-  hpx_gas_unpin(sema);
-  return sema;
+  hpx_addr_t s;
+  _sema_t *sema = _free;
+  if (sema) {
+    _free = (_sema_t*)sema->lco.vtable;
+    s = HPX_HERE;
+    char *base;
+    if (!hpx_gas_try_pin(s, (void**)&base)) {
+      dbg_error("Could not translate semaphore block.\n");
+      hpx_abort();
+    }
+    s.offset = (char*)sema - base;
+    assert(s.offset < s.block_bytes);
+  }
+  else {
+    s = locality_malloc(sizeof(_sema_t));
+    if (!hpx_gas_try_pin(s, (void**)&sema)) {
+      dbg_error("Could not pin newly allocated semaphore.\n");
+      hpx_abort();
+    }
+  }
+
+  _init(sema, count);
+  hpx_gas_unpin(s);
+  return s;
 }
 
 
