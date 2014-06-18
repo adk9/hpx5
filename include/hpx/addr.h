@@ -18,12 +18,13 @@
 
 /// An HPX global address.
 ///
-/// HPX manages global addresses on a per-block basis. Blocks are allocated
-/// during hpx_alloc() or hpx_global_alloc(), and can be up to 2^32 bytes large.
+/// HPX manages global addresses on a per-block basis. Blocks are
+/// allocated during hpx_gas_alloc() or hpx_gas_global_alloc(), and can be
+/// up to 2^32 bytes large.
 typedef struct {
-  uint64_t offset;                              // absolute offset
-  uint32_t base_id;                             // base block id
-  uint32_t block_bytes;                         // number of bytes per block
+  uint64_t offset;                              /// absolute offset
+  uint32_t base_id;                             /// base block id
+  uint32_t block_bytes;                         /// number of bytes per block
 } hpx_addr_t;
 
 #define HPX_ADDR_INIT(OFFSET, BASE, BYTES)       \
