@@ -43,7 +43,10 @@ hpx_addr_t HPX_HERE = HPX_ADDR_INIT(0, 0, UINT32_MAX);
 
 /// Uses the well-known, low-order, block mappings to construct a "there
 /// address."
-hpx_addr_t HPX_THERE(int i) {
+hpx_addr_t HPX_THERE(hpx_locality_t i) {
+  assert(i != HPX_LOCALITY_ALL);
+  if (i == HPX_LOCALITY_NONE)
+    return HPX_NULL;
   hpx_addr_t addr = hpx_addr_init(0, i, UINT32_MAX);
   return addr;
 }

@@ -15,6 +15,7 @@
 
 #include "hpx/action.h"
 #include "hpx/addr.h"
+#include "hpx/process.h"
 
 /// @file
 /// @brief HPX parcel interface.
@@ -158,6 +159,16 @@ void *hpx_parcel_get_data(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 
+/// Get the process ID for a parcel.
+///
+/// @param p The parcel to query.
+///
+/// @returns The process identifier of the process that the parcel @p p
+//           belongs to.
+hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+
 /// Set the action for a parcel.
 ///
 /// @param      p The parcel we're updating.
@@ -201,6 +212,13 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
 /// @param data The data buffer to copy into the parcel.
 /// @param size The size of the @p data buffer.
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
+  HPX_NON_NULL(1);
+
+
+/// Set the PID for a parcel
+/// @param   p the parcel
+/// @param pid the process identifier (PID) to associate with this parcel
+void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid)
   HPX_NON_NULL(1);
 
 #endif

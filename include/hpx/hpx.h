@@ -31,6 +31,7 @@ extern "C" {
 #include "hpx/lco.h"
 #include "hpx/par.h"
 #include "hpx/parcel.h"
+#include "hpx/process.h"
 #include "hpx/rpc.h"
 #include "hpx/runtime.h"
 #include "hpx/thread.h"
