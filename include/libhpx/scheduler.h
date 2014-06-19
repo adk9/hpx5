@@ -211,4 +211,10 @@ HPX_INTERNAL void scheduler_signal_all(struct cvar *cvar)
 HPX_INTERNAL void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
   HPX_NON_NULL(1);
 
+
+/// ----------------------------------------------------------------------------
+/// Get the parcel bound to the current executing thread.
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL hpx_parcel_t *scheduler_current_parcel(void);
+
 #endif // LIBHPX_SCHEDULER_H

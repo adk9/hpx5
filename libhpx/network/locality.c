@@ -133,7 +133,7 @@ static int _call_cont_action(locality_cont_args_t *args) {
   if (!hpx_gas_try_pin(target, NULL))
     return HPX_RESEND;
 
-  uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t) - sizeof(hpx_action_t);
+  uint32_t size = hpx_thread_current_args_size() - sizeof(args->status) - sizeof(args->action);
   // handle status here: args->status;
   return hpx_call(target, args->action, args->data, size, HPX_NULL);
 }
