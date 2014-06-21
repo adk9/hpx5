@@ -22,12 +22,3 @@ libsystem_la_CFLAGS   += @HWLOC_CFLAGS@
 libsystem_la_LIBADD   += @HWLOC_LIBS@
 endif
 
-if HAVE_CRYPTO
-libsystem_la_CFLAGS   += @CRYPTO_CFLAGS@
-libsystem_la_LIBADD   += @CRYPTO_LIBS@
-endif
-
-if HAVE_GLIB
-libsystem_la_CFLAGS   += @GLIB_CFLAGS@
-libsystem_la_LIBADD   += @GLIB_LIBS@
-endif

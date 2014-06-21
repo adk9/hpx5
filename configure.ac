@@ -136,8 +136,6 @@ AM_CONDITIONAL([HAVE_FLOODLIGHT], [test "xwith_jansson" != xno -a "x$with_curl" 
 # ---------------------------------------------------------------------------
 HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
-HPX_WITH_PKG([crypto],[libcrypto],[use libcrypto for string hashing],[no],[CRYPTO])
-HPX_WITH_PKG([glib],[glib-2.0],[build with glib-2.0],[no],[GLIB])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
@@ -241,12 +239,6 @@ AS_IF([test "x$with_photon" != xno],
 AS_IF([test "x$with_portals" != xno],
   [networks="Portals $networks"],
   [])
-AS_IF([test "x$with_crypto" != xno],
-  [hashing="$with_crypto"],
-  [])
-AS_IF([test "x$with_glib" != xno],
-  [hashing="$with_glib"],
-  [])
 
 echo ""
 echo "================================================"
@@ -254,7 +246,6 @@ echo " HPX Build Configuration"
 echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
-echo "         String Hashing : $hashing"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
