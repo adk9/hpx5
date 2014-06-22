@@ -133,10 +133,10 @@ btt_class_t *btt_pgas_new(void) {
 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;
-  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | MAP_NONBLOCK;
+  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   btt->table = mmap(NULL, _TABLE_SIZE, prot, flags, -1, 0);
   if (btt->table == MAP_FAILED) {
-    dbg_error("could not mmap PGAS block stranslation table, "
+    dbg_error("could not mmap PGAS block-translation-table, "
               "defaulting to HPX_GAS_NOGLOBAL.\n");
     free(btt);
     return btt_new(HPX_GAS_NOGLOBAL);
