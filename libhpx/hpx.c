@@ -80,7 +80,7 @@ static int _cleanup(locality_t *l, int code) {
 
 static void *_map_local(uint32_t bytes) {
   int prot = PROT_READ | PROT_WRITE;
-  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | MAP_NONBLOCK;
+  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   return mmap(NULL, bytes, prot, flags, -1, 0);
 }
 
