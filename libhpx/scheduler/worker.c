@@ -76,7 +76,6 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  cvar_node_t   *cvar_nodes;                    // free cvar nodes
   _envelope_t    *envelopes;                    // free envelopes
   chase_lev_ws_deque_t work;                    // my work
   _mailbox_t          inbox;                    // envelopes sent to me
@@ -90,7 +89,6 @@ static __thread struct worker {
   .backoff    = 0,
   .sp         = NULL,
   .current    = NULL,
-  .cvar_nodes = NULL,
   .envelopes  = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
@@ -99,25 +97,8 @@ static __thread struct worker {
 };
 
 
-static cvar_node_t *_acquire_cvar_node(worker_t *w) {
-  cvar_node_t *n = w->cvar_nodes;
-  if (n)
-    w->cvar_nodes = n->next;
-  else
-    n = malloc(sizeof(*n));
-  return n;
-}
-
-
-static void _release_cvar_node(worker_t *w, cvar_node_t *n) {
-  n->next = w->cvar_nodes;
-  n->data = 0;
-  n->tid = -1;
-  w->cvar_nodes = n;
-}
-
-
-static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
+static _envelope_t *
+_enclose(worker_t *w, hpx_parcel_t *p) {
   _envelope_t *envelope = w->envelopes;
   if (envelope != NULL)
     w->envelopes = w->envelopes->next;
@@ -548,7 +529,8 @@ void hpx_thread_yield(void) {
 /// A transfer continuation that unlocks a lock.
 /// ----------------------------------------------------------------------------
 static int
-_unlock(hpx_parcel_t *to, void *sp, void *env) {
+_unlock(hpx_parcel_t *to, void *sp, void *env)
+{
   lockable_ptr_t *lock = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
@@ -558,54 +540,70 @@ _unlock(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-/// Waits for a condition to be signaled.
-///
-/// @precondition The calling thread must hold @p lco's lock.
 hpx_status_t
-scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
-  // 0. figure out who we're transferring to
-  hpx_parcel_t *to = _schedule(true, NULL);
-
-  // 1. get a cvar node
-  cvar_node_t *n = _acquire_cvar_node(&self);
-
-  // 2. figure out what affinity to use when we enqueue the current thread,
-  //    record the current parcel, and push the node onto the cvar
+scheduler_wait(lockable_ptr_t *lock, cvar_t *condition)
+{
+  // push the current thread onto the condition variable---no lost-update
+  // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self.current);
-  if (0 <= thread->affinity)
-    n->tid = thread->affinity;
-  else
-    n->tid = self.id;
+  hpx_status_t status = cvar_push_thread(condition, thread);
 
-  n->data = self.current;
-  n->next = condition->top;
-  condition->top = n;
-
-  // 3. the unlock continuation will release the LCO's lock
-  thread_transfer(to, _unlock, (void*)lock);
-
-  // 4. reacquire the lock before we return
-  sync_lockable_ptr_lock(lock);
-
-  // 5. return the status of the condition variable
-  return condition->status;
-}
-
-
-/// Signals a condition.
-///
-/// @precondition The calling thread must hold @p lco's lock.
-void
-scheduler_signal(cvar_t *cvar, hpx_status_t status) {
-  for (cvar_node_t *i = cvar->top; i != NULL; i = cvar->top = cvar->top->next) {
-    if (i->tid != self.id)
-      _send_mail(i->tid, i->data);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, i->data);
-    _release_cvar_node(&self, i);
+  // if we successfully pushed, then do a transfer away from this thread,
+  // setting the soft affinity so that the thread is woken up in the right
+  // place, and releasing the lock across the wait
+  if (status == HPX_SUCCESS) {
+    thread->affinity = (thread->affinity >= 0) ? thread->affinity : self.id;
+    hpx_parcel_t *to = _schedule(true, NULL);
+    thread_transfer(to, _unlock, (void*)lock);
+    sync_lockable_ptr_lock(lock);
+    status = cvar_get_error(condition);
   }
-  cvar->status = status;
+  return status;
 }
+
+
+void
+scheduler_signal(cvar_t *cvar)
+{
+  ustack_t *thread = cvar_pop_thread(cvar);
+  if (!thread)
+    return;
+
+  if (thread->wait_affinity != self.id)
+    _send_mail(thread->wait_affinity, thread->parcel);
+  else
+    sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
+}
+
+
+void
+scheduler_signal_all(struct cvar *cvar)
+{
+  ustack_t *thread = cvar_pop_all(cvar);
+  while (thread) {
+    if (thread->wait_affinity != self.id)
+      _send_mail(thread->wait_affinity, thread->parcel);
+    else
+      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
+    thread = thread->next;
+  }
+}
+
+
+void
+scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
+{
+  ustack_t *thread = cvar_set_error(cvar, code);
+  while (thread) {
+    if (thread->wait_affinity != self.id)
+      _send_mail(thread->wait_affinity, thread->parcel);
+    else
+      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
+    thread = thread->next;
+  }
+}
+
+
 
 
 static void

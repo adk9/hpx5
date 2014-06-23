@@ -50,12 +50,12 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 /// Set an LCO, optionally with data.
 ///
 /// @param   lco - the LCO to set
-/// @param value - the address of the value to set
 /// @param  size - the size of the data
+/// @param value - the address of the value to set
 /// @param lsync - an LCO to signal local completion (HPX_NULL == don't wait)
 /// @param rsync - an LCO to signal remote completion (HPX_NULL == don't wait)
 /// ----------------------------------------------------------------------------
-void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t lsync,
+void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
 
 
@@ -65,12 +65,8 @@ void hpx_lco_set(hpx_addr_t lco, const void *value, int size, hpx_addr_t lsync,
 /// The LCO blocks the caller until an LCO set operation triggers the LCO. Each
 /// LCO type has its own semantics for the state under which this occurs.
 ///
-/// If the return status is HPX_LCO_ERROR then the LCO was triggered by
-/// hpx_lco_error() rather than hpx_lco_set().
-///
 /// @param lco - the LCO we're processing
-/// @returns   - the LCO's status, HPX_SUCCESS or the code passed to
-///              hpx_lco_error()
+/// @returns   - HPX_SUCCESS or the code passed to hpx_lco_error()
 /// ----------------------------------------------------------------------------
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
@@ -86,12 +82,11 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// to by @p out will not be inspected.
 ///
 /// @param      lco - the LCO we're processing
-/// @param[out] out - the output location (may be null)
 /// @param     size - the size of the data
-/// @returns        - the LCO's status, HPX_SUCCESS or the code passed to
-///                   hpx_lco_error()
+/// @param[out] out - the output location (may be null)
+/// @returns        - HPX_SUCCESS or the code passed to hpx_lco_error()
 /// ----------------------------------------------------------------------------
-hpx_status_t hpx_lco_get(hpx_addr_t lco, void *value, int size);
+hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 
 
 /// ----------------------------------------------------------------------------
@@ -174,10 +169,10 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 /// ----------------------------------------------------------------------------
 /// Create an AND gate.
 ///
-/// @param inputs - the number of inputs to the and
+/// @param inputs - the number of inputs to the and (must be >= 0)
 /// @returns      - the global address of the and gate
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_lco_and_new(uint64_t inputs);
+hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 
 /// ----------------------------------------------------------------------------
 /// Join an AND lco.
@@ -185,7 +180,7 @@ hpx_addr_t hpx_lco_and_new(uint64_t inputs);
 /// @param   and - the LCO's global address
 /// @param rsync - an LCO to signal remote completion
 /// ----------------------------------------------------------------------------
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync);
 
 /// @}
 
@@ -203,41 +198,113 @@ void hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync);
 
 /// ----------------------------------------------------------------------------
 /// Channels.
+///
+/// The channel LCO approximates an MPI channel.
+///
+/// The channel send operation creates at least one copy of the sent buffer,
+/// possibly asynchronously, and the channel recv operation returns a pointer to
+/// this buffer (any intermediate copies are managed by the runtime).
 /// ----------------------------------------------------------------------------
 hpx_addr_t hpx_lco_chan_new(void);
-void hpx_lco_chan_send(hpx_addr_t chan, const void *value, int size, hpx_addr_t sync);
-void *hpx_lco_chan_recv(hpx_addr_t chan, int size);
+
+
+/// ----------------------------------------------------------------------------
+/// This sends a buffer.
+///
+/// Sending the @p buffer entails creating at least one copy of the buffer. The
+/// @p lsync LCO will be set when the @p buffer can be safely written to. The @p
+/// rsync LCO can be used to provide an ordered channel---if every send operation
+/// waits on remote completion before sending on the same channel again then the
+/// receives from the channel will occur in that same order. No ordering
+/// guarantees are supplied between channels, or given an out-of-band
+/// communication mechanism, other than those that can be deduced through
+/// waiting on @p rsync.
+///
+/// The send operation is equivalent to hpx_lco_set() for the channel.
+/// ----------------------------------------------------------------------------
+void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *buffer,
+                       hpx_addr_t lsync, hpx_addr_t rsync);
+
+
+/// ----------------------------------------------------------------------------
+/// Receive a buffer from a channel.
+///
+/// This is a blocking call. The user is responsible for freeing the returned
+/// buffer.
+///
+/// @param[in]    chan - the global address of the channel to receive from
+/// @param[out]   size - the size of the received buffer
+/// @param[out] buffer - the address of the received buffer
+/// @returns           - HPX_SUCCESS or an error code
+/// ----------------------------------------------------------------------------
+hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer);
+
+
+/// ----------------------------------------------------------------------------
+/// Probe a single channel to attempt to read.
+///
+/// The hpx_lco_chan_recv() interface blocks the caller until a buffer is
+/// available. This hpx_lco_chan_try_recv() operation will instead return
+/// HPX_LCO_CHAN_EMPTY to indicate that no buffer was available.
+///
+/// @param[in]    chan - the global address of the channel
+/// @param[out]   size - the size of the received buffer, if there was one
+/// @param[out] buffer - the received buffer, if there was one
+/// @returns           - HPX_SUCCESS if a buffer was received,
+///                      HPX_LCO_CHAN_EMPY if there was no buffer available
+///                      HPX_LCO_ERROR if the channel has an error
+/// ----------------------------------------------------------------------------
+hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer);
+
+
+/// ----------------------------------------------------------------------------
+/// Receive from one of a set of channels.
+///
+/// This is a blocking call, and the user is responsible for freeing the
+/// returned buffer. The return value corresponds to the error condition for the
+/// channel that we matched on, if it is not HPX_SUCCESS, then @p index
+/// indicates the channel, but the @p size and @p buffer should not be
+/// inspected.
+///
+/// @param[in]        n - the number of channels we're probing
+/// @param[in] channels - an array of channels to probe
+/// @param[out]   index - the index of the channel that we matched
+/// @param[out]    size - the size of the buffer that we matched
+/// @param[out]     out - the buffer that we matched
+/// @returns            - HPX_SUCCESS or an error code
+/// ----------------------------------------------------------------------------
+hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[],
+                                       int *index, int *size, void **out);
 
 hpx_addr_t hpx_lco_chan_array_new(int n, int block_size);
 hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
-hpx_status_t hpx_lco_chan_array_select(hpx_addr_t chans[], int n, int size, int *index,
-                                       void **out);
 
 /// ----------------------------------------------------------------------------
 /// Allocate a new generation counter.
 ///
 /// A generation counter allows an application programmer to efficiently wait
-/// for a counter. The @p depth indicates a bound on the typical number of
+/// for a counter. The @p ninplace indicates a bound on the typical number of
 /// generations that are explicitly active---it does not impact correctness,
 /// merely performance.
 ///
 /// As an example, if there are typically three generations active (i.e.,
 /// threads may exist for up to three generations ahead of the current
-/// generation), then depth should be set to three. If it is set to two, then
-/// the runtime will perform some extra work testing threads that should not be
-/// tested.
+/// generation), then @p ninplace should be set to three. If it is set to two,
+/// then the runtime will perform some extra work testing threads that should
+/// not be tested.
 ///
-/// @param depth - the typical number of active generations
+/// @param ninplace - the typical number of active generations
 /// ----------------------------------------------------------------------------
-hpx_addr_t hpx_lco_gencount_new(unsigned int depth);
+hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace);
 
 /// ----------------------------------------------------------------------------
 /// Increment the generation counter.
 ///
 /// @param gencnt - the counter to increment
+/// @param  rsync - an LCO to set to detect remote completion
 /// ----------------------------------------------------------------------------
-void hpx_lco_gencount_inc(hpx_addr_t gencnt);
+void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
 
 /// ----------------------------------------------------------------------------
 /// Wait for the generation counter to reach a certain value.
@@ -254,7 +321,8 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt);
 ///
 /// @param gencnt - the counter to wait for
 /// @param    gen - the generation to wait for
+/// @returns      - HPX_SUCCESS or an error code
 /// ----------------------------------------------------------------------------
-void hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
+hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 
 #endif

@@ -23,7 +23,11 @@
 static const int HPX_LCO_SET_ASYNC = 512;
 
 typedef struct lco_class lco_class_t;
-typedef SYNC_LOCKABLE_PTR(lco_class_t) lco_t;
+typedef union {
+  lockable_ptr_t       lock;
+  const lco_class_t *vtable;
+  uintptr_t            bits;
+} lco_t;
 
 /// ----------------------------------------------------------------------------
 /// The LCO abstract class interface.

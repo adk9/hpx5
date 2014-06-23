@@ -30,14 +30,10 @@
 /// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
-  lco_t     vtable;
-  cvar_t available;
-  unsigned   count;
+  lco_t       lco;
+  cvar_t    avail;
+  uintptr_t count;
 } _sema_t;
-
-
-static hpx_action_t _sema_p_action = 0;
-static hpx_action_t _sema_v_action = 0;
 
 
 // Freelist
@@ -47,80 +43,77 @@ static __thread _sema_t *_free_semas = NULL;
 static void
 _free(_sema_t *sema)
 {
-  // repurpose vtable as a freelist "next" pointer
-  sema->vtable = (lco_class_t*)_free_semas;
+  // repurpose count as a freelist "next" pointer
+  sema->count = (uintptr_t)_free_semas;
   _free_semas = sema;
 }
 
 
 static void
-_sema_fini(lco_t *lco, hpx_addr_t sync)
+_sema_fini(lco_t *lco)
 {
   if (!lco)
     return;
 
   _sema_t *sema = (_sema_t *)lco;
-  LCO_LOCK(&sema->vtable);
+  lco_lock(&sema->lco);
   _free(sema);
-
-  if (!hpx_addr_eq(sync, HPX_NULL))
-    hpx_lco_set(sync, NULL, 0, HPX_NULL);
 }
 
 
 static void
-_sema_error(lco_t *lco, hpx_status_t code, hpx_addr_t sync)
+_sema_error(lco_t *lco, hpx_status_t code)
 {
   _sema_t *sema = (_sema_t *)lco;
-  LCO_LOCK(&sema->vtable);
-  scheduler_signal(&sema->available, code);
-  LCO_UNLOCK(&sema->vtable);
-
-  if (!hpx_addr_eq(sync, HPX_NULL))
-    hpx_lco_set(sync, NULL, 0, HPX_NULL);
+  lco_lock(&sema->lco);
+  scheduler_signal_error(&sema->avail, code);
+  lco_unlock(&sema->lco);
 }
 
 
 /// Set is equivalent to returning a resource to the semaphore.
 static void
-_sema_set(lco_t *lco, int size, const void *from, hpx_addr_t sync)
+_sema_set(lco_t *lco, int size, const void *from)
 {
   _sema_t *sema = (_sema_t *)lco;
-  LCO_LOCK(&sema->vtable);
+  lco_lock(&sema->lco);
   if (sema->count++ == 0) {
-    hpx_status_t status = sema->available.status;
-    scheduler_signal(&sema->available, status);
-  }
-  LCO_UNLOCK(&sema->vtable);
-}
-
-
-/// Get is equivalent to acquiring a resource from the semaphore.
-static hpx_status_t
-_sema_get(lco_t *lco, int size, void *out) {
-  hpx_status_t status = HPX_SUCCESS;
-  _sema_t *sema = (_sema_t *)lco;
-  LCO_LOCK(&sema->vtable);
-
-  // wait until the count is non-zero---MESA semantics mean we re-read count
-  unsigned count = sema->count;
-  while (count == 0 && status == HPX_SUCCESS) {
-    status = scheduler_wait((lockable_ptr_t*)sema, &sema->available);
-    count = sema->count;
+    // only signal one sleeping thread since we're only returning one resource,
+    // waking everyone up is inefficient
+    scheduler_signal(&sema->avail);
   }
 
-  // reduce the count
-  if (status == HPX_SUCCESS)
-    sema->count = count - 1;
-
-  LCO_UNLOCK(&sema->vtable);
-  return status;
+  lco_unlock(&sema->lco);
 }
 
 
 static hpx_status_t
 _sema_wait(lco_t *lco) {
-  return _sema_get(lco, 0, NULL);
+  hpx_status_t status = HPX_SUCCESS;
+  _sema_t *sema = (_sema_t *)lco;
+  lco_lock(&sema->lco);
+
+  // wait until the count is non-zero, use while here and re-read count because
+  // our condition variables have MESA semantics
+  unsigned count = sema->count;
+  while (count == 0 && status == HPX_SUCCESS) {
+    status = scheduler_wait(&sema->lco.lock, &sema->avail);
+    count = sema->count;
+  }
+
+  // reduce the count, unless there was an error
+  if (status == HPX_SUCCESS)
+    sema->count = count - 1;
+
+  lco_unlock(&sema->lco);
+  return status;
+}
+
+
+static hpx_status_t
+_sema_get(lco_t *lco, int size, void *out) {
+  assert(size == 0);
+  return _sema_wait(lco);
 }
 
 
@@ -136,34 +129,9 @@ _sema_init(_sema_t *sema, unsigned count)
     _sema_wait
   };
 
-  lco_init(&sema->vtable, &vtable, 0);
+  lco_init(&sema->lco, &vtable, 0);
+  cvar_reset(&sema->avail);
   sema->count = count;
-}
-
-
-static int
-_sema_p(void *args)
-{
-  hpx_addr_t target = hpx_thread_current_target();
-  hpx_lco_sema_p(target);
-  return HPX_SUCCESS;
-}
-
-
-static int
-_sema_v(void *args)
-{
-  hpx_addr_t target = hpx_thread_current_target();
-  hpx_lco_sema_v(target);
-  return HPX_SUCCESS;
-}
-
-
-static void HPX_CONSTRUCTOR
-_initialize_actions(void)
-{
-  _sema_p_action = HPX_REGISTER_ACTION(_sema_p);
-  _sema_v_action = HPX_REGISTER_ACTION(_sema_v);
 }
 
 /// @}
@@ -178,7 +146,7 @@ hpx_lco_sema_new(unsigned count)
   hpx_addr_t sema;
   _sema_t *local = _free_semas;
   if (local) {
-    _free_semas = (_sema_t *)local->vtable;
+    _free_semas = (_sema_t *)local->count;
     sema = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(sema, (void**)&base)) {
@@ -215,14 +183,7 @@ hpx_lco_sema_new(unsigned count)
 hpx_status_t
 hpx_lco_sema_p(hpx_addr_t sema)
 {
-  lco_t *s;
-  if (hpx_gas_try_pin(sema, (void**)&s)) {
-    hpx_status_t status = _sema_get(s, 0, NULL);
-    hpx_gas_unpin(sema);
-    return status;
-  }
-
-  return hpx_call_sync(sema, _sema_p_action, NULL, 0, NULL, 0);
+  return hpx_lco_get(sema, 0, NULL);
 }
 
 
@@ -238,12 +199,5 @@ hpx_lco_sema_p(hpx_addr_t sema)
 void
 hpx_lco_sema_v(hpx_addr_t sema)
 {
-  lco_t *s;
-  if (hpx_gas_try_pin(sema, (void**)&s)) {
-    _sema_set(s, 0, NULL, HPX_NULL);
-    hpx_gas_unpin(sema);
-    return;
-  }
-
-  hpx_call_async(sema, _sema_v_action, NULL, 0, HPX_NULL, HPX_NULL);
+  hpx_lco_set(sema, 0, NULL, HPX_NULL, HPX_NULL);
 }

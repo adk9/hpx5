@@ -45,7 +45,7 @@ hpx_action_t hpx_lco_set_action = 0;
 static const lco_class_t *
 _lco_class(lco_t *lco)
 {
-  const lco_class_t *class = sync_lockable_ptr_read((lockable_ptr_t*)lco);
+  const lco_class_t *class = sync_lockable_ptr_read(&lco->lock);
   uintptr_t bits = (uintptr_t)class;
   bits = bits & ~_STATE_MASK;
   return (lco_class_t*)bits;
@@ -156,75 +156,63 @@ _initialize_actions(void)
 const lco_class_t *
 lco_lock(lco_t *lco)
 {
-  return sync_lockable_ptr_lock((lockable_ptr_t*)lco);
+  return sync_lockable_ptr_lock(&lco->lock);
 }
 
 
 void
 lco_unlock(lco_t *lco)
 {
-  sync_lockable_ptr_unlock((lockable_ptr_t*)lco);
+  sync_lockable_ptr_unlock(&lco->lock);
 }
 
 
 void
 lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
 {
-  uintptr_t bits = (uintptr_t)class;
-  bits = bits | ((user) ? 0 : _USER_MASK);
-  *lco = (const lco_class_t *)bits;
+  lco->bits = ((user) ? 0 : _USER_MASK);
 }
 
 
 void
 lco_set_user(lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  bits = bits | _USER_MASK;
-  *lco = (const lco_class_t *)bits;
+  lco->bits |= _USER_MASK;
 }
 
 
 void
 lco_reset_user(lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  bits = bits & ~_USER_MASK;
-  *lco = (const lco_class_t*)bits;
+  lco->bits &= ~_USER_MASK;
 }
 
 
 uintptr_t
 lco_get_user(const lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  return bits & _USER_MASK;
+  return lco->bits & _USER_MASK;
 }
 
 
 void
 lco_set_triggered(lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  bits = bits | _TRIGGERED_MASK;
-  *lco = (const lco_class_t *)bits;
+  lco->bits |= _TRIGGERED_MASK;
 }
 
 
 void
 lco_reset_triggered(lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  bits = bits & ~_TRIGGERED_MASK;
-  *lco = (const lco_class_t*)bits;
+  lco->bits &= ~_TRIGGERED_MASK;
 }
 
 
 uintptr_t
 lco_get_triggered(const lco_t *lco)
 {
-  uintptr_t bits = (uintptr_t)*lco;
-  return bits & _TRIGGERED_MASK;
+  return lco->bits & _TRIGGERED_MASK;
 }
 
 
@@ -240,7 +228,7 @@ hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
   _lco_class(lco)->on_fini(lco);
   hpx_gas_unpin(target);
   if (!hpx_addr_eq(rsync, HPX_NULL))
-    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
@@ -257,12 +245,12 @@ hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync)
   _lco_class(lco)->on_error(lco, code);
   hpx_gas_unpin(target);
   if (!hpx_addr_eq(rsync, HPX_NULL))
-    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
 void
-hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t lsync,
+hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
             hpx_addr_t rsync)
 {
   lco_t *lco = NULL;
@@ -275,9 +263,9 @@ hpx_lco_set(hpx_addr_t target, const void *value, int size, hpx_addr_t lsync,
   _lco_class(lco)->on_set(lco, size, value);
   hpx_gas_unpin(target);
   if (!hpx_addr_eq(lsync, HPX_NULL))
-    hpx_lco_set(lsync, NULL, 0, HPX_NULL, HPX_NULL);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   if (!hpx_addr_eq(rsync, HPX_NULL))
-    hpx_lco_set(rsync, NULL, 0, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
@@ -298,7 +286,7 @@ hpx_lco_wait(hpx_addr_t target)
 /// If the LCO is local, then we use the local get functionality.
 /// ----------------------------------------------------------------------------
 hpx_status_t
-hpx_lco_get(hpx_addr_t target, void *value, int size)
+hpx_lco_get(hpx_addr_t target, int size, void *value)
 {
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco))
@@ -389,7 +377,7 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       hpx_gas_unpin(lcos[i]);
     }
     else {
-      status = hpx_lco_get(remotes[i], values[i], sizes[i]);
+      status = hpx_lco_get(remotes[i], sizes[i], values[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
     if (status != HPX_SUCCESS)

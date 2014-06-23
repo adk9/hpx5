@@ -166,9 +166,9 @@ HPX_INTERNAL void scheduler_yield(void);
 ///
 /// @param  lco - the lco containing the condition
 /// @param cvar - the LCO condition we'd like to wait for
+/// @returns    - HPX_SUCCESS or HPX_LCO_ERROR
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_status_t scheduler_wait(lockable_ptr_t *lock,
-                                         struct cvar *cond)
+HPX_INTERNAL hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
   HPX_NON_NULL(1, 2);
 
 
@@ -176,14 +176,40 @@ HPX_INTERNAL hpx_status_t scheduler_wait(lockable_ptr_t *lock,
 /// Signal a condition.
 ///
 /// The calling thread must hold the lock on whatever LCO is protecting the
-/// condition. This call is synchronous and all of the waiting threads will be
-/// rescheduled (i.e., MESA semantics).
+/// condition. This call is synchronous (MESA style) and one waiting thread will
+/// be woken up.
 ///
 /// @param   cvar - the LCO condition we'd like to signal
-/// @param status - the status we're signaling
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal(struct cvar *cond, hpx_status_t status)
+HPX_INTERNAL void scheduler_signal(struct cvar *cond)
   HPX_NON_NULL(1);
 
+
+/// ----------------------------------------------------------------------------
+/// Signal a condition.
+///
+/// The calling thread must hold the lock on whatever LCO is protecting the
+/// condition. This call is synchronous (MESA style) and all waiting threads
+/// will be woken up.
+///
+/// @param   cvar - the LCO condition we'd like to signal
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_signal_all(struct cvar *cvar)
+  HPX_NON_NULL(1);
+
+
+/// ----------------------------------------------------------------------------
+/// Signal an error condition.
+///
+/// The calling thread must hold the lock on whatever LCO is protecting the
+/// condition. This call is synchronous (MESA style) and all of the waiting
+/// threads will be woken up, with the return value of HPX_LCO_ERROR. The
+/// user-supplied error can be retrieved from the condition.
+///
+/// @param cvar - the LCO condition we'd like to signal
+/// @param code - the error code to set in the condition
+/// ----------------------------------------------------------------------------
+HPX_INTERNAL void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_H

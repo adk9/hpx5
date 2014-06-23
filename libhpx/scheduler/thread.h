@@ -24,10 +24,13 @@
 /// ----------------------------------------------------------------------------
 /// ----------------------------------------------------------------------------
 typedef struct ustack {
-  void      *sp;
-  int    tls_id;
-  int  affinity;
-  char  stack[];
+  void             *sp;                         // checkpointed stack pointer
+  hpx_parcel_t *parcel;                         // the progenitor parcel
+  struct ustack  *next;                         // freelists and condition vars
+  int           tls_id;
+  short       affinity;                         // set by user
+  short  wait_affinity;                         // set during scheduler_wait()
+  char         stack[];
 } ustack_t;
 
 
