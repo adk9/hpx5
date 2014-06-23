@@ -100,3 +100,9 @@ cvar_pop_all(cvar_t *cvar)
   cvar->top = NULL;
   return thread;
 }
+
+void
+cvar_reset(cvar_t *cvar)
+{
+  cvar->top = NULL;
+}
