@@ -47,6 +47,8 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
 /// @param   args - the argument data for @p action
 /// @param    len - the length of @p args
 /// @param result - an address of an LCO to trigger with the result
+/// @returns      - HPX_SUCCESS, or an error code if there was a problem locally
+///                 during the hpx_call invocation
 /// ----------------------------------------------------------------------------
 int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
              size_t len, hpx_addr_t result);
@@ -62,13 +64,15 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 /// and is free to reuse. If @p args_reuse is not HPX_NULL, it is set
 /// when @p args is safe to be reused or freed.
 ///
-/// @param   addr     - the address that defines where the action is executed
-/// @param action     - the action to perform
-/// @param   args     - the argument data for @p action
-/// @param    len     - the length of @p args
+/// @param       addr - the address that defines where the action is executed
+/// @param     action - the action to perform
+/// @param       args - the argument data for @p action
+/// @param        len - the length of @p args
 /// @param args_reuse - an address of an LCO to trigger when the
 ///                     argument buffer is safe to be reused (local completion)
-/// @param result     - an address of an LCO to trigger with the result
+/// @param     result - an address of an LCO to trigger with the result
+/// @returns          - HPX_SUCCESS, or an error code if there was a problem
+///                     locally during the hpx_call_async invocation
 /// ----------------------------------------------------------------------------
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
                    size_t len, hpx_addr_t args_reuse, hpx_addr_t result);
