@@ -37,10 +37,11 @@ static int _allreduce_action(hpx_addr_t *args) {
 
   double buf = rand();
   hpx_addr_t root = hpx_lco_chan_array_at(channels, 0);
-  hpx_lco_chan_send(root, &buf, sizeof(buf), HPX_NULL);
+  hpx_lco_chan_send(root, sizeof(buf), &buf, HPX_NULL, HPX_NULL);
 
   hpx_addr_t chan = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
-  double *result = hpx_lco_chan_recv(chan, sizeof(*result));
+  double *result;
+  hpx_lco_chan_recv(chan, NULL, (void**)&result);
   assert(result);
   printf("rank %d (in %f, out %f).\n", HPX_LOCALITY_ID, buf, *result);
   free(result);
@@ -63,7 +64,7 @@ static int _main_action(void *args) {
     rank = hpx_lco_chan_array_at(channels, k);
     hpx_call(rank, _allreduce, &channels, sizeof(channels), and);
   }
-  
+
   hpx_time_t t1 = hpx_time_now();
 
   // receive from each rank.
@@ -72,7 +73,7 @@ static int _main_action(void *args) {
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
-    buf = hpx_lco_chan_recv(rank, sizeof(*buf));
+    hpx_lco_chan_recv(rank, NULL, (void**)&buf);
     accum += *buf; // reduce
     free(buf);
   }
@@ -82,7 +83,7 @@ static int _main_action(void *args) {
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, k);
-    hpx_lco_chan_send(rank, &accum, sizeof(accum), HPX_NULL);
+    hpx_lco_chan_send(rank, sizeof(accum), &accum, HPX_NULL, HPX_NULL);
   }
 
   // wait for receivers to finish.
@@ -92,7 +93,7 @@ static int _main_action(void *args) {
 
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
-  
+
   hpx_shutdown(0);
 }
 
