@@ -54,10 +54,11 @@ static int _pinger_action(hpx_addr_t *chans) {
         start = hpx_time_now();
 
       hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_lco_chan_send(chans[0], buffer, size, done);
+      hpx_lco_chan_send(chans[0], size, buffer, done, HPX_NULL);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
-      void *rbuf = hpx_lco_chan_recv(chans[1], size);
+      void *rbuf;
+      hpx_lco_chan_recv(chans[1], NULL, &rbuf);
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
@@ -75,10 +76,11 @@ static int _ponger_action(hpx_addr_t *chans) {
     }
 
     for (int i = 0; i < loop + skip; i++) {
-      void *rbuf = hpx_lco_chan_recv(chans[0], size);
+      void *rbuf;
+      hpx_lco_chan_recv(chans[0], NULL, &rbuf);
       free(rbuf);
       hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_lco_chan_send(chans[1], buffer, size, done);
+      hpx_lco_chan_send(chans[1], size, buffer, done, HPX_NULL);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
     }

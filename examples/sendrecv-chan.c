@@ -87,7 +87,8 @@ static int _receiver_action(hpx_addr_t *args) {
       // 106 microseconds
       int delay = 10000;
       hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
-      double *buf = hpx_lco_chan_recv(chan, sizeof(*buf));
+      double *buf;
+      hpx_lco_chan_recv(chan, NULL, (void**)&buf);
       assert(buf);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
@@ -117,8 +118,9 @@ static int _main_action(void *args) {
 
     hpx_time_t t1 = hpx_time_now();
     hpx_addr_t sfut = hpx_lco_and_new(avg);
+    // sfut just controls local completion, these sends may occur out-of-order
     for (int k=0; k<avg; ++k)
-      hpx_lco_chan_send(chan, buf, sizeof(double)*counts[i], sfut);
+      hpx_lco_chan_send(chan, sizeof(double)*counts[i], buf, sfut, HPX_NULL);
     hpx_lco_wait(sfut);
     hpx_lco_delete(sfut, HPX_NULL);
     double elapsed = hpx_time_elapsed_ms(t1);
