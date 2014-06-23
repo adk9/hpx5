@@ -238,10 +238,13 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
 }
 
 /// A RPC call with a user-specified continuation action.
-int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                               const void *args, size_t len,
-                               hpx_addr_t c_target, hpx_action_t c_action) {
-  hpx_parcel_t *p = parcel_create(addr, action, (void*)args, len, c_target, c_action, true);
+int
+hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                           const void *args, size_t len,
+                           hpx_addr_t c_target, hpx_action_t c_action)
+{
+  hpx_parcel_t *p = parcel_create(addr, action, (void*)args, len, c_target,
+                                  c_action, true);
   if (!p)
     return dbg_error("hpx_call_with_continuation failed.\n");
 
@@ -250,24 +253,34 @@ int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 }
 
 /// Encapsulates an asynchronous remote-procedure-call.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-             size_t len, hpx_addr_t result) {
-  return hpx_call_with_continuation(addr, action, args, len, result, hpx_lco_set_action);
+int
+hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
+         size_t len, hpx_addr_t result)
+{
+  return hpx_call_with_continuation(addr, action, args, len, result,
+                                    hpx_lco_set_action);
 }
 
 
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
-                  size_t alen, void *out, size_t olen) {
+int
+hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
+              const void *args, size_t alen,
+              void *out, size_t olen)
+{
   hpx_addr_t result = hpx_lco_future_new(olen);
   hpx_call(addr, action, args, alen, result);
-  int status = hpx_lco_get(result, out, olen);
+  int status = hpx_lco_get(result, olen, out);
   hpx_lco_delete(result, HPX_NULL);
   return status;
 }
 
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action, void *args,
-                   size_t len, hpx_addr_t args_reuse, hpx_addr_t result) {
-  hpx_parcel_t *p = parcel_create(addr, action, args, len, result, hpx_lco_set_action, false);
+int
+hpx_call_async(hpx_addr_t addr, hpx_action_t action,
+               const void *args, size_t len,
+               hpx_addr_t args_reuse, hpx_addr_t result)
+{
+  hpx_parcel_t *p = parcel_create(addr, action, args, len, result,
+                                  hpx_lco_set_action, false);
   if (!p)
     return dbg_error("hpx_call_async failed.\n");
 
@@ -428,7 +441,7 @@ hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_gas_t type = btt_type(here->btt);
   if ((type == HPX_GAS_PGAS) || (type == HPX_GAS_PGAS_SWITCH)) {
     if (!hpx_addr_eq(lco, HPX_NULL))
-      hpx_lco_set(lco, NULL, 0, HPX_NULL);
+      hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 

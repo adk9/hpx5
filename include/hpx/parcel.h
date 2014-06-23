@@ -60,7 +60,7 @@ typedef struct hpx_parcel hpx_parcel_t;
 /// @param bytes - size of the @p data buffer
 /// @returns     - a pointer to the parcel structure, or NULL on error
 /// ----------------------------------------------------------------------------
-hpx_parcel_t *hpx_parcel_acquire(void *data, size_t bytes)
+hpx_parcel_t *hpx_parcel_acquire(const void *data, size_t bytes)
   HPX_MALLOC;
 
 /// ----------------------------------------------------------------------------

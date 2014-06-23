@@ -120,7 +120,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
 /// is.
 /// ----------------------------------------------------------------------------
 hpx_parcel_t *
-hpx_parcel_acquire(void *buffer, size_t bytes) {
+hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // figure out how big a parcel buffer I actually need
   size_t size = sizeof(hpx_parcel_t);
   if (bytes != 0)
@@ -224,8 +224,10 @@ hpx_parcel_release(hpx_parcel_t *p) {
 
 
 hpx_parcel_t *
-parcel_create(hpx_addr_t target, hpx_action_t action, void *args, size_t len,
-              hpx_addr_t c_target, hpx_action_t c_action, bool inplace) {
+parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
+              size_t len, hpx_addr_t c_target, hpx_action_t c_action,
+              bool inplace)
+{
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
   if (!p) {
     dbg_error("could not allocate parcel.\n");
