@@ -56,20 +56,23 @@
 typedef void (*send_t)(int nx, int ny, int nz, double *src, double *dest);
 typedef void (*recv_t)(int nx, int ny, int nz, double *src, double *dest, int type);
 
-typedef struct Advance {
-  int index;
-  int nDoms;
-  int nx;
-  int maxcycles;
-  int cores;
-} Advance;
+typedef struct {
+  int           index;
+  int           nDoms;
+  int              nx;
+  int       maxcycles;
+  int           cores;
+  hpx_addr_t complete;
+} InitArgs;
 
-typedef struct Nodal {
-  int srcLocalIdx;
-  double buf[];                                // inline, variable length buffer
-} Nodal;
+typedef struct {
+  unsigned long epoch;
+  int     srcLocalIdx;
+  double        buf[];                         // inline, variable length buffer
+} NodalArgs;
 
 typedef struct Domain {
+  hpx_addr_t complete;
   hpx_addr_t sem_sbn1;
   hpx_addr_t sem_sbn3;
 
@@ -183,10 +186,10 @@ typedef struct Domain {
   int numElem;
   int numNode;
 
- // hpx_future_t *dataSendTT[26];
- // hpx_future_t *dataSendTF[26];
- // hpx_future_t *dataSendFF[26];
- // hpx_future_t SBN1[26];
+  // hpx_future_t *dataSendTT[26];
+  // hpx_future_t *dataSendTF[26];
+  // hpx_future_t *dataSendFF[26];
+  // hpx_future_t SBN1[26];
 
   double *dataRecvTT[26];
   double *dataRecvTF[26];
@@ -200,14 +203,15 @@ typedef struct Domain {
   int recvTF[27];
   int recvFF[14];
 
-  hpx_addr_t sbn1_and;
+  hpx_addr_t gencnt;
+  hpx_addr_t sbn1_and[2];                       // local completion reduction
+  unsigned long epoch;                          // local epoch timestamp
 } Domain;
 
-typedef struct pSBN {
+typedef struct {
   Domain *domain;
   int destLocalIdx;
-  hpx_addr_t done;
-  int rank;
+  unsigned long epoch;
 } pSBN;
 
 int OFFSET[26], BUFSZ[26], XFERCNT[26], MAXEDGESIZE, MAXPLANESIZE;
@@ -374,15 +378,17 @@ void CalcHydroConstraintForElems(int *matElemlist, double *vdov, double dvovmax,
 
 double CalcElemVolume(const double x[8], const double y[8], const double z[8]);
 
-int _SBN1_result_action(Nodal *nodal);
+int _SBN1_result_action(NodalArgs *nodal);
 extern hpx_action_t _SBN1_result;
 int _SBN1_sends_action(pSBN *psbn);
 extern hpx_action_t _SBN1_sends;
-void SBN1(hpx_addr_t address,Domain *domain, int index);
+//void SBN1(hpx_addr_t address,Domain *domain, int index);
+
+void SBN1(hpx_addr_t addr, Domain *domain, unsigned long epoch);
 
 int _SBN3_sends_action(pSBN *psbn);
 extern hpx_action_t _SBN3_sends;
-int _SBN3_result_action(Nodal *nodal);
+int _SBN3_result_action(NodalArgs *nodal);
 extern hpx_action_t _SBN3_result;
 void SBN3(hpx_addr_t address,Domain *domain, int index);
 

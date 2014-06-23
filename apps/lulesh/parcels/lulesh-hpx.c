@@ -3,21 +3,50 @@
 static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _initDomain    = 0;
+
 hpx_action_t _SBN1_sends = 0;
 hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
 
-static int _advanceDomain_action(Advance *advance) {
+// perform one epoch of the algorithm
+// 0. test for overall completion
+// 1. prepare for epoch n + 1
+//    - allocate an and gate for n + 1
+// 2. send all messages for epoch n
+// 3. recv all messages for epoch n
+//    - enable epoch n
+//    - wait for and gate for n
+// 4. perform local computation for n
+// 5. spawn epoch n + 1
+static int _advanceDomain_action(unsigned long *epoch) {
+  const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
   if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
 
-  int rank = advance->index;
+  // 0. If I've run enough epochs locally, then I want to join the global
+  //    complete barrier (stored in my local domain as domain->complete)---this
+  //    is the barrier the _main_action() thread is waiting on.
+  if (n < domain->maxcycles + 1) {
+    hpx_gas_unpin(local);
+    hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
 
-  SBN1(local,domain,rank);
+  // 1. Allocate a reduction for the next epoch so we know when its done
+  domain->sbn1_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
 
+  // 2. Send all of the messages for epoch n
+  SBN1(local, domain, n);
+
+  // 3. Recv all of the messages for epoch n
+  hpx_lco_set(domain->gencnt, 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_lco_wait(domain->sbn1_and[n % 2]);
+  hpx_lco_delete(domain->sbn1_and[n % 2], HPX_NULL);
+
+  // 4. Perform the local computation for epoch n
 #if 0
   while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) {
     double targetdt = domain->stoptime - domain->time;
@@ -40,33 +69,42 @@ static int _advanceDomain_action(Advance *advance) {
   }
 #endif
 
+  // 5. spawn the next epoch
+  unsigned long next = n + 1;
+  hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
 }
 
-static int _initDomain_action(Advance *advance) {
+static int _initDomain_action(InitArgs *init) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  int nx = advance->nx;
-  int nDoms = advance->nDoms;
-  int maxcycles = advance->maxcycles;
-  int cores = advance->cores;
-  int index = advance->index;
-
-  int tp = (int) (cbrt(nDoms) + 0.5);
+  int nx        = init->nx;
+  int nDoms     = init->nDoms;
+  int maxcycles = init->maxcycles;
+  //int cores     = init->cores;
+  int index     = init->index;
+  int tp        = (int) (cbrt(nDoms) + 0.5);
 
   Init(tp,nx);
-  int col = index%tp;
-  int row = (index/tp)%tp;
-  int plane = index/(tp*tp);
+  int col      = index%tp;
+  int row      = (index/tp)%tp;
+  int plane    = index/(tp*tp);
   ld->sem_sbn1 = hpx_lco_sema_new(0);
   ld->sem_sbn3 = hpx_lco_sema_new(0);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
-  hpx_gas_unpin(local);
 
+  // remember the LCO we're supposed to set when we've completed maxcycles
+  ld->complete = init->complete;
+
+  // set the domain's epoch counter
+  ld->epoch = 0;
+
+  hpx_gas_unpin(local);
   return HPX_SUCCESS;
 }
 
@@ -99,35 +137,39 @@ static int _main_action(int *input)
 
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
-  hpx_addr_t and = hpx_lco_and_new(nDoms);
-  Advance advance[nDoms];
-  for (k=0;k<nDoms;k++) {
-    advance[k].index = k;
-    advance[k].nDoms = nDoms;
-    advance[k].nx = nx;
-    advance[k].maxcycles = maxcycles;
-    advance[k].cores = cores;
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _initDomain, &advance[k], sizeof(advance[k]), and);
-  }
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-  and = hpx_lco_and_new(nDoms);
+  hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
+  // Initialize the domains
+  hpx_addr_t init = hpx_lco_and_new(nDoms);
   for (k=0;k<nDoms;k++) {
-    advance[k].index = k;
-    advance[k].nDoms = nDoms;
-    advance[k].nx = nx;
-    advance[k].maxcycles = maxcycles;
-    advance[k].cores = cores;
+    InitArgs args = {
+      .index = k,
+      .nDoms = nDoms,
+      .nx = nx,
+      .maxcycles = maxcycles,
+      .cores = cores,
+      .complete = complete
+    };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _advanceDomain, &advance[k], sizeof(advance[k]), and);
+    hpx_call(block, _initDomain, &args, sizeof(args), init);
   }
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
+  hpx_lco_wait(init);
+  hpx_lco_delete(init, HPX_NULL);
+
+  // Spawn the first epoch, _advanceDomain will recursively spawn each epoch.
+  unsigned long epoch = 0;
+  for (k=0;k<nDoms;k++) {
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+  }
+
+  // And wait for each domain to reach the end of its simulation
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL);
 
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
+
 
   free(deltaTimeCnt);
   free(deltaTimeVal);
