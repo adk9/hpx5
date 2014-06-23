@@ -75,7 +75,7 @@ static int _fib_action(int *args) {
 
   hpx_call(peers[0], _fib, &ns[0], sizeof(int), futures[0]);
   hpx_call(peers[1], _fib, &ns[1], sizeof(int), futures[1]);
-  hpx_lco_get_all(2, futures, addrs, sizes);
+  hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   hpx_lco_delete(futures[0], HPX_NULL);
   hpx_lco_delete(futures[1], HPX_NULL);
 
