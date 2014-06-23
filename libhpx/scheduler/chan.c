@@ -418,6 +418,17 @@ hpx_lco_chan_send(hpx_addr_t chan, int size, const void *value,
 }
 
 
+void
+hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *value,
+                          hpx_addr_t lsync)
+{
+  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_lco_chan_send(chan, size, value, lsync, rsync);
+  hpx_lco_wait(rsync);
+  hpx_lco_delete(rsync, HPX_NULL);
+}
+
+
 /// ----------------------------------------------------------------------------
 /// Channel receive.
 ///

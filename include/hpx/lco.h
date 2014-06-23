@@ -226,6 +226,19 @@ void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *buffer,
                        hpx_addr_t lsync, hpx_addr_t rsync);
 
 
+
+/// ----------------------------------------------------------------------------
+/// Send a buffer inorder.
+///
+/// All inorder sends from a thread are guaranteed to be received in the order
+/// that they were sent. No guarantee is made for inorder sends on the same
+/// channel from different threads. More complicated ordering can be provided
+/// using the @p rsync LCO and the hpx_lco_chan_send() interface.
+/// ----------------------------------------------------------------------------
+void hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *buffer,
+                               hpx_addr_t lsync);
+
+
 /// ----------------------------------------------------------------------------
 /// Receive a buffer from a channel.
 ///
