@@ -51,11 +51,15 @@ typedef SYNC_ATOMIC(atomic_int_t*) atomic_int_atomic_ptr_t;
 typedef two_lock_queue_t _mailbox_t;
 typedef two_lock_queue_node_t _envelope_t;
 
-static unsigned int _max(unsigned int lhs, unsigned int rhs) {
+static unsigned int
+_max(unsigned int lhs, unsigned int rhs)
+{
   return (lhs > rhs) ? lhs : rhs;
 }
 
-static unsigned int _min(unsigned int lhs, unsigned int rhs) {
+static unsigned int
+_min(unsigned int lhs, unsigned int rhs)
+{
   return (lhs < rhs) ? lhs : rhs;
 }
 
@@ -97,8 +101,13 @@ static __thread struct worker {
 };
 
 
+/// ----------------------------------------------------------------------------
+/// Enclose a parcel in an envelope so that it can be sent to another worker
+/// using the mailbox functionality.
+/// ----------------------------------------------------------------------------
 static _envelope_t *
-_enclose(worker_t *w, hpx_parcel_t *p) {
+_enclose(worker_t *w, hpx_parcel_t *p)
+{
   _envelope_t *envelope = w->envelopes;
   if (envelope != NULL)
     w->envelopes = w->envelopes->next;
@@ -111,7 +120,12 @@ _enclose(worker_t *w, hpx_parcel_t *p) {
 }
 
 
-static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
+/// ----------------------------------------------------------------------------
+/// Extract a parcel from an envelope.
+/// ----------------------------------------------------------------------------
+static hpx_parcel_t *
+_open(worker_t *w, _envelope_t *mail)
+{
   mail->next = w->envelopes;
   w->envelopes = mail;
   return mail->value;
@@ -119,9 +133,15 @@ static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
 
 
 /// ----------------------------------------------------------------------------
-/// The entry function for all of the threads.
+/// The entry function for all of the lightweight threads.
+///
+/// This entry function extracts the action and the arguments from the parcel,
+/// and then invokes the action on the arguments. If the action returns to this
+/// entry function, we dispatch tot he correct thread termination handler.
 /// ----------------------------------------------------------------------------
-static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+static void HPX_NORETURN
+_thread_enter(hpx_parcel_t *parcel)
+{
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
   int status = action_invoke(action, args);
@@ -145,7 +165,9 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
 /// ----------------------------------------------------------------------------
-static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
+static int
+_on_start(hpx_parcel_t *to, void *sp, void *env)
+{
   assert(sp);
 
   // checkpoint my native stack pointer
