@@ -18,16 +18,16 @@
 #include "libsync/lockable_ptr.h"
 #include "libsync/sync.h"
 
-static const uintptr_t _BACKOFF_BASE = 16;
-static const uintptr_t    _LOCK_MASK = 0x1;
-static const uintptr_t   _STATE_MASK = 0x7;
+static const unsigned int _BACKOFF_BASE = 16;
+static const uintptr_t       _LOCK_MASK = 0x1;
+static const uintptr_t      _STATE_MASK = 0x7;
 
 const void *
 sync_lockable_ptr_lock(lockable_ptr_t *p)
 {
   while (true) {
     const void *ptr;
-    uintptr_t backoff = _BACKOFF_BASE;
+    unsigned int backoff = _BACKOFF_BASE;
 
     // load the ptr
     sync_load(ptr, p, SYNC_ACQUIRE);

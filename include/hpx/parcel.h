@@ -16,14 +16,14 @@
 #include "hpx/action.h"
 #include "hpx/addr.h"
 
-/// ----------------------------------------------------------------------------
-/// HPX parcel interface.
+/// @file
+/// @brief HPX parcel interface.
 ///
 /// Parcels are the HPX message type.
-/// ----------------------------------------------------------------------------
+
+/// HPX parcel type
 typedef struct hpx_parcel hpx_parcel_t;
 
-/// ----------------------------------------------------------------------------
 /// Acquire a parcel.
 ///
 /// The application programmer can choose to associate an existing buffer with
@@ -45,37 +45,35 @@ typedef struct hpx_parcel hpx_parcel_t;
 /// between hpx_parcel_send() and hpx_parcel_send_sync().
 ///
 /// If the @p data pointer is NULL, and the @p bytes is 0, then
-/// hpx_parcel_{get,set}_data() may fail.
+/// hpx_parcel_get_data() or hpx_parcel_set_data() may fail.
 ///
 /// If the @p data pointer is non-NULL, then the runtime assumes that @p bytes
 /// is an accurate size of @p data, and will use it as the buffer to be
 /// sent. The runtime does not claim ownership of @p data, but does make it
-/// available through the standard hpx_parcel_{get,set}_data() interface. The @p
-/// data buffer MAY be concurrently associated with more than one parcel,
-/// however the @p data buffer MUST NOT be written to while any of the parcels
-/// that it is associated with has an outstanding hpx_parcel_send()
+/// available through the standard hpx_parcel_get_data()/hpx_parcel_set_data()
+/// interface. The @p data buffer MAY be concurrently associated with more than
+/// one parcel, however the @p data buffer MUST NOT be written to while any of
+/// the parcels that it is associated with has an outstanding hpx_parcel_send()
 /// operation, or concurrently with an hpx_parcel_send_sync().
 ///
-/// @param  data - a possibly NULL buffer to associate with the parcel
-/// @param bytes - size of the @p data buffer
-/// @returns     - a pointer to the parcel structure, or NULL on error
-/// ----------------------------------------------------------------------------
+/// @param  data A possibly NULL buffer to associate with the parcel.
+/// @param bytes The size of the @p data buffer.
+///
+/// @returns A pointer to the parcel structure, or NULL on error.
 hpx_parcel_t *hpx_parcel_acquire(const void *data, size_t bytes)
   HPX_MALLOC;
 
-/// ----------------------------------------------------------------------------
+
 /// Explicitly release a parcel.
 ///
 /// The @p p argument must correspond to a parcel pointer returned from
 /// hpx_parcel_acquire().
 ///
-/// @param p - the parcel to release
-/// ----------------------------------------------------------------------------
+/// @param p The parcel to release.
 void hpx_parcel_release(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
 /// Send a parcel with asynchronous local completion semantics.
 ///
 /// hpx_parcel_send() has asynchronous local semantics. After returning from
@@ -84,19 +82,18 @@ void hpx_parcel_release(hpx_parcel_t *p)
 /// performed---this may result in better performance.
 ///
 /// Sending a parcel transfers ownership of the parcel to the runtime. The
-/// parcel pointed to by @p p may not be reused and must not be
-/// hpx_parcel_release()d.
+/// parcel pointed to by @p p may not be reused and must not be released with
+/// hpx_parcel_release().
 ///
-/// @param    p - the parcel to send, must correspond to a parcel returned from
-///               hpx_parcel_acquire()
-/// @param done - the address of an LCO to set once the send has completed
-///               locally, or HPX_NULL if the caller does not care
-/// ----------------------------------------------------------------------------
+/// @param    p The parcel to send, must correspond to a parcel returned from
+///             hpx_parcel_acquire().
+/// @param done The global address of an LCO to set once the send has completed
+///             locally (i.e., the parcel's buffer can be written to or freed),
+///             or HPX_NULL if the caller does not care.
 void hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done)
   HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
 /// Send a parcel with synchronous local completion semantics.
 ///
 /// hpx_parcel_send_sync() performs a synchronous local send. After returning
@@ -104,63 +101,105 @@ void hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t done)
 /// completed.
 ///
 /// Sending a parcel transfers ownership of the parcel to the runtime. The
-/// parcel pointed to by @p p may not be reused and must not be
-/// hpx_parcel_release()d.
+/// parcel pointed to by @p p may not be reused and must not be released with
+/// hpx_parcel_release().
 ///
-/// @param p - the parcel to send, must correspond to a parcel returned from
-///            hpx_parcel_acquire().
-/// ----------------------------------------------------------------------------
+/// @param p The parcel to send, must correspond to a parcel returned from
+///          hpx_parcel_acquire().
 void hpx_parcel_send_sync(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+/// Get the action associated with a parcel.
+///
+/// @param p The parcel to query.
+///
+/// @returns The action associated with @p p.
 hpx_action_t hpx_parcel_get_action(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Get the target address of a parcel.
+///
+/// @param p The parcel to query.
+///
+/// @returns The global address of the target of @p p.
 hpx_addr_t hpx_parcel_get_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Get the continuation action of a parcel.
+///
+/// @param p The parcel to query.
+///
+/// @returns The continuation action of @p p.
 hpx_action_t hpx_parcel_get_cont_action(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Get the address of the continuation associated with a parcel.
+///
+/// @param p The parcel to query.
+///
+/// @returns The global address of the continuation of @p p.
 hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Get the data buffer for a parcel.
+///
+/// The data for a parcel can be written to directly, which in some cases may
+/// allow one to avoid an extra copy.
+///
+/// @param p The parcel to query.
+///
+/// @returns A pointer to the data buffer for the parcel.
 void *hpx_parcel_get_data(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Set the action for a parcel.
+///
+/// @param      p The parcel we're updating.
+/// @param action The action to be invoked when the parcel arrives at its
+///               target.
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Set a target address for a parcel.
+///
+/// @param    p The parcel we're updating.
+/// @param addr The global address of the target to send the parcel to.
 void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Set the continuation action for a parcel.
+///
+/// @param      p The parcel we're updating.
+/// @param action The continuation action to set for the parcel.
 void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Set the continuation address for a parcel.
+///
+/// @param    p The parcel we're updating.
+/// @param addr The global address of the continuation.
 void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
   HPX_NON_NULL(1);
 
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
+
+/// Set the data buffer for a parcel.
+///
+/// The data will be copied (shallowly) into the parcel. When possible, it is
+/// preferable to use hpx_parcel_get_data() and write to the parcel directly,
+/// but hpx_parcel_set_data() may be used when a copy is unavoidable anyway.
+///
+/// @param    p The parcel we're updating.
+/// @param data The data buffer to copy into the parcel.
+/// @param size The size of the @p data buffer.
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
   HPX_NON_NULL(1);
 

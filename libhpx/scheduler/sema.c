@@ -14,13 +14,12 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "lco.h"
 #include "cvar.h"
@@ -137,9 +136,12 @@ _sema_init(_sema_t *sema, unsigned count)
 /// @}
 
 
-/// ----------------------------------------------------------------------------
-/// Allocate a semaphore LCO. This is synchronous.
-/// ----------------------------------------------------------------------------
+
+/// Allocate a semaphore LCO.
+///
+/// @param count The initial count for the semaphore.
+///
+/// @returns The global address of the new semaphore.
 hpx_addr_t
 hpx_lco_sema_new(unsigned count)
 {
@@ -158,7 +160,7 @@ hpx_lco_sema_new(unsigned count)
     assert(sema.offset < sema.block_bytes);
   }
   else {
-    sema = hpx_gas_alloc(sizeof(_sema_t));
+    sema = locality_malloc(sizeof(_sema_t));
     if (!hpx_gas_try_pin(sema, (void**)&local)) {
       dbg_error("Could not pin newly allocated semaphore.\n");
       hpx_abort();
@@ -170,16 +172,15 @@ hpx_lco_sema_new(unsigned count)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Decrement a semaphore.
 ///
 /// If the semaphore is local, then we can use the _sema_get operation directly,
 /// otherwise we perform the operation as a synchronous remote call using the
 /// _sema_p action.
 ///
-/// @param sema - the global address of the semaphore we're reducing
-/// @returns    - HPX_SUCCESS, or an error code if the sema is in an error state
-/// ----------------------------------------------------------------------------
+/// @param sema The global address of the semaphore we're reducing.
+///
+/// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
 hpx_status_t
 hpx_lco_sema_p(hpx_addr_t sema)
 {
@@ -187,15 +188,13 @@ hpx_lco_sema_p(hpx_addr_t sema)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Increment a semaphore.
 ///
 /// If the semaphore is local, then we can use the _sema_set operation directly,
 /// otherwise we perform the operation as an asynchronous remote call using the
 /// _sema_v action.
 ///
-/// @param sema - the global address of the semaphore we're incrementing
-/// ----------------------------------------------------------------------------
+/// @param sema The global address of the semaphore we're incrementing.
 void
 hpx_lco_sema_v(hpx_addr_t sema)
 {

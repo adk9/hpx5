@@ -25,6 +25,7 @@
 
 #include "hpx/hpx.h"
 #include "libhpx/scheduler.h"
+#include "libhpx/locality.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -176,8 +177,8 @@ _initialize_actions(void)
 /// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace) {
-  hpx_addr_t target = hpx_gas_alloc(sizeof(_gencount_t) +
-                                    ninplace * sizeof(cvar_t));
+  hpx_addr_t target = locality_malloc(sizeof(_gencount_t) +
+                                      ninplace * sizeof(cvar_t));
   _gencount_t *cnt;
   if (!hpx_gas_try_pin(target, (void**)&cnt))
     hpx_abort();

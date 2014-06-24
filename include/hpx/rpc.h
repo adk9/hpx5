@@ -13,49 +13,49 @@
 #ifndef HPX_RPC_H
 #define HPX_RPC_H
 
-/// ----------------------------------------------------------------------------
-/// HPX call interface (completely synchronous).
+/// @file
+/// @brief HPX remote procedure call interface
+
+/// Fully synchronous call interface.
 ///
 /// Performs @p action on @p args at @p addr, and sets @p out with the
 /// resulting value. The output value @p out can be NULL (or the
 /// corresponding @p olen could be zero), in which case no return
 /// value is generated.
 ///
-/// @param   addr - the address that defines where the action is executed
-/// @param action - the action to perform
-/// @param   args - the argument data for @p action
-/// @param   alen - the length of @p args
-/// @param    out - address of  the result
-/// @param   olen - the length of the @p output
-/// @returns      - HPX_SUCCESS, or an error code if the action generated an
-///                 error that could not be handled remotely
-/// ----------------------------------------------------------------------------
+/// @param   addr The address that defines where the action is executed.
+/// @param action The action to perform.
+/// @param   args The argument data buffer for @p action.
+/// @param   alen The length of the @p args buffer.
+/// @param    out Address of the output buffer.
+/// @param   olen The length of the @p output buffer.
+///
+/// @returns HPX_SUCCESS, or an error code if the action generated an error that
+///          could not be handled remotely/
 int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
                   size_t alen, void *out, size_t olen);
 
 
-/// ----------------------------------------------------------------------------
-/// HPX call interface.
+/// Locally synchronous call interface.
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
 /// the remote-procedure call interface. If @p result is not HPX_NULL,
 /// hpx_call puts the the resulting value in @p result at some point
 /// in the future.
 ///
-/// @param   addr - the address that defines where the action is executed
-/// @param action - the action to perform
-/// @param   args - the argument data for @p action
-/// @param    len - the length of @p args
-/// @param result - an address of an LCO to trigger with the result
-/// @returns      - HPX_SUCCESS, or an error code if there was a problem locally
-///                 during the hpx_call invocation
-/// ----------------------------------------------------------------------------
+/// @param   addr The address that defines where the action is executed.
+/// @param action The action to perform.
+/// @param   args The argument data buffer for @p action.
+/// @param    len The length of the @p args buffer.
+/// @param result An address of an LCO to trigger with the result.
+///
+/// @returns HPX_SUCCESS, or an error code if there was a problem locally during
+///          the hpx_call invocation.
 int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
              size_t len, hpx_addr_t result);
 
 
-/// ----------------------------------------------------------------------------
-/// HPX call interface (completely asynchronous).
+/// Fully asynchronous call interface.
 ///
 /// This is a completely asynchronous variant of the remote-procedure
 /// call interface. If @p result is not HPX_NULL, hpx_call puts the
@@ -64,27 +64,32 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 /// and is free to reuse. If @p args_reuse is not HPX_NULL, it is set
 /// when @p args is safe to be reused or freed.
 ///
-/// @param       addr - the address that defines where the action is executed
-/// @param     action - the action to perform
-/// @param       args - the argument data for @p action
-/// @param        len - the length of @p args
-/// @param args_reuse - an address of an LCO to trigger when the
-///                     argument buffer is safe to be reused (local completion)
-/// @param     result - an address of an LCO to trigger with the result
-/// @returns          - HPX_SUCCESS, or an error code if there was a problem
-///                     locally during the hpx_call_async invocation
-/// ----------------------------------------------------------------------------
+/// @param       addr The address that defines where the action is executed.
+/// @param     action The action to perform.
+/// @param       args The argument data buffer for @p action.
+/// @param        len The length of the @p args buffer.
+/// @param args_reuse The global address of an LCO to signal local completion
+///                   (i.e., R/W access to, or free of @p args is safe),
+///                   HPX_NULL if we don't care.
+/// @param     result The global address of an LCO to signal with the result.
+///
+/// @returns HPX_SUCCESS, or an error code if there was a problem locally during
+///          the hpx_call_async invocation.
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
                    size_t len, hpx_addr_t args_reuse, hpx_addr_t result);
 
 
-/// ----------------------------------------------------------------------------
 /// HPX collective operations.
 ///
 /// This is a parallel call interface that performs an @p action on @p args at
 /// all available localities. The output values are not returned, but the
 /// completion of the broadcast operation can be tracked through the @p lco LCO.
-/// ----------------------------------------------------------------------------
+/// @param action the action to perform
+/// @param   args the argument data for @p action
+/// @param    len the length of @p args
+/// @param    lco the address of an LCO to trigger when the broadcast operation
+///               is completed
+/// @returns      HPX_SUCCESS if no errors were encountered
 int hpx_bcast(hpx_action_t action, const void *args, size_t len,
               hpx_addr_t lco);
 

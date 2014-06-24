@@ -13,6 +13,8 @@
 #ifndef HPX_TYPES_H
 #define HPX_TYPES_H
 
+/// @file
+
 /// Extern HPX macros
 /// @{
 typedef enum {

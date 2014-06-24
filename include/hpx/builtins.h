@@ -13,15 +13,15 @@
 #ifndef HPX_BUILTINS_H
 #define HPX_BUILTINS_H
 
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 /// @file builtins.h
 ///
-/// This file encapsulates some operations that are builtin compiler functions
-/// in order to support multiple compilers.
+/// This file encapsulates some operations that are builtin compiler 
+/// functions in order to support multiple compilers.
 ///
 /// @todo Deal with non-gcc compatible compilers.
 /// @todo Deal with this during configuration.
-/// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 #define likely(S) (__builtin_expect(S, 1))
 #define unlikely(S) (__builtin_expect(S, 0))
