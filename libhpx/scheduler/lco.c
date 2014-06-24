@@ -170,7 +170,8 @@ lco_unlock(lco_t *lco)
 void
 lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
 {
-  lco->bits = ((user) ? 0 : _USER_MASK);
+  lco->vtable = class;
+  lco->bits |= ((user) ? _USER_MASK : 0);
 }
 
 
