@@ -197,8 +197,8 @@ static void _backoff(void) {
 /// Steal a lightweight thread during scheduling.
 ///
 /// NB: we can be much smarter about who to steal from and how much to
-/// steal. Ultimately though, we're building a distributed runtime though, so
-/// SMP work stealing isn't that big a deal.
+/// steal. Ultimately though, we're building a distributed runtime so SMP work
+/// stealing isn't that big a deal.
 /// ----------------------------------------------------------------------------
 static hpx_parcel_t *_steal(void) {
   int victim_id = rand_r(&self.seed) % here->sched->n_workers;
@@ -272,10 +272,13 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// ----------------------------------------------------------------------------
 /// A transfer continuation that resends the current parcel.
 ///
-/// If a parcel has arrived at the wrong locality because it's target address
-/// has been moved, then the application user will want to resend the parcel and
+/// If a parcel has arrived at the wrong locality because its target address has
+/// been moved, then the application user will want to resend the parcel and
 /// terminate the running thread. This transfer continuation performs that
 /// operation.
+///
+/// The current thread is terminating however, so we release the stack we were
+/// running on.
 /// ----------------------------------------------------------------------------
 static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
@@ -283,7 +286,7 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   thread_delete(stack);
-  hpx_parcel_send_sync(prev);
+  hpx_parcel_send(prev, HPX_NULL);
   return HPX_SUCCESS;
 }
 
