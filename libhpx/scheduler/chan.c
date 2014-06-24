@@ -395,7 +395,7 @@ hpx_lco_chan_new(void)
     assert(chan.offset < chan.block_bytes);
   }
   else {
-    chan = hpx_gas_alloc(sizeof(_chan_t));
+    chan = locality_malloc(sizeof(_chan_t));
     if (!hpx_gas_try_pin(chan, (void**)&local)) {
       dbg_error("Could not pin newly allocated channel.\n");
       hpx_abort();

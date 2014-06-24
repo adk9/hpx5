@@ -64,7 +64,7 @@ static int _alloc_blocks_action(uint32_t *args) {
 static int _global_sbrk_action(size_t *args) {
   // Bump the next block id by the required number of blocks---always bump a
   // ranks-aligned value
-  size_t n = *args + (*args % here->ranks);
+  size_t n = *args;
   int next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
   if (UINT32_MAX - next < n) {
     dbg_error("rank out of blocks for allocation size %lu\n", n);
@@ -145,4 +145,22 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
   locality_gas_forward       = HPX_REGISTER_ACTION(_gas_forward_action);
   locality_call_continuation = HPX_REGISTER_ACTION(_call_cont_action);
+}
+
+/// ----------------------------------------------------------------------------
+/// Local allocation is done from our designated local block. Allocation is
+/// always done to 8 byte alignment. Here we're using a simple sbrk allocator
+/// with no free functionality for now.
+/// ----------------------------------------------------------------------------
+hpx_addr_t
+locality_malloc(size_t bytes) {
+  bytes += bytes % 8;
+  uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
+  if (UINT32_MAX - offset < bytes) {
+    dbg_error("exhausted local allocation limit with %lu-byte allocation.\n",
+              bytes);
+    hpx_abort();
+  }
+
+  return hpx_addr_add(HPX_HERE, offset);
 }

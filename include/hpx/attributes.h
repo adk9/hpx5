@@ -13,6 +13,8 @@
 #ifndef HPX_ATTRIBUTES_H
 #define HPX_ATTRIBUTES_H
 
+/// @file
+/// @brief Attribute definitions for HPX functions.
 
 #define HPX_ALIGNED(N)       __attribute__((aligned(N)))
 #define HPX_INTERNAL         __attribute__((visibility("internal")))
