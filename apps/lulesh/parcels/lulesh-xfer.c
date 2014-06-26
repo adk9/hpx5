@@ -1,20 +1,16 @@
 #include "lulesh-hpx.h"
 
-// Performs the SBN1 update
-// 0. wait for the right update to become active
-// 1. acquire the domain lock (to prevent concurrent updates)
-// 2. update the domain
-// 3. release the domain lock
-// 4. join the right and
-int _SBN1_result_action(NodalArgs *args) {
+// Performs the SBN1 update (allreduce)
+int
+_SBN1_result_action(NodalArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain       *ld = NULL;
 
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  // 0.
-  hpx_lco_gencount_wait(ld->gencnt, args->epoch);
+  // 0. wait for the right generation to become active
+  hpx_lco_gencount_wait(ld->epoch, args->epoch);
 
   // prepare for the unpack, do this here to minimize the time spent holding the
   // lock
@@ -25,17 +21,22 @@ int _SBN1_result_action(NodalArgs *args) {
   int          nz = ld->sizeZ + 1;
   recv_t   unpack = RECEIVER[srcLocalIdx];
 
-  // 1.
+  // 1. acquire the domain lock
   hpx_lco_sema_p(ld->sem_sbn1);
 
-  // 2.
+  // static unsigned count[8] = {0};
+  // printf("recv %u %u\n", ld->rank, count[ld->rank]++);
+  // fflush(stdout);
+
+  // 2. update the domain
   unpack(nx, ny, nz, src, ld->nodalMass, 0);
 
-  // 3.
+  // 3. release the domain lock
   hpx_lco_sema_v(ld->sem_sbn1);
 
-  // 4.
-  hpx_lco_and_set(ld->sbn1_and[args->epoch % 2],HPX_NULL);
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->sbn1_and[args->epoch % 2], HPX_NULL);
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -44,7 +45,8 @@ int _SBN1_result_action(NodalArgs *args) {
 /// Perform a single send operation for SBN1---basically just allocate and pack
 /// a parcel. Exposed here as an action so that we can perform it in a parallel
 /// spawn.
-int _SBN1_sends_action(pSBN *psbn)
+int
+_SBN1_sends_action(pSBN *psbn)
 {
   // Acquire a large-enough buffer to pack into.
   // - NULL first parameter means it comes with the parcel and is managed by
@@ -63,7 +65,7 @@ int _SBN1_sends_action(pSBN *psbn)
   send_t      pack = SENDER[destLocalIdx];
   pack(nx, ny, nz, domain->nodalMass, nodal->buf);
 
-  // compute the neighbor we are sending do (as byte offset in the domain)
+  // compute the neighbor we are sending to (as byte offset in the domain)
   int    srcRemoteIdx = destLocalIdx;
   int     srcLocalIdx = 25 - srcRemoteIdx;
   int        distance = -OFFSET[srcLocalIdx];
@@ -74,7 +76,13 @@ int _SBN1_sends_action(pSBN *psbn)
   nodal->srcLocalIdx = srcLocalIdx;
   nodal->epoch = psbn->epoch;
 
-  // send the parcel--sync is fine because we packed in-place
+  // static unsigned count[8] = {0};
+  // printf("send %u %u\n", domain->rank, count[domain->rank]++);
+  // fflush(stdout);
+
+  // send the parcel--sync is fine because we packed in-place, we don't have a
+  // continuation for this action since it's going to join the allreduce barrier
+  // allocated at the remote domain, and we don't know it's global address here
   hpx_parcel_set_target(p, neighbor);
   hpx_parcel_set_action(p, _SBN1_result);
   hpx_parcel_send_sync(p);
@@ -83,7 +91,8 @@ int _SBN1_sends_action(pSBN *psbn)
 
 
 /// Perform a parallel spawn of SBN1 messages for the domain and epoch
-void SBN1(hpx_addr_t local, Domain *domain, unsigned long epoch)
+void
+SBN1(hpx_addr_t local, Domain *domain, unsigned long epoch)
 {
   const int    nsTF = domain->sendTF[0];
   const int *sendTF = &domain->sendTF[1];

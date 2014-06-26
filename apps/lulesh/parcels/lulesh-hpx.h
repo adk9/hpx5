@@ -203,9 +203,8 @@ typedef struct Domain {
   int recvTF[27];
   int recvFF[14];
 
-  hpx_addr_t gencnt;
+  hpx_addr_t epoch;                             // an epoch generation counter
   hpx_addr_t sbn1_and[2];                       // local completion reduction
-  unsigned long epoch;                          // local epoch timestamp
 } Domain;
 
 typedef struct {

@@ -10,15 +10,6 @@ hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
 
 // perform one epoch of the algorithm
-// 0. test for overall completion
-// 1. prepare for epoch n + 1
-//    - allocate an and gate for n + 1
-// 2. send all messages for epoch n
-// 3. recv all messages for epoch n
-//    - enable epoch n
-//    - wait for and gate for n
-// 4. perform local computation for n
-// 5. spawn epoch n + 1
 static int _advanceDomain_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
@@ -29,20 +20,29 @@ static int _advanceDomain_action(unsigned long *epoch) {
   // 0. If I've run enough epochs locally, then I want to join the global
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
-  if (n < domain->maxcycles + 1) {
+  if (n >= domain->maxcycles) {
     hpx_gas_unpin(local);
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
 
-  // 1. Allocate a reduction for the next epoch so we know when its done
+  // 1. allocate a reduction for the next epoch (n + 1) so we can tell if its
+  //    completed
+  //
+  //    We haven't sent any of our epoch n messages yet, and this is an
+  //    allreduce, so no one else should be sending epoch (n + 1) messages yet
+  //    (they're waiting for our epoch n message).
   domain->sbn1_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
 
-  // 2. Send all of the messages for epoch n
+  // 2. Send our allreduce messages for epoch n
   SBN1(local, domain, n);
 
-  // 3. Recv all of the messages for epoch n
-  hpx_lco_set(domain->gencnt, 0, NULL, HPX_NULL, HPX_NULL);
+  // 3. update the domain's epoch, this releases any pending the
+  //    _SBN1_result_action messages, which will all acquire and release the
+  //    domain lock and then join the sbn1_and reduction for the nth epoch
+  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+
+  // 4. wait for the allreduce for this epoch to complete locally
   hpx_lco_wait(domain->sbn1_and[n % 2]);
   hpx_lco_delete(domain->sbn1_and[n % 2], HPX_NULL);
 
@@ -69,12 +69,12 @@ static int _advanceDomain_action(unsigned long *epoch) {
   }
 #endif
 
+  // don't need this domain to be pinned anymore---let it move
+  hpx_gas_unpin(local);
+
   // 5. spawn the next epoch
   unsigned long next = n + 1;
-  hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
-
-  hpx_gas_unpin(local);
-  return HPX_SUCCESS;
+  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
 }
 
 static int _initDomain_action(InitArgs *init) {
@@ -94,15 +94,24 @@ static int _initDomain_action(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
-  ld->sem_sbn1 = hpx_lco_sema_new(0);
-  ld->sem_sbn3 = hpx_lco_sema_new(0);
+  ld->sem_sbn1 = hpx_lco_sema_new(1);
+  ld->sem_sbn3 = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   // remember the LCO we're supposed to set when we've completed maxcycles
   ld->complete = init->complete;
 
-  // set the domain's epoch counter
-  ld->epoch = 0;
+  // allocate the domain's generation counter
+  //
+  // NB: right now, we're only doing an allreduce, so there is only ever one
+  //     generation waiting---if we end up using this counter inside of the
+  //     allreduce boundary (i.e., timestamp), then we need to allocate the
+  //     right number of inplace generations in this constructor
+  ld->epoch = hpx_lco_gencount_new(0);
+
+  // allocate the initial allreduce and gate
+  ld->sbn1_and[0] = hpx_lco_and_new(nDoms - 1);
+  ld->sbn1_and[1] = HPX_NULL;
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
