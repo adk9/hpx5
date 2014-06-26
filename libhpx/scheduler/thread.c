@@ -100,11 +100,12 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
   frame->rip     = f;
 
   // set the stack stuff
-  stack->sp       = frame;
-  stack->next     = NULL;
-  stack->parcel   = parcel;
-  stack->tls_id   = -1;
-  stack->affinity = -1;
+  stack->sp            = frame;
+  stack->next          = NULL;
+  stack->parcel        = parcel;
+  stack->tls_id        = -1;
+  stack->affinity      = -1;
+  stack->wait_affinity = -1;
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {

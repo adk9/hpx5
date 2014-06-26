@@ -577,7 +577,7 @@ scheduler_wait(lockable_ptr_t *lock, cvar_t *condition)
   // setting the soft affinity so that the thread is woken up in the right
   // place, and releasing the lock across the wait
   if (status == HPX_SUCCESS) {
-    thread->affinity = (thread->affinity >= 0) ? thread->affinity : self.id;
+    thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
