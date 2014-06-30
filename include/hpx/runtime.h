@@ -32,35 +32,38 @@
 /// hpx_shutdown() is called from an HPX lightweight thread to terminate
 /// scheduler execution
 
-// ----------------------------------------------------------------------------
-/// Initializes the HPX runtime. This must be called before other HPX functions.
-/// hpx_init() initializes the scheduler, network, and locality and should be 
-/// called before any other HPX functions.
+
+/// Initializes the HPX runtime.
+///
+/// This must be called before other HPX functions.  hpx_init() initializes the
+/// scheduler, network, and locality and should be called before any other HPX
+/// functions.
 ///
 /// @param config HPX runtime confoguration; may be HPX_NULL
 /// @returns      HPX_SUCCESS on success
-// ----------------------------------------------------------------------------
 int hpx_init(const hpx_config_t *config);
 
-// ----------------------------------------------------------------------------
+
+/// Start the HPX runtime.
+///
 /// This finalizes action registration, starts up any scheduler and native
 /// threads that need to run, and transfers all control into the HPX scheduler,
 /// beginning execution in @p entry. Returns the hpx_shutdown() code.
 ///
-/// The @p entry paramter may be HPX_ACTION_NULL, in which case this entire
+/// The @p entry action may be HPX_ACTION_NULL, in which case this entire
 /// scheduler instance is running, waiting for a successful inter-locality steal
 /// operation (if that is implemented) or a network parcel.
 ///
-/// @param entry an action to execute, of HPX_ACTION NULL to wait for an
+/// @param entry an action to execute, or HPX_ACTION NULL to wait for an
 ///              incoming parcel or a inter-locality steal (if implemented)
 /// @param  args arguments to pass to @p entry
 /// @param  size the size of @p args
 /// @returns     the status code passed to hpx_shutdown() upon termination
-// ----------------------------------------------------------------------------
 int hpx_run(hpx_action_t entry, const void *args, unsigned size);
 
 
-// ----------------------------------------------------------------------------
+/// Shutdown the HPX runtime.
+///
 /// This causes the hpx_run() in the main native thread to return the @p code.
 /// The returned thread is executing the original native thread, and all
 /// supplementary scheduler threads and network will have been shutdown, and any
@@ -70,11 +73,12 @@ int hpx_run(hpx_action_t entry, const void *args, unsigned size);
 /// misbehaving HPX lightweight threads.
 ///
 /// @param code a status code to be returned by hpx_run()
-// ----------------------------------------------------------------------------
-void hpx_shutdown(int code) HPX_NORETURN;
+void hpx_shutdown(int code)
+  HPX_NORETURN;
 
 
-// ----------------------------------------------------------------------------
+/// Abort the HPX runtime.
+///
 /// This causes the main native thread to return the @p code from hpx_run(). The
 /// returned thread is executing the original native thread, and all
 /// supplementary scheduler threads an network will ahve been shutdown.
@@ -83,8 +87,8 @@ void hpx_shutdown(int code) HPX_NORETURN;
 /// the state of the system after the return is not well defined. The
 /// application's main native thread should only rely on the async-safe
 /// interface provided in signal(7).
-// ----------------------------------------------------------------------------
-void hpx_abort(void) HPX_NORETURN;
+void hpx_abort(void)
+  HPX_NORETURN;
 
 
 #endif
