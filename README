@@ -37,3 +37,6 @@ Running
 try running pingpong in hpx/examples:
 "./pingpong 100"
 
+hpx can benefit from allocators like jemalloc or tcmalloc, try preloading one:
+"LD_PRELOAD=libjemalloc.so ./fibonacci"
+"LD_PRELOAD=libtcmalloc.so ./fibonacci"
