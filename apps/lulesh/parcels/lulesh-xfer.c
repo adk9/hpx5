@@ -98,7 +98,8 @@ SBN1(hpx_addr_t local, Domain *domain, unsigned long epoch)
   const int *sendTF = &domain->sendTF[1];
   hpx_addr_t   done = hpx_lco_and_new(nsTF);
 
-  for (int i = 0; i < nsTF; ++i) {
+  int i;
+  for (i = 0; i < nsTF; ++i) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
     assert(p);
 
@@ -120,15 +121,20 @@ SBN1(hpx_addr_t local, Domain *domain, unsigned long epoch)
   hpx_lco_delete(done, HPX_NULL);
 }
 
-int _SBN3_result_action(NodalArgs *nodal) {
+int _SBN3_result_action(NodalArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();
-  Domain *ld;
+  Domain *ld = NULL;
 
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  int srcLocalIdx = nodal->srcLocalIdx;
-  double *src = nodal->buf;
+  // 0. wait for the right generation to become active
+  hpx_lco_gencount_wait(ld->epoch, args->epoch);
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+  double *src = args->buf;
 
   int recvcnt = XFERCNT[srcLocalIdx];
   recv_t unpack = RECEIVER[srcLocalIdx];
@@ -137,13 +143,20 @@ int _SBN3_result_action(NodalArgs *nodal) {
   int ny = ld->sizeY + 1;
   int nz = ld->sizeZ + 1;
 
+  // 1. acquire the domain lock
   hpx_lco_sema_p(ld->sem_sbn3);
 
+  // 2. update 
   unpack(nx, ny, nz, src, ld->fx, 0);
   unpack(nx, ny, nz, src + recvcnt, ld->fy, 0);
   unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
 
+  // 3. release the domain lock
   hpx_lco_sema_v(ld->sem_sbn3);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->sbn3_and[args->epoch % 2], HPX_NULL);
 
   hpx_gas_unpin(local);
 
@@ -183,7 +196,9 @@ int _SBN3_sends_action(pSBN *psbn)
   int distance = -OFFSET[srcLocalIdx];
   hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
+  // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
 
   hpx_parcel_set_target(p, neighbor);
   hpx_parcel_set_action(p, _SBN3_result);
@@ -201,8 +216,11 @@ void SBN3(hpx_addr_t local,Domain *domain,int rank)
   // release the lock too early
   hpx_addr_t sends = hpx_lco_and_new(nsTF);
 
-  for (int i = 0; i < nsTF; i++) {
+  int i;
+  for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
+    printf(" TEST dest idx %d rank %d\n",destLocalIdx,domain->rank);
+#if 0
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
     assert(p);
     hpx_parcel_set_target(p, local);
@@ -216,12 +234,14 @@ void SBN3(hpx_addr_t local,Domain *domain,int rank)
 
     // async is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
+#endif
   }
-
+#if 0
   // Make sure the parallel spawn loop above is done so that we can release the
   // domain lock.
   hpx_lco_wait(sends);
   hpx_lco_delete(sends, HPX_NULL);
+#endif
 }
 #if 0
 void PosVel(int rank)

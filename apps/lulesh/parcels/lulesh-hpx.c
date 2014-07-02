@@ -17,57 +17,67 @@ static int _advanceDomain_action(unsigned long *epoch) {
   if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
 
-  // 0. If I've run enough epochs locally, then I want to join the global
+  // 0. If I've run enough cycles locally, then I want to join the global
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
-  if (n >= domain->maxcycles) {
+  if ( (domain->time >= domain->stoptime) || (domain->cycle >= domain->maxcycles)) {
     hpx_gas_unpin(local);
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
 
-  // 1. allocate a reduction for the next epoch (n + 1) so we can tell if its
-  //    completed
-  //
-  //    We haven't sent any of our epoch n messages yet, and this is an
-  //    allreduce, so no one else should be sending epoch (n + 1) messages yet
-  //    (they're waiting for our epoch n message).
-  domain->sbn1_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
+  // on the very first cycle, exchange nodalMass information
+  if ( domain->cycle == 0 ) {
+    // 1. allocate a reduction for the next epoch (n + 1) so we can tell if its
+    //    completed
+    //
+    //    We haven't sent any of our epoch n messages yet, and this is an
+    //    allreduce, so no one else should be sending epoch (n + 1) messages yet
+    //    (they're waiting for our epoch n message).
+    domain->sbn1_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
 
-  // 2. Send our allreduce messages for epoch n
-  SBN1(local, domain, n);
+    // 2. Send our allreduce messages for epoch n
+    SBN1(local, domain, n);
 
-  // 3. update the domain's epoch, this releases any pending the
-  //    _SBN1_result_action messages, which will all acquire and release the
-  //    domain lock and then join the sbn1_and reduction for the nth epoch
-  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+    printf(" TEST epoch n %ld domain %d\n",n,domain->rank);
 
-  // 4. wait for the allreduce for this epoch to complete locally
-  hpx_lco_wait(domain->sbn1_and[n % 2]);
-  hpx_lco_delete(domain->sbn1_and[n % 2], HPX_NULL);
+    // 3. update the domain's epoch, this releases any pending the
+    //    _SBN1_result_action messages, which will all acquire and release the
+    //    domain lock and then join the sbn1_and reduction for the nth epoch
+    hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+
+    // 4. wait for the allreduce for this epoch to complete locally
+    hpx_lco_wait(domain->sbn1_and[n % 2]);
+    hpx_lco_delete(domain->sbn1_and[n % 2], HPX_NULL);
+
+    // 5. spawn the next epoch
+   // n++;
+  }
 
   // 4. Perform the local computation for epoch n
-#if 0
-  while ((domain->time < domain->stoptime) && (domain->cycle < domain->maxcycles)) {
-    double targetdt = domain->stoptime - domain->time;
+  double targetdt = domain->stoptime - domain->time;
+  if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {
+    double gnewdt = 1.0e+20;
+    if (domain->dtcourant < gnewdt)
+      gnewdt = domain->dtcourant/2.0;
+    if (domain->dthydro < gnewdt)
+      gnewdt = domain->dthydro*2.0/3.0;
 
-    if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {
-      double gnewdt = 1.0e+20;
-      if (domain->dtcourant < gnewdt)
-        gnewdt = domain->dtcourant/2.0;
-      if (domain->dthydro < gnewdt)
-        gnewdt = domain->dthydro*2.0/3.0;
-
-      if (deltaTimeVal[domain->cycle] > gnewdt)
-        deltaTimeVal[domain->cycle] = gnewdt;
-      deltaTimeCnt[domain->cycle]++;
-      //if (deltaTimeCnt[domain->cycle] == domain->nDomains)
-        //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
-    }
-
-    CalcForceForNodes(local,domain,rank);
+    //if (deltaTimeVal[domain->cycle] > gnewdt)
+    //  deltaTimeVal[domain->cycle] = gnewdt;
+    //deltaTimeCnt[domain->cycle]++;
+    //if (deltaTimeCnt[domain->cycle] == domain->nDomains)
+      //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
   }
-#endif
+
+  //domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
+
+  // send messages for epoch n
+  CalcForceForNodes(local,domain,domain->rank);
+
+  //hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+
+  domain->cycle++;
 
   // don't need this domain to be pinned anymore---let it move
   hpx_gas_unpin(local);
