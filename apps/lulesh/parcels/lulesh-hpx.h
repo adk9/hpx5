@@ -205,6 +205,7 @@ typedef struct Domain {
 
   hpx_addr_t epoch;                             // an epoch generation counter
   hpx_addr_t sbn1_and[2];                       // local completion reduction
+  hpx_addr_t sbn3_and[2];                       // local completion reduction
 } Domain;
 
 typedef struct {
