@@ -36,7 +36,7 @@ _SBN1_result_action(NodalArgs *args) {
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
-  hpx_lco_and_set(ld->sbn1_and[args->epoch % 2], HPX_NULL);
+  hpx_lco_and_set(ld->sbn1_and, HPX_NULL);
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -206,7 +206,7 @@ int _SBN3_sends_action(pSBN *psbn)
   return HPX_SUCCESS;
 }
 
-void SBN3(hpx_addr_t local,Domain *domain,int rank)
+void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
   // pack outgoing data
   int nsTF = domain->sendTF[0];
@@ -218,30 +218,27 @@ void SBN3(hpx_addr_t local,Domain *domain,int rank)
 
   int i;
   for (i = 0; i < nsTF; i++) {
-    int destLocalIdx = sendTF[i];
-    printf(" TEST dest idx %d rank %d\n",destLocalIdx,domain->rank);
-#if 0
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
     assert(p);
+
+    pSBN *psbn = hpx_parcel_get_data(p);
+
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendTF[i];
+    psbn->epoch        = epoch;
+
     hpx_parcel_set_target(p, local);
     hpx_parcel_set_action(p, _SBN3_sends);
     hpx_parcel_set_cont_target(p, sends);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
-    pSBN *psbn = hpx_parcel_get_data(p);
-    psbn->domain = domain;
-    psbn->destLocalIdx = destLocalIdx;
-
     // async is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
-#endif
   }
-#if 0
   // Make sure the parallel spawn loop above is done so that we can release the
   // domain lock.
   hpx_lco_wait(sends);
   hpx_lco_delete(sends, HPX_NULL);
-#endif
 }
 #if 0
 void PosVel(int rank)
