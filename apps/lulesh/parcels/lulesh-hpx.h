@@ -232,7 +232,7 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank);
+void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch);
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 

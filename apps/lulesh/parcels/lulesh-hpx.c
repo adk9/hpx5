@@ -30,8 +30,6 @@ static int _advanceDomain_action(unsigned long *epoch) {
     // Send our allreduce messages for epoch n
     SBN1(local, domain, n);
 
-    printf(" TEST epoch n %ld domain %d\n",n,domain->rank);
-
     //  update the domain's epoch, this releases any pending the
     //    _SBN1_result_action messages, which will all acquire and release the
     //    domain lock and then join the sbn1_and reduction for the nth epoch
@@ -61,13 +59,18 @@ static int _advanceDomain_action(unsigned long *epoch) {
   domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
 
   // send messages for epoch n
-  //CalcForceForNodes(local,domain,domain->rank);
-  SBN3(local,domain,n);
-
+  CalcForceForNodes(local,domain,domain->rank,n);
   hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
-
   hpx_lco_wait(domain->sbn3_and[n % 2]);
   hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
+
+  CalcAccelerationForNodes(domain->xdd, domain->ydd, domain->zdd,
+                             domain->fx, domain->fy, domain->fz,
+                             domain->nodalMass, domain->numNode);
+
+  ApplyAccelerationBoundaryConditionsForNodes(domain->xdd, domain->ydd, domain->zdd,
+                                              domain->symmX, domain->symmY, domain->symmZ,
+                                              domain->sizeX);
 
   domain->cycle++;
 
