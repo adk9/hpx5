@@ -9,6 +9,15 @@ hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
 
+static void initdouble(double *input) {
+  *input = 99999999.0; 
+}
+
+static void mindouble(double *output,const double *input) {
+  if ( *output > *input ) *output = *input;
+  return;
+}
+
 // perform one epoch of the algorithm
 static int _advanceDomain_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
