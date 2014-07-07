@@ -361,5 +361,32 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 
 
+/// Perform a commutative-associative reduction.
+///
+/// This is similar to an ALLREDUCE. It is statically sized at creation time,
+/// and is used cyclically. There is no non-blocking hpx_lco_get() operation, so
+/// users should wait to call it until they know that they need it.
+/// @{
+
+
+/// The commutative-associative operation type.
+///
+/// Common operations would be min, max, +, *, etc.
+typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs);
+
+
+/// Allocate a new reduction LCO.
+///
+/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
+/// to call the hpx_lco_set() operation as the first phase of operation.
+///
+/// @param participants The static number of participants in the reduction.
+/// @param size         The size of the data being reduced.
+/// @param op           The commutative-associative operation we're performing.
+/// @param initializer  An initialization function for the data.
+hpx_addr_t hpx_lco_reduce_new(size_t participants, size_t size,
+                              hpx_commutative_associative_op_t op,
+                              void (*initializer)(void *));
+/// @}
 
 #endif
