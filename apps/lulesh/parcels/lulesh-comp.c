@@ -1,6 +1,6 @@
 #include "lulesh-hpx.h"
 
-void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank)
+void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch)
 {
   int numNode = domain->numNode; 
   int i; 
@@ -13,7 +13,7 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank)
 
   CalcVolumeForceForElems(domain,rank); 
 
-  SBN3(local,domain,rank);
+  SBN3(local,domain,epoch);
 }
 
 void CalcVolumeForceForElems(Domain *domain,int rank)
