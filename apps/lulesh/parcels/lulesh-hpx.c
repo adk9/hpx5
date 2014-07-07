@@ -9,6 +9,15 @@ hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
 
+static void initdouble(double *input) {
+  *input = 99999999.0; 
+}
+
+static void mindouble(double *output,const double *input) {
+  if ( *output > *input ) *output = *input;
+  return;
+}
+
 // perform one epoch of the algorithm
 static int _advanceDomain_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
@@ -49,6 +58,9 @@ static int _advanceDomain_action(unsigned long *epoch) {
     if (domain->dthydro < gnewdt)
       gnewdt = domain->dthydro*2.0/3.0;
 
+    // allreduce on gnewdt
+    hpx_lco_set(domain->newdt,sizeof(double),&gnewdt,HPX_NULL,HPX_NULL);    
+
     //if (deltaTimeVal[domain->cycle] > gnewdt)
     //  deltaTimeVal[domain->cycle] = gnewdt;
     //deltaTimeCnt[domain->cycle]++;
@@ -71,6 +83,9 @@ static int _advanceDomain_action(unsigned long *epoch) {
   ApplyAccelerationBoundaryConditionsForNodes(domain->xdd, domain->ydd, domain->zdd,
                                               domain->symmX, domain->symmY, domain->symmZ,
                                               domain->sizeX);
+
+  double newdt;
+  hpx_lco_get(domain->newdt,sizeof(double),&newdt);
 
   domain->cycle++;
 
@@ -102,6 +117,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_sbn1 = hpx_lco_sema_new(1);
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
+
+  ld->newdt = init->newdt;
 
   // remember the LCO we're supposed to set when we've completed maxcycles
   ld->complete = init->complete;
@@ -157,6 +174,8 @@ static int _main_action(int *input)
 
   // Initialize the domains
   hpx_addr_t init = hpx_lco_and_new(nDoms);
+  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms,sizeof(double),(hpx_commutative_associative_op_t) mindouble,
+          (void (*)(void *)) initdouble);     
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .index = k,
@@ -164,7 +183,8 @@ static int _main_action(int *input)
       .nx = nx,
       .maxcycles = maxcycles,
       .cores = cores,
-      .complete = complete
+      .complete = complete,
+      .newdt = newdt
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _initDomain, &args, sizeof(args), init);
@@ -174,6 +194,7 @@ static int _main_action(int *input)
 
   // Spawn the first epoch, _advanceDomain will recursively spawn each epoch.
   unsigned long epoch = 0;
+
   for (k=0;k<nDoms;k++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);

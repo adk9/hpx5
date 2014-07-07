@@ -63,6 +63,7 @@ typedef struct {
   int       maxcycles;
   int           cores;
   hpx_addr_t complete;
+  hpx_addr_t newdt;
 } InitArgs;
 
 typedef struct {
@@ -72,6 +73,7 @@ typedef struct {
 } NodalArgs;
 
 typedef struct Domain {
+  hpx_addr_t newdt;
   hpx_addr_t complete;
   hpx_addr_t sem_sbn1;
   hpx_addr_t sem_sbn3;
