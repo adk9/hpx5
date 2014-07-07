@@ -25,33 +25,19 @@ static int _advanceDomain_action(unsigned long *epoch) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
-
   // on the very first cycle, exchange nodalMass information
   if ( domain->cycle == 0 ) {
-    // 1. allocate a reduction for the next epoch (n + 1) so we can tell if its
-    //    completed
-    //
-    //    We haven't sent any of our epoch n messages yet, and this is an
-    //    allreduce, so no one else should be sending epoch (n + 1) messages yet
-    //    (they're waiting for our epoch n message).
-    domain->sbn1_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
-
-    // 2. Send our allreduce messages for epoch n
+    // Send our allreduce messages for epoch n
     SBN1(local, domain, n);
 
-    printf(" TEST epoch n %ld domain %d\n",n,domain->rank);
-
-    // 3. update the domain's epoch, this releases any pending the
+    //  update the domain's epoch, this releases any pending the
     //    _SBN1_result_action messages, which will all acquire and release the
     //    domain lock and then join the sbn1_and reduction for the nth epoch
     hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
 
-    // 4. wait for the allreduce for this epoch to complete locally
-    hpx_lco_wait(domain->sbn1_and[n % 2]);
-    hpx_lco_delete(domain->sbn1_and[n % 2], HPX_NULL);
-
-    // 5. spawn the next epoch
-   // n++;
+    //  wait for the allreduce for this epoch to complete locally
+    hpx_lco_wait(domain->sbn1_and);
+    hpx_lco_delete(domain->sbn1_and, HPX_NULL);
   }
 
   // 4. Perform the local computation for epoch n
@@ -70,12 +56,21 @@ static int _advanceDomain_action(unsigned long *epoch) {
       //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
   }
 
-  //domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->nDomains - 1);
+  domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
 
   // send messages for epoch n
-  CalcForceForNodes(local,domain,domain->rank);
+  CalcForceForNodes(local,domain,domain->rank,n);
+  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+  hpx_lco_wait(domain->sbn3_and[n % 2]);
+  hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
 
-  //hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+  CalcAccelerationForNodes(domain->xdd, domain->ydd, domain->zdd,
+                             domain->fx, domain->fy, domain->fz,
+                             domain->nodalMass, domain->numNode);
+
+  ApplyAccelerationBoundaryConditionsForNodes(domain->xdd, domain->ydd, domain->zdd,
+                                              domain->symmX, domain->symmY, domain->symmZ,
+                                              domain->sizeX);
 
   domain->cycle++;
 
@@ -120,8 +115,10 @@ static int _initDomain_action(InitArgs *init) {
   ld->epoch = hpx_lco_gencount_new(0);
 
   // allocate the initial allreduce and gate
-  ld->sbn1_and[0] = hpx_lco_and_new(nDoms - 1);
-  ld->sbn1_and[1] = HPX_NULL;
+  ld->sbn1_and = hpx_lco_and_new(ld->recvTF[0]);
+
+  ld->sbn3_and[0] = hpx_lco_and_new(ld->recvTF[0]);
+  ld->sbn3_and[1] = HPX_NULL;
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;

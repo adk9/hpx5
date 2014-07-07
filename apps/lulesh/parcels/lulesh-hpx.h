@@ -204,7 +204,7 @@ typedef struct Domain {
   int recvFF[14];
 
   hpx_addr_t epoch;                             // an epoch generation counter
-  hpx_addr_t sbn1_and[2];                       // local completion reduction
+  hpx_addr_t sbn1_and;                          // local completion reduction
   hpx_addr_t sbn3_and[2];                       // local completion reduction
 } Domain;
 
@@ -232,7 +232,7 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank);
+void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch);
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 
@@ -390,7 +390,7 @@ int _SBN3_sends_action(pSBN *psbn);
 extern hpx_action_t _SBN3_sends;
 int _SBN3_result_action(NodalArgs *nodal);
 extern hpx_action_t _SBN3_result;
-void SBN3(hpx_addr_t address,Domain *domain, int index);
+void SBN3(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
 void PosVel(int rank);
 
