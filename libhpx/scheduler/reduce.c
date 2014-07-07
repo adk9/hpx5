@@ -37,6 +37,7 @@ typedef struct {
   cvar_t                         wait;
   size_t                 participants;
   hpx_commutative_associative_op_t op;
+  void                 (*init)(void*);
   size_t                        count;
   volatile int                  phase;
   void                         *value;     // out-of-place for alignment reasons
@@ -44,17 +45,18 @@ typedef struct {
 
 
 /// This utility reduces the count of waiting
-static void
+static int
 _reduce_join(_reduce_t *r)
 {
   assert(r->count != 0);
 
   if (--r->count > 0)
-    return;
+    return 0;
 
   r->phase = r->phase - 1;
   r->count = r->participants;
   scheduler_signal(&r->wait);
+  return 1;
 }
 
 /// Deletes a reduction.
@@ -112,7 +114,8 @@ _reduce_get(lco_t *lco, int size, void *out)
   if (status == HPX_SUCCESS) {
     if (size && out)
       memcpy(out, r->value, size);
-    _reduce_join(r);
+    if (_reduce_join(r))
+      r->init(r->value);
   }
 
   lco_unlock(lco);
@@ -141,10 +144,13 @@ _reduce_init(_reduce_t *r, size_t participants, size_t size,
     _reduce_wait
   };
 
+  assert(init);
+
   lco_init(&r->lco, &vtable, 0);
   cvar_reset(&r->wait);
   r->participants = participants;
   r->op = op;
+  r->init = init;
   r->count = participants;
   r->phase = _reducing;
   r->value = NULL;
@@ -152,9 +158,9 @@ _reduce_init(_reduce_t *r, size_t participants, size_t size,
   if (size) {
     r->value = malloc(size);
     assert(r->value);
-    assert(init);
-    init(r->value);
   }
+
+  r->init(r->value);
 }
 
 /// @}
