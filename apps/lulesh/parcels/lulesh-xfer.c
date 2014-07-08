@@ -240,6 +240,139 @@ void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
   hpx_lco_wait(sends);
   hpx_lco_delete(sends, HPX_NULL);
 }
+
+int _PosVel_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  // 0. wait for the right generation to become active
+  hpx_lco_gencount_wait(ld->epoch, args->epoch);
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+  double *src = args->buf;
+
+  int recvcnt = XFERCNT[srcLocalIdx];
+  recv_t unpack = RECEIVER[srcLocalIdx];
+
+  int nx = ld->sizeX + 1;
+  int ny = ld->sizeY + 1;
+  int nz = ld->sizeZ + 1;
+
+  // 1. acquire the domain lock
+  hpx_lco_sema_p(ld->sem_posvel);
+
+  // 2. update 
+  unpack(nx, ny, nz, src, ld->x, 1);
+  unpack(nx, ny, nz, src + recvcnt, ld->y, 1);
+  unpack(nx, ny, nz, src + recvcnt*2, ld->z, 1);
+  unpack(nx, ny, nz, src + recvcnt*3, ld->xd, 1);
+  unpack(nx, ny, nz, src + recvcnt*4, ld->yd, 1);
+  unpack(nx, ny, nz, src + recvcnt*5, ld->zd, 1);
+
+  // 3. release the domain lock
+  hpx_lco_sema_v(ld->sem_posvel);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->posvel_and[args->epoch % 2], HPX_NULL);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _PosVel_sends_action(pSBN *psbn)
+{
+  Domain *domain;
+  domain = psbn->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn->destLocalIdx;
+
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+                                       BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+
+  send_t pack = SENDER[destLocalIdx];
+
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  int sendcnt = XFERCNT[destLocalIdx];
+
+  pack(nx, ny, nz, domain->x, nodal->buf);
+  pack(nx, ny, nz, domain->y, nodal->buf + sendcnt);
+  pack(nx, ny, nz, domain->z, nodal->buf + sendcnt*2);
+  pack(nx, ny, nz, domain->xd, nodal->buf + sendcnt*3);
+  pack(nx, ny, nz, domain->yd, nodal->buf + sendcnt*4);
+  pack(nx, ny, nz, domain->zd, nodal->buf + sendcnt*5);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _PosVel_result);
+  hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
+}
+
+void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
+{
+  // doRecv = F, doSend = F, planeOnly = F, data = x, y, z, xd, yd, zd
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  int tag = domain->cycle;
+  int i;
+
+  // pack outgoing data
+  int nsFF = domain->sendFF[0];
+  int *sendFF = &domain->sendFF[1];
+  // for completing the PosVel_sends operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsFF);
+
+  for (i = 0; i < nsFF; i++) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
+
+    pSBN *psbn = hpx_parcel_get_data(p);
+
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendFF[i];
+    psbn->epoch        = epoch;
+
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _PosVel_sends);
+    hpx_parcel_set_cont_target(p, sends);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
+  }
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
+}
+
 #if 0
 void PosVel(int rank)
 {
