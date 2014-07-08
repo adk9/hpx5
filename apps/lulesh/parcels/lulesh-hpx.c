@@ -151,6 +151,7 @@ static int _initDomain_action(InitArgs *init) {
   int plane    = index/(tp*tp);
   ld->sem_sbn1 = hpx_lco_sema_new(1);
   ld->sem_sbn3 = hpx_lco_sema_new(1);
+  ld->sem_posvel = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
