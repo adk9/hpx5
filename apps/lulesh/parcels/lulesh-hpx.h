@@ -78,6 +78,7 @@ typedef struct Domain {
   hpx_addr_t sem_sbn1;
   hpx_addr_t sem_sbn3;
   hpx_addr_t sem_posvel;
+  hpx_addr_t sem_monoq;
 
   // Elem-centered
   int *matElemlist;  // material indexset
@@ -205,11 +206,13 @@ typedef struct Domain {
   int recvTT[7];
   int recvTF[27];
   int recvFF[14];
+  int reverse_recvTT[27];
 
   hpx_addr_t epoch;                             // an epoch generation counter
   hpx_addr_t sbn1_and;                          // local completion reduction
   hpx_addr_t sbn3_and[2];                       // local completion reduction
   hpx_addr_t posvel_and[2];
+  hpx_addr_t monoq_and[2];
 } Domain;
 
 typedef struct {
@@ -219,7 +222,6 @@ typedef struct {
 } pSBN;
 
 int OFFSET[26], BUFSZ[26], XFERCNT[26], MAXEDGESIZE, MAXPLANESIZE;
-Domain *DOMAINS;
 send_t SENDER[26];
 recv_t RECEIVER[26];
 
@@ -240,7 +242,7 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long ep
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 
-void CalcQForElems(int rank);
+void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch);
 
 void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
                  double *sigzz, int numElem);
@@ -313,7 +315,7 @@ void CalcPositionForNodes(double *x, double *y, double *z,
               double *xd, double *yd, double *zd,
               const double dt, int numNode);
 
-void LagrangeElements(int rank);
+void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch);
 
 void CalcLagrangeElements(Domain *domain);
 
@@ -403,7 +405,11 @@ extern hpx_action_t _PosVel_result;
 void PosVel(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
 
-void MonoQ(int rank);
+int _MonoQ_sends_action(pSBN *psbn);
+extern hpx_action_t _MonoQ_sends;
+int _MonoQ_result_action(NodalArgs *nodal);
+extern hpx_action_t _MonoQ_result;
+void MonoQ(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
 void send1(int nx, int ny, int nz, double *src, double *dest);
 

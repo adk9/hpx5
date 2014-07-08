@@ -10,6 +10,8 @@ hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
 hpx_action_t _PosVel_sends = 0;
 hpx_action_t _PosVel_result = 0;
+hpx_action_t _MonoQ_sends = 0;
+hpx_action_t _MonoQ_result = 0;
 
 static void initdouble(double *input) {
   *input = 99999999.0; 
@@ -122,6 +124,13 @@ static int _advanceDomain_action(unsigned long *epoch) {
   hpx_lco_wait(domain->posvel_and[n % 2]);
   hpx_lco_delete(domain->posvel_and[n % 2], HPX_NULL);
 
+  domain->monoq_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTT[0]);
+  LagrangeElements(local,domain,n);
+
+  CalcTimeConstraintsForElems(domain);
+
+  domain->time += domain->deltatime;
+
   domain->cycle++;
 
   // don't need this domain to be pinned anymore---let it move
@@ -152,6 +161,7 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_sbn1 = hpx_lco_sema_new(1);
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   ld->sem_posvel = hpx_lco_sema_new(1);
+  ld->sem_monoq = hpx_lco_sema_new(1);
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
@@ -175,6 +185,9 @@ static int _initDomain_action(InitArgs *init) {
 
   ld->posvel_and[0] = hpx_lco_and_new(ld->recvFF[0]);
   ld->posvel_and[1] = HPX_NULL;
+
+  ld->monoq_and[0] = hpx_lco_and_new(ld->recvTT[0]);
+  ld->monoq_and[1] = HPX_NULL;
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -334,6 +347,8 @@ int main(int argc, char **argv)
   _SBN3_result = HPX_REGISTER_ACTION(_SBN3_result_action);
   _PosVel_sends = HPX_REGISTER_ACTION(_PosVel_sends_action);
   _PosVel_result = HPX_REGISTER_ACTION(_PosVel_result_action);
+  _MonoQ_sends = HPX_REGISTER_ACTION(_MonoQ_sends_action);
+  _MonoQ_result = HPX_REGISTER_ACTION(_MonoQ_result_action);
 
   int input[4];
   input[0] = nDoms;

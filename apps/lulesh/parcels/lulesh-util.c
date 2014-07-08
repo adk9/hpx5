@@ -996,6 +996,12 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   domain->recvTT[0] = nrTT;
   domain->recvTF[0] = nrTF;
   domain->recvFF[0] = nrFF; 
+
+  // Compute the reverse of recvTT
+  for (i=0;i<nrTT;i++) {
+    int srcLocalIdx = recvTT[i];
+    domain->reverse_recvTT[srcLocalIdx] = i;
+  }
 }
 
 void DestroyDomain(Domain *domain)
