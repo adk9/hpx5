@@ -60,12 +60,6 @@ static int _advanceDomain_action(unsigned long *epoch) {
 
     // allreduce on gnewdt
     hpx_lco_set(domain->newdt,sizeof(double),&gnewdt,HPX_NULL,HPX_NULL);    
-
-    //if (deltaTimeVal[domain->cycle] > gnewdt)
-    //  deltaTimeVal[domain->cycle] = gnewdt;
-    //deltaTimeCnt[domain->cycle]++;
-    //if (deltaTimeCnt[domain->cycle] == domain->nDomains)
-      //hpx_lco_future_set(&fut_deltaTime[domain->cycle], 0, (void *)&deltaTimeVal[domain->cycle]);
   }
 
   domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
@@ -84,8 +78,33 @@ static int _advanceDomain_action(unsigned long *epoch) {
                                               domain->symmX, domain->symmY, domain->symmZ,
                                               domain->sizeX);
 
-  double newdt;
-  hpx_lco_get(domain->newdt,sizeof(double),&newdt);
+  if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {
+    double newdt;
+    hpx_lco_get(domain->newdt,sizeof(double),&newdt);
+    double olddt = domain->deltatime;
+    double ratio = newdt/olddt;
+    if (ratio >= 1.0) {
+      if (ratio < domain->deltatimemultlb) {
+        newdt = olddt;
+      } else if (ratio > domain->deltatimemultub) {
+        newdt = olddt*domain->deltatimemultub;
+      }
+    }
+
+    if (newdt > domain->dtmax) {
+      newdt = domain->dtmax;
+    }
+
+    domain->deltatime = newdt;
+  }
+
+  if ((targetdt > domain->deltatime) && (targetdt < 4.0*domain->deltatime/3.0)) {
+    targetdt = 2.0*domain->deltatime/3.0;
+  }
+
+  if (targetdt < domain->deltatime) {
+    domain->deltatime = targetdt;
+  }
 
   domain->cycle++;
 
