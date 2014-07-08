@@ -937,16 +937,15 @@ void CalcPositionForNodes(double *x, double *y, double *z,
   }
 }
 
-void LagrangeElements(int rank)
+void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
-  Domain *domain = &DOMAINS[rank]; 
   int numElem = domain->numElem; 
 
   domain->vnew = malloc(sizeof(double)*numElem);
   
   CalcLagrangeElements(domain);
 
-  CalcQForElems(rank); 
+  CalcQForElems(local,domain,epoch); 
 
   ApplyMaterialPropertiesForElems(domain);
 
@@ -1561,10 +1560,8 @@ double CalcElemVolume(const double x[8], const double y[8], const double z[8])
   return volume; 
 }
 
-void CalcQForElems(int rank)
+void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
-#if 0
-  Domain *domain = &DOMAINS[rank]; 
   int numElem = domain->numElem; 
 
   if (numElem != 0) {
@@ -1586,7 +1583,9 @@ void CalcQForElems(int rank)
 				    domain->delx_xi, domain->delx_eta, domain->delx_zeta,
 				    domain->nodelist, domain->numElem);
 
-    MonoQ(rank);
+    MonoQ(local,domain,epoch);
+    hpx_lco_wait(domain->monoq_and[epoch % 2]);
+    hpx_lco_delete(domain->monoq_and[epoch % 2], HPX_NULL);
 
     CalcMonotonicQForElems(domain);
 
@@ -1614,7 +1613,6 @@ void CalcQForElems(int rank)
       exit(-1);
     }
   }
-#endif
 }
 
 void CalcPressureForElems(double *p_new, double *bvc, double *pbvc, double *e_old, 

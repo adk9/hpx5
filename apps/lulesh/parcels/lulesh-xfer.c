@@ -373,132 +373,140 @@ void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
   hpx_lco_delete(sends, HPX_NULL);
 }
 
-#if 0
-void PosVel(int rank)
-{
-  // doRecv = F, doSend = F, planeOnly = F, data = x, y, z, xd, yd, zd
-  Domain *domain = &DOMAINS[rank];
-  int nx = domain->sizeX + 1;
-  int ny = domain->sizeY + 1;
-  int nz = domain->sizeZ + 1;
-  int tag = domain->cycle;
-  int i;
+int _MonoQ_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
 
-  // pack outgoing data
-  int nsFF = domain->sendFF[0];
-  int *sendFF = &domain->sendFF[1];
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
 
-  for (i = 0; i < nsFF; i++) {
-    int destLocalIdx = sendFF[i];
-    int sendcnt = XFERCNT[destLocalIdx];
-    double *data = hpx_alloc(BUFSZ[destLocalIdx]);
-    send_t pack = SENDER[destLocalIdx];
+  // 0. wait for the right generation to become active
+  hpx_lco_gencount_wait(ld->epoch, args->epoch);
 
-    pack(nx, ny, nz, domain->x, data);
-    pack(nx, ny, nz, domain->y, data + sendcnt);
-    pack(nx, ny, nz, domain->z, data + sendcnt*2);
-    pack(nx, ny, nz, domain->xd, data + sendcnt*3);
-    pack(nx, ny, nz, domain->yd, data + sendcnt*4);
-    pack(nx, ny, nz, domain->zd, data + sendcnt*5);
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+  double *src = args->buf;
 
-    hpx_future_t *fut = &(domain->dataSendFF[destLocalIdx][tag]);
-    hpx_lco_future_set(fut, 0, (void *)data);
-  }
+  // 1. acquire the domain lock
+  hpx_lco_sema_p(ld->sem_monoq);
 
-  // wait for incoming data
-  int nrFF = domain->recvFF[0];
-  int *recvFF = &domain->recvFF[1];
+  // move pointers to the ghost area
+  double *delv_xi = ld->delv_xi;
+  double *delv_eta = ld->delv_eta;
+  double *delv_zeta = ld->delv_zeta;
+  //delv_xi += ld->numElem;
+  //delv_eta += ld->numElem;
+  //delv_zeta += ld->numElem;
 
-  for (i = 0; i < nrFF; i++) {
-    int srcLocalIdx = recvFF[i];
-    int fromDomain = OFFSET[srcLocalIdx] + rank;
-    int srcRemoteIdx = 25 - srcLocalIdx;
-    hpx_future_t *fut = &(DOMAINS[fromDomain].dataSendFF[srcRemoteIdx][tag]);
+  int nx = ld->sizeX;
+  int planeElem = nx*nx;
 
-    hpx_thread_wait(fut);
-    double *src = (double *) hpx_lco_future_get_value(fut);
-    int recvcnt = XFERCNT[srcLocalIdx];
-    recv_t unpack = RECEIVER[srcLocalIdx];
+  // 2. update 
+  int i = ld->reverse_recvTT[srcLocalIdx];
+  // FIXME -- delv_xi pointer is goofed up here
+  //printf(" TEST planeElem %d i %d src %g\n",planeElem,i,src[0]);
+  //memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
+  //memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
+  //memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
 
-    unpack(nx, ny, nz, src, domain->x, 1);
-    unpack(nx, ny, nz, src + recvcnt, domain->y, 1);
-    unpack(nx, ny, nz, src + recvcnt*2, domain->z, 1);
-    unpack(nx, ny, nz, src + recvcnt*3, domain->xd, 1);
-    unpack(nx, ny, nz, src + recvcnt*4, domain->yd, 1);
-    unpack(nx, ny, nz, src + recvcnt*5, domain->zd, 1);
+  // 3. release the domain lock
+  hpx_lco_sema_v(ld->sem_monoq);
 
-    // free the buffer
-    hpx_free(src);
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->monoq_and[args->epoch % 2], HPX_NULL);
 
-    // destroy the future
-    hpx_lco_future_destroy(fut);
-  }
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
 }
 
-void MonoQ(int rank)
+int _MonoQ_sends_action(pSBN *psbn)
 {
-  // doRecv = T, doSend = T, planeOnly = T, data = delv_xi, delv_eta, delv_zeta
-  // MonoQ communicates with face-adjacent neighboring domains, the message size for each
-  // field is nx*nx (assuming cubic domain).
+  Domain *domain;
+  domain = psbn->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn->destLocalIdx;
 
-  Domain *domain = &DOMAINS[rank];
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+                                       BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+
+  send_t pack = SENDER[destLocalIdx];
+ 
   int nx = domain->sizeX;
   int ny = domain->sizeY;
   int nz = domain->sizeZ;
-  int tag = domain->cycle;
-  int numElem = domain->numElem;
-  int planeElem = nx*nx;
-  int i, j;
 
   double *delv_xi = domain->delv_xi;
   double *delv_eta = domain->delv_eta;
   double *delv_zeta = domain->delv_zeta;
 
+  int numElem = domain->numElem;
+  int planeElem = nx*nx;
+
+  pack(nx, ny, nz, delv_xi, nodal->buf);
+  pack(nx, ny, nz, delv_eta, nodal->buf + planeElem);
+  pack(nx, ny, nz, delv_zeta, nodal->buf + planeElem*2);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _MonoQ_result);
+  hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
+}
+
+void MonoQ(hpx_addr_t local,Domain *domain,unsigned long epoch)
+{
   // pack outgoing data
   int nsTT = domain->sendTT[0];
   int *sendTT = &domain->sendTT[1];
 
+  // for completing the parallel send operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsTT);
+
+  int i; 
   for (i = 0; i < nsTT; i++) {
-    int destLocalIdx = sendTT[i];
-    double *data = hpx_alloc(BUFSZ[destLocalIdx]);
-    send_t pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, delv_xi, data);
-    pack(nx, ny, nz, delv_eta, data + planeElem);
-    pack(nx, ny, nz, delv_zeta, data + planeElem*2);
-    hpx_future_t *fut = &(domain->dataSendTT[destLocalIdx][tag]);
-    hpx_lco_future_set(fut, 0, (void *)data);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
 
+    pSBN *psbn = hpx_parcel_get_data(p);
+
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendTT[i];
+    psbn->epoch        = epoch;
+
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _MonoQ_sends);
+    hpx_parcel_set_cont_target(p, sends);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
   }
-
-  // wait for incoming data
-  int nrTT = domain->recvTT[0];
-  int *recvTT = &domain->recvTT[1];
-
-  // move pointers to the ghost area
-  delv_xi += numElem;
-  delv_eta += numElem;
-  delv_zeta += numElem;
-
-  for (i = 0; i < nrTT; i++) {
-    int srcLocalIdx = recvTT[i];
-    int fromDomain = OFFSET[srcLocalIdx] + rank;
-    int srcRemoteIdx = 25 - srcLocalIdx;
-    hpx_future_t *fut = &(DOMAINS[fromDomain].dataSendTT[srcRemoteIdx][tag]);
-    hpx_thread_wait(fut);
-    double *src = (double *) hpx_lco_future_get_value(fut);
-
-    memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
-    memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
-    memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
-
-    // free the buffer
-    hpx_free(src);
-
-    // destroy the future
-    hpx_lco_future_destroy(fut);
-  }
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 }
-#endif
+
 void send1(int nx, int ny, int nz, double *src, double *dest)
 {
   dest[0] = src[0];
