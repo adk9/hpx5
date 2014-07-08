@@ -53,7 +53,7 @@ _reduce_join(_reduce_t *r)
   if (--r->count > 0)
     return 0;
 
-  r->phase = r->phase - 1;
+  r->phase = 1 - r->phase;
   r->count = r->participants;
   scheduler_signal(&r->wait);
   return 1;
