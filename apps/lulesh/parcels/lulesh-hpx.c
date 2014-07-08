@@ -8,6 +8,8 @@ hpx_action_t _SBN1_sends = 0;
 hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
 hpx_action_t _SBN3_result = 0;
+hpx_action_t _PosVel_sends = 0;
+hpx_action_t _PosVel_result = 0;
 
 static void initdouble(double *input) {
   *input = 99999999.0; 
@@ -106,6 +108,20 @@ static int _advanceDomain_action(unsigned long *epoch) {
     domain->deltatime = targetdt;
   }
 
+  CalcVelocityForNodes(domain->xd, domain->yd, domain->zd,
+                         domain->xdd, domain->ydd, domain->zdd,
+                         domain->deltatime, domain->u_cut, domain->numNode);
+
+  CalcPositionForNodes(domain->x, domain->y, domain->z,
+                         domain->xd, domain->yd, domain->zd,
+                         domain->deltatime, domain->numNode);
+
+  domain->posvel_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvFF[0]);
+  PosVel(local,domain,n);
+  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
+  hpx_lco_wait(domain->posvel_and[n % 2]);
+  hpx_lco_delete(domain->posvel_and[n % 2], HPX_NULL);
+
   domain->cycle++;
 
   // don't need this domain to be pinned anymore---let it move
@@ -155,6 +171,9 @@ static int _initDomain_action(InitArgs *init) {
 
   ld->sbn3_and[0] = hpx_lco_and_new(ld->recvTF[0]);
   ld->sbn3_and[1] = HPX_NULL;
+
+  ld->posvel_and[0] = hpx_lco_and_new(ld->recvFF[0]);
+  ld->posvel_and[1] = HPX_NULL;
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -312,6 +331,8 @@ int main(int argc, char **argv)
   _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
   _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);
   _SBN3_result = HPX_REGISTER_ACTION(_SBN3_result_action);
+  _PosVel_sends = HPX_REGISTER_ACTION(_PosVel_sends_action);
+  _PosVel_result = HPX_REGISTER_ACTION(_PosVel_result_action);
 
   int input[4];
   input[0] = nDoms;

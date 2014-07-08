@@ -77,6 +77,7 @@ typedef struct Domain {
   hpx_addr_t complete;
   hpx_addr_t sem_sbn1;
   hpx_addr_t sem_sbn3;
+  hpx_addr_t sem_posvel;
 
   // Elem-centered
   int *matElemlist;  // material indexset
@@ -208,6 +209,7 @@ typedef struct Domain {
   hpx_addr_t epoch;                             // an epoch generation counter
   hpx_addr_t sbn1_and;                          // local completion reduction
   hpx_addr_t sbn3_and[2];                       // local completion reduction
+  hpx_addr_t posvel_and[2];
 } Domain;
 
 typedef struct {
@@ -394,7 +396,12 @@ int _SBN3_result_action(NodalArgs *nodal);
 extern hpx_action_t _SBN3_result;
 void SBN3(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
-void PosVel(int rank);
+int _PosVel_sends_action(pSBN *psbn);
+extern hpx_action_t _PosVel_sends;
+int _PosVel_result_action(NodalArgs *nodal);
+extern hpx_action_t _PosVel_result;
+void PosVel(hpx_addr_t address,Domain *domain, unsigned long epoch);
+
 
 void MonoQ(int rank);
 
