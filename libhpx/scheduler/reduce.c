@@ -55,7 +55,7 @@ _reduce_join(_reduce_t *r)
 
   r->phase = 1 - r->phase;
   r->count = r->participants;
-  scheduler_signal(&r->wait);
+  scheduler_signal_all(&r->wait);
   return 1;
 }
 
