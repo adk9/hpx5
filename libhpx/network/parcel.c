@@ -219,7 +219,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 void
 hpx_parcel_release(hpx_parcel_t *p) {
-  network_free(p, p->size + sizeof(*p));
+  network_free(p);
 }
 
 
