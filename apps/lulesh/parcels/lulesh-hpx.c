@@ -34,6 +34,35 @@ static int _advanceDomain_action(unsigned long *epoch) {
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
   if ( (domain->time >= domain->stoptime) || (domain->cycle >= domain->maxcycles)) {
+    if ( domain->rank == 0 ) { 
+      int nx = domain->sizeX;
+      printf("  Problem size = %d \n"
+             "  Iteration count = %d \n"
+             "  Final origin energy = %12.6e\n",nx,domain->cycle,domain->e[0]);
+      double MaxAbsDiff = 0.0;
+      double TotalAbsDiff = 0.0;
+      double MaxRelDiff = 0.0;
+      int j,k;
+      for (j = 0; j < nx; j++) {
+        for (k = j + 1; k < nx; k++) {
+          double AbsDiff = fabs(domain->e[j*nx + k] - domain->e[k*nx + j]);
+          TotalAbsDiff += AbsDiff;
+
+          if (MaxAbsDiff < AbsDiff)
+            MaxAbsDiff = AbsDiff;
+
+          double RelDiff = AbsDiff/domain->e[k*nx + j];
+          if (MaxRelDiff < RelDiff)
+            MaxRelDiff = RelDiff;
+        }
+      }
+      printf("  Testing plane 0 of energy array:\n"
+         "  MaxAbsDiff   = %12.6e\n"
+         "  TotalAbsDiff = %12.6e\n"
+         "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+    }
+
+
     hpx_gas_unpin(local);
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
@@ -196,7 +225,7 @@ static int _initDomain_action(InitArgs *init) {
 static int _main_action(int *input)
 {
   hpx_time_t tick = hpx_time_now();
-  printf(" Tick: %g\n", hpx_time_us(tick));
+  //printf(" Tick: %g\n", hpx_time_us(tick));
 
   hpx_time_t t1 = hpx_time_now();
 
@@ -211,15 +240,6 @@ static int _main_action(int *input)
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
     return -1;
   }
-
-  deltaTimeCnt = malloc(sizeof(int)*maxcycles);
-  deltaTimeVal = malloc(sizeof(double)*maxcycles);
-
-  for (i = 0; i < maxcycles; i++) {
-    deltaTimeCnt[i] = 0;
-    deltaTimeVal[i] = DBL_MAX;
-  }
-
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
@@ -258,10 +278,6 @@ static int _main_action(int *input)
 
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
-
-
-  free(deltaTimeCnt);
-  free(deltaTimeVal);
 
   hpx_shutdown(0);
 }

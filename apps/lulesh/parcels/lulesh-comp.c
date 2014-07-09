@@ -1568,13 +1568,13 @@ void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
     int allElem = numElem + 2*domain->sizeX*domain->sizeY + 
       2*domain->sizeX*domain->sizeZ + 2*domain->sizeY*domain->sizeZ; 
 
-    domain->delv_xi = malloc(sizeof(double)*allElem);
-    domain->delv_eta = malloc(sizeof(double)*allElem);
-    domain->delv_zeta = malloc(sizeof(double)*allElem);
+    //domain->delv_xi = malloc(sizeof(double)*allElem);
+    //domain->delv_eta = malloc(sizeof(double)*allElem);
+    //domain->delv_zeta = malloc(sizeof(double)*allElem);
 
-    domain->delx_xi = malloc(sizeof(double)*numElem);
-    domain->delx_eta = malloc(sizeof(double)*numElem);
-    domain->delx_zeta = malloc(sizeof(double)*numElem);
+    //domain->delx_xi = malloc(sizeof(double)*numElem);
+    //domain->delx_eta = malloc(sizeof(double)*numElem);
+    //domain->delx_zeta = malloc(sizeof(double)*numElem);
 
     CalcMonotonicQGradientsForElems(domain->x, domain->y, domain->z, 
 				    domain->xd, domain->yd, domain->zd, 
@@ -1589,13 +1589,13 @@ void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
 
     CalcMonotonicQForElems(domain);
 
-    free(domain->delx_zeta);
-    free(domain->delx_eta);
-    free(domain->delx_xi);
+    //free(domain->delx_zeta);
+    //free(domain->delx_eta);
+    //free(domain->delx_xi);
 
-    free(domain->delv_zeta);
-    free(domain->delv_eta);
-    free(domain->delv_xi);
+    //free(domain->delv_zeta);
+    //free(domain->delv_eta);
+    //free(domain->delv_xi);
 
     double qstop = domain->qstop;
     int i, idx = -1;
