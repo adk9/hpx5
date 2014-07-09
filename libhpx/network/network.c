@@ -126,15 +126,13 @@ routing_t *network_get_routing(network_class_t *network) {
   return network->routing;
 }
 
+#include <stdio.h>
 
 void *network_malloc(size_t bytes, size_t align) {
-  void *buf = transport_malloc(here->transport, bytes, align);
-  transport_pin(here->transport, buf, bytes);
-  return buf;
+  return transport_malloc(here->transport, bytes, align);
 }
 
 
-void network_free(void *p, size_t bytes) {
-  transport_unpin(here->transport, p, bytes);
+void network_free(void *p) {
   transport_free(here->transport, p);
 }

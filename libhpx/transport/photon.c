@@ -17,6 +17,8 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <stdbool.h>                            // required for jemalloc
+#include <jemalloc/jemalloc.h>
 #include <photon.h>
 
 #include "libhpx/boot.h"
@@ -104,10 +106,11 @@ static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 /// ----------------------------------------------------------------------------
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
+static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
+{
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
-    dbg_error("Could not un-pin buffer of size %lu for photon\n", len);
+    dbg_error("Could not un-pin buffer %p of size %lu for photon\n", buffer, len);
 }
 
 /// ----------------------------------------------------------------------------
@@ -130,7 +133,7 @@ static int _put(transport_class_t *t, int dest, const void *data, size_t n,
   pbuf.addr = (uintptr_t)rbuffer;
   pbuf.size = rn;
   pbuf.priv = priv;
-  
+
   rc = photon_post_os_put_direct(dest, b, n, PHOTON_DEFAULT_TAG, &pbuf, r);
   if (rc != PHOTON_OK) {
     return dbg_error("Could not complete put operation: 0x%016lx (%lu)\n",
@@ -160,7 +163,7 @@ static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
   pbuf.addr = (uintptr_t)b;
   pbuf.size = rn;
   pbuf.priv = priv;
-  
+
   rc = photon_post_os_get_direct(dest, buffer, n, PHOTON_DEFAULT_TAG, &pbuf, r);
   if (rc != PHOTON_OK) {
     return dbg_error("Could not complete get operation: 0x%016lx (%lu)\n",
@@ -229,13 +232,13 @@ static size_t _probe(transport_class_t *transport, int *source) {
 static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
   //photon_t *photon = (photon_t*)t;
   //uint64_t *id = (uint64_t*)r;
-  //int e = photon_recv(*id, buffer, n, 0);  
+  //int e = photon_recv(*id, buffer, n, 0);
   // make sure we have remote buffer metadata
   int e = photon_wait_send_buffer_rdma(src, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK) {
     return dbg_error("error in wait_send_buffer for %i\n", src);
   }
-  
+
   // get the remote buffer
   e = photon_post_os_get(*(uint32_t*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
@@ -261,7 +264,7 @@ static int _test(transport_class_t *t, void *request, int *success) {
                        status.src_addr.global.proc_id);
     }
   }
-  
+
   return HPX_SUCCESS;
 }
 
@@ -278,6 +281,7 @@ static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
   if (posix_memalign(&p, align, bytes))
     dbg_log("failed network allocation.\n");
   //dbg_error("allocated address: 0x%016lx (%lu)\n", (uintptr_t)p, bytes);
+  _pin(t, p, bytes);
   return p;
 }
 
@@ -309,14 +313,14 @@ transport_class_t *transport_new_photon(void) {
   photon->class.progress       = _progress;
   photon->class.malloc         = _malloc;
   photon->class.free           = _free;
-  
+
   // runtime configuration options
   char* eth_dev;
   char* ib_dev;
   char* backend;
   int ib_port;
   int use_cma;
-  
+
   int val = 0;
   MPI_Initialized(&val);
   if (!val) {
@@ -343,7 +347,7 @@ transport_class_t *transport_new_photon(void) {
     ib_port = photon_default_ib_port;
   else
     ib_port = atoi(getenv("HPX_USE_IB_PORT"));
-  
+
   struct photon_config_t *cfg = &photon->cfg;
   cfg->meta_exch       = PHOTON_EXCH_MPI;
   cfg->nproc           = here->ranks;
