@@ -226,8 +226,6 @@ send_t SENDER[26];
 recv_t RECEIVER[26];
 
 //hpx_future_t *fut_deltaTime;
-int *deltaTimeCnt;
-double *deltaTimeVal;
 
 void Init(int tp, int nx);
 
