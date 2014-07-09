@@ -148,6 +148,19 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   int domElems = domain->numElem;
   int domNodes = domain->numNode; 
 
+  int allElem = domain->numElem + 
+       2*domain->sizeX*domain->sizeY + 
+       2*domain->sizeX*domain->sizeZ + 
+       2*domain->sizeY*domain->sizeZ; 
+
+  domain->delv_xi = malloc(sizeof(double)*allElem);
+  domain->delv_eta = malloc(sizeof(double)*allElem);
+  domain->delv_zeta = malloc(sizeof(double)*allElem);
+
+  domain->delx_xi = malloc(sizeof(double)*domain->numElem);
+  domain->delx_eta = malloc(sizeof(double)*domain->numElem);
+  domain->delx_zeta = malloc(sizeof(double)*domain->numElem);
+
   // Elem-centered
   domain->matElemlist = malloc(sizeof(int)*domElems);
   domain->nodelist = malloc(sizeof(int)*8*domElems); 
@@ -1006,6 +1019,14 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
 
 void DestroyDomain(Domain *domain)
 {
+  free(domain->delx_zeta);
+  free(domain->delx_eta);
+  free(domain->delx_xi);
+
+  free(domain->delv_zeta);
+  free(domain->delv_eta);
+  free(domain->delv_xi);
+
   free(domain->matElemlist);
   free(domain->nodelist);
   free(domain->lxim);
