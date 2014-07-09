@@ -277,9 +277,11 @@ static void _progress(transport_class_t *t, bool flush) {
 
 
 static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
-  void *p = NULL;
-  if (posix_memalign(&p, align, bytes))
+  void *p = mallocx(bytes, MALLOCX_ALIGN(align));
+  if (!p)
     dbg_log("failed network allocation.\n");
+
+  // if (posix_memalign(&p, align, bytes))
   //dbg_error("allocated address: 0x%016lx (%lu)\n", (uintptr_t)p, bytes);
   _pin(t, p, bytes);
   return p;
