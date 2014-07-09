@@ -34,6 +34,7 @@ endif
 
 if HAVE_PHOTON
 AM_CFLAGS           += @PHOTON_CFLAGS@
+AM_LDFLAGS          += -lphoton
 endif
 
 if HAVE_MPI
