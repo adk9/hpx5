@@ -395,20 +395,18 @@ int _MonoQ_result_action(NodalArgs *args) {
   double *delv_xi = ld->delv_xi;
   double *delv_eta = ld->delv_eta;
   double *delv_zeta = ld->delv_zeta;
-  //delv_xi += ld->numElem;
-  //delv_eta += ld->numElem;
-  //delv_zeta += ld->numElem;
+  delv_xi += ld->numElem;
+  delv_eta += ld->numElem;
+  delv_zeta += ld->numElem;
 
   int nx = ld->sizeX;
   int planeElem = nx*nx;
 
   // 2. update 
   int i = ld->reverse_recvTT[srcLocalIdx];
-  // FIXME -- delv_xi pointer is goofed up here
-  //printf(" TEST planeElem %d i %d src %g\n",planeElem,i,src[0]);
-  //memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
-  //memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
-  //memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
+  memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
+  memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
+  memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
 
   // 3. release the domain lock
   hpx_lco_sema_v(ld->sem_monoq);
