@@ -17,7 +17,9 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>                            // required for jemalloc
+#include <sys/mman.h>
 #include <jemalloc/jemalloc.h>
 #include <photon.h>
 
@@ -37,16 +39,19 @@ static char* photon_default_backend = "verbs";
 
 /// the Photon transport
 typedef struct {
-  transport_class_t       class;
+  transport_class_t     class;
   struct photon_config_t  cfg;
-  progress_t             *progress;
+  progress_t        *progress;
+  unsigned              arena;
 } photon_t;
 
 
 /// ----------------------------------------------------------------------------
 /// Get the ID for a Photon transport.
 /// ----------------------------------------------------------------------------
-static const char *_id(void) {
+static const char *
+_id(void)
+{
   return "Photon";
 }
 
@@ -54,7 +59,9 @@ static const char *_id(void) {
 /// ----------------------------------------------------------------------------
 /// Photon barrier.
 /// ----------------------------------------------------------------------------
-static void _barrier(void) {
+static void
+_barrier(void)
+{
   dbg_log("photon: barrier unsupported.\n");
 }
 
@@ -62,12 +69,16 @@ static void _barrier(void) {
 /// ----------------------------------------------------------------------------
 /// Return the size of a Photon request.
 /// ----------------------------------------------------------------------------
-static int _request_size(void) {
+static int
+_request_size(void)
+{
   return sizeof(uint64_t);
 }
 
 
-static int _adjust_size(int size) {
+static int
+_adjust_size(int size)
+{
   return size;
 }
 
@@ -75,7 +86,9 @@ static int _adjust_size(int size) {
 /// ----------------------------------------------------------------------------
 /// Cancel an active Photon request.
 /// ----------------------------------------------------------------------------
-static int _request_cancel(void *request) {
+static int
+_request_cancel(void *request)
+{
   // Is it possible to cancel an active request/ledger?
   return 0;
 }
@@ -84,7 +97,9 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Shut down Photon, and delete the transport.
 /// ----------------------------------------------------------------------------
-static void _delete(transport_class_t *transport) {
+static void
+_delete(transport_class_t *transport)
+{
   photon_t *photon = (photon_t*)transport;
   network_progress_delete(photon->progress);
   photon_finalize();
@@ -95,7 +110,9 @@ static void _delete(transport_class_t *transport) {
 /// ----------------------------------------------------------------------------
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
-static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static void
+_pin(transport_class_t *transport, const void* buffer, size_t len)
+{
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("Could not pin buffer of size %lu for photon\n", len);
@@ -106,18 +123,21 @@ static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 /// ----------------------------------------------------------------------------
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
+static void
+_unpin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
     dbg_error("Could not un-pin buffer %p of size %lu for photon\n", buffer, len);
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Put data via Photon
 /// ----------------------------------------------------------------------------
-static int _put(transport_class_t *t, int dest, const void *data, size_t n,
-                void *rbuffer, size_t rn, void *r)
+static int
+_put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
+     size_t rn, void *r)
 {
   int rc;
   void *b = (void*)data;
@@ -143,11 +163,13 @@ static int _put(transport_class_t *t, int dest, const void *data, size_t n,
   return HPX_SUCCESS;
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Get data via Photon
 /// ----------------------------------------------------------------------------
-static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
-                const void *rdata, size_t rn, void *r)
+static int
+_get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
+     size_t rn, void *r)
 {
   int rc;
   void *b = (void*)rdata;
@@ -173,12 +195,14 @@ static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
   return HPX_SUCCESS;
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Send data via Photon.
 ///
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
 /// ----------------------------------------------------------------------------
-static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
+static int
+_send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
   //uint64_t saddr = block_id_ipv4mc(dest);
   //photon_t *photon = (photon_t*)t;
@@ -196,7 +220,9 @@ static int _send(transport_class_t *t, int dest, const void *data, size_t n, voi
 /// ----------------------------------------------------------------------------
 /// Probe Photon ledger to see if anything has been received.
 /// ----------------------------------------------------------------------------
-static size_t _probe(transport_class_t *transport, int *source) {
+static size_t
+_probe(transport_class_t *transport, int *source)
+{
   int photon_src = *source;
   int flag = 0;
   struct photon_status_t status;
@@ -229,7 +255,9 @@ static size_t _probe(transport_class_t *transport, int *source) {
 /// ----------------------------------------------------------------------------
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
-static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
+static int
+_recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+{
   //photon_t *photon = (photon_t*)t;
   //uint64_t *id = (uint64_t*)r;
   //int e = photon_recv(*id, buffer, n, 0);
@@ -248,7 +276,9 @@ static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
 }
 
 
-static int _test(transport_class_t *t, void *request, int *success) {
+static int
+_test(transport_class_t *t, void *request, int *success)
+{
   int type = 0;
   struct photon_status_t status;
   uint32_t *id = (uint32_t*)request;
@@ -268,7 +298,10 @@ static int _test(transport_class_t *t, void *request, int *success) {
   return HPX_SUCCESS;
 }
 
-static void _progress(transport_class_t *t, bool flush) {
+
+static void
+_progress(transport_class_t *t, bool flush)
+{
   photon_t *photon = (photon_t*)t;
   network_progress_poll(photon->progress);
   //if (flush)
@@ -276,20 +309,65 @@ static void _progress(transport_class_t *t, bool flush) {
 }
 
 
-static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
-  void *p = mallocx(bytes, MALLOCX_ALIGN(align));
+static void *
+_malloc(transport_class_t *t, size_t bytes, size_t align)
+{
+  photon_t *photon = (photon_t *)t;
+  void *p = mallocx(bytes,
+                    MALLOCX_ALIGN(align) | MALLOCX_ARENA(photon->arena));
   if (!p)
     dbg_log("failed network allocation.\n");
 
-  // if (posix_memalign(&p, align, bytes))
-  //dbg_error("allocated address: 0x%016lx (%lu)\n", (uintptr_t)p, bytes);
-  _pin(t, p, bytes);
   return p;
 }
 
 
-static void _free(transport_class_t *t, void *p) {
-  free(p);
+static void
+_free(transport_class_t *t, void *p)
+{
+  photon_t *photon = (photon_t *)t;
+  dallocx(p, MALLOCX_ARENA(photon->arena));
+}
+
+
+static void *
+_mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
+{
+  static const int prot = PROT_READ | PROT_WRITE;
+  static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
+  void *chunk = mmap(NULL, size, prot, flags, -1, 0);
+  if (!chunk) {
+    dbg_error("Photon could not mmap jemalloc chunk of size %lu\n", size);
+    return NULL;
+  }
+
+  assert((uintptr_t)chunk % alignment == 0);
+
+  int error = photon_register_buffer(chunk, size);
+  if (error) {
+    dbg_error("Photon could not pin buffer %p of size %lu\n", chunk, size);
+    error = munmap(chunk, size);
+    assert(error >= 0);
+  }
+
+  *zero = true;
+  return chunk;
+}
+
+
+static bool
+_munmap_pinned(void *chunk, size_t size, unsigned arena_ind)
+{
+  int error = photon_unregister_buffer(chunk, size);
+  if (error)
+    dbg_error("Photon could not un-pin buffer %p of size %lu\n", chunk, size);
+
+  error = munmap(chunk, size);
+  if (error < 0) {
+    dbg_error("Could not munmap buffer %p of size %lu\n", chunk, size);
+  }
+
+  return error;
 }
 
 
@@ -377,5 +455,30 @@ transport_class_t *transport_new_photon(void) {
     dbg_error("failed to start the transport progress loop.\n");
     hpx_abort();
   }
+
+  size_t sz = sizeof(photon->arena);
+  int error = mallctl("arenas.extend", &photon->arena, &sz, NULL, 0);
+  if (error) {
+    dbg_error("failed to allocate a pinned arena %d.\n", error);
+    hpx_abort();
+  }
+
+  char path[128];
+  snprintf(path, 128, "arena.%u.chunk.alloc", photon->arena);
+  chunk_alloc_t *alloc = _mmap_pinned;
+  error = mallctl(path, NULL, NULL, (void*)&alloc, sizeof(alloc));
+  if (error) {
+    dbg_error("failed to set arena allocator to pinned mmap.\n");
+    hpx_abort();
+  }
+
+  snprintf(path, 128, "arena.%u.chunk.dalloc", photon->arena);
+  chunk_dalloc_t *dalloc = _munmap_pinned;
+  error = mallctl(path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
+  if (error) {
+    dbg_error("failed to set arena de-allocator to pinned munmap.\n");
+    hpx_abort();
+  }
+
   return &photon->class;
 }
