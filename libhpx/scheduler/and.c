@@ -14,10 +14,9 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/and.c
 /// Defines the AND LCO.
-/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <stdint.h>
 
@@ -29,9 +28,7 @@
 #include "cvar.h"
 
 
-/// ----------------------------------------------------------------------------
 /// And LCO class interface.
-/// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
   lco_t      lco;
@@ -155,9 +152,7 @@ _and_init(_and_t *and, intptr_t value) {
 
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate an and LCO. This is synchronous.
-/// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_and_new(intptr_t limit) {
   hpx_addr_t target;
@@ -183,9 +178,7 @@ hpx_lco_and_new(intptr_t limit) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Join the and.
-/// ----------------------------------------------------------------------------
 void
 hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {
   hpx_lco_set(and, 0, NULL, HPX_NULL, rsync);

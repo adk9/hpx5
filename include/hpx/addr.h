@@ -36,7 +36,7 @@ typedef struct {
 
 hpx_addr_t hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes);
 
-/// Compare to global addresses
+/// Compare two global addresses
 ///
 /// @param lhs a global address
 /// @param rhs a global address

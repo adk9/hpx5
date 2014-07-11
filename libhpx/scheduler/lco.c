@@ -14,9 +14,7 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/lco.c
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
@@ -52,13 +50,11 @@ _lco_class(lco_t *lco)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Action LCO event handler wrappers.
 ///
 /// These try and pin the LCO, and then forward to the local event handler
 /// wrappers. If the pin fails, then the LCO isn't local, so the parcel is
 /// resent.
-/// ----------------------------------------------------------------------------
 static int
 _lco_fini(void *args)
 {
@@ -136,9 +132,7 @@ _lco_wait(void *args)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Register the event handlers.
-/// ----------------------------------------------------------------------------
 static void HPX_CONSTRUCTOR
 _initialize_actions(void)
 {
@@ -150,9 +144,8 @@ _initialize_actions(void)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// LCO bit packing and manipulation
-/// ----------------------------------------------------------------------------
+/// @{
 const lco_class_t *
 lco_lock(lco_t *lco)
 {
@@ -216,6 +209,7 @@ lco_get_triggered(const lco_t *lco)
   return lco->bits & _TRIGGERED_MASK;
 }
 
+/// @}
 
 void
 hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
@@ -283,9 +277,7 @@ hpx_lco_wait(hpx_addr_t target)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// If the LCO is local, then we use the local get functionality.
-/// ----------------------------------------------------------------------------
 hpx_status_t
 hpx_lco_get(hpx_addr_t target, int size, void *value)
 {

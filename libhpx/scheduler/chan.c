@@ -14,10 +14,9 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/chan.c
 /// Defines a channel structure.
-/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,14 +28,12 @@
 #include "lco.h"
 
 
-/// ----------------------------------------------------------------------------
 /// Local channel interface.
 ///
 /// A channel is an LCO that contains a linked-list queue of dynamically sized
 /// buffers. It can be used to support a thread-based, point-to-point
 /// communication mechanism, and that channel can be made in-order if the sender
 /// waits for remote completion for sets or sends().
-/// ----------------------------------------------------------------------------
 /// @{
 typedef struct _node {
   struct _node *next;
@@ -357,7 +354,6 @@ _register_actions(void) {
 /// @}
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate a new channel.
 ///
 /// Channels, like other LCOs, are always allocated in the global
@@ -376,8 +372,7 @@ _register_actions(void) {
 /// sent on a channel. It is the responsibility of the receiver to
 /// free a buffer that it receives on the channel.
 ///
-/// @returns    - the global address of the allocated channel
-/// ----------------------------------------------------------------------------
+/// @returns the global address of the allocated channel
 hpx_addr_t
 hpx_lco_chan_new(void)
 {
@@ -407,9 +402,7 @@ hpx_lco_chan_new(void)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Channel send.
-/// ----------------------------------------------------------------------------
 void
 hpx_lco_chan_send(hpx_addr_t chan, int size, const void *value,
                   hpx_addr_t lsync, hpx_addr_t rsync)
@@ -429,7 +422,6 @@ hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *value,
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Channel receive.
 ///
 /// If the channel is local, we can just do a synchronous receive to get the
@@ -437,7 +429,6 @@ hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *value,
 /// receive into it through a remote receive. We have to use a channel instead
 /// of a future because we don't know the size that we're receiving, so the
 /// channel needs to allocate the buffer internally on it's own.
-/// ----------------------------------------------------------------------------
 hpx_status_t
 hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer)
 {
@@ -457,14 +448,12 @@ hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Channel try receive.
 ///
 /// If the channel is local, we can just do a synchronous try recv, otherwise we
 /// allocate a proxy channel to receive into (we need to use a channel because
 /// we don't know size) and use the _chan_try_recv action to get the remote
 /// value.
-/// ----------------------------------------------------------------------------
 hpx_status_t
 hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
 {
@@ -484,12 +473,10 @@ hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate a global array of channels.
 ///
-/// @param          n - the total number of channels to allocate
-/// @param block_size - the number of channels per block
-/// ----------------------------------------------------------------------------
+/// @param          n the total number of channels to allocate
+/// @param block_size the number of channels per block
 hpx_addr_t
 hpx_lco_chan_array_new(int n, int block_size)
 {
