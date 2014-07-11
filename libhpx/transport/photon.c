@@ -334,14 +334,20 @@ static void *
 _mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
 {
   static const int prot = PROT_READ | PROT_WRITE;
-  static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
+  // NB: MAP_LOCKED required for some unknown reason, we get weird silent issues
+  //     if it's not used
+  static const int flags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_LOCKED;
   void *chunk = mmap(NULL, size, prot, flags, -1, 0);
   if (!chunk) {
     dbg_error("Photon could not mmap jemalloc chunk of size %lu\n", size);
     return NULL;
   }
 
-  assert((uintptr_t)chunk % alignment == 0);
+  if ((uintptr_t)chunk % alignment != 0) {
+    dbg_error("Photon could not mmap jemalloc chunk of size %lu "
+              "with alignment %lu\n", size, alignment);
+    hpx_abort();
+  }
 
   int error = photon_register_buffer(chunk, size);
   if (error) {
