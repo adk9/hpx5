@@ -189,13 +189,9 @@ hpx_addr_t hpx_lco_future_new(int size);
 
 /// Allocate a global array of futures.
 ///
-/// Each of the futures needs to be initialized correctly, and if they need to
-/// be out of place, then each locality needs to allocate the out-of-place size
-/// required.
-///
-/// @param          n - the (total) number of futures to allocate
-/// @param       size - the size of each futures' value
-/// @param block_size - the number of futures per block
+/// @param          n The (total) number of futures to allocate
+/// @param       size The size of each futures' value
+/// @param block_size The number of futures per block
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 
 
