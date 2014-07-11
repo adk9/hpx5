@@ -165,11 +165,6 @@ _reduce_init(_reduce_t *r, size_t participants, size_t size,
 
 /// @}
 
-/// Allocate a reduction LCO.
-///
-/// @param participants The static number of participants in the reduction.
-/// @param op           The commutative associative reduction operation.
-/// @param size         The size of the data we're reducing
 hpx_addr_t
 hpx_lco_reduce_new(size_t inputs, size_t size,
                    hpx_commutative_associative_op_t op, void (*init)(void*))

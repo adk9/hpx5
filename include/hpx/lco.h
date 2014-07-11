@@ -45,6 +45,8 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 /// @param  size the size of the data
 /// @param value the address of the value to set
 /// @param lsync an LCO to signal local completion (HPX_NULL == don't wait)
+///              (Local completion indicates that the @p value may be freed 
+///              or reused.)
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
@@ -146,9 +148,7 @@ void hpx_lco_sema_v(hpx_addr_t sema);
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 
 
-/// ----------------------------------------------------------------------------
 /// An and LCO represents an AND gate.
-/// ----------------------------------------------------------------------------
 /// @{
 
 /// Create an AND gate.
@@ -158,15 +158,7 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 /// @returns The global address of the new and gate.
 hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 
-/// Join an AND lco.
-///
-/// @param   and - the LCO's global address
-/// @param rsync - an LCO to signal remote completion
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync);
-
-/// @}
-
-/// Set an "and" LCO, triggering it (i.e. setting it) if appropriate.
+/// Join an "and" LCO, triggering it (i.e. setting it) if appropriate.
 ///
 /// If this set is the last one the "and" LCO is waiting on, the "and" LCO
 /// will be set.
@@ -175,14 +167,16 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync);
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
-
+/// @}
 
 /// Create a future.
 ///
 /// Futures are builtin LCOs that represent values returned from asynchronous
 /// computation.
+/// Futures are always allocated in the global address space, because their
+/// addresses are used as the targets of parcels.
 ///
-/// @param size the size of the future's value (may be 0)
+/// @param size the size in bytes of the future's value (may be 0)
 /// @returns    the glboal address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size);
 

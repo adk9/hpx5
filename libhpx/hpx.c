@@ -14,13 +14,12 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/hpx.c
 /// @brief Implements much of hpx.h using libhpx.
 ///
 /// This file implements the "glue" between the HPX public interface, and
 /// libhpx.
-/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,12 +41,10 @@
 #include "network/servers.h"
 
 
-/// ----------------------------------------------------------------------------
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated, and return
 /// the passed code.
-/// ----------------------------------------------------------------------------
 static int _cleanup(locality_t *l, int code) {
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -370,11 +367,9 @@ hpx_abort(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// This is currently trying to provide the layout:
 ///
 /// shared [1] T foo[n]; where sizeof(T) == bytes
-/// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_gas_global_alloc(size_t n, uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
@@ -407,10 +402,8 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// This is a non-collective, local call to allocate memory in the
 /// global address space that can be moved.
-/// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_gas_alloc(size_t n, uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
