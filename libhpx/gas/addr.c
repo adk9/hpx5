@@ -15,13 +15,9 @@
 #endif
 
 
-/// ----------------------------------------------------------------------------
+/// @file libhpx/gas/addr.c
 /// AGAS agnostic global address manipulation.
-/// ----------------------------------------------------------------------------
-#include "hpx/hpx.h"
-
-
-/// ----------------------------------------------------------------------------
+///
 /// Allocation is done on a per-block basis.
 ///
 /// There are 2^32 blocks available, and the maximum size for a block is 2^32
@@ -32,8 +28,8 @@
 /// allocations, i.e., block 0 belongs to rank 0, block 1 belongs to rank 1,
 /// etc. Rank 0's block 0 also serves as the "NULL" block, that contains
 /// HPX_NULL.
-/// ----------------------------------------------------------------------------
 
+#include "hpx/hpx.h"
 
 /// Null doubles as rank 0's HPX_HERE.
 const hpx_addr_t HPX_NULL = HPX_ADDR_INIT(0, 0, 0);
@@ -53,18 +49,13 @@ hpx_addr_t HPX_THERE(int i) {
 }
 
 
-/// ----------------------------------------------------------------------------
-///
-/// ----------------------------------------------------------------------------
 bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
   return (lhs.offset == rhs.offset) && (lhs.base_id == rhs.base_id) &&
     (lhs.block_bytes == rhs.block_bytes);
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Perform address arithmetic.
-/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes) {
   // not checking overflow
   uint64_t offset = addr.offset + bytes;

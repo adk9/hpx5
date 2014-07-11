@@ -14,10 +14,9 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/future.c
 /// Defines the future structure.
-/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,9 +27,7 @@
 #include "lco.h"
 #include "cvar.h"
 
-/// ----------------------------------------------------------------------------
 /// Local future interface.
-/// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
   lco_t    lco;                                 //
@@ -252,16 +249,6 @@ _future_initialize_actions(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
-/// Allocate a future.
-///
-/// Futures are always allocated in the global address space, because their
-/// addresses are used as the targets of parcels.
-///
-/// @param size - the number of bytes of data the future should be prepared to
-///               deal with
-/// @returns    - the global address of the allocated future
-/// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_future_new(int size) {
   hpx_addr_t f;
@@ -290,17 +277,11 @@ hpx_lco_future_new(int size) {
 }
 
 
-/// ----------------------------------------------------------------------------
-/// Allocate a global array of futures.
-///
-/// Each of the futures needs to be initialized correctly, and if they need to
-/// be out of place, then each locality needs to allocate the out-of-place size
-/// required.
-///
-/// @param          n - the (total) number of futures to allocate
-/// @param       size - the payload size for the futures
-/// @param block_size - the number of futures per block
-/// ----------------------------------------------------------------------------
+// Allocate a global array of futures.
+//
+// Each of the futures needs to be initialized correctly, and if they need to
+// be out of place, then each locality needs to allocate the out-of-place size
+// required.
 hpx_addr_t
 hpx_lco_future_array_new(int n, int size, int block_size) {
   // perform the global allocation
@@ -344,19 +325,15 @@ hpx_lco_future_array_new(int n, int size, int block_size) {
 }
 
 
-/// ----------------------------------------------------------------------------
-/// Application level programmer doesn't know how big the future is, so we
-/// provide this array indexer.
-/// ----------------------------------------------------------------------------
+// Application level programmer doesn't know how big the future is, so we
+// provide this array indexer.
 hpx_addr_t
 hpx_lco_future_array_at(hpx_addr_t array, int i) {
   return hpx_addr_add(array, i * sizeof(_future_t));
 }
 
 
-/// ----------------------------------------------------------------------------
-/// This should probably be managed by the LCO superclass.
-/// ----------------------------------------------------------------------------
+// This should probably be managed by the LCO superclass.
 void
 hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   dbg_log("unimplemented");
