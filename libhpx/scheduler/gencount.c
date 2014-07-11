@@ -14,10 +14,10 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
+
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
-/// ----------------------------------------------------------------------------
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,9 +29,8 @@
 #include "cvar.h"
 #include "lco.h"
 
-/// ----------------------------------------------------------------------------
+
 /// Local gencount interface.
-/// ----------------------------------------------------------------------------
 /// @{
 typedef struct {
   lco_t              lco;
@@ -172,9 +171,6 @@ _initialize_actions(void)
   _gencount_wait_gen_action = HPX_REGISTER_ACTION(_gencount_wait_gen_proxy);
 }
 
-/// ----------------------------------------------------------------------------
-/// Allocate a gencnt LCO. This is synchronous.
-/// ----------------------------------------------------------------------------
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace) {
   hpx_addr_t target = locality_malloc(sizeof(_gencount_t) +

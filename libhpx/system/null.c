@@ -16,10 +16,9 @@
 
 #include "hpx/hpx.h"
 
-/// ----------------------------------------------------------------------------
-/// "Home" location for the HPX_ACTION_NULL action..
-/// ----------------------------------------------------------------------------
 
+/// @file libhpx/system/null.c
+/// "Home" location for the HPX_ACTION_NULL action..
 
 hpx_action_t HPX_ACTION_NULL = 0;
 
