@@ -4,29 +4,29 @@ void Init(int tp, int nx)
 {
   // setup OFFSET
   OFFSET[0] = -tp*tp - tp - 1;
-  OFFSET[1] = -tp*tp - tp; 
+  OFFSET[1] = -tp*tp - tp;
   OFFSET[2] = -tp*tp - tp + 1;
   OFFSET[3] = -tp*tp - 1;
-  OFFSET[4] = -tp*tp; 
+  OFFSET[4] = -tp*tp;
   OFFSET[5] = -tp*tp + 1;
   OFFSET[6] = -tp*tp + tp - 1;
-  OFFSET[7] = -tp*tp + tp; 
+  OFFSET[7] = -tp*tp + tp;
   OFFSET[8] = -tp*tp + tp + 1;
 
   OFFSET[9]  = -tp - 1;
   OFFSET[10] = -tp;
-  OFFSET[11] = -tp + 1; 
-  OFFSET[12] = -1; 
+  OFFSET[11] = -tp + 1;
+  OFFSET[12] = -1;
   OFFSET[13] = 1;
-  OFFSET[14] = tp - 1; 
-  OFFSET[15] = tp; 
+  OFFSET[14] = tp - 1;
+  OFFSET[15] = tp;
   OFFSET[16] = tp + 1;
 
   OFFSET[17] = tp*tp - tp - 1;
   OFFSET[18] = tp*tp - tp;
   OFFSET[19] = tp*tp - tp + 1;
   OFFSET[20] = tp*tp - 1;
-  OFFSET[21] = tp*tp; 
+  OFFSET[21] = tp*tp;
   OFFSET[22] = tp*tp + 1;
   OFFSET[23] = tp*tp + tp - 1;
   OFFSET[24] = tp*tp + tp;
@@ -42,7 +42,7 @@ void Init(int tp, int nx)
   SENDER[6] = send7;
   SENDER[7] = send8;
   SENDER[8] = send9;
-  SENDER[9] = send10; 
+  SENDER[9] = send10;
 
   SENDER[10] = send11;
   SENDER[11] = send12;
@@ -53,7 +53,7 @@ void Init(int tp, int nx)
   SENDER[16] = send17;
   SENDER[17] = send18;
   SENDER[18] = send19;
-  SENDER[19] = send20; 
+  SENDER[19] = send20;
 
   SENDER[20] = send21;
   SENDER[21] = send22;
@@ -90,68 +90,68 @@ void Init(int tp, int nx)
   RECEIVER[23] = recv24;
   RECEIVER[24] = recv25;
   RECEIVER[25] = recv26;
-  
+
   // setup buffer size
   MAXPLANESIZE = CACHE_ALIGN_REAL((nx + 1)*(nx + 1));
   MAXEDGESIZE = CACHE_ALIGN_REAL(nx + 1);
 
   int allocsz = MAXPLANESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double);
   BUFSZ[4] = BUFSZ[21] = BUFSZ[10] = allocsz;
-  BUFSZ[15] = BUFSZ[12] = BUFSZ[13] = allocsz; 
+  BUFSZ[15] = BUFSZ[12] = BUFSZ[13] = allocsz;
 
-  allocsz = MAXEDGESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double); 
-  BUFSZ[9] = BUFSZ[1] = BUFSZ[3] = BUFSZ[16] = allocsz; 
+  allocsz = MAXEDGESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double);
+  BUFSZ[9] = BUFSZ[1] = BUFSZ[3] = BUFSZ[16] = allocsz;
   BUFSZ[24] = BUFSZ[22] = BUFSZ[14] = BUFSZ[18] = allocsz;
-  BUFSZ[20] = BUFSZ[11] = BUFSZ[7] = BUFSZ[5] = allocsz; 
+  BUFSZ[20] = BUFSZ[11] = BUFSZ[7] = BUFSZ[5] = allocsz;
 
   allocsz = CACHE_COHERENCE_PAD_REAL*sizeof(double);
-  BUFSZ[0] = BUFSZ[17] = BUFSZ[2] = BUFSZ[19] = allocsz; 
-  BUFSZ[6] = BUFSZ[23] = BUFSZ[8] = BUFSZ[25] = allocsz; 
+  BUFSZ[0] = BUFSZ[17] = BUFSZ[2] = BUFSZ[19] = allocsz;
+  BUFSZ[6] = BUFSZ[23] = BUFSZ[8] = BUFSZ[25] = allocsz;
 
   // setup XFERCNT
   XFERCNT[4] = XFERCNT[21] = XFERCNT[10] = (nx + 1)*(nx + 1);
-  XFERCNT[15] = XFERCNT[12] = XFERCNT[13] = (nx + 1)*(nx + 1);; 
+  XFERCNT[15] = XFERCNT[12] = XFERCNT[13] = (nx + 1)*(nx + 1);;
 
-  XFERCNT[9] = XFERCNT[1] = XFERCNT[3] = XFERCNT[16] = nx + 1; 
+  XFERCNT[9] = XFERCNT[1] = XFERCNT[3] = XFERCNT[16] = nx + 1;
   XFERCNT[24] = XFERCNT[22] = XFERCNT[14] = XFERCNT[18] = nx + 1;
-  XFERCNT[20] = XFERCNT[11] = XFERCNT[7] = XFERCNT[5] = nx + 1; 
+  XFERCNT[20] = XFERCNT[11] = XFERCNT[7] = XFERCNT[5] = nx + 1;
 
   XFERCNT[0] = XFERCNT[17] = XFERCNT[2] = XFERCNT[19] = 1;
   XFERCNT[6] = XFERCNT[23] = XFERCNT[8] = XFERCNT[25] = 1;
 }
 
-void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp, 
-	       int nDomains, int maxcycles,Domain *domain)
+void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
+           int nDomains, int maxcycles,Domain *domain)
 {
-  double tx, ty, tz; 
-  int nidx, zidx, pidx; 
-  int ghostIdx[6]; 
-  int i, j, plane, row, col, lnode; 
+  double tx, ty, tz;
+  int nidx, zidx, pidx;
+  int ghostIdx[6];
+  int i, j, plane, row, col, lnode;
 
-  int edgeElems = nx; 
+  int edgeElems = nx;
   int edgeNodes = edgeElems + 1;
-  int meshEdgeElems = tp*nx; 
+  int meshEdgeElems = tp*nx;
 
   domain->colLoc = colLoc;
   domain->rowLoc = rowLoc;
-  domain->planeLoc = planeLoc; 
-  domain->tp = tp; 
-  domain->rank = rank; 
-  domain->nDomains = nDomains; 
-  domain->maxcycles = maxcycles; 
-  
+  domain->planeLoc = planeLoc;
+  domain->tp = tp;
+  domain->rank = rank;
+  domain->nDomains = nDomains;
+  domain->maxcycles = maxcycles;
+
   domain->sizeX = edgeElems;
   domain->sizeY = edgeElems;
   domain->sizeZ = edgeElems;
   domain->numElem = edgeElems*edgeElems*edgeElems;
   domain->numNode = edgeNodes*edgeNodes*edgeNodes;
   int domElems = domain->numElem;
-  int domNodes = domain->numNode; 
+  int domNodes = domain->numNode;
 
-  int allElem = domain->numElem + 
-       2*domain->sizeX*domain->sizeY + 
-       2*domain->sizeX*domain->sizeZ + 
-       2*domain->sizeY*domain->sizeZ; 
+  int allElem = domain->numElem +
+       2*domain->sizeX*domain->sizeY +
+       2*domain->sizeX*domain->sizeZ +
+       2*domain->sizeY*domain->sizeZ;
 
   domain->delv_xi = malloc(sizeof(double)*allElem);
   domain->delv_eta = malloc(sizeof(double)*allElem);
@@ -163,17 +163,17 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
 
   // Elem-centered
   domain->matElemlist = malloc(sizeof(int)*domElems);
-  domain->nodelist = malloc(sizeof(int)*8*domElems); 
+  domain->nodelist = malloc(sizeof(int)*8*domElems);
 
   domain->lxim   = malloc(sizeof(int)*domElems);
-  domain->lxip   = malloc(sizeof(int)*domElems); 
-  domain->letam  = malloc(sizeof(int)*domElems); 
-  domain->letap  = malloc(sizeof(int)*domElems); 
-  domain->lzetam = malloc(sizeof(int)*domElems); 
+  domain->lxip   = malloc(sizeof(int)*domElems);
+  domain->letam  = malloc(sizeof(int)*domElems);
+  domain->letap  = malloc(sizeof(int)*domElems);
+  domain->lzetam = malloc(sizeof(int)*domElems);
   domain->lzetap = malloc(sizeof(int)*domElems);
 
   domain->elemBC = malloc(sizeof(int)*domElems);
-  
+
   domain->e        = malloc(sizeof(double)*domElems);
   domain->p        = malloc(sizeof(double)*domElems);
   domain->q        = malloc(sizeof(double)*domElems);
@@ -183,9 +183,9 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   domain->volo     = malloc(sizeof(double)*domElems);
   domain->delv     = malloc(sizeof(double)*domElems);
   domain->vdov     = malloc(sizeof(double)*domElems);
-  domain->arealg   = malloc(sizeof(double)*domElems); 
-  domain->ss       = malloc(sizeof(double)*domElems); 
-  domain->elemMass = malloc(sizeof(double)*domElems); 
+  domain->arealg   = malloc(sizeof(double)*domElems);
+  domain->ss       = malloc(sizeof(double)*domElems);
+  domain->elemMass = malloc(sizeof(double)*domElems);
 
   // Node-centered
   domain->x         = malloc(sizeof(double)*domNodes);
@@ -194,42 +194,39 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   domain->xd        = malloc(sizeof(double)*domNodes);
   domain->yd        = malloc(sizeof(double)*domNodes);
   domain->zd        = malloc(sizeof(double)*domNodes);
-  domain->xdd       = malloc(sizeof(double)*domNodes); 
-  domain->ydd       = malloc(sizeof(double)*domNodes); 
+  domain->xdd       = malloc(sizeof(double)*domNodes);
+  domain->ydd       = malloc(sizeof(double)*domNodes);
   domain->zdd       = malloc(sizeof(double)*domNodes);
-  domain->fx        = malloc(sizeof(double)*domNodes); 
+  domain->fx        = malloc(sizeof(double)*domNodes);
   domain->fy        = malloc(sizeof(double)*domNodes);
-  domain->fz        = malloc(sizeof(double)*domNodes); 
-  domain->nodalMass = malloc(sizeof(double)*domNodes); 
+  domain->fz        = malloc(sizeof(double)*domNodes);
+  domain->nodalMass = malloc(sizeof(double)*domNodes);
 
-  int rowMin, rowMax, colMin, colMax, planeMin, planeMax; 
-  rowMin = rowMax = colMin = colMax = planeMin = planeMax = 1; 
+  int rowMin, rowMax, colMin, colMax, planeMin, planeMax;
+  rowMin = rowMax = colMin = colMax = planeMin = planeMax = 1;
 
-  if (rowLoc == 0) 
+  if (rowLoc == 0)
     rowMin = 0;
 
   if (rowLoc == tp - 1)
-    rowMax = 0; 
+    rowMax = 0;
 
-  if (colLoc == 0) 
-    colMin = 0; 
+  if (colLoc == 0)
+    colMin = 0;
 
   if (colLoc == tp - 1)
     colMax = 0;
 
   if (planeLoc == 0)
-    planeMin = 0; 
+    planeMin = 0;
 
   if (planeLoc == tp - 1)
     planeMax = 0;
 
   // boundary nodesets
-  if (colLoc == 0) 
-    domain->symmX = malloc(sizeof(int)*edgeNodes*edgeNodes);
-  if (rowLoc == 0) 
-    domain->symmY = malloc(sizeof(int)*edgeNodes*edgeNodes);
-  if (planeLoc == 0) 
-    domain->symmZ = malloc(sizeof(int)*edgeNodes*edgeNodes);
+  domain->symmX = (colLoc == 0) ? malloc(sizeof(int)*edgeNodes*edgeNodes) : NULL;
+  domain->symmY = (rowLoc == 0) ? malloc(sizeof(int)*edgeNodes*edgeNodes) : NULL;
+  domain->symmZ = (planeLoc == 0) ? malloc(sizeof(int)*edgeNodes*edgeNodes) : NULL;
 
   // basic field initialization
   for (i = 0; i < domElems; i++) {
@@ -249,18 +246,18 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   // initialize nodal coordinates
-  nidx = 0; 
-  tz = 1.125*planeLoc*nx/meshEdgeElems; 
+  nidx = 0;
+  tz = 1.125*planeLoc*nx/meshEdgeElems;
   for (plane = 0; plane < edgeNodes; ++plane) {
     ty = 1.125*rowLoc*nx/meshEdgeElems;
     for (row = 0; row < edgeNodes; ++row) {
       tx = 1.125*colLoc*nx/meshEdgeElems;
       for (col = 0; col < edgeNodes; ++col) {
-	domain->x[nidx] = tx; 
-	domain->y[nidx] = ty; 
-	domain->z[nidx] = tz; 
-	++nidx; 
-	tx = 1.125*(colLoc*nx + col + 1)/meshEdgeElems;
+    domain->x[nidx] = tx;
+    domain->y[nidx] = ty;
+    domain->z[nidx] = tz;
+    ++nidx;
+    tx = 1.125*(colLoc*nx + col + 1)/meshEdgeElems;
       }
       ty = 1.125*(rowLoc*nx + row + 1)/meshEdgeElems;
     }
@@ -268,31 +265,31 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   // embed hexehedral elements in nodal point lattice
-  nidx = 0; 
-  zidx = 0; 
+  nidx = 0;
+  zidx = 0;
   for (plane = 0; plane < edgeElems; ++plane) {
     for (row = 0; row < edgeElems; ++row) {
       for (col = 0; col < edgeElems; ++col) {
-	int *localNode = &domain->nodelist[8*zidx]; 
-	localNode[0] = nidx; 
-	localNode[1] = nidx + 1; 
-	localNode[2] = nidx + edgeNodes + 1; 
-	localNode[3] = nidx + edgeNodes; 
-	localNode[4] = nidx + edgeNodes*edgeNodes; 
-	localNode[5] = nidx + edgeNodes*edgeNodes + 1;
-	localNode[6] = nidx + edgeNodes*edgeNodes + edgeNodes + 1;
-	localNode[7] = nidx + edgeNodes*edgeNodes + edgeNodes; 
-	++zidx; 
-	++nidx;
+    int *localNode = &domain->nodelist[8*zidx];
+    localNode[0] = nidx;
+    localNode[1] = nidx + 1;
+    localNode[2] = nidx + edgeNodes + 1;
+    localNode[3] = nidx + edgeNodes;
+    localNode[4] = nidx + edgeNodes*edgeNodes;
+    localNode[5] = nidx + edgeNodes*edgeNodes + 1;
+    localNode[6] = nidx + edgeNodes*edgeNodes + edgeNodes + 1;
+    localNode[7] = nidx + edgeNodes*edgeNodes + edgeNodes;
+    ++zidx;
+    ++nidx;
       }
-      ++nidx; 
+      ++nidx;
     }
     nidx += edgeNodes;
   }
 
-  // create a material indexset 
+  // create a material indexset
   for (i = 0; i < domElems; ++i) {
-    domain->matElemlist[i] = i; 
+    domain->matElemlist[i] = i;
   }
 
   // initialize material parameters
@@ -305,56 +302,56 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   domain->dthydro = 1.0e+20;
   domain->dtmax = 1.0e-2;
   domain->time = 0.0;
-  domain->cycle = 0; 
+  domain->cycle = 0;
 
-  domain->e_cut = 1.0e-7; 
+  domain->e_cut = 1.0e-7;
   domain->p_cut = 1.0e-7;
   domain->q_cut = 1.0e-7;
   domain->u_cut = 1.0e-7;
   domain->v_cut = 1.0e-7;
 
   domain->hgcoef = 3.0;
-  domain->ss4o3 = 4.0/3.0; 
-  
+  domain->ss4o3 = 4.0/3.0;
+
   domain->qstop = 1.0e+12;
-  domain->monoq_max_slope = 1.0; 
+  domain->monoq_max_slope = 1.0;
   domain->monoq_limiter_mult = 2.0;
   domain->qlc_monoq = 0.5;
-  domain->qqc_monoq = 2.0/3.0; 
+  domain->qqc_monoq = 2.0/3.0;
   domain->qqc = 2.0;
 
   domain->pmin = 0.0;
   domain->emin = -1.0e+15;
-  
+
   domain->dvovmax = 0.1;
- 
+
   domain->eosvmax = 1.0e+9;
   domain->eosvmin = 1.0e-9;
 
   domain->refdens = 1.0;
 
-  // initialize field data 
+  // initialize field data
   for (i = 0; i < domNodes; i++) {
     domain->nodalMass[i] = 0.0;
   }
 
   for (i = 0; i < domElems; i++) {
-    double x_local[8], y_local[8], z_local[8]; 
-    int *elemToNode = &domain->nodelist[8*i]; 
+    double x_local[8], y_local[8], z_local[8];
+    int *elemToNode = &domain->nodelist[8*i];
     for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemToNode[lnode]; 
-      x_local[lnode] = domain->x[gnode]; 
-      y_local[lnode] = domain->y[gnode]; 
-      z_local[lnode] = domain->z[gnode]; 
+      int gnode = elemToNode[lnode];
+      x_local[lnode] = domain->x[gnode];
+      y_local[lnode] = domain->y[gnode];
+      z_local[lnode] = domain->z[gnode];
     }
 
     double volume = CalcElemVolume(x_local, y_local, z_local);
-    domain->volo[i] = volume; 
-    domain->elemMass[i] = volume; 
+    domain->volo[i] = volume;
+    domain->elemMass[i] = volume;
 
     for (j = 0; j < 8; j++) {
-      int idx = elemToNode[j]; 
-      domain->nodalMass[idx] += volume / (double) 8.0; 
+      int idx = elemToNode[j];
+      domain->nodalMass[idx] += volume / (double) 8.0;
     }
   }
 
@@ -364,21 +361,21 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   // setup symmetry nodesets
-  nidx = 0; 
+  nidx = 0;
   for (i = 0; i < edgeNodes; i++) {
-    int planeInc = i*edgeNodes*edgeNodes; 
-    int rowInc = i*edgeNodes; 
+    int planeInc = i*edgeNodes*edgeNodes;
+    int rowInc = i*edgeNodes;
     for (j = 0; j < edgeNodes; j++) {
       if (planeLoc == 0) {
-	domain->symmZ[nidx] = rowInc + j;
+    domain->symmZ[nidx] = rowInc + j;
       }
 
       if (rowLoc == 0) {
-	domain->symmY[nidx] = planeInc + j;
+    domain->symmY[nidx] = planeInc + j;
       }
 
       if (colLoc == 0) {
-	domain->symmX[nidx] = planeInc + j*edgeNodes;
+    domain->symmX[nidx] = planeInc + j*edgeNodes;
       }
 
       ++nidx;
@@ -386,148 +383,148 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   // setup element connectivity information
-  domain->lxim[0] = 0; 
+  domain->lxim[0] = 0;
   for (i = 1; i < domElems; i++) {
     domain->lxim[i] = i - 1;
-    domain->lxip[i - 1] = i; 
+    domain->lxip[i - 1] = i;
   }
-  domain->lxip[domElems - 1] = domElems - 1; 
+  domain->lxip[domElems - 1] = domElems - 1;
 
   for (i = 0; i < edgeElems; i++) {
-    domain->letam[i] = i; 
-    domain->letap[domElems - edgeElems + i] = domElems - edgeElems + i; 
+    domain->letam[i] = i;
+    domain->letap[domElems - edgeElems + i] = domElems - edgeElems + i;
   }
 
   for (i = edgeElems; i < domElems; i++) {
-    domain->letam[i] = i - edgeElems; 
-    domain->letap[i - edgeElems] = i; 
+    domain->letam[i] = i - edgeElems;
+    domain->letap[i - edgeElems] = i;
   }
 
   for (i = 0; i < edgeElems*edgeElems; i++) {
-    domain->lzetam[i] = i; 
-    domain->lzetap[domElems - edgeElems*edgeElems + i] = domElems - edgeElems*edgeElems + i; 
+    domain->lzetam[i] = i;
+    domain->lzetap[domElems - edgeElems*edgeElems + i] = domElems - edgeElems*edgeElems + i;
   }
 
   for (i = edgeElems*edgeElems; i < domElems; i++) {
-    domain->lzetam[i] = i - edgeElems*edgeElems; 
-    domain->lzetap[i - edgeElems*edgeElems] = i; 
+    domain->lzetam[i] = i - edgeElems*edgeElems;
+    domain->lzetap[i - edgeElems*edgeElems] = i;
   }
 
   // setup boundary condition information
   for (i = 0; i < domElems; i++) {
-    domain->elemBC[i] = 0; 
+    domain->elemBC[i] = 0;
   }
 
   for (i = 0; i < 6; i++) {
-    ghostIdx[i] = INT_MIN; 
+    ghostIdx[i] = INT_MIN;
   }
 
-  pidx = domElems; 
+  pidx = domElems;
   if (planeMin != 0) {
-    ghostIdx[0] = pidx; 
+    ghostIdx[0] = pidx;
     pidx += domain->sizeX*domain->sizeY;
   }
 
   if (planeMax != 0) {
-    ghostIdx[1] = pidx; 
+    ghostIdx[1] = pidx;
     pidx += domain->sizeX*domain->sizeY;
   }
 
   if (rowMin != 0) {
-    ghostIdx[2] = pidx; 
-    pidx += domain->sizeX*domain->sizeZ; 
+    ghostIdx[2] = pidx;
+    pidx += domain->sizeX*domain->sizeZ;
   }
 
   if (rowMax != 0 ) {
-    ghostIdx[3] = pidx; 
-    pidx += domain->sizeX*domain->sizeZ; 
+    ghostIdx[3] = pidx;
+    pidx += domain->sizeX*domain->sizeZ;
   }
 
   if (colMin != 0) {
-    ghostIdx[4] = pidx; 
+    ghostIdx[4] = pidx;
     pidx += domain->sizeY*domain->sizeZ;
   }
 
   if (colMax != 0) {
     ghostIdx[5] = pidx;
   }
-  
+
   // symmetry plane or free surface BCs
   for (i = 0; i < edgeElems; i++) {
     int planeInc = i*edgeElems*edgeElems;
-    int rowInc = i*edgeElems; 
+    int rowInc = i*edgeElems;
     for (j = 0; j < edgeElems; j++) {
       if (planeLoc == 0) {
-	domain->elemBC[rowInc + j] |= ZETA_M_SYMM;
+    domain->elemBC[rowInc + j] |= ZETA_M_SYMM;
       } else {
-	domain->elemBC[rowInc + j] |= ZETA_M_COMM;
-	domain->lzetam[rowInc + j] = ghostIdx[0] + rowInc + j;
+    domain->elemBC[rowInc + j] |= ZETA_M_COMM;
+    domain->lzetam[rowInc + j] = ghostIdx[0] + rowInc + j;
       }
 
       if (planeLoc == tp - 1) {
-	domain->elemBC[rowInc + j + domElems - edgeElems*edgeElems] |= ZETA_P_FREE;
+    domain->elemBC[rowInc + j + domElems - edgeElems*edgeElems] |= ZETA_P_FREE;
       } else {
-	domain->elemBC[rowInc + j + domElems - edgeElems*edgeElems] |= ZETA_P_COMM;
-	domain->lzetap[rowInc + j + domElems - edgeElems*edgeElems] = ghostIdx[1] + rowInc + j;
+    domain->elemBC[rowInc + j + domElems - edgeElems*edgeElems] |= ZETA_P_COMM;
+    domain->lzetap[rowInc + j + domElems - edgeElems*edgeElems] = ghostIdx[1] + rowInc + j;
       }
 
       if (rowLoc == 0) {
-	domain->elemBC[planeInc + j] |= ETA_M_SYMM;
+    domain->elemBC[planeInc + j] |= ETA_M_SYMM;
       } else {
-	domain->elemBC[planeInc + j] |= ETA_M_COMM;
-	domain->letam[planeInc + j] = ghostIdx[2] + rowInc + j;
+    domain->elemBC[planeInc + j] |= ETA_M_COMM;
+    domain->letam[planeInc + j] = ghostIdx[2] + rowInc + j;
       }
 
       if (rowLoc == tp - 1) {
-	domain->elemBC[planeInc + j + edgeElems*edgeElems - edgeElems] |= ETA_P_FREE;
+    domain->elemBC[planeInc + j + edgeElems*edgeElems - edgeElems] |= ETA_P_FREE;
       } else {
-	domain->elemBC[planeInc + j + edgeElems*edgeElems - edgeElems] |= ETA_P_COMM;
-	domain->letap[planeInc + j + edgeElems*edgeElems - edgeElems] = ghostIdx[3] + rowInc + j;
+    domain->elemBC[planeInc + j + edgeElems*edgeElems - edgeElems] |= ETA_P_COMM;
+    domain->letap[planeInc + j + edgeElems*edgeElems - edgeElems] = ghostIdx[3] + rowInc + j;
       }
 
       if (colLoc == 0) {
-	domain->elemBC[planeInc + j*edgeElems] |= XI_M_SYMM;
+    domain->elemBC[planeInc + j*edgeElems] |= XI_M_SYMM;
       } else {
-	domain->elemBC[planeInc + j*edgeElems] |= XI_M_COMM;
-	domain->lxim[planeInc + j*edgeElems] = ghostIdx[4] + rowInc + j;
+    domain->elemBC[planeInc + j*edgeElems] |= XI_M_COMM;
+    domain->lxim[planeInc + j*edgeElems] = ghostIdx[4] + rowInc + j;
       }
 
       if (colLoc == tp - 1) {
-	domain->elemBC[planeInc + j*edgeElems + edgeElems - 1] |= XI_P_FREE;
+    domain->elemBC[planeInc + j*edgeElems + edgeElems - 1] |= XI_P_FREE;
       } else {
-	domain->elemBC[planeInc + j*edgeElems + edgeElems - 1] |= XI_P_COMM; 
-	domain->lxip[planeInc + j*edgeElems + edgeElems - 1] = ghostIdx[5] + rowInc + j;
+    domain->elemBC[planeInc + j*edgeElems + edgeElems - 1] |= XI_P_COMM;
+    domain->lxip[planeInc + j*edgeElems + edgeElems - 1] = ghostIdx[5] + rowInc + j;
       }
     }
   }
 
-  // there are three communication patterns in the lulesh code. 
+  // there are three communication patterns in the lulesh code.
   // 1) communicate with all 26 surrounding domains and do aggregate operation (sbn)
   // 2) one-way communication, send information to the domains that are adjacent to the
   // three faces of the domain that are joined at the lower left corner, recv information
   // from the domains that are adjacent to the three faces of the domain that are joined
-  // at the upper right corner. 
-  // 3) communicate with all the face-adjacent domains. 
+  // at the upper right corner.
+  // 3) communicate with all the face-adjacent domains.
 
   // setup communications between domains
-  int nsTF, nsTT, nsFF, nrTF, nrTT, nrFF; 
-  nsTF = nsTT = nsFF = nrTF = nrTT = nrFF = 0; 
+  int nsTF, nsTT, nsFF, nrTF, nrTT, nrFF;
+  nsTF = nsTT = nsFF = nrTF = nrTT = nrFF = 0;
 
-  int *sendTF = &domain->sendTF[1]; 
-  int *recvTF = &domain->recvTF[1]; 
-  int *sendTT = &domain->sendTT[1]; 
-  int *recvTT = &domain->recvTT[1]; 
-  int *sendFF = &domain->sendFF[1]; 
-  int *recvFF = &domain->recvFF[1]; 
+  int *sendTF = &domain->sendTF[1];
+  int *recvTF = &domain->recvTF[1];
+  int *sendTT = &domain->sendTT[1];
+  int *recvTT = &domain->recvTT[1];
+  int *sendFF = &domain->sendFF[1];
+  int *recvFF = &domain->recvFF[1];
 
-  int PLANEBUFFERSZ = MAXPLANESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double); 
+  int PLANEBUFFERSZ = MAXPLANESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double);
   int EDGEBUFFERSZ = MAXEDGESIZE*MAX_FIELDS_PER_MPI_COMM*sizeof(double);
   int CORNERBUFFERSZ = CACHE_COHERENCE_PAD_REAL;
   //int FUTURESZ = maxcycles*sizeof(hpx_future_t);
 
   if (planeMin) {
     // #5
-    domain->dataRecvTF[4] = malloc(PLANEBUFFERSZ); 
+    domain->dataRecvTF[4] = malloc(PLANEBUFFERSZ);
     domain->dataRecvTT[4] = malloc(PLANEBUFFERSZ);
     recvTF[nrTF++] = 4;
     recvTT[nrTT++] = 4;
@@ -545,7 +542,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //  hpx_lco_future_init(&domain->dataSendFF[4][i]);
     //}
 
-    //hpx_lco_future_init(&domain->SBN1[4]); 
+    //hpx_lco_future_init(&domain->SBN1[4]);
   }
 
   if (planeMax) {
@@ -571,11 +568,11 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   if (rowMin) {
-    // #11 
+    // #11
     domain->dataRecvTF[10] = malloc(PLANEBUFFERSZ);
     domain->dataRecvTT[10] = malloc(PLANEBUFFERSZ);
     recvTF[nrTF++] = 10;
-    recvTT[nrTT++] = 10; 
+    recvTT[nrTT++] = 10;
 
     //domain->dataSendTF[10] = malloc(FUTURESZ);
     //domain->dataSendTT[10] = malloc(FUTURESZ);
@@ -583,7 +580,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     sendTF[nsTF++] = 10;
     sendTT[nsTT++] = 10;
     sendFF[nsFF++] = 10;
-    
+
     //for (i = 0; i < maxcycles; i++) {
     //  hpx_lco_future_init(&domain->dataSendTF[10][i]);
     //  hpx_lco_future_init(&domain->dataSendTT[10][i]);
@@ -616,7 +613,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   if (colMin) {
-    // #13 
+    // #13
     domain->dataRecvTF[12] = malloc(PLANEBUFFERSZ);
     domain->dataRecvTT[12] = malloc(PLANEBUFFERSZ);
     recvTF[nrTF++] = 12;
@@ -661,7 +658,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   if (rowMin & colMin) {
-    // #10 
+    // #10
     domain->dataRecvTF[9] = malloc(EDGEBUFFERSZ);
     recvTF[nrTF++] = 9;
 
@@ -682,7 +679,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   if (rowMin & planeMin) {
     // #2
     domain->dataRecvTF[1] = malloc(EDGEBUFFERSZ);
-    recvTF[nrTF++] = 1; 
+    recvTF[nrTF++] = 1;
 
     //domain->dataSendTF[1] = malloc(FUTURESZ);
     //domain->dataSendFF[1] = malloc(FUTURESZ);
@@ -698,7 +695,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   if (colMin & planeMin) {
-    // #4 
+    // #4
     domain->dataRecvTF[3] = malloc(EDGEBUFFERSZ);
     recvTF[nrTF++] = 3;
 
@@ -725,7 +722,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[16] = malloc(FUTURESZ);
     sendTF[nsTF++] = 16;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[16][i]);
 
     //hpx_lco_future_init(&domain->SBN1[16]);
@@ -743,7 +740,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
 
     //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[24][i]);
-    
+
     //hpx_lco_future_init(&domain->SBN1[24]);
   }
 
@@ -758,7 +755,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[22] = malloc(FUTURESZ);
     sendTF[nsTF++] = 22;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[22][i]);
 
     //hpx_lco_future_init(&domain->SBN1[22]);
@@ -790,7 +787,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[18] = malloc(FUTURESZ);
     sendTF[nsTF++] = 18;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[18][i]);
 
     //hpx_lco_future_init(&domain->SBN1[18]);
@@ -802,10 +799,10 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     domain->dataRecvFF[20] = malloc(EDGEBUFFERSZ);
     recvTF[nrTF++] = 20;
     recvFF[nrFF++] = 20;
-    
+
     //domain->dataSendTF[20] = malloc(FUTURESZ);
     sendTF[nsTF++] = 20;
-    
+
     //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[20][i]);
 
@@ -821,7 +818,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendFF[11] = malloc(FUTURESZ);
     sendTF[nsTF++] = 11;
     sendFF[nsFF++] = 11;
-    
+
     //for (i = 0; i < maxcycles; i++) {
     //  hpx_lco_future_init(&domain->dataSendTF[11][i]);
     //  hpx_lco_future_init(&domain->dataSendFF[11][i]);
@@ -834,7 +831,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     // #8
     domain->dataRecvTF[7] = malloc(EDGEBUFFERSZ);
     recvTF[nrTF++] = 7;
-    
+
     //domain->dataSendTF[7] = malloc(FUTURESZ);
     //domain->dataSendFF[7] = malloc(FUTURESZ);
     sendTF[nsTF++] = 7;
@@ -852,7 +849,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     // #6
     domain->dataRecvTF[5] = malloc(EDGEBUFFERSZ);
     recvTF[nrTF++] = 5;
-    
+
     //domain->dataSendTF[5] = malloc(FUTURESZ);
     //domain->dataSendFF[5] = malloc(FUTURESZ);
     sendTF[nsTF++] = 5;
@@ -868,16 +865,16 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
 
   if (rowMin & colMin & planeMin) {
     // #1
-    domain->dataRecvTF[0] = malloc(CORNERBUFFERSZ); 
-    recvTF[nrTF++] = 0; 
+    domain->dataRecvTF[0] = malloc(CORNERBUFFERSZ);
+    recvTF[nrTF++] = 0;
 
-    //domain->dataSendTF[0] = malloc(FUTURESZ); 
-    //domain->dataSendFF[0] = malloc(FUTURESZ);    
-    sendTF[nsTF++] = 0; 
+    //domain->dataSendTF[0] = malloc(FUTURESZ);
+    //domain->dataSendFF[0] = malloc(FUTURESZ);
+    sendTF[nsTF++] = 0;
     sendFF[nsFF++] = 0;
 
     //for (i = 0; i < maxcycles; i++) {
-    //  hpx_lco_future_init(&domain->dataSendTF[0][i]); 
+    //  hpx_lco_future_init(&domain->dataSendTF[0][i]);
     //  hpx_lco_future_init(&domain->dataSendFF[0][i]);
     //}
 
@@ -919,7 +916,7 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
   }
 
   if (rowMin & colMax & planeMax) {
-    // #20 
+    // #20
     domain->dataRecvTF[19] = malloc(CORNERBUFFERSZ);
     domain->dataRecvFF[19] = malloc(CORNERBUFFERSZ);
     recvTF[nrTF++] = 19;
@@ -928,15 +925,15 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[19] = malloc(FUTURESZ);
     sendTF[nsTF++] = 19;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[19][i]);
 
     //hpx_lco_future_init(&domain->SBN1[19]);
   }
 
   if (rowMax & colMin & planeMin) {
-    // #7 
-    domain->dataRecvTF[6] = malloc(CORNERBUFFERSZ);    
+    // #7
+    domain->dataRecvTF[6] = malloc(CORNERBUFFERSZ);
     recvTF[nrTF++] = 6;
 
     //domain->dataSendTF[6] = malloc(FUTURESZ);
@@ -962,14 +959,14 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[23] = malloc(FUTURESZ);
     sendTF[nsTF++] = 23;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[23][i]);
 
     //hpx_lco_future_init(&domain->SBN1[23]);
   }
 
   if (rowMax & colMax & planeMin) {
-    // #9 
+    // #9
     domain->dataRecvTF[8] = malloc(CORNERBUFFERSZ);
     recvTF[nrTF++] = 8;
 
@@ -996,19 +993,19 @@ void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
     //domain->dataSendTF[25] = malloc(FUTURESZ);
     sendTF[nsTF++] = 25;
 
-    //for (i = 0; i < maxcycles; i++) 
+    //for (i = 0; i < maxcycles; i++)
     //  hpx_lco_future_init(&domain->dataSendTF[25][i]);
 
     //hpx_lco_future_init(&domain->SBN1[25]);
   }
 
-  domain->sendTT[0] = nsTT; 
+  domain->sendTT[0] = nsTT;
   domain->sendTF[0] = nsTF;
-  domain->sendFF[0] = nsFF; 
-  
+  domain->sendFF[0] = nsFF;
+
   domain->recvTT[0] = nrTT;
   domain->recvTF[0] = nrTF;
-  domain->recvFF[0] = nrFF; 
+  domain->recvFF[0] = nrFF;
 
   // Compute the reverse of recvTT
   for (i=0;i<nrTT;i++) {
@@ -1070,7 +1067,7 @@ void DestroyDomain(Domain *domain)
   if (domain->planeLoc)
     free(domain->symmZ);
 
-  int i; 
+  int i;
   for (i = 0; i < 26; i++) {
     free(domain->dataRecvTF[i]);
     free(domain->dataRecvTT[i]);
