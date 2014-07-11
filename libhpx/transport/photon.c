@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdbool.h>                            // required for jemalloc
 #include <jemalloc/jemalloc.h>
+#include <sys/mman.h>
 #include <photon.h>
 
 #include "libhpx/boot.h"
@@ -349,7 +350,13 @@ _mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
     hpx_abort();
   }
 
-  int error = photon_register_buffer(chunk, size);
+  int error = mlock(chunk, size);
+  if (error) {
+    dbg_error("Photon could not mlock buffer %p of size %lu\n", chunk, size);
+    hpx_abort();
+  }
+
+  error = photon_register_buffer(chunk, size);
   if (error) {
     dbg_error("Photon could not pin buffer %p of size %lu\n", chunk, size);
     t->dalloc(chunk, size, arena_ind);
