@@ -352,6 +352,7 @@ _mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
 
   int error = mlock(chunk, size);
   if (error) {
+    perror("error");
     dbg_error("Photon could not mlock buffer %p of size %lu\n", chunk, size);
     hpx_abort();
   }
@@ -369,7 +370,13 @@ _mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
 static bool
 _munmap_pinned(void *chunk, size_t size, unsigned arena_ind)
 {
-  int error = photon_unregister_buffer(chunk, size);
+  int error = munlock(chunk, size);
+  if (error) {
+    perror("error");
+    dbg_error("Photon could not munlock region %p of size %lu.\n", chunk, size);
+  }
+
+  error = photon_unregister_buffer(chunk, size);
   if (error)
     dbg_error("Photon could not un-pin buffer %p of size %lu\n", chunk, size);
 
