@@ -1,0 +1,9 @@
+
+Instructions:
+
+Start with example4
+1) Add two functions: static void initdouble(double *input) 
+and static void mindouble(double *output, const double *input)
+2) Create a new hpx_lco_reduce_new; call it newdt; make it of size double and make it have nDoms inputs.  Initialize it with initdouble and make the reduction operation mindouble.
+3) Add newdt to the Domain structure; initialize newdt in initDomain
+4) In advanceDomain, perform an allreduce every timestep

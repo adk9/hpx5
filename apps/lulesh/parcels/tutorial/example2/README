@@ -1,0 +1,18 @@
+
+Instructions:
+
+Start with example1
+1) Add an action called _initDomain_action.
+2) Register the action as _initDomain.
+3) Declare _initDomain as an hpx_action.
+
+In main_action:
+4) Declare an LCO of size nDoms.  Call it init.
+5) Add the hpx_addr_t domain to an hpx_addr_t called block.
+6) Call initDomain for each of 0 to nDoms-1.  Pass it the arguments  nDoms, maxcycles, cores, 
+and the index in [0,nDoms).  Attach the LCO "init" to the hpx_call.
+
+7) wait for the LCO init to complete.
+8) delete the init LCO.
+9) Access the global address for domain
+10) Assign nDoms, rank, and maxcycles to the global address

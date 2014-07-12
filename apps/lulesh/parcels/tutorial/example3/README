@@ -1,0 +1,12 @@
+
+Instructions:
+
+Start with example2
+1) Add two hpx addreses to the Domain structure:  complete 
+2) In mainAction, declare a new LCO:  complete
+3) Pass the new LCO complete to initDomain and assign it to the Domain structure
+4) Add a new action, called advanceDomain
+5) Create an unsigned long called epoch, set it to zero.
+6) Using hpx_call, call advanceDomain for  [0,nDoms).  Pass it the global address space for domain as well as
+the epoch variable.
+7) In advanceDomain, access the Domain and set the complete LCO.  

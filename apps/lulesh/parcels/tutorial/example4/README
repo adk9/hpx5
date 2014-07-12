@@ -1,0 +1,8 @@
+
+Instructions:
+
+Start with example3
+1) Add int cycle to the Domain structure; initialize it to zero in initDomain
+2) Increment the cycle by one in advanceDomain
+3) If cycle is less than maxcycles, have advanceDomain call itself; when it reaches maxcycles, have it exit.
+4) increment the epoch argument by one for each call to advanceDomain
