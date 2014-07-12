@@ -15,6 +15,8 @@
 #endif
 
 #include <assert.h>
+#include <errno.h>
+#include <error.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -334,51 +336,57 @@ _free(transport_class_t *t, void *p)
 
 
 static void *
-_mmap_pinned(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
+_alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
 {
   photon_t *t = (photon_t *)here->transport;
   assert(t);
   void *chunk = t->alloc(size, alignment, zero, arena_ind);
   if (!chunk) {
-    dbg_error("Photon could not alloc jemalloc chunk of size %lu\n", size);
+    dbg_error("Photon transport could not alloc jemalloc chunk of size %lu\n", size);
     return NULL;
   }
 
   if ((uintptr_t)chunk % alignment != 0) {
-    dbg_error("Photon could not alloc jemalloc chunk of size %lu "
+    dbg_error("Photon transport could not alloc jemalloc chunk of size %lu "
               "with alignment %lu\n", size, alignment);
     hpx_abort();
   }
 
-  int error = mlock(chunk, size);
-  if (error) {
-    perror("error");
-    dbg_error("Photon could not mlock buffer %p of size %lu\n", chunk, size);
-    hpx_abort();
-  }
+  if (mlock(chunk, size))
+    error(1, errno, "Photon transport could not mlock buffer %p of size %lu",
+          chunk, size);
 
-  error = photon_register_buffer(chunk, size);
-  if (error) {
-    dbg_error("Photon could not pin buffer %p of size %lu\n", chunk, size);
+  if (photon_register_buffer(chunk, size)) {
+    dbg_error("Photon transport could not pin buffer %p of size %lu\n", chunk, size);
     t->dalloc(chunk, size, arena_ind);
   }
+
+  // debugging code
+  static size_t total = 0;
+  printf("Photon transport allocated and pinned %lu bytes for a total of %lu\n",
+         size, total += size);
+  fflush(stdout);
 
   return chunk;
 }
 
 
 static bool
-_munmap_pinned(void *chunk, size_t size, unsigned arena_ind)
+_dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
 {
-  int error = munlock(chunk, size);
-  if (error) {
-    perror("error");
-    dbg_error("Photon could not munlock region %p of size %lu.\n", chunk, size);
-  }
+  // debugging code
+  static size_t total = 0;
+  printf("Photon transport unpinned %lu bytes for a total of %lu\n", size,
+         total += size);
+  fflush(stdout);
 
-  error = photon_unregister_buffer(chunk, size);
-  if (error)
-    dbg_error("Photon could not un-pin buffer %p of size %lu\n", chunk, size);
+  if (munlock(chunk, size))
+    error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
+          chunk, size);
+
+  if (photon_unregister_buffer(chunk, size))
+    dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
+              chunk, size);
 
   photon_t *t = (photon_t *)here->transport;
   assert(t);
@@ -481,21 +489,21 @@ transport_class_t *transport_new_photon(void) {
   sz = sizeof(photon->alloc);
   char path[128];
   snprintf(path, 128, "arena.%u.chunk.alloc", photon->arena);
-  chunk_alloc_t *alloc = _mmap_pinned;
+  chunk_alloc_t *alloc = _alloc_pinned_chunk;
   error = mallctl(path, (void*)&photon->alloc, &sz, (void*)&alloc,
                   sizeof(alloc));
   if (error) {
-    dbg_error("failed to set arena allocator to pinned mmap.\n");
+    dbg_error("Photon failed to set arena allocator\n");
     hpx_abort();
   }
 
   sz = sizeof(photon->dalloc);
   snprintf(path, 128, "arena.%u.chunk.dalloc", photon->arena);
-  chunk_dalloc_t *dalloc = _munmap_pinned;
+  chunk_dalloc_t *dalloc = _dalloc_pinned_chunk;
   error = mallctl(path, (void*)&photon->dalloc, &sz, (void*)&dalloc,
                   sizeof(dalloc));
   if (error) {
-    dbg_error("failed to set arena de-allocator to pinned munmap.\n");
+    dbg_error("Photon failed to set arena de-allocator.\n");
     hpx_abort();
   }
 
