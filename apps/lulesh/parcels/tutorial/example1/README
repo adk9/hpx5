@@ -1,0 +1,8 @@
+
+Instructions:
+
+Start with example0
+1) Add a timer to the main action
+2) Access the input variables,  nDoms, maxcycles, and cores, and assign them to local variables
+3) Allocate nDoms copies of the domain structure in the global address space
+4) Abort the code if the number of domains isn't a cube of an integer
