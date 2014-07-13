@@ -1,7 +1,7 @@
-#ifndef DOMAIN_HPX_H
-#define DOMAIN_HPX_H
+#ifndef DOMAIN_H
+#define DOMAIN_H
 
-typedef struct Domain {
+typedef struct {
   int nDoms;
   int rank;
   int maxcycles;
