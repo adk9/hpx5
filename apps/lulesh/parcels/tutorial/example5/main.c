@@ -101,9 +101,9 @@ tutorial_main_action(const main_args_t *args)
 
   // allocate the allreduce, using _minDouble as the reduction and _initDouble
   // as the initialization
-  hpx_addr_t newdt = hpx_lco_reduce_new(args->nDoms, sizeof(double),
-                                        (hpx_commutative_associative_op_t)_minDouble,
-                                        (void (*)(void *))_initDouble);
+  hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)_minDouble,
+                                           (void (*)(void *))_initDouble);
 
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     InitArgs init = {
