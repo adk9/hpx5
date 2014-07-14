@@ -1,7 +1,7 @@
 #include "common.h"
 
 int
-main_action(const main_args_t *args)
+tutorial_main_action(const main_args_t *args)
 {
   // output the arguments we're running with
   printf("Number of domains: %d maxCycles: %d cores: %d\n",
@@ -10,4 +10,9 @@ main_action(const main_args_t *args)
 
   // and shutdown (arg is error code, if necessary)
   hpx_shutdown(0);
+}
+
+void
+tutorial_init_actions(void)
+{
 }
