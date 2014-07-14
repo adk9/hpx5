@@ -14,9 +14,8 @@ typedef struct {
   int cores;
 } main_args_t;
 
-int main_action(const main_args_t *args);
+int tutorial_main_action(const main_args_t *args);
 
-void parse_command_line(int argc, char * const argv[argc],
-                        hpx_config_t *config, main_args_t *args);
+void tutorial_init_actions(void);
 
 #endif

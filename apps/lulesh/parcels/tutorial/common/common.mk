@@ -4,7 +4,7 @@ CFLAGS = -g
 LIBS = -lhpx
 
 VPATH = ../common
-SRC = common.c parse.c $(shell ls *.c)
+SRC = common.c $(shell ls *.c)
 OBJ = $(SRC:.c=.o)
 
 .PHONY: all clean help
