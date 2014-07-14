@@ -14,7 +14,7 @@ hpx_action_t _MonoQ_sends = 0;
 hpx_action_t _MonoQ_result = 0;
 
 static void initdouble(double *input) {
-  *input = 99999999.0; 
+  *input = 99999999.0;
 }
 
 static void mindouble(double *output,const double *input) {
@@ -34,7 +34,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
   if ( (domain->time >= domain->stoptime) || (domain->cycle >= domain->maxcycles)) {
-    if ( domain->rank == 0 ) { 
+    if ( domain->rank == 0 ) {
       int nx = domain->sizeX;
       printf("  Problem size = %d \n"
              "  Iteration count = %d \n"
@@ -92,7 +92,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
       gnewdt = domain->dthydro*2.0/3.0;
 
     // allreduce on gnewdt
-    hpx_lco_set(domain->newdt,sizeof(double),&gnewdt,HPX_NULL,HPX_NULL);    
+    hpx_lco_set(domain->newdt,sizeof(double),&gnewdt,HPX_NULL,HPX_NULL);
   }
 
   domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
@@ -246,8 +246,9 @@ static int _main_action(int *input)
 
   // Initialize the domains
   hpx_addr_t init = hpx_lco_and_new(nDoms);
-  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms,sizeof(double),(hpx_commutative_associative_op_t) mindouble,
-          (void (*)(void *)) initdouble);     
+  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)mindouble,
+                                           (void (*)(void *)) initdouble);
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .index = k,

@@ -45,7 +45,7 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 /// @param  size the size of the data
 /// @param value the address of the value to set
 /// @param lsync an LCO to signal local completion (HPX_NULL == don't wait)
-///              (Local completion indicates that the @p value may be freed 
+///              (Local completion indicates that the @p value may be freed
 ///              or reused.)
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
@@ -375,9 +375,9 @@ typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs);
 /// @param op           The commutative-associative operation we're performing.
 /// @param initializer  An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
-hpx_addr_t hpx_lco_reduce_new(size_t participants, size_t size,
-                              hpx_commutative_associative_op_t op,
-                              void (*initializer)(void *));
+hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t size,
+                                 hpx_commutative_associative_op_t op,
+                                 void (*initializer)(void *));
 /// @}
 
 #endif

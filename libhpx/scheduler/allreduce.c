@@ -41,12 +41,12 @@ typedef struct {
   size_t                        count;
   volatile int                  phase;
   void                         *value;     // out-of-place for alignment reasons
-} _reduce_t;
+} _allreduce_t;
 
 
 /// This utility reduces the count of waiting
 static int
-_reduce_join(_reduce_t *r)
+_allreduce_join(_allreduce_t *r)
 {
   assert(r->count != 0);
 
@@ -61,21 +61,23 @@ _reduce_join(_reduce_t *r)
 
 /// Deletes a reduction.
 static void
-_reduce_fini(lco_t *lco)
+_allreduce_fini(lco_t *lco)
 {
   lco_lock(lco);
-  _reduce_t *r = (_reduce_t *)lco;
-  free(r->value);
-  free(r);
+  _allreduce_t *r = (_allreduce_t *)lco;
+  if (r->value)
+    free(r->value);
+  if (r)
+    free(r);
 }
 
 
 /// Handle an error condition.
 static void
-_reduce_error(lco_t *lco, hpx_status_t code)
+_allreduce_error(lco_t *lco, hpx_status_t code)
 {
   lco_lock(lco);
-  _reduce_t *r = (_reduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   scheduler_signal_error(&r->wait, code);
   lco_unlock(lco);
 }
@@ -83,16 +85,16 @@ _reduce_error(lco_t *lco, hpx_status_t code)
 
 /// Update the reduction, will wait if the phase is reading.
 static void
-_reduce_set(lco_t *lco, int size, const void *from)
+_allreduce_set(lco_t *lco, int size, const void *from)
 {
   lco_lock(lco);
-  _reduce_t *r = (_reduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
 
   // wait until we're reducing, then perform the op() and join the reduction
   while (r->phase != _reducing)
     scheduler_wait(&lco->lock, &r->wait);
   r->op(r->value, from);
-  _reduce_join(r);
+  _allreduce_join(r);
 
   lco_unlock(lco);
 }
@@ -100,9 +102,9 @@ _reduce_set(lco_t *lco, int size, const void *from)
 
 /// Get the value of the reduction, will wait if the phase is reducing.
 static hpx_status_t
-_reduce_get(lco_t *lco, int size, void *out)
+_allreduce_get(lco_t *lco, int size, void *out)
 {
-  _reduce_t *r = (_reduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   lco_lock(lco);
 
   hpx_status_t status = cvar_get_error(&r->wait);
@@ -114,7 +116,7 @@ _reduce_get(lco_t *lco, int size, void *out)
   if (status == HPX_SUCCESS) {
     if (size && out)
       memcpy(out, r->value, size);
-    if (_reduce_join(r))
+    if (_allreduce_join(r))
       r->init(r->value);
   }
 
@@ -125,23 +127,23 @@ _reduce_get(lco_t *lco, int size, void *out)
 
 // Wait for the reduction, loses the value of the reduction for this round.
 static hpx_status_t
-_reduce_wait(lco_t *lco)
+_allreduce_wait(lco_t *lco)
 {
-  return _reduce_get(lco, 0, NULL);
+  return _allreduce_get(lco, 0, NULL);
 }
 
 
 static void
-_reduce_init(_reduce_t *r, size_t participants, size_t size,
+_allreduce_init(_allreduce_t *r, size_t participants, size_t size,
              hpx_commutative_associative_op_t op, void (*init)(void *))
 {
   // vtable
   static const lco_class_t vtable = {
-    _reduce_fini,
-    _reduce_error,
-    _reduce_set,
-    _reduce_get,
-    _reduce_wait
+    _allreduce_fini,
+    _allreduce_error,
+    _allreduce_set,
+    _allreduce_get,
+    _allreduce_wait
   };
 
   assert(init);
@@ -166,16 +168,16 @@ _reduce_init(_reduce_t *r, size_t participants, size_t size,
 /// @}
 
 hpx_addr_t
-hpx_lco_reduce_new(size_t inputs, size_t size,
+hpx_lco_allreduce_new(size_t inputs, size_t size,
                    hpx_commutative_associative_op_t op, void (*init)(void*))
 {
-  hpx_addr_t reduce = locality_malloc(sizeof(_reduce_t));
-  _reduce_t *r = NULL;
+  hpx_addr_t reduce = locality_malloc(sizeof(_allreduce_t));
+  _allreduce_t *r = NULL;
   if (!hpx_gas_try_pin(reduce, (void**)&r)) {
     dbg_error("Could not pin newly allocated reduction.\n");
     hpx_abort();
   }
-  _reduce_init(r, inputs, size, op, init);
+  _allreduce_init(r, inputs, size, op, init);
   hpx_gas_unpin(reduce);
   return reduce;
 }
