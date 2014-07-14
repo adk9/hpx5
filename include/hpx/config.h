@@ -81,7 +81,7 @@ typedef struct {
     .gas         = HPX_GAS_PGAS,                \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
-    .wait_at     = HPX_LOCALITY_NONE            \
+    .wait_at     = HPX_LOCALITY_NONE,		\
     .statistics  = true                         \
   }
 
