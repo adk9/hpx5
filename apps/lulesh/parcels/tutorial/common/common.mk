@@ -1,6 +1,6 @@
 CC = mpicc
-CPPFLAGS = -I../common
-CFLAGS = -g
+CPPFLAGS = -D_GNU_SOURCE -I../common
+CFLAGS = -std=c99 -g
 LIBS = -lhpx
 
 VPATH = ../common

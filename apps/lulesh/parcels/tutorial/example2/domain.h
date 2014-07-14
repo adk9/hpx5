@@ -14,5 +14,4 @@ typedef struct {
   int           cores;
 } InitArgs;
 
-
 #endif
