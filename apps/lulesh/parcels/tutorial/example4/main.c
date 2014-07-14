@@ -17,9 +17,10 @@ _initDomain_action(const InitArgs *args)
   ld->rank = args->index;
   ld->maxcycles = args->maxcycles;
   ld->nDoms = args->nDoms;
-
-  // Record the AND gate LCO to trigger when execution terminates
   ld->complete = args->complete;
+
+  // set the domain's cycle to 0
+  ld->cycle = 0;
 
   hpx_gas_unpin(local);
 
@@ -29,26 +30,27 @@ _initDomain_action(const InitArgs *args)
 }
 
 
-/// Advance a domain one timestep.
 static int
 _advanceDomain_action(const unsigned long *epoch)
 {
-  // Get the address this parcel was sent to, and map it to a local address---if
-  // this fails then the message arrived at the wrong place due to AGAS
-  // movement, so resend the parcel.
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
   if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
 
-  // signal completion---no data is required for this, nor do we care about
-  // waiting for local or remote completion
-  hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
-  printf("Finished processing domain %u\n", domain->rank);
+  // if we've processed enough cycles, then signal complete
+  if (domain->maxcycles <= *epoch) {
+    hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
+    printf("Finished processing %lu epochs at domain %u\n", *epoch, domain->rank);
+    hpx_gas_unpin(local);
+    return HPX_SUCCESS;
+  }
 
-  // unpin the domain
-  hpx_gas_unpin(local);
-  return HPX_SUCCESS;
+  // update the domain's cycle, and spawn another iteration of _advanceDomain at
+  // the same domain
+  domain->cycle = *epoch;
+  const unsigned long next = *epoch + 1;
+  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
 }
 
 
