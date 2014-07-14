@@ -2,7 +2,7 @@
 #include "domain.h"
 
 int
-main_action(const main_args_t *args)
+tutorial_main_action(const main_args_t *args)
 {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -24,4 +24,9 @@ main_action(const main_args_t *args)
  shutdown:
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   hpx_shutdown(0);
+}
+
+void
+tutorial_init_actions(void)
+{
 }
