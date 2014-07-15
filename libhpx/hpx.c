@@ -40,6 +40,8 @@
 
 #include "network/servers.h"
 
+/// The default configuration.
+static const hpx_config_t _default_cfg = HPX_CONFIG_DEFAULTS;
 
 /// Cleanup utility function.
 ///
@@ -109,6 +111,10 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 
 
 int hpx_init(const hpx_config_t *cfg) {
+  // 0) use a default configuration if one is necessary
+  if (!cfg)
+    cfg = &_default_cfg;
+
   // 1) start by initializing the entire local data segment
   here = _map_local(UINT32_MAX);
   if (!here)
