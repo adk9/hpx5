@@ -1,77 +1,90 @@
+/// ----------------------------------------------------------------------------
+/// @file fmm-param.h
+/// @author Bo Zhang <zhang416 [at] indiana.edu>
+/// @brief Implementation of functions that compute various translation coeffs
+/// ----------------------------------------------------------------------------
 #include <stdlib.h>
 #include <math.h>
 #include "fmm-param.h"
 
-fmm_param_t construct_param(int accuracy) {
-  fmm_param_t fmm_param; 
+fmm_param_t fmm_param; 
+
+fmm_param_t *construct_param(const fmm_config_t *fmm_config, const int nslev, 
+			     const int ntlev, const double size) {
+  int accuracy = fmm_config->accuracy; 
+  fmm_param_t *param = calloc(1, sizeof(fmm_param_t)); 
 
   if (accuracy == 3) {
-    fmm_param.pterms = 9;
-    fmm_param.nlambs = 9; 
-    fmm_param.pgsz   = 100;
+    param->pterms = 9;
+    param->nlambs = 9;
+    param->pgsz = 100;
   } else if (accuracy == 6) {
-    fmm_param.pterms = 18;
-    fmm_param.nlambs = 18;
-    fmm_param.pgsz   = 361;
+    param->pterms = 18;    
+    param->nlambs = 18;
+    param->pgsz = 361;
   }
 
-  fmm_param.numphys = calloc(fmm_param.nlambs, sizeof(int)); 
-  fmm_param.numfour = calloc(fmm_param.nlambs, sizeof(int)); 
-  fmm_param.whts    = calloc(fmm_param.nlambs, sizeof(double)); 
-  fmm_param.rlams   = calloc(fmm_param.nlambs, sizeof(double)); 
+  int pterms = param->pterms; 
+  int nlambs = param->nlambs; 
+  int pgsz = param->pgsz; 
 
-  int allocation_size = fmm_param.pgsz*(2*fmm_param.pterms + 1); 
-  fmm_param.rdplus  = calloc(allocation_size, sizeof(double)); 
-  fmm_param.rdminus = calloc(allocation_size, sizeof(double)); 
-  fmm_param.rdsq3   = calloc(allocation_size, sizeof(double)); 
-  fmm_param.rdmsq3  = calloc(allocation_size, sizeof(double)); 
-  
-  allocation_size = (2*fmm_param.pterms + 1)*(2*fmm_param.pterms + 1)*
-    (2*fmm_param.pterms + 1); 
-  fmm_param.dc      = calloc(allocation_size, sizeof(double)); 
+  param->numphys = calloc(nlambs, sizeof(int)); 
+  param->numfour = calloc(nlambs, sizeof(int)); 
+  param->whts    = calloc(nlambs, sizeof(double)); 
+  param->rlams   = calloc(nlambs, sizeof(double)); 
+  param->rdplus  = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  param->rdminus = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  param->rdsq3   = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  param->rdmsq3  = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  param->dc      = calloc((2 * pterms + 1)*(2 * pterms + 1)* (2 * pterms + 1), 
+                          sizeof(double)); 
+  param->ytopc     = calloc((pterms + 2) * (pterms + 2), sizeof(double)); 
+  param->ytopcs    = calloc((pterms + 2) * (pterms + 2), sizeof(double)); 
+  param->ytopcsinv = calloc((pterms + 2) * (pterms + 2), sizeof(double)); 
+  param->rlsc      = calloc(pgsz * nlambs, sizeof(double)); 
 
-  fmm_param.ytopc     = calloc(fmm_param.pgsz, sizeof(double)); 
-  fmm_param.ytopcs    = calloc(fmm_param.pgsz, sizeof(double)); 
-  fmm_param.ytopcsinv = calloc(fmm_param.pgsz, sizeof(double)); 
+  frmini(param); 
+  rotgen(param); 
+  vwts(param); 
+  numthetahalf(param); 
+  numthetafour(param); 
+  rlscini(param); 
 
-  fmm_param.rlsc = calloc(fmm_param.pgsz*fmm_param.nlambs, sizeof(double)); 
+  param->nexptot  = 0;
+  param->nthmax   = 0; 
+  param->nexptotp = 0; 
 
-  frmini(&fmm_param); 
-  rotgen(&fmm_param); 
-  vwts(&fmm_param); 
-  numthetahalf(&fmm_param); 
-  numthetafour(&fmm_param); 
-  rlscini(&fmm_param); 
-
-  fmm_param.nexptot = 0; 
-  fmm_param.nthmax = 0; 
-  fmm_param.nexptotp = 0; 
-  for (int i = 1; i <= fmm_param.nlambs; i++) {
-    fmm_param.nexptot += fmm_param.numfour[i - 1]; 
-    if (fmm_param.numfour[i - 1] > fmm_param.nthmax) 
-      fmm_param.nthmax = fmm_param.numfour[i - 1]; 
-    fmm_param.nexptotp += fmm_param.numphys[i - 1]; 
+  for (int i = 1; i <= nlambs; i++) {
+    param->nexptot += param->numfour[i - 1]; 
+    if (param->numfour[i - 1] > param->nthmax) 
+      param->nthmax = param->numfour[i - 1]; 
+    param->nexptotp += param->numphys[i - 1]; 
   }
-  fmm_param.nexptotp /= 2.0; 
-  fmm_param.nexpmax = (fmm_param.nexptot > fmm_param.nexptotp ? 
-		       fmm_param.nexptot : 
-		       fmm_param.nexptotp) + 1;
-
-  allocation_size = fmm_param.nexpmax*3; 
-  fmm_param.xs = calloc(allocation_size, sizeof(double complex)); 
-  fmm_param.ys = calloc(allocation_size, sizeof(double complex)); 
-  fmm_param.zs = calloc(allocation_size, sizeof(double)); 
-
-  fmm_param.fexpe    = calloc(15000, sizeof(double complex)); 
-  fmm_param.fexpo    = calloc(15000, sizeof(double complex)); 
-  fmm_param.fexpback = calloc(15000, sizeof(double complex)); 
-
-  mkfexp(&fmm_param); 
-  mkexps(&fmm_param); 
   
-  return fmm_param;
+  param->nexptotp *= 0.5; 
+  param->nexpmax = (param->nexptot > param->nexptotp ? 
+                    param->nexptot : param->nexptotp) + 1;
+
+  param->xs = calloc(param->nexpmax * 3, sizeof(double complex)); 
+  param->ys = calloc(param->nexpmax * 3, sizeof(double complex)); 
+  param->zs = calloc(param->nexpmax * 3, sizeof(double)); 
+  param->fexpe    = calloc(15000, sizeof(double complex)); 
+  param->fexpo    = calloc(15000, sizeof(double complex)); 
+  param->fexpback = calloc(15000, sizeof(double complex)); 
+
+  mkfexp(param); 
+  mkexps(param); 
+
+  int nlevel = (nslev >= ntlev ? nslev : ntlev); 
+  param->scale = calloc(1 + nlevel, sizeof(double));   
+  assert(param->scale != NULL); 
+
+  param->scale[0] = 1 / size; 
+  for (int i = 1; i <= nlevel; i++) 
+    param->scale[i] = 2 * param->scale[i - 1]; 
+
+  return param; 
 }
-
 
 void destruct_param(fmm_param_t *fmm_param) {
   free(fmm_param->xs); 
@@ -93,69 +106,16 @@ void destruct_param(fmm_param_t *fmm_param) {
   free(fmm_param->ytopcs);
   free(fmm_param->ytopcsinv);
   free(fmm_param->rlsc); 
+  free(fmm_param->scale); 
+  free(fmm_param); 
 }
-
-
-void frmini(fmm_param_t *fmm_param) {
-  double *ytopc     = fmm_param->ytopc; 
-  double *ytopcs    = fmm_param->ytopcs; 
-  double *ytopcsinv = fmm_param->ytopcsinv; 
-  int pterms        = fmm_param->pterms; 
-
-  double *factorial = calloc(1 + 2*pterms, sizeof(double));
-  double d = 1.0;
-  factorial[0] = d;
-  for (int ell = 1; ell <= 2*pterms; ell++) {
-    d *= sqrt(ell);
-    factorial[ell] = d;
-  }
-
-  ytopcs[0] = 1.0;
-  ytopcsinv[0] = 1.0;
-  for (int m = 0; m <= pterms; m++) {
-    int offset = m*(pterms + 1);
-    for (int ell = m; ell <= pterms; ell++) {
-      ytopc[ell + offset] = factorial[ell - m]/factorial[ell + m];
-      ytopcsinv[ell + offset] = factorial[ell - m]*factorial[ell + m];
-      ytopcs[ell + offset] = 1.0/ytopcsinv[ell + offset];
-    }
-  }
-
-  free(factorial);
-}
-
-
-void rotgen(fmm_param_t *fmm_param) {
-  double *dc      = fmm_param->dc; 
-  double *rdplus  = fmm_param->rdplus; 
-  double *rdminus = fmm_param->rdminus; 
-  double *rdsq3   = fmm_param->rdsq3; 
-  double *rdmsq3  = fmm_param->rdmsq3; 
-  int pterms      = fmm_param->pterms; 
-  int pgsz        = fmm_param->pgsz; 
-
-  bnlcft(dc, 2*pterms); 
-
-  double theta = acos(0); 
-  fstrtn(pterms, rdplus, dc, theta, pgsz); 
-  
-  theta = -theta; 
-  fstrtn(pterms, rdminus, dc, theta, pgsz); 
-
-  theta = acos(sqrt(3)/3); 
-  fstrtn(pterms, rdsq3, dc, theta, pgsz); 
-
-  theta = acos(-sqrt(3)/3); 
-  fstrtn(pterms, rdmsq3, dc, theta, pgsz); 
-}
-
 
 void bnlcft(double *c, int p) {
   for (int n = 0; n <= p; n++)
     c[n] = 1.0;
 
   for (int m = 1; m <= p; m++) {
-    int offset = m*(p + 1);
+    int offset = m * (p + 1);
     int offset1 = offset - p - 1;
     c[m + offset] = 1.0;
     for (int n = m + 1; n <= p; n++) 
@@ -163,99 +123,12 @@ void bnlcft(double *c, int p) {
   }
 
   for (int m = 1; m <= p; m++) {
-    int offset = m*(p + 1);
+    int offset = m * (p + 1);
     for (int n = m + 1; n <= p; n++) {
       c[n + offset] = sqrt(c[n + offset]);
     }
   }
 }
-
-
-void fstrtn(int p, double *d, const double *sqc, double theta, int pgsz) {
-  const double precision = 1.0e-19;
-  const double ww = sqrt(2)/2;
-  double ctheta = cos(theta);
-  ctheta = (fabs(ctheta) <= precision ? 0.0 : ctheta);
-  double stheta = sin(-theta);
-  stheta = (fabs(stheta) <= precision ? 0.0 : stheta);
-  double hsthta = ww*stheta;
-  double cthtap = ww*(1.0+ctheta);
-  double cthtan = -ww*(1.0-ctheta);
-
-  int ij, im, imp; 
-  d[p*pgsz] = 1.0;
-
-  for (ij = 1; ij <= p; ij++) {
-    for (im = -ij; im <= -1; im++) {
-      int index = ij + (im + p)*pgsz; 
-      d[index] = -sqc[ij - im + 2*(1 + 2*p)]*d[ij-1 + (im + 1 + p)*pgsz];
-      if (im > 1 - ij) 
-	d[index] += sqc[ij + im + 2*(1 + 2*p)]*d[ij - 1 + (im - 1 + p)*pgsz];
-      d[index] *= hsthta;
-
-      if (im > -ij) 
-	d[index] += d[ij - 1 + (im + p)*pgsz]*ctheta*
-	  sqc[ij + im + 2*p + 1]*sqc[ij - im + 2*p + 1];      
-      d[index] /= ij;
-    }
-
-    d[ij + p*pgsz] = d[ij - 1 + p*pgsz]*ctheta;
-
-    if (ij > 1) 
-      d[ij + p*pgsz] += hsthta*sqc[ij + 2*(1 + 2*p)]*
-	(d[ij - 1 + (-1 + p)*pgsz] + d[ij - 1 + (1 + p)*pgsz])/ij;
-    
-    for (im = 1; im <= ij; im++) {
-      int index = ij + (im + p)*pgsz; 
-      d[index] = -sqc[ij + im + 2*(1 + 2*p)]*d[ij - 1 + (im - 1 + p)*pgsz];
-      if (im < ij-1) 
-	d[index] += sqc[ij - im + 2*(1 + 2*p)]*d[ij - 1 + (im + 1 + p)*pgsz];
-      d[index] *= hsthta;
-
-      if (im < ij) 
-	d[index] += d[ij- 1 + (im + p)*pgsz]*ctheta*
-	  sqc[ij + im + 2*p + 1]*sqc[ij - im + 2*p + 1];      
-      d[index] /= ij;
-    }
-
-    for (imp = 1; imp <= ij; imp++) {
-      for (im = -ij; im <= -1; im++) {
-	int index1 = ij + imp*(p + 1) + (im + p)*pgsz; 
-	int index2 = ij - 1 + (imp - 1)*(p + 1) + (im + p)*pgsz; 
-	d[index1] = d[index2 + pgsz]*cthtan*sqc[ij - im + 2*(2*p + 1)]; 
-	if (im > 1 - ij) 
-	  d[index1] -= d[index2 - pgsz]*cthtap*sqc[ij + im + 2*(2*p + 1)]; 
-
-	if (im > -ij) 
-	      d[index1] += d[index2]*stheta*sqc[ij + im + 2*p + 1]*
-		sqc[ij - im + 2*p + 1];
-	d[index1] *= ww/sqc[ij + imp + 2*(2*p + 1)];
-      }      
-
-      int index3 = ij + imp*(p + 1) + p*pgsz; 
-      int index4 = ij - 1 + (imp - 1)*(p + 1) + p*pgsz; 
-      d[index3] = ij*stheta*d[index4];
-      if (ij > 1) 
-	d[index3] -= sqc[ij + 2*(2*p + 1)]*
-	  (d[index4 - pgsz]*cthtap + d[index4 + pgsz]*cthtan);
-      d[index3] *= ww/sqc[ij + imp + 2*(2*p + 1)]; 
-
-      for (im = 1; im <= ij; im++) {
-	int index5 = ij + imp*(p + 1) + (im + p)*pgsz; 
-	int index6 = ij - 1 + (imp - 1)*(p + 1) + (im + p)*pgsz; 
-	d[index5] = d[index6 - pgsz]*cthtap*sqc[ij + im + 2*(2*p + 1)]; 
-	if (im < ij - 1) 
-	  d[index5] -= d[index6 + pgsz]*cthtan*sqc[ij - im + 2*(2*p + 1)]; 
-
-	if (im < ij) 
-	      d[index5] += d[index6]*stheta*sqc[ij + im + 2*p + 1]*
-		sqc[ij - im + 2*p + 1];
-	d[index5] *= ww/sqc[ij + imp + 2*(2*p + 1)];
-      }
-    }
-  }
-}
-
 
 void vwts(fmm_param_t *fmm_param) {
   int nlambs    = fmm_param->nlambs; 
@@ -321,7 +194,6 @@ void vwts(fmm_param_t *fmm_param) {
   }
 }
 
-
 void numthetahalf(fmm_param_t *fmm_param) {
   int *numfour = fmm_param->numfour; 
   int nlambs   = fmm_param->nlambs; 
@@ -358,6 +230,147 @@ void numthetahalf(fmm_param_t *fmm_param) {
   }
 }
 
+void frmini(fmm_param_t *fmm_param) {
+  double *ytopc     = fmm_param->ytopc; 
+  double *ytopcs    = fmm_param->ytopcs; 
+  double *ytopcsinv = fmm_param->ytopcsinv; 
+  int pterms        = fmm_param->pterms; 
+
+  double *factorial = calloc(3 + 2 * pterms, sizeof(double));
+
+  double d = 1.0;
+  factorial[0] = d;
+  for (int ell = 1; ell <= 2 * pterms + 2; ell++) {
+    d *= sqrt(ell);
+    factorial[ell] = d;
+  }
+
+  ytopcs[0] = 1.0;
+  ytopcsinv[0] = 1.0;
+  for (int m = 0; m <= pterms + 1; m++) {
+    int offset = m * (pterms + 2);
+    for (int ell = m; ell <= pterms + 1; ell++) {
+      ytopc[ell + offset] = factorial[ell - m] / factorial[ell + m];
+      ytopcsinv[ell + offset] = factorial[ell - m] * factorial[ell + m];
+      ytopcs[ell + offset] = 1.0 / ytopcsinv[ell + offset];
+    }
+  }
+
+
+  free(factorial);
+}
+
+void rotgen(fmm_param_t *fmm_param) {
+  double *dc      = fmm_param->dc; 
+  double *rdplus  = fmm_param->rdplus; 
+  double *rdminus = fmm_param->rdminus; 
+  double *rdsq3   = fmm_param->rdsq3; 
+  double *rdmsq3  = fmm_param->rdmsq3; 
+  int pterms      = fmm_param->pterms; 
+  int pgsz        = fmm_param->pgsz; 
+
+  bnlcft(dc, 2*pterms); 
+
+  double theta = acos(0); 
+  fstrtn(pterms, rdplus, dc, theta, pgsz); 
+  
+  theta = -theta; 
+  fstrtn(pterms, rdminus, dc, theta, pgsz); 
+
+  theta = acos(sqrt(3)/3); 
+  fstrtn(pterms, rdsq3, dc, theta, pgsz); 
+
+  theta = acos(-sqrt(3)/3); 
+  fstrtn(pterms, rdmsq3, dc, theta, pgsz); 
+}
+
+void fstrtn(int p, double *d, const double *sqc, double theta, int pgsz) {
+  const double precision = 1.0e-19;
+  const double ww = sqrt(2)/2;
+  double ctheta = cos(theta);
+  ctheta = (fabs(ctheta) <= precision ? 0.0 : ctheta);
+  double stheta = sin(-theta);
+  stheta = (fabs(stheta) <= precision ? 0.0 : stheta);
+  double hsthta = ww*stheta;
+  double cthtap = ww*(1.0+ctheta);
+  double cthtan = -ww*(1.0-ctheta);
+
+  int ij, im, imp; 
+  d[p * pgsz] = 1.0;
+
+  for (ij = 1; ij <= p; ij++) {
+    for (im = -ij; im <= -1; im++) {
+      int index = ij + (im + p)*pgsz; 
+      d[index] = -sqc[ij - im + 2 * (1 + 2 * p)] * d[ij-1 + (im + 1 + p) * pgsz];
+      if (im > 1 - ij) 
+	d[index] += sqc[ij + im + 2 * (1 + 2 * p)] * 
+          d[ij - 1 + (im - 1 + p) * pgsz];
+      d[index] *= hsthta;
+
+      if (im > -ij) 
+	d[index] += d[ij - 1 + (im + p) * pgsz] * ctheta *
+	  sqc[ij + im + 2 * p + 1] * sqc[ij - im + 2 * p + 1];      
+      d[index] /= ij;
+    }
+
+    d[ij + p * pgsz] = d[ij - 1 + p * pgsz] * ctheta;
+
+    if (ij > 1) 
+      d[ij + p * pgsz] += hsthta * sqc[ij + 2 * (1 + 2 * p)] *
+	(d[ij - 1 + (-1 + p) * pgsz] + d[ij - 1 + (1 + p) * pgsz]) / ij;
+    
+    for (im = 1; im <= ij; im++) {
+      int index = ij + (im + p) * pgsz; 
+      d[index] = -sqc[ij + im + 2 * (1 + 2 * p)] * 
+        d[ij - 1 + (im - 1 + p) *pgsz];
+      if (im < ij-1) 
+	d[index] += sqc[ij - im + 2 * (1 + 2 * p)] *
+          d[ij - 1 + (im + 1 + p) * pgsz];
+      d[index] *= hsthta;
+
+      if (im < ij) 
+	d[index] += d[ij- 1 + (im + p) * pgsz] * ctheta *
+	  sqc[ij + im + 2 * p + 1] * sqc[ij - im + 2 * p + 1];      
+      d[index] /= ij;
+    }
+
+    for (imp = 1; imp <= ij; imp++) {
+      for (im = -ij; im <= -1; im++) {
+        int index1 = ij + imp * (p + 1) + (im + p) * pgsz; 
+	int index2 = ij - 1 + (imp - 1) * (p + 1) + (im + p) * pgsz; 
+	d[index1] = d[index2 + pgsz] * cthtan * sqc[ij - im + 2 * (2 * p + 1)]; 
+        if (im > 1 - ij) 
+          d[index1] -= d[index2 - pgsz] * cthtap * sqc[ij + im + 4 * p + 2]; 
+
+	if (im > -ij) 
+	        d[index1] += d[index2] * stheta * sqc[ij + im + 2 * p + 1] *
+		  sqc[ij - im + 2 * p + 1];
+	d[index1] *= ww / sqc[ij + imp + 2 * (2 * p + 1)];
+      }      
+
+      int index3 = ij + imp * (p + 1) + p * pgsz; 
+      int index4 = ij - 1 + (imp - 1) * (p + 1) + p * pgsz; 
+      d[index3] = ij * stheta * d[index4];
+      if (ij > 1) 
+        d[index3] -= sqc[ij + 2 * (2 * p + 1)] *
+          (d[index4 - pgsz] * cthtap + d[index4 + pgsz] * cthtan);
+      d[index3] *= ww / sqc[ij + imp + 2 * (2 * p + 1)]; 
+
+      for (im = 1; im <= ij; im++) {
+        int index5 = ij + imp * (p + 1) + (im + p) * pgsz; 
+        int index6 = ij - 1 + (imp - 1) * (p + 1) + (im + p) * pgsz; 
+        d[index5] = d[index6 - pgsz] * cthtap * sqc[ij + im + 2 * (2 * p + 1)]; 
+        if (im < ij - 1) 
+          d[index5] -= d[index6 + pgsz] * cthtan * sqc[ij - im + 4 * p + 2]; 
+
+        if (im < ij) 
+          d[index5] += d[index6] * stheta * sqc[ij + im + 2 * p + 1] *
+            sqc[ij - im + 2 * p + 1];
+        d[index5] *= ww/sqc[ij + imp + 2 * (2 * p + 1)];
+      }
+    }
+  }
+}
 
 void numthetafour(fmm_param_t *fmm_param) {
   int *numphys = fmm_param->numphys; 
@@ -403,22 +416,22 @@ void rlscini(fmm_param_t *fmm_param) {
   double *rlsc  = fmm_param->rlsc; 
   double *rlams = fmm_param->rlams; 
 
-  double *factorial = calloc(2*pterms + 1, sizeof(double));
+  double *factorial = calloc(2 * pterms + 1, sizeof(double));
   double *rlampow = calloc(pterms + 1, sizeof(double));
 
   factorial[0] = 1;
-  for (int i = 1; i <= 2*pterms; i++)
+  for (int i = 1; i <= 2 * pterms; i++)
     factorial[i] = factorial[i-1]*sqrt(i);
  
   for (int nell = 0; nell < nlambs; nell++) {
     double rmul = rlams[nell];
     rlampow[0] = 1;
     for (int j = 1;  j <= pterms; j++)
-      rlampow[j] = rlampow[j - 1]*rmul;      
+      rlampow[j] = rlampow[j - 1] * rmul;      
     for (int j = 0; j <= pterms; j++) {
       for (int k = 0; k <= j; k++) {
-	rlsc[j + k*(pterms + 1) + nell*pgsz] = rlampow[j]/
-	  factorial[j - k]/factorial[j + k];
+        rlsc[j + k * (pterms + 1) + nell * pgsz] = rlampow[j] /
+          factorial[j - k] / factorial[j + k];
       }
     }    
   }
@@ -426,7 +439,6 @@ void rlscini(fmm_param_t *fmm_param) {
   free(factorial);
   free(rlampow);
 }
-
 
 void mkfexp(fmm_param_t *fmm_param) {
   int nlambs = fmm_param->nlambs; 
@@ -442,18 +454,18 @@ void mkfexp(fmm_param_t *fmm_param) {
 
   for (int i = 0; i < nlambs; i++) {
     int nalpha = numphys[i]; 
-    int nalpha2 = nalpha/2; 
-    double halpha = 2.0*m_pi/nalpha; 
+    int nalpha2 = nalpha / 2; 
+    double halpha = 2.0 * m_pi / nalpha; 
     for (int j = 1; j <= nalpha2; j++) {
-      double alpha = (j - 1)*halpha; 
+      double alpha = (j - 1) * halpha; 
       for (int nm = 2; nm <= numfour[i]; nm += 2) {
-	fexpe[nexte] = cexp((nm - 1)*_Complex_I*alpha);
-	nexte++;
+        fexpe[nexte] = cexp((nm - 1) * _Complex_I * alpha);
+        nexte++;
       }
 
       for (int nm = 3; nm <= numfour[i]; nm += 2) {
-	fexpo[nexto] = cexp((nm - 1)*_Complex_I*alpha);
-	nexto++;
+        fexpo[nexto] = cexp((nm - 1) * _Complex_I * alpha);
+        nexto++;
       }
     }
   }
@@ -461,26 +473,25 @@ void mkfexp(fmm_param_t *fmm_param) {
   int next = 0; 
   for (int i = 0; i < nlambs; i++) {
     int nalpha = numphys[i]; 
-    int nalpha2 = nalpha/2; 
-    double halpha = 2.0*m_pi/nalpha; 
+    int nalpha2 = nalpha / 2; 
+    double halpha = 2.0 * m_pi / nalpha; 
     for (int nm = 3; nm <= numfour[i]; nm += 2) {
       for (int j = 1; j <= nalpha2; j++) {
-	double alpha = (j - 1)*halpha; 
-	fexpback[next] = cexp(-(nm - 1)*_Complex_I*alpha);
-	next++;
+        double alpha = (j - 1) * halpha; 
+        fexpback[next] = cexp(-(nm - 1) * _Complex_I * alpha);
+        next++;
       }
     }
 
     for (int nm = 2; nm <= numfour[i]; nm += 2) {
       for (int j = 1; j <= nalpha2; j++) {
-	double alpha = (j - 1)*halpha; 
-	fexpback[next] = cexp(-(nm - 1)*_Complex_I*alpha);
-	next++;
+        double alpha = (j - 1) * halpha; 
+        fexpback[next] = cexp(-(nm - 1) * _Complex_I * alpha);
+        next++;
       }
     }
   }
 }
-
 
 void mkexps(fmm_param_t *fmm_param) {
   int nlambs = fmm_param->nlambs; 
@@ -492,20 +503,22 @@ void mkexps(fmm_param_t *fmm_param) {
   int ntot = 0; 
   double m_pi = acos(-1); 
   for (int nell = 0; nell < nlambs; nell++) {
-    double hu = 2.0*m_pi/numphys[nell]; 
-    for (int mth = 0; mth < numphys[nell]/2; mth++) {
-      double u = mth*hu; 
-      int ncurrent = 3*(ntot + mth);
+    double hu = 2.0 * m_pi / numphys[nell]; 
+    for (int mth = 0; mth < numphys[nell] / 2; mth++) {
+      double u = mth * hu; 
+      int ncurrent = 3 * (ntot + mth);
       zs[ncurrent]     = exp(-rlams[nell]);
-      zs[ncurrent + 1] = zs[ncurrent]*zs[ncurrent]; 
-      zs[ncurrent + 2] = zs[ncurrent]*zs[ncurrent + 1];
-      xs[ncurrent]     = cexp(_Complex_I*cos(u)*rlams[nell]);
-      xs[ncurrent + 1] = xs[ncurrent]*xs[ncurrent];
-      xs[ncurrent + 2] = xs[ncurrent + 1]*xs[ncurrent]; 
-      ys[ncurrent]     = cexp(_Complex_I*sin(u)*rlams[nell]);
-      ys[ncurrent + 1] = ys[ncurrent]*ys[ncurrent]; 
-      ys[ncurrent + 2] = ys[ncurrent + 1]*ys[ncurrent]; 
+      zs[ncurrent + 1] = zs[ncurrent] * zs[ncurrent]; 
+      zs[ncurrent + 2] = zs[ncurrent] * zs[ncurrent + 1];
+      xs[ncurrent]     = cexp(_Complex_I * cos(u) * rlams[nell]);
+      xs[ncurrent + 1] = xs[ncurrent] * xs[ncurrent];
+      xs[ncurrent + 2] = xs[ncurrent + 1] * xs[ncurrent]; 
+      ys[ncurrent]     = cexp(_Complex_I * sin(u) * rlams[nell]);
+      ys[ncurrent + 1] = ys[ncurrent] * ys[ncurrent]; 
+      ys[ncurrent + 2] = ys[ncurrent + 1] * ys[ncurrent]; 
     }
     ntot += numphys[nell]/2; 
   }
 }
+
+

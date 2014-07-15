@@ -1,3 +1,9 @@
+/// ----------------------------------------------------------------------------
+/// @file fmm-main.c
+/// @author Bo Zhang <zhang416 [at] indiana.edu>
+/// @brief  Main file for FMM 
+/// ----------------------------------------------------------------------------
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +39,6 @@ int main(int argc, char *argv[]) {
     .s        = 40
   };
 
-  int debug = -1;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:n:m:a:d:s:D:h")) != -1) {
     switch (opt) {
@@ -58,9 +63,6 @@ int main(int argc, char *argv[]) {
     case 's':
       fmm_cfg.s        = atoi(optarg);
       break;
-     case 'D':
-      debug = atoi(optarg);
-      break;
     case 'h':
       _usage(stdout);
       return 0;
@@ -77,8 +79,19 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  // register actions
   _fmm_main             = HPX_REGISTER_ACTION(_fmm_main_action);
+
+
+  e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg)); 
+  if (e) {
+    fprintf(stderr, "HPX: error while running.\n");
+    return e;
+  } 
+
+  
+
+  /*
+  // register actions
   _fmm_build_list134    = HPX_REGISTER_ACTION(_fmm_build_list134_action); 
   _fmm_bcast            = HPX_REGISTER_ACTION(_fmm_bcast_action); 
   _aggr_leaf_sbox       = HPX_REGISTER_ACTION(_aggr_leaf_sbox_action);
@@ -108,6 +121,7 @@ int main(int argc, char *argv[]) {
 
   // cleanup
   destruct_param(&fmm_param);
+  */
   return 0;
 }
 

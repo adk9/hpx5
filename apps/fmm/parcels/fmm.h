@@ -1,21 +1,23 @@
+/// ----------------------------------------------------------------------------
+/// @file fmm.h
+/// @author Bo Zhang <zhang416 [at] indiana.edu>
+/// @brief FMM header file
+/// ----------------------------------------------------------------------------
 #pragma once
 #ifndef FMM_H
 #define FMM_H
 
-#include "fmm-types.h"
-#include "fmm-action.h"
-#include "fmm-param.h"
-#include "fmm-dag.h"
 #include "hpx/hpx.h"
+#include "fmm-types.h"
+#include "fmm-param.h"
+#include "fmm-action.h"
+#include "fmm-dag.h"
 
-fmm_param_t fmm_param; 
-hpx_addr_t mpole; 
-hpx_addr_t local_h;
-hpx_addr_t local_v; 
-hpx_addr_t expu; 
-hpx_addr_t expd; 
-hpx_addr_t expn;
-hpx_addr_t exps;
-hpx_addr_t expe; 
-hpx_addr_t expw; 
+extern hpx_addr_t sources; 
+extern hpx_addr_t charges; 
+extern hpx_addr_t targets; 
+extern hpx_addr_t potential;
+extern hpx_addr_t field; 
+extern hpx_addr_t fmm_dag; 
+
 #endif
