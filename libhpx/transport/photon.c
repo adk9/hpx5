@@ -121,7 +121,6 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("Could not pin buffer of size %lu for photon\n", len);
-  //dbg_error("pinning address: 0x%016lx (%lu)\n", (uintptr_t)b, len);
 }
 
 
@@ -135,7 +134,6 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
   if (photon_unregister_buffer(b, len))
     dbg_error("Could not un-pin buffer %p of size %lu for photon\n", buffer, len);
 }
-
 
 /// ----------------------------------------------------------------------------
 /// Put data via Photon
@@ -362,10 +360,10 @@ _alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_in
   }
 
   // debugging code
-  static size_t total = 0;
-  printf("Photon transport allocated and pinned %lu bytes for a total of %lu\n",
-         size, total += size);
-  fflush(stdout);
+  //static size_t total = 0;
+  //printf("Photon transport allocated and pinned %lu bytes for a total of %lu\n",
+  //       size, total += size);
+  //fflush(stdout);
 
   return chunk;
 }
@@ -375,18 +373,18 @@ static bool
 _dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
 {
   // debugging code
-  static size_t total = 0;
-  printf("Photon transport unpinned %lu bytes for a total of %lu\n", size,
-         total += size);
-  fflush(stdout);
+  //static size_t total = 0;
+  //printf("Photon transport unpinned %lu bytes for a total of %lu\n", size,
+  //       total += size);
+  //fflush(stdout);
 
-  if (munlock(chunk, size))
-    error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
-          chunk, size);
+  //if (munlock(chunk, size))
+  //  error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
+  //        chunk, size);
 
-  if (photon_unregister_buffer(chunk, size))
-    dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
-              chunk, size);
+  //if (photon_unregister_buffer(chunk, size))
+  //  dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
+  //            chunk, size);
 
   photon_t *t = (photon_t *)here->transport;
   assert(t);
