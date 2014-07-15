@@ -1,6 +1,6 @@
 CC     = gcc
 CFLAGS = -std=gnu99 -Wall -pedantic
-LIBS   = -lhpx -lm
+LIBS   = /u/zhang416/installed/hpx/lib/libhpx.a -lpthread -lrt -lm 
 
 SRC    = $(shell ls *.c)
 OBJ    = $(SRC:.c=.o)
