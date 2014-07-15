@@ -2,8 +2,9 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 examples_PROGRAMS    = fibonacci pingpong allreduce countdown seqspawn \
                        parspawn future agas_test memput memget guppie sendrecv\
-                       sendrecv-chan allreduce-chan pingpong-chan
+                       sendrecv-chan allreduce-chan pingpong-chan hello
 
+hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
 allreduce_SOURCES       = allreduce.c
