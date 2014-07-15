@@ -52,29 +52,6 @@ void request_delete(request_t *r) {
 
 
 /// ----------------------------------------------------------------------------
-/// Some transports care about pinning data before sending it. The transport
-/// isn't supposed to depend on the parcel implementation or interface though,
-/// so we check to see if a parcel needs to be pinned here, in the network
-/// layer.
-///
-/// We know that parcels are block allocated, so we pin entire blocks at
-/// once. This reduces pin-based churn. Once a parcel block is pinned, we don't
-/// ever unpin it, since parcels are reused.
-///
-/// TODO: It might make sense to unpin blocks during shutdown, for debugging
-/// purposes (e.g., valgrind might complain about transport-layer resource
-/// allocation if we don't unpin them).
-/// ----------------------------------------------------------------------------
-static void _pin(transport_class_t *transport, hpx_parcel_t *parcel) {
-  // block_t *block = block_from_parcel(parcel);
-  // if (!block_is_pinned(block)) {
-  //   transport_pin(transport, block, block_get_size(block));
-  //   block_set_pinned(block, true);
-  // }
-}
-
-
-/// ----------------------------------------------------------------------------
 /// Requests associate parcels to transport send and receive operations, and
 /// list nodes as well. This constructor creates new requests, bound to the
 /// passed parcel.
@@ -162,7 +139,6 @@ static bool _try_start_send(progress_t *progress) {
   hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
     return false;
-  _pin(here->transport, p);
 
   request_t *r = _new_request(progress, p);
   if (!r) {
@@ -210,7 +186,6 @@ static bool _try_start_recv(progress_t *progress) {
     dbg_error("could not acquire a parcel of size %d during receive.\n", size);
     return false;
   }
-  _pin(here->transport, p);
 
   // remember the source
   p->src = src;
