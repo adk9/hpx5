@@ -378,13 +378,13 @@ _dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
   //       total += size);
   //fflush(stdout);
 
-  //if (munlock(chunk, size))
-  //  error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
-  //        chunk, size);
+  if (munlock(chunk, size))
+   error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
+         chunk, size);
 
-  //if (photon_unregister_buffer(chunk, size))
-  //  dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
-  //            chunk, size);
+  if (photon_unregister_buffer(chunk, size))
+   dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
+             chunk, size);
 
   photon_t *t = (photon_t *)here->transport;
   assert(t);
