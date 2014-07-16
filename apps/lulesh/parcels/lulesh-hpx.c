@@ -19,11 +19,13 @@ hpx_action_t _PosVel_result = 0;
 hpx_action_t _MonoQ_sends = 0;
 hpx_action_t _MonoQ_result = 0;
 
-static void initdouble(double *input) {
+static void initdouble(double *input, const size_t size) {
+  assert(sizeof(double) == size);
   *input = 99999999.0;
 }
 
-static void mindouble(double *output,const double *input) {
+static void mindouble(double *output,const double *input, const size_t size) {
+  assert(sizeof(double) == size);
   if ( *output > *input ) *output = *input;
   return;
 }
@@ -254,7 +256,7 @@ static int _main_action(int *input)
   hpx_addr_t init = hpx_lco_and_new(nDoms);
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, sizeof(double),
                                            (hpx_commutative_associative_op_t)mindouble,
-                                           (void (*)(void *)) initdouble);
+                                           (void (*)(void *, const size_t size)) initdouble);
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .index = k,
@@ -365,13 +367,13 @@ int main(int argc, char **argv)
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
   _checkdeterm   = HPX_REGISTER_ACTION(_checkdeterm_action);
-  _compute_InitStressTermsForElems = 
+  _compute_InitStressTermsForElems =
             HPX_REGISTER_ACTION(_compute_InitStressTermsForElems_action);
-  _compute_IntegrateStressForElems = 
+  _compute_IntegrateStressForElems =
             HPX_REGISTER_ACTION(_compute_IntegrateStressForElems_action);
-  _compute_CalcFBHourglassForceForElems = 
+  _compute_CalcFBHourglassForceForElems =
             HPX_REGISTER_ACTION(_compute_CalcFBHourglassForceForElems_action);
-  _compute_CalcHourglassControlForElems = 
+  _compute_CalcHourglassControlForElems =
             HPX_REGISTER_ACTION(_compute_CalcHourglassControlForElems_action);
   _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
   _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
