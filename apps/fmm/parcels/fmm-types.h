@@ -25,7 +25,6 @@ struct fmm_box_t {
   int idz; ///< index, z-direction
   int npts; ///< number of points contained in the box
   int addr; ///< offset to locate the first point contained in the box
-  char type; ///< type of the box: 'S' for source, 'T' for target
   hpx_addr_t list1[27]; ///< coarser or same level list 1 boxes 
   hpx_addr_t list5[27]; ///< same-level adjacent boxes
   int nlist1; ///< number of entries in list1
@@ -33,23 +32,6 @@ struct fmm_box_t {
   hpx_addr_t reduce; ///< reduce lco for the box
   double complex expansion[]; ///< storage for expansion
 }; 
-
-/// ----------------------------------------------------------------------------
-/// @brief FMM dag type
-/// ----------------------------------------------------------------------------
-typedef struct {
-  int nslev; ///< maximum level of the source tree
-  int nsboxes; ///< total number of boxes on the source tree
-  int ntlev; ///< maximum level of the target tree
-  int ntboxes; ///< total number of bxoes on the target tree
-  double size; ///< size of the bounding box
-  double corner[3]; ///< coordinate of the lower left corner of the bounding box
-  hpx_addr_t source_root; ///< pointer to the root of the source tree
-  hpx_addr_t target_root; ///< pointer to the root of the target tree
-  int *mapsrc; ///< source mapping info
-  int *maptar; ///< target mapping info
-  int mapping[]; ///< storage for mapping info
-} fmm_dag_t; 
 
 /// ----------------------------------------------------------------------------
 /// @brief FMM configuration type
@@ -67,6 +49,8 @@ typedef struct {
 /// @note This is intended to be duplicated on each locality
 /// ----------------------------------------------------------------------------
 typedef struct {
+  double size; ///< size of the bounding boxes
+  double corner[3]; ///< coordinate of the lower left corner of the bounding box
   int pterms; ///< order of the multipole/local expansion
   int nlambs; ///< number of terms in the exponential expansion
   int pgsz; ///< buffer size for holding multipole/local expansion
@@ -95,5 +79,14 @@ typedef struct {
   double complex *fexpo; ///< coefficients for merging exponentials
   double complex *fexpback; ///< coefficients for merging exponentials
 } fmm_param_t; 
+
+/// ----------------------------------------------------------------------------
+/// @brief Argument passed to the _init_param_action
+/// ----------------------------------------------------------------------------
+typedef struct {
+  int accuracy; 
+  double size; 
+  double corner[3]; 
+} init_param_action_arg_t; 
 
 #endif

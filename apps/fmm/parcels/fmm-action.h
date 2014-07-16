@@ -7,7 +7,8 @@
 #include "hpx/hpx.h"
 
 extern hpx_action_t _fmm_main; 
-extern hpx_action_t _construct_dag; 
+extern hpx_action_t _init_param; 
+extern hpx_action_t _partition_box; 
 
 /// ----------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -15,6 +16,11 @@ extern hpx_action_t _construct_dag;
 int _fmm_main_action(void *args); 
 
 /// ----------------------------------------------------------------------------
+/// @brief Initialize FMM param action
+/// ----------------------------------------------------------------------------
+int _init_param_action(void *args); 
+
+/// ----------------------------------------------------------------------------
 /// @brief Construct the FMM DAG
 /// ----------------------------------------------------------------------------
-int _construct_dag_action(void *args); 
+int _partition_box_action(void *args); 

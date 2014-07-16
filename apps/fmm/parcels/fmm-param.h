@@ -6,19 +6,14 @@
 #pragma once
 #ifndef FMM_PARAM_H 
 #define FMM_PARAM_H
-
 #include "fmm-types.h"
+
+#define MAXLEVEL 128
 
 /// ----------------------------------------------------------------------------
 /// @brief The parameter itself
 /// ----------------------------------------------------------------------------
-extern fmm_param_t fmm_param; 
-
-/// ----------------------------------------------------------------------------
-/// @brief Constructs the parameter
-/// ----------------------------------------------------------------------------
-fmm_param_t *construct_param(const fmm_config_t *fmm_config, const int nslev, 
-			     const int ntlev, const double size); 
+extern fmm_param_t *fmm_param; 
 
 /// ----------------------------------------------------------------------------
 /// @brief Destructs the parameter
