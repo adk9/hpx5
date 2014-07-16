@@ -16,6 +16,15 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long ep
   SBN3(local,domain,epoch);
 }
 
+int _checkdeterm_action(double *determk) {
+  if ( *determk <= 0.0 ) {
+    // need an abort here, temporarily using exit function
+    printf("CalcVolumeForceForElems exit(-1)\n");
+    exit(-1);
+  }
+  return HPX_SUCCESS;
+}
+
 void CalcVolumeForceForElems(Domain *domain,int rank)
 {
   int numElem = domain->numElem; 
@@ -33,16 +42,18 @@ void CalcVolumeForceForElems(Domain *domain,int rank)
 			    domain->fx, domain->fy, domain->fz, sigxx, sigyy, sigzz, 
 			    determ, numElem);
     int k; 
+
+    hpx_addr_t done = hpx_lco_and_new(numElem);
+    hpx_addr_t local = hpx_thread_current_target();
     for (k = 0; k < numElem; k++) {
-      if (determ[k] <= 0.0) {
-	// need an abort here, temporarily using exit function
-	printf("rank %d: CalcVolumeForceForElems exit(-1) at cycle %d\n", 
-	       rank, domain->cycle);
-	exit(-1);
-      }
+      double determk = determ[k];
+      hpx_call(local, _checkdeterm, &determk, sizeof(double), done);
     }
 
     CalcHourglassControlForElems(domain, determ, hgcoef);
+
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
 
     free(sigxx);
     free(sigyy);
@@ -51,20 +62,42 @@ void CalcVolumeForceForElems(Domain *domain,int rank)
   }
 }
 
+int _compute_InitStressTermsForElems_action(InitStressTermsForElemsArgs *args) {
+
+  double *sigxx = args->sigxx;
+  double *sigyy = args->sigyy;
+  double *sigzz = args->sigzz;
+  double *p = args->p;
+  double *q = args->q;
+  int i = args->i;
+
+  sigxx[i] = sigyy[i] = sigzz[i] = -p[i] - q[i];
+
+  return HPX_SUCCESS;
+}
+
 void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy, 
 			     double *sigzz, int numElem)
 {
+  hpx_addr_t done = hpx_lco_and_new(numElem);
+  hpx_addr_t local = hpx_thread_current_target();
   int i; 
   for (i = 0; i < numElem; i++) {
-    sigxx[i] = sigyy[i] = sigzz[i] = -p[i] - q[i];
+    InitStressTermsForElemsArgs args = {
+      .i = i,
+      .p = p,
+      .q = q,
+      .sigxx = sigxx,
+      .sigyy = sigyy,
+      .sigzz = sigzz
+    };
+    hpx_call(local, _compute_InitStressTermsForElems, &args, sizeof(InitStressTermsForElemsArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 }
 
-void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z, 
-			     double *fx, double *fy, double *fz, 
-			     double *sigxx, double *sigyy, double *sigzz, 
-			     double *determ, int numElem)
-{
+int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
   double B[3][8];
   double x_local[8];
   double y_local[8];
@@ -73,32 +106,123 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
   double fy_local[8];
   double fz_local[8];
 
-  int k; 
-  for (k = 0; k < numElem; k++) {
-    const int * const elemNodes = &nodelist[8*k]; 
+  int k = args->k;
+  int *nodelist = args->nodelist;
+  double *x = args->x;
+  double *y = args->y;
+  double *z = args->z;
+  double *fx = args->fx;
+  double *fy = args->fy;
+  double *fz = args->fz;
+  double *sigxx = args->sigxx;
+  double *sigyy = args->sigyy;
+  double *sigzz = args->sigzz;
+  double *determ = args->determ;
+
+  const int * const elemNodes = &nodelist[8*k]; 
     
-    int lnode; 
-    for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemNodes[lnode]; 
-      x_local[lnode] = x[gnode]; 
-      y_local[lnode] = y[gnode]; 
-      z_local[lnode] = z[gnode];
-    }
-
-    CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &determ[k]);
-
-    CalcElemNodeNormals(B[0], B[1], B[2], x_local, y_local, z_local);
-
-    SumElemStressesToNodeForces(B, sigxx[k], sigyy[k], sigzz[k], 
-				fx_local, fy_local, fz_local);
-
-    for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemNodes[lnode]; 
-      fx[gnode] += fx_local[lnode];
-      fy[gnode] += fy_local[lnode]; 
-      fz[gnode] += fz_local[lnode];
-    }
+  int lnode; 
+  for (lnode = 0; lnode < 8; lnode++) {
+    int gnode = elemNodes[lnode]; 
+    x_local[lnode] = x[gnode]; 
+    y_local[lnode] = y[gnode]; 
+    z_local[lnode] = z[gnode];
   }
+
+  CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &determ[k]);
+
+  CalcElemNodeNormals(B[0], B[1], B[2], x_local, y_local, z_local);
+
+  SumElemStressesToNodeForces(B, sigxx[k], sigyy[k], sigzz[k], 
+                 		fx_local, fy_local, fz_local);
+
+  for (lnode = 0; lnode < 8; lnode++) {
+    int gnode = elemNodes[lnode]; 
+    fx[gnode] += fx_local[lnode];
+    fy[gnode] += fy_local[lnode]; 
+    fz[gnode] += fz_local[lnode];
+  }
+  return HPX_SUCCESS;
+}
+
+void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z, 
+			     double *fx, double *fy, double *fz, 
+			     double *sigxx, double *sigyy, double *sigzz, 
+			     double *determ, int numElem)
+{
+  int k; 
+  hpx_addr_t done = hpx_lco_and_new(numElem);
+  hpx_addr_t local = hpx_thread_current_target();
+  for (k = 0; k < numElem; k++) {
+    IntegrateStressForElemsArgs args = {
+      .k = k,
+      .nodelist = nodelist,
+      .x = x,
+      .y = y,
+      .z = z,
+      .fx = fx,
+      .fy = fy,
+      .fz = fz,
+      .sigxx = sigxx,
+      .sigyy = sigyy,
+      .sigzz = sigzz,
+      .determ = determ
+    };
+    hpx_call(local, _compute_IntegrateStressForElems, &args, sizeof(IntegrateStressForElemsArgs), done);
+  }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+}
+
+int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArgs *args) {
+
+    int i = args->i;
+    int *nodelist = args->nodelist;
+    double *x = args->x;
+    double *y = args->y;
+    double *z = args->z;
+    double *x1 = args->x1;
+    double *y1 = args->y1;
+    double *z1 = args->z1;
+    double *pfx = args->pfx;
+    double *pfy = args->pfy;
+    double *pfz = args->pfz;
+    double *dvdx = args->dvdx;
+    double *dvdy = args->dvdy;
+    double *dvdz = args->dvdz;
+    double *x8n = args->x8n;
+    double *y8n = args->y8n;
+    double *z8n = args->z8n;
+    double *determ = args->determ;
+    double *volo = args->volo;
+    double *v = args->v;
+
+    int *elemToNode = &nodelist[8*i]; 
+    
+    CollectDomainNodesToElemNodes(x, y, z, elemToNode, x1, y1, z1);
+
+    CalcElemVolumeDerivative(pfx, pfy, pfz, x1, y1, z1);
+
+    int ii,jj;
+    for (ii = 0; ii < 8; ii++) {
+      jj = 8*i + ii; 
+
+      dvdx[jj] = pfx[ii]; 
+      dvdy[jj] = pfy[ii]; 
+      dvdz[jj] = pfz[ii]; 
+      x8n[jj] = x1[ii]; 
+      y8n[jj] = y1[ii]; 
+      z8n[jj] = z1[ii]; 
+    }
+
+    determ[i] = volo[i]*v[i]; 
+
+    if (v[i] <= 0.0) {
+      // need an abort function here, temporarily using exit function
+      printf("CalcHourglassControlForElems exit(-1) at cycle\n"); 
+      exit(-1);
+    }
+    return HPX_SUCCESS;
 }
 
 void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef)
@@ -115,33 +239,39 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
   double *y8n = malloc(sizeof(double)*numElem8);
   double *z8n = malloc(sizeof(double)*numElem8);
 
+  int *nodelist = domain->nodelist;
+  double *volo = domain->volo;
+  double *v = domain->v;
+
+  hpx_addr_t done = hpx_lco_and_new(numElem);
+  hpx_addr_t local = hpx_thread_current_target();
   for (i = 0; i < numElem; i++) {
-    int *elemToNode = &domain->nodelist[8*i]; 
-    
-    CollectDomainNodesToElemNodes(domain->x, domain->y, domain->z, elemToNode, x1, y1, z1);
-
-    CalcElemVolumeDerivative(pfx, pfy, pfz, x1, y1, z1);
-
-    for (ii = 0; ii < 8; ii++) {
-      jj = 8*i + ii; 
-
-      dvdx[jj] = pfx[ii]; 
-      dvdy[jj] = pfy[ii]; 
-      dvdz[jj] = pfz[ii]; 
-      x8n[jj] = x1[ii]; 
-      y8n[jj] = y1[ii]; 
-      z8n[jj] = z1[ii]; 
-    }
-
-    determ[i] = domain->volo[i]*domain->v[i]; 
-
-    if (domain->v[i] <= 0.0) {
-      // need an abort function here, temporarily using exit function
-      printf("rank %d: CalcHourglassControlForElems exit(-1) at cycle %d\n", 
-	     domain->rank, domain->cycle);
-      exit(-1);
-    }
+    CalcHourglassControlForElemsArgs args = {
+      .i = i,
+      .nodelist = nodelist,
+      .x = domain->x,
+      .y = domain->y,
+      .z = domain->z,
+      .x1 = x1,
+      .y1 = y1,
+      .z1 = z1,
+      .pfx = pfx,
+      .pfy = pfy,
+      .pfz = pfz,
+      .dvdx = dvdx,
+      .dvdy = dvdy,
+      .dvdz = dvdz,
+      .x8n = x8n,
+      .y8n = y8n,
+      .z8n = z8n,
+      .determ = determ,
+      .volo = volo,
+      .v = v
+    };
+    hpx_call(local, _compute_CalcHourglassControlForElems, &args, sizeof(CalcHourglassControlForElemsArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 
   if (hgcoef > 0.0) {
     CalcFBHourglassForceForElems(domain->nodelist, domain->ss, domain->elemMass, 
@@ -273,58 +403,70 @@ void VoluDer(const double x0, const double x1, const double x2,
   *dvdz *= twelfth;
 }
 
-void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass, 
-				  double *xd, double *yd, double *zd, 
-				  double *fx, double *fy, double *fz, double *determ,
-				  double *x8n, double *y8n, double *z8n, 
-				  double *dvdx, double *dvdy, double *dvdz, 
-				  double hourg, int numElem)
-{
-  double hgfx[8], hgfy[8], hgfz[8]; 
-  double coefficient; 
+int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArgs *args) {
 
-  double gamma[4][8];
-  double hourgam0[4], hourgam1[4], hourgam2[4], hourgam3[4];
-  double hourgam4[4], hourgam5[4], hourgam6[4], hourgam7[4];
-  double xd1[8], yd1[8], zd1[8]; 
+    double hgfx[8], hgfy[8], hgfz[8]; 
+    double coefficient; 
 
-  gamma[0][0] = 1.0;
-  gamma[0][1] = 1.0;
-  gamma[0][2] = -1.0;
-  gamma[0][3] = -1.0;
-  gamma[0][4] = -1.0;
-  gamma[0][5] = -1.0;
-  gamma[0][6] = 1.0;
-  gamma[0][7] = 1.0;
-  gamma[1][0] = 1.0;
-  gamma[1][1] = -1.0;
-  gamma[1][2] = -1.0; 
-  gamma[1][3] = 1.0; 
-  gamma[1][4] = -1.0; 
-  gamma[1][5] = 1.0; 
-  gamma[1][6] = 1.0; 
-  gamma[1][7] = -1.0; 
-  gamma[2][0] = 1.0; 
-  gamma[2][1] = -1.0; 
-  gamma[2][2] = 1.0;
-  gamma[2][3] = -1.0; 
-  gamma[2][4] = 1.0; 
-  gamma[2][5] = -1.0; 
-  gamma[2][6] = 1.0; 
-  gamma[2][7] = -1.0; 
-  gamma[3][0] = -1.0; 
-  gamma[3][1] = 1.0; 
-  gamma[3][2] = -1.0; 
-  gamma[3][3] = 1.0; 
-  gamma[3][4] = 1.0; 
-  gamma[3][5] = -1.0; 
-  gamma[3][6] = 1.0; 
-  gamma[3][7] = -1.0; 
+    double gamma[4][8];
+    double hourgam0[4], hourgam1[4], hourgam2[4], hourgam3[4];
+    double hourgam4[4], hourgam5[4], hourgam6[4], hourgam7[4];
+    double xd1[8], yd1[8], zd1[8]; 
 
+    int i1; 
 
-  int i2, i1; 
+    int i2 = args->i2;
+    int *nodelist = args->nodelist;
+    double *ss = args->ss;
+    double *elemMass = args->elemMass;
+    double *xd = args->xd;
+    double *yd = args->yd;
+    double *zd = args->zd;
+    double *fx = args->fx;
+    double *fy = args->fy;
+    double *fz = args->fz;
+    double *determ = args->determ;
+    double *x8n = args->x8n;
+    double *y8n = args->y8n;
+    double *z8n = args->z8n;
+    double *dvdx = args->dvdx;
+    double *dvdy = args->dvdy;
+    double *dvdz = args->dvdz;
+    double hourg = args->hourg;
 
-  for (i2 = 0; i2 < numElem; i2++) {
+    gamma[0][0] = 1.0;
+    gamma[0][1] = 1.0;
+    gamma[0][2] = -1.0;
+    gamma[0][3] = -1.0;
+    gamma[0][4] = -1.0;
+    gamma[0][5] = -1.0;
+    gamma[0][6] = 1.0;
+    gamma[0][7] = 1.0;
+    gamma[1][0] = 1.0;
+    gamma[1][1] = -1.0;
+    gamma[1][2] = -1.0; 
+    gamma[1][3] = 1.0; 
+    gamma[1][4] = -1.0; 
+    gamma[1][5] = 1.0; 
+    gamma[1][6] = 1.0; 
+    gamma[1][7] = -1.0; 
+    gamma[2][0] = 1.0; 
+    gamma[2][1] = -1.0; 
+    gamma[2][2] = 1.0;
+    gamma[2][3] = -1.0; 
+    gamma[2][4] = 1.0; 
+    gamma[2][5] = -1.0; 
+    gamma[2][6] = 1.0; 
+    gamma[2][7] = -1.0; 
+    gamma[3][0] = -1.0; 
+    gamma[3][1] = 1.0; 
+    gamma[3][2] = -1.0; 
+    gamma[3][3] = 1.0; 
+    gamma[3][4] = 1.0; 
+    gamma[3][5] = -1.0; 
+    gamma[3][6] = 1.0; 
+    gamma[3][7] = -1.0; 
+
     const int *elemToNode = &nodelist[8*i2]; 
     int i3 = 8*i2; 
     double volinv = 1.0/determ[i2]; 
@@ -454,7 +596,48 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
     fx[n7si2] += hgfx[7];
     fy[n7si2] += hgfy[7];
     fz[n7si2] += hgfz[7];
+
+    return HPX_SUCCESS;
+}
+
+void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass, 
+				  double *xd, double *yd, double *zd, 
+				  double *fx, double *fy, double *fz, double *determ,
+				  double *x8n, double *y8n, double *z8n, 
+				  double *dvdx, double *dvdy, double *dvdz, 
+				  double hourg, int numElem)
+{
+
+  int i2, i1; 
+
+  hpx_addr_t done = hpx_lco_and_new(numElem);
+  hpx_addr_t local = hpx_thread_current_target();
+  for (i2 = 0; i2 < numElem; i2++) {
+    CalcFBHourglassForceForElemsArgs args = {
+      .i2 = i2,
+      .nodelist = nodelist,
+      .ss = ss,
+      .elemMass = elemMass,
+      .xd = xd,
+      .yd = yd,
+      .zd = zd,
+      .fx = fx,
+      .fy = fy,
+      .fz = fz,
+      .determ = determ,
+      .x8n = x8n,
+      .y8n = y8n,
+      .z8n = z8n,
+      .dvdx = dvdx,
+      .dvdy = dvdy,
+      .dvdz = dvdz,
+      .hourg = hourg
+    };
+    hpx_call(local, _compute_CalcFBHourglassForceForElems, &args, sizeof(CalcFBHourglassForceForElemsArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+
 }
 
 void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourgam0, 

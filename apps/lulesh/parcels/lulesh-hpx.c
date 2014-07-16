@@ -4,6 +4,12 @@ static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _initDomain    = 0;
 
+hpx_action_t _checkdeterm                     = 0;
+hpx_action_t _compute_InitStressTermsForElems = 0;
+hpx_action_t _compute_IntegrateStressForElems = 0;
+hpx_action_t _compute_CalcFBHourglassForceForElems = 0;
+hpx_action_t _compute_CalcHourglassControlForElems = 0;
+
 hpx_action_t _SBN1_sends = 0;
 hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
@@ -358,6 +364,15 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
+  _checkdeterm   = HPX_REGISTER_ACTION(_checkdeterm_action);
+  _compute_InitStressTermsForElems = 
+            HPX_REGISTER_ACTION(_compute_InitStressTermsForElems_action);
+  _compute_IntegrateStressForElems = 
+            HPX_REGISTER_ACTION(_compute_IntegrateStressForElems_action);
+  _compute_CalcFBHourglassForceForElems = 
+            HPX_REGISTER_ACTION(_compute_CalcFBHourglassForceForElems_action);
+  _compute_CalcHourglassControlForElems = 
+            HPX_REGISTER_ACTION(_compute_CalcHourglassControlForElems_action);
   _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
   _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
   _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);

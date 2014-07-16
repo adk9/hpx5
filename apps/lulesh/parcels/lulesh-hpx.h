@@ -72,6 +72,74 @@ typedef struct {
   double        buf[];                         // inline, variable length buffer
 } NodalArgs;
 
+typedef struct {
+  double *p;
+  double *q;
+  double *sigxx;
+  double *sigyy;
+  double *sigzz;
+  int i;
+} InitStressTermsForElemsArgs;
+
+typedef struct {
+  int i;
+  int *nodelist;
+  double *x;
+  double *y;
+  double *z;
+  double *x1;
+  double *y1;
+  double *z1;
+  double *pfx;
+  double *pfy;
+  double *pfz;
+  double *dvdx;
+  double *dvdy;
+  double *dvdz;
+  double *x8n;
+  double *y8n;
+  double *z8n;
+  double *determ;
+  double *volo;
+  double *v;
+} CalcHourglassControlForElemsArgs;
+
+typedef struct {
+  int k;
+  int *nodelist;
+  double *x;
+  double *y;
+  double *z;
+  double *fx;
+  double *fy;
+  double *fz;
+  double *sigxx;
+  double *sigyy;
+  double *sigzz;
+  double *determ;
+} IntegrateStressForElemsArgs;
+
+typedef struct {
+  int i2;
+  int *nodelist;
+  double *ss;
+  double *elemMass;
+  double *xd;
+  double *yd;
+  double *zd;
+  double *fx;
+  double *fy;
+  double *fz;
+  double *determ;
+  double *x8n;
+  double *y8n;
+  double *z8n;
+  double *dvdx;
+  double *dvdy;
+  double *dvdz;
+  double hourg;
+} CalcFBHourglassForceForElemsArgs;
+
 typedef struct Domain {
   hpx_addr_t newdt;
   hpx_addr_t complete;
@@ -408,6 +476,21 @@ extern hpx_action_t _MonoQ_sends;
 int _MonoQ_result_action(NodalArgs *nodal);
 extern hpx_action_t _MonoQ_result;
 void MonoQ(hpx_addr_t address,Domain *domain, unsigned long epoch);
+
+extern hpx_action_t _checkdeterm;
+int _checkdeterm_action(double*);
+
+extern hpx_action_t _compute_InitStressTermsForElems;
+int _compute_InitStressTermsForElems_action(InitStressTermsForElemsArgs *args);
+
+extern hpx_action_t _compute_IntegrateStressForElems;
+int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args);
+
+extern hpx_action_t _compute_CalcFBHourglassForceForElems;
+int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArgs *args);
+
+extern hpx_action_t _compute_CalcHourglassControlForElems;
+int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArgs *args);
 
 void send1(int nx, int ny, int nz, double *src, double *dest);
 
