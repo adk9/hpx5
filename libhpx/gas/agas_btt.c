@@ -241,7 +241,7 @@ btt_class_t *btt_agas_new(void) {
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   btt->table = mmap(NULL, _TABLE_SIZE, prot, flags, -1, 0);
   if (btt->table == MAP_FAILED) {
-    dbg_error("could not mmap AGAS block stranslation table.\n");
+    dbg_error("could not mmap AGAS block translation table.\n");
     free(btt);
     return NULL;
   }
