@@ -1,1 +1,1 @@
-SUBDIRS = lulesh
+SUBDIRS = lulesh fmm
