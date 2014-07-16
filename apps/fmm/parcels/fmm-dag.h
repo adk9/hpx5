@@ -10,8 +10,8 @@
 #include "hpx/hpx.h"
 #include "fmm-types.h"
 
-extern hpx_addr_t partition_complete; 
-extern fmm_dag_t *fmm_dag_pinned; 
+//extern hpx_addr_t partition_complete; 
+//extern fmm_dag_t *fmm_dag_pinned; 
 /*
 
 extern fmm_dag_t *fmm_dag; 

@@ -10,6 +10,10 @@
 #include "hpx/hpx.h"
 #include "fmm.h"
 
+hpx_action_t _fmm_main; 
+hpx_action_t _init_param; 
+hpx_action_t _partition_box; 
+
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
       "\t-c, number of cores to run on\n"
@@ -73,14 +77,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // init hpx runtime
   int e = hpx_init(&hpx_cfg);
   if (e) {
     fprintf(stderr, "HPX:failed to initialize.\n");
     return e;
   }
 
+  // register actions
   _fmm_main             = HPX_REGISTER_ACTION(_fmm_main_action);
-
+  _init_param           = HPX_REGISTER_ACTION(_init_param_action); 
+  _partition_box        = HPX_REGISTER_ACTION(_partition_box_action); 
 
   e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg)); 
   if (e) {
