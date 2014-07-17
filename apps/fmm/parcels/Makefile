@@ -1,4 +1,4 @@
-CC     = gcc
+CC     = mpicc
 CFLAGS = -std=gnu99 -Wall -pedantic
 LIBS   = /u/zhang416/installed/hpx/lib/libhpx.a -lpthread -lrt -lm 
 
