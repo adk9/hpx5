@@ -9,6 +9,7 @@
 extern hpx_action_t _fmm_main; 
 extern hpx_action_t _init_param; 
 extern hpx_action_t _partition_box; 
+extern hpx_action_t _source_to_multipole; 
 
 /// ----------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -24,3 +25,8 @@ int _init_param_action(void *args);
 /// @brief Construct the FMM DAG
 /// ----------------------------------------------------------------------------
 int _partition_box_action(void *args); 
+
+/// ----------------------------------------------------------------------------
+/// @brief Source to multipole action
+/// ----------------------------------------------------------------------------
+int _source_to_multipole_action(void); 
