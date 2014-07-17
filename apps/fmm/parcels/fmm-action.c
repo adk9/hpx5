@@ -32,13 +32,20 @@ const int zoff[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
 int part_threshold; 
 
-static void init_double_complex(double complex *input) {
-  
+static void init_double_complex(double complex *input, const size_t size) {
+  assert(size % sizeof(double complex) == 0); 
+  const int n_entries = size / sizeof(double complex); 
+  for (int i = 0; i < n_entries; i++) 
+    input[i] = 0; 
 }
 
 static void sum_double_complex(double complex *output, 
-			       const double complex *input) {
-
+			       const double complex *input, 
+			       const size_t size) {
+  assert(size % sizeof(double complex) == 0); 
+  const int n_entries = size / sizeof(double complex); 
+  for (int i = 0; i < n_entries; i++) 
+    output[i] += input[i]; 
 }
 
 int _fmm_main_action(void *args) {
@@ -186,14 +193,17 @@ int _fmm_main_action(void *args) {
   hpx_gas_unpin(source_root);
   hpx_gas_unpin(target_root); 
 
+  // partition the source and target ensembles. On the source side, when the
+  // partition reaches to a leaf box, source-to-multipole action is invoked
+  // immediately. The target side needs to wait for completion of the partition
+  // in order to construct (and possibly trimming) lists. 
   part_threshold = fmm_cfg->s;   
   char type1 = 'S', type2 = 'T'; 
   hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done);
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done); 
   hpx_lco_wait(partition_done); 
 
-  // start aggregate operation on the source tree and continue constructing 
-  // edges (and possibly trimming) on the target tree
+  
 
   // source and target info, and the mappings remain pinned during computation 
   hpx_gas_unpin(mapsrc);
@@ -368,22 +378,35 @@ int _partition_box_action(void *args) {
     }
   }
 
-  if (type == 'S')
-    box->reduce = 
-      hpx_lco_allreduce_new(and_gate_size, 
+  if (type == 'S') {
+    box->reduce = ///< handle multipole-to-multipole reduction
+      hpx_lco_allreduce_new(box->nchild, 
 			    sizeof(double complex) * fmm_param->pgsz, 
 			    (hpx_commutative_associative_op_t) sum_double_complex, 
-			    (void (*)(void *)) init_double_complex); 
-
-  hpx_addr_t branch_done = hpx_lco_and_new(and_gate_size); 
-
-  for (int i = 0; i < 8; i++) {
-    if (child_parts[i] > part_threshold)
-      hpx_call(box->child[i], _partition_box, &type, sizeof(type), branch_done);
+			    (void (*)(void *, const size_t)) init_double_complex); 
   }
 
-  hpx_lco_wait(branch_done); 
-  hpx_lco_delete(branch_done, HPX_NULL); 
+  if (and_gate_size) {
+    hpx_addr_t branching = hpx_lco_and_new(and_gate_size); 
+    for (int i = 0; i < 8; i++) {
+      if (child_parts[i] > part_threshold) 
+	hpx_call(box->child[i], _partition_box, &type, sizeof(type), branching);
+    }
+
+    hpx_lco_wait(branching);
+    hpx_lco_delete(branching, HPX_NULL);
+  } else {
+    // the new child boxes are all leaf boxes, spawn source-to-mutlipole in a
+    // fire-and-forget way 
+    for (int i = 0; i < 8; i++) {
+      if (child_parts[i]) 
+	hpx_call(box->child[i], _source_to_multipole, NULL, 0, HPX_NULL); 
+    }
+  }
 
   return HPX_SUCCESS;
+}
+
+int _source_to_multipole_action(void) {
+  return HPX_SUCCESS; 
 }
