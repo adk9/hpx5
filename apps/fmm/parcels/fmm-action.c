@@ -193,17 +193,14 @@ int _fmm_main_action(void *args) {
   hpx_gas_unpin(source_root);
   hpx_gas_unpin(target_root); 
 
-  // partition the source and target ensembles. On the source side, when the
-  // partition reaches to a leaf box, source-to-multipole action is invoked
-  // immediately. The target side needs to wait for completion of the partition
-  // in order to construct (and possibly trimming) lists. 
+  // partition the source and target ensembles. On the source side,
+  // when the partition reaches a leaf box, source-to-multipole action
+  // is invoked immediately. 
   part_threshold = fmm_cfg->s;   
   char type1 = 'S', type2 = 'T'; 
   hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done);
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done); 
   hpx_lco_wait(partition_done); 
-
-  
 
   // source and target info, and the mappings remain pinned during computation 
   hpx_gas_unpin(mapsrc);
@@ -400,7 +397,7 @@ int _partition_box_action(void *args) {
     // fire-and-forget way 
     for (int i = 0; i < 8; i++) {
       if (child_parts[i]) 
-	hpx_call(box->child[i], _source_to_multipole, NULL, 0, HPX_NULL); 
+	hpx_call(box->child[i], _source_to_mpole, NULL, 0, HPX_NULL); 
     }
   }
 
@@ -408,5 +405,485 @@ int _partition_box_action(void *args) {
 }
 
 int _source_to_multipole_action(void) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+
+  hpx_gas_try_pin(curr, (void **)&sbox); 
+
+  int pgsz      = fmm_param->pgsz; 
+  int pterms    = fmm_param->pterms; 
+  double *ytopc = fmm_param->ytopc;
+  int addr      = sbox->addr; 
+  int level     = sbox->level; 
+
+  double complex *multipole = &sbox->expansion[0]; 
+  double *sources = &sources_p[3 * addr]; 
+  double *charges = &charges_p[addr]; 
+  int nsources = sbox->npts; 
+  double myscale = fmm_param->scale[level]; 
+  double h = fmm_param->size / (1 << (level + 1)); 
+  double center[3]; 
+  center[0] = fmm_param->corner[0] + (2 * sbox->idx + 1) * h; 
+  center[1] = fmm_param->corner[1] + (2 * sbox->idy + 1) * h;
+  center[2] = fmm_param->corner[2] + (2 * sbox->idz + 1) * h; 
+
+  const double precision = 1e-14;
+  double *powers = calloc(pterms + 1, sizeof(double));
+  double *p = calloc(pgsz, sizeof(double));
+  double complex *ephi = calloc(pterms + 1, sizeof(double complex));
+
+  for (int i = 0; i < nsources; i++) {
+    int i3 = i * 3; 
+    double rx = sources[i3]     - center[0];
+    double ry = sources[i3 + 1] - center[1];
+    double rz = sources[i3 + 2] - center[2];
+    double proj = rx * rx + ry * ry;
+    double rr = proj + rz * rz;
+    proj = sqrt(proj);
+    double d = sqrt(rr);
+    double ctheta = (d <= precision ? 1.0 : rz / d);
+    ephi[0] = (proj <= precision * d ? 1.0 : rx / proj + _Complex_I * ry / proj);
+    d *= myscale;
+    powers[0] = 1.0;
+    for (int ell = 1; ell <= pterms; ell++) {
+      powers[ell] = powers[ell - 1] * d;
+      ephi[ell] = ephi[ell - 1] * ephi[0];
+    }
+
+    double charge = charges[i];
+    multipole[0] += charge;
+
+    lgndr(pterms, ctheta, p);
+    for (int ell = 1; ell <= pterms; ell++) {
+      double cp = charge * powers[ell] * p[ell];
+      multipole[ell] += cp;
+    }
+
+    for (int m = 1; m <= pterms; m++) {
+      int offset1 = m * (pterms + 1);
+      int offset2 = m * (pterms + 2); 
+      for (int ell = m; ell <= pterms; ell++) {
+        double cp = charge * powers[ell] * ytopc[ell + offset2] * 
+          p[ell + offset1];
+        multipole[ell + offset1] += cp * conj(ephi[m - 1]);
+      }
+    }
+  }
+
+  free(powers);
+  free(p);
+  free(ephi);
+
+  // spawn one thread to continue on multipole-to-multipole translation and three
+  // other threads on multipole-to-exponential translations, all in
+  // fire-and-forget way
+  int ichild = (sbox->idz % 2) * 4 + (sbox->idy % 2) * 2 + (sbox->idx % 2); 
+  const char dir[3] = {'z', 'y', 'x'};  
+  hpx_call(curr, _mpole_to_mpole, &ichild, sizeof(ichild), HPX_NULL); 
+  hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), HPX_NULL); 
+  hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), HPX_NULL);
+  hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), HPX_NULL);
   return HPX_SUCCESS; 
+}
+
+int _multipole_to_multipole_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void **)&sbox); 
+
+  int ichild = *((int *) args); 
+  const double complex var[5] =
+    {1,-1 + _Complex_I, 1 + _Complex_I, 1 - _Complex_I, -1 - _Complex_I};
+  const double arg = sqrt(2)/2.0;
+  const int iflu[8] = {3, 4, 2, 1, 3, 4, 2, 1};
+
+  int pterms = fmm_param->pterms;
+  int pgsz   = fmm_param->pgsz;
+  double *dc = fmm_param->dc;
+
+  double *powers = calloc(pterms + 3, sizeof(double));
+  double complex *mpolen = calloc(pgsz, sizeof(double complex));
+  double complex *marray = calloc(pgsz, sizeof(double complex));
+  double complex *ephi   = calloc(pterms + 3, sizeof(double complex));
+  
+  int ifl = iflu[ichild]; 
+  double *rd = (ichild < 4 ? fmm_param->rdsq3 : fmm_param->rdmsq3); 
+  double complex *mpole = &sbox->expansion[0]; 
+
+  ephi[0] = 1.0;
+  ephi[1] = arg * var[ifl];
+  double dd = -sqrt(3) / 2.0;
+  powers[0] = 1.0;
+
+  for (int ell = 1; ell <= pterms + 1; ell++) {
+    powers[ell] = powers[ell - 1] * dd;
+    ephi[ell + 1] = ephi[ell] * ephi[1];
+  }
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset; 
+      mpolen[index] = conj(ephi[m]) * mpole[index];
+    }
+  }
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    int offset1 = (m + pterms) * pgsz;
+    int offset2 = (-m + pterms) * pgsz;
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = offset + ell;
+      marray[index] = mpolen[ell] * rd[ell + offset1];
+      for (int mp = 1; mp <= ell; mp++) {
+	int index1 = ell + mp * (pterms + 1);
+	marray[index] += mpolen[index1] * rd[index1 + offset1] +
+	  conj(mpolen[index1]) * rd[index1 + offset2];
+      }
+    }
+  }
+  
+  for (int k = 0; k <= pterms; k++) {
+    int offset = k * (pterms + 1);
+    for (int j = k; j <= pterms; j++) {
+      int index = offset + j;
+      mpolen[index] = marray[index];
+      for (int ell = 1; ell <= j - k; ell++) {
+	int index2 = j - k + ell * (2 * pterms + 1);
+	int index3 = j + k + ell * (2 * pterms + 1);
+	mpolen[index] += marray[index - ell] * powers[ell] *
+	  dc[index2] * dc[index3];
+      }
+    }
+  }
+  
+  for (int m = 0; m <= pterms; m += 2) {
+    int offset = m * (pterms + 1);
+    int offset1 = (m + pterms) * pgsz;
+    int offset2 = (-m + pterms) * pgsz;
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      marray[index] = mpolen[ell] * rd[ell + offset1];
+      for (int mp = 1; mp <= ell; mp += 2) {
+	int index1 = ell + mp * (pterms + 1);
+	marray[index] -= mpolen[index1] * rd[index1 + offset1] +
+	  conj(mpolen[index1]) * rd[index1 + offset2];
+      }
+      
+      for (int mp = 2; mp <= ell; mp += 2) {
+	int index1 = ell + mp * (pterms + 1);
+	marray[index] += mpolen[index1] * rd[index1 + offset1] +
+	  conj(mpolen[index1]) * rd[index1 + offset2];
+      }
+    }
+  }
+
+  for (int m = 1; m <= pterms; m += 2) {
+    int offset = m * (pterms + 1);
+    int offset1 = (m + pterms) * pgsz;
+    int offset2 = (-m + pterms) * pgsz;
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      marray[index] = -mpolen[ell] * rd[ell + offset1];
+      for (int mp = 1; mp <= ell; mp += 2) {
+	int index1 = ell + mp * (pterms + 1);
+	marray[index] += mpolen[index1] * rd[index1 + offset1] +
+	  conj(mpolen[index1]) * rd[index1 + offset2];
+      }
+
+      for (int mp = 2; mp <= ell; mp += 2) {
+	int index1 = ell + mp * (pterms + 1);
+	marray[index] -= mpolen[index1] * rd[index1 + offset1] +
+	  conj(mpolen[index1]) * rd[index1 + offset2];
+      }
+    }
+  }
+  
+  powers[0] = 1.0;
+  for (int ell = 1; ell <= pterms + 1; ell++)
+    powers[ell] = powers[ell - 1] / 2;
+  
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      mpolen[index] = ephi[m] * marray[index] * powers[ell];
+    }
+  }
+
+  hpx_call(sbox->parent, _mpole_reduction, mpolen, 
+	   sizeof(double complex) * pgsz, HPX_NULL); 
+
+  free(ephi);
+  free(powers);
+  free(mpolen);
+  free(marray); 
+
+  return HPX_SUCCESS; 
+}
+
+int _multipole_reduction_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  if (!hpx_gas_try_pin(curr, (void **)&box))
+    return HPX_RESEND; 
+
+  double complex *input = (double complex *) args; 
+  hpx_lco_set(box->reduce, sizeof(double complex) * fmm_param->pgsz, 
+	      input, HPX_NULL, HPX_NULL); 
+
+  // Q: do i need to free args here? 
+
+  // if there is an and-reduce lco with boolean result, based on the result,
+  // the reduction thread either continues by calling TMM and TME or exits. 
+
+  return HPX_SUCCESS; 
+}
+
+int _multipole_to_exponential_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL;   
+  hpx_gas_try_pin(curr, (void **)&sbox); 
+
+  char dir        = *((char *) args); 
+  int pgsz        = fmm_param->pgsz; 
+  int nexpmax     = fmm_param->nexpmax; 
+  double *rdminus = fmm_param->rdminus; 
+  double *rdplus  = fmm_param->rdplus; 
+
+  double complex *mw = calloc(pgsz, sizeof(double complex)); 
+  double complex *mexpf1 = calloc(nexpmax, sizeof(double complex)); 
+  double complex *mexpf2 = calloc(nexpmax, sizeof(double complex)); 
+
+  switch (dir) {
+  case 'z': 
+    multipole_to_exponential_p1(&sbox->expansion[0], mexpf1, mexpf2); 
+    multipole_to_exponential_p2(mexpf1, &sbox->expansion[pgsz]); 
+    multipole_to_exponential_p2(mexpf2, &sbox->expansion[pgsz + nexpmax]);
+    break;
+  case 'y':
+    rotz2y(&sbox->expansion[0], rdminus, mw); 
+    multipole_to_exponential_p1(mw, mexpf1, mexpf2); 
+    multipole_to_exponential_p2(mexpf1, &sbox->expansion[pgsz + nexpmax * 2]); 
+    multipole_to_exponential_p2(mexpf2, &sbox->expansion[pgsz + nexpmax * 3]); 
+    break; 
+  case 'x':
+    rotz2x(&sbox->expansion[0], rdplus, mw); 
+    multipole_to_exponential_p1(mw, mexpf1, mexpf2); 
+    multipole_to_exponential_p2(mexpf1, &sbox->expansion[pgsz + nexpmax * 4]); 
+    multipole_to_exponential_p2(mexpf2, &sbox->expansion[pgsz + nexpmax * 5]); 
+    break; 
+  default: 
+    break;
+  } 
+
+  free(mw); 
+  free(mexpf1); 
+  free(mexpf2); 
+
+  return HPX_SUCCESS; 
+}
+
+void multipole_to_exponential_p1(const double complex *multipole, 
+                                 double complex *mexpu, 
+                                 double complex *mexpd) {
+  int nlambs   = fmm_param->nlambs;
+  int *numfour = fmm_param->numfour;
+  int pterms   = fmm_param->pterms;
+  int pgsz     = fmm_param->pgsz;
+  double *rlsc = fmm_param->rlsc;
+
+  int ntot = 0;
+  for (int nell = 0; nell < nlambs; nell++) {
+    double sgn = -1.0;
+    double complex zeyep = 1.0;
+    for (int mth = 0; mth <= numfour[nell] - 1; mth++) {
+      int ncurrent = ntot + mth;
+      double complex ztmp1 = 0.0;
+      double complex ztmp2 = 0.0;
+      sgn = -sgn;
+      int offset = mth * (pterms + 1);
+      int offset1 = offset + nell * pgsz;
+      for (int nm = mth; nm <= pterms; nm += 2)
+        ztmp1 += rlsc[nm + offset1] * multipole[nm + offset];
+      for (int nm = mth + 1; nm <= pterms; nm += 2)
+        ztmp2 += rlsc[nm + offset1] * multipole[nm + offset];
+
+      mexpu[ncurrent] = (ztmp1 + ztmp2) * zeyep;
+      mexpd[ncurrent] = sgn * (ztmp1 - ztmp2) * zeyep;
+      zeyep *= _Complex_I;
+    }
+    ntot += numfour[nell];
+  }
+}
+
+void multipole_to_exponential_p2(const double complex *mexpf, 
+                                 double complex *mexpphys) {
+  int nlambs   = fmm_param->nlambs;
+  int *numfour = fmm_param->numfour;
+  int *numphys = fmm_param->numphys;
+
+  int nftot, nptot, nexte, nexto;
+  nftot = 0;
+  nptot = 0;
+  nexte = 0;
+  nexto = 0;
+
+  double complex *fexpe = fmm_param->fexpe;
+  double complex *fexpo = fmm_param->fexpo;
+
+  for (int i = 0; i < nlambs; i++) {
+    for (int ival = 0; ival < numphys[i] / 2; ival++) {
+      mexpphys[nptot + ival] = mexpf[nftot]; 
+
+      for (int nm = 1; nm < numfour[i]; nm += 2) {
+        double rt1 = cimag(fexpe[nexte]) * creal(mexpf[nftot + nm]);
+        double rt2 = creal(fexpe[nexte]) * cimag(mexpf[nftot + nm]);
+        double rtmp = 2 * (rt1 + rt2);
+
+        nexte++;
+        mexpphys[nptot + ival] += rtmp * _Complex_I;
+      }
+
+      for (int nm = 2; nm < numfour[i]; nm += 2) {
+        double rt1 = creal(fexpo[nexto]) * creal(mexpf[nftot + nm]);
+        double rt2 = cimag(fexpo[nexto]) * cimag(mexpf[nftot + nm]);
+        double rtmp = 2 * (rt1 - rt2);
+
+        nexto++;
+        mexpphys[nptot + ival] += rtmp;
+      }
+    }
+    nftot += numfour[i];
+    nptot += numphys[i]/2;
+  }
+}
+
+void lgndr(int nmax, double x, double *y) {
+  int n;
+  n = (nmax + 1) * (nmax + 1);
+  for (int m = 0; m < n; m++)
+    y[m] = 0.0;
+
+  double u = -sqrt(1 - x * x);
+  y[0] = 1;
+
+  y[1] = x * y[0];
+  for (int n = 2; n <= nmax; n++)
+    y[n] = ((2 * n - 1) * x * y[n - 1] - (n - 1) * y[n - 2]) / n;
+
+  int offset1 = nmax + 2;
+  for (int m = 1; m <= nmax - 1; m++) {
+    int offset2 = m * offset1;
+    y[offset2] = y[offset2 - offset1] * u * (2 * m - 1);
+    y[offset2 + 1] = y[offset2] * x * (2 * m + 1);
+    for (int n = m + 2; n <= nmax; n++) {
+      int offset3 = n + m * (nmax + 1);
+      y[offset3] = ((2 * n - 1) * x * y[offset3 - 1] -
+                    (n + m - 1) * y[offset3 - 2]) / (n - m);
+    }
+  }
+
+  y[nmax + nmax * (nmax + 1)] =
+    y[nmax - 1 + (nmax - 1) * (nmax + 1)] * u * (2 * nmax - 1);
+}
+
+void rotz2y(const double complex *multipole, const double *rd,
+            double complex *mrotate) {
+  int pterms = fmm_param->pterms;
+  int pgsz   = fmm_param->pgsz;
+
+  double complex *mwork = calloc(pgsz, sizeof(double complex));
+  double complex *ephi = calloc(pterms + 1, sizeof(double complex));
+
+  ephi[0] = 1.0;
+  for (int m =1; m <= pterms; m++)
+    ephi[m] = -ephi[m - 1] * _Complex_I;
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = offset + ell;
+      mwork[index] = ephi[m] * multipole[index];
+    }
+  }
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      mrotate[index] = mwork[ell] * rd[ell + (m + pterms) * pgsz];
+      for (int mp = 1; mp <= ell; mp++) {
+        int index1 = ell + mp * (pterms + 1);
+        mrotate[index] +=
+          mwork[index1] * rd[ell + mp * (pterms + 1) + (m + pterms) * pgsz] +
+          conj(mwork[index1]) * 
+          rd[ell + mp * (pterms + 1) + (pterms - m) * pgsz];
+      }
+    }
+  }
+  
+  free(ephi);
+  free(mwork);
+}
+
+void roty2z(const double complex *multipole, const double *rd,
+            double complex *mrotate) {
+  int pterms = fmm_param->pterms;
+  int pgsz   = fmm_param->pgsz;
+
+  double complex *mwork = calloc(pgsz, sizeof(double complex));
+  double complex *ephi = calloc(1 + pterms, sizeof(double complex));
+
+  ephi[0] = 1.0;
+  for (int m = 1; m <= pterms; m++)
+    ephi[m] = ephi[m - 1] * _Complex_I;
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      mwork[index] = multipole[ell] * rd[ell + (m + pterms) * pgsz];
+      for (int mp = 1; mp <= ell; mp++) {
+        int index1 = ell + mp * (pterms + 1);
+        double complex temp = multipole[index1];
+        mwork[index] +=
+          temp * rd[ell + mp * (pterms + 1) + (m + pterms) * pgsz] +
+          conj(temp) * rd[ell + mp * (pterms + 1) + (pterms - m) * pgsz];
+      }
+    }
+  }
+
+  for (int m = 0; m <= pterms; m++) {
+    int offset = m * (pterms + 1);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index = ell + offset;
+      mrotate[index] = ephi[m] * mwork[index];
+    }
+  }
+
+  free(ephi);
+  free(mwork);
+}
+
+void rotz2x(const double complex *multipole, const double *rd,
+            double complex *mrotate) {
+  int pterms = fmm_param->pterms;
+  int pgsz   = fmm_param->pgsz;
+
+  int offset1 = pterms * pgsz;
+  for (int m = 0; m <= pterms; m++) {
+    int offset2 = m * (pterms + 1);
+    int offset3 = m * pgsz + offset1;
+    int offset4 = -m * pgsz + offset1;
+    for (int ell = m; ell <= pterms; ell++) {
+      mrotate[ell + offset2] = multipole[ell] * rd[ell + offset3];
+      for (int mp = 1; mp <= ell; mp++) {
+        int offset5 = mp * (pterms + 1);
+        mrotate[ell + offset2] +=
+          multipole[ell + offset5] * rd[ell + offset3 + offset5] +
+          conj(multipole[ell + offset5]) * rd[ell + offset4 + offset5];
+      }
+    }
+  }
 }
