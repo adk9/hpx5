@@ -67,6 +67,46 @@ typedef struct {
 } InitArgs;
 
 typedef struct {
+  double *xd;
+  double *yd;
+  double *zd;
+  double *x;
+  double *y;
+  double *z;
+  double dt;
+  int i;
+} CalcPositionForNodesArgs;
+
+typedef struct {
+  double *xd;
+  double *yd;
+  double *zd;
+  double *xdd;
+  double *ydd;
+  double *zdd;
+  double dt;
+  double u_cut;
+  int i;
+} CalcVelocityForNodesArgs;
+
+typedef struct {
+  double *dd;
+  int *symm;
+  int i;
+} ApplyAccelerationBoundaryConditionsForNodesArgs;
+
+typedef struct {
+  double *xdd;
+  double *ydd;
+  double *zdd;
+  double *fx;
+  double *fy;
+  double *fz;
+  double *nodalMass;
+  int i;
+} CalcAccelerationForNodesArgs;
+
+typedef struct {
   unsigned long epoch;
   int     srcLocalIdx;
   double        buf[];                         // inline, variable length buffer
@@ -285,6 +325,11 @@ typedef struct Domain {
 
 typedef struct {
   Domain *domain;
+  int i;
+} CalcForceForNodesArgs;
+
+typedef struct {
+  Domain *domain;
   int destLocalIdx;
   unsigned long epoch;
 } pSBN;
@@ -491,6 +536,21 @@ int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArg
 
 extern hpx_action_t _compute_CalcHourglassControlForElems;
 int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArgs *args);
+
+extern hpx_action_t _compute_CalcForceForNodes;
+int _compute_CalcForceForNodes_action(CalcForceForNodesArgs *args);
+
+extern hpx_action_t _compute_CalcAccelerationForNodes;
+int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args);
+
+extern hpx_action_t _compute_ApplyAccelerationBoundaryConditionsForNodes;
+int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAccelerationBoundaryConditionsForNodesArgs *args);
+
+extern hpx_action_t _compute_CalcVelocityForNodes;
+int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args);
+
+extern hpx_action_t _compute_CalcPositionForNodes;
+int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args);
 
 void send1(int nx, int ny, int nz, double *src, double *dest);
 

@@ -1,15 +1,32 @@
 #include "lulesh-hpx.h"
 
+int _compute_CalcForceForNodes_action(CalcForceForNodesArgs *args) {
+
+  Domain *domain = args->domain;
+  int i = args->i;
+
+  domain->fx[i] = 0.0;
+  domain->fy[i] = 0.0;
+  domain->fz[i] = 0.0;
+ 
+  return HPX_SUCCESS;
+}
+
 void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch)
 {
   int numNode = domain->numNode; 
   int i; 
 
+  hpx_addr_t done = hpx_lco_and_new(numNode);
   for (i = 0; i < numNode; i++) {
-    domain->fx[i] = 0.0;
-    domain->fy[i] = 0.0;
-    domain->fz[i] = 0.0;
+    CalcForceForNodesArgs args = {
+      .domain = domain,
+      .i = i
+    };
+    hpx_call(local, _compute_CalcForceForNodes, &args, sizeof(CalcForceForNodesArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 
   CalcVolumeForceForElems(domain,rank); 
 
@@ -1049,16 +1066,53 @@ void SumElemStressesToNodeForces(double B[][8], const double stress_xx,
   fz[7] = -stress_zz*pfz7;
 }
 
+int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args) {
+  double *xdd = args->xdd;
+  double *ydd = args->ydd;
+  double *zdd = args->zdd;
+  double *fx = args->fx;
+  double *fy = args->fy;
+  double *fz = args->fz;
+  double *nodalMass = args->nodalMass;
+  int i = args->i;
+  
+  xdd[i] = fx[i]/nodalMass[i];
+  ydd[i] = fy[i]/nodalMass[i];
+  zdd[i] = fz[i]/nodalMass[i];
+ 
+  return HPX_SUCCESS;
+}
+
 void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
 			      double *fx, double *fy, double *fz,
 			      double *nodalMass, int numNode)
 {
   int i;
+  hpx_addr_t done = hpx_lco_and_new(numNode);
+  hpx_addr_t local = hpx_thread_current_target();
   for (i = 0; i < numNode; i++) {
-    xdd[i] = fx[i]/nodalMass[i];
-    ydd[i] = fy[i]/nodalMass[i];
-    zdd[i] = fz[i]/nodalMass[i];
+    CalcAccelerationForNodesArgs args = {
+      .xdd = xdd,
+      .ydd = ydd,
+      .zdd = zdd,
+      .fx = fx,
+      .fy = fy,
+      .fz = fz,
+      .nodalMass = nodalMass,
+      .i = i
+    };
+    hpx_call(local, _compute_CalcAccelerationForNodes, &args, sizeof(CalcAccelerationForNodesArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+}
+
+int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAccelerationBoundaryConditionsForNodesArgs *args) {
+  double *dd = args->dd;
+  int *symm = args->symm;
+  int i = args->i;
+  dd[symm[i]] = 0.0;
+  return HPX_SUCCESS;
 }
 
 void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, double *zdd,
@@ -1068,19 +1122,92 @@ void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, doubl
   int i; 
 
   if (symmX != 0) {
-    for (i = 0; i < numNodeBC; i++)
-      xdd[symmX[i]] = 0.0;
+    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
+    hpx_addr_t local = hpx_thread_current_target();
+    for (i = 0; i < numNodeBC; i++) {
+      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
+        .dd = xdd,
+        .symm = symmX,
+        .i = i
+      };
+      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes, 
+                 &args, sizeof(CalcAccelerationForNodesArgs), done);
+    //  xdd[symmX[i]] = 0.0;
+    }
+
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
   }
 
   if (symmY != 0) {
-    for (i = 0; i < numNodeBC; i++)
-      ydd[symmY[i]] = 0.0;
+    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
+    hpx_addr_t local = hpx_thread_current_target();
+    for (i = 0; i < numNodeBC; i++) {
+      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
+        .dd = ydd,
+        .symm = symmY,
+        .i = i
+      };
+      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes, 
+                 &args, sizeof(CalcAccelerationForNodesArgs), done);
+    }
+
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
+    //for (i = 0; i < numNodeBC; i++) {
+    //  ydd[symmY[i]] = 0.0;
+    //}
   }
 
   if (symmZ != 0) {
-    for (i = 0; i < numNodeBC; i++)
-      zdd[symmZ[i]] = 0.0;
+    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
+    hpx_addr_t local = hpx_thread_current_target();
+    for (i = 0; i < numNodeBC; i++) {
+      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
+        .dd = zdd,
+        .symm = symmZ,
+        .i = i
+      };
+      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes, 
+                 &args, sizeof(CalcAccelerationForNodesArgs), done);
+    }
+
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
+    //for (i = 0; i < numNodeBC; i++)
+    //  zdd[symmZ[i]] = 0.0;
   }
+}
+
+int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args) {
+  double *xd = args->xd;
+  double *yd = args->yd;
+  double *zd = args->zd;
+  double *xdd = args->xdd;
+  double *ydd = args->ydd;
+  double *zdd = args->zdd;
+  double dt = args->dt;
+  double u_cut = args->u_cut;
+  int i = args->i;
+
+  double xdtmp, ydtmp, zdtmp; 
+
+  xdtmp = xd[i] + xdd[i]*dt; 
+  if (fabs(xdtmp) < u_cut) 
+    xdtmp = 0.0;
+  xd[i] = xdtmp; 
+
+  ydtmp = yd[i] + ydd[i]*dt;
+  if (fabs(ydtmp) < u_cut)
+    ydtmp = 0.0;
+  yd[i] = ydtmp; 
+
+  zdtmp = zd[i] + zdd[i]*dt;
+  if (fabs(zdtmp) < u_cut)
+    zdtmp = 0.0;
+  zd[i] = zdtmp;
+
+  return HPX_SUCCESS;
 }
 
 void CalcVelocityForNodes(double *xd, double *yd, double *zd, 
@@ -1088,24 +1215,42 @@ void CalcVelocityForNodes(double *xd, double *yd, double *zd,
 			  const double dt, const double u_cut, int numNode)
 {
   int i; 
+  hpx_addr_t done = hpx_lco_and_new(numNode);
+  hpx_addr_t local = hpx_thread_current_target();
   for (i = 0; i < numNode; i++) {
-    double xdtmp, ydtmp, zdtmp; 
-
-    xdtmp = xd[i] + xdd[i]*dt; 
-    if (fabs(xdtmp) < u_cut) 
-      xdtmp = 0.0;
-    xd[i] = xdtmp; 
-
-    ydtmp = yd[i] + ydd[i]*dt;
-    if (fabs(ydtmp) < u_cut)
-      ydtmp = 0.0;
-    yd[i] = ydtmp; 
-
-    zdtmp = zd[i] + zdd[i]*dt;
-    if (fabs(zdtmp) < u_cut)
-      zdtmp = 0.0;
-    zd[i] = zdtmp;
+    CalcVelocityForNodesArgs args = {
+      .xd = xd,
+      .yd = yd,
+      .zd = zd,
+      .xdd = xdd,
+      .ydd = ydd,
+      .zdd = zdd,
+      .dt = dt,
+      .u_cut = u_cut,
+      .i = i
+    };
+    hpx_call(local, _compute_CalcVelocityForNodes, 
+               &args, sizeof(CalcVelocityForNodesArgs), done);
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+}
+
+int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args) {
+  double *x = args->x;
+  double *y = args->y;
+  double *z = args->z;
+  double *xd = args->xd;
+  double *yd = args->yd;
+  double *zd = args->zd;
+  double dt = args->dt;
+  int i = args->i;
+
+  x[i] += xd[i]*dt;
+  y[i] += yd[i]*dt;
+  z[i] += zd[i]*dt;
+
+  return HPX_SUCCESS;
 }
 
 void CalcPositionForNodes(double *x, double *y, double *z, 
@@ -1113,11 +1258,27 @@ void CalcPositionForNodes(double *x, double *y, double *z,
 			  const double dt, int numNode)
 {
   int i; 
+  hpx_addr_t done = hpx_lco_and_new(numNode);
+  hpx_addr_t local = hpx_thread_current_target();
   for (i = 0; i < numNode; i++) {
-    x[i] += xd[i]*dt;
-    y[i] += yd[i]*dt;
-    z[i] += zd[i]*dt;
+    CalcPositionForNodesArgs args = {
+      .xd = xd,
+      .yd = yd,
+      .zd = zd,
+      .x = x,
+      .y = y,
+      .z = z,
+      .dt = dt,
+      .i = i
+    };
+    hpx_call(local, _compute_CalcPositionForNodes, 
+               &args, sizeof(CalcPositionForNodesArgs), done);
+  //  x[i] += xd[i]*dt;
+  //  y[i] += yd[i]*dt;
+  //  z[i] += zd[i]*dt;
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 }
 
 void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)
