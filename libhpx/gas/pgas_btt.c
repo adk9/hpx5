@@ -24,7 +24,7 @@
 #include "libhpx/routing.h"
 #include "addr.h"
 
-static const uint64_t _TABLE_SIZE = (uint64_t)UINT32_MAX * sizeof(void*);
+static uint64_t _table_size = (uint64_t)UINT32_MAX * sizeof(void*);
 
 typedef void* SYNC_ATOMIC() atomic_word_t;
 
@@ -57,7 +57,7 @@ static void _pgas_btt_delete(btt_class_t *btt) {
     return;
 
   if (pgas->table)
-    munmap((void*)pgas->table, _TABLE_SIZE);
+    munmap((void*)pgas->table, _table_size);
 
   free(pgas);
 }
@@ -134,10 +134,16 @@ btt_class_t *btt_pgas_new(void) {
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
-  btt->table = mmap(NULL, _TABLE_SIZE, prot, flags, -1, 0);
+  btt->table = mmap(NULL, _table_size, prot, flags, -1, 0);
+  while (btt->table == MAP_FAILED && _table_size > 1000) {
+    dbg_error("could not mmap PGAS block-translation-table of size %lu, "
+        "falling back to %lu\n", _table_size, _table_size / 2);
+    _table_size = _table_size / 2;
+    btt->table = mmap(NULL, _table_size, prot, flags, -1, 0);
+  }
   if (btt->table == MAP_FAILED) {
-    dbg_error("could not mmap PGAS block-translation-table, "
-              "defaulting to HPX_GAS_NOGLOBAL.\n");
+    dbg_error("could not mmap PGAS block-translation-table, falling back to "
+        "HPX_GAS_NOGLOBAL\n");
     free(btt);
     return btt_new(HPX_GAS_NOGLOBAL);
   }

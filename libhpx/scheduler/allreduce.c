@@ -37,7 +37,7 @@ typedef struct {
   cvar_t                         wait;
   size_t                 participants;
   hpx_commutative_associative_op_t op;
-  void                 (*init)(void*);
+  void   (*init)(void*, const size_t);
   size_t                        count;
   volatile int                  phase;
   void                         *value;     // out-of-place for alignment reasons
@@ -93,7 +93,7 @@ _allreduce_set(lco_t *lco, int size, const void *from)
   // wait until we're reducing, then perform the op() and join the reduction
   while (r->phase != _reducing)
     scheduler_wait(&lco->lock, &r->wait);
-  r->op(r->value, from);
+  r->op(r->value, from, size);
   _allreduce_join(r);
 
   lco_unlock(lco);
@@ -117,7 +117,7 @@ _allreduce_get(lco_t *lco, int size, void *out)
     if (size && out)
       memcpy(out, r->value, size);
     if (_allreduce_join(r))
-      r->init(r->value);
+      r->init(r->value, size);
   }
 
   lco_unlock(lco);
@@ -135,7 +135,8 @@ _allreduce_wait(lco_t *lco)
 
 static void
 _allreduce_init(_allreduce_t *r, size_t participants, size_t size,
-             hpx_commutative_associative_op_t op, void (*init)(void *))
+                hpx_commutative_associative_op_t op,
+                void (*init)(void *, const size_t size))
 {
   // vtable
   static const lco_class_t vtable = {
@@ -162,14 +163,15 @@ _allreduce_init(_allreduce_t *r, size_t participants, size_t size,
     assert(r->value);
   }
 
-  r->init(r->value);
+  r->init(r->value, size);
 }
 
 /// @}
 
 hpx_addr_t
 hpx_lco_allreduce_new(size_t inputs, size_t size,
-                   hpx_commutative_associative_op_t op, void (*init)(void*))
+                      hpx_commutative_associative_op_t op,
+                      void (*init)(void*, const size_t size))
 {
   hpx_addr_t reduce = locality_malloc(sizeof(_allreduce_t));
   _allreduce_t *r = NULL;

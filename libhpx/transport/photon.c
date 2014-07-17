@@ -350,20 +350,10 @@ _alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_in
     hpx_abort();
   }
 
-  if (mlock(chunk, size))
-    error(1, errno, "Photon transport could not mlock buffer %p of size %lu",
-          chunk, size);
-
   if (photon_register_buffer(chunk, size)) {
     dbg_error("Photon transport could not pin buffer %p of size %lu\n", chunk, size);
     t->dalloc(chunk, size, arena_ind);
   }
-
-  // debugging code
-  //static size_t total = 0;
-  //printf("Photon transport allocated and pinned %lu bytes for a total of %lu\n",
-  //       size, total += size);
-  //fflush(stdout);
 
   return chunk;
 }
@@ -372,19 +362,9 @@ _alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_in
 static bool
 _dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
 {
-  // debugging code
-  //static size_t total = 0;
-  //printf("Photon transport unpinned %lu bytes for a total of %lu\n", size,
-  //       total += size);
-  //fflush(stdout);
-
-  //if (munlock(chunk, size))
-  //  error(1, errno, "Photon transport could not munlock buffer %p of size %lu",
-  //        chunk, size);
-
-  //if (photon_unregister_buffer(chunk, size))
-  //  dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
-  //            chunk, size);
+  if (photon_unregister_buffer(chunk, size))
+   dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
+             chunk, size);
 
   photon_t *t = (photon_t *)here->transport;
   assert(t);
