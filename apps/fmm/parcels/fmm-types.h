@@ -27,9 +27,10 @@ struct fmm_box_t {
   int addr; ///< offset to locate the first point contained in the box
   hpx_addr_t list1[27]; ///< coarser or same level list 1 boxes 
   hpx_addr_t list5[27]; ///< same-level adjacent boxes
+  int n_reduce; ///< number of inputs for the reduction 
+  hpx_addr_t sema; ///< semaphore for reduction
   int nlist1; ///< number of entries in list1
   int nlist5; ///< number of entries in list5
-  hpx_addr_t reduce; ///< reduce lco for the box
   double complex expansion[]; ///< storage for expansion
 }; 
 
