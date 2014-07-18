@@ -6,7 +6,7 @@ SUBDIRS = system boot gas transport network scheduler
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
 
-libhpx_la_SOURCES  = hpx.c debug.c action.c
+libhpx_la_SOURCES  = hpx.c debug.c action.c par.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpx_la_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
