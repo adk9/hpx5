@@ -29,6 +29,7 @@ extern "C" {
 #include "hpx/addr.h"
 #include "hpx/gas.h"
 #include "hpx/lco.h"
+#include "hpx/par.h"
 #include "hpx/parcel.h"
 #include "hpx/rpc.h"
 #include "hpx/runtime.h"
