@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "fmm.h"
 
 hpx_addr_t sources; 
@@ -31,22 +32,6 @@ const int yoff[] = {0, 0, 1, 1, 0, 0, 1, 1};
 const int zoff[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
 int part_threshold; 
-
-static void init_double_complex(double complex *input, const size_t size) {
-  assert(size % sizeof(double complex) == 0); 
-  const int n_entries = size / sizeof(double complex); 
-  for (int i = 0; i < n_entries; i++) 
-    input[i] = 0; 
-}
-
-static void sum_double_complex(double complex *output, 
-			       const double complex *input, 
-			       const size_t size) {
-  assert(size % sizeof(double complex) == 0); 
-  const int n_entries = size / sizeof(double complex); 
-  for (int i = 0; i < n_entries; i++) 
-    output[i] += input[i]; 
-}
 
 int _fmm_main_action(void *args) {
   fmm_config_t *fmm_cfg = (fmm_config_t *)args; 
@@ -376,11 +361,8 @@ int _partition_box_action(void *args) {
   }
 
   if (type == 'S') {
-    box->reduce = ///< handle multipole-to-multipole reduction
-      hpx_lco_allreduce_new(box->nchild, 
-			    sizeof(double complex) * fmm_param->pgsz, 
-			    (hpx_commutative_associative_op_t) sum_double_complex, 
-			    (void (*)(void *, const size_t)) init_double_complex); 
+    box->n_reduce = box->nchild; 
+    box->sema = hpx_lco_sema_new(1); 
   }
 
   if (and_gate_size) {
@@ -407,8 +389,8 @@ int _partition_box_action(void *args) {
 int _source_to_multipole_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *sbox = NULL; 
-
-  hpx_gas_try_pin(curr, (void **)&sbox); 
+  if (!hpx_gas_try_pin(curr, (void **)&sbox))
+    return HPX_RESEND; 
 
   int pgsz      = fmm_param->pgsz; 
   int pterms    = fmm_param->pterms; 
@@ -479,6 +461,7 @@ int _source_to_multipole_action(void) {
   // fire-and-forget way
   int ichild = (sbox->idz % 2) * 4 + (sbox->idy % 2) * 2 + (sbox->idx % 2); 
   const char dir[3] = {'z', 'y', 'x'};  
+  hpx_gas_unpin(curr); 
   hpx_call(curr, _mpole_to_mpole, &ichild, sizeof(ichild), HPX_NULL); 
   hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), HPX_NULL); 
   hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), HPX_NULL);
@@ -489,7 +472,8 @@ int _source_to_multipole_action(void) {
 int _multipole_to_multipole_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *sbox = NULL; 
-  hpx_gas_try_pin(curr, (void **)&sbox); 
+  if (!hpx_gas_try_pin(curr, (void **)&sbox))
+    return HPX_RESEND; 
 
   int ichild = *((int *) args); 
   const double complex var[5] =
@@ -611,6 +595,7 @@ int _multipole_to_multipole_action(void *args) {
     }
   }
 
+  hpx_gas_unpin(curr); 
   hpx_call(sbox->parent, _mpole_reduction, mpolen, 
 	   sizeof(double complex) * pgsz, HPX_NULL); 
 
@@ -628,14 +613,31 @@ int _multipole_reduction_action(void *args) {
   if (!hpx_gas_try_pin(curr, (void **)&box))
     return HPX_RESEND; 
 
-  double complex *input = (double complex *) args; 
-  hpx_lco_set(box->reduce, sizeof(double complex) * fmm_param->pgsz, 
-	      input, HPX_NULL, HPX_NULL); 
+  double complex *input  = (double complex *)args; 
+  double complex *output = &box->expansion[0]; 
+  hpx_addr_t sema = box->sema; 
+  int pgsz = fmm_param->pgsz; 
+  bool last_arrival = false; 
 
-  // Q: do i need to free args here? 
+  while (hpx_lco_sema_p(sema)) {
+    for (int i = 0; i < pgsz; i++) 
+      output[i] += input[i]; 
+    last_arrival = (--box->n_reduce == 0); 
+  }
 
-  // if there is an and-reduce lco with boolean result, based on the result,
-  // the reduction thread either continues by calling TMM and TME or exits. 
+  hpx_lco_sema_v(sema); 
+
+  hpx_gas_unpin(curr); 
+  
+  if (last_arrival) {
+    // the thread arrives last at the parent box spawn four more actions
+    int ichild = (box->idz % 2) * 4 + (box->idy % 2) * 2 + (box->idx % 2); 
+    const char dir[3] = {'z', 'y', 'x'}; 
+    hpx_call(curr, _mpole_to_mpole, &ichild, sizeof(ichild), HPX_NULL); 
+    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), HPX_NULL);
+    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), HPX_NULL);
+    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), HPX_NULL);
+  }
 
   return HPX_SUCCESS; 
 }
@@ -643,7 +645,8 @@ int _multipole_reduction_action(void *args) {
 int _multipole_to_exponential_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *sbox = NULL;   
-  hpx_gas_try_pin(curr, (void **)&sbox); 
+  if (!hpx_gas_try_pin(curr, (void **)&sbox))
+    return HPX_RESEND; 
 
   char dir        = *((char *) args); 
   int pgsz        = fmm_param->pgsz; 
@@ -677,10 +680,10 @@ int _multipole_to_exponential_action(void *args) {
     break;
   } 
 
+  hpx_gas_unpin(curr); 
   free(mw); 
   free(mexpf1); 
   free(mexpf2); 
-
   return HPX_SUCCESS; 
 }
 
