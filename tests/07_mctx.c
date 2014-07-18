@@ -28,7 +28,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <pthread.h>
-#include "hpx.h"
+#include "hpx/hpx.h"
 #include "tests.h"
 
 

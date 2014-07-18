@@ -20,7 +20,7 @@
  ====================================================================
 */
 
-#include "hpx.h"
+#include "hpx/hpx.h"
 #include "tests.h"
 
 /* steal some internal headers so that we can actually write the test */
