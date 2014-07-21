@@ -1123,28 +1123,38 @@ int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args)
   return HPX_SUCCESS;
 }
 
+static void
+_init_CalcAccelerationForNodesArgs(void *out, const int i, const void *in)
+{
+  CalcAccelerationForNodesArgs *args = out;
+  memcpy(args, in, sizeof(*args));
+  args->i = i;
+}
+
 void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
                   double *fx, double *fy, double *fz,
                   double *nodalMass, int numNode)
 {
-  int i;
-  hpx_addr_t done = hpx_lco_and_new(numNode);
-  hpx_addr_t local = hpx_thread_current_target();
-  for (i = 0; i < numNode; i++) {
-    CalcAccelerationForNodesArgs args = {
-      .xdd = xdd,
-      .ydd = ydd,
-      .zdd = zdd,
-      .fx = fx,
-      .fy = fy,
-      .fz = fz,
-      .nodalMass = nodalMass,
-      .i = i
-    };
-    hpx_call(local, _compute_CalcAccelerationForNodes, &args, sizeof(CalcAccelerationForNodesArgs), done);
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  CalcAccelerationForNodesArgs init = {
+    .xdd = xdd,
+    .ydd = ydd,
+    .zdd = zdd,
+    .fx = fx,
+    .fy = fy,
+    .fz = fz,
+    .nodalMass = nodalMass,
+    .i = -1
+  };
+
+  hpx_par_for_sync(/* action */ _compute_CalcAccelerationForNodes,
+                   /* min index */ 0,
+                   /* max index */ numNode,
+                   /* branching factor */ 4,
+                   /* leaf size limit (transition to sequential spawn) */ 4,
+                   /* action args size */ sizeof(init),
+                   /* action args initializer */ _init_CalcAccelerationForNodesArgs,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
 }
 
 int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAccelerationBoundaryConditionsForNodesArgs *args) {
