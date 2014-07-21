@@ -264,6 +264,14 @@ int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArg
     return HPX_SUCCESS;
 }
 
+static void
+_init_CalcHourglassControlForElemsArgs(void *out, const int i, const void *env)
+{
+  CalcHourglassControlForElemsArgs *args = out;
+  memcpy(args, env, sizeof(*args));
+  args->i = i;
+}
+
 void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef)
 {
   int i, ii, jj;
@@ -282,35 +290,38 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
   double *volo = domain->volo;
   double *v = domain->v;
 
-  hpx_addr_t done = hpx_lco_and_new(numElem);
-  hpx_addr_t local = hpx_thread_current_target();
-  for (i = 0; i < numElem; i++) {
-    CalcHourglassControlForElemsArgs args = {
-      .i = i,
-      .nodelist = nodelist,
-      .x = domain->x,
-      .y = domain->y,
-      .z = domain->z,
-      .x1 = x1,
-      .y1 = y1,
-      .z1 = z1,
-      .pfx = pfx,
-      .pfy = pfy,
-      .pfz = pfz,
-      .dvdx = dvdx,
-      .dvdy = dvdy,
-      .dvdz = dvdz,
-      .x8n = x8n,
-      .y8n = y8n,
-      .z8n = z8n,
-      .determ = determ,
-      .volo = volo,
-      .v = v
-    };
-    hpx_call(local, _compute_CalcHourglassControlForElems, &args, sizeof(CalcHourglassControlForElemsArgs), done);
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  CalcHourglassControlForElemsArgs init = {
+    .i = -1,
+    .nodelist = nodelist,
+    .x = domain->x,
+    .y = domain->y,
+    .z = domain->z,
+    .x1 = x1,
+    .y1 = y1,
+    .z1 = z1,
+    .pfx = pfx,
+    .pfy = pfy,
+    .pfz = pfz,
+    .dvdx = dvdx,
+    .dvdy = dvdy,
+    .dvdz = dvdz,
+    .x8n = x8n,
+    .y8n = y8n,
+    .z8n = z8n,
+    .determ = determ,
+    .volo = volo,
+    .v = v
+  };
+
+  hpx_par_for_sync(/* action */ _compute_CalcHourglassControlForElems,
+                   /* min index */ 0,
+                   /* max index */ numElem,
+                   /* branching factor */ 4,
+                   /* leaf size limit */ 4,
+                   /* action args size */ sizeof(init),
+                   /* action args initializer */ _init_CalcHourglassControlForElemsArgs,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
 
   if (hgcoef > 0.0) {
     CalcFBHourglassForceForElems(domain->nodelist, domain->ss, domain->elemMass,
