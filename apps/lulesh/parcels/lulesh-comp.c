@@ -650,6 +650,14 @@ int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArg
     return HPX_SUCCESS;
 }
 
+static void
+_init_CalcFBHourglassForceForElemsArgs(void *out, const int i, const void *in)
+{
+  CalcFBHourglassForceForElemsArgs *args = out;
+  memcpy(args, in, sizeof(*args));
+  args->i2 = i;
+}
+
 void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
                   double *xd, double *yd, double *zd,
                   double *fx, double *fy, double *fz, double *determ,
@@ -657,37 +665,36 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
                   double *dvdx, double *dvdy, double *dvdz,
                   double hourg, int numElem)
 {
+  CalcFBHourglassForceForElemsArgs init = {
+    .i2 = -1,
+    .nodelist = nodelist,
+    .ss = ss,
+    .elemMass = elemMass,
+    .xd = xd,
+    .yd = yd,
+    .zd = zd,
+    .fx = fx,
+    .fy = fy,
+    .fz = fz,
+    .determ = determ,
+    .x8n = x8n,
+    .y8n = y8n,
+    .z8n = z8n,
+    .dvdx = dvdx,
+    .dvdy = dvdy,
+    .dvdz = dvdz,
+    .hourg = hourg
+  };
 
-  int i2, i1;
-
-  hpx_addr_t done = hpx_lco_and_new(numElem);
-  hpx_addr_t local = hpx_thread_current_target();
-  for (i2 = 0; i2 < numElem; i2++) {
-    CalcFBHourglassForceForElemsArgs args = {
-      .i2 = i2,
-      .nodelist = nodelist,
-      .ss = ss,
-      .elemMass = elemMass,
-      .xd = xd,
-      .yd = yd,
-      .zd = zd,
-      .fx = fx,
-      .fy = fy,
-      .fz = fz,
-      .determ = determ,
-      .x8n = x8n,
-      .y8n = y8n,
-      .z8n = z8n,
-      .dvdx = dvdx,
-      .dvdy = dvdy,
-      .dvdz = dvdz,
-      .hourg = hourg
-    };
-    hpx_call(local, _compute_CalcFBHourglassForceForElems, &args, sizeof(CalcFBHourglassForceForElemsArgs), done);
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
+  hpx_par_for_sync(/* action */ _compute_CalcFBHourglassForceForElems,
+                   /* min index */ 0,
+                   /* max index */ numElem,
+                   /* branching factor */ 4,
+                   /* leaf size limit */ 1,
+                   /* action args size */ sizeof(init),
+                   /* action args initializer */ _init_CalcFBHourglassForceForElemsArgs,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
 }
 
 void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourgam0,
