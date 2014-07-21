@@ -1327,32 +1327,46 @@ int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args) {
   return HPX_SUCCESS;
 }
 
+static void
+_init_CalcPositionForNodesArgs(void *out, const int i, const void *in)
+{
+  CalcPositionForNodesArgs *args = out;
+  memcpy(args, in, sizeof(*args));
+  args->i = i;
+}
+
 void CalcPositionForNodes(double *x, double *y, double *z,
               double *xd, double *yd, double *zd,
               const double dt, int numNode)
 {
-  int i;
-  hpx_addr_t done = hpx_lco_and_new(numNode);
-  hpx_addr_t local = hpx_thread_current_target();
-  for (i = 0; i < numNode; i++) {
-    CalcPositionForNodesArgs args = {
-      .xd = xd,
-      .yd = yd,
-      .zd = zd,
-      .x = x,
-      .y = y,
-      .z = z,
-      .dt = dt,
-      .i = i
-    };
-    hpx_call(local, _compute_CalcPositionForNodes,
-               &args, sizeof(CalcPositionForNodesArgs), done);
+  CalcPositionForNodesArgs init = {
+    .xd = xd,
+    .yd = yd,
+    .zd = zd,
+    .x = x,
+    .y = y,
+    .z = z,
+    .dt = dt,
+    .i = -1
+  };
+
+  hpx_par_for_sync(/* action */ _compute_CalcPositionForNodes,
+                   /* min index */ 0,
+                   /* max index */ numNode,
+                   /* branching factor */ 4,
+                   /* leaf size limit (transition to sequential spawn) */ 4,
+                   /* action args size */ sizeof(init),
+                   /* action args initializer */ _init_CalcPositionForNodesArgs,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
+  // for (i = 0; i < numNode; i++) {
+
+  //   hpx_call(local, _compute_CalcPositionForNodes,
+  //              &args, sizeof(CalcPositionForNodesArgs), done);
   //  x[i] += xd[i]*dt;
   //  y[i] += yd[i]*dt;
   //  z[i] += zd[i]*dt;
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  // }
 }
 
 void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)
