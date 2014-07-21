@@ -1275,30 +1275,39 @@ int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args) {
   return HPX_SUCCESS;
 }
 
+static void
+_init_CalcVelocityForNodesArgs(void *out, const int i, const void *in)
+{
+  CalcVelocityForNodesArgs *args = out;
+  memcpy(args, in, sizeof(*args));
+  args->i = i;
+}
+
 void CalcVelocityForNodes(double *xd, double *yd, double *zd,
               double *xdd, double *ydd, double *zdd,
               const double dt, const double u_cut, int numNode)
 {
-  int i;
-  hpx_addr_t done = hpx_lco_and_new(numNode);
-  hpx_addr_t local = hpx_thread_current_target();
-  for (i = 0; i < numNode; i++) {
-    CalcVelocityForNodesArgs args = {
-      .xd = xd,
-      .yd = yd,
-      .zd = zd,
-      .xdd = xdd,
-      .ydd = ydd,
-      .zdd = zdd,
-      .dt = dt,
-      .u_cut = u_cut,
-      .i = i
-    };
-    hpx_call(local, _compute_CalcVelocityForNodes,
-               &args, sizeof(CalcVelocityForNodesArgs), done);
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  CalcVelocityForNodesArgs init = {
+    .xd = xd,
+    .yd = yd,
+    .zd = zd,
+    .xdd = xdd,
+    .ydd = ydd,
+    .zdd = zdd,
+    .dt = dt,
+    .u_cut = u_cut,
+    .i = -1
+  };
+
+  hpx_par_for_sync(/* action */ _compute_CalcVelocityForNodes,
+                   /* min index */ 0,
+                   /* max index */ numNode,
+                   /* branching factor */ 4,
+                   /* leaf size limit (transition to sequential spawn) */ 4,
+                   /* action args size */ sizeof(init),
+                   /* action args initializer */ _init_CalcVelocityForNodesArgs,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
 }
 
 int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args) {
