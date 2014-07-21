@@ -1165,6 +1165,17 @@ int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAcceleratio
   return HPX_SUCCESS;
 }
 
+static void
+_init_ApplyAccelerationBoundaryConditionsForNodesArgs(void *out, const int i,
+                                                      const void *in)
+{
+  ApplyAccelerationBoundaryConditionsForNodesArgs *args = out;
+  const ApplyAccelerationBoundaryConditionsForNodesArgs *env = in;
+  args->dd = env->dd;
+  args->symm = env->symm;
+  args->i = i;
+}
+
 void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, double *zdd,
                          int *symmX, int *symmY, int *symmZ, int size)
 {
@@ -1172,58 +1183,62 @@ void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, doubl
   int i;
 
   if (symmX != 0) {
-    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
-    hpx_addr_t local = hpx_thread_current_target();
-    for (i = 0; i < numNodeBC; i++) {
-      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
-        .dd = xdd,
-        .symm = symmX,
-        .i = i
-      };
-      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                 &args, sizeof(CalcAccelerationForNodesArgs), done);
-    //  xdd[symmX[i]] = 0.0;
-    }
+    ApplyAccelerationBoundaryConditionsForNodesArgs init = {
+      .dd = xdd,
+      .symm = symmX,
+      .i = -1
+    };
 
-    hpx_lco_wait(done);
-    hpx_lco_delete(done, HPX_NULL);
+    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
+                     /* min index */ 0,
+                     /* max index */ numNodeBC,
+                     /* branching factor */ 4,
+                     /* leaf size limit (transition to sequential spawn) */ 4,
+                     /* action args size */ sizeof(init),
+                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
+                     /* initializer env size */ sizeof(init),
+                     /* initializer env */ &init);
   }
 
   if (symmY != 0) {
-    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
-    hpx_addr_t local = hpx_thread_current_target();
-    for (i = 0; i < numNodeBC; i++) {
-      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
-        .dd = ydd,
-        .symm = symmY,
-        .i = i
-      };
-      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                 &args, sizeof(CalcAccelerationForNodesArgs), done);
-    }
+    ApplyAccelerationBoundaryConditionsForNodesArgs init = {
+      .dd = ydd,
+      .symm = symmY,
+      .i = -1
+    };
 
-    hpx_lco_wait(done);
-    hpx_lco_delete(done, HPX_NULL);
+    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
+                     /* min index */ 0,
+                     /* max index */ numNodeBC,
+                     /* branching factor */ 4,
+                     /* leaf size limit (transition to sequential spawn) */ 4,
+                     /* action args size */ sizeof(init),
+                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
+                     /* initializer env size */ sizeof(init),
+                     /* initializer env */ &init);
+
     //for (i = 0; i < numNodeBC; i++) {
     //  ydd[symmY[i]] = 0.0;
     //}
   }
 
   if (symmZ != 0) {
-    hpx_addr_t done = hpx_lco_and_new(numNodeBC);
-    hpx_addr_t local = hpx_thread_current_target();
-    for (i = 0; i < numNodeBC; i++) {
-      ApplyAccelerationBoundaryConditionsForNodesArgs args = {
-        .dd = zdd,
-        .symm = symmZ,
-        .i = i
-      };
-      hpx_call(local, _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                 &args, sizeof(CalcAccelerationForNodesArgs), done);
-    }
+    ApplyAccelerationBoundaryConditionsForNodesArgs init = {
+      .dd = zdd,
+      .symm = symmZ,
+      .i = -1
+    };
 
-    hpx_lco_wait(done);
-    hpx_lco_delete(done, HPX_NULL);
+    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
+                     /* min index */ 0,
+                     /* max index */ numNodeBC,
+                     /* branching factor */ 4,
+                     /* leaf size limit (transition to sequential spawn) */ 4,
+                     /* action args size */ sizeof(init),
+                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
+                     /* initializer env size */ sizeof(init),
+                     /* initializer env */ &init);
+
     //for (i = 0; i < numNodeBC; i++)
     //  zdd[symmZ[i]] = 0.0;
   }
