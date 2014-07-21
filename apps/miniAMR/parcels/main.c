@@ -1,6 +1,7 @@
 #include "main.h"
 
 static hpx_action_t _main          = 0;
+static hpx_action_t _initDomain    = 0;
 
 static void initdouble(double *input, const size_t size) {
   assert(sizeof(double) == size);
@@ -13,13 +14,203 @@ static void mindouble(double *output,const double *input, const size_t size) {
   return;
 }
 
-static int _main_action(int *input)
+static int _initDomain_action(RunArgs *init) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  int *params = init->params;
+
+  int max_num_blocks = params[ 0];
+  int target_active = params[ 1];
+  int num_refine = params[ 2];
+  int uniform_refine = params[ 3];
+  int x_block_size = params[ 4];
+  int y_block_size = params[ 5];
+  int z_block_size = params[ 6];
+  int num_vars = params[ 7];
+  int comm_vars = params[ 8];
+  int init_block_x = params[ 9];
+  int init_block_y = params[10];
+  int init_block_z = params[11];
+  int reorder = params[12];
+  int npx = params[13];
+  int npy = params[14];
+  int npz = params[15];
+  int inbalance = params[16];
+  int refine_freq = params[17];
+  int report_diffusion = params[18];
+  int error_tol = params[19];
+  int num_tsteps = params[20];
+  int stencil = params[21];
+  int report_perf = params[22];
+  int plot_freq = params[23];
+  int num_objects = params[24];
+  int checksum_freq = params[25];
+  int target_max = params[26];
+  int target_min = params[27];
+  int stages_per_ts = params[28];
+  int lb_opt = params[29];
+  int block_change = params[30];
+  int code = params[31];
+  int permute = params[32];
+  int num_pes = params[33];
+
+  ld->num_blocks = (int *) malloc((num_refine+1)*sizeof(int));    
+  ld->num_blocks[0] = num_pes*init_block_x*init_block_y*init_block_z;
+
+  ld->local_num_blocks = (int *) malloc((num_refine+1)*sizeof(int));
+  ld->local_num_blocks[0] = init_block_x*init_block_y*init_block_z;
+
+  ld->blocks = (block *) malloc(max_num_blocks*sizeof(block));
+  
+  int n,m,i,j,k;
+  for (n = 0; n < max_num_blocks; n++) {
+      ld->blocks[n].number = -1;
+      ld->blocks[n].array = (double ****) malloc(num_vars*sizeof(double ***));
+      for (m = 0; m < num_vars; m++) {
+         ld->blocks[n].array[m] = (double ***) malloc((x_block_size+2)*sizeof(double **));
+         for (i = 0; i < x_block_size+2; i++) {
+            ld->blocks[n].array[m][i] = (double **) malloc((y_block_size+2)*sizeof(double *));
+            for (j = 0; j < y_block_size+2; j++)
+               ld->blocks[n].array[m][i][j] = (double *) malloc((z_block_size+2)*sizeof(double));
+         }
+      }
+  }
+
+  ld->sorted_list = (sorted_block *) malloc(max_num_blocks*sizeof(sorted_block));
+  ld->sorted_index = (int *) malloc((num_refine+2)*sizeof(int));
+
+  ld->max_num_parents = max_num_blocks;  // Guess at number needed
+  ld->parents = (parent *) malloc(ld->max_num_parents*sizeof(parent));
+  for (n = 0; n < ld->max_num_parents; n++)
+      ld->parents[n].number = -1;
+
+  ld->max_num_dots = 2*max_num_blocks;     // Guess at number needed
+  ld->dots = (dot *) malloc(ld->max_num_dots*sizeof(dot));
+  for (n = 0; n < ld->max_num_dots; n++)
+      ld->dots[n].number = -1;
+
+  ld->grid_sum = (double *)malloc(num_vars*sizeof(double));
+
+  ld->p8 = (int *) malloc((num_refine+2)*sizeof(int));
+  ld->p2 = (int *) malloc((num_refine+2)*sizeof(int));
+  ld->block_start = (int *) malloc((num_refine+1)*sizeof(int));
+
+  ld->from = (int *) malloc(num_pes*sizeof(int));
+  ld->to   = (int *) malloc(num_pes*sizeof(int));
+
+  // first try at allocating comm arrays
+  for (i = 0; i < 3; i++) {
+     if (num_refine)
+         ld->max_comm_part[i] = 20;
+      else
+         ld->max_comm_part[i] = 2;
+      ld->comm_partner[i] = (int *) malloc(ld->max_comm_part[i]*sizeof(int));
+      ld->send_size[i] = (int *) malloc(ld->max_comm_part[i]*sizeof(int));
+      ld->recv_size[i] = (int *) malloc(ld->max_comm_part[i]*sizeof(int));
+      ld->comm_index[i] = (int *) malloc(ld->max_comm_part[i]*sizeof(int));
+      ld->comm_num[i] = (int *) malloc(ld->max_comm_part[i]*sizeof(int));
+      if (num_refine)
+         ld->max_num_cases[i] = 100;
+      else if (i == 0)
+         ld->max_num_cases[i] = 2*init_block_y*init_block_z;
+      else if (i == 1)
+         ld->max_num_cases[i] = 2*init_block_x*init_block_z;
+      else
+         ld->max_num_cases[i] = 2*init_block_x*init_block_y;
+      ld->comm_block[i] = (int *) malloc(ld->max_num_cases[i]*sizeof(int));
+      ld->comm_face_case[i] = (int *) malloc(ld->max_num_cases[i]*sizeof(int));
+      ld->comm_pos[i] = (int *) malloc(ld->max_num_cases[i]*sizeof(int));
+      ld->comm_pos1[i] = (int *)malloc(ld->max_num_cases[i]*sizeof(int));
+      ld->comm_send_off[i] = (int *) malloc(ld->max_num_cases[i]*sizeof(int));
+      ld->comm_recv_off[i] = (int *) malloc(ld->max_num_cases[i]*sizeof(int));
+  }
+
+  if (num_refine) {
+      ld->par_b.max_part = 10;
+      ld->par_b.max_cases = 100;
+      ld->par_p.max_part = 10;
+      ld->par_p.max_cases = 100;
+      ld->par_p1.max_part = 10;
+      ld->par_p1.max_cases = 100;
+   } else {
+      ld->par_b.max_part = 1;
+      ld->par_b.max_cases = 1;
+      ld->par_p.max_part = 1;
+      ld->par_p.max_cases = 1;
+      ld->par_p1.max_part = 1;
+      ld->par_p1.max_cases = 1;
+   }
+   ld->par_b.comm_part = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_b.comm_num = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_b.index = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_b.comm_b = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_b.comm_p = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_b.comm_c = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+
+   ld->par_p.comm_part = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p.comm_num = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p.index = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p.comm_b = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_p.comm_p = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_p.comm_c = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+
+   ld->par_p1.comm_part = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p1.comm_num = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p1.index = (int *) malloc(ld->par_b.max_part*sizeof(int));
+   ld->par_p1.comm_b = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_p1.comm_p = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+   ld->par_p1.comm_c = (int *) malloc(ld->par_b.max_cases*sizeof(int));
+  
+  if (num_refine) {
+      ld->s_buf_size = (int) (0.10*((double)max_num_blocks))*comm_vars*
+                   (x_block_size+2)*(y_block_size+2)*(z_block_size+2);
+      if (ld->s_buf_size < (num_vars*x_block_size*y_block_size*z_block_size + 45))
+         ld->s_buf_size = num_vars*x_block_size*y_block_size*z_block_size + 45;
+      ld->r_buf_size = 5*ld->s_buf_size;
+   } else {
+      i = init_block_x*(x_block_size+2);
+      j = init_block_y*(y_block_size+2);
+      k = init_block_z*(z_block_size+2);
+      if (i > j)         // do not need ordering just two largest
+         if (j > k)      // i > j > k
+            ld->s_buf_size = i*j;
+         else            // i > j && k > j
+            ld->s_buf_size = i*k;
+      else if (i > k)    // j > i > k
+            ld->s_buf_size = i*j;
+         else            // j > i && k > i
+            ld->s_buf_size = j*k;
+      ld->r_buf_size = 2*ld->s_buf_size;
+   }
+   ld->send_buff = (double *) malloc(ld->s_buf_size*sizeof(double));
+   ld->recv_buff = (double *) malloc(ld->r_buf_size*sizeof(double));
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+static int _main_action(RunArgs *runargs)
 {
   hpx_time_t t1 = hpx_time_now();
+  int k;
+
+  int nDoms = runargs->params[33];
+
+  hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
+
+  hpx_addr_t init = hpx_lco_and_new(nDoms);  
+  for (k=0;k<nDoms;k++) {
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _initDomain, &runargs, sizeof(RunArgs), init);
+  }
+  hpx_lco_wait(init);
+  hpx_lco_delete(init, HPX_NULL);
 
   double elapsed = hpx_time_elapsed_ms(t1);
-  printf(" Elapsed: %g\n",elapsed);
-
+  printf(" Elapsed: %g Num domains: %d\n",elapsed,nDoms);
   hpx_shutdown(0);
 }
 
@@ -131,7 +322,7 @@ int check_input(int *params)
       printf("block size in y direction must be even\n");
       error = 1;
    }
-if (((z_block_size/2)*2) != z_block_size) {
+   if (((z_block_size/2)*2) != z_block_size) {
       printf("block size in z direction must be even\n");
       error = 1;
    }
@@ -244,7 +435,8 @@ int main(int argc, char **argv)
   int code = 0;
   int permute = 0;
   int object_num = 0;
-  object *objects;
+
+  RunArgs *runargs = malloc(sizeof(RunArgs));
 
   int i;
   for (i = 1; i < argc; i++) {
@@ -326,27 +518,27 @@ int main(int argc, char **argv)
        code = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--num_objects")) {
        num_objects = atoi(argv[++i]);
-       objects = (object *) malloc(num_objects*sizeof(object));
+       runargs->objects = (object *) malloc(num_objects*sizeof(object));
        object_num = 0;
     } else if (!strcmp(argv[i], "--object")) {
        if (object_num >= num_objects) {
           printf("object number greater than num_objects\n");
           exit(-1);
        }
-       objects[object_num].type = atoi(argv[++i]);
-       objects[object_num].bounce = atoi(argv[++i]);
-       objects[object_num].cen[0] = atof(argv[++i]);
-       objects[object_num].cen[1] = atof(argv[++i]);
-       objects[object_num].cen[2] = atof(argv[++i]);
-       objects[object_num].move[0] = atof(argv[++i]);
-       objects[object_num].move[1] = atof(argv[++i]);
-       objects[object_num].move[2] = atof(argv[++i]);
-       objects[object_num].size[0] = atof(argv[++i]);
-       objects[object_num].size[1] = atof(argv[++i]);
-       objects[object_num].size[2] = atof(argv[++i]);
-       objects[object_num].inc[0] = atof(argv[++i]);
-       objects[object_num].inc[1] = atof(argv[++i]);
-       objects[object_num].inc[2] = atof(argv[++i]);
+       runargs->objects[object_num].type = atoi(argv[++i]);
+       runargs->objects[object_num].bounce = atoi(argv[++i]);
+       runargs->objects[object_num].cen[0] = atof(argv[++i]);
+       runargs->objects[object_num].cen[1] = atof(argv[++i]);
+       runargs->objects[object_num].cen[2] = atof(argv[++i]);
+       runargs->objects[object_num].move[0] = atof(argv[++i]);
+       runargs->objects[object_num].move[1] = atof(argv[++i]);
+       runargs->objects[object_num].move[2] = atof(argv[++i]);
+       runargs->objects[object_num].size[0] = atof(argv[++i]);
+       runargs->objects[object_num].size[1] = atof(argv[++i]);
+       runargs->objects[object_num].size[2] = atof(argv[++i]);
+       runargs->objects[object_num].inc[0] = atof(argv[++i]);
+       runargs->objects[object_num].inc[1] = atof(argv[++i]);
+       runargs->objects[object_num].inc[2] = atof(argv[++i]);
        object_num++;
     } else if (!strcmp(argv[i], "--help")) {
        usage(stdout);
@@ -403,9 +595,9 @@ int main(int argc, char **argv)
 
   for (object_num = 0; object_num < num_objects; object_num++)
       for (i = 0; i < 3; i++) {
-         objects[object_num].orig_cen[i] = objects[object_num].cen[i];
-         objects[object_num].orig_move[i] = objects[object_num].move[i];
-         objects[object_num].orig_size[i] = objects[object_num].size[i];
+         runargs->objects[object_num].orig_cen[i] = runargs->objects[object_num].cen[i];
+         runargs->objects[object_num].orig_move[i] = runargs->objects[object_num].move[i];
+         runargs->objects[object_num].orig_size[i] = runargs->objects[object_num].size[i];
       }
 
   if (hpx_init(&cfg)) {
@@ -414,10 +606,14 @@ int main(int argc, char **argv)
   }
 
   _main      = HPX_REGISTER_ACTION(_main_action);
+  _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 
-  return hpx_run(_main, params, 34*sizeof(int));
+  runargs->params = params;
+  runargs->paramsize = 34;
+  runargs->objectsize = num_objects;
+  return hpx_run(_main, runargs, sizeof(RunArgs));
 
   return 0;
 }

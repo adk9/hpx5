@@ -22,10 +22,105 @@ typedef struct {
    double orig_size[3];
    double inc[3];
 } object;
-object *objects;
+
+typedef struct {
+  int *params;
+  int paramsize;
+  object *objects;
+  int objectsize;
+} RunArgs;
+
+typedef struct {
+   int number;     // number of block
+   int n;          // position in block array
+} sorted_block;
+
+typedef struct {
+   int number;
+   int level;
+   int refine;
+   int new_proc;
+   int parent;       // if original block -1,
+                     // else if on node, number in structure
+                     // else (-2 - parent->number)
+   int parent_node;
+   int child_number;
+   int nei_refine[6];
+   int nei_level[6];  /* 0 to 5 = W, E, S, N, D, U; use -2 for boundary */
+   int nei[6][2][2];  /* negative if off processor (-1 - proc) */
+   int cen[3];
+   double ****array;
+} block;
+
+typedef struct {
+   int number;
+   int level;
+   int parent;      // -1 if original block
+   int parent_node;
+   int child_number;
+   int refine;
+   int child[8];    // n if on node, number if not
+                    // if negative, then onnode child is a parent (-1 - n)
+   int child_node[8];
+   int cen[3];
+} parent;
+
+typedef struct {
+   int cen[3];
+   int number;
+   int n;
+   int proc;
+   int new_proc;
+} dot;
+
+typedef struct {
+   int num_comm_part;          // number of other cores to communicate with
+   int *comm_part;             // core to communicate with
+   int *comm_num;              // number to communicate to each core
+   int *index;                 // offset into next two arrays
+   int *comm_b;                // block number to communicate from
+   int *comm_p;                // parent number of block (for sorting)
+   int *comm_c;                // child number of block
+   int max_part;               // max communication partners
+   int num_cases;              // number to communicate
+   int max_cases;              // max number to communicate
+} par_comm;
 
 typedef struct Domain {
+  int *num_blocks;
+  int *local_num_blocks;
+  block *blocks;
+  int *sorted_index;
+  sorted_block *sorted_list;
+  int max_num_parents;
+  parent *parents; 
+  int max_num_dots;
+  dot *dots; 
+  double *grid_sum;
+  int *p8, *p2;
+  int *block_start;
+  int *from, *to;
 
+  int num_comm_partners[3],  // number of comm partners in each direction
+    *comm_partner[3],      // list of comm partners in each direction
+    max_comm_part[3],      // lengths of comm partners arrays
+    *send_size[3],         // send sizes for each comm partner
+    *recv_size[3],         // recv sizes for each comm partner
+    *comm_index[3],        // index into comm_block, _face_case, and offsets
+    *comm_num[3],          // number of blocks for each comm partner
+    *comm_block[3],        // array containing local block number for comm
+    *comm_face_case[3],    // array containing face cases for comm
+    *comm_pos[3],          // position for center of sending face
+    *comm_pos1[3],         // perpendicular position of sending face
+    *comm_send_off[3],     // offset into send buffer (global, convert to local)
+    *comm_recv_off[3],     // offset into recv buffer
+    num_cases[3],          // amount used in above six arrays
+    max_num_cases[3],      // length of above six arrays
+    s_buf_num[3],          // total amount being sent in each direction
+    r_buf_num[3];          // total amount being received in each direction
+    par_comm par_b, par_p, par_p1;
+  int s_buf_size, r_buf_size;
+  double *send_buff, *recv_buff;    /* use in comm and for balancing blocks */
 } Domain;
 
 #endif
