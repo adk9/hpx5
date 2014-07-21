@@ -1,6 +1,7 @@
 #include "main.h"
 
 static hpx_action_t _main          = 0;
+static hpx_action_t _advance       = 0;
 static hpx_action_t _initDomain    = 0;
 
 static void initdouble(double *input, const size_t size) {
@@ -14,12 +15,41 @@ static void mindouble(double *output,const double *input, const size_t size) {
   return;
 }
 
-static int _initDomain_action(RunArgs *init) {
+static int _advance_action(unsigned long *epoch) {
+  const unsigned long n = *epoch;
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *domain = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&domain))
+    return HPX_RESEND;
+
+  if ( domain->ts > domain->num_tsteps ) {
+    hpx_gas_unpin(local);
+    hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  if ( domain->ts == 0 ) {
+  } 
+
+  domain->ts++;
+
+// don't need this domain to be pinned anymore---let it move
+  hpx_gas_unpin(local);
+
+  // 5. spawn the next epoch
+  unsigned long next = n + 1;
+  return hpx_call(local, _advance, &next, sizeof(next), HPX_NULL);
+}
+
+
+static int _initDomain_action(InitArgs *init) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
+  ld->ts = 0;
+  ld->complete = init->complete;
   int *params = init->params;
 
   int max_num_blocks = params[ 0];
@@ -56,6 +86,41 @@ static int _initDomain_action(RunArgs *init) {
   int code = params[31];
   int permute = params[32];
   int num_pes = params[33];
+
+  ld->max_num_blocks = params[ 0];
+  ld->target_active = params[ 1];
+  ld->num_refine = params[ 2];
+  ld->uniform_refine = params[ 3];
+  ld->x_block_size = params[ 4];
+  ld->y_block_size = params[ 5];
+  ld->z_block_size = params[ 6];
+  ld->num_vars = params[ 7];
+  ld->comm_vars = params[ 8];
+  ld->init_block_x = params[ 9];
+  ld->init_block_y = params[10];
+  ld->init_block_z = params[11];
+  ld->reorder = params[12];
+  ld->npx = params[13];
+  ld->npy = params[14];
+  ld->npz = params[15];
+  ld->inbalance = params[16];
+  ld->refine_freq = params[17];
+  ld->report_diffusion = params[18];
+  ld->error_tol = params[19];
+  ld->num_tsteps = params[20];
+  ld->stencil = params[21];
+  ld->report_perf = params[22];
+  ld->plot_freq = params[23];
+  ld->num_objects = params[24];
+  ld->checksum_freq = params[25];
+  ld->target_max = params[26];
+  ld->target_min = params[27];
+  ld->stages_per_ts = params[28];
+  ld->lb_opt = params[29];
+  ld->block_change = params[30];
+  ld->code = params[31];
+  ld->permute = params[32];
+  ld->num_pes = params[33];
 
   ld->num_blocks = (int *) malloc((num_refine+1)*sizeof(int));    
   ld->num_blocks[0] = num_pes*init_block_x*init_block_y*init_block_z;
@@ -200,14 +265,33 @@ static int _main_action(RunArgs *runargs)
   int nDoms = runargs->params[33];
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
-
   hpx_addr_t init = hpx_lco_and_new(nDoms);  
+  hpx_addr_t complete = hpx_lco_and_new(nDoms);
+
+  int i;
   for (k=0;k<nDoms;k++) {
+    InitArgs args;
+    args.complete = complete;
+    for (i=0;i<34;i++) {
+      args.params[i] = runargs->params[i];
+    }
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _initDomain, &runargs, sizeof(RunArgs), init);
+    hpx_call(block, _initDomain, &args, sizeof(InitArgs), init);
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
+
+  // Spawn the first epoch, _advanceDomain will recursively spawn each epoch.
+  unsigned long epoch = 0;
+
+  for (k=0;k<nDoms;k++) {
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_call(block, _advance, &epoch, sizeof(epoch), HPX_NULL);
+  }
+
+  // And wait for each domain to reach the end of its simulation
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL); 
 
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g Num domains: %d\n",elapsed,nDoms);
@@ -607,6 +691,7 @@ int main(int argc, char **argv)
 
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
+  _advance   = HPX_REGISTER_ACTION(_advance_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 

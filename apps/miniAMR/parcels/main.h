@@ -24,6 +24,11 @@ typedef struct {
 } object;
 
 typedef struct {
+  hpx_addr_t complete;
+  int params[34];
+} InitArgs;
+
+typedef struct {
   int *params;
   int paramsize;
   object *objects;
@@ -87,6 +92,42 @@ typedef struct {
 } par_comm;
 
 typedef struct Domain {
+  int ts;
+  int max_num_blocks;
+  int target_active;
+  int num_refine;
+  int uniform_refine;
+  int x_block_size;
+  int y_block_size;
+  int z_block_size;
+  int num_vars;
+  int comm_vars;
+  int init_block_x;
+  int init_block_y;
+  int init_block_z;
+  int reorder;
+  int npx;
+  int npy;
+  int npz;
+  int inbalance;
+  int refine_freq;
+  int report_diffusion;
+  int error_tol;
+  int num_tsteps;
+  int stencil;
+  int report_perf;
+  int plot_freq;
+  int num_objects;
+  int checksum_freq;
+  int target_max;
+  int target_min;
+  int stages_per_ts;
+  int lb_opt;
+  int block_change;
+  int code;
+  int permute;
+  int num_pes;
+  hpx_addr_t complete;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
