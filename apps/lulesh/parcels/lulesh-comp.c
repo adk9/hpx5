@@ -97,25 +97,46 @@ int _compute_InitStressTermsForElems_action(InitStressTermsForElemsArgs *args) {
   return HPX_SUCCESS;
 }
 
+typedef struct {
+  double *p;
+  double *q;
+  double *sigxx;
+  double *sigyy;
+  double *sigzz;
+} _init_InitStressTermsForElems_env;
+
+static void
+_init_InitStressTermsForElems(void *out, const int i, const void *in)
+{
+  InitStressTermsForElemsArgs *args = out;
+  const _init_InitStressTermsForElems_env *env = in;
+  args->i = i;
+  args->p = env->p;
+  args->q = env->q;
+  args->sigxx = env->sigxx;
+  args->sigyy = env->sigyy;
+  args->sigzz = env->sigzz;
+}
+
 void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
                  double *sigzz, int numElem)
 {
-  hpx_addr_t done = hpx_lco_and_new(numElem);
-  hpx_addr_t local = hpx_thread_current_target();
-  int i;
-  for (i = 0; i < numElem; i++) {
-    InitStressTermsForElemsArgs args = {
-      .i = i,
+  _init_InitStressTermsForElems_env init = {
       .p = p,
       .q = q,
       .sigxx = sigxx,
       .sigyy = sigyy,
       .sigzz = sigzz
-    };
-    hpx_call(local, _compute_InitStressTermsForElems, &args, sizeof(InitStressTermsForElemsArgs), done);
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  };
+  hpx_par_for_sync(/* action */ _compute_InitStressTermsForElems,
+                   /* min index */ 0,
+                   /* max index */ numElem,
+                   /* branching factor */ 4,
+                   /* leaf size limit */ 4,
+                   /* action args size */ sizeof(InitStressTermsForElemsArgs),
+                   /* action args initializer */ _init_InitStressTermsForElems,
+                   /* initializer env size */ sizeof(init),
+                   /* initializer env */ &init);
 }
 
 int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
