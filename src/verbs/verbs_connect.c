@@ -16,7 +16,7 @@
 #include "libphoton.h"
 #include "logging.h"
 #include "verbs_connect.h"
-#include "verbs_exchange.h"
+#include "verbs_util.h"
 #include "verbs_ud.h"
 
 #define MAX_CQ_ENTRIES      16384

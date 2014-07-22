@@ -6,7 +6,6 @@
 typedef struct photon_rdma_FIN_ledger_entry_t {
   volatile uint8_t header;
   uint32_t request;
-  volatile uint16_t filler;
   volatile uint8_t footer;
 } photon_rdma_FIN_ledger_entry;
 

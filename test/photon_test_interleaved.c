@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "test_cfg.h"
 
-#define PHOTON_SEND_SIZE 16777216 // 16MB
+#define PHOTON_SEND_SIZE 68
 #define PHOTON_TAG       13
 
 #define NUM_REQ          9
@@ -15,7 +15,7 @@
 int main(int argc, char *argv[]) {
   uint32_t recvReq[NUM_REQ], sendReq[NUM_REQ];
   char *send[NUM_REQ], *recv[NUM_REQ];
-  int rank,size,prev,next,i;
+  int rank,size,prev,next,i,j;
 
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -33,6 +33,13 @@ int main(int argc, char *argv[]) {
     recv[i] = (char*)malloc(PHOTON_SEND_SIZE*sizeof(char));
     photon_register_buffer(send[i], PHOTON_SEND_SIZE);
     photon_register_buffer(recv[i], PHOTON_SEND_SIZE);
+
+    for (j=0; j<PHOTON_SEND_SIZE; j++) {
+      send[i][j] = rand() % 26 + 97;
+    }
+    send[i][PHOTON_SEND_SIZE] = '\0';
+    
+    printf("%d send buf[%d]: %s\n", rank, i, send[i]);
   }
 
   // everyone posts their send buffers to their next rank
@@ -47,18 +54,10 @@ int main(int argc, char *argv[]) {
     // wait for the send buffer that was posted from the previous rank
     photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i]);
     photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i+1]);
-
     photon_post_os_get(recvReq[i+1], prev, recv[i+1], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-    photon_send_FIN(recvReq[i+1], prev);
-    
     photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i+2]);    
-
     photon_post_os_get(recvReq[i], prev, recv[i], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-
     photon_post_os_get(recvReq[i+2], prev, recv[i+2], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-    photon_send_FIN(recvReq[i+2], prev);
-
-    photon_send_FIN(recvReq[i], prev);    
   }
   
   /* check that all the os_gets completed */
@@ -86,6 +85,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+    photon_send_FIN(recvReq[i], prev);
   }
 
   /* check that all the buffers we posted were retrieved */
@@ -118,6 +118,8 @@ int main(int argc, char *argv[]) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   for (i=0; i<NUM_REQ; i++) {
+    recv[i][PHOTON_SEND_SIZE] = '\0';
+    printf("%d recv buf[%d]: %s\n", rank, i, recv[i]);
     photon_unregister_buffer(send[i], PHOTON_SEND_SIZE);
     photon_unregister_buffer(recv[i], PHOTON_SEND_SIZE);
     free(send[i]);

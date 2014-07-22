@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: post_send_buf(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: post_send_buf(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
         break;
       }
       else {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     }
     else {
       if( flag ) {
-        fprintf(stderr,"%d: get(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(stderr,"%d: get(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
         break;
       }
       else {

@@ -20,13 +20,14 @@ enum test_type {PHOTON_TEST,
 
 int pp_test = PHOTON_TEST;
 int global_iters = 100;
+int msize = 1024;
 int rank, other_rank, size;
 
 struct pingpong_args {
-  int type;
-  int ping_id;
-  int pong_id;
-  char msg[1024];
+  uint32_t type;
+  uint32_t ping_id;
+  uint32_t pong_id;
+  char msg[];
 };
 
 struct pingpong_args *send_args;
@@ -36,21 +37,21 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   struct timeval start, end;
   uint32_t send_req;
 
+  send_args->type = pp_type;
   send_args->ping_id = ping_id;
   send_args->pong_id = pong_id;
-  send_args->type = pp_type;
   send_args->msg[0] = '\0';
 
   if (pp_test == PHOTON_TEST) {
-    //photon_post_send_buffer_rdma(dst, (char*)send_args, sizeof(*send_args), PHOTON_TAG, &send_req);
     //gettimeofday(&start, NULL);
-    photon_wait_recv_buffer_rdma(dst, PHOTON_TAG, &send_req);
+    photon_post_send_buffer_rdma(dst, (char*)send_args, msize, PHOTON_TAG, &send_req);
+    //photon_wait_recv_buffer_rdma(dst, PHOTON_TAG, &send_req);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
-    //  printf("%d: wait_recv time: %f\n", rank, SUBTRACT_TV(end, start));
+    //  printf("%d: post_send time: %f\n", rank, SUBTRACT_TV(end, start));
     
     //gettimeofday(&start, NULL);
-    photon_post_os_put(send_req, dst, (void*)send_args, sizeof(*send_args), PHOTON_TAG, 0);
+    //photon_post_os_put(send_req, dst, (void*)send_args, msize, PHOTON_TAG, 0);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
     //  printf("%d: os_put time: %f\n", rank, SUBTRACT_TV(end, start));
@@ -59,7 +60,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       struct photon_status_t stat;
       int tst = photon_test(send_req, &flag, &type, &stat);
       if(flag) {
-        dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %lu completed successfully\n", rank, rank, dst, pp_type, sizeof(*send_args));
+        dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %lu completed successfully\n", rank, rank, dst, pp_type, msize);
         break;
       }
       else {
@@ -67,16 +68,16 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       }
     }
     //gettimeofday(&start, NULL);
-    photon_send_FIN(send_req, dst);
+    //photon_send_FIN(send_req, dst);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
-    //printf("%d: send_FIN time: %f\n", rank, SUBTRACT_TV(end, start));
+    //  printf("%d: wait time: %f\n", rank, SUBTRACT_TV(end, start));
   }
   else if (pp_test == MPI_TEST) {
     MPI_Request mpi_r;
     MPI_Status stat;
     int flag;
-    MPI_Isend((void*)send_args, sizeof(*send_args), MPI_BYTE, dst, rank, MPI_COMM_WORLD, &mpi_r);
+    MPI_Isend((void*)send_args, msize, MPI_BYTE, dst, rank, MPI_COMM_WORLD, &mpi_r);
     //MPI_Wait(&mpi_r, &stat);
     while (1) {
       MPI_Test(&mpi_r, &flag, &stat);
@@ -118,16 +119,16 @@ void *receiver(void *args) {
     */
 
     if (pp_test == PHOTON_TEST) {
-      //photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
-      //photon_post_os_get(recv_req, other_rank, (void*)recv_args, sizeof(*recv_args), PHOTON_TAG, 0);
       //gettimeofday(&start, NULL);
-      photon_post_recv_buffer_rdma(other_rank, (void*)recv_args, sizeof(*recv_args), PHOTON_TAG, &recv_req);
+      photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
+      photon_post_os_get(recv_req, other_rank, (void*)recv_args, msize, PHOTON_TAG, 0);
+      //photon_post_recv_buffer_rdma(other_rank, (void*)recv_args, msize, PHOTON_TAG, &recv_req);
       while (1) {
         int flag, type;
         struct photon_status_t stat;
         int tst = photon_test(recv_req, &flag, &type, &stat);
         if(flag) {
-          dbg_printf("%d: recv_ping(%d<-%d) of size %lu completed successfully\n", rank, rank, (int)stat.src_addr, sizeof(*args));
+          dbg_printf("%d: recv_ping(%d<-%d) of size %lu completed successfully\n", rank, rank, (int)stat.src_addr, msize);
           break;
         }
         else {
@@ -135,14 +136,15 @@ void *receiver(void *args) {
         }
       }
       //gettimeofday(&end, NULL);
-      //printf("%d: post_recv time: %f\n", rank, SUBTRACT_TV(end, start));
-      //photon_send_FIN(recv_req, other_rank);
+      //if (rank == 0)
+      //printf("%d: recv time: %f\n", rank, SUBTRACT_TV(end, start));
+      photon_send_FIN(recv_req, other_rank);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Request mpi_r;
       MPI_Status stat;
       int flag;
-      MPI_Irecv((void*)recv_args, sizeof(*recv_args), MPI_BYTE, other_rank, other_rank, MPI_COMM_WORLD, &mpi_r);
+      MPI_Irecv((void*)recv_args, msize, MPI_BYTE, other_rank, other_rank, MPI_COMM_WORLD, &mpi_r);
       //MPI_Wait(&mpi_r, &stat);
       while (1) {
         MPI_Test(&mpi_r, &flag, &stat);
@@ -185,12 +187,13 @@ int main(int argc, char **argv) {
   pthread_t th;
   struct timeval start, end;
 
-  if (argc > 2) {
+  if (argc > 3) {
     test = strdup(argv[1]);
     global_iters = atoi(argv[2]);
+    msize = atoi(argv[3]);
   }
-  if (global_iters < 1) {
-    printf("Usage: %s <type> <iters>\n", argv[0]);
+  if (argc <= 3 || global_iters < 1) {
+    printf("Usage: %s <type> <iters> <size>\n", argv[0]);
     exit(-1);
   }
 
@@ -209,12 +212,12 @@ int main(int argc, char **argv) {
 
   photon_init(&cfg);
 
-  send_args = malloc(sizeof(struct pingpong_args));
-  recv_args = malloc(sizeof(struct pingpong_args));
+  send_args = (struct pingpong_args*)malloc(msize);
+  recv_args = (struct pingpong_args*)malloc(msize);
 
   if (pp_test == PHOTON_TEST) {
-    photon_register_buffer((char*)send_args, sizeof(*send_args));
-    photon_register_buffer((char*)recv_args, sizeof(*recv_args));
+    photon_register_buffer((char*)send_args, msize);
+    photon_register_buffer((char*)recv_args, msize);
   }
 
   gettimeofday(&start, NULL);
@@ -230,8 +233,18 @@ int main(int argc, char **argv) {
 
   gettimeofday(&end, NULL);
 
-  if (rank == 0)
+  if (rank == 0) {
     printf("%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
+    
+    float usec = (end.tv_sec - start.tv_sec) * 1000000 +
+      (end.tv_usec - start.tv_usec);
+    long long bytes = (long long) msize * global_iters * 2;
+    
+    printf("%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
+           bytes, usec / 1000000., bytes * 8. / usec);
+    printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+           global_iters, usec / 1000000., usec / global_iters);
+  }
 
   if (pp_test == PHOTON_TEST)
     photon_finalize();

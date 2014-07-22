@@ -8,10 +8,11 @@
 
 #include "photon_backend.h"
 #include "photon_buffer.h"
+#include "photon_exchange.h"
 
 #include "verbs.h"
 #include "verbs_connect.h"
-#include "verbs_exchange.h"
+#include "verbs_util.h"
 #include "verbs_ud.h"
 #include "htable.h"
 #include "logging.h"
@@ -212,13 +213,18 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       }
     }
 
-    if (__verbs_exchange_ri_ledgers(photon_processes) != 0) {
+    if (photon_exchange_ri_ledgers(photon_processes) != 0) {
       log_err("couldn't exchange rdma ledgers");
       goto error_exit;
     }
 
-    if (__verbs_exchange_FIN_ledger(photon_processes) != 0) {
+    if (photon_exchange_FIN_ledger(photon_processes) != 0) {
       log_err("couldn't exchange send ledgers");
+      goto error_exit;
+    }
+    
+    if (photon_exchange_eager_buf(photon_processes) != 0) {
+      log_err("couldn't exchange eager buf");
       goto error_exit;
     }
   }
@@ -351,6 +357,11 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
     .wr.rdma.rkey        = args->rkey
   };
 
+  // FIXME: make sure we can send inline data for all sge
+  //if (args->sg_list[0].length <= 64) {
+  //  wr.send_flags |= IBV_SEND_INLINE;
+  //}
+
   retries = MAX_RETRIES;
   do {
     err = ibv_post_send(verbs_ctx.qp[args->proc], &wr, &bad_wr);
@@ -358,7 +369,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
   while(err && --retries);
 
   if (err != 0) {
-    dbg_err("Failure in ibv_post_send(): %s", strerror(err));
+    log_err("Failure in ibv_post_send(): %s", strerror(err));
     return PHOTON_ERROR;
   }
 
@@ -529,7 +540,8 @@ static int verbs_get_event(photonEventStatus stat) {
     return 1;
   }
   else if (wc.status != IBV_WC_SUCCESS) {
-    log_err("(status==%d) != IBV_WC_SUCCESS: %s", wc.status, strerror(wc.status));
+    log_err("(status==%d) != IBV_WC_SUCCESS: %s",
+            wc.status, ibv_wc_status_str(wc.status));
     goto error_exit;
   }
   

@@ -7,6 +7,7 @@
 #include "photon_msgbuffer.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "photon_rdma_FIN_ledger.h"
+#include "photon_rdma_EAGER_buf.h"
 #include "squeue.h"
 
 #ifdef HAVE_XSP
@@ -18,8 +19,7 @@
 #define DEF_NUM_REQUESTS     5*512
 
 /* this should not exceed MCA max_qp_wr (typically 16k) */
-#define LEDGER_SIZE          512
-#define SMSG_SIZE            (4 * 4096)
+#define LEDGER_SIZE          64
 #define MAX_BUF_ENTRIES      64
 
 #define LEDGER               1
@@ -33,9 +33,11 @@
 
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
+#define REQUEST_FLAG_EAGER   0x02
 
 #define REQUEST_COOK_SEND    0xbeef
 #define REQUEST_COOK_RECV    0xcafebabe
+#define REQUEST_COOK_EAGER   0xdeadfeed
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
@@ -46,7 +48,8 @@ typedef struct proc_info_t {
   photonRILedger  remote_rcv_info_ledger;
   photonFINLedger local_FIN_ledger;
   photonFINLedger remote_FIN_ledger;
-
+  
+  photonEagerBuf  eager_buf;
   photonMsgBuf    smsgbuf;
 
 #ifdef HAVE_XSP
@@ -65,6 +68,7 @@ typedef struct photon_req_t {
   int type;
   int proc;
   int tag;
+  int curr;
   int bentries[MAX_BUF_ENTRIES];
   int num_entries;
   uint64_t mmask;

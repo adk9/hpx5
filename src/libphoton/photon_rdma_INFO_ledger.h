@@ -9,8 +9,8 @@ typedef struct photon_ri_ledger_entry_t {
   uint64_t size;
   struct photon_buffer_priv_t priv;
   uint32_t request;
-  int tag;
-  volatile uint16_t filler;
+  uint32_t tag;
+  uint32_t flags;
   volatile uint8_t footer;
 } photon_ri_ledger_entry;
 

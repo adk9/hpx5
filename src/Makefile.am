@@ -15,17 +15,18 @@ libphoton_la_SOURCES = libphoton/libphoton.c           \
 		       libphoton/photon_msgbuffer.c            \
 		       libphoton/photon_buffertable.c          \
 		       libphoton/photon_rdma_FIN_ledger.c      \
-		       libphoton/photon_rdma_INFO_ledger.c
+		       libphoton/photon_rdma_INFO_ledger.c     \
+	               libphoton/photon_rdma_EAGER_buf.c
 
 libphoton_ladir = @top_srcdir@/src/libphoton
 libphoton_la_LDFLAGS = @THREAD_LIBS@ @MPI_LIBS@
-libphoton_la_LIBADD = @top_srcdir@/src/util/libutil.la
+libphoton_la_LIBADD = @top_builddir@/src/util/libutil.la
 
 if HAVE_VERBS
 AM_CFLAGS += -I@top_srcdir@/src/verbs
 libphoton_la_LDFLAGS += @VERBS_LIBS@
 libphoton_la_SOURCES += verbs/verbs.c                  \
-		    verbs/verbs_exchange.c                     \
+		    verbs/verbs_util.c                         \
 		    verbs/verbs_connect.c                      \
 		    verbs/verbs_buffer.c                       \
 	            verbs/verbs_ud.c
@@ -35,7 +36,6 @@ if HAVE_UGNI
 AM_CFLAGS += -I@top_srcdir@/src/ugni @UGNI_CFLAGS@
 libphoton_la_LDFLAGS += @UGNI_LIBS@
 libphoton_la_SOURCES += ugni/photon_ugni.c             \
-		    ugni/photon_ugni_exchange.c                \
 		    ugni/photon_ugni_connect.c                 \
 		    ugni/photon_ugni_buffer.c                  \
 		    ugni/utility_functions.c

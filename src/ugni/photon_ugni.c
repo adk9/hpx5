@@ -7,10 +7,10 @@
 
 #include "photon_backend.h"
 #include "photon_buffer.h"
+#include "photon_exchange.h"
 
 #include "photon_ugni.h"
 #include "photon_ugni_connect.h"
-#include "photon_ugni_exchange.h"
 #include "logging.h"
 #include "utility_functions.h"
 
@@ -120,17 +120,21 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
     goto error_exit;
   }
 
-  /* TODO: pull out exchange */
-  if (__ugni_exchange_ri_ledgers(photon_processes) != 0) {
+  if (photon_exchange_ri_ledgers(photon_processes) != 0) {
     log_err("couldn't exchange rdma ledgers");
     goto error_exit;
   }
 
-  if (__ugni_exchange_FIN_ledger(photon_processes) != 0) {
+  if (photon_exchange_FIN_ledger(photon_processes) != 0) {
     log_err("couldn't exchange send ledgers");
     goto error_exit;
   }
 
+  if (photon_exchange_eager_buf(photon_processes) != 0) {
+    log_err("couldn't exchange eager buf");
+    goto error_exit;
+  }
+  
   __initialized = 1;
 
   dbg_info("ended successfully =============");
@@ -232,7 +236,7 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_rdma(&args, GNI_POST_RDMA_PUT);
+  return __ugni_do_fma(&args, GNI_POST_FMA_PUT);
 }
 
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
@@ -247,7 +251,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_rdma(&args, GNI_POST_RDMA_GET);
+  return __ugni_do_fma(&args, GNI_POST_FMA_GET);
 }
 
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
