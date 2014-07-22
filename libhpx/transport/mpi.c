@@ -104,7 +104,7 @@ static void _mpi_unpin(transport_class_t *transport, const void* buffer,
 /// Put data via MPI_Put
 /// ----------------------------------------------------------------------------
 static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
-                    void *rbuffer, size_t rn, void *r)
+                    void *rbuffer, size_t rn, void *rid, void *r)
 {
   dbg_log("MPI: put unsupported.\n");
   return HPX_SUCCESS;
@@ -114,7 +114,7 @@ static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
 /// Get data via MPI_Get
 /// ----------------------------------------------------------------------------
 static int _mpi_get(transport_class_t *t, int dest, void *buffer, size_t n,
-                    const void *rdata, size_t rn, void *r)
+                    const void *rdata, size_t rn, void *rid, void *r)
 {
   dbg_log("MPI: get unsupported.\n");
   return HPX_SUCCESS;
