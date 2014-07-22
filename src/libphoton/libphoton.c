@@ -302,22 +302,22 @@ int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, i
   return __photon_default->post_os_get(request, proc, ptr, size, tag, r_offset);
 }
 
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->post_os_put_direct(proc, ptr, size, tag, rbuf, request);
+  return __photon_default->post_os_put_direct(proc, ptr, size, rbuf, flags, request);
 }
 
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->post_os_get_direct(proc, ptr, size, tag, rbuf, request);
+  return __photon_default->post_os_get_direct(proc, ptr, size, rbuf, flags, request);
 }
 
 int photon_send_FIN(photon_rid request, int proc) {

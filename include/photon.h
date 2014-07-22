@@ -84,6 +84,9 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_SEND_LEDGER     0x0000
 #define PHOTON_RECV_LEDGER     0x0001
 
+#define PHOTON_REQ_NIL         0x0000
+#define PHOTON_REQ_USERID      0x0001
+
 #define PHOTON_ANY_SOURCE      -1
 
 int photon_initialized();
@@ -114,8 +117,8 @@ int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
 int photon_send_FIN(photon_rid request, int proc);
 int photon_test(photon_rid request, int *flag, int *type, photonStatus status);
 

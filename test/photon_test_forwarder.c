@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
   /* rank=size,size+1,...size+n are the forwarders
      need a proper mapping and lookup yet */
-  photon_post_os_get_direct(fproc, recv, alloc_size, PHOTON_TAG, &desc, &recvReq);
+  photon_post_os_get_direct(fproc, recv, alloc_size, &desc, PHOTON_REQ_NIL, &recvReq);
 
   while(1) {
     int flag, type;

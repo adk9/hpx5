@@ -130,8 +130,8 @@ struct photon_backend_t {
   int (*wait_send_request_rdma)(int tag);
   int (*post_os_put)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
   int (*post_os_get)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-  int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
-  int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+  int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
+  int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
   int (*send_FIN)(photon_rid request, int proc);
   int (*wait_any)(int *ret_proc, photon_rid *ret_req);
   int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);

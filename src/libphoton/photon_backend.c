@@ -47,8 +47,8 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request)
 static int _photon_wait_send_request_rdma(int tag);
 static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
-static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
+static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
 static int _photon_send_FIN(photon_rid request, int proc);
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req);
 static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req);
@@ -141,7 +141,7 @@ static inline photonRequest __photon_get_request() {
 }
 
 /* request id has already been set  */
-static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, photon_rid request) {
+static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int flags, photon_rid request) {
   photonRequest req;
   
   req = __photon_get_request();
@@ -154,19 +154,20 @@ static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, p
   req->state = REQUEST_PENDING;
   req->type = EVQUEUE;
   req->proc = proc;
-  req->tag = tag;
+  req->tag = 0;
   req->length = rbuf->size;
+  req->flags = flags;
   
   /* fill in the internal buffer with the rbuf contents */
   memcpy(&req->remote_buffer, rbuf, sizeof(*rbuf));
   /* there is no matching request from the remote side, so fill in local values */
   req->remote_buffer.request = request;
-  req->remote_buffer.tag = tag;
+  req->remote_buffer.tag = req->tag;
   
   dbg_info("Remote request: %u", request);
   dbg_info("Addr: %p", (void *)rbuf->addr);
   dbg_info("Size: %lu", rbuf->size);
-  dbg_info("Tag: %d",	tag);
+  dbg_info("Flags: %d",	flags);
   dbg_info("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
   
   dbg_info("Inserting the OS put request into the request table: %d/%d/%p", proc, request, req);
@@ -617,7 +618,7 @@ static int __photon_nbpop_event(photonRequest req) {
   dbg_info("(%lu)",req->id);
 
   if(req->state == REQUEST_PENDING) {
-    uint32_t cookie;
+    uint64_t cookie;
     uint32_t prefix;
     photon_event_status event;
 
@@ -633,6 +634,12 @@ static int __photon_nbpop_event(photonRequest req) {
     cookie = (uint32_t)( (event.id<<32)>>32);
     prefix = (uint32_t)(event.id>>32);
     
+    // if the user set the request id, then we just passed it along as the WR id
+    // in such cases, that user-defined id is also in the request table
+    if (req->flags & PHOTON_REQ_USERID) {
+      cookie = event.id;
+    }
+
     dbg_info("(req type=%d) got completion for: %u", req->type, cookie);
     
     if ((prefix == REQUEST_COOK_EAGER) ||
@@ -647,12 +654,13 @@ static int __photon_nbpop_event(photonRequest req) {
     // handle any other request completions we might get from the backend event queue
     else if (cookie != NULL_COOKIE) {
       photonRequest tmp_req;
-      if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) == 0) {
+      if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
         if (tmp_req->type == EVQUEUE) {
           dbg_info("setting request completed with cookie: %u",  cookie);
           tmp_req->state = REQUEST_COMPLETED;
         }
       }
+      // FIXME: should also check htable for the full event.id here
     }
   }
   
@@ -1929,7 +1937,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
   int rc;
@@ -1942,14 +1950,18 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int ta
     return -1;
   }
 
-  request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
-
-  cookie = (( (uint64_t)proc)<<32) | request_id;
-  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
+  if ((flags & PHOTON_REQ_USERID) && request) {
+    request_id = *request;
+    cookie = request_id;
+  }
+  else {
+    request_id = INC_COUNTER(curr_cookie);
+    *request = request_id;
+    dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+    cookie = (( (uint64_t)proc)<<32) | request_id;
+  }
 
   {
-
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, rbuf->addr,
                                     rbuf->size, &(db->buf), rbuf, cookie);
     
@@ -1957,12 +1969,12 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int ta
       dbg_err("RDMA GET failed for %lu\n", cookie);
       goto error_exit;
     }
+
+    dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
   }
 
   if (request != NULL) {
-    *request = request_id;
-    
-    rc = __photon_setup_request_direct(rbuf, proc, tag, request_id);
+    rc = __photon_setup_request_direct(rbuf, proc, flags, request_id);
     if (rc != PHOTON_OK) {
       dbg_info("Could not setup direct buffer request");
       goto error_exit;
@@ -1978,7 +1990,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
+static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
   int rc;
@@ -1991,11 +2003,16 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int ta
     return -1;
   }
 
-  request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
-
-  cookie = (( (uint64_t)proc)<<32) | request_id;
-  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
+  if ((flags & PHOTON_REQ_USERID) && request) {
+    request_id = *request;
+    cookie = request_id;
+  }
+  else {
+    request_id = INC_COUNTER(curr_cookie);
+    *request = request_id;
+    dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+    cookie = (( (uint64_t)proc)<<32) | request_id;
+  }
 
   {
 
@@ -2006,12 +2023,12 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int ta
       dbg_err("RDMA GET failed for %lu\n", cookie);
       goto error_exit;
     }
+    
+    dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
   }
 
   if (request != NULL) {
-    *request = request_id;
-    
-    rc = __photon_setup_request_direct(rbuf, proc, tag, request_id);
+    rc = __photon_setup_request_direct(rbuf, proc, flags, request_id);
     if (rc != PHOTON_OK) {
       dbg_info("Could not setup direct buffer request");
       goto error_exit;
