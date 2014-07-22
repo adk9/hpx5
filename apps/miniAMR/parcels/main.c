@@ -29,7 +29,7 @@ static int _advance_action(unsigned long *epoch) {
   }
 
   if ( domain->ts == 0 ) {
-  } 
+  }
 
   domain->ts++;
 
@@ -122,14 +122,14 @@ static int _initDomain_action(InitArgs *init) {
   ld->permute = params[32];
   ld->num_pes = params[33];
 
-  ld->num_blocks = (int *) malloc((num_refine+1)*sizeof(int));    
+  ld->num_blocks = (int *) malloc((num_refine+1)*sizeof(int));
   ld->num_blocks[0] = num_pes*init_block_x*init_block_y*init_block_z;
 
   ld->local_num_blocks = (int *) malloc((num_refine+1)*sizeof(int));
   ld->local_num_blocks[0] = init_block_x*init_block_y*init_block_z;
 
   ld->blocks = (block *) malloc(max_num_blocks*sizeof(block));
-  
+
   int n,m,i,j,k;
   for (n = 0; n < max_num_blocks; n++) {
       ld->blocks[n].number = -1;
@@ -228,7 +228,7 @@ static int _initDomain_action(InitArgs *init) {
    ld->par_p1.comm_b = (int *) malloc(ld->par_b.max_cases*sizeof(int));
    ld->par_p1.comm_p = (int *) malloc(ld->par_b.max_cases*sizeof(int));
    ld->par_p1.comm_c = (int *) malloc(ld->par_b.max_cases*sizeof(int));
-  
+
   if (num_refine) {
       ld->s_buf_size = (int) (0.10*((double)max_num_blocks))*comm_vars*
                    (x_block_size+2)*(y_block_size+2)*(z_block_size+2);
@@ -265,16 +265,15 @@ static int _main_action(RunArgs *runargs)
   int nDoms = runargs->params[33];
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
-  hpx_addr_t init = hpx_lco_and_new(nDoms);  
+  hpx_addr_t init = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   int i;
   for (k=0;k<nDoms;k++) {
-    InitArgs args;
-    args.complete = complete;
-    for (i=0;i<34;i++) {
-      args.params[i] = runargs->params[i];
-    }
+    InitArgs args = {
+      .complete = complete
+    };
+    memcpy(&args.params, runargs->params, 34 * sizeof(args.params[0]));
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _initDomain, &args, sizeof(InitArgs), init);
   }
@@ -291,7 +290,7 @@ static int _main_action(RunArgs *runargs)
 
   // And wait for each domain to reach the end of its simulation
   hpx_lco_wait(complete);
-  hpx_lco_delete(complete, HPX_NULL); 
+  hpx_lco_delete(complete, HPX_NULL);
 
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g Num domains: %d\n",elapsed,nDoms);
@@ -524,7 +523,7 @@ int main(int argc, char **argv)
 
   int i;
   for (i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "-c")) 
+    if (!strcmp(argv[i], "-c"))
       cfg.cores = atoi(argv[++i]);
     else if (!strcmp(argv[i], "-t" ))
       cfg.threads = atoi(argv[++i]);
