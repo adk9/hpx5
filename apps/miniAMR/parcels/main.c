@@ -15,6 +15,8 @@ static void mindouble(double *output,const double *input, const size_t size) {
   return;
 }
 
+void init(Domain *domain);
+
 static int _advance_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
@@ -29,6 +31,7 @@ static int _advance_action(unsigned long *epoch) {
   }
 
   if ( domain->ts == 0 ) {
+    //init(domain);
   }
 
   domain->ts++;
@@ -50,6 +53,8 @@ static int _initDomain_action(InitArgs *init) {
 
   ld->ts = 0;
   ld->complete = init->complete;
+  ld->my_pe = init->rank;
+  ld->num_pes = init->ndoms;
   int *params = init->params;
 
   int max_num_blocks = params[ 0];
@@ -287,7 +292,8 @@ static int _main_action(RunArgs *runargs)
     // we were using hpx_call_async, or a parcel_send, we'd need to wait for the
     // send to complete locally to reuse the buffer.
     //
-    // args->rank = k
+    args->rank = k;
+    args->ndoms = nDoms;
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _initDomain, args, sizeof(InitArgs), init);
   }
