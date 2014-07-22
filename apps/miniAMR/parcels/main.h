@@ -27,6 +27,8 @@ typedef struct {
   hpx_addr_t complete;
   int params[34];
   int objectsize;
+  int rank;
+  int ndoms;
   object objects[];
 } InitArgs;
 
@@ -120,6 +122,7 @@ typedef struct Domain {
   int refine_freq;
   int report_diffusion;
   int error_tol;
+  double tol;
   int num_tsteps;
   int stencil;
   int report_perf;
@@ -169,6 +172,23 @@ typedef struct Domain {
     par_comm par_b, par_p, par_p1;
   int s_buf_size, r_buf_size;
   double *send_buff, *recv_buff;    /* use in comm and for balancing blocks */
+
+  int global_max_b;
+  int x_block_half, y_block_half, z_block_half;
+  int msg_len[3][4];
+  int max_num_req;
+  int *me;
+  int *np;
+  int max_active_block;
+  int num_active;
+  int global_active;
+  int num_parents;
+  int mesh_size[3];
+  int max_mesh_size;
+  int *bin;
+  int *gbin;
+  int my_pe;
+  int max_active_parent;
 } Domain;
 
 #endif
