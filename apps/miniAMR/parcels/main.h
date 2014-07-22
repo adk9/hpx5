@@ -26,14 +26,21 @@ typedef struct {
 typedef struct {
   hpx_addr_t complete;
   int params[34];
+  int objectsize;
+  object objects[];
 } InitArgs;
 
 typedef struct {
   int *params;
   int paramsize;
-  object *objects;
   int objectsize;
+  object objects[];
 } RunArgs;
+
+static inline size_t RunArgs_size(RunArgs *runargs) {
+  assert(runargs != NULL);
+  return sizeof(*runargs) + (sizeof(object) * runargs->objectsize);
+}
 
 typedef struct {
    int number;     // number of block
@@ -134,9 +141,9 @@ typedef struct Domain {
   int *sorted_index;
   sorted_block *sorted_list;
   int max_num_parents;
-  parent *parents; 
+  parent *parents;
   int max_num_dots;
-  dot *dots; 
+  dot *dots;
   double *grid_sum;
   int *p8, *p2;
   int *block_start;
