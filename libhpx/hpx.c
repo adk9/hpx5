@@ -84,7 +84,7 @@ static void *_map_local(uint32_t bytes) {
 }
 
 
-static hpx_action_t _bcast;
+static hpx_action_t _bcast = 0;
 
 
 typedef struct {
@@ -104,10 +104,6 @@ static int _bcast_action(_bcast_args_t *args) {
   return HPX_SUCCESS;
 }
 
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  _bcast = HPX_REGISTER_ACTION(_bcast_action);
-}
 
 
 int hpx_init(const hpx_config_t *cfg) {
@@ -453,13 +449,48 @@ hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   hpx_call(dst, locality_gas_move, &src, sizeof(src), lco);
 }
 
-void hpx_gas_global_free(hpx_addr_t addr) {
-  dbg_log("unimplemented");
+
+static hpx_action_t _gas_global_free = 0;
+
+
+/// Perform a global free operation.
+///
+/// Right now we're leaking the global address space associated with this
+/// allocation. In addition, we're not correctly dealing with freeing a
+/// distributed array.
+///
+/// @param unused -
+static int
+_gas_global_free_action(void *unused)
+{
+  hpx_addr_t addr = hpx_thread_current_target();
+  void *local = NULL;
+  if (!hpx_gas_try_pin(addr, &local))
+    return HPX_RESEND;
+  free(local);
+  hpx_gas_unpin(addr);
+  return HPX_SUCCESS;
 }
+
+
+void
+hpx_gas_global_free(hpx_addr_t addr, hpx_addr_t sync)
+{
+  // currently I don't care about the performance of this call, so we just use
+  // the action interface for freeing.
+  hpx_call_async(addr, _gas_global_free, NULL, 0, HPX_NULL, sync);
+}
+
 
 hpx_addr_t
 hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
   assert(bytes != 0);
   hpx_addr_t addr = HPX_ADDR_INIT(offset, base, bytes);
   return addr;
+}
+
+
+static HPX_CONSTRUCTOR void _init_actions(void) {
+  _bcast = HPX_REGISTER_ACTION(_bcast_action);
+  _gas_global_free = HPX_REGISTER_ACTION(_gas_global_free_action);
 }
