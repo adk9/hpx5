@@ -269,16 +269,31 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   int i;
+
+  // initialize an InitArgs structure with the data from the RunArgs
+  // structure---this requires dynamic allocation because the number of in-place
+  // objects in the variable length "objects" array is a runtime value
+  InitArgs *args = malloc(sizeof(*args) +
+                          sizeof(object) * runargs->objectsize);
+  args->complete = complete;
+  memcpy(&args->params, runargs->params, 34 * sizeof(int));
+  args->objectsize = runargs->objectsize;
+  memcpy(&args->objects, &runargs->objects,
+         sizeof(object) * runargs->objectsize);
+
   for (k=0;k<nDoms;k++) {
-    InitArgs args = {
-      .complete = complete
-    };
-    memcpy(&args.params, runargs->params, 34 * sizeof(args.params[0]));
+    // Each time through this loop, update the rank in the data we'll send
+    // out. We can reuse the buffer because hpx_call is locally synchronous. If
+    // we were using hpx_call_async, or a parcel_send, we'd need to wait for the
+    // send to complete locally to reuse the buffer.
+    //
+    // args->rank = k
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _initDomain, &args, sizeof(InitArgs), init);
+    hpx_call(block, _initDomain, args, sizeof(InitArgs), init);
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
+  free(args);
 
   // Spawn the first epoch, _advanceDomain will recursively spawn each epoch.
   unsigned long epoch = 0;
@@ -519,7 +534,7 @@ int main(int argc, char **argv)
   int permute = 0;
   int object_num = 0;
 
-  RunArgs *runargs = malloc(sizeof(RunArgs));
+  RunArgs *runargs = NULL;
 
   int i;
   for (i = 1; i < argc; i++) {
@@ -601,9 +616,14 @@ int main(int argc, char **argv)
        code = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--num_objects")) {
        num_objects = atoi(argv[++i]);
-       runargs->objects = (object *) malloc(num_objects*sizeof(object));
+       runargs =  malloc(sizeof(RunArgs) + (sizeof(object) * num_objects));
        object_num = 0;
     } else if (!strcmp(argv[i], "--object")) {
+       if (runargs == NULL) {
+         printf("please specify --num_objects before --object on the command "
+                "line\n");
+         exit(-1);
+       }
        if (object_num >= num_objects) {
           printf("object number greater than num_objects\n");
           exit(-1);
@@ -676,6 +696,10 @@ int main(int argc, char **argv)
      return 1;
   }
 
+  // runargs wasn't allocated if there was no --num_objects on the command line
+  if (!runargs)
+    runargs = malloc(sizeof(*runargs));
+
   for (object_num = 0; object_num < num_objects; object_num++)
       for (i = 0; i < 3; i++) {
          runargs->objects[object_num].orig_cen[i] = runargs->objects[object_num].cen[i];
@@ -697,7 +721,7 @@ int main(int argc, char **argv)
   runargs->params = params;
   runargs->paramsize = 34;
   runargs->objectsize = num_objects;
-  return hpx_run(_main, runargs, sizeof(RunArgs));
+  return hpx_run(_main, runargs, RunArgs_size(runargs));
 
   return 0;
 }
