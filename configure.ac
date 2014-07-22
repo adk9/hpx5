@@ -219,7 +219,13 @@ AC_CONFIG_FILES([
 # src/libhpx.pc
 
 AS_IF([test "x$enable_apps" != xno],
-  [AC_CONFIG_FILES([apps/Makefile apps/fmm/Makefile apps/fmm/parcels/Makefile apps/lulesh/Makefile apps/lulesh/parcels/Makefile])])
+  [AC_CONFIG_FILES([apps/Makefile
+  apps/fmm/Makefile
+  apps/fmm/parcels/Makefile
+  apps/lulesh/Makefile
+  apps/lulesh/parcels/Makefile
+  apps/miniAMR/Makefile
+  apps/miniAMR/parcels/Makefile])])
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
 AS_IF([test "x$enable_tests" != xno],
