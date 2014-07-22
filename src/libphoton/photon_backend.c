@@ -35,23 +35,23 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss);
 static int _photon_finalize(void);
 static int _photon_register_buffer(void *buffer, uint64_t size);
 static int _photon_unregister_buffer(void *buffer, uint64_t size);
-static int _photon_test(uint32_t request, int *flag, int *type, photonStatus status);
-static int _photon_wait(uint32_t request);
-static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
+static int _photon_test(photon_rid request, int *flag, int *type, photonStatus status);
+static int _photon_wait(photon_rid request);
+static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, photon_rid *request);
 static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
-static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
-static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request);
-static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
+static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request);
+static int _photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request);
+static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
 static int _photon_wait_send_request_rdma(int tag);
-static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-static int _photon_send_FIN(uint32_t request, int proc);
-static int _photon_wait_any(int *ret_proc, uint32_t *ret_req);
-static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
+static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+static int _photon_send_FIN(photon_rid request, int proc);
+static int _photon_wait_any(int *ret_proc, photon_rid *ret_req);
+static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req);
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
 static int _photon_probe(photonAddr addr, int *flag, photonStatus status);
 static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter);
@@ -63,9 +63,9 @@ static int __photon_nbpop_ledger(photonRequest req);
 static int __photon_wait_ledger(photonRequest req);
 static int __photon_wait_event(photonRequest req);
 
-static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request);
-static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr, int proc, uint32_t *request);
-static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, uint32_t request);
+static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, photon_rid request);
+static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr, int proc, photon_rid *request);
+static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, photon_rid request);
 static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize, int bindex, int nbufs, uint64_t request);
 
 static int __photon_handle_send_event(photonRequest req, uint64_t id);
@@ -141,7 +141,7 @@ static inline photonRequest __photon_get_request() {
 }
 
 /* request id has already been set  */
-static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, uint32_t request) {
+static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, photon_rid request) {
   photonRequest req;
   
   req = __photon_get_request();
@@ -170,7 +170,7 @@ static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, u
   dbg_info("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
   
   dbg_info("Inserting the OS put request into the request table: %d/%d/%p", proc, request, req);
-  if (htable_insert(reqtable, (uint64_t)request, req) != 0) {
+  if (htable_insert(reqtable, request, req) != 0) {
     // this is bad, we've submitted the request, but we can't track it
     log_err("Couldn't save request in hashtable");
   }
@@ -182,9 +182,9 @@ static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag, u
 }
 
 /* generates a new request for the received ledger event */
-static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr, int proc, uint32_t *request) {
+static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr, int proc, photon_rid *request) {
   photonRequest req;
-  uint32_t request_id;
+  photon_rid request_id;
 
   request_id = INC_COUNTER(curr_cookie);
   dbg_info("Incrementing curr_cookie_count to: %d", request_id);
@@ -217,7 +217,7 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr,
   dbg_info("Keys: 0x%016lx / 0x%016lx", ri_entry->priv.key0, ri_entry->priv.key1);
 
   dbg_info("Inserting the new send buffer request into the request table: %d/%d/%p", proc, request_id, req);
-  if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
+  if (htable_insert(reqtable, request_id, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
     goto error_exit;
@@ -272,7 +272,7 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int m
 }
 
 /* generates a new request for the send wr */
-static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, uint32_t request) {
+static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, photon_rid request) {
   photonRequest req;
 
   req = __photon_get_request();
@@ -293,7 +293,7 @@ static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, ui
   
   dbg_info("Inserting the new send request into the sr table: 0x%016lx/%u/%p",
            addr->global.proc_id, request, req);
-  if (htable_insert(sr_reqtable, (uint64_t)request, req) != 0) {
+  if (htable_insert(sr_reqtable, request, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
     goto error_exit;
@@ -672,9 +672,9 @@ error_exit:
   return -1;
 }
 
-static int __photon_handle_send_event(photonRequest req, uint64_t id) {
+static int __photon_handle_send_event(photonRequest req, photon_rid id) {
   photonRequest creq = NULL;
-  uint32_t cookie;
+  photon_rid cookie;
   int i;
 
   dbg_info("handling send completion with id: 0x%016lx", id);
@@ -718,7 +718,7 @@ static int __photon_handle_send_event(photonRequest req, uint64_t id) {
   return PHOTON_OK;
 }
 
-static int __photon_handle_recv_event(uint64_t id) {
+static int __photon_handle_recv_event(photon_rid id) {
   photonRequest req;
   photon_ud_hdr *hdr;
   uint64_t cookie;
@@ -880,7 +880,7 @@ static int __photon_nbpop_ledger(photonRequest req) {
   
   if (req->state == REQUEST_COMPLETED) {
     dbg_info("removing RDMA req: %lu", req->id);
-    htable_remove(reqtable, (uint64_t)req->id, NULL);
+    htable_remove(reqtable, req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
   }
   
@@ -990,15 +990,15 @@ error_exit:
 // Regardless of the return value and the value of "flag", the parameter "type"
 // will be set to 0 (zero) when the request is of type event and 1 (one) when the
 // request is of type ledger.  type is set to 2 when the request was a send/recv
-static int _photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
+static int _photon_test(photon_rid request, int *flag, int *type, photonStatus status) {
   photonRequest req;
   void *test;
   int ret_val;
 
   dbg_info("(%d)",request);
 
-  if (htable_lookup(reqtable, (uint64_t)request, &test) != 0) {
-    if (htable_lookup(sr_reqtable, (uint64_t)request, &test) != 0) {
+  if (htable_lookup(reqtable, request, &test) != 0) {
+    if (htable_lookup(sr_reqtable, request, &test) != 0) {
       dbg_info("Request is not in any request-table");
       // Unlike photon_wait(), we might call photon_test() multiple times on a request,
       // e.g., in an unguarded loop.	flag==-1 will signify that the operation is
@@ -1067,7 +1067,7 @@ static int _photon_test(uint32_t request, int *flag, int *type, photonStatus sta
   }
 }
 
-static int _photon_wait(uint32_t request) {
+static int _photon_wait(photon_rid request) {
   photonRequest req;
 
   dbg_info("(%d)",request);
@@ -1122,7 +1122,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
 
   photon_addr saddr;
   int bufs[MAX_BUF_ENTRIES];
-  uint32_t request_id;
+  photon_rid request_id;
   uint64_t cookie;
   uint64_t bytes_remaining, bytes_sent, send_bytes;
   uintptr_t buf_addr;
@@ -1196,7 +1196,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   } while (bytes_remaining);
   
   if (request != NULL) {
-    *request = (uint64_t)request_id;
+    *request = request_id;
     
     rc = __photon_setup_request_send(addr, bufs, m_count, request_id);
     if (rc != PHOTON_OK) {
@@ -1211,7 +1211,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
   return PHOTON_ERROR;
 }
 
-static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
+static int _photon_recv(photon_rid request, void *ptr, uint64_t size, int flags) {
   photonRequest req;
 
   dbg_info("(0x%016lx, %p, %lu, %d)", request, ptr, size, flags);
@@ -1282,12 +1282,12 @@ static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
   return PHOTON_ERROR;
 }
 
-static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
+static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
   photonRILedgerEntry entry;
   int curr, num_entries, rc;
-  uint32_t request_id;
+  photon_rid request_id;
 
   dbg_info("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
   
@@ -1382,12 +1382,12 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
   photonBI db;
   photonRILedgerEntry entry;
   int curr, num_entries, rc;
   uint64_t cookie;
-  uint32_t request_id;
+  photon_rid request_id;
   bool eager = false;
 
   dbg_info("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
@@ -1509,11 +1509,11 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request) {
+static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonRILedgerEntry entry;
   int curr, num_entries, rc;
   uint64_t cookie;
-  uint32_t request_id;
+  photon_rid request_id;
 
   dbg_info("(%d, %lu, %d, %p)", proc, size, tag, request);
 
@@ -1595,7 +1595,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
+static int _photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request) {
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
   int ret, count, curr, num_entries, still_searching;
@@ -1661,7 +1661,7 @@ static int _photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
+static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request) {
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
   int ret, count, curr, num_entries, still_searching;
@@ -1797,7 +1797,7 @@ static int _photon_wait_send_request_rdma(int tag) {
   return PHOTON_OK;
 }
 
-static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   photonRequest req;
   photonBI drb;
   photonBI db;
@@ -1806,7 +1806,7 @@ static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t s
 
   dbg_info("(%d, %p, %lu, %lu, %u)", proc, ptr, size, r_offset, request);
 
-  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+  if (htable_lookup(reqtable, request, (void**)&req) != 0) {
     log_err("Could not find request");
     goto error_exit;
   }
@@ -1859,7 +1859,7 @@ static int _photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t s
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   photonRequest req;
   photonBI drb;
   photonBI db;
@@ -1929,11 +1929,11 @@ static int _photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t s
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
+static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
   int rc;
-  uint32_t request_id;
+  photon_rid request_id;
 
   dbg_info("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
 
@@ -1978,11 +1978,11 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
+static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
   int rc;
-  uint32_t request_id;
+  photon_rid request_id;
 
   dbg_info("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
 
@@ -2027,7 +2027,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_send_FIN(uint32_t request, int proc) {
+static int _photon_send_FIN(photon_rid request, int proc) {
   photonRequest req;
   photonFINLedgerEntry entry;
   int curr, num_entries, rc;
@@ -2035,7 +2035,7 @@ static int _photon_send_FIN(uint32_t request, int proc) {
 
   dbg_info("(%d)", proc);
 
-  if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
+  if (htable_lookup(reqtable, request, (void**)&req) != 0) {
     dbg_info("Could not find request: %u", request);
     goto error_exit;
   }
@@ -2083,7 +2083,7 @@ static int _photon_send_FIN(uint32_t request, int proc) {
 
   if (req->state == REQUEST_COMPLETED) {
     dbg_info("Removing request %u for remote buffer request %u", request, req->remote_buffer.request);
-    htable_remove(reqtable, (uint64_t)req->id, NULL);
+    htable_remove(reqtable, req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
     dbg_info("%d requests left in reqtable", htable_count(reqtable));
   }    
@@ -2097,7 +2097,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_any(int *ret_proc, uint32_t *ret_req) {
+static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   int rc;
 
   dbg_info("remaining: %d", htable_count(reqtable));
@@ -2123,12 +2123,11 @@ static int _photon_wait_any(int *ret_proc, uint32_t *ret_req) {
     }
 
     cookie = (uint32_t)( (event.id<<32)>>32);
-    //fprintf(stderr,"gen_wait_any() poped an events with cookie:%x\n",cookie);
     if (cookie != NULL_COOKIE) {
       photonRequest req;
       void *test;
 
-      dbg_info("removing event with cookie:%u", cookie);
+      dbg_info("removing event with cookie: %u", cookie);
       existed = htable_remove(reqtable, (uint64_t)cookie, &test);
       req = test;
       SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
@@ -2152,7 +2151,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
+static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
   static int i = -1; // this is static so we don't starve events in later processes
   int curr, num_entries;
 
@@ -2242,7 +2241,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
       entry_iterator = &(ledger->entries[j]);
       if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
         status->src_addr.global.proc_id = i;
-        status->request = entry_iterator->request;
+        status->request = (photon_rid)entry_iterator->request;
         status->tag = entry_iterator->tag;
         status->size = entry_iterator->size;
 
@@ -2318,7 +2317,7 @@ static int _photon_io_finalize() {
 
 /* TODO */
 #ifdef PHOTON_MULTITHREADED
-static inline int __photon_complete_ledger_req(uint32_t cookie) {
+static inline int __photon_complete_ledger_req(photon_rid cookie) {
   photonRequest tmp_req;
 
   if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
@@ -2336,7 +2335,7 @@ static inline int __photon_complete_ledger_req(uint32_t cookie) {
   return 0;
 }
 
-static inline int __photon_complete_evd_req(uint32_t cookie) {
+static inline int __photon_complete_evd_req(photon_rid cookie) {
   photonRequest tmp_req;
 
   if (htable_lookup(reqtable, (uint64_t)cookie, (void**)&tmp_req) != 0)
@@ -2480,7 +2479,7 @@ int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pr
   }
 }
 
-int _photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf) {
+int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
   photonRequest req;
 
   if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {

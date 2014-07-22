@@ -13,7 +13,7 @@
 #define NUM_REQ          9
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq[NUM_REQ], sendReq[NUM_REQ];
+  photon_rid recvReq[NUM_REQ], sendReq[NUM_REQ];
   char *send[NUM_REQ], *recv[NUM_REQ];
   int rank,size,prev,next,i,j;
 

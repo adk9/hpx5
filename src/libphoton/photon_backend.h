@@ -62,7 +62,7 @@ typedef struct proc_info_t {
 typedef struct photon_req_t {
   LIST_ENTRY(photon_req_t) list;
   SLIST_ENTRY(photon_req_t) slist;
-  uint64_t id;
+  photon_rid id;
   int state;
   int flags;
   int type;
@@ -80,7 +80,7 @@ typedef struct photon_req_t {
 typedef struct photon_req_t * photonRequest;
 
 typedef struct photon_event_status_t {
-  uint64_t id;
+  photon_rid id;
   int proc;
   void *priv;
 } photon_event_status;
@@ -103,7 +103,6 @@ typedef struct photon_ud_hdr_t {
   uint16_t nmsg;
 } photon_ud_hdr;
 
-/* TODO: fix parameters and generalize API */
 struct photon_backend_t {
   void *context;
   int (*initialized)(void);
@@ -118,24 +117,24 @@ struct photon_backend_t {
   int (*get_dev_addr)(int af, photonAddr addr);
   int (*register_addr)(photonAddr addr, int af);
   int (*unregister_addr)(photonAddr addr, int af);
-  int (*test)(uint32_t request, int *flag, int *type, photonStatus status);
-  int (*wait)(uint32_t request);
-  int (*wait_ledger)(uint32_t request);
+  int (*test)(photon_rid request, int *flag, int *type, photonStatus status);
+  int (*wait)(photon_rid request);
+  int (*wait_ledger)(photon_rid request);
   int (*send)(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
   int (*recv)(uint64_t request, void *ptr, uint64_t size, int flags);
-  int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-  int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-  int (*post_send_request_rdma)(int proc, uint64_t size, int tag, uint32_t *request);
-  int (*wait_recv_buffer_rdma)(int proc, int tag, uint32_t *request);
-  int (*wait_send_buffer_rdma)(int proc, int tag, uint32_t *request);
+  int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+  int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+  int (*post_send_request_rdma)(int proc, uint64_t size, int tag, photon_rid *request);
+  int (*wait_recv_buffer_rdma)(int proc, int tag, photon_rid *request);
+  int (*wait_send_buffer_rdma)(int proc, int tag, photon_rid *request);
   int (*wait_send_request_rdma)(int tag);
-  int (*post_os_put)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-  int (*post_os_get)(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-  int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-  int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-  int (*send_FIN)(uint32_t request, int proc);
-  int (*wait_any)(int *ret_proc, uint32_t *ret_req);
-  int (*wait_any_ledger)(int *ret_proc, uint32_t *ret_req);
+  int (*post_os_put)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+  int (*post_os_get)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+  int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+  int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+  int (*send_FIN)(photon_rid request, int proc);
+  int (*wait_any)(int *ret_proc, photon_rid *ret_req);
+  int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
   int (*probe)(photonAddr addr, int *flag, photonStatus status);
   int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
@@ -163,7 +162,7 @@ int photon_xsp_unused_proc(ProcessInfo **ret_pi, int *index);
 
 /* util */
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
-int _photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf);
+int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 int _photon_handle_addr(photonAddr addr, photonAddr ret_addr);
 
 #endif

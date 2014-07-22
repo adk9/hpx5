@@ -40,10 +40,12 @@ typedef union photon_addr_t {
   } blkaddr;
 } photon_addr;
 
+typedef uint64_t photon_rid;
+
 /* status for photon requests */
 struct photon_status_t {
   union photon_addr_t src_addr;
-  uint64_t request;
+  photon_rid request;
   uint64_t size;
   int tag;
   int count;
@@ -88,8 +90,8 @@ int photon_initialized();
 int photon_init(photonConfig cfg);
 int photon_finalize();
 
-int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request);
-int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
+int photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, photon_rid *request);
+int photon_recv(photon_rid request, void *ptr, uint64_t size, int flags);
 
 /* tell photon that we want to accept messages for certain addresses
    identified by address family af */
@@ -103,25 +105,25 @@ int photon_get_dev_addr(int af, photonAddr addr);
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
-int photon_get_buffer_remote(uint32_t request, photonBuffer ret_buf);
-int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request);
-int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request);
-int photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request);
-int photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request);
+int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
+int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
+int photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request);
+int photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request);
+int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
 int photon_wait_send_request_rdma(int tag);
-int photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request);
-int photon_send_FIN(uint32_t request, int proc);
-int photon_test(uint32_t request, int *flag, int *type, photonStatus status);
+int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request);
+int photon_send_FIN(photon_rid request, int proc);
+int photon_test(photon_rid request, int *flag, int *type, photonStatus status);
 
-int photon_wait(uint32_t request);
-int photon_wait_ledger(uint32_t request);
+int photon_wait(photon_rid request);
+int photon_wait_ledger(photon_rid request);
 
-int photon_wait_any(int *ret_proc, uint32_t *ret_req);
-int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req);
+int photon_wait_any(int *ret_proc, photon_rid *ret_req);
+int photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req);
 
 int photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
 int photon_probe(photonAddr addr, int *flag, photonStatus status);

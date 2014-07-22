@@ -203,7 +203,7 @@ int photon_unregister_addr(photonAddr addr, int af) {
   return __photon_default->unregister_addr(addr, af);
 }
 
-int photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
+int photon_test(photon_rid request, int *flag, int *type, photonStatus status) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -212,7 +212,7 @@ int photon_test(uint32_t request, int *flag, int *type, photonStatus status) {
   return __photon_default->test(request, flag, type, status);
 }
 
-int photon_wait(uint32_t request) {
+int photon_wait(photon_rid request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -221,7 +221,7 @@ int photon_wait(uint32_t request) {
   return __photon_default->wait(request);
 }
 
-int photon_wait_ledger(uint32_t request) {
+int photon_wait_ledger(photon_rid request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -230,7 +230,7 @@ int photon_wait_ledger(uint32_t request) {
   return __photon_default->wait_ledger(request);
 }
 
-int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
+int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -239,7 +239,7 @@ int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, ui
   return __photon_default->post_recv_buffer_rdma(proc, ptr, size, tag, request);
 }
 
-int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, uint32_t *request) {
+int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -248,7 +248,7 @@ int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, ui
   return __photon_default->post_send_buffer_rdma(proc, ptr, size, tag, request);
 }
 
-int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *request) {
+int photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -257,7 +257,7 @@ int photon_post_send_request_rdma(int proc, uint64_t size, int tag, uint32_t *re
   return __photon_default->post_send_request_rdma(proc, size, tag, request);
 }
 
-int photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
+int photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -266,7 +266,7 @@ int photon_wait_recv_buffer_rdma(int proc, int tag, uint32_t *request) {
   return __photon_default->wait_recv_buffer_rdma(proc, tag, request);
 }
 
-int photon_wait_send_buffer_rdma(int proc, int tag, uint32_t *request) {
+int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -284,7 +284,7 @@ int photon_wait_send_request_rdma(int tag) {
   return __photon_default->wait_send_request_rdma(tag);
 }
 
-int photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -293,7 +293,7 @@ int photon_post_os_put(uint32_t request, int proc, void *ptr, uint64_t size, int
   return __photon_default->post_os_put(request, proc, ptr, size, tag, r_offset);
 }
 
-int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
+int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -302,7 +302,7 @@ int photon_post_os_get(uint32_t request, int proc, void *ptr, uint64_t size, int
   return __photon_default->post_os_get(request, proc, ptr, size, tag, r_offset);
 }
 
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -311,7 +311,7 @@ int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, int tag, photo
   return __photon_default->post_os_put_direct(proc, ptr, size, tag, rbuf, request);
 }
 
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, uint32_t *request) {
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photonBuffer rbuf, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -320,7 +320,7 @@ int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, int tag, photo
   return __photon_default->post_os_get_direct(proc, ptr, size, tag, rbuf, request);
 }
 
-int photon_send_FIN(uint32_t request, int proc) {
+int photon_send_FIN(photon_rid request, int proc) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -329,7 +329,7 @@ int photon_send_FIN(uint32_t request, int proc) {
   return __photon_default->send_FIN(request, proc);
 }
 
-int photon_wait_any(int *ret_proc, uint32_t *ret_req) {
+int photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -344,7 +344,7 @@ int photon_wait_any(int *ret_proc, uint32_t *ret_req) {
 #endif
 }
 
-int photon_wait_any_ledger(int *ret_proc, uint32_t *ret_req) {
+int photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
@@ -424,6 +424,6 @@ int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pri
 }
 
 /* utility method to get the remote buffer info set after a wait buffer request */
-int photon_get_buffer_remote(uint32_t request, photonBuffer ret_desc) {
+int photon_get_buffer_remote(photon_rid request, photonBuffer ret_desc) {
   return _photon_get_buffer_remote(request, ret_desc);
 }

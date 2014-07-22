@@ -35,7 +35,7 @@ struct pingpong_args *recv_args;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   //struct timeval start, end;
-  uint32_t send_req;
+  photon_rid send_req;
 
   send_args->type = pp_type;
   send_args->ping_id = ping_id;
@@ -97,7 +97,7 @@ void *receiver(void *args) {
   //struct timeval start, end;
 
   while (1) {
-    uint32_t recv_req;
+    photon_rid recv_req;
 
     /* check if we have something to receive first, mimicking HPX parcel handler
        instead of blocking in wait_send_buffer... */

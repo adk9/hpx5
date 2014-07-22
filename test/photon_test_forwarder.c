@@ -11,7 +11,7 @@
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq;
+  photon_rid recvReq;
   char *recv;
   int rank,size,fproc;
 

@@ -36,7 +36,7 @@ int estimateKernelSize(double time) {
 }
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq,sendReq;
+  photon_rid recvReq,sendReq;
   char *send,*recv;
   int rank,size,prev,next;
   int arraySize,workSize,maxSize,maxWork,smallAmountOfWork,trial;
