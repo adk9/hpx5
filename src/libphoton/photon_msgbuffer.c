@@ -11,11 +11,11 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   photonMsgBuf mbuf;
   void *bptr;
   int page_size;
-  int l1d_cacheline;
+  //int l1d_cacheline;
   int ret, i;
   
   page_size = sysconf(_SC_PAGESIZE);
-  l1d_cacheline = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
+  //l1d_cacheline = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
   
   mbuf = malloc(sizeof(struct photon_msgbuffer_t));
   if (!mbuf)

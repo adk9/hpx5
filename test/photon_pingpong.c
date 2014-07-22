@@ -34,7 +34,7 @@ struct pingpong_args *send_args;
 struct pingpong_args *recv_args;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
-  struct timeval start, end;
+  //struct timeval start, end;
   uint32_t send_req;
 
   send_args->type = pp_type;
@@ -58,7 +58,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     while (1) {
       int flag, type;
       struct photon_status_t stat;
-      int tst = photon_test(send_req, &flag, &type, &stat);
+      photon_test(send_req, &flag, &type, &stat);
       if(flag) {
         dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %lu completed successfully\n", rank, rank, dst, pp_type, msize);
         break;
@@ -94,7 +94,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
 }
 
 void *receiver(void *args) {
-  struct timeval start, end;
+  //struct timeval start, end;
 
   while (1) {
     uint32_t recv_req;
@@ -126,7 +126,7 @@ void *receiver(void *args) {
       while (1) {
         int flag, type;
         struct photon_status_t stat;
-        int tst = photon_test(recv_req, &flag, &type, &stat);
+	photon_test(recv_req, &flag, &type, &stat);
         if(flag) {
           dbg_printf("%d: recv_ping(%d<-%d) of size %lu completed successfully\n", rank, rank, (int)stat.src_addr, msize);
           break;

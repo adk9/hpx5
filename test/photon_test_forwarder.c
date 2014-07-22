@@ -11,15 +11,13 @@
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
-  uint32_t recvReq,sendReq;
-  char *send,*recv;
-  int rank,size,prev,next,fproc;
+  uint32_t recvReq;
+  char *recv;
+  int rank,size,fproc;
 
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  next = (rank+1) % size;
-  prev = (size+rank-1) % size;
   fproc = size;
 
   char **forwarders = malloc(sizeof(char**));

@@ -42,7 +42,7 @@ bravo_node *mynode = NULL;
 photon_addr naddr;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
-  struct timeval start, end;
+  //struct timeval start, end;
   uint32_t send_req;
 
   send_args->type = pp_type;
@@ -129,7 +129,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
 }
 
 void *receiver(void *args) {
-  struct timeval start, end;
+  //struct timeval start, end;
 
   while (1) {
     uint32_t recv_req;

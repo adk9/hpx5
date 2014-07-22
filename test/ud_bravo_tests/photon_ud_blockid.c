@@ -18,9 +18,9 @@
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
-  uint64_t recvReq,sendReq,sendReq2;
+  uint64_t sendReq;
   char *send,*recv;
-  int rank,size,prev,next;
+  int rank,size;
 
   MD5_CTX ctx;
   unsigned char hash[16];
@@ -32,8 +32,6 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  next = (rank+1) % size;
-  prev = (size+rank-1) % size;
 
   struct photon_config_t cfg = {
     .meta_exch = PHOTON_EXCH_MPI,

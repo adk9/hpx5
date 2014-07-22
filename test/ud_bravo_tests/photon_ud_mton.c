@@ -15,15 +15,13 @@
 #define NUM_REQ          9
 
 int main(int argc, char *argv[]) {
-  uint64_t recvReq[NUM_REQ], sendReq[NUM_REQ];
+  uint64_t sendReq[NUM_REQ];
   char *send[NUM_REQ], *recv[NUM_REQ];
-  int rank,size,prev,next,i;
+  int rank,size,i;
 
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  next = (rank+1) % size;
-  prev = (size+rank-1) % size;
 
   struct photon_config_t cfg = {
     .meta_exch = PHOTON_EXCH_MPI,

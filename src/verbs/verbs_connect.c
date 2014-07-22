@@ -83,7 +83,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 
     // make sure there are some devices we can use
     ctx_list = rdma_get_devices(&num_devs);
-    if (!num_devs) {
+    if (!num_devs && !ctx_list) {
       dbg_err("No RDMA CMA devices found");
       return PHOTON_ERROR;
     }
@@ -789,7 +789,9 @@ error_exit:
 static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp) {
   int i;
   int err;
+#ifdef DEBUG
   char gid[40];
+#endif
 
   for (i = 0; i < num_qp; ++i) {
     dbg_info("[%d/%d], pindex=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x, gid=%s",
