@@ -143,6 +143,10 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     ctx->ib_lid = attr.lid;
     ctx->ib_mtu = 1 << (attr.active_mtu + 7);
 
+    if (attr.state != IBV_PORT_ACTIVE) {
+      log_warn("Requested ibv port is not active! : %s:%d", ctx->ib_dev, ctx->ib_port);
+    }
+
     ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
     if (!ctx->ib_pd) {
       dbg_err("Could not create protection domain");
