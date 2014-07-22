@@ -1,1 +1,1 @@
-SUBDIRS = lulesh fmm
+SUBDIRS = lulesh fmm miniAMR
