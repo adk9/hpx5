@@ -135,34 +135,55 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
     dbg_error("Could not un-pin buffer %p of size %lu for photon\n", buffer, len);
 }
 
+
 /// ----------------------------------------------------------------------------
 /// Put data via Photon
 /// ----------------------------------------------------------------------------
 static int
 _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
-     size_t rn, void *r)
+     size_t rn, void *rid, void *r)
 {
-  int rc;
+  int rc, flags;
+  photon_t *photon = (photon_t *)t;
   void *b = (void*)data;
   struct photon_buffer_priv_t priv;
   struct photon_buffer_t pbuf;
 
-  rc = photon_get_buffer_private(rbuffer, rn, &priv);
-  if (rc != PHOTON_OK) {
-    return dbg_error("Could not get buffer metadata for put: 0x%016lx (%lu)\n",
-                     (uintptr_t)rbuffer, rn);
+  // If we are doing HW GAS, then we need to be in photon UD mode with special
+  // mcast addressing.  This mode currently doesn't allow custom request IDs.
+  if (photon->cfg.use_ud) {
+    uint64_t saddr = block_id_ipv4mc(dest);
+    photon_addr daddr = {.blkaddr.blk3 = saddr};
+    int e = photon_send(&daddr, b, n, 0, r);
+    if (e != PHOTON_OK)
+      return dbg_error("Photon could not put %lu bytes to %i.\n", n, dest);
   }
-
-  pbuf.addr = (uintptr_t)rbuffer;
-  pbuf.size = rn;
-  pbuf.priv = priv;
-
-  rc = photon_post_os_put_direct(dest, b, n, PHOTON_DEFAULT_TAG, &pbuf, r);
-  if (rc != PHOTON_OK) {
-    return dbg_error("Could not complete put operation: 0x%016lx (%lu)\n",
-                     (uintptr_t)rbuffer, rn);
+  else {
+    rc = photon_get_buffer_private(rbuffer, rn, &priv);
+    if (rc != PHOTON_OK) {
+      return dbg_error("Could not get buffer metadata for put: 0x%016lx (%lu)\n",
+		       (uintptr_t)rbuffer, rn);
+    }
+    
+    pbuf.addr = (uintptr_t)rbuffer;
+    pbuf.size = rn;
+    pbuf.priv = priv;
+    
+    if (rid) {
+      flags = PHOTON_REQ_USERID;
+      *(photon_rid*)r = *(photon_rid*)rid;
+    }
+    else {
+      flags = PHOTON_REQ_NIL;
+    }
+    
+    rc = photon_post_os_put_direct(dest, b, n, &pbuf, flags, r);
+    if (rc != PHOTON_OK) {
+      return dbg_error("Could not complete put operation: 0x%016lx (%lu)\n",
+		       (uintptr_t)rbuffer, rn);
+    }
   }
-
+  
   return HPX_SUCCESS;
 }
 
@@ -172,27 +193,47 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
 /// ----------------------------------------------------------------------------
 static int
 _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
-     size_t rn, void *r)
+     size_t rn, void *rid, void *r)
 {
-  int rc;
+  int rc, flags;
+  photon_t *photon = (photon_t*)t;
   void *b = (void*)rdata;
   struct photon_buffer_priv_t priv;
   struct photon_buffer_t pbuf;
 
-  rc = photon_get_buffer_private(b, rn, &priv);
-  if (rc != PHOTON_OK) {
-    return dbg_error("Could not get buffer metadata for get: 0x%016lx (%lu)\n",
-                     (uintptr_t)b, rn);
+  // Behavior of HW GAS and UD mode is undefined for a "get", this will most
+  // likely need to be a signal to the target to "put" the data, and then wait.
+  if (photon->cfg.use_ud) {
+    photon_rid *id = (photon_rid*)r;
+    int e = photon_recv(*id, buffer, n, 0);
+    if (e != PHOTON_OK) {
+      return dbg_error("Photon could not get from %i\n", dest);
+    }
   }
-
-  pbuf.addr = (uintptr_t)b;
-  pbuf.size = rn;
-  pbuf.priv = priv;
-
-  rc = photon_post_os_get_direct(dest, buffer, n, PHOTON_DEFAULT_TAG, &pbuf, r);
-  if (rc != PHOTON_OK) {
-    return dbg_error("Could not complete get operation: 0x%016lx (%lu)\n",
-                     (uintptr_t)b, rn);
+  else {
+    rc = photon_get_buffer_private(b, rn, &priv);
+    if (rc != PHOTON_OK) {
+      return dbg_error("Could not get buffer metadata for get: 0x%016lx (%lu)\n",
+		       (uintptr_t)b, rn);
+    }
+    
+    pbuf.addr = (uintptr_t)b;
+    pbuf.size = rn;
+    pbuf.priv = priv;
+    
+    if (rid) {
+      flags = PHOTON_REQ_USERID;
+      *(photon_rid*)r = *(photon_rid*)rid;
+    }
+    else {
+      flags = PHOTON_REQ_NIL;
+    }
+    
+    rc = photon_post_os_get_direct(dest, buffer, n, &pbuf, flags, r);
+    if (rc != PHOTON_OK) {
+      return dbg_error("Could not complete get operation: 0x%016lx (%lu)\n",
+		       (uintptr_t)b, rn);
+    }
   }
 
   return HPX_SUCCESS;
@@ -207,9 +248,6 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
 static int
 _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
-  //uint64_t saddr = block_id_ipv4mc(dest);
-  //photon_t *photon = (photon_t*)t;
-  //photon_addr daddr = {.blkaddr.blk3 = saddr};
   void *b = (void*)data;
 
   //int e = photon_send(&daddr, b, n, 0, r);
