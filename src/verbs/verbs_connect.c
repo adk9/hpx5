@@ -142,6 +142,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     }
     ctx->ib_lid = attr.lid;
     ctx->ib_mtu = 1 << (attr.active_mtu + 7);
+    ctx->ib_mtu_attr = attr.active_mtu;
 
     if (attr.state != IBV_PORT_ACTIVE) {
       log_warn("Requested ibv port is not active! : %s:%d", ctx->ib_dev, ctx->ib_port);
@@ -454,6 +455,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     }
     ctx->ib_lid = port_attr.lid;
     ctx->ib_mtu = 1 << (port_attr.active_mtu + 7);    
+    ctx->ib_mtu_attr = port_attr.active_mtu;
 
     // create a UD QP as well if requested
     if (ctx->use_ud) {
@@ -821,7 +823,7 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
     
     struct ibv_qp_attr attr = {
       .qp_state	          = IBV_QPS_RTR,
-      .path_mtu	          = IBV_MTU_4096,
+      .path_mtu	          = ctx->ib_mtu_attr,
       .dest_qp_num        = remote_info[i].qpn,
       .rq_psn             = remote_info[i].psn,
       .max_dest_rd_atomic = 1,

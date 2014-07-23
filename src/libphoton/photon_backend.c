@@ -636,7 +636,7 @@ static int __photon_nbpop_event(photonRequest req) {
     
     // if the user set the request id, then we just passed it along as the WR id
     // in such cases, that user-defined id is also in the request table
-    if (req->flags & PHOTON_REQ_USERID) {
+    if (req->flags & REQUEST_FLAG_USERID) {
       cookie = event.id;
     }
 
@@ -1940,7 +1940,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
 static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
-  int rc;
+  int rc, rflags;
   photon_rid request_id;
 
   dbg_info("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
@@ -1953,12 +1953,14 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
   if ((flags & PHOTON_REQ_USERID) && request) {
     request_id = *request;
     cookie = request_id;
+    rflags = REQUEST_FLAG_USERID;
   }
   else {
     request_id = INC_COUNTER(curr_cookie);
     *request = request_id;
     dbg_info("Incrementing curr_cookie_count to: %d", request_id);
     cookie = (( (uint64_t)proc)<<32) | request_id;
+    rflags = REQUEST_FLAG_NIL;
   }
 
   {
@@ -1974,7 +1976,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
   }
 
   if (request != NULL) {
-    rc = __photon_setup_request_direct(rbuf, proc, flags, request_id);
+    rc = __photon_setup_request_direct(rbuf, proc, rflags, request_id);
     if (rc != PHOTON_OK) {
       dbg_info("Could not setup direct buffer request");
       goto error_exit;
@@ -1993,7 +1995,7 @@ error_exit:
 static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request) {
   photonBI db;
   uint64_t cookie;
-  int rc;
+  int rc, rflags;
   photon_rid request_id;
 
   dbg_info("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
@@ -2006,12 +2008,14 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
   if ((flags & PHOTON_REQ_USERID) && request) {
     request_id = *request;
     cookie = request_id;
+    rflags = REQUEST_FLAG_USERID;
   }
   else {
     request_id = INC_COUNTER(curr_cookie);
     *request = request_id;
     dbg_info("Incrementing curr_cookie_count to: %d", request_id);
     cookie = (( (uint64_t)proc)<<32) | request_id;
+    rflags = REQUEST_FLAG_NIL;
   }
 
   {
@@ -2028,7 +2032,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
   }
 
   if (request != NULL) {
-    rc = __photon_setup_request_direct(rbuf, proc, flags, request_id);
+    rc = __photon_setup_request_direct(rbuf, proc, rflags, request_id);
     if (rc != PHOTON_OK) {
       dbg_info("Could not setup direct buffer request");
       goto error_exit;

@@ -34,6 +34,7 @@
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
 #define REQUEST_FLAG_EAGER   0x02
+#define REQUEST_FLAG_USERID  0x04
 
 #define REQUEST_COOK_SEND    0xbeef
 #define REQUEST_COOK_RECV    0xcafebabe

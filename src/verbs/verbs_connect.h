@@ -23,6 +23,7 @@ typedef struct verbs_cnct_ctx_t {
   struct ibv_comp_channel   *ib_cc;
   int                        ib_lid;
   int                        ib_mtu;
+  enum ibv_mtu               ib_mtu_attr;
 
   struct rdma_event_channel *cm_schannel;
   struct rdma_cm_id        **cm_id;
