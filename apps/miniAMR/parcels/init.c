@@ -27,16 +27,12 @@ double check_sum(int var,Domain *ld)
    hpx_time_t t2 = hpx_time_now();
 
    hpx_lco_set(ld->gsum,sizeof(double),&sum,HPX_NULL,HPX_NULL);
-
    hpx_lco_get(ld->gsum,sizeof(double),&gsum);
-
-   //MPI_Allreduce(&sum, &gsum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
    hpx_time_t t3 = hpx_time_now();
 
-  // FIXME
-  // ld->timer_cs_red += t3 - t2;
-  // ld->timer_cs_calc += t2 - t1;
+   ld->timer_cs_red += hpx_time_diff_ms(t2,t3);
+   ld->timer_cs_calc += hpx_time_diff_ms(t1,t2);
    ld->total_red++;
 
    return gsum;

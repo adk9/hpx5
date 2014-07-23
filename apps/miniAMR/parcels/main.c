@@ -5,7 +5,7 @@ static hpx_action_t _advance       = 0;
 static hpx_action_t _initDomain    = 0;
 
 static void initdouble(double *input, const size_t size) {
-  assert(sizeof(int) == size);
+  assert(sizeof(double) == size);
   *input = 0.0;
 }
 
@@ -31,6 +31,7 @@ static int _advance_action(unsigned long *epoch) {
   }
 
   if ( domain->ts == 0 ) {
+    init_profile(domain);
     //init(domain);
   }
 
