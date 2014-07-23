@@ -44,11 +44,11 @@ struct transport_class {
   // We can assume the transports have a mechanism to acquire the buffer 
   // metadata needed for a put/get operation.
   int (*put)(transport_class_t*, int dest, const void *buffer, size_t size,
-             void *rbuffer, size_t rsize, void *request)
+             void *rbuffer, size_t rsize, void *rid, void *request)
     HPX_NON_NULL(1, 3);
   
   int (*get)(transport_class_t*, int dest, void *buffer, size_t size,
-             const void *rbuffer, size_t rsize, void *request)
+             const void *rbuffer, size_t rsize, void *rid, void *request)
     HPX_NON_NULL(1, 3);
   
   int (*send)(transport_class_t*, int dest, const void *buffer, size_t size,

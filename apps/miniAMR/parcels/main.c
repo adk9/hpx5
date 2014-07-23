@@ -5,15 +5,17 @@ static hpx_action_t _advance       = 0;
 static hpx_action_t _initDomain    = 0;
 
 static void initdouble(double *input, const size_t size) {
-  assert(sizeof(double) == size);
-  *input = 99999999.0;
+  assert(sizeof(int) == size);
+  *input = 0.0;
 }
 
-static void mindouble(double *output,const double *input, const size_t size) {
+static void sumdouble(double *output,const double *input, const size_t size) {
   assert(sizeof(double) == size);
-  if ( *output > *input ) *output = *input;
+  *output += *input;
   return;
 }
+
+void init(Domain *domain);
 
 static int _advance_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
@@ -29,6 +31,7 @@ static int _advance_action(unsigned long *epoch) {
   }
 
   if ( domain->ts == 0 ) {
+    //init(domain);
   }
 
   domain->ts++;
@@ -50,6 +53,9 @@ static int _initDomain_action(InitArgs *init) {
 
   ld->ts = 0;
   ld->complete = init->complete;
+  ld->gsum = init->gsum;
+  ld->my_pe = init->rank;
+  ld->num_pes = init->ndoms;
   int *params = init->params;
 
   int max_num_blocks = params[ 0];
@@ -267,6 +273,9 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t init = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
+  hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)sumdouble,
+                                           (void (*)(void *, const size_t size)) initdouble);
 
   int i;
 
@@ -276,6 +285,7 @@ static int _main_action(RunArgs *runargs)
   InitArgs *args = malloc(sizeof(*args) +
                           sizeof(object) * runargs->objectsize);
   args->complete = complete;
+  args->gsum = gsum;
   memcpy(&args->params, runargs->params, 34 * sizeof(int));
   args->objectsize = runargs->objectsize;
   memcpy(&args->objects, &runargs->objects,
@@ -287,7 +297,8 @@ static int _main_action(RunArgs *runargs)
     // we were using hpx_call_async, or a parcel_send, we'd need to wait for the
     // send to complete locally to reuse the buffer.
     //
-    // args->rank = k
+    args->rank = k;
+    args->ndoms = nDoms;
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
     hpx_call(block, _initDomain, args, sizeof(InitArgs), init);
   }
