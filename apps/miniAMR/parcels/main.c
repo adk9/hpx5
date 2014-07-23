@@ -20,22 +20,38 @@ void init(Domain *domain);
 static int _advance_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
-  Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain))
+  Domain *ld = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  if ( domain->ts > domain->num_tsteps ) {
+  if ( ld->ts > ld->num_tsteps ) {
     hpx_gas_unpin(local);
-    hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(ld->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
 
-  if ( domain->ts == 0 ) {
-    init_profile(domain);
-    //init(domain);
+  if ( ld->ts == 0 ) {
+    init_profile(ld);
+    init(ld);
+
+    ld->counter_malloc_init = ld->counter_malloc;
+    ld->size_malloc_init = ld->size_malloc;
+
+    ld->t1 = hpx_time_now();
+
+    if (ld->num_refine || ld->uniform_refine) //refine(0); FIXME
+    ld->t2 = hpx_time_now();
+    ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
+
+    if (ld->plot_freq)
+       //plot(0,ld); FIXME
+    ld->t3 = hpx_time_now();
+    ld->timer_plot += hpx_time_diff_ms(ld->t2,ld->t3);
+
+    ld->nb_min = ld->nb_max = ld->global_active;
   }
 
-  domain->ts++;
+  ld->ts++;
 
 // don't need this domain to be pinned anymore---let it move
   hpx_gas_unpin(local);

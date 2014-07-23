@@ -282,6 +282,7 @@ typedef struct Domain {
   int counter_malloc_init;
   double size_malloc_init;
   int total_red;
+  hpx_time_t t1,t2,t3;
 } Domain;
 
 #endif
