@@ -1,6 +1,48 @@
 
 #include "main.h"
 
+// Generate check sum for a variable over all active blocks.
+double check_sum(int var,Domain *ld)
+{
+   int n, in, i, j, k;
+   double sum, gsum, block_sum;
+   block *bp;
+
+   hpx_time_t t1 = hpx_time_now();
+
+   sum = 0.0;
+   for (in = 0; in < ld->sorted_index[ld->num_refine+1]; in++) {
+      n = ld->sorted_list[in].n;
+      bp = &ld->blocks[n];
+      if (bp->number >= 0) {
+         block_sum = 0.0;
+         for (i = 1; i <= ld->x_block_size; i++)
+            for (j = 1; j <= ld->y_block_size; j++)
+               for (k = 1; k <= ld->z_block_size; k++)
+                  block_sum += bp->array[var][i][j][k];
+         sum += block_sum;
+      }
+   }
+
+   hpx_time_t t2 = hpx_time_now();
+
+   hpx_lco_set(ld->gsum,sizeof(double),&sum,HPX_NULL,HPX_NULL);
+
+   hpx_lco_get(ld->gsum,sizeof(double),&gsum);
+
+   //MPI_Allreduce(&sum, &gsum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   hpx_time_t t3 = hpx_time_now();
+
+  // FIXME
+  // ld->timer_cs_red += t3 - t2;
+  // ld->timer_cs_calc += t2 - t1;
+   ld->total_red++;
+
+   return gsum;
+}
+
+
 void add_sorted_list(int n, int number, int level,Domain *ld)
 {
    int i, j;
@@ -617,8 +659,8 @@ void init(Domain *ld)
                   }
 
          check_buff_size(ld);
-         //for (var = 0; var < ld->num_vars; var++)
-         //  ld->grid_sum[var] = check_sum(var);
+         for (var = 0; var < ld->num_vars; var++)
+           ld->grid_sum[var] = check_sum(var,ld);
 
 
 }

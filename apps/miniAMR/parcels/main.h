@@ -25,6 +25,7 @@ typedef struct {
 
 typedef struct {
   hpx_addr_t complete;
+  hpx_addr_t gsum;
   int params[34];
   int objectsize;
   int rank;
@@ -138,6 +139,7 @@ typedef struct Domain {
   int permute;
   int num_pes;
   hpx_addr_t complete;
+  hpx_addr_t gsum;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
@@ -189,6 +191,9 @@ typedef struct Domain {
   int *gbin;
   int my_pe;
   int max_active_parent;
+  double timer_cs_red;
+  double timer_cs_calc;
+  int total_red;
 } Domain;
 
 #endif
