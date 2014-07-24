@@ -8,16 +8,16 @@ import json
 DPID = "00:02:00:01:e8:8b:1e:32"
 
 node = {}
-node['cutter01'] = {'mac': "00:02:c9:0f:67:2e",
+node['cutter01'] = {'mac': "00:02:c9:24:31:70",
                 'mcmac': "33:33:00:01:00:00",
                 'port': 2}
-node['cutter02'] = {'mac': "00:02:c9:0f:80:64",
+node['cutter02'] = {'mac': "f4:52:14:49:50:20",
                 'mcmac': "33:33:00:02:00:00",
                 'port': 3}
-node['cutter03'] = {'mac': "00:02:c9:0f:80:e2",
+node['cutter03'] = {'mac': "f4:52:14:49:55:40",
                 'mcmac': "33:33:00:03:00:00",
                 'port': 4}
-node['cutter04'] = {'mac': "00:02:c9:0d:83:04",
+node['cutter04'] = {'mac': "f4:52:14:49:54:70",
                 'mcmac': "33:33:00:04:00:00",
                 'port': 5}
 node['cutter05'] = {'mac': "00:02:c9:18:07:00",
@@ -41,19 +41,19 @@ node['cutter10'] = {'mac': "00:02:c9:18:10:40",
 node['cutter11'] = {'mac': "f4:52:14:01:71:70",
                 'mcmac': "33:33:00:0b:00:00",
                 'port': 12}
-node['cutter12'] = {'mac': "00:02:c9:0f:80:3a",
+node['cutter12'] = {'mac': "f4:52:14:49:55:80",
                 'mcmac': "33:33:00:0c:00:00",
                 'port': 13}
-node['cutter13'] = {'mac': "00:02:c9:0f:80:3c",
+node['cutter13'] = {'mac': "f4:52:14:49:4f:d0",
                 'mcmac': "33:33:00:0d:00:00",
                 'port': 14}
-node['cutter14'] = {'mac': "00:02:c9:0f:7f:66",
+node['cutter14'] = {'mac': "f4:52:14:49:54:60",
                 'mcmac': "33:33:00:0e:00:00",
                 'port': 15}
-node['cutter15'] = {'mac': "00:02:c9:0f:67:64",
+node['cutter15'] = {'mac': "f4:52:14:49:51:a0",
                 'mcmac': "33:33:00:0f:00:00",
                 'port': 16}
-node['cutter16'] = {'mac': "00:02:c9:0f:80:90",
+node['cutter16'] = {'mac': "f4:52:14:49:54:40",
                 'mcmac': "33:33:00:10:00:00",
                 'port': 17}
 

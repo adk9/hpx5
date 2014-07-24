@@ -12,9 +12,9 @@
 #include <openssl/md5.h>
 
 #include "photon.h"
-#include "bravo_ids.h"
+#include "cutter_ids.h"
 
-#define PHOTON_SEND_SIZE 1024*240
+#define PHOTON_SEND_SIZE 1024
 #define PHOTON_TAG       13
 
 int main(int argc, char *argv[]) {
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     .use_ud = 1,
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_1",
+    .ib_dev = "mlx4_0",
     .ib_port = 1,
     .backend = "verbs",
   };
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   printf("%d: dev addr: %s\n", rank, buf);
 
   bravo_node *dnode = NULL, *mynode = NULL;
-  init_bravo_ids(10);
+  init_bravo_ids(1);
   mynode = find_bravo_node(&naddr);
 
   if (!mynode) {
@@ -87,11 +87,11 @@ int main(int argc, char *argv[]) {
   }
 
   switch (mynode->index) {
-  case B005:
-    dnode = get_bravo_node(B006);
+  case B001:
+    dnode = get_bravo_node(B002);
     break;
-  case B006:
-    dnode = get_bravo_node(B005);
+  case B002:
+    dnode = get_bravo_node(B001);
     break;
   default:
     break;

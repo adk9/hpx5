@@ -61,7 +61,8 @@ inline bravo_node *init_bravo_ids(int num_blocks) {
   for (i=0; i<NUM_NODES; i++) {
     for (j=0; j<num_blocks; j++) {
       uint32_t bid = ((uint32_t)(i+1)<<16) | (uint32_t)j;
-      bid |= (uint32_t)(0xe<<28);
+      // no need for the 0xe for IPv6 multicast
+      //bid |= (uint32_t)(0xe<<28);
       if (j==0) {
         //printf("B00%d base block: 0x%08x\n", i+1, bid);
       }
