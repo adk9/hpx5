@@ -12,6 +12,20 @@
 #include "hpx/hpx.h"
 
 typedef struct {
+  unsigned long epoch;
+  int     srcIndex;
+  int     total_num_blocks;
+  int        buf[];                         // inline, variable length buffer
+} NodalArgs;
+
+typedef struct {
+  int rank;
+  int *buf;
+  int total_num_blocks;
+  unsigned long epoch;
+} plotSBN;
+
+typedef struct {
    int type;
    int bounce;
    double cen[3];
@@ -283,6 +297,16 @@ typedef struct Domain {
   double size_malloc_init;
   int total_red;
   hpx_time_t t1,t2,t3;
+  int *plot_buf_size;
+  int **plot_buf;
+  hpx_addr_t sem_plot;
+  hpx_addr_t plot_and[2];
+  hpx_addr_t epoch;
 } Domain;
+
+int _plot_result_action(NodalArgs *nodal);
+extern hpx_action_t _plot_result;
+int _plot_sends_action(plotSBN *psbn);
+extern hpx_action_t _plot_sends;
 
 #endif
