@@ -3,6 +3,8 @@
 static hpx_action_t _main          = 0;
 static hpx_action_t _advance       = 0;
 static hpx_action_t _initDomain    = 0;
+hpx_action_t _plot_result = 0;
+hpx_action_t _plot_sends = 0;
 
 static void initdouble(double *input, const size_t size) {
   assert(sizeof(double) == size);
@@ -43,8 +45,7 @@ static int _advance_action(unsigned long *epoch) {
     ld->t2 = hpx_time_now();
     ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
 
-    if (ld->plot_freq)
-       //plot(0,ld); FIXME
+    if (ld->plot_freq) plot(0,ld,n);
     ld->t3 = hpx_time_now();
     ld->timer_plot += hpx_time_diff_ms(ld->t2,ld->t3);
 
@@ -74,6 +75,11 @@ static int _initDomain_action(InitArgs *init) {
   ld->my_pe = init->rank;
   ld->num_pes = init->ndoms;
   int *params = init->params;
+  ld->sem_plot = hpx_lco_sema_new(1);
+  ld->plot_and[0] = hpx_lco_and_new(ld->num_pes-1);
+  ld->plot_and[1] = HPX_NULL;
+
+  ld->epoch = hpx_lco_gencount_new(0);
 
   int max_num_blocks = params[ 0];
   int target_active = params[ 1];
@@ -275,6 +281,12 @@ static int _initDomain_action(InitArgs *init) {
    }
    ld->send_buff = (double *) malloc(ld->s_buf_size*sizeof(double));
    ld->recv_buff = (double *) malloc(ld->r_buf_size*sizeof(double));
+
+  // for plot output
+  if (ld->my_pe == 0) {
+    ld->plot_buf = (int **) malloc(ld->num_pes*sizeof(int *));
+    ld->plot_buf_size = (int *) malloc(ld->num_pes*sizeof(int));
+  }
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -554,7 +566,7 @@ int main(int argc, char **argv)
   int checksum_freq = 5;
   int stencil = 7;
   int report_perf = 1;
-  int plot_freq = 0;
+  int plot_freq = 1;
   int num_objects = 0;
   int lb_opt = 1;
   int block_change = 0;
@@ -743,6 +755,8 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advance   = HPX_REGISTER_ACTION(_advance_action);
+  _plot_sends = HPX_REGISTER_ACTION(_plot_sends_action);
+  _plot_result = HPX_REGISTER_ACTION(_plot_result_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 
