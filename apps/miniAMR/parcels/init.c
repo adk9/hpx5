@@ -386,7 +386,7 @@ void zero_comm_list(Domain *ld)
    }
 }
 
-void init(Domain *ld)
+void init_amr(Domain *ld)
 {
   int n, var, i, j, k, l, m, o, size, dir, i1, i2, j1, j2, k1, k2, ib, jb, kb;
    int start[ld->num_pes], pos[3][ld->num_pes], pos1[ld->npx][ld->npy][ld->npz], set,
