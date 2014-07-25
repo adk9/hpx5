@@ -13,8 +13,8 @@ void refine(int ts,Domain *ld,unsigned long epoch)
 
    hpx_time_t t2 = hpx_time_now();
 
-   hpx_lco_set(ld->rsum,(ld->num_refine+1)*sizeof(int),&ld->local_num_blocks,HPX_NULL,HPX_NULL);
-   hpx_lco_get(ld->rsum,(ld->num_refine+1)*sizeof(int),&ld->num_blocks);
+   hpx_lco_set(ld->rsum,(ld->num_refine+1)*sizeof(int),ld->local_num_blocks,HPX_NULL,HPX_NULL);
+   hpx_lco_get(ld->rsum,(ld->num_refine+1)*sizeof(int),ld->num_blocks);
 
  //  MPI_Allreduce(local_num_blocks, num_blocks, (num_refine+1), MPI_INTEGER,
  //                MPI_SUM, MPI_COMM_WORLD);
