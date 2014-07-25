@@ -2,7 +2,7 @@ noinst_appsdir         = $(abs_top_builddir)/apps/
 
 noinst_apps_PROGRAMS   = miniamr
 
-miniamr_SOURCES  = main.c
+miniamr_SOURCES  = main.c init.c plot.c profile.c refine.c
 
 miniamr_LDFLAGS  = -static
 miniamr_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
