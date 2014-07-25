@@ -21,7 +21,7 @@ static void initint(int *input, const size_t size) {
   int i;
   int nx = size/sizeof(int);
   for (i=0;i<nx;i++) {
-    input[i] = 0.0;
+    input[i] = 0;
   }
 }
 
@@ -58,7 +58,7 @@ static int _advance_action(unsigned long *epoch) {
 
     ld->t1 = hpx_time_now();
 
-    if (ld->num_refine || ld->uniform_refine) refine(0);
+    if (ld->num_refine || ld->uniform_refine) refine(0,ld,n);
     ld->t2 = hpx_time_now();
     ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
 
@@ -352,7 +352,7 @@ static int _main_action(RunArgs *runargs)
     args->rank = k;
     args->ndoms = nDoms;
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _initDomain, args, sizeof(InitArgs), init);
+    hpx_call(block, _initDomain, args, sizeof(InitArgs) + sizeof(object) * runargs->objectsize, init);
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
