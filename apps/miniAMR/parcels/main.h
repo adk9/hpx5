@@ -40,6 +40,7 @@ typedef struct {
 typedef struct {
   hpx_addr_t complete;
   hpx_addr_t gsum;
+  hpx_addr_t rsum;
   int params[34];
   int objectsize;
   int rank;
@@ -154,6 +155,7 @@ typedef struct Domain {
   int num_pes;
   hpx_addr_t complete;
   hpx_addr_t gsum;
+  hpx_addr_t rsum;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
