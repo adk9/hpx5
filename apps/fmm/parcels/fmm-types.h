@@ -20,9 +20,7 @@ struct fmm_box_t {
   hpx_addr_t parent; ///< pointer to the parent
   hpx_addr_t child[8]; ///< pointers to the children
   int nchild; ///< number of child boxes
-  int idx; ///< index, x-direction
-  int idy; ///< index, y-direction
-  int idz; ///< index, z-direction
+  int index[3]; ///< index, x-, y-, and z-direction
   int npts; ///< number of points contained in the box
   int addr; ///< offset to locate the first point contained in the box
   hpx_addr_t list1[27]; ///< coarser or same level list 1 boxes 
@@ -31,19 +29,8 @@ struct fmm_box_t {
   hpx_addr_t sema; ///< semaphore for reduction
   int nlist1; ///< number of entries in list1
   int nlist5; ///< number of entries in list5
-  double complex expansion[]; ///< storage for expansion
+  hpx_addr_t expansion; ///< address for expansion
 }; 
-
-/// ----------------------------------------------------------------------------
-/// @brief FMM configuration type
-/// ----------------------------------------------------------------------------
-typedef struct {
-  int nsources; ///< number of source points
-  int ntargets; ///< number of target points
-  int datatype; ///< type of data to generate
-  int accuracy; ///< accuracy of the computation
-  int s;        ///< partition criterion on box
-} fmm_config_t; 
 
 /// ----------------------------------------------------------------------------
 /// @brief FMM parameter type
@@ -85,9 +72,16 @@ typedef struct {
 /// @brief Argument passed to the _init_param_action
 /// ----------------------------------------------------------------------------
 typedef struct {
-  int accuracy; 
-  double size; 
-  double corner[3]; 
+  hpx_addr_t sources; ///< sources location
+  hpx_addr_t charges; ///< charges 
+  hpx_addr_t targets; ///< targets location
+  hpx_addr_t potential; ///< storage for potential 
+  hpx_addr_t field; ///< storage for field 
+  hpx_addr_t mapsrc; ///< source mapping information
+  hpx_addr_t maptar; ///< target mapping information
+  hpx_addr_t source_root; ///< address for the source root
+  hpx_addr_t target_root; ///< address for the target root
+  double size; ///< size of the bounding box
+  double corner[3]; ///< lower left corner of the bounding box
 } init_param_action_arg_t; 
-
 #endif

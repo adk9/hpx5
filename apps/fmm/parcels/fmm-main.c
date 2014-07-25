@@ -10,13 +10,21 @@
 #include "hpx/hpx.h"
 #include "fmm.h"
 
-hpx_action_t _fmm_main; 
+int nsources; 
+int ntargets; 
+int datatype; 
+int accuracy; 
+int s; 
+
+hpx_action_t _fmm_main;
+hpx_action_t _init_sources; 
+hpx_action_t _init_charges; 
+hpx_action_t _init_targets; 
+hpx_action_t _init_mapsrc; 
+hpx_action_t _init_maptar; 
 hpx_action_t _init_param; 
-hpx_action_t _partition_box; 
-hpx_action_t _source_to_mpole;
-hpx_action_t _mpole_to_mpole;
-hpx_action_t _mpole_reduction; 
-hpx_action_t _mpole_to_expo;
+hpx_action_t _init_source_root; 
+hpx_action_t _init_target_root; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -39,13 +47,11 @@ int main(int argc, char *argv[]) {
     .stack_bytes = 8192
   };
 
-  fmm_config_t fmm_cfg = {
-    .nsources = 10000,
-    .ntargets = 10000,
-    .datatype = 1,
-    .accuracy = 3,
-    .s        = 40
-  };
+  nsources = 10000;
+  ntargets = 10000;
+  datatype = 1;
+  accuracy = 3;
+  s        = 40;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:n:m:a:d:s:D:h")) != -1) {
@@ -57,19 +63,19 @@ int main(int argc, char *argv[]) {
       hpx_cfg.threads = atoi(optarg);
       break;
     case 'n':
-      fmm_cfg.nsources = atoi(optarg);
+      nsources = atoi(optarg);
       break;
     case 'm':
-      fmm_cfg.ntargets = atoi(optarg);
+      ntargets = atoi(optarg);
       break;
     case 'a':
-      fmm_cfg.accuracy = atoi(optarg);
+      accuracy = atoi(optarg);
       break;
     case 'd':
-      fmm_cfg.datatype = atoi(optarg);
+      datatype = atoi(optarg);
       break;
     case 's':
-      fmm_cfg.s        = atoi(optarg);
+      s        = atoi(optarg);
       break;
     case 'h':
       _usage(stdout);
@@ -89,54 +95,22 @@ int main(int argc, char *argv[]) {
   }
 
   // register actions
-  _fmm_main        = HPX_REGISTER_ACTION(_fmm_main_action);
-  _init_param      = HPX_REGISTER_ACTION(_init_param_action); 
-  _partition_box   = HPX_REGISTER_ACTION(_partition_box_action); 
-  _source_to_mpole = HPX_REGISTER_ACTION(_source_to_multipole_action); 
-  _mpole_to_mpole  = HPX_REGISTER_ACTION(_multipole_to_multipole_action);
-  _mpole_reduction = HPX_REGISTER_ACTION(_multipole_reduction_action); 
-  _mpole_to_expo   = HPX_REGISTER_ACTION(_multipole_to_exponential_action); 
+  _fmm_main         = HPX_REGISTER_ACTION(_fmm_main_action);
+  _init_sources     = HPX_REGISTER_ACTION(_init_sources_action);
+  _init_charges     = HPX_REGISTER_ACTION(_init_charges_action);
+  _init_targets     = HPX_REGISTER_ACTION(_init_targets_action);
+  _init_mapsrc      = HPX_REGISTER_ACTION(_init_mapsrc_action); 
+  _init_maptar      = HPX_REGISTER_ACTION(_init_maptar_action); 
+  _init_param       = HPX_REGISTER_ACTION(_init_param_action); 
+  _init_source_root = HPX_REGISTER_ACTION(_init_source_root_action); 
+  _init_target_root = HPX_REGISTER_ACTION(_init_target_root_action); 
 
-  e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg)); 
+  e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
     fprintf(stderr, "HPX: error while running.\n");
     return e;
   } 
 
-  
-
-  /*
-  // register actions
-  _fmm_build_list134    = HPX_REGISTER_ACTION(_fmm_build_list134_action); 
-  _fmm_bcast            = HPX_REGISTER_ACTION(_fmm_bcast_action); 
-  _aggr_leaf_sbox       = HPX_REGISTER_ACTION(_aggr_leaf_sbox_action);
-  _aggr_nonleaf_sbox    = HPX_REGISTER_ACTION(_aggr_nonleaf_sbox_action);
-  _disaggr_leaf_tbox    = HPX_REGISTER_ACTION(_disaggr_leaf_tbox_action);
-  _disaggr_nonleaf_tbox = HPX_REGISTER_ACTION(_disaggr_nonleaf_tbox_action);
-  _recv_result          = HPX_REGISTER_ACTION(_recv_result_action);
-  _process_near_field   = HPX_REGISTER_ACTION(_process_near_field_action);
-
-  // run the main action
-  fmm_param = construct_param(fmm_cfg.accuracy);
-  if (debug == hpx_get_my_rank()) {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    while (0 == i)
-      sleep(12);
-  }
-
-  e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg));
-  if (e) {
-    fprintf(stderr, "HPX: error while running.\n");
-    return e;
-  }
-
-  // cleanup
-  destruct_param(&fmm_param);
-  */
   return 0;
 }
 
