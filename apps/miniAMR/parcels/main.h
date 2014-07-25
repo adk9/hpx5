@@ -304,6 +304,8 @@ typedef struct Domain {
   hpx_addr_t sem_plot;
   hpx_addr_t plot_and[2];
   hpx_addr_t epoch;
+  int objectsize;
+  object *objects;
 } Domain;
 
 int _plot_result_action(NodalArgs *nodal);
