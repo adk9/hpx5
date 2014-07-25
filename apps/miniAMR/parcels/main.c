@@ -96,6 +96,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_plot = hpx_lco_sema_new(1);
   ld->plot_and[0] = hpx_lco_and_new(ld->num_pes-1);
   ld->plot_and[1] = HPX_NULL;
+  ld->objectsize = init->objectsize;
+  ld->objects = init->objects;
 
   ld->epoch = hpx_lco_gencount_new(0);
 
