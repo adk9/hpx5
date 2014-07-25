@@ -40,8 +40,8 @@ void driver(void)
    double t1, t2, t3, t4;
    double sum;
 
-   init();
    init_profile();
+   init();
    counter_malloc_init = counter_malloc;
    size_malloc_init = size_malloc;
 
