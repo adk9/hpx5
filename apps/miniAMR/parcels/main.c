@@ -45,6 +45,7 @@ static int _advance_action(unsigned long *epoch) {
     ld->t2 = hpx_time_now();
     ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
 
+    printf(" TEST plot %d\n",ld->my_pe);
     if (ld->plot_freq) plot(0,ld,n);
     ld->t3 = hpx_time_now();
     ld->timer_plot += hpx_time_diff_ms(ld->t2,ld->t3);
