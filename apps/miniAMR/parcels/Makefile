@@ -1,5 +1,5 @@
 CC = mpicc
-CFLAGS = -g
+CFLAGS = -g -Wall -pedantic
 INCLUDES = -I/home/manderson/hpx5_gitlab/include
 LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx
 
