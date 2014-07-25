@@ -97,37 +97,36 @@ void plot(int ts,Domain *ld,unsigned long epoch)
            buf[i++] = bp->cen[2];
         }
 
-     hpx_addr_t sends = hpx_lco_and_new(ld->num_pes-1);
+     hpx_addr_t sends = hpx_lco_and_new(1);
 
-     for (i = 0; i < ld->num_pes-1; ++i) {
-       hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(plotSBN));
-       assert(p);
+     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(plotSBN));
+     assert(p);
 
-       plotSBN *psbn = hpx_parcel_get_data(p);
+     plotSBN *psbn = hpx_parcel_get_data(p);
 
-       psbn->rank             = ld->my_pe;
-       psbn->buf              = buf;
-       psbn->total_num_blocks = total_num_blocks;
-       psbn->epoch            = epoch;
+     psbn->rank             = ld->my_pe;
+     psbn->buf              = buf;
+     psbn->total_num_blocks = total_num_blocks;
+     psbn->epoch            = epoch;
 
-       hpx_parcel_set_target(p, local);
-       hpx_parcel_set_action(p, _plot_sends);
-       hpx_parcel_set_cont_target(p, sends);
-       hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+     hpx_parcel_set_target(p, local);
+     hpx_parcel_set_action(p, _plot_sends);
+     hpx_parcel_set_cont_target(p, sends);
+     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
-       // async is fine, since we're waiting on sends below
-       hpx_parcel_send(p, HPX_NULL);
-     }
+     // async is fine, since we're waiting on sends below
+     hpx_parcel_send(p, HPX_NULL);
+
      hpx_lco_wait(sends); 
      hpx_lco_delete(sends, HPX_NULL);
      free(buf);
    }
 
    hpx_lco_gencount_inc(ld->epoch, HPX_NULL);
-   hpx_lco_wait(ld->plot_and[epoch % 2]);
-   hpx_lco_delete(ld->plot_and[epoch % 2], HPX_NULL);
-
    if (ld->my_pe == 0) {
+      hpx_lco_wait(ld->plot_and[epoch % 2]);
+      hpx_lco_delete(ld->plot_and[epoch % 2], HPX_NULL);
+
       fname[0] = 'p';
       fname[1] = 'l';
       fname[2] = 'o';
