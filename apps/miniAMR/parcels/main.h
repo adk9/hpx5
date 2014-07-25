@@ -26,6 +26,15 @@ typedef struct {
 } plotSBN;
 
 typedef struct {
+  unsigned long epoch;
+  int size;
+  int i;
+  int dir;
+  int     srcIndex;
+  int        buf[];                         // inline, variable length buffer
+} RefineNodalArgs;
+
+typedef struct {
    int type;
    int bounce;
    double cen[3];
@@ -303,14 +312,34 @@ typedef struct Domain {
   int **plot_buf;
   hpx_addr_t sem_plot;
   hpx_addr_t plot_and[2];
+  hpx_addr_t sem_refine;
+  hpx_addr_t refine_and[2];
   hpx_addr_t epoch;
   int objectsize;
   object *objects;
+  int cur_max_level;
 } Domain;
+
+typedef struct {
+  int rank;
+  int dir;
+  int i;
+  Domain *domain;
+  unsigned long epoch;
+} refineSBN;
 
 int _plot_result_action(NodalArgs *nodal);
 extern hpx_action_t _plot_result;
 int _plot_sends_action(plotSBN *psbn);
 extern hpx_action_t _plot_sends;
+
+int _comm_refine_result_action(RefineNodalArgs *nodal);
+extern hpx_action_t _comm_refine_result;
+int _comm_refine_sends_action(refineSBN *psbn);
+extern hpx_action_t _comm_refine_sends;
+
+void check_objects(Domain *ld);
+void init_amr(Domain *ld);
+void init_profile(Domain *ld);
 
 #endif

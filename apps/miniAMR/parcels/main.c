@@ -5,6 +5,8 @@ static hpx_action_t _advance       = 0;
 static hpx_action_t _initDomain    = 0;
 hpx_action_t _plot_result = 0;
 hpx_action_t _plot_sends = 0;
+hpx_action_t _comm_refine_result = 0;
+hpx_action_t _comm_refine_sends = 0;
 
 static void initdouble(double *input, const size_t size) {
   assert(sizeof(double) == size);
@@ -34,8 +36,6 @@ static void sumint(int *output,const int *input, const size_t size) {
   return;
 }
 
-void init(Domain *domain);
-
 static int _advance_action(unsigned long *epoch) {
   const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
@@ -50,14 +50,7 @@ static int _advance_action(unsigned long *epoch) {
   }
 
   if ( ld->ts == 0 ) {
-    init_profile(ld);
-    init(ld);
-
-    ld->counter_malloc_init = ld->counter_malloc;
-    ld->size_malloc_init = ld->size_malloc;
-
     ld->t1 = hpx_time_now();
-
     if (ld->num_refine || ld->uniform_refine) refine(0,ld,n);
     ld->t2 = hpx_time_now();
     ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
@@ -96,6 +89,9 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_plot = hpx_lco_sema_new(1);
   ld->plot_and[0] = hpx_lco_and_new(ld->num_pes-1);
   ld->plot_and[1] = HPX_NULL;
+  ld->sem_refine = hpx_lco_sema_new(1);
+  ld->refine_and[0] = HPX_NULL;  // this is initially set after calling init
+  ld->refine_and[1] = HPX_NULL;
   ld->objectsize = init->objectsize;
   ld->objects = init->objects;
 
@@ -307,6 +303,21 @@ static int _initDomain_action(InitArgs *init) {
     ld->plot_buf = (int **) malloc(ld->num_pes*sizeof(int *));
     ld->plot_buf_size = (int *) malloc(ld->num_pes*sizeof(int));
   }
+
+  init_profile(ld);
+  init_amr(ld);
+  
+  // find out how many "receives"
+  int nrecvs = 0;
+  int dir;
+   for (dir = 0; dir < 3; dir++) {
+     nrecvs += ld->num_comm_partners[dir];
+   }
+
+  ld->refine_and[0] = hpx_lco_and_new(nrecvs);
+
+  ld->counter_malloc_init = ld->counter_malloc;
+  ld->size_malloc_init = ld->size_malloc;
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -782,6 +793,8 @@ int main(int argc, char **argv)
   _advance   = HPX_REGISTER_ACTION(_advance_action);
   _plot_sends = HPX_REGISTER_ACTION(_plot_sends_action);
   _plot_result = HPX_REGISTER_ACTION(_plot_result_action);
+  _comm_refine_sends = HPX_REGISTER_ACTION(_comm_refine_sends_action);
+  _comm_refine_result = HPX_REGISTER_ACTION(_comm_refine_result_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 
