@@ -17,6 +17,23 @@ static void sumdouble(double *output,const double *input, const size_t size) {
   return;
 }
 
+static void initint(int *input, const size_t size) {
+  int i;
+  int nx = size/sizeof(int);
+  for (i=0;i<nx;i++) {
+    input[i] = 0.0;
+  }
+}
+
+static void sumint(int *output,const int *input, const size_t size) {
+  int i;
+  int nx = size/sizeof(int);
+  for (i=0;i<nx;i++) {
+    output[i] += input[i];
+  }
+  return;
+}
+
 void init(Domain *domain);
 
 static int _advance_action(unsigned long *epoch) {
@@ -41,11 +58,10 @@ static int _advance_action(unsigned long *epoch) {
 
     ld->t1 = hpx_time_now();
 
-    if (ld->num_refine || ld->uniform_refine) //refine(0); FIXME
+    if (ld->num_refine || ld->uniform_refine) refine(0);
     ld->t2 = hpx_time_now();
     ld->timer_refine_all += hpx_time_diff_ms(ld->t1,ld->t2);
 
-    printf(" TEST plot %d\n",ld->my_pe);
     if (ld->plot_freq) plot(0,ld,n);
     ld->t3 = hpx_time_now();
     ld->timer_plot += hpx_time_diff_ms(ld->t2,ld->t3);
@@ -73,6 +89,7 @@ static int _initDomain_action(InitArgs *init) {
   ld->ts = 0;
   ld->complete = init->complete;
   ld->gsum = init->gsum;
+  ld->rsum = init->rsum;
   ld->my_pe = init->rank;
   ld->num_pes = init->ndoms;
   int *params = init->params;
@@ -299,6 +316,7 @@ static int _main_action(RunArgs *runargs)
   int k;
 
   int nDoms = runargs->params[33];
+  int num_refine = runargs->params[ 2];
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t init = hpx_lco_and_new(nDoms);
@@ -306,6 +324,9 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, sizeof(double),
                                            (hpx_commutative_associative_op_t)sumdouble,
                                            (void (*)(void *, const size_t size)) initdouble);
+  hpx_addr_t rsum = hpx_lco_allreduce_new(nDoms, (num_refine+1)*sizeof(int),
+                                           (hpx_commutative_associative_op_t)sumint,
+                                           (void (*)(void *, const size_t size)) initint);
 
   int i;
 
@@ -316,6 +337,7 @@ static int _main_action(RunArgs *runargs)
                           sizeof(object) * runargs->objectsize);
   args->complete = complete;
   args->gsum = gsum;
+  args->rsum = rsum;
   memcpy(&args->params, runargs->params, 34 * sizeof(int));
   args->objectsize = runargs->objectsize;
   memcpy(&args->objects, &runargs->objects,
