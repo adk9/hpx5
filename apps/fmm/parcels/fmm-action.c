@@ -1,8 +1,6 @@
-/// ----------------------------------------------------------------------------
-/// @file fmm-action.h
+/// @file fmm-action.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief Implementations of FMM actions
-/// ----------------------------------------------------------------------------
 
 #include <math.h>
 #include <stdlib.h>
@@ -11,12 +9,7 @@
 #include "fmm.h"
 
 hpx_addr_t sources;
-hpx_addr_t charges;
 hpx_addr_t targets;
-hpx_addr_t potential;
-hpx_addr_t field;
-hpx_addr_t mapsrc;
-hpx_addr_t maptar;
 hpx_addr_t source_root;
 hpx_addr_t target_root;
 
@@ -25,34 +18,22 @@ const int yoff[] = {0, 0, 1, 1, 0, 0, 1, 1};
 const int zoff[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
 int _fmm_main_action(void) {
-
-  // Allocate memory to hold input and output data, and mapping info. 
-  sources = hpx_gas_alloc(nsources * 3, sizeof(double)); 
-  charges = hpx_gas_alloc(nsources, sizeof(double));
-  targets = hpx_gas_alloc(ntargets * 3, sizeof(double));
-  potential = hpx_gas_alloc(ntargets, sizeof(double));
-  field = hpx_gas_alloc(ntargets * 3, sizeof(double));
-  mapsrc = hpx_gas_alloc(nsources, sizeof(int)); 
-  maptar = hpx_gas_alloc(ntargets, sizeof(int)); 
-
-  // Populate test data and initialize mapping
-  hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6); 
-  hpx_addr_t bound_tar = hpx_lco_future_new(sizeof(double) * 6); 
-  hpx_addr_t init_data_done = hpx_lco_and_new(3); 
-
-  hpx_call(sources, _init_sources, NULL, 0, bound_src); 
-  hpx_call(charges, _init_charges, NULL, 0, bound_tar);
-  hpx_call(targets, _init_targets, NULL, 0, init_data_done); 
-  hpx_call(mapsrc, _init_mapsrc, NULL, 0, init_data_done);
-  hpx_call(maptar, _init_maptar, NULL, 0, init_data_done); 
-  hpx_lco_wait(init_data_done); 
-  hpx_lco_delete(init_data_done, HPX_NULL); 
   
-  // Determine the smallest box enclosing all the points
+  // Allocate memory to hold input and output data, and mapping info
+  sources = hpx_gas_alloc(nsources, sizeof(source_t)); 
+  targets = hpx_gas_alloc(ntargets, sizeof(target_t)); 
+
+  // Populate test data 
+  hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6);
+  hpx_addr_t bound_tar = hpx_lco_future_new(sizeof(double) * 6); 
+  hpx_call(sources, _init_sources, NULL, 0, bound_src); 
+  hpx_call(targets, _init_targets, NULL, 0, bound_tar); 
+
+  // Determine the smallest bounding box 
   double temp_src[6] = {0}, temp_tar[6] = {0}; 
   hpx_lco_get(bound_src, sizeof(double) * 6, temp_src); 
   hpx_lco_get(bound_tar, sizeof(double) * 6, temp_tar); 
-  hpx_lco_delete(bound_src, HPX_NULL); 
+  hpx_lco_delete(bound_src, HPX_NULL);
   hpx_lco_delete(bound_tar, HPX_NULL); 
 
   double xmin = fmin(temp_src[0], temp_tar[0]); 
@@ -63,7 +44,7 @@ int _fmm_main_action(void) {
   double zmax = fmax(temp_src[5], temp_tar[5]); 
   double size = fmax(fmax(xmax - xmin, ymax - ymin), zmax - zmin);
 
-  // Construct root nodes of the source and target tree
+  // Construct root nodes of the source and target trees
   hpx_addr_t init_root_done = hpx_lco_and_new(2); 
   source_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); // expansion is NULL
   target_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); // expansion is NULL 
@@ -77,12 +58,7 @@ int _fmm_main_action(void) {
   hpx_addr_t init_param_done = hpx_lco_future_new(0); 
   init_param_action_arg_t init_param_arg = {
     .sources = sources, 
-    .charges = charges, 
     .targets = targets, 
-    .potential = potential, 
-    .field = field, 
-    .mapsrc = mapsrc, 
-    .maptar = maptar, 
     .source_root = source_root, 
     .target_root = target_root, 
     .size = size, 
@@ -95,156 +71,137 @@ int _fmm_main_action(void) {
   hpx_lco_wait(init_param_done); 
   hpx_lco_delete(init_param_done, HPX_NULL); 
 
-  /*
-  // partition the source and target ensembles. On the source side,
-  // when the partition reaches a leaf box, the source-to-multipole
-  // action will be invoked immediately. 
+  // Partition the source and target ensembles. On the source side, whenever the
+  // partition reaches a leaf box, the source-to-multipole action will be
+  // invoked immediately
   hpx_addr_t partition_done = hpx_lco_and_new(2); 
   char type1 = 'S', type2 = 'T'; 
-  hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done);
+  hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done); 
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done); 
   hpx_lco_wait(partition_done); 
-  hpx_lco_delete(partition_done, HPX_NULL); // HPX_NULL may be changed
-					    // to an lco indicating
-					    // work on target tree can start
-					    */
+  hpx_lco_delete(partition_done, HPX_NULL); 
 
   // Cleanup
   hpx_gas_global_free(sources, HPX_NULL);
-  hpx_gas_global_free(charges, HPX_NULL);
   hpx_gas_global_free(targets, HPX_NULL);
-  hpx_gas_global_free(potential, HPX_NULL);
-  hpx_gas_global_free(field, HPX_NULL);
-  hpx_gas_global_free(mapsrc, HPX_NULL); 
-  hpx_gas_global_free(maptar, HPX_NULL); 
- 
+
   hpx_shutdown(0);
 }
 
-init _init_sources_action(void) {
+int _init_sources_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
-  double *sources_p = NULL; 
-  hpx_gas_try_pin(curr, (void **)&sources_p); 
+  source_t *sources_p = NULL; 
+  hpx_gas_try_pin(curr, (void **)&sources_p);
   double bound[6] = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX};
 
   if (datatype == 1) {
     for (int i = 0; i < nsources; i++) {
-      int j = 3 * i;
-      sources_p[j]     = 1.0 * rand() / RAND_MAX - 0.5;
-      sources_p[j + 1] = 1.0 * rand() / RAND_MAX - 0.5;
-      sources_p[j + 2] = 1.0 * rand() / RAND_MAX - 0.5;
-      
-      bound[0] = fmin(bound[0], sources_p[j]); 
-      bound[1] = fmax(bound[1], sources_p[j]); 
-      bound[2] = fmin(bound[2], sources_p[j + 1]);
-      bound[3] = fmax(bound[3], sources_p[j + 1]); 
-      bound[4] = fmin(bound[4], sources_p[j + 2]); 
-      bound[5] = fmax(bound[5], sources_p[j + 2]); 
+      double x = 1.0 * rand() / RAND_MAX - 0.5; 
+      double y = 1.0 * rand() / RAND_MAX - 0.5; 
+      double z = 1.0 * rand() / RAND_MAX - 0.5; 
+      double q = 1.0 * rand() / RAND_MAX - 0.5; 
+
+      bound[0] = fmin(bound[0], x); 
+      bound[1] = fmax(bound[1], x); 
+      bound[2] = fmin(bound[2], y);
+      bound[3] = fmax(bound[3], y);
+      bound[4] = fmin(bound[4], z);
+      bound[5] = fmax(bound[5], z); 
+
+      sources_p[i].pos[0] = x;
+      sources_p[i].pos[1] = y;
+      sources_p[i].pos[2] = z;
+      sources_p[i].charge = q; 
+      sources_p[i].rank   = i;
     }
   } else if (datatype == 2) {
     double pi = acos(-1); 
     for (int i = 0; i < nsources; i++) {
-      int j = 3 * i;
       double theta = 1.0*rand() / RAND_MAX * pi;
       double phi = 1.0*rand() / RAND_MAX * pi * 2;
+      double x = sin(theta) * cos(phi); 
+      double y = sin(theta) * sin(phi); 
+      double z = cos(theta); 
+      double q = 1.0 * rand() / RAND_MAX - 0.5; 
+      
+      bound[0] = fmin(bound[0], x); 
+      bound[1] = fmax(bound[1], x); 
+      bound[2] = fmin(bound[2], y);
+      bound[3] = fmax(bound[3], y);
+      bound[4] = fmin(bound[4], z);
+      bound[5] = fmax(bound[5], z); 
 
-      sources_p[j]     = sin(theta) * cos(phi);
-      sources_p[j + 1] = sin(theta) * sin(phi);
-      sources_p[j + 2] = cos(theta);
- 
-      bound[0] = fmin(bound[0], sources_p[j]); 
-      bound[1] = fmax(bound[1], sources_p[j]); 
-      bound[2] = fmin(bound[2], sources_p[j + 1]);
-      bound[3] = fmax(bound[3], sources_p[j + 1]); 
-      bound[4] = fmin(bound[4], sources_p[j + 2]); 
-      bound[5] = fmax(bound[5], sources_p[j + 2]); 
-   }
+      sources_p[i].pos[0] = x;
+      sources_p[i].pos[1] = y;
+      sources_p[i].pos[2] = z;
+      sources_p[i].charge = q; 
+      sources_p[i].rank   = i;
+    }
   }
-
   hpx_gas_unpin(curr); 
   HPX_THREAD_CONTINUE(bound); 
   return HPX_SUCCESS;
 } 
 
-init _init_charges_action(void) {
-  hpx_addr_t = curr = hpx_thread_current_target(); 
-  double *charges_p = NULL;
-  hpx_gas_try_pin(curr, (void **)&charges_p); 
-
-  for (int i = 0; i < nsources; i++) 
-    charges_p[i] = 1.0 * rand() / RAND_MAX - 0.5; 
-
-  hpx_gas_unpin(curr);
-  return HPX_SUCCESS;
-}
-
 int _init_targets_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
-  double *targets_p = NULL; 
+  target_t *targets_p = NULL;
   hpx_gas_try_pin(curr, (void **)&targets_p); 
   double bound[6] = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX};
   
   if (datatype == 1) {
     for (int i = 0; i < ntargets; i++) {
-      int j = 3 * i;
-      targets_p[j]     = 1.0 * rand() / RAND_MAX - 0.5;
-      targets_p[j + 1] = 1.0 * rand() / RAND_MAX - 0.5;
-      targets_p[j + 2] = 1.0 * rand() / RAND_MAX - 0.5;
+      double x = 1.0 * rand() / RAND_MAX - 0.5; 
+      double y = 1.0 * rand() / RAND_MAX - 0.5; 
+      double z = 1.0 * rand() / RAND_MAX - 0.5; 
 
-      bound[0] = fmin(bound[0], sources_p[j]); 
-      bound[1] = fmax(bound[1], sources_p[j]); 
-      bound[2] = fmin(bound[2], sources_p[j + 1]);
-      bound[3] = fmax(bound[3], sources_p[j + 1]); 
-      bound[4] = fmin(bound[4], sources_p[j + 2]); 
-      bound[5] = fmax(bound[5], sources_p[j + 2]); 
+      bound[0] = fmin(bound[0], x); 
+      bound[1] = fmax(bound[1], x); 
+      bound[2] = fmin(bound[2], y);
+      bound[3] = fmax(bound[3], y);
+      bound[4] = fmin(bound[4], z);
+      bound[5] = fmax(bound[5], z); 
+
+      targets_p[i].pos[0]    = x;
+      targets_p[i].pos[1]    = y;
+      targets_p[i].pos[2]    = z;
+      targets_p[i].potential = 0; 
+      targets_p[i].field[0]  = 0; 
+      targets_p[i].field[1]  = 0;
+      targets_p[i].field[2]  = 0; 
+      targets_p[i].rank      = i; 
     }
   } else if (datatype == 2) {
-    double pi = acos(-1);
-    
+    double pi = acos(-1);    
     for (int i = 0; i < ntargets; i++) {
-      int j = 3 * i;
       double theta = 1.0 * rand() / RAND_MAX * pi;
       double phi = 1.0 * rand() / RAND_MAX * pi * 2;
-      targets_p[j]     = sin(theta) * cos(phi);
-      targets_p[j + 1] = sin(theta) * sin(phi);
-      targets_p[j + 2] = cos(theta);
 
-      bound[0] = fmin(bound[0], sources_p[j]); 
-      bound[1] = fmax(bound[1], sources_p[j]); 
-      bound[2] = fmin(bound[2], sources_p[j + 1]);
-      bound[3] = fmax(bound[3], sources_p[j + 1]); 
-      bound[4] = fmin(bound[4], sources_p[j + 2]); 
-      bound[5] = fmax(bound[5], sources_p[j + 2]); 
+      double x = sin(theta) * cos(phi); 
+      double y = sin(theta) * sin(phi); 
+      double z = cos(theta); 
+      
+      bound[0] = fmin(bound[0], x); 
+      bound[1] = fmax(bound[1], x); 
+      bound[2] = fmin(bound[2], y);
+      bound[3] = fmax(bound[3], y);
+      bound[4] = fmin(bound[4], z);
+      bound[5] = fmax(bound[5], z); 
+
+      targets_p[i].pos[0]    = x;
+      targets_p[i].pos[1]    = y;
+      targets_p[i].pos[2]    = z;
+      targets_p[i].potential = 0; 
+      targets_p[i].field[0]  = 0; 
+      targets_p[i].field[1]  = 0;
+      targets_p[i].field[2]  = 0; 
+      targets_p[i].rank      = i; 
     }
   }
   hpx_gas_unpin(curr); 
   HPX_THREAD_CONTINUE(bound); 
   return HPX_SUCCESS;
 } 
-
-int _init_mapsrc_action(void) {
-  hpx_addr_t curr = hpx_thread_current_target(); 
-  int *mapsrc_p = NULL; 
-  hpx_gas_try_pin(curr, (void **)&mapsrc_p); 
-
-  for (int i = 0; i < nsources; i++) 
-    mapsrc_p[i] = i;
-
-  hpx_gas_unpin(curr); 
-  return HPX_SUCCESS;
-}
-
-int _init_maptar_action(void) {
-  hpx_addr_t curr = hpx_thread_current_target(); 
-  int *maptar_p = NULL;
-  hpx_gas_try_pin(curr, (void **)*maptar_p); 
-
-  for (int i = 0; i < ntargets; i++)
-    maptar_p[i] = i;
-
-  hpx_gas_unpin(curr); 
-  return HPX_SUCCESS;
-}
 
 int _init_source_root_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
@@ -285,17 +242,12 @@ int _init_param_action(void *args) {
   init_param_action_arg_t *init_param_arg = (init_param_action_arg_t *) args; 
 
   sources = init_param_arg->sources; 
-  charges = init_param_arg->charges; 
   targets = init_param_arg->targets; 
-  potential = init_param_arg->potential; 
-  field = init_param_arg->field; 
-  mapsrc = init_param_arg->mapsrc; 
-  maptar = init_param_arg->maptar; 
   source_root = init_param_arg->source_root; 
   target_root = init_param_arg->target_root; 
 
   fmm_param = calloc(1, sizeof(fmm_param_t)); 
-  fmm_param-size = init_param_arg->size; 
+  fmm_param->size = init_param_arg->size; 
   fmm_param->corner[0] = init_param_arg->corner[0]; 
   fmm_param->corner[1] = init_param_arg->corner[1]; 
   fmm_param->corner[2] = init_param_arg->corner[2]; 
@@ -362,12 +314,198 @@ int _init_param_action(void *args) {
   mkexps(fmm_param);
 
   fmm_param->scale = calloc(MAXLEVEL, sizeof(double));
-  fmm_param->scale[0] = 1 / _args->size;
+  fmm_param->scale[0] = 1 / init_param_arg->size;
   for (int i = 1; i <= MAXLEVEL; i++)
     fmm_param->scale[i] = 2 * fmm_param->scale[i - 1];
   return HPX_SUCCESS;
 }
 
+int _partition_box_action(void *args) {
+  const char type = *((char *) args); 
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  hpx_gas_try_pin(curr, (void *)&box);
+
+  int pgsz = fmm_param->pgsz; 
+  int nexpmax = fmm_param->nexpmax; 
+  double size = fmm_param->size; 
+  double *corner = &fmm_param->corner[0]; 
+
+  double h = size / (1 << (box->level + 1)); 
+  swap_action_arg_t swap_arg = {
+    .type = type, 
+    .addr = box->addr, 
+    .npts = box->npts, 
+    .center[0] = corner[0] + (2 * box->index[0] + 1) * h, 
+    .center[1] = corner[1] + (2 * box->index[1] + 1) * h, 
+    .center[2] = corner[2] + (2 * box->index[2] + 1) * h
+  }; 
+
+  hpx_addr_t points = (type == 'S' ? sources : targets); 
+  hpx_addr_t partition = hpx_lco_future_new(sizeof(int) * 16); 
+  hpx_call(points, _swap, &swap_arg, sizeof(swap_action_arg_t), partition); 
+
+  int temp[16] = {0}, *subparts = NULL, *addrs = NULL; 
+  hpx_lco_get(partition, sizeof(int) * 16, temp); 
+  hpx_lco_delete(partition, HPX_NULL); 
+
+  subparts = &temp[0]; 
+  addrs = &temp[8]; 
+  box->nchild = (subparts[0] > 0) + (subparts[1] > 0) + (subparts[2] > 0) + 
+    (subparts[3] > 0) + (subparts[4] > 0) + (subparts[5] > 0) + 
+    (subparts[6] > 0) + (subparts[7] > 0); 
+
+  hpx_addr_t branching = hpx_lco_and_new(box->nchild);
+  int bufsz = sizeof(double complex) * (pgsz + 6 * nexpmax * (type == 'S'));
+
+  for (int i = 0; i < 8; i++) {
+    if (subparts[i] > 0) {
+      box->child[i] = hpx_gas_alloc(1, sizeof(fmm_box_t) + bufsz); 
+      set_box_action_arg_t temp = {
+	.level = box->level + 1, 
+	.parent = curr, 
+	.index[0] = box->index[0] * 2 + xoff[i], 
+	.index[1] = box->index[1] * 2 + yoff[i], 
+	.index[2] = box->index[2] * 2 + zoff[i], 
+	.npts = subparts[i], 
+	.addr = box->addr + addrs[i], 
+	.type = type
+      };      
+      hpx_call(box->child[i], _set_box, &temp, sizeof(set_box_action_arg_t), 
+	       branching); 
+    }
+  }
+
+  hpx_gas_unpin(curr); 
+  hpx_lco_wait(branching); 
+  hpx_lco_delete(branching, HPX_NULL);   
+  return HPX_SUCCESS; 
+} 
+
+int _swap_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  swap_action_arg_t *swap_arg = (swap_action_arg_t *) args; 
+
+  char type = swap_arg->type; 
+  int npts = swap_arg->npts; 
+  int first = swap_arg->addr; 
+  int last = first + npts; 
+  double xc = swap_arg->center[0]; 
+  double yc = swap_arg->center[1]; 
+  double zc = swap_arg->center[2]; 
+  int *record = calloc(npts, sizeof(int)); 
+  int result[16] = {0}, assigned[8] = {0};
+  int *subparts = &result[0], *addrs = &result[8]; 
+
+  if (type == 'S') {
+    source_t *sources_p = NULL;
+    hpx_gas_try_pin(curr, (void *)&sources_p); 
+
+    for (int i = first; i < last; i++) {
+      double x = sources_p[i].pos[0]; 
+      double y = sources_p[i].pos[1]; 
+      double z = sources_p[i].pos[2]; 
+      int bin = 4 * (z > zc) + 2 * (y > yc) + (x > xc); 
+      record[i - first] = bin; 
+    }
+
+    for (int i = 0; i < npts; i++) 
+      subparts[record[i]]++; 
+
+    addrs[1] = addrs[0] + subparts[0]; 
+    addrs[2] = addrs[1] + subparts[1]; 
+    addrs[3] = addrs[2] + subparts[2]; 
+    addrs[4] = addrs[3] + subparts[3]; 
+    addrs[5] = addrs[4] + subparts[4];
+    addrs[6] = addrs[5] + subparts[5]; 
+    addrs[7] = addrs[6] + subparts[6]; 
+
+    source_t *temp = calloc(npts, sizeof(source_t)); 
+    for (int i = first; i < last; i++) {
+      int bin = record[i - first]; 
+      int offset = addrs[bin] + assigned[bin]++; 
+      temp[offset] = sources_p[i]; 
+    } 
+
+    for (int i = first; i < last; i++) 
+      sources_p[i] = temp[i - first]; 
+
+    free(temp); 
+  } else {
+    target_t *targets_p = NULL; 
+    hpx_gas_try_pin(curr, (void *)&targets_p); 
+
+    for (int i = first; i < last; i++) {
+      double x = targets_p[i].pos[0]; 
+      double y = targets_p[i].pos[1]; 
+      double z = targets_p[i].pos[2]; 
+      int bin = 4 * (z > zc) + 2 * (y > yc) + (x > xc); 
+      record[i - first] = bin; 
+    }
+
+    for (int i = 0; i < npts; i++) 
+      subparts[record[i]]++; 
+    addrs[1] = addrs[0] + subparts[0]; 
+    addrs[2] = addrs[1] + subparts[1]; 
+    addrs[3] = addrs[2] + subparts[2]; 
+    addrs[4] = addrs[3] + subparts[3]; 
+    addrs[5] = addrs[4] + subparts[4];
+    addrs[6] = addrs[5] + subparts[5]; 
+    addrs[7] = addrs[6] + subparts[6]; 
+
+    target_t *temp = calloc(npts, sizeof(target_t)); 
+    for (int i = first; i < last; i++) {
+      int bin = record[i - first]; 
+      int offset = addrs[bin] + assigned[bin]++; 
+      temp[offset] = targets_p[i]; 
+    }
+
+    for (int i = first; i < last; i++) 
+      targets_p[i] = temp[i - first]; 
+
+    free(temp); 
+  }
+
+  hpx_gas_unpin(curr); 
+  HPX_THREAD_CONTINUE(result); 
+  return HPX_SUCCESS;
+}
+
+int _set_box_action(void *args) {
+  set_box_action_arg_t *temp = (set_box_action_arg_t *)args; 
+
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  hpx_gas_try_pin(curr, (void *)&box); 
+
+  box->level = temp->level; 
+  box->parent = temp->parent; 
+  box->index[0] = temp->index[0]; 
+  box->index[1] = temp->index[1]; 
+  box->index[2] = temp->index[2]; 
+  box->npts = temp->npts; 
+  box->addr = temp->addr; 
+
+  char type = temp->type; 
+  if (box->npts > s) {
+    // Continue the partition process if it contains more than s points
+    hpx_addr_t status = hpx_lco_future_new(0); 
+    hpx_call(curr, _partition_box, &type, sizeof(type), status); 
+    hpx_lco_wait(status); 
+    hpx_lco_delete(status, HPX_NULL); 
+  } else {
+    // invoke source-to-multipole action at leaf source box
+    if (type == 'S') 
+      hpx_call(curr, _source_to_mpole, NULL, 0, HPX_NULL); 
+  } 
+
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS;
+}
+
+int _source_to_multipole_action(void) {
+  return HPX_SUCCESS;
+}
 
 void lgndr(int nmax, double x, double *y) {
   int n;

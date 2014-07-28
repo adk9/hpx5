@@ -18,13 +18,14 @@ int s;
 
 hpx_action_t _fmm_main;
 hpx_action_t _init_sources; 
-hpx_action_t _init_charges; 
 hpx_action_t _init_targets; 
-hpx_action_t _init_mapsrc; 
-hpx_action_t _init_maptar; 
 hpx_action_t _init_param; 
 hpx_action_t _init_source_root; 
 hpx_action_t _init_target_root; 
+hpx_action_t _partition_box; 
+hpx_action_t _swap; 
+hpx_action_t _set_box; 
+hpx_action_t _source_to_mpole; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -97,13 +98,14 @@ int main(int argc, char *argv[]) {
   // register actions
   _fmm_main         = HPX_REGISTER_ACTION(_fmm_main_action);
   _init_sources     = HPX_REGISTER_ACTION(_init_sources_action);
-  _init_charges     = HPX_REGISTER_ACTION(_init_charges_action);
   _init_targets     = HPX_REGISTER_ACTION(_init_targets_action);
-  _init_mapsrc      = HPX_REGISTER_ACTION(_init_mapsrc_action); 
-  _init_maptar      = HPX_REGISTER_ACTION(_init_maptar_action); 
   _init_param       = HPX_REGISTER_ACTION(_init_param_action); 
   _init_source_root = HPX_REGISTER_ACTION(_init_source_root_action); 
   _init_target_root = HPX_REGISTER_ACTION(_init_target_root_action); 
+  _partition_box    = HPX_REGISTER_ACTION(_partition_box_action); 
+  _swap             = HPX_REGISTER_ACTION(_swap_action); 
+  _set_box          = HPX_REGISTER_ACTION(_set_box_action); 
+  _source_to_mpole  = HPX_REGISTER_ACTION(_source_to_multipole_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
