@@ -9,6 +9,7 @@ int _comm_refine_result_action(RefineNodalArgs *args)
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
+
   // 0. wait for the right generation to become active
   hpx_lco_gencount_wait(ld->epoch, args->epoch);
 
@@ -17,6 +18,7 @@ int _comm_refine_result_action(RefineNodalArgs *args)
   int *incoming_buf = args->buf;
   int i = args->i;
   int dir = args->dir;
+  int iter = args->iter;
 
   // 1. acquire the domain lock
   hpx_lco_sema_p(ld->sem_refine);
@@ -40,7 +42,7 @@ int _comm_refine_result_action(RefineNodalArgs *args)
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
-  hpx_lco_and_set(ld->refine_and[args->epoch % 2], HPX_NULL);
+  hpx_lco_and_set(ld->refine_and[args->epoch % 2 + 2*iter], HPX_NULL);
 
   hpx_gas_unpin(local);
 
@@ -54,6 +56,7 @@ int _comm_refine_sends_action(refineSBN *psbn)
   Domain *ld = psbn->domain;
   int dir = psbn->dir;
   int i = psbn->i;
+  int iter = psbn->iter;
 
   // Acquire a large-enough buffer to pack into.
   // - NULL first parameter means it comes with the parcel and is managed by
@@ -69,6 +72,7 @@ int _comm_refine_sends_action(refineSBN *psbn)
   nodal->srcIndex = psbn->rank;
   nodal->i = i;
   nodal->dir = dir;
+  nodal->iter = iter;
 
   int n;
   for (n=0;n<ld->comm_num[dir][i];n++) {
@@ -88,21 +92,20 @@ int _comm_refine_sends_action(refineSBN *psbn)
 // This routine uses the communication pattern established for exchanging
 // ghost values to exchange information about the refinement level and
 // plans for refinement for neighboring blocks.
-void comm_refine(Domain *ld,unsigned long epoch)
+void comm_refine(Domain *ld,unsigned long epoch,int iter)
 {
    int i, n, offset, dir, which, face, err, type;
    block *bp;
 
    hpx_addr_t local = hpx_thread_current_target();
 
-   // you can't allocate the next generation until the grid is known -- this has to be done later
-   //ld->refine_and[(epoch + 1) % 2] = hpx_lco_and_new(ld->num_pes-1);
-
    // find out how many sends
    int nsends = 0;
    for (dir = 0; dir < 3; dir++) {
      nsends += ld->num_comm_partners[dir];
    }
+   // you may have to re-allocate the next generation if the grid changes
+   ld->refine_and[(epoch + 1) % 2 + 2*iter] = hpx_lco_and_new(nsends);
 
    hpx_addr_t sends = hpx_lco_and_new(nsends);
    for (dir = 0; dir < 3; dir++) {
@@ -118,6 +121,7 @@ void comm_refine(Domain *ld,unsigned long epoch)
          psbn->i                = i;
          psbn->domain           = ld;
          psbn->epoch            = epoch;
+         psbn->iter             = iter;
 
          hpx_parcel_set_target(p, local);
          hpx_parcel_set_action(p, _comm_refine_sends);
@@ -133,6 +137,6 @@ void comm_refine(Domain *ld,unsigned long epoch)
    hpx_lco_delete(sends, HPX_NULL);
 
    hpx_lco_gencount_inc(ld->epoch, HPX_NULL);
-   hpx_lco_wait(ld->refine_and[epoch % 2]);
-   hpx_lco_delete(ld->refine_and[epoch % 2], HPX_NULL);
+   hpx_lco_wait(ld->refine_and[epoch % 2 + 2*iter]);
+   hpx_lco_delete(ld->refine_and[epoch % 2 + 2*iter], HPX_NULL);
 }

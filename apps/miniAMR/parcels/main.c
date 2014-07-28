@@ -90,8 +90,6 @@ static int _initDomain_action(InitArgs *init) {
   ld->plot_and[0] = hpx_lco_and_new(ld->num_pes-1);
   ld->plot_and[1] = HPX_NULL;
   ld->sem_refine = hpx_lco_sema_new(1);
-  ld->refine_and[0] = HPX_NULL;  // this is initially set after calling init
-  ld->refine_and[1] = HPX_NULL;
   ld->objectsize = init->objectsize;
   ld->objects = init->objects;
 
@@ -314,7 +312,15 @@ static int _initDomain_action(InitArgs *init) {
      nrecvs += ld->num_comm_partners[dir];
    }
 
-  ld->refine_and[0] = hpx_lco_and_new(nrecvs);
+  if ( ld->num_refine >= ld->block_change ) {
+    ld->refine_and_size = ld->num_refine;  
+  } else {
+    ld->refine_and_size = ld->block_change;
+  }
+  ld->refine_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
+  for (j=0;j<ld->refine_and_size;j++) {
+    ld->refine_and[0 + 2*j] = hpx_lco_and_new(nrecvs);
+  }
 
   ld->counter_malloc_init = ld->counter_malloc;
   ld->size_malloc_init = ld->size_malloc;
