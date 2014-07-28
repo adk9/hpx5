@@ -10,6 +10,25 @@
 #include <complex.h>
 #include "hpx/hpx.h"
 
+/// ----------------------------------------------------------------------------
+/// @brief Source point type
+/// ----------------------------------------------------------------------------
+typedef struct source_t {
+  double pos[3]; ///< position of the source point
+  double charge; ///< strength of the source point
+  int rank; ///< original input order
+} source_t;
+
+/// ----------------------------------------------------------------------------
+/// @brief Target point type
+/// ----------------------------------------------------------------------------
+typedef struct target_t {
+  double pos[3]; ///< position of the target point
+  double potential; ///< potential at the target point
+  double field[3]; ///< field at the target point
+  int rank; ///< original input order
+} target_t; 
+
 typedef struct fmm_box_t fmm_box_t; 
 
 /// ----------------------------------------------------------------------------
@@ -29,7 +48,7 @@ struct fmm_box_t {
   hpx_addr_t sema; ///< semaphore for reduction
   int nlist1; ///< number of entries in list1
   int nlist5; ///< number of entries in list5
-  hpx_addr_t expansion; ///< address for expansion
+  double complex expansion[]; ///< address for expansion
 }; 
 
 /// ----------------------------------------------------------------------------
@@ -72,16 +91,33 @@ typedef struct {
 /// @brief Argument passed to the _init_param_action
 /// ----------------------------------------------------------------------------
 typedef struct {
-  hpx_addr_t sources; ///< sources location
-  hpx_addr_t charges; ///< charges 
-  hpx_addr_t targets; ///< targets location
-  hpx_addr_t potential; ///< storage for potential 
-  hpx_addr_t field; ///< storage for field 
-  hpx_addr_t mapsrc; ///< source mapping information
-  hpx_addr_t maptar; ///< target mapping information
+  hpx_addr_t sources; ///< global address for the source information
+  hpx_addr_t targets; ///< global address for the target information and output
   hpx_addr_t source_root; ///< address for the source root
   hpx_addr_t target_root; ///< address for the target root
   double size; ///< size of the bounding box
   double corner[3]; ///< lower left corner of the bounding box
 } init_param_action_arg_t; 
+
+/// ----------------------------------------------------------------------------
+/// @brief Argument passed to the _swap_action
+/// ----------------------------------------------------------------------------
+typedef struct {
+  char type; ///< type of points being swapped
+  int addr; ///< pointer to the first point contained in the box
+  int npts; ///< number of points contained in the box
+  int center[3]; ///< center of the box
+} swap_action_arg_t; 
+
+/// ----------------------------------------------------------------------------
+/// @brief Argument passed to the _set_box_action
+/// ----------------------------------------------------------------------------
+typedef struct {
+  int level; ///< level of the box being set
+  hpx_addr_t parent; ///< address of the parent 
+  int index[3]; ///< index of the box being set
+  int npts; ///< number of points contained in the box
+  int addr; ///< pointer to the first point contained in the box
+  int type; ///< type of the box being set
+} set_box_action_arg_t; 
 #endif
