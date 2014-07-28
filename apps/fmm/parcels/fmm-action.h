@@ -13,11 +13,12 @@ extern hpx_action_t _init_target_root;
 extern hpx_action_t _partition_box; 
 extern hpx_action_t _swap; 
 extern hpx_action_t _set_box; 
+extern hpx_action_t _aggregate; 
 extern hpx_action_t _source_to_mpole; 
-/*
 extern hpx_action_t _mpole_to_mpole;
-extern hpx_action_t _mpole_reduction; 
 extern hpx_action_t _mpole_to_expo; 
+/*
+
 extern hpx_action_t _disaggregate; 
 */
 
@@ -49,12 +50,16 @@ int _swap_action(void *args);
 int _set_box_action(void *args); 
 
 /// @brief Source to multipole action
-int _source_to_multipole_action(void); 
+int _aggregate_action(void *args); 
 
-/// ----------------------------------------------------------------------------
+/// @brief Source to multipole action helper
+int _source_to_multipole_action(void *args); 
+
 /// @brief Multipole to multipole action
-/// ----------------------------------------------------------------------------
 int _multipole_to_multipole_action(void *args); 
+
+/// @brief Multipole to exponential action
+int _multipole_to_exponential_action(void *args); 
 
 void multipole_to_exponential_p1(const double complex *multipole, 
                                  double complex *mexpu, 
@@ -63,24 +68,10 @@ void multipole_to_exponential_p1(const double complex *multipole,
 void multipole_to_exponential_p2(const double complex *mexpf, 
                                  double complex *mexpphys); 
 
-/// ----------------------------------------------------------------------------
-/// @brief Reduction on multipole expansion
-/// ----------------------------------------------------------------------------
-int _multipole_reduction_action(void *args); 
-
-/// ----------------------------------------------------------------------------
-/// @brief Multipole to exponential action
-/// ----------------------------------------------------------------------------
-int _multipole_to_exponential_action(void *args); 
-
-/// ----------------------------------------------------------------------------
 /// @brief Disaggregate operation
-/// ----------------------------------------------------------------------------
 int _disaggregate_action(void *args); 
 
-/// ----------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 
-/// ----------------------------------------------------------------------------
 void lgndr(int nmax, double x, double *y); 
 
 void rotz2y(const double complex *multipole, const double *rd, 
