@@ -27,6 +27,7 @@ typedef struct {
 
 typedef struct {
   unsigned long epoch;
+  int iter;
   int size;
   int i;
   int dir;
@@ -313,7 +314,8 @@ typedef struct Domain {
   hpx_addr_t sem_plot;
   hpx_addr_t plot_and[2];
   hpx_addr_t sem_refine;
-  hpx_addr_t refine_and[2];
+  hpx_addr_t *refine_and;
+  int refine_and_size;
   hpx_addr_t epoch;
   int objectsize;
   object *objects;
@@ -326,6 +328,7 @@ typedef struct {
   int i;
   Domain *domain;
   unsigned long epoch;
+  int iter;
 } refineSBN;
 
 int _plot_result_action(NodalArgs *nodal);
@@ -341,5 +344,7 @@ extern hpx_action_t _comm_refine_sends;
 void check_objects(Domain *ld);
 void init_amr(Domain *ld);
 void init_profile(Domain *ld);
+
+void comm_refine(Domain *ld,unsigned long epoch,int iter);
 
 #endif
