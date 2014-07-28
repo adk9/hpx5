@@ -1,8 +1,6 @@
-/// ----------------------------------------------------------------------------
 /// @file fmm-types.h
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief FMM types 
-/// ----------------------------------------------------------------------------
 #pragma once
 #ifndef FMM_TYPES_H
 #define FMM_TYPES_H
@@ -10,18 +8,14 @@
 #include <complex.h>
 #include "hpx/hpx.h"
 
-/// ----------------------------------------------------------------------------
 /// @brief Source point type
-/// ----------------------------------------------------------------------------
 typedef struct source_t {
   double pos[3]; ///< position of the source point
   double charge; ///< strength of the source point
   int rank; ///< original input order
 } source_t;
 
-/// ----------------------------------------------------------------------------
 /// @brief Target point type
-/// ----------------------------------------------------------------------------
 typedef struct target_t {
   double pos[3]; ///< position of the target point
   double potential; ///< potential at the target point
@@ -31,9 +25,7 @@ typedef struct target_t {
 
 typedef struct fmm_box_t fmm_box_t; 
 
-/// ----------------------------------------------------------------------------
 /// @brief FMM box type
-/// ----------------------------------------------------------------------------
 struct fmm_box_t {
   int level; ///< level of the box
   hpx_addr_t parent; ///< pointer to the parent
@@ -51,10 +43,8 @@ struct fmm_box_t {
   double complex expansion[]; ///< address for expansion
 }; 
 
-/// ----------------------------------------------------------------------------
 /// @brief FMM parameter type
 /// @note This is intended to be duplicated on each locality
-/// ----------------------------------------------------------------------------
 typedef struct {
   double size; ///< size of the bounding boxes
   double corner[3]; ///< coordinate of the lower left corner of the bounding box
@@ -87,9 +77,7 @@ typedef struct {
   double complex *fexpback; ///< coefficients for merging exponentials
 } fmm_param_t; 
 
-/// ----------------------------------------------------------------------------
 /// @brief Argument passed to the _init_param_action
-/// ----------------------------------------------------------------------------
 typedef struct {
   hpx_addr_t sources; ///< global address for the source information
   hpx_addr_t targets; ///< global address for the target information and output
@@ -99,25 +87,15 @@ typedef struct {
   double corner[3]; ///< lower left corner of the bounding box
 } init_param_action_arg_t; 
 
-/// ----------------------------------------------------------------------------
-/// @brief Argument passed to the _swap_action
-/// ----------------------------------------------------------------------------
+/// @brief Argument passed to actions involing point operation
 typedef struct {
-  char type; ///< type of points being swapped
-  int addr; ///< pointer to the first point contained in the box
-  int npts; ///< number of points contained in the box
-  int center[3]; ///< center of the box
-} swap_action_arg_t; 
+  char type; 
+  int addr; 
+  int npts; 
+  int index[3]; 
+  double center[3]; 
+  int level; 
+  hpx_addr_t parent; 
+} point_op_arg_t; 
 
-/// ----------------------------------------------------------------------------
-/// @brief Argument passed to the _set_box_action
-/// ----------------------------------------------------------------------------
-typedef struct {
-  int level; ///< level of the box being set
-  hpx_addr_t parent; ///< address of the parent 
-  int index[3]; ///< index of the box being set
-  int npts; ///< number of points contained in the box
-  int addr; ///< pointer to the first point contained in the box
-  int type; ///< type of the box being set
-} set_box_action_arg_t; 
 #endif

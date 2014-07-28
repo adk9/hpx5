@@ -1,8 +1,6 @@
-/// ----------------------------------------------------------------------------
 /// @file fmm-main.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief  Main file for FMM 
-/// ----------------------------------------------------------------------------
 
 #include <unistd.h>
 #include <stdio.h>
@@ -25,7 +23,10 @@ hpx_action_t _init_target_root;
 hpx_action_t _partition_box; 
 hpx_action_t _swap; 
 hpx_action_t _set_box; 
+hpx_action_t _aggregate; 
 hpx_action_t _source_to_mpole; 
+hpx_action_t _mpole_to_mpole; 
+hpx_action_t _mpole_to_expo; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -105,7 +106,10 @@ int main(int argc, char *argv[]) {
   _partition_box    = HPX_REGISTER_ACTION(_partition_box_action); 
   _swap             = HPX_REGISTER_ACTION(_swap_action); 
   _set_box          = HPX_REGISTER_ACTION(_set_box_action); 
+  _aggregate        = HPX_REGISTER_ACTION(_aggregate_action);
   _source_to_mpole  = HPX_REGISTER_ACTION(_source_to_multipole_action); 
+  _mpole_to_mpole   = HPX_REGISTER_ACTION(_multipole_to_multipole_action); 
+  _mpole_to_expo    = HPX_REGISTER_ACTION(_multipole_to_exponential_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
