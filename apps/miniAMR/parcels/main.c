@@ -7,6 +7,8 @@ hpx_action_t _plot_result = 0;
 hpx_action_t _plot_sends = 0;
 hpx_action_t _comm_refine_result = 0;
 hpx_action_t _comm_refine_sends = 0;
+hpx_action_t _comm_parent_result = 0;
+hpx_action_t _comm_parent_sends = 0;
 
 static void initdouble(double *input, const size_t size) {
   assert(sizeof(double) == size);
@@ -90,6 +92,7 @@ static int _initDomain_action(InitArgs *init) {
   ld->plot_and[0] = hpx_lco_and_new(ld->num_pes-1);
   ld->plot_and[1] = HPX_NULL;
   ld->sem_refine = hpx_lco_sema_new(1);
+  ld->sem_parent = hpx_lco_sema_new(1);
   ld->objectsize = init->objectsize;
   ld->objects = init->objects;
 
@@ -318,8 +321,10 @@ static int _initDomain_action(InitArgs *init) {
     ld->refine_and_size = ld->block_change;
   }
   ld->refine_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
+  ld->parent_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
   for (j=0;j<ld->refine_and_size;j++) {
     ld->refine_and[0 + 2*j] = hpx_lco_and_new(nrecvs);
+    ld->parent_and[0 + 2*j] = hpx_lco_and_new(ld->par_p.num_comm_part);
   }
 
   ld->counter_malloc_init = ld->counter_malloc;
@@ -801,6 +806,8 @@ int main(int argc, char **argv)
   _plot_result = HPX_REGISTER_ACTION(_plot_result_action);
   _comm_refine_sends = HPX_REGISTER_ACTION(_comm_refine_sends_action);
   _comm_refine_result = HPX_REGISTER_ACTION(_comm_refine_result_action);
+  _comm_parent_sends = HPX_REGISTER_ACTION(_comm_parent_sends_action);
+  _comm_parent_result = HPX_REGISTER_ACTION(_comm_parent_result_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 

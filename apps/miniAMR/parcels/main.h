@@ -36,6 +36,15 @@ typedef struct {
 } RefineNodalArgs;
 
 typedef struct {
+  unsigned long epoch;
+  int iter;
+  int size;
+  int i;
+  int     srcIndex;
+  int        buf[];                         // inline, variable length buffer
+} ParentNodalArgs;
+
+typedef struct {
    int type;
    int bounce;
    double cen[3];
@@ -315,6 +324,8 @@ typedef struct Domain {
   hpx_addr_t plot_and[2];
   hpx_addr_t sem_refine;
   hpx_addr_t *refine_and;
+  hpx_addr_t sem_parent;
+  hpx_addr_t *parent_and;
   int refine_and_size;
   hpx_addr_t epoch;
   int objectsize;
@@ -331,6 +342,14 @@ typedef struct {
   int iter;
 } refineSBN;
 
+typedef struct {
+  int rank;
+  int i;
+  Domain *domain;
+  unsigned long epoch;
+  int iter;
+} parentSBN;
+
 int _plot_result_action(NodalArgs *nodal);
 extern hpx_action_t _plot_result;
 int _plot_sends_action(plotSBN *psbn);
@@ -346,5 +365,12 @@ void init_amr(Domain *ld);
 void init_profile(Domain *ld);
 
 void comm_refine(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_parent_result_action(ParentNodalArgs *nodal);
+extern hpx_action_t _comm_parent_result;
+int _comm_parent_sends_action(parentSBN *psbn);
+extern hpx_action_t _comm_parent_sends;
+
+void comm_parent(Domain *ld,unsigned long epoch,int iter);
 
 #endif
