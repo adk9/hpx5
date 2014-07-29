@@ -85,6 +85,7 @@ void refine(int ts,Domain *ld,unsigned long epoch)
       t2 = hpx_time_now();
       comm_refine(ld,epoch,i);
       comm_parent(ld,epoch,i);
+      comm_parent_reverse(ld,epoch,i);
       ld->timer_refine_c1 += hpx_time_elapsed_ms(t2);
       t4 += hpx_time_elapsed_ms(t2);
       
