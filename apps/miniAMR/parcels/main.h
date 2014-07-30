@@ -60,6 +60,7 @@ typedef struct {
   hpx_addr_t complete;
   hpx_addr_t gsum;
   hpx_addr_t rsum;
+  hpx_addr_t refinelevel;
   int params[34];
   int objectsize;
   int rank;
@@ -175,6 +176,7 @@ typedef struct Domain {
   hpx_addr_t complete;
   hpx_addr_t gsum;
   hpx_addr_t rsum;
+  hpx_addr_t refinelevel;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
@@ -324,6 +326,8 @@ typedef struct Domain {
   hpx_addr_t plot_and[2];
   hpx_addr_t sem_refine;
   hpx_addr_t *refine_and;
+  hpx_addr_t sem_reverse_refine;
+  hpx_addr_t *reverse_refine_and;
   hpx_addr_t sem_parent;
   hpx_addr_t *parent_and;
   hpx_addr_t sem_parent_reverse;
@@ -381,5 +385,14 @@ int _comm_parent_reverse_sends_action(parentSBN *psbn);
 extern hpx_action_t _comm_parent_reverse_sends;
 
 void comm_parent_reverse(Domain *ld,unsigned long epoch,int iter);
+
+int refine_level(Domain *ld,unsigned long epoch,int *iter);
+
+int _comm_reverse_refine_result_action(RefineNodalArgs *nodal);
+extern hpx_action_t _comm_reverse_refine_result;
+int _comm_reverse_refine_sends_action(refineSBN *psbn);
+extern hpx_action_t _comm_reverse_refine_sends;
+
+void comm_reverse_refine(Domain *ld,unsigned long epoch,int iter);
 
 #endif

@@ -7,6 +7,8 @@ hpx_action_t _plot_result = 0;
 hpx_action_t _plot_sends = 0;
 hpx_action_t _comm_refine_result = 0;
 hpx_action_t _comm_refine_sends = 0;
+hpx_action_t _comm_reverse_refine_result = 0;
+hpx_action_t _comm_reverse_refine_sends = 0;
 hpx_action_t _comm_parent_result = 0;
 hpx_action_t _comm_parent_sends = 0;
 hpx_action_t _comm_parent_reverse_result = 0;
@@ -37,6 +39,17 @@ static void sumint(int *output,const int *input, const size_t size) {
   for (i=0;i<nx;i++) {
     output[i] += input[i];
   }
+  return;
+}
+
+static void singleinitint(int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  *input = 0;
+}
+
+static void singlesumint(int *output,const int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  *output += *input;
   return;
 }
 
@@ -87,6 +100,7 @@ static int _initDomain_action(InitArgs *init) {
   ld->complete = init->complete;
   ld->gsum = init->gsum;
   ld->rsum = init->rsum;
+  ld->refinelevel = init->refinelevel;
   ld->my_pe = init->rank;
   ld->num_pes = init->ndoms;
   int *params = init->params;
@@ -323,11 +337,16 @@ static int _initDomain_action(InitArgs *init) {
   } else {
     ld->refine_and_size = ld->block_change;
   }
+  // could be called as many as 8 times in refine_level
+  ld->refine_and_size *= 8;
+
   ld->refine_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
+  ld->reverse_refine_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
   ld->parent_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
   ld->parent_reverse_and = (hpx_addr_t *) malloc(2*ld->refine_and_size * sizeof(hpx_addr_t));
   for (j=0;j<ld->refine_and_size;j++) {
     ld->refine_and[0 + 2*j] = hpx_lco_and_new(nrecvs);
+    ld->reverse_refine_and[0 + 2*j] = hpx_lco_and_new(nrecvs);
     ld->parent_and[0 + 2*j] = hpx_lco_and_new(ld->par_p.num_comm_part);
     ld->parent_reverse_and[0 + 2*j] = hpx_lco_and_new(ld->par_b.num_comm_part);
   }
@@ -356,6 +375,9 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t rsum = hpx_lco_allreduce_new(nDoms, (num_refine+1)*sizeof(int),
                                            (hpx_commutative_associative_op_t)sumint,
                                            (void (*)(void *, const size_t size)) initint);
+  hpx_addr_t refinelevel = hpx_lco_allreduce_new(nDoms, sizeof(int),
+                                           (hpx_commutative_associative_op_t)singlesumint,
+                                           (void (*)(void *, const size_t size)) singleinitint);
 
   int i;
 
@@ -367,6 +389,7 @@ static int _main_action(RunArgs *runargs)
   args->complete = complete;
   args->gsum = gsum;
   args->rsum = rsum;
+  args->refinelevel = refinelevel;
   memcpy(&args->params, runargs->params, 34 * sizeof(int));
   args->objectsize = runargs->objectsize;
   memcpy(&args->objects, &runargs->objects,
@@ -815,6 +838,8 @@ int main(int argc, char **argv)
   _comm_parent_result = HPX_REGISTER_ACTION(_comm_parent_result_action);
   _comm_parent_reverse_sends = HPX_REGISTER_ACTION(_comm_parent_reverse_sends_action);
   _comm_parent_reverse_result = HPX_REGISTER_ACTION(_comm_parent_reverse_result_action);
+  _comm_reverse_refine_sends = HPX_REGISTER_ACTION(_comm_reverse_refine_sends_action);
+  _comm_reverse_refine_result = HPX_REGISTER_ACTION(_comm_reverse_refine_result_action);
 
   printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
 
