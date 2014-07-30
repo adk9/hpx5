@@ -36,7 +36,8 @@ void reset_all(Domain *ld)
 void refine(int ts,Domain *ld,unsigned long epoch)
 {
   int i, j, n, p, c, in, min_b, max_b, sum_b, num_refine_step, num_split;
-   double ratio, tp, tm, tu, tp1, tm1, tu1, t1, t3, t4, t5;
+   double ratio, tp, tm, tu, tp1, tm1, tu1, t1, t3, t4;
+   hpx_time_t t5;
    block *bp;
    parent *pp;
 
@@ -53,11 +54,12 @@ void refine(int ts,Domain *ld,unsigned long epoch)
    ld->timer_refine_sy += hpx_time_elapsed_ms(t2);
    t4 += hpx_time_elapsed_ms(t2);
 
-   if (ld->ts) 
+   if (ts) 
      num_refine_step = ld->block_change;
    else
      num_refine_step = ld->num_refine;
 
+   int count = 0;
    for (i = 0; i < num_refine_step; i++) {
       for (j = ld->num_refine; j >= 0; j--)
          if (ld->num_blocks[j]) {
@@ -83,12 +85,20 @@ void refine(int ts,Domain *ld,unsigned long epoch)
       }
 
       t2 = hpx_time_now();
-      comm_refine(ld,epoch,i);
-      comm_parent(ld,epoch,i);
-      comm_parent_reverse(ld,epoch,i);
+      comm_refine(ld,epoch,count);
+      count++;
+      comm_parent(ld,epoch,count);
+      count++;
+      comm_parent_reverse(ld,epoch,count);
+      count++;
       ld->timer_refine_c1 += hpx_time_elapsed_ms(t2);
       t4 += hpx_time_elapsed_ms(t2);
-      
+
+      t2 = hpx_time_now();
+      num_split = refine_level(ld,epoch,&count);
+      t5 = hpx_time_now();
+      ld->timer_refine_mr += hpx_time_diff_ms(t5,t2);
+      t4 += hpx_time_diff_ms(t5,t2);
 
    }
 }
