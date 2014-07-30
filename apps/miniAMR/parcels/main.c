@@ -42,6 +42,16 @@ static void sumint(int *output,const int *input, const size_t size) {
   return;
 }
 
+static void singleinitintmax(int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  *input = -99999;
+}
+
+static void singleinitintmin(int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  *input = 99999;
+}
+
 static void singleinitint(int *input, const size_t size) {
   assert(sizeof(int) == size);
   *input = 0;
@@ -50,6 +60,22 @@ static void singleinitint(int *input, const size_t size) {
 static void singlesumint(int *output,const int *input, const size_t size) {
   assert(sizeof(int) == size);
   *output += *input;
+  return;
+}
+
+static void singleminint(int *output,const int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  if ( *input < *output ) {
+    *output = *input;
+  } 
+  return;
+}
+
+static void singlemaxint(int *output,const int *input, const size_t size) {
+  assert(sizeof(int) == size);
+  if ( *input > *output ) {
+    *output = *input;
+  } 
   return;
 }
 
@@ -101,6 +127,9 @@ static int _initDomain_action(InitArgs *init) {
   ld->gsum = init->gsum;
   ld->rsum = init->rsum;
   ld->refinelevel = init->refinelevel;
+  ld->refinelevel_min = init->refinelevel_min;
+  ld->refinelevel_max = init->refinelevel_max;
+  ld->rcb_sumint = init->rcb_sumint;
   ld->my_pe = init->rank;
   ld->num_pes = init->ndoms;
   int *params = init->params;
@@ -378,6 +407,15 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t refinelevel = hpx_lco_allreduce_new(nDoms, sizeof(int),
                                            (hpx_commutative_associative_op_t)singlesumint,
                                            (void (*)(void *, const size_t size)) singleinitint);
+  hpx_addr_t refinelevel_max = hpx_lco_allreduce_new(nDoms, sizeof(int),
+                                           (hpx_commutative_associative_op_t)singlemaxint,
+                                           (void (*)(void *, const size_t size)) singleinitintmin);
+  hpx_addr_t refinelevel_min = hpx_lco_allreduce_new(nDoms, sizeof(int),
+                                           (hpx_commutative_associative_op_t)singleminint,
+                                           (void (*)(void *, const size_t size)) singleinitintmax);
+  hpx_addr_t rcb_sumint = hpx_lco_allreduce_new(nDoms, (nDoms)*sizeof(int),
+                                           (hpx_commutative_associative_op_t)sumint,
+                                           (void (*)(void *, const size_t size)) initint);
 
   int i;
 
@@ -390,6 +428,9 @@ static int _main_action(RunArgs *runargs)
   args->gsum = gsum;
   args->rsum = rsum;
   args->refinelevel = refinelevel;
+  args->refinelevel_max = refinelevel_max;
+  args->refinelevel_min = refinelevel_min;
+  args->rcb_sumint = rcb_sumint;
   memcpy(&args->params, runargs->params, 34 * sizeof(int));
   args->objectsize = runargs->objectsize;
   memcpy(&args->objects, &runargs->objects,

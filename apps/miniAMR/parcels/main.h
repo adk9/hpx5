@@ -61,6 +61,9 @@ typedef struct {
   hpx_addr_t gsum;
   hpx_addr_t rsum;
   hpx_addr_t refinelevel;
+  hpx_addr_t refinelevel_max;
+  hpx_addr_t refinelevel_min;
+  hpx_addr_t rcb_sumint;
   int params[34];
   int objectsize;
   int rank;
@@ -177,6 +180,9 @@ typedef struct Domain {
   hpx_addr_t gsum;
   hpx_addr_t rsum;
   hpx_addr_t refinelevel;
+  hpx_addr_t refinelevel_max;
+  hpx_addr_t refinelevel_min;
+  hpx_addr_t rcb_sumint;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;

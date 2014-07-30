@@ -100,5 +100,23 @@ void refine(int ts,Domain *ld,unsigned long epoch)
       ld->timer_refine_mr += hpx_time_diff_ms(t5,t2);
       t4 += hpx_time_diff_ms(t5,t2);
 
+      t2 = hpx_time_now();
+      sum_b = ld->num_active + 7*num_split + 1;
+      hpx_lco_set(ld->refinelevel_max,sizeof(int),&sum_b,HPX_NULL,HPX_NULL);
+      hpx_lco_get(ld->refinelevel_max,sizeof(int),&max_b);
+      sum_b = ld->num_parents + num_split;
+      hpx_lco_set(ld->refinelevel_min,sizeof(int),&sum_b,HPX_NULL,HPX_NULL);
+      hpx_lco_get(ld->refinelevel_min,sizeof(int),&min_b);
+      if (max_b > ((int) (0.75*((double) ld->max_num_blocks))) ||
+          min_b >= (ld->max_num_parents-1)) {
+         //redistribute_blocks(&tp1, &tm1, &tu1, &t3, &num_moved_rs, num_split);
+         ld->timer_rs_ca += t3;
+         ld->nrrs++;
+      }
+      t5 = hpx_time_now();
+      ld->timer_rs_all += hpx_time_diff_ms(t5,t2);
+      t4 += hpx_time_diff_ms(t5,t2);
+      
+
    }
 }
