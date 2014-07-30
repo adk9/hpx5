@@ -490,6 +490,7 @@ void init_amr(Domain *ld)
             npz1 /= fact;
       num /= fact;
       set = ld->me[n]/num;
+    // FIXME
     // Allgather/sort here
     //  MPI_Comm_split(comms[n], set, me[n], &comms[n+1]);
     //  MPI_Comm_rank(comms[n+1], &me[n+1]);
