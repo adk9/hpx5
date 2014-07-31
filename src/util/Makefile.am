@@ -3,4 +3,4 @@ AM_CFLAGS = @CFLAGS@                         \
 	    -I@top_srcdir@/include
 
 noinst_LTLIBRARIES = libutil.la
-libutil_la_SOURCES = htable.c util.c
+libutil_la_SOURCES = htable.c util.c bit_array.c
