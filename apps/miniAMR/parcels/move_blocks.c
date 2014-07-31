@@ -319,7 +319,8 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
       f = 1;
 
    // FIXME
-   //comm_proc();
+   comm_proc(ld,epoch,*iter);
+   (*iter)++;
    //comm_parent_proc();
    //update_comm_list();
 

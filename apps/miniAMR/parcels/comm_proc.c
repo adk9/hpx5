@@ -1,7 +1,7 @@
 
 #include "main.h"
 
-int _comm_refine_result_action(RefineNodalArgs *args)
+int _comm_proc_result_action(RefineNodalArgs *args)
 {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
@@ -21,35 +21,38 @@ int _comm_refine_result_action(RefineNodalArgs *args)
   int iter = args->iter;
 
   // 1. acquire the domain lock
-  hpx_lco_sema_p(ld->sem_refine);
+  hpx_lco_sema_p(ld->sem_comm_proc);
 
   // 2. update
-  int face;
+  int face,face_case;
   block *bp;
   int n;
+  int j,k;
   for (n = 0; n < ld->comm_num[dir][i]; n++) {
     face = dir*2+(ld->comm_face_case[dir][ld->comm_index[dir][i]+n] >= 10);
     bp = &ld->blocks[ld->comm_block[dir][ld->comm_index[dir][i]+n]];
-    if ( incoming_buf[ld->comm_index[dir][i]+n] == 1 && bp->nei_level[face] <= bp->level ) {
-      bp->nei_refine[face] = 1;
-    } else if (incoming_buf[ld->comm_index[dir][i]+n] >= 0 && bp->nei_refine[face] == -1 ) {
-      bp->nei_refine[face] = 0;
-    }
+    j = k = 0;
+    face_case = ld->comm_face_case[dir][ld->comm_index[dir][i]+n]%10;
+            if (face_case >= 6) {
+               j = ((face_case+2)/2)%2;
+               k = face_case%2;
+            }
+            bp->nei[face][j][k] = -1 - incoming_buf[ld->comm_index[dir][i]+n];
   }
 
   // 3. release the domain lock
-  hpx_lco_sema_v(ld->sem_refine);
+  hpx_lco_sema_v(ld->sem_comm_proc);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
-  hpx_lco_and_set(ld->refine_and[args->epoch % 2 + 2*iter], HPX_NULL);
+  hpx_lco_and_set(ld->comm_proc_and[args->epoch % 2 + 2*iter], HPX_NULL);
 
   hpx_gas_unpin(local);
 
   return HPX_SUCCESS;
 }
 
-int _comm_refine_sends_action(refineSBN *psbn)
+int _comm_proc_sends_action(refineSBN *psbn)
 {
   hpx_addr_t local = hpx_thread_current_target();
 
@@ -76,7 +79,7 @@ int _comm_refine_sends_action(refineSBN *psbn)
 
   int n;
   for (n=0;n<ld->comm_num[dir][i];n++) {
-    nodal->buf[n] = ld->blocks[ld->comm_block[dir][ld->comm_index[dir][i]+n]].refine;
+    nodal->buf[n] = ld->blocks[ld->comm_block[dir][ld->comm_index[dir][i]+n]].new_proc;
   }
 
   int dest = ld->comm_partner[dir][i];
@@ -84,30 +87,27 @@ int _comm_refine_sends_action(refineSBN *psbn)
   hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
 
   hpx_parcel_set_target(p, neighbor);
-  hpx_parcel_set_action(p, _comm_refine_result);
+  hpx_parcel_set_action(p, _comm_proc_result);
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 
-// This routine uses the communication pattern established for exchanging
-// ghost values to exchange information about the refinement level and
-// plans for refinement for neighboring blocks.
-void comm_refine(Domain *ld,unsigned long epoch,int iter)
+void comm_proc(Domain *ld,unsigned long epoch,int iter)
 {
-   int i, n, offset, dir, which, face, err, type;
-   block *bp;
-
    hpx_addr_t local = hpx_thread_current_target();
 
    // find out how many sends
    int nsends = 0;
+   int dir,i;
    for (dir = 0; dir < 3; dir++) {
      nsends += ld->num_comm_partners[dir];
    }
+
    // you may have to re-allocate the next generation if the grid changes
-   ld->refine_and[(epoch + 1) % 2 + 2*iter] = hpx_lco_and_new(nsends);
+   ld->comm_proc_and[(epoch + 1) % 2 + 2*iter] = hpx_lco_and_new(nsends);
 
    hpx_addr_t sends = hpx_lco_and_new(nsends);
+
    for (dir = 0; dir < 3; dir++) {
       for (i = 0; i < ld->num_comm_partners[dir]; i++) {
          hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(refineSBN));
@@ -123,7 +123,7 @@ void comm_refine(Domain *ld,unsigned long epoch,int iter)
          psbn->iter             = iter;
 
          hpx_parcel_set_target(p, local);
-         hpx_parcel_set_action(p, _comm_refine_sends);
+         hpx_parcel_set_action(p, _comm_proc_sends);
          hpx_parcel_set_cont_target(p, sends);
          hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
@@ -136,6 +136,6 @@ void comm_refine(Domain *ld,unsigned long epoch,int iter)
    hpx_lco_delete(sends, HPX_NULL);
 
    hpx_lco_gencount_inc(ld->epoch, HPX_NULL);
-   hpx_lco_wait(ld->refine_and[epoch % 2 + 2*iter]);
-   hpx_lco_delete(ld->refine_and[epoch % 2 + 2*iter], HPX_NULL);
+   hpx_lco_wait(ld->comm_proc_and[epoch % 2 + 2*iter]);
+   hpx_lco_delete(ld->comm_proc_and[epoch % 2 + 2*iter], HPX_NULL);
 }
