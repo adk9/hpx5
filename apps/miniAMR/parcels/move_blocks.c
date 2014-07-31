@@ -318,11 +318,11 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
    else
       f = 1;
 
-   // FIXME
    comm_proc(ld,epoch,*iter);
    (*iter)++;
-   //comm_parent_proc();
-   //update_comm_list();
+   comm_parent_proc(ld,epoch,*iter);
+   (*iter)++;
+   update_comm_list(ld);
 
    // go through blocks being moved and reset their nei[] list
    // (partially done above with comm_proc) and the lists of their neighbors

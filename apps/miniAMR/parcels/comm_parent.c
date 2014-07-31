@@ -104,7 +104,7 @@ void comm_parent(Domain *ld,unsigned long epoch,int iter)
    // you may have to re-allocate the next generation if the grid changes
    ld->parent_and[(epoch + 1) % 2 + 2*iter] = hpx_lco_and_new(ld->par_p.num_comm_part);
 
-   hpx_addr_t sends = hpx_lco_and_new(ld->par_p.num_comm_part);
+   hpx_addr_t sends = hpx_lco_and_new(ld->par_b.num_comm_part);
 
    for (i = 0; i < ld->par_b.num_comm_part; i++) {
      hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(parentSBN));
