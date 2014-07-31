@@ -133,9 +133,11 @@ static inline photonRequest __photon_get_request() {
   if (!req) {
     dbg_info("Request list is empty, this should rarely happen");
     req = malloc(sizeof(struct photon_req_t));
+    req->mmask = bit_array_create(UD_MASK_SIZE);
   }
 
   req->flags = REQUEST_FLAG_NIL;
+  bit_array_clear_all(req->mmask);
 
   return req;
 }
@@ -253,11 +255,12 @@ static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int m
   req->type = SENDRECV;
   req->proc = addr->global.proc_id;
   req->num_entries = nbufs;
-  req->mmask = (uint64_t)1<<msn;
   req->length = msize;
   req->bentries[msn] = bindex;
   memcpy(&req->addr, addr, sizeof(*addr));
   
+  bit_array_set(req->mmask, msn);
+
   dbg_info("Inserting the new recv request into the sr table: %lu/0x%016lx/%p",
            addr->global.proc_id, request, req);
   if (htable_insert(sr_reqtable, request, req) != 0) {
@@ -287,7 +290,6 @@ static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, ph
   req->state = REQUEST_PENDING;
   req->type = SENDRECV;
   req->num_entries = nbufs;
-  req->mmask = 0x0;
   req->length = 0;
   memcpy(&req->addr, addr, sizeof(*addr));
   memcpy(req->bentries, bufs, sizeof(int)*MAX_BUF_ENTRIES);
@@ -336,6 +338,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   SLIST_INIT(&pending_recv_list);
 
   for(i = 0; i < num_requests; i++) {
+    requests[i].mmask = bit_array_create(UD_MASK_SIZE);
     LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
   }
 
@@ -704,8 +707,10 @@ static int __photon_handle_send_event(photonRequest req, photon_rid id) {
     if (creq->state == REQUEST_PENDING) {
       uint16_t msn;
       msn = (uint16_t)((id<<16)>>48);
-      creq->mmask |= ((uint64_t)1<<msn);
-      if (!( creq->mmask ^ ~(~(uint64_t)0<<creq->num_entries))) {
+      //creq->mmask |= ((uint64_t)1<<msn);
+      bit_array_set(req->mmask, msn);
+      //if (!( creq->mmask ^ ~(~(uint64_t)0<<creq->num_entries))) {
+      if (bit_array_num_bits_set(creq->mmask) == creq->num_entries) {
         // additional condition would be ACK from receiver
         creq->state = REQUEST_COMPLETED;
         // mark sendbuf entries as available again
@@ -731,13 +736,16 @@ static int __photon_handle_recv_event(photon_rid id) {
   photon_ud_hdr *hdr;
   uint64_t cookie;
   uint32_t bindex;
-  
+
   dbg_info("handling recv completion with id: 0x%016lx", id);
 
   bindex = (uint32_t)((id<<32)>>32);
   
   // TODO: get backend gid...not really needed
-
+  //dbg_info("got msg from: %s to: %s",
+  //	   inet_ntop(AF_INET6, recvbuf->entries[bindex].base+8, gid, 40),
+  //	   inet_ntop(AF_INET6, recvbuf->entries[bindex].base+24, gid2, 40));
+  
   hdr = (photon_ud_hdr*)recvbuf->entries[bindex].hptr;
   dbg_info("r_request: %u", hdr->request);
   dbg_info("src      : %u", hdr->src_addr);
@@ -759,7 +767,8 @@ static int __photon_handle_recv_event(photon_rid id) {
   cookie = ((uint64_t)(~hdr->src_addr)<<32) | hdr->request;
   if (htable_lookup(sr_reqtable, cookie, (void**)&req) == 0) {
     // update existing req
-    req->mmask |= ((uint64_t)1<<hdr->msn);
+    //req->mmask |= ((uint64_t)1<<hdr->msn);
+    bit_array_set(req->mmask, hdr->msn);
     req->length += hdr->length;
     req->bentries[hdr->msn] = bindex;
   }
@@ -772,7 +781,8 @@ static int __photon_handle_recv_event(photon_rid id) {
   // now check if we have the whole message
   // if so, add to pending recv list
   if (req) {
-    if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
+    //if (!( req->mmask ^ ~(~(uint64_t)0<<req->num_entries))) {
+    if (bit_array_num_bits_set(req->mmask) == req->num_entries) {
       dbg_info("adding recv request to pending recv list: %lu/0x%016lx", req->id, cookie);
       SAFE_SLIST_INSERT_HEAD(&pending_recv_list, req, slist);
       req->state = REQUEST_COMPLETED;
@@ -1278,6 +1288,7 @@ static int _photon_recv(photon_rid request, void *ptr, uint64_t size, int flags)
 
     dbg_info("removing recv request from sr_reqtable: 0x%016lx", req->id);
     htable_remove(sr_reqtable, req->id, NULL);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
   }
   else {
     dbg_info("request not found in sr_reqtable");

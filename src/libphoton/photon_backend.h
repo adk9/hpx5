@@ -9,6 +9,7 @@
 #include "photon_rdma_FIN_ledger.h"
 #include "photon_rdma_EAGER_buf.h"
 #include "squeue.h"
+#include "bit_array.h"
 
 #ifdef HAVE_XSP
 #include "photon_xsp_forwarder.h"
@@ -21,6 +22,7 @@
 /* this should not exceed MCA max_qp_wr (typically 16k) */
 #define LEDGER_SIZE          64
 #define MAX_BUF_ENTRIES      64
+#define UD_MASK_SIZE         1<<6
 
 #define LEDGER               1
 #define EVQUEUE              2
@@ -72,7 +74,7 @@ typedef struct photon_req_t {
   int curr;
   int bentries[MAX_BUF_ENTRIES];
   int num_entries;
-  uint64_t mmask;
+  BIT_ARRAY *mmask;
   uint64_t length;
   photon_addr addr;
   struct photon_buffer_internal_t remote_buffer;
