@@ -18,7 +18,7 @@ void redistribute_blocks(double *tp, double *tm, double *tu, double *time,
    ld->bin[ld->my_pe] = num_split;
 
    hpx_lco_set(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->bin,HPX_NULL,HPX_NULL);
-   hpx_lco_set(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->gbin,HPX_NULL,HPX_NULL);
+   hpx_lco_get(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->gbin);
 
    for (sum = i = 0; i < ld->num_pes; i++) {
       ld->from[i] = 0;
@@ -37,7 +37,7 @@ void redistribute_blocks(double *tp, double *tm, double *tu, double *time,
    target = sum/ld->num_pes;
    rem = sum - target*ld->num_pes;
 
-   hpx_lco_set(ld->rcb_sumint,(ld->num_pes)*sizeof(int),space,HPX_NULL,HPX_NULL);
+   hpx_lco_get(ld->rcb_sumint,(ld->num_pes)*sizeof(int),space);
 
    for (excess = i = 0; i < ld->num_pes; i++) {
       need = target + (i < rem);
@@ -115,7 +115,7 @@ void redistribute_blocks(double *tp, double *tm, double *tu, double *time,
          ld->bin[ld->my_pe] = my_active;
 
          hpx_lco_set(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->bin,HPX_NULL,HPX_NULL);
-         hpx_lco_set(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->gbin,HPX_NULL,HPX_NULL);
+         hpx_lco_get(ld->rcb_sumint,(ld->num_pes)*sizeof(int),ld->gbin);
 
          for (sum = i = 0; i < ld->num_pes; i++)
             sum += ld->gbin[i];
@@ -156,7 +156,7 @@ void redistribute_blocks(double *tp, double *tm, double *tu, double *time,
 
       // FIXME
       //MPI_Alltoall(from, 1, MPI_INTEGER, to, 1, MPI_INTEGER, MPI_COMM_WORLD);
-      //move_blocks(tp, tm, tu);
+      move_blocks(tp, tm, tu,ld,epoch,iter);
    } else
       *time = hpx_time_elapsed_ms(t1);
 }

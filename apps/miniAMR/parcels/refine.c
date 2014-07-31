@@ -109,7 +109,7 @@ void refine(int ts,Domain *ld,unsigned long epoch)
       hpx_lco_get(ld->refinelevel_min,sizeof(int),&min_b);
       if (max_b > ((int) (0.75*((double) ld->max_num_blocks))) ||
           min_b >= (ld->max_num_parents-1)) {
-         //redistribute_blocks(&tp1, &tm1, &tu1, &t3, &num_moved_rs, num_split);
+         redistribute_blocks(&tp1, &tm1, &tu1, &t3, &ld->num_moved_rs, num_split,ld,epoch,&count);
          ld->timer_rs_ca += t3;
          ld->nrrs++;
       }

@@ -332,6 +332,8 @@ typedef struct Domain {
   hpx_addr_t plot_and[2];
   hpx_addr_t sem_refine;
   hpx_addr_t *refine_and;
+  hpx_addr_t sem_comm_proc;
+  hpx_addr_t *comm_proc_and;
   hpx_addr_t sem_reverse_refine;
   hpx_addr_t *reverse_refine_and;
   hpx_addr_t sem_parent;
@@ -400,5 +402,12 @@ int _comm_reverse_refine_sends_action(refineSBN *psbn);
 extern hpx_action_t _comm_reverse_refine_sends;
 
 void comm_reverse_refine(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_proc_result_action(RefineNodalArgs *nodal);
+extern hpx_action_t _comm_proc_result;
+int _comm_proc_sends_action(refineSBN *psbn);
+extern hpx_action_t _comm_proc_sends;
+
+void comm_proc(Domain *ld,unsigned long epoch,int iter);
 
 #endif
