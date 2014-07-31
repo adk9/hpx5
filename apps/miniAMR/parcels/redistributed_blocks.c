@@ -101,12 +101,12 @@ void redistribute_blocks(double *tp, double *tm, double *tu, double *time,
             else
                ld->blocks[pp->child[i]].new_proc = ld->my_pe;
 
-   // FIXME
-   //MPI_Allreduce(&m, &n, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD);
+   hpx_lco_set(ld->refinelevel,sizeof(int),&m,HPX_NULL,HPX_NULL);
+   hpx_lco_get(ld->refinelevel,sizeof(int),&n);
 
    if (n) {
-      // FIXME
-      //MPI_Allreduce(&my_active, &sum, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD);
+      hpx_lco_set(ld->refinelevel_max,sizeof(int),&my_active,HPX_NULL,HPX_NULL);
+      hpx_lco_get(ld->refinelevel_max,sizeof(int),&sum);
 
       if (sum > ((int) (0.75*((double) ld->max_num_blocks)))) {
          // even up the expected number of blocks per processor
