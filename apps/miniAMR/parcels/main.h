@@ -338,6 +338,8 @@ typedef struct Domain {
   hpx_addr_t *reverse_refine_and;
   hpx_addr_t sem_parent;
   hpx_addr_t *parent_and;
+  hpx_addr_t *comm_parent_proc_and;
+  hpx_addr_t sem_comm_parent_proc;
   hpx_addr_t sem_parent_reverse;
   hpx_addr_t *parent_reverse_and;
   int refine_and_size;
@@ -409,5 +411,12 @@ int _comm_proc_sends_action(refineSBN *psbn);
 extern hpx_action_t _comm_proc_sends;
 
 void comm_proc(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_parent_proc_result_action(ParentNodalArgs *nodal);
+extern hpx_action_t _comm_parent_proc_result;
+int _comm_parent_proc_sends_action(parentSBN *psbn);
+extern hpx_action_t _comm_parent_proc_sends;
+
+void comm_parent_proc(Domain *ld,unsigned long epoch,int iter);
 
 #endif
