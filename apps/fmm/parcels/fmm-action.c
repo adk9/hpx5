@@ -72,14 +72,17 @@ int _fmm_main_action(void) {
   hpx_lco_delete(init_param_done, HPX_NULL); 
 
   // Partition the source and target ensembles. On the source side, whenever the
-  // partition reaches a leaf box, the source-to-multipole action will be
-  // invoked immediately
+  // partition reaches a leaf box, the aggregate action will be invoked
+  // immediately 
   hpx_addr_t partition_done = hpx_lco_and_new(2); 
   char type1 = 'S', type2 = 'T'; 
   hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done); 
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done); 
   hpx_lco_wait(partition_done); 
   hpx_lco_delete(partition_done, HPX_NULL); 
+
+  // Spawn disaggregate action along the target tree
+
 
   // Cleanup
   hpx_gas_global_free(sources, HPX_NULL);
@@ -214,6 +217,7 @@ int _init_source_root_action(void) {
   source_root_p->index[2] = 0; 
   source_root_p->npts = nsources; 
   source_root_p->addr = 0; 
+  source_root_p->expo_avail = hpx_lco_and_new(3); 
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -483,6 +487,9 @@ int _set_box_action(void *args) {
   box->addr = temp->addr; 
 
   char type = temp->type; 
+  if (type == 'S') 
+    box->expo_avail = hpx_lco_and_new(3); 
+
   if (box->npts > s) {
     // Continue the partition process if it contains more than s points
     hpx_addr_t status = hpx_lco_future_new(0); 
@@ -490,7 +497,7 @@ int _set_box_action(void *args) {
     hpx_lco_wait(status); 
     hpx_lco_delete(status, HPX_NULL); 
   } else {
-    // invoke source-to-multipole action at leaf source box
+    // invoke aggregate action at leaf source box
     if (type == 'S') 
       hpx_call(curr, _aggregate, NULL, 0, HPX_NULL); 
   } 
@@ -537,9 +544,9 @@ int _aggregate_action(void *args) {
     // spawn three threads to translate the multipole expansion into exponential
     // expansions, and translate the multipole expansion to the parent box
     const char dir[3] = {'z', 'y', 'x'}; 
-    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), HPX_NULL); 
-    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), HPX_NULL); 
-    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), HPX_NULL); 
+    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), sbox->expo_avail); 
+    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), sbox->expo_avail); 
+    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), sbox->expo_avail); 
     
     int ichild = (sbox->index[2] % 2) * 4 + (sbox->index[1] % 2) * 2 + 
       (sbox->index[0] % 2); 
@@ -872,6 +879,105 @@ void multipole_to_exponential_p2(const double complex *mexpf,
     nftot += numfour[i];
     nptot += numphys[i]/2;
   }
+}
+
+int _disaggregate_action(void *args) {
+  /// plans: 
+  /// the function is called on a target box. the args passed in is
+  /// the list1 and list5 of the parent box.  
+
+  /// the box first will go over the parent box's list5 and then
+  /// determine its own list5 (by checking the child boxes of each
+  /// list5 entry. if the child box is adjacent, then it is list5
+  /// entry). this information can be stored locally. 
+
+  /// the box then go over the list 1 of the parent box. for each
+  /// entry, if the box is not adjacent, then it is a list 4 entry,
+  /// and we will invoke a source-to-local operation. otherwise, this
+  /// entry is a list1 entry of the box under consideration. We will
+  /// keep the list1 of the box (thread current target) locally. 
+  /// 
+  /// the thread now determine if it is possible to remove the
+  /// branches below it.
+  /// (1) if the list5 is empty, then we will spawn action to remove
+  /// all the lower branches. 
+  /// (2) if the list5 is not empty, then we need to check if any
+  /// list5 entry has more than s points, (this will be done in the
+  /// first step). if none of the list5 entry has more than s
+  /// points,we should remove the lower branches. 
+
+  /// now, if the box remains a nonleaf box, it will do the E2L for
+  /// its child boxes. Afterwards, it will wait on the completion of
+  /// source-to-local operation if it has been invoked. Once that
+  /// completes, the parent box will spawn actions to shift the local
+  /// expansion to its child boxes. Finally, it will send the list5
+  /// and list1 (some of the list5 needs to be moved to list1) information to its child boxes (possibly merged with
+  /// the previous work) and invoke disaggregate action on the child
+  /// boxes. 
+
+  /// if the box becomes a leaf box, it will then do the
+  /// local-to-target operation. next, it will go over all the entries
+  /// in list5, they will be processed as list 1 or list 3. Finally,
+  /// it go over the list 1 entries and do the work directly. 
+
+  /// regarding termination detection, I can let many threads
+  /// finishing at the upper levels just waiting for the completion of
+  /// the descendants before they exit. But this keeps a lot of
+  /// threads whose only remaining task is waiting. 
+
+  /// I would like to have an lco which initially holds a value of the
+  /// number of target points. Whenever I reach to a leaf target box,
+  /// I will reduce the value of that lco by the number of points
+  /// contained in the leaf box. Inside hpx_run, I will just wait on
+  /// the lco until it reaches to 0. Right now, I can use a semaphore
+  /// to do this, the thread who reaches to 0 set an lco. the
+  /// semaphore and that lco needs to be known on every locality. 
+
+  /*
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  hpx_gas_try_pin(curr, (void *)&box); 
+
+  hpx_addr_t parent = box->parent; 
+  hpx_addr_t list5_result = hpx_lco_future_new(sizeof(build_list5_return_t)); 
+  hpx_call(parent, _build_list5, box->index, sizeof(int) * 3, list5_result); 
+  */
+
+  return HPX_SUCCESS;
+}
+
+int _build_list5_action(void *args) {
+  /*
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *pbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&pbox); 
+  
+  int nplist5 = pbox->nlist5; 
+  build_list5_return_t temp = {
+    .nlist5 = 0, 
+    .remove = true
+  }; 
+
+  for (int i = 0; i < nplist5; i++) {
+    hpx_addr_t entry = pbox->list5[i]; 
+    hpx_addr_t ans = hpx_lco_future_new(sizeof(hpx_addr_t) * 4 + sizeof(bool)); 
+    hpx_call(entry, _check_plist5_entry, args, sizeof(int) * 3, ans); 
+    void *temp = NULL; 
+    hpx_lco_get(ans, sizeof(hpx_addr_t) * 4, 
+    
+
+
+
+    hpx_addr_t ans = hpx_lco_future_new(sizeof(hpx_addr_t) * 4 + sizeof(bool));
+    hpx_call(entry, _check5, args, sizeof(int) * 3, ans); 
+    void *temp = NULL; 
+    hpx_lco_get(ans, sizeof(hpx_addr_t) * 4 + sizeof(bool), temp); 
+    hpx_addr_t 
+
+    for (int j = 0; j < 4; j++) {
+      if (!hpx_addr_eq
+  */
+  return HPX_SUCCESS; 
 }
 
 void lgndr(int nmax, double x, double *y) {
