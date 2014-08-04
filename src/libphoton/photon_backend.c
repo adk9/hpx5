@@ -691,7 +691,7 @@ static int __photon_handle_send_event(photonRequest req, photon_rid id) {
   dbg_info("handling send completion with id: 0x%016lx", id);
 
   cookie = (uint32_t)((id<<32)>>32);
-    
+
   if(req && (cookie == req->id)) {
     creq = req;
   }
@@ -708,7 +708,7 @@ static int __photon_handle_send_event(photonRequest req, photon_rid id) {
       uint16_t msn;
       msn = (uint16_t)((id<<16)>>48);
       //creq->mmask |= ((uint64_t)1<<msn);
-      bit_array_set(req->mmask, msn);
+      bit_array_set(creq->mmask, msn);
       //if (!( creq->mmask ^ ~(~(uint64_t)0<<creq->num_entries))) {
       if (bit_array_num_bits_set(creq->mmask) == creq->num_entries) {
         // additional condition would be ACK from receiver
