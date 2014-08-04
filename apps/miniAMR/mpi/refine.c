@@ -97,7 +97,7 @@ void refine(int ts)
       sum_b = num_active + 7*num_split + 1;
       MPI_Allreduce(&sum_b, &max_b, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD);
       sum_b = num_parents + num_split;
-      MPI_Allreduce(&sum_b, &min_b, 1, MPI_INTEGER, MPI_MIN, MPI_COMM_WORLD);
+      MPI_Allreduce(&sum_b, &min_b, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD);
       if (max_b > ((int) (0.75*((double) max_num_blocks))) ||
           min_b >= (max_num_parents-1)) {
          redistribute_blocks(&tp1, &tm1, &tu1, &t3, &num_moved_rs, num_split);
