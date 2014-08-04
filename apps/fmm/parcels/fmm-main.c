@@ -1,6 +1,8 @@
+/// ---------------------------------------------------------------------------
 /// @file fmm-main.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief  Main file for FMM 
+/// ---------------------------------------------------------------------------
 
 #include <unistd.h>
 #include <stdio.h>
@@ -8,11 +10,11 @@
 #include "hpx/hpx.h"
 #include "fmm.h"
 
-int nsources; 
-int ntargets; 
-int datatype; 
-int accuracy; 
-int s; 
+int nsources; ///< number of sources
+int ntargets; ///< number of targets
+int datatype; ///< distribution of the source and tagret ensembles
+int accuracy; ///< accuracy of the requirement
+int s;        ///< partition criterion 
 
 hpx_action_t _fmm_main;
 hpx_action_t _init_sources; 
@@ -27,6 +29,11 @@ hpx_action_t _aggregate;
 hpx_action_t _source_to_mpole; 
 hpx_action_t _mpole_to_mpole; 
 hpx_action_t _mpole_to_expo; 
+hpx_action_t _disaggregate; 
+hpx_action_t _build_list5;
+hpx_action_t _build_list1; 
+hpx_action_t _source_to_local; 
+hpx_action_t _merge_local; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -110,6 +117,11 @@ int main(int argc, char *argv[]) {
   _source_to_mpole  = HPX_REGISTER_ACTION(_source_to_multipole_action); 
   _mpole_to_mpole   = HPX_REGISTER_ACTION(_multipole_to_multipole_action); 
   _mpole_to_expo    = HPX_REGISTER_ACTION(_multipole_to_exponential_action); 
+  _disaggregate     = HPX_REGISTER_ACTION(_disaggregate_action); 
+  _build_list5      = HPX_REGISTER_ACTION(_build_list5_action);
+  _build_list1      = HPX_REGISTER_ACTION(_build_list1_action); 
+  _source_to_local  = HPX_REGISTER_ACTION(_source_to_local_action); 
+  _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
