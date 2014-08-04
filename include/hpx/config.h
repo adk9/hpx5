@@ -66,6 +66,7 @@ typedef struct {
   unsigned int  backoff_max;                  //!< upper bound for backoff
   int           stack_bytes;                  //!< minimum stack size in bytes
   hpx_gas_t             gas;                  //!< GAS algorithm
+  hpx_boot_t           boot;                  //!< bootstrap method to use
   hpx_transport_t transport;                  //!< transport to use
   hpx_wait_t           wait;                  //!< when to wait for a debugger
   hpx_locality_t    wait_at;                  //!< locality to wait on
@@ -79,6 +80,7 @@ typedef struct {
     .backoff_max = 1024,                        \
     .stack_bytes = 65536,                       \
     .gas         = HPX_GAS_PGAS,                \
+    .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
     .wait_at     = HPX_LOCALITY_NONE,		\
