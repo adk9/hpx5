@@ -24,6 +24,7 @@ extern hpx_action_t _build_list5;
 extern hpx_action_t _build_list1; 
 extern hpx_action_t _source_to_local;
 extern hpx_action_t _merge_local; 
+extern hpx_action_t _delete_box; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -121,6 +122,11 @@ int _source_to_local_action(void *args);
 /// @brief Merge local action
 /// ---------------------------------------------------------------------------
 int _merge_local_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Delete box action
+/// ---------------------------------------------------------------------------
+int _delete_box_action(void); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 

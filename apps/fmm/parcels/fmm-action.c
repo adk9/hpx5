@@ -952,6 +952,23 @@ int _disaggregate_action(void *args) {
 	list1[nlist1++] = input->plist1[i]; 
     }
 
+    // Check if it is possible to prune the subtree rooted at the current target
+    // box. First, we check if the box is adjacent to any source box by checking
+    // if nlist5 is nonzero. If not, we check if any entry of list 5 has more
+    // than s points. When both conditions are satisfied, the partition
+    // performed will be kept. Otherwise, the lower branch will be dropped. 
+    if (tbox->nchild) {
+      if (nlist5 == 0) {
+	for (int i = 0; i < 8; i++) {
+	  if (!hpx_addr_eq(tbox->child[i], HPX_NULL))
+	    hpx_call(tbox->child[i], _delete_box, NULL, 0, HPX_NULL); 
+	}
+      } else {
+	bool remove = true; 
+      }
+    }
+      
+
     // Wait on source-to-local to complete
     for (int i = 0; i < nplist1; i++) {
       if (!hpx_addr_eq(result[i], HPX_NULL)) 
@@ -1120,6 +1137,10 @@ int _merge_local_action(void *args) {
   hpx_lco_set(input->done, 0, NULL, HPX_NULL, HPX_NULL); 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS; 
+}
+
+int _delete_box_action(void) {
+  return HPX_SUCCESS;
 }
 
 void lgndr(int nmax, double x, double *y) {

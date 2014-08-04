@@ -34,6 +34,7 @@ hpx_action_t _build_list5;
 hpx_action_t _build_list1; 
 hpx_action_t _source_to_local; 
 hpx_action_t _merge_local; 
+hpx_action_t _delete_box; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -122,6 +123,7 @@ int main(int argc, char *argv[]) {
   _build_list1      = HPX_REGISTER_ACTION(_build_list1_action); 
   _source_to_local  = HPX_REGISTER_ACTION(_source_to_local_action); 
   _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
+  _delete_box       = HPX_REGISTER_ACTION(_delete_box_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
