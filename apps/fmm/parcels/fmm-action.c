@@ -1,30 +1,25 @@
+/// ---------------------------------------------------------------------------
 /// @file fmm-action.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief Implementations of FMM actions
-
+/// ---------------------------------------------------------------------------
 #include <math.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <float.h>
 #include "fmm.h"
 
-hpx_addr_t sources;
-hpx_addr_t targets;
-hpx_addr_t source_root;
-hpx_addr_t target_root;
-
 const int xoff[] = {0, 1, 0, 1, 0, 1, 0, 1};
 const int yoff[] = {0, 0, 1, 1, 0, 0, 1, 1};
 const int zoff[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
 int _fmm_main_action(void) {
-  
-  // Allocate memory to hold input and output data, and mapping info
-  sources = hpx_gas_alloc(nsources, sizeof(source_t)); 
-  targets = hpx_gas_alloc(ntargets, sizeof(target_t)); 
+  // Allocate memory to hold source and target information
+  hpx_addr_t sources = hpx_gas_alloc(nsources, sizeof(source_t)); 
+  hpx_addr_t targets = hpx_gas_alloc(ntargets, sizeof(target_t)); 
 
-  // Populate test data 
-  hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6);
+  // Populate test data
+  hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6); 
   hpx_addr_t bound_tar = hpx_lco_future_new(sizeof(double) * 6); 
   hpx_call(sources, _init_sources, NULL, 0, bound_src); 
   hpx_call(targets, _init_targets, NULL, 0, bound_tar); 
@@ -45,49 +40,55 @@ int _fmm_main_action(void) {
   double size = fmax(fmax(xmax - xmin, ymax - ymin), zmax - zmin);
 
   // Construct root nodes of the source and target trees
-  hpx_addr_t init_root_done = hpx_lco_and_new(2); 
-  source_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); // expansion is NULL
-  target_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); // expansion is NULL 
-  hpx_call(source_root, _init_source_root, NULL, 0, init_root_done); 
-  hpx_call(target_root, _init_target_root, &source_root, 
-	   sizeof(hpx_addr_t), init_root_done); 
-  hpx_lco_wait(init_root_done); 
-  hpx_lco_delete(init_root_done, HPX_NULL); 
+  hpx_addr_t roots_done = hpx_lco_and_new(2); 
+  hpx_addr_t source_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); 
+  hpx_addr_t target_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); 
+  hpx_call(source_root, _init_source_root, NULL, 0, roots_done); 
+  hpx_call(target_root, _init_target_root, NULL, 0, roots_done); 
+  hpx_lco_wait(roots_done); 
+  hpx_lco_delete(roots_done, HPX_NULL); 
+
+  hpx_addr_t sema_done = hpx_lco_sema_new(1); 
+  hpx_addr_t fmm_done = hpx_lco_future_new(0); 
 
   // Construct FMM param on each locality
-  hpx_addr_t init_param_done = hpx_lco_future_new(0); 
+  hpx_addr_t params_done = hpx_lco_future_new(0); 
   init_param_action_arg_t init_param_arg = {
     .sources = sources, 
     .targets = targets, 
     .source_root = source_root, 
     .target_root = target_root, 
+    .sema_done = sema_done, 
+    .fmm_done = fmm_done, 
     .size = size, 
     .corner[0] = (xmax + xmin - size) * 0.5, 
     .corner[1] = (ymax + ymin - size) * 0.5, 
     .corner[2] = (zmax + zmin - size) * 0.5
   }; 
-  hpx_bcast(_init_param, &init_param_arg, sizeof(init_param_action_arg_t),
-	    init_param_done); 
-  hpx_lco_wait(init_param_done); 
-  hpx_lco_delete(init_param_done, HPX_NULL); 
-
-  // Partition the source and target ensembles. On the source side, whenever the
-  // partition reaches a leaf box, the aggregate action will be invoked
-  // immediately 
+  hpx_bcast(_init_param, &init_param_arg, sizeof(init_param_action_arg_t), 
+	    params_done); 
+  hpx_lco_wait(params_done); 
+  hpx_lco_delete(params_done, HPX_NULL); 
+  
+  // Partition the source and target ensemble. On the source part, the 
+  // aggregate action is invoked immediately when a leaf is reached
   hpx_addr_t partition_done = hpx_lco_and_new(2); 
   char type1 = 'S', type2 = 'T'; 
   hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done); 
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done); 
   hpx_lco_wait(partition_done); 
   hpx_lco_delete(partition_done, HPX_NULL); 
-
+  
   // Spawn disaggregate action along the target tree
+  hpx_call(target_root, _disaggregate, NULL, 0, HPX_NULL); 
 
-
+  // Wait for completion
+  hpx_lco_wait(fmm_param->fmm_done); 
+  
   // Cleanup
   hpx_gas_global_free(sources, HPX_NULL);
   hpx_gas_global_free(targets, HPX_NULL);
-
+  
   hpx_shutdown(0);
 }
 
@@ -96,7 +97,7 @@ int _init_sources_action(void) {
   source_t *sources_p = NULL; 
   hpx_gas_try_pin(curr, (void **)&sources_p);
   double bound[6] = {DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX};
-
+  
   if (datatype == 1) {
     for (int i = 0; i < nsources; i++) {
       double x = 1.0 * rand() / RAND_MAX - 0.5; 
@@ -111,9 +112,9 @@ int _init_sources_action(void) {
       bound[4] = fmin(bound[4], z);
       bound[5] = fmax(bound[5], z); 
 
-      sources_p[i].pos[0] = x;
-      sources_p[i].pos[1] = y;
-      sources_p[i].pos[2] = z;
+      sources_p[i].position[0] = x;
+      sources_p[i].position[1] = y;
+      sources_p[i].position[2] = z;
       sources_p[i].charge = q; 
       sources_p[i].rank   = i;
     }
@@ -134,9 +135,9 @@ int _init_sources_action(void) {
       bound[4] = fmin(bound[4], z);
       bound[5] = fmax(bound[5], z); 
 
-      sources_p[i].pos[0] = x;
-      sources_p[i].pos[1] = y;
-      sources_p[i].pos[2] = z;
+      sources_p[i].position[0] = x;
+      sources_p[i].position[1] = y;
+      sources_p[i].position[2] = z;
       sources_p[i].charge = q; 
       sources_p[i].rank   = i;
     }
@@ -165,14 +166,14 @@ int _init_targets_action(void) {
       bound[4] = fmin(bound[4], z);
       bound[5] = fmax(bound[5], z); 
 
-      targets_p[i].pos[0]    = x;
-      targets_p[i].pos[1]    = y;
-      targets_p[i].pos[2]    = z;
+      targets_p[i].position[0] = x;
+      targets_p[i].position[1] = y;
+      targets_p[i].position[2] = z;
       targets_p[i].potential = 0; 
-      targets_p[i].field[0]  = 0; 
-      targets_p[i].field[1]  = 0;
-      targets_p[i].field[2]  = 0; 
-      targets_p[i].rank      = i; 
+      targets_p[i].field[0] = 0; 
+      targets_p[i].field[1] = 0;
+      targets_p[i].field[2] = 0; 
+      targets_p[i].rank = i; 
     }
   } else if (datatype == 2) {
     double pi = acos(-1);    
@@ -191,14 +192,14 @@ int _init_targets_action(void) {
       bound[4] = fmin(bound[4], z);
       bound[5] = fmax(bound[5], z); 
 
-      targets_p[i].pos[0]    = x;
-      targets_p[i].pos[1]    = y;
-      targets_p[i].pos[2]    = z;
+      targets_p[i].position[0] = x;
+      targets_p[i].position[1] = y;
+      targets_p[i].position[2] = z;
       targets_p[i].potential = 0; 
-      targets_p[i].field[0]  = 0; 
-      targets_p[i].field[1]  = 0;
-      targets_p[i].field[2]  = 0; 
-      targets_p[i].rank      = i; 
+      targets_p[i].field[0] = 0; 
+      targets_p[i].field[1] = 0;
+      targets_p[i].field[2] = 0; 
+      targets_p[i].rank = i; 
     }
   }
   hpx_gas_unpin(curr); 
@@ -210,47 +211,41 @@ int _init_source_root_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *source_root_p = NULL; 
   hpx_gas_try_pin(curr, (void **)&source_root_p);
-
   source_root_p->level = 0; 
   source_root_p->index[0] = 0; 
   source_root_p->index[1] = 0; 
   source_root_p->index[2] = 0; 
   source_root_p->npts = nsources; 
   source_root_p->addr = 0; 
-  source_root_p->expo_avail = hpx_lco_and_new(3); 
-
+  source_root_p->expan_avail = hpx_lco_and_new(3); 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
 
-int _init_target_root_action(void *args) {
-  hpx_addr_t list5_entry = *((hpx_addr_t *) args); 
-  fmm_box_t *target_root_p = NULL;
+int _init_target_root_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *target_root_p = NULL;
   hpx_gas_try_pin(curr, (void **)&target_root_p); 
-
   target_root_p->level = 0; 
   target_root_p->index[0] = 0;
   target_root_p->index[1] = 0;
   target_root_p->index[2] = 0; 
   target_root_p->npts = ntargets; 
   target_root_p->addr = 0; 
-  target_root_p->nlist5 = 1; 
-  target_root_p->list5[0] = list5_entry; 
-
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
 
 int _init_param_action(void *args) {
   init_param_action_arg_t *init_param_arg = (init_param_action_arg_t *) args; 
-
-  sources = init_param_arg->sources; 
-  targets = init_param_arg->targets; 
-  source_root = init_param_arg->source_root; 
-  target_root = init_param_arg->target_root; 
-
+  
   fmm_param = calloc(1, sizeof(fmm_param_t)); 
+  fmm_param->sources = init_param_arg->sources; 
+  fmm_param->targets = init_param_arg->targets; 
+  fmm_param->source_root = init_param_arg->source_root; 
+  fmm_param->target_root = init_param_arg->target_root; 
+  fmm_param->sema_done = init_param_arg->sema_done; 
+  fmm_param->fmm_done = init_param_arg->fmm_done; 
   fmm_param->size = init_param_arg->size; 
   fmm_param->corner[0] = init_param_arg->corner[0]; 
   fmm_param->corner[1] = init_param_arg->corner[1]; 
@@ -272,18 +267,18 @@ int _init_param_action(void *args) {
 
   fmm_param->numphys = calloc(nlambs, sizeof(int));
   fmm_param->numfour = calloc(nlambs, sizeof(int));
-  fmm_param->whts    = calloc(nlambs, sizeof(double));
-  fmm_param->rlams   = calloc(nlambs, sizeof(double));
-  fmm_param->rdplus  = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  fmm_param->whts = calloc(nlambs, sizeof(double));
+  fmm_param->rlams = calloc(nlambs, sizeof(double));
+  fmm_param->rdplus = calloc(pgsz * (2 * pterms + 1), sizeof(double));
   fmm_param->rdminus = calloc(pgsz * (2 * pterms + 1), sizeof(double));
-  fmm_param->rdsq3   = calloc(pgsz * (2 * pterms + 1), sizeof(double));
-  fmm_param->rdmsq3  = calloc(pgsz * (2 * pterms + 1), sizeof(double));
-  fmm_param->dc = calloc((2 * pterms + 1)*(2 * pterms + 1)* (2 * pterms + 1),
+  fmm_param->rdsq3 = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  fmm_param->rdmsq3 = calloc(pgsz * (2 * pterms + 1), sizeof(double));
+  fmm_param->dc = calloc((2 * pterms + 1)*(2 * pterms + 1)* (2 * pterms + 1), 
 			 sizeof(double));
-  fmm_param->ytopc     = calloc((pterms + 2) * (pterms + 2), sizeof(double));
-  fmm_param->ytopcs    = calloc((pterms + 2) * (pterms + 2), sizeof(double));
+  fmm_param->ytopc = calloc((pterms + 2) * (pterms + 2), sizeof(double));
+  fmm_param->ytopcs = calloc((pterms + 2) * (pterms + 2), sizeof(double));
   fmm_param->ytopcsinv = calloc((pterms + 2) * (pterms + 2), sizeof(double));
-  fmm_param->rlsc      = calloc(pgsz * nlambs, sizeof(double));
+  fmm_param->rlsc = calloc(pgsz * nlambs, sizeof(double));
 
   frmini(fmm_param);
   rotgen(fmm_param);
@@ -302,16 +297,13 @@ int _init_param_action(void *args) {
       fmm_param->nthmax = fmm_param->numfour[i - 1];
     fmm_param->nexptotp += fmm_param->numphys[i - 1];
   }
-
+  
   fmm_param->nexptotp *= 0.5;
-  fmm_param->nexpmax = (fmm_param->nexptot > fmm_param->nexptotp ?
-			fmm_param->nexptot : fmm_param->nexptotp) + 1;
-
-  fmm_param->xs = calloc(fmm_param->nexpmax * 3, sizeof(double complex));
+  fmm_param->nexpmax = fmax(fmm_param->nexptot, fmm_param->nexptotp) + 1; 
   fmm_param->ys = calloc(fmm_param->nexpmax * 3, sizeof(double complex));
   fmm_param->zs = calloc(fmm_param->nexpmax * 3, sizeof(double));
-  fmm_param->fexpe    = calloc(15000, sizeof(double complex));
-  fmm_param->fexpo    = calloc(15000, sizeof(double complex));
+  fmm_param->fexpe = calloc(15000, sizeof(double complex));
+  fmm_param->fexpo = calloc(15000, sizeof(double complex));
   fmm_param->fexpback = calloc(15000, sizeof(double complex));
 
   mkfexp(fmm_param);
@@ -328,28 +320,23 @@ int _partition_box_action(void *args) {
   const char type = *((char *) args); 
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *box = NULL; 
-  hpx_gas_try_pin(curr, (void *)&box);
+  hpx_gas_try_pin(curr, (void *)&box); 
 
-  int pgsz = fmm_param->pgsz; 
-  int nexpmax = fmm_param->nexpmax; 
-  double size = fmm_param->size; 
-  double *corner = &fmm_param->corner[0]; 
-
-  double h = size / (1 << (box->level + 1)); 
-  point_op_arg_t temp = {
+  swap_action_arg_t temp = {
     .type = type, 
     .addr = box->addr, 
     .npts = box->npts, 
-    .center[0] = corner[0] + (2 * box->index[0] + 1) * h, 
-    .center[1] = corner[1] + (2 * box->index[1] + 1) * h, 
-    .center[2] = corner[2] + (2 * box->index[2] + 1) * h
+    .level = box->level, 
+    .index[0] = box->index[0], 
+    .index[1] = box->index[1], 
+    .index[2] = box->index[2]
   }; 
 
-  hpx_addr_t points = (type == 'S' ? sources : targets); 
+  hpx_addr_t points = (type == 'S' ? fmm_param->sources : fmm_param->targets); 
   hpx_addr_t partition = hpx_lco_future_new(sizeof(int) * 16); 
-  hpx_call(points, _swap, &temp, sizeof(point_op_arg_t), partition); 
+  hpx_call(points, _swap, &temp, sizeof(swap_action_arg_t), partition); 
 
-  int result[16] = {0}, *subparts =&result[0], *addrs = &result[8]; 
+  int result[16] = {0}, *subparts = &result[0], *addrs = &result[8]; 
   hpx_lco_get(partition, sizeof(int) * 16, result); 
   hpx_lco_delete(partition, HPX_NULL); 
 
@@ -357,58 +344,64 @@ int _partition_box_action(void *args) {
     (subparts[3] > 0) + (subparts[4] > 0) + (subparts[5] > 0) + 
     (subparts[6] > 0) + (subparts[7] > 0); 
 
-  hpx_addr_t branch = hpx_lco_and_new(box->nchild);
-  int bufsz = sizeof(double complex) * (pgsz + 6 * nexpmax * (type == 'S'));
+  hpx_addr_t branch = hpx_lco_and_new(box->nchild); 
+  int expansion_size = sizeof(double complex) * 
+    (fmm_param->pgsz + fmm_param->nexpmax * 6 * (type == 'S')); 
 
   for (int i = 0; i < 8; i++) {
     if (subparts[i] > 0) {
-      box->child[i] = hpx_gas_alloc(1, sizeof(fmm_box_t) + bufsz); 
-      point_op_arg_t temp = {
-	.level = box->level + 1,  
+      box->child[i] = hpx_gas_alloc(1, sizeof(fmm_box_t) + expansion_size); 
+      set_box_action_arg_t cbox = {
+	.type = type, 
+	.addr = box->addr + addrs[i], 
+	.npts = subparts[i], 
+	.level = box->level + 1, 
 	.parent = curr, 
 	.index[0] = box->index[0] * 2 + xoff[i], 
 	.index[1] = box->index[1] * 2 + yoff[i], 
-	.index[2] = box->index[2] * 2 + zoff[i], 
-	.npts = subparts[i], 
-	.addr = box->addr + addrs[i], 
-	.type = type
-      };      
-      hpx_call(box->child[i], _set_box, &temp, sizeof(point_op_arg_t), branch); 
+	.index[2] = box->index[2] * 2 + zoff[i]
+      }; 
+      hpx_call(box->child[i], _set_box, &cbox, sizeof(set_box_action_arg_t), 
+	       branch); 
     }
   }
 
   hpx_gas_unpin(curr); 
   hpx_lco_wait(branch); 
-  hpx_lco_delete(branch, HPX_NULL);   
+  hpx_lco_delete(branch, HPX_NULL); 
   return HPX_SUCCESS; 
-} 
+}
 
 int _swap_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
-  point_op_arg_t *temp = (point_op_arg_t *) args; 
+  swap_action_arg_t *input = (swap_action_arg_t *) args; 
 
-  char type = temp->type; 
-  int npts = temp->npts; 
-  int first = temp->addr; 
+  char type = input->type; 
+  int npts = input->npts; 
+  int level = input->level; 
+  int first = input->addr; 
   int last = first + npts; 
-  double xc = temp->center[0]; 
-  double yc = temp->center[1]; 
-  double zc = temp->center[2]; 
+  double size = fmm_param->size; 
+  double *corner = &fmm_param->corner[0]; 
+  double h = size / (1 << (level + 1)); 
+  double xc = corner[0] + (2 * input->index[0] + 1) * h; 
+  double yc = corner[1] + (2 * input->index[1] + 1) * h; 
+  double zc = corner[2] + (2 * input->index[2] + 1) * h;
   int *record = calloc(npts, sizeof(int)); 
-  int result[16] = {0}, assigned[8] = {0};
+  int result[16] = {0}, assigned[8] = {0}; 
   int *subparts = &result[0], *addrs = &result[8]; 
 
   if (type == 'S') {
-    source_t *sources_p = NULL;
+    source_t *sources_p = NULL; 
     hpx_gas_try_pin(curr, (void *)&sources_p); 
 
     for (int i = first; i < last; i++) {
-      double x = sources_p[i].pos[0]; 
-      double y = sources_p[i].pos[1]; 
-      double z = sources_p[i].pos[2]; 
+      double x = sources_p[i].position[0]; 
+      double y = sources_p[i].position[1]; 
+      double z = sources_p[i].position[2]; 
       int bin = 4 * (z > zc) + 2 * (y > yc) + (x > xc); 
       record[i - first] = bin; 
-    }
+    } 
 
     for (int i = 0; i < npts; i++) 
       subparts[record[i]]++; 
@@ -437,15 +430,16 @@ int _swap_action(void *args) {
     hpx_gas_try_pin(curr, (void *)&targets_p); 
 
     for (int i = first; i < last; i++) {
-      double x = targets_p[i].pos[0]; 
-      double y = targets_p[i].pos[1]; 
-      double z = targets_p[i].pos[2]; 
+      double x = targets_p[i].position[0]; 
+      double y = targets_p[i].position[1]; 
+      double z = targets_p[i].position[2]; 
       int bin = 4 * (z > zc) + 2 * (y > yc) + (x > xc); 
       record[i - first] = bin; 
-    }
+    } 
 
     for (int i = 0; i < npts; i++) 
       subparts[record[i]]++; 
+
     addrs[1] = addrs[0] + subparts[0]; 
     addrs[2] = addrs[1] + subparts[1]; 
     addrs[3] = addrs[2] + subparts[2]; 
@@ -459,7 +453,7 @@ int _swap_action(void *args) {
       int bin = record[i - first]; 
       int offset = addrs[bin] + assigned[bin]++; 
       temp[offset] = targets_p[i]; 
-    }
+    } 
 
     for (int i = first; i < last; i++) 
       targets_p[i] = temp[i - first]; 
@@ -469,38 +463,39 @@ int _swap_action(void *args) {
 
   hpx_gas_unpin(curr); 
   HPX_THREAD_CONTINUE(result); 
-  return HPX_SUCCESS;
-}
+  return HPX_SUCCESS; 
+} 
 
 int _set_box_action(void *args) {
-  point_op_arg_t *temp = (point_op_arg_t *) args; 
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *box = NULL; 
   hpx_gas_try_pin(curr, (void *)&box); 
 
-  box->level = temp->level; 
-  box->parent = temp->parent; 
-  box->index[0] = temp->index[0]; 
-  box->index[1] = temp->index[1]; 
-  box->index[2] = temp->index[2]; 
-  box->npts = temp->npts; 
-  box->addr = temp->addr; 
+  // Configure the new box
+  set_box_action_arg_t *input = (set_box_action_arg_t *) args; 
+  box->level = input->level; 
+  box->parent = input->parent; 
+  box->index[0] = input->index[0]; 
+  box->index[1] = input->index[1]; 
+  box->index[2] = input->index[2]; 
+  box->npts = input->npts; 
+  box->addr = input->addr; 
 
-  char type = temp->type; 
+  char type = input->type; 
   if (type == 'S') 
-    box->expo_avail = hpx_lco_and_new(3); 
+    box->expan_avail = hpx_lco_and_new(3); 
 
   if (box->npts > s) {
-    // Continue the partition process if it contains more than s points
+    // Continue partitioning the box if it contains more than s points 
     hpx_addr_t status = hpx_lco_future_new(0); 
     hpx_call(curr, _partition_box, &type, sizeof(type), status); 
     hpx_lco_wait(status); 
     hpx_lco_delete(status, HPX_NULL); 
   } else {
-    // invoke aggregate action at leaf source box
+    // Start the aggregate action at a leaf source box 
     if (type == 'S') 
       hpx_call(curr, _aggregate, NULL, 0, HPX_NULL); 
-  } 
+  }
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -515,43 +510,41 @@ int _aggregate_action(void *args) {
   bool last_arrival = false; 
 
   if (sbox->nchild == 0) {
-    double size = fmm_param->size; 
-    double *corner = &fmm_param->corner[0]; 
-    double h = size / (1 << (sbox->level + 1)); 
-    point_op_arg_t temp = {
+    source_to_mpole_action_arg_t temp = {
       .addr = sbox->addr, 
       .npts = sbox->npts, 
       .level = sbox->level, 
-      .center[0] = corner[0] + (2 * sbox->index[0] + 1) * h, 
-      .center[1] = corner[1] + (2 * sbox->index[1] + 1) * h, 
-      .center[2] = corner[2] + (2 * sbox->index[2] + 1) * h
+      .index[0] = sbox->index[0], 
+      .index[1] = sbox->index[1], 
+      .index[2] = sbox->index[2]
     }; 
 
-    hpx_addr_t result = hpx_lco_future_new(sizeof(double complex) * pgsz); 
-    hpx_call(sources,  _source_to_mpole, &temp, sizeof(temp), result); 
-    hpx_lco_get(result, sizeof(double complex) * pgsz, &sbox->expansion[0]); 
+    hpx_addr_t result = hpx_lco_future_new(sizeof(double complex) * fmm_param->pgsz); 
+    hpx_call(fmm_param->sources, _source_to_mpole, &temp, sizeof(temp), result); 
+    hpx_lco_get(result, sizeof(double complex) * fmm_param->pgsz, &sbox->expansion[0]);
+    hpx_lco_delete(result, HPX_NULL); 
   } else {
     double complex *input = (double complex *) args; 
     double complex *output = &sbox->expansion[0]; 
     hpx_lco_sema_p(sbox->sema); 
     for (int i = 0; i < pgsz; i++) 
       output[i] += input[i]; 
-    last_arrival = (--sbox->n_reduce == 0); 
-    hpx_lco_sema_v(sbox->sema); 
-  }
+    last_arrival = (++sbox->n_reduce == sbox->nchild);
+    hpx_lco_sema_v(sbox->sema);     
+  } 
 
   if (sbox->nchild == 0 || last_arrival == true) {
-    // spawn three threads to translate the multipole expansion into exponential
-    // expansions, and translate the multipole expansion to the parent box
+    // Spawn tasks to translate multipole expansion into exponential expansions
     const char dir[3] = {'z', 'y', 'x'}; 
-    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), sbox->expo_avail); 
-    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), sbox->expo_avail); 
-    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), sbox->expo_avail); 
-    
+    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), sbox->expan_avail); 
+    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), sbox->expan_avail); 
+    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), sbox->expan_avail); 
+
+    // Spawn task to translate the multipole expansion to its parent box
     int ichild = (sbox->index[2] % 2) * 4 + (sbox->index[1] % 2) * 2 + 
       (sbox->index[0] % 2); 
     hpx_call(curr, _mpole_to_mpole, &ichild, sizeof(int), HPX_NULL); 
-  }
+  } 
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -561,13 +554,19 @@ int _source_to_multipole_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   source_t *sources_p = NULL; 
   hpx_gas_try_pin(curr, (void *)&sources_p); 
-  
-  point_op_arg_t *temp = (point_op_arg_t *) args; 
-  int first = temp->addr; 
-  int npts = temp->npts; 
+
+  source_to_mpole_action_arg_t *input = (source_to_mpole_action_arg_t *) args; 
+  int first = input->addr; 
+  int npts = input->npts; 
   int last = first + npts; 
-  int level = temp->level; 
-  double *center = &temp->center[0]; 
+  int level = input->level; 
+  double size = fmm_param->size; 
+  double h = size / (1 << (level + 1)); 
+  double *corner = &fmm_param->corner[0]; 
+  double center[3]; 
+  center[0] = corner[0] + (2 * input->index[0] + 1) * h; 
+  center[1] = corner[1] + (2 * input->index[1] + 1) * h; 
+  center[2] = corner[2] + (2 * input->index[2] + 1) * h; 
 
   int pgsz = fmm_param->pgsz; 
   int pterms = fmm_param->pterms; 
@@ -581,9 +580,9 @@ int _source_to_multipole_action(void *args) {
   double complex *multipole = calloc(pgsz, sizeof(double complex)); 
 
   for (int i = first; i < last; i++) {
-    double rx = sources_p[i].pos[0] - center[0]; 
-    double ry = sources_p[i].pos[1] - center[1]; 
-    double rz = sources_p[i].pos[2] - center[2]; 
+    double rx = sources_p[i].position[0] - center[0]; 
+    double ry = sources_p[i].position[1] - center[1]; 
+    double rz = sources_p[i].position[2] - center[2]; 
     double proj = rx * rx + ry * ry; 
     double rr = proj + rz * rz; 
     proj = sqrt(proj); 
@@ -633,7 +632,7 @@ int _multipole_to_multipole_action(void *args) {
   hpx_gas_try_pin(curr, (void *)&sbox); 
 
   int ichild = *((int *) args); 
-  const double complex var[5] =
+  const double complex var[5] = 
     {1,-1 + _Complex_I, 1 + _Complex_I, 1 - _Complex_I, -1 - _Complex_I};
   const double arg = sqrt(2)/2.0;
   const int iflu[8] = {3, 4, 2, 1, 3, 4, 2, 1};
@@ -882,101 +881,244 @@ void multipole_to_exponential_p2(const double complex *mexpf,
 }
 
 int _disaggregate_action(void *args) {
-  /// plans: 
-  /// the function is called on a target box. the args passed in is
-  /// the list1 and list5 of the parent box.  
-
-  /// the box first will go over the parent box's list5 and then
-  /// determine its own list5 (by checking the child boxes of each
-  /// list5 entry. if the child box is adjacent, then it is list5
-  /// entry). this information can be stored locally. 
-
-  /// the box then go over the list 1 of the parent box. for each
-  /// entry, if the box is not adjacent, then it is a list 4 entry,
-  /// and we will invoke a source-to-local operation. otherwise, this
-  /// entry is a list1 entry of the box under consideration. We will
-  /// keep the list1 of the box (thread current target) locally. 
-  /// 
-  /// the thread now determine if it is possible to remove the
-  /// branches below it.
-  /// (1) if the list5 is empty, then we will spawn action to remove
-  /// all the lower branches. 
-  /// (2) if the list5 is not empty, then we need to check if any
-  /// list5 entry has more than s points, (this will be done in the
-  /// first step). if none of the list5 entry has more than s
-  /// points,we should remove the lower branches. 
-
-  /// now, if the box remains a nonleaf box, it will do the E2L for
-  /// its child boxes. Afterwards, it will wait on the completion of
-  /// source-to-local operation if it has been invoked. Once that
-  /// completes, the parent box will spawn actions to shift the local
-  /// expansion to its child boxes. Finally, it will send the list5
-  /// and list1 (some of the list5 needs to be moved to list1) information to its child boxes (possibly merged with
-  /// the previous work) and invoke disaggregate action on the child
-  /// boxes. 
-
-  /// if the box becomes a leaf box, it will then do the
-  /// local-to-target operation. next, it will go over all the entries
-  /// in list5, they will be processed as list 1 or list 3. Finally,
-  /// it go over the list 1 entries and do the work directly. 
-
-  /// regarding termination detection, I can let many threads
-  /// finishing at the upper levels just waiting for the completion of
-  /// the descendants before they exit. But this keeps a lot of
-  /// threads whose only remaining task is waiting. 
-
-  /// I would like to have an lco which initially holds a value of the
-  /// number of target points. Whenever I reach to a leaf target box,
-  /// I will reduce the value of that lco by the number of points
-  /// contained in the leaf box. Inside hpx_run, I will just wait on
-  /// the lco until it reaches to 0. Right now, I can use a semaphore
-  /// to do this, the thread who reaches to 0 set an lco. the
-  /// semaphore and that lco needs to be known on every locality. 
-
-  /*
   hpx_addr_t curr = hpx_thread_current_target(); 
-  fmm_box_t *box = NULL; 
-  hpx_gas_try_pin(curr, (void *)&box); 
+  fmm_box_t *tbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&tbox); 
 
-  hpx_addr_t parent = box->parent; 
-  hpx_addr_t list5_result = hpx_lco_future_new(sizeof(build_list5_return_t)); 
-  hpx_call(parent, _build_list5, box->index, sizeof(int) * 3, list5_result); 
-  */
+  int pgsz = fmm_param->pgsz; 
+  if (tbox->level == 0) {
+    disaggregate_action_arg_t *output = 
+      calloc(1, sizeof(disaggregate_action_arg_t) + sizeof(double complex) * pgsz); 
+    output->plist5[0] = fmm_param->source_root; 
+    output->nplist5 = 1; 
 
-  return HPX_SUCCESS;
-}
+    for (int i = 0; i < 8; i++) {
+      if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) {
+	hpx_call(tbox->child[i], _disaggregate, output, 
+		 sizeof(disaggregate_action_arg_t) + sizeof(double complex) * pgsz, 
+		 HPX_NULL); 
+      }
+    }
+  } else {
+    disaggregate_action_arg_t *input = (disaggregate_action_arg_t *) args;    
+    for (int i = 0; i < pgsz; i++) 
+      tbox->expansion[i] += input->expansion[i]; 
+
+    int nlist1 = 0; 
+    int nlist5 = 0; 
+    hpx_addr_t list5[27] = {HPX_NULL}; 
+    hpx_addr_t list1[27] = {HPX_NULL}; 
+
+    // Determine the content of list 5
+    int nplist1 = input->nplist1; 
+    int nplist5 = input->nplist5; 
+    hpx_addr_t result[27]; 
+    for (int i = 0; i < nplist5; i++) {
+      hpx_addr_t entry = input->plist5[i]; 
+      result[i] = hpx_lco_future_new(sizeof(hpx_addr_t) * 4); 
+      hpx_call(entry, _build_list5, &tbox->index[0], sizeof(int) * 3, result[i]); 
+    } 
+
+    for (int i = 0; i < nplist5; i++) {
+      hpx_addr_t temp[4]; 
+      hpx_lco_get(result[i], sizeof(hpx_addr_t) * 4, temp); 
+      for (int j = 0; j < 4; j++) {
+	if (!hpx_addr_eq(temp[j], HPX_NULL)) 
+	  list5[nlist5++] = temp[j]; 
+      }
+      hpx_lco_delete(result[i], HPX_NULL); 
+    }
+
+    // Determine the content of list 1
+    build_list1_action_arg_t build_list1_arg = {
+      .index[0] = tbox->index[0], 
+      .index[1] = tbox->index[1], 
+      .index[2] = tbox->index[2], 
+      .level = tbox->level, 
+      .box = curr
+    }; 
+
+    for (int i = 0; i < nplist1; i++) {
+      hpx_addr_t entry = input->plist1[i]; 
+      result[i] = hpx_lco_future_new(sizeof(hpx_addr_t)); 
+      hpx_call(entry, _build_list1, &build_list1_arg, sizeof(build_list1_action_arg_t),
+	       result[i]); 
+    }
+
+    for (int i = 0; i < nplist1; i++) {
+      hpx_addr_t temp; 
+      hpx_lco_get(result[i], sizeof(hpx_addr_t), &temp); 
+      if (hpx_addr_eq(temp, HPX_NULL)) 
+	list1[nlist1++] = input->plist1[i]; 
+    }
+
+    // Wait on source-to-local to complete
+    for (int i = 0; i < nplist1; i++) {
+      if (!hpx_addr_eq(result[i], HPX_NULL)) 
+	hpx_lco_wait(result[i]); 
+      hpx_lco_delete(result[i], HPX_NULL); 
+    }
+
+    // Translate the local expansion to its child boxes
+  }
+
+  hpx_gas_unpin(curr); 
+
+  return HPX_SUCCESS; 
+}  
 
 int _build_list5_action(void *args) {
-  /*
   hpx_addr_t curr = hpx_thread_current_target(); 
-  fmm_box_t *pbox = NULL; 
-  hpx_gas_try_pin(curr, (void *)&pbox); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+
+  int *input = (int *) args; 
+  int tx = input[0]; 
+  int ty = input[1];
+  int tz = input[2]; 
+  hpx_addr_t result[4] = {HPX_NULL}; 
+  int iter = 0; 
+
+  for (int i = 0; i < 8; i++) {
+    int sx = sbox->index[i] * 2 + xoff[i]; 
+    int sy = sbox->index[i] * 2 + yoff[i]; 
+    int sz = sbox->index[i] * 2 + zoff[i]; 
+    if (fabs(tx - sx) <= 1 && fabs(ty - sy) <= 1 && fabs(tz - sz) <= 1)
+      result[iter++] = sbox->child[i]; 
+  }
+
+  hpx_gas_unpin(curr); 
+  HPX_THREAD_CONTINUE(result);
+  return HPX_SUCCESS; 
+}
+
+int _build_list1_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
   
-  int nplist5 = pbox->nlist5; 
-  build_list5_return_t temp = {
-    .nlist5 = 0, 
-    .remove = true
-  }; 
+  build_list1_action_arg_t *input = (build_list1_action_arg_t *) args; 
+  int tx = input->index[0]; 
+  int ty = input->index[1]; 
+  int tz = input->index[2]; 
+  int sx = sbox->index[0]; 
+  int sy = sbox->index[1]; 
+  int sz = sbox->index[2]; 
+  hpx_addr_t result = HPX_NULL; 
 
-  for (int i = 0; i < nplist5; i++) {
-    hpx_addr_t entry = pbox->list5[i]; 
-    hpx_addr_t ans = hpx_lco_future_new(sizeof(hpx_addr_t) * 4 + sizeof(bool)); 
-    hpx_call(entry, _check_plist5_entry, args, sizeof(int) * 3, ans); 
-    void *temp = NULL; 
-    hpx_lco_get(ans, sizeof(hpx_addr_t) * 4, 
-    
+  if (fabs(tx - sx) > 1 || fabs(ty - sy) > 1 || fabs(tz - sz) > 1) {
+    // The source box is a list 4 entry, invoke source-to-local action 
+    result = hpx_lco_future_new(0); 
+    source_to_local_action_arg_t temp = {
+      .addr = sbox->addr, 
+      .npts = sbox->npts, 
+      .index[0] = tx, 
+      .index[1] = ty, 
+      .index[2] = tz, 
+      .level = input->level, 
+      .box = input->box, 
+      .done = result
+    }; 
+    hpx_addr_t sources = fmm_param->sources; 
+    hpx_call(sources, _source_to_local, &temp, sizeof(temp), HPX_NULL);
+  }
 
+  hpx_gas_unpin(curr); 
+  HPX_THREAD_CONTINUE(result); 
+  return HPX_SUCCESS; 
+}
 
+int _source_to_local_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  source_t *sources_p = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sources_p);
 
-    hpx_addr_t ans = hpx_lco_future_new(sizeof(hpx_addr_t) * 4 + sizeof(bool));
-    hpx_call(entry, _check5, args, sizeof(int) * 3, ans); 
-    void *temp = NULL; 
-    hpx_lco_get(ans, sizeof(hpx_addr_t) * 4 + sizeof(bool), temp); 
-    hpx_addr_t 
+  source_to_local_action_arg_t *input = (source_to_local_action_arg_t *) args; 
+  int pgsz = fmm_param->pgsz; 
+  int pterms = fmm_param->pterms; 
+  double *ytopc = fmm_param->ytopc; 
+  int first = input->addr; 
+  int npts = input->npts; 
+  int last = first + npts;
+  double h = fmm_param->size / (1 << (input->level + 1)); 
+  double *corner = &fmm_param->corner[0]; 
+  double center[3]; 
+  center[0] = corner[0] + (2 * input->index[0] + 1) * h; 
+  center[1] = corner[1] + (2 * input->index[1] + 1) * h; 
+  center[2] = corner[2] + (2 * input->index[2] + 1) * h; 
+  double scale = fmm_param->scale[input->level]; 
+  double *powers = calloc(pterms + 3, sizeof(double)); 
+  double *p = calloc(pgsz, sizeof(double)); 
+  double complex *ephi = calloc(pterms + 2, sizeof(double complex)); 
+  merge_local_action_arg_t *output = calloc(1, sizeof(merge_local_action_arg_t) + 
+					    sizeof(double complex) * pgsz); 
+  double complex *local = &output->expansion[0]; 
+  output->done = input->done; 
 
-    for (int j = 0; j < 4; j++) {
-      if (!hpx_addr_eq
-  */
+  const double precision = 1e-14; 
+  for (int i = first; i < last; i++) {
+    double rx = sources_p[i].position[0] - center[0]; 
+    double ry = sources_p[i].position[1] - center[1]; 
+    double rz = sources_p[i].position[2] - center[2]; 
+    double proj = rx * rx + ry * ry; 
+    double rr = proj + rz * rz; 
+    proj = sqrt(proj);
+    double d = sqrt(rr);
+    double ctheta = (d <= precision ? 1.0 : rz / d);
+    ephi[0] = (proj <= precision * d ? 1.0 : (rx - _Complex_I * ry) / proj); 
+    d = 1.0/d;
+    powers[0] = 1.0;
+    powers[1] = d;
+    d /= scale; 
+
+    for (int ell = 2; ell <= pterms + 2; ell++) 
+      powers[ell] = powers[ell - 1] * d;
+
+    for (int ell = 1; ell <= pterms + 1; ell++) 
+      ephi[ell] = ephi[ell - 1] * ephi[0]; 
+
+    local[0] += sources_p[i].charge * powers[1]; 
+    lgndr(pterms, ctheta, p); 
+
+    for (int ell = 1; ell <= pterms; ell++) 
+      local[ell] += sources_p[i].charge * p[ell] * powers[ell + 1]; 
+
+    for (int m = 1; m <= pterms; m++) {
+      int offset1 = m * (pterms + 1);
+      int offset2 = m * (pterms + 2); 
+      for (int ell = m; ell <= pterms; ell++) {
+        int index1 = offset1 + ell; 
+        int index2 = offset2 + ell;
+        local[index1] += sources_p[i].charge * powers[ell + 1] * 
+          ytopc[index2] * p[index1] * ephi[m - 1]; 
+      }
+    }
+  }
+
+  // Merge local expansion
+  hpx_call(input->box, _merge_local, output, 
+	   sizeof(merge_local_action_arg_t) + sizeof(double complex) * pgsz, 
+	   HPX_NULL); 
+  free(powers); 
+  free(p); 
+  free(ephi); 
+  free(output); 
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
+}
+
+int _merge_local_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *tbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&tbox); 
+  merge_local_action_arg_t *input = (merge_local_action_arg_t *) args; 
+  int pgsz = fmm_param->pgsz; 
+  hpx_lco_sema_p(tbox->sema); 
+  for (int i = 0; i < pgsz; i++) 
+    tbox->expansion[0] += input->expansion[0]; 
+  hpx_lco_sema_v(tbox->sema); 
+  hpx_lco_set(input->done, 0, NULL, HPX_NULL, HPX_NULL); 
+  hpx_gas_unpin(curr); 
   return HPX_SUCCESS; 
 }
 

@@ -1,6 +1,8 @@
+/// ---------------------------------------------------------------------------
 /// @file fmm-action.h
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief Declare FMM actions 
+/// ---------------------------------------------------------------------------
 
 #include "hpx/hpx.h"
 
@@ -17,48 +19,75 @@ extern hpx_action_t _aggregate;
 extern hpx_action_t _source_to_mpole; 
 extern hpx_action_t _mpole_to_mpole;
 extern hpx_action_t _mpole_to_expo; 
-/*
-
 extern hpx_action_t _disaggregate; 
-*/
+extern hpx_action_t _build_list5; 
+extern hpx_action_t _build_list1; 
+extern hpx_action_t _source_to_local;
+extern hpx_action_t _merge_local; 
 
+/// ---------------------------------------------------------------------------
 /// @brief The main FMM action
+/// ---------------------------------------------------------------------------
 int _fmm_main_action(void); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Initialize sources action
+/// ---------------------------------------------------------------------------
 int _init_sources_action(void); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Initialize targets action
+/// ---------------------------------------------------------------------------
 int _init_targets_action(void); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Initialize root box of the source tree
+/// ---------------------------------------------------------------------------
 int _init_source_root_action(void); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Initialize root box of the target tree
-int _init_target_root_action(void *args); 
+/// ---------------------------------------------------------------------------
+int _init_target_root_action(void); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Initialize FMM param action
+/// ---------------------------------------------------------------------------
 int _init_param_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Construct FMM DAG action
+/// ---------------------------------------------------------------------------
 int _partition_box_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Swap points action
+/// ---------------------------------------------------------------------------
 int _swap_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Set box action
+/// ---------------------------------------------------------------------------
 int _set_box_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Source to multipole action
+/// ---------------------------------------------------------------------------
 int _aggregate_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Source to multipole action helper
+/// ---------------------------------------------------------------------------
 int _source_to_multipole_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Multipole to multipole action
+/// ---------------------------------------------------------------------------
 int _multipole_to_multipole_action(void *args); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Multipole to exponential action
+/// ---------------------------------------------------------------------------
 int _multipole_to_exponential_action(void *args); 
 
 void multipole_to_exponential_p1(const double complex *multipole, 
@@ -68,10 +97,34 @@ void multipole_to_exponential_p1(const double complex *multipole,
 void multipole_to_exponential_p2(const double complex *mexpf, 
                                  double complex *mexpphys); 
 
+/// ---------------------------------------------------------------------------
 /// @brief Disaggregate operation
+/// ---------------------------------------------------------------------------
 int _disaggregate_action(void *args); 
 
+/// ---------------------------------------------------------------------------
+/// @brief Build list5 action
+/// ---------------------------------------------------------------------------
+int _build_list5_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Build list1 action
+/// ---------------------------------------------------------------------------
+int _build_list1_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Source to local action
+/// ---------------------------------------------------------------------------
+int _source_to_local_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Merge local action
+/// ---------------------------------------------------------------------------
+int _merge_local_action(void *args); 
+
+/// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 
+/// ---------------------------------------------------------------------------
 void lgndr(int nmax, double x, double *y); 
 
 void rotz2y(const double complex *multipole, const double *rd, 

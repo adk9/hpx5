@@ -1,6 +1,8 @@
+/// ---------------------------------------------------------------------------
 /// @file fmm-param.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief Implementation of functions that compute various translation coeffs
+/// ---------------------------------------------------------------------------
 #include <stdlib.h>
 #include <math.h>
 #include "fmm-param.h"
