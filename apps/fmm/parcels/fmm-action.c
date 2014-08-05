@@ -991,22 +991,17 @@ int _disaggregate_action(void *args) {
     // Complete the exponential-to-local translation using merge-and-shift
     // technique if the target box remains nonleaf 
     if (tbox->nchild) {
-      merge_shift_action_arg_t temp = {
-	.index[0] = tbox->index[0],
+      // Complete the exponential-to-local for the child boxes       
+      merge_expo_action_arg_t temp = {
+	.index[0] = tbox->index[0], 
 	.index[1] = tbox->index[1], 
-	.index[2] = tbox->index[2], 
-	.child[0] = tbox->child[0], 
-	.child[1] = tbox->child[1], 
-	.child[2] = tbox->child[2], 
-	.child[3] = tbox->child[3], 
-	.child[4] = tbox->child[4], 
-	.child[5] = tbox->child[5], 
-	.child[6] = tbox->child[6], 
-	.child[7] = tbox->child[7]
+	.index[2] = tbox->index[2]
       }; 
-
+      for (int i = 0; i < 28; i++) 
+	temp.merge[i] = hpx_lco_future_new(sizeof(double complex) * 
+					   fmm_param->nexpmax); 
       for (int i = 0; i < nlist5; i++) 
-	hpx_call(list5[i], _merge_shift, &temp, sizeof(temp), HPX_NULL);
+	hpx_call(list5[i], _merge_expo, &temp, sizeof(temp), HPX_NULL); 
     } 
 
     // Wait on source-to-local to complete
@@ -1212,133 +1207,367 @@ int _query_box_action(void) {
   return HPX_SUCCESS;
 }
 
-int _merge_shift_action(void *args) {
+int _merge_exponential_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *sbox = NULL; 
   hpx_gas_try_pin(curr, (void *)&sbox); 
-
-  merge_shift_action_arg_t *input = (merge_shift_action_arg_t *)args; 
-  int action_argsz = sizeof(expo_to_local_action_arg_t); 
+  merge_expo_action_arg_t *input = (merge_expo_action_arg_t *) args; 
   
   for (int i = 0; i < 8; i++) {
-    if (!hpx_addr_eq(sbox->child[i], HPX_NULL))
-      hpx_call(sbox->child[i], _expo_to_local, input, action_argsz, HPX_NULL); 
+    if (!hpx_addr_eq(sbox->child[i], HPX_NULL)) {
+      hpx_addr_t ichild = sbox->child[i]; 
+      int dx = sbox->index[0] * 2 + xoff[i] - input->index[0]; 
+      int dy = sbox->index[1] * 2 + yoff[i] - input->index[1]; 
+      int dz = sbox->index[2] * 2 + zoff[i] - input->index[2]; 
+
+      proc_expo_action_arg_t temp1, temp2, temp3, temp4; 
+
+      if (dz == 3) { // uall
+	temp1.offx = dx; 
+	temp1.offy = dy; 
+	temp1.lco = input->merge[0]; 
+	hpx_call(ichild, _proc_expo_p, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dz == -2) { // dall
+	temp1.offx = dx; 
+	temp1.offy = dy; 
+	temp1.lco = input->merge[2]; 
+	hpx_call(ichild, _proc_expo_m, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dy == 3) { // nall
+	temp1.offx = dz;
+	temp1.offy = dx; 
+	temp1.lco = input->merge[4];
+	hpx_call(ichild, _proc_expo_p, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dy == -2) { // sall
+	temp1.offx = dz;
+	temp1.offy = dx; 
+	temp1.lco = input->merge[8]; 
+	hpx_call(ichild, _proc_expo_m, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dx == 3) { // eall
+	temp1.offx = -dz; 
+	temp1.offy = dy; 
+	temp1.lco = input->merge[12]; 
+	hpx_call(ichild, _proc_expo_p, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dx == -2) { // wall 
+	temp1.offx = -dz; 
+	temp1.offy = dy; 
+	temp1.lco = input->merge[20]; 
+	hpx_call(ichild, _proc_expo_m, &temp1, sizeof(temp1), HPX_NULL); 
+      } else if (dy >= -1 && dy <= 2 && dx >= -1 && dx <= 2) {
+	int caseID = dy * 4 + dx + 5; 
+
+	if (dz == 2) {
+	  temp1.offx = dx; 
+	  temp1.offy = dy; 
+	  temp1.lco = input->merge[1];  // u1234
+	  hpx_call(ichild, _proc_expo_p, &temp1, sizeof(temp1), HPX_NULL); 
+
+	  switch (caseID) {
+	  case 0:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[11]; // s78
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[26]; // w6
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 1:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[11]; // s78
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 2:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[11]; // s78
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 3:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[11]; // s78
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[18]; // e5
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 4:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[23]; // w68
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 7:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[15]; // e57
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 8:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[23]; // w68
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 11:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[15]; // e57
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 12: 
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[7]; // n56
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[27]; // w8 
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 13:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[7]; // n56
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 14:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[7]; // n56
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 15:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[7]; // n56
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[19]; // e7
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  } 
+	} else if (dz == 1 || dz == 0) {
+	  switch (caseID) {
+	  case 0: 
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[9]; // s3478
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL);
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[24]; // w2
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[26]; // w6
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 1:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[9]; // s3478
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL);
+	    break;
+	  case 2: 
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[9]; // s3478
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL);
+	    break;
+	  case 3:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[9]; // s3478
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL);
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[16]; // e1
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[18]; // e5
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 4:
+	    temp2.offx = -dz; 
+	    temp2.offy = dy; 
+	    temp2.lco = input->merge[21]; // w2468
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 7: 
+	    temp2.offx = -dz; 
+	    temp2.offy = dy; 
+	    temp2.lco = input->merge[13]; // e1357
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 8:
+	    temp2.offx = -dz; 
+	    temp2.offy = dy; 
+	    temp2.lco = input->merge[21]; // w2468
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 11: 
+	    temp2.offx = -dz; 
+	    temp2.offy = dy; 
+	    temp2.lco = input->merge[13]; // e1357
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 12:
+	    temp2.offx = dz; 
+	    temp2.offy = dx;
+	    temp2.lco = input->merge[5]; // n1256
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy;
+	    temp3.lco = input->merge[25]; // w4
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    temp4.offx = -dz; 
+	    temp4.offy = dy;
+	    temp4.lco = input->merge[27]; // w8
+	    hpx_call(ichild, _proc_expo_m, &temp4, sizeof(temp4), HPX_NULL); 
+	    break;
+	  case 13:
+	    temp2.offx = dz; 
+	    temp2.offy = dx;
+	    temp2.lco = input->merge[5]; // n1256
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 14:
+	    temp2.offx = dz; 
+	    temp2.offy = dx;
+	    temp2.lco = input->merge[5]; // n1256
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 15:
+	    temp2.offx = dz; 
+	    temp2.offy = dx;
+	    temp2.lco = input->merge[5]; // n1256
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy;
+	    temp3.lco = input->merge[17]; // e3
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    temp4.offx = -dz; 
+	    temp4.offy = dy;
+	    temp4.lco = input->merge[19]; // e7
+	    hpx_call(ichild, _proc_expo_p, &temp4, sizeof(temp4), HPX_NULL); 
+	    break;
+	  }
+	} else if (dz == -1) {
+	  temp1.offx = dx; 
+	  temp1.offy = dy; 
+	  temp1.lco = input->merge[3];  // d5678
+	  hpx_call(ichild, _proc_expo_m, &temp1, sizeof(temp1), HPX_NULL); 
+
+	  switch (caseID) {
+	  case 0:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[10]; // s34
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[24]; // w2
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 1:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[10]; // s34
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 2:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[10]; // s34
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 3:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[10]; // s34
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[16]; // e1
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 4:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[22]; // w24
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 7:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[14]; // e13
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 8:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[22]; // w24
+	    hpx_call(ichild, _proc_expo_m, &temp2, sizeof(temp2), HPX_NULL); 
+	    break; 
+	  case 11:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[14]; // e13
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 12: 
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[6]; // n12
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[25]; // w4
+	    hpx_call(ichild, _proc_expo_m, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  case 13:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[6]; // n12
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 14:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[6]; // n12
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    break;
+	  case 15:
+	    temp2.offx = dz; 
+	    temp2.offy = dx; 
+	    temp2.lco = input->merge[6]; // n12
+	    hpx_call(ichild, _proc_expo_p, &temp2, sizeof(temp2), HPX_NULL); 
+	    temp3.offx = -dz; 
+	    temp3.offy = dy; 
+	    temp3.lco = input->merge[17]; // e3
+	    hpx_call(ichild, _proc_expo_p, &temp3, sizeof(temp3), HPX_NULL); 
+	    break;
+	  } 
+	}
+      }
+    }
   }
+
   hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
+}
+
+int _proc_exponential_p_action(void *args) {
   return HPX_SUCCESS;
 }
 
-int _exponential_to_local_action(void *args) {
-  hpx_addr_t curr = hpx_thread_current_target(); 
-  fmm_box_t *sbox = NULL; 
-  hpx_gas_try_pin(curr, (void *)&sbox); 
-
-  expo_to_local_action_arg_t *input = (expo_to_local_action_arg_t *) args; 
-  int dx = sbox->index[0] - input->index[0]; 
-  int dy = sbox->index[1] - input->index[1]; 
-  int dz = sbox->index[2] - input->index[2]; 
-
-  if (dz == 3) { 
-    // uall 
-  } else if (dz == -2) { 
-    // dall
-  } else if (dy == 3) {
-    // nall
-  } else if (dy == -2) {
-    // sall
-  } else if (dx == 3) {
-    // eall
-  } else if (dx == -2) {
-    // wall
-  } 
-
-  if (dy >= -1 && dy <= 2 && dx >= -1 && dx <= 2) {
-    int caseID = dy * 4 + dx + 5; 
-    if (dz == 2) { // u1234
-      switch (caseID) {
-      case 0: // s78, w6
-	break;
-      case 1: // s78
-	break;
-      case 2: // s78
-	break;
-      case 3: // s78, e5
-	break;
-      case 4: // w68
-	break;
-      case 7: // e57
-	break;
-      case 8: // w68
-	break;
-      case 11:// e57
-	break;
-      case 12: // n56, w8
-	break;
-      case 13: // n56
-	break;
-      case 14: // n56
-	break;
-      case 15: // n56, e7
-	break;
-      } 
-    } else if (dz == 1 || dz == 0) {
-      switch (caseID) {
-      case 0: // s3478, w2, w6
-	break;
-      case 1: // s3478
-	break;
-      case 2: // s3478
-	break;
-      case 3: // s3478, e1, e5
-	break;
-      case 4: // w2468
-	break;
-      case 7: // e1357
-	break;
-      case 8: // w2468
-	break;
-      case 11:// e1357
-	break;
-      case 12: // n1256, w4, w8
-	break;
-      case 13: // n1256
-	break;
-      case 14: // n1256
-	break;
-      case 15: // n1256, e3, e7
-	break;
-      } 	
-    } else if (dz == -1) { // d5678 
-      switch (caseID) {
-      case 0: // s34, w2
-	break;
-      case 1: // s34
-	break;
-      case 2: // s34
-	break;
-      case 3: // s34, e1
-	break;
-      case 4: // w24
-	break;
-      case 7: // e13
-	break;
-      case 8: // w24
-	break;
-      case 11: // e13
-	break;
-      case 12: // n12, w4
-	break;
-      case 13: // n12
-	break;
-      case 14: // n12
-	break;
-      case 15: // n12, e3
-	break;
-      }
-    }
-  } 
-
-  hpx_gas_unpin(curr); 
+int _proc_exponential_m_action(void *args) {
   return HPX_SUCCESS;
 }
 
@@ -1470,3 +1699,4 @@ void rotz2x(const double complex *multipole, const double *rd,
     }
   }
 }
+

@@ -178,13 +178,20 @@ typedef struct {
 } merge_local_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
-/// @brief Argument passed to the _expo_to_local action
+/// @brief Argument passed to the _merge_expo action
 /// ---------------------------------------------------------------------------
 typedef struct {
   int index[3]; ///< index of the parent target box 
-  hpx_addr_t child[8]; ///< address of the child target boxes
-} expo_to_local_action_arg_t; 
+  hpx_addr_t merge[28]; ///< lco holding various merged list
+} merge_expo_action_arg_t; 
 
-typedef expo_to_local_action_arg_t merge_shift_action_arg_t; 
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _proc_expo_p and _proc_expo_m actions
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int offx; ///< offsets
+  int offy; 
+  hpx_addr_t lco; ///< which lco to set
+} proc_expo_action_arg_t; 
 
 #endif
