@@ -988,6 +988,26 @@ int _disaggregate_action(void *args) {
       }
     }
 
+    // Complete the exponential-to-local translation using merge-and-shift
+    // technique if the target box remains nonleaf 
+    if (tbox->nchild) {
+      merge_shift_action_arg_t temp = {
+	.index[0] = tbox->index[0],
+	.index[1] = tbox->index[1], 
+	.index[2] = tbox->index[2], 
+	.child[0] = tbox->child[0], 
+	.child[1] = tbox->child[1], 
+	.child[2] = tbox->child[2], 
+	.child[3] = tbox->child[3], 
+	.child[4] = tbox->child[4], 
+	.child[5] = tbox->child[5], 
+	.child[6] = tbox->child[6], 
+	.child[7] = tbox->child[7]
+      }; 
+
+      for (int i = 0; i < nlist5; i++) 
+	hpx_call(list5[i], _merge_shift, &temp, sizeof(temp), HPX_NULL);
+    } 
 
     // Wait on source-to-local to complete
     for (int i = 0; i < nplist1; i++) {
@@ -996,7 +1016,15 @@ int _disaggregate_action(void *args) {
       hpx_lco_delete(result[i], HPX_NULL); 
     }
 
-    // Translate the local expansion to its child boxes
+    if (tbox->nchild) {
+      // Translate the local expansion to the child boxes and invoke
+      // disaggregate actions on the child boxes 
+    } else {
+      // Evaluate local expansion 
+
+      // Process list 1 & 3
+
+    }
   }
 
   hpx_gas_unpin(curr); 
@@ -1180,6 +1208,136 @@ int _query_box_action(void) {
   hpx_gas_try_pin(curr, (void *)&box); 
   bool result = (box->npts <= s); 
   HPX_THREAD_CONTINUE(result); 
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS;
+}
+
+int _merge_shift_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+
+  merge_shift_action_arg_t *input = (merge_shift_action_arg_t *)args; 
+  int action_argsz = sizeof(expo_to_local_action_arg_t); 
+  
+  for (int i = 0; i < 8; i++) {
+    if (!hpx_addr_eq(sbox->child[i], HPX_NULL))
+      hpx_call(sbox->child[i], _expo_to_local, input, action_argsz, HPX_NULL); 
+  }
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS;
+}
+
+int _exponential_to_local_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+
+  expo_to_local_action_arg_t *input = (expo_to_local_action_arg_t *) args; 
+  int dx = sbox->index[0] - input->index[0]; 
+  int dy = sbox->index[1] - input->index[1]; 
+  int dz = sbox->index[2] - input->index[2]; 
+
+  if (dz == 3) { 
+    // uall 
+  } else if (dz == -2) { 
+    // dall
+  } else if (dy == 3) {
+    // nall
+  } else if (dy == -2) {
+    // sall
+  } else if (dx == 3) {
+    // eall
+  } else if (dx == -2) {
+    // wall
+  } 
+
+  if (dy >= -1 && dy <= 2 && dx >= -1 && dx <= 2) {
+    int caseID = dy * 4 + dx + 5; 
+    if (dz == 2) { // u1234
+      switch (caseID) {
+      case 0: // s78, w6
+	break;
+      case 1: // s78
+	break;
+      case 2: // s78
+	break;
+      case 3: // s78, e5
+	break;
+      case 4: // w68
+	break;
+      case 7: // e57
+	break;
+      case 8: // w68
+	break;
+      case 11:// e57
+	break;
+      case 12: // n56, w8
+	break;
+      case 13: // n56
+	break;
+      case 14: // n56
+	break;
+      case 15: // n56, e7
+	break;
+      } 
+    } else if (dz == 1 || dz == 0) {
+      switch (caseID) {
+      case 0: // s3478, w2, w6
+	break;
+      case 1: // s3478
+	break;
+      case 2: // s3478
+	break;
+      case 3: // s3478, e1, e5
+	break;
+      case 4: // w2468
+	break;
+      case 7: // e1357
+	break;
+      case 8: // w2468
+	break;
+      case 11:// e1357
+	break;
+      case 12: // n1256, w4, w8
+	break;
+      case 13: // n1256
+	break;
+      case 14: // n1256
+	break;
+      case 15: // n1256, e3, e7
+	break;
+      } 	
+    } else if (dz == -1) { // d5678 
+      switch (caseID) {
+      case 0: // s34, w2
+	break;
+      case 1: // s34
+	break;
+      case 2: // s34
+	break;
+      case 3: // s34, e1
+	break;
+      case 4: // w24
+	break;
+      case 7: // e13
+	break;
+      case 8: // w24
+	break;
+      case 11: // e13
+	break;
+      case 12: // n12, w4
+	break;
+      case 13: // n12
+	break;
+      case 14: // n12
+	break;
+      case 15: // n12, e3
+	break;
+      }
+    }
+  } 
+
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }

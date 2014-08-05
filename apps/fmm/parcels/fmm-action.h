@@ -26,6 +26,8 @@ extern hpx_action_t _source_to_local;
 extern hpx_action_t _merge_local; 
 extern hpx_action_t _delete_box; 
 extern hpx_action_t _query_box; 
+extern hpx_action_t _merge_shift; 
+extern hpx_action_t _expo_to_local; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -133,6 +135,16 @@ int _delete_box_action(void);
 /// @brief Query information to prune box action
 /// ---------------------------------------------------------------------------
 int _query_box_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Merge and shift action
+/// ---------------------------------------------------------------------------
+int _merge_shift_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Exponential to local action
+/// ---------------------------------------------------------------------------
+int _exponential_to_local_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 
