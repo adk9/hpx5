@@ -177,6 +177,14 @@ typedef struct {
   double complex expansion[]; ///< expansion
 } merge_local_action_arg_t; 
 
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _expo_to_local action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int index[3]; ///< index of the parent target box 
+  hpx_addr_t child[8]; ///< address of the child target boxes
+} expo_to_local_action_arg_t; 
 
+typedef expo_to_local_action_arg_t merge_shift_action_arg_t; 
 
 #endif
