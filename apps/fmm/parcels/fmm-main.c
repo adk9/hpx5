@@ -36,8 +36,9 @@ hpx_action_t _source_to_local;
 hpx_action_t _merge_local; 
 hpx_action_t _delete_box; 
 hpx_action_t _query_box; 
-hpx_action_t _merge_shift; 
-hpx_action_t _expo_to_local; 
+hpx_action_t _merge_expo; 
+hpx_action_t _proc_expo_p; 
+hpx_action_t _proc_expo_m; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -128,8 +129,9 @@ int main(int argc, char *argv[]) {
   _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
   _delete_box       = HPX_REGISTER_ACTION(_delete_box_action); 
   _query_box        = HPX_REGISTER_ACTION(_query_box_action); 
-  _merge_shift      = HPX_REGISTER_ACTION(_merge_shift_action);
-  _expo_to_local    = HPX_REGISTER_ACTION(_exponential_to_local_action);
+  _merge_expo       = HPX_REGISTER_ACTION(_merge_exponential_action);
+  _proc_expo_p      = HPX_REGISTER_ACTION(_proc_exponential_p_action); 
+  _proc_expo_m      = HPX_REGISTER_ACTION(_proc_exponential_m_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
