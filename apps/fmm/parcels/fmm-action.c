@@ -952,22 +952,42 @@ int _disaggregate_action(void *args) {
 	list1[nlist1++] = input->plist1[i]; 
     }
 
-    // Check if it is possible to prune the subtree rooted at the current target
-    // box. First, we check if the box is adjacent to any source box by checking
-    // if nlist5 is nonzero. If not, we check if any entry of list 5 has more
-    // than s points. When both conditions are satisfied, the partition
-    // performed will be kept. Otherwise, the lower branch will be dropped. 
+    // Check if the subtree rooted at the current target box can be pruned. 
     if (tbox->nchild) {
+      // Check if the box is adjacent to any source box
       if (nlist5 == 0) {
 	for (int i = 0; i < 8; i++) {
 	  if (!hpx_addr_eq(tbox->child[i], HPX_NULL))
 	    hpx_call(tbox->child[i], _delete_box, NULL, 0, HPX_NULL); 
+	  tbox->child[i] = HPX_NULL; 
 	}
+	tbox->nchild = 0; 
       } else {
+	// Check if any list5 has more than s points 
 	bool remove = true; 
+	hpx_addr_t query[27] = {HPX_NULL};
+	for (int i = 0; i < nlist5; i++) {
+	  query[i] = hpx_lco_future_new(sizeof(bool)); 
+	  hpx_call(list5[i], _query_box, NULL, 0, query[i]); 
+	}
+
+	for (int i = 0; i < nlist5; i++) {
+	  bool temp; 
+	  hpx_lco_get(query[i], sizeof(bool), &temp); 
+	  remove &= temp; 
+	}
+
+	if (remove) {
+	  for (int i = 0; i < 8; i++) {
+	    if (!hpx_addr_eq(tbox->child[i], HPX_NULL))
+	      hpx_call(tbox->child[i], _delete_box, NULL, 0, HPX_NULL);
+	    tbox->child[i] = HPX_NULL;
+	  }
+	  tbox->nchild = 0;
+	}
       }
     }
-      
+
 
     // Wait on source-to-local to complete
     for (int i = 0; i < nplist1; i++) {
@@ -1140,6 +1160,27 @@ int _merge_local_action(void *args) {
 }
 
 int _delete_box_action(void) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  hpx_gas_try_pin(curr, (void *)&box); 
+  for (int i = 0; i < 8; i++) {
+    if (!hpx_addr_eq(box->child[i], HPX_NULL))
+      hpx_call(box->child[i], _delete_box, NULL, 0, HPX_NULL); 
+  }
+  hpx_lco_delete(box->sema, HPX_NULL); 
+  hpx_lco_delete(box->expan_avail, HPX_NULL); 
+  hpx_gas_unpin(curr); 
+  hpx_gas_global_free(curr, HPX_NULL); 
+  return HPX_SUCCESS;
+}
+
+int _query_box_action(void) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *box = NULL; 
+  hpx_gas_try_pin(curr, (void *)&box); 
+  bool result = (box->npts <= s); 
+  HPX_THREAD_CONTINUE(result); 
+  hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
 
