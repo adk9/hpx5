@@ -23,12 +23,12 @@ extern hpx_action_t _disaggregate;
 extern hpx_action_t _build_list5; 
 extern hpx_action_t _build_list1; 
 extern hpx_action_t _source_to_local;
-extern hpx_action_t _merge_local; 
 extern hpx_action_t _delete_box; 
 extern hpx_action_t _query_box; 
 extern hpx_action_t _merge_expo; 
-extern hpx_action_t _proc_expo_p; 
-extern hpx_action_t _proc_expo_m; 
+extern hpx_action_t _merge_expo_zp; 
+extern hpx_action_t _merge_expo_zm; 
+extern hpx_action_t _merge_update; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -115,17 +115,12 @@ int _build_list5_action(void *args);
 /// ---------------------------------------------------------------------------
 /// @brief Build list1 action
 /// ---------------------------------------------------------------------------
-int _build_list1_action(void *args); 
+int _build_list1_action(void); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Source to local action
 /// ---------------------------------------------------------------------------
 int _source_to_local_action(void *args); 
-
-/// ---------------------------------------------------------------------------
-/// @brief Merge local action
-/// ---------------------------------------------------------------------------
-int _merge_local_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Delete box action
@@ -145,32 +140,17 @@ int _merge_exponential_action(void *args);
 /// ---------------------------------------------------------------------------
 /// @brief Process '+' direction exponential expansion action
 /// ---------------------------------------------------------------------------
-int _proc_exponential_p_action(void *args); 
+int _merge_exponential_zp_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Process '-' direction exponential expansion action
 /// ---------------------------------------------------------------------------
-int _proc_exponential_m_action(void *args); 
-
-
-/*
-/// ---------------------------------------------------------------------------
-/// @brief Exponential to local action
-/// ---------------------------------------------------------------------------
-int _exponential_to_local_action(void *args); 
+int _merge_exponential_zm_action(void *args); 
 
 /// ---------------------------------------------------------------------------
-/// @brief Make '+' direction exponential expansion
+/// @brief Merge update action
 /// ---------------------------------------------------------------------------
-void make_expo_p(const double complex *input, const int xoff, const int yoff, 
-		 double complex *output); 
-
-/// ---------------------------------------------------------------------------
-/// @brief Make '-' direction exponential expansion
-/// ---------------------------------------------------------------------------
-void make_expo_m(const double complex *input, const int xoff, const int yoff, 
-		 double complex *output); 
-*/
+int _merge_update_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 

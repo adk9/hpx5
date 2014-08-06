@@ -45,6 +45,7 @@ struct fmm_box_t {
   hpx_addr_t sema; ///< semaphore for reduction
   int n_reduce; ///< number of operands completing the reduction
   hpx_addr_t expan_avail; ///< lco indicating availability of the expansion
+  hpx_addr_t and_gates[28]; ///< and_gates for merging exponential expansions
   double complex expansion[]; ///< storage for the expansion
 }; 
 
@@ -149,15 +150,6 @@ typedef struct {
 } disaggregate_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
-/// @brief Argument passed to the _build_list1 action
-/// ---------------------------------------------------------------------------
-typedef struct {
-  int index[3]; ///< index of the target box
-  int level; ///< level of the target box
-  hpx_addr_t box; ///< address of the target box
-} build_list1_action_arg_t; 
-
-/// ---------------------------------------------------------------------------
 /// @brief Argument passed to the _source_to_local action
 /// ---------------------------------------------------------------------------
 typedef struct {
@@ -165,33 +157,32 @@ typedef struct {
   int npts; ///< number of source points
   int index[3]; ///< index of the target box
   int level; ///< level of the target box
-  hpx_addr_t box; ///< address of the target box
-  hpx_addr_t done; ///< lco tracking completion
 } source_to_local_action_arg_t; 
-
-/// ---------------------------------------------------------------------------
-/// @brief Argument passed to the _merge_local action
-/// ---------------------------------------------------------------------------
-typedef struct {
-  hpx_addr_t done; ///< lco tracking completion
-  double complex expansion[]; ///< expansion
-} merge_local_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
 /// @brief Argument passed to the _merge_expo action
 /// ---------------------------------------------------------------------------
 typedef struct {
   int index[3]; ///< index of the parent target box 
-  hpx_addr_t merge[28]; ///< lco holding various merged list
+  hpx_addr_t box; ///< address of the parent target box
 } merge_expo_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
-/// @brief Argument passed to the _proc_expo_p and _proc_expo_m actions
+/// @brief Argument passed to the _merge_expo_zp and _merge_expo_zm actions
 /// ---------------------------------------------------------------------------
 typedef struct {
   int offx; ///< offsets
-  int offy; 
-  hpx_addr_t lco; ///< which lco to set
-} proc_expo_action_arg_t; 
+  int offy;   
+  int label; ///< which merged list to update
+  hpx_addr_t box; ///< which target box to send the result
+} merge_expo_z_action_arg_t; 
 
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _merge_update action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int label; ///< which merged list to update
+  int size; ///< size of the expansion
+  double complex expansion[]; ///< buffer holding expansion
+} merge_update_action_arg_t; 
 #endif
