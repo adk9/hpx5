@@ -33,12 +33,12 @@ hpx_action_t _disaggregate;
 hpx_action_t _build_list5;
 hpx_action_t _build_list1; 
 hpx_action_t _source_to_local; 
-hpx_action_t _merge_local; 
 hpx_action_t _delete_box; 
 hpx_action_t _query_box; 
 hpx_action_t _merge_expo; 
-hpx_action_t _proc_expo_p; 
-hpx_action_t _proc_expo_m; 
+hpx_action_t _merge_expo_zp;
+hpx_action_t _merge_expo_zm; 
+hpx_action_t _merge_update; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -126,13 +126,13 @@ int main(int argc, char *argv[]) {
   _build_list5      = HPX_REGISTER_ACTION(_build_list5_action);
   _build_list1      = HPX_REGISTER_ACTION(_build_list1_action); 
   _source_to_local  = HPX_REGISTER_ACTION(_source_to_local_action); 
-  _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
   _delete_box       = HPX_REGISTER_ACTION(_delete_box_action); 
   _query_box        = HPX_REGISTER_ACTION(_query_box_action); 
   _merge_expo       = HPX_REGISTER_ACTION(_merge_exponential_action);
-  _proc_expo_p      = HPX_REGISTER_ACTION(_proc_exponential_p_action); 
-  _proc_expo_m      = HPX_REGISTER_ACTION(_proc_exponential_m_action); 
-
+  _merge_expo_zp    = HPX_REGISTER_ACTION(_merge_exponential_zp_action); 
+  _merge_expo_zm    = HPX_REGISTER_ACTION(_merge_exponential_zm_action); 
+  _merge_update     = HPX_REGISTER_ACTION(_merge_update_action); 
+ 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
     fprintf(stderr, "HPX: error while running.\n");
