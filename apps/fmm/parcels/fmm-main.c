@@ -39,6 +39,15 @@ hpx_action_t _merge_expo;
 hpx_action_t _merge_expo_zp;
 hpx_action_t _merge_expo_zm; 
 hpx_action_t _merge_update; 
+hpx_action_t _shift_expo_c1; 
+hpx_action_t _shift_expo_c2; 
+hpx_action_t _shift_expo_c3; 
+hpx_action_t _shift_expo_c4; 
+hpx_action_t _shift_expo_c5; 
+hpx_action_t _shift_expo_c6; 
+hpx_action_t _shift_expo_c7; 
+hpx_action_t _shift_expo_c8; 
+
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -132,7 +141,15 @@ int main(int argc, char *argv[]) {
   _merge_expo_zp    = HPX_REGISTER_ACTION(_merge_exponential_zp_action); 
   _merge_expo_zm    = HPX_REGISTER_ACTION(_merge_exponential_zm_action); 
   _merge_update     = HPX_REGISTER_ACTION(_merge_update_action); 
- 
+  _shift_expo_c1    = HPX_REGISTER_ACTION(_shift_exponential_c1_action); 
+  _shift_expo_c2    = HPX_REGISTER_ACTION(_shift_exponential_c2_action); 
+  _shift_expo_c3    = HPX_REGISTER_ACTION(_shift_exponential_c3_action); 
+  _shift_expo_c4    = HPX_REGISTER_ACTION(_shift_exponential_c4_action); 
+  _shift_expo_c5    = HPX_REGISTER_ACTION(_shift_exponential_c5_action); 
+  _shift_expo_c6    = HPX_REGISTER_ACTION(_shift_exponential_c6_action); 
+  _shift_expo_c7    = HPX_REGISTER_ACTION(_shift_exponential_c7_action); 
+  _shift_expo_c8    = HPX_REGISTER_ACTION(_shift_exponential_c8_action); 
+  
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
     fprintf(stderr, "HPX: error while running.\n");

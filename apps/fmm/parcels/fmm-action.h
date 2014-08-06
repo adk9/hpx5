@@ -29,6 +29,14 @@ extern hpx_action_t _merge_expo;
 extern hpx_action_t _merge_expo_zp; 
 extern hpx_action_t _merge_expo_zm; 
 extern hpx_action_t _merge_update; 
+extern hpx_action_t _shift_expo_c1; 
+extern hpx_action_t _shift_expo_c2; 
+extern hpx_action_t _shift_expo_c3; 
+extern hpx_action_t _shift_expo_c4; 
+extern hpx_action_t _shift_expo_c5; 
+extern hpx_action_t _shift_expo_c6; 
+extern hpx_action_t _shift_expo_c7; 
+extern hpx_action_t _shift_expo_c8; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -151,6 +159,53 @@ int _merge_exponential_zm_action(void *args);
 /// @brief Merge update action
 /// ---------------------------------------------------------------------------
 int _merge_update_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 1
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c1_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 2
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c2_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 3
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c3_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 4
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c4_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 5
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c5_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 6
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c6_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 7
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c7_action(void); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Shift merged exponential expansion to child 8
+/// ---------------------------------------------------------------------------
+int _shift_exponential_c8_action(void); 
+
+void exponential_to_local_p1(const double complex *mexpphys, 
+                             double complex *mexpf);
+
+void exponential_to_local_p2(const double complex *mexpu,
+                             const double complex *mexpd, 
+                             double complex *local); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 
