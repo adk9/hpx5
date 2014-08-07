@@ -161,6 +161,14 @@ typedef struct {
 } source_to_local_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
+/// @brief Value returned from the _build_list5 action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  hpx_addr_t box; ///< address for the list entry
+  int type; ///< 5 means belongs to list 5, 1 means it belongs to list 1
+} build_list5_action_return_t; 
+
+/// ---------------------------------------------------------------------------
 /// @brief Argument passed to the _merge_expo action
 /// ---------------------------------------------------------------------------
 typedef struct {
