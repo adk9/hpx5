@@ -348,12 +348,8 @@ int _partition_box_action(void *args) {
   int pgsz = fmm_param->pgsz; 
   int nexpmax = fmm_param->nexpmax; 
 
-  int expan_size; 
-  if (type == 'S') {
-    expan_size = sizeof(double complex) * (pgsz + nexpmax * 6); 
-  } else {
-    expan_size = sizeof(double complex) * (pgsz + nexpmax * 28);
-  }
+
+  int expan_size = sizeof(double complex) * (pgsz + nexpmax * 6 * (type == 'S')); 
 
   for (int i = 0; i < 8; i++) {
     if (subparts[i] > 0) {
@@ -491,13 +487,6 @@ int _set_box_action(void *args) {
   char type = input->type; 
   int and_gate_size = (type == 'S' ? 3 : 2); 
   box->expan_avail = hpx_lco_and_new(and_gate_size); 
-
-  if (type == 'T') {
-    int and_gate_size[28] = {36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3, 
-			     36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3}; 
-    for (int i = 0; i < 28; i++) 
-      box->and_gates[i] = hpx_lco_and_new(and_gate_size[i]); 
-  }
 
   if (box->npts > s) {
     // Continue partitioning the box if it contains more than s points 
@@ -900,6 +889,7 @@ int _disaggregate_action(void *args) {
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
   int pgsz = fmm_param->pgsz; 
+  int nexpmax = fmm_param->nexpmax;
   disaggregate_action_arg_t *input = (disaggregate_action_arg_t *)args; 
   int action_argsz = sizeof(disaggregate_action_arg_t) + 
     sizeof(double complex) * pgsz; 
@@ -987,8 +977,7 @@ int _disaggregate_action(void *args) {
 
     // Check if the branch below tbox can be pruned
     if (tbox->nchild) {
-      bool delete = false; 
-      
+      bool delete = false;       
       if (nlist5 == 0) { // tbox is not adjacent to any source box
 	delete = true; 
       } else { // Check any list5 entry has more than s points
@@ -1009,9 +998,10 @@ int _disaggregate_action(void *args) {
       } 
 
       if (delete) {
+	char type = 'T'; 
 	for (int i = 0; i < 8; i++) {
 	  if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) 
-	    hpx_call(tbox->child[i], _delete_box, NULL, 0, HPX_NULL); 
+	    hpx_call(tbox->child[i], _delete_box, &type, sizeof(char), HPX_NULL); 
 	  tbox->child[i] = HPX_NULL;
 	}
 	tbox->nchild = 0; 
@@ -1020,6 +1010,13 @@ int _disaggregate_action(void *args) {
 
     if (tbox->nchild) {
       // Complete the exponential-to-local operation using merge-and-shift
+      int and_gate_size[28] = {36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3, 
+			       36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3}; 
+      for (int i = 0; i < 28; i++) 
+	tbox->and_gates[i] = hpx_lco_and_new(and_gate_size[i]); 
+    
+      tbox->merge = calloc(1, sizeof(double complex) * nexpmax * 28); 
+
       merge_expo_action_arg_t merge_expo_arg = {
 	.index[0] = tbox->index[0], 
 	.index[1] = tbox->index[1], 
@@ -1034,7 +1031,6 @@ int _disaggregate_action(void *args) {
       // Wait on merge operation to complete
       for (int i = 0; i < 28; i++) 
 	hpx_lco_wait(tbox->and_gates[i]); 
-
 
       // Shift the merged exponentials to the child boxes 
       hpx_call(curr, _shift_expo_c1, NULL, 0, HPX_NULL); 
@@ -1177,7 +1173,7 @@ int _source_to_local_action(void *args) {
   return HPX_SUCCESS; 
 }
 
-int _delete_box_action(void) {
+int _delete_box_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *box = NULL; 
   hpx_gas_try_pin(curr, (void *)&box); 
@@ -1187,8 +1183,15 @@ int _delete_box_action(void) {
   }
   hpx_lco_delete(box->sema, HPX_NULL); 
   hpx_lco_delete(box->expan_avail, HPX_NULL); 
-  for (int i = 0; i < 28; i++) 
-    hpx_lco_delete(box->and_gates[i], HPX_NULL); 
+
+  char type = *((char *) args); 
+
+  if (box->nchild && type == 'T') {
+    for (int i = 0; i < 28; i++) 
+      hpx_lco_delete(box->and_gates[i], HPX_NULL);  
+    free(box->merge);
+  }
+
   hpx_gas_unpin(curr); 
   hpx_gas_global_free(curr, HPX_NULL); 
   return HPX_SUCCESS;
@@ -1437,9 +1440,8 @@ int _merge_update_action(void *args) {
   int size = input->size; 
   if (size) {
     int nexpmax = fmm_param->nexpmax; 
-    int pgsz = fmm_param->pgsz; 
     double complex *expo_in = &input->expansion[0]; 
-    double complex *expo_out = &tbox->expansion[pgsz + nexpmax * label]; 
+    double complex *expo_out = &tbox->merge[nexpmax * label]; 
 
     hpx_lco_sema_p(tbox->sema); 
     for (int i = 0; i < size; i++) 
@@ -1457,89 +1459,102 @@ int _shift_exponential_c1_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
-  int nexpmax = fmm_param->nexpmax; 
-  int nexptotp = fmm_param->nexptotp;
-  int pgsz = fmm_param->pgsz; 
-  int level = tbox->level; 
-  double scale = fmm_param->scale[level + 1]; 
-  double complex *xs = fmm_param->xs; 
-  double complex *ys = fmm_param->ys; 
-  double complex *zs = fmm_param->zs; 
-  double *rdplus = fmm_param->rdplus; 
-  double *rdminus = fmm_param->rdminus; 
-  double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
-  double complex *local = calloc(1, sizeof(double complex) * pgsz); 
-  double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
-  double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
-  double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
-  double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
-  double complex *mw3 = calloc(1, sizeof(double complex) * pgsz); 
+  if (!hpx_addr_eq(tbox->child[0], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      double complex *u1234 = &tbox->merge[nexpmax]; 
+      temp[i] = (uall[i] * zs[i3 + 2] + u1234[i] * zs[i3 + 1]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      temp[i] = dall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+    
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      double complex *n1256 = &tbox->merge[nexpmax * 3]; 
+      double complex *n12 = &tbox->merge[nexpmax * 4]; 
+      temp[i] = (nall[i] * zs[i3 + 2] + 
+		 (n1256[i] + n12[i]) * zs[i3 + 1]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      temp[i] = sall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      double complex *e1357 = &tbox->merge[nexpmax * 7]; 
+      double complex *e13 = &tbox->merge[nexpmax * 8]; 
+      double complex *e1 = &tbox->merge[nexpmax * 10];     
+      temp[i] = (eall[i] * zs[i3 + 2] + 
+	       (e1357[i] + e13[i] + e1[i]) * zs[i3 + 1]) * scale;
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      temp[i] = wall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[0], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
 
-  // +z direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *uall = &tbox->expansion[pgsz];
-    double complex *u1234 = &tbox->expansion[pgsz + nexpmax]; 
-    temp[i] = (uall[i] * zs[3 * i + 2] + u1234[i] * zs[3 * i + 1]) * scale; 
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
   }
-  exponential_to_local_p1(temp, mexpf1); 
-
-  // -z direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *dall = &tbox->expansion[pgsz + nexpmax * 14]; 
-    temp[i] = dall[i] * zs[3 * i + 1] * scale; 
-  }
-  exponential_to_local_p1(temp, mexpf2); 
-
-  exponential_to_local_p2(mexpf2, mexpf1, mw1); 
-  for (int i = 0; i < pgsz; i++) 
-    local[i] += mw1[i]; 
-
-  // +y direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *nall = &tbox->expansion[pgsz + nexpmax * 2]; 
-    double complex *n1256 = &tbox->expansion[pgsz + nexpmax * 3]; 
-    double complex *n12 = &tbox->expansion[pgsz + nexpmax * 4]; 
-    temp[i] = (nall[i] * zs[3 * i + 2] + 
-	       (n1256[i] + n12[i]) * zs[3 * i + 1]) * scale; 
-  }
-  exponential_to_local_p1(temp, mexpf1); 
-
-  // -y direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *sall = &tbox->expansion[pgsz + nexpmax * 24]; 
-    temp[i] = sall[i] * zs[3 * i + 1] * scale; 
-  }
-  exponential_to_local_p1(temp, mexpf2); 
-
-  exponential_to_local_p2(mexpf2, mexpf1, mw1); 
-  roty2z(mw1, rdplus, mw2); 
-  for (int i = 0; i < pgsz; i++) 
-    local[i] += mw2[i]; 
- 
-  // +x direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *eall = &tbox->expansion[pgsz + nexpmax * 6]; 
-    double complex *e1357 = &tbox->expansion[pgsz + nexpmax * 7]; 
-    double complex *e13 = &tbox->expansion[pgsz + nexpmax * 8]; 
-    double complex *e1 = &tbox->expansion[pgsz + nexpmax * 10];     
-    temp[i] = (eall[i] * zs[3 * i + 2] + 
-	       (e1357[i] + e13[i] + e1[i]) * zs[3 * i + 1]) * scale;
-  }
-  exponential_to_local_p1(temp, mexpf1); 
-
-  // -x direction
-  for (int i = 0; i < nexptotp; i++) {
-    double complex *wall = &tbox->expansion[pgsz + nexpmax * 20]; 
-    temp[i] = wall[i] * zs[3 * i + 1] * scale; 
-  }
-  exponential_to_local_p1(temp, mexpf2); 
-
-  exponential_to_local_p2(mexpf2, mexpf1, mw1); 
-  rotz2x(mw1, rdminus, mw2); 
-  for (int i = 0; i < pgsz; i++) 
-    local[i] += mw2[i]; 
-
-  // Send it out
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -1550,6 +1565,106 @@ int _shift_exponential_c2_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
+  if (!hpx_addr_eq(tbox->child[1], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      double complex *u1234 = &tbox->merge[nexpmax]; 
+      temp[i] = (uall[i] * zs[i3 + 2] + u1234[i] * zs[i3 + 1]) * 
+	conj(xs[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      temp[i] = dall[i] * zs[i3 + 1] * xs[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+    
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      double complex *n1256 = &tbox->merge[nexpmax * 3]; 
+      double complex *n12 = &tbox->merge[nexpmax * 4]; 
+      temp[i] = (nall[i] * zs[i3 + 2] + 
+		 (n1256[i] + n12[i]) * zs[i3 + 1]) * conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      temp[i] = sall[i] * zs[i3 + 1] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      temp[i] = eall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      double complex *w2468 = &tbox->merge[nexpmax * 21]; 
+      double complex *w24 = &tbox->merge[nexpmax * 22]; 
+      double complex *w2 = &tbox->merge[nexpmax * 24]; 
+      temp[i] = (wall[i] * zs[i3 + 2] + 
+		 (w2468[i] + w24[i] + w2[i]) * zs[i3 + 1]) *scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    hpx_call(tbox->child[1], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
+
+
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
@@ -1558,6 +1673,105 @@ int _shift_exponential_c3_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
+
+  if (!hpx_addr_eq(tbox->child[2], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      double complex *u1234 = &tbox->merge[nexpmax]; 
+      temp[i] = (uall[i] * zs[i3 + 2] + u1234[i] * zs[i3 + 1]) * 
+	conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      temp[i] = dall[i] * zs[i3 + 1] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+    
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      temp[i] = nall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      double complex *s3478 = &tbox->merge[nexpmax * 17];
+      double complex *s34 = &tbox->merge[nexpmax * 18]; 
+      temp[i] = (sall[i] * zs[i3 + 2]  + 
+		 (s3478[i] + s34[i]) * zs[i3 + 1]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      double complex *e1357 = &tbox->merge[nexpmax * 7]; 
+      double complex *e13 = &tbox->merge[nexpmax * 8]; 
+      double complex *e3 = &tbox->merge[nexpmax * 11]; 
+      temp[i] = (eall[i] * zs[i3 + 2] + 
+		 (e1357[i] + e13[i] + e3[i]) * zs[i3 + 1]) * conj(ys[i3]) * scale;
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      temp[i] = wall[i] * zs[i3 + 1] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[2], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -1568,6 +1782,106 @@ int _shift_exponential_c4_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
+  if (!hpx_addr_eq(tbox->child[3], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      double complex *u1234 = &tbox->merge[nexpmax]; 
+      temp[i] = (uall[i] * zs[i3 + 2] + u1234[i] * zs[i3 + 1]) * 
+	conj(xs[i3]) * ys[i3] *scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      temp[i] = dall[i] * zs[i3 + 1] * xs[i3] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      temp[i] = nall[i] * zs[i3 + 1] * conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      double complex *s3478 = &tbox->merge[nexpmax * 17];
+      double complex *s34 = &tbox->merge[nexpmax * 18]; 
+      temp[i] = (sall[i] * zs[i3 + 2]  + 
+		 (s3478[i] + s34[i]) * zs[i3 + 1]) * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      temp[i] = eall[i] * zs[i3 + 1] * conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      double complex *w2468 = &tbox->merge[nexpmax * 21]; 
+      double complex *w24 = &tbox->merge[nexpmax * 22]; 
+      double complex *w4 = &tbox->merge[nexpmax * 25]; 
+      temp[i] = (wall[i] * zs[i3 + 2] + 
+		 (w2468[i] + w24[i] + w4[i]) * zs[i3 + 1]) * ys[i3] * scale;
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[3], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
+
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
@@ -1576,6 +1890,104 @@ int _shift_exponential_c5_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
+
+  if (!hpx_addr_eq(tbox->child[4], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      temp[i] = uall[i] * zs[i3 + 1] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      double complex *d5678 = &tbox->merge[nexpmax * 15];      
+      temp[i] = (dall[i] * zs[i3 + 2] + d5678[i] * zs[i3 + 1]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      double complex *n1256 = &tbox->merge[nexpmax * 3]; 
+      double complex *n56 = &tbox->merge[nexpmax * 5]; 
+      temp[i] = (nall[i] * zs[i3 + 2] + 
+		 (n1256[i] + n56[i]) * zs[i3 + 1]) * conj(xs[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      temp[i] = sall[i] * zs[i3 + 1] * xs[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      double complex *e1357 = &tbox->merge[nexpmax * 7]; 
+      double complex *e57 = &tbox->merge[nexpmax * 9]; 
+      double complex *e5 = &tbox->merge[nexpmax * 12]; 
+      temp[i] = (eall[i] * zs[i3 + 2] + 
+		 (e1357[i] + e57[i] + e5[i]) * zs[i3 + 1]) * xs[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      temp[i] = wall[i] * zs[i3 + 1] * conj(xs[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[4], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -1586,6 +1998,105 @@ int _shift_exponential_c6_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
+  if (!hpx_addr_eq(tbox->child[5], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      temp[i] = uall[i] * zs[i3 + 1] * conj(xs[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      double complex *d5678 = &tbox->merge[nexpmax * 15]; 
+      temp[i] = (dall[i] * zs[i3 + 2] + d5678[i] * zs[i3 + 1]) * xs[i3] * scale;
+   }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      double complex *n1256 = &tbox->merge[nexpmax * 3]; 
+      double complex *n56 = &tbox->merge[nexpmax * 5]; 
+      temp[i] = (nall[i] * zs[i3 + 2] + (n1256[i] + n56[i]) * zs[i3 + 1]) * 
+	conj(xs[i3] * ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      temp[i] = sall[i] * zs[i3 + 1] * xs[i3] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      temp[i] = eall[i] * zs[i3 + 1] * xs[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      double complex *w2468 = &tbox->merge[nexpmax * 21]; 
+      double complex *w68 = &tbox->merge[nexpmax * 23]; 
+      double complex *w6 = &tbox->merge[nexpmax * 26]; 
+      temp[i] = (wall[i] * zs[i3 + 2] + 
+		 (w2468[i] + w68[i] + w6[i]) * zs[i3 + 1]) * conj(xs[i3]) * scale;
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[5], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
+
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
@@ -1594,6 +2105,105 @@ int _shift_exponential_c7_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
+
+  if (!hpx_addr_eq(tbox->child[6], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      temp[i] = uall[i] * zs[i3 + 1] * conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      double complex *d5678 = &tbox->merge[nexpmax * 15];
+      temp[i] = (dall[i] * zs[i3 + 2] + d5678[i] * zs[i3 + 1]) * ys[i3] * scale; 
+   }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      temp[i] = nall[i] * zs[i3 + 1] * conj(xs[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      double complex *s3478 = &tbox->merge[nexpmax * 17]; 
+      double complex *s78 = &tbox->merge[nexpmax * 19]; 
+      temp[i] = (sall[i] * zs[i3 + 2] + (s3478[i] + s78[i]) * zs[i3 + 1]) *
+	xs[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      double complex *e1357 = &tbox->merge[nexpmax * 7]; 
+      double complex *e57 = &tbox->merge[nexpmax * 9]; 
+      double complex *e7 = &tbox->merge[nexpmax * 13]; 
+      temp[i] = (eall[i] * zs[i3 + 2] + (e1357[i] + e57[i] + e7[i]) * zs[i3 + 1]) 
+	* xs[i3] * conj(ys[i3]) * scale;
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      temp[i] = wall[i] * zs[i3 + 1] + xs[i3] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[6], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
 
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
@@ -1604,19 +2214,258 @@ int _shift_exponential_c8_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox); 
 
+  if (!hpx_addr_eq(tbox->child[7], HPX_NULL)) {
+    int nexpmax = fmm_param->nexpmax; 
+    int nexptotp = fmm_param->nexptotp;
+    int pgsz = fmm_param->pgsz; 
+    int level = tbox->level; 
+    double scale = fmm_param->scale[level + 1]; 
+    double complex *xs = fmm_param->xs; 
+    double complex *ys = fmm_param->ys; 
+    double *zs = fmm_param->zs; 
+    double *rdplus = fmm_param->rdplus; 
+    double *rdminus = fmm_param->rdminus; 
+    double complex *temp = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *local = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mexpf1 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mexpf2 = calloc(1, sizeof(double complex) * nexpmax); 
+    double complex *mw1 = calloc(1, sizeof(double complex) * pgsz); 
+    double complex *mw2 = calloc(1, sizeof(double complex) * pgsz); 
+    
+    // +z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *uall = &tbox->merge[0];
+      temp[i] = uall[i] * zs[i3 + 1] * conj(xs[i3] * ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -z direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *dall = &tbox->merge[nexpmax * 14]; 
+      double complex *d5678 = &tbox->merge[nexpmax * 15];
+      temp[i] = (dall[i] * zs[i3 + 2] + d5678[i] * zs[i3 + 1]) * 
+	xs[i3] * ys[i3] * scale; 
+   }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw1[i]; 
+
+    // +y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3;
+      double complex *nall = &tbox->merge[nexpmax * 2]; 
+      temp[i] = nall[i] * zs[i3 + 1] * conj(xs[i3] * ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -y direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *sall = &tbox->merge[nexpmax * 16]; 
+      double complex *s3478 = &tbox->merge[nexpmax * 17]; 
+      double complex *s78 = &tbox->merge[nexpmax * 19]; 
+      temp[i] = (sall[i] * zs[i3 + 2] + (s3478[i] + s78[i]) * zs[i3 + 1]) * 
+	xs[i3] * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    roty2z(mw1, rdplus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+
+    // +x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *eall = &tbox->merge[nexpmax * 6]; 
+      temp[i] = eall[i] * zs[i3 + 1] * xs[i3] * conj(ys[i3]) * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf1); 
+    
+    // -x direction
+    for (int i = 0; i < nexptotp; i++) {
+      int i3 = i * 3; 
+      double complex *wall = &tbox->merge[nexpmax * 20]; 
+      double complex *w2468 = &tbox->merge[nexpmax * 21]; 
+      double complex *w68 = &tbox->merge[nexpmax * 23]; 
+      double complex *w8 = &tbox->merge[nexpmax * 27]; 
+      temp[i] = (wall[i] * zs[i3 + 2] + (w2468[i] + w68[i] + w8[i]) * zs[i3 + 1])
+	* conj(xs[i3]) * ys[i3] * scale; 
+    }
+    exponential_to_local_p1(temp, mexpf2); 
+    
+    exponential_to_local_p2(mexpf2, mexpf1, mw1); 
+    rotz2x(mw1, rdminus, mw2); 
+    for (int i = 0; i < pgsz; i++) 
+      local[i] += mw2[i]; 
+    
+    hpx_call(tbox->child[7], _merge_local, local, 
+	     sizeof(double complex) * pgsz, HPX_NULL); 
+
+    free(temp);
+    free(local);
+    free(mexpf1);
+    free(mexpf2);
+    free(mw1);
+    free(mw2);
+  }
+
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
 
 void exponential_to_local_p1(const double complex *mexpphys, 
                              double complex *mexpf) {
+  int nlambs = fmm_param->nlambs;
+  int *numfour = fmm_param->numfour;
+  int *numphys = fmm_param->numphys;
+  double complex *fexpback = fmm_param->fexpback;
+  
+  int nftot = 0;
+  int nptot = 0;
+  int next  = 0;
 
+  for (int i = 0; i < nlambs; i++) {
+    int nalpha = numphys[i];
+    int nalpha2 = nalpha / 2;
+    mexpf[nftot] = 0;
+    for (int ival = 0; ival < nalpha2; ival++) {
+      mexpf[nftot] += 2.0 * creal(mexpphys[nptot + ival]);
+    }
+    mexpf[nftot] /= nalpha;
+
+    for (int nm = 2; nm < numfour[i]; nm += 2) {
+      mexpf[nftot + nm] = 0;
+      for (int ival = 0; ival < nalpha2; ival++) {
+        double rtmp = 2 * creal(mexpphys[nptot + ival]);
+        mexpf[nftot + nm] += fexpback[next] * rtmp;
+        next++;
+      }
+      mexpf[nftot + nm] /= nalpha;
+    }
+
+    for (int nm = 1; nm < numfour[i]; nm += 2) {
+      mexpf[nftot + nm] = 0;
+      for (int ival = 0; ival < nalpha2; ival++) {
+        double complex ztmp = 2 * cimag(mexpphys[nptot + ival]) * _Complex_I;
+        mexpf[nftot + nm] += fexpback[next] * ztmp;
+        next++;
+      }
+      mexpf[nftot + nm] /= nalpha;
+    }
+    nftot += numfour[i];
+    nptot += numphys[i] / 2;
+  }
 }
 
 void exponential_to_local_p2(const double complex *mexpu,
                              const double complex *mexpd, 
                              double complex *local) {
+  int pterms = fmm_param->pterms;
+  int nlambs = fmm_param->nlambs;
+  int nexptot = fmm_param->nexptot;
+  int pgsz = fmm_param->pgsz;
+  double *whts = fmm_param->whts;
+  double *rlams = fmm_param->rlams;
+  int *numfour = fmm_param->numfour;
+  double *ytopcs = fmm_param->ytopcs;
 
+  double *rlampow = calloc(pterms + 1, sizeof(double));
+  double complex *zeye = calloc(pterms + 1, sizeof(double complex));
+  double complex *mexpplus = calloc(nexptot, sizeof(double complex));
+  double complex *mexpminus = calloc(nexptot, sizeof(double complex));
+
+  zeye[0] = 1.0;
+  for (int i = 1; i <= pterms; i++)
+    zeye[i] = zeye[i - 1] * _Complex_I;
+
+  for (int i = 0; i < pgsz; i++)
+    local[i] = 0;
+
+  for (int i = 0; i < nexptot; i++) {
+    mexpplus[i] = mexpd[i] + mexpu[i]; 
+    mexpminus[i] = mexpd[i] - mexpu[i]; 
+  }
+
+  int ntot = 0;
+  for (int nell = 0; nell < nlambs; nell++) {
+    rlampow[0] = whts[nell];
+    double rmul = rlams[nell];
+    for (int j = 1; j <= pterms; j++)
+      rlampow[j] = rlampow[j - 1] * rmul;
+
+    int mmax = numfour[nell]-1;
+    for (int mth = 0; mth <= mmax; mth += 2) {
+      int offset = mth * (pterms + 1);
+      for (int nm = mth; nm <= pterms; nm += 2) {
+        int index = offset + nm;
+        int ncurrent = ntot + mth;
+        rmul = rlampow[nm];
+        local[index] += rmul * mexpplus[ncurrent];
+      }
+
+      for (int nm = mth + 1; nm <= pterms; nm += 2) {
+        int index = offset + nm;
+        int ncurrent = ntot + mth;
+        rmul = rlampow[nm];
+        local[index] += rmul * mexpminus[ncurrent];
+      }
+    }
+
+    for (int mth = 1; mth <= mmax; mth += 2) {
+      int offset = mth * (pterms + 1);
+      for (int nm = mth + 1; nm <= pterms; nm += 2) {
+        int index = nm + offset;
+        int ncurrent = ntot+mth;
+        rmul = rlampow[nm];
+        local[index] += rmul * mexpplus[ncurrent];
+      }
+
+      for (int nm = mth; nm <= pterms; nm += 2) {
+        int index = nm + offset;
+        int ncurrent = ntot + mth;
+        rmul = rlampow[nm];
+        local[index] += rmul * mexpminus[ncurrent];
+      }
+    }
+    ntot += numfour[nell];
+  }
+
+  for (int mth = 0; mth <= pterms; mth++) {
+    int offset1 = mth * (pterms + 1);
+    int offset2 = mth * (pterms + 2); 
+    for (int nm = mth; nm <= pterms; nm++) {
+      int index1 = nm + offset1;
+      int index2 = nm + offset2; 
+      local[index1] *= zeye[mth] * ytopcs[index2];
+    }
+  }
+
+  free(rlampow);
+  free(zeye);
+  free(mexpplus);
+  free(mexpminus);
+}
+
+int _merge_local_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *tbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&tbox); 
+  double complex *input = (double complex *) args; 
+  int pgsz = fmm_param->pgsz; 
+
+  hpx_lco_sema_p(tbox->sema); 
+  for (int i = 0; i < pgsz; i++) 
+    tbox->expansion[i] += input[i]; 
+  hpx_lco_sema_v(tbox->sema); 
+  hpx_lco_and_set(tbox->expan_avail, HPX_NULL); 
+
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
 }
 
 void lgndr(int nmax, double x, double *y) {

@@ -37,6 +37,7 @@ extern hpx_action_t _shift_expo_c5;
 extern hpx_action_t _shift_expo_c6; 
 extern hpx_action_t _shift_expo_c7; 
 extern hpx_action_t _shift_expo_c8; 
+extern hpx_action_t _merge_local; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -133,7 +134,7 @@ int _source_to_local_action(void *args);
 /// ---------------------------------------------------------------------------
 /// @brief Delete box action
 /// ---------------------------------------------------------------------------
-int _delete_box_action(void); 
+int _delete_box_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Query information to prune box action
@@ -206,6 +207,11 @@ void exponential_to_local_p1(const double complex *mexpphys,
 void exponential_to_local_p2(const double complex *mexpu,
                              const double complex *mexpd, 
                              double complex *local); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Merge local action
+/// ---------------------------------------------------------------------------
+int _merge_local_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 
