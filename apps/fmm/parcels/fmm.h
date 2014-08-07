@@ -17,9 +17,5 @@ extern int ntargets; ///< number of target points
 extern int datatype; ///< type of data to generate
 extern int accuracy; ///< accuracy of the computation
 extern int s; ///< partition criterion on the box
-extern hpx_addr_t sources; ///< locations of the sources
-extern hpx_addr_t targets; ///< locations of the targets
-extern hpx_addr_t source_root; ///< pointer to the root of the source tree
-extern hpx_addr_t target_root; ///< pointer to the root of the target tree
 
 #endif

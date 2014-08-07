@@ -21,10 +21,9 @@ extern hpx_action_t _mpole_to_mpole;
 extern hpx_action_t _mpole_to_expo; 
 extern hpx_action_t _disaggregate; 
 extern hpx_action_t _build_list5; 
-extern hpx_action_t _build_list1; 
+extern hpx_action_t _query_box; 
 extern hpx_action_t _source_to_local;
 extern hpx_action_t _delete_box; 
-extern hpx_action_t _query_box; 
 extern hpx_action_t _merge_expo; 
 extern hpx_action_t _merge_expo_zp; 
 extern hpx_action_t _merge_expo_zm; 
@@ -122,9 +121,9 @@ int _disaggregate_action(void *args);
 int _build_list5_action(void *args); 
 
 /// ---------------------------------------------------------------------------
-/// @brief Build list1 action
+/// @brief Query box information action
 /// ---------------------------------------------------------------------------
-int _build_list1_action(void); 
+int _query_box_action(void); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Source to local action
@@ -135,11 +134,6 @@ int _source_to_local_action(void *args);
 /// @brief Delete box action
 /// ---------------------------------------------------------------------------
 int _delete_box_action(void *args); 
-
-/// ---------------------------------------------------------------------------
-/// @brief Query information to prune box action
-/// ---------------------------------------------------------------------------
-int _query_box_action(void); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Merge exponential action
@@ -218,11 +212,21 @@ int _merge_local_action(void *args);
 /// ---------------------------------------------------------------------------
 void lgndr(int nmax, double x, double *y); 
 
+/// ---------------------------------------------------------------------------
+/// @brief Rotation z->y
+/// ---------------------------------------------------------------------------
 void rotz2y(const double complex *multipole, const double *rd, 
             double complex *mrotate); 
 
+/// ---------------------------------------------------------------------------
+/// @brief Rotation y->z
+/// ---------------------------------------------------------------------------
 void roty2z(const double complex *multipole, const double *rd, 
             double complex *mrotate); 
 
+/// ---------------------------------------------------------------------------
+/// @brief Rotation z->x
+/// ---------------------------------------------------------------------------
 void rotz2x(const double complex *multipole, const double *rd, 
             double complex *mrotate); 
+

@@ -904,6 +904,26 @@ int _disaggregate_action(void *args) {
 	hpx_call(tbox->child[i], _disaggregate, output, action_argsz, HPX_NULL); 
     }
   } else {
+    int nlist1 = 0, nlist5 = 0; 
+    hpx_addr_t list1[27] = {HPX_NULL}, list5[27] = {HPX_NULL}; 
+
+    int nplist1 = input->nplist1; 
+    int nplist5 = input->nplist5; 
+    hpx_addr_t result1[27], result5[27]; 
+
+    // Spawn threads to determine the contents of lists 1 and 5 
+    for (int i = 0; i < nplist5; i++) {
+      hpx_addr_t entry = input->plist5[i]; 
+      result5[i] = hpx_lco_future_new(sizeof(build_list5_action_return_t) * 4); 
+      hpx_call(entry, _build_list5, &tbox->index[0], sizeof(int) * 3, result5[i]); 
+    }
+
+    for (int i = 0; i < nplist1; i++) {
+      hpx_addr_t entry = input->plist1[i]; 
+      result1[i] = hpx_lco_future_new(sizeof(int) * 5); 
+      hpx_call(entry, _query_box, NULL, 0, result1[i]); 
+    }
+
     // Receive local expansion passed vertically 
     hpx_lco_sema_p(tbox->sema); 
     for (int i = 0; i < pgsz; i++) 
@@ -911,40 +931,24 @@ int _disaggregate_action(void *args) {
     hpx_lco_sema_v(tbox->sema); 
     hpx_lco_and_set(tbox->expan_avail, HPX_NULL);
 
-    int nlist1 = 0, nlist5 = 0; 
-    hpx_addr_t list1[27] = {HPX_NULL}, list5[27] = {HPX_NULL}; 
-
-    int nplist1 = input->nplist1; 
-    int nplist5 = input->nplist5; 
-    hpx_addr_t result[27]; 
-
-    // Determine the content of list 5
+    // Get lists 1 and 5 results
     for (int i = 0; i < nplist5; i++) {
-      hpx_addr_t entry = input->plist5[i]; 
-      result[i] = hpx_lco_future_new(sizeof(hpx_addr_t) * 4); 
-      hpx_call(entry, _build_list5, &tbox->index[0], sizeof(int) * 3, result[i]); 
-    }
-
-    for (int i = 0; i < nplist5; i++) {
-      hpx_addr_t temp[4]; 
-      hpx_lco_get(result[i], sizeof(hpx_addr_t) * 4, temp); 
+      build_list5_action_return_t temp[4]; 
+      hpx_lco_get(result5[i], sizeof(build_list5_action_return_t) * 4, temp); 
       for (int j = 0; j < 4; j++) {
-	if (!hpx_addr_eq(temp[j], HPX_NULL))
-	  list5[nlist5++] = temp[j]; 
+	if (!hpx_addr_eq(temp[j].box, HPX_NULL)) {
+	  if (temp[j].type == 5) {
+	    list5[nlist5++] = temp[j].box; 
+	  } else {
+	    list1[nlist1++] = temp[j].box;
+	  }
+	}
       }
-      hpx_lco_delete(result[i], HPX_NULL);
     }
-
-    // Determine the content of list 1
-    for (int i = 0; i < nplist1; i++) {
-      hpx_addr_t entry = input->plist1[i]; 
-      result[i] = hpx_lco_future_new(sizeof(int) * 5); 
-      hpx_call(entry, _build_list1, NULL, 0, result[i]); 
-    } 
 
     for (int i = 0; i < nplist1; i++) {
       int temp[5]; 
-      hpx_lco_get(result[i], sizeof(int) * 5, temp); 
+      hpx_lco_get(result1[i], sizeof(int) * 5, temp); 
       int dx = tbox->index[0] - temp[0]; 
       int dy = tbox->index[1] - temp[1]; 
       int dz = tbox->index[2] - temp[2]; 
@@ -952,8 +956,8 @@ int _disaggregate_action(void *args) {
       if (fabs(dx) > 1 || fabs(dy) > 1 || fabs(dz) > 1) {
 	// The source box in plist1 is a list 4 entry of tbox, invoke
 	// source-to-local action 
-	hpx_lco_delete(result[i], HPX_NULL); 
-	result[i] = hpx_lco_future_new(sizeof(double complex) * pgsz); 
+	hpx_lco_delete(result1[i], HPX_NULL); 
+	result1[i] = hpx_lco_future_new(sizeof(double complex) * pgsz); 
 
 	source_to_local_action_arg_t source_to_local_arg = {
 	  .addr = temp[3], 
@@ -965,39 +969,18 @@ int _disaggregate_action(void *args) {
 	}; 
 
 	hpx_call(fmm_param->sources, _source_to_local, &source_to_local_arg, 
-		 sizeof(source_to_local_action_arg_t), result[i]); 
+		 sizeof(source_to_local_action_arg_t), result1[i]); 
       } else {
 	// The source box in plist1 is a list 1 entry of tbox 
-	hpx_lco_delete(result[i], HPX_NULL); 
-	result[i] = HPX_NULL; 
+	hpx_lco_delete(result1[i], HPX_NULL); 
+	result1[i] = HPX_NULL; 
 	list1[nlist1++] = input->plist1[i]; 
       }
     }
 
-
-    // Check if the branch below tbox can be pruned
     if (tbox->nchild) {
-      bool delete = false;       
-      if (nlist5 == 0) { // tbox is not adjacent to any source box
-	delete = true; 
-      } else { // Check any list5 entry has more than s points
-	bool remove = true; 
-	hpx_addr_t query[27] = {HPX_NULL}; 
-	for (int i = 0; i < nlist5; i++) {
-	  query[i] = hpx_lco_future_new(sizeof(bool)); 
-	  hpx_call(list5[i], _query_box, NULL, 0, query[i]);
-	}
-
-	for (int i = 0; i < nlist5; i++) {
-	  bool temp; 
-	  hpx_lco_get(query[i], sizeof(bool), &temp); 
-	  remove &= temp; 
-	}
-
-	delete = remove; 
-      } 
-
-      if (delete) {
+      if (nlist5 == 0) {
+	// Prune the branch below tbox
 	char type = 'T'; 
 	for (int i = 0; i < 8; i++) {
 	  if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) 
@@ -1005,55 +988,52 @@ int _disaggregate_action(void *args) {
 	  tbox->child[i] = HPX_NULL;
 	}
 	tbox->nchild = 0; 
+      } else {
+	// Complete exponential-to-local operation using merge-and-shift
+	int and_gate_size[28] = {36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3, 
+				 36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3}; 
+	for (int i = 0; i < 28; i++) 
+	  tbox->and_gates[i] = hpx_lco_and_new(and_gate_size[i]); 
+    
+	tbox->merge = calloc(1, sizeof(double complex) * nexpmax * 28); 
+
+	merge_expo_action_arg_t merge_expo_arg = {
+	  .index[0] = tbox->index[0], 
+	  .index[1] = tbox->index[1], 
+	  .index[2] = tbox->index[2], 
+	  .box = curr
+	};
+
+	for (int i = 0; i < nlist5; i++) 
+	  hpx_call(list5[i], _merge_expo, &merge_expo_arg, 
+		   sizeof(merge_expo_action_arg_t), HPX_NULL); 
+	
+	// Wait on merge operation to complete
+	for (int i = 0; i < 28; i++) 
+	  hpx_lco_wait(tbox->and_gates[i]); 
+	
+	// Shift the merged exponentials to the child boxes 
+	hpx_call(curr, _shift_expo_c1, NULL, 0, HPX_NULL); 
+	hpx_call(curr, _shift_expo_c2, NULL, 0, HPX_NULL); 
+	hpx_call(curr, _shift_expo_c3, NULL, 0, HPX_NULL); 
+	hpx_call(curr, _shift_expo_c4, NULL, 0, HPX_NULL); 
+	hpx_call(curr, _shift_expo_c5, NULL, 0, HPX_NULL);
+	hpx_call(curr, _shift_expo_c6, NULL, 0, HPX_NULL);
+	hpx_call(curr, _shift_expo_c7, NULL, 0, HPX_NULL);
+	hpx_call(curr, _shift_expo_c8, NULL, 0, HPX_NULL);	
       }
     }
-
-    if (tbox->nchild) {
-      // Complete the exponential-to-local operation using merge-and-shift
-      int and_gate_size[28] = {36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3, 
-			       36, 16, 24, 8, 4, 4, 16, 4, 2, 2, 3, 3, 3, 3}; 
-      for (int i = 0; i < 28; i++) 
-	tbox->and_gates[i] = hpx_lco_and_new(and_gate_size[i]); 
-    
-      tbox->merge = calloc(1, sizeof(double complex) * nexpmax * 28); 
-
-      merge_expo_action_arg_t merge_expo_arg = {
-	.index[0] = tbox->index[0], 
-	.index[1] = tbox->index[1], 
-	.index[2] = tbox->index[2], 
-	.box = curr
-      };
-
-      for (int i = 0; i < nlist5; i++) 
-	hpx_call(list5[i], _merge_expo, &merge_expo_arg, 
-		 sizeof(merge_expo_action_arg_t), HPX_NULL); 
-
-      // Wait on merge operation to complete
-      for (int i = 0; i < 28; i++) 
-	hpx_lco_wait(tbox->and_gates[i]); 
-
-      // Shift the merged exponentials to the child boxes 
-      hpx_call(curr, _shift_expo_c1, NULL, 0, HPX_NULL); 
-      hpx_call(curr, _shift_expo_c2, NULL, 0, HPX_NULL); 
-      hpx_call(curr, _shift_expo_c3, NULL, 0, HPX_NULL); 
-      hpx_call(curr, _shift_expo_c4, NULL, 0, HPX_NULL); 
-      hpx_call(curr, _shift_expo_c5, NULL, 0, HPX_NULL);
-      hpx_call(curr, _shift_expo_c6, NULL, 0, HPX_NULL);
-      hpx_call(curr, _shift_expo_c7, NULL, 0, HPX_NULL);
-      hpx_call(curr, _shift_expo_c8, NULL, 0, HPX_NULL);
-    }
-
 
     // Wait for completion of the source-to-local operation
     double complex *srcloc = calloc(1, sizeof(double complex) * pgsz); 
     for (int i = 0; i < nplist1; i++) {
-      if (!hpx_addr_eq(result[i], HPX_NULL)) {
-	hpx_lco_get(result[i], sizeof(double complex) * pgsz, srcloc); 
+      if (!hpx_addr_eq(result1[i], HPX_NULL)) {
+	hpx_lco_get(result1[i], sizeof(double complex) * pgsz, srcloc); 
 	hpx_lco_sema_p(tbox->sema); 
 	for (int j = 0; j < pgsz; j++) 
 	  tbox->expansion[j] += srcloc[j]; 
 	hpx_lco_sema_v(tbox->sema); 
-	hpx_lco_delete(result[i], HPX_NULL); 
+	hpx_lco_delete(result1[i], HPX_NULL); 
       }
     }
     free(srcloc); 
@@ -1069,26 +1049,38 @@ int _build_list5_action(void *args) {
   hpx_gas_try_pin(curr, (void *)&sbox); 
 
   int *input = (int *) args; 
-  int tx = input[0]; 
-  int ty = input[1];
-  int tz = input[2]; 
-  hpx_addr_t result[4] = {HPX_NULL}; 
   int iter = 0; 
+  build_list5_action_return_t result[4]; 
+  hpx_addr_t query[4];  
+  for (int i = 0; i < 4; i++) {
+    result[i].box = HPX_NULL; 
+    result[i].type = -1;    
+  } 
 
   for (int i = 0; i < 8; i++) {
-    int sx = sbox->index[i] * 2 + xoff[i]; 
-    int sy = sbox->index[i] * 2 + yoff[i]; 
-    int sz = sbox->index[i] * 2 + zoff[i]; 
-    if (fabs(tx - sx) <= 1 && fabs(ty - sy) <= 1 && fabs(tz - sz) <= 1)
-      result[iter++] = sbox->child[i]; 
+    if (!hpx_addr_eq(sbox->child[i], HPX_NULL)) {     
+      int dx = sbox->index[i] * 2 + xoff[i] - input[0];
+      int dy = sbox->index[i] * 2 + yoff[i] - input[1]; 
+      int dz = sbox->index[i] * 2 + zoff[i] - input[2]; 
+      if (fabs(dx) <= 1 && fabs(dy) <= 1 && fabs(dz) <= 1) {
+	result[iter].box = sbox->child[i]; 
+	query[iter] = hpx_lco_future_new(sizeof(int) * 5); 
+	hpx_call(sbox->child[i], _query_box, NULL, 0, query[iter++]); 
+      }
+    }
   }
 
+  for (int i = 0; i < iter; i++) {
+    int temp[5]; 
+    hpx_lco_get(query[i], sizeof(int) * 5, temp); 
+    result[i].type = (temp[4] > s ? 5 : 1); 
+  }
   hpx_gas_unpin(curr); 
   HPX_THREAD_CONTINUE(result);
   return HPX_SUCCESS; 
 }
 
-int _build_list1_action(void) {
+int _query_box_action(void) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   fmm_box_t *sbox = NULL; 
   hpx_gas_try_pin(curr, (void *)&sbox); 
@@ -1194,16 +1186,6 @@ int _delete_box_action(void *args) {
 
   hpx_gas_unpin(curr); 
   hpx_gas_global_free(curr, HPX_NULL); 
-  return HPX_SUCCESS;
-}
-
-int _query_box_action(void) {
-  hpx_addr_t curr = hpx_thread_current_target(); 
-  fmm_box_t *box = NULL; 
-  hpx_gas_try_pin(curr, (void *)&box); 
-  bool result = (box->npts <= s); 
-  HPX_THREAD_CONTINUE(result); 
-  hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
 }
 
