@@ -143,11 +143,10 @@ typedef struct {
 /// @brief Argument passed to the _disaggregate action
 /// ---------------------------------------------------------------------------
 typedef struct {
-  hpx_addr_t plist1[27]; ///< list 1 of the parent box
-  hpx_addr_t plist5[27]; ///< list 5 of the parent box
-  int nplist1; ///< number of entries of plist1
-  int nplist5; ///< number of entries of plist5
-  double complex expansion[]; ///< translated local expansion from the parent
+  hpx_addr_t list1[27]; ///< list 1 
+  hpx_addr_t list5[27]; ///< list 5 
+  int nlist1; ///< number of entries of list1
+  int nlist5; ///< number of entries of list5
 } disaggregate_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
