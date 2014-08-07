@@ -47,7 +47,7 @@ hpx_action_t _shift_expo_c5;
 hpx_action_t _shift_expo_c6; 
 hpx_action_t _shift_expo_c7; 
 hpx_action_t _shift_expo_c8; 
-
+hpx_action_t _merge_local; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -110,14 +110,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // init hpx runtime
+  // Initialize hpx runtime
   int e = hpx_init(&hpx_cfg);
   if (e) {
     fprintf(stderr, "HPX:failed to initialize.\n");
     return e;
   }
 
-  // register actions
+  // Register actions
   _fmm_main         = HPX_REGISTER_ACTION(_fmm_main_action);
   _init_sources     = HPX_REGISTER_ACTION(_init_sources_action);
   _init_targets     = HPX_REGISTER_ACTION(_init_targets_action);
@@ -149,7 +149,8 @@ int main(int argc, char *argv[]) {
   _shift_expo_c6    = HPX_REGISTER_ACTION(_shift_exponential_c6_action); 
   _shift_expo_c7    = HPX_REGISTER_ACTION(_shift_exponential_c7_action); 
   _shift_expo_c8    = HPX_REGISTER_ACTION(_shift_exponential_c8_action); 
-  
+  _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
+
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
     fprintf(stderr, "HPX: error while running.\n");

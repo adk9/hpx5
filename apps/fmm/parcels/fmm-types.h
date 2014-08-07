@@ -46,6 +46,7 @@ struct fmm_box_t {
   int n_reduce; ///< number of operands completing the reduction
   hpx_addr_t expan_avail; ///< lco indicating availability of the expansion
   hpx_addr_t and_gates[28]; ///< and_gates for merging exponential expansions
+  double complex *merge; ///< storage for merging exponential expansions 
   double complex expansion[]; ///< storage for the expansion
 }; 
 
