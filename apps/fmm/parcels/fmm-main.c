@@ -47,6 +47,7 @@ hpx_action_t _shift_expo_c6;
 hpx_action_t _shift_expo_c7; 
 hpx_action_t _shift_expo_c8; 
 hpx_action_t _merge_local; 
+hpx_action_t _local_to_local; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -148,6 +149,7 @@ int main(int argc, char *argv[]) {
   _shift_expo_c7    = HPX_REGISTER_ACTION(_shift_exponential_c7_action); 
   _shift_expo_c8    = HPX_REGISTER_ACTION(_shift_exponential_c8_action); 
   _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
+  _local_to_local   = HPX_REGISTER_ACTION(_local_to_local_action); 
 
   e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
