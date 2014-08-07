@@ -193,4 +193,15 @@ typedef struct {
   int size; ///< size of the expansion
   double complex expansion[]; ///< buffer holding expansion
 } merge_update_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _local_to_target action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int addr; ///< address of the first contained point
+  int npts; ///< number of target points 
+  int level; ///< level of the box
+  int index[3]; ///< index of the box
+  double complex expansion[]; ///< local expansion
+} local_to_target_action_arg_t; 
 #endif
