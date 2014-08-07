@@ -753,6 +753,7 @@ static int __photon_handle_recv_event(photon_rid id) {
   dbg_info("msn      : %d", hdr->msn);
   dbg_info("nmsg     : %d", hdr->nmsg);
 
+  /*
   if (hdr->src_addr == _photon_myrank) {
     // we somehow sent to our own rank, just reset mbuf entry and return
     __photon_backend->rdma_recv(NULL, (uintptr_t)recvbuf->entries[bindex].base,
@@ -761,6 +762,7 @@ static int __photon_handle_recv_event(photon_rid id) {
     photon_msgbuffer_free_entry(recvbuf, bindex);
     return PHOTON_OK;
   }
+  */
 
   // construct a cookie to query the htable with
   // |..~remote proc...|...remote r_id...|
@@ -1134,9 +1136,11 @@ static int _photon_wait(photon_rid request) {
 }
 
 static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, uint64_t *request) {
-  //char buf[40];
-  //inet_ntop(AF_INET6, addr->raw, buf, 40);
-  //dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+#ifdef DEBUG
+  char buf[40], buf2[40];
+  inet_ntop(AF_INET6, addr->raw, buf, 40);
+  dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+#endif
 
   photon_addr saddr;
   int bufs[MAX_BUF_ENTRIES];
@@ -1151,8 +1155,10 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     goto error_exit;
   }
 
-  //inet_ntop(AF_INET6, saddr.raw, buf, 40);
-  //dbg_info("(%s, %p, %lu, %d)", buf, ptr, size, flags);
+#ifdef DEBUG
+  inet_ntop(AF_INET6, saddr.raw, buf2, 40);
+  dbg_info("(%s, %p, %lu, %d)", buf2, ptr, size, flags);
+#endif
 
   request_id = INC_COUNTER(curr_cookie);
   
