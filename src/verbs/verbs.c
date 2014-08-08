@@ -482,7 +482,9 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
   };
   
   // cache the address handles since it takes forever to create them
-  if (htable_lookup(ah_table, addr->s_addr, (void**)&args.ah) != 0) {
+  if (htable_lookup(ah_table,
+		    (uint64_t)(addr->global.proc_id + addr->global.prefix),
+		    (void**)&args.ah) != 0) {
     rc = __verbs_ud_create_ah(&verbs_ctx, (union ibv_gid *)addr, 0x0, &args.ah);
     if (!rc) {
       return PHOTON_ERROR;

@@ -561,7 +561,7 @@ BIT_ARRAY* bit_array_create(bit_index_t nbits)
     return NULL;
   }
 
-  #ifdef DEBUG
+  #ifdef DEBUG_NO
   printf("Creating BIT_ARRAY (bits: %lu; allocated words: %lu; "
          "using words: %lu; WORD_SIZE: %i)\n",
          (unsigned long)nbits, (unsigned long)bitarr->capacity_in_words,

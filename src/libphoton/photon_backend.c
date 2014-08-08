@@ -1015,7 +1015,7 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
   void *test;
   int ret_val;
 
-  dbg_info("(%d)",request);
+  dbg_info("(0x%016lx)", request);
 
   if (htable_lookup(reqtable, request, &test) != 0) {
     if (htable_lookup(sr_reqtable, request, &test) != 0) {
@@ -1291,7 +1291,9 @@ static int _photon_recv(photon_rid request, void *ptr, uint64_t size, int flags)
       bytes_copied += copy_bytes;
       bytes_remaining -= copy_bytes;
     }
-
+    
+    //dbg_info("recv request completed: 0x%016lx", req->id);
+    //req->state == REQUEST_COMPLETED;
     dbg_info("removing recv request from sr_reqtable: 0x%016lx", req->id);
     htable_remove(sr_reqtable, req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
