@@ -38,6 +38,7 @@ extern hpx_action_t _shift_expo_c7;
 extern hpx_action_t _shift_expo_c8; 
 extern hpx_action_t _merge_local; 
 extern hpx_action_t _local_to_local; 
+extern hpx_action_t _proc_target; 
 extern hpx_action_t _local_to_target;
 
 /// ---------------------------------------------------------------------------
@@ -213,6 +214,11 @@ int _merge_local_action(void *args);
 /// @brief Local to local action
 /// ---------------------------------------------------------------------------
 int _local_to_local_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Process target point 
+/// ---------------------------------------------------------------------------
+int _proc_target_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Local to target action

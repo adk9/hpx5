@@ -48,8 +48,7 @@ int _fmm_main_action(void) {
   hpx_lco_wait(roots_done); 
   hpx_lco_delete(roots_done, HPX_NULL); 
 
-  hpx_addr_t sema_done = hpx_lco_sema_new(1); 
-  hpx_addr_t fmm_done = hpx_lco_future_new(0); 
+  hpx_addr_t fmm_done = hpx_lco_and_new(ntargets); 
 
   // Construct FMM param on each locality
   hpx_addr_t params_done = hpx_lco_future_new(0); 
@@ -58,7 +57,6 @@ int _fmm_main_action(void) {
     .targets = targets, 
     .source_root = source_root, 
     .target_root = target_root, 
-    .sema_done = sema_done, 
     .fmm_done = fmm_done, 
     .size = size, 
     .corner[0] = (xmax + xmin - size) * 0.5, 
@@ -244,7 +242,6 @@ int _init_param_action(void *args) {
   fmm_param->targets = init_param_arg->targets; 
   fmm_param->source_root = init_param_arg->source_root; 
   fmm_param->target_root = init_param_arg->target_root; 
-  fmm_param->sema_done = init_param_arg->sema_done; 
   fmm_param->fmm_done = init_param_arg->fmm_done; 
   fmm_param->size = init_param_arg->size; 
   fmm_param->corner[0] = init_param_arg->corner[0]; 
@@ -892,11 +889,15 @@ int _disaggregate_action(void *args) {
   int nexpmax = fmm_param->nexpmax;
   int argsz =  sizeof(disaggregate_action_arg_t); 
   disaggregate_action_arg_t *input = (disaggregate_action_arg_t *) args;
-  disaggregate_action_arg_t *output = calloc(1, argsz); 
+  int nlist1 = 0, nlist5 = 0; 
+  hpx_addr_t list1[27] = {HPX_NULL}, list5[27] = {HPX_NULL}; 
 
   if (tbox->level == 0) {
-    output->list5[0] = fmm_param->source_root; 
-    output->nlist5 = 1; 
+    list5[0] = fmm_param->source_root; 
+    nlist5 = 1; 
+    disaggregate_action_arg_t *output = calloc(1, argsz); 
+    output->nlist5 = nlist5; 
+    output->list5[0] = list5[0]; 
     for (int i = 0; i < 8; i++) {
       if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) 
 	hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL); 
@@ -920,16 +921,15 @@ int _disaggregate_action(void *args) {
     }
     
     // Get lists 1 and 5 results
-    int nlist1 = 0, nlist5 = 0; 
     for (int i = 0; i < nplist5; i++) {
       build_list5_action_return_t temp[4]; 
       hpx_lco_get(result5[i], sizeof(build_list5_action_return_t) * 4, temp); 
       for (int j = 0; j < 4; j++) {
 	if (!hpx_addr_eq(temp[j].box, HPX_NULL)) {
 	  if (temp[j].type == 5) {
-	    output->list5[nlist5++] = temp[j].box; 
+	    list5[nlist5++] = temp[j].box; 
 	  } else {
-	    output->list1[nlist1++] = temp[j].box;
+	    list1[nlist1++] = temp[j].box;
 	  }
 	}
       }
@@ -963,7 +963,7 @@ int _disaggregate_action(void *args) {
 	// The source box in plist1 is a list 1 entry of tbox 
 	hpx_lco_delete(result1[i], HPX_NULL); 
 	result1[i] = HPX_NULL; 
-	output->list1[nlist1++] = input->list1[i]; 
+	list1[nlist1++] = input->list1[i]; 
       }
     }
 
@@ -994,7 +994,7 @@ int _disaggregate_action(void *args) {
 	};
 
 	for (int i = 0; i < nlist5; i++) 
-	  hpx_call(output->list5[i], _merge_expo, &merge_expo_arg, 
+	  hpx_call(list5[i], _merge_expo, &merge_expo_arg, 
 		   sizeof(merge_expo_action_arg_t), HPX_NULL); 
 	
 	// Wait on merge operation to complete
@@ -1030,8 +1030,13 @@ int _disaggregate_action(void *args) {
     hpx_lco_wait(tbox->expan_avail); 
 
     if (tbox->nchild) {
+      disaggregate_action_arg_t *output = calloc(1, argsz); 
       output->nlist1 = nlist1; 
-      output->nlist5 = nlist5;
+      output->nlist5 = nlist5; 
+      for (int i = 0; i < nlist1; i++) 
+	output->list1[i] = list1[i]; 
+      for (int i = 0; i < nlist5; i++) 
+	output->list5[i] = list5[i]; 
       for (int i = 0; i < 8; i++) {
 	if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) {
 	  hpx_call(curr, _local_to_local, &i, sizeof(int), HPX_NULL);
@@ -1039,24 +1044,25 @@ int _disaggregate_action(void *args) {
 	}
       }
     } else {
-      hpx_addr_t far_field_done = hpx_lco_future_new(0); 
-      local_to_target_action_arg_t *local_to_target_arg = 
-	calloc(1, sizeof(local_to_target_action_arg_t) + sizeof(double complex) * pgsz); 
-      local_to_target_arg->addr = tbox->addr; 
-      local_to_target_arg->npts = tbox->npts; 
-      local_to_target_arg->level = tbox->level;
-      local_to_target_arg->index[0] = tbox->index[0];
-      local_to_target_arg->index[1] = tbox->index[1]; 
-      local_to_target_arg->index[2] = tbox->index[2]; 
-      for (int i = 0; i < pgsz; i++) 
-	local_to_target_arg->expansion[i] = tbox->expansion[i]; 
-      hpx_call(fmm_param->targets, _local_to_target, local_to_target_arg, 
-	       sizeof(local_to_target_action_arg_t) + sizeof(double complex) * pgsz, 
-	       far_field_done); 
-      hpx_lco_wait(far_field_done); 
+      int first = tbox->addr; 
+      int last = first + tbox->npts; 
 
+      for (int i = first; i < last; i++) {	
+	proc_target_action_arg_t proc_target_arg = {
+	  .id = i, 
+	  .index[0] = tbox->index[0], 
+	  .index[1] = tbox->index[1], 
+	  .index[2] = tbox->index[2],
+	  .box = curr, 
+	  .nlist5 = nlist5
+	}; 
+	for (int i = 0; i < nlist5; i++) 
+	  proc_target_arg.list5[i] = list5[i]; 
+
+	hpx_call(fmm_param->targets, _proc_target, &proc_target_arg, 
+		 sizeof(proc_target_action_arg_t), HPX_NULL); 
+      }
     }
-
   }
 
   hpx_gas_unpin(curr); 
@@ -2607,12 +2613,32 @@ int _local_to_local_action(void *args) {
   return HPX_SUCCESS;
 } 
 
-int _local_to_target_action(void *args) {
+int _proc_target_action(void *args) {
   hpx_addr_t curr = hpx_thread_current_target(); 
   target_t *targets_p = NULL; 
   hpx_gas_try_pin(curr, (void *)&targets_p); 
+  proc_target_action_arg_t *input = (proc_target_action_arg_t *) args; 
+  
+  int id = input->id; 
+  double position[3]; 
+  position[0] = targets_p[id].position[0]; 
+  position[1] = targets_p[id].position[1]; 
+  position[2] = targets_p[id].position[2]; 
+  hpx_addr_t result = hpx_lco_future_new(sizeof(double) * 4); 
+  hpx_call(input->box, _local_to_target, position, sizeof(double) * 3, result); 
 
-  local_to_target_action_arg_t *input = (local_to_target_action_arg_t *) args; 
+  hpx_gas_unpin(curr); 
+  hpx_lco_and_set(fmm_param->fmm_done, HPX_NULL); 
+  return HPX_SUCCESS; 
+}
+
+int _local_to_target_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *tbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&tbox); 
+  double *position = (double *) args; 
+  double result[4] = {0}; 
+
   int pgsz = fmm_param->pgsz;
   int pterms = fmm_param->pterms;
   double *ytopc = fmm_param->ytopc;
@@ -2621,107 +2647,104 @@ int _local_to_target_action(void *args) {
   double *p = calloc(pgsz, sizeof(double));
   double *powers = calloc(pterms + 1, sizeof(double));
   double complex *ephi = calloc(pterms + 1, sizeof(double complex));
-  double complex *local = &input->expansion[0];
-  int level = input->level; 
+  double complex *local = &tbox->expansion[0]; 
+  int level = tbox->level; 
   double h = fmm_param->size / (1 << (level + 1)); 
   double *corner = &fmm_param->corner[0]; 
   double center[3]; 
-  center[0] = corner[0] + (2 * input->index[0] + 1) * h; 
-  center[1] = corner[1] + (2 * input->index[1] + 1) * h; 
-  center[2] = corner[2] + (2 * input->index[2] + 1) * h; 
-  int npts = input->npts; 
-  int first = input->addr; 
-  int last = first + npts; 
+  center[0] = corner[0] + (2 * tbox->index[0] + 1) * h; 
+  center[1] = corner[1] + (2 * tbox->index[1] + 1) * h;
+  center[2] = corner[2] + (2 * tbox->index[2] + 1) * h; 
   double scale = fmm_param->scale[level]; 
   const double precision = 1e-14; 
 
-  for (int i = first; i < last; i++) {
-    double field0 = 0, field1 = 0, field2 = 0, rloc = 0, cp = 0, rpotz = 0;
-    double complex cpz = 0, zs1 = 0, zs2 = 0, zs3 = 0;
-    double rx = targets_p[i].position[0] - center[0]; 
-    double ry = targets_p[i].position[1] - center[1]; 
-    double rz = targets_p[i].position[2] - center[2]; 
-    double proj = rx * rx + ry * ry;
-    double rr = proj + rz * rz;
-    proj = sqrt(proj);
-    double d = sqrt(rr);
-    double ctheta = (d <= precision ? 0.0 : rz / d);
-    ephi[0] = (proj <= precision * d ? 1.0 : (rx + _Complex_I * ry) / proj); 
-    d *= scale;
-    double dd = d;
+  double field0 = 0, field1 = 0, field2 = 0, rloc = 0, cp = 0, rpotz = 0;
+  double complex cpz = 0, zs1 = 0, zs2 = 0, zs3 = 0;
+  double rx = position[0] - center[0]; 
+  double ry = position[1] - center[1]; 
+  double rz = position[2] - center[2]; 
+  double proj = rx * rx + ry * ry;
+  double rr = proj + rz * rz;
+  proj = sqrt(proj);
+  double d = sqrt(rr);
+  double ctheta = (d <= precision ? 0.0 : rz / d);
+  ephi[0] = (proj <= precision * d ? 1.0 : (rx + _Complex_I * ry) / proj); 
+  d *= scale;
+  double dd = d;
 
-    powers[0] = 1.0;
-    for (int ell = 1; ell <= pterms; ell++) {
-      powers[ell] = dd;
-      dd *= d;
-      ephi[ell] = ephi[ell - 1] * ephi[0];
-    }
-
-    lgndr(pterms, ctheta, p);
-    targets_p[i].potential += creal(local[0]); 
-
-    field2 = 0.0;
-    for (int ell = 1; ell <= pterms; ell++) {
-      rloc = creal(local[ell]);
-      cp = rloc * powers[ell] * p[ell];
-      targets_p[i].potential += cp; 
-      cp = powers[ell - 1] * p[ell - 1] * ytopcs[ell - 1];
-      cpz = local[ell + pterms + 1] * cp * ytopcsinv[ell + pterms + 2];
-      zs2 = zs2 + cpz;
-      cp = rloc * cp * ytopcsinv[ell];
-      field2 += cp;
-    }
-
-    for (int ell = 1; ell <= pterms; ell++) {
-      for (int m = 1; m <= ell; m++) {
-        int index = ell + m * (pterms + 1);
-        cpz = local[index] * ephi[m - 1];
-	rpotz += creal(cpz) * powers[ell] * ytopc[ell + m * (pterms + 2)] * p[index];
-      }
-
-      for (int m = 1; m <= ell - 1; m++) {
-        int index1 = ell + m * (pterms + 1);
-        int index2 = index1 - 1;
-        zs3 += local[index1] * ephi[m - 1] * powers[ell - 1] *
-	  ytopc[ell - 1 + m * (pterms + 2)] * p[index2] *
-	  ytopcs[ell - 1 + m * (pterms + 2)] *
-	  ytopcsinv[ell + m * (pterms + 2)];
-      }
-
-      for (int m = 2; m <= ell; m++) {
-        int index1 = ell + m * (pterms + 1);
-        int index2 = ell - 1 + (m - 1) * (pterms + 1);
-	zs2 += local[index1] * ephi[m - 2] * 
-	  ytopcs[ell - 1 + (m - 1) * (pterms + 2)] *
-	  ytopcsinv[ell + m * (pterms + 2)] * powers[ell - 1] *
-	  ytopc[ell - 1 + (m - 1) * (pterms + 2)] * p[index2];
-      }
-
-      for (int m = 0; m <= ell - 2; m++) {
-        int index1 = ell + m * (pterms + 1);
-        int index2 = ell - 1 + (m + 1) * (pterms + 1);
-        zs1 += local[index1] * ephi[m] * 
-	  ytopcs[ell - 1 + (m + 1) * (pterms + 2)] *
-	  ytopcsinv[ell + m * (pterms + 2)] * powers[ell - 1] *
-	  ytopc[ell - 1 + (m + 1) * (pterms + 2)] * p[index2];
-
-      }
-    }
-
-    targets_p[i].potential += 2.0 * rpotz; 
-    field0 = creal(zs2 - zs1);
-    field1 = -cimag(zs2 + zs1);
-    field2 += 2.0 * creal(zs3);
-    
-    targets_p[i].field[0] += field0 * scale; 
-    targets_p[i].field[1] += field1 * scale; 
-    targets_p[i].field[2] += field2 * scale; 
+  powers[0] = 1.0;
+  for (int ell = 1; ell <= pterms; ell++) {
+    powers[ell] = dd;
+    dd *= d;
+    ephi[ell] = ephi[ell - 1] * ephi[0];
   }
+
+  lgndr(pterms, ctheta, p);
+  result[0] += creal(local[0]); 
+
+  field2 = 0.0;
+  for (int ell = 1; ell <= pterms; ell++) {
+    rloc = creal(local[ell]);
+    cp = rloc * powers[ell] * p[ell];
+    result[0] += cp; 
+    cp = powers[ell - 1] * p[ell - 1] * ytopcs[ell - 1];
+    cpz = local[ell + pterms + 1] * cp * ytopcsinv[ell + pterms + 2];
+    zs2 = zs2 + cpz;
+    cp = rloc * cp * ytopcsinv[ell];
+    field2 += cp;
+  }
+
+  for (int ell = 1; ell <= pterms; ell++) {
+    for (int m = 1; m <= ell; m++) {
+      int index = ell + m * (pterms + 1);
+      cpz = local[index] * ephi[m - 1];
+      rpotz += creal(cpz) * powers[ell] * ytopc[ell + m * (pterms + 2)] * p[index];
+    }
+    
+    for (int m = 1; m <= ell - 1; m++) {
+      int index1 = ell + m * (pterms + 1);
+      int index2 = index1 - 1;
+      zs3 += local[index1] * ephi[m - 1] * powers[ell - 1] *
+	ytopc[ell - 1 + m * (pterms + 2)] * p[index2] *
+	ytopcs[ell - 1 + m * (pterms + 2)] *
+	ytopcsinv[ell + m * (pterms + 2)];
+    }
+    
+    for (int m = 2; m <= ell; m++) {
+      int index1 = ell + m * (pterms + 1);
+      int index2 = ell - 1 + (m - 1) * (pterms + 1);
+      zs2 += local[index1] * ephi[m - 2] * 
+	ytopcs[ell - 1 + (m - 1) * (pterms + 2)] *
+	ytopcsinv[ell + m * (pterms + 2)] * powers[ell - 1] *
+	ytopc[ell - 1 + (m - 1) * (pterms + 2)] * p[index2];
+    }
+    
+    for (int m = 0; m <= ell - 2; m++) {
+      int index1 = ell + m * (pterms + 1);
+      int index2 = ell - 1 + (m + 1) * (pterms + 1);
+      zs1 += local[index1] * ephi[m] * 
+	ytopcs[ell - 1 + (m + 1) * (pterms + 2)] *
+	ytopcsinv[ell + m * (pterms + 2)] * powers[ell - 1] *
+	ytopc[ell - 1 + (m + 1) * (pterms + 2)] * p[index2];
+      
+    }
+  }
+
+  result[0] += 2.0 * rpotz; 
+  field0 = creal(zs2 - zs1);
+  field1 = -cimag(zs2 + zs1);
+  field2 += 2.0 * creal(zs3);
+
+  result[1] += field0 * scale; 
+  result[2] += field1 * scale; 
+  result[3] += field2 * scale; 
+
   free(powers);
   free(ephi);
   free(p);
 
   hpx_gas_unpin(curr); 
+  HPX_THREAD_CONTINUE(result); 
   return HPX_SUCCESS;
 }
 
