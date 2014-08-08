@@ -27,12 +27,22 @@ typedef struct {
 
 typedef struct {
   unsigned long epoch;
+  int iter;
   int size;
   int i;
   int dir;
   int     srcIndex;
   int        buf[];                         // inline, variable length buffer
 } RefineNodalArgs;
+
+typedef struct {
+  unsigned long epoch;
+  int iter;
+  int size;
+  int i;
+  int     srcIndex;
+  int        buf[];                         // inline, variable length buffer
+} ParentNodalArgs;
 
 typedef struct {
    int type;
@@ -50,6 +60,10 @@ typedef struct {
   hpx_addr_t complete;
   hpx_addr_t gsum;
   hpx_addr_t rsum;
+  hpx_addr_t refinelevel;
+  hpx_addr_t refinelevel_max;
+  hpx_addr_t refinelevel_min;
+  hpx_addr_t rcb_sumint;
   int params[34];
   int objectsize;
   int rank;
@@ -165,6 +179,10 @@ typedef struct Domain {
   hpx_addr_t complete;
   hpx_addr_t gsum;
   hpx_addr_t rsum;
+  hpx_addr_t refinelevel;
+  hpx_addr_t refinelevel_max;
+  hpx_addr_t refinelevel_min;
+  hpx_addr_t rcb_sumint;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
@@ -313,7 +331,18 @@ typedef struct Domain {
   hpx_addr_t sem_plot;
   hpx_addr_t plot_and[2];
   hpx_addr_t sem_refine;
-  hpx_addr_t refine_and[2];
+  hpx_addr_t *refine_and;
+  hpx_addr_t sem_comm_proc;
+  hpx_addr_t *comm_proc_and;
+  hpx_addr_t sem_reverse_refine;
+  hpx_addr_t *reverse_refine_and;
+  hpx_addr_t sem_parent;
+  hpx_addr_t *parent_and;
+  hpx_addr_t *comm_parent_proc_and;
+  hpx_addr_t sem_comm_parent_proc;
+  hpx_addr_t sem_parent_reverse;
+  hpx_addr_t *parent_reverse_and;
+  int refine_and_size;
   hpx_addr_t epoch;
   int objectsize;
   object *objects;
@@ -326,7 +355,16 @@ typedef struct {
   int i;
   Domain *domain;
   unsigned long epoch;
+  int iter;
 } refineSBN;
+
+typedef struct {
+  int rank;
+  int i;
+  Domain *domain;
+  unsigned long epoch;
+  int iter;
+} parentSBN;
 
 int _plot_result_action(NodalArgs *nodal);
 extern hpx_action_t _plot_result;
@@ -341,5 +379,44 @@ extern hpx_action_t _comm_refine_sends;
 void check_objects(Domain *ld);
 void init_amr(Domain *ld);
 void init_profile(Domain *ld);
+
+void comm_refine(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_parent_result_action(ParentNodalArgs *nodal);
+extern hpx_action_t _comm_parent_result;
+int _comm_parent_sends_action(parentSBN *psbn);
+extern hpx_action_t _comm_parent_sends;
+
+void comm_parent(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_parent_reverse_result_action(ParentNodalArgs *nodal);
+extern hpx_action_t _comm_parent_reverse_result;
+int _comm_parent_reverse_sends_action(parentSBN *psbn);
+extern hpx_action_t _comm_parent_reverse_sends;
+
+void comm_parent_reverse(Domain *ld,unsigned long epoch,int iter);
+
+int refine_level(Domain *ld,unsigned long epoch,int *iter);
+
+int _comm_reverse_refine_result_action(RefineNodalArgs *nodal);
+extern hpx_action_t _comm_reverse_refine_result;
+int _comm_reverse_refine_sends_action(refineSBN *psbn);
+extern hpx_action_t _comm_reverse_refine_sends;
+
+void comm_reverse_refine(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_proc_result_action(RefineNodalArgs *nodal);
+extern hpx_action_t _comm_proc_result;
+int _comm_proc_sends_action(refineSBN *psbn);
+extern hpx_action_t _comm_proc_sends;
+
+void comm_proc(Domain *ld,unsigned long epoch,int iter);
+
+int _comm_parent_proc_result_action(ParentNodalArgs *nodal);
+extern hpx_action_t _comm_parent_proc_result;
+int _comm_parent_proc_sends_action(parentSBN *psbn);
+extern hpx_action_t _comm_parent_proc_sends;
+
+void comm_parent_proc(Domain *ld,unsigned long epoch,int iter);
 
 #endif
