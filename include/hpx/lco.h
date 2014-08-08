@@ -380,6 +380,15 @@ typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t size,
                                  hpx_commutative_associative_op_t op,
                                  void (*initializer)(void *, const size_t bytes));
+
+
+hpx_addr_t hpx_lco_allgather_new(size_t participants, size_t size);
+
+
+hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
+                                     size, const void *value, hpx_addr_t lsync,
+                                     hpx_addr_t rsync);
+
 /// @}
 
 #endif
