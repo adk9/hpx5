@@ -1,8 +1,8 @@
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
 /// @file fmm-main.c
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief  Main file for FMM 
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
 
 #include <unistd.h>
 #include <stdio.h>
@@ -10,13 +10,48 @@
 #include "hpx/hpx.h"
 #include "fmm.h"
 
-hpx_action_t _fmm_main; 
+int nsources; ///< number of sources
+int ntargets; ///< number of targets
+int datatype; ///< distribution of the source and tagret ensembles
+int accuracy; ///< accuracy of the requirement
+int s;        ///< partition criterion 
+
+hpx_action_t _fmm_main;
+hpx_action_t _init_sources; 
+hpx_action_t _init_targets; 
 hpx_action_t _init_param; 
+hpx_action_t _init_source_root; 
+hpx_action_t _init_target_root; 
 hpx_action_t _partition_box; 
-hpx_action_t _source_to_mpole;
-hpx_action_t _mpole_to_mpole;
-hpx_action_t _mpole_reduction; 
-hpx_action_t _mpole_to_expo;
+hpx_action_t _swap; 
+hpx_action_t _set_box; 
+hpx_action_t _aggregate; 
+hpx_action_t _source_to_mpole; 
+hpx_action_t _mpole_to_mpole; 
+hpx_action_t _mpole_to_expo; 
+hpx_action_t _disaggregate; 
+hpx_action_t _build_list5;
+hpx_action_t _query_box; 
+hpx_action_t _source_to_local; 
+hpx_action_t _delete_box; 
+hpx_action_t _merge_expo; 
+hpx_action_t _merge_expo_zp;
+hpx_action_t _merge_expo_zm; 
+hpx_action_t _merge_update; 
+hpx_action_t _shift_expo_c1; 
+hpx_action_t _shift_expo_c2; 
+hpx_action_t _shift_expo_c3; 
+hpx_action_t _shift_expo_c4; 
+hpx_action_t _shift_expo_c5; 
+hpx_action_t _shift_expo_c6; 
+hpx_action_t _shift_expo_c7; 
+hpx_action_t _shift_expo_c8; 
+hpx_action_t _merge_local; 
+hpx_action_t _local_to_local; 
+hpx_action_t _proc_target; 
+hpx_action_t _local_to_target;
+hpx_action_t _proc_list1; 
+hpx_action_t _source_to_target; 
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
@@ -39,13 +74,11 @@ int main(int argc, char *argv[]) {
     .stack_bytes = 8192
   };
 
-  fmm_config_t fmm_cfg = {
-    .nsources = 10000,
-    .ntargets = 10000,
-    .datatype = 1,
-    .accuracy = 3,
-    .s        = 40
-  };
+  nsources = 10000;
+  ntargets = 10000;
+  datatype = 1;
+  accuracy = 3;
+  s        = 40;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:n:m:a:d:s:D:h")) != -1) {
@@ -57,19 +90,19 @@ int main(int argc, char *argv[]) {
       hpx_cfg.threads = atoi(optarg);
       break;
     case 'n':
-      fmm_cfg.nsources = atoi(optarg);
+      nsources = atoi(optarg);
       break;
     case 'm':
-      fmm_cfg.ntargets = atoi(optarg);
+      ntargets = atoi(optarg);
       break;
     case 'a':
-      fmm_cfg.accuracy = atoi(optarg);
+      accuracy = atoi(optarg);
       break;
     case 'd':
-      fmm_cfg.datatype = atoi(optarg);
+      datatype = atoi(optarg);
       break;
     case 's':
-      fmm_cfg.s        = atoi(optarg);
+      s        = atoi(optarg);
       break;
     case 'h':
       _usage(stdout);
@@ -81,62 +114,57 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // init hpx runtime
+  // Initialize hpx runtime
   int e = hpx_init(&hpx_cfg);
   if (e) {
     fprintf(stderr, "HPX:failed to initialize.\n");
     return e;
   }
 
-  // register actions
-  _fmm_main        = HPX_REGISTER_ACTION(_fmm_main_action);
-  _init_param      = HPX_REGISTER_ACTION(_init_param_action); 
-  _partition_box   = HPX_REGISTER_ACTION(_partition_box_action); 
-  _source_to_mpole = HPX_REGISTER_ACTION(_source_to_multipole_action); 
-  _mpole_to_mpole  = HPX_REGISTER_ACTION(_multipole_to_multipole_action);
-  _mpole_reduction = HPX_REGISTER_ACTION(_multipole_reduction_action); 
-  _mpole_to_expo   = HPX_REGISTER_ACTION(_multipole_to_exponential_action); 
+  // Register actions
+  _fmm_main         = HPX_REGISTER_ACTION(_fmm_main_action);
+  _init_sources     = HPX_REGISTER_ACTION(_init_sources_action);
+  _init_targets     = HPX_REGISTER_ACTION(_init_targets_action);
+  _init_param       = HPX_REGISTER_ACTION(_init_param_action); 
+  _init_source_root = HPX_REGISTER_ACTION(_init_source_root_action); 
+  _init_target_root = HPX_REGISTER_ACTION(_init_target_root_action); 
+  _partition_box    = HPX_REGISTER_ACTION(_partition_box_action); 
+  _swap             = HPX_REGISTER_ACTION(_swap_action); 
+  _set_box          = HPX_REGISTER_ACTION(_set_box_action); 
+  _aggregate        = HPX_REGISTER_ACTION(_aggregate_action);
+  _source_to_mpole  = HPX_REGISTER_ACTION(_source_to_multipole_action); 
+  _mpole_to_mpole   = HPX_REGISTER_ACTION(_multipole_to_multipole_action); 
+  _mpole_to_expo    = HPX_REGISTER_ACTION(_multipole_to_exponential_action); 
+  _disaggregate     = HPX_REGISTER_ACTION(_disaggregate_action); 
+  _build_list5      = HPX_REGISTER_ACTION(_build_list5_action);
+  _query_box        = HPX_REGISTER_ACTION(_query_box_action); 
+  _source_to_local  = HPX_REGISTER_ACTION(_source_to_local_action); 
+  _delete_box       = HPX_REGISTER_ACTION(_delete_box_action); 
+  _merge_expo       = HPX_REGISTER_ACTION(_merge_exponential_action);
+  _merge_expo_zp    = HPX_REGISTER_ACTION(_merge_exponential_zp_action); 
+  _merge_expo_zm    = HPX_REGISTER_ACTION(_merge_exponential_zm_action); 
+  _merge_update     = HPX_REGISTER_ACTION(_merge_update_action); 
+  _shift_expo_c1    = HPX_REGISTER_ACTION(_shift_exponential_c1_action); 
+  _shift_expo_c2    = HPX_REGISTER_ACTION(_shift_exponential_c2_action); 
+  _shift_expo_c3    = HPX_REGISTER_ACTION(_shift_exponential_c3_action); 
+  _shift_expo_c4    = HPX_REGISTER_ACTION(_shift_exponential_c4_action); 
+  _shift_expo_c5    = HPX_REGISTER_ACTION(_shift_exponential_c5_action); 
+  _shift_expo_c6    = HPX_REGISTER_ACTION(_shift_exponential_c6_action); 
+  _shift_expo_c7    = HPX_REGISTER_ACTION(_shift_exponential_c7_action); 
+  _shift_expo_c8    = HPX_REGISTER_ACTION(_shift_exponential_c8_action); 
+  _merge_local      = HPX_REGISTER_ACTION(_merge_local_action); 
+  _local_to_local   = HPX_REGISTER_ACTION(_local_to_local_action); 
+  _proc_target      = HPX_REGISTER_ACTION(_proc_target_action); 
+  _local_to_target  = HPX_REGISTER_ACTION(_local_to_target_action); 
+  _proc_list1       = HPX_REGISTER_ACTION(_proc_list1_action); 
+  _source_to_target = HPX_REGISTER_ACTION(_source_to_target_action); 
 
-  e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg)); 
+  e = hpx_run(_fmm_main, NULL, 0); 
   if (e) {
     fprintf(stderr, "HPX: error while running.\n");
     return e;
   } 
 
-  
-
-  /*
-  // register actions
-  _fmm_build_list134    = HPX_REGISTER_ACTION(_fmm_build_list134_action); 
-  _fmm_bcast            = HPX_REGISTER_ACTION(_fmm_bcast_action); 
-  _aggr_leaf_sbox       = HPX_REGISTER_ACTION(_aggr_leaf_sbox_action);
-  _aggr_nonleaf_sbox    = HPX_REGISTER_ACTION(_aggr_nonleaf_sbox_action);
-  _disaggr_leaf_tbox    = HPX_REGISTER_ACTION(_disaggr_leaf_tbox_action);
-  _disaggr_nonleaf_tbox = HPX_REGISTER_ACTION(_disaggr_nonleaf_tbox_action);
-  _recv_result          = HPX_REGISTER_ACTION(_recv_result_action);
-  _process_near_field   = HPX_REGISTER_ACTION(_process_near_field_action);
-
-  // run the main action
-  fmm_param = construct_param(fmm_cfg.accuracy);
-  if (debug == hpx_get_my_rank()) {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    while (0 == i)
-      sleep(12);
-  }
-
-  e = hpx_run(_fmm_main, &fmm_cfg, sizeof(fmm_cfg));
-  if (e) {
-    fprintf(stderr, "HPX: error while running.\n");
-    return e;
-  }
-
-  // cleanup
-  destruct_param(&fmm_param);
-  */
   return 0;
 }
 

@@ -1,8 +1,8 @@
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
 /// @file fmm-types.h
 /// @author Bo Zhang <zhang416 [at] indiana.edu>
 /// @brief FMM types 
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
 #pragma once
 #ifndef FMM_TYPES_H
 #define FMM_TYPES_H
@@ -10,46 +10,56 @@
 #include <complex.h>
 #include "hpx/hpx.h"
 
+/// ---------------------------------------------------------------------------
+/// @brief Source point type
+/// ---------------------------------------------------------------------------
+typedef struct source_t {
+  double position[3]; ///< position of the source point
+  double charge; ///< strength of the source point
+  int rank; ///< original input order
+} source_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Target point type
+/// ---------------------------------------------------------------------------
+typedef struct target_t {
+  double position[3]; ///< position of the target point
+  double potential; ///< potential at the target point 
+  double field[3]; ///< field at the target point
+  int rank; ///< original input order
+} target_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief FMM box type
+/// ---------------------------------------------------------------------------
 typedef struct fmm_box_t fmm_box_t; 
 
-/// ----------------------------------------------------------------------------
-/// @brief FMM box type
-/// ----------------------------------------------------------------------------
 struct fmm_box_t {
   int level; ///< level of the box
-  hpx_addr_t parent; ///< pointer to the parent
-  hpx_addr_t child[8]; ///< pointers to the children
+  hpx_addr_t parent; ///< address of the parent box
+  hpx_addr_t child[8]; ///< address of the child boxes
   int nchild; ///< number of child boxes
-  int idx; ///< index, x-direction
-  int idy; ///< index, y-direction
-  int idz; ///< index, z-direction
+  int index[3]; ///< indices of the box in x, y, and z directions
   int npts; ///< number of points contained in the box
-  int addr; ///< offset to locate the first point contained in the box
-  hpx_addr_t list1[27]; ///< coarser or same level list 1 boxes 
-  hpx_addr_t list5[27]; ///< same-level adjacent boxes
-  int n_reduce; ///< number of inputs for the reduction 
+  int addr; ///< offset to find the first point contained in the box
   hpx_addr_t sema; ///< semaphore for reduction
-  int nlist1; ///< number of entries in list1
-  int nlist5; ///< number of entries in list5
-  double complex expansion[]; ///< storage for expansion
+  int n_reduce; ///< number of operands completing the reduction
+  hpx_addr_t expan_avail; ///< lco indicating availability of the expansion
+  hpx_addr_t and_gates[28]; ///< and_gates for merging exponential expansions
+  double complex *merge; ///< storage for merging exponential expansions 
+  double complex expansion[]; ///< storage for the expansion
 }; 
 
-/// ----------------------------------------------------------------------------
-/// @brief FMM configuration type
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
+/// @brief FMM parameter type. 
+/// @note The parameter is intended to be duplicated on each locality
+/// ---------------------------------------------------------------------------
 typedef struct {
-  int nsources; ///< number of source points
-  int ntargets; ///< number of target points
-  int datatype; ///< type of data to generate
-  int accuracy; ///< accuracy of the computation
-  int s;        ///< partition criterion on box
-} fmm_config_t; 
-
-/// ----------------------------------------------------------------------------
-/// @brief FMM parameter type
-/// @note This is intended to be duplicated on each locality
-/// ----------------------------------------------------------------------------
-typedef struct {
+  hpx_addr_t sources; ///< address for the source information
+  hpx_addr_t targets; ///< address for the target information
+  hpx_addr_t source_root; ///< address for the source root
+  hpx_addr_t target_root; ///< address for the target root
+  hpx_addr_t fmm_done; ///< and gate tracking fmm completion
   double size; ///< size of the bounding boxes
   double corner[3]; ///< coordinate of the lower left corner of the bounding box
   int pterms; ///< order of the multipole/local expansion
@@ -81,13 +91,139 @@ typedef struct {
   double complex *fexpback; ///< coefficients for merging exponentials
 } fmm_param_t; 
 
-/// ----------------------------------------------------------------------------
-/// @brief Argument passed to the _init_param_action
-/// ----------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _init_param action
+/// ---------------------------------------------------------------------------
 typedef struct {
-  int accuracy; 
-  double size; 
-  double corner[3]; 
+  hpx_addr_t sources; ///< address for the source information
+  hpx_addr_t targets; ///< address for the target information
+  hpx_addr_t source_root; ///< address for the source root
+  hpx_addr_t target_root; ///< address for the target root
+  hpx_addr_t fmm_done; ///< address of the lco for fmm completion detection
+  double size; ///< size of the bounding box
+  double corner[3]; ///< lower left corner of the bounding box
 } init_param_action_arg_t; 
 
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to _swap action 
+/// ---------------------------------------------------------------------------
+typedef struct {
+  char type; ///< source/target point 
+  int addr; ///< address of first source/target point
+  int npts; ///< number of points
+  int index[3]; ///< index of the box 
+  int level; ///< level of the box
+} swap_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to _set_box action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  char type; ///< source/target box
+  int addr; ///< address of the first contained point 
+  int npts; ///< number of points contained 
+  int level; ///< level of the box 
+  int index[3]; ///< index of the box
+  hpx_addr_t parent; ///< parent of the box being set
+} set_box_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to _source_to_mpole action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int addr; ///< address of the first contained point
+  int npts; ///< number of source points
+  int level; ///< level of the box
+  int index[3]; ///< index of the box
+} source_to_mpole_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _disaggregate action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  hpx_addr_t list1[27]; ///< list 1 
+  hpx_addr_t list5[27]; ///< list 5 
+  int nlist1; ///< number of entries of list1
+  int nlist5; ///< number of entries of list5
+} disaggregate_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _source_to_local action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int addr; ///< address for the first source point
+  int npts; ///< number of source points
+  int index[3]; ///< index of the target box
+  int level; ///< level of the target box
+} source_to_local_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Value returned from the _build_list5 action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  hpx_addr_t box; ///< address for the list entry
+  int type; ///< 5 means belongs to list 5, 1 means it belongs to list 1
+} build_list5_action_return_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _merge_expo action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int index[3]; ///< index of the parent target box 
+  hpx_addr_t box; ///< address of the parent target box
+} merge_expo_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _merge_expo_zp and _merge_expo_zm actions
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int offx; ///< offsets
+  int offy;   
+  int label; ///< which merged list to update
+  hpx_addr_t box; ///< which target box to send the result
+} merge_expo_z_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _merge_update action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int label; ///< which merged list to update
+  int size; ///< size of the expansion
+  double complex expansion[]; ///< buffer holding expansion
+} merge_update_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _proc_target action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int id; ///< which point in the box to process
+  int index[3]; ///< index of the box containing the point
+  hpx_addr_t box; ///< address of the box containing the point
+  int nlist1; ///< number of list 1 entries
+  int nlist5; ///< number of list 5 entries
+  hpx_addr_t list1[27]; ///< list 1
+  hpx_addr_t list5[27]; ///< list 5 
+} proc_target_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _proc_list1 action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  double position[3]; ///< position of the target point
+  double potential; ///< accumulated potential result so far
+  double field[3]; ///< accumulated field result so far
+  int nlist1; ///< total list 1 entries
+  hpx_addr_t list1[27]; ///< list 1 
+  int curr; ///< which list 1 to process
+  hpx_addr_t result; ///< lco to set when all list 1 entries are processed
+} proc_list1_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the source_to_target action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  double position[3]; ///< position of the target point
+  int addr; ///< address of the first source point
+  int npts; ///< number of source points
+} source_to_target_action_arg_t; 
 #endif

@@ -125,7 +125,7 @@ int hpx_init(const hpx_config_t *cfg) {
 
 
   // 2) bootstrap, to figure out some topology information
-  here->boot = boot_new(HPX_BOOT_DEFAULT);
+  here->boot = boot_new(cfg->boot);
   if (here->boot == NULL)
     return _cleanup(here, dbg_error("failed to create boot manager.\n"));
 
