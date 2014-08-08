@@ -2620,12 +2620,56 @@ int _proc_target_action(void *args) {
   proc_target_action_arg_t *input = (proc_target_action_arg_t *) args; 
   
   int id = input->id; 
+  int nlist1 = input->nlist1;
+  int nlist5 = input->nlist5; 
   double position[3]; 
   position[0] = targets_p[id].position[0]; 
   position[1] = targets_p[id].position[1]; 
   position[2] = targets_p[id].position[2]; 
-  hpx_addr_t result = hpx_lco_future_new(sizeof(double) * 4); 
-  hpx_call(input->box, _local_to_target, position, sizeof(double) * 3, result); 
+
+  hpx_addr_t far_field_result = hpx_lco_future_new(sizeof(double) * 4); 
+  hpx_addr_t list1_result = hpx_lco_future_new(sizeof(double) * 4); 
+  hpx_addr_t list5_result = hpx_lco_future_new(sizeof(double) * 4); 
+
+  hpx_call(input->box, _local_to_target, position, sizeof(double) * 3, 
+	   far_field_result); 
+
+  if (nlist1) {
+    proc_list1_action_arg_t proc_list1_arg = {
+      .position[0] = position[0], 
+      .position[1] = position[1], 
+      .position[2] = position[2], 
+      .potential = 0, 
+      .field[0] = 0, 
+      .field[1] = 0, 
+      .field[2] = 0, 
+      .nlist1 = nlist1, 
+      .curr = 0,
+      .result = list1_result
+    };
+
+    for (int i = 0; i < nlist1; i++) 
+      proc_list1_arg.list1[i] = input->list1[i]; 
+    
+    hpx_call(input->list1[0], _proc_list1, &proc_list1_arg, 
+	     sizeof(proc_list1_action_arg_t), HPX_NULL); 
+  }
+
+  double far_field_contrib[4] = {0};
+  double list1_contrib[4] = {0};
+  double list5_contrib[4] = {0};
+
+  hpx_lco_get(far_field_result, sizeof(double) * 4, far_field_contrib); 
+  if (nlist1)
+    hpx_lco_get(list1_result, sizeof(double) * 4, list1_contrib); 
+  if (nlist5) 
+    hpx_lco_get(list5_result, sizeof(double) * 4, list5_contrib); 
+
+  targets_p[id].potential = far_field_contrib[0] + list1_contrib[0] + list5_contrib[0];
+  targets_p[id].field[0] = far_field_contrib[1] + list1_contrib[1] + list5_contrib[1];
+  targets_p[id].field[1] = far_field_contrib[2] + list1_contrib[2] + list5_contrib[2];
+  targets_p[id].field[2] = far_field_contrib[3] + list1_contrib[3] + list5_contrib[3];
+
 
   hpx_gas_unpin(curr); 
   hpx_lco_and_set(fmm_param->fmm_done, HPX_NULL); 
@@ -2748,6 +2792,82 @@ int _local_to_target_action(void *args) {
   return HPX_SUCCESS;
 }
 
+int _proc_list1_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+
+  proc_list1_action_arg_t *param = (proc_list1_action_arg_t *) args; 
+  hpx_addr_t entry = param->list1[param->curr]; 
+  hpx_addr_t done = hpx_lco_future_new(sizeof(double) * 4); 
+  source_to_target_action_arg_t source_to_target_arg = {
+    .addr = sbox->addr, 
+    .npts = sbox->npts, 
+    .position[0] = param->position[0], 
+    .position[1] = param->position[1], 
+    .position[2] = param->position[2]
+  }; 
+
+  hpx_call(entry, _source_to_target, &source_to_target_arg, 
+	   sizeof(source_to_target_arg), done);
+  double contrib[4]; 
+  hpx_lco_get(done, sizeof(double) * 4, contrib); 
+
+  param->potential += contrib[0]; 
+  param->field[0] += contrib[1]; 
+  param->field[1] += contrib[2]; 
+  param->field[2] += contrib[3]; 
+  param->curr++; 
+
+  if (param->curr == param->nlist1) {
+    double temp[4]; 
+    temp[0] = param->potential;
+    temp[1] = param->field[0]; 
+    temp[2] = param->field[1]; 
+    temp[3] = param->field[2]; 
+    hpx_lco_set(param->result, sizeof(double) * 4, temp, HPX_NULL, HPX_NULL);
+  } else {
+    entry = param->list1[param->curr]; 
+    hpx_call(entry, _proc_list1, param, sizeof(proc_list1_action_arg_t), HPX_NULL);
+  }
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS;
+}
+
+int _source_to_target_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  source_t *sources_p = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sources_p); 
+
+  source_to_target_action_arg_t *input = (source_to_target_action_arg_t *)args; 
+  int first = input->addr; 
+  int last = first + input->npts; 
+  double tx = input->position[0]; 
+  double ty = input->position[1]; 
+  double tz = input->position[2]; 
+  double result[4] = {0}; 
+
+  for (int i = first; i < last; i++) {
+    double rx = tx - sources_p[i].position[0]; 
+    double ry = ty - sources_p[i].position[1]; 
+    double rz = tz - sources_p[i].position[2]; 
+    double q = sources_p[i].charge; 
+    double rr = rx * rx + ry * ry + rz * rz; 
+    double rdis = sqrt(rr); 
+
+    if (rr) {
+      result[0] += q / rdis; 
+      double rmul = q / (rdis * rr); 
+      result[1] += rmul * rx; 
+      result[2] += rmul * ry; 
+      result[3] += rmul * rz; 
+    }
+  }
+
+  HPX_THREAD_CONTINUE(result); 
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
+}
 
 void lgndr(int nmax, double x, double *y) {
   int n;
