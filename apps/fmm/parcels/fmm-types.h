@@ -193,13 +193,37 @@ typedef struct {
 } merge_update_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
-/// @brief Process target point inside a leaf box
+/// @brief Argument passed to the _proc_target action
 /// ---------------------------------------------------------------------------
 typedef struct {
   int id; ///< which point in the box to process
   int index[3]; ///< index of the box containing the point
   hpx_addr_t box; ///< address of the box containing the point
+  int nlist1; ///< number of list 1 entries
   int nlist5; ///< number of list 5 entries
+  hpx_addr_t list1[27]; ///< list 1
   hpx_addr_t list5[27]; ///< list 5 
 } proc_target_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _proc_list1 action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  double position[3]; ///< position of the target point
+  double potential; ///< accumulated potential result so far
+  double field[3]; ///< accumulated field result so far
+  int nlist1; ///< total list 1 entries
+  hpx_addr_t list1[27]; ///< list 1 
+  int curr; ///< which list 1 to process
+  hpx_addr_t result; ///< lco to set when all list 1 entries are processed
+} proc_list1_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
+/// @brief Argument passed to the source_to_target action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  double position[3]; ///< position of the target point
+  int addr; ///< address of the first source point
+  int npts; ///< number of source points
+} source_to_target_action_arg_t; 
 #endif
