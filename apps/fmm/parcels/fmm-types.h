@@ -59,8 +59,7 @@ typedef struct {
   hpx_addr_t targets; ///< address for the target information
   hpx_addr_t source_root; ///< address for the source root
   hpx_addr_t target_root; ///< address for the target root
-  hpx_addr_t sema_done; ///< address for the termination detection semaphore
-  hpx_addr_t fmm_done; ///< address of the lco for fmm completion detection
+  hpx_addr_t fmm_done; ///< and gate tracking fmm completion
   double size; ///< size of the bounding boxes
   double corner[3]; ///< coordinate of the lower left corner of the bounding box
   int pterms; ///< order of the multipole/local expansion
@@ -100,7 +99,6 @@ typedef struct {
   hpx_addr_t targets; ///< address for the target information
   hpx_addr_t source_root; ///< address for the source root
   hpx_addr_t target_root; ///< address for the target root
-  hpx_addr_t sema_done; ///< address for the termination detection semaphore
   hpx_addr_t fmm_done; ///< address of the lco for fmm completion detection
   double size; ///< size of the bounding box
   double corner[3]; ///< lower left corner of the bounding box
@@ -195,13 +193,13 @@ typedef struct {
 } merge_update_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
-/// @brief Argument passed to the _local_to_target action
+/// @brief Process target point inside a leaf box
 /// ---------------------------------------------------------------------------
 typedef struct {
-  int addr; ///< address of the first contained point
-  int npts; ///< number of target points 
-  int level; ///< level of the box
-  int index[3]; ///< index of the box
-  double complex expansion[]; ///< local expansion
-} local_to_target_action_arg_t; 
+  int id; ///< which point in the box to process
+  int index[3]; ///< index of the box containing the point
+  hpx_addr_t box; ///< address of the box containing the point
+  int nlist5; ///< number of list 5 entries
+  hpx_addr_t list5[27]; ///< list 5 
+} proc_target_action_arg_t; 
 #endif
