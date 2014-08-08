@@ -198,6 +198,7 @@ typedef struct {
 typedef struct {
   int id; ///< which point in the box to process
   int index[3]; ///< index of the box containing the point
+  int level; ///< level of the box containing of the point
   hpx_addr_t box; ///< address of the box containing the point
   int nlist1; ///< number of list 1 entries
   int nlist5; ///< number of list 5 entries
@@ -219,6 +220,21 @@ typedef struct {
 } proc_list1_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
+/// @brief Argument passed to the _proc_list5 action
+/// ---------------------------------------------------------------------------
+typedef struct {
+  int level; ///< level of the box containing the target point
+  int index[3]; ///< index of the box containing the target point
+  double position[3]; ///< position of the target point
+  double potential; ///< accumulated potential result so far
+  double field[3]; ///< accumulated field result so far
+  int nlist5; ///< total list 5 entries
+  hpx_addr_t list5[27]; ///< list 5 
+  int curr; ///< which list 5 to process
+  hpx_addr_t result; ///< lco to set when all list 5 entries are processed
+} proc_list5_action_arg_t; 
+
+/// ---------------------------------------------------------------------------
 /// @brief Argument passed to the source_to_target action
 /// ---------------------------------------------------------------------------
 typedef struct {
@@ -226,4 +242,5 @@ typedef struct {
   int addr; ///< address of the first source point
   int npts; ///< number of source points
 } source_to_target_action_arg_t; 
+
 #endif

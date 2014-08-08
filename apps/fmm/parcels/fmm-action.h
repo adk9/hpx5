@@ -41,7 +41,9 @@ extern hpx_action_t _local_to_local;
 extern hpx_action_t _proc_target; 
 extern hpx_action_t _local_to_target;
 extern hpx_action_t _proc_list1; 
+extern hpx_action_t _proc_list5; 
 extern hpx_action_t _source_to_target; 
+extern hpx_action_t _multipole_to_target; 
 
 /// ---------------------------------------------------------------------------
 /// @brief The main FMM action
@@ -233,9 +235,19 @@ int _local_to_target_action(void *args);
 int _proc_list1_action(void *args); 
 
 /// ---------------------------------------------------------------------------
+/// @brief Process list 5 action
+/// ---------------------------------------------------------------------------
+int _proc_list5_action(void *args); 
+
+/// ---------------------------------------------------------------------------
 /// @brief Source to target action
 /// ---------------------------------------------------------------------------
 int _source_to_target_action(void *args); 
+
+/// ---------------------------------------------------------------------------
+/// @brief Multipole to target action
+/// ---------------------------------------------------------------------------
+int _multipole_to_target_action(void *args); 
 
 /// ---------------------------------------------------------------------------
 /// @brief Evaluates Lengndre polynomial 

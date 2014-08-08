@@ -1053,6 +1053,7 @@ int _disaggregate_action(void *args) {
 	  .index[0] = tbox->index[0], 
 	  .index[1] = tbox->index[1], 
 	  .index[2] = tbox->index[2],
+	  .level = tbox->level, 
 	  .box = curr, 
 	  .nlist5 = nlist5
 	}; 
@@ -2655,6 +2656,31 @@ int _proc_target_action(void *args) {
 	     sizeof(proc_list1_action_arg_t), HPX_NULL); 
   }
 
+  if (nlist5) {
+    proc_list5_action_arg_t proc_list5_arg = {
+      .level = input->level, 
+      .index[0] = input->index[0], 
+      .index[1] = input->index[1], 
+      .index[2] = input->index[2], 
+      .position[0] = position[0], 
+      .position[1] = position[1], 
+      .position[2] = position[2], 
+      .potential = 0, 
+      .field[0] = 0, 
+      .field[1] = 0, 
+      .field[2] = 0, 
+      .nlist5 = nlist5, 
+      .curr = 0, 
+      .result = list5_result
+    }; 
+
+    for (int i = 0; i < nlist5; i++) 
+      proc_list5_arg.list5[i] = input->list5[i]; 
+
+    hpx_call(input->list5[0], _proc_list5, &proc_list5_arg, 
+	     sizeof(proc_list5_action_arg_t), HPX_NULL); 
+  }
+
   double far_field_contrib[4] = {0};
   double list1_contrib[4] = {0};
   double list5_contrib[4] = {0};
@@ -2669,7 +2695,6 @@ int _proc_target_action(void *args) {
   targets_p[id].field[0] = far_field_contrib[1] + list1_contrib[1] + list5_contrib[1];
   targets_p[id].field[1] = far_field_contrib[2] + list1_contrib[2] + list5_contrib[2];
   targets_p[id].field[2] = far_field_contrib[3] + list1_contrib[3] + list5_contrib[3];
-
 
   hpx_gas_unpin(curr); 
   hpx_lco_and_set(fmm_param->fmm_done, HPX_NULL); 
@@ -2798,7 +2823,6 @@ int _proc_list1_action(void *args) {
   hpx_gas_try_pin(curr, (void *)&sbox); 
 
   proc_list1_action_arg_t *param = (proc_list1_action_arg_t *) args; 
-  hpx_addr_t entry = param->list1[param->curr]; 
   hpx_addr_t done = hpx_lco_future_new(sizeof(double) * 4); 
   source_to_target_action_arg_t source_to_target_arg = {
     .addr = sbox->addr, 
@@ -2807,8 +2831,8 @@ int _proc_list1_action(void *args) {
     .position[1] = param->position[1], 
     .position[2] = param->position[2]
   }; 
-
-  hpx_call(entry, _source_to_target, &source_to_target_arg, 
+  
+  hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg, 
 	   sizeof(source_to_target_arg), done);
   double contrib[4]; 
   hpx_lco_get(done, sizeof(double) * 4, contrib); 
@@ -2827,11 +2851,109 @@ int _proc_list1_action(void *args) {
     temp[3] = param->field[2]; 
     hpx_lco_set(param->result, sizeof(double) * 4, temp, HPX_NULL, HPX_NULL);
   } else {
-    entry = param->list1[param->curr]; 
-    hpx_call(entry, _proc_list1, param, sizeof(proc_list1_action_arg_t), HPX_NULL);
+    hpx_call(param->list1[param->curr], _proc_list1, param, 
+	     sizeof(proc_list1_action_arg_t), HPX_NULL); 
   }
   hpx_gas_unpin(curr); 
   return HPX_SUCCESS;
+}
+
+int _proc_list5_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL; 
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+
+  proc_list5_action_arg_t *param = (proc_list5_action_arg_t *)args; 
+  int dim = 1 << (param->level - sbox->level); 
+  bool is_adjacent = 
+    ((param->index[0] >= dim * sbox->index[0] - 1) && 
+     (param->index[0] <= dim * sbox->index[0] + dim) && 
+     (param->index[1] >= dim * sbox->index[1] - 1) &&
+     (param->index[1] <= dim * sbox->index[1] + dim) &&
+     (param->index[2] >= dim * sbox->index[2] - 1) && 
+     (param->index[2] <= dim * sbox->index[2] + dim));
+
+  double contrib[4] = {0}; 
+
+  if (is_adjacent) {
+    if (sbox->nchild) {
+      int counter = 0; 
+      hpx_addr_t done[8]; 
+      for (int i = 0; i < 8; i++) {
+	if (!hpx_addr_eq(sbox->child[i], HPX_NULL)) {
+	  done[counter] = hpx_lco_future_new(sizeof(double) * 4); 
+	  hpx_call(sbox->child[i], _proc_list5, param, 
+		   sizeof(proc_list5_action_arg_t), done[counter]); 
+	  counter++;
+	}
+      }
+
+      for (int i = 0; i < sbox->nchild; i++) {
+	double temp[4] = {0}; 
+	hpx_lco_get(done[i], sizeof(double) * 4, temp); 
+	contrib[0] += temp[0]; 
+	contrib[1] += temp[1]; 
+	contrib[2] += temp[2]; 
+	contrib[3] += temp[3];
+      }
+    } else {
+      hpx_addr_t done = hpx_lco_future_new(sizeof(double) * 4); 
+      source_to_target_action_arg_t source_to_target_arg = {
+	.addr = sbox->addr, 
+	.npts = sbox->npts, 
+	.position[0] = param->position[0], 
+	.position[1] = param->position[1], 
+	.position[2] = param->position[2]
+      }; 
+
+      hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg, 
+	       sizeof(source_to_target_action_arg_t), done); 
+      hpx_lco_get(done, sizeof(double) * 4, contrib); 
+    }
+  } else {
+    hpx_addr_t done = hpx_lco_future_new(sizeof(double) * 4); 
+
+    if (sbox->npts > fmm_param->pgsz) {
+      // use multipole-to-target to process this list 3 box
+    } else {
+      // use source-to-target action
+      source_to_target_action_arg_t source_to_target_arg = {
+	.addr = sbox->addr, 
+	.npts = sbox->npts, 
+	.position[0] = param->position[0], 
+	.position[1] = param->position[1], 
+	.position[2] = param->position[2]
+      }; 
+      
+      hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg, 
+	       sizeof(source_to_target_action_arg_t), done); 
+    }
+    hpx_lco_get(done, sizeof(double) * 4, contrib); 
+  }
+
+  if (hpx_addr_eq(curr, param->list5[param->curr])) {
+    param->potential += contrib[0]; 
+    param->field[0] += contrib[1]; 
+    param->field[1] += contrib[2]; 
+    param->field[2] += contrib[3]; 
+    param->curr++; 
+
+    if (param->curr == param->nlist5) {
+      double temp[4]; 
+      temp[0] = param->potential; 
+      temp[1] = param->field[1]; 
+      temp[2] = param->field[2]; 
+      hpx_lco_set(param->result, sizeof(double) * 4, temp, HPX_NULL, HPX_NULL);
+    } else {
+      hpx_call(param->list5[param->curr], _proc_list5, param, 
+	       sizeof(proc_list5_action_arg_t), HPX_NULL); 
+    }
+  } else {
+    HPX_THREAD_CONTINUE(contrib); 
+  }
+
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
 }
 
 int _source_to_target_action(void *args) {
@@ -2863,6 +2985,122 @@ int _source_to_target_action(void *args) {
       result[3] += rmul * rz; 
     }
   }
+
+  HPX_THREAD_CONTINUE(result); 
+  hpx_gas_unpin(curr); 
+  return HPX_SUCCESS; 
+}
+
+int _multipole_to_target_action(void *args) {
+  hpx_addr_t curr = hpx_thread_current_target(); 
+  fmm_box_t *sbox = NULL;
+  hpx_gas_try_pin(curr, (void *)&sbox); 
+  double *input = (double *) args; 
+
+  int level = sbox->level; 
+  int pgsz      = fmm_param->pgsz; 
+  int pterms    = fmm_param->pterms; 
+  double *ytopc = fmm_param->ytopc;
+  double *ytopcs = fmm_param->ytopcs; 
+  double *ytopcsinv = fmm_param->ytopcsinv;
+  double scale = fmm_param->scale[level]; 
+  double complex *multipole = &sbox->expansion[0]; 
+  double h = fmm_param->size / (1 << (level + 1));
+  double *corner = &fmm_param->corner[0]; 
+  double center[3]; 
+  center[0] = corner[0] + (2 * sbox->index[0] + 1) * h; 
+  center[1] = corner[1] + (2 * sbox->index[1] + 1) * h; 
+  center[2] = corner[2] + (2 * sbox->index[2] + 1) * h; 
+
+  double *p = calloc((pterms + 2) * (pterms + 2), sizeof(double));
+  double *powers = calloc(pterms + 4, sizeof(double));
+  double complex *ephi = calloc(pterms + 3, sizeof(double complex)); 
+  const double precis = 1e-14; 
+
+  double tx = input[0]; 
+  double ty = input[1]; 
+  double tz = input[2]; 
+  double result[4] = {0}; 
+
+  double rpotz = 0.0, field1 = 0.0, field2 = 0.0, field3 = 0.0;
+  double complex zs1 = 0.0, zs2 = 0.0, zs3 = 0.0;
+  double rx = tx - center[0]; 
+  double ry = ty - center[1]; 
+  double rz = tz - center[2]; 
+  double proj = rx * rx + ry * ry;
+  double rr = proj + rz * rz;
+  proj = sqrt(proj); 
+  double d = sqrt(rr); 
+  double ctheta = (d <= precis ? 0.0 : rz / d); 
+  ephi[0] = (proj <= precis * d ? 1.0 : (rx + _Complex_I * ry) / proj); 
+  d = 1.0 / d; 
+  powers[0] = 1.0;
+  powers[1] = d; 
+  d /= scale; 
+
+  for (int ell = 1; ell <= pterms + 2; ell++) {
+    powers[ell + 1] = powers[ell] * d; 
+    ephi[ell] = ephi[ell - 1] * ephi[0]; 
+  }
+
+  lgndr(pterms + 1, ctheta, p); 
+    
+  double rtemp; 
+  double rmp = creal(multipole[0]); 
+  result[0] += rmp * powers[1]; 
+  double complex cpz = ephi[0] * rmp * powers[2] * ytopc[1 + pterms + 2] * 
+    p[1 + pterms + 2] * ytopcsinv[1 + pterms + 2]; 
+  zs1 += cpz; 
+  double cp = rmp * powers[2] * p[1] * ytopcs[0] * ytopcsinv[1]; 
+  field3 = cp;
+
+  for (int ell = 1; ell <= pterms; ell++) {
+    rmp = creal(multipole[ell]); 
+    cp = rmp * powers[ell + 1] * p[ell]; 
+    result[0] += cp; 
+    zs1 += ephi[0] * rmp * powers[ell + 2] * ytopcs[ell + 1+ pterms + 2] * 
+      p[ell + 1 + pterms+2] * ytopcs[ell] * ytopcsinv[ell + 1 + pterms + 2];
+    cpz = multipole[ell + pterms + 1]; 
+    rtemp = powers[ell + 2] * p[ell + 1] * ytopcsinv[ell + 1]; 
+    zs2 += cpz * rtemp * ytopcs[ell + pterms + 2]; 
+    cp = rmp * rtemp * ytopcs[ell]; 
+    field3 += cp;
+  }
+
+  for (int m = 1; m <= pterms; m++) {
+    int offset1 = m * (pterms + 1); 
+    int offset2 = m * (pterms + 2);
+    int offset5 = (m + 1) * (pterms + 2);
+    int offset6 = (m - 1) * (pterms + 2);
+    for (int ell = m; ell <= pterms; ell++) {
+      int index1 = ell + offset1; 
+      int index2 = ell + offset2;
+      int index5 = ell + 1 + offset5; 
+      int index6 = ell + 1 + offset6;
+      cpz = multipole[index1] * powers[ell + 1] * ytopc[index2] * p[index2]; 
+      rpotz += creal(cpz * ephi[m - 1]); 
+      cpz = multipole[index1] * ytopcs[index2] * powers[ell + 2]; 
+      zs1 += cpz * ephi[m] * ytopcsinv[index5] * ytopc[index5] * p[index5];
+      if (m > 1) 
+	zs2 += cpz * ephi[m - 2] * ytopcsinv[index6] * 
+	  ytopc[index6] * p[index6]; 
+      zs3 += cpz * ephi[m - 1] * ytopc[index2 + 1] * p[index2 + 1] * 
+	ytopcsinv[index2 + 1];
+    }
+  }
+
+  result[0] += 2.0 * rpotz;
+  field1 = creal(zs2 - zs1);
+  field2 = -cimag(zs2 + zs1);
+  field3 = field3 + 2.0 * creal(zs3); 
+  
+  result[1] += field1 * scale;
+  result[2] += field2 * scale;
+  result[2] += field3 * scale; 
+  
+  free(p);
+  free(powers);
+  free(ephi);
 
   HPX_THREAD_CONTINUE(result); 
   hpx_gas_unpin(curr); 
