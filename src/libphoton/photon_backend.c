@@ -166,13 +166,13 @@ static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int flags,
   req->remote_buffer.request = request;
   req->remote_buffer.tag = req->tag;
   
-  dbg_info("Remote request: %u", request);
+  dbg_info("Remote request: %lu", request);
   dbg_info("Addr: %p", (void *)rbuf->addr);
   dbg_info("Size: %lu", rbuf->size);
   dbg_info("Flags: %d",	flags);
   dbg_info("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
   
-  dbg_info("Inserting the OS put request into the request table: %d/%d/%p", proc, request, req);
+  dbg_info("Inserting the OS put request into the request table: %d/%lu/%p", proc, request, req);
   if (htable_insert(reqtable, request, req) != 0) {
     // this is bad, we've submitted the request, but we can't track it
     log_err("Couldn't save request in hashtable");
@@ -190,7 +190,7 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr,
   photon_rid request_id;
 
   request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+  dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
 
   *request = request_id;
   
@@ -219,7 +219,7 @@ static int __photon_setup_request_ledger(photonRILedgerEntry ri_entry, int curr,
   dbg_info("Tag: %d",	ri_entry->tag);
   dbg_info("Keys: 0x%016lx / 0x%016lx", ri_entry->priv.key0, ri_entry->priv.key1);
 
-  dbg_info("Inserting the new send buffer request into the request table: %d/%d/%p", proc, request_id, req);
+  dbg_info("Inserting the new send buffer request into the request table: %d/%lu/%p", proc, request_id, req);
   if (htable_insert(reqtable, request_id, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
     log_err("Couldn't save request in hashtable");
@@ -294,7 +294,7 @@ static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, ph
   memcpy(&req->addr, addr, sizeof(*addr));
   memcpy(req->bentries, bufs, sizeof(int)*MAX_BUF_ENTRIES);
   
-  dbg_info("Inserting the new send request into the sr table: 0x%016lx/%u/%p",
+  dbg_info("Inserting the new send request into the sr table: 0x%016lx/%lu/%p",
            addr->global.proc_id, request, req);
   if (htable_insert(sr_reqtable, request, req) != 0) {
     /* this is bad, we've submitted the request, but we can't track it */
@@ -643,7 +643,7 @@ static int __photon_nbpop_event(photonRequest req) {
       cookie = event.id;
     }
 
-    dbg_info("(req type=%d) got completion for: %u", req->type, cookie);
+    dbg_info("(req type=%d) got completion for: %lu", req->type, cookie);
     
     if ((prefix == REQUEST_COOK_EAGER) ||
         (req->flags & REQUEST_FLAG_EAGER)) {
@@ -651,7 +651,7 @@ static int __photon_nbpop_event(photonRequest req) {
     }
     
     if ((cookie == req->id) && (req->type == EVQUEUE)) {
-      dbg_info("setting request completed with cookie: %u", cookie);
+      dbg_info("setting request completed with cookie: %lu", cookie);
       req->state = REQUEST_COMPLETED;
     }
     // handle any other request completions we might get from the backend event queue
@@ -659,7 +659,7 @@ static int __photon_nbpop_event(photonRequest req) {
       photonRequest tmp_req;
       if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
         if (tmp_req->type == EVQUEUE) {
-          dbg_info("setting request completed with cookie: %u",  cookie);
+          dbg_info("setting request completed with cookie: %lu",  cookie);
           tmp_req->state = REQUEST_COMPLETED;
         }
       }
@@ -1090,7 +1090,7 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
 static int _photon_wait(photon_rid request) {
   photonRequest req;
 
-  dbg_info("(%d)",request);
+  dbg_info("(0x%016lx)",request);
 
   if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
     if (htable_lookup(sr_reqtable, (uint64_t)request, (void**)&req) != 0) {
@@ -1324,7 +1324,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
   }
 
   request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+  dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
 
   /* proc == -1 means ANY_SOURCE.  In this case all potential senders must post a send request
      which will write into our snd_info ledger entries such that:
@@ -1385,7 +1385,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     req->proc = proc;
     req->tag = tag;
 
-    dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
+    dbg_info("Inserting the RDMA request into the request table: %lu/%p", request_id, req);
     if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -1425,7 +1425,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   }
 
   request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+  dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
 
   curr = photon_processes[proc].remote_snd_info_ledger->curr;
   entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
@@ -1513,7 +1513,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     //else 
     {
       req->type = LEDGER;
-      dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
+      dbg_info("Inserting the RDMA request into the request table: %lu/%p", request_id, req);
       if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
         log_err("Couldn't save request in hashtable");
       }
@@ -1545,7 +1545,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
   dbg_info("(%d, %lu, %d, %p)", proc, size, tag, request);
 
   request_id = INC_COUNTER(curr_cookie);
-  dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+  dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
 
   curr = photon_processes[proc].remote_snd_info_ledger->curr;
   entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
@@ -1599,7 +1599,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     req->proc = proc;
     req->tag = tag;
 
-    dbg_info("Inserting the RDMA request into the request table: %d/%p", request_id, req);
+    dbg_info("Inserting the RDMA request into the request table: %lu/%p", request_id, req);
     if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
       // this is bad, we've submitted the request, but we can't track it
       log_err("Couldn't save request in hashtable");
@@ -1831,7 +1831,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
   uint64_t cookie;
   int rc;
 
-  dbg_info("(%d, %p, %lu, %lu, %u)", proc, ptr, size, r_offset, request);
+  dbg_info("(%d, %p, %lu, %lu, %lu)", proc, ptr, size, r_offset, request);
 
   if (htable_lookup(reqtable, request, (void**)&req) != 0) {
     log_err("Could not find request");
@@ -1868,7 +1868,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
   }
 
   cookie = (( (uint64_t)proc)<<32) | request;
-  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request, cookie);
+  dbg_info("Posted Cookie: %d/%lu/%lu", proc, request, cookie);
 
   {
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, drb->buf.addr + (uintptr_t)r_offset,
@@ -1893,7 +1893,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   uint64_t cookie;
   int rc;
 
-  dbg_info("(%d, %p, %lu, %lu, %u)", proc, ptr, size, r_offset, request);
+  dbg_info("(%d, %p, %lu, %lu, %lu)", proc, ptr, size, r_offset, request);
 
   if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
     log_err("Could not find request");
@@ -1937,7 +1937,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   }
 
   cookie = (( (uint64_t)proc)<<32) | request;
-  dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request, cookie);
+  dbg_info("Posted Cookie: %d/%lu/%lu", proc, request, cookie);
 
   {
 
@@ -1977,7 +1977,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
   else {
     request_id = INC_COUNTER(curr_cookie);
     *request = request_id;
-    dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+    dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
     cookie = (( (uint64_t)proc)<<32) | request_id;
     rflags = REQUEST_FLAG_NIL;
   }
@@ -1991,7 +1991,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
       goto error_exit;
     }
 
-    dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
+    dbg_info("Posted Cookie: %d/%lu/%lu", proc, request_id, cookie);
   }
 
   if (request != NULL) {
@@ -2032,7 +2032,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
   else {
     request_id = INC_COUNTER(curr_cookie);
     *request = request_id;
-    dbg_info("Incrementing curr_cookie_count to: %d", request_id);
+    dbg_info("Incrementing curr_cookie_count to: %lu", request_id);
     cookie = (( (uint64_t)proc)<<32) | request_id;
     rflags = REQUEST_FLAG_NIL;
   }
@@ -2047,7 +2047,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
       goto error_exit;
     }
     
-    dbg_info("Posted Cookie: %u/%u/%"PRIx64, proc, request_id, cookie);
+    dbg_info("Posted Cookie: %d/%lu/%lu", proc, request_id, cookie);
   }
 
   if (request != NULL) {
@@ -2076,7 +2076,7 @@ static int _photon_send_FIN(photon_rid request, int proc) {
   dbg_info("(%d)", proc);
 
   if (htable_lookup(reqtable, request, (void**)&req) != 0) {
-    dbg_info("Could not find request: %u", request);
+    dbg_info("Could not find request: %lu", request);
     goto error_exit;
   }
 
@@ -2122,7 +2122,7 @@ static int _photon_send_FIN(photon_rid request, int proc) {
   photon_processes[proc].remote_FIN_ledger->curr = curr;
 
   if (req->state == REQUEST_COMPLETED) {
-    dbg_info("Removing request %u for remote buffer request %u", request, req->remote_buffer.request);
+    dbg_info("Removing request %lu for remote buffer request %u", request, req->remote_buffer.request);
     htable_remove(reqtable, req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
     dbg_info("%d requests left in reqtable", htable_count(reqtable));
@@ -2523,7 +2523,7 @@ int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
   photonRequest req;
 
   if (htable_lookup(reqtable, (uint64_t)request, (void**)&req) != 0) {
-    dbg_info("Could not find request: %u", request);
+    dbg_info("Could not find request: %lu", request);
     goto error_exit;
   }
 

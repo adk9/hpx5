@@ -33,7 +33,7 @@ void photon_buffer_free(photonBI buf) {
     return;
   }
 
-  return bi->buffer_free(buf);
+  bi->buffer_free(buf);
 }
 
 int photon_buffer_register(photonBI buf, void *ctx) {
