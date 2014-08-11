@@ -389,6 +389,17 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
                                      size, const void *value, hpx_addr_t lsync,
                                      hpx_addr_t rsync);
 
+
+
+
+
+hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
+                                     size, const void *value, hpx_addr_t lsync,
+                                     hpx_addr_t rsync);
+hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
+
+
+
 /// @}
 
 #endif
