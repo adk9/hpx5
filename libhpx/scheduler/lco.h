@@ -54,7 +54,11 @@ struct lco_class {
   lco_wait_t   on_wait;
 };
 
-
+typedef struct _allgather_set_offset{
+  int size;
+  int offset;
+  char buffer[];
+}_allgather_set_offset_t;
 /// ----------------------------------------------------------------------------
 /// LCO operations merely operate on the bits of an lco vtable pointer.
 /// ----------------------------------------------------------------------------
