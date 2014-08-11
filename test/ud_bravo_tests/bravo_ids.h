@@ -22,7 +22,7 @@ typedef struct bravo_node_t {
 
 static bravo_node *node;
 
-inline bravo_node *init_bravo_ids(int num_blocks) {
+bravo_node *init_bravo_ids(int num_blocks) {
   int i, j;
 
   node = malloc(NUM_NODES * sizeof(bravo_node));
@@ -65,7 +65,7 @@ inline bravo_node *init_bravo_ids(int num_blocks) {
   return node;
 }
 
-inline bravo_node *find_bravo_node(photonAddr naddr) {
+bravo_node *find_bravo_node(photonAddr naddr) {
   int i;
   for (i=0; i< NUM_NODES; i++) {
     if (naddr->s_addr == node[i].s_addr)
@@ -74,6 +74,6 @@ inline bravo_node *find_bravo_node(photonAddr naddr) {
   return NULL;
 }
 
-inline bravo_node *get_bravo_node(int id) {
+bravo_node *get_bravo_node(int id) {
   return &node[id];
 }
