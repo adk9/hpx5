@@ -38,50 +38,21 @@ static void _usage(FILE *stream) {
 }
 
 static hpx_action_t _nop     = 0;
-static hpx_action_t _par_for = 0;
 static hpx_action_t _main    = 0;
-
-static hpx_addr_t and;
-
-// Threads are launched sequentially below this cutoff.
-#define SEQ_CUTOFF 1000
 
 
 // The empty action
 static int _nop_action(void *args) {
-  hpx_lco_and_set(and, HPX_NULL);
   hpx_thread_exit(HPX_SUCCESS);
-}
-
-// A parallel-for operation.
-static int _par_for_action(int *args) {
-  int n = *args;
-
-  if (n <= SEQ_CUTOFF) {
-    for (int i = 0; i < n; ++i)
-      hpx_call(HPX_HERE, _nop, 0, 0, HPX_NULL);
-    hpx_thread_exit(HPX_SUCCESS);
-  }
-
-  int nn = n/4;
-  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
-  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
-  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
-  nn = n - (n/4)*3;
-  hpx_call(HPX_HERE, _par_for, &nn, sizeof(nn), HPX_NULL);
-  return HPX_SUCCESS;
 }
 
 static int _main_action(int *args) {
   int n = *args;
   printf("parspawn(%d)\n", n); fflush(stdout);
 
-  and = hpx_lco_and_new(n);
   hpx_time_t now = hpx_time_now();
-  hpx_call(HPX_HERE, _par_for, &n, sizeof(n), HPX_NULL);
-  hpx_lco_wait(and);
+  hpx_par_for_sync(_nop, 0, n, 8, 1000, 0, NULL, 0, 0);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
-  hpx_lco_delete(and, HPX_NULL);
 
   printf("seconds: %.7f\n", elapsed);
   printf("localities:   %d\n", HPX_LOCALITIES);
@@ -158,7 +129,6 @@ main(int argc, char *argv[])
   // register the actions
   _nop     = HPX_REGISTER_ACTION(_nop_action);
   _main    = HPX_REGISTER_ACTION(_main_action);
-  _par_for = HPX_REGISTER_ACTION(_par_for_action);
 
   // run the main action
   return hpx_run(_main, &n, sizeof(n));
