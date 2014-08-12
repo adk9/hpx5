@@ -407,8 +407,9 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
       //exchange(tp, tm, tu);
       for (n1 = i = 0; i < ld->num_pes; i++)
          n1 += ld->from[i];
-      // FIXME
-      //MPI_Allreduce(&n1, &n, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD);
+
+      hpx_lco_set(ld->refinelevel,sizeof(int),&n1,HPX_NULL,HPX_NULL);
+      hpx_lco_get(ld->refinelevel,sizeof(int),&n);
       j++;
    } while (n && j < 10);
 
