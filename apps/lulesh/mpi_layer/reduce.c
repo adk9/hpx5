@@ -53,7 +53,7 @@ int reduce_recv(void* vargs) {
     return -1;
   dbg_reduce_printf("n-- rank %d trans %d from %d about to wait on nic side future at %p in reduce_recv\n", args->dest_rank,  args->trans_num, args->src_rank, (void*)nicside_fut);
   struct reduce_recv_args *reduce_args = NULL;
-  hpx_lco_get(nicside_fut, (void*)&reduce_args, sizeof(reduce_args));
+  hpx_lco_get(nicside_fut, sizeof(reduce_args), (void*)&reduce_args);
   dbg_reduce_printf("n++ rank %d trans %d from %d done waiting on nic side future at %p in reduce_recv\n", args->dest_rank, args->trans_num, args->src_rank, (void*)nicside_fut);
 
   // copy data to destination and trigger userside future
@@ -150,7 +150,7 @@ int reduce_recv(void* vargs) {
     return -1;
   }
   dbg_reduce_printf("ns- rank %d trans %d from %d about to set reduce future at %p (%p) in reduce_recv - thread = %p kthread = %p\n", args->dest_rank, args->trans_num, args->src_rank, (void*)&reduce_args->futs[args->src_rank], (void*)reduce_args->futs, (void*)th, (void*)kth);
-  hpx_lco_set(reduce_args->futs[args->src_rank], NULL, 0, HPX_NULL);
+  hpx_lco_set(reduce_args->futs[args->src_rank], 0, NULL, HPX_NULL, HPX_NULL);
   dbg_reduce_printf("ns+ rank %d trans %d from %d set reduce future at %p (%p) in reduce_recv\n", args->dest_rank, args->trans_num, args->src_rank, (void*)&reduce_args->futs[args->src_rank], (void*)reduce_args->futs);
   return HPX_SUCCESS;
 }
@@ -186,7 +186,7 @@ void mpi_reduce_(void *sendbuf, void *recvbuf, int *recvcounts,
 
   if (*recvcounts > 0) {
     int payload_size = sizeof(struct op_recv_args) + *recvcounts * typesize;
-    hpx_parcel_t *p = hpx_parcel_acquire(payload_size);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
     hpx_parcel_set_action(p, action_reduce_recv);
     hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(root)));
     struct op_recv_args *args = (struct op_recv_args *)hpx_parcel_get_data(p);
@@ -198,7 +198,7 @@ void mpi_reduce_(void *sendbuf, void *recvbuf, int *recvcounts,
     args->msg_size = *recvcounts * typesize;
     //double *res = (double *) sendbuf;
     memcpy(args->msg_data, sendbuf, *recvcounts * typesize);
-    hpx_parcel_send(p);
+    hpx_parcel_send(p, HPX_NULL);
   }
 
   if (rank == root) {
@@ -303,7 +303,7 @@ void mpi_reduce_(void *sendbuf, void *recvbuf, int *recvcounts,
 
     for (int i = 0; i < size; i++) {
       dbg_reduce_printf("u-- rank %d trans %d about to wait on reduce future %d of %d at %p (%p) in mpi_reduce_\n", rank, transaction_num, i, size, (void*)&futs[i], (void*)futs);
-      hpx_lco_get(futs[i], NULL, 0);
+      hpx_lco_get(futs[i], 0, NULL);
       dbg_reduce_printf("u++ rank %d trans %d done waiting on reduce future %d of %d at %p (%p) in mpi_reduce_\n", rank, transaction_num, i, size, (void*)&futs[i], (void*)futs);
     }
 

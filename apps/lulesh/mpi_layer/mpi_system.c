@@ -204,7 +204,7 @@ static int init_action(struct init_args *args) {
 
 static int mark_rank_inited(void *args) {
   struct rank_init_fut_args *s = (struct rank_init_fut_args*)args;
-  hpx_lco_set(shared_state->rank_init_futs[s->rank], NULL, 0, HPX_NULL);
+  hpx_lco_set(shared_state->rank_init_futs[s->rank], 0, NULL, HPX_NULL, HPX_NULL);
   dbg_printf("On hpx rank %d setting future for rank %d\n", hpx_get_rank(), s->rank);
   return HPX_SUCCESS;
 }
@@ -267,7 +267,7 @@ void mpi_init_(int* pier) {
   // write entry in tids list
   shared_state->tids[n] = hpx_thread_get_tls_id();
 
-  hpx_thread_set_affinity(n % hpx_get_num_threads());
+  //hpx_thread_set_affinity(n % hpx_get_num_threads());
 
   // HERE
 
@@ -298,21 +298,21 @@ void mpi_init_(int* pier) {
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     struct rank_init_fut_args args;
     args.rank = shared_state->rankls[n].rank;
-    hpx_parcel_t *p = hpx_parcel_acquire(sizeof(args));
+    hpx_parcel_t *p = hpx_parcel_acquire(&args, sizeof(args));
     if (p == NULL) {
       // do some error handling
         hpx_abort();
     }
 
     hpx_parcel_set_action(p, action_mark_rank_inited);
-    hpx_parcel_set_data(p, (void*)&args, sizeof(args));
+    //    hpx_parcel_set_data(p, (void*)&args, sizeof(args));
     dbg_printf("On hpx rank %d, sending message to hpx rank %d to set future for mpi rank %d from thread %d\n", hpx_get_my_rank(), get_hpx_rank_from_mpi_rank(i), args.rank, n);
     hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(i)));
-    hpx_parcel_send(p);
+    hpx_parcel_send(p, HPX_NULL);
   }
 
   for (int i = 0; i < shared_state->size; i++) {
-    hpx_lco_get(shared_state->rank_init_futs[i], NULL, 0);
+    hpx_lco_get(shared_state->rank_init_futs[i], 0, NULL);
   }
 
   rankls->initialized = true;
@@ -507,7 +507,7 @@ static int communicator_lock(struct communicator *comm) {
 
 static int communicator_unlock(struct communicator *comm) {
   struct lock_record* record = log_lock_start(COMM_V, comm->rank, comm->rank);
-  hpx_lco_sema_v(comm->requests_lock, HPX_NULL);
+  hpx_lco_sema_v(comm->requests_lock);
   log_lock_end(record);
   return SUCCESS;
 }
@@ -549,7 +549,7 @@ int communicator_op_dict_insert(struct communicator_op_dict *d, int op, struct c
   d->ops[d->size] = op;
   d->transaction_dicts[d->size] = td;
   ++d->size;
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
   return SUCCESS;
 }
 
@@ -561,12 +561,12 @@ int communicator_op_dict_search(struct communicator_op_dict *d, int op, struct c
     ++i;
   if (i == d->size) {
     *td = NULL;
-    hpx_lco_sema_v(d->lock, HPX_NULL);
+    hpx_lco_sema_v(d->lock);
     return ERROR;
   }
   else
     *td = d->transaction_dicts[i];
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
   return SUCCESS;
 }
 
@@ -620,14 +620,14 @@ int communicator_transaction_dict_complete(struct communicator_transaction_dict 
     ++i;
 
   if (i >= d->capacity) {
-    hpx_lco_sema_v(d->lock, HPX_NULL);
+    hpx_lco_sema_v(d->lock);
     return ERROR;
   }
 
   d->completed[i] = true;
   d->size--;
 
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
 
   return SUCCESS;
 }
@@ -666,7 +666,7 @@ int communicator_transaction_dict_userside_record(struct communicator_transactio
   if (i >= d->capacity) { // i.e. is not already in the table
     int error = communicator_transaction_dict_add_entry(d, &i);
     if (error != SUCCESS) {
-      hpx_lco_sema_v(d->lock, HPX_NULL);
+      hpx_lco_sema_v(d->lock);
       return error;
     }
     d->trans_num[i] = transaction_num;
@@ -674,9 +674,9 @@ int communicator_transaction_dict_userside_record(struct communicator_transactio
 
   if (fut != NULL)
     *fut = d->userside_fut[i];
-  hpx_lco_set(d->nicside_fut[i], &val_p, sizeof(val_p), HPX_NULL);
+  hpx_lco_set(d->nicside_fut[i], sizeof(val_p), &val_p, HPX_NULL, HPX_NULL);
 
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
 
   return SUCCESS;
 }
@@ -698,7 +698,7 @@ int communicator_transaction_dict_nicside_record(struct communicator_transaction
   if (i >= d->capacity) { // i.e. is not already in the table
     int error = communicator_transaction_dict_add_entry(d, &i);
     if (error != SUCCESS) {
-      hpx_lco_sema_v(d->lock, HPX_NULL);
+      hpx_lco_sema_v(d->lock);
       return error;
     }
     d->trans_num[i] = transaction_num;
@@ -709,7 +709,7 @@ int communicator_transaction_dict_nicside_record(struct communicator_transaction
   if (nicside_fut != NULL)
     *nicside_fut = d->nicside_fut[i];
 
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
 
   return SUCCESS;
 }
@@ -726,7 +726,7 @@ int communicator_transaction_dict_nicside_future(struct communicator_transaction
   if (fut != NULL)
     *fut = d->nicside_fut[i];
 
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
 
   return SUCCESS;
 }
@@ -744,7 +744,7 @@ int communicator_transaction_dict_userside_future(struct communicator_transactio
   if (fut != NULL)
     *fut = d->userside_fut[i];
 
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
 
   return SUCCESS;
 }
@@ -793,7 +793,7 @@ static inline int communicator_p2p_transaction_list_lock(struct communicator_p2p
 
 static inline int communicator_p2p_transaction_list_unlock(struct communicator_p2p_transaction_list *d) {
   struct lock_record* record = log_lock_start(P2P_V, d->src, d->dest);
-  hpx_lco_sema_v(d->lock, HPX_NULL);
+  hpx_lco_sema_v(d->lock);
   log_lock_end(record);
   return SUCCESS;
 }
@@ -871,7 +871,7 @@ int communicator_p2p_transaction_list_try_fulfill(struct communicator_p2p_transa
 // handles matching the message with its request, removes the message from the list, and changes the current transaction number
 // should only be called by function that has the lock
 static int communicator_p2p_transaction_list_fulfill(struct communicator_p2p_transaction_list *d, struct mpi_request_* req, struct p2p_msg* msg) {
-  hpx_lco_set(msg->nicside_fut, &req, sizeof(req), HPX_NULL);
+  hpx_lco_set(msg->nicside_fut, sizeof(req), &req, HPX_NULL, HPX_NULL);
   list_delete(&d->received_messages, msg);
   d->curr_trans_num++;
   return SUCCESS;

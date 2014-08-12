@@ -49,10 +49,10 @@ int alltoallv_recv(void* vargs) {
 
   // copy data to destination and trigger userside future
   struct alltoallv_recv_args *alltoallv_args;
-  hpx_lco_get(nicside_fut, &alltoallv_args, sizeof(alltoallv_args));
+  hpx_lco_get(nicside_fut, sizeof(alltoallv_args), &alltoallv_args);
   memcpy((char*)alltoallv_args->recv_buffer + alltoallv_args->displs[args->src_rank] * alltoallv_args->typesize,
                 args->msg_data, args->msg_size);
-  hpx_lco_set(alltoallv_args->futs[args->src_rank], NULL, 0, HPX_NULL);
+  hpx_lco_set(alltoallv_args->futs[args->src_rank], 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -90,7 +90,7 @@ void mpi_alltoallv_(void *sendbuf, int *sendcounts, int *sdispls,
   for (int i = 0; i < size; i++) {
     if (sendcounts[i] > 0) {
       int payload_size = sizeof(struct op_recv_args) + sendcounts[i] * typesize;
-      hpx_parcel_t *p = hpx_parcel_acquire(payload_size);
+      hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
       hpx_parcel_set_action(p, action_alltoallv_recv);
       hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(i)));
       struct op_recv_args *args = (struct op_recv_args *)hpx_parcel_get_data(p);
@@ -101,7 +101,7 @@ void mpi_alltoallv_(void *sendbuf, int *sendcounts, int *sdispls,
       args->operation_type = OP_ALLTOALLV;
       args->msg_size = sendcounts[i] * typesize;
       memcpy((char*)args->msg_data, (char*)sendbuf + sdispls[i] * typesize, sendcounts[i] * typesize);
-      hpx_parcel_send(p);
+      hpx_parcel_send(p, HPX_NULL);
     }
   } // end for(i)
 
@@ -123,7 +123,7 @@ void mpi_alltoallv_(void *sendbuf, int *sendcounts, int *sdispls,
   }
 
   for (int i = 0; i < size; i++) {
-    hpx_lco_get(futs[i], NULL, 0);
+    hpx_lco_get(futs[i], 0, NULL);
   }
 
   error =  communicator_transaction_dict_complete(td, transaction_num);

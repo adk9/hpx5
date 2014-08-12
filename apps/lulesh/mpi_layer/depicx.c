@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     .cores = numos,
     .threads = numos,
     //    .stack_bytes = 2<<24
-    .gas = HPX_GAS_NOGLOBAL
+    .gas = HPX_GAS_PGAS
   };
 
   int error = hpx_init(&cfg);

@@ -46,13 +46,13 @@ int bcast_recv(void* vargs) {
 
   dbg_bcast_printf("n-- rank %d trnas %d about to wait on nic side future at %p in bcast_recv\n", args->rank, transaction_num, (void*)nicside_fut);
   void* datap;
-  hpx_lco_get(nicside_fut, &datap, sizeof(datap));
+  hpx_lco_get(nicside_fut, sizeof(datap), &datap);
   dbg_bcast_printf("n++ rank %d trans %d done waiting on nic side future at %p in bcast_recv\n", args->rank, transaction_num, (void*)nicside_fut);
 
   // copy data to destination and trigger userside future
   memcpy((char*)datap, args->msg_data, args->msg_size);
   dbg_bcast_printf("ns- rank %d trans %d about to set user side future in bcast_recv at %p - thread = %p kthread = %p\n", args->rank, transaction_num, (void*)userside_fut, (void*)th, (void*)kth);
-  hpx_lco_set(userside_fut, NULL, 0, HPX_NULL);
+  hpx_lco_set(userside_fut, 0, NULL, HPX_NULL, HPX_NULL);
   dbg_bcast_printf("ns+ rank %d trans %d set user side future in bcast_recv\n", args->rank, transaction_num);
   return HPX_SUCCESS;
 }
@@ -92,7 +92,7 @@ void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
       for (int i = 0; i < size; i++) {
           if (datacount > 0) {
               int payload_size = sizeof(struct op_recv_args) + datacount * typesize;
-              hpx_parcel_t *p = hpx_parcel_acquire(payload_size);
+              hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
               hpx_parcel_set_action(p, action_bcast_recv);
               hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(i)));
               struct op_recv_args *args = (struct op_recv_args *)hpx_parcel_get_data(p);
@@ -101,7 +101,7 @@ void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
               args->operation_type = OP_BCAST;
               args->msg_size = datacount * typesize;
               memcpy(args->msg_data, buffer, datacount * typesize);
-              hpx_parcel_send(p);
+              hpx_parcel_send(p, HPX_NULL);
           }
       } // end for(i)
   } // end if(root==rank)
@@ -116,7 +116,7 @@ void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
   }
 
   dbg_bcast_printf("u-- rank %d trans %d about to wait on user side future at %p in mpi_bcast_\n", rank, transaction_num, (void*)fut);
-  hpx_lco_get(fut, NULL, 0);
+  hpx_lco_get(fut, 0, NULL);
   dbg_bcast_printf("u++ rank %d trans %d done waiting on user side future at %p in mpi_bcast_\n", rank, transaction_num, (void*)fut);
 
   error =  communicator_transaction_dict_complete(td, transaction_num);
