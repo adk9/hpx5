@@ -69,7 +69,7 @@
 
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
-
+#include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -139,7 +139,7 @@ static void _allgather_error(lco_t *lco, hpx_status_t code)
 
 /// Get the value of the gathering, will wait if the phase is gathering.
 static hpx_status_t _allgather_get(lco_t *lco, int size, void *out)
-{
+{ 
   _allgather_t *g = (_allgather_t *)lco;
   lco_lock(lco);
 
@@ -152,6 +152,7 @@ static hpx_status_t _allgather_get(lco_t *lco, int size, void *out)
   if (status == HPX_SUCCESS) {
     if (size && out)
       memcpy(out, g->value, size);
+    _allgather_join(g);
   }
 
   lco_unlock(lco);
