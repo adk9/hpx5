@@ -134,6 +134,7 @@ static int _initDomain_action(InitArgs *init) {
   ld->refinelevel_min = init->refinelevel_min;
   ld->refinelevel_max = init->refinelevel_max;
   ld->rcb_sumint = init->rcb_sumint;
+  ld->initallgather = init->initallgather;
   ld->my_pe = init->rank;
   ld->num_pes = init->ndoms;
   int *params = init->params;
@@ -219,6 +220,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->code = params[31];
   ld->permute = params[32];
   ld->num_pes = params[33];
+
+  ld->colors = malloc(ld->num_pes*sizeof(int));
 
   ld->num_blocks = (int *) malloc((num_refine+1)*sizeof(int));
   ld->num_blocks[0] = num_pes*init_block_x*init_block_y*init_block_z;
@@ -427,6 +430,8 @@ static int _main_action(RunArgs *runargs)
                                            (hpx_commutative_associative_op_t)sumint,
                                            (void (*)(void *, const size_t size)) initint);
 
+  hpx_addr_t initallgather = hpx_lco_allgather_new(nDoms, sizeof(int));
+
   int i;
 
   // initialize an InitArgs structure with the data from the RunArgs
@@ -441,6 +446,7 @@ static int _main_action(RunArgs *runargs)
   args->refinelevel_max = refinelevel_max;
   args->refinelevel_min = refinelevel_min;
   args->rcb_sumint = rcb_sumint;
+  args->initallgather = initallgather;
   memcpy(&args->params, runargs->params, 34 * sizeof(int));
   args->objectsize = runargs->objectsize;
   memcpy(&args->objects, &runargs->objects,
@@ -460,7 +466,7 @@ static int _main_action(RunArgs *runargs)
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
   free(args);
-
+#if 0
   // Spawn the first epoch, _advanceDomain will recursively spawn each epoch.
   unsigned long epoch = 0;
 
@@ -472,7 +478,7 @@ static int _main_action(RunArgs *runargs)
   // And wait for each domain to reach the end of its simulation
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
-
+#endif
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g Num domains: %d\n",elapsed,nDoms);
   hpx_shutdown(0);
