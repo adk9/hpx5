@@ -214,6 +214,7 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
+  bench/Makefile
 ])
 # src/Makefile
 # src/libhpx.pc
