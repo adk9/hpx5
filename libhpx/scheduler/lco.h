@@ -54,7 +54,6 @@ struct lco_class {
   lco_wait_t   on_wait;
 };
 
-
 /// ----------------------------------------------------------------------------
 /// LCO operations merely operate on the bits of an lco vtable pointer.
 /// ----------------------------------------------------------------------------

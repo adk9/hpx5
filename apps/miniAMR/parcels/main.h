@@ -64,6 +64,7 @@ typedef struct {
   hpx_addr_t refinelevel_max;
   hpx_addr_t refinelevel_min;
   hpx_addr_t rcb_sumint;
+  hpx_addr_t initallgather;
   int params[34];
   int objectsize;
   int rank;
@@ -183,6 +184,7 @@ typedef struct Domain {
   hpx_addr_t refinelevel_max;
   hpx_addr_t refinelevel_min;
   hpx_addr_t rcb_sumint;
+  hpx_addr_t initallgather;
   int *num_blocks;
   int *local_num_blocks;
   block *blocks;
@@ -347,6 +349,7 @@ typedef struct Domain {
   int objectsize;
   object *objects;
   int cur_max_level;
+  int *colors;
 } Domain;
 
 typedef struct {

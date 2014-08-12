@@ -106,7 +106,8 @@ hpx_par_for(hpx_action_t action, const int min, const int max,
       hpx_parcel_set_action(p, action);
       hpx_parcel_set_cont_action(p, hpx_lco_set_action);
       hpx_parcel_set_cont_target(p, sync);
-      arg_init(hpx_parcel_get_data(p), i, env);
+      if (arg_init)
+        arg_init(hpx_parcel_get_data(p), i, env);
       hpx_parcel_send(p, HPX_NULL);
     }
   }
