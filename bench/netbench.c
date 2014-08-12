@@ -2,6 +2,7 @@
 #include <string.h>
 #include <hpx/hpx.h>
 
+#define DEFAULT_ITERS 1000
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
 
@@ -43,29 +44,53 @@ void send_pong(echo_args_t *args) {
 }
 
 int echo_pong_action(echo_args_t *args) {
-  printf("in echo pong\n");
   if (args->dst != hpx_get_my_rank())
     return HPX_ERROR;
   send_pong(args);
-  printf("pong sent\n");
   return HPX_SUCCESS;
 }
 
 int echo_finish_action(echo_args_t *args) {
-  printf("in echo finish\n");
-  hpx_lco_gencount_inc(args->lco, HPX_NULL);
+  //hpx_lco_gencount_inc(args->lco, HPX_NULL);
+  hpx_lco_and_set(args->lco, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 int hpx_main_action(void *args) {
+  if (hpx_get_num_ranks() < 2) {
+    printf("Too few ranks, need at least two.\n");
+    return HPX_ERROR;
+  }
+    
   size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024, 16*1024*1024};
-  hpx_addr_t lco = hpx_lco_gencount_new(sizeof(sizes));
-  for (int i = 0; i < sizeof(sizes); i++)
-    send_ping(lco, 0, 1, sizes[i]);
+  int num_sizes = sizeof(sizes)/sizeof(size_t);
+  //  hpx_addr_t lco = hpx_lco_gencount_new(num_sizes);
+  hpx_addr_t lco;
+  printf("size\ttime_ms\tmsgs/s\tbyets/s\n");
+  for (int i = 0; i < num_sizes; i++) {
+    size_t actual_size = sizes[i];
+    if (sizeof(echo_args_t) > sizes[i])
+      actual_size = sizeof(echo_args_t);
 
-  hpx_lco_gencount_wait(lco, sizeof(sizes));
+    lco = hpx_lco_and_new(DEFAULT_ITERS);
+    //lco = hpx_lco_gencount_new(DEFAULT_ITERS);
+    hpx_time_t time_start = hpx_time_now();
+    for (int j = 0; j < DEFAULT_ITERS; j++)
+      send_ping(lco, 0, 1, actual_size);   
+    // hpx_lco_gencount_wait(lco, DEFAULT_ITERS);
+    hpx_lco_wait(lco);
+    hpx_time_t time_end = hpx_time_now();
+    double time_in_ms = hpx_time_diff_ms(time_start, time_end);
+    printf("%zu\t%g\t%g\t%g\n", 
+	   actual_size, 
+	   time_in_ms,
+	   (DEFAULT_ITERS*1.0)/time_in_ms*1000.0,
+	   (DEFAULT_ITERS*1.0)/time_in_ms*1000.0*actual_size);
+    hpx_lco_delete(lco, HPX_NULL);
+  }
 
-  hpx_shutdown(0);
+  //hpx_shutdown(0);
+  return HPX_SUCCESS;
 }
 
 
@@ -76,11 +101,11 @@ int main(int argc, char *argv[]) {
   hpx_action_t hpx_main = HPX_REGISTER_ACTION(hpx_main_action);
 
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.wait = HPX_WAIT;
-  cfg.wait_at = 0;
+  //  cfg.wait = HPX_WAIT;
+  //cfg.wait_at = 0;
   hpx_init(&cfg);
 
-  hpx_run(hpx_main, NULL, 0);
-
+  int e = hpx_run(hpx_main, NULL, 0);
+  printf("Finished with succes %d\n", e);
   return 0;
 }
