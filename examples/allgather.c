@@ -100,11 +100,16 @@ _advanceDomain_action(const unsigned long *epoch)
 
 
   // Get the gathered value, and print the debugging string.
-  double newdt;
-  hpx_lco_get(domain->newdt, sizeof(double), &newdt);
-  printf(" TEST cycle %d rank %d newdt %g\n", domain->cycle, domain->rank,
-         newdt);
-
+  double *newdt;
+  newdt = malloc(domain->nDoms*sizeof(double));
+  hpx_lco_get(domain->newdt, domain->nDoms*sizeof(double), newdt);
+  
+  printf("TEST cycle %d rank %d newgt = ", domain->cycle, domain->rank);
+  for(int i=0; i<domain->nDoms; i++)
+    printf(" %g ", newdt[i]);
+  printf("\n");
+  
+  free(newdt);
   ++domain->cycle;
   const unsigned long next = *epoch + 1;
   return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
@@ -171,7 +176,7 @@ main(int argc, char * const argv[argc])
   // allocate the default argument structure on the stack
   main_args_t args = {
     .nDoms = 8,
-    .maxCycles = 10,
+    .maxCycles = 1,
     .cores = 8
   };
 
@@ -206,9 +211,6 @@ main(int argc, char * const argv[argc])
       break;
      case 'n':
       args.nDoms = atoi(optarg);
-      break;
-     case 'i':
-      args.maxCycles = atoi(optarg);
       break;
      case 'h':
       _usage(stdout, 0);
