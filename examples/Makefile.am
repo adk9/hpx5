@@ -1,12 +1,13 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS    = fibonacci pingpong allreduce countdown seqspawn \
+examples_PROGRAMS    = fibonacci pingpong allgather allreduce countdown seqspawn \
                        parspawn future agas_test memput memget guppie sendrecv\
                        sendrecv-chan allreduce-chan pingpong-chan hello
 
 hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
+allgather_SOURCES       = allgather.c
 allreduce_SOURCES       = allreduce.c
 countdown_SOURCES       = countdown.c
 seqspawn_SOURCES        = seqspawn.c
@@ -21,8 +22,8 @@ sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
 pingpong_chan_SOURCES   = pingpong-chan.c
 
-AM_CPPFLAGS          = -I$(top_srcdir)/include
-AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
+AM_CPPFLAGS          = -D_GNU_COURCE -I$(top_srcdir)/include
+AM_CFLAGS            = -std=c99 -g $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 AM_LDFLAGS          = -static $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_HWLOC
