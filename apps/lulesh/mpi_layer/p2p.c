@@ -30,10 +30,10 @@ int send_remote(void* vargs) {
 #endif
 
   struct mpi_request_ *req = NULL;
-  hpx_lco_get(msg->nicside_fut, &req, sizeof(req));
+  hpx_lco_get(msg->nicside_fut, sizeof(req), &req);
 
   memcpy((char*)req->buf, (char*)msg->msg_data, msg->msg_size);
-  hpx_lco_set(req->fut, NULL, 0, HPX_NULL);
+  hpx_lco_set(req->fut, 0, NULL, HPX_NULL, HPX_NULL);
 
   return HPX_SUCCESS;
 }
@@ -56,7 +56,7 @@ int mpi_isend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
   static int scount = 0;
   req->fut = hpx_lco_future_new(0);
   mpi_send_(buf, &count, &datatype, &dest, &tag, &comm);
-  hpx_lco_set(req->fut, NULL, 0, HPX_NULL);
+  hpx_lco_set(req->fut, 0, NULL, HPX_NULL, HPX_NULL);
 
   log_p2p_end(record);
   return MPI_SUCCESS_;
@@ -94,7 +94,7 @@ void mpi_send_(void *buf, int *count, MPI_Datatype *fsendtype, int *dest, int *t
     return;
 
   int payload_size = sizeof(struct p2p_msg) + *count * typesize;
-  hpx_parcel_t *p = hpx_parcel_acquire(payload_size);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
   hpx_parcel_set_action(p, action_send_remote);
   hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(*dest)));
   struct p2p_msg *args = (struct p2p_msg *)hpx_parcel_get_data(p);
@@ -105,7 +105,7 @@ void mpi_send_(void *buf, int *count, MPI_Datatype *fsendtype, int *dest, int *t
   args->trans_num = transaction_num;
   args->msg_size = *count * typesize;
   memcpy((char*)args->msg_data, (char*)buf, *count * typesize);
-  hpx_parcel_send(p);
+  hpx_parcel_send(p, HPX_NULL);
 }
 
 // ====================================
@@ -183,7 +183,7 @@ int do_wait(struct mpi_request_ *req, MPI_Status *status) {
   int rank;
   mpi_comm_rank(MPI_COMM_WORLD_, &rank);
   if (req->active == true)
-    hpx_lco_get(req->fut, NULL, 0);
+    hpx_lco_get(req->fut, 0, NULL);
   req->active = false;
 
   return MPI_SUCCESS_;
@@ -227,7 +227,7 @@ void mpi_waitall(int pcount,MPI_Request *request_num, MPI_Status *status) {
       match_message(req->comm, &success);
 #endif
       if (req->active == true)
-  hpx_lco_get(req->fut, NULL, 0);
+	hpx_lco_get(req->fut, 0, NULL);
       req->active = false;
 
       log_p2p_end(record);

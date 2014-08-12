@@ -54,7 +54,7 @@ int gatherv_recv(void* vargs) {
     return -1;
   dbg_gatherv_printf("n-- rank %d trans %d from %d about to wait on nic side future at %p in gatherv_recv\n", args->dest_rank,  args->trans_num, args->src_rank, (void*)nicside_fut);
   struct gatherv_recv_args *gatherv_args;
-  hpx_lco_get(nicside_fut, (void*)&gatherv_args, sizeof(gatherv_args))
+  hpx_lco_get(nicside_fut, sizeof(gatherv_args), (void*)&gatherv_args)
   dbg_gatherv_printf("n++ rank %d trans %d from %d done waiting on nic side future at %p in gatherv_recv\n", args->dest_rank, args->trans_num, args->src_rank, (void*)nicside_fut);
 
   // copy data to destination and trigger userside future
@@ -62,7 +62,7 @@ int gatherv_recv(void* vargs) {
   memcpy((char*)gatherv_args->recv_buffer + gatherv_args->displs[args->src_rank] * gatherv_args->typesize,
                            args->msg_data, args->msg_size);
   dbg_gatherv_printf("ns- rank %d trans %d from %d about to set gatherv future at %p (%p) in gatherv_recv - thread = %p kthread = %p\n", args->dest_rank, args->trans_num, args->src_rank, (void*)&gatherv_args->futs[args->src_rank], (void*)gatherv_args->futs, (void*)th, (void*)kth);
-  hpx_lco_set(gatherv_args->futs[args->src_rank], NULL, 0, HPX_NULL);
+  hpx_lco_set(gatherv_args->futs[args->src_rank], 0, NULL, HPX_NULL, HPX_NULL);
   dbg_gatherv_printf("ns+ rank %d trans %d from %d set gatherv future at %p (%p) in gatherv_recv\n", args->dest_rank, args->trans_num, args->src_rank, (void*)&gatherv_args->futs[args->src_rank], (void*)gatherv_args->futs);
   return HPX_SUCCESS;
 }
@@ -102,7 +102,7 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
 
   if (*fsendcounts > 0) {
     int payload_size = sizeof(struct op_recv_args) + *fsendcounts * typesize;
-    hpx_parcel_t *p = hpx_parcel_acquire(payload_size);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
     hpx_parcel_set_action(p, action_gatherv_recv);
     hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(root)));
     struct op_recv_args *args = (struct op_recv_args *)hpx_parcel_get_data(p);
@@ -113,7 +113,7 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
     args->operation_type = OP_GATHERV;
     args->msg_size = *fsendcounts * typesize;
     memcpy(args->msg_data, sendbuf, *fsendcounts * typesize);
-    hpx_parcel_send(p);
+    hpx_parcel_send(p, HPX_NULL);
   }
 
   if (rank == root) {
@@ -136,7 +136,7 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
 
     for (int i = 0; i < size; i++) {
       dbg_gatherv_printf("u-- rank %d trans %d about to wait on gatherv future %d of %d at %p (%p) in mpi_gatherv_\n", rank, transaction_num, i, size, (void*)&futs[i], (void*)futs);
-      hpx_lco_get(futs[i], NULL, 0);
+      hpx_lco_get(futs[i], 0, NULL);
       dbg_gatherv_printf("u++ rank %d trans %d done waiting on gatherv future %d of %d at %p (%p) in mpi_gatherv_\n", rank, transaction_num, i, size, (void*)&futs[i], (void*)futs);
     }
 

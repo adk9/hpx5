@@ -51,7 +51,7 @@ int hpxmain_action(void *vargs) {
     k++;
   }
   for (int i = 0; i < 2; i++)
-    hpx_lco_get(done_futs[i], NULL, 0);
+    hpx_lco_get(done_futs[i], 0, NULL);
   // hpx_lco_get_all(2, done_futs, NULL, 0); // this does not work
 
   double elapsed = hpx_elapsed_us(ts);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
   //fflush(stdout);
   //  sleep(8);
 
-  hpx_config_t cfg = {0, 0, 0};
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS; //{0, 0, 0};
 
   if ( argc < 3 ) {
     printf(" Usage: test <number of OS threads> <number of rounds>\n");
