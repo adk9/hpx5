@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <hpx/hpx.h>
 
-#define DEFAULT_ITERS 1000
+#define DEFAULT_ITERS 10
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
 
@@ -45,7 +46,7 @@ void send_pong(echo_args_t *args) {
 
 int echo_pong_action(echo_args_t *args) {
   if (args->dst != hpx_get_my_rank())
-    return HPX_ERROR;
+    hpx_shutdown(-1);
   send_pong(args);
   return HPX_SUCCESS;
 }
@@ -62,7 +63,7 @@ int hpx_main_action(void *args) {
     return HPX_ERROR;
   }
     
-  size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024, 16*1024*1024};
+  size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024};
   int num_sizes = sizeof(sizes)/sizeof(size_t);
   //  hpx_addr_t lco = hpx_lco_gencount_new(num_sizes);
   hpx_addr_t lco;
@@ -96,6 +97,13 @@ int hpx_main_action(void *args) {
 
 
 int main(int argc, char *argv[]) {
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  sleep(12);
+
+
   echo_pong = HPX_REGISTER_ACTION(echo_pong_action);
   echo_finish = HPX_REGISTER_ACTION(echo_finish_action);
   hpx_action_t hpx_main = HPX_REGISTER_ACTION(hpx_main_action);
