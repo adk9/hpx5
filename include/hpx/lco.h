@@ -390,14 +390,19 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
                                      hpx_addr_t rsync);
 
 
+/// Set an allgather.
+///
+/// Currently, in order to reuse the allgather LCO across multiple iterations,
+/// you must wait for remote completion of the set operation. The @p size should
+/// be the size of one input slot.
+hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
+                                     int size, const void *value,
+                                     hpx_addr_t lsync, hpx_addr_t rsync);
 
-
-
-hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
-                                     size, const void *value, hpx_addr_t lsync,
-                                     hpx_addr_t rsync);
+/// Allocate an allgather.
+///
+/// This allocates an allgather LCO with enough space for @p inputs of @p size.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
-
 
 
 /// @}
