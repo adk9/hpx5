@@ -43,22 +43,6 @@ typedef struct {
   void                         *value;     // out-of-place for alignment reasons
 } _allreduce_t;
 
-
-/// This utility reduces the count of waiting
-static int
-_allreduce_join(_allreduce_t *r)
-{
-  assert(r->count != 0);
-
-  if (--r->count > 0)
-    return 0;
-
-  r->phase = 1 - r->phase;
-  r->count = r->participants;
-  scheduler_signal_all(&r->wait);
-  return 1;
-}
-
 /// Deletes a reduction.
 static void
 _allreduce_fini(lco_t *lco)
@@ -87,16 +71,29 @@ _allreduce_error(lco_t *lco, hpx_status_t code)
 static void
 _allreduce_set(lco_t *lco, int size, const void *from)
 {
+  hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
 
   // wait until we're reducing, then perform the op() and join the reduction
-  while (r->phase != _reducing)
-    scheduler_wait(&lco->lock, &r->wait);
-  r->op(r->value, from, size);
-  _allreduce_join(r);
+  while ((r->phase != _reducing) && (status == HPX_SUCCESS))
+    status = scheduler_wait(&lco->lock, &r->wait);
+  
+  if(status != HPX_SUCCESS)
+    goto unlock;
 
-  lco_unlock(lco);
+  //perform the op() 
+  assert(size && from);
+  r->op(r->value, from, size);
+
+  // if we're the last one to arrive, switch the phase and signal readers.
+  if(--r->count == 0) {
+    r->phase = _reading;
+    scheduler_signal_all(&r->wait);
+  }
+
+  unlock:
+   lco_unlock(lco);
 }
 
 
@@ -105,23 +102,39 @@ static hpx_status_t
 _allreduce_get(lco_t *lco, int size, void *out)
 {
   _allreduce_t *r = (_allreduce_t *)lco;
+  hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-
-  hpx_status_t status = cvar_get_error(&r->wait);
 
   // wait until we're reading, then read the value and join the reduction
   while ((r->phase != _reading) && (status == HPX_SUCCESS))
     status = scheduler_wait(&lco->lock, &r->wait);
 
+  // If there was an error signal, unlock and return it.
+  if(status != HPX_SUCCESS)
+    goto unlock;
+
   if (status == HPX_SUCCESS) {
     if (size && out)
       memcpy(out, r->value, size);
-    if (_allreduce_join(r))
+
+    // update the count, if I'm the last reader to arrive, switch the mode and
+    // release all of the other readers, otherwise wait for the phase to change
+    // back to reducing---this blocking behavior prevents gets from one "epoch"
+    // to satisfy earlier _reading epochs
+    if(++r->count == r->participants) {
+      r->phase = _reducing;
+      scheduler_signal_all(&r->wait);
       r->init(r->value, size);
+    }
+    else {
+      while ((r->phase == _reading) && (status == HPX_SUCCESS))
+        status = scheduler_wait(&r->lco.lock, &r->wait);
+    }
   }
 
-  lco_unlock(lco);
-  return status;
+  unlock:
+   lco_unlock(lco);
+   return status;
 }
 
 
