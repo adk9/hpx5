@@ -92,18 +92,10 @@ _advanceDomain_action(const unsigned long *epoch)
     return HPX_SUCCESS;
   }
 
-  // Compute my gnewdt, and then start the allgather---we can't do this in a
-  // non-blocking way at the moment, because it causes problems if we have a
-  // proxy set waiting and we issue a get operation.
-  //
-  // NB: We should implement the setid operation in a way that relaxes this
-  //     restriction.
-  hpx_addr_t complete = hpx_lco_future_new(0);
+  // Compute my gnewdt, and then start the allgather
   double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
   hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt,
-                          HPX_NULL, complete);
-  hpx_lco_wait(complete);
-  hpx_lco_delete(complete, HPX_NULL);
+                          HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print the debugging string.
   double newdt[domain->nDoms];

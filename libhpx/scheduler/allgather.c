@@ -85,12 +85,12 @@ static const int _gathering = 0;
 static const int _reading   = 1;
 
 typedef struct {
-  lco_t                           lco;
-  cvar_t                         wait;
-  size_t                 participants;
-  size_t                        count;
-  int                  phase;
-  void                         *value;
+  lco_t           lco;
+  cvar_t         wait;
+  size_t participants;
+  size_t        count;
+  volatile int  phase;
+  void         *value;
 } _allgather_t;
 
 
@@ -99,21 +99,7 @@ typedef struct {
   char buffer[];
 } _allgather_set_offset_t;
 
-static hpx_action_t _allgather_setid_gen_action = 0;
-
-/// This utility gathers the count of waiting
-static int
-_allgather_join(_allgather_t *g)
-{
-  assert(g->count != 0);
-
-  if (--g->count > 0) {
-    return 0;
-  }
-  g->phase = 1 - g->phase;
-  g->count = g->participants;
-  return 1;
-}
+static hpx_action_t _allgather_setid_action = 0;
 
 /// Deletes a gathering.
 static void _allgather_fini(lco_t *lco)
@@ -137,30 +123,46 @@ static void _allgather_error(lco_t *lco, hpx_status_t code)
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
-static hpx_status_t _allgather_get(lco_t *lco, int size, void *out)
+static hpx_status_t
+_allgather_get(lco_t *lco, int size, void *out)
 {
   _allgather_t *g = (_allgather_t *)lco;
+  hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
-  hpx_status_t status = cvar_get_error(&g->wait);
-
-  // wait until we're reading, then read the value and join the gathering
+  // wait until we're reading, and watch for errors
   while ((g->phase != _reading) && (status == HPX_SUCCESS))
     status = scheduler_wait(&g->lco.lock, &g->wait);
 
-  if (status == HPX_SUCCESS) {
-    if (size && out)
-      memcpy(out, g->value, size);
-    if (_allgather_join(g))
-      scheduler_signal_all(&g->wait);
+  // if there was an error signal, unlock and return it
+  if (status != HPX_SUCCESS)
+    goto unlock;
+
+  // we're in a reading phase, if the user wants the data, copy it out
+  if (size && out)
+    memcpy(out, g->value, size);
+
+  // update the count, if I'm the last reader to arrive, switch the mode and
+  // release all of the other readers, otherwise wait for the phase to change
+  // back to gathering---this blocking behavior prevents gets from one "epoch"
+  // to satisfy earlier _reading epochs
+  if (++g->count == g->participants) {
+    g->phase = _gathering;
+    scheduler_signal_all(&g->wait);
+  }
+  else {
+    while ((g->phase == _reading) && (status == HPX_SUCCESS))
+      status = scheduler_wait(&g->lco.lock, &g->wait);
   }
 
+ unlock:
   lco_unlock(lco);
   return status;
 }
 
 // Wait for the gathering, loses the value of the gathering for this round.
-static hpx_status_t _allgather_wait(lco_t *lco)
+static hpx_status_t
+_allgather_wait(lco_t *lco)
 {
   return _allgather_get(lco, 0, NULL);
 }
@@ -172,17 +174,24 @@ _allgather_setid(_allgather_t *g, unsigned offset, int size, const void* buffer)
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&g->lco);
 
-  // wait until we're gathering, then perform the setid()
-  // and join the gathering
+  // wait until we're gathering
   while ((g->phase != _gathering) && (status == HPX_SUCCESS))
     status = scheduler_wait(&g->lco.lock, &g->wait);
 
-  if (status == HPX_SUCCESS) {
-    memcpy((char*)g->value + (offset * size), buffer, size);
-    if (_allgather_join(g))
-      scheduler_signal_all(&g->wait);
+  if (status != HPX_SUCCESS)
+    goto unlock;
+
+  // copy in our chunk of the data
+  assert(size && buffer);
+  memcpy((char*)g->value + (offset * size), buffer, size);
+
+  // if we're the last one to arrive, switch the phase and signal readers
+  if (--g->count == 0) {
+    g->phase = _reading;
+    scheduler_signal_all(&g->wait);
   }
 
+ unlock:
   lco_unlock(&g->lco);
   return status;
 }
@@ -211,7 +220,7 @@ hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int size,
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, args_size);
     assert(p);
     hpx_parcel_set_target(p, allgather);
-    hpx_parcel_set_action(p, _allgather_setid_gen_action);
+    hpx_parcel_set_action(p, _allgather_setid_action);
     hpx_parcel_set_cont_target(p, rsync);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
@@ -232,7 +241,7 @@ hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int size,
 }
 
 
-static hpx_status_t _allgather_setid_gen_proxy(void *args)
+static hpx_status_t _allgather_setid_proxy(void *args)
 {
   // try and pin the allgather LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
@@ -254,7 +263,7 @@ static hpx_status_t _allgather_setid_gen_proxy(void *args)
 static HPX_CONSTRUCTOR void
 _initialize_actions(void)
 {
-  _allgather_setid_gen_action = HPX_REGISTER_ACTION(_allgather_setid_gen_proxy);
+  _allgather_setid_action = HPX_REGISTER_ACTION(_allgather_setid_proxy);
 }
 
 /// Update the gathering, will wait if the phase is reading.
