@@ -22,9 +22,27 @@ sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
 pingpong_chan_SOURCES   = pingpong-chan.c
 
+hello_LDADD             = $(top_builddir)/libhpx/libhpx.la
+fibonacci_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+pingpong_LDADD        =  $(top_builddir)/libhpx/libhpx.la
+allgather_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+allreduce_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+countdown_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+seqspawn_LDADD        =  $(top_builddir)/libhpx/libhpx.la
+parspawn_LDADD        =  $(top_builddir)/libhpx/libhpx.la
+future_LDADD          =  $(top_builddir)/libhpx/libhpx.la
+agas_test_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+memput_LDADD          =  $(top_builddir)/libhpx/libhpx.la
+memget_LDADD          =  $(top_builddir)/libhpx/libhpx.la
+guppie_LDADD          =  $(top_builddir)/libhpx/libhpx.la
+sendrecv_LDADD        =  $(top_builddir)/libhpx/libhpx.la
+sendrecv_chan_LDADD   =  $(top_builddir)/libhpx/libhpx.la
+allreduce_chan_LDADD  =  $(top_builddir)/libhpx/libhpx.la
+pingpong_chan_LDADD   = $(top_builddir)/libhpx/libhpx.la
+
 AM_CPPFLAGS          = -D_GNU_COURCE -I$(top_srcdir)/include
 AM_CFLAGS            = -std=c99 -g $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
-AM_LDFLAGS          = -static $(top_builddir)/libhpx/libhpx.la
+
 
 if HAVE_HWLOC
 AM_CFLAGS           += @HWLOC_CFLAGS@
@@ -36,7 +54,7 @@ endif
 
 if HAVE_PHOTON
 AM_CFLAGS           += @PHOTON_CFLAGS@
-AM_LDFLAGS          += -lphoton -ljemalloc
+AM_LDFLAGS          = -lphoton -ljemalloc
 endif
 
 if HAVE_MPI
