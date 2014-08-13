@@ -272,7 +272,6 @@ _allgather_set(lco_t *lco, int size, const void *from)
 {
   // can't call set on an allgather
   hpx_abort();
-  //
 }
 
 static void _allgather_init(_allgather_t *g, size_t participants,
