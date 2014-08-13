@@ -381,23 +381,28 @@ hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t size,
                                  hpx_commutative_associative_op_t op,
                                  void (*initializer)(void *, const size_t bytes));
 
+/// Set an allgather.
+///
+/// The allgather LCO hpx_lco_set operation does not work correctly, because
+/// there is no input variable. Use this setid operation instead of set.
+///
+/// @param allgather The allgather we're setting.
+/// @param id        The ID of our rank.
+/// @param size      The size of the input @p value.
+/// @param value     A pointer to @p size bytes to set with.
+/// @param lsync     An LCO to test for local completion.
+/// @param rsync     An LCO to test for remote completion.
+hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
+                                     int size, const void *value,
+                                     hpx_addr_t lsync, hpx_addr_t rsync);
 
-hpx_addr_t hpx_lco_allgather_new(size_t participants, size_t size);
-
-
-hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
-                                     size, const void *value, hpx_addr_t lsync,
-                                     hpx_addr_t rsync);
-
-
-
-
-
-hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int
-                                     size, const void *value, hpx_addr_t lsync,
-                                     hpx_addr_t rsync);
+/// Allocate an allgather.
+///
+/// This allocates an allgather LCO with enough space for @p inputs of @p size.
+///
+/// @param inputs The number of participants in the allgather.
+/// @param size   The size of the value type that we're gathering.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
-
 
 
 /// @}

@@ -41,7 +41,7 @@ static hpx_action_t _advanceDomain = 0;
 
 static void
 _usage(FILE *f, int error) {
-  fprintf(f, "Usage: ./example [options]\n"
+  fprintf(f, "Usage: ./example [options] [CYCLES]\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
           "\t-s, stack size in bytes\n"
@@ -74,14 +74,13 @@ _initDomain_action(const InitArgs *args)
 
   hpx_gas_unpin(local);
 
-  printf("Initialized domain %u\n", args->index);
-
+  fflush(stdout);
   return HPX_SUCCESS;
 }
 
 static int
 _advanceDomain_action(const unsigned long *epoch)
-{ 
+{
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
   if (!hpx_gas_try_pin(local, (void**)&domain))
@@ -89,27 +88,19 @@ _advanceDomain_action(const unsigned long *epoch)
 
   if (domain->maxcycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
-    printf("Finished processing %lu epochs at domain %u\n", *epoch, domain->rank);
     hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
   // Compute my gnewdt, and then start the allgather
   double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
-  hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
-
+  hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt,
+                          HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print the debugging string.
-  double *newdt;
-  newdt = malloc(domain->nDoms*sizeof(double));
-  hpx_lco_get(domain->newdt, domain->nDoms*sizeof(double), newdt);
-  
-  printf("TEST cycle %d rank %d newgt = ", domain->cycle, domain->rank);
-  for(int i=0; i<domain->nDoms; i++)
-    printf(" %g ", newdt[i]);
-  printf("\n");
-  
-  free(newdt);
+  double newdt[domain->nDoms];
+  hpx_lco_get(domain->newdt, sizeof(newdt), &newdt);
+
   ++domain->cycle;
   const unsigned long next = *epoch + 1;
   return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
@@ -139,7 +130,7 @@ allgather_main_action(const main_args_t *args)
       .maxcycles = args->maxCycles,
       .cores = args->cores,
       .complete = complete,
-      .newdt = newdt                  
+      .newdt = newdt
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
     hpx_call(block, _initDomain, &init, sizeof(init), done);
@@ -148,14 +139,17 @@ allgather_main_action(const main_args_t *args)
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
+  fflush(stdout);
+
   const unsigned long epoch = 0;
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
   }
+
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
-  
+
   hpx_gas_global_free(domain, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -224,6 +218,21 @@ main(int argc, char * const argv[argc])
   int err = hpx_init(&cfg);
   if (err)
     return err;
+
+  argc -= optind;
+  argv += optind;
+
+  switch (argc) {
+   case 1:
+    args.maxCycles = atoi(argv[0]);
+    break;
+   case 0:
+    break;
+   default:
+    _usage(stderr, -1);
+    return -1;
+  }
+
 
   // register HPX actions
   allgather_init_actions();
