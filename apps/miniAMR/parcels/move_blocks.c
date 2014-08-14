@@ -403,8 +403,7 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
    /* swap blocks - if space is tight, may take multiple passes */
    j = 0;
    do {
-      // FIXME
-      //exchange(tp, tm, tu);
+      exchange(tp, tm, tu,ld,epoch,iter);
       for (n1 = i = 0; i < ld->num_pes; i++)
          n1 += ld->from[i];
 
