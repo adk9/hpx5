@@ -492,8 +492,10 @@ void init_amr(Domain *ld)
       set = ld->me[n]/num;
     // FIXME
     // Allgather/sort here
-    //hpx_lco_allgather_setid(ld->initallgather, ld->my_pe, sizeof(int), &set, HPX_NULL, HPX_NULL);
-    //hpx_lco_get(ld->initallgather, ld->num_pes*sizeof(int), ld->colors);
+    printf(" TEST A %d\n",ld->my_pe);
+    hpx_lco_allgather_setid(ld->initallgather, ld->my_pe, sizeof(int), &set, HPX_NULL, HPX_NULL);
+    hpx_lco_get(ld->initallgather, ld->num_pes*sizeof(int), ld->colors);
+    printf(" TEST B %d\n",ld->my_pe);
     //  MPI_Comm_split(comms[n], set, me[n], &comms[n+1]);
     //  MPI_Comm_rank(comms[n+1], &me[n+1]);
     //  MPI_Comm_size(comms[n+1], &np[n+1]);
