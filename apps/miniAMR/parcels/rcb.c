@@ -3,6 +3,7 @@
 
 void exchange(double *tp, double *tm, double *tu,Domain *ld, unsigned long epoch,int *iter)
 {
+#if 0
    int f, s, sp, fp, i, j[25], k, l, rb, lev, nfac, block_size, par[25], start[25];
    hpx_time_t t1;
    double t2, t3, t4;
@@ -34,4 +35,5 @@ void exchange(double *tp, double *tm, double *tu,Domain *ld, unsigned long epoch
 
             }
 
+#endif
 }
