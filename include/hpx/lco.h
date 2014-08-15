@@ -405,6 +405,40 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
 
 
+/// Set an alltoall.
+///
+/// The alltoall LCO hpx_lco_set operation does not work correctly, because
+/// there is no input variable. Use this setid operation instead of set.
+///
+/// @param alltoall    The alltoall we're setting.
+/// @param id          The ID of our rank.
+/// @param size        The size of the input @p value.
+/// @param value       A pointer to @p size bytes to set with.
+/// @param lsync       An LCO to test for local completion.
+/// @param rsync       An LCO to test for remote completion.
+hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
+                                    int size, const void *value, 
+                                    hpx_addr_t lsync, hpx_addr_t rsync);
+
+/// Get the ID for alltoall. This is global getid for the user to use.
+///
+/// @param   alltoall    Global address of the alltoall LCO
+/// @param   id          The ID of our rank
+/// @param   size        The size of the data being gathered
+/// @param   value       Address of the value buffer
+hpx_status_t
+hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size, 
+                       void *value);
+
+/// Allocate an alltoall.
+///
+/// This allocates an alltoall LCO with enough space for @p inputs of @p size.
+///
+/// @param inputs The number of participants in the alltoall.
+/// @param size   The size of the value type that we're gathering.
+hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
+
+
 /// @}
 
 #endif
