@@ -115,6 +115,7 @@ int mpi_gather(void *sendbuf, int sendcounts,
 #define MPI_Allreduce mpi_allreduce
 #define MPI_Reduce mpi_reduce
 #define MPI_Gather mpi_gather
+#define MPI_Wtime mpi_wtime
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
