@@ -221,6 +221,7 @@ AC_CONFIG_FILES([
 
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
+  apps/mpi/Makefile
   apps/fmm/Makefile
   apps/fmm/parcels/Makefile
   apps/lulesh/Makefile
