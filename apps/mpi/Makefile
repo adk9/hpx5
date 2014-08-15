@@ -1,7 +1,7 @@
 CC = mpicc
-CFLAGS = -g -Wall -pedantic
+CFLAGS = -g -Wall #-pedantic
 INCLUDES = -I/home/manderson/hpx5_gitlab/include
-LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx
+LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx -lrt
 
 SRC = $(shell ls *.c)
 OBJ = $(SRC:.c=.o)

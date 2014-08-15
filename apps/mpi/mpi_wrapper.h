@@ -97,6 +97,10 @@ void mpi_comm_size(int *comm, int*size);
 int mpi_init(int *argc, char*** argv);
 int mpi_finalize();
 
+int mpi_gather(void *sendbuf, int sendcounts,
+                   MPI_Datatype sendtype, void *recvbuf, int recvcounts,
+                   MPI_Datatype recvtype, int root, MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -110,6 +114,7 @@ int mpi_finalize();
 #define MPI_Waitall mpi_waitall
 #define MPI_Allreduce mpi_allreduce
 #define MPI_Reduce mpi_reduce
+#define MPI_Gather mpi_gather
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
