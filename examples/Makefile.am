@@ -1,13 +1,16 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS    = fibonacci pingpong allgather allreduce countdown seqspawn \
-                       parspawn future agas_test memput memget guppie sendrecv\
-                       sendrecv-chan allreduce-chan pingpong-chan hello
+examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
+                       countdown seqspawn parspawn future agas_test memput \
+                       memget guppie sendrecv sendrecv-chan allreduce-chan \
+                       pingpong-chan hello alltoall
 
 hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
 allgather_SOURCES       = allgather.c
+allreduce_bench_SOURCES = allreduce-bench.c
+alltoall_SOURCES        = alltoall.c
 allreduce_SOURCES       = allreduce.c
 countdown_SOURCES       = countdown.c
 seqspawn_SOURCES        = seqspawn.c
@@ -26,6 +29,8 @@ hello_LDADD             = $(top_builddir)/libhpx/libhpx.la
 fibonacci_LDADD       =  $(top_builddir)/libhpx/libhpx.la
 pingpong_LDADD        =  $(top_builddir)/libhpx/libhpx.la
 allgather_LDADD       =  $(top_builddir)/libhpx/libhpx.la
+allreduce_bench_LDADD =  $(top_builddir)/libhpx/libhpx.la
+alltoall_LDADD        =  $(top_builddir)/libhpx/libhpx.la
 allreduce_LDADD       =  $(top_builddir)/libhpx/libhpx.la
 countdown_LDADD       =  $(top_builddir)/libhpx/libhpx.la
 seqspawn_LDADD        =  $(top_builddir)/libhpx/libhpx.la

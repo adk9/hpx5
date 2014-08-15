@@ -33,9 +33,9 @@ typedef struct {
   hpx_addr_t newdt;
 } InitArgs;
 
-int allgather_main_action(const main_args_t *args);
+int allreduce_main_action(const main_args_t *args);
 
-void allgather_init_actions(void);
+void allreduce_init_actions(void);
 static hpx_action_t _initDomain = 0;
 static hpx_action_t _advanceDomain = 0;
 
@@ -54,6 +54,18 @@ _usage(FILE *f, int error) {
   exit(error);
 }
 
+/// Initialize a double zero.
+static void
+_initDouble(double *input)
+{
+  *input = 0;
+}
+
+/// Update *lhs with with the max(lhs, rhs);
+static void
+_maxDouble(double *lhs, const double *rhs) {
+  *lhs = (*lhs > *rhs) ? *lhs : *rhs;
+}
 
 static int
 _initDomain_action(const InitArgs *args)
@@ -88,25 +100,20 @@ _advanceDomain_action(const unsigned long *epoch)
 
   if (domain->maxcycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
+    printf("Finished processing %lu epochs at domain %u\n", *epoch, domain->rank);
     hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
-  // Compute my gnewdt, and then start the allgather
+  // Compute my gnewdt, and then start the allreduce
   double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
-  hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt,
-                          HPX_NULL, HPX_NULL);
+  hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print the debugging string.
-  double newdt[domain->nDoms];
-  hpx_lco_get(domain->newdt, sizeof(newdt), &newdt);
-
-  /*
-  printf("TEST Cycle %d rank %d newdt = ", domain->cycle, domain->rank);
-  for(int i=0; i < domain->nDoms; i++)
-     printf(" %g ", newdt[i]);
-  printf("\n");
-  */
+  double newdt;
+  hpx_lco_get(domain->newdt, sizeof(double), &newdt);
+  printf(" TEST cycle %d rank %d newdt %g\n", domain->cycle, domain->rank,
+         newdt);
 
   ++domain->cycle;
   const unsigned long next = *epoch + 1;
@@ -114,7 +121,7 @@ _advanceDomain_action(const unsigned long *epoch)
 }
 
 int
-allgather_main_action(const main_args_t *args)
+allreduce_main_action(const main_args_t *args)
 {
   hpx_time_t t1 = hpx_time_now();
 
@@ -126,9 +133,10 @@ allgather_main_action(const main_args_t *args)
   hpx_addr_t done = hpx_lco_and_new(args->nDoms);
   hpx_addr_t complete = hpx_lco_and_new(args->nDoms);
 
-  // Call the allgather function here.
-  hpx_addr_t newdt = hpx_lco_allgather_new(args->nDoms, sizeof(double));
-
+  // Call the allreduce function here.
+  hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)_maxDouble,
+                                           (void (*)(void *, const size_t size)) _initDouble);
 
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     InitArgs init = {
@@ -165,7 +173,7 @@ allgather_main_action(const main_args_t *args)
 
 /// Register the actions that we need.
 void
-allgather_init_actions(void)
+allreduce_init_actions(void)
 {
   _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
@@ -242,10 +250,10 @@ main(int argc, char * const argv[argc])
 
 
   // register HPX actions
-  allgather_init_actions();
+  allreduce_init_actions();
 
   // register the main action
-  hpx_action_t _main = HPX_REGISTER_ACTION(allgather_main_action);
+  hpx_action_t _main = HPX_REGISTER_ACTION(allreduce_main_action);
 
   // run HPX (this copies the args structure)
   return hpx_run(_main, &args, sizeof(args));
