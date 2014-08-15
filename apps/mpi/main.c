@@ -12,9 +12,93 @@ static hpx_action_t _hpxmain = 0;
 
 void mpi_test_routine(int its)
 {
-  int numProcs;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-  printf(" Number of procs %d\n",numProcs);
+  int numProcs,rank;
+  MPI_Comm_size(MPI_COMM_WORLD_, &numProcs);
+  MPI_Comm_rank(MPI_COMM_WORLD_, &rank) ;
+  printf(" Number of procs %d rank %d\n",numProcs,rank);
+  if ( numProcs < 2 ) {
+    printf(" Need to have at least two persistent threads to test this\n");
+    return;
+  }
+
+  int i;
+  int buffsize = 20;
+  double *sendbuff,*recvbuff;
+  sendbuff=(double *)malloc(sizeof(double)*buffsize);
+  recvbuff=(double *)malloc(sizeof(double)*buffsize);
+
+  srand((unsigned)time( NULL ) + rank);
+  for(i=0;i<buffsize;i++){
+    sendbuff[i]=(double)rand()/RAND_MAX;
+  }
+
+  int taskid = rank;
+  int ntasks = numProcs;
+  double recvtime,totaltime;
+  MPI_Status   status;
+  MPI_Request	send_request,recv_request;
+  int ierr,inittime,itask;
+  double sendbuffsum,recvbuffsum;
+  double *recvtimes, *sendbuffsums,*recvbuffsums;
+  recvtimes=(double *)malloc(sizeof(double)*ntasks);
+  sendbuffsums=(double *)malloc(sizeof(double)*ntasks);
+  recvbuffsums=(double *)malloc(sizeof(double)*ntasks);
+
+
+  for (i=0;i<its;i++) {
+    inittime = MPI_Wtime();
+    // Example Isend/Irecv/Wait  
+    if ( taskid == 0 ) {
+      ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
+	           taskid+1,0,MPI_COMM_WORLD_,&send_request);   
+      ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
+	           ntasks-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+      recvtime = MPI_Wtime();
+    } else if ( taskid == ntasks-1 ) {
+      ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
+	           0,0,MPI_COMM_WORLD_,&send_request);   
+      ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
+	           taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+      recvtime = MPI_Wtime();
+    } else {
+      ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
+	           taskid+1,0,MPI_COMM_WORLD_,&send_request);
+      ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
+	           taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+      recvtime = MPI_Wtime();
+    }
+    ierr=MPI_Wait(&send_request,&status);
+    ierr=MPI_Wait(&recv_request,&status);
+
+    totaltime = MPI_Wtime() - inittime;
+
+    recvbuffsum=0.0;
+    for(i=0;i<buffsize;i++){
+      recvbuffsum += recvbuff[i];
+    }   
+ 
+    ierr=MPI_Gather(&recvbuffsum,1,MPI_DOUBLE,
+                   recvbuffsums,1, MPI_DOUBLE,
+                   0,MPI_COMM_WORLD_);
+ 
+    ierr=MPI_Gather(&recvtime,1,MPI_DOUBLE,
+                   recvtimes,1, MPI_DOUBLE,
+                   0,MPI_COMM_WORLD_);
+    if ( taskid == 0 ) {
+      for(itask=0;itask<ntasks;itask++){
+        printf("Process %d: Sum of received vector= %e: Time=%f seconds\n",
+               itask,recvbuffsums[itask],recvtimes[itask]);
+      }  
+      printf(" Communication time: %f seconds\n\n",totaltime);  
+    }
+  }
+
+
+  free(sendbuff);
+  free(recvbuff);
+  free(recvtimes);
+  free(sendbuffsums);
+  free(recvbuffsums);
 }
 
 static int _mpi_action(int args[1] /* its */) {
