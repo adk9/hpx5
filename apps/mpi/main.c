@@ -9,6 +9,8 @@
 
 static hpx_action_t _mpi = 0;
 static hpx_action_t _hpxmain = 0;
+extern hpx_time_t start_time;
+hpx_time_t start_time;
 
 void mpi_test_routine(int its)
 {
@@ -21,7 +23,7 @@ void mpi_test_routine(int its)
     return;
   }
 
-  int i;
+  int i,j;
   int buffsize = 20;
   double *sendbuff,*recvbuff;
   sendbuff=(double *)malloc(sizeof(double)*buffsize);
@@ -44,8 +46,7 @@ void mpi_test_routine(int its)
   sendbuffsums=(double *)malloc(sizeof(double)*ntasks);
   recvbuffsums=(double *)malloc(sizeof(double)*ntasks);
 
-
-  for (i=0;i<its;i++) {
+  for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
     // Example Isend/Irecv/Wait  
     if ( taskid == 0 ) {
@@ -86,7 +87,7 @@ void mpi_test_routine(int its)
                    0,MPI_COMM_WORLD_);
     if ( taskid == 0 ) {
       for(itask=0;itask<ntasks;itask++){
-        printf("Process %d: Sum of received vector= %e: Time=%f seconds\n",
+        printf("Process %d: Sum of received vector= %e: Time=%f milliseconds\n",
                itask,recvbuffsums[itask],recvtimes[itask]);
       }  
       printf(" Communication time: %f seconds\n\n",totaltime);  
@@ -103,6 +104,7 @@ void mpi_test_routine(int its)
 
 static int _mpi_action(int args[1] /* its */) {
   int err;
+  start_time = hpx_time_now();
   mpi_init_(&err);
   mpi_test_routine(args[0]);
   mpi_finalize_(&err);
