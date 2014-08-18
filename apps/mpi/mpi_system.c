@@ -362,7 +362,7 @@ void mpi_finalize_(int *pier) {
   int root = 0;
   MPI_Datatype dt = MPI_INT;
   int comm = MPI_COMM_WORLD_;
-  mpi_bcast_(&send_buffer, &count, &dt, &root, &comm, &err);
+  err = mpi_bcast(&send_buffer, count, dt, root, comm);
    //   int MPI_Bcast(void *buffer, int count, MPI_Datatype datatype,
    //        int root, MPI_Comm comm)
   // end barrier

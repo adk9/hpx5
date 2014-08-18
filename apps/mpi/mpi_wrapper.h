@@ -105,6 +105,9 @@ int mpi_gatherv(void *sendbuf, int sendcounts,
                    MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs,
                    MPI_Datatype recvtype, int root, MPI_Comm comm);
 
+int mpi_bcast(void *buffer, int datacount, MPI_Datatype datatype,
+                int root, MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -120,6 +123,7 @@ int mpi_gatherv(void *sendbuf, int sendcounts,
 #define MPI_Reduce mpi_reduce
 #define MPI_Gather mpi_gather
 #define MPI_Gatherv mpi_gatherv
+#define MPI_Bcast mpi_bcast
 #define MPI_Wtime mpi_wtime
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 

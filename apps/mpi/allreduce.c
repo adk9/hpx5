@@ -16,7 +16,7 @@ int mpi_allreduce(void *sendbuf, void *recvbuf, int recvcounts,
   mpi_reduce_(sendbuf,recvbuf,&recvcounts,
                &frecvtype,&pop,&root,&comm,&pier);
 
-  mpi_bcast_(recvbuf,&recvcounts,&frecvtype,&root,&comm,&pier);
+  pier = mpi_bcast(recvbuf,recvcounts,frecvtype,root,comm);
 
   return MPI_SUCCESS_;
 }

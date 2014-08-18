@@ -57,36 +57,30 @@ int bcast_recv(void* vargs) {
   return HPX_SUCCESS;
 }
 
-void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
-                int *froot, MPI_Comm *fcomm, int* pier) {
-  *pier = ERROR;
-  MPI_Comm comm = *fcomm;
+int mpi_bcast(void *buffer, int datacount, MPI_Datatype datatype,
+                int root, MPI_Comm comm) {
 
   struct mpi_rank_rankls *rankls = get_rankls(shared_state);
   struct communicator_transaction_dict *td = get_transaction_dict(rankls, comm, OP_BCAST);
-
-  int root = *froot;
-  int datacount = *fdatacount;
-  MPI_Datatype datatype = *fdatatype;
 
   int transaction_num;
   int error;
   error = communicator_transaction_dict_inc_userside_count(td, &transaction_num);
   if (error != SUCCESS)
-    return;
+    return error;
 
   int rank;
   int size;
   int typesize;
   mpi_comm_rank_(&comm, &rank, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_comm_size_(&comm, &size, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_type_size_(datatype, &typesize, &error); // recvtype since that is significant at all ranks and sendtype is not
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
 
   int i;
   if (root == rank) {
@@ -112,8 +106,7 @@ void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
   fflush(stdout);
   error = communicator_transaction_dict_userside_record(td, transaction_num, buffer, &fut);
   if (error != SUCCESS) {
-    *pier = error;
-    return;
+    return error;
   }
 
   dbg_bcast_printf("u-- rank %d trans %d about to wait on user side future at %p in mpi_bcast_\n", rank, transaction_num, (void*)fut);
@@ -122,10 +115,8 @@ void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
 
   error =  communicator_transaction_dict_complete(td, transaction_num);
   if (error != SUCCESS) {
-    *pier = error;
-    return;
+    return error;
   }
 
-  *pier = MPI_SUCCESS_;
-  return;
+  return MPI_SUCCESS_;
 }
