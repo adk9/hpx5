@@ -76,6 +76,17 @@ void mpi_test_routine(int its)
   rdispls = (int *)malloc( ntasks * sizeof(int) );
   sdispls = (int *)malloc( ntasks * sizeof(int) );
 
+  int *displs,*send_counts,*row,**table; 
+  int errors = 0;
+  displs = (int *)malloc( ntasks*sizeof(int)); 
+  send_counts = (int *)malloc( ntasks*sizeof(int)); 
+  row = (int *)malloc( ntasks*sizeof(int)); 
+  table = (int **)malloc( ntasks*sizeof(int *)); 
+  for (i=0;i<ntasks;i++) {
+    table[i] = (int *) malloc (ntasks*sizeof(int));
+  }
+  int recv_count;
+
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
     if ( rank == 0 ) printf(" Beginning Isend/Irecv/Wait/Gather Test\n");
@@ -221,6 +232,32 @@ void mpi_test_routine(int its)
     if ( errs > 0 ) printf(" (%d) Error to type MPI_Reduce MPI_INT MPI_SUM %d\n",errs,rank);
     if ( rank == 0 )printf(" Finished Reduce Test\n");
 
+
+    if ( rank == 0 )printf(" Beginning Scatterv Test\n");
+    // Testing reduce------------------------------------------------
+    errors = 0;
+    recv_count = ntasks;
+    if (rank == 0) 
+      for ( i=0; i<ntasks; i++) {
+        send_counts[i] = recv_count;
+        displs[i] = i * ntasks;
+        for ( j=0; j<ntasks; j++ ) 
+          table[i][j] = i+j;
+      }
+ 
+    /* Scatter the big table to everybody's little table */
+    MPI_Scatterv(&table[0][0], send_counts, displs, MPI_INT, 
+                     &row[0] , recv_count, MPI_INT, 0, MPI_COMM_WORLD_);
+ 
+    /* Now see if our row looks right */
+    for (i=0; i<ntasks; i++) 
+      if ( row[i] != i+rank ) errors++;
+
+    if ( errors > 0 ) printf(" (%d) Error to type MPI_Scatterv %d\n",errors,rank);
+    if ( rank == 0 )printf(" Finished Scatterv Test\n");
+
+
+
     if ( rank == 0 )printf(" Beginning Alltoallv Test\n");
     // Testing Alltoallv------------------------------------------------
     for (i=0; i<ntasks*ntasks; i++) {
@@ -252,6 +289,13 @@ void mpi_test_routine(int its)
 
   }
 
+  free(row);
+  free(displs);
+  free(send_counts);
+  for (i=0;i<ntasks;i++) { 
+    free(table[i]);
+  }
+  free(table);
   free(sendbuf);
   free(recvbuf);
   free(sbuf);

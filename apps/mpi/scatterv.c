@@ -62,37 +62,30 @@ int scatterv_recv(void* vargs) {
 // }}}
 
 // scatterv {{{
-void mpi_scatterv_(void *sendbuf, int *sendcounts, int *displs,
-                   MPI_Datatype *fsendtype, void *recvbuf, int *frecvcount,
-                   MPI_Datatype *frecvtype, int *froot, MPI_Comm *fcomm, int* pier) {
-  *pier = ERROR;
-  MPI_Comm comm = *fcomm;
+int mpi_scatterv(void *sendbuf, int *sendcounts, int *displs,
+                   MPI_Datatype sendtype, void *recvbuf, int recvcount,
+                   MPI_Datatype recvtype, int root, MPI_Comm comm) {
   struct mpi_rank_rankls *rankls = get_rankls(shared_state);
   struct communicator_transaction_dict *td = get_transaction_dict(rankls, comm, OP_SCATTERV);
-
-  int root = *froot;
-  int recvcount = *frecvcount;
-  MPI_Datatype sendtype = *fsendtype;
-  MPI_Datatype recvtype = *frecvtype;
 
   int transaction_num;
   int error;
   error = communicator_transaction_dict_inc_userside_count(td, &transaction_num);
   if (error != SUCCESS)
-    return;
+    return error;
 
   int rank;
   int size;
   int typesize;
   mpi_comm_rank_(&comm, &rank, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_comm_size_(&comm, &size, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_type_size_(recvtype, &typesize, &error); // recvtype since that is significant at all ranks and sendtype is not
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
 
   int i;
   if (root == rank) {
@@ -122,8 +115,7 @@ void mpi_scatterv_(void *sendbuf, int *sendcounts, int *displs,
   fflush(stdout);
   error = communicator_transaction_dict_userside_record(td, transaction_num, recvbuf, &fut);
   if (error != SUCCESS) {
-    *pier = error;
-    return;
+    return error;
   }
 
   dbg_scatterv_printf("u-- rank %d trans %d about to wait on user side future at %p in mpi_scatterv_\n", rank, transaction_num, (void*)fut);
@@ -132,11 +124,9 @@ void mpi_scatterv_(void *sendbuf, int *sendcounts, int *displs,
 
   error =  communicator_transaction_dict_complete(td, transaction_num);
   if (error != SUCCESS) {
-    *pier = error;
-    return;
+    return error;
   }
 
-  *pier = MPI_SUCCESS_;
-  return;
+  return MPI_SUCCESS_;
 }
 // }}}

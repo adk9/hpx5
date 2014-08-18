@@ -116,6 +116,10 @@ int mpi_alltoallv(void *sendbuf, int *sendcounts, int *sdispls,
                    MPI_Datatype sendtype, void *recvbuf, int *frecvcount,int *rdispls,
                    MPI_Datatype recvtype, MPI_Comm comm);
 
+int mpi_scatterv(void *sendbuf, int *sendcounts, int *displs,
+                   MPI_Datatype sendtype, void *recvbuf, int recvcount,
+                   MPI_Datatype recvtype, int root, MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -135,6 +139,7 @@ int mpi_alltoallv(void *sendbuf, int *sendcounts, int *sdispls,
 #define MPI_Wtime mpi_wtime
 #define MPI_Alltoall mpi_alltoall
 #define MPI_Alltoallv mpi_alltoallv
+#define MPI_Scatterv mpi_scatterv
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
