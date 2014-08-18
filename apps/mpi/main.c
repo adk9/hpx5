@@ -48,6 +48,12 @@ void mpi_test_routine(int its)
   int buffer[6];
   int receive_counts[4] = { 0, 1, 2, 3 };
   int receive_displacements[4] = { 0, 0, 1, 3 };
+  int count = 1000;
+  int *in, *out, *sol;
+  int fnderr=0;
+  in = (int *)malloc( count * sizeof(int) );
+  out = (int *)malloc( count * sizeof(int) );
+  sol = (int *)malloc( count * sizeof(int) );
 
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
@@ -116,14 +122,37 @@ void mpi_test_routine(int its)
         fflush(stdout);
       }
     }
-  }
 
+    // Testing Allreduce
+    for (i=0; i<count; i++)
+    {
+        *(in + i) = i;
+        *(sol + i) = i*ntasks;
+        *(out + i) = 0;
+    }
+    MPI_Allreduce( in, out, count, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+    for (i=0; i<count; i++)
+    {
+        if (*(out + i) != *(sol + i))
+        {
+            fnderr++;
+        }
+    }
+    if (fnderr)
+    {
+        fprintf( stderr, "(%d) Error for type MPI_INT and op MPI_SUM fnderr %d\n", rank,fnderr );
+        fflush(stderr);
+    }
+  }
 
   free(sendbuff);
   free(recvbuff);
   free(recvtimes);
   free(sendbuffsums);
   free(recvbuffsums);
+  free( in );
+  free( out );
+  free( sol );
 }
 
 static int _mpi_action(int args[1] /* its */) {
