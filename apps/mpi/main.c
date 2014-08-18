@@ -130,7 +130,7 @@ void mpi_test_routine(int its)
         *(sol + i) = i*ntasks;
         *(out + i) = 0;
     }
-    MPI_Allreduce( in, out, count, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+    MPI_Allreduce( in, out, count, MPI_INT, MPI_SUM, MPI_COMM_WORLD_ );
     for (i=0; i<count; i++)
     {
         if (*(out + i) != *(sol + i))
@@ -143,6 +143,19 @@ void mpi_test_routine(int its)
         fprintf( stderr, "(%d) Error for type MPI_INT and op MPI_SUM fnderr %d\n", rank,fnderr );
         fflush(stderr);
     }
+
+    // Testing Bcast
+    if (rank == 0 ) {
+      buffer[5] = 6;
+    } else {
+      buffer[5] = 0;
+    }
+    MPI_Bcast(buffer, 6, MPI_INT, 0, MPI_COMM_WORLD_);
+    if ( buffer[5] != 6 ) { 
+      fprintf( stderr, "(%d) Error for type MPI_INT MPI_Bcast\n", rank);
+      fflush(stderr);
+    }
+
   }
 
   free(sendbuff);
