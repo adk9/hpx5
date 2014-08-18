@@ -87,7 +87,7 @@ void mpi_waitall(int pcount,MPI_Request *request_num, MPI_Status *status);
 
 int mpi_allreduce(void *sendbuf, void *recvbuf, int recvcounts, 
 		  MPI_Datatype frecvtype, MPI_Op pop, MPI_Comm comm);
-void mpi_reduce(void *sendbuf, void *recvbuf, int recvcounts, 
+int mpi_reduce(void *sendbuf, void *recvbuf, int recvcounts, 
 		MPI_Datatype frecvtype, MPI_Op pop, int froot, MPI_Comm fcomm);
 
 
@@ -112,6 +112,10 @@ int mpi_alltoall(void *sendbuf, int sendcounts,
                    MPI_Datatype sendtype, void *recvbuf, int recvcount,
                    MPI_Datatype recvtype, MPI_Comm comm);
 
+int mpi_alltoallv(void *sendbuf, int *sendcounts, int *sdispls,
+                   MPI_Datatype sendtype, void *recvbuf, int *frecvcount,int *rdispls,
+                   MPI_Datatype recvtype, MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -130,6 +134,7 @@ int mpi_alltoall(void *sendbuf, int sendcounts,
 #define MPI_Bcast mpi_bcast
 #define MPI_Wtime mpi_wtime
 #define MPI_Alltoall mpi_alltoall
+#define MPI_Alltoallv mpi_alltoallv
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI

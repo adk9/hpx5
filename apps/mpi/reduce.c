@@ -321,9 +321,10 @@ void mpi_reduce_(void *sendbuf, void *recvbuf, int *recvcounts,
   return;
 }
 
-void mpi_reduce(void *sendbuf, void *recvbuf, int recvcounts,
+int mpi_reduce(void *sendbuf, void *recvbuf, int recvcounts,
                    MPI_Datatype frecvtype, MPI_Op pop, int froot, MPI_Comm fcomm) {
    int err;
    mpi_reduce_(sendbuf, recvbuf, &recvcounts,
                    &frecvtype, &pop, &froot, &fcomm, &err);
+   return err;
 }
