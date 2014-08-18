@@ -45,6 +45,9 @@ void mpi_test_routine(int its)
   recvtimes=(double *)malloc(sizeof(double)*ntasks);
   sendbuffsums=(double *)malloc(sizeof(double)*ntasks);
   recvbuffsums=(double *)malloc(sizeof(double)*ntasks);
+  int buffer[6];
+  int receive_counts[4] = { 0, 1, 2, 3 };
+  int receive_displacements[4] = { 0, 0, 1, 3 };
 
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
@@ -91,6 +94,27 @@ void mpi_test_routine(int its)
                itask,recvbuffsums[itask],recvtimes[itask]);
       }  
       printf(" Communication time: %f seconds\n\n",totaltime);  
+    }
+
+    if (ntasks == 4 ) {
+      if ( rank == 0 ) {
+        printf(" Running gatherv test\n");
+      }
+      // Example gatherv
+      for (i=0; i<rank; i++)
+      {
+        buffer[i] = rank;
+      }
+      MPI_Gatherv(buffer, rank, MPI_INT, buffer, receive_counts, receive_displacements, MPI_INT, 0, MPI_COMM_WORLD_);
+      if ( rank == 0)
+      {
+        for (i=0; i<6; i++)
+        {
+            printf("[%d]", buffer[i]);
+        }
+        printf("\n");
+        fflush(stdout);
+      }
     }
   }
 
