@@ -69,39 +69,33 @@ int gatherv_recv(void* vargs) {
 // }}}
 
 // gatherv {{{
-void mpi_gatherv_(void *sendbuf, int *fsendcounts,
-                   MPI_Datatype *fsendtype, void *recvbuf, int *recvcounts, int *displs,
-                   MPI_Datatype *frecvtype, int *froot, MPI_Comm *fcomm, int* pier) {
-  *pier = ERROR;
-  MPI_Comm comm = *fcomm;
+int mpi_gatherv(void *sendbuf, int sendcounts,
+                   MPI_Datatype sendtype, void *recvbuf, int *recvcounts, int *displs,
+                   MPI_Datatype recvtype, int root, MPI_Comm comm) {
   struct mpi_rank_rankls *rankls = get_rankls(shared_state);
   struct communicator_transaction_dict *td = get_transaction_dict(rankls, comm, OP_GATHERV);
-
-  int root = *froot;
-  MPI_Datatype sendtype = *fsendtype;
-  MPI_Datatype recvtype = *frecvtype;
 
   int transaction_num;
   int error;
   error = communicator_transaction_dict_inc_userside_count(td, &transaction_num);
   if (error != SUCCESS)
-    return;
+    return error;
 
   int rank;
   int size;
   int typesize;
   mpi_comm_rank_(&comm, &rank, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_comm_size_(&comm, &size, &error);
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
   mpi_type_size_(recvtype, &typesize, &error); // recvtype since that is significant at all ranks and sendtype is not
   if (error != MPI_SUCCESS_)
-    return;
+    return error;
 
-  if (*fsendcounts > 0) {
-    int payload_size = sizeof(struct op_recv_args) + *fsendcounts * typesize;
+  if (sendcounts > 0) {
+    int payload_size = sizeof(struct op_recv_args) + sendcounts * typesize;
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
     hpx_parcel_set_action(p, action_gatherv_recv);
     hpx_parcel_set_target(p, HPX_THERE(get_hpx_rank_from_mpi_rank(root)));
@@ -111,8 +105,8 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
     args->trans_num = transaction_num;
     args->comm = comm;
     args->operation_type = OP_GATHERV;
-    args->msg_size = *fsendcounts * typesize;
-    memcpy(args->msg_data, sendbuf, *fsendcounts * typesize);
+    args->msg_size = sendcounts * typesize;
+    memcpy(args->msg_data, sendbuf, sendcounts * typesize);
     hpx_parcel_send(p, HPX_NULL);
   }
 
@@ -131,8 +125,7 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
     hpx_addr_t fut;
     error = communicator_transaction_dict_userside_record(td, transaction_num, &gatherv_args, &fut);
     if (error != SUCCESS) {
-      *pier = error;
-      return;
+      return error;
     }
 
     for (i = 0; i < size; i++) {
@@ -145,11 +138,9 @@ void mpi_gatherv_(void *sendbuf, int *fsendcounts,
 
   error =  communicator_transaction_dict_complete(td, transaction_num);
   if (error != SUCCESS) {
-    *pier = error;
-    return;
+    return error;
   }
 
-  *pier = MPI_SUCCESS_;
-  return;
+  return MPI_SUCCESS_;
 }
 // }}}
