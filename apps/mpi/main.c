@@ -54,10 +54,14 @@ void mpi_test_routine(int its)
   in = (int *)malloc( count * sizeof(int) );
   out = (int *)malloc( count * sizeof(int) );
   sol = (int *)malloc( count * sizeof(int) );
+  int chunk = 128;
+  int *sb,*rb;
+  sb = (int *)malloc(ntasks*chunk*sizeof(int));
+  rb = (int *)malloc(ntasks*chunk*sizeof(int));
 
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
-    // Example Isend/Irecv/Wait  
+    // Example Isend/Irecv/Wait/Gather  -------------------------------------------------
     if ( taskid == 0 ) {
       ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
 	           taskid+1,0,MPI_COMM_WORLD_,&send_request);   
@@ -102,11 +106,11 @@ void mpi_test_routine(int its)
       printf(" Communication time: %f seconds\n\n",totaltime);  
     }
 
+    // Example gatherv -------------------------------------------------
     if (ntasks == 4 ) {
       if ( rank == 0 ) {
         printf(" Running gatherv test\n");
       }
-      // Example gatherv
       for (i=0; i<rank; i++)
       {
         buffer[i] = rank;
@@ -123,7 +127,7 @@ void mpi_test_routine(int its)
       }
     }
 
-    // Testing Allreduce
+    // Testing Allreduce -------------------------------------------------
     for (i=0; i<count; i++)
     {
         *(in + i) = i;
@@ -144,7 +148,7 @@ void mpi_test_routine(int its)
         fflush(stderr);
     }
 
-    // Testing Bcast
+    // Testing Bcast -------------------------------------------------
     if (rank == 0 ) {
       buffer[5] = 6;
     } else {
@@ -156,8 +160,24 @@ void mpi_test_routine(int its)
       fflush(stderr);
     }
 
+    // Testing Alltoall------------------------------------------------
+    for ( i=0 ; i < ntasks*chunk ; ++i ) {
+        sb[i] = rank + 1;
+        rb[i] = 0;
+    }
+    status = MPI_Alltoall(sb, chunk, MPI_INT, rb, chunk, MPI_INT, MPI_COMM_WORLD_);
+
+    if ( ntasks > 1 ) {
+      if (rb[chunk] != 2 ) {
+        fprintf( stderr, "(%d) Error for type Alltoall\n", rank);
+        fflush(stderr);
+      }
+    }
+
   }
 
+  free(sb);
+  free(rb);
   free(sendbuff);
   free(recvbuff);
   free(recvtimes);
