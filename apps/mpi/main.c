@@ -58,9 +58,27 @@ void mpi_test_routine(int its)
   int *sb,*rb;
   sb = (int *)malloc(ntasks*chunk*sizeof(int));
   rb = (int *)malloc(ntasks*chunk*sizeof(int));
+  int *sendcounts, *recvcounts, *rdispls, *sdispls;
+  int *sbuf, *rbuf;
+  int *p;
+  int err;
+  int errs;
+  int *sendbuf, *recvbuf;
+  int root;
+  sendbuf = (int *)malloc( count * sizeof(int) );
+  recvbuf = (int *)malloc( count * sizeof(int) ); 
+
+  sbuf = (int *)malloc( ntasks * ntasks * sizeof(int) );
+  rbuf = (int *)malloc( ntasks * ntasks * sizeof(int) );
+
+  sendcounts = (int *)malloc( ntasks * sizeof(int) );
+  recvcounts = (int *)malloc( ntasks * sizeof(int) );
+  rdispls = (int *)malloc( ntasks * sizeof(int) );
+  sdispls = (int *)malloc( ntasks * sizeof(int) );
 
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
+    if ( rank == 0 ) printf(" Beginning Isend/Irecv/Wait/Gather Test\n");
     // Example Isend/Irecv/Wait/Gather  -------------------------------------------------
     if ( taskid == 0 ) {
       ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
@@ -105,9 +123,11 @@ void mpi_test_routine(int its)
       }  
       printf(" Communication time: %f seconds\n\n",totaltime);  
     }
+    if ( rank == 0 )printf(" Finished Isend/Irecv/Wait/Gather Test\n");
 
     // Example gatherv -------------------------------------------------
     if (ntasks == 4 ) {
+      if ( rank == 0 )printf(" Beginning Gatherv Test\n");
       if ( rank == 0 ) {
         printf(" Running gatherv test\n");
       }
@@ -125,8 +145,12 @@ void mpi_test_routine(int its)
         printf("\n");
         fflush(stdout);
       }
+      if ( rank == 0 )printf(" Finished Gatherv Test\n");
+    } else {
+      if ( rank == 0 )printf(" Skipping Gatherv Test\n");
     }
 
+    if ( rank == 0 )printf(" Beginning Allreduce Test\n");
     // Testing Allreduce -------------------------------------------------
     for (i=0; i<count; i++)
     {
@@ -147,7 +171,9 @@ void mpi_test_routine(int its)
         fprintf( stderr, "(%d) Error for type MPI_INT and op MPI_SUM fnderr %d\n", rank,fnderr );
         fflush(stderr);
     }
+    if ( rank == 0 )printf(" Finished Allreduce Test\n");
 
+    if ( rank == 0 )printf(" Beginning Bcast Test\n");
     // Testing Bcast -------------------------------------------------
     if (rank == 0 ) {
       buffer[5] = 6;
@@ -159,7 +185,9 @@ void mpi_test_routine(int its)
       fprintf( stderr, "(%d) Error for type MPI_INT MPI_Bcast\n", rank);
       fflush(stderr);
     }
+    if ( rank == 0 )printf(" Finished Bcast Test\n");
 
+    if ( rank == 0 )printf(" Beginning Alltoall Test\n");
     // Testing Alltoall------------------------------------------------
     for ( i=0 ; i < ntasks*chunk ; ++i ) {
         sb[i] = rank + 1;
@@ -173,9 +201,65 @@ void mpi_test_routine(int its)
         fflush(stderr);
       }
     }
+    if ( rank == 0 )printf(" Finished Alltoall Test\n");
+
+    if ( rank == 0 )printf(" Beginning Reduce Test\n");
+    // Testing reduce------------------------------------------------
+    errs = 0;
+    for (root = 0; root < ntasks; root ++) {
+      for (i=0; i<count; i++) sendbuf[i] = i;
+      for (i=0; i<count; i++) recvbuf[i] = -1;
+      MPI_Reduce( sendbuf, recvbuf, count, MPI_INT, MPI_SUM, root, MPI_COMM_WORLD_ );
+      if (rank == root) {
+        for (i=0; i<count; i++) {
+          if (recvbuf[i] != i * ntasks) {
+            errs++;
+          }
+        }
+      }
+    }
+    if ( errs > 0 ) printf(" (%d) Error to type MPI_Reduce MPI_INT MPI_SUM %d\n",errs,rank);
+    if ( rank == 0 )printf(" Finished Reduce Test\n");
+
+    if ( rank == 0 )printf(" Beginning Alltoallv Test\n");
+    // Testing Alltoallv------------------------------------------------
+    for (i=0; i<ntasks*ntasks; i++) {
+        sbuf[i] = i + 100*rank;
+        rbuf[i] = -i;
+    }
+    for (i=0; i<ntasks; i++) {
+        sendcounts[i] = i;
+        recvcounts[i] = rank;
+        rdispls[i] = i * rank;
+        sdispls[i] = (i * (i+1))/2;
+    }
+    MPI_Alltoallv( sbuf, sendcounts, sdispls, MPI_INT,
+                       rbuf, recvcounts, rdispls, MPI_INT, MPI_COMM_WORLD_ );
+    /* Check rbuf */
+    err = 0;
+    for (i=0; i<ntasks; i++) {
+        p = rbuf + rdispls[i];
+        for (j=0; j<rank; j++) {
+            if (p[j] != i * 100 + (rank*(rank+1))/2 + j) {
+                fprintf( stderr, "[%d] got %d expected %d for %dth\n",
+                                    rank, p[j],(i*(i+1))/2 + j, j );
+                fflush(stderr);
+                err++;
+            }
+        }
+    }
+    if ( rank == 0 )printf(" Finished Alltoallv Test\n");
 
   }
 
+  free(sendbuf);
+  free(recvbuf);
+  free(sbuf);
+  free(rbuf);
+  free(sdispls);
+  free(rdispls);
+  free(recvcounts);
+  free(sendcounts);
   free(sb);
   free(rb);
   free(sendbuff);
