@@ -108,6 +108,10 @@ int mpi_gatherv(void *sendbuf, int sendcounts,
 int mpi_bcast(void *buffer, int datacount, MPI_Datatype datatype,
                 int root, MPI_Comm comm);
 
+int mpi_alltoall(void *sendbuf, int sendcounts,
+                   MPI_Datatype sendtype, void *recvbuf, int recvcount,
+                   MPI_Datatype recvtype, MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -125,6 +129,7 @@ int mpi_bcast(void *buffer, int datacount, MPI_Datatype datatype,
 #define MPI_Gatherv mpi_gatherv
 #define MPI_Bcast mpi_bcast
 #define MPI_Wtime mpi_wtime
+#define MPI_Alltoall mpi_alltoall
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
