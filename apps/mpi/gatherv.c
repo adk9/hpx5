@@ -94,7 +94,7 @@ int mpi_gatherv(void *sendbuf, int sendcounts,
   if (error != MPI_SUCCESS_)
     return error;
 
-  if (sendcounts > 0) {
+  //if (sendcounts > 0) {
     int payload_size = sizeof(struct op_recv_args) + sendcounts * typesize;
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
     hpx_parcel_set_action(p, action_gatherv_recv);
@@ -108,7 +108,7 @@ int mpi_gatherv(void *sendbuf, int sendcounts,
     args->msg_size = sendcounts * typesize;
     memcpy(args->msg_data, sendbuf, sendcounts * typesize);
     hpx_parcel_send(p, HPX_NULL);
-  }
+  //}
 
   int i;
   if (rank == root) {
