@@ -318,8 +318,8 @@ static int _photon_initialized() {
 static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   int i, rc;
   char *buf;
-  int bufsize, offset;
-  int info_ledger_size, FIN_ledger_size, eager_bufsize;
+  int bufsize;
+  int info_ledger_size, fin_ledger_size, eager_ledger_size, eager_bufsize;
 
   srand48(getpid() * time(NULL));
 
@@ -377,30 +377,35 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   // Ledgers are x2 cause we need a local and a remote copy of each ledger.
   // Remote Info (_ri_) ledger has an additional x2 cause we need "send-info" and "receive-info" ledgers.
-  info_ledger_size = 2 * 2 * sizeof(struct photon_ri_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc + _photon_nforw);
-  FIN_ledger_size  = 2 * sizeof(struct photon_rdma_FIN_ledger_entry_t) * LEDGER_SIZE * (_photon_nproc + _photon_nforw);
-  eager_bufsize = sizeof(struct photon_rdma_eager_buf_entry_t) * LEDGER_SIZE * (_photon_nproc + _photon_nforw);
-  bufsize = info_ledger_size + FIN_ledger_size + eager_bufsize;
-  buf = malloc(bufsize);
+  info_ledger_size = 2 * 2 * PHOTON_NP_INFO_SIZE;
+  fin_ledger_size  = 2 * PHOTON_NP_LEDG_SIZE;
+  eager_ledger_size = PHOTON_NP_LEDG_SIZE;
+  eager_bufsize = PHOTON_NP_EBUF_SIZE;;
+  bufsize = info_ledger_size + fin_ledger_size + eager_ledger_size + eager_bufsize;
+
+  posix_memalign((void*)&buf, getpagesize(), bufsize);
   if (!buf) {
     log_err("Couldn't allocate ledgers");
     goto error_exit_crb;
   }
   dbg_info("Bufsize: %d", bufsize);
 
-  if (photon_setup_ri_ledgers(photon_processes, buf, LEDGER_SIZE) != 0) {
+  if (photon_setup_ri_ledger(photon_processes, PHOTON_LRI_PTR(buf), LEDGER_SIZE) != 0) {
     log_err("couldn't setup snd/rcv info ledgers");
     goto error_exit_buf;
   }
 
-  offset = info_ledger_size;
-  if (photon_setup_FIN_ledger(photon_processes, buf + offset, LEDGER_SIZE) != 0) {
+  if (photon_setup_fin_ledger(photon_processes, PHOTON_LF_PTR(buf), LEDGER_SIZE) != 0) {
     log_err("couldn't setup send ledgers");
     goto error_exit_buf;
   }
 
-  offset += FIN_ledger_size;
-  if (photon_setup_EAGER_buf(photon_processes, buf + offset, LEDGER_SIZE) != 0) {
+  if (photon_setup_eager_ledger(photon_processes, PHOTON_LE_PTR(buf), LEDGER_SIZE) != 0) {
+    log_err("couldn't setup eager ledgers");
+    goto error_exit_buf;
+  }
+
+  if (photon_setup_eager_buf(photon_processes, PHOTON_EB_PTR(buf), LEDGER_SIZE) != 0) {
     log_err("couldn't setup eager buffers");
     goto error_exit_buf;
   }
@@ -872,13 +877,11 @@ static int __photon_nbpop_ledger(photonRequest req) {
 
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
-      photonFINLedgerEntry curr_entry;
+      photonLedgerEntry curr_entry;
       curr = photon_processes[i].local_FIN_ledger->curr;
       curr_entry = &(photon_processes[i].local_FIN_ledger->entries[curr]);
-      if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
+      if (curr_entry->request != (uint64_t) 0) {
         dbg_info("Found curr: %d, req: %u while looking for req: %lu", curr, curr_entry->request, req->id);
-        curr_entry->header = 0;
-        curr_entry->footer = 0;
 
         if (curr_entry->request == req->id) {
           req->state = REQUEST_COMPLETED;
@@ -891,6 +894,8 @@ static int __photon_nbpop_ledger(photonRequest req) {
             tmp_req->state = REQUEST_COMPLETED;
           }
         }
+
+        curr_entry->request = 0;
         num = photon_processes[i].local_FIN_ledger->num_entries;
         new_curr = (photon_processes[i].local_FIN_ledger->curr + 1) % num;
         photon_processes[i].local_FIN_ledger->curr = new_curr;
@@ -931,13 +936,11 @@ static int __photon_wait_ledger(photonRequest req) {
 
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
-      photonFINLedgerEntry curr_entry;
+      photonLedgerEntry curr_entry;
       curr = photon_processes[i].local_FIN_ledger->curr;
       curr_entry = &(photon_processes[i].local_FIN_ledger->entries[curr]);
-      if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
+      if (curr_entry->request != (uint64_t) 0) {
         dbg_info("Found: %d/%u/%lu", curr, curr_entry->request, req->id);
-        curr_entry->header = 0;
-        curr_entry->footer = 0;
 
         if (curr_entry->request == req->id) {
           req->state = REQUEST_COMPLETED;
@@ -950,7 +953,8 @@ static int __photon_wait_ledger(photonRequest req) {
             tmp_req->state = REQUEST_COMPLETED;
           }
         }
-
+        
+        curr_entry->request = 0;
         num_entries = photon_processes[i].local_FIN_ledger->num_entries;
         curr = photon_processes[i].local_FIN_ledger->curr;
         curr = (curr + 1) % num_entries;
@@ -1193,7 +1197,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ui
     }
 
     // copy data into one message
-    memcpy(bentry->mptr, ptr + bytes_sent, send_bytes);
+    memcpy(bentry->mptr, (char*)ptr + bytes_sent, send_bytes);
 
     if (__photon_config->use_ud) {
       // create the header
@@ -1277,7 +1281,7 @@ static int _photon_recv(photon_rid request, void *ptr, uint64_t size, int flags)
       }
 
       bind = req->bentries[m_count];
-      memcpy(ptr + bytes_copied, recvbuf->entries[bind].mptr, copy_bytes);
+      memcpy((char*)ptr + bytes_copied, recvbuf->entries[bind].mptr, copy_bytes);
 
       // re-arm this buffer entry for another recv
       rc = __photon_backend->rdma_recv(NULL, (uintptr_t)recvbuf->entries[bind].base, recvbuf->p_size,
@@ -1475,7 +1479,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       entry->flags |= REQUEST_FLAG_EAGER;
       eager = true;
     }
-    
+
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
 				    &(photon_processes[proc].remote_snd_info_ledger->remote), cookie);
     if (rc != PHOTON_OK) {
@@ -2069,7 +2073,7 @@ error_exit:
 
 static int _photon_send_FIN(photon_rid request, int proc) {
   photonRequest req;
-  photonFINLedgerEntry entry;
+  photonLedgerEntry entry;
   int curr, num_entries, rc;
   uint64_t cookie;
 
@@ -2091,16 +2095,14 @@ static int _photon_send_FIN(photon_rid request, int proc) {
 
   curr = photon_processes[proc].remote_FIN_ledger->curr;
   entry = &photon_processes[proc].remote_FIN_ledger->entries[curr];
-  dbg_info("photon_processes[%d].remote_FIN_ledger->curr==%d",proc, curr);
+  dbg_info("photon_processes[%d].remote_FIN_ledger->curr==%d", proc, curr);
   
   if( entry == NULL ) {
-    log_err("entry is NULL for proc=%d",proc);
+    log_err("entry is NULL for proc=%d", proc);
     goto error_exit;
   }
   
-  entry->header = 1;
-  entry->request = req->remote_buffer.request;
-  entry->footer = 1;
+  entry->request = (uint64_t)req->remote_buffer.request;
 
   {
     uintptr_t rmt_addr;
@@ -2207,7 +2209,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
   }
 
   while(1) {
-    photonFINLedgerEntry curr_entry;
+    photonLedgerEntry curr_entry;
     int exists;
 
     i=(i+1)%_photon_nproc;
@@ -2216,11 +2218,9 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
     curr = photon_processes[i].local_FIN_ledger->curr;
     curr_entry = &(photon_processes[i].local_FIN_ledger->entries[curr]);
 
-    if (curr_entry->header != (uint8_t) 0 && curr_entry->footer != (uint8_t) 0) {
+    if (curr_entry->request != (uint64_t) 0) {
       void *test;
       dbg_info("Wait All In: %d/%u", photon_processes[i].local_FIN_ledger->curr, curr_entry->request);
-      curr_entry->header = 0;
-      curr_entry->footer = 0;
 
       exists = htable_remove(reqtable, (uint64_t)curr_entry->request, &test);
       if (exists != -1) {
@@ -2232,6 +2232,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
         break;
       }
 
+      curr_entry->request = 0;
       num_entries = photon_processes[i].local_FIN_ledger->num_entries;
       curr = photon_processes[i].local_FIN_ledger->curr;
       curr = (curr + 1) % num_entries;

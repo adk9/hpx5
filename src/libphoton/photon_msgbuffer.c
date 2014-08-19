@@ -9,14 +9,9 @@
 photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize) {
 
   photonMsgBuf mbuf;
-  void *bptr;
-  int page_size;
-  //int l1d_cacheline;
+  char *bptr;
   int ret, i;
-  
-  page_size = sysconf(_SC_PAGESIZE);
-  //l1d_cacheline = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
-  
+    
   mbuf = malloc(sizeof(struct photon_msgbuffer_t));
   if (!mbuf)
     goto error_exit;
@@ -24,7 +19,7 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   memset(mbuf, 0, sizeof(mbuf));
 
   // TODO: probably want to align each entry (p_size) on a cacheline  
-  ret = posix_memalign(&bptr, page_size, size);
+  ret = posix_memalign((void*)&bptr, getpagesize(), size);
   if (ret) {
     dbg_err("could not allocate buffer space");
     goto error_exit_buf;
@@ -50,9 +45,9 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   }
 
   for (i = 0; i < mbuf->p_count; i++) {
-    mbuf->entries[i].base = (void*)(mbuf->db)->buf.addr + (i * p_size);
-    mbuf->entries[i].hptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset;
-    mbuf->entries[i].mptr = (void*)(mbuf->db)->buf.addr + (i * p_size) + p_offset + p_hsize;
+    mbuf->entries[i].base = (void*)((mbuf->db)->buf.addr + (i * p_size));
+    mbuf->entries[i].hptr = (void*)((mbuf->db)->buf.addr + (i * p_size) + p_offset);
+    mbuf->entries[i].mptr = (void*)((mbuf->db)->buf.addr + (i * p_size) + p_offset + p_hsize);
     mbuf->entries[i].empty = true;
   }
 

@@ -5,8 +5,8 @@
 #include "photon_io.h"
 #include "photon_buffer.h"
 #include "photon_msgbuffer.h"
+#include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
-#include "photon_rdma_FIN_ledger.h"
 #include "photon_rdma_EAGER_buf.h"
 #include "squeue.h"
 #include "bit_array.h"
@@ -42,6 +42,12 @@
 #define REQUEST_COOK_RECV    0xcafebabe
 #define REQUEST_COOK_EAGER   0xdeadfeed
 
+#define LEDGER_ALL           0xffff
+#define LEDGER_INFO          0x0001
+#define LEDGER_EAGER         0x0002
+#define LEDGER_FIN           0x0004
+#define LEDGER_BUF           0x0008
+
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
 typedef struct proc_info_t {
@@ -49,8 +55,10 @@ typedef struct proc_info_t {
   photonRILedger  remote_snd_info_ledger;
   photonRILedger  local_rcv_info_ledger;
   photonRILedger  remote_rcv_info_ledger;
-  photonFINLedger local_FIN_ledger;
-  photonFINLedger remote_FIN_ledger;
+  photonLedger    local_eager_ledger;
+  photonLedger    remote_eager_ledger;
+  photonLedger    local_FIN_ledger;
+  photonLedger    remote_FIN_ledger;
   
   photonEagerBuf  eager_buf;
   photonMsgBuf    smsgbuf;

@@ -10,6 +10,6 @@ struct photon_config_t cfg = {
   .use_ud = 0,
   .eth_dev = "roce0",
   .ib_dev = "mlx4_0",
-  .ib_port = 1,
+  .ib_port = 2,
   .backend = "verbs"
 };

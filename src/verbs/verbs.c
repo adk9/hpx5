@@ -213,18 +213,8 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       }
     }
 
-    if (photon_exchange_ri_ledgers(photon_processes) != 0) {
-      log_err("couldn't exchange rdma ledgers");
-      goto error_exit;
-    }
-
-    if (photon_exchange_FIN_ledger(photon_processes) != 0) {
-      log_err("couldn't exchange send ledgers");
-      goto error_exit;
-    }
-    
-    if (photon_exchange_eager_buf(photon_processes) != 0) {
-      log_err("couldn't exchange eager buf");
+    if (photon_exchange_ledgers(photon_processes, LEDGER_ALL) != PHOTON_OK) {
+      log_err("couldn't exchange ledgers");
       goto error_exit;
     }
   }

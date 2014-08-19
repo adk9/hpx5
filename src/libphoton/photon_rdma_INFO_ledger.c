@@ -16,6 +16,8 @@ photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, 
 
   memset(new, 0, sizeof(struct photon_ri_ledger_t));
 
+  log_info("new entry buf addr: 0x%016lx", (uint64_t)ledger_buffer);
+
   new->entries = ledger_buffer;
 
   // we bzero this out so that valgrind doesn't believe these are
