@@ -83,7 +83,7 @@ int mpi_alltoallv(void *sendbuf, int *sendcounts, int *sdispls,
 
   int i;
   for (i = 0; i < size; i++) {
-    if (sendcounts[i] > 0) {
+    //if (sendcounts[i] > 0) {
       int payload_size = sizeof(struct op_recv_args) + sendcounts[i] * typesize;
       hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload_size);
       hpx_parcel_set_action(p, action_alltoallv_recv);
@@ -97,7 +97,7 @@ int mpi_alltoallv(void *sendbuf, int *sendcounts, int *sdispls,
       args->msg_size = sendcounts[i] * typesize;
       memcpy((char*)args->msg_data, (char*)sendbuf + sdispls[i] * typesize, sendcounts[i] * typesize);
       hpx_parcel_send(p, HPX_NULL);
-    }
+    //}
   } // end for(i)
 
   hpx_addr_t *futs = malloc(sizeof(hpx_addr_t) * size);

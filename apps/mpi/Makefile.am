@@ -3,7 +3,8 @@ noinst_appsdir         = $(abs_top_builddir)/apps/
 noinst_apps_PROGRAMS   = mpi
 
 mpi_SOURCES  = allreduce.c alltoall.c alltoallv.c bcast.c gather.c gatherv.c \
-               logging.c main.c mpi_system.c p2p.c reduce.c scatterv.c
+               logging.c main.c mpi_system.c p2p.c reduce.c scatterv.c \
+               mpi_wtime.c sendrecv.c
 
 mpi_LDFLAGS  = -static
 mpi_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
