@@ -76,6 +76,11 @@ typedef int MPI_Op;
 #define MPI_MINLOC (MPI_Op)(110)
 #define MPI_MAXLOC (MPI_Op)(111)
 
+int mpi_sendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
+                int dest, int sendtag,
+                void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                int source, int recvtag,
+                MPI_Comm comm, MPI_Status *status);
 int mpi_isend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request_num);
 int mpi_irecv(void *buf, int count, MPI_Datatype datatype,
 	      int source, int tag, MPI_Comm comm, MPI_Request *request_num);
@@ -140,6 +145,7 @@ int mpi_scatterv(void *sendbuf, int *sendcounts, int *displs,
 #define MPI_Alltoall mpi_alltoall
 #define MPI_Alltoallv mpi_alltoallv
 #define MPI_Scatterv mpi_scatterv
+#define MPI_Sendrecv mpi_sendrecv
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
