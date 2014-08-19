@@ -87,6 +87,12 @@ void mpi_test_routine(int its)
   }
   int recv_count;
 
+  int left,right;
+  int *srbuffer,*srbuffer2;
+  srbuffer = (int *) malloc(10*sizeof(int));
+  srbuffer2 = (int *) malloc(10*sizeof(int));
+  MPI_Status srstatus;
+
   for (j=0;j<its;j++) {
     inittime = MPI_Wtime();
     if ( rank == 0 ) printf(" Beginning Isend/Irecv/Wait/Gather Test\n");
@@ -135,6 +141,21 @@ void mpi_test_routine(int its)
       printf(" Communication time: %f seconds\n\n",totaltime);  
     }
     if ( rank == 0 )printf(" Finished Isend/Irecv/Wait/Gather Test\n");
+
+    if ( rank == 0 )printf(" Beginning Sendrecv Test\n");
+    // Example sendrecv -------------------------------------------------
+    right = (rank + 1) % ntasks;
+    left = rank - 1;
+    if (left < 0)
+        left = ntasks - 1;
+
+    for (i=0;i<10;i++) {
+      buffer[i] = rank*100 + i;
+    }
+ 
+    MPI_Sendrecv(srbuffer, 10, MPI_INT, left, 123, srbuffer2, 10, MPI_INT, right, 123, MPI_COMM_WORLD_, &srstatus);
+
+    if ( rank == 0 )printf(" Finished Sendrecv Test\n");
 
     // Example gatherv -------------------------------------------------
     if (ntasks == 4 ) {
@@ -289,6 +310,8 @@ void mpi_test_routine(int its)
 
   }
 
+  free(srbuffer);
+  free(srbuffer2);
   free(row);
   free(displs);
   free(send_counts);
