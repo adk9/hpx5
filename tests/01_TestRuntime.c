@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <mpi.h>
 #include "common.h"
 
 FILE * perf_log;
@@ -87,6 +88,7 @@ void hpxtest_core_teardown(void) {
   // scheduler and native threads that need to run, and transfers all control
   // into the HPX scheduler, beginning execution in entry.
   hpx_run(_main, NULL, 0);
+  MPI_Finalize();
 }
 
 
