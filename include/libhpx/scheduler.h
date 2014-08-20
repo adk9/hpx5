@@ -83,6 +83,10 @@ typedef struct scheduler {
 HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size,
                                         unsigned int backoff_max, bool stats);
 
+/// Reset a scheduler to a state as if it had just been created
+///
+/// @param s - the scheduler to reset
+void scheduler_reset(scheduler_t *s);
 
 /// ----------------------------------------------------------------------------
 /// Finalize and free the scheduler object.
