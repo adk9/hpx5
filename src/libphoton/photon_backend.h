@@ -57,8 +57,8 @@ typedef struct proc_info_t {
   photonRILedger  remote_rcv_info_ledger;
   photonLedger    local_eager_ledger;
   photonLedger    remote_eager_ledger;
-  photonLedger    local_FIN_ledger;
-  photonLedger    remote_FIN_ledger;
+  photonLedger    local_fin_ledger;
+  photonLedger    remote_fin_ledger;
   
   photonEagerBuf  eager_buf;
   photonMsgBuf    smsgbuf;

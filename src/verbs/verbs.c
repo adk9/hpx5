@@ -288,7 +288,7 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
     info->addr = (uintptr_t)pi->local_snd_info_ledger->entries;
     break;
   case PHOTON_FI:
-    info->addr = (uintptr_t)pi->local_FIN_ledger->entries;
+    info->addr = (uintptr_t)pi->local_fin_ledger->entries;
   default:
     break;
   }
@@ -319,8 +319,8 @@ static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photo
     pi->remote_snd_info_ledger->remote.priv = li->priv;
     break;
   case PHOTON_FI:
-    pi->remote_FIN_ledger->remote.addr = li->addr;
-    pi->remote_FIN_ledger->remote.priv = li->priv;
+    pi->remote_fin_ledger->remote.addr = li->addr;
+    pi->remote_fin_ledger->remote.priv = li->priv;
     break;
   default:
     goto error_exit;
