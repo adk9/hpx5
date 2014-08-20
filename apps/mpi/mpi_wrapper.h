@@ -125,6 +125,10 @@ int mpi_scatterv(void *sendbuf, int *sendcounts, int *displs,
                    MPI_Datatype sendtype, void *recvbuf, int recvcount,
                    MPI_Datatype recvtype, int root, MPI_Comm comm);
 
+int mpi_allgather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
+                  void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                  MPI_Comm comm);
+
 
 #define MPI_Comm_rank mpi_comm_rank
 #define MPI_Comm_size mpi_comm_size
@@ -146,6 +150,7 @@ int mpi_scatterv(void *sendbuf, int *sendcounts, int *displs,
 #define MPI_Alltoallv mpi_alltoallv
 #define MPI_Scatterv mpi_scatterv
 #define MPI_Sendrecv mpi_sendrecv
+#define MPI_Allgather mpi_allgather
 #define MPI_COMM_WORLD MPI_COMM_WORLD_
 
 #else // USE_REAL_MPI
