@@ -11,5 +11,6 @@ void hpxtest_core_teardown(void);
 void add_02_TestMemAlloc(TCase *);
 void add_03_TestGlobalMemAlloc(TCase *);
 void add_04_TestMemMove(TCase *);
+void add_05_TestParcel(TCase *);
 
 #endif /* LIBHPX_TESTS_TESTS_H_ */

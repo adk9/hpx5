@@ -31,6 +31,7 @@
 #include "tests.h"
 #include "hpx/hpx.h"
 #include "common.h"
+#include <libhpx/debug.h> 
 /*
  --------------------------------------------------------------------
   Main
@@ -69,8 +70,9 @@ static int _main_action(void *args)
   tcase_set_timeout(tc, 8000);
 
   add_02_TestMemAlloc(tc);
-  add_03_TestGlobalMemAlloc(tc);
+  //add_03_TestGlobalMemAlloc(tc);
   //add_04_TestMemMove(tc);
+  add_05_TestParcel(tc);
 
   suite_add_tcase(s, tc);
 
@@ -91,7 +93,9 @@ void _register_actions(void) {
   //_init_sources = HPX_REGISTER_ACTION(_init_sources_action);
 }
 
-int main(int argc, char * argv[]) {  
+int main(int argc, char * argv[]) {
+  //dbg_wait();
+  
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   // parse the command line
