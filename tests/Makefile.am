@@ -7,7 +7,8 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
                           02_TestMemAlloc.c \
                           03_TestGlobalMemAlloc.c \
-                          04_TestMemMove.c
+                          04_TestMemMove.c \
+                          05_TestParcel.c
 
 #hpxtest_LDADD           = $(top_builddir)/src/libhpx.la -lm
 hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck
