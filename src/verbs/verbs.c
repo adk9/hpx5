@@ -347,10 +347,9 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
     .wr.rdma.rkey        = args->rkey
   };
 
-  // FIXME: make sure we can send inline data for all sge
-  //if (args->sg_list[0].length <= 64) {
-  //  wr.send_flags |= IBV_SEND_INLINE;
-  //}
+  if (args->num_sge == 1 && args->sg_list[0].length <= 64) {
+    wr.send_flags |= IBV_SEND_INLINE;
+  }
 
   retries = MAX_RETRIES;
   do {

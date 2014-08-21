@@ -4,7 +4,7 @@
 #include "photon_buffer.h"
 
 typedef struct photon_rdma_ledger_entry_t {
-  uint64_t request;
+  volatile uint64_t request;
 } photon_rdma_ledger_entry;
 
 typedef struct photon_rdma_ledger_t {

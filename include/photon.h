@@ -102,6 +102,7 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
 
+#define PHOTON_ANY_TAG         -1
 #define PHOTON_ANY_SOURCE      -1
 
 int photon_initialized();
