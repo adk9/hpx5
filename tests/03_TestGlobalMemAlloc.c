@@ -40,11 +40,9 @@ typedef struct {
   int cores;
 } main_args_t;
 
-static hpx_action_t _initDomain = 0;
-
 /// Initialize a domain.
-static int
-_initDomain_action(const InitArgs *args)
+int
+t03_initDomain_action(const InitArgs *args)
 {
   // Get the address this parcel was sent to, and map it to a local address---if
   // this fails then the message arrived at the wrong place due to AGAS
@@ -83,8 +81,6 @@ START_TEST (test_libhpx_gas_global_alloc)
 
   printf("Starting the GAS global memory allocation test\n");
 
-  _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
-
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -115,7 +111,7 @@ START_TEST (test_libhpx_gas_global_alloc)
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
 
     // and send the initDomain action, with the done LCO as the continuation
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, t03_initDomain, &init, sizeof(init), done);
   }
 
   // wait for initialization
