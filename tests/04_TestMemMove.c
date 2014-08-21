@@ -38,10 +38,8 @@
 //****************************************************************************
 // TEST: Global Shared Memory (GAS)
 //****************************************************************************
-static hpx_action_t root = 0;
-static hpx_action_t get_rank = 0;
 
-static int get_rank_action(void *args) {
+int t04_get_rank_action(void *args) {
   int rank = HPX_LOCALITY_ID;
   HPX_THREAD_CONTINUE(rank);
 }
@@ -53,13 +51,13 @@ static int get_rank_action(void *args) {
 // synchronous move of the remote future address to the root locality, and
 // re-executes the "get-rank" action on the address.
 //****************************************************************************
-static int root_action(void *args) {
+int t04_root_action(void *args) {
   printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
   int r = 0;
-  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
+  hpx_call_sync(other, t04_get_rank, NULL, 0, &r, sizeof(r));
   printf("target locality's ID (before move): %d\n", r);
 
   if (r == HPX_LOCALITY_ID) {
@@ -83,7 +81,7 @@ static int root_action(void *args) {
 
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
+  hpx_call_sync(other, t04_get_rank, NULL, 0, &r, sizeof(r));
   printf("target locality's rank (after move): %d\n", r);
 
   printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "passed" : "failed"));
@@ -112,14 +110,10 @@ START_TEST (test_libhpx_gas_move)
   }
 
   local = hpx_gas_alloc(1, sizeof(double));
-
-  // Register the action
-  root     = HPX_REGISTER_ACTION(root_action);
-  get_rank = HPX_REGISTER_ACTION(get_rank_action);
   
   hpx_addr_t completed =  hpx_lco_future_new(sizeof(double));
 
-  hpx_call(local, root,  NULL, 0, completed);
+  hpx_call(local, t04_root,  NULL, 0, completed);
 
   int err = hpx_lco_wait(completed);
   ck_assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");

@@ -33,13 +33,10 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-/// @brief Initialize sources action
-static hpx_action_t _init_sources        = 0;
-
 //****************************************************************************
 // Source action to populate the data
 //****************************************************************************
-static int _init_sources_action(void) {
+int t02_init_sources_action(void* args) {
   printf("Populating the data\n");
   // Get the address this parcel was sent to, and map it to a local address---if
   // this fails then the message arrived at the wrong place due to AGAS
@@ -80,8 +77,6 @@ START_TEST (test_libhpx_gas_alloc)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  // Register the action that we need.
-  _init_sources = HPX_REGISTER_ACTION(_init_sources_action);
   // Allocate the local global memory to hold the data of 10 bytes. 
   // This is a non-collective, local call to allocate memory in the global 
   // address space that can be moved. This allocates one block with 10
@@ -96,7 +91,7 @@ START_TEST (test_libhpx_gas_alloc)
   hpx_addr_t done = hpx_lco_future_new(sizeof(double));
   
   // and send the init_sources action, with the done LCO as the continuation
-  hpx_call(local, _init_sources, NULL, 0, done);
+  hpx_call(local, t02_init_sources, NULL, 0, done);
 
   // wait for initialization. The LCO blocks the caller until an LCO set 
   // operation triggers the LCO. 

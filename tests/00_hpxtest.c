@@ -30,6 +30,17 @@
 #include <float.h>
 #include "tests.h"
 #include "hpx/hpx.h"
+
+/*
+  Globals
+ */
+hpx_action_t t02_init_sources;
+hpx_action_t t03_initDomain;
+hpx_action_t t04_root;
+hpx_action_t t04_get_rank;
+
+
+
 /*
  --------------------------------------------------------------------
   Main
@@ -154,8 +165,15 @@ int main(int argc, char * argv[]) {
   if (err)
     return err;
 
-  // Register the main action (user-level action with the runtime
+  // Register the main action (user-level action with the runtime)
   _main = HPX_REGISTER_ACTION(_main_action);
+  // 02_TestMemAlloc.c
+  t02_init_sources = HPX_REGISTER_ACTION(t02_init_sources_action);
+  // 03_TestGlobalMemAlloc.c
+  t03_initDomain = HPX_REGISTER_ACTION(t03_initDomain_action);
+  // 04_TestMemMove.c
+  t04_root     = HPX_REGISTER_ACTION(t04_root_action);
+  t04_get_rank = HPX_REGISTER_ACTION(t04_get_rank_action);
 
   // Run HPX (this copies the args structure)
   return hpx_run(_main, &args, sizeof(args));
