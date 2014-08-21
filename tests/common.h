@@ -14,8 +14,10 @@ typedef struct {
   int cores;
 } main_args_t;
 
-int unittest_main_action(const main_args_t *args);
+static hpx_action_t _main = 0;
+static hpx_action_t _init_sources        = 0;
 
-void unittest_init_actions(void);
+static void _register_actions(void);
+int _init_sources_action(void);
 
 #endif

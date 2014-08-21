@@ -98,12 +98,6 @@ static int root_action(void *args) {
 START_TEST (test_libhpx_gas_move)
 {
   hpx_addr_t local;
-  hpx_config_t cfg = {
-    .cores       = 4,
-    .threads     = 2,
-    .stack_bytes = 0,
-    .gas         = HPX_GAS_AGAS
-  };
 
   printf("Starting the change the locality affinity of a GAS test\n");
   int ranks = HPX_LOCALITIES;
@@ -117,7 +111,7 @@ START_TEST (test_libhpx_gas_move)
   root     = HPX_REGISTER_ACTION(root_action);
   get_rank = HPX_REGISTER_ACTION(get_rank_action);
   
-  hpx_addr_t completed =  hpx_lco_future_new(sizeof(double));
+  hpx_addr_t completed =  hpx_lco_and_new(sizeof(double));
 
   hpx_call(local, root,  NULL, 0, completed);
 

@@ -32,14 +32,12 @@
 //****************************************************************************
 #include "hpx/hpx.h"
 #include "tests.h"
-
-/// @brief Initialize sources action
-static hpx_action_t _init_sources        = 0;
+#include "common.h"
 
 //****************************************************************************
 // Source action to populate the data
 //****************************************************************************
-static int _init_sources_action(void) {
+int _init_sources_action(void) {
   printf("Populating the data\n");
   // Get the address this parcel was sent to, and map it to a local address---if
   // this fails then the message arrived at the wrong place due to AGAS
@@ -79,8 +77,6 @@ START_TEST (test_libhpx_gas_alloc)
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
-
-  // Register the action that we need.
   _init_sources = HPX_REGISTER_ACTION(_init_sources_action);
   // Allocate the local global memory to hold the data of 10 bytes. 
   // This is a non-collective, local call to allocate memory in the global 
