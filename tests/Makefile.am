@@ -2,7 +2,7 @@ noinst_bin_PROGRAMS 	= hpxtest
 noinst_bindir 		= $(abs_top_builddir)/tests
 #TESTS 			= hpxtest
 TESTS 			= 
-check_PROGRAMS		= hpxtest
+#check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
                           02_TestMemAlloc.c \
@@ -10,7 +10,7 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           04_TestMemMove.c
 
 #hpxtest_LDADD           = $(top_builddir)/src/libhpx.la -lm
-hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm
+hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck
 
 
 #hpxtest_CPPFLAGS        = -I$(top_srcdir)/include -I$(top_srcdir)/src

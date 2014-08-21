@@ -68,6 +68,11 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
   return s;
 }
 
+void scheduler_reset(scheduler_t *s) {
+  sync_store(&s->next_id, 0, SYNC_RELEASE);
+  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
+}
+
 
 void scheduler_delete(scheduler_t *sched) {
   if (!sched)
