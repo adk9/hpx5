@@ -515,22 +515,39 @@ void scheduler_spawn(hpx_parcel_t *p) {
 }
 
 
-static int _checkpoint_ws_push(hpx_parcel_t *to, void *sp, void *env) {
+/// This is the continuation that we use to yield a thread.
+///
+/// This make flagrantly bad use of the network queue to deal with a number of
+/// issues related to yielding threads and workstealing queues.
+///
+/// 1) We can't put a yielding thread onto our workqueue with the normal push
+///    operation, because two threads who are yielding will prevent progress
+///    in that scheduler.
+/// 2) We can't use our mailbox because we empty that as fast as possible, and
+///    we'll wind up with the same problem as above.
+/// 3) We don't want to use a separate local queue because we don't want to hide
+///    visibility of yielded threads in the case of heavy load.
+/// 4) We don't want to push onto the bottom of our workqueue because that
+///    requires counted pointers for stealing and yielding and won't solve the
+///    problem, a yielding thread can tie up a scheduler.
+/// 5) We'd like to use a global queue for yielded threads so that they can be
+///    processed in LIFO order by threads that don't have anything else to do.
+///
+/// We already have the RX queue, so we'll use it for now. It's checked before
+/// stealing though, so two yielders could theoretically inhibit
+/// liveness. Ultimately we'll want a separate yielded queue (or queues) to deal
+/// with the issue.
+static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
-  sync_chase_lev_ws_deque_push(&self.work, prev);
+  network_rx_enqueue(here->network, prev);
   return HPX_SUCCESS;
 }
 
 
 /// Yields the current thread.
 ///
-/// This doesn't block the current thread, but gives the scheduler the
-/// opportunity to suspend it ans select a different thread to run for a
-/// while. It's usually used to avoid busy waiting in user-level threads, when
-/// the event we're waiting for isn't an LCO (like user-level lock-based
-/// synchronization).
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self.current;
@@ -542,7 +559,7 @@ void scheduler_yield(void) {
   assert(parcel_get_stack(to));
   assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_ws_push, self.current);
+  thread_transfer(to, _checkpoint_network_push, self.current);
 }
 
 void hpx_thread_yield(void) {
