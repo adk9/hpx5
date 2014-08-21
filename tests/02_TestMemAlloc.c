@@ -33,48 +33,45 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-//****************************************************************************
-// TEST: Global Shared Memory (GAS)
-//****************************************************************************
-static hpx_action_t _localMemTest	 = 0;
-
 /// @brief Initialize sources action
-static hpx_action_t _init_sources 	 = 0;
-static int _init_sources_action(void); 
+static hpx_action_t _init_sources        = 0;
 
 //****************************************************************************
 // Source action to populate the data
 //****************************************************************************
 static int _init_sources_action(void) {
   printf("Populating the data\n");
-  // Get the global address.
-  hpx_addr_t curr = hpx_thread_current_target();
+  // Get the address this parcel was sent to, and map it to a local address---if
+  // this fails then the message arrived at the wrong place due to AGAS
+  // movement, so resend the parcel.
+  hpx_addr_t local = hpx_thread_current_target();
+
   // The pinned local address 
-  int *sources_p = NULL; 
+  int *sources_p = NULL;
 
   // Performs address translation. This will try to perform a global-to-local
   // translation on the global addr, and set local to the local address if it
   // it is successful.
-  bool pinned = hpx_gas_try_pin(curr, (void **)&sources_p);
+  bool pinned = hpx_gas_try_pin(local, (void **)&sources_p);
   ck_assert_msg(pinned == true, "Could not perform the address translation");
 
-  for (int i = 0; i < 10; i++){
+  for(int i=0; i<10; i++){
      sources_p[i] = i;
      printf("Sources_p[i] = '%d'\n", sources_p[i]);
   }
 
-  // Allows address to be remapped. curr -- the address of global memory to 
-  // unpin
-  hpx_gas_unpin(curr);
-  hpx_thread_exit(HPX_SUCCESS);
+  // make sure to unpin the domain, so that AGAS can move it if it wants to
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
 }
 
 //****************************************************************************
-// Action to allocate the GAS local memory and call the thread to populate the
-// data
+// Test code -- for GAS local memory allocation
 //****************************************************************************
-static int _action_localMemTest(void *args) {
-  // The global address of the allocated local global memory
+START_TEST (test_libhpx_gas_alloc)
+{
+  printf("Starting the GAS local memory allocation test\n");
   hpx_addr_t local;
   static double *data_p = NULL;
   // the number of bytes to allocate
@@ -83,6 +80,8 @@ static int _action_localMemTest(void *args) {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
+  // Register the action that we need.
+  _init_sources = HPX_REGISTER_ACTION(_init_sources_action);
   // Allocate the local global memory to hold the data of 10 bytes. 
   // This is a non-collective, local call to allocate memory in the global 
   // address space that can be moved. This allocates one block with 10
@@ -94,39 +93,23 @@ static int _action_localMemTest(void *args) {
   // Futures are builtin LCOs that represent values returned from asynchronous 
   // computation. Futures are always allocated in the global address space, 
   // because their addresses are used as the targets of parcels.
-  hpx_addr_t next =  hpx_lco_future_new(sizeof(double));
+  hpx_addr_t done = hpx_lco_future_new(sizeof(double));
+  
   // and send the init_sources action, with the done LCO as the continuation
-  hpx_call(local, _init_sources, NULL, 0, next);
+  hpx_call(local, _init_sources, NULL, 0, done);
 
   // wait for initialization. The LCO blocks the caller until an LCO set 
   // operation triggers the LCO. 
-  int err = hpx_lco_wait(next);
+  int err = hpx_lco_wait(done);
   ck_assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
-  
-  // Deletes an LCO - next -the address of the lco to delete
-  hpx_lco_delete(next, HPX_NULL);
-  
+
+  // Deletes an LCO - done -the address of the lco to delete
+  hpx_lco_delete(done, HPX_NULL);
+
   // Cleanup - Free the global allocation of local global memory.
-  hpx_gas_global_free(local, HPX_NULL);
-  
+  hpx_gas_global_free(local, HPX_NULL);  
+
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-
-  // Shutdown the HPX runtime 
-  hpx_shutdown(HPX_SUCCESS);
-}
-
-//****************************************************************************
-// Test code -- for GAS local memory allocation
-//****************************************************************************
-START_TEST (test_libhpx_gas_alloc)
-{
-  printf("Starting the GAS local memory allocation test\n");
-  // Register the actions
-  _localMemTest = HPX_REGISTER_ACTION(_action_localMemTest);
-  _init_sources = HPX_REGISTER_ACTION(_init_sources_action);
-  // Run the HPX action
-  int err = hpx_run(_localMemTest, NULL, 0);
-  ck_assert_msg(err == HPX_SUCCESS, "Could not run the _localMemTest action");
 } 
 END_TEST
 
