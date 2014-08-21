@@ -9,9 +9,7 @@
 // @OS            Linux
 // @Description   runtime.h File Reference
 // @Goal          Goal of this testcase is to test the HPX system interface
-//                1. hpx_init() initializes the scheduler, network and
-//                   locality.
-//                2. hpx_shutdown() called by the application to terminate
+//                1. hpx_shutdown() called by the application to terminate
 //                   the scheduler and network.
 // @Copyright     Copyright (c) 2014, Trustees of Indiana University
 //                All rights reserved.
