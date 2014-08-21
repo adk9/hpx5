@@ -139,14 +139,14 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 
 // RDMA with completion
 // If @p ptr is NULL, then only completion value in @p remote is sent
-// The remote buffer is specified in @p rbuf and includes the rkey
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags,
+// The remote buffer is specified in @p rptr and the rkey in @p priv
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                photon_rid local, photon_rid remote);
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags,
-                               photon_rid local, photon_rid remote);
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+                               photon_rid local);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
-int photon_probe_completion(int proc, int *flag, photonStatus status);
+int photon_probe_completion(int proc, int *flag, photon_rid *request);
 
 // Atomics
 int photon_post_atomic(int proc, void *ptr, uint64_t val, int type, int flags, photon_rid *request);
