@@ -76,6 +76,7 @@ struct photon_buffer_priv_t {
 struct photon_buffer_t {
   uintptr_t addr;
   uint64_t size;
+  uint64_t offset;
   struct photon_buffer_priv_t priv;
 };
 
@@ -115,7 +116,7 @@ int photon_unregister_buffer(void *buf, uint64_t size);
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
 int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 
-// RDMA
+// RDMA rendezvous
 int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 int photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request);
@@ -124,15 +125,28 @@ int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
-int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
 int photon_send_FIN(photon_rid request, int proc);
 
-// Vectored direct put/get
+// RDMA one-sided
+int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
+int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
+
+// Vectored one-sided put/get
 int photon_post_os_putv_direct(int proc, void *ptr[], uint64_t size[], photonBuffer rbuf[], int nbuf,
                                int flags, photon_rid *request);
 int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuffer rbuf[], int nbuf,
                                int flags, photon_rid *request);
+
+// RDMA with completion
+// If @p ptr is NULL, then only completion value in @p remote is sent
+// The remote buffer is specified in @p rbuf and includes the rkey
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags,
+                               photon_rid local, photon_rid remote);
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags,
+                               photon_rid local, photon_rid remote);
+// Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
+// ledger associated with that rank
+int photon_probe_completion(int proc, int *flag, photonStatus status);
 
 // Atomics
 int photon_post_atomic(int proc, void *ptr, uint64_t val, int type, int flags, photon_rid *request);
