@@ -73,14 +73,14 @@ t03_initDomain_action(const InitArgs *args)
 START_TEST (test_libhpx_gas_global_alloc)
 {
   // allocate the default argument structure on the stack
+  
   main_args_t args = {
     .nDoms = 8,
     .maxCycles = 1,
     .cores = 8
   };
-
+  
   printf("Starting the GAS global memory allocation test\n");
-
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -88,10 +88,10 @@ START_TEST (test_libhpx_gas_global_alloc)
   printf("Number of domains: %d maxCycles: %d cores: %d\n",
          args.nDoms, args.maxCycles, args.cores);
   fflush(stdout);
-
+  
   // Allocate the domain array
   hpx_addr_t domain = hpx_gas_global_alloc(args.nDoms, sizeof(Domain));
-
+  
   // Allocate an and gate that we can wait on to detect that all of the domains
   // have completed initialization.
   hpx_addr_t done = hpx_lco_and_new(args.nDoms);
@@ -117,7 +117,7 @@ START_TEST (test_libhpx_gas_global_alloc)
   // wait for initialization
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
-
+  
   // and free the domain
   hpx_gas_global_free(domain, HPX_NULL);
 
