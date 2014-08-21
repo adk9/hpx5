@@ -235,9 +235,9 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // }
 
   // and cleanup the system
-  scheduler_reset(here->sched);
-  //  return _cleanup(here, e);
-  return 0;
+  //  scheduler_reset(here->sched);
+  return _cleanup(here, e);
+  //return 0;
 }
 
 /// A RPC call with a user-specified continuation action.
