@@ -97,33 +97,24 @@ static int root_action(void *args) {
 //****************************************************************************
 START_TEST (test_libhpx_gas_move)
 {
-  hpx_addr_t local;
-
   printf("Starting the change the locality affinity of a GAS test\n");
   int ranks = HPX_LOCALITIES;
   if (ranks < 2) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.");
   }
-
-  local = hpx_gas_alloc(1, sizeof(double));
-
   // Register the action
   root     = HPX_REGISTER_ACTION(root_action);
   get_rank = HPX_REGISTER_ACTION(get_rank_action);
   
   hpx_addr_t completed =  hpx_lco_and_new(sizeof(double));
 
-  hpx_call(local, root,  NULL, 0, completed);
+  hpx_call(HPX_HERE, root,  NULL, 0, completed);
 
   int err = hpx_lco_wait(completed);
   ck_assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
 
   // Deletes an LCO - next -the address of the lco to delete
   hpx_lco_delete(completed, HPX_NULL);
-
-  // Cleanup - Free the global allocation of local global memory.
-  hpx_gas_global_free(local, HPX_NULL);
- 
 }
 END_TEST
 
