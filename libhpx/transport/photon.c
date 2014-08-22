@@ -309,7 +309,7 @@ _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
   }
 
   // get the remote buffer
-  e = photon_post_os_get(*(uint32_t*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
+  e = photon_post_os_get(*(photon_rid*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
     return dbg_error("could not receive %lu bytes from %i\n", n, src);
 
@@ -322,7 +322,7 @@ _test(transport_class_t *t, void *request, int *success)
 {
   int type = 0;
   struct photon_status_t status;
-  uint32_t *id = (uint32_t*)request;
+  photon_rid *id = (photon_rid*)request;
   int e = photon_test(*id, success, &type, &status);
   if (e < 0)
     return dbg_error("failed photon_test.\n");

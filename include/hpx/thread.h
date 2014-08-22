@@ -17,8 +17,10 @@
 /// @brief HPX thread interface
 ///
 /// HPX threads are spawned as a result of hpx_parcel_send() or 
-/// hpx_parcel_send_sync(). The may return values to their LCO continuations 
-/// using this hpx_thread_exit() call, which terminates the thread's execution.
+/// hpx_parcel_send_sync(), or as a result of an hpx_call() (or variant) which
+/// which relies on an implicit parcel send. The may return values to their 
+/// LCO continuations using this hpx_thread_exit() call, which terminates the 
+/// thread's execution.
 
 /// Get the target of the current thread.
 /// The target of the thread is the destination that a parcel was sent to
