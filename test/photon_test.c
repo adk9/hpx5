@@ -53,23 +53,51 @@ int main(int argc, char *argv[]) {
   photon_init(&cfg);
   maxSize = 104857600; // 100 Mb
   smallAmountOfWork = estimateKernelSize(5000); // 5 milliseconds (i think)
-  maxWork = estimateKernelSize(200000); // 20 seconds (i think)
+  //maxWork = estimateKernelSize(200000); // 20 seconds (i think)
+  maxWork = 1024*1024;
   for (trial = 0; trial < 1; trial++) {
     for (arraySize = 1; arraySize <= maxSize; arraySize = arraySize*16) {
       send = (char*)malloc(arraySize*sizeof(char));
       recv = (char*)malloc(arraySize*sizeof(char));
       photon_register_buffer(send,arraySize);
       photon_register_buffer(recv,arraySize);
+      //for (workSize = maxWork; workSize == maxWork; workSize = workSize/16) {
       for (workSize = maxWork; workSize > 1; workSize = workSize/16) {
         photon_gettime_(&total_start);
         photon_post_recv_buffer_rdma(prev,recv,arraySize,13,&recvReq);
+	//photon_post_send_buffer_rdma(prev,recv,arraySize,13,&sendReq);
         kernel(smallAmountOfWork);
         photon_wait_recv_buffer_rdma(next,13,&sendReq);
         photon_post_os_put(sendReq,next,send,arraySize,13,0);
-        photon_send_FIN(sendReq,next);
+	//photon_wait_send_buffer_rdma(next,13,&recvReq);
+	//photon_post_os_get(recvReq,next,send,arraySize,13,0);
         photon_gettime_(&kernel_start);
         kernel(workSize);
         photon_gettime_(&kernel_end);
+        while(1) {
+          int flag, type;
+          struct photon_status_t stat;
+          int tst = photon_test(sendReq, &flag, &type, &stat);
+          if( tst < 0 ) {
+            fprintf(stderr,"%d: An error occured in photon_test(send)\n", rank);
+            exit(-1);
+          }
+          else if( tst > 0 ) {
+            fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+            exit(0);
+          }
+          else {
+            if( flag ) {
+              fprintf(stderr,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
+	      photon_send_FIN(sendReq,next);
+              break;
+            }
+            else {
+              //fprintf(stderr,"%d: Busy waiting for send\n", rank);
+              usleep(10*1000); // 1/100th of a second
+            }
+          }
+        }
         while(1) {
           int flag, type;
           struct photon_status_t stat;
@@ -89,29 +117,6 @@ int main(int argc, char *argv[]) {
             }
             else {
               //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-              usleep(10*1000); // 1/100th of a second
-            }
-          }
-        }
-        while(1) {
-          int flag, type;
-          struct photon_status_t stat;
-          int tst = photon_test(sendReq, &flag, &type, &stat);
-          if( tst < 0 ) {
-            fprintf(stderr,"%d: An error occured in photon_test(send)\n", rank);
-            exit(-1);
-          }
-          else if( tst > 0 ) {
-            fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
-            exit(0);
-          }
-          else {
-            if( flag ) {
-              fprintf(stderr,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
-              break;
-            }
-            else {
-              //fprintf(stderr,"%d: Busy waiting for send\n", rank);
               usleep(10*1000); // 1/100th of a second
             }
           }
