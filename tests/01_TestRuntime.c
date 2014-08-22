@@ -22,7 +22,7 @@
 //----------------------------------------------------------------------------
 // @Date          08/07/2014
 // @Author        Jayashree Candadai <jayaajay [at] indiana.edu>
-// @Version       1.0
+// @Version       0.1
 // Commands to Run: make, mpirun hpxtest 
 //****************************************************************************
 
@@ -42,6 +42,7 @@ FILE * perf_log;
 //****************************************************************************
 void hpxtest_core_setup(void) {
   /* open a performance log file */
+  printf("Starting the HPX unit test framework\n");
   perf_log = fopen("perf.log", "w+");
   ck_assert_msg(perf_log != NULL, "Could not open performance log");
 }
@@ -52,6 +53,8 @@ void hpxtest_core_setup(void) {
 
 void hpxtest_core_teardown(void) {
   fclose(perf_log);
+  printf("Shutting down HPX unit test framework in hpxtest_core_teardown\n");
+  printf("Check test.log for output\n\n");
   hpx_shutdown(0);
 }
 

@@ -139,8 +139,6 @@ _open(worker_t *w, _envelope_t *mail)
 /// and then invokes the action on the arguments. If the action returns to this
 /// entry function, we dispatch tot he correct thread termination handler.
 /// ----------------------------------------------------------------------------
-static void HPX_NORETURN
-_thread_enter(hpx_parcel_t *parcel)
 {
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
