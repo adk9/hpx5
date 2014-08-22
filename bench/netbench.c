@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define DEFAULT_ITERS 10
+#define DEFAULT_ITERS 10000
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
+unsigned long iterations;
 
 typedef struct {
   hpx_addr_t lco;
@@ -14,6 +16,15 @@ typedef struct {
   size_t size;
   char data[];
 } echo_args_t;
+
+static void _usage(FILE *stream) {
+  fprintf(stream, "Usage: netbench [options] [ITERATIONS]\n"
+          "\t-c, the number of cores to run on\n"
+          "\t-t, the number of scheduler threads\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
+          "\t-h, show help\n");
+}
 
 void send_ping(hpx_addr_t lco, int src, int dst, size_t size) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
@@ -67,53 +78,85 @@ int hpx_main_action(void *args) {
   int num_sizes = sizeof(sizes)/sizeof(size_t);
   //  hpx_addr_t lco = hpx_lco_gencount_new(num_sizes);
   hpx_addr_t lco;
-  printf("size\ttime_ms\tmsgs/s\tbyets/s\n");
+  printf("size\tS_time_ms\tavg_time_ms\tmsgs/s\tbytes/s\n");
   for (int i = 0; i < num_sizes; i++) {
     size_t actual_size = sizes[i];
     if (sizeof(echo_args_t) > sizes[i])
       actual_size = sizeof(echo_args_t);
 
-    lco = hpx_lco_and_new(DEFAULT_ITERS);
-    //lco = hpx_lco_gencount_new(DEFAULT_ITERS);
+    lco = hpx_lco_and_new(iterations);
+    //lco = hpx_lco_gencount_new(iterations);
     hpx_time_t time_start = hpx_time_now();
-    for (int j = 0; j < DEFAULT_ITERS; j++)
+    for (int j = 0; j < iterations; j++)
       send_ping(lco, 0, 1, actual_size);   
-    // hpx_lco_gencount_wait(lco, DEFAULT_ITERS);
+    // hpx_lco_gencount_wait(lco, iterations);
     hpx_lco_wait(lco);
     hpx_time_t time_end = hpx_time_now();
     double time_in_ms = hpx_time_diff_ms(time_start, time_end);
-    printf("%zu\t%g\t%g\t%g\n", 
+    double avg_time_in_ms = time_in_ms/iterations;
+    printf("%zu\t%.4g\t%.4g\t%.6g\t%.4g\n", 
 	   actual_size, 
 	   time_in_ms,
-	   (DEFAULT_ITERS*1.0)/time_in_ms*1000.0,
-	   (DEFAULT_ITERS*1.0)/time_in_ms*1000.0*actual_size);
+	   avg_time_in_ms,
+	   (iterations*1.0)/time_in_ms*1000.0,
+	   (iterations*1.0)/time_in_ms*1000.0*actual_size);
     hpx_lco_delete(lco, HPX_NULL);
   }
 
-  //hpx_shutdown(0);
-  return HPX_SUCCESS;
+  hpx_shutdown(0);
+  //return HPX_SUCCESS;
 }
 
 
 
 int main(int argc, char *argv[]) {
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
-  printf("PID %d on %s ready for attach\n", getpid(), hostname);
-  fflush(stdout);
-  sleep(12);
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
+    switch (opt) {
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'D':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
+      break;
+     case 'd':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
+      break;
+     case 'h':
+      _usage(stdout);
+      return 0;
+     case '?':
+     default:
+      _usage(stderr);
+      return -1;
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  iterations = 0;
+  if (argc != 0)
+    iterations = strtol(argv[0], NULL, 10);
+  
+  if (iterations == 0) {
+    iterations = DEFAULT_ITERS;
+    printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
+  }
+
+  hpx_init(&cfg);
 
   echo_pong = HPX_REGISTER_ACTION(echo_pong_action);
   echo_finish = HPX_REGISTER_ACTION(echo_finish_action);
   hpx_action_t hpx_main = HPX_REGISTER_ACTION(hpx_main_action);
 
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  //  cfg.wait = HPX_WAIT;
-  //cfg.wait_at = 0;
-  hpx_init(&cfg);
-
   int e = hpx_run(hpx_main, NULL, 0);
-  printf("Finished with succes %d\n", e);
-  return 0;
+  return e;
 }
