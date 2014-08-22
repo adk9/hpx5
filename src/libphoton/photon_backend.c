@@ -2297,11 +2297,14 @@ error_exit:
 
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   photonRILedger ledger;
+  photonLedgerEntry eager_entry;
   photonRILedgerEntry entry_iterator;
-  int i, j;
-  int start, end;
+  int i;
+  int start, end, curr;
 
-  dbg_info("(%d, %d)", proc, type);
+  //dbg_info("(%d, %d)", proc, type);
+
+  *flag = 0;
 
   if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
@@ -2326,8 +2329,24 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
       goto error_exit;
     }
 
-    for (j=0; j<ledger->num_entries; j++) {
-      entry_iterator = &(ledger->entries[j]);
+    //for (j=0; j<ledger->num_entries; j++) {
+    {
+      // process any eager entry first
+      if (type == PHOTON_SEND_LEDGER) {
+        curr = photon_processes[i].local_eager_ledger->curr;
+        eager_entry = &(photon_processes[i].local_eager_ledger->entries[curr]);
+        if (eager_entry->request) {
+          status->src_addr.global.proc_id = i;
+          status->request = (photon_rid)((eager_entry->request<<32)>>32);
+          status->size = eager_entry->request>>32;
+
+          *flag = 1;
+          
+          return PHOTON_OK;
+        }
+      }
+      
+      entry_iterator = &(ledger->entries[ledger->curr]);
       if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
         status->src_addr.global.proc_id = i;
         status->request = (photon_rid)entry_iterator->request;
