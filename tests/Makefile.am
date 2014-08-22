@@ -5,15 +5,15 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
                           02_TestMemAlloc.c \
                           03_TestGlobalMemAlloc.c \
-                          04_TestMemMove.c \
-                          05_TestParcel.c
+                          04_TestParcel.c \
+                          05_TestThreads.c
 
 hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck
 
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 
-hpxtest_CFLAGS          = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
+hpxtest_CFLAGS          =$(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 hpxtest_CFLAGS         += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
 hpxtest_CFLAGS         += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxtest_CFLAGS         += $(HPX_C99)

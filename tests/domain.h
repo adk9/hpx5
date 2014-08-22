@@ -14,5 +14,12 @@ typedef struct {
   int           cores;
 } InitArgs;
 
+#define BUFFER_SIZE 128
+
+typedef struct InitBuffer {
+  int  threadNo;
+  char message[BUFFER_SIZE];
+} InitBuffer;
+
 #endif
 
