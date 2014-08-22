@@ -1,42 +1,58 @@
+//****************************************************************************
+// @Filename      00_hpxtest.c
+// @Project       High Performance ParallelX Library (libhpx)
+//----------------------------------------------------------------------------
+// @Subject       Library Unit Test Harness
+// 
+// @Compiler      GCC
+// @OS            Linux
+// @Description   Main function. 
+// @Goal          Goal of this testcase is to initialize check as HPX 
+//                application   
+// @Copyright     Copyright (c) 2014, Trustees of Indiana University
+//                All rights reserved.
+//
+//                This software may be modified and distributed under the terms
+//                of the BSD license.  See the COPYING file for details.
+//
+//                This software was created at the Indiana University Center 
+//                for Research in Extreme Scale Technologies (CREST).
+//----------------------------------------------------------------------------
+// @Date          08/07/2014
+// @Author        Patrick K. Bohan <pbohan [at] indiana.edu>
+//                Jayashree Candadai <jayaajay [at] indiana.edu>
+// @Version       0.1
+// Commands to Run: make, mpirun hpxtest 
+//****************************************************************************
 
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
-  
-  Library Unit Test Harness
-  00_hpxtest.c
-
-  Copyright (c) 2013, Trustees of Indiana University 
-  All rights reserved.
-
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
- ====================================================================
-*/
-
-
-#include <stdlib.h>                             /* getenv */
+//****************************************************************************
+// @Project Includes
+//****************************************************************************
+#include <stdlib.h>                             
 #include <unistd.h>
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#include "tests.h"
-#include "hpx/hpx.h"
-#include "common.h"
+
 #include <libhpx/debug.h> 
-/*
- --------------------------------------------------------------------
-  Main
- --------------------------------------------------------------------
-*/
+#include <hpx/hpx.h>
+
+#include "tests.h"
+#include "common.h"
+
+//****************************************************************************
+//  Globals
+//****************************************************************************
+hpx_action_t t02_init_sources;
+hpx_action_t t03_initDomain;
+hpx_action_t t04_send;
+hpx_action_t t05_initData;
+
+//****************************************************************************
+// Options
+//****************************************************************************
 static void usage(FILE *f) {
   fprintf(f, "Usage: CHECK [options] ROUNDS \n"
           "\t-c, cores\n"
@@ -46,6 +62,9 @@ static void usage(FILE *f) {
           "\t-h, show help\n");
 }
 
+//****************************************************************************
+// Main action to run check as HPX Application
+//****************************************************************************
 static int _main_action(void *args)
 {
   Suite * s = suite_create("hpxtest");
@@ -70,14 +89,22 @@ static int _main_action(void *args)
   tcase_set_timeout(tc, 8000);
 
   add_02_TestMemAlloc(tc);
-  //add_03_TestGlobalMemAlloc(tc);
-  //add_04_TestMemMove(tc);
-  add_05_TestParcel(tc);
+  add_03_TestGlobalMemAlloc(tc);
+  add_04_TestParcel(tc);
+  add_05_TestThreads(tc);
 
   suite_add_tcase(s, tc);
 
   SRunner * sr = srunner_create(s);
-  srunner_run_all(sr, CK_NORMAL);
+  srunner_add_suite(sr, s);
+
+  //Outputs the result to test.log
+  srunner_set_log(sr, "test.log");
+
+  // This sets CK_FORK=no
+  //srunner_set_fork_status(sr, CK_NOFORK);
+
+  srunner_run_all(sr, CK_VERBOSE);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
@@ -85,14 +112,28 @@ static int _main_action(void *args)
   return (failed == 0) ? 0 : -1;
 }
 
-/**
- * Registers functions as actions.
-**/
+//****************************************************************************
+// Registers functions as actions.
+//****************************************************************************
 void _register_actions(void) {
   _main = HPX_REGISTER_ACTION(_main_action);
-  //_init_sources = HPX_REGISTER_ACTION(_init_sources_action);
+
+  // 02_TestMemAlloc.c
+  t02_init_sources = HPX_REGISTER_ACTION(t02_init_sources_action);
+
+  // 03_TestGlobalMemAlloc.c
+  t03_initDomain = HPX_REGISTER_ACTION(t03_initDomain_action);
+
+  //04_TestParcel.c
+  t04_send = HPX_REGISTER_ACTION(t04_send_action);
+
+  //05_TestThreads.c
+  t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
 }
 
+//****************************************************************************
+// Initialize the check and run as a HPX application
+//****************************************************************************
 int main(int argc, char * argv[]) {
   //dbg_wait();
   
@@ -126,7 +167,6 @@ int main(int argc, char * argv[]) {
     }
   }
 
-  printf("Initializing the Library test suite in main function \n");
   // Initialize HPX
   hpx_init(&cfg);
 
