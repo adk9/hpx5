@@ -33,9 +33,8 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long ep
 
 int _checkdeterm_action(double *determk) {
   if ( *determk <= 0.0 ) {
-    // need an abort here, temporarily using exit function
-    printf("CalcVolumeForceForElems exit(-1)\n");
-    exit(-1);
+    printf("CalcVolumeForceForElems aborted.\n");
+    hpx_abort();
   }
   return HPX_SUCCESS;
 }
@@ -257,9 +256,8 @@ int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArg
     determ[i] = volo[i]*v[i];
 
     if (v[i] <= 0.0) {
-      // need an abort function here, temporarily using exit function
-      printf("CalcHourglassControlForElems exit(-1) at cycle\n");
-      exit(-1);
+      printf("CalcHourglassControlForElems aborted.\n");
+      hpx_abort();
     }
     return HPX_SUCCESS;
 }
@@ -1414,10 +1412,9 @@ void CalcLagrangeElements(Domain *domain)
       domain->dzz[k] -= vdovthird;
 
       if (domain->vnew[k] <= 0.0) {
-    // need an abort function here, temporarily using exit function
-    printf("rank %d: CalcLagrangeElements exit(-1) at cycle %d\n",
-         domain->rank, domain->cycle);
-    exit(-1);
+         printf("rank %d: CalcLagrangeElements aborted at cycle %d\n",
+                domain->rank, domain->cycle);
+         hpx_abort();
       }
     }
 
@@ -2039,10 +2036,9 @@ void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
     }
 
     if (idx >= 0) {
-      // need an abort here, temporarily using exit function
-      printf("rank %d: CalcQForElems exit(-1) at cycle %d\n",
+      printf("rank %d: CalcQForElems aborted at cycle %d\n",
          domain->rank, domain->cycle);
-      exit(-1);
+      hpx_abort();
     }
   }
 }
@@ -2335,10 +2331,9 @@ void ApplyMaterialPropertiesForElems(Domain *domain)
       }
 
       if (vc <= 0.0) {
-    // need an abort here, temporarily using exit function
-    printf("rank %d: ApplyMaterialProperties exit(-1) at cycle %d\n",
-           domain->rank, domain->cycle);
-    exit(-1);
+        printf("rank %d: ApplyMaterialProperties aborted at cycle %d\n",
+               domain->rank, domain->cycle);
+        hpx_abort();
       }
     }
 
