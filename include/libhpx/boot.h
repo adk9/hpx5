@@ -22,8 +22,9 @@ struct boot_class {
   void (*delete)(boot_class_t*);
   int (*rank)(const boot_class_t*);
   int (*n_ranks)(const boot_class_t*);
-  int (*barrier)(void);
+  int (*barrier)(const boot_class_t*);
   int (*allgather)(const boot_class_t*, /* const */ void*, void*, int);
+  void (*abort)(const boot_class_t*);
 };
 
 
@@ -57,5 +58,14 @@ static inline int boot_allgather(const boot_class_t *boot, /* const */ void *in,
   return boot->allgather(boot, in, out, n);
 }
 
+
+static inline int boot_barrier(const boot_class_t *boot) {
+  return boot->barrier(boot);
+}
+
+
+static inline void boot_abort(const boot_class_t *boot) {
+  boot->abort(boot);
+}
 
 #endif // LIBHPX_BOOT_H

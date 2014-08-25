@@ -14,6 +14,7 @@
 #include "config.h"
 #endif
 
+#include <stdlib.h>
 #include "libhpx/boot.h"
 
 
@@ -31,7 +32,7 @@ static int _n_ranks(const boot_class_t *boot) {
 }
 
 
-static int _barrier(void) {
+static int _barrier(const boot_class_t *boot) {
   return 0;
 }
 
@@ -41,13 +42,19 @@ static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out,
 }
 
 
+static void _abort(const boot_class_t *boot) {
+  abort();
+}
+
+
 static boot_class_t _smp = {
   .type      = HPX_BOOT_SMP,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,
   .barrier   = _barrier,
-  .allgather = _allgather
+  .allgather = _allgather,
+  .abort     = _abort
 };
 
 
