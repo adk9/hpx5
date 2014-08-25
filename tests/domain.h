@@ -17,9 +17,14 @@ typedef struct {
 #define BUFFER_SIZE 128
 
 typedef struct InitBuffer {
-  int  threadNo;
+  int  index;
   char message[BUFFER_SIZE];
 } InitBuffer;
+
+typedef struct contTest_config {
+  long arraySize;   // Global array size
+  hpx_addr_t array; // Global address of the array
+}contTest_config_t;
 
 #endif
 
