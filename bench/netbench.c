@@ -8,6 +8,7 @@
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
 unsigned long iterations;
+unsigned long yield_iterations;
 
 typedef struct {
   hpx_addr_t lco;
@@ -19,6 +20,7 @@ typedef struct {
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: netbench [options] [ITERATIONS]\n"
+	  "\t-y, the number of iterations after which to yield\n"
           "\t-c, the number of cores to run on\n"
           "\t-t, the number of scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
@@ -87,8 +89,11 @@ int hpx_main_action(void *args) {
     lco = hpx_lco_and_new(iterations);
     //lco = hpx_lco_gencount_new(iterations);
     hpx_time_t time_start = hpx_time_now();
-    for (int j = 0; j < iterations; j++)
-      send_ping(lco, 0, 1, actual_size);   
+    for (int j = 0; j < iterations; j++) {
+      send_ping(lco, 0, 1, actual_size);  
+      if (yield_iterations > 0 && j % yield_iterations)
+	hpx_thread_yield();
+    } 
     // hpx_lco_gencount_wait(lco, iterations);
     hpx_lco_wait(lco);
     hpx_time_t time_end = hpx_time_now();
@@ -111,31 +116,35 @@ int hpx_main_action(void *args) {
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  yield_iterations = 0;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "y:c:t:d:Dmvh")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'h':
-      _usage(stdout);
-      return 0;
-     case '?':
-     default:
-      _usage(stderr);
-      return -1;
+      case 'y':
+	yield_iterations = atol(optarg);
+	break;
+      case 'c':
+        cfg.cores = atoi(optarg);
+        break;
+      case 't':
+        cfg.threads = atoi(optarg);
+        break;
+      case 'D':
+        cfg.wait = HPX_WAIT;
+        cfg.wait_at = HPX_LOCALITY_ALL;
+        break;
+      case 'd':
+        cfg.wait = HPX_WAIT;
+        cfg.wait_at = atoi(optarg);
+        break;
+      case 'h':
+        _usage(stdout);
+        return 0;
+      case '?':
+      default:
+        _usage(stderr);
+        return -1;
     }
   }
 
