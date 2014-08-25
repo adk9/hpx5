@@ -432,7 +432,7 @@ static int _recv_progress(transport_class_t **t) {
         assert(pe.rlength == pe.mlength);
 
         // allocate a parcel to provide the buffer to receive into
-        hpx_parcel_t *p = hpx_parcel_acquire(pe.mlength - sizeof(hpx_parcel_t));
+        hpx_parcel_t *p = hpx_parcel_acquire(NULL, pe.mlength - sizeof(hpx_parcel_t));
         if (!p)
           dbg_error("could not acquire a parcel of size %lu during receive.\n", pe.mlength);
 
