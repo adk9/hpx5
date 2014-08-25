@@ -123,6 +123,8 @@ int hpx_init(const hpx_config_t *cfg) {
   // 1a) set the local allocation sbrk
   sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
 
+  // 1b) set the global private allocation sbrk
+  sync_store(&here->pvt_sbrk, UINT32_MAX, SYNC_RELEASE);
 
   // 2) bootstrap, to figure out some topology information
   here->boot = boot_new(cfg->boot);
@@ -139,7 +141,7 @@ int hpx_init(const hpx_config_t *cfg) {
     if (cfg->wait_at == HPX_LOCALITY_ALL || cfg->wait_at == here->rank)
       dbg_wait();
 
-  // 3a) set the global allocation sbrk
+  // 3b) set the global allocation sbrk
   sync_store(&here->global_sbrk, here->ranks, SYNC_RELEASE);
 
   // 4) update the HPX_HERE global address
@@ -412,11 +414,11 @@ hpx_gas_alloc(size_t n, uint32_t bytes) {
 
   // Get a set of @p n contiguous block ids.
   uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
+  hpx_call_sync(HPX_THERE(0), locality_private_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
 
   uint32_t args[3] = { base_id, n, bytes };
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, locality_alloc_blocks, &args, sizeof(args), sync);
+  hpx_call(HPX_HERE, locality_alloc_mapping, &args, sizeof(args), sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
