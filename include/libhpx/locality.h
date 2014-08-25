@@ -38,12 +38,15 @@ typedef struct {
 
   SYNC_ATOMIC(uint32_t)  local_sbrk;            // the local memory block sbrk
   SYNC_ATOMIC(uint32_t) global_sbrk;            // the global block id sbrk
+  SYNC_ATOMIC(uint32_t)    pvt_sbrk;            // the global private block id sbrk
 } locality_t;
 
 
 /// Actions for use with HPX_THERE()
 HPX_INTERNAL extern hpx_action_t locality_shutdown;
 HPX_INTERNAL extern hpx_action_t locality_global_sbrk;
+HPX_INTERNAL extern hpx_action_t locality_private_sbrk;
+HPX_INTERNAL extern hpx_action_t locality_alloc_mapping;
 HPX_INTERNAL extern hpx_action_t locality_alloc_blocks;
 typedef struct {
   hpx_action_t action;
