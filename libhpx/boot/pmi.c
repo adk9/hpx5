@@ -48,8 +48,13 @@ static int _n_ranks(const boot_class_t *boot) {
 }
 
 
-static int _barrier(void) {
+static int _barrier(const boot_class_t *boot) {
   return (PMI_Barrier() != PMI_SUCCESS) ? HPX_ERROR : HPX_SUCCESS;
+}
+
+
+static void _abort(const boot_class_t *boot) {
+  PMI_Abort(-6, "HPX aborted.");
 }
 
 
@@ -255,7 +260,8 @@ static boot_class_t _pmi = {
   .rank      = _rank,
   .n_ranks   = _n_ranks,
   .barrier   = _barrier,
-  .allgather = _allgather
+  .allgather = _allgather,
+  .abort     = _abort
 };
 
 

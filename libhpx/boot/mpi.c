@@ -14,7 +14,7 @@
 #include "config.h"
 #endif
 
-
+#include <stdlib.h>
 #include <mpi.h>
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -46,7 +46,7 @@ static int _n_ranks(const boot_class_t *boot) {
 }
 
 
-static int _barrier(void) {
+static int _barrier(const boot_class_t *boot) {
   if (MPI_Barrier(MPI_COMM_WORLD) != MPI_SUCCESS)
     return HPX_ERROR;
   return HPX_SUCCESS;
@@ -61,6 +61,11 @@ static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out,
 }
 
 
+static void _abort(const boot_class_t *boot) {
+  MPI_Abort(MPI_COMM_WORLD, -6);
+}
+
+
 static boot_class_t _mpi = {
   .type      = HPX_BOOT_MPI,
   .delete    = _delete,
@@ -68,6 +73,7 @@ static boot_class_t _mpi = {
   .n_ranks   = _n_ranks,
   .barrier   = _barrier,
   .allgather = _allgather,
+  .abort     = _abort
 };
 
 
