@@ -327,7 +327,7 @@ int main(int argc, char **argv)
   cfg.cores = cores;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:D:n:x:i:h")) != -1) {
     switch (opt) {
       case 'c':
         cfg.cores = atoi(optarg);
