@@ -49,6 +49,13 @@ hpx_action_t t02_init_sources;
 hpx_action_t t03_initDomain;
 hpx_action_t t04_send;
 hpx_action_t t05_initData;
+hpx_action_t t05_worker;
+hpx_action_t t05_assignID;
+hpx_action_t t05_init_array;
+hpx_action_t t05_update_array;
+hpx_action_t t05_memput;
+hpx_action_t t05_memget;
+hpx_action_t t05_threadContMain;
 
 //****************************************************************************
 // Options
@@ -129,6 +136,13 @@ void _register_actions(void) {
 
   //05_TestThreads.c
   t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
+  t05_worker   = HPX_REGISTER_ACTION(t05_worker_action);
+  t05_assignID = HPX_REGISTER_ACTION(t05_assignID_action);
+  t05_init_array = HPX_REGISTER_ACTION(t05_init_array_action);
+  t05_update_array = HPX_REGISTER_ACTION(t05_update_array_action);
+  t05_memput = HPX_REGISTER_ACTION(t05_memput_action);
+  t05_memget = HPX_REGISTER_ACTION(t05_memget_action);
+  t05_threadContMain = HPX_REGISTER_ACTION(t05_threadContMain_action);
 }
 
 //****************************************************************************
