@@ -218,7 +218,7 @@ void mpi_system_register_actions() {
   action_gatherv_recv     = HPX_REGISTER_ACTION(gatherv_recv);
   action_bcast_recv       = HPX_REGISTER_ACTION(bcast_recv);
   action_gather_recv      = HPX_REGISTER_ACTION(gather_recv);
-  action_alltoallv_recv   = HPX_REGISTER_ACTION(alltoallv_recv);
+  alltoallv_recv          = HPX_REGISTER_ACTION(alltoallv_recv);
   action_alltoall_recv    = HPX_REGISTER_ACTION(alltoall_recv);
   action_reduce_recv      = HPX_REGISTER_ACTION(reduce_recv);
 }

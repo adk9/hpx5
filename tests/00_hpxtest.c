@@ -1,35 +1,72 @@
+//****************************************************************************
+// @Filename      00_hpxtest.c
+// @Project       High Performance ParallelX Library (libhpx)
+//----------------------------------------------------------------------------
+// @Subject       Library Unit Test Harness
+// 
+// @Compiler      GCC
+// @OS            Linux
+// @Description   Main function. 
+// @Goal          Goal of this testcase is to initialize check as HPX 
+//                application   
+// @Copyright     Copyright (c) 2014, Trustees of Indiana University
+//                All rights reserved.
+//
+//                This software may be modified and distributed under the terms
+//                of the BSD license.  See the COPYING file for details.
+//
+//                This software was created at the Indiana University Center 
+//                for Research in Extreme Scale Technologies (CREST).
+//----------------------------------------------------------------------------
+// @Date          08/07/2014
+// @Author        Patrick K. Bohan <pbohan [at] indiana.edu>
+//                Jayashree Candadai <jayaajay [at] indiana.edu>
+// @Version       0.1
+// Commands to Run: make, mpirun hpxtest 
+//****************************************************************************
 
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
-  
-  Library Unit Test Harness
-  00_hpxtest.c
+//****************************************************************************
+// @Project Includes
+//****************************************************************************
+#include <stdlib.h>                             
+#include <unistd.h>
+#include <assert.h>
+#include <limits.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
 
-  Copyright (c) 2013, Trustees of Indiana University 
-  All rights reserved.
+#include <libhpx/debug.h> 
+#include <hpx/hpx.h>
 
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
-
-  Authors:
-    Patrick K. Bohan <pbohan [at] indiana.edu>
- ====================================================================
-*/
-
-
-#include <stdlib.h>                             /* getenv */
 #include "tests.h"
+#include "common.h"
 
-/*
- --------------------------------------------------------------------
-  Main
- --------------------------------------------------------------------
-*/
-int main(int argc, char * argv[]) {
+//****************************************************************************
+//  Globals
+//****************************************************************************
+hpx_action_t t02_init_sources;
+hpx_action_t t03_initDomain;
+hpx_action_t t04_send;
+hpx_action_t t05_initData;
+
+//****************************************************************************
+// Options
+//****************************************************************************
+static void usage(FILE *f) {
+  fprintf(f, "Usage: CHECK [options] ROUNDS \n"
+          "\t-c, cores\n"
+          "\t-t, scheduler threads\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
+          "\t-h, show help\n");
+}
+
+//****************************************************************************
+// Main action to run check as HPX Application
+//****************************************************************************
+static int _main_action(void *args)
+{
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
   char * long_tests = NULL;
@@ -49,34 +86,93 @@ int main(int argc, char * argv[]) {
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
-  tcase_set_timeout(tc, 1200);
+  tcase_set_timeout(tc, 8000);
 
-  
-  add_09_config(tc);                            /* test configuration */
-  add_02_mem(tc);                               /* test memory management */
-  add_06_kthread(tc);                           /* test kernel threads,
-                                                   NOTE: before ctx tests */
-  add_03_ctx(tc);                               /* scheduling ctx management */
-  /* add_04_thread1(tc); LD: why not? */        /* threads (stage 1) */
-  add_05_queue(tc);                             /* FIFO queues */
-  add_10_list(tc);                              /* linked lists */
-  add_11_map(tc);                               /* maps */
-  add_07_mctx(tc, long_tests);                  /* machine ctx switching */
-  add_08_thread2(tc, long_tests, hardcore_tests); /* LCOs, threads (stage 2) */
-  add_12_gate(tc);                              /* gates */
-  #if HAVE_NETWORK
-  add_12_parcelhandler(tc);                     /* parcel handler tests */
-  #endif
-  if (perf_tests)
-    add_98_thread_perf1(tc);
+  add_02_TestMemAlloc(tc);
+  add_03_TestGlobalMemAlloc(tc);
+  add_04_TestParcel(tc);
+  add_05_TestThreads(tc);
 
   suite_add_tcase(s, tc);
 
   SRunner * sr = srunner_create(s);
+  srunner_add_suite(sr, s);
+
+  //Outputs the result to test.log
+  srunner_set_log(sr, "test.log");
+
+  // This sets CK_FORK=no
+  //srunner_set_fork_status(sr, CK_NOFORK);
+
   srunner_run_all(sr, CK_VERBOSE);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
-  
+
   return (failed == 0) ? 0 : -1;
+}
+
+//****************************************************************************
+// Registers functions as actions.
+//****************************************************************************
+void _register_actions(void) {
+  _main = HPX_REGISTER_ACTION(_main_action);
+
+  // 02_TestMemAlloc.c
+  t02_init_sources = HPX_REGISTER_ACTION(t02_init_sources_action);
+
+  // 03_TestGlobalMemAlloc.c
+  t03_initDomain = HPX_REGISTER_ACTION(t03_initDomain_action);
+
+  //04_TestParcel.c
+  t04_send = HPX_REGISTER_ACTION(t04_send_action);
+
+  //05_TestThreads.c
+  t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
+}
+
+//****************************************************************************
+// Initialize the check and run as a HPX application
+//****************************************************************************
+int main(int argc, char * argv[]) {
+  //dbg_wait();
+  
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+
+  // parse the command line
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+    switch (opt) {
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'D':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
+      break;
+     case 'd':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
+      break;
+     case 'h':
+      usage(stdout);
+      return 0;
+     case '?':
+     default:
+      usage(stderr);
+      return -1;
+    }
+  }
+
+  // Initialize HPX
+  hpx_init(&cfg);
+
+  // Register all the actions
+  _register_actions();
+
+  // Run HPX 
+  return hpx_run(_main, NULL, 0);
 }

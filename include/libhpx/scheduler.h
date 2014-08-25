@@ -83,7 +83,6 @@ typedef struct scheduler {
 HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size,
                                         unsigned int backoff_max, bool stats);
 
-
 /// ----------------------------------------------------------------------------
 /// Finalize and free the scheduler object.
 ///
