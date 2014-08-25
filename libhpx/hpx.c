@@ -58,21 +58,23 @@ static int _cleanup(locality_t *l, int code) {
     l->network = NULL;
   }
 
+  
   if (l->transport) {
     transport_delete(l->transport);
     l->transport = NULL;
   }
-
+  
   if (l->btt) {
     btt_delete(l->btt);
     l->btt = NULL;
   }
 
+  
   if (l->boot) {
     boot_delete(l->boot);
     l->boot = NULL;
   }
-
+  
   return code;
 }
 
@@ -235,7 +237,9 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // }
 
   // and cleanup the system
+  //  scheduler_reset(here->sched);
   return _cleanup(here, e);
+  //return 0;
 }
 
 /// A RPC call with a user-specified continuation action.

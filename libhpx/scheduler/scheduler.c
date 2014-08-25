@@ -68,7 +68,6 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
   return s;
 }
 
-
 void scheduler_delete(scheduler_t *sched) {
   if (!sched)
     return;
