@@ -347,7 +347,7 @@ hpx_get_network_id(void) {
 void system_shutdown(int code) {
   if (!here || !here->sched) {
     dbg_error("hpx_shutdown called without a scheduler.\n");
-    abort();
+    hpx_abort();
   }
 
   scheduler_shutdown(here->sched);
@@ -367,6 +367,8 @@ hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void
 hpx_abort(void) {
+  assert(here->boot);
+  boot_abort(here->boot);
   abort();
 }
 
