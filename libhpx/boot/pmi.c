@@ -217,7 +217,7 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
     return dbg_error("failed in pmi->allgather.\n");
   }
 
-  void *buf = malloc(sizeof(void*) * n * here->ranks);
+  void *buf = malloc(sizeof(char) * n * here->ranks);
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
@@ -226,7 +226,7 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
   }
 
   for (int i = 0; i < here->ranks; i++)
-    memcpy(out+i, buf+nranks[i], n);
+    memcpy((char*)out+(nranks[i]*n), (char*)buf+(i*n), n);
 
   free(buf);
   free(nranks);
