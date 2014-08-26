@@ -383,9 +383,8 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
   int ranks = here->ranks;
 
   // Get a set of @p n contiguous block ids.
-  size_t nr = n + (n % ranks);
   uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &nr, sizeof(nr), &base_id, sizeof(base_id));
+  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
 
   uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
   uint32_t args[3] = {

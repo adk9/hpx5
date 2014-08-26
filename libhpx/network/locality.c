@@ -84,8 +84,9 @@ static int _alloc_blocks_action(uint32_t *args) {
 
 /// The action that performs the global sbrk.
 static int _global_sbrk_action(size_t *args) {
-  // Bump the next block id by the required number of blocks.
-  size_t n = *args;
+  // Bump the next block id by the required number of blocks---always
+  // bump a ranks-aligned value
+  size_t n = *args + (*args % here->ranks);
   uint32_t next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
   if (UINT32_MAX - next < n) {
     dbg_error("rank out of blocks for allocation size %lu\n", n);
