@@ -84,8 +84,8 @@ int _fmm_main_action(void) {
   hpx_lco_wait(fmm_param->fmm_done); 
   
   // Cleanup
-  hpx_gas_global_free(sources, HPX_NULL);
-  hpx_gas_global_free(targets, HPX_NULL);
+  hpx_gas_free(sources, HPX_NULL);
+  hpx_gas_free(targets, HPX_NULL);
   
   hpx_shutdown(0);
 }
@@ -1212,7 +1212,7 @@ int _delete_box_action(void *args) {
   }
 
   hpx_gas_unpin(curr); 
-  hpx_gas_global_free(curr, HPX_NULL); 
+  hpx_gas_free(curr, HPX_NULL); 
   return HPX_SUCCESS;
 }
 

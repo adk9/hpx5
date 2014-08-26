@@ -454,7 +454,7 @@ hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
 }
 
 
-static hpx_action_t _gas_global_free = 0;
+static hpx_action_t _gas_free = 0;
 
 
 /// Perform a global free operation.
@@ -465,7 +465,7 @@ static hpx_action_t _gas_global_free = 0;
 ///
 /// @param unused -
 static int
-_gas_global_free_action(void *unused)
+_gas_free_action(void *unused)
 {
   hpx_addr_t addr = hpx_thread_current_target();
   void *local = NULL;
@@ -478,11 +478,11 @@ _gas_global_free_action(void *unused)
 
 
 void
-hpx_gas_global_free(hpx_addr_t addr, hpx_addr_t sync)
+hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync)
 {
   // currently I don't care about the performance of this call, so we just use
   // the action interface for freeing.
-  hpx_call_async(addr, _gas_global_free, NULL, 0, HPX_NULL, sync);
+  hpx_call_async(addr, _gas_free, NULL, 0, HPX_NULL, sync);
 }
 
 
@@ -496,5 +496,5 @@ hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
   _bcast = HPX_REGISTER_ACTION(_bcast_action);
-  _gas_global_free = HPX_REGISTER_ACTION(_gas_global_free_action);
+  _gas_free = HPX_REGISTER_ACTION(_gas_free_action);
 }

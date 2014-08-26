@@ -19,7 +19,7 @@ tutorial_main_action(const main_args_t *args)
   }
 
   hpx_addr_t domain = hpx_gas_global_alloc(args->nDoms, sizeof(Domain));
-  hpx_gas_global_free(domain);
+  hpx_gas_free(domain);
 
  shutdown:
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));

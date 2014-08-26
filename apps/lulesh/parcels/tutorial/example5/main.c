@@ -129,7 +129,7 @@ tutorial_main_action(const main_args_t *args)
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
   // hpx_lco_delete(newdt, HPX_NULL); HPX BUG
-  hpx_gas_global_free(domain);
+  hpx_gas_free(domain);
 
  shutdown:
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));

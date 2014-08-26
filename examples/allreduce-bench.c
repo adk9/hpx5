@@ -165,7 +165,7 @@ allreduce_main_action(const main_args_t *args)
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
 
-  hpx_gas_global_free(domain, HPX_NULL);
+  hpx_gas_free(domain, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   hpx_shutdown(0);
