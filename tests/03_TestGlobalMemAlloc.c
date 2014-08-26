@@ -34,12 +34,6 @@
 #include "tests.h"
 #include "domain.h"
 
-typedef struct {
-  int nDoms;
-  int maxCycles;
-  int cores;
-} main_args_t;
-
 /// Initialize a domain.
 int
 t03_initDomain_action(const InitArgs *args)
