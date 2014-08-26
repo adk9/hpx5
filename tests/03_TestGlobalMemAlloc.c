@@ -119,7 +119,7 @@ START_TEST (test_libhpx_gas_global_alloc)
   hpx_lco_delete(done, HPX_NULL);
   
   // and free the domain
-  hpx_gas_global_free(domain, HPX_NULL);
+  hpx_gas_free(domain, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }

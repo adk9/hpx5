@@ -1,0 +1,5 @@
+
+hpxtest:26324 terminated with signal 11 at PC=40a9d2 SP=7ff1f0054e90.  Backtrace:
+hpxtest[0x40a9d2]
+hpxtest[0x404048]
+hpxtest[0x40d904]
