@@ -8,12 +8,6 @@
 #include <float.h>
 #include <hpx/hpx.h>
 
-typedef struct {
-  int nDoms;
-  int maxCycles;
-  int cores;
-} main_args_t;
-
 static hpx_action_t _main = 0;
 static hpx_action_t _init_sources        = 0;
 

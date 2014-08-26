@@ -56,6 +56,8 @@ hpx_action_t t05_update_array;
 hpx_action_t t05_memput;
 hpx_action_t t05_memget;
 hpx_action_t t05_threadContMain;
+hpx_action_t t06_initDomain;
+hpx_action_t t06_advanceDomain;
 
 //****************************************************************************
 // Options
@@ -99,6 +101,7 @@ static int _main_action(void *args)
   add_03_TestGlobalMemAlloc(tc);
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
+  add_06_TestFutures(tc);  
 
   suite_add_tcase(s, tc);
 
@@ -143,6 +146,10 @@ void _register_actions(void) {
   t05_memput = HPX_REGISTER_ACTION(t05_memput_action);
   t05_memget = HPX_REGISTER_ACTION(t05_memget_action);
   t05_threadContMain = HPX_REGISTER_ACTION(t05_threadContMain_action);
+
+  //06_TestFutures.c
+  t06_initDomain = HPX_REGISTER_ACTION(t06_initDomain_action);
+  t06_advanceDomain = HPX_REGISTER_ACTION(t06_advanceDomain_action);
 }
 
 //****************************************************************************
