@@ -251,7 +251,7 @@ static int _main_action(int *input)
   tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
-    return -1;
+    hpx_shutdown(HPX_ERROR);
   }
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
@@ -293,7 +293,7 @@ static int _main_action(int *input)
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
 
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 static void usage(FILE *f) {
