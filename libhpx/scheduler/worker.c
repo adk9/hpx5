@@ -709,7 +709,7 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 
 
 void hpx_thread_exit(int status) {
-  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR)) {
+  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) || unlikely(status == HPX_ERROR)) {
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
   }
