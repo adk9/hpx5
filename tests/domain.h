@@ -1,10 +1,19 @@
 #ifndef DOMAIN_HPX_H
 #define DOMAIN_HPX_H
 
+typedef struct {
+  int nDoms;
+  int maxCycles;
+  int cores;
+} main_args_t;
+
 typedef struct Domain {
+  hpx_addr_t complete;
+  hpx_addr_t newdt;
   int nDoms;
   int rank;
   int maxcycles;
+  int cycle;
 } Domain;
 
 typedef struct {
@@ -12,6 +21,8 @@ typedef struct {
   int           nDoms;
   int       maxcycles;
   int           cores;
+  hpx_addr_t complete;
+  hpx_addr_t newdt;
 } InitArgs;
 
 #define BUFFER_SIZE 128
