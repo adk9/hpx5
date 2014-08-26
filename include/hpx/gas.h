@@ -87,7 +87,7 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bytes);
 ///
 /// @param addr - the global address of the memory to free
 /// @param sync - an LCO we can use to detect that the free has occurred
-void hpx_gas_global_free(hpx_addr_t addr, hpx_addr_t sync);
+void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync);
 
 
 /// Change the locality-affinity of a global distributed memory address.
