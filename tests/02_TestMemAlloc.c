@@ -103,7 +103,7 @@ START_TEST (test_libhpx_gas_alloc)
   hpx_lco_delete(done, HPX_NULL);
 
   // Cleanup - Free the global allocation of local global memory.
-  hpx_gas_global_free(local, HPX_NULL);  
+  hpx_gas_free(local, HPX_NULL);  
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 

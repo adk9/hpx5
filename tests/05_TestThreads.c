@@ -107,7 +107,7 @@ START_TEST (test_libhpx_threadCreate)
   hpx_lco_wait(done);
   
   hpx_lco_delete(done, HPX_NULL);
-  hpx_gas_global_free(addr, HPX_NULL);
+  hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
@@ -195,7 +195,7 @@ START_TEST (test_libhpx_threadGetTlsID)
   hpx_lco_wait(done);
 
   hpx_lco_delete(done, HPX_NULL);
-  hpx_gas_global_free(addr, HPX_NULL);
+  hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
