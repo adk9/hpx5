@@ -160,7 +160,7 @@ int t05_assignID_action(void *args)
 {
   int tid = hpx_thread_get_tls_id();
   int consecutiveID = hpx_thread_get_tls_id();
-  //ck_assert_msg(tid == consecutiveID, "Error in expected behavior of generation of thread ID"); 
+  ck_assert_msg(tid == consecutiveID, "Error in expected behavior of generation of thread ID"); 
   printf("First time generated ID: %d, consecutive new ID:  %d\n", tid, 
                                        consecutiveID);
   return HPX_SUCCESS;
