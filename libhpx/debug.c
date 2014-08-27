@@ -49,6 +49,7 @@ dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
   va_end(args);
 
   fflush(stderr);
+  hpx_abort();
   return HPX_ERROR;
 }
 
