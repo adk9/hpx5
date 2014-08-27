@@ -133,7 +133,8 @@ AS_IF([test "x$DOXYGEN" != x],
 # ---------------------------------------------------------------------------
 AS_CASE([$host_os],
       [linux*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-                 l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+                 dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+                 l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
                  pagesize=`getconf PAGESIZE`],
      [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
                  pagesize=`getconf PAGESIZE`],
@@ -143,7 +144,7 @@ AS_CASE([$host_os],
                 [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
                  l1d_linesize=128
                  pagesize=4096])
-
+                 
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
