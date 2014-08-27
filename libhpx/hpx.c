@@ -123,9 +123,6 @@ int hpx_init(const hpx_config_t *cfg) {
   // 1a) set the local allocation sbrk
   sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
 
-  // 1b) set the global private allocation sbrk
-  sync_store(&here->pvt_sbrk, UINT32_MAX, SYNC_RELEASE);
-
   // 2) bootstrap, to figure out some topology information
   here->boot = boot_new(cfg->boot);
   if (here->boot == NULL)
@@ -170,6 +167,13 @@ int hpx_init(const hpx_config_t *cfg) {
   bool pinned = hpx_gas_try_pin(HPX_HERE, &local);
   assert(local == here);
   assert(pinned);
+
+  // 7b) set the global private allocation sbrk
+  uint64_t round = ((uint64_t)(UINT32_MAX/here->ranks) * here->ranks) + here->rank;
+  uint32_t offset = (uint32_t)((round >= UINT32_MAX) ? (round - here->ranks) : (round));
+  dbg_log_gas("initializing private sbrk to %u.\n", offset);
+  assert(offset % here->ranks == here->rank);
+  sync_store(&here->pvt_sbrk, offset, SYNC_RELEASE);
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
@@ -408,24 +412,31 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
 }
 
 
-/// This is a non-collective, local call to allocate memory in the
-/// global address space that can be moved.
+/// This is a non-collective call to allocate a block of memory in the
+/// global address space.
 hpx_addr_t
-hpx_gas_alloc(size_t n, uint32_t bytes) {
+hpx_gas_alloc(uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
-  // Get a set of @p n contiguous block ids.
-  uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_private_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
+  // Get a block id.
+  int ranks = here->ranks;
+  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
+  uint32_t global;
+  sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
+  if (block_id <= global) {
+    dbg_error("locality: rank %d out of blocks for private allocation of size %u.\n", here->rank, bytes);
+    hpx_abort();
+    // TODO: forward allocation request to another locality.
+  }
 
-  uint32_t args[3] = { base_id, n, bytes };
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, locality_alloc_mapping, &args, sizeof(args), sync);
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  // Insert the block mapping.
+  hpx_addr_t addr = hpx_addr_init(0, block_id, bytes);
+  char *block = malloc(bytes);
+  assert(block);
+  btt_insert(here->btt, addr, block);
 
   // Return the base id to the caller.
-  return hpx_addr_init(0, base_id, bytes);
+  return addr;
 }
 
 

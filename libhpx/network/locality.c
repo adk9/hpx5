@@ -32,32 +32,12 @@ locality_t *here = NULL;
 
 hpx_action_t locality_shutdown          = 0;
 hpx_action_t locality_global_sbrk       = 0;
-hpx_action_t locality_private_sbrk      = 0;
-hpx_action_t locality_alloc_mapping     = 0;
 hpx_action_t locality_alloc_blocks      = 0;
 hpx_action_t locality_gas_move          = 0;
 hpx_action_t locality_gas_acquire       = 0;
 hpx_action_t locality_gas_forward       = 0;
 hpx_action_t locality_call_continuation = 0;
 
-
-/// The action that performs a global (private) allocation for a rank.
-static int _alloc_mapping_action(uint32_t *args) {
-  uint32_t base_id = args[0];
-  uint32_t n = args[1];
-  uint32_t size = args[2];
-
-  // Insert all of the private mappings.
-  for (int i = 0; i < n; ++i) {
-    uint32_t block_id = base_id + i;
-    hpx_addr_t addr = hpx_addr_init(0, block_id, size);
-    char *block = malloc(size);
-    assert(block);
-    btt_insert(here->btt, addr, block);
-  }
-
-  return HPX_SUCCESS;
-}
 
 
 /// The action that performs a shared global allocation for a rank.
@@ -93,25 +73,6 @@ static int _global_sbrk_action(size_t *args) {
     hpx_abort();
   }
 
-  // return the base block id of the allocated blocks, the caller can use this
-  // to initialize block addresses
-  hpx_thread_continue(sizeof(next), &next);
-}
-
-
-/// The action that performs the global private sbrk.
-static int _private_sbrk_action(size_t *args) {
-  // Decrement the next block id by the required number of blocks.
-  size_t n = *args;
-  uint32_t next = sync_addf(&here->pvt_sbrk, -n, SYNC_ACQ_REL);
-
-  uint32_t global;
-  sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
-  if (next <= global) {
-    dbg_error("locality: rank out of blocks for shared allocation size %lu.\n", n);
-    hpx_abort();
-  }
-  
   // return the base block id of the allocated blocks, the caller can use this
   // to initialize block addresses
   hpx_thread_continue(sizeof(next), &next);
@@ -181,8 +142,6 @@ static int _call_cont_action(locality_cont_args_t *args) {
 static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_shutdown          = HPX_REGISTER_ACTION(_shutdown_action);
   locality_global_sbrk       = HPX_REGISTER_ACTION(_global_sbrk_action);
-  locality_private_sbrk      = HPX_REGISTER_ACTION(_private_sbrk_action);
-  locality_alloc_mapping     = HPX_REGISTER_ACTION(_alloc_mapping_action);
   locality_alloc_blocks      = HPX_REGISTER_ACTION(_alloc_blocks_action);
   locality_gas_move          = HPX_REGISTER_ACTION(_gas_move_action);
   locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
