@@ -66,18 +66,19 @@ void hpx_gas_unpin(const hpx_addr_t addr);
 hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bytes);
 
 
-/// Allocate local global memory.
+/// Allocate a block of global memory.
 ///
-/// This is a non-collective, local call to allocate memory in the
-/// global address space that can be moved. The memory is allocated originally
-/// at this node, but it is accessible from anywhere, and may be relocated.
+/// This is a non-collective call to allocate memory in the global
+/// address space that can be moved. The allocated memory, by default,
+/// has affinity to the allocating node. As it allocated in the GAS,
+/// it is accessible from any locality, and may be relocated by the
+/// runtime.
 ///
-/// The total amount of memory allocated is n * bytes.
+/// The total amount of memory allocated is bytes.
 ///
-/// @param         n the number of blocks to allocate
 /// @param bytes the number of bytes per block to allocate
 /// @returns     the global address of the allocated memory
-hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bytes);
+hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 
 
 /// Free a global allocation.
