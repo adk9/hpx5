@@ -2,8 +2,8 @@ Running suite hpxtest
 02_TestMemAlloc.c:98:P:hpxtest-core:test_libhpx_gas_alloc:0: Passed
 03_TestGlobalMemAlloc.c:67:P:hpxtest-core:test_libhpx_gas_global_alloc:0: Passed
 04_TestParcel.c:71:P:hpxtest-core:test_libhpx_parcel:0: Passed
-05_TestThreads.c:77:P:hpxtest-core:test_libhpx_threadCreate:0: Passed
-05_TestThreads.c:146:P:hpxtest-core:test_libhpx_threadExit:0: Passed
-05_TestThreads.c:169:P:hpxtest-core:test_libhpx_threadGetTlsID:0: Passed
-05_TestThreads.c:215:P:hpxtest-core:test_libhpx_threadContinue:0: Passed
-06_TestFutures.c:88:P:hpxtest-core:test_libhpx_future_lco:0: Passed
+05_TestThreads.c:78:P:hpxtest-core:test_libhpx_threadCreate:0: Passed
+05_TestThreads.c:147:P:hpxtest-core:test_libhpx_threadExit:0: Passed
+05_TestThreads.c:170:P:hpxtest-core:test_libhpx_threadGetTlsID:0: Passed
+05_TestThreads.c:216:P:hpxtest-core:test_libhpx_threadContinue:0: Passed
+05_TestThreads.c:267:P:hpxtest-core:test_libhpx_threadContinueCleanup:0: Passed

@@ -65,15 +65,15 @@ int t06_advanceDomain_action(const unsigned long *epoch)
   }
 
   // Compute my gnewdt, and then start the future
-  int gnewdt[domain->nDoms];
-  for (int k=0; k < domain->nDoms; k++) {
-    gnewdt[k] = (k+1) + domain->rank * domain->nDoms;
-  }
+  //int gnewdt[domain->nDoms];
+  //for (int k=0; k < domain->nDoms; k++) {
+    //gnewdt[k] = (k+1) + domain->rank * domain->nDoms;
+  //}
 
   //hpx_lco_future_setat(domain->newdt, domain->rank, domain->nDoms * sizeof(int), gnewdt, HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print the debugging string.
-  int newdt[domain->nDoms];
+  //int newdt[domain->nDoms];
   //hpx_lco_future_getat(domain->newdt, domain->rank, sizeof(newdt), &newdt);
 
   ++domain->cycle;
@@ -102,7 +102,7 @@ START_TEST (test_libhpx_future_lco)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t domain = hpx_gas_alloc(args.nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_alloc(sizeof(Domain));
   hpx_addr_t done = hpx_lco_future_new(args.nDoms);
   hpx_addr_t complete = hpx_lco_future_new(args.nDoms);
 

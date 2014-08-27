@@ -80,7 +80,7 @@ START_TEST (test_libhpx_gas_alloc)
   // This is a non-collective, local call to allocate memory in the global 
   // address space that can be moved. This allocates one block with 10
   // bytes of memory
-  local = hpx_gas_alloc(1, ndata * sizeof(double));
+  local = hpx_gas_alloc(ndata * sizeof(double));
 
   // Populate the test data -- Allocate an and gate that we can wait on to
   // detect that all of the data have been populated. This creates a future.
