@@ -89,7 +89,7 @@ static int _global_sbrk_action(size_t *args) {
   size_t n = *args + (*args % here->ranks);
   uint32_t next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
   if (UINT32_MAX - next < n) {
-    dbg_error("rank out of blocks for allocation size %lu\n", n);
+    dbg_error("locality: rank out of blocks for allocation size %lu.\n", n);
     hpx_abort();
   }
 
@@ -108,7 +108,7 @@ static int _private_sbrk_action(size_t *args) {
   uint32_t global;
   sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
   if (next <= global) {
-    dbg_error("rank out of blocks for shared allocation size %lu\n", n);
+    dbg_error("locality: rank out of blocks for shared allocation size %lu.\n", n);
     hpx_abort();
   }
   
@@ -156,7 +156,7 @@ static int _gas_move_action(hpx_addr_t *args) {
   hpx_status_t status = hpx_call_sync(src, locality_gas_acquire, &rank, sizeof(rank),
                                       block, size);
   if (status != HPX_SUCCESS) {
-    dbg_log("failed move operation.\n");
+    dbg_log_net("locality: failed move operation.\n");
     hpx_thread_exit(status);
   }
 
@@ -200,7 +200,7 @@ locality_malloc(size_t bytes) {
   bytes += bytes % 8;
   uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
   if (UINT32_MAX - offset < bytes) {
-    dbg_error("exhausted local allocation limit with %lu-byte allocation.\n",
+    dbg_error("locality: exhausted local allocation limit with %lu-byte allocation.\n",
               bytes);
     hpx_abort();
   }

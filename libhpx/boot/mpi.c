@@ -56,7 +56,7 @@ static int _barrier(const boot_class_t *boot) {
 static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out, int n) {
   int e = MPI_Allgather((void*)in, n, MPI_BYTE, out, n, MPI_BYTE, MPI_COMM_WORLD);
   if (e != MPI_SUCCESS)
-    return dbg_error("failed mpi->allgather().\n");
+    return dbg_error("mpirun: failed MPI_Allgather %d.\n", e);
   return HPX_SUCCESS;
 }
 
@@ -83,12 +83,11 @@ boot_class_t *boot_new_mpi(void) {
   if (init)
     return &_mpi;
 
-  dbg_log("initializing MPI boostrap... ");
   if (MPI_Init(0, NULL) == MPI_SUCCESS) {
-    dbg_log("success.\n");
+    dbg_log_boot("mpirun: initialized MPI bootstrapper.\n");
     return &_mpi;
   }
 
-  dbg_error("failed.\n");
+  dbg_error("mpirun: initialization failed.\n");
   return NULL;
 }

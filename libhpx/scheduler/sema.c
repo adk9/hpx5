@@ -152,7 +152,7 @@ hpx_lco_sema_new(unsigned count)
     sema = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(sema, (void**)&base)) {
-      dbg_error("Could not translate local block.\n");
+      dbg_error("sema: could not translate local block.\n");
       hpx_abort();
     }
     hpx_gas_unpin(sema);
@@ -162,7 +162,7 @@ hpx_lco_sema_new(unsigned count)
   else {
     sema = locality_malloc(sizeof(_sema_t));
     if (!hpx_gas_try_pin(sema, (void**)&local)) {
-      dbg_error("Could not pin newly allocated semaphore.\n");
+      dbg_error("sema: could not pin newly allocated semaphore.\n");
       hpx_abort();
     }
   }

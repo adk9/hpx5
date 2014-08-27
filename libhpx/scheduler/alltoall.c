@@ -383,7 +383,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   hpx_addr_t gather = locality_malloc(sizeof(_alltoall_t));
   _alltoall_t *g = NULL;
   if (!hpx_gas_try_pin(gather, (void**)&g)) {
-    dbg_error("Could not pin newly allocated gathering.\n");
+    dbg_error("alltoall: could not pin newly allocated alltoall LCO.\n");
     hpx_abort();
   }
   _alltoall_init(g, inputs, size);

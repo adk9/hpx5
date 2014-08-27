@@ -258,7 +258,7 @@ hpx_lco_future_new(int size) {
     f = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(f, (void**)&base)) {
-      dbg_error("Could not translate local block.\n");
+      dbg_error("future: could not translate local block.\n");
       hpx_abort();
     }
     f.offset = (char*)local - base;
@@ -267,7 +267,7 @@ hpx_lco_future_new(int size) {
   else {
     f = locality_malloc(sizeof(_future_t));
     if (!hpx_gas_try_pin(f, (void**)&local)) {
-      dbg_error("Could not pin newly allocated future of size %d.\n", size);
+      dbg_error("future: could not pin newly allocated future of size %d.\n", size);
       hpx_abort();
     }
   }
@@ -336,7 +336,7 @@ hpx_lco_future_array_at(hpx_addr_t array, int i) {
 // This should probably be managed by the LCO superclass.
 void
 hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
-  dbg_log("unimplemented");
+  dbg_log_lco("future: array delete unimplemented");
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
