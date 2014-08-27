@@ -154,7 +154,7 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   if ((PMI_KVS_Commit(kvs)) != PMI_SUCCESS)
     goto error;
 
-  _barrier();
+  PMI_Barrier();
 
   free(key);
   free(value);
