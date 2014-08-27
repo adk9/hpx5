@@ -10,8 +10,7 @@ mpi_LDFLAGS  = -static
 mpi_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 mpi_CPPFLAGS = -I$(top_srcdir)/include
-mpi_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
-mpi_CFLAGS  += @PHOTON_CFLAGS@ @MPI_CFLAGS@
+mpi_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
 mpi_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 if HAVE_PHOTON

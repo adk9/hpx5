@@ -55,12 +55,12 @@ static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 
-static void _unpin(transport_class_t *transpor, const void* buffer, size_t len) {
+static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
 }
 
 
 static int _send(transport_class_t *t, int d, const void *b, size_t n, void *r) {
-  dbg_error("should never call send in smp network.\n");
+  dbg_error("smp: should never call send.\n");
   return HPX_ERROR;
 }
 
@@ -71,13 +71,13 @@ static size_t _probe(transport_class_t *transport, int *src) {
 
 
 static int _recv(transport_class_t *t, int src, void *buffer, size_t size, void *r) {
-  dbg_error("should never receive a parcel in smp network.\n");
+  dbg_error("smp: should never receive a parcel.\n");
   return HPX_ERROR;
 }
 
 
 static int _test(transport_class_t *t, void *request, int *success) {
-  dbg_error("should never call test in smp network.\n");
+  dbg_error("smp: should never call test.\n");
   return HPX_ERROR;
 }
 
@@ -89,7 +89,7 @@ static void _progress(transport_class_t *transport, bool flush) {
 static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
   void *p = NULL;
   if (posix_memalign(&p, align, bytes))
-    dbg_log("failed network allocation.\n");
+    dbg_error("smp: failed network allocation.\n");
   return p;
 }
 

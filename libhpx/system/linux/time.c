@@ -26,12 +26,14 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "hpx/hpx.h"
+#include "libhpx/debug.h"
+
 
 hpx_time_t
 hpx_time_now(void) {
   hpx_time_t time;
   if (clock_gettime(CLOCK_MONOTONIC, &time)) {
-    fprintf(stderr, "hpx_time_now() failed to get time.\n");
+    dbg_error("system: hpx_time_now() failed to get time.\n");
   }
   return time;
 }

@@ -35,6 +35,6 @@ int system_set_affinity(pthread_t *thread, int core_id) {
   CPU_SET(core_id, &cpuset);
   int e = pthread_setaffinity_np(*thread, sizeof(cpuset), &cpuset);
   if (e) // not fatal
-    return dbg_error("failed to bind thread affinity.\n");
+    return dbg_error("system: failed to bind thread affinity.\n");
   return HPX_SUCCESS;
 }

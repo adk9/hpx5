@@ -79,7 +79,7 @@ hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
 network_class_t *network_new(void) {
   network_class_t *n = malloc(sizeof(*n));
   if (!n) {
-    dbg_error("failed to allocate a network.\n");
+    dbg_error("network: failed to allocate a network.\n");
     return NULL;
   }
 
@@ -88,7 +88,7 @@ network_class_t *network_new(void) {
 
   n->routing = routing_new();
   if (!n->routing) {
-    dbg_error("failed to start routing update manager.\n");
+    dbg_error("network: failed to start routing update manager.\n");
     free(n);
     return NULL;
   }

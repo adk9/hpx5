@@ -71,7 +71,7 @@ static size_t _write_buf(void *ptr, size_t size, size_t nmemb, void *userp) {
   struct _json_buf_t *buf = (struct _json_buf_t *)userp;
   long bufsz = size * nmemb;
   if(buf->pos + bufsz >= buf->size - 1)
-    return dbg_error("buffer too small for JSON write request.\n");
+    return dbg_error("floodlight: buffer too small for json write request.\n");
   memcpy(buf->data + buf->pos, ptr, bufsz);
   buf->pos += bufsz;
   return bufsz;
@@ -107,14 +107,14 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
   CURLcode status = curl_easy_perform(fl->curl);
   if (status != 0) {
     free(data);
-    return dbg_error("failed GET request to %s: %s.\n", url, curl_easy_strerror(status));
+    return dbg_error("floodlight: failed GET request to %s: %s.\n", url, curl_easy_strerror(status));
   }
 
   long code;
   curl_easy_getinfo(fl->curl, CURLINFO_RESPONSE_CODE, &code);
   if (code != 200) {
     free(data);
-    return dbg_error("invalid response %ld.\n", code);
+    return dbg_error("floodlight: invalid response %ld.\n", code);
   }
 
   data[buf.pos] = '\0';
@@ -124,7 +124,7 @@ static int _get_request(const floodlight_t *fl, const char *url, uint64_t size, 
   free(data);
 
   if (!*json) {
-    return dbg_error("could not load json data: %s\n", error.text);
+    return dbg_error("floodlight: could not load json data: %s\n", error.text);
   }
 
   return HPX_SUCCESS;
@@ -157,14 +157,14 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
   CURLcode status = curl_easy_perform(fl->curl);
   if (status != 0) {
     free(data);
-    return dbg_error("failed POST request to %s: %s.\n", url, curl_easy_strerror(status));
+    return dbg_error("floodlight: failed POST request to %s: %s.\n", url, curl_easy_strerror(status));
   }
 
   long code;
   curl_easy_getinfo(fl->curl, CURLINFO_RESPONSE_CODE, &code);
   if (code != 200) {
     free(data);
-    return dbg_error("invalid response %ld.\n", code);
+    return dbg_error("floodlight: invalid response %ld.\n", code);
   }
   data[wbuf.pos] = '\0';
 
@@ -172,7 +172,7 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
     json_error_t error;
     *response = json_loads(data, 0, &error);
     if (*response == NULL)
-      dbg_error("unable to parse json response.\n");
+      dbg_error("floodlight: unable to parse json response.\n");
   }
   free(data);
   return HPX_SUCCESS;
@@ -181,14 +181,14 @@ static int _post_request(const floodlight_t *fl, const char *url, uint64_t size,
 static int _get_json_int(json_t *object, const char *key) {
   json_t *obj = json_object_get(object, key);
   if (!json_is_number(obj))
-    return dbg_error("failed to get json integer value.\n");
+    return dbg_error("floodlight: failed to get json integer value.\n");
   return json_integer_value(obj);
 }
 
 static const char *_get_json_string(json_t *object, const char *key) {
   json_t *obj = json_object_get(object, key);
   if (!json_is_string(obj)) {
-    dbg_error("failed to get json string value.\n");
+    dbg_error("floodlight: failed to get json string value.\n");
     return NULL;
   }
   return json_string_value(obj);
@@ -205,7 +205,7 @@ static json_t *_create_flow_mod(switch_t *s, uint64_t src, uint64_t dst, uint16_
   json_t *obj = json_object();
 
   if (!obj) {
-    dbg_error("could not create new json object");
+    dbg_error("floodlight: could not create new json object");
     return NULL;
   }
 
@@ -265,11 +265,11 @@ static int _get_switches(const floodlight_t *fl) {
   switch_t *sw;
 
   snprintf(url, 512, "%s" SWITCH_URL, caddr);
-  dbg_error("url: %s\n", url);
+  dbg_error("floodlight: url=%s\n", url);
   _get_request(fl, url, 4096, &response);
 
   if (!json_is_array(response)) {
-    dbg_error("invalid JSON response.\n");
+    dbg_error("floodlight: invalid json response.\n");
     json_decref(response);
   }
 
@@ -277,7 +277,7 @@ static int _get_switches(const floodlight_t *fl) {
   for(int i = 0; i < json_array_size(response); i++) {
     s = json_array_get(response, i);
     if(!json_is_object(s)) {
-      dbg_error("invalid JSON response.\n");
+      dbg_error("floodlight: invalid json response.\n");
       json_decref(response);
     }
     sw = _add_switch(s);
@@ -286,7 +286,7 @@ static int _get_switches(const floodlight_t *fl) {
       // LD: why is it const if it's not actually const?
       sw->next = ((floodlight_t*)fl)->switches;
       ((floodlight_t*)fl)->switches = sw;
-      dbg_log("New switch %s added.\n", (char*)sw->dpid);
+      dbg_log_net("floodlight: new switch %s added.\n", (char*)sw->dpid);
     }
   }
   json_decref(response);
@@ -302,7 +302,7 @@ static void _init(floodlight_t *fl) {
   curl_global_init(CURL_GLOBAL_ALL);
   fl->curl = curl_easy_init();
   if (!fl->curl) {
-    dbg_error("failed to initialize CURL for REST requests.\n");
+    dbg_error("floodlight: failed to initialize curl for rest requests.\n");
     return;
   }
 
@@ -341,7 +341,7 @@ static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t po
   json_t *flow = _create_flow_mod(s, src, dst, port);
   assert(flow);
 
-  dbg_error("flow entry: %s\n", json_dumps(flow, JSON_INDENT(2)));
+  dbg_error("floodlight: flow entry: %s.\n", json_dumps(flow, JSON_INDENT(2)));
 
   char url[512];
   snprintf(url, 512, "%s" PUSH_URL, caddr);
@@ -361,7 +361,7 @@ static int _delete_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t
   json_t *flow = _create_flow_mod(s, src, dst, port);
   assert(flow);
 
-  dbg_error("flow entry: %s\n", json_dumps(flow, JSON_INDENT(2)));
+  dbg_error("floodlight: flow entry: %s.\n", json_dumps(flow, JSON_INDENT(2)));
 
   char url[256];
   snprintf(url, 512, "%s" PUSH_URL, caddr);

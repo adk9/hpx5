@@ -15,35 +15,7 @@ AC_SUBST(CLEANFILES)
 # ---------------------------------------------------------------------------
 # Detect the programming environment.
 # ---------------------------------------------------------------------------
-
-AS_IF([test -z "$PE_ENV"],
- [AS_CASE([$CC],
-   [craycc*], [AC_SUBST([PE_ENV],["CRAY"])],
-     [pgcc*], [AC_SUBST([PE_ENV],["PGI"])],
-      [icc*], [AC_SUBST([PE_ENV],["INTEL"])],
-      [gcc*], [AC_SUBST([PE_ENV],["GNU"])],
-              [AC_SUBST([PE_ENV],["UNKNOWN"])])])
-
-cflags_save="$CFLAGS"
-AC_MSG_CHECKING([for programming environment])
-AS_CASE([$PE_ENV],
-    [CRAY*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["craycc"])])
-              # ADK: We need this for ASM labels.
-              CFLAGS="-hgnu"
-              # Force static linking with craycc as it does not support
-              # flags that LT adds for building a shared library.
-              AC_DISABLE_SHARED
-              AC_ENABLE_STATIC
-              hpx_pe_env="CRAY"],
-    [PGI*],   [AS_IF([test -z "$CC"], [AC_SUBST([CC],["pgcc"])])
-              hpx_pe_env="PGI"],
-    [INTEL*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["icc"])])
-              hpx_pe_env="INTEL"],
-    [GNU*],   [AS_IF([test -z "$CC"], [AC_SUBST([CC],["gcc"])])
-              hpx_pe_env="GNU"],
-    [hpx_pe_env="GNU"])
-CFLAGS="$CFLAGS $cflags_save"
-AC_MSG_RESULT([$hpx_pe_env])
+HPX_PE_ENV
 
 AC_LANG([C])
 
@@ -55,66 +27,61 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 
 # Checks for programs.
-cflags_save="$CFLAGS"
-AC_PROG_CC
 AC_PROG_CC_C99
-AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AM_PROG_AS
-CFLAGS="$cflags_save"
 
+# Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-LT_INIT
+LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 
 # NB: Don't check for anything that we're not actually prepared to deal with
-#     in our source code. Add these commented-out checks later if we come up
-#     with platform-independent code that actually requires the result of
-#     these checks.
+#     in our source code---this just clutters the configure and gives users a
+#     false sense of security.
 
 # ---------------------------------------------------------------------------
 # --enable options
 # ---------------------------------------------------------------------------
 AC_ARG_ENABLE([pedantic],
-  [AS_HELP_STRING([--enable-pedantic], [Enable -pedantic @<:@default=yes@:>@])],
+  [AS_HELP_STRING([--enable-pedantic],
+                  [Enable pedantic C99 @<:@default=yes@:>@])],
   [], [enable_pedantic=yes])
-AS_IF([test "x$enable_pedantic" != xno -a "x$hpx_pe_env" = xGNU],
-  [AC_SUBST([HPX_PEDANTIC], [-pedantic])])
 
 AC_ARG_ENABLE([wall],
-  [AS_HELP_STRING([--enable-wall], [Enable -Wall @<:@default=yes@:>@])],
+  [AS_HELP_STRING([--enable-wall],
+                  [Enable all warnings @<:@default=yes@:>@])],
   [], [enable_wall=yes])
-AS_IF([test "x$enable_wall" != xno -a "x$hpx_pe_env" = xGNU],
-  [AC_SUBST([HPX_W_ALL], [-Wall])])
 
 AC_ARG_ENABLE([werror],
-  [AS_HELP_STRING([--enable-werror], [Enable -Werror @<:@default=no@:>@])],
+  [AS_HELP_STRING([--enable-werror],
+                  [Treat warnings as errors @<:@default=no@:>@])],
   [], [enable_werror=no])
-AS_IF([test "x$enable_werror" != xno -a "x$hpx_pe_env" = xGNU],
-  [AC_SUBST([HPX_W_ERROR], [-Werror])])
-
-AC_SUBST([HPX_C99], [$ac_cv_prog_cc_c99])
 
 AC_ARG_ENABLE([apps],
-  [AS_HELP_STRING([--enable-apps], [Enable mini-apps @<:@default=no@:>@])],
+  [AS_HELP_STRING([--enable-apps],
+                  [Enable mini-apps @<:@default=no@:>@])],
   [], [enable_apps=no])
 
 AC_ARG_ENABLE([debug],
-  [AS_HELP_STRING([--enable-debug], [Enable debug code @<:@default=no@:>@])],
+  [AS_HELP_STRING([--enable-debug],
+                  [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
 AC_ARG_ENABLE([profiling],
-  [AS_HELP_STRING([--enable-profiling], [Enable profiling support @<:@default=no@:>@])],
+  [AS_HELP_STRING([--enable-profiling],
+                  [Enable profiling support @<:@default=no@:>@])],
   [], [enable_profiling=no])
 AS_IF([test "x$enable_profiling" != xno],
   [AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])])
 
 AC_ARG_ENABLE([testsuite],
-  [AS_HELP_STRING([--enable-testsuite], [Enable test suite (requires check) @<:@default=yes@:>@])],
+  [AS_HELP_STRING([--enable-testsuite],
+                  [Enable test suite (requires check) @<:@default=yes@:>@])],
   [], [enable_testsuite=yes])
 
 # ---------------------------------------------------------------------------
@@ -165,17 +132,17 @@ AS_IF([test "x$DOXYGEN" != x],
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
 AS_CASE([$host_os],
-    [linux*],   [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+      [linux*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
                  l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
                  pagesize=`getconf PAGESIZE`],
-    [darwin*],  [l1d_linesize=`sysctl -n hw.cachelinesize`
+     [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
                  pagesize=`getconf PAGESIZE`],
     [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
-                                     grep l1-dcache-line-size | uniq | \
-                                     awk '{print $2}'`]
-    [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
-     l1d_linesize=128
-     pagesize=4096])
+                               grep l1-dcache-line-size | uniq | \
+                               awk '{print $2}'`]
+                [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
+                 l1d_linesize=128
+                 pagesize=4096])
 
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
@@ -197,6 +164,25 @@ AM_CONDITIONAL([PGI_PE_ENV], [test "x$hpx_pe_env" = xPGI])
 AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 
 # -----------------------------------------------------------------------------
+# Finalize flags
+# -----------------------------------------------------------------------------
+extra_cppflags="$hpx_pe_env_cppflags"
+extra_cflags="$hpx_pe_env_cflags"
+extra_ccasflags="$hpx_pe_env_ccasflags"
+AS_IF([test "x$enable_pedantic" != xno],
+  [extra_cflags="$hpx_pe_env_cflags_pedantic $extra_cflags"])
+
+AS_IF([test "x$enable_wall" != xno],
+  [extra_cflags="$hpx_pe_env_cflags_wall $extra_cflags"])
+  
+AS_IF([test "x$enable_werror" != xno],
+  [extra_cflags="$hpx_pe_env_cflags_werror $extra_cflags"])
+
+CPPFLAGS="$extra_cppflags $CPPFLAGS"
+CFLAGS="$extra_cflags $CFLAGS"
+CCASFLAGS="$extra_ccasflags $CCASFLAGS"
+
+# -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
 # -----------------------------------------------------------------------------
 AC_CONFIG_FILES([
@@ -214,10 +200,7 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile
-])
-# src/Makefile
-# src/libhpx.pc
+  bench/Makefile])
 
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
@@ -228,11 +211,14 @@ AS_IF([test "x$enable_apps" != xno],
   apps/lulesh/parcels/Makefile
   apps/miniAMR/Makefile
   apps/miniAMR/parcels/Makefile])])
+  
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
+  
 AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile])])
-    
+
+  
 AC_OUTPUT
 
 # ---------------------------------------------------------------------------
@@ -260,5 +246,8 @@ echo "     Topology Awareness : $with_hwloc"
 echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "             Test Suite : $enable_tests"
+echo "         Extra CPPFLAGS : $extra_cppflags"
+echo "           Extra CFLAGS : $extra_cflags"
+echo "        Extra CCASFLAGS : $extra_ccasflags"
 echo "================================================"
 
