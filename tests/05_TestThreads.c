@@ -43,6 +43,7 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 #include "domain.h"
+#include "libhpx/locality.h"
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
@@ -244,12 +245,53 @@ START_TEST (test_libhpx_threadContinue)
 END_TEST
 
 //****************************************************************************
+// Finish the current thread's execution, sending value to the thread's
+// continuation address (size is the size of the value and value is the value
+// to be sent to the thread's continuation address. This version gives the 
+// application a chance to cleanup for instance, to free the value. After
+// dealing with the continued data, it will run cleanup(env).
+//****************************************************************************
+int t05_thread_cont_cleanup_action(void *args) {
+  hpx_addr_t addr = hpx_thread_current_target();
+  uint64_t local;
+  if (!hpx_gas_try_pin(addr, (void**)&local))
+    return HPX_RESEND;
+
+  local = SET_CONT_VALUE;
+  uint64_t *value = (uint64_t*) malloc(sizeof(uint64_t));
+  *value = local;
+
+  hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
+}
+
+START_TEST (test_libhpx_threadContinueCleanup)
+{
+  printf("Starting the Thread continue cleanup test\n");
+  // Start the timer
+  hpx_time_t t1 = hpx_time_now();
+  
+  hpx_addr_t src = hpx_gas_alloc(sizeof(uint64_t));
+  int rank = hpx_get_my_rank();
+
+  uint64_t *block = malloc(DATA_SIZE);
+  assert(block);
+
+  hpx_call_sync(src, t05_thread_cont_cleanup, &rank, sizeof(rank), block, DATA_SIZE);
+  printf("value in block is %lu\n", *block);
+
+  hpx_gas_free(src, HPX_NULL);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
 // Register tests from this file
 //****************************************************************************
-
 void add_05_TestThreads(TCase *tc) {
   tcase_add_test(tc, test_libhpx_threadCreate);
   tcase_add_test(tc, test_libhpx_threadExit);
   tcase_add_test(tc, test_libhpx_threadGetTlsID);
   tcase_add_test(tc, test_libhpx_threadContinue);
+  tcase_add_test(tc, test_libhpx_threadContinueCleanup);
 }

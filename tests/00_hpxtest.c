@@ -54,6 +54,7 @@ hpx_action_t t05_initData;
 hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
 hpx_action_t t05_cont_thread;
+hpx_action_t t05_thread_cont_cleanup;
 hpx_action_t t06_initDomain;
 hpx_action_t t06_advanceDomain;
 
@@ -76,19 +77,7 @@ static int _main_action(void *args)
 {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
-  //char * long_tests = NULL;
-  //char * hardcore_tests = NULL;
-  //char * perf_tests = NULL;
-
-  /* figure out if we need to run long-running tests */
-  //long_tests = getenv("HPXTEST_EXTENDED");
-
-  /* see if we're in HARDCORE mode (heh) */
-  //hardcore_tests = getenv("HPXTEST_HARDCORE");
-
-  /* see if we're supposed to run performance tests */
-  //perf_tests = getenv("HPXTEST_PERF");
-
+  
   /* install fixtures */
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
@@ -99,7 +88,7 @@ static int _main_action(void *args)
   add_03_TestGlobalMemAlloc(tc);
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
-  add_06_TestFutures(tc);  
+  // add_06_TestFutures(tc);  
 
   suite_add_tcase(s, tc);
 
@@ -140,6 +129,7 @@ void _register_actions(void) {
   t05_worker   = HPX_REGISTER_ACTION(t05_worker_action);
   t05_assignID = HPX_REGISTER_ACTION(t05_assignID_action);
   t05_cont_thread = HPX_REGISTER_ACTION(t05_set_cont_action);
+  t05_thread_cont_cleanup = HPX_REGISTER_ACTION(t05_thread_cont_cleanup_action);
 
   //06_TestFutures.c
   t06_initDomain = HPX_REGISTER_ACTION(t06_initDomain_action);
