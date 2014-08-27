@@ -35,6 +35,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <check.h>
 
 #include <libhpx/debug.h> 
 #include <hpx/hpx.h>
@@ -51,11 +52,7 @@ hpx_action_t t04_send;
 hpx_action_t t05_initData;
 hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
-hpx_action_t t05_init_array;
-hpx_action_t t05_update_array;
-hpx_action_t t05_memput;
-hpx_action_t t05_memget;
-hpx_action_t t05_threadContMain;
+hpx_action_t t05_cont_thread;
 hpx_action_t t06_initDomain;
 hpx_action_t t06_advanceDomain;
 
@@ -114,12 +111,12 @@ static int _main_action(void *args)
   // This sets CK_FORK=no
   //srunner_set_fork_status(sr, CK_NOFORK);
 
-  srunner_run_all(sr, CK_VERBOSE);
+  srunner_run_all(sr, CK_NORMAL);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
 
-  return (failed == 0) ? 0 : -1;
+  return (failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 //****************************************************************************
@@ -141,11 +138,7 @@ void _register_actions(void) {
   t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
   t05_worker   = HPX_REGISTER_ACTION(t05_worker_action);
   t05_assignID = HPX_REGISTER_ACTION(t05_assignID_action);
-  t05_init_array = HPX_REGISTER_ACTION(t05_init_array_action);
-  t05_update_array = HPX_REGISTER_ACTION(t05_update_array_action);
-  t05_memput = HPX_REGISTER_ACTION(t05_memput_action);
-  t05_memget = HPX_REGISTER_ACTION(t05_memget_action);
-  t05_threadContMain = HPX_REGISTER_ACTION(t05_threadContMain_action);
+  t05_cont_thread = HPX_REGISTER_ACTION(t05_set_cont_action);
 
   //06_TestFutures.c
   t06_initDomain = HPX_REGISTER_ACTION(t06_initDomain_action);
