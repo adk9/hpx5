@@ -49,6 +49,10 @@
 /examples/sendrecv
 /examples/sendrecv-chan
 /examples/pingpong-chan
+/examples/allgather
+/examples/allreduce-bench
+/examples/alltoall
+/examples/hello
 
 # /include/
 /include/stamp-h1
