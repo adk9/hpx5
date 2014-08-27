@@ -136,6 +136,8 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// @returns       - true if we initiated a send
 /// ----------------------------------------------------------------------------
 static bool _try_start_send(progress_t *progress) {
+  uint32_t dest;
+  int size;
   hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
     return false;
@@ -146,8 +148,8 @@ static bool _try_start_send(progress_t *progress) {
     goto unwind0;
   }
 
-  uint32_t dest = btt_owner(here->btt, p->target);
-  int size = sizeof(*p) + p->size;
+  dest = btt_owner(here->btt, p->target);
+  size = sizeof(*p) + p->size;
   if (transport_send(here->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");
     goto unwind1;
