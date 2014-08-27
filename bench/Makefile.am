@@ -5,7 +5,7 @@ bench_PROGRAMS    = netbench
 netbench_SOURCES        = netbench.c
 
 AM_CPPFLAGS          = -I$(top_srcdir)/include
-AM_CFLAGS            = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
+AM_CFLAGS         =
 AM_LDFLAGS          = -static $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_HWLOC

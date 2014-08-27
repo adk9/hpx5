@@ -2,14 +2,28 @@ noinst_appsdir         = $(abs_top_builddir)/apps/
 
 noinst_apps_PROGRAMS   = miniamr
 
-miniamr_SOURCES  = main.c init.c plot.c profile.c refine.c
+miniamr_SOURCES  = comm_parent.c \
+                   comm_parent_proc.c \
+                   comm_parent_reverse.c \
+                   comm_proc.c \
+                   comm_refine.c \
+                   comm_reverse_refine.c \
+                   init.c \
+                   main.c \
+                   move.c \
+                   move_blocks.c \
+                   plot.c \
+                   profile.c \
+                   rcb.c \
+                   redistribute_blocks.c \
+                   refine.c \
+                   refine_level.c
 
 miniamr_LDFLAGS  = -static
 miniamr_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 miniamr_CPPFLAGS = -I$(top_srcdir)/include
-miniamr_CFLAGS   = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
-miniamr_CFLAGS  += @PHOTON_CFLAGS@ @MPI_CFLAGS@
+miniamr_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
 miniamr_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 if HAVE_PHOTON
