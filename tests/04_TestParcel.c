@@ -75,7 +75,7 @@ START_TEST (test_libhpx_parcel)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t completed = hpx_lco_and_new(0);
+  hpx_addr_t completed = hpx_lco_and_new(1);
 
   hpx_call(HPX_HERE, t04_send, &n, sizeof(n), completed);
   
