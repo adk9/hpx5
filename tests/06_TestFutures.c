@@ -28,7 +28,6 @@
 //****************************************************************************
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "common.h"
 
 int t06_initDomain_action(const InitArgs *args)
 {

@@ -32,7 +32,6 @@
 //****************************************************************************
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "common.h"
 
 //****************************************************************************
 // Source action to populate the data
@@ -71,7 +70,6 @@ START_TEST (test_libhpx_gas_alloc)
 {
   printf("Starting the GAS local memory allocation test\n");
   hpx_addr_t local;
-  static double *data_p = NULL;
   // the number of bytes to allocate
   int ndata = 10;
 

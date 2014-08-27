@@ -50,8 +50,6 @@
 const int DATA_SIZE = sizeof(uint64_t);
 const int SET_CONT_VALUE = 1234;
 
-static int t05_data_move = 0;
-
 int t05_initData_action(const InitBuffer *args)
 {
  // Get the target of the current thread. The target of the thread is the
@@ -210,7 +208,6 @@ END_TEST
 //****************************************************************************
 
 int t05_set_cont_action(void *args) {
-  hpx_addr_t cont_addr = hpx_thread_current_cont_target();
   uint64_t value = SET_CONT_VALUE;
   hpx_thread_continue(DATA_SIZE, &value);
 }
@@ -224,7 +221,6 @@ START_TEST (test_libhpx_threadContinue)
   hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(), 
                                      DATA_SIZE, hpx_get_num_ranks());
 
-  hpx_addr_t addr = hpx_gas_global_alloc(hpx_get_num_ranks(), DATA_SIZE);
   for (int i = 0; i < hpx_get_num_ranks(); i++) { 
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     hpx_parcel_set_target(p, HPX_THERE(i));
