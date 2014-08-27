@@ -17,20 +17,25 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include "hpx/config.h"
 #include "hpx/hpx.h"
 
 #include "libhpx/debug.h"
 
-void
-dbg_log1(unsigned line, const char *f, const char *fmt, ...) {
-  printf("LIBHPX<%d,%d>: (%s:%u) ", hpx_get_my_rank(),
-         hpx_get_my_thread_id(), f, line);
+hpx_log_t dbg_log_level = HPX_LOG_DEFAULT;
 
-  va_list args;
-  va_start(args, fmt);
-  vprintf(fmt, args);
-  va_end(args);
-  fflush(stdout);
+void
+dbg_log1(unsigned line, const char *f, const hpx_log_t level, const char *fmt, ...) {
+  if (dbg_log_level & level) {
+    printf("LIBHPX<%d,%d>: (%s:%u) ", hpx_get_my_rank(),
+           hpx_get_my_thread_id(), f, line);
+
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    fflush(stdout);
+  }
 }
 
 int

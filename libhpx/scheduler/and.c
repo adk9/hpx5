@@ -106,7 +106,7 @@ _and_set(lco_t *lco, int size, const void *from)
     return;
 
   if (val < 1) {
-    dbg_error("Too many threads joined AND lco\n");
+    dbg_error("and: too many threads joined the AND lco.\n");
     return;
   }
 

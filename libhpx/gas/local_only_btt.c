@@ -89,7 +89,7 @@ btt_class_t *btt_local_only_new(void) {
   // Allocate the object
   _btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
-    dbg_error("could not allocate PGAS block-translation-table.\n");
+    dbg_error("local: could not allocate block-translation-table.\n");
     return NULL;
   }
 

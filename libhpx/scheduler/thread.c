@@ -136,7 +136,7 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   if (e) {
     uint64_t stacks;
     sync_load(stacks, &_stacks, SYNC_ACQUIRE);
-    dbg_error("failed to mark a guard page for the thread, %lu.\n", stacks);
+    dbg_error("thread: failed to mark a guard page for thread %lu.\n", stacks);
     hpx_abort();
   }
 
@@ -149,7 +149,7 @@ void thread_delete(ustack_t *stack) {
   char *block = (char*)stack - HPX_PAGE_SIZE;
   int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
   if (e) {
-    dbg_error("failed to unprotect a guard page.\n");
+    dbg_error("thread: failed to unprotect the guard page.\n");
     // don't abort
   }
   free(block);

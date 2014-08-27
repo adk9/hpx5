@@ -129,7 +129,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // allocate a parcel with enough space to buffer the @p buffer
   hpx_parcel_t *p = network_malloc(size, HPX_CACHELINE_SIZE);
   if (!p) {
-    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", bytes);
+    dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
     return NULL;
   }
 
@@ -230,7 +230,7 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
   if (!p) {
-    dbg_error("could not allocate parcel.\n");
+    dbg_error("parcel: could not allocate parcel.\n");
     return NULL;
   }
 

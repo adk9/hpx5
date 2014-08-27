@@ -26,6 +26,7 @@ struct gas_class;
 struct network_class;
 struct scheduler;
 struct transport_class;
+struct hpx_config;
 
 typedef struct {
   hpx_locality_t               rank;            // this locality's rank

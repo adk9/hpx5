@@ -114,7 +114,7 @@ int hpx_init(const hpx_config_t *cfg) {
   // 1) start by initializing the entire local data segment
   here = _map_local(UINT32_MAX);
   if (!here)
-    return dbg_error("failed to map the local data segment.\n");
+    return dbg_error("init: failed to map the local data segment.\n");
 
   // for debugging
   here->rank = -1;
@@ -129,7 +129,7 @@ int hpx_init(const hpx_config_t *cfg) {
   // 2) bootstrap, to figure out some topology information
   here->boot = boot_new(cfg->boot);
   if (here->boot == NULL)
-    return _cleanup(here, dbg_error("failed to create boot manager.\n"));
+    return _cleanup(here, dbg_error("init: failed to create the bootstrapper.\n"));
 
   // 3) grab the rank and ranks, these are used all over the place so we expose
   //    them directly
@@ -150,17 +150,17 @@ int hpx_init(const hpx_config_t *cfg) {
   // 5) allocate our block translation table
   here->btt = btt_new(cfg->gas);
   if (here->btt == NULL)
-    return _cleanup(here, dbg_error("failed to create the block translation table.\n"));
+    return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));
 
   // 6) allocate the transport
   here->transport = transport_new(cfg->transport);
   if (here->transport == NULL)
-    return _cleanup(here, dbg_error("failed to create transport.\n"));
+    return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
   here->network = network_new();
   if (here->network == NULL)
-    return _cleanup(here, dbg_error("failed to create network.\n"));
+    return _cleanup(here, dbg_error("init: failed to create network.\n"));
   dbg_log("initialized the network.\n");
 
   // 7) insert the base mapping for our local data segment, and pin it so that
@@ -176,7 +176,8 @@ int hpx_init(const hpx_config_t *cfg) {
   here->sched = scheduler_new(cores, workers, cfg->stack_bytes,
                               cfg->backoff_max, cfg->statistics);
   if (here->sched == NULL)
-    return _cleanup(here, dbg_error("failed to create scheduler.\n"));
+    return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
+  dbg_log_level = cfg->log_level;
 
   return HPX_SUCCESS;
 }
@@ -188,7 +189,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // pthread_t heavy;
   // int e = pthread_create(&heavy, NULL, heavy_network, here->network);
   // if (e)
-  //   return _cleanup(here, dbg_error("could not start the network
+  //   return _cleanup(here, dbg_error("init: could not start the network
   //   thread.\n"));
 
   // the rank-0 process starts the application by sending a single parcel to
@@ -197,7 +198,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     // allocate and initialize a parcel for the original action
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
     if (!p)
-      return dbg_error("failed to allocate an initial parcel.\n");
+      return dbg_error("init: failed to allocate an initial parcel.\n");
 
     hpx_parcel_set_action(p, act);
     hpx_parcel_set_target(p, HPX_HERE);
@@ -213,7 +214,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   if (here->transport->type != HPX_TRANSPORT_SMP) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     if (!p)
-      return dbg_error("could not allocate a network server parcel");
+      return dbg_error("init: could not allocate a light network parcel");
     hpx_parcel_set_action(p, light_network);
     hpx_parcel_set_target(p, HPX_HERE);
 
@@ -230,7 +231,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // wait for the network to shutdown
   // e = pthread_join(heavy, NULL);
   // if (e) {
-  //   dbg_error("could not join the heavy network thread.\n");
+  //   dbg_error("init: could not join the heavy network thread.\n");
   //   return e;
   // }
 
@@ -247,7 +248,7 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_t *p = parcel_create(addr, action, (void*)args, len, c_target,
                                   c_action, true);
   if (!p)
-    return dbg_error("hpx_call_with_continuation failed.\n");
+    return dbg_error("rpc: failed to create parcel.\n");
 
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
@@ -283,7 +284,7 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_t *p = parcel_create(addr, action, args, len, result,
                                   hpx_lco_set_action, false);
   if (!p)
-    return dbg_error("hpx_call_async failed.\n");
+    return dbg_error("rpc: failed to create parcel.\n");
 
   hpx_parcel_send(p, args_reuse);
   return HPX_SUCCESS;
