@@ -50,5 +50,6 @@ HPX_INTERNAL void dbg_wait(void);
 #define dbg_log_gas(...) _dbg_log(HPX_LOG_GAS, __VA_ARGS__)
 #define dbg_log_net(...) _dbg_log(HPX_LOG_NET, __VA_ARGS__)
 #define dbg_log_trans(...) _dbg_log(HPX_LOG_TRANS, __VA_ARGS__)
+#define dbg_log_parcel(...) _dbg_log(HPX_LOG_PARCEL, __VA_ARGS__)
 
 #endif // LIBHPX_DEBUG_H

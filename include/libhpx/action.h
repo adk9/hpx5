@@ -23,4 +23,6 @@ HPX_INTERNAL hpx_action_handler_t action_lookup(hpx_action_t id);
 
 HPX_INTERNAL int action_invoke(hpx_action_t id, void *args);
 
+HPX_INTERNAL const char *action_get_key(hpx_action_t id);
+
 #endif // LIBHPX_ACTION_H

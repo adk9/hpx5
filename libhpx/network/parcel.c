@@ -26,6 +26,7 @@
 #include <string.h>
 #include "hpx/hpx.h"
 
+#include "libhpx/action.h"
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -205,6 +206,13 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
 
+  dbg_log_parcel("parcel: %s(%p,%u)@(%lu,%u,%u) => %s@(%lu,%u,%u).\n",
+                 action_get_key(p->action), hpx_parcel_get_data(p),
+                 p->size, p->target.offset, p->target.base_id,
+                 p->target.block_bytes, action_get_key(p->c_action),
+                 p->c_target.offset, p->c_target.base_id,
+                 p->c_target.block_bytes);
+  
   // do a local send through loopback
   bool local = (btt_owner(here->btt, p->target) == here->rank);
   if (local) {

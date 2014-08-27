@@ -20,13 +20,14 @@ struct ustack;
 /// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
-/// @field   stack - a pointer to a stack
-/// @field     src - the src rank for the parcel
-/// @field    size - the data size in bytes
-/// @field  action - the target action identifier
-/// @field  target - the target address for parcel_send()
-/// @field    cont - the continuation address
-/// @field    data - either an in-place payload, or a pointer
+/// @field   ustack - a pointer to a stack
+/// @field      src - the src rank for the parcel
+/// @field     size - the data size in bytes
+/// @field   action - the target action identifier
+/// @field   target - the target address for parcel_send()
+/// @field c_action - the continuation action identifier
+/// @field c_target - the target address for the continuation 
+/// @field   buffer - either an in-place payload, or a pointer
 /// ----------------------------------------------------------------------------
 struct hpx_parcel {
   struct ustack *ustack;
