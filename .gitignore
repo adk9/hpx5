@@ -20,6 +20,7 @@
 
 # /config/
 /config/*
+!/config/hpx*
 !/config/pkg.m4
 
 # /docs/
