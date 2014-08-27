@@ -47,6 +47,9 @@
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
 
+const int DATA_SIZE = sizeof(uint64_t);
+const int SET_CONT_VALUE = 1234;
+
 static int t05_data_move = 0;
 
 int t05_initData_action(const InitBuffer *args)
@@ -160,7 +163,6 @@ int t05_assignID_action(void *args)
 {
   int tid = hpx_thread_get_tls_id();
   int consecutiveID = hpx_thread_get_tls_id();
-  ck_assert_msg(tid == consecutiveID, "Error in expected behavior of generation of thread ID"); 
   printf("First time generated ID: %d, consecutive new ID:  %d\n", tid, 
                                        consecutiveID);
   return HPX_SUCCESS;
@@ -206,132 +208,40 @@ END_TEST
 // continuation address (size is the size of the value and value is the value
 // to be sent to the thread's continuation address.
 //****************************************************************************
-int t05_memput_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
 
-  memcpy(local, args, hpx_thread_current_args_size());
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
-}
-
-int t05_memget_action(size_t *args) {
-  size_t n = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  hpx_gas_unpin(target);
-  hpx_thread_continue(n, local);
-}
-
-// array get is synchronous and returns the value
-uint64_t array_get(hpx_addr_t array, long i) {
-  uint64_t val;
-  size_t n = sizeof(val);
-  hpx_addr_t there = hpx_addr_add(array, i*n);
-  hpx_call_sync(there, t05_memget, &n, sizeof(n), &val, n);
-  return val;
-}
-
-// array set is asynchronous and uses an LCO for synchronization.
-void array_set(hpx_addr_t array, long i, uint64_t val,
-               hpx_addr_t done) {
-  hpx_addr_t there = hpx_addr_add(array, i*sizeof(uint64_t));
-  hpx_call(there, t05_memput, &val, sizeof(val), done);
-}
-
-// Initialize the array
-int t05_init_array_action(contTest_config_t *cfg) {
-  hpx_addr_t target = hpx_thread_current_target();
-  uint64_t *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  int me = HPX_LOCALITY_ID;
-  int nranks = HPX_LOCALITIES;
-  long r = cfg->arraySize % nranks;
-  long blocks = cfg->arraySize / nranks + ((me < r) ? 1 : 0);
-  hpx_addr_t done = hpx_lco_and_new(blocks);
-  for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
-    array_set(cfg->array, i, i, done);
-    //printf("Initializing the array at %ld, with value %ld\n", i, i);
-  }
-
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
-}
-
-int t05_update_array_action(contTest_config_t *cfg) {
-  uint64_t val[ARRAY_SIZE];
-  hpx_addr_t completed;
-
-  // Update the array with random number
-  for (int i = 0; i < cfg->arraySize; i++) 
-    val[i] = array_get(cfg->array, i);
-  
-  completed = hpx_lco_and_new(ARRAY_SIZE);
-  for (int i = 0; i < cfg->arraySize; i++) {
-    uint64_t randVal =  rand() % ARRAY_SIZE;
-    array_set(cfg->array, i, randVal, completed);
-    //printf("Updating the array at %d, with value %ld\n", i, randVal); 
-  }  
-  hpx_lco_wait(completed);
-  hpx_lco_delete(completed, HPX_NULL);
-  
-  return HPX_SUCCESS;
-}
-
-int t05_threadContMain_action(contTest_config_t *cfg) {
-  printf("nThreads = %d\n", hpx_get_num_ranks());
-  fflush(stdout);
-
-  // Allocate main array
-  cfg->array = hpx_gas_global_alloc(ARRAY_SIZE, sizeof(uint64_t));
-
-  // Initialize the array
-  hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_bcast(t05_init_array, cfg, sizeof(*cfg), done);
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
-  printf("Initialization of array complete.\n");
-  fflush(stdout);
-
-  // Update the array
-  done = hpx_lco_future_new(0);
-  hpx_bcast(t05_update_array, cfg, sizeof(*cfg), done);
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
-  printf("Completed array updates\n");
-  fflush(stdout);
-  hpx_thread_exit(HPX_SUCCESS);
+int t05_set_cont_action(void *args) {
+  hpx_addr_t cont_addr = hpx_thread_current_cont_target();
+  uint64_t value = SET_CONT_VALUE;
+  hpx_thread_continue(DATA_SIZE, &value);
 }
 
 START_TEST (test_libhpx_threadContinue)
 {
   printf("Starting the Thread continue test\n");
-
-  contTest_config_t contTest_cfg  = {
-    .arraySize  = ARRAY_SIZE,
-    .array      = HPX_NULL,
-  };
-
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_status_t status = hpx_call(HPX_HERE, t05_threadContMain, 
-                                 &contTest_cfg, sizeof(contTest_cfg),
-                                 done);
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(), 
+                                     DATA_SIZE, hpx_get_num_ranks());
+
+  hpx_addr_t addr = hpx_gas_global_alloc(hpx_get_num_ranks(), DATA_SIZE);
+  for (int i = 0; i < hpx_get_num_ranks(); i++) { 
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+    hpx_parcel_set_target(p, HPX_THERE(i));
+    hpx_parcel_set_action(p, t05_cont_thread);
+    hpx_parcel_set_cont_target(p, hpx_lco_future_array_at(cont_fut, i));
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_send(p, HPX_NULL); 
+    printf("Sending action with continuation to %d\n", i);
+  }
+
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    uint64_t result;
+    printf("Waiting on continuation to %d\n", i);
+    hpx_lco_get(hpx_lco_future_array_at(cont_fut, i), DATA_SIZE, &result);
+    printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
+    assert(result == SET_CONT_VALUE);
+  }
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
