@@ -66,7 +66,7 @@ void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *n) {
 }
 
 two_lock_queue_t *sync_two_lock_queue_new(void) {
-  two_lock_queue_t *q;
+  two_lock_queue_t *q = NULL;
   int e = posix_memalign((void**)&q, HPX_CACHELINE_SIZE, sizeof(*q));
   if (e == 0)
     sync_two_lock_queue_init(q, NULL);
