@@ -383,7 +383,7 @@ hpx_lco_chan_new(void)
     chan = HPX_HERE;
     char *base;
     if (!hpx_gas_try_pin(chan, (void**)&base)) {
-      dbg_error("Could not translate local block.\n");
+      dbg_error("chan: could not translate local block.\n");
       hpx_abort();
     }
     chan.offset = (char*)local - base;
@@ -392,7 +392,7 @@ hpx_lco_chan_new(void)
   else {
     chan = locality_malloc(sizeof(_chan_t));
     if (!hpx_gas_try_pin(chan, (void**)&local)) {
-      dbg_error("Could not pin newly allocated channel.\n");
+      dbg_error("chan: could not pin newly allocated channel.\n");
       hpx_abort();
     }
   }
@@ -525,7 +525,7 @@ hpx_lco_chan_array_at(hpx_addr_t array, int i) {
 
 void
 hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync) {
-  dbg_log("unimplemented");
+  dbg_log_lco("chan: array delete unimplemented");
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }

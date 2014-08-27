@@ -136,6 +136,8 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// @returns       - true if we initiated a send
 /// ----------------------------------------------------------------------------
 static bool _try_start_send(progress_t *progress) {
+  uint32_t dest;
+  int size;
   hpx_parcel_t *p = network_tx_dequeue(here->network);
   if (!p)
     return false;
@@ -146,8 +148,8 @@ static bool _try_start_send(progress_t *progress) {
     goto unwind0;
   }
 
-  uint32_t dest = btt_owner(here->btt, p->target);
-  int size = sizeof(*p) + p->size;
+  dest = btt_owner(here->btt, p->target);
+  size = sizeof(*p) + p->size;
   if (transport_send(here->transport, dest, p, size, &r->request)) {
     dbg_error("transport failed send.\n");
     goto unwind1;
@@ -279,25 +281,21 @@ void network_progress_flush(progress_t *p) {
 }
 
 void network_progress_poll(progress_t *p) {
-  //int sends =
-  _test(p, _finish_send, &p->pending_sends, 0);
-  // if (sends)
-  //   dbg_log("finished %d sends.\n", sends);
+  int sends = _test(p, _finish_send, &p->pending_sends, 0);
+  if (sends)
+    dbg_log_trans("progress: finished %d sends.\n", sends);
 
-  //bool send =
-  _try_start_send(p);
-  // if (send)
-  //   dbg_log("started a send.\n");
+  bool send = _try_start_send(p);
+  if (send)
+    dbg_log_trans("progress: started a send.\n");
 
-  // int recvs =
-  _test(p, _finish_recv, &p->pending_recvs, 0);
-  // if (recvs)
-  //   dbg_log("finished %d receives.\n", recvs);
+  int recvs = _test(p, _finish_recv, &p->pending_recvs, 0);
+  if (recvs)
+    dbg_log_trans("progress: finished %d receives.\n", recvs);
 
-  // bool recv =
-  _try_start_recv(p);
-  // if (recv)
-  //   dbg_log("started a recv.\n");
+  bool recv = _try_start_recv(p);
+  if (recv)
+    dbg_log_trans("progress: started a recv.\n");
 }
 
 progress_t *network_progress_new() {
@@ -318,7 +316,7 @@ void network_progress_delete(progress_t *p) {
   }
 
   if (p->pending_sends)
-    dbg_log("abandoning active send.\n");
+    dbg_log_trans("progress: abandoning active send.\n");
 
   while ((i = p->pending_sends) != NULL) {
     transport_request_cancel(here->transport, i);
@@ -327,7 +325,7 @@ void network_progress_delete(progress_t *p) {
   }
 
   if (p->pending_recvs)
-    dbg_log("abandoning active recv.\n");
+    dbg_log_trans("progress: abandoning active recv.\n");
 
   while ((i = p->pending_recvs) != NULL) {
     transport_request_cancel(here->transport, i);

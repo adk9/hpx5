@@ -67,7 +67,7 @@ _id(void)
 static void
 _barrier(void)
 {
-  dbg_log("photon: barrier unsupported.\n");
+  dbg_log_trans("photon: barrier unsupported.\n");
 }
 
 
@@ -120,7 +120,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
-    dbg_error("Could not pin buffer of size %lu for photon\n", len);
+    dbg_error("photon: could not pin buffer of size %lu.\n", len);
 }
 
 
@@ -132,7 +132,7 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
-    dbg_error("Could not un-pin buffer %p of size %lu for photon\n", buffer, len);
+    dbg_error("photon: could not unpin buffer %p of size %lu.\n", buffer, len);
 }
 
 
@@ -156,12 +156,12 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     photon_addr daddr = {.blkaddr.blk3 = saddr};
     int e = photon_send(&daddr, b, n, 0, r);
     if (e != PHOTON_OK)
-      return dbg_error("Photon could not put %lu bytes to %i.\n", n, dest);
+      return dbg_error("photon: could not put %lu bytes to %i.\n", n, dest);
   }
   else {
     rc = photon_get_buffer_private(rbuffer, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("Could not get buffer metadata for put: 0x%016lx (%lu)\n",
+      return dbg_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
 		       (uintptr_t)rbuffer, rn);
     }
     
@@ -179,7 +179,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     
     rc = photon_post_os_put_direct(dest, b, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("Could not complete put operation: 0x%016lx (%lu)\n",
+      return dbg_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
 		       (uintptr_t)rbuffer, rn);
     }
   }
@@ -207,13 +207,13 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     photon_rid *id = (photon_rid*)r;
     int e = photon_recv(*id, buffer, n, 0);
     if (e != PHOTON_OK) {
-      return dbg_error("Photon could not get from %i\n", dest);
+      return dbg_error("photon: could not get from %i.\n", dest);
     }
   }
   else {
     rc = photon_get_buffer_private(b, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("Could not get buffer metadata for get: 0x%016lx (%lu)\n",
+      return dbg_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
 		       (uintptr_t)b, rn);
     }
     
@@ -231,7 +231,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     
     rc = photon_post_os_get_direct(dest, buffer, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("Could not complete get operation: 0x%016lx (%lu)\n",
+      return dbg_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
 		       (uintptr_t)b, rn);
     }
   }
@@ -253,7 +253,7 @@ _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
   //int e = photon_send(&daddr, b, n, 0, r);
   int e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK)
-    return dbg_error("Photon could not send %lu bytes to %i.\n", n, dest);
+    return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
 }
 
@@ -277,7 +277,7 @@ _probe(transport_class_t *transport, int *source)
 
   int e = photon_probe_ledger(photon_src, &flag, PHOTON_SEND_LEDGER, &status);
   if (e < 0) {
-    dbg_error("photon probe failed.\n");
+    dbg_error("photon: probe failed.\n");
     return 0;
   }
 
@@ -325,13 +325,13 @@ _test(transport_class_t *t, void *request, int *success)
   photon_rid *id = (photon_rid*)request;
   int e = photon_test(*id, success, &type, &status);
   if (e < 0)
-    return dbg_error("failed photon_test.\n");
+    return dbg_error("photon: failed photon_test.\n");
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
     e = photon_send_FIN(*id, status.src_addr.global.proc_id);
     if (e != PHOTON_OK) {
-      return dbg_error("could not send FIN back to %lu\n",
+      return dbg_error("photon: could not send FIN back to %lu.\n",
                        status.src_addr.global.proc_id);
     }
   }
@@ -357,7 +357,7 @@ _malloc(transport_class_t *t, size_t bytes, size_t align)
   void *p = mallocx(bytes,
                     MALLOCX_ALIGN(align) | MALLOCX_ARENA(photon->arena));
   if (!p)
-    dbg_log("failed network allocation.\n");
+    dbg_error("photon: failed network allocation.\n");
 
   return p;
 }
@@ -378,18 +378,18 @@ _alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_in
   assert(t);
   void *chunk = t->alloc(size, alignment, zero, arena_ind);
   if (!chunk) {
-    dbg_error("Photon transport could not alloc jemalloc chunk of size %lu\n", size);
+    dbg_error("photon: could not alloc jemalloc chunk of size %lu.\n", size);
     return NULL;
   }
 
   if ((uintptr_t)chunk % alignment != 0) {
-    dbg_error("Photon transport could not alloc jemalloc chunk of size %lu "
-              "with alignment %lu\n", size, alignment);
+    dbg_error("photon: could not alloc jemalloc chunk of size %lu "
+              "with alignment %lu.\n", size, alignment);
     hpx_abort();
   }
 
   if (photon_register_buffer(chunk, size)) {
-    dbg_error("Photon transport could not pin buffer %p of size %lu\n", chunk, size);
+    dbg_error("photon: could not pin buffer %p of size %lu.\n", chunk, size);
     t->dalloc(chunk, size, arena_ind);
   }
 
@@ -401,7 +401,7 @@ static bool
 _dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
 {
   if (photon_unregister_buffer(chunk, size))
-   dbg_error("Photon transport could not un-pin buffer %p of size %lu\n",
+   dbg_error("photon: could not unpin buffer %p of size %lu.\n",
              chunk, size);
 
   photon_t *t = (photon_t *)here->transport;
@@ -443,7 +443,7 @@ transport_class_t *transport_new_photon(void) {
   int val = 0;
   MPI_Initialized(&val);
   if (!val) {
-    dbg_error("photon transport only supports mpi bootstrap.\n");
+    dbg_error("photon: only supports MPI bootstrap.\n");
     return NULL;
   }
 
@@ -484,21 +484,21 @@ transport_class_t *transport_new_photon(void) {
   val = photon_initialized();
   if (!val) {
     if (photon_init(cfg) != PHOTON_OK) {
-      dbg_error("failed to initialize photon transport.\n");
+      dbg_error("photon: failed to initialize transport.\n");
       return NULL;
     };
   }
 
   photon->progress     = network_progress_new();
   if (!photon->progress) {
-    dbg_error("failed to start the transport progress loop.\n");
+    dbg_error("photon: failed to start the progress loop.\n");
     hpx_abort();
   }
 
   size_t sz = sizeof(photon->arena);
   int error = mallctl("arenas.extend", &photon->arena, &sz, NULL, 0);
   if (error) {
-    dbg_error("failed to allocate a pinned arena %d.\n", error);
+    dbg_error("photon: failed to allocate a pinned arena %d.\n", error);
     hpx_abort();
   }
 
@@ -509,7 +509,7 @@ transport_class_t *transport_new_photon(void) {
   error = mallctl(path, (void*)&photon->alloc, &sz, (void*)&alloc,
                   sizeof(alloc));
   if (error) {
-    dbg_error("Photon failed to set arena allocator\n");
+    dbg_error("photon: failed to set arena allocator.\n");
     hpx_abort();
   }
 
@@ -519,7 +519,7 @@ transport_class_t *transport_new_photon(void) {
   error = mallctl(path, (void*)&photon->dalloc, &sz, (void*)&dalloc,
                   sizeof(dalloc));
   if (error) {
-    dbg_error("Photon failed to set arena de-allocator.\n");
+    dbg_error("photon: failed to set arena de-allocator.\n");
     hpx_abort();
   }
 

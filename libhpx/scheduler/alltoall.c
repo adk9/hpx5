@@ -144,7 +144,7 @@ _alltoall_getid(_alltoall_t *g, unsigned offset, int size, void *out)
     goto unlock;
 
   // We're in the reading phase, if the user wants data copy it out
-  if (size && out) 
+  if (size && out)
     memcpy(out, (char *)g->value + (offset * size), size);
 
   // update the count, if I'm the last reader to arrive, switch the mode and
@@ -202,7 +202,7 @@ static int _alltoall_getid_proxy(_alltoall_get_offset_t *args)
   hpx_status_t status = _alltoall_getid(g, args->offset, args->size, buffer);
   hpx_gas_unpin(target);
 
-  // if success, finish the current thread's execution, sending buffer value to 
+  // if success, finish the current thread's execution, sending buffer value to
   // the thread's continuation address else finish the current thread's execution.
   if(status == HPX_SUCCESS)
     hpx_thread_continue(args->size, buffer);
@@ -223,6 +223,9 @@ _alltoall_wait(lco_t *lco)
 static hpx_status_t
 _alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
 {
+  int nDoms;
+  int elementSize;
+  int columnOffset;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&g->lco);
 
@@ -233,13 +236,13 @@ _alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
   if (status != HPX_SUCCESS)
     goto unlock;
 
-  int nDoms = g->participants;
+  nDoms = g->participants;
   // copy in our chunk of the data
   assert(size && buffer);
-  int elementSize = size / nDoms;
-  int columnOffset = offset * elementSize;
+  elementSize = size / nDoms;
+  columnOffset = offset * elementSize;
 
-  for (int i = 0; i < nDoms; i++) 
+  for (int i = 0; i < nDoms; i++)
   {
     int rowOffset = i * size;
     int tempOffset = rowOffset + columnOffset;
@@ -271,7 +274,7 @@ _alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
 ///                     don't care.
 /// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t
-hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size, 
+hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
                        const void *value, hpx_addr_t lsync, hpx_addr_t rsync)
 {
   hpx_status_t status = HPX_SUCCESS;
@@ -337,7 +340,7 @@ _alltoall_set(lco_t *lco, int size, const void *from)
 }
 
 static hpx_status_t
-_alltoall_get(lco_t *lco, int size, void *out) 
+_alltoall_get(lco_t *lco, int size, void *out)
 {
   // can't call get on an alltoall
   hpx_abort();
@@ -383,7 +386,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   hpx_addr_t gather = locality_malloc(sizeof(_alltoall_t));
   _alltoall_t *g = NULL;
   if (!hpx_gas_try_pin(gather, (void**)&g)) {
-    dbg_error("Could not pin newly allocated gathering.\n");
+    dbg_error("alltoall: could not pin newly allocated alltoall LCO.\n");
     hpx_abort();
   }
   _alltoall_init(g, inputs, size);

@@ -147,10 +147,10 @@ _thread_enter(hpx_parcel_t *parcel)
   int status = action_invoke(action, args);
   switch (status) {
    default:
-    dbg_error("action produced unhandled error, %i\n", (int)status);
+    dbg_error("action: produced unhandled error %i.\n", (int)status);
     hpx_shutdown(status);
    case HPX_ERROR:
-    dbg_error("action produced error\n");
+    dbg_error("action: produced error.\n");
     hpx_abort();
    case HPX_RESEND:
    case HPX_SUCCESS:
@@ -438,14 +438,14 @@ void *worker_run(scheduler_t *sched) {
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
   if (!p) {
-    dbg_error("failed to acquire an initial parcel.\n");
+    dbg_error("worker: failed to acquire an initial parcel.\n");
     return NULL;
   }
 
   // bind a stack to transfer to
   _bind(p);
   if (!p) {
-    dbg_error("failed to bind an initial stack.\n");
+    dbg_error("worker: failed to bind an initial stack.\n");
     hpx_parcel_release(p);
     return NULL;
   }
@@ -453,7 +453,7 @@ void *worker_run(scheduler_t *sched) {
   // transfer to the thread---ordinary shutdown will return here
   int e = thread_transfer(p, _on_start, NULL);
   if (e) {
-    dbg_error("shutdown returned error\n");
+    dbg_error("worker: shutdown returned error.\n");
     return NULL;
   }
 
@@ -495,13 +495,13 @@ void worker_shutdown(worker_t *worker) {
 
 void worker_join(worker_t *worker) {
   if (pthread_join(worker->thread, NULL))
-    dbg_error("cannot join worker thread %d.\n", worker->id);
+    dbg_error("worker: cannot join worker thread %d.\n", worker->id);
 }
 
 
 void worker_cancel(worker_t *worker) {
   if (worker && pthread_cancel(worker->thread))
-    dbg_error("cannot cancel worker thread %d.\n", worker->id);
+    dbg_error("worker: cannot cancel worker thread %d.\n", worker->id);
 }
 
 
@@ -740,7 +740,7 @@ void hpx_thread_exit(int status) {
     unreachable();
   }
 
-  dbg_error("unexpected status, %d.\n", status);
+  dbg_error("worker: unexpected status %d.\n", status);
   hpx_abort();
 }
 

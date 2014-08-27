@@ -223,7 +223,7 @@ btt_class_t *btt_agas_new(void) {
   // Allocate the object
   agas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
-    dbg_error("could not allocate AGAS block-translation-table.\n");
+    dbg_error("agas: could not allocate block-translation-table.\n");
     return NULL;
   }
 
@@ -241,7 +241,7 @@ btt_class_t *btt_agas_new(void) {
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   btt->table = mmap(NULL, _TABLE_SIZE, prot, flags, -1, 0);
   if (btt->table == MAP_FAILED) {
-    dbg_error("could not mmap AGAS block translation table.\n");
+    dbg_error("agas: could not mmap block translation table.\n");
     free(btt);
     return NULL;
   }

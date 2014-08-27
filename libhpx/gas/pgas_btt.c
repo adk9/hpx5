@@ -118,7 +118,7 @@ btt_class_t *btt_pgas_new(void) {
   // Allocate the object
   pgas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
-    dbg_error("could not allocate PGAS block-translation-table.\n");
+    dbg_error("pgas: could not allocate block-translation-table.\n");
     return NULL;
   }
 
@@ -136,13 +136,13 @@ btt_class_t *btt_pgas_new(void) {
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   btt->table = mmap(NULL, _table_size, prot, flags, -1, 0);
   while (btt->table == MAP_FAILED && _table_size > 1000) {
-    dbg_error("could not mmap PGAS block-translation-table of size %lu, "
-        "falling back to %lu\n", _table_size, _table_size / 2);
+    dbg_error("pgas: could not mmap block-translation-table of size %lu, "
+        "falling back to %lu.\n", _table_size, _table_size / 2);
     _table_size = _table_size / 2;
     btt->table = mmap(NULL, _table_size, prot, flags, -1, 0);
   }
   if (btt->table == MAP_FAILED) {
-    dbg_error("could not mmap PGAS block-translation-table, falling back to "
+    dbg_error("pgas: could not mmap block-translation-table, falling back to "
         "HPX_GAS_NOGLOBAL\n");
     free(btt);
     return btt_new(HPX_GAS_NOGLOBAL);

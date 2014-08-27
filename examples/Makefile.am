@@ -46,8 +46,7 @@ allreduce_chan_LDADD  =  $(top_builddir)/libhpx/libhpx.la
 pingpong_chan_LDADD   = $(top_builddir)/libhpx/libhpx.la
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_CFLAGS            = -std=c99 -g $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
-
+AM_CFLAGS            =
 
 if HAVE_HWLOC
 AM_CFLAGS           += @HWLOC_CFLAGS@

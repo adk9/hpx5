@@ -26,6 +26,7 @@
 #include <string.h>
 #include "hpx/hpx.h"
 
+#include "libhpx/action.h"
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -129,7 +130,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // allocate a parcel with enough space to buffer the @p buffer
   hpx_parcel_t *p = network_malloc(size, HPX_CACHELINE_SIZE);
   if (!p) {
-    dbg_error("failed to get an %lu-byte parcel from the allocator.\n", bytes);
+    dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
     return NULL;
   }
 
@@ -205,6 +206,13 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
 
+  dbg_log_parcel("parcel: %s(%p,%u)@(%lu,%u,%u) => %s@(%lu,%u,%u).\n",
+                 action_get_key(p->action), hpx_parcel_get_data(p),
+                 p->size, p->target.offset, p->target.base_id,
+                 p->target.block_bytes, action_get_key(p->c_action),
+                 p->c_target.offset, p->c_target.base_id,
+                 p->c_target.block_bytes);
+  
   // do a local send through loopback
   bool local = (btt_owner(here->btt, p->target) == here->rank);
   if (local) {
@@ -230,7 +238,7 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
   if (!p) {
-    dbg_error("could not allocate parcel.\n");
+    dbg_error("parcel: could not allocate parcel.\n");
     return NULL;
   }
 

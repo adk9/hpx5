@@ -71,7 +71,7 @@ static int _join(barrier_t *barrier, int i) {
 
 barrier_t *sr_barrier_new(int n) {
   sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
-  assert(barrier && "Could not allocate a sense-reversing barrier.");
+  assert(barrier);
   barrier->vtable.delete = _delete;
   barrier->vtable.join   = _join;
   barrier->count         = 0;

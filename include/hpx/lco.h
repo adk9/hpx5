@@ -20,10 +20,6 @@
 #include "hpx/types.h"
 
 
-/// An action-based interface to the LCO set operation.
-extern hpx_action_t hpx_lco_set_action;
-
-
 /// Delete an LCO.
 ///
 /// @param   lco the address of the LCO to delete
@@ -39,6 +35,10 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 
 
+/// An action-based interface to the LCO set operation.
+extern hpx_action_t hpx_lco_set_action;
+
+
 /// Set an LCO, optionally with data.
 ///
 /// @param   lco the LCO to set
@@ -51,8 +51,6 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
 
-/// An action to set an LCO with arguments of type hpx_lco_set_args_t
-extern hpx_action_t hpx_lco_set_action;
 
 /// Perform a wait operation.
 ///

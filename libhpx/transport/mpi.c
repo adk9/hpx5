@@ -106,7 +106,7 @@ static void _mpi_unpin(transport_class_t *transport, const void* buffer,
 static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
                     void *rbuffer, size_t rn, void *rid, void *r)
 {
-  dbg_log("MPI: put unsupported.\n");
+  dbg_log_trans("mpi: put unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -116,7 +116,7 @@ static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
 static int _mpi_get(transport_class_t *t, int dest, void *buffer, size_t n,
                     const void *rdata, size_t rn, void *rid, void *r)
 {
-  dbg_log("MPI: get unsupported.\n");
+  dbg_log_trans("mpi: get unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -131,7 +131,7 @@ static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
   void *b = (void*)data;
   int e = MPI_Isend(b, n, MPI_BYTE, dest, here->rank, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("MPI could not send %lu bytes to %i.\n", n, dest);
+    return dbg_error("mpi: could not send %lu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
 }
 
@@ -141,7 +141,7 @@ static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
 /// ----------------------------------------------------------------------------
 static size_t _mpi_probe(transport_class_t *transport, int *source) {
   if (*source != TRANSPORT_ANY_SOURCE) {
-    dbg_error("mpi transport can not currently probe source %d\n", *source);
+    dbg_error("mpi: cannot currently probe source %d.\n", *source);
     return 0;
   }
 
@@ -151,7 +151,7 @@ static size_t _mpi_probe(transport_class_t *transport, int *source) {
                      &status);
 
   if (e != MPI_SUCCESS) {
-    dbg_error("mpi failed Iprobe.\n");
+    dbg_error("mpi: failed iprobe %d.\n", e);
     return 0;
   }
 
@@ -161,7 +161,7 @@ static size_t _mpi_probe(transport_class_t *transport, int *source) {
   int bytes = 0;
   e = MPI_Get_count(&status, MPI_BYTE, &bytes);
   if (e != MPI_SUCCESS) {
-    dbg_error("could not extract bytes from mpi.\n");
+    dbg_error("mpi: could not get count %d.\n", e);
     return 0;
   }
 
@@ -183,7 +183,7 @@ static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void
 
   int e = MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("could not receive %lu bytes from %i", n, src);
+    return dbg_error("mpi: could not receive %lu bytes from %i.\n", n, src);
 
   return HPX_SUCCESS;
 }
@@ -192,8 +192,7 @@ static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void
 static int _mpi_test(transport_class_t *t, void *request, int *success) {
   int e = MPI_Test(request, success, MPI_STATUS_IGNORE);
   if (e != MPI_SUCCESS)
-    return dbg_error("failed MPI_Test.\n");
-
+    return dbg_error("mpi: failed MPI_Test %d.\n", e);
   return HPX_SUCCESS;
 }
 
@@ -208,7 +207,7 @@ static void _mpi_progress(transport_class_t *t, bool flush) {
 static void *_mpi_malloc(transport_class_t *t, size_t bytes, size_t align) {
   void *p = NULL;
   if (posix_memalign(&p, align, bytes))
-    dbg_log("failed network allocation.\n");
+    dbg_error("mpi: failed network allocation.\n");
   return p;
 }
 
@@ -228,7 +227,7 @@ transport_class_t *transport_new_mpi(void) {
         MPI_SUCCESS)
       return NULL;
 
-    dbg_log("thread_support_provided = %d\n", threading);
+    dbg_log_trans("mpi: thread_support_provided = %d\n", threading);
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
@@ -255,7 +254,7 @@ transport_class_t *transport_new_mpi(void) {
 
   mpi->progress             = network_progress_new();
   if (!mpi->progress) {
-    dbg_error("failed to start the transport progress loop.\n");
+    dbg_error("mpi: failed to start the progress loop.\n");
     hpx_abort();
   }
   return &mpi->class;
