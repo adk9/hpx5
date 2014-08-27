@@ -41,11 +41,12 @@
 #include <hpx/hpx.h>
 
 #include "tests.h"
-#include "common.h"
 
 //****************************************************************************
 //  Globals
 //****************************************************************************
+hpx_action_t _main = 0;
+
 hpx_action_t t02_init_sources;
 hpx_action_t t03_initDomain;
 hpx_action_t t04_send;
@@ -75,18 +76,18 @@ static int _main_action(void *args)
 {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
-  char * long_tests = NULL;
-  char * hardcore_tests = NULL;
-  char * perf_tests = NULL;
+  //char * long_tests = NULL;
+  //char * hardcore_tests = NULL;
+  //char * perf_tests = NULL;
 
   /* figure out if we need to run long-running tests */
-  long_tests = getenv("HPXTEST_EXTENDED");
+  //long_tests = getenv("HPXTEST_EXTENDED");
 
   /* see if we're in HARDCORE mode (heh) */
-  hardcore_tests = getenv("HPXTEST_HARDCORE");
+  //hardcore_tests = getenv("HPXTEST_HARDCORE");
 
   /* see if we're supposed to run performance tests */
-  perf_tests = getenv("HPXTEST_PERF");
+  //perf_tests = getenv("HPXTEST_PERF");
 
   /* install fixtures */
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
