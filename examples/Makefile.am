@@ -48,10 +48,6 @@ pingpong_chan_LDADD   = $(top_builddir)/libhpx/libhpx.la
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 
-if HAVE_HWLOC
-AM_CFLAGS           += @HWLOC_CFLAGS@
-endif
-
 if HAVE_PAPI
 AM_CFLAGS           += @PAPI_CFLAGS@
 endif

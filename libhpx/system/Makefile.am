@@ -16,8 +16,3 @@ if OS_DARWIN
 libsystem_la_SOURCES  += darwin/time.c darwin/cpu.c
 endif
 
-if HAVE_HWLOC
-libsystem_la_CFLAGS    = @HWLOC_CFLAGS@
-libsystem_la_LIBADD   += @HWLOC_LIBS@
-endif
-
