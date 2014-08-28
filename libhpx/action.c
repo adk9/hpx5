@@ -24,7 +24,9 @@ typedef struct {
   UT_hash_handle hh;
 } action_table_t;
 
+#ifdef ENABLE_DEBUG
 static action_table_t *action_table = 0;
+#endif
 
 bool hpx_action_eq(const hpx_action_t lhs, const hpx_action_t rhs) {
   return (lhs == rhs);
