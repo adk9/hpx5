@@ -677,11 +677,10 @@ static void HPX_NORETURN _continue(hpx_status_t status,
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
   if (!hpx_addr_eq(c_target, HPX_NULL) &&
       !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
-    if (hpx_action_eq(c_act, hpx_lco_set_action)) {
-      hpx_call(c_target, c_act, value, size, HPX_NULL);
-    } else {
+    if (hpx_action_eq(c_act, hpx_lco_set_action))
+      hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL, HPX_ACTION_NULL);
+    else
       _call_continuation(c_target, c_act, value, size, status);
-    }
   }
 
   // run the cleanup handler
