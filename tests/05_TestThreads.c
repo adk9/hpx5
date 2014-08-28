@@ -124,14 +124,10 @@ END_TEST
 //****************************************************************************
 int t05_worker_action(int *args)
 {
-  hpx_addr_t local = hpx_thread_current_target();
-  int n;
-  if (!hpx_gas_try_pin(local, (void**)&n))
-    return HPX_RESEND;
-  n = *(int*)args;
+  uint64_t n;
+  n = *(uint64_t*)args;
 
-  printf("Value of n =  %d\n", n);
-  hpx_gas_unpin(local);
+  printf("Value of n =  %"PRIu64" \n", n);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -141,8 +137,8 @@ START_TEST (test_libhpx_threadExit)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t done = hpx_lco_future_new(0);
-  int value = 1000;
+  hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
+  uint64_t value = SET_CONT_VALUE;
   hpx_status_t status = hpx_call(HPX_HERE, t05_worker, &value, sizeof(value),
                                  done);
   ck_assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
@@ -174,16 +170,15 @@ START_TEST (test_libhpx_threadGetTlsID)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_global_alloc(NUM_THREADS, sizeof(int));
   hpx_addr_t done = hpx_lco_and_new(NUM_THREADS);
 
   // HPX Threads are spawned as a result of hpx_parcel_send() / hpx_parcel_
   // sync(). 
   for (int t = 0; t < NUM_THREADS; t++) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(int));
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
 
     // Set the target address and action for the parcel
-    hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(int) * t));
+    hpx_parcel_set_target(p, HPX_THERE(t % hpx_get_num_ranks()));
     hpx_parcel_set_action(p, t05_assignID);
 
     // Set the continuation target and action for parcel
@@ -197,7 +192,6 @@ START_TEST (test_libhpx_threadGetTlsID)
   hpx_lco_wait(done);
 
   hpx_lco_delete(done, HPX_NULL);
-  hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
@@ -220,14 +214,15 @@ START_TEST (test_libhpx_threadContinue)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(), 
-                                     DATA_SIZE, 1);
+  hpx_addr_t *cont_fut = malloc(sizeof(hpx_addr_t) * hpx_get_num_ranks());
+
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) { 
+    cont_fut[i] = hpx_lco_future_new(DATA_SIZE);
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     hpx_parcel_set_target(p, HPX_THERE(i));
     hpx_parcel_set_action(p, t05_cont_thread);
-    hpx_parcel_set_cont_target(p, hpx_lco_future_array_at(cont_fut, i));
+    hpx_parcel_set_cont_target(p, cont_fut[i]);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
     hpx_parcel_send(p, HPX_NULL); 
     printf("Sending action with continuation to %d\n", i);
@@ -236,7 +231,7 @@ START_TEST (test_libhpx_threadContinue)
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     uint64_t result;
     printf("Waiting on continuation to %d\n", i);
-    hpx_lco_get(hpx_lco_future_array_at(cont_fut, i), DATA_SIZE, &result);
+    hpx_lco_get(cont_fut[i], DATA_SIZE, &result);
     printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
     assert(result == SET_CONT_VALUE);
   }
@@ -317,21 +312,21 @@ START_TEST (test_libhpx_threadContAction)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(),
-                                     DATA_SIZE, 1);
+  hpx_addr_t *cont_fut = malloc(sizeof(hpx_addr_t) * hpx_get_num_ranks());
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+    cont_fut[i] = hpx_lco_future_new(DATA_SIZE);
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, DATA_SIZE);
     hpx_parcel_set_target(p, HPX_THERE(i));
     hpx_parcel_set_action(p, t05_thread_current_cont_target);
-    hpx_parcel_set_cont_target(p, hpx_lco_future_array_at(cont_fut, i));
+    hpx_parcel_set_cont_target(p, cont_fut[i]);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
     hpx_parcel_send(p, HPX_NULL);
   }
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     uint64_t result;
-    hpx_lco_get(hpx_lco_future_array_at(cont_fut, i), DATA_SIZE, &result);
+    hpx_lco_get(cont_fut[i], DATA_SIZE, &result);
     printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
     assert(result == SET_CONT_VALUE);
   }

@@ -49,8 +49,8 @@ int t02_init_sources_action(void* args) {
   // Performs address translation. This will try to perform a global-to-local
   // translation on the global addr, and set local to the local address if it
   // it is successful.
-  bool pinned = hpx_gas_try_pin(local, (void **)&sources_p);
-  ck_assert_msg(pinned == true, "Could not perform the address translation");
+  if (!hpx_gas_try_pin(local, (void **)&sources_p))
+    return HPX_RESEND;
 
   for(int i=0; i<10; i++){
      sources_p[i] = i;
