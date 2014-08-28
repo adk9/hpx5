@@ -15,6 +15,7 @@ extern hpx_action_t t05_worker;
 extern hpx_action_t t05_assignID;
 extern hpx_action_t t05_cont_thread;
 extern hpx_action_t t05_thread_cont_cleanup;
+extern hpx_action_t t05_thread_current_cont_target;
 extern hpx_action_t t06_initDomain;
 extern hpx_action_t t06_advanceDomain;
 
@@ -26,6 +27,8 @@ int t05_worker_action(int*);
 int t05_assignID_action(void*);
 int t05_set_cont_action(void*);
 int t05_thread_cont_cleanup_action(void*);
+int t05_thread_current_cont_target_action(void*);
+
 int t06_initDomain_action(const InitArgs*);
 int t06_advanceDomain_action(const unsigned long*);
 

@@ -131,6 +131,7 @@ int t05_worker_action(int *args)
   n = *(int*)args;
 
   printf("Value of n =  %d\n", n);
+  hpx_gas_unpin(local);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -220,7 +221,7 @@ START_TEST (test_libhpx_threadContinue)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(), 
-                                     DATA_SIZE, hpx_get_num_ranks());
+                                     DATA_SIZE, 1);
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) { 
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
@@ -261,6 +262,7 @@ int t05_thread_cont_cleanup_action(void *args) {
   uint64_t *value = (uint64_t*) malloc(sizeof(uint64_t));
   *value = local;
 
+  hpx_gas_unpin(addr);
   hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
 }
 
@@ -286,6 +288,59 @@ START_TEST (test_libhpx_threadContinueCleanup)
 END_TEST
 
 //****************************************************************************
+// hpx_thread_current_cont_action gets the continuation action for the current
+// thread
+//****************************************************************************
+int t05_thread_current_cont_target_action(void *args) {
+  hpx_addr_t addr = hpx_thread_current_target();
+  uint64_t local;
+  if (!hpx_gas_try_pin(addr, (void**)&local))
+    return HPX_RESEND;
+
+  hpx_action_t c_action = hpx_thread_current_cont_action();
+  hpx_addr_t   c_target = hpx_thread_current_cont_target();
+  
+  local = SET_CONT_VALUE;
+
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_call(c_target, c_action, &local, DATA_SIZE, done);
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+
+  hpx_gas_unpin(addr);
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_libhpx_threadContAction)
+{
+  printf("Starting the Thread continue target and action test\n");
+  // Start the timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t cont_fut = hpx_lco_future_array_new(hpx_get_num_ranks(),
+                                     DATA_SIZE, 1);
+
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+    hpx_parcel_set_target(p, HPX_THERE(i));
+    hpx_parcel_set_action(p, t05_thread_current_cont_target);
+    hpx_parcel_set_cont_target(p, hpx_lco_future_array_at(cont_fut, i));
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_send(p, HPX_NULL);
+  }
+
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    uint64_t result;
+    hpx_lco_get(hpx_lco_future_array_at(cont_fut, i), DATA_SIZE, &result);
+    printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
+    assert(result == SET_CONT_VALUE);
+  }
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
 // Register tests from this file
 //****************************************************************************
 void add_05_TestThreads(TCase *tc) {
@@ -294,4 +349,5 @@ void add_05_TestThreads(TCase *tc) {
   tcase_add_test(tc, test_libhpx_threadGetTlsID);
   tcase_add_test(tc, test_libhpx_threadContinue);
   tcase_add_test(tc, test_libhpx_threadContinueCleanup);
+  tcase_add_test(tc, test_libhpx_threadContAction);
 }
