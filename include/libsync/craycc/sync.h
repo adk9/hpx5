@@ -58,8 +58,16 @@
   __sync_val_compare_and_swap(addr, from, to)
 
 #define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
-
 #define sync_addf(addr, val, mm) __sync_add_and_fetch(addr, val)
+
+#define sync_fand(addr, val, mm) __sync_fetch_and_and(addr, val)
+#define sync_andf(addr, val, mm) __sync_and_and_fetch(addr, val)
+
+#define sync_for(addr, val, mm) __sync_fetch_and_or(addr, val)
+#define sync_orf(addr, val, mm) __sync_or_and_fetch(addr, val)
+
+#define sync_fxor(addr, val, mm) __sync_fetch_and_xor(addr, val)
+#define sync_xorf(addr, val, mm) __sync_xor_and_fetch(addr, val)
 
 #define sync_fence(mm) __builtin_ia32_mfence()
 
