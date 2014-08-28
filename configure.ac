@@ -25,6 +25,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 
 # Checks for programs.
 AC_PROG_CC_C99
@@ -37,6 +38,9 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
+
+# intialize hwloc
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1rc1], [hpx_])
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -102,7 +106,6 @@ AM_CONDITIONAL([HAVE_FLOODLIGHT], [test "xwith_jansson" != xno -a "x$with_curl" 
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
 HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
-HPX_WITH_PKG([hwloc],[hwloc],[build with topology awareness],[no],[HWLOC])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
@@ -188,6 +191,7 @@ CCASFLAGS="$extra_ccasflags $CCASFLAGS"
 # -----------------------------------------------------------------------------
 AC_CONFIG_FILES([
   Makefile
+  contrib/Makefile
   libsync/Makefile
   libsync/arch/Makefile
   libhpx/Makefile

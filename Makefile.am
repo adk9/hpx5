@@ -7,19 +7,19 @@ EXTRA_DIST = \
         README NEWS TODO     \
         docs
 
-AUTOMAKE_OPTIONS= foreign
-ACLOCAL_AMFLAGS = -I config
+AUTOMAKE_OPTIONS = foreign
+ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.9.1rc1/config
 
-SUBDIRS         = libsync libhpx include examples bench
+SUBDIRS = contrib libsync libhpx include examples bench
 
 if ENABLE_DOCS
-    SUBDIRS    += docs
+SUBDIRS += docs
 endif
 
 if ENABLE_TESTS
-    SUBDIRS    += tests
+SUBDIRS += tests
 endif
 
 if ENABLE_APPS
-    SUBDIRS    += apps
+SUBDIRS += apps
 endif

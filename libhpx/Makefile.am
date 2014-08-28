@@ -14,12 +14,14 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      gas/libgas.la \
                      transport/libtransport.la \
                      network/libnetwork.la \
-                     scheduler/libscheduler.la
-if GNU_PE_ENV
-libhpx_la_LDFLAGS  = -pthread
-else
-libhpx_la_LDFLAGS  = -lpthread
-endif
+                     scheduler/libscheduler.la \
+                     $(HWLOC_EMBEDDED_LDADD)
+
+# if GNU_PE_ENV
+# libhpx_la_LDFLAGS  = -pthread
+# else
+# libhpx_la_LDFLAGS  = -lpthread
+# endif
 
 if HAVE_PAPI
 libhpx_la_CFLAGS   = @PAPI_CFLAGS@

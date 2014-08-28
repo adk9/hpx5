@@ -21,7 +21,7 @@ AC_DEFUN([HPX_PE_ENV],
 
    AC_MSG_CHECKING([for programming environment])
    AS_CASE([$PE_ENV],
-       [CRAY*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["cc"])])
+        [CRAY*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["cc"])])
                   hpx_pe_env_cppflags="‐h noomp"
                   hpx_pe_env_cflags="-h nomessage=1254"
                   hpx_pe_env_cflags_pedantic="" # LD: Can't be pedantic yet---no atomics
@@ -29,14 +29,14 @@ AC_DEFUN([HPX_PE_ENV],
                   hpx_pe_env_cflags_werror=""
                   hpx_pe_env_ccasflags="-h gnu -h nomessage=1254" # ADK: We need this for ASM labels.
                   hpx_pe_env="CRAY"],
-        [PGI*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["pgcc"])])
+         [PGI*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["pgcc"])])
                   hpx_pe_env="PGI"],
-      [INTEL*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["icc"])])
+       [INTEL*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["icc"])])
                   hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_cflags_werror="-Werror"
                   hpx_pe_env="INTEL"],
-        [GNU*],  [AS_IF([test -z "$CC"], [AC_SUBST([CC],["gcc"])])
+         [GNU*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["gcc"])])
                   hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_cflags_werror="-Werror"
