@@ -55,6 +55,7 @@ hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
 hpx_action_t t05_cont_thread;
 hpx_action_t t05_thread_cont_cleanup;
+hpx_action_t t05_thread_current_cont_target;
 hpx_action_t t06_initDomain;
 hpx_action_t t06_advanceDomain;
 
@@ -99,7 +100,7 @@ static int _main_action(void *args)
   srunner_set_log(sr, "test.log");
 
   // This sets CK_FORK=no
-  //srunner_set_fork_status(sr, CK_NOFORK);
+  srunner_set_fork_status(sr, CK_NOFORK);
 
   srunner_run_all(sr, CK_NORMAL);
 
@@ -130,6 +131,7 @@ void _register_actions(void) {
   t05_assignID = HPX_REGISTER_ACTION(t05_assignID_action);
   t05_cont_thread = HPX_REGISTER_ACTION(t05_set_cont_action);
   t05_thread_cont_cleanup = HPX_REGISTER_ACTION(t05_thread_cont_cleanup_action);
+  t05_thread_current_cont_target = HPX_REGISTER_ACTION(t05_thread_current_cont_target_action);
 
   //06_TestFutures.c
   t06_initDomain = HPX_REGISTER_ACTION(t06_initDomain_action);
