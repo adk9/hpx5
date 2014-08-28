@@ -55,6 +55,28 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
              size_t len, hpx_addr_t result);
 
 
+
+/// Locally synchronous call with continuation interface.
+///
+/// This is similar to hpx_call with additional parameters to specify
+/// the continuation action @p c_action to be executed at a
+/// continuation address @p c_target.
+///
+/// @param   addr   The address that defines where the action is executed.
+/// @param action   The action to perform.
+/// @param   args   The argument data buffer for @p action.
+/// @param    len   The length of the @p args buffer.
+/// @param c_target The address where the continuation action is executed.
+/// @param c_action The continuation action to perform.
+///
+/// @returns HPX_SUCCESS, or an error code if there was a problem locally during
+///          the hpx_call invocation.
+int
+hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                           const void *args, size_t len,
+                           hpx_addr_t c_target, hpx_action_t c_action);
+
+
 /// Fully asynchronous call interface.
 ///
 /// This is a completely asynchronous variant of the remote-procedure
