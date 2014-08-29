@@ -18,6 +18,7 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/types.h \
                          libsync/backoff.h \
                          libsync/barriers.h \
+                         libsync/bitvector.h \
                          libsync/cptr.h \
                          libsync/deques.h \
                          libsync/generic.h \
