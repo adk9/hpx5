@@ -49,8 +49,20 @@
     __atomic_compare_exchange_n(addr, &from, to, false, onsuccess, onfailure)
 #define sync_cas_val(addr, from, to, onsuccess, onfailure)          \
     __atomic_compare_exchange_n(addr, &from, to, false, onsuccess, onfailure) ? from : to
+
 #define sync_fadd(addr, val, mm) __atomic_fetch_add(addr, val, mm)
 #define sync_addf(addr, val, mm) __atomic_add_fetch(addr, val, mm)
+
+#define sync_fand(addr, val, mm) __atomic_fetch_and(addr, val, mm)
+#define sync_andf(addr, val, mm) __atomic_and_fetch(addr, val, mm)
+
+
+#define sync_for(addr, val, mm) __atomic_fetch_or(addr, val, mm)
+#define sync_orf(addr, val, mm) __atomic_or_fetch(addr, val, mm)
+
+#define sync_fxor(addr, val, mm) __atomic_fetch_xor(addr, val, mm)
+#define sync_xorf(addr, val, mm) __atomic_xor_fetch(addr, val, mm)
+
 #define sync_fence(mm) __atomic_thread_fence(mm)
 
 #define SYNC_ATOMIC(decl) decl
