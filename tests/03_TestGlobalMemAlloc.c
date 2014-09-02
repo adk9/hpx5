@@ -54,7 +54,7 @@ t03_initDomain_action(const InitArgs *args)
   // make sure to unpin the domain, so that AGAS can move it if it wants to
   hpx_gas_unpin(local);
 
-  printf("Initialized domain %u\n", args->index);
+  //printf("Initialized domain %u\n", args->index);
 
   // return success---this triggers whatever continuation was set by the parcel
   // sender
@@ -119,10 +119,18 @@ START_TEST (test_libhpx_gas_global_alloc)
 }
 END_TEST
 
+START_TEST(test_libhpx_gas_global_alloc_block)
+{
+  hpx_addr_t data = hpx_gas_global_alloc(1, 1024 * sizeof(char));
+  hpx_gas_free(data, HPX_NULL);
+}
+END_TEST
+
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
 
 void add_03_TestGlobalMemAlloc(TCase *tc) {
   tcase_add_test(tc, test_libhpx_gas_global_alloc);
+  tcase_add_test(tc, test_libhpx_gas_global_alloc_block);
 }
