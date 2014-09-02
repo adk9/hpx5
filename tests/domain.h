@@ -27,10 +27,10 @@ typedef struct {
 
 #define BUFFER_SIZE 128
 
-typedef struct InitBuffer {
+typedef struct initBuffer {
   int  index;
   char message[BUFFER_SIZE];
-} InitBuffer;
+}initBuffer_t;
 
 typedef struct contTest_config {
   long arraySize;   // Global array size

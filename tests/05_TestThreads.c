@@ -51,13 +51,13 @@
 const int DATA_SIZE = sizeof(uint64_t);
 const int SET_CONT_VALUE = 1234;
 
-int t05_initData_action(const InitBuffer *args)
+int t05_initData_action(const initBuffer_t *args)
 {
  // Get the target of the current thread. The target of the thread is the
  // destination that a parcel was sent to to spawn the current thread.
  // hpx_thread_current_target() returns the address of the thread's target
   hpx_addr_t local = hpx_thread_current_target();
-  InitBuffer *ld = NULL;
+  initBuffer_t *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
@@ -81,21 +81,21 @@ START_TEST (test_libhpx_threadCreate)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_global_alloc(NUM_THREADS, sizeof(InitBuffer));
+  hpx_addr_t addr = hpx_gas_global_alloc(NUM_THREADS, sizeof(initBuffer_t));
   hpx_addr_t done = hpx_lco_and_new(NUM_THREADS);
   
   // HPX Threads are spawned as a result of hpx_parcel_send() / hpx_parcel_
   // sync(). 
   for (int t = 0; t < NUM_THREADS; t++) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(InitBuffer));
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
     
     // Fill the buffer
-    InitBuffer *init = hpx_parcel_get_data(p);
+    initBuffer_t *init = hpx_parcel_get_data(p);
     init->index = t;
     strcpy(init->message, "Thread creation test");
 
     // Set the target address and action for the parcel
-    hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(InitBuffer) * t));
+    hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(initBuffer_t) * t));
     hpx_parcel_set_action(p, t05_initData);
 
     // Set the continuation target and action for parcel

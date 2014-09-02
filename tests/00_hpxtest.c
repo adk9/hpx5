@@ -50,15 +50,17 @@ hpx_action_t _main = 0;
 hpx_action_t t02_init_sources;
 hpx_action_t t03_initDomain;
 hpx_action_t t04_send;
+hpx_action_t t04_sendData;
+hpx_action_t t04_recv;
 hpx_action_t t05_initData;
 hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
 hpx_action_t t05_cont_thread;
 hpx_action_t t05_thread_cont_cleanup;
 hpx_action_t t05_thread_current_cont_target;
-hpx_action_t t06_initDomain;
-hpx_action_t t06_advanceDomain;
-
+hpx_action_t t06_set_value;
+hpx_action_t t06_get_value;
+hpx_action_t t06_get_future_value;
 //****************************************************************************
 // Options
 //****************************************************************************
@@ -89,7 +91,7 @@ static int _main_action(void *args)
   add_03_TestGlobalMemAlloc(tc);
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
-  // add_06_TestFutures(tc);  
+  add_06_TestFutures(tc);  
 
   suite_add_tcase(s, tc);
 
@@ -124,6 +126,8 @@ void _register_actions(void) {
 
   //04_TestParcel.c
   t04_send = HPX_REGISTER_ACTION(t04_send_action);
+  t04_sendData = HPX_REGISTER_ACTION(t04_sendData_action);
+  t04_recv = HPX_REGISTER_ACTION(t04_recv_action);
 
   //05_TestThreads.c
   t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
@@ -134,8 +138,9 @@ void _register_actions(void) {
   t05_thread_current_cont_target = HPX_REGISTER_ACTION(t05_thread_current_cont_target_action);
 
   //06_TestFutures.c
-  t06_initDomain = HPX_REGISTER_ACTION(t06_initDomain_action);
-  t06_advanceDomain = HPX_REGISTER_ACTION(t06_advanceDomain_action);
+  t06_set_value = HPX_REGISTER_ACTION(t06_set_value_action);
+  t06_get_value = HPX_REGISTER_ACTION(t06_get_value_action);
+  t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
 }
 
 //****************************************************************************
