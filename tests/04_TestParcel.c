@@ -272,7 +272,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
   ck_assert_msg(get_act == hpx_lco_set_action, 
                 "Error in getting cont action");
 
-  assert(hpx_gas_try_pin(hpx_parcel_get_cont_target(p), NULL));
+  assert(hpx_addr_eq(hpx_parcel_get_cont_target(p), done));
 
   // Send the parcel
   hpx_parcel_send(p, HPX_NULL);
