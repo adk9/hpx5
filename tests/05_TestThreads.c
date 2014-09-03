@@ -263,9 +263,9 @@ int t05_thread_yield_consumer_action(void *vargs) {
   hpx_lco_set(args->consumer_ready, 0, NULL, HPX_NULL, HPX_NULL);
   hpx_lco_wait(args->producer_ready);
 
-  for (int i = 0; i < args->iters; i++) {
-    sync_two_lock_queue_dequeue(args->q);
-  }
+  sync_two_lock_queue_dequeue(args->q);
+  hpx_thread_yield();
+  sync_two_lock_queue_dequeue(args->q);
 
   return HPX_SUCCESS;
 }
@@ -275,9 +275,11 @@ int t05_thread_yield_producer_action(void *vargs) {
   hpx_thread_set_affinity(hpx_get_num_threads() - 1);
   
   // initialize data
+  int old_head_value = -1;
+  int new_head_value = -1;
   hpx_addr_t done = hpx_lco_future_new(0);
   struct t05_thread_yield_args args = {
-    .iters = 100,
+    .iters = 4,
     .q = sync_two_lock_queue_new(),
     .consumer_ready = hpx_lco_future_new(0),
     .producer_ready = hpx_lco_future_new(0)
@@ -298,13 +300,18 @@ int t05_thread_yield_producer_action(void *vargs) {
   }
 
   // check data pre-yield
-  int old_head_value = *(int*)args.q->head->value; // we expect this to be 0
+  void *head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
+  if (head_value != NULL)
+    old_head_value = *(int*)head_value;
+  // new head should now be 1
 
   hpx_thread_yield();
 
   // check data post-yield
-  int new_head_value = *(int*)args.q->head->value; // we expect this to NOT be 0
-  ck_assert_msg(new_head_value != old_head_value, "Thread did not yield.");
+  head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
+  if (head_value != NULL)
+    new_head_value = *(int*)head_value;
+  ck_assert_msg(new_head_value == 3, "Thread did not yield.");
 
   // cleanup
   free(numbers);
