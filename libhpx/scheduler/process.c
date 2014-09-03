@@ -33,15 +33,17 @@
 
 
 typedef struct {
-  SYNC_ATOMIC(uint32_t) credit;           // credit balance
+  SYNC_ATOMIC(uint64_t) credit;           // credit balance
   bitmap_t               *debt;           // the credit that was recovered 
   hpx_addr_t       termination;           // the termination LCO
 } _process_t;
 
 
 /// Remote action interface to a process.
-static hpx_action_t         _delete;
-static hpx_action_t _debt_collector;
+static hpx_action_t          _call;
+static hpx_action_t        _delete;
+static hpx_action_t _return_credit;
+
 
 static bool _is_tracked(_process_t *p) {
   return (!hpx_addr_eq(p->termination, HPX_NULL));
@@ -71,6 +73,37 @@ static void _init(_process_t *p, hpx_addr_t termination) {
 }
 
 
+typedef struct {
+  hpx_addr_t result;
+  char data[];
+} _call_args_t;
+
+
+static int _call_action(_call_args_t *args) {
+  hpx_addr_t process = hpx_thread_current_target();
+  _process_t *p = NULL;
+  if (!hpx_gas_try_pin(process, (void**)&p))
+    return HPX_RESEND;
+
+  uint64_t credit = sync_addf(&p->credit, 1, SYNC_ACQ_REL);
+  hpx_gas_unpin(process);
+
+  hpx_pid_t pid = hpx_process_getpid(process);
+  hpx_addr_t target = hpx_thread_current_cont_target();
+  hpx_action_t action = hpx_thread_current_cont_action();
+  uint32_t len = hpx_thread_current_args_size() - sizeof(args->result);
+  hpx_parcel_t *parcel =
+      parcel_create(target, action, args->data, len, args->result,
+                    hpx_lco_set_action, pid, true);
+  parcel_set_credit(parcel, credit);
+  if (!parcel)
+    return dbg_error("process: call_action failed.\n");
+
+  hpx_parcel_send_sync(parcel);
+  return HPX_SUCCESS;
+}
+
+
 static int _delete_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   _process_t *p = NULL;
@@ -83,18 +116,21 @@ static int _delete_action(void *args) {
 }
 
 
-static int _debt_collector_action(uint32_t *args) {
-  uint32_t credit = *args;
+static int _return_credit_action(uint64_t *args) {
+  uint64_t credit = *args;
   hpx_addr_t target = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(target, (void**)&p))
     return HPX_RESEND;
 
-  dbg_log("debt collector recovered credit %d.\n", credit);
+  // add credit to the credit-accounting bitmap
   cr_bitmap_add(p->debt, credit);
+  uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
 
+  // test for quiescence
   if (cr_bitmap_test(p->debt)) {
     dbg_log("detected quiescence. HPX is now terminating...\n");
+    assert(total_credit == 0);
     assert(_is_tracked(p));
     hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
   }
@@ -111,7 +147,7 @@ parcel_recover_credit(hpx_parcel_t *p) {
 
   hpx_addr_t process = hpx_addr_init(0, p->pid, sizeof(_process_t));  
   hpx_parcel_t *pp =
-      parcel_create(process, _debt_collector, &p->credit, sizeof(p->credit),
+      parcel_create(process, _return_credit, &p->credit, sizeof(p->credit),
                     HPX_NULL, HPX_ACTION_NULL, 0, false);
   if (!pp)
     return dbg_error("parcel_recover_credit failed.\n");
@@ -122,14 +158,17 @@ parcel_recover_credit(hpx_parcel_t *p) {
 
 
 static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  _delete         = HPX_REGISTER_ACTION(_delete_action);
-  _debt_collector = HPX_REGISTER_ACTION(_debt_collector_action);
+  _call          = HPX_REGISTER_ACTION(_call_action);
+  _delete        = HPX_REGISTER_ACTION(_delete_action);
+  _return_credit = HPX_REGISTER_ACTION(_return_credit_action);
 }
 
 
 /// Create a new HPX process.
 hpx_addr_t
 hpx_process_new(hpx_addr_t termination) {
+  if (!hpx_addr_eq(termination, HPX_NULL))
+    return HPX_HERE;
   _process_t *p;
   hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -151,15 +190,34 @@ hpx_process_getpid(hpx_addr_t process) {
 
 /// ----------------------------------------------------------------------------
 /// Call an action in a specified process context.
+///
+/// When an action is invoked in a process context, the parcel has to
+/// request credit from the process owner represented by the address
+/// @p process. We set the continuation targets and actions to be the
+/// actual action which is to be invoked, and pass the completion
+/// continuation as an argument to the _call action.
 /// ----------------------------------------------------------------------------
 int
 hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
   hpx_pid_t pid = hpx_process_getpid(process);
-  hpx_parcel_t *p = parcel_create(process, action, args, len, result,
-                                  hpx_lco_set_action, pid, true);
-  if (!p)
-    return dbg_error("process: failed to create parcel.\n");
+  hpx_parcel_t *p;
+
+  // do an immediate call if it is an untracked process
+  if (!pid) {
+    p = parcel_create(HPX_HERE, action, args, len, result, hpx_lco_set_action, 0, true);
+  } else {
+    p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
+    hpx_parcel_set_target(p, process);
+    hpx_parcel_set_action(p, _call);
+    hpx_parcel_set_cont_action(p, action);
+    hpx_parcel_set_cont_target(p, process);
+    hpx_parcel_set_pid(p, pid);
+
+    _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
+    call_args->result = result;
+    memcpy(&call_args->data, args, len);
+  }
 
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
@@ -171,6 +229,10 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
 /// ----------------------------------------------------------------------------
 void
 hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
+  hpx_pid_t pid = hpx_process_getpid(process);
+  if (!pid)
+    return;
+
   _process_t *p = NULL;
   if (hpx_gas_try_pin(process, (void**)&p)) {
     _free(p);
