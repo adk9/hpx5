@@ -12,8 +12,8 @@ Running suite hpxtest
 05_TestThreads.c:149:P:hpxtest-core:test_libhpx_threadExit:0: Passed
 05_TestThreads.c:172:P:hpxtest-core:test_libhpx_threadGetTlsID:0: Passed
 05_TestThreads.c:216:P:hpxtest-core:test_libhpx_threadContinue:0: Passed
-05_TestThreads.c:344:P:hpxtest-core:test_libhpx_threadContinueCleanup:0: Passed
-05_TestThreads.c:389:P:hpxtest-core:test_libhpx_threadContAction:0: Passed
-05_TestThreads.c:307:F:hpxtest-core:test_libhpx_threadYield:0: Thread did not yield.
+05_TestThreads.c:351:P:hpxtest-core:test_libhpx_threadContinueCleanup:0: Passed
+05_TestThreads.c:396:P:hpxtest-core:test_libhpx_threadContAction:0: Passed
+05_TestThreads.c:314:F:hpxtest-core:test_libhpx_threadYield:0: Thread did not yield.
 06_TestFutures.c:51:P:hpxtest-core:test_libhpx_lco_future_new:0: Passed
 06_TestFutures.c:104:P:hpxtest-core:test_libhpx_lco_future_array:0: Passed
