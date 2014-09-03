@@ -44,6 +44,7 @@
 #include "tests.h"
 #include "domain.h"
 #include "libhpx/locality.h"
+#include "libsync/queues.h"
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
@@ -122,13 +123,13 @@ END_TEST
 // HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to the
 // the thread's continuation address.
 //****************************************************************************
-int t05_worker_action(int *args)
+int t05_worker_action(uint64_t *args)
 {
   uint64_t n;
   n = *(uint64_t*)args;
 
   printf("Value of n =  %"PRIu64" \n", n);
-  hpx_thread_exit(HPX_SUCCESS);
+  hpx_thread_exit(HPX_LCO_ERROR);
 }
 
 START_TEST (test_libhpx_threadExit)
@@ -143,6 +144,10 @@ START_TEST (test_libhpx_threadExit)
                                  done);
   ck_assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
   hpx_lco_wait(done);
+
+  hpx_lco_get(done, sizeof(uint64_t), &value);
+  ck_assert(value == HPX_SUCCESS);
+
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -239,6 +244,88 @@ START_TEST (test_libhpx_threadContinue)
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
+
+//****************************************************************************
+// hpx_thread_yield()
+//****************************************************************************
+
+struct t05_thread_yield_args {
+  int iters;
+  two_lock_queue_t *q;
+  hpx_addr_t consumer_ready;
+  hpx_addr_t producer_ready;
+};
+
+int t05_thread_yield_consumer_action(void *vargs) {
+  hpx_thread_set_affinity(hpx_get_num_threads() - 1);
+
+  struct t05_thread_yield_args *args = (struct t05_thread_yield_args*)vargs;
+  hpx_lco_set(args->consumer_ready, 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_lco_wait(args->producer_ready);
+
+  sync_two_lock_queue_dequeue(args->q);
+  hpx_thread_yield();
+  sync_two_lock_queue_dequeue(args->q);
+
+  return HPX_SUCCESS;
+}
+
+int t05_thread_yield_producer_action(void *vargs) {
+  // set affinity
+  hpx_thread_set_affinity(hpx_get_num_threads() - 1);
+  
+  // initialize data
+  int old_head_value = -1;
+  int new_head_value = -1;
+  hpx_addr_t done = hpx_lco_future_new(0);
+  struct t05_thread_yield_args args = {
+    .iters = 4,
+    .q = sync_two_lock_queue_new(),
+    .consumer_ready = hpx_lco_future_new(0),
+    .producer_ready = hpx_lco_future_new(0)
+  };
+  int *numbers = malloc(sizeof(int) * args.iters);
+
+  // create consumer
+  hpx_call(HPX_HERE, t05_thread_yield_consumer, &args, sizeof(args), done);
+
+  // synchronize
+  hpx_lco_wait(args.consumer_ready);
+  hpx_lco_set(args.producer_ready, 0, NULL, HPX_NULL, HPX_NULL);
+
+  // produce
+  for (int i = 0; i < args.iters; i++) {
+    numbers[i] = i;
+    sync_two_lock_queue_enqueue(args.q, &numbers[i]);
+  }
+
+  // check data pre-yield
+  void *head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
+  if (head_value != NULL)
+    old_head_value = *(int*)head_value;
+  // new head should now be 1
+
+  hpx_thread_yield();
+
+  // check data post-yield
+  head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
+  if (head_value != NULL)
+    new_head_value = *(int*)head_value;
+  ck_assert_msg(new_head_value == 3, "Thread did not yield.");
+
+  // cleanup
+  free(numbers);
+
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_libhpx_threadYield)
+{
+  int retval = hpx_call_sync(HPX_HERE, t05_thread_yield_producer, NULL, 0, NULL, 0);
+  ck_assert(retval == HPX_SUCCESS);
+}
+END_TEST
+
 
 //****************************************************************************
 // Finish the current thread's execution, sending value to the thread's
@@ -345,4 +432,5 @@ void add_05_TestThreads(TCase *tc) {
   tcase_add_test(tc, test_libhpx_threadContinue);
   tcase_add_test(tc, test_libhpx_threadContinueCleanup);
   tcase_add_test(tc, test_libhpx_threadContAction);
+  tcase_add_test(tc, test_libhpx_threadYield);
 }

@@ -52,15 +52,19 @@ hpx_action_t t03_initDomain;
 hpx_action_t t04_send;
 hpx_action_t t04_sendData;
 hpx_action_t t04_recv;
+hpx_action_t t04_getContValue;
 hpx_action_t t05_initData;
 hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
 hpx_action_t t05_cont_thread;
 hpx_action_t t05_thread_cont_cleanup;
 hpx_action_t t05_thread_current_cont_target;
+hpx_action_t t05_thread_yield_producer;
+hpx_action_t t05_thread_yield_consumer;
 hpx_action_t t06_set_value;
 hpx_action_t t06_get_value;
 hpx_action_t t06_get_future_value;
+ 
 //****************************************************************************
 // Options
 //****************************************************************************
@@ -128,6 +132,7 @@ void _register_actions(void) {
   t04_send = HPX_REGISTER_ACTION(t04_send_action);
   t04_sendData = HPX_REGISTER_ACTION(t04_sendData_action);
   t04_recv = HPX_REGISTER_ACTION(t04_recv_action);
+  t04_getContValue = HPX_REGISTER_ACTION(t04_getContValue_action);
 
   //05_TestThreads.c
   t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
@@ -136,6 +141,8 @@ void _register_actions(void) {
   t05_cont_thread = HPX_REGISTER_ACTION(t05_set_cont_action);
   t05_thread_cont_cleanup = HPX_REGISTER_ACTION(t05_thread_cont_cleanup_action);
   t05_thread_current_cont_target = HPX_REGISTER_ACTION(t05_thread_current_cont_target_action);
+  t05_thread_yield_producer = HPX_REGISTER_ACTION(t05_thread_yield_producer_action);
+  t05_thread_yield_consumer = HPX_REGISTER_ACTION(t05_thread_yield_consumer_action);
 
   //06_TestFutures.c
   t06_set_value = HPX_REGISTER_ACTION(t06_set_value_action);
