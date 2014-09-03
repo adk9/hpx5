@@ -303,17 +303,22 @@ int t05_thread_yield_producer_action(void *vargs) {
   void *head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
   if (head_value != NULL)
     old_head_value = *(int*)head_value;
+  ck_assert_msg(old_head_value == 0, "Queue head contained unexpected value. Either (1) thread_affinity() failed or (2) thread scheduling assumptions are incorrect.");
   // new head should now be 1
 
   hpx_thread_yield();
+  // new head should now be 2
 
   // check data post-yield
-  head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
+  head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 2
   if (head_value != NULL)
     new_head_value = *(int*)head_value;
-  ck_assert_msg(new_head_value == 3, "Thread did not yield.");
+  ck_assert_msg(new_head_value == 2, "Thread did not yield.");
+  printf("new head value == %d\n", new_head_value);
 
   // cleanup
+  lco_wait(done);
+  sync_two_lock_queue_delete(args.q);
   free(numbers);
 
   return HPX_SUCCESS;
