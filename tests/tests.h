@@ -24,6 +24,8 @@ extern hpx_action_t t05_thread_yield_consumer;
 extern hpx_action_t t06_get_value;
 extern hpx_action_t t06_set_value;
 extern hpx_action_t t06_get_future_value;
+extern hpx_action_t t07_init_array;
+
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -42,6 +44,7 @@ int t05_thread_yield_consumer_action(void*);
 int t06_set_value_action(void*);
 int t06_get_value_action(void*);
 int t06_get_future_value_action(void*);
+int t07_init_array_action(size_t*);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);

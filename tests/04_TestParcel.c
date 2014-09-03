@@ -234,12 +234,12 @@ END_TEST
 int t04_getContValue_action(uint64_t *args)
 {
   hpx_addr_t local = hpx_thread_current_target();
-  uint64_t value;
+  uint64_t *value;
   if (!hpx_gas_try_pin(local, (void**)&value))
     return HPX_RESEND;
 
-  value = *(uint64_t*)args;
-  printf("Value = %" PRIu64 "\n", value);
+  memcpy(value, args, hpx_thread_current_args_size());
+  printf("Value =  %"PRIu64"\n", *value);
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -261,7 +261,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
   *result = 1234;
 
   // Set the target address and action for the parcel
-  hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(uint64_t)));
+  hpx_parcel_set_target(p, addr);
   hpx_parcel_set_action(p, t04_getContValue);
 
   // Set the continuation target and action for the parcel
