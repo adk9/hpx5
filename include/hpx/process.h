@@ -36,6 +36,4 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process);
 
 hpx_addr_t hpx_process_owner(hpx_pid_t pid);
 
-int hpx_process_create(hpx_action_t act, const void *args, size_t size, hpx_addr_t done);
-
 #endif

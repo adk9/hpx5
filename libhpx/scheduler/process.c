@@ -200,10 +200,10 @@ hpx_process_getpid(hpx_addr_t process) {
 int
 hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
-  hpx_pid_t pid = hpx_process_getpid(process);
   hpx_parcel_t *p;
 
   // do an immediate call if it is an untracked process
+  hpx_pid_t pid = hpx_process_getpid(process);
   if (!pid) {
     p = parcel_create(HPX_HERE, action, args, len, result, hpx_lco_set_action, 0, true);
   } else {
@@ -245,13 +245,3 @@ hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
   hpx_call(process, _delete, NULL, 0, sync);
 }
 
-
-int
-hpx_process_create(hpx_action_t act, const void *args, size_t size, hpx_addr_t done) {
-  hpx_addr_t proc = hpx_process_new(done);
-  hpx_pid_t pid = hpx_process_getpid(proc);
-  hpx_parcel_t *p = parcel_create(proc, act, args, size, HPX_NULL,
-                                  HPX_ACTION_NULL, pid, true);
-  hpx_parcel_send_sync(p);
-  return HPX_SUCCESS;
-}
