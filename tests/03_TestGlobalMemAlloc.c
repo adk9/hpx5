@@ -54,7 +54,7 @@ t03_initDomain_action(const InitArgs *args)
   // make sure to unpin the domain, so that AGAS can move it if it wants to
   hpx_gas_unpin(local);
 
-  //printf("Initialized domain %u\n", args->index);
+  printf("Initialized domain %u\n", args->index);
 
   // return success---this triggers whatever continuation was set by the parcel
   // sender
