@@ -358,9 +358,8 @@ hpx_get_network_id(void) {
 }
 
 void system_shutdown(int code) {
-  if (!here || !here->sched) {
+  if (!here || !here->sched)
     dbg_error("hpx_shutdown called without a scheduler.\n");
-  }
 
   scheduler_shutdown(here->sched);
 }
@@ -425,22 +424,27 @@ hpx_addr_t
 hpx_gas_alloc(uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
-  // Get a block id.
-  int ranks = here->ranks;
-  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
+  hpx_addr_t addr;
   uint32_t global;
+  int ranks = here->ranks;
+
+  // Get a block id.
+  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
   sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
   if (block_id <= global) {
-    dbg_error("locality: rank %d out of blocks for private allocation of size %u.\n", here->rank, bytes);
-    hpx_abort();
-    // TODO: forward allocation request to another locality.
-  }
+    dbg_log_gas("gas: rank %d out of blocks for a private allocation of size %u.\n", here->rank, bytes);
 
-  // Insert the block mapping.
-  hpx_addr_t addr = hpx_addr_init(0, block_id, bytes);
-  char *block = malloc(bytes);
-  assert(block);
-  btt_insert(here->btt, addr, block);
+    // forward allocation request to a random locality.
+    int r = rand() % ranks;
+    hpx_call_sync(HPX_THERE(r), locality_gas_alloc, &bytes, sizeof(bytes), &addr, sizeof(addr));
+  } else {
+    // Insert the block mapping.
+    addr = hpx_addr_init(0, block_id, bytes);
+
+    char *block = malloc(bytes);
+    assert(block);
+    btt_insert(here->btt, addr, block);
+  }
 
   // Return the base id to the caller.
   return addr;
