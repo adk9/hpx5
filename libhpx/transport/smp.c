@@ -60,8 +60,7 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 
 
 static int _send(transport_class_t *t, int d, const void *b, size_t n, void *r) {
-  dbg_error("smp: should never call send.\n");
-  return HPX_ERROR;
+  return dbg_error("smp: should never call send.\n");
 }
 
 
@@ -71,14 +70,12 @@ static size_t _probe(transport_class_t *transport, int *src) {
 
 
 static int _recv(transport_class_t *t, int src, void *buffer, size_t size, void *r) {
-  dbg_error("smp: should never receive a parcel.\n");
-  return HPX_ERROR;
+  return dbg_error("smp: should never receive a parcel.\n");
 }
 
 
 static int _test(transport_class_t *t, void *request, int *success) {
-  dbg_error("smp: should never call test.\n");
-  return HPX_ERROR;
+  return dbg_error("smp: should never call test.\n");
 }
 
 

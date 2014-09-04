@@ -106,3 +106,8 @@ libsync/arch/Makefile
 /docs/man/
 /docs/latex/
 
+# /bench/
+/bench/Makefile
+/bench/Makefile.in
+/bench/netbench
+

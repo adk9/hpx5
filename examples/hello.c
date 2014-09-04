@@ -11,10 +11,6 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdio.h>
 #include <hpx/hpx.h>
 
@@ -23,7 +19,7 @@ static int _hello_action(void *args) {
   hpx_shutdown(0);
 }
 
-int main(int argc, char * const argv[argc]) {
+int main(int argc, char *const argv[argc]) {
   if (hpx_init(NULL) != 0)
     return -1;
   hpx_action_t hello = HPX_REGISTER_ACTION(_hello_action);

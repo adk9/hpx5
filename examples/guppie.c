@@ -1,7 +1,4 @@
 // HPX 5 version of guppie
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include <stdio.h>
 #include <string.h>

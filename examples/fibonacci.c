@@ -1,34 +1,23 @@
-/*
- ====================================================================
-  High Performance ParalleX Library (libhpx)
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 
-  Pingong example
-  examples/hpx/pingpong.c
-
-  Copyright (c) 2013, Trustees of Indiana University
-  All rights reserved.
-
-  This software may be modified and distributed under the terms of
-  the BSD license.  See the COPYING file for details.
-
-  This software was created at the Indiana University Center for
-  Research in Extreme Scale Technologies (CREST).
- ====================================================================
-*/
 /// @file
-/// A simple fibonacci number computation to demonstrate HPX
+/// A simple fibonacci number computation to demonstrate HPX.
 /// This example calculates a fibonacci number using recursion, where each 
 /// level of recursion is executed by a different HPX thread. (Of course, this
 /// is not an efficient way to calculate a fibonacci number but it does 
 /// demonstrate some of the basic of HPX and it may demonstrate a 
 /// <em>pattern of computation</em> that might be used in the real world.)
-
-
-
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 #include <unistd.h>
 #include <stdio.h>
