@@ -287,6 +287,7 @@ hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
   return status;
 }
 
+
 int
 hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                const void *args, size_t len,
