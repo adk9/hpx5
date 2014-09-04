@@ -151,7 +151,6 @@ static int _set_map(portals_t *ptl) {
   if (e != PTL_OK) {
     free(nidpid_map);
     dbg_error("failed to set portals nidpid map.\n");
-    hpx_abort();
   }
 
   free(nidpid_map);
@@ -478,7 +477,6 @@ static void _free(transport_class_t *t, void *p) {
 transport_class_t *transport_new_portals(void) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
-    hpx_abort();
   }
 
   portals_t *portals = malloc(sizeof(*portals));

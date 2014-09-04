@@ -71,7 +71,6 @@ boot_class_t *boot_new(hpx_boot_t type) {
 
   if (!boot) {
     dbg_error("boot: failed to initialize the bootstrapper.\n");
-    hpx_abort();
   }
   return boot;
 }
