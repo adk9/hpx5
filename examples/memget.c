@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #define BENCHMARK "OSU HPX MEMGET Test"
 
 #include <unistd.h>
