@@ -492,7 +492,6 @@ transport_class_t *transport_new_photon(void) {
   photon->progress     = network_progress_new();
   if (!photon->progress) {
     dbg_error("photon: failed to start the progress loop.\n");
-    hpx_abort();
   }
 
   size_t sz = sizeof(photon->arena);
@@ -510,7 +509,6 @@ transport_class_t *transport_new_photon(void) {
                   sizeof(alloc));
   if (error) {
     dbg_error("photon: failed to set arena allocator.\n");
-    hpx_abort();
   }
 
   sz = sizeof(photon->dalloc);
@@ -520,7 +518,6 @@ transport_class_t *transport_new_photon(void) {
                   sizeof(dalloc));
   if (error) {
     dbg_error("photon: failed to set arena de-allocator.\n");
-    hpx_abort();
   }
 
   return &photon->class;

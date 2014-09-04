@@ -173,7 +173,6 @@ hpx_process_new(hpx_addr_t termination) {
   hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
   if (!hpx_gas_try_pin(process, (void**)&p)) {
     dbg_error("Could not pin newly allocated process.\n");
-    hpx_abort();
   }
   _init(p, termination);
   hpx_gas_unpin(process);

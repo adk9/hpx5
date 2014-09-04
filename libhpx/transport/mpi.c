@@ -255,7 +255,6 @@ transport_class_t *transport_new_mpi(void) {
   mpi->progress             = network_progress_new();
   if (!mpi->progress) {
     dbg_error("mpi: failed to start the progress loop.\n");
-    hpx_abort();
   }
   return &mpi->class;
 }

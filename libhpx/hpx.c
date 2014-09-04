@@ -360,7 +360,6 @@ hpx_get_network_id(void) {
 void system_shutdown(int code) {
   if (!here || !here->sched) {
     dbg_error("hpx_shutdown called without a scheduler.\n");
-    hpx_abort();
   }
 
   scheduler_shutdown(here->sched);
