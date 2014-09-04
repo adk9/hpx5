@@ -64,7 +64,13 @@ hpx_action_t t05_thread_yield_consumer;
 hpx_action_t t06_set_value;
 hpx_action_t t06_get_value;
 hpx_action_t t06_get_future_value;
- 
+hpx_action_t t07_init_array;
+hpx_action_t t07_lcoSetGet;
+hpx_action_t t07_initMemory;
+hpx_action_t t07_initBlock; 
+hpx_action_t t07_getAll;
+hpx_action_t t07_errorSet;
+hpx_action_t t08_handler;
 //****************************************************************************
 // Options
 //****************************************************************************
@@ -96,6 +102,8 @@ static int _main_action(void *args)
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
   add_06_TestFutures(tc);  
+  add_07_TestLCO(tc);
+  add_08_TestSemaphores(tc);
 
   suite_add_tcase(s, tc);
 
@@ -148,6 +156,17 @@ void _register_actions(void) {
   t06_set_value = HPX_REGISTER_ACTION(t06_set_value_action);
   t06_get_value = HPX_REGISTER_ACTION(t06_get_value_action);
   t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
+
+  //07_TestLCO.c
+  t07_init_array = HPX_REGISTER_ACTION(t07_init_array_action);
+  t07_lcoSetGet = HPX_REGISTER_ACTION(t07_lcoSetGet_action);
+  t07_initMemory = HPX_REGISTER_ACTION(t07_initMemory_action);
+  t07_initBlock = HPX_REGISTER_ACTION(t07_initBlock_action);
+  t07_getAll = HPX_REGISTER_ACTION(t07_getAll_action);
+  t07_errorSet = HPX_REGISTER_ACTION(t07_errorSet_action);
+
+  //08_TestSema.c
+  t08_handler = HPX_REGISTER_ACTION(t08_handler_action);
 }
 
 //****************************************************************************
