@@ -31,6 +31,13 @@ extern hpx_action_t t07_initBlock;
 extern hpx_action_t t07_getAll;
 extern hpx_action_t t07_errorSet;
 extern hpx_action_t t08_handler;
+extern hpx_action_t t09_sender;
+extern hpx_action_t t09_receiver;
+extern hpx_action_t t09_sendInOrder;
+extern hpx_action_t t09_receiveInOrder;
+extern hpx_action_t t09_tryRecvEmpty;
+extern hpx_action_t t09_senderChannel;
+extern hpx_action_t t09_receiverChannel;
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -56,6 +63,13 @@ int t07_initBlock_action(uint32_t*);
 int t07_getAll_action(uint32_t*);
 int t07_errorSet_action(void*);
 int t08_handler_action(uint32_t*);
+int t09_sender_action(hpx_addr_t*);
+int t09_receiver_action(hpx_addr_t*);
+int t09_sendInOrder_action(hpx_addr_t*);
+int t09_receiveInOrder_action(hpx_addr_t*);
+int t09_tryRecvEmpty_action(void*);
+int t09_senderChannel_action(hpx_addr_t*);
+int t09_receiverChannel_action(hpx_addr_t*);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);
@@ -67,4 +81,5 @@ void add_05_TestThreads(TCase *);
 void add_06_TestFutures(TCase *);
 void add_07_TestLCO(TCase *);
 void add_08_TestSemaphores(TCase *);
+void add_09_TestChannels(TCase *);
 #endif /* LIBHPX_TESTS_TESTS_H_ */
