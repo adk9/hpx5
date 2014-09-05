@@ -350,11 +350,7 @@ int _partition_box_action(void *args) {
 
   for (int i = 0; i < 8; i++) {
     if (subparts[i] > 0) {
-<<<<<<< Updated upstream
       box->child[i] = hpx_gas_alloc(sizeof(fmm_box_t) + expan_size);
-=======
-      box->child[i] = hpx_gas_alloc(sizeof(fmm_box_t) + expan_size);
->>>>>>> Stashed changes
       set_box_action_arg_t cbox = {
     .type = type,
     .addr = box->addr + addrs[i],
