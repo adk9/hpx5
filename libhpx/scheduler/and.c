@@ -56,8 +56,7 @@ _wait(_and_t *and)
   // and we can correctly return the status that we read (the status won't
   // change, because that's done through the hpx_lco_error() handler which would
   // need the lock too).
-  intptr_t val;
-  sync_load(val, &and->value, SYNC_ACQUIRE);
+  intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
   if (val == 0)
     return status;
 

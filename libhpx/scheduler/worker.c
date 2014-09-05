@@ -339,8 +339,7 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
-  atomic_int_t shutdown;
-  sync_load(shutdown, &self.shutdown, SYNC_ACQUIRE);
+  atomic_int_t shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
   if (shutdown) {
     void **temp = &self.sp;
     assert(temp);

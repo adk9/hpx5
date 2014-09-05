@@ -425,12 +425,11 @@ hpx_gas_alloc(uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
   hpx_addr_t addr;
-  uint32_t global;
   int ranks = here->ranks;
 
   // Get a block id.
   uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
-  sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
+  uint32_t global = sync_load(&here->global_sbrk, SYNC_ACQUIRE);
   if (block_id <= global) {
     dbg_log_gas("gas: rank %d out of blocks for a private allocation of size %u.\n", here->rank, bytes);
 

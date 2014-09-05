@@ -920,14 +920,13 @@ int match_message(struct communicator* comm, bool *success) {
 void p2p_match_main(void* vargs) {
   struct p2p_match_args* args = vargs;
   struct mpi_rank_rankls *rankls = get_rankls(shared_state);
-  int finalized;
-  sync_load(finalized, &rankls->finalized, SYNC_RELAXED);
+  int finalized = sync_load(&rankls->finalized, SYNC_RELAXED);
   while (!finalized) {
     bool matched;
     int i;
     for (i = 0; i < 100; i++)
       match_message(args->comm, &matched);
     //    hpx_thread_yield();
-    sync_load(finalized, &rankls->finalized, SYNC_RELAXED);
+    finalized = sync_load(&rankls->finalized, SYNC_RELAXED);
   }
 }

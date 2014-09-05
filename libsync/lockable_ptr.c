@@ -26,11 +26,10 @@ const void *
 sync_lockable_ptr_lock(lockable_ptr_t *p)
 {
   while (true) {
-    const void *ptr;
     unsigned int backoff = _BACKOFF_BASE;
 
     // load the ptr
-    sync_load(ptr, p, SYNC_ACQUIRE);
+    const void *ptr = sync_load(p, SYNC_ACQUIRE);
 
     // check to see if the ptr is locked
     uintptr_t bits = (uintptr_t)ptr;
@@ -65,8 +64,7 @@ sync_lockable_ptr_unlock(lockable_ptr_t *p)
 const void *
 sync_lockable_ptr_read(lockable_ptr_t *p)
 {
-  const void *ptr;
-  sync_load(ptr, p, SYNC_ACQUIRE);
+  const void *ptr = sync_load(p, SYNC_ACQUIRE);
   uintptr_t bits = (uintptr_t)ptr;
   bits = bits & ~_STATE_MASK;
   return (const void*)bits;
