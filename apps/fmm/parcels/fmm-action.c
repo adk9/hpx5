@@ -15,8 +15,8 @@ const int zoff[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
 int _fmm_main_action(void) {
   // Allocate memory to hold source and target information
-  hpx_addr_t sources = hpx_gas_alloc(nsources, sizeof(source_t)); 
-  hpx_addr_t targets = hpx_gas_alloc(ntargets, sizeof(target_t)); 
+  hpx_addr_t sources = hpx_gas_alloc(nsources * sizeof(source_t)); 
+  hpx_addr_t targets = hpx_gas_alloc(ntargets * sizeof(target_t)); 
 
   // Populate test data
   hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6); 
@@ -41,8 +41,8 @@ int _fmm_main_action(void) {
 
   // Construct root nodes of the source and target trees
   hpx_addr_t roots_done = hpx_lco_and_new(2); 
-  hpx_addr_t source_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); 
-  hpx_addr_t target_root = hpx_gas_alloc(1, sizeof(fmm_box_t)); 
+  hpx_addr_t source_root = hpx_gas_alloc(sizeof(fmm_box_t)); 
+  hpx_addr_t target_root = hpx_gas_alloc(sizeof(fmm_box_t)); 
   hpx_call(source_root, _init_source_root, NULL, 0, roots_done); 
   hpx_call(target_root, _init_target_root, NULL, 0, roots_done); 
   hpx_lco_wait(roots_done); 
@@ -350,7 +350,7 @@ int _partition_box_action(void *args) {
 
   for (int i = 0; i < 8; i++) {
     if (subparts[i] > 0) {
-      box->child[i] = hpx_gas_alloc(1, sizeof(fmm_box_t) + expan_size); 
+      box->child[i] = hpx_gas_alloc(sizeof(fmm_box_t) + expan_size); 
       set_box_action_arg_t cbox = {
 	.type = type, 
 	.addr = box->addr + addrs[i], 
