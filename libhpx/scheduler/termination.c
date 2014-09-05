@@ -28,9 +28,8 @@
 void _bitmap_bounds_check(bitmap_t *b, uint32_t page, uint32_t word) {
   assert(word < _bitmap_num_words);
 
-  _bitmap_page_t p;
   // check if the page has been allocated or not
-  sync_load(p, &b[page].page, SYNC_ACQUIRE);
+  _bitmap_page_t p = sync_load(&b[page].page, SYNC_ACQUIRE);
   if (!p) {
     _bitmap_page_t newp = (_bitmap_page_t)calloc(_bitmap_num_words, sizeof(_bitmap_word_t));
     if (!sync_cas(&b[page].page, p, newp, SYNC_RELEASE, SYNC_RELAXED)) {
@@ -62,9 +61,8 @@ void cr_bitmap_delete(bitmap_t *b) {
     return;
 
   // delete all pages
-  _bitmap_page_t p;
   for (int i = 0; i < _bitmap_num_pages; ++i) {
-    sync_load(p, &b[i].page, SYNC_ACQUIRE);
+    _bitmap_page_t p = sync_load(&b[i].page, SYNC_ACQUIRE);
     if (p)
       free((void*)p);
   }
@@ -99,8 +97,7 @@ void cr_bitmap_add(bitmap_t *b, int i) {
 
 // test if the bit at the 0th position (page 0 word 0) is set
 bool cr_bitmap_test(bitmap_t *b) {
-  _bitmap_word_t w;
-  sync_load(w, &b[0].page[0], SYNC_ACQUIRE);
+  _bitmap_word_t w = sync_load(&b[0].page[0], SYNC_ACQUIRE);
   return (w == (1UL << 63));
 }
 

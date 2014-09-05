@@ -70,8 +70,7 @@ static bool _pgas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
     return false;
 
   // Look up the mapping
-  void *base;
-  sync_load(base, &pgas->table[_row(addr)], SYNC_ACQUIRE);
+  void *base = sync_load(&pgas->table[_row(addr)], SYNC_ACQUIRE);
   if (!base)
     return false;
 
