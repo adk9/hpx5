@@ -108,6 +108,9 @@ static void _finish_request(progress_t *progress, request_t *r) {
 /// @param r - the request to finish
 /// ----------------------------------------------------------------------------
 static void _finish_send(progress_t *progress, request_t *r) {
+  // as this parcel was sent over the network, we consume all of its credit.
+  parcel_set_credit(r->parcel, 0);
+
   hpx_parcel_release(r->parcel);
   _finish_request(progress, r);
 }

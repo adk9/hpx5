@@ -158,7 +158,6 @@ static bool _agas_btt_forward(btt_class_t *btt, hpx_addr_t addr, uint32_t rank,
 
   if (!_valid(state)) {
     dbg_error("hwagas: cannot forward an invalid block.\n");
-    hpx_abort();
   }
 
   // if the rank is us, don't do anything

@@ -42,6 +42,7 @@
 #include "libhpx/system.h"
 #include "cvar.h"
 #include "thread.h"
+#include "termination.h"
 #include "worker.h"
 
 
@@ -137,13 +138,14 @@ _open(worker_t *w, _envelope_t *mail)
 ///
 /// This entry function extracts the action and the arguments from the parcel,
 /// and then invokes the action on the arguments. If the action returns to this
-/// entry function, we dispatch tot he correct thread termination handler.
+/// entry function, we dispatch to the correct thread termination handler.
 /// ----------------------------------------------------------------------------
 static void HPX_NORETURN
 _thread_enter(hpx_parcel_t *parcel)
 {
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
+
   int status = action_invoke(action, args);
   switch (status) {
    default:
@@ -677,6 +679,9 @@ static void HPX_NORETURN _continue(hpx_status_t status,
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
   if (!hpx_addr_eq(c_target, HPX_NULL) &&
       !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+    // Double the credit so that we can pass it on to the continuation
+    // without splitting it up.
+    --parcel->credit;
     if (hpx_action_eq(c_act, hpx_lco_set_action))
       hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL, HPX_ACTION_NULL);
     else
@@ -709,6 +714,8 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 
 void hpx_thread_exit(int status) {
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) || unlikely(status == HPX_ERROR)) {
+    hpx_parcel_t *parcel = self.current;
+    parcel_recover_credit(parcel);
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
   }
@@ -743,9 +750,11 @@ void hpx_thread_exit(int status) {
   hpx_abort();
 }
 
+
 scheduler_stats_t *thread_get_stats(void) {
   return &self.stats;
 }
+
 
 hpx_parcel_t *scheduler_current_parcel(void) {
   return self.current;
@@ -774,6 +783,20 @@ hpx_action_t hpx_thread_current_cont_action(void) {
 
 uint32_t hpx_thread_current_args_size(void) {
   return self.current->size;
+}
+
+
+hpx_pid_t hpx_thread_current_pid(void) {
+  if (self.current == NULL)
+    return 0;
+  return self.current->pid;
+}
+
+
+uint32_t hpx_thread_current_credit(void) {
+  if (self.current == NULL)
+    return 0;
+  return parcel_get_credit(self.current);
 }
 
 

@@ -259,7 +259,6 @@ hpx_lco_future_new(int size) {
     char *base;
     if (!hpx_gas_try_pin(f, (void**)&base)) {
       dbg_error("future: could not translate local block.\n");
-      hpx_abort();
     }
     f.offset = (char*)local - base;
     assert(f.offset < f.block_bytes);

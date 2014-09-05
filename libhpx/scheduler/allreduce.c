@@ -189,7 +189,6 @@ hpx_lco_allreduce_new(size_t inputs, size_t size,
   _allreduce_t *r = NULL;
   if (!hpx_gas_try_pin(reduce, (void**)&r)) {
     dbg_error("allreduce: could not pin newly allocated reduction.\n");
-    hpx_abort();
   }
   _allreduce_init(r, inputs, size, op, init);
   hpx_gas_unpin(reduce);
