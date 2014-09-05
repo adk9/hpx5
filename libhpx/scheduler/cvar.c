@@ -51,7 +51,7 @@ hpx_status_t
 cvar_get_error(const cvar_t *cvar)
 {
   if (_has_error(cvar)) {
-    return (hpx_status_t)((uintptr_t)cvar >> _CODE_OFFSET);
+    return (hpx_status_t)((uintptr_t)(cvar->top) >> _CODE_OFFSET);
   }
   else {
     return HPX_SUCCESS;

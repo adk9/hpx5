@@ -25,7 +25,12 @@ extern hpx_action_t t06_get_value;
 extern hpx_action_t t06_set_value;
 extern hpx_action_t t06_get_future_value;
 extern hpx_action_t t07_init_array;
-
+extern hpx_action_t t07_lcoSetGet;
+extern hpx_action_t t07_initMemory;
+extern hpx_action_t t07_initBlock;
+extern hpx_action_t t07_getAll;
+extern hpx_action_t t07_errorSet;
+extern hpx_action_t t08_handler;
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -45,6 +50,12 @@ int t06_set_value_action(void*);
 int t06_get_value_action(void*);
 int t06_get_future_value_action(void*);
 int t07_init_array_action(size_t*);
+int t07_lcoSetGet_action(uint64_t*);
+int t07_initMemory_action(uint32_t*);
+int t07_initBlock_action(uint32_t*);
+int t07_getAll_action(uint32_t*);
+int t07_errorSet_action(void*);
+int t08_handler_action(uint32_t*);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);
@@ -54,4 +65,6 @@ void add_03_TestGlobalMemAlloc(TCase *);
 void add_04_TestParcel(TCase *);
 void add_05_TestThreads(TCase *);
 void add_06_TestFutures(TCase *);
+void add_07_TestLCO(TCase *);
+void add_08_TestSemaphores(TCase *);
 #endif /* LIBHPX_TESTS_TESTS_H_ */

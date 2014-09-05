@@ -33,6 +33,7 @@ locality_t *here = NULL;
 hpx_action_t locality_shutdown          = 0;
 hpx_action_t locality_global_sbrk       = 0;
 hpx_action_t locality_alloc_blocks      = 0;
+hpx_action_t locality_gas_alloc         = 0;
 hpx_action_t locality_gas_move          = 0;
 hpx_action_t locality_gas_acquire       = 0;
 hpx_action_t locality_gas_forward       = 0;
@@ -45,6 +46,13 @@ static int _alloc_blocks_action(uint32_t *args) {
   uint32_t base_id = args[0];
   uint32_t n = args[1];
   uint32_t size = args[2];
+
+
+  // Update the value of global_sbrk locally so that we can check if
+  // we are out of memory for local GAS allocations without having to
+  // request the current global_sbrk value from the root locality.
+  if (here->rank != 0)
+    sync_fadd(&here->global_sbrk, base_id + n * here->ranks, SYNC_ACQ_REL);
 
   // Insert all of the mappings (always block cyclic allocations). We use
   // distinct allocations for each block because we want to be able to move
@@ -68,17 +76,24 @@ static int _global_sbrk_action(size_t *args) {
   // bump a ranks-aligned value
   size_t n = *args + (here->ranks - (*args % here->ranks));
   uint32_t next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
-  if (UINT32_MAX - next < n) {
-    dbg_error("locality: rank out of blocks for allocation size %lu.\n", n);
-    hpx_abort();
-  }
+  if (UINT32_MAX - next < n)
+    return dbg_error("gas: rank out of blocks for allocation size %lu.\n", n);
 
   // return the base block id of the allocated blocks, the caller can use this
   // to initialize block addresses
   hpx_thread_continue(sizeof(next), &next);
+  return HPX_SUCCESS;
 }
 
 
+static int _gas_alloc_action(uint32_t *args) {
+  uint32_t bytes = *args;
+  hpx_addr_t addr = hpx_gas_alloc(bytes);
+  hpx_thread_continue(sizeof(addr), &addr);
+  return HPX_SUCCESS;
+}
+
+/// The action that shuts down the HPX scheduler.
 static int _shutdown_action(void *args) {
   scheduler_shutdown(here->sched);
   return HPX_SUCCESS;
@@ -133,7 +148,7 @@ static int _call_cont_action(locality_cont_args_t *args) {
   if (!hpx_gas_try_pin(target, NULL))
     return HPX_RESEND;
 
-  uint32_t size = hpx_thread_current_args_size() - sizeof(hpx_status_t) - sizeof(hpx_action_t);
+  uint32_t size = hpx_thread_current_args_size() - sizeof(args->status) - sizeof(args->action);
   // handle status here: args->status;
   return hpx_call(target, args->action, args->data, size, HPX_NULL);
 }
@@ -143,6 +158,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_shutdown          = HPX_REGISTER_ACTION(_shutdown_action);
   locality_global_sbrk       = HPX_REGISTER_ACTION(_global_sbrk_action);
   locality_alloc_blocks      = HPX_REGISTER_ACTION(_alloc_blocks_action);
+  locality_gas_alloc         = HPX_REGISTER_ACTION(_gas_alloc_action);
   locality_gas_move          = HPX_REGISTER_ACTION(_gas_move_action);
   locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
   locality_gas_forward       = HPX_REGISTER_ACTION(_gas_forward_action);
@@ -158,11 +174,9 @@ hpx_addr_t
 locality_malloc(size_t bytes) {
   bytes += bytes % 8;
   uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
-  if (UINT32_MAX - offset < bytes) {
+  if (UINT32_MAX - offset < bytes)
     dbg_error("locality: exhausted local allocation limit with %lu-byte allocation.\n",
               bytes);
-    hpx_abort();
-  }
 
   return hpx_addr_add(HPX_HERE, offset);
 }

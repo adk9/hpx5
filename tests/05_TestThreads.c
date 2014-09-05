@@ -317,7 +317,7 @@ int t05_thread_yield_producer_action(void *vargs) {
   printf("new head value == %d\n", new_head_value);
 
   // cleanup
-  lco_wait(done);
+  hpx_lco_wait(done);
   sync_two_lock_queue_delete(args.q);
   free(numbers);
 

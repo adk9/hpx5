@@ -14,6 +14,7 @@
 #define LIBHPX_PARCEL_H
 
 #include "hpx/hpx.h"
+#include "libsync/sync.h"
 
 struct ustack;
 
@@ -37,14 +38,24 @@ struct hpx_parcel {
   hpx_addr_t     target;
   hpx_action_t c_action;
   hpx_addr_t   c_target;
+  hpx_pid_t         pid;
+  uint64_t       credit;
   char         buffer[];
 };
 
-hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
-                            const void *args, size_t len, hpx_addr_t c_target,
-                            hpx_action_t c_action, bool inplace);
+HPX_INTERNAL hpx_parcel_t *
+parcel_create(hpx_addr_t addr, hpx_action_t action, const void *args,
+              size_t len, hpx_addr_t c_target, hpx_action_t c_action,
+              hpx_pid_t pid, bool inplace);
 
-void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack);
-struct ustack *parcel_get_stack(hpx_parcel_t *p);
+HPX_INTERNAL void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
+  HPX_NON_NULL(1);
+HPX_INTERNAL struct ustack *parcel_get_stack(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+HPX_INTERNAL void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
+  HPX_NON_NULL(1);
+HPX_INTERNAL uint64_t parcel_get_credit(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_PARCEL_H

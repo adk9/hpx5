@@ -153,7 +153,6 @@ hpx_lco_sema_new(unsigned count)
     char *base;
     if (!hpx_gas_try_pin(sema, (void**)&base)) {
       dbg_error("sema: could not translate local block.\n");
-      hpx_abort();
     }
     hpx_gas_unpin(sema);
     sema.offset = (char*)local - base;
@@ -163,7 +162,6 @@ hpx_lco_sema_new(unsigned count)
     sema = locality_malloc(sizeof(_sema_t));
     if (!hpx_gas_try_pin(sema, (void**)&local)) {
       dbg_error("sema: could not pin newly allocated semaphore.\n");
-      hpx_abort();
     }
   }
   _sema_init(local, count);

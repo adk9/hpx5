@@ -89,15 +89,15 @@ static hpx_action_t _bcast = 0;
 
 typedef struct {
   hpx_action_t action;
-  size_t len;
   char *data[];
 } _bcast_args_t;
 
 
 static int _bcast_action(_bcast_args_t *args) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
+  uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
   for (int i = 0, e = here->ranks; i < e; ++i)
-    hpx_call(HPX_THERE(i), args->action, args->data, args->len, and);
+    hpx_call(HPX_THERE(i), args->action, args->data, len, and);
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
@@ -120,7 +120,7 @@ int hpx_init(const hpx_config_t *cfg) {
   here->rank = -1;
   here->ranks = -1;
 
-  // 1a) set the local allocation sbrk
+  // 1) set the local allocation sbrk
   sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
 
   // 2) bootstrap, to figure out some topology information
@@ -183,12 +183,6 @@ int hpx_init(const hpx_config_t *cfg) {
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
   dbg_log_level = cfg->log_level;
 
-  return HPX_SUCCESS;
-}
-
-
-/// Called to run HPX.
-int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // start the network
   // pthread_t heavy;
   // int e = pthread_create(&heavy, NULL, heavy_network, here->network);
@@ -196,29 +190,13 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   //   return _cleanup(here, dbg_error("init: could not start the network
   //   thread.\n"));
 
-  // the rank-0 process starts the application by sending a single parcel to
-  // itself
-  if (here->rank == 0) {
-    // allocate and initialize a parcel for the original action
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
-    if (!p)
-      return dbg_error("init: failed to allocate an initial parcel.\n");
-
-    hpx_parcel_set_action(p, act);
-    hpx_parcel_set_target(p, HPX_HERE);
-    hpx_parcel_set_data(p, args, size);
-
-    // enqueue directly---network exists but schedulers don't yet
-    network_rx_enqueue(here->network, p);
-  }
-
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
   if (here->transport->type != HPX_TRANSPORT_SMP) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     if (!p)
-      return dbg_error("init: could not allocate a light network parcel");
+      return dbg_error("could not allocate a network server parcel");
     hpx_parcel_set_action(p, light_network);
     hpx_parcel_set_target(p, HPX_HERE);
 
@@ -226,6 +204,12 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
     network_rx_enqueue(here->network, p);
   }
 
+  return HPX_SUCCESS;
+}
+
+
+/// Called to start up the HPX runtime.
+int system_startup(void) {
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
 
@@ -235,7 +219,7 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   // wait for the network to shutdown
   // e = pthread_join(heavy, NULL);
   // if (e) {
-  //   dbg_error("init: could not join the heavy network thread.\n");
+  //   dbg_error("could not join the heavy network thread.\n");
   //   return e;
   // }
 
@@ -243,14 +227,37 @@ int hpx_run(hpx_action_t act, const void *args, unsigned size) {
   return _cleanup(here, e);
 }
 
+/// Called to run HPX.
+int
+hpx_run(hpx_action_t act, const void *args, size_t size) {
+  if (here->rank == 0) {
+    // start the main process. enqueue parcels directly---schedulers
+    // don't exist yet
+    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
+                                    HPX_ACTION_NULL, 0, true);
+    network_rx_enqueue(here->network, p);
+  }
+
+  // start the HPX runtime (scheduler) on all of the localities
+  return hpx_start();
+}
+
+
+// This function is used to start the HPX scheduler and runtime on
+// all of the available localities.
+int hpx_start(void) {
+  return system_startup();
+}
+
+
 /// A RPC call with a user-specified continuation action.
 int
 hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                            const void *args, size_t len,
                            hpx_addr_t c_target, hpx_action_t c_action)
 {
-  hpx_parcel_t *p = parcel_create(addr, action, (void*)args, len, c_target,
-                                  c_action, true);
+  hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
+                                  hpx_thread_current_pid(), true);
   if (!p)
     return dbg_error("rpc: failed to create parcel.\n");
 
@@ -280,13 +287,15 @@ hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
   return status;
 }
 
+
 int
 hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                const void *args, size_t len,
                hpx_addr_t args_reuse, hpx_addr_t result)
 {
-  hpx_parcel_t *p = parcel_create(addr, action, args, len, result,
-                                  hpx_lco_set_action, false);
+  hpx_parcel_t *p =
+      parcel_create(addr, action, args, len, result, hpx_lco_set_action,
+                    hpx_thread_current_pid(), false);
   if (!p)
     return dbg_error("rpc: failed to create parcel.\n");
 
@@ -295,9 +304,9 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
 }
 
 
-
 /// Encapsulates a RPC called on all available localities.
-int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
+int
+hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, _bcast);
@@ -306,10 +315,9 @@ int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco)
 
   _bcast_args_t *args = (_bcast_args_t *)hpx_parcel_get_data(p);
   args->action = action;
-  args->len = len;
   memcpy(&args->data, data, len);
-  hpx_parcel_send_sync(p);
 
+  hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
 
@@ -350,10 +358,8 @@ hpx_get_network_id(void) {
 }
 
 void system_shutdown(int code) {
-  if (!here || !here->sched) {
+  if (!here || !here->sched)
     dbg_error("hpx_shutdown called without a scheduler.\n");
-    hpx_abort();
-  }
 
   scheduler_shutdown(here->sched);
 }
@@ -418,22 +424,27 @@ hpx_addr_t
 hpx_gas_alloc(uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
-  // Get a block id.
-  int ranks = here->ranks;
-  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
+  hpx_addr_t addr;
   uint32_t global;
+  int ranks = here->ranks;
+
+  // Get a block id.
+  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
   sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
   if (block_id <= global) {
-    dbg_error("locality: rank %d out of blocks for private allocation of size %u.\n", here->rank, bytes);
-    hpx_abort();
-    // TODO: forward allocation request to another locality.
-  }
+    dbg_log_gas("gas: rank %d out of blocks for a private allocation of size %u.\n", here->rank, bytes);
 
-  // Insert the block mapping.
-  hpx_addr_t addr = hpx_addr_init(0, block_id, bytes);
-  char *block = malloc(bytes);
-  assert(block);
-  btt_insert(here->btt, addr, block);
+    // forward allocation request to a random locality.
+    int r = rand() % ranks;
+    hpx_call_sync(HPX_THERE(r), locality_gas_alloc, &bytes, sizeof(bytes), &addr, sizeof(addr));
+  } else {
+    // Insert the block mapping.
+    addr = hpx_addr_init(0, block_id, bytes);
+
+    char *block = malloc(bytes);
+    assert(block);
+    btt_insert(here->btt, addr, block);
+  }
 
   // Return the base id to the caller.
   return addr;

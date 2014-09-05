@@ -11,10 +11,6 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>

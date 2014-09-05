@@ -63,6 +63,6 @@ extern hpx_addr_t HPX_HERE;
 /// destination.
 /// @param i a locality
 /// @returns an address representing that locality
-hpx_addr_t HPX_THERE(int i);
+hpx_addr_t HPX_THERE(hpx_locality_t i);
 
 #endif

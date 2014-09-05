@@ -52,9 +52,9 @@ int t02_init_sources_action(void* args) {
   if (!hpx_gas_try_pin(local, (void **)&sources_p))
     return HPX_RESEND;
 
-  for(int i=0; i<10; i++){
-     sources_p[i] = i;
-     //printf("Sources_p[i] = '%d'\n", sources_p[i]);
+  for (int i=0; i<10; i++){
+    sources_p[i] = i;
+    printf("Sources_p[i] = '%d'\n", sources_p[i]);
   }
 
   // make sure to unpin the domain, so that AGAS can move it if it wants to

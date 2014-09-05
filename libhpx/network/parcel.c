@@ -27,6 +27,7 @@
 #include "hpx/hpx.h"
 
 #include "libhpx/action.h"
+#include "libsync/sync.h"
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -54,9 +55,11 @@ void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr) {
   p->target = addr;
 }
 
+
 void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action) {
   p->c_action = action;
 }
+
 
 void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
   p->c_target = cont;
@@ -68,6 +71,11 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
     void *to = hpx_parcel_get_data(p);
     memcpy(to, data, size);
   }
+}
+
+
+void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid) {
+  p->pid = pid;
 }
 
 
@@ -104,6 +112,10 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
   return buffer;
 }
 
+hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p) {
+  return p->pid;
+}
+
 
 // ----------------------------------------------------------------------------
 /// Acquire a parcel structure.
@@ -136,6 +148,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
 
   // initialize the structure with defaults
   p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
   p->action   = HPX_ACTION_NULL;
@@ -205,14 +218,32 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     memcpy(&p->buffer, buffer, p->size);
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
-
-  dbg_log_parcel("parcel: %s(%p,%u)@(%lu,%u,%u) => %s@(%lu,%u,%u).\n",
-                 action_get_key(p->action), hpx_parcel_get_data(p),
-                 p->size, p->target.offset, p->target.base_id,
-                 p->target.block_bytes, action_get_key(p->c_action),
-                 p->c_target.offset, p->c_target.base_id,
-                 p->c_target.block_bytes);
   
+  if (p->pid != 0) {
+    uint64_t credit = 0;
+    // split the parent's current credit. the parent retains half..
+    hpx_parcel_t *parent = scheduler_current_parcel();
+    if (parent)
+      credit = ++parent->credit;
+
+    // ..and the parcel gets the other half:
+    p->credit = credit;
+  }
+
+  if (p->c_action != HPX_ACTION_NULL) {
+    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu,%u,%u) => %s@(%lu,%u,%u)\n",
+                   p->pid, p->credit, action_get_key(p->action),
+                   hpx_parcel_get_data(p), p->size, p->target.offset,
+                   p->target.base_id, p->target.block_bytes,
+                   action_get_key(p->c_action), p->c_target.offset,
+                   p->c_target.base_id, p->c_target.block_bytes);
+  } else {
+    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu,%u,%u)\n",
+                   p->pid,  p->credit, action_get_key(p->action),
+                   hpx_parcel_get_data(p), p->size, p->target.offset,
+                   p->target.base_id, p->target.block_bytes);
+  }
+
   // do a local send through loopback
   bool local = (btt_owner(here->btt, p->target) == here->rank);
   if (local) {
@@ -234,7 +265,7 @@ hpx_parcel_release(hpx_parcel_t *p) {
 hpx_parcel_t *
 parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
               size_t len, hpx_addr_t c_target, hpx_action_t c_action,
-              bool inplace)
+              hpx_pid_t pid, bool inplace)
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
   if (!p) {
@@ -242,6 +273,7 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
     return NULL;
   }
 
+  hpx_parcel_set_pid(p, pid);
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_cont_action(p, c_action);
@@ -251,6 +283,7 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
   return p;
 }
 
+
 void
 parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
   assert((uintptr_t)stack % sizeof(void*) == 0);
@@ -258,7 +291,20 @@ parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
   p->ustack = (struct ustack*)(state | (uintptr_t)stack);
 }
 
+
 struct ustack *
 parcel_get_stack(hpx_parcel_t *p) {
   return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
+}
+
+
+void
+parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
+  p->credit = credit;
+}
+
+
+uint64_t
+parcel_get_credit(hpx_parcel_t *p) {
+  return p->credit;
 }

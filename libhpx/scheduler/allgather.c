@@ -315,7 +315,6 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
   _allgather_t *g = NULL;
   if (!hpx_gas_try_pin(gather, (void**)&g)) {
     dbg_error("allgather: could not pin newly allocated allgather LCO.\n");
-    hpx_abort();
   }
   _allgather_init(g, inputs, size);
   hpx_gas_unpin(gather);
