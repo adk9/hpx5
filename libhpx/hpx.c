@@ -111,6 +111,7 @@ int hpx_init(const hpx_config_t *cfg) {
   if (!cfg)
     cfg = &_default_cfg;
 
+  dbg_log_level = cfg->log_level;
   // 1) start by initializing the entire local data segment
   here = _map_local(UINT32_MAX);
   if (!here)
@@ -181,7 +182,6 @@ int hpx_init(const hpx_config_t *cfg) {
                               cfg->backoff_max, cfg->statistics);
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
-  dbg_log_level = cfg->log_level;
 
   // start the network
   // pthread_t heavy;

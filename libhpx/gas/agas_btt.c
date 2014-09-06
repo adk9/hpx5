@@ -119,7 +119,7 @@ static void _agas_btt_delete(btt_class_t *btt) {
 static bool _agas_btt_try_pin(btt_class_t *btt, hpx_addr_t addr, void **out) {
   agas_btt_t *agas = (agas_btt_t *)btt;
   _record_t *record = &agas->table[addr_block_id(addr)];
-  uint64_t state = sync_load_ui64( &record->state, SYNC_ACQUIRE);
+  uint64_t state = sync_load_ui64(&record->state, SYNC_ACQUIRE);
 
   if (!_valid(state))
     return false;
