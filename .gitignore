@@ -54,6 +54,21 @@
 /examples/alltoall
 /examples/hello
 
+# /apps/
+apps/miniAMR/Makefile
+apps/miniAMR/parcels/Makefile
+apps/mpi/Makefile
+apps/Makefile
+apps/fmm/Makefile
+apps/fmm/parcels/Makefile
+apps/lulesh/parcels/Makefile
+apps/lulesh/Makefile
+apps/fmm/parcels/fmmparcels
+apps/lulesh/mpi/luleshMPI
+apps/miniAMR/parcels/miniamr
+apps/mpi/hpxmpi
+apps/lulesh/parcels/luleshparcels
+
 # /include/
 /include/stamp-h1
 /include/config.h

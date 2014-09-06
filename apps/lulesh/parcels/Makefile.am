@@ -1,4 +1,4 @@
-noinst_appsdir         = $(abs_top_builddir)/apps/
+noinst_appsdir         = $(datarootdir)/apps/
 
 noinst_apps_PROGRAMS   = luleshparcels
 
