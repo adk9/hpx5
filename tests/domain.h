@@ -32,6 +32,12 @@ typedef struct initBuffer {
   char message[BUFFER_SIZE];
 }initBuffer_t;
 
+typedef struct {
+  int dst;
+  size_t size;
+  hpx_addr_t lco;
+} input_args_t;
+
 typedef struct contTest_config {
   long arraySize;   // Global array size
   hpx_addr_t array; // Global address of the array

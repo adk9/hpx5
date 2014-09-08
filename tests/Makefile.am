@@ -12,7 +12,9 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           06_TestFutures.c \
                           07_TestLCO.c \
                           08_TestSema.c \
-                          09_TestChannels.c
+                          09_TestChannels.c \
+                          10_TestAndLCO.c \
+                          11_TestGenCount.c 
 
 hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck  
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
