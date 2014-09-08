@@ -78,6 +78,8 @@ hpx_action_t t09_receiveInOrder;
 hpx_action_t t09_tryRecvEmpty;
 hpx_action_t t09_senderChannel;
 hpx_action_t t09_receiverChannel;
+hpx_action_t t10_set;
+hpx_action_t t11_increment;
 //****************************************************************************
 // Options
 //****************************************************************************
@@ -112,6 +114,8 @@ Suite *test_suite(void)
   add_07_TestLCO(tc);
   add_08_TestSemaphores(tc);
   add_09_TestChannels(tc);
+  add_10_TestAndLCO(tc);
+  add_11_TestGenCountLCO(tc);
 
   suite_add_tcase(s, tc);
   return s;
@@ -191,6 +195,12 @@ void _register_actions(void) {
   t09_tryRecvEmpty = HPX_REGISTER_ACTION(t09_tryRecvEmpty_action);
   t09_senderChannel = HPX_REGISTER_ACTION(t09_senderChannel_action);
   t09_receiverChannel = HPX_REGISTER_ACTION(t09_receiverChannel_action);
+
+  //10_TestAndLCO.c
+  t10_set = HPX_REGISTER_ACTION(t10_set_action);
+
+  //11_TestGenCount.c
+  t11_increment = HPX_REGISTER_ACTION(t11_increment_action);
 }
 
 //****************************************************************************
