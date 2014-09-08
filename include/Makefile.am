@@ -10,6 +10,7 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/lco.h \
                          hpx/par.h \
                          hpx/parcel.h \
+                         hpx/process.h \
                          hpx/rpc.h \
                          hpx/runtime.h \
                          hpx/thread.h \
