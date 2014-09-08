@@ -27,3 +27,5 @@ Running suite hpxtest
 09_TestChannels.c:158:P:hpxtest-core:test_libhpx_lco_channelSendInOrder:0: Passed
 09_TestChannels.c:201:P:hpxtest-core:test_libhpx_lco_channelTryRecvEmpty:0: Passed
 09_TestChannels.c:264:P:hpxtest-core:test_libhpx_lco_channelArray:0: Passed
+10_TestAndLCO.c:54:P:hpxtest-core:test_libhpx_lco_and:0: Passed
+11_TestGenCount.c:52:P:hpxtest-core:test_libhpx_lco_gencount:0: Passed

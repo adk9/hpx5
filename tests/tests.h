@@ -38,6 +38,8 @@ extern hpx_action_t t09_receiveInOrder;
 extern hpx_action_t t09_tryRecvEmpty;
 extern hpx_action_t t09_senderChannel;
 extern hpx_action_t t09_receiverChannel;
+extern hpx_action_t t10_set;
+extern hpx_action_t t11_increment;
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -70,6 +72,8 @@ int t09_receiveInOrder_action(hpx_addr_t*);
 int t09_tryRecvEmpty_action(void*);
 int t09_senderChannel_action(hpx_addr_t*);
 int t09_receiverChannel_action(hpx_addr_t*);
+int t10_set_action(input_args_t*);
+int t11_increment_action(void*);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);
@@ -82,4 +86,6 @@ void add_06_TestFutures(TCase *);
 void add_07_TestLCO(TCase *);
 void add_08_TestSemaphores(TCase *);
 void add_09_TestChannels(TCase *);
+void add_10_TestAndLCO(TCase *);
+void add_11_TestGenCountLCO(TCase *);
 #endif /* LIBHPX_TESTS_TESTS_H_ */
