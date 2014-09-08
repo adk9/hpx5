@@ -15,7 +15,7 @@
   real    h, utmp, diffnorm
   integer np, myid
   integer js, je, js1, je1
-  integer nbr_down, nbr_up, status(mpi_status_size), ierr
+  integer nbr_down, nbr_up, status(3), ierr
 
   !call mpi_init(ierr)
   call mpi_comm_size(mpi_comm_world,np,ierr)
@@ -129,11 +129,11 @@ subroutine read_params(ngrid,maxiter,tol,omega)
 
   if (mod(ngrid,np) /= 0) then  ! For a simple example code
      write(0,*) 'ERROR: ngrid must be divisible by the number of images'
-     call mpi_abort(mpi_comm_world,1,ierr)
+     !call mpi_abort(mpi_comm_world,1,ierr)
   endif
   if ((ngrid)/np < 1) then
      write(0,*) 'ERROR: local grid size should be greater than 0'
-     call mpi_abort(mpi_comm_world,1,ierr)
+     !call mpi_abort(mpi_comm_world,1,ierr)
   endif
 end subroutine read_params
 
