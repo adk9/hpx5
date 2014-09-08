@@ -111,6 +111,7 @@ int hpx_init(const hpx_config_t *cfg) {
   if (!cfg)
     cfg = &_default_cfg;
 
+  dbg_log_level = cfg->log_level;
   // 1) start by initializing the entire local data segment
   here = _map_local(UINT32_MAX);
   if (!here)
@@ -181,7 +182,6 @@ int hpx_init(const hpx_config_t *cfg) {
                               cfg->backoff_max, cfg->statistics);
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
-  dbg_log_level = cfg->log_level;
 
   // start the network
   // pthread_t heavy;
@@ -425,12 +425,11 @@ hpx_gas_alloc(uint32_t bytes) {
   assert(here->btt->type != HPX_GAS_NOGLOBAL);
 
   hpx_addr_t addr;
-  uint32_t global;
   int ranks = here->ranks;
 
   // Get a block id.
   uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
-  sync_load(global, &here->global_sbrk, SYNC_ACQUIRE);
+  uint32_t global = sync_load(&here->global_sbrk, SYNC_ACQUIRE);
   if (block_id <= global) {
     dbg_log_gas("gas: rank %d out of blocks for a private allocation of size %u.\n", here->rank, bytes);
 

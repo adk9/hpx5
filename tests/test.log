@@ -14,12 +14,18 @@ Running suite hpxtest
 05_TestThreads.c:216:P:hpxtest-core:test_libhpx_threadContinue:0: Passed
 05_TestThreads.c:356:P:hpxtest-core:test_libhpx_threadContinueCleanup:0: Passed
 05_TestThreads.c:401:P:hpxtest-core:test_libhpx_threadContAction:0: Passed
-05_TestThreads.c:330:P:hpxtest-core:test_libhpx_threadYield:0: Passed
+05_TestThreads.c:316:F:hpxtest-core:test_libhpx_threadYield:0: Thread did not yield.
 06_TestFutures.c:51:P:hpxtest-core:test_libhpx_lco_future_new:0: Passed
 06_TestFutures.c:104:P:hpxtest-core:test_libhpx_lco_future_array:0: Passed
 07_TestLCO.c:81:P:hpxtest-core:test_libhpx_lcoFunction:0: Passed
 07_TestLCO.c:114:P:hpxtest-core:test_libhpx_lcoSetGet:0: Passed
-07_TestLCO.c:175:P:hpxtest-core:test_libhpx_lcoWaitAll:0: Passed
-07_TestLCO.c:282:P:hpxtest-core:test_libhpx_lcoGetAll:0: Passed
-07_TestLCO.c:318:P:hpxtest-core:test_libhpx_lcoError:0: Passed
+07_TestLCO.c:174:P:hpxtest-core:test_libhpx_lcoWaitAll:0: Passed
+07_TestLCO.c:281:P:hpxtest-core:test_libhpx_lcoGetAll:0: Passed
+07_TestLCO.c:317:P:hpxtest-core:test_libhpx_lcoError:0: Passed
 08_TestSema.c:69:P:hpxtest-core:test_libhpx_lco_Semaphores:0: Passed
+09_TestChannels.c:68:P:hpxtest-core:test_libhpx_lco_channelSendRecv:0: Passed
+09_TestChannels.c:158:P:hpxtest-core:test_libhpx_lco_channelSendInOrder:0: Passed
+09_TestChannels.c:201:P:hpxtest-core:test_libhpx_lco_channelTryRecvEmpty:0: Passed
+09_TestChannels.c:264:P:hpxtest-core:test_libhpx_lco_channelArray:0: Passed
+10_TestAndLCO.c:43:P:hpxtest-core:test_libhpx_lco_and:0: Passed
+11_TestGenCount.c:52:P:hpxtest-core:test_libhpx_lco_gencount:0: Passed

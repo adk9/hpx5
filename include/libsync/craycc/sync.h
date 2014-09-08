@@ -37,10 +37,7 @@
 #define SYNC_RELEASE 0
 
 
-#define sync_load(val, addr, mm) do {           \
-    __builtin_ia32_lfence();                    \
-    val = *addr;                                \
-  } while (0)
+#define sync_load(addr, mm) *addr; __builtin_ia32_lfence()
 
 
 #define sync_store(addr, val, mm) do {          \

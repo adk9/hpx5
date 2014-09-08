@@ -71,6 +71,15 @@ hpx_action_t t07_initBlock;
 hpx_action_t t07_getAll;
 hpx_action_t t07_errorSet;
 hpx_action_t t08_handler;
+hpx_action_t t09_sender;
+hpx_action_t t09_receiver;
+hpx_action_t t09_sendInOrder;
+hpx_action_t t09_receiveInOrder;
+hpx_action_t t09_tryRecvEmpty;
+hpx_action_t t09_senderChannel;
+hpx_action_t t09_receiverChannel;
+hpx_action_t t10_set;
+hpx_action_t t11_increment;
 
 //****************************************************************************
 // Options
@@ -87,11 +96,11 @@ static void usage(FILE *f) {
 //****************************************************************************
 // Main action to run check as HPX Application
 //****************************************************************************
-static int _main_action(void *args)
+Suite *test_suite(void) 
 {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
-  
+
   /* install fixtures */
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
@@ -102,12 +111,21 @@ static int _main_action(void *args)
   add_03_TestGlobalMemAlloc(tc);
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
-  add_06_TestFutures(tc);  
+  add_06_TestFutures(tc);
   add_07_TestLCO(tc);
   add_08_TestSemaphores(tc);
+  add_09_TestChannels(tc);
+  add_10_TestAndLCO(tc);
+  add_11_TestGenCountLCO(tc);
 
   suite_add_tcase(s, tc);
+  return s;
+}
 
+int _main_action(void *args)
+{
+  Suite *s;
+  s = test_suite();
   SRunner * sr = srunner_create(s);
   srunner_add_suite(sr, s);
 
@@ -118,6 +136,7 @@ static int _main_action(void *args)
   srunner_set_fork_status(sr, CK_NOFORK);
 
   srunner_run_all(sr, CK_NORMAL);
+  srunner_print(sr, CK_NORMAL);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
@@ -168,6 +187,21 @@ void _register_actions(void) {
 
   //08_TestSema.c
   t08_handler = HPX_REGISTER_ACTION(t08_handler_action);
+
+  //09_TestChannels.c
+  t09_sender = HPX_REGISTER_ACTION(t09_sender_action);
+  t09_receiver = HPX_REGISTER_ACTION(t09_receiver_action);
+  t09_sendInOrder = HPX_REGISTER_ACTION(t09_sendInOrder_action);
+  t09_receiveInOrder = HPX_REGISTER_ACTION(t09_receiveInOrder_action);
+  t09_tryRecvEmpty = HPX_REGISTER_ACTION(t09_tryRecvEmpty_action);
+  t09_senderChannel = HPX_REGISTER_ACTION(t09_senderChannel_action);
+  t09_receiverChannel = HPX_REGISTER_ACTION(t09_receiverChannel_action);
+
+  //10_TestAndLCO.c
+  t10_set = HPX_REGISTER_ACTION(t10_set_action);
+
+  //11_TestGenCount.c
+  t11_increment = HPX_REGISTER_ACTION(t11_increment_action);
 }
 
 //****************************************************************************
