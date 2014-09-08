@@ -77,3 +77,10 @@ double
 hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
+
+hpx_time_t *hpx_time_construct(unsigned long s, unsigned long ns) {
+  hpx_time_t t = malloc(sizeof(hpx_time_t));
+  t->tv_sec = s;
+  t->tv_nsec = ns;
+  return t;
+}
