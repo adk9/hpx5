@@ -29,6 +29,7 @@
 #include "hpx/hpx.h"
 
 #define SET_VALUE 1234
+#define NUM_LOCAL_FUTURES 4
 static uint64_t value;
 
 //****************************************************************************
@@ -51,11 +52,11 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty)
 
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t06_get_value, &fut, sizeof(future), done);
+  hpx_call(HPX_HERE, t06_waitforempty, &fut, sizeof(future), done);
   hpx_lco_future_wait(done);
   
   hpx_lco_newfuture_free(fut);
-  hpx_lco_future_free(done);
+  hpx_lco_delete(done);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
@@ -77,11 +78,11 @@ START_TEST (test_libhpx_lco_newfuture_waitat_empty_remote)
     
     hpx_addr_t done = hpx_lco_future_new(0);
     hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-    hpx_call(HPX_THERE(1), t06_get_value, &fut, sizeof(future), done);
+    hpx_call(HPX_THERE(1), t06_waitforempty, &fut, sizeof(future), done);
     hpx_lco_future_wait(done);
     
     hpx_lco_newfuture_free(fut);
-    hpx_lco_future_free(done);
+    hpx_lco_delete(done);
 
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
@@ -109,7 +110,7 @@ START_TEST (test_hpx_lco_newfuture_waitfor_full)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t06_get_value, &fut, sizeof(future), done);
+  hpx_call(HPX_HERE, t06_waitforfull, &fut, sizeof(future), done);
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
   hpx_lco_wait(lsync);
   hpx_lco_wait(rsync);
@@ -137,7 +138,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_remote)
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
     hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-    hpx_call(HPX_THERE(1), t06_get_value, &fut, sizeof(future), done);
+    hpx_call(HPX_THERE(1), t06_waitforfull, &fut, sizeof(future), done);
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
     hpx_lco_wait(lsync);
     hpx_lco_wait(rsync);
@@ -172,13 +173,16 @@ START_TEST (test_hpx_lco_newfuture_getat)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t06_get_value, &fut, sizeof(future), done);
+  hpx_call(HPX_HERE, t06_getat, &fut, sizeof(future), done);
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
   hpx_lco_wait(lsync);
   hpx_lco_wait(rsync);
   hpx_lco_wait(done);
   
   hpx_lco_newfuture_free(fut);
+  hpx_lco_delete(lsync);
+  hpx_lco_delete(rsync);
+  hpx_lco_delete(done);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
@@ -188,14 +192,7 @@ END_TEST
 // hpx_lco_newfuture_getat remote test: 
 // This tests the getting of a future's value at a remote location.
 //****************************************************************************
-int t06_getat_action(hpx_addr_t *fut) {
-  SET_VALUE_T value;
-  hpx_lco_newfuture_getat(*fut, 0, sizeof(value), &value);
-  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
-  return HPX_SUCCESS;
-}
-
-START_TEST (test_hpx_lco_newfuture_waitat_full)
+START_TEST (test_hpx_lco_newfuture_getat_remote)
 {
   if (hpx_get_num_localities() > 0) {
     printf("Starting the hpx_lco_newfuture_waitat() full test\n");
@@ -207,7 +204,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full)
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
     hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-    hpx_call(HPX_THERE(1), t06_get_value, &fut, sizeof(future), done);
+    hpx_call(HPX_THERE(1), t06_getat, &fut, sizeof(future), done);
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
     hpx_lco_wait(lsync);
     hpx_lco_wait(rsync);
@@ -218,97 +215,6 @@ START_TEST (test_hpx_lco_newfuture_waitat_full)
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
 } 
-END_TEST
-
-//****************************************************************************
-// hpx_lco_newfuture_waitat_for test: 
-// This tests waiting on a future for a set amount of time.
-//****************************************************************************
-
-// HERE HERE HERE
-
-int t06_waitat_for_action(hpx_addr_t *fut) {
-  SET_VALUE_T value;
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_time_t *duration = hpx_time_construct(5, 0);
-  hpx_lco_newfuture_waitat_for(*fut, 0, HPX_SET);
-
-  hpx_time_t t2 = hpx_time_now();
-  ck_assert_msg(hpx_time_diff_ms(t1, t2) > 5000.0, "hpx_lco_newfuture_waitat_for() did not wait as long as the specified duration.");
-
-  hpx_lco_newfuture_getat(*fut, 0, sizeof(value), &value);
-  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
-
-  return HPX_SUCCESS;
-}
-
-START_TEST (test_hpx_lco_newfuture_waitat)
-{
-  printf("Starting the hpx_lco_newfuture_waitat() full test\n");
-
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_addr_t lsync = hpx_lco_future_new(0);
-  hpx_addr_t rsync = hpx_lco_future_new(0);
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t06_get_value, &fut, sizeof(future), done);
-  sleep(6);
-  hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
-  hpx_lco_wait(lsync);
-  hpx_lco_wait(rsync);
-  hpx_lco_wait(done);
-  
-  hpx_lco_newfuture_free(fut);
-
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-} 
-END_TEST
-
-
-
-//******
-
-// TODO
-// 0. is shared() (how!?)
-// 1. waitat_for
-// 2. waitat_until
-// 3., etc. array versions of above
-
-//*****
-
-
-
-
-//****************************************************************************
-// This testcase tests the hpx_lco_future_array_new API function which 
-// allocates a global array of futures and hpx_lco_future_array_at which gets
-// an address of a future in a future array
-//****************************************************************************
-int t06_get_future_value_action(void *args) {
-  uint64_t data = SET_VALUE;
-  HPX_THREAD_CONTINUE(data);
-}
-
-START_TEST (test_libhpx_lco_future_array)
-{
-  printf("Starting the array of futures test\n");
-  uint64_t value = 0;
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
-  
-  // allocate 2 futures with size of each future's value and the  
-  // one future per block
-  hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
-  hpx_addr_t other = hpx_lco_future_array_at(base, 1);
-
-  hpx_call_sync(other, t06_get_future_value, NULL, 0, &value, sizeof(value));
-  printf("value = %"PRIu64"\n", value);
-
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-}
 END_TEST
 
 //****************************************************************************
@@ -354,19 +260,272 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
+
+//****************************************************************************
+// hpx_lco_newfuture_waitat for empty test, array version: 
+// This tests the creation of an array of futures. In the test, we wait on the
+// futures to see if they are empty, since a future should be empty on creation.
+// Finally we free the futures.
+//****************************************************************************
+struct waitforempty_id_args {
+  hpx_addr_t base;
+  int index;
+};
+
+int t06_waitforempty_id_action(void *vargs) {
+  struct waitforempty_id_args *args = (struct waitforempty_id_args*)vargs; 
+  hpx_lco_newfuture_waitat(*args->base, args->index, HPX_UNSET);
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_hpx_lco_newfuture_waitat_empty_array)
+{
+  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES);
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    args[i].base = fut;
+    args[i] = i;
+    hpx_call(HPX_HERE, t06_waitforempty_id, &args[i], sizeof(args[i]), done);
+  }
+
+  hpx_lco_future_wait(done);
+  
+  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_delete(done);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+} 
+END_TEST
+
+
+//****************************************************************************
+// hpx_lco_newfuture_waitat for empty remote test, array version: 
+// This tests the creation of an array of futures. In the test, we wait on the
+// futures to see if they are empty, since a future should be empty on creation.
+// Finally we free the futures.
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_waitat_empty_remote_array)
+{
+  int ranks = hpx_get_num_ranks();
+  if (ranks > 1) {
+    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+    
+    hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      args[i].base = fut;
+      args[i] = i;
+      hpx_call(hpx_lco_newfuture_at(fut, i), t06_waitforempty_id, &args[i], sizeof(args[i]), done);
+    }
+    
+    hpx_lco_future_wait(done);
+    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_delete(done);
+    
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  }
+} 
+END_TEST
+
+//****************************************************************************
+// hpx_lco_newfuture_waitat for full test, array version
+//****************************************************************************
+struct waitforfull_id_args {
+  hpx_addr_t base;
+  int index;
+};
+
+int t06_waitforfull_id_action(void *vargs) {
+  struct waitforfull_id_args *args = (struct waitforfull_id_args*)vargs; 
+  hpx_lco_newfuture_waitat(*args->base, args->index, HPX_SET);
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_hpx_lco_newfuture_waitat_full_array)
+{
+  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES);
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    args[i].base = fut;
+    args[i] = i;
+    hpx_call(HPX_HERE, t06_waitforfull_id, &args[i], sizeof(args[i]), done);
+  }
+
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    hpx_addr_t lsync = hpx_lco_future_new(0);
+    hpx_addr_t rsync = hpx_lco_future_new(0);
+    hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
+    hpx_addr_t hpx_lco_delete(lsync, HPX_NULL);
+    hpx_addr_t hpx_lco_delete(rsync, HPX_NULL);
+  }
+  hpx_lco_future_wait(done);  
+  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_delete(done);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+} 
+END_TEST
+
+//****************************************************************************
+// hpx_lco_newfuture_waitat for full remote test, array version
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_waitat_full_remote_array)
+{
+  int ranks = hpx_get_num_ranks();
+  if (ranks > 1) {
+    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+    
+    hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      args[i].base = fut;
+      args[i] = i;
+      hpx_call(hpx_lco_newfuture_at(fut, i), t06_waitforfull_id, &args[i], sizeof(args[i]), done);
+    }
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      hpx_addr_t lsync = hpx_lco_future_new(0);
+      hpx_addr_t rsync = hpx_lco_future_new(0);
+      hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
+      hpx_addr_t hpx_lco_delete(lsync, HPX_NULL);
+      hpx_addr_t hpx_lco_delete(rsync, HPX_NULL);
+    }
+   
+    hpx_lco_future_wait(done);
+    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_delete(done);
+    
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  } 
+}
+END_TEST
+
+//****************************************************************************
+// hpx_lco_newfuture_getat test: 
+// This tests the getting of a future's value.
+//****************************************************************************
+int t06_getat_id_action(void* vargs) {
+  struct waitforfull_id_args *args = (struct waitforfull_id_args*)vargs; 
+  SET_VALUE_T value;
+  hpx_lco_newfuture_getat(*args->base, args->index, sizeof(value), &value);
+  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_hpx_lco_newfuture_getat_array)
+{
+  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES);
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    args[i].base = fut;
+    args[i] = i;
+    hpx_call(HPX_HERE, t06_getat_id, &args[i], sizeof(args[i]), done);
+  }
+
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    hpx_addr_t lsync = hpx_lco_future_new(0);
+    hpx_addr_t rsync = hpx_lco_future_new(0);
+    hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
+    hpx_addr_t hpx_lco_delete(lsync, HPX_NULL);
+    hpx_addr_t hpx_lco_delete(rsync, HPX_NULL);
+  }
+  hpx_lco_future_wait(done);  
+  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_delete(done);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+} 
+END_TEST
+
+
+//****************************************************************************
+// hpx_lco_newfuture_getat for full remote test, array version
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_getat_remote_array)
+{
+  int ranks = hpx_get_num_ranks();
+  if (ranks > 1) {
+    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+    
+    hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      args[i].base = fut;
+      args[i] = i;
+      hpx_call(hpx_lco_newfuture_at(fut, i), t06_getat_id, &args[i], sizeof(args[i]), done);
+    }
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      hpx_addr_t lsync = hpx_lco_future_new(0);
+      hpx_addr_t rsync = hpx_lco_future_new(0);
+      hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE, lsync, rsync);
+      hpx_addr_t hpx_lco_delete(lsync, HPX_NULL);
+      hpx_addr_t hpx_lco_delete(rsync, HPX_NULL);
+    }
+   
+    hpx_lco_future_wait(done);
+    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_delete(done);
+    
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  } 
+}
+END_TEST
+
+
+//******
+
+// TODO
+// 0. is shared() (how!?)
+
+//*****
+
+
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
 
-void add_06_TestFutures(TCase *tc) {
-  tcase_add_test(tc, test_libhpx_lco_future_new);
-  tcase_add_test(tc, test_libhpx_lco_future_array);
-  tcase_add_test(tc, test_hpx_lco_newfuture_getat);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waitat);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_remote);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waitfor_full);
-  tcase_add_test(tc, test_libhpx_lco_newfuture_waitat_empty_remote);
+void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty);
+  tcase_add_test(tc, test_libhpx_lco_newfuture_waitat_empty_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitfor);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_remote_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_full_remote_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_remote_array);
 }

@@ -64,6 +64,12 @@ hpx_action_t t05_thread_yield_consumer;
 hpx_action_t t06_set_value;
 hpx_action_t t06_get_value;
 hpx_action_t t06_get_future_value;
+hpx_action_t t06_waitforempty;
+hpx_action_t t06_waitforfull;
+hpx_action_t t06_getat;
+hpx_action_t t06_waitforempty_id;
+hpx_action_t t06_waitforfull_id;
+hpx_action_t t06_getat_id;
 hpx_action_t t07_init_array;
 hpx_action_t t07_lcoSetGet;
 hpx_action_t t07_initMemory;
@@ -176,6 +182,14 @@ void _register_actions(void) {
   t06_set_value = HPX_REGISTER_ACTION(t06_set_value_action);
   t06_get_value = HPX_REGISTER_ACTION(t06_get_value_action);
   t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
+
+  //06_TestNewFutures.c
+  t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty);
+  t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull);
+  t06_getat = HPX_REGISTER_ACTION(t06_getat);
+  t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id);
+  t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id);
+  t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id);
 
   //07_TestLCO.c
   t07_init_array = HPX_REGISTER_ACTION(t07_init_array_action);
