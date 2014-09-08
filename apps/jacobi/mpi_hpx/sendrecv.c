@@ -13,12 +13,20 @@ int mpi_sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
 {
   int ierr;
   MPI_Request send_request,recv_request;
-  ierr = mpi_isend(sendbuf, sendcount, sendtype,
+  if ( dest != MPI_PROC_NULL ) {
+    ierr = mpi_isend(sendbuf, sendcount, sendtype,
 		   dest, sendtag, MPI_COMM_WORLD_, &send_request);
-  ierr = mpi_irecv(recvbuf, recvcount, recvtype,
+  }
+  if ( source != MPI_PROC_NULL ) {
+    ierr = mpi_irecv(recvbuf, recvcount, recvtype,
 		   source, recvtag, MPI_COMM_WORLD_, &recv_request);
-  ierr = mpi_wait(&send_request, status);
-  ierr = mpi_wait(&recv_request, status);
+  }
+  if ( dest != MPI_PROC_NULL ) {
+    ierr = mpi_wait(&send_request, status);
+  }
+  if ( source != MPI_PROC_NULL ) {
+    ierr = mpi_wait(&recv_request, status);
+  }
 }
 
 void mpi_sendrecv_(void *sendbuf, int *fsendcount, MPI_Datatype *fsendtype,
