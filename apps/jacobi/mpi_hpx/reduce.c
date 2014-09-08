@@ -115,6 +115,12 @@ int reduce_recv(void* vargs) {
       for (i=0;i<args->msg_size/reduce_args->typesize;i++) {
         result[i] += incoming[i];
       }
+    } else if (reduce_args->type == MPI_REAL || reduce_args->type == MPI_FLOAT) {
+      float *result = (float *) reduce_args->recv_buffer;
+      float *incoming = (float *) args->msg_data;
+      for (i=0;i<args->msg_size/reduce_args->typesize;i++) {
+        result[i] += incoming[i];
+      }
     } else {
       printf(" No Op %d support for type %d\n",reduce_args->op,reduce_args->type);
       return -1;
@@ -250,6 +256,11 @@ void mpi_reduce_(void *sendbuf, void *recvbuf, int *recvcounts,
         }
       } else if (type == MPI_DOUBLE_PRECISION || type == MPI_DOUBLE) {
         double *result = (double *) recvbuf;
+        for (i=0;i<count;i++) {
+          result[i] = 0.0;
+        }
+      } else if (type == MPI_REAL || type == MPI_FLOAT) {
+        float *result = (float *) recvbuf;
         for (i=0;i<count;i++) {
           result[i] = 0.0;
         }
