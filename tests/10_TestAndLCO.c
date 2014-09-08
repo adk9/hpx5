@@ -35,20 +35,9 @@
 //****************************************************************************
 // Testcase for and LCO.
 //****************************************************************************
-int t10_set_action(input_args_t *args) {
-  hpx_lco_and_set(args->lco, HPX_NULL);
+int t10_set_action(void *args) {
+  hpx_lco_and_set(*(hpx_addr_t*)args, HPX_NULL);
   return HPX_SUCCESS;
-}
-
-void send_lco(hpx_addr_t lco, int dst, size_t size) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
-  input_args_t *args = hpx_parcel_get_data(p);
-  args->lco = lco;
-  args->dst = dst;
-  args->size = size;
-  hpx_parcel_set_action(p, t10_set);
-  hpx_parcel_set_target(p, HPX_THERE(dst));
-  hpx_parcel_send(p, HPX_NULL);
 }
 
 START_TEST (test_libhpx_lco_and)
@@ -59,12 +48,13 @@ START_TEST (test_libhpx_lco_and)
 
   // Allocate an and LCO. This is synchronous. An and LCO generates an AND
   // gate. Inputs should be >=0;
-  hpx_addr_t done = hpx_lco_and_new(1);
-
-  send_lco(done, 1, sizeof(input_args_t));
+  hpx_addr_t lco = hpx_lco_and_new(1);
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_call(HPX_HERE, t10_set, &lco, sizeof(lco), done);
+  hpx_lco_wait(lco);
   hpx_lco_wait(done);
-  
   hpx_lco_delete(done, HPX_NULL);
+  hpx_lco_delete(lco, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
