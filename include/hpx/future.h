@@ -63,6 +63,12 @@ hpx_addr_t hpx_lco_newfuture_new(size_t size);
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant);
 
+/// Get the address of a future in an array
+///
+/// @param base The base address for the array of futures
+/// @param   id The index into the array of futures
+hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id);
+
 /// Set a future
 ///
 /// Set future @p future with @p data of @p size bytes. Set @p lsync_lco
