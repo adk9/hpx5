@@ -164,7 +164,7 @@ int t06_getat_action(hpx_addr_t *fut) {
 
 START_TEST (test_hpx_lco_newfuture_getat)
 {
-  printf("Starting the hpx_lco_newfuture_waitat() full test\n");
+  printf("Starting the hpx_lco_newfuture_getat() test\n");
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -195,7 +195,7 @@ END_TEST
 START_TEST (test_hpx_lco_newfuture_getat_remote)
 {
   if (hpx_get_num_localities() > 0) {
-    printf("Starting the hpx_lco_newfuture_waitat() full test\n");
+    printf("Starting the hpx_lco_newfuture_getat() remote test\n");
     
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
@@ -280,7 +280,7 @@ int t06_waitforempty_id_action(void *vargs) {
 
 START_TEST (test_hpx_lco_newfuture_waitat_empty_array)
 {
-  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+  printf("Starting the hpx_lco_newfuture_waitat() empty array test\n");
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -310,11 +310,11 @@ END_TEST
 // futures to see if they are empty, since a future should be empty on creation.
 // Finally we free the futures.
 //****************************************************************************
-START_TEST (test_hpx_lco_newfuture_waitat_empty_remote_array)
+START_TEST (test_hpx_lco_newfuture_waitat_empty_array_remote)
 {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
-    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    printf("Starting the hpx_lco_newfuture_waitat() empty array remote test\n");
     
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
@@ -353,7 +353,7 @@ int t06_waitforfull_id_action(void *vargs) {
 
 START_TEST (test_hpx_lco_newfuture_waitat_full_array)
 {
-  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+  printf("Starting the hpx_lco_newfuture_waitat() full array test\n");
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -385,11 +385,11 @@ END_TEST
 //****************************************************************************
 // hpx_lco_newfuture_waitat for full remote test, array version
 //****************************************************************************
-START_TEST (test_hpx_lco_newfuture_waitat_full_remote_array)
+START_TEST (test_hpx_lco_newfuture_waitat_full_array_remote)
 {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
-    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    printf("Starting the hpx_lco_newfuture_waitat() full array remote test\n");
     
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
@@ -433,7 +433,7 @@ int t06_getat_id_action(void* vargs) {
 
 START_TEST (test_hpx_lco_newfuture_getat_array)
 {
-  printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+  printf("Starting the hpx_lco_newfuture_getat() array test\n");
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -466,11 +466,11 @@ END_TEST
 //****************************************************************************
 // hpx_lco_newfuture_getat for full remote test, array version
 //****************************************************************************
-START_TEST (test_hpx_lco_newfuture_getat_remote_array)
+START_TEST (test_hpx_lco_newfuture_getat_array_remote)
 {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
-    printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
+    printf("Starting the hpx_lco_newfuture_getat() array remote test\n");
     
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
@@ -523,9 +523,9 @@ void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_getat);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitfor);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_remote_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array);
-  tcase_add_test(tc, test_hpx_lco_newfuture_getat_full_remote_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_full_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);
-  tcase_add_test(tc, test_hpx_lco_newfuture_getat_remote_array);
+  tcase_add_test(tc, test_hpx_lco_newfuture_getat_array_remote);
 }
