@@ -29,7 +29,7 @@ extern hpx_action_t t06_waitforfull;
 extern hpx_action_t t06_getat;
 extern hpx_action_t t06_waitforempty_id;
 extern hpx_action_t t06_waitforfull_id;
-extern hpx_action_t  t06_getat_id;
+extern hpx_action_t t06_getat_id;
 extern hpx_action_t t07_init_array;
 extern hpx_action_t t07_lcoSetGet;
 extern hpx_action_t t07_initMemory;

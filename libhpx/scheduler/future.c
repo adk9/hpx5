@@ -339,3 +339,85 @@ hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
+
+
+
+
+
+
+
+
+
+hpx_addr_t hpx_lco_newfuture_new(size_t size) {
+  return HPX_NULL;
+}
+
+hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant) {
+  return HPX_NULL;
+}
+
+hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id) {
+  return base;
+}
+
+hpx_status_t hpx_lco_newfuture_setat(hpx_addr_t future,  int id, size_t size, void *data,
+				     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+  if (lysnc_lco != HPX_NULL)
+    hpx_lco_set(lsync_lco);
+  if (rysnc_lco != HPX_NULL)
+    hpx_lco_set(rsync_lco);
+  return HPX_SUCCESS;
+}
+
+hpx_status_t hpx_lco_newfuture_emptyat(hpx_addr_t newfuture,  int id, hpx_addr_t rsync_lco) {
+  if (rysnc_lco != HPX_NULL)
+    hpx_lco_set(rsync_lco);
+  return HPX_SUCCESS;
+}
+
+hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void *value) {
+  return HPX_NULL;
+};
+
+void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t *futures, size_t *size,
+			       void *values) {
+  return;
+}
+
+void hpx_lco_newfuture_waitat(hpx_addr_t future, int id, hpx_set_t set) {
+  return;
+}
+
+hpx_status_t hpx_lco_newfuture_waitat_for(hpx_addr_t future, int id, hpx_set_t set, hpx_time_t for_time) {
+  return HPX_SUCCESS;
+}
+
+hpx_status_t hpx_lco_newfuture_waitat_until(hpx_addr_t future, int id, hpx_set_t set, hpx_time_t for_time) {
+  return HPX_SUCCESS;
+}
+
+void hpx_lco_newfuture_wait_all(size_t num, hpx_addr_t *newfutures, hpx_set_t set) {
+  return;
+}
+
+hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_addr_t *newfutures, 
+					    hpx_set_t set, hpx_time_t time) {
+  return HPX_SUCCESS;
+}
+
+hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t *newfutures, 
+					      hpx_set_t set, hpx_time_t time) {
+  return HPX_SUCCESS;
+}
+
+void hpx_lco_newfuture_free(hpx_addr_t newfuture) {
+  return;
+}
+
+void hpx_lco_newfuture_free_all(size_t num, hpx_addr_t *newfutures) {
+  return;
+}
+
+bool hpx_lco_newfuture_is_shared() {
+  return true;
+}
