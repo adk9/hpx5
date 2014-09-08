@@ -67,5 +67,10 @@ double hpx_time_elapsed_us(hpx_time_t from);
 ///             in milliseconds
 double hpx_time_elapsed_ms(hpx_time_t from);
 
-
+/// Construct an hpx time object
+/// @param  s seconds
+/// @param ns nanoseconds
+/// @returns  a pointer to an object of type hpx_time_t that has the specified
+///           duration
+hpx_time_t *hpx_time_construct(unsigned long s, unsigned long ns);
 #endif

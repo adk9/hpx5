@@ -311,7 +311,6 @@ START_TEST (test_libhpx_lco_future_array)
 }
 END_TEST
 
-
 //****************************************************************************
 // This testcase tests for future wait for function.
 // Waits for the result to become available. Blocks until specified timeout
