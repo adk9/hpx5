@@ -54,6 +54,7 @@ typedef int MPI_Comm;
 #define MPI_COMM_WORLD_ 0
 #define MPI_SUCCESS_ SUCCESS
 #define MPI_REQUEST_NULL 0
+#define MPI_PROC_NULL -1
 
 #define MPI_ANY_TAG_ -1
 #define MPI_ANY_SOURCE_ -1
