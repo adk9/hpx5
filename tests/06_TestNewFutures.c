@@ -240,7 +240,7 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
   hpx_future_status status;
   do {
     hpx_time_t *timeout_duration = hpx_time_construct(5, 0);
-    status = hpx_lco_newfuture_waitfor(*fut, HPX_SET, timeout_duration);
+    status = hpx_lco_newfuture_waitat_for(*fut, HPX_SET, timeout_duration);
     if (status == hpx_future_status.deferred) {
       printf("Deferred\n");
     } else if (status == hpx_future_status.timeout) {

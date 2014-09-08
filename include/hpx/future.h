@@ -5,7 +5,7 @@
 
 // Specifies state of a future as returned by wait_for and wait_until functions
 // of future.
-enum class future_status {
+typedef enum {
   // The shared state is ready.
   ready,
   // The shared state did not become ready before specified timeout duration
@@ -14,7 +14,7 @@ enum class future_status {
   // The shared state contains a deferred function, so the result will be
   // computed only when explicitly requested.
   deferred
-};
+} hpx_future_status;
 
 typedef enum {HPX_SET, HPX_UNSET} hpx_set_t;
 
