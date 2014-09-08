@@ -402,6 +402,8 @@ void mpi_type_size_(MPI_Datatype datatype, int *size, int *pier) {
     *size = 4;
   else if (datatype == 10) //float
     *size = 4;
+  else if (datatype == 26) //float
+    *size = 4;
   else if (datatype == 11) // double
     *size = 8;
   else if (datatype == 12) // long double

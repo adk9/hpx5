@@ -2,3 +2,4 @@
    integer, parameter :: MPI_INTEGER = 28
    integer, parameter :: MPI_REAL = 26
    integer, parameter :: MPI_PROC_NULL = -1
+   integer, parameter :: MPI_SUM = 102
