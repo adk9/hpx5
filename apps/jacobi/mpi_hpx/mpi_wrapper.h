@@ -76,7 +76,7 @@ typedef int MPI_Op;
 #define MPI_MINLOC (MPI_Op)(110)
 #define MPI_MAXLOC (MPI_Op)(111)
 
-int mpi_sendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
+int mpi_sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 int dest, int sendtag,
                 void *recvbuf, int recvcount, MPI_Datatype recvtype,
                 int source, int recvtag,
