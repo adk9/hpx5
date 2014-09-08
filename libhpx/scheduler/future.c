@@ -362,22 +362,22 @@ hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id) {
 
 hpx_status_t hpx_lco_newfuture_setat(hpx_addr_t future,  int id, size_t size, void *data,
 				     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
-  if (lysnc_lco != HPX_NULL)
-    hpx_lco_set(lsync_lco);
-  if (rysnc_lco != HPX_NULL)
-    hpx_lco_set(rsync_lco);
+  if (!hpx_addr_eq(lsync_lco, HPX_NULL))
+    hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
+  if (!hpx_addr_eq(rsync_lco, HPX_NULL))
+    hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 hpx_status_t hpx_lco_newfuture_emptyat(hpx_addr_t newfuture,  int id, hpx_addr_t rsync_lco) {
-  if (rysnc_lco != HPX_NULL)
-    hpx_lco_set(rsync_lco);
+  if (!hpx_addr_eq(rsync_lco, HPX_NULL))
+    hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void *value) {
   return HPX_NULL;
-};
+}
 
 void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t *futures, size_t *size,
 			       void *values) {

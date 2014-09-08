@@ -1,3 +1,8 @@
+#ifndef HPX_FUTURE_H
+#define HPX_FUTURE_H
+
+#include "hpx/time.h"
+
 // Specifies state of a future as returned by wait_for and wait_until functions
 // of future.
 enum class future_status {
@@ -203,3 +208,4 @@ void hpx_lco_newfuture_free_all(size_t num, hpx_addr_t *newfutures);
 ///          false otherwise
 bool hpx_lco_newfuture_is_shared();
 
+#endif

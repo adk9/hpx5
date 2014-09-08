@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
 
@@ -79,7 +80,7 @@ hpx_time_ms(hpx_time_t time) {
 }
 
 hpx_time_t *hpx_time_construct(unsigned long s, unsigned long ns) {
-  hpx_time_t t = malloc(sizeof(hpx_time_t));
+  hpx_time_t *t = malloc(sizeof(hpx_time_t));
   t->tv_sec = s;
   t->tv_nsec = ns;
   return t;
