@@ -78,7 +78,7 @@ START_TEST (test_libhpx_lcoFunction)
     // Perform a wait operation. The LCO blocks the caller until an LCO set
     // operation triggers the LCO. 
     hpx_status_t status = hpx_lco_wait(done);
-    ck_assert_msg(status == HPX_SUCCESS, "LCO Wait operation failed");
+    ck_assert(status == HPX_SUCCESS);
 
     // Deletes an LCO. It takes address of the LCO and an rsync ot signal
     // remote completion.
@@ -129,7 +129,6 @@ START_TEST (test_libhpx_lcoSetGet)
   printf("Value returned = %"PRIu64"\n", result);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
-  hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 }
 END_TEST
@@ -184,7 +183,7 @@ START_TEST (test_libhpx_lcoWaitAll)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  uint32_t blocks = (size / block_size) + ((size % block_size) ? 1 : 0);
+  uint32_t blocks = size;
   uint32_t block_bytes = block_size * sizeof(uint32_t);
 
   printf("Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
@@ -212,7 +211,7 @@ START_TEST (test_libhpx_lcoWaitAll)
     hpx_call(block, t07_initMemory, args, sizeof(args[0]), done[1]);
   }
 
-  // Blocks the thread untill all of the LCO's have been set.
+  // Blocks the thread until all of the LCO's have been set.
   hpx_lco_wait_all(2, done, NULL);
   hpx_lco_delete(done[0], HPX_NULL);
   hpx_lco_delete(done[1], HPX_NULL);
@@ -315,7 +314,7 @@ START_TEST (test_libhpx_lcoError)
   hpx_call(HPX_HERE, t07_errorSet, &lco, sizeof(lco), done);
   hpx_status_t status = hpx_lco_wait(lco);
   printf("status == %d\n", status);
-  ck_assert_msg(status == HPX_ERROR, "hpx_lco_error function failed");
+  ck_assert(status == HPX_ERROR);
   hpx_lco_wait(done);
 
   hpx_lco_delete(lco, HPX_NULL);

@@ -1,6 +1,8 @@
-noinst_PROGRAMS 	= hpxtest
+noinst_bin_PROGRAMS 	= hpxtest
+noinst_bindir 		= $(abs_top_builddir)/tests
+#TESTS 			= hpxtest 
 TESTS 			= 
-#check_PROGRAMS		= hpxtest
+check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
                           02_TestMemAlloc.c \
@@ -9,7 +11,10 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           05_TestThreads.c \
                           06_TestFutures.c \
                           07_TestLCO.c \
-                          08_TestSema.c
+                          08_TestSema.c \
+                          09_TestChannels.c \
+                          10_TestAndLCO.c \
+                          11_TestGenCount.c 
 
 hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck  
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 

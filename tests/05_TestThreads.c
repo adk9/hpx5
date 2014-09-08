@@ -366,7 +366,7 @@ START_TEST (test_libhpx_threadContinueCleanup)
   assert(block);
 
   hpx_call_sync(src, t05_thread_cont_cleanup, &rank, sizeof(rank), block, DATA_SIZE);
-  printf("value in block is %lu\n", *block);
+  printf("value in block is %"PRIu64"\n", *block);
 
   hpx_gas_free(src, HPX_NULL);
 

@@ -1,18 +1,30 @@
-noinst_appsdir         = $(abs_top_builddir)/apps/
+noinst_appsdir         = $(datarootdir)/apps/
 
-noinst_apps_PROGRAMS   = mpi
+noinst_apps_PROGRAMS   = hpxmpi
 
-mpi_SOURCES  = allreduce.c alltoall.c alltoallv.c bcast.c gather.c gatherv.c \
-               logging.c main.c mpi_system.c p2p.c reduce.c scatterv.c \
-               mpi_wtime.c sendrecv.c
+hpxmpi_SOURCES  = allgather.c      \
+               allreduce.c      \
+               alltoall.c       \
+               alltoallv.c      \
+               bcast.c          \
+               gather.c         \
+               gatherv.c        \
+               logging.c        \
+               main.c           \
+               mpi_system.c     \
+               mpi_wtime.c      \
+               p2p.c            \
+               reduce.c         \
+               scatterv.c       \
+               sendrecv.c
 
-mpi_LDFLAGS  = -static
-mpi_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
+hpxmpi_LDFLAGS  = -static
+hpxmpi_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
-mpi_CPPFLAGS = -I$(top_srcdir)/include
-mpi_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
-mpi_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+hpxmpi_CPPFLAGS = -I$(top_srcdir)/include
+hpxmpi_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
+hpxmpi_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 if HAVE_PHOTON
-mpi_LDADD   += -lphoton -ljemalloc
+hpxmpi_LDADD   += -lphoton -ljemalloc
 endif
