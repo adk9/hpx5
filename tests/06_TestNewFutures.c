@@ -262,6 +262,56 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
 END_TEST
 
 //****************************************************************************
+// wait_until waits for a result to become available. It blocks until 
+// specified timeout_time has been reached or the result becomes available,
+// whichever comes first. The return value indicates why wait_until returned.
+// The behavior is undefined if valid()== false before the call 
+// to this function. In this case throw a future error with an error condition
+// no state.
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_waituntil) 
+{
+  printf("Starting the future wait for test\n");
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE,
+                          HPX_NULL, HPX_NULL);
+
+  printf("Waiting for status to be set...\n");
+  hpx_future_status status;
+  do {
+    hpx_time_t now = hpx_time_now();
+    // Duration is used to measure the time since epoch
+    hpx_time_t *duration = hpx_time_construct(5, 0);
+    hpx_time_t *timeout_time = hpx_time_point(now, duration);
+    status = hpx_lco_newfuture_waitat_until(*fut, HPX_SET, &timeout_time);
+    if (status == hpx_future_status.deferred) {
+      // The function to calculate the result has not been started yes.
+      printf("Deferred\n");
+    } else if (status == hpx_future_status.timeout) {
+      // The timeout has expired.
+      printf("Timeout\n");
+    } else if (status == hpx_future_status.ready) {
+      // The result is ready.
+      printf("Ready\n");
+    }
+  } while (status != hpx_future_status.ready);
+
+  uint64_t result;
+  hpx_lco_newfuture_getat(fut, 0, sizeof(uint64_t), &result);
+  printf("Result of the future is = %"PRIu64"\n", result);
+  ck_assert(result == SET_VALUE);
+
+  hpx_lco_newfuture_free(fut);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
 // hpx_lco_newfuture_waitat for empty test, array version: 
 // This tests the creation of an array of futures. In the test, we wait on the
 // futures to see if they are empty, since a future should be empty on creation.
@@ -528,4 +578,5 @@ void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_full_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waituntil);
 }
