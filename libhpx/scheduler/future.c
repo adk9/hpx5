@@ -379,7 +379,7 @@ hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void 
   return HPX_NULL;
 }
 
-void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t *futures, size_t *size,
+void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t *size,
 			       void *values) {
   return;
 }
@@ -396,16 +396,16 @@ hpx_status_t hpx_lco_newfuture_waitat_until(hpx_addr_t future, int id, hpx_set_t
   return HPX_SUCCESS;
 }
 
-void hpx_lco_newfuture_wait_all(size_t num, hpx_addr_t *newfutures, hpx_set_t set) {
+void hpx_lco_newfuture_wait_all(size_t num, hpx_addr_t newfutures, hpx_set_t set) {
   return;
 }
 
-hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_addr_t *newfutures, 
+hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_addr_t newfutures, 
 					    hpx_set_t set, hpx_time_t time) {
   return HPX_SUCCESS;
 }
 
-hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t *newfutures, 
+hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t newfutures, 
 					      hpx_set_t set, hpx_time_t time) {
   return HPX_SUCCESS;
 }
@@ -414,7 +414,7 @@ void hpx_lco_newfuture_free(hpx_addr_t newfuture) {
   return;
 }
 
-void hpx_lco_newfuture_free_all(size_t num, hpx_addr_t *newfutures) {
+void hpx_lco_newfuture_free_all(hpx_addr_t newfutures) {
   return;
 }
 

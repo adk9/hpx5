@@ -118,6 +118,7 @@ Suite *test_suite(void)
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
   add_06_TestFutures(tc);
+  add_06_TestNewFutures(tc);
   add_07_TestLCO(tc);
   add_08_TestSemaphores(tc);
   add_09_TestChannels(tc);
