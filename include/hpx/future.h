@@ -51,6 +51,13 @@ typedef enum {HPX_SET, HPX_UNSET} hpx_set_t;
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_new(size_t size);
 
+/// Creates a shared future
+/// 
+/// Shared futures can be accessed mutiple times
+/// @param size                 The number of bytes e
+/// @returns                    The global address of the future
+hpx_addr_t hpx_lco_newfuture_shared_new(size_t size);
+
 /// Create an array of futures
 ///
 /// Creates an array of @p num futures, each with @p num_participants

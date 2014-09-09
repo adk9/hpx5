@@ -68,8 +68,6 @@
 
 #define sync_fence(mm) __builtin_ia32_mfence()
 
-#define SYNC_ATOMIC(decl) volatile decl
-
 /* ../generic.h implements all of the strongly-typed versions in
  * terms of the above generic versions.
  */

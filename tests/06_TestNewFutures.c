@@ -552,6 +552,44 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
 END_TEST
 
 //****************************************************************************
+// Testcase to test shared future
+//****************************************************************************
+int t07_lcoSetGet_action(int *args) {
+  int val = 10, setVal;
+  hpx_addr_t future = hpx_lco_future_new(sizeof(int));
+  // Set an LCO, with data.
+  hpx_lco_set(future, sizeof(int), &val, HPX_NULL, HPX_NULL);
+
+  // Get the value and print for debugging purpose. An LCO blocks the caller
+  // until the future is set, and then copies its value to data into the 
+  // provided output location.
+  hpx_lco_get(future, sizeof(setVal), &setVal);
+  hpx_lco_delete(future, HPX_NULL);
+  hpx_thread_continue(sizeof(int), &setVal);
+}
+
+START_TEST (test_hpx_lco_newfuture_shared) 
+{
+    int n = 10, result;
+    printf("Starting the hpx_lco_newfuture_shared_new test\n");
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+
+    hpx_addr_t shared_done = hpx_lco_newfuture_shared_new(sizeof(uint64_t));
+    hpx_call(HPX_HERE, t06_lcoSetGet, &n, sizeof(n), shared_done);
+    
+    // Shared futures can be accessed multiple times;
+    hpx_lco_get(shared_done, sizeof(int), &result);
+    printf("Value = %d\n", result);
+
+    hpx_lco_get(shared_done, sizeof(int), &result);
+    printf("Its double = %d\n", result * 2); 
+
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
 // test_hpx_lco_newfuture_wait_all
 //****************************************************************************
 START_TEST (test_hpx_lco_newfuture_wait_all) 
@@ -633,15 +671,6 @@ START_TEST (test_hpx_lco_newfuture_wait_all_until)
 }
 END_TEST
 
-
-//******
-
-// TODO
-// 0. is shared() (how!?)
-
-//*****
-
-
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
@@ -656,6 +685,7 @@ void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_getat);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitfor);
   tcase_add_test(tc, test_hpx_lco_newfuture_waituntil);
+  tcase_add_test(tc, test_hpx_lco_newfuture_shared);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array);
