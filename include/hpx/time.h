@@ -72,5 +72,14 @@ double hpx_time_elapsed_ms(hpx_time_t from);
 /// @param ns nanoseconds
 /// @returns  a pointer to an object of type hpx_time_t that has the specified
 ///           duration
-hpx_time_t *hpx_time_construct(unsigned long s, unsigned long ns);
+hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns);
+
+/// Construct an hpx time to represent a point in time
+/// Given a point in time, and a duration from that point, construct a new
+/// point in time. Duration at present must be a positive interval.
+/// @param     time A starting time
+/// @param duration A duration from the starting time
+/// @returns        A pointer to an object of type hpx_time_t that represents
+///                 a point in time, based on the start time and duration
+hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration);
 #endif
