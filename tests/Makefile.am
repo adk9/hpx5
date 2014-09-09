@@ -10,6 +10,7 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           04_TestParcel.c \
                           05_TestThreads.c \
                           06_TestFutures.c \
+                          06_TestNewFutures.c \
                           07_TestLCO.c \
                           08_TestSema.c \
                           09_TestChannels.c \
