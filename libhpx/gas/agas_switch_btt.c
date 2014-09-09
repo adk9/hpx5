@@ -27,7 +27,7 @@
 
 
 typedef struct {
-  SYNC_ATOMIC uint64_t state;
+  volatile uint64_t state;
   void                 *base;
 } _record_t;
 

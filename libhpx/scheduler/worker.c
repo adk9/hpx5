@@ -46,8 +46,8 @@
 #include "worker.h"
 
 
-typedef SYNC_ATOMIC int atomic_int_t;
-typedef atomic_int_t* SYNC_ATOMIC atomic_int_atomic_ptr_t;
+typedef volatile int atomic_int_t;
+typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
 
 typedef two_lock_queue_t _mailbox_t;
 typedef two_lock_queue_node_t _envelope_t;

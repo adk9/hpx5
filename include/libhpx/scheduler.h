@@ -59,8 +59,8 @@ struct cvar;
 /// not implemented.
 /// ----------------------------------------------------------------------------
 typedef struct scheduler {
-  SYNC_ATOMIC int     next_id;
-  SYNC_ATOMIC int next_tls_id;
+  volatile int     next_id;
+  volatile int next_tls_id;
   int                   cores;
   int               n_workers;
   unsigned int    backoff_max;
