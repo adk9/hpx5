@@ -33,7 +33,7 @@
 typedef struct {
   lco_t                  lco;
   cvar_t             barrier;
-  SYNC_ATOMIC intptr_t value;                  // the threshold
+  volatile intptr_t value;                  // the threshold
 } _and_t;
 
 

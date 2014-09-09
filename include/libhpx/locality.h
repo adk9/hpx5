@@ -37,9 +37,9 @@ typedef struct {
   struct network_class     *network;            // the parcel transport
   struct scheduler           *sched;            // the scheduler data
 
-  SYNC_ATOMIC uint32_t   local_sbrk;            // the local memory block sbrk
-  SYNC_ATOMIC uint32_t  global_sbrk;            // the global block id sbrk
-  SYNC_ATOMIC uint32_t     pvt_sbrk;            // the global private block sbrk
+  volatile uint32_t   local_sbrk;            // the local memory block sbrk
+  volatile uint32_t  global_sbrk;            // the global block id sbrk
+  volatile uint32_t     pvt_sbrk;            // the global private block sbrk
 } locality_t;
 
 

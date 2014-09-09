@@ -33,7 +33,7 @@
 
 
 typedef struct {
-  SYNC_ATOMIC uint64_t credit;                  // credit balance
+  volatile uint64_t credit;                  // credit balance
   bitmap_t              *debt;                  // the credit that was recovered
   hpx_addr_t      termination;                  // the termination LCO
 } _process_t;

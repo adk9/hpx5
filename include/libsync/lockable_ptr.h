@@ -18,8 +18,8 @@
 #include "hpx/attributes.h"
 #include "sync.h"
 
-typedef const void * SYNC_ATOMIC lockable_ptr_t;
-#define SYNC_LOCKABLE_PTR(T) const T * SYNC_ATOMIC
+typedef const void * volatile lockable_ptr_t;
+#define SYNC_LOCKABLE_PTR(T) const T * volatile
 
 HPX_INTERNAL const void *sync_lockable_ptr_lock(lockable_ptr_t *p);
 HPX_INTERNAL void sync_lockable_ptr_unlock(lockable_ptr_t *p);

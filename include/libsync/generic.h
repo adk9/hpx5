@@ -15,7 +15,7 @@
 
 #define SYNC_FLOAT_TY(T, s)
 #define SYNC_INT_TY(T, s)                                           \
-  static inline T sync_load_##s(T SYNC_ATOMIC *addr, int mm) {    \
+  static inline T sync_load_##s(T volatile *addr, int mm) {    \
     return sync_load(addr, mm);                                     \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
@@ -24,7 +24,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                               \
-  static inline void sync_store_##s(T SYNC_ATOMIC *addr, T val, int mm) { \
+  static inline void sync_store_##s(T volatile *addr, T val, int mm) { \
     sync_store(addr, val, mm);                                          \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
@@ -33,7 +33,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                               \
-  static inline T sync_swap_##s(T SYNC_ATOMIC *addr, T val, int mm) { \
+  static inline T sync_swap_##s(T volatile *addr, T val, int mm) { \
     return sync_swap(addr, val, mm);                                    \
   }
 #define SYNC_PTR_TY(T, s) SYNC_INT_TY(T, s)
@@ -42,7 +42,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                       \
-  static inline bool sync_cas_##s(T SYNC_ATOMIC *addr, T from, T to, int \
+  static inline bool sync_cas_##s(T volatile *addr, T from, T to, int \
                                   onsuccess, int onfailure) {           \
     return sync_cas(addr, from, to, onsuccess, onfailure);              \
   }
@@ -52,7 +52,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                               \
-  static inline T sync_cas_val_##s(T SYNC_ATOMIC *addr, T from, T to, \
+  static inline T sync_cas_val_##s(T volatile *addr, T from, T to, \
                                    int onsuccess, int onfailure) {      \
     return sync_cas_val(addr, from, to, onsuccess, onfailure);          \
   }
@@ -62,7 +62,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                               \
-  static inline T sync_fadd_##s(T SYNC_ATOMIC *addr, T val, int mm) { \
+  static inline T sync_fadd_##s(T volatile *addr, T val, int mm) { \
     return sync_fadd(addr, val, mm);                                    \
   }
 #define SYNC_PTR_TY(T, s)
@@ -71,7 +71,7 @@
 #undef SYNC_INT_TY
 
 #define SYNC_INT_TY(T, s)                                               \
-  static inline T sync_addf_##s(T SYNC_ATOMIC *addr, T val, int mm) { \
+  static inline T sync_addf_##s(T volatile *addr, T val, int mm) { \
     return sync_addf(addr, val, mm);                                    \
   }
 #define SYNC_PTR_TY(T, s)
