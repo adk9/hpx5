@@ -1,0 +1,1 @@
+photontest-kernel.o: kernel.c
