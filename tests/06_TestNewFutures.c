@@ -551,6 +551,88 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
 }
 END_TEST
 
+//****************************************************************************
+// test_hpx_lco_newfuture_wait_all
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_wait_all) 
+{
+  printf("Starting the future wait for test\n");
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    hpx_lco_newfuture_setat(fut, 1, sizeof(SET_VALUE), &SET_VALUE, 
+			    HPX_NULL, HPX_NULL);
+  }
+  hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES, fut, HPX_SET);
+  hpx_lco_newfuture_free_all(fut);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
+// test_hpx_lco_newfuture_wait_all_for
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_wait_all_for) 
+{
+  printf("Starting the future wait for test\n");
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_time_t timeout_duration = hpx_time_construct(0, 5e8);
+  hpx_future_status status;
+  status = hpx_lco_newfuture_wait_all_for(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout_duration);
+  ck_assert_msg(status = HPX_FUTURE_STATUS_TIMEOUT);
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    hpx_lco_newfuture_setat(fut, 1, sizeof(SET_VALUE), &SET_VALUE, 
+			    HPX_NULL, HPX_NULL);
+  }
+  status = hpx_lco_newfuture_wait_all_for(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout_duration);
+  ck_assert_msg(status = HPX_FUTURE_STATUS_READY);
+
+  hpx_lco_newfuture_free_all(fut);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
+// test_hpx_lco_newfuture_wait_all_until
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_wait_all_until) 
+{
+  hpx_time_t now, duration, timeout;
+  printf("Starting the future wait for test\n");
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+
+  now = hpx_time_now();
+  duration = hpx_time_construct(0, 5e8);
+  timeout = hpx_time_point(now, duration);
+  hpx_future_status status;
+  status = hpx_lco_newfuture_wait_all_until(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout);
+  ck_assert_msg(status = HPX_FUTURE_STATUS_TIMEOUT);
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    hpx_lco_newfuture_setat(fut, 1, sizeof(SET_VALUE), &SET_VALUE, 
+			    HPX_NULL, HPX_NULL);
+  }
+  now = hpx_time_now();
+  duration = hpx_time_construct(0, 5e8);
+  timeout = hpx_time_point(now, duration);
+  status = hpx_lco_newfuture_wait_all_until(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout);
+  ck_assert_msg(status = HPX_FUTURE_STATUS_READY);
+
+  hpx_lco_newfuture_free_all(fut);
+
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
 
 //******
 
@@ -573,11 +655,17 @@ void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitfor);
+  tcase_add_test(tc, test_hpx_lco_newfuture_waituntil);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array_remote);
-  tcase_add_test(tc, test_hpx_lco_newfuture_waituntil);
+  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all);
+  //  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_remote);
+  //  tcase_add_test(tc, test_hpx_lco_newfuture_get_all);
+  //  tcase_add_test(tc, test_hpx_lco_newfuture_get_all_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_for);
+  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_until);
 }
