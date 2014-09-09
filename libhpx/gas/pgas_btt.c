@@ -26,7 +26,7 @@
 
 static uint64_t _table_size = (uint64_t)UINT32_MAX * sizeof(void*);
 
-typedef void* SYNC_ATOMIC() atomic_word_t;
+typedef void* SYNC_ATOMIC atomic_word_t;
 
 typedef struct {
   btt_class_t    class;

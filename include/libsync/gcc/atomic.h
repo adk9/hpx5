@@ -65,7 +65,7 @@
 
 #define sync_fence(mm) __atomic_thread_fence(mm)
 
-#define SYNC_ATOMIC(decl) decl
+#define SYNC_ATOMIC volatile
 
 /* ../generic.h implements all of the strongly-typed versions in
  * terms of the above generic versions.
