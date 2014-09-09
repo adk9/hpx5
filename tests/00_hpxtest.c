@@ -70,6 +70,8 @@ hpx_action_t t06_getat;
 hpx_action_t t06_waitforempty_id;
 hpx_action_t t06_waitforfull_id;
 hpx_action_t t06_getat_id;
+hpx_action_t t06_lcoSetGet;
+hpx_action_t t06_set;
 hpx_action_t t07_init_array;
 hpx_action_t t07_lcoSetGet;
 hpx_action_t t07_initMemory;
@@ -185,12 +187,14 @@ void _register_actions(void) {
   t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
 
   //06_TestNewFutures.c
-  t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty);
-  t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull);
-  t06_getat = HPX_REGISTER_ACTION(t06_getat);
-  t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id);
-  t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id);
-  t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id);
+  t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty_action);
+  t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull_action);
+  t06_getat = HPX_REGISTER_ACTION(t06_getat_action);
+  t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id_action);
+  t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id_action);
+  t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id_action);
+  t06_lcoSetGet = HPX_REGISTER_ACTION(t06_lcoSetGet_action);
+  t06_set = HPX_REGISTER_ACTION(t06_set_action);
 
   //07_TestLCO.c
   t07_init_array = HPX_REGISTER_ACTION(t07_init_array_action);

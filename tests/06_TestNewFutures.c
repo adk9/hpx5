@@ -554,7 +554,7 @@ END_TEST
 //****************************************************************************
 // Testcase to test shared future
 //****************************************************************************
-int t07_lcoSetGet_action(int *args) {
+int t06_lcoSetGet_action(int *args) {
   int val = 10, setVal;
   hpx_addr_t future = hpx_lco_future_new(sizeof(int));
   // Set an LCO, with data.
@@ -607,6 +607,108 @@ START_TEST (test_hpx_lco_newfuture_wait_all)
   hpx_lco_newfuture_free_all(fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
+// test_hpx_lco_newfuture_wait_all_remote
+//****************************************************************************
+struct t06_set_args {
+  hpx_addr_t fut;
+  int i;
+};
+
+int t06_set_action(void *vargs) {
+  struct t06_set_args *args = (struct t06_set_args*)vargs;
+  hpx_lco_newfuture_setat(args->fut, args->i, sizeof(SET_VALUE), &SET_VALUE, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+START_TEST (test_hpx_lco_newfuture_wait_all_remote) 
+{
+  int ranks = hpx_get_num_ranks();
+  if (ranks > 1) {
+    printf("Starting the hpx_lco_newfuture_waitat() empty array remote test\n");
+    
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      args[i].fut = fut;
+      args[i].i = i;
+      hpx_call(hpx_lco_newfuture_at(fut, i), t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+    }
+    
+    hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES * ranks, fut, HPX_SET);
+    hpx_lco_newfuture_free_all(fut);
+    
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  }
+}
+END_TEST
+
+//****************************************************************************
+// test_hpx_lco_newfuture_get_all
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_get_all) 
+{
+  printf("Starting the hpx_lco_newfuture_waitat() empty array remote test\n");
+  
+  // allocate and start a timer
+  hpx_time_t t1 = hpx_time_now();
+  
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    args[i].fut = fut;
+    args[i].i = i;
+    hpx_call(HPX_HERE, t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+  }
+  
+  SET_VALUE_T *values = calloc(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
+  hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), values);
+  for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    ck_assert_msg(values[i] == SET_VALUE, "Got wrong value");
+  }
+  
+  hpx_lco_newfuture_free_all(fut);
+  
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
+//****************************************************************************
+// test_hpx_lco_newfuture_get_all_remote
+//****************************************************************************
+START_TEST (test_hpx_lco_newfuture_get_all_remote) 
+{
+  int ranks = hpx_get_num_ranks();
+  if (ranks > 1) {
+    printf("Starting the hpx_lco_newfuture_waitat() empty array remote test\n");
+    
+    // allocate and start a timer
+    hpx_time_t t1 = hpx_time_now();
+
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      args[i].fut = fut;
+      args[i].i = i;
+      hpx_call(hpx_lco_newfuture_at(fut, i), t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+    }
+    
+    SET_VALUE_T *values = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
+    hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES * ranks, fut, sizeof(SET_VALUE_T), values);
+    for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      ck_assert_msg(values[i] == SET_VALUE, "Got wrong value");
+    }
+
+    hpx_lco_newfuture_free_all(fut);
+    
+    printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  }
 }
 END_TEST
 
@@ -693,9 +795,9 @@ void add_06_TestNewFutures(TCase *tc) {
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_wait_all);
-  //  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_remote);
-  //  tcase_add_test(tc, test_hpx_lco_newfuture_get_all);
-  //  tcase_add_test(tc, test_hpx_lco_newfuture_get_all_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_remote);
+  tcase_add_test(tc, test_hpx_lco_newfuture_get_all);
+  tcase_add_test(tc, test_hpx_lco_newfuture_get_all_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_for);
   tcase_add_test(tc, test_hpx_lco_newfuture_wait_all_until);
 }
