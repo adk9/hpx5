@@ -24,7 +24,7 @@
 #include "libhpx/routing.h"
 #include "addr.h"
 
-typedef void* SYNC_ATOMIC() atomic_word_t;
+typedef void* volatile atomic_word_t;
 
 typedef struct {
   btt_class_t    class;

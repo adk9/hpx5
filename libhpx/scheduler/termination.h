@@ -50,7 +50,7 @@ typedef _bitmap_word_t *_bitmap_page_t;
 
 // the bitmap structure used for credit tracking
 typedef struct {
-  _bitmap_page_t SYNC_ATOMIC(page);
+  _bitmap_page_t volatile(page);
 } bitmap_t;
 
 ///
