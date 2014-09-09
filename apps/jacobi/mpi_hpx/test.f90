@@ -22,6 +22,8 @@
             if (myid >      0) nbr_down = myid - 1
             if (myid < np - 1) nbr_up   = myid + 1
 
+            tmp = 0
+
             call mpi_sendrecv(myid,1,mpi_integer,nbr_down,314, &
                       tmp,1,mpi_integer,nbr_up  ,314, &
                       mpi_comm_world,status,ierr)
