@@ -138,6 +138,9 @@ int photon_init(photonConfig cfg) {
   __photon_default->probe = (be->probe)?(be->probe):__photon_default->probe;
   __photon_default->send = (be->send)?(be->send):__photon_default->send;
   __photon_default->recv = (be->recv)?(be->recv):__photon_default->recv;
+  __photon_default->put_with_completion = (be->put_with_completion)?(be->put_with_completion):__photon_default->put_with_completion;
+  __photon_default->get_with_completion = (be->get_with_completion)?(be->get_with_completion):__photon_default->get_with_completion;
+  __photon_default->probe_completion = (be->probe_completion)?(be->probe_completion):__photon_default->probe_completion;
   __photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
   __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
 
@@ -366,6 +369,8 @@ int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   return __photon_default->probe_ledger(proc, flag, type, status);
 }
 
+
+/* begin SR interface */
 int photon_probe(photonAddr addr, int *flag, photonStatus status) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
@@ -392,6 +397,38 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
 
   return __photon_default->recv(request, ptr, size, flags);
 }
+/* end SR interface */
+
+/* begin with completion */
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+                               photon_rid local, photon_rid remote, int flags) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+  
+  return __photon_default->put_with_completion(proc, ptr, size, rptr, priv, local, remote, flags);
+}
+
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+                               photon_rid local, int flags) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+  
+  return __photon_default->get_with_completion(proc, ptr, size, rptr, priv, local, flags);
+}
+
+int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+  
+  return __photon_default->probe_completion(proc, flag, request, flags);
+}
+/* end with completion */
 
 /* begin I/O */
 int photon_io_init(char *file, int amode, MPI_Datatype view, int niter) {
@@ -417,6 +454,7 @@ void photon_io_print_info(void *io) {
     __photon_forwarder->io_print(io);
   }
 }
+/* end I/O */
 
 /* utility API method to get backend-specific buffer info */
 int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {

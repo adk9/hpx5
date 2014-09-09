@@ -375,10 +375,6 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   if (__photon_config->use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
     for (iproc = (_photon_myrank + 1); iproc < _photon_nproc; iproc++) {
-      if (iproc == _photon_myrank) {
-        continue;
-      }
-
       if (__verbs_connect_qps_cma(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
         dbg_err("Could not connect queue pairs using RDMA CMA");
         goto error_exit;
@@ -387,10 +383,6 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   }
   else {
     for (iproc = 0; iproc < _photon_nproc; iproc++) {
-      if( iproc == _photon_myrank ) {
-        continue;
-      }
-
       if(__verbs_connect_qps(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
         dbg_err("Cannot connect queue pairs");
         goto error_exit;
@@ -896,18 +888,12 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
   for (i = 0; i < num_qp; ++i) {
     for (iproc=0; iproc < _photon_nproc; iproc++) {
       peer = (_photon_myrank+iproc)%_photon_nproc;
-      if( peer == _photon_myrank ) {
-        continue;
-      }
       MPI_Irecv(rmsg[peer], msg_size, MPI_BYTE, peer, 0, _photon_comm, &rreq[peer]);
-
     }
 
     for (iproc=0; iproc < _photon_nproc; iproc++) {
       peer = (_photon_nproc+_photon_myrank-iproc)%_photon_nproc;
-      if( peer == _photon_myrank ) {
-        continue;
-      }
+
       inet_ntop(AF_INET6, local_info[peer][i].gid.raw, gid, sizeof gid);
       sprintf(smsg, "%08x:%08x:%08x:%08x:%08d:%s", local_info[peer][i].lid, local_info[peer][i].qpn,
               local_info[peer][i].psn, local_info[peer][i].ip.s_addr, local_info[peer][i].cma_port, gid);
@@ -920,9 +906,6 @@ static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info *
 
     for (iproc=0; iproc < _photon_nproc; iproc++) {
       peer = (_photon_myrank+iproc)%_photon_nproc;
-      if( peer == _photon_myrank ) {
-        continue;
-      }
 
       if( MPI_Wait(&rreq[peer], MPI_STATUS_IGNORE) ) {
         dbg_err("Could not wait() to receive remote address");

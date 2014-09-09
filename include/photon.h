@@ -103,6 +103,10 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
 
+#define PHOTON_PROBE_ANY       0xffff
+#define PHOTON_PROBE_EVQ       0x0001
+#define PHOTON_PROBE_LEDGER    0x0002
+
 #define PHOTON_ANY_TAG         -1
 #define PHOTON_ANY_SOURCE      -1
 
@@ -141,12 +145,12 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // If @p ptr is NULL, then only completion value in @p remote is sent
 // The remote buffer is specified in @p rptr and the rkey in @p priv
 int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
-                               photon_rid local, photon_rid remote);
+                               photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
-                               photon_rid local);
+                               photon_rid local, int flags);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
-int photon_probe_completion(int proc, int *flag, photon_rid *request);
+int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags);
 
 // Atomics
 int photon_post_atomic(int proc, void *ptr, uint64_t val, int type, int flags, photon_rid *request);

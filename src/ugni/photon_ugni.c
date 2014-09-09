@@ -267,6 +267,10 @@ static int ugni_get_event(photonEventStatus stat) {
       dbg_err("GNI_GetCompleted  data ERROR status: %s (%d)", gni_err_str[rc], rc);
     }
   }
+  else if (rc == 3) {
+    /* nothing available */
+    return 1;
+  }
   else {
     /* rc == 2 is an overrun */
     dbg_err("Error getting CQ event: %d\n", rc);

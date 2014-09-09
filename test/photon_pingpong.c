@@ -12,10 +12,11 @@
 #define PONG         1
 
 #define SUBTRACT_TV(E,S) (((E).tv_sec - (S).tv_sec) + ((E).tv_usec - (S).tv_usec)/1e6)
-#define dbg_printf(format, args, ...)
+#define dbg_printf(...) if(0) {printf(__VA_ARGS__);}
 
 enum test_type {PHOTON_TEST,
-                MPI_TEST
+                MPI_TEST,
+                PWC_TEST
                };
 
 int pp_test = PHOTON_TEST;
@@ -32,6 +33,7 @@ struct pingpong_args {
 
 struct pingpong_args *send_args;
 struct pingpong_args *recv_args;
+struct photon_buffer_t rbuf;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   //struct timeval start, end;
@@ -60,7 +62,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       struct photon_status_t stat;
       photon_test(send_req, &flag, &type, &stat);
       if(flag) {
-        dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %lu completed successfully\n", rank, rank, dst, pp_type, msize);
+        dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %d completed successfully\n", rank, rank, dst, pp_type, msize);
         break;
       }
       else {
@@ -88,6 +90,14 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
         //usleep(10);
       }
     }
+  }
+  else if (pp_test == PWC_TEST) {
+    photon_put_with_completion(dst, send_args, msize, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+    photon_rid request;
+    int flag;
+    do {
+      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    } while (!flag || request != PHOTON_TAG);
   }
 
   return 0;
@@ -128,7 +138,7 @@ void *receiver(void *args) {
         struct photon_status_t stat;
 	photon_test(recv_req, &flag, &type, &stat);
         if(flag) {
-          dbg_printf("%d: recv_ping(%d<-%d) of size %lu completed successfully\n", rank, rank, (int)stat.src_addr, msize);
+          dbg_printf("%d: recv_ping(%d<-%d) of size %d completed successfully\n", rank, rank, (int)stat.src_addr.global.proc_id, msize);
           break;
         }
         else {
@@ -156,21 +166,34 @@ void *receiver(void *args) {
         }
       }
     }
+    else if (pp_test == PWC_TEST) {
+      photon_rid request;
+      int flag;
+      do {
+        photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+      } while (!flag || request != 0xcafebabe);
+    }
 
     switch(recv_args->type) {
     case PING:
-      dbg_printf("%d: got ping %d from %d, sending pong back...\n", rank, recv_args->ping_id, other_rank);
-      send_pingpong(other_rank, -1, recv_args->ping_id, PONG);
-      if (recv_args->ping_id == (global_iters-1)) {
-        return NULL;
+      {
+        int ping_id = recv_args->ping_id;
+        dbg_printf("%d: got ping %d from %d, sending pong back...\n", rank, ping_id, other_rank);
+        send_pingpong(other_rank, -1, ping_id, PONG);
+        if (ping_id == (global_iters-1)) {
+          return NULL;
+        }
       }
       break;
     case PONG:
-      dbg_printf("%d: got pong %d from %d, sending ping back...\n", rank, recv_args->pong_id, other_rank);
-      if (recv_args->pong_id == (global_iters-1)) {
-        return NULL;
+      {
+        int pong_id = recv_args->pong_id;
+        dbg_printf("%d: got pong %d from %d, sending ping back...\n", rank, pong_id, other_rank);
+        if (pong_id == (global_iters-1)) {
+          return NULL;
+        }
+        send_pingpong(other_rank, recv_args->pong_id+1, -1, PING);
       }
-      send_pingpong(other_rank, recv_args->pong_id+1, -1, PING);
       break;
     default:
       fprintf(stderr, "%d: Unknown pingpong type\n", rank);
@@ -201,6 +224,8 @@ int main(int argc, char **argv) {
     pp_test = PHOTON_TEST;
   else if (!strcasecmp(test, "MPI"))
     pp_test = MPI_TEST;
+  else if (!strcasecmp(test, "PWC"))
+    pp_test = PWC_TEST;
 
   MPI_Init(&argc,&argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -215,9 +240,18 @@ int main(int argc, char **argv) {
   send_args = (struct pingpong_args*)malloc(msize);
   recv_args = (struct pingpong_args*)malloc(msize);
 
-  if (pp_test == PHOTON_TEST) {
+  if (pp_test == PHOTON_TEST || pp_test == PWC_TEST) {
     photon_register_buffer((char*)send_args, msize);
     photon_register_buffer((char*)recv_args, msize);
+  }
+
+  if (pp_test == PWC_TEST) {
+    photon_rid sendReq, recvReq, request;
+    int ret_proc;
+    photon_post_recv_buffer_rdma(other_rank, recv_args, msize, PHOTON_TAG, &recvReq);
+    photon_wait_any(&ret_proc, &request);
+    photon_wait_recv_buffer_rdma(other_rank, PHOTON_TAG, &sendReq);
+    photon_get_buffer_remote(sendReq, &rbuf);
   }
 
   gettimeofday(&start, NULL);

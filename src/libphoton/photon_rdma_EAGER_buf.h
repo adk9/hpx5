@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "photon.h"
 
-#define SMSG_SIZE            8192
+#define SMSG_SIZE            4096
 
 typedef struct photon_rdma_eager_buf_entry_t {
   uint8_t data[SMSG_SIZE];

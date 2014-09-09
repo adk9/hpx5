@@ -19,18 +19,20 @@ static int photon_exchange_allgather(void *ptr, void **ivec_ptr) {
   return PHOTON_OK;
 }
 
+/*
 static int photon_exchange_allgatherv(void **ptr, void ***ivec_ptr,
                                       const int *rcounts, const int *offsets) {
   MPI_Comm _photon_comm = __photon_config->comm;
   int ret;
 
-  ret = MPI_Allgatherv(ptr, _photon_nproc, MPI_UINT64_T, *ivec_ptr, rcounts,
+  ret = MPI_Allgatherv(ptr, _photon_nproc, MPI_UINT64_T, *ivec_ptr, (int)rcounts,
                        offsets, MPI_UINT64_T, _photon_comm);
   if (ret != MPI_SUCCESS)
     return PHOTON_ERROR;
   
   return PHOTON_OK;
 }
+*/
 
 int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   int i, ret;
@@ -85,6 +87,15 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
       processes[i].remote_fin_ledger->remote.addr = PHOTON_LF_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].remote_fin_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_fin_ledger->remote.priv.key1 = key_1[i];
+    }
+  }
+
+  if (flags & LEDGER_PWC) {
+    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * LEDGER_SIZE;
+    for (i=0; i<_photon_nproc; i++) {
+      processes[i].remote_pwc_ledger->remote.addr = PHOTON_LP_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_pwc_ledger->remote.priv.key0 = key_0[i];
+      processes[i].remote_pwc_ledger->remote.priv.key1 = key_1[i];
     }
   }
 
@@ -196,6 +207,42 @@ int photon_setup_fin_ledger(ProcessInfo *photon_processes, char *buf, int num_en
     if (!photon_processes[i].remote_fin_ledger) {
       log_err("couldn't create remote FIN ledger for process %d", i);
       return PHOTON_ERROR;
+    }
+  }
+
+  return PHOTON_OK;
+}
+
+int photon_setup_pwc_ledger(ProcessInfo *photon_processes, char *buf, int num_entries) {
+  int i, j;
+  int ledger_size;
+
+  dbg_info();
+
+  ledger_size = sizeof(struct photon_rdma_ledger_entry_t) * num_entries;
+
+  for(i = 0; i < PHOTON_TPROC; i++) {
+    // allocate the ledger
+    dbg_info("allocating local PWC ledger for %d", i);
+
+    photon_processes[i].local_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries);
+    if (!photon_processes[i].local_pwc_ledger) {
+      log_err("couldn't create local PWC ledger for process %d", i);
+      return PHOTON_ERROR;
+    }
+
+    dbg_info("allocating remote PWC ledger for %d", i);
+
+    photon_processes[i].remote_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    if (!photon_processes[i].remote_pwc_ledger) {
+      log_err("couldn't create remote PWC ledger for process %d", i);
+      return PHOTON_ERROR;
+    }
+
+    // set all 1s for PWC ledgers
+    for (j = 0; j <= num_entries; j++) {
+      photon_processes[i].local_pwc_ledger->entries[j].request = UINT64_MAX;
+      photon_processes[i].remote_pwc_ledger->entries[j].request = UINT64_MAX;
     }
   }
 

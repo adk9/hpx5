@@ -5,10 +5,10 @@
 
 typedef struct photon_ri_ledger_entry_t {
   volatile uint8_t header;
+  photon_rid request;
   uintptr_t addr;
   uint64_t size;
   struct photon_buffer_priv_t priv;
-  uint32_t request;
   uint32_t tag;
   uint32_t flags;
   volatile uint8_t footer;

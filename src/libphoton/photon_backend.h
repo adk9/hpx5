@@ -16,22 +16,21 @@
 #endif
 
 #define NULL_COOKIE          0x0
-#define DEF_QUEUE_LENGTH     5*512
-#define DEF_NUM_REQUESTS     5*512
+#define DEF_NUM_REQUESTS     (1024*5)  // 5k pre-allocated requests
 
-/* this should not exceed MCA max_qp_wr (typically 16k) */
-#define LEDGER_SIZE          64
+#define LEDGER_SIZE          64        // This should not exceed MCA max_qp_wr (typically 16k)
 #define MAX_BUF_ENTRIES      64
 #define UD_MASK_SIZE         1<<6
 
-#define LEDGER               1
-#define EVQUEUE              2
-#define SENDRECV             3
+#define EVENT_NIL            0x00
+#define LEDGER               0x01
+#define EVQUEUE              0x02
+#define SENDRECV             0x03
 
-#define REQUEST_NEW          0
-#define REQUEST_PENDING      1
-#define REQUEST_FAILED       2
-#define REQUEST_COMPLETED    3
+#define REQUEST_NEW          0x01
+#define REQUEST_PENDING      0x02
+#define REQUEST_FAILED       0x03
+#define REQUEST_COMPLETED    0x04
 
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
@@ -42,11 +41,12 @@
 #define REQUEST_COOK_RECV    0xcafebabe
 #define REQUEST_COOK_EAGER   0xdeadfeed
 
-#define LEDGER_ALL           0xffff
-#define LEDGER_INFO          0x0001
-#define LEDGER_EAGER         0x0002
-#define LEDGER_FIN           0x0004
-#define LEDGER_BUF           0x0008
+#define LEDGER_ALL           0xff
+#define LEDGER_INFO          0x01
+#define LEDGER_EAGER         0x02
+#define LEDGER_FIN           0x04
+#define LEDGER_PWC           0x08
+#define LEDGER_BUF           0x10
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
@@ -59,6 +59,8 @@ typedef struct proc_info_t {
   photonLedger    remote_eager_ledger;
   photonLedger    local_fin_ledger;
   photonLedger    remote_fin_ledger;
+  photonLedger    local_pwc_ledger;
+  photonLedger    remote_pwc_ledger;
   
   photonEagerBuf  eager_buf;
   photonMsgBuf    smsgbuf;
@@ -148,6 +150,11 @@ struct photon_backend_t {
   int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
   int (*probe)(photonAddr addr, int *flag, photonStatus status);
+  int (*put_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+                             photon_rid local, photon_rid remote, int flags);
+  int (*get_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+                             photon_rid local, int flags);
+  int (*probe_completion)(int proc, int *flag, photon_rid *request, int flags);
   int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
   int (*io_finalize)();
   /* data movement -- needs to be split out */

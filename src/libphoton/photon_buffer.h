@@ -7,7 +7,7 @@
 
 typedef struct photon_buffer_internal_t {
   struct photon_buffer_t buf;
-  uint32_t request;
+  photon_rid request;
   int tag;
   int is_registered;
   int ref_count;
