@@ -95,6 +95,7 @@ void add_03_TestGlobalMemAlloc(TCase *);
 void add_04_TestParcel(TCase *);
 void add_05_TestThreads(TCase *);
 void add_06_TestFutures(TCase *);
+void add_06_TestNewFutures(TCase *);
 void add_07_TestLCO(TCase *);
 void add_08_TestSemaphores(TCase *);
 void add_09_TestChannels(TCase *);
