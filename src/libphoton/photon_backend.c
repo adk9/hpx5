@@ -2118,7 +2118,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
   }
 
   {
-    rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, rbuf->addr, rbuf->size,
+    rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, rbuf->addr, size,
                                     &(db->buf), rbuf, event_id);
 
     if (rc != PHOTON_OK) {
@@ -2448,11 +2448,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     rbuf.size = size;
     rbuf.priv = priv;
     
-    dbg_info("sending ping_id: %u\n", (uint32_t)*(uint32_t*)((char*)ptr + 4));
-    dbg_info("sending pong_id: %u\n", (uint32_t)*(uint32_t*)((char*)ptr + 8));
-
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id);
-    
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", request_id);
       goto error_exit;
@@ -2494,9 +2490,50 @@ error_exit:
   return PHOTON_ERROR;  
 }
 
+// this guy doesn't actually do any completion (yet?), just does a get and sets up a request with local rid
 static int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                        photon_rid local, int flags) {
+  photonBI db;
+  photon_rid request_id;
+  struct photon_buffer_t rbuf;
+  int rc;
+
+  dbg_info("(%d, %p, %lu, %p, 0x%016lx)", proc, ptr, size, rptr, local);
+
+  if (!size || !ptr) {
+    log_err("GET (PWC) trying to GET 0 bytes or into NULL buf");
+    goto error_exit;
+  }
+
+  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+
+  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+    log_err("Tried posting from a buffer that's not registered");
+    goto error_exit;
+  }
+  
+  rbuf.addr = (uintptr_t)rptr;
+  rbuf.size = size;
+  rbuf.priv = priv;
+  
+  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id);
+  if (rc != PHOTON_OK) {
+    dbg_err("RDMA GET (PWC data) failed for 0x%016lx", request_id);
+    goto error_exit;
+  }
+
+  rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, 1, local, request_id);
+  if (rc != PHOTON_OK) {
+    dbg_info("Could not setup direct buffer request");
+    goto error_exit;
+  }
+
+  dbg_info("Posted Request ID: %d/0x%016lx", proc, local);
+
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 static int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {

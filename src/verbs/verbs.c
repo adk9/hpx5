@@ -347,7 +347,9 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
     .wr.rdma.rkey        = args->rkey
   };
 
-  if (args->num_sge == 1 && args->sg_list[0].length <= 64) {
+  if (opcode == IBV_WR_RDMA_WRITE &&
+      args->num_sge == 1 &&
+      args->sg_list[0].length <= 64) {
     wr.send_flags |= IBV_SEND_INLINE;
   }
 

@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-7s%-11s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Async (us)", "RTT (us)");
+    printf("%-7s%-9s%-7s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)", "RTT (us)");
 
   struct timespec time_s, time_e;
   
@@ -184,6 +184,7 @@ int main(int argc, char *argv[]) {
       // send to your next rank only
       //j = next;
 
+      // PUT
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
@@ -210,6 +211,35 @@ int main(int argc, char *argv[]) {
 
       assert(send_comp == 0 && recv_comp == 0);
 
+      // GET
+      if (rank <= ns) {
+        if (i) {
+          clock_gettime(CLOCK_MONOTONIC, &time_s);
+          for (k=0; k<ITERS; k++) {
+            photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+            send_comp++;
+            wait_local(NULL);
+          }
+          clock_gettime(CLOCK_MONOTONIC, &time_e);
+        }
+      }
+      
+      MPI_Barrier(MPI_COMM_WORLD);
+      
+      if (rank == 0 && i) {
+        double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
+        double time_us = time_ns/1e3;
+        double latency = time_us/ITERS;
+        printf("%1.4f     ", latency);
+        fflush(stdout);
+      }
+      else if (rank == 0) {
+        printf("N/A       ");
+      }
+
+      assert(send_comp == 0 && recv_comp == 0);
+
+      // Async PUT
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ASYNC_ITERS; k++) {
