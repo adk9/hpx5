@@ -81,8 +81,6 @@
 
 #define sync_fence(mm) __sync_synchronize()
 
-#define SYNC_ATOMIC(decl) volatile decl
-
 /* ../generic.h implements all of the strongly-typed versions in
  * terms of the above generic versions.
  */
