@@ -244,8 +244,8 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
   printf("Waiting for status to be set...\n");
   hpx_future_status status;
   do {
-    hpx_time_t *timeout_duration = hpx_time_construct(5, 0);
-    status = hpx_lco_newfuture_waitat_for(fut, 0, HPX_SET, *timeout_duration);
+    hpx_time_t timeout_duration = hpx_time_construct(5, 0);
+    status = hpx_lco_newfuture_waitat_for(fut, 0, HPX_SET, timeout_duration);
     if (status == HPX_FUTURE_STATUS_DEFERRED) {
       printf("Deferred\n");
     } else if (status == HPX_FUTURE_STATUS_TIMEOUT) {
@@ -280,9 +280,8 @@ START_TEST (test_hpx_lco_newfuture_waituntil)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t done = hpx_lco_future_new(0);
   hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
-  hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), SET_VALUE,
+  hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE,
                           HPX_NULL, HPX_NULL);
 
   printf("Waiting for status to be set...\n");
@@ -290,20 +289,17 @@ START_TEST (test_hpx_lco_newfuture_waituntil)
   do {
     hpx_time_t now = hpx_time_now();
     // Duration is used to measure the time since epoch
-    hpx_time_t *duration = hpx_time_construct(5, 0);
-    hpx_time_t *timeout_time = hpx_time_point(now, duration);
-    status = hpx_lco_newfuture_waitat_until(*fut, HPX_SET, &timeout_time);
-    if (status == hpx_future_status.deferred) {
-      // The function to calculate the result has not been started yes.
+    hpx_time_t duration = hpx_time_construct(5, 0);
+    hpx_time_t timeout_time = hpx_time_point(now, duration);
+    status = hpx_lco_newfuture_waitat_until(fut, 0, HPX_SET, timeout_time);
+    if (status == HPX_FUTURE_STATUS_DEFERRED) {
       printf("Deferred\n");
-    } else if (status == hpx_future_status.timeout) {
-      // The timeout has expired.
+    } else if (status == HPX_FUTURE_STATUS_TIMEOUT) {
       printf("Timeout\n");
-    } else if (status == hpx_future_status.ready) {
-      // The result is ready.
+    } else if (status == HPX_FUTURE_STATUS_READY) {
       printf("Ready\n");
     }
-  } while (status != hpx_future_status.ready);
+  } while (status != HPX_FUTURE_STATUS_READY);
 
   uint64_t result;
   hpx_lco_newfuture_getat(fut, 0, sizeof(uint64_t), &result);
