@@ -356,6 +356,10 @@ hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_parti
   return HPX_NULL;
 }
 
+hpx_addr_t hpx_lco_newfuture_shared_new(size_t size) {
+  return HPX_NULL;
+}
+
 hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id) {
   return base;
 }
@@ -379,7 +383,7 @@ hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void 
   return HPX_NULL;
 }
 
-void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t *size,
+void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t size,
 			       void *values) {
   return;
 }

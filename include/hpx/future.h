@@ -47,14 +47,14 @@ typedef enum {HPX_SET, HPX_UNSET} hpx_set_t;
 /// Although globally accessible, this future will be created at the
 /// calling locality.
 ///
-/// @param size                 The number of bytes e
+/// @param size                 The number of bytes
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_new(size_t size);
 
 /// Creates a shared future
 /// 
 /// Shared futures can be accessed mutiple times
-/// @param size                 The number of bytes e
+/// @param size                 The number of bytes
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_shared_new(size_t size);
 
@@ -74,6 +74,14 @@ hpx_addr_t hpx_lco_newfuture_shared_new(size_t size);
 ///                             will be setting
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant);
+
+/// Creates an array of shared futures
+/// 
+/// Shared futures can be accessed mutiple times
+/// @param num_participants The number of shared futures to allocate
+/// @param size             The number of bytes per shared future
+/// @returns                The global address of the future
+hpx_addr_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size);
 
 /// Get the address of a future in an array
 ///
@@ -122,9 +130,9 @@ hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void 
 ///
 /// @param[in]     num The number of futures to wait on
 /// @param[in] futures An array of the addresses of the futures
-/// @param[in]   sizes An array of the amounts of data to get, in bytes
+/// @param[in]   sizes The amount of data to get at each location, in bytes
 /// @param[out] values The addresses of the values of the futures
-void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t *size,
+void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t size,
                         void *values);
 
 /// Wait on a future
