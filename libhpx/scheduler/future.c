@@ -360,6 +360,10 @@ hpx_addr_t hpx_lco_newfuture_shared_new(size_t size) {
   return HPX_NULL;
 }
 
+hpx_addr_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size) {
+  return HPX_NULL;
+}
+
 hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id) {
   return base;
 }
