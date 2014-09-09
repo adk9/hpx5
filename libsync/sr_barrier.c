@@ -30,9 +30,9 @@
 /// going to be super-scalable, so we're not worried about it.
 typedef struct {
   barrier_t vtable;
-  SYNC_ATOMIC(int count);
+  SYNC_ATOMIC int count;
   int threads;
-  SYNC_ATOMIC(int sense);
+  SYNC_ATOMIC int sense;
   int senses[];
 } sr_barrier_t;
 

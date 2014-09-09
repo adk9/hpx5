@@ -62,9 +62,9 @@ struct chase_lev_ws_deque_buffer;
 
 typedef struct chase_lev_ws_deque {
   ws_deque_t vtable;
-  SYNC_ATOMIC(uint64_t bottom);
-  SYNC_ATOMIC(uint64_t top);
-  struct chase_lev_ws_deque_buffer* SYNC_ATOMIC(buffer);
+  SYNC_ATOMIC uint64_t bottom;
+  SYNC_ATOMIC uint64_t top;
+  struct chase_lev_ws_deque_buffer* SYNC_ATOMIC buffer;
   uint64_t top_bound;
 } chase_lev_ws_deque_t;
 

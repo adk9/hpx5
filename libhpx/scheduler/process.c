@@ -33,9 +33,9 @@
 
 
 typedef struct {
-  SYNC_ATOMIC(uint64_t) credit;           // credit balance
-  bitmap_t               *debt;           // the credit that was recovered 
-  hpx_addr_t       termination;           // the termination LCO
+  SYNC_ATOMIC uint64_t credit;                  // credit balance
+  bitmap_t              *debt;                  // the credit that was recovered
+  hpx_addr_t      termination;                  // the termination LCO
 } _process_t;
 
 
@@ -145,7 +145,7 @@ parcel_recover_credit(hpx_parcel_t *p) {
   if (!p->credit || !p->pid)
     return HPX_SUCCESS;
 
-  hpx_addr_t process = hpx_addr_init(0, p->pid, sizeof(_process_t));  
+  hpx_addr_t process = hpx_addr_init(0, p->pid, sizeof(_process_t));
   hpx_parcel_t *pp =
       parcel_create(process, _return_credit, &p->credit, sizeof(p->credit),
                     HPX_NULL, HPX_ACTION_NULL, 0, false);
