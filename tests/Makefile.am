@@ -1,5 +1,4 @@
-noinst_bin_PROGRAMS 	= hpxtest
-noinst_bindir 		= $(abs_top_builddir)/tests
+noinst_PROGRAMS 	= hpxtest
 #TESTS 			= hpxtest 
 TESTS 			= 
 check_PROGRAMS		= hpxtest
