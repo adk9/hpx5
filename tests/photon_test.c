@@ -5,7 +5,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-
 #include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
 #include "tests.h"
@@ -13,6 +12,7 @@
 
 void do_kernel(int);
 void photon_gettime_(double *);
+int rank, size;
 
 double junk;
 
@@ -37,7 +37,7 @@ START_TEST (test_photon)
 {
   photon_rid recvReq, sendReq;
   char *send, *recv;
-  int rank, size, prev, next;
+  int prev, next;
   int arraySize, workSize, maxSize, maxWork, smallAmountOfWork, trial;
   double kernel_start, kernel_end, total_start, total_end, overhead;
 
