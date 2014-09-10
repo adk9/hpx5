@@ -1,9 +1,14 @@
 AC_PREREQ([2.63])
 AC_INIT([photon], [0.1a], [photon@stout.incntre.iu.edu])
+CLEANFILES="*~ .\#*"
+AC_SUBST(CLEANFILES)
+
 AM_CONFIG_HEADER(include/config.h)
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
+
+# Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -18,6 +23,7 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_INSTALL
 AM_PROG_CC_C_O
+AM_PROG_AS
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -60,6 +66,15 @@ AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([atoll atoq gethostbyaddr gethostbyname gethostname gettimeofday inet_ntoa memset select socket strcasecmp strchr strdup strerror strlcat strlcpy strstr strtoul strtoll inet_ntop])
+
+
+# ---------------------------------------------------------------------------
+# --enable options
+# ---------------------------------------------------------------------------
+AC_ARG_ENABLE([testsuite],
+  [AS_HELP_STRING([--enable-testsuite],
+                  [Enable test suite (requires check) @<:@default=yes@:>@])],
+  [], [enable_testsuite=yes])
 
 AC_ARG_ENABLE(debug,
 	[  --enable-debug          turn on debugging],
@@ -209,12 +224,25 @@ if test "$with_xsp_lib" != "no"; then
 fi
 AM_CONDITIONAL(HAVE_XSP, test x$have_xsp = xyes)
 
+# ---------------------------------------------------------------------------
+# --with-options, see config/photon_with_pkg.m4 for details
+# ---------------------------------------------------------------------------
+PHOTON_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
+AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
+  [enable_tests=yes],
+  [enable_tests=no])
+AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
+
 AC_CONFIG_FILES([
 	Makefile
 	src/util/Makefile
 	src/Makefile
 	test/Makefile
 ])
+
+AS_IF([test "x$enable_tests" != xno],
+  [AC_CONFIG_FILES([tests/Makefile])])
+
 AC_OUTPUT
 
 AC_SUBST(THREAD_LIBS)
