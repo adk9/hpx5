@@ -8,7 +8,8 @@ photontest_SOURCES  = photonmain.c \
                       photon_test.c \
                       photon_data_movement.c \
                       photon_message_passing.c \
-                      photon_pingpong.c 
+                      photon_pingpong.c \
+                      photon_communication.c 
 
 photontest_LDADD    = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
 photontest_CFLAGS   = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ -I$(top_srcdir)/include
