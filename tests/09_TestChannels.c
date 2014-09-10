@@ -199,7 +199,8 @@ int t09_tryRecvEmpty_action(void *args) {
   hpx_addr_t addr = *(hpx_addr_t*)args;
   hpx_status_t status = hpx_lco_chan_try_recv(addr, NULL, &rbuf);
   ck_assert(status == HPX_LCO_CHAN_EMPTY);
-  free(rbuf);
+  if (status == HPX_SUCCESS)
+    free(rbuf);
   return HPX_SUCCESS;
 }
 
