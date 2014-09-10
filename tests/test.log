@@ -1,1 +1,10 @@
 Running suite photontest
+photon_test.c:36:P:photontest-core:test_photon:0: Passed
+photon_data_movement.c:47:P:photontest-core:test_photon_test_get:0: Passed
+photon_data_movement.c:138:P:photontest-core:test_photon_test_put:0: Passed
+photon_message_passing.c:75:P:photontest-core:test_photon_interleaved:0: Passed
+photon_pingpong.c:218:P:photontest-core:test_photon_pingpong_for_photon:0: Passed
+photon_pingpong.c:269:P:photontest-core:test_photon_pingpong_for_mpi:0: Passed
+photon_pingpong.c:317:P:photontest-core:test_photon_pingpong_for_pwc:0: Passed
+Results for all suites run:
+100%: Checks: 7, Failures: 0, Errors: 0

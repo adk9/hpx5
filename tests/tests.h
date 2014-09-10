@@ -9,5 +9,8 @@ void photontest_core_setup(void);
 void photontest_core_teardown(void);
 
 void add_photon_test(TCase *);
+void add_photon_data_movement(TCase *);
+void add_photon_message_passing(TCase *);
+void add_photon_pingpong(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/

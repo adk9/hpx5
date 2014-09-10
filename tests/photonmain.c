@@ -19,6 +19,9 @@ int main(int argc, char *argv[]) {
   tcase_set_timeout(tc, 1200);
 
   add_photon_test(tc);  /*photon_test.c*/ 
+  add_photon_data_movement(tc); // Photon get and put tests
+  add_photon_message_passing(tc); // photon forwarder and interleaved
+  add_photon_pingpong(tc); // photon pingpong test
 
   suite_add_tcase(s, tc);
 

@@ -4,7 +4,6 @@
 #include <check.h>
 #include "photon.h"
 #include "test_cfg.h"
-FILE * perf_log;
 
 /*
  --------------------------------------------------------------------
@@ -13,15 +12,15 @@ FILE * perf_log;
 */
 void photontest_core_setup(void) {
   int rank, size;
-  /* open a performance log file */
-  perf_log = fopen("perf.log", "w+");
-  ck_assert_msg(perf_log != NULL, "Could not open performance log");
+  //char **forwarders = malloc(sizeof(char**));
+  //forwarders[0] = "b001/5006";
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
   cfg.nproc = size;
   cfg.address = rank;
-
+  //cfg.use_forwarder = 1;
+  //cfg.forwarder_eids = forwarders;
   photon_init(&cfg);
 }
 
@@ -32,6 +31,5 @@ void photontest_core_setup(void) {
 */
 void photontest_core_teardown(void) {
   photon_finalize();
-  fclose(perf_log);
 }
 
