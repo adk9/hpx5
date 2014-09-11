@@ -382,16 +382,16 @@ int main(int argc, char *argv[])
    fflush(stdout);
    //   sleep(8);
 
-  if ( argc < 4 ) {
-    printf(" Usage: test <number of OS threads> <# of persistent hpx threads> <# of iterations>\n");
+  if ( argc < 3 ) {
+    printf(" Usage: test <number of OS threads> <# of persistent hpx threads>\n");
     exit(0);
   }
 
   uint64_t numos = atoll(argv[1]);
   int numhpx = atoi(argv[2]);
-  int its = atoi(argv[3]);
+  int its = 1;
 
-  printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx,its);
+  printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx);
 
   hpx_config_t cfg = {
     .cores = numos,
