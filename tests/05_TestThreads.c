@@ -249,85 +249,68 @@ END_TEST
 // hpx_thread_yield()
 //****************************************************************************
 
-struct t05_thread_yield_args {
-  int iters;
-  two_lock_queue_t *q;
-  hpx_addr_t consumer_ready;
-  hpx_addr_t producer_ready;
+struct t05_yield_args {
+  size_t *counter;
+  size_t limit;
+  double time_limit;
 };
 
-int t05_thread_yield_consumer_action(void *vargs) {
-  hpx_thread_set_affinity(hpx_get_num_threads() - 1);
+int t05_yield_worker_action(void *vargs) {
+  struct t05_yield_args *args = (struct t05_yield_args*)vargs;
 
-  struct t05_thread_yield_args *args = (struct t05_thread_yield_args*)vargs;
-  hpx_lco_set(args->consumer_ready, 0, NULL, HPX_NULL, HPX_NULL);
-  hpx_lco_wait(args->producer_ready);
-
-  sync_two_lock_queue_dequeue(args->q);
-  hpx_thread_yield();
-  sync_two_lock_queue_dequeue(args->q);
-
-  return HPX_SUCCESS;
-}
-
-int t05_thread_yield_producer_action(void *vargs) {
-  // set affinity
-  hpx_thread_set_affinity(hpx_get_num_threads() - 1);
+  // int num = 
+  sync_addf(args->counter, 1, SYNC_SEQ_CST);
   
-  // initialize data
-  int old_head_value = -1;
-  int new_head_value = -1;
-  hpx_addr_t done = hpx_lco_future_new(0);
-  struct t05_thread_yield_args args = {
-    .iters = 4,
-    .q = sync_two_lock_queue_new(),
-    .consumer_ready = hpx_lco_future_new(0),
-    .producer_ready = hpx_lco_future_new(0)
-  };
-  int *numbers = malloc(sizeof(int) * args.iters);
-
-  // create consumer
-  hpx_call(HPX_HERE, t05_thread_yield_consumer, &args, sizeof(args), done);
-
-  // synchronize
-  hpx_lco_wait(args.consumer_ready);
-  hpx_lco_set(args.producer_ready, 0, NULL, HPX_NULL, HPX_NULL);
-
-  // produce
-  for (int i = 0; i < args.iters; i++) {
-    numbers[i] = i;
-    sync_two_lock_queue_enqueue(args.q, &numbers[i]);
+  uint64_t timeout = false;
+  hpx_time_t start_time = hpx_time_now();
+  while (*args->counter < args->limit) {
+    if (hpx_time_elapsed_ms(start_time) > args->time_limit) {
+      timeout = true;
+      break;
+    }
+    hpx_thread_yield();
+    // printf("Thread %d yielding after %f ms.\n", num, hpx_time_elapsed_ms(start_time));
   }
 
-  // check data pre-yield
-  void *head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 0
-  if (head_value != NULL)
-    old_head_value = *(int*)head_value;
-  ck_assert_msg(old_head_value == 0, "Queue head contained unexpected value. Either (1) thread_affinity() failed or (2) thread scheduling assumptions are incorrect.");
-  // new head should now be 1
-
-  hpx_thread_yield();
-  // new head should now be 2
-
-  // check data post-yield
-  head_value = sync_two_lock_queue_dequeue(args.q); // we expect this to be 2
-  if (head_value != NULL)
-    new_head_value = *(int*)head_value;
-  ck_assert_msg(new_head_value == 2, "Thread did not yield.");
-  printf("new head value == %d\n", new_head_value);
-
-  // cleanup
-  hpx_lco_wait(done);
-  sync_two_lock_queue_delete(args.q);
-  free(numbers);
-
-  return HPX_SUCCESS;
+  // printf("Thread %d done after %f ms.\n", num, hpx_time_elapsed_ms(start_time));
+  hpx_thread_continue(sizeof(uint64_t), &timeout);
 }
 
 START_TEST (test_libhpx_threadYield)
 {
-  int retval = hpx_call_sync(HPX_HERE, t05_thread_yield_producer, NULL, 0, NULL, 0);
-  ck_assert(retval == HPX_SUCCESS);
+  int num_threads = hpx_get_num_threads();
+  size_t counter = 0;
+
+  struct t05_yield_args args = {
+    .counter = &counter,
+    .limit = num_threads + 1,
+    .time_limit = 5000.0
+  };
+  hpx_addr_t *done = malloc(sizeof(hpx_addr_t) * (num_threads + 1));
+
+
+  // now spawn num_threads + 1 num_threads
+  for (int i = 0; i < num_threads + 1; i++) {
+    done[i] = hpx_lco_future_new(sizeof(uint64_t));
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(args));
+    hpx_parcel_set_action(p, t05_yield_worker);
+    hpx_parcel_set_target(p, HPX_HERE);
+    hpx_parcel_set_data(p, &args, sizeof(args));
+    hpx_parcel_set_cont_target(p, done[i]);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_send(p, HPX_NULL);
+  }
+
+  // wait on all done[]s. if any are true, yield() failed
+  uint64_t any_timeouts = false;
+  uint64_t timeout = false;
+  for (int i = 0; i < num_threads + 1; i++) {
+    hpx_lco_get(done[i], sizeof(timeout), &timeout);
+    any_timeouts |= timeout;
+    hpx_lco_delete(done[i], HPX_NULL);
+  }
+  ck_assert_msg(any_timeouts == false, "Threads did not yield.");
+  //  free(done);
 }
 END_TEST
 
