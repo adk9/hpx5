@@ -83,7 +83,8 @@ static verbs_cnct_ctx verbs_ctx = {
   .tx_depth = LEDGER_SIZE,
   .rx_depth = LEDGER_SIZE,
   .atomic_depth = 16,
-  .max_sge = 16
+  .max_sge = 16,
+  .max_inline = -1
 };
 
 /* we are now a Photon backend */
@@ -349,7 +350,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
 
   if (opcode == IBV_WR_RDMA_WRITE &&
       args->num_sge == 1 &&
-      args->sg_list[0].length <= 64) {
+      args->sg_list[0].length <= verbs_ctx.max_inline) {
     wr.send_flags |= IBV_SEND_INLINE;
   }
 

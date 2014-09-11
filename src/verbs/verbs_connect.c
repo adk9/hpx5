@@ -20,6 +20,7 @@
 #include "verbs_ud.h"
 
 #define MAX_CQ_ENTRIES      16384
+#define MAX_SRQ_ENTRIES     8192
 #define RDMA_CMA_BASE_PORT  18000
 #define RDMA_CMA_FORW_OFFS  1000
 #define RDMA_CMA_TIMEOUT    2000
@@ -77,26 +78,26 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 
     ctx->cm_schannel = rdma_create_event_channel();
     if (!ctx->cm_schannel) {
-      dbg_err("Could not create RDMA event channel");
+      log_err("Could not create RDMA event channel");
       return PHOTON_ERROR;
     }
 
     // make sure there are some devices we can use
     ctx_list = rdma_get_devices(&num_devs);
     if (!num_devs && !ctx_list) {
-      dbg_err("No RDMA CMA devices found");
+      log_err("No RDMA CMA devices found");
       return PHOTON_ERROR;
     }
 
     // start the RDMA CMA listener
-    // first rank only connects
+    // first rank only connects to itself
     // forwarders will listen for a self-connection to start
     struct rdma_cma_thread_args *args;
-    if (!_forwarder && (_photon_myrank > 0)) {
+    if (!_forwarder) {
       args = malloc(sizeof(struct rdma_cma_thread_args));
       args->ctx = ctx;
       args->pindex = -1;
-      args->num_listeners = _photon_myrank;
+      args->num_listeners = _photon_myrank + 1;
       pthread_create(&cma_listener, NULL, __rdma_cma_listener_thread, (void*)args);
     }
     else if (_forwarder) {
@@ -110,7 +111,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
   else {
     dev_list = ibv_get_device_list(&num_devs);
     if (!num_devs) {
-      dbg_err("No IB devices found");
+      log_err("No IB devices found");
       return PHOTON_ERROR;
     }
 
@@ -154,6 +155,12 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       return PHOTON_ERROR;
     }
 
+    struct ibv_device_attr dattr;
+    if (ibv_query_device(ctx->ib_context, &dattr)) {
+      log_err("Could not query IB device");
+      return PHOTON_ERROR;
+    }
+
     // create a completion queue
     // The second argument (cq_size) can be something like 40K.	 It should be
     // within NIC MaxCQEntries limit
@@ -167,7 +174,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       // create shared receive queue
       struct ibv_srq_init_attr attr = {
         .attr = {
-          .max_wr  = 500,
+          .max_wr  = dattr.max_srq_wr,
           .max_sge = 1
         }
       };
@@ -177,6 +184,11 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
         dbg_err("Could not create SRQ");
         return PHOTON_ERROR;
       }
+    }
+
+    if (__verbs_find_max_inline(ctx, &ctx->max_inline)) {
+      log_err("Could not determine max inline data size");
+      return PHOTON_ERROR;
     }
 
     // create QPs in the non-CMA case and transition to INIT state
@@ -200,7 +212,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
           .max_recv_wr     = ctx->rx_depth,
           .max_send_sge    = ctx->max_sge, // scatter gather element
           .max_recv_sge    = ctx->max_sge,
-          .max_inline_data = 0
+          .max_inline_data = ctx->max_inline
         },
         .qp_type        = IBV_QPT_RC
       };
@@ -265,7 +277,7 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
   }
 
   if (__photon_config->use_cma && !ifa) {
-    dbg_err("verbs_connect_peers(): Did not find interface info for %s\n", __photon_config->eth_dev);
+    log_err("verbs_connect_peers(): Could not find interface %s", __photon_config->eth_dev);
     goto error_exit;
   }
 
@@ -374,7 +386,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 
   if (__photon_config->use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
-    for (iproc = (_photon_myrank + 1); iproc < _photon_nproc; iproc++) {
+    for (iproc = _photon_myrank; iproc < _photon_nproc; iproc++) {
       if (__verbs_connect_qps_cma(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
         dbg_err("Could not connect queue pairs using RDMA CMA");
         goto error_exit;
@@ -422,24 +434,28 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       dbg_err("could not create PD");
       goto error_exit;
     }
-
+    
+    /*
     ctx->ib_cc = ibv_create_comp_channel(ctx->ib_context);
     if (!ctx->ib_cc) {
       dbg_err("could not create completion channel");
       goto error_exit;
     }
+    */
 
-    ctx->ib_cq = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, ctx->ib_cc, 0);
+    ctx->ib_cq = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL, 0);
     if (!ctx->ib_cq) {
       dbg_err("could not create CQ");
       goto error_exit;
     }
 
+    /*
     if (ibv_req_notify_cq(ctx->ib_cq, 0)) {
       dbg_err("could not request CQ notifications");
       goto error_exit;
     }
-    
+    */    
+
     struct ibv_port_attr port_attr;
     if (ibv_query_port(cm_id->verbs, cm_id->port_num, &port_attr)) {
       dbg_err("could not query port");
@@ -448,6 +464,33 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     ctx->ib_lid = port_attr.lid;
     ctx->ib_mtu = 1 << (port_attr.active_mtu + 7);    
     ctx->ib_mtu_attr = port_attr.active_mtu;
+
+    struct ibv_device_attr dattr;
+    if (ibv_query_device(ctx->ib_context, &dattr)) {
+      log_err("Could not query IB device");
+      return PHOTON_ERROR;
+    }
+
+    {
+      // create shared receive queue
+      struct ibv_srq_init_attr attr = {
+        .attr = {
+          .max_wr  = dattr.max_srq_wr,
+          .max_sge = 1
+        }
+      };
+
+      ctx->ib_srq = ibv_create_srq(ctx->ib_pd, &attr);
+      if (!ctx->ib_srq) {
+        dbg_err("Could not create SRQ");
+        return PHOTON_ERROR;
+      }
+    }
+    
+    if (__verbs_find_max_inline(ctx, &ctx->max_inline)) {
+      log_err("Could not determine max inline data size");
+      return PHOTON_ERROR;
+    }
 
     // create a UD QP as well if requested
     if (ctx->use_ud) {
@@ -470,10 +513,9 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       .max_recv_wr  = ctx->rx_depth,
       .max_send_sge = ctx->max_sge,
       .max_recv_sge = ctx->max_sge,
-      .max_inline_data = 0
+      .max_inline_data = ctx->max_inline
     },
     .qp_type = IBV_QPT_RC,
-    //.sq_sig_all = 0,
     .srq = NULL
   };
 
@@ -608,7 +650,7 @@ static void *__rdma_cma_listener_thread(void *arg) {
       ctx->qp[pindex] = child_cm_id->qp;
 
       memset(&conn_param, 0, sizeof conn_param);
-      conn_param.responder_resources =ctx->atomic_depth;
+      conn_param.responder_resources = ctx->atomic_depth;
       conn_param.initiator_depth = ctx->atomic_depth;
       // don't send any private data back
       conn_param.private_data = NULL;

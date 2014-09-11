@@ -7,6 +7,54 @@
 #include "verbs_util.h"
 #include "verbs_buffer.h"
 
+int __verbs_find_max_inline(verbs_cnct_ctx *ctx, int *ret_mi) {
+  // find out what our max inline data size is
+  // this is not defined in the spec and is vendor specific
+  if (ctx->max_inline == -1) {
+    struct ibv_qp *qp;
+    struct ibv_cq *cq;
+    struct ibv_qp_init_attr init_attr;
+    uint32_t max_inline_data;
+    
+    cq = ibv_create_cq(ctx->ib_context, 1, NULL, NULL,  0);
+    if (!cq) {
+      dbg_err("Could not create completion queue");
+      return PHOTON_ERROR;
+    }
+    
+    memset(&init_attr, 0, sizeof(init_attr));
+    init_attr.qp_type = IBV_QPT_RC;
+    init_attr.send_cq = ctx->ib_cq;
+    init_attr.recv_cq = ctx->ib_cq;
+    init_attr.srq = 0;
+    init_attr.cap.max_send_sge = 1;
+    init_attr.cap.max_recv_sge = 1;
+    init_attr.cap.max_recv_wr = 1;
+    
+    init_attr.cap.max_inline_data = max_inline_data = 1 << 20;
+    while (max_inline_data > 0) {
+      qp = ibv_create_qp(ctx->ib_pd, &init_attr); 
+      if (qp != NULL) {
+        break;
+      }
+      max_inline_data >>= 1;
+      init_attr.cap.max_inline_data = max_inline_data;
+    }
+    
+    if (qp != NULL) {
+      *ret_mi = max_inline_data;
+      ibv_destroy_qp(qp);
+    } else {
+      *ret_mi = 0;
+    }
+  }
+  else {
+    *ret_mi = ctx->max_inline;
+  } 
+  
+  return PHOTON_OK;
+}
+
 int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
   unsigned *qp_numbers = (unsigned *)calloc(_photon_nproc, sizeof(unsigned));
   unsigned local_qpn;
