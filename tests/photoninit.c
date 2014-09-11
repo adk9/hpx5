@@ -21,7 +21,8 @@ void photontest_core_setup(void) {
   cfg.address = rank;
   //cfg.use_forwarder = 1;
   //cfg.forwarder_eids = forwarders;
-  photon_init(&cfg);
+  int initialized = photon_init(&cfg);
+  ck_assert_msg((initialized != 1), "Photon initialization failed\n");
 }
 
 /*

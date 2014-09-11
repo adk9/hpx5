@@ -91,7 +91,7 @@ START_TEST (test_photon_communication)
   }
   
   struct photon_status_t recv_status;
-  photon_rid recvReq;
+  photon_rid recvReq = 0;
   while (1) {
     //photon_addr addr = {.s_addr = 0};
     int flag, type;

@@ -23,6 +23,9 @@ int main(int argc, char *argv[]) {
   add_photon_message_passing(tc); // photon forwarder and interleaved
   add_photon_pingpong(tc); // photon pingpong test
   add_photon_comm_test(tc);
+  add_photon_buffers_remote_test(tc);
+  add_photon_buffers_private_test(tc);
+  add_photon_send_request_test(tc);
 
   suite_add_tcase(s, tc);
 

@@ -1,8 +1,14 @@
 Running suite photontest
 photon_test.c:36:P:photontest-core:test_photon:0: Passed
-photon_data_movement.c:47:P:photontest-core:test_photon_test_get:0: Passed
-photon_data_movement.c:138:P:photontest-core:test_photon_test_put:0: Passed
-photon_message_passing.c:75:P:photontest-core:test_photon_interleaved:0: Passed
+photon_data_movement.c:30:P:photontest-core:test_photon_test_get:0: Passed
+photon_data_movement.c:121:P:photontest-core:test_photon_test_put:0: Passed
+photon_message_passing.c:22:P:photontest-core:test_photon_interleaved:0: Passed
 photon_pingpong.c:218:P:photontest-core:test_photon_pingpong_for_photon:0: Passed
 photon_pingpong.c:269:P:photontest-core:test_photon_pingpong_for_mpi:0: Passed
 photon_pingpong.c:317:P:photontest-core:test_photon_pingpong_for_pwc:0: Passed
+photon_communication.c:21:P:photontest-core:test_photon_communication:0: Passed
+photon_buffers_remote.c:22:P:photontest-core:test_photon_get_remote_buffers:0: Passed
+photon_buffers_private.c:49:P:photontest-core:test_photon_get_private_buffers:0: Passed
+photon_rendezvous.c:19:P:photontest-core:test_photon_send_request:0: Passed
+Results for all suites run:
+100%: Checks: 11, Failures: 0, Errors: 0

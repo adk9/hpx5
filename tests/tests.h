@@ -13,5 +13,8 @@ void add_photon_data_movement(TCase *);
 void add_photon_message_passing(TCase *);
 void add_photon_pingpong(TCase *);
 void add_photon_comm_test(TCase *);
+void add_photon_buffers_remote_test(TCase *);
+void add_photon_buffers_private_test(TCase *);
+void add_photon_send_request_test(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/
