@@ -90,14 +90,14 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     }
 
     // start the RDMA CMA listener
-    // first rank only connects
+    // first rank only connects to itself
     // forwarders will listen for a self-connection to start
     struct rdma_cma_thread_args *args;
-    if (!_forwarder && (_photon_myrank > 0)) {
+    if (!_forwarder) {
       args = malloc(sizeof(struct rdma_cma_thread_args));
       args->ctx = ctx;
       args->pindex = -1;
-      args->num_listeners = _photon_myrank;
+      args->num_listeners = _photon_myrank + 1;
       pthread_create(&cma_listener, NULL, __rdma_cma_listener_thread, (void*)args);
     }
     else if (_forwarder) {
@@ -386,7 +386,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 
   if (__photon_config->use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
-    for (iproc = (_photon_myrank + 1); iproc < _photon_nproc; iproc++) {
+    for (iproc = _photon_myrank; iproc < _photon_nproc; iproc++) {
       if (__verbs_connect_qps_cma(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
         dbg_err("Could not connect queue pairs using RDMA CMA");
         goto error_exit;
