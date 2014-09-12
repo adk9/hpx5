@@ -274,6 +274,7 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
   }
 
   hpx_parcel_set_pid(p, pid);
+  parcel_set_credit(p, 0);
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_cont_action(p, c_action);
