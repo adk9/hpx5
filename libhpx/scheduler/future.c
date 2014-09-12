@@ -344,12 +344,40 @@ hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
 
 
 
+typdef struct _newfuture_t {
+  lco_t lco;
+  uint32_t bits;
+};
 
+static _newfuture_init(size_t size) {
 
+  static const lco_class_t vtable = {
+    .on_fini = _newfuture_fini,
+    .on_error = _newfuture_error,
+    .on_set = _newfuture_set,
+    .on_get = _newfuture_get,
+    .on_wait = _newfuture_wait
+  };
+
+  // it's still not clear to me much of the old lco features it makes sense to use
+  // with the new futures.
+
+  
+}
 
 
 hpx_addr_t hpx_lco_newfuture_new(size_t size) {
-  return HPX_NULL;
+  _newfuture_t *local = NULL;
+
+  hpx_addr_t f = locality_malloc(sizeof(_newfuture_t));
+  if (!hpx_gas_try_pin(f, (void**)&local)) {
+    dbg_error("newfuture: could not pin newly allocated future of size %d.\n", size);
+    hpx_abort();
+  }
+
+  _newfuture_init(local, size);
+
+  return f;
 }
 
 hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant) {
