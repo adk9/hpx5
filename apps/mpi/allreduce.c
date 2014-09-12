@@ -20,3 +20,15 @@ int mpi_allreduce(void *sendbuf, void *recvbuf, int recvcounts,
 
   return MPI_SUCCESS_;
 }
+
+void mpi_allreduce_(void *sendbuf, void *recvbuf, int *frecvcounts, 
+                   MPI_Datatype *frecvtype, MPI_Op *fpop, MPI_Comm *fcomm,int *ierr) {
+
+  int recvcounts = *frecvcounts;
+  MPI_Datatype recvtype = *frecvtype;
+  MPI_Op pop = *fpop;
+  MPI_Comm comm = *fcomm;
+
+  *ierr = mpi_allreduce(sendbuf,recvbuf,recvcounts,recvtype,pop,comm);
+  return;
+}

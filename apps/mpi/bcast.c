@@ -120,3 +120,14 @@ int mpi_bcast(void *buffer, int datacount, MPI_Datatype datatype,
 
   return MPI_SUCCESS_;
 }
+
+void mpi_bcast_(void *buffer, int *fdatacount, MPI_Datatype *fdatatype,
+                int *froot, MPI_Comm *fcomm,int *ierr) {
+  int datacount = *fdatacount;
+  MPI_Datatype datatype = *fdatatype;
+  int root = *froot;
+  MPI_Comm comm = *fcomm;
+
+  *ierr = mpi_bcast(buffer,datacount,datatype,root,comm);
+  return;
+}
