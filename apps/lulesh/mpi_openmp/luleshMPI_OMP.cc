@@ -68,14 +68,8 @@ Additional BSD Notice
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <mpi.h>
-//#include <omp.h>
-extern "C" {
-#include "mpi_wrapper.h"
-int lulesh(int,int);
-void start_time();
-double etime();
-}
+#include <mpi.h>
+#include <omp.h>
 
 
 //#define LULESH_SHOW_PROGRESS 1
@@ -5356,14 +5350,14 @@ Domain *NewDomain(Index_t colLoc, Index_t rowLoc, Index_t planeLoc, Index_t nx, 
 /* -tx -ty -tz  threads in each subdomain along each dimension */
 /* -px -py -pz  size of each thread patch along each dimension */
 
-int lulesh(int nx, int its)
+int main(int argc, char *argv[])
 {
    Domain *locDom ;
    int myDom ;
    int numProcs ;
    int myRank ;
    int testProcs ;
-   //MPI_Init(&argc, &argv) ;
+   MPI_Init(&argc, &argv) ;
    MPI_Comm_size(MPI_COMM_WORLD, &numProcs) ;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank) ;
 
@@ -5371,17 +5365,17 @@ int lulesh(int nx, int its)
    testProcs = (int) (cbrt(double(numProcs))+0.5) ;
    if (testProcs*testProcs*testProcs != numProcs) {
       printf("num processors must be a cube of an integer (1, 8, 27, ...)\n") ;
-      //MPI_Abort(MPI_COMM_WORLD, -1) ;
+      MPI_Abort(MPI_COMM_WORLD, -1) ;
       exit(0);
    }
    if (sizeof(Real_t) != 4 && sizeof(Real_t) != 8) {
       printf("MPI operations only support float and double right now...\n");
-      //MPI_Abort(MPI_COMM_WORLD, -1) ;
+      MPI_Abort(MPI_COMM_WORLD, -1) ;
       exit(0);
    }
    if (MAX_FIELDS_PER_MPI_COMM > CACHE_COHERENCE_PAD_REAL) {
       printf("corner element comm buffers too small.  Fix code.\n") ;
-      //MPI_Abort(MPI_COMM_WORLD, -1) ;
+      MPI_Abort(MPI_COMM_WORLD, -1) ;
       exit(0);
    }
 
@@ -5399,7 +5393,7 @@ int lulesh(int nx, int its)
 
    /* assume cube subdomain geometry for now */
    
-   //Index_t nx = 45 ;
+   Index_t nx = 20 ;
 #if 0
    Index_t ny = 45 ;
    Index_t nz = 45 ;
@@ -5467,11 +5461,10 @@ int lulesh(int nx, int its)
    CommSBN(locDom, 1, &locDom->nodalMass) ;
 
 
-
-   start_time(); 
+   MPI_Barrier(MPI_COMM_WORLD);
+   Real_t start = MPI_Wtime();
    /* timestep to solution */
-   while( (locDom->time < locDom->stoptime) && (locDom->cycle < its) ) {
-   //while(locDom->time < locDom->stoptime) {
+   while( (locDom->time < locDom->stoptime) && (locDom->cycle < 10) ) {
 
       TimeIncrement(locDom) ;
       LagrangeLeapFrog(locDom) ;
@@ -5483,7 +5476,7 @@ int lulesh(int nx, int its)
 #endif
    }
 
-   Real_t elapsed_time = etime();
+   Real_t elapsed_time = MPI_Wtime() - start;
    double elapsed_timeG; 
 
    int size = 1;
@@ -5522,7 +5515,7 @@ int lulesh(int nx, int its)
      printf("        MaxRelDiff   = %12.6e\n\n", MaxRelDiff   );
    }
 
-  //MPI_Finalize() ;
+  MPI_Finalize() ;
   return 0 ;
 }
 
