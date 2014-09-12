@@ -69,6 +69,8 @@ apps/lulesh/mpi/luleshMPI
 apps/miniAMR/parcels/miniamr
 apps/mpi/hpxmpi
 apps/lulesh/parcels/luleshparcels
+apps/libPXGL/Makefile
+apps/libPXGL/sssp
 
 # /include/
 /include/stamp-h1
