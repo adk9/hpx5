@@ -74,7 +74,6 @@ typedef struct {
   double *y;
   double *z;
   double dt;
-  int i;
 } CalcPositionForNodesArgs;
 
 typedef struct {
@@ -86,13 +85,11 @@ typedef struct {
   double *zdd;
   double dt;
   double u_cut;
-  int i;
 } CalcVelocityForNodesArgs;
 
 typedef struct {
   double *dd;
   int *symm;
-  int i;
 } ApplyAccelerationBoundaryConditionsForNodesArgs;
 
 typedef struct {
@@ -103,7 +100,6 @@ typedef struct {
   double *fy;
   double *fz;
   double *nodalMass;
-  int i;
 } CalcAccelerationForNodesArgs;
 
 typedef struct {
@@ -118,11 +114,9 @@ typedef struct {
   double *sigxx;
   double *sigyy;
   double *sigzz;
-  int i;
 } InitStressTermsForElemsArgs;
 
 typedef struct {
-  int i;
   int *nodelist;
   double *x;
   double *y;
@@ -145,7 +139,6 @@ typedef struct {
 } CalcHourglassControlForElemsArgs;
 
 typedef struct {
-  int k;
   int *nodelist;
   double *x;
   double *y;
@@ -160,7 +153,6 @@ typedef struct {
 } IntegrateStressForElemsArgs;
 
 typedef struct {
-  int i2;
   int *nodelist;
   double *ss;
   double *elemMass;
@@ -322,11 +314,6 @@ typedef struct Domain {
   hpx_addr_t posvel_and[2];
   hpx_addr_t monoq_and[2];
 } Domain;
-
-typedef struct {
-  Domain *domain;
-  int i;
-} CalcForceForNodesArgs;
 
 typedef struct {
   Domain *domain;
@@ -522,35 +509,26 @@ int _MonoQ_result_action(NodalArgs *nodal);
 extern hpx_action_t _MonoQ_result;
 void MonoQ(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
-extern hpx_action_t _checkdeterm;
-int _checkdeterm_action(double*);
 
-extern hpx_action_t _compute_InitStressTermsForElems;
-int _compute_InitStressTermsForElems_action(InitStressTermsForElemsArgs *args);
+int _compute_CalcForceForNodes(const int i, const Domain *args);
 
-extern hpx_action_t _compute_IntegrateStressForElems;
-int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args);
+int _checkdeterm(const int, const double*);
 
-extern hpx_action_t _compute_CalcFBHourglassForceForElems;
-int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArgs *args);
+int _compute_InitStressTermsForElems(const int i, const InitStressTermsForElemsArgs *args);
 
-extern hpx_action_t _compute_CalcHourglassControlForElems;
-int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArgs *args);
+int _compute_IntegrateStressForElems(const int i, const IntegrateStressForElemsArgs *args);
 
-extern hpx_action_t _compute_CalcForceForNodes;
-int _compute_CalcForceForNodes_action(CalcForceForNodesArgs *args);
+int _compute_CalcFBHourglassForceForElems(const int i, const CalcFBHourglassForceForElemsArgs *args);
 
-extern hpx_action_t _compute_CalcAccelerationForNodes;
-int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args);
+int _compute_CalcHourglassControlForElems(const int i, const CalcHourglassControlForElemsArgs *args);
 
-extern hpx_action_t _compute_ApplyAccelerationBoundaryConditionsForNodes;
-int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAccelerationBoundaryConditionsForNodesArgs *args);
+int _compute_CalcAccelerationForNodes(const int i, const CalcAccelerationForNodesArgs *args);
 
-extern hpx_action_t _compute_CalcVelocityForNodes;
-int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args);
+int _compute_ApplyAccelerationBoundaryConditionsForNodes(const int i, const ApplyAccelerationBoundaryConditionsForNodesArgs *args);
 
-extern hpx_action_t _compute_CalcPositionForNodes;
-int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args);
+int _compute_CalcVelocityForNodes(const int i, const CalcVelocityForNodesArgs *args);
+
+int _compute_CalcPositionForNodes(const int i, const CalcPositionForNodesArgs *args);
 
 void send1(int nx, int ny, int nz, double *src, double *dest);
 
