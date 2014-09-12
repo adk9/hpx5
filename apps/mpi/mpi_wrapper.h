@@ -54,6 +54,7 @@ typedef int MPI_Comm;
 #define MPI_COMM_WORLD_ 0
 #define MPI_SUCCESS_ SUCCESS
 #define MPI_REQUEST_NULL 0
+#define MPI_PROC_NULL -1
 
 #define MPI_ANY_TAG_ -1
 #define MPI_ANY_SOURCE_ -1
@@ -76,7 +77,7 @@ typedef int MPI_Op;
 #define MPI_MINLOC (MPI_Op)(110)
 #define MPI_MAXLOC (MPI_Op)(111)
 
-int mpi_sendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
+int mpi_sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 int dest, int sendtag,
                 void *recvbuf, int recvcount, MPI_Datatype recvtype,
                 int source, int recvtag,
