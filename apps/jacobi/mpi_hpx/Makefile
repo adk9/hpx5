@@ -1,11 +1,11 @@
 CC = mpicc
 F90 = gfortran
-CFLAGS = -g
+CFLAGS = -g -static
 FFLAGS = -g
-INCLUDES = -I/home/manderson/hpx5_gitlab/include
-LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx -lrt -lm -lgfortran
+INCLUDES = -I../../../include -I../../mpi/
+LIBS = -L../../mpi/.libs/ -lhpxmpi -L../../../libhpx/.libs/ -lhpx -lrt -lm -lgfortran
 
-OBJ = allgather.o alltoall.o bcast.o gatherv.o logging.o mpi_wtime.o reduce.o sendrecv.o allreduce.o alltoallv.o gather.o main.o mpi_system.o p2p.o scatterv.o jacobi_mpiomp.o #test.o
+OBJ = main.o jacobi_mpiomp.o #test.o
 TARGET = jacobi
 
 .PHONY: clean help
