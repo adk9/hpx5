@@ -47,7 +47,7 @@ static int _main_action(int *args) {
   printf("parspawn(%d)\n", n); fflush(stdout);
 
   hpx_time_t now = hpx_time_now();
-  hpx_par_for_sync(_nop, 0, n, 8, 1000, 0, NULL, 0, 0);
+  hpx_par_call_sync(_nop, 0, n, 8, 1000, 0, NULL, 0, 0);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
   printf("seconds: %.7f\n", elapsed);
