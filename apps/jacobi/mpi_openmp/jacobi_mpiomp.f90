@@ -149,7 +149,7 @@ subroutine get_indices(js,je,js1,je1,n)
   call mpi_comm_size(mpi_comm_world,np,ierr)
   call mpi_comm_rank(mpi_comm_world,myid,ierr)
 
-  js = 0
+  js = 1
   je = ((n + 1) / np) - 1
 
   js1 = js
