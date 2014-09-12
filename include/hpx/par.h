@@ -17,7 +17,16 @@
 /// @brief HPX parallel loop interface
 
 
-/// Perform a parallel "for" loop.
+int
+hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
+            const void *args, hpx_addr_t sync);
+
+int
+hpx_par_for_sync(int (*fn)(const int, const void*), const int min,
+                 const int max, const void *args);
+
+
+/// Perform a parallel call.
 ///
 /// This encapsulates a simple parallel for loop with the following semantics.
 ///
@@ -45,7 +54,7 @@
 /// @param             sync An LCO to set as the continuation for each iteration.
 ///
 //// @returns An error code, or HPX_SUCCESS.
-int hpx_par_for(hpx_action_t action,
+int hpx_par_call(hpx_action_t action,
                 const int min, const int max,
                 const int branching_factor, const int cutoff,
                 const size_t arg_size,
@@ -54,7 +63,7 @@ int hpx_par_for(hpx_action_t action,
                 hpx_addr_t sync);
 
 
-int hpx_par_for_sync(hpx_action_t action,
+int hpx_par_call_sync(hpx_action_t action,
                      const int min, const int max,
                      const int branching_factor, const int cutoff,
                      const size_t arg_size,

@@ -20,7 +20,76 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "libhpx/locality.h"
+#include "libhpx/scheduler.h"
 #include "hpx/hpx.h"
+
+
+
+typedef struct {
+  int (*fn)(const int, const void*);
+  const void *args;
+  int min;
+  int max;
+} par_for_async_args_t;
+
+static int
+_par_for_async_action(par_for_async_args_t *args)
+{
+  for (int i = args->min, e = args->max; i < e; ++i)
+    args->fn(i, args->args);
+  return HPX_SUCCESS;
+}
+
+static hpx_action_t _par_for_async = 0;
+
+int
+hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
+            const void *args, hpx_addr_t sync)
+{
+  assert(max - min > 0);
+
+  // get the number of scheduler threads
+  int nworkers = here->sched->n_workers;
+
+  const int n = max - min;
+  const int m = n / nworkers;
+  int r = n % nworkers;
+
+  int base = min;
+  for (int i = 0, e = nworkers; i < e; ++i) {
+    par_for_async_args_t *a = malloc(sizeof(*a));
+    a->fn = fn;
+    a->min = base;
+    a->max = base + m + ((r-- > 0) ? 1 : 0);
+    base = a->max;
+    a->args = args;
+
+    int e = hpx_call(HPX_HERE, _par_for_async, a, sizeof(*a), sync);
+    if (e)
+      return e;
+  }
+
+  return HPX_SUCCESS;
+}
+
+int
+hpx_par_for_sync(int (*fn)(const int, const void*), const int min,
+                 const int max, const void *args)
+{
+  assert(max - min > 0);
+  // HACK
+  int nworkers = here->sched->n_workers;
+  hpx_addr_t sync = hpx_lco_and_new(nworkers);
+  int e = hpx_par_for(fn, min, max, args, sync);
+  if (!e)
+    e = hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+  return e;
+}
+
+
+/// HPX parallel "call".
 
 typedef struct {
   hpx_action_t action;
@@ -32,29 +101,30 @@ typedef struct {
   void (*arg_init)(void*, const int, const void*);
   hpx_addr_t sync;
   char env[];
-} par_for_async_args_t;
+} par_call_async_args_t;
 
 static int
-_par_for_async_action(par_for_async_args_t *args)
+_par_call_async_action(par_call_async_args_t *args)
 {
   const size_t env_size = hpx_thread_current_args_size() - sizeof(*args);
-  return hpx_par_for(args->action,
+  return hpx_par_call(args->action,
                      args->min, args->max, args->branching_factor, args->cutoff,
                      args->arg_size, args->arg_init,
                      env_size, &args->env,
                      args->sync);
 }
 
-static hpx_action_t _par_for_async = 0;
+static hpx_action_t _par_call_async = 0;
 
 static HPX_CONSTRUCTOR void
 _init_actions(void) {
   _par_for_async = HPX_REGISTER_ACTION(_par_for_async_action);
+  _par_call_async = HPX_REGISTER_ACTION(_par_call_async_action);
 }
 
 
 int
-hpx_par_for(hpx_action_t action, const int min, const int max,
+hpx_par_call(hpx_action_t action, const int min, const int max,
             const int branching_factor,
             const int cutoff,
             const size_t arg_size,
@@ -74,7 +144,7 @@ hpx_par_for(hpx_action_t action, const int min, const int max,
     int r = n % branching_factor;
 
     // we'll reuse this buffer
-    par_for_async_args_t *args = malloc(sizeof(par_for_async_args_t) + env_size);
+    par_call_async_args_t *args = malloc(sizeof(par_call_async_args_t) + env_size);
     args->action = action;
     args->min = min;
     args->max = min + m + ((r-- > 0) ? 1 : 0);
@@ -86,7 +156,7 @@ hpx_par_for(hpx_action_t action, const int min, const int max,
     memcpy(&args->env, env, env_size);
 
     for (int i = 0, e = branching_factor; i < e; ++i) {
-      int e = hpx_call(HPX_HERE, _par_for_async, args, sizeof(*args) + env_size,
+      int e = hpx_call(HPX_HERE, _par_call_async, args, sizeof(*args) + env_size,
                        HPX_NULL);
       if (e)
         return e;
@@ -116,7 +186,7 @@ hpx_par_for(hpx_action_t action, const int min, const int max,
 }
 
 int
-hpx_par_for_sync(hpx_action_t action,
+hpx_par_call_sync(hpx_action_t action,
                  const int min, const int max,
                  const int branching_factor,
                  const int cutoff,
@@ -126,7 +196,7 @@ hpx_par_for_sync(hpx_action_t action,
 {
   assert(max - min > 0);
   hpx_addr_t sync = hpx_lco_and_new(max - min);
-  int e = hpx_par_for(action, min, max, branching_factor, cutoff, arg_size,
+  int e = hpx_par_call(action, min, max, branching_factor, cutoff, arg_size,
                       arg_init, env_size, env, sync);
   if (!e)
     e = hpx_lco_wait(sync);
