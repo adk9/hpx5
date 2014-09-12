@@ -13,7 +13,10 @@ photontest_SOURCES  = photonmain.c \
                       photon_buffers_remote.c \
                       photon_buffers_private.c \
                       photon_rendezvous.c \
-                      photon_one_sided.c 
+                      photon_one_sided_put.c \
+                      photon_one_sided_get.c \
+                      photon_rdma_with_completion.c \
+                      photon_test_put_wc.c 
 
 photontest_LDADD    = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
 photontest_CFLAGS   = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ -I$(top_srcdir)/include

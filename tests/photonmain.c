@@ -26,7 +26,10 @@ int main(int argc, char *argv[]) {
   add_photon_buffers_remote_test(tc);
   add_photon_buffers_private_test(tc);
   add_photon_send_request_test(tc);
-  add_photon_rdma_one_sided(tc);
+  add_photon_rdma_one_sided_put(tc);
+  //add_photon_rdma_one_sided_get(tc);
+  add_photon_rdma_with_completion(tc);
+  add_photon_put_wc(tc);
 
   suite_add_tcase(s, tc);
 
