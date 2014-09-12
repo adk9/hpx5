@@ -1,1 +1,1 @@
-SUBDIRS = mpi lulesh fmm miniAMR
+SUBDIRS = mpi lulesh fmm miniAMR libPXGL

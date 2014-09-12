@@ -31,6 +31,7 @@ AC_CANONICAL_TARGET
 AC_PROG_CC_C99
 AC_PROG_INSTALL
 AM_PROG_AS
+AM_PROG_CC_C_O
 
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
@@ -205,7 +206,8 @@ AS_IF([test "x$enable_apps" != xno],
   apps/lulesh/Makefile
   apps/lulesh/parcels/Makefile
   apps/miniAMR/Makefile
-  apps/miniAMR/parcels/Makefile])])
+  apps/miniAMR/parcels/Makefile
+  apps/libPXGL/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
