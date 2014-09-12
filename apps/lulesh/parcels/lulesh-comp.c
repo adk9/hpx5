@@ -1,10 +1,6 @@
 #include "lulesh-hpx.h"
 
-int _compute_CalcForceForNodes_action(CalcForceForNodesArgs *args) {
-
-  Domain *domain = args->domain;
-  int i = args->i;
-
+int _compute_CalcForceForNodes(const int i, const Domain *domain) {
   domain->fx[i] = 0.0;
   domain->fy[i] = 0.0;
   domain->fz[i] = 0.0;
@@ -12,42 +8,22 @@ int _compute_CalcForceForNodes_action(CalcForceForNodesArgs *args) {
   return HPX_SUCCESS;
 }
 
-void
-_init_CalcForceForNodesArgs(void *out, const int i, const void *env)
-{
-  CalcForceForNodesArgs *args = out;
-  args->i = i;
-  args->domain = *(Domain** const)env;
-}
-
 void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch)
 {
-  hpx_par_for_sync(_compute_CalcForceForNodes, 0, domain->numNode, 4, 4,
-                   sizeof(CalcForceForNodesArgs), _init_CalcForceForNodesArgs,
-                   sizeof(domain), &domain);
-
+  hpx_par_for_sync(_compute_CalcForceForNodes, 0, domain->numNode, domain);
   CalcVolumeForceForElems(domain,rank);
-
   SBN3(local,domain,epoch);
 }
 
-int _checkdeterm_action(double *determk) {
-  if ( *determk <= 0.0 ) {
+int _checkdeterm(const int i, const double *determk) {
+  if (determk[i] <= 0.0) {
     printf("CalcVolumeForceForElems aborted.\n");
     hpx_abort();
   }
   return HPX_SUCCESS;
 }
 
-static void
-_init_checkDetermArgs(void *out, const int i, const void *env)
-{
-  double *args = out;
-  double *determs = *(double** const)env;
-  *args = determs[i];
-}
-
-void CalcVolumeForceForElems(Domain *domain,int rank)
+void CalcVolumeForceForElems(Domain *domain, int rank)
 {
   int numElem = domain->numElem;
 
@@ -65,10 +41,8 @@ void CalcVolumeForceForElems(Domain *domain,int rank)
                 determ, numElem);
 
 
-    hpx_addr_t done = hpx_lco_and_new(numElem);
-    hpx_par_for(_checkdeterm, 0, numElem, 4, 4,
-                sizeof(double), _init_checkDetermArgs,
-                sizeof(determ), &determ, done);
+    hpx_addr_t done = hpx_lco_and_new(HPX_THREADS);
+    hpx_par_for(_checkdeterm, 0, numElem, determ, done);
 
     CalcHourglassControlForElems(domain, determ, hgcoef);
 
@@ -82,51 +56,33 @@ void CalcVolumeForceForElems(Domain *domain,int rank)
   }
 }
 
-int _compute_InitStressTermsForElems_action(InitStressTermsForElemsArgs *args) {
+int _compute_InitStressTermsForElems(const int i, const InitStressTermsForElemsArgs *args) {
 
   double *sigxx = args->sigxx;
   double *sigyy = args->sigyy;
   double *sigzz = args->sigzz;
   double *p = args->p;
   double *q = args->q;
-  int i = args->i;
 
   sigxx[i] = sigyy[i] = sigzz[i] = -p[i] - q[i];
 
   return HPX_SUCCESS;
 }
 
-static void
-_init_InitStressTermsForElems(void *out, const int i, const void *in)
-{
-  InitStressTermsForElemsArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->i = i;
-}
-
 void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
                  double *sigzz, int numElem)
 {
   InitStressTermsForElemsArgs init = {
-    .i = -1,
     .p = p,
     .q = q,
     .sigxx = sigxx,
     .sigyy = sigyy,
     .sigzz = sigzz
   };
-  hpx_par_for_sync(/* action */ _compute_InitStressTermsForElems,
-                   /* min index */ 0,
-                   /* max index */ numElem,
-                   /* branching factor */ 4,
-                   /* leaf size limit */ 4,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_InitStressTermsForElems,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_InitStressTermsForElems, 0, numElem, &init);
 }
 
-int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
+int _compute_IntegrateStressForElems(const int i, const IntegrateStressForElemsArgs *args) {
   double B[3][8];
   double x_local[8];
   double y_local[8];
@@ -135,7 +91,6 @@ int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
   double fy_local[8];
   double fz_local[8];
 
-  int k = args->k;
   int *nodelist = args->nodelist;
   double *x = args->x;
   double *y = args->y;
@@ -148,7 +103,7 @@ int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
   double *sigzz = args->sigzz;
   double *determ = args->determ;
 
-  const int * const elemNodes = &nodelist[8*k];
+  const int * const elemNodes = &nodelist[8*i];
 
   int lnode;
   for (lnode = 0; lnode < 8; lnode++) {
@@ -158,11 +113,11 @@ int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
     z_local[lnode] = z[gnode];
   }
 
-  CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &determ[k]);
+  CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &determ[i]);
 
   CalcElemNodeNormals(B[0], B[1], B[2], x_local, y_local, z_local);
 
-  SumElemStressesToNodeForces(B, sigxx[k], sigyy[k], sigzz[k],
+  SumElemStressesToNodeForces(B, sigxx[i], sigyy[i], sigzz[i],
                         fx_local, fy_local, fz_local);
 
   for (lnode = 0; lnode < 8; lnode++) {
@@ -174,21 +129,12 @@ int _compute_IntegrateStressForElems_action(IntegrateStressForElemsArgs *args) {
   return HPX_SUCCESS;
 }
 
-static void
-_init_IntegrateStressForElemsArgs(void *out, const int i, const void *in)
-{
-  IntegrateStressForElemsArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->k = i;
-}
-
 void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
                  double *fx, double *fy, double *fz,
                  double *sigxx, double *sigyy, double *sigzz,
                  double *determ, int numElem)
 {
   IntegrateStressForElemsArgs init = {
-    .k = -1,
     .nodelist = nodelist,
     .x = x,
     .y = y,
@@ -201,20 +147,11 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
     .sigzz = sigzz,
     .determ = determ
   };
-  hpx_par_for_sync(/* action */ _compute_IntegrateStressForElems,
-                   /* min index */ 0,
-                   /* max index */ numElem,
-                   /* branching factor */ 4,
-                   /* leaf size limit */ 1,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_IntegrateStressForElemsArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_IntegrateStressForElems, 0, numElem, &init);
 }
 
-int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArgs *args) {
+int _compute_CalcHourglassControlForElems(const int i, const CalcHourglassControlForElemsArgs *args) {
 
-    int i = args->i;
     int *nodelist = args->nodelist;
     double *x = args->x;
     double *y = args->y;
@@ -262,14 +199,6 @@ int _compute_CalcHourglassControlForElems_action(CalcHourglassControlForElemsArg
     return HPX_SUCCESS;
 }
 
-static void
-_init_CalcHourglassControlForElemsArgs(void *out, const int i, const void *env)
-{
-  CalcHourglassControlForElemsArgs *args = out;
-  memcpy(args, env, sizeof(*args));
-  args->i = i;
-}
-
 void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef)
 {
   int i, ii, jj;
@@ -289,7 +218,6 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
   double *v = domain->v;
 
   CalcHourglassControlForElemsArgs init = {
-    .i = -1,
     .nodelist = nodelist,
     .x = domain->x,
     .y = domain->y,
@@ -311,15 +239,7 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
     .v = v
   };
 
-  hpx_par_for_sync(/* action */ _compute_CalcHourglassControlForElems,
-                   /* min index */ 0,
-                   /* max index */ numElem,
-                   /* branching factor */ 4,
-                   /* leaf size limit */ 4,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_CalcHourglassControlForElemsArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_CalcHourglassControlForElems, 0, numElem, &init);
 
   if (hgcoef > 0.0) {
     CalcFBHourglassForceForElems(domain->nodelist, domain->ss, domain->elemMass,
@@ -451,7 +371,7 @@ void VoluDer(const double x0, const double x1, const double x2,
   *dvdz *= twelfth;
 }
 
-int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArgs *args) {
+int _compute_CalcFBHourglassForceForElems(const int i2, const CalcFBHourglassForceForElemsArgs *args) {
 
     double hgfx[8], hgfy[8], hgfz[8];
     double coefficient;
@@ -463,7 +383,6 @@ int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArg
 
     int i1;
 
-    int i2 = args->i2;
     int *nodelist = args->nodelist;
     double *ss = args->ss;
     double *elemMass = args->elemMass;
@@ -648,14 +567,6 @@ int _compute_CalcFBHourglassForceForElems_action(CalcFBHourglassForceForElemsArg
     return HPX_SUCCESS;
 }
 
-static void
-_init_CalcFBHourglassForceForElemsArgs(void *out, const int i, const void *in)
-{
-  CalcFBHourglassForceForElemsArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->i2 = i;
-}
-
 void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
                   double *xd, double *yd, double *zd,
                   double *fx, double *fy, double *fz, double *determ,
@@ -664,7 +575,6 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
                   double hourg, int numElem)
 {
   CalcFBHourglassForceForElemsArgs init = {
-    .i2 = -1,
     .nodelist = nodelist,
     .ss = ss,
     .elemMass = elemMass,
@@ -684,15 +594,7 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
     .hourg = hourg
   };
 
-  hpx_par_for_sync(/* action */ _compute_CalcFBHourglassForceForElems,
-                   /* min index */ 0,
-                   /* max index */ numElem,
-                   /* branching factor */ 4,
-                   /* leaf size limit */ 1,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_CalcFBHourglassForceForElemsArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_CalcFBHourglassForceForElems, 0, numElem, &init);
 }
 
 void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourgam0,
@@ -1104,7 +1006,7 @@ void SumElemStressesToNodeForces(double B[][8], const double stress_xx,
   fz[7] = -stress_zz*pfz7;
 }
 
-int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args) {
+int _compute_CalcAccelerationForNodes(const int i, const CalcAccelerationForNodesArgs *args) {
   double *xdd = args->xdd;
   double *ydd = args->ydd;
   double *zdd = args->zdd;
@@ -1112,21 +1014,12 @@ int _compute_CalcAccelerationForNodes_action(CalcAccelerationForNodesArgs *args)
   double *fy = args->fy;
   double *fz = args->fz;
   double *nodalMass = args->nodalMass;
-  int i = args->i;
 
   xdd[i] = fx[i]/nodalMass[i];
   ydd[i] = fy[i]/nodalMass[i];
   zdd[i] = fz[i]/nodalMass[i];
 
   return HPX_SUCCESS;
-}
-
-static void
-_init_CalcAccelerationForNodesArgs(void *out, const int i, const void *in)
-{
-  CalcAccelerationForNodesArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->i = i;
 }
 
 void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
@@ -1141,108 +1034,55 @@ void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
     .fy = fy,
     .fz = fz,
     .nodalMass = nodalMass,
-    .i = -1
   };
 
-  hpx_par_for_sync(/* action */ _compute_CalcAccelerationForNodes,
-                   /* min index */ 0,
-                   /* max index */ numNode,
-                   /* branching factor */ 4,
-                   /* leaf size limit (transition to sequential spawn) */ 4,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_CalcAccelerationForNodesArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_CalcAccelerationForNodes, 0, numNode, &init);
 }
 
-int _compute_ApplyAccelerationBoundaryConditionsForNodes_action(ApplyAccelerationBoundaryConditionsForNodesArgs *args) {
+int _compute_ApplyAccelerationBoundaryConditionsForNodes(const int i, const ApplyAccelerationBoundaryConditionsForNodesArgs *args) {
   double *dd = args->dd;
   int *symm = args->symm;
-  int i = args->i;
   dd[symm[i]] = 0.0;
   return HPX_SUCCESS;
-}
-
-static void
-_init_ApplyAccelerationBoundaryConditionsForNodesArgs(void *out, const int i,
-                                                      const void *in)
-{
-  ApplyAccelerationBoundaryConditionsForNodesArgs *args = out;
-  const ApplyAccelerationBoundaryConditionsForNodesArgs *env = in;
-  args->dd = env->dd;
-  args->symm = env->symm;
-  args->i = i;
 }
 
 void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, double *zdd,
                          int *symmX, int *symmY, int *symmZ, int size)
 {
   int numNodeBC = (size + 1)*(size + 1);
-  int i;
 
   if (symmX != 0) {
     ApplyAccelerationBoundaryConditionsForNodesArgs init = {
       .dd = xdd,
       .symm = symmX,
-      .i = -1
     };
 
-    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                     /* min index */ 0,
-                     /* max index */ numNodeBC,
-                     /* branching factor */ 4,
-                     /* leaf size limit (transition to sequential spawn) */ 4,
-                     /* action args size */ sizeof(init),
-                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
-                     /* initializer env size */ sizeof(init),
-                     /* initializer env */ &init);
+    hpx_par_for_sync(_compute_ApplyAccelerationBoundaryConditionsForNodes, 0,
+                     numNodeBC, &init);
   }
 
   if (symmY != 0) {
     ApplyAccelerationBoundaryConditionsForNodesArgs init = {
       .dd = ydd,
       .symm = symmY,
-      .i = -1
     };
 
-    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                     /* min index */ 0,
-                     /* max index */ numNodeBC,
-                     /* branching factor */ 4,
-                     /* leaf size limit (transition to sequential spawn) */ 4,
-                     /* action args size */ sizeof(init),
-                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
-                     /* initializer env size */ sizeof(init),
-                     /* initializer env */ &init);
-
-    //for (i = 0; i < numNodeBC; i++) {
-    //  ydd[symmY[i]] = 0.0;
-    //}
+    hpx_par_for_sync(_compute_ApplyAccelerationBoundaryConditionsForNodes, 0,
+                     numNodeBC, &init);
   }
 
   if (symmZ != 0) {
     ApplyAccelerationBoundaryConditionsForNodesArgs init = {
       .dd = zdd,
       .symm = symmZ,
-      .i = -1
     };
 
-    hpx_par_for_sync(/* action */ _compute_ApplyAccelerationBoundaryConditionsForNodes,
-                     /* min index */ 0,
-                     /* max index */ numNodeBC,
-                     /* branching factor */ 4,
-                     /* leaf size limit (transition to sequential spawn) */ 4,
-                     /* action args size */ sizeof(init),
-                     /* action args initializer */ _init_ApplyAccelerationBoundaryConditionsForNodesArgs,
-                     /* initializer env size */ sizeof(init),
-                     /* initializer env */ &init);
-
-    //for (i = 0; i < numNodeBC; i++)
-    //  zdd[symmZ[i]] = 0.0;
+    hpx_par_for_sync(_compute_ApplyAccelerationBoundaryConditionsForNodes, 0,
+                     numNodeBC, &init);
   }
 }
 
-int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args) {
+int _compute_CalcVelocityForNodes(const int i, const CalcVelocityForNodesArgs *args) {
   double *xd = args->xd;
   double *yd = args->yd;
   double *zd = args->zd;
@@ -1251,7 +1091,6 @@ int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args) {
   double *zdd = args->zdd;
   double dt = args->dt;
   double u_cut = args->u_cut;
-  int i = args->i;
 
   double xdtmp, ydtmp, zdtmp;
 
@@ -1273,14 +1112,6 @@ int _compute_CalcVelocityForNodes_action(CalcVelocityForNodesArgs *args) {
   return HPX_SUCCESS;
 }
 
-static void
-_init_CalcVelocityForNodesArgs(void *out, const int i, const void *in)
-{
-  CalcVelocityForNodesArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->i = i;
-}
-
 void CalcVelocityForNodes(double *xd, double *yd, double *zd,
               double *xdd, double *ydd, double *zdd,
               const double dt, const double u_cut, int numNode)
@@ -1294,21 +1125,12 @@ void CalcVelocityForNodes(double *xd, double *yd, double *zd,
     .zdd = zdd,
     .dt = dt,
     .u_cut = u_cut,
-    .i = -1
   };
 
-  hpx_par_for_sync(/* action */ _compute_CalcVelocityForNodes,
-                   /* min index */ 0,
-                   /* max index */ numNode,
-                   /* branching factor */ 4,
-                   /* leaf size limit (transition to sequential spawn) */ 4,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_CalcVelocityForNodesArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
+  hpx_par_for_sync(_compute_CalcVelocityForNodes, 0, numNode, &init);
 }
 
-int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args) {
+int _compute_CalcPositionForNodes(const int i, const CalcPositionForNodesArgs *args) {
   double *x = args->x;
   double *y = args->y;
   double *z = args->z;
@@ -1316,21 +1138,12 @@ int _compute_CalcPositionForNodes_action(CalcPositionForNodesArgs *args) {
   double *yd = args->yd;
   double *zd = args->zd;
   double dt = args->dt;
-  int i = args->i;
 
   x[i] += xd[i]*dt;
   y[i] += yd[i]*dt;
   z[i] += zd[i]*dt;
 
   return HPX_SUCCESS;
-}
-
-static void
-_init_CalcPositionForNodesArgs(void *out, const int i, const void *in)
-{
-  CalcPositionForNodesArgs *args = out;
-  memcpy(args, in, sizeof(*args));
-  args->i = i;
 }
 
 void CalcPositionForNodes(double *x, double *y, double *z,
@@ -1345,26 +1158,9 @@ void CalcPositionForNodes(double *x, double *y, double *z,
     .y = y,
     .z = z,
     .dt = dt,
-    .i = -1
   };
 
-  hpx_par_for_sync(/* action */ _compute_CalcPositionForNodes,
-                   /* min index */ 0,
-                   /* max index */ numNode,
-                   /* branching factor */ 4,
-                   /* leaf size limit (transition to sequential spawn) */ 4,
-                   /* action args size */ sizeof(init),
-                   /* action args initializer */ _init_CalcPositionForNodesArgs,
-                   /* initializer env size */ sizeof(init),
-                   /* initializer env */ &init);
-  // for (i = 0; i < numNode; i++) {
-
-  //   hpx_call(local, _compute_CalcPositionForNodes,
-  //              &args, sizeof(CalcPositionForNodesArgs), done);
-  //  x[i] += xd[i]*dt;
-  //  y[i] += yd[i]*dt;
-  //  z[i] += zd[i]*dt;
-  // }
+  hpx_par_for_sync(_compute_CalcPositionForNodes, 0, numNode, &init);
 }
 
 void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)

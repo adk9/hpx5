@@ -4,17 +4,6 @@ static hpx_action_t _main          = 0;
 static hpx_action_t _advanceDomain = 0;
 static hpx_action_t _initDomain    = 0;
 
-hpx_action_t _checkdeterm                     = 0;
-hpx_action_t _compute_InitStressTermsForElems = 0;
-hpx_action_t _compute_IntegrateStressForElems = 0;
-hpx_action_t _compute_CalcFBHourglassForceForElems = 0;
-hpx_action_t _compute_CalcHourglassControlForElems = 0;
-hpx_action_t _compute_CalcForceForNodes = 0;
-hpx_action_t _compute_CalcAccelerationForNodes = 0;
-hpx_action_t _compute_ApplyAccelerationBoundaryConditionsForNodes = 0;
-hpx_action_t _compute_CalcVelocityForNodes = 0;
-hpx_action_t _compute_CalcPositionForNodes = 0;
-
 hpx_action_t _SBN1_sends = 0;
 hpx_action_t _SBN1_result = 0;
 hpx_action_t _SBN3_sends = 0;
@@ -315,7 +304,8 @@ int main(int argc, char **argv)
     .cores         = 0,
     .threads       = 0,
     .stack_bytes   = 0,
-    .gas           = HPX_GAS_PGAS
+    .gas           = HPX_GAS_PGAS,
+    .log_level     = HPX_LOG_DEFAULT
   };
 
   int nDoms, nx, maxcycles,cores;
@@ -371,25 +361,7 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
-  _checkdeterm   = HPX_REGISTER_ACTION(_checkdeterm_action);
-  _compute_InitStressTermsForElems =
-            HPX_REGISTER_ACTION(_compute_InitStressTermsForElems_action);
-  _compute_IntegrateStressForElems =
-            HPX_REGISTER_ACTION(_compute_IntegrateStressForElems_action);
-  _compute_CalcFBHourglassForceForElems =
-            HPX_REGISTER_ACTION(_compute_CalcFBHourglassForceForElems_action);
-  _compute_CalcHourglassControlForElems =
-            HPX_REGISTER_ACTION(_compute_CalcHourglassControlForElems_action);
-  _compute_CalcForceForNodes = 
-            HPX_REGISTER_ACTION(_compute_CalcForceForNodes_action);
-  _compute_CalcAccelerationForNodes = 
-            HPX_REGISTER_ACTION(_compute_CalcAccelerationForNodes_action);
-  _compute_ApplyAccelerationBoundaryConditionsForNodes = 
-            HPX_REGISTER_ACTION(_compute_ApplyAccelerationBoundaryConditionsForNodes_action);
-  _compute_CalcVelocityForNodes =
-            HPX_REGISTER_ACTION(_compute_CalcVelocityForNodes_action);
-  _compute_CalcPositionForNodes =
-            HPX_REGISTER_ACTION(_compute_CalcPositionForNodes_action);
+
   _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
   _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
   _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);
