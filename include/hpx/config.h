@@ -64,7 +64,8 @@ typedef enum {
   HPX_LOG_LCO     = (1<<4),  //!< Log the LCO operations.
   HPX_LOG_NET     = (1<<5),  //!< Turn on logging for network ops.
   HPX_LOG_TRANS   = (1<<6),  //!< Log the transport operations.
-  HPX_LOG_PARCEL  = (1<<7)   //!< Parcel logging.
+  HPX_LOG_PARCEL  = (1<<7),  //!< Parcel logging.
+  HPX_LOG_ALL     =   (-1)   //!< Turn on all logging.
 } hpx_log_t;
 
 // ----------------------------------------------------------------------------
