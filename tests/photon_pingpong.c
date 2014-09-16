@@ -16,7 +16,7 @@
 #define PHOTON_TAG  13
 #define PING         0
 #define PONG         1
-#define ITERS     10000
+#define ITERS    10000
 #define SIZE        32
 //****************************************************************************
 // Photon pingpong test
@@ -60,7 +60,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       int flag, type;
       struct photon_status_t stat;
       photon_test(send_req, &flag, &type, &stat);
-      if (flag > 0) {
+      if(flag > 0) {
         dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %d completed successfully\n", rank, rank, dst, pp_type, msize);
         break;
       }
@@ -74,7 +74,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     //MPI_Wait(&mpi_r, &stat);
     while (1) {
       MPI_Test(&mpi_r, &flag, &stat);
-      if (flag > 0) {
+      if (flag) {
         break;
       }
     }
@@ -103,7 +103,7 @@ void *receiver(void *args __attribute__((unused))) {
         int flag, type;
         struct photon_status_t stat;
         photon_test(recv_req, &flag, &type, &stat);
-        if (flag > 0) {
+        if(flag > 0) {
           dbg_printf("%d: recv_ping(%d<-%d) of size %d completed successfully\n", rank, rank, (int)stat.src_addr.global.proc_id, msize);
           break;
         }
@@ -117,7 +117,7 @@ void *receiver(void *args __attribute__((unused))) {
       MPI_Irecv((void*)recv_args, msize, MPI_BYTE, other_rank, other_rank, MPI_COMM_WORLD, &mpi_r);
       while (1) {
         MPI_Test(&mpi_r, &flag, &stat);
-        if (flag > 0) {
+        if (flag) {
           break;
         }
       }
