@@ -26,25 +26,31 @@ struct rdma_args_t {
   gni_mem_handle_t rmdh;
 };
 
+typedef struct photon_gni_descriptor_t {
+  int curr;
+  gni_post_descriptor_t *entries;
+} photon_gni_descriptor;
+
 static int __initialized = 0;
 
 static int ugni_initialized(void);
 static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss);
 static int ugni_finalize(void);
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id);
+                          photonBuffer lbuf, uint64_t id, int flags);
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id);
+                          photonBuffer lbuf, uint64_t id, int flags);
 static int ugni_get_event(photonEventStatus stat);
 
-static int __ugni_do_rdma(struct rdma_args_t *args, int opcode);
-static int __ugni_do_fma(struct rdma_args_t *args, int opcode);
+static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags);
+static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags);
 
 static ugni_cnct_ctx ugni_ctx;
+static photon_gni_descriptor *descriptors;
 
 /* we are now a Photon backend */
 struct photon_backend_t photon_ugni_backend = {
@@ -94,7 +100,7 @@ static int ugni_initialized() {
 }
 
 static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
-
+  int i;
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
@@ -124,7 +130,13 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
     log_err("couldn't exchange ledgers");
     goto error_exit;
   }
-  
+
+  // initialize the available descriptors
+  descriptors = (photon_gni_descriptor*)calloc(_photon_nproc, sizeof(photon_gni_descriptor));
+  for (i=0; i<_photon_nproc; i++) {
+    descriptors[i].entries = (gni_post_descriptor_t*)calloc(LEDGER_SIZE, sizeof(gni_post_descriptor_t));
+  }
+
   __initialized = 1;
 
   dbg_info("ended successfully =============");
@@ -136,24 +148,33 @@ error_exit:
 }
 
 static int ugni_finalize() {
+  int i;
   /* should clean up allocated buffers */
+  for (i=0; i<_photon_nproc; i++) {
+    free(descriptors[i].entries);
+  }
+  free(descriptors);
   return PHOTON_OK;
 }
 
-static int __ugni_do_rdma(struct rdma_args_t *args, int opcode) {
+static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err;
+  int err, curr;
 
-  /* create a new descriptor, free once the event is completed
-     this is different from verbs where the descriptors are copied in the call */
-  fma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
-  if (!fma_desc) {
-    dbg_err("Could not allocate new post descriptor");
-    goto error_exit;
+  curr = descriptors[args->proc].curr;
+  fma_desc = &(descriptors[args->proc].entries[curr]);
+  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % LEDGER_SIZE;
+
+  if (flags & RDMA_FLAG_NO_CQE) {
+    fma_desc->cq_mode = GNI_CQMODE_SILENT;
+    fma_desc->src_cq_hndl = NULL;
+  }
+  else {
+    fma_desc->cq_mode = GNI_CQMODE_LOCAL_EVENT;
+    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
   }
 
   fma_desc->type = opcode;
-  fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
   fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
   fma_desc->local_addr = args->laddr;
   fma_desc->local_mem_hndl = args->lmdh;
@@ -162,7 +183,6 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode) {
   fma_desc->length = args->size;
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
-  fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
 
   err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
   if (err != GNI_RC_SUCCESS) {
@@ -177,20 +197,24 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __ugni_do_fma(struct rdma_args_t *args, int opcode) {
+static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err;
+  int err, curr;
+  
+  curr = descriptors[args->proc].curr;
+  fma_desc = &(descriptors[args->proc].entries[curr]);
+  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % LEDGER_SIZE;
 
-  /* create a new descriptor, free once the event is completed
-     this is different from verbs where the descriptors are copied in the call */
-  fma_desc = (gni_post_descriptor_t *)calloc(1, sizeof(gni_post_descriptor_t));
-  if (!fma_desc) {
-    dbg_err("Could not allocate new post descriptor");
-    goto error_exit;
+  if (flags & RDMA_FLAG_NO_CQE) {
+    fma_desc->cq_mode = GNI_CQMODE_SILENT;
+    fma_desc->src_cq_hndl = NULL;
+  }
+  else {
+    fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
   }
 
   fma_desc->type = opcode;
-  fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
   fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
   fma_desc->local_addr = args->laddr;
   fma_desc->local_mem_hndl = args->lmdh;
@@ -199,11 +223,10 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode) {
   fma_desc->length = args->size;
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
-  fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
 
   err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
   if (err != GNI_RC_SUCCESS) {
-    log_err("GNI_PostFma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+    log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
     goto error_exit;
   }
   dbg_info("GNI_PostFma data transfer successful: %"PRIx64, args->id);
@@ -215,7 +238,7 @@ error_exit:
 }
 
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
@@ -226,11 +249,11 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_fma(&args, GNI_POST_FMA_PUT);
+  return __ugni_do_fma(&args, GNI_POST_FMA_PUT, flags);
 }
 
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
@@ -241,16 +264,16 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_fma(&args, GNI_POST_FMA_GET);
+  return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
 }
 
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id) {
+                          photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
 }
 
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id) {
+                          photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
 }
 
@@ -282,12 +305,6 @@ static int ugni_get_event(photonEventStatus stat) {
   stat->id = cookie;
   stat->proc = 0x0;
   stat->priv = NULL;
-
-  /* free up the descriptor we allocated for the operation
-     this might get freed internally by GNI... */
-  if (event_post_desc_ptr) {
-    //free(event_post_desc_ptr);
-  }
 
   return PHOTON_OK;
 }
