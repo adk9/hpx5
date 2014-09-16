@@ -5,6 +5,8 @@
 #include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
 
+FILE *detailed_log;
+
 void photontest_core_setup(void);
 void photontest_core_teardown(void);
 

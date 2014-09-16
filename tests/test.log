@@ -1,19 +1,200 @@
-Running suite photontest
-photon_test_put_wc.c:108:P:photontest-core:test_photon_put_wc:0: Passed
-photon_rdma_with_completion.c:18:P:photontest-core:test_rdma_with_completion:0: Passed
-photon_test.c:36:P:photontest-core:test_photon:0: Passed
-photon_data_movement.c:30:P:photontest-core:test_photon_test_get:0: Passed
-photon_data_movement.c:121:P:photontest-core:test_photon_test_put:0: Passed
-photon_message_passing.c:22:P:photontest-core:test_photon_interleaved:0: Passed
-photon_pingpong.c:176:P:photontest-core:test_photon_pingpong_for_photon:0: Passed
-photon_pingpong.c:227:P:photontest-core:test_photon_pingpong_for_mpi:0: Passed
-photon_pingpong.c:275:P:photontest-core:test_photon_pingpong_for_pwc:0: Passed
-photon_communication.c:21:P:photontest-core:test_photon_communication:0: Passed
-photon_rendezvous.c:19:P:photontest-core:test_photon_send_request:0: Passed
-photon_one_sided_put.c:18:P:photontest-core:test_rdma_one_sided_put_direct:0: Passed
-photon_one_sided_put.c:91:P:photontest-core:test_rdma_one_sided_put_direct_array:0: Passed
-photon_buffers_remote.c:22:P:photontest-core:test_photon_get_remote_buffers:0: Passed
-photon_buffers_private.c:38:P:photontest-core:test_photon_get_private_buffers:0: Passed
-photon_one_sided_get.c:17:P:photontest-core:test_rdma_one_sided_get_direct:0: Passed
-Results for all suites run:
-100%: Checks: 16, Failures: 0, Errors: 0
+Starting the photon put wc test
+Starting RDMA with completion test
+1 Sending buffer: 012345678910111213141516171819202122232425262728293031
+1 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting the Photon test
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+1: send(0, 13) completed successfully
+1: recv(0, 13) completed successfully
+Starting the photon get test
+1: post_send_buf(0, 13) of size 16777216 completed successfully
+1: get(0, 13) of size 16777216 completed successfully
+Starting the photon put test
+1: put(0, 13) of size 16777216 completed successfully
+1: recv(0, 13) of size 16777216 completed successfully
+Starting the photon interleaved test
+1 send buf[0]: tbkrbfxwuytxaayswnhprmlvqyogmseivozyuyuqwpqxpopnbyeumqseogmcbqkwfjxb
+1 send buf[1]: ittgjjdyxvmatqxiipmyxzbyrlxyxuzhnvnyerxemlghddpmueksdlquzntwjudzpsxw
+1 send buf[2]: lwazjghnmyzgcjyhxpewexsqtxplpohdnjcwpljbkiiouiwrxapezjuuglfxboaoxdnn
+1 send buf[3]: owqahapdjnwinlmougictobvcclahypxxhyeipjtcfbrsofownqsdrnivakczzcwiccs
+1 send buf[4]: rllvsnomdvabkstoliwhjglkhpgrrkkkxvhrkvdpsdtdxmrixprixfsguaxomjajhiat
+1 send buf[5]: fdjyicdfqwppljxkorskrradbboijobqtmqbqtijpaycjyoxpgjjykobldlwtompbfsr
+1 send buf[6]: ybcqbbskzjjqpsbpcqqpvblqqaftfymfbpveqqqrzzjqtlgybwnyabosbwliuxnxmlbe
+1 send buf[7]: drxeshulsalvzbvbcltfhenddcaspdyswwwoftczvnuuorvqcqxkumnapqsgtqzqoxgt
+1 send buf[8]: qismwoimfgfiwcstphtgzlmvdnlsltldcgrauamcgtkewexnnqvndhijxvbkoonswfst
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: get(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1: post_send_buf(0, 13) of size 68 completed successfully
+1 recv buf[0]: srvhefreigxsrtupokiuvjufrnmsopfiicrnjktrqqlhlfyargwmrtukggewxkeioxvy
+1 recv buf[1]: hqpyhdhuigwcotoioksurxqqjwyxtvxcmpcvskrcsoegjvoxfjrygjprfnoalocxdfsv
+1 recv buf[2]: rjxjzepizghgpafxjwqolgowutvxanurzuaayrlzzshotmnckdtwkjuecqeefaveuxfu
+1 recv buf[3]: pqtokdfdpuicydykmsqrkwvqxturqbmfthugkbjcvtevweflywcjsxzrsvjjzxougkar
+1 recv buf[4]: nmvjfbeefkpfirocqpujlfumekgkvhdktytabaegmtmumcyduuohbitfszqpgvabuvcv
+1 recv buf[5]: vgehcsdowetqyhxcrqhmszdavfcrbeoymsgomldjpybqizszrznjzrkwyonzsbygwgvi
+1 recv buf[6]: ratjyvzgurinsxxtojpnxcorgoxcwumqwgzvdydzrnmjlldbusotxfkdvkhsgvidbjyg
+1 recv buf[7]: jdfarsledofajwtibgnwquqwrazvjzbsfhuybgcewhghfapggcfyyxwqyylhzmcevyew
+1 recv buf[8]: egddqjkvjaerelrdiotimgsnsusquwmbfpexbqukqyevlvawjvexbylvuflpdaqipwhq
+Starting the photon pingpong test for photon
+Starting the photon pingpong test for mpi
+Starting the photon pingpong test for PWC
+Starting the RDMA rendezvous send reqest and wait request test
+1: put(0, 13) of size 32 completed successfully
+1: recv(0, 13) of size 32 completed successfully
+1 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting RDMA one sided put direct test
+1: put(0, 0) of size 32 completed successfully
+1 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting the photon vectored RDMA one sided put test
+1 send buf[0]: hhvpahtylrlajgnpqxypsbzjrmbotuhc
+1 send buf[1]: derdllcyepynymeqlefefepzsqnomwqp
+1 send buf[2]: citntxlxmlmkzralvhrdlgcgwrujpkar
+1 send buf[3]: uvepsrmhcbrcuunrdgupmyvkprvedwvy
+1 recv buf[0]: mcddchaoecmoxsnyrytlfhajhstyobrb
+1 recv buf[1]: dwgffivjkhxhanhtlcerjhcqbvrqwitb
+1 recv buf[2]: ezjjjestoscqfjjslplxyppalgsjqlnw
+1 recv buf[3]: mwhvacqqusgbdpvqhjnfydhjlzvcmiya
+Starting the photon remote buffer test
+1 Sending buffer: 012345678910111213141516171819202122232425262728293031
+1 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting the photon get private buffer test
+Starting the photon one sided get direct test
+direct get of size 32 completed successfully
+post recv of size 32 completed successfully
+Received buffer: 012345678910111213141516171819202122232425262728293031
+completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0: post_send_buf(1, 13) of size 68 completed successfully
+0 recv buf[0]: tbkrbfxwuytxaayswnhprmlvqyogmseivozyuyuqwpqxpopnbyeumqseogmcbqkwfjxb
+0 recv buf[1]: ittgjjdyxvmatqxiipmyxzbyrlxyxuzhnvnyerxemlghddpmueksdlquzntwjudzpsxw
+0 recv buf[2]: lwazjghnmyzgcjyhxpewexsqtxplpohdnjcwpljbkiiouiwrxapezjuuglfxboaoxdnn
+0 recv buf[3]: owqahapdjnwinlmougictobvcclahypxxhyeipjtcfbrsofownqsdrnivakczzcwiccs
+0 recv buf[4]: rllvsnomdvabkstoliwhjglkhpgrrkkkxvhrkvdpsdtdxmrixprixfsguaxomjajhiat
+0 recv buf[5]: fdjyicdfqwppljxkorskrradbboijobqtmqbqtijpaycjyoxpgjjykobldlwtompbfsr
+0 recv buf[6]: ybcqbbskzjjqpsbpcqqpvblqqaftfymfbpveqqqrzzjqtlgybwnyabosbwliuxnxmlbe
+0 recv buf[7]: drxeshulsalvzbvbcltfhenddcaspdyswwwoftczvnuuorvqcqxkumnapqsgtqzqoxgt
+0 recv buf[8]: qismwoimfgfiwcstphtgzlmvdnlsltldcgrauamcgtkewexnnqvndhijxvbkoonswfst
+Starting the photon pingpong test for photon
+0: total time: 0.072932
+640000 bytes in 0.07 seconds = 70.20 Mbit/sec
+10000 iters in 0.07 seconds = 7.29 usec/iter
+Starting the photon pingpong test for mpi
+0: total time: 0.012843
+640000 bytes in 0.01 seconds = 398.66 Mbit/sec
+10000 iters in 0.01 seconds = 1.28 usec/iter
+Starting the photon pingpong test for PWC
+0: total time: 0.012628
+640000 bytes in 0.01 seconds = 405.45 Mbit/sec
+10000 iters in 0.01 seconds = 1.26 usec/iter
+Starting the RDMA rendezvous send reqest and wait request test
+0: put(1, 13) of size 32 completed successfully
+0: recv(1, 13) of size 32 completed successfully
+0 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting RDMA one sided put direct test
+0: put(1, 0) of size 32 completed successfully
+0 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting the photon vectored RDMA one sided put test
+0 send buf[0]: mcddchaoecmoxsnyrytlfhajhstyobrb
+0 send buf[1]: dwgffivjkhxhanhtlcerjhcqbvrqwitb
+0 send buf[2]: ezjjjestoscqfjjslplxyppalgsjqlnw
+0 send buf[3]: mwhvacqqusgbdpvqhjnfydhjlzvcmiya
+0 recv buf[0]: hhvpahtylrlajgnpqxypsbzjrmbotuhc
+0 recv buf[1]: derdllcyepynymeqlefefepzsqnomwqp
+0 recv buf[2]: citntxlxmlmkzralvhrdlgcgwrujpkar
+0 recv buf[3]: uvepsrmhcbrcuunrdgupmyvkprvedwvy
+Starting the photon remote buffer test
+0 Sending buffer: 012345678910111213141516171819202122232425262728293031
+0 received buffer: 012345678910111213141516171819202122232425262728293031
+Starting the photon get private buffer test
+Starting the photon one sided get direct test
+direct get of size 32 completed successfully
+post recv of size 32 completed successfully
+Received buffer: 012345678910111213141516171819202122232425262728293031

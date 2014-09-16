@@ -107,7 +107,7 @@ int handle_ack_loop(int wait) {
 //****************************************************************************
 START_TEST(test_photon_put_wc) 
 {
-  printf("Starting the photon put wc test\n");
+  fprintf(detailed_log, "Starting the photon put wc test\n");
   int i, j, k, ns;
   int rank, nproc, ret_proc;
   int ASYNC_ITERS = ITERS;
@@ -152,16 +152,16 @@ START_TEST(test_photon_put_wc)
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-7s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)", "RTT (us)");
+    fprintf(detailed_log, "%-7s%-9s%-7s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)", "RTT (us)");
 
   struct timespec time_s, time_e;
 
   for (ns = 0; ns < nproc; ns++) {
     for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
       if (rank == 0) {
-        printf("%-7d", nproc);
-        printf("%-9u", ns + 1);
-        printf("%-7u", sizes[i]);
+        fprintf(detailed_log, "%-7d", nproc);
+        fprintf(detailed_log, "%-9u", ns + 1);
+        fprintf(detailed_log, "%-7u", sizes[i]);
         fflush(stdout);
       }
 
@@ -192,7 +192,7 @@ START_TEST(test_photon_put_wc)
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;
-        printf("%1.4f     ", latency);
+        fprintf(detailed_log, "%1.4f     ", latency);
         fflush(stdout);
       }
 
@@ -217,11 +217,11 @@ START_TEST(test_photon_put_wc)
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;
-        printf("%1.4f     ", latency);
+        fprintf(detailed_log, "%1.4f     ", latency);
         fflush(stdout);
       }
       else if (rank == 0) {
-        printf("N/A       ");
+        fprintf(detailed_log, "N/A       ");
       }
 
       assert(sendComp == 0 && recvComp == 0);
@@ -231,7 +231,7 @@ START_TEST(test_photon_put_wc)
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ASYNC_ITERS; k++) {
           if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0)) {
-            fprintf(stderr, "error: exceeded max outstanding work events (k=%d)\n", k);
+            fprintf(detailed_log, "error: exceeded max outstanding work events (k=%d)\n", k);
             exit(1);
           }
           sendComp++;
@@ -249,7 +249,7 @@ START_TEST(test_photon_put_wc)
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double overhead = time_us/ASYNC_ITERS;
-        printf("%1.4f\n", overhead);
+        fprintf(detailed_log, "%1.4f\n", overhead);
         fflush(stdout);
       }
 

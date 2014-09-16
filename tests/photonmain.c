@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   add_photon_data_movement(tc); // Photon get and put tests
   add_photon_message_passing(tc); // photon  interleaved
   add_photon_pingpong(tc); // photon pingpong test
-  add_photon_comm_test(tc);
+  //add_photon_comm_test(tc);
   add_photon_send_request_test(tc);
   add_photon_rdma_one_sided_put(tc);
   add_photon_buffers_remote_test(tc);
@@ -35,13 +35,10 @@ int main(int argc, char *argv[]) {
 
   SRunner * sr = srunner_create(s);
 
-  //Outputs the result to test.log
-  srunner_set_log(sr, "test.log");
-
   // This sets CK_FORK=no
   srunner_set_fork_status(sr, CK_NOFORK);
 
-  srunner_run_all(sr, CK_NORMAL);
+  srunner_run_all(sr, CK_VERBOSE);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);

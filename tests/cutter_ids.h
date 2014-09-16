@@ -23,7 +23,7 @@ bravo_node *init_bravo_ids(int num_blocks, int myrank, char *addr) {
     node[i].index = i;
     node[i].nblocks = num_blocks;
   }
-  printf("Initializing ID %d with IP addr = %s\n", myrank, addr);
+  fprintf(detailed_log,"Initializing ID %d with IP addr = %s\n", myrank, addr);
 
   inet_pton(AF_INET, addr, &node[myrank].s_addr);
   

@@ -20,7 +20,7 @@ START_TEST(test_rdma_with_completion)
   int rank, size, i, next;
   int ret, flag, rc;
   int send_comp = 0;
-  printf("Starting RDMA with completion test\n");
+  fprintf(detailed_log, "Starting RDMA with completion test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -36,12 +36,12 @@ START_TEST(test_rdma_with_completion)
   photon_register_buffer(send, PHOTON_SEND_SIZE);
   photon_register_buffer(recv, PHOTON_SEND_SIZE);
 
-  printf("%d Sending buffer: ", rank);
+  fprintf(detailed_log, "%d Sending buffer: ", rank);
   for (i = 0; i < PHOTON_SEND_SIZE; i++) {
     send[i] = i;
-    printf("%d", send[i]);
+    fprintf(detailed_log, "%d", send[i]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
 
   // Post the recv buffer
@@ -84,12 +84,12 @@ START_TEST(test_rdma_with_completion)
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  printf("%d received buffer: ", rank);
+  fprintf(detailed_log, "%d received buffer: ", rank);
   int j;
   for (j = 0; j < PHOTON_SEND_SIZE; j++) {
-    printf("%d", recv[j]);
+    fprintf(detailed_log, "%d", recv[j]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);

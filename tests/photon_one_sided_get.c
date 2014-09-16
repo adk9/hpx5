@@ -16,11 +16,11 @@
 //****************************************************************************
 START_TEST(test_rdma_one_sided_get_direct) 
 {
-  photon_rid recvReq,sendReq, request, req;
+  photon_rid recvReq,sendReq, request;
   char *send,*recv;
   int rank,size,prev,next;
 
-  printf("Starting the photon one sided get direct test\n");
+  fprintf(detailed_log, "Starting the photon one sided get direct test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -39,20 +39,14 @@ START_TEST(test_rdma_one_sided_get_direct)
   }
 
   // everyone posts their recv buffer to their next rank
-  int ret_proc;
   struct photon_buffer_t rbuf;
   photon_post_recv_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
-  
-  // check for this below instead
-  //photon_wait_any(&ret_proc, &req);
   
   // Wait for a recv buffer that was posted
   photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &recvReq);
   
   // Get the remote buffer info so that we can get
   photon_get_buffer_remote(recvReq, &rbuf);
-  //photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  //photon_send_FIN(recvReq, prev);
   photon_post_os_get_direct(prev, recv, PHOTON_SEND_SIZE, &rbuf, 0, &request);
  
   while (1) {
@@ -60,12 +54,9 @@ START_TEST(test_rdma_one_sided_get_direct)
     struct photon_status_t stat;
     photon_test(request, &flag, &type, &stat);
     if (flag > 0) {
-      printf("direct get of size %d completed successfully\n", (int)stat.size);
+      fprintf(detailed_log, "direct get of size %d completed successfully\n", (int)stat.size);
       photon_send_FIN(recvReq, prev); 
       break;
-    }
-    else {
-      usleep(10);
     }
   }
   while (1) {
@@ -73,22 +64,19 @@ START_TEST(test_rdma_one_sided_get_direct)
     struct photon_status_t stat;
     photon_test(sendReq, &flag, &type, &stat);
     if (flag > 0) {
-      printf("post recv of size %d completed successfully\n", (int)stat.size);
+      fprintf(detailed_log, "post recv of size %d completed successfully\n", (int)stat.size);
       break;
-    }
-    else {
-      usleep(10);
     }
   }
  
   MPI_Barrier(MPI_COMM_WORLD);
 
-  printf("Received buffer: ");
+  fprintf(detailed_log, "Received buffer: ");
   int j;
   for (j = 0; j < PHOTON_SEND_SIZE; j++) {
-    printf("%d", recv[j]);
+    fprintf(detailed_log, "%d", recv[j]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);

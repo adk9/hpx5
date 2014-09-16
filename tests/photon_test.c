@@ -47,7 +47,7 @@ START_TEST (test_photon)
   next = (rank+1) % size;
   prev = (size+rank-1) % size;
 
-  printf("Starting the Photon test\n");
+  fprintf(detailed_log, "Starting the Photon test\n");
 
   maxSize = 104857600; // 100 Mb
   smallAmountOfWork = estimateKernelSize(5000); // 5 milliseconds (i think)
@@ -77,22 +77,18 @@ START_TEST (test_photon)
           struct photon_status_t stat;
           int tst = photon_test(sendReq, &flag, &type, &stat);
           if( tst < 0 ) {
-            fprintf(stderr,"%d: An error occured in photon_test(send)\n", rank);
+            fprintf(detailed_log,"%d: An error occured in photon_test(send)\n", rank);
             exit(-1);
           }
           else if( tst > 0 ) {
-            fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+            fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
             exit(0);
           }
          else {
-            if( flag ) {
-              fprintf(stderr,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
+            if (flag > 0) {
+              fprintf(detailed_log,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
               photon_send_FIN(sendReq,next);
               break;
-            }
-            else {
-              //fprintf(stderr,"%d: Busy waiting for send\n", rank);
-              usleep(10*1000); // 1/100th of a second
             }
           }
         }
@@ -101,28 +97,24 @@ START_TEST (test_photon)
           struct photon_status_t stat;
           int tst = photon_test(recvReq, &flag, &type, &stat);
           if( tst < 0 ) {
-            fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+            fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
             exit(-1);
           }
           else if( tst > 0 ) {
-            fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+            fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
             exit(0);
           }
           else {
-            if( flag ) {
-              fprintf(stderr,"%d: recv(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
+            if (flag > 0) {
+              fprintf(detailed_log,"%d: recv(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
               break;
-            }
-            else {
-              //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-              usleep(10*1000); // 1/100th of a second
             }
           }
         }
         photon_gettime_(&total_end);
         overhead = (total_end-total_start) - (kernel_end-kernel_start);
         if (rank == 0 )
-          printf("%i,%i,%i,%f,%f,%f\n",trial,arraySize,workSize,(total_end-total_start),(kernel_end-kernel_start),overhead);
+          fprintf(detailed_log, "%i,%i,%i,%f,%f,%f\n",trial,arraySize,workSize,(total_end-total_start),(kernel_end-kernel_start),overhead);
       }
       photon_unregister_buffer(send,arraySize);
       photon_unregister_buffer(recv,arraySize);
