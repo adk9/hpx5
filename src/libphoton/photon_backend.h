@@ -37,6 +37,9 @@
 #define REQUEST_FLAG_EAGER   0x02
 #define REQUEST_FLAG_USERID  0x04
 
+#define RDMA_FLAG_NIL        0x00
+#define RDMA_FLAG_NO_CQE     0x01
+
 #define REQUEST_COOK_SEND    0xbeef
 #define REQUEST_COOK_RECV    0xcafebabe
 #define REQUEST_COOK_EAGER   0xdeadfeed
@@ -159,13 +162,13 @@ struct photon_backend_t {
   int (*io_finalize)();
   /* data movement -- needs to be split out */
   int (*rdma_put)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
   int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
   int (*rdma_send)(photonAddr addr, uintptr_t laddr, uint64_t size,
-                   photonBuffer lbuf, uint64_t id);
+                   photonBuffer lbuf, uint64_t id, int flags);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
-                   photonBuffer lbuf, uint64_t id);
+                   photonBuffer lbuf, uint64_t id, int flags);
   int (*get_event)(photonEventStatus stat);
 };
 

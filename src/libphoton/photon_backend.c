@@ -544,7 +544,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     // pre-post the receive buffers when UD service is requested
     for (i = 0; i < recvbuf->p_count; i++) {
       __photon_backend->rdma_recv(NULL, (uintptr_t)recvbuf->entries[i].base, recvbuf->p_size,
-                                  &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | i);
+                                  &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | i, 0);
     }
   }
   
@@ -1294,7 +1294,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ph
     dbg_info("sending mbuf [%d/%d], size=%lu, header size=%d", m_count, num_msgs-1, send_bytes, sendbuf->p_hsize);
 
     buf_addr = (uintptr_t)bentry->hptr;
-    rc = __photon_backend->rdma_send(&saddr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie);
+    rc = __photon_backend->rdma_send(&saddr, buf_addr, send_bytes + sendbuf->p_hsize, &sendbuf->db->buf, cookie, 0);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA SEND failed for 0x%016lx\n", cookie);
       goto error_exit;
@@ -1367,7 +1367,7 @@ static int _photon_recv(photon_rid request, void *ptr, uint64_t size, int flags)
 
       // re-arm this buffer entry for another recv
       rc = __photon_backend->rdma_recv(NULL, (uintptr_t)recvbuf->entries[bind].base, recvbuf->p_size,
-                                       &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | bind);
+                                       &recvbuf->db->buf, (( (uint64_t)REQUEST_COOK_RECV) << 32) | bind, 0);
       if (rc != PHOTON_OK) {
         dbg_err("could not post_recv() buffer entry");
         goto error_exit;
@@ -1444,7 +1444,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     rmt_addr += photon_processes[proc].remote_rcv_info_ledger->curr * sizeof(*entry);
 
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                    &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id);
+                                    &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id, 0);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
       goto error_exit;
@@ -1520,7 +1520,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       dbg_info("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
       
       rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
-				      &(photon_processes[proc].eager_buf->remote), eager_cookie);
+				      &(photon_processes[proc].eager_buf->remote), eager_cookie, 0);
 
       if (rc != PHOTON_OK) {
 	dbg_err("RDMA EAGER PUT failed for 0x%016lx\n", eager_cookie);
@@ -1537,7 +1537,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       dbg_info("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
      
       rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_eager_ledger->remote), request_id);
+                                      &(photon_processes[proc].remote_eager_ledger->remote), request_id, 0);
       if (rc != PHOTON_OK) {
         dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
         goto error_exit;
@@ -1576,7 +1576,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       dbg_info("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
 
       rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_snd_info_ledger->remote), request_id);
+                                      &(photon_processes[proc].remote_snd_info_ledger->remote), request_id, 0);
       if (rc != PHOTON_OK) {
         dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
         goto error_exit;
@@ -1660,7 +1660,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     rmt_addr += photon_processes[proc].remote_snd_info_ledger->curr * sizeof(*entry);
 
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                    &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id);
+                                    &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id, 0);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
       goto error_exit;
@@ -1957,7 +1957,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
 
   {
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, drb->buf.addr + (uintptr_t)r_offset,
-                                    size, &(db->buf), &(drb->buf), request);
+                                    size, &(db->buf), &(drb->buf), request, 0);
 
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx\n", request);
@@ -2024,7 +2024,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
 
   {
     rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, drb->buf.addr + (uintptr_t)r_offset,
-                                    size, &(db->buf), &(drb->buf), request);
+                                    size, &(db->buf), &(drb->buf), request, 0);
 
     if (rc != PHOTON_OK) {
       dbg_err("RDMA GET failed for 0x%016lx\n", request);
@@ -2065,7 +2065,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
 
   {
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, rbuf->addr,
-                                    rbuf->size, &(db->buf), rbuf, event_id);
+                                    rbuf->size, &(db->buf), rbuf, event_id, 0);
     
     if (rc != PHOTON_OK) {
       dbg_err("RDMA GET failed for 0x%016lx", event_id);
@@ -2119,7 +2119,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
 
   {
     rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, rbuf->addr, size,
-                                    &(db->buf), rbuf, event_id);
+                                    &(db->buf), rbuf, event_id, 0);
 
     if (rc != PHOTON_OK) {
       dbg_err("RDMA GET failed for 0x%016lx", event_id);
@@ -2184,7 +2184,7 @@ static int _photon_send_FIN(photon_rid request, int proc) {
     rmt_addr += photon_processes[proc].remote_fin_ledger->curr * sizeof(*entry);
 
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                    &(photon_processes[proc].remote_fin_ledger->remote), (photon_rid)NULL_COOKIE);
+                                    &(photon_processes[proc].remote_fin_ledger->remote), (photon_rid)NULL_COOKIE, 0);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx\n", (photon_rid)NULL_COOKIE);
       goto error_exit;
@@ -2433,11 +2433,15 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   struct photon_buffer_t rbuf;
   uintptr_t rmt_addr;
   int rc, curr, nentries;
+  int p0_flags = 0, p1_flags = 0;
 
   dbg_info("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
 
   request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
-
+  
+  p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
+  p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
+  
   if (size > 0) {
     if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
       log_err("Tried posting from a buffer that's not registered");
@@ -2448,7 +2452,8 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     rbuf.size = size;
     rbuf.priv = priv;
     
-    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id);
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
+                                    &rbuf, request_id, p0_flags);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", request_id);
       goto error_exit;
@@ -2464,7 +2469,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   dbg_info("putting into remote ledger addr: 0x%016lx", rmt_addr);
 
   rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                  &(photon_processes[proc].remote_pwc_ledger->remote), request_id);
+                                  &(photon_processes[proc].remote_pwc_ledger->remote), request_id, p1_flags);
   
   if (rc != PHOTON_OK) {
     dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx\n", request_id);
@@ -2473,20 +2478,28 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
 
   // if we didn't send any data, then we only wait on one event
   nentries = (size > 0)?2:1;
-
-  rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, nentries, local, request_id);
-  if (rc != PHOTON_OK) {
-    dbg_info("Could not setup direct buffer request");
-    goto error_exit;
+  // check if we only get event for one put
+  if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
+    nentries = 1;
+  // or no events for either put
+  if (flags & PHOTON_REQ_NO_CQE)
+    nentries = 0;
+  
+  if (nentries > 0) {
+    rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, nentries, local, request_id);
+    if (rc != PHOTON_OK) {
+      dbg_info("Could not setup direct buffer request");
+      goto error_exit;
+    }
   }
-
+    
   dbg_info("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
-
+  
   NEXT_LEDGER_ENTRY(photon_processes[proc].remote_pwc_ledger);
-
+  
   return PHOTON_OK;
-
-error_exit:
+  
+ error_exit:
   return PHOTON_ERROR;  
 }
 
@@ -2516,7 +2529,7 @@ static int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void 
   rbuf.size = size;
   rbuf.priv = priv;
   
-  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id);
+  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id, 0);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", request_id);
     goto error_exit;

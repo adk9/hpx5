@@ -48,21 +48,21 @@ static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, voi
 static int verbs_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
 static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id);
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id);
+                           photonBuffer lbuf, uint64_t id, int flags);
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id);
+                           photonBuffer lbuf, uint64_t id, int flags);
 static int verbs_get_event(photonEventStatus stat);
 static int verbs_get_dev_addr(int af, photonAddr addr);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
 
-static int __verbs_do_rdma(struct rdma_args_t *args, int opcode);
-static int __verbs_do_send(struct sr_args_t *args);
-static int __verbs_do_recv(struct sr_args_t *args);
+static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags);
+static int __verbs_do_send(struct sr_args_t *args, int flags);
+static int __verbs_do_recv(struct sr_args_t *args, int flags);
 
 static verbs_cnct_ctx verbs_ctx = {
   .ib_dev ="ib0",
@@ -334,7 +334,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
+static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   int err, retries;
   struct ibv_send_wr *bad_wr;
 
@@ -343,16 +343,10 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
     .sg_list             = args->sg_list,
     .num_sge             = args->num_sge,
     .opcode              = opcode,
-    .send_flags          = IBV_SEND_SIGNALED,
+    .send_flags          = flags,
     .wr.rdma.remote_addr = args->raddr,
     .wr.rdma.rkey        = args->rkey
   };
-
-  if (opcode == IBV_WR_RDMA_WRITE &&
-      args->num_sge == 1 &&
-      args->sg_list[0].length <= verbs_ctx.max_inline) {
-    wr.send_flags |= IBV_SEND_INLINE;
-  }
 
   retries = MAX_RETRIES;
   do {
@@ -369,7 +363,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode) {
 }
 
 // send/recv use UD service_qp by default at the moment
-static int __verbs_do_send(struct sr_args_t *args) {
+static int __verbs_do_send(struct sr_args_t *args, int flags) {
   int err, retries;
   struct ibv_send_wr *bad_wr;
 
@@ -402,7 +396,7 @@ static int __verbs_do_send(struct sr_args_t *args) {
   return PHOTON_OK;
 }
 
-static int __verbs_do_recv(struct sr_args_t *args) {
+static int __verbs_do_recv(struct sr_args_t *args, int flags) {
   int err, retries;
   struct ibv_recv_wr *bad_wr;
 
@@ -428,13 +422,21 @@ static int __verbs_do_recv(struct sr_args_t *args) {
 }
 
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+  int ibv_flags = IBV_SEND_SIGNALED;
   struct rdma_args_t args;
   struct ibv_sge list = {
     .addr   = laddr,
     .length = size,
     .lkey   = lbuf->priv.key0
   };
+
+  if (size <= verbs_ctx.max_inline) {
+    ibv_flags |= IBV_SEND_INLINE;
+  }
+
+  if (flags & RDMA_FLAG_NO_CQE)
+    ibv_flags ^= IBV_SEND_SIGNALED;
   
   args.proc = proc;
   args.id = id;
@@ -442,11 +444,11 @@ static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
   args.num_sge = 1;
   args.raddr = raddr;
   args.rkey = rbuf->priv.key1;
-  return __verbs_do_rdma(&args, IBV_WR_RDMA_WRITE);
+  return __verbs_do_rdma(&args, IBV_WR_RDMA_WRITE, ibv_flags);
 }
 
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id) {
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
   struct rdma_args_t args;
   struct ibv_sge list = {
     .addr   = laddr,
@@ -460,11 +462,11 @@ static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
   args.num_sge = 1;
   args.raddr = raddr;
   args.rkey = rbuf->priv.key1;
-  return __verbs_do_rdma(&args, IBV_WR_RDMA_READ);
+  return __verbs_do_rdma(&args, IBV_WR_RDMA_READ, IBV_SEND_SIGNALED);
 }
 
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id) {
+                           photonBuffer lbuf, uint64_t id, int flags) {
   void *rc;
   struct sr_args_t args;
   struct ibv_sge list = {
@@ -490,11 +492,11 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
   args.num_sge = 1;
   args.qpn = 0xffffff;
   args.qkey = 0x11111111;
-  return __verbs_do_send(&args);
+  return __verbs_do_send(&args, flags);
 }
 
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id) {
+                           photonBuffer lbuf, uint64_t id, int flags) {
   struct sr_args_t args;
   struct ibv_sge list = {
     .addr = laddr,
@@ -507,7 +509,7 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   args.id = id;
   args.sg_list = &list;
   args.num_sge = 1;
-  return __verbs_do_recv(&args);
+  return __verbs_do_recv(&args, flags);
 }
 
 static int verbs_get_event(photonEventStatus stat) {

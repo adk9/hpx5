@@ -99,6 +99,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 
 #define PHOTON_REQ_NIL         0x0000
 #define PHOTON_REQ_USERID      0x0001
+#define PHOTON_REQ_NO_CQE      0x0002
+#define PHOTON_REQ_ONE_CQE     0x0004
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
