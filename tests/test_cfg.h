@@ -10,7 +10,7 @@ struct photon_config_t cfg = {
   .use_ud = 1,
   .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   .eth_dev = "roce0",
-  .ib_dev = "mlx4_0",
-  .ib_port = 2,
+  .ib_dev = "qib0",
+  .ib_port = 1,
   .backend = "verbs"
 };

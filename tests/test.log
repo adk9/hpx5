@@ -13,3 +13,7 @@ photon_rendezvous.c:19:P:photontest-core:test_photon_send_request:0: Passed
 photon_one_sided_put.c:18:P:photontest-core:test_rdma_one_sided_put_direct:0: Passed
 photon_one_sided_put.c:91:P:photontest-core:test_rdma_one_sided_put_direct_array:0: Passed
 photon_buffers_remote.c:22:P:photontest-core:test_photon_get_remote_buffers:0: Passed
+photon_buffers_private.c:38:P:photontest-core:test_photon_get_private_buffers:0: Passed
+photon_one_sided_get.c:17:P:photontest-core:test_rdma_one_sided_get_direct:0: Passed
+Results for all suites run:
+100%: Checks: 16, Failures: 0, Errors: 0
