@@ -249,7 +249,11 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_fma(&args, GNI_POST_FMA_PUT, flags);
+
+  if (size < SMSG_SIZE)
+    return __ugni_do_fma(&args, GNI_POST_FMA_PUT, flags);
+  else
+    return __ugni_do_rdma(&args, GNI_POST_RDMA_PUT, flags);
 }
 
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
@@ -264,7 +268,11 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
+
+  if (size < SMSG_SIZE)
+    return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
+  else
+    return __ugni_do_rdma(&args, GNI_POST_RDMA_GET, flags);
 }
 
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
