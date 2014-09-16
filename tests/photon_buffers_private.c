@@ -4,8 +4,8 @@
 #include <check.h>
 #include "tests.h"
 #include "photon.h"
+
 #define PHOTON_SEND_SIZE 32
-#define PHOTON_TAG       13
 
 //****************************************************************************
 // This unit testcase tests photon buffers functions:
@@ -13,73 +13,28 @@
 // 2. photon_unregister_buffer
 // 3. photon_get_buffer_private
 //****************************************************************************
+
+
 START_TEST (test_photon_get_private_buffers) 
 {
-  int rank, next, prev, size;
-  char *send, *recv;
-  photon_rid sendReq, recvReq;
-  int flag, type;
-  struct photon_buffer_t rbuf;
-
+  struct photon_buffer_t *desc;
+  int rc;
   printf("Starting the photon get private buffer test\n");
-  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  MPI_Comm_size(MPI_COMM_WORLD,&size);
-  next = (rank + 1) % size;
-  prev = (size + rank - 1) %size;
+  photonBufferPriv ret = malloc(sizeof(struct photon_buffer_priv_t));
+  ret->key0 = 2576896;
+  ret->key1 = 2576896;
 
-  posix_memalign((void **) &send, 32, PHOTON_SEND_SIZE*sizeof(char));
-  posix_memalign((void **) &recv, 32, PHOTON_SEND_SIZE*sizeof(char));
+  desc = malloc(PHOTON_SEND_SIZE * sizeof(struct photon_buffer_t));
+  rc = photon_get_buffer_private(&desc, PHOTON_SEND_SIZE, ret);
+  ck_assert_msg(rc == PHOTON_ERROR, "photon_get_buffer_private before register returned wrong output");
 
-  photon_register_buffer(send, PHOTON_SEND_SIZE);
-  photon_register_buffer(recv, PHOTON_SEND_SIZE);
-
-  int i;
-  for (i = 0; i < PHOTON_SEND_SIZE; i++) {
-    send[i] = i;
-  }
-
-  photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
-
-  photon_get_buffer_remote(sendReq, &rbuf);
-
-  // It is a utility function which just exposes the private info of the 
-  // registered buffer.
-  int err = photon_get_buffer_private(&rbuf, PHOTON_SEND_SIZE, 0);
-  ck_assert_msg(err == PHOTON_ERROR, "Could not find in buffer table"); 
-  printf("Keys: 0x%016lx / 0x%016lx\n", rbuf.priv.key0, rbuf.priv.key1);
-
-  // put directly into that recv buffer
-  //photon_post_os_put(sendReq, prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  //photon_send_FIN(sendReq, prev);
-
-  photon_put_with_completion(next, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
-                               rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
-
-  while (1) {
-    struct photon_status_t stat;
-    photon_test(sendReq, &flag, &type, &stat);
-    if (flag) {
-      printf("%d put of size %d completed successfully\n", rank, PHOTON_SEND_SIZE);
-      break;
-    } else {
-      usleep(10*1000);
-    }
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  printf("%d received buffer: ", rank);
-  int j;
-  for (j = 0; j < PHOTON_SEND_SIZE; j++) { 
-    printf("%d", recv[j]);
-  }
-  printf("\n");
-
-  photon_unregister_buffer(send, PHOTON_SEND_SIZE);
-  photon_unregister_buffer(recv, PHOTON_SEND_SIZE);
-  free(send);
-  free(recv);
+  photon_register_buffer(desc, PHOTON_SEND_SIZE);
+  rc = photon_get_buffer_private(&desc, PHOTON_SEND_SIZE, ret);
+  ck_assert_msg(rc == PHOTON_OK, "photon_get_buffer_private after register buffer failed"); 
+ 
+  photon_unregister_buffer(desc, PHOTON_SEND_SIZE);
+  free(ret);
+  free(desc);
 }
 END_TEST
 

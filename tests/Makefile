@@ -60,7 +60,15 @@ am_photontest_OBJECTS = photontest-photonmain.$(OBJEXT) \
 	photontest-photon_test.$(OBJEXT) \
 	photontest-photon_data_movement.$(OBJEXT) \
 	photontest-photon_message_passing.$(OBJEXT) \
-	photontest-photon_pingpong.$(OBJEXT)
+	photontest-photon_pingpong.$(OBJEXT) \
+	photontest-photon_communication.$(OBJEXT) \
+	photontest-photon_buffers_remote.$(OBJEXT) \
+	photontest-photon_buffers_private.$(OBJEXT) \
+	photontest-photon_rendezvous.$(OBJEXT) \
+	photontest-photon_one_sided_put.$(OBJEXT) \
+	photontest-photon_one_sided_get.$(OBJEXT) \
+	photontest-photon_rdma_with_completion.$(OBJEXT) \
+	photontest-photon_test_put_wc.$(OBJEXT)
 photontest_OBJECTS = $(am_photontest_OBJECTS)
 photontest_DEPENDENCIES = $(top_builddir)/src/libphoton.la
 AM_V_lt = $(am__v_lt_$(V))
@@ -246,7 +254,15 @@ photontest_SOURCES = photonmain.c \
                       photon_test.c \
                       photon_data_movement.c \
                       photon_message_passing.c \
-                      photon_pingpong.c 
+                      photon_pingpong.c \
+                      photon_communication.c \
+                      photon_buffers_remote.c \
+                      photon_buffers_private.c \
+                      photon_rendezvous.c \
+                      photon_one_sided_put.c \
+                      photon_one_sided_get.c \
+                      photon_rdma_with_completion.c \
+                      photon_test_put_wc.c 
 
 photontest_LDADD = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck -lcheck_pic    -lpthread  -libverbs -lrdmacm -L/opt/openmpi/1.6.3/lib/ -lmpi -lrt
 photontest_CFLAGS = -O2 -Wall -g -O2   -I/opt/openmpi/1.6.3/include/ \
@@ -351,10 +367,18 @@ distclean-compile:
 	-rm -f *.tab.c
 
 include ./$(DEPDIR)/photontest-kernel.Po
+include ./$(DEPDIR)/photontest-photon_buffers_private.Po
+include ./$(DEPDIR)/photontest-photon_buffers_remote.Po
+include ./$(DEPDIR)/photontest-photon_communication.Po
 include ./$(DEPDIR)/photontest-photon_data_movement.Po
 include ./$(DEPDIR)/photontest-photon_message_passing.Po
+include ./$(DEPDIR)/photontest-photon_one_sided_get.Po
+include ./$(DEPDIR)/photontest-photon_one_sided_put.Po
 include ./$(DEPDIR)/photontest-photon_pingpong.Po
+include ./$(DEPDIR)/photontest-photon_rdma_with_completion.Po
+include ./$(DEPDIR)/photontest-photon_rendezvous.Po
 include ./$(DEPDIR)/photontest-photon_test.Po
+include ./$(DEPDIR)/photontest-photon_test_put_wc.Po
 include ./$(DEPDIR)/photontest-photoninit.Po
 include ./$(DEPDIR)/photontest-photonmain.Po
 
@@ -479,6 +503,118 @@ photontest-photon_pingpong.obj: photon_pingpong.c
 #	$(AM_V_CC)source='photon_pingpong.c' object='photontest-photon_pingpong.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_pingpong.obj `if test -f 'photon_pingpong.c'; then $(CYGPATH_W) 'photon_pingpong.c'; else $(CYGPATH_W) '$(srcdir)/photon_pingpong.c'; fi`
+
+photontest-photon_communication.o: photon_communication.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_communication.o -MD -MP -MF $(DEPDIR)/photontest-photon_communication.Tpo -c -o photontest-photon_communication.o `test -f 'photon_communication.c' || echo '$(srcdir)/'`photon_communication.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_communication.Tpo $(DEPDIR)/photontest-photon_communication.Po
+#	$(AM_V_CC)source='photon_communication.c' object='photontest-photon_communication.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_communication.o `test -f 'photon_communication.c' || echo '$(srcdir)/'`photon_communication.c
+
+photontest-photon_communication.obj: photon_communication.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_communication.obj -MD -MP -MF $(DEPDIR)/photontest-photon_communication.Tpo -c -o photontest-photon_communication.obj `if test -f 'photon_communication.c'; then $(CYGPATH_W) 'photon_communication.c'; else $(CYGPATH_W) '$(srcdir)/photon_communication.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_communication.Tpo $(DEPDIR)/photontest-photon_communication.Po
+#	$(AM_V_CC)source='photon_communication.c' object='photontest-photon_communication.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_communication.obj `if test -f 'photon_communication.c'; then $(CYGPATH_W) 'photon_communication.c'; else $(CYGPATH_W) '$(srcdir)/photon_communication.c'; fi`
+
+photontest-photon_buffers_remote.o: photon_buffers_remote.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_remote.o -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_remote.Tpo -c -o photontest-photon_buffers_remote.o `test -f 'photon_buffers_remote.c' || echo '$(srcdir)/'`photon_buffers_remote.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_remote.Tpo $(DEPDIR)/photontest-photon_buffers_remote.Po
+#	$(AM_V_CC)source='photon_buffers_remote.c' object='photontest-photon_buffers_remote.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_remote.o `test -f 'photon_buffers_remote.c' || echo '$(srcdir)/'`photon_buffers_remote.c
+
+photontest-photon_buffers_remote.obj: photon_buffers_remote.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_remote.obj -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_remote.Tpo -c -o photontest-photon_buffers_remote.obj `if test -f 'photon_buffers_remote.c'; then $(CYGPATH_W) 'photon_buffers_remote.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_remote.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_remote.Tpo $(DEPDIR)/photontest-photon_buffers_remote.Po
+#	$(AM_V_CC)source='photon_buffers_remote.c' object='photontest-photon_buffers_remote.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_remote.obj `if test -f 'photon_buffers_remote.c'; then $(CYGPATH_W) 'photon_buffers_remote.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_remote.c'; fi`
+
+photontest-photon_buffers_private.o: photon_buffers_private.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_private.o -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_private.Tpo -c -o photontest-photon_buffers_private.o `test -f 'photon_buffers_private.c' || echo '$(srcdir)/'`photon_buffers_private.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_private.Tpo $(DEPDIR)/photontest-photon_buffers_private.Po
+#	$(AM_V_CC)source='photon_buffers_private.c' object='photontest-photon_buffers_private.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_private.o `test -f 'photon_buffers_private.c' || echo '$(srcdir)/'`photon_buffers_private.c
+
+photontest-photon_buffers_private.obj: photon_buffers_private.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_private.obj -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_private.Tpo -c -o photontest-photon_buffers_private.obj `if test -f 'photon_buffers_private.c'; then $(CYGPATH_W) 'photon_buffers_private.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_private.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_private.Tpo $(DEPDIR)/photontest-photon_buffers_private.Po
+#	$(AM_V_CC)source='photon_buffers_private.c' object='photontest-photon_buffers_private.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_private.obj `if test -f 'photon_buffers_private.c'; then $(CYGPATH_W) 'photon_buffers_private.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_private.c'; fi`
+
+photontest-photon_rendezvous.o: photon_rendezvous.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rendezvous.o -MD -MP -MF $(DEPDIR)/photontest-photon_rendezvous.Tpo -c -o photontest-photon_rendezvous.o `test -f 'photon_rendezvous.c' || echo '$(srcdir)/'`photon_rendezvous.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rendezvous.Tpo $(DEPDIR)/photontest-photon_rendezvous.Po
+#	$(AM_V_CC)source='photon_rendezvous.c' object='photontest-photon_rendezvous.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rendezvous.o `test -f 'photon_rendezvous.c' || echo '$(srcdir)/'`photon_rendezvous.c
+
+photontest-photon_rendezvous.obj: photon_rendezvous.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rendezvous.obj -MD -MP -MF $(DEPDIR)/photontest-photon_rendezvous.Tpo -c -o photontest-photon_rendezvous.obj `if test -f 'photon_rendezvous.c'; then $(CYGPATH_W) 'photon_rendezvous.c'; else $(CYGPATH_W) '$(srcdir)/photon_rendezvous.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rendezvous.Tpo $(DEPDIR)/photontest-photon_rendezvous.Po
+#	$(AM_V_CC)source='photon_rendezvous.c' object='photontest-photon_rendezvous.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rendezvous.obj `if test -f 'photon_rendezvous.c'; then $(CYGPATH_W) 'photon_rendezvous.c'; else $(CYGPATH_W) '$(srcdir)/photon_rendezvous.c'; fi`
+
+photontest-photon_one_sided_put.o: photon_one_sided_put.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_put.o -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_put.Tpo -c -o photontest-photon_one_sided_put.o `test -f 'photon_one_sided_put.c' || echo '$(srcdir)/'`photon_one_sided_put.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_put.Tpo $(DEPDIR)/photontest-photon_one_sided_put.Po
+#	$(AM_V_CC)source='photon_one_sided_put.c' object='photontest-photon_one_sided_put.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_put.o `test -f 'photon_one_sided_put.c' || echo '$(srcdir)/'`photon_one_sided_put.c
+
+photontest-photon_one_sided_put.obj: photon_one_sided_put.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_put.obj -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_put.Tpo -c -o photontest-photon_one_sided_put.obj `if test -f 'photon_one_sided_put.c'; then $(CYGPATH_W) 'photon_one_sided_put.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_put.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_put.Tpo $(DEPDIR)/photontest-photon_one_sided_put.Po
+#	$(AM_V_CC)source='photon_one_sided_put.c' object='photontest-photon_one_sided_put.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_put.obj `if test -f 'photon_one_sided_put.c'; then $(CYGPATH_W) 'photon_one_sided_put.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_put.c'; fi`
+
+photontest-photon_one_sided_get.o: photon_one_sided_get.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_get.o -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_get.Tpo -c -o photontest-photon_one_sided_get.o `test -f 'photon_one_sided_get.c' || echo '$(srcdir)/'`photon_one_sided_get.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_get.Tpo $(DEPDIR)/photontest-photon_one_sided_get.Po
+#	$(AM_V_CC)source='photon_one_sided_get.c' object='photontest-photon_one_sided_get.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_get.o `test -f 'photon_one_sided_get.c' || echo '$(srcdir)/'`photon_one_sided_get.c
+
+photontest-photon_one_sided_get.obj: photon_one_sided_get.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_get.obj -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_get.Tpo -c -o photontest-photon_one_sided_get.obj `if test -f 'photon_one_sided_get.c'; then $(CYGPATH_W) 'photon_one_sided_get.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_get.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_get.Tpo $(DEPDIR)/photontest-photon_one_sided_get.Po
+#	$(AM_V_CC)source='photon_one_sided_get.c' object='photontest-photon_one_sided_get.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_get.obj `if test -f 'photon_one_sided_get.c'; then $(CYGPATH_W) 'photon_one_sided_get.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_get.c'; fi`
+
+photontest-photon_rdma_with_completion.o: photon_rdma_with_completion.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rdma_with_completion.o -MD -MP -MF $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo -c -o photontest-photon_rdma_with_completion.o `test -f 'photon_rdma_with_completion.c' || echo '$(srcdir)/'`photon_rdma_with_completion.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo $(DEPDIR)/photontest-photon_rdma_with_completion.Po
+#	$(AM_V_CC)source='photon_rdma_with_completion.c' object='photontest-photon_rdma_with_completion.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rdma_with_completion.o `test -f 'photon_rdma_with_completion.c' || echo '$(srcdir)/'`photon_rdma_with_completion.c
+
+photontest-photon_rdma_with_completion.obj: photon_rdma_with_completion.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rdma_with_completion.obj -MD -MP -MF $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo -c -o photontest-photon_rdma_with_completion.obj `if test -f 'photon_rdma_with_completion.c'; then $(CYGPATH_W) 'photon_rdma_with_completion.c'; else $(CYGPATH_W) '$(srcdir)/photon_rdma_with_completion.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo $(DEPDIR)/photontest-photon_rdma_with_completion.Po
+#	$(AM_V_CC)source='photon_rdma_with_completion.c' object='photontest-photon_rdma_with_completion.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rdma_with_completion.obj `if test -f 'photon_rdma_with_completion.c'; then $(CYGPATH_W) 'photon_rdma_with_completion.c'; else $(CYGPATH_W) '$(srcdir)/photon_rdma_with_completion.c'; fi`
+
+photontest-photon_test_put_wc.o: photon_test_put_wc.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test_put_wc.o -MD -MP -MF $(DEPDIR)/photontest-photon_test_put_wc.Tpo -c -o photontest-photon_test_put_wc.o `test -f 'photon_test_put_wc.c' || echo '$(srcdir)/'`photon_test_put_wc.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test_put_wc.Tpo $(DEPDIR)/photontest-photon_test_put_wc.Po
+#	$(AM_V_CC)source='photon_test_put_wc.c' object='photontest-photon_test_put_wc.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test_put_wc.o `test -f 'photon_test_put_wc.c' || echo '$(srcdir)/'`photon_test_put_wc.c
+
+photontest-photon_test_put_wc.obj: photon_test_put_wc.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test_put_wc.obj -MD -MP -MF $(DEPDIR)/photontest-photon_test_put_wc.Tpo -c -o photontest-photon_test_put_wc.obj `if test -f 'photon_test_put_wc.c'; then $(CYGPATH_W) 'photon_test_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_test_put_wc.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test_put_wc.Tpo $(DEPDIR)/photontest-photon_test_put_wc.Po
+#	$(AM_V_CC)source='photon_test_put_wc.c' object='photontest-photon_test_put_wc.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test_put_wc.obj `if test -f 'photon_test_put_wc.c'; then $(CYGPATH_W) 'photon_test_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_test_put_wc.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

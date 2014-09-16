@@ -45,16 +45,27 @@ START_TEST(test_rdma_one_sided_put_direct)
   photon_post_os_put_direct(prev, send, PHOTON_SEND_SIZE, &rbuf, 0, &sendReq);
   photon_send_FIN(sendReq, prev);
 
-  int flag;
-  photon_rid req = 0;
-  int send_comp = 0; 
-  while (send_comp) {
-    int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
-    if (rc != PHOTON_OK)
-      continue;  // no events
-    if (flag) {
-      if (req == PHOTON_TAG)
-        send_comp--;
+  while(1) {
+    int flag, type;
+    struct photon_status_t stat;
+    int tst = photon_test(sendReq, &flag, &type, &stat);
+    if( tst < 0 ) {
+      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      exit(-1);
+    }
+    else if( tst > 0 ) {
+      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      exit(0);
+    }
+    else {
+      if( flag ) {
+        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        break;
+      }
+      else {
+        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
+        usleep(10*1000); // 1/100th of a second
+      }
     }
   }
 
