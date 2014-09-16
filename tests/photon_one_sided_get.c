@@ -38,36 +38,49 @@ START_TEST(test_rdma_one_sided_get_direct)
     send[i] = i;
   }
 
-  // everyone posts their send buffer to their next rank
+  // everyone posts their recv buffer to their next rank
   int ret_proc;
   struct photon_buffer_t rbuf;
-  photon_post_send_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
-  // make sure we clear the local post event
-  photon_wait_any(&ret_proc, &req);
-
-  // Wait for a send buffer that was posted
-  photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+  photon_post_recv_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
+  
+  // check for this below instead
+  //photon_wait_any(&ret_proc, &req);
+  
+  // Wait for a recv buffer that was posted
+  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+  
   // Get the remote buffer info so that we can get
-  photon_get_buffer_remote(request, &rbuf);
+  photon_get_buffer_remote(recvReq, &rbuf);
   //photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
   //photon_send_FIN(recvReq, prev);
-  photon_post_os_get_direct(prev, recv, PHOTON_SEND_SIZE,  &rbuf, 0, &request);
+  photon_post_os_get_direct(prev, recv, PHOTON_SEND_SIZE, &rbuf, 0, &request);
  
-  photon_send_FIN(request, prev); 
   while (1) {
     int flag, type;
     struct photon_status_t stat;
-    // photon_test(recvReq, &flag, &type, &stat);
     photon_test(request, &flag, &type, &stat);
-    if (flag) {
-      printf("recv of size %d completed successfully\n", PHOTON_SEND_SIZE);
+    if (flag > 0) {
+      printf("direct get of size %d completed successfully\n", (int)stat.size);
+      photon_send_FIN(recvReq, prev); 
       break;
     }
     else {
       usleep(10);
     }
   }
-  
+  while (1) {
+    int flag, type;
+    struct photon_status_t stat;
+    photon_test(sendReq, &flag, &type, &stat);
+    if (flag > 0) {
+      printf("post recv of size %d completed successfully\n", (int)stat.size);
+      break;
+    }
+    else {
+      usleep(10);
+    }
+  }
+ 
   MPI_Barrier(MPI_COMM_WORLD);
 
   printf("Received buffer: ");

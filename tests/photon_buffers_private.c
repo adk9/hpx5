@@ -17,24 +17,28 @@
 
 START_TEST (test_photon_get_private_buffers) 
 {
-  struct photon_buffer_t *desc;
+  void *mybuf = malloc(PHOTON_SEND_SIZE*sizeof(char));
   int rc;
-  printf("Starting the photon get private buffer test\n");
-  photonBufferPriv ret = malloc(sizeof(struct photon_buffer_priv_t));
-  ret->key0 = 2576896;
-  ret->key1 = 2576896;
+  struct photon_buffer_priv_t rpriv = {
+    .key0 = UINT64_MAX,
+    .key1 = UINT64_MAX
+  };
 
-  desc = malloc(PHOTON_SEND_SIZE * sizeof(struct photon_buffer_t));
-  rc = photon_get_buffer_private(&desc, PHOTON_SEND_SIZE, ret);
+  printf("Starting the photon get private buffer test\n");
+
+  rc = photon_get_buffer_private(mybuf, PHOTON_SEND_SIZE, &rpriv);
   ck_assert_msg(rc == PHOTON_ERROR, "photon_get_buffer_private before register returned wrong output");
 
-  photon_register_buffer(desc, PHOTON_SEND_SIZE);
-  rc = photon_get_buffer_private(&desc, PHOTON_SEND_SIZE, ret);
+  rc = photon_register_buffer(mybuf, PHOTON_SEND_SIZE);
+  ck_assert_msg(rc == PHOTON_OK, "photon_register_buffer failed");
+
+  rc = photon_get_buffer_private(mybuf, PHOTON_SEND_SIZE, &rpriv);
   ck_assert_msg(rc == PHOTON_OK, "photon_get_buffer_private after register buffer failed"); 
- 
-  photon_unregister_buffer(desc, PHOTON_SEND_SIZE);
-  free(ret);
-  free(desc);
+  ck_assert_msg(rpriv.key0 != UINT64_MAX, "key0 is not set"); 
+  ck_assert_msg(rpriv.key1 != UINT64_MAX, "key1 is not set"); 
+
+  photon_unregister_buffer(mybuf, PHOTON_SEND_SIZE);
+  free(mybuf);
 }
 END_TEST
 

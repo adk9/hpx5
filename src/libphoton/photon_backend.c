@@ -1468,6 +1468,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     req->type = LEDGER;
     req->proc = proc;
     req->tag = tag;
+    req->length = size;
 
     dbg_info("Inserting the RDMA request into the request table: 0x%016lx/%p", request_id, req);
     if (htable_insert(reqtable, (uint64_t)request_id, req) != 0) {
