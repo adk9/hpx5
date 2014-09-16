@@ -5,6 +5,9 @@
 #include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
 
+#define TIME() getMicrosecondTimeStamp()
+int64_t getMicrosecondTimeStamp();
+
 FILE *detailed_log;
 
 void photontest_core_setup(void);
@@ -22,5 +25,6 @@ void add_photon_rdma_one_sided_put(TCase *);
 void add_photon_rdma_one_sided_get(TCase *);
 void add_photon_rdma_with_completion(TCase *);
 void add_photon_put_wc(TCase *);
+void add_photon_data_movement_bench(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/
