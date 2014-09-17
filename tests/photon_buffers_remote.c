@@ -25,7 +25,7 @@ START_TEST (test_photon_get_remote_buffers)
   int ret, flag, rc;
   int send_comp = 0;
 
-  printf("Starting the photon remote buffer test\n");
+  fprintf(detailed_log,"Starting the photon remote buffer test\n");
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
   other_rank = (rank + 1) % size;
@@ -36,13 +36,13 @@ START_TEST (test_photon_get_remote_buffers)
   photon_register_buffer(send, PHOTON_SEND_SIZE);
   photon_register_buffer(recv, PHOTON_SEND_SIZE);
 
-  printf("%d Sending buffer: ", rank);
+  fprintf(detailed_log, "%d Sending buffer: ", rank);
   int i;
   for (i = 0; i < PHOTON_SEND_SIZE; i++) {
     send[i] = i;
-    printf("%d", send[i]);
+    fprintf(detailed_log,"%d", send[i]);
   }
-  printf("\n");
+  fprintf(detailed_log,"\n");
 
   // Post the recv buffer
   photon_post_recv_buffer_rdma(other_rank, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
@@ -67,12 +67,12 @@ START_TEST (test_photon_get_remote_buffers)
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  printf("%d received buffer: ", rank);
+  fprintf(detailed_log,"%d received buffer: ", rank);
   int j;
   for (j = 0; j < PHOTON_SEND_SIZE; j++) { 
-    printf("%d", recv[j]);
+    fprintf(detailed_log, "%d", recv[j]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);

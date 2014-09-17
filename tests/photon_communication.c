@@ -30,7 +30,7 @@ START_TEST (test_photon_communication)
   MD5_CTX ctx;
   unsigned char hash[16];
 
-  printf("Starting the Photon test\n");
+  fprintf(detailed_log, "Starting the Photon test\n");
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
@@ -52,7 +52,7 @@ START_TEST (test_photon_communication)
   myNode = find_bravo_node(&naddr);
 
   if (!myNode) {
-    printf("Could not find my node\n");
+    fprintf(detailed_log, "Could not find my node\n");
   }
 
  switch (myNode->index) {
@@ -67,7 +67,7 @@ START_TEST (test_photon_communication)
   }
 
   if (!node) {
-    printf("could not find dest node\n");
+    fprintf(detailed_log, "could not find dest node\n");
   }
 
   for (i = 0; i < myNode->nblocks; i++) {
@@ -82,12 +82,10 @@ START_TEST (test_photon_communication)
   while (1) {
     int flag, type;
     photon_test(sendReq, &flag, &type, &status);
-    if (flag) {
-      printf("%d: put of size %d completed successfully\n", myrank, PHOTON_SEND_SIZE);
+    if (flag > 0) {
+      fprintf(detailed_log, "%d: put of size %d completed successfully\n", myrank, PHOTON_SEND_SIZE);
       break;
-    } else {
-     usleep(10*1000);
-    }
+    } 
   }
   
   struct photon_status_t recv_status;
@@ -97,14 +95,11 @@ START_TEST (test_photon_communication)
     int flag, type;
     //photon_probe(&addr, &flag, &recv_status);
     photon_test(recvReq, &flag, &type, &recv_status);
-    if (flag) {
+    if (flag > 0) {
       // Probe says we got some message, let's get it
       photon_recv(recv_status.request, recv, recv_status.size, 0);
-      printf("%d: Received of size %lu\n", myrank, recv_status.size);
+      fprintf(detailed_log, "%d: Received of size %lu\n", myrank, recv_status.size);
       break;
-    }
-    else {
-      usleep(10*1000);
     }
   }
 

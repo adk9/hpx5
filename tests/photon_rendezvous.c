@@ -22,7 +22,7 @@ START_TEST (test_photon_send_request)
   char *send,*recv;
   int rank,size,prev,next;
 
-  printf("Starting the RDMA rendezvous send reqest and wait request test\n");
+  fprintf(detailed_log, "Starting the RDMA rendezvous send reqest and wait request test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -58,20 +58,17 @@ START_TEST (test_photon_send_request)
     struct photon_status_t stat;
     int tst = photon_test(sendReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+      if (flag > 0) {
+        fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
-      }
-      else {
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
@@ -81,32 +78,29 @@ START_TEST (test_photon_send_request)
     struct photon_status_t stat;
     int tst = photon_test(recvReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+      if (flag > 0) {
+        fprintf(detailed_log,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
-      }
-      else {
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  printf("%d received buffer: ", rank);
+  fprintf(detailed_log, "%d received buffer: ", rank);
   int j;
   for (j = 0; j < PHOTON_SEND_SIZE; j++) {
-    printf("%d", recv[j]);
+    fprintf(detailed_log, "%d", recv[j]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);

@@ -20,7 +20,7 @@ START_TEST(test_rdma_one_sided_put_direct)
   struct photon_buffer_t rbuf;
   char *send, *recv;
   int rank, size, next, prev;
-  printf("Starting RDMA one sided put direct test\n");
+  fprintf(detailed_log, "Starting RDMA one sided put direct test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -50,33 +50,29 @@ START_TEST(test_rdma_one_sided_put_direct)
     struct photon_status_t stat;
     int tst = photon_test(sendReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+      if (flag > 0) {
+        fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
-      }
-      else {
-        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  printf("%d received buffer: ", rank);
+  fprintf(detailed_log, "%d received buffer: ", rank);
   int j;
   for (j = 0; j < PHOTON_SEND_SIZE; j++) {
-    printf("%d", recv[j]);
+    fprintf(detailed_log, "%d", recv[j]);
   }
-  printf("\n");
+  fprintf(detailed_log, "\n");
 
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);
@@ -96,7 +92,7 @@ START_TEST (test_rdma_one_sided_put_direct_array)
   char *send[ARRAY_SIZE], *recv[ARRAY_SIZE];
   int rank, size, prev, next, i, j, ret_proc;
 
-  printf("Starting the photon vectored RDMA one sided put test\n");
+  fprintf(detailed_log, "Starting the photon vectored RDMA one sided put test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -114,7 +110,7 @@ START_TEST (test_rdma_one_sided_put_direct_array)
     }
     send[i][PHOTON_SEND_SIZE] = '\0';
 
-    printf("%d send buf[%d]: %s\n", rank, i, send[i]);
+    fprintf(detailed_log, "%d send buf[%d]: %s\n", rank, i, send[i]);
   }
 
   fflush(stdout);
@@ -149,7 +145,7 @@ START_TEST (test_rdma_one_sided_put_direct_array)
   MPI_Barrier(MPI_COMM_WORLD);
   for (i = 0; i < ARRAY_SIZE; i++) {
     recv[i][PHOTON_SEND_SIZE] = '\0';
-    printf("%d recv buf[%d]: %s\n", rank, i, recv[i]);
+    fprintf(detailed_log, "%d recv buf[%d]: %s\n", rank, i, recv[i]);
     fflush(stdout);
     photon_unregister_buffer(send[i], PHOTON_SEND_SIZE);
     photon_unregister_buffer(recv[i], PHOTON_SEND_SIZE);

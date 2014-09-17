@@ -16,13 +16,13 @@
 #define PHOTON_TAG  13
 #define PING         0
 #define PONG         1
-#define ITERS     1000
+#define ITERS    10000
 #define SIZE        32
 //****************************************************************************
 // Photon pingpong test
 //****************************************************************************
 #define SUBTRACT_TV(E,S) (((E).tv_sec - (S).tv_sec) + ((E).tv_usec - (S).tv_usec)/1e6)
-#define dbg_printf(...) if(0) {printf(__VA_ARGS__);}
+#define dbg_printf(...) if(0) {fprintf(detailed_log, __VA_ARGS__);}
 
 enum test_type {PHOTON_TEST,
                 MPI_TEST,
@@ -60,12 +60,9 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       int flag, type;
       struct photon_status_t stat;
       photon_test(send_req, &flag, &type, &stat);
-      if(flag) {
+      if(flag > 0) {
         dbg_printf("%d: send_pingpong(%d->%d)[%d] of size %d completed successfully\n", rank, rank, dst, pp_type, msize);
         break;
-      }
-      else {
-        usleep(10);
       }
     }
   }
@@ -79,9 +76,6 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       MPI_Test(&mpi_r, &flag, &stat);
       if (flag) {
         break;
-      }
-      else {
-        usleep(10);
       }
     }
   }
@@ -109,12 +103,9 @@ void *receiver(void *args __attribute__((unused))) {
         int flag, type;
         struct photon_status_t stat;
         photon_test(recv_req, &flag, &type, &stat);
-        if(flag) {
+        if(flag > 0) {
           dbg_printf("%d: recv_ping(%d<-%d) of size %d completed successfully\n", rank, rank, (int)stat.src_addr.global.proc_id, msize);
           break;
-        }
-        else {
-          usleep(10);
         }
       }
       photon_send_FIN(recv_req, other_rank);
@@ -128,9 +119,6 @@ void *receiver(void *args __attribute__((unused))) {
         MPI_Test(&mpi_r, &flag, &stat);
         if (flag) {
           break;
-        }
-        else {
-          usleep(10);
         }
       }
     }
@@ -181,7 +169,7 @@ START_TEST (test_photon_pingpong_for_photon)
   global_iters = ITERS;
   msize = SIZE;
 
-  printf("Starting the photon pingpong test for photon\n");
+  fprintf(detailed_log, "Starting the photon pingpong test for photon\n");
 
   if (!strcasecmp(test, "PHOTON"))
     pp_test = PHOTON_TEST;
@@ -210,15 +198,15 @@ START_TEST (test_photon_pingpong_for_photon)
   gettimeofday(&end, NULL);
 
   if (rank == 0) {
-    printf("%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
+    fprintf(detailed_log, "%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
 
     float usec = (end.tv_sec - start.tv_sec) * 1000000 +
       (end.tv_usec - start.tv_usec);
     long long bytes = (long long) msize * global_iters * 2;
 
-    printf("%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
+    fprintf(detailed_log, "%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
            bytes, usec / 1000000., bytes * 8. / usec);
-    printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+    fprintf(detailed_log, "%d iters in %.2f seconds = %.2f usec/iter\n",
            global_iters, usec / 1000000., usec / global_iters);
   }
 }
@@ -232,7 +220,7 @@ START_TEST (test_photon_pingpong_for_mpi)
   global_iters = ITERS;
   msize = SIZE;
 
-  printf("Starting the photon pingpong test for mpi\n");
+  fprintf(detailed_log, "Starting the photon pingpong test for mpi\n");
 
   if (!strcasecmp(test, "MPI"))
     pp_test = MPI_TEST;
@@ -258,15 +246,15 @@ START_TEST (test_photon_pingpong_for_mpi)
   gettimeofday(&end, NULL);
 
   if (rank == 0) {
-    printf("%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
+    fprintf(detailed_log, "%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
 
     float usec = (end.tv_sec - start.tv_sec) * 1000000 +
       (end.tv_usec - start.tv_usec);
     long long bytes = (long long) msize * global_iters * 2;
 
-    printf("%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
+    fprintf(detailed_log, "%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
            bytes, usec / 1000000., bytes * 8. / usec);
-    printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+    fprintf(detailed_log, "%d iters in %.2f seconds = %.2f usec/iter\n",
            global_iters, usec / 1000000., usec / global_iters);
   }
 }
@@ -280,7 +268,7 @@ START_TEST (test_photon_pingpong_for_pwc)
   global_iters = ITERS;
   msize = SIZE;
 
-  printf("Starting the photon pingpong test for PWC\n");
+  fprintf(detailed_log, "Starting the photon pingpong test for PWC\n");
 
   if (!strcasecmp(test, "PEC"))
     pp_test = PWC_TEST;
@@ -318,15 +306,15 @@ START_TEST (test_photon_pingpong_for_pwc)
   gettimeofday(&end, NULL);
 
   if (rank == 0) {
-    printf("%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
+    fprintf(detailed_log, "%d: total time: %f\n", rank, SUBTRACT_TV(end, start));
 
     float usec = (end.tv_sec - start.tv_sec) * 1000000 +
       (end.tv_usec - start.tv_usec);
     long long bytes = (long long) msize * global_iters * 2;
 
-    printf("%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
+    fprintf(detailed_log, "%lld bytes in %.2f seconds = %.2f Mbit/sec\n",
            bytes, usec / 1000000., bytes * 8. / usec);
-    printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+    fprintf(detailed_log, "%d iters in %.2f seconds = %.2f usec/iter\n",
            global_iters, usec / 1000000., usec / global_iters);
   }
 }

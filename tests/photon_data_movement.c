@@ -32,7 +32,7 @@ START_TEST (test_photon_test_get)
   photon_rid recvReq, sendReq;
   char *send, *recv;
   int rank, size, prev, next;
-  printf("Starting the photon get test\n");
+  fprintf(detailed_log, "Starting the photon get test\n");
 
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -64,21 +64,17 @@ START_TEST (test_photon_test_get)
     struct photon_status_t stat;
     int tst = photon_test(sendReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log, "%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log, "%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: post_send_buf(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
+      if(flag > 0) {
+        fprintf(detailed_log,"%d: post_send_buf(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
         break;
-      }
-      else {
-        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
@@ -87,21 +83,17 @@ START_TEST (test_photon_test_get)
     struct photon_status_t stat;
     int tst = photon_test(recvReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: get(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
+      if(flag > 0) {
+        fprintf(detailed_log,"%d: get(%d, %d) of size %lu completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, stat.size);
         break;
-      }
-      else {
-        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
@@ -120,7 +112,7 @@ END_TEST
 //****************************************************************************
 START_TEST (test_photon_test_put) 
 {
-  printf("Starting the photon put test\n");
+  fprintf(detailed_log, "Starting the photon put test\n");
   photon_rid recvReq, sendReq;
   char *send, *recv;
   int rank, size, prev, next;
@@ -154,21 +146,17 @@ START_TEST (test_photon_test_put)
     struct photon_status_t stat;
     int tst = photon_test(sendReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+      if(flag > 0) {
+        fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
-      }
-      else {
-        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }
@@ -177,21 +165,17 @@ START_TEST (test_photon_test_put)
     struct photon_status_t stat;
     int tst = photon_test(recvReq, &flag, &type, &stat);
     if( tst < 0 ) {
-      fprintf(stderr,"%d: An error occured in photon_test(recv)\n", rank);
+      fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
     }
     else if( tst > 0 ) {
-      fprintf(stderr,"%d: That shouldn't have happened in this code\n", rank);
+      fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
       exit(0);
     }
     else {
-      if( flag ) {
-        fprintf(stderr,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+      if(flag > 0) {
+        fprintf(detailed_log,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
-      }
-      else {
-        //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-        usleep(10*1000); // 1/100th of a second
       }
     }
   }

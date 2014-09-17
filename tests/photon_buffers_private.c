@@ -24,7 +24,7 @@ START_TEST (test_photon_get_private_buffers)
     .key1 = UINT64_MAX
   };
 
-  printf("Starting the photon get private buffer test\n");
+  fprintf(detailed_log,"Starting the photon get private buffer test\n");
 
   rc = photon_get_buffer_private(mybuf, PHOTON_SEND_SIZE, &rpriv);
   ck_assert_msg(rc == PHOTON_ERROR, "photon_get_buffer_private before register returned wrong output");

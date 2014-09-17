@@ -25,7 +25,7 @@ static int sizes[] = {
   8,
   64,
   128,
-  196,
+  192,
   256,
   2048,
   4096,
@@ -107,7 +107,7 @@ int handle_ack_loop(int wait) {
 //****************************************************************************
 START_TEST(test_photon_put_wc) 
 {
-  printf("Starting the photon put wc test\n");
+  fprintf(detailed_log, "Starting the photon put wc test\n");
   int i, j, k, ns;
   int rank, nproc, ret_proc;
   int ASYNC_ITERS = ITERS;
@@ -127,12 +127,12 @@ START_TEST(test_photon_put_wc)
   char *send, *recv[nproc];
 
   // only need one send buffer
-  posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
+  posix_memalign((void **) &send, 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
   // ... but recv buffers for each potential sender
   for (i=0; i<nproc; i++) {
-    posix_memalign((void **) &recv[i], 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
+    posix_memalign((void **) &recv[i], 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
     photon_register_buffer(recv[i], PHOTON_BUF_SIZE);
   }
 
@@ -175,7 +175,7 @@ START_TEST(test_photon_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
-          photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+          photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
           sendComp++;
           wait_local(NULL);
         }
@@ -200,7 +200,7 @@ START_TEST(test_photon_put_wc)
       
       // GET
       if (rank <= ns) {
-        if (i) {
+        if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
             photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
@@ -213,7 +213,7 @@ START_TEST(test_photon_put_wc)
 
       MPI_Barrier(MPI_COMM_WORLD);
 
-      if (rank == 0 && i) {
+      if (rank == 0 && i && !(sizes[i] % 8)) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;
