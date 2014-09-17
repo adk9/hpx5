@@ -64,7 +64,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     ctx->qp[i] = NULL;
   }
 
-  if (__photon_config->use_cma) {
+  if (__photon_config->ibv.use_cma) {
 
     ctx->cm_id = (struct rdma_cm_id**)malloc((_photon_nproc + _photon_nforw) * sizeof(struct rdma_cm_id*));
     if (!ctx->cm_id) {
@@ -270,14 +270,14 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
     if (ifa->ifa_addr == NULL)
       continue;
 
-    if (!strcmp(ifa->ifa_name, __photon_config->eth_dev) &&
+    if (!strcmp(ifa->ifa_name, __photon_config->ibv.eth_dev) &&
         ifa->ifa_addr->sa_family == AF_INET) {
       break;
     }
   }
 
-  if (__photon_config->use_cma && !ifa) {
-    log_err("verbs_connect_peers(): Could not find interface %s", __photon_config->eth_dev);
+  if (__photon_config->ibv.use_cma && !ifa) {
+    log_err("verbs_connect_peers(): Could not find interface %s", __photon_config->ibv.eth_dev);
     goto error_exit;
   }
 
@@ -292,7 +292,7 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
       
       memset(&(ctx->local_ci[iproc][i].gid.raw), 0, sizeof(union ibv_gid));
       
-      if (__photon_config->use_cma) {
+      if (__photon_config->ibv.use_cma) {
         ctx->local_ci[iproc][i].qpn = 0x0;
       }
       else {
@@ -336,7 +336,7 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, ver
                            verbs_cnct_info **ret_ci, int *ret_len, photon_connect_mode_t mode) {
   switch (mode) {
   case PHOTON_CONN_ACTIVE:
-    if (__photon_config->use_cma) {
+    if (__photon_config->ibv.use_cma) {
       return __verbs_connect_qps_cma(ctx, local_info, remote_info, pindex, MAX_QP);
     }
     else {
@@ -344,7 +344,7 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, ver
     }
     break;
   case PHOTON_CONN_PASSIVE:
-    if (__photon_config->use_cma) {
+    if (__photon_config->ibv.use_cma) {
       pthread_t cma_thread;
       struct rdma_cma_thread_args *args;
       args = malloc(sizeof(struct rdma_cma_thread_args));
@@ -384,7 +384,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 
   MPI_Barrier(_photon_comm);
 
-  if (__photon_config->use_cma) {
+  if (__photon_config->ibv.use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
     for (iproc = _photon_myrank; iproc < _photon_nproc; iproc++) {
       if (__verbs_connect_qps_cma(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
@@ -403,7 +403,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   }
 
   // make sure everyone is connected before proceeding
-  if (__photon_config->use_cma) {
+  if (__photon_config->ibv.use_cma) {
     if (_photon_myrank > 0) {
       dbg_info("waiting for listener to finish...");
       pthread_join(cma_listener, NULL);

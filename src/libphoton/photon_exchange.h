@@ -2,9 +2,9 @@
 #define PHOTON_EXCHANGE
 
 #define PHOTON_TPROC (_photon_nproc + _photon_nforw)
-#define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * LEDGER_SIZE * sizeof(struct photon_ri_ledger_entry_t))
-#define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * LEDGER_SIZE * sizeof(struct photon_rdma_ledger_entry_t))
-#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * LEDGER_SIZE * sizeof(struct photon_rdma_eager_buf_entry_t))
+#define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_ri_ledger_entry_t))
+#define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_ledger_entry_t))
+#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_eager_buf_entry_t))
 
 // The ledger buffer (shared_storage) is laid out as follows:
 // | local_rcv | remote_rcv | local_snd | remote_snd | local_fin | remote_fin |

@@ -358,7 +358,7 @@ static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, ph
   req->num_entries = nbufs;
   req->length = 0;
   memcpy(&req->addr, addr, sizeof(*addr));
-  memcpy(req->bentries, bufs, sizeof(int)*MAX_BUF_ENTRIES);
+  memcpy(req->bentries, bufs, sizeof(int)*DEF_MAX_BUF_ENTRIES);
   
   dbg_info("Inserting the new send request into the sr table: 0x%016lx/0x%016lx/%p",
            addr->global.proc_id, request, req);
@@ -407,6 +407,18 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     requests[i].mmask = bit_array_create(UD_MASK_SIZE);
     LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
   }
+
+  // set any defaults
+  if (_LEDGER_SIZE <= 0)
+    _LEDGER_SIZE = DEF_LEDGER_SIZE;
+  if (cfg->cap.eager_buf_size < 0)
+    cfg->cap.eager_buf_size = DEF_EAGER_BUF_SIZE;
+  if (cfg->cap.small_msg_size < 0)
+    cfg->cap.small_msg_size = DEF_SMALL_MSG_SIZE;
+
+  dbg_info("num ledgers: %d\n", _LEDGER_SIZE);
+  dbg_info("eager buf size: %d\n", cfg->cap.eager_buf_size);
+  dbg_info("small msg size: %d\n", cfg->cap.small_msg_size);
 
   dbg_info("create_buffertable()");
   fflush(stderr);
@@ -465,27 +477,27 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   }
   dbg_info("Bufsize: %d", bufsize);
 
-  if (photon_setup_ri_ledger(photon_processes, PHOTON_LRI_PTR(buf), LEDGER_SIZE) != 0) {
+  if (photon_setup_ri_ledger(photon_processes, PHOTON_LRI_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup snd/rcv info ledgers");
     goto error_exit_buf;
   }
 
-  if (photon_setup_fin_ledger(photon_processes, PHOTON_LF_PTR(buf), LEDGER_SIZE) != 0) {
+  if (photon_setup_fin_ledger(photon_processes, PHOTON_LF_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup send ledgers");
     goto error_exit_buf;
   }
 
-  if (photon_setup_pwc_ledger(photon_processes, PHOTON_LP_PTR(buf), LEDGER_SIZE) != 0) {
+  if (photon_setup_pwc_ledger(photon_processes, PHOTON_LP_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup send ledgers");
     goto error_exit_buf;
   }
 
-  if (photon_setup_eager_ledger(photon_processes, PHOTON_LE_PTR(buf), LEDGER_SIZE) != 0) {
+  if (photon_setup_eager_ledger(photon_processes, PHOTON_LE_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup eager ledgers");
     goto error_exit_buf;
   }
 
-  if (photon_setup_eager_buf(photon_processes, PHOTON_EB_PTR(buf), LEDGER_SIZE) != 0) {
+  if (photon_setup_eager_buf(photon_processes, PHOTON_EB_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup eager buffers");
     goto error_exit_buf;
   }
@@ -505,7 +517,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   // allocate buffers for UD send/recv operations (after backend initializes)
   uint64_t msgbuf_size, p_size;
   int p_offset, p_hsize;
-  if (cfg->use_ud) {
+  if (cfg->ibv.use_ud) {
     // we need to ask the backend about the max msg size it can support for UD
     int *mtu, size;
     if (__photon_backend->get_info(photon_processes, PHOTON_ANY_SOURCE, (void**)&mtu, &size, PHOTON_MTU)) {
@@ -520,12 +532,12 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     //else {
     //  p_offset = 0;
     //  p_hsize = 0;
-    //  p_size = p_offset + SMSG_SIZE;
+    //  p_size = p_offset + cfg->cap.small_msg_size;
     
     dbg_info("sr partition size: %lu", p_size);
     
-    // create enough space to accomodate every rank sending LEDGER_SIZE messages
-    msgbuf_size = LEDGER_SIZE * p_size * _photon_nproc;
+    // create enough space to accomodate every rank sending _LEDGER_SIZE messages
+    msgbuf_size = _LEDGER_SIZE * p_size * _photon_nproc;
     
     sendbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset, p_hsize);
     if (!sendbuf) {
@@ -1229,7 +1241,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ph
 #endif
 
   photon_addr saddr;
-  int bufs[MAX_BUF_ENTRIES];
+  int bufs[DEF_MAX_BUF_ENTRIES];
   photon_rid request_id;
   uint64_t cookie;
   uint64_t bytes_remaining, bytes_sent, send_bytes;
@@ -1254,8 +1266,8 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ph
   m_count = 0;
   
   num_msgs = size / sendbuf->m_size + 1;
-  if (num_msgs > MAX_BUF_ENTRIES) {
-    dbg_err("Message of size %lu requires too many mbuf entries, %u, max=%u", size, num_msgs, MAX_BUF_ENTRIES);
+  if (num_msgs > DEF_MAX_BUF_ENTRIES) {
+    dbg_err("Message of size %lu requires too many mbuf entries, %u, max=%u", size, num_msgs, DEF_MAX_BUF_ENTRIES);
     goto error_exit;
   }
 
@@ -1281,7 +1293,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ph
     // copy data into one message
     memcpy(bentry->mptr, (char*)ptr + bytes_sent, send_bytes);
 
-    if (__photon_config->use_ud) {
+    if (__photon_config->ibv.use_ud) {
       // create the header
       photon_ud_hdr *hdr = (photon_ud_hdr*)bentry->hptr;
       hdr->request = request_id;
@@ -1507,7 +1519,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   dbg_info("Incrementing curr_cookie_count to: 0x%016lx", request_id);
   
   {
-    if (size <= SMSG_SIZE) {
+    if (size <= __photon_config->cap.small_msg_size) {
       uintptr_t rmt_addr, eager_addr;
       uint64_t eager_cookie;
       photonLedgerEntry entry;
@@ -2779,8 +2791,8 @@ int _photon_handle_addr(photonAddr addr, photonAddr raddr) {
   if (!(addr->blkaddr.blk0) &&
       !(addr->blkaddr.blk1) &&
       !(addr->blkaddr.blk2)) {
-    if (__photon_config->ud_gid_prefix) {
-      inet_pton(AF_INET6, __photon_config->ud_gid_prefix, raddr->raw);
+    if (__photon_config->ibv.ud_gid_prefix) {
+      inet_pton(AF_INET6, __photon_config->ibv.ud_gid_prefix, raddr->raw);
       uint32_t *iptr = (uint32_t*)&(raddr->raw[12]);
       *iptr = htonl(addr->blkaddr.blk3);
     }

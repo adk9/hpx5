@@ -15,6 +15,7 @@
 #include "utility_functions.h"
 
 #define MAX_RETRIES 1
+#define DEF_UGNI_BTE_THRESH 8192
 
 struct rdma_args_t {
   int proc;
@@ -103,6 +104,11 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   int i;
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
+
+  if (cfg->ugni.bte_thresh < 0)
+    cfg->ugni.bte_thresh = DEF_UGNI_BTE_THRESH;
+  else if (cfg->ugni.bte_thresh == 0)
+    cfg->ugni.bte_thresh = INT_MAX;
 
   if (cfg->eth_dev) {
     ugni_ctx.gemini_dev = cfg->eth_dev;
@@ -250,7 +256,7 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
 
-  if (size < SMSG_SIZE)
+  if (size < __photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_PUT, flags);
   else
     return __ugni_do_rdma(&args, GNI_POST_RDMA_PUT, flags);
@@ -269,7 +275,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
 
-  if (size < SMSG_SIZE)
+  if (size < photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
   else
     return __ugni_do_rdma(&args, GNI_POST_RDMA_GET, flags);

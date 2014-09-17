@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <mpi.h>
 
 #include "test_cfg.h"
 

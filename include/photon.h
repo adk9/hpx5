@@ -14,27 +14,38 @@
 #define PHOTON_H
 
 #include <stdint.h>
-#include <mpi.h>
 
 struct photon_config_t {
-  uint64_t address;
-  int nproc;
+  uint64_t address;         // i.e. process rank
+  int nproc;                // Total number of processes
 
-  int use_cma;
-  int use_ud;
-  char *ud_gid_prefix;
-  int use_forwarder;
-  char **forwarder_eids;
+  struct {                  // OPTIONS for InfiniBand Verbs backend
+    char *eth_dev;          // Device name for CMA mode
+    char *ib_dev;           // IB device as listed by ibv_devinfo
+    int ib_port;            // An active IB port
+    int use_cma;            // Use connection manager to establish RDMA context
+    int use_ud;             // EXPERIMENTAL: unreliable datagram mode (uses multicast)
+    char *ud_gid_prefix;    // EXPERIMENTAL: GID prefix to use for UD multicast
+  } ibv;
+  
+  struct {                  // OPTIONS for Cray UGNI backend (set -1 for defaults)
+    int bte_thresh;         // Messages >= bytes use BTE (default 8192, set 0 to disable BTE)
+  } ugni;
 
-  MPI_Comm comm;
+  struct {                  // EXPERIMENTAL: forwarder interface to XSPd
+    int use_forwarder;
+    char **forwarder_eids;
+  } forwarder;
 
-  char *backend;
-  char *mode;
-  int meta_exch;
+  struct {                  // Various buffer and message sizes (set -1 for defaults)
+    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128k, set 0 to disable)
+    int small_msg_size;     // Messages <= bytes will use eager buffers (default 8192, set 0 to disable)
+    int ledger_entries;     // The number of ledger entries (default 64)
+  } cap;
 
-  char *eth_dev;
-  char *ib_dev;
-  int ib_port;
+  void *comm;               // Optional communicator for use with MPI, etc.
+  int meta_exch;            // See PHOTON_EXCH types below (default MPI)
+  char *backend;            // "verbs" or "ugni"
 };
 
 typedef union photon_addr_t {
@@ -92,7 +103,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
-#define PHOTON_EXCH_XSP        0x0002
+#define PHOTON_EXCH_PMI        0x0002
+#define PHOTON_EXCH_XSP        0x0003
 
 #define PHOTON_SEND_LEDGER     0x0000
 #define PHOTON_RECV_LEDGER     0x0001

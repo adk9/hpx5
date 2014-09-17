@@ -80,8 +80,8 @@ static verbs_cnct_ctx verbs_ctx = {
   .psn = 0,
   .num_qp = 0,
   .use_ud = 0,
-  .tx_depth = LEDGER_SIZE,
-  .rx_depth = LEDGER_SIZE,
+  .tx_depth = DEF_LEDGER_SIZE,
+  .rx_depth = DEF_LEDGER_SIZE,
   .atomic_depth = 16,
   .max_sge = 16,
   .max_inline = -1
@@ -142,19 +142,22 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   /* __initialized: 0 - not; -1 - initializing; 1 - initialized */
   __initialized = -1;
 
-  if (cfg->ib_dev)
-    verbs_ctx.ib_dev = cfg->ib_dev;
+  verbs_ctx.tx_depth = _LEDGER_SIZE;
+  verbs_ctx.rx_depth = _LEDGER_SIZE;
 
-  if (cfg->ib_port)
-    verbs_ctx.ib_port = cfg->ib_port;
+  if (cfg->ibv.ib_dev)
+    verbs_ctx.ib_dev = cfg->ibv.ib_dev;
 
-  if (cfg->use_cma && !cfg->eth_dev) {
+  if (cfg->ibv.ib_port)
+    verbs_ctx.ib_port = cfg->ibv.ib_port;
+
+  if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
     goto error_exit;
   }
 
-  if (cfg->use_ud) {
-    verbs_ctx.use_ud = cfg->use_ud;
+  if (cfg->ibv.use_ud) {
+    verbs_ctx.use_ud = cfg->ibv.use_ud;
     
     dbg_info("create ah_table");
     ah_table = htable_create(1009);
@@ -183,7 +186,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     }
 
     /* setup forwarder if requested */
-    if (cfg->use_forwarder && __photon_forwarder) {
+    if (cfg->forwarder.use_forwarder && __photon_forwarder) {
       if (__photon_forwarder->init(cfg, photon_processes)) {
         log_err("Could not initialize forwarder(s)");
         goto error_exit;
@@ -207,7 +210,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
 
   if (!_forwarder) {
     /* TODO: pull out exchange and generalize in libphoton */
-    if (cfg->use_forwarder && __photon_forwarder) {
+    if (cfg->forwarder.use_forwarder && __photon_forwarder) {
       if (__photon_forwarder->exchange(photon_processes)) {
         log_err("Could not perform ledger exchange with forwarder(s)");
         goto error_exit;

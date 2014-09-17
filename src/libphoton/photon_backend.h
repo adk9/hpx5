@@ -15,11 +15,13 @@
 #include "photon_xsp_forwarder.h"
 #endif
 
-#define NULL_COOKIE          0x0
-#define DEF_NUM_REQUESTS     (1024*5)  // 5k pre-allocated requests
+#define DEF_NUM_REQUESTS     (1024*5)   // 5k pre-allocated requests
+#define DEF_EAGER_BUF_SIZE   (1024*128) // 128k bytes of space per rank
+#define DEF_SMALL_MSG_SIZE   8192
+#define DEF_LEDGER_SIZE      64         // This should not exceed MCA max_qp_wr (typically 16k)
+#define DEF_MAX_BUF_ENTRIES  64         // The number msgbuf entries for UD mode
 
-#define LEDGER_SIZE          64        // This should not exceed MCA max_qp_wr (typically 16k)
-#define MAX_BUF_ENTRIES      64
+#define NULL_COOKIE          0x0
 #define UD_MASK_SIZE         1<<6
 
 #define EVENT_NIL            0x00
@@ -85,7 +87,7 @@ typedef struct photon_req_t {
   int proc;
   int tag;
   int curr;
-  int bentries[MAX_BUF_ENTRIES];
+  int bentries[DEF_MAX_BUF_ENTRIES];
   int num_entries;
   BIT_ARRAY *mmask;
   uint64_t length;

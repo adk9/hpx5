@@ -25,8 +25,8 @@ int main(int argc, char *argv[]) {
 
   cfg.nproc = size;
   cfg.address = rank;
-  cfg.use_forwarder = 1;
-  cfg.forwarder_eids = forwarders;
+  cfg.forwarder.use_forwarder = 1;
+  cfg.forwarder.forwarder_eids = forwarders;
 
   photon_init(&cfg);
 

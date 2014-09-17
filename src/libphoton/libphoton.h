@@ -13,6 +13,7 @@ extern photonConfig __photon_config;
 extern photonBackend __photon_backend;
 extern photonForwarder __photon_forwarder;
 
+extern int _LEDGER_SIZE;
 extern int _photon_myrank;
 extern int _photon_nproc;
 extern int _photon_nforw;

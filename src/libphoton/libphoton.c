@@ -1,4 +1,5 @@
-#include <strings.h>
+#include <stdlib.h>
+#include <string.h>
 #include "libphoton.h"
 #include "logging.h"
 
@@ -19,6 +20,7 @@ photonConfig __photon_config = NULL;
 photonBackend __photon_backend = NULL;
 photonForwarder __photon_forwarder = NULL;
 
+int _LEDGER_SIZE;
 int _photon_myrank;
 int _photon_nproc;
 int _photon_nforw;
@@ -54,11 +56,32 @@ int photon_initialized() {
 
 int photon_init(photonConfig cfg) {
   photonBackend be;
+  photonConfig lcfg = NULL;
+
+  /* copy the configuration */
+  lcfg = calloc(1, sizeof(struct photon_config_t));
+  if (!lcfg) {
+    log_err("Could not allocate space for internal config!");
+    return PHOTON_ERROR;
+  }
+
+  memcpy(lcfg, cfg, sizeof(struct photon_config_t));
+  if (cfg->ibv.eth_dev)
+    lcfg->ibv.eth_dev = strdup(cfg->ibv.eth_dev);
+  if (cfg->ibv.ib_dev)
+    lcfg->ibv.ib_dev = strdup(cfg->ibv.ib_dev);
+  if (cfg->ibv.ud_gid_prefix)
+    lcfg->ibv.ud_gid_prefix = strdup(cfg->ibv.ud_gid_prefix);
+  if (cfg->backend)
+    lcfg->backend = strdup(cfg->backend);
+
+  /* track the config with a global */
+  __photon_config = lcfg;
 
   /* we can override the default with the tech-specific backends,
      but we just use their RDMA methods for now */
-  if (cfg->backend != NULL) {
-    if (!strncasecmp(cfg->backend, "verbs", 10)) {
+  if (lcfg->backend != NULL) {
+    if (!strncasecmp(lcfg->backend, "verbs", 10)) {
 #ifdef HAVE_VERBS
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
@@ -66,7 +89,7 @@ int photon_init(photonConfig cfg) {
       goto error_exit;
 #endif
     }
-    else if (!strncasecmp(cfg->backend, "ugni", 10)) {
+    else if (!strncasecmp(lcfg->backend, "ugni", 10)) {
 #ifdef HAVE_UGNI
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
@@ -83,23 +106,24 @@ int photon_init(photonConfig cfg) {
   }
 
   /* set globals */
-  _photon_nproc = cfg->nproc;
-  _photon_nforw = cfg->use_forwarder;
-  _photon_myrank = (int)cfg->address;
+  _photon_myrank = (int)lcfg->address;
+  _photon_nproc = lcfg->nproc;
+  _photon_nforw = lcfg->forwarder.use_forwarder;
+  _LEDGER_SIZE = lcfg->cap.ledger_entries;
 
   /* figure out forwarder info */
-  if (cfg->use_forwarder) {
+  if (lcfg->forwarder.use_forwarder) {
     /* if init is called with a rank greater than or equal to nproc, then we are a forwarder
        TODO: fix this in the case of non-MPI */
-    if ((int)cfg->address >= cfg->nproc) {
-      _photon_fproc = (int)cfg->address;
+    if ((int)lcfg->address >= lcfg->nproc) {
+      _photon_fproc = (int)lcfg->address;
       _forwarder = 1;
     }
     /* otherwise we are a proc that wants to use a forwarder */
     else {
       /* do some magic to determing which forwarder to use for this rank
          right now every rank gets the first forwarder */
-      _photon_fproc = cfg->nproc;
+      _photon_fproc = lcfg->nproc;
       _forwarder = 0;
     }
 #ifdef HAVE_XSP
@@ -108,8 +132,6 @@ int photon_init(photonConfig cfg) {
     log_warn("Photon was built without forwarder support!");
 #endif
   }
-
-  __photon_config = cfg;
 
   /* check if the selected backend defines its own API methods and use those instead */
   __photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
@@ -150,20 +172,37 @@ int photon_init(photonConfig cfg) {
   }
 
   /* the configured backend init gets called from within the default library init */
-  return __photon_default->init(cfg, NULL, NULL);
+  return __photon_default->init(lcfg, NULL, NULL);
 
 error_exit:
-  log_err("photon_init(): %s support not present", cfg->backend);
+  log_err("photon_init(): %s support not present", lcfg->backend);
   return PHOTON_ERROR;
 }
 
 int photon_finalize() {
+  int rc;
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->finalize();
+  rc = __photon_default->finalize();
+  if (rc != PHOTON_OK) {
+    log_err("Error in backend finalize");
+    return rc;
+  }
+
+  if (__photon_config->ibv.eth_dev)
+    free(__photon_config->ibv.eth_dev);
+  if (__photon_config->ibv.ib_dev)
+    free(__photon_config->ibv.ib_dev);
+  if (__photon_config->ibv.ud_gid_prefix)
+    free(__photon_config->ibv.ud_gid_prefix);
+  if (__photon_config->backend)
+    free(__photon_config->backend);
+  free(__photon_config);
+
+  return PHOTON_OK;
 }
 
 int photon_register_buffer(void *buf, uint64_t size) {

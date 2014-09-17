@@ -69,7 +69,7 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_INFO) {
-    uint64_t lsize = sizeof(struct photon_ri_ledger_entry_t) * LEDGER_SIZE;
+    uint64_t lsize = sizeof(struct photon_ri_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
       processes[i].remote_rcv_info_ledger->remote.addr = PHOTON_LRI_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].remote_rcv_info_ledger->remote.priv.key0 = key_0[i];
@@ -82,7 +82,7 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
   
   if (flags & LEDGER_FIN) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * LEDGER_SIZE;
+    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
       processes[i].remote_fin_ledger->remote.addr = PHOTON_LF_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].remote_fin_ledger->remote.priv.key0 = key_0[i];
@@ -91,7 +91,7 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_PWC) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * LEDGER_SIZE;
+    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
       processes[i].remote_pwc_ledger->remote.addr = PHOTON_LP_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].remote_pwc_ledger->remote.priv.key0 = key_0[i];
@@ -100,7 +100,7 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_EAGER) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * LEDGER_SIZE;
+    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
       processes[i].remote_eager_ledger->remote.addr = PHOTON_LE_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].remote_eager_ledger->remote.priv.key0 = key_0[i];
@@ -109,7 +109,7 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_BUF) {
-    uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * LEDGER_SIZE;
+    uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
       processes[i].eager_buf->remote.addr = PHOTON_EB_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].eager_buf->remote.priv.key0 = key_0[i];
