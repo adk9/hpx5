@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <check.h>
+#include <mpi.h>
 #include "tests.h"
 #include "photon.h"
+
 #define PHOTON_SEND_SIZE 32
 #define PHOTON_TAG       13
 
