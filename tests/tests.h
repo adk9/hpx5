@@ -25,6 +25,7 @@ void add_photon_rdma_one_sided_put(TCase *);
 void add_photon_rdma_one_sided_get(TCase *);
 void add_photon_rdma_with_completion(TCase *);
 void add_photon_put_wc(TCase *);
-void add_photon_data_movement_bench(TCase *);
+void add_photon_os_get_bench(TCase *);
+void add_photon_os_put_bench(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/

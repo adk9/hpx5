@@ -152,7 +152,7 @@ START_TEST(test_photon_put_wc)
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-7s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)", "RTT (us)");
+    printf("%-7s%-9s%-7s%-11s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)");
 
   struct timespec time_s, time_e;
 

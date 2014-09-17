@@ -14,13 +14,13 @@
 #include "photon.h"
 #include <time.h>
 
-#define BENCHMARK "Photon OS GET Test"
+#define BENCHMARK "Photon OS PUT Test"
 #define MESSAGE_ALIGNMENT 64
 #define MAX_MSG_SIZE (1<<20)
 #define MYBUFSIZE (MAX_MSG_SIZE + MESSAGE_ALIGNMENT)
 #define PHOTON_TAG 13
-int myrank, size, rank;
 
+int myrank, size, rank;
 
 #define HEADER "# " BENCHMARK "\n"
 #define FIELD_WIDTH 20
@@ -29,7 +29,7 @@ int myrank, size, rank;
 //****************************************************************************
 // photon get test
 //****************************************************************************
-START_TEST (test_photon_test_get_bench) 
+START_TEST (test_photon_test_put_bench) 
 {
   int skip = 1000;
   int loop = 10000;
@@ -45,7 +45,7 @@ START_TEST (test_photon_test_get_bench)
   int i, k;
 
   int rank, size, prev, next;
-  fprintf(detailed_log, "Starting the photon get benchmark test\n");
+  fprintf(detailed_log, "Starting the photon put benchmark test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
@@ -73,10 +73,10 @@ START_TEST (test_photon_test_get_bench)
     fflush(stdout);
   }
 
-  // everyone posts their send buffer to their next rank
-  photon_post_send_buffer_rdma(next, s_buf, MYBUFSIZE, PHOTON_TAG, &sendReq);
-  // wait for the send buffer that was posted from the previous rank
-  photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+  // everyone posts their recv buffer to their next rank
+  photon_post_recv_buffer_rdma(next, r_buf, MYBUFSIZE, PHOTON_TAG, &recvReq);
+  // wait for the recv buffer that was posted from the previous rank
+  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
 
   for (k = 1; k <= MAX_MSG_SIZE; k = (k ? k * 2 : 1)) {
     // touch the data 
@@ -95,14 +95,14 @@ START_TEST (test_photon_test_get_bench)
     if (rank == 0) {
       for (i = 0; i < loop + skip; i++) {
          if (i == skip) t_start = TIME();
-         // get that posted send buffer
-         photon_post_os_get(recvReq, prev, r_buf, k, PHOTON_TAG, 0);
+         // put directly into that recv buffer
+         photon_post_os_put(sendReq, prev, s_buf, k, PHOTON_TAG, 0);
          while (1) {
            int flag, type;
            struct photon_status_t stat;
-           photon_test(recvReq, &flag, &type, &stat);
+           photon_test(sendReq, &flag, &type, &stat);
            if (flag > 0) {
-             //photon_send_FIN(recvReq, prev);
+             //photon_send_FIN(sendReq, prev);
              break;
            }
          }
@@ -128,6 +128,6 @@ START_TEST (test_photon_test_get_bench)
 }
 END_TEST
 
-void add_photon_os_get_bench(TCase *tc) {
-  tcase_add_test(tc, test_photon_test_get_bench);
+void add_photon_os_put_bench(TCase *tc) {
+  tcase_add_test(tc, test_photon_test_put_bench);
 }

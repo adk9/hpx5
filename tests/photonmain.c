@@ -8,6 +8,18 @@
 #include <check.h>
 #include "tests.h"
 
+int64_t getMicrosecondTimeStamp()
+{
+  int64_t retval;
+  struct timeval tv;
+  if (gettimeofday(&tv, NULL)) {
+    perror("gettimeofday");
+    abort();
+  }
+  retval = ((int64_t)tv.tv_sec) * 1000000 + tv.tv_usec;
+  return retval;
+}
+
 int main(int argc, char *argv[]) {
   Suite * s = suite_create("photontest");
   TCase * tc = tcase_create("photontest-core");
@@ -29,7 +41,8 @@ int main(int argc, char *argv[]) {
   add_photon_buffers_remote_test(tc);
   add_photon_buffers_private_test(tc);
   add_photon_rdma_one_sided_get(tc);
-  add_photon_data_movement_bench(tc);
+  add_photon_os_get_bench(tc);
+  add_photon_os_put_bench(tc);
 
   suite_add_tcase(s, tc);
 
