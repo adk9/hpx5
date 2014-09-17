@@ -43,6 +43,8 @@ int main(int argc, char *argv[]) {
   add_photon_rdma_one_sided_get(tc);
   add_photon_os_get_bench(tc);
   add_photon_os_put_bench(tc);
+  add_photon_send_buffer_bench(tc);
+  add_photon_recv_buffer_bench(tc);
 
   suite_add_tcase(s, tc);
 

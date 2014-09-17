@@ -9,7 +9,6 @@ photontest_SOURCES  = photonmain.c \
                       photon_data_movement.c \
                       photon_message_passing.c \
                       photon_pingpong.c \
-                      photon_communication.c \
                       photon_buffers_remote.c \
                       photon_buffers_private.c \
                       photon_rendezvous.c \
@@ -18,7 +17,9 @@ photontest_SOURCES  = photonmain.c \
                       photon_rdma_with_completion.c \
                       photon_test_put_wc.c \
                       photon_os_get_bench.c \
-                      photon_os_put_bench.c 
+                      photon_os_put_bench.c \
+                      photon_send_buffer_bench.c \
+                      photon_recv_buffer_bench.c 
 
 photontest_LDADD    = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
 photontest_CFLAGS   = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ -I$(top_srcdir)/include

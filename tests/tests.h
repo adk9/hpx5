@@ -17,7 +17,6 @@ void add_photon_test(TCase *);
 void add_photon_data_movement(TCase *);
 void add_photon_message_passing(TCase *);
 void add_photon_pingpong(TCase *);
-void add_photon_comm_test(TCase *);
 void add_photon_buffers_remote_test(TCase *);
 void add_photon_buffers_private_test(TCase *);
 void add_photon_send_request_test(TCase *);
@@ -27,5 +26,7 @@ void add_photon_rdma_with_completion(TCase *);
 void add_photon_put_wc(TCase *);
 void add_photon_os_get_bench(TCase *);
 void add_photon_os_put_bench(TCase *);
+void add_photon_send_buffer_bench(TCase *);
+void add_photon_recv_buffer_bench(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/

@@ -5,14 +5,15 @@ struct photon_config_t cfg = {
   .nproc = 0,
   .address = 0,
   .forwarder = {
-    .use_forwarder = 0
+    .use_forwarder = 0, 
   },
   .ibv = {
     .use_cma = 0,
-    .use_ud = 0,
+    .use_ud = 1,
     .eth_dev = "roce0",
     .ib_dev = "qib0",
     .ib_port = 1,
+    .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   },
   .ugni = {
     .bte_thresh = -1,
