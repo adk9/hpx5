@@ -8,7 +8,7 @@
 
 #include "photon_xsp_forwarder.h"
 
-#define INT_ASSIGN_MOVE(ptr, i) do {			\
+#define INT_ASSIGN_MOVE(ptr, i) do {                             \
 		*((int *)ptr) = i;						\
 		ptr += sizeof(int);						\
 } while(0)
@@ -126,8 +126,8 @@ static void _print_photon_io_info(void *io_info) {
 
 /* See photon_xsp.h for message format */
 void *photon_create_xsp_io_init_msg(PhotonIOInfo *io, int *size) {
-  void *msg;
-  void *msg_ptr;
+  char *msg;
+  char *msg_ptr;
   int totalsize = 0;
 
   totalsize += sizeof(int) + strlen(io->fileURI) + 1;
@@ -179,7 +179,7 @@ static int _photon_xsp_init(photonConfig cfg, ProcessInfo *photon_processes) {
   }
 
   /* otherwise we are a peer and we want to connect if possible */
-  if (!cfg->forwarder_eids) {
+  if (!cfg->forwarder.forwarder_eids) {
     dbg_err("Error: no photon forwarder(s) specified.");
     goto error_exit;
 
@@ -187,10 +187,10 @@ static int _photon_xsp_init(photonConfig cfg, ProcessInfo *photon_processes) {
 
   /* establish session with all forwards */
   for (i = _photon_nproc; i < (_photon_nproc + _photon_nforw); i++) {
-    dbg_info("Connecting to forwarder at %s", cfg->forwarder_eids[fnum]);
+    dbg_info("Connecting to forwarder at %s", cfg->forwarder.forwarder_eids[fnum]);
 
-    if (__photon_xsp_setup_session(&(photon_processes[i].sess), cfg->forwarder_eids[fnum]) != 0) {
-      dbg_err("Error: could not setup XSP session with %s", cfg->forwarder_eids[fnum]);
+    if (__photon_xsp_setup_session(&(photon_processes[i].sess), cfg->forwarder.forwarder_eids[fnum]) != 0) {
+      dbg_err("Error: could not setup XSP session with %s", cfg->forwarder.forwarder_eids[fnum]);
       goto error_exit;
     }
   }
@@ -612,7 +612,7 @@ int photon_xsp_do_io(libxspSess *sess) {
   FILE *file;
   void *buf[2];
   MPI_Aint dtextent;
-  uint32_t request;
+  photon_rid request;
   ProcessInfo *pi;
 
   if (photon_xsp_lookup_proc(sess, &pi, &ind) < 0) {
