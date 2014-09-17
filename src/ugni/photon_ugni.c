@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <limits.h>
 
 #include "photon_backend.h"
 #include "photon_buffer.h"
@@ -110,8 +111,8 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   else if (cfg->ugni.bte_thresh == 0)
     cfg->ugni.bte_thresh = INT_MAX;
 
-  if (cfg->eth_dev) {
-    ugni_ctx.gemini_dev = cfg->eth_dev;
+  if (cfg->ugni.eth_dev) {
+    ugni_ctx.gemini_dev = cfg->ugni.eth_dev;
   }
   else {
     ugni_ctx.gemini_dev = "ipogif0";
@@ -140,7 +141,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   // initialize the available descriptors
   descriptors = (photon_gni_descriptor*)calloc(_photon_nproc, sizeof(photon_gni_descriptor));
   for (i=0; i<_photon_nproc; i++) {
-    descriptors[i].entries = (gni_post_descriptor_t*)calloc(LEDGER_SIZE, sizeof(gni_post_descriptor_t));
+    descriptors[i].entries = (gni_post_descriptor_t*)calloc(_LEDGER_SIZE, sizeof(gni_post_descriptor_t));
   }
 
   __initialized = 1;
@@ -169,7 +170,7 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
 
   curr = descriptors[args->proc].curr;
   fma_desc = &(descriptors[args->proc].entries[curr]);
-  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % LEDGER_SIZE;
+  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % _LEDGER_SIZE;
 
   if (flags & RDMA_FLAG_NO_CQE) {
     fma_desc->cq_mode = GNI_CQMODE_SILENT;
@@ -209,7 +210,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   
   curr = descriptors[args->proc].curr;
   fma_desc = &(descriptors[args->proc].entries[curr]);
-  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % LEDGER_SIZE;
+  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % _LEDGER_SIZE;
 
   if (flags & RDMA_FLAG_NO_CQE) {
     fma_desc->cq_mode = GNI_CQMODE_SILENT;
@@ -275,7 +276,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
 
-  if (size < photon_config->ugni.bte_thresh)
+  if (size < __photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
   else
     return __ugni_do_rdma(&args, GNI_POST_RDMA_GET, flags);

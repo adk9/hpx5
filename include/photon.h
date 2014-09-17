@@ -29,6 +29,7 @@ struct photon_config_t {
   } ibv;
   
   struct {                  // OPTIONS for Cray UGNI backend (set -1 for defaults)
+    char *eth_dev;          // Device name for PE
     int bte_thresh;         // Messages >= bytes use BTE (default 8192, set 0 to disable BTE)
   } ugni;
 
