@@ -82,7 +82,7 @@ START_TEST (test_photon_recv_buffer_bench)
       for (i = 0; i < loop + skip; i++) {
          if (i == skip) t_start = TIME();
          // everyone posts their recv buffer to their next rank
-         photon_post_recv_buffer_rdma(prev, r_buf, MYBUFSIZE, PHOTON_TAG, &recvReq);
+         photon_post_recv_buffer_rdma(prev, r_buf, k, PHOTON_TAG, &recvReq);
       } // End of for loop
       t_end = TIME();
     } // End of if(rank == 0)
