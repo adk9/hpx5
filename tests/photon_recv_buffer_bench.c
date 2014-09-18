@@ -37,12 +37,13 @@ START_TEST (test_photon_recv_buffer_bench)
   int loop_large = 100;
   int large_message_size = 8192;
 
-  photon_rid recvReq;
+  photon_rid recvReq, req;
   char *r_buf_heap;
   char *r_buf;
   int align_size;
   int64_t t_start = 0, t_end = 0;
   int i, k;
+  int ret_proc;
 
   int rank, size, prev;
   fprintf(detailed_log, "Starting the photon recv buffer benchmark test\n");
@@ -83,6 +84,7 @@ START_TEST (test_photon_recv_buffer_bench)
          if (i == skip) t_start = TIME();
          // everyone posts their recv buffer to their next rank
          photon_post_recv_buffer_rdma(prev, r_buf, k, PHOTON_TAG, &recvReq);
+         photon_wait_any(&ret_proc, &req);
       } // End of for loop
       t_end = TIME();
     } // End of if(rank == 0)

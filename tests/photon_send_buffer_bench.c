@@ -37,12 +37,13 @@ START_TEST (test_photon_send_buffer_bench)
   int loop_large = 100;
   int large_message_size = 8192;
 
-  photon_rid sendReq;
+  photon_rid sendReq, req;
   char *s_buf_heap;
   char *s_buf;
   int align_size;
   int64_t t_start = 0, t_end = 0;
   int i, k;
+  int ret_proc;
 
   int rank, size, next;
   fprintf(detailed_log, "Starting the photon get benchmark test\n");
@@ -85,6 +86,7 @@ START_TEST (test_photon_send_buffer_bench)
         if (i == skip) t_start = TIME();
         // everyone posts their send buffer to their next rank
         photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
+        photon_wait_any(&ret_proc, &req);
       } // End of for loop
       t_end = TIME();
     } // End of if(rank == 0)

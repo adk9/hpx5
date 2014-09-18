@@ -2231,6 +2231,9 @@ error_exit:
   return PHOTON_ERROR;
 }
 
+// Polls EVQ waiting for an event.
+// Returns the request associated with the event, but only removes request
+// if it is an EVQUEUE event, not LEDGER.
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   int rc;
 
@@ -2247,7 +2250,7 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
 
   while(1) {
     photon_rid cookie;
-    int existed;
+    int existed = -1;
     photon_event_status event;
 
     rc = __photon_backend->get_event(&event);
@@ -2261,13 +2264,30 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
     
     cookie = event.id;
     if (cookie != (photon_rid)NULL_COOKIE) {
-      photonRequest req;
+      photonRequest req = NULL;
       void *test;
+      
+      if (htable_lookup(reqtable, cookie, (void**)&req) == 0) {
+        if (req->type == EVQUEUE) {
+          dbg_info("setting request completed with cookie: 0x%016lx", cookie);
+          req->state = REQUEST_COMPLETED;
+        }
+      }
+      else if (htable_lookup(pwc_reqtable, cookie, (void**)&req) == 0) {
+        if (req->type == EVQUEUE && (--req->num_entries) == 0) {
+          dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
+          req->state = REQUEST_COMPLETED;
+        }
+      }
 
-      dbg_info("removing event with cookie: 0x%016lx", cookie);
-      existed = htable_remove(reqtable, cookie, &test);
-      req = test;
-      SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+      if (req && req->type == EVQUEUE && req->state == REQUEST_COMPLETED) {
+        dbg_info("removing event with cookie: 0x%016lx", cookie);
+        existed = htable_remove(reqtable, cookie, &test);
+        SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+      }
+      else if (req) {
+        existed = 1;
+      }
     }
     else {
       existed = -1;

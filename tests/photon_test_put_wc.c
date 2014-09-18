@@ -17,7 +17,7 @@
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
 
-static int ITERS = 10;
+static int ITERS = 10000;
 
 static int sizes[] = {
   0,
@@ -110,7 +110,7 @@ START_TEST(test_photon_put_wc)
   fprintf(detailed_log, "Starting the photon put wc test\n");
   int i, j, k, ns;
   int rank, nproc, ret_proc;
-  int ASYNC_ITERS = ITERS;
+  int ASYNC_ITERS = PHOTON_LEDGER_SIZE;
 
   int rdata;
   int ur = open("/dev/urandom", O_RDONLY);
