@@ -16,8 +16,8 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include "contrib/uthash/src/uthash.h"
 #include "libsync/hashtables.h"
+#include "uthash.h"
 
 struct cuckoo_bucket {
   long key;

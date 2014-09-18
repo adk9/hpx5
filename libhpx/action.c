@@ -14,9 +14,8 @@
 #include "config.h"
 #endif
 
-#include "contrib/uthash/src/uthash.h"
 #include "libhpx/action.h"
-
+#include "uthash.h"
 
 typedef struct {
   void *f;
