@@ -25,6 +25,8 @@ int _photon_myrank;
 int _photon_nproc;
 int _photon_nforw;
 int _photon_fproc;
+int _photon_ebsize;
+int _photon_smsize;
 int _forwarder;
 
 #ifdef DEBUG
@@ -109,8 +111,18 @@ int photon_init(photonConfig cfg) {
   _photon_myrank = (int)lcfg->address;
   _photon_nproc = lcfg->nproc;
   _photon_nforw = lcfg->forwarder.use_forwarder;
+  _photon_ebsize = lcfg->cap.eager_buf_size;
+  _photon_smsize = lcfg->cap.small_msg_size;
   _LEDGER_SIZE = lcfg->cap.ledger_entries;
-
+  
+  /* update defaults */
+  if (_photon_ebsize < 0)
+    _photon_ebsize = DEF_EAGER_BUF_SIZE;
+  if (_photon_smsize < 0)
+    _photon_smsize = DEF_SMALL_MSG_SIZE;
+  if (_LEDGER_SIZE <= 0)
+    _LEDGER_SIZE = DEF_LEDGER_SIZE;
+  
   /* figure out forwarder info */
   if (lcfg->forwarder.use_forwarder) {
     /* if init is called with a rank greater than or equal to nproc, then we are a forwarder

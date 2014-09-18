@@ -4,7 +4,7 @@
 #define PHOTON_TPROC (_photon_nproc + _photon_nforw)
 #define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_ri_ledger_entry_t))
 #define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_ledger_entry_t))
-#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_eager_buf_entry_t))
+#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * _photon_ebsize)
 
 // The ledger buffer (shared_storage) is laid out as follows:
 // | local_rcv | remote_rcv | local_snd | remote_snd | local_fin | remote_fin |
@@ -20,7 +20,8 @@
 #define PHOTON_RP_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 3)
 #define PHOTON_LE_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 4)
 #define PHOTON_RE_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 5)
-#define PHOTON_EB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6)
+#define PHOTON_LEB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6)
+#define PHOTON_REB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6 + _photon_ebsize)
 
 int photon_exchange_ledgers(ProcessInfo *processes, int flags);
 
