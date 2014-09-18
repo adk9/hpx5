@@ -170,21 +170,21 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-extra_cppflags="$hpx_pe_env_cppflags"
-extra_cflags="$hpx_pe_env_cflags"
-extra_ccasflags="$hpx_pe_env_ccasflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags -I\$(top_srcdir)/contrib/uthash-fe01a6ad1b/src"
+hpx_extra_cflags="$hpx_pe_env_cflags"
+hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 AS_IF([test "x$enable_pedantic" != xno],
-  [extra_cflags="$hpx_pe_env_cflags_pedantic $extra_cflags"])
+  [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
 AS_IF([test "x$enable_wall" != xno],
-  [extra_cflags="$hpx_pe_env_cflags_wall $extra_cflags"])
+  [hpx_extra_cflags="$hpx_pe_env_cflags_wall $hpx_extra_cflags"])
   
 AS_IF([test "x$enable_werror" != xno],
-  [extra_cflags="$hpx_pe_env_cflags_werror $extra_cflags"])
+  [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
 
-CPPFLAGS="$extra_cppflags $CPPFLAGS"
-CFLAGS="$extra_cflags $CFLAGS"
-CCASFLAGS="$extra_ccasflags $CCASFLAGS"
+CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
+CFLAGS="$hpx_extra_cflags $CFLAGS"
+CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
@@ -251,8 +251,8 @@ echo "     Topology Awareness : $with_hwloc"
 echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "             Test Suite : $enable_tests"
-echo "         Extra CPPFLAGS : $extra_cppflags"
-echo "           Extra CFLAGS : $extra_cflags"
-echo "        Extra CCASFLAGS : $extra_ccasflags"
+echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
+echo "           Extra CFLAGS : $hpx_extra_cflags"
+echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
 echo "================================================"
 
