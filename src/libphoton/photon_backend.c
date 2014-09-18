@@ -1524,10 +1524,10 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 
       curr = photon_processes[proc].remote_eager_ledger->curr;
 
-      //eager_addr = (uintptr_t)photon_processes[proc].eager_buf->remote.addr + 
+      //eager_addr = (uintptr_t)photon_processes[proc].remote_eager_buf->remote.addr + 
       //(sizeof(struct photon_rdma_eager_buf_entry_t) * curr);
 
-      eb = photon_processes[proc].eager_buf;
+      eb = photon_processes[proc].remote_eager_buf;
       if ((eb->offset + size) > _photon_ebsize)
         NEXT_EAGER_BUF(eb, size);
 
@@ -1537,7 +1537,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       dbg_info("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
       
       rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
-				      &(photon_processes[proc].eager_buf->remote), eager_cookie, 0);
+				      &eb->remote, eager_cookie, 0);
 
       if (rc != PHOTON_OK) {
 	dbg_err("RDMA EAGER PUT failed for 0x%016lx\n", eager_cookie);
@@ -2032,7 +2032,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   }
 
   if (req->flags & REQUEST_FLAG_EAGER) {
-    photonEagerBuf eb = photon_processes[proc].eager_buf;
+    photonEagerBuf eb = photon_processes[proc].local_eager_buf;
     if ((eb->offset + size) > _photon_ebsize)
       NEXT_EAGER_BUF(eb, size);
     dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)eb->data[eb->offset]);

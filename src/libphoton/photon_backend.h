@@ -67,7 +67,8 @@ typedef struct proc_info_t {
   photonLedger    local_pwc_ledger;
   photonLedger    remote_pwc_ledger;
   
-  photonEagerBuf  eager_buf;
+  photonEagerBuf  local_eager_buf;
+  photonEagerBuf  remote_eager_buf;
   photonMsgBuf    smsgbuf;
 
 #ifdef HAVE_XSP
