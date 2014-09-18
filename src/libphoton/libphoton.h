@@ -18,6 +18,8 @@ extern int _photon_myrank;
 extern int _photon_nproc;
 extern int _photon_nforw;
 extern int _photon_fproc;
+extern int _photon_ebsize;
+extern int _photon_smsize;
 extern int _forwarder;
 
 #ifdef DEBUG

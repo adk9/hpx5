@@ -109,11 +109,13 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_BUF) {
-    uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
+    //uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
+    uint64_t lsize = _photon_ebsize;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].eager_buf->remote.addr = PHOTON_EB_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].eager_buf->remote.addr = PHOTON_LEB_PTR(va[i]) + lsize * _photon_myrank;
       processes[i].eager_buf->remote.priv.key0 = key_0[i];
       processes[i].eager_buf->remote.priv.key1 = key_1[i];
+      dbg_info("EB for %d: 0x%016lx", i, processes[i].eager_buf->remote.addr);
     }
   }
 
@@ -279,19 +281,20 @@ int photon_setup_eager_ledger(ProcessInfo *photon_processes, char *buf, int num_
   return PHOTON_OK;
 }
 
-int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int num_entries) {
+int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
   int i;
   int buf_size;
 
   dbg_info();
 
-  buf_size = sizeof(struct photon_rdma_eager_buf_entry_t) * num_entries;
+  //buf_size = sizeof(struct photon_rdma_eager_buf_entry_t) * num_entries;
+  buf_size = size;
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     
-    dbg_info("allocating eager buffer for %d", i);
+    dbg_info("allocating local eager buffer for %d", i);
     
-    photon_processes[i].eager_buf = photon_rdma_eager_buf_create_reuse((photonEagerBufEntry) (buf + buf_size * i), num_entries);
+    photon_processes[i].eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size);
     if (!photon_processes[i].eager_buf) {
       log_err("couldn't create eager buffer for process %d", i);
       return PHOTON_ERROR;

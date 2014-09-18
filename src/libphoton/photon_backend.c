@@ -16,6 +16,7 @@
 #include "squeue.h"
 
 #define NEXT_LEDGER_ENTRY(l) (l->curr = (l->curr + 1) % l->num_entries);
+#define NEXT_EAGER_BUF(e, s) (e->offset = (e->offset + s) % _photon_ebsize);
 
 photonBI shared_storage;
 
@@ -408,17 +409,9 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     LIST_INSERT_HEAD(&free_reqs_list, &(requests[i]), list);
   }
 
-  // set any defaults
-  if (_LEDGER_SIZE <= 0)
-    _LEDGER_SIZE = DEF_LEDGER_SIZE;
-  if (cfg->cap.eager_buf_size < 0)
-    cfg->cap.eager_buf_size = DEF_EAGER_BUF_SIZE;
-  if (cfg->cap.small_msg_size < 0)
-    cfg->cap.small_msg_size = DEF_SMALL_MSG_SIZE;
-
-  dbg_info("num ledgers: %d\n", _LEDGER_SIZE);
-  dbg_info("eager buf size: %d\n", cfg->cap.eager_buf_size);
-  dbg_info("small msg size: %d\n", cfg->cap.small_msg_size);
+  dbg_info("num ledgers: %d", _LEDGER_SIZE);
+  dbg_info("eager buf size: %d", _photon_ebsize);
+  dbg_info("small msg size: %d", _photon_smsize);
 
   dbg_info("create_buffertable()");
   fflush(stderr);
@@ -467,8 +460,12 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   fin_ledger_size  = 2 * PHOTON_NP_LEDG_SIZE;
   pwc_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
-  eager_bufsize = 2* PHOTON_NP_EBUF_SIZE;
+  eager_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
   bufsize = info_ledger_size + fin_ledger_size + pwc_ledger_size + eager_ledger_size + eager_bufsize;
+
+  if (!eager_bufsize) {
+    log_warn("EAGER buffers disabled!");
+  }
 
   rc = posix_memalign((void**)&buf, getpagesize(), bufsize);
   if (rc || !buf) {
@@ -497,7 +494,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     goto error_exit_buf;
   }
 
-  if (photon_setup_eager_buf(photon_processes, PHOTON_EB_PTR(buf), _LEDGER_SIZE) != 0) {
+  if (photon_setup_eager_buf(photon_processes, PHOTON_LEB_PTR(buf), _photon_ebsize) != 0) {
     log_err("couldn't setup eager buffers");
     goto error_exit_buf;
   }
@@ -532,7 +529,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     //else {
     //  p_offset = 0;
     //  p_hsize = 0;
-    //  p_size = p_offset + cfg->cap.small_msg_size;
+    //  p_size = p_offset + _photon_smsize;
     
     dbg_info("sr partition size: %lu", p_size);
     
@@ -1519,15 +1516,22 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   dbg_info("Incrementing curr_cookie_count to: 0x%016lx", request_id);
   
   {
-    if (size <= __photon_config->cap.small_msg_size) {
+    if (size <= _photon_smsize) {
       uintptr_t rmt_addr, eager_addr;
       uint64_t eager_cookie;
       photonLedgerEntry entry;
-      
+      photonEagerBuf eb;
+
       curr = photon_processes[proc].remote_eager_ledger->curr;
 
-      eager_addr = (uintptr_t)photon_processes[proc].eager_buf->remote.addr + 
-	(sizeof(struct photon_rdma_eager_buf_entry_t) * curr);
+      //eager_addr = (uintptr_t)photon_processes[proc].eager_buf->remote.addr + 
+      //(sizeof(struct photon_rdma_eager_buf_entry_t) * curr);
+
+      eb = photon_processes[proc].eager_buf;
+      if ((eb->offset + size) > _photon_ebsize)
+        NEXT_EAGER_BUF(eb, size);
+
+      eager_addr = (uintptr_t)eb->remote.addr + eb->offset;
       eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | request_id;
       
       dbg_info("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
@@ -1539,6 +1543,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 	dbg_err("RDMA EAGER PUT failed for 0x%016lx\n", eager_cookie);
 	goto error_exit;
       }
+      NEXT_EAGER_BUF(eb, size);
 
       rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
       rmt_addr += photon_processes[proc].remote_eager_ledger->curr * sizeof(*entry);
@@ -2027,8 +2032,12 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   }
 
   if (req->flags & REQUEST_FLAG_EAGER) {
-    dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&photon_processes[proc].eager_buf->entries[req->curr]);
-    memcpy(ptr, &photon_processes[proc].eager_buf->entries[req->curr], size);
+    photonEagerBuf eb = photon_processes[proc].eager_buf;
+    if ((eb->offset + size) > _photon_ebsize)
+      NEXT_EAGER_BUF(eb, size);
+    dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)eb->data[eb->offset]);
+    memcpy(ptr, &eb->data[eb->offset], size);
+    NEXT_EAGER_BUF(eb, size);
     req->state = REQUEST_COMPLETED;
     return PHOTON_OK;
   }
