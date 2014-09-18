@@ -80,15 +80,15 @@ Starting the photon put test
 1: put(0, 13) of size 16777216 completed successfully
 1: recv(0, 13) of size 16777216 completed successfully
 Starting the photon interleaved test
-1 send buf[0]: uakzenovcotemagtxigdpqbsyvamohikjsloiblkpeqbeywcgefxuiqugsjwbrikmtaw
-1 send buf[1]: wmgmqypxxmbfsifnqxjypsusmecazdwwreijezgdnjjgrqvkneiczfwnjypldnhurrex
-1 send buf[2]: qmbewmkncfzplktkrpzapontbunultscgvgchsrlxrcidvvumwwblkwoemlqfdunacrj
-1 send buf[3]: ujurcwbftyzhvviihhwmtjeamyooafxuqtnupqzkrarmycwfjuteexesxuhzcevsaipp
-1 send buf[4]: bocsrtgrxcwiwqmaptvnpcmrikmiubavrcnkxvbvxafusswhnrwcvlwgviopjqlcuans
-1 send buf[5]: wopvourgooqdhmgfxclumzkxsxzmxmevdvrtsicgysmigsngwyaizkfrjgejvkeyixta
-1 send buf[6]: iviipuqymdekdeufrzyageldpqbxpwzxuhilcyjqendjuxonznpfrbkitlhkjgkdqspu
-1 send buf[7]: qymwopgknwzmjotdrdnmqvxzdhftzuprucqiryugutsgknlbsyoktnkzuruvlkohmesd
-1 send buf[8]: cmmzgefsuqtmojxkwjjsafpnpgwbmohrbtqjzxbtnwidghpesazugojvwfxjugavzsgy
+1 send buf[0]: oshxroznmpjifieuovshapiveoeonejcyqbqgadsqncxxhrncjwfbhchvjxlngnoyqeg
+1 send buf[1]: rjajydgxkxkojjvmqatnjqyyznmzeqgxcggajmavjmmuvjgnjbbuuztvpfutyaqcjyeu
+1 send buf[2]: kesvreqmpyabadvueoptwlowogyxectojlmarcohcqietdyyuprqdiorooqvqjlbvxbm
+1 send buf[3]: bsveificjjafatxddlwszmnrwytrywfzodfxiqztzbybwvhaidujqjbojwhhsojhroea
+1 send buf[4]: eftfiujgrqgcvclllmbviicbxnkqcoqivmofixlzpubkwpykbzfmkjphxzzbpqjkezpm
+1 send buf[5]: wcnnwryvgwfjxkvhvkqulqvaihmmgbadgpqciqxomcakovtmikgtcewkliwrmywsnpww
+1 send buf[6]: fumuymgpkzbuljpnplxcwvuivsclhyhpuvltkrkwslsewhtovrqtokdkffvmfedcboxl
+1 send buf[7]: fhjaubeslxggqxbfhermlmbqsgstvpfcyqcssildgrlyomfyqwmbiptawmwrddvctywl
+1 send buf[8]: ghoozzppnundrcebryenmagrdctwaqkizyzaaoqniftzhzbbzfolhxdkzyibqsjqtiqt
 1: get(0, 13) of size 68 completed successfully
 1: get(0, 13) of size 68 completed successfully
 1: get(0, 13) of size 68 completed successfully
@@ -107,15 +107,15 @@ Starting the photon interleaved test
 1: post_send_buf(0, 13) of size 68 completed successfully
 1: post_send_buf(0, 13) of size 68 completed successfully
 1: post_send_buf(0, 13) of size 68 completed successfully
-1 recv buf[0]: zfhkqmeoqylxqquzqldbbbxddokyqdhrkobbchpugatwsoxjzamdbkggaqeqvljgbmhd
-1 recv buf[1]: tyzbaszsgwdiyqlzarhcilufydlbpugksfmsylnekqmigxkirrkbfegdjufyoljjrxdp
-1 recv buf[2]: iqvujidphnaygkzlripacwzqhkbajhrrznoixraggafmkgaboreqndjwpmxytqrtdfdc
-1 recv buf[3]: ydjedqtqytrnmvfzaqvrdupyljtqoxtpaetgwowujpjvnrunhshmmynxhgqydjngpiml
-1 recv buf[4]: zihixrgmiccrujejhtirzypfjenaoznnjvwimevwgxpdgvmpowgovxvgbihqhufspbad
-1 recv buf[5]: hvbourramfqbbyrywmfzworfkxxaazfixjyrarsoykpzkiaiwhisvbxfywhbwpltyjka
-1 recv buf[6]: ceoaqebdobllivdfxdnxbwaxllsluflylaycgafudsfooltnqikrflrsyjevoptarsex
-1 recv buf[7]: slsxfzltmfgeptwwgnpeytzpktpcnvzhitenvqhjxpomkmjsbyxztyodtfhgajpicuyz
-1 recv buf[8]: kfjhwxvjlebmealzbaduhmdkvsuamszyzifwhbfshigojsnmusgbflnagiauactakayu
+1 recv buf[0]: lxircyzcmzegkgdpwulfkmbffyecrmkclvvovwshvxqifvxbpiicumhbmoffcrhomech
+1 recv buf[1]: nbitbfxionolyubsydkccrltttablduaecthjspagdngaoyaslcwcnpwjqzwttxzxqgi
+1 recv buf[2]: curytjgzgdavnlzjxjmlzrrbiarvhtejqxjjirkounmjyluxwgivxbzgcqdjmjuejepr
+1 recv buf[3]: zozchwlwsalqbykvairfsbwgqwustedvtfxcbkavmlnplxmlidsahrgzncshjxecebgf
+1 recv buf[4]: vaisnudnhymegubeyamatrlfcflljaffcnzrhcgoasujpwnnybnrsaywfjirmnyocxij
+1 recv buf[5]: ngczrsoerapzfhboyhoomivvfzzkcfrrnwsgoikfkbhriigjqwzeeublvavzhpqulkab
+1 recv buf[6]: rvvjebbuavozdhuwbwrkzytfuyaryxbrsyayzcuczjbcsxzvvqfvqzcmzcdzzgqtfqtg
+1 recv buf[7]: smicnptxybiqxhwbbxnyxkxezpamzcntoyvbnrylshdqoztswgsvtsbshbhjfwctuawi
+1 recv buf[8]: uoivzlytjzoertbhuftvizujfkdkdyrzmbvnnvgyuwelsguolnkvoefurkguiztvbqkq
 Starting the photon pingpong test for photon
 Starting the photon pingpong test for mpi
 Starting the photon pingpong test for PWC
@@ -127,14 +127,14 @@ Starting RDMA one sided put direct test
 1: put(0, 0) of size 32 completed successfully
 1 received buffer: 012345678910111213141516171819202122232425262728293031
 Starting the photon vectored RDMA one sided put test
-1 send buf[0]: phuedejllzsfbrzhhkfepepjkrgjjoja
-1 send buf[1]: vfgbjpowqgbszcbhmglcmcnwtuhcireg
-1 send buf[2]: wkjizxesggmfinovwzzidmhwgoyrhezg
-1 send buf[3]: oioqhsinauvjjjghlfsotblcpltzssfg
-1 recv buf[0]: dfolnvzypoklhtmmeaokkphkrakdakze
-1 recv buf[1]: pqrdlsdcgonnjbbpdqcnhjyajkdlvfpm
-1 recv buf[2]: viricvkllzyuacjesltbutbfegrbling
-1 recv buf[3]: thqvcagpbhjcjuidibeevfkbldcznrhg
+1 send buf[0]: wiifqdgzdhaeorqxovhnvsomkzediwyg
+1 send buf[1]: fjlvmswrbxwsoopclzrgrhudgahoxfve
+1 send buf[2]: qibdcxwgusykipotqfcjmynvzujybgcs
+1 send buf[3]: pdxtctzxozjwryshfuruugptaatdhvxy
+1 recv buf[0]: ltofpssjamymcijqookhyrdhqzetpqjb
+1 recv buf[1]: jxizsbispigrqqihesqflumctsviihlu
+1 recv buf[2]: eutwxdrmmxeenonsgexuylyrftbpcnjh
+1 recv buf[3]: jefikwuwuacjosbxwarwnppukqknfvwq
 Starting the photon remote buffer test
 1 Sending buffer: 012345678910111213141516171819202122232425262728293031
 1 received buffer: 012345678910111213141516171819202122232425262728293031
@@ -145,16 +145,14 @@ post recv of size 32 completed successfully
 Received buffer: 012345678910111213141516171819202122232425262728293031
 Starting the photon get benchmark test
 Starting the photon put benchmark test
-nds = 94.21 Mbit/sec
-10000 iters in 0.05 seconds = 5.43 usec/iter
-Starting the photon pingpong test for mpi
-0: total time: 0.012577
-640000 bytes in 0.01 seconds = 407.09 Mbit/sec
-10000 iters in 0.01 seconds = 1.26 usec/iter
-Starting the photon pingpong test for PWC
-0: total time: 0.012629
-640000 bytes in 0.01 seconds = 405.42 Mbit/sec
-10000 iters in 0.01 seconds = 1.26 usec/iter
+Starting the photon send buffer latency benchmark test
+Starting the photon recv buffer benchmark test
+Starting the photon send buffer--both direction latency benchmark test
+Starting the photon recv buffer--both direction latency benchmark test
+pingpong test for PWC
+0: total time: 0.012741
+640000 bytes in 0.01 seconds = 401.85 Mbit/sec
+10000 iters in 0.01 seconds = 1.27 usec/iter
 Starting the RDMA rendezvous send reqest and wait request test
 0: put(1, 13) of size 32 completed successfully
 0: recv(1, 13) of size 32 completed successfully
@@ -163,14 +161,14 @@ Starting RDMA one sided put direct test
 0: put(1, 0) of size 32 completed successfully
 0 received buffer: 012345678910111213141516171819202122232425262728293031
 Starting the photon vectored RDMA one sided put test
-0 send buf[0]: dfolnvzypoklhtmmeaokkphkrakdakze
-0 send buf[1]: pqrdlsdcgonnjbbpdqcnhjyajkdlvfpm
-0 send buf[2]: viricvkllzyuacjesltbutbfegrbling
-0 send buf[3]: thqvcagpbhjcjuidibeevfkbldcznrhg
-0 recv buf[0]: phuedejllzsfbrzhhkfepepjkrgjjoja
-0 recv buf[1]: vfgbjpowqgbszcbhmglcmcnwtuhcireg
-0 recv buf[2]: wkjizxesggmfinovwzzidmhwgoyrhezg
-0 recv buf[3]: oioqhsinauvjjjghlfsotblcpltzssfg
+0 send buf[0]: ltofpssjamymcijqookhyrdhqzetpqjb
+0 send buf[1]: jxizsbispigrqqihesqflumctsviihlu
+0 send buf[2]: eutwxdrmmxeenonsgexuylyrftbpcnjh
+0 send buf[3]: jefikwuwuacjosbxwarwnppukqknfvwq
+0 recv buf[0]: wiifqdgzdhaeorqxovhnvsomkzediwyg
+0 recv buf[1]: fjlvmswrbxwsoopclzrgrhudgahoxfve
+0 recv buf[2]: qibdcxwgusykipotqfcjmynvzujybgcs
+0 recv buf[3]: pdxtctzxozjwryshfuruugptaatdhvxy
 Starting the photon remote buffer test
 0 Sending buffer: 012345678910111213141516171819202122232425262728293031
 0 received buffer: 012345678910111213141516171819202122232425262728293031
@@ -181,3 +179,7 @@ post recv of size 32 completed successfully
 Received buffer: 012345678910111213141516171819202122232425262728293031
 Starting the photon get benchmark test
 Starting the photon put benchmark test
+Starting the photon send buffer latency benchmark test
+Starting the photon recv buffer benchmark test
+Starting the photon send buffer--both direction latency benchmark test
+Starting the photon recv buffer--both direction latency benchmark test
