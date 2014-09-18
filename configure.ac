@@ -39,8 +39,9 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 
-# intialize hwloc
+# intialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1rc1], [hpx_])
+HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -170,7 +171,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags -I\$(top_srcdir)/contrib/uthash-fe01a6ad1b/src"
+hpx_extra_cppflags="$hpx_pe_env_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 AS_IF([test "x$enable_pedantic" != xno],
