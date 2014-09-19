@@ -44,6 +44,8 @@ typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
+typedef hpx_status_t (*lco_try_get_t)(lco_t *lco, int size, void *value, hpx_time_t time);
+typedef hpx_status_t (*lco_try_wait_t)(lco_t *lco, hpx_time_t time);
 
 
 struct lco_class {
@@ -52,6 +54,8 @@ struct lco_class {
   lco_set_t     on_set;
   lco_get_t     on_get;
   lco_wait_t   on_wait;
+  lco_try_get_t on_try_get;
+  lco_try_wait_t on_try_wait;
 };
 
 /// ----------------------------------------------------------------------------

@@ -60,6 +60,26 @@ _wait(_future_t *f) {
   return cvar_get_error(&f->full);
 }
 
+static hpx_status_t
+_try_wait(_future_t *f, hpx_time_t time) {
+  if (!lco_get_triggered(&f->lco)) {
+    bool timeout = false;
+    while (!lco_get_triggered(&f->lco) && !timeout) {
+    if (hpx_time_diff_us(hpx_time_now(), time) > 0) {
+      timeout = true;
+      break;
+    }
+    hpx_thread_yield();
+  }
+
+  if (!timeout)
+    return cvar_get_error(&f->full);
+  else
+    return HPX_LCO_TIMEOUT;
+  }
+
+  return cvar_get_error(&f->full);
+}
 
 static bool
 _trigger(_future_t *f) {
@@ -174,6 +194,15 @@ _future_wait(lco_t *lco)
   return status;
 }
 
+static hpx_status_t
+_future_try_wait(lco_t *lco, hpx_time_t time)
+{
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+  hpx_status_t status = _try_wait(f, time);
+  lco_unlock(&f->lco);
+  return status;
+}
 
 /// initialize the future
 static void
@@ -181,11 +210,13 @@ _future_init(_future_t *f, int size)
 {
   // the future vtable
   static const lco_class_t vtable = {
-    _future_fini,
-    _future_error,
-    _future_set,
-    _future_get,
-    _future_wait
+    .on_fini = _future_fini,
+    .on_error = _future_error,
+    .on_set = _future_set,
+    .on_get = _future_get,
+    .on_wait = _future_wait,
+    //    .on_try_get = _future_try_get,
+    .on_try_wait = _future_try_wait
   };
 
   bool inplace = (size <= sizeof(f->value));
@@ -341,119 +372,3 @@ hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
 }
 
 
-
-
-
-typdef struct _newfuture_t {
-  lco_t lco;
-  uint32_t bits;
-};
-
-static _newfuture_init(size_t size) {
-
-  static const lco_class_t vtable = {
-    .on_fini = _newfuture_fini,
-    .on_error = _newfuture_error,
-    .on_set = _newfuture_set,
-    .on_get = _newfuture_get,
-    .on_wait = _newfuture_wait
-  };
-
-  // it's still not clear to me much of the old lco features it makes sense to use
-  // with the new futures.
-
-  
-}
-
-
-hpx_addr_t hpx_lco_newfuture_new(size_t size) {
-  _newfuture_t *local = NULL;
-
-  hpx_addr_t f = locality_malloc(sizeof(_newfuture_t));
-  if (!hpx_gas_try_pin(f, (void**)&local)) {
-    dbg_error("newfuture: could not pin newly allocated future of size %d.\n", size);
-    hpx_abort();
-  }
-
-  _newfuture_init(local, size);
-
-  return f;
-}
-
-hpx_addr_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant) {
-  return HPX_NULL;
-}
-
-hpx_addr_t hpx_lco_newfuture_shared_new(size_t size) {
-  return HPX_NULL;
-}
-
-hpx_addr_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size) {
-  return HPX_NULL;
-}
-
-hpx_addr_t hpx_lco_newfuture_at(hpx_addr_t base, int id) {
-  return base;
-}
-
-hpx_status_t hpx_lco_newfuture_setat(hpx_addr_t future,  int id, size_t size, void *data,
-				     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
-  if (!hpx_addr_eq(lsync_lco, HPX_NULL))
-    hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
-  if (!hpx_addr_eq(rsync_lco, HPX_NULL))
-    hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-hpx_status_t hpx_lco_newfuture_emptyat(hpx_addr_t newfuture,  int id, hpx_addr_t rsync_lco) {
-  if (!hpx_addr_eq(rsync_lco, HPX_NULL))
-    hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-hpx_addr_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, void *value) {
-  return HPX_NULL;
-}
-
-void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t size,
-			       void *values) {
-  return;
-}
-
-void hpx_lco_newfuture_waitat(hpx_addr_t future, int id, hpx_set_t set) {
-  return;
-}
-
-hpx_status_t hpx_lco_newfuture_waitat_for(hpx_addr_t future, int id, hpx_set_t set, hpx_time_t for_time) {
-  return HPX_SUCCESS;
-}
-
-hpx_status_t hpx_lco_newfuture_waitat_until(hpx_addr_t future, int id, hpx_set_t set, hpx_time_t for_time) {
-  return HPX_SUCCESS;
-}
-
-void hpx_lco_newfuture_wait_all(size_t num, hpx_addr_t newfutures, hpx_set_t set) {
-  return;
-}
-
-hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_addr_t newfutures, 
-					    hpx_set_t set, hpx_time_t time) {
-  return HPX_SUCCESS;
-}
-
-hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t newfutures, 
-					      hpx_set_t set, hpx_time_t time) {
-  return HPX_SUCCESS;
-}
-
-void hpx_lco_newfuture_free(hpx_addr_t newfuture) {
-  return;
-}
-
-void hpx_lco_newfuture_free_all(hpx_addr_t newfutures) {
-  return;
-}
-
-bool hpx_lco_newfuture_is_shared() {
-  return true;
-}
