@@ -276,6 +276,26 @@ hpx_lco_wait(hpx_addr_t target)
   return status;
 }
 
+hpx_status_t
+hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time)
+{
+  lco_t *lco;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_addr_t done = hpx_lco_future_new(0);
+    // for optimization purposes we may want to send a time limit,
+    // in which case we would also need an lco_try_wait_action
+    // but for now, we will just have the remote side wait and we will
+    // bail early if necessary
+    hpx_status_t status = hpx_call(target, _lco_wait_action, NULL, 0, done);
+    if (status != HPX_SUCCESS)
+      return status;
+    return hpx_lco_try_wait(done, time);
+  }
+
+  hpx_status_t status = _lco_class(lco)->on_try_wait(lco, time);
+  hpx_gas_unpin(target);
+  return status;
+}
 
 /// If the LCO is local, then we use the local get functionality.
 hpx_status_t
