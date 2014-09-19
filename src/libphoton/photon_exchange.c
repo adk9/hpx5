@@ -301,9 +301,9 @@ int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
 
     dbg_info("allocating remote eager buffer for %d", i);
     
-    photon_processes[i].remote_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i + PHOTON_TPROC * buf_size), size);
+    photon_processes[i].remote_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size);
     if (!photon_processes[i].remote_eager_buf) {
-      log_err("couldn't create local eager buffer for process %d", i);
+      log_err("couldn't create remote eager buffer for process %d", i);
       return PHOTON_ERROR;
     }
   } 

@@ -21,7 +21,7 @@
 #define PHOTON_LE_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 4)
 #define PHOTON_RE_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 5)
 #define PHOTON_LEB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6)
-#define PHOTON_REB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6 + _photon_ebsize)
+#define PHOTON_REB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6 + PHOTON_NP_EBUF_SIZE)
 
 int photon_exchange_ledgers(ProcessInfo *processes, int flags);
 

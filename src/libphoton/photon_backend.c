@@ -17,6 +17,7 @@
 
 #define NEXT_LEDGER_ENTRY(l) (l->curr = (l->curr + 1) % l->num_entries);
 #define NEXT_EAGER_BUF(e, s) (e->offset = (e->offset + s) % _photon_ebsize);
+#define EB_MSG_SIZE(s) (sizeof(struct photon_eb_hdr_t) + s + sizeof(uint8_t))
 
 photonBI shared_storage;
 
@@ -2483,43 +2484,80 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
-  
-  if (size > 0) {
-    if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
-      log_err("Tried posting from a buffer that's not registered");
-      goto error_exit;
-    }
-    
-    rbuf.addr = (uintptr_t)rptr;
-    rbuf.size = size;
-    rbuf.priv = priv;
-    
-    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
-                                    &rbuf, request_id, p0_flags);
+
+  // see if we should pack into an eager buffer and send in one put
+  if ((size > 0) && (size <= _photon_smsize) && (size <= _photon_ebsize)) {
+    photonEagerBuf eb;
+    photon_eb_hdr *hdr;
+    uintptr_t eager_addr;
+
+    eb = photon_processes[proc].remote_eager_buf;
+    hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
+    hdr->request = remote;
+    hdr->addr = (uintptr_t)rptr;
+    hdr->length = size;
+    hdr->head = UINT8_MAX;
+    memcpy((void*)((uint8_t*)hdr + sizeof(*hdr)), ptr, size);
+    // set a tail flag
+    *((uint8_t*)hdr + sizeof(*hdr) + size) = UINT8_MAX;
+
+    eager_addr = (uintptr_t)eb->remote.addr + eb->offset;
+    rbuf.addr = eager_addr;
+    rbuf.size = EB_MSG_SIZE(size);
+    rbuf.priv = shared_storage->buf.priv;
+
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size),
+                                    &(shared_storage->buf), &eb->remote, request_id, p1_flags);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", request_id);
+      dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", request_id);
       goto error_exit;
     }
+    nentries = 1;
+    NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size));
+    if ((_photon_ebsize - eb->offset) < _photon_smsize)
+      eb->offset = 0;
+  }
+  // do the unpacked 2-put version instead
+  else { 
+    if (size > 0) {
+      if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+        log_err("Tried posting from a buffer that's not registered");
+        goto error_exit;
+      }
+      
+      rbuf.addr = (uintptr_t)rptr;
+      rbuf.size = size;
+      rbuf.priv = priv;
+      
+      rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
+                                      &rbuf, request_id, p0_flags);
+      if (rc != PHOTON_OK) {
+        dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", request_id);
+        goto error_exit;
+      }
+    }
+    
+    curr = photon_processes[proc].remote_pwc_ledger->curr;
+    entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
+    rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);
+    
+    entry->request = remote;
+    
+    dbg_info("putting into remote ledger addr: 0x%016lx", rmt_addr);
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+                                    &(photon_processes[proc].remote_pwc_ledger->remote), request_id, p1_flags);
+    
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx\n", request_id);
+      goto error_exit;
+    }
+
+    // if we didn't send any data, then we only wait on one event
+    nentries = (size > 0)?2:1;
+    NEXT_LEDGER_ENTRY(photon_processes[proc].remote_pwc_ledger);
   }
 
-  curr = photon_processes[proc].remote_pwc_ledger->curr;
-  entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
-  rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);
-  
-  entry->request = remote;
-
-  dbg_info("putting into remote ledger addr: 0x%016lx", rmt_addr);
-
-  rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                  &(photon_processes[proc].remote_pwc_ledger->remote), request_id, p1_flags);
-  
-  if (rc != PHOTON_OK) {
-    dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx\n", request_id);
-    goto error_exit;
-  }
-
-  // if we didn't send any data, then we only wait on one event
-  nentries = (size > 0)?2:1;
   // check if we only get event for one put
   if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
     nentries = 1;
@@ -2536,8 +2574,6 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   }
     
   dbg_info("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
-  
-  NEXT_LEDGER_ENTRY(photon_processes[proc].remote_pwc_ledger);
   
   return PHOTON_OK;
   
@@ -2595,7 +2631,9 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
   photonLedger ledger;
   photonLedgerEntry entry_iter;
   photonRequest req;
+  photonEagerBuf eb;
   photon_event_status event;
+  photon_eb_hdr *hdr;
   photon_rid cookie = UINT64_MAX;
   int i, rc, start, end;
 
@@ -2625,6 +2663,27 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
   // prioritize the EVQ
   if ((flags & PHOTON_PROBE_LEDGER) && (cookie == UINT64_MAX)) {
     for (i=start; i<end; i++) {
+      // check eager region first
+      eb = photon_processes[i].local_eager_buf;
+      hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
+      if (hdr->head == UINT8_MAX) {
+        // now check for tail flag (or we could return to check later)
+        volatile uint8_t *tail = ((uint8_t*)hdr + sizeof(*hdr) + hdr->length);
+        while (*tail != UINT8_MAX)
+          ;
+        memcpy((void*)hdr->addr, (void*)((uint8_t*)hdr + sizeof(*hdr)), hdr->length);
+        *request = hdr->request;
+        *flag = 1;
+        NEXT_EAGER_BUF(eb, EB_MSG_SIZE(hdr->length));
+        if ((_photon_ebsize - eb->offset) < _photon_smsize)
+          eb->offset = 0;
+        dbg_info("copied message of size %u into 0x%016lx for request 0x%016lx",
+                 hdr->length, hdr->addr, hdr->request);
+        memset((void*)hdr, 0, EB_MSG_SIZE(hdr->length));
+        return PHOTON_OK;
+      }
+
+      // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
       entry_iter = &(ledger->entries[ledger->curr]);
       if (entry_iter->request != (photon_rid) UINT64_MAX) {
