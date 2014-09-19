@@ -120,7 +120,7 @@ START_TEST (test_photon_test_get_bench)
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (rank == 0) {
-      double tmp = k / 1e6 * loop;
+      double tmp = k * loop;
       double latency = (1.0 * (t_end-t_start)) / loop;
       fprintf(stdout, "%-*d%*.*f%*.*f\n", 10, k, FIELD_WIDTH,
                     FLOAT_PRECISION, latency,
