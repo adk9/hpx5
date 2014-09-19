@@ -17,17 +17,61 @@
 
 
 #define BENCHMARK "Photon OS PUT Bandwidth Test"
-#define WINDOW_SIZE 32
+
+#define PHOTON_LEDGER_SIZE 64 // Default size
+
 #define MAX_ALIGNMENT 128 
 #define MAX_SIZE (1<<22)
-#define MYBUFSIZE (150000000)   /* ~= 100M Bytes */
-#define PHOTON_TAG 13
+#define MYBUFSIZE (4294967296)   /* ~= 4GB */
+#define PHOTON_TAG UINT32_MAX
 
 #define LOOP (30)
 
 #define HEADER "# " BENCHMARK "\n"
 #define FIELD_WIDTH 20
 #define FLOAT_PRECISION 2
+
+double difftv(struct timeval *start, struct timeval *end)
+{
+  double retval;
+  retval = end->tv_sec - start->tv_sec;
+
+  if (end->tv_usec >= start->tv_usec) {
+    retval += ((double)(end->tv_usec - start->tv_usec)) / 1e6;
+  } else {
+    retval -= 1.0;
+    retval += ((double)(end->tv_usec + 1e6) - start->tv_usec) / 1e6;
+  }
+  return retval;
+}
+
+char* print_bytes(uint64_t b, int bits) {
+  char ret[64];
+  char val = 'B';
+  int bb = 1;
+
+  if (bits) {
+    bb = 8;
+    val = 'b';
+  }
+
+  if (b > 1e9)
+    sprintf(ret, "%.2f G%c", (double)b/1e9*bb, val);
+  else if (b > 1e6)
+    sprintf(ret, "%.2f M%c", (double)b/1e6*bb, val);
+  else if (b > 1e3*100)
+    sprintf(ret, "%.2f K%c", (double)b/1e3*100*bb, val);
+  else
+    sprintf(ret, "%d %cytes", (int)b, val);
+  
+  return strdup(ret);
+}
+
+void print_bw(struct timeval *s, struct timeval *e, uint64_t b) {
+  uint64_t rate = (uint64_t)b/difftv(s, e);
+  printf("[0.0-%.1f sec]\t%14s\t%14s/s\tbytes: %"PRIu64"\n", difftv(s, e),
+               print_bytes(b, 0), print_bytes(rate, 1), b);
+}
 
 //****************************************************************************
 // photon os put bandwidth test
@@ -44,8 +88,10 @@ START_TEST (test_photon_os_put_bw_bench)
   char *s_buf_heap, *r_buf_heap;
   char *s_buf, *r_buf;
   int align_size;
-  double t = 0.0, t_start = 0.0, t_end = 0.0;
   int i, j, k;
+
+
+  struct timeval start_time, end_time;
 
   int rank, size, prev, next;
   fprintf(detailed_log, "Starting the photon os put bandwidth benchmark test\n");
@@ -78,13 +124,9 @@ START_TEST (test_photon_os_put_bw_bench)
   /**************Memory Allocation Done*********************/
 
   assert((s_buf != NULL) && (r_buf != NULL));
-  assert(MAX_SIZE * WINDOW_SIZE < MYBUFSIZE);
 
   if (rank == 0) {
     fprintf(stdout, "# %s \n", BENCHMARK );
-
-    fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH,
-                "Bandwidth (MB/s)");
     fflush(stdout);
   }
   // everyone posts their recv buffer to their next rank
@@ -107,32 +149,26 @@ START_TEST (test_photon_os_put_bw_bench)
     MPI_Barrier(MPI_COMM_WORLD);
 
     for (i = 0; i < loop + skip; i++) {
-      if (i == skip) t_start = TIME();
+      if (i == skip) gettimeofday(&start_time, NULL);
       // put directly into that recv buffer
-      for (j = 0; j < WINDOW_SIZE; j++) {
+      for (j = 0; j < PHOTON_LEDGER_SIZE; j++) {
         photon_post_os_put(sendReq, prev, s_buf, k, PHOTON_TAG, 0);
-        while (1) {
-          int flag, type;
-          struct photon_status_t stat;
-          photon_test(sendReq, &flag, &type, &stat);
-          if (flag > 0) {
-            break;
-          }
+      }
+      while (1) {
+        int flag, type;
+        struct photon_status_t stat;
+        photon_test(sendReq, &flag, &type, &stat);
+        if (flag > 0) {
+          break;
         }
       }
     } // End of for loop
-    t_end = TIME();
-    t = t_end - t_start;
+    gettimeofday(&end_time, NULL);
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    if (rank == 0) {
-      double tmp = k / 1e6 * loop * WINDOW_SIZE;
-
-      fprintf(stdout, "%-*d%*.*f\n", 10, k, FIELD_WIDTH,
-                    FLOAT_PRECISION, tmp / t);
-      fflush(stdout);
-    }
+    if(rank == 0) 
+      print_bw(&start_time, &end_time, k);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

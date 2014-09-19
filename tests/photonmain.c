@@ -6,6 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <check.h>
+#include <assert.h>
 #include "tests.h"
 
 int64_t getMicrosecondTimeStamp()
@@ -41,8 +42,8 @@ int main(int argc, char *argv[]) {
   //add_photon_buffers_remote_test(tc);
   //add_photon_buffers_private_test(tc);
   //add_photon_rdma_one_sided_get(tc);
-  //add_photon_os_get_bench(tc);
-  //add_photon_os_put_bench(tc);
+  add_photon_os_get_bench(tc);
+  add_photon_os_put_bench(tc);
   //add_photon_send_buffer_bench(tc);
   //add_photon_recv_buffer_bench(tc);
   //add_photon_send_buffer_bd_bench(tc);

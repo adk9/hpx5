@@ -12,13 +12,16 @@
 #include <check.h>
 #include "tests.h"
 #include "photon.h"
+#include <assert.h>
 #include <time.h>
 
 #define BENCHMARK "Photon OS PUT Test"
-#define MESSAGE_ALIGNMENT 64
-#define MAX_MSG_SIZE (1<<20)
-#define MYBUFSIZE (MAX_MSG_SIZE + MESSAGE_ALIGNMENT)
+#define MESSAGE_ALIGNMENT 128
+#define MAX_MSG_SIZE (1<<22)
+#define MYBUFSIZE (150000000)   /* ~= 100M Bytes */
 #define PHOTON_TAG 13
+
+#define LOOP (30)
 
 int myrank, size, rank;
 
@@ -27,7 +30,7 @@ int myrank, size, rank;
 #define FLOAT_PRECISION 2
 
 //****************************************************************************
-// photon get test
+// photon put test
 //****************************************************************************
 START_TEST (test_photon_test_put_bench) 
 {
@@ -41,7 +44,7 @@ START_TEST (test_photon_test_put_bench)
   char *s_buf_heap, *r_buf_heap;
   char *s_buf, *r_buf;
   int align_size;
-  int64_t t_start = 0, t_end = 0;
+  double t = 0.0, t_start = 0.0, t_end = 0.0;
   int i, k;
 
   int rank, size, prev, next;
@@ -53,11 +56,12 @@ START_TEST (test_photon_test_put_bench)
   next = (rank + 1) % size;
   prev = (size + rank - 1) % size;
 
+  loop = LOOP;
   align_size = MESSAGE_ALIGNMENT;
 
   /**************Allocating Memory*********************/
-  posix_memalign((void**) &s_buf_heap, 64, MYBUFSIZE*sizeof(char));
-  posix_memalign((void**) &r_buf_heap, 64, MYBUFSIZE*sizeof(char));
+  posix_memalign((void**) &s_buf_heap, 128, MYBUFSIZE*sizeof(char));
+  posix_memalign((void**) &r_buf_heap, 128, MYBUFSIZE*sizeof(char));
 
   photon_register_buffer(s_buf_heap, MYBUFSIZE);
   photon_register_buffer(r_buf_heap, MYBUFSIZE);
@@ -67,9 +71,13 @@ START_TEST (test_photon_test_put_bench)
   r_buf = (char *) (((unsigned long) r_buf_heap + (align_size - 1)) /
                       align_size * align_size);
   /**************Memory Allocation Done*********************/
+
+  assert((s_buf != NULL) && (r_buf != NULL));
+
   if (rank == 0) {
     fprintf(stdout, HEADER);
-    fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
+    fprintf(stdout, "%-*s%*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)",
+            FIELD_WIDTH, "Bandwidth (MB/s)");
     fflush(stdout);
   }
 
@@ -102,20 +110,22 @@ START_TEST (test_photon_test_put_bench)
            struct photon_status_t stat;
            photon_test(sendReq, &flag, &type, &stat);
            if (flag > 0) {
-             //photon_send_FIN(sendReq, prev);
              break;
            }
          }
       } // End of for loop
       t_end = TIME();
+      t = t_end - t_start;
     } // End of if(rank == 0)
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (rank == 0) {
+      double tmp = k / 1e6 * loop;
       double latency = (1.0 * (t_end-t_start)) / loop;
-      fprintf(stdout, "%-*d%*.*f\n", 10, k, FIELD_WIDTH,
-                    FLOAT_PRECISION, latency);
+      fprintf(stdout, "%-*d%*.*f%*.*f\n", 10, k, FIELD_WIDTH,
+                    FLOAT_PRECISION, latency,
+                    FIELD_WIDTH, FLOAT_PRECISION, tmp / t);
       fflush(stdout);
     }
   }
