@@ -2,26 +2,29 @@
 noinst_LTLIBRARIES	= libtransport.la
 
 # libtransport files and flags
-libtransport_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/libhpx/network/
-libtransport_la_CFLAGS   =
-libtransport_la_SOURCES  = smp.c transport.c
-libtransport_la_LIBADD   =
+libtransport_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(top_srcdir)/libhpx/network/
+libtransport_la_CFLAGS    =
+libtransport_la_SOURCES   = smp.c transport.c
+libtransport_la_LDFLAGS   =
+libtransport_la_LIBADD    =
 
 if HAVE_MPI
-libtransport_la_CFLAGS  += @MPI_CFLAGS@
-libtransport_la_SOURCES += mpi.c progress.c
-libtransport_la_LIBADD  += @MPI_LIBS@
+libtransport_la_CFLAGS   += @MPI_CFLAGS@
+libtransport_la_SOURCES  += mpi.c progress.c
+libtransport_la_LIBADD   += @MPI_LIBS@
 endif
 
 if HAVE_PHOTON
-libtransport_la_CFLAGS  += @PHOTON_CFLAGS@ @MPI_CFLAGS@
-libtransport_la_SOURCES += photon.c progress.c
-libtransport_la_LIBADD  += @PHOTON_LIBS@ @MPI_LIBS@
+libtransport_la_CPPFLAGS += $(HPX_JEMALLOC_CPPFLAGS)
+libtransport_la_CFLAGS   += @PHOTON_CFLAGS@ @MPI_CFLAGS@
+libtransport_la_SOURCES  += photon.c progress.c
+libtransport_la_LDFLAGS  += $(HPX_JEMALLOC_LDFLAGS)
+libtransport_la_LIBADD   += @PHOTON_LIBS@ @MPI_LIBS@ $(HPX_JEMALLOC_LIBS)
 endif
 
 if HAVE_PORTALS
-libtransport_la_CFLAGS  += @PORTALS_CFLAGS@
-libtransport_la_SOURCES += portals.c
-libtransport_la_LIBADD  += @PORTALS_LIBS@
+libtransport_la_CFLAGS   += @PORTALS_CFLAGS@
+libtransport_la_SOURCES  += portals.c
+libtransport_la_LIBADD   += @PORTALS_LIBS@
 endif
 
