@@ -122,6 +122,13 @@ typedef struct photon_ud_hdr_t {
   uint16_t nmsg;
 } photon_ud_hdr;
 
+typedef struct photon_eb_hdr_t {
+  photon_rid request;
+  uintptr_t addr;
+  uint16_t length;
+  volatile uint8_t head;
+} photon_eb_hdr;
+
 struct photon_backend_t {
   void *context;
   int (*initialized)(void);
