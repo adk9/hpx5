@@ -25,25 +25,7 @@ sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
 pingpong_chan_SOURCES   = pingpong-chan.c
 
-hello_LDADD             = $(top_builddir)/libhpx/libhpx.la
-fibonacci_LDADD       =  $(top_builddir)/libhpx/libhpx.la
-pingpong_LDADD        =  $(top_builddir)/libhpx/libhpx.la
-allgather_LDADD       =  $(top_builddir)/libhpx/libhpx.la
-allreduce_bench_LDADD =  $(top_builddir)/libhpx/libhpx.la
-alltoall_LDADD        =  $(top_builddir)/libhpx/libhpx.la
-allreduce_LDADD       =  $(top_builddir)/libhpx/libhpx.la
-countdown_LDADD       =  $(top_builddir)/libhpx/libhpx.la
-seqspawn_LDADD        =  $(top_builddir)/libhpx/libhpx.la
-parspawn_LDADD        =  $(top_builddir)/libhpx/libhpx.la
-future_LDADD          =  $(top_builddir)/libhpx/libhpx.la
-agas_test_LDADD       =  $(top_builddir)/libhpx/libhpx.la
-memput_LDADD          =  $(top_builddir)/libhpx/libhpx.la
-memget_LDADD          =  $(top_builddir)/libhpx/libhpx.la
-guppie_LDADD          =  $(top_builddir)/libhpx/libhpx.la
-sendrecv_LDADD        =  $(top_builddir)/libhpx/libhpx.la
-sendrecv_chan_LDADD   =  $(top_builddir)/libhpx/libhpx.la
-allreduce_chan_LDADD  =  $(top_builddir)/libhpx/libhpx.la
-pingpong_chan_LDADD   = $(top_builddir)/libhpx/libhpx.la
+all_LIBS = $(top_builddir)/libhpx/libhpx.la
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
@@ -53,10 +35,33 @@ AM_CFLAGS           += @PAPI_CFLAGS@
 endif
 
 if HAVE_PHOTON
+AM_CPPFLAGS         += $(HPX_JEMALLOC_CPPFLAGS)
 AM_CFLAGS           += @PHOTON_CFLAGS@
-AM_LDFLAGS          = -lphoton -ljemalloc
+AM_LDFLAGS           = $(HPX_JEMALLOC_LDFLAGS)
+all_LIBS            += -lphoton $(HPX_JEMALLOC_LIBS)
 endif
 
 if HAVE_MPI
 AM_CFLAGS           += @MPI_CFLAGS@
 endif
+
+hello_LDADD           = $(all_LIBS)
+fibonacci_LDADD       = $(all_LIBS)
+pingpong_LDADD        = $(all_LIBS)
+allgather_LDADD       = $(all_LIBS)
+allreduce_bench_LDADD = $(all_LIBS)
+alltoall_LDADD        = $(all_LIBS)
+allreduce_LDADD       = $(all_LIBS)
+countdown_LDADD       = $(all_LIBS)
+seqspawn_LDADD        = $(all_LIBS)
+parspawn_LDADD        = $(all_LIBS)
+future_LDADD          = $(all_LIBS)
+agas_test_LDADD       = $(all_LIBS)
+memput_LDADD          = $(all_LIBS)
+memget_LDADD          = $(all_LIBS)
+guppie_LDADD          = $(all_LIBS)
+sendrecv_LDADD        = $(all_LIBS)
+sendrecv_chan_LDADD   = $(all_LIBS)
+allreduce_chan_LDADD  = $(all_LIBS)
+pingpong_chan_LDADD   = $(all_LIBS)
+

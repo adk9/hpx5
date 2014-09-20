@@ -26,3 +26,10 @@ hpxtest_CFLAGS         += $(HPX_C99)
 
 # Turn off some warnings for the tests
 hpxtest_CFLAGS         += -Wno-unused
+
+if HAVE_PHOTON
+hpxtest_CPPFLAGS       += $(HPX_JEMALLOC_LDFLAGS)
+hpxtest_CFLAGS         += @PHOTON_CFLAGS@
+hpxtest_LDFLAGS         = $(HPX_JEMALLOC_LDFLAGS)
+hpxtest_LDADD          += -lphoton $(HPX_JEMALLOC_LIBS)
+endif
