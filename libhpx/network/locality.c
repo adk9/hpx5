@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -46,6 +47,7 @@ static int _alloc_blocks_action(uint32_t *args) {
   uint32_t base_id = args[0];
   uint32_t n = args[1];
   uint32_t size = args[2];
+  uint32_t zeroed = args[3];
 
 
   // Update the value of global_sbrk locally so that we can check if
@@ -63,6 +65,9 @@ static int _alloc_blocks_action(uint32_t *args) {
     hpx_addr_t addr = hpx_addr_init(0, block_id, size);
     char *block = malloc(size);
     assert(block);
+    if (zeroed)
+      memset(block, 0, size);
+
     btt_insert(here->btt, addr, block);
   }
 

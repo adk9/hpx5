@@ -66,6 +66,17 @@ void hpx_gas_unpin(const hpx_addr_t addr);
 hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bytes);
 
 
+/// Allocate distributed global zeroed-memory.
+///
+/// This call is similar to hpx_gas_global_alloc except that the
+/// global memory returned is set to 0.
+///
+/// @param         n the number of localities to allocated memory at
+/// @param     bytes the number of bytes to allocate at each locality
+/// @returns         the global address of the allocated memory
+hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bytes);
+
+
 /// Allocate a block of global memory.
 ///
 /// This is a non-collective call to allocate memory in the global

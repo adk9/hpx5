@@ -398,10 +398,43 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
   hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
 
   uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
-  uint32_t args[3] = {
+  uint32_t args[4] = {
     base_id,
     blocks_per_locality,
-    bytes
+    bytes,
+    0 // zeroed-memory?
+  };
+
+  // The global alloc is currently synchronous, because the btt mappings aren't
+  // complete until the allocation is complete.
+  hpx_addr_t and = hpx_lco_and_new(ranks);
+  for (int i = 0; i < ranks; ++i)
+    hpx_call(HPX_THERE(i), locality_alloc_blocks, &args, sizeof(args), and);
+
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+
+  // Return the base id to the caller.
+  return hpx_addr_init(0, base_id, bytes);
+}
+
+
+hpx_addr_t
+hpx_gas_global_calloc(size_t n, uint32_t bytes) {
+  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+
+  int ranks = here->ranks;
+
+  // Get a set of @p n contiguous block ids.
+  uint32_t base_id;
+  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
+
+  uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
+  uint32_t args[4] = {
+    base_id,
+    blocks_per_locality,
+    bytes,
+    1 // zeroed-memory?
   };
 
   // The global alloc is currently synchronous, because the btt mappings aren't
