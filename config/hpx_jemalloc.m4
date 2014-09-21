@@ -19,7 +19,7 @@
 #
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_JEMALLOC],
- [AC_MSG_NOTICE([cheking for jemalloc with support for custom chunk allocation])
+ [AC_MSG_NOTICE([checking for jemalloc with support for custom chunk allocation])
   
   # Make sure we're using C and checkpoint flags that we might overwrite.
   AC_LANG_PUSH(C)
@@ -131,7 +131,7 @@ HPX ERROR
 jemalloc could not be configured correctly. HPX depends on functionality present
 in the jemalloc development branch that can be downloaded from
 https://github.com/jemalloc/jemalloc. Please ensure that your version of
-jemalloc is up to date, and that it's paths are can be found in the standard
+jemalloc is up to date, and that its paths can be found in the standard
 search paths on your system. 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
