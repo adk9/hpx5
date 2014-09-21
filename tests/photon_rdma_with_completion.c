@@ -17,14 +17,15 @@
 //****************************************************************************
 START_TEST(test_rdma_with_completion) 
 {
-  int rank, size, i, next;
+  int rank, size, i, next, prev;
   int ret, flag, rc;
   int send_comp = 0;
   fprintf(detailed_log, "Starting RDMA with completion test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   MPI_Comm_size(MPI_COMM_WORLD,&size);
-  next = (rank+1) % size;
+  next = (rank + 1) % size;
+  prev = (size + rank - 1) % size;
 
   struct photon_buffer_t rbuf;
   photon_rid sendReq, recvReq, req, request;
@@ -49,13 +50,13 @@ START_TEST(test_rdma_with_completion)
   // Make sure we clear the local post event
   photon_wait_any(&ret, &request);
   // wait for a recv buffer that was posted
-  photon_wait_recv_buffer_rdma(next, PHOTON_TAG, &sendReq);
+  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
   // Get the remote buffer info so we can do our own put.
   photon_get_buffer_remote(sendReq, &rbuf);
 
 
   // Put
-  photon_put_with_completion(next, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
+  photon_put_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
                                rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
   while (send_comp) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
@@ -71,7 +72,7 @@ START_TEST(test_rdma_with_completion)
 
   // Get
   send_comp = 0;
-  photon_get_with_completion(next, send, PHOTON_SEND_SIZE, (void*)rbuf.addr, 
+  photon_get_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr, 
                              rbuf.priv, PHOTON_TAG, 0);
   while (send_comp) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
