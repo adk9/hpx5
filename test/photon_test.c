@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
           else {
             if( flag ) {
               fprintf(stderr,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
-	      photon_send_FIN(sendReq,next);
+	      photon_send_FIN(sendReq,next,0);
               break;
             }
             else {

@@ -31,16 +31,16 @@ int main(int argc, char *argv[]) {
   /* set timeout */
   tcase_set_timeout(tc, 1200);
 
-  add_photon_pingpong(tc); // photon pingpong test
   add_photon_put_wc(tc);
+  add_photon_pingpong(tc);              // photon pingpong test
   add_photon_rdma_with_completion(tc);
-  add_photon_test(tc);  /*photon_test.c*/ 
-  add_photon_data_movement(tc); // Photon get and put tests
-  add_photon_message_passing(tc); // photon  interleaved
+  add_photon_test(tc);                    //photon_test.c
+  add_photon_data_movement(tc);           // Photon get and put tests
+  add_photon_message_passing(tc);         // photon  interleaved
   add_photon_send_request_test(tc);
-  add_photon_rdma_one_sided_put(tc);
   add_photon_buffers_remote_test(tc);
   add_photon_buffers_private_test(tc);
+  add_photon_rdma_one_sided_put(tc);
   add_photon_rdma_one_sided_get(tc);
   add_photon_os_get_bench(tc);
   add_photon_os_put_bench(tc);
@@ -48,8 +48,6 @@ int main(int argc, char *argv[]) {
   add_photon_recv_buffer_bench(tc);
   add_photon_send_buffer_bd_bench(tc);
   add_photon_recv_buffer_bd_bench(tc);
-  add_photon_os_put_bw_bench(tc);
-  add_photon_os_get_bw_bench(tc);
   add_photon_put_wc_bw_bench(tc);
 
   suite_add_tcase(s, tc);

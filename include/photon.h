@@ -41,6 +41,7 @@ struct photon_config_t {
   struct {                  // Various buffer and message sizes (set -1 for defaults)
     int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128k, set 0 to disable)
     int small_msg_size;     // Messages <= bytes will use eager buffers (default 8192, set 0 to disable)
+    int small_pwc_size;     // Messages <= bytes will be coalesced in PWC (default 8192, set 0 to disable)
     int ledger_entries;     // The number of ledger entries (default 64)
   } cap;
 
@@ -114,6 +115,7 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_REQ_USERID      0x0001
 #define PHOTON_REQ_NO_CQE      0x0002
 #define PHOTON_REQ_ONE_CQE     0x0004
+#define PHOTON_REQ_COMPLETED   0x0008
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
@@ -144,7 +146,7 @@ int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
-int photon_send_FIN(photon_rid request, int proc);
+int photon_send_FIN(photon_rid request, int proc, int flags);
 
 // RDMA one-sided
 int photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);

@@ -374,13 +374,13 @@ int photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer r
   return __photon_default->post_os_get_direct(proc, ptr, size, rbuf, flags, request);
 }
 
-int photon_send_FIN(photon_rid request, int proc) {
+int photon_send_FIN(photon_rid request, int proc, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->send_FIN(request, proc);
+  return __photon_default->send_FIN(request, proc, flags);
 }
 
 int photon_wait_any(int *ret_proc, photon_rid *ret_req) {

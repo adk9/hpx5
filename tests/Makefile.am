@@ -22,8 +22,6 @@ photontest_SOURCES  = photonmain.c \
                       photon_recv_buffer_bench.c \
                       photon_send_buffer_bd_bench.c \
                       photon_recv_buffer_bd_bench.c \
-                      photon_os_put_bw.c \
-                      photon_os_get_bw.c \
                       photon_put_wc_bw.c 
 
 photontest_LDADD    = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt

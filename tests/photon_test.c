@@ -87,7 +87,7 @@ START_TEST (test_photon)
          else {
             if (flag > 0) {
               fprintf(detailed_log,"%d: send(%d, %d) completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag);
-              photon_send_FIN(sendReq,next);
+              photon_send_FIN(sendReq,next,0);
               break;
             }
           }

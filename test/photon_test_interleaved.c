@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    photon_send_FIN(recvReq[i], prev);
+    photon_send_FIN(recvReq[i], prev, 0);
   }
 
   /* check that all the buffers we posted were retrieved */

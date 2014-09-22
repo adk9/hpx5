@@ -83,7 +83,7 @@ START_TEST (test_photon_interleaved)
         }
       }
     }
-    photon_send_FIN(recvReq[i], prev);
+    photon_send_FIN(recvReq[i], prev, 0);
   }
  
   /* check that all the buffers we posted were retrieved */

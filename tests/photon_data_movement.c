@@ -57,7 +57,7 @@ START_TEST (test_photon_test_get)
 
   // get that posted send buffer
   photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  photon_send_FIN(recvReq, prev);
+  photon_send_FIN(recvReq, prev, 0);
 
   while(1) {
     int flag, type;
@@ -139,7 +139,7 @@ START_TEST (test_photon_test_put)
 
   // put directly into that recv buffer
   photon_post_os_put(sendReq, prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  photon_send_FIN(sendReq, prev);
+  photon_send_FIN(sendReq, prev, 0);
 
   while(1) {
     int flag, type;

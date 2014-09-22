@@ -33,9 +33,6 @@ START_TEST (test_photon_recv_buffer_bench)
 {
   int skip = 1000;
   int loop = 10000;
-  int skip_large = 10;
-  int loop_large = 100;
-  int large_message_size = 8192;
 
   photon_rid recvReq, sendReq, req;
   char *r_buf_heap;
@@ -73,24 +70,25 @@ START_TEST (test_photon_recv_buffer_bench)
       r_buf[i] = 'b';
     }
 
-    if (k > large_message_size) {
-      loop = loop_large = 100;
-      skip = skip_large = 0;
-    }
-
     MPI_Barrier(MPI_COMM_WORLD);
 
     for (i = 0; i < loop + skip; i++) {
       if (i == skip) t_start = TIME();
-      // Source post the buffer
-      // everyone posts their recv buffer to their next rank
-      photon_post_recv_buffer_rdma(next, r_buf, k, PHOTON_TAG, &recvReq);
-      // Source wait_any to reap the event associated with the local post
-      // buffer operation
-      photon_wait_any(&ret_proc, &req);
-      // Dest: Wait buffer
-      // wait for the recv buffer that was posted from the previous rank
-      photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+      if (rank == 0) {
+        // Source post the buffer
+        photon_post_recv_buffer_rdma(next, r_buf, k, PHOTON_TAG, &recvReq);
+        // Source wait_any to reap the event associated with the local post
+        // buffer operation
+        photon_wait_any(&ret_proc, &req);
+        photon_wait(recvReq);
+      }
+      else {
+        // Dest: Wait buffer
+        // wait for the recv buffer that was posted from the previous rank
+        photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+        photon_send_FIN(sendReq, prev, PHOTON_REQ_COMPLETED);
+        photon_wait_any(&ret_proc, &req);
+      }
     } // End of for loop
     t_end = TIME();
 

@@ -108,7 +108,7 @@ void *receiver(void *args __attribute__((unused))) {
           break;
         }
       }
-      photon_send_FIN(recv_req, other_rank);
+      photon_send_FIN(recv_req, other_rank, 0);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Request mpi_r;
@@ -270,7 +270,7 @@ START_TEST (test_photon_pingpong_for_pwc)
 
   fprintf(detailed_log, "Starting the photon pingpong test for PWC\n");
 
-  if (!strcasecmp(test, "PEC"))
+  if (!strcasecmp(test, "PWC"))
     pp_test = PWC_TEST;
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);

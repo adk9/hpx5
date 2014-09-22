@@ -35,9 +35,6 @@ START_TEST (test_photon_test_get_bench)
 {
   int skip = 1000;
   int loop = 10000;
-  int skip_large = 10;
-  int loop_large = 100;
-  int large_message_size = 8192;
 
   photon_rid recvReq, sendReq;
   char *s_buf_heap, *r_buf_heap;
@@ -80,42 +77,41 @@ START_TEST (test_photon_test_get_bench)
     fflush(stdout);
   }
 
-  // everyone posts their send buffer to their next rank
-  photon_post_send_buffer_rdma(next, s_buf, MYBUFSIZE, PHOTON_TAG, &sendReq);
-  // wait for the send buffer that was posted from the previous rank
-  photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
-
   for (k = 1; k <= MAX_MSG_SIZE; k = (k ? k * 2 : 1)) {
     // touch the data 
     for (i = 0; i < k; i++) {
       s_buf[i] = 'a';
       r_buf[i] = 'b';
     }
-
-    if (k > large_message_size) {
-      loop = loop_large = 100;
-      skip = skip_large = 0;
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (rank == 0) {
-      for (i = 0; i < loop + skip; i++) {
-        if (i == skip) t_start = TIME();
-         // get that posted send buffer
-         photon_post_os_get(recvReq, prev, r_buf, k, PHOTON_TAG, 0);
-         while (1) {
-           int flag, type;
-           struct photon_status_t stat;
-           photon_test(recvReq, &flag, &type, &stat);
-           if (flag > 0) {
-             break;
-           }
-         }
-       } // End of for loop
-       t_end = TIME();
-       t = t_end - t_start;
-    } // End of if(rank == 0)
+    
+    for (i = 0; i < loop + skip; i++) {
+      if (i == skip) t_start = TIME();
+      // everyone posts their send buffer to their next rank
+      photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
+      // wait for the send buffer that was posted from the previous rank
+      photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+      // get that posted send buffer
+      photon_post_os_get(recvReq, prev, r_buf, k, PHOTON_TAG, 0);
+      while (1) {
+        int flag, type;
+        struct photon_status_t stat;
+        photon_test(recvReq, &flag, &type, &stat);
+        if (flag > 0) {
+          photon_send_FIN(recvReq, prev, 0);
+          break;
+        }
+      }
+      while (1) {
+        int flag, type;
+        struct photon_status_t stat;
+        photon_test(sendReq, &flag, &type, &stat);
+        if (flag > 0) {
+          break;
+        }
+      }
+    } // End of for loop
+    t_end = TIME();
+    t = t_end - t_start;
 
     MPI_Barrier(MPI_COMM_WORLD);
 

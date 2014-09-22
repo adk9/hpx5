@@ -38,17 +38,16 @@ START_TEST(test_rdma_one_sided_put_direct)
     send[i] = i;
   }
 
-  photon_rid sendReq, recvReq;
+  photon_rid sendReq, recvReq, directReq;
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
   photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
   photon_get_buffer_remote(sendReq, &rbuf);
-  photon_post_os_put_direct(prev, send, PHOTON_SEND_SIZE, &rbuf, 0, &sendReq);
-  photon_send_FIN(sendReq, prev);
+  photon_post_os_put_direct(prev, send, PHOTON_SEND_SIZE, &rbuf, 0, &directReq);
 
   while(1) {
     int flag, type;
     struct photon_status_t stat;
-    int tst = photon_test(sendReq, &flag, &type, &stat);
+    int tst = photon_test(directReq, &flag, &type, &stat);
     if( tst < 0 ) {
       fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
       exit(-1);
@@ -60,10 +59,17 @@ START_TEST(test_rdma_one_sided_put_direct)
     else {
       if (flag > 0) {
         fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        photon_send_FIN(sendReq, prev, PHOTON_REQ_COMPLETED);
         break;
       }
     }
   }
+
+  // clear the FIN event to avoid it being reaped in later tests
+  int ret_proc;
+  photon_rid req;
+  photon_wait_any(&ret_proc, &req);
+  photon_wait(recvReq);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -122,7 +128,7 @@ START_TEST (test_rdma_one_sided_put_direct_array)
     photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq[i]);
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
     photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &sendReq[i]);
-    photon_send_FIN(sendReq[i], prev);
+    photon_send_FIN(sendReq[i], prev, 0);
   }
 
 

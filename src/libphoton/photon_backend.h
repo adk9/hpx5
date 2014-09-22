@@ -158,7 +158,7 @@ struct photon_backend_t {
   int (*post_os_get)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
   int (*post_os_put_direct)(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
   int (*post_os_get_direct)(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
-  int (*send_FIN)(photon_rid request, int proc);
+  int (*send_FIN)(photon_rid request, int proc, int flags);
   int (*wait_any)(int *ret_proc, photon_rid *ret_req);
   int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);

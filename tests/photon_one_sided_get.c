@@ -16,7 +16,7 @@
 //****************************************************************************
 START_TEST(test_rdma_one_sided_get_direct) 
 {
-  photon_rid recvReq,sendReq, request;
+  photon_rid recvReq,sendReq,directReq;
   char *send,*recv;
   int rank,size,prev,next;
 
@@ -41,34 +41,30 @@ START_TEST(test_rdma_one_sided_get_direct)
   // everyone posts their recv buffer to their next rank
   struct photon_buffer_t rbuf;
   photon_post_recv_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
-  
   // Wait for a recv buffer that was posted
   photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &recvReq);
   
   // Get the remote buffer info so that we can get
   photon_get_buffer_remote(recvReq, &rbuf);
-  photon_post_os_get_direct(prev, recv, PHOTON_SEND_SIZE, &rbuf, 0, &request);
- 
+  photon_post_os_get_direct(prev, recv, PHOTON_SEND_SIZE, &rbuf, 0, &directReq);
+  
   while (1) {
     int flag, type;
     struct photon_status_t stat;
-    photon_test(request, &flag, &type, &stat);
+    photon_test(directReq, &flag, &type, &stat);
     if (flag > 0) {
       fprintf(detailed_log, "direct get of size %d completed successfully\n", (int)stat.size);
-      photon_send_FIN(recvReq, prev); 
+      photon_send_FIN(recvReq, prev, 0); 
       break;
     }
   }
-  while (1) {
-    int flag, type;
-    struct photon_status_t stat;
-    photon_test(sendReq, &flag, &type, &stat);
-    if (flag > 0) {
-      fprintf(detailed_log, "post recv of size %d completed successfully\n", (int)stat.size);
-      break;
-    }
-  }
- 
+
+  // clear the FIN event to avoid it being reaped in later tests
+  int ret_proc;
+  photon_rid req;
+  photon_wait_any(&ret_proc, &req);
+  photon_wait(sendReq);
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   fprintf(detailed_log, "Received buffer: ");

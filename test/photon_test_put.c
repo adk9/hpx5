@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   // put directly into that recv buffer
   photon_post_os_put(sendReq, prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  photon_send_FIN(sendReq, prev);
+  photon_send_FIN(sendReq, prev, 0);
 
   while(1) {
     int flag, type;

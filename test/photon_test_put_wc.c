@@ -235,6 +235,7 @@ int main(int argc, char *argv[]) {
       }
       else if (rank == 0) {
         printf("N/A       ");
+        fflush(stdout);
       }
 
       assert(send_comp == 0 && recv_comp == 0);

@@ -33,9 +33,6 @@ START_TEST (test_photon_send_buffer_bench)
 {
   int skip = 1000;
   int loop = 10000;
-  int skip_large = 10;
-  int loop_large = 100;
-  int large_message_size = 8192;
 
   photon_rid sendReq, recvReq, req;
   char *s_buf_heap;
@@ -75,25 +72,29 @@ START_TEST (test_photon_send_buffer_bench)
         s_buf[i] = i;
     }
 
-    if (k > large_message_size) {
-      loop = loop_large = 100;
-      skip = skip_large = 0;
-    }
-
     MPI_Barrier(MPI_COMM_WORLD);
 
     for (i = 0; i < loop + skip; i++) {
       if (i == skip) t_start = TIME();
       // Source: post buffer
-      // everyone posts their send buffer to their next rank
-      photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
-      // the source can also do wait_any() to reap the event associated with the 
-      // local post buffer operation.
-      photon_wait_any(&ret_proc, &req);
+      if (rank == 0) {
+        photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
+        // the source can also do wait_any() to reap the event associated with the 
+        // local post buffer operation.
 
-      // Dest: wait buffer
-      // wait for the send buffer that was posted from the previous rank
-      photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+        // clear the EVQ event from the post_send
+        photon_wait_any(&ret_proc, &req);
+        // wait on the ledger event (FIN from other side)
+        photon_wait(sendReq);
+      }
+      else {
+        // Dest: wait buffer
+        // wait for the send buffer that was posted from the previous rank
+        photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+        photon_send_FIN(recvReq, prev, PHOTON_REQ_COMPLETED);
+        // clear the EVQ event resulting from the FIN
+        photon_wait_any(&ret_proc, &req);
+      }
     } // End of for loop
     t_end = TIME();
 

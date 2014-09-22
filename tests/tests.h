@@ -12,6 +12,7 @@ FILE *detailed_log;
 
 void photontest_core_setup(void);
 void photontest_core_teardown(void);
+void photontest_clear_evq(void);
 
 void add_photon_test(TCase *);
 void add_photon_data_movement(TCase *);

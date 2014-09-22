@@ -2,6 +2,7 @@
 #include <stdio.h>                              /* FILE, fopen, sprintf, ... */
 #include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
+#include <unistd.h>
 #include "photon.h"
 #include "test_cfg.h"
 #include "tests.h"
@@ -37,3 +38,11 @@ void photontest_core_teardown(void) {
   photon_finalize();
 }
 
+void photontest_clear_evq(void) {
+  photon_rid req;
+  int i, flag;
+  for (i=0; i<100; i++) {
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_EVQ);
+    usleep(100);
+  }
+}

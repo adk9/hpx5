@@ -71,7 +71,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
       }
     }
     //gettimeofday(&start, NULL);
-    //photon_send_FIN(send_req, dst);
+    //photon_send_FIN(send_req, dst, 0);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
     //  printf("%d: wait time: %f\n", rank, SUBTRACT_TV(end, start));
@@ -149,7 +149,7 @@ void *receiver(void *args) {
       //gettimeofday(&end, NULL);
       //if (rank == 0)
       //printf("%d: recv time: %f\n", rank, SUBTRACT_TV(end, start));
-      photon_send_FIN(recv_req, other_rank);
+      photon_send_FIN(recv_req, other_rank, 0);
     }
     else if (pp_test == MPI_TEST) {
       MPI_Request mpi_r;

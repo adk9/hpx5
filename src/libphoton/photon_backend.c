@@ -53,7 +53,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
 static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
 static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photonBuffer rbuf, int flags, photon_rid *request);
-static int _photon_send_FIN(photon_rid request, int proc);
+static int _photon_send_FIN(photon_rid request, int proc, int flags);
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req);
 static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req);
 static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus status);
@@ -716,7 +716,7 @@ static int __photon_nbpop_event(photonRequest req) {
   
   dbg_info("(0x%016lx)",req->id);
 
-  if(req->state == REQUEST_PENDING) {
+  if (req->state == REQUEST_PENDING) {
     photon_rid cookie;
     uint32_t prefix;
     photon_event_status event;
@@ -727,7 +727,7 @@ static int __photon_nbpop_event(photonRequest req) {
       goto error_exit;
     }
     else if (rc != PHOTON_OK) {
-      return 1;
+      return 2; // nothing in the EVQ
     }
     
     cookie = event.id;
@@ -966,7 +966,8 @@ static int __photon_nbpop_ledger(photonRequest req) {
   if(req->state == REQUEST_PENDING) {
     
     // clear any completed tasks from the event queue
-    __photon_nbpop_event(req);
+    while (__photon_nbpop_event(req) != 2)
+      ;
 
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
@@ -1026,6 +1027,10 @@ static int __photon_wait_ledger(photonRequest req) {
 #endif
   while (req->state == REQUEST_PENDING) {
 
+    // clear any completed tasks from the event queue
+    while (__photon_nbpop_event(req) != 2)
+      ;
+    
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
@@ -1456,7 +1461,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                     &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id, 0);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
+      dbg_err("RDMA PUT failed for 0x%016lx", request_id);
       goto error_exit;
     }
   }
@@ -1541,7 +1546,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 				      &eb->remote, eager_cookie, 0);
 
       if (rc != PHOTON_OK) {
-	dbg_err("RDMA EAGER PUT failed for 0x%016lx\n", eager_cookie);
+	dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
 	goto error_exit;
       }
       NEXT_EAGER_BUF(eb, size);
@@ -1558,7 +1563,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                       &(photon_processes[proc].remote_eager_ledger->remote), request_id, 0);
       if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
+        dbg_err("RDMA PUT failed for 0x%016lx", request_id);
         goto error_exit;
       }
       eager = true;
@@ -1597,7 +1602,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                       &(photon_processes[proc].remote_snd_info_ledger->remote), request_id, 0);
       if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
+        dbg_err("RDMA PUT failed for 0x%016lx", request_id);
         goto error_exit;
       }
 
@@ -1681,7 +1686,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                     &(photon_processes[proc].remote_rcv_info_ledger->remote), request_id, 0);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT failed for 0x%016lx\n", request_id);
+      dbg_err("RDMA PUT failed for 0x%016lx", request_id);
       goto error_exit;
     }
   }
@@ -1979,7 +1984,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
                                     size, &(db->buf), &(drb->buf), request, 0);
 
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT failed for 0x%016lx\n", request);
+      dbg_err("RDMA PUT failed for 0x%016lx", request);
       goto error_exit;
     }
   }
@@ -2038,6 +2043,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
       NEXT_EAGER_BUF(eb, size);
     dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)eb->data[eb->offset]);
     memcpy(ptr, &eb->data[eb->offset], size);
+    memset(&eb->data[eb->offset], 0, size);
     NEXT_EAGER_BUF(eb, size);
     req->state = REQUEST_COMPLETED;
     return PHOTON_OK;
@@ -2169,7 +2175,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_send_FIN(photon_rid request, int proc) {
+static int _photon_send_FIN(photon_rid request, int proc, int flags) {
   photonRequest req;
   photonLedgerEntry entry;
   int curr, rc;
@@ -2209,22 +2215,23 @@ static int _photon_send_FIN(photon_rid request, int proc) {
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                     &(photon_processes[proc].remote_fin_ledger->remote), (photon_rid)NULL_COOKIE, 0);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT failed for 0x%016lx\n", (photon_rid)NULL_COOKIE);
+      dbg_err("RDMA PUT failed for 0x%016lx", (photon_rid)NULL_COOKIE);
       goto error_exit;
     }
   }
 
   NEXT_LEDGER_ENTRY(photon_processes[proc].remote_fin_ledger);
 
-  if (req->state == REQUEST_COMPLETED) {
+  if (req->state == REQUEST_COMPLETED || flags & PHOTON_REQ_COMPLETED) {
     dbg_info("Removing request 0x%016lx for remote buffer request 0x%016lx", request, req->remote_buffer.request);
     htable_remove(reqtable, req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
     dbg_info("%d requests left in reqtable", htable_count(reqtable));
-  }    
-
-  req->flags = REQUEST_FLAG_FIN;
-  req->remote_buffer.request = NULL_COOKIE;
+  }
+  else {
+    req->flags = REQUEST_FLAG_FIN;
+    req->remote_buffer.request = NULL_COOKIE;
+  }
 
   return PHOTON_OK;
 
@@ -2235,17 +2242,13 @@ error_exit:
 // Polls EVQ waiting for an event.
 // Returns the request associated with the event, but only removes request
 // if it is an EVQUEUE event, not LEDGER.
+// Can also return if an event not associated with a pending request was popped.
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   int rc;
 
   dbg_info("remaining: %d", htable_count(reqtable));
 
   if (ret_req == NULL) {
-    goto error_exit;
-  }
-
-  if (htable_count(reqtable) == 0) {
-    log_err("No events on queue to wait on");
     goto error_exit;
   }
 
@@ -2262,7 +2265,7 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
     else if (rc != PHOTON_OK) {
       continue;
     }
-    
+
     cookie = event.id;
     if (cookie != (photon_rid)NULL_COOKIE) {
       photonRequest req = NULL;
@@ -2290,12 +2293,11 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
         existed = 1;
       }
     }
-    else {
-      existed = -1;
-    }
 
     if (existed == -1) {
-      continue;
+      *ret_req = UINT64_MAX;
+      *ret_proc = (uint32_t)(event.id>>32);
+      return PHOTON_OK;
     }
     else {
       *ret_req = cookie;
@@ -2486,7 +2488,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
 
   // see if we should pack into an eager buffer and send in one put
-  if ((size > 0) && (size <= _photon_smsize) && (size <= _photon_ebsize)) {
+  if ((size > 0) && (size <= __photon_config->cap.small_pwc_size) && (size <= _photon_ebsize)) {
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uintptr_t eager_addr;
@@ -2514,7 +2516,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     }
     nentries = 1;
     NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size));
-    if ((_photon_ebsize - eb->offset) < _photon_smsize)
+    if ((_photon_ebsize - eb->offset) < __photon_config->cap.small_pwc_size)
       eb->offset = 0;
   }
   // do the unpacked 2-put version instead
@@ -2549,7 +2551,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
                                     &(photon_processes[proc].remote_pwc_ledger->remote), request_id, p1_flags);
     
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx\n", request_id);
+      dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", request_id);
       goto error_exit;
     }
 
@@ -2675,7 +2677,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
         *request = hdr->request;
         *flag = 1;
         NEXT_EAGER_BUF(eb, EB_MSG_SIZE(hdr->length));
-        if ((_photon_ebsize - eb->offset) < _photon_smsize)
+        if ((_photon_ebsize - eb->offset) < __photon_config->cap.small_pwc_size)
           eb->offset = 0;
         dbg_info("copied message of size %u into 0x%016lx for request 0x%016lx",
                  hdr->length, hdr->addr, hdr->request);
@@ -2700,7 +2702,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
   // we found something to process
   if (cookie != UINT64_MAX) {
     if (htable_lookup(pwc_reqtable, cookie, (void**)&req)) {
-      log_err("got CQ event for something PWC never tracked!");
+      dbg_info("got CQ event for something PWC never tracked!");
       goto error_exit;
     }
 
