@@ -54,7 +54,6 @@ START_TEST(test_rdma_with_completion)
   // Get the remote buffer info so we can do our own put.
   photon_get_buffer_remote(sendReq, &rbuf);
 
-
   // Put
   photon_put_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
                                rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);

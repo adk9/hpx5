@@ -32,8 +32,8 @@ int main(int argc, char *argv[]) {
   tcase_set_timeout(tc, 1200);
 
   add_photon_pingpong(tc);                // photon pingpong test (first because it cares about PWC payload)
+  add_photon_rdma_with_completion(tc);    // this one too
   add_photon_put_wc(tc);
-  add_photon_rdma_with_completion(tc);
   add_photon_test(tc);                    //photon_test.c
   add_photon_data_movement(tc);           // Photon get and put tests
   add_photon_message_passing(tc);         // photon  interleaved

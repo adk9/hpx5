@@ -47,7 +47,7 @@ START_TEST(test_rdma_one_sided_put_direct)
 
   int flag;
   photon_rid req = 0;
-  int send_comp = 0; 
+  int send_comp = 1; 
   while (send_comp) {
     int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
@@ -109,7 +109,7 @@ START_TEST (test_rdma_one_sided_get_direct)
 
   int flag;
   photon_rid req = 0;
-  int send_comp = 0;
+  int send_comp = 1;
   while (send_comp) {
     int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
