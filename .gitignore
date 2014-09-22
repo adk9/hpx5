@@ -5,6 +5,7 @@
 *.dirstamp
 *.la
 *~
+*.swp
 *Makefile.in
 
 # /
