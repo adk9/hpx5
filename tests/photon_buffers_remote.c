@@ -76,6 +76,8 @@ START_TEST (test_photon_get_remote_buffers)
   }
   fprintf(detailed_log, "\n");
 
+  ck_assert_msg(*send == *recv, "Remote buffer test failed");
+
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);
   free(send);
