@@ -24,6 +24,7 @@
 #include <jemalloc/jemalloc.h>
 #include <sys/mman.h>
 #include <photon.h>
+#include <mpi.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -151,7 +152,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
 
   // If we are doing HW GAS, then we need to be in photon UD mode with special
   // mcast addressing.  This mode currently doesn't allow custom request IDs.
-  if (photon->cfg.use_ud) {
+  if (photon->cfg.ibv.use_ud) {
     uint64_t saddr = block_id_ipv4mc(dest);
     photon_addr daddr = {.blkaddr.blk3 = saddr};
     int e = photon_send(&daddr, b, n, 0, r);
@@ -203,7 +204,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
 
   // Behavior of HW GAS and UD mode is undefined for a "get", this will most
   // likely need to be a signal to the target to "put" the data, and then wait.
-  if (photon->cfg.use_ud) {
+  if (photon->cfg.ibv.use_ud) {
     photon_rid *id = (photon_rid*)r;
     int e = photon_recv(*id, buffer, n, 0);
     if (e != PHOTON_OK) {
@@ -472,13 +473,13 @@ transport_class_t *transport_new_photon(void) {
   cfg->nproc           = here->ranks;
   cfg->address         = here->rank;
   cfg->comm            = MPI_COMM_WORLD;
-  cfg->use_forwarder   = 0;
-  cfg->use_cma         = use_cma;
-  cfg->use_ud          = 0;
-  cfg->ud_gid_prefix   = "ff0e::ffff:0000:0000";
-  cfg->eth_dev         = eth_dev;
-  cfg->ib_dev          = ib_dev;
-  cfg->ib_port         = ib_port;
+  cfg->forwarder.use_forwarder   = 0;
+  cfg->ibv.use_cma         = use_cma;
+  cfg->ibv.use_ud          = 1;
+  cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
+  cfg->ibv.eth_dev         = eth_dev;
+  cfg->ibv.ib_dev          = ib_dev;
+  cfg->ibv.ib_port         = ib_port;
   cfg->backend         = backend;
 
   val = photon_initialized();
