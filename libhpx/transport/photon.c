@@ -330,7 +330,7 @@ _test(transport_class_t *t, void *request, int *success)
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
-    e = photon_send_FIN(*id, status.src_addr.global.proc_id);
+    e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
     if (e != PHOTON_OK) {
       return dbg_error("photon: could not send FIN back to %lu.\n",
                        status.src_addr.global.proc_id);
