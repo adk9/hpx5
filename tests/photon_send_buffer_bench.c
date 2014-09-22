@@ -35,9 +35,7 @@ START_TEST (test_photon_send_buffer_bench)
   int loop = 10000;
 
   photon_rid sendReq, recvReq, req;
-  char *s_buf_heap;
   char *s_buf;
-  int align_size;
   int64_t t_start = 0, t_end = 0;
   int i, k;
   int ret_proc;
@@ -50,13 +48,9 @@ START_TEST (test_photon_send_buffer_bench)
 
   next = (rank + 1) % size;
   prev = (size+rank-1) % size;
-
-  align_size = MESSAGE_ALIGNMENT;
  
   /**************Allocating Memory*********************/
-  s_buf_heap = (char*)malloc(MAX_MSG_SIZE*sizeof(char));
-  s_buf = (char *) (((unsigned long) s_buf_heap + (align_size - 1)) /
-                      align_size * align_size);
+  s_buf = (char*)malloc(MAX_MSG_SIZE*sizeof(char));
   photon_register_buffer(s_buf, MAX_MSG_SIZE);
   /**************Memory Allocation Done*********************/
   if (rank == 0) {
@@ -107,8 +101,8 @@ START_TEST (test_photon_send_buffer_bench)
     }
   }
   MPI_Barrier(MPI_COMM_WORLD);
-  photon_unregister_buffer(s_buf_heap, MYBUFSIZE);
-  free(s_buf_heap);
+  photon_unregister_buffer(s_buf, MYBUFSIZE);
+  free(s_buf);
 }
 END_TEST
 
