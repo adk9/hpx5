@@ -11,7 +11,7 @@ struct photon_config_t cfg = {
     .use_cma = 0,
     .use_ud = 1,
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_0",
+    .ib_dev = "qib0",
     .ib_port = 1,
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   },
@@ -20,7 +20,7 @@ struct photon_config_t cfg = {
   },
   .cap = {
     .small_msg_size = -1,
-    .small_pwc_size =  128,
+    .small_pwc_size =  0,
     .eager_buf_size = -1,
     .ledger_entries = -1
   },
