@@ -93,6 +93,8 @@ START_TEST(test_rdma_with_completion)
   }
   fprintf(detailed_log, "\n");
 
+  ck_assert_msg(strcmp(send, recv) == 0, "Photon rdma with completion test failed");
+
   photon_unregister_buffer(send, PHOTON_SEND_SIZE);
   photon_unregister_buffer(recv, PHOTON_SEND_SIZE);
   free(send);
