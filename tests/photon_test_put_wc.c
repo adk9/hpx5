@@ -13,9 +13,9 @@
 #include "photon.h"
 #include <assert.h>
 
-#define PHOTON_LEDGER_SIZE 60     // we can make this larger if needed
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
+#define SQ_SIZE 30
 
 static int ITERS = 10000;
 
@@ -110,7 +110,7 @@ START_TEST(test_photon_put_wc)
   fprintf(detailed_log, "Starting the photon put wc test\n");
   int i, j, k, ns;
   int rank, nproc, ret_proc;
-  int ASYNC_ITERS = PHOTON_LEDGER_SIZE;
+  int ASYNC_ITERS = SQ_SIZE;
 
   int rdata;
   int ur = open("/dev/urandom", O_RDONLY);
@@ -180,11 +180,8 @@ START_TEST(test_photon_put_wc)
           wait_local(NULL);
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        send_done(nproc, rank);
         wait_local(NULL);
       }
-      else
-        wait_done();
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -230,19 +227,16 @@ START_TEST(test_photon_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ASYNC_ITERS; k++) {
-          if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0)) {
+          if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE)) {
             fprintf(stderr, "error: exceeded max outstanding work events (k=%d)\n", k);
             exit(1);
           }
           sendComp++;
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        send_done(nproc, rank);
         wait_local(NULL);
       }
-      else
-        wait_done();
-
+      
       MPI_Barrier(MPI_COMM_WORLD);
 
       if (rank == 0) {
@@ -256,6 +250,7 @@ START_TEST(test_photon_put_wc)
       assert(sendComp == 0 && recvComp == 0);
     }
   }
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   photon_unregister_buffer(send, PHOTON_BUF_SIZE);

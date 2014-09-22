@@ -28,7 +28,7 @@
 #define FIELD_WIDTH 20
 #define FLOAT_PRECISION 2
 
-#define SQ_SIZE 32
+#define SQ_SIZE 16
 
 //****************************************************************************
 // photon put with completion test

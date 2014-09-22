@@ -2516,7 +2516,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     }
     nentries = 1;
     NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size));
-    if ((_photon_ebsize - eb->offset) < __photon_config->cap.small_pwc_size)
+    if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
       eb->offset = 0;
   }
   // do the unpacked 2-put version instead
@@ -2677,7 +2677,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
         *request = hdr->request;
         *flag = 1;
         NEXT_EAGER_BUF(eb, EB_MSG_SIZE(hdr->length));
-        if ((_photon_ebsize - eb->offset) < __photon_config->cap.small_pwc_size)
+        if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
           eb->offset = 0;
         dbg_info("copied message of size %u into 0x%016lx for request 0x%016lx",
                  hdr->length, hdr->addr, hdr->request);

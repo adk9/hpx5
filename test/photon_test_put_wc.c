@@ -12,9 +12,9 @@
 
 #include "test_cfg.h"
 
-#define PHOTON_LEDGER_SIZE 60     // we can make this larger if needed
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
+#define SQ_SIZE 30
 
 static int ITERS = 1000;
 
@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
   if (argc > 1)
     ITERS = atoi(argv[1]);
 
-  if (ITERS > PHOTON_LEDGER_SIZE)
-    ASYNC_ITERS = PHOTON_LEDGER_SIZE;
+  if (ITERS > SQ_SIZE)
+    ASYNC_ITERS = SQ_SIZE;
   else
     ASYNC_ITERS = ITERS;
 
@@ -193,11 +193,8 @@ int main(int argc, char *argv[]) {
           wait_local(NULL);
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        send_done(nproc, rank);
         wait_local(NULL);
       }
-      else
-        wait_done();
 
       MPI_Barrier(MPI_COMM_WORLD);
       
@@ -244,18 +241,15 @@ int main(int argc, char *argv[]) {
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ASYNC_ITERS; k++) {
-          if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0)) {
+          if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE)) {
             fprintf(stderr, "error: exceeded max outstanding work events (k=%d)\n", k);
             exit(1);
           }
           send_comp++;
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        send_done(nproc, rank);
         wait_local(NULL);
       }
-      else
-        wait_done();
 
       MPI_Barrier(MPI_COMM_WORLD);
       

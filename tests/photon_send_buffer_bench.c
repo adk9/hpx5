@@ -55,10 +55,9 @@ START_TEST (test_photon_send_buffer_bench)
  
   /**************Allocating Memory*********************/
   s_buf_heap = (char*)malloc(MAX_MSG_SIZE*sizeof(char));
-  photon_register_buffer(s_buf_heap, MAX_MSG_SIZE);
-
   s_buf = (char *) (((unsigned long) s_buf_heap + (align_size - 1)) /
                       align_size * align_size);
+  photon_register_buffer(s_buf, MAX_MSG_SIZE);
   /**************Memory Allocation Done*********************/
   if (rank == 0) {
     fprintf(stdout, HEADER);
