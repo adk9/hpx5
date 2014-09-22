@@ -15,9 +15,11 @@
 #include "logging.h"
 #include "squeue.h"
 
+#define PWC_ALIGN            8
+
 #define NEXT_LEDGER_ENTRY(l) (l->curr = (l->curr + 1) % l->num_entries);
 #define NEXT_EAGER_BUF(e, s) (e->offset = (e->offset + s) % _photon_ebsize);
-#define EB_MSG_SIZE(s) (sizeof(struct photon_eb_hdr_t) + s + sizeof(uint8_t))
+#define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 
 photonBI shared_storage;
 
@@ -515,7 +517,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   // allocate buffers for UD send/recv operations (after backend initializes)
   uint64_t msgbuf_size, p_size;
   int p_offset, p_hsize;
-  if (cfg->ibv.use_ud) {
+  if (!strcmp(cfg->backend, "verbs") && cfg->ibv.use_ud) {
     // we need to ask the backend about the max msg size it can support for UD
     int *mtu, size;
     if (__photon_backend->get_info(photon_processes, PHOTON_ANY_SOURCE, (void**)&mtu, &size, PHOTON_MTU)) {
@@ -2492,6 +2494,8 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uintptr_t eager_addr;
+    uint8_t *tail;
+    int tadd = 0;
 
     eb = photon_processes[proc].remote_eager_buf;
     hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
@@ -2499,23 +2503,27 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     hdr->addr = (uintptr_t)rptr;
     hdr->length = size;
     hdr->head = UINT8_MAX;
-    memcpy((void*)((uint8_t*)hdr + sizeof(*hdr)), ptr, size);
+    memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), ptr, size);
     // set a tail flag
-    *((uint8_t*)hdr + sizeof(*hdr) + size) = UINT8_MAX;
+    tail = (uint8_t*)((uintptr_t)hdr + sizeof(*hdr) + size);
+    // align to correct boundary
+    tadd = ((uintptr_t)tail % PWC_ALIGN != 0)?(PWC_ALIGN - (uintptr_t)tail % PWC_ALIGN):0;
+    tail += tadd;
+    *tail = UINT8_MAX;
 
     eager_addr = (uintptr_t)eb->remote.addr + eb->offset;
     rbuf.addr = eager_addr;
-    rbuf.size = EB_MSG_SIZE(size);
+    rbuf.size = EB_MSG_SIZE(size+tadd);
     rbuf.priv = shared_storage->buf.priv;
 
-    rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size),
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size+tadd),
                                     &(shared_storage->buf), &eb->remote, request_id, p1_flags);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", request_id);
       goto error_exit;
     }
     nentries = 1;
-    NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size));
+    NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size+tadd));
     if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
       eb->offset = 0;
   }
@@ -2670,18 +2678,23 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
       hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
       if (hdr->head == UINT8_MAX) {
         // now check for tail flag (or we could return to check later)
-        volatile uint8_t *tail = ((uint8_t*)hdr + sizeof(*hdr) + hdr->length);
+	uint16_t size = hdr->length;
+	photon_rid req = hdr->request;
+	uintptr_t addr = hdr->addr;
+        volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + sizeof(*hdr) + size);
+	int tadd = ((uintptr_t)tail % PWC_ALIGN != 0)?(PWC_ALIGN - (uintptr_t)tail % PWC_ALIGN):0;
+	tail += tadd;
         while (*tail != UINT8_MAX)
           ;
-        memcpy((void*)hdr->addr, (void*)((uint8_t*)hdr + sizeof(*hdr)), hdr->length);
-        *request = hdr->request;
+        memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
+        *request = req;
         *flag = 1;
-        NEXT_EAGER_BUF(eb, EB_MSG_SIZE(hdr->length));
+        NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size+tadd));
         if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
           eb->offset = 0;
         dbg_info("copied message of size %u into 0x%016lx for request 0x%016lx",
-                 hdr->length, hdr->addr, hdr->request);
-        memset((void*)hdr, 0, EB_MSG_SIZE(hdr->length));
+                 size, addr, req);
+        memset((void*)hdr, 0, EB_MSG_SIZE(size+tadd));
         return PHOTON_OK;
       }
 

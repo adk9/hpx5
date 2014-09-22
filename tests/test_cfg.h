@@ -16,15 +16,16 @@ struct photon_config_t cfg = {
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   },
   .ugni = {
+    .eth_dev = NULL,
     .bte_thresh = -1,
   },
   .cap = {
     .small_msg_size = -1,
-    .small_pwc_size =  0,
+    .small_pwc_size =  1024,
     .eager_buf_size = -1,
     .ledger_entries = -1
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = MPI_COMM_WORLD,
-  .backend = "verbs"
+  .backend = "ugni"
 };

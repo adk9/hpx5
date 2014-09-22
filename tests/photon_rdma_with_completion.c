@@ -20,6 +20,7 @@ START_TEST(test_rdma_with_completion)
   int rank, size, i, next, prev;
   int ret, flag, rc;
   int send_comp = 0;
+  int recv_comp = 0;
   fprintf(detailed_log, "Starting RDMA with completion test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -58,13 +59,16 @@ START_TEST(test_rdma_with_completion)
   photon_put_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
                                rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
   send_comp++;
-  while (send_comp) {
+  recv_comp++;
+  while (send_comp || recv_comp) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {
       if (req == PHOTON_TAG)
         send_comp--;
+      else if (req == 0xcafebabe)
+	recv_comp--;
     }
   }
   

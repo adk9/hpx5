@@ -21,8 +21,12 @@ void photontest_core_setup(void) {
   cfg.address = rank;
   //cfg.use_forwarder = 1;
   //cfg.forwarder_eids = forwarders;
+
   int initialized = photon_init(&cfg);
-  ck_assert_msg((initialized != 1), "Photon initialization failed\n");
+  ck_assert_msg((initialized == PHOTON_OK), "Photon initialization failed\n");
+  if (initialized != PHOTON_OK)
+    exit(1);
+
 
   detailed_log = fopen("test.log", "w+");
   ck_assert_msg(detailed_log != NULL, "Could not open the detailed log");

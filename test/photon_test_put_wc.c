@@ -43,7 +43,7 @@ void *wait_local(void *arg) {
   int flag, rc;
 
   while (send_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {

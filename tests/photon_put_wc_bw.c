@@ -19,10 +19,10 @@
 #define MESSAGE_ALIGNMENT 64
 #define MAX_MSG_SIZE (1<<22)
 #define MYBUFSIZE 1024*1024*1024   /* ~= 1GB */
+#define BUFSIZE   1024*1024*100    /* 100MB */
 #define PHOTON_TAG 13
 
 #define STARTSIZE 512
-#define BUFFULLSIZE (4294967296)   /* ~= 4GB */
 
 #define HEADER "# " BENCHMARK "\n"
 #define FIELD_WIDTH 20
@@ -56,11 +56,11 @@ START_TEST (test_photon_test_put_wc_bw_bench)
   align_size = MESSAGE_ALIGNMENT;
 
   /**************Allocating Memory*********************/
-  posix_memalign((void**) &s_buf_heap, 64, MYBUFSIZE*sizeof(char));
-  posix_memalign((void**) &r_buf_heap, 64, MYBUFSIZE*sizeof(char));
+  posix_memalign((void**) &s_buf_heap, 64, BUFSIZE*sizeof(char));
+  posix_memalign((void**) &r_buf_heap, 64, BUFSIZE*sizeof(char));
 
-  photon_register_buffer(s_buf_heap, MYBUFSIZE);
-  photon_register_buffer(r_buf_heap, MYBUFSIZE);
+  photon_register_buffer(s_buf_heap, BUFSIZE);
+  photon_register_buffer(r_buf_heap, BUFSIZE);
 
   s_buf = (char *) (((unsigned long) s_buf_heap + (align_size - 1)) /
                       align_size * align_size);
@@ -78,7 +78,7 @@ START_TEST (test_photon_test_put_wc_bw_bench)
   }
 
   // everyone posts their recv buffer to their next rank
-  photon_post_recv_buffer_rdma(next, r_buf, MYBUFSIZE, PHOTON_TAG, &recvReq);
+  photon_post_recv_buffer_rdma(next, r_buf, BUFSIZE, PHOTON_TAG, &recvReq);
   // Make sure we clear the local post event
   photon_wait_any(&ret, &request);
   // wait for the recv buffer that was posted from the previous rank
@@ -153,8 +153,8 @@ START_TEST (test_photon_test_put_wc_bw_bench)
   photon_send_FIN(sendReq, prev, PHOTON_REQ_COMPLETED);
   photon_wait(recvReq);
 
-  photon_unregister_buffer(s_buf_heap, MYBUFSIZE);
-  photon_unregister_buffer(r_buf_heap, MYBUFSIZE);
+  photon_unregister_buffer(s_buf_heap, BUFSIZE);
+  photon_unregister_buffer(r_buf_heap, BUFSIZE);
   free(s_buf_heap);
   free(r_buf_heap);
 }
