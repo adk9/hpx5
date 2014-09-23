@@ -1,5 +1,6 @@
 #include <check.h>
 #include <stdio.h>                              /* FILE, fopen, sprintf, ... */
+#include <stdlib.h>
 #include <inttypes.h>                           /* stdint formatting */
 #include <check.h>
 #include <unistd.h>

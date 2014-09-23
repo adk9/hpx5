@@ -23,7 +23,11 @@ struct photon_config_t cfg = {
     .eager_buf_size = -1,
     .ledger_entries = -1
   },
+  .exch = {
+    .allgather = NULL,
+    .barrier = NULL
+  },
   .meta_exch = PHOTON_EXCH_MPI,
-  .comm = MPI_COMM_WORLD,
-  .backend = "ugni"
+  .comm = NULL,
+  .backend = "verbs"
 };

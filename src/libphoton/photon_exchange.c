@@ -6,33 +6,96 @@
 #include "photon_exchange.h"
 #include "logging.h"
 
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
+
 extern photonBI shared_storage;
 
-static int photon_exchange_allgather(void *ptr, void **ivec_ptr) {
-  MPI_Comm _photon_comm = __photon_config->comm;
-  int ret;
+int photon_exchange_allgather(void *ptr, void *ivec_ptr, int n) {
+  int rc;
 
-  ret = MPI_Allgather(ptr, 1, MPI_UINT64_T, *ivec_ptr, 1, MPI_UINT64_T, _photon_comm);
-  if (ret != MPI_SUCCESS)
-    return PHOTON_ERROR;
-
+  switch(__photon_config->meta_exch) {
+  case PHOTON_EXCH_MPI:
+    {
+#ifdef HAVE_MPI
+      MPI_Comm _photon_comm = __photon_config->comm;
+      if (!_photon_comm)
+	_photon_comm = MPI_COMM_WORLD;
+      rc = MPI_Allgather(ptr, n, MPI_BYTE, ivec_ptr, n, MPI_BYTE, _photon_comm);
+      if (rc != MPI_SUCCESS)
+	goto error_exit;
+#endif
+    }
+    break;
+  case PHOTON_EXCH_PMI:
+#ifdef HAVE_PMI
+#endif
+    break;
+  case PHOTON_EXCH_XSP:
+#ifdef HAVE_XSP
+#endif
+    break;
+  case PHOTON_EXCH_EXTERNAL:
+    rc = __photon_config->exch.allgather(NULL, ptr, ivec_ptr, n);
+    if (rc != 0) {
+      log_err("Error in external exchange");
+      goto error_exit;
+    }
+    break;
+  default:
+    log_err("Unrecognized exchange type requested!");
+    goto error_exit;
+    break;
+  }
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
-/*
-static int photon_exchange_allgatherv(void **ptr, void ***ivec_ptr,
-                                      const int *rcounts, const int *offsets) {
-  MPI_Comm _photon_comm = __photon_config->comm;
-  int ret;
-
-  ret = MPI_Allgatherv(ptr, _photon_nproc, MPI_UINT64_T, *ivec_ptr, (int)rcounts,
-                       offsets, MPI_UINT64_T, _photon_comm);
-  if (ret != MPI_SUCCESS)
-    return PHOTON_ERROR;
+int photon_exchange_barrier() {
+  int rc;
+  
+  switch(__photon_config->meta_exch) {
+  case PHOTON_EXCH_MPI:
+    {
+#ifdef HAVE_MPI
+      MPI_Comm _photon_comm = __photon_config->comm;
+      if (!_photon_comm)
+	_photon_comm = MPI_COMM_WORLD;
+      rc = MPI_Barrier(_photon_comm);
+      if (rc != MPI_SUCCESS)
+	goto error_exit;
+#endif
+    }
+    break;
+  case PHOTON_EXCH_PMI:
+#ifdef HAVE_PMI
+#endif
+    break;
+  case PHOTON_EXCH_XSP:
+#ifdef HAVE_XSP
+#endif
+    break;
+  case PHOTON_EXCH_EXTERNAL:
+    rc = __photon_config->exch.barrier(NULL);
+    if (rc != 0) {
+      log_err("Error in external barrier");
+      goto error_exit;
+    }
+    break;
+  default:
+    log_err("Unrecognized exchange type requested!");
+    goto error_exit;
+    break;
+  }
   
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
-*/
 
 int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   int i, ret;
@@ -48,21 +111,21 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   memset(va, 0, _photon_nproc);
 
   pval = shared_storage->buf.priv.key0;
-  ret = photon_exchange_allgather(&pval, (void**)&key_0);
+  ret = photon_exchange_allgather(&pval, (void*)key_0, sizeof(pval));
   if (ret != PHOTON_OK) {
     log_err("Could not gather shared storage key_0");
     goto error_exit;
   }
 
   pval = shared_storage->buf.priv.key1;
-  ret = photon_exchange_allgather(&pval, (void**)&key_1);
+  ret = photon_exchange_allgather(&pval, (void*)key_1, sizeof(pval));
   if (ret != PHOTON_OK) {
     log_err("Could not gather shared storage key_1");
     goto error_exit;
   }
 
   pval = (uint64_t)shared_storage->buf.addr;
-  ret = photon_exchange_allgather(&pval, (void**)&va);
+  ret = photon_exchange_allgather(&pval, (void*)va, sizeof(pval));
   if (ret != PHOTON_OK) {
     log_err("Could not gather shared storage base ptrs");
     goto error_exit;

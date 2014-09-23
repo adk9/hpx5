@@ -14,6 +14,7 @@
 #include <netdb.h>
 
 #include "libphoton.h"
+#include "photon_exchange.h"
 #include "logging.h"
 #include "verbs_connect.h"
 #include "verbs_util.h"
@@ -372,7 +373,6 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, ver
 
 int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   int iproc;
-  MPI_Comm _photon_comm = __photon_config->comm;
 
   dbg_info();
 
@@ -382,7 +382,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
     goto error_exit;
   }
 
-  MPI_Barrier(_photon_comm);
+  photon_exchange_barrier();
 
   if (__photon_config->ibv.use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
@@ -410,7 +410,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
       dbg_info("DONE");
     }
 
-    MPI_Barrier(_photon_comm);
+    photon_exchange_barrier();
   }
 
   return PHOTON_OK;
@@ -900,75 +900,53 @@ static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
 }
 
 static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info **local_info, int num_qp) {
-  MPI_Request *rreq;
-  MPI_Comm _photon_comm = __photon_config->comm;
   int peer;
   char smsg[ sizeof "00000000:00000000:00000000:00000000:00000000:00000000000000000000000000000000"];
-  char **rmsg;
-  int i, iproc;
+  char *rmsg;
+  int i, k, iproc, rc;
   verbs_cnct_info **remote_info = ctx->remote_ci;
   int msg_size = sizeof smsg;
   char gid[sizeof "00000000000000000000000000000000" + 1];
 
-  rreq = (MPI_Request *)malloc( _photon_nproc * sizeof(MPI_Request) );
-  if( !rreq ) goto err_exit;
-
-  rmsg = (char **)malloc( _photon_nproc * sizeof(char *) );
-  if( !rmsg ) goto err_exit;
-  for (iproc = 0; iproc < _photon_nproc; ++iproc) {
-    rmsg[iproc] = (char *)malloc( msg_size );
-    if( !rmsg[iproc] ) {
-      int j = 0;
-      for (j = 0; j < iproc; j++) {
-        free(rmsg[j]);
-      }
-      free(rmsg);
-      goto err_exit;
-    }
+  rmsg = (char*)calloc(_photon_nproc, msg_size);
+  if (!rmsg) {
+    log_err("Could not allocate exchange recv buffer");
+    goto err_exit;
   }
 
-  for (i = 0; i < num_qp; ++i) {
+  for (i = 0; i < num_qp; i++) {
     for (iproc=0; iproc < _photon_nproc; iproc++) {
-      peer = (_photon_myrank+iproc)%_photon_nproc;
-      MPI_Irecv(rmsg[peer], msg_size, MPI_BYTE, peer, 0, _photon_comm, &rreq[peer]);
-    }
-
-    for (iproc=0; iproc < _photon_nproc; iproc++) {
-      peer = (_photon_nproc+_photon_myrank-iproc)%_photon_nproc;
-
+      peer = iproc;
+      
       inet_ntop(AF_INET6, local_info[peer][i].gid.raw, gid, sizeof gid);
       sprintf(smsg, "%08x:%08x:%08x:%08x:%08d:%s", local_info[peer][i].lid, local_info[peer][i].qpn,
-              local_info[peer][i].psn, local_info[peer][i].ip.s_addr, local_info[peer][i].cma_port, gid);
-      //fprintf(stderr,"[%d/%d] Sending lid:qpn:psn:ip = %s to task=%d\n",_photon_myrank, _photon_nproc, smsg, peer);
-      if( MPI_Send(smsg, msg_size , MPI_BYTE, peer, 0, _photon_comm ) != MPI_SUCCESS ) {
-        dbg_err("Could not send local address");
-        goto err_exit;
+	      local_info[peer][i].psn, local_info[peer][i].ip.s_addr, local_info[peer][i].cma_port, gid);
+      
+      rc = photon_exchange_allgather(smsg, rmsg, msg_size);
+      if (rc != PHOTON_OK) {
+	log_err("exchange failed");
+	goto err_exit;
       }
-    }
 
-    for (iproc=0; iproc < _photon_nproc; iproc++) {
-      peer = (_photon_myrank+iproc)%_photon_nproc;
-
-      if( MPI_Wait(&rreq[peer], MPI_STATUS_IGNORE) ) {
-        dbg_err("Could not wait() to receive remote address");
-        goto err_exit;
+      if (_photon_myrank == iproc) {
+	char *tmp = rmsg;
+	for (k = 0; k < _photon_nproc; k++) {
+	  sscanf(tmp, "%x:%x:%x:%x:%d:%s",
+		 &remote_info[k][i].lid,
+		 &remote_info[k][i].qpn,
+		 &remote_info[k][i].psn,
+		 &remote_info[k][i].ip.s_addr,
+		 &remote_info[k][i].cma_port,
+		 gid);
+	  inet_pton(AF_INET6, gid, &remote_info[k][i].gid.raw);
+	  tmp += msg_size;
+	}
       }
-      sscanf(rmsg[peer], "%x:%x:%x:%x:%d:%s",
-             &remote_info[peer][i].lid,
-             &remote_info[peer][i].qpn,
-             &remote_info[peer][i].psn,
-             &remote_info[peer][i].ip.s_addr,
-             &remote_info[peer][i].cma_port,
-             gid);
-      inet_pton(AF_INET6, gid, &remote_info[peer][i].gid.raw);
     }
   }
   
-  for (i = 0; i < _photon_nproc; i++) {
-    free(rmsg[i]);
-  }
   free(rmsg);
-
+  
   return remote_info;
 err_exit:
   return NULL;

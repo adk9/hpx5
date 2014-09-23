@@ -65,7 +65,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
 static int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                        photon_rid local, int flags);
 static int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags);
-static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter);
+static int _photon_io_init(char *file, int amode, void *view, int niter);
 static int _photon_io_finalize();
 
 static int __photon_nbpop_event(photonRequest req);
@@ -2738,7 +2738,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
 /* end PWC */
 
 /* begin I/O */
-static int _photon_io_init(char *file, int amode, MPI_Datatype view, int niter) {
+static int _photon_io_init(char *file, int amode, void *view, int niter) {
   /* forwarders do our I/O for now */
   if (__photon_forwarder != NULL) {
     return __photon_forwarder->io_init(photon_processes, file, amode, view, niter);

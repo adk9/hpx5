@@ -3,7 +3,8 @@ AC_INIT([photon], [0.1a], [photon@stout.incntre.iu.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
-AM_CONFIG_HEADER(include/config.h)
+AC_CONFIG_SRCDIR([include/config.h.in])
+AM_CONFIG_HEADER([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
@@ -105,54 +106,9 @@ if test "$enable_verbs" != "no" ; then
 fi
 AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
 
-dnl Check for uGNI
-AC_ARG_ENABLE([ugni], AC_HELP_STRING([--disable-ugni],
-			[disable UGNI support (default is autodetect)]),
-			[enable_ugni=$enableval],
-			[enable_ugni=try])
-
-if test "$enable_ugni" != "no" ; then
-   AH_TEMPLATE(HAVE_UGNI, Whether or not UGNI is installed on the system)
-   AC_MSG_CHECKING(for UGNI with pkg-config)
-   `pkg-config --exists cray-ugni`
-   have_ugni=`echo $?`
-   if test $have_ugni -eq 0; then
-      AC_MSG_RESULT(yes)
-      AC_DEFINE(HAVE_UGNI, 1, Build with UGNI support)
-      AC_SUBST(UGNI_CFLAGS, `pkg-config --cflags cray-ugni`)
-      AC_SUBST(UGNI_LIBS, `pkg-config --libs cray-ugni`)
-      have_ugni=yes
-   else
-      AC_MSG_RESULT(no)
-      have_ugni=no
-   fi
-fi
-AM_CONDITIONAL(HAVE_UGNI, test x$have_ugni = xyes)
-
-dnl Check for mpich2
-AC_ARG_ENABLE([mpich2], AC_HELP_STRING([--disable-mpich2],						
-                    	[disable MPICH2 support (default is autodetect)]),
-                    	[enable_mpich2=$enableval],
-                    	[enable_mpich2=try])
-
-if test "$enable_mpich2" != "no" ; then
-   AH_TEMPLATE(HAVE_MPICH2, Whether or not MPICH2 is installed on the system)
-   AC_CHECK_LIB([mpich2], [MPI_Init], [have_mpich2_lib=yes], [have_mpich2_lib=no])
-   AC_CHECK_HEADER([mpich2/mpi.h], [have_mpich2=yes], [have_mpich2=no], [])
-
-   if test "$have_mpich2" == "yes"; then
-      	  if test -f /usr/include/mpich2/mpi.h; then
-   	  	 AC_SUBST(MPI_CFLAGS, "-I/usr/include/mpich2")
-		 have_mpich2=yes
-	  elif test -f /usr/local/include/mpich2/mpi.h; then
-		 AC_SUBST(MPI_CFLAGS, "-I/usr/local/include/mpich2")
-		 have_mpich2=yes
-	  fi
-	  AC_SUBST(MPI_LIBS, "-L/usr/lib/mpich2/lib/ -L/usr/local/mpich2/lib -lmpich -lmpl")
-	  AC_DEFINE(HAVE_MPICH2,, Build with MPICH2 support)
-   fi
-fi
-AM_CONDITIONAL(HAVE_MPICH2, test x$have_mpich2 = xyes)
+PHOTON_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
+PHOTON_WITH_PKG([mpi],[mpi],[Build with MPI],[no],[MPI])
+PHOTON_WITH_PKG([pmi],[pmi],[Build with PMI],[no],[PMI])
 
 dnl Check for user defined MPI
 AC_ARG_WITH([mpi-include-path], [AC_HELP_STRING([--with-mpi-include-path[=PATH]],
@@ -165,6 +121,7 @@ if test "$with_mpi_include" != "no"; then
    if test -f $with_mpi_include/mpi.h; then
    	  AC_MSG_RESULT(yes)
 	  AC_SUBST(MPI_CFLAGS, "-I$with_mpi_include")
+	  AC_DEFINE(HAVE_MPI)
    else
 	  AC_MSG_RESULT(no)
       AC_MSG_ERROR(No MPI headers found!)
@@ -188,6 +145,8 @@ if test "$with_mpi_lib" != "no"; then
 				   [-lpthread])
    LDFLAGS=$save_LDFLAGS
 fi
+
+AM_CONDITIONAL(HAVE_MPI, test x$have_mpi = xyes | test x$with_mpi != xno)
 
 dnl CHeck for user defined XSP
 AC_ARG_WITH([xsp-include-path], [AC_HELP_STRING([--with-xsp-include-path[=PATH]],

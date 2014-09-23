@@ -45,7 +45,12 @@ struct photon_config_t {
     int ledger_entries;     // The number of ledger entries (default 64)
   } cap;
 
-  void *comm;               // Optional communicator for use with MPI, etc.
+  struct {
+    int (*barrier)(void *);
+    int (*allgather)(void *, void *, void *, int);
+  } exch;
+  
+  void *comm;               // Optional communicator to use for exchange
   int meta_exch;            // See PHOTON_EXCH types below (default MPI)
   char *backend;            // "verbs" or "ugni"
 };
@@ -106,7 +111,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
 #define PHOTON_EXCH_PMI        0x0002
-#define PHOTON_EXCH_XSP        0x0003
+#define PHOTON_EXCH_XSP        0x0004
+#define PHOTON_EXCH_EXTERNAL   0x0008
 
 #define PHOTON_SEND_LEDGER     0x0000
 #define PHOTON_RECV_LEDGER     0x0001

@@ -168,7 +168,7 @@ struct photon_backend_t {
   int (*get_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                              photon_rid local, int flags);
   int (*probe_completion)(int proc, int *flag, photon_rid *request, int flags);
-  int (*io_init)(char *file, int amode, MPI_Datatype view, int niter);
+  int (*io_init)(char *file, int amode, void *view, int niter);
   int (*io_finalize)();
   /* data movement -- needs to be split out */
   int (*rdma_put)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,

@@ -87,7 +87,6 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
   unsigned int *remote_ips;
   struct ifaddrs *ifaddr, *ifa;
   int i, rc;
-  MPI_Comm _photon_comm = __photon_config->comm;
 
   remote_info = (ugni_cnct_info *)malloc(_photon_nproc * sizeof(ugni_cnct_info));
   if(!remote_info) {
@@ -135,14 +134,14 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
 
   local_info.lid = get_gni_nic_address(GEMINI_DEVICE_ID);
 
-  rc = MPI_Allgather(&local_info.lid, 1, MPI_UNSIGNED, remote_lids, 1, MPI_UNSIGNED, _photon_comm);
-  if (rc != MPI_SUCCESS) {
+  rc = photon_exchange_allgather(&local_info.lid, remote_lids, sizeof(local_info.lid));
+  if (rc != PHOTON_OK) {
     dbg_err("Could not allgather NIC IDs");
     goto error_exit_free;
   }
 
-  rc = MPI_Allgather(&local_info.ip.s_addr, 1, MPI_UNSIGNED, remote_ips, 1, MPI_UNSIGNED, _photon_comm);
-  if (rc != MPI_SUCCESS) {
+  rc = photon_exchange_allgather(&local_info.ip.s_addr, remote_ips, sizeof(local_info.ip.s_addr));
+  if (rc != PHOTON_OK) {
     dbg_err("Could not allgather NIC IPs");
     goto error_exit_free;
   }

@@ -23,6 +23,9 @@
 #define PHOTON_LEB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6)
 #define PHOTON_REB_PTR(a) (a + PHOTON_NP_INFO_SIZE * 4 + PHOTON_NP_LEDG_SIZE * 6 + PHOTON_NP_EBUF_SIZE)
 
+int photon_exchange_allgather(void *s, void *d, int n);
+int photon_exchange_barrier();
+
 int photon_exchange_ledgers(ProcessInfo *processes, int flags);
 
 int photon_setup_ri_ledger(ProcessInfo *processes, char *buf, int num_entries);

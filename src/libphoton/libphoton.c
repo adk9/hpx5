@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "libphoton.h"
 #include "logging.h"
 
@@ -59,6 +60,7 @@ int photon_initialized() {
 int photon_init(photonConfig cfg) {
   photonBackend be;
   photonConfig lcfg = NULL;
+  char *errmsg = "";
 
   /* copy the configuration */
   lcfg = calloc(1, sizeof(struct photon_config_t));
@@ -88,6 +90,7 @@ int photon_init(photonConfig cfg) {
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
 #else
+      errmsg = "IB verbs backend";
       goto error_exit;
 #endif
     }
@@ -96,6 +99,7 @@ int photon_init(photonConfig cfg) {
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
 #else
+      errmsg = "UGNI backend";
       goto error_exit;
 #endif
     }
@@ -107,6 +111,41 @@ int photon_init(photonConfig cfg) {
     log_warn("photon_init(): backend not specified, using default test backend!");
   }
 
+  switch (lcfg->meta_exch) {
+  case PHOTON_EXCH_MPI:
+#ifndef HAVE_MPI
+    errmsg = "MPI exchange";
+    goto error_exit;
+#endif
+    break;
+  case PHOTON_EXCH_PMI:
+#ifndef HAVE_PMI
+    errmsg = "PMI exchange";
+    goto error_exit;
+#endif
+    break;
+  case PHOTON_EXCH_XSP:
+#ifndef HAVE_XSP
+    errmsg = "XSP exchange";
+    goto error_exit;
+#endif
+    break;
+  case PHOTON_EXCH_EXTERNAL:
+    if ((lcfg->exch.allgather == NULL) || 
+	(lcfg->exch.barrier == NULL)) {
+      errmsg = "External exchange function (see config)";
+      goto error_exit;
+    } else {
+      assert(lcfg->exch.allgather);
+      assert(lcfg->exch.barrier);
+    }
+    break;
+  default:
+    errmsg = "unknown exchange";
+    goto error_exit;
+    break;
+  }
+  
   /* set globals */
   _photon_myrank = (int)lcfg->address;
   _photon_nproc = lcfg->nproc;
@@ -187,7 +226,8 @@ int photon_init(photonConfig cfg) {
   return __photon_default->init(lcfg, NULL, NULL);
 
 error_exit:
-  log_err("photon_init(): %s support not present", lcfg->backend);
+  log_err("photon_init(): %s support not present", errmsg);
+  free(lcfg);
   return PHOTON_ERROR;
 }
 
@@ -482,7 +522,7 @@ int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags)
 /* end with completion */
 
 /* begin I/O */
-int photon_io_init(char *file, int amode, MPI_Datatype view, int niter) {
+int photon_io_init(char *file, int amode, void *view, int niter) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;

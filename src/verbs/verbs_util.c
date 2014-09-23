@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include "libphoton.h"
+#include "photon_exchange.h"
 #include "logging.h"
 #include "verbs_util.h"
 #include "verbs_buffer.h"
@@ -87,8 +88,8 @@ int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
     dbg_err("Could not destroy temp QP: %s", strerror(status));
   }
 
-  status = MPI_Allgather(&local_qpn, 1, MPI_UNSIGNED, qp_numbers, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
-  if (status != MPI_SUCCESS) {
+  status = photon_exchange_allgather(&local_qpn, qp_numbers, sizeof(local_qpn));
+  if (status != PHOTON_OK) {
     dbg_err("Could not allgather QP numbers");
     return PHOTON_ERROR;
   }

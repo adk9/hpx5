@@ -1,5 +1,4 @@
 AM_CFLAGS = @CFLAGS@                         \
-	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include           \
 	    -I@top_srcdir@/src/util          \
 	    -I@top_srcdir@/src/libphoton     \
@@ -19,7 +18,7 @@ libphoton_la_SOURCES = libphoton/libphoton.c           \
 	               libphoton/photon_rdma_EAGER_buf.c
 
 libphoton_ladir = @top_srcdir@/src/libphoton
-libphoton_la_LDFLAGS = @THREAD_LIBS@ @MPI_LIBS@
+libphoton_la_LDFLAGS = @THREAD_LIBS@
 libphoton_la_LIBADD = @top_builddir@/src/util/libutil.la
 
 if HAVE_VERBS
@@ -43,8 +42,18 @@ libphoton_la_SOURCES += ugni/photon_ugni.c             \
 noinst_bindir = @abs_top_builddir@/test
 noinst_bin_PROGRAMS = ugni_test
 ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
-ugni_test_LDFLAGS = @MPI_LIBS@ @UGNI_LIBS@
-ugni_test_SOURCES = ugni/ugni_test.c ugni/utility_functions.c
+ugni_test_LDFLAGS = @UGNI_LIBS@
+ugni_test_SOURCES = ugni/utility_functions.c
+endif
+
+if HAVE_MPI
+AM_CFLAGS += @MPI_CFLAGS@
+libphoton_la_LDFLAGS += @MPI_LIBS@
+endif
+
+if HAVE_PMI
+AM_CFLAGS += @PMI_CFLAGS@
+libphoton_la_LDFLAGS += @PMI_LIBS@
 endif
 
 if HAVE_XSP

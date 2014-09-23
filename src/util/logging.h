@@ -2,8 +2,8 @@
 #define LOGGING_H
 
 #include <stdio.h>
-#include <mpi.h>
 #include <pthread.h>
+
 extern int _photon_nproc, _photon_myrank;
 #ifdef DEBUG
 extern int _photon_start_debugging;
@@ -11,7 +11,7 @@ extern int _photon_start_debugging;
 
 #if defined(DEBUG) || defined(CALLTRACE)
 extern FILE *_phot_ofp;
-#define _photon_open_ofp() { if(_phot_ofp == NULL){char name[10]; int global_rank; MPI_Comm_rank(MPI_COMM_WORLD, &global_rank); sprintf(name,"out.%05d",global_rank);_phot_ofp=fopen(name,"w"); } }
+#define _photon_open_ofp() { if(_phot_ofp == NULL){char name[10]; sprintf(name,"out.%05d",_photon_myrank);_phot_ofp=fopen(name,"w"); } }
 #endif
 
 #ifdef DEBUG
