@@ -24,7 +24,6 @@
 #include <jemalloc/jemalloc.h>
 #include <sys/mman.h>
 #include <photon.h>
-#include <mpi.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -440,13 +439,7 @@ transport_class_t *transport_new_photon(void) {
   char* backend;
   int ib_port;
   int use_cma;
-
   int val = 0;
-  MPI_Initialized(&val);
-  if (!val) {
-    dbg_error("photon: only supports MPI bootstrap.\n");
-    return NULL;
-  }
 
   // TODO: make eth_dev and ib_dev runtime configurable!
   eth_dev = getenv("HPX_USE_ETH_DEV");
@@ -467,20 +460,25 @@ transport_class_t *transport_new_photon(void) {
     ib_port = photon_default_ib_port;
   else
     ib_port = atoi(getenv("HPX_USE_IB_PORT"));
-
+  
   struct photon_config_t *cfg = &photon->cfg;
-  cfg->meta_exch       = PHOTON_EXCH_MPI;
+  cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
   cfg->nproc           = here->ranks;
   cfg->address         = here->rank;
-  cfg->comm            = MPI_COMM_WORLD;
+  cfg->comm            = NULL;
   cfg->forwarder.use_forwarder   = 0;
   cfg->ibv.use_cma         = use_cma;
-  cfg->ibv.use_ud          = 1;
+  cfg->ibv.use_ud          = 0;  // don't enable this unless we're doing HW GAS
   cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->ibv.eth_dev         = eth_dev;
   cfg->ibv.ib_dev          = ib_dev;
   cfg->ibv.ib_port         = ib_port;
-  cfg->backend         = backend;
+  cfg->cap.eager_buf_size  = -1;  // default 128k
+  cfg->cap.small_msg_size  = -1;  // default 8192
+  cfg->cap.small_pwc_size  =  0;  // 0 disabled
+  cfg->exch.allgather      = here->boot->allgather;
+  cfg->exch.barrier        = here->boot->barrier;
+  cfg->backend             = backend;
 
   val = photon_initialized();
   if (!val) {
