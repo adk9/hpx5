@@ -346,8 +346,8 @@ _progress(transport_class_t *t, bool flush)
 {
   photon_t *photon = (photon_t*)t;
   network_progress_poll(photon->progress);
-  //if (flush)
-  //  network_progress_flush(photon->progress);
+  if (flush)
+    network_progress_flush(photon->progress);
 }
 
 
