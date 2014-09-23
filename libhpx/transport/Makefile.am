@@ -16,10 +16,10 @@ endif
 
 if HAVE_PHOTON
 libtransport_la_CPPFLAGS += $(HPX_JEMALLOC_CPPFLAGS)
-libtransport_la_CFLAGS   += @PHOTON_CFLAGS@ @MPI_CFLAGS@
+libtransport_la_CFLAGS   += @PHOTON_CFLAGS@
 libtransport_la_SOURCES  += photon.c progress.c
 libtransport_la_LDFLAGS  += $(HPX_JEMALLOC_LDFLAGS)
-libtransport_la_LIBADD   += @PHOTON_LIBS@ @MPI_LIBS@ $(HPX_JEMALLOC_LIBS)
+libtransport_la_LIBADD   += @PHOTON_LIBS@ $(HPX_JEMALLOC_LIBS)
 endif
 
 if HAVE_PORTALS
