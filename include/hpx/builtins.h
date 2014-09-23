@@ -16,7 +16,7 @@
 // ----------------------------------------------------------------------------
 /// @file builtins.h
 ///
-/// This file encapsulates some operations that are builtin compiler 
+/// This file encapsulates some operations that are builtin compiler
 /// functions in order to support multiple compilers.
 ///
 /// @todo Deal with non-gcc compatible compilers.
@@ -31,5 +31,7 @@
 #define unreachable()
 #endif
 #define ctzl(N) __builtin_ctzl(N)
+#define clzl(N) __builtin_clzl(N)
+#define popcountl(N) __builtin_popcountl(N)
 
 #endif // HPX_BUILTINS_H
