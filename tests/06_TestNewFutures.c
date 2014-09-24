@@ -161,8 +161,7 @@ END_TEST
 int t06_getat_action(hpx_addr_t *fut) {
   SET_VALUE_T value;
   hpx_lco_newfuture_getat(*fut, 0, sizeof(value), &value);
-  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
-  return HPX_SUCCESS;
+  hpx_thread_continue(sizeof(value), &value);
 }
 
 START_TEST (test_hpx_lco_newfuture_getat)
@@ -172,7 +171,7 @@ START_TEST (test_hpx_lco_newfuture_getat)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_addr_t done = hpx_lco_future_new(sizeof(SET_VALUE));
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
@@ -180,7 +179,9 @@ START_TEST (test_hpx_lco_newfuture_getat)
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
   hpx_lco_wait(lsync);
   hpx_lco_wait(rsync);
-  hpx_lco_wait(done);
+  SET_VALUE_T value;
+  hpx_lco_get(done, sizeof(SET_VALUE), &value);
+  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
   
   hpx_lco_newfuture_free(fut);
   hpx_lco_delete(lsync, HPX_NULL);
@@ -203,7 +204,7 @@ START_TEST (test_hpx_lco_newfuture_getat_remote)
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
     
-    hpx_addr_t done = hpx_lco_future_new(0);
+    hpx_addr_t done = hpx_lco_future_new(sizeof(SET_VALUE));
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
     hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
@@ -211,8 +212,10 @@ START_TEST (test_hpx_lco_newfuture_getat_remote)
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
     hpx_lco_wait(lsync);
     hpx_lco_wait(rsync);
-    hpx_lco_wait(done);
-    
+    SET_VALUE_T value;
+    hpx_lco_get(done, sizeof(SET_VALUE), &value);
+    ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
+
     hpx_lco_newfuture_free(fut);
     hpx_lco_delete(lsync, HPX_NULL);
     hpx_lco_delete(rsync, HPX_NULL);
@@ -668,7 +671,7 @@ START_TEST (test_hpx_lco_newfuture_get_all)
   }
   
   SET_VALUE_T *values = calloc(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
-  hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), values);
+  hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), (void*)values);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     ck_assert_msg(values[i] == SET_VALUE, "Got wrong value");
   }
