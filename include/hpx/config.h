@@ -32,7 +32,8 @@ typedef enum {
   HPX_TRANSPORT_SMP,         //!< Do not use a network transport.
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
   HPX_TRANSPORT_PORTALS,     //!< Use Portals for network transport.
-  HPX_TRANSPORT_PHOTON       //!< Use Photon for network transport.
+  HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
+  HPX_TRANSPORT_MAX
 } hpx_transport_t;
 
 //! Configuration options for which bootstrappers HPX can use.
@@ -98,7 +99,7 @@ typedef struct {
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
-    .wait_at     = HPX_LOCALITY_NONE,		\
+    .wait_at     = HPX_LOCALITY_NONE,       \
     .log_level   = HPX_LOG_DEFAULT,             \
     .statistics  = true                         \
   }

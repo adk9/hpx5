@@ -3,32 +3,32 @@
 // @Project       High Performance ParallelX Library (libhpx)
 //----------------------------------------------------------------------------
 // @Subject       Library Unit Test Harness
-// 
+//
 // @Compiler      GCC
 // @OS            Linux
-// @Description   Main function. 
-// @Goal          Goal of this testcase is to initialize check as HPX 
-//                application   
+// @Description   Main function.
+// @Goal          Goal of this testcase is to initialize check as HPX
+//                application
 // @Copyright     Copyright (c) 2014, Trustees of Indiana University
 //                All rights reserved.
 //
 //                This software may be modified and distributed under the terms
 //                of the BSD license.  See the COPYING file for details.
 //
-//                This software was created at the Indiana University Center 
+//                This software was created at the Indiana University Center
 //                for Research in Extreme Scale Technologies (CREST).
 //----------------------------------------------------------------------------
 // @Date          08/07/2014
 // @Author        Patrick K. Bohan <pbohan [at] indiana.edu>
 //                Jayashree Candadai <jayaajay [at] indiana.edu>
 // @Version       0.1
-// Commands to Run: make, mpirun hpxtest 
+// Commands to Run: make, mpirun hpxtest
 //****************************************************************************
 
 //****************************************************************************
 // @Project Includes
 //****************************************************************************
-#include <stdlib.h>                             
+#include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
 #include <limits.h>
@@ -37,7 +37,7 @@
 #include <float.h>
 #include <check.h>
 
-#include <libhpx/debug.h> 
+#include <libhpx/debug.h>
 #include <hpx/hpx.h>
 
 #include "tests.h"
@@ -66,7 +66,7 @@ hpx_action_t t06_get_future_value;
 hpx_action_t t07_init_array;
 hpx_action_t t07_lcoSetGet;
 hpx_action_t t07_initMemory;
-hpx_action_t t07_initBlock; 
+hpx_action_t t07_initBlock;
 hpx_action_t t07_getAll;
 hpx_action_t t07_errorSet;
 hpx_action_t t08_handler;
@@ -86,6 +86,7 @@ static void usage(FILE *f) {
   fprintf(f, "Usage: CHECK [options] ROUNDS \n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
@@ -94,7 +95,7 @@ static void usage(FILE *f) {
 //****************************************************************************
 // Main action to run check as HPX Application
 //****************************************************************************
-Suite *test_suite(void) 
+Suite *test_suite(void)
 {
   Suite * s = suite_create("hpxtest");
   TCase * tc = tcase_create("hpxtest-core");
@@ -206,12 +207,12 @@ void _register_actions(void) {
 //****************************************************************************
 int main(int argc, char * argv[]) {
   //dbg_wait();
-  
+
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:T:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -226,6 +227,10 @@ int main(int argc, char * argv[]) {
      case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'h':
       usage(stdout);
@@ -243,6 +248,6 @@ int main(int argc, char * argv[]) {
   // Register all the actions
   _register_actions();
 
-  // Run HPX 
+  // Run HPX
   return hpx_run(_main, NULL, 0);
 }
