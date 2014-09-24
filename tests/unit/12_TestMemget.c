@@ -29,12 +29,12 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-#define MAX_MSG_SIZE        (1<<22)
+#define ARRAY_SIZE 32
 
 int t12_init_array_action(size_t* args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
-  int *local = NULL;
+  uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
@@ -52,12 +52,12 @@ START_TEST (test_libhpx_memget)
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
-  int *local;
+  uint64_t *local;
  
-  hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
+  hpx_addr_t data = hpx_gas_global_alloc(size, ARRAY_SIZE*sizeof(uint64_t));
+  hpx_addr_t remote = hpx_addr_add(data, ARRAY_SIZE*sizeof(uint64_t)* peerid);
 
-  size_t arraysize = 32;
+  size_t arraysize = ARRAY_SIZE;
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
   hpx_call(remote, t12_init_array, &arraysize, sizeof(arraysize), done);
   hpx_call_sync(data, t12_init_array, &arraysize, sizeof(arraysize), &local, sizeof(local));
@@ -65,9 +65,17 @@ START_TEST (test_libhpx_memget)
   hpx_lco_delete(done, HPX_NULL);
 
   // allocate and start a timer
+  uint64_t localBuf[arraysize];
   hpx_time_t t1 = hpx_time_now();
-  hpx_gas_memget(remote, data, arraysize);
+  hpx_addr_t completed = hpx_lco_future_new(0);
+  hpx_gas_memget(&localBuf, remote, arraysize*sizeof(uint64_t), completed);
+  hpx_lco_wait(completed);
+  hpx_lco_delete(completed, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+
+  for (int i = 0; i < arraysize; i++)
+    printf("%"PRIu64"", localBuf[i]);
+  printf("\n");
 } 
 END_TEST
 

@@ -29,17 +29,17 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-#define MAX_MSG_SIZE        (1<<22)
+#define ARRAY_SIZE 32
 
 int t13_init_array_action(size_t* args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
-  char *local;
+  uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
   for(int i = 0; i < n; i++)
-    local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
+    local[i] = i;
   HPX_THREAD_CONTINUE(local);
 }
 
@@ -52,22 +52,34 @@ START_TEST (test_libhpx_memput)
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
-  char *local;
+  uint64_t *local;
  
-  hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
+  hpx_addr_t data = hpx_gas_global_alloc(size, ARRAY_SIZE*sizeof(uint64_t));
+  hpx_addr_t remote = hpx_addr_add(data, ARRAY_SIZE*sizeof(uint64_t) * peerid);
 
-  size_t arraysize = 1000*1024;
-  hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, t13_init_array, &arraysize, sizeof(arraysize), done);
+  size_t arraysize = ARRAY_SIZE;
   hpx_call_sync(data, t13_init_array, &arraysize, sizeof(arraysize), &local, sizeof(local));
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
 
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
-  hpx_gas_memput(remote, local, arraysize);
+  hpx_addr_t localComplete = hpx_lco_future_new(0);
+  hpx_addr_t remoteComplete = hpx_lco_future_new(0);
+  hpx_gas_memput(remote, local, arraysize*sizeof(uint64_t), localComplete, remoteComplete);
+  hpx_lco_wait(localComplete);
+  hpx_lco_wait(remoteComplete);
+  hpx_lco_delete(localComplete, HPX_NULL);
+  hpx_lco_delete(remoteComplete, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));  
+
+  uint64_t localBuf[arraysize];
+  hpx_addr_t completed = hpx_lco_future_new(0);
+  hpx_gas_memget(&localBuf, remote, arraysize*sizeof(uint64_t), completed);
+  hpx_lco_wait(completed);
+  hpx_lco_delete(completed, HPX_NULL);
+
+  for (int i = 0; i < arraysize; i++)
+    printf("%"PRIu64"", localBuf[i]);
+  printf("\n");
 } 
 END_TEST
 
