@@ -1,6 +1,7 @@
-noinst_PROGRAMS 	= hpxtest
-#TESTS 			= hpxtest 
-TESTS 			= 
+noinst_bin_PROGRAMS 	= hpxtest
+noinst_bindir           = $(abs_top_builddir)/tests/unit
+TESTS 			= hpxtest 
+#TESTS 			= 
 check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \

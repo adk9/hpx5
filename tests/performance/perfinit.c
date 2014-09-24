@@ -1,5 +1,5 @@
 //****************************************************************************
-// @Filename      01_TestRuntime.c
+// @Filename      perfinit.c
 // @Project       High Performance ParallelX Library (libhpx)
 //----------------------------------------------------------------------------
 // @Subject       Library Unit Test Harness - Initialization and Cleanup 
@@ -38,18 +38,18 @@
 //****************************************************************************
 // TEST SUITE FIXTURE: Library initialization
 //****************************************************************************
-void hpxtest_core_setup(void) {
+void perftest_core_setup(void) {
   /* open a performance log file */
-  printf("Starting the HPX unit test framework\n");
+  printf("Starting the HPX performance test framework\n");
 }
 
 //****************************************************************************
 //  TEST SUITE FIXTURE: library cleanup
 //****************************************************************************
 
-void hpxtest_core_teardown(void) {
-  printf("Shutting down HPX unit test framework in hpxtest_core_teardown\n");
-  printf("Check test.log for output\n\n");
+void perftest_core_teardown(void) {
+  printf("Shutting down HPX performance test framework in perftest_core_teardown\n");
+  printf("Check output.log for output\n\n");
   hpx_shutdown(0);
 }
 
