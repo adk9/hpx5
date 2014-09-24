@@ -80,6 +80,7 @@ typedef struct {
   int               threads;          //!< number of HPX scheduler threads.
   unsigned int  backoff_max;          //!< upper bound for backoff.
   int           stack_bytes;          //!< minimum stack size in bytes.
+  size_t         heap_bytes;          //!< shared heap size in bytes
   hpx_gas_t             gas;          //!< Type of GAS.
   hpx_boot_t           boot;          //!< bootstrap method to use.
   hpx_transport_t transport;          //!< transport to use.
@@ -95,6 +96,7 @@ typedef struct {
     .threads     = 0,                           \
     .backoff_max = 1024,                        \
     .stack_bytes = 32768,                       \
+    .heap_bytes  = 1 << 30, /* 1GB */           \
     .gas         = HPX_GAS_PGAS,                \
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
