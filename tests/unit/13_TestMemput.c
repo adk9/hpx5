@@ -29,18 +29,24 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-#define ARRAY_SIZE 32
+static uint64_t block[] = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+  22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+};
 
-int t13_init_array_action(size_t* args) {
-  size_t n = *args;
+int t13_memput_verify_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  for(int i = 0; i < n; i++)
-    local[i] = i;
-  HPX_THREAD_CONTINUE(local);
+  const size_t BLOCK_ELEMS = sizeof(block) / sizeof(block[0]);
+  for (int i = 0; i < BLOCK_ELEMS; ++i)
+    ck_assert_msg(local[i] == block[i],
+                  "failed to put element %d correctly, expected %"PRIu64
+                  ", got %"PRIu64"\n", i, block[i], local[i]);
+  hpx_gas_unpin(target);
+  return HPX_SUCCESS;
 }
 
 //****************************************************************************
@@ -52,34 +58,24 @@ START_TEST (test_libhpx_memput)
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
-  uint64_t *local;
  
-  hpx_addr_t data = hpx_gas_global_alloc(size, ARRAY_SIZE*sizeof(uint64_t));
-  hpx_addr_t remote = hpx_addr_add(data, ARRAY_SIZE*sizeof(uint64_t) * peerid);
+  hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
+  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block));
 
-  size_t arraysize = ARRAY_SIZE;
-  hpx_call_sync(data, t13_init_array, &arraysize, sizeof(arraysize), &local, sizeof(local));
-
-  // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t localComplete = hpx_lco_future_new(0);
   hpx_addr_t remoteComplete = hpx_lco_future_new(0);
-  hpx_gas_memput(remote, local, arraysize*sizeof(uint64_t), localComplete, remoteComplete);
+  hpx_gas_memput(remote, block, sizeof(block), localComplete, remoteComplete);
   hpx_lco_wait(localComplete);
   hpx_lco_wait(remoteComplete);
   hpx_lco_delete(localComplete, HPX_NULL);
   hpx_lco_delete(remoteComplete, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));  
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
-  uint64_t localBuf[arraysize];
-  hpx_addr_t completed = hpx_lco_future_new(0);
-  hpx_gas_memget(&localBuf, remote, arraysize*sizeof(uint64_t), completed);
-  hpx_lco_wait(completed);
-  hpx_lco_delete(completed, HPX_NULL);
-
-  for (int i = 0; i < arraysize; i++)
-    printf("%"PRIu64"", localBuf[i]);
-  printf("\n");
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_call(remote, t13_memput_verify, NULL, 0, done);
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 } 
 END_TEST
 

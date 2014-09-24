@@ -80,7 +80,7 @@ hpx_action_t t09_receiverChannel;
 hpx_action_t t10_set;
 hpx_action_t t11_increment;
 hpx_action_t t12_init_array;
-hpx_action_t t13_init_array;
+hpx_action_t t13_memput_verify;
 //****************************************************************************
 // Options
 //****************************************************************************
@@ -208,7 +208,7 @@ void _register_actions(void) {
   t12_init_array = HPX_REGISTER_ACTION(t12_init_array_action);
 
   //13_TestMemput.c
-  t13_init_array = HPX_REGISTER_ACTION(t13_init_array_action);
+  t13_memput_verify = HPX_REGISTER_ACTION(t13_memput_verify_action);
 }
 
 //****************************************************************************
