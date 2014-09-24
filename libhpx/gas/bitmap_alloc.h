@@ -47,7 +47,7 @@ typedef struct {
 /// @param n The number of blocks we need to manage.
 ///
 /// @return The size of the bitmap_alloc_t required to manage @p n blocks.
-size_t bitmap_alloc_sizeof(uint32_t n)
+size_t bitmap_alloc_sizeof(const uint32_t n)
   HPX_INTERNAL;
 
 /// Initialize a bitmap.
@@ -57,7 +57,7 @@ size_t bitmap_alloc_sizeof(uint32_t n)
 ///
 /// @param   bitmap The bitmap to initialize.
 /// @param        n The number of blocks we need to manage.
-void bitmap_alloc_init(bitmap_alloc_t *bitmap, uint32_t n)
+void bitmap_alloc_init(bitmap_alloc_t *bitmap, const uint32_t n)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Allocate @p n contiguous blocks from the bitmap.
@@ -67,15 +67,17 @@ void bitmap_alloc_init(bitmap_alloc_t *bitmap, uint32_t n)
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
-int bitmap_alloc_alloc(bitmap_alloc_t *bitmap, uint32_t n, uint32_t *i)
+int bitmap_alloc_alloc(bitmap_alloc_t *bitmap, const uint32_t from,
+                       uint32_t *i)
   HPX_INTERNAL HPX_NON_NULL(1,3);
 
 /// Free @p n contiguous blocks of memory, starting at offset @p i.
 ///
 /// @param   bitmap The bitmap to free from.
-/// @param        i The offset to start freeing from.
+/// @param     from The offset to start freeing from.
 /// @param        n The number of blocks to free.
-void bitmap_alloc_free(bitmap_alloc_t *bitmap, uint32_t i, uint32_t n)
-  HPX_INTERNAL  HPX_NON_NULL(1);
+void bitmap_alloc_free(bitmap_alloc_t *bitmap, const uint32_t from,
+                       const uint32_t n)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif
