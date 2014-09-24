@@ -162,13 +162,13 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     rc = photon_get_buffer_private(rbuffer, rn, &priv);
     if (rc != PHOTON_OK) {
       return dbg_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
-		       (uintptr_t)rbuffer, rn);
+               (uintptr_t)rbuffer, rn);
     }
-    
+
     pbuf.addr = (uintptr_t)rbuffer;
     pbuf.size = rn;
     pbuf.priv = priv;
-    
+
     if (rid) {
       flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
@@ -176,14 +176,14 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     else {
       flags = PHOTON_REQ_NIL;
     }
-    
+
     rc = photon_post_os_put_direct(dest, b, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
       return dbg_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
-		       (uintptr_t)rbuffer, rn);
+               (uintptr_t)rbuffer, rn);
     }
   }
-  
+
   return HPX_SUCCESS;
 }
 
@@ -214,13 +214,13 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     rc = photon_get_buffer_private(b, rn, &priv);
     if (rc != PHOTON_OK) {
       return dbg_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
-		       (uintptr_t)b, rn);
+               (uintptr_t)b, rn);
     }
-    
+
     pbuf.addr = (uintptr_t)b;
     pbuf.size = rn;
     pbuf.priv = priv;
-    
+
     if (rid) {
       flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
@@ -228,11 +228,11 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     else {
       flags = PHOTON_REQ_NIL;
     }
-    
+
     rc = photon_post_os_get_direct(dest, buffer, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
       return dbg_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
-		       (uintptr_t)b, rn);
+               (uintptr_t)b, rn);
     }
   }
 
@@ -460,7 +460,7 @@ transport_class_t *transport_new_photon(void) {
     ib_port = photon_default_ib_port;
   else
     ib_port = atoi(getenv("HPX_USE_IB_PORT"));
-  
+
   struct photon_config_t *cfg = &photon->cfg;
   cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
   cfg->nproc           = here->ranks;
@@ -476,8 +476,8 @@ transport_class_t *transport_new_photon(void) {
   cfg->cap.eager_buf_size  = -1;  // default 128k
   cfg->cap.small_msg_size  = -1;  // default 8192
   cfg->cap.small_pwc_size  =  0;  // 0 disabled
-  cfg->exch.allgather      = here->boot->allgather;
-  cfg->exch.barrier        = here->boot->barrier;
+  cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
+  cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
   cfg->backend             = backend;
 
   val = photon_initialized();
