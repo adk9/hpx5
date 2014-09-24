@@ -39,11 +39,11 @@ libphoton_la_SOURCES += ugni/photon_ugni.c             \
 		    ugni/photon_ugni_buffer.c                  \
 		    ugni/utility_functions.c
 
-noinst_bindir = @abs_top_builddir@/test
-noinst_bin_PROGRAMS = ugni_test
-ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@
-ugni_test_LDFLAGS = @UGNI_LIBS@
-ugni_test_SOURCES = ugni/utility_functions.c
+#noinst_bindir = @abs_top_builddir@/test
+#noinst_bin_PROGRAMS = ugni_test
+#ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@ @MPI_FLAGS@
+#ugni_test_LDFLAGS = @UGNI_LIBS@ @MPI_LIBS@
+#ugni_test_SOURCES = ugni/utility_functions.c
 endif
 
 if HAVE_MPI

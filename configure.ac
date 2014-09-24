@@ -106,7 +106,7 @@ if test "$enable_verbs" != "no" ; then
 fi
 AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
 
-PHOTON_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
+PHOTON_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 PHOTON_WITH_PKG([mpi],[mpi],[Build with MPI],[no],[MPI])
 PHOTON_WITH_PKG([pmi],[pmi],[Build with PMI],[no],[PMI])
 
@@ -122,6 +122,7 @@ if test "$with_mpi_include" != "no"; then
    	  AC_MSG_RESULT(yes)
 	  AC_SUBST(MPI_CFLAGS, "-I$with_mpi_include")
 	  AC_DEFINE(HAVE_MPI)
+	  have_mpi=yes
    else
 	  AC_MSG_RESULT(no)
       AC_MSG_ERROR(No MPI headers found!)
@@ -146,7 +147,7 @@ if test "$with_mpi_lib" != "no"; then
    LDFLAGS=$save_LDFLAGS
 fi
 
-AM_CONDITIONAL(HAVE_MPI, test x$have_mpi = xyes | test x$with_mpi != xno)
+AM_CONDITIONAL(HAVE_MPI, test x$have_mpi = xyes || test x$with_mpi != xno)
 
 dnl CHeck for user defined XSP
 AC_ARG_WITH([xsp-include-path], [AC_HELP_STRING([--with-xsp-include-path[=PATH]],
