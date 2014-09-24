@@ -11,7 +11,11 @@ EXTRA_DIST = autogen.sh      \
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = . src/util src test
+SUBDIRS = . src/util src
+
+if HAVE_MPI
+ SUBDIRS += test
+endif
 
 #if HAVE_VERBS
 #SUBDIRS += src/verbs
