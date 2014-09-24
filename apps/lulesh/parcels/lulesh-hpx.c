@@ -300,13 +300,7 @@ static void usage(FILE *f) {
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = {
-    .cores         = 0,
-    .threads       = 0,
-    .stack_bytes   = 0,
-    .gas           = HPX_GAS_PGAS,
-    .log_level     = HPX_LOG_DEFAULT
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int nDoms, nx, maxcycles,cores;
   // default

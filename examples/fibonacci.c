@@ -13,10 +13,10 @@
 
 /// @file
 /// A simple fibonacci number computation to demonstrate HPX.
-/// This example calculates a fibonacci number using recursion, where each 
+/// This example calculates a fibonacci number using recursion, where each
 /// level of recursion is executed by a different HPX thread. (Of course, this
-/// is not an efficient way to calculate a fibonacci number but it does 
-/// demonstrate some of the basic of HPX and it may demonstrate a 
+/// is not an efficient way to calculate a fibonacci number but it does
+/// demonstrate some of the basic of HPX and it may demonstrate a
 /// <em>pattern of computation</em> that might be used in the real world.)
 
 #include <unistd.h>
@@ -101,11 +101,7 @@ static int _fib_main_action(int *args) {
 }
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {

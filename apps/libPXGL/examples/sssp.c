@@ -52,8 +52,8 @@ static int _print_vertex_distance_index_action(int *i)
   const hpx_addr_t target = hpx_thread_current_target();
 
   hpx_addr_t *v;
-  hpx_addr_t vertex; 
-  
+  hpx_addr_t vertex;
+
   if (!hpx_gas_try_pin(target, (void**)&v))
     return HPX_RESEND;
 
@@ -94,7 +94,7 @@ static int _main_action(_sssp_args_t *args) {
 
   // Verification of results.
   printf("Verifying results...\n");
-  
+
   // Action to print the distances of each vertex from the source
   hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
   for (int i = 0; i < el.num_vertices; ++i) {
@@ -110,11 +110,7 @@ static int _main_action(_sssp_args_t *args) {
 
 
 int main(int argc, char *const argv[argc]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {

@@ -68,12 +68,8 @@ static int _main_action(int *args) {
 /// @param argv[2] - n
 /// ----------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-    .gas         = HPX_GAS_NOGLOBAL
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.gas          = HPX_GAS_NOGLOBAL;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {

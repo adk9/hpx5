@@ -338,12 +338,7 @@ static void _usage(FILE *stream) {
 // main routine
 int main(int argc, char *argv[])
 {
-  hpx_config_t hpx_cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-    .gas         = HPX_GAS_PGAS
-  };
+  hpx_config_t hpx_cfg = HPX_CONFIG_DEFAULTS;
 
   guppie_config_t guppie_cfg = {
     .ltabsize = LTABSIZE,

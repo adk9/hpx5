@@ -26,14 +26,8 @@ static void usage(FILE *f) {
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = {
-    .cores         = 0,
-    .threads       = 0,
-    .stack_bytes   = 0,
-    .gas           = HPX_GAS_PGAS
-  };
-
-  cfg.cores = 8; 
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.cores = 8;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
@@ -84,25 +78,25 @@ int main(int argc, char **argv)
   int restart_cp_num = 0;
 
   _main      = HPX_REGISTER_ACTION(_main_action);
- 
+
   int input[17];
-  input[0] = scaling; 
-  input[1] = comm_method; 
-  input[2] = stencil; 
-  input[3] = bc; 
-  input[4] = cp_method; 
-  input[5] = nx; 
-  input[6] = ny; 
-  input[7] = nz; 
-  input[8] = nvars; 
-  input[9] = ntsteps; 
-  input[10] = nspikes; 
-  input[11] = percent_sum; 
-  input[12] = debug_grid; 
-  input[13] = report_diffusion; 
-  input[14] = report_perf; 
-  input[15] = cp_interval; 
-  input[16] = restart_cp_num; 
+  input[0] = scaling;
+  input[1] = comm_method;
+  input[2] = stencil;
+  input[3] = bc;
+  input[4] = cp_method;
+  input[5] = nx;
+  input[6] = ny;
+  input[7] = nz;
+  input[8] = nvars;
+  input[9] = ntsteps;
+  input[10] = nspikes;
+  input[11] = percent_sum;
+  input[12] = debug_grid;
+  input[13] = report_diffusion;
+  input[14] = report_perf;
+  input[15] = cp_interval;
+  input[16] = restart_cp_num;
 
   return hpx_run(_main, input, 17*sizeof(int));
 

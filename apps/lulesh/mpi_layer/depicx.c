@@ -79,12 +79,10 @@ int main(int argc, char *argv[])
 
   printf(" Number OS threads: %ld Number lightweight threads: %d nx: %d its: %d\n",numos,numhpx,nx,its);
 
-  hpx_config_t cfg = {
-    .cores = numos,
-    .threads = numos,
-    //    .stack_bytes = 2<<24
-    .gas = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.cores = numos;
+  cfg.threads = numos;
+  // cfg.stack_bytes = 2<<24
 
   int error = hpx_init(&cfg);
   if (error != HPX_SUCCESS)

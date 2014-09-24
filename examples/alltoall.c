@@ -116,7 +116,7 @@ _advanceDomain_action(const unsigned long *epoch)
 
   hpx_lco_alltoall_setid(domain->newdt, domain->rank, domain->nDoms * sizeof(int),
                            gnewdt, HPX_NULL, HPX_NULL);
-  
+
   // Get the gathered value, and print the debugging string.
   int newdt[domain->nDoms];
   hpx_lco_alltoall_getid(domain->newdt, domain->rank, sizeof(newdt), &newdt);
@@ -164,7 +164,7 @@ alltoall_main_action(const main_args_t *args)
   hpx_lco_delete(done, HPX_NULL);
 
   fflush(stdout);
-  
+
   const unsigned long epoch = 0;
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
@@ -173,7 +173,7 @@ alltoall_main_action(const main_args_t *args)
 
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
-  
+
   hpx_gas_free(domain, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -199,12 +199,7 @@ main(int argc, char * const argv[argc])
   };
 
   // allocate the default HPX configuration on the stack
-  hpx_config_t cfg = {
-    .cores = args.cores,
-    .threads = args.cores,
-    .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   // parse the command line
   int opt = 0;

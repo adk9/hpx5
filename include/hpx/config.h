@@ -99,7 +99,7 @@ typedef struct {
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
-    .wait_at     = HPX_LOCALITY_NONE,       \
+    .wait_at     = HPX_LOCALITY_NONE,           \
     .log_level   = HPX_LOG_DEFAULT,             \
     .statistics  = true                         \
   }
