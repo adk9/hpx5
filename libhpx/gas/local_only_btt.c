@@ -85,7 +85,7 @@ static void _insert(btt_class_t *class, hpx_addr_t addr, void *base) {
 }
 
 
-btt_class_t *btt_local_only_new(void) {
+btt_class_t *btt_local_only_new(size_t heap_size) {
   // Allocate the object
   _btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
