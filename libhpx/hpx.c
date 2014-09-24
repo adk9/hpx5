@@ -84,28 +84,6 @@ static void *_map_local(uint32_t bytes) {
 }
 
 
-static hpx_action_t _bcast = 0;
-
-
-typedef struct {
-  hpx_action_t action;
-  char *data[];
-} _bcast_args_t;
-
-
-static int _bcast_action(_bcast_args_t *args) {
-  hpx_addr_t and = hpx_lco_and_new(here->ranks);
-  uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
-  for (int i = 0, e = here->ranks; i < e; ++i)
-    hpx_call(HPX_THERE(i), args->action, args->data, len, and);
-
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-
-
 int hpx_init(const hpx_config_t *cfg) {
   // 0) use a default configuration if one is necessary
   if (!cfg)
@@ -247,84 +225,6 @@ hpx_run(hpx_action_t act, const void *args, size_t size) {
 // all of the available localities.
 int hpx_start(void) {
   return system_startup();
-}
-
-
-/// A RPC call with a user-specified continuation action.
-int
-hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                           const void *args, size_t len,
-                           hpx_addr_t c_target, hpx_action_t c_action)
-{
-  hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
-                                  hpx_thread_current_pid(), true);
-  if (!p)
-    return dbg_error("rpc: failed to create parcel.\n");
-
-  hpx_parcel_send_sync(p);
-  return HPX_SUCCESS;
-}
-
-/// Encapsulates an asynchronous remote-procedure-call.
-int
-hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-         size_t len, hpx_addr_t result)
-{
-  return hpx_call_with_continuation(addr, action, args, len, result,
-                                    hpx_lco_set_action);
-}
-
-
-int
-hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
-              const void *args, size_t alen,
-              void *out, size_t olen)
-{
-  hpx_addr_t result = hpx_lco_future_new(olen);
-  hpx_call(addr, action, args, alen, result);
-  int status = hpx_lco_get(result, olen, out);
-  hpx_lco_delete(result, HPX_NULL);
-  return status;
-}
-
-
-int
-hpx_call_async(hpx_addr_t addr, hpx_action_t action,
-               const void *args, size_t len,
-               hpx_addr_t args_reuse, hpx_addr_t result)
-{
-  hpx_parcel_t *p =
-      parcel_create(addr, action, args, len, result, hpx_lco_set_action,
-                    hpx_thread_current_pid(), false);
-  if (!p)
-    return dbg_error("rpc: failed to create parcel.\n");
-
-  hpx_parcel_send(p, args_reuse);
-  return HPX_SUCCESS;
-}
-
-
-/// Encapsulates a RPC called on all available localities.
-int
-hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
-  hpx_parcel_set_target(p, HPX_HERE);
-  hpx_parcel_set_action(p, _bcast);
-  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-  hpx_parcel_set_cont_target(p, lco);
-
-  _bcast_args_t *args = (_bcast_args_t *)hpx_parcel_get_data(p);
-  args->action = action;
-  memcpy(&args->data, data, len);
-
-  hpx_parcel_send_sync(p);
-  return HPX_SUCCESS;
-}
-
-
-hpx_action_t
-hpx_register_action(const char *id, hpx_action_handler_t func) {
-  return action_register(id, func);
 }
 
 
@@ -547,6 +447,5 @@ hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  _bcast = HPX_REGISTER_ACTION(_bcast_action);
   _gas_free = HPX_REGISTER_ACTION(_gas_free_action);
 }
