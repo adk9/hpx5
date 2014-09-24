@@ -3,24 +3,24 @@
 // @Project       High Performance ParallelX Library (libhpx)
 //----------------------------------------------------------------------------
 // @Subject       Library Unit Test Harness - Memget
-// 
+//
 // @Compiler      GCC
 // @OS            Linux
 // @Description   Future based memget test
-// @Goal          Goal of this testcase is to test future based memget 
+// @Goal          Goal of this testcase is to test future based memget
 // @Copyright     Copyright (c) 2014, Trustees of Indiana University
 //                All rights reserved.
 //
 //                This software may be modified and distributed under the terms
 //                of the BSD license.  See the COPYING file for details.
 //
-//                This software was created at the Indiana University Center 
+//                This software was created at the Indiana University Center
 //                for Research in Extreme Scale Technologies (CREST).
 //----------------------------------------------------------------------------
 // @Date          09/23/2014
 // @Author        Jayashree Candadai <jayaajay [at] indiana.edu>
 // @Version       0.1
-// Commands to Run: make, mpirun hpxtest 
+// Commands to Run: make, mpirun hpxtest
 //****************************************************************************
 
 //****************************************************************************
@@ -29,18 +29,21 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-#define ARRAY_SIZE 32
+static uint64_t block[] = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+  22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+};
 
-int t12_init_array_action(size_t* args) {
-  size_t n = *args;
+
+int t12_init_array_action(void* args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  for(int i = 0; i < n; i++)
-    local[i] = i;
-  HPX_THREAD_CONTINUE(local);
+  memcpy(local, args, hpx_thread_current_args_size());
+  hpx_gas_unpin(target);
+  return HPX_SUCCESS;
 }
 
 //****************************************************************************
@@ -52,31 +55,32 @@ START_TEST (test_libhpx_memget)
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
-  uint64_t *local;
- 
-  hpx_addr_t data = hpx_gas_global_alloc(size, ARRAY_SIZE*sizeof(uint64_t));
-  hpx_addr_t remote = hpx_addr_add(data, ARRAY_SIZE*sizeof(uint64_t)* peerid);
 
-  size_t arraysize = ARRAY_SIZE;
+  hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
+  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block));
+
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, t12_init_array, &arraysize, sizeof(arraysize), done);
-  hpx_call_sync(data, t12_init_array, &arraysize, sizeof(arraysize), &local, sizeof(local));
+  hpx_call(remote, t12_init_array, block, sizeof(block), done);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
+  const size_t BLOCK_ELEMS = sizeof(block) / sizeof(block[0]);
+  uint64_t local[BLOCK_ELEMS];
+  memset(&local, 0xFF, sizeof(local));
+
   // allocate and start a timer
-  uint64_t localBuf[arraysize];
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t completed = hpx_lco_future_new(0);
-  hpx_gas_memget(&localBuf, remote, arraysize*sizeof(uint64_t), completed);
+  hpx_gas_memget(&local, remote, sizeof(block), completed);
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
-  for (int i = 0; i < arraysize; i++)
-    printf("%"PRIu64"", localBuf[i]);
-  printf("\n");
-} 
+  for (int i = 0; i < BLOCK_ELEMS; ++i)
+    ck_assert_msg(local[i] == block[i],
+                  "failed to get element %d correctly, expected %"PRIu64
+                  ", got %"PRIu64"\n", i, block[i], local[i]);
+}
 END_TEST
 
 //****************************************************************************
