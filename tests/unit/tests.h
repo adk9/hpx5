@@ -76,7 +76,7 @@ int t09_senderChannel_action(hpx_addr_t*);
 int t09_receiverChannel_action(hpx_addr_t*);
 int t10_set_action(void*);
 int t11_increment_action(void*);
-int t12_init_array_action(size_t*);
+int t12_init_array_action(void*);
 int t13_init_array_action(size_t*);
 
 void hpxtest_core_setup(void);
