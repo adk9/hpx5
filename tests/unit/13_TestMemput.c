@@ -40,13 +40,15 @@ int t13_memput_verify_action(void *args) {
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
+  uint64_t result = false;
   const size_t BLOCK_ELEMS = sizeof(block) / sizeof(block[0]);
-  for (int i = 0; i < BLOCK_ELEMS; ++i)
-    ck_assert_msg(local[i] == block[i],
-                  "failed to put element %d correctly, expected %"PRIu64
-                  ", got %"PRIu64"\n", i, block[i], local[i]);
+  for (int i = 0; i < BLOCK_ELEMS; ++i){
+    if (local[i] != block[i]) {
+      result = true;
+    }
+  }                 
   hpx_gas_unpin(target);
-  return HPX_SUCCESS;
+  hpx_thread_continue(sizeof(uint64_t), &result);
 }
 
 //****************************************************************************
@@ -72,9 +74,13 @@ START_TEST (test_libhpx_memput)
   hpx_lco_delete(remoteComplete, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
+  uint64_t output;
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_call(remote, t13_memput_verify, NULL, 0, done);
   hpx_lco_wait(done);
+  
+  hpx_lco_get(done, sizeof(output), &output);
+  ck_assert_msg(output == false, "gas_memput failed");
   hpx_lco_delete(done, HPX_NULL);
 } 
 END_TEST
