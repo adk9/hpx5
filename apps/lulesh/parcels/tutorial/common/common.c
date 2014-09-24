@@ -29,12 +29,9 @@ main(int argc, char * const argv[argc])
   };
 
   // allocate the default HPX configuration on the stack
-  hpx_config_t cfg = {
-    .cores = args.cores,
-    .threads = args.cores,
-    .stack_bytes = 0,
-    .gas = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.cores = args.cores;
+  cfg.threads = args.cores;
 
   // parse the command line
   int opt = 0;

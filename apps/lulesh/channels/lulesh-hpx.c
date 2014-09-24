@@ -45,7 +45,7 @@ void SBN1(hpx_addr_t *address,int index,Domain *domain)
     printf(" TEST fromDomain %d srcRemoteIdx %d\n",fromDomain,srcRemoteIdx);
     //hpx_future_t *fut = &DOMAINS[fromDomain].SBN1[srcRemoteIdx];
     if (index == fromDomain) {
-      double *data = malloc(1*sizeof(double)); 
+      double *data = malloc(1*sizeof(double));
       data[0] = 1.0*index;
       hpx_addr_t dest = hpx_lco_chan_array_at(channels,srcRemoteIdx);
       hpx_lco_chan_send(dest, &data, sizeof(data), HPX_NULL);
@@ -80,18 +80,18 @@ static int _advanceDomain_action(Advance *advance) {
   int index = advance->index;
   int i;
 
-  int tp = (int) (cbrt(nDoms) + 0.5); 
+  int tp = (int) (cbrt(nDoms) + 0.5);
 
   Init(tp,nx);
   Domain domain;
-  int col = index%tp; 
-  int row = (index/tp)%tp; 
+  int col = index%tp;
+  int row = (index/tp)%tp;
   int plane = index/(tp*tp);
-  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,&domain); 
+  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,&domain);
 
   SBN1(&channels,index,&domain);
 
-  // send recv example    
+  // send recv example
   //if ( index == 1 ) {
   //  double buf = 3.14159;
   //  hpx_addr_t root = hpx_lco_chan_array_at(channels, 7);
@@ -138,13 +138,13 @@ static int _main_action(int *input)
 
   hpx_time_t t1 = hpx_time_now();
 
-  int nDoms, nx, maxcycles, cores, tp, i, j, k; 
+  int nDoms, nx, maxcycles, cores, tp, i, j, k;
   nDoms = input[0];
   nx = input[1];
   maxcycles = input[2];
   cores = input[3];
 
-  tp = (int) (cbrt(nDoms) + 0.5); 
+  tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
     return -1;
@@ -168,12 +168,12 @@ static int _main_action(int *input)
 #if 0
 
   Init(tp, nx);
-  DOMAINS = malloc(sizeof(Domain)*nDoms); 
+  DOMAINS = malloc(sizeof(Domain)*nDoms);
   for (i = 0; i < nDoms; i++) {
-    int col = i%tp; 
-    int row = (i/tp)%tp; 
+    int col = i%tp;
+    int row = (i/tp)%tp;
     int plane = i/(tp*tp);
-    //SetDomain(i, col, row, plane, nx, tp, nDoms, maxcycles); 
+    //SetDomain(i, col, row, plane, nx, tp, nDoms, maxcycles);
   }
 
   free(DOMAINS);
@@ -204,20 +204,15 @@ static void usage(FILE *f) {
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = {
-    .cores         = 0,
-    .threads       = 0,
-    .stack_bytes   = 0,
-    .gas           = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int nDoms, nx, maxcycles,cores;
   // default
   nDoms = 8;
   nx = 15;
   maxcycles = 10;
-  cores = 8; 
-  cfg.cores = cores; 
+  cores = 8;
+  cfg.cores = cores;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
@@ -265,10 +260,10 @@ int main(int argc, char **argv)
   _advanceDomain      = HPX_REGISTER_ACTION(_advanceDomain_action);
 
   int input[4];
-  input[0] = nDoms; 
-  input[1] = nx; 
-  input[2] = maxcycles; 
-  input[3] = cores; 
+  input[0] = nDoms;
+  input[1] = nx;
+  input[2] = maxcycles;
+  input[3] = cores;
   printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
 
   return hpx_run(_main, input, 4*sizeof(int));

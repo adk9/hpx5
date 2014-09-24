@@ -71,7 +71,7 @@ static void singleminint(int *output,const int *input, const size_t size) {
   assert(sizeof(int) == size);
   if ( *input < *output ) {
     *output = *input;
-  } 
+  }
   return;
 }
 
@@ -79,7 +79,7 @@ static void singlemaxint(int *output,const int *input, const size_t size) {
   assert(sizeof(int) == size);
   if ( *input > *output ) {
     *output = *input;
-  } 
+  }
   return;
 }
 
@@ -362,7 +362,7 @@ static int _initDomain_action(InitArgs *init) {
 
   init_profile(ld);
   init_amr(ld);
-  
+
   // find out how many "receives"
   int nrecvs = 0;
   int dir;
@@ -371,7 +371,7 @@ static int _initDomain_action(InitArgs *init) {
    }
 
   if ( ld->num_refine >= ld->block_change ) {
-    ld->refine_and_size = ld->num_refine;  
+    ld->refine_and_size = ld->num_refine;
   } else {
     ld->refine_and_size = ld->block_change;
   }
@@ -658,13 +658,7 @@ if (stencil != 7 && stencil != 27) {
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = {
-    .cores         = 0,
-    .threads       = 0,
-    .stack_bytes   = 0,
-    .gas           = HPX_GAS_PGAS
-  };
-
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   // default
   int num_pes = 8;
   cfg.threads = 8;

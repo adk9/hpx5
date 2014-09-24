@@ -38,7 +38,7 @@ static int _hpxmain_action(int args[2] /* hpxranks, its */) {
     int ranks_there = 0; // important to be 0
     get_ranks_per_node(i, &size, &ranks_there, NULL);
 
-    
+
     for (j = 0; j < ranks_there; ++j)
       hpx_call(HPX_THERE(i), _mpi, &args[1], sizeof(int), and);
   }
@@ -61,12 +61,10 @@ int main(int argc, char *argv[])
 
   printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx,its);
 
-  hpx_config_t cfg = {
-    .cores = numos,
-    .threads = numos,
-    //    .stack_bytes = 2<<24
-    .gas = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.cores = numos;
+  cfg.threads = numos;
+  // cfg.stack_bytes = 2<<24
 
   int error = hpx_init(&cfg);
   if (error != HPX_SUCCESS)

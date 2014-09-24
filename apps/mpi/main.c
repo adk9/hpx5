@@ -38,7 +38,7 @@ void mpi_test_routine(int its)
   int ntasks = numProcs;
   double recvtime,totaltime;
   MPI_Status   status;
-  MPI_Request	send_request,recv_request;
+  MPI_Request   send_request,recv_request;
   int ierr,inittime,itask;
   double sendbuffsum,recvbuffsum;
   double *recvtimes, *sendbuffsums,*recvbuffsums;
@@ -66,7 +66,7 @@ void mpi_test_routine(int its)
   int *sendbuf, *recvbuf;
   int root;
   sendbuf = (int *)malloc( count * sizeof(int) );
-  recvbuf = (int *)malloc( count * sizeof(int) ); 
+  recvbuf = (int *)malloc( count * sizeof(int) );
 
   sbuf = (int *)malloc( ntasks * ntasks * sizeof(int) );
   rbuf = (int *)malloc( ntasks * ntasks * sizeof(int) );
@@ -76,12 +76,12 @@ void mpi_test_routine(int its)
   rdispls = (int *)malloc( ntasks * sizeof(int) );
   sdispls = (int *)malloc( ntasks * sizeof(int) );
 
-  int *displs,*send_counts,*row,**table; 
+  int *displs,*send_counts,*row,**table;
   int errors = 0;
-  displs = (int *)malloc( ntasks*sizeof(int)); 
-  send_counts = (int *)malloc( ntasks*sizeof(int)); 
-  row = (int *)malloc( ntasks*sizeof(int)); 
-  table = (int **)malloc( ntasks*sizeof(int *)); 
+  displs = (int *)malloc( ntasks*sizeof(int));
+  send_counts = (int *)malloc( ntasks*sizeof(int));
+  row = (int *)malloc( ntasks*sizeof(int));
+  table = (int **)malloc( ntasks*sizeof(int *));
   for (i=0;i<ntasks;i++) {
     table[i] = (int *) malloc (ntasks*sizeof(int));
   }
@@ -99,21 +99,21 @@ void mpi_test_routine(int its)
     // Example Isend/Irecv/Wait/Gather  -------------------------------------------------
     if ( taskid == 0 ) {
       ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
-	           taskid+1,0,MPI_COMM_WORLD_,&send_request);   
+               taskid+1,0,MPI_COMM_WORLD_,&send_request);
       ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
-	           ntasks-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+               ntasks-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
       recvtime = MPI_Wtime();
     } else if ( taskid == ntasks-1 ) {
       ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
-	           0,0,MPI_COMM_WORLD_,&send_request);   
+               0,0,MPI_COMM_WORLD_,&send_request);
       ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
-	           taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+               taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
       recvtime = MPI_Wtime();
     } else {
       ierr=MPI_Isend(sendbuff,buffsize,MPI_DOUBLE,
-	           taskid+1,0,MPI_COMM_WORLD_,&send_request);
+               taskid+1,0,MPI_COMM_WORLD_,&send_request);
       ierr=MPI_Irecv(recvbuff,buffsize,MPI_DOUBLE,
-	           taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
+               taskid-1,MPI_ANY_TAG_,MPI_COMM_WORLD_,&recv_request);
       recvtime = MPI_Wtime();
     }
     ierr=MPI_Wait(&send_request,&status);
@@ -124,12 +124,12 @@ void mpi_test_routine(int its)
     recvbuffsum=0.0;
     for(i=0;i<buffsize;i++){
       recvbuffsum += recvbuff[i];
-    }   
- 
+    }
+
     ierr=MPI_Gather(&recvbuffsum,1,MPI_DOUBLE,
                    recvbuffsums,1, MPI_DOUBLE,
                    0,MPI_COMM_WORLD_);
- 
+
     ierr=MPI_Gather(&recvtime,1,MPI_DOUBLE,
                    recvtimes,1, MPI_DOUBLE,
                    0,MPI_COMM_WORLD_);
@@ -137,8 +137,8 @@ void mpi_test_routine(int its)
       for(itask=0;itask<ntasks;itask++){
         printf("Process %d: Sum of received vector= %e: Time=%f milliseconds\n",
                itask,recvbuffsums[itask],recvtimes[itask]);
-      }  
-      printf(" Communication time: %f seconds\n\n",totaltime);  
+      }
+      printf(" Communication time: %f seconds\n\n",totaltime);
     }
     if ( rank == 0 )printf(" Finished Isend/Irecv/Wait/Gather Test\n");
 
@@ -152,7 +152,7 @@ void mpi_test_routine(int its)
     for (i=0;i<10;i++) {
       buffer[i] = rank*100 + i;
     }
- 
+
     MPI_Sendrecv(srbuffer, 10, MPI_INT, left, 123, srbuffer2, 10, MPI_INT, right, 123, MPI_COMM_WORLD_, &srstatus);
 
     if ( rank == 0 )printf(" Finished Sendrecv Test\n");
@@ -213,7 +213,7 @@ void mpi_test_routine(int its)
       buffer[5] = 0;
     }
     MPI_Bcast(buffer, 6, MPI_INT, 0, MPI_COMM_WORLD_);
-    if ( buffer[5] != 6 ) { 
+    if ( buffer[5] != 6 ) {
       fprintf( stderr, "(%d) Error for type MPI_INT MPI_Bcast\n", rank);
       fflush(stderr);
     }
@@ -258,20 +258,20 @@ void mpi_test_routine(int its)
     // Testing reduce------------------------------------------------
     errors = 0;
     recv_count = ntasks;
-    if (rank == 0) 
+    if (rank == 0)
       for ( i=0; i<ntasks; i++) {
         send_counts[i] = recv_count;
         displs[i] = i * ntasks;
-        for ( j=0; j<ntasks; j++ ) 
+        for ( j=0; j<ntasks; j++ )
           table[i][j] = i+j;
       }
- 
+
     /* Scatter the big table to everybody's little table */
-    MPI_Scatterv(&table[0][0], send_counts, displs, MPI_INT, 
+    MPI_Scatterv(&table[0][0], send_counts, displs, MPI_INT,
                      &row[0] , recv_count, MPI_INT, 0, MPI_COMM_WORLD_);
- 
+
     /* Now see if our row looks right */
-    for (i=0; i<ntasks; i++) 
+    for (i=0; i<ntasks; i++)
       if ( row[i] != i+rank ) errors++;
 
     if ( errors > 0 ) printf(" (%d) Error to type MPI_Scatterv %d\n",errors,rank);
@@ -315,7 +315,7 @@ void mpi_test_routine(int its)
   free(row);
   free(displs);
   free(send_counts);
-  for (i=0;i<ntasks;i++) { 
+  for (i=0;i<ntasks;i++) {
     free(table[i]);
   }
   free(table);
@@ -358,7 +358,7 @@ static int _hpxmain_action(int args[2] /* hpxranks, its */) {
     int ranks_there = 0; // important to be 0
     get_ranks_per_node(i, &size, &ranks_there, NULL);
 
-    
+
     for (j = 0; j < ranks_there; ++j)
       hpx_call(HPX_THERE(i), _mpi, &args[1], sizeof(int), and);
   }
@@ -388,12 +388,10 @@ int main(int argc, char *argv[])
 
   printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx,its);
 
-  hpx_config_t cfg = {
-    .cores = numos,
-    .threads = numos,
-    //    .stack_bytes = 2<<24
-    .gas = HPX_GAS_PGAS
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.cores = numos;
+  cfg.threads = numos;
+  // cfg.stack_bytes = 2<<24
 
   int error = hpx_init(&cfg);
   if (error != HPX_SUCCESS)

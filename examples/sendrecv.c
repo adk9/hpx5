@@ -113,12 +113,8 @@ static void usage(FILE *f) {
 
 
 int main(int argc, char *argv[argc]) {
-  hpx_config_t cfg = {
-    .cores         = 0,
-    .threads       = 0,
-    .stack_bytes   = 0,
-    .gas           = HPX_GAS_NOGLOBAL
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.gas          = HPX_GAS_NOGLOBAL;
 
   int args[2] = {24, 10000};
 
