@@ -31,7 +31,7 @@ static void _usage(FILE *stream) {
 
 
 static hpx_action_t _print_vertex_distance;
-static int _print_vertex_distance_action(void *args)
+static int _print_vertex_distance_action(int *i)
 {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -39,7 +39,7 @@ static int _print_vertex_distance_action(void *args)
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  fprintf(stderr, "%lu\n", vertex->distance);
+  printf("Vertex: %d, %lu, %lu\n", *i, vertex->num_edges, vertex->distance);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -47,7 +47,7 @@ static int _print_vertex_distance_action(void *args)
 
 
 static hpx_action_t _print_vertex_distance_index;
-static int _print_vertex_distance_index_action(void *args)
+static int _print_vertex_distance_index_action(int *i)
 {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -60,7 +60,7 @@ static int _print_vertex_distance_index_action(void *args)
   vertex = *v;
   hpx_gas_unpin(target);
 
-  return hpx_call_sync(vertex, _print_vertex_distance, NULL, 0, NULL, 0);
+  return hpx_call_sync(vertex, _print_vertex_distance, i, sizeof(*i), NULL, 0);
 }
 
 
@@ -77,25 +77,34 @@ static int _main_action(_sssp_args_t *args) {
   // Create an edge list structure from the given filename
   edge_list_t el;
   hpx_call_sync(HPX_HERE, edge_list_from_file, &args->filename, sizeof(char*), &el, sizeof(el));
+  printf("Allocated edge-list from file %s.\n", args->filename);
+  printf("Edge List: #v = %lu, #e = %lu\n",
+         el.num_vertices, el.num_edges);
 
   // Construct the graph as an adjacency list
   call_sssp_args_t sargs = { .graph = HPX_NULL, .source = args->source };
   hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
 
+  printf("Allocated adjacency-list.\n");
+
   // Call the SSSP algorithm
   hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs), NULL, 0);
 
+  printf("Finished executing SSSP (chaotic-relaxation).\n");
 
   // Verification of results.
-
+  printf("Verifying results...\n");
+  
   // Action to print the distances of each vertex from the source
   hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
   for (int i = 0; i < el.num_vertices; ++i) {
     hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
-    hpx_call(index, _print_vertex_distance_index, NULL, 0, vertices);
+    hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
   }
   hpx_lco_wait(vertices);
   hpx_lco_delete(vertices, HPX_NULL);
+
+  hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
 
