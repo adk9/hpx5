@@ -23,6 +23,7 @@
 #include "libhpx/network.h"
 #include "libhpx/routing.h"
 #include "addr.h"
+#include "pgas.h"
 
 static uint64_t _table_size = (uint64_t)UINT32_MAX * sizeof(void*);
 
@@ -113,7 +114,7 @@ static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
 }
 
 
-btt_class_t *btt_pgas_new(void) {
+btt_class_t *btt_pgas_new(size_t heap_size) {
   // Allocate the object
   pgas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
@@ -144,7 +145,7 @@ btt_class_t *btt_pgas_new(void) {
     dbg_error("pgas: could not mmap block-translation-table, falling back to "
         "HPX_GAS_NOGLOBAL\n");
     free(btt);
-    return btt_new(HPX_GAS_NOGLOBAL);
+    return btt_new(HPX_GAS_NOGLOBAL, heap_size);
   }
 
   return &btt->class;
