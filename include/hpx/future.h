@@ -133,7 +133,7 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_addr_t future, int id, size_t size, voi
 /// @param[in]   sizes The amount of data to get at each location, in bytes
 /// @param[out] values Array of the addresses of the values of the futures
 void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t size,
-			       void *values[]);
+			       void *values);
 
 /// Wait on a future
 ///
