@@ -23,6 +23,7 @@ typedef enum {
   HPX_RESEND         = 1,
   HPX_LCO_ERROR      = 2,
   HPX_LCO_CHAN_EMPTY = 3,
+  HPX_LCO_TIMEOUT    = 4,
   HPX_USER           = 127
 } hpx_status_t;
 /// @}

@@ -59,11 +59,46 @@ _wait(_and_t *and)
   intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
   if (val == 0)
     return status;
-
+  
   // otherwise wait for the and to be signaled
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
+static hpx_status_t
+_try_wait(_and_t *and, hpx_time_t time)
+{
+  // and->value can change asynchronously, but and->lco and and->barrier do not
+  // because we're holding the lock here
+  hpx_status_t status = cvar_get_error(&and->barrier);
+  if (status != HPX_SUCCESS)
+    return status;
+  
+  // read the value using an atomic, we either see 0---in which case either the
+  // and has already been signaled, or there is someone trying to get the lock
+  // we hold in order to signal it. In both cases, the and has been satisfied,
+  // and we can correctly return the status that we read (the status won't
+  // change, because that's done through the hpx_lco_error() handler which would
+  // need the lock too).
+  intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
+  if (val == 0)
+    return status;
+  
+  // otherwise wait for the and barrier to reach 0 or return if out of time
+  bool timeout = false;
+  while (val != 0 && !timeout) {
+    if (hpx_time_diff_us(hpx_time_now(), time) > 0) {
+      timeout = true;
+      break;
+    }
+    hpx_thread_yield();
+    val = sync_load(&and->value, SYNC_ACQUIRE);
+  }
+
+  if (!timeout)
+    return HPX_SUCCESS;
+  else
+    return HPX_LCO_TIMEOUT;
+}
 
 static void
 _free(_and_t *and) {
@@ -124,21 +159,35 @@ _and_wait(lco_t *lco) {
   return status;
 }
 
+static hpx_status_t
+_and_try_wait(lco_t *lco, hpx_time_t time) {
+  _and_t *and = (_and_t *)lco;
+  lco_lock(&and->lco);
+  hpx_status_t status = _try_wait(and, time);
+  lco_unlock(&and->lco);
+  return status;
+}
 
 static hpx_status_t
 _and_get(lco_t *lco, int size, void *out) {
   return _and_wait(lco);
 }
 
+static hpx_status_t
+_and_try_get(lco_t *lco, int size, void *out, hpx_time_t time) {
+  return _and_try_wait(lco, time);
+}
 
 static void
 _and_init(_and_t *and, intptr_t value) {
   static const lco_class_t vtable = {
-    _and_fini,
-    _and_error,
-    _and_set,
-    _and_get,
-    _and_wait
+    .on_fini = _and_fini,
+    .on_error = _and_error,
+    .on_set = _and_set,
+    .on_get = _and_get,
+    .on_wait = _and_wait,
+    .on_try_get = _and_try_get,
+    .on_try_wait = _and_try_wait
   };
 
   assert(value >= 0);
