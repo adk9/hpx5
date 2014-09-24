@@ -42,7 +42,7 @@ extern hpx_action_t t09_receiverChannel;
 extern hpx_action_t t10_set;
 extern hpx_action_t t11_increment;
 extern hpx_action_t t12_init_array;
-extern hpx_action_t t13_init_array;
+extern hpx_action_t t13_memput_verify;
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -76,8 +76,8 @@ int t09_senderChannel_action(hpx_addr_t*);
 int t09_receiverChannel_action(hpx_addr_t*);
 int t10_set_action(void*);
 int t11_increment_action(void*);
-int t12_init_array_action(size_t*);
-int t13_init_array_action(size_t*);
+int t12_init_array_action(void*);
+int t13_memput_verify_action(void*);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);
