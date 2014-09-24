@@ -80,10 +80,15 @@ apps/libPXGL/sssp
 /include/Makefile
 /include/Makefile.in
 
-# /include/contrib/
-/include/contrib/.deps
-/include/contrib/Makefile
-/include/contrib/Makefile.in
+# /contrib/
+contrib/hwloc-1.9.1rc1/Makefile
+contrib/hwloc-1.9.1rc1/include/Makefile
+contrib/hwloc-1.9.1rc1/include/hwloc/autogen/config.h
+contrib/hwloc-1.9.1rc1/include/hwloc/autogen/stamp-h3
+contrib/hwloc-1.9.1rc1/include/private/autogen/config.h
+contrib/hwloc-1.9.1rc1/include/private/autogen/stamp-h2
+contrib/hwloc-1.9.1rc1/src/Makefile
+contrib/hwloc-1.9.1rc1/src/static-components.h
 
 include/hpx/Makefile
 include/libhpx/Makefile
