@@ -113,5 +113,16 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync);
 /// @param[out]    lco - LCO object to check to wait for the completion of move
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
+/// Memput implementation - This essentially does memcpy
+/// @param         remote - the Global address
+/// @param         addr - the pinned local address
+/// @size          size of the memget
+void hpx_gas_memget(hpx_addr_t remote, hpx_addr_t addr, size_t size);
+
+/// Memput implementation 
+/// @param         remote - The global address
+/// @param         local 
+/// @param         size - size of the metput
+void hpx_gas_memput(hpx_addr_t remote, const void *local, size_t size);
 
 #endif

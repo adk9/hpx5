@@ -539,6 +539,62 @@ hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync)
   hpx_call_async(addr, _gas_free, NULL, 0, HPX_NULL, sync);
 }
 
+typedef struct {
+  size_t n;
+  hpx_addr_t addr;
+  hpx_addr_t cont;
+} _memget_args_t;
+
+static hpx_action_t _memget = 0;
+static hpx_action_t _memget_copy = 0;
+static hpx_action_t _memput = 0;
+
+static int _memget_copy_action(void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  char *local;
+  if (!hpx_gas_try_pin(target, (void**)&local))
+    return HPX_RESEND;
+
+  memcpy(args, local, hpx_thread_current_args_size());
+  return HPX_SUCCESS;
+}
+
+static int _memget_action(_memget_args_t *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  char *local;
+  if (!hpx_gas_try_pin(target, (void**)&local))
+    return HPX_RESEND;
+
+  hpx_call(args->addr, _memget_copy, local, args->n, args->cont);
+  hpx_thread_exit(HPX_SUCCESS);
+}
+
+static int _memput_action(void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  char *local;
+  if (!hpx_gas_try_pin(target, (void**)&local))
+    return HPX_RESEND;
+
+  memcpy(local, args, hpx_thread_current_args_size());
+  return HPX_SUCCESS;
+}
+
+void hpx_gas_memget(hpx_addr_t remote, hpx_addr_t addr, size_t size) {
+  _memget_args_t args = {
+    .n = size,
+    .addr = addr,
+    .cont = HPX_NULL
+  };
+
+  args.cont = hpx_lco_future_new(0);
+  hpx_call(remote, _memget, &args, sizeof(args), HPX_NULL);
+  hpx_lco_wait(args.cont);
+  hpx_lco_delete(args.cont, HPX_NULL);
+}
+
+void hpx_gas_memput(hpx_addr_t remote, const void *local, size_t size) {
+  hpx_call_sync(remote, _memput, local, size, NULL, 0);
+}
 
 hpx_addr_t
 hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
@@ -547,8 +603,10 @@ hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
   return addr;
 }
 
-
 static HPX_CONSTRUCTOR void _init_actions(void) {
   _bcast = HPX_REGISTER_ACTION(_bcast_action);
   _gas_free = HPX_REGISTER_ACTION(_gas_free_action);
+  _memget = HPX_REGISTER_ACTION(_memget_action);
+  _memget_copy = HPX_REGISTER_ACTION(_memget_copy_action);
+  _memput = HPX_REGISTER_ACTION(_memput_action);
 }
