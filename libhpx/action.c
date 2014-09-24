@@ -64,3 +64,9 @@ const char *action_get_key(hpx_action_t id) {
 #endif
   return key;
 }
+
+
+hpx_action_t
+hpx_register_action(const char *id, hpx_action_handler_t func) {
+  return action_register(id, func);
+}
