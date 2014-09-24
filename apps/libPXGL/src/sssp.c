@@ -10,8 +10,11 @@
 
 /// SSSP Chaotic-relaxation
 
+static hpx_action_t _sssp_visit_vertex;
+static hpx_action_t _sssp_update_vertex_distance;
 
-static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, int distance) {
+
+static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t distance) {
   uint64_t prev_dist = sync_load(&vertex->distance, SYNC_ACQUIRE);
   if (distance < prev_dist) {
     if (!sync_cas(&vertex->distance, prev_dist, distance, SYNC_RELEASE, SYNC_RELAXED))
@@ -27,7 +30,6 @@ typedef struct {
 } _sssp_visit_vertex_args_t;
 
 
-static hpx_action_t _sssp_update_vertex_distance;
 static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -38,20 +40,16 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     uint64_t num_edges = sync_load(&vertex->num_edges, SYNC_ACQUIRE);
 
-    uint64_t new_dist;
     hpx_addr_t edges = hpx_lco_and_new(num_edges);
-    adj_list_edge_t *e;
     for (int i = 0; i < num_edges; ++i) {
-      e = &vertex->edge_list[i];
-      new_dist = args->distance + e->weight;
+      adj_list_edge_t *e = &vertex->edge_list[i];
+      args->distance += e->weight;
 
       const hpx_addr_t index
           = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t));
 
-      _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = new_dist };
-      hpx_call(index, _sssp_update_vertex_distance, &sssp_args, sizeof(sssp_args), edges);
+      hpx_call(index, _sssp_visit_vertex, args, sizeof(*args), edges);
     }
-
     hpx_gas_unpin(target);
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
@@ -62,7 +60,6 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) 
 }
 
 
-static hpx_action_t _sssp_visit_vertex;
 static int _sssp_visit_vertex_action(_sssp_visit_vertex_args_t *args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -73,6 +70,7 @@ static int _sssp_visit_vertex_action(_sssp_visit_vertex_args_t *args) {
 
   vertex = *v;
   hpx_gas_unpin(target);
+
   return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
 }
 

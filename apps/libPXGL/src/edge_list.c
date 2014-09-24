@@ -27,7 +27,7 @@ static int _put_edge_action(edge_list_edge_t *e)
    if (!hpx_gas_try_pin(target, (void**)&edge))
      return HPX_RESEND;
 
-   memcpy(edge, e, sizeof(e));
+   memcpy(edge, e, sizeof(*e));
    hpx_gas_unpin(target);
    return HPX_SUCCESS;
 }
@@ -62,6 +62,7 @@ int edge_list_from_file_action(char **filename) {
   }
   hpx_lco_wait(edges);
   hpx_lco_delete(edges, HPX_NULL);
+  free(edge);
 
   hpx_thread_continue(sizeof(*el), el);
   return HPX_SUCCESS;

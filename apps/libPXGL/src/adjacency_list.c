@@ -1,6 +1,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "adjacency_list.h"
 #include "libpxgl.h"
@@ -181,7 +182,7 @@ hpx_action_t adj_list_from_edge_list;
 int adj_list_from_edge_list_action(edge_list_t *el) {
 
   // Allocate the count array for creating an edge histogram
-  const hpx_addr_t count_array = hpx_gas_global_alloc(_COUNT_ARRAY_BLOCKS, _COUNT_ARRAY_BLOCK_SIZE(el->num_vertices));
+  const hpx_addr_t count_array = hpx_gas_global_calloc(_COUNT_ARRAY_BLOCKS, _COUNT_ARRAY_BLOCK_SIZE(el->num_vertices));
 
   // Count the number of edges per source vertex
   hpx_addr_t edges = hpx_lco_and_new(el->num_edges);
@@ -198,7 +199,7 @@ int adj_list_from_edge_list_action(edge_list_t *el) {
   // Allocate and populate the adjacency list.
   hpx_addr_t vertices = hpx_lco_and_new(el->num_vertices);
   for (int i = 0; i < el->num_vertices; ++i) {
-    hpx_addr_t count = hpx_addr_add(count_array, i * sizeof(hpx_addr_t));
+    hpx_addr_t count = hpx_addr_add(count_array, i * sizeof(count_t));
     hpx_addr_t index = hpx_addr_add(index_array, i * sizeof(hpx_addr_t));
     hpx_call(count, _alloc_adj_list_entry, &index, sizeof(index), vertices);
   }
