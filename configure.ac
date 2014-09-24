@@ -213,8 +213,9 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/Makefile])])
-
+  [AC_CONFIG_FILES([tests/Makefile
+  tests/unit/Makefile
+  tests/performance/Makefile])])
   
 AC_OUTPUT
 
