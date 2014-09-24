@@ -3,23 +3,30 @@ noinst_appsdir       = $(datarootdir)/apps/
 noinst_LTLIBRARIES   = libpxgl.la
 
 libpxgl_la_SOURCES   = src/adjacency_list.c \
-		       src/edge_list.c \
+		               src/edge_list.c \
                        src/sssp.c
 
-libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I./include
+libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include
 libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la
+
+if HAVE_PHOTON
+libpxgl_la_CPPFLAGS += $(HPX_JEMALLOC_CPPFLAGS)
+libpxgl_la_CFLAGS    = @PHOTON_CFLAGS@
+libpxgl_la_LDFLAGS   = $(HPX_JEMALLOC_LDFLAGS)
+libpxgl_la_LIBADD    += -lphoton $(HPX_JEMALLOC_LIBS)
+endif
+
 
 noinst_apps_PROGRAMS = sssp
 
 sssp_SOURCES   = examples/sssp.c
-sssp_LDFLAGS   = -static
 
-sssp_CPPFLAGS  = -I$(top_srcdir)/include -I./include
-sssp_CFLAGS    = @PHOTON_CFLAGS@ @MPI_CFLAGS@
-sssp_CFLAGS   += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-sssp_LDADD     = $(top_builddir)/apps/libPXGL/libpxgl.la $(top_builddir)/libhpx/libhpx.la
+sssp_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include
+sssp_CFLAGS    = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+sssp_LDADD     = libpxgl.la
 
 if HAVE_PHOTON
-libpxgl_la_LIBADD   += @PHOTON_LIBS@ @MPI_LIBS@
-sssp_LDADD    += @PHOTON_LIBS@ @MPI_LIBS@
+sssp_CPPFLAGS += $(HPX_JEMALLOC_CPPFLAGS)
+sssp_CFLAGS   += @PHOTON_CFLAGS@
+sssp_LDFLAGS   = $(HPX_JEMALLOC_LDFLAGS)
 endif
