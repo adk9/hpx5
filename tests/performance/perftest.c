@@ -61,11 +61,11 @@ static void usage(FILE *f) {
 //****************************************************************************
 Suite *test_suite(void) 
 {
-  Suite * s = suite_create("hpxtest");
-  TCase * tc = tcase_create("hpxtest-core");
+  Suite * s = suite_create("perftest");
+  TCase * tc = tcase_create("perftest-core");
 
   /* install fixtures */
-  tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
+  tcase_add_unchecked_fixture(tc, perftest_core_setup, perftest_core_teardown);
 
   /* set timeout */
   tcase_set_timeout(tc, 8000);
@@ -83,8 +83,8 @@ int _main_action(void *args)
   SRunner * sr = srunner_create(s);
   srunner_add_suite(sr, s);
 
-  //Outputs the result to test.log
-  srunner_set_log(sr, "test.log");
+  //Outputs the result to output.log
+  srunner_set_log(sr, "output.log");
 
   // This sets CK_FORK=no
   srunner_set_fork_status(sr, CK_NOFORK);
@@ -115,7 +115,7 @@ int main(int argc, char * argv[]) {
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:T:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -130,6 +130,10 @@ int main(int argc, char * argv[]) {
      case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'h':
       usage(stdout);

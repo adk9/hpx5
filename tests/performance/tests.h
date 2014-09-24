@@ -6,8 +6,8 @@
 #include <check.h>
 #include <hpx/hpx.h>
 
-void hpxtest_core_setup(void);
-void hpxtest_core_teardown(void);
+void perftest_core_setup(void);
+void perftest_core_teardown(void);
 
 void add_primesieve(TCase *);
 

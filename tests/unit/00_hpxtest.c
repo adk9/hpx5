@@ -100,13 +100,13 @@ static void usage(FILE *f) {
 Suite *test_suite(void)
 {
   Suite * s = suite_create("hpxtest");
-  TCase * tc = tcase_create("hpxtest-core");
+  TCase * tc = tcase_create("hpxtest-Core");
 
   /* install fixtures */
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
-  tcase_set_timeout(tc, 8000);
+  tcase_set_timeout(tc, 1200);
 
   add_02_TestMemAlloc(tc);
   add_03_TestGlobalMemAlloc(tc);
@@ -132,14 +132,13 @@ int _main_action(void *args)
   SRunner * sr = srunner_create(s);
   srunner_add_suite(sr, s);
 
-  //Outputs the result to test.log
-  srunner_set_log(sr, "test.log");
+  //Outputs the result to output.log
+  srunner_set_log(sr, "output.log");
 
   // This sets CK_FORK=no
   srunner_set_fork_status(sr, CK_NOFORK);
 
-  srunner_run_all(sr, CK_NORMAL);
-  srunner_print(sr, CK_NORMAL);
+  srunner_run_all(sr, CK_VERBOSE);
 
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
