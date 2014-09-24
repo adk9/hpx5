@@ -113,16 +113,77 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync);
 /// @param[out]    lco - LCO object to check to wait for the completion of move
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
-/// Memput implementation - This essentially does memcpy
-/// @param         remote - the Global address
-/// @param         addr - the pinned local address
-/// @size          size of the memget
-void hpx_gas_memget(hpx_addr_t remote, hpx_addr_t addr, size_t size);
 
-/// Memput implementation 
-/// @param         remote - The global address
-/// @param         local 
-/// @param         size - size of the metput
-void hpx_gas_memput(hpx_addr_t remote, const void *local, size_t size);
+/// This copies data from a global address to a local buffer, asynchronously.
+///
+/// The global address range [from, from + size) must be within a single block
+/// allocated using one of the family of GAS allocation routines. This
+/// requirement may not be checked. Copying data across a block boundary, or
+/// from unallocated memory, will result in undefined behavior.
+///
+/// This operation is not atomic. memgets with concurrent memputs to overlapping
+/// addresses ranges will result in a data race with undefined behavior. Users
+/// should synchronize with some out-of-band mechanism.
+///
+/// @param             to The local address to copy to.
+/// @param           from The global address to copy from.
+/// @param           size The size, in bytes, of the buffer to copy
+/// @param          lsync The address of a zero-sized future that can be used to
+///                       wait for completion of the memget.
+///
+/// @returns HPX_SUCCESS
+int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync);
+
+
+/// This copies data from a local buffer to a global address, asynchronously.
+///
+/// The global address range [to, to + size) must be within a single block
+/// allocated using one of the family of GAS allocation routines. This
+/// requirement is not checked. Copying data across a block boundary, or to
+/// unallocated memory, will result in undefined behavior.
+///
+/// This operation is not atomic. Concurrent memputs to overlapping addresses
+/// ranges will result in a data race with undefined behavior. Users should
+/// synchronize with some out-of-band mechanism.
+///
+/// @note A set to @p rsync implies @p lsync has also been set.
+///
+/// @param             to The global address to copy to.
+/// @param           from The local address to copy from.
+/// @param           size The size, in bytes, of the buffer to copy
+/// @param          lsync The address of a zero-sized future that can be used to
+///                       wait for local completion of the memput. Once this is
+///                       signaled the @p from buffer may be reused or freed.
+/// @param          rsync The address of a zero-sized future that can be used to
+///                       wait for remote completion of the memput. Once this is
+///                       signaled the put has become globally visible.
+///
+/// @returns HPX_SUCCESS
+int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
+                   hpx_addr_t lsync, hpx_addr_t rsync);
+
+
+/// This copies data from a global address to a global address, asynchronously.
+///
+/// The global address range [from, from + size) and [to, to + size) must be
+/// within single blocks, respectively, allocated using one of the family of GAS
+/// allocation routines. This requirement may not be checked. Copying data
+/// across a block boundary, or from unallocated memory, will result in
+/// undefined behavior.
+///
+/// This operation is not atomic. Concurrent memcpys to overlapping addresses
+/// ranges will result in a data race with undefined behavior. Users should
+/// synchronize with some out-of-band mechanism. Concurrent memcpys from
+/// overlapping regions will be race free, as long as no concurrent memputs or
+/// memcpys occur to that region.
+///
+/// @param             to The global address to copy to.
+/// @param           from The global address to copy from.
+/// @param           size The size, in bytes, of the buffer to copy
+/// @param           sync The address of a zero-sized future that can be used to
+///                       wait for completion of the memcpy.
+///
+/// @returns HPX_OK
+int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
 
 #endif
