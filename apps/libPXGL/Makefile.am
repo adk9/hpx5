@@ -12,8 +12,6 @@ libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include
 libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_PHOTON
-libpxgl_la_CPPFLAGS += $(HPX_JEMALLOC_CPPFLAGS)
 libpxgl_la_CFLAGS    = @PHOTON_CFLAGS@
-libpxgl_la_LDFLAGS   = $(HPX_JEMALLOC_LDFLAGS)
-libpxgl_la_LIBADD    += -lphoton $(HPX_JEMALLOC_LIBS)
+libpxgl_la_LIBADD    += -lphoton 
 endif

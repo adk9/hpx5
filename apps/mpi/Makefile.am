@@ -21,10 +21,8 @@ libhpxmpi_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpxmpi_la_LIBADD   = $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_PHOTON
-libhpxmpi_la_CPPFLAGS += $(HPX_JEMALLOC_LDFLAGS)
 libhpxmpi_la_CFLAGS    = $(PHOTON_CFLAGS)
-libhpxmpi_la_LDFLAGS   = $(HPX_JEMALLOC_LDFLAGS)
-libhpxmpi_la_LIBADD   += -lphoton @MPI_LIBS@ $(HPX_JEMALLOC_LIBS)
+libhpxmpi_la_LIBADD   += -lphoton @MPI_LIBS@ 
 endif
 
 noinst_apps_PROGRAMS   = hpxmpi
@@ -37,8 +35,6 @@ hpxmpi_CFLAGS   = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxmpi_LDADD    = $(top_builddir)/apps/mpi/libhpxmpi.la $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_PHOTON
-hpxmpi_CPPFLAGS += $(HPX_JEMALLOC_LDFLAGS)
 hpxmpi_CFLAGS   += $(PHOTON_CFLAGS)
-hpxmpi_LDFLAGS  += $(HPX_JEMALLOC_LDFLAGS)
-hpxmpi_LDADD    += -lphoton @MPI_LIBS@ $(HPX_JEMALLOC_LIBS)
+hpxmpi_LDADD    += -lphoton @MPI_LIBS@
 endif
