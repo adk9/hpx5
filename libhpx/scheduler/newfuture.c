@@ -444,7 +444,7 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_addr_t base, int i, size_t size, void *
 // this is a highly suboptimal implementation
 // ideally this would be done more like wait_all is implemented
 void hpx_lco_newfuture_get_all(size_t num, hpx_addr_t futures, size_t size,
-			       void* values) {
+			       void *values[]) {
   hpx_addr_t *lcos = malloc(sizeof(hpx_addr_t) * num);
   int *sizes = malloc(sizeof(int) * num);
   hpx_status_t *statuses = malloc(sizeof(hpx_status_t) * num);
