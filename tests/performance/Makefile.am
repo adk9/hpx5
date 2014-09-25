@@ -20,8 +20,5 @@ perftest_CFLAGS         += $(HPX_C99)
 perftest_CFLAGS         += -Wno-unused
 
 if HAVE_PHOTON
-perftest_CPPFLAGS       += $(HPX_JEMALLOC_LDFLAGS)
-perftest_CFLAGS         += @PHOTON_CFLAGS@
-perftest_LDFLAGS         = $(HPX_JEMALLOC_LDFLAGS)
-perftest_LDADD          += -lphoton $(HPX_JEMALLOC_LIBS)
+perftest_LDADD          += -lphoton
 endif
