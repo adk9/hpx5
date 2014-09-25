@@ -33,7 +33,7 @@ static int _put_edge_action(edge_list_edge_t *e)
 }
 
 
-hpx_action_t edge_list_from_file;
+hpx_action_t edge_list_from_file = NULL;
 int edge_list_from_file_action(char **filename) {
 
   // Read from the edge-list filename
