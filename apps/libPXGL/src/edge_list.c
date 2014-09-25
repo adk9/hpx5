@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "edge_list.h"
 #include "libpxgl.h"
@@ -33,7 +34,7 @@ static int _put_edge_action(edge_list_edge_t *e)
 }
 
 
-hpx_action_t edge_list_from_file;
+hpx_action_t edge_list_from_file = NULL;
 int edge_list_from_file_action(char **filename) {
 
   // Read from the edge-list filename
@@ -43,26 +44,48 @@ int edge_list_from_file_action(char **filename) {
   edge_list_t *el = malloc(sizeof(*el));
   assert(el);
 
-  fscanf(f, "%lu", &el->num_vertices);
-  fscanf(f, "%lu", &el->num_edges);
-
-  // Allocate an edge_list array in the global address space
-  el->edge_list = hpx_gas_global_alloc(_EDGE_LIST_BLOCKS, _EDGE_LIST_BLOCK_SIZE(el->num_edges));
-
   edge_list_edge_t *edge = malloc(sizeof(*edge));
   assert(edge);
 
-  // Populate the edge_list
-  hpx_addr_t edges = hpx_lco_and_new(el->num_edges);
+  hpx_addr_t edges = HPX_NULL;
+  uint64_t count = 0;
 
-  for (int i = 0; i < el->num_edges; i++){
-    fscanf(f, "%lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
-    hpx_addr_t e = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t));
-    hpx_call(e, _put_edge, edge, sizeof(*edge), edges);
+  char line[LINE_MAX];
+  while (fgets(line, sizeof(line), f) != NULL) {
+    switch (line[0]) {
+      case 'c': continue;
+      case 'a':
+        sscanf(&line[1], " %lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
+        hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t));
+        count++;
+        assert(!hpx_addr_eq(edges, HPX_NULL));
+        hpx_call(e, _put_edge, edge, sizeof(*edge), edges);
+        break;
+
+      case 'p':
+        sscanf(&line[1], " sp %lu %lu", &el->num_vertices, &el->num_edges);
+
+        // Account for the  DIMACS graph format (.gr) where the node
+        // ids range from 1..n
+        el->num_vertices++;
+
+        // Allocate an edge_list array in the global address space
+        el->edge_list = hpx_gas_global_alloc(_EDGE_LIST_BLOCKS, _EDGE_LIST_BLOCK_SIZE(el->num_edges));
+
+        // Populate the edge_list
+        edges = hpx_lco_and_new(el->num_edges);
+        break;
+      default:
+        fprintf(stderr, "invalid command specifier '%c' in graph file. skipping..\n", line[0]);
+        continue;
+    }
   }
+
+  assert(!hpx_addr_eq(edges, HPX_NULL));
   hpx_lco_wait(edges);
   hpx_lco_delete(edges, HPX_NULL);
   free(edge);
+  fclose(f);
 
   hpx_thread_continue(sizeof(*el), el);
   return HPX_SUCCESS;
