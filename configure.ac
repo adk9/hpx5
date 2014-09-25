@@ -160,9 +160,10 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
+hpx_extra_libs="$HPX_JEMALLOC_LIBS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -175,7 +176,7 @@ AS_IF([test "x$enable_werror" != xno],
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
-LIBS="$LIBS $HPX_JEMALLOC_LIBS"
+LIBS="$hpx_extra_libs $LIBS"
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
