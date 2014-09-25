@@ -15,7 +15,8 @@ static hpx_action_t _sssp_update_vertex_distance;
 
 
 static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t distance) {
-  uint64_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED), old_dist = prev_dist;
+  uint64_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED);
+  uint64_t old_dist = prev_dist;
   while (distance < prev_dist) {
     old_dist = prev_dist;
     prev_dist = sync_cas_val(&vertex->distance, prev_dist, distance, SYNC_RELAXED, SYNC_RELAXED);
