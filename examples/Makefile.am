@@ -35,10 +35,8 @@ AM_CFLAGS           += @PAPI_CFLAGS@
 endif
 
 if HAVE_PHOTON
-AM_CPPFLAGS         += $(HPX_JEMALLOC_CPPFLAGS)
 AM_CFLAGS           += @PHOTON_CFLAGS@
-AM_LDFLAGS           = $(HPX_JEMALLOC_LDFLAGS)
-all_LIBS            += -lphoton $(HPX_JEMALLOC_LIBS)
+all_LIBS            += -lphoton
 endif
 
 if HAVE_MPI
