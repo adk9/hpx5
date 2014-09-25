@@ -38,7 +38,7 @@ static size_t get_nchunks(const size_t size, size_t bytes_per_chunk) {
 
 static lhpx_bitmap_alloc_t *new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
-  lhpx_bitmap_alloc_t *bitmap = lhpx_bitmap_alloc_new(*(uint32_t*)&nchunks);
+  lhpx_bitmap_alloc_t *bitmap = lhpx_bitmap_alloc_new((uint32_t)nchunks);
   if (!bitmap)
     dbg_error("pgas: failed to allocate a bitmap to track free chunks.\n");
   return bitmap;
