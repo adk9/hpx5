@@ -53,7 +53,8 @@ void hpxtest_core_setup(void) {
 void hpxtest_core_teardown(void) {
   fclose(test_log);
   printf("Shutting down HPX unit test framework in hpxtest_core_teardown\n");
-  printf("Check output.log for results\n\n");
+  printf("Check test.log for detailed output\n");
+  printf("Check output.log for tests passed or failed results\n\n");
   hpx_shutdown(0);
 }
 

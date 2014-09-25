@@ -44,14 +44,14 @@ int t11_increment_action(void *args) {
   // Increment the generation counter.
   // Counter to increment and the global address of an LCO signal remote
   // completion.
-  printf("Incrementing the generation counter\n");
+  fprintf(test_log, "Incrementing the generation counter\n");
   hpx_lco_gencount_inc(addr, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 START_TEST (test_libhpx_lco_gencount)
 {
-  printf("Starting the HPX gencount lco test\n");
+  fprintf(test_log, "Starting the HPX gencount lco test\n");
   //int ninplace = 4;
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -74,7 +74,7 @@ START_TEST (test_libhpx_lco_gencount)
   hpx_lco_delete(done, HPX_NULL);
   // hpx_lco_delete(lco, HPX_NULL); 
  
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 

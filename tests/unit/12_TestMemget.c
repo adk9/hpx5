@@ -51,7 +51,7 @@ int t12_init_array_action(void* args) {
 //****************************************************************************
 START_TEST (test_libhpx_memget)
 {
-  printf("Starting the memget test\n");
+  fprintf(test_log, "Starting the memget test\n");
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
@@ -74,7 +74,7 @@ START_TEST (test_libhpx_memget)
   hpx_gas_memget(&local, remote, sizeof(block), completed);
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   for (int i = 0; i < BLOCK_ELEMS; ++i)
     ck_assert_msg(local[i] == block[i],

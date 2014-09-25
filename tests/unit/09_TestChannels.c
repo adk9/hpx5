@@ -55,7 +55,7 @@ int t09_sender_action(hpx_addr_t *channels) {
   
   hpx_thread_set_affinity(0);
 
-  printf("Source sending data = %"PRIu64"\n", data);
+  //printf("Source sending data = %"PRIu64"\n", data);
   hpx_addr_t done = hpx_lco_future_new(0);
   // Channel send -- Send a buffer through a channel.
   hpx_lco_chan_send(channels[0], sizeof(data), &data, done, HPX_NULL);
@@ -66,10 +66,10 @@ int t09_sender_action(hpx_addr_t *channels) {
   // Receive a buffer from a channel. This is a blocking call.
   hpx_status_t status = hpx_lco_chan_recv(channels[1], NULL, &rbuf);
   ck_assert_msg(status == HPX_SUCCESS, "LCO Channel receive failed");
-  uint64_t result = *(uint64_t*)rbuf;
+  //uint64_t result = *(uint64_t*)rbuf;
   // free the buffer that it receives on the channel.
   free(rbuf);
-  printf("The data received by source is: = %"PRIu64"\n", result);
+  //printf("The data received by source is: = %"PRIu64"\n", result);
 
   return HPX_SUCCESS;
 }
@@ -81,12 +81,12 @@ int t09_receiver_action(hpx_addr_t *channels) {
 
   void *rbuf;
   hpx_lco_chan_recv(channels[0], NULL, &rbuf);
-  uint64_t result = *(uint64_t*)rbuf;
+  //uint64_t result = *(uint64_t*)rbuf;
   free(rbuf);
-  printf("The data received by destination is: = %"PRIu64"\n", result);
+  //printf("The data received by destination is: = %"PRIu64"\n", result);
 
   hpx_addr_t done = hpx_lco_future_new(0);
-  printf("Destination sending data = %"PRIu64"\n", data);
+  //printf("Destination sending data = %"PRIu64"\n", data);
   hpx_lco_chan_send(channels[1], sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done); 
   hpx_lco_delete(done, HPX_NULL);
@@ -95,7 +95,7 @@ int t09_receiver_action(hpx_addr_t *channels) {
 
 START_TEST (test_libhpx_lco_channelSendRecv)
 {
-  printf("Starting the HPX LCO Channels test\n");
+  fprintf(test_log, "Starting the HPX LCO Channels test\n");
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(2);
@@ -116,7 +116,7 @@ START_TEST (test_libhpx_lco_channelSendRecv)
   hpx_lco_delete(channels[1], HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 
@@ -131,7 +131,7 @@ END_TEST
 int t09_sendInOrder_action(hpx_addr_t *chans) {
   int count = 0;
   while (count < PING_PONG_LIMIT) {
-    printf("Source sending data = %d\n", count);
+    //printf("Source sending data = %d\n", count);
     hpx_addr_t done = hpx_lco_future_new(0);
     // Send a buffer in order through a channel.
     hpx_lco_chan_send_inorder(chans[0], sizeof(int), &count, done);
@@ -154,7 +154,7 @@ int t09_receiveInOrder_action(hpx_addr_t *chans) {
     hpx_lco_chan_recv(chans[0], NULL, &rbuf);
     int result = *(int*)rbuf;
     free(rbuf);
-    printf("The data received by destination is: = %d\n", result);
+    //printf("The data received by destination is: = %d\n", result);
     ck_assert(result == count);
 
     hpx_addr_t done = hpx_lco_future_new(0);
@@ -168,7 +168,7 @@ int t09_receiveInOrder_action(hpx_addr_t *chans) {
 
 START_TEST (test_libhpx_lco_channelSendInOrder) 
 {
-  printf("Starting the HPX LCO Channels In order send test\n");
+  fprintf(test_log, "Starting the HPX LCO Channels In order send test\n");
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(2);
@@ -185,7 +185,7 @@ START_TEST (test_libhpx_lco_channelSendInOrder)
   hpx_lco_delete(channel[1], HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -206,7 +206,7 @@ int t09_tryRecvEmpty_action(void *args) {
 
 START_TEST (test_libhpx_lco_channelTryRecvEmpty) 
 {
-  printf("Starting the HPX LCO Channel Try Receive empty buffer test\n");
+  fprintf(test_log, "Starting the HPX LCO Channel Try Receive empty buffer test\n");
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(1);
@@ -216,7 +216,7 @@ START_TEST (test_libhpx_lco_channelTryRecvEmpty)
   hpx_lco_delete(channel, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -230,7 +230,7 @@ int t09_senderChannel_action(hpx_addr_t *args) {
   uint64_t data = 1234;
   hpx_addr_t channels = *args;
 
-  printf("Source sending data = %"PRIu64"\n", data);
+  //printf("Source sending data = %"PRIu64"\n", data);
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
@@ -239,7 +239,7 @@ int t09_senderChannel_action(hpx_addr_t *args) {
 
   hpx_addr_t chan = hpx_lco_chan_array_at(channels, 1);
   hpx_lco_chan_recv(chan, NULL, (void**)&result);
-  printf("The data received by source is: = %"PRIu64"\n", *result);
+  //printf("The data received by source is: = %"PRIu64"\n", *result);
   free(result);
   return HPX_SUCCESS;
 }
@@ -250,11 +250,11 @@ int t09_receiverChannel_action(hpx_addr_t *args) {
   hpx_addr_t channels = *args;
   hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0);
   hpx_lco_chan_recv(addr, NULL, (void**)&result);
-  printf("The data received by destination is: = %"PRIu64"\n", *result);
+  //printf("The data received by destination is: = %"PRIu64"\n", *result);
   free(result);
 
   hpx_addr_t done = hpx_lco_future_new(0);
-  printf("Destination sending data = %"PRIu64"\n", data);
+  //printf("Destination sending data = %"PRIu64"\n", data);
   addr = hpx_lco_chan_array_at(channels, 1);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done);
@@ -264,7 +264,7 @@ int t09_receiverChannel_action(hpx_addr_t *args) {
 
 START_TEST (test_libhpx_lco_channelArray) 
 {
-  printf("Starting the HPX LCO global array of channels test\n");
+  fprintf(test_log, "Starting the HPX LCO global array of channels test\n");
   hpx_addr_t addr1, addr2;  
 
   hpx_time_t t1 = hpx_time_now();
@@ -282,7 +282,7 @@ START_TEST (test_libhpx_lco_channelArray)
   hpx_lco_delete(completed, HPX_NULL);
   hpx_lco_chan_array_delete(channels, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 //****************************************************************************

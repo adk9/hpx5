@@ -37,7 +37,7 @@
 // Source action to populate the data
 //****************************************************************************
 int t02_init_sources_action(void* args) {
-  printf("Populating the data\n");
+  fprintf(test_log, "Populating the data\n");
   // Get the address this parcel was sent to, and map it to a local address---if
   // this fails then the message arrived at the wrong place due to AGAS
   // movement, so resend the parcel.
@@ -54,7 +54,7 @@ int t02_init_sources_action(void* args) {
 
   for (int i=0; i<10; i++){
     sources_p[i] = i;
-    printf("Sources_p[i] = '%d'\n", sources_p[i]);
+    //fprintf(test_log, "Sources_p[i] = '%d'\n", sources_p[i]);
   }
 
   // make sure to unpin the domain, so that AGAS can move it if it wants to
@@ -68,7 +68,7 @@ int t02_init_sources_action(void* args) {
 //****************************************************************************
 START_TEST (test_libhpx_gas_alloc)
 {
-  printf("Starting the GAS local memory allocation test\n");
+  fprintf(test_log, "Starting the GAS local memory allocation test\n");
   hpx_addr_t local;
   // the number of bytes to allocate
   int ndata = 10;
@@ -103,7 +103,7 @@ START_TEST (test_libhpx_gas_alloc)
   // Cleanup - Free the global allocation of local global memory.
   hpx_gas_free(local, HPX_NULL);  
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 

@@ -69,7 +69,7 @@ t03_initDomain_action(const InitArgs *args)
   // make sure to unpin the domain, so that AGAS can move it if it wants to
   hpx_gas_unpin(local);
 
-  printf("Initialized domain %u\n", args->index);
+  //fprintf(test_log, "Initialized domain %u\n", args->index);
 
   // return success---this triggers whatever continuation was set by the parcel
   // sender
@@ -89,12 +89,12 @@ START_TEST (test_libhpx_gas_global_alloc)
     .cores = 8
   };
   
-  printf("Starting the GAS global memory allocation test\n");
+  fprintf(test_log, "Starting the GAS global memory allocation test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
  // output the arguments we're running with
-  printf("Number of domains: %d maxCycles: %d cores: %d\n",
+  fprintf(test_log, "Number of domains: %d maxCycles: %d cores: %d\n",
          args.nDoms, args.maxCycles, args.cores);
   fflush(test_log);
   
@@ -130,7 +130,7 @@ START_TEST (test_libhpx_gas_global_alloc)
   // and free the domain
   hpx_gas_free(domain, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 

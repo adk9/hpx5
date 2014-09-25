@@ -134,12 +134,10 @@ int _main_action(void *args)
 
   //Outputs the result to output.log
   srunner_set_log(sr, "output.log");
-
   // This sets CK_FORK=no
   srunner_set_fork_status(sr, CK_NOFORK);
 
   srunner_run_all(sr, CK_VERBOSE);
-
   int failed = srunner_ntests_failed(sr);
   srunner_free(sr);
 
