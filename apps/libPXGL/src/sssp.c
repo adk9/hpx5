@@ -15,11 +15,11 @@ static hpx_action_t _sssp_update_vertex_distance;
 
 
 static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t distance) {
-  uint64_t prev_dist = sync_load(&vertex->distance, SYNC_ACQUIRE);
-  if (distance < prev_dist) {
-    if (!sync_cas(&vertex->distance, prev_dist, distance, SYNC_RELEASE, SYNC_RELAXED))
-      return _try_update_vertex_distance(vertex, distance);
-    return true;
+  uint64_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED), old_dist = prev_dist;
+  while (distance < prev_dist) {
+    old_dist = prev_dist;
+    prev_dist = sync_cas_val(&vertex->distance, prev_dist, distance, SYNC_RELAXED, SYNC_RELAXED);
+    if(prev_dist == old_dist) return true;
   }
   return false;
 }
@@ -38,12 +38,13 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) 
     return HPX_RESEND;
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
-    uint64_t num_edges = sync_load(&vertex->num_edges, SYNC_ACQUIRE);
+    const uint64_t num_edges = vertex->num_edges;
+    const uint64_t old_distance = args->distance;
 
     hpx_addr_t edges = hpx_lco_and_new(num_edges);
     for (int i = 0; i < num_edges; ++i) {
       adj_list_edge_t *e = &vertex->edge_list[i];
-      args->distance += e->weight;
+      args->distance = old_distance + e->weight;
 
       const hpx_addr_t index
           = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t));
