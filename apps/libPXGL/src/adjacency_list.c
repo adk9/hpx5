@@ -178,7 +178,7 @@ static int _insert_edge_action(const hpx_addr_t * const index_array)
 
 
 
-hpx_action_t adj_list_from_edge_list;
+hpx_action_t adj_list_from_edge_list = NULL;
 int adj_list_from_edge_list_action(edge_list_t *el) {
 
   // Allocate the count array for creating an edge histogram
