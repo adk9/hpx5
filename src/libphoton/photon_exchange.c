@@ -10,6 +10,10 @@
 #include <mpi.h>
 #endif
 
+#ifdef HAVE_PMI
+#include <pmi_cray.h>
+#endif
+
 extern photonBI shared_storage;
 
 int photon_exchange_allgather(void *ptr, void *ivec_ptr, int n) {
@@ -30,6 +34,9 @@ int photon_exchange_allgather(void *ptr, void *ivec_ptr, int n) {
     break;
   case PHOTON_EXCH_PMI:
 #ifdef HAVE_PMI
+    rc = PMI_Allgather(ptr, ivec_ptr, n);
+    if (rc != PMI_SUCCESS)
+      goto error_exit;
 #endif
     break;
   case PHOTON_EXCH_XSP:
@@ -72,6 +79,9 @@ int photon_exchange_barrier() {
     break;
   case PHOTON_EXCH_PMI:
 #ifdef HAVE_PMI
+    rc = PMI_Barrier();
+    if (rc != PMI_SUCCESS)
+      goto error_exit;
 #endif
     break;
   case PHOTON_EXCH_XSP:

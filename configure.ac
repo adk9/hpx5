@@ -107,8 +107,8 @@ fi
 AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
 
 PHOTON_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
+PHOTON_WITH_PKG([pmi],[cray-pmi],[Build with PMI],[no],[PMI])
 PHOTON_WITH_PKG([mpi],[mpi],[Build with MPI],[no],[MPI])
-PHOTON_WITH_PKG([pmi],[pmi],[Build with PMI],[no],[PMI])
 
 dnl Check for user defined MPI
 AC_ARG_WITH([mpi-include-path], [AC_HELP_STRING([--with-mpi-include-path[=PATH]],
