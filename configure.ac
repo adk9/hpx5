@@ -175,6 +175,7 @@ AS_IF([test "x$enable_werror" != xno],
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
+LIBS="$LIBS $HPX_JEMALLOC_LIBS"
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
