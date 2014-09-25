@@ -66,10 +66,10 @@ int t05_initData_action(const initBuffer_t *args)
   strcpy(ld->message, args->message);
 
   //Get the size of the arguments passed to the current thread 
-  uint32_t size = hpx_thread_current_args_size();
+  //uint32_t size = hpx_thread_current_args_size();
 
   hpx_gas_unpin(local);
-  printf("Initialized buffer with index: %u, with message: %s, size of arguments = %d\n", ld->index, ld->message, size);
+  //printf("Initialized buffer with index: %u, with message: %s, size of arguments = %d\n", ld->index, ld->message, size);
   return HPX_SUCCESS;
 }
 
@@ -78,7 +78,7 @@ int t05_initData_action(const initBuffer_t *args)
 //****************************************************************************
 START_TEST (test_libhpx_threadCreate)
 {
-  printf("Starting the Threads test\n");
+  fprintf(test_log, "Starting the Threads test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -112,7 +112,7 @@ START_TEST (test_libhpx_threadCreate)
   hpx_lco_delete(done, HPX_NULL);
   hpx_gas_free(addr, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -125,16 +125,16 @@ END_TEST
 //****************************************************************************
 int t05_worker_action(uint64_t *args)
 {
-  uint64_t n;
-  n = *(uint64_t*)args;
+  //uint64_t n;
+  //n = *(uint64_t*)args;
 
-  printf("Value of n =  %"PRIu64" \n", n);
+  //printf("Value of n =  %"PRIu64" \n", n);
   hpx_thread_exit(HPX_LCO_ERROR);
 }
 
 START_TEST (test_libhpx_threadExit)
 { 
-  printf("Starting the Thread Exit test\n");
+  fprintf(test_log, "Starting the Thread Exit test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -150,7 +150,7 @@ START_TEST (test_libhpx_threadExit)
 
   hpx_lco_delete(done, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -162,16 +162,18 @@ END_TEST
 //****************************************************************************
 int t05_assignID_action(void *args)
 {
-  int tid = hpx_thread_get_tls_id();
-  int consecutiveID = hpx_thread_get_tls_id();
-  printf("First time generated ID: %d, consecutive new ID:  %d\n", tid, 
-                                       consecutiveID);
+  hpx_thread_get_tls_id();
+  hpx_thread_get_tls_id();
+ // int tid = hpx_thread_get_tls_id();
+ // int consecutiveID = hpx_thread_get_tls_id();
+  //printf("First time generated ID: %d, consecutive new ID:  %d\n", tid, 
+  //                                     consecutiveID);
   return HPX_SUCCESS;
 }
 
 START_TEST (test_libhpx_threadGetTlsID)
 {
-  printf("Starting the Threads ID generation test\n");
+  fprintf(test_log, "Starting the Threads ID generation test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -198,7 +200,7 @@ START_TEST (test_libhpx_threadGetTlsID)
 
   hpx_lco_delete(done, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -215,7 +217,7 @@ int t05_set_cont_action(void *args) {
 
 START_TEST (test_libhpx_threadContinue)
 {
-  printf("Starting the Thread continue test\n");
+  fprintf(test_log, "Starting the Thread continue test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -230,18 +232,18 @@ START_TEST (test_libhpx_threadContinue)
     hpx_parcel_set_cont_target(p, cont_fut[i]);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
     hpx_parcel_send(p, HPX_NULL); 
-    printf("Sending action with continuation to %d\n", i);
+    fprintf(test_log, "Sending action with continuation to %d\n", i);
   }
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     uint64_t result;
-    printf("Waiting on continuation to %d\n", i);
+    fprintf(test_log, "Waiting on continuation to %d\n", i);
     hpx_lco_get(cont_fut[i], DATA_SIZE, &result);
-    printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
+    fprintf(test_log, "Received continuation from %d with value %" PRIu64 "\n", i, result);
     assert(result == SET_CONT_VALUE);
   }
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -338,7 +340,7 @@ int t05_thread_cont_cleanup_action(void *args) {
 
 START_TEST (test_libhpx_threadContinueCleanup)
 {
-  printf("Starting the Thread continue cleanup test\n");
+  fprintf(test_log, "Starting the Thread continue cleanup test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
   
@@ -349,11 +351,11 @@ START_TEST (test_libhpx_threadContinueCleanup)
   assert(block);
 
   hpx_call_sync(src, t05_thread_cont_cleanup, &rank, sizeof(rank), block, DATA_SIZE);
-  printf("value in block is %"PRIu64"\n", *block);
+  fprintf(test_log, "value in block is %"PRIu64"\n", *block);
 
   hpx_gas_free(src, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -383,7 +385,7 @@ int t05_thread_current_cont_target_action(void *args) {
 
 START_TEST (test_libhpx_threadContAction)
 {
-  printf("Starting the Thread continue target and action test\n");
+  fprintf(test_log, "Starting the Thread continue target and action test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -402,11 +404,11 @@ START_TEST (test_libhpx_threadContAction)
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     uint64_t result;
     hpx_lco_get(cont_fut[i], DATA_SIZE, &result);
-    printf("Received continuation from %d with value %" PRIu64 "\n", i, result);
+    fprintf(test_log, "Received continuation from %d with value %" PRIu64 "\n", i, result);
     assert(result == SET_CONT_VALUE);
   }
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 

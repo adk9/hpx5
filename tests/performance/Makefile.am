@@ -1,6 +1,7 @@
-noinst_PROGRAMS 	= perftest
-#TESTS 			= hpxtest 
-TESTS 			= 
+noinst_bin_PROGRAMS     = perftest
+noinst_bindir           = $(abs_top_builddir)/tests/performance
+check_SCRIPTS           = $(abs_top_builddir)/tests/performance/run_tests.sh
+TESTS                   = $(abs_top_builddir)/tests/performance/run_tests.sh
 check_PROGRAMS		= perftest
 perftest_SOURCES        = perftest.c \
                           perfinit.c \

@@ -1,7 +1,8 @@
 noinst_bin_PROGRAMS 	= hpxtest
 noinst_bindir           = $(abs_top_builddir)/tests/unit
-TESTS 			= hpxtest 
-#TESTS 			= 
+#TESTS 			= hpxtest 
+check_SCRIPTS           = $(abs_top_builddir)/tests/unit/run_tests.sh
+TESTS                   = $(abs_top_builddir)/tests/unit/run_tests.sh
 check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
@@ -18,7 +19,7 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           12_TestMemget.c \
                           13_TestMemput.c 
 
-hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la -lm -lcheck  
+hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm -lcheck  
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 

@@ -58,7 +58,7 @@ START_TEST (test_libhpx_lcoFunction)
   int size = HPX_LOCALITIES;
   int peerID = (HPX_LOCALITY_ID + 1) % size;
  
-  printf("Starting the HPX LCO test\n");
+  fprintf(test_log, "Starting the HPX LCO test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -86,7 +86,7 @@ START_TEST (test_libhpx_lcoFunction)
   }
   
   hpx_gas_free(addr, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -107,7 +107,7 @@ int t07_lcoSetGet_action(uint64_t *args) {
   hpx_lco_get(future, sizeof(setVal), &setVal);
   hpx_lco_delete(future, HPX_NULL);
 
-  printf("Value set is = %"PRIu64"\n", setVal);
+  //printf("Value set is = %"PRIu64"\n", setVal);
   hpx_thread_continue(sizeof(uint64_t), &setVal);
 }
 
@@ -116,8 +116,8 @@ START_TEST (test_libhpx_lcoSetGet)
   int size = HPX_LOCALITIES;
   uint64_t n = 0;
   
-  printf("Starting the HPX LCO Set and Get test\n");
-  printf("localities: %d\n", size);
+  fprintf(test_log, "Starting the HPX LCO Set and Get test\n");
+  fprintf(test_log, "localities: %d\n", size);
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -126,8 +126,8 @@ START_TEST (test_libhpx_lcoSetGet)
 
   uint64_t result;
   hpx_lco_get(done, sizeof(uint64_t), &result);
-  printf("Value returned = %"PRIu64"\n", result);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, "Value returned = %"PRIu64"\n", result);
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   hpx_lco_delete(done, HPX_NULL);
 }
@@ -147,8 +147,8 @@ int t07_initBlock_action(uint32_t *args)
   for (int i = 0; i < block_size; i++){
     // Initialixe the buffer
     buffer[i] = 1234;
-    printf("Initializing the buffer for locality ID %d: %d\n", 
-           HPX_LOCALITY_ID, buffer[i]);
+    //printf("Initializing the buffer for locality ID %d: %d\n", 
+    //       HPX_LOCALITY_ID, buffer[i]);
   } 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -177,8 +177,8 @@ START_TEST (test_libhpx_lcoWaitAll)
   int block_size = 1;
   int ranks = hpx_get_num_ranks();
 
-  printf("Starting the HPX LCO Wait all test\n");
-  printf("localities: %d\n", size);
+  fprintf(test_log, "Starting the HPX LCO Wait all test\n");
+  fprintf(test_log, "localities: %d\n", size);
 
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -186,8 +186,8 @@ START_TEST (test_libhpx_lcoWaitAll)
   uint32_t blocks = size;
   uint32_t block_bytes = block_size * sizeof(uint32_t);
 
-  printf("Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
-  printf("Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
+  fprintf(test_log,"Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
+  fprintf(test_log, "Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
   hpx_addr_t addr = hpx_gas_global_alloc(blocks, block_bytes);
 
   uint32_t args[2] = {
@@ -218,7 +218,7 @@ START_TEST (test_libhpx_lcoWaitAll)
   
   hpx_gas_free(addr, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -281,16 +281,16 @@ int t07_getAll_action(uint32_t *args) {
 START_TEST (test_libhpx_lcoGetAll) 
 {
   uint32_t n, ssn;
-  printf("Starting the HPX LCO get all test\n");
+  fprintf(test_log, "Starting the HPX LCO get all test\n");
   for (uint32_t i = 0; i < 6; i++) {
     ssn = 0;
     n = i + 1;
     hpx_time_t t1 = hpx_time_now();
-    printf("Square series for (%d): ", n);
+    fprintf(test_log, "Square series for (%d): ", n);
     fflush(stdout);
     hpx_call_sync(HPX_HERE, t07_getAll, &n, sizeof(n), &ssn, sizeof(ssn));
-    printf("%d", ssn);
-    printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+    fprintf(test_log,"%d", ssn);
+    fprintf(test_log, " Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
   }
 }
 END_TEST
@@ -307,20 +307,20 @@ int t07_errorSet_action(void *args) {
 
 START_TEST (test_libhpx_lcoError) 
 {
-  printf("Starting the HPX LCO get all test\n");
+  fprintf(test_log, "Starting the HPX LCO get all test\n");
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t lco = hpx_lco_future_new(0);
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_call(HPX_HERE, t07_errorSet, &lco, sizeof(lco), done);
   hpx_status_t status = hpx_lco_wait(lco);
-  printf("status == %d\n", status);
+  fprintf(test_log, "status == %d\n", status);
   ck_assert(status == HPX_ERROR);
   hpx_lco_wait(done);
 
   hpx_lco_delete(lco, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
  
-  printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+  fprintf(test_log, " Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
 }
 END_TEST
 

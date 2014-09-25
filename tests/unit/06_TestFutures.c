@@ -44,14 +44,14 @@ int t06_get_value_action(void *args) {
 
 int t06_set_value_action(void *args) {
   value = *(uint64_t*)args;
-  printf("At rank %d received value %"PRIu64" \n", hpx_get_my_rank(), value);
+  //printf("At rank %d received value %"PRIu64" \n", hpx_get_my_rank(), value);
   return HPX_SUCCESS;
 }
 
 START_TEST (test_libhpx_lco_future_new)
 {
   int count;
-  printf("Starting the Future LCO test\n");
+  fprintf(test_log, "Starting the Future LCO test\n");
   if(HPX_LOCALITIES < 2)
     count = 2;
   else
@@ -87,7 +87,7 @@ START_TEST (test_libhpx_lco_future_new)
   for (int i = 0; i < count; i++)
     hpx_lco_delete(futures[i], HPX_NULL);
   
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 
@@ -103,7 +103,7 @@ int t06_get_future_value_action(void *args) {
 
 START_TEST (test_libhpx_lco_future_array)
 {
-  printf("Starting the array of futures test\n");
+  fprintf(test_log, "Starting the array of futures test\n");
   uint64_t value = 0;
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -114,9 +114,9 @@ START_TEST (test_libhpx_lco_future_array)
   hpx_addr_t other = hpx_lco_future_array_at(base, 1);
 
   hpx_call_sync(other, t06_get_future_value, NULL, 0, &value, sizeof(value));
-  printf("value = %"PRIu64"\n", value);
+  fprintf(test_log, "value = %"PRIu64"\n", value);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 

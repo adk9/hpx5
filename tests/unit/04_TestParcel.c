@@ -57,11 +57,11 @@ static hpx_addr_t rand_rank(void) {
 
 int t04_send_action(void *args) {
   int n = *(int*)args;
-  printf("locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
-         hpx_get_my_thread_id(), n);
+  //printf( "locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
+  //       hpx_get_my_thread_id(), n);
 
   if (n-- <= 0) {
-    printf("terminating.\n");
+    //printf("terminating.\n");
     return HPX_SUCCESS;
   }
 
@@ -82,7 +82,7 @@ int t04_send_action(void *args) {
 START_TEST (test_libhpx_parcelCreate)
 {
   int n = 0;
-  printf("Starting the parcel create test\n");
+  fprintf(test_log, "Starting the parcel create test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -91,7 +91,7 @@ START_TEST (test_libhpx_parcelCreate)
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 
@@ -106,14 +106,14 @@ hpx_addr_t _partner(void) {
 }
 
 int t04_sendData_action(const initBuffer_t *args) {
-  printf("Received message = '%s', %d from (%d, %d)\n", args->message, 
-         args->index, hpx_get_my_rank(), hpx_get_my_thread_id());
+  //printf("Received message = '%s', %d from (%d, %d)\n", args->message, 
+  //       args->index, hpx_get_my_rank(), hpx_get_my_thread_id());
   return HPX_SUCCESS;
 }
 
 START_TEST (test_libhpx_parcelGetAction) 
 {
-  printf("Testing the parcel create with arguments\n");
+  fprintf(test_log, "Testing the parcel create with arguments\n");
   initBuffer_t args = {
     .index = hpx_get_my_rank(),
     .message = "parcel creation test"
@@ -141,7 +141,7 @@ END_TEST
 //****************************************************************************
 START_TEST(test_libhpx_parcelGetData) 
 {
-  printf("Testing the parcel get data function\n");
+  fprintf(test_log, "Testing the parcel get data function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, t04_sendData);
@@ -159,7 +159,7 @@ END_TEST
 //****************************************************************************
 START_TEST(test_libhpx_parcelRelease)
 {
-  printf("Testing the parcel release function\n");
+  fprintf(test_log, "Testing the parcel release function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, t04_sendData);
@@ -182,7 +182,7 @@ int t04_recv_action(double *args) {
 
 START_TEST(test_libhpx_parcelSend) 
 {
-  printf("Testing the hpx parcel send function\n");
+  fprintf(test_log, "Testing the hpx parcel send function\n");
   int buffer[4] = {1, 100, 1000, 10000};
   int avg = 1000;
 
@@ -192,7 +192,7 @@ START_TEST(test_libhpx_parcelSend)
     for (int j = 0; j < buffer[i]; j++)
       buf[j] = rand() % 10000;
 
-    printf("%d, %d, %g: " , i, buffer[i], buf[i]);
+    fprintf(test_log, "%d, %d, %g: " , i, buffer[i], buf[i]);
     hpx_time_t t1 = hpx_time_now();
 
     // Set the lco for completing the entire loop
@@ -222,7 +222,7 @@ START_TEST(test_libhpx_parcelSend)
     hpx_lco_delete(completed, HPX_NULL);
 
     double elapsed = hpx_time_elapsed_ms(t1);
-    printf("Elapsed: %g\n", elapsed/avg);
+    fprintf(test_log, "Elapsed: %g\n", elapsed/avg);
     free(buf);
   }  
 }
@@ -239,7 +239,7 @@ int t04_getContValue_action(uint64_t *args)
     return HPX_RESEND;
 
   memcpy(value, args, hpx_thread_current_args_size());
-  printf("Value =  %"PRIu64"\n", *value);
+  //printf("Value =  %"PRIu64"\n", *value);
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
@@ -247,7 +247,7 @@ int t04_getContValue_action(uint64_t *args)
 
 START_TEST(test_libhpx_parcelGetContinuation)
 {
-  printf("Testing parcel contination target and action\n");
+  fprintf(test_log, "Testing parcel contination target and action\n");
 
   hpx_time_t t1 = hpx_time_now();
 
@@ -281,7 +281,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
   hpx_lco_delete(done, HPX_NULL);
   hpx_gas_free(addr, HPX_NULL);
 
-  printf("Elapsed: %g\n", hpx_time_elapsed_ms(t1)); 
+  fprintf(test_log,"Elapsed: %g\n", hpx_time_elapsed_ms(t1)); 
 }
 END_TEST
 

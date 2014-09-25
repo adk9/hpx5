@@ -54,7 +54,7 @@ int t13_memput_verify_action(void *args) {
 //****************************************************************************
 START_TEST (test_libhpx_memput)
 {
-  printf("Starting the memput test\n");
+  fprintf(test_log, "Starting the memput test\n");
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
@@ -70,7 +70,7 @@ START_TEST (test_libhpx_memput)
   hpx_lco_wait(remoteComplete);
   hpx_lco_delete(localComplete, HPX_NULL);
   hpx_lco_delete(remoteComplete, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   bool output = false;
   int e = hpx_call_sync(remote, t13_memput_verify, NULL, 0,

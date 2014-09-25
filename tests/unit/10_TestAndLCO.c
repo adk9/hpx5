@@ -42,7 +42,7 @@ int t10_set_action(void *args) {
 
 START_TEST (test_libhpx_lco_and)
 {
-  printf("Starting the HPX and lco test\n");
+  fprintf(test_log, "Starting the HPX and lco test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -55,7 +55,7 @@ START_TEST (test_libhpx_lco_and)
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
   hpx_lco_delete(lco, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 

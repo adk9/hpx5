@@ -38,7 +38,7 @@ int counter; /* shared variable */
 
 int t08_handler_action(uint32_t *args) {
   uint32_t x = *args;
-  printf("Thread %d: Waiting to enter critical region...\n", x);
+  fprintf(test_log, "Thread %d: Waiting to enter critical region...\n", x);
 
   // Standard semaphore P (wait) operation.
   // Attempts to decrement the count in the semaphore; block
@@ -46,12 +46,12 @@ int t08_handler_action(uint32_t *args) {
   hpx_lco_sema_p(mutex);
 
   /* START CRITICAL REGION */
-  printf("Thread %d: Now in critical region...\n", x);
-  printf("Thread %d: Counter Value: %d\n", x, counter);
-  printf("Thread %d: Incrementing Counter...\n", x);
+  fprintf(test_log, "Thread %d: Now in critical region...\n", x);
+  fprintf(test_log, "Thread %d: Counter Value: %d\n", x, counter);
+  fprintf(test_log, "Thread %d: Incrementing Counter...\n", x);
   counter++;
-  printf("Thread %d: New Counter Value: %d\n", x, counter);
-  printf("Thread %d: Exiting critical region...\n", x);
+  fprintf(test_log, "Thread %d: New Counter Value: %d\n", x, counter);
+  fprintf(test_log, "Thread %d: Exiting critical region...\n", x);
   /* END CRITICAL REGION */
 
   // Standard semaphore V (Signal) operation. 
@@ -79,7 +79,7 @@ START_TEST (test_libhpx_lco_Semaphores)
     hpx_lco_future_new(sizeof(uint32_t))
   };
 
-  printf("Starting the HPX LCO Semaphore test\n");
+  fprintf(test_log, "Starting the HPX LCO Semaphore test\n");
   hpx_time_t t1 = hpx_time_now();
 
   // create a new semaphore
@@ -95,14 +95,13 @@ START_TEST (test_libhpx_lco_Semaphores)
   hpx_lco_delete(futures[0], HPX_NULL);
   hpx_lco_delete(futures[1], HPX_NULL);
 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 } 
 END_TEST
 
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
-
 void add_08_TestSemaphores(TCase *tc) {
   tcase_add_test(tc, test_libhpx_lco_Semaphores);
 }
