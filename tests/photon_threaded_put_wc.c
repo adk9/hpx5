@@ -71,7 +71,7 @@ void *wait_ledger_completions_thread(void *arg) {
     photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
   } while (!flag || request != 0xcafebabe);
 
-  pthread_exit((void*)arg);
+  pthread_exit(NULL);
 }
 
 //****************************************************************************
@@ -84,7 +84,6 @@ START_TEST(test_photon_threaded_put_wc)
   int rank, nproc, ret_proc;
   pthread_t th;
   long t;
-  pthread_attr_t attr;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -96,12 +95,15 @@ START_TEST(test_photon_threaded_put_wc)
 
   // Have multiple threads each polling for ledger completions
   pthread_t recv_threads[nproc];
-
   pthread_mutex_init(&mutexSendCounter, NULL);
 
-  /* Create threads to perform the dotproduct  */
-  pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  // Create a thread to wait for local completions 
+  pthread_create(&th, NULL, wait_local_completion_thread, NULL);
+
+  // Create receive threads one per rank
+  for (t=0; t<nproc; t++) {
+    pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
+  }
 
   // only need one send buffer
   posix_memalign((void **) &send, 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -133,11 +135,6 @@ START_TEST(test_photon_threaded_put_wc)
 
   struct timespec time_s, time_e;
 
-  pthread_create(&th, NULL, wait_local_completion_thread, NULL);
-  for (t=0; t<nproc; t++) {
-    pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
-  }
-
   for (ns = 0; ns < nproc; ns++) {
     for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
       if (rank == 0) {
@@ -147,7 +144,6 @@ START_TEST(test_photon_threaded_put_wc)
         fflush(stdout);
       }
 
-      // send to random rank, including self
       j = rand() % nproc;
       // send to random rank, excluding self
       while (j == rank)
@@ -158,7 +154,9 @@ START_TEST(test_photon_threaded_put_wc)
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
           photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+          pthread_mutex_lock(&mutexSendCounter);
           sendCompT++;
+          pthread_mutex_unlock(&mutexSendCounter);
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
@@ -178,7 +176,9 @@ START_TEST(test_photon_threaded_put_wc)
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
             photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+            pthread_mutex_lock(&mutexSendCounter);
             sendCompT++;
+            pthread_mutex_unlock(&mutexSendCounter);
           }
           clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
@@ -202,19 +202,21 @@ START_TEST(test_photon_threaded_put_wc)
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  pthread_attr_destroy(&attr);
+  // Wait for all threads to complete
   pthread_join(th, NULL);
+  /*
+  for (t=0; t<nproc; t++) {
+    pthread_join(recv_threads[t], NULL);
+  }
+  */
 
+  // Clean up and destroy the mutex
   photon_unregister_buffer(send, PHOTON_BUF_SIZE);
   free(send);
   for (i=0; i<nproc; i++) {
     photon_unregister_buffer(recv[i], PHOTON_BUF_SIZE);
     free(recv[i]);
   }
-
-  //for (t=0; t < nproc; t++) {
-    //pthread_join(recv_threads[t], NULL);
- // }
 
   pthread_mutex_destroy(&mutexSendCounter);   
 }
