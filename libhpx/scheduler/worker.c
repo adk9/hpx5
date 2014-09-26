@@ -14,9 +14,9 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/worker.c
-/// ----------------------------------------------------------------------------
+/// @brief Implementation of the scheduler worker thread.
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,26 +52,21 @@ typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
 typedef two_lock_queue_t _mailbox_t;
 typedef two_lock_queue_node_t _envelope_t;
 
-static unsigned int
-_max(unsigned int lhs, unsigned int rhs)
-{
+static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
 
-static unsigned int
-_min(unsigned int lhs, unsigned int rhs)
-{
+static unsigned int _min(unsigned int lhs, unsigned int rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
-/// ----------------------------------------------------------------------------
 /// Class representing a worker thread's state.
 ///
 /// Worker threads are "object-oriented" insofar as that goes, but each native
 /// thread has exactly one, thread-local worker_t structure, so the interface
 /// doesn't take a "this" pointer and instead grabs the "self" structure using
 /// __thread local storage.
-/// ----------------------------------------------------------------------------
+///
 /// @{
 static __thread struct worker {
   pthread_t          thread;                    // this worker's native thread
@@ -102,13 +97,9 @@ static __thread struct worker {
 };
 
 
-/// ----------------------------------------------------------------------------
 /// Enclose a parcel in an envelope so that it can be sent to another worker
 /// using the mailbox functionality.
-/// ----------------------------------------------------------------------------
-static _envelope_t *
-_enclose(worker_t *w, hpx_parcel_t *p)
-{
+static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
   _envelope_t *envelope = w->envelopes;
   if (envelope != NULL)
     w->envelopes = w->envelopes->next;
@@ -121,28 +112,20 @@ _enclose(worker_t *w, hpx_parcel_t *p)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Extract a parcel from an envelope.
-/// ----------------------------------------------------------------------------
-static hpx_parcel_t *
-_open(worker_t *w, _envelope_t *mail)
-{
+static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
   mail->next = w->envelopes;
   w->envelopes = mail;
   return mail->value;
 }
 
 
-/// ----------------------------------------------------------------------------
 /// The entry function for all of the lightweight threads.
 ///
 /// This entry function extracts the action and the arguments from the parcel,
 /// and then invokes the action on the arguments. If the action returns to this
 /// entry function, we dispatch to the correct thread termination handler.
-/// ----------------------------------------------------------------------------
-static void HPX_NORETURN
-_thread_enter(hpx_parcel_t *parcel)
-{
+static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
@@ -163,13 +146,9 @@ _thread_enter(hpx_parcel_t *parcel)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
-/// ----------------------------------------------------------------------------
-static int
-_on_start(hpx_parcel_t *to, void *sp, void *env)
-{
+static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
   assert(sp);
 
   // checkpoint my native stack pointer
@@ -183,15 +162,14 @@ _on_start(hpx_parcel_t *to, void *sp, void *env)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Create a new lightweight thread based on the parcel.
 ///
 /// The newly created thread is runnable, and can be thread_transfer()ed to in
 /// the same way as any other lightweight thread can be.
 ///
-/// @param p - the parcel that is generating this thread.
-/// @returns - a new lightweight thread, as defined by the parcel
-/// ----------------------------------------------------------------------------
+/// @param          p The parcel that is generating this thread.
+///
+/// @returns A new lightweight thread, as defined by the parcel.
 static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
   ustack_t *stack = thread_new(p, _thread_enter);
@@ -200,7 +178,6 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Backoff is called when there is nothing to do.
 ///
 /// This is a place where we could do system maintenance for optimization, etc.,
@@ -208,7 +185,6 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 /// based on our backoff integer.
 ///
 /// Right now we just use the synchronization library's backoff.
-/// ----------------------------------------------------------------------------
 static void _backoff(void) {
   hpx_time_t now = hpx_time_now();
   sync_backoff(self.backoff);
@@ -217,13 +193,11 @@ static void _backoff(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Steal a lightweight thread during scheduling.
 ///
 /// NB: we can be much smarter about who to steal from and how much to
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
-/// ----------------------------------------------------------------------------
 static hpx_parcel_t *_steal(void) {
   int victim_id = rand_r(&self.seed) % here->sched->n_workers;
   if (victim_id == self.id)
@@ -243,17 +217,13 @@ static hpx_parcel_t *_steal(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Check the network during scheduling.
-/// ----------------------------------------------------------------------------
 static hpx_parcel_t *_network(void) {
   return network_rx_dequeue(here->network);
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Send a mail message to another worker.
-/// ----------------------------------------------------------------------------
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
   worker_t    *w = here->sched->workers[id];
   _envelope_t *letter = _enclose(&self, p);
@@ -261,9 +231,7 @@ static void _send_mail(uint32_t id, hpx_parcel_t *p) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Process my mail queue.
-/// ----------------------------------------------------------------------------
 static void _handle_mail(void) {
   _envelope_t *letter = NULL;
   while ((letter = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
@@ -274,14 +242,12 @@ static void _handle_mail(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// A transfer continuation that frees the current parcel.
 ///
 /// During normal thread termination, the current thread and parcel need to be
 /// freed. This can only be done safely once we've transferred away from that
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
-/// ----------------------------------------------------------------------------
 static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
@@ -293,7 +259,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// A transfer continuation that resends the current parcel.
 ///
 /// If a parcel has arrived at the wrong locality because its target address has
@@ -303,7 +268,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
-/// ----------------------------------------------------------------------------
 static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
@@ -315,7 +279,6 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// The main scheduling "loop."
 ///
 /// Selects a new lightweight thread to run. If @p fast is set then the
@@ -332,10 +295,10 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// but it is NULL, then the scheduler will return a new thread running the
 /// HPX_ACTION_NULL action.
 ///
-/// @param  fast - schedule quickly
-/// @param final - a final option if the scheduler wants to give up
-/// @returns     - a thread to transfer to
-/// ----------------------------------------------------------------------------
+/// @param      fast Schedule quickly.
+/// @param     final A final option if the scheduler wants to give up.
+///
+/// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
@@ -406,7 +369,6 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Run a worker thread.
 ///
 /// This is the pthread entry function for a scheduler worker thread. It needs
@@ -415,7 +377,8 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 ///
 /// Under normal HPX shutdown, we return to the original transfer site and
 /// cleanup.
-/// ----------------------------------------------------------------------------
+///
+/// @param      sched The scheduler that this thread should be attached to.
 void *worker_run(scheduler_t *sched) {
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -532,10 +495,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
 ///    requires counted pointers for stealing and yielding and won't solve the
 ///    problem, a yielding thread can tie up a scheduler.
 /// 5) We'd like to use a global queue for yielded threads so that they can be
-///    processed in LIFO order by threads that don't have anything else to do.
+///    processed in FIFO order by threads that don't have anything else to do.
 ///
-/// We already have the RX queue, so we'll use it for now. It's checked before
-/// stealing though, so two yielders could theoretically inhibit
+/// We already have the network RX queue, so we'll use it for now. It's checked
+/// before stealing though, so two yielders could theoretically inhibit
 /// liveness. Ultimately we'll want a separate yielded queue (or queues) to deal
 /// with the issue.
 static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
@@ -547,8 +510,6 @@ static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-/// Yields the current thread.
-///
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self.current;
@@ -563,17 +524,14 @@ void scheduler_yield(void) {
   thread_transfer(to, _checkpoint_network_push, self.current);
 }
 
+
 void hpx_thread_yield(void) {
   scheduler_yield();
 }
 
 
-/// ----------------------------------------------------------------------------
 /// A transfer continuation that unlocks a lock.
-/// ----------------------------------------------------------------------------
-static int
-_unlock(hpx_parcel_t *to, void *sp, void *env)
-{
+static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
   lockable_ptr_t *lock = env;
   hpx_parcel_t *prev = self.current;
   self.current = to;
@@ -583,9 +541,7 @@ _unlock(hpx_parcel_t *to, void *sp, void *env)
 }
 
 
-hpx_status_t
-scheduler_wait(lockable_ptr_t *lock, cvar_t *condition)
-{
+hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self.current);
@@ -605,9 +561,7 @@ scheduler_wait(lockable_ptr_t *lock, cvar_t *condition)
 }
 
 
-void
-scheduler_signal(cvar_t *cvar)
-{
+void scheduler_signal(cvar_t *cvar) {
   ustack_t *thread = cvar_pop_thread(cvar);
   if (!thread)
     return;
@@ -619,9 +573,7 @@ scheduler_signal(cvar_t *cvar)
 }
 
 
-void
-scheduler_signal_all(struct cvar *cvar)
-{
+void scheduler_signal_all(struct cvar *cvar) {
   ustack_t *thread = cvar_pop_all(cvar);
   while (thread) {
     if (thread->wait_affinity != self.id)
@@ -633,9 +585,7 @@ scheduler_signal_all(struct cvar *cvar)
 }
 
 
-void
-scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
-{
+void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   ustack_t *thread = cvar_set_error(cvar, code);
   while (thread) {
     if (thread->wait_affinity != self.id)
@@ -647,29 +597,27 @@ scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 }
 
 
+static void _call_continuation(hpx_addr_t target, hpx_action_t action,
+                               const void *args, size_t len,
+                               hpx_status_t status) {
+  const size_t payload = sizeof(locality_cont_args_t) + len;
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload);
+  assert(p);
+  hpx_parcel_set_target(p, target);
+  hpx_parcel_set_action(p, locality_call_continuation);
 
-
-static void
-_call_continuation(hpx_addr_t target, hpx_action_t action,
-                   const void *args, size_t len, hpx_status_t status)
-{
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-    assert(p);
-    hpx_parcel_set_target(p, target);
-    hpx_parcel_set_action(p, locality_call_continuation);
-
-    // perform the single serialization
-    locality_cont_args_t *cargs = (locality_cont_args_t *)hpx_parcel_get_data(p);
-    cargs->action = action;
-    cargs->status = status;
-    memcpy(&cargs->data, args, len);
-    hpx_parcel_send(p, HPX_NULL);
+  // perform the single serialization
+  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
+  cargs->action = action;
+  cargs->status = status;
+  memcpy(&cargs->data, args, len);
+  hpx_parcel_send(p, HPX_NULL);
 }
 
 
 /// unified continuation handler
-static void HPX_NORETURN _continue(hpx_status_t status,
-                                   size_t size, const void *value,
+static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
+                                   const void *value,
                                    void (*cleanup)(void*), void *env) {
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
@@ -682,7 +630,8 @@ static void HPX_NORETURN _continue(hpx_status_t status,
     // without splitting it up.
     --parcel->credit;
     if (hpx_action_eq(c_act, hpx_lco_set_action))
-      hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL, HPX_ACTION_NULL);
+      hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
+                                 HPX_ACTION_NULL);
     else
       _call_continuation(c_target, c_act, value, size, status);
   }
@@ -712,7 +661,8 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 
 
 void hpx_thread_exit(int status) {
-  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) || unlikely(status == HPX_ERROR)) {
+  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
+      unlikely(status == HPX_ERROR)) {
     hpx_parcel_t *parcel = self.current;
     parcel_recover_credit(parcel);
     _continue(status, 0, NULL, NULL, NULL);
@@ -733,8 +683,8 @@ void hpx_thread_exit(int status) {
         parcel->target,
         rank
       };
-      hpx_call(HPX_THERE(parcel->src), locality_gas_forward, &args, sizeof(args),
-               HPX_NULL);
+      hpx_call(HPX_THERE(parcel->src), locality_gas_forward, &args,
+               sizeof(args), HPX_NULL);
     }
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
@@ -808,10 +758,14 @@ int hpx_thread_get_tls_id(void) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// A thread_transfer() continuation that runs when a thread changes its
 /// affinity. This puts the current thread into the mailbox specified in env.
-/// ----------------------------------------------------------------------------
+///
+/// @param     to The thread to transfer to.
+/// @param     sp The stack pointer that we're transferring away from.
+/// @param    env The environment passed in from the transferring thread.
+///
+/// @returns HPX_SUCCESS
 static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = self.current;
   self.current = to;
@@ -829,8 +783,9 @@ void hpx_thread_set_affinity(int affinity) {
   assert(self.current);
   assert(parcel_get_stack(self.current));
   parcel_get_stack(self.current)->affinity = affinity;
-  if (affinity != self.id) {
-    hpx_parcel_t *to = _schedule(NULL, false);
-    thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
-  }
+  if (affinity == self.id)
+    return;
+
+  hpx_parcel_t *to = _schedule(NULL, false);
+  thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
 }
