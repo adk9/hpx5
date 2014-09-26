@@ -31,7 +31,7 @@ typedef struct {
 } _sssp_visit_vertex_args_t;
 
 
-static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) {
+static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
   adj_list_vertex_t *vertex;
@@ -62,7 +62,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *args) 
 }
 
 
-static int _sssp_visit_vertex_action(_sssp_visit_vertex_args_t *args) {
+static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
   hpx_addr_t vertex;
@@ -78,7 +78,7 @@ static int _sssp_visit_vertex_action(_sssp_visit_vertex_args_t *args) {
 
 
 hpx_action_t call_sssp = NULL;
-int call_sssp_action(call_sssp_args_t *args) {
+int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t));
 
