@@ -36,6 +36,7 @@ int main(int argc, char *argv[]) {
   add_photon_buffers_remote_test(tc);
   add_photon_buffers_private_test(tc);
   add_photon_put_wc(tc);                  // END tests that care about PWC payload
+  add_photon_threaded_put_wc(tc);
   add_photon_test(tc);                    // photon_test.c
   add_photon_data_movement(tc);           // Photon get and put tests
   add_photon_message_passing(tc);         // photon  interleaved

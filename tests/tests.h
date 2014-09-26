@@ -34,5 +34,6 @@ void add_photon_recv_buffer_bd_bench(TCase *);
 void add_photon_os_put_bw_bench(TCase *);
 void add_photon_os_get_bw_bench(TCase *);
 void add_photon_put_wc_bw_bench(TCase *);
+void add_photon_threaded_put_wc(TCase *);
 
 #endif /*PHOTON_TESTS_TESTS_H_*/
