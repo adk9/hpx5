@@ -116,8 +116,6 @@ int main(int argc, char *argv[]) {
 
   args_t args = {
     .iterations = strtol(argv[0], NULL, 10),
-    .ping = hpx_lco_newfuture_new(BUFFER_SIZE),
-    .pong = hpx_lco_newfuture_new(BUFFER_SIZE)
   };
 
   if (args.iterations == 0) {
@@ -139,6 +137,8 @@ int main(int argc, char *argv[]) {
 
   const char *network = hpx_get_network_id();
 
+  args.ping = hpx_lco_newfuture_new(BUFFER_SIZE);
+  args.pong = hpx_lco_newfuture_new(BUFFER_SIZE);
   hpx_time_t start = hpx_time_now();
   e = hpx_run(_main, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
@@ -148,6 +148,7 @@ int main(int argc, char *argv[]) {
 }
 
 static int _action_main(args_t *args) {
+  printf("In main\n");
   hpx_addr_t done = hpx_lco_and_new(2);
 
   hpx_call(HPX_HERE, _ping, args, sizeof(*args), done);
