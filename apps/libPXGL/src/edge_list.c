@@ -43,10 +43,12 @@ int edge_list_from_file_action(char **filename) {
 
   edge_list_t *el = malloc(sizeof(*el));
   assert(el);
+  el->min_edge_weight = UINT64_MAX;
+  el->max_edge_weight = 0;
 
   edge_list_edge_t *edge = malloc(sizeof(*edge));
   assert(edge);
-
+ 
   hpx_addr_t edges = HPX_NULL;
   uint64_t count = 0;
 
@@ -56,6 +58,10 @@ int edge_list_from_file_action(char **filename) {
       case 'c': continue;
       case 'a':
         sscanf(&line[1], " %lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
+	if(el->min_edge_weight > edge->weight)
+	  el->min_edge_weight = edge->weight;
+	if(el->max_edge_weight < edge->weight)
+	  el->max_edge_weight = edge->weight;
         hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t));
         count++;
         assert(!hpx_addr_eq(edges, HPX_NULL));

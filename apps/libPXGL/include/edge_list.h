@@ -26,6 +26,8 @@ typedef struct {
 typedef struct {
   uint64_t   num_edges;
   uint64_t   num_vertices;
+  uint64_t min_edge_weight;
+  uint64_t max_edge_weight;
   hpx_addr_t edge_list;
 } edge_list_t;
 
