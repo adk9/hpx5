@@ -129,7 +129,7 @@ START_TEST(test_photon_threaded_put_wc)
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-7s%-11s\n", "Ranks", "Senders", "Bytes", "Sync PUT(us)");
+    printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
 
   struct timespec time_s, time_e;
 
@@ -169,7 +169,32 @@ START_TEST(test_photon_threaded_put_wc)
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;
+        printf("%1.4f     ", latency);
+        fflush(stdout);
+      }
+
+      if (rank <= ns) {
+        if (i && !(sizes[i] % 8)) {
+          clock_gettime(CLOCK_MONOTONIC, &time_s);
+          for (k=0; k<ITERS; k++) {
+            photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+            sendCompT++;
+          }
+          clock_gettime(CLOCK_MONOTONIC, &time_e);
+        }
+      }
+
+      MPI_Barrier(MPI_COMM_WORLD);
+
+      if (rank == 0 && i && !(sizes[i] % 8)) {
+        double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
+        double time_us = time_ns/1e3;
+        double latency = time_us/ITERS;
         printf("%1.4f\n", latency);
+        fflush(stdout);
+      }
+      else if (rank == 0) {
+        printf("N/A\n");
         fflush(stdout);
       }
     }
