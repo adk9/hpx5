@@ -62,13 +62,14 @@ void *wait_local_completion_thread() {
 
 // Have multiple threads each polling for ledger completions (i.e., revs) 
 // PHOTON_PROBE_LEDGER from a given rank instead of any source
-void *wait_ledger_completions_thread(void *arg) {
+void *wait_ledger_completions_thread(void *arg __attribute__((unused))) {
   photon_rid request;
-  long inputrank = (long)arg;
+  //long inputrank = (long)arg;
 
   int flag;
   do {
-    photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    //photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
   } while (!flag || request != 0xcafebabe);
 
   pthread_exit(NULL);
@@ -79,7 +80,7 @@ void *wait_ledger_completions_thread(void *arg) {
 //****************************************************************************
 START_TEST(test_photon_threaded_put_wc) 
 {
-  fprintf(detailed_log, "Starting the photon threaded put wc test\n");
+  printf("Starting the photon threaded put wc test\n");
   int i, j, k, ns;
   int rank, nproc, ret_proc;
   pthread_t th;
@@ -204,11 +205,10 @@ START_TEST(test_photon_threaded_put_wc)
 
   // Wait for all threads to complete
   pthread_join(th, NULL);
-  /*
+  
   for (t=0; t<nproc; t++) {
     pthread_join(recv_threads[t], NULL);
   }
-  */
 
   // Clean up and destroy the mutex
   photon_unregister_buffer(send, PHOTON_BUF_SIZE);
