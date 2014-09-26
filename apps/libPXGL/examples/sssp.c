@@ -99,6 +99,7 @@ typedef struct {
   char *filename;
   uint64_t nproblems;
   uint64_t *problems;
+  char *prob_file;
 } _sssp_args_t;
 
 
@@ -113,6 +114,9 @@ static int _main_action(_sssp_args_t *args) {
          el.num_vertices, el.num_edges);
 
   call_sssp_args_t sargs;
+  double total_elapsed_time = 0.0;
+  // _sssp_statistics sssp_stat = {.total_vertex_traversal = 0, .total_edge_traversal = 0, total_distance_updates = 0 };
+
   for (int i = 0; i < args->nproblems; ++i) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
@@ -124,26 +128,53 @@ static int _main_action(_sssp_args_t *args) {
     hpx_time_t now = hpx_time_now();
     
     // Call the SSSP algorithm
-    hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs), NULL, 0);
+    hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
-
+    total_elapsed_time+=elapsed;
     printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
+      // Action to print the distances of each vertex from the source
+    hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
+    for (int i = 0; i < el.num_vertices; ++i) {
+      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
+      hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
+    }
+    hpx_lco_wait(vertices);
+    hpx_lco_delete(vertices, HPX_NULL);
+
 
     hpx_gas_free(sargs.graph, HPX_NULL);
   }
 
-  // Verification of results.
-  printf("Verifying results...\n");
+  double avg_time_per_source = total_elapsed_time/args->nproblems;
 
-  // Action to print the distances of each vertex from the source
-  hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices-1);
-  for (int i = 1; i < el.num_vertices; ++i) {
-    hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
-    hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
-  }
-  hpx_lco_wait(vertices);
-  hpx_lco_delete(vertices, HPX_NULL);
+  FILE *fp;
+  fp = fopen("perf.ss.res", "a+");
+
+  fprintf(fp , "%s\n","p res sp ss sssp"); 
+  fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
+  fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+  fprintf(fp,"%s %f\n","t",avg_time_per_source);
+
+  fclose(fp);
+  
+  fp = fopen("sample.ss.chk", "a+");
+  
+  fprintf(fp , "%s\n","p chk sp ss sssp"); 
+  fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
+  fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+  //fprintf(fp,"%s %s %f\n","d","S",avg_time_per_source);//TBD
+
+
+
+  // Verification of results.
+  // printf("Verifying results...\n");
+
+  typedef struct{
+    uint64_t source;
+    uint64_t total_distance;
+  }total_distances_per_source;
+
 
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
@@ -211,7 +242,8 @@ int main(int argc, char *const argv[argc]) {
 
   _sssp_args_t args = { .filename = graph_file,
                         .nproblems = nproblems,
-                        .problems = problems
+                        .problems = problems,
+			.prob_file = problem_file
   };
 
   int e = hpx_init(&cfg);

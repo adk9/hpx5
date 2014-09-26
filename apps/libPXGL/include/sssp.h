@@ -19,6 +19,13 @@ typedef struct {
   uint64_t source;
 } call_sssp_args_t;
 
+
+typedef struct {
+  uint64_t total_vertex_traversal;
+  uint64_t total_edge_traversal;
+  uint64_t total_distance_updates;
+}_sssp_statistics;
+
 // This invokes the chaotic-relaxation SSSP algorithm on the given
 // graph, starting from the given source.
 extern hpx_action_t call_sssp;
