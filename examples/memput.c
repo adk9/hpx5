@@ -93,7 +93,7 @@ static int _main_action(void *args) {
         wtime(&t_start);
 
       hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_gas_memput(remote, local, size, done, HPX_NULL);
+      hpx_gas_memput(remote, local, size, HPX_NULL, done);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
     }
@@ -119,6 +119,7 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.log_level = HPX_LOG_DEFAULT | HPX_LOG_TRANS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
