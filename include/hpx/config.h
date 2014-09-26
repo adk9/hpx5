@@ -94,7 +94,7 @@ typedef struct {
     .cores       = 0,                           \
     .threads     = 0,                           \
     .backoff_max = 1024,                        \
-    .stack_bytes = 65536,                       \
+    .stack_bytes = 32768,                       \
     .gas         = HPX_GAS_PGAS,                \
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
