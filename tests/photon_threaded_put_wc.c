@@ -38,6 +38,7 @@ static int sizes[] = {
 int sendCompT = 0;
 int recvCompT = 0;
 int myrank;
+pthread_mutex_t mutexSendCounter;
 
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
@@ -49,8 +50,11 @@ void *wait_local_completion_thread() {
     if (rc != PHOTON_OK)
      continue;  // no events
     if (flag) {
-      if (request == PHOTON_TAG)
+      if (request == PHOTON_TAG) {
+        pthread_mutex_lock(&mutexSendCounter);
         sendCompT--;
+        pthread_mutex_unlock(&mutexSendCounter);
+      }
     }
   }
   pthread_exit(NULL);
@@ -80,6 +84,7 @@ START_TEST(test_photon_threaded_put_wc)
   int rank, nproc, ret_proc;
   pthread_t th;
   long t;
+  pthread_attr_t attr;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -91,6 +96,12 @@ START_TEST(test_photon_threaded_put_wc)
 
   // Have multiple threads each polling for ledger completions
   pthread_t recv_threads[nproc];
+
+  pthread_mutex_init(&mutexSendCounter, NULL);
+
+  /* Create threads to perform the dotproduct  */
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   // only need one send buffer
   posix_memalign((void **) &send, 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -122,6 +133,7 @@ START_TEST(test_photon_threaded_put_wc)
 
   struct timespec time_s, time_e;
 
+  pthread_create(&th, NULL, wait_local_completion_thread, NULL);
   for (t=0; t<nproc; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
   }
@@ -147,12 +159,8 @@ START_TEST(test_photon_threaded_put_wc)
         for (k=0; k<ITERS; k++) {
           photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
           sendCompT++;
-          pthread_create(&th, NULL, wait_local_completion_thread, NULL);
-          pthread_join(th, NULL);
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        pthread_create(&th, NULL, wait_local_completion_thread, NULL);
-        pthread_join(th, NULL);
       }
 
       MPI_Barrier(MPI_COMM_WORLD);
@@ -164,11 +172,13 @@ START_TEST(test_photon_threaded_put_wc)
         printf("%1.4f\n", latency);
         fflush(stdout);
       }
-      assert(sendCompT == 0 && recvCompT == 0);
     }
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  pthread_attr_destroy(&attr);
+  pthread_join(th, NULL);
 
   photon_unregister_buffer(send, PHOTON_BUF_SIZE);
   free(send);
@@ -176,6 +186,12 @@ START_TEST(test_photon_threaded_put_wc)
     photon_unregister_buffer(recv[i], PHOTON_BUF_SIZE);
     free(recv[i]);
   }
+
+  //for (t=0; t < nproc; t++) {
+    //pthread_join(recv_threads[t], NULL);
+ // }
+
+  pthread_mutex_destroy(&mutexSendCounter);   
 }
 END_TEST
 
