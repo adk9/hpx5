@@ -157,7 +157,7 @@ static int _insert_edge_action(const hpx_addr_t * const index_array)
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
-  uint64_t source = edge->source;
+  const uint64_t source = edge->source;
 
   adj_list_edge_t e;
   e.dest = edge->dest;
