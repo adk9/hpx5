@@ -164,6 +164,7 @@ hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS"
 hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$HPX_JEMALLOC_LIBS"
+hpx_extra_ldflags="$HPX_JEMALLOC_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -177,6 +178,7 @@ CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
+LDFLAGS="$hpx_extra_ldflags $LDFLAGS"
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
