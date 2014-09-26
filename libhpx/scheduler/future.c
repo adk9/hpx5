@@ -60,6 +60,26 @@ _wait(_future_t *f) {
   return cvar_get_error(&f->full);
 }
 
+static hpx_status_t
+_try_wait(_future_t *f, hpx_time_t time) {
+  if (!lco_get_triggered(&f->lco)) {
+    bool timeout = false;
+    while (!lco_get_triggered(&f->lco) && !timeout) {
+    if (hpx_time_diff_us(hpx_time_now(), time) > 0) {
+      timeout = true;
+      break;
+    }
+    hpx_thread_yield();
+  }
+
+  if (!timeout)
+    return cvar_get_error(&f->full);
+  else
+    return HPX_LCO_TIMEOUT;
+  }
+
+  return cvar_get_error(&f->full);
+}
 
 static bool
 _trigger(_future_t *f) {
@@ -174,6 +194,15 @@ _future_wait(lco_t *lco)
   return status;
 }
 
+static hpx_status_t
+_future_try_wait(lco_t *lco, hpx_time_t time)
+{
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+  hpx_status_t status = _try_wait(f, time);
+  lco_unlock(&f->lco);
+  return status;
+}
 
 /// initialize the future
 static void
@@ -181,11 +210,13 @@ _future_init(_future_t *f, int size)
 {
   // the future vtable
   static const lco_class_t vtable = {
-    _future_fini,
-    _future_error,
-    _future_set,
-    _future_get,
-    _future_wait
+    .on_fini = _future_fini,
+    .on_error = _future_error,
+    .on_set = _future_set,
+    .on_get = _future_get,
+    .on_wait = _future_wait,
+    //    .on_try_get = _future_try_get,
+    .on_try_wait = _future_try_wait
   };
 
   bool inplace = (size <= sizeof(f->value));
@@ -339,3 +370,5 @@ hpx_lco_future_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   if (!hpx_addr_eq(sync, HPX_NULL))
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
+
+
