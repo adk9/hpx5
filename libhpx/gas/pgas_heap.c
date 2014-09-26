@@ -20,8 +20,8 @@
 #include <libsync/sync.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
+#include "mallctl.h"
 #include "pgas_heap.h"
-#include "jemalloc_mallctl_wrappers.h"
 
 static size_t get_nchunks(const size_t size, size_t bytes_per_chunk) {
   size_t nchunks = size / bytes_per_chunk;
@@ -64,7 +64,7 @@ int lhpx_pgas_heap_init(lhpx_pgas_heap_t *heap, const size_t size) {
 
   sync_store(&heap->csbrk, 0, SYNC_RELEASE);
 
-  heap->bytes_per_chunk = lhpx_jemalloc_get_chunk_size();
+  heap->bytes_per_chunk = lhpx_mallctl_get_chunk_size();
   dbg_log_gas("pgas: heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
 
   heap->nchunks = get_nchunks(size, heap->bytes_per_chunk);

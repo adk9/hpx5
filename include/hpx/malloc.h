@@ -10,22 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
+#ifndef HPX_MALLOC_H
+#define HPX_MALLOC_H
+
+#include <stddef.h>
+
+void *malloc(size_t bytes);
+void free(void *ptr);
+void *calloc(size_t nmemb, size_t size);
+void *realloc(void *ptr, size_t size);
+void *valloc(size_t size);
+void *memalign(size_t boundary, size_t size);
+int posix_memalign(void **memptr, size_t alignment, size_t size);
+
 #endif
-
-#include <stdbool.h>
-#include <jemalloc/jemalloc.h>
-#include "libhpx/debug.h"
-#include "jemalloc_mallctl_wrappers.h"
-
-size_t lhpx_jemalloc_get_chunk_size(void) {
-  size_t log2_bytes_per_chunk = 0;
-  size_t sz = sizeof(log2_bytes_per_chunk);
-  int e = mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
-  if (e) {
-    dbg_error("pgas: failed to read the jemalloc chunk size\n");
-  }
-
-  return 1 << log2_bytes_per_chunk;
-}
