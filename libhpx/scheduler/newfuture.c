@@ -256,6 +256,7 @@ _future_init(_newfuture_t *f, int size)
 
   bool inplace = (size <= sizeof(f->value));
   lco_init(&f->lco, &vtable, inplace);
+  cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | FT_EMPTY; // future starts out empty
   if (!inplace) {

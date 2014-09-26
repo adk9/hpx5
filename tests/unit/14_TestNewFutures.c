@@ -378,12 +378,12 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES);
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
     args[i].index = i;
-    hpx_call(HPX_HERE, t06_waitforempty_id, &args[i], sizeof(args[i]), done);
+    hpx_call(hpx_lco_newfuture_at(fut, i), t06_waitforempty_id, &args[i], sizeof(args[i]), done);
   }
 
   hpx_lco_wait(done);
@@ -835,8 +835,10 @@ void add_06_TestNewFutures(TCase *tc) {
   //tcase_add_test(tc, test_hpx_lco_newfuture_waitfor);
   //  tcase_add_test(tc, test_hpx_lco_newfuture_waituntil);
   //  tcase_add_test(tc, test_hpx_lco_newfuture_shared);
+
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_empty_array_remote);
+
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array);
   tcase_add_test(tc, test_hpx_lco_newfuture_waitat_full_array_remote);
   tcase_add_test(tc, test_hpx_lco_newfuture_getat_array);  
