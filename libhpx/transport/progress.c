@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <stdlib.h>
@@ -25,6 +25,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "progress.h"
@@ -51,7 +52,6 @@ void request_delete(request_t *r) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Requests associate parcels to transport send and receive operations, and
 /// list nodes as well. This constructor creates new requests, bound to the
 /// passed parcel.
@@ -63,7 +63,6 @@ void request_delete(request_t *r) {
 ///
 /// This allocator mallocs enough space for the current transport's request
 /// size.
-/// ----------------------------------------------------------------------------
 static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p) {
   request_t *r = progress->free;
   if (r) {
@@ -78,27 +77,24 @@ static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Frees a previously allocated request.
 ///
 /// This uses a freelist algorithm for request nodes.
 ///
 /// @param network - the network
 /// @param request - the request
-/// ----------------------------------------------------------------------------
 static void _delete_request(progress_t *progress, request_t *request) {
   request->next = progress->free;
   progress->free = request->next;
 }
 
-/// ----------------------------------------------------------------------------
+
 /// Finish a generic request.
-/// ----------------------------------------------------------------------------
 static void _finish_request(progress_t *progress, request_t *r) {
   _delete_request(progress, r);
 }
 
-/// ----------------------------------------------------------------------------
+
 /// Finish a send request.
 ///
 /// This finishes a send by freeing the request's parcel, and then calling the
@@ -106,35 +102,33 @@ static void _finish_request(progress_t *progress, request_t *r) {
 ///
 /// @param n - the network
 /// @param r - the request to finish
-/// ----------------------------------------------------------------------------
 static void _finish_send(progress_t *progress, request_t *r) {
   hpx_parcel_release(r->parcel);
   _finish_request(progress, r);
 }
 
-/// ----------------------------------------------------------------------------
+
 /// Finish a receive request.
 ///
 /// This finishes a receive by pushing the request's parcel into the receive
 /// queue, and then calling the generic finish handler.
 ///
-/// @param n - the network
-/// @param r - the request to finish
-/// ----------------------------------------------------------------------------
+/// @param     n The network.
+/// @param     r The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
-  network_rx_enqueue(here->network, r->parcel);
+  scheduler_spawn(r->parcel);
   _finish_request(progress, r);
 }
 
-/// ----------------------------------------------------------------------------
+
 /// Called during network progress to initiate a send with the transport.
 ///
 /// Try and pop a network request off of the send queue, allocate a request node
 /// for it, and initiate a byte-send with the transport.
 ///
-/// @param network - the network object
-/// @returns       - true if we initiated a send
-/// ----------------------------------------------------------------------------
+/// @param      network The network object
+///
+/// @returns true if we initiated a send
 static bool _try_start_send(progress_t *progress) {
   uint32_t dest;
   int size;
@@ -167,9 +161,7 @@ static bool _try_start_send(progress_t *progress) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Called during network progress to initiate a recv with the transport.
-/// ----------------------------------------------------------------------------
 static bool _try_start_recv(progress_t *progress) {
   int src = TRANSPORT_ANY_SOURCE;
   int size = transport_probe(here->transport, &src);
@@ -219,23 +211,21 @@ static bool _try_start_recv(progress_t *progress) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Recursively test a list of requests.
 ///
 /// Tail recursive so it won't use any stack space. Uses the passed function
 /// pointer to finish the request, so that this can be used for different kinds
 /// of requests.
 ///
-/// @param network - the network used for testing
-/// @param  finish - a callback to finish the request
-/// @param    curr - the current request to test
-/// @param       n - the current number of completed requests
-/// @returns       - the total number of completed requests
-/// ----------------------------------------------------------------------------
-static int HPX_NON_NULL(1, 2, 3) _test(progress_t *p,
-                                       void (*finish)(progress_t*, request_t*),
-                                       request_t **curr, int n)
-{
+/// @param    network The network used for testing.
+/// @param     finish A callback to finish the request.
+/// @param       curr The current request to test.
+/// @param          n The current number of completed requests.
+///
+/// @returns The total number of completed requests.
+static int HPX_NON_NULL(1, 2, 3)
+  _test(progress_t *p, void (*finish)(progress_t*, request_t*),
+        request_t **curr, int n) {
   request_t *i = *curr;
 
   // base case, return the number of finished requests
@@ -259,13 +249,10 @@ static int HPX_NON_NULL(1, 2, 3) _test(progress_t *p,
 }
 
 
-/// ----------------------------------------------------------------------------
-/// This call tries to "flush" the transport progress queues. It
-/// ensures that all of the pending sends are finished. This is
-/// particularly useful during shutdown where we need the
-/// "shutdown-action" parcels to go out before shutting down the
-/// scheduler.
-/// ----------------------------------------------------------------------------
+/// This call tries to "flush" the transport progress queues. It ensures that
+/// all of the pending sends are finished. This is particularly useful during
+/// shutdown where we need the "shutdown-action" parcels to go out before
+/// shutting down the scheduler.
 void network_progress_flush(progress_t *p) {
   bool send = true;
   while (send)
