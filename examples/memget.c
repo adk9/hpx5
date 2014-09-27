@@ -40,8 +40,6 @@ void wtime(double *t)
 
 static hpx_action_t _main        = 0;
 static hpx_action_t _init_array  = 0;
-static hpx_action_t _memget      = 0;
-static hpx_action_t _memget_pong = 0;
 
 static int _init_array_action(size_t *args) {
   size_t n = *args;
@@ -53,34 +51,6 @@ static int _init_array_action(size_t *args) {
   for(int i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
   HPX_THREAD_CONTINUE(local);
-}
-
-
-static int _memget_pong_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  memcpy(args, local, hpx_thread_current_args_size());
-  return HPX_SUCCESS;
-}
-
-typedef struct {
-  size_t n;
-  hpx_addr_t addr;
-  hpx_addr_t cont;
-} _memget_args_t;
-
-
-static int _memget_action(_memget_args_t *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  hpx_call(args->addr, _memget_pong, local, args->n, args->cont);
-  hpx_thread_exit(HPX_SUCCESS);
 }
 
 
@@ -104,11 +74,10 @@ static int _main_action(void *args) {
   fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
   fflush(stdout);
 
-  hpx_addr_t rfut;
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     char *local;
 
-    rfut = hpx_lco_future_new(sizeof(void*));
+    hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
     hpx_call(remote, _init_array, &size, sizeof(size), rfut);
     hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
     hpx_lco_wait(rfut);
@@ -119,20 +88,14 @@ static int _main_action(void *args) {
       skip = SKIP_LARGE;
     }
 
-    _memget_args_t args = {
-      .n    = size,
-      .addr = data,
-      .cont = HPX_NULL
-    };
-
     for (i = 0; i < loop + skip; i++) {
       if(i == skip)
         wtime(&t_start);
 
-      args.cont = hpx_lco_future_new(0);
-      hpx_call(remote, _memget, &args, sizeof(args), HPX_NULL);
-      hpx_lco_wait(args.cont);
-      hpx_lco_delete(args.cont, HPX_NULL);
+      hpx_addr_t done = hpx_lco_future_new(0);
+      hpx_gas_memcpy(data, remote, size, done);
+      hpx_lco_wait(done);
+      hpx_lco_delete(done, HPX_NULL);
     }
 
     wtime(&t_end);
@@ -197,8 +160,6 @@ int main(int argc, char *argv[argc]) {
 
   _main        = HPX_REGISTER_ACTION(_main_action);
   _init_array  = HPX_REGISTER_ACTION(_init_array_action);
-  _memget      = HPX_REGISTER_ACTION(_memget_action);
-  _memget_pong = HPX_REGISTER_ACTION(_memget_pong_action);
 
   return hpx_run(_main, NULL, 0);
 }

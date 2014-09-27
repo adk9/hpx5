@@ -41,7 +41,7 @@ static int _print_vertex_distance_action(int *i)
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  printf("vertex: %d nbrs: %lu dist: %lu\n", *i, vertex->num_edges, vertex->distance);
+  printf("vertex: %d nbrs: %lu dist: %llu\n", *i, vertex->num_edges, vertex->distance);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -77,10 +77,10 @@ static int read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pro
     switch (line[0]) {
       case 'c': continue;
       case 's':
-        sscanf(&line[1], " %lu", &((*problems)[count++]));
+        sscanf(&line[1], " %llu", &((*problems)[count++]));
         break;
       case 'p':
-        sscanf(&line[1], " aux sp ss %lu", nproblems);
+        sscanf(&line[1], " aux sp ss %llu", nproblems);
         *problems = malloc(*nproblems * sizeof(uint64_t));
         assert(*problems);
         break;
@@ -140,7 +140,7 @@ static int _main_action(_sssp_args_t *args) {
   edge_list_t el;
   printf("Allocated edge-list from file %s.\n", args->filename);
   hpx_call_sync(HPX_HERE, edge_list_from_file, &args->filename, sizeof(char*), &el, sizeof(el));
-  printf("Edge List: #v = %lu, #e = %lu\n",
+  printf("Edge List: #v = %llu, #e = %llu\n",
          el.num_vertices, el.num_edges);
 
   call_sssp_args_t sargs;
@@ -169,6 +169,7 @@ static int _main_action(_sssp_args_t *args) {
     total_elapsed_time+=elapsed;
     printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
 
+
     /*
      _sssp_statistics *sssp_stat;
      hpx_call_sync(sssp_stats, _print_sssp_stat,sssp_stat,sizeof(_sssp_statistics),NULL,0);
@@ -182,6 +183,14 @@ static int _main_action(_sssp_args_t *args) {
     }
     hpx_lco_wait(vertices);
     hpx_lco_delete(vertices, HPX_NULL);
+
+
+    hpx_addr_t checksum_lco = HPX_NULL;
+    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices), &checksum_lco, sizeof(checksum_lco));
+    size_t checksum = 0;
+    hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
+    hpx_lco_delete(checksum_lco, HPX_NULL);
+    printf("Dimacs checksum is %zu\n", checksum);
 
 
     hpx_gas_free(sargs.graph, HPX_NULL);

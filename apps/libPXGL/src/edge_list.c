@@ -1,15 +1,16 @@
+#define __STDC_FORMAT_MACROS
 
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <inttypes.h>
 
 #include "edge_list.h"
 #include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
-
 
 #ifndef _EDGE_LIST_BLOCKS
 #define _EDGE_LIST_BLOCKS HPX_LOCALITIES
@@ -34,7 +35,7 @@ static int _put_edge_action(edge_list_edge_t *e)
 }
 
 
-hpx_action_t edge_list_from_file = NULL;
+hpx_action_t edge_list_from_file = 0;
 int edge_list_from_file_action(char **filename) {
 
   // Read from the edge-list filename
@@ -57,11 +58,15 @@ int edge_list_from_file_action(char **filename) {
     switch (line[0]) {
       case 'c': continue;
       case 'a':
+
         sscanf(&line[1], " %lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
 	if(el->min_edge_weight > edge->weight)
 	  el->min_edge_weight = edge->weight;
 	if(el->max_edge_weight < edge->weight)
 	  el->max_edge_weight = edge->weight;
+
+        sscanf(&line[1], " %" PRIu64 " %" PRIu64 " %" PRIu64, &edge->source, &edge->dest, &edge->weight);
+
         hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t));
         count++;
         assert(!hpx_addr_eq(edges, HPX_NULL));
@@ -69,7 +74,7 @@ int edge_list_from_file_action(char **filename) {
         break;
 
       case 'p':
-        sscanf(&line[1], " sp %lu %lu", &el->num_vertices, &el->num_edges);
+        sscanf(&line[1], " sp %" PRIu64 " %" PRIu64, &el->num_vertices, &el->num_edges);
 
         // Account for the  DIMACS graph format (.gr) where the node
         // ids range from 1..n

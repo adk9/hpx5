@@ -24,6 +24,9 @@ extern "C" {
 // Algorithms
 #include "sssp.h"
 
+// Dimacs
+#include "dimacs.h"
+
 #ifdef __cplusplus
 }
 #endif

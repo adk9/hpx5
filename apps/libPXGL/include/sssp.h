@@ -31,6 +31,6 @@ typedef struct {
 // This invokes the chaotic-relaxation SSSP algorithm on the given
 // graph, starting from the given source.
 extern hpx_action_t call_sssp;
-extern int call_sssp_action(call_sssp_args_t *args);
+extern int call_sssp_action(const call_sssp_args_t *const args);
 
 #endif // PXGL_SSSP_H
