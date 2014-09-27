@@ -15,16 +15,18 @@
 #define PXGL_SSSP_H
 
 typedef struct {
-  adj_list_t graph;
-  uint64_t source;
-} call_sssp_args_t;
+  uint64_t useful_work;
+  uint64_t useless_work;
+  uint64_t total_distance_updates;
+}_sssp_statistics;
 
 
 typedef struct {
-  uint64_t total_vertex_traversal;
-  uint64_t total_edge_traversal;
-  uint64_t total_distance_updates;
-}_sssp_statistics;
+  adj_list_t graph;
+  uint64_t source;
+  hpx_addr_t sssp_stat; 
+} call_sssp_args_t;
+
 
 // This invokes the chaotic-relaxation SSSP algorithm on the given
 // graph, starting from the given source.
