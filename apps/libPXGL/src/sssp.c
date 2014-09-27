@@ -77,7 +77,7 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
 }
 
 
-hpx_action_t call_sssp = NULL;
+hpx_action_t call_sssp = 0;
 int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t));
