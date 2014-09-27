@@ -19,4 +19,10 @@
 size_t lhpx_mallctl_get_chunk_size(void)
   HPX_INTERNAL;
 
-#endif // LIBHPX_GAS_JEMALLOC_MALLCTL_WRAPPERS_H
+unsigned lhpx_mallctl_thread_get_arena(void)
+  HPX_INTERNAL;
+
+unsigned lhpx_mallctl_thread_set_arena(unsigned)
+  HPX_INTERNAL;
+
+#endif // LIBHPX_GAS_MALLCTL_H
