@@ -16,7 +16,7 @@ typedef enum {
   HPX_FUTURE_STATUS_DEFERRED
 } hpx_future_status;
 
-typedef enum {HPX_UNSET = 0x01, HPX_SET = 0x03} hpx_set_t;
+typedef enum {HPX_UNSET = 0x01, HPX_SET = 0x02} hpx_set_t;
 
 /// FT_FREE is set to true if there are pre-allocated future description
 #define FT_FREE     0x00
