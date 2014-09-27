@@ -30,10 +30,39 @@
 ///
 
 #include <stddef.h>
+#include <hpx/attributes.h>
 
-int lhpx_pgas_init(size_t heap_size);
-int lhpx_pgas_init_worker();
-void lphx_pgas_fini_worker();
-void lhpx_pgas_fini(void);
+int lhpx_pgas_init(size_t heap_size)
+  HPX_INTERNAL;
+
+int lhpx_pgas_init_worker()
+  HPX_INTERNAL;
+
+void lphx_pgas_fini_worker()
+  HPX_INTERNAL;
+
+void lhpx_pgas_fini(void)
+  HPX_INTERNAL;
+
+void *lhpx_pgas_malloc(size_t bytes)
+  HPX_INTERNAL;
+
+void lhpx_pgas_free(void *ptr)
+  HPX_INTERNAL;
+
+void *lhpx_pgas_calloc(size_t nmemb, size_t size)
+  HPX_INTERNAL;
+
+void *lhpx_pgas_realloc(void *ptr, size_t size)
+  HPX_INTERNAL;
+
+void *lhpx_pgas_valloc(size_t size)
+  HPX_INTERNAL;
+
+void *lhpx_pgas_memalign(size_t boundary, size_t size)
+  HPX_INTERNAL;
+
+int lhpx_pgas_posix_memalign(void **memptr, size_t alignment, size_t size)
+  HPX_INTERNAL;
 
 #endif
