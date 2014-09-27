@@ -17,17 +17,23 @@
 #include "edge_list.h"
 #include "hpx/hpx.h"
 
+// Distance
+typedef uint64_t distance_t;
+
+// Vertex Index
+typedef uint64_t vertex_t;
+
 // Graph Edge
 typedef struct {
-  uint64_t dest;
-  uint64_t weight;
+  vertex_t dest;
+  distance_t weight;
 } adj_list_edge_t;
 
 
 // Graph Vertex
 typedef struct {
-  volatile uint64_t num_edges;
-  volatile uint64_t distance;
+  size_t num_edges;
+  distance_t distance;
   adj_list_edge_t edge_list[];
 } adj_list_vertex_t;
 

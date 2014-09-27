@@ -10,22 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef HPX_TYPES_H
-#define HPX_TYPES_H
+#ifndef PXGL_DIMACS_H
+#define PXGL_DIMACS_H
 
-/// @file
+#include "hpx/hpx.h"
+#include "adjacency_list.h"
 
-/// Extern HPX macros
-/// @{
-typedef enum {
-  HPX_ERROR          = -1,
-  HPX_SUCCESS        = 0,
-  HPX_RESEND         = 1,
-  HPX_LCO_ERROR      = 2,
-  HPX_LCO_CHAN_EMPTY = 3,
-  HPX_LCO_TIMEOUT    = 4,
-  HPX_USER           = 127
-} hpx_status_t;
-/// @}
+// Compute checksum given an adjacency list
+extern hpx_action_t dimacs_checksum;
+extern int dimacs_checksum_action(const size_t *const g);
 
-#endif
+#endif // PXGL_DIMACS_H

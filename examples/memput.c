@@ -40,7 +40,6 @@ void wtime(double *t)
 
 static hpx_action_t _main = 0;
 static hpx_action_t _init_array = 0;
-static hpx_action_t _memput = 0;
 
 static int _init_array_action(size_t *args) {
   size_t n = *args;
@@ -54,15 +53,6 @@ static int _init_array_action(size_t *args) {
   HPX_THREAD_CONTINUE(local);
 }
 
-static int _memput_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  memcpy(local, args, hpx_thread_current_args_size());
-  return HPX_SUCCESS;
-}
 
 static int _main_action(void *args) {
   double t_start = 0.0, t_end = 0.0;
@@ -84,11 +74,10 @@ static int _main_action(void *args) {
   fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
   fflush(stdout);
 
-  hpx_addr_t rfut;
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     char *local;
 
-    rfut = hpx_lco_future_new(sizeof(void*));
+    hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
     hpx_call(remote, _init_array, &size, sizeof(size), rfut);
     hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
     hpx_lco_wait(rfut);
@@ -103,7 +92,10 @@ static int _main_action(void *args) {
       if(i == skip)
         wtime(&t_start);
 
-      hpx_call_sync(remote, _memput, local, size, NULL, 0);
+      hpx_addr_t done = hpx_lco_future_new(0);
+      hpx_gas_memput(remote, local, size, HPX_NULL, done);
+      hpx_lco_wait(done);
+      hpx_lco_delete(done, HPX_NULL);
     }
 
     wtime(&t_end);
@@ -127,6 +119,7 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.log_level = HPX_LOG_DEFAULT | HPX_LOG_TRANS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
@@ -167,6 +160,5 @@ int main(int argc, char *argv[argc]) {
 
   _main       = HPX_REGISTER_ACTION(_main_action);
   _init_array = HPX_REGISTER_ACTION(_init_array_action);
-  _memput     = HPX_REGISTER_ACTION(_memput_action);
   return hpx_run(_main, NULL, 0);
 }

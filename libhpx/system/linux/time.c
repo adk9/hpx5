@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
 
@@ -76,4 +77,26 @@ hpx_time_us(hpx_time_t time) {
 double
 hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
+}
+
+hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {
+  hpx_time_t t;
+  t.tv_sec = s;
+  t.tv_nsec = ns;
+  return t;
+}
+
+hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) {
+  hpx_time_t t;
+  long ns = time.tv_nsec + duration.tv_nsec;
+  if (ns > 1e9) {
+    t.tv_nsec = ns % 1000000000;
+    t.tv_sec = time.tv_nsec + duration.tv_nsec + 1;
+  }
+  else {
+    t.tv_nsec = ns;
+    t.tv_sec = time.tv_nsec + duration.tv_nsec;
+  }
+    
+  return t;
 }
