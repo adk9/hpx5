@@ -103,6 +103,36 @@ typedef struct {
 } _sssp_args_t;
 
 
+static hpx_action_t _get_sssp_stat;
+static int _get_sssp_stat_action(call_sssp_args_t* sargs)
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+
+  hpx_addr_t *sssp_stats;
+  if (!hpx_gas_try_pin(target, (void**)&sssp_stats))
+    return HPX_RESEND;
+
+  sargs->sssp_stat = *sssp_stats;
+  hpx_gas_unpin(target);
+
+  return HPX_SUCCESS;
+}
+
+static hpx_action_t _print_sssp_stat;
+static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+  _sssp_statistics *stat;
+  if (!hpx_gas_try_pin(target, (void**)&stat))
+    return HPX_RESEND;
+  
+  sssp_stat->useful_work  =  stat->useful_work;
+  sssp_stat->useless_work =  stat->useless_work;
+  hpx_gas_unpin(target);
+  
+  return HPX_SUCCESS;
+}
+
 static hpx_action_t _main;
 static int _main_action(_sssp_args_t *args) {
 
@@ -114,13 +144,18 @@ static int _main_action(_sssp_args_t *args) {
          el.num_vertices, el.num_edges);
 
   call_sssp_args_t sargs;
+
   double total_elapsed_time = 0.0;
-  // _sssp_statistics sssp_stat = {.total_vertex_traversal = 0, .total_edge_traversal = 0, total_distance_updates = 0 };
+
+  const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
 
   for (int i = 0; i < args->nproblems; ++i) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+    
+    //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
+    sargs.sssp_stat = sssp_stats;
     printf("Allocated adjacency-list.\n");
 
     sargs.source = args->problems[i];
@@ -133,7 +168,13 @@ static int _main_action(_sssp_args_t *args) {
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     total_elapsed_time+=elapsed;
     printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
-      // Action to print the distances of each vertex from the source
+
+    /*
+     _sssp_statistics *sssp_stat;
+     hpx_call_sync(sssp_stats, _print_sssp_stat,sssp_stat,sizeof(_sssp_statistics),NULL,0);
+     printf("useful work = %d,  useless work = %d", sssp_stat->useful_work, sssp_stat->useless_work);
+    */
+    // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
       hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
@@ -255,6 +296,8 @@ int main(int argc, char *const argv[argc]) {
   // register the actions
   _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);
   _print_vertex_distance       = HPX_REGISTER_ACTION(_print_vertex_distance_action);
+  _get_sssp_stat               = HPX_REGISTER_ACTION(_get_sssp_stat_action);
+  _print_sssp_stat             = HPX_REGISTER_ACTION(_print_sssp_stat_action);
   _main                        = HPX_REGISTER_ACTION(_main_action);
 
   return hpx_run(_main, &args, sizeof(args));
