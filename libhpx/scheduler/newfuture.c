@@ -60,11 +60,11 @@ static hpx_action_t _future_reset_remote = 0;
 static hpx_action_t _future_wait_remote = 0;
 
 static bool _empty(const _newfuture_t *f) {
-  return f->bits | FT_EMPTY;
+  return f->bits & HPX_UNSET;
 }
 
 static bool _full(const _newfuture_t *f) {
-  return f->bits | FT_FULL;
+  return f->bits & HPX_SET;
 }
 
 /// Use the LCO's "user" state to remember if the future is in-place or not.
@@ -111,16 +111,20 @@ _future_fini(lco_t *lco)
   _free(f);
 }
 
-
-/// Copies @p from into the appropriate location. Futures are single-assignment,
-/// so we only do this if the future isn't set yet.
 static void
 _future_set(lco_t *lco, int size, const void *from)
 {
   _newfuture_t *f = (_newfuture_t *)lco;
   lco_lock(&f->lco);
 
-  f->bits ^= FT_EMPTY; // not empty anymore!
+  hpx_status_t status;
+  if (!_empty(f))
+    scheduler_wait(&f->lco.lock, &f->empty);
+  else {
+    status = cvar_get_error(&f->empty);
+    if (status != HPX_SUCCESS)
+      goto unlock;
+  }
 
   if (from && _is_inplace(f)) {
     memcpy(&f->value, from, size);
@@ -131,9 +135,17 @@ _future_set(lco_t *lco, int size, const void *from)
     memcpy(ptr, from, size);
   }
 
+  uint64_t buffer;
+  if (_is_inplace(f))
+    memcpy(&buffer, &f->value, 4);
+  else
+    memcpy(&buffer, f->value, 4);
+
+  f->bits ^= HPX_UNSET; // not empty anymore!
+  f->bits |= HPX_SET;
   cvar_reset(&f->empty);
   scheduler_signal_all(&f->full);
-
+ unlock:
   lco_unlock(&f->lco);
 }
 
@@ -181,6 +193,9 @@ _future_get(lco_t *lco, int size, void *out)
 
   hpx_status_t status = _wait(f);
 
+  if (!_full(f))
+    scheduler_wait(&f->lco.lock, &f->full);
+
   if (status != HPX_SUCCESS)
     goto unlock;
 
@@ -194,6 +209,11 @@ _future_get(lco_t *lco, int size, void *out)
     memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     memcpy(out, ptr, size);
   }
+
+  f->bits ^= HPX_SET;
+  f->bits |= HPX_UNSET;
+  cvar_reset(&f->full);
+  scheduler_signal_all(&f->empty);
 
  unlock:
   lco_unlock(&f->lco);
@@ -218,7 +238,7 @@ _future_wait_remote_action(struct _future_wait_args *args)
   _newfuture_t *f;
   if (!hpx_gas_try_pin(target, (void**)&f))
     return HPX_RESEND;
-  
+
   lco_lock(&f->lco);
   
   if (args->set == HPX_SET) {
@@ -226,12 +246,20 @@ _future_wait_remote_action(struct _future_wait_args *args)
       status = scheduler_wait(&f->lco.lock, &f->full);
     else
       status = cvar_get_error(&f->full);
+    f->bits ^= HPX_SET;
+    f->bits |= HPX_UNSET;
+    cvar_reset(&f->full);
+    scheduler_signal_all(&f->empty);
   }
   else {
     if (!_empty(f))
       status = scheduler_wait(&f->lco.lock, &f->empty);
     else
       status = cvar_get_error(&f->empty);
+    f->bits ^= HPX_UNSET;
+    f->bits |= HPX_SET;
+    cvar_reset(&f->empty);
+    scheduler_signal_all(&f->full);
   }
 
   lco_unlock(&f->lco);
@@ -258,7 +286,7 @@ _future_init(_newfuture_t *f, int size)
   lco_init(&f->lco, &vtable, inplace);
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
-  f->bits = 0 | FT_EMPTY; // future starts out empty
+  f->bits = 0 | HPX_UNSET; // future starts out empty
   if (!inplace) {
     f->value = malloc(size);                    // allocate if necessary
     assert(f->value);

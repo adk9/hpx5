@@ -54,7 +54,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
   hpx_call(HPX_HERE, t06_waitforempty, &fut, sizeof(fut), done);
   hpx_lco_wait(done);
   
@@ -80,7 +80,7 @@ START_TEST (test_libhpx_lco_newfuture_waitat_empty_remote)
     hpx_time_t t1 = hpx_time_now();
     
     hpx_addr_t done = hpx_lco_future_new(0);
-    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
     hpx_call(HPX_THERE(1), t06_waitforempty, &fut, sizeof(fut), done);
     hpx_lco_wait(done);
     
@@ -112,13 +112,15 @@ START_TEST (test_hpx_lco_newfuture_waitat_full)
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
   hpx_call(HPX_HERE, t06_waitforfull, &fut, sizeof(fut), done);
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
-  hpx_lco_wait(lsync);
-  hpx_lco_wait(rsync);
+  hpx_addr_t syncs[] = {lsync, rsync};
+  hpx_lco_wait_all(2, syncs, NULL);
   hpx_lco_wait(done);
-  
+
+  hpx_lco_delete(lsync, HPX_NULL);
+  hpx_lco_delete(rsync, HPX_NULL);
   hpx_lco_newfuture_free(fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -140,15 +142,18 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_remote)
     hpx_addr_t done = hpx_lco_future_new(0);
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
-    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
     hpx_call(HPX_THERE(1), t06_waitforfull, &fut, sizeof(fut), done);
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
-    hpx_lco_wait(lsync);
-    hpx_lco_wait(rsync);
+    hpx_addr_t syncs[] = {lsync, rsync};
+    hpx_lco_wait_all(2, syncs, NULL);
+
     hpx_lco_wait(done);
     
     hpx_lco_newfuture_free(fut);
-    
+    hpx_lco_delete(lsync, HPX_NULL);
+    hpx_lco_delete(rsync, HPX_NULL);
+
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
 } 
@@ -174,7 +179,7 @@ START_TEST (test_hpx_lco_newfuture_getat)
   hpx_addr_t done = hpx_lco_future_new(sizeof(SET_VALUE));
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
   hpx_call(HPX_HERE, t06_getat, &fut, sizeof(fut), done);
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
   hpx_lco_wait(lsync);
@@ -207,11 +212,11 @@ START_TEST (test_hpx_lco_newfuture_getat_remote)
     hpx_addr_t done = hpx_lco_future_new(sizeof(SET_VALUE));
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
-    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
     hpx_call(HPX_THERE(1), t06_getat, &fut, sizeof(fut), done);
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
-    hpx_lco_wait(lsync);
-    hpx_lco_wait(rsync);
+    hpx_addr_t syncs[] = {lsync, rsync};
+    hpx_lco_wait_all(2, syncs, NULL);
     SET_VALUE_T value;
     hpx_lco_get(done, sizeof(SET_VALUE), &value);
     ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
@@ -240,7 +245,7 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, 
                           HPX_NULL, HPX_NULL);
 
@@ -258,8 +263,8 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
     }
   } while (status != HPX_FUTURE_STATUS_READY);
 
-  uint64_t result;
-  hpx_lco_newfuture_getat(fut, 0, sizeof(uint64_t), &result);
+  SET_VALUE_T result;
+  hpx_lco_newfuture_getat(fut, 0, sizeof(SET_VALUE_T), &result);
   printf("Result of the future is = %"PRIu64"\n", result);
   ck_assert(result == SET_VALUE);
 
@@ -283,7 +288,7 @@ START_TEST (test_hpx_lco_newfuture_waituntil)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE,
                           HPX_NULL, HPX_NULL);
 
@@ -304,8 +309,8 @@ START_TEST (test_hpx_lco_newfuture_waituntil)
     }
   } while (status != HPX_FUTURE_STATUS_READY);
 
-  uint64_t result;
-  hpx_lco_newfuture_getat(fut, 0, sizeof(uint64_t), &result);
+  SET_VALUE_T result;
+  hpx_lco_newfuture_getat(fut, 0, sizeof(SET_VALUE_T), &result);
   printf("Result of the future is = %"PRIu64"\n", result);
   ck_assert(result == SET_VALUE);
 
@@ -339,7 +344,7 @@ START_TEST (test_hpx_lco_newfuture_shared)
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
 
-    hpx_addr_t shared_done = hpx_lco_newfuture_shared_new(sizeof(uint64_t));
+    hpx_addr_t shared_done = hpx_lco_newfuture_shared_new(sizeof(SET_VALUE_T));
     hpx_call(HPX_HERE, t06_lcoSetGet, &n, sizeof(n), shared_done);
     
     // Shared futures can be accessed multiple times;
@@ -412,7 +417,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array_remote)
     hpx_time_t t1 = hpx_time_now();
     
     hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
-    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
     struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
@@ -451,7 +456,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES);
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
@@ -462,7 +467,9 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
-    hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+    hpx_lco_newfuture_setat(fut, i, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+    hpx_addr_t syncs[] = {lsync, rsync};
+    hpx_lco_wait_all(2, syncs, NULL);
     hpx_lco_delete(lsync, HPX_NULL);
     hpx_lco_delete(rsync, HPX_NULL);
   }
@@ -487,7 +494,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array_remote)
     hpx_time_t t1 = hpx_time_now();
     
     hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
-    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
     struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
@@ -497,7 +504,9 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       hpx_addr_t lsync = hpx_lco_future_new(0);
       hpx_addr_t rsync = hpx_lco_future_new(0);
-      hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+      hpx_lco_newfuture_setat(fut, i, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+      hpx_addr_t syncs[] = {lsync, rsync};
+      hpx_lco_wait_all(2, syncs, NULL);
       hpx_lco_delete(lsync, HPX_NULL);
       hpx_lco_delete(rsync, HPX_NULL);
     }
@@ -519,6 +528,7 @@ int t06_getat_id_action(void* vargs) {
   struct waitforfull_id_args *args = (struct waitforfull_id_args*)vargs; 
   SET_VALUE_T value;
   hpx_lco_newfuture_getat(args->base, args->index, sizeof(value), &value);
+  printf("Got value == %d\n", value);
   hpx_thread_continue(sizeof(value), &value);
   return HPX_SUCCESS;
 }
@@ -532,7 +542,7 @@ START_TEST (test_hpx_lco_newfuture_getat_array)
   hpx_addr_t *done = malloc(sizeof(hpx_addr_t) * NUM_LOCAL_FUTURES);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
     done[i] = hpx_lco_future_new(sizeof(SET_VALUE));
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
@@ -543,13 +553,16 @@ START_TEST (test_hpx_lco_newfuture_getat_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
-    hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+    hpx_lco_newfuture_setat(fut, i, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+    hpx_addr_t syncs[] = {lsync, rsync};
+    hpx_lco_wait_all(2, syncs, NULL);
     hpx_lco_delete(lsync, HPX_NULL);
     hpx_lco_delete(rsync, HPX_NULL);
   }
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     SET_VALUE_T value;
     hpx_lco_get(done[i], sizeof(SET_VALUE), &value);
+    printf("FUTURE at %p CONTAINED VALUE %d\n", &done[i], value);
     ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
   }
   hpx_lco_newfuture_free_all(fut);
@@ -574,7 +587,7 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
     hpx_time_t t1 = hpx_time_now();
     
     hpx_addr_t done = hpx_lco_and_new(NUM_LOCAL_FUTURES * ranks);
-    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
     struct waitforempty_id_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
@@ -585,6 +598,8 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
       hpx_addr_t lsync = hpx_lco_future_new(0);
       hpx_addr_t rsync = hpx_lco_future_new(0);
       hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+      hpx_addr_t syncs[] = {lsync, rsync};
+      hpx_lco_wait_all(2, syncs, NULL);
       hpx_lco_delete(lsync, HPX_NULL);
       hpx_lco_delete(rsync, HPX_NULL);
     }
@@ -607,9 +622,9 @@ START_TEST (test_hpx_lco_newfuture_wait_all)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
-    hpx_lco_newfuture_setat(fut, 1, sizeof(SET_VALUE), &SET_VALUE, 
+    hpx_lco_newfuture_setat(fut, i, sizeof(SET_VALUE), &SET_VALUE, 
 			    HPX_NULL, HPX_NULL);
   }
   hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES, fut, HPX_SET);
@@ -642,7 +657,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_remote)
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
 
-    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
     struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].fut = fut;
@@ -668,7 +683,7 @@ START_TEST (test_hpx_lco_newfuture_get_all)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
   
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES, sizeof(args[0]));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].fut = fut;
@@ -679,8 +694,9 @@ START_TEST (test_hpx_lco_newfuture_get_all)
   SET_VALUE_T **values = calloc(NUM_LOCAL_FUTURES, sizeof(void*));
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
     values[i] = malloc(NUM_LOCAL_FUTURES * sizeof(SET_VALUE_T));
-  hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), (void*)values);
+  hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), (void**)values);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
+    printf("FUTURE CONTAINED VALUE %d\n", *values[i]);
     ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
   }
   
@@ -705,7 +721,7 @@ START_TEST (test_hpx_lco_newfuture_get_all_remote)
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
 
-    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(uint64_t));
+    hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES * ranks, sizeof(SET_VALUE_T));
     struct t06_set_args *args = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(args[0]));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].fut = fut;
@@ -713,12 +729,13 @@ START_TEST (test_hpx_lco_newfuture_get_all_remote)
       hpx_call(hpx_lco_newfuture_at(fut, i), t06_set, &args[i], sizeof(args[i]), HPX_NULL);
     }
     
-    void **values = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(void*));
+    SET_VALUE_T **values = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(void*));
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++)
       values[i] = malloc(NUM_LOCAL_FUTURES * ranks * sizeof(SET_VALUE_T));
-    hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES * ranks, fut, sizeof(SET_VALUE_T), values);
+    hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES * ranks, fut, sizeof(SET_VALUE_T), (void**)values);
 
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
+      printf("FUTURE CONTAINED VALUE %d\n", *values[i]);
       ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
     }
 
@@ -741,7 +758,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_for)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
   hpx_time_t timeout_duration = hpx_time_construct(0, 5e8);
   hpx_future_status status;
   status = hpx_lco_newfuture_wait_all_for(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout_duration);
@@ -769,7 +786,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_until)
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+  hpx_addr_t fut = hpx_lco_newfuture_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
 
   now = hpx_time_now();
   duration = hpx_time_construct(0, 5e8);
@@ -802,7 +819,7 @@ START_TEST (test_hpx_lco_newfuture_shared_array)
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
 
-    hpx_addr_t shared_done = hpx_lco_newfuture_shared_new_all(NUM_LOCAL_FUTURES, sizeof(uint64_t));
+    hpx_addr_t shared_done = hpx_lco_newfuture_shared_new_all(NUM_LOCAL_FUTURES, sizeof(SET_VALUE_T));
 
     for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
       hpx_lco_newfuture_setat(shared_done, i, sizeof(SET_VALUE), &SET_VALUE, HPX_NULL, HPX_NULL);
