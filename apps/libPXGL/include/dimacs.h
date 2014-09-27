@@ -10,26 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBPXGL_H
-#define LIBPXGL_H
+#ifndef PXGL_DIMACS_H
+#define PXGL_DIMACS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Graph representation / formats
+#include "hpx/hpx.h"
 #include "adjacency_list.h"
-#include "edge_list.h"
 
-// Algorithms
-#include "sssp.h"
+// Compute checksum given an adjacency list
+extern hpx_action_t dimacs_checksum;
+extern int dimacs_checksum_action(const size_t *const g);
 
-// Dimacs
-#include "dimacs.h"
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // LIBPXGL_H
-
+#endif // PXGL_DIMACS_H
