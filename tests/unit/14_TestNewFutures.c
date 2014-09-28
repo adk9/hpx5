@@ -596,7 +596,7 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       hpx_addr_t lsync = hpx_lco_future_new(0);
       hpx_addr_t rsync = hpx_lco_future_new(0);
-      hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
+      hpx_lco_newfuture_setat(fut, i, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
       hpx_addr_t syncs[] = {lsync, rsync};
       hpx_lco_wait_all(2, syncs, NULL);
       hpx_lco_delete(lsync, HPX_NULL);
