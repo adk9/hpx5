@@ -18,30 +18,6 @@ typedef enum {
 
 typedef enum {HPX_UNSET = 0x01, HPX_SET = 0x02} hpx_set_t;
 
-/// FT_FREE is set to true if there are pre-allocated future description
-#define FT_FREE     0x00
-/// FT_EMPTY is set if the future container size is 0, false otherwise
-#define FT_EMPTY    0x01
-/// FT_FULL is set if the future container size is full, false otherwise
-#define FT_FULL     0x03
-/// Async is when the action is defined with the future, to be executed
-/// asynchronously. The creater of the asynchronous operation can then use
-/// a variety of methods to query waitfor, or extract a value from future.
-/// These may block if the asynchronous operation has not yet provided a
-/// value
-#define FT_ASYNCH   0x05
-/// Wait has a waiter already
-#define FT_WAIT     0x09
-/// Waits for the result. Gets set if it is not available for the specific
-/// timeout duration.
-#define FT_WAITFORA 0x0D
-/// Waits for the result, gets set if result is not available until specified
-/// time pount has been reached
-#define FT_WAITUNTILA 0x0E
-/// This state is set to true if *this refers to a shared state otherwise
-/// false.
-#define FT_SHARED   0x10
-
 /// Create a future
 ///
 /// Although globally accessible, this future will be created at the
@@ -53,7 +29,8 @@ hpx_addr_t hpx_lco_newfuture_new(size_t size);
 
 /// Creates a shared future
 /// 
-/// Shared futures can be accessed mutiple times
+/// Shared futures can be accessed mutiple times. They must be manually emptied
+/// with hpx_lco_newfuture_emptyat()
 /// @param size                 The number of bytes
 /// @returns                    The global address of the future
 hpx_addr_t hpx_lco_newfuture_shared_new(size_t size);
@@ -218,9 +195,8 @@ void hpx_lco_newfuture_free_all(int num, hpx_addr_t base);
 ///
 /// If a future is shared it can be waited on or set
 ///
-/// @returns true if the future may given as an arugument to hpx_lco_future_set(), 
-///          hpx_lco_future_get(), or hpx_lco_future_wait(), etc.
-///          false otherwise
-bool hpx_lco_newfuture_is_shared();
+/// @param future A future
+/// @returns      true if the future is a shared future, false otherwise
+bool hpx_lco_newfuture_is_shared(hpx_addr_t future);
 
 #endif

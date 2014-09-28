@@ -33,6 +33,36 @@
 //
 // ==============================================================
 
+/*
+// The folowing was part of the original design, but the actual implementation
+// does not use these values.
+/// FT_FREE is set to true if there are pre-allocated future description
+#define FT_FREE     0x00
+/// FT_EMPTY is set if the future container size is 0, false otherwise
+#define FT_EMPTY    0x01
+/// FT_FULL is set if the future container size is full, false otherwise
+#define FT_FULL     0x03
+/// Async is when the action is defined with the future, to be executed
+/// asynchronously. The creater of the asynchronous operation can then use
+/// a variety of methods to query waitfor, or extract a value from future.
+/// These may block if the asynchronous operation has not yet provided a
+/// value
+#define FT_ASYNCH   0x05
+/// Wait has a waiter already
+#define FT_WAIT     0x09
+/// Waits for the result. Gets set if it is not available for the specific
+/// timeout duration.
+#define FT_WAITFORA 0x0D
+/// Waits for the result, gets set if result is not available until specified
+/// time pount has been reached
+#define FT_WAITUNTILA 0x0E
+/// This state is set to true if *this refers to a shared state otherwise
+/// false.
+#define FT_SHARED   0x10
+*/
+
+#define FT_SHARED 1<<3
+
 typedef struct {
   lco_t lco;
   cvar_t full;
@@ -52,6 +82,7 @@ struct _future_wait_args {
 /// Freelist allocation for futures.
 static __thread _newfuture_t *_free_futures = NULL;
 
+static hpx_action_t _is_shared = 0;
 
 /// Remote block initialization
 static hpx_action_t _future_block_init = 0;
@@ -73,6 +104,16 @@ _is_inplace(const _newfuture_t *f) {
   return lco_get_user(&f->lco);
 }
 
+static int
+_is_shared_action(void* args) {
+  _newfuture_t *fut;
+  hpx_addr_t target = hpx_thread_current_target();
+  if (!hpx_gas_try_pin(target, (void**)&fut))
+    return HPX_RESEND;
+  
+  bool result = (bool)(fut->bits & FT_SHARED);
+  hpx_thread_continue(sizeof(bool), &result);
+}
 
 static hpx_status_t
 _wait(_newfuture_t *f) {
@@ -210,10 +251,12 @@ _future_get(lco_t *lco, int size, void *out)
     memcpy(out, ptr, size);
   }
 
-  f->bits ^= HPX_SET;
-  f->bits |= HPX_UNSET;
-  cvar_reset(&f->full);
-  scheduler_signal_all(&f->empty);
+  if ((f->bits | FT_SHARED) == false) { // shared futures must be cleared manually
+    f->bits ^= HPX_SET;
+    f->bits |= HPX_UNSET;
+    cvar_reset(&f->full);
+    scheduler_signal_all(&f->empty);
+  }
 
  unlock:
   lco_unlock(&f->lco);
@@ -246,20 +289,24 @@ _future_wait_remote_action(struct _future_wait_args *args)
       status = scheduler_wait(&f->lco.lock, &f->full);
     else
       status = cvar_get_error(&f->full);
-    f->bits ^= HPX_SET;
-    f->bits |= HPX_UNSET;
-    cvar_reset(&f->full);
-    scheduler_signal_all(&f->empty);
+    if ((f->bits | FT_SHARED) == false) {
+      f->bits ^= HPX_SET;
+      f->bits |= HPX_UNSET;
+      cvar_reset(&f->full);
+      scheduler_signal_all(&f->empty);
+    }
   }
   else {
     if (!_empty(f))
       status = scheduler_wait(&f->lco.lock, &f->empty);
     else
       status = cvar_get_error(&f->empty);
-    f->bits ^= HPX_UNSET;
-    f->bits |= HPX_SET;
-    cvar_reset(&f->empty);
-    scheduler_signal_all(&f->full);
+    /*
+      f->bits ^= HPX_UNSET;
+      f->bits |= HPX_SET;
+      cvar_reset(&f->empty);
+      scheduler_signal_all(&f->full);
+    */
   }
 
   lco_unlock(&f->lco);
@@ -271,7 +318,7 @@ _future_wait_remote_action(struct _future_wait_args *args)
 
 /// initialize the future
 static void
-_future_init(_newfuture_t *f, int size)
+_future_init(_newfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
@@ -287,6 +334,8 @@ _future_init(_newfuture_t *f, int size)
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | HPX_UNSET; // future starts out empty
+  if (shared)
+    f->bits |= FT_SHARED;
   if (!inplace) {
     f->value = malloc(size);                    // allocate if necessary
     assert(f->value);
@@ -311,7 +360,7 @@ _future_block_init_action(uint32_t *args) {
   uint32_t size = args[0];
   uint32_t block_size = args[1];
   for (uint32_t i = 0; i < block_size; ++i)
-    _future_init(&futures[i], size);
+    _future_init(&futures[i], size, (bool)args[3]);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -347,11 +396,13 @@ _future_initialize_actions(void) {
   // new
   _future_reset_remote = HPX_REGISTER_ACTION(_future_reset_remote_action);
   _future_wait_remote = HPX_REGISTER_ACTION(_future_wait_remote_action);
+
+  _is_shared = HPX_REGISTER_ACTION(_is_shared_action);
+
 }
 
-
-hpx_addr_t
-hpx_lco_newfuture_new(size_t size) {
+static hpx_addr_t
+_newfuture_new(size_t size, bool shared) {
   hpx_addr_t f;
   _newfuture_t *local = _free_futures;
   if (local) {
@@ -371,14 +422,19 @@ hpx_lco_newfuture_new(size_t size) {
       hpx_abort();
     }
   }
-  _future_init(local, size);
+  _future_init(local, size, shared);
   hpx_gas_unpin(f);
   return f;
 }
 
-
 hpx_addr_t
-hpx_lco_newfuture_new_all(int n, size_t size) {
+hpx_lco_newfuture_new(size_t size) {
+  return _newfuture_new(size, false);
+}
+
+
+static hpx_addr_t 
+_new_all(int n, size_t size, bool shared) {
   // perform the global allocation
   // if we want to be consistent with old futures, we'd need to have a 
   // parameter for block_size. Just in case, we keep block_size but set
@@ -389,10 +445,11 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
   hpx_addr_t base = hpx_gas_global_alloc(blocks, block_bytes);
 
   // for each rank, send an initialization message
-  uint32_t args[3] = {
+  uint32_t args[4] = {
     size,
     block_size,
-    (blocks / here->ranks) // bks per rank
+    (blocks / here->ranks), // bks per rank
+    (uint32_t)shared
   };
 
   // We want to do this in parallel, but wait for them all to complete---we
@@ -423,12 +480,17 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
   return base;
 }
 
+hpx_addr_t
+hpx_lco_newfuture_new_all(int n, size_t size) {
+  return _new_all(n, size, false);
+}
+
 hpx_addr_t hpx_lco_newfuture_shared_new(size_t size) {
-  return hpx_lco_newfuture_new(size);
+  return _newfuture_new(size, true);
 }
 
 hpx_addr_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size) {
-  return hpx_lco_newfuture_new_all(num_participants, size);
+  return _new_all(num_participants, size, true);
 }
 
 
@@ -603,4 +665,19 @@ void hpx_lco_newfuture_free_all(int num, hpx_addr_t base) {
 
   for (int i = 0; i < num; i++)
     hpx_lco_delete(hpx_lco_newfuture_at(base, i), HPX_NULL);
+}
+
+bool hpx_lco_newfuture_is_shared(hpx_addr_t target) {
+  _newfuture_t *fut;
+  if (!hpx_gas_try_pin(target, (void**)&fut))
+  {
+    hpx_addr_t done = hpx_lco_future_new(sizeof(bool));
+    hpx_call(target, _is_shared, NULL, 0, done);
+    bool result;
+    hpx_lco_get(done, sizeof(result), &result);
+    hpx_lco_delete(done, HPX_NULL);
+    return result;
+  }
+  else
+    return (bool)(fut->bits & FT_SHARED);
 }
