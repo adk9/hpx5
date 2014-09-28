@@ -26,10 +26,8 @@
 #include "pgas.h"
 
 void *malloc(size_t bytes) {
-  if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
+  if (!here || !here->btt)
     return mallocx(bytes, 0);
-  }
 
   switch (here->btt->type) {
    default:
@@ -51,10 +49,11 @@ void *malloc(size_t bytes) {
 }
 
 void free(void *ptr) {
+  if (!ptr)
+    return;
+
   if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
-    if (ptr)
-      dallocx(ptr, 0);
+    dallocx(ptr, 0);
     return;
   }
 
@@ -74,8 +73,7 @@ void free(void *ptr) {
    case (HPX_GAS_AGAS):
    case (HPX_GAS_PGAS_SWITCH):
    case (HPX_GAS_AGAS_SWITCH):
-    if (ptr)
-      dallocx(ptr, 0);
+    dallocx(ptr, 0);
     return;
   }
 }
@@ -83,7 +81,6 @@ void free(void *ptr) {
 
 void *calloc(size_t nmemb, size_t size) {
   if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
     return mallocx(nmemb * size, MALLOCX_ZERO);
   }
 
@@ -107,10 +104,8 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-  if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
+  if (!here || !here->btt)
     return rallocx(ptr, size, 0);
-  }
 
   switch (here->btt->type) {
    default:
@@ -132,10 +127,8 @@ void *realloc(void *ptr, size_t size) {
 }
 
 void *valloc(size_t size) {
-  if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
+  if (!here || !here->btt)
     return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
-  }
 
   switch (here->btt->type) {
    default:
@@ -157,10 +150,8 @@ void *valloc(size_t size) {
 }
 
 void *memalign(size_t boundary, size_t size) {
-  if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
+  if (!here || !here->btt)
     return mallocx(size, MALLOCX_ALIGN(boundary));
-  }
 
   switch (here->btt->type) {
    default:
@@ -183,7 +174,6 @@ void *memalign(size_t boundary, size_t size) {
 
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
   if (!here || !here->btt) {
-    dbg_log("malloc: GAS not yet initialized, using jemalloc default\n");
     *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
     return (*memptr == 0) ? ENOMEM : 0;
   }
