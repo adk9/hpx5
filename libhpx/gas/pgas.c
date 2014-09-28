@@ -36,11 +36,11 @@ int lhpx_pgas_init(size_t heap_size) {
   return lhpx_pgas_heap_init(&_heap, heap_size);
 }
 
-int lhpx_pgas_init_worker() {
+int lhpx_pgas_init_worker(void) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-void lhpx_pgas_fini_worker() {
+void lhpx_pgas_fini_worker(void) {
 }
 
 void lhpx_pgas_fini(void) {
