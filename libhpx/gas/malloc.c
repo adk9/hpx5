@@ -26,6 +26,9 @@
 #include "pgas.h"
 
 void *malloc(size_t bytes) {
+  if (!bytes)
+    return NULL;
+
   if (!here || !here->btt)
     return mallocx(bytes, 0);
 
@@ -80,6 +83,9 @@ void free(void *ptr) {
 
 
 void *calloc(size_t nmemb, size_t size) {
+  if (!nmemb || !size)
+    return NULL;
+
   if (!here || !here->btt) {
     return mallocx(nmemb * size, MALLOCX_ZERO);
   }
@@ -104,6 +110,10 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
+  // jemalloc doesn't like ptr to be null
+  if (!ptr)
+    return malloc(size);
+
   if (!here || !here->btt)
     return rallocx(ptr, size, 0);
 
