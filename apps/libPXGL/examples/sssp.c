@@ -81,7 +81,7 @@ static int read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pro
         sscanf(&line[1], " %lu", &((*problems)[count++]));
         break;
       case 'p':
-        sscanf(&line[1], " aux sp ss %llu", nproblems);
+        sscanf(&line[1], " aux sp ss %" PRIu64, nproblems);
         *problems = malloc(*nproblems * sizeof(uint64_t));
         assert(*problems);
         break;
@@ -131,7 +131,7 @@ static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
   sssp_stat->edge_traversal_count = stat->edge_traversal_count;
   hpx_thread_continue(sizeof(_sssp_statistics), sssp_stat);
   hpx_gas_unpin(target);
-  
+
   return HPX_SUCCESS;
 }
 
@@ -158,7 +158,7 @@ static int _main_action(_sssp_args_t *args) {
   for (int i = 0; i < args->nproblems; ++i) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
-    
+
     //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
     sargs.sssp_stat = sssp_stats;
@@ -167,7 +167,7 @@ static int _main_action(_sssp_args_t *args) {
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
-    
+
     // Call the SSSP algorithm
     hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
 
@@ -175,16 +175,16 @@ static int _main_action(_sssp_args_t *args) {
     total_elapsed_time+=elapsed;
     printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
 
-#ifdef GATHER_STAT    
+#ifdef GATHER_STAT
     _sssp_statistics *sssp_stat=(_sssp_statistics *)malloc(sizeof(_sssp_statistics));
     hpx_call_sync(sargs.sssp_stat, _print_sssp_stat,sssp_stat,sizeof(_sssp_statistics),sssp_stat,sizeof(_sssp_statistics));
      printf("\nuseful work = %lu,  useless work = %lu\n", sssp_stat->useful_work, sssp_stat->useless_work);
-    
+
      total_vertex_visit += (sssp_stat->useful_work + sssp_stat->useless_work);
      total_distance_updates += sssp_stat->useful_work;
      total_edge_traversal += sssp_stat->edge_traversal_count;
 #endif
-    
+
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
@@ -209,14 +209,14 @@ static int _main_action(_sssp_args_t *args) {
   double avg_time_per_source = total_elapsed_time/args->nproblems;
   double avg_vertex_visit  = total_vertex_visit/args->nproblems;
   double avg_edge_traversal = total_edge_traversal/args->nproblems;
-  double avg_distance_updates = total_distance_updates/args->nproblems; 
+  double avg_distance_updates = total_distance_updates/args->nproblems;
 
   printf("\navg_vertex_visit =  %f, avg_edge_traversal = %f, avg_distance_updates= %f\n", avg_vertex_visit, avg_edge_traversal, avg_distance_updates);
 
   FILE *fp;
   fp = fopen("perf.ss.res", "a+");
 
-  fprintf(fp , "%s\n","p res sp ss sssp"); 
+  fprintf(fp , "%s\n","p res sp ss sssp");
   fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
   fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
   fprintf(fp,"%s %f\n","t",avg_time_per_source);
@@ -225,13 +225,13 @@ static int _main_action(_sssp_args_t *args) {
   fprintf(fp,"%s %f\n","i",avg_distance_updates);
 
   fclose(fp);
-  
+
   fp = fopen("sample.ss.chk", "a+");
-  
-  fprintf(fp , "%s\n","p chk sp ss sssp"); 
+
+  fprintf(fp , "%s\n","p chk sp ss sssp");
   fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
   fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
- 
+
 
   // Verification of results.
   // printf("Verifying results...\n");
@@ -309,7 +309,7 @@ int main(int argc, char *const argv[argc]) {
   _sssp_args_t args = { .filename = graph_file,
                         .nproblems = nproblems,
                         .problems = problems,
-			.prob_file = problem_file
+            .prob_file = problem_file
   };
 
   int e = hpx_init(&cfg);
