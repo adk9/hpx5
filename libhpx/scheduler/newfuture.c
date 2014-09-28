@@ -592,38 +592,15 @@ hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t newfutures,
   return success;
 }
 
-
-
-void hpx_lco_newfuture_free(hpx_addr_t newfuture) {
-
-
-
-  /* hpx_addr_t f; */
-  /* _newfuture_t *local = _free_futures; */
-  /* if (local) { */
-  /*   _free_futures = (_newfuture_t*)local->value; */
-  /*   f = HPX_HERE; */
-  /*   char *base; */
-  /*   if (!hpx_gas_try_pin(f, (void**)&base)) { */
-  /*     dbg_error("future: could not translate local block.\n"); */
-  /*   } */
-  /*   f.offset = (char*)local - base; */
-  /*   assert(f.offset < f.block_bytes); */
-  /* } */
-  /* else { */
-  /*   f = locality_malloc(sizeof(_newfuture_t)); */
-  /*   if (!hpx_gas_try_pin(f, (void**)&local)) { */
-  /*     dbg_error("future: could not pin newly allocated future of size %llu.\n", (unsigned long long)size); */
-  /*     hpx_abort(); */
-  /*   } */
-  /* } */
-  /* _future_init(local, size); */
-  /* hpx_gas_unpin(f); */
-  /* return f; */
-
-
+void hpx_lco_newfuture_free(hpx_addr_t future) {
+  hpx_lco_delete(future, HPX_NULL);
 }
 
-void hpx_lco_newfuture_free_all(hpx_addr_t newfutures) {
+void hpx_lco_newfuture_free_all(int num, hpx_addr_t base) {
+  // Ideally this would not need to know the number of futures. But in order to avoid that
+  // we would need to add to futures that are created and deleted with _all() functions
+  // a pointer to the base future and a count.
 
+  for (int i = 0; i < num; i++)
+    hpx_lco_delete(hpx_lco_newfuture_at(base, i), HPX_NULL);
 }

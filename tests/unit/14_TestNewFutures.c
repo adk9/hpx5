@@ -265,7 +265,7 @@ START_TEST (test_hpx_lco_newfuture_waitfor)
 
   SET_VALUE_T result;
   hpx_lco_newfuture_getat(fut, 0, sizeof(SET_VALUE_T), &result);
-  printf("Result of the future is = %"PRIu64"\n", result);
+  printf("Result of the future is = %d\n", result);
   ck_assert(result == SET_VALUE);
 
   hpx_lco_newfuture_free(fut);
@@ -311,7 +311,7 @@ START_TEST (test_hpx_lco_newfuture_waituntil)
 
   SET_VALUE_T result;
   hpx_lco_newfuture_getat(fut, 0, sizeof(SET_VALUE_T), &result);
-  printf("Result of the future is = %"PRIu64"\n", result);
+  printf("Result of the future is = %d\n", result);
   ck_assert(result == SET_VALUE);
 
   hpx_lco_newfuture_free(fut);
@@ -393,7 +393,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array)
 
   hpx_lco_wait(done);
   
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -426,7 +426,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array_remote)
     }
     
     hpx_lco_wait(done);
-    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
     hpx_lco_delete(done, HPX_NULL);
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -474,7 +474,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array)
     hpx_lco_delete(rsync, HPX_NULL);
   }
   hpx_lco_wait(done);  
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -512,7 +512,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array_remote)
     }
    
     hpx_lco_wait(done);
-    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
     hpx_lco_delete(done, HPX_NULL);
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -562,10 +562,9 @@ START_TEST (test_hpx_lco_newfuture_getat_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     SET_VALUE_T value;
     hpx_lco_get(done[i], sizeof(SET_VALUE), &value);
-    printf("FUTURE at %p CONTAINED VALUE %d\n", &done[i], value);
     ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
   }
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
     hpx_lco_delete(done[i], HPX_NULL);
 
@@ -605,7 +604,7 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
     }
    
     hpx_lco_wait(done);
-    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
     hpx_lco_delete(done, HPX_NULL);
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -628,7 +627,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all)
 			    HPX_NULL, HPX_NULL);
   }
   hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES, fut, HPX_SET);
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
@@ -666,7 +665,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_remote)
     }
     
     hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES * ranks, fut, HPX_SET);
-    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
@@ -700,7 +699,7 @@ START_TEST (test_hpx_lco_newfuture_get_all)
     ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
   }
   
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
     free(values[i]);
   free(values);
@@ -739,7 +738,7 @@ START_TEST (test_hpx_lco_newfuture_get_all_remote)
       ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
     }
 
-    hpx_lco_newfuture_free_all(fut);
+    hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++)
       free(values[i]);
     free(values);
@@ -770,7 +769,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_for)
   status = hpx_lco_newfuture_wait_all_for(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout_duration);
   ck_assert(status = HPX_FUTURE_STATUS_READY);
 
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
@@ -804,7 +803,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_until)
   status = hpx_lco_newfuture_wait_all_until(NUM_LOCAL_FUTURES, fut, HPX_SET, timeout);
   ck_assert(status = HPX_FUTURE_STATUS_READY);
 
-  hpx_lco_newfuture_free_all(fut);
+  hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
