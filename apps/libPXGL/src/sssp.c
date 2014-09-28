@@ -1,6 +1,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "adjacency_list.h"
 #include "libpxgl.h"
@@ -28,10 +29,58 @@ static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t dist
 typedef struct {
   adj_list_t graph;
   uint64_t distance;
+  hpx_addr_t sssp_stat;
 } _sssp_visit_vertex_args_t;
 
 
+
+static hpx_action_t _useful_work_update;
+static hpx_action_t _useless_work_update;
+static hpx_action_t _edge_traversal_count;
+
+static int _useful_work_update_action()
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+  _sssp_statistics *sssp_stat;
+  if (!hpx_gas_try_pin(target, (void**)&sssp_stat))
+    return HPX_RESEND;
+  
+  sync_fadd(&(sssp_stat->useful_work), 1, SYNC_RELAXED);
+  hpx_gas_unpin(target);
+  
+  return HPX_SUCCESS;
+}
+
+static int _useless_work_update_action()
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+   _sssp_statistics *sssp_stat;
+  if (!hpx_gas_try_pin(target, (void**)&sssp_stat))
+    return HPX_RESEND;
+  
+  sync_fadd(&(sssp_stat->useless_work), 1, SYNC_RELAXED);
+  hpx_gas_unpin(target);
+  
+  return HPX_SUCCESS;
+}
+
+
+static int _edge_traversal_count_action(uint64_t* num_edges)
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+  _sssp_statistics *sssp_stat;
+  if (!hpx_gas_try_pin(target, (void**)&sssp_stat))
+    return HPX_RESEND;
+  sync_fadd(&(sssp_stat->edge_traversal_count), *num_edges, SYNC_RELAXED);
+  hpx_gas_unpin(target);
+  
+  return HPX_SUCCESS;
+}
+
+
+
 static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const args) {
+
   const hpx_addr_t target = hpx_thread_current_target();
 
   adj_list_vertex_t *vertex;
@@ -41,7 +90,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     const uint64_t num_edges = vertex->num_edges;
     const uint64_t old_distance = args->distance;
-
+    
     hpx_addr_t edges = hpx_lco_and_new(num_edges);
     for (int i = 0; i < num_edges; ++i) {
       adj_list_edge_t *e = &vertex->edge_list[i];
@@ -52,12 +101,22 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
 
       hpx_call(index, _sssp_visit_vertex, args, sizeof(*args), edges);
     }
+    
     hpx_gas_unpin(target);
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
-  } else
-    hpx_gas_unpin(target);
-
+#ifdef GATHER_STAT
+    hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(uint64_t),NULL,0);
+    
+    hpx_call_sync(args->sssp_stat, _useful_work_update, NULL,0,NULL,0);
+#endif
+ 
+  } else{
+#ifdef GATHER_STAT
+    hpx_call_sync(args->sssp_stat, _useless_work_update, NULL,0,NULL,0);
+#endif
+     hpx_gas_unpin(target);
+  }
   return HPX_SUCCESS;
 }
 
@@ -83,6 +142,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t));
 
   _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
+  sssp_args.sssp_stat = args->sssp_stat;
   return hpx_call_sync(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), NULL, 0);
 }
 
@@ -91,4 +151,7 @@ static __attribute__((constructor)) void _sssp_register_actions() {
   call_sssp                    = HPX_REGISTER_ACTION(call_sssp_action);
   _sssp_visit_vertex           = HPX_REGISTER_ACTION(_sssp_visit_vertex_action);
   _sssp_update_vertex_distance = HPX_REGISTER_ACTION(_sssp_update_vertex_distance_action);
+  _useful_work_update          = HPX_REGISTER_ACTION(_useful_work_update_action);
+ _useless_work_update          = HPX_REGISTER_ACTION(_useless_work_update_action);
+ _edge_traversal_count         = HPX_REGISTER_ACTION(_edge_traversal_count_action);
 }
