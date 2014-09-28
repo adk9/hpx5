@@ -14,12 +14,13 @@
 #ifndef PXGL_SSSP_H
 #define PXGL_SSSP_H
 
+#define GATHER_STAT 1
+
 typedef struct {
   uint64_t useful_work;
   uint64_t useless_work;
-  uint64_t total_distance_updates;
+  uint64_t edge_traversal_count;
 }_sssp_statistics;
-
 
 typedef struct {
   adj_list_t graph;
