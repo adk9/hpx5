@@ -206,12 +206,13 @@ hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_addr_t newfutures,
 /// Free a future
 ///
 /// @param future The address of the future
-void hpx_lco_newfuture_free(hpx_addr_t newfuture);
+void hpx_lco_newfuture_free(hpx_addr_t future);
 
 /// Free multiple futures
 ///
-/// @param futures An array of the addresses of the newfutures
-void hpx_lco_newfuture_free_all(hpx_addr_t newfutures);
+/// @param  num The number of futures in the array
+/// @param base An array of the addresses of the newfutures
+void hpx_lco_newfuture_free_all(int num, hpx_addr_t base);
 
 /// Check to see if a future is shared
 ///
