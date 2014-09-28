@@ -86,9 +86,8 @@ void *calloc(size_t nmemb, size_t size) {
   if (!nmemb || !size)
     return NULL;
 
-  if (!here || !here->btt) {
+  if (!here || !here->btt)
     return mallocx(nmemb * size, MALLOCX_ZERO);
-  }
 
   switch (here->btt->type) {
    default:
@@ -110,7 +109,6 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void *realloc(void *ptr, size_t size) {
-  // jemalloc doesn't like ptr to be null
   if (!ptr)
     return malloc(size);
 
