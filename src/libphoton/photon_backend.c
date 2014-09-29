@@ -48,8 +48,8 @@ static int _photon_recv(uint64_t request, void *ptr, uint64_t size, int flags);
 static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request);
-static int _photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request);
-static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
+static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request);
+static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request);
 static int _photon_wait_send_request_rdma(int tag);
 static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
@@ -284,6 +284,7 @@ static int __photon_setup_request_ledger_eager(photonLedgerEntry entry, int curr
   req->flags = REQUEST_FLAG_EAGER;
   req->length = (entry->request>>32);
 
+  req->remote_buffer.buf.size = req->length;
   req->remote_buffer.request = (( (uint64_t)_photon_myrank)<<32) | (entry->request<<32>>32);
   
   dbg_info("Inserting the new eager buffer request into the request table: %d/0x%016lx/%p", proc, request_id, req);
@@ -722,6 +723,9 @@ static int __photon_nbpop_event(photonRequest req) {
     photon_rid cookie;
     uint32_t prefix;
     photon_event_status event;
+
+    if (req->flags & REQUEST_FLAG_EDONE)
+      req->state = REQUEST_COMPLETED;
 
     rc = __photon_backend->get_event(&event);
     if (rc < 0) {
@@ -1732,7 +1736,7 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request) {
+static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
   int ret, count, curr, still_searching, num_entries;
@@ -1792,7 +1796,7 @@ static int _photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request)
   return PHOTON_ERROR;
 }
 
-static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request) {
+static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonLedgerEntry eager_entry;
   photonRILedgerEntry curr_entry, entry_iterator;
   struct photon_ri_ledger_entry_t tmp_entry;
@@ -1817,11 +1821,18 @@ static int _photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request)
     while((entry_iterator->header == 0 || entry_iterator->footer == 0) && (eager_entry->request == 0)) {
       ;
     }
-    if (eager_entry->request) {
+    if (eager_entry->request && (size == PHOTON_ANY_SIZE)) {
       still_searching = 0;
       eager = true;
     }
-    else if( (tag < 0) || (entry_iterator->tag == tag ) ) {
+    else if (eager_entry->request && (size == eager_entry->request>>32)) {
+      still_searching = 0;
+      eager = true;
+    }
+    if( ((tag < 0) || (entry_iterator->tag == tag )) && (size == PHOTON_ANY_SIZE) ) {
+      still_searching = 0;
+    }
+    else if (((tag < 0) || (entry_iterator->tag == tag )) && (size == entry_iterator->size)) {
       still_searching = 0;
     }
     else {
@@ -2047,7 +2058,8 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
     memcpy(ptr, &eb->data[eb->offset], size);
     memset(&eb->data[eb->offset], 0, size);
     NEXT_EAGER_BUF(eb, size);
-    req->state = REQUEST_COMPLETED;
+    //req->state = REQUEST_COMPLETED;
+    req->flags |= REQUEST_FLAG_EDONE;
     return PHOTON_OK;
   }
 
@@ -2383,7 +2395,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
     start = proc;
     end = proc+1;
   }
-
+  
   for (i=start; i<end; i++) {
 
     switch (type) {

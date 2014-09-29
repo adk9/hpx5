@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
 
   for (i=0; i<nproc; i++) {
     // wait for a recv buffer that was posted
-    photon_wait_recv_buffer_rdma(i, PHOTON_TAG, &sendReq[i]);
+    photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     // get the remote buffer info so we can do our own put
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
   }

@@ -48,7 +48,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   if (pp_test == PHOTON_TEST) {
     //gettimeofday(&start, NULL);
     photon_post_send_buffer_rdma(dst, (char*)send_args, msize, PHOTON_TAG, &send_req);
-    //photon_wait_recv_buffer_rdma(dst, PHOTON_TAG, &send_req);
+    //photon_wait_recv_buffer_rdma(dst, PHOTON_ANY_SIZE, PHOTON_TAG, &send_req);
     //gettimeofday(&end, NULL);
     //if (rank == 0)
     //  printf("%d: post_send time: %f\n", rank, SUBTRACT_TV(end, start));
@@ -131,7 +131,7 @@ void *receiver(void *args) {
 
     if (pp_test == PHOTON_TEST) {
       //gettimeofday(&start, NULL);
-      photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
+      photon_wait_send_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &recv_req);
       photon_post_os_get(recv_req, other_rank, (void*)recv_args, msize, PHOTON_TAG, 0);
       //photon_post_recv_buffer_rdma(other_rank, (void*)recv_args, msize, PHOTON_TAG, &recv_req);
       while (1) {
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
     int ret_proc;
     photon_post_recv_buffer_rdma(other_rank, recv_args, msize, PHOTON_TAG, &recvReq);
     photon_wait_any(&ret_proc, &request);
-    photon_wait_recv_buffer_rdma(other_rank, PHOTON_TAG, &sendReq);
+    photon_wait_recv_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
     photon_get_buffer_remote(sendReq, &rbuf);
   }
 

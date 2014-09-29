@@ -11,8 +11,8 @@ struct photon_config_t cfg = {
     .use_cma = 0,
     .use_ud = 1,
     .eth_dev = "roce0",
-    .ib_dev = "qib0",
-    .ib_port = 1,
+    .ib_dev = "mlx4_0",
+    .ib_port = 2,
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   },
   .ugni = {

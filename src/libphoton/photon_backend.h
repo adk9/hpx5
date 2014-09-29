@@ -37,7 +37,8 @@
 #define REQUEST_FLAG_NIL     0x00
 #define REQUEST_FLAG_FIN     0x01
 #define REQUEST_FLAG_EAGER   0x02
-#define REQUEST_FLAG_USERID  0x04
+#define REQUEST_FLAG_EDONE   0x04
+#define REQUEST_FLAG_USERID  0x08
 
 #define RDMA_FLAG_NIL        0x00
 #define RDMA_FLAG_NO_CQE     0x01
@@ -151,8 +152,8 @@ struct photon_backend_t {
   int (*post_recv_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
   int (*post_send_buffer_rdma)(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
   int (*post_send_request_rdma)(int proc, uint64_t size, int tag, photon_rid *request);
-  int (*wait_recv_buffer_rdma)(int proc, int tag, photon_rid *request);
-  int (*wait_send_buffer_rdma)(int proc, int tag, photon_rid *request);
+  int (*wait_recv_buffer_rdma)(int proc, uint64_t size, int tag, photon_rid *request);
+  int (*wait_send_buffer_rdma)(int proc, uint64_t size, int tag, photon_rid *request);
   int (*wait_send_request_rdma)(int tag);
   int (*post_os_put)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
   int (*post_os_get)(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
