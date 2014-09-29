@@ -15,11 +15,13 @@
 #endif
 
 #include <limits.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <jemalloc/jemalloc.h>
 #include <hpx/hpx.h>
 #include "libhpx/libhpx.h"
+#include "libhpx/debug.h"
 #include "mallctl.h"
 #include "pgas.h"
 #include "pgas_heap.h"
@@ -42,14 +44,30 @@ static uint32_t _chunks(size_t size) {
 }
 
 static void *_shared_chunk_alloc(size_t size, size_t alignment, bool *zero,
-                                 unsigned arena_ind) {
-  abort();
-  return NULL;
+                                 unsigned arena) {
+  assert(arena == lhpx_mallctl_thread_get_arena());
+  const uint32_t blocks = _chunks(size);
+  const uint32_t align = _chunks(alignment);
+  uint32_t offset = 0;
+  int e = lhpx_bitmap_alloc_alloc(_heap.chunks, blocks, align, &offset);
+  dbg_check(e, "pgas: failed to allocate a chunk size %"PRIu32
+            " align %"PRIu32"\n", blocks, align);
+  if (zero)
+    *zero = false;
+
+  char *chunk = _heap.bytes + offset * _heap.bytes_per_chunk;
+  assert((uintptr_t)chunk % alignment == 0);
+  return chunk;
 }
 
-static bool _shared_chunk_dalloc(void *chunk, size_t size, unsigned a) {
-  abort();
-  return false;
+static bool _shared_chunk_dalloc(void *chunk, size_t size, unsigned arena) {
+  assert(arena == lhpx_mallctl_thread_get_arena());
+  const uint32_t offset = (char*)chunk - _heap.bytes;
+  assert(offset % _heap.bytes_per_chunk == 0);
+  const uint32_t i = _chunks(offset);
+  const uint32_t n = _chunks(size);
+  lhpx_bitmap_alloc_free(_heap.chunks, i, n);
+  return true;
 }
 
 int lhpx_pgas_init(size_t heap_size) {
