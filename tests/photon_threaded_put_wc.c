@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include "tests.h"
+#include <semaphore.h>
 #include "photon.h"
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
@@ -40,6 +41,7 @@ static volatile int sendCompT = 0;
 static int *recvCompT;
 static int myrank;
 static pthread_mutex_t mutexSendCounter;
+sem_t sem;
 
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
@@ -75,6 +77,7 @@ void *wait_ledger_completions_thread(void *arg) {
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);
+  // V operation
 
   pthread_exit(NULL);
 }
@@ -100,6 +103,9 @@ START_TEST(test_photon_threaded_put_wc)
 
   pthread_mutex_init(&mutexSendCounter, NULL);
   recvCompT = calloc(nproc, sizeof(int));
+
+  // initiates semaphore to nproc
+  sem_init(&sem, 1, nproc);
 
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -159,17 +165,21 @@ START_TEST(test_photon_threaded_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
-          if (sendCompT < SQ_SIZE) {
+         // if (sendCompT < SQ_SIZE) {
+          if (sem_wait(&sem) == 0) {
             photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
             pthread_mutex_lock(&mutexSendCounter);
             sendCompT++;
             pthread_mutex_unlock(&mutexSendCounter);
+
+            // V operation
+            sem_post(&sem);
           }
-          else { // spin until we can send more
-            while (sendCompT == SQ_SIZE) ;
-          }
+          // else { // spin until we can send more
+          //  while (sendCompT == SQ_SIZE) ;
+          //}
         }
-        while (sendCompT > 0) ;
+        //while (sendCompT > 0) ;
         clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
       
@@ -187,17 +197,21 @@ START_TEST(test_photon_threaded_put_wc)
         if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
-            if (sendCompT < SQ_SIZE) {
+            //if (sendCompT < SQ_SIZE) {
+            if (sem_wait(&sem) == 0) {
               photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
               pthread_mutex_lock(&mutexSendCounter);
               sendCompT++;
               pthread_mutex_unlock(&mutexSendCounter);
+
+              // V operation
+              sem_post(&sem);
             }
-            else { // spin until we can send more
-              while (sendCompT == SQ_SIZE) ;
-            }
+            //else { // spin until we can send more
+              //while (sendCompT == SQ_SIZE) ;
+            //}
           }
-          while (sendCompT > 0) ;
+          //while (sendCompT > 0) ;
           clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
       }
