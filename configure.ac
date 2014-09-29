@@ -40,8 +40,9 @@ LT_PREREQ([2.2.6])
 LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 
 # intialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1rc1], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
+HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -90,7 +91,6 @@ AC_ARG_ENABLE([testsuite],
   [], [enable_testsuite=yes])
 
 HPX_OPENFLOW
-HPX_JEMALLOC
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
