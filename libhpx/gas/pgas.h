@@ -38,7 +38,7 @@ int lhpx_pgas_init(size_t heap_size)
 int lhpx_pgas_init_worker(void)
   HPX_INTERNAL;
 
-void lphx_pgas_fini_worker(void)
+void lhpx_pgas_fini_worker(void)
   HPX_INTERNAL;
 
 void lhpx_pgas_fini(void)

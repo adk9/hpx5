@@ -16,8 +16,11 @@
 
 #include <limits.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <jemalloc/jemalloc.h>
+#include <hpx/hpx.h>
 #include "libhpx/libhpx.h"
+#include "mallctl.h"
 #include "pgas.h"
 #include "pgas_heap.h"
 
@@ -32,15 +35,48 @@ static lhpx_pgas_heap_t _heap = {
 
 static __thread unsigned _pvt_arena = UINT_MAX;
 
+static uint32_t _chunks(size_t size) {
+  uint32_t chunks = size / _heap.bytes_per_chunk;
+  chunks += (size % _heap.bytes_per_chunk) ? 1 : 0;
+  return chunks;
+}
+
+static void *_shared_chunk_alloc(size_t size, size_t alignment, bool *zero,
+                                 unsigned arena_ind) {
+  abort();
+  return NULL;
+}
+
+static bool _shared_chunk_dalloc(void *chunk, size_t size, unsigned a) {
+  abort();
+  return false;
+}
+
 int lhpx_pgas_init(size_t heap_size) {
+  if (!lhpx_mallctl_get_lg_dirty_mult()) {
+    fprintf(stderr,
+            "HPX requires \"lg_dirty_mult:-1\" set in the environment variable "
+            "MALLOC_CONF\n");
+    hpx_abort();
+  }
+
   return lhpx_pgas_heap_init(&_heap, heap_size);
 }
 
 int lhpx_pgas_init_worker(void) {
-  return LIBHPX_EUNIMPLEMENTED;
+  if (_pvt_arena != UINT_MAX)
+    return LIBHPX_OK;
+
+  unsigned arena = lhpx_mallctl_create_arena(_shared_chunk_alloc,
+                                             _shared_chunk_dalloc);
+  lhpx_mallctl_thread_enable_cache();
+  lhpx_mallctl_thread_flush_cache();
+  _pvt_arena = lhpx_mallctl_thread_set_arena(arena);
+  return LIBHPX_OK;
 }
 
 void lhpx_pgas_fini_worker(void) {
+
 }
 
 void lhpx_pgas_fini(void) {

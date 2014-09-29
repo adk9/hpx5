@@ -81,7 +81,7 @@ void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap)
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
-int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t from,
+int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
                             uint32_t *i)
   HPX_INTERNAL HPX_NON_NULL(1,3);
 
