@@ -40,7 +40,7 @@ START_TEST(test_rdma_one_sided_put_direct)
 
   photon_rid sendReq, recvReq, directReq;
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+  photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   photon_get_buffer_remote(sendReq, &rbuf);
   photon_post_os_put_direct(prev, send, PHOTON_SEND_SIZE, &rbuf, 0, &directReq);
 
@@ -125,7 +125,7 @@ START_TEST (test_rdma_one_sided_put_direct_array)
   for (i = 0; i < ARRAY_SIZE; i++) {
     photon_post_recv_buffer_rdma(next, recv[i], PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i]);
     photon_wait_any(&ret_proc, &request);
-    photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq[i]);
+    photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
     photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &sendReq[i]);
     photon_send_FIN(sendReq[i], prev, 0);

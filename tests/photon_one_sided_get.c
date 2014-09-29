@@ -42,7 +42,7 @@ START_TEST(test_rdma_one_sided_get_direct)
   struct photon_buffer_t rbuf;
   photon_post_recv_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
   // Wait for a recv buffer that was posted
-  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+  photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &recvReq);
   
   // Get the remote buffer info so that we can get
   photon_get_buffer_remote(recvReq, &rbuf);

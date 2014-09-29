@@ -82,7 +82,7 @@ START_TEST (test_photon_test_put_wc_bw_bench)
   // Make sure we clear the local post event
   photon_wait_any(&ret, &request);
   // wait for the recv buffer that was posted from the previous rank
-  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+  photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   photon_get_buffer_remote(sendReq, &rbuf);
 
   for (k = STARTSIZE; k <= MAX_MSG_SIZE; k = (k ? k * 2 : 1)) {

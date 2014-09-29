@@ -54,10 +54,10 @@ START_TEST (test_photon_interleaved)
 
   for (i=0; i<NUM_REQ; i+=3) {
     // wait for the send buffer that was posted from the previous rank
-    photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i]);
-    photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i+1]);
+    photon_wait_send_buffer_rdma(prev, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i]);
+    photon_wait_send_buffer_rdma(prev, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i+1]);
     photon_post_os_get(recvReq[i+1], prev, recv[i+1], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-    photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq[i+2]);
+    photon_wait_send_buffer_rdma(prev, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i+2]);
     photon_post_os_get(recvReq[i], prev, recv[i], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
     photon_post_os_get(recvReq[i+2], prev, recv[i+2], PHOTON_SEND_SIZE, PHOTON_TAG, 0);
   }

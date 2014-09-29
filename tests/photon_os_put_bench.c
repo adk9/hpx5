@@ -84,7 +84,7 @@ START_TEST (test_photon_test_put_bench)
   // everyone posts their recv buffer to their next rank
   photon_post_recv_buffer_rdma(next, r_buf, MYBUFSIZE, PHOTON_TAG, &recvReq);
   // wait for the recv buffer that was posted from the previous rank
-  photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+  photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
 
   for (k = 1; k <= MAX_MSG_SIZE; k = (k ? k * 2 : 1)) {
     // touch the data 

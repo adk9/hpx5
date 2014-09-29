@@ -89,7 +89,7 @@ START_TEST (test_photon_test_get_bench)
       // everyone posts their send buffer to their next rank
       photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
       // wait for the send buffer that was posted from the previous rank
-      photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+      photon_wait_send_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &recvReq);
       // get that posted send buffer
       photon_post_os_get(recvReq, prev, r_buf, k, PHOTON_TAG, 0);
       while (1) {
