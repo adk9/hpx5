@@ -69,6 +69,7 @@ static inline uint32_t min32(const uint32_t lhs, const uint32_t rhs) {
 /// @param    word The word offset into @p bits where the search starts.
 /// @param  offset The offset into @p word where the search starts.
 /// @param       n The number of contiguous bits we need to find.
+/// @param   align The alignment requirements for the allocation.
 /// @param   total The total number of bits we've already searched.
 ///
 /// @returns The @p off-relative offset where we found a region of free bits. If
@@ -76,7 +77,14 @@ static inline uint32_t min32(const uint32_t lhs, const uint32_t rhs) {
 ///          allocation, otherwise the start was @p off + the return value.
 ///
 static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
-                       const uint32_t n, const uint32_t total) {
+                       const uint32_t n, const uint32_t align,
+                       const uint32_t total) {
+  // make sure that we start with a good alignment
+  const uint32_t r = offset % align;
+  if (offset % align)
+    return search(words, word, offset + r, n, align, total + r);
+
+  // scan for enough bytes
   uint32_t remaining = n;
 
   while (remaining > 0) {
@@ -91,7 +99,7 @@ static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
       const uint32_t next_word = word + msb / BITS_PER_WORD;
       const uint32_t next_offset = msb % BITS_PER_WORD;
       const uint32_t next_total = total + (n - remaining) + (msb - offset);
-      return search(words, next_word, next_offset, n, next_total);
+      return search(words, next_word, next_offset, n, align, next_total);
     }
 
     remaining -= popcountl(bits);
@@ -99,6 +107,7 @@ static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
     offset = 0;
   }
 
+  // found a matching allocation
   return total;
 }
 
@@ -131,7 +140,7 @@ static void reset(uintptr_t *words, uint32_t from, uint32_t n) {
 }
 
 int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
-                            uint32_t *i) {
+                            const uint32_t align, uint32_t *i) {
   int status;
   if (n == 0)
     return LIBHPX_EINVAL;
@@ -148,9 +157,10 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
   //  woff: #bits offset into the min word we begin
   //  roff: #bits relative to offset we found space
   const uint32_t offset = ctzl(start);
-  const uint32_t relative = search(bitmap->bits, start, offset, n, 0);
+  const uint32_t relative = search(bitmap->bits, start, offset, n, align, 0);
   const uint32_t abs = bitmap->min * BITS_PER_WORD + offset + relative;
   const uint32_t end = abs + n;
+  assert(abs % align == 0);
 
   // update our min word, ensuring the invariant that it always points to a word
   // with at least one free bit

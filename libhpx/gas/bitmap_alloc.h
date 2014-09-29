@@ -74,16 +74,18 @@ lhpx_bitmap_alloc_t *lhpx_bitmap_alloc_new(const uint32_t n)
 void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap)
   HPX_INTERNAL;
 
-/// Allocate @p n contiguous blocks from the bitmap.
+/// Allocate @p n contiguous blocks from the bitmap, aligned to a @p align
+/// boundary.
 ///
 /// @param[in]   bitmap The bitmap to allocate from.
 /// @param[in]        n The number of continuous blocks to allocate.
+/// @param[in]    align The alignment required.
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
 int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
-                            uint32_t *i)
-  HPX_INTERNAL HPX_NON_NULL(1,3);
+                            const uint32_t align, uint32_t *i)
+  HPX_INTERNAL HPX_NON_NULL(1, 4);
 
 /// Free @p n contiguous blocks of memory, starting at offset @p i.
 ///
