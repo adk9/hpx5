@@ -91,7 +91,6 @@ AC_ARG_ENABLE([testsuite],
   [], [enable_testsuite=yes])
 
 HPX_OPENFLOW
-#HPX_JEMALLOC
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
