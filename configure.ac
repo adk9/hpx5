@@ -40,7 +40,7 @@ LT_PREREQ([2.2.6])
 LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 
 # intialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1rc1], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 
