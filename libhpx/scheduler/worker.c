@@ -44,6 +44,7 @@
 #include "thread.h"
 #include "termination.h"
 #include "worker.h"
+#include "../gas/pgas.h"
 
 
 typedef volatile int atomic_int_t;
@@ -380,6 +381,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 ///
 /// @param      sched The scheduler that this thread should be attached to.
 void *worker_run(scheduler_t *sched) {
+  // initialize my heap
+  lhpx_pgas_init_worker();
+
   // initialize my worker structure
   self.thread    = pthread_self();
   self.id        = sync_fadd(&sched->next_id, 1, SYNC_ACQ_REL);
@@ -441,6 +445,9 @@ void *worker_run(scheduler_t *sched) {
   // delete my deque last, as someone might be stealing from it up until the
   // point where everyone has joined the barrier
   sync_chase_lev_ws_deque_fini(&self.work);
+
+  // finalize my heap
+  lhpx_pgas_fini_worker();
 
   return NULL;
 }
