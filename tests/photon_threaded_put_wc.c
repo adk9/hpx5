@@ -17,9 +17,9 @@
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 1
+#define SQ_SIZE 10
 
-static int ITERS = 10;
+static int ITERS = 10000;
 
 static int sizes[] = {
   0,
@@ -84,7 +84,7 @@ void *wait_ledger_completions_thread(void *arg) {
 START_TEST(test_photon_threaded_put_wc) 
 {
   printf("Starting the photon threaded put wc test\n");
-  int i, j, k, ns;
+  int i, j, k, ns, val;
   int rank, nproc, ret_proc;
   long t;
 
@@ -125,6 +125,8 @@ START_TEST(test_photon_threaded_put_wc)
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
   }
 
+  sem_init(&sem, 0, SQ_SIZE);
+
   // Create a thread to wait for local completions 
   pthread_create(&th, NULL, wait_local_completion_thread, NULL);
 
@@ -137,8 +139,6 @@ START_TEST(test_photon_threaded_put_wc)
   if (rank == 0)
     printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
 
-  sem_init(&sem, 0, PHOTON_BUF_SIZE);
-  
   struct timespec time_s, time_e;
   for (ns = 0; ns < nproc; ns++) {
     for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
@@ -153,8 +153,6 @@ START_TEST(test_photon_threaded_put_wc)
       // send to random rank, excluding self
       while (j == rank)
         j = rand() % nproc;
-  
-      sem_init(&sem, 0, PHOTON_BUF_SIZE);
     
       // PUT
       if (rank <= ns) {
@@ -166,7 +164,10 @@ START_TEST(test_photon_threaded_put_wc)
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
-      
+
+      // clear remaining local completions
+      while (sem_getvalue(&sem, &val) > 0) ;
+
       MPI_Barrier(MPI_COMM_WORLD);
 
       if (rank == 0) {
@@ -188,6 +189,9 @@ START_TEST(test_photon_threaded_put_wc)
           clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
       }
+
+      // clear remaining local completions
+      while (sem_getvalue(&sem, &val) > 0) ;
       
       MPI_Barrier(MPI_COMM_WORLD);
       
