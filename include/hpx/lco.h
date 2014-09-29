@@ -397,11 +397,12 @@ typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
 /// to call the hpx_lco_set() operation as the first phase of operation.
 ///
 /// @param participants The static number of participants in the reduction.
+/// @param readers      The static number of the readers of the result of the reduction.
 /// @param size         The size of the data being reduced.
 /// @param op           The commutative-associative operation we're performing.
 /// @param initializer  An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
-hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t size,
+hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
                                  hpx_commutative_associative_op_t op,
                                  void (*initializer)(void *, const size_t bytes));
 

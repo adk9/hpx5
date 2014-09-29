@@ -147,7 +147,7 @@ allreduce_main_action(const main_args_t *args)
   hpx_addr_t complete = hpx_lco_and_new(args->nDoms);
 
   // Call the allreduce function here.
-  hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, sizeof(double),
+  hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, args->nDoms, sizeof(double),
                                            (hpx_commutative_associative_op_t)_maxDouble,
                                            (void (*)(void *, const size_t size)) _initDouble);
 
