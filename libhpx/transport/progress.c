@@ -151,7 +151,7 @@ static bool _try_start_send(progress_t *progress) {
 
   r->next = progress->pending_sends;
   progress->pending_sends = r;
-  return true;
+  return _try_start_send(progress);
 
  unwind1:
   _delete_request(progress, r);
@@ -201,7 +201,7 @@ static bool _try_start_recv(progress_t *progress) {
   // remember that this receive is pending so that we can poll it later
   r->next = progress->pending_recvs;
   progress->pending_recvs = r;
-  return true;
+  return _try_start_recv(progress);
 
  unwind1:
   _delete_request(progress, r);
