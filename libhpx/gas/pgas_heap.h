@@ -55,7 +55,7 @@ typedef struct {
   size_t              nchunks;
   lhpx_bitmap_alloc_t *chunks;
   size_t               nbytes;
-  void                 *bytes;
+  char                 *bytes;
 } lhpx_pgas_heap_t;
 
 int lhpx_pgas_heap_init(lhpx_pgas_heap_t *heap, size_t size);
