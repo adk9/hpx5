@@ -103,7 +103,13 @@ void lhpx_pgas_fini(void) {
 
 
 void *lhpx_pgas_malloc(size_t bytes) {
-  return mallocx(bytes, 0);
+  if (!bytes)
+    return NULL;
+
+  if (_pvt_arena != UINT_MAX)
+    return mallocx(bytes, MALLOCX_ARENA(_pvt_arena));
+  else
+    return mallocx(bytes, 0);
 }
 
 void lhpx_pgas_free(void *ptr) {
