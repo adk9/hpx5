@@ -15,7 +15,8 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      transport/libtransport.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
-                     $(HWLOC_EMBEDDED_LDADD)
+                     $(HWLOC_EMBEDDED_LDADD) \
+		     $(HPX_JEMALLOC_LDADD)
 
 # if GNU_PE_ENV
 # libhpx_la_LDFLAGS  = -pthread
