@@ -1,5 +1,7 @@
 #include "dimacs.h"
 
+#include <stdio.h>
+
 #define MODUL ((distance_t) 1 << 62)
 
 static void dimacs_checksum_op(distance_t *const output, const distance_t *const input, const size_t size) {
@@ -45,11 +47,13 @@ static int _dimacs_visit_vertex_action(const hpx_addr_t *const args) {
 hpx_action_t dimacs_checksum = 0;
 int dimacs_checksum_action(const size_t *const num_vertices) {
   const hpx_addr_t adj_list = hpx_thread_current_target();
-  hpx_addr_t checksum_lco = hpx_lco_allreduce_new(*num_vertices, sizeof(distance_t), (hpx_commutative_associative_op_t) dimacs_checksum_op, dimacs_checksum_init);
+  hpx_addr_t checksum_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(distance_t), (hpx_commutative_associative_op_t) dimacs_checksum_op, dimacs_checksum_init);
   for(size_t i = 0; i < *num_vertices; ++i) {
     const hpx_addr_t vertex_index = hpx_addr_add(adj_list, i * sizeof(hpx_addr_t));
-    hpx_call(vertex_index, _dimacs_visit_vertex, &vertex_index, sizeof(vertex_index), HPX_NULL);
+    hpx_call(vertex_index, _dimacs_visit_vertex, &checksum_lco, sizeof(checksum_lco), HPX_NULL);
   }
+
+  printf("Finished with the loop\n");
 
   hpx_thread_continue(sizeof(checksum_lco), &checksum_lco);
 

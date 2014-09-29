@@ -169,12 +169,12 @@ static int _main_action(_sssp_args_t *args) {
 
     hpx_time_t now = hpx_time_now();
 
-    printf("Before call_sssp\n");
+    // printf("Before call_sssp\n");
 
     // Call the SSSP algorithm
     hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
 
-    printf("After call_sssp\n");
+    // printf("After call_sssp\n");
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     total_elapsed_time+=elapsed;
@@ -199,14 +199,14 @@ static int _main_action(_sssp_args_t *args) {
     hpx_lco_wait(vertices);
     hpx_lco_delete(vertices, HPX_NULL);
 
-    /*
+    printf("Computing checksum...\n");
     hpx_addr_t checksum_lco = HPX_NULL;
     hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices), &checksum_lco, sizeof(checksum_lco));
     size_t checksum = 0;
+    // printf("Getting checksum\n");
     hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
     hpx_lco_delete(checksum_lco, HPX_NULL);
     printf("Dimacs checksum is %zu\n", checksum);
-    */
 
     hpx_gas_free(sargs.graph, HPX_NULL);
   }
