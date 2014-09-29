@@ -248,7 +248,7 @@ static int _main_action(int *input)
 
   // Initialize the domains
   hpx_addr_t init = hpx_lco_and_new(nDoms);
-  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, sizeof(double),
+  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
                                            (hpx_commutative_associative_op_t)mindouble,
                                            (void (*)(void *, const size_t size)) initdouble);
   for (k=0;k<nDoms;k++) {

@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -35,7 +36,7 @@ static const  int _reading = 1;
 typedef struct {
   lco_t                           lco;
   cvar_t                         wait;
-  size_t                 participants;
+  size_t                 readers;
   hpx_commutative_associative_op_t op;
   void   (*init)(void*, const size_t);
   size_t                        count;
@@ -109,6 +110,7 @@ _allreduce_get(lco_t *lco, int size, void *out)
   while ((r->phase != _reading) && (status == HPX_SUCCESS))
     status = scheduler_wait(&lco->lock, &r->wait);
 
+
   // if there was an error signal, unlock and return it
   if (status != HPX_SUCCESS)
     goto unlock;
@@ -121,7 +123,7 @@ _allreduce_get(lco_t *lco, int size, void *out)
   // release all of the other readers, otherwise wait for the phase to change
   // back to reducing---this blocking behavior prevents gets from one "epoch"
   // to satisfy earlier _reading epochs
-  if (++r->count == r->participants) {
+  if (++r->count == r->readers) {
     r->phase = _reducing;
     r->init(r->value, size);
     scheduler_signal_all(&r->wait);
@@ -146,7 +148,7 @@ _allreduce_wait(lco_t *lco)
 
 
 static void
-_allreduce_init(_allreduce_t *r, size_t participants, size_t size,
+_allreduce_init(_allreduce_t *r, size_t participants, size_t readers, size_t size,
                 hpx_commutative_associative_op_t op,
                 void (*init)(void *, const size_t size))
 {
@@ -163,7 +165,7 @@ _allreduce_init(_allreduce_t *r, size_t participants, size_t size,
 
   lco_init(&r->lco, &vtable, 0);
   cvar_reset(&r->wait);
-  r->participants = participants;
+  r->readers = readers;
   r->op = op;
   r->init = init;
   r->count = participants;
@@ -181,7 +183,7 @@ _allreduce_init(_allreduce_t *r, size_t participants, size_t size,
 /// @}
 
 hpx_addr_t
-hpx_lco_allreduce_new(size_t inputs, size_t size,
+hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                       hpx_commutative_associative_op_t op,
                       void (*init)(void*, const size_t size))
 {
@@ -190,7 +192,7 @@ hpx_lco_allreduce_new(size_t inputs, size_t size,
   if (!hpx_gas_try_pin(reduce, (void**)&r)) {
     dbg_error("allreduce: could not pin newly allocated reduction.\n");
   }
-  _allreduce_init(r, inputs, size, op, init);
+  _allreduce_init(r, inputs, outputs, size, op, init);
   hpx_gas_unpin(reduce);
   return reduce;
 }

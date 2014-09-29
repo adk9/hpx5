@@ -411,22 +411,22 @@ static int _main_action(RunArgs *runargs)
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t init = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
-  hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, sizeof(double),
+  hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
                                            (hpx_commutative_associative_op_t)sumdouble,
                                            (void (*)(void *, const size_t size)) initdouble);
-  hpx_addr_t rsum = hpx_lco_allreduce_new(nDoms, (num_refine+1)*sizeof(int),
+  hpx_addr_t rsum = hpx_lco_allreduce_new(nDoms, nDoms, (num_refine+1)*sizeof(int),
                                            (hpx_commutative_associative_op_t)sumint,
                                            (void (*)(void *, const size_t size)) initint);
-  hpx_addr_t refinelevel = hpx_lco_allreduce_new(nDoms, sizeof(int),
+  hpx_addr_t refinelevel = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(int),
                                            (hpx_commutative_associative_op_t)singlesumint,
                                            (void (*)(void *, const size_t size)) singleinitint);
-  hpx_addr_t refinelevel_max = hpx_lco_allreduce_new(nDoms, sizeof(int),
+  hpx_addr_t refinelevel_max = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(int),
                                            (hpx_commutative_associative_op_t)singlemaxint,
                                            (void (*)(void *, const size_t size)) singleinitintmin);
-  hpx_addr_t refinelevel_min = hpx_lco_allreduce_new(nDoms, sizeof(int),
+  hpx_addr_t refinelevel_min = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(int),
                                            (hpx_commutative_associative_op_t)singleminint,
                                            (void (*)(void *, const size_t size)) singleinitintmax);
-  hpx_addr_t rcb_sumint = hpx_lco_allreduce_new(nDoms, (nDoms)*sizeof(int),
+  hpx_addr_t rcb_sumint = hpx_lco_allreduce_new(nDoms, nDoms, (nDoms)*sizeof(int),
                                            (hpx_commutative_associative_op_t)sumint,
                                            (void (*)(void *, const size_t size)) initint);
 
