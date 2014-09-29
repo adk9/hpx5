@@ -2,12 +2,12 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "adjacency_list.h"
 #include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
-
 
 /// SSSP Chaotic-relaxation
 
@@ -29,11 +29,13 @@ static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t dist
 typedef struct {
   adj_list_t graph;
   uint64_t distance;
+#ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
+#endif
 } _sssp_visit_vertex_args_t;
 
 
-
+#ifdef GATHER_STAT
 static hpx_action_t _useful_work_update;
 static hpx_action_t _useless_work_update;
 static hpx_action_t _edge_traversal_count;
@@ -64,7 +66,6 @@ static int _useless_work_update_action()
   return HPX_SUCCESS;
 }
 
-
 static int _edge_traversal_count_action(uint64_t* num_edges)
 {
   const hpx_addr_t target = hpx_thread_current_target();
@@ -76,8 +77,7 @@ static int _edge_traversal_count_action(uint64_t* num_edges)
   
   return HPX_SUCCESS;
 }
-
-
+#endif // GATHER_STAT
 
 static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const args) {
 
@@ -86,6 +86,8 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
   adj_list_vertex_t *vertex;
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
+
+  printf("Distance Action on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     const uint64_t num_edges = vertex->num_edges;
@@ -103,20 +105,22 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     }
     
     hpx_gas_unpin(target);
+    printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
 #ifdef GATHER_STAT
     hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(uint64_t),NULL,0);
-    
     hpx_call_sync(args->sssp_stat, _useful_work_update, NULL,0,NULL,0);
 #endif
- 
   } else{
 #ifdef GATHER_STAT
     hpx_call_sync(args->sssp_stat, _useless_work_update, NULL,0,NULL,0);
 #endif
-     hpx_gas_unpin(target);
+    hpx_gas_unpin(target);
   }
+
+  printf("Distance Action finished on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+
   return HPX_SUCCESS;
 }
 
@@ -132,6 +136,8 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
   vertex = *v;
   hpx_gas_unpin(target);
 
+  printf("Calling update distance on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", vertex.offset, vertex.base_id, vertex.block_bytes);
+
   return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
 }
 
@@ -142,8 +148,16 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t));
 
   _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
+
+#ifdef GATHER_STAT
   sssp_args.sssp_stat = args->sssp_stat;
+#endif // GATHER_STAT
+
+  printf("Starting SSSP on the source\n");
+
   return hpx_call_sync(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), NULL, 0);
+
+  printf("SSSP is done\n");
 }
 
 
@@ -151,7 +165,9 @@ static __attribute__((constructor)) void _sssp_register_actions() {
   call_sssp                    = HPX_REGISTER_ACTION(call_sssp_action);
   _sssp_visit_vertex           = HPX_REGISTER_ACTION(_sssp_visit_vertex_action);
   _sssp_update_vertex_distance = HPX_REGISTER_ACTION(_sssp_update_vertex_distance_action);
+#ifdef GATHER_STAT
   _useful_work_update          = HPX_REGISTER_ACTION(_useful_work_update_action);
  _useless_work_update          = HPX_REGISTER_ACTION(_useless_work_update_action);
  _edge_traversal_count         = HPX_REGISTER_ACTION(_edge_traversal_count_action);
+#endif // GATHER_STAT
 }
