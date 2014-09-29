@@ -87,7 +87,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  printf("Distance Action on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+  // printf("Distance Action on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     const uint64_t num_edges = vertex->num_edges;
@@ -105,7 +105,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     }
     
     hpx_gas_unpin(target);
-    printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+    // printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
 #ifdef GATHER_STAT
@@ -119,7 +119,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     hpx_gas_unpin(target);
   }
 
-  printf("Distance Action finished on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+  // printf("Distance Action finished on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
 
   return HPX_SUCCESS;
 }
@@ -136,7 +136,7 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
   vertex = *v;
   hpx_gas_unpin(target);
 
-  printf("Calling update distance on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", vertex.offset, vertex.base_id, vertex.block_bytes);
+  // printf("Calling update distance on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", vertex.offset, vertex.base_id, vertex.block_bytes);
 
   return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
 }
@@ -153,11 +153,11 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   sssp_args.sssp_stat = args->sssp_stat;
 #endif // GATHER_STAT
 
-  printf("Starting SSSP on the source\n");
+  // printf("Starting SSSP on the source\n");
 
   return hpx_call_sync(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), NULL, 0);
 
-  printf("SSSP is done\n");
+  // printf("SSSP is done\n");
 }
 
 
