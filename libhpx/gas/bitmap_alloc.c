@@ -36,7 +36,8 @@ size_t lhpx_bitmap_alloc_sizeof(const uint32_t n) {
 void lhpx_bitmap_alloc_init(lhpx_bitmap_alloc_t *bitmap, const uint32_t n) {
   sync_tatas_init(&bitmap->lock);
   bitmap->min = 0;
-  memset(&bitmap->bits, 0xFF, lhpx_bitmap_alloc_sizeof(n));
+  const uintptr_t pattern = UINTPTR_MAX;
+  memset(&bitmap->bits, pattern, lhpx_bitmap_alloc_sizeof(n));
 }
 
 lhpx_bitmap_alloc_t *lhpx_bitmap_alloc_new(const uint32_t n) {
@@ -55,11 +56,11 @@ void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap) {
   free(bitmap);
 }
 
-static inline uint32_t sat_sub32(const uint32_t lhs, const uint32_t rhs) {
+static inline uint32_t _sat_sub32(const uint32_t lhs, const uint32_t rhs) {
   return (lhs < rhs) ? 0 : lhs - rhs;
 }
 
-static inline uint32_t min32(const uint32_t lhs, const uint32_t rhs) {
+static inline uint32_t _min32(const uint32_t lhs, const uint32_t rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
@@ -76,20 +77,20 @@ static inline uint32_t min32(const uint32_t lhs, const uint32_t rhs) {
 ///          we return 0, this means that @p off was the start of the
 ///          allocation, otherwise the start was @p off + the return value.
 ///
-static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
-                       const uint32_t n, const uint32_t align,
-                       const uint32_t total) {
+static uint32_t _search(uintptr_t *words, uint32_t word, uint32_t offset,
+                        const uint32_t n, const uint32_t align,
+                        const uint32_t total) {
   // make sure that we start with a good alignment
   const uint32_t r = offset % align;
   if (offset % align)
-    return search(words, word, offset + r, n, align, total + r);
+    return _search(words, word, offset + r, n, align, total + r);
 
   // scan for enough bytes
   uint32_t remaining = n;
 
   while (remaining > 0) {
-    const uintptr_t rshift = sat_sub32(BITS_PER_WORD - offset, n);
-    const uintptr_t mask = (UINTPTR_MAX << offset) >> rshift;
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
     const uintptr_t bits = mask & words[word];
 
     if (bits != mask) {
@@ -99,7 +100,7 @@ static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
       const uint32_t next_word = word + msb / BITS_PER_WORD;
       const uint32_t next_offset = msb % BITS_PER_WORD;
       const uint32_t next_total = total + (n - remaining) + (msb - offset);
-      return search(words, next_word, next_offset, n, align, next_total);
+      return _search(words, next_word, next_offset, n, align, next_total);
     }
 
     remaining -= popcountl(bits);
@@ -111,28 +112,42 @@ static uint32_t search(uintptr_t *words, uint32_t word, uint32_t offset,
   return total;
 }
 
-static void set(uintptr_t *words, const uint32_t from, uint32_t n) {
+/// Set a chunk of contiguous space in the bitmap to 0.
+static void _set(uintptr_t *words, const uint32_t from, uint32_t n) {
   uint32_t word = from / BITS_PER_WORD;
   uint32_t offset = from % BITS_PER_WORD;
 
   while (n > 0) {
-    const uintptr_t rshift = sat_sub32(BITS_PER_WORD - offset, n);
-    const uintptr_t mask = (UINTPTR_MAX << offset) >> rshift;
-    words[word] |= mask;
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
+
+    //   word   0 0 1 1
+    //   mask   0 1 1 0
+    //          -------
+    // result   0 0 0 1
+
+    words[word] &= ~mask;
     n -= popcountl(mask);
     ++word;
     offset = 0;
   }
 }
 
-static void reset(uintptr_t *words, uint32_t from, uint32_t n) {
+/// Set a chunk of contiguous space in the bitmap to 1.
+static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
   uint32_t word = from / BITS_PER_WORD;
   uint32_t offset = from % BITS_PER_WORD;
 
   while (n > 0) {
-    const uintptr_t rshift = sat_sub32(BITS_PER_WORD - offset, n);
-    const uintptr_t mask = (UINTPTR_MAX << offset) >> rshift;
-    words[word] &= ~mask;
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
+
+    //   word   0 0 1 1
+    //   mask   0 1 1 0
+    //          -------
+    // result   0 1 1 1
+
+    words[word] |= mask;
     n -= popcountl(mask);
     ++word;
     offset = 0;
@@ -149,7 +164,8 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
   sync_tatas_acquire(&bitmap->lock);
 
   // Find the first potential offset, using the cached min word.
-  const uintptr_t start = bitmap->bits[bitmap->min];
+  const uint32_t min = bitmap->min;
+  const uintptr_t start = bitmap->bits[min];
   assert(start);
 
   // we're computing the absolute offset *i as
@@ -157,7 +173,7 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
   //  woff: #bits offset into the min word we begin
   //  roff: #bits relative to offset we found space
   const uint32_t offset = ctzl(start);
-  const uint32_t relative = search(bitmap->bits, start, offset, n, align, 0);
+  const uint32_t relative = _search(bitmap->bits, min, offset, n, align, 0);
   const uint32_t abs = bitmap->min * BITS_PER_WORD + offset + relative;
   const uint32_t end = abs + n;
   assert(abs % align == 0);
@@ -169,7 +185,7 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
     ++bitmap->min;
 
   // set the bits
-  set(bitmap->bits, abs, n);
+  _set(bitmap->bits, abs, n);
 
   // output the absolute total start of the allocation
   *i = abs;
@@ -181,7 +197,7 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
 void lhpx_bitmap_alloc_free(lhpx_bitmap_alloc_t *bitmap, const uint32_t from,
                             const uint32_t n) {
   sync_tatas_acquire(&bitmap->lock);
-  reset(bitmap->bits, from, n);
-  bitmap->min = min32(bitmap->min, from / BITS_PER_WORD);
+  _reset(bitmap->bits, from, n);
+  bitmap->min = _min32(bitmap->min, from / BITS_PER_WORD);
   sync_tatas_release(&bitmap->lock);
 }
