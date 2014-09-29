@@ -21,8 +21,6 @@
 #include "hpx/hpx.h"
 #include "libpxgl.h"
 
-
-
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
           "\t-c, number of cores to run on\n"
@@ -149,7 +147,11 @@ static int _main_action(_sssp_args_t *args) {
 
   double total_elapsed_time = 0.0;
 
+#ifdef GATHER_STAT
+  printf("Gathering of statistics is enabled.\n");
   const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
+  sargs.sssp_stat = sssp_stats;
+#endif // GATHER_STAT
 
   uint64_t total_vertex_visit = 0;
   uint64_t total_edge_traversal = 0;
@@ -161,15 +163,18 @@ static int _main_action(_sssp_args_t *args) {
 
     //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
-    sargs.sssp_stat = sssp_stats;
     printf("Allocated adjacency-list.\n");
 
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
 
+    printf("Before call_sssp\n");
+
     // Call the SSSP algorithm
     hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
+
+    printf("After call_sssp\n");
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     total_elapsed_time+=elapsed;
@@ -236,10 +241,10 @@ static int _main_action(_sssp_args_t *args) {
   // Verification of results.
   // printf("Verifying results...\n");
 
-  typedef struct{
-    uint64_t source;
-    uint64_t total_distance;
-  }total_distances_per_source;
+/*   typedef struct{ */
+/*     uint64_t source; */
+/*     uint64_t total_distance; */
+/*   }total_distances_per_source; */
 
 
   hpx_shutdown(HPX_SUCCESS);
