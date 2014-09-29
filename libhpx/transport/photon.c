@@ -303,7 +303,7 @@ _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
   //uint64_t *id = (uint64_t*)r;
   //int e = photon_recv(*id, buffer, n, 0);
   // make sure we have remote buffer metadata
-  int e = photon_wait_send_buffer_rdma(src, PHOTON_DEFAULT_TAG, r);
+  int e = photon_wait_send_buffer_rdma(src, n, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK) {
     return dbg_error("error in wait_send_buffer for %i\n", src);
   }
