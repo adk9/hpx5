@@ -351,22 +351,22 @@ int photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *
   return __photon_default->post_send_request_rdma(proc, size, tag, request);
 }
 
-int photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request) {
+int photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->wait_recv_buffer_rdma(proc, tag, request);
+  return __photon_default->wait_recv_buffer_rdma(proc, size, tag, request);
 }
 
-int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request) {
+int photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
 
-  return __photon_default->wait_send_buffer_rdma(proc, tag, request);
+  return __photon_default->wait_send_buffer_rdma(proc, size, tag, request);
 }
 
 int photon_wait_send_request_rdma(int tag) {

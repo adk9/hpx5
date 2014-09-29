@@ -132,6 +132,7 @@ typedef struct photon_buffer_t      * photonBuffer;
 
 #define PHOTON_ANY_TAG         -1
 #define PHOTON_ANY_SOURCE      -1
+#define PHOTON_ANY_SIZE        -1
 
 int photon_initialized();
 int photon_init(photonConfig cfg);
@@ -147,8 +148,8 @@ int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 int photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 int photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request);
 int photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request);
-int photon_wait_recv_buffer_rdma(int proc, int tag, photon_rid *request);
-int photon_wait_send_buffer_rdma(int proc, int tag, photon_rid *request);
+int photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request);
+int photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request);
 int photon_wait_send_request_rdma(int tag);
 int photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);
 int photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t size, int tag, uint64_t r_offset);

@@ -67,9 +67,9 @@ int main(int argc, char *argv[]) {
         photon_post_recv_buffer_rdma(prev,recv,arraySize,13,&recvReq);
 	//photon_post_send_buffer_rdma(prev,recv,arraySize,13,&sendReq);
         kernel(smallAmountOfWork);
-        photon_wait_recv_buffer_rdma(next,13,&sendReq);
+        photon_wait_recv_buffer_rdma(next,PHOTON_ANY_SIZE,13,&sendReq);
         photon_post_os_put(sendReq,next,send,arraySize,13,0);
-	//photon_wait_send_buffer_rdma(next,13,&recvReq);
+	//photon_wait_send_buffer_rdma(next,PHOTON_ANY_SIZE,13,&recvReq);
 	//photon_post_os_get(recvReq,next,send,arraySize,13,0);
         photon_gettime_(&kernel_start);
         kernel(workSize);
