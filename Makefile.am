@@ -17,6 +17,10 @@ if HAVE_MPI
  SUBDIRS += test
 endif
 
+if ENABLE_TESTS
+SUBDIRS += tests
+endif
+
 #if HAVE_VERBS
 #SUBDIRS += src/verbs
 #endif

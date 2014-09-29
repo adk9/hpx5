@@ -97,7 +97,7 @@ void *receiver(void *args __attribute__((unused))) {
     photon_rid recv_req;
 
     if (pp_test == PHOTON_TEST) {
-      photon_wait_send_buffer_rdma(other_rank, PHOTON_TAG, &recv_req);
+      photon_wait_send_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &recv_req);
       photon_post_os_get(recv_req, other_rank, (void*)recv_args, msize, PHOTON_TAG, 0);
       while (1) {
         int flag, type;
@@ -288,7 +288,7 @@ START_TEST (test_photon_pingpong_for_pwc)
     int ret_proc;
     photon_post_recv_buffer_rdma(other_rank, recv_args, msize, PHOTON_TAG, &recvReq);
     photon_wait_any(&ret_proc, &request);
-    photon_wait_recv_buffer_rdma(other_rank, PHOTON_TAG, &sendReq);
+    photon_wait_recv_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
     photon_get_buffer_remote(sendReq, &rbuf);
   }
 

@@ -85,7 +85,7 @@ START_TEST (test_photon_recv_buffer_bench)
       else {
         // Dest: Wait buffer
         // wait for the recv buffer that was posted from the previous rank
-        photon_wait_recv_buffer_rdma(prev, PHOTON_TAG, &sendReq);
+        photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
         photon_send_FIN(sendReq, prev, PHOTON_REQ_COMPLETED);
         photon_wait_any(&ret_proc, &req);
       }

@@ -1,6 +1,7 @@
 noinst_bin_PROGRAMS = photontest
 noinst_bindir       = $(abs_top_builddir)/tests
-TESTS               = photontest
+check_SCRIPTS           = $(abs_top_builddir)/tests/run_tests.sh
+TESTS                   = $(abs_top_builddir)/tests/run_tests.sh
 check_PROGRAMS      = photontest
 photontest_SOURCES  = photonmain.c \
                       photoninit.c \

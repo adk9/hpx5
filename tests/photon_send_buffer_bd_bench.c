@@ -77,7 +77,7 @@ START_TEST (test_photon_send_buffer_bd_bench)
        photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
        // Dest: Wait buffer
        // wait for the send buffer that was posted from the previous rank
-       photon_wait_send_buffer_rdma(prev, PHOTON_TAG, &recvReq);
+       photon_wait_send_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &recvReq);
        // Dest: Send FIN and say the request is completed so it's removed
        photon_send_FIN(recvReq, prev, PHOTON_REQ_COMPLETED);
        // each side waits for the send request to complete
