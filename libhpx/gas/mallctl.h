@@ -20,6 +20,9 @@
 int mallctl_get_lg_dirty_mult(void)
   HPX_INTERNAL;
 
+bool mallctl_disable_dirty_page_purge(void)
+  HPX_INTERNAL;
+
 size_t mallctl_get_chunk_size(void)
   HPX_INTERNAL;
 
