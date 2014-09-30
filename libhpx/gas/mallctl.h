@@ -17,7 +17,7 @@
 #include <hpx/attributes.h>
 #include <jemalloc/jemalloc.h>
 
-bool mallctl_get_lg_dirty_mult(void)
+int mallctl_get_lg_dirty_mult(void)
   HPX_INTERNAL;
 
 size_t mallctl_get_chunk_size(void)

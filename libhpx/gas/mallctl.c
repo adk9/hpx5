@@ -20,13 +20,13 @@
 #include "libhpx/debug.h"
 #include "mallctl.h"
 
-bool mallctl_get_lg_dirty_mult(void) {
-  ssize_t enabled = false;
-  size_t sz = sizeof(enabled);
-  int e = hpx_mallctl("opt.lg_dirty_mult", &enabled, &sz, NULL, 0);
+int mallctl_get_lg_dirty_mult(void) {
+  ssize_t opt = 0;
+  size_t sz = sizeof(opt);
+  int e = hpx_mallctl("opt.lg_dirty_mult", &opt, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to check opt.lg_dirty_mult.\n");
-  return enabled;
+  return (int)opt;
 }
 
 size_t mallctl_get_chunk_size(void) {
@@ -70,11 +70,14 @@ unsigned mallctl_thread_get_arena(void) {
 }
 
 unsigned mallctl_thread_set_arena(unsigned arena) {
-  unsigned old = 0;
+  unsigned old = 42;
   size_t sz1 = sizeof(arena), sz2 = sizeof(arena);
-  int e = hpx_mallctl("thread.arena", &old , &sz1, &arena, sz2);
+  int e = hpx_mallctl("thread.arena", &old , &sz1, NULL, 0);
+  assert(!e);
+  e = hpx_mallctl("thread.arena", NULL, NULL, &arena, sz2);
   if (e)
     dbg_error("jemalloc: failed to update the default arena\n");
+  printf("arena %u set to %u\n", old, arena);
   return old;
 }
 
