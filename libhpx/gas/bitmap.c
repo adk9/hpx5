@@ -89,7 +89,7 @@ static uint32_t _search(uintptr_t *words, uint32_t word, uint32_t offset,
   uint32_t remaining = n;
 
   while (remaining > 0) {
-    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
     const uintptr_t bits = mask & words[word];
 
@@ -118,7 +118,7 @@ static void _set(uintptr_t *words, const uint32_t from, uint32_t n) {
   uint32_t offset = from % BITS_PER_WORD;
 
   while (n > 0) {
-    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
     //   word   0 0 1 1
@@ -139,7 +139,7 @@ static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
   uint32_t offset = from % BITS_PER_WORD;
 
   while (n > 0) {
-    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD - offset, n);
+    const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
     //   word   0 0 1 1
