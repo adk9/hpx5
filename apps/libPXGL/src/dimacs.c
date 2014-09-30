@@ -53,7 +53,7 @@ int dimacs_checksum_action(const size_t *const num_vertices) {
     hpx_call(vertex_index, _dimacs_visit_vertex, &checksum_lco, sizeof(checksum_lco), HPX_NULL);
   }
 
-  printf("Finished with the loop\n");
+  // printf("Finished with the loop\n");
 
   hpx_thread_continue(sizeof(checksum_lco), &checksum_lco);
 
