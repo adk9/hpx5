@@ -44,6 +44,6 @@ typedef hpx_addr_t adj_list_t;
 // list includes an index array that points to each row of an
 // adjacency list.
 extern hpx_action_t adj_list_from_edge_list;
-extern int adj_list_from_edge_list_action(edge_list_t *el);
+extern int adj_list_from_edge_list_action(const edge_list_t * const el);
 
 #endif // PXGL_ADJ_LIST_H
