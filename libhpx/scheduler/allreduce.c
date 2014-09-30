@@ -36,7 +36,8 @@ static const  int _reading = 1;
 typedef struct {
   lco_t                           lco;
   cvar_t                         wait;
-  size_t                 readers;
+  size_t                      readers;
+  size_t                      writers;
   hpx_commutative_associative_op_t op;
   void   (*init)(void*, const size_t);
   size_t                        count;
@@ -124,6 +125,7 @@ _allreduce_get(lco_t *lco, int size, void *out)
   // back to reducing---this blocking behavior prevents gets from one "epoch"
   // to satisfy earlier _reading epochs
   if (++r->count == r->readers) {
+    r->count = r->writers;
     r->phase = _reducing;
     r->init(r->value, size);
     scheduler_signal_all(&r->wait);
@@ -148,7 +150,7 @@ _allreduce_wait(lco_t *lco)
 
 
 static void
-_allreduce_init(_allreduce_t *r, size_t participants, size_t readers, size_t size,
+_allreduce_init(_allreduce_t *r, size_t writers, size_t readers, size_t size,
                 hpx_commutative_associative_op_t op,
                 void (*init)(void *, const size_t size))
 {
@@ -168,7 +170,7 @@ _allreduce_init(_allreduce_t *r, size_t participants, size_t readers, size_t siz
   r->readers = readers;
   r->op = op;
   r->init = init;
-  r->count = participants;
+  r->count = writers;
   r->phase = _reducing;
   r->value = NULL;
 
