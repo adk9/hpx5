@@ -53,8 +53,6 @@ _allreduce_fini(lco_t *lco)
   _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value)
     free(r->value);
-  if (r)
-    free(r);
 }
 
 
