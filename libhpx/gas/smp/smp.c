@@ -19,32 +19,32 @@
 #include <jemalloc/jemalloc.h>
 #include "smp.h"
 
-void *lhpx_smp_malloc(size_t bytes) {
+void *smp_malloc(size_t bytes) {
   return mallocx(bytes, 0);
 }
 
-void lhpx_smp_free(void *ptr) {
+void smp_free(void *ptr) {
   if (ptr)
     dallocx(ptr, 0);
 }
 
-void *lhpx_smp_calloc(size_t nmemb, size_t size) {
+void *smp_calloc(size_t nmemb, size_t size) {
   return mallocx(nmemb * size, MALLOCX_ZERO);
 }
 
-void *lhpx_smp_realloc(void *ptr, size_t size) {
+void *smp_realloc(void *ptr, size_t size) {
   return rallocx(ptr, size, 0);
 }
 
-void *lhpx_smp_valloc(size_t size) {
+void *smp_valloc(size_t size) {
   return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
 }
 
-void *lhpx_smp_memalign(size_t boundary, size_t size) {
+void *smp_memalign(size_t boundary, size_t size) {
   return mallocx(size, MALLOCX_ALIGN(boundary));
 }
 
-int lhpx_smp_posix_memalign(void **memptr, size_t alignment, size_t size) {
+int smp_posix_memalign(void **memptr, size_t alignment, size_t size) {
   *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
   return (*memptr == 0) ? ENOMEM : 0;
 }

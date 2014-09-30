@@ -20,37 +20,37 @@
 #include <stddef.h>
 #include <hpx/attributes.h>
 
-int lhpx_smp_init(size_t heap_size)
+int smp_init(size_t heap_size)
   HPX_INTERNAL;
 
-int lhpx_smp_init_worker()
+int smp_init_worker()
   HPX_INTERNAL;
 
 void lphx_smp_fini_worker()
   HPX_INTERNAL;
 
-void lhpx_smp_fini(void)
+void smp_fini(void)
   HPX_INTERNAL;
 
-void *lhpx_smp_malloc(size_t bytes)
+void *smp_malloc(size_t bytes)
   HPX_INTERNAL;
 
-void lhpx_smp_free(void *ptr)
+void smp_free(void *ptr)
   HPX_INTERNAL;
 
-void *lhpx_smp_calloc(size_t nmemb, size_t size)
+void *smp_calloc(size_t nmemb, size_t size)
   HPX_INTERNAL;
 
-void *lhpx_smp_realloc(void *ptr, size_t size)
+void *smp_realloc(void *ptr, size_t size)
   HPX_INTERNAL;
 
-void *lhpx_smp_valloc(size_t size)
+void *smp_valloc(size_t size)
   HPX_INTERNAL;
 
-void *lhpx_smp_memalign(size_t boundary, size_t size)
+void *smp_memalign(size_t boundary, size_t size)
   HPX_INTERNAL;
 
-int lhpx_smp_posix_memalign(void **memptr, size_t alignment, size_t size)
+int smp_posix_memalign(void **memptr, size_t alignment, size_t size)
   HPX_INTERNAL;
 
 #endif

@@ -20,7 +20,7 @@
 #include "libhpx/debug.h"
 #include "mallctl.h"
 
-bool lhpx_mallctl_get_lg_dirty_mult(void) {
+bool mallctl_get_lg_dirty_mult(void) {
   ssize_t enabled = false;
   size_t sz = sizeof(enabled);
   int e = mallctl("opt.lg_dirty_mult", &enabled, &sz, NULL, 0);
@@ -29,7 +29,7 @@ bool lhpx_mallctl_get_lg_dirty_mult(void) {
   return enabled;
 }
 
-size_t lhpx_mallctl_get_chunk_size(void) {
+size_t mallctl_get_chunk_size(void) {
   size_t log2_bytes_per_chunk = 0;
   size_t sz = sizeof(log2_bytes_per_chunk);
   int e = mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
@@ -39,7 +39,7 @@ size_t lhpx_mallctl_get_chunk_size(void) {
   return 1 << log2_bytes_per_chunk;
 }
 
-unsigned lhpx_mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
+unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
   unsigned arena = 0;
   size_t sz = sizeof(arena);
   int e = mallctl("arenas.extend", &arena, &sz, NULL, 0);
@@ -60,7 +60,7 @@ unsigned lhpx_mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
   return arena;
 }
 
-unsigned lhpx_mallctl_thread_get_arena(void) {
+unsigned mallctl_thread_get_arena(void) {
   unsigned arena = 0;
   size_t sz = sizeof(arena);
   int e = mallctl("thread.arena", &arena, &sz, NULL, 0);
@@ -69,7 +69,7 @@ unsigned lhpx_mallctl_thread_get_arena(void) {
   return arena;
 }
 
-unsigned lhpx_mallctl_thread_set_arena(unsigned arena) {
+unsigned mallctl_thread_set_arena(unsigned arena) {
   unsigned old = 0;
   size_t sz1 = sizeof(arena), sz2 = sizeof(arena);
   int e = mallctl("thread.arena", &old , &sz1, &arena, sz2);
@@ -78,7 +78,7 @@ unsigned lhpx_mallctl_thread_set_arena(unsigned arena) {
   return old;
 }
 
-void lhpx_mallctl_thread_enable_cache(void) {
+void mallctl_thread_enable_cache(void) {
   bool enable = true;
   size_t sz = sizeof(enable);
   int e = mallctl("thread.tcache.enabled", NULL, NULL, &enable, sz);
@@ -86,7 +86,7 @@ void lhpx_mallctl_thread_enable_cache(void) {
     dbg_error("jemalloc: failed to enable the thread cache.\n");
 }
 
-void lhpx_mallctl_thread_flush_cache(void) {
+void mallctl_thread_flush_cache(void) {
   int e = mallctl("thread.tcache.flush", NULL, NULL, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to flush thread cache.\n");

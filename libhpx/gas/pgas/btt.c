@@ -23,7 +23,6 @@
 #include "libhpx/network.h"
 #include "libhpx/routing.h"
 #include "addr.h"
-#include "pgas.h"
 
 static uint64_t _table_size = (uint64_t)UINT32_MAX * sizeof(void*);
 
@@ -115,9 +114,6 @@ static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
 
 
 btt_class_t *btt_pgas_new(size_t heap_size) {
-  int e = lhpx_pgas_init(heap_size);
-  dbg_check(e, "pgas: failed to initialize.\n");
-
   // Allocate the object
   pgas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
