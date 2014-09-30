@@ -12,7 +12,7 @@ static hpx_action_t _hpxmain = 0;
 extern hpx_time_t start_time;
 hpx_time_t start_time;
 
-void mpi_test_routine(int its)
+int mpi_test_routine(int its)
 {
   int numProcs,rank;
   MPI_Comm_size(MPI_COMM_WORLD_, &numProcs);
@@ -20,7 +20,7 @@ void mpi_test_routine(int its)
   printf(" Number of procs %d rank %d\n",numProcs,rank);
   if ( numProcs < 2 ) {
     printf(" Need to have at least two persistent threads to test this\n");
-    return;
+    return 1;
   }
 
   int i,j;
@@ -39,7 +39,7 @@ void mpi_test_routine(int its)
   double recvtime,totaltime;
   MPI_Status   status;
   MPI_Request   send_request,recv_request;
-  int ierr,inittime,itask;
+  int ierr = 0,inittime,itask;
   double sendbuffsum,recvbuffsum;
   double *recvtimes, *sendbuffsums,*recvbuffsums;
   recvtimes=(double *)malloc(sizeof(double)*ntasks);
@@ -149,7 +149,7 @@ void mpi_test_routine(int its)
     if (left < 0)
         left = ntasks - 1;
 
-    for (i=0;i<10;i++) {
+    for (i=0;i<6;i++) {
       buffer[i] = rank*100 + i;
     }
 
@@ -337,14 +337,17 @@ void mpi_test_routine(int its)
   free( in );
   free( out );
   free( sol );
+  return ierr;
 }
 
 static int _mpi_action(int args[1] /* its */) {
   int err;
   start_time = hpx_time_now();
   mpi_init_(&err);
-  mpi_test_routine(args[0]);
+  err = mpi_test_routine(args[0]);
   mpi_finalize_(&err);
+  if (err)
+    return HPX_ERROR;
   return HPX_SUCCESS;
 }
 

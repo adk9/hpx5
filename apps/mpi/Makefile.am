@@ -20,12 +20,14 @@ libhpxmpi_la_SOURCES = allgather.c\
 libhpxmpi_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpxmpi_la_LIBADD   = $(top_builddir)/libhpx/libhpx.la
 
+libhpxmpi_la_CFLAGS   = -Wno-unused -Wno-implicit-function-declaration -Wno-unused-variable
+
 if HAVE_PHOTON
-libhpxmpi_la_CFLAGS    = $(PHOTON_CFLAGS)
-libhpxmpi_la_LIBADD   += -lphoton @MPI_LIBS@ 
+libhpxmpi_la_CFLAGS  += $(PHOTON_CFLAGS)
+libhpxmpi_la_LIBADD  += -lphoton @MPI_LIBS@ 
 endif
 
-noinst_apps_PROGRAMS   = hpxmpi
+noinst_apps_PROGRAMS  = hpxmpi
 
 hpxmpi_SOURCES  = main.c
 hpxmpi_LDFLAGS  = -static

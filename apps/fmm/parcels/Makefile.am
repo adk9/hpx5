@@ -12,5 +12,5 @@ fmmparcels_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
 fmmparcels_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 if HAVE_PHOTON
-fmmparcels_LDADD   += -lphoton -ljemalloc
+fmmparcels_LDADD   += -lphoton
 endif

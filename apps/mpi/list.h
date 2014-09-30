@@ -264,17 +264,14 @@ static inline void list_delete(list_t *ll, void *val) {
 */
 static inline void list_insert_after(list_t *ll, void *val_after, void* val) {
   struct list_node_t *found = NULL;
-  struct list_node_t *prev = NULL;
   struct list_node_t *cur = NULL;
 
   cur = ll->head;
-  prev = NULL;
 
   while ((cur != NULL) && (found == NULL)) {
     if (cur->value == val_after) {
       found = cur;
     } else {
-      prev = cur;
       cur = cur->next;
     }
   }

@@ -16,14 +16,16 @@
 /// @file
 /// @brief HPX parallel loop interface
 
+/// The type of functions that can be passed to hpx_par_for().
+typedef int (*hpx_for_action_t)(const int, const void*);
+
 
 int
-hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
-            const void *args, hpx_addr_t sync);
+hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args,
+            hpx_addr_t sync);
 
 int
-hpx_par_for_sync(int (*fn)(const int, const void*), const int min,
-                 const int max, const void *args);
+hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *args);
 
 
 /// Perform a parallel call.

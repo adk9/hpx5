@@ -183,11 +183,12 @@ void add_comm_list(int dir, int block_f, int pe, int fcase, int pos, int pos1,Do
          }
       }
 
-      if (i == ld->num_comm_partners[dir])
+      if (i == ld->num_comm_partners[dir]) {
          if (i == 0)
             ld->comm_index[dir][i] = 0;
          else
             ld->comm_index[dir][i] = ld->comm_index[dir][i-1] + ld->comm_num[dir][i-1];
+      }
       ld->num_comm_partners[dir]++;
       ld->comm_partner[dir][i] = pe;
       ld->send_size[dir][i] = s_len;

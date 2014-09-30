@@ -71,11 +71,12 @@ void refine(int ts,Domain *ld,unsigned long epoch)
          for (in = 0; in < ld->sorted_index[ld->num_refine+1]; in++) {
             n = ld->sorted_list[in].n;
             bp = &ld->blocks[n];
-            if (bp->number >= 0)
+            if (bp->number >= 0) {
                if (bp->level < ld->num_refine)
                   bp->refine = 1;
                else
                   bp->refine = 0;
+            }
          }
       } else {
          t2 = hpx_time_now();
