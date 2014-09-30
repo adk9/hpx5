@@ -16,7 +16,7 @@
 #define _EDGE_LIST_BLOCKS HPX_LOCALITIES
 #endif
 #ifndef _EDGE_LIST_BLOCK_SIZE
-#define _EDGE_LIST_BLOCK_SIZE(n) (((n * sizeof(edge_list_edge_t)) + HPX_LOCALITIES - 1) / HPX_LOCALITIES)
+#define _EDGE_LIST_BLOCK_SIZE(n) (((n + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(edge_list_edge_t))
 #endif
 
 
