@@ -39,25 +39,24 @@ static int sizes[] = {
 static int DONE = 0;
 static int *recvCompT;
 static int myrank;
-sem_t sem;
+static sem_t sem;
 
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
-  int flag, rc;
+  int flag, rc, val;
 
   do {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
-    if (rc != PHOTON_OK)
-      continue;  // no events
-    if (flag) {
-      if (request == PHOTON_TAG) {
-        // Increments the counter  
-        sem_post(&sem);
-      }
+    if (rc < 0) {
+      exit(1);
+    }
+    if ((flag > 0) && (request == PHOTON_TAG)) {
+      // Increments the counter  
+      sem_post(&sem);
     }
   } while (!DONE);
-
+  
   pthread_exit(NULL);
 }
 
@@ -134,7 +133,7 @@ START_TEST(test_photon_threaded_put_wc)
   for (t=0; t<nproc; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
   }
-
+  
   // now we can proceed with our benchmark
   if (rank == 0)
     printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
@@ -158,15 +157,17 @@ START_TEST(test_photon_threaded_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
-            if (sem_wait(&sem) == 0) {
-              photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
-            }
+	  if (sem_wait(&sem) == 0) {
+	    photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	  }
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
-
+      
       // clear remaining local completions
-      while (sem_getvalue(&sem, &val) > 0) ;
+      do {
+	if (sem_getvalue(&sem, &val)) continue;
+      } while (val < SQ_SIZE);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -191,7 +192,9 @@ START_TEST(test_photon_threaded_put_wc)
       }
 
       // clear remaining local completions
-      while (sem_getvalue(&sem, &val) > 0) ;
+      do {
+	if (sem_getvalue(&sem, &val)) continue;
+      } while (val < SQ_SIZE);
       
       MPI_Barrier(MPI_COMM_WORLD);
       

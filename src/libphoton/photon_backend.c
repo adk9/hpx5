@@ -164,7 +164,7 @@ static int __photon_setup_request_direct(photonBuffer rbuf, int proc, int flags,
   
   req = __photon_get_request();
   if (!req) {
-    log_err("Couldn't allocate request\n");
+    log_err("Couldn't allocate request");
     goto error_exit;
   }
 
@@ -2500,6 +2500,26 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
   
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
+  
+  // if we didn't send any data, then we only wait on one event
+  nentries = (size > 0)?2:1;
+  // if we are under the small pwc eager limit, only one event
+  nentries = (size <= __photon_config->cap.small_pwc_size)?1:2;
+
+  // check if we only get event for one put
+  if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
+    nentries = 1;
+  // or no events for either put
+  if (flags & PHOTON_REQ_NO_CQE)
+    nentries = 0;
+  
+  if (nentries > 0) {
+    rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, nentries, local, request_id);
+    if (rc != PHOTON_OK) {
+      dbg_info("Could not setup direct buffer request");
+      goto error_exit;
+    }
+  }
 
   // see if we should pack into an eager buffer and send in one put
   if ((size > 0) && (size <= __photon_config->cap.small_pwc_size) && (size <= _photon_ebsize)) {
@@ -2534,7 +2554,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
       dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", request_id);
       goto error_exit;
     }
-    nentries = 1;
+
     NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size+tadd));
     if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
       eb->offset = 0;
@@ -2574,27 +2594,9 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
       dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", request_id);
       goto error_exit;
     }
-
-    // if we didn't send any data, then we only wait on one event
-    nentries = (size > 0)?2:1;
     NEXT_LEDGER_ENTRY(photon_processes[proc].remote_pwc_ledger);
   }
-
-  // check if we only get event for one put
-  if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
-    nentries = 1;
-  // or no events for either put
-  if (flags & PHOTON_REQ_NO_CQE)
-    nentries = 0;
   
-  if (nentries > 0) {
-    rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, nentries, local, request_id);
-    if (rc != PHOTON_OK) {
-      dbg_info("Could not setup direct buffer request");
-      goto error_exit;
-    }
-  }
-    
   dbg_info("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
   
   return PHOTON_OK;
@@ -2624,6 +2626,12 @@ static int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void 
     log_err("Tried posting from a buffer that's not registered");
     goto error_exit;
   }
+
+  rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, 1, local, request_id);
+  if (rc != PHOTON_OK) {
+    dbg_info("Could not setup direct buffer request");
+    goto error_exit;
+  }
   
   rbuf.addr = (uintptr_t)rptr;
   rbuf.size = size;
@@ -2632,12 +2640,6 @@ static int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void 
   rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, request_id, 0);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", request_id);
-    goto error_exit;
-  }
-
-  rc = __photon_setup_request_direct(&rbuf, proc, REQUEST_FLAG_USERID, 1, local, request_id);
-  if (rc != PHOTON_OK) {
-    dbg_info("Could not setup direct buffer request");
     goto error_exit;
   }
 
@@ -2730,7 +2732,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
       dbg_info("got CQ event for something PWC never tracked!");
       goto error_exit;
     }
-
+    
     // set flag and request only if we have processed the number of outstanding
     // events expected for this reqeust
     if ( (--req->num_entries) == 0) {
