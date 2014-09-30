@@ -30,6 +30,7 @@
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/btt.h"
+#include "libhpx/gas.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
@@ -66,6 +67,11 @@ static int _cleanup(locality_t *l, int code) {
   if (l->btt) {
     btt_delete(l->btt);
     l->btt = NULL;
+  }
+
+  if (l->gas) {
+    gas_delete(l->gas);
+    l->gas = NULL;
   }
 
   if (l->boot) {
@@ -124,6 +130,7 @@ int hpx_init(const hpx_config_t *cfg) {
   HPX_HERE = HPX_THERE(here->rank);
 
   // 5) allocate our block translation table
+  here->gas = gas_new(cfg->gas, cfg->heap_bytes);
   here->btt = btt_new(cfg->gas, cfg->heap_bytes);
   if (here->btt == NULL)
     return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));

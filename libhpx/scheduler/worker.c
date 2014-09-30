@@ -34,6 +34,7 @@
 #include "libhpx/action.h"
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
@@ -44,7 +45,6 @@
 #include "thread.h"
 #include "termination.h"
 #include "worker.h"
-#include "../gas/pgas.h"
 
 
 typedef volatile int atomic_int_t;
@@ -381,8 +381,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 ///
 /// @param      sched The scheduler that this thread should be attached to.
 void *worker_run(scheduler_t *sched) {
-  // initialize my heap
-  lhpx_pgas_init_worker();
+  // join the global address space
+  assert(here && here->gas);
+  int e = gas_join(here->gas);
+  dbg_check(e, "worker: failed to join the global address space.\n");
 
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -419,7 +421,7 @@ void *worker_run(scheduler_t *sched) {
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  int e = thread_transfer(p, _on_start, NULL);
+  e = thread_transfer(p, _on_start, NULL);
   if (e) {
     dbg_error("worker: shutdown returned error.\n");
     return NULL;
@@ -446,9 +448,9 @@ void *worker_run(scheduler_t *sched) {
   // point where everyone has joined the barrier
   sync_chase_lev_ws_deque_fini(&self.work);
 
-  // finalize my heap
-  lhpx_pgas_fini_worker();
-
+  // leave the global address space
+  assert(here && here->gas);
+  gas_leave(here->gas);
   return NULL;
 }
 

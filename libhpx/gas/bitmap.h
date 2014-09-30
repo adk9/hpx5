@@ -10,15 +10,15 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_BITMAP_ALLOC_H
-#define LIBHPX_GAS_BITMAP_ALLOC_H
+#ifndef LIBHPX_GAS_BITMAP_H
+#define LIBHPX_GAS_BITMAP_H
 
 #include <stddef.h>
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <libsync/locks.h>
 
-/// @file libhpx/gas/bitmap_alloc.h
+/// @file libhpx/gas/bitmap.h
 /// @brief Implement a simple parallel bitmap allocator to manage chunk
 ///        allocation for jemalloc.
 ///
@@ -40,14 +40,14 @@ typedef struct {
   uint32_t      min;
   uint32_t    nbits;
   uintptr_t  bits[];
-} lhpx_bitmap_alloc_t;
+} bitmap_t;
 
 /// Determine the size of a bitmap structure required to allocate @p n blocks.
 ///
 /// @param n The number of blocks we need to manage.
 ///
-/// @return The size of the bitmap_alloc_t required to manage @p n blocks.
-size_t lhpx_bitmap_alloc_sizeof(const uint32_t n)
+/// @return The size of the bitmap_t required to manage @p n blocks.
+size_t bitmap_sizeof(const uint32_t n)
   HPX_INTERNAL;
 
 /// Initialize a bitmap.
@@ -57,7 +57,7 @@ size_t lhpx_bitmap_alloc_sizeof(const uint32_t n)
 ///
 /// @param   bitmap The bitmap to initialize.
 /// @param        n The number of blocks we need to manage.
-void lhpx_bitmap_alloc_init(lhpx_bitmap_alloc_t *bitmap, const uint32_t n)
+void bitmap_init(bitmap_t *bitmap, const uint32_t n)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Allocate and initialize a bitmap.
@@ -65,13 +65,13 @@ void lhpx_bitmap_alloc_init(lhpx_bitmap_alloc_t *bitmap, const uint32_t n)
 /// @param        n The number of blocks we need to manage.
 ///
 /// @returns The new bitmap or NULL if there was an error.
-lhpx_bitmap_alloc_t *lhpx_bitmap_alloc_new(const uint32_t n)
+bitmap_t *bitmap_new(const uint32_t n)
   HPX_INTERNAL;
 
-/// Delete a bitmap that was previously allocated with lhpx_bitmap_alloc_new().
+/// Delete a bitmap that was previously allocated with bitmap_new().
 ///
 /// @param   bitmap The bitmap to free,
-void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap)
+void bitmap_delete(bitmap_t *bitmap)
   HPX_INTERNAL;
 
 /// Allocate @p n contiguous blocks from the bitmap, aligned to a @p align
@@ -83,8 +83,8 @@ void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap)
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
-int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
-                            const uint32_t align, uint32_t *i)
+int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
+                   uint32_t *i)
   HPX_INTERNAL HPX_NON_NULL(1, 4);
 
 /// Free @p n contiguous blocks of memory, starting at offset @p i.
@@ -92,8 +92,7 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
 /// @param   bitmap The bitmap to free from.
 /// @param     from The offset to start freeing from.
 /// @param        n The number of blocks to free.
-void lhpx_bitmap_alloc_free(lhpx_bitmap_alloc_t *bitmap, const uint32_t from,
-                            const uint32_t n)
+void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif

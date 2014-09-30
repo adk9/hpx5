@@ -17,68 +17,34 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <jemalloc/jemalloc.h>
-#include <hpx/builtins.h>
 #include <hpx/malloc.h>
-#include "libhpx/btt.h"
-#include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/locality.h"
-#include "smp.h"
-#include "pgas.h"
+
+// We need to sit in front of all of the memory allocation routines to implement
+// the following protocol. We use jemalloc for all memory allocation. All
+// standard malloc.h routines should be allocating private memory. If the gas
+// has not been initialized yet, then we use jemalloc directly, otherwise we
+// forward to the gas-specific local implementation.
 
 void *malloc(size_t bytes) {
   if (!bytes)
     return NULL;
 
-  if (!here || !here->btt)
+  if (!here || !here->gas)
     return mallocx(bytes, 0);
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_malloc(bytes);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_malloc(bytes);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    return mallocx(bytes, 0);
-  }
-  unreachable();
+  return gas_local_malloc(here->gas, bytes);
 }
 
 void free(void *ptr) {
   if (!ptr)
     return;
 
-  if (!here || !here->btt) {
+  if (!here || !here->btt)
     dallocx(ptr, 0);
-    return;
-  }
-
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    lhpx_smp_free(ptr);
-    return;
-
-   case (HPX_GAS_PGAS):
-    lhpx_pgas_free(ptr);
-    return;
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    dallocx(ptr, 0);
-    return;
-  }
+  else
+    gas_local_free(here->gas, ptr);
 }
 
 
@@ -89,23 +55,7 @@ void *calloc(size_t nmemb, size_t size) {
   if (!here || !here->btt)
     return mallocx(nmemb * size, MALLOCX_ZERO);
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_calloc(nmemb, size);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_calloc(nmemb, size);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    return mallocx(nmemb * size, MALLOCX_ZERO);
-  }
-  unreachable();
+  return gas_local_calloc(here->gas, nmemb, size);
 }
 
 void *realloc(void *ptr, size_t size) {
@@ -115,92 +65,39 @@ void *realloc(void *ptr, size_t size) {
   if (!here || !here->btt)
     return rallocx(ptr, size, 0);
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_realloc(ptr, size);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_realloc(ptr, size);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    return rallocx(ptr, size, 0);
-  }
-  unreachable();
+  return gas_local_realloc(here->gas, ptr, size);
 }
 
 void *valloc(size_t size) {
+  if (!size)
+    return NULL;
+
   if (!here || !here->btt)
     return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_valloc(size);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_valloc(size);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
-  }
-  unreachable();
+  return gas_local_valloc(here->gas, size);
 }
 
 void *memalign(size_t boundary, size_t size) {
+  if (!size || !boundary)
+    return NULL;
+
   if (!here || !here->btt)
     return mallocx(size, MALLOCX_ALIGN(boundary));
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_memalign(boundary, size);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_memalign(boundary, size);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    return mallocx(size, MALLOCX_ALIGN(boundary));
-  }
-  unreachable();
+  return gas_local_memalign(here->gas, boundary, size);
 }
 
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
+  if (!size || !alignment) {
+    *memptr = NULL;
+    return 0;
+  }
+
   if (!here || !here->btt) {
     *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
     return (*memptr == 0) ? ENOMEM : 0;
   }
 
-  switch (here->btt->type) {
-   default:
-    dbg_error("malloc: unexpected GAS type %u\n", here->btt->type);
-    hpx_abort();
-   case (HPX_GAS_NOGLOBAL):
-    return lhpx_smp_posix_memalign(memptr, alignment, size);
-
-   case (HPX_GAS_PGAS):
-    return lhpx_pgas_posix_memalign(memptr, alignment, size);
-
-   case (HPX_GAS_AGAS):
-   case (HPX_GAS_PGAS_SWITCH):
-   case (HPX_GAS_AGAS_SWITCH):
-    *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
-    return (*memptr == 0) ? ENOMEM : 0;
-  }
-  unreachable();
+  return gas_local_posix_memalign(here->gas, memptr, alignment, size);
 }

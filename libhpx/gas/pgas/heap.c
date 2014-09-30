@@ -14,16 +14,17 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <sys/mman.h>
 #include <jemalloc/jemalloc.h>
 #include <libsync/sync.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
-#include "mallctl.h"
-#include "pgas_heap.h"
+#include "../mallctl.h"
+#include "heap.h"
 
-static size_t get_nchunks(const size_t size, size_t bytes_per_chunk) {
+static size_t _get_nchunks(const size_t size, size_t bytes_per_chunk) {
   size_t nchunks = size / bytes_per_chunk;
   if (nchunks == 0) {
     dbg_log_gas("pgas: must have at least %lu bytes in the shared heap\n",
@@ -36,16 +37,15 @@ static size_t get_nchunks(const size_t size, size_t bytes_per_chunk) {
   return nchunks;
 }
 
-static lhpx_bitmap_alloc_t *new_bitmap(size_t nchunks) {
+static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
-  lhpx_bitmap_alloc_t *bitmap = lhpx_bitmap_alloc_new((uint32_t)nchunks);
+  bitmap_t *bitmap = bitmap_new((uint32_t)nchunks);
   if (!bitmap)
     dbg_error("pgas: failed to allocate a bitmap to track free chunks.\n");
   return bitmap;
 }
 
-
-static void *map_heap(const size_t bytes) {
+static void *_map_heap(const size_t bytes) {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   void *heap = mmap(NULL, bytes, prot, flags, -1, 0);
@@ -58,19 +58,26 @@ static void *map_heap(const size_t bytes) {
   return heap;
 }
 
-int lhpx_pgas_heap_init(lhpx_pgas_heap_t *heap, const size_t size) {
+/// Compute the number of chunks required to satisfy the @p size.
+static uint32_t _chunks(const size_t size, const size_t bytes_per_chunk) {
+  uint32_t chunks = size / bytes_per_chunk;
+  chunks += (size % bytes_per_chunk) ? 1 : 0;
+  return chunks;
+}
+
+int heap_init(heap_t *heap, const size_t size) {
   assert(heap);
   assert(size);
 
   sync_store(&heap->csbrk, 0, SYNC_RELEASE);
 
-  heap->bytes_per_chunk = lhpx_mallctl_get_chunk_size();
+  heap->bytes_per_chunk = mallctl_get_chunk_size();
   dbg_log_gas("pgas: heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
 
-  heap->nchunks = get_nchunks(size, heap->bytes_per_chunk);
+  heap->nchunks = _get_nchunks(size, heap->bytes_per_chunk);
   dbg_log_gas("pgas: heap nchunks is %lu\n", heap->nchunks);
 
-  heap->chunks = new_bitmap(heap->nchunks);
+  heap->chunks = _new_bitmap(heap->nchunks);
   dbg_log_gas("pgas: allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
 
   heap->nbytes = heap->nchunks * heap->bytes_per_chunk;
@@ -79,22 +86,50 @@ int lhpx_pgas_heap_init(lhpx_pgas_heap_t *heap, const size_t size) {
                 size, heap->nbytes);
 
   dbg_log_gas("pgas: allocating %lu bytes for the shared heap.\n", heap->nbytes);
-  heap->bytes = map_heap(heap->nbytes);
+  heap->bytes = _map_heap(heap->nbytes);
   dbg_log_gas("pgas: allocated heap.\n");
 
   return LIBHPX_OK;
 }
 
-void lhpx_pgas_heap_fini(lhpx_pgas_heap_t *heap) {
+void heap_fini(heap_t *heap) {
   if (!heap)
     return;
 
   if (heap->chunks)
-    lhpx_bitmap_alloc_delete(heap->chunks);
+    bitmap_delete(heap->chunks);
 
   if (heap->bytes) {
     int e = munmap(heap->bytes, heap->nbytes);
     if (e)
       dbg_error("pgas: failed to munmap the heap.\n");
   }
+}
+
+void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
+                       unsigned arena) {
+  assert(arena == mallctl_thread_get_arena());
+  const uint32_t blocks = _chunks(size, heap->bytes_per_chunk);
+  const uint32_t align = _chunks(alignment, heap->bytes_per_chunk);
+  uint32_t offset = 0;
+  int e = bitmap_reserve(heap->chunks, blocks, align, &offset);
+  dbg_check(e, "pgas: failed to allocate a chunk size %"PRIu32
+            " align %"PRIu32"\n", blocks, align);
+
+  if (zero)
+    *zero = false;
+
+  char *chunk = heap->bytes + offset * heap->bytes_per_chunk;
+  assert((uintptr_t)chunk % alignment == 0);
+  return chunk;
+}
+
+bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
+  assert(arena == mallctl_thread_get_arena());
+  const uint32_t offset = (char*)chunk - heap->bytes;
+  assert(offset % heap->bytes_per_chunk == 0);
+  const uint32_t i = _chunks(offset, heap->bytes_per_chunk);
+  const uint32_t n = _chunks(size, heap->bytes_per_chunk);
+  bitmap_release(heap->chunks, i, n);
+  return true;
 }

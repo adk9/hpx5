@@ -22,7 +22,7 @@
 
 struct boot_class;
 struct btt_class;
-struct gas_class;
+struct lhpx_gas_class;
 struct network_class;
 struct scheduler;
 struct transport_class;
@@ -32,6 +32,7 @@ typedef struct {
   hpx_locality_t               rank;            // this locality's rank
   int                         ranks;            // the total number of ranks
   struct boot_class           *boot;            // the bootstrap object
+  struct gas_class             *gas;            // the global address space
   struct btt_class             *btt;            // the block translation table
   struct transport_class *transport;            // the byte transport
   struct network_class     *network;            // the parcel transport
@@ -63,17 +64,13 @@ typedef struct {
 } locality_gas_forward_args_t;
 HPX_INTERNAL extern hpx_action_t locality_gas_forward;
 
-/// ----------------------------------------------------------------------------
 /// The global locality is exposed through this "here" pointer.
 ///
 /// The value of the pointer is equivalent to hpx_addr_try_pin(HPX_HERE, &here);
-/// ----------------------------------------------------------------------------
 HPX_INTERNAL extern locality_t *here;
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate immovable local memory that is addressable globally.
-/// ----------------------------------------------------------------------------
 HPX_INTERNAL hpx_addr_t locality_malloc(size_t bytes);
 
 

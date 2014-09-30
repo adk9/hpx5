@@ -47,18 +47,25 @@
 ///
 
 #include <stddef.h>
-#include "bitmap_alloc.h"
+#include "bitmap.h"
 
 typedef struct {
-  volatile size_t       csbrk;
-  size_t      bytes_per_chunk;
-  size_t              nchunks;
-  lhpx_bitmap_alloc_t *chunks;
-  size_t               nbytes;
-  char                 *bytes;
-} lhpx_pgas_heap_t;
+  volatile size_t  csbrk;
+  size_t bytes_per_chunk;
+  size_t         nchunks;
+  bitmap_t       *chunks;
+  size_t          nbytes;
+  char            *bytes;
+} heap_t;
 
-int lhpx_pgas_heap_init(lhpx_pgas_heap_t *heap, size_t size);
-void lhpx_pgas_heap_fini(lhpx_pgas_heap_t *heap);
+int heap_init(heap_t *heap, size_t size);
+void heap_fini(heap_t *heap);
+
+void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
+                       unsigned arena)
+  HPX_INTERNAL;
+
+bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
+  HPX_INTERNAL;
 
 #endif

@@ -14,7 +14,7 @@
 # include "config.h"
 #endif
 
-/// @file libhpx/gas/bitmap_alloc.c
+/// @file libhpx/gas/bitmap.c
 /// @brief Implement a simple parallel bitmap.
 
 #include <assert.h>
@@ -24,32 +24,32 @@
 #include <libsync/sync.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
-#include "bitmap_alloc.h"
+#include "bitmap.h"
 
 // The number of bits in a word.
 const uint32_t BITS_PER_WORD = sizeof(uintptr_t) * 8;
 
-size_t lhpx_bitmap_alloc_sizeof(const uint32_t n) {
-  return sizeof(lhpx_bitmap_alloc_t) + n / 8;
+size_t bitmap_sizeof(const uint32_t n) {
+  return sizeof(bitmap_t) + n / 8;
 }
 
-void lhpx_bitmap_alloc_init(lhpx_bitmap_alloc_t *bitmap, const uint32_t n) {
+void bitmap_init(bitmap_t *bitmap, const uint32_t n) {
   sync_tatas_init(&bitmap->lock);
   bitmap->min = 0;
   const uintptr_t pattern = UINTPTR_MAX;
-  memset(&bitmap->bits, pattern, lhpx_bitmap_alloc_sizeof(n));
+  memset(&bitmap->bits, pattern, bitmap_sizeof(n));
 }
 
-lhpx_bitmap_alloc_t *lhpx_bitmap_alloc_new(const uint32_t n) {
-  const size_t bytes = lhpx_bitmap_alloc_sizeof(n);
-  lhpx_bitmap_alloc_t *bitmap = malloc(bytes);
+bitmap_t *bitmap_new(const uint32_t n) {
+  const size_t bytes = bitmap_sizeof(n);
+  bitmap_t *bitmap = malloc(bytes);
   if (!bitmap)
     dbg_error("bitmap: failed to allocate a bitmap for %u blocks\n", n);
-  lhpx_bitmap_alloc_init(bitmap, n);
+  bitmap_init(bitmap, n);
   return bitmap;
 }
 
-void lhpx_bitmap_alloc_delete(lhpx_bitmap_alloc_t *bitmap) {
+void bitmap_delete(bitmap_t *bitmap) {
   if (!bitmap)
     return;
 
@@ -154,8 +154,8 @@ static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
   }
 }
 
-int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
-                            const uint32_t align, uint32_t *i) {
+int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
+                   uint32_t *i) {
   int status;
   if (n == 0)
     return LIBHPX_EINVAL;
@@ -194,8 +194,7 @@ int lhpx_bitmap_alloc_alloc(lhpx_bitmap_alloc_t *bitmap, const uint32_t n,
   return status;
 }
 
-void lhpx_bitmap_alloc_free(lhpx_bitmap_alloc_t *bitmap, const uint32_t from,
-                            const uint32_t n) {
+void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n) {
   sync_tatas_acquire(&bitmap->lock);
   _reset(bitmap->bits, from, n);
   bitmap->min = _min32(bitmap->min, from / BITS_PER_WORD);

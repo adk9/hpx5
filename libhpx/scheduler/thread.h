@@ -69,7 +69,8 @@ HPX_INTERNAL void thread_init(ustack_t *stack, hpx_parcel_t *parcel,
 /// ----------------------------------------------------------------------------
 /// Allocates and initializes a new thread.
 ///
-/// This allocates and initializes a new user-level stack.
+/// This allocates and initializes a new user-level stack. User-level stacks are
+/// allocated in the global address space.
 ///
 /// @param parcel - The parcel that is generating this thread.
 /// @param      f - The entry function for the thread.
