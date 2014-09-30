@@ -131,6 +131,7 @@ int hpx_init(const hpx_config_t *cfg) {
 
   // 5) allocate our block translation table
   here->gas = gas_new(cfg->gas, cfg->heap_bytes);
+  gas_join(here->gas);
   here->btt = btt_new(cfg->gas, cfg->heap_bytes);
   if (here->btt == NULL)
     return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));
