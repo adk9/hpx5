@@ -32,7 +32,7 @@ void *malloc(size_t bytes) {
     return NULL;
 
   if (!here || !here->gas)
-    return mallocx(bytes, 0);
+    return hpx_mallocx(bytes, 0);
 
   return gas_local_malloc(here->gas, bytes);
 }
@@ -42,7 +42,7 @@ void free(void *ptr) {
     return;
 
   if (!here || !here->btt)
-    dallocx(ptr, 0);
+    hpx_dallocx(ptr, 0);
   else
     gas_local_free(here->gas, ptr);
 }
@@ -53,7 +53,7 @@ void *calloc(size_t nmemb, size_t size) {
     return NULL;
 
   if (!here || !here->btt)
-    return mallocx(nmemb * size, MALLOCX_ZERO);
+    return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
 
   return gas_local_calloc(here->gas, nmemb, size);
 }
@@ -63,7 +63,7 @@ void *realloc(void *ptr, size_t size) {
     return malloc(size);
 
   if (!here || !here->btt)
-    return rallocx(ptr, size, 0);
+    return hpx_rallocx(ptr, size, 0);
 
   return gas_local_realloc(here->gas, ptr, size);
 }
@@ -73,7 +73,7 @@ void *valloc(size_t size) {
     return NULL;
 
   if (!here || !here->btt)
-    return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
+    return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
 
   return gas_local_valloc(here->gas, size);
 }
@@ -83,7 +83,7 @@ void *memalign(size_t boundary, size_t size) {
     return NULL;
 
   if (!here || !here->btt)
-    return mallocx(size, MALLOCX_ALIGN(boundary));
+    return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
 
   return gas_local_memalign(here->gas, boundary, size);
 }
@@ -95,7 +95,7 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
   }
 
   if (!here || !here->btt) {
-    *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
+    *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
     return (*memptr == 0) ? ENOMEM : 0;
   }
 

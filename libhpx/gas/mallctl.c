@@ -16,14 +16,14 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <jemalloc/jemalloc.h>
+#include "jemalloc/jemalloc.h"
 #include "libhpx/debug.h"
 #include "mallctl.h"
 
 bool mallctl_get_lg_dirty_mult(void) {
   ssize_t enabled = false;
   size_t sz = sizeof(enabled);
-  int e = mallctl("opt.lg_dirty_mult", &enabled, &sz, NULL, 0);
+  int e = hpx_mallctl("opt.lg_dirty_mult", &enabled, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to check opt.lg_dirty_mult.\n");
   return enabled;
@@ -32,7 +32,7 @@ bool mallctl_get_lg_dirty_mult(void) {
 size_t mallctl_get_chunk_size(void) {
   size_t log2_bytes_per_chunk = 0;
   size_t sz = sizeof(log2_bytes_per_chunk);
-  int e = mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
+  int e = hpx_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to read the chunk size\n");
 
@@ -42,18 +42,18 @@ size_t mallctl_get_chunk_size(void) {
 unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
   unsigned arena = 0;
   size_t sz = sizeof(arena);
-  int e = mallctl("arenas.extend", &arena, &sz, NULL, 0);
+  int e = hpx_mallctl("arenas.extend", &arena, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to allocate a new arena %d.\n", e);
 
   char path[128];
   snprintf(path, 128, "arena.%u.chunk.alloc", arena);
-  e = mallctl(path, NULL, NULL, (void*)&alloc, sizeof(alloc));
+  e = hpx_mallctl(path, NULL, NULL, (void*)&alloc, sizeof(alloc));
   if (e)
     dbg_error("jemalloc: failed to set chunk allocator on arena %u\n", arena);
 
   snprintf(path, 128, "arena.%u.chunk.dalloc", arena);;
-  e = mallctl(path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
+  e = hpx_mallctl(path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
   if (e)
     dbg_error("jemalloc: failed to set chunk dallocator on arena %u\n", arena);
 
@@ -63,7 +63,7 @@ unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
 unsigned mallctl_thread_get_arena(void) {
   unsigned arena = 0;
   size_t sz = sizeof(arena);
-  int e = mallctl("thread.arena", &arena, &sz, NULL, 0);
+  int e = hpx_mallctl("thread.arena", &arena, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to read the default arena\n");
   return arena;
@@ -72,7 +72,7 @@ unsigned mallctl_thread_get_arena(void) {
 unsigned mallctl_thread_set_arena(unsigned arena) {
   unsigned old = 0;
   size_t sz1 = sizeof(arena), sz2 = sizeof(arena);
-  int e = mallctl("thread.arena", &old , &sz1, &arena, sz2);
+  int e = hpx_mallctl("thread.arena", &old , &sz1, &arena, sz2);
   if (e)
     dbg_error("jemalloc: failed to update the default arena\n");
   return old;
@@ -81,13 +81,13 @@ unsigned mallctl_thread_set_arena(unsigned arena) {
 void mallctl_thread_enable_cache(void) {
   bool enable = true;
   size_t sz = sizeof(enable);
-  int e = mallctl("thread.tcache.enabled", NULL, NULL, &enable, sz);
+  int e = hpx_mallctl("thread.tcache.enabled", NULL, NULL, &enable, sz);
   if (e)
     dbg_error("jemalloc: failed to enable the thread cache.\n");
 }
 
 void mallctl_thread_flush_cache(void) {
-  int e = mallctl("thread.tcache.flush", NULL, NULL, NULL, 0);
+  int e = hpx_mallctl("thread.tcache.flush", NULL, NULL, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to flush thread cache.\n");
 }
