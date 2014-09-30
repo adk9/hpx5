@@ -37,7 +37,7 @@ typedef struct {
 } sr_barrier_t;
 
 /// Delete member function.
-static void _delete(barrier_t *barrier) {
+static void _sr_barrier_delete(barrier_t *barrier) {
   free(barrier);
 }
 
@@ -45,7 +45,7 @@ static void _delete(barrier_t *barrier) {
 /// Sense-reversing join member function.
 ///
 /// see: http://www.morganclaypool.com/doi/abs/10.2200/S00499ED1V01Y201304CAC023
-static int _join(barrier_t *barrier, int i) {
+static int _sr_barrier_join(barrier_t *barrier, int i) {
   sr_barrier_t *this = (sr_barrier_t*)barrier;
   int sense = 1 - this->senses[i];
   this->senses[i] = sense;
@@ -71,8 +71,8 @@ static int _join(barrier_t *barrier, int i) {
 barrier_t *sr_barrier_new(int n) {
   sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
   assert(barrier);
-  barrier->vtable.delete = _delete;
-  barrier->vtable.join   = _join;
+  barrier->vtable.delete = _sr_barrier_delete;
+  barrier->vtable.join   = _sr_barrier_join;
   barrier->count         = 0;
   barrier->threads       = n;
   barrier->sense         = 1;
