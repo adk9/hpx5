@@ -39,6 +39,9 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 
+# Initialize pthreads
+AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
+
 # intialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
@@ -161,9 +164,9 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # Finalize flags
 # -----------------------------------------------------------------------------
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs=""
+hpx_extra_libs="$PTHREAD_LIBS"
 hpx_extra_ldflags=""
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
