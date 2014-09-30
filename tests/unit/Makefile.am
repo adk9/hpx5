@@ -20,14 +20,12 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           13_TestMemput.c \
                           14_TestNewFutures.c	
 
-hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm -lcheck  
+hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 
-hpxtest_CFLAGS          = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
-hpxtest_CFLAGS         += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@ 
+hpxtest_CFLAGS          = @PHOTON_CFLAGS@ @MPI_CFLAGS@
 hpxtest_CFLAGS         += @CHECK_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-hpxtest_CFLAGS         += $(HPX_C99)
 
 # Turn off some warnings for the tests
 hpxtest_CFLAGS         += -Wno-unused

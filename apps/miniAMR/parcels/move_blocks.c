@@ -387,7 +387,7 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
             }
          }
          // move parent connection in blocks being moved
-         if (bp->parent != -1)
+         if (bp->parent != -1) {
             if (bp->parent_node == ld->my_pe) {
                ld->parents[bp->parent].child[bp->child_number] = bp->number;
                ld->parents[bp->parent].child_node[bp->child_number] = bp->new_proc;
@@ -397,6 +397,7 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
             } else
                del_par_list(&ld->par_b, (-2-bp->parent), n, bp->child_number,
                             bp->parent_node);
+         }
       }
    }
 
@@ -499,7 +500,7 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
             }
          }
          // connect to parent if moved
-         if (bp->parent != -1)
+         if (bp->parent != -1) {
             if (bp->parent_node == ld->my_pe) {
                for (p = 0; p < ld->max_active_parent; p++)
                   if (ld->parents[p].number == -2 - bp->parent) {
@@ -511,6 +512,7 @@ void move_blocks(double *tp, double *tm, double *tu,Domain *ld, unsigned long ep
             } else
                add_par_list(&ld->par_b, (-2-bp->parent), n, bp->child_number,
                             bp->parent_node, 0,ld);
+         }
       }
    }
 }

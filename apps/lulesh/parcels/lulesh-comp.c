@@ -1,6 +1,7 @@
 #include "lulesh-hpx.h"
 
-int _compute_CalcForceForNodes(const int i, const Domain *domain) {
+int _compute_CalcForceForNodes(const int i, const void *args) {
+  Domain *domain = (Domain*)args;
   domain->fx[i] = 0.0;
   domain->fy[i] = 0.0;
   domain->fz[i] = 0.0;
@@ -15,7 +16,8 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long ep
   SBN3(local,domain,epoch);
 }
 
-int _checkdeterm(const int i, const double *determk) {
+int _checkdeterm(const int i, const void *args) {
+  double *determk = (double*)args;
   if (determk[i] <= 0.0) {
     printf("CalcVolumeForceForElems aborted.\n");
     hpx_abort();
@@ -56,8 +58,8 @@ void CalcVolumeForceForElems(Domain *domain, int rank)
   }
 }
 
-int _compute_InitStressTermsForElems(const int i, const InitStressTermsForElemsArgs *args) {
-
+int _compute_InitStressTermsForElems(const int i, const void *data) {
+  InitStressTermsForElemsArgs *args = (InitStressTermsForElemsArgs*)data;
   double *sigxx = args->sigxx;
   double *sigyy = args->sigyy;
   double *sigzz = args->sigzz;
@@ -82,7 +84,8 @@ void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
   hpx_par_for_sync(_compute_InitStressTermsForElems, 0, numElem, &init);
 }
 
-int _compute_IntegrateStressForElems(const int i, const IntegrateStressForElemsArgs *args) {
+int _compute_IntegrateStressForElems(const int i, const void *data) {
+  IntegrateStressForElemsArgs *args = (IntegrateStressForElemsArgs*)data;
   double B[3][8];
   double x_local[8];
   double y_local[8];
@@ -150,8 +153,8 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
   hpx_par_for_sync(_compute_IntegrateStressForElems, 0, numElem, &init);
 }
 
-int _compute_CalcHourglassControlForElems(const int i, const CalcHourglassControlForElemsArgs *args) {
-
+int _compute_CalcHourglassControlForElems(const int i, const void *data) {
+    CalcHourglassControlForElemsArgs *args = (CalcHourglassControlForElemsArgs*)data;
     int *nodelist = args->nodelist;
     double *x = args->x;
     double *y = args->y;
@@ -371,8 +374,8 @@ void VoluDer(const double x0, const double x1, const double x2,
   *dvdz *= twelfth;
 }
 
-int _compute_CalcFBHourglassForceForElems(const int i2, const CalcFBHourglassForceForElemsArgs *args) {
-
+int _compute_CalcFBHourglassForceForElems(const int i2, const void *data) {
+    CalcFBHourglassForceForElemsArgs *args = (CalcFBHourglassForceForElemsArgs*)data;
     double hgfx[8], hgfy[8], hgfz[8];
     double coefficient;
 
@@ -1006,7 +1009,8 @@ void SumElemStressesToNodeForces(double B[][8], const double stress_xx,
   fz[7] = -stress_zz*pfz7;
 }
 
-int _compute_CalcAccelerationForNodes(const int i, const CalcAccelerationForNodesArgs *args) {
+int _compute_CalcAccelerationForNodes(const int i, const void *data) {
+  CalcAccelerationForNodesArgs *args = (CalcAccelerationForNodesArgs*)data;
   double *xdd = args->xdd;
   double *ydd = args->ydd;
   double *zdd = args->zdd;
@@ -1039,7 +1043,8 @@ void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
   hpx_par_for_sync(_compute_CalcAccelerationForNodes, 0, numNode, &init);
 }
 
-int _compute_ApplyAccelerationBoundaryConditionsForNodes(const int i, const ApplyAccelerationBoundaryConditionsForNodesArgs *args) {
+int _compute_ApplyAccelerationBoundaryConditionsForNodes(const int i, const void *data) {
+  ApplyAccelerationBoundaryConditionsForNodesArgs *args = (ApplyAccelerationBoundaryConditionsForNodesArgs*)data;
   double *dd = args->dd;
   int *symm = args->symm;
   dd[symm[i]] = 0.0;
@@ -1082,7 +1087,8 @@ void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, doubl
   }
 }
 
-int _compute_CalcVelocityForNodes(const int i, const CalcVelocityForNodesArgs *args) {
+int _compute_CalcVelocityForNodes(const int i, const void *data) {
+  CalcVelocityForNodesArgs *args = (CalcVelocityForNodesArgs*)data;
   double *xd = args->xd;
   double *yd = args->yd;
   double *zd = args->zd;
@@ -1130,7 +1136,8 @@ void CalcVelocityForNodes(double *xd, double *yd, double *zd,
   hpx_par_for_sync(_compute_CalcVelocityForNodes, 0, numNode, &init);
 }
 
-int _compute_CalcPositionForNodes(const int i, const CalcPositionForNodesArgs *args) {
+int _compute_CalcPositionForNodes(const int i, const void *data) {
+  CalcPositionForNodesArgs *args = (CalcPositionForNodesArgs*)data;
   double *x = args->x;
   double *y = args->y;
   double *z = args->z;

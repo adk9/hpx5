@@ -27,6 +27,7 @@ int mpi_sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
   if ( source != MPI_PROC_NULL ) {
     ierr = mpi_wait(&recv_request, status);
   }
+  return ierr;
 }
 
 void mpi_sendrecv_(void *sendbuf, int *fsendcount, MPI_Datatype *fsendtype,

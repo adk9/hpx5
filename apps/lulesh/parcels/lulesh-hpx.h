@@ -510,26 +510,6 @@ extern hpx_action_t _MonoQ_result;
 void MonoQ(hpx_addr_t address,Domain *domain, unsigned long epoch);
 
 
-int _compute_CalcForceForNodes(const int i, const Domain *args);
-
-int _checkdeterm(const int, const double*);
-
-int _compute_InitStressTermsForElems(const int i, const InitStressTermsForElemsArgs *args);
-
-int _compute_IntegrateStressForElems(const int i, const IntegrateStressForElemsArgs *args);
-
-int _compute_CalcFBHourglassForceForElems(const int i, const CalcFBHourglassForceForElemsArgs *args);
-
-int _compute_CalcHourglassControlForElems(const int i, const CalcHourglassControlForElemsArgs *args);
-
-int _compute_CalcAccelerationForNodes(const int i, const CalcAccelerationForNodesArgs *args);
-
-int _compute_ApplyAccelerationBoundaryConditionsForNodes(const int i, const ApplyAccelerationBoundaryConditionsForNodesArgs *args);
-
-int _compute_CalcVelocityForNodes(const int i, const CalcVelocityForNodesArgs *args);
-
-int _compute_CalcPositionForNodes(const int i, const CalcPositionForNodesArgs *args);
-
 void send1(int nx, int ny, int nz, double *src, double *dest);
 
 void send2(int nx, int ny, int nz, double *src, double *dest);

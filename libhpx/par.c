@@ -27,7 +27,7 @@
 
 
 typedef struct {
-  int (*fn)(const int, const void*);
+  hpx_for_action_t f;
   const void *args;
   int min;
   int max;
@@ -37,15 +37,14 @@ static int
 _par_for_async_action(par_for_async_args_t *args)
 {
   for (int i = args->min, e = args->max; i < e; ++i)
-    args->fn(i, args->args);
+    args->f(i, args->args);
   return HPX_SUCCESS;
 }
 
 static hpx_action_t _par_for_async = 0;
 
 int
-hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
-            const void *args, hpx_addr_t sync)
+hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, hpx_addr_t sync)
 {
   assert(max - min > 0);
 
@@ -59,7 +58,7 @@ hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
   int base = min;
   for (int i = 0, e = nworkers; i < e; ++i) {
     par_for_async_args_t *a = malloc(sizeof(*a));
-    a->fn = fn;
+    a->f = f;
     a->min = base;
     a->max = base + m + ((r-- > 0) ? 1 : 0);
     base = a->max;
@@ -74,14 +73,13 @@ hpx_par_for(int (*fn)(const int, const void*), const int min, const int max,
 }
 
 int
-hpx_par_for_sync(int (*fn)(const int, const void*), const int min,
-                 const int max, const void *args)
+hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *args)
 {
   assert(max - min > 0);
   // HACK
   int nworkers = here->sched->n_workers;
   hpx_addr_t sync = hpx_lco_and_new(nworkers);
-  int e = hpx_par_for(fn, min, max, args, sync);
+  int e = hpx_par_for(f, min, max, args, sync);
   if (!e)
     e = hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
