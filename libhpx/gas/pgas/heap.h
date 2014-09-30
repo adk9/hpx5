@@ -68,4 +68,7 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
   HPX_INTERNAL;
 
+bool heap_contains(heap_t *heap, void *addr)
+  HPX_INTERNAL;
+
 #endif
