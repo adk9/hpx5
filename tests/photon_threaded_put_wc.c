@@ -44,7 +44,7 @@ static sem_t sem;
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
-  int flag, rc, val;
+  int flag, rc;
 
   do {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
