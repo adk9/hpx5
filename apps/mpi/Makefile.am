@@ -32,7 +32,7 @@ hpxmpi_LDFLAGS  = -static
 
 hpxmpi_CPPFLAGS = -I$(top_srcdir)/include
 hpxmpi_CFLAGS   = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-hpxmpi_LDADD    = $(top_builddir)/apps/mpi/libhpxmpi.la $(top_builddir)/libhpx/libhpx.la
+hpxmpi_LDADD    = libhpxmpi.la $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_PHOTON
 hpxmpi_CFLAGS   += $(PHOTON_CFLAGS)
