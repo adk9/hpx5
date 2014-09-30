@@ -68,8 +68,14 @@ static void _pgas_delete(gas_class_t *gas) {
 }
 
 static int _pgas_join(gas_class_t *gas) {
-  if (_pgas)
+  if (_pgas && (_pgas == (_pgas_t*)gas))
     return LIBHPX_OK;
+
+  if (_pgas) {
+    dbg_error("pgas: worker attempted to join a GAS without leaving "
+              "previous one.\n");
+    return LIBHPX_ERROR;
+  }
 
   unsigned arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
   mallctl_thread_enable_cache();
