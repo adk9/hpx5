@@ -201,9 +201,8 @@ static void _pgas_delete(gas_class_t *gas) {
 }
 
 gas_class_t *gas_pgas_new(size_t heap_size) {
-  if (mallctl_get_lg_dirty_mult() != -1) {
-    dbg_error("HPX requires \"lg_dirty_mult:-1\" set in the environment "
-              "variable HPX_MALLOC_CONF\n");
+  if (!mallctl_disable_diry_page_purge()) {
+    dbg_error("pgas: failed to disable dirty page purging\n");
     return NULL;
   }
 
