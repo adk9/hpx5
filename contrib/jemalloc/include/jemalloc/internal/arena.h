@@ -131,7 +131,7 @@ struct arena_chunk_map_misc_s {
 	 */
 	rb_node(arena_chunk_map_misc_t)		rb_link;
 
-	union {
+	__extension__ union {
 		/* Linkage for list of dirty runs. */
 		ql_elm(arena_chunk_map_misc_t)	dr_link;
 

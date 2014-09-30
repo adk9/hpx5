@@ -21,10 +21,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>                            // required for jemalloc
-#include <jemalloc/jemalloc.h>
 #include <sys/mman.h>
 #include <photon.h>
 
+#include "jemalloc/jemalloc.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -354,8 +354,8 @@ static void *
 _malloc(transport_class_t *t, size_t bytes, size_t align)
 {
   photon_t *photon = (photon_t *)t;
-  void *p = mallocx(bytes,
-                    MALLOCX_ALIGN(align) | MALLOCX_ARENA(photon->arena));
+  void *p = hpx_mallocx(bytes,
+                        MALLOCX_ALIGN(align) | MALLOCX_ARENA(photon->arena));
   if (!p)
     dbg_error("photon: failed network allocation.\n");
 
@@ -367,7 +367,7 @@ static void
 _free(transport_class_t *t, void *p)
 {
   photon_t *photon = (photon_t *)t;
-  dallocx(p, MALLOCX_ARENA(photon->arena));
+  hpx_dallocx(p, MALLOCX_ARENA(photon->arena));
 }
 
 
@@ -494,7 +494,7 @@ transport_class_t *transport_new_photon(void) {
   }
 
   size_t sz = sizeof(photon->arena);
-  int error = mallctl("arenas.extend", &photon->arena, &sz, NULL, 0);
+  int error = hpx_mallctl("arenas.extend", &photon->arena, &sz, NULL, 0);
   if (error) {
     dbg_error("photon: failed to allocate a pinned arena %d.\n", error);
     hpx_abort();
@@ -504,8 +504,8 @@ transport_class_t *transport_new_photon(void) {
   char path[128];
   snprintf(path, 128, "arena.%u.chunk.alloc", photon->arena);
   chunk_alloc_t *alloc = _alloc_pinned_chunk;
-  error = mallctl(path, (void*)&photon->alloc, &sz, (void*)&alloc,
-                  sizeof(alloc));
+  error = hpx_mallctl(path, (void*)&photon->alloc, &sz, (void*)&alloc,
+                      sizeof(alloc));
   if (error) {
     dbg_error("photon: failed to set arena allocator.\n");
   }
@@ -513,8 +513,8 @@ transport_class_t *transport_new_photon(void) {
   sz = sizeof(photon->dalloc);
   snprintf(path, 128, "arena.%u.chunk.dalloc", photon->arena);
   chunk_dalloc_t *dalloc = _dalloc_pinned_chunk;
-  error = mallctl(path, (void*)&photon->dalloc, &sz, (void*)&dalloc,
-                  sizeof(dalloc));
+  error = hpx_mallctl(path, (void*)&photon->dalloc, &sz, (void*)&dalloc,
+                      sizeof(dalloc));
   if (error) {
     dbg_error("photon: failed to set arena de-allocator.\n");
   }

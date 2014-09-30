@@ -163,8 +163,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS"
 hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$HPX_JEMALLOC_LIBS"
-hpx_extra_ldflags="$HPX_JEMALLOC_LDFLAGS"
+hpx_extra_libs=""
+hpx_extra_ldflags=""
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
