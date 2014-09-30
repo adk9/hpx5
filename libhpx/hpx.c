@@ -169,13 +169,6 @@ int hpx_init(const hpx_config_t *cfg) {
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
 
-  // start the network
-  // pthread_t heavy;
-  // int e = pthread_create(&heavy, NULL, heavy_network, here->network);
-  // if (e)
-  //   return _cleanup(here, dbg_error("init: could not start the network
-  //   thread.\n"));
-
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
@@ -201,13 +194,6 @@ int system_startup(void) {
 
   // need to flush the transport
   transport_progress(here->transport, true);
-
-  // wait for the network to shutdown
-  // e = pthread_join(heavy, NULL);
-  // if (e) {
-  //   dbg_error("could not join the heavy network thread.\n");
-  //   return e;
-  // }
 
   // and cleanup the system
   return _cleanup(here, e);
