@@ -228,6 +228,7 @@ static int _main_action(_sssp_args_t *args) {
   fprintf(fp,"%s %f\n","v",avg_vertex_visit);
   fprintf(fp,"%s %f\n","e",avg_edge_traversal);
   fprintf(fp,"%s %f\n","i",avg_distance_updates);
+  fprintf(fp,"%s %s %f\n","c ", "The GTEPS measure is ",(total_edge_traversal/(total_elapsed_time*1.0E9)));
 
   fclose(fp);
 
