@@ -15,7 +15,7 @@
  * from being exported, but for static libraries, naming collisions are a real
  * possibility.
  */
-#define JEMALLOC_PRIVATE_NAMESPACE hpx_je_
+#define JEMALLOC_PRIVATE_NAMESPACE je_
 
 /*
  * Hyper-threaded CPUs may need a special instruction inside spin loops in
