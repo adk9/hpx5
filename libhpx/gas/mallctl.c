@@ -23,7 +23,6 @@
 int mallctl_get_lg_dirty_mult(void) {
   ssize_t opt = -1;
   size_t sz = sizeof(opt);
-  je_opt_lg_dirty_mult = -1;
   int e = hpx_mallctl("opt.lg_dirty_mult", &opt, &sz, NULL, 0);
   if (e)
     dbg_error("jemalloc: failed to check opt.lg_dirty_mult.\n");
