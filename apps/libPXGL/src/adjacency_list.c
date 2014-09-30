@@ -13,14 +13,14 @@
 #define _COUNT_ARRAY_BLOCKS HPX_LOCALITIES
 #endif
 #ifndef _COUNT_ARRAY_BLOCK_SIZE
-#define _COUNT_ARRAY_BLOCK_SIZE(n) (((n * sizeof(count_t)) + HPX_LOCALITIES - 1) / HPX_LOCALITIES)
+#define _COUNT_ARRAY_BLOCK_SIZE(n) (((n + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(count_t))
 #endif
 
 #ifndef _INDEX_ARRAY_BLOCKS
 #define _INDEX_ARRAY_BLOCKS HPX_LOCALITIES
 #endif
 #ifndef _INDEX_ARRAY_BLOCK_SIZE
-#define _INDEX_ARRAY_BLOCK_SIZE(n) (((n * sizeof(hpx_addr_t)) + HPX_LOCALITIES - 1) / HPX_LOCALITIES)
+#define _INDEX_ARRAY_BLOCK_SIZE(n) (((n + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t))
 #endif
 
 typedef uint32_t count_t;
@@ -179,7 +179,7 @@ static int _insert_edge_action(const hpx_addr_t * const index_array)
 
 
 hpx_action_t adj_list_from_edge_list = 0;
-int adj_list_from_edge_list_action(edge_list_t *el) {
+int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Allocate the count array for creating an edge histogram
   const hpx_addr_t count_array = hpx_gas_global_calloc(_COUNT_ARRAY_BLOCKS, _COUNT_ARRAY_BLOCK_SIZE(el->num_vertices));
