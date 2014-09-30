@@ -57,6 +57,10 @@ static bool _chunk_dalloc(void *chunk, size_t size, unsigned arena) {
   return heap_chunk_dalloc(&_pgas->heap, chunk, size, arena);
 }
 
+static bool _is_global(_pgas_t *pgas, void *addr) {
+  return heap_contains(&pgas->heap, addr);
+}
+
 static void _pgas_delete(gas_class_t *gas) {
   _pgas_t *pgas = (void*)gas;
 
@@ -103,6 +107,7 @@ static void _pgas_free(gas_class_t *gas, void *ptr) {
     return;
 
   assert(_pgas && gas == (void*)_pgas);
+  assert(_is_global((_pgas_t*)gas, ptr));
   hpx_dallocx(ptr, 0);
 }
 

@@ -133,3 +133,8 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
   bitmap_release(heap->chunks, i, n);
   return true;
 }
+
+bool heap_contains(heap_t *heap, void *addr) {
+  ptrdiff_t diff = (char*)addr - heap->bytes;
+  return (0 <= diff && diff < heap->nbytes);
+}
