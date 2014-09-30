@@ -126,7 +126,6 @@ routing_t *network_get_routing(network_class_t *network) {
   return network->routing;
 }
 
-#include <stdio.h>
 
 void *network_malloc(size_t bytes, size_t align) {
   return transport_malloc(here->transport, bytes, align);
