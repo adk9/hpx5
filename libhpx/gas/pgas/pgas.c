@@ -82,6 +82,11 @@ static int _pgas_join(gas_class_t *gas) {
 
 static void _pgas_leave(gas_class_t *gas) {
   /// @todo: should get rid of my private arena or something
+  mallctl_thread_flush_cache();
+  mallctl_thread_set_arena(_pvt_arena);
+  _pgas = NULL;
+  _pvt_arena = UINT_MAX;
+  _pvt_flags = 0;
 }
 
 static void *_pgas_malloc(gas_class_t *gas, size_t bytes) {
@@ -126,6 +131,8 @@ static void *_pgas_valloc(gas_class_t *gas, size_t size) {
 }
 
 static void *_pgas_memalign(gas_class_t *gas, size_t boundary, size_t size) {
+  assert(_pgas);
+
   if (!size || !boundary)
     return NULL;
 
