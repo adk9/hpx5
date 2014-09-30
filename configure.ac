@@ -198,6 +198,7 @@ AC_CONFIG_FILES([
 	src/util/Makefile
 	src/Makefile
 	test/Makefile
+	photon.pc
 ])
 
 AS_IF([test "x$enable_tests" != xno],

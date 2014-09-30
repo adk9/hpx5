@@ -21,6 +21,9 @@ if ENABLE_TESTS
 SUBDIRS += tests
 endif
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = photon.pc
+
 #if HAVE_VERBS
 #SUBDIRS += src/verbs
 #endif
