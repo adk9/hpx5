@@ -160,8 +160,10 @@ static void *_pgas_local_malloc(gas_class_t *gas, size_t bytes) {
 }
 
 static void _pgas_local_free(gas_class_t *gas, void *ptr) {
-  if (ptr)
+  if (ptr) {
+    assert(!_is_global((_pgas_t*)gas, ptr));
     hpx_dallocx(ptr, _pvt_flags);
+  }
 }
 
 static void *_pgas_local_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
