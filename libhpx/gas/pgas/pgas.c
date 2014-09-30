@@ -64,7 +64,7 @@ static void _pgas_delete(gas_class_t *gas) {
     return;
 
   heap_fini(&pgas->heap);
-  free(pgas);
+  hpx_free(pgas);
 }
 
 static int _pgas_join(gas_class_t *gas) {
@@ -89,7 +89,7 @@ static void *_pgas_malloc(gas_class_t *gas, size_t bytes) {
     return NULL;
 
   assert(_pgas && gas == (void*)_pgas);
-  return mallocx(bytes, 0);
+  return hpx_mallocx(bytes, 0);
 }
 
 static void _pgas_free(gas_class_t *gas, void *ptr) {
@@ -97,7 +97,7 @@ static void _pgas_free(gas_class_t *gas, void *ptr) {
     return;
 
   assert(_pgas && gas == (void*)_pgas);
-  dallocx(ptr, 0);
+  hpx_dallocx(ptr, 0);
 }
 
 static void *_pgas_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
@@ -105,7 +105,7 @@ static void *_pgas_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
     return NULL;
 
   assert(_pgas && gas == (void*)_pgas);
-  return mallocx(nmemb * size, MALLOCX_ZERO);
+  return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
 }
 
 static void *_pgas_realloc(gas_class_t *gas, void *ptr, size_t size) {
@@ -113,7 +113,7 @@ static void *_pgas_realloc(gas_class_t *gas, void *ptr, size_t size) {
     return _pgas_malloc(gas, size);
 
   assert(_pgas && gas == (void*)_pgas);
-  return rallocx(ptr, size, 0);
+  return hpx_rallocx(ptr, size, 0);
 }
 
 static void *_pgas_valloc(gas_class_t *gas, size_t size) {
@@ -121,7 +121,7 @@ static void *_pgas_valloc(gas_class_t *gas, size_t size) {
     return NULL;
 
   assert(_pgas && gas == (void*)_pgas);
-  return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
+  return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
 }
 
 static void *_pgas_memalign(gas_class_t *gas, size_t boundary, size_t size) {
@@ -129,7 +129,7 @@ static void *_pgas_memalign(gas_class_t *gas, size_t boundary, size_t size) {
     return NULL;
 
   assert(_pgas && gas == (void*)_pgas);
-  return mallocx(size, MALLOCX_ALIGN(boundary));
+  return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
 }
 
 static int _pgas_posix_memalign(gas_class_t *gas, void **memptr,
@@ -140,35 +140,40 @@ static int _pgas_posix_memalign(gas_class_t *gas, void **memptr,
   }
 
   assert(_pgas && gas == (void*)_pgas);
-  *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
+  *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
   return (*memptr == 0) ? ENOMEM : 0;
 }
 
 static void *_pgas_local_malloc(gas_class_t *gas, size_t bytes) {
-  return (bytes) ? mallocx(bytes, _pvt_flags) : NULL;
+  return (bytes) ? hpx_mallocx(bytes, _pvt_flags) : NULL;
 }
 
 static void _pgas_local_free(gas_class_t *gas, void *ptr) {
   if (ptr)
-    dallocx(ptr, _pvt_flags);
+    hpx_dallocx(ptr, _pvt_flags);
 }
 
 static void *_pgas_local_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
-  return (nmemb && size) ? mallocx(nmemb * size, _pvt_flags | MALLOCX_ZERO) :
-                           NULL;
+  if (nmemb && size)
+    return hpx_mallocx(nmemb * size, _pvt_flags | MALLOCX_ZERO);
+  else
+    return NULL;
 }
 
 static void *_pgas_local_realloc(gas_class_t *gas, void *ptr, size_t size) {
-  return (ptr) ? rallocx(ptr, size, _pvt_flags) : _pgas_local_malloc(gas, size);
+  if (ptr)
+    return hpx_rallocx(ptr, size, _pvt_flags);
+  else
+    return _pgas_local_malloc(gas, size);
 }
 
 static void *_pgas_local_valloc(gas_class_t *gas, size_t size) {
-  return mallocx(size, _pvt_flags | MALLOCX_ALIGN(HPX_PAGE_SIZE));
+  return hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(HPX_PAGE_SIZE));
 }
 
 static void *_pgas_local_memalign(gas_class_t *gas, size_t boundary,
                                   size_t size) {
-  return mallocx(size, _pvt_flags | MALLOCX_ALIGN(boundary));
+  return hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(boundary));
 }
 
 static int _pgas_local_posix_memalign(gas_class_t *gas, void **memptr,
@@ -178,7 +183,7 @@ static int _pgas_local_posix_memalign(gas_class_t *gas, void **memptr,
     return 0;
   }
 
-  *memptr = mallocx(size, _pvt_flags | MALLOCX_ALIGN(alignment));
+  *memptr = hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(alignment));
   return (*memptr == 0) ? ENOMEM : 0;
 }
 
@@ -190,7 +195,7 @@ gas_class_t *gas_pgas_new(size_t heap_size) {
     return NULL;
   }
 
-  _pgas_t *pgas = malloc(sizeof(*pgas));        // :-)
+  _pgas_t *pgas = hpx_malloc(sizeof(*pgas));
   if (!pgas) {
     dbg_error("pgas: could not allocate pgas instance.\n");
     return NULL;
@@ -219,7 +224,7 @@ gas_class_t *gas_pgas_new(size_t heap_size) {
   int e = heap_init(&pgas->heap, heap_size);
   if (e) {
     dbg_error("pgas: could not initialize heap structure.\n");
-    free(pgas);
+    hpx_free(pgas);
     return NULL;
   }
 

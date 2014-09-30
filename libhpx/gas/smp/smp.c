@@ -20,31 +20,31 @@
 #include "smp.h"
 
 void *smp_malloc(size_t bytes) {
-  return mallocx(bytes, 0);
+  return hpx_mallocx(bytes, 0);
 }
 
 void smp_free(void *ptr) {
   if (ptr)
-    dallocx(ptr, 0);
+    hpx_dallocx(ptr, 0);
 }
 
 void *smp_calloc(size_t nmemb, size_t size) {
-  return mallocx(nmemb * size, MALLOCX_ZERO);
+  return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
 }
 
 void *smp_realloc(void *ptr, size_t size) {
-  return rallocx(ptr, size, 0);
+  return hpx_rallocx(ptr, size, 0);
 }
 
 void *smp_valloc(size_t size) {
-  return mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
+  return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
 }
 
 void *smp_memalign(size_t boundary, size_t size) {
-  return mallocx(size, MALLOCX_ALIGN(boundary));
+  return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
 }
 
 int smp_posix_memalign(void **memptr, size_t alignment, size_t size) {
-  *memptr = mallocx(size, MALLOCX_ALIGN(alignment));
+  *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
   return (*memptr == 0) ? ENOMEM : 0;
 }
