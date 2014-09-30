@@ -61,16 +61,6 @@ static bool _is_global(_pgas_t *pgas, void *addr) {
   return heap_contains(&pgas->heap, addr);
 }
 
-static void _pgas_delete(gas_class_t *gas) {
-  _pgas_t *pgas = (void*)gas;
-
-  if (!pgas)
-    return;
-
-  heap_fini(&pgas->heap);
-  hpx_free(pgas);
-}
-
 static int _pgas_join(gas_class_t *gas) {
   if (_pgas && (_pgas == (_pgas_t*)gas))
     return LIBHPX_OK;
@@ -200,6 +190,15 @@ static int _pgas_local_posix_memalign(gas_class_t *gas, void **memptr,
   return (*memptr == 0) ? ENOMEM : 0;
 }
 
+static void _pgas_delete(gas_class_t *gas) {
+  _pgas_t *pgas = (void*)gas;
+
+  if (!pgas)
+    return;
+
+  heap_fini(&pgas->heap);
+  free(pgas);
+}
 
 gas_class_t *gas_pgas_new(size_t heap_size) {
   if (!mallctl_get_lg_dirty_mult()) {
@@ -208,12 +207,13 @@ gas_class_t *gas_pgas_new(size_t heap_size) {
     return NULL;
   }
 
-  _pgas_t *pgas = hpx_malloc(sizeof(*pgas));
+  _pgas_t *pgas = malloc(sizeof(*pgas));
   if (!pgas) {
     dbg_error("pgas: could not allocate pgas instance.\n");
     return NULL;
   }
 
+  pgas->vtable.type                 = HPX_GAS_PGAS;
   pgas->vtable.delete               = _pgas_delete;
   pgas->vtable.join                 = _pgas_join;
   pgas->vtable.leave                = _pgas_leave;
