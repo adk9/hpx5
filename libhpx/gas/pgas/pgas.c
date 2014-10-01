@@ -84,7 +84,13 @@ static void _pgas_global_free(void *ptr) {
   if (!ptr)
     return;
 
-  assert(heap_contains(_global_heap, ptr));
+  assert(_global_heap);
+  if (!heap_contains(_global_heap, ptr)) {
+    char *base = _global_heap->bytes;
+    ptrdiff_t size = (_global_heap->raw_bytes + _global_heap->nbytes) - _global_heap->bytes;
+    dbg_error("pgas: global free called on local pointer %p. Heap base, size "
+              "(%p, %ld)\n", ptr, base, size);
+  }
 
   if (_joined)
     libhpx_free(ptr);
