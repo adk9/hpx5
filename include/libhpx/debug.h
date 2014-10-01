@@ -19,8 +19,10 @@ HPX_INTERNAL extern hpx_log_t dbg_log_level;
 
 #ifdef ENABLE_DEBUG
 #define DEBUG 1
+#define DEBUG_IF(S) if (S)
 #else
 #define DEBUG 0
+#define DEBUG_IF(S) if (false && S)
 #endif
 
 /// Some output wrappers
