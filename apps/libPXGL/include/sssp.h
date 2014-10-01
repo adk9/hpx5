@@ -13,6 +13,7 @@
 
 #ifndef PXGL_SSSP_H
 #define PXGL_SSSP_H
+//#define GATHER_STAT 1
 
 typedef struct {
   uint64_t useful_work;
