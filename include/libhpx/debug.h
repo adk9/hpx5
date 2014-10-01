@@ -33,6 +33,10 @@ HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) 
 
 #define dbg_check(e, ...) do { if (e != HPX_SUCCESS) dbg_error(__VA_ARGS__); } while (0)
 
+#elif defined(NDEBUG)
+#define _dbg_log(...)
+#define dbg_error(...) (HPX_SUCCESS)
+#define dbg_check(e, ...) (void)e
 #else
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
