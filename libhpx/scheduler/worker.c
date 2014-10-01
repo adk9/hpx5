@@ -673,7 +673,8 @@ void hpx_thread_exit(int status) {
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
       unlikely(status == HPX_ERROR)) {
     hpx_parcel_t *parcel = self.current;
-    parcel_recover_credit(parcel);
+    if (parcel->pid > 0 && parcel->credit)
+      parcel_recover_credit(parcel);
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
   }
