@@ -15,6 +15,7 @@
 
 #include <stddef.h>
 
+// These always perform local allocation.
 void *malloc(size_t bytes);
 void free(void *ptr);
 void *calloc(size_t nmemb, size_t size);
@@ -23,6 +24,7 @@ void *valloc(size_t size);
 void *memalign(size_t boundary, size_t size);
 int posix_memalign(void **memptr, size_t alignment, size_t size);
 
+// These perform allocation to a specific arena, bypassing the cache.
 void *arena_malloc(unsigned arena, size_t bytes);
 void arena_free(unsigned arena, void *ptr);
 void *arena_calloc(unsigned arena, size_t nmemb, size_t size);
@@ -31,5 +33,13 @@ void *arena_valloc(unsigned arena, size_t size);
 void *arena_memalign(unsigned arena, size_t boundary, size_t size);
 int arena_posix_memalign(unsigned arena, void **memptr, size_t alignment, size_t size);
 
+// These perform allocation to the default arena, using caching.
+void *default_malloc(size_t bytes);
+void default_free(void *ptr);
+void *default_calloc(size_t nmemb, size_t size);
+void *default_realloc(void *ptr, size_t size);
+void *default_valloc(size_t size);
+void *default_memalign(size_t boundary, size_t size);
+int default_posix_memalign(void **memptr, size_t alignment, size_t size);
 
 #endif
