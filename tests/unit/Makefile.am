@@ -1,8 +1,8 @@
 noinst_bin_PROGRAMS 	= hpxtest
-noinst_bindir           = $(abs_top_builddir)/tests/unit
+noinst_bindir           = $(builddir)
 #TESTS 			= hpxtest 
-check_SCRIPTS           = $(abs_top_builddir)/tests/unit/run_tests.sh
-TESTS                   = $(abs_top_builddir)/tests/unit/run_tests.sh
+check_SCRIPTS           = $(srcdir)/run_tests.sh
+TESTS                   = $(srcdir)/run_tests.sh
 check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \

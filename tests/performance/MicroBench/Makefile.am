@@ -1,7 +1,7 @@
 all: $(check_PROGRAMS)
-noinst_bindir           = $(abs_top_builddir)/tests/performance/MicroBench
-check_SCRIPTS           = $(abs_top_builddir)/tests/performance/MicroBench/run_tests.sh
-TESTS                   = $(abs_top_builddir)/tests/performance/MicroBench/run_tests.sh
+noinst_bindir           = $(builddir)
+check_SCRIPTS           = $(srcdir)/run_tests.sh
+TESTS                   = $(srcdir)/run_tests.sh
 
 check_PROGRAMS          = $(PERFTESTS)
 PERFTESTS               =
