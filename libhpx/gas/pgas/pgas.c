@@ -85,9 +85,10 @@ static void _pgas_global_free(void *ptr) {
     return;
 
   assert(_global_heap);
-  if (!heap_contains(_global_heap, ptr)) {
+  DEBUG_IF (!heap_contains(_global_heap, ptr)) {
     char *base = _global_heap->bytes;
-    ptrdiff_t size = (_global_heap->raw_bytes + _global_heap->nbytes) - _global_heap->bytes;
+    ptrdiff_t size = (_global_heap->raw_bytes + _global_heap->nbytes) -
+                     _global_heap->bytes;
     dbg_error("pgas: global free called on local pointer %p. Heap base, size "
               "(%p, %ld)\n", ptr, base, size);
   }
@@ -120,7 +121,8 @@ static void *_pgas_global_memalign(size_t boundary, size_t size) {
 
 static int _pgas_global_posix_memalign(void **memptr, size_t alignment,
                                       size_t size) {
-  return (_joined) ? libhpx_posix_memalign(memptr, alignment, size)
+  return (_joined) ? arena_posix_memalign(_global_arena, memptr, alignment,
+                                          size) //libhpx_posix_memalign(memptr, alignment, size)
                    : arena_posix_memalign(_global_arena, memptr, alignment, size);
 }
 
