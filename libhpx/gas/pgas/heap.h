@@ -52,13 +52,14 @@
 struct transport_class;
 
 typedef struct {
-  volatile size_t  csbrk;
-  size_t bytes_per_chunk;
-  size_t         nchunks;
-  bitmap_t       *chunks;
-  size_t          nbytes;
-  char            *bytes;
-  char        *raw_bytes;
+  volatile size_t             csbrk;
+  size_t            bytes_per_chunk;
+  size_t                    nchunks;
+  bitmap_t                  *chunks;
+  size_t                     nbytes;
+  char                       *bytes;
+  char                   *raw_bytes;
+  struct transport_class *transport;
 } heap_t;
 
 int heap_init(heap_t *heap, size_t size);

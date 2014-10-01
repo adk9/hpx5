@@ -102,6 +102,10 @@ void heap_fini(heap_t *heap) {
     bitmap_delete(heap->chunks);
 
   if (heap->raw_bytes) {
+    if (heap->transport) {
+      size_t pin_bytes = (heap->raw_bytes + heap->nbytes) - heap->bytes;
+      heap->transport->unpin(heap->transport, heap->bytes, pin_bytes);
+    }
     int e = munmap(heap->raw_bytes, heap->nbytes);
     if (e)
       dbg_error("pgas: failed to munmap the heap.\n");
@@ -142,5 +146,7 @@ bool heap_contains(heap_t *heap, void *addr) {
 }
 
 void heap_bind_transport(heap_t *heap, transport_class_t *transport) {
-  transport->pin(transport, heap->bytes, (heap->raw_bytes + heap->nbytes) - heap->bytes);
+  size_t pin_bytes = (heap->raw_bytes + heap->nbytes) - heap->bytes;
+  transport->pin(transport, heap->bytes, pin_bytes);
+  heap->transport = transport;
 }
