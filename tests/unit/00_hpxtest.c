@@ -101,6 +101,7 @@ static void usage(FILE *f) {
           "\t-s, set timeout (0 disables)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-l, logging level\n"
           "\t-h, show help\n");
 }
 
@@ -243,7 +244,7 @@ int main(int argc, char * argv[]) {
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:T:s:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:T:s:l:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -265,6 +266,9 @@ int main(int argc, char * argv[]) {
       break;
      case 's':
       _timeout = atoi(optarg);
+      break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
