@@ -156,6 +156,7 @@ static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
 
 int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
                    uint32_t *i) {
+  dbg_log_gas("bitmap: searching for %u blocks with %u alignment.\n", n, align);
   int status;
   if (n == 0)
     return LIBHPX_EINVAL;
@@ -191,10 +192,12 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
   *i = abs;
 
   sync_tatas_release(&bitmap->lock);
+  dbg_log_gas("bitmap: found at offset %u.\n", abs);
   return status;
 }
 
 void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n) {
+  dbg_log_gas("bitmap: release %u blocks at %u.\n", n, from);
   sync_tatas_acquire(&bitmap->lock);
   _reset(bitmap->bits, from, n);
   bitmap->min = _min32(bitmap->min, from / BITS_PER_WORD);
