@@ -1,3 +1,4 @@
+#define	je_no JEMALLOC_N(no)
 #define	je_malloc_conf JEMALLOC_N(malloc_conf)
 #define	je_malloc_message JEMALLOC_N(malloc_message)
 #define	je_malloc JEMALLOC_N(malloc)
