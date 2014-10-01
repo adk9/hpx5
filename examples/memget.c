@@ -114,6 +114,7 @@ static void usage(FILE *f) {
           "\t-t, scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-l, logging level\n"
           "\t-h, show help\n");
 }
 
@@ -121,7 +122,7 @@ int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dl:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -136,6 +137,9 @@ int main(int argc, char *argv[argc]) {
      case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
+      break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
