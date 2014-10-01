@@ -1,9 +1,11 @@
 mpirun perfmain
-mpirun parspawn 2
-mpirun parspawn 4
-mpirun parspawn 8
-mpirun parspawn 16
-mpirun seqspawn 2
-mpirun seqspawn 4
-mpirun seqspawn 8
-mpirun seqspawn 16
+mpirun parspawn 1000000
+mpirun parspawn 2000000
+mpirun parspawn 3000000
+mpirun parspawn 4000000
+mpirun parspawn 5000000
+mpirun seqspawn 1000000
+mpirun seqspawn 2000000
+mpirun seqspawn 3000000
+mpirun seqspawn 4000000
+mpirun seqspawn 5000000
