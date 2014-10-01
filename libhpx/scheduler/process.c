@@ -142,9 +142,6 @@ static int _return_credit_action(uint64_t *args) {
 
 int
 parcel_recover_credit(hpx_parcel_t *p) {
-  if (!p->credit || !p->pid)
-    return HPX_SUCCESS;
-
   hpx_addr_t process = hpx_addr_init(0, p->pid, sizeof(_process_t));
   hpx_parcel_t *pp =
       parcel_create(process, _return_credit, &p->credit, sizeof(p->credit),
