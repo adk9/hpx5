@@ -78,7 +78,7 @@ static void _pgas_leave(void) {
 static void *_pgas_global_malloc(size_t bytes) {
   void *addr = (_joined) ? default_malloc(bytes)
                          : arena_malloc(_global_arena, bytes);
-  dbg_log_gas("pgas: global malloc (%p,%lu)\n", addr, bytes);
+  dbg_log_gas("%p, %lu\n", addr, bytes);
   return addr;
 }
 
@@ -95,7 +95,7 @@ static void _pgas_global_free(void *ptr) {
               "(%p, %ld)\n", ptr, base, size);
   }
 
-  dbg_log_gas("pgas: global free (%p)\n", ptr);
+  dbg_log_gas("%p\n", ptr);
 
   if (_joined)
     default_free(ptr);
@@ -106,28 +106,28 @@ static void _pgas_global_free(void *ptr) {
 static void *_pgas_global_calloc(size_t nmemb, size_t size) {
   void *addr = (_joined) ? default_calloc(nmemb, size)
                          : arena_calloc(_global_arena, nmemb, size);
-  dbg_log_gas("pgas: global calloc (%p,%lu,%luX)\n", addr, nmemb, size);
+  dbg_log_gas("%p, %lu, %lu\n", addr, nmemb, size);
   return addr;
 }
 
 static void *_pgas_global_realloc(void *ptr, size_t size) {
   void *addr = (_joined) ? default_realloc(ptr, size)
                          : arena_realloc(_global_arena, ptr, size);
-  dbg_log_gas("pgas: global realloc (%p,%p,%lu)\n", addr, ptr, size);
+  dbg_log_gas("%p, %p, %lu\n", addr, ptr, size);
   return addr;
 }
 
 static void *_pgas_global_valloc(size_t size) {
   void *addr = (_joined) ? default_valloc(size)
                          : arena_valloc(_global_arena, size);
-  dbg_log_gas("pgas: global valloc (%p,%lu)\n", addr, size);
+  dbg_log_gas("%p, %lu\n", addr, size);
   return addr;
 }
 
 static void *_pgas_global_memalign(size_t boundary, size_t size) {
   void *addr = (_joined) ? default_memalign(boundary, size)
                          : arena_memalign(_global_arena, boundary, size);
-  dbg_log_gas("pgas: global memalign (%p,%lu,%lu)\n", addr, boundary, size);
+  dbg_log_gas("%p, %lu, %lu\n", addr, boundary, size);
   return addr;
 }
 
@@ -135,13 +135,15 @@ static int _pgas_global_posix_memalign(void **memptr, size_t alignment,
                                       size_t size) {
   int e = (_joined) ? default_posix_memalign(memptr, alignment, size)
                     : arena_posix_memalign(_global_arena, memptr, alignment, size);
+  if (!e)
+    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, alignment, size);
   return e;
 }
 
 static void *_pgas_local_malloc(size_t bytes) {
   void *addr = (_joined) ? arena_malloc(_local_arena, bytes)
                          : default_malloc(bytes);
-  dbg_log_gas("pgas: local malloc (%p,%lu)\n", addr, bytes);
+  dbg_log_gas("%p, %lu\n", addr, bytes);
   return addr;
 }
 
@@ -150,7 +152,7 @@ static void _pgas_local_free(void *ptr) {
     return;
 
   assert(!heap_contains(_global_heap, ptr));
-  dbg_log_gas("pgas: local free (%p)\n", ptr);
+  dbg_log_gas("%p\n", ptr);
   if (_joined)
     arena_free(_local_arena, ptr);
   else
@@ -160,28 +162,28 @@ static void _pgas_local_free(void *ptr) {
 static void *_pgas_local_calloc(size_t nmemb, size_t size) {
   void *addr = (_joined) ? arena_calloc(_local_arena, nmemb, size)
                          : default_calloc(nmemb, size);
-  dbg_log_gas("pgas: local malloc (%p,%lu,%lu)\n", addr, nmemb, size);
+  dbg_log_gas("%p, %lu, %lu\n", addr, nmemb, size);
   return addr;
 }
 
 static void *_pgas_local_realloc(void *ptr, size_t size) {
   void *addr = (_joined) ? arena_realloc(_local_arena, ptr, size)
                          : default_realloc(ptr, size);
-  dbg_log_gas("pgas: local realloc (%p,%p,%lu)\n", addr, ptr, size);
+  dbg_log_gas("%p, %p, %lu\n", addr, ptr, size);
   return addr;
 }
 
 static void *_pgas_local_valloc(size_t size) {
   void *addr = (_joined) ? arena_valloc(_local_arena, size)
                          : default_valloc(size);
-  dbg_log_gas("pgas: local valloc (%p,%lu)\n", addr, size);
+  dbg_log_gas("%p, %lu\n", addr, size);
   return addr;
 }
 
 static void *_pgas_local_memalign(size_t boundary, size_t size) {
   void *addr = (_joined) ? arena_memalign(_local_arena, boundary, size)
                          : default_memalign(boundary, size);
-  dbg_log_gas("pgas: local memalign (%p,%lu,%lu)\n", addr, boundary, size);
+  dbg_log_gas("%p, %lu, %lu\n", addr, boundary, size);
   return addr;
 }
 
@@ -189,6 +191,8 @@ static int _pgas_local_posix_memalign(void **memptr, size_t alignment,
                                       size_t size) {
   int e = (_joined) ? arena_posix_memalign(_local_arena, memptr, alignment, size)
                     : default_posix_memalign(memptr, alignment, size);
+  if (!e)
+    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, alignment, size);
   return e;
 }
 
