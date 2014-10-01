@@ -22,230 +22,199 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "../bitmap.h"
+#include "../malloc.h"
 #include "../mallctl.h"
 #include "heap.h"
 
 
 /// The PGAS type is a global address space that manages a shared heap.
-typedef struct {
-  gas_class_t vtable;
-  heap_t heap;
-} _pgas_t;
+static heap_t *_global_heap = NULL;
 
+static __thread unsigned _global_arena = UINT_MAX;
+static __thread unsigned _local_arena = UINT_MAX;
+static __thread unsigned _primordial_arena = UINT_MAX;
+static __thread bool _joined = false;
 
-/// Threads join PGAS by swapping their arena into private space with an arena
-/// into the shared heap. This thread-local variable remembers the private space
-/// so that we can continue to use it to satisfy private allocations.
-static __thread unsigned _pvt_arena = UINT_MAX;
-static __thread int _pvt_flags = 0;
-
-
-/// Threads remember the PGAS instance that they join.
-static __thread _pgas_t *_pgas = NULL;
-
-static void *_chunk_alloc(size_t size, size_t alignment, bool *zero,
-                          unsigned arena) {
-  if (!_pgas) {
-    dbg_error("pgas: gas alloc requires thread to join the GAS instance.\n");
-    return NULL;
-  }
-  return heap_chunk_alloc(&_pgas->heap, size, alignment, zero, arena);
+static void *_chunk_alloc(size_t size, size_t alignment, bool *zero, unsigned arena) {
+  return heap_chunk_alloc(_global_heap, size, alignment, zero, arena);
 }
 
 static bool _chunk_dalloc(void *chunk, size_t size, unsigned arena) {
-  assert(_pgas);
-  return heap_chunk_dalloc(&_pgas->heap, chunk, size, arena);
+  return heap_chunk_dalloc(_global_heap, chunk, size, arena);
 }
 
-static bool _is_global(_pgas_t *pgas, void *addr) {
-  return heap_contains(&pgas->heap, addr);
-}
-
-static int _pgas_join(gas_class_t *gas) {
-  if (_pgas && (_pgas == (_pgas_t*)gas))
-    return LIBHPX_OK;
-
-  if (_pgas) {
-    dbg_error("pgas: worker attempted to join a GAS without leaving "
-              "previous one.\n");
+static int _pgas_join(void) {
+  if (!_global_heap) {
+    dbg_error("pgas: attempt to join GAS before global heap allocation.\n");
     return LIBHPX_ERROR;
   }
 
-  unsigned arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
+  if (_global_arena == UINT_MAX)
+    _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
+
+  if (_local_arena == UINT_MAX)
+    _local_arena =  mallctl_create_arena(NULL, NULL);
+
   mallctl_thread_enable_cache();
   mallctl_thread_flush_cache();
-  _pvt_arena = mallctl_thread_set_arena(arena);
-  _pvt_flags = MALLOCX_ARENA(_pvt_arena);
-  _pgas = (void*)gas;
+  unsigned old = mallctl_thread_set_arena(_global_arena);
+  if (_primordial_arena == UINT_MAX)
+    _primordial_arena = old;
+
+  _joined = true;
+
   return LIBHPX_OK;
 }
 
-static void _pgas_leave(gas_class_t *gas) {
-  /// @todo: should get rid of my private arena or something
+static void _pgas_leave(void) {
+  if (_local_arena == UINT_MAX || _global_arena == UINT_MAX)
+    dbg_error("pgas: trying to leave the GAS before joining it.\n");
+
   mallctl_thread_flush_cache();
-  mallctl_thread_set_arena(_pvt_arena);
-  _pgas = NULL;
-  _pvt_arena = UINT_MAX;
-  _pvt_flags = 0;
+  mallctl_thread_set_arena(_local_arena);
+  _joined = false;
 }
 
-static void *_pgas_malloc(gas_class_t *gas, size_t bytes) {
-  if (!bytes)
-    return NULL;
-
-  assert(_pgas && gas == (void*)_pgas);
-  return hpx_mallocx(bytes, 0);
+static void *_pgas_global_malloc(size_t bytes) {
+  return (_joined) ? hpx_malloc(bytes)
+                   : arena_malloc(_global_arena, bytes);
 }
 
-static void _pgas_free(gas_class_t *gas, void *ptr) {
+static void _pgas_global_free(void *ptr) {
   if (!ptr)
     return;
 
-  assert(_pgas && gas == (void*)_pgas);
-  assert(_is_global((_pgas_t*)gas, ptr));
-  hpx_dallocx(ptr, 0);
+  assert(heap_contains(_global_heap, ptr));
+
+  if (_joined)
+    hpx_free(ptr);
+  else
+    arena_free(_global_arena, ptr);
 }
 
-static void *_pgas_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
-  if (!nmemb || !size)
-    return NULL;
-
-  assert(_pgas && gas == (void*)_pgas);
-  return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
+static void *_pgas_global_calloc(size_t nmemb, size_t size) {
+  return (_joined) ? hpx_calloc(nmemb, size)
+                   : arena_calloc(_global_arena, nmemb, size);
 }
 
-static void *_pgas_realloc(gas_class_t *gas, void *ptr, size_t size) {
+static void *_pgas_global_realloc(void *ptr, size_t size) {
+  return (_joined) ? hpx_realloc(ptr, size)
+                   : arena_realloc(_global_arena, ptr, size);
+}
+
+static void *_pgas_global_valloc(size_t size) {
+  return (_joined) ? hpx_valloc(size)
+                   : arena_valloc(_global_arena, size);
+}
+
+static void *_pgas_global_memalign(size_t boundary, size_t size) {
+  return (_joined) ? hpx_memalign(boundary, size)
+                   : arena_memalign(_global_arena, boundary, size);
+}
+
+static int _pgas_global_posix_memalign(void **memptr, size_t alignment,
+                                      size_t size) {
+  return (_joined) ? hpx_posix_memalign(memptr, alignment, size)
+                   : arena_posix_memalign(_global_arena, memptr, alignment, size);
+}
+
+static void *_pgas_local_malloc(size_t bytes) {
+  return (_joined) ? arena_malloc(_local_arena, bytes)
+                   : hpx_malloc(bytes);
+}
+
+static void _pgas_local_free(void *ptr) {
   if (!ptr)
-    return _pgas_malloc(gas, size);
+    return;
 
-  assert(_pgas && gas == (void*)_pgas);
-  return hpx_rallocx(ptr, size, 0);
-}
+  assert(!heap_contains(_global_heap, ptr));
 
-static void *_pgas_valloc(gas_class_t *gas, size_t size) {
-  if (!size)
-    return NULL;
-
-  assert(_pgas && gas == (void*)_pgas);
-  return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
-}
-
-static void *_pgas_memalign(gas_class_t *gas, size_t boundary, size_t size) {
-  assert(_pgas);
-
-  if (!size || !boundary)
-    return NULL;
-
-  assert(_pgas && gas == (void*)_pgas);
-  return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
-}
-
-static int _pgas_posix_memalign(gas_class_t *gas, void **memptr,
-                                size_t alignment, size_t size) {
-  if (!size || !alignment) {
-    *memptr = NULL;
-    return 0;
-  }
-
-  assert(_pgas && gas == (void*)_pgas);
-  *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
-  return (*memptr == 0) ? ENOMEM : 0;
-}
-
-static void *_pgas_local_malloc(gas_class_t *gas, size_t bytes) {
-  return (bytes) ? hpx_mallocx(bytes, _pvt_flags) : NULL;
-}
-
-static void _pgas_local_free(gas_class_t *gas, void *ptr) {
-  if (ptr) {
-    assert(!_is_global((_pgas_t*)gas, ptr));
-    hpx_dallocx(ptr, _pvt_flags);
-  }
-}
-
-static void *_pgas_local_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
-  if (nmemb && size)
-    return hpx_mallocx(nmemb * size, _pvt_flags | MALLOCX_ZERO);
+  if (_joined)
+    arena_free(_local_arena, ptr);
   else
-    return NULL;
+    hpx_free(ptr);
 }
 
-static void *_pgas_local_realloc(gas_class_t *gas, void *ptr, size_t size) {
-  if (ptr)
-    return hpx_rallocx(ptr, size, _pvt_flags);
-  else
-    return _pgas_local_malloc(gas, size);
+static void *_pgas_local_calloc(size_t nmemb, size_t size) {
+  return (_joined) ? arena_calloc(_local_arena, nmemb, size)
+                   : hpx_calloc(nmemb, size);
 }
 
-static void *_pgas_local_valloc(gas_class_t *gas, size_t size) {
-  return hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(HPX_PAGE_SIZE));
+static void *_pgas_local_realloc(void *ptr, size_t size) {
+  return (_joined) ? arena_realloc(_local_arena, ptr, size)
+                   : hpx_realloc(ptr, size);
 }
 
-static void *_pgas_local_memalign(gas_class_t *gas, size_t boundary,
-                                  size_t size) {
-  return hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(boundary));
+static void *_pgas_local_valloc(size_t size) {
+  return (_joined) ? arena_valloc(_local_arena, size)
+                   : hpx_valloc(size);
 }
 
-static int _pgas_local_posix_memalign(gas_class_t *gas, void **memptr,
-                                      size_t alignment, size_t size) {
-  if (!size || !alignment) {
-    *memptr = NULL;
-    return 0;
-  }
+static void *_pgas_local_memalign(size_t boundary, size_t size) {
+  return (_joined) ? arena_memalign(_local_arena, boundary, size)
+                   : hpx_memalign(boundary, size);
+}
 
-  *memptr = hpx_mallocx(size, _pvt_flags | MALLOCX_ALIGN(alignment));
-  return (*memptr == 0) ? ENOMEM : 0;
+static int _pgas_local_posix_memalign(void **memptr, size_t alignment,
+                                      size_t size) {
+  return (_joined) ? arena_posix_memalign(_local_arena, memptr, alignment, size)
+                   : hpx_posix_memalign(memptr, alignment, size);
 }
 
 static void _pgas_delete(gas_class_t *gas) {
-  _pgas_t *pgas = (void*)gas;
-
-  if (!pgas)
-    return;
-
-  heap_fini(&pgas->heap);
-  free(pgas);
+  if (_global_heap) {
+    heap_fini(_global_heap);
+    free(_global_heap);
+    _global_heap = NULL;
+  }
 }
 
+static gas_class_t _pgas_vtable = {
+  .type   = HPX_GAS_PGAS,
+  .delete = _pgas_delete,
+  .join   = _pgas_join,
+  .leave  = _pgas_leave,
+  .global = {
+    .malloc         = _pgas_global_malloc,
+    .free           = _pgas_global_free,
+    .calloc         = _pgas_global_calloc,
+    .realloc        = _pgas_global_realloc,
+    .valloc         = _pgas_global_valloc,
+    .memalign       = _pgas_global_memalign,
+    .posix_memalign = _pgas_global_posix_memalign
+  },
+  .local  = {
+    .malloc         = _pgas_local_malloc,
+    .free           = _pgas_local_free,
+    .calloc         = _pgas_local_calloc,
+    .realloc        = _pgas_local_realloc,
+    .valloc         = _pgas_local_valloc,
+    .memalign       = _pgas_local_memalign,
+    .posix_memalign = _pgas_local_posix_memalign
+  }
+};
+
 gas_class_t *gas_pgas_new(size_t heap_size) {
+  if (_global_heap)
+    return &_pgas_vtable;
+
   if (!mallctl_disable_dirty_page_purge()) {
     dbg_error("pgas: failed to disable dirty page purging\n");
     return NULL;
   }
 
-  _pgas_t *pgas = malloc(sizeof(*pgas));
-  if (!pgas) {
-    dbg_error("pgas: could not allocate pgas instance.\n");
+  _global_heap = malloc(sizeof(*_global_heap));
+  if (!_global_heap) {
+    dbg_error("pgas: could not allocate global heap\n");
     return NULL;
   }
 
-  pgas->vtable.type                 = HPX_GAS_PGAS;
-  pgas->vtable.delete               = _pgas_delete;
-  pgas->vtable.join                 = _pgas_join;
-  pgas->vtable.leave                = _pgas_leave;
-
-  pgas->vtable.malloc               = _pgas_malloc;
-  pgas->vtable.free                 = _pgas_free;
-  pgas->vtable.calloc               = _pgas_calloc;
-  pgas->vtable.realloc              = _pgas_realloc;
-  pgas->vtable.valloc               = _pgas_valloc;
-  pgas->vtable.memalign             = _pgas_memalign;
-  pgas->vtable.posix_memalign       = _pgas_posix_memalign;
-
-  pgas->vtable.local_malloc         = _pgas_local_malloc;
-  pgas->vtable.local_free           = _pgas_local_free;
-  pgas->vtable.local_calloc         = _pgas_local_calloc;
-  pgas->vtable.local_realloc        = _pgas_local_realloc;
-  pgas->vtable.local_valloc         = _pgas_local_valloc;
-  pgas->vtable.local_memalign       = _pgas_local_memalign;
-  pgas->vtable.local_posix_memalign = _pgas_local_posix_memalign;
-
-  int e = heap_init(&pgas->heap, heap_size);
+  int e = heap_init(_global_heap, heap_size);
   if (e) {
-    dbg_error("pgas: could not initialize heap structure.\n");
-    hpx_free(pgas);
+    dbg_error("pgas: failed to allocate global heap\n");
+    free(_global_heap);
     return NULL;
   }
 
-  return (void*)pgas;
+  return &_pgas_vtable;
 }

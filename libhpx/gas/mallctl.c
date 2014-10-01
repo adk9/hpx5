@@ -57,16 +57,21 @@ unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
   if (e)
     dbg_error("jemalloc: failed to allocate a new arena %d.\n", e);
 
-  char path[128];
-  snprintf(path, 128, "arena.%u.chunk.alloc", arena);
-  e = hpx_mallctl(path, NULL, NULL, (void*)&alloc, sizeof(alloc));
-  if (e)
-    dbg_error("jemalloc: failed to set chunk allocator on arena %u\n", arena);
+  if (alloc) {
+    char path[128];
+    snprintf(path, 128, "arena.%u.chunk.alloc", arena);
+    e = hpx_mallctl(path, NULL, NULL, (void*)&alloc, sizeof(alloc));
+    if (e)
+      dbg_error("jemalloc: failed to set chunk allocator on arena %u\n", arena);
+  }
 
-  snprintf(path, 128, "arena.%u.chunk.dalloc", arena);;
-  e = hpx_mallctl(path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
-  if (e)
-    dbg_error("jemalloc: failed to set chunk dallocator on arena %u\n", arena);
+  if (dalloc) {
+    char path[128];
+    snprintf(path, 128, "arena.%u.chunk.dalloc", arena);;
+    e = hpx_mallctl(path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
+    if (e)
+      dbg_error("jemalloc: failed to set chunk dallocator on arena %u\n", arena);
+  }
 
   return arena;
 }
@@ -88,7 +93,6 @@ unsigned mallctl_thread_set_arena(unsigned arena) {
   e = hpx_mallctl("thread.arena", NULL, NULL, &arena, sz2);
   if (e)
     dbg_error("jemalloc: failed to update the default arena\n");
-  printf("arena %u set to %u\n", old, arena);
   return old;
 }
 

@@ -86,7 +86,8 @@ int heap_init(heap_t *heap, const size_t size) {
                 size, heap->nbytes);
 
   dbg_log_gas("pgas: allocating %lu bytes for the shared heap.\n", heap->nbytes);
-  heap->bytes = _map_heap(heap->nbytes);
+  heap->raw_bytes = _map_heap(heap->nbytes);
+  heap->bytes = heap->raw_bytes + (heap->bytes_per_chunk - (uintptr_t)heap->raw_bytes % heap->bytes_per_chunk);
   dbg_log_gas("pgas: allocated heap.\n");
 
   return LIBHPX_OK;
@@ -99,8 +100,8 @@ void heap_fini(heap_t *heap) {
   if (heap->chunks)
     bitmap_delete(heap->chunks);
 
-  if (heap->bytes) {
-    int e = munmap(heap->bytes, heap->nbytes);
+  if (heap->raw_bytes) {
+    int e = munmap(heap->raw_bytes, heap->nbytes);
     if (e)
       dbg_error("pgas: failed to munmap the heap.\n");
   }
@@ -135,6 +136,6 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
 }
 
 bool heap_contains(heap_t *heap, void *addr) {
-  ptrdiff_t diff = (char*)addr - heap->bytes;
-  return (0 <= diff && diff < heap->nbytes);
+  return (((void*)heap->bytes <= addr) &&
+          (addr < (void*)(heap->raw_bytes + heap->nbytes)));
 }
