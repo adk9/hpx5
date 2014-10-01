@@ -32,39 +32,40 @@ extern "C" {
  * these macro definitions.
  */
 #ifndef JEMALLOC_NO_RENAME
-#  define je_malloc_conf hpx_malloc_conf
-#  define je_malloc_message hpx_malloc_message
-#  define je_malloc hpx_malloc
-#  define je_calloc hpx_calloc
-#  define je_posix_memalign hpx_posix_memalign
-#  define je_aligned_alloc hpx_aligned_alloc
-#  define je_realloc hpx_realloc
-#  define je_free hpx_free
-#  define je_mallocx hpx_mallocx
-#  define je_rallocx hpx_rallocx
-#  define je_xallocx hpx_xallocx
-#  define je_sallocx hpx_sallocx
-#  define je_dallocx hpx_dallocx
-#  define je_sdallocx hpx_sdallocx
-#  define je_nallocx hpx_nallocx
-#  define je_mallctl hpx_mallctl
-#  define je_mallctlnametomib hpx_mallctlnametomib
-#  define je_mallctlbymib hpx_mallctlbymib
-#  define je_malloc_stats_print hpx_malloc_stats_print
-#  define je_malloc_usable_size hpx_malloc_usable_size
-#  define je_memalign hpx_memalign
-#  define je_valloc hpx_valloc
+#  define je_no
+#  define je_malloc_conf libhpx_malloc_conf
+#  define je_malloc_message libhpx_malloc_message
+#  define je_malloc libhpx_malloc
+#  define je_calloc libhpx_calloc
+#  define je_posix_memalign libhpx_posix_memalign
+#  define je_aligned_alloc libhpx_aligned_alloc
+#  define je_realloc libhpx_realloc
+#  define je_free libhpx_free
+#  define je_mallocx libhpx_mallocx
+#  define je_rallocx libhpx_rallocx
+#  define je_xallocx libhpx_xallocx
+#  define je_sallocx libhpx_sallocx
+#  define je_dallocx libhpx_dallocx
+#  define je_sdallocx libhpx_sdallocx
+#  define je_nallocx libhpx_nallocx
+#  define je_mallctl libhpx_mallctl
+#  define je_mallctlnametomib libhpx_mallctlnametomib
+#  define je_mallctlbymib libhpx_mallctlbymib
+#  define je_malloc_stats_print libhpx_malloc_stats_print
+#  define je_malloc_usable_size libhpx_malloc_usable_size
+#  define je_memalign libhpx_memalign
+#  define je_valloc libhpx_valloc
 #endif
 
 #include <limits.h>
 #include <strings.h>
 
-#define	JEMALLOC_VERSION "3.6.0-130-g0c5dd03e889d0269170b5db9fa872738d906eb78"
+#define	JEMALLOC_VERSION "3.6.0-136-g4dcf04bfc03b9e9eb50015a8fc8735de28c23090"
 #define	JEMALLOC_VERSION_MAJOR 3
 #define	JEMALLOC_VERSION_MINOR 6
 #define	JEMALLOC_VERSION_BUGFIX 0
-#define	JEMALLOC_VERSION_NREV 130
-#define	JEMALLOC_VERSION_GID "0c5dd03e889d0269170b5db9fa872738d906eb78"
+#define	JEMALLOC_VERSION_NREV 136
+#define	JEMALLOC_VERSION_GID "4dcf04bfc03b9e9eb50015a8fc8735de28c23090"
 
 #  define MALLOCX_LG_ALIGN(la)	(la)
 #  if LG_SIZEOF_PTR == 2
@@ -166,6 +167,7 @@ typedef bool (chunk_dalloc_t)(void *, size_t, unsigned);
 #  ifndef JEMALLOC_NO_DEMANGLE
 #    define JEMALLOC_NO_DEMANGLE
 #  endif
+#  define no je_no
 #  define malloc_conf je_malloc_conf
 #  define malloc_message je_malloc_message
 #  define malloc je_malloc
@@ -198,6 +200,7 @@ typedef bool (chunk_dalloc_t)(void *, size_t, unsigned);
  * and/or --with-jemalloc-prefix.
  */
 #ifndef JEMALLOC_NO_DEMANGLE
+#  undef je_no
 #  undef je_malloc_conf
 #  undef je_malloc_message
 #  undef je_malloc

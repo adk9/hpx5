@@ -6,8 +6,8 @@
  * public APIs to be prefixed.  This makes it possible, with some care, to use
  * multiple allocators simultaneously.
  */
-#define JEMALLOC_PREFIX "hpx_"
-#define JEMALLOC_CPREFIX "HPX_"
+#define JEMALLOC_PREFIX "libhpx_"
+#define JEMALLOC_CPREFIX "LIBHPX_"
 
 /*
  * JEMALLOC_PRIVATE_NAMESPACE is used as a prefix for all library-private APIs.
@@ -215,5 +215,8 @@
 
 /* glibc memalign hook */
 #define JEMALLOC_GLIBC_MEMALIGN_HOOK 
+
+/* adaptive mutex support in pthreads */
+#define JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP 
 
 #endif /* JEMALLOC_INTERNAL_DEFS_H_ */
