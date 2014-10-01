@@ -32,12 +32,17 @@ static void _smp_bind(gas_class_t *gas, struct transport_class *transport) {
 static void _smp_delete(gas_class_t *gas) {
 }
 
+static bool _smp_is_global(gas_class_t *gas, void *addr) {
+  return true;
+}
+
 static gas_class_t _smp_vtable = {
   .type   = HPX_GAS_SMP,
   .bind   = _smp_bind,
   .delete = _smp_delete,
   .join   = _smp_join,
   .leave  = _smp_leave,
+  .is_global = _smp_is_global,
   .global = {
     .malloc         = libhpx_malloc,
     .free           = libhpx_free,

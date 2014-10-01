@@ -37,6 +37,7 @@ struct gas_class {
   void (*delete)(gas_class_t *gas);
   int (*join)(void);
   void (*leave)(void);
+  bool (*is_global)(gas_class_t *gas, void *addr);
 
   as_class_t global;
   as_class_t local;
