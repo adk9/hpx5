@@ -125,13 +125,3 @@ void network_barrier(network_class_t *network) {
 routing_t *network_get_routing(network_class_t *network) {
   return network->routing;
 }
-
-
-void *network_malloc(size_t bytes, size_t align) {
-  return transport_malloc(here->transport, bytes, align);
-}
-
-
-void network_free(void *p) {
-  transport_free(here->transport, p);
-}

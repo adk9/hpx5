@@ -104,23 +104,6 @@ HPX_INTERNAL void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p)
 
 
 /// ----------------------------------------------------------------------------
-/// Malloc memory that can be sent across the network.
-///
-/// This can be used for the global address space, but is only used for parcels
-/// at the moment.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void *network_malloc(size_t bytes, size_t alignment)
-  HPX_MALLOC;
-
-
-/// ----------------------------------------------------------------------------
-/// Free network allocated memory.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_free(void *p)
-  HPX_NON_NULL(1);
-
-
-/// ----------------------------------------------------------------------------
 /// Complete a parcel send over the network.
 /// ----------------------------------------------------------------------------
 HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(network_class_t *network)

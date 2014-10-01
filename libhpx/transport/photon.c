@@ -20,11 +20,9 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>                            // required for jemalloc
 #include <sys/mman.h>
 #include <photon.h>
 
-#include "jemalloc/jemalloc.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -46,8 +44,6 @@ typedef struct {
   struct photon_config_t  cfg;
   progress_t        *progress;
   unsigned              arena;
-  chunk_alloc_t        *alloc;
-  chunk_dalloc_t      *dalloc;
 } photon_t;
 
 
@@ -350,66 +346,6 @@ _progress(transport_class_t *t, bool flush)
 }
 
 
-static void *
-_malloc(transport_class_t *t, size_t bytes, size_t align)
-{
-  photon_t *photon = (photon_t *)t;
-  void *p = libhpx_mallocx(bytes,
-              MALLOCX_ALIGN(align) | MALLOCX_ARENA(photon->arena));
-  if (!p)
-    dbg_error("photon: failed network allocation.\n");
-
-  return p;
-}
-
-
-static void
-_free(transport_class_t *t, void *p)
-{
-  photon_t *photon = (photon_t *)t;
-  libhpx_dallocx(p, MALLOCX_ARENA(photon->arena));
-}
-
-
-static void *
-_alloc_pinned_chunk(size_t size, size_t alignment, bool *zero, unsigned arena_ind)
-{
-  photon_t *t = (photon_t *)here->transport;
-  assert(t);
-  void *chunk = t->alloc(size, alignment, zero, arena_ind);
-  if (!chunk) {
-    dbg_error("photon: could not alloc jemalloc chunk of size %lu.\n", size);
-    return NULL;
-  }
-
-  if ((uintptr_t)chunk % alignment != 0) {
-    dbg_error("photon: could not alloc jemalloc chunk of size %lu "
-              "with alignment %lu.\n", size, alignment);
-    hpx_abort();
-  }
-
-  if (photon_register_buffer(chunk, size)) {
-    dbg_error("photon: could not pin buffer %p of size %lu.\n", chunk, size);
-    t->dalloc(chunk, size, arena_ind);
-  }
-
-  return chunk;
-}
-
-
-static bool
-_dalloc_pinned_chunk(void *chunk, size_t size, unsigned arena_ind)
-{
-  if (photon_unregister_buffer(chunk, size))
-   dbg_error("photon: could not unpin buffer %p of size %lu.\n",
-             chunk, size);
-
-  photon_t *t = (photon_t *)here->transport;
-  assert(t);
-  return t->dalloc(chunk, size, arena_ind);
-}
-
-
 transport_class_t *transport_new_photon(void) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
@@ -430,8 +366,6 @@ transport_class_t *transport_new_photon(void) {
   photon->class.test           = _test;
   photon->class.testsome       = NULL;
   photon->class.progress       = _progress;
-  photon->class.malloc         = _malloc;
-  photon->class.free           = _free;
 
   // runtime configuration options
   char* eth_dev;
@@ -491,32 +425,6 @@ transport_class_t *transport_new_photon(void) {
   photon->progress     = network_progress_new();
   if (!photon->progress) {
     dbg_error("photon: failed to start the progress loop.\n");
-  }
-
-  size_t sz = sizeof(photon->arena);
-  int error = libhpx_mallctl("arenas.extend", &photon->arena, &sz, NULL, 0);
-  if (error) {
-    dbg_error("photon: failed to allocate a pinned arena %d.\n", error);
-    hpx_abort();
-  }
-
-  sz = sizeof(photon->alloc);
-  char path[128];
-  snprintf(path, 128, "arena.%u.chunk.alloc", photon->arena);
-  chunk_alloc_t *alloc = _alloc_pinned_chunk;
-  error = libhpx_mallctl(path, (void*)&photon->alloc, &sz, (void*)&alloc,
-                      sizeof(alloc));
-  if (error) {
-    dbg_error("photon: failed to set arena allocator.\n");
-  }
-
-  sz = sizeof(photon->dalloc);
-  snprintf(path, 128, "arena.%u.chunk.dalloc", photon->arena);
-  chunk_dalloc_t *dalloc = _dalloc_pinned_chunk;
-  error = libhpx_mallctl(path, (void*)&photon->dalloc, &sz, (void*)&dalloc,
-                      sizeof(dalloc));
-  if (error) {
-    dbg_error("photon: failed to set arena de-allocator.\n");
   }
 
   return &photon->class;
