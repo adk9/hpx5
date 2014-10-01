@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "hpx/hpx.h"
+#include "common.h"
 
 #define MAX_MSG_SIZE        (1<<22)
 #define SKIP_LARGE          10
@@ -63,15 +64,16 @@ static int _main_action(void *args) {
 
   if (size == 1) {
     fprintf(stderr, "This test requires at least two HPX threads\n");
+    fclose(test_log);
     hpx_shutdown(HPX_ERROR);
   }
 
   hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
   hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
 
-  fprintf(stdout, HEADER);
-  fprintf(stdout, "# [ pairs: %d ]\n", size/2);
-  fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
+  fprintf(test_log, HEADER);
+  fprintf(test_log, "# [ pairs: %d ]\n", size/2);
+  fprintf(test_log, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
   fflush(stdout);
 
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
@@ -101,10 +103,11 @@ static int _main_action(void *args) {
     wtime(&t_end);
 
     double latency = (t_end - t_start)/(1.0 * loop);
-    fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
+    fprintf(test_log, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
+  fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
 
@@ -146,6 +149,8 @@ int main(int argc, char *argv[argc]) {
       return -1;
     }
   }
+
+  test_log = fopen("test.log", "a+");
 
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
