@@ -1,7 +1,7 @@
 .PHONY: buildall buildtests
 
 TESTS                   = 
-                           
+
 check_PROGRAMS = $(TESTS)
 
 NPROCS ?= 2
