@@ -182,12 +182,17 @@ static void _pgas_delete(gas_class_t *gas) {
   }
 }
 
+static bool _pgas_is_global(gas_class_t *gas, void *addr) {
+  return heap_contains(_global_heap, addr);
+}
+
 static gas_class_t _pgas_vtable = {
-  .type   = HPX_GAS_PGAS,
-  .bind   = _pgas_bind,
-  .delete = _pgas_delete,
-  .join   = _pgas_join,
-  .leave  = _pgas_leave,
+  .type      = HPX_GAS_PGAS,
+  .bind      = _pgas_bind,
+  .delete    = _pgas_delete,
+  .join      = _pgas_join,
+  .leave     = _pgas_leave,
+  .is_global = _pgas_is_global,
   .global = {
     .malloc         = _pgas_global_malloc,
     .free           = _pgas_global_free,
