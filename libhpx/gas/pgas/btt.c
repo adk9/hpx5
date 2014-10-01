@@ -142,9 +142,9 @@ btt_class_t *btt_pgas_new(size_t heap_size) {
   }
   if (btt->table == MAP_FAILED) {
     dbg_error("pgas: could not mmap block-translation-table, falling back to "
-        "HPX_GAS_NOGLOBAL\n");
+        "HPX_GAS_SMP\n");
     free(btt);
-    return btt_new(HPX_GAS_NOGLOBAL, heap_size);
+    return btt_new(HPX_GAS_SMP, heap_size);
   }
 
   return &btt->class;

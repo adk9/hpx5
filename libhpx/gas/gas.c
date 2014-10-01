@@ -33,8 +33,8 @@ gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) {
    case (HPX_GAS_AGAS_SWITCH):
     gas = NULL;//gas_agas_switch_new(heap_size);
     break;
-   case (HPX_GAS_NOGLOBAL):
-    gas = NULL;//gas_local_only_new(heap_size);
+   case (HPX_GAS_SMP):
+    gas = gas_smp_new(heap_size);
     break;
   };
   assert(gas);
