@@ -14,37 +14,46 @@
 # include "config.h"
 #endif
 
-#include <errno.h>
 #include <stdbool.h>
 #include <jemalloc/jemalloc.h>
-#include "smp.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
 
-void *smp_malloc(size_t bytes) {
-  return hpx_mallocx(bytes, 0);
+static int _smp_join(void) {
+  return LIBHPX_OK;
 }
 
-void smp_free(void *ptr) {
-  if (ptr)
-    hpx_dallocx(ptr, 0);
+static void _smp_leave(void) {
 }
 
-void *smp_calloc(size_t nmemb, size_t size) {
-  return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
+static void _smp_delete(gas_class_t *gas) {
 }
 
-void *smp_realloc(void *ptr, size_t size) {
-  return hpx_rallocx(ptr, size, 0);
-}
+static gas_class_t _smp_vtable = {
+  .type   = HPX_GAS_SMP,
+  .delete = _smp_delete,
+  .join   = _smp_join,
+  .leave  = _smp_leave,
+  .global = {
+    .malloc         = hpx_malloc,
+    .free           = hpx_free,
+    .calloc         = hpx_calloc,
+    .realloc        = hpx_realloc,
+    .valloc         = hpx_valloc,
+    .memalign       = hpx_memalign,
+    .posix_memalign = hpx_posix_memalign
+  },
+  .local  = {
+    .malloc         = hpx_malloc,
+    .free           = hpx_free,
+    .calloc         = hpx_calloc,
+    .realloc        = hpx_realloc,
+    .valloc         = hpx_valloc,
+    .memalign       = hpx_memalign,
+    .posix_memalign = hpx_posix_memalign
+  }
+};
 
-void *smp_valloc(size_t size) {
-  return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
-}
-
-void *smp_memalign(size_t boundary, size_t size) {
-  return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
-}
-
-int smp_posix_memalign(void **memptr, size_t alignment, size_t size) {
-  *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
-  return (*memptr == 0) ? ENOMEM : 0;
+gas_class_t *gas_smp_new(size_t heap_size) {
+  return &_smp_vtable;
 }

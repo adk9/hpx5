@@ -33,7 +33,7 @@ btt_class_t *btt_new(hpx_gas_t type, size_t heap_size) {
    case (HPX_GAS_AGAS_SWITCH):
     btt = btt_agas_switch_new(heap_size);
     break;
-   case (HPX_GAS_NOGLOBAL):
+   case (HPX_GAS_SMP):
     btt = btt_local_only_new(heap_size);
     break;
   };

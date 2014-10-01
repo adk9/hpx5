@@ -283,7 +283,7 @@ hpx_abort(void) {
 /// shared [1] T foo[n]; where sizeof(T) == bytes
 hpx_addr_t
 hpx_gas_global_alloc(size_t n, uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+  assert(here->btt->type != HPX_GAS_SMP);
 
   int ranks = here->ranks;
 
@@ -315,7 +315,7 @@ hpx_gas_global_alloc(size_t n, uint32_t bytes) {
 
 hpx_addr_t
 hpx_gas_global_calloc(size_t n, uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+  assert(here->btt->type != HPX_GAS_SMP);
 
   int ranks = here->ranks;
 
@@ -349,7 +349,7 @@ hpx_gas_global_calloc(size_t n, uint32_t bytes) {
 /// global address space.
 hpx_addr_t
 hpx_gas_alloc(uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_NOGLOBAL);
+  assert(here->btt->type != HPX_GAS_SMP);
 
   hpx_addr_t addr;
   int ranks = here->ranks;

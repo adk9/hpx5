@@ -19,7 +19,7 @@
 //! Configuration options for which global memory model to use.
 typedef enum {
   HPX_GAS_DEFAULT = 0, //!< Let HPX choose what memory model to use.
-  HPX_GAS_NOGLOBAL,    //!< Do not use global memory.
+  HPX_GAS_SMP,         //!< Do not use global memory.
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
   HPX_GAS_PGAS_SWITCH, //!< Use hardware-accelerated PGAS.

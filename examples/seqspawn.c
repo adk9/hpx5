@@ -69,7 +69,7 @@ static int _main_action(int *args) {
 /// ----------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.gas          = HPX_GAS_NOGLOBAL;
+  cfg.gas          = HPX_GAS_SMP;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {

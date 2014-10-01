@@ -39,7 +39,7 @@ struct gas_class {
   as_class_t local;
 };
 
-gas_class_t *gas_local_only_new(size_t heap_size) HPX_INTERNAL;
+gas_class_t *gas_smp_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_pgas_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_agas_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_agas_switch_new(size_t heap_size) HPX_INTERNAL;
