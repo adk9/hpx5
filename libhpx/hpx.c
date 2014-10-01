@@ -149,6 +149,7 @@ int hpx_init(const hpx_config_t *cfg) {
 
   // 7) insert the base mapping for our local data segment, and pin it so that
   //    it doesn't go anywhere, ever....
+  gas_bind(here->gas, here->transport);
   btt_insert(here->btt, HPX_HERE, here);
   void *local;
   bool pinned = hpx_gas_try_pin(HPX_HERE, &local);

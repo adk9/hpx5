@@ -49,6 +49,8 @@
 #include <stddef.h>
 #include "bitmap.h"
 
+struct transport_class;
+
 typedef struct {
   volatile size_t  csbrk;
   size_t bytes_per_chunk;
@@ -70,6 +72,9 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
   HPX_INTERNAL;
 
 bool heap_contains(heap_t *heap, void *addr)
+  HPX_INTERNAL;
+
+void heap_bind_transport(heap_t *heap, struct transport_class *transport)
   HPX_INTERNAL;
 
 #endif

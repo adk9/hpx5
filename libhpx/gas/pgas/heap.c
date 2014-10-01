@@ -21,6 +21,7 @@
 #include <libsync/sync.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/transport.h"
 #include "../mallctl.h"
 #include "heap.h"
 
@@ -138,4 +139,8 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
 bool heap_contains(heap_t *heap, void *addr) {
   return (((void*)heap->bytes <= addr) &&
           (addr < (void*)(heap->raw_bytes + heap->nbytes)));
+}
+
+void heap_bind_transport(heap_t *heap, transport_class_t *transport) {
+  transport->pin(transport, heap->bytes, (heap->raw_bytes + heap->nbytes) - heap->bytes);
 }

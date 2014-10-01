@@ -15,6 +15,8 @@
 
 #include <hpx/hpx.h>
 
+struct transport_class;
+
 typedef struct as_class as_class_t;
 struct as_class {
   void *(*malloc)(size_t bytes);
@@ -31,6 +33,7 @@ typedef struct gas_class gas_class_t;
 struct gas_class {
   hpx_gas_t type;
 
+  void (*bind)(gas_class_t *gas, struct transport_class *transport);
   void (*delete)(gas_class_t *gas);
   int (*join)(void);
   void (*leave)(void);
@@ -44,6 +47,11 @@ gas_class_t *gas_pgas_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_agas_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_agas_switch_new(size_t heap_size) HPX_INTERNAL;
 gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) HPX_INTERNAL;
+
+inline static void gas_bind(gas_class_t *gas, struct transport_class *transport)
+{
+  gas->bind(gas, transport);
+}
 
 inline static void gas_delete(gas_class_t *gas) {
   gas->delete(gas);
