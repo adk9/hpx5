@@ -98,10 +98,13 @@ static void usage(FILE *f) {
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
           "\t-T, select a transport by number (see hpx_config.h)\n"
+          "\t-s, set timeout (0 disables)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
+
+static unsigned _timeout = 1200;
 
 //****************************************************************************
 // Main action to run check as HPX Application
@@ -115,7 +118,8 @@ Suite *test_suite(void)
   tcase_add_unchecked_fixture(tc, hpxtest_core_setup, hpxtest_core_teardown);
 
   /* set timeout */
-  tcase_set_timeout(tc, 1200);
+  if (_timeout)
+    tcase_set_timeout(tc, _timeout);
 
   add_02_TestMemAlloc(tc);
   add_03_TestGlobalMemAlloc(tc);
@@ -236,10 +240,10 @@ int main(int argc, char * argv[]) {
   //dbg_wait();
 
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  
+
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:T:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:T:s:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -258,6 +262,9 @@ int main(int argc, char * argv[]) {
      case 'T':
       cfg.transport = atoi(optarg);
       assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
+      break;
+     case 's':
+      _timeout = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
