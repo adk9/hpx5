@@ -41,16 +41,16 @@ struct transport_class {
   void (*unpin)(transport_class_t*, const void* buffer, size_t len)
     HPX_NON_NULL(1);
 
-  // We can assume the transports have a mechanism to acquire the buffer 
+  // We can assume the transports have a mechanism to acquire the buffer
   // metadata needed for a put/get operation.
   int (*put)(transport_class_t*, int dest, const void *buffer, size_t size,
              void *rbuffer, size_t rsize, void *rid, void *request)
     HPX_NON_NULL(1, 3);
-  
+
   int (*get)(transport_class_t*, int dest, void *buffer, size_t size,
              const void *rbuffer, size_t rsize, void *rid, void *request)
     HPX_NON_NULL(1, 3);
-  
+
   int (*send)(transport_class_t*, int dest, const void *buffer, size_t size,
               void *request)
     HPX_NON_NULL(1, 3);
@@ -79,12 +79,6 @@ struct transport_class {
     HPX_NON_NULL(1, 3, 4);
 
   void (*progress)(transport_class_t *t, bool flush)
-    HPX_NON_NULL(1);
-
-  void *(*malloc)(transport_class_t *, size_t, size_t)
-    HPX_NON_NULL(1);
-
-  void (*free)(transport_class_t *t, void *p)
     HPX_NON_NULL(1);
 };
 
@@ -184,16 +178,5 @@ transport_barrier(transport_class_t *t) {
   t->barrier();
 }
 
-
-inline static void *
-transport_malloc(transport_class_t *t, size_t bytes, size_t align) {
-  return t->malloc(t, bytes, align);
-}
-
-
-inline static void
-transport_free(transport_class_t *t, void *p) {
-  t->free(t, p);
-}
 
 #endif // LIBHPX_TRANSPORT_H

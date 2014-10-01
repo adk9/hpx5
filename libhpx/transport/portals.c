@@ -461,19 +461,6 @@ static void _progress(transport_class_t *t, bool flush) {
 }
 
 
-static void *_malloc(transport_class_t *t, size_t bytes, size_t align) {
-  void *p = NULL;
-  if (posix_memalign(&p, align, bytes))
-    dbg_error("failed network allocation.\n");
-  return p;
-}
-
-
-static void _free(transport_class_t *t, void *p) {
-  free(p);
-}
-
-
 transport_class_t *transport_new_portals(void) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
@@ -499,8 +486,6 @@ transport_class_t *transport_new_portals(void) {
   portals->class.test           = _test;
   portals->class.testsome       = NULL;
   portals->class.progress       = _progress;
-  portals->class.malloc         = _malloc;
-  portals->class.free           = _free;
 
   portals->interface            = PTL_INVALID_HANDLE;
   portals->sendq                = PTL_INVALID_HANDLE;
