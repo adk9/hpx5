@@ -17,7 +17,8 @@
 #include "libhpx/gas.h"
 #include "libhpx/debug.h"
 
-gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) {
+gas_class_t *gas_new(size_t heap_size, struct boot_class *boot, hpx_gas_t type)
+{
   gas_class_t *gas = NULL;
   switch (type) {
    default:
@@ -25,7 +26,7 @@ gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) {
     dbg_log_gas("HPX GAS defaults to PGAS.\n");
    case (HPX_GAS_PGAS):
    case (HPX_GAS_PGAS_SWITCH):
-    gas = gas_pgas_new(heap_size);
+    gas = gas_pgas_new(heap_size, boot);
     break;
    case (HPX_GAS_AGAS):
     gas = NULL;//gas_agas_new(heap_size);
@@ -34,7 +35,7 @@ gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) {
     gas = NULL;//gas_agas_switch_new(heap_size);
     break;
    case (HPX_GAS_SMP):
-    gas = gas_smp_new(heap_size);
+    gas = gas_smp_new(heap_size, boot);
     break;
   };
   assert(gas);

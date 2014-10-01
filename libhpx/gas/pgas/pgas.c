@@ -18,9 +18,10 @@
 #include <stdbool.h>
 #include <jemalloc/jemalloc.h>
 #include <hpx/hpx.h>
-#include "libhpx/libhpx.h"
+#include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
 #include "../bitmap.h"
 #include "../malloc.h"
 #include "../mallctl.h"
@@ -242,7 +243,7 @@ static gas_class_t _pgas_vtable = {
   }
 };
 
-gas_class_t *gas_pgas_new(size_t heap_size) {
+gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot) {
   if (_global_heap)
     return &_pgas_vtable;
 

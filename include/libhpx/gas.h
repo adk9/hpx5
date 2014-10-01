@@ -15,6 +15,7 @@
 
 #include <hpx/hpx.h>
 
+struct boot_class;
 struct transport_class;
 
 typedef struct as_class as_class_t;
@@ -33,21 +34,38 @@ typedef struct gas_class gas_class_t;
 struct gas_class {
   hpx_gas_t type;
 
+  // Initialization
   void (*bind)(gas_class_t *gas, struct transport_class *transport);
   void (*delete)(gas_class_t *gas);
   int (*join)(void);
   void (*leave)(void);
   bool (*is_global)(gas_class_t *gas, void *addr);
 
+  //
   as_class_t global;
   as_class_t local;
+
+  // Dealing with global addresses
+  hpx_locality_t (*locality_of)(hpx_addr_t gva);
+  uint64_t (*offset_of)(hpx_addr_t gva);
+  uint64_t (*phase_of)(hpx_addr_t gva);
+
+  int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs);
+  hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes);
+  hpx_addr_t (*add_cyclic)(hpx_addr_t gva, int64_t bytes, uint64_t block);
+
+  hpx_addr_t (*lva_to_gva)(void *lva);
+  void *(*gva_to_lva)(hpx_addr_t gva);
 };
 
-gas_class_t *gas_smp_new(size_t heap_size) HPX_INTERNAL;
-gas_class_t *gas_pgas_new(size_t heap_size) HPX_INTERNAL;
-gas_class_t *gas_agas_new(size_t heap_size) HPX_INTERNAL;
-gas_class_t *gas_agas_switch_new(size_t heap_size) HPX_INTERNAL;
-gas_class_t *gas_new(hpx_gas_t type, size_t heap_size) HPX_INTERNAL;
+gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot)
+  HPX_INTERNAL;
+
+gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot)
+  HPX_INTERNAL;
+
+gas_class_t *gas_new(size_t heap_size, struct boot_class *boot, hpx_gas_t type)
+  HPX_INTERNAL;
 
 inline static void gas_bind(gas_class_t *gas, struct transport_class *transport)
 {

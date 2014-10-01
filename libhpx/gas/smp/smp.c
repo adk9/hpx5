@@ -63,6 +63,6 @@ static gas_class_t _smp_vtable = {
   }
 };
 
-gas_class_t *gas_smp_new(size_t heap_size) {
+gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot) {
   return &_smp_vtable;
 }

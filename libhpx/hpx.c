@@ -59,6 +59,11 @@ static int _cleanup(locality_t *l, int code) {
     l->network = NULL;
   }
 
+  if (l->gas) {
+    gas_delete(l->gas);
+    l->gas = NULL;
+  }
+
   if (l->transport) {
     transport_delete(l->transport);
     l->transport = NULL;
@@ -67,11 +72,6 @@ static int _cleanup(locality_t *l, int code) {
   if (l->btt) {
     btt_delete(l->btt);
     l->btt = NULL;
-  }
-
-  if (l->gas) {
-    gas_delete(l->gas);
-    l->gas = NULL;
   }
 
   if (l->boot) {
@@ -130,8 +130,6 @@ int hpx_init(const hpx_config_t *cfg) {
   HPX_HERE = HPX_THERE(here->rank);
 
   // 5) allocate our block translation table
-  here->gas = gas_new(cfg->gas, cfg->heap_bytes);
-  gas_join(here->gas);
   here->btt = btt_new(cfg->gas, cfg->heap_bytes);
   if (here->btt == NULL)
     return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));
@@ -141,6 +139,12 @@ int hpx_init(const hpx_config_t *cfg) {
   if (here->transport == NULL)
     return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
+
+  here->gas = gas_new(cfg->heap_bytes, here->boot, cfg->gas);
+  if (here->gas == NULL)
+    return _cleanup(here, dbg_error("init: failed to create the global address "
+                                    "space.\n"));
+  gas_join(here->gas);
 
   here->network = network_new();
   if (here->network == NULL)
