@@ -76,7 +76,7 @@ static void _pgas_leave(void) {
 }
 
 static void *_pgas_global_malloc(size_t bytes) {
-  return (_joined) ? hpx_malloc(bytes)
+  return (_joined) ? libhpx_malloc(bytes)
                    : arena_malloc(_global_arena, bytes);
 }
 
@@ -87,40 +87,40 @@ static void _pgas_global_free(void *ptr) {
   assert(heap_contains(_global_heap, ptr));
 
   if (_joined)
-    hpx_free(ptr);
+    libhpx_free(ptr);
   else
     arena_free(_global_arena, ptr);
 }
 
 static void *_pgas_global_calloc(size_t nmemb, size_t size) {
-  return (_joined) ? hpx_calloc(nmemb, size)
+  return (_joined) ? libhpx_calloc(nmemb, size)
                    : arena_calloc(_global_arena, nmemb, size);
 }
 
 static void *_pgas_global_realloc(void *ptr, size_t size) {
-  return (_joined) ? hpx_realloc(ptr, size)
+  return (_joined) ? libhpx_realloc(ptr, size)
                    : arena_realloc(_global_arena, ptr, size);
 }
 
 static void *_pgas_global_valloc(size_t size) {
-  return (_joined) ? hpx_valloc(size)
+  return (_joined) ? libhpx_valloc(size)
                    : arena_valloc(_global_arena, size);
 }
 
 static void *_pgas_global_memalign(size_t boundary, size_t size) {
-  return (_joined) ? hpx_memalign(boundary, size)
+  return (_joined) ? libhpx_memalign(boundary, size)
                    : arena_memalign(_global_arena, boundary, size);
 }
 
 static int _pgas_global_posix_memalign(void **memptr, size_t alignment,
                                       size_t size) {
-  return (_joined) ? hpx_posix_memalign(memptr, alignment, size)
+  return (_joined) ? libhpx_posix_memalign(memptr, alignment, size)
                    : arena_posix_memalign(_global_arena, memptr, alignment, size);
 }
 
 static void *_pgas_local_malloc(size_t bytes) {
   return (_joined) ? arena_malloc(_local_arena, bytes)
-                   : hpx_malloc(bytes);
+                   : libhpx_malloc(bytes);
 }
 
 static void _pgas_local_free(void *ptr) {
@@ -132,33 +132,33 @@ static void _pgas_local_free(void *ptr) {
   if (_joined)
     arena_free(_local_arena, ptr);
   else
-    hpx_free(ptr);
+    libhpx_free(ptr);
 }
 
 static void *_pgas_local_calloc(size_t nmemb, size_t size) {
   return (_joined) ? arena_calloc(_local_arena, nmemb, size)
-                   : hpx_calloc(nmemb, size);
+                   : libhpx_calloc(nmemb, size);
 }
 
 static void *_pgas_local_realloc(void *ptr, size_t size) {
   return (_joined) ? arena_realloc(_local_arena, ptr, size)
-                   : hpx_realloc(ptr, size);
+                   : libhpx_realloc(ptr, size);
 }
 
 static void *_pgas_local_valloc(size_t size) {
   return (_joined) ? arena_valloc(_local_arena, size)
-                   : hpx_valloc(size);
+                   : libhpx_valloc(size);
 }
 
 static void *_pgas_local_memalign(size_t boundary, size_t size) {
   return (_joined) ? arena_memalign(_local_arena, boundary, size)
-                   : hpx_memalign(boundary, size);
+                   : libhpx_memalign(boundary, size);
 }
 
 static int _pgas_local_posix_memalign(void **memptr, size_t alignment,
                                       size_t size) {
   return (_joined) ? arena_posix_memalign(_local_arena, memptr, alignment, size)
-                   : hpx_posix_memalign(memptr, alignment, size);
+                   : libhpx_posix_memalign(memptr, alignment, size);
 }
 
 static void _pgas_delete(gas_class_t *gas) {
