@@ -10,12 +10,14 @@ if ENABLE_LENGTHY_TESTS
 PERFTESTS += \
         perfmain \
         parspawn \
-        seqspawn
+        seqspawn \
+        fibonacci
 else
 check_PROGRAMS += \
         perfmain \
         parspawn \
-        seqspawn
+        seqspawn \
+        fibonacci
 endif
 
 NPROCS ?= 2
@@ -32,6 +34,7 @@ AM_CFLAGS         += $(HPX_C99)
 perfmain_SOURCES     = perfmain.c
 parspawn_SOURCES     = parspawn.c 
 seqspawn_SOURCES     = seqspawn.c
+fibonacci_SOURCES    = fibonacci.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton

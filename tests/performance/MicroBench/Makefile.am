@@ -10,12 +10,14 @@ if ENABLE_LENGTHY_TESTS
 PERFTESTS += \
         perfmain \
         memput \
-        memget
+        memget \
+        pingpong
 else
 check_PROGRAMS += \
         perfmain \
         memput \
-        memget
+        memget \
+        pingpong
 endif
 
 NPROCS ?= 2
@@ -32,6 +34,7 @@ AM_CFLAGS         += $(HPX_C99)
 perfmain_SOURCES   = perfmain.c
 memput_SOURCES     = memput.c 
 memget_SOURCES     = memget.c
+pingpong_SOURCES   = pingpong.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
