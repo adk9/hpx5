@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include "libsync/locks.h"
 #include "hpx/config.h"
 #include "hpx/hpx.h"
 
@@ -24,9 +25,11 @@
 
 hpx_log_t dbg_log_level = HPX_LOG_DEFAULT;
 
-void
-dbg_log1(unsigned line, const char *f, const hpx_log_t level, const char *fmt, ...) {
+void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
+              const char *fmt, ...) {
+  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
   if (dbg_log_level & level) {
+    sync_tatas_acquire(&lock);
     printf("LIBHPX<%d,%d>: (%s:%u) ", hpx_get_my_rank(),
            hpx_get_my_thread_id(), f, line);
 
@@ -35,6 +38,7 @@ dbg_log1(unsigned line, const char *f, const hpx_log_t level, const char *fmt, .
     vprintf(fmt, args);
     va_end(args);
     fflush(stdout);
+    sync_tatas_release(&lock);
   }
 }
 
