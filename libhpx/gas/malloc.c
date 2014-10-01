@@ -17,87 +17,88 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <jemalloc/jemalloc.h>
-#include <hpx/malloc.h>
-#include "libhpx/gas.h"
 #include "libhpx/locality.h"
-
-// We need to sit in front of all of the memory allocation routines to implement
-// the following protocol. We use jemalloc for all memory allocation. All
-// standard malloc.h routines should be allocating private memory. If the gas
-// has not been initialized yet, then we use jemalloc directly, otherwise we
-// forward to the gas-specific local implementation.
+#include "malloc.h"
 
 void *malloc(size_t bytes) {
-  if (!bytes)
-    return NULL;
-
-  if (!here || !here->gas)
-    return hpx_mallocx(bytes, 0);
-
-  return gas_local_malloc(here->gas, bytes);
+  return (here && here->gas) ? local_malloc(bytes)
+                             : hpx_malloc(bytes);
 }
 
 void free(void *ptr) {
-  if (!ptr)
-    return;
-
-  if (!here || !here->gas)
-    hpx_dallocx(ptr, 0);
+  if (here && here->gas)
+    local_free(ptr);
   else
-    gas_local_free(here->gas, ptr);
+    hpx_free(ptr);
 }
 
-
 void *calloc(size_t nmemb, size_t size) {
-  if (!nmemb || !size)
-    return NULL;
-
-  if (!here || !here->gas)
-    return hpx_mallocx(nmemb * size, MALLOCX_ZERO);
-
-  return gas_local_calloc(here->gas, nmemb, size);
+  return (here && here->gas) ? local_calloc(nmemb, size)
+                             : hpx_calloc(nmemb, size);
 }
 
 void *realloc(void *ptr, size_t size) {
-  if (!ptr)
-    return malloc(size);
-
-  if (!here || !here->gas)
-    return hpx_rallocx(ptr, size, 0);
-
-  return gas_local_realloc(here->gas, ptr, size);
+  return (here && here->gas) ? local_realloc(ptr, size)
+                             : hpx_realloc(ptr, size);
 }
 
 void *valloc(size_t size) {
-  if (!size)
-    return NULL;
-
-  if (!here || !here->gas)
-    return hpx_mallocx(size, MALLOCX_ALIGN(HPX_PAGE_SIZE));
-
-  return gas_local_valloc(here->gas, size);
+  return (here && here->gas) ? local_valloc(size)
+                             : hpx_valloc(size);
 }
 
 void *memalign(size_t boundary, size_t size) {
-  if (!size || !boundary)
-    return NULL;
-
-  if (!here || !here->gas)
-    return hpx_mallocx(size, MALLOCX_ALIGN(boundary));
-
-  return gas_local_memalign(here->gas, boundary, size);
+  return (here && here->gas) ? local_memalign(boundary, size)
+                             : hpx_memalign(boundary, size);
 }
 
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
+  return (here && here->gas) ? local_posix_memalign(memptr, alignment, size)
+                             : hpx_posix_memalign(memptr, alignment, size);
+}
+
+void *arena_malloc(unsigned arena, size_t bytes) {
+  const int flags = MALLOCX_ARENA(arena);
+  return (bytes) ? hpx_mallocx(bytes, flags)
+                 : NULL;
+}
+
+void arena_free(unsigned arena, void *ptr) {
+  if (ptr) {
+    const int flags = MALLOCX_ARENA(arena);
+    hpx_dallocx(ptr, flags);
+  }
+}
+
+void *arena_calloc(unsigned arena, size_t nmemb, size_t size) {
+  const int flags = MALLOCX_ARENA(arena) | MALLOCX_ZERO;
+  return (nmemb && size) ? hpx_mallocx(nmemb * size, flags )
+                         : NULL;
+}
+
+void *arena_realloc(unsigned arena, void *ptr, size_t size) {
+  const int flags = MALLOCX_ARENA(arena);
+  return (ptr) ? hpx_rallocx(ptr, size, flags)
+               : arena_malloc(arena, size);
+}
+
+void *arena_valloc(unsigned arena, size_t size) {
+  return arena_memalign(arena, HPX_PAGE_SIZE, size);
+}
+
+void *arena_memalign(unsigned arena, size_t boundary, size_t size) {
+  const int flags = MALLOCX_ARENA(arena) | MALLOCX_ALIGN(boundary);
+  return hpx_mallocx(size, flags);
+}
+
+int arena_posix_memalign(unsigned arena, void **memptr, size_t alignment,
+                         size_t size) {
   if (!size || !alignment) {
     *memptr = NULL;
     return 0;
   }
 
-  if (!here || !here->gas) {
-    *memptr = hpx_mallocx(size, MALLOCX_ALIGN(alignment));
-    return (*memptr == 0) ? ENOMEM : 0;
-  }
-
-  return gas_local_posix_memalign(here->gas, memptr, alignment, size);
+  const int flags = MALLOCX_ARENA(arena) | MALLOCX_ALIGN(alignment);
+  *memptr = hpx_mallocx(size, flags);
+  return (*memptr == 0) ? ENOMEM : 0;
 }

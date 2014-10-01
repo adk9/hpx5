@@ -30,7 +30,6 @@ extern "C" {
 #include "hpx/future.h"
 #include "hpx/gas.h"
 #include "hpx/lco.h"
-#include "hpx/malloc.h"
 #include "hpx/par.h"
 #include "hpx/parcel.h"
 #include "hpx/process.h"

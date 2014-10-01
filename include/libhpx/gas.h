@@ -15,30 +15,28 @@
 
 #include <hpx/hpx.h>
 
+typedef struct as_class as_class_t;
+struct as_class {
+  void *(*malloc)(size_t bytes);
+  void (*free)(void *ptr);
+  void *(*calloc)(size_t nmemb, size_t size);
+  void *(*realloc)(void *ptr, size_t size);
+  void *(*valloc)(size_t size);
+  void *(*memalign)(size_t boundary, size_t size);
+  int (*posix_memalign)(void **memptr, size_t alignment, size_t size);
+};
+
 /// Generic object oriented interface to the global address space.
 typedef struct gas_class gas_class_t;
 struct gas_class {
   hpx_gas_t type;
 
   void (*delete)(gas_class_t *gas);
-  int (*join)(gas_class_t *gas);
-  void (*leave)(gas_class_t *gas);
+  int (*join)(void);
+  void (*leave)(void);
 
-  void *(*malloc)(gas_class_t *gas, size_t bytes);
-  void  (*free)(gas_class_t *gas, void *ptr);
-  void *(*calloc)(gas_class_t *gas, size_t nmemb, size_t size);
-  void *(*realloc)(gas_class_t *gas, void *ptr, size_t size);
-  void *(*valloc)(gas_class_t *gas, size_t size);
-  void *(*memalign)(gas_class_t *gas, size_t boundary, size_t size);
-  int   (*posix_memalign)(gas_class_t *gas, void **memptr, size_t alignment, size_t size);
-
-  void *(*local_malloc)(gas_class_t *gas, size_t bytes);
-  void  (*local_free)(gas_class_t *gas, void *ptr);
-  void *(*local_calloc)(gas_class_t *gas, size_t nmemb, size_t size);
-  void *(*local_realloc)(gas_class_t *gas, void *ptr, size_t size);
-  void *(*local_valloc)(gas_class_t *gas, size_t size);
-  void *(*local_memalign)(gas_class_t *gas, size_t boundary, size_t size);
-  int   (*local_posix_memalign)(gas_class_t *gas, void **memptr, size_t alignment, size_t size);
+  as_class_t global;
+  as_class_t local;
 };
 
 gas_class_t *gas_local_only_new(size_t heap_size) HPX_INTERNAL;
@@ -52,73 +50,11 @@ inline static void gas_delete(gas_class_t *gas) {
 }
 
 inline static int gas_join(gas_class_t *gas) {
-  return gas->join(gas);
+  return gas->join();
 }
 
 inline static void gas_leave(gas_class_t *gas) {
-  gas->leave(gas);
-}
-
-inline static void *gas_malloc(gas_class_t *gas, size_t bytes) {
-  return gas->malloc(gas, bytes);
-}
-
-inline static void gas_free(gas_class_t *gas, void *ptr) {
-  gas->free(gas, ptr);
-}
-
-inline static void *gas_calloc(gas_class_t *gas, size_t nmemb, size_t size) {
-  return gas->calloc(gas, nmemb, size);
-}
-
-inline static void *gas_realloc(gas_class_t *gas, void *ptr, size_t size) {
-  return gas->realloc(gas, ptr, size);
-}
-
-inline static void *gas_valloc(gas_class_t *gas, size_t size) {
-  return gas->valloc(gas, size);
-}
-
-inline static void *gas_memalign(gas_class_t *gas, size_t boundary,
-                                 size_t size) {
-  return gas->memalign(gas, boundary, size);
-}
-
-inline static int gas_posix_memalign(gas_class_t *gas, void **memptr,
-                                     size_t alignment, size_t size) {
-  return gas->posix_memalign(gas, memptr, alignment, size);
-}
-
-inline static void *gas_local_malloc(gas_class_t *gas, size_t bytes) {
-  return gas->local_malloc(gas, bytes);
-}
-
-inline static void gas_local_free(gas_class_t *gas, void *ptr) {
-  gas->local_free(gas, ptr);
-}
-
-inline static void *gas_local_calloc(gas_class_t *gas, size_t nmemb,
-                                     size_t size) {
-  return gas->local_calloc(gas, nmemb, size);
-}
-
-inline static void *gas_local_realloc(gas_class_t *gas, void *ptr,
-                                      size_t size) {
-  return gas->local_realloc(gas, ptr, size);
-}
-
-inline static void *gas_local_valloc(gas_class_t *gas, size_t size) {
-  return gas->local_valloc(gas, size);
-}
-
-inline static void *gas_local_memalign(gas_class_t *gas, size_t boundary,
-                                       size_t size) {
-  return gas->local_memalign(gas, boundary, size);
-}
-
-inline static int gas_local_posix_memalign(gas_class_t *gas, void **memptr,
-                                           size_t alignment, size_t size) {
-  return gas->local_posix_memalign(gas, memptr, alignment, size);
+  gas->leave();
 }
 
 #endif// LIBHPX_GAS_H

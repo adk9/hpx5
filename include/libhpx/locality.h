@@ -19,10 +19,10 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libhpx/gas.h"
 
 struct boot_class;
 struct btt_class;
-struct lhpx_gas_class;
 struct network_class;
 struct scheduler;
 struct transport_class;
@@ -69,6 +69,64 @@ HPX_INTERNAL extern hpx_action_t locality_gas_forward;
 /// The value of the pointer is equivalent to hpx_addr_try_pin(HPX_HERE, &here);
 HPX_INTERNAL extern locality_t *here;
 
+inline static void *global_malloc(size_t bytes) {
+  return here->gas->global.malloc(bytes);
+}
+
+inline static void global_free(void *ptr) {
+  here->gas->global.free(ptr);
+}
+
+inline static void *global_calloc(size_t nmemb, size_t size) {
+  return here->gas->global.calloc(nmemb, size);
+}
+
+inline static void *global_realloc(void *ptr, size_t size) {
+  return here->gas->global.realloc(ptr, size);
+}
+
+inline static void *global_valloc(size_t size) {
+  return here->gas->global.valloc(size);
+}
+
+inline static void *global_memalign(size_t boundary, size_t size) {
+  return here->gas->global.memalign(boundary, size);
+}
+
+inline static int global_posix_memalign(void **memptr, size_t alignment,
+                                        size_t size) {
+  return here->gas->global.posix_memalign(memptr, alignment, size);
+}
+
+
+inline static void *local_malloc(size_t bytes) {
+  return here->gas->local.malloc(bytes);
+}
+
+inline static void local_free(void *ptr) {
+  here->gas->local.free(ptr);
+}
+
+inline static void *local_calloc(size_t nmemb, size_t size) {
+  return here->gas->local.calloc(nmemb, size);
+}
+
+inline static void *local_realloc(void *ptr, size_t size) {
+  return here->gas->local.realloc(ptr, size);
+}
+
+inline static void *local_valloc(size_t size) {
+  return here->gas->local.valloc(size);
+}
+
+inline static void *local_memalign(size_t boundary, size_t size) {
+  return here->gas->local.memalign(boundary, size);
+}
+
+inline static int local_posix_memalign(void **memptr, size_t alignment,
+                                        size_t size) {
+  return here->gas->local.posix_memalign(memptr, alignment, size);
+}
 
 /// Allocate immovable local memory that is addressable globally.
 HPX_INTERNAL hpx_addr_t locality_malloc(size_t bytes);

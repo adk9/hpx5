@@ -140,7 +140,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
     size += _max(sizeof(void*), bytes);
 
   // allocate a parcel with enough space to buffer the @p buffer
-  hpx_parcel_t *p = network_malloc(size, HPX_CACHELINE_SIZE);
+  hpx_parcel_t *p = global_memalign(HPX_CACHELINE_SIZE, size);
   if (!p) {
     dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
     return NULL;
@@ -218,7 +218,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     memcpy(&p->buffer, buffer, p->size);
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
-  
+
   if (p->pid != 0) {
     uint64_t credit = 0;
     // split the parent's current credit. the parent retains half..
@@ -258,7 +258,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 void
 hpx_parcel_release(hpx_parcel_t *p) {
-  network_free(p);
+  global_free(p);
 }
 
 

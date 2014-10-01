@@ -56,6 +56,7 @@ typedef struct {
   bitmap_t       *chunks;
   size_t          nbytes;
   char            *bytes;
+  char        *raw_bytes;
 } heap_t;
 
 int heap_init(heap_t *heap, size_t size);

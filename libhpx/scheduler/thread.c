@@ -23,7 +23,6 @@
 
 #include "hpx/builtins.h"
 #include "libhpx/debug.h"
-#include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "asm.h"
@@ -111,14 +110,14 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = gas_valloc(here->gas, _thread_size);
+  ustack_t *stack = global_valloc(_thread_size);
   assert(stack);
   thread_init(stack, parcel, f);
   return stack;
 }
 
 void thread_delete(ustack_t *stack) {
-  gas_free(here->gas, stack);
+  global_free(stack);
 }
 
 #if 0
