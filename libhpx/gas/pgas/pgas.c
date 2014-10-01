@@ -161,6 +161,13 @@ static int _pgas_local_posix_memalign(void **memptr, size_t alignment,
                    : libhpx_posix_memalign(memptr, alignment, size);
 }
 
+static void _pgas_bind(gas_class_t *gas, struct transport_class *transport) {
+  if (!_global_heap)
+    dbg_error("pgas: cannot bind the GAS network before the heap has been "
+              "initialized.\n");
+  heap_bind_transport(_global_heap, transport);
+}
+
 static void _pgas_delete(gas_class_t *gas) {
   if (_global_heap) {
     heap_fini(_global_heap);
@@ -171,6 +178,7 @@ static void _pgas_delete(gas_class_t *gas) {
 
 static gas_class_t _pgas_vtable = {
   .type   = HPX_GAS_PGAS,
+  .bind   = _pgas_bind,
   .delete = _pgas_delete,
   .join   = _pgas_join,
   .leave  = _pgas_leave,
