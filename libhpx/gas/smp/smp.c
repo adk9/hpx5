@@ -35,22 +35,22 @@ static gas_class_t _smp_vtable = {
   .join   = _smp_join,
   .leave  = _smp_leave,
   .global = {
-    .malloc         = hpx_malloc,
-    .free           = hpx_free,
-    .calloc         = hpx_calloc,
-    .realloc        = hpx_realloc,
-    .valloc         = hpx_valloc,
-    .memalign       = hpx_memalign,
-    .posix_memalign = hpx_posix_memalign
+    .malloc         = libhpx_malloc,
+    .free           = libhpx_free,
+    .calloc         = libhpx_calloc,
+    .realloc        = libhpx_realloc,
+    .valloc         = libhpx_valloc,
+    .memalign       = libhpx_memalign,
+    .posix_memalign = libhpx_posix_memalign
   },
   .local  = {
-    .malloc         = hpx_malloc,
-    .free           = hpx_free,
-    .calloc         = hpx_calloc,
-    .realloc        = hpx_realloc,
-    .valloc         = hpx_valloc,
-    .memalign       = hpx_memalign,
-    .posix_memalign = hpx_posix_memalign
+    .malloc         = libhpx_malloc,
+    .free           = libhpx_free,
+    .calloc         = libhpx_calloc,
+    .realloc        = libhpx_realloc,
+    .valloc         = libhpx_valloc,
+    .memalign       = libhpx_memalign,
+    .posix_memalign = libhpx_posix_memalign
   }
 };
 
