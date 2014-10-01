@@ -45,38 +45,18 @@ static hpx_action_t _update_table = 0;
 static hpx_action_t _init_table   = 0;
 static hpx_action_t _bitwiseor    = 0;
 static hpx_action_t _main         = 0;
-static hpx_action_t _memput       = 0;
-static hpx_action_t _memget       = 0;
 static hpx_action_t _mover        = 0;
 
-static int _memput_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  memcpy(local, args, hpx_thread_current_args_size());
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
-}
-
-static int _memget_action(size_t *args) {
-  size_t n = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  hpx_gas_unpin(target);
-  hpx_thread_continue(n, local);
-}
 
 // table get is synchronous and returns the value
 uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
   hpx_addr_t there = hpx_addr_add(table, i*n);
-  hpx_call_sync(there, _memget, &n, sizeof(n), &val, n);
+  hpx_addr_t lco = hpx_lco_future_new(0);
+  hpx_gas_memget(&val, there, n, lco);
+  hpx_lco_wait(lco);
+  hpx_lco_delete(lco, HPX_NULL);
   return val;
 }
 
@@ -84,7 +64,7 @@ uint64_t table_get(hpx_addr_t table, long i) {
 void table_set(hpx_addr_t table, long i, uint64_t val,
                hpx_addr_t lco) {
   hpx_addr_t there = hpx_addr_add(table, i*sizeof(uint64_t));
-  hpx_call(there, _memput, &val, sizeof(val), lco);
+  hpx_gas_memput(there, &val, sizeof(val), HPX_NULL, lco);
 }
 
 
@@ -405,8 +385,6 @@ int main(int argc, char *argv[])
   _init_table   = HPX_REGISTER_ACTION(_init_table_action);
   _bitwiseor    = HPX_REGISTER_ACTION(_bitwiseor_action);
   _update_table = HPX_REGISTER_ACTION(_update_table_action);
-  _memput       = HPX_REGISTER_ACTION(_memput_action);
-  _memget       = HPX_REGISTER_ACTION(_memget_action);
   _mover        = HPX_REGISTER_ACTION(_mover_action);
 
   // run the update_table action

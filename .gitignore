@@ -89,6 +89,11 @@ contrib/hwloc-1.9.1/include/private/autogen/config.h
 contrib/hwloc-1.9.1/include/private/autogen/stamp-h2
 contrib/hwloc-1.9.1/src/Makefile
 contrib/hwloc-1.9.1/src/static-components.h
+contrib/jemalloc/Makefile
+contrib/jemalloc/include/Makefile
+contrib/jemalloc/include/jemalloc/Makefile
+contrib/jemalloc/include/jemalloc/internal/Makefile
+contrib/jemalloc/src/Makefile
 
 include/hpx/Makefile
 include/libhpx/Makefile
