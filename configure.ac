@@ -88,6 +88,11 @@ AC_ARG_ENABLE([profiling],
 AS_IF([test "x$enable_profiling" != xno],
   [AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])])
 
+AC_ARG_ENABLE([lengthy-tests],
+    [AC_HELP_STRING([--enable-lengthy-tests],
+                    [Enable long running tests in the test suite (default: disabled)])])
+AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "$enable_lengthy_tests" = "yes"])
+
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
                   [Enable test suite (requires check) @<:@default=yes@:>@])],
@@ -222,7 +227,10 @@ AS_IF([test "x$enable_docs" != xno],
 AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/performance/Makefile])])
+  tests/performance/Makefile
+  tests/performance/TaskSpawningSO/Makefile
+  tests/performance/MicroBench/Makefile
+  tests/performance/Overheads/Makefile])])
   
 AC_OUTPUT
 

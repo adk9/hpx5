@@ -1,19 +1,8 @@
-SUBDIRS = TaskSpawningSO MicroBench Overheads
+.PHONY: buildall buildtests
 
-TaskSpawningSOtests: $(MAKE) -C TaskSpawningSO buildtests
-
-MicroBenchtests: $(MAKE) -C MicroBench buildtests
-
-Overheadstests: $(MAKE) -C Overheads buildtests
-
-tests: TaskSpawningSOtests MicroBenchtests Overheadsstests
-
-buildtests: tests
-
-buildall: buildtests
-.PHONY: buildall tests buildtests TaskSpawningSOtests MicroBenchtests Overheadstests
-
-noinst_HEADERS = argparsing.h
+TESTS                   = 
+                           
+check_PROGRAMS = $(TESTS)
 
 NPROCS ?= 2
 LOG_COMPILER = $(TEST_RUNNER)
@@ -25,6 +14,10 @@ AM_CFLAGS          = $(HPX_PEDANTIC) $(HPX_W_ALL) $(HPX_W_ERROR) $(HPX_C99)
 AM_CFLAGS         += @CHECK_LIBS@ @PHOTON_CFLAGS@ @MPI_CFLAGS@
 AM_CFLAGS         += @CHECK_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 AM_CFLAGS         += $(HPX_C99)
+
+buildall: $(TESTS)
+
+buildtests: $(TESTS)
 
 if HAVE_PHOTON
 LDADD            += -lphoton

@@ -236,7 +236,7 @@ int main(int argc, char * argv[]) {
   //dbg_wait();
 
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-
+  
   // parse the command line
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:T:Dh")) != -1) {
