@@ -131,7 +131,6 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
 }
 
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
-  assert(arena == mallctl_thread_get_arena());
   const uint32_t offset = (char*)chunk - heap->bytes;
   assert(offset % heap->bytes_per_chunk == 0);
   const uint32_t i = _chunks(offset, heap->bytes_per_chunk);
