@@ -14,9 +14,7 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/schedule.c
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -99,6 +97,10 @@ int scheduler_startup(scheduler_t *sched) {
   }
 
   worker_run(sched);
+
+  for (int i = 0, e = sched->n_workers; i < e; ++i)
+      worker_join(sched->workers[i]);
+
   return HPX_SUCCESS;
 }
 
