@@ -95,4 +95,13 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
 void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Determine if a particular block has been allocated.
+///
+/// @param   bitmap The bitmap to check.
+/// @param    block The block offset to check.
+///
+/// @returns true if the block is set, false otherwise.
+bool bitmap_is_set(bitmap_t *bitmap, const uint32_t block)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 #endif

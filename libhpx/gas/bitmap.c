@@ -121,12 +121,17 @@ static void _set(uintptr_t *words, const uint32_t from, uint32_t n) {
     const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
-    //   word   0 0 1 1
+    // ok to read naked because we're holding the lock and thus ordered with all
+    // other writers
+    const uintptr_t val = words[word];
+
+    //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 0 0 1
 
-    words[word] &= ~mask;
+    // synchronized write so that it can be read non-blockingly in is_set
+    sync_store(&words[word], val & ~mask, SYNC_RELAXED);
     n -= popcountl(mask);
     ++word;
     offset = 0;
@@ -142,12 +147,17 @@ static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
     const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
-    //   word   0 0 1 1
+    // ok to read naked because we're holding the lock and thus ordered with all
+    // other writers
+    const uintptr_t val = words[word];
+
+    //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 1 1 1
 
-    words[word] |= mask;
+    // synchronized write so that it can be read non-blockingly in is_set
+    sync_store(&words[word], val | mask, SYNC_RELAXED);
     n -= popcountl(mask);
     ++word;
     offset = 0;
@@ -214,4 +224,12 @@ void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n) {
   bitmap->min = min;
   assert(bitmap->bits[bitmap->min]);
   sync_tatas_release(&bitmap->lock);
+}
+
+bool bitmap_is_set(bitmap_t *bitmap, const uint32_t block) {
+  const uint32_t i = block / BITS_PER_WORD;
+  const uint32_t r = block % BITS_PER_WORD;
+  const uintptr_t word = sync_load(&bitmap->bits[i], SYNC_RELAXED);
+  const uintptr_t mask = 0x1 << r;
+  return word & mask;
 }
