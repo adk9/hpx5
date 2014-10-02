@@ -140,11 +140,10 @@ int hpx_init(const hpx_config_t *cfg) {
     return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
-  here->gas = gas_new(cfg->heap_bytes, here->boot, cfg->gas);
+  here->gas = gas_new(cfg->heap_bytes, here->boot, here->transport, cfg->gas);
   if (here->gas == NULL)
     return _cleanup(here, dbg_error("init: failed to create the global address "
                                     "space.\n"));
-  gas_join(here->gas);
 
   here->network = network_new();
   if (here->network == NULL)
@@ -153,7 +152,6 @@ int hpx_init(const hpx_config_t *cfg) {
 
   // 7) insert the base mapping for our local data segment, and pin it so that
   //    it doesn't go anywhere, ever....
-  gas_bind(here->gas, here->transport);
   btt_insert(here->btt, HPX_HERE, here);
   void *local;
   bool pinned = hpx_gas_try_pin(HPX_HERE, &local);

@@ -26,9 +26,6 @@ static int _smp_join(void) {
 static void _smp_leave(void) {
 }
 
-static void _smp_bind(gas_class_t *gas, struct transport_class *transport) {
-}
-
 static void _smp_delete(gas_class_t *gas) {
 }
 
@@ -38,7 +35,6 @@ static bool _smp_is_global(gas_class_t *gas, void *addr) {
 
 static gas_class_t _smp_vtable = {
   .type   = HPX_GAS_SMP,
-  .bind   = _smp_bind,
   .delete = _smp_delete,
   .join   = _smp_join,
   .leave  = _smp_leave,
@@ -63,6 +59,7 @@ static gas_class_t _smp_vtable = {
   }
 };
 
-gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot) {
+gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
+                         struct transport_class *transport) {
   return &_smp_vtable;
 }

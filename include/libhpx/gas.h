@@ -35,7 +35,6 @@ struct gas_class {
   hpx_gas_t type;
 
   // Initialization
-  void (*bind)(gas_class_t *gas, struct transport_class *transport);
   void (*delete)(gas_class_t *gas);
   int (*join)(void);
   void (*leave)(void);
@@ -58,19 +57,17 @@ struct gas_class {
   void *(*gva_to_lva)(hpx_addr_t gva);
 };
 
-gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot)
-  HPX_INTERNAL;
+gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
+                         struct transport_class *transport)
+  HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot)
-  HPX_INTERNAL;
+gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot,
+                         struct transport_class *transport)
+  HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_new(size_t heap_size, struct boot_class *boot, hpx_gas_t type)
-  HPX_INTERNAL;
-
-inline static void gas_bind(gas_class_t *gas, struct transport_class *transport)
-{
-  gas->bind(gas, transport);
-}
+gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
+                     struct transport_class *transport, hpx_gas_t type)
+  HPX_INTERNAL HPX_NON_NULL(2,3);
 
 inline static void gas_delete(gas_class_t *gas) {
   gas->delete(gas);
