@@ -34,4 +34,18 @@
 #define clzl(N) __builtin_clzl(N)
 #define popcountl(N) __builtin_popcountl(N)
 
+#if (__GNUC__ > 3) && (__GNUC_MINOR__ > 5)
+#define _HELPER0(x) #x
+#define _HELPER1(x) _HELPER0(GCC diagnostic ignored x)
+#define _HELPER2(y) _HELPER1(#y)
+#define HPX_PUSH_IGNORE(S)                      \
+  _Pragma("GCC diagnostic push")                  \
+  _Pragma(_HELPER2(S))
+#define HPX_POP_IGNORE                          \
+  _Pragma("GCC diagnostic pop")
+#else
+#define HPX_PUSH_IGNORE(S)
+#define HPX_POP_IGNORE
+#endif
+
 #endif // HPX_BUILTINS_H
