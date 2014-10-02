@@ -144,6 +144,10 @@ int hpx_init(const hpx_config_t *cfg) {
   if (here->gas == NULL)
     return _cleanup(here, dbg_error("init: failed to create the global address "
                                     "space.\n"));
+  int e = here->gas->join();
+  if (e)
+    return _cleanup(here, dbg_error("init: failed to join the global address "
+                                    "space.\n"));
 
   here->network = network_new();
   if (here->network == NULL)
