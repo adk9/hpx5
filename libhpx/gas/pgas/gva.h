@@ -34,14 +34,14 @@ uint16_t pgas_phase_of(hpx_addr_t gva)
 ///
 /// @param   lhs The left-hand-side address.
 /// @param   rhs The right-hand-size address.
-/// @param block The block size for the allocation.
+/// @param bsize The block size for the allocation.
 ///
 /// @returns The equivalent of (@p lhs - @p rhs) if @p lhs and @p rhs were
 ///          char*.
-int64_t pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint16_t block)
+int64_t pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint16_t bsize)
   HPX_INTERNAL;
 
-hpx_addr_t pgas_add(hpx_addr_t gva, int64_t bytes, uint16_t block)
+hpx_addr_t pgas_add(hpx_addr_t gva, int64_t bytes, uint16_t bsize)
   HPX_INTERNAL;
 
 #endif // LIBHPX_GAS_PGAS_ADDR_H
