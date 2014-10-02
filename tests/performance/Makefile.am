@@ -1,4 +1,4 @@
-SUBDIRS = TaskSpawningSO MicroBench Overheads
+SUBDIRS = TaskSpawningSO MicroBench Overheads PutGetSM
 
 TaskSpawningSOtests: $(MAKE) -C TaskSpawningSO buildtests
 
@@ -6,14 +6,14 @@ MicroBenchtests: $(MAKE) -C MicroBench buildtests
 
 Overheadstests: $(MAKE) -C Overheads buildtests
 
-tests: TaskSpawningSOtests MicroBenchtests Overheadsstests
+PutGetSMtests: $(MAKE) -C PutGetSM buildtests
+
+tests: TaskSpawningSOtests MicroBenchtests Overheadsstests PutGetSMtests
 
 buildtests: tests
 
 buildall: buildtests
-.PHONY: buildall tests buildtests TaskSpawningSOtests MicroBenchtests Overheadstests
-
-noinst_HEADERS = argparsing.h
+.PHONY: buildall tests buildtests TaskSpawningSOtests MicroBenchtests Overheadstests putGetSM
 
 NPROCS ?= 2
 LOG_COMPILER = $(TEST_RUNNER)

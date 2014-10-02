@@ -230,7 +230,8 @@ AS_IF([test "x$enable_tests" != xno],
   tests/performance/Makefile
   tests/performance/TaskSpawningSO/Makefile
   tests/performance/MicroBench/Makefile
-  tests/performance/Overheads/Makefile])])
+  tests/performance/Overheads/Makefile
+  tests/performance/PutGetSM/Makefile])])
   
 AC_OUTPUT
 
