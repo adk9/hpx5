@@ -467,6 +467,9 @@ void worker_shutdown(worker_t *worker) {
 
 
 void worker_join(worker_t *worker) {
+  if (worker->thread == pthread_self())
+    return;
+
   if (pthread_join(worker->thread, NULL))
     dbg_error("worker: cannot join worker thread %d.\n", worker->id);
 }
