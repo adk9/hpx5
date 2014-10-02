@@ -49,6 +49,8 @@
 #include <stddef.h>
 #include "bitmap.h"
 
+#define HEAP_USE_CYCLIC_CSBRK_BARRIER 0
+
 struct transport_class;
 
 typedef struct {
@@ -75,6 +77,9 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
   HPX_INTERNAL;
 
 bool heap_contains(heap_t *heap, void *addr)
+  HPX_INTERNAL;
+
+bool heap_is_cyclic(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
 void heap_bind_transport(heap_t *heap, struct transport_class *transport)

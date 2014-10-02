@@ -153,6 +153,16 @@ bool heap_contains(heap_t *heap, void *addr) {
   return (0 <= d && d < heap->nbytes);
 }
 
+bool heap_is_cyclic(heap_t *heap, void *addr) {
+  assert(heap_contains(heap, addr));
+  if (HEAP_USE_CYCLIC_CSBRK_BARRIER)
+    return (char*)addr >= heap->base + heap->nbytes - heap->csbrk;
+
+  // see if the chunk is allocated
+  const uint32_t chunk = heap_offset_of(heap, addr) / heap->bytes_per_chunk;
+  return bitmap_is_set(heap->chunks, chunk);
+}
+
 void heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   transport->pin(transport, heap->base, heap->nbytes);
   heap->transport = transport;
