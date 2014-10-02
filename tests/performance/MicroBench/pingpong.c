@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
 
   test_log = fopen("test.log", "a+");
 
+  fprintf(test_log, "\nStarting the pingpong test\n");
   fprintf(test_log, "Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.id, _text, _verbose);
 

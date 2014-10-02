@@ -10,8 +10,15 @@ mpirun parspawn 2000000
 mpirun parspawn 3000000
 mpirun parspawn 4000000
 mpirun parspawn 5000000
+mpirun parspawn 6000000
+mpirun parspawn 7000000
+mpirun parspawn 8000000
+mpirun parspawn 9000000
+mpirun parspawn 10000000
 mpirun seqspawn 1000000
 mpirun seqspawn 2000000
 mpirun seqspawn 3000000
 mpirun seqspawn 4000000
 mpirun seqspawn 5000000
+mpirun seqspawn 6000000
+mpirun seqspawn 7000000

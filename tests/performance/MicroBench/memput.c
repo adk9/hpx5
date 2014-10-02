@@ -107,7 +107,6 @@ static int _main_action(void *args) {
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
-  fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
 
@@ -122,7 +121,6 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.log_level = HPX_LOG_DEFAULT | HPX_LOG_TRANS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
@@ -152,6 +150,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   test_log = fopen("test.log", "a+");
+  fprintf(test_log, "Starting the memput test\n");
 
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
