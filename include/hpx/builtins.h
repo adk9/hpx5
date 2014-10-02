@@ -32,6 +32,8 @@
 #endif
 #define ctzl(N) __builtin_ctzl(N)
 #define clzl(N) __builtin_clzl(N)
+#define clz(N) __builtin_clz(N)
+
 #define popcountl(N) __builtin_popcountl(N)
 
 #if (__GNUC__ > 3) && (__GNUC_MINOR__ > 5)
