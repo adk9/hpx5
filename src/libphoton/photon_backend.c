@@ -225,6 +225,7 @@ static int __photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int 
   }
   req->id = request_id;
   req->state = REQUEST_NEW;
+  req->type = EVQUEUE;
   req->proc = proc;
   req->curr = curr;
   req->flags = ri_entry->flags;
@@ -279,6 +280,7 @@ static int __photon_setup_request_ledger_eager(photonLedgerEntry entry, int curr
   }
   req->id = request_id;
   req->state = REQUEST_NEW;
+  req->type = EVQUEUE;
   req->proc = proc;
   req->curr = curr;
   req->flags = REQUEST_FLAG_EAGER;
@@ -741,8 +743,7 @@ static int __photon_nbpop_event(photonRequest req) {
     
     dbg_info("(req type=%d) got completion for: 0x%016lx", req->type, cookie);
     
-    if ((prefix == REQUEST_COOK_EAGER) ||
-        (req->flags & REQUEST_FLAG_EAGER)) {
+    if (prefix == REQUEST_COOK_EAGER) {
       return 1;
     }
     
@@ -753,29 +754,27 @@ static int __photon_nbpop_event(photonRequest req) {
     // handle any other request completions we might get from the backend event queue
     else if (cookie != NULL_COOKIE) {
       photonRequest tmp_req;
-      if (req->flags & REQUEST_FLAG_USERID) {
-        if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
-          if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
-            dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
-            tmp_req->state = REQUEST_COMPLETED;
-          }
-        }
+      if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
+	if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
+	  dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
+	  tmp_req->state = REQUEST_COMPLETED;
+	}
       }
       else {
-        if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
-          if (tmp_req->type == EVQUEUE) {
-            dbg_info("setting request completed with cookie: 0x%016lx", cookie);
-            tmp_req->state = REQUEST_COMPLETED;
-          }
-        }
+	if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
+	  if (tmp_req->type == EVQUEUE) {
+	    dbg_info("%d: setting request completed with cookie: 0x%016lx", _photon_myrank, cookie);
+	    tmp_req->state = REQUEST_COMPLETED;
+	  }
+	}
       }
     }
   }
-  
+
   // clean up a completed request if the FIN has already been sent
   // otherwise, we clean up in send_FIN()
   if ((req->state == REQUEST_COMPLETED) && (req->flags & REQUEST_FLAG_FIN)) {
-    dbg_info("Removing request 0x%016lx for remote buffer request", req->id);
+    dbg_info("Removing request 0x%016lx for remote buffer request 0x%016lx", req->id, req->remote_buffer.request);
     htable_remove(reqtable, (uint64_t)req->id, NULL);
     SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
     dbg_info("%d requests left in reqtable", htable_count(reqtable));
@@ -2054,7 +2053,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
     photonEagerBuf eb = photon_processes[proc].local_eager_buf;
     if ((eb->offset + size) > _photon_ebsize)
       NEXT_EAGER_BUF(eb, size);
-    dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)eb->data[eb->offset]);
+    dbg_info("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&eb->data[eb->offset]);
     memcpy(ptr, &eb->data[eb->offset], size);
     memset(&eb->data[eb->offset], 0, size);
     NEXT_EAGER_BUF(eb, size);
