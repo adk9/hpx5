@@ -81,8 +81,8 @@ static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
 ///
 /// This uses a freelist algorithm for request nodes.
 ///
-/// @param network - the network
-/// @param request - the request
+/// @param progress - the progress object
+/// @param request  - the request
 static void _delete_request(progress_t *progress, request_t *request) {
   request->next = progress->free;
   progress->free = request->next;
@@ -100,8 +100,8 @@ static void _finish_request(progress_t *progress, request_t *r) {
 /// This finishes a send by freeing the request's parcel, and then calling the
 /// generic finish handler.
 ///
-/// @param n - the network
-/// @param r - the request to finish
+/// @param progress - the progress object
+/// @param        r - the request to finish
 static void _finish_send(progress_t *progress, request_t *r) {
   hpx_parcel_release(r->parcel);
   _finish_request(progress, r);
@@ -113,8 +113,8 @@ static void _finish_send(progress_t *progress, request_t *r) {
 /// This finishes a receive by pushing the request's parcel into the receive
 /// queue, and then calling the generic finish handler.
 ///
-/// @param     n The network.
-/// @param     r The request to finish.
+/// @param progress - The progress object.
+/// @param        r - The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
   scheduler_spawn(r->parcel);
   _finish_request(progress, r);
@@ -126,7 +126,7 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// Try and pop a network request off of the send queue, allocate a request node
 /// for it, and initiate a byte-send with the transport.
 ///
-/// @param      network The network object
+/// @param      progress - The progress object
 ///
 /// @returns true if we initiated a send
 static bool _try_start_send(progress_t *progress) {
@@ -217,7 +217,7 @@ static bool _try_start_recv(progress_t *progress) {
 /// pointer to finish the request, so that this can be used for different kinds
 /// of requests.
 ///
-/// @param    network The network used for testing.
+/// @param   progress The progress object used for testing.
 /// @param     finish A callback to finish the request.
 /// @param       curr The current request to test.
 /// @param          n The current number of completed requests.
@@ -302,6 +302,7 @@ void network_progress_delete(progress_t *p) {
     request_delete(i);
   }
 
+#if 0
   if (p->pending_sends)
     dbg_log_trans("progress: abandoning active send.\n");
 
@@ -319,4 +320,5 @@ void network_progress_delete(progress_t *p) {
     p->pending_recvs = p->pending_recvs->next;
     request_delete(i);
   }
+#endif
 }

@@ -123,4 +123,11 @@ HPX_INTERNAL struct routing *network_get_routing(network_class_t *network)
   HPX_NON_NULL(1);
 
 
+HPX_INTERNAL void network_set_shutdown_src(network_class_t *network, hpx_locality_t locality)
+  HPX_NON_NULL(1);
+
+
+HPX_INTERNAL hpx_locality_t network_get_shutdown_src(network_class_t *network)
+  HPX_NON_NULL(1);
+
 #endif // LIBHPX_NETWORK_H

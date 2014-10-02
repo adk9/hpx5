@@ -200,7 +200,8 @@ int system_startup(void) {
   int e = scheduler_startup(here->sched);
 
   // need to flush the transport
-  transport_progress(here->transport, true);
+  bool flush = (network_get_shutdown_src(here->network) == here->rank);
+  transport_progress(here->transport, flush);
 
   // and cleanup the system
   return _cleanup(here, e);
@@ -270,6 +271,7 @@ void system_shutdown(int code) {
 void
 hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
+  network_set_shutdown_src(here->network, here->rank);
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
   hpx_thread_exit(code);
 }
