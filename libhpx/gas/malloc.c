@@ -58,12 +58,16 @@ int posix_memalign(void **memptr, size_t alignment, size_t size) {
 }
 
 void *arena_malloc(unsigned arena, size_t bytes) {
+  assert(arena != UINT_MAX);
+
   const int flags = MALLOCX_ARENA(arena);
   return (bytes) ? libhpx_mallocx(bytes, flags)
                  : NULL;
 }
 
 void arena_free(unsigned arena, void *ptr) {
+  assert(arena != UINT_MAX);
+
   if (ptr) {
     const int flags = MALLOCX_ARENA(arena);
     libhpx_dallocx(ptr, flags);
@@ -71,28 +75,37 @@ void arena_free(unsigned arena, void *ptr) {
 }
 
 void *arena_calloc(unsigned arena, size_t nmemb, size_t size) {
+  assert(arena != UINT_MAX);
+
   const int flags = MALLOCX_ARENA(arena) | MALLOCX_ZERO;
   return (nmemb && size) ? libhpx_mallocx(nmemb * size, flags )
                          : NULL;
 }
 
 void *arena_realloc(unsigned arena, void *ptr, size_t size) {
+  assert(arena != UINT_MAX);
+
   const int flags = MALLOCX_ARENA(arena);
   return (ptr) ? libhpx_rallocx(ptr, size, flags)
                : arena_malloc(arena, size);
 }
 
 void *arena_valloc(unsigned arena, size_t size) {
+  assert(arena != UINT_MAX);
   return arena_memalign(arena, HPX_PAGE_SIZE, size);
 }
 
 void *arena_memalign(unsigned arena, size_t boundary, size_t size) {
+  assert(arena != UINT_MAX);
+
   const int flags = MALLOCX_ARENA(arena) | MALLOCX_ALIGN(boundary);
   return libhpx_mallocx(size, flags);
 }
 
 int arena_posix_memalign(unsigned arena, void **memptr, size_t alignment,
                          size_t size) {
+  assert(arena != UINT_MAX);
+
   if (!size || !alignment) {
     *memptr = NULL;
     return 0;
