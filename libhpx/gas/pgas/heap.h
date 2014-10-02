@@ -54,11 +54,13 @@ struct transport_class;
 typedef struct {
   volatile size_t             csbrk;
   size_t            bytes_per_chunk;
+  size_t                raw_nchunks;
   size_t                    nchunks;
   bitmap_t                  *chunks;
   size_t                     nbytes;
-  char                       *bytes;
-  char                   *raw_bytes;
+  char                        *base;
+  size_t                 raw_nbytes;
+  char                    *raw_base;
   struct transport_class *transport;
 } heap_t;
 
@@ -76,6 +78,9 @@ bool heap_contains(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
 void heap_bind_transport(heap_t *heap, struct transport_class *transport)
+  HPX_INTERNAL;
+
+uint64_t heap_offset_of(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
 #endif
