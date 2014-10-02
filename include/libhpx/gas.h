@@ -45,12 +45,12 @@ struct gas_class {
   as_class_t local;
 
   // Dealing with global addresses
-  hpx_locality_t (*locality_of)(hpx_addr_t gva);
-  uint64_t (*offset_of)(hpx_addr_t gva);
-  uint16_t (*phase_of)(hpx_addr_t gva);
+  uint32_t (*locality_of)(hpx_addr_t gva);
+  uint64_t (*offset_of)(hpx_addr_t gva, uint32_t bsize);
+  uint32_t (*phase_of)(hpx_addr_t gva, uint32_t bsize);
 
-  int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint16_t bsize);
-  hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint16_t bsize);
+  int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
+  hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
 
   hpx_addr_t (*lva_to_gva)(void *lva);
   void *(*gva_to_lva)(hpx_addr_t gva);
