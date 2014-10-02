@@ -27,6 +27,11 @@ extern "C" {
 // Dimacs
 #include "dimacs.h"
 
+//
+#include "gteps.h"
+
+#include "statistics.h"
+
 #ifdef __cplusplus
 }
 #endif

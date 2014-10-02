@@ -156,6 +156,9 @@ static int _main_action(_sssp_args_t *args) {
   uint64_t total_vertex_visit = 0;
   uint64_t total_edge_traversal = 0;
   uint64_t total_distance_updates = 0;
+  
+  size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
+  double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
 
   for (int i = 0; i < args->nproblems; ++i) {
     // Construct the graph as an adjacency list
@@ -177,6 +180,7 @@ static int _main_action(_sssp_args_t *args) {
     // printf("After call_sssp\n");
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
+    elapsed_time[i] = elapsed;
     total_elapsed_time+=elapsed;
     printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
 
@@ -207,6 +211,15 @@ static int _main_action(_sssp_args_t *args) {
     hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
     hpx_lco_delete(checksum_lco, HPX_NULL);
     printf("Dimacs checksum is %zu\n", checksum);
+
+    //printf("Computing GTEPS...\n");
+    hpx_addr_t gteps_lco = HPX_NULL;
+    hpx_call_sync(sargs.graph, gteps_calculate, &el.num_vertices, sizeof(el.num_vertices), &gteps_lco, sizeof(gteps_lco));
+    size_t gteps = 0;
+    hpx_lco_get(gteps_lco, sizeof(gteps), &gteps);
+    hpx_lco_delete(gteps_lco, HPX_NULL);
+    edge_traversed[i] = gteps;
+    //printf("Gteps is %zu\n", gteps);
 
     hpx_gas_free(sargs.graph, HPX_NULL);
   }
@@ -247,7 +260,26 @@ static int _main_action(_sssp_args_t *args) {
 /*     uint64_t total_distance; */
 /*   }total_distances_per_source; */
 
+  printf("\nElapsed time\n");
+  for(int i = 0;i < args->nproblems;i++){
+    printf("%f\n", elapsed_time[i]);
+  }
 
+  printf("\nEdge traversed\n");
+  for(int i = 0;i < args->nproblems;i++){
+    printf("%zu\n", edge_traversed[i]);
+  }
+
+  printf("\nTEPS statistics:\n");
+  double *tm = (double *)malloc(sizeof(double)*args->nproblems);
+  double *stats = (double *)malloc(sizeof(double)*9); 
+
+   for(int i = 0;i < args->nproblems;i++){
+    tm[i] = edge_traversed[i]/elapsed_time[i];
+   }
+  statistics (stats, tm, args->nproblems);
+  PRINT_STATS("TEPS", 1);
+  
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
