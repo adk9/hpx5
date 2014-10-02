@@ -79,13 +79,16 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
 bool heap_contains(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
-bool heap_is_cyclic(heap_t *heap, void *addr)
-  HPX_INTERNAL;
-
 void heap_bind_transport(heap_t *heap, struct transport_class *transport)
   HPX_INTERNAL;
 
 uint64_t heap_offset_of(heap_t *heap, void *addr)
+  HPX_INTERNAL;
+
+bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
+  HPX_INTERNAL;
+
+void *heap_offset_to_local(heap_t *heap, uint64_t offset)
   HPX_INTERNAL;
 
 #endif
