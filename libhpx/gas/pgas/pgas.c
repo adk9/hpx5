@@ -25,6 +25,7 @@
 #include "../bitmap.h"
 #include "../malloc.h"
 #include "../mallctl.h"
+#include "gva.h"
 #include "heap.h"
 
 
@@ -232,7 +233,12 @@ static gas_class_t _pgas_vtable = {
     .valloc         = _pgas_local_valloc,
     .memalign       = _pgas_local_memalign,
     .posix_memalign = _pgas_local_posix_memalign
-  }
+  },
+  .locality_of = pgas_locality_of,
+  .offset_of = pgas_offset_of,
+  .phase_of = pgas_phase_of,
+  .sub = pgas_sub,
+  .add = pgas_add
 };
 
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
