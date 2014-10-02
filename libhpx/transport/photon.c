@@ -423,9 +423,8 @@ transport_class_t *transport_new_photon(void) {
   }
 
   photon->progress     = network_progress_new();
-  if (!photon->progress) {
+  if (!photon->progress)
     dbg_error("photon: failed to start the progress loop.\n");
-  }
 
   return &photon->class;
 }
