@@ -93,7 +93,9 @@ int heap_init(heap_t *heap, const size_t size) {
 
   heap->base = heap->raw_base + r;
   heap->nbytes = heap->raw_nbytes - r;
-  heap->nchunks = heap->raw_nchunks - (r != 0) ? 1 : 0;
+  heap->nchunks = heap->raw_nchunks - ((r > 0) ? 1 : 0);
+
+  assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
 
   heap->chunks = _new_bitmap(heap->nchunks);
   dbg_log_gas("pgas: allocated chunk bitmap to manage %lu chunks.\n",
