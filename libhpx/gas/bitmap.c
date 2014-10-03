@@ -179,14 +179,21 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
   const uint32_t end = abs + n;
   assert(abs % align == 0);
 
-  // update our min word, ensuring the invariant that it always points to a word
-  // with at least one free bit
-  bitmap->min = end / BITS_PER_WORD;
-  while (!bitmap->bits[bitmap->min])
-    ++bitmap->min;
-
   // set the bits
   _set(bitmap->bits, abs, n);
+
+  // update our min word, ensuring the invariant that it always points to a word
+  // with at least one free bit
+  if (relative == 0) {
+    bitmap->min = end / BITS_PER_WORD;
+    while (!bitmap->bits[bitmap->min]) {
+      ++bitmap->min;
+      dbg_log_gas("updated min to %u, for word %p.\n",
+                  bitmap->min, (void*)bitmap->bits[bitmap->min]);
+    }
+  }
+
+  assert(bitmap->bits[bitmap->min]);
 
   // output the absolute total start of the allocation
   *i = abs;
@@ -200,6 +207,11 @@ void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n) {
   dbg_log_gas("bitmap: release %u blocks at %u.\n", n, from);
   sync_tatas_acquire(&bitmap->lock);
   _reset(bitmap->bits, from, n);
-  bitmap->min = _min32(bitmap->min, from / BITS_PER_WORD);
+  uint32_t min = _min32(bitmap->min, from / BITS_PER_WORD);
+  if (min != bitmap->min)
+    dbg_log_gas("updated min from %u to %u, for word %p.\n",
+                bitmap->min, min, (void*)bitmap->bits[bitmap->min]);
+  bitmap->min = min;
+  assert(bitmap->bits[bitmap->min]);
   sync_tatas_release(&bitmap->lock);
 }
