@@ -27,6 +27,9 @@ static void _usage(FILE *stream) {
           "\t-t, number of scheduler threads\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-l, set logging level\n"
+          "\t-s, set stack size\n"
+          "\t-p, set per-PE global heap size\n"
           "\t-h, this help display\n");
 }
 
@@ -156,7 +159,7 @@ static int _main_action(_sssp_args_t *args) {
   uint64_t total_vertex_visit = 0;
   uint64_t total_edge_traversal = 0;
   uint64_t total_distance_updates = 0;
-  
+
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
 
@@ -272,14 +275,14 @@ static int _main_action(_sssp_args_t *args) {
 
   printf("\nTEPS statistics:\n");
   double *tm = (double *)malloc(sizeof(double)*args->nproblems);
-  double *stats = (double *)malloc(sizeof(double)*9); 
+  double *stats = (double *)malloc(sizeof(double)*9);
 
    for(int i = 0;i < args->nproblems;i++){
     tm[i] = edge_traversed[i]/elapsed_time[i];
    }
   statistics (stats, tm, args->nproblems);
   PRINT_STATS("TEPS", 1);
-  
+
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
@@ -289,7 +292,7 @@ int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dl:s:p:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -304,6 +307,15 @@ int main(int argc, char *const argv[argc]) {
      case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
+      break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = atoi(optarg);
+      break;
+     case 'p':
+      cfg.heap_bytes = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
