@@ -11,15 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "hpx/hpx.h"
-#include "hpx/future.h"
-
-#define BUFFER_SIZE 128
+#include "lulesh-hpx.h"
 
 /* command line options */
 static bool         _text = false;            //!< send text data with the ping
@@ -27,7 +19,7 @@ static bool      _verbose = false;            //!< print to the terminal
 
 /* actions */
 static hpx_action_t _main = 0;
-static hpx_action_t _initdomain = 0;
+static hpx_action_t _evolve = 0;
 //static hpx_action_t _ping = 0;
 //static hpx_action_t _pong = 0;
 
@@ -47,18 +39,6 @@ static void _usage(FILE *stream) {
 }
 
 static void _register_actions(void);
-
-typedef struct {
-  hpx_addr_t sbn1;
-  hpx_addr_t sbn3;
-  hpx_addr_t posvel;
-  hpx_addr_t monoq;
-  hpx_addr_t complete;
-} Domain;
-
-typedef struct {
-  hpx_addr_t complete;
-} InitArgs;
 
 /** the pingpong message type */
 //typedef struct {
@@ -83,11 +63,8 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  //cfg.heap_bytes = 2e9;
 
   int nDoms, nx, maxcycles,cores;
   // default
@@ -179,32 +156,22 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
+  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(27*nDoms,sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
-
-  // Initialize the domains
-  hpx_addr_t init = hpx_lco_and_new(nDoms);
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
-      .complete = complete
+      .index = k,
+      .nDoms = nDoms,
+      .nx = nx,
+      .maxcycles = maxcycles,
+      .cores = cores,
+      .sbn1 = sbn1
     };
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
-    hpx_call(block, _initdomain, &args, sizeof(args), init);
+    hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
   }
-  hpx_lco_wait(init);
-  hpx_lco_delete(init, HPX_NULL);
-
-//  hpx_addr_t done = hpx_lco_and_new(2);
-
-//  hpx_call(HPX_HERE, _ping, args, sizeof(*args), done);
-//  hpx_addr_t there = HPX_HERE;
-//  if (hpx_get_num_ranks() > 1)
-//    there = HPX_THERE(1);
-//  hpx_call(there, _ping, args, sizeof(*args), done);
-//
-//  hpx_lco_wait(done);
-//  hpx_lco_delete(done, HPX_NULL);
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL);
 
   printf("finished main\n");
   hpx_shutdown(HPX_ERROR);
@@ -261,19 +228,64 @@ static int _action_pong(args_t *args) {
 }
 */
 
-static int _action_initdomain(InitArgs *init) {
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *ld = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&ld))
-    return HPX_RESEND;
+static int _action_evolve(InitArgs *init) {
 
-  //ld->sbn1 = hpx_lco_newfuture_new();
-  //ld->sbn3;
-  //ld->posvel;
-  //ld->monoq;
+  Domain *ld;
+  ld = (Domain *) malloc(sizeof(Domain)); 
 
-  // remember the LCO we're supposed to set when we've completed maxcycles
-  ld->complete = init->complete;
+  int nx        = init->nx;
+  int nDoms     = init->nDoms;
+  int maxcycles = init->maxcycles;
+  //int cores     = init->cores;
+  int index     = init->index;
+  int tp        = (int) (cbrt(nDoms) + 0.5);
+
+  Init(tp,nx);
+  int col      = index%tp;
+  int row      = (index/tp)%tp;
+  int plane    = index/(tp*tp);
+  
+  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
+
+  while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    if ( ld->cycle == 0 ) {
+      // SBN1
+    }
+
+    ld->time += ld->deltatime;
+
+    ld->cycle++;
+  }
+
+  if ( ld->rank == 0 ) {
+    int nx = ld->sizeX;
+    printf("  Problem size = %d \n"
+           "  Iteration count = %d \n"
+           "  Final origin energy = %12.6e\n",nx,ld->cycle,ld->e[0]);
+    double MaxAbsDiff = 0.0;
+    double TotalAbsDiff = 0.0;
+    double MaxRelDiff = 0.0;
+    int j,k;
+    for (j = 0; j < nx; j++) {
+      for (k = j + 1; k < nx; k++) {
+        double AbsDiff = fabs(ld->e[j*nx + k] - ld->e[k*nx + j]);
+        TotalAbsDiff += AbsDiff;
+
+        if (MaxAbsDiff < AbsDiff)
+          MaxAbsDiff = AbsDiff;
+
+        double RelDiff = AbsDiff/ld->e[k*nx + j];
+        if (MaxRelDiff < RelDiff)
+          MaxRelDiff = RelDiff;
+      }
+    }
+    printf("  Testing plane 0 of energy array:\n"
+       "  MaxAbsDiff   = %12.6e\n"
+       "  TotalAbsDiff = %12.6e\n"
+       "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+  }
+
+  free(ld);
   return HPX_SUCCESS;
 }
 
@@ -283,7 +295,7 @@ static int _action_initdomain(InitArgs *init) {
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
   _main = HPX_REGISTER_ACTION(_action_main);
-  _initdomain = HPX_REGISTER_ACTION(_action_initdomain);
+  _evolve = HPX_REGISTER_ACTION(_action_evolve);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }

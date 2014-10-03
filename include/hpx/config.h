@@ -82,12 +82,14 @@ typedef struct {
   int           stack_bytes;          //!< minimum stack size in bytes.
   size_t         heap_bytes;          //!< shared heap size in bytes
   hpx_gas_t             gas;          //!< Type of GAS.
+  size_t           btt_size;          //!< size of the BTT in bytes.
   hpx_boot_t           boot;          //!< bootstrap method to use.
   hpx_transport_t transport;          //!< transport to use.
   hpx_wait_t           wait;          //!< when to wait for a debugger.
   hpx_locality_t    wait_at;          //!< locality to wait on.
   hpx_log_t       log_level;          //!< the logging level to use.
   int            statistics;          //!< print statistics.
+  uint32_t        req_limit;          //!< max transport requests
 } hpx_config_t;
 
 /// The default configuration parameters HPX will start with.
@@ -98,12 +100,14 @@ typedef struct {
     .stack_bytes = 32768,                       \
     .heap_bytes  = 1 << 30, /* 1GB */           \
     .gas         = HPX_GAS_PGAS,                \
+    .btt_size    = 0,                           \
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
     .wait_at     = HPX_LOCALITY_NONE,           \
     .log_level   = HPX_LOG_DEFAULT,             \
-    .statistics  = true                         \
+    .statistics  = true,			\
+    .req_limit   = 0                            \
   }
 
 const char* hpx_get_network_id(void);
