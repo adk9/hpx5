@@ -17,7 +17,7 @@
 #include "libhpx/btt.h"
 #include "libhpx/debug.h"
 
-btt_class_t *btt_new(hpx_gas_t type, size_t heap_size) {
+btt_class_t *btt_new(hpx_gas_t type, size_t heap_size, size_t btt_size) {
   btt_class_t *btt = NULL;
   switch (type) {
    default:
@@ -25,16 +25,16 @@ btt_class_t *btt_new(hpx_gas_t type, size_t heap_size) {
     dbg_log_gas("HPX GAS defaults to PGAS.\n");
    case (HPX_GAS_PGAS):
    case (HPX_GAS_PGAS_SWITCH):
-    btt = btt_pgas_new(heap_size);
+    btt = btt_pgas_new(heap_size, btt_size);
     break;
    case (HPX_GAS_AGAS):
-    btt = btt_agas_new(heap_size);
+    btt = btt_agas_new(heap_size, btt_size);
     break;
    case (HPX_GAS_AGAS_SWITCH):
-    btt = btt_agas_switch_new(heap_size);
+    btt = btt_agas_switch_new(heap_size, btt_size);
     break;
    case (HPX_GAS_SMP):
-    btt = btt_local_only_new(heap_size);
+    btt = btt_local_only_new(heap_size, btt_size);
     break;
   };
   assert(btt);
