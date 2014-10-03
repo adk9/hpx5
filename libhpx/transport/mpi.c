@@ -205,11 +205,11 @@ static void _mpi_progress(transport_class_t *t, bool flush) {
 }
 
 static uint32_t _mpi_get_send_limit(void) {
-  return UINT32_MAX;
+  return UINT16_MAX;
 }
 
 static uint32_t _mpi_get_recv_limit(void) {
-  return UINT32_MAX;
+  return UINT16_MAX;
 }
 
 transport_class_t *transport_new_mpi(void) {

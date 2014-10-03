@@ -422,9 +422,9 @@ transport_class_t *transport_new_photon(void) {
   cfg->ibv.ib_dev          = ib_dev;
   cfg->ibv.ib_port         = ib_port;
   cfg->cap.eager_buf_size  = -1;  // default 128k
-  cfg->cap.small_msg_size  = -1;  // default 8192
+  cfg->cap.small_msg_size  =  0;  // default 8192
   cfg->cap.small_pwc_size  =  0;  // 0 disabled
-  cfg->cap.ledger_entries  = -1;  // default 64;
+  cfg->cap.ledger_entries  =128;  // default 64;
   cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
   cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
   cfg->backend             = backend;
