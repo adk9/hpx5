@@ -11,14 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "hpx/hpx.h"
-#include "hpx/future.h"
-
-#define BUFFER_SIZE 128
+#include "lulesh-hpx.h"
 
 /* command line options */
 static bool         _text = false;            //!< send text data with the ping
@@ -26,30 +19,32 @@ static bool      _verbose = false;            //!< print to the terminal
 
 /* actions */
 static hpx_action_t _main = 0;
-static hpx_action_t _ping = 0;
-static hpx_action_t _pong = 0;
+static hpx_action_t _evolve = 0;
+//static hpx_action_t _ping = 0;
+//static hpx_action_t _pong = 0;
 
 /* helper functions */
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
+  fprintf(stream, "Usage: lulesh [options]\n"
           "\t-c, the number of cores to run on\n"
           "\t-t, the number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-n, number of domains,nDoms\n"
+          "\t-x, nx\n"
+          "\t-i, maxcycles\n"
           "\t-h, show help\n");
 }
 
 static void _register_actions(void);
 
 /** the pingpong message type */
-typedef struct {
-  int iterations;
-  hpx_newfuture_t *ping;
-  hpx_newfuture_t *pong;
-} args_t;
+//typedef struct {
+//  hpx_addr_t ping;
+//  hpx_addr_t pong;
+//} args_t;
 
 /* utility macros */
 #define CHECK_NOT_NULL(p, err)                                \
@@ -69,18 +64,24 @@ typedef struct {
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  //cfg.heap_bytes = 2e9;
+
+  int nDoms, nx, maxcycles,cores;
+  // default
+  nDoms = 8;
+  nx = 15;
+  maxcycles = 10;
+  cores = 10;
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
+      cores = cfg.cores;
       break;
      case 't':
       cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'm':
       _text = true;
@@ -95,6 +96,15 @@ int main(int argc, char *argv[]) {
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
       break;
+     case 'n':
+      nDoms = atoi(optarg);
+      break;
+     case 'x':
+      nx = atoi(optarg);
+      break;
+     case 'i':
+      maxcycles = atoi(optarg);
+      break;
      case 'h':
       _usage(stdout);
       return 0;
@@ -105,28 +115,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  argc -= optind;
-  argv += optind;
-
-  if (argc == 0) {
-    _usage(stderr);
-    fprintf(stderr, "\nMissing iteration limit\n");
-    return -1;
-  }
-
-  args_t args = {
-    .iterations = strtol(argv[0], NULL, 10),
-  };
-
-  if (args.iterations == 0) {
-    _usage(stderr);
-    printf("read ITERATIONS as 0, exiting.\n");
-    return -1;
-  }
-
-  printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
-         args.iterations, _text, _verbose);
-
   int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "Failed to initialize hpx\n");
@@ -135,36 +123,65 @@ int main(int argc, char *argv[]) {
 
   _register_actions();
 
-  const char *network = hpx_get_network_id();
+  //const char *network = hpx_get_network_id();
 
+  int input[4];
+  input[0] = nDoms;
+  input[1] = nx;
+  input[2] = maxcycles;
+  input[3] = cores;
+  printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
+
+  //args.ping = hpx_lco_newfuture_new(BUFFER_SIZE);
+  //args.pong = hpx_lco_newfuture_new(BUFFER_SIZE);
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_main, NULL, 0);
+  e = hpx_run(_main, input, 4*sizeof(int));
   double elapsed = (double)hpx_time_elapsed_ms(start);
-  double latency = elapsed / (args.iterations * 2);
-  printf("average oneway latency (%s):   %f ms\n", network, latency);
+  printf("average elapsed:   %f ms\n", elapsed);
   return e;
 }
 
-static int _action_main(args_t *args) {
+static int _action_main(int *input) {
   printf("In main\n");
-  hpx_addr_t done = hpx_lco_and_new(2);
 
-  hpx_newfuture_t *base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
-  args->ping = hpx_lco_newfuture_at(base, 0);
-  args->pong = hpx_lco_newfuture_at(base, 1);
+  int nDoms, nx, maxcycles, cores,k;
+  nDoms = input[0];
+  nx = input[1];
+  maxcycles = input[2];
+  cores = input[3];
 
-  hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(args->ping)), _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_THERE(hpx_lco_newfuture_get_rank(args->pong));
-  hpx_call(there, _pong, args, sizeof(*args), done);
+  int tp = (int) (cbrt(nDoms) + 0.5);
+  if (tp*tp*tp != nDoms) {
+    fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
+    hpx_shutdown(HPX_ERROR);
+  }
 
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
+  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(27*nDoms,sizeof(double));
+  hpx_addr_t complete = hpx_lco_and_new(nDoms);
+
+  for (k=0;k<nDoms;k++) {
+    InitArgs args = {
+      .index = k,
+      .nDoms = nDoms,
+      .nx = nx,
+      .maxcycles = maxcycles,
+      .cores = cores,
+      .sbn1 = sbn1
+    };
+    hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
+  }
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL);
+
+  printf("finished main\n");
+  hpx_shutdown(HPX_ERROR);
   return HPX_SUCCESS;
 }
 
 /**
  * Send a ping message.
  */
+/*
 static int _action_ping(args_t *args) {
   char msg_ping[BUFFER_SIZE];
   char msg_pong[BUFFER_SIZE];
@@ -184,11 +201,13 @@ static int _action_ping(args_t *args) {
 
   hpx_shutdown(HPX_SUCCESS);
 }
+*/
 
 
 /**
  * Handle a pong action.
  */
+/*
 static int _action_pong(args_t *args) {
   char msg_ping[BUFFER_SIZE];
   char msg_pong[BUFFER_SIZE];
@@ -207,6 +226,68 @@ static int _action_pong(args_t *args) {
 
   hpx_shutdown(HPX_SUCCESS);
 }
+*/
+
+static int _action_evolve(InitArgs *init) {
+
+  Domain *ld;
+  ld = (Domain *) malloc(sizeof(Domain)); 
+
+  int nx        = init->nx;
+  int nDoms     = init->nDoms;
+  int maxcycles = init->maxcycles;
+  //int cores     = init->cores;
+  int index     = init->index;
+  int tp        = (int) (cbrt(nDoms) + 0.5);
+
+  Init(tp,nx);
+  int col      = index%tp;
+  int row      = (index/tp)%tp;
+  int plane    = index/(tp*tp);
+  
+  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
+
+  while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    if ( ld->cycle == 0 ) {
+      // SBN1
+    }
+
+    ld->time += ld->deltatime;
+
+    ld->cycle++;
+  }
+
+  if ( ld->rank == 0 ) {
+    int nx = ld->sizeX;
+    printf("  Problem size = %d \n"
+           "  Iteration count = %d \n"
+           "  Final origin energy = %12.6e\n",nx,ld->cycle,ld->e[0]);
+    double MaxAbsDiff = 0.0;
+    double TotalAbsDiff = 0.0;
+    double MaxRelDiff = 0.0;
+    int j,k;
+    for (j = 0; j < nx; j++) {
+      for (k = j + 1; k < nx; k++) {
+        double AbsDiff = fabs(ld->e[j*nx + k] - ld->e[k*nx + j]);
+        TotalAbsDiff += AbsDiff;
+
+        if (MaxAbsDiff < AbsDiff)
+          MaxAbsDiff = AbsDiff;
+
+        double RelDiff = AbsDiff/ld->e[k*nx + j];
+        if (MaxRelDiff < RelDiff)
+          MaxRelDiff = RelDiff;
+      }
+    }
+    printf("  Testing plane 0 of energy array:\n"
+       "  MaxAbsDiff   = %12.6e\n"
+       "  TotalAbsDiff = %12.6e\n"
+       "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+  }
+
+  free(ld);
+  return HPX_SUCCESS;
+}
 
 /**
  * Registers functions as actions.
@@ -214,6 +295,7 @@ static int _action_pong(args_t *args) {
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
   _main = HPX_REGISTER_ACTION(_action_main);
-  _ping = HPX_REGISTER_ACTION(_action_ping);
-  _pong = HPX_REGISTER_ACTION(_action_pong);
+  _evolve = HPX_REGISTER_ACTION(_action_evolve);
+//  _ping = HPX_REGISTER_ACTION(_action_ping);
+//  _pong = HPX_REGISTER_ACTION(_action_pong);
 }

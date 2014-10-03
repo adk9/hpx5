@@ -199,9 +199,10 @@ static int _mpi_test(transport_class_t *t, void *request, int *success) {
 
 static void _mpi_progress(transport_class_t *t, bool flush) {
   mpi_t *mpi = (mpi_t*)t;
-  network_progress_poll(mpi->progress);
   if (flush)
     network_progress_flush(mpi->progress);
+  else
+    network_progress_poll(mpi->progress);
 }
 
 static uint32_t _mpi_get_send_limit(void) {

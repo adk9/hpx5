@@ -16,7 +16,7 @@ int loop = 10000;
 
 #define HEADER "# " BENCHMARK "\n"
 #define FIELD_WIDTH 10
-
+#define HEADER_FIELD_WIDTH 5
 /// This file tests cost of GAS operations
 static void usage(FILE *stream) {
   fprintf(stream, "Usage:  [options]\n"
@@ -36,12 +36,15 @@ static int _main_action(void *args) {
   hpx_time_t t;
 
   fprintf(test_log, HEADER);
-  fprintf(test_log, "%s\t\t%*s%*s%*s%*s%*s%*s\n", "# Size ", FIELD_WIDTH, " LOCAL_ALLOC ", FIELD_WIDTH, " FREE ", FIELD_WIDTH, "  GLOBAL_ALLOC ", FIELD_WIDTH, " FREE ", FIELD_WIDTH, " GLOBAL_CALLOC ", FIELD_WIDTH, " FREE ");
+  fprintf(test_log, "%s\t%*s%*s%*s%*s%*s%*s\n", "# Size ", HEADER_FIELD_WIDTH,
+           " LOCAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH, 
+           " GLOBAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
+           " GLOBAL_CALLOC ", HEADER_FIELD_WIDTH, " FREE ");
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
     local = hpx_gas_alloc(size);
-    fprintf(test_log, "%-*lu%*g\t", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    fprintf(test_log, "%-*lu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
    
     t = hpx_time_now();
     hpx_gas_free(local, HPX_NULL);
@@ -53,11 +56,11 @@ static int _main_action(void *args) {
 
     t = hpx_time_now();
     hpx_gas_free(global, HPX_NULL);
-    fprintf(test_log, "%*g\t", FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
     calloc_global = hpx_gas_global_calloc(hpx_get_num_ranks(), size);
-    fprintf(test_log, "%*g\t", FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
     hpx_gas_free(calloc_global, HPX_NULL);
