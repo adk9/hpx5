@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <photon.h>
+
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
@@ -71,6 +73,7 @@ typedef struct {
   void *value;
   int home_rank;
   void* home_address;
+  char data[];
 } _newfuture_t;
 
 enum  _future_wait_action { _future_wait_full, _future_wait_for, _future_wait_until };
@@ -96,22 +99,31 @@ static hpx_action_t _set_future_from_remote = 0;
 static hpx_action_t _recv_queue_progress = 0;
 static hpx_action_t _send_queue_progress = 0;
 
-#if 0
-/* in libhpx/gas/addr.h
-static inline uint32_t addr_block_id(hpx_addr_t addr) {
-  assert(addr.block_bytes);
-  return addr.base_id + (addr.offset / addr.block_bytes);
+static bool _empty(const _newfuture_t *f) {
+  return f->bits & HPX_UNSET;
 }
 
-static inline void *addr_to_local(hpx_addr_t addr, void *base) {
-  return (void*)((char*)base + addr.offset % addr.block_bytes);
+static bool _full(const _newfuture_t *f) {
+  return f->bits & HPX_SET;
 }
-*/
 
-static uint32_t _pgas_btt_home(hpx_addr_t addr) {
-  return addr_block_id(addr) % here->ranks;
+/// Use the LCO's "user" state to remember if the future is in-place or not.
+static uintptr_t
+_is_inplace(const _newfuture_t *f) {
+  return lco_get_user(&f->lco);
 }
-#endif
+
+static int
+_is_shared_action(void* args) {
+  _newfuture_t *fut;
+  hpx_addr_t target = hpx_thread_current_target();
+  if (!hpx_gas_try_pin(target, (void**)&fut))
+    return HPX_RESEND;
+  
+  bool result = (bool)(fut->bits & FT_SHARED);
+  hpx_thread_continue(sizeof(bool), &result);
+}
+
 
 ////////////
 ///// start hacks
@@ -125,27 +137,38 @@ typedef struct  {
   int base_rank;
   int size_per; // size per future in bytes
   int id; // index
-  // actual address is buffer.addr + (id % HPX_NUM_LOCALITIES) * (sizeof(newfuture_t) + size_per) 
 } hpx_newfuture_t;
+
+  // actual newfuture address is buffer.addr + (id % HPX_NUM_LOCALITIES) * (size_per)
+  // actual data address is I think buffer.addr + (id % HPX_NUM_LOCALITIES) * (sizeof(_newfuture_t) + size_per) + sizeof(newfuture_t)
+
 #endif
+
+//static two_lock_queue_t *send_queue;
+//static two_lock_queue_t *recv_queues;
 
 #define PHOTON_NOWAIT_TAG 0
 
-int _newfuture_get_rank(hpx_newfuture_t *f) {
+static int 
+_newfuture_get_rank(hpx_newfuture_t *f) {
   return f->base_rank + (f->id % hpx_get_num_ranks());
 }
 
-void *_newfuture_get_addr(hpx_newfuture_t *f) {
-  return f->buffer.addr + (f->id % hpx_get_num_ranks()) * (sizeof(hpx_newfuture_t) + f->size_per);
+static uintptr_t 
+_newfuture_get_addr(hpx_newfuture_t *f) {
+  return (uintptr_t)f->buffer.addr + (f->id % hpx_get_num_ranks()) * f->size_per;
 }
 
-static two_Lock_queue_t *send_queue;
-static two_lock_queue_t *recv_queues;
+static uintptr_t 
+_newfuture_get_data_addr(hpx_newfuture_t *f) {
+  return (uintptr_t)f->buffer.addr + (f->id % hpx_get_num_ranks()) * (sizeof(*f) + f->size_per) + f->size_per;
+}
 
 static int
 _send_queue_progress_action(void* args) {
   int flag;
-  int request;
+  photon_rid request;
+  int rc;
   while (1) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (rc < 0) {
@@ -155,11 +178,12 @@ _send_queue_progress_action(void* args) {
 	
     }
   }
+  return HPX_SUCCESS;
 }
 
 static void 
 _set_future(_newfuture_t *f) {
-  status = cvar_get_error(&f->empty);
+  //hpx_status_t status = cvar_get_error(&f->empty);
   f->bits ^= HPX_UNSET; // not empty anymore!
   f->bits |= HPX_SET;
   cvar_reset(&f->empty);
@@ -173,15 +197,17 @@ _set_future_from_remote_action(void *args) {
   scheduler_wait(&f->lco.lock, &f->empty);
   _set_future(f);
   lco_unlock(&f->lco);
+  return HPX_SUCCESS;
 }
 
 static int
 _recv_queue_progress_action(void *args) {
   int flag;
-  int request;
+  photon_rid request;
   int send_rank = -1;
   do {
-    send_rank = (send_rank++) % hpx_get_num_ranks();
+    send_rank++;
+    send_rank = send_rank % hpx_get_num_ranks();
     if (send_rank != hpx_get_my_rank())
       continue;
     photon_probe_completion(send_rank, &flag, &request, PHOTON_PROBE_LEDGER);
@@ -190,7 +216,7 @@ _recv_queue_progress_action(void *args) {
       lco_lock(&f->lco);
   
       // do set stuff
-      if (!empty(f))
+      if (!_empty(f))
 	hpx_call_async(HPX_HERE, _set_future_from_remote, f, sizeof(f), HPX_NULL, HPX_NULL);
       else {
 	_set_future(f);
@@ -198,6 +224,7 @@ _recv_queue_progress_action(void *args) {
       lco_unlock(&f->lco);
     } // end if
   } while (1);
+  return HPX_SUCCESS;
 }
 
 void initialize_newfutures() {
@@ -223,31 +250,6 @@ void initialize_newfutures() {
 /////////
 /// end main part of hacks
 /////////
-
-static bool _empty(const _newfuture_t *f) {
-  return f->bits & HPX_UNSET;
-}
-
-static bool _full(const _newfuture_t *f) {
-  return f->bits & HPX_SET;
-}
-
-/// Use the LCO's "user" state to remember if the future is in-place or not.
-static uintptr_t
-_is_inplace(const _newfuture_t *f) {
-  return lco_get_user(&f->lco);
-}
-
-static int
-_is_shared_action(void* args) {
-  _newfuture_t *fut;
-  hpx_addr_t target = hpx_thread_current_target();
-  if (!hpx_gas_try_pin(target, (void**)&fut))
-    return HPX_RESEND;
-  
-  bool result = (bool)(fut->bits & FT_SHARED);
-  hpx_thread_continue(sizeof(bool), &result);
-}
 
 static hpx_status_t
 _wait(_newfuture_t *f) {
@@ -546,9 +548,11 @@ _newfuture_new(size_t size, bool shared) {
   return f;
 }
 
-hpx_addr_t
+hpx_newfuture_t *
 hpx_lco_newfuture_new(size_t size) {
-  return _newfuture_new(size, false);
+  // TODO
+  //return _newfuture_new(size, false);
+  return NULL;
 }
 
 
@@ -599,31 +603,37 @@ _new_all(int n, size_t size, bool shared) {
   return base;
 }
 
-hpx_newfuture_t
+hpx_newfuture_t *
 hpx_lco_newfuture_new_all(int n, size_t size) {
-  return _new_all(n, size, false);
+  // TODO
+  //  return _new_all(n, size, false);
+  return NULL;
 }
 
-hpx_newfuture_t hpx_lco_newfuture_shared_new(size_t size) {
-  return _newfuture_new(size, true);
+hpx_newfuture_t *hpx_lco_newfuture_shared_new(size_t size) {
+  // TODO
+  //  return _newfuture_new(size, true);
+  return NULL;
 }
 
-hpx_newfuture_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size) {
-  return _new_all(num_participants, size, true);
+hpx_newfuture_t *hpx_lco_newfuture_shared_new_all(int num_participants, size_t size) {
+  // TODO
+  //  return _new_all(num_participants, size, true);
+  return NULL;
 }
 
 
 // Application level programmer doesn't know how big the future is, so we
 // provide this array indexer.
-hpx_newfuture_t
-hpx_lco_newfuture_at(hpx_newfuture_t array, int i) {
-  return hpx_addr_add(array, i * sizeof(_newfuture_t));
+hpx_newfuture_t *
+hpx_lco_newfuture_at(hpx_newfuture_t *array, int i) {
+  return &array[i];
 }
 
 
 
 static void
-_put_with_completion(hpx_newfuture_t future,  int id, size_t size, void *data,
+_put_with_completion(hpx_newfuture_t *future,  int id, size_t size, void *data,
 			  hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
   // need the following information:
   
@@ -635,47 +645,40 @@ _put_with_completion(hpx_newfuture_t future,  int id, size_t size, void *data,
   // local_rid can be the same?
 
 
-  photon_buffer_t buffer = future.buffer;
+  struct photon_buffer_t *buffer = (struct photon_buffer_t *)&future->buffer;
   int remote_rank = _newfuture_get_rank(future);
-  void *remote_ptr = _newfuture_get_addr(future);
-  struct photon_buffer_priv_t remote_priv = buffer.priv;
-  local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
-  photon_rid local_rid = remote_ptr; // TODO this is not ideal - could clash
-  photon_rid remote_rid = remote_ptr;
+  void *remote_ptr = (void*)_newfuture_get_data_addr(future);
+  struct photon_buffer_priv_t remote_priv = buffer->priv;
+  photon_rid local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
+  photon_rid remote_rid = _newfuture_get_data_addr(future);
   photon_put_with_completion(remote_rank, data, size, remote_ptr, remote_priv, 
 			     local_rid, remote_rid, PHOTON_REQ_ONE_CQE);
   
   // TODO add to queue for threads to check
 
-  if (lsync_lco != HPX_NULL) {
+  if (!hpx_addr_eq(lsync_lco, HPX_NULL)) {
     // wait at shared newfuture while value != local_rid
   }
-  if (rsync_lco != HPX_NULL) {
+  if (!hpx_addr_eq(rsync_lco, HPX_NULL)) {
     // wait at shared newfuture while value != remote_rid
   }
 }
 
-void hpx_lco_newfuture_setat(hpx_newfuture_t future,  int id, size_t size, void *data,
+void hpx_lco_newfuture_setat(hpx_newfuture_t *future,  int id, size_t size, void *data,
 				     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
-  hpx_newfuture_t future_i = hpx_lco_newfuture_at(future, id);
-  hpx_lco_set(future_i, size, data, lsync_lco, rsync_lco);
+  hpx_newfuture_t *future_i = hpx_lco_newfuture_at(future, id);
 
   // normally lco_set does all this
-  hpx_newfuture_t target = future;
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    put_with_completion(future, id, size, daya, lsync_lco, rsync_lco);
+  if (_newfuture_get_rank(future_i) != hpx_get_my_rank()) {
+    _put_with_completion(future_i, id, size, data, lsync_lco, rsync_lco);
   }
-  else {
-    size_t size = hpx_thread_current_args_size();
-    _lco_class(lco)->on_set(lco, size, data);
-    hpx_gas_unpin(target);
-  }
-  
+  else
+    _future_set((lco_t*)_newfuture_get_addr(future_i), size, data);  
 }
 
-void hpx_lco_newfuture_emptyat(hpx_newfuture_t base, int i, hpx_addr_t rsync_lco) {
-  hpx_newfuture_t target = hpx_lco_newfuture_at(base, i);
+void hpx_lco_newfuture_emptyat(hpx_newfuture_t *base, int i, hpx_addr_t rsync_lco) {
+#if 0
+  hpx_newfuture_t *target = hpx_lco_newfuture_at(base, i);
   
   // this is based on the implementation of hpx_lco_set()
   lco_t *lco = NULL;
@@ -690,37 +693,45 @@ void hpx_lco_newfuture_emptyat(hpx_newfuture_t base, int i, hpx_addr_t rsync_lco
 
   if (!hpx_addr_eq(rsync_lco, HPX_NULL))
     hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
+#endif
 }
 
-hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t base, int i, size_t size, void *value) {
-  hpx_newfuture_t target = hpx_lco_newfuture_at(base, i);
+hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t *base, int i, size_t size, void *value) {
+  // TODO
+  /*
+  hpx_newfuture_t *target = hpx_lco_newfuture_at(base, i);
   return hpx_lco_get(target, size, value);
+  */
 }
 
 
 
 // this is a highly suboptimal implementation
 // ideally this would be done more like wait_all is implemented
-void hpx_lco_newfuture_get_all(size_t num, hpx_newfuture_t futures, size_t size,
+void hpx_lco_newfuture_get_all(size_t num, hpx_newfuture_t *futures, size_t size,
 			       void *values[]) {
-  hpx_newfuture_t *lcos = malloc(sizeof(hpx_newfuture_t) * num);
-  int *sizes = malloc(sizeof(int) * num);
-  hpx_status_t *statuses = malloc(sizeof(hpx_status_t) * num);
+  /*
 
-  for (int i = 0; i < num; i++) {
+    hpx_newfuture_t *lcos = malloc(sizeof(hpx_newfuture_t) * num);
+    int *sizes = malloc(sizeof(int) * num);
+    hpx_status_t *statuses = malloc(sizeof(hpx_status_t) * num);
+    
+    for (int i = 0; i < num; i++) {
     lcos[i] = hpx_lco_newfuture_at(futures, i);
     sizes[i] = size;
-  }
-
-  hpx_lco_get_all(num, lcos, sizes, values, statuses);
-
-  free(lcos);
-  free(sizes);
-  free(statuses);
+    }
+    
+    hpx_lco_get_all(num, lcos, sizes, values, statuses);
+    
+    free(lcos);
+    free(sizes);
+    free(statuses);
+  */
+  // TODO TODO TODO
 }
 
-void hpx_lco_newfuture_waitat(hpx_newfuture_t future, int id, hpx_set_t set) {
-  hpx_newfuture_t target = hpx_lco_newfuture_at(future, id);
+void hpx_lco_newfuture_waitat(hpx_newfuture_t *future, int id, hpx_set_t set) {
+  hpx_newfuture_t *target = hpx_lco_newfuture_at(future, id);
 
   struct _future_wait_args args;
   args.set = set;
@@ -729,41 +740,15 @@ void hpx_lco_newfuture_waitat(hpx_newfuture_t future, int id, hpx_set_t set) {
   hpx_call_sync(target, _future_wait_remote, &args, sizeof(args), NULL, 0);
 }
 
-hpx_status_t hpx_lco_newfuture_waitat_for(hpx_newfuture_t future, int id, hpx_set_t set, hpx_time_t time) {
-  hpx_time_t abs_time = hpx_time_point(hpx_time_now(), time);
-
-  hpx_addr_t done = hpx_lco_future_new(0);
-  struct _future_wait_args *args = malloc(sizeof(args));
-  args->set = set;
-  args->wait_action = _future_wait_full; // TODO remove??
-
-  hpx_newfuture_t target = hpx_lco_newfuture_at(future, id);
-  hpx_call_async(target, _future_wait_remote, args, sizeof(args), HPX_NULL, done);
-
-  hpx_status_t success = hpx_lco_try_wait(done, abs_time);
-  hpx_lco_delete(done, HPX_NULL);
-  free(args);
-
-  return success;
+hpx_status_t hpx_lco_newfuture_waitat_for(hpx_newfuture_t *future, int id, hpx_set_t set, hpx_time_t time) {
+  return HPX_ERROR;
 }
 
-hpx_status_t hpx_lco_newfuture_waitat_until(hpx_newfuture_t future, int id, hpx_set_t set, hpx_time_t time) {
-  hpx_addr_t done = hpx_lco_future_new(0);
-  struct _future_wait_args *args = malloc(sizeof(args));
-  args->set = set;
-  args->wait_action = _future_wait_full; // TODO remove??
-
-  hpx_newfuture_t target = hpx_lco_newfuture_at(future, id);
-  hpx_call_async(target, _future_wait_remote, args, sizeof(args), HPX_NULL, done);
-
-  hpx_status_t success = hpx_lco_try_wait(done, time);
-  hpx_lco_delete(done, HPX_NULL);
-  free(args);
-
-  return success;
+hpx_status_t hpx_lco_newfuture_waitat_until(hpx_newfuture_t *future, int id, hpx_set_t set, hpx_time_t time) {
+  return HPX_ERROR;
 }
 
-void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t newfutures, hpx_set_t set) {
+void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t *newfutures, hpx_set_t set) {
 
   hpx_addr_t done = hpx_lco_and_new(num);
   struct _future_wait_args *args = malloc(sizeof(args));
@@ -771,7 +756,7 @@ void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t newfutures, hpx_set_
   args->wait_action = _future_wait_full; // TODO remove??
 
   for (int i = 0; i < num; i++) {
-    hpx_newfuture_t target = hpx_lco_newfuture_at(newfutures, i);
+    hpx_newfuture_t *target = hpx_lco_newfuture_at(newfutures, i);
     hpx_call_async(target, _future_wait_remote, args, sizeof(args), HPX_NULL, done);
   }
 
@@ -781,51 +766,21 @@ void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t newfutures, hpx_set_
   return;
 }
 
-hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_newfuture_t newfutures, 
+hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_newfuture_t *newfutures, 
 					    hpx_set_t set, hpx_time_t time) {
-  hpx_time_t abs_time = hpx_time_point(hpx_time_now(), time);
-
-  hpx_addr_t done = hpx_lco_and_new(num);
-  struct _future_wait_args *args = malloc(sizeof(args));
-  args->set = set;
-  args->wait_action = _future_wait_full; // TODO remove??
-
-  for (int i = 0; i < num; i++) {
-    hpx_newfuture_t target = hpx_lco_newfuture_at(newfutures, i);
-    hpx_call_async(target, _future_wait_remote, args, sizeof(args), HPX_NULL, done);
-  }
-
-  hpx_status_t success = hpx_lco_try_wait(done, abs_time);
-  hpx_lco_delete(done, HPX_NULL);
-  free(args);
-
-  return success;
+  return HPX_ERROR;
 }
 
-hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_newfuture_t newfutures, 
+hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_newfuture_t *newfutures, 
 					    hpx_set_t set, hpx_time_t time) {
-  hpx_addr_t done = hpx_lco_and_new(num);
-  struct _future_wait_args *args = malloc(sizeof(args));
-  args->set = set;
-  args->wait_action = _future_wait_full; // TODO remove??
-
-  for (int i = 0; i < num; i++) {
-    hpx_newfuture_t target = hpx_lco_newfuture_at(newfutures, i);
-    hpx_call_async(target, _future_wait_remote, args, sizeof(args), HPX_NULL, done);
-  }
-
-  hpx_status_t success = hpx_lco_try_wait(done, time);
-  hpx_lco_delete(done, HPX_NULL);
-  free(args);
-
-  return success;
+  return HPX_ERROR;
 }
 
-void hpx_lco_newfuture_free(hpx_newfuture_t future) {
+void hpx_lco_newfuture_free(hpx_newfuture_t *future) {
   hpx_lco_delete(future, HPX_NULL);
 }
 
-void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t base) {
+void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t *base) {
   // Ideally this would not need to know the number of futures. But in order to avoid that
   // we would need to add to futures that are created and deleted with _all() functions
   // a pointer to the base future and a count.
@@ -834,7 +789,7 @@ void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t base) {
     hpx_lco_delete(hpx_lco_newfuture_at(base, i), HPX_NULL);
 }
 
-bool hpx_lco_newfuture_is_shared(hpx_newfuture_t target) {
+bool hpx_lco_newfuture_is_shared(hpx_newfuture_t *target) {
   _newfuture_t *fut;
   if (!hpx_gas_try_pin(target, (void**)&fut))
   {
