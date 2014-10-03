@@ -47,8 +47,8 @@ static void _register_actions(void);
 /** the pingpong message type */
 typedef struct {
   int iterations;
-  hpx_newfuture_t ping;
-  hpx_newfuture_t pong;
+  hpx_newfuture_t *ping;
+  hpx_newfuture_t *pong;
 } args_t;
 
 /* utility macros */
@@ -68,11 +68,7 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
@@ -154,12 +150,12 @@ static int _action_main(args_t *args) {
   printf("In main\n");
   hpx_addr_t done = hpx_lco_and_new(2);
 
-  hpx_newfuture_t base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
+  hpx_newfuture_t *base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
   args->ping = hpx_lco_newfuture_at(base, 0);
   args->pong = hpx_lco_newfuture_at(base, 1);
 
-  hpx_call(HPX_THERE(hpx_newfuture_get_rank(args->ping)), _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_THERE(hpx_newfuture_get_rank(args->pong));
+  hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(args->ping)), _ping, args, sizeof(*args), done);
+  hpx_addr_t there = HPX_THERE(hpx_lco_newfuture_get_rank(args->pong));
   hpx_call(there, _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);

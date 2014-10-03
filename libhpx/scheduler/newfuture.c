@@ -65,6 +65,8 @@
 
 #define FT_SHARED 1<<3
 
+static const int _NEWFUTURE_EXCHG = -37;
+
 typedef struct {
   lco_t lco;
   cvar_t full;
@@ -99,6 +101,7 @@ static hpx_action_t _future_wait_remote = 0;
 static hpx_action_t _future_set_no_copy_from_remote = 0;
 static hpx_action_t _recv_queue_progress = 0;
 static hpx_action_t _send_queue_progress = 0;
+static hpx_action_t _new_all_remote = 0;
 
 static bool _empty(const _newfuture_t *f) {
   return f->bits & HPX_UNSET;
@@ -531,6 +534,7 @@ _future_blocks_init_action(uint32_t *args) {
   return HPX_SUCCESS;
 }
 
+#if 0
 static hpx_addr_t
 _newfuture_new(size_t size, bool shared) {
   hpx_addr_t f;
@@ -556,17 +560,115 @@ _newfuture_new(size_t size, bool shared) {
   hpx_gas_unpin(f);
   return f;
 }
+#endif
 
 hpx_newfuture_t *
 hpx_lco_newfuture_new(size_t size) {
-  // TODO
+  return hpx_lco_newfuture_new_all(1, size);
   //return _newfuture_new(size, false);
   return NULL;
 }
 
+typedef struct {
+  lockable_ptr_t lock;
+  int index;
+  int capacity;
+  hpx_newfuture_t **futs;
+} _newfuture_table_t;
 
-static hpx_addr_t 
+static _newfuture_table_t _newfuture_table;
+
+// assumes table is already locked
+static void
+_table_resize() {
+  // TODO make nicer
+  _newfuture_table.futs = realloc(_newfuture_table.futs, _newfuture_table.capacity * 2 * sizeof(hpx_newfuture_t*));
+  _newfuture_table.capacity *= 2;
+}
+
+struct new_all_args {
+  int n;
+  int base_rank;
+  size_t size;
+};
+
+static hpx_newfuture_t*
+_new_all(struct new_all_args *args) {
+	 
+  int n = args->n; // number of futures
+  int base_rank = args->base_rank;
+  size_t size = args->size;
+
+  size_t elem_size = size + sizeof(_newfuture_t);
+
+  // allocate control structures that exist globally (via redundancy - they're not unique global objects)
+  hpx_newfuture_t *base_local = calloc(n, sizeof(hpx_newfuture_t));
+
+  // allocate local data
+  int futs_here = n / hpx_get_num_ranks();
+  futs_here = futs_here + (hpx_get_num_ranks() - futs_here % hpx_get_num_ranks());
+  _newfuture_t *futures = calloc(futs_here, elem_size);
+
+  // allocate local send buffer
+  base_local[hpx_get_my_rank()].send_buffer = malloc(elem_size);
+
+  void *send_buffer = base_local[hpx_get_my_rank()].send_buffer;
+
+  sync_lockable_ptr_lock(&_newfuture_table.lock);
+  _newfuture_table.index++;
+  if (_newfuture_table.index > _newfuture_table.capacity)
+    _table_resize();
+  _newfuture_table.futs[_newfuture_table.index] = base_local;
+
+  photon_register_buffer(send_buffer, elem_size);
+
+  photon_register_buffer(futures, elem_size * futs_here);
+  
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    if (i == hpx_get_my_rank())
+      continue;
+    photon_rid rid;
+    photon_post_recv_buffer_rdma(i, futures, elem_size * futs_here, _NEWFUTURE_EXCHG, &rid);
+    int dummy;
+    photon_wait_any(&dummy, &rid); // make sure we actually do something
+  }
+
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    base_local[i].count = n;
+    base_local[i].base_rank = base_rank;
+    base_local[i].size_per = size;
+    base_local[i].id = i;
+    base_local[i].send_buffer = send_buffer;
+    base_local[i].table_index = _newfuture_table.index;
+
+    if (i == hpx_get_my_rank())
+      continue;
+    photon_rid rid;
+    // wait for a recv buffer that was posted
+    photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, _NEWFUTURE_EXCHG, &rid);
+    photon_get_buffer_remote(rid, (struct photon_buffer_t*)&base_local[i].buffer);
+  }
+
+  sync_lockable_ptr_unlock(&_newfuture_table.lock);
+
+  return base_local;
+
+  // TODO return error on error
+}
+
+static int
+_new_all_remote_action(struct new_all_args *args) {
+  hpx_newfuture_t *fut = _new_all(args);
+  if (fut != NULL)
+    return HPX_SUCCESS;
+  else
+    return HPX_ERROR;
+}
+
+#if 0
+static hpx_newfuture_t * 
 _new_all(int n, size_t size, bool shared) {
+
   // perform the global allocation
   // if we want to be consistent with old futures, we'd need to have a 
   // parameter for block_size. Just in case, we keep block_size but set
@@ -610,13 +712,28 @@ _new_all(int n, size_t size, bool shared) {
 
   // return the base address of the allocation
   return base;
+
 }
+#endif
 
 hpx_newfuture_t *
 hpx_lco_newfuture_new_all(int n, size_t size) {
-  // TODO
-  //  return _new_all(n, size, false);
-  return NULL;
+  
+  struct new_all_args args = {
+    .n = n,
+    .base_rank = hpx_get_my_rank(),
+    .size = size
+  };
+
+  hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
+  hpx_newfuture_t *base_local = _new_all(&args);
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    if (i != hpx_get_my_rank())
+      hpx_call(HPX_THERE(i), _new_all_remote, &args, sizeof(args), done);
+  }
+  hpx_lco_wait(done);
+  
+  return base_local;
 }
 
 hpx_newfuture_t *hpx_lco_newfuture_shared_new(size_t size) {
@@ -805,31 +922,25 @@ hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_newfuture_t *newfu
 }
 
 void hpx_lco_newfuture_free(hpx_newfuture_t *future) {
-  hpx_lco_delete(future, HPX_NULL);
+
+  // TODO
+  //  hpx_lco_delete(future, HPX_NULL);
+
 }
+
 
 void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t *base) {
   // Ideally this would not need to know the number of futures. But in order to avoid that
   // we would need to add to futures that are created and deleted with _all() functions
   // a pointer to the base future and a count.
 
-  for (int i = 0; i < num; i++)
-    hpx_lco_delete(hpx_lco_newfuture_at(base, i), HPX_NULL);
+  // TODO
+  //  for (int i = 0; i < num; i++)
+  //    hpx_lco_delete(hpx_lco_newfuture_at(base, i), HPX_NULL);
 }
 
 bool hpx_lco_newfuture_is_shared(hpx_newfuture_t *target) {
-  _newfuture_t *fut;
-  if (!hpx_gas_try_pin(target, (void**)&fut))
-  {
-    hpx_addr_t done = hpx_lco_future_new(sizeof(bool));
-    hpx_call(target, _is_shared, NULL, 0, done);
-    bool result;
-    hpx_lco_get(done, sizeof(result), &result);
-    hpx_lco_delete(done, HPX_NULL);
-    return result;
-  }
-  else
-    return (bool)(fut->bits & FT_SHARED);
+  return false;
 }
 
 int
@@ -854,4 +965,5 @@ _future_initialize_actions(void) {
 
   _recv_queue_progress = HPX_REGISTER_ACTION(_recv_queue_progress_action);
   _send_queue_progress = HPX_REGISTER_ACTION(_send_queue_progress_action);
+  _new_all_remote = HPX_REGISTER_ACTION(_new_all_remote_action);
 }
