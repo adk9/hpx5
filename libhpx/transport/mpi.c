@@ -31,6 +31,7 @@
 typedef struct {
   transport_class_t class;
   progress_t *progress;
+  uint32_t req_limit;
 } mpi_t;
 
 
@@ -199,20 +200,21 @@ static int _mpi_test(transport_class_t *t, void *request, int *success) {
 
 static void _mpi_progress(transport_class_t *t, bool flush) {
   mpi_t *mpi = (mpi_t*)t;
-  network_progress_poll(mpi->progress);
   if (flush)
     network_progress_flush(mpi->progress);
+  else
+    network_progress_poll(mpi->progress);
 }
 
-static uint32_t _mpi_get_send_limit(void) {
-  return UINT16_MAX;
+static uint32_t _mpi_get_send_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
-static uint32_t _mpi_get_recv_limit(void) {
-  return UINT16_MAX;
+static uint32_t _mpi_get_recv_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
-transport_class_t *transport_new_mpi(void) {
+transport_class_t *transport_new_mpi(uint32_t req_limit) {
   int val = 0;
   MPI_Initialized(&val);
 
@@ -246,6 +248,8 @@ transport_class_t *transport_new_mpi(void) {
   mpi->class.test           = _mpi_test;
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
+
+  mpi->class.req_limit      = req_limit == 0 ? UINT16_MAX : req_limit;
 
   mpi->progress             = network_progress_new(&mpi->class);
   if (!mpi->progress) {

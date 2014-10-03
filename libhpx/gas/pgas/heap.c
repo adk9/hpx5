@@ -185,9 +185,7 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
   return heap->base + offset;
 }
 
-size_t heap_sbrk(heap_t *heap, size_t n, uint32_t bsize) {
-  const uint32_t align = ceil_log2_32(bsize);
-  const uint64_t m = n / here->ranks + ((n % here->ranks) ? 1 : 0);
-  const uint32_t csbrk = sync_fadd(&heap->csbrk, align * m, SYNC_ACQ_REL);
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t balign) {
+  const uint32_t csbrk = sync_fadd(&heap->csbrk, balign * n, SYNC_ACQ_REL);
   return (heap->nbytes - csbrk);
 }

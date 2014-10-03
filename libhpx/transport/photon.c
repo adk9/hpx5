@@ -45,6 +45,7 @@ typedef struct {
   struct photon_config_t  cfg;
   progress_t        *progress;
   unsigned              arena;
+  uint32_t            srlimit;
 } photon_t;
 
 
@@ -342,23 +343,24 @@ static void
 _progress(transport_class_t *t, bool flush)
 {
   photon_t *photon = (photon_t*)t;
-  network_progress_poll(photon->progress);
   if (flush)
     network_progress_flush(photon->progress);
+  else
+    network_progress_poll(photon->progress);
 }
 
 
-static uint32_t _photon_get_send_limit(void) {
-  return photon_default_srlimit;
+static uint32_t _photon_get_send_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
-static uint32_t _photon_get_recv_limit(void) {
-  return photon_default_srlimit;
+static uint32_t _photon_get_recv_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
 
 
-transport_class_t *transport_new_photon(void) {
+transport_class_t *transport_new_photon(uint32_t req_limit) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
@@ -381,6 +383,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.testsome       = NULL;
   photon->class.progress       = _progress;
 
+  photon->class.req_limit      = req_limit == 0 ? photon_default_srlimit : req_limit;
+
   // runtime configuration options
   char* eth_dev;
   char* ib_dev;
@@ -401,7 +405,7 @@ transport_class_t *transport_new_photon(void) {
   if (backend == NULL)
     backend = photon_default_backend;
   if(getenv("HPX_USE_CMA") == NULL)
-    use_cma = 1;
+    use_cma = 0;
   else
     use_cma = atoi(getenv("HPX_USE_CMA"));
   if (getenv("HPX_USE_IB_PORT") == NULL)
