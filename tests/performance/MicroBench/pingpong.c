@@ -33,6 +33,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
           "\t-c, the number of cores to run on\n"
           "\t-t, the number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
           "\t-D, all localities wait for debugger\n"
@@ -69,13 +70,17 @@ int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'm':
       _text = true;
@@ -120,17 +125,17 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  test_log = fopen("test.log", "a+");
-
-  fprintf(test_log, "\nStarting the pingpong test\n");
-  fprintf(test_log, "Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
-         args.id, _text, _verbose);
-
   int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
+
+  test_log = fopen("test.log", "a+");
+
+  fprintf(test_log, "\nStarting the pingpong test\n");
+  fprintf(test_log, "Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
+         args.id, _text, _verbose);
 
   _register_actions();
 
@@ -141,6 +146,7 @@ int main(int argc, char *argv[]) {
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.id * 2);
   fprintf(test_log, "average oneway latency (%s):   %f ms\n", network, latency);
+  fclose(test_log);
   return e;
 }
 

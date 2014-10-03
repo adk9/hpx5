@@ -30,6 +30,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fibonacci [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, this help display\n");
@@ -96,7 +97,7 @@ static int _fib_main_action(int *args) {
   fprintf(test_log, "%d\n", fn);
   fprintf(test_log, "seconds: %.7f\n", elapsed);
   fprintf(test_log, "localities: %d\n", HPX_LOCALITIES);
-  fprintf(test_log, "threads/locality: %d\n", HPX_THREADS);
+  fprintf(test_log, "threads/locality: %d\n\n", HPX_THREADS);
   fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
@@ -105,13 +106,17 @@ int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;
@@ -146,14 +151,14 @@ int main(int argc, char *argv[]) {
      break;
   }
 
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the Fibonacci test\n");
-
   int e = hpx_init(&cfg);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
+
+  test_log = fopen("test.log", "a+");
+  fprintf(test_log, "Starting the Fibonacci test\n");
 
   // register the fib action
   _fib      = HPX_REGISTER_ACTION(_fib_action);

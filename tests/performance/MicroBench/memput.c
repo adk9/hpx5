@@ -114,6 +114,7 @@ static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
@@ -123,13 +124,17 @@ int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;
@@ -149,13 +154,12 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the memput test\n");
-
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
+
+  test_log = fopen("test.log", "a+");
 
   if (HPX_LOCALITIES < 2) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.\n");
