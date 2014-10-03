@@ -73,7 +73,7 @@ action_allreduce(void *unused) {
     hpx_call(HPX_THERE(i), set_value, &value, sizeof(value), futures[i]);
   }
 
-  hpx_lco_get_all(num_ranks, futures, NULL, NULL, NULL);
+  hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
 
   for (int i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
@@ -82,11 +82,8 @@ action_allreduce(void *unused) {
 }
 
 int main(int argc, char** argv) {
-  hpx_config_t config = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0
-  };
+  
+  hpx_config_t config = HPX_CONFIG_DEFAULTS;
 
   switch (argc) {
    default:

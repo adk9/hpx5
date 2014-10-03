@@ -131,7 +131,7 @@ int hpx_init(const hpx_config_t *cfg) {
   HPX_HERE = HPX_THERE(here->rank);
 
   // 5) allocate our block translation table
-  here->btt = btt_new(cfg->gas, cfg->heap_bytes);
+  here->btt = btt_new(cfg->gas, cfg->heap_bytes, cfg->btt_size);
   if (here->btt == NULL)
     return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));
 
@@ -164,8 +164,8 @@ int hpx_init(const hpx_config_t *cfg) {
   assert(pinned);
 
   // 7b) set the global private allocation sbrk
-  uint64_t round = ((uint64_t)(UINT32_MAX/here->ranks) * here->ranks) + here->rank;
-  uint32_t offset = (uint32_t)((round >= UINT32_MAX) ? (round - here->ranks) : (round));
+  uint64_t round = ((uint64_t)(cfg->btt_size/here->ranks) * here->ranks) + here->rank;
+  uint32_t offset = (uint32_t)((round >= cfg->btt_size) ? (round - here->ranks) : (round));
   dbg_log_gas("initializing private sbrk to %u.\n", offset);
   assert(offset % here->ranks == here->rank);
   sync_store(&here->pvt_sbrk, offset, SYNC_RELEASE);

@@ -115,7 +115,7 @@ static void usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.gas          = HPX_GAS_SMP;
+  //cfg.gas          = HPX_GAS_SMP;
 
   int args[2] = {24, 10000};
 

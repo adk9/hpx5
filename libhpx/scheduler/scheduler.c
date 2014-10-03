@@ -97,9 +97,7 @@ int scheduler_startup(scheduler_t *sched) {
   }
 
   worker_run(sched);
-
-  for (int i = 0, e = sched->n_workers; i < e; ++i)
-      worker_join(sched->workers[i]);
+  scheduler_join(sched);
 
   return HPX_SUCCESS;
 }

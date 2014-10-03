@@ -108,6 +108,16 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
    _finish_request(progress, r);
  }
 
+/// Flush a request.
+///
+/// This finishes a request during shutdown flushing. We cheat by using the
+/// _finish_send handler, which does what we want. This name just helps with
+/// documentation.
+///
+static void _flush(progress_t *progress, request_t *r) {
+  _finish_send(progress, r);
+}
+
 
  /// Finish a receive request.
  ///
@@ -254,17 +264,26 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
 
    // flush the pending sends
    while (p->pending_sends)
-     _test(p, &p->pending_sends, _finish_send);
+     _test(p, &p->pending_sends, _flush);
 
    // if we have any pending receives, we wait for those to finish as well
    while (p->pending_recvs)
-     _test(p, &p->pending_recvs, _finish_recv);
+     _test(p, &p->pending_recvs, _flush);
  }
 
  void network_progress_poll(progress_t *p) {
    int sends = 0;
    int recvs = 0;
    do {
+     int recv = 1;
+     while (recv && network_progress_can_recv(p)) {
+       recv = _try_start_recv(p);
+       p->nprecvs += recv;
+       DEBUG_IF (recv) {
+	 dbg_log_trans("progress: started a recv.\n");
+       }
+     }
+
      sends = _test(p, &p->pending_sends, _finish_send);
      assert(sends <= p->npsends);
      p->npsends -= sends;
@@ -286,15 +305,6 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
      p->npsends += send;
      DEBUG_IF(send) {
        dbg_log_trans("progress: started a send.\n");
-     }
-   }
-
-   int recv = 1;
-   while (recv && network_progress_can_recv(p)) {
-     recv = _try_start_recv(p);
-     p->nprecvs += recv;
-     DEBUG_IF (recv) {
-       dbg_log_trans("progress: started a recv.\n");
      }
    }
 }
