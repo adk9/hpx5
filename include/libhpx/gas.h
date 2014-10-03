@@ -54,6 +54,15 @@ struct gas_class {
 
   hpx_addr_t (*lva_to_gva)(void *lva);
   void *(*gva_to_lva)(hpx_addr_t gva);
+
+  // implement hpx/gas.h
+  __typeof(hpx_gas_try_pin) *try_pin;
+  __typeof(hpx_gas_unpin) *unpin;
+  __typeof(hpx_gas_global_alloc) *cyclic_alloc;
+  __typeof(hpx_gas_global_calloc) *cyclic_calloc;
+  __typeof(hpx_gas_alloc) *local_alloc;
+  __typeof(hpx_gas_free) *free;
+
 };
 
 gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
