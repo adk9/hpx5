@@ -18,6 +18,7 @@
 /// Defines the future structure.
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -622,7 +623,8 @@ _new_all(struct new_all_args *args) {
       continue;
     photon_rid rid;
     photon_post_recv_buffer_rdma(i, futures, elem_size * futs_here, _NEWFUTURE_EXCHG, &rid);
-    int dummy;
+    printf("Posted buffer to %d at %d with addr = %p\n", i, hpx_get_my_rank(), (void*)futures);
+    //    int dummy;
     //    photon_wait_any(&dummy, &rid); // make sure we actually do something
   }
 
@@ -635,11 +637,14 @@ _new_all(struct new_all_args *args) {
     base_local[i].table_index = _newfuture_table.index;
 
     if (i == hpx_get_my_rank())
-      continue;
+      base_local[i].buffer.addr = (uintptr_t)futures;
+      
     photon_rid rid;
     // wait for a recv buffer that was posted
     photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, _NEWFUTURE_EXCHG, &rid);
     photon_get_buffer_remote(rid, (struct photon_buffer_t*)&base_local[i].buffer);
+
+    printf("Recevied buffer from %d at %d with address = %p\n", i, hpx_get_my_rank(), (void*)base_local[i].buffer.addr);
   }
 
   sync_lockable_ptr_unlock(&_newfuture_table.lock);
