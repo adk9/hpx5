@@ -135,12 +135,13 @@ _is_shared_action(void* args) {
 
 typedef struct {
   lockable_ptr_t lock;
+  int inited;
   int index;
   int capacity;
   hpx_newfuture_t **futs;
 } _newfuture_table_t;
 
-static _newfuture_table_t _newfuture_table;
+static _newfuture_table_t _newfuture_table = {.inited = 0};
 
 
 #define PHOTON_NOWAIT_TAG 0
@@ -584,6 +585,10 @@ struct new_all_args {
 static hpx_newfuture_t*
 _new_all(struct new_all_args *args) {
 	 
+  sync_lockable_ptr_lock(&_newfuture_table.lock);
+  if (_newfuture_table.inited != 1)
+    initialize_newfutures();
+
   int n = args->n; // number of futures
   int base_rank = args->base_rank;
   size_t size = args->size;
@@ -603,7 +608,6 @@ _new_all(struct new_all_args *args) {
 
   void *send_buffer = base_local[hpx_get_my_rank()].send_buffer;
 
-  sync_lockable_ptr_lock(&_newfuture_table.lock);
   _newfuture_table.index++;
   if (_newfuture_table.index > _newfuture_table.capacity)
     _table_resize();
