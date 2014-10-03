@@ -246,7 +246,44 @@ static int _action_evolve(InitArgs *init) {
   int plane    = index/(tp*tp);
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
-  printf(" TEST \n");
+
+  while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    if ( ld->cycle == 0 ) {
+      // SBN1
+    }
+
+    ld->time += ld->deltatime;
+
+    ld->cycle++;
+  }
+
+  if ( ld->rank == 0 ) {
+    int nx = ld->sizeX;
+    printf("  Problem size = %d \n"
+           "  Iteration count = %d \n"
+           "  Final origin energy = %12.6e\n",nx,ld->cycle,ld->e[0]);
+    double MaxAbsDiff = 0.0;
+    double TotalAbsDiff = 0.0;
+    double MaxRelDiff = 0.0;
+    int j,k;
+    for (j = 0; j < nx; j++) {
+      for (k = j + 1; k < nx; k++) {
+        double AbsDiff = fabs(ld->e[j*nx + k] - ld->e[k*nx + j]);
+        TotalAbsDiff += AbsDiff;
+
+        if (MaxAbsDiff < AbsDiff)
+          MaxAbsDiff = AbsDiff;
+
+        double RelDiff = AbsDiff/ld->e[k*nx + j];
+        if (MaxRelDiff < RelDiff)
+          MaxRelDiff = RelDiff;
+      }
+    }
+    printf("  Testing plane 0 of energy array:\n"
+       "  MaxAbsDiff   = %12.6e\n"
+       "  TotalAbsDiff = %12.6e\n"
+       "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+  }
 
   free(ld);
   return HPX_SUCCESS;
