@@ -15,7 +15,7 @@ SBN1(Domain *domain, hpx_addr_t sbn1)
     double *data = malloc(BUFSZ[destLocalIdx]);
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
-    hpx_lco_newfuture_setat(sbn1[destLocalIdx + domain->rank*26], 0, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+    hpx_lco_newfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
     free(data);
   }
 
@@ -28,7 +28,7 @@ SBN1(Domain *domain, hpx_addr_t sbn1)
     int fromDomain = OFFSET[srcLocalIdx] + domain->rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
     double *src = malloc(BUFSZ[srcRemoteIdx]);
-    hpx_lco_newfuture_getat(sbn1[srcRemoteIdx + fromDomain*26], 0, BUFSZ[srcRemoteIdx], src);
+    hpx_lco_newfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx], src);
     recv_t unpack = RECEIVER[srcLocalIdx];
     unpack(nx, ny, nz, src, domain->nodalMass, 0);
     free(src);
