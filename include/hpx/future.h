@@ -219,4 +219,7 @@ void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t *base);
 /// @returns      true if the future is a shared future, false otherwise
 bool hpx_lco_newfuture_is_shared(hpx_newfuture_t *future);
 
+/// Returns the rank at which the future is located (you might need to use hpx_lco_newfuture_at() to get the future).
+int hpx_lco_newfuture_get_rank(hpx_newfuture_t *future);
+
 #endif
