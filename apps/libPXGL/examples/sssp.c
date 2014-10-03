@@ -197,6 +197,7 @@ static int _main_action(_sssp_args_t *args) {
      total_edge_traversal += sssp_stat->edge_traversal_count;
 #endif
 
+#ifdef VERBOSE
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
@@ -205,6 +206,7 @@ static int _main_action(_sssp_args_t *args) {
     }
     hpx_lco_wait(vertices);
     hpx_lco_delete(vertices, HPX_NULL);
+#endif
 
     printf("Computing checksum...\n");
     hpx_addr_t checksum_lco = HPX_NULL;
@@ -263,6 +265,7 @@ static int _main_action(_sssp_args_t *args) {
 /*     uint64_t total_distance; */
 /*   }total_distances_per_source; */
 
+#ifdef VERBOSE
   printf("\nElapsed time\n");
   for(int i = 0;i < args->nproblems;i++){
     printf("%f\n", elapsed_time[i]);
@@ -272,6 +275,7 @@ static int _main_action(_sssp_args_t *args) {
   for(int i = 0;i < args->nproblems;i++){
     printf("%zu\n", edge_traversed[i]);
   }
+#endif
 
   printf("\nTEPS statistics:\n");
   double *tm = (double *)malloc(sizeof(double)*args->nproblems);
