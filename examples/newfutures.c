@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
   const char *network = hpx_get_network_id();
 
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_main, NULL, 0);
+  e = hpx_run(_main, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.iterations * 2);
   printf("average oneway latency (%s):   %f ms\n", network, latency);
@@ -150,6 +150,7 @@ static int _action_main(args_t *args) {
   hpx_addr_t done = hpx_lco_and_new(2);
 
   hpx_newfuture_t *base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
+  printf("Futures allocated\n");
   args->ping = hpx_lco_newfuture_at(base, 0);
   args->pong = hpx_lco_newfuture_at(base, 1);
 
