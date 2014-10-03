@@ -33,24 +33,29 @@ static bool _smp_is_global(gas_class_t *gas, void *addr) {
   return true;
 }
 
-static hpx_locality_t _smp_locality_of(hpx_addr_t addr) {
+static uint32_t _smp_locality_of(hpx_addr_t addr) {
   return 0;
 }
 
-static uint64_t _smp_offset_of(hpx_addr_t gva) {
+static uint64_t _smp_offset_of(hpx_addr_t gva, uint32_t bsize) {
   return gva.offset;
 }
 
-static uint16_t _smp_phase_of(hpx_addr_t gva) {
+static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
   return 0;
 }
 
-static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint16_t bsize) {
+static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return (lhs.offset - rhs.offset);
 }
 
-static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint16_t bsize) {
-  return hpx_addr_init(gva.offset + bytes, 0, bsize);
+static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+  hpx_addr_t addr = {
+    .offset = gva.offset + bytes,
+    .base_id = 0,
+    .block_bytes = 0
+  };
+  return addr;
 }
 
 static gas_class_t _smp_vtable = {
