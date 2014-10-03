@@ -29,15 +29,19 @@
 // The number of bits in a word.
 const uint32_t BITS_PER_WORD = sizeof(uintptr_t) * 8;
 
+static uint32_t _get_nwords(uint32_t n) {
+  return n / BITS_PER_WORD + ((n % BITS_PER_WORD) ? 1 : 0);
+}
+
 size_t bitmap_sizeof(const uint32_t n) {
-  // need to allocate the closest word-multiple
-  int words = n / BITS_PER_WORD + ((n % BITS_PER_WORD) ? 1 : 0);
+  const uint32_t words = _get_nwords(n);
   return sizeof(bitmap_t) + words * sizeof(uintptr_t);
 }
 
 void bitmap_init(bitmap_t *bitmap, const uint32_t n) {
   sync_tatas_init(&bitmap->lock);
   bitmap->min = 0;
+  bitmap->nwords = _get_nwords(n);
   const uintptr_t pattern = UINTPTR_MAX;
   memset(&bitmap->bits, pattern, bitmap_sizeof(n) - sizeof(*bitmap));
 }
@@ -190,6 +194,11 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
   const uint32_t abs = bitmap->min * BITS_PER_WORD + offset + relative;
   const uint32_t end = abs + n;
   assert(abs % align == 0);
+  DEBUG_IF (end / BITS_PER_WORD >= bitmap->nwords) {
+    dbg_error("application ran out of global address space. This space is used\n"
+              "for all global allocation, as well as all stacks and parcel\n"
+              "data. Try adjusting your configuration.\n");
+  }
 
   // set the bits
   _set(bitmap->bits, abs, n);
