@@ -46,22 +46,15 @@ int   pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size) HP
 typedef struct {
   size_t n;
   uint32_t bsize;
-} alloc_handler_args_t;
+} pgas_alloc_args_t;
 
-extern hpx_action_t act_pgas_cyclic_alloc_handler;
-extern hpx_action_t act_pgas_cyclic_calloc_handler;
+extern hpx_action_t pgas_cyclic_alloc;
+extern hpx_action_t pgas_cyclic_calloc;
+
+hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
+hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 
 void pgas_register_actions(void) HPX_INTERNAL;
-
-
-int pgas_cyclic_alloc_handler(alloc_handler_args_t *args)
-  HPX_INTERNAL;
-
-
-
-int pgas_cyclic_calloc_handler(alloc_handler_args_t *args)
-  HPX_INTERNAL;
-
 
 
 

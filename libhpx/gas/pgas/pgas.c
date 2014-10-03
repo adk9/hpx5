@@ -122,24 +122,30 @@ static void _pgas_unpin(const hpx_addr_t addr) {
 }
 
 static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
+  if (here->rank == 0)
+    return pgas_cyclic_alloc_sync(n, bsize);
+
   hpx_addr_t addr;
-  alloc_handler_args_t args = {
+  pgas_alloc_args_t args = {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), act_pgas_cyclic_alloc_handler,
-                        &args, sizeof(args), &addr, sizeof(addr));
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &args, sizeof(args),
+                        &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
   return addr;
 }
 
 static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
+  if (here->rank == 0)
+    return pgas_cyclic_calloc_sync(n, bsize);
+
   hpx_addr_t addr;
-  alloc_handler_args_t args = {
+  pgas_alloc_args_t args = {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), act_pgas_cyclic_alloc_handler,
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc,
                         &args, sizeof(args), &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
   return addr;
