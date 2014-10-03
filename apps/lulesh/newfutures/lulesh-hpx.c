@@ -11,15 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "hpx/hpx.h"
-#include "hpx/future.h"
-
-#define BUFFER_SIZE 128
+#include "lulesh-hpx.h"
 
 /* command line options */
 static bool         _text = false;            //!< send text data with the ping
@@ -47,10 +39,6 @@ static void _usage(FILE *stream) {
 }
 
 static void _register_actions(void);
-
-typedef struct {
-  hpx_addr_t sbn1;
-} InitArgs;
 
 /** the pingpong message type */
 //typedef struct {
@@ -173,6 +161,11 @@ static int _action_main(int *input) {
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
+      .index = k,
+      .nDoms = nDoms,
+      .nx = nx,
+      .maxcycles = maxcycles,
+      .cores = cores,
       .sbn1 = sbn1
     };
     hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
@@ -237,8 +230,25 @@ static int _action_pong(args_t *args) {
 
 static int _action_evolve(InitArgs *init) {
 
+  Domain *ld;
+  ld = (Domain *) malloc(sizeof(Domain)); 
+
+  int nx        = init->nx;
+  int nDoms     = init->nDoms;
+  int maxcycles = init->maxcycles;
+  //int cores     = init->cores;
+  int index     = init->index;
+  int tp        = (int) (cbrt(nDoms) + 0.5);
+
+  Init(tp,nx);
+  int col      = index%tp;
+  int row      = (index/tp)%tp;
+  int plane    = index/(tp*tp);
+  
+  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
   printf(" TEST \n");
 
+  free(ld);
   return HPX_SUCCESS;
 }
 
