@@ -237,7 +237,7 @@ transport_class_t *transport_new_mpi(void) {
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
 
-  mpi->progress             = network_progress_new();
+  mpi->progress             = network_progress_new(&mpi->class);
   if (!mpi->progress) {
     dbg_error("mpi: failed to start the progress loop.\n");
   }
