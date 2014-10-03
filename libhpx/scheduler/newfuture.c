@@ -132,24 +132,16 @@ _is_shared_action(void* args) {
 ////////////
 ///// start hacks
 ///////////
-#if 0
 
-typedef struct  {
-  struct photon_buffer_t buffer;
-  // of interest are buffer.priv and buffer.addr
-  int count; // number of futures in this array
-  int base_rank;
-  int size_per; // size per future in bytes
-  int id; // index
-} hpx_newfuture_t;
+typedef struct {
+  lockable_ptr_t lock;
+  int index;
+  int capacity;
+  hpx_newfuture_t **futs;
+} _newfuture_table_t;
 
-  // actual newfuture address is buffer.addr + (id % HPX_NUM_LOCALITIES) * (size_per)
-  // actual data address is I think buffer.addr + (id % HPX_NUM_LOCALITIES) * (sizeof(_newfuture_t) + size_per) + sizeof(newfuture_t)
+static _newfuture_table_t _newfuture_table;
 
-#endif
-
-//static two_lock_queue_t *send_queue;
-//static two_lock_queue_t *recv_queues;
 
 #define PHOTON_NOWAIT_TAG 0
 
@@ -237,6 +229,10 @@ _recv_queue_progress_action(void *args) {
 }
 
 void initialize_newfutures() {
+  _newfuture_table.index = 0;
+  _newfuture_table.capacity = 1000;
+  _newfuture_table.futs = malloc(sizeof(hpx_newfuture_t*) * _newfuture_table.capacity);
+
   // alltoall:
   // exchange private structures and remote addresses
 
@@ -255,6 +251,8 @@ void initialize_newfutures() {
   for (int i = 0; i < hpx_get_num_ranks(); i++)
     recv_queues[i] = sync_two_lock_queue_new();
 #endif
+
+
 
 }
 /////////
@@ -568,15 +566,6 @@ hpx_lco_newfuture_new(size_t size) {
   //return _newfuture_new(size, false);
   return NULL;
 }
-
-typedef struct {
-  lockable_ptr_t lock;
-  int index;
-  int capacity;
-  hpx_newfuture_t **futs;
-} _newfuture_table_t;
-
-static _newfuture_table_t _newfuture_table;
 
 // assumes table is already locked
 static void

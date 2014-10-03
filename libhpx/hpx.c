@@ -34,6 +34,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
+#include "libhpx/newfuture.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
@@ -196,6 +197,8 @@ int hpx_init(const hpx_config_t *cfg) {
 
 /// Called to start up the HPX runtime.
 int system_startup(void) {
+  initialize_newfutures();
+
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
 
