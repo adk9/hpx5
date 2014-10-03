@@ -203,8 +203,6 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
     }
   }
 
-  assert(bitmap->bits[bitmap->min]);
-
   // output the absolute total start of the allocation
   *i = abs;
 
