@@ -312,10 +312,10 @@ int main(int argc, char *const argv[argc]) {
       cfg.log_level = atoi(optarg);
       break;
      case 's':
-      cfg.stack_bytes = atoi(optarg);
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
       break;
      case 'p':
-      cfg.heap_bytes = atoi(optarg);
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);
