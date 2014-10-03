@@ -275,6 +275,15 @@ static void _flush(progress_t *progress, request_t *r) {
    int sends = 0;
    int recvs = 0;
    do {
+     int recv = 1;
+     while (recv && network_progress_can_recv(p)) {
+       recv = _try_start_recv(p);
+       p->nprecvs += recv;
+       DEBUG_IF (recv) {
+	 dbg_log_trans("progress: started a recv.\n");
+       }
+     }
+
      sends = _test(p, &p->pending_sends, _finish_send);
      assert(sends <= p->npsends);
      p->npsends -= sends;
@@ -296,15 +305,6 @@ static void _flush(progress_t *progress, request_t *r) {
      p->npsends += send;
      DEBUG_IF(send) {
        dbg_log_trans("progress: started a send.\n");
-     }
-   }
-
-   int recv = 1;
-   while (recv && network_progress_can_recv(p)) {
-     recv = _try_start_recv(p);
-     p->nprecvs += recv;
-     DEBUG_IF (recv) {
-       dbg_log_trans("progress: started a recv.\n");
      }
    }
 }
