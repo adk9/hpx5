@@ -34,6 +34,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
           "\t-c, the number of cores to run on\n"
           "\t-t, the number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
           "\t-D, all localities wait for debugger\n"
@@ -74,13 +75,17 @@ int main(int argc, char *argv[]) {
   };
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'm':
       _text = true;

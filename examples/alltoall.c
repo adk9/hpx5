@@ -57,6 +57,7 @@ _usage(FILE *f, int error) {
   fprintf(f, "Usage: ./example [options] [CYCLES]\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-s, stack size in bytes\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
@@ -203,13 +204,17 @@ main(int argc, char * const argv[argc])
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:s:d:D:n:i:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:s:d:D:n:i:h")) != -1) {
     switch (opt) {
      case 'c':
       args.cores = cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 's':
       cfg.stack_bytes = atoi(optarg);
