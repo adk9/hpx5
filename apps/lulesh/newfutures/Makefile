@@ -1,7 +1,7 @@
 CC = mpicc
 CFLAGS = -g -std=gnu99
 INCLUDES = -I/home/manderson/hpx5_gitlab/include
-LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx -lhpx_jemalloc -lm
+LIBS = -L/home/manderson/hpx5_gitlab/lib -lhpx -lhpx_jemalloc -lphoton -lm
 
 SRC = $(shell ls *.c)
 OBJ = $(SRC:.c=.o)
