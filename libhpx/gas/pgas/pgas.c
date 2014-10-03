@@ -306,11 +306,6 @@ gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
   if (_global_heap)
     return &_pgas_vtable;
 
-  if (!mallctl_disable_dirty_page_purge()) {
-    dbg_error("pgas: failed to disable dirty page purging\n");
-    return NULL;
-  }
-
   _global_heap = malloc(sizeof(*_global_heap));
   if (!_global_heap) {
     dbg_error("pgas: could not allocate global heap\n");
@@ -324,7 +319,12 @@ gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
     return NULL;
   }
 
-  heap_bind_transport(_global_heap, transport);
+  if (heap_bind_transport(_global_heap, transport)) {
+    if (!mallctl_disable_dirty_page_purge()) {
+      dbg_error("pgas: failed to disable dirty page purging\n");
+      return NULL;
+    }
+  }
 
   return &_pgas_vtable;
 }

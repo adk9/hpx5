@@ -155,9 +155,9 @@ bool heap_contains(heap_t *heap, void *addr) {
   return (0 <= d && d < heap->nbytes);
 }
 
-void heap_bind_transport(heap_t *heap, transport_class_t *transport) {
-  transport->pin(transport, heap->base, heap->nbytes);
+int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   heap->transport = transport;
+  return transport->pin(transport, heap->base, heap->nbytes);
 }
 
 uint64_t heap_offset_of(heap_t *heap, void *addr) {
