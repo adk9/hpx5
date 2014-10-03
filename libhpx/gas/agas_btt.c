@@ -216,7 +216,7 @@ static uint32_t _agas_btt_owner(btt_class_t *btt, hpx_addr_t addr) {
 }
 
 
-btt_class_t *btt_agas_new(size_t heap_size) {
+btt_class_t *btt_agas_new(size_t heap_size, size_t btt_size) {
   // Allocate the object
   agas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
