@@ -317,6 +317,9 @@ int main(int argc, char *const argv[argc]) {
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
       break;
+     case 't':
+      cfg.btt_size = strtoul(optarg, NULL, 0);
+      break;
      case 'h':
       _usage(stdout);
       return 0;
