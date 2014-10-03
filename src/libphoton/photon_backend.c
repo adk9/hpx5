@@ -80,6 +80,7 @@ static int __photon_setup_request_ledger_eager(photonLedgerEntry l_entry, int cu
 static int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs, photon_rid request);
 static photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize, int bindex, int nbufs, photon_rid request);
 
+static int __photon_handle_cq_event(photonRequest req, photon_rid id);
 static int __photon_handle_send_event(photonRequest req, photon_rid id);
 static int __photon_handle_recv_event(photon_rid id);
 
@@ -711,6 +712,38 @@ error_exit:
   return PHOTON_ERROR;
 }
 
+static int __photon_handle_cq_event(photonRequest req, photon_rid id) {
+  photon_rid cookie = id;
+  uint32_t prefix;
+
+  prefix = (uint32_t)(cookie>>32);
+  if (prefix == REQUEST_COOK_EAGER) {
+    return 1;
+  }
+  
+  if ((cookie == req->id) && (req->type == EVQUEUE)) {
+    dbg_info("setting request completed with cookie: 0x%016lx", cookie);
+    req->state = REQUEST_COMPLETED;
+  }
+  // handle any other request completions we might get from the backend event queue
+  else if (cookie != NULL_COOKIE) {
+    photonRequest tmp_req;    
+    if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
+      if (tmp_req->type == EVQUEUE) {
+	dbg_info("setting request completed with cookie: 0x%016lx", cookie);
+	tmp_req->state = REQUEST_COMPLETED;
+      }
+    }
+    else if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
+      if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
+	dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
+	tmp_req->state = REQUEST_COMPLETED;
+      } 
+    }
+  }
+  return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // __photon_nbpop_event() is non blocking and returns:
 // -1 if an error occured.
@@ -723,7 +756,6 @@ static int __photon_nbpop_event(photonRequest req) {
 
   if (req->state == REQUEST_PENDING) {
     photon_rid cookie;
-    uint32_t prefix;
     photon_event_status event;
 
     if (req->flags & REQUEST_FLAG_EDONE)
@@ -739,36 +771,11 @@ static int __photon_nbpop_event(photonRequest req) {
     }
     
     cookie = event.id;
-    prefix = (uint32_t)(event.id>>32);
     
     dbg_info("(req type=%d) got completion for: 0x%016lx", req->type, cookie);
     
-    if (prefix == REQUEST_COOK_EAGER) {
-      return 1;
-    }
-    
-    if ((cookie == req->id) && (req->type == EVQUEUE)) {
-      dbg_info("setting request completed with cookie: 0x%016lx", cookie);
-      req->state = REQUEST_COMPLETED;
-    }
-    // handle any other request completions we might get from the backend event queue
-    else if (cookie != NULL_COOKIE) {
-      photonRequest tmp_req;
-      if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
-	if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
-	  dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
-	  tmp_req->state = REQUEST_COMPLETED;
-	}
-      }
-      else {
-	if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
-	  if (tmp_req->type == EVQUEUE) {
-	    dbg_info("%d: setting request completed with cookie: 0x%016lx", _photon_myrank, cookie);
-	    tmp_req->state = REQUEST_COMPLETED;
-	  }
-	}
-      }
-    }
+    rc = __photon_handle_cq_event(req, cookie);
+    if (rc) return rc;
   }
 
   // clean up a completed request if the FIN has already been sent
@@ -2727,19 +2734,25 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
   
   // we found something to process
   if (cookie != UINT64_MAX) {
-    if (htable_lookup(pwc_reqtable, cookie, (void**)&req)) {
-      dbg_info("got CQ event for something PWC never tracked!");
-      goto error_exit;
+    if (htable_lookup(pwc_reqtable, cookie, (void**)&req) == 0) {
+      // set flag and request only if we have processed the number of outstanding
+      // events expected for this reqeust
+      if ( (req->state == REQUEST_COMPLETED) || (--req->num_entries) == 0) {
+	*flag = 1;
+	*request = req->id;
+	dbg_info("completed and removing request: 0x%016lx", cookie);
+	htable_remove(pwc_reqtable, cookie, NULL);
+	SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+	return PHOTON_OK;
+      }
     }
-    
-    // set flag and request only if we have processed the number of outstanding
-    // events expected for this reqeust
-    if ( (--req->num_entries) == 0) {
-      *flag = 1;
-      *request = req->id;
-      dbg_info("completed and removing request: 0x%016lx", cookie);
-      htable_remove(pwc_reqtable, cookie, NULL);
-      SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+    else if (htable_lookup(reqtable, cookie, (void**)&req) == 0) {
+      dbg_info("got CQ event for a non-PWC request");
+      __photon_handle_cq_event(req, cookie);
+    }
+    else {
+      dbg_info("got CQ event not tracked: 0x%016lx", cookie);
+      goto error_exit;
     }
   }
   
