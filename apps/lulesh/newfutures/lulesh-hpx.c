@@ -75,11 +75,8 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  //cfg.heap_bytes = 2e9;
 
   int nDoms, nx, maxcycles,cores;
   // default
