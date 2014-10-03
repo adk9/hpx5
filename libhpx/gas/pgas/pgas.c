@@ -107,7 +107,7 @@ static bool _pgas_try_pin(const hpx_addr_t addr, void **local) {
 }
 
 static void *_pgas_gva_to_lva(hpx_addr_t addr) {
-  void *local;
+  void *local = NULL;
   bool is_local = _pgas_try_pin(addr, &local);
   DEBUG_IF (!is_local) {
     dbg_error("%lu is not local to %u\n", addr.offset, here->rank);

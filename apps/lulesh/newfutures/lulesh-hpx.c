@@ -11,15 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "hpx/hpx.h"
-#include "hpx/future.h"
-
-#define BUFFER_SIZE 128
+#include "lulesh-hpx.h"
 
 /* command line options */
 static bool         _text = false;            //!< send text data with the ping
@@ -48,10 +40,6 @@ static void _usage(FILE *stream) {
 
 static void _register_actions(void);
 
-typedef struct {
-  hpx_addr_t sbn1;
-} InitArgs;
-
 /** the pingpong message type */
 //typedef struct {
 //  hpx_addr_t ping;
@@ -75,11 +63,8 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-  };
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  //cfg.heap_bytes = 2e9;
 
   int nDoms, nx, maxcycles,cores;
   // default
@@ -176,6 +161,11 @@ static int _action_main(int *input) {
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
+      .index = k,
+      .nDoms = nDoms,
+      .nx = nx,
+      .maxcycles = maxcycles,
+      .cores = cores,
       .sbn1 = sbn1
     };
     hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
@@ -240,8 +230,62 @@ static int _action_pong(args_t *args) {
 
 static int _action_evolve(InitArgs *init) {
 
-  printf(" TEST \n");
+  Domain *ld;
+  ld = (Domain *) malloc(sizeof(Domain)); 
 
+  int nx        = init->nx;
+  int nDoms     = init->nDoms;
+  int maxcycles = init->maxcycles;
+  //int cores     = init->cores;
+  int index     = init->index;
+  int tp        = (int) (cbrt(nDoms) + 0.5);
+
+  Init(tp,nx);
+  int col      = index%tp;
+  int row      = (index/tp)%tp;
+  int plane    = index/(tp*tp);
+  
+  SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
+
+  while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    if ( ld->cycle == 0 ) {
+      // SBN1
+    }
+
+    ld->time += ld->deltatime;
+
+    ld->cycle++;
+  }
+
+  if ( ld->rank == 0 ) {
+    int nx = ld->sizeX;
+    printf("  Problem size = %d \n"
+           "  Iteration count = %d \n"
+           "  Final origin energy = %12.6e\n",nx,ld->cycle,ld->e[0]);
+    double MaxAbsDiff = 0.0;
+    double TotalAbsDiff = 0.0;
+    double MaxRelDiff = 0.0;
+    int j,k;
+    for (j = 0; j < nx; j++) {
+      for (k = j + 1; k < nx; k++) {
+        double AbsDiff = fabs(ld->e[j*nx + k] - ld->e[k*nx + j]);
+        TotalAbsDiff += AbsDiff;
+
+        if (MaxAbsDiff < AbsDiff)
+          MaxAbsDiff = AbsDiff;
+
+        double RelDiff = AbsDiff/ld->e[k*nx + j];
+        if (MaxRelDiff < RelDiff)
+          MaxRelDiff = RelDiff;
+      }
+    }
+    printf("  Testing plane 0 of energy array:\n"
+       "  MaxAbsDiff   = %12.6e\n"
+       "  TotalAbsDiff = %12.6e\n"
+       "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+  }
+
+  free(ld);
   return HPX_SUCCESS;
 }
 

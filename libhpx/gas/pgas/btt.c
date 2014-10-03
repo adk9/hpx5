@@ -24,7 +24,7 @@
 #include "libhpx/routing.h"
 #include "addr.h"
 
-static uint64_t _table_size = (uint64_t)UINT32_MAX * sizeof(void*);
+static uint64_t _table_size = 0;
 
 typedef void* volatile atomic_word_t;
 
@@ -113,7 +113,7 @@ static void _pgas_btt_insert(btt_class_t *btt, hpx_addr_t addr, void *base) {
 }
 
 
-btt_class_t *btt_pgas_new(size_t heap_size) {
+btt_class_t *btt_pgas_new(size_t heap_size, size_t btt_size) {
   // Allocate the object
   pgas_btt_t *btt = malloc(sizeof(*btt));
   if (!btt) {
@@ -130,6 +130,9 @@ btt_class_t *btt_pgas_new(size_t heap_size) {
   btt->class.owner   = _pgas_btt_owner;
   btt->class.home    = _pgas_btt_home;
 
+  _table_size =
+      btt_size ? btt_size : ((uint64_t)UINT32_MAX * sizeof(void*));
+ 
   // mmap the table
   int prot = PROT_READ | PROT_WRITE;
   int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
@@ -144,7 +147,7 @@ btt_class_t *btt_pgas_new(size_t heap_size) {
     dbg_error("pgas: could not mmap block-translation-table, falling back to "
         "HPX_GAS_SMP\n");
     free(btt);
-    return btt_new(HPX_GAS_SMP, heap_size);
+    return btt_new(HPX_GAS_SMP, heap_size, btt_size);
   }
 
   return &btt->class;
