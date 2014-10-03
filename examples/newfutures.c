@@ -47,8 +47,8 @@ static void _register_actions(void);
 /** the pingpong message type */
 typedef struct {
   int iterations;
-  hpx_addr_t ping;
-  hpx_addr_t pong;
+  hpx_newfuture_t ping;
+  hpx_newfuture_t pong;
 } args_t;
 
 /* utility macros */
@@ -142,10 +142,8 @@ int main(int argc, char *argv[]) {
 
   const char *network = hpx_get_network_id();
 
-  args.ping = hpx_lco_newfuture_new(BUFFER_SIZE);
-  args.pong = hpx_lco_newfuture_new(BUFFER_SIZE);
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_main, &args, sizeof(args));
+  e = hpx_run(_main, NULL, 0);
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.iterations * 2);
   printf("average oneway latency (%s):   %f ms\n", network, latency);
@@ -156,11 +154,13 @@ static int _action_main(args_t *args) {
   printf("In main\n");
   hpx_addr_t done = hpx_lco_and_new(2);
 
-  hpx_call(HPX_HERE, _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_HERE;
-  if (hpx_get_num_ranks() > 1)
-    there = HPX_THERE(1);
-  hpx_call(there, _ping, args, sizeof(*args), done);
+  hpx_newfuture_t base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
+  args->ping = hpx_lco_newfuture_at(base, 0);
+  args->pong = hpx_lco_newfuture_at(base, 1);
+
+  hpx_call(HPX_THERE(hpx_newfuture_get_rank(args->ping)), _ping, args, sizeof(*args), done);
+  hpx_addr_t there = HPX_THERE(hpx_newfuture_get_rank(args->pong));
+  hpx_call(there, _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
