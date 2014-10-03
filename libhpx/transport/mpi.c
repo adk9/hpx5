@@ -88,8 +88,9 @@ static void _mpi_delete(transport_class_t *transport) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _mpi_pin(transport_class_t *transport, const void* buffer,
-                     size_t len) {
+static int _mpi_pin(transport_class_t *transport, const void* buffer,
+                    size_t len) {
+  return 0;
 }
 
 

@@ -51,7 +51,8 @@ static void _delete(transport_class_t *transport) {
 }
 
 
-static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
+  return 0;
 }
 
 

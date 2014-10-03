@@ -249,7 +249,8 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
+  return 0;
 }
 
 /// ----------------------------------------------------------------------------
