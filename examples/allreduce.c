@@ -82,11 +82,8 @@ action_allreduce(void *unused) {
 }
 
 int main(int argc, char** argv) {
-  hpx_config_t config = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0
-  };
+  
+  hpx_config_t config = HPX_CONFIG_DEFAULTS;
 
   switch (argc) {
    default:
