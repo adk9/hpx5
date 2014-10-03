@@ -347,6 +347,16 @@ _progress(transport_class_t *t, bool flush)
 }
 
 
+static uint32_t _photon_get_send_limit(void) {
+  return UINT32_MAX;
+}
+
+static uint32_t _photon_get_recv_limit(void) {
+  return UINT32_MAX;
+}
+
+
+
 transport_class_t *transport_new_photon(void) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
@@ -355,6 +365,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.request_size   = _request_size;
   photon->class.request_cancel = _request_cancel;
   photon->class.adjust_size    = _adjust_size;
+  photon->class.get_send_limit = _photon_get_send_limit;
+  photon->class.get_recv_limit = _photon_get_recv_limit;
 
   photon->class.delete         = _delete;
   photon->class.pin            = _pin;

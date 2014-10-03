@@ -204,6 +204,14 @@ static void _mpi_progress(transport_class_t *t, bool flush) {
     network_progress_flush(mpi->progress);
 }
 
+static uint32_t _mpi_get_send_limit(void) {
+  return UINT32_MAX;
+}
+
+static uint32_t _mpi_get_recv_limit(void) {
+  return UINT32_MAX;
+}
+
 transport_class_t *transport_new_mpi(void) {
   int val = 0;
   MPI_Initialized(&val);
@@ -224,6 +232,8 @@ transport_class_t *transport_new_mpi(void) {
   mpi->class.request_size   = _mpi_request_size;
   mpi->class.request_cancel = _mpi_request_cancel;
   mpi->class.adjust_size    = _mpi_adjust_size;
+  mpi->class.get_send_limit = _mpi_get_send_limit;
+  mpi->class.get_recv_limit = _mpi_get_recv_limit;
 
   mpi->class.delete         = _mpi_delete;
   mpi->class.pin            = _mpi_pin;
