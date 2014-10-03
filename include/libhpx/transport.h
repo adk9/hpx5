@@ -29,6 +29,9 @@ struct transport_class {
 
   int (*adjust_size)(int size);
 
+  uint32_t (*get_send_limit)(void);
+  uint32_t (*get_recv_limit)(void);
+
   const char *(*id)(void)
     HPX_RETURNS_NON_NULL;
 

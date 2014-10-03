@@ -304,10 +304,10 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
 progress_t *network_progress_new(transport_class_t *t) {
   progress_t *p = malloc(sizeof(*p));
   assert(p);
-  p->psend_limit   = UINT32_MAX;
+  p->psend_limit   = t->get_send_limit();
   p->npsends       = 0;
   p->pending_sends = NULL;
-  p->precv_limit   = UINT32_MAX;
+  p->precv_limit   = t->get_recv_limit();
   p->nprecvs       = 0;
   p->pending_recvs = NULL;
   p->free          = NULL;
