@@ -30,7 +30,9 @@
 const uint32_t BITS_PER_WORD = sizeof(uintptr_t) * 8;
 
 size_t bitmap_sizeof(const uint32_t n) {
-  return sizeof(bitmap_t) + n / 8;
+  // need to allocate the closest word-multiple
+  int words = n / BITS_PER_WORD + ((n % BITS_PER_WORD) ? 1 : 0);
+  return sizeof(bitmap_t) + words * sizeof(uintptr_t);
 }
 
 void bitmap_init(bitmap_t *bitmap, const uint32_t n) {
