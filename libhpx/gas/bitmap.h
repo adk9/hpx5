@@ -38,7 +38,7 @@
 typedef struct {
   tatas_lock_t lock;                            // single lock for now
   uint32_t      min;
-  uint32_t    nbits;
+  uint32_t   UNUSED;
   uintptr_t  bits[];
 } bitmap_t;
 
@@ -93,6 +93,15 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
 /// @param     from The offset to start freeing from.
 /// @param        n The number of blocks to free.
 void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Determine if a particular block has been allocated.
+///
+/// @param   bitmap The bitmap to check.
+/// @param    block The block offset to check.
+///
+/// @returns true if the block is set, false otherwise.
+bool bitmap_is_set(bitmap_t *bitmap, const uint32_t block)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif

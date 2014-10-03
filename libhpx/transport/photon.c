@@ -111,12 +111,13 @@ _delete(transport_class_t *transport)
 /// ----------------------------------------------------------------------------
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
-static void
+static int
 _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("photon: could not pin buffer of size %lu.\n", len);
+  return 1;
 }
 
 
@@ -423,9 +424,8 @@ transport_class_t *transport_new_photon(void) {
   }
 
   photon->progress     = network_progress_new();
-  if (!photon->progress) {
+  if (!photon->progress)
     dbg_error("photon: failed to start the progress loop.\n");
-  }
 
   return &photon->class;
 }

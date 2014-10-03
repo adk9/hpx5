@@ -30,14 +30,16 @@
 const uint32_t BITS_PER_WORD = sizeof(uintptr_t) * 8;
 
 size_t bitmap_sizeof(const uint32_t n) {
-  return sizeof(bitmap_t) + n / 8;
+  // need to allocate the closest word-multiple
+  int words = n / BITS_PER_WORD + ((n % BITS_PER_WORD) ? 1 : 0);
+  return sizeof(bitmap_t) + words * sizeof(uintptr_t);
 }
 
 void bitmap_init(bitmap_t *bitmap, const uint32_t n) {
   sync_tatas_init(&bitmap->lock);
   bitmap->min = 0;
   const uintptr_t pattern = UINTPTR_MAX;
-  memset(&bitmap->bits, pattern, bitmap_sizeof(n));
+  memset(&bitmap->bits, pattern, bitmap_sizeof(n) - sizeof(*bitmap));
 }
 
 bitmap_t *bitmap_new(const uint32_t n) {
@@ -121,12 +123,17 @@ static void _set(uintptr_t *words, const uint32_t from, uint32_t n) {
     const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
-    //   word   0 0 1 1
+    // ok to read naked because we're holding the lock and thus ordered with all
+    // other writers
+    const uintptr_t val = words[word];
+
+    //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 0 0 1
 
-    words[word] &= ~mask;
+    // synchronized write so that it can be read non-blockingly in is_set
+    sync_store(&words[word], val & ~mask, SYNC_RELAXED);
     n -= popcountl(mask);
     ++word;
     offset = 0;
@@ -142,12 +149,17 @@ static void _reset(uintptr_t *words, uint32_t from, uint32_t n) {
     const uintptr_t rshift = _sat_sub32(BITS_PER_WORD, n);
     const uintptr_t mask = (UINTPTR_MAX >> rshift) << offset;
 
-    //   word   0 0 1 1
+    // ok to read naked because we're holding the lock and thus ordered with all
+    // other writers
+    const uintptr_t val = words[word];
+
+    //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 1 1 1
 
-    words[word] |= mask;
+    // synchronized write so that it can be read non-blockingly in is_set
+    sync_store(&words[word], val | mask, SYNC_RELAXED);
     n -= popcountl(mask);
     ++word;
     offset = 0;
@@ -179,14 +191,19 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
   const uint32_t end = abs + n;
   assert(abs % align == 0);
 
-  // update our min word, ensuring the invariant that it always points to a word
-  // with at least one free bit
-  bitmap->min = end / BITS_PER_WORD;
-  while (!bitmap->bits[bitmap->min])
-    ++bitmap->min;
-
   // set the bits
   _set(bitmap->bits, abs, n);
+
+  // update our min word, ensuring the invariant that it always points to a word
+  // with at least one free bit
+  if (relative == 0) {
+    bitmap->min = end / BITS_PER_WORD;
+    while (!bitmap->bits[bitmap->min]) {
+      ++bitmap->min;
+      dbg_log_gas("updated min to %u, for word %p.\n",
+                  bitmap->min, (void*)bitmap->bits[bitmap->min]);
+    }
+  }
 
   // output the absolute total start of the allocation
   *i = abs;
@@ -200,6 +217,19 @@ void bitmap_release(bitmap_t *bitmap, const uint32_t from, const uint32_t n) {
   dbg_log_gas("bitmap: release %u blocks at %u.\n", n, from);
   sync_tatas_acquire(&bitmap->lock);
   _reset(bitmap->bits, from, n);
-  bitmap->min = _min32(bitmap->min, from / BITS_PER_WORD);
+  uint32_t min = _min32(bitmap->min, from / BITS_PER_WORD);
+  if (min != bitmap->min)
+    dbg_log_gas("updated min from %u to %u, for word %p.\n",
+                bitmap->min, min, (void*)bitmap->bits[bitmap->min]);
+  bitmap->min = min;
+  assert(bitmap->bits[bitmap->min]);
   sync_tatas_release(&bitmap->lock);
+}
+
+bool bitmap_is_set(bitmap_t *bitmap, const uint32_t block) {
+  const uint32_t i = block / BITS_PER_WORD;
+  const uint32_t r = block % BITS_PER_WORD;
+  const uintptr_t word = sync_load(&bitmap->bits[i], SYNC_RELAXED);
+  const uintptr_t mask = 0x1 << r;
+  return word & mask;
 }

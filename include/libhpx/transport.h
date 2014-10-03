@@ -35,7 +35,7 @@ struct transport_class {
   void (*delete)(transport_class_t*)
     HPX_NON_NULL(1);
 
-  void (*pin)(transport_class_t*, const void* buffer, size_t len)
+  int (*pin)(transport_class_t*, const void* buffer, size_t len)
     HPX_NON_NULL(1);
 
   void (*unpin)(transport_class_t*, const void* buffer, size_t len)
@@ -117,9 +117,9 @@ transport_request_cancel(const transport_class_t *t, void *request) {
 }
 
 
-inline static void
+inline static int
 transport_pin(transport_class_t *t, const void *buffer, size_t len) {
-  t->pin(t, buffer, len);
+  return t->pin(t, buffer, len);
 }
 
 
