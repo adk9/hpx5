@@ -38,7 +38,7 @@
 typedef struct {
   tatas_lock_t lock;                            // single lock for now
   uint32_t      min;
-  uint32_t   UNUSED;
+  uint32_t   nwords;
   uintptr_t  bits[];
 } bitmap_t;
 
