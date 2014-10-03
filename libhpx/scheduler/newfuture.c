@@ -623,7 +623,7 @@ _new_all(struct new_all_args *args) {
     photon_rid rid;
     photon_post_recv_buffer_rdma(i, futures, elem_size * futs_here, _NEWFUTURE_EXCHG, &rid);
     int dummy;
-    photon_wait_any(&dummy, &rid); // make sure we actually do something
+    //    photon_wait_any(&dummy, &rid); // make sure we actually do something
   }
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
@@ -719,11 +719,12 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
   };
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
-  hpx_newfuture_t *base_local = _new_all(&args);
+
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     if (i != hpx_get_my_rank())
-      hpx_call(HPX_THERE(i), _new_all_remote, &args, sizeof(args), done);
+    hpx_call(HPX_THERE(i), _new_all_remote, &args, sizeof(args), done);
   }
+  hpx_newfuture_t *base_local = _new_all(&args);
   hpx_lco_wait(done);
   
   return base_local;
