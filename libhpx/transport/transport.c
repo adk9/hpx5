@@ -21,27 +21,27 @@
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 
-static transport_class_t *_default(void) {
+static transport_class_t *_default(uint32_t req_limit) {
 #ifdef HAVE_PHOTON
-  return transport_new_photon();
+  return transport_new_photon(req_limit);
 #endif
 
 #ifdef HAVE_PORTALS
-  return transport_new_portals();
+  return transport_new_portals(req_limit);
 #endif
 
 #ifdef HAVE_MPI
-  return transport_new_mpi();
+  return transport_new_mpi(req_limit);
 #endif
 
-  return transport_new_smp();
+  return transport_new_smp(req_limit);
 }
 
-transport_class_t *transport_new(hpx_transport_t transport) {
+transport_class_t *transport_new(hpx_transport_t transport, uint32_t req_limit) {
   switch (transport) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    return transport_new_photon();
+    return transport_new_photon(req_limit);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
     break;
@@ -49,7 +49,7 @@ transport_class_t *transport_new(hpx_transport_t transport) {
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    return transport_new_mpi();
+    return transport_new_mpi(req_limit);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
     break;
@@ -57,21 +57,21 @@ transport_class_t *transport_new(hpx_transport_t transport) {
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    return transport_new_portals();
+    return transport_new_portals(req_limit);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
     break;
 #endif
 
    case (HPX_TRANSPORT_SMP):
-    return transport_new_smp();
+    return transport_new_smp(req_limit);
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
     break;
   };
 
-  return _default();
+  return _default(req_limit);
 }
 
 

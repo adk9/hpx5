@@ -103,6 +103,6 @@ static transport_class_t _smp = {
 };
 
 
-transport_class_t *transport_new_smp(void) {
+transport_class_t *transport_new_smp(uint32_t req_limit) {
   return &_smp;
 }
