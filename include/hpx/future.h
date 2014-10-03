@@ -36,6 +36,8 @@ typedef struct  {
   int size_per; // size per future in bytes
   int id; // index
   // actual address is buffer.addr + (id % HPX_NUM_LOCALITIES) * (sizeof(newfuture_t) + size_per) 
+  void *send_buffer;
+  int table_index;
 } hpx_newfuture_t;
 
 /// Create a future
