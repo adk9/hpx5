@@ -1,5 +1,0 @@
-
-sssp:9341 terminated with signal 11 at PC=4099a2 SP=7feed0a4eee0.  Backtrace:
-../sssp[0x4099a2]
-../sssp[0x4049e1]
-../sssp[0x40c6e4]
