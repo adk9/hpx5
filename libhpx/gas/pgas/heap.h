@@ -82,6 +82,12 @@ bool heap_contains(heap_t *heap, void *addr)
 int heap_bind_transport(heap_t *heap, struct transport_class *transport)
   HPX_INTERNAL;
 
+
+/// Compute the relative heap_offset for this address.
+///
+/// This does not check to see if the address is in range. Users should either
+/// check the returned value with heap_offset_inbounds(), or check beforehand
+/// with heap_contains().
 uint64_t heap_offset_of(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
@@ -100,5 +106,13 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset)
 /// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned)
   HPX_INTERNAL;
+
+
+/// Check to make sure a heap offset is actually in the heap.
+bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset);
+
+
+/// Check to make sure that a range of offsets is in the heap.
+bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length);
 
 #endif

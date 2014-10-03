@@ -85,22 +85,36 @@ static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   return gva1;
 }
 
+
+/// Convert a local virtual address into a globa address.
 static hpx_addr_t _pgas_lva_to_gva(void *lva) {
-  uint64_t goffset = heap_offset_of(global_heap, lva);
-  hpx_addr_t gva = HPX_ADDR_INIT(pgas_gva_from_goffset(here->rank, goffset,
-                                                       here->ranks), 0, 0);
-  return gva;
+  DEBUG_IF (!heap_contains(global_heap, lva)) {
+    dbg_error("the global heap does not contain %p", lva);
+  }
+
+  const uint64_t heap_offset = heap_offset_of(global_heap, lva);
+  const uint32_t rank = here->rank;
+  const uint32_t ranks = here->ranks;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_gva_to_hpx_addr(gva);
 }
 
+
+/// Pin and translate an hpx address into a local virtual address. PGAS
+/// addresses don't get pinned, so we're really only talking about translating
+/// the address if its local.
 static bool _pgas_try_pin(const hpx_addr_t addr, void **local) {
-  pgas_gva_t gva = addr.offset;
-  uint32_t l = pgas_gva_locality_of(gva, here->ranks);
-  if (l != here->rank)
+  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+  const uint32_t ranks = here->ranks;
+  const uint32_t locality = pgas_gva_locality_of(gva, ranks);
+
+  if (locality != here->rank) {
     return false;
+  }
 
   if (local) {
-    uint64_t goffset = pgas_gva_goffset_of(gva, here->ranks);
-    *local = heap_offset_to_local(global_heap, goffset);
+    const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
+    *local = heap_offset_to_local(global_heap, heap_offset);
   }
 
   return true;
@@ -154,10 +168,12 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = pgas_global_malloc(bytes);
   assert(lva && heap_contains(global_heap, lva));
-  uint64_t goffset = heap_offset_of(global_heap, lva);
-  pgas_gva_t gva = pgas_gva_from_goffset(here->rank, goffset, here->ranks);
-  hpx_addr_t addr = HPX_ADDR_INIT(gva, 0, 0);
-  return addr;
+
+  const uint64_t heap_offset = heap_offset_of(global_heap, lva);
+  const uint32_t rank = here->rank;
+  const uint32_t ranks = here->ranks;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_gva_to_hpx_addr(gva);
 }
 
 static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
