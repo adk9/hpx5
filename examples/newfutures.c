@@ -68,12 +68,8 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = {
-    .cores       = 0,
-    .threads     = 0,
-    .stack_bytes = 0,
-  };
 
+  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
