@@ -15,6 +15,7 @@
 
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
+#include <hpx/builtins.h>
 
 extern struct heap *global_heap;
 
@@ -54,8 +55,21 @@ extern hpx_action_t pgas_cyclic_calloc;
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 
+typedef struct {
+  uint64_t goffset;
+  uint64_t   value;
+  uint64_t  length;
+} pgas_memset_args_t;
+extern hpx_action_t pgas_memset;
+
 void pgas_register_actions(void) HPX_INTERNAL;
 
+static inline uint32_t pgas_n_per_locality(size_t m, uint32_t ranks) {
+  return (m / ranks) + ((m % ranks) ? 1 : 0);
+}
 
+static inline uint32_t pgas_fit_log2_32(uint32_t n) {
+  return ceil_log2_32(n);
+}
 
 #endif // LIBHPX_GAS_PGAS_H
