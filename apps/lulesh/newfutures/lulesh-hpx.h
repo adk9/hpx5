@@ -302,6 +302,8 @@ recv_t RECEIVER[26];
 
 //hpx_future_t *fut_deltaTime;
 
+void SBN1(Domain *,hpx_addr_t);
+
 void Init(int tp, int nx);
 
 void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,

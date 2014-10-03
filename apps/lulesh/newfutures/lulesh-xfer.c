@@ -1,5 +1,40 @@
 #include "lulesh-hpx.h"
 
+void
+SBN1(Domain *domain, hpx_addr_t sbn1)
+{
+  const int    nsTF = domain->sendTF[0];
+  const int *sendTF = &domain->sendTF[1]; 
+
+  int i,destLocalIdx;
+  int           nx = domain->sizeX + 1;
+  int           ny = domain->sizeY + 1;
+  int           nz = domain->sizeZ + 1;
+  for (i = 0; i < nsTF; ++i) {
+    destLocalIdx = sendTF[i];
+    double *data = malloc(BUFSZ[destLocalIdx]);
+    send_t      pack = SENDER[destLocalIdx];
+    pack(nx, ny, nz, domain->nodalMass, data);
+    hpx_lco_newfuture_setat(sbn1[destLocalIdx + domain->rank*26], 0, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+    free(data);
+  }
+
+  // wait for incoming data
+  int nrTF = domain->recvTF[0];
+  int *recvTF = &domain->recvTF[1];
+
+  for (i = 0; i < nrTF; i++) {
+    int srcLocalIdx = recvTF[i];
+    int fromDomain = OFFSET[srcLocalIdx] + domain->rank;
+    int srcRemoteIdx = 25 - srcLocalIdx;
+    double *src = malloc(BUFSZ[srcRemoteIdx]);
+    hpx_lco_newfuture_getat(sbn1[srcRemoteIdx + fromDomain*26], 0, BUFSZ[srcRemoteIdx], src);
+    recv_t unpack = RECEIVER[srcLocalIdx];
+    unpack(nx, ny, nz, src, domain->nodalMass, 0);
+    free(src);
+  }
+}
+
 void send1(int nx, int ny, int nz, double *src, double *dest)
 {
   dest[0] = src[0];

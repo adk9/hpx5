@@ -156,7 +156,7 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(27*nDoms,sizeof(double));
+  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   for (k=0;k<nDoms;k++) {
@@ -244,12 +244,14 @@ static int _action_evolve(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
+  hpx_addr_t sbn1 = init->sbn1;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    // on the very first cycle, exchange nodalMass information
     if ( ld->cycle == 0 ) {
-      // SBN1
+      SBN1(ld,sbn1);
     }
 
     ld->time += ld->deltatime;
