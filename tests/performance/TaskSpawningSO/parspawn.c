@@ -28,6 +28,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: parspawn [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, this help display\n");
@@ -52,7 +53,7 @@ static int _main_action(int *args) {
 
   fprintf(test_log, "seconds: %.7f\n", elapsed);
   fprintf(test_log, "localities:   %d\n", HPX_LOCALITIES);
-  fprintf(test_log, "threads:      %d\n", HPX_THREADS);
+  fprintf(test_log, "threads:      %d\n\n", HPX_THREADS);
 
   fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
@@ -74,13 +75,17 @@ main(int argc, char *argv[])
   //cfg.gas          = HPX_GAS_SMP;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;
@@ -115,13 +120,13 @@ main(int argc, char *argv[])
      break;
   }
 
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the parspawn test\n");
-
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
   }
+
+  test_log = fopen("test.log", "a+");
+  fprintf(test_log, "Starting the parspawn test\n");
 
   // register the actions
   _nop     = HPX_REGISTER_ACTION(_nop_action);

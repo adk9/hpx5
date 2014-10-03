@@ -22,6 +22,7 @@ static void usage(FILE *stream) {
   fprintf(stream, "Usage:  [options]\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-l, logging level\n"
@@ -63,6 +64,7 @@ static int _main_action(void *args) {
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     fprintf(test_log, "\n");
   }
+  fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
 
@@ -72,13 +74,17 @@ main(int argc, char *argv[])
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dl:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;

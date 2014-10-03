@@ -303,6 +303,7 @@ void _main_action(guppie_config_t *cfg)
   fprintf(test_log, "Found %lu errors in %lu locations (%s).\n",
          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
+  fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
 
@@ -310,6 +311,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger\n"
           "\t-s, stack size in bytes\n"
@@ -329,13 +331,17 @@ int main(int argc, char *argv[])
   };
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:s:d:DMh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:s:d:DMh")) != -1) {
     switch (opt) {
      case 'c':
       hpx_cfg.cores = atoi(optarg);
       break;
      case 't':
       hpx_cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      hpx_cfg.transport = atoi(optarg);
+      assert(0 <= hpx_cfg.transport && hpx_cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 's':
       hpx_cfg.stack_bytes = atoi(optarg);
@@ -375,14 +381,14 @@ int main(int argc, char *argv[])
     guppie_cfg.tabsize = 1L << guppie_cfg.ltabsize;
   };
 
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the guppie test\n");
-
   int e = hpx_init(&hpx_cfg);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
+
+  test_log = fopen("test.log", "a+");
+  fprintf(test_log, "Starting the guppie test\n");
 
   // register the actions
   _main         = HPX_REGISTER_ACTION(_main_action);

@@ -1,0 +1,148 @@
+Starting the GAS local memory allocation test
+Populating the data
+ Elapsed: 0.027925
+Starting the GAS global memory allocation test
+Number of domains: 8 maxCycles: 1 cores: 8
+ Elapsed: 20.7217
+Starting the parcel create test
+ Elapsed: 0.00608
+Testing the parcel create with arguments
+Testing the parcel get data function
+Testing the parcel release function
+Testing the hpx parcel send function
+0, 1, 3449: Elapsed: 0.0375477
+1, 100, 6840: Elapsed: 0.0369639
+2, 1000, 3866: Elapsed: 0.0387286
+3, 10000, 8517: Elapsed: 0.10571
+Testing parcel contination target and action
+Elapsed: 63.816
+Starting the Threads test
+ Elapsed: 63.8998
+Starting the Thread Exit test
+ Elapsed: 0.013756
+Starting the Threads ID generation test
+ Elapsed: 27.8356
+Starting the Thread continue test
+Sending action with continuation to 0
+Sending action with continuation to 1
+Waiting on continuation to 0
+Received continuation from 0 with value 1234
+Waiting on continuation to 1
+Received continuation from 1 with value 1234
+ Elapsed: 44.1079
+Starting the Thread continue cleanup test
+value in block is 1234
+ Elapsed: 0.011421
+Starting the Thread continue target and action test
+Received continuation from 0 with value 1234
+Received continuation from 1 with value 1234
+ Elapsed: 36.0586
+Starting the Future LCO test
+ Elapsed: 115.279
+Starting the array of futures test
+value = 1234
+ Elapsed: 68.0016
+Starting the hpx_lco_newfuture_waitat() empty test
+ Elapsed: 0.013864
+Starting the hpx_lco_newfuture_waitat() empty (remote) test
+ Elapsed: 0.07749
+Starting the hpx_lco_newfuture_waitat() full test
+ Elapsed: 0.022492
+Starting the hpx_lco_newfuture_waitat() full remote test
+ Elapsed: 0.628885
+Starting the hpx_lco_newfuture_getat() test
+ Elapsed: 0.013939
+Starting the hpx_lco_newfuture_getat() remote test
+ Elapsed: 0.083499
+Starting the hpx_lco_newfuture_getat() test
+ Elapsed: 0.020673
+Starting the hpx_lco_newfuture_shared_new test
+Value = 1234
+Its double = 2468
+ Elapsed: 0.007083
+Starting the hpx_lco_newfuture_waitat() empty array test
+ Elapsed: 0.16078
+Starting the hpx_lco_newfuture_waitat() empty array remote test
+ Elapsed: 0.166253
+Starting the hpx_lco_newfuture_waitat() full array test
+ Elapsed: 0.188022
+Starting the hpx_lco_newfuture_waitat() full array remote test
+ Elapsed: 0.248187
+Starting the hpx_lco_newfuture_getat() array test
+ Elapsed: 0.196056
+Starting the hpx_lco_newfuture_getat() array remote test
+ Elapsed: 0.257832
+Starting the hpx_lco_newfuture_wait_all() test
+ Elapsed: 0.129045
+Starting the hpx_lco_newfuture_wait_all() remote test
+ Elapsed: 0.158236
+Starting the hpx_lco_newfuture_get_all() test
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+ Elapsed: 0.179931
+Starting the hpx_lco_newfuture_get_all() remote test
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+FUTURE CONTAINED VALUE 1234
+ Elapsed: 0.22714
+Starting the hpx_lco_newfuture_shared_new test
+ Elapsed: 0.204494
+Starting the HPX LCO test
+ Elapsed: 0.29131
+Starting the HPX LCO Set and Get test
+localities: 2
+Value returned = 1234
+ Elapsed: 0.007223
+Starting the HPX LCO Wait all test
+localities: 2
+Number of blocks and bytes per block = 2, 4
+Ranks and blocks per rank = 2, 1
+ Elapsed: 0.083377
+Starting the HPX LCO get all test
+Square series for (1): 1 Elapsed: 0.0000066
+Square series for (2): 1 Elapsed: 0.0000205
+Square series for (3): 2 Elapsed: 0.0000257
+Square series for (4): 5 Elapsed: 0.0000301
+Square series for (5): 29 Elapsed: 0.0000530
+Square series for (6): 866 Elapsed: 0.0000506
+Starting the HPX LCO get all test
+status == -1
+ Elapsed: 0.0000096
+Starting the HPX LCO Semaphore test
+Thread 1: Waiting to enter critical region...
+Thread 0: Waiting to enter critical region...
+Thread 1: Now in critical region...
+Thread 1: Counter Value: 0
+Thread 1: Incrementing Counter...
+Thread 1: New Counter Value: 1
+Thread 1: Exiting critical region...
+Thread 0: Now in critical region...
+Thread 0: Counter Value: 1
+Thread 0: Incrementing Counter...
+Thread 0: New Counter Value: 2
+Thread 0: Exiting critical region...
+ Elapsed: 0.03183
+Starting the HPX LCO Channels test
+ Elapsed: 0.028186
+Starting the HPX LCO Channels In order send test
+ Elapsed: 0.091595
+Starting the HPX LCO Channel Try Receive empty buffer test
+ Elapsed: 0.009596
+Starting the HPX LCO global array of channels test
+ Elapsed: 0.153573
+Starting the HPX and lco test
+ Elapsed: 0.005743
+Starting the HPX gencount lco test
+Incrementing the generation counter
+ Elapsed: 0.007115
+Starting the memget test
+ Elapsed: 0.043038
+Starting the memput test
+ Elapsed: 0.035678
