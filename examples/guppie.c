@@ -309,6 +309,7 @@ static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger\n"
           "\t-s, stack size in bytes\n"
@@ -328,13 +329,17 @@ int main(int argc, char *argv[])
   };
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:s:d:DMh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:s:d:DMh")) != -1) {
     switch (opt) {
      case 'c':
       hpx_cfg.cores = atoi(optarg);
       break;
      case 't':
       hpx_cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      hpx_cfg.transport = atoi(optarg);
+      assert(0 <= hpx_cfg.transport && hpx_cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 's':
       hpx_cfg.stack_bytes = atoi(optarg);
