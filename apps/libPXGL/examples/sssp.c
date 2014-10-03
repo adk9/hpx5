@@ -69,7 +69,7 @@ static int _print_vertex_distance_index_action(int *i)
 }
 
 
-static int read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **problems) {
+static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **problems) {
 
   FILE *f = fopen(*filename, "r");
   assert(f);
@@ -95,6 +95,7 @@ static int read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pro
   fclose(f);
   return 0;
 }
+
 
 
 // Arguments for the main SSSP action
@@ -155,11 +156,11 @@ static int _main_action(_sssp_args_t *args) {
   printf("Gathering of statistics is enabled.\n");
   const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
   sargs.sssp_stat = sssp_stats;
-#endif // GATHER_STAT
 
   uint64_t total_vertex_visit = 0;
   uint64_t total_edge_traversal = 0;
   uint64_t total_distance_updates = 0;
+#endif // GATHER_STAT
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
@@ -170,23 +171,16 @@ static int _main_action(_sssp_args_t *args) {
 
     //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
-    printf("Allocated adjacency-list.\n");
-
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
 
-    // printf("Before call_sssp\n");
-
     // Call the SSSP algorithm
     hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
 
-    // printf("After call_sssp\n");
-
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     elapsed_time[i] = elapsed;
-    total_elapsed_time+=elapsed;
-    printf("Finished executing SSSP (chaotic-relaxation) in %.7f seconds.\n", elapsed);
+    total_elapsed_time += elapsed;
 
 #ifdef GATHER_STAT
     _sssp_statistics *sssp_stat=(_sssp_statistics *)malloc(sizeof(_sssp_statistics));
@@ -209,14 +203,11 @@ static int _main_action(_sssp_args_t *args) {
     hpx_lco_delete(vertices, HPX_NULL);
 #endif
 
-    printf("Computing checksum...\n");
     hpx_addr_t checksum_lco = HPX_NULL;
     hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices), &checksum_lco, sizeof(checksum_lco));
     size_t checksum = 0;
-    // printf("Getting checksum\n");
     hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
     hpx_lco_delete(checksum_lco, HPX_NULL);
-    printf("Dimacs checksum is %zu\n", checksum);
 
     //printf("Computing GTEPS...\n");
     hpx_addr_t gteps_lco = HPX_NULL;
@@ -227,9 +218,12 @@ static int _main_action(_sssp_args_t *args) {
     edge_traversed[i] = gteps;
     //printf("Gteps is %zu\n", gteps);
 
+    printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
+
     hpx_gas_free(sargs.graph, HPX_NULL);
   }
 
+#ifdef GATHER_STAT
   double avg_time_per_source = total_elapsed_time/args->nproblems;
   double avg_vertex_visit  = total_vertex_visit/args->nproblems;
   double avg_edge_traversal = total_edge_traversal/args->nproblems;
@@ -256,35 +250,28 @@ static int _main_action(_sssp_args_t *args) {
   fprintf(fp , "%s\n","p chk sp ss sssp");
   fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
   fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+#endif
 
 
   // Verification of results.
-  // printf("Verifying results...\n");
-
-/*   typedef struct{ */
-/*     uint64_t source; */
-/*     uint64_t total_distance; */
-/*   }total_distances_per_source; */
 
 #ifdef VERBOSE
   printf("\nElapsed time\n");
-  for(int i = 0;i < args->nproblems;i++){
+  for(int i = 0; i < args->nproblems; i++)
     printf("%f\n", elapsed_time[i]);
-  }
 
-  printf("\nEdge traversed\n");
-  for(int i = 0;i < args->nproblems;i++){
+  printf("\nEdges traversed\n");
+  for(int i = 0; i < args->nproblems; i++)
     printf("%zu\n", edge_traversed[i]);
-  }
 #endif
 
   printf("\nTEPS statistics:\n");
-  double *tm = (double *)malloc(sizeof(double)*args->nproblems);
-  double *stats = (double *)malloc(sizeof(double)*9);
+  double *tm = (double*)malloc(sizeof(double)*args->nproblems);
+  double *stats = (double*)malloc(sizeof(double)*9);
 
-   for(int i = 0;i < args->nproblems;i++){
+  for(int i = 0; i < args->nproblems; i++)
     tm[i] = edge_traversed[i]/elapsed_time[i];
-   }
+
   statistics (stats, tm, args->nproblems);
   PRINT_STATS("TEPS", 1);
 
@@ -363,12 +350,12 @@ int main(int argc, char *const argv[argc]) {
   uint64_t nproblems;
   uint64_t *problems;
   // Read the DIMACS problem specification file
-  read_dimacs_spec(&problem_file, &nproblems, &problems);
+  _read_dimacs_spec(&problem_file, &nproblems, &problems);
 
   _sssp_args_t args = { .filename = graph_file,
                         .nproblems = nproblems,
                         .problems = problems,
-            .prob_file = problem_file
+                        .prob_file = problem_file
   };
 
   int e = hpx_init(&cfg);
