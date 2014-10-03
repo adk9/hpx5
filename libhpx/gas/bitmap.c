@@ -37,7 +37,7 @@ void bitmap_init(bitmap_t *bitmap, const uint32_t n) {
   sync_tatas_init(&bitmap->lock);
   bitmap->min = 0;
   const uintptr_t pattern = UINTPTR_MAX;
-  memset(&bitmap->bits, pattern, bitmap_sizeof(n));
+  memset(&bitmap->bits, pattern, bitmap_sizeof(n) - sizeof(*bitmap));
 }
 
 bitmap_t *bitmap_new(const uint32_t n) {
