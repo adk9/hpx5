@@ -401,7 +401,7 @@ transport_class_t *transport_new_photon(void) {
   if (backend == NULL)
     backend = photon_default_backend;
   if(getenv("HPX_USE_CMA") == NULL)
-    use_cma = 1;
+    use_cma = 0;
   else
     use_cma = atoi(getenv("HPX_USE_CMA"));
   if (getenv("HPX_USE_IB_PORT") == NULL)
