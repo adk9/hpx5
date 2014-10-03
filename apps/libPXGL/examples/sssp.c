@@ -31,6 +31,7 @@ static void _usage(FILE *stream) {
           "\t-l, set logging level\n"
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
+	  "\t-r, set send/receive request limit\n"
           "\t-h, this help display\n");
 }
 
@@ -284,7 +285,7 @@ int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -312,6 +313,9 @@ int main(int argc, char *const argv[argc]) {
       break;
      case 'p':
       cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);
