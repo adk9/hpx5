@@ -19,8 +19,10 @@
 #include <sys/mman.h>
 #include <jemalloc/jemalloc.h>
 #include <libsync/sync.h>
+#include <hpx/builtins.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "../mallctl.h"
 #include "heap.h"
@@ -181,4 +183,11 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
     dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
   }
   return heap->base + offset;
+}
+
+size_t heap_sbrk(heap_t *heap, size_t n, uint32_t bsize) {
+  const uint32_t align = ceil_log2_32(bsize);
+  const uint64_t m = n / here->ranks + ((n % here->ranks) ? 1 : 0);
+  const uint32_t csbrk = sync_fadd(&heap->csbrk, align * m, SYNC_ACQ_REL);
+  return (heap->nbytes - csbrk);
 }

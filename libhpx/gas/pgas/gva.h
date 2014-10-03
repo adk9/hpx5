@@ -21,14 +21,6 @@
 
 typedef uint64_t pgas_gva_t;
 
-/// From stack overflow.
-///
-/// http://stackoverflow.com/questions/3272424/compute-fast-log-base-2-ceiling
-static inline uint32_t ceil_log2_32(uint32_t val){
-  assert(val);
-  return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
-}
-
 /// Extract the locality from a gva, given the number of ranks.
 static inline uint32_t pgas_gva_locality_of(pgas_gva_t gva, uint32_t ranks) {
   const uint32_t rshift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
