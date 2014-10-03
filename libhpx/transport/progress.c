@@ -263,6 +263,7 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
 
  void network_progress_poll(progress_t *p) {
    int sends = 0;
+   int recvs = 0;
    do {
      sends = _test(p, &p->pending_sends, _finish_send);
      assert(sends <= p->npsends);
@@ -270,26 +271,23 @@ request_t *request_init(request_t *request, hpx_parcel_t *p) {
      DEBUG_IF (sends) {
        dbg_log_trans("progress: finished %d sends.\n", sends);
      }
-   } while (network_progress_drain_sends(p));
 
-   int send = 1;
-   while (send && network_progress_can_recv(p)) {
-     send = _try_start_send(p);
-     p->npsends += send;
-     DEBUG_IF(send) {
-       dbg_log_trans("progress: started a send.\n");
-     }
-   }
-
-   int recvs = 0;
-   do {
      recvs = _test(p, &p->pending_recvs, _finish_recv);
      assert(recvs <= p->nprecvs);
      p->nprecvs -= recvs;
      DEBUG_IF (recvs) {
        dbg_log_trans("progress: finished %d receives.\n", recvs);
      }
-   } while (network_progress_drain_recvs(p));
+   } while (network_progress_drain_sends(p) || network_progress_drain_recvs(p));
+
+   int send = 1;
+   while (send && network_progress_can_send(p)) {
+     send = _try_start_send(p);
+     p->npsends += send;
+     DEBUG_IF(send) {
+       dbg_log_trans("progress: started a send.\n");
+     }
+   }
 
    int recv = 1;
    while (recv && network_progress_can_recv(p)) {
