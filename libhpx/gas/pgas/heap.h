@@ -53,7 +53,7 @@
 
 struct transport_class;
 
-typedef struct {
+typedef struct heap {
   volatile size_t             csbrk;
   size_t            bytes_per_chunk;
   size_t                raw_nchunks;
@@ -89,6 +89,10 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
   HPX_INTERNAL;
 
 void *heap_offset_to_local(heap_t *heap, uint64_t offset)
+  HPX_INTERNAL;
+
+// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
+size_t heap_sbrk(heap_t *heap, size_t n, uint32_t bsize)
   HPX_INTERNAL;
 
 #endif
