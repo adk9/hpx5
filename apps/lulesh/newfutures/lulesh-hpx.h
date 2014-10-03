@@ -64,6 +64,7 @@ typedef struct {
   int       maxcycles;
   int           cores;
   hpx_addr_t sbn1;
+  hpx_addr_t newdt;
 } InitArgs;
 
 typedef struct {
