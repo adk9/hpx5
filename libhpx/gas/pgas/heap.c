@@ -189,3 +189,13 @@ size_t heap_csbrk(heap_t *heap, size_t n, uint32_t balign) {
   const uint32_t csbrk = sync_fadd(&heap->csbrk, balign * n, SYNC_ACQ_REL);
   return (heap->nbytes - csbrk);
 }
+
+bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset) {
+  return (heap_offset < heap->nbytes);
+}
+
+bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length) {
+  uint64_t end = start + length;
+  return (start < heap->nbytes) && (end < heap->nbytes);
+}
+
