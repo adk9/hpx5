@@ -106,6 +106,7 @@ static void usage(FILE *f) {
           "\t-w, amount of work\n"
           "\t-c, cores\n"
           "\t-t, scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
@@ -119,7 +120,7 @@ int main(int argc, char *argv[argc]) {
   int args[2] = {24, 10000};
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "w:c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "w:c:t:T:d:Dh")) != -1) {
     switch (opt) {
      case 'w':
       args[1] = atoi(optarg);
@@ -128,6 +129,10 @@ int main(int argc, char *argv[argc]) {
       break;
      case 't':
       cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;

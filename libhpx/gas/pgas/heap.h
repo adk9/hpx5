@@ -49,16 +49,20 @@
 #include <stddef.h>
 #include "bitmap.h"
 
+#define HEAP_USE_CYCLIC_CSBRK_BARRIER 0
+
 struct transport_class;
 
 typedef struct {
   volatile size_t             csbrk;
   size_t            bytes_per_chunk;
+  size_t                raw_nchunks;
   size_t                    nchunks;
   bitmap_t                  *chunks;
   size_t                     nbytes;
-  char                       *bytes;
-  char                   *raw_bytes;
+  char                        *base;
+  size_t                 raw_nbytes;
+  char                    *raw_base;
   struct transport_class *transport;
 } heap_t;
 
@@ -75,7 +79,16 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena)
 bool heap_contains(heap_t *heap, void *addr)
   HPX_INTERNAL;
 
-void heap_bind_transport(heap_t *heap, struct transport_class *transport)
+int heap_bind_transport(heap_t *heap, struct transport_class *transport)
+  HPX_INTERNAL;
+
+uint64_t heap_offset_of(heap_t *heap, void *addr)
+  HPX_INTERNAL;
+
+bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
+  HPX_INTERNAL;
+
+void *heap_offset_to_local(heap_t *heap, uint64_t offset)
   HPX_INTERNAL;
 
 #endif

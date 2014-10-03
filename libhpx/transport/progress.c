@@ -81,8 +81,8 @@ static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
 ///
 /// This uses a freelist algorithm for request nodes.
 ///
-/// @param network - the network
-/// @param request - the request
+/// @param progress - the progress object
+/// @param request  - the request
 static void _delete_request(progress_t *progress, request_t *request) {
   request->next = progress->free;
   progress->free = request->next;
@@ -100,9 +100,10 @@ static void _finish_request(progress_t *progress, request_t *r) {
 /// This finishes a send by freeing the request's parcel, and then calling the
 /// generic finish handler.
 ///
-/// @param n - the network
-/// @param r - the request to finish
+/// @param progress - the progress object
+/// @param        r - the request to finish
 static void _finish_send(progress_t *progress, request_t *r) {
+  assert(r);
   hpx_parcel_release(r->parcel);
   _finish_request(progress, r);
 }
@@ -113,8 +114,8 @@ static void _finish_send(progress_t *progress, request_t *r) {
 /// This finishes a receive by pushing the request's parcel into the receive
 /// queue, and then calling the generic finish handler.
 ///
-/// @param     n The network.
-/// @param     r The request to finish.
+/// @param progress - The progress object.
+/// @param        r - The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
   scheduler_spawn(r->parcel);
   _finish_request(progress, r);
@@ -126,7 +127,7 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// Try and pop a network request off of the send queue, allocate a request node
 /// for it, and initiate a byte-send with the transport.
 ///
-/// @param      network The network object
+/// @param      progress - The progress object
 ///
 /// @returns true if we initiated a send
 static bool _try_start_send(progress_t *progress) {
@@ -151,7 +152,7 @@ static bool _try_start_send(progress_t *progress) {
 
   r->next = progress->pending_sends;
   progress->pending_sends = r;
-  return _try_start_send(progress);
+  return true;
 
  unwind1:
   _delete_request(progress, r);
@@ -201,7 +202,7 @@ static bool _try_start_recv(progress_t *progress) {
   // remember that this receive is pending so that we can poll it later
   r->next = progress->pending_recvs;
   progress->pending_recvs = r;
-  return _try_start_recv(progress);
+  return true;
 
  unwind1:
   _delete_request(progress, r);
@@ -211,41 +212,34 @@ static bool _try_start_recv(progress_t *progress) {
 }
 
 
-/// Recursively test a list of requests.
+/// Test a list of results.
 ///
-/// Tail recursive so it won't use any stack space. Uses the passed function
-/// pointer to finish the request, so that this can be used for different kinds
-/// of requests.
-///
-/// @param    network The network used for testing.
+/// @param   progress The progress object used for testing.
 /// @param     finish A callback to finish the request.
 /// @param       curr The current request to test.
 /// @param          n The current number of completed requests.
 ///
 /// @returns The total number of completed requests.
-static int HPX_NON_NULL(1, 2, 3)
-  _test(progress_t *p, void (*finish)(progress_t*, request_t*),
-        request_t **curr, int n) {
-  request_t *i = *curr;
+static int _test(progress_t *p, request_t **i,
+                 void (*finish)(progress_t*, request_t*)) {
+  transport_class_t *t = here->transport;
+  int n = 0;
+  while (*i != NULL) {
+    request_t *j = *i;
+    int complete = 0;
+    int e = transport_test(t, &j->request, &complete);
+    dbg_check(e, "transport test failed");
 
-  // base case, return the number of finished requests
-  if (i == NULL)
-    return n;
-
-  // test this request
-  int complete = 0;
-  int e = transport_test(here->transport, &i->request, &complete);
-  if (e)
-    dbg_error("transport test failed.\n");
-
-  // test next request, do not increment n
-  if (!complete)
-    return _test(p, finish, &i->next, n);
-
-  // remove and finish this request, test new next request, increment n
-  *curr = i->next;
-  finish(p, i);
-  return _test(p, finish, curr, n + 1);
+    if (!complete) {
+      i = &j->next;
+    }
+    else {
+      *i = j->next;
+      finish(p, j);
+      ++n;
+    }
+  }
+  return n;
 }
 
 
@@ -260,28 +254,28 @@ void network_progress_flush(progress_t *p) {
 
   // flush the pending sends
   while (p->pending_sends)
-    _test(p, _finish_send, &p->pending_sends, 0);
+    _test(p, &p->pending_sends, _finish_send);
 
   // if we have any pending receives, we wait for those to finish as well
   while (p->pending_recvs)
-    _test(p, _finish_recv, &p->pending_recvs, 0);
+    _test(p, &p->pending_recvs, _finish_recv);
 }
 
 void network_progress_poll(progress_t *p) {
-  int sends = _test(p, _finish_send, &p->pending_sends, 0);
+  int sends = _test(p, &p->pending_sends, _finish_send);
   if (sends)
     dbg_log_trans("progress: finished %d sends.\n", sends);
 
-  bool send = _try_start_send(p);
-  if (send)
+  bool send;
+  while ((send = _try_start_send(p)))
     dbg_log_trans("progress: started a send.\n");
 
-  int recvs = _test(p, _finish_recv, &p->pending_recvs, 0);
+  int recvs = _test(p, &p->pending_recvs, _finish_recv);
   if (recvs)
     dbg_log_trans("progress: finished %d receives.\n", recvs);
 
-  bool recv = _try_start_recv(p);
-  if (recv)
+  bool recv;
+  if ((recv = _try_start_recv(p)))
     dbg_log_trans("progress: started a recv.\n");
 }
 
@@ -302,6 +296,7 @@ void network_progress_delete(progress_t *p) {
     request_delete(i);
   }
 
+#if 0
   if (p->pending_sends)
     dbg_log_trans("progress: abandoning active send.\n");
 
@@ -319,4 +314,5 @@ void network_progress_delete(progress_t *p) {
     p->pending_recvs = p->pending_recvs->next;
     request_delete(i);
   }
+#endif
 }

@@ -50,7 +50,9 @@
 /// ----------------------------------------------------------------------------
 struct network_class {
   _QUEUE_T                         tx;          // half duplex port for send
-  _QUEUE_T                         rx;          // half duplex port for recv
+  _QUEUE_T                         rx;          // half duplex port
+  hpx_locality_t         shutdown_src;          // the HPX locality that
+                                                // called hpx_shutdown()
   routing_t                  *routing;          // for adaptive routing
 };
 
@@ -86,6 +88,8 @@ network_class_t *network_new(void) {
   _QUEUE_INIT(&n->tx, NULL);
   _QUEUE_INIT(&n->rx, NULL);
 
+  n->shutdown_src = HPX_LOCALITY_NONE;
+
   n->routing = routing_new();
   if (!n->routing) {
     dbg_error("network: failed to start routing update manager.\n");
@@ -119,6 +123,16 @@ void network_delete(network_class_t *network) {
 
 void network_barrier(network_class_t *network) {
   transport_barrier(here->transport);
+}
+
+
+void network_set_shutdown_src(network_class_t *network, hpx_locality_t locality) {
+  network->shutdown_src = locality;
+}
+
+
+hpx_locality_t network_get_shutdown_src(network_class_t *network) {
+  return network->shutdown_src;
 }
 
 

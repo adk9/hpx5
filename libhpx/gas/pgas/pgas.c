@@ -22,9 +22,11 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "../bitmap.h"
 #include "../malloc.h"
 #include "../mallctl.h"
+#include "gva.h"
 #include "heap.h"
 
 
@@ -88,14 +90,6 @@ static void _pgas_global_free(void *ptr) {
     return;
 
   assert(_global_heap);
-  DEBUG_IF (!heap_contains(_global_heap, ptr)) {
-    char *base = _global_heap->bytes;
-    ptrdiff_t size = (_global_heap->raw_bytes + _global_heap->nbytes) -
-                     _global_heap->bytes;
-    dbg_error("pgas: global free called on local pointer %p. Heap base, size "
-              "(%p, %ld)\n", ptr, base, size);
-  }
-
   dbg_log_gas("%p\n", ptr);
 
   if (_joined)
@@ -209,6 +203,71 @@ static bool _pgas_is_global(gas_class_t *gas, void *addr) {
   return heap_contains(_global_heap, addr);
 }
 
+static uint32_t _pgas_locality_of(hpx_addr_t gva) {
+  return pgas_gva_locality_of(gva.offset, here->ranks);
+}
+
+static bool _check_cyclic(hpx_addr_t gva, uint32_t *bsize) {
+  bool cyclic = heap_offset_is_cyclic(_global_heap, gva.offset);
+  if (cyclic)
+    *bsize = 1;
+  return cyclic;
+}
+
+static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
+  DEBUG_IF (!bsize && heap_offset_is_cyclic(_global_heap, gva.offset)) {
+    dbg_error("invalid block size for cyclic address\n");
+  }
+
+  _check_cyclic(gva, &bsize);
+  return pgas_gva_offset_of(gva.offset, here->ranks, bsize);
+}
+
+static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
+  _check_cyclic(gva, &bsize);
+  return pgas_gva_phase_of(gva.offset, bsize);
+}
+
+static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+  bool clhs = _check_cyclic(lhs, &bsize);
+  bool crhs = _check_cyclic(rhs, &bsize);
+  DEBUG_IF (clhs != crhs) {
+    dbg_error("cannot compare addresses between different allocations.\n");
+  }
+  return pgas_gva_sub(lhs.offset, rhs.offset, here->ranks, bsize);
+}
+
+static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+  _check_cyclic(gva, &bsize);
+  hpx_addr_t gva1 = {
+    .offset = pgas_gva_add(gva.offset, bytes, here->ranks, bsize),
+    .base_id = 0,
+    .block_bytes = 0
+  };
+  return gva1;
+}
+
+static hpx_addr_t _pgas_lva_to_gva(void *lva) {
+  uint64_t goffset = heap_offset_of(_global_heap, lva);
+  hpx_addr_t gva = {
+    .offset = pgas_gva_from_goffset(here->rank, goffset, here->ranks),
+    .base_id = 0,
+    .block_bytes = 0
+  };
+  return gva;
+}
+
+static void *_pgas_gva_to_lva(hpx_addr_t hgva) {
+  pgas_gva_t gva = hgva.offset;
+  uint32_t l = pgas_gva_locality_of(gva, here->ranks);
+  DEBUG_IF (l != here->rank) {
+    dbg_error("%lu has affinity to %u, not to %u\n", gva, l, here->rank);
+  }
+
+  return heap_offset_to_local(_global_heap,
+                              pgas_gva_goffset_of(gva, here->ranks));
+}
+
 static gas_class_t _pgas_vtable = {
   .type   = HPX_GAS_PGAS,
   .delete = _pgas_delete,
@@ -232,18 +291,20 @@ static gas_class_t _pgas_vtable = {
     .valloc         = _pgas_local_valloc,
     .memalign       = _pgas_local_memalign,
     .posix_memalign = _pgas_local_posix_memalign
-  }
+  },
+  .locality_of = _pgas_locality_of,
+  .offset_of = _pgas_offset_of,
+  .phase_of = _pgas_phase_of,
+  .sub = _pgas_sub,
+  .add = _pgas_add,
+  .lva_to_gva = _pgas_lva_to_gva,
+  .gva_to_lva = _pgas_gva_to_lva
 };
 
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
                           struct transport_class *transport) {
   if (_global_heap)
     return &_pgas_vtable;
-
-  if (!mallctl_disable_dirty_page_purge()) {
-    dbg_error("pgas: failed to disable dirty page purging\n");
-    return NULL;
-  }
 
   _global_heap = malloc(sizeof(*_global_heap));
   if (!_global_heap) {
@@ -258,7 +319,12 @@ gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
     return NULL;
   }
 
-  heap_bind_transport(_global_heap, transport);
+  if (heap_bind_transport(_global_heap, transport)) {
+    if (!mallctl_disable_dirty_page_purge()) {
+      dbg_error("pgas: failed to disable dirty page purging\n");
+      return NULL;
+    }
+  }
 
   return &_pgas_vtable;
 }

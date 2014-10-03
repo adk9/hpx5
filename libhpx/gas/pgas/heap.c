@@ -75,20 +75,32 @@ int heap_init(heap_t *heap, const size_t size) {
   heap->bytes_per_chunk = mallctl_get_chunk_size();
   dbg_log_gas("pgas: heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
 
-  heap->nchunks = _get_nchunks(size, heap->bytes_per_chunk);
-  dbg_log_gas("pgas: heap nchunks is %lu\n", heap->nchunks);
+  heap->raw_nchunks = _get_nchunks(size, heap->bytes_per_chunk);
+  dbg_log_gas("pgas: heap raw nchunks is %lu\n", heap->raw_nchunks);
+
+  heap->raw_nbytes = heap->raw_nchunks * heap->bytes_per_chunk;
+  if (heap->raw_nbytes != size)
+    dbg_log_gas("pgas: heap allocation of %lu requested, adjusted to %lu\n",
+                size, heap->raw_nbytes);
+
+  dbg_log_gas("pgas: allocating %lu bytes for the shared heap.\n",
+              heap->raw_nbytes);
+  heap->raw_base = _map_heap(heap->raw_nbytes);
+
+  // Adjust base, nbytes, raw, based on alignment requirements.
+  const size_t r = heap->bytes_per_chunk - ((uintptr_t)heap->raw_base %
+                                            heap->bytes_per_chunk);
+
+  heap->base = heap->raw_base + r;
+  heap->nbytes = heap->raw_nbytes - r;
+  heap->nchunks = heap->raw_nchunks - ((r > 0) ? 1 : 0);
+
+  assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
 
   heap->chunks = _new_bitmap(heap->nchunks);
-  dbg_log_gas("pgas: allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
+  dbg_log_gas("pgas: allocated chunk bitmap to manage %lu chunks.\n",
+              heap->nchunks);
 
-  heap->nbytes = heap->nchunks * heap->bytes_per_chunk;
-  if (heap->nbytes != size)
-    dbg_log_gas("pgas: heap allocation of %lu requested, adjusted to %lu\n",
-                size, heap->nbytes);
-
-  dbg_log_gas("pgas: allocating %lu bytes for the shared heap.\n", heap->nbytes);
-  heap->raw_bytes = _map_heap(heap->nbytes);
-  heap->bytes = heap->raw_bytes + (heap->bytes_per_chunk - (uintptr_t)heap->raw_bytes % heap->bytes_per_chunk);
   dbg_log_gas("pgas: allocated heap.\n");
 
   return LIBHPX_OK;
@@ -101,12 +113,11 @@ void heap_fini(heap_t *heap) {
   if (heap->chunks)
     bitmap_delete(heap->chunks);
 
-  if (heap->raw_bytes) {
-    if (heap->transport) {
-      size_t pin_bytes = (heap->raw_bytes + heap->nbytes) - heap->bytes;
-      heap->transport->unpin(heap->transport, heap->bytes, pin_bytes);
-    }
-    int e = munmap(heap->raw_bytes, heap->nbytes);
+  if (heap->raw_base) {
+    if (heap->transport)
+      heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
+
+    int e = munmap(heap->raw_base, heap->raw_nbytes);
     if (e)
       dbg_error("pgas: failed to munmap the heap.\n");
   }
@@ -125,13 +136,13 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
   if (zero)
     *zero = false;
 
-  char *chunk = heap->bytes + offset * heap->bytes_per_chunk;
+  char *chunk = heap->base + offset * heap->bytes_per_chunk;
   assert((uintptr_t)chunk % alignment == 0);
   return chunk;
 }
 
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
-  const uint32_t offset = (char*)chunk - heap->bytes;
+  const uint32_t offset = (char*)chunk - heap->base;
   assert(offset % heap->bytes_per_chunk == 0);
   const uint32_t i = _chunks(offset, heap->bytes_per_chunk);
   const uint32_t n = _chunks(size, heap->bytes_per_chunk);
@@ -140,12 +151,34 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
 }
 
 bool heap_contains(heap_t *heap, void *addr) {
-  return (((void*)heap->bytes <= addr) &&
-          (addr < (void*)(heap->raw_bytes + heap->nbytes)));
+  const ptrdiff_t d = (char*)addr - heap->base;
+  return (0 <= d && d < heap->nbytes);
 }
 
-void heap_bind_transport(heap_t *heap, transport_class_t *transport) {
-  size_t pin_bytes = (heap->raw_bytes + heap->nbytes) - heap->bytes;
-  transport->pin(transport, heap->bytes, pin_bytes);
+int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   heap->transport = transport;
+  return transport->pin(transport, heap->base, heap->nbytes);
+}
+
+uint64_t heap_offset_of(heap_t *heap, void *addr) {
+  DEBUG_IF (!heap_contains(heap, addr)) {
+    dbg_error("local virtual address %p is not in the global heap\n", addr);
+  }
+  return ((char*)addr - heap->base);
+}
+
+bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset) {
+  if (HEAP_USE_CYCLIC_CSBRK_BARRIER)
+    return heap->nbytes - heap->csbrk < offset;
+
+  // see if the chunk is allocated
+  const uint32_t chunk = offset / heap->bytes_per_chunk;
+  return bitmap_is_set(heap->chunks, chunk);
+}
+
+void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
+  DEBUG_IF (heap->nbytes < offset) {
+    dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
+  }
+  return heap->base + offset;
 }
