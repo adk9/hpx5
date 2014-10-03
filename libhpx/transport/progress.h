@@ -15,7 +15,7 @@
 
 #include "hpx/hpx.h"
 
-struct gas;
+struct transport_class;
 
 typedef struct request request_t;
 struct request {
@@ -36,8 +36,8 @@ struct progress {
 };
 
 
-progress_t *network_progress_new(void)
-  HPX_INTERNAL HPX_MALLOC;
+progress_t *network_progress_new(struct transport_class *transport)
+  HPX_INTERNAL HPX_MALLOC HPX_NON_NULL(1);
 
 
 void network_progress_poll(progress_t *p)
