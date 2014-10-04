@@ -191,7 +191,7 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
 }
 
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t balign) {
-  const uint32_t csbrk = sync_fadd(&heap->csbrk, balign * n, SYNC_ACQ_REL);
+  const uint32_t csbrk = sync_addf(&heap->csbrk, balign * n, SYNC_ACQ_REL);
   return (heap->nbytes - csbrk);
 }
 
