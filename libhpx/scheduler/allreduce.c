@@ -46,20 +46,17 @@ typedef struct {
 } _allreduce_t;
 
 /// Deletes a reduction.
-static void
-_allreduce_fini(lco_t *lco)
-{
+static void _allreduce_fini(lco_t *lco) {
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value)
     free(r->value);
+  global_free(r);
 }
 
 
 /// Handle an error condition.
-static void
-_allreduce_error(lco_t *lco, hpx_status_t code)
-{
+static void _allreduce_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
   scheduler_signal_error(&r->wait, code);
@@ -68,9 +65,7 @@ _allreduce_error(lco_t *lco, hpx_status_t code)
 
 
 /// Update the reduction, will wait if the phase is reading.
-static void
-_allreduce_set(lco_t *lco, int size, const void *from)
-{
+static void _allreduce_set(lco_t *lco, int size, const void *from) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
@@ -100,9 +95,7 @@ _allreduce_set(lco_t *lco, int size, const void *from)
 
 
 /// Get the value of the reduction, will wait if the phase is reducing.
-static hpx_status_t
-_allreduce_get(lco_t *lco, int size, void *out)
-{
+static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
   _allreduce_t *r = (_allreduce_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
@@ -143,17 +136,14 @@ _allreduce_get(lco_t *lco, int size, void *out)
 
 
 // Wait for the reduction, loses the value of the reduction for this round.
-static hpx_status_t
-_allreduce_wait(lco_t *lco)
-{
+static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
 
-static void
-_allreduce_init(_allreduce_t *r, size_t writers, size_t readers, size_t size,
-                hpx_commutative_associative_op_t op,
-                void (*init)(void *, const size_t size))
+static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
+                            size_t size, hpx_commutative_associative_op_t op,
+                            void (*init)(void *, const size_t size))
 {
   // vtable
   static const lco_class_t vtable = {
@@ -186,17 +176,12 @@ _allreduce_init(_allreduce_t *r, size_t writers, size_t readers, size_t size,
 
 /// @}
 
-hpx_addr_t
-hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
-                      hpx_commutative_associative_op_t op,
-                      void (*init)(void*, const size_t size))
+hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
+                                 hpx_commutative_associative_op_t op,
+                                 void (*init)(void*, const size_t size))
 {
-  hpx_addr_t reduce = locality_malloc(sizeof(_allreduce_t));
-  _allreduce_t *r = NULL;
-  if (!hpx_gas_try_pin(reduce, (void**)&r)) {
-    dbg_error("allreduce: could not pin newly allocated reduction.\n");
-  }
+  _allreduce_t *r = global_malloc(sizeof(*r));
+  assert(r);
   _allreduce_init(r, inputs, outputs, size, op, init);
-  hpx_gas_unpin(reduce);
-  return reduce;
+  return lva_to_gva(r);
 }
