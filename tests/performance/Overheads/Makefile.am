@@ -12,14 +12,18 @@ PERFTESTS += \
         time_gas_alloc \
         time_gas_addr_trans \
         time_lco_chan \
-        time_lco_sema 
+        time_lco_sema \
+        time_lco_and \
+        time_lco_future 
 else
 check_PROGRAMS += \
         perfmain \
         time_gas_alloc \
         time_gas_addr_trans \
         time_lco_chan \
-        time_lco_sema 
+        time_lco_sema \
+        time_lco_and \
+        time_lco_future
 endif
 
 NPROCS ?= 2
@@ -38,6 +42,8 @@ time_gas_alloc_SOURCES     = time_gas_alloc.c
 time_gas_addr_trans_SOURCES = time_gas_addr_trans.c
 time_lco_chan_SOURCES = time_lco_chan.c
 time_lco_sema_SOURCES = time_lco_sema.c
+time_lco_and_SOURCES = time_lco_and.c
+time_lco_future_SOURCES = time_lco_future.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
