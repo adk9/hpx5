@@ -18,6 +18,7 @@
 /// Defines the future structure.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,6 +175,9 @@ _send_queue_progress_action(void* args) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (rc < 0) {
       
+    }
+    if (flag > 0) {
+      printf("Received completion %" PRIu64 "\n", request);
     }
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
