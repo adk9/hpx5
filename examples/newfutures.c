@@ -146,6 +146,10 @@ int main(int argc, char *argv[]) {
 
 static int _action_main(args_t *args) {
   printf("In main\n");
+  hpx_status_t status =  hpx_newfutures_init();
+  if (status != HPX_SUCCESS)
+    return status;
+
   hpx_addr_t done = hpx_lco_and_new(2);
 
   hpx_newfuture_t base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
