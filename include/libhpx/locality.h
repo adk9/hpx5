@@ -23,7 +23,6 @@
 #include "libhpx/gas.h"
 
 struct boot_class;
-struct btt_class;
 struct network_class;
 struct scheduler;
 struct transport_class;
@@ -34,14 +33,9 @@ typedef struct {
   int                         ranks;            // the total number of ranks
   struct boot_class           *boot;            // the bootstrap object
   struct gas_class             *gas;            // the global address space
-  // struct btt_class             *btt;            // the block translation table
   struct transport_class *transport;            // the byte transport
   struct network_class     *network;            // the parcel transport
   struct scheduler           *sched;            // the scheduler data
-
-  volatile uint32_t   local_sbrk;            // the local memory block sbrk
-  volatile uint32_t  global_sbrk;            // the global block id sbrk
-  volatile uint32_t     pvt_sbrk;            // the global private block sbrk
 } locality_t;
 
 
@@ -71,142 +65,84 @@ HPX_INTERNAL extern hpx_action_t locality_gas_forward;
 HPX_INTERNAL extern locality_t *here;
 
 inline static bool lva_is_global(void *addr) {
+  dbg_assert(here && here->gas && here->gas->is_global);
   return here->gas->is_global(here->gas, addr);
 }
 
 inline static void *global_malloc(size_t bytes) {
-  void *addr = here->gas->global.malloc(bytes);
-
-  DEBUG_IF (!lva_is_global(addr))
-    dbg_error("pgas: global malloc returned local pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->global.malloc);
+  return here->gas->global.malloc(bytes);
 }
 
 inline static void global_free(void *ptr) {
-  DEBUG_IF (!lva_is_global(ptr))
-    dbg_error("pgas: global free called on local pointer %p.\n", ptr);
-
+  dbg_assert(here && here->gas && here->gas->global.free);
   here->gas->global.free(ptr);
 }
 
 inline static void *global_calloc(size_t nmemb, size_t size) {
-  void *addr = here->gas->global.calloc(nmemb, size);
-  DEBUG_IF (!lva_is_global(addr))
-    dbg_error("pgas: global calloc returned local pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->global.calloc);
+  return here->gas->global.calloc(nmemb, size);
 }
 
 inline static void *global_realloc(void *ptr, size_t size) {
-  DEBUG_IF (ptr && !lva_is_global(ptr))
-    dbg_error("pgas: global realloc called on local pointer %p.\n", ptr);
-
-  void *addr = here->gas->global.realloc(ptr, size);
-
-  DEBUG_IF (!lva_is_global(addr))
-    dbg_error("pgas: global realloc returned local pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->global.realloc);
+  return here->gas->global.realloc(ptr, size);
 }
 
 inline static void *global_valloc(size_t size) {
-  void *addr = here->gas->global.valloc(size);
-
-  DEBUG_IF (!lva_is_global(addr))
-    dbg_error("pgas: global valloc returned local pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->global.valloc);
+  return here->gas->global.valloc(size);
 }
 
 inline static void *global_memalign(size_t boundary, size_t size) {
-  void *addr = here->gas->global.memalign(boundary, size);
-
-  DEBUG_IF (!lva_is_global(addr))
-    dbg_error("pgas: global memalign returned local pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->global.memalign);
+  return here->gas->global.memalign(boundary, size);
 }
 
 inline static int global_posix_memalign(void **memptr, size_t alignment,
                                         size_t size) {
-  int e = here->gas->global.posix_memalign(memptr, alignment, size);
-
-  DEBUG_IF (!e && !lva_is_global(*memptr))
-    dbg_error("pgas: global posix memalign returned local pointer %p.\n", *memptr);
-
-  return e;
+  dbg_assert(here && here->gas && here->gas->global.posix_memalign);
+  return here->gas->global.posix_memalign(memptr, alignment, size);
 }
 
 inline static void *local_malloc(size_t bytes) {
-  void *addr = here->gas->local.malloc(bytes);
-
-  DEBUG_IF (lva_is_global(addr))
-    dbg_error("pgas: local malloc returned global pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->local.malloc);
+  return here->gas->local.malloc(bytes);
 }
 
 inline static void local_free(void *ptr) {
-  DEBUG_IF (lva_is_global(ptr))
-    dbg_error("pgas: local free passed global pointer %p.\n", ptr);
-
+  dbg_assert(here && here->gas && here->gas->local.free);
   here->gas->local.free(ptr);
 }
 
 inline static void *local_calloc(size_t nmemb, size_t size) {
-  void *addr = here->gas->local.calloc(nmemb, size);
-
-  DEBUG_IF (lva_is_global(addr))
-    dbg_error("pgas: local calloc returned global pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->local.calloc);
+  return here->gas->local.calloc(nmemb, size);
 }
 
 inline static void *local_realloc(void *ptr, size_t size) {
-  DEBUG_IF (lva_is_global(ptr))
-    dbg_error("pgas: local realloc called on global pointer %p.\n", ptr);
-
-  void *addr = here->gas->local.realloc(ptr, size);
-
-  DEBUG_IF (lva_is_global(addr))
-    dbg_error("pgas: local realloc returned global pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->local.realloc);
+  return here->gas->local.realloc(ptr, size);
 }
 
 inline static void *local_valloc(size_t size) {
-  void *addr =  here->gas->local.valloc(size);
-
-  DEBUG_IF (lva_is_global(addr))
-    dbg_error("pgas: local valloc returned global pointer %p.\n", addr);
-
-  return addr;
-
+  dbg_assert(here && here->gas && here->gas->local.valloc);
+  return here->gas->local.valloc(size);
 }
 
 inline static void *local_memalign(size_t boundary, size_t size) {
-  void *addr = here->gas->local.memalign(boundary, size);
-
-  DEBUG_IF (lva_is_global(addr))
-    dbg_error("pgas: local memalign returned global pointer %p.\n", addr);
-
-  return addr;
+  dbg_assert(here && here->gas && here->gas->local.memalign);
+  return here->gas->local.memalign(boundary, size);
 }
 
 inline static int local_posix_memalign(void **memptr, size_t alignment,
                                         size_t size) {
-  int e = here->gas->local.posix_memalign(memptr, alignment, size);
-
-  DEBUG_IF (!e && lva_is_global(*memptr))
-    dbg_error("pgas: local posix memalign returned global pointer %p.\n", *memptr);
-
-  return e;
+  dbg_assert(here && here->gas && here->gas->local.posix_memalign);
+  return here->gas->local.posix_memalign(memptr, alignment, size);
 }
 
-
 inline static hpx_addr_t lva_to_gva(void *lva) {
-  assert(here && here->gas && here->gas->lva_to_gva);
+  dbg_assert(here && here->gas && here->gas->lva_to_gva);
   return here->gas->lva_to_gva(lva);
 }
 
