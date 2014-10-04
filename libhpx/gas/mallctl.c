@@ -16,6 +16,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <jemalloc/jemalloc.h>
 #include "libhpx/debug.h"
 #include "mallctl.h"
