@@ -235,6 +235,7 @@ void initialize_newfutures() {
   _newfuture_table.capacity = 1000;
   _newfuture_table.futs = malloc(sizeof(hpx_newfuture_t*) * _newfuture_table.capacity);
 
+  _newfuture_table.inited = 1;
   // alltoall:
   // exchange private structures and remote addresses
 
@@ -601,7 +602,9 @@ _new_all(struct new_all_args *args) {
 
   // allocate local data
   int futs_here = n / hpx_get_num_ranks();
-  futs_here = futs_here + (hpx_get_num_ranks() - futs_here % hpx_get_num_ranks());
+  if (((hpx_get_my_rank() + base_rank) % hpx_get_num_ranks()) < futs_here % hpx_get_num_ranks())
+    futs_here++;
+  //  futs_here = futs_here + (hpx_get_num_ranks() - (hpx_get_num_ranks() % futs_here));
   _newfuture_t *futures = calloc(futs_here, elem_size);
 
   // allocate local send buffer
@@ -619,13 +622,15 @@ _new_all(struct new_all_args *args) {
   photon_register_buffer(futures, elem_size * futs_here);
   
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
-    if (i == hpx_get_my_rank())
-      continue;
+    //    if (i == hpx_get_my_rank())
+    //      continue;
     photon_rid rid;
     photon_post_recv_buffer_rdma(i, futures, elem_size * futs_here, _NEWFUTURE_EXCHG, &rid);
     printf("Posted buffer to %d at %d with addr = %p\n", i, hpx_get_my_rank(), (void*)futures);
-    //    int dummy;
-    //    photon_wait_any(&dummy, &rid); // make sure we actually do something
+    int dummy;
+    photon_rid new_rid;
+    photon_wait_any(&dummy, &new_rid); // make sure we actually do something
+    printf("Waited any on  buffer to %d at %d with addr = %p\n", i, hpx_get_my_rank(), (void*)futures);
   }
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
