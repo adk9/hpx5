@@ -108,20 +108,20 @@ static hpx_action_t _alltoall_setid_action = 0;
 static hpx_action_t _alltoall_getid_action = 0;
 
 /// Deletes a gathering.
-static void _alltoall_fini(lco_t *lco)
-{
+static void _alltoall_fini(lco_t *lco) {
+  if (!lco)
+    return;
+
   lco_lock(lco);
   _alltoall_t *g = (_alltoall_t *)lco;
   if (g->value)
     free(g->value);
-  if (g)
-    free(g);
+  global_free(g);
 }
 
 
 /// Handle an error condition.
-static void _alltoall_error(lco_t *lco, hpx_status_t code)
-{
+static void _alltoall_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
   _alltoall_t *g = (_alltoall_t *)lco;
   scheduler_signal_error(&g->wait, code);
@@ -129,9 +129,8 @@ static void _alltoall_error(lco_t *lco, hpx_status_t code)
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
-static hpx_status_t
-_alltoall_getid(_alltoall_t *g, unsigned offset, int size, void *out)
-{
+static hpx_status_t _alltoall_getid(_alltoall_t *g, unsigned offset, int size,
+                                    void *out) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&g->lco);
 
@@ -172,14 +171,15 @@ _alltoall_getid(_alltoall_t *g, unsigned offset, int size, void *out)
 /// @param   id          The ID of our rank
 /// @param   size        The size of the data being gathered
 /// @param   value       Address of the value buffer
-hpx_status_t
-hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size, void *value) {
+hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
+                                    void *value) {
   hpx_status_t status = HPX_SUCCESS;
   _alltoall_t *local;
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
     _alltoall_get_offset_t args = {.size = size, .offset = id};
-    return hpx_call_sync(alltoall, _alltoall_getid_action, &args, sizeof(args), value, size);
+    return hpx_call_sync(alltoall, _alltoall_getid_action, &args, sizeof(args),
+                         value, size);
   }
 
   status = _alltoall_getid(local, id, size, value);
@@ -187,8 +187,7 @@ hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size, void *value) 
   return status;
 }
 
-static int _alltoall_getid_proxy(_alltoall_get_offset_t *args)
-{
+static int _alltoall_getid_proxy(_alltoall_get_offset_t *args) {
   // try and pin the alltoall LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -212,17 +211,14 @@ static int _alltoall_getid_proxy(_alltoall_get_offset_t *args)
 
 
 // Wait for the gathering, loses the value of the gathering for this round.
-static hpx_status_t
-_alltoall_wait(lco_t *lco)
-{
+static hpx_status_t _alltoall_wait(lco_t *lco) {
   _alltoall_t *g = (_alltoall_t *)lco;
   return _alltoall_getid(g, 0, 0, NULL);
 }
 
 // Local set id function.
-static hpx_status_t
-_alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
-{
+static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
+                                    const void* buffer) {
   int nDoms;
   int elementSize;
   int columnOffset;
@@ -273,10 +269,9 @@ _alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
 /// @param   rsync      An LCO to signal remote completion HPX_NULL if we
 ///                     don't care.
 /// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t
-hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
-                       const void *value, hpx_addr_t lsync, hpx_addr_t rsync)
-{
+hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
+                                    const void *value, hpx_addr_t lsync,
+                                    hpx_addr_t rsync) {
   hpx_status_t status = HPX_SUCCESS;
   _alltoall_t *local;
 
@@ -306,8 +301,7 @@ hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
 }
 
 
-static hpx_status_t _alltoall_setid_proxy(void *args)
-{
+static hpx_status_t _alltoall_setid_proxy(void *args) {
   // try and pin the allgather LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -325,31 +319,22 @@ static hpx_status_t _alltoall_setid_proxy(void *args)
 }
 
 
-static HPX_CONSTRUCTOR void
-_initialize_actions(void)
-{
+static HPX_CONSTRUCTOR void _initialize_actions(void) {
   _alltoall_setid_action = HPX_REGISTER_ACTION(_alltoall_setid_proxy);
   _alltoall_getid_action = HPX_REGISTER_ACTION(_alltoall_getid_proxy);
 }
 
-static void
-_alltoall_set(lco_t *lco, int size, const void *from)
-{
+static void _alltoall_set(lco_t *lco, int size, const void *from) {
   // can't call set on an alltoall
   hpx_abort();
 }
 
-static hpx_status_t
-_alltoall_get(lco_t *lco, int size, void *out)
-{
+static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
   // can't call get on an alltoall
   hpx_abort();
 }
 
-static void _alltoall_init(_alltoall_t *g, size_t participants,
-                size_t size)
-{
-  // vtable
+static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
   static const lco_class_t vtable = {
     _alltoall_fini,
     _alltoall_error,
@@ -383,12 +368,8 @@ static void _alltoall_init(_alltoall_t *g, size_t participants,
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  hpx_addr_t gather = locality_malloc(sizeof(_alltoall_t));
-  _alltoall_t *g = NULL;
-  if (!hpx_gas_try_pin(gather, (void**)&g)) {
-    dbg_error("alltoall: could not pin newly allocated alltoall LCO.\n");
-  }
+  _alltoall_t *g = global_malloc(sizeof(*g));
+  assert(g);
   _alltoall_init(g, inputs, size);
-  hpx_gas_unpin(gather);
-  return gather;
+  return lva_to_gva(g);
 }
