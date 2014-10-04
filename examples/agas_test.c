@@ -38,7 +38,7 @@ static int get_rank_action(void *args) {
 static int root_action(void *args) {
   printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
-  hpx_addr_t other = hpx_lco_future_array_at(base, 1);
+  hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(int));
 
   int r = 0;
   hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
