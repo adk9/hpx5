@@ -58,106 +58,97 @@ struct lco_class {
   lco_try_wait_t on_try_wait;
 };
 
-/// ----------------------------------------------------------------------------
-/// LCO operations merely operate on the bits of an lco vtable pointer.
-/// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// LCO operations merely operate on the bits of an lco vtable pointer.
+// -----------------------------------------------------------------------------
 
-/// ----------------------------------------------------------------------------
 /// Lock an LCO.
 ///
-/// @param lco - the LCO to lock
-/// @returns   - the vtable pointer for the LCO, with any packed state removed
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL const lco_class_t *lco_lock(lco_t *lco) HPX_NON_NULL(1);
+/// @param lco  The LCO to lock
+/// @returns    The vtable pointer for the LCO, with any packed state removed
+const lco_class_t *lco_lock(lco_t *lco)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
 /// Unlock an LCO.
 ///
 /// The calling thread must currently hold the LCO's lock.
 ///
 /// @param lco - the LCO to unlock
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_unlock(lco_t* lco) HPX_NON_NULL(1);
+void lco_unlock(lco_t* lco)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
 /// Initialize an LCO vtable pointer.
 ///
-/// @param   lco - the pointer to initialize
-/// @param class - the class pointer for this LCO instance
-/// @param  user - non-zero to set the user state during initialization
-/// ----------------------------------------------------------------------------
+/// @param           lco The pointer to initialize
+/// @param         class The class pointer for this LCO instance
+/// @param          user Non-zero to set the user state during initialization
 HPX_INTERNAL void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
   HPX_NON_NULL(1,2);
 
 
-/// ----------------------------------------------------------------------------
 /// Set the user state bit to one.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to reset
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_set_user(lco_t *lco);
+/// @param           lco The LCO to reset.
+void lco_set_user(lco_t *lco)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Resets the user state bit to zero.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to reset
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_reset_user(lco_t *lco);
+/// @param           lco The LCO to reset.
+void lco_reset_user(lco_t *lco)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Get the user state bit.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to read
-/// @returns   - non-zero if the user state bit is set, zero otherwise
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL uintptr_t lco_get_user(const lco_t *lco);
+/// @param           lco The LCO to read.
+/// @returns Non-zero if the user state bit is set, zero otherwise
+uintptr_t lco_get_user(const lco_t *lco)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Set the triggered state to true.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to trigger
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_set_triggered(lco_t *lco);
+/// @param           lco The LCO to trigger.
+void lco_set_triggered(lco_t *lco)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Reset the triggered state to false.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to trigger
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void lco_reset_triggered(lco_t *lco);
+/// @param           lco The LCO to trigger.
+void lco_reset_triggered(lco_t *lco)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Get the triggered state.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
-/// @param lco - the LCO to read
-/// @returns   - non-zero if the triggered bit is set, zero otherwise
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL uintptr_t lco_get_triggered(const lco_t *lco);
+/// @param           lco The LCO to read.
+///
+/// @returns Non-zero if the triggered bit is set, zero otherwise.
+uintptr_t lco_get_triggered(const lco_t *lco)
+  HPX_INTERNAL;
 
 
 #endif // LIBHPX_LCO_H
