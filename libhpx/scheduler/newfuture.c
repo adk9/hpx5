@@ -50,7 +50,6 @@ typedef struct {
 struct _future_wait_args {
   _newfuture_t *fut;
   hpx_set_t set;
-  enum \_future_wait_action wait_action;
   hpx_time_t time;
 };
 
@@ -235,9 +234,6 @@ _wait(_newfuture_t *f) {
 
 static void
 _free(_newfuture_t *f) {
-  // overload the value for freelisting---not perfect
-  f->value = _free_futures;
-  _free_futures = f;
 }
 
 
@@ -802,7 +798,6 @@ void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t *newfutures, hpx_set
   hpx_addr_t done = hpx_lco_and_new(num);
   struct _future_wait_args *args = malloc(sizeof(args));
   args->set = set;
-  args->wait_action = _future_wait_full; // TODO remove??
 
   for (int i = 0; i < num; i++) {
     hpx_newfuture_t *target = hpx_lco_newfuture_at(newfutures, i);
