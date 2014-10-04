@@ -170,8 +170,7 @@ static int _action_ping(args_t *args) {
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();
-  RANK_PRINTF("pinging block (%d,%lu), msg= '%s'\n", to.base_id, to.offset,
-              args->msg);
+  RANK_PRINTF("pinging block (%lu), msg= '%s'\n", to, args->msg);
 
   hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
@@ -198,8 +197,7 @@ static int _action_pong(args_t *args) {
 
 
   hpx_addr_t to = _partner();
-  RANK_PRINTF("ponging block (%d,%lu), msg='%s'\n", to.base_id, to.offset,
-              args->msg);
+  RANK_PRINTF("ponging block (%lu), msg='%s'\n", to, args->msg);
 
   hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");

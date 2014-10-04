@@ -111,7 +111,7 @@ START_TEST (test_libhpx_lco_future_array)
   // allocate 2 futures with size of each future's value and the
   // one future per block
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
-  hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t));
+  hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t), 1);
 
   hpx_call_sync(other, t06_get_future_value, NULL, 0, &value, sizeof(value));
   fprintf(test_log, "value = %"PRIu64"\n", value);
