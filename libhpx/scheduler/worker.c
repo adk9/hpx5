@@ -563,6 +563,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // place, and releasing the lock across the wait
   if (status == HPX_SUCCESS) {
     thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
+    assert(thread->wait_affinity < here->sched->n_workers);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
@@ -782,10 +783,10 @@ void hpx_thread_set_affinity(int affinity) {
   assert(affinity >= -1);
   assert(self.current);
   assert(parcel_get_stack(self.current));
-  parcel_get_stack(self.current)->affinity = affinity;
 
   // make sure affinity is in bounds
-  affinity %= here->sched->n_workers;
+  affinity = affinity % here->sched->n_workers;
+  parcel_get_stack(self.current)->affinity = affinity;
 
   if (affinity == self.id)
     return;

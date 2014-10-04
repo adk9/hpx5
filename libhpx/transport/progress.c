@@ -19,9 +19,8 @@
 
 #include "libsync/queues.h"
 #include "libsync/sync.h"
-
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -153,7 +152,7 @@ static void _flush(progress_t *progress, request_t *r) {
      goto unwind0;
    }
 
-   dest = btt_owner(here->btt, p->target);
+   dest = gas_owner_of(here->gas, p->target);
    size = sizeof(*p) + p->size;
    if (transport_send(here->transport, dest, p, size, &r->request)) {
      dbg_error("transport failed send.\n");
@@ -280,7 +279,7 @@ static void _flush(progress_t *progress, request_t *r) {
        recv = _try_start_recv(p);
        p->nprecvs += recv;
        DEBUG_IF (recv) {
-	 dbg_log_trans("progress: started a recv.\n");
+     dbg_log_trans("progress: started a recv.\n");
        }
      }
 
