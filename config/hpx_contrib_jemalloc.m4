@@ -60,9 +60,10 @@ case "${host}" in
 	;;
 esac
 
-   AC_SUBST(HPX_JEMALLOC_CPPFLAGS, "$JEMALLOC_CPPFLAGS -I\$(top_srcdir)/$1/include")
-   AC_SUBST(HPX_JEMALLOC_LDADD, "$JEMALLOC_LIBS \$(top_builddir)/$1/src/libhpx_jemalloc.la")
-
+   AC_SUBST(HPX_JEMALLOC_CPPFLAGS, " -I\$(top_srcdir)/$1/include")
+   AC_SUBST(HPX_JEMALLOC_LDADD, "\$(top_builddir)/$1/src/libhpx_jemalloc.la")
+   AC_SUBST(HPX_JEMALLOC_BUILD_CPPFLAGS, "$JEMALLOC_CPPFLAGS")
+   AC_SUBST(HPX_JEMALLOC_BUISD_LIBS, "$JEMALLOC_LIBS")
 
    AC_CONFIG_FILES([contrib/jemalloc/Makefile])
    AC_CONFIG_FILES([contrib/jemalloc/src/Makefile])
