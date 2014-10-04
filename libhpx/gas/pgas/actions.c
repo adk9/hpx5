@@ -23,6 +23,7 @@
 hpx_action_t pgas_cyclic_alloc = 0;
 hpx_action_t pgas_cyclic_calloc = 0;
 hpx_action_t pgas_memset = 0;
+hpx_action_t pgas_free = 0;
 
 /// Allocate from the cyclic space.
 ///
@@ -99,10 +100,22 @@ static int _pgas_memset_handler(pgas_memset_args_t *args) {
   return HPX_SUCCESS;
 }
 
+static int _pgas_free_handler(void *UNUSED) {
+  void *local = NULL;
+  hpx_addr_t addr = hpx_thread_current_target();
+  if (!pgas_try_pin(addr, &local)) {
+    dbg_error("failed to translate an address during free.\n");
+    return HPX_ERROR;
+  }
+  pgas_global_free(local);
+  return HPX_SUCCESS;
+}
+
 void pgas_register_actions(void) {
   pgas_cyclic_alloc = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
   pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
   pgas_memset = HPX_REGISTER_ACTION(_pgas_memset_handler);
+  pgas_free = HPX_REGISTER_ACTION(_pgas_free_handler);
 }
 
 static void HPX_CONSTRUCTOR _register(void) {
