@@ -1,5 +1,5 @@
 all: $(check_PROGRAMS)
-noinst_bindir           = $(builddir)
+#noinst_bindir           = $(builddir)
 check_SCRIPTS           = $(srcdir)/run_tests.sh
 TESTS                   = $(srcdir)/run_tests.sh
 

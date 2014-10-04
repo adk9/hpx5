@@ -1,5 +1,5 @@
 all: $(check_PROGRAMS)
-noinst_bindir           = $(builddir)
+#noinst_bindir           = $(builddir)
 check_SCRIPTS           = $(srcdir)/run_tests.sh
 TESTS                   = $(srcdir)/run_tests.sh
 
@@ -19,7 +19,7 @@ check_PROGRAMS += \
         time_gas_alloc \
         time_gas_addr_trans \
         time_lco_chan \
-        time_lco_sema
+        time_lco_sema 
 endif
 
 NPROCS ?= 2

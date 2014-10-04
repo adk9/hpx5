@@ -1,6 +1,4 @@
-noinst_bin_PROGRAMS 	= hpxtest
-noinst_bindir           = $(builddir)
-#TESTS 			= hpxtest 
+noinst_PROGRAMS 	= hpxtest
 check_SCRIPTS           = $(srcdir)/run_tests.sh
 TESTS                   = $(srcdir)/run_tests.sh
 check_PROGRAMS		= hpxtest
