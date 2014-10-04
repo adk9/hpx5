@@ -51,7 +51,7 @@ static uint32_t _pgas_locality_of(hpx_addr_t gva) {
 static bool _check_cyclic(hpx_addr_t gva, uint32_t *bsize) {
   bool cyclic = heap_offset_is_cyclic(global_heap, gva.offset);
   if (cyclic)
-    *bsize = 1;
+    *bsize = 1 << ceil_log2_32(*bsize);
   return cyclic;
 }
 
@@ -81,7 +81,7 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   _check_cyclic(gva, &bsize);
   hpx_addr_t gva1 = HPX_ADDR_INIT(pgas_gva_add(gva.offset, bytes, here->ranks,
-                                               bsize), 0, 0);
+                                               bsize), 0, bsize);
   return gva1;
 }
 
