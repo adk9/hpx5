@@ -56,11 +56,6 @@ static hpx_action_t   _blocks_init_action = 0;
 static hpx_action_t     _chan_recv_action = 0;
 static hpx_action_t _chan_try_recv_action = 0;
 
-
-/// Freelist allocation for chans.
-static __thread _chan_t *_free = NULL;
-
-
 static int
 _chan_enqueue(_chan_t *chan, _node_t *node)
 {
@@ -105,10 +100,7 @@ _chan_fini(lco_t *lco)
     node = c->head->next;
   }
 
-  // overload the head pointer for freelisting---not perfect, but it's
-  // reinitialized in _init(), so it's not the end of the world.
-  c->head = (_node_t*)_free;
-  _free = c;
+  global_free(c);
 }
 
 static void
@@ -373,30 +365,11 @@ _register_actions(void) {
 /// free a buffer that it receives on the channel.
 ///
 /// @returns the global address of the allocated channel
-hpx_addr_t
-hpx_lco_chan_new(void)
-{
-  hpx_addr_t chan;
-  _chan_t *local = _free;
-  if (local) {
-    _free = (_chan_t*)local->head;
-    chan = HPX_HERE;
-    char *base;
-    if (!hpx_gas_try_pin(chan, (void**)&base)) {
-      dbg_error("chan: could not translate local block.\n");
-    }
-    chan.offset = (char*)local - base;
-    assert(chan.offset < chan.block_bytes);
-  }
-  else {
-    chan = locality_malloc(sizeof(_chan_t));
-    if (!hpx_gas_try_pin(chan, (void**)&local)) {
-      dbg_error("chan: could not pin newly allocated channel.\n");
-    }
-  }
+hpx_addr_t hpx_lco_chan_new(void) {
+  _chan_t *local = global_malloc(sizeof(_chan_t));
+  assert(local);
   _chan_init(local);
-  hpx_gas_unpin(chan);
-  return chan;
+  return lva_to_gva(local);
 }
 
 
