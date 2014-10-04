@@ -64,6 +64,8 @@ typedef struct {
   int       maxcycles;
   int           cores;
   hpx_addr_t sbn1;
+  hpx_addr_t sbn3;
+  hpx_addr_t newdt;
 } InitArgs;
 
 typedef struct {
@@ -302,6 +304,9 @@ recv_t RECEIVER[26];
 
 //hpx_future_t *fut_deltaTime;
 
+void SBN1(Domain *,hpx_addr_t);
+void SBN3(hpx_addr_t,Domain *,int);
+
 void Init(int tp, int nx);
 
 void SetDomain(int rank, int colLoc, int rowLoc, int planeLoc, int nx, int tp,
@@ -311,7 +316,7 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(Domain *domain,int rank);
+void CalcForceForNodes(hpx_addr_t, Domain *domain,int rank);
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 

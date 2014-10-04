@@ -10,12 +10,16 @@ if ENABLE_LENGTHY_TESTS
 PERFTESTS += \
         perfmain \
         time_gas_alloc \
-        time_gas_addr_trans 
+        time_gas_addr_trans \
+        time_lco_chan \
+        time_lco_sema 
 else
 check_PROGRAMS += \
         perfmain \
         time_gas_alloc \
-        time_gas_addr_trans
+        time_gas_addr_trans \
+        time_lco_chan \
+        time_lco_sema
 endif
 
 NPROCS ?= 2
@@ -32,6 +36,8 @@ AM_CFLAGS         += $(HPX_C99)
 perfmain_SOURCES   = perfmain.c
 time_gas_alloc_SOURCES     = time_gas_alloc.c
 time_gas_addr_trans_SOURCES = time_gas_addr_trans.c
+time_lco_chan_SOURCES = time_lco_chan.c
+time_lco_sema_SOURCES = time_lco_sema.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
