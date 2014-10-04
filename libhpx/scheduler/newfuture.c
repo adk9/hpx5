@@ -625,7 +625,7 @@ _new_all(struct new_all_args *args) {
   photon_register_buffer(send_buffer, elem_size);
 
   photon_register_buffer(futures, elem_size * futs_here);
-  
+  photon_get_buffer_private(futures, elem_size * futs_here, (photonBufferPriv)&base_local[hpx_get_my_rank()].buffer.priv);
 
 
 
@@ -665,7 +665,7 @@ _new_all(struct new_all_args *args) {
   //    hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(uintptr_t));
   struct photon_buffer_t *buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
 
-  //  printf("At %d buffer = %p\n", hpx_get_my_rank(), futures);
+  printf("At %d buffer = %p\n", hpx_get_my_rank(), futures);
   base_local[hpx_get_my_rank()].buffer.addr = (uintptr_t)futures;
   hpx_lco_allgather_setid(ag, hpx_get_my_rank(), sizeof(struct photon_buffer_t), 
 			  &base_local[hpx_get_my_rank()].buffer,
@@ -685,7 +685,7 @@ _new_all(struct new_all_args *args) {
     if (i == hpx_get_my_rank())
       base_local[i].buffer.addr = (uintptr_t)futures;
 
-    //printf("At %d received buffer[%d] = %p\n", hpx_get_my_rank(), i, (void*)base_local[i].buffer.addr);
+    printf("At %d received buffer[%d] = %p\n", hpx_get_my_rank(), i, (void*)base_local[i].buffer.addr);
   }
 
   free(buffers);
@@ -836,6 +836,8 @@ _put_with_completion(hpx_newfuture_t *future,  int id, size_t size, void *data,
 void hpx_lco_newfuture_setat(hpx_newfuture_t *future,  int id, size_t size, void *data,
 				     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
   hpx_newfuture_t *future_i = hpx_lco_newfuture_at(future, id);
+
+  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
 
   // normally lco_set does all this
   if (_newfuture_get_rank(future_i) != hpx_get_my_rank()) {
