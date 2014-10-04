@@ -64,7 +64,7 @@ uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize) {
 pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
                                      uint32_t ranks) {
   // make sure the locality is in the expected range
-  DEBUG_IF (ceil_log2_32(ranks) < ceil_log2_32(locality)) {
+  DEBUG_IF (ranks < locality) {
     dbg_error("locality %u must be less than %u\n", locality,
               1 << ceil_log2_32(ranks));
   }
