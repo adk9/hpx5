@@ -29,7 +29,6 @@
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
-#include "libhpx/btt.h"
 #include "libhpx/gas.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -68,11 +67,6 @@ static int _cleanup(locality_t *l, int code) {
   if (l->transport) {
     transport_delete(l->transport);
     l->transport = NULL;
-  }
-
-  if (l->btt) {
-    btt_delete(l->btt);
-    l->btt = NULL;
   }
 
   if (l->boot) {
@@ -124,17 +118,6 @@ int hpx_init(const hpx_config_t *cfg) {
     if (cfg->wait_at == HPX_LOCALITY_ALL || cfg->wait_at == here->rank)
       dbg_wait();
 
-  // 3b) set the global allocation sbrk
-  sync_store(&here->global_sbrk, here->ranks, SYNC_RELEASE);
-
-  // 4) update the HPX_HERE global address
-  HPX_HERE = HPX_THERE(here->rank);
-
-  // 5) allocate our block translation table
-  here->btt = btt_new(cfg->gas, cfg->heap_bytes, cfg->btt_size);
-  if (here->btt == NULL)
-    return _cleanup(here, dbg_error("init: failed to create the block-translation-table.\n"));
-
   // 6) allocate the transport
   here->transport = transport_new(cfg->transport, cfg->req_limit);
   if (here->transport == NULL)
@@ -150,27 +133,13 @@ int hpx_init(const hpx_config_t *cfg) {
     return _cleanup(here, dbg_error("init: failed to join the global address "
                                     "space.\n"));
 
+  // 4) update the HPX_HERE global address, depends on GAS initialization
+  HPX_HERE = HPX_THERE(here->rank);
+
   here->network = network_new();
   if (here->network == NULL)
     return _cleanup(here, dbg_error("init: failed to create network.\n"));
   dbg_log("initialized the network.\n");
-
-  // 7) insert the base mapping for our local data segment, and pin it so that
-  //    it doesn't go anywhere, ever....
-  btt_insert(here->btt, HPX_HERE, here);
-  void *local;
-  bool pinned = hpx_gas_try_pin(HPX_HERE, &local);
-  assert(local == here);
-  assert(pinned);
-
-  // 7b) set the global private allocation sbrk
-  uint64_t _btt_size = cfg->btt_size ? (cfg->btt_size/8) : UINT32_MAX;
-
-  uint64_t round = ((uint64_t)(_btt_size / here->ranks) * here->ranks) + here->rank;
-  uint32_t offset = (uint32_t)((round >= _btt_size) ? (round - here->ranks) : (round));
-  dbg_log_gas("initializing private sbrk to %u.\n", offset);
-  assert(offset % here->ranks == here->rank);
-  sync_store(&here->pvt_sbrk, offset, SYNC_RELEASE);
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
@@ -289,169 +258,3 @@ hpx_abort(void) {
   abort();
 }
 
-
-/// This is currently trying to provide the layout:
-///
-/// shared [1] T foo[n]; where sizeof(T) == bytes
-hpx_addr_t
-hpx_gas_global_alloc(size_t n, uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_SMP);
-
-  int ranks = here->ranks;
-
-  // Get a set of @p n contiguous block ids.
-  uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
-
-  uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
-  uint32_t args[4] = {
-    base_id,
-    blocks_per_locality,
-    bytes,
-    0 // zeroed-memory?
-  };
-
-  // The global alloc is currently synchronous, because the btt mappings aren't
-  // complete until the allocation is complete.
-  hpx_addr_t and = hpx_lco_and_new(ranks);
-  for (int i = 0; i < ranks; ++i)
-    hpx_call(HPX_THERE(i), locality_alloc_blocks, &args, sizeof(args), and);
-
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-
-  // Return the base id to the caller.
-  return hpx_addr_init(0, base_id, bytes);
-}
-
-
-hpx_addr_t
-hpx_gas_global_calloc(size_t n, uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_SMP);
-
-  int ranks = here->ranks;
-
-  // Get a set of @p n contiguous block ids.
-  uint32_t base_id;
-  hpx_call_sync(HPX_THERE(0), locality_global_sbrk, &n, sizeof(n), &base_id, sizeof(base_id));
-
-  uint32_t blocks_per_locality = n / ranks + ((n % ranks) ? 1 : 0);
-  uint32_t args[4] = {
-    base_id,
-    blocks_per_locality,
-    bytes,
-    1 // zeroed-memory?
-  };
-
-  // The global alloc is currently synchronous, because the btt mappings aren't
-  // complete until the allocation is complete.
-  hpx_addr_t and = hpx_lco_and_new(ranks);
-  for (int i = 0; i < ranks; ++i)
-    hpx_call(HPX_THERE(i), locality_alloc_blocks, &args, sizeof(args), and);
-
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-
-  // Return the base id to the caller.
-  return hpx_addr_init(0, base_id, bytes);
-}
-
-
-/// This is a non-collective call to allocate a block of memory in the
-/// global address space.
-hpx_addr_t
-hpx_gas_alloc(uint32_t bytes) {
-  assert(here->btt->type != HPX_GAS_SMP);
-
-  hpx_addr_t addr;
-  int ranks = here->ranks;
-
-  // Get a block id.
-  uint32_t block_id = sync_addf(&here->pvt_sbrk, -ranks, SYNC_ACQ_REL);
-  uint32_t global = sync_load(&here->global_sbrk, SYNC_ACQUIRE);
-  if (block_id <= global) {
-    dbg_log_gas("gas: rank %d out of blocks for a private allocation of size %u.\n", here->rank, bytes);
-
-    // forward allocation request to a random locality.
-    int r = rand() % ranks;
-    hpx_call_sync(HPX_THERE(r), locality_gas_alloc, &bytes, sizeof(bytes), &addr, sizeof(addr));
-  } else {
-    // Insert the block mapping.
-    addr = hpx_addr_init(0, block_id, bytes);
-
-    char *block = malloc(bytes);
-    assert(block);
-    btt_insert(here->btt, addr, block);
-  }
-
-  // Return the base id to the caller.
-  return addr;
-}
-
-
-bool
-hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
-  return btt_try_pin(here->btt, addr, local);
-}
-
-
-void
-hpx_gas_unpin(const hpx_addr_t addr) {
-  btt_unpin(here->btt, addr);
-}
-
-
-void
-hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  hpx_gas_t type = btt_type(here->btt);
-  if ((type == HPX_GAS_PGAS) || (type == HPX_GAS_PGAS_SWITCH)) {
-    if (!hpx_addr_eq(lco, HPX_NULL))
-      hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
-    return;
-  }
-
-  hpx_call(dst, locality_gas_move, &src, sizeof(src), lco);
-}
-
-
-static hpx_action_t _gas_free = 0;
-
-
-/// Perform a global free operation.
-///
-/// Right now we're leaking the global address space associated with this
-/// allocation. In addition, we're not correctly dealing with freeing a
-/// distributed array.
-///
-/// @param unused -
-static int
-_gas_free_action(void *unused)
-{
-  hpx_addr_t addr = hpx_thread_current_target();
-  void *local = NULL;
-  if (!hpx_gas_try_pin(addr, &local))
-    return HPX_RESEND;
-  free(local);
-  hpx_gas_unpin(addr);
-  return HPX_SUCCESS;
-}
-
-
-void
-hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync)
-{
-  // currently I don't care about the performance of this call, so we just use
-  // the action interface for freeing.
-  hpx_call_async(addr, _gas_free, NULL, 0, HPX_NULL, sync);
-}
-
-hpx_addr_t
-hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
-  assert(bytes != 0);
-  hpx_addr_t addr = HPX_ADDR_INIT(offset, base, bytes);
-  return addr;
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  _gas_free = HPX_REGISTER_ACTION(_gas_free_action);
-}

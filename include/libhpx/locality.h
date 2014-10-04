@@ -34,7 +34,7 @@ typedef struct {
   int                         ranks;            // the total number of ranks
   struct boot_class           *boot;            // the bootstrap object
   struct gas_class             *gas;            // the global address space
-  struct btt_class             *btt;            // the block translation table
+  // struct btt_class             *btt;            // the block translation table
   struct transport_class *transport;            // the byte transport
   struct network_class     *network;            // the parcel transport
   struct scheduler           *sched;            // the scheduler data
@@ -203,6 +203,13 @@ inline static int local_posix_memalign(void **memptr, size_t alignment,
 
   return e;
 }
+
+
+inline static hpx_addr_t lva_to_gva(void *lva) {
+  assert(here && here->gas && here->gas->lva_to_gva);
+  return here->gas->lva_to_gva(lva);
+}
+
 
 /// Allocate immovable local memory that is addressable globally.
 HPX_INTERNAL hpx_addr_t locality_malloc(size_t bytes);

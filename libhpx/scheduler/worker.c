@@ -32,7 +32,6 @@
 
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
@@ -688,17 +687,6 @@ void hpx_thread_exit(int status) {
   if (status == HPX_RESEND) {
     hpx_parcel_t *parcel = self.current;
 
-    if (here->btt->type == HPX_GAS_AGAS) {
-      // Who do we think owns this parcel?
-      uint32_t rank = btt_owner(here->btt, parcel->target);
-      // Send that as an update to the src of the parcel.
-      locality_gas_forward_args_t args = {
-        parcel->target,
-        rank
-      };
-      hpx_call(HPX_THERE(parcel->src), locality_gas_forward, &args,
-               sizeof(args), HPX_NULL);
-    }
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
     assert(to);
