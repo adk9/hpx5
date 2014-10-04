@@ -233,7 +233,9 @@ static int _action_evolve(InitArgs *init) {
 
     if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
       double newdt;
+      printf("lulesh started get\n");
       hpx_lco_get(lco_newdt,sizeof(double),&newdt);
+      printf("lulesh got %f\n", newdt);
       double olddt = ld->deltatime;
       double ratio = newdt/olddt;
       if (ratio >= 1.0) {
