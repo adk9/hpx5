@@ -25,7 +25,6 @@
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 #include "libhpx/action.h"
-#include "libhpx/btt.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
