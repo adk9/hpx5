@@ -178,6 +178,7 @@ _send_queue_progress_action(void* args) {
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
     }
+    hpx_thread_yield();
   }
   return HPX_SUCCESS;
 }
@@ -226,6 +227,7 @@ _recv_queue_progress_action(void *args) {
       }
       lco_unlock(&f->lco);
     } // end if
+    hpx_thread_yield();
   } while (1);
   return HPX_SUCCESS;
 }
@@ -663,7 +665,10 @@ _new_all(struct new_all_args *args) {
   //    hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(uintptr_t));
   struct photon_buffer_t *buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
 
-  hpx_lco_allgather_setid(ag, hpx_get_my_rank(), sizeof(uintptr_t), futures,
+  //  printf("At %d buffer = %p\n", hpx_get_my_rank(), futures);
+  base_local[hpx_get_my_rank()].buffer.addr = (uintptr_t)futures;
+  hpx_lco_allgather_setid(ag, hpx_get_my_rank(), sizeof(struct photon_buffer_t), 
+			  &base_local[hpx_get_my_rank()].buffer,
 			  HPX_NULL, HPX_NULL);
   
   hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(struct photon_buffer_t), buffers);
@@ -679,8 +684,10 @@ _new_all(struct new_all_args *args) {
     
     if (i == hpx_get_my_rank())
       base_local[i].buffer.addr = (uintptr_t)futures;
+
+    //printf("At %d received buffer[%d] = %p\n", hpx_get_my_rank(), i, (void*)base_local[i].buffer.addr);
   }
-  
+
   free(buffers);
 
   sync_lockable_ptr_unlock(&_newfuture_table.lock);
@@ -788,7 +795,8 @@ hpx_newfuture_t *hpx_lco_newfuture_shared_new_all(int num_participants, size_t s
 // provide this array indexer.
 hpx_newfuture_t *
 hpx_lco_newfuture_at(hpx_newfuture_t *array, int i) {
-  return &array[i];
+  //  return &array[i];
+  return &_newfuture_table.futs[array->table_index][i];
 }
 
 
