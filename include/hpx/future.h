@@ -210,4 +210,7 @@ bool hpx_lco_newfuture_is_shared(hpx_newfuture_t future);
 /// Returns the rank at which the future is located (you might need to use hpx_lco_newfuture_at() to get the future).
 int hpx_lco_newfuture_get_rank(hpx_newfuture_t future);
 
+/// Must be called first, from the main action
+hpx_status_t hpx_newfutures_init();
+
 #endif
