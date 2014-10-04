@@ -117,7 +117,7 @@ START_TEST (test_libhpx_gas_global_alloc)
     };
 
     // compute the offset for this domain
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
 
     // and send the initDomain action, with the done LCO as the continuation
     hpx_call(block, t03_initDomain, &init, sizeof(init), done);

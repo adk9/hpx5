@@ -57,7 +57,7 @@ START_TEST (test_libhpx_memget)
   int peerid = (rank+1)%size;
 
   hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
-  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block));
+  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
   hpx_call(remote, t12_init_array, block, sizeof(block), done);

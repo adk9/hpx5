@@ -221,8 +221,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 /// @param     bsize The number of futures in each block.
 ///
 /// @returns The address of the ith future in the array.
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size
-                                   /*, int bsize */);
+hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 
 
 /// Channels.
@@ -330,7 +329,7 @@ hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[],
                                        int *index, int *size, void **out);
 
 hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block);
-hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i, int size);
+hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i, int size, int bsize);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 
 

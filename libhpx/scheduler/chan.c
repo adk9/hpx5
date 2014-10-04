@@ -454,8 +454,10 @@ hpx_lco_chan_array_new(int n, int size, int chans_per_block)
 
 
 hpx_addr_t
-hpx_lco_chan_array_at(hpx_addr_t array, int i, int size) {
-  return hpx_addr_add(array, i * (sizeof(_chan_t) + size), (sizeof(_chan_t) + size));
+hpx_lco_chan_array_at(hpx_addr_t array, int i, int size, int bsize) {
+  uint32_t chan_bytes = sizeof(_chan_t) + size;
+  uint32_t  block_bytes = bsize * chan_bytes;
+  return hpx_addr_add(array, i * (sizeof(_chan_t) + size), block_bytes);
 }
 
 

@@ -203,9 +203,11 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 
 // Application level programmer doesn't know how big the future is, so we
 // provide this array indexer.
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size)
+hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 {
-  return hpx_addr_add(array, i * (sizeof(_future_t) + size), (sizeof(_future_t) + size));
+  uint32_t future_bytes = sizeof(_future_t) + size;
+  uint32_t  block_bytes = bsize * future_bytes;
+  return hpx_addr_add(array, i * (sizeof(_future_t) + size), block_bytes);
 }
 
 

@@ -63,7 +63,7 @@ START_TEST (test_libhpx_lcoFunction)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t addr = hpx_gas_global_alloc(size, BUFFER_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(addr, BUFFER_SIZE*2 * peerID);
+  hpx_addr_t remote = hpx_addr_add(addr, BUFFER_SIZE*2 * peerID, BUFFER_SIZE*2);
 
   hpx_addr_t done;
   
@@ -163,7 +163,7 @@ int t07_initMemory_action(uint32_t *args)
 
   hpx_addr_t completed = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; i++) {
-    hpx_addr_t block = hpx_addr_add(local, i * HPX_LOCALITY_ID * block_bytes);
+    hpx_addr_t block = hpx_addr_add(local, i * HPX_LOCALITY_ID * block_bytes, block_bytes);
     hpx_call(block, t07_initBlock, args, 2 * sizeof(*args), completed);
   }
   hpx_lco_wait(completed);
@@ -202,12 +202,12 @@ START_TEST (test_libhpx_lcoWaitAll)
   };
 
   for (int i = 0; i < ranks; i++) {
-    hpx_addr_t there = hpx_addr_add(addr, i * block_bytes);
+    hpx_addr_t there = hpx_addr_add(addr, i * block_bytes, block_bytes);
     hpx_call(there, t07_initMemory, args, sizeof(args), done[0]);
   }
 
   for (int i = 0; i < rem; i++) {
-    hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes);
+    hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes, block_bytes);
     hpx_call(block, t07_initMemory, args, sizeof(args[0]), done[1]);
   }
 
