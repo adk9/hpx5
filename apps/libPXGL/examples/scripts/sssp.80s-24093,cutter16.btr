@@ -1,0 +1,6 @@
+
+sssp:24093 terminated with signal 11 at PC=412e3a SP=2ab3f43ffca0.  Backtrace:
+../sssp[0x412e3a]
+../sssp[0x412f16]
+../sssp[0x414696]
+../sssp[0x41b2e2]
