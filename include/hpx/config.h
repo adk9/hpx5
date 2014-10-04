@@ -107,7 +107,7 @@ typedef struct {
     .threads     = 0,                           \
     .backoff_max = 1024,                        \
     .stack_bytes = 32768,                       \
-    .heap_bytes  = 1 << 30, /* 1GB */           \
+    .heap_bytes  = 1lu << 30, /* 1GB */           \
     .gas         = HPX_GAS_PGAS,                \
     .btt_size    = 0,                           \
     .boot        = HPX_BOOT_DEFAULT,            \
