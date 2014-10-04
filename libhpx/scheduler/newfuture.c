@@ -50,7 +50,7 @@ typedef struct {
 struct _future_wait_args {
   _newfuture_t *fut;
   hpx_set_t set;
-  enum _future_wait_action wait_action;
+  enum \_future_wait_action wait_action;
   hpx_time_t time;
 };
 
