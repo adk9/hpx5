@@ -582,6 +582,7 @@ struct new_all_args {
   int n;
   int base_rank;
   size_t size;
+  hpx_addr_t allg;
 };
 
 static hpx_newfuture_t*
@@ -590,6 +591,8 @@ _new_all(struct new_all_args *args) {
   sync_lockable_ptr_lock(&_newfuture_table.lock);
   if (_newfuture_table.inited != 1)
     initialize_newfutures();
+
+  hpx_addr_t ag = args->allg;
 
   int n = args->n; // number of futures
   int base_rank = args->base_rank;
@@ -621,6 +624,10 @@ _new_all(struct new_all_args *args) {
 
   photon_register_buffer(futures, elem_size * futs_here);
   
+
+
+
+#if 0
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     //    if (i == hpx_get_my_rank())
     //      continue;
@@ -651,9 +658,32 @@ _new_all(struct new_all_args *args) {
 
     printf("Recevied buffer from %d at %d with address = %p\n", i, hpx_get_my_rank(), (void*)base_local[i].buffer.addr);
   }
+#endif
+
+  //    hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(uintptr_t));
+  struct photon_buffer_t *buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
+
+  hpx_lco_allgather_setid(ag, hpx_get_my_rank(), sizeof(uintptr_t), futures,
+			  HPX_NULL, HPX_NULL);
+  
+  hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(struct photon_buffer_t), buffers);
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    memcpy(&base_local[i].buffer, &buffers[i], sizeof(buffers[i]));
+
+    base_local[i].count = n;
+    base_local[i].base_rank = base_rank;
+    base_local[i].size_per = size;
+    base_local[i].id = i;
+    base_local[i].send_buffer = send_buffer;
+    base_local[i].table_index = _newfuture_table.index;
+    
+    if (i == hpx_get_my_rank())
+      base_local[i].buffer.addr = (uintptr_t)futures;
+  }
+  
+  free(buffers);
 
   sync_lockable_ptr_unlock(&_newfuture_table.lock);
-
   return base_local;
 
   // TODO return error on error
@@ -727,6 +757,7 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
     .base_rank = hpx_get_my_rank(),
     .size = size
   };
+  args.allg = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(uintptr_t));
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
 
