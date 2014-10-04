@@ -35,6 +35,59 @@ SBN1(Domain *domain, hpx_addr_t sbn1)
   }
 }
 
+void
+SBN3(hpx_addr_t sbn3,Domain *domain, int rank)
+{
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  int tag = domain->cycle;
+  int i,destLocalIdx;
+
+  // pack outgoing data
+  int nsTF = domain->sendTF[0];
+  int *sendTF = &domain->sendTF[1];
+  
+  int gen = tag%2;
+  for (i = 0; i < nsTF; i++) {
+    int destLocalIdx = sendTF[i];
+    int sendcnt = XFERCNT[destLocalIdx];
+    double *data = malloc(BUFSZ[destLocalIdx]);
+    send_t pack = SENDER[destLocalIdx];
+
+    pack(nx, ny, nz, domain->fx, data);
+    pack(nx, ny, nz, domain->fy, data + sendcnt);
+    pack(nx, ny, nz, domain->fz, data + sendcnt*2);
+
+    hpx_lco_newfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+
+    free(data);
+  } 
+
+  // wait for incoming data
+  int nrTF = domain->recvTF[0];
+  int *recvTF = &domain->recvTF[1];
+
+  for (i = 0; i < nrTF; i++) {
+    int srcLocalIdx = recvTF[i];
+    int fromDomain = OFFSET[srcLocalIdx] + rank;
+    int srcRemoteIdx = 25 - srcLocalIdx;
+    double *src = malloc(BUFSZ[srcRemoteIdx]);
+    hpx_lco_newfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx], src);
+    int recvcnt = XFERCNT[srcLocalIdx];
+    recv_t unpack = RECEIVER[srcLocalIdx];
+
+    unpack(nx, ny, nz, src, domain->fx, 0);
+    unpack(nx, ny, nz, src + recvcnt, domain->fy, 0);
+    unpack(nx, ny, nz, src + recvcnt*2, domain->fz, 0);
+
+    // free the buffer
+    free(src);
+  }
+
+
+}
+
 void send1(int nx, int ny, int nz, double *src, double *dest)
 {
   dest[0] = src[0];
