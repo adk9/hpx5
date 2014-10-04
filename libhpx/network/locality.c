@@ -53,7 +53,3 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_shutdown = HPX_REGISTER_ACTION(_shutdown_handler);
   locality_call_continuation = HPX_REGISTER_ACTION(_call_cont_handler);
 }
-
-hpx_addr_t locality_malloc(size_t bytes) {
-  return hpx_gas_alloc(bytes);
-}
