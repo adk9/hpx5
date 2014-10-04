@@ -45,28 +45,28 @@ static bool _pgas_is_global(gas_class_t *gas, void *addr) {
 }
 
 static uint32_t _pgas_locality_of(hpx_addr_t gva) {
-  return pgas_gva_locality_of(gva.offset, here->ranks);
+  return pgas_gva_locality_of((pgas_gva_t)gva, here->ranks);
 }
 
 static bool _check_cyclic(hpx_addr_t gva, uint32_t *bsize) {
-  bool cyclic = heap_offset_is_cyclic(global_heap, gva.offset);
+  bool cyclic = heap_offset_is_cyclic(global_heap, (uint64_t)gva);
   if (cyclic)
     *bsize = 1 << ceil_log2_32(*bsize);
   return cyclic;
 }
 
 static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  DEBUG_IF (!bsize && heap_offset_is_cyclic(global_heap, gva.offset)) {
+  DEBUG_IF (!bsize && heap_offset_is_cyclic(global_heap, (uint64_t)gva)) {
     dbg_error("invalid block size for cyclic address\n");
   }
 
   _check_cyclic(gva, &bsize);
-  return pgas_gva_offset_of(gva.offset, here->ranks, bsize);
+  return pgas_gva_offset_of((pgas_gva_t)gva, here->ranks, bsize);
 }
 
 static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
   _check_cyclic(gva, &bsize);
-  return pgas_gva_phase_of(gva.offset, bsize);
+  return pgas_gva_phase_of((pgas_gva_t)gva, bsize);
 }
 
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
@@ -75,13 +75,12 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   DEBUG_IF (clhs != crhs) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return pgas_gva_sub(lhs.offset, rhs.offset, here->ranks, bsize);
+  return pgas_gva_sub((pgas_gva_t)lhs, (pgas_gva_t)rhs, here->ranks, bsize);
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   _check_cyclic(gva, &bsize);
-  hpx_addr_t gva1 = HPX_ADDR_INIT(pgas_gva_add(gva.offset, bytes, here->ranks,
-                                               bsize), 0, bsize);
+  hpx_addr_t gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks, bsize);
   return gva1;
 }
 
@@ -132,14 +131,14 @@ static void *_pgas_gva_to_lva(hpx_addr_t addr) {
   void *local = NULL;
   bool is_local = pgas_try_pin(addr, &local);
   DEBUG_IF (!is_local) {
-    dbg_error("%lu is not local to %u\n", addr.offset, here->rank);
+    dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
   return local;
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
   DEBUG_IF(!pgas_try_pin(addr, NULL)) {
-    dbg_error("%lu is not local to %u\n", addr.offset, here->rank);
+    dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
 }
 

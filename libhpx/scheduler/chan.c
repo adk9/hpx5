@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <hpx/builtins.h>
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
@@ -52,7 +53,6 @@ typedef struct {
 
 /// Internal actions.
 static hpx_action_t    _block_init_action = 0;
-static hpx_action_t   _blocks_init_action = 0;
 static hpx_action_t     _chan_recv_action = 0;
 static hpx_action_t _chan_try_recv_action = 0;
 
@@ -315,30 +315,9 @@ _block_init_handler(uint32_t *args)
 }
 
 
-/// Initialize a strided block of futures
-static int
-_blocks_init_handler(uint32_t *args)
-{
-  hpx_addr_t base = hpx_thread_current_target();
-  uint32_t block_size = args[0];
-  uint32_t block_bytes = block_size * sizeof(_chan_t);
-  uint32_t blocks = args[1];
-
-  hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (uint32_t i = 0; i < blocks; i++) {
-    hpx_addr_t block = hpx_addr_add(base, i * here->ranks * block_bytes);
-    hpx_call(block, _block_init_action, args, 2 * sizeof(*args), and);
-  }
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-
 static void HPX_CONSTRUCTOR
 _register_actions(void) {
   _block_init_action    = HPX_REGISTER_ACTION(_block_init_handler);
-  _blocks_init_action   = HPX_REGISTER_ACTION(_blocks_init_handler);
   _chan_recv_action     = HPX_REGISTER_ACTION(_chan_recv_proxy);
   _chan_try_recv_action = HPX_REGISTER_ACTION(_chan_try_recv_proxy);
 }
@@ -449,39 +428,25 @@ hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
 /// @param          n the total number of channels to allocate
 /// @param block_size the number of channels per block
 hpx_addr_t
-hpx_lco_chan_array_new(int n, int block_size)
+hpx_lco_chan_array_new(int n, int size, int chans_per_block)
 {
   // perform the global allocation
-  uint32_t blocks = (n / block_size) + ((n % block_size) ? 1 : 0);
-  uint32_t block_bytes = block_size * sizeof(_chan_t);
-  hpx_addr_t base = hpx_gas_global_alloc(blocks, block_bytes);
+  uint32_t     blocks   = ceil_div_32(n, chans_per_block);;
+  uint32_t chan_bytes   = sizeof(_chan_t) + size;
+  uint32_t  block_bytes = chans_per_block * chan_bytes;
+  hpx_addr_t       base = hpx_gas_global_alloc(blocks, block_bytes);
 
-  int ranks = here->ranks;
   // for each rank, send an initialization message
-  uint32_t args[2] = {
-    block_size,
-    (blocks / ranks) // blks per rank
-  };
+  uint32_t args[] = { size, chans_per_block };
 
-  int rem = blocks % ranks;
-  hpx_addr_t and[2] = {
-    hpx_lco_and_new(ranks),
-    hpx_lco_and_new(rem)
-  };
-
-  for (int i = 0; i < ranks; ++i) {
-    hpx_addr_t there = hpx_addr_add(base, i * block_bytes);
-    hpx_call(there, _blocks_init_action, args, sizeof(args), and[0]);
+  hpx_addr_t and = hpx_lco_and_new(blocks);
+  for (int i = 0; i < blocks; ++i) {
+    hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
+    int e = hpx_call(there, _block_init_action, args, sizeof(args), and);
+    dbg_check(e, "call of _block_init_action failed\n");
   }
-
-  for (int i = 0; i < rem; ++i) {
-    hpx_addr_t block = hpx_addr_add(base, args[1] * ranks + i * block_bytes);
-    hpx_call(block, _block_init_action, args, 2 * sizeof(args[0]), and[1]);
-  }
-
-  hpx_lco_wait_all(2, and, NULL);
-  hpx_lco_delete(and[0], HPX_NULL);
-  hpx_lco_delete(and[1], HPX_NULL);
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
 
   // return the base address of the allocation
   return base;
@@ -489,8 +454,8 @@ hpx_lco_chan_array_new(int n, int block_size)
 
 
 hpx_addr_t
-hpx_lco_chan_array_at(hpx_addr_t array, int i) {
-  return hpx_addr_add(array, i * sizeof(_chan_t));
+hpx_lco_chan_array_at(hpx_addr_t array, int i, int size) {
+  return hpx_addr_add(array, i * (sizeof(_chan_t) + size), (sizeof(_chan_t) + size));
 }
 
 

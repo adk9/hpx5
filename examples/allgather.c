@@ -154,7 +154,7 @@ allgather_main_action(const main_args_t *args)
       .complete = complete,
       .newdt = newdt
     };
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
     hpx_call(block, _initDomain, &init, sizeof(init), done);
   }
 
@@ -165,7 +165,7 @@ allgather_main_action(const main_args_t *args)
 
   const unsigned long epoch = 0;
   for (int i = 0, e = args->nDoms; i < e; ++i) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
   }
 

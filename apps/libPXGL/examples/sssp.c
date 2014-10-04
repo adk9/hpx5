@@ -206,7 +206,8 @@ static int _main_action(_sssp_args_t *args) {
 #endif
 
     hpx_addr_t checksum_lco = HPX_NULL;
-    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices), &checksum_lco, sizeof(checksum_lco));
+    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices),
+                  &checksum_lco, sizeof(checksum_lco));
     size_t checksum = 0;
     hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
     hpx_lco_delete(checksum_lco, HPX_NULL);

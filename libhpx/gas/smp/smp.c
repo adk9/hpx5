@@ -40,7 +40,7 @@ static uint32_t _smp_locality_of(hpx_addr_t addr) {
 }
 
 static uint64_t _smp_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  return gva.offset;
+  return gva;
 }
 
 static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
@@ -48,25 +48,21 @@ static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
 }
 
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  return (lhs.offset - rhs.offset);
+  return (lhs - rhs);
 }
 
 static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  hpx_addr_t addr = {
-    .offset = gva.offset + bytes,
-    .base_id = 0,
-    .block_bytes = 0
-  };
+  hpx_addr_t addr = gva + bytes;
   return addr;
 }
 
 static hpx_addr_t _smp_lva_to_gva(void *lva) {
-  hpx_addr_t addr = { (uintptr_t)lva, 0, 0 };
+  hpx_addr_t addr = (hpx_addr_t)lva;
   return addr;
 }
 
 static void *_smp_gva_to_lva(hpx_addr_t addr) {
-  return (void*)addr.offset;
+  return (void*)addr;
 }
 
 static bool _smp_try_pin(const hpx_addr_t addr, void **local) {

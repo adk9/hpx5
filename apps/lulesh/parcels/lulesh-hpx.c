@@ -261,7 +261,7 @@ static int _main_action(int *input)
       .complete = complete,
       .newdt = newdt
     };
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, &args, sizeof(args), init);
   }
   hpx_lco_wait(init);
@@ -271,7 +271,7 @@ static int _main_action(int *input)
   unsigned long epoch = 0;
 
   for (k=0;k<nDoms;k++) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
   }
 

@@ -189,7 +189,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; ++i) {
-    hpx_addr_t there = hpx_addr_add(base, i * block_bytes);
+    hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
     int e = hpx_call(there, _block_init, args, sizeof(args), and);
     dbg_check(e, "call of _block_init failed\n");
   }
@@ -203,9 +203,9 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 
 // Application level programmer doesn't know how big the future is, so we
 // provide this array indexer.
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size/*, int bsize*/)
+hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size)
 {
-  return hpx_addr_add(array, i * (sizeof(_future_t) + size));
+  return hpx_addr_add(array, i * (sizeof(_future_t) + size), (sizeof(_future_t) + size));
 }
 
 

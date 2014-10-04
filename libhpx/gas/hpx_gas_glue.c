@@ -19,28 +19,22 @@
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 
-const hpx_addr_t HPX_NULL = HPX_ADDR_INIT(0, 0, 0);
+const hpx_addr_t HPX_NULL = 0;
 
-hpx_addr_t HPX_HERE = HPX_ADDR_INIT(0, 0, 0);
+hpx_addr_t HPX_HERE = 0;
 
 hpx_addr_t HPX_THERE(hpx_locality_t i) {
   assert(here && here->gas && here->gas->there);
   return here->gas->there(i);
 }
 
-hpx_addr_t hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes) {
-  const hpx_addr_t addr = HPX_ADDR_INIT(offset, 0, 0);
-  return addr;
-}
-
 bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
-  return (lhs.offset == rhs.offset) && (lhs.base_id == rhs.base_id) &&
-  (lhs.block_bytes == rhs.block_bytes);
+  return (lhs == rhs);
 }
 
-hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes) {
+hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes, uint32_t block_size) {
   assert(here && here->gas);
-  return here->gas->add(addr, bytes, addr.block_bytes);
+  return here->gas->add(addr, bytes, block_size);
 }
 
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local) {

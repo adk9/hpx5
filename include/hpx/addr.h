@@ -21,20 +21,8 @@
 /// HPX manages global addresses on a per-block basis. Blocks are
 /// allocated during hpx_gas_alloc() or hpx_gas_global_alloc(), and can be
 /// up to 2^32 bytes large.
-typedef struct {
-  uint64_t offset;                              /// absolute offset
-  uint32_t base_id;                             /// base block id
-  uint32_t block_bytes;                         /// number of bytes per block
-} hpx_addr_t;
+typedef uint64_t hpx_addr_t;
 
-#define HPX_ADDR_INIT(OFFSET, BASE, BYTES)       \
-  {                                              \
-    .offset = (OFFSET),                          \
-    .base_id = (BASE),                           \
-    .block_bytes = (BYTES)                       \
-  }
-
-hpx_addr_t hpx_addr_init(uint64_t offset, uint32_t base, uint32_t bytes);
 
 /// Compare two global addresses
 ///
@@ -50,7 +38,7 @@ bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
 /// @param  addr a global address
 /// @param bytes an offset in bytes into the memory referenced by @p addr
 /// @returns     the address of the memory at offset @p bytes from @p addr
-hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes);
+hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes, uint32_t block_size);
 
 /// The equivalent of NULL for global memory
 extern const hpx_addr_t HPX_NULL;

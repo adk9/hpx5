@@ -32,6 +32,8 @@ struct tms t;
 #define NUPDATE (4L * TABSIZE)
 //#define NUPDATE 134217728
 
+#define BLOCK_SIZE sizeof(uint64_t)
+
 typedef struct guppie_config {
   long       ltabsize;           // local table size
   long       tabsize;            // global table size
@@ -52,7 +54,7 @@ static hpx_action_t _mover        = 0;
 uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
-  hpx_addr_t there = hpx_addr_add(table, i*n);
+  hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
   hpx_addr_t lco = hpx_lco_future_new(0);
   hpx_gas_memget(&val, there, n, lco);
   hpx_lco_wait(lco);
@@ -63,7 +65,7 @@ uint64_t table_get(hpx_addr_t table, long i) {
 // table set is asynchronous and uses an LCO for synchronization.
 void table_set(hpx_addr_t table, long i, uint64_t val,
                hpx_addr_t lco) {
-  hpx_addr_t there = hpx_addr_add(table, i*sizeof(uint64_t));
+  hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
   hpx_gas_memput(there, &val, sizeof(val), HPX_NULL, lco);
 }
 
@@ -175,7 +177,7 @@ static int _mover_action(guppie_config_t *cfg) {
     dst = (rand() % size);
 
     // get the random address into the table.
-    hpx_addr_t there = hpx_addr_add(cfg->table, src * sizeof(uint64_t));
+    hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
     lco = hpx_lco_future_new(0);
     // initiate a move
     hpx_gas_move(there, HPX_THERE(dst), lco);
@@ -287,7 +289,7 @@ void _main_action(guppie_config_t *cfg)
   lco = hpx_lco_and_new(cfg->nupdate);
   for (i=0; i<cfg->nupdate; i++) {
     temp = (temp << 1) ^ (((long) temp < 0) ? POLY : 0);
-    there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))*sizeof(uint64_t));
+    there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
     hpx_call(there, _bitwiseor, &temp, sizeof(temp), lco);
   }
   hpx_lco_wait(lco);
