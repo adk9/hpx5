@@ -23,56 +23,99 @@
 hpx_action_t pgas_cyclic_alloc = 0;
 hpx_action_t pgas_cyclic_calloc = 0;
 hpx_action_t pgas_memset = 0;
+hpx_action_t pgas_free = 0;
 
+/// Allocate from the cyclic space.
+///
+/// This is performed at the single cyclic server node (usually rank 0), and
+/// doesn't need to be broadcast because the server controls this for
+/// everyone. All global cyclic allocations are rooted at rank 0.
+///
+/// @param        n The number of blocks to allocate.
+/// @param    bsize The block size for this allocation.
+///
+/// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
-  const uint64_t bpn = pgas_n_per_locality(n, here->ranks);
-  const uint32_t balign = pgas_fit_log2_32(bsize);
-  const size_t goffset = heap_csbrk(global_heap, bpn, balign);
-  const pgas_gva_t gva = pgas_gva_from_goffset(here->rank, goffset, here->ranks);
-  const hpx_addr_t addr = HPX_ADDR_INIT(gva, 0, 0);
-  return addr;
+  const uint32_t ranks = here->ranks;
+  const uint64_t blocks_per_locality = pgas_n_per_locality(n, here->ranks);
+  const uint32_t padded_bsize = pgas_fit_log2_32(bsize);
+  const uint64_t heap_offset = heap_csbrk(global_heap, blocks_per_locality,
+                                          padded_bsize);
+  const uint32_t rank = here->rank;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_gva_to_hpx_addr(gva);
 }
 
+/// Allocate zeroed memory from the cyclic space.
+///
+/// This is performed at the single cyclic server node (usually rank 0) and is
+/// broadcast to all of the ranks in the system using hpx_bcast(). It waits for
+/// the broadcast to finish before returning. All global cyclic allocations are
+/// rooted at rank 0.
+///
+/// @param        n The number of blocks to allocate.
+/// @param    bsize The block size for this allocation.
+///
+/// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
-  const uint64_t bpn = pgas_n_per_locality(n, here->ranks);
-  const uint32_t balign = pgas_fit_log2_32(bsize);
-  const size_t goffset = heap_csbrk(global_heap, bpn, balign);
+  const uint32_t ranks = here->ranks;
+  const uint64_t blocks_per_locality = pgas_n_per_locality(n, ranks);
+  const uint32_t padded_bsize = pgas_fit_log2_32(bsize);
+  const size_t heap_offset = heap_csbrk(global_heap, blocks_per_locality,
+                                        padded_bsize);
 
   pgas_memset_args_t args = {
-    .goffset = goffset,
+    .heap_offset = heap_offset,
     .value = 0,
-    .length = bpn * balign
+    .length = blocks_per_locality * padded_bsize
   };
 
-  hpx_addr_t sync = hpx_lco_future_new(0);
+
+  hpx_addr_t sync = hpx_lco_and_new(ranks);
   hpx_bcast(pgas_memset, &args, sizeof(args), sync);
-  const pgas_gva_t gva = pgas_gva_from_goffset(here->rank, goffset, here->ranks);
-  const hpx_addr_t addr = HPX_ADDR_INIT(gva, 0, 0);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
-  return addr;
+  const uint32_t rank = here->rank;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_gva_to_hpx_addr(gva);
 }
 
-static int _cyclic_alloc_async(pgas_alloc_args_t *args) {
+
+/// This is the hpx_call_* target for a cyclic allocation.
+static int _pgas_cyclic_alloc_handler(pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_alloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
 
-static int _cyclic_calloc_async(pgas_alloc_args_t *args) {
+/// This is the hpx_call_* target for cyclic zeroed allocation.
+static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_calloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
 
-static int _pgas_memset_async(pgas_memset_args_t *args) {
-  void *dest = heap_offset_to_local(global_heap, args->goffset);
+/// This is the hpx_call_* target for memset, used in calloc broadcast.
+static int _pgas_memset_handler(pgas_memset_args_t *args) {
+  void *dest = heap_offset_to_local(global_heap, args->heap_offset);
   memset(dest, args->value, args->length);
   return HPX_SUCCESS;
 }
 
+static int _pgas_free_handler(void *UNUSED) {
+  void *local = NULL;
+  hpx_addr_t addr = hpx_thread_current_target();
+  if (!pgas_try_pin(addr, &local)) {
+    dbg_error("failed to translate an address during free.\n");
+    return HPX_ERROR;
+  }
+  pgas_global_free(local);
+  return HPX_SUCCESS;
+}
+
 void pgas_register_actions(void) {
-  pgas_cyclic_alloc = HPX_REGISTER_ACTION(_cyclic_alloc_async);
-  pgas_cyclic_calloc = HPX_REGISTER_ACTION(_cyclic_calloc_async);
-  pgas_memset = HPX_REGISTER_ACTION(_pgas_memset_async);
+  pgas_cyclic_alloc = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
+  pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
+  pgas_memset = HPX_REGISTER_ACTION(_pgas_memset_handler);
+  pgas_free = HPX_REGISTER_ACTION(_pgas_free_handler);
 }
 
 static void HPX_CONSTRUCTOR _register(void) {
