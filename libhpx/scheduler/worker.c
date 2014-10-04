@@ -780,10 +780,13 @@ static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
 
 void hpx_thread_set_affinity(int affinity) {
   assert(affinity >= -1);
-  assert(affinity < here->sched->n_workers);
   assert(self.current);
   assert(parcel_get_stack(self.current));
   parcel_get_stack(self.current)->affinity = affinity;
+
+  // make sure affinity is in bounds
+  affinity %= here->sched->n_workers;
+
   if (affinity == self.id)
     return;
 
