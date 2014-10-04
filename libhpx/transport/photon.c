@@ -45,6 +45,7 @@ typedef struct {
   struct photon_config_t  cfg;
   progress_t        *progress;
   unsigned              arena;
+  uint32_t            srlimit;
 } photon_t;
 
 
@@ -349,17 +350,17 @@ _progress(transport_class_t *t, bool flush)
 }
 
 
-static uint32_t _photon_get_send_limit(void) {
-  return photon_default_srlimit;
+static uint32_t _photon_get_send_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
-static uint32_t _photon_get_recv_limit(void) {
-  return photon_default_srlimit;
+static uint32_t _photon_get_recv_limit(transport_class_t *t) {
+  return t->req_limit;
 }
 
 
 
-transport_class_t *transport_new_photon(void) {
+transport_class_t *transport_new_photon(uint32_t req_limit) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
@@ -381,6 +382,8 @@ transport_class_t *transport_new_photon(void) {
   photon->class.test           = _test;
   photon->class.testsome       = NULL;
   photon->class.progress       = _progress;
+
+  photon->class.req_limit      = req_limit == 0 ? photon_default_srlimit : req_limit;
 
   // runtime configuration options
   char* eth_dev;
