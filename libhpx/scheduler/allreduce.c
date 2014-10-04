@@ -76,11 +76,13 @@ _allreduce_set(lco_t *lco, int size, const void *from)
   _allreduce_t *r = (_allreduce_t *)lco;
 
   // wait until we're reducing, then perform the op() and join the reduction
-  while ((r->phase != _reducing) && (status == HPX_SUCCESS))
+  while ((r->phase != _reducing) && (status == HPX_SUCCESS)) {
     status = scheduler_wait(&lco->lock, &r->wait);
+  }
 
-  if (status != HPX_SUCCESS)
+  if (status != HPX_SUCCESS) {
     goto unlock;
+  }
 
   //perform the op()
   assert(size && from);
@@ -106,13 +108,14 @@ _allreduce_get(lco_t *lco, int size, void *out)
   lco_lock(lco);
 
   // wait until we're reading
-  while ((r->phase != _reading) && (status == HPX_SUCCESS))
+  while ((r->phase != _reading) && (status == HPX_SUCCESS)) {
     status = scheduler_wait(&lco->lock, &r->wait);
-
+  }
 
   // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS)
+  if (status != HPX_SUCCESS) {
     goto unlock;
+  }
 
   // copy out the value if the caller wants it
   if (size && out)
@@ -169,6 +172,7 @@ _allreduce_init(_allreduce_t *r, size_t writers, size_t readers, size_t size,
   r->op = op;
   r->init = init;
   r->count = writers;
+  r->writers = writers;
   r->phase = _reducing;
   r->value = NULL;
 
