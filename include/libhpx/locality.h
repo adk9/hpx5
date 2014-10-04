@@ -147,8 +147,4 @@ inline static hpx_addr_t lva_to_gva(void *lva) {
 }
 
 
-/// Allocate immovable local memory that is addressable globally.
-HPX_INTERNAL hpx_addr_t locality_malloc(size_t bytes);
-
-
 #endif // LIBHPX_LOCALITY_H
