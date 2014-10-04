@@ -82,11 +82,11 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
 }
 
 pgas_gva_t pgas_gva_from_hpx_addr(hpx_addr_t addr) {
-  return addr.offset;
+  return (pgas_gva_t)addr;
 }
 
 hpx_addr_t pgas_gva_to_hpx_addr(pgas_gva_t gva) {
-  const hpx_addr_t addr = HPX_ADDR_INIT(gva, 0, 0);
+  const hpx_addr_t addr = (hpx_addr_t)gva;
   return addr;
 }
 

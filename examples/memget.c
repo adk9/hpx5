@@ -67,7 +67,7 @@ static int _main_action(void *args) {
   }
 
   hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid);
+  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid, MAX_MSG_SIZE*2);
 
   fprintf(stdout, HEADER);
   fprintf(stdout, "# [ pairs: %d ]\n", size/2);

@@ -12,13 +12,6 @@
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
 
-#ifndef _EDGE_LIST_BLOCKS
-#define _EDGE_LIST_BLOCKS HPX_LOCALITIES
-#endif
-#ifndef _EDGE_LIST_BLOCK_SIZE
-#define _EDGE_LIST_BLOCK_SIZE(n) (((n + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(edge_list_edge_t))
-#endif
-
 
 static hpx_action_t _put_edge;
 static int _put_edge_action(edge_list_edge_t *e)
@@ -67,7 +60,7 @@ int edge_list_from_file_action(char **filename) {
 
         sscanf(&line[1], " %" PRIu64 " %" PRIu64 " %" PRIu64, &edge->source, &edge->dest, &edge->weight);
 
-        hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t));
+        hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t), el->edge_list_bsize);
         count++;
         assert(!hpx_addr_eq(edges, HPX_NULL));
         hpx_call(e, _put_edge, edge, sizeof(*edge), edges);
@@ -80,8 +73,11 @@ int edge_list_from_file_action(char **filename) {
         // ids range from 1..n
         el->num_vertices++;
 
+        // Set an appropriate block size
+        el->edge_list_bsize = ((el->num_edges + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(edge_list_edge_t);
+        
         // Allocate an edge_list array in the global address space
-        el->edge_list = hpx_gas_global_alloc(_EDGE_LIST_BLOCKS, _EDGE_LIST_BLOCK_SIZE(el->num_edges));
+        el->edge_list = hpx_gas_global_alloc(HPX_LOCALITIES, el->edge_list_bsize);
 
         // Populate the edge_list
         edges = hpx_lco_and_new(el->num_edges);

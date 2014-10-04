@@ -141,7 +141,7 @@ static int _return_credit_action(uint64_t *args) {
 
 int
 parcel_recover_credit(hpx_parcel_t *p) {
-  hpx_addr_t process = hpx_addr_init(0, p->pid, sizeof(_process_t));
+  hpx_addr_t process = p->pid;
   hpx_parcel_t *pp =
       parcel_create(process, _return_credit, &p->credit, sizeof(p->credit),
                     HPX_NULL, HPX_ACTION_NULL, 0, false);
@@ -179,7 +179,7 @@ hpx_process_new(hpx_addr_t termination) {
 /// Get a process' PID.
 hpx_pid_t
 hpx_process_getpid(hpx_addr_t process) {
-  return (hpx_pid_t)process.base_id;
+  return (hpx_pid_t)process;
 }
 
 

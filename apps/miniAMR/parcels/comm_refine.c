@@ -81,7 +81,7 @@ int _comm_refine_sends_action(refineSBN *psbn)
 
   int dest = ld->comm_partner[dir][i];
   int distance = -psbn->rank + dest;
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance);
+  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
 
   hpx_parcel_set_target(p, neighbor);
   hpx_parcel_set_action(p, _comm_refine_result);
