@@ -29,8 +29,8 @@ struct transport_class {
 
   int (*adjust_size)(int size);
 
-  uint32_t (*get_send_limit)(void);
-  uint32_t (*get_recv_limit)(void);
+  uint32_t (*get_send_limit)(transport_class_t*);
+  uint32_t (*get_recv_limit)(transport_class_t*);
 
   const char *(*id)(void)
     HPX_RETURNS_NON_NULL;
@@ -83,14 +83,16 @@ struct transport_class {
 
   void (*progress)(transport_class_t *t, bool flush)
     HPX_NON_NULL(1);
+
+  uint32_t req_limit;
 };
 
 
-HPX_INTERNAL transport_class_t *transport_new_photon(void);
-HPX_INTERNAL transport_class_t *transport_new_mpi(void);
-HPX_INTERNAL transport_class_t *transport_new_portals(void);
-HPX_INTERNAL transport_class_t *transport_new_smp(void);
-HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport);
+HPX_INTERNAL transport_class_t *transport_new_photon(uint32_t);
+HPX_INTERNAL transport_class_t *transport_new_mpi(uint32_t);
+HPX_INTERNAL transport_class_t *transport_new_portals(uint32_t);
+HPX_INTERNAL transport_class_t *transport_new_smp(uint32_t);
+HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport, uint32_t req_limit);
 
 
 inline static const char *
