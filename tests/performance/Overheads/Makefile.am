@@ -14,7 +14,10 @@ PERFTESTS += \
         time_lco_chan \
         time_lco_sema \
         time_lco_and \
-        time_lco_future 
+        time_lco_future \
+        time_lco_allreduce \
+        time_lco_allgather \
+        time_lco_alltoall 
 else
 check_PROGRAMS += \
         perfmain \
@@ -23,7 +26,10 @@ check_PROGRAMS += \
         time_lco_chan \
         time_lco_sema \
         time_lco_and \
-        time_lco_future
+        time_lco_future \
+        time_lco_allreduce \
+        time_lco_allgather \
+        time_lco_alltoall
 endif
 
 NPROCS ?= 2
@@ -44,6 +50,9 @@ time_lco_chan_SOURCES = time_lco_chan.c
 time_lco_sema_SOURCES = time_lco_sema.c
 time_lco_and_SOURCES = time_lco_and.c
 time_lco_future_SOURCES = time_lco_future.c
+time_lco_allreduce_SOURCES = time_lco_allreduce.c
+time_lco_allgather_SOURCES = time_lco_allgather.c
+time_lco_alltoall_SOURCES = time_lco_alltoall.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
