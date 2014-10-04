@@ -164,8 +164,10 @@ int hpx_init(const hpx_config_t *cfg) {
   assert(pinned);
 
   // 7b) set the global private allocation sbrk
-  uint64_t round = ((uint64_t)(cfg->btt_size/here->ranks) * here->ranks) + here->rank;
-  uint32_t offset = (uint32_t)((round >= cfg->btt_size) ? (round - here->ranks) : (round));
+  uint64_t _btt_size = cfg->btt_size ? (cfg->btt_size/8) : UINT32_MAX;
+
+  uint64_t round = ((uint64_t)(_btt_size / here->ranks) * here->ranks) + here->rank;
+  uint32_t offset = (uint32_t)((round >= _btt_size) ? (round - here->ranks) : (round));
   dbg_log_gas("initializing private sbrk to %u.\n", offset);
   assert(offset % here->ranks == here->rank);
   sync_store(&here->pvt_sbrk, offset, SYNC_RELEASE);

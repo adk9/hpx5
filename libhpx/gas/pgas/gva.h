@@ -16,59 +16,76 @@
 /// @file libhpx/gas/pgas/addr.h
 /// @brief Declaration of the PGAS-specific address.
 #include <stdint.h>
-#include <hpx/builtins.h>
-#include "libhpx/debug.h"
 
 typedef uint64_t pgas_gva_t;
 
 /// Extract the locality from a gva, given the number of ranks.
-static inline uint32_t pgas_gva_locality_of(pgas_gva_t gva, uint32_t ranks) {
-  const uint32_t rshift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
-  return (uint32_t)(gva >> rshift);
-}
+uint32_t pgas_gva_locality_of(pgas_gva_t gva, uint32_t ranks)
+  HPX_INTERNAL;
 
-static inline uint64_t pgas_gva_offset_of(pgas_gva_t gva, uint32_t ranks,
-                                          uint32_t bsize) {
-  const uint32_t lshift = ceil_log2_32(ranks);
-  const uint32_t rshift = ceil_log2_32(bsize) + lshift;
-  return (gva << lshift) >> rshift;
-}
+/// Extract the offset from a gva, given the number of ranks and the block
+/// size.
+///
+/// The offset is basically just the bits the live between the phase and
+/// locality in the gva.
+///
+uint64_t pgas_gva_offset_of(pgas_gva_t gva, uint32_t ranks, uint32_t bsize)
+  HPX_INTERNAL;
 
-static inline uint64_t pgas_gva_goffset_of(pgas_gva_t gva, uint32_t ranks) {
-  const uint32_t shift = ceil_log2_32(ranks);
-  return (gva << shift) >> shift;
-}
+/// Extract the heap offset of a gva, given the number of ranks.
+///
+/// The heap_offset is the complete relative offset of the global virtual
+/// address in its global heap. It encodes both the gva offset and the gva
+/// phase, and can be used to extract either of those in the future.
+uint64_t pgas_gva_heap_offset_of(pgas_gva_t gva, uint32_t ranks)
+  HPX_INTERNAL;
 
-static inline uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize) {
-  const uint64_t mask = ceil_log2_32(bsize) - 1;
-  return (uint32_t)(gva & mask);
-}
+/// Extract the phase of a global virtual address, given the block size.
+///
+/// The phase is the number of bytes into the current block the gva is pointing
+/// to.
+uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize)
+  HPX_INTERNAL;
 
-static inline pgas_gva_t pgas_gva_from_goffset(uint32_t locality, uint64_t offset,
-                                               uint32_t ranks) {
-  DEBUG_IF (locality >= (1 << ceil_log2_32(ranks))) {
-    dbg_error("locality %u must be less than %u\n", locality,
-              1 << ceil_log2_32(ranks));
-  }
+/// Create a global virtual address from a locality and heap offset pair.
+///
+/// We need to know the number of ranks to perform this operation because that
+/// will tell us how many bits we are using to describe the rank.
+///
+/// @param      locality The locality where we want the address to point.
+/// @param   heap_offset The offset into the heap.
+/// @param         ranks The number of ranks overall in the system
+///
+/// @returns A global address that contains the appropriate triple of
+///          information.
+pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
+                                     uint32_t ranks)
+  HPX_INTERNAL;
 
-  DEBUG_IF (pgas_gva_locality_of(offset, ranks) != 0) {
-    dbg_error("global offset too large.\n");
-  }
+/// Create a global virtual address from a locality, gva-offset, and phase.
+///
+/// We need to know both the number of ranks and the block size in order to
+/// determine how many bits in the address we're using to store the locality and
+/// the phase.
+///
+/// @param      locality The locality where we want the address to point.
+/// @param        offset The offset chunk of the address.
+/// @param         phase The phase we want for the address
+/// @param         ranks The number of ranks overall in the system
+/// @param         bsize The block size for the allocation
+///
+/// @returns The encoded gva.
+pgas_gva_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
+                                uint32_t phase, uint32_t ranks, uint32_t bsize)
+  HPX_INTERNAL;
 
-  const uint32_t shift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
-  return ((uint64_t)locality << shift) + offset;
-}
 
-static inline pgas_gva_t pgas_gva_from(uint32_t locality, uint64_t offset,
-                                       uint32_t phase, uint32_t ranks,
-                                       uint32_t bsize) {
-  DEBUG_IF (phase >= (1 << ceil_log2_32(bsize))) {
-    dbg_error("phase %u must be less than %u", phase, 1 << ceil_log2_32(bsize));
-  }
+pgas_gva_t pgas_gva_from_hpx_addr(hpx_addr_t addr)
+  HPX_INTERNAL;
 
-  const uint32_t shift = ceil_log2_32(bsize);
-  return pgas_gva_from_goffset(locality, (offset << shift) + phase, ranks);
-}
+
+hpx_addr_t pgas_gva_to_hpx_addr(pgas_gva_t gva)
+  HPX_INTERNAL;
 
 
 /// Compute the (signed) distance, in bytes, between two global addresses.
@@ -95,5 +112,7 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
 pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
                         uint32_t bsize)
   HPX_INTERNAL;
+
+
 
 #endif // LIBHPX_GAS_PGAS_ADDR_H

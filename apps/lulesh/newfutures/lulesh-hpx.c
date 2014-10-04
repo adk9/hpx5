@@ -20,8 +20,7 @@ static bool      _verbose = false;            //!< print to the terminal
 /* actions */
 static hpx_action_t _main = 0;
 static hpx_action_t _evolve = 0;
-//static hpx_action_t _ping = 0;
-//static hpx_action_t _pong = 0;
+
 
 /* helper functions */
 static void _usage(FILE *stream) {
@@ -40,12 +39,6 @@ static void _usage(FILE *stream) {
 
 static void _register_actions(void);
 
-/** the pingpong message type */
-//typedef struct {
-//  hpx_addr_t ping;
-//  hpx_addr_t pong;
-//} args_t;
-
 /* utility macros */
 #define CHECK_NOT_NULL(p, err)                                \
   do {                                                        \
@@ -61,6 +54,19 @@ static void _register_actions(void);
       printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), \
              __VA_ARGS__);                                              \
   } while (0)
+
+/// Initialize a double zero.
+static void
+_initDouble(double *input)
+{
+  *input = 0;
+}
+
+/// Update *lhs with with the max(lhs, rhs);
+static void
+_maxDouble(double *lhs, const double *rhs) {
+  *lhs = (*lhs > *rhs) ? *lhs : *rhs;
+}
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
@@ -132,8 +138,6 @@ int main(int argc, char *argv[]) {
   input[3] = cores;
   printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
 
-  //args.ping = hpx_lco_newfuture_new(BUFFER_SIZE);
-  //args.pong = hpx_lco_newfuture_new(BUFFER_SIZE);
   hpx_time_t start = hpx_time_now();
   e = hpx_run(_main, input, 4*sizeof(int));
   double elapsed = (double)hpx_time_elapsed_ms(start);
@@ -156,8 +160,13 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(27*nDoms,sizeof(double));
+  hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_addr_t sbn3 = hpx_lco_newfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
+
+  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)_maxDouble,
+                                           (void (*)(void *, const size_t size)) _initDouble);
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
@@ -166,7 +175,9 @@ static int _action_main(int *input) {
       .nx = nx,
       .maxcycles = maxcycles,
       .cores = cores,
-      .sbn1 = sbn1
+      .newdt = newdt,
+      .sbn1 = sbn1,
+      .sbn3 = sbn3
     };
     hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
   }
@@ -177,56 +188,6 @@ static int _action_main(int *input) {
   hpx_shutdown(HPX_ERROR);
   return HPX_SUCCESS;
 }
-
-/**
- * Send a ping message.
- */
-/*
-static int _action_ping(args_t *args) {
-  char msg_ping[BUFFER_SIZE];
-  char msg_pong[BUFFER_SIZE];
-
-  for (int i = 0; i < args->iterations; i++) {
-    if (_text)
-      snprintf(msg_ping, BUFFER_SIZE, "ping %d from (%d, %d)", i,
-	       hpx_get_my_rank(), hpx_get_my_thread_id());
-    
-    RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping);
-    
-    hpx_lco_newfuture_setat(args->ping, 0, BUFFER_SIZE, msg_ping, HPX_NULL, HPX_NULL);
-    hpx_lco_newfuture_getat(args->pong, 0, BUFFER_SIZE, msg_pong);
-
-    RANK_PRINTF("Received pong msg= '%s'\n", msg_pong);
-  }
-
-  hpx_shutdown(HPX_SUCCESS);
-}
-*/
-
-
-/**
- * Handle a pong action.
- */
-/*
-static int _action_pong(args_t *args) {
-  char msg_ping[BUFFER_SIZE];
-  char msg_pong[BUFFER_SIZE];
-
-  for (int i = 0; i < args->iterations; i++) {
-    hpx_lco_newfuture_getat(args->ping, 0, BUFFER_SIZE, msg_ping);
-
-    if (_text)
-      snprintf(msg_pong, BUFFER_SIZE, "pong %d from (%d, %d)", i,
-	       hpx_get_my_rank(), hpx_get_my_thread_id());
-
-    RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong);
-
-    hpx_lco_newfuture_setat(args->pong, 0, BUFFER_SIZE, msg_pong, HPX_NULL, HPX_NULL);
-  }
-
-  hpx_shutdown(HPX_SUCCESS);
-}
-*/
 
 static int _action_evolve(InitArgs *init) {
 
@@ -244,13 +205,54 @@ static int _action_evolve(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
+  hpx_addr_t sbn1 = init->sbn1;
+  hpx_addr_t sbn3 = init->sbn3;
+  hpx_addr_t lco_newdt = init->newdt;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   while ((ld->time < ld->stoptime) && (ld->cycle < ld->maxcycles)) {
+    // on the very first cycle, exchange nodalMass information
     if ( ld->cycle == 0 ) {
-      // SBN1
+      SBN1(ld,sbn1);
     }
+
+    double targetdt = ld->stoptime - ld->time;
+    if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
+      double gnewdt = 1.0e+20;
+      if (ld->dtcourant < gnewdt)
+        gnewdt = ld->dtcourant/2.0;
+      if (ld->dthydro < gnewdt)
+        gnewdt = ld->dthydro*2.0/3.0;
+
+      // allreduce on gnewdt
+      hpx_lco_set(lco_newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
+    }
+
+    CalcForceForNodes(sbn3,ld,ld->rank);
+
+    if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
+      double newdt;
+      printf("lulesh started get\n");
+      hpx_lco_get(lco_newdt,sizeof(double),&newdt);
+      printf("lulesh got %f\n", newdt);
+      double olddt = ld->deltatime;
+      double ratio = newdt/olddt;
+      if (ratio >= 1.0) {
+        if (ratio < ld->deltatimemultlb) {
+          newdt = olddt;
+        } else if (ratio > ld->deltatimemultub) {
+          newdt = olddt*ld->deltatimemultub;
+        }
+      }
+
+      if (newdt > ld->dtmax) {
+        newdt = ld->dtmax;
+      }
+
+      ld->deltatime = newdt;
+    }
+    
 
     ld->time += ld->deltatime;
 
