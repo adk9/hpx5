@@ -61,6 +61,10 @@ static bool _trigger(_future_t *f) {
 
 // Nothing extra allocated in the future
 static void _future_fini(lco_t *lco) {
+  _future_t *f = (void*)lco;
+  if (f)
+    lco_lock(&f->lco);
+  global_free(f);
 }
 
 /// Copies @p from into the appropriate location.
