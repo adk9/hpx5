@@ -127,7 +127,7 @@ Suite *test_suite(void)
   add_04_TestParcel(tc);
   add_05_TestThreads(tc);
   add_06_TestFutures(tc);
-  add_06_TestNewFutures(tc);
+  //add_06_TestNewFutures(tc);
   add_07_TestLCO(tc);
   add_08_TestSemaphores(tc);
   add_09_TestChannels(tc);
@@ -192,14 +192,14 @@ void _register_actions(void) {
   t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
 
   //06_TestNewFutures.c
-  t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty_action);
-  t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull_action);
-  t06_getat = HPX_REGISTER_ACTION(t06_getat_action);
-  t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id_action);
-  t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id_action);
-  t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id_action);
-  t06_lcoSetGet = HPX_REGISTER_ACTION(t06_lcoSetGet_action);
-  t06_set = HPX_REGISTER_ACTION(t06_set_action);
+  /* t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty_action); */
+  /* t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull_action); */
+  /* t06_getat = HPX_REGISTER_ACTION(t06_getat_action); */
+  /* t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id_action); */
+  /* t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id_action); */
+  /* t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id_action); */
+  /* t06_lcoSetGet = HPX_REGISTER_ACTION(t06_lcoSetGet_action); */
+  /* t06_set = HPX_REGISTER_ACTION(t06_set_action); */
 
   //07_TestLCO.c
   t07_init_array = HPX_REGISTER_ACTION(t07_init_array_action);
