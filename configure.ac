@@ -216,6 +216,7 @@ AS_IF([test "x$enable_apps" != xno],
   apps/fmm/parcels/Makefile
   apps/lulesh/Makefile
   apps/lulesh/parcels/Makefile
+  apps/lulesh/newfutures/Makefile
   apps/miniAMR/Makefile
   apps/miniAMR/parcels/Makefile
   apps/libPXGL/Makefile

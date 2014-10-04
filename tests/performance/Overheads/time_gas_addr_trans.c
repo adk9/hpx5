@@ -63,8 +63,8 @@ static int _main_action(void *args) {
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
       hpx_call(local, _address_translation, 0 , 0, completed);
-    hpx_lco_wait(completed);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
+    hpx_lco_wait(completed);
     fprintf(test_log, "%*.7f", FIELD_WIDTH,  elapsed);
     hpx_lco_delete(completed, HPX_NULL);
     hpx_gas_free(local, HPX_NULL);
@@ -73,9 +73,9 @@ static int _main_action(void *args) {
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(global, _address_translation, 0 , 0, done);
-    hpx_lco_wait(done); 
+      hpx_call(global, _address_translation, 0 , 0, done); 
     elapsed = hpx_time_elapsed_ms(now)/1e3;
+    hpx_lco_wait(done);
     fprintf(test_log, "%*.7f", FIELD_WIDTH,  elapsed);
     hpx_lco_delete(done, HPX_NULL);
     hpx_gas_free(global, HPX_NULL);
@@ -85,8 +85,8 @@ static int _main_action(void *args) {
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
       hpx_call(callocMem, _address_translation, 0 , 0, and);
-    hpx_lco_wait(and);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
+    hpx_lco_wait(and);
     fprintf(test_log, "%*.7f", FIELD_WIDTH,  elapsed);
     hpx_lco_delete(and, HPX_NULL);
     hpx_gas_free(callocMem, HPX_NULL);

@@ -1,5 +1,5 @@
 all: $(check_PROGRAMS)
-noinst_bindir           = $(builddir)
+#noinst_bindir           = $(builddir)
 check_SCRIPTS           = $(srcdir)/run_tests.sh
 TESTS                   = $(srcdir)/run_tests.sh
 
@@ -10,12 +10,20 @@ if ENABLE_LENGTHY_TESTS
 PERFTESTS += \
         perfmain \
         time_gas_alloc \
-        time_gas_addr_trans 
+        time_gas_addr_trans \
+        time_lco_chan \
+        time_lco_sema \
+        time_lco_and \
+        time_lco_future 
 else
 check_PROGRAMS += \
         perfmain \
         time_gas_alloc \
-        time_gas_addr_trans
+        time_gas_addr_trans \
+        time_lco_chan \
+        time_lco_sema \
+        time_lco_and \
+        time_lco_future
 endif
 
 NPROCS ?= 2
@@ -32,6 +40,10 @@ AM_CFLAGS         += $(HPX_C99)
 perfmain_SOURCES   = perfmain.c
 time_gas_alloc_SOURCES     = time_gas_alloc.c
 time_gas_addr_trans_SOURCES = time_gas_addr_trans.c
+time_lco_chan_SOURCES = time_lco_chan.c
+time_lco_sema_SOURCES = time_lco_sema.c
+time_lco_and_SOURCES = time_lco_and.c
+time_lco_future_SOURCES = time_lco_future.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
