@@ -11,14 +11,6 @@
 #define FIELD_WIDTH 10
 #define HEADER_FIELD_WIDTH 5
 
-static int num[] = {
-  1000000,
-  2000000,
-  3000000,
-  4000000,
-  5000000
-};
-
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: future lco overhead \n"
           "\t-c, number of cores to run on\n"
@@ -29,60 +21,94 @@ static void _usage(FILE *stream) {
           "\t-h, this help display\n");
 }
 
-static hpx_action_t _lco_set  = 0;
 static hpx_action_t _main = 0;
-static hpx_action_t _empty = 0;
+static hpx_action_t set_value = 0;
+static hpx_action_t get_value = 0;
 
+#define T int
 
-static int _lco_set_action(void *args) {
-  hpx_lco_and_set(*(hpx_addr_t*)args, HPX_NULL);
-  return HPX_SUCCESS;
+static T value;
+
+static int num_readers[]  ={
+  1,
+  4,
+  8,
+  32,
+  64,
+ 128,
+ 192,
+ 256,
+ 512
+};
+
+static int action_get_value(void *args) {
+  HPX_THREAD_CONTINUE(value);
 }
 
-static int _empty_action(hpx_addr_t *args) {
+static int action_set_value(void *args) {
+  value = *(T*)args;
   return HPX_SUCCESS;
 }
 
 static int _main_action(int *args) {
-  hpx_time_t t, t1;
+  hpx_time_t t;
+  int count;
+
   fprintf(test_log, HEADER);
   fprintf(test_log, "# Latency in (ms)\n");
-  fprintf(test_log, "%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ",
-          FIELD_WIDTH, "LCO Set", FIELD_WIDTH, "Delete");
 
-  for (int i = 0; i < sizeof(num)/sizeof(num[0]) ; i++) {
-    fprintf(test_log, "%d", num[i]);
+  t = hpx_time_now();
+  hpx_addr_t done = hpx_lco_future_new(0);
+  fprintf(test_log, "Creation time: %g\n", hpx_time_elapsed_ms(t));
+
+  value = 1234;
+
+  t = hpx_time_now();
+  hpx_call(HPX_HERE, set_value, &value, sizeof(value), done);
+  fprintf(test_log, "Value set time: %g\n", hpx_time_elapsed_ms(t));
+
+  t = hpx_time_now();
+  hpx_lco_wait(done);
+  fprintf(test_log, "Wait time: %g\n", hpx_time_elapsed_ms(t));
+
+  t = hpx_time_now();
+  hpx_lco_delete(done, HPX_NULL);
+  fprintf(test_log, "Deletion time: %g\n", hpx_time_elapsed_ms(t));
+
+  fprintf(test_log, "%s\t%*s%*s%*s\n", "# NumReaders " , FIELD_WIDTH, 
+         "Get_Value ", FIELD_WIDTH, " LCO_Getall ", FIELD_WIDTH, "Delete");
+
+  for (int i = 0; i < sizeof(num_readers)/sizeof(num_readers[0]); i++) {
+    fprintf(test_log, "%d\t\t", num_readers[i]);
+    count = num_readers[i];
+    int values[count];
+    void *addrs[count];
+    int sizes[count];
+    hpx_addr_t futures[count];  
+   
+    for (int j = 0; j < count; j++) {
+      addrs[j] = &values[j];
+      sizes[j] = sizeof(int);
+      futures[j] = hpx_lco_future_new(sizeof(int));
+    }
    
     t = hpx_time_now();
-    hpx_addr_t done = hpx_lco_future_new(num[i]);
+    for (int j = 0; j < count; j++) {
+      t = hpx_time_now();
+      hpx_call(HPX_HERE, get_value, NULL, 0, futures[j]);
+      hpx_lco_wait(futures[j]);
+    }
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
-    hpx_addr_t setlco = hpx_lco_and_new(num[i]);
-
-    // Time it take to set empty action
-    hpx_addr_t completed = hpx_lco_and_new(num[i]);
-    t1 = hpx_time_now();
-    for (int j = 0; j < num[i]; j++)
-      hpx_call(HPX_HERE, _empty, &setlco, sizeof(setlco), completed);
-    hpx_lco_wait(completed);
-    double empty_t = hpx_time_elapsed_ms(t1);
-    hpx_lco_delete(completed, HPX_NULL);
-
-    // Time to set for LCO argument
     t = hpx_time_now();
-    for (int j = 0; j < num[i]; j++)
-      hpx_call(HPX_HERE, _lco_set, &setlco, sizeof(setlco), done);
-    hpx_lco_wait(setlco);
-    double end_t = hpx_time_elapsed_ms(t);
-    fprintf(test_log, "%*g",FIELD_WIDTH, end_t - empty_t);
-
-    hpx_lco_delete(setlco, HPX_NULL);
+    hpx_lco_get_all(count, futures, sizes, addrs, NULL);
+    fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
-    hpx_lco_delete(done, HPX_NULL);
-    fprintf(test_log, "%*g\n",FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    for (int j = 0; j < count; j++)
+      hpx_lco_delete(futures[j], HPX_NULL); 
+    fprintf(test_log, "%*g\n", FIELD_WIDTH, hpx_time_elapsed_ms(t));   
   }
-
   fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
@@ -130,9 +156,9 @@ int main(int argc, char *argv[]) {
   fprintf(test_log, "\n");
 
   // register the actions
-  _lco_set  = HPX_REGISTER_ACTION(_lco_set_action);
   _main = HPX_REGISTER_ACTION(_main_action);
-  _empty = HPX_REGISTER_ACTION(_empty_action);
+  set_value = hpx_register_action("set_value", action_set_value);
+  get_value = hpx_register_action("get_value", action_get_value);
 
   // run the main action
   return hpx_run(_main, NULL, 0);
