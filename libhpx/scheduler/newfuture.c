@@ -203,7 +203,8 @@ _future_set_no_copy_from_remote_action(void *args) {
   _newfuture_t *f = (_newfuture_t*)args;
   // EK: stuck in here now
   lco_lock(&f->lco);
-  scheduler_wait(&f->lco.lock, &f->empty);
+  if (!_empty(f))
+    scheduler_wait(&f->lco.lock, &f->empty);
   _future_set_no_copy(f);
   lco_unlock(&f->lco);
   return HPX_SUCCESS;
@@ -213,7 +214,7 @@ static int
 _recv_queue_progress_action(void *args) {
   int flag;
   photon_rid request;
-  int send_rank = -1;
+  //  int send_rank = -1;
   do {
     /*
     send_rank++;
@@ -614,10 +615,12 @@ _new_all(struct new_all_args *args) {
   hpx_newfuture_t *base_local = calloc(n, sizeof(hpx_newfuture_t));
 
   // allocate local data
-  int futs_here = n / hpx_get_num_ranks();
-  if (((hpx_get_my_rank() + base_rank) % hpx_get_num_ranks()) < futs_here % hpx_get_num_ranks())
-    futs_here++;
-  //  futs_here = futs_here + (hpx_get_num_ranks() - (hpx_get_num_ranks() % futs_here));
+  int futs_here = 1;
+  if (futs_here > hpx_get_num_ranks() {
+      futs_here = n / hpx_get_num_ranks();
+      if (((hpx_get_my_rank() + base_rank) % hpx_get_num_ranks()) < futs_here % hpx_get_num_ranks())
+	futs_here++;
+    }
   _newfuture_t *futures = calloc(futs_here, elem_size);
 
   // allocate local send buffer
@@ -875,6 +878,20 @@ void hpx_lco_newfuture_emptyat(hpx_newfuture_t *base, int i, hpx_addr_t rsync_lc
 #endif
 }
 
+typedef {
+  _newfuture_t *f;
+  int ret_rank;
+  int ret_size;
+  void *ret_val;
+} _get_remote_args_t;
+
+static int
+_get_remote_action(_get_remote_args_t *args) {
+
+
+  
+}
+
 hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t *base, int i, size_t size, void *value) {
   // TODO
   /*
@@ -882,10 +899,16 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t *base, int i, size_t size, 
   return hpx_lco_get(target, size, value);
   */
 
+
+
   hpx_newfuture_t *future_i = hpx_lco_newfuture_at(base, i);
 
   if (_newfuture_get_rank(future_i) != hpx_get_my_rank()) {
-    return HPX_ERROR;
+    _newfuture_t *f = malloc(sizeof(_newfuture_t) + size);
+    _get_remote_args args;
+    args.f = 
+    hpx_call(_newfuture_get_rank(future_i), _remote_get, &args, sizeof(args), HPX_NULL);
+
     // TODO
   }
 

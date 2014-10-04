@@ -151,11 +151,11 @@ static int _action_main(args_t *args) {
 
   hpx_newfuture_t *base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
   printf("Futures allocated\n");
-  args->ping = *hpx_lco_newfuture_at(base, 0);
-  args->pong = *hpx_lco_newfuture_at(base, 1);
+  args->pong = *hpx_lco_newfuture_at(base, 0);
+  args->ping = *hpx_lco_newfuture_at(base, 1);
 
-  hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(&args->ping)), _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_THERE(hpx_lco_newfuture_get_rank(&args->pong));
+  hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(&args->pong)), _ping, args, sizeof(*args), done);
+  hpx_addr_t there = HPX_THERE(hpx_lco_newfuture_get_rank(&args->ping));
   hpx_call(there, _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);
