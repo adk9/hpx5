@@ -177,7 +177,7 @@ _send_queue_progress_action(void* args) {
       
     }
     if (flag > 0) {
-      printf("Received completion %" PRIu64 "\n", request);
+      //printf("Received completion %" PRIu64 "\n", request);
     }
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
@@ -201,6 +201,7 @@ _future_set_no_copy(_newfuture_t *f) {
 static int
 _future_set_no_copy_from_remote_action(void *args) {
   _newfuture_t *f = (_newfuture_t*)args;
+  // EK: stuck in here now
   lco_lock(&f->lco);
   scheduler_wait(&f->lco.lock, &f->empty);
   _future_set_no_copy(f);
@@ -214,15 +215,18 @@ _recv_queue_progress_action(void *args) {
   photon_rid request;
   int send_rank = -1;
   do {
+    /*
     send_rank++;
     send_rank = send_rank % hpx_get_num_ranks();
-    if (send_rank != hpx_get_my_rank())
+    if (send_rank == hpx_get_my_rank())
       continue;
-    photon_probe_completion(send_rank, &flag, &request, PHOTON_PROBE_LEDGER);
+    */
+    // you want to get completions from any source, even yourself
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag && request != 0) {
       _newfuture_t *f = (_newfuture_t*)request;
       lco_lock(&f->lco);
-  
+      
       // do set stuff
       if (!_empty(f))
 	hpx_call_async(HPX_HERE, _future_set_no_copy_from_remote, f, sizeof(f), HPX_NULL, HPX_NULL);
@@ -842,7 +846,7 @@ void hpx_lco_newfuture_setat(hpx_newfuture_t *future,  int id, size_t size, void
   hpx_newfuture_t *future_i = hpx_lco_newfuture_at(future, id);
 
   printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
-
+  
   // normally lco_set does all this
   if (_newfuture_get_rank(future_i) != hpx_get_my_rank()) {
     _put_with_completion(future_i, id, size, data, lsync_lco, rsync_lco);
