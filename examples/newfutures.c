@@ -47,8 +47,7 @@ static void _register_actions(void);
 /** the pingpong message type */
 typedef struct {
   int iterations;
-  hpx_newfuture_t ping;
-  hpx_newfuture_t pong;
+  hpx_newfuture_t pingpong;
 } args_t;
 
 /* utility macros */
@@ -149,13 +148,12 @@ static int _action_main(args_t *args) {
   printf("In main\n");
   hpx_addr_t done = hpx_lco_and_new(2);
 
-  hpx_newfuture_t *base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
+  hpx_newfuture_t base = hpx_lco_newfuture_new_all(2, BUFFER_SIZE);
   printf("Futures allocated\n");
-  args->pong = *hpx_lco_newfuture_at(base, 0);
-  args->ping = *hpx_lco_newfuture_at(base, 1);
+  args->pingpong = base;
 
-  hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(&args->pong)), _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_THERE(hpx_lco_newfuture_get_rank(&args->ping));
+  hpx_call(HPX_THERE(0), _ping, args, sizeof(*args), done);
+  hpx_addr_t there = HPX_THERE(1);
   hpx_call(there, _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);
@@ -177,8 +175,8 @@ static int _action_ping(args_t *args) {
     
     RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping);
     
-    hpx_lco_newfuture_setat(&args->ping, 0, BUFFER_SIZE, msg_ping, HPX_NULL, HPX_NULL);
-    hpx_lco_newfuture_getat(&args->pong, 0, BUFFER_SIZE, msg_pong);
+    hpx_lco_newfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping, HPX_NULL, HPX_NULL);
+    hpx_lco_newfuture_getat(args->pingpong, 0, BUFFER_SIZE, msg_pong);
 
     RANK_PRINTF("Received pong msg= '%s'\n", msg_pong);
   }
@@ -195,7 +193,7 @@ static int _action_pong(args_t *args) {
   char msg_pong[BUFFER_SIZE];
 
   for (int i = 0; i < args->iterations; i++) {
-    hpx_lco_newfuture_getat(&args->ping, 0, BUFFER_SIZE, msg_ping);
+    hpx_lco_newfuture_getat(args->pingpong, 1, BUFFER_SIZE, msg_ping);
 
     if (_text)
       snprintf(msg_pong, BUFFER_SIZE, "pong %d from (%d, %d)", i,
@@ -203,7 +201,7 @@ static int _action_pong(args_t *args) {
 
     RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong);
 
-    hpx_lco_newfuture_setat(&args->pong, 0, BUFFER_SIZE, msg_pong, HPX_NULL, HPX_NULL);
+    hpx_lco_newfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong, HPX_NULL, HPX_NULL);
   }
 
   hpx_shutdown(HPX_SUCCESS);
