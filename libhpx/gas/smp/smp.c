@@ -15,9 +15,11 @@
 #endif
 
 #include <stdbool.h>
+#include <string.h>
 #include <jemalloc/jemalloc.h>
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 
 static int _smp_join(void) {
   return LIBHPX_OK;
@@ -98,6 +100,51 @@ static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
+static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
+                       hpx_addr_t sync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  void *lto = gva_to_lva(to);
+  const void *lfrom = gva_to_lva(from);
+  memcpy(lto, lfrom, size);
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
+                       hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  void *lto = gva_to_lva(to);
+  memcpy(lto, from, size);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
+{
+  if (!size)
+    return HPX_SUCCESS;
+
+  const void *lfrom = gva_to_lva(from);
+  memcpy(to, lfrom, size);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+}
+
 static uint32_t _smp_owner_of(hpx_addr_t addr) {
   return 0;
 }
@@ -140,10 +187,10 @@ static gas_class_t _smp_vtable = {
   .cyclic_calloc = _smp_gas_cyclic_calloc,
   .local_alloc   = _smp_gas_alloc,
   .free          = _smp_gas_free,
-  .move          = NULL,
-  .memget        = NULL,
-  .memput        = NULL,
-  .memcpy        = NULL,
+  .move          = _smp_move,
+  .memget        = _smp_memget,
+  .memput        = _smp_memput,
+  .memcpy        = _smp_memcpy,
   .owner_of      = _smp_owner_of
 };
 
