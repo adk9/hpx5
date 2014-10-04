@@ -58,6 +58,50 @@ static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   return addr;
 }
 
+static hpx_addr_t _smp_lva_to_gva(void *lva) {
+  hpx_addr_t addr = { (uintptr_t)lva, 0, 0 };
+  return addr;
+}
+
+static void *_smp_gva_to_lva(hpx_addr_t addr) {
+  return (void*)addr.offset;
+}
+
+static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
+  if (local)
+    *local = _smp_gva_to_lva(addr);
+  return true;
+}
+
+static void _smp_unpin(const hpx_addr_t addr) {
+}
+
+static hpx_addr_t _smp_there(hpx_locality_t i) {
+  return _smp_lva_to_gva(0);
+}
+
+static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
+  return _smp_lva_to_gva(libhpx_malloc(n * bsize));
+}
+
+static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
+  return _smp_lva_to_gva(libhpx_calloc(n, bsize));
+}
+
+static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
+  return _smp_lva_to_gva(libhpx_malloc(bytes));
+}
+
+static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
+  libhpx_free(_smp_gva_to_lva(addr));
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+}
+
+static uint32_t _smp_owner_of(hpx_addr_t addr) {
+  return 0;
+}
+
 static gas_class_t _smp_vtable = {
   .type   = HPX_GAS_SMP,
   .delete = _smp_delete,
@@ -86,7 +130,21 @@ static gas_class_t _smp_vtable = {
   .offset_of = _smp_offset_of,
   .phase_of = _smp_phase_of,
   .sub = _smp_sub,
-  .add = _smp_add
+  .add = _smp_add,
+  .lva_to_gva    = _smp_lva_to_gva,
+  .gva_to_lva    = _smp_gva_to_lva,
+  .there         = _smp_there,
+  .try_pin       = _smp_try_pin,
+  .unpin         = _smp_unpin,
+  .cyclic_alloc  = _smp_gas_cyclic_alloc,
+  .cyclic_calloc = _smp_gas_cyclic_calloc,
+  .local_alloc   = _smp_gas_alloc,
+  .free          = _smp_gas_free,
+  .move          = NULL,
+  .memget        = NULL,
+  .memput        = NULL,
+  .memcpy        = NULL,
+  .owner_of      = _smp_owner_of
 };
 
 gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
