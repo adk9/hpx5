@@ -32,17 +32,19 @@ HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) 
 #ifdef ENABLE_DEBUG
 #define _dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
-
 #define dbg_check(e, ...) do { if (e != HPX_SUCCESS) dbg_error(__VA_ARGS__); } while (0)
+#define dbg_assert(e) assert(e)
 
 #elif defined(NDEBUG)
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
 #define dbg_check(e, ...) (void)e
+#define dbg_assert(e)
 #else
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
 #define dbg_check(e, ...) assert(e == HPX_SUCCESS)
+#define dbg_assert(e)
 #endif
 
 HPX_INTERNAL void dbg_wait(void);
