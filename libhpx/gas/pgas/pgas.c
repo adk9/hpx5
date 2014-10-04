@@ -100,6 +100,14 @@ static hpx_addr_t _pgas_lva_to_gva(void *lva) {
 }
 
 
+// Compute a global address for a locality.
+hpx_addr_t _pgas_there(hpx_locality_t i) {
+  const uint32_t ranks = here->ranks;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(i, 0, ranks);
+  return pgas_gva_to_hpx_addr(gva);
+}
+
+
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
@@ -209,6 +217,12 @@ static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
+static uint32_t _pgas_owner_of(hpx_addr_t addr) {
+  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+  const uint32_t ranks = here->ranks;
+  return pgas_gva_locality_of(gva, ranks);
+}
+
 static gas_class_t _pgas_vtable = {
   .type   = HPX_GAS_PGAS,
   .delete = _pgas_delete,
@@ -240,13 +254,18 @@ static gas_class_t _pgas_vtable = {
   .add           = _pgas_add,
   .lva_to_gva    = _pgas_lva_to_gva,
   .gva_to_lva    = _pgas_gva_to_lva,
+  .there         = _pgas_there,
   .try_pin       = pgas_try_pin,
   .unpin         = _pgas_unpin,
   .cyclic_alloc  = _pgas_gas_cyclic_alloc,
   .cyclic_calloc = _pgas_gas_cyclic_calloc,
   .local_alloc   = _pgas_gas_alloc,
-  .free          = _pgas_gas_free
-
+  .free          = _pgas_gas_free,
+  .move          = NULL,
+  .memget        = NULL,
+  .memput        = NULL,
+  .memcpy        = NULL,
+  .owner_of      = _pgas_owner_of
 };
 
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,

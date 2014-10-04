@@ -43,60 +43,60 @@ hpx_action_t locality_call_continuation = 0;
 
 
 /// The action that performs a shared global allocation for a rank.
-static int _alloc_blocks_action(uint32_t *args) {
-  uint32_t base_id = args[0];
-  uint32_t n = args[1];
-  uint32_t size = args[2];
-  uint32_t zeroed = args[3];
+// static int _alloc_blocks_action(uint32_t *args) {
+//   uint32_t base_id = args[0];
+//   uint32_t n = args[1];
+//   uint32_t size = args[2];
+//   uint32_t zeroed = args[3];
 
 
-  // Update the value of global_sbrk locally so that we can check if
-  // we are out of memory for local GAS allocations without having to
-  // request the current global_sbrk value from the root locality.
-  if (here->rank != 0)
-    sync_fadd(&here->global_sbrk, base_id + n * here->ranks, SYNC_ACQ_REL);
+//   // Update the value of global_sbrk locally so that we can check if
+//   // we are out of memory for local GAS allocations without having to
+//   // request the current global_sbrk value from the root locality.
+//   if (here->rank != 0)
+//     sync_fadd(&here->global_sbrk, base_id + n * here->ranks, SYNC_ACQ_REL);
 
-  // Insert all of the mappings (always block cyclic allocations). We use
-  // distinct allocations for each block because we want to be able to move
-  // blocks dynamically, and if they are all in one big malloc then we can't
-  // free them individually.
-  for (int i = 0; i < n; ++i) {
-    uint32_t block_id = base_id + i * here->ranks + here->rank;
-    hpx_addr_t addr = hpx_addr_init(0, block_id, size);
-    char *block = malloc(size);
-    assert(block);
-    if (zeroed)
-      memset(block, 0, size);
+//   // Insert all of the mappings (always block cyclic allocations). We use
+//   // distinct allocations for each block because we want to be able to move
+//   // blocks dynamically, and if they are all in one big malloc then we can't
+//   // free them individually.
+//   for (int i = 0; i < n; ++i) {
+//     uint32_t block_id = base_id + i * here->ranks + here->rank;
+//     hpx_addr_t addr = hpx_addr_init(0, block_id, size);
+//     char *block = malloc(size);
+//     assert(block);
+//     if (zeroed)
+//       memset(block, 0, size);
 
-    btt_insert(here->btt, addr, block);
-  }
+//     btt_insert(here->btt, addr, block);
+//   }
 
-  return HPX_SUCCESS;
-}
-
-
-/// The action that performs the global sbrk.
-static int _global_sbrk_action(size_t *args) {
-  // Bump the next block id by the required number of blocks---always
-  // bump a ranks-aligned value
-  size_t n = *args + (here->ranks - (*args % here->ranks));
-  uint32_t next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
-  if (UINT32_MAX - next < n)
-    return dbg_error("gas: rank out of blocks for allocation size %lu.\n", n);
-
-  // return the base block id of the allocated blocks, the caller can use this
-  // to initialize block addresses
-  hpx_thread_continue(sizeof(next), &next);
-  return HPX_SUCCESS;
-}
+//   return HPX_SUCCESS;
+// }
 
 
-static int _gas_alloc_action(uint32_t *args) {
-  uint32_t bytes = *args;
-  hpx_addr_t addr = hpx_gas_alloc(bytes);
-  hpx_thread_continue(sizeof(addr), &addr);
-  return HPX_SUCCESS;
-}
+// /// The action that performs the global sbrk.
+// static int _global_sbrk_action(size_t *args) {
+//   // Bump the next block id by the required number of blocks---always
+//   // bump a ranks-aligned value
+//   size_t n = *args + (here->ranks - (*args % here->ranks));
+//   uint32_t next = sync_fadd(&here->global_sbrk, n, SYNC_ACQ_REL);
+//   if (UINT32_MAX - next < n)
+//     return dbg_error("gas: rank out of blocks for allocation size %lu.\n", n);
+
+//   // return the base block id of the allocated blocks, the caller can use this
+//   // to initialize block addresses
+//   hpx_thread_continue(sizeof(next), &next);
+//   return HPX_SUCCESS;
+// }
+
+
+// static int _gas_alloc_action(uint32_t *args) {
+//   uint32_t bytes = *args;
+//   hpx_addr_t addr = hpx_gas_alloc(bytes);
+//   hpx_thread_continue(sizeof(addr), &addr);
+//   return HPX_SUCCESS;
+// }
 
 /// The action that shuts down the HPX scheduler.
 static int _shutdown_action(void *args) {
@@ -106,46 +106,46 @@ static int _shutdown_action(void *args) {
 
 
 /// Updates a mapping to a forward, and continues the block data.
-static int _gas_acquire_action(uint32_t *rank) {
-  hpx_addr_t addr = hpx_thread_current_target();
-  void *block = NULL;
-  if (btt_forward(here->btt, addr, *rank, &block))
-    hpx_thread_continue_cleanup(addr.block_bytes, block, free, block);
-  else
-    hpx_thread_exit(HPX_LCO_ERROR);
-}
+// static int _gas_acquire_action(uint32_t *rank) {
+//   hpx_addr_t addr = hpx_thread_current_target();
+//   void *block = NULL;
+//   if (btt_forward(here->btt, addr, *rank, &block))
+//     hpx_thread_continue_cleanup(addr.block_bytes, block, free, block);
+//   else
+//     hpx_thread_exit(HPX_LCO_ERROR);
+// }
 
 
 /// Updates a mapping to a forward.
-static int _gas_forward_action(locality_gas_forward_args_t *args) {
-  btt_forward(here->btt, args->addr, args->rank, NULL);
-  return HPX_SUCCESS;
-}
+// static int _gas_forward_action(locality_gas_forward_args_t *args) {
+//   btt_forward(here->btt, args->addr, args->rank, NULL);
+//   return HPX_SUCCESS;
+// }
 
 
-static int _gas_move_action(hpx_addr_t *args) {
-  hpx_addr_t src = *args;
+// static int _gas_move_action(hpx_addr_t *args) {
+//   hpx_addr_t src = *args;
 
-  int size = src.block_bytes;
-  uint32_t rank = here->rank;
+//   int size = src.block_bytes;
+//   uint32_t rank = here->rank;
 
-  // 1. allocate local memory for the block.
-  char *block = malloc(size);
-  assert(block);
+//   // 1. allocate local memory for the block.
+//   char *block = malloc(size);
+//   assert(block);
 
-  // 2. invalidate the block mapping at the source locality.
-  hpx_status_t status = hpx_call_sync(src, locality_gas_acquire, &rank, sizeof(rank),
-                                      block, size);
-  if (status != HPX_SUCCESS) {
-    dbg_log_net("locality: failed move operation.\n");
-    hpx_thread_exit(status);
-  }
+//   // 2. invalidate the block mapping at the source locality.
+//   hpx_status_t status = hpx_call_sync(src, locality_gas_acquire, &rank, sizeof(rank),
+//                                       block, size);
+//   if (status != HPX_SUCCESS) {
+//     dbg_log_net("locality: failed move operation.\n");
+//     hpx_thread_exit(status);
+//   }
 
-  // 3. If the invalidate was successful, insert an entry into the local block
-  //    translation table
-  btt_insert(here->btt, src, block);
-  return status;
-}
+//   // 3. If the invalidate was successful, insert an entry into the local block
+//   //    translation table
+//   btt_insert(here->btt, src, block);
+//   return status;
+// }
 
 
 static int _call_cont_action(locality_cont_args_t *args) {
@@ -161,12 +161,12 @@ static int _call_cont_action(locality_cont_args_t *args) {
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
   locality_shutdown          = HPX_REGISTER_ACTION(_shutdown_action);
-  locality_global_sbrk       = HPX_REGISTER_ACTION(_global_sbrk_action);
-  locality_alloc_blocks      = HPX_REGISTER_ACTION(_alloc_blocks_action);
-  locality_gas_alloc         = HPX_REGISTER_ACTION(_gas_alloc_action);
-  locality_gas_move          = HPX_REGISTER_ACTION(_gas_move_action);
-  locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
-  locality_gas_forward       = HPX_REGISTER_ACTION(_gas_forward_action);
+  // locality_global_sbrk       = HPX_REGISTER_ACTION(_global_sbrk_action);
+  // locality_alloc_blocks      = HPX_REGISTER_ACTION(_alloc_blocks_action);
+  // locality_gas_alloc         = HPX_REGISTER_ACTION(_gas_alloc_action);
+  // locality_gas_move          = HPX_REGISTER_ACTION(_gas_move_action);
+  // locality_gas_acquire       = HPX_REGISTER_ACTION(_gas_acquire_action);
+  // locality_gas_forward       = HPX_REGISTER_ACTION(_gas_forward_action);
   locality_call_continuation = HPX_REGISTER_ACTION(_call_cont_action);
 }
 

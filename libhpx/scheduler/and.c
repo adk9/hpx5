@@ -59,7 +59,7 @@ _wait(_and_t *and)
   intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
   if (val == 0)
     return status;
-  
+
   // otherwise wait for the and to be signaled
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
@@ -72,7 +72,7 @@ _try_wait(_and_t *and, hpx_time_t time)
   hpx_status_t status = cvar_get_error(&and->barrier);
   if (status != HPX_SUCCESS)
     return status;
-  
+
   // read the value using an atomic, we either see 0---in which case either the
   // and has already been signaled, or there is someone trying to get the lock
   // we hold in order to signal it. In both cases, the and has been satisfied,
@@ -82,7 +82,7 @@ _try_wait(_and_t *and, hpx_time_t time)
   intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
   if (val == 0)
     return status;
-  
+
   // otherwise wait for the and barrier to reach 0 or return if out of time
   bool timeout = false;
   while (val != 0 && !timeout) {
@@ -203,26 +203,12 @@ _and_init(_and_t *and, intptr_t value) {
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t
 hpx_lco_and_new(intptr_t limit) {
-  hpx_addr_t target;
-  _and_t *and = _free_ands;
-  if (and) {
-    _free_ands = (_and_t*)and->value;
-    target = HPX_HERE;
-    char *base;
-    if (!hpx_gas_try_pin(target, (void**)&base))
-      hpx_abort();
-    target.offset = (char*)and - base;
-    assert(target.offset < target.block_bytes);
-  }
-  else {
-    target = locality_malloc(sizeof(_and_t));
-    if (!hpx_gas_try_pin(target, (void**)&and))
-      hpx_abort();
-  }
+  _and_t *and = global_malloc(sizeof(*and));
+  if (!and)
+    dbg_error("Could not malloc global memory\n");
 
   _and_init(and, limit);
-  hpx_gas_unpin(target);
-  return target;
+  return lva_to_gva(and);;
 }
 
 

@@ -28,8 +28,8 @@
 
 #include "libhpx/action.h"
 #include "libsync/sync.h"
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -246,7 +246,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   // do a local send through loopback
-  bool local = (btt_owner(here->btt, p->target) == here->rank);
+  bool local = (gas_owner_of(here->gas, p->target) == here->rank);
   if (local) {
     scheduler_spawn(p);
     return;
