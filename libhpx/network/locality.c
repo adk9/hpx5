@@ -175,13 +175,6 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 /// always done to 8 byte alignment. Here we're using a simple sbrk allocator
 /// with no free functionality for now.
 /// ----------------------------------------------------------------------------
-hpx_addr_t
-locality_malloc(size_t bytes) {
-  bytes += bytes % 8;
-  uint32_t offset = sync_fadd(&here->local_sbrk, bytes, SYNC_ACQ_REL);
-  if (UINT32_MAX - offset < bytes)
-    dbg_error("locality: exhausted local allocation limit with %lu-byte allocation.\n",
-              bytes);
-
-  return hpx_addr_add(HPX_HERE, offset);
+hpx_addr_t locality_malloc(size_t bytes) {
+  return hpx_gas_alloc(bytes);
 }

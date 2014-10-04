@@ -100,9 +100,6 @@ int hpx_init(const hpx_config_t *cfg) {
   here->rank = -1;
   here->ranks = -1;
 
-  // 1) set the local allocation sbrk
-  sync_store(&here->local_sbrk, sizeof(*here), SYNC_RELEASE);
-
   // 2) bootstrap, to figure out some topology information
   here->boot = boot_new(cfg->boot);
   if (here->boot == NULL)
