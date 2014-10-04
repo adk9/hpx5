@@ -161,6 +161,7 @@ static int _action_main(int *input) {
   }
 
   hpx_addr_t sbn1 = hpx_lco_newfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_addr_t sbn3 = hpx_lco_newfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
@@ -175,7 +176,8 @@ static int _action_main(int *input) {
       .maxcycles = maxcycles,
       .cores = cores,
       .newdt = newdt,
-      .sbn1 = sbn1
+      .sbn1 = sbn1,
+      .sbn3 = sbn3
     };
     hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
   }
@@ -204,6 +206,7 @@ static int _action_evolve(InitArgs *init) {
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
   hpx_addr_t sbn1 = init->sbn1;
+  hpx_addr_t sbn3 = init->sbn3;
   hpx_addr_t lco_newdt = init->newdt;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
@@ -225,6 +228,8 @@ static int _action_evolve(InitArgs *init) {
       // allreduce on gnewdt
       hpx_lco_set(lco_newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
     }
+
+    CalcForceForNodes(sbn3,ld,ld->rank);
 
     if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
       double newdt;
