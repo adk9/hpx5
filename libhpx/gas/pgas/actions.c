@@ -43,9 +43,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
                                           padded_bsize);
   const uint32_t rank = here->rank;
   const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
-  hpx_addr_t addr =  pgas_gva_to_hpx_addr(gva);
-  addr.block_bytes = bsize;
-  return addr;
+  return pgas_gva_to_hpx_addr(gva);
 }
 
 /// Allocate zeroed memory from the cyclic space.
@@ -79,9 +77,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   hpx_lco_delete(sync, HPX_NULL);
   const uint32_t rank = here->rank;
   const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
-  hpx_addr_t addr = pgas_gva_to_hpx_addr(gva);
-  addr.block_bytes = bsize;
-  return addr;
+  return pgas_gva_to_hpx_addr(gva);
 }
 
 
