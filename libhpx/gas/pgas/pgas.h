@@ -44,25 +44,27 @@ void *pgas_local_memalign(size_t boundary, size_t size) HPX_INTERNAL;
 int   pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size) HPX_INTERNAL;
 /// @}
 
+bool pgas_try_pin(const hpx_addr_t addr, void **local)
+  HPX_INTERNAL;
+
 typedef struct {
   size_t n;
   uint32_t bsize;
 } pgas_alloc_args_t;
-
-extern hpx_action_t pgas_cyclic_alloc;
-extern hpx_action_t pgas_cyclic_calloc;
-
-hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
-hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 
 typedef struct {
   uint64_t heap_offset;
   uint64_t       value;
   uint64_t      length;
 } pgas_memset_args_t;
-extern hpx_action_t pgas_memset;
 
-extern hpx_action_t pgas_gas_free;
+extern hpx_action_t pgas_cyclic_alloc;
+extern hpx_action_t pgas_cyclic_calloc;
+extern hpx_action_t pgas_memset;
+extern hpx_action_t pgas_free;
+
+hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
+hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 
 void pgas_register_actions(void) HPX_INTERNAL;
 

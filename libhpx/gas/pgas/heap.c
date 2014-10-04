@@ -169,12 +169,17 @@ uint64_t heap_offset_of(heap_t *heap, void *addr) {
   return ((char*)addr - heap->base);
 }
 
-bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset) {
+bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
+  if (!heap_offset_inbounds(heap, heap_offset)) {
+    dbg_log_gas("offset %lu is not in the heap\n", heap_offset);
+    return false;
+  }
+
   if (HEAP_USE_CYCLIC_CSBRK_BARRIER)
-    return heap->nbytes - heap->csbrk < offset;
+    return heap_offset > (heap->nbytes - heap->csbrk);
 
   // see if the chunk is allocated
-  const uint32_t chunk = offset / heap->bytes_per_chunk;
+  const uint32_t chunk = heap_offset / heap->bytes_per_chunk;
   return bitmap_is_set(heap->chunks, chunk);
 }
 
