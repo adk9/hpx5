@@ -11,6 +11,9 @@
 
 typedef uint32_t count_t;
 
+hpx_addr_t count_array;
+hpx_addr_t index_array;
+
 uint32_t _count_array_block_size = 0;
 uint32_t _index_array_block_size = 0;
 
@@ -189,7 +192,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  const hpx_addr_t count_array = hpx_gas_global_calloc(HPX_LOCALITIES, _count_array_block_size);
+  count_array = hpx_gas_global_calloc(HPX_LOCALITIES, _count_array_block_size);
 
   // Count the number of edges per source vertex
   hpx_addr_t edges = hpx_lco_and_new(el->num_edges);
@@ -207,7 +210,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  const hpx_addr_t index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
+  index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
 
   // Allocate and populate the adjacency list.
   hpx_addr_t vertices = hpx_lco_and_new(el->num_vertices);
@@ -233,8 +236,21 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   return HPX_SUCCESS;
 }
 
+
+hpx_action_t free_adj_list;
+int free_adj_list_action(void *arg) {
+  const hpx_addr_t target = hpx_thread_current_target();
+
+  hpx_gas_free(count_array, HPX_NULL);
+  hpx_gas_free(index_array, HPX_NULL);
+  hpx_gas_free(target, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+
 static __attribute__((constructor)) void _adj_list_register_actions() {
   adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
+  free_adj_list            = HPX_REGISTER_ACTION(free_adj_list_action);
   _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
   _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
   _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
