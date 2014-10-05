@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include <infiniband/verbs.h>
 
@@ -31,7 +32,7 @@ static int __verbs_buffer_register(photonBI dbuffer, void *ctx) {
   flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_READ|IBV_ACCESS_REMOTE_WRITE;
   mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, (void *)dbuffer->buf.addr, dbuffer->buf.size, flags);
   if (!mr) {
-    log_err("Could not allocate MR\n");
+    log_err("Could not register MR at %p: %s", (void*)dbuffer->buf.addr, strerror(errno));
     goto error_exit;
   }
 
@@ -55,6 +56,7 @@ static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx) {
 
   retval = ibv_dereg_mr((struct ibv_mr *)dbuffer->priv_ptr);
   if(retval) {
+    log_err("Could not deregister MR at %p: %s", (void*)dbuffer->buf.addr, strerror(errno));
     return retval;
   }
 
