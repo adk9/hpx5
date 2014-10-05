@@ -28,10 +28,10 @@
 #include "gva.h"
 #include "heap.h"
 #include "pgas.h"
+#include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 heap_t *global_heap = NULL;
-
 
 static void _pgas_delete(gas_class_t *gas) {
   if (global_heap) {
@@ -239,7 +239,7 @@ static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
     memcpy(lto, lfrom, size);
   }
   else {
-    assert(false);
+    return parcel_memcpy(to, from, size, sync);
   }
 
   if (!hpx_addr_eq(sync, HPX_NULL))
@@ -261,7 +261,7 @@ static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
     memcpy(lto, from, size);
   }
   else {
-    assert(false);
+    return parcel_memput(to, from, size, lsync, rsync);
   }
 
   if (!hpx_addr_eq(lsync, HPX_NULL))
@@ -284,7 +284,7 @@ static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
     memcpy(to, lfrom, size);
   }
   else {
-    assert(false);
+    return parcel_memget(to, from, size, lsync);
   }
 
   if (!hpx_addr_eq(lsync, HPX_NULL))
