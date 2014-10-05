@@ -169,8 +169,11 @@ static int _action_main(args_t *args) {
  */
 static int _action_ping(args_t *args) {
   printf("In ping on rank %d\n", hpx_get_my_rank());
-  char msg_ping[BUFFER_SIZE];
-  char msg_pong[BUFFER_SIZE];
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  char *msg_ping;
+  char *msg_pong;
+  hpx_gas_try_pin(msg_ping_gas, &msg_ping);
 
   for (int i = 0; i < args->iterations; i++) {
     if (_text)
@@ -179,8 +182,9 @@ static int _action_ping(args_t *args) {
     
     RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping);
     
-    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping, HPX_NULL, HPX_NULL);
-    hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE, msg_pong);
+    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, HPX_NULL, HPX_NULL);
+    msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE);
+    hpx_gas_try_pin(msg_pong_gas, &msg_pong);
 
     RANK_PRINTF("Received pong msg= '%s'\n", msg_pong);
   }
@@ -194,11 +198,15 @@ static int _action_ping(args_t *args) {
  */
 static int _action_pong(args_t *args) {
   printf("In pong on rank %d\n", hpx_get_my_rank());
-  char msg_ping[BUFFER_SIZE];
-  char msg_pong[BUFFER_SIZE];
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  char *msg_ping;
+  char *msg_pong;
+  hpx_gas_try_pin(msg_pong_gas, &msg_pong);
 
   for (int i = 0; i < args->iterations; i++) {
-    hpx_lco_netfuture_getat(args->pingpong, 1, BUFFER_SIZE, msg_ping);
+    msg_ping_gas = hpx_lco_netfuture_getat(args->pingpong, 1, BUFFER_SIZE);
+    hpx_gas_try_pin(msg_ping_gas, &msg_ping);
 
     if (_text)
       snprintf(msg_pong, BUFFER_SIZE, "pong %d from (%d, %d)", i,
@@ -206,7 +214,7 @@ static int _action_pong(args_t *args) {
 
     RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong);
 
-    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, HPX_NULL, HPX_NULL);
   }
 
   return HPX_SUCCESS;
