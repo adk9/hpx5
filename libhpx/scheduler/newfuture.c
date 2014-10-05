@@ -31,6 +31,8 @@
 #include "lco.h"
 #include "cvar.h"
 
+#define dbg_printf(...)
+
 #define _NEWFUTURES_MEMORY_DEFAULT 1024*1024*1024
 #define _NEWFUTURES_CAPACITY_DEFAULT 10000
 #define PHOTON_NOWAIT_TAG 0
@@ -158,7 +160,7 @@ _send_queue_progress_action(void* args) {
   while (1) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (flag > 0) {
-      printf("Received send completion %" PRIx64 "\n", request);
+      dbg_printf("Received send completion %" PRIx64 "\n", request);
     }
     if (rc < 0) {
       
@@ -185,7 +187,7 @@ _future_set_no_copy(_newfuture_t *f) {
 static int
 _future_set_no_copy_from_remote_action(_newfuture_t **fp) {
   _newfuture_t *f = *fp;
-  printf("_future_set_no_copy_from_remote_action on %p\n", (void*)f);
+  dbg_printf("_future_set_no_copy_from_remote_action on %p\n", (void*)f);
   lco_lock(&f->lco);
   if (!_empty(f))
     scheduler_wait(&f->lco.lock, &f->empty);
@@ -209,7 +211,7 @@ _recv_queue_progress_action(void *args) {
     // you want to get completions from any source, even yourself
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag > 0) {
-      printf("Received recv completion %" PRIx64 "\n", request);
+      dbg_printf("Received recv completion %" PRIx64 "\n", request);
     }
     if (flag && request != 0) {
       _newfuture_t *f = (_newfuture_t*)request;
@@ -240,7 +242,7 @@ _table_unlock() {
 
 static int 
 _initialize_newfutures_action(hpx_addr_t *ag) {
-  printf("Initializing futures on rank %d\n", hpx_get_my_rank());
+  dbg_printf("Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
   _newfuture_table.curr_index = 0;
   _newfuture_table.curr_capacity = _NEWFUTURES_CAPACITY_DEFAULT;
@@ -258,7 +260,7 @@ _initialize_newfutures_action(hpx_addr_t *ag) {
   buffer.addr = (uintptr_t)_newfuture_table.base;
   photon_get_buffer_private(_newfuture_table.base, _NEWFUTURES_MEMORY_DEFAULT, &buffer.priv);
 
-  printf("At %d buffer = %p\n", hpx_get_my_rank(), _newfuture_table.base);
+  dbg_printf("At %d buffer = %p\n", hpx_get_my_rank(), _newfuture_table.base);
 
   hpx_lco_allgather_setid(*ag, hpx_get_my_rank(), 
 			  sizeof(struct photon_buffer_t), &buffer,
@@ -272,7 +274,7 @@ _initialize_newfutures_action(hpx_addr_t *ag) {
   hpx_call_async(HPX_HERE, _send_queue_progress, NULL, 0, HPX_NULL, HPX_NULL);
 
   _table_unlock();
-  printf("Initialized futures on rank %d\n", hpx_get_my_rank());
+  dbg_printf("Initialized futures on rank %d\n", hpx_get_my_rank());
   return HPX_SUCCESS;
 }
 
@@ -624,9 +626,9 @@ void hpx_lco_newfuture_setat(hpx_newfuture_t future, int id, size_t size, void *
 			     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
   hpx_newfuture_t future_i = hpx_lco_newfuture_at(future, id);
 
-  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
 
-  //  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
+  //  dbg_printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
   
   // normally lco_set does all this
   if (_newfuture_get_rank(&future_i) != hpx_get_my_rank()) {
@@ -644,7 +646,7 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t base, int i, size_t size, v
 
   lco_t *lco;
 
-  printf("Getting from (%d, %p) to %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("Getting from (%d, %p) to %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
 
   if (_newfuture_get_rank(&future_i) != hpx_get_my_rank()) {
     return HPX_ERROR;
