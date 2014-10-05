@@ -519,7 +519,7 @@ int update_table(hpx_newfuture_t *f) {
 static int
 _add_future_to_table_action(hpx_newfuture_t *f) {
   _table_lock();
-  return update_table(f);
+  hpx_status_t status = update_table(f);
 
   for (int i = 0; i < _newfutures_at_rank(f); i ++) {
     _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(f) + (sizeof(_newfuture_t) + f->size) * i;
@@ -527,6 +527,7 @@ _add_future_to_table_action(hpx_newfuture_t *f) {
   }
 
   _table_unlock();
+  return status;
 }
 
 hpx_newfuture_t
