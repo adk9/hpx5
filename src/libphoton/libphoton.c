@@ -241,7 +241,7 @@ int photon_cancel(photon_rid request, int flags) {
   
   rc = __photon_default->cancel(request, flags);
   if (rc != PHOTON_OK) {
-    log_err("Error in backend cancel");
+    dbg_err("Error in backend cancel");
     return rc;
   }
 

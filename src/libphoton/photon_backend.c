@@ -2750,7 +2750,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
         *flag = 1;
         entry_iter->request = UINT64_MAX;
         NEXT_LEDGER_ENTRY(photon_processes[i].local_pwc_ledger);
-        log_info("popped ledger event with id: 0x%016lx", *request);
+        dbg_info("popped ledger event with id: 0x%016lx", *request);
         return PHOTON_OK;
       }
     }
