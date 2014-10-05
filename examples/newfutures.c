@@ -161,7 +161,7 @@ static int _action_main(args_t *args) {
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
-  return HPX_SUCCESS;
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 /**
@@ -185,7 +185,7 @@ static int _action_ping(args_t *args) {
     RANK_PRINTF("Received pong msg= '%s'\n", msg_pong);
   }
 
-  hpx_shutdown(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 
@@ -209,7 +209,7 @@ static int _action_pong(args_t *args) {
     hpx_lco_newfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong, HPX_NULL, HPX_NULL);
   }
 
-  hpx_shutdown(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 
 /**
