@@ -154,6 +154,7 @@ static int _action_main(void *args) {
     double latency = elapsed / (args.iterations * 2);
     fprintf(test_log, "%*f\n", FIELD_WIDTH, latency);
   }
+  hpx_netfutures_fini();
   hpx_shutdown(HPX_SUCCESS);
 }
 
