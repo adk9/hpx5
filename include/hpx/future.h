@@ -85,7 +85,7 @@ hpx_netfuture_t hpx_lco_netfuture_at(hpx_netfuture_t base, int id);
 /// @param   data    The data the future will be set with
 /// @param lsync_lco An LCO to be set when the data is sent to the future
 /// @param rsync_lco An LCO to be set when the future has been successfully set
-void hpx_lco_netfuture_setat(hpx_netfuture_t future,  int id, size_t size, void *data,
+void hpx_lco_netfuture_setat(hpx_netfuture_t future,  int id, size_t size, hpx_addr_t value,
                                   hpx_addr_t lsync_lco, hpx_addr_t rsync_lco);
 
 /// Reset a future to empty
@@ -105,8 +105,8 @@ void hpx_lco_netfuture_emptyat(hpx_netfuture_t netfuture,  int id, hpx_addr_t rs
 /// @param   size The amount of data to get, in bytes
 /// @param  id    The index in array of futures
 /// @param value  Address of data value
-/// @returns      Either HPX_SUCCESS or some error status
-hpx_status_t hpx_lco_netfuture_getat(hpx_netfuture_t future, int id, size_t size, void *value);
+/// @returns      Global memory with the value (or HPX_NULL on error)
+hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t future, int id, size_t size);
 
 /// Get the values of multiple futures simultaneously
 ///
