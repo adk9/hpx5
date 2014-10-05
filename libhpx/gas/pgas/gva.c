@@ -65,8 +65,9 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
                                      uint32_t ranks) {
   // make sure the locality is in the expected range
   DEBUG_IF (ranks < locality) {
+    assert(ranks > 0);
     dbg_error("locality %u must be less than %u\n", locality,
-              1 << ceil_log2_32(ranks));
+              pgas_fit_log2_32(ranks));
   }
 
   // make sure that the heap offset is in the expected range (everyone has the
@@ -96,13 +97,20 @@ pgas_gva_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
                                 uint32_t phase, uint32_t ranks, uint32_t bsize)
 {
   // make sure that the phase is in the expected range, locality will be checked
-  DEBUG_IF (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
-    dbg_error("phase %u must be less than %u", phase, 1 << ceil_log2_32(bsize));
+  DEBUG_IF (bsize && phase) {
+    if (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
+      dbg_error("phase %u must be less than %u\n", phase,
+                pgas_fit_log2_32(bsize));
+    }
+  }
+
+  DEBUG_IF (!bsize && phase) {
+    dbg_error("cannot initialize a non-cyclic gva with a phase of %u\n", phase);
   }
 
   // forward to the heap_offset version, by computing the heap offset through a
   // shift of the gva offset
-  const uint32_t shift = ceil_log2_32(bsize);
+  const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
 
   return pgas_gva_from_heap_offset(locality, (offset << shift) + phase, ranks);
 }
