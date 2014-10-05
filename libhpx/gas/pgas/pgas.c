@@ -49,11 +49,19 @@ static uint32_t _pgas_locality_of(hpx_addr_t gva) {
   return pgas_gva_locality_of((pgas_gva_t)gva, here->ranks);
 }
 
-static bool _check_cyclic(hpx_addr_t gva, uint32_t *bsize) {
+static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
   bool cyclic = heap_offset_is_cyclic(global_heap, (uint64_t)gva);
-  if (cyclic)
-    *bsize = 1 << ceil_log2_32(*bsize);
-  return cyclic;
+
+  if (cyclic && !bsize) {
+    dbg_error("heap offset %lu is cyclic but user defined block size 0\n", gva);
+  }
+
+  if (!cyclic && bsize) {
+    dbg_log_gas("heap offset %lu specific bsize %u suppressed\n", gva, bsize);
+    return 0;
+  }
+
+  return pgas_fit_log2_32(bsize);
 }
 
 static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
@@ -61,26 +69,26 @@ static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
     dbg_error("invalid block size for cyclic address\n");
   }
 
-  _check_cyclic(gva, &bsize);
+  bsize = _check_cyclic(gva, bsize);
   return pgas_gva_offset_of((pgas_gva_t)gva, here->ranks, bsize);
 }
 
 static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
-  _check_cyclic(gva, &bsize);
+  bsize = _check_cyclic(gva, bsize);
   return pgas_gva_phase_of((pgas_gva_t)gva, bsize);
 }
 
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  bool clhs = _check_cyclic(lhs, &bsize);
-  bool crhs = _check_cyclic(rhs, &bsize);
-  DEBUG_IF (clhs != crhs) {
+  const uint32_t lbs = _check_cyclic(lhs, bsize);
+  const uint32_t rbs = _check_cyclic(rhs, bsize);
+  DEBUG_IF (lbs != rbs) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return pgas_gva_sub((pgas_gva_t)lhs, (pgas_gva_t)rhs, here->ranks, bsize);
+  return pgas_gva_sub((pgas_gva_t)lhs, (pgas_gva_t)rhs, here->ranks, lbs);
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  _check_cyclic(gva, &bsize);
+  bsize = _check_cyclic(gva, bsize);
   hpx_addr_t gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks, bsize);
   return gva1;
 }
