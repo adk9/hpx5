@@ -24,6 +24,7 @@ hpx_action_t pgas_cyclic_alloc = 0;
 hpx_action_t pgas_cyclic_calloc = 0;
 hpx_action_t pgas_memset = 0;
 hpx_action_t pgas_free = 0;
+hpx_action_t pgas_set_csbrk = 0;
 
 /// Allocate from the cyclic space.
 ///
@@ -39,8 +40,20 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   const uint32_t ranks = here->ranks;
   const uint64_t blocks_per_locality = pgas_n_per_locality(n, here->ranks);
   const uint32_t padded_bsize = pgas_fit_log2_32(bsize);
+
+
   const uint64_t heap_offset = heap_csbrk(global_heap, blocks_per_locality,
                                           padded_bsize);
+
+  DEBUG_IF (true) {
+    // during DEBUG execution we broadcast the csbrk to the system to make sure
+    // that people can do effective cyclic vs. gas allocations
+    hpx_addr_t sync = hpx_lco_future_new(0);
+    hpx_bcast(pgas_set_csbrk, &heap_offset, sizeof(heap_offset), sync);
+    hpx_lco_wait(sync);
+    hpx_lco_delete(sync, HPX_NULL);
+  }
+
   const uint32_t rank = here->rank;
   const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
   return pgas_gva_to_hpx_addr(gva);
@@ -70,6 +83,16 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
     .length = blocks_per_locality * padded_bsize
   };
 
+  DEBUG_IF (true) {
+    // during DEBUG execution we broadcast the csbrk to the system to make sure
+    // that people can do effective cyclic vs. gas allocations
+    //
+    // NB: we're already broadcasting memset, we could just do it then...?
+    hpx_addr_t sync = hpx_lco_future_new(0);
+    hpx_bcast(pgas_set_csbrk, &heap_offset, sizeof(heap_offset), sync);
+    hpx_lco_wait(sync);
+    hpx_lco_delete(sync, HPX_NULL);
+  }
 
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_bcast(pgas_memset, &args, sizeof(args), sync);
@@ -111,11 +134,18 @@ static int _pgas_free_handler(void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static int _pgas_set_csbrk_handler(size_t *heap_offset) {
+  int e = heap_set_csbrk(global_heap, *heap_offset);
+  dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
+  return e;
+}
+
 void pgas_register_actions(void) {
   pgas_cyclic_alloc = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
   pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
   pgas_memset = HPX_REGISTER_ACTION(_pgas_memset_handler);
   pgas_free = HPX_REGISTER_ACTION(_pgas_free_handler);
+  pgas_set_csbrk = HPX_REGISTER_ACTION(_pgas_set_csbrk_handler);
 }
 
 static void HPX_CONSTRUCTOR _register(void) {
