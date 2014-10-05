@@ -104,15 +104,19 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
                      uint32_t bsize)
   HPX_INTERNAL;
 
-/// Compute standard address arithmetic on the global address.
+/// Compute cyclic address arithmetic on the global address.
 ///
 /// @param ranks The number of localities in the system.
 /// @param bsize The block size in bytes for the allocation.
 
-pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
-                        uint32_t bsize)
+pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
+                               uint32_t bsize)
   HPX_INTERNAL;
 
+
+/// Compute standard address arithmetic on the global address.
+pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks)
+  HPX_INTERNAL;
 
 
 #endif // LIBHPX_GAS_PGAS_ADDR_H

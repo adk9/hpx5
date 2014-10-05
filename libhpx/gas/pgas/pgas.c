@@ -88,8 +88,11 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  bsize = _check_cyclic(gva, bsize);
-  hpx_addr_t gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks, bsize);
+  hpx_addr_t gva1 = HPX_NULL;
+  if (!_check_cyclic(gva, bsize))
+    gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks);
+  else
+    gva1 = pgas_gva_add_cyclic((pgas_gva_t)gva, bytes, here->ranks, bsize);
   return gva1;
 }
 
