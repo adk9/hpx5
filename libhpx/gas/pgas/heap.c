@@ -171,8 +171,17 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
 }
 
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
-  const uint32_t csbrk = sync_addf(&heap->csbrk, bsize * n, SYNC_ACQ_REL);
-  return (heap->nbytes - csbrk);
+  const size_t bytes = n * bsize;
+  const uint32_t old = sync_fadd(&heap->csbrk, bytes, SYNC_ACQ_REL);
+  const uint32_t new = old + bytes;
+  const uint64_t heap_offset = (heap->nbytes - new);
+
+  // check to see if any of this allocation is reserved in the bitmap
+  DEBUG_IF(true) {
+
+  }
+
+  return heap_offset;
 }
 
 bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset) {
