@@ -5,6 +5,7 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/attributes.h \
                          hpx/builtins.h \
                          hpx/config.h \
+                         hpx/future.h \
                          hpx/gas.h \
                          hpx/hpx.h \
                          hpx/lco.h \

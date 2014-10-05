@@ -1,7 +1,7 @@
 #include "lulesh-hpx.h"
 
 void
-SBN1(Domain *domain, hpx_newfuture_t sbn1)
+SBN1(Domain *domain, hpx_netfuture_t sbn1)
 {
   const int    nsTF = domain->sendTF[0];
   const int *sendTF = &domain->sendTF[1]; 
@@ -15,7 +15,7 @@ SBN1(Domain *domain, hpx_newfuture_t sbn1)
     double *data = malloc(BUFSZ[destLocalIdx]);
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
-    hpx_lco_newfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
     free(data);
   }
 
@@ -28,7 +28,7 @@ SBN1(Domain *domain, hpx_newfuture_t sbn1)
     int fromDomain = OFFSET[srcLocalIdx] + domain->rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
     double *src = malloc(BUFSZ[srcRemoteIdx]);
-    hpx_lco_newfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx], src);
+    hpx_lco_netfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx], src);
     recv_t unpack = RECEIVER[srcLocalIdx];
     unpack(nx, ny, nz, src, domain->nodalMass, 0);
     free(src);
@@ -36,7 +36,7 @@ SBN1(Domain *domain, hpx_newfuture_t sbn1)
 }
 
 void
-SBN3(hpx_newfuture_t sbn3,Domain *domain, int rank)
+SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
 {
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
@@ -59,7 +59,7 @@ SBN3(hpx_newfuture_t sbn3,Domain *domain, int rank)
     pack(nx, ny, nz, domain->fy, data + sendcnt);
     pack(nx, ny, nz, domain->fz, data + sendcnt*2);
 
-    hpx_lco_newfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
 
     free(data);
   } 
@@ -73,7 +73,7 @@ SBN3(hpx_newfuture_t sbn3,Domain *domain, int rank)
     int fromDomain = OFFSET[srcLocalIdx] + rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
     double *src = malloc(BUFSZ[srcRemoteIdx]);
-    hpx_lco_newfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx], src);
+    hpx_lco_netfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx], src);
     int recvcnt = XFERCNT[srcLocalIdx];
     recv_t unpack = RECEIVER[srcLocalIdx];
 
