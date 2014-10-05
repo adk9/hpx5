@@ -198,7 +198,7 @@ static int _main_action(_sssp_args_t *args) {
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
-      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
+      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), sargs.block_size);
       hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
     }
     hpx_lco_wait(vertices);
