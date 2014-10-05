@@ -78,7 +78,8 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
   // construct the gva by shifting the locality into the most significant bits
   // of the gva and then adding in the heap offset
   const uint32_t shift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
-  return ((uint64_t)locality << shift) + heap_offset;
+  const uint64_t high = ((uint64_t)locality) << shift;
+  return high + heap_offset;
 }
 
 pgas_gva_t pgas_gva_from_hpx_addr(hpx_addr_t addr) {
@@ -163,5 +164,14 @@ pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
   const uint32_t cycles = (pgas_gva_locality_of(gva, ranks) + blocks) / ranks;
   const uint64_t offset = pgas_gva_offset_of(gva, ranks, bsize) + cycles;
 
-  return pgas_gva_from_triple(locality, offset, phase, ranks, bsize);
+  const pgas_gva_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
+                                               bsize);
+
+  // sanity check
+  const uint32_t nextho = pgas_gva_heap_offset_of(next, ranks);
+  DEBUG_IF (!heap_offset_inbounds(global_heap, nextho)) {
+    dbg_error("computed out of bounds address\n");
+  }
+
+  return next;
 }
