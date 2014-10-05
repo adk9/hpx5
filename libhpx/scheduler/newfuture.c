@@ -183,7 +183,9 @@ _future_set_no_copy(_newfuture_t *f) {
 }
 
 static int
-_future_set_no_copy_from_remote_action(_newfuture_t *f) {
+_future_set_no_copy_from_remote_action(_newfuture_t **fp) {
+  _newfuture_t *f = *fp;
+  printf("_future_set_no_copy_from_remote_action on %p\n", (void*)f);
   lco_lock(&f->lco);
   if (!_empty(f))
     scheduler_wait(&f->lco.lock, &f->empty);
@@ -215,7 +217,7 @@ _recv_queue_progress_action(void *args) {
       
       // do set stuff
       if (!_empty(f))
-	hpx_call_async(HPX_HERE, _future_set_no_copy_from_remote, f, sizeof(f), HPX_NULL, HPX_NULL);
+	hpx_call_async(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(&f), HPX_NULL, HPX_NULL);
       else {
 	_future_set_no_copy(f);
       }
