@@ -27,7 +27,11 @@ typedef enum {
 typedef struct rkey rkey_t;
 struct rkey {
   char *base;
-  char  rkey[];
+  //char rkey[];
+  struct {
+    uint64_t key0;
+    uint64_t key1;
+  } rkey;
 };
 
 typedef struct transport_class transport_class_t;
