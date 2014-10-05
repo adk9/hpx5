@@ -29,7 +29,7 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
   if (type == HPX_GAS_PGAS) {
     gas = gas_pgas_new(heap_size, boot, transport);
     if (!gas) {
-      dbg_log_gas("PGAS failed to initialize, using smp\n");
+      dbg_log_gas("PGAS failed to initialize\n");
     }
     else {
       dbg_log_gas("PGAS initialized\n");
