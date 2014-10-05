@@ -160,8 +160,8 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_newfuture_t *sbn1 = hpx_lco_newfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
-  hpx_newfuture_t *sbn3 = hpx_lco_newfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_newfuture_t sbn1 = hpx_lco_newfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_newfuture_t sbn3 = hpx_lco_newfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
@@ -205,8 +205,8 @@ static int _action_evolve(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
-  hpx_newfuture_t *sbn1 = init->sbn1;
-  hpx_newfuture_t *sbn3 = init->sbn3;
+  hpx_newfuture_t sbn1 = init->sbn1;
+  hpx_newfuture_t sbn3 = init->sbn3;
   hpx_addr_t lco_newdt = init->newdt;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
