@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 }
 
 static int _action_main(args_t *args) {
-  printf("In main\n");
+  printf("In main on rank %d\n", hpx_get_my_rank());
   hpx_status_t status =  hpx_newfutures_init();
   if (status != HPX_SUCCESS)
     return status;
@@ -156,7 +156,7 @@ static int _action_main(args_t *args) {
   printf("Futures allocated\n");
   args->pingpong = base;
 
-  hpx_call(HPX_THERE(0), _ping, args, sizeof(*args), done);
+  hpx_call(HPX_HERE, _ping, args, sizeof(*args), done);
   hpx_call(HPX_THERE(1), _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);
@@ -168,6 +168,7 @@ static int _action_main(args_t *args) {
  * Send a ping message.
  */
 static int _action_ping(args_t *args) {
+  printf("In ping on rank %d\n", hpx_get_my_rank());
   char msg_ping[BUFFER_SIZE];
   char msg_pong[BUFFER_SIZE];
 
@@ -192,6 +193,7 @@ static int _action_ping(args_t *args) {
  * Handle a pong action.
  */
 static int _action_pong(args_t *args) {
+  printf("In pong on rank %d\n", hpx_get_my_rank());
   char msg_ping[BUFFER_SIZE];
   char msg_pong[BUFFER_SIZE];
 

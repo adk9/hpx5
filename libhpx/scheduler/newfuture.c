@@ -152,14 +152,14 @@ _send_queue_progress_action(void* args) {
   int rc;
   while (1) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    if (flag > 0) {
+      printf("Received send completion %" PRIu64 "\n", request);
+    }
     if (rc < 0) {
       
     }
     if (flag > 0) {
       //printf("Received completion %" PRIu64 "\n", request);
-    }
-    if (flag > 0) {
-      printf("Received completion %" PRIu64 "\n", request);
     }
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
@@ -204,6 +204,9 @@ _recv_queue_progress_action(void *args) {
     */
     // you want to get completions from any source, even yourself
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    if (flag > 0) {
+      printf("Received recv completion %" PRIu64 "\n", request);
+    }
     if (flag && request != 0) {
       _newfuture_t *f = (_newfuture_t*)request;
       lco_lock(&f->lco);
@@ -233,6 +236,7 @@ _table_unlock() {
 
 static int 
 _initialize_newfutures_action(hpx_addr_t *ag) {
+  printf("Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
   _newfuture_table.curr_index = 0;
   _newfuture_table.curr_capacity = _NEWFUTURES_CAPACITY_DEFAULT;
@@ -264,6 +268,7 @@ _initialize_newfutures_action(hpx_addr_t *ag) {
   hpx_call_async(HPX_HERE, _send_queue_progress, NULL, 0, HPX_NULL, HPX_NULL);
 
   _table_unlock();
+  printf("Initialized futures on rank %d\n", hpx_get_my_rank());
   return HPX_SUCCESS;
 }
 
@@ -576,7 +581,7 @@ _put_with_completion(hpx_newfuture_t *future,  int id, size_t size, void *data,
   // local_rid can be the same?
 
   hpx_newfuture_t *f = future;
-  struct photon_buffer_t *buffer = &_newfuture_table.buffers[f->table_index];
+  struct photon_buffer_t *buffer = &_newfuture_table.buffers[_newfuture_get_rank(f)];
 
   int remote_rank = _newfuture_get_rank(future);
   void *remote_ptr = (void*)_newfuture_get_data_addr(future);
