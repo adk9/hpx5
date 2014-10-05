@@ -132,9 +132,9 @@ _newfuture_get_offset(hpx_newfuture_t *f) {
 // the native address of the _newfuture_t representation of a future
 static uintptr_t 
 _newfuture_get_addr(hpx_newfuture_t *f) {
-  int offset =  _newfuture_get_offset(f);
+  uintptr_t offset =  _newfuture_get_offset(f);
   int rank = _newfuture_get_rank(f);
-  int rank_base = _newfuture_table.buffers[rank].addr;
+  uintptr_t rank_base = _newfuture_table.buffers[rank].addr;
   return rank_base + offset;
 }
 
