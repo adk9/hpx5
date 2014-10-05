@@ -24,7 +24,7 @@ typedef struct  {
   int size;
   int count;
   int index;
-} hpx_newfuture_t;
+} hpx_netfuture_t;
 
 /// Create a future
 ///
@@ -33,15 +33,15 @@ typedef struct  {
 ///
 /// @param size                 The number of bytes
 /// @returns                    The global address of the future
-hpx_newfuture_t hpx_lco_newfuture_new(size_t size);
+hpx_netfuture_t hpx_lco_netfuture_new(size_t size);
 
 /// Creates a shared future
 /// 
 /// Shared futures can be accessed mutiple times. They must be manually emptied
-/// with hpx_lco_newfuture_emptyat()
+/// with hpx_lco_netfuture_emptyat()
 /// @param size                 The number of bytes
 /// @returns                    The global address of the future
-hpx_newfuture_t hpx_lco_newfuture_shared_new(size_t size);
+hpx_netfuture_t hpx_lco_netfuture_shared_new(size_t size);
 
 /// Create an array of futures
 ///
@@ -58,7 +58,7 @@ hpx_newfuture_t hpx_lco_newfuture_shared_new(size_t size);
 /// @param size_per_participant The number of bytes each participant
 ///                             will be setting
 /// @returns                    The global address of the future
-hpx_newfuture_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_participant);
+hpx_netfuture_t hpx_lco_netfuture_new_all(int num_participants, size_t size_per_participant);
 
 /// Creates an array of shared futures
 /// 
@@ -66,13 +66,13 @@ hpx_newfuture_t hpx_lco_newfuture_new_all(int num_participants, size_t size_per_
 /// @param num_participants The number of shared futures to allocate
 /// @param size             The number of bytes per shared future
 /// @returns                The global address of the future
-hpx_newfuture_t hpx_lco_newfuture_shared_new_all(int num_participants, size_t size);
+hpx_netfuture_t hpx_lco_netfuture_shared_new_all(int num_participants, size_t size);
 
 /// Get the address of a future in an array
 ///
 /// @param base The base address for the array of futures
 /// @param   id The index into the array of futures
-hpx_newfuture_t hpx_lco_newfuture_at(hpx_newfuture_t base, int id);
+hpx_netfuture_t hpx_lco_netfuture_at(hpx_netfuture_t base, int id);
 
 /// Set a future
 ///
@@ -85,7 +85,7 @@ hpx_newfuture_t hpx_lco_newfuture_at(hpx_newfuture_t base, int id);
 /// @param   data    The data the future will be set with
 /// @param lsync_lco An LCO to be set when the data is sent to the future
 /// @param rsync_lco An LCO to be set when the future has been successfully set
-void hpx_lco_newfuture_setat(hpx_newfuture_t future,  int id, size_t size, void *data,
+void hpx_lco_netfuture_setat(hpx_netfuture_t future,  int id, size_t size, void *data,
                                   hpx_addr_t lsync_lco, hpx_addr_t rsync_lco);
 
 /// Reset a future to empty
@@ -94,8 +94,8 @@ void hpx_lco_newfuture_setat(hpx_newfuture_t future,  int id, size_t size, void 
 /// and notifying any threads waiting for it to be emptied
 /// @param future    The global address of the future
 /// @param  id       The index in array of futures
-/// @param rsync_lco An LCO to be set when the newfuture has been successfully reset
-void hpx_lco_newfuture_emptyat(hpx_newfuture_t newfuture,  int id, hpx_addr_t rsync_lco);
+/// @param rsync_lco An LCO to be set when the netfuture has been successfully reset
+void hpx_lco_netfuture_emptyat(hpx_netfuture_t netfuture,  int id, hpx_addr_t rsync_lco);
 
 /// Get a future
 ///
@@ -106,7 +106,7 @@ void hpx_lco_newfuture_emptyat(hpx_newfuture_t newfuture,  int id, hpx_addr_t rs
 /// @param  id    The index in array of futures
 /// @param value  Address of data value
 /// @returns      Either HPX_SUCCESS or some error status
-hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t future, int id, size_t size, void *value);
+hpx_status_t hpx_lco_netfuture_getat(hpx_netfuture_t future, int id, size_t size, void *value);
 
 /// Get the values of multiple futures simultaneously
 ///
@@ -117,7 +117,7 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t future, int id, size_t size
 /// @param[in] futures An array of the addresses of the futures
 /// @param[in]   sizes The amount of data to get at each location, in bytes
 /// @param[out] values Array of the addresses of the values of the futures
-void hpx_lco_newfuture_get_all(size_t num, hpx_newfuture_t futures, size_t size,
+void hpx_lco_netfuture_get_all(size_t num, hpx_netfuture_t futures, size_t size,
 			       void *values[]);
 
 /// Wait on a future
@@ -127,7 +127,7 @@ void hpx_lco_newfuture_get_all(size_t num, hpx_newfuture_t futures, size_t size,
 /// @param future The address of the future
 /// @param     id The index in array of futures
 /// @param    set Wait until future is set or reset?
-void hpx_lco_newfuture_waitat(hpx_newfuture_t future, int id, hpx_set_t set);
+void hpx_lco_netfuture_waitat(hpx_netfuture_t future, int id, hpx_set_t set);
 
 /// Wait on a future for a specified amount of time
 ///
@@ -139,7 +139,7 @@ void hpx_lco_newfuture_waitat(hpx_newfuture_t future, int id, hpx_set_t set);
 /// @param   set Wait until future is set or reset?
 /// @param  time Amount of time to wait for
 /// @returns     HPX_SUCCESS if future is ready before time expires
-hpx_status_t hpx_lco_newfuture_waitat_for(hpx_newfuture_t future, int id, hpx_set_t set, hpx_time_t time);
+hpx_status_t hpx_lco_netfuture_waitat_for(hpx_netfuture_t future, int id, hpx_set_t set, hpx_time_t time);
 
 /// Wait on a future until a certain time
 ///
@@ -151,7 +151,7 @@ hpx_status_t hpx_lco_newfuture_waitat_for(hpx_newfuture_t future, int id, hpx_se
 /// @param    set Wait until future is set or reset?
 /// @param   time A set time to wait until
 /// @returns      HPX_SUCCESS if future is ready before time expires
-hpx_status_t hpx_lco_newfuture_waitat_until(hpx_newfuture_t future, int id, hpx_set_t set, hpx_time_t time);
+hpx_status_t hpx_lco_netfuture_waitat_until(hpx_netfuture_t future, int id, hpx_set_t set, hpx_time_t time);
 
 /// Wait on a multiple futures
 ///
@@ -160,7 +160,7 @@ hpx_status_t hpx_lco_newfuture_waitat_until(hpx_newfuture_t future, int id, hpx_
 /// @param     num The number of futures to wait on
 /// @param futures An array of addresses of the future
 /// @param     set Wait until future is set or reset?
-void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t newfutures, hpx_set_t set);
+void hpx_lco_netfuture_wait_all(size_t num, hpx_netfuture_t netfutures, hpx_set_t set);
 
 /// Wait on a multiple futures for a set amount of time
 ///
@@ -172,7 +172,7 @@ void hpx_lco_newfuture_wait_all(size_t num, hpx_newfuture_t newfutures, hpx_set_
 /// @param     set Wait until future is set or reset?
 /// @param    time An amount of time to wait for before returning
 /// @returns      HPX_SUCCESS if all futures are ready before time expires
-hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_newfuture_t newfutures, 
+hpx_status_t hpx_lco_netfuture_wait_all_for(size_t num, hpx_netfuture_t netfutures, 
 				     hpx_set_t set, hpx_time_t time);
 
 /// Wait on a multiple futures until a set time
@@ -185,19 +185,19 @@ hpx_status_t hpx_lco_newfuture_wait_all_for(size_t num, hpx_newfuture_t newfutur
 /// @param     set Wait until future is set or reset?
 /// @param    time A time to wait until
 /// @returns      HPX_SUCCESS if all futures are ready before time expires
-hpx_status_t hpx_lco_newfuture_wait_all_until(size_t num, hpx_newfuture_t newfutures, 
+hpx_status_t hpx_lco_netfuture_wait_all_until(size_t num, hpx_netfuture_t netfutures, 
 				       hpx_set_t set, hpx_time_t time);
 
 /// Free a future
 ///
 /// @param future The address of the future
-void hpx_lco_newfuture_free(hpx_newfuture_t future);
+void hpx_lco_netfuture_free(hpx_netfuture_t future);
 
 /// Free multiple futures
 ///
 /// @param  num The number of futures in the array
-/// @param base An array of the addresses of the newfutures
-void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t base);
+/// @param base An array of the addresses of the netfutures
+void hpx_lco_netfuture_free_all(int num, hpx_netfuture_t base);
 
 /// Check to see if a future is shared
 ///
@@ -205,12 +205,12 @@ void hpx_lco_newfuture_free_all(int num, hpx_newfuture_t base);
 ///
 /// @param future A future
 /// @returns      true if the future is a shared future, false otherwise
-bool hpx_lco_newfuture_is_shared(hpx_newfuture_t future);
+bool hpx_lco_netfuture_is_shared(hpx_netfuture_t future);
 
-/// Returns the rank at which the future is located (you might need to use hpx_lco_newfuture_at() to get the future).
-int hpx_lco_newfuture_get_rank(hpx_newfuture_t future);
+/// Returns the rank at which the future is located (you might need to use hpx_lco_netfuture_at() to get the future).
+int hpx_lco_netfuture_get_rank(hpx_netfuture_t future);
 
 /// Must be called first, from the main action
-hpx_status_t hpx_newfutures_init();
+hpx_status_t hpx_netfutures_init();
 
 #endif
