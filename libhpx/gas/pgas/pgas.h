@@ -73,7 +73,7 @@ static inline uint32_t pgas_n_per_locality(size_t m, uint32_t ranks) {
 }
 
 static inline uint32_t pgas_fit_log2_32(uint32_t n) {
-  return ceil_log2_32(n);
+  return 1 << ceil_log2_32(n);
 }
 
 
