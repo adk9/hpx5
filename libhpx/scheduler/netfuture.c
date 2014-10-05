@@ -35,11 +35,14 @@
 #define dbg_printf(...)
 //#define dbg_printf printf
 
+#define YIELD_COUNT 10
 #define _NETFUTURES_MEMORY_DEFAULT 1024*1024*100
 #define _NETFUTURES_CAPACITY_DEFAULT 10000
 #define PHOTON_NOWAIT_TAG 0
 #define FT_SHARED 1<<3
 static const int _NETFUTURE_EXCHG = -37;
+
+static bool shutdown = false;
 
 typedef struct {
   lco_t lco;
@@ -156,7 +159,8 @@ _send_queue_progress_action(void* args) {
   int flag;
   photon_rid request;
   int rc;
-  while (1) {
+  int i = 0;
+  while (!shutdown) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (flag > 0) {
       dbg_printf("Received send completion %" PRIx64 "\n", request);
@@ -167,7 +171,9 @@ _send_queue_progress_action(void* args) {
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
     }
-    hpx_thread_yield();
+    i = (i + 1) % YIELD_COUNT;
+    if (i == 0)
+      hpx_thread_yield();
   }
   return HPX_SUCCESS;
 }
@@ -200,7 +206,8 @@ _recv_queue_progress_action(void *args) {
   int flag;
   photon_rid request;
   //  int send_rank = -1;
-  do {
+  int i = 0;
+  while (!shutdown) {
     /*
     send_rank++;
     send_rank = send_rank % hpx_get_num_ranks();
@@ -210,7 +217,7 @@ _recv_queue_progress_action(void *args) {
     // you want to get completions from any source, even yourself
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag > 0) {
-      dbg_printf("Received recv completion %" PRIx64 "\n", request);
+      dbg_printf("Received recv completion for future at %" PRIx64 "\n", request);
     }
     if (flag && request != 0) {
       _netfuture_t *f = (_netfuture_t*)request;
@@ -224,8 +231,10 @@ _recv_queue_progress_action(void *args) {
       }
       lco_unlock(&f->lco);
     } // end if
-    hpx_thread_yield();
-  } while (1);
+    i = (i + 1) % YIELD_COUNT;
+    if (i == 0)
+      hpx_thread_yield();
+  }
   return HPX_SUCCESS;
 }
 
@@ -241,7 +250,7 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
-  dbg_printf("Initializing futures on rank %d\n", hpx_get_my_rank());
+  //  dbg_printf("Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
   _netfuture_table.curr_index = 0;
   _netfuture_table.curr_capacity = _NETFUTURES_CAPACITY_DEFAULT;
@@ -293,6 +302,10 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   return HPX_SUCCESS;
 }
   
+void hpx_netfutures_fini() {
+  shutdown = true;
+}
+
 hpx_status_t hpx_netfutures_init() {
   hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   if (hpx_get_my_rank() != 0)
@@ -652,6 +665,8 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
   }
   else
     _future_set_with_copy((lco_t*)_netfuture_get_addr(&future_i), size, data);  
+
+  dbg_printf("Done setting to (%d, %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 }
 
 void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco) {
@@ -673,6 +688,7 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
     retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i), _netfuture_table.mem_size);
   }
   _future_get(lco, size, NULL);
+  dbg_printf("Done getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
   return retval;
 }
 

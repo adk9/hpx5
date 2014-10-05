@@ -161,6 +161,7 @@ static int _action_main(args_t *args) {
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
+  hpx_netfutures_fini();
   hpx_shutdown(HPX_SUCCESS);
 }
 
