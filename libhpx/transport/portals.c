@@ -41,6 +41,8 @@ struct _portals_lim {
   ptl_ni_limits_t rlim_max;  // Hard limit (requested)
 };
 
+static int   portals_default_srlimit = 32;
+
 static const uint64_t PORTALS_EVENTQ_SIZE = UINT_MAX;
 static const uint64_t PORTALS_BUFFER_SIZE = (1UL << 20);
 
@@ -231,6 +233,14 @@ static void _barrier(void) {
 /// Return the size of a Portals request.
 /// ----------------------------------------------------------------------------
 static int _request_size(void) {
+  return 0;
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Return the size of the Portals registration key.
+/// ----------------------------------------------------------------------------
+static int _rkey_size(void) {
   return 0;
 }
 
@@ -461,8 +471,16 @@ static void _progress(transport_class_t *t, bool flush) {
   hpx_lco_delete(and, HPX_NULL);
 }
 
+static uint32_t _get_send_limit(transport_class_t *t) {
+  return t->req_limit;
+}
 
-transport_class_t *transport_new_portals(void) {
+static uint32_t _get_recv_limit(transport_class_t *t) {
+  return t->req_limit;
+}
+
+
+transport_class_t *transport_new_portals(uint32_t req_limit) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
   }
@@ -473,8 +491,11 @@ transport_class_t *transport_new_portals(void) {
   portals->class.id             = _id;
   portals->class.barrier        = _barrier;
   portals->class.request_size   = _request_size;
+  portals->class.rkey_size      = _rkey_size;
   portals->class.request_cancel = _request_cancel;
   portals->class.adjust_size    = _adjust_size;
+  portals->class.get_send_limit = _get_send_limit;
+  portals->class.get_recv_limit = _get_recv_limit;
 
   portals->class.delete         = _delete;
   portals->class.pin            = _pin;
@@ -487,6 +508,8 @@ transport_class_t *transport_new_portals(void) {
   portals->class.test           = _test;
   portals->class.testsome       = NULL;
   portals->class.progress       = _progress;
+  portals->class.req_limit      = req_limit == 0 ? portals_default_srlimit : req_limit;
+  portals->class.rkey_table     = NULL;
 
   portals->interface            = PTL_INVALID_HANDLE;
   portals->sendq                = PTL_INVALID_HANDLE;

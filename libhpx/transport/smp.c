@@ -28,11 +28,17 @@ static const char *_id(void) {
   return "SMP";
 }
 
+
 static void _barrier(void) {
 }
 
 
 static int _request_size(void) {
+  return 0;
+}
+
+
+static int _rkey_size(void) {
   return 0;
 }
 
@@ -89,6 +95,7 @@ static transport_class_t _smp = {
   .id             = _id,
   .barrier        = _barrier,
   .request_size   = _request_size,
+  .rkey_size      = _rkey_size,
   .request_cancel = _request_cancel,
   .adjust_size    = _adjust_size,
   .delete         = _delete,
@@ -99,7 +106,9 @@ static transport_class_t _smp = {
   .recv           = _recv,
   .test           = _test,
   .testsome       = NULL,
-  .progress       = _progress
+  .progress       = _progress,
+  .req_limit      = 0,
+  .rkey_table     = NULL
 };
 
 

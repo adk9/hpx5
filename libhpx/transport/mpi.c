@@ -59,6 +59,14 @@ static int _mpi_request_size(void) {
 }
 
 
+/// ----------------------------------------------------------------------------
+/// Return the size of the transport-specific registration key.
+/// ----------------------------------------------------------------------------
+static int _mpi_rkey_size(void) {
+  return 0;
+}
+
+
 static int _mpi_adjust_size(int size) {
   return size;
 }
@@ -232,6 +240,7 @@ transport_class_t *transport_new_mpi(uint32_t req_limit) {
   mpi->class.id             = _mpi_id;
   mpi->class.barrier        = _mpi_barrier;
   mpi->class.request_size   = _mpi_request_size;
+  mpi->class.rkey_size      = _mpi_rkey_size;
   mpi->class.request_cancel = _mpi_request_cancel;
   mpi->class.adjust_size    = _mpi_adjust_size;
   mpi->class.get_send_limit = _mpi_get_send_limit;
@@ -250,6 +259,7 @@ transport_class_t *transport_new_mpi(uint32_t req_limit) {
   mpi->class.progress       = _mpi_progress;
 
   mpi->class.req_limit      = req_limit == 0 ? UINT16_MAX : req_limit;
+  mpi->class.rkey_table     = NULL;
 
   mpi->progress             = network_progress_new(&mpi->class);
   if (!mpi->progress) {
