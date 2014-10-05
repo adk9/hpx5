@@ -17,6 +17,12 @@
 
 #define TRANSPORT_ANY_SOURCE -1
 
+typedef enum {
+  TRANSPORT_FLUSH = 0,
+  TRANSPORT_CANCEL,
+  TRANSPORT_POLL
+} transport_op_t;
+
 // A transport-specific registration key.
 typedef struct rkey rkey_t;
 struct rkey {
@@ -90,7 +96,7 @@ struct transport_class {
   int (*testsome)(transport_class_t *t, int n, char requests[], int complete[])
     HPX_NON_NULL(1, 3, 4);
 
-  void (*progress)(transport_class_t *t, bool flush)
+  void (*progress)(transport_class_t *t, transport_op_t op)
     HPX_NON_NULL(1);
 
   uint32_t req_limit;
@@ -172,8 +178,8 @@ transport_recv(transport_class_t *t, int src, void *buffer, size_t n, void *r) {
 
 
 inline static void
-transport_progress(transport_class_t *t, bool flush) {
-  t->progress(t, flush);
+transport_progress(transport_class_t *t, transport_op_t op) {
+  t->progress(t, op);
 }
 
 

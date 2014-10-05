@@ -127,8 +127,6 @@ _delete(transport_class_t *transport)
 static int
 _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
-  dbg_log_trans("pinning %lu bytes at %p\n", len, buffer);
-
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("photon: could not pin buffer of size %lu.\n", len);
@@ -136,7 +134,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
   rkey_t *r = new_rkey(transport, b);
   if (!r)
     dbg_error("photon: could not allocate registration key.\n");
-
+  
   int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
   if (rc != PHOTON_OK)
     dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
@@ -157,7 +155,6 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
 static void
 _unpin(transport_class_t *transport, const void* buffer, size_t len)
 {
-  dbg_log_trans("unpinning %lu bytes at %p\n", len, buffer);
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
     dbg_error("photon: could not unpin buffer %p of size %lu.\n", buffer, len);
@@ -372,13 +369,30 @@ _test(transport_class_t *t, void *request, int *success)
 
 
 static void
-_progress(transport_class_t *t, bool flush)
+_progress(transport_class_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
-  if (flush)
-    network_progress_flush(photon->progress);
-  else
+  switch (op) {
+    printf("op: %d\n", op);
+  case TRANSPORT_POLL:
     network_progress_poll(photon->progress);
+    break;
+  case TRANSPORT_CANCEL:
+    {
+      // probe a few times to catch any oustanding CQ events
+      int i, flag;
+      photon_rid req;
+      for (i=0; i<20; i++) {
+	photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_EVQ);
+      }
+    }
+    break;
+  case TRANSPORT_FLUSH:
+    network_progress_flush(photon->progress);
+    break;
+  default:
+    break;
+  }
 }
 
 

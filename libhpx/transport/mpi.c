@@ -206,12 +206,20 @@ static int _mpi_test(transport_class_t *t, void *request, int *success) {
   return HPX_SUCCESS;
 }
 
-static void _mpi_progress(transport_class_t *t, bool flush) {
+static void _mpi_progress(transport_class_t *t, transport_op_t op) {
   mpi_t *mpi = (mpi_t*)t;
-  if (flush)
+  switch (op) {
+  case TRANSPORT_FLUSH:
     network_progress_flush(mpi->progress);
-  else
+    break;
+  case TRANSPORT_POLL:
     network_progress_poll(mpi->progress);
+    break;
+  case TRANSPORT_CANCEL:
+    break;
+  default:
+    break;
+  }
 }
 
 static uint32_t _mpi_get_send_limit(transport_class_t *t) {
