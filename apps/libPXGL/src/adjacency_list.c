@@ -239,11 +239,8 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
 hpx_action_t free_adj_list;
 int free_adj_list_action(void *arg) {
-  const hpx_addr_t target = hpx_thread_current_target();
-
   hpx_gas_free(count_array, HPX_NULL);
   hpx_gas_free(index_array, HPX_NULL);
-  hpx_gas_free(target, HPX_NULL);
   return HPX_SUCCESS;
 }
 
