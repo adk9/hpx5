@@ -28,7 +28,7 @@ static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t dist
 
 typedef struct {
   adj_list_t graph;
-  uint64_t block_size;
+  uint32_t block_size;
   uint64_t distance;
 #ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
