@@ -143,6 +143,7 @@ static int _action_main(void *args) {
     double latency = elapsed / loop;
     fprintf(test_log, "%*f\n", FIELD_WIDTH, latency);
   }
+  hpx_netfutures_fini();
   hpx_shutdown(HPX_SUCCESS);
 }
 /**
