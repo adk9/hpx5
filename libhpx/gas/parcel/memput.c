@@ -19,9 +19,9 @@
 ///
 
 #include <string.h>
-#include <hpx/attributes.h>
 #include <hpx/hpx.h>
 #include "libhpx/debug.h"
+#include "emulation.h"
 
 static hpx_action_t _memput_request = 0;
 
@@ -40,8 +40,8 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   _memput_request = HPX_REGISTER_ACTION(_memput_request_action);
 }
 
-int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
-                   hpx_addr_t lsync, hpx_addr_t rsync) {
+int parcel_memput(hpx_addr_t to, const void *from, size_t size,
+                  hpx_addr_t lsync, hpx_addr_t rsync) {
   int e = hpx_call_async(to, _memput_request, from, size, lsync, rsync);
   dbg_check(e, "failed to initiate a memput request.\n");
   return e;
