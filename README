@@ -40,3 +40,15 @@ try running pingpong in hpx/examples:
 hpx can benefit from allocators like jemalloc or tcmalloc, try preloading one:
 "LD_PRELOAD=libjemalloc.so ./fibonacci"
 "LD_PRELOAD=libtcmalloc.so ./fibonacci"
+
+Running test directory
+----------------------
+To run the unit and performance test in tests directory:
+
+"./configure --with-mpi --with-photon --with-check --enable-testsuite"
+* make
+
+Grab 2 nodes and 
+* make check
+
+
