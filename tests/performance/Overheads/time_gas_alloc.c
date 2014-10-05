@@ -5,7 +5,7 @@
 #include "hpx/hpx.h"
 #include "common.h"
 
-#define MAX_BYTES        1073741824 //1gb
+#define MAX_BYTES        1024*1024*100
 #define SKIP_LARGE       10
 #define LOOP_LARGE       100
 

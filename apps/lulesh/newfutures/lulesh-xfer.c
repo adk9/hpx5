@@ -12,11 +12,14 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
   int           nz = domain->sizeZ + 1;
   for (i = 0; i < nsTF; ++i) {
     destLocalIdx = sendTF[i];
-    double *data = malloc(BUFSZ[destLocalIdx]);
+    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
+    double *data;
+    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
+    assert(pin_success);
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
-    hpx_lco_netfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
-    free(data);
+    hpx_gas_unpin(data_addr);
+    hpx_lco_netfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
   // wait for incoming data
@@ -27,11 +30,13 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     int srcLocalIdx = recvTF[i];
     int fromDomain = OFFSET[srcLocalIdx] + domain->rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
-    double *src = malloc(BUFSZ[srcRemoteIdx]);
-    hpx_lco_netfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx], src);
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx]);
+    double *src;
+    const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
+    assert(pin_success);
     recv_t unpack = RECEIVER[srcLocalIdx];
     unpack(nx, ny, nz, src, domain->nodalMass, 0);
-    free(src);
+    hpx_gas_unpin(src_addr);
   }
 }
 
@@ -52,16 +57,18 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
   for (i = 0; i < nsTF; i++) {
     int destLocalIdx = sendTF[i];
     int sendcnt = XFERCNT[destLocalIdx];
-    double *data = malloc(BUFSZ[destLocalIdx]);
+    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
+    double *data;
+    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
     send_t pack = SENDER[destLocalIdx];
 
     pack(nx, ny, nz, domain->fx, data);
     pack(nx, ny, nz, domain->fy, data + sendcnt);
     pack(nx, ny, nz, domain->fz, data + sendcnt*2);
 
-    hpx_lco_netfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data, HPX_NULL, HPX_NULL);
+    hpx_gas_unpin(data_addr);
 
-    free(data);
+    hpx_lco_netfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   } 
 
   // wait for incoming data
@@ -72,8 +79,10 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
     int srcLocalIdx = recvTF[i];
     int fromDomain = OFFSET[srcLocalIdx] + rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
-    double *src = malloc(BUFSZ[srcRemoteIdx]);
-    hpx_lco_netfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx], src);
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx]);
+    double *src;
+    const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
+    assert(hpx_pin_success);
     int recvcnt = XFERCNT[srcLocalIdx];
     recv_t unpack = RECEIVER[srcLocalIdx];
 
@@ -81,8 +90,8 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
     unpack(nx, ny, nz, src + recvcnt, domain->fy, 0);
     unpack(nx, ny, nz, src + recvcnt*2, domain->fz, 0);
 
-    // free the buffer
-    free(src);
+    // unpin the buffer
+    hpx_gas_unpin(src_addr);
   }
 
 

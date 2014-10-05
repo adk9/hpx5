@@ -31,9 +31,10 @@
 #include "lco.h"
 #include "cvar.h"
 
-#define dbg_printf(...)
+//#define dbg_printf(...)
+#define dbg_printf printf
 
-#define _NETFUTURES_MEMORY_DEFAULT 1024*1024*1024
+#define _NETFUTURES_MEMORY_DEFAULT 1024*1024*100
 #define _NETFUTURES_CAPACITY_DEFAULT 10000
 #define PHOTON_NOWAIT_TAG 0
 #define FT_SHARED 1<<3
@@ -106,14 +107,11 @@ typedef struct {
   int curr_capacity;
   size_t curr_offset; // a new future is allocated at here
   
-  size_t ghost_offset; // sync add
-
   // must be locked for write only
   struct photon_buffer_t *buffers; // one for each rank
   void* base;
-  void *ghosts_base;
-
-
+  hpx_addr_t base_gas;
+  size_t mem_size;
   _fut_info_t *fut_infos;
   
 } _netfuture_table_t;
@@ -247,14 +245,16 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   _netfuture_table.curr_index = 0;
   _netfuture_table.curr_capacity = _NETFUTURES_CAPACITY_DEFAULT;
   _netfuture_table.curr_offset = 0;
-  _netfuture_table.ghost_offset = 0;
   _netfuture_table.buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
+  /*
   _netfuture_table.base = malloc(_NETFUTURES_MEMORY_DEFAULT);
   photon_register_buffer(_netfuture_table.base, _NETFUTURES_MEMORY_DEFAULT);
-  _netfuture_table.ghosts_base = malloc(_NETFUTURES_MEMORY_DEFAULT);
-  photon_register_buffer(_netfuture_table.ghosts_base, _NETFUTURES_MEMORY_DEFAULT);
-
+  */
+  _netfuture_table.mem_size = _NETFUTURES_MEMORY_DEFAULT;
+  _netfuture_table.base_gas = hpx_gas_alloc(_NETFUTURES_MEMORY_DEFAULT);
+  if (!hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base))
+    return HPX_ERROR;
 
   struct  photon_buffer_t buffer;
   buffer.addr = (uintptr_t)_netfuture_table.base;
@@ -505,7 +505,7 @@ struct new_all_args {
   hpx_addr_t allg;
 };
 
-int update_table(hpx_netfuture_t *f) {
+int _update_table(hpx_netfuture_t *f) {
   _netfuture_table.fut_infos[f->table_index].table_index = f->table_index;
   _netfuture_table.fut_infos[f->table_index].offset = f->base_offset;
 
@@ -514,16 +514,22 @@ int update_table(hpx_netfuture_t *f) {
   return HPX_SUCCESS;
 }
 
-static int
-_add_future_to_table_action(hpx_netfuture_t *f) {
-  _table_lock();
-  hpx_status_t status = update_table(f);
-
+int _add_futures(hpx_netfuture_t *f) {
   for (int i = 0; i < _netfutures_at_rank(f); i ++) {
     hpx_netfuture_t fi = hpx_lco_netfuture_at(*f, hpx_get_my_rank());
     _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
     _future_init(nf, f->size, false);
+    dbg_printf("Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
   }
+  return HPX_SUCCESS;
+}
+
+static int
+_add_future_to_table_action(hpx_netfuture_t *f) {
+  _table_lock();
+  hpx_status_t status = _update_table(f);
+
+  _add_futures(f);
 
   _table_unlock();
   return status;
@@ -541,19 +547,15 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
   f.size = size;
   f.count = n;
 
-  update_table(&f);
+  _update_table(&f);
+
+  _add_futures(&f);
 
   _table_unlock();
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
   for (int i = 1; i < hpx_get_num_ranks(); i++)
     hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
-
-  for (int i = 0; i < _netfutures_at_rank(&f); i ++) {
-    hpx_netfuture_t fi = hpx_lco_netfuture_at(f, hpx_get_my_rank());
-    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + size) * i;
-    _future_init(nf, size, false);
-  }
 
   hpx_lco_wait(done);
 
@@ -618,8 +620,11 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   }
 }
 
-void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, void *data,
+void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
 			     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+  void *data;
+  assert(hpx_gas_try_pin(value, &data)); // TODO: unpin this
+
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(future, id);
 
   dbg_printf("Putting to (%d, %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
@@ -637,7 +642,8 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, void *
 void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco) {
 }
 
-hpx_status_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size, void *value) {
+hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
+  hpx_addr_t retval = HPX_NULL;
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(base, i);
 
   lco_t *lco;
@@ -649,11 +655,11 @@ hpx_status_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size, v
   }
   else {
     lco = (lco_t*)_netfuture_get_addr(&future_i);
+    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i), _netfuture_table.mem_size);
   }
-  return _future_get(lco, size, value);
+  _future_get(lco, size, NULL);
+  return retval;
 }
-
-
 
 // this is a highly suboptimal implementation
 // ideally this would be done more like wait_all is implemented

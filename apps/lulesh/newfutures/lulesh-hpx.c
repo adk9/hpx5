@@ -160,6 +160,7 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
+  hpx_netfutures_init();
   hpx_netfuture_t sbn1 = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_netfuture_t sbn3 = hpx_lco_netfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
