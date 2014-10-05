@@ -14,6 +14,17 @@ typedef uint32_t count_t;
 uint32_t _count_array_block_size = 0;
 uint32_t _index_array_block_size = 0;
 
+static hpx_action_t _set_count_array_bsize;
+static int _set_count_array_bsize_action(const uint32_t *arg) {
+  _count_array_block_size = *arg;
+  return HPX_SUCCESS;
+}
+
+static hpx_action_t _set_index_array_bsize;
+static int _set_index_array_bsize_action(const uint32_t *arg) {
+  _index_array_block_size = *arg;
+  return HPX_SUCCESS;
+}
 
 // Action to increment count in the count array
 static hpx_action_t _increment_count;
@@ -173,6 +184,11 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Allocate the count array for creating an edge histogram
   _count_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(count_t);
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_bcast(_set_count_array_bsize, &_count_array_block_size, sizeof(uint32_t), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+
   const hpx_addr_t count_array = hpx_gas_global_calloc(HPX_LOCALITIES, _count_array_block_size);
 
   // Count the number of edges per source vertex
@@ -186,6 +202,11 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Counting is finished here. Now allocate the index array.
   _index_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
+  sync = hpx_lco_future_new(0);
+  hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(uint32_t), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+
   const hpx_addr_t index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
 
   // Allocate and populate the adjacency list.
@@ -215,6 +236,8 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 static __attribute__((constructor)) void _adj_list_register_actions() {
   adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
   _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
+  _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
+  _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
   _count_edge              = HPX_REGISTER_ACTION(_count_edge_action);
   _init_vertex             = HPX_REGISTER_ACTION(_init_vertex_action);
   _alloc_vertex            = HPX_REGISTER_ACTION(_alloc_vertex_action);
