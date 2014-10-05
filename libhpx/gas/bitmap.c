@@ -194,7 +194,7 @@ int bitmap_reserve(bitmap_t *bitmap, const uint32_t n, const uint32_t align,
   const uint32_t abs = bitmap->min * BITS_PER_WORD + offset + relative;
   const uint32_t end = abs + n;
   assert(abs % align == 0);
-  DEBUG_IF (end / BITS_PER_WORD >= bitmap->nwords) {
+  if (end / BITS_PER_WORD >= bitmap->nwords) {
     dbg_error("application ran out of global address space. This space is used\n"
               "for all global allocation, as well as all stacks and parcel\n"
               "data. Try adjusting your configuration.\n");
