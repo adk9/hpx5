@@ -127,6 +127,8 @@ _delete(transport_class_t *transport)
 static int
 _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
+  dbg_log_trans("pinning %lu bytes at %p\n", len, buffer);
+
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("photon: could not pin buffer of size %lu.\n", len);
@@ -134,7 +136,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
   rkey_t *r = new_rkey(transport, b);
   if (!r)
     dbg_error("photon: could not allocate registration key.\n");
-  
+
   int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
   if (rc != PHOTON_OK)
     dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
@@ -155,6 +157,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
 static void
 _unpin(transport_class_t *transport, const void* buffer, size_t len)
 {
+  dbg_log_trans("unpinning %lu bytes at %p\n", len, buffer);
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
     dbg_error("photon: could not unpin buffer %p of size %lu.\n", buffer, len);
