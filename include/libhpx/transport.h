@@ -17,6 +17,13 @@
 
 #define TRANSPORT_ANY_SOURCE -1
 
+// A transport-specific registration key.
+typedef struct rkey rkey_t;
+struct rkey {
+  char *base;
+  char  rkey[];
+};
+
 typedef struct transport_class transport_class_t;
 
 struct transport_class {
@@ -24,6 +31,8 @@ struct transport_class {
   void (*barrier)(void);
 
   int (*request_size)(void);
+
+  int (*rkey_size)(void);
 
   int (*request_cancel)(void *request);
 
@@ -85,14 +94,17 @@ struct transport_class {
     HPX_NON_NULL(1);
 
   uint32_t req_limit;
+
+  rkey_t *rkey_table;
 };
 
 
-HPX_INTERNAL transport_class_t *transport_new_photon(uint32_t);
-HPX_INTERNAL transport_class_t *transport_new_mpi(uint32_t);
-HPX_INTERNAL transport_class_t *transport_new_portals(uint32_t);
-HPX_INTERNAL transport_class_t *transport_new_smp(uint32_t);
+HPX_INTERNAL transport_class_t *transport_new_photon(uint32_t req_limit);
+HPX_INTERNAL transport_class_t *transport_new_mpi(uint32_t req_limit);
+HPX_INTERNAL transport_class_t *transport_new_portals(uint32_t req_limit);
+HPX_INTERNAL transport_class_t *transport_new_smp(uint32_t req_limit);
 HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport, uint32_t req_limit);
+
 
 
 inline static const char *
@@ -113,6 +125,12 @@ inline static hpx_transport_t transport_type(transport_class_t *t) {
 inline static int
 transport_request_size(const transport_class_t *t) {
   return t->request_size();
+}
+
+
+inline static int
+transport_rkey_size(const transport_class_t *t) {
+  return t->rkey_size();
 }
 
 

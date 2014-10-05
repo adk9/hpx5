@@ -26,13 +26,13 @@ struct request {
 
 typedef struct progress progress_t;
 struct progress {
-  request_t         *free;              // request freelist
-  uint32_t             psend_limit;       //
-  uint32_t             npsends;           //
-  request_t         *pending_sends;     // outstanding send requests
-  uint32_t             precv_limit;       //
-  uint32_t             nprecvs;           //
-  request_t         *pending_recvs;     // outstanding recv requests
+  request_t              *free;       // request freelist
+  uint32_t         psend_limit;       //
+  uint32_t             npsends;       //
+  request_t     *pending_sends;       // outstanding send requests
+  uint32_t         precv_limit;       //
+  uint32_t             nprecvs;       //
+  request_t     *pending_recvs;       // outstanding recv requests
 };
 
 
