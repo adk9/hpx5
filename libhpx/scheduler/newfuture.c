@@ -522,7 +522,8 @@ _add_future_to_table_action(hpx_newfuture_t *f) {
   hpx_status_t status = update_table(f);
 
   for (int i = 0; i < _newfutures_at_rank(f); i ++) {
-    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(f) + (sizeof(_newfuture_t) + f->size) * i;
+    hpx_newfuture_t fi = hpx_lco_newfuture_at(*f, hpx_get_my_rank());
+    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(&fi) + (sizeof(_newfuture_t) + fi.size) * i;
     _future_init(nf, f->size, false);
   }
 
@@ -551,7 +552,8 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
     hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
 
   for (int i = 0; i < _newfutures_at_rank(&f); i ++) {
-    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(&f) + (sizeof(_newfuture_t) + size) * i;
+    hpx_newfuture_t fi = hpx_lco_newfuture_at(f, hpx_get_my_rank());
+    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(&fi) + (sizeof(_newfuture_t) + size) * i;
     _future_init(nf, size, false);
   }
 
