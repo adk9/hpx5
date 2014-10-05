@@ -96,7 +96,7 @@ START_TEST (test_libhpx_threadCreate)
     strcpy(init->message, "Thread creation test");
 
     // Set the target address and action for the parcel
-    hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(initBuffer_t) * t));
+    hpx_parcel_set_target(p, hpx_addr_add(addr, sizeof(initBuffer_t) * t, sizeof(initBuffer_t)));
     hpx_parcel_set_action(p, t05_initData);
 
     // Set the continuation target and action for parcel

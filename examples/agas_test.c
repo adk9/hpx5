@@ -38,7 +38,7 @@ static int get_rank_action(void *args) {
 static int root_action(void *args) {
   printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
-  hpx_addr_t other = hpx_lco_future_array_at(base, 1);
+  hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(int), 1);
 
   int r = 0;
   hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
@@ -51,9 +51,7 @@ static int root_action(void *args) {
 
   hpx_addr_t done = hpx_lco_future_new(0);
   // move address to our locality.
-  printf("initiating AGAS move from (%lu,%u,%u) to (%lu,%u,%u).\n",
-         other.offset, other.base_id, other.block_bytes,
-         HPX_HERE.offset, HPX_HERE.base_id, HPX_HERE.block_bytes);
+  printf("initiating AGAS move from (%lu) to (%lu).\n", other, HPX_HERE);
   hpx_gas_move(other, HPX_HERE, done);
   if (hpx_lco_wait(done) != HPX_SUCCESS)
     printf("error in hpx_move().\n");

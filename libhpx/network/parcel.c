@@ -28,8 +28,8 @@
 
 #include "libhpx/action.h"
 #include "libsync/sync.h"
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -232,21 +232,18 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu,%u,%u) => %s@(%lu,%u,%u)\n",
+    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
                    p->pid, p->credit, action_get_key(p->action),
-                   hpx_parcel_get_data(p), p->size, p->target.offset,
-                   p->target.base_id, p->target.block_bytes,
-                   action_get_key(p->c_action), p->c_target.offset,
-                   p->c_target.base_id, p->c_target.block_bytes);
+                   hpx_parcel_get_data(p), p->size, p->target,
+                   action_get_key(p->c_action), p->c_target);
   } else {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu,%u,%u)\n",
+    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu)\n",
                    p->pid,  p->credit, action_get_key(p->action),
-                   hpx_parcel_get_data(p), p->size, p->target.offset,
-                   p->target.base_id, p->target.block_bytes);
+                   hpx_parcel_get_data(p), p->size, p->target);
   }
 
   // do a local send through loopback
-  bool local = (btt_owner(here->btt, p->target) == here->rank);
+  bool local = (gas_owner_of(here->gas, p->target) == here->rank);
   if (local) {
     scheduler_spawn(p);
     return;

@@ -55,8 +55,16 @@
 /// From stack overflow.
 ///
 /// http://stackoverflow.com/questions/3272424/compute-fast-log-base-2-ceiling
-static inline uint32_t ceil_log2_32(uint32_t val){
+static inline uint32_t ceil_log2_32(uint32_t val) {
   return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
+}
+
+static inline uint32_t ceil_div_32(uint32_t num, uint32_t denom) {
+  return (num / denom) + ((num % denom) ? 1 : 0);
+}
+
+static inline uint64_t ceil_div_64(uint64_t num, uint64_t denom) {
+  return (num / denom) + ((num % denom) ? 1 : 0);
 }
 
 #endif // HPX_BUILTINS_H

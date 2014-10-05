@@ -15,6 +15,7 @@
 #endif
 
 #include <limits.h>
+#include <string.h>
 #include <hpx/hpx.h>
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -27,10 +28,10 @@
 #include "gva.h"
 #include "heap.h"
 #include "pgas.h"
+#include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 heap_t *global_heap = NULL;
-
 
 static void _pgas_delete(gas_class_t *gas) {
   if (global_heap) {
@@ -45,43 +46,53 @@ static bool _pgas_is_global(gas_class_t *gas, void *addr) {
 }
 
 static uint32_t _pgas_locality_of(hpx_addr_t gva) {
-  return pgas_gva_locality_of(gva.offset, here->ranks);
+  return pgas_gva_locality_of((pgas_gva_t)gva, here->ranks);
 }
 
-static bool _check_cyclic(hpx_addr_t gva, uint32_t *bsize) {
-  bool cyclic = heap_offset_is_cyclic(global_heap, gva.offset);
-  if (cyclic)
-    *bsize = 1;
-  return cyclic;
+static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
+  bool cyclic = heap_offset_is_cyclic(global_heap, (uint64_t)gva);
+
+  if (cyclic && !bsize) {
+    dbg_error("heap offset %lu is cyclic but user defined block size 0\n", gva);
+  }
+
+  if (!cyclic && bsize) {
+    dbg_log_gas("heap offset %lu specific bsize %u suppressed\n", gva, bsize);
+    return 0;
+  }
+
+  return pgas_fit_log2_32(bsize);
 }
 
 static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  DEBUG_IF (!bsize && heap_offset_is_cyclic(global_heap, gva.offset)) {
+  DEBUG_IF (!bsize && heap_offset_is_cyclic(global_heap, (uint64_t)gva)) {
     dbg_error("invalid block size for cyclic address\n");
   }
 
-  _check_cyclic(gva, &bsize);
-  return pgas_gva_offset_of(gva.offset, here->ranks, bsize);
+  bsize = _check_cyclic(gva, bsize);
+  return pgas_gva_offset_of((pgas_gva_t)gva, here->ranks, bsize);
 }
 
 static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
-  _check_cyclic(gva, &bsize);
-  return pgas_gva_phase_of(gva.offset, bsize);
+  bsize = _check_cyclic(gva, bsize);
+  return pgas_gva_phase_of((pgas_gva_t)gva, bsize);
 }
 
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  bool clhs = _check_cyclic(lhs, &bsize);
-  bool crhs = _check_cyclic(rhs, &bsize);
-  DEBUG_IF (clhs != crhs) {
+  const uint32_t lbs = _check_cyclic(lhs, bsize);
+  const uint32_t rbs = _check_cyclic(rhs, bsize);
+  DEBUG_IF (lbs != rbs) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return pgas_gva_sub(lhs.offset, rhs.offset, here->ranks, bsize);
+  return pgas_gva_sub((pgas_gva_t)lhs, (pgas_gva_t)rhs, here->ranks, lbs);
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  _check_cyclic(gva, &bsize);
-  hpx_addr_t gva1 = HPX_ADDR_INIT(pgas_gva_add(gva.offset, bytes, here->ranks,
-                                               bsize), 0, 0);
+  hpx_addr_t gva1 = HPX_NULL;
+  if (!_check_cyclic(gva, bsize))
+    gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks);
+  else
+    gva1 = pgas_gva_add_cyclic((pgas_gva_t)gva, bytes, here->ranks, bsize);
   return gva1;
 }
 
@@ -96,6 +107,14 @@ static hpx_addr_t _pgas_lva_to_gva(void *lva) {
   const uint32_t rank = here->rank;
   const uint32_t ranks = here->ranks;
   const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_gva_to_hpx_addr(gva);
+}
+
+
+// Compute a global address for a locality.
+hpx_addr_t _pgas_there(hpx_locality_t i) {
+  const uint32_t ranks = here->ranks;
+  const pgas_gva_t gva = pgas_gva_from_heap_offset(i, 0, ranks);
   return pgas_gva_to_hpx_addr(gva);
 }
 
@@ -124,14 +143,14 @@ static void *_pgas_gva_to_lva(hpx_addr_t addr) {
   void *local = NULL;
   bool is_local = pgas_try_pin(addr, &local);
   DEBUG_IF (!is_local) {
-    dbg_error("%lu is not local to %u\n", addr.offset, here->rank);
+    dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
   return local;
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
   DEBUG_IF(!pgas_try_pin(addr, NULL)) {
-    dbg_error("%lu is not local to %u\n", addr.offset, here->rank);
+    dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
 }
 
@@ -159,7 +178,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc,
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
                         &args, sizeof(args), &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
   return addr;
@@ -209,6 +228,86 @@ static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
+static uint32_t _pgas_owner_of(hpx_addr_t addr) {
+  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+  const uint32_t ranks = here->ranks;
+  return pgas_gva_locality_of(gva, ranks);
+}
+
+
+static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
+                               hpx_addr_t sync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  const uint32_t rank = here->rank;
+  const uint32_t ranks = here->ranks;
+
+  if (pgas_gva_locality_of(to, ranks) == rank &&
+      pgas_gva_locality_of(from, ranks) == rank) {
+    void *lto = gva_to_lva(to);
+    const void *lfrom = gva_to_lva(from);
+    memcpy(lto, lfrom, size);
+  }
+  else {
+    return parcel_memcpy(to, from, size, sync);
+  }
+
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
+                               hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  const uint32_t rank = here->rank;
+  const uint32_t ranks = here->ranks;
+
+  if (pgas_gva_locality_of(to, ranks) == rank) {
+    void *lto = gva_to_lva(to);
+    memcpy(lto, from, size);
+  }
+  else {
+    return parcel_memput(to, from, size, lsync, rsync);
+  }
+
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
+                               hpx_addr_t lsync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  const uint32_t rank = here->rank;
+  const uint32_t ranks = here->ranks;
+
+  if (pgas_gva_locality_of(from, ranks) == rank) {
+    const void *lfrom = gva_to_lva(from);
+    memcpy(to, lfrom, size);
+  }
+  else {
+    return parcel_memget(to, from, size, lsync);
+  }
+
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+}
+
 static gas_class_t _pgas_vtable = {
   .type   = HPX_GAS_PGAS,
   .delete = _pgas_delete,
@@ -240,17 +339,27 @@ static gas_class_t _pgas_vtable = {
   .add           = _pgas_add,
   .lva_to_gva    = _pgas_lva_to_gva,
   .gva_to_lva    = _pgas_gva_to_lva,
+  .there         = _pgas_there,
   .try_pin       = pgas_try_pin,
   .unpin         = _pgas_unpin,
   .cyclic_alloc  = _pgas_gas_cyclic_alloc,
   .cyclic_calloc = _pgas_gas_cyclic_calloc,
   .local_alloc   = _pgas_gas_alloc,
-  .free          = _pgas_gas_free
-
+  .free          = _pgas_gas_free,
+  .move          = _pgas_move,
+  .memget        = _pgas_parcel_memget,
+  .memput        = _pgas_parcel_memput,
+  .memcpy        = _pgas_parcel_memcpy,
+  .owner_of      = _pgas_owner_of
 };
 
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
                           struct transport_class *transport) {
+  if (here->ranks == 1) {
+    dbg_log_gas("PGAS requires at least two ranks\n");
+    return NULL;
+  }
+
   if (global_heap)
     return &_pgas_vtable;
 

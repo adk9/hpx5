@@ -64,29 +64,32 @@ uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize) {
 pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
                                      uint32_t ranks) {
   // make sure the locality is in the expected range
-  DEBUG_IF (ceil_log2_32(ranks) < ceil_log2_32(locality)) {
+  DEBUG_IF (ranks < locality) {
+    assert(ranks > 0);
     dbg_error("locality %u must be less than %u\n", locality,
-              1 << ceil_log2_32(ranks));
+              pgas_fit_log2_32(ranks));
   }
 
   // make sure that the heap offset is in the expected range (everyone has the
   // same size, so the locality is irrelevant here)
   DEBUG_IF (!heap_offset_inbounds(global_heap, heap_offset)) {
+    dbg_wait();
     dbg_error("heap offset %lu is out of range\n", heap_offset);
   }
 
   // construct the gva by shifting the locality into the most significant bits
   // of the gva and then adding in the heap offset
   const uint32_t shift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
-  return ((uint64_t)locality << shift) + heap_offset;
+  const uint64_t high = ((uint64_t)locality) << shift;
+  return high + heap_offset;
 }
 
 pgas_gva_t pgas_gva_from_hpx_addr(hpx_addr_t addr) {
-  return addr.offset;
+  return (pgas_gva_t)addr;
 }
 
 hpx_addr_t pgas_gva_to_hpx_addr(pgas_gva_t gva) {
-  const hpx_addr_t addr = HPX_ADDR_INIT(gva, 0, 0);
+  const hpx_addr_t addr = (hpx_addr_t)gva;
   return addr;
 }
 
@@ -95,13 +98,20 @@ pgas_gva_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
                                 uint32_t phase, uint32_t ranks, uint32_t bsize)
 {
   // make sure that the phase is in the expected range, locality will be checked
-  DEBUG_IF (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
-    dbg_error("phase %u must be less than %u", phase, 1 << ceil_log2_32(bsize));
+  DEBUG_IF (bsize && phase) {
+    if (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
+      dbg_error("phase %u must be less than %u\n", phase,
+                pgas_fit_log2_32(bsize));
+    }
+  }
+
+  DEBUG_IF (!bsize && phase) {
+    dbg_error("cannot initialize a non-cyclic gva with a phase of %u\n", phase);
   }
 
   // forward to the heap_offset version, by computing the heap offset through a
   // shift of the gva offset
-  const uint32_t shift = ceil_log2_32(bsize);
+  const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
 
   return pgas_gva_from_heap_offset(locality, (offset << shift) + phase, ranks);
 }
@@ -143,7 +153,7 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
     const int64_t dist = doffset * ranks * bsize + dlocality * bsize + dphase;
 
     // make sure we're not crazy
-    DEBUG_IF (pgas_gva_add(lhs, dist, ranks, bsize) != rhs) {
+    DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, ranks, bsize) != rhs) {
       dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
                 lhs, rhs, dist);
     }
@@ -152,8 +162,8 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
 }
 
 /// Perform address arithmetic on a PGAS global address.
-pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
-                        uint32_t bsize) {
+pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
+                               uint32_t bsize) {
   if (!bsize)
     return gva + bytes;
 
@@ -163,5 +173,18 @@ pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
   const uint32_t cycles = (pgas_gva_locality_of(gva, ranks) + blocks) / ranks;
   const uint64_t offset = pgas_gva_offset_of(gva, ranks, bsize) + cycles;
 
-  return pgas_gva_from_triple(locality, offset, phase, ranks, bsize);
+  const pgas_gva_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
+                                               bsize);
+
+  // sanity check
+  const uint32_t nextho = pgas_gva_heap_offset_of(next, ranks);
+  DEBUG_IF (!heap_offset_inbounds(global_heap, nextho)) {
+    dbg_error("computed out of bounds address\n");
+  }
+
+  return next;
+}
+
+pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks) {
+  return gva + bytes;
 }

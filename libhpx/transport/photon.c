@@ -29,6 +29,7 @@
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
 #include "progress.h"
+#include "registration.h"
 
 
 #define PHOTON_DEFAULT_TAG 13
@@ -75,7 +76,17 @@ _barrier(void)
 static int
 _request_size(void)
 {
-  return sizeof(uint64_t);
+  return sizeof(photon_rid);
+}
+
+
+/// ----------------------------------------------------------------------------
+/// Return the size of the Photon registration key.
+/// ----------------------------------------------------------------------------
+static int
+_rkey_size(void)
+{
+  return sizeof(struct photon_buffer_priv_t);
 }
 
 
@@ -119,6 +130,21 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len))
     dbg_error("photon: could not pin buffer of size %lu.\n", len);
+
+  rkey_t *r = new_rkey(transport, b);
+  if (!r)
+    dbg_error("photon: could not allocate registration key.\n");
+  
+  int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
+  if (rc != PHOTON_OK)
+    dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
+              (uintptr_t)b, len);
+
+  assert(!transport->rkey_table);
+  transport->rkey_table = exchange_rkey_table(transport, r);
+  if (!transport->rkey_table)
+    dbg_error("photon: error exchanging metadata with peers.\n");
+
   return 1;
 }
 
@@ -132,6 +158,9 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
     dbg_error("photon: could not unpin buffer %p of size %lu.\n", buffer, len);
+
+  if (transport->rkey_table)
+    free(transport->rkey_table);
 }
 
 
@@ -340,13 +369,30 @@ _test(transport_class_t *t, void *request, int *success)
 
 
 static void
-_progress(transport_class_t *t, bool flush)
+_progress(transport_class_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
-  if (flush)
-    network_progress_flush(photon->progress);
-  else
+  switch (op) {
+    printf("op: %d\n", op);
+  case TRANSPORT_POLL:
     network_progress_poll(photon->progress);
+    break;
+  case TRANSPORT_CANCEL:
+    {
+      request_t **i = &(photon->progress)->pending_sends;
+      while (*i != NULL) {
+	request_t *j = *i;
+	photon_cancel((photon_rid)j->request, 0);
+	*i = j->next;
+      }
+    }
+    break;
+  case TRANSPORT_FLUSH:
+    network_progress_flush(photon->progress);
+    break;
+  default:
+    break;
+  }
 }
 
 
@@ -366,6 +412,7 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   photon->class.id             = _id;
   photon->class.barrier        = _barrier;
   photon->class.request_size   = _request_size;
+  photon->class.rkey_size      = _rkey_size;
   photon->class.request_cancel = _request_cancel;
   photon->class.adjust_size    = _adjust_size;
   photon->class.get_send_limit = _photon_get_send_limit;
@@ -384,6 +431,7 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   photon->class.progress       = _progress;
 
   photon->class.req_limit      = req_limit == 0 ? photon_default_srlimit : req_limit;
+  photon->class.rkey_table     = NULL;
 
   // runtime configuration options
   char* eth_dev;

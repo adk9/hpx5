@@ -10,15 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef PXGL_DIMACS_H
-#define PXGL_DIMACS_H
+#ifndef LIBHPX_TRANSPORT_REGISTRATION_H
+#define LIBHPX_TRANSPORT_REGISTRATION_H
 
 #include "hpx/hpx.h"
-#include "adjacency_list.h"
+#include "libhpx/transport.h"
 
+HPX_INTERNAL rkey_t *new_rkey(transport_class_t *t, char *heap_base)
+  HPX_NON_NULL(1);
 
-// Compute checksum given an adjacency list
-extern hpx_action_t dimacs_checksum;
-extern int dimacs_checksum_action(const uint64_t *const g);
+HPX_INTERNAL rkey_t *exchange_rkey_table(transport_class_t *t, rkey_t *my_rkey)
+  HPX_NON_NULL(1);
 
-#endif // PXGL_DIMACS_H
+#endif // LIBHPX_TRANSPORT_REGISTRATION_H

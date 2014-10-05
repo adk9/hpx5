@@ -102,20 +102,20 @@ typedef struct {
 static hpx_action_t _allgather_setid_action = 0;
 
 /// Deletes a gathering.
-static void _allgather_fini(lco_t *lco)
-{
+static void _allgather_fini(lco_t *lco) {
+  if (!lco)
+    return;
+
   lco_lock(lco);
   _allgather_t *g = (_allgather_t *)lco;
   if (g->value)
     free(g->value);
-  if (g)
-    free(g);
+  global_free(g);
 }
 
 
 /// Handle an error condition.
-static void _allgather_error(lco_t *lco, hpx_status_t code)
-{
+static void _allgather_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
   _allgather_t *g = (_allgather_t *)lco;
   scheduler_signal_error(&g->wait, code);
@@ -123,9 +123,7 @@ static void _allgather_error(lco_t *lco, hpx_status_t code)
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
-static hpx_status_t
-_allgather_get(lco_t *lco, int size, void *out)
-{
+static hpx_status_t _allgather_get(lco_t *lco, int size, void *out) {
   _allgather_t *g = (_allgather_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
@@ -161,16 +159,13 @@ _allgather_get(lco_t *lco, int size, void *out)
 }
 
 // Wait for the gathering, loses the value of the gathering for this round.
-static hpx_status_t
-_allgather_wait(lco_t *lco)
-{
+static hpx_status_t _allgather_wait(lco_t *lco) {
   return _allgather_get(lco, 0, NULL);
 }
 
 // Local set id function.
-static hpx_status_t
-_allgather_setid(_allgather_t *g, unsigned offset, int size, const void* buffer)
-{
+static hpx_status_t _allgather_setid(_allgather_t *g, unsigned offset, int size,
+                                     const void* buffer) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&g->lco);
 
@@ -208,9 +203,9 @@ _allgather_setid(_allgather_t *g, unsigned offset, int size, const void* buffer)
 /// @param   rsync      An LCO to signal remote completion HPX_NULL if we
 ///                     don't care.
 /// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t
-hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int size,
-                        const void *value, hpx_addr_t lsync, hpx_addr_t rsync)
+hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
+                                     int size, const void *value,
+                                     hpx_addr_t lsync, hpx_addr_t rsync)
 {
   hpx_status_t status = HPX_SUCCESS;
   _allgather_t *local;
@@ -241,8 +236,7 @@ hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id, int size,
 }
 
 
-static hpx_status_t _allgather_setid_proxy(void *args)
-{
+static hpx_status_t _allgather_setid_proxy(void *args) {
   // try and pin the allgather LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -260,9 +254,7 @@ static hpx_status_t _allgather_setid_proxy(void *args)
 }
 
 
-static HPX_CONSTRUCTOR void
-_initialize_actions(void)
-{
+static HPX_CONSTRUCTOR void _initialize_actions(void) {
   _allgather_setid_action = HPX_REGISTER_ACTION(_allgather_setid_proxy);
 }
 
@@ -274,9 +266,7 @@ _allgather_set(lco_t *lco, int size, const void *from)
   hpx_abort();
 }
 
-static void _allgather_init(_allgather_t *g, size_t participants,
-                size_t size)
-{
+static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
   // vtable
   static const lco_class_t vtable = {
     _allgather_fini,
@@ -311,13 +301,9 @@ static void _allgather_init(_allgather_t *g, size_t participants,
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
-  hpx_addr_t gather = locality_malloc(sizeof(_allgather_t));
-  _allgather_t *g = NULL;
-  if (!hpx_gas_try_pin(gather, (void**)&g)) {
-    dbg_error("allgather: could not pin newly allocated allgather LCO.\n");
-  }
+  _allgather_t *g = global_malloc(sizeof(*g));
+  assert(g);
   _allgather_init(g, inputs, size);
-  hpx_gas_unpin(gather);
-  return gather;
+  return lva_to_gva(g);
 }
 

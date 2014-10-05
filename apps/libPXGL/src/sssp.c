@@ -28,6 +28,7 @@ static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t dist
 
 typedef struct {
   adj_list_t graph;
+  uint32_t block_size;
   uint64_t distance;
 #ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
@@ -99,7 +100,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
       args->distance = old_distance + e->weight;
 
       const hpx_addr_t index
-          = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t));
+          = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t), args->block_size);
 
       hpx_call(index, _sssp_visit_vertex, args, sizeof(*args), edges);
     }
@@ -145,9 +146,11 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
 hpx_action_t call_sssp = 0;
 int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
-    = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t));
+    = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), args->block_size);
 
-  _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
+  _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph,
+                                          .block_size = args->block_size,
+                                          .distance = 0 };
 
 #ifdef GATHER_STAT
   sssp_args.sssp_stat = args->sssp_stat;

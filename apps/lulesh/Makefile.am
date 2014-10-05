@@ -1,2 +1,2 @@
-SUBDIRS = parcels newfutures
+SUBDIRS = parcels
 

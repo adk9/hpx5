@@ -460,7 +460,7 @@ static int _main_action(RunArgs *runargs)
     //
     args->rank = k;
     args->ndoms = nDoms;
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, args, sizeof(InitArgs) + sizeof(object) * runargs->objectsize, init);
   }
   hpx_lco_wait(init);
@@ -471,7 +471,7 @@ static int _main_action(RunArgs *runargs)
   unsigned long epoch = 0;
 
   for (k=0;k<nDoms;k++) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k);
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _advance, &epoch, sizeof(epoch), HPX_NULL);
   }
 

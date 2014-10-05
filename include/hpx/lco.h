@@ -63,8 +63,8 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
 /// Perform a wait operation, failing if a set time is passed.
 ///
-/// The LCO blocks the caller until an LCO set operation triggers the LCO or 
-/// until @p time is reached. Each LCO type has its own semantics for the state 
+/// The LCO blocks the caller until an LCO set operation triggers the LCO or
+/// until @p time is reached. Each LCO type has its own semantics for the state
 /// under which this occurs.
 ///
 /// @param lco  the LCO we're processing
@@ -90,7 +90,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 /// Perform a get operation, failing if a certain time is reached first.
 ///
 /// An LCO blocks the caller until the future is set, and then copies its value
-/// data into the provided buffer. Will return early if @p time is reached 
+/// data into the provided buffer. Will return early if @p time is reached
 /// first.
 ///
 /// If the return status is not HPX_SUCCESS then the LCO was triggered by
@@ -215,10 +215,13 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 
 /// Get an address of a future in a future array
 ///
-/// @param base the base address of the array of futures
-/// @param    i the index of the future to return
-/// @returns    the address of the ith future in the array
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i);
+/// @param      base The base address of the array of futures.
+/// @param         i The index of the future to return.
+/// @param      size The size of the data stored with each future.
+/// @param     bsize The number of futures in each block.
+///
+/// @returns The address of the ith future in the array.
+hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 
 
 /// Channels.
@@ -325,8 +328,8 @@ hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer);
 hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[],
                                        int *index, int *size, void **out);
 
-hpx_addr_t hpx_lco_chan_array_new(int n, int block_size);
-hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i);
+hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block);
+hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i, int size, int bsize);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 
 
@@ -442,7 +445,7 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
 /// @param lsync       An LCO to test for local completion.
 /// @param rsync       An LCO to test for remote completion.
 hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
-                                    int size, const void *value, 
+                                    int size, const void *value,
                                     hpx_addr_t lsync, hpx_addr_t rsync);
 
 /// Get the ID for alltoall. This is global getid for the user to use.
@@ -452,7 +455,7 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
 /// @param   size        The size of the data being gathered
 /// @param   value       Address of the value buffer
 hpx_status_t
-hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size, 
+hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
                        void *value);
 
 /// Allocate an alltoall.

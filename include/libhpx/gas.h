@@ -56,13 +56,20 @@ struct gas_class {
   void *(*gva_to_lva)(hpx_addr_t gva);
 
   // implement hpx/gas.h
+  __typeof(HPX_THERE) *there;
   __typeof(hpx_gas_try_pin) *try_pin;
   __typeof(hpx_gas_unpin) *unpin;
   __typeof(hpx_gas_global_alloc) *cyclic_alloc;
   __typeof(hpx_gas_global_calloc) *cyclic_calloc;
   __typeof(hpx_gas_alloc) *local_alloc;
   __typeof(hpx_gas_free) *free;
+  __typeof(hpx_gas_move) *move;
+  __typeof(hpx_gas_memget) *memget;
+  __typeof(hpx_gas_memput) *memput;
+  __typeof(hpx_gas_memcpy) *memcpy;
 
+  // network operation
+  uint32_t (*owner_of)(hpx_addr_t gva);
 };
 
 gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
@@ -87,6 +94,11 @@ inline static int gas_join(gas_class_t *gas) {
 
 inline static void gas_leave(gas_class_t *gas) {
   gas->leave();
+}
+
+inline static uint32_t gas_owner_of(gas_class_t *gas, hpx_addr_t addr) {
+  assert(gas && gas->owner_of);
+  return gas->owner_of(addr);
 }
 
 #endif// LIBHPX_GAS_H

@@ -32,36 +32,36 @@
 #include "hpx/hpx.h"
 
 /// Null doubles as rank 0's HPX_HERE.
-const hpx_addr_t HPX_NULL = HPX_ADDR_INIT(0, 0, 0);
+// const hpx_addr_t HPX_NULL = HPX_ADDR_INIT(0, 0, 0);
 
 
 /// Updated in hpx_init(), the HPX_HERE (HPX_THERE) block is a max-bytes
 /// block. This means that any reasonable address computation within a here or
 /// there address will remain on the same locality.
-hpx_addr_t HPX_HERE = HPX_ADDR_INIT(0, 0, UINT32_MAX);
+// hpx_addr_t HPX_HERE = HPX_ADDR_INIT(0, 0, UINT32_MAX);
 
 
 /// Uses the well-known, low-order, block mappings to construct a "there
 /// address."
-hpx_addr_t HPX_THERE(hpx_locality_t i) {
-  assert(i != HPX_LOCALITY_ALL);
-  if (i == HPX_LOCALITY_NONE)
-    return HPX_NULL;
-  hpx_addr_t addr = hpx_addr_init(0, i, UINT32_MAX);
-  return addr;
-}
+// hpx_addr_t HPX_THERE(hpx_locality_t i) {
+//   assert(i != HPX_LOCALITY_ALL);
+//   if (i == HPX_LOCALITY_NONE)
+//     return HPX_NULL;
+//   hpx_addr_t addr = hpx_addr_init(0, i, UINT32_MAX);
+//   return addr;
+// }
 
 
-bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
-  return (lhs.offset == rhs.offset) && (lhs.base_id == rhs.base_id) &&
-    (lhs.block_bytes == rhs.block_bytes);
-}
+// bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
+//   return (lhs.offset == rhs.offset) && (lhs.base_id == rhs.base_id) &&
+//   (lhs.block_bytes == rhs.block_bytes);
+// }
 
 
-/// Perform address arithmetic.
-hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes) {
-  // not checking overflow
-  uint64_t offset = addr.offset + bytes;
-  hpx_addr_t result = hpx_addr_init(offset, addr.base_id, addr.block_bytes);
-  return result;
-}
+// /// Perform address arithmetic.
+// hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes) {
+//   // not checking overflow
+//   uint64_t offset = addr.offset + bytes;
+//   hpx_addr_t result = hpx_addr_init(offset, addr.base_id, addr.block_bytes);
+//   return result;
+// }

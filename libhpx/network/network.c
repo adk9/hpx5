@@ -27,7 +27,6 @@
 #include "libsync/queues.h"
 
 #include "libhpx/boot.h"
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"

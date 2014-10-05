@@ -27,24 +27,12 @@
 #include "../mallctl.h"
 #include "heap.h"
 
-static size_t _get_nchunks(const size_t size, size_t bytes_per_chunk) {
-  size_t nchunks = size / bytes_per_chunk;
-  if (nchunks == 0) {
-    dbg_log_gas("pgas: must have at least %lu bytes in the shared heap\n",
-                bytes_per_chunk);
-    nchunks = 1;
-  }
-
-  if (nchunks == 1)
-    dbg_log_gas("pgas: disabling support for cyclic allocation\n");
-  return nchunks;
-}
 
 static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
   bitmap_t *bitmap = bitmap_new((uint32_t)nchunks);
   if (!bitmap)
-    dbg_error("pgas: failed to allocate a bitmap to track free chunks.\n");
+    dbg_error("failed to allocate a bitmap to track free chunks.\n");
   return bitmap;
 }
 
@@ -53,19 +41,17 @@ static void *_map_heap(const size_t bytes) {
   const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
   void *heap = mmap(NULL, bytes, prot, flags, -1, 0);
   if (!heap) {
-    dbg_error("pgas: failed to mmap %lu bytes for the shared heap\n", bytes);
+    dbg_error("failed to mmap %lu bytes for the shared heap\n", bytes);
   }
   else {
-    dbg_log_gas("pgas: mmaped %lu bytes for the shared heap\n", bytes);
+    dbg_log_gas("mmaped %lu bytes for the shared heap\n", bytes);
   }
   return heap;
 }
 
 /// Compute the number of chunks required to satisfy the @p size.
 static uint32_t _chunks(const size_t size, const size_t bytes_per_chunk) {
-  uint32_t chunks = size / bytes_per_chunk;
-  chunks += (size % bytes_per_chunk) ? 1 : 0;
-  return chunks;
+  return ceil_div_64(size, bytes_per_chunk);
 }
 
 int heap_init(heap_t *heap, const size_t size) {
@@ -75,35 +61,29 @@ int heap_init(heap_t *heap, const size_t size) {
   sync_store(&heap->csbrk, 0, SYNC_RELEASE);
 
   heap->bytes_per_chunk = mallctl_get_chunk_size();
-  dbg_log_gas("pgas: heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
+  dbg_log_gas("heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
 
-  heap->raw_nchunks = _get_nchunks(size, heap->bytes_per_chunk);
-  dbg_log_gas("pgas: heap raw nchunks is %lu\n", heap->raw_nchunks);
+  heap->nbytes = size;
+  heap->nchunks = ceil_div_64(size, heap->bytes_per_chunk);
+  dbg_log_gas("heap nchunks is %lu\n", heap->nchunks);
 
+  // use one extra chunk to deal with alignment
+  heap->raw_nchunks = heap->nchunks + 1;
   heap->raw_nbytes = heap->raw_nchunks * heap->bytes_per_chunk;
-  if (heap->raw_nbytes != size)
-    dbg_log_gas("pgas: heap allocation of %lu requested, adjusted to %lu\n",
-                size, heap->raw_nbytes);
-
-  dbg_log_gas("pgas: allocating %lu bytes for the shared heap.\n",
-              heap->raw_nbytes);
   heap->raw_base = _map_heap(heap->raw_nbytes);
 
-  // Adjust base, nbytes, raw, based on alignment requirements.
-  const size_t r = heap->bytes_per_chunk - ((uintptr_t)heap->raw_base %
-                                            heap->bytes_per_chunk);
-
-  heap->base = heap->raw_base + r;
-  heap->nbytes = heap->raw_nbytes - r;
-  heap->nchunks = heap->raw_nchunks - ((r > 0) ? 1 : 0);
+  // adjust stored base based on alignment requirements
+  const size_t r = ((uintptr_t)heap->raw_base % heap->bytes_per_chunk);
+  const size_t l = heap->bytes_per_chunk - r;
+  heap->base = heap->raw_base + l;
+  dbg_log_gas("%lu-byte heap reserved at %p\n", heap->nbytes, heap->base);
 
   assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
+  assert(heap->base + heap->nbytes <= heap->raw_base + heap->raw_nbytes);
 
   heap->chunks = _new_bitmap(heap->nchunks);
-  dbg_log_gas("pgas: allocated chunk bitmap to manage %lu chunks.\n",
-              heap->nchunks);
-
-  dbg_log_gas("pgas: allocated heap.\n");
+  dbg_log_gas("allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
+  dbg_log_gas("allocated heap.\n");
 
   return LIBHPX_OK;
 }
@@ -190,9 +170,18 @@ void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
   return heap->base + offset;
 }
 
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t balign) {
-  const uint32_t csbrk = sync_fadd(&heap->csbrk, balign * n, SYNC_ACQ_REL);
-  return (heap->nbytes - csbrk);
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
+  const size_t bytes = n * bsize;
+  const uint32_t old = sync_fadd(&heap->csbrk, bytes, SYNC_ACQ_REL);
+  const uint32_t new = old + bytes;
+  const uint64_t heap_offset = (heap->nbytes - new);
+
+  // check to see if any of this allocation is reserved in the bitmap
+  DEBUG_IF(true) {
+
+  }
+
+  return heap_offset;
 }
 
 bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset) {

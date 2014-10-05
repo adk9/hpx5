@@ -21,25 +21,36 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
                      struct transport_class *transport, hpx_gas_t type)
 {
   gas_class_t *gas = NULL;
-  switch (type) {
-   default:
-   case (HPX_GAS_DEFAULT):
+
+  if (type == HPX_GAS_DEFAULT) {
     dbg_log_gas("HPX GAS defaults to PGAS.\n");
-   case (HPX_GAS_PGAS):
-   case (HPX_GAS_PGAS_SWITCH):
+  }
+
+  if (type == HPX_GAS_PGAS) {
     gas = gas_pgas_new(heap_size, boot, transport);
-    break;
-   case (HPX_GAS_AGAS):
-    gas = NULL;//gas_agas_new(heap_size);
-    break;
-   case (HPX_GAS_AGAS_SWITCH):
-    gas = NULL;//gas_agas_switch_new(heap_size);
-    break;
-   case (HPX_GAS_SMP):
+    if (!gas) {
+      dbg_log_gas("PGAS failed to initialize\n");
+    }
+    else {
+      dbg_log_gas("PGAS initialized\n");
+      gas->type = HPX_GAS_PGAS;
+    }
+  }
+
+  if (type == HPX_GAS_SMP || !gas) {
     gas = gas_smp_new(heap_size, boot, transport);
-    break;
-  };
-  assert(gas);
-  gas->type = type;
-  return gas;
+    if (!gas) {
+      dbg_log_gas("SMP failed to initialize\n");
+    }
+    else {
+      dbg_log_gas("SMP initialized\n");
+      gas->type = HPX_GAS_SMP;
+    }
+  }
+
+  if (gas)
+    return gas;
+
+  dbg_error("Could not initialize GAS model %s", HPX_GAS_TO_STRING[type]);
+  return NULL;
 }

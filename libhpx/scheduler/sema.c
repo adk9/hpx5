@@ -34,20 +34,6 @@ typedef struct {
   uintptr_t count;
 } _sema_t;
 
-
-// Freelist
-static __thread _sema_t *_free_semas = NULL;
-
-
-static void
-_free(_sema_t *sema)
-{
-  // repurpose count as a freelist "next" pointer
-  sema->count = (uintptr_t)_free_semas;
-  _free_semas = sema;
-}
-
-
 static void
 _sema_fini(lco_t *lco)
 {
@@ -56,7 +42,7 @@ _sema_fini(lco_t *lco)
 
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
-  _free(sema);
+  global_free(sema);
 }
 
 
@@ -145,28 +131,10 @@ _sema_init(_sema_t *sema, unsigned count)
 hpx_addr_t
 hpx_lco_sema_new(unsigned count)
 {
-  hpx_addr_t sema;
-  _sema_t *local = _free_semas;
-  if (local) {
-    _free_semas = (_sema_t *)local->count;
-    sema = HPX_HERE;
-    char *base;
-    if (!hpx_gas_try_pin(sema, (void**)&base)) {
-      dbg_error("sema: could not translate local block.\n");
-    }
-    hpx_gas_unpin(sema);
-    sema.offset = (char*)local - base;
-    assert(sema.offset < sema.block_bytes);
-  }
-  else {
-    sema = locality_malloc(sizeof(_sema_t));
-    if (!hpx_gas_try_pin(sema, (void**)&local)) {
-      dbg_error("sema: could not pin newly allocated semaphore.\n");
-    }
-  }
+  _sema_t *local = global_malloc(sizeof(_sema_t));;
+  assert(local);
   _sema_init(local, count);
-  hpx_gas_unpin(sema);
-  return sema;
+  return lva_to_gva(local);
 }
 
 

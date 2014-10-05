@@ -19,10 +19,10 @@
 ///
 
 #include <string.h>
-#include <hpx/attributes.h>
 #include <hpx/hpx.h>
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
+#include "emulation.h"
 
 static hpx_action_t _memget_request = 0;
 static hpx_action_t _memget_reply = 0;
@@ -75,7 +75,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   _memget_reply = HPX_REGISTER_ACTION(_memget_reply_action);
 }
 
-int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
+int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   _memget_request_args_t args = {
     .size = size,
     .to = to,

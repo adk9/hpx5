@@ -14,6 +14,6 @@
 
 // Compute GTEPS
 extern hpx_action_t gteps_calculate;
-extern int gteps_calculate_action(const size_t *const g);
+extern int gteps_calculate_action(const uint64_t *const g);
 
 #endif // PXGL_GTEPS_H
