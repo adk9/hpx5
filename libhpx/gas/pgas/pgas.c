@@ -167,7 +167,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc,
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
                         &args, sizeof(args), &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
   return addr;
