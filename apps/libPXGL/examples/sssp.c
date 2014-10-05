@@ -174,6 +174,7 @@ static int _main_action(_sssp_args_t *args) {
     //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
     sargs.source = args->problems[i];
+    sargs.block_size = _index_array_block_size;
 
     hpx_time_t now = hpx_time_now();
 

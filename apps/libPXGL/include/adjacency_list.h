@@ -23,6 +23,9 @@ typedef uint64_t distance_t;
 // Vertex Index
 typedef uint64_t vertex_t;
 
+extern uint32_t _count_array_block_size;
+extern uint32_t _index_array_block_size;
+
 // Graph Edge
 typedef struct {
   vertex_t dest;
