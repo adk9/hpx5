@@ -79,7 +79,7 @@ int heap_init(heap_t *heap, const size_t size) {
   dbg_log_gas("%lu-byte heap reserved at %p\n", heap->nbytes, heap->base);
 
   assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
-  assert(heap->base + heap->nbytes < heap->raw_base + heap->raw_nbytes);
+  assert(heap->base + heap->nbytes <= heap->raw_base + heap->raw_nbytes);
 
   heap->chunks = _new_bitmap(heap->nchunks);
   dbg_log_gas("allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
