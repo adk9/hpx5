@@ -27,7 +27,6 @@
 #include "../mallctl.h"
 #include "heap.h"
 
-
 static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
   bitmap_t *bitmap = bitmap_new((uint32_t)nchunks);
@@ -137,7 +136,7 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
   const uint32_t offset = (char*)chunk - heap->base;
   assert(offset % heap->bytes_per_chunk == 0);
-  const uint32_t i = ceil_div_64(offset, heap->bytes_per_chunk);
+  const uint32_t i = offset / heap->bytes_per_chunk;
   const uint32_t n = ceil_div_64(size, heap->bytes_per_chunk);
   bitmap_release(heap->chunks, i, n);
   return true;
@@ -177,22 +176,43 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
 
 void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
   DEBUG_IF (heap->nbytes < offset) {
+    dbg_wait();
     dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
   }
   return heap->base + offset;
 }
 
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
-  const size_t bytes = n * bsize;
-  const uint32_t old = sync_fadd(&heap->csbrk, bytes, SYNC_ACQ_REL);
-  const uint32_t new = old + bytes;
-  const uint64_t heap_offset = (heap->nbytes - new);
-
+int _check_heap_offsets(heap_t *heap, uint64_t base, uint64_t size) {
   // check to see if any of this allocation is reserved in the bitmap
-  DEBUG_IF(true) {
+  const uint64_t from = base / heap->bytes_per_chunk;
+  const uint64_t to = (base + size) / heap->bytes_per_chunk;
 
+  for (uint64_t i = from, e = to; i < e; ++i) {
+    if (bitmap_is_set(heap->chunks, i)) {
+      dbg_error("out-of-memory detected, csbrk allocation collided with the "
+                "gas_alloc heap \n");
+    }
   }
 
+  return LIBHPX_OK;
+}
+
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
+  const size_t bytes = n * bsize;
+  const uint64_t old = sync_fadd(&heap->csbrk, bytes, SYNC_ACQ_REL);
+  const uint64_t new = old + bytes;
+
+  if (old + bytes >= heap->nbytes)
+    dbg_error("\n"
+              "out-of-memory detected during csbrk allocation\n"
+              "\t-global heap size: %lu bytes\n"
+              "\t-previous cyclic allocation total: %lu bytes\n"
+              "\t-current allocation request: %lu bytes\n",
+              heap->nbytes, old, old + bytes);
+
+  const uint64_t heap_offset = (heap->nbytes - new);
+  assert(heap_offset_inbounds(heap, heap_offset));
+  _check_heap_offsets(heap, heap_offset, bytes);
   return heap_offset;
 }
 
@@ -205,3 +225,11 @@ bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length) {
   return (start < heap->nbytes) && (end < heap->nbytes);
 }
 
+int heap_set_csbrk(heap_t *heap, uint64_t heap_offset) {
+  const uint64_t new = heap->nbytes - heap_offset;
+  const size_t old = sync_swap(&heap->csbrk, new, SYNC_ACQ_REL);
+  if (new < old)
+    dbg_error("csbrk should be monotonically increasing");
+
+  return _check_heap_offsets(heap, heap_offset, new - old);
+}
