@@ -277,7 +277,7 @@ void network_progress_poll(progress_t *p) {
       recv = _try_start_recv(p);
       p->nprecvs += recv;
       DEBUG_IF (recv) {
-        dbg_log_trans("progress: started a recv.\n");
+        dbg_log_trans("started a recv.\n");
       }
     }
 
@@ -285,14 +285,14 @@ void network_progress_poll(progress_t *p) {
     assert(sends <= p->npsends);
     p->npsends -= sends;
     DEBUG_IF (sends) {
-      dbg_log_trans("progress: finished %d sends.\n", sends);
+      dbg_log_trans("finished %d sends.\n", sends);
     }
 
     int recvs = recvs = _test(p, &p->pending_recvs, _finish_recv);
     assert(recvs <= p->nprecvs);
     p->nprecvs -= recvs;
     DEBUG_IF (recvs) {
-      dbg_log_trans("progress: finished %d receives.\n", recvs);
+      dbg_log_trans("finished %d receives.\n", recvs);
     }
   } while (network_progress_drain_sends(p) || network_progress_drain_recvs(p));
 
@@ -301,7 +301,7 @@ void network_progress_poll(progress_t *p) {
     send = _try_start_send(p);
     p->npsends += send;
     DEBUG_IF(send) {
-      dbg_log_trans("progress: started a send.\n");
+      dbg_log_trans("started a send.\n");
     }
   }
 }
