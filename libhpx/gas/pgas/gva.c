@@ -73,7 +73,6 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
   // make sure that the heap offset is in the expected range (everyone has the
   // same size, so the locality is irrelevant here)
   DEBUG_IF (!heap_offset_inbounds(global_heap, heap_offset)) {
-    dbg_wait();
     dbg_error("heap offset %lu is out of range\n", heap_offset);
   }
 
