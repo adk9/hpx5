@@ -86,7 +86,7 @@ _is_shared_action(void* args) {
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&fut))
     return HPX_RESEND;
-  
+
   bool result = (bool)(fut->bits & FT_SHARED);
   hpx_thread_continue(sizeof(bool), &result);
 }
@@ -428,7 +428,7 @@ _future_wait_local(struct _future_wait_args *args)
   _newfuture_t *f = args->fut;
 
   lco_lock(&f->lco);
-  
+
   if (args->set == HPX_SET) {
     if (!_full(f))
       status = scheduler_wait(&f->lco.lock, &f->full);

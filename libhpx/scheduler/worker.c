@@ -32,7 +32,6 @@
 
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
-#include "libhpx/btt.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
@@ -127,6 +126,12 @@ static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
 /// and then invokes the action on the arguments. If the action returns to this
 /// entry function, we dispatch to the correct thread termination handler.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  const hpx_addr_t target = hpx_parcel_get_target(parcel);
+  const uint32_t owner = gas_owner_of(here->gas, target);
+  DEBUG_IF (owner != here->rank) {
+    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+  }
+
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
@@ -564,6 +569,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // place, and releasing the lock across the wait
   if (status == HPX_SUCCESS) {
     thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
+    assert(thread->wait_affinity < here->sched->n_workers);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
@@ -688,17 +694,6 @@ void hpx_thread_exit(int status) {
   if (status == HPX_RESEND) {
     hpx_parcel_t *parcel = self.current;
 
-    if (here->btt->type == HPX_GAS_AGAS) {
-      // Who do we think owns this parcel?
-      uint32_t rank = btt_owner(here->btt, parcel->target);
-      // Send that as an update to the src of the parcel.
-      locality_gas_forward_args_t args = {
-        parcel->target,
-        rank
-      };
-      hpx_call(HPX_THERE(parcel->src), locality_gas_forward, &args,
-               sizeof(args), HPX_NULL);
-    }
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
     assert(to);
@@ -792,10 +787,13 @@ static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
 
 void hpx_thread_set_affinity(int affinity) {
   assert(affinity >= -1);
-  assert(affinity < here->sched->n_workers);
   assert(self.current);
   assert(parcel_get_stack(self.current));
+
+  // make sure affinity is in bounds
+  affinity = affinity % here->sched->n_workers;
   parcel_get_stack(self.current)->affinity = affinity;
+
   if (affinity == self.id)
     return;
 

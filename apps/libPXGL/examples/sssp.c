@@ -174,6 +174,7 @@ static int _main_action(_sssp_args_t *args) {
     //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
 
     sargs.source = args->problems[i];
+    sargs.block_size = _index_array_block_size;
 
     hpx_time_t now = hpx_time_now();
 
@@ -198,7 +199,7 @@ static int _main_action(_sssp_args_t *args) {
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
-      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t));
+      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), sargs.block_size);
       hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
     }
     hpx_lco_wait(vertices);
@@ -206,7 +207,8 @@ static int _main_action(_sssp_args_t *args) {
 #endif
 
     hpx_addr_t checksum_lco = HPX_NULL;
-    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices), &checksum_lco, sizeof(checksum_lco));
+    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices),
+                  &checksum_lco, sizeof(checksum_lco));
     size_t checksum = 0;
     hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
     hpx_lco_delete(checksum_lco, HPX_NULL);
@@ -222,7 +224,7 @@ static int _main_action(_sssp_args_t *args) {
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
 
-    hpx_gas_free(sargs.graph, HPX_NULL);
+    hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
   }
 
 #ifdef GATHER_STAT

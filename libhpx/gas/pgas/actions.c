@@ -71,7 +71,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   };
 
 
-  hpx_addr_t sync = hpx_lco_and_new(ranks);
+  hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_bcast(pgas_memset, &args, sizeof(args), sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);

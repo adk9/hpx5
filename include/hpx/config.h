@@ -26,6 +26,15 @@ typedef enum {
   HPX_GAS_AGAS_SWITCH  //!< Use hardware-accelerated AGAS.
 } hpx_gas_t;
 
+static const char* const HPX_GAS_TO_STRING[] = {
+  "HPX_GAS_DEFAULT",
+  "HPX_GAS_SMP",
+  "HPX_GAS_PGAS",
+  "HPX_GAS_AGAS",
+  "HPX_GAS_PGAS_SWITCH",
+  "HPX_GAS_AGAS_SWITCH"
+};
+
 //! Configuration options for the network transports HPX can use.
 typedef enum {
   HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
@@ -98,7 +107,7 @@ typedef struct {
     .threads     = 0,                           \
     .backoff_max = 1024,                        \
     .stack_bytes = 32768,                       \
-    .heap_bytes  = 1 << 30, /* 1GB */           \
+    .heap_bytes  = 1lu << 30, /* 1GB */           \
     .gas         = HPX_GAS_PGAS,                \
     .btt_size    = 0,                           \
     .boot        = HPX_BOOT_DEFAULT,            \
@@ -106,7 +115,7 @@ typedef struct {
     .wait        = HPX_WAIT_NONE,               \
     .wait_at     = HPX_LOCALITY_NONE,           \
     .log_level   = HPX_LOG_DEFAULT,             \
-    .statistics  = true,			\
+    .statistics  = true,            \
     .req_limit   = 0                            \
   }
 

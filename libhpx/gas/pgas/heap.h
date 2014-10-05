@@ -128,18 +128,18 @@ void *heap_offset_to_local(heap_t *heap, uint64_t heap_offset)
 ///
 /// @param           heap The heap from which to allocate.
 /// @param              n The number of blocks per locality to allocate.
-/// @param  aligned_bsize The base 2 alignment of the block size.
+/// @param  aligned_bsize The base 2 aligned size of the block.
 ///
 /// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned)
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned_bsize)
   HPX_INTERNAL;
 
-
 /// Check to make sure a heap offset is actually in the heap.
-bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset);
-
+bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset)
+  HPX_INTERNAL;
 
 /// Check to make sure that a range of offsets is in the heap.
-bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length);
+bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length)
+  HPX_INTERNAL;
 
 #endif

@@ -10,15 +10,19 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef PXGL_DIMACS_H
-#define PXGL_DIMACS_H
+#ifndef LIBHPX_GAS_PARCELS_EMULATION_H
+#define LIBHPX_GAS_PARCELS_EMULATION_H
 
-#include "hpx/hpx.h"
-#include "adjacency_list.h"
+#include <hpx/attributes.h>
 
+int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
+  HPX_INTERNAL;
 
-// Compute checksum given an adjacency list
-extern hpx_action_t dimacs_checksum;
-extern int dimacs_checksum_action(const uint64_t *const g);
+int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
+  HPX_INTERNAL;
 
-#endif // PXGL_DIMACS_H
+int parcel_memput(hpx_addr_t to, const void *from, size_t size,
+                  hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_INTERNAL;
+
+#endif // LIBHPX_GAS_PARCELS_EMULATION_H

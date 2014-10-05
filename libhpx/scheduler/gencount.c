@@ -44,21 +44,17 @@ typedef struct {
 static hpx_action_t _gencount_wait_gen_action = 0;
 
 
-static void
-_gencount_fini(lco_t *lco)
-{
+static void _gencount_fini(lco_t *lco) {
   if (!lco)
     return;
 
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
-  free(gencnt);
+  global_free(gencnt);
 }
 
 
-static void
-_gencount_error(lco_t *lco, hpx_status_t code)
-{
+static void _gencount_error(lco_t *lco, hpx_status_t code) {
   _gencount_t *gen = (_gencount_t *)lco;
   lco_lock(&gen->lco);
 
@@ -71,9 +67,7 @@ _gencount_error(lco_t *lco, hpx_status_t code)
 
 
 /// Set is equivalent to incrementing the generation count
-static void
-_gencount_set(lco_t *lco, int size, const void *from)
-{
+static void _gencount_set(lco_t *lco, int size, const void *from) {
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
   unsigned long gen = gencnt->gen++;
@@ -88,9 +82,7 @@ _gencount_set(lco_t *lco, int size, const void *from)
 
 
 /// Get returns the current generation, it does not block.
-static hpx_status_t
-_gencount_get(lco_t *lco, int size, void *out)
-{
+static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
   if (size)
@@ -103,9 +95,7 @@ _gencount_get(lco_t *lco, int size, void *out)
 // Wait means to wait for one generation, i.e., wait on the next generation. We
 // actually just wait on oflow since we signal that every time the generation
 // changes.
-static hpx_status_t
-_gencount_wait(lco_t *lco)
-{
+static hpx_status_t _gencount_wait(lco_t *lco) {
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
   hpx_status_t status = scheduler_wait(&gencnt->lco.lock, &gencnt->oflow);
@@ -115,9 +105,7 @@ _gencount_wait(lco_t *lco)
 
 
 // Wait for a specific generation.
-static hpx_status_t
-_gencount_wait_gen(_gencount_t *gencnt, unsigned long gen)
-{
+static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&gencnt->lco);
 
@@ -139,8 +127,7 @@ _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen)
 }
 
 
-static void
-_gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
+static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   static const lco_class_t gencount_vtable = {
     _gencount_fini,
     _gencount_error,
@@ -157,43 +144,30 @@ _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     cvar_reset(&gencnt->inplace[i]);
 }
 
-static hpx_status_t
-_gencount_wait_gen_proxy(unsigned long *gen)
-{
+static hpx_status_t _gencount_wait_gen_proxy(unsigned long *gen) {
   hpx_addr_t target = hpx_thread_current_target();
   return hpx_lco_gencount_wait(target, *gen);
 }
 
 
-static HPX_CONSTRUCTOR void
-_initialize_actions(void)
-{
+static HPX_CONSTRUCTOR void _initialize_actions(void) {
   _gencount_wait_gen_action = HPX_REGISTER_ACTION(_gencount_wait_gen_proxy);
 }
 
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace) {
-  hpx_addr_t target = locality_malloc(sizeof(_gencount_t) +
-                                      ninplace * sizeof(cvar_t));
-  _gencount_t *cnt;
-  if (!hpx_gas_try_pin(target, (void**)&cnt))
-    hpx_abort();
-
+  _gencount_t *cnt = global_malloc(sizeof(*cnt) + ninplace * sizeof(cvar_t));
+  assert(cnt);
   _gencount_init(cnt, ninplace);
-  hpx_gas_unpin(target);
-  return target;
+  return lva_to_gva(cnt);
 }
 
-void
-hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
-{
+void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
   hpx_lco_set(gencnt, 0, NULL, HPX_NULL, rsync);
 }
 
 
-hpx_status_t
-hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen)
-{
+hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
   _gencount_t *local;
   if (!hpx_gas_try_pin(gencnt, (void**)&local))
     return hpx_call_sync(gencnt, _gencount_wait_gen_action, &gen, gen, NULL, 0);

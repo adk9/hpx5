@@ -15,9 +15,11 @@
 #endif
 
 #include <stdbool.h>
+#include <string.h>
 #include <jemalloc/jemalloc.h>
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 
 static int _smp_join(void) {
   return LIBHPX_OK;
@@ -38,7 +40,7 @@ static uint32_t _smp_locality_of(hpx_addr_t addr) {
 }
 
 static uint64_t _smp_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  return gva.offset;
+  return gva;
 }
 
 static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
@@ -46,16 +48,101 @@ static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
 }
 
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  return (lhs.offset - rhs.offset);
+  return (lhs - rhs);
 }
 
 static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  hpx_addr_t addr = {
-    .offset = gva.offset + bytes,
-    .base_id = 0,
-    .block_bytes = 0
-  };
+  hpx_addr_t addr = gva + bytes;
   return addr;
+}
+
+static hpx_addr_t _smp_lva_to_gva(void *lva) {
+  hpx_addr_t addr = (hpx_addr_t)lva;
+  return addr;
+}
+
+static void *_smp_gva_to_lva(hpx_addr_t addr) {
+  return (void*)addr;
+}
+
+static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
+  if (local)
+    *local = _smp_gva_to_lva(addr);
+  return true;
+}
+
+static void _smp_unpin(const hpx_addr_t addr) {
+}
+
+static hpx_addr_t _smp_there(hpx_locality_t i) {
+  return _smp_lva_to_gva(0);
+}
+
+static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
+  return _smp_lva_to_gva(libhpx_malloc(n * bsize));
+}
+
+static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
+  return _smp_lva_to_gva(libhpx_calloc(n, bsize));
+}
+
+static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
+  return _smp_lva_to_gva(libhpx_malloc(bytes));
+}
+
+static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
+  libhpx_free(_smp_gva_to_lva(addr));
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+}
+
+static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
+                       hpx_addr_t sync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  void *lto = gva_to_lva(to);
+  const void *lfrom = gva_to_lva(from);
+  memcpy(lto, lfrom, size);
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
+                       hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!size)
+    return HPX_SUCCESS;
+
+  void *lto = gva_to_lva(to);
+  memcpy(lto, from, size);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  if (!hpx_addr_eq(rsync, HPX_NULL))
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
+{
+  if (!size)
+    return HPX_SUCCESS;
+
+  const void *lfrom = gva_to_lva(from);
+  memcpy(to, lfrom, size);
+  if (!hpx_addr_eq(lsync, HPX_NULL))
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  if (!hpx_addr_eq(sync, HPX_NULL))
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+}
+
+static uint32_t _smp_owner_of(hpx_addr_t addr) {
+  return 0;
 }
 
 static gas_class_t _smp_vtable = {
@@ -86,7 +173,21 @@ static gas_class_t _smp_vtable = {
   .offset_of = _smp_offset_of,
   .phase_of = _smp_phase_of,
   .sub = _smp_sub,
-  .add = _smp_add
+  .add = _smp_add,
+  .lva_to_gva    = _smp_lva_to_gva,
+  .gva_to_lva    = _smp_gva_to_lva,
+  .there         = _smp_there,
+  .try_pin       = _smp_try_pin,
+  .unpin         = _smp_unpin,
+  .cyclic_alloc  = _smp_gas_cyclic_alloc,
+  .cyclic_calloc = _smp_gas_cyclic_calloc,
+  .local_alloc   = _smp_gas_alloc,
+  .free          = _smp_gas_free,
+  .move          = _smp_move,
+  .memget        = _smp_memget,
+  .memput        = _smp_memput,
+  .memcpy        = _smp_memcpy,
+  .owner_of      = _smp_owner_of
 };
 
 gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,

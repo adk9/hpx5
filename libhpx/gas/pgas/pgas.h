@@ -62,6 +62,7 @@ extern hpx_action_t pgas_cyclic_alloc;
 extern hpx_action_t pgas_cyclic_calloc;
 extern hpx_action_t pgas_memset;
 extern hpx_action_t pgas_free;
+extern hpx_action_t pgas_csbrk;
 
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
@@ -73,7 +74,7 @@ static inline uint32_t pgas_n_per_locality(size_t m, uint32_t ranks) {
 }
 
 static inline uint32_t pgas_fit_log2_32(uint32_t n) {
-  return ceil_log2_32(n);
+  return 1 << ceil_log2_32(n);
 }
 
 

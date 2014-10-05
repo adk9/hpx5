@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
   adj_list_t graph;
+  uint32_t block_size;
   uint64_t source;
   hpx_addr_t sssp_stat; 
 } call_sssp_args_t;

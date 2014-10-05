@@ -29,7 +29,7 @@
 /// ----------------------------------------------------------------------------
 void* heavy_network(void *args) {
   while (true) {
-    transport_progress(here->transport, false);
+    transport_progress(here->transport, TRANSPORT_POLL);
     pthread_testcancel();
 #if defined(__APPLE__) || defined(__MACH__)
     pthread_yield_np();

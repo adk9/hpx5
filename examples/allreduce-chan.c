@@ -32,10 +32,10 @@ static int _allreduce_action(hpx_addr_t *args) {
   hpx_addr_t channels = *args;
 
   double buf = rand();
-  hpx_addr_t root = hpx_lco_chan_array_at(channels, 0);
+  hpx_addr_t root = hpx_lco_chan_array_at(channels, 0, 1, 1);
   hpx_lco_chan_send(root, sizeof(buf), &buf, HPX_NULL, HPX_NULL);
 
-  hpx_addr_t chan = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
+  hpx_addr_t chan = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID, 1, 1);
   double *result;
   hpx_lco_chan_recv(chan, NULL, (void**)&result);
   assert(result);
@@ -53,11 +53,11 @@ static int _main_action(void *args) {
   int ranks = HPX_LOCALITIES;
 
   // initialize persistent threads---one per locality.
-  hpx_addr_t channels = hpx_lco_chan_array_new(HPX_LOCALITIES, 1);
+  hpx_addr_t channels = hpx_lco_chan_array_new(HPX_LOCALITIES, 1, 1);
   hpx_addr_t and = hpx_lco_and_new(ranks-1);
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
-    rank = hpx_lco_chan_array_at(channels, k);
+    rank = hpx_lco_chan_array_at(channels, k, 1, 1);
     hpx_call(rank, _allreduce, &channels, sizeof(channels), and);
   }
 
@@ -68,7 +68,7 @@ static int _main_action(void *args) {
   double accum = 0;
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
-    rank = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID);
+    rank = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID, 1, 1);
     hpx_lco_chan_recv(rank, NULL, (void**)&buf);
     accum += *buf; // reduce
     free(buf);
@@ -78,7 +78,7 @@ static int _main_action(void *args) {
 
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
-    rank = hpx_lco_chan_array_at(channels, k);
+    rank = hpx_lco_chan_array_at(channels, k, 1, 1);
     hpx_lco_chan_send(rank, sizeof(accum), &accum, HPX_NULL, HPX_NULL);
   }
 

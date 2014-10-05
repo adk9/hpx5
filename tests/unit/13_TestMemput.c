@@ -60,7 +60,7 @@ START_TEST (test_libhpx_memput)
   int peerid = (rank+1)%size;
 
   hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
-  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block));
+  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block));
 
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t localComplete = hpx_lco_future_new(0);
