@@ -126,7 +126,8 @@ _newfuture_get_rank(hpx_newfuture_t *f) {
 
 static size_t
 _newfuture_get_offset(hpx_newfuture_t *f) {
-  return _newfuture_table.fut_infos[f->table_index].offset + (f->size * (f->index % hpx_get_num_ranks()));
+  size_t size = sizeof(_newfuture_t) + f->size;
+  return _newfuture_table.fut_infos[f->table_index].offset + (size * (f->index % hpx_get_num_ranks()));
 }
 
 // the native address of the _newfuture_t representation of a future
@@ -156,6 +157,9 @@ _send_queue_progress_action(void* args) {
     }
     if (flag > 0) {
       //printf("Received completion %" PRIu64 "\n", request);
+    }
+    if (flag > 0) {
+      printf("Received completion %" PRIu64 "\n", request);
     }
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
@@ -596,6 +600,8 @@ void hpx_lco_newfuture_setat(hpx_newfuture_t future, int id, size_t size, void *
 			     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
   hpx_newfuture_t future_i = hpx_lco_newfuture_at(future, id);
 
+  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
+
   //  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
   
   // normally lco_set does all this
@@ -613,6 +619,8 @@ hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t base, int i, size_t size, v
   hpx_newfuture_t future_i = hpx_lco_newfuture_at(base, i);
 
   lco_t *lco;
+
+  printf("Getting from (%d, %p) to %d\n", _newfuture_get_rank(&future_i), (void*)_newfuture_get_addr(&future_i), hpx_get_my_rank());
 
   if (_newfuture_get_rank(&future_i) != hpx_get_my_rank()) {
     return HPX_ERROR;
