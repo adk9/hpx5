@@ -213,4 +213,6 @@ int hpx_lco_netfuture_get_rank(hpx_netfuture_t future);
 /// Must be called first, from the main action
 hpx_status_t hpx_netfutures_init();
 
+void hpx_netfutures_fini();
+
 #endif
