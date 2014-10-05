@@ -1,6 +1,6 @@
 #include "lulesh-hpx.h"
 
-void CalcForceForNodes(hpx_newfuture_t *sbn3,Domain *domain,int rank)
+void CalcForceForNodes(hpx_newfuture_t sbn3,Domain *domain,int rank)
 {
   int numNode = domain->numNode; 
   int i; 

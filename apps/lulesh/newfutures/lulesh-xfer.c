@@ -1,7 +1,7 @@
 #include "lulesh-hpx.h"
 
 void
-SBN1(Domain *domain, hpx_newfuture_t *sbn1)
+SBN1(Domain *domain, hpx_newfuture_t sbn1)
 {
   const int    nsTF = domain->sendTF[0];
   const int *sendTF = &domain->sendTF[1]; 
@@ -36,7 +36,7 @@ SBN1(Domain *domain, hpx_newfuture_t *sbn1)
 }
 
 void
-SBN3(hpx_newfuture_t *sbn3,Domain *domain, int rank)
+SBN3(hpx_newfuture_t sbn3,Domain *domain, int rank)
 {
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
