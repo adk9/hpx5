@@ -32,8 +32,8 @@
 #include "lco.h"
 #include "cvar.h"
 
-//#define dbg_printf(...)
-#define dbg_printf printf
+#define dbg_printf(...)
+//#define dbg_printf printf
 
 #define _NETFUTURES_MEMORY_DEFAULT 1024*1024*100
 #define _NETFUTURES_CAPACITY_DEFAULT 10000
