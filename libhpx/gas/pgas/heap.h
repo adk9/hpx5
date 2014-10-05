@@ -128,10 +128,10 @@ void *heap_offset_to_local(heap_t *heap, uint64_t heap_offset)
 ///
 /// @param           heap The heap from which to allocate.
 /// @param              n The number of blocks per locality to allocate.
-/// @param  aligned_bsize The base 2 alignment of the block size.
+/// @param  aligned_bsize The base 2 aligned size of the block.
 ///
 /// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned)
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned_bsize)
   HPX_INTERNAL;
 
 
