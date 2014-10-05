@@ -158,6 +158,9 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
     dbg_error("photon: could not unpin buffer %p of size %lu.\n", buffer, len);
+
+  if (transport->rkey_table)
+    free(transport->rkey_table);
 }
 
 
