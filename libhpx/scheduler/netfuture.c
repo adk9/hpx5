@@ -68,8 +68,7 @@ static hpx_action_t _future_reset_remote = 0;
 static hpx_action_t _future_wait_remote = 0;
 
 static hpx_action_t _future_set_no_copy_from_remote = 0;
-static hpx_action_t _recv_queue_progress = 0;
-static hpx_action_t _send_queue_progress = 0;
+static hpx_action_t _progress = 0;
 static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
@@ -154,30 +153,6 @@ _netfuture_get_data_addr(hpx_netfuture_t *f) {
   return _netfuture_get_addr(f) + sizeof(_netfuture_t);
 }
 
-static int
-_send_queue_progress_action(void* args) {
-  int flag;
-  photon_rid request;
-  int rc;
-  int i = 0;
-  while (!shutdown) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
-    if (flag > 0) {
-      dbg_printf("Received send completion %" PRIx64 "\n", request);
-    }
-    if (rc < 0) {
-      
-    }
-    if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
-	
-    }
-    i = (i + 1) % YIELD_COUNT;
-    if (i == 0)
-      hpx_thread_yield();
-  }
-  return HPX_SUCCESS;
-}
-
 // this is what we use when we do NOT need to copy memory into the future, 
 // as it has been set via RDMA
 static void 
@@ -202,24 +177,18 @@ _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
 }
 
 static int
-_recv_queue_progress_action(void *args) {
+_progress_action(void *args) {
   int flag;
   photon_rid request;
   //  int send_rank = -1;
   int i = 0;
   while (!shutdown) {
-    /*
-    send_rank++;
-    send_rank = send_rank % hpx_get_num_ranks();
-    if (send_rank == hpx_get_my_rank())
-      continue;
-    */
-    // you want to get completions from any source, even yourself
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    if (flag > 0) {
-      dbg_printf("Received recv completion for future at %" PRIx64 "\n", request);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_ANY);
+    if (flag && request == 0) {
+      dbg_printf("Received send completion %" PRIx64 "\n", request);
     }
-    if (flag && request != 0) {
+    else if (flag && request != 0) {
+      dbg_printf("Received recv completion for future at %" PRIx64 "\n", request);
       _netfuture_t *f = (_netfuture_t*)request;
       lco_lock(&f->lco);
       
@@ -294,8 +263,7 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
 
   _netfuture_table.inited = 1;
 
-  hpx_call_async(HPX_HERE, _recv_queue_progress, NULL, 0, HPX_NULL, HPX_NULL);
-  hpx_call_async(HPX_HERE, _send_queue_progress, NULL, 0, HPX_NULL, HPX_NULL);
+  hpx_call_async(HPX_HERE, _progress, NULL, 0, HPX_NULL, HPX_NULL);
 
   _table_unlock();
   dbg_printf("Initialized futures on rank %d\n", hpx_get_my_rank());
@@ -788,8 +756,7 @@ _future_initialize_actions(void) {
   _is_shared = HPX_REGISTER_ACTION(_is_shared_action);
   _future_set_no_copy_from_remote = HPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action);
 
-  _recv_queue_progress = HPX_REGISTER_ACTION(_recv_queue_progress_action);
-  _send_queue_progress = HPX_REGISTER_ACTION(_send_queue_progress_action);
+  _progress = HPX_REGISTER_ACTION(_progress_action);
   _add_future_to_table = HPX_REGISTER_ACTION(_add_future_to_table_action);
   _initialize_netfutures = HPX_REGISTER_ACTION(_initialize_netfutures_action);
 }
