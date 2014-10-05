@@ -62,6 +62,7 @@ extern hpx_action_t pgas_cyclic_alloc;
 extern hpx_action_t pgas_cyclic_calloc;
 extern hpx_action_t pgas_memset;
 extern hpx_action_t pgas_free;
+extern hpx_action_t pgas_csbrk;
 
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
