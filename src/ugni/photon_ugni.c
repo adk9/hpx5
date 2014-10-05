@@ -59,6 +59,7 @@ struct photon_backend_t photon_ugni_backend = {
   .context = &ugni_ctx,
   .initialized = ugni_initialized,
   .init = ugni_init,
+  .cancel = NULL,
   .finalize = ugni_finalize,
   /* API */
   .get_dev_addr = NULL,

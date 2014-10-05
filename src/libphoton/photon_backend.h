@@ -38,7 +38,8 @@
 #define REQUEST_FLAG_FIN     0x01
 #define REQUEST_FLAG_EAGER   0x02
 #define REQUEST_FLAG_EDONE   0x04
-#define REQUEST_FLAG_USERID  0x08
+#define REQUEST_FLAG_LDONE   0x08
+#define REQUEST_FLAG_USERID  0x10
 
 #define RDMA_FLAG_NIL        0x00
 #define RDMA_FLAG_NO_CQE     0x01
@@ -134,6 +135,7 @@ struct photon_backend_t {
   void *context;
   int (*initialized)(void);
   int (*init)(photonConfig cfg, ProcessInfo *info, photonBI ss);
+  int (*cancel)(photon_rid request, int flags);
   int (*finalize)(void);
   int (*connect)(void *local_ci, void *remote_ci, int pindex, void **ret_ci, int *ret_len, photon_connect_mode_t);
   int (*get_info)(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);

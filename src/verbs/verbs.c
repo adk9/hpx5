@@ -92,6 +92,7 @@ struct photon_backend_t photon_verbs_backend = {
   .context = &verbs_ctx,
   .initialized = verbs_initialized,
   .init = verbs_init,
+  .cancel = NULL,
   .finalize = verbs_finalize,
   .connect = verbs_connect_single,
   .get_info = verbs_get_info,

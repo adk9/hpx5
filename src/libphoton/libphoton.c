@@ -185,6 +185,7 @@ int photon_init(photonConfig cfg) {
   }
 
   /* check if the selected backend defines its own API methods and use those instead */
+  __photon_default->cancel = (be->cancel)?(be->cancel):__photon_default->cancel;
   __photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
   __photon_default->register_buffer = (be->register_buffer)?(be->register_buffer):__photon_default->register_buffer;
   __photon_default->unregister_buffer = (be->unregister_buffer)?(be->unregister_buffer):__photon_default->unregister_buffer;
@@ -229,6 +230,22 @@ error_exit:
   log_err("photon_init(): %s support not present", errmsg);
   free(lcfg);
   return PHOTON_ERROR;
+}
+
+int photon_cancel(photon_rid request, int flags) {
+  int rc;
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+  
+  rc = __photon_default->cancel(request, flags);
+  if (rc != PHOTON_OK) {
+    log_err("Error in backend cancel");
+    return rc;
+  }
+
+  return PHOTON_OK;
 }
 
 int photon_finalize() {

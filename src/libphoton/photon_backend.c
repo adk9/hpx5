@@ -38,6 +38,7 @@ DEFINE_COUNTER(curr_cookie, uint32_t)
 /* default backend methods */
 static int _photon_initialized(void);
 static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss);
+static int _photon_cancel(photon_rid request, int flags);
 static int _photon_finalize(void);
 static int _photon_register_buffer(void *buffer, uint64_t size);
 static int _photon_unregister_buffer(void *buffer, uint64_t size);
@@ -99,6 +100,7 @@ static void *__photon_req_watcher(void *arg);
 struct photon_backend_t photon_default_backend = {
   .initialized = _photon_initialized,
   .init = _photon_init,
+  .cancel = _photon_cancel,
   .finalize = _photon_finalize,
   .get_dev_addr = NULL,
   .register_addr = NULL,
@@ -616,6 +618,26 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   return PHOTON_ERROR;
 }
 
+static int _photon_cancel(photon_rid request, int flags) {
+  photonRequest req;
+  
+  if (flags & PHOTON_SHUTDOWN) {
+    
+  }
+  else {
+    if (htable_lookup(reqtable, request, (void**)&req)) {
+      dbg_err("Could not find request to cancel: 0x%016lx", request);
+      return PHOTON_ERROR;
+    }
+    while (!(req->flags & REQUEST_FLAG_LDONE))
+      __photon_nbpop_event(req);
+
+    htable_remove(reqtable, request, NULL);
+  }
+
+  return PHOTON_OK;
+}
+
 static int _photon_finalize() {
   int rc;
 
@@ -733,6 +755,8 @@ static int __photon_handle_cq_event(photonRequest req, photon_rid id) {
 	dbg_info("setting request completed with cookie: 0x%016lx", cookie);
 	tmp_req->state = REQUEST_COMPLETED;
       }
+      else
+	tmp_req->flags &= REQUEST_FLAG_LDONE;
     }
     else if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
       if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
@@ -1524,7 +1548,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   bool eager = false;
 
   dbg_info("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
-
+  
   if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
     log_err("Requested post of send buffer for ptr not in table");
     goto error_exit;
@@ -2428,7 +2452,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
           status->size = eager_entry->request>>32;
 
           *flag = 1;
-          
+   
           return PHOTON_OK;
         }
       }
@@ -2439,7 +2463,7 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
         status->request = entry_iterator->request;
         status->tag = entry_iterator->tag;
         status->size = entry_iterator->size;
-
+	
         dbg_info("Request: 0x%016lx", entry_iterator->request);
         dbg_info("Address: %p", (void *)entry_iterator->addr);
         dbg_info("Size: %lu", entry_iterator->size);
@@ -2726,7 +2750,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
         *flag = 1;
         entry_iter->request = UINT64_MAX;
         NEXT_LEDGER_ENTRY(photon_processes[i].local_pwc_ledger);
-        dbg_info("popped ledger event with id: 0x%016lx", *request);
+        log_info("popped ledger event with id: 0x%016lx", *request);
         return PHOTON_OK;
       }
     }
@@ -2747,7 +2771,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
       }
     }
     else if (htable_lookup(reqtable, cookie, (void**)&req) == 0) {
-      dbg_info("got CQ event for a non-PWC request");
+      dbg_info("got CQ event for a non-PWC request: 0x%016lx", cookie);
       __photon_handle_cq_event(req, cookie);
     }
     else {
