@@ -27,18 +27,6 @@
 #include "../mallctl.h"
 #include "heap.h"
 
-static size_t _get_nchunks(const size_t size, size_t bytes_per_chunk) {
-  size_t nchunks = size / bytes_per_chunk;
-  if (nchunks == 0) {
-    dbg_log_gas("must have at least %lu bytes in the shared heap\n",
-                bytes_per_chunk);
-    nchunks = 1;
-  }
-
-  if (nchunks == 1)
-    dbg_log_gas("disabling support for cyclic allocation\n");
-  return nchunks;
-}
 
 static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
@@ -76,7 +64,7 @@ int heap_init(heap_t *heap, const size_t size) {
   dbg_log_gas("heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
 
   heap->nbytes = size;
-  heap->nchunks = _get_nchunks(size, heap->bytes_per_chunk);
+  heap->nchunks = ceil_div_64(size, heap->bytes_per_chunk);
   dbg_log_gas("heap nchunks is %lu\n", heap->nchunks);
 
   // use one extra chunk to deal with alignment
