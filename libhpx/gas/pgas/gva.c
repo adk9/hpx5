@@ -73,6 +73,7 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
   // make sure that the heap offset is in the expected range (everyone has the
   // same size, so the locality is irrelevant here)
   DEBUG_IF (!heap_offset_inbounds(global_heap, heap_offset)) {
+    dbg_wait();
     dbg_error("heap offset %lu is out of range\n", heap_offset);
   }
 
@@ -152,7 +153,7 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
     const int64_t dist = doffset * ranks * bsize + dlocality * bsize + dphase;
 
     // make sure we're not crazy
-    DEBUG_IF (pgas_gva_add(lhs, dist, ranks, bsize) != rhs) {
+    DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, ranks, bsize) != rhs) {
       dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
                 lhs, rhs, dist);
     }
@@ -161,8 +162,8 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
 }
 
 /// Perform address arithmetic on a PGAS global address.
-pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
-                        uint32_t bsize) {
+pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
+                               uint32_t bsize) {
   if (!bsize)
     return gva + bytes;
 
@@ -182,4 +183,8 @@ pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
   }
 
   return next;
+}
+
+pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks) {
+  return gva + bytes;
 }
