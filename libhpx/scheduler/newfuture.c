@@ -554,7 +554,8 @@ hpx_newfuture_t
 hpx_lco_newfuture_at(hpx_newfuture_t array, int i) {
   //  return &array[i];
   //return &_newfuture_table.futs[array->table_index][i];
-  hpx_newfuture_t fut;
+  hpx_newfuture_t fut = array;
+  fut.index = i;
   return fut;
 }
 
@@ -593,27 +594,31 @@ _put_with_completion(hpx_newfuture_t *future,  int id, size_t size, void *data,
 
 void hpx_lco_newfuture_setat(hpx_newfuture_t future, int id, size_t size, void *data,
 			     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+  hpx_newfuture_t future_i = hpx_lco_newfuture_at(future, id);
+
   //  printf("Putting to (%d, %p) from %d\n", _newfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
   
   // normally lco_set does all this
-  if (_newfuture_get_rank(&future) != hpx_get_my_rank()) {
-    _put_with_completion(&future, id, size, data, lsync_lco, rsync_lco);
+  if (_newfuture_get_rank(&future_i) != hpx_get_my_rank()) {
+    _put_with_completion(&future_i, id, size, data, lsync_lco, rsync_lco);
   }
   else
-    _future_set_with_copy((lco_t*)_newfuture_get_addr(&future), size, data);  
+    _future_set_with_copy((lco_t*)_newfuture_get_addr(&future_i), size, data);  
 }
 
 void hpx_lco_newfuture_emptyat(hpx_newfuture_t base, int i, hpx_addr_t rsync_lco) {
 }
 
 hpx_status_t hpx_lco_newfuture_getat(hpx_newfuture_t base, int i, size_t size, void *value) {
+  hpx_newfuture_t future_i = hpx_lco_newfuture_at(base, i);
+
   lco_t *lco;
 
-  if (_newfuture_get_rank(&base) != hpx_get_my_rank()) {
+  if (_newfuture_get_rank(&future_i) != hpx_get_my_rank()) {
     return HPX_ERROR;
   }
   else {
-    lco = (lco_t*)_newfuture_get_addr(&base);
+    lco = (lco_t*)_newfuture_get_addr(&future_i);
   }
   return _future_get(lco, size, value);
 }
