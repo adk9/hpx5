@@ -157,8 +157,7 @@ static int _action_main(args_t *args) {
   args->pingpong = base;
 
   hpx_call(HPX_THERE(0), _ping, args, sizeof(*args), done);
-  hpx_addr_t there = HPX_THERE(1);
-  hpx_call(there, _pong, args, sizeof(*args), done);
+  hpx_call(HPX_THERE(1), _pong, args, sizeof(*args), done);
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
