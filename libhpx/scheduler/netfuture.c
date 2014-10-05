@@ -28,11 +28,12 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
+#include "libhpx/transport.h"
 #include "lco.h"
 #include "cvar.h"
 
-//#define dbg_printf(...)
-#define dbg_printf printf
+#define dbg_printf(...)
+//#define dbg_printf printf
 
 #define _NETFUTURES_MEMORY_DEFAULT 1024*1024*100
 #define _NETFUTURES_CAPACITY_DEFAULT 10000
@@ -247,27 +248,42 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   _netfuture_table.curr_offset = 0;
   _netfuture_table.buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
-  /*
+
   _netfuture_table.base = malloc(_NETFUTURES_MEMORY_DEFAULT);
   photon_register_buffer(_netfuture_table.base, _NETFUTURES_MEMORY_DEFAULT);
-  */
+
+#if 0
   _netfuture_table.mem_size = _NETFUTURES_MEMORY_DEFAULT;
   _netfuture_table.base_gas = hpx_gas_alloc(_NETFUTURES_MEMORY_DEFAULT);
-  if (!hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base))
-    return HPX_ERROR;
-
+  assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
+#endif
   struct  photon_buffer_t buffer;
   buffer.addr = (uintptr_t)_netfuture_table.base;
+
   photon_get_buffer_private(_netfuture_table.base, _NETFUTURES_MEMORY_DEFAULT, &buffer.priv);
-
+  
   dbg_printf("At %d buffer = %p\n", hpx_get_my_rank(), _netfuture_table.base);
-
+  
   hpx_lco_allgather_setid(*ag, hpx_get_my_rank(), 
 			  sizeof(struct photon_buffer_t), &buffer,
 			  HPX_NULL, HPX_NULL);
   
   hpx_lco_get(*ag, hpx_get_num_ranks() * sizeof(struct photon_buffer_t), _netfuture_table.buffers);
 
+#if 0
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    dbg_printf("At rank %d, buffer[%d].priv = %"PRIx64",%"PRIx64"\n", hpx_get_my_rank(), i, _netfuture_table.buffers[i].priv.key0,  _netfuture_table.buffers[i].priv.key1);
+  }
+#endif
+  #if 0
+  for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    transport_class_t *transport = here->transport;
+    memcpy(&_netfuture_table.buffers[i].priv, transport->rkey_table[i].rkey, sizeof(_netfuture_table.buffers[i].priv));
+    //    _netfuture_table.buffers[i].priv.key1 = (uint64_6)transport->rkey_table[i];
+
+    dbg_printf("At rank %d, buffer[%d].priv = %"PRIx64",%"PRIx64"\n", hpx_get_my_rank(), i, _netfuture_table.buffers[i].priv.key0,  _netfuture_table.buffers[i].priv.key1);
+  }
+#endif
   _netfuture_table.inited = 1;
 
   hpx_call_async(HPX_HERE, _recv_queue_progress, NULL, 0, HPX_NULL, HPX_NULL);
@@ -277,7 +293,7 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   dbg_printf("Initialized futures on rank %d\n", hpx_get_my_rank());
   return HPX_SUCCESS;
 }
-
+  
 hpx_status_t hpx_netfutures_init() {
   hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   if (hpx_get_my_rank() != 0)
@@ -643,8 +659,9 @@ void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco
 }
 
 hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
-  hpx_addr_t retval = HPX_NULL;
+  hpx_addr_t retval = hpx_gas_alloc(size);
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(base, i);
+  void* out;
 
   lco_t *lco;
 
@@ -655,9 +672,10 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
   }
   else {
     lco = (lco_t*)_netfuture_get_addr(&future_i);
-    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i), _netfuture_table.mem_size);
+    //    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i), _netfuture_table.mem_size);
+    hpx_gas_try_pin(retval, &out);
   }
-  _future_get(lco, size, NULL);
+  _future_get(lco, size, out);
   return retval;
 }
 
