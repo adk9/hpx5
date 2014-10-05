@@ -25,7 +25,7 @@ void buffertable_finalize() {
   buffertable_size = 0;
 }
 
-int buffertable_find_containing(void* start, int size, photonBI* result) {
+int buffertable_find_containing(void* start, uint64_t size, photonBI* result) {
   int i, cond;
 
   for(i=0; i<num_registered_buffers; i++) {
@@ -41,7 +41,7 @@ int buffertable_find_containing(void* start, int size, photonBI* result) {
   return 1;
 }
 
-int buffertable_find_exact(void* start, int size, photonBI* result) {
+int buffertable_find_exact(void* start, uint64_t size, photonBI* result) {
   int i, cond;
 
   for(i=0; i<num_registered_buffers; i++) {

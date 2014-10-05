@@ -2969,6 +2969,7 @@ int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pr
     return photon_buffer_get_private(db, ret_priv);
   }
   else {
+    dbg_err("Could not find buffer: 0x%016lx of size %lu", (uintptr_t)buf, size);
     return PHOTON_ERROR;
   }
 }

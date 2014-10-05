@@ -10,8 +10,8 @@
 int buffertable_init(int max_buffers);
 void buffertable_finalize();
 
-int buffertable_find_containing(void* start, int size, photonBI* result);
-int buffertable_find_exact(void* start, int size, photonBI* result);
+int buffertable_find_containing(void* start, uint64_t size, photonBI* result);
+int buffertable_find_exact(void* start, uint64_t size, photonBI* result);
 
 int buffertable_insert(photonBI buffer);
 int buffertable_remove(photonBI buffer);
