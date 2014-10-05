@@ -223,7 +223,7 @@ static int _main_action(_sssp_args_t *args) {
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
 
-    hpx_gas_free(sargs.graph, HPX_NULL);
+    hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
   }
 
 #ifdef GATHER_STAT
