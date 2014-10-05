@@ -171,7 +171,8 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
 
   // see if the chunk is allocated
   const uint32_t chunk = heap_offset / heap->bytes_per_chunk;
-  return bitmap_is_set(heap->chunks, chunk);
+  const bool acyclic = bitmap_is_set(heap->chunks, chunk);
+  return !acyclic;
 }
 
 void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
