@@ -181,6 +181,20 @@ static int _insert_edge_action(const hpx_addr_t * const index_array)
 }
 
 
+static hpx_action_t _print_edge;
+static int _print_edge_action(int *i)
+{
+  const hpx_addr_t target = hpx_thread_current_target();
+
+  edge_list_edge_t *edge;
+  if (!hpx_gas_try_pin(target, (void**)&edge))
+    return HPX_RESEND;
+
+  hpx_gas_unpin(target);
+  printf("%d %lu %lu %lu.\n", *i, edge->source, edge->dest, edge->weight);
+  return HPX_SUCCESS;
+}
+
 
 hpx_action_t adj_list_from_edge_list = 0;
 int adj_list_from_edge_list_action(const edge_list_t * const el) {
@@ -255,6 +269,7 @@ static __attribute__((constructor)) void _adj_list_register_actions() {
   _init_vertex             = HPX_REGISTER_ACTION(_init_vertex_action);
   _alloc_vertex            = HPX_REGISTER_ACTION(_alloc_vertex_action);
   _alloc_adj_list_entry    = HPX_REGISTER_ACTION(_alloc_adj_list_entry_action);
+  _print_edge              = HPX_REGISTER_ACTION(_print_edge_action);
   _insert_edge             = HPX_REGISTER_ACTION(_insert_edge_action);
   _put_edge_index          = HPX_REGISTER_ACTION(_put_edge_index_action);
   _put_edge                = HPX_REGISTER_ACTION(_put_edge_action);
