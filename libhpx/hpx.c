@@ -169,8 +169,9 @@ int system_startup(void) {
   int e = scheduler_startup(here->sched);
 
   // need to flush the transport
-  bool flush = (network_get_shutdown_src(here->network) == here->rank);
-  transport_progress(here->transport, flush);
+  transport_op_t op = (network_get_shutdown_src(here->network) == here->rank)?
+    TRANSPORT_FLUSH:TRANSPORT_CANCEL;
+  transport_progress(here->transport, op);
 
   // and cleanup the system
   return _cleanup(here, e);

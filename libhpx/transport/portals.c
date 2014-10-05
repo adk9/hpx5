@@ -458,17 +458,23 @@ static int _recv_progress(transport_class_t **t) {
   return HPX_SUCCESS;
 }
 
-static void _progress(transport_class_t *t, bool flush) {
-  if (flush) {
+static void _progress(transport_class_t *t, transport_op_t op) {
+  switch (op) {
+  case TRANSPORT_FLUSH:
     _send_flush(t);
-    return;
+    break;
+  case TRANSPORT_POLL:
+    hpx_addr_t and = hpx_lco_and_new(2);
+    hpx_call(HPX_HERE, _send_progress_action, &t, sizeof(t), and);
+    hpx_call(HPX_HERE, _recv_progress_action, &t, sizeof(t), and);
+    hpx_lco_wait(and);
+    hpx_lco_delete(and, HPX_NULL);
+    break;
+  case TRANSPORT_CANCEL:
+    break;
+  default:
+    break;
   }
-
-  hpx_addr_t and = hpx_lco_and_new(2);
-  hpx_call(HPX_HERE, _send_progress_action, &t, sizeof(t), and);
-  hpx_call(HPX_HERE, _recv_progress_action, &t, sizeof(t), and);
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
 }
 
 static uint32_t _get_send_limit(transport_class_t *t) {
