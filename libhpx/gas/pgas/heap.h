@@ -134,12 +134,12 @@ void *heap_offset_to_local(heap_t *heap, uint64_t heap_offset)
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned_bsize)
   HPX_INTERNAL;
 
-
 /// Check to make sure a heap offset is actually in the heap.
-bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset);
-
+bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset)
+  HPX_INTERNAL;
 
 /// Check to make sure that a range of offsets is in the heap.
-bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length);
+bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length)
+  HPX_INTERNAL;
 
 #endif
