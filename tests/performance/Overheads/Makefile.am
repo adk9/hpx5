@@ -17,7 +17,9 @@ PERFTESTS += \
         time_lco_future \
         time_lco_allreduce \
         time_lco_allgather \
-        time_lco_alltoall 
+        time_lco_alltoall \
+        time_lco_netfutures \
+        time_lco_netfutures_msgSize
 else
 check_PROGRAMS += \
         perfmain \
@@ -29,7 +31,9 @@ check_PROGRAMS += \
         time_lco_future \
         time_lco_allreduce \
         time_lco_allgather \
-        time_lco_alltoall
+        time_lco_alltoall \
+        time_lco_netfutures \
+        time_lco_netfutures_msgSize
 endif
 
 NPROCS ?= 2
@@ -53,7 +57,10 @@ time_lco_future_SOURCES = time_lco_future.c
 time_lco_allreduce_SOURCES = time_lco_allreduce.c
 time_lco_allgather_SOURCES = time_lco_allgather.c
 time_lco_alltoall_SOURCES = time_lco_alltoall.c
+time_lco_netfutures_SOURCES = time_lco_netfutures.c
+time_lco_netfutures_msgSize_SOURCES = time_lco_netfutures_msgSize.c
 
 if HAVE_PHOTON
 LDADD            += -lphoton
 endif
+
