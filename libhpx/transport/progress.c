@@ -271,8 +271,6 @@ void network_progress_flush(progress_t *p) {
 }
 
 void network_progress_poll(progress_t *p) {
-  int sends = 0;
-  int recvs = 0;
   do {
     int recv = 1;
     while (recv && network_progress_can_recv(p)) {
@@ -283,14 +281,14 @@ void network_progress_poll(progress_t *p) {
       }
     }
 
-    sends = _test(p, &p->pending_sends, _finish_send);
+    int sends = _test(p, &p->pending_sends, _finish_send);
     assert(sends <= p->npsends);
     p->npsends -= sends;
     DEBUG_IF (sends) {
       dbg_log_trans("progress: finished %d sends.\n", sends);
     }
 
-    recvs = _test(p, &p->pending_recvs, _finish_recv);
+    int recvs = recvs = _test(p, &p->pending_recvs, _finish_recv);
     assert(recvs <= p->nprecvs);
     p->nprecvs -= recvs;
     DEBUG_IF (recvs) {
