@@ -49,11 +49,6 @@ static void *_map_heap(const size_t bytes) {
   return heap;
 }
 
-/// Compute the number of chunks required to satisfy the @p size.
-static uint32_t _chunks(const size_t size, const size_t bytes_per_chunk) {
-  return ceil_div_64(size, bytes_per_chunk);
-}
-
 int heap_init(heap_t *heap, const size_t size) {
   assert(heap);
   assert(size);
@@ -108,26 +103,42 @@ void heap_fini(heap_t *heap) {
 void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
                        unsigned arena) {
   assert(arena == mallctl_thread_get_arena());
-  const uint32_t blocks = _chunks(size, heap->bytes_per_chunk);
-  const uint32_t align = _chunks(alignment, heap->bytes_per_chunk);
-  uint32_t offset = 0;
-  int e = bitmap_reserve(heap->chunks, blocks, align, &offset);
+  const uint32_t blocks = ceil_div_64(size, heap->bytes_per_chunk);
+  const uint32_t align  = ceil_div_64(alignment, heap->bytes_per_chunk);
+  uint32_t chunk_offset = 0;
+  int e = bitmap_reserve(heap->chunks, blocks, align, &chunk_offset);
   dbg_check(e, "pgas: failed to allocate a chunk size %"PRIu32
             " align %"PRIu32"\n", blocks, align);
+
+  const uint64_t heap_offset = chunk_offset * heap->bytes_per_chunk;
+  const uint64_t cyclic_offset = heap->nbytes - sync_load(&heap->csbrk,
+                                                          SYNC_RELAXED);
+  if (cyclic_offset < heap_offset) {
+    dbg_error("\n"
+              "out-of-memory detected\n"
+              "\t-gas_alloc is using %lu bytes\n"
+              "\t-gas_global_alloc is using %lu bytes per locality\n",
+              heap_offset, cyclic_offset);
+  }
+
+  char *chunk = heap->base + heap_offset;
+  const uint64_t actual_alignment = (uintptr_t)chunk % alignment;
+  if (actual_alignment != 0) {
+    dbg_error("expected chunk with alignment %lu, off by %lu\n", alignment,
+              actual_alignment);
+  }
 
   if (zero)
     *zero = false;
 
-  char *chunk = heap->base + offset * heap->bytes_per_chunk;
-  assert((uintptr_t)chunk % alignment == 0);
   return chunk;
 }
 
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
   const uint32_t offset = (char*)chunk - heap->base;
   assert(offset % heap->bytes_per_chunk == 0);
-  const uint32_t i = _chunks(offset, heap->bytes_per_chunk);
-  const uint32_t n = _chunks(size, heap->bytes_per_chunk);
+  const uint32_t i = ceil_div_64(offset, heap->bytes_per_chunk);
+  const uint32_t n = ceil_div_64(size, heap->bytes_per_chunk);
   bitmap_release(heap->chunks, i, n);
   return true;
 }
