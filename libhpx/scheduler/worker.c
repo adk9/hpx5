@@ -126,6 +126,12 @@ static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
 /// and then invokes the action on the arguments. If the action returns to this
 /// entry function, we dispatch to the correct thread termination handler.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  const hpx_addr_t target = hpx_parcel_get_target(parcel);
+  const uint32_t owner = gas_owner_of(here->gas, target);
+  DEBUG_IF (owner != here->rank) {
+    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+  }
+
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
