@@ -379,11 +379,11 @@ _progress(transport_class_t *t, transport_op_t op)
     break;
   case TRANSPORT_CANCEL:
     {
-      // probe a few times to catch any oustanding CQ events
-      int i, flag;
-      photon_rid req;
-      for (i=0; i<20; i++) {
-	photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_EVQ);
+      request_t **i = &(photon->progress)->pending_sends;
+      while (*i != NULL) {
+	request_t *j = *i;
+	photon_cancel((photon_rid)j->request, 0);
+	*i = j->next;
       }
     }
     break;
