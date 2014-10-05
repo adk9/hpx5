@@ -124,6 +124,11 @@ _newfuture_get_rank(hpx_newfuture_t *f) {
   return f->index % hpx_get_num_ranks(); // TODO change if we want to allow base_rank != 0
 }
 
+static int
+_newfutures_at_rank(hpx_newfuture_t *f) {
+  return (f->count + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+}
+
 static size_t
 _newfuture_get_offset(hpx_newfuture_t *f) {
   size_t size = sizeof(_newfuture_t) + f->size;
@@ -153,13 +158,10 @@ _send_queue_progress_action(void* args) {
   while (1) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (flag > 0) {
-      printf("Received send completion %" PRIu64 "\n", request);
+      printf("Received send completion %" PRIx64 "\n", request);
     }
     if (rc < 0) {
       
-    }
-    if (flag > 0) {
-      //printf("Received completion %" PRIu64 "\n", request);
     }
     if ((flag > 0) && (request == PHOTON_NOWAIT_TAG)) {
 	
@@ -205,7 +207,7 @@ _recv_queue_progress_action(void *args) {
     // you want to get completions from any source, even yourself
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag > 0) {
-      printf("Received recv completion %" PRIu64 "\n", request);
+      printf("Received recv completion %" PRIx64 "\n", request);
     }
     if (flag && request != 0) {
       _newfuture_t *f = (_newfuture_t*)request;
@@ -507,7 +509,7 @@ int update_table(hpx_newfuture_t *f) {
   _newfuture_table.fut_infos[f->table_index].table_index = f->table_index;
   _newfuture_table.fut_infos[f->table_index].offset = f->base_offset;
 
-  _newfuture_table.curr_offset += ((f->count + hpx_get_num_ranks() - 1)/hpx_get_num_ranks()) * f->size;
+  _newfuture_table.curr_offset += (_newfutures_at_rank(f)) * f->size;
   _newfuture_table.curr_index++;
   return HPX_SUCCESS;
 }
@@ -516,6 +518,12 @@ static int
 _add_future_to_table_action(hpx_newfuture_t *f) {
   _table_lock();
   return update_table(f);
+
+  for (int i = 0; i < _newfutures_at_rank(f); i ++) {
+    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(f) + (sizeof(_newfuture_t) + f->size) * i;
+    _future_init(nf, f->size, false);
+  }
+
   _table_unlock();
 }
 
@@ -538,6 +546,12 @@ hpx_lco_newfuture_new_all(int n, size_t size) {
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
   for (int i = 1; i < hpx_get_num_ranks(); i++)
     hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
+
+  for (int i = 0; i < _newfutures_at_rank(&f); i ++) {
+    _newfuture_t *nf = (_newfuture_t*)_newfuture_get_addr(&f) + (sizeof(_newfuture_t) + size) * i;
+    _future_init(nf, size, false);
+  }
+
   hpx_lco_wait(done);
 
   return f;
