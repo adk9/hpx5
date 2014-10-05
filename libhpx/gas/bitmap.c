@@ -239,6 +239,13 @@ bool bitmap_is_set(bitmap_t *bitmap, const uint32_t block) {
   const uint32_t i = block / BITS_PER_WORD;
   const uint32_t r = block % BITS_PER_WORD;
   const uintptr_t word = sync_load(&bitmap->bits[i], SYNC_RELAXED);
-  const uintptr_t mask = 0x1 << r;
-  return word & mask;
+  const uintptr_t mask = 1lu << r;
+
+  // word  0 0 1 1     ~word  1 1 0 0
+  // mask  1 0 1 0      mask  1 0 1 0
+  // -------------
+  //  val  1 0 0 0
+
+  const uintptr_t val = ~word & mask;
+  return val;
 }
