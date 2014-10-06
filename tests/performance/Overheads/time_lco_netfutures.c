@@ -35,7 +35,8 @@ static int iters[] = {
   10,
   100,
   1000,
-  10000
+  10000,
+  100000
 };
 /* helper functions */
 static void _usage(FILE *stream) {

@@ -19,9 +19,9 @@ static hpx_action_t _pong = 0;
 
 #define MAX_MSG_SIZE 1024*1024*100
 
-int skip = 1000;
-int loop = 10000;
-int iters = 10;
+int skip = 0;
+int loop = 10;
+int iters = 1000;
 
 /* helper functions */
 static void _usage(FILE *stream) {
@@ -62,6 +62,8 @@ typedef struct {
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.heap_bytes = (unsigned long)2*1024*1024*1024;
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
