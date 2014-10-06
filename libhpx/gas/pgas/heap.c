@@ -117,7 +117,7 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
               "out-of-memory detected\n"
               "\t-gas_alloc is using %lu bytes\n"
               "\t-gas_global_alloc is using %lu bytes per locality\n",
-              heap_offset, cyclic_offset);
+              heap_offset, heap->csbrk);
   }
 
   char *chunk = heap->base + heap_offset;
