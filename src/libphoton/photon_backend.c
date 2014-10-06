@@ -2705,6 +2705,15 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
 
   *flag = 0;
 
+  req = SLIST_FIRST(&pending_pwc_list);
+  if (req) {
+    *flag = 1;
+    *request = req->id;
+    SAFE_SLIST_REMOVE_HEAD(&pending_pwc_list, slist);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+    return PHOTON_OK;
+  }
+
   if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
     end = _photon_nproc;
@@ -2724,15 +2733,6 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
       cookie = event.id;
       dbg_info("popped CQ event with id: 0x%016lx", cookie);
     }
-  }
-
-  req = SLIST_FIRST(&pending_pwc_list);
-  if (req) {
-    *flag = 1;
-    *request = req->id;
-    SAFE_SLIST_REMOVE_HEAD(&pending_pwc_list, slist);
-    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-    return PHOTON_OK;
   }
 
   // prioritize the EVQ
