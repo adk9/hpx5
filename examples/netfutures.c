@@ -66,6 +66,10 @@ typedef struct {
              __VA_ARGS__);                                              \
   } while (0)
 
+struct buffer {
+  char data[BUFFER_SIZE];
+};
+
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   int opt = 0;
@@ -170,19 +174,19 @@ static int _action_main(args_t *args) {
  */
 static int _action_ping(args_t *args) {
   printf("In ping on rank %d\n", hpx_get_my_rank());
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
   
-  char *msg_ping;
-  char *msg_pong;
+  struct buffer *msg_ping;
+  struct buffer *msg_pong;
   hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 
   for (int i = 0; i < args->iterations; i++) {
     if (_text)
-      snprintf(msg_ping, BUFFER_SIZE, "ping %d from (%d, %d)", i,
+      snprintf(msg_ping->data, BUFFER_SIZE, "ping %d from (%d, %d)", i,
 	       hpx_get_my_rank(), hpx_get_my_thread_id());
     
-    RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping);
+    RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping->data);
 
     hpx_addr_t lsync = hpx_lco_future_new(0);    
     hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, lsync, HPX_NULL);
@@ -191,7 +195,7 @@ static int _action_ping(args_t *args) {
     msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE);
     hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
 
-    RANK_PRINTF("Received pong msg= '%s'\n", msg_pong);
+    RANK_PRINTF("Received pong msg= '%s'\n", msg_pong->data);
   }
 
   return HPX_SUCCESS;
@@ -203,10 +207,10 @@ static int _action_ping(args_t *args) {
  */
 static int _action_pong(args_t *args) {
   printf("In pong on rank %d\n", hpx_get_my_rank());
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
-  char *msg_ping;
-  char *msg_pong;
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
+  struct buffer *msg_ping;
+  struct buffer *msg_pong;
   hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
 
 
@@ -215,10 +219,10 @@ static int _action_pong(args_t *args) {
     hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 
     if (_text)
-      snprintf(msg_pong, BUFFER_SIZE, "pong %d from (%d, %d)", i,
+      snprintf(msg_pong->data, BUFFER_SIZE, "pong %d from (%d, %d)", i,
 	       hpx_get_my_rank(), hpx_get_my_thread_id());
 
-    RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong);
+    RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong->data);
 
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);
