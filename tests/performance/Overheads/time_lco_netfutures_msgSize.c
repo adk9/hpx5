@@ -17,11 +17,11 @@ static hpx_action_t _main = 0;
 static hpx_action_t _ping = 0;
 static hpx_action_t _pong = 0;
 
-#define MAX_MSG_SIZE (1<<22)
+#define MAX_MSG_SIZE 1024*1024*100
 
 int skip = 1000;
 int loop = 10000;
-int iters = 1000;
+int iters = 10;
 
 /* helper functions */
 static void _usage(FILE *stream) {
