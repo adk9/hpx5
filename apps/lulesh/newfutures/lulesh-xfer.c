@@ -4,7 +4,7 @@ int get_bs_index(int i, int bi, int bs) {
   int r = hpx_get_num_ranks();
   printf("(%d, %d) -> %d\n", bi, i, (bi % r) + (bi/r)*bs*r + i*r);
 
-  return (bi/r)*bs*r + i*r;
+  return (bi%r) + (bi/r)*bs*r + i*r;
 }
 
 void
@@ -29,7 +29,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
     hpx_gas_unpin(data_addr);
-    //    printf("SBN1 setting at %d\n", srcLocalIdx + (domain->rank+distance)*26);
+    printf("SBN1 setting at %d\n", srcLocalIdx + (domain->rank+distance)*26);
     hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
@@ -53,6 +53,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
 void
 SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
 {
+  printf("================= SBN3 =====================================");
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
   int nz = domain->sizeZ + 1;
