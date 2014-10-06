@@ -167,14 +167,12 @@ static int _main_action(_sssp_args_t *args) {
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
 
+  // Construct the graph as an adjacency list
+  hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+  sargs.block_size = _index_array_block_size;
+
   for (int i = 0; i < args->nproblems; ++i) {
-    // Construct the graph as an adjacency list
-    hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
-
-    //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
-
     sargs.source = args->problems[i];
-    sargs.block_size = _index_array_block_size;
 
     hpx_time_t now = hpx_time_now();
 
@@ -224,8 +222,10 @@ static int _main_action(_sssp_args_t *args) {
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
 
-    hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
+    reset_adj_list(sargs.graph, &el);
   }
+
+  free_adj_list(sargs.graph);
 
 #ifdef GATHER_STAT
   double avg_time_per_source = total_elapsed_time/args->nproblems;
