@@ -396,7 +396,8 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   int i, rc;
   char *buf;
   int bufsize;
-  int info_ledger_size, fin_ledger_size, pwc_ledger_size, eager_ledger_size, eager_bufsize;
+  int info_ledger_size, fin_ledger_size, pwc_ledger_size, eager_ledger_size;
+  int eager_bufsize, pwc_bufsize;
 
   srand48(getpid() * time(NULL));
 
@@ -472,7 +473,9 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   pwc_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
-  bufsize = info_ledger_size + fin_ledger_size + pwc_ledger_size + eager_ledger_size + eager_bufsize;
+  pwc_bufsize = 2 * PHOTON_NP_PBUF_SIZE;
+  bufsize = info_ledger_size + fin_ledger_size + pwc_ledger_size + eager_ledger_size;
+  bufsize += (eager_bufsize + pwc_bufsize);
 
   if (!eager_bufsize) {
     log_warn("EAGER buffers disabled!");
@@ -507,6 +510,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   if (photon_setup_eager_buf(photon_processes, PHOTON_LEB_PTR(buf), _photon_ebsize) != 0) {
     log_err("couldn't setup eager buffers");
+    goto error_exit_buf;
+  }
+
+  if (photon_setup_pwc_buf(photon_processes, PHOTON_LPB_PTR(buf), _photon_ebsize) != 0) {
+    log_err("couldn't setup pwc eager buffers");
     goto error_exit_buf;
   }
 
@@ -2563,7 +2571,7 @@ static int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void 
     uint8_t *tail;
     int tadd = 0;
 
-    eb = photon_processes[proc].remote_eager_buf;
+    eb = photon_processes[proc].remote_pwc_buf;
     hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
     hdr->request = remote;
     hdr->addr = (uintptr_t)rptr;
@@ -2731,7 +2739,7 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
   if ((flags & PHOTON_PROBE_LEDGER) && (cookie == UINT64_MAX)) {
     for (i=start; i<end; i++) {
       // check eager region first
-      eb = photon_processes[i].local_eager_buf;
+      eb = photon_processes[i].local_pwc_buf;
       hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
       if (hdr->head == UINT8_MAX) {
         // now check for tail flag (or we could return to check later)

@@ -54,6 +54,7 @@
 #define LEDGER_FIN           0x04
 #define LEDGER_PWC           0x08
 #define LEDGER_BUF           0x10
+#define LEDGER_PBUF          0x11
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 
@@ -62,15 +63,17 @@ typedef struct proc_info_t {
   photonRILedger  remote_snd_info_ledger;
   photonRILedger  local_rcv_info_ledger;
   photonRILedger  remote_rcv_info_ledger;
-  photonLedger    local_eager_ledger;
-  photonLedger    remote_eager_ledger;
   photonLedger    local_fin_ledger;
   photonLedger    remote_fin_ledger;
+  photonLedger    local_eager_ledger;
+  photonLedger    remote_eager_ledger;
   photonLedger    local_pwc_ledger;
   photonLedger    remote_pwc_ledger;
   
   photonEagerBuf  local_eager_buf;
   photonEagerBuf  remote_eager_buf;
+  photonEagerBuf  local_pwc_buf;
+  photonEagerBuf  remote_pwc_buf;
   photonMsgBuf    smsgbuf;
 
 #ifdef HAVE_XSP

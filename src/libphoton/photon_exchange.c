@@ -191,6 +191,16 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
     }
   }
 
+  if (flags & LEDGER_PBUF) {
+    //uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
+    uint64_t lsize = _photon_ebsize;
+    for (i=0; i<_photon_nproc; i++) {
+      processes[i].remote_pwc_buf->remote.addr = PHOTON_LPB_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_pwc_buf->remote.priv.key0 = key_0[i];
+      processes[i].remote_pwc_buf->remote.priv.key1 = key_1[i];
+    }
+  }
+
   free(key_0);
   free(key_1);
   free(va);
@@ -377,6 +387,37 @@ int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
     photon_processes[i].remote_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size);
     if (!photon_processes[i].remote_eager_buf) {
       log_err("couldn't create remote eager buffer for process %d", i);
+      return PHOTON_ERROR;
+    }
+  } 
+  
+  return PHOTON_OK;
+}
+
+int photon_setup_pwc_buf(ProcessInfo *photon_processes, char *buf, int size) {
+  int i;
+  int buf_size;
+
+  dbg_info();
+
+  //buf_size = sizeof(struct photon_rdma_eager_buf_entry_t) * num_entries;
+  buf_size = size;
+
+  for(i = 0; i < PHOTON_TPROC; i++) {
+    
+    dbg_info("allocating local pwc eager buffer for %d", i);
+    
+    photon_processes[i].local_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size);
+    if (!photon_processes[i].local_eager_buf) {
+      log_err("couldn't create local pwc eager buffer for process %d", i);
+      return PHOTON_ERROR;
+    }
+
+    dbg_info("allocating remote pwc eager buffer for %d", i);
+    
+    photon_processes[i].remote_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size);
+    if (!photon_processes[i].remote_eager_buf) {
+      log_err("couldn't create remote pwc eager buffer for process %d", i);
       return PHOTON_ERROR;
     }
   } 
