@@ -36,9 +36,7 @@ static int num_readers[]  ={
   32,
   64,
  128,
- 192,
- 256,
- 512
+ 192
 };
 
 static int action_get_value(void *args) {
