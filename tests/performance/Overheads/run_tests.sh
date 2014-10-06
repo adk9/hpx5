@@ -17,4 +17,4 @@ mpirun time_lco_alltoall 10
 mpirun time_lco_alltoall 100
 mpirun time_lco_alltoall 1000
 mpirun time_lco_netfutures
-#mpirun time_lco_netfutures_msgSize -c 1
+mpirun time_lco_netfutures_msgSize -c 1

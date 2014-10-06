@@ -17,7 +17,7 @@ static hpx_action_t _main = 0;
 static hpx_action_t _ping = 0;
 static hpx_action_t _pong = 0;
 
-#define MAX_MSG_SIZE 1024*1024*8
+#define MAX_MSG_SIZE 1024*1024
 
 int skip = 0;
 int loop = 10;
@@ -127,8 +127,6 @@ static int _action_main(void *args) {
     args_t args = {
       .msg_size = k,
     };
-
-    printf("Size: %d\n", k);
 
     for (int i = 0; i < loop + skip; i++) {
       if (i == skip) {
