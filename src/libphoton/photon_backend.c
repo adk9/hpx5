@@ -30,6 +30,7 @@ static htable_t *reqtable, *pwc_reqtable, *sr_reqtable;
 static photonRequest requests;
 static int num_requests;
 static LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
+static SLIST_HEAD(pendingpwc, photon_req_t) pending_pwc_list;
 static SLIST_HEAD(pendingrecvlist, photon_req_t) pending_recv_list;
 static SLIST_HEAD(pendingmemregs, photon_mem_register_req) pending_mem_register_list;
 
@@ -411,6 +412,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   num_requests = DEF_NUM_REQUESTS;
   LIST_INIT(&free_reqs_list);
+  SLIST_INIT(&pending_pwc_list);
   SLIST_INIT(&pending_recv_list);
 
   for(i = 0; i < num_requests; i++) {
@@ -760,8 +762,10 @@ static int __photon_handle_cq_event(photonRequest req, photon_rid id) {
     }
     else if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
       if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
-	dbg_info("setting pwc request completed with cookie: 0x%016lx", cookie);
+	dbg_info("setting pwc request 0x%016lx completed with cookie: 0x%016lx", req->id, cookie);
 	tmp_req->state = REQUEST_COMPLETED;
+	SAFE_SLIST_INSERT_HEAD(&pending_pwc_list, tmp_req, slist);
+	htable_remove(pwc_reqtable, cookie, NULL);
       } 
     }
   }
@@ -2714,6 +2718,15 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
     }
   }
 
+  req = SLIST_FIRST(&pending_pwc_list);
+  if (req) {
+    *flag = 1;
+    *request = req->id;
+    SAFE_SLIST_REMOVE_HEAD(&pending_pwc_list, slist);
+    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+    return PHOTON_OK;
+  }
+
   // prioritize the EVQ
   if ((flags & PHOTON_PROBE_LEDGER) && (cookie == UINT64_MAX)) {
     for (i=start; i<end; i++) {
@@ -2761,10 +2774,10 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
     if (htable_lookup(pwc_reqtable, cookie, (void**)&req) == 0) {
       // set flag and request only if we have processed the number of outstanding
       // events expected for this reqeust
-      if ( (req->state == REQUEST_COMPLETED) || (--req->num_entries) == 0) {
+      if ( (--req->num_entries) == 0) {
 	*flag = 1;
 	*request = req->id;
-	dbg_info("completed and removing request: 0x%016lx", cookie);
+	dbg_info("completed and removing pwc request: 0x%016lx", cookie);
 	htable_remove(pwc_reqtable, cookie, NULL);
 	SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
 	return PHOTON_OK;
