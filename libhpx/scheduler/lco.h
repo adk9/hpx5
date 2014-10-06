@@ -150,5 +150,7 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_INTERNAL;
 
+void lco_future_set(lco_t *lco, int size, const void *from) 
+  HPX_INTERNAL;
 
 #endif // LIBHPX_LCO_H

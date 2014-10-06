@@ -86,6 +86,10 @@ static void _future_set(lco_t *lco, int size, const void *from)
   lco_unlock(&f->lco);
 }
 
+void lco_future_set(lco_t *lco, int size, const void *from) {
+  _future_set(lco, size, from);
+}
+
 static void _future_error(lco_t *lco, hpx_status_t code) {
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
