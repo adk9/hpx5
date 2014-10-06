@@ -198,19 +198,28 @@ int _check_heap_offsets(heap_t *heap, uint64_t base, uint64_t size) {
 }
 
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
+  // need to allocate properly aligned offset
   const size_t bytes = n * bsize;
-  const uint64_t old = sync_fadd(&heap->csbrk, bytes, SYNC_ACQ_REL);
-  const uint64_t new = old + bytes;
+  uint64_t old = 0;
+  uint64_t new = 0;
+  do {
+    old = sync_load(&heap->csbrk, SYNC_RELAXED);
+    const size_t end = old + bytes;
+    const size_t offset = heap->nbytes - end;
+    const uint32_t r = offset % bsize;
+    new = end + r;
+  } while (!sync_cas(&heap->csbrk, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
-  if (old + bytes >= heap->nbytes)
+  if (new >= heap->nbytes)
     dbg_error("\n"
               "out-of-memory detected during csbrk allocation\n"
               "\t-global heap size: %lu bytes\n"
               "\t-previous cyclic allocation total: %lu bytes\n"
               "\t-current allocation request: %lu bytes\n",
-              heap->nbytes, old, old + bytes);
+              heap->nbytes, old, bytes);
 
   const uint64_t heap_offset = (heap->nbytes - new);
+  assert(heap_offset % bsize == 0);
   assert(heap_offset_inbounds(heap, heap_offset));
   _check_heap_offsets(heap, heap_offset, bytes);
   return heap_offset;
