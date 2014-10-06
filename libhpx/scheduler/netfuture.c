@@ -406,7 +406,7 @@ _future_get(lco_t *lco, int size, void *out)
     memcpy(out, ptr, size);
   }
 
-  if ((f->bits | FT_SHARED) == false) { // shared futures must be cleared manually
+  if ((f->bits & FT_SHARED) == false) { // shared futures must be cleared manually
     f->bits ^= HPX_SET;
     f->bits |= HPX_UNSET;
     cvar_reset(&f->full);
@@ -441,7 +441,7 @@ _future_wait_local(struct _future_wait_args *args)
       status = scheduler_wait(&f->lco.lock, &f->full);
     else
       status = cvar_get_error(&f->full);
-    if ((f->bits | FT_SHARED) == false) {
+    if ((f->bits & FT_SHARED) == false) {
       f->bits ^= HPX_SET;
       f->bits |= HPX_UNSET;
       cvar_reset(&f->full);
