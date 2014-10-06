@@ -72,6 +72,7 @@ struct buffer {
 
 int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  cfg.heap_bytes = 1L<<31;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
