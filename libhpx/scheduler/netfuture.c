@@ -44,6 +44,9 @@ static const int _NETFUTURE_EXCHG = -37;
 
 static bool shutdown = false;
 
+static uint32_t _outstanding_sends = 0;
+static uint32_t _outstanding_send_limit = 0;
+
 typedef struct {
   lco_t lco;
   cvar_t full;
@@ -186,6 +189,7 @@ _progress_action(void *args) {
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_ANY);
     if (flag && request == 0) {
       dbg_printf("Received send completion %" PRIx64 "\n", request);
+      sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
     }
     else if (flag && request != 0) {
       dbg_printf("Received recv completion for future at %" PRIx64 "\n", request);
@@ -219,6 +223,8 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
+  _outstanding_send_limit = here->transport->get_send_limit(here->transport);
+
   //  dbg_printf("Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
   _netfuture_table.curr_index = 0;
@@ -586,6 +592,15 @@ hpx_lco_netfuture_at(hpx_netfuture_t array, int i) {
 static void
 _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
 			  hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+
+  uint32_t old, new;
+  old = _outstanding_send_limit;
+  do {
+    while (old >= _outstanding_send_limit)
+      old = sync_load(&_outstanding_sends, SYNC_RELAXED);
+    new = old + 1;
+  } while (!sync_cas(&_outstanding_sends, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
+
   // need the following information:
   
   // need to convey the following information:
