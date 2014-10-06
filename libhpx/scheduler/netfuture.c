@@ -35,7 +35,7 @@
 #define dbg_printf(...)
 //#define dbg_printf printf
 
-#define YIELD_COUNT 10
+//#define YIELD_COUNT 10
 #define _NETFUTURES_MEMORY_DEFAULT 1024*1024*100
 #define _NETFUTURES_CAPACITY_DEFAULT 10000
 #define PHOTON_NOWAIT_TAG 0
@@ -184,7 +184,7 @@ _progress_action(void *args) {
   int flag;
   photon_rid request;
   //  int send_rank = -1;
-  int i = 0;
+  //  int i = 0;
   while (!shutdown) {
     // check send completion
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
@@ -211,9 +211,12 @@ _progress_action(void *args) {
       }
       lco_unlock(&f->lco);
     } // end if
+    /*
     i = (i + 1) % YIELD_COUNT;
     if (i == 0)
       hpx_thread_yield();
+    */
+    hpx_thread_yield();
   }
   return HPX_SUCCESS;
 }
@@ -230,7 +233,8 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
-  _outstanding_send_limit = here->transport->get_send_limit(here->transport);
+    _outstanding_send_limit = here->transport->get_send_limit(here->transport);
+  // _outstanding_send_limit = 1;
 
   //  dbg_printf("Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
@@ -406,12 +410,10 @@ _future_get(lco_t *lco, int size, void *out)
     memcpy(out, ptr, size);
   }
 
-  if ((f->bits & FT_SHARED) == false) { // shared futures must be cleared manually
-    f->bits ^= HPX_SET;
-    f->bits |= HPX_UNSET;
-    cvar_reset(&f->full);
-    scheduler_signal_all(&f->empty);
-  }
+  f->bits ^= HPX_SET;
+  f->bits |= HPX_UNSET;
+  cvar_reset(&f->full);
+  scheduler_signal_all(&f->empty);
 
  unlock:
   lco_unlock(&f->lco);
@@ -441,12 +443,10 @@ _future_wait_local(struct _future_wait_args *args)
       status = scheduler_wait(&f->lco.lock, &f->full);
     else
       status = cvar_get_error(&f->full);
-    if ((f->bits & FT_SHARED) == false) {
-      f->bits ^= HPX_SET;
-      f->bits |= HPX_UNSET;
-      cvar_reset(&f->full);
-      scheduler_signal_all(&f->empty);
-    }
+    f->bits ^= HPX_SET;
+    f->bits |= HPX_UNSET;
+    cvar_reset(&f->full);
+    scheduler_signal_all(&f->empty);
   }
   else {
     if (!_empty(f))
@@ -654,7 +654,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(future, id);
 
-  dbg_printf("Putting to (%d, %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("Putting to (%d, future at %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 
   //  dbg_printf("Putting to (%d, %p) from %d\n", _netfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
   
@@ -677,14 +677,14 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
 
   lco_t *lco;
 
-  dbg_printf("Getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("Getting from (%d, future at %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 
   if (_netfuture_get_rank(&future_i) != hpx_get_my_rank()) {
     return HPX_ERROR;
   }
   else {
     lco = (lco_t*)_netfuture_get_addr(&future_i);
-    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i), _netfuture_table.mem_size);
+    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), _netfuture_table.mem_size);
   }
   _future_get(lco, size, NULL);
   dbg_printf("Done getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
