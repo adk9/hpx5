@@ -192,7 +192,7 @@ static int _action_main(int *input) {
       .sbn1 = sbn1,
       .sbn3 = sbn3
     };
-    hpx_call(HPX_THERE(k), _evolve, &args, sizeof(args), complete);
+    hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);

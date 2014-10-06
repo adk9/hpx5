@@ -1,5 +1,12 @@
 #include "lulesh-hpx.h"
 
+int get_bs_index(int i, int bi, int bs) {
+  int r = hpx_get_num_ranks();
+  printf("(%d, %d) -> %d\n", bi, i, (bi % r) + (bi/r)*bs*r + i*r);
+
+  return (bi/r)*bs*r + i*r;
+}
+
 void
 SBN1(Domain *domain, hpx_netfuture_t sbn1)
 {
@@ -22,7 +29,8 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
     hpx_gas_unpin(data_addr);
-    hpx_lco_netfuture_setat(sbn1, srcLocalIdx + (domain->rank+distance)*26, BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+    //    printf("SBN1 setting at %d\n", srcLocalIdx + (domain->rank+distance)*26);
+    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
   // wait for incoming data
@@ -32,7 +40,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
   for (i = 0; i < nrTF; i++) {
     int srcLocalIdx = recvTF[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
-    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, srcLocalIdx + domain->rank*26, BUFSZ[srcRemoteIdx]);
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
     double *src;
     const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
     assert(pin_success);
@@ -70,7 +78,7 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
 
     hpx_gas_unpin(data_addr);
 
-    hpx_lco_netfuture_setat(sbn3, destLocalIdx + 26*(domain->rank + gen*2), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(sbn3, get_bs_index((destLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   } 
 
   // wait for incoming data
@@ -81,7 +89,7 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
     int srcLocalIdx = recvTF[i];
     int fromDomain = OFFSET[srcLocalIdx] + rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
-    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn3, srcRemoteIdx + 26*(fromDomain + gen*2), BUFSZ[srcRemoteIdx]);
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn3, get_bs_index((srcRemoteIdx + 26*(fromDomain + gen*2))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
     double *src;
     const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
     assert(hpx_pin_success);
