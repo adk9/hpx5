@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   cores = 10;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dl:s:p:r:mvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -89,7 +89,19 @@ int main(int argc, char *argv[]) {
      case 't':
       cfg.threads = atoi(optarg);
       break;
-     case 'm':
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'p':
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
+      break;
+      case 'm':
       _text = true;
      case 'v':
       _verbose = true;
