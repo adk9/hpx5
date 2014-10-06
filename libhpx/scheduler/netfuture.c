@@ -234,10 +234,10 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
-    _outstanding_send_limit = here->transport->get_send_limit(here->transport);
+  _outstanding_send_limit = here->transport->get_send_limit(here->transport);
   // _outstanding_send_limit = 1;
-
-  //  dbg_printf("  Initializing futures on rank %d\n", hpx_get_my_rank());
+  
+  dbg_printf("  Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
   _netfuture_table.curr_index = 0;
   _netfuture_table.curr_capacity = _NETFUTURES_CAPACITY_DEFAULT;
@@ -525,11 +525,13 @@ int _update_table(hpx_netfuture_t *f) {
 }
 
 int _add_futures(hpx_netfuture_t *f) {
-  for (int i = 0; i < _netfutures_at_rank(f); i ++) {
     hpx_netfuture_t fi = hpx_lco_netfuture_at(*f, hpx_get_my_rank());
-    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
+    //    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
+  for (int i = 0; i < _netfutures_at_rank(f); i ++) {
+    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
     _future_init(nf, f->size, false);
-    //    dbg_printf("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
+    dbg_printf("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
+    fi.index += hpx_get_num_ranks();
   }
   return HPX_SUCCESS;
 }
