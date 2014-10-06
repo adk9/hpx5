@@ -754,26 +754,26 @@ static int __photon_handle_cq_event(photonRequest req, photon_rid id) {
   }
   
   if ((cookie == req->id) && (req->type == EVQUEUE)) {
-    dbg_info("setting request completed with cookie: 0x%016lx", cookie);
     req->state = REQUEST_COMPLETED;
+    dbg_info("set request completed with cookie: 0x%016lx", cookie);
   }
   // handle any other request completions we might get from the backend event queue
   else if (cookie != NULL_COOKIE) {
     photonRequest tmp_req;    
     if (htable_lookup(reqtable, cookie, (void**)&tmp_req) == 0) {
       if (tmp_req->type == EVQUEUE) {
-	dbg_info("setting request completed with cookie: 0x%016lx", cookie);
 	tmp_req->state = REQUEST_COMPLETED;
+	dbg_info("set request completed with cookie: 0x%016lx", cookie);
       }
       else
 	tmp_req->flags &= REQUEST_FLAG_LDONE;
     }
     else if (htable_lookup(pwc_reqtable, cookie, (void**)&tmp_req) == 0) {
       if (tmp_req->type == EVQUEUE && (--tmp_req->num_entries) == 0) {
-	dbg_info("setting pwc request 0x%016lx completed with cookie: 0x%016lx", req->id, cookie);
 	tmp_req->state = REQUEST_COMPLETED;
 	SAFE_SLIST_INSERT_HEAD(&pending_pwc_list, tmp_req, slist);
 	htable_remove(pwc_reqtable, cookie, NULL);
+	dbg_info("set pwc request 0x%016lx completed with cookie: 0x%016lx", tmp_req->id, cookie);
       } 
     }
   }
@@ -2705,13 +2705,21 @@ static int _photon_probe_completion(int proc, int *flag, photon_rid *request, in
 
   *flag = 0;
 
-  req = SLIST_FIRST(&pending_pwc_list);
-  if (req) {
-    *flag = 1;
-    *request = req->id;
-    SAFE_SLIST_REMOVE_HEAD(&pending_pwc_list, slist);
-    SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
-    return PHOTON_OK;
+  // only pop pending local completions when asking for them
+  if (flags & PHOTON_PROBE_EVQ) {
+    SLIST_LOCK(&pending_pwc_list);
+    req = SLIST_FIRST(&pending_pwc_list);
+    if (req) {
+      *flag = 1;
+      *request = req->id;
+      SLIST_REMOVE_HEAD(&pending_pwc_list, slist);
+      SLIST_UNLOCK(&pending_pwc_list);
+      SAFE_LIST_INSERT_HEAD(&free_reqs_list, req, list);
+      dbg_info("returning local pwc request: 0x%016lx", req->id);
+      return PHOTON_OK;
+    }
+    else
+      SLIST_UNLOCK(&pending_pwc_list);
   }
 
   if (proc == PHOTON_ANY_SOURCE) {
