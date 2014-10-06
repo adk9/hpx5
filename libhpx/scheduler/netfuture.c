@@ -186,12 +186,19 @@ _progress_action(void *args) {
   //  int send_rank = -1;
   int i = 0;
   while (!shutdown) {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_ANY);
-    if (flag && request == 0) {
+    // check send completion
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    if (flag) {
       dbg_printf("Received send completion %" PRIx64 "\n", request);
       sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
+      if (request != 0){
+	lco_t *lco = (lco_t*)request;
+	lco_future_set(lco, 0, NULL);
+      } 
     }
-    else if (flag && request != 0) {
+
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    if (flag && request != 0) {
       dbg_printf("Received recv completion for future at %" PRIx64 "\n", request);
       _netfuture_t *f = (_netfuture_t*)request;
       lco_lock(&f->lco);
@@ -616,7 +623,16 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   int remote_rank = _netfuture_get_rank(future);
   void *remote_ptr = (void*)_netfuture_get_data_addr(future);
   struct photon_buffer_priv_t remote_priv = buffer->priv;
-  photon_rid local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
+  
+  photon_rid local_rid;
+
+  if (lsync_lco == HPX_NULL)
+    local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
+  else {
+    void *ptr;
+    hpx_gas_try_pin(lsync_lco, &ptr);
+    local_rid = (photon_rid)ptr;
+  }
   photon_rid remote_rid = _netfuture_get_addr(future);
   photon_put_with_completion(remote_rank, data, size, remote_ptr, remote_priv, 
 			     local_rid, remote_rid, PHOTON_REQ_ONE_CQE);

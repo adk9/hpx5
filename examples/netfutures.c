@@ -172,9 +172,12 @@ static int _action_ping(args_t *args) {
   printf("In ping on rank %d\n", hpx_get_my_rank());
   hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  
   char *msg_ping;
   char *msg_pong;
   hpx_gas_try_pin(msg_ping_gas, &msg_ping);
+
+  hpx_addr_t lsync = hpx_lco_future_new(0);
 
   for (int i = 0; i < args->iterations; i++) {
     if (_text)
@@ -183,7 +186,8 @@ static int _action_ping(args_t *args) {
     
     RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping);
     
-    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, lsync, HPX_NULL);
+    hpx_lco_wait(lsync);
     msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE);
     hpx_gas_try_pin(msg_pong_gas, &msg_pong);
 
@@ -205,6 +209,7 @@ static int _action_pong(args_t *args) {
   char *msg_pong;
   hpx_gas_try_pin(msg_pong_gas, &msg_pong);
 
+  hpx_addr_t lsync = hpx_lco_future_new(0);
   for (int i = 0; i < args->iterations; i++) {
     msg_ping_gas = hpx_lco_netfuture_getat(args->pingpong, 1, BUFFER_SIZE);
     hpx_gas_try_pin(msg_ping_gas, &msg_ping);
@@ -215,7 +220,8 @@ static int _action_pong(args_t *args) {
 
     RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong);
 
-    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);
+    hpx_lco_wait(lsync);
   }
 
   return HPX_SUCCESS;
