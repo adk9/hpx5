@@ -250,6 +250,7 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   */
   _netfuture_table.mem_size = _NETFUTURES_MEMORY_DEFAULT;
   _netfuture_table.base_gas = hpx_gas_alloc(_NETFUTURES_MEMORY_DEFAULT);
+  dbg_printf("GAS base = %p.\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
 
   struct  photon_buffer_t buffer;
@@ -685,13 +686,10 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
 
   dbg_printf("  Getating from (%d, future at %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 
-  if (_netfuture_get_rank(&future_i) != hpx_get_my_rank()) {
-    return HPX_ERROR;
-  }
-  else {
-    lco = (lco_t*)_netfuture_get_addr(&future_i);
-    retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), _netfuture_table.mem_size);
-  }
+  assert(_netfuture_get_rank(&future_i) == hpx_get_my_rank());
+  
+  lco = (lco_t*)_netfuture_get_addr(&future_i);
+  retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), 1);
   _future_get(lco, size, NULL);
   dbg_printf("  Done getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
   return retval;
