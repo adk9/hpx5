@@ -30,7 +30,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     pack(nx, ny, nz, domain->nodalMass, data);
     hpx_gas_unpin(data_addr);
     printf("SBN1 setting at %d\n", srcLocalIdx + (domain->rank+distance)*26);
-    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
   // wait for incoming data
@@ -40,6 +40,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
   for (i = 0; i < nrTF; i++) {
     int srcLocalIdx = recvTF[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
+    printf("SBN1 getting at %d\n", srcLocalIdx + domain->rank*26);
     const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
     double *src;
     const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
