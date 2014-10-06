@@ -178,6 +178,12 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns A new lightweight thread, as defined by the parcel.
 static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
+#ifdef HPX_PROFILE_STACKS
+  unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
+  unsigned long max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
+  if (stacks + 1 > max_stacks)
+    sync_fadd(&here->sched->stats.max_stacks, 1, SYNC_SEQ_CST);
+#endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
   return p;
@@ -260,6 +266,9 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   thread_delete(stack);
+#ifdef HPX_PROFILE_STACKS
+  sync_fadd(&here->sched->stats.stacks, -1, SYNC_SEQ_CST);
+#endif
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }

@@ -70,6 +70,10 @@ void scheduler_delete(scheduler_t *sched) {
   if (!sched)
     return;
 
+#ifdef HPX_PROFILE_STACKS
+  printf("High water mark for stacks was %lu\n", sched->stats.max_stacks);
+#endif
+
   if (sched->barrier)
     sync_barrier_delete(sched->barrier);
 
