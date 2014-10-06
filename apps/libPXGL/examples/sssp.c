@@ -293,7 +293,7 @@ static int _main_action(_sssp_args_t *args) {
 
 int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  uint64_t time_limit = 0;
+  uint64_t time_limit = 1000;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
