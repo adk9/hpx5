@@ -17,11 +17,13 @@ static hpx_action_t _main = 0;
 static hpx_action_t _ping = 0;
 static hpx_action_t _pong = 0;
 
-#define MAX_MSG_SIZE 1024*1024*100
+#define MAX_MSG_SIZE 1024*1024*8
 
 int skip = 0;
 int loop = 10;
 int iters = 1000;
+int large_msg_size = 1024*1024;
+int large_msg_iters = 100;
 
 /* helper functions */
 static void _usage(FILE *stream) {
@@ -126,6 +128,8 @@ static int _action_main(void *args) {
       .msg_size = k,
     };
 
+    printf("Size: %d\n", k);
+
     for (int i = 0; i < loop + skip; i++) {
       if (i == skip) {
         start = hpx_time_now();
@@ -156,9 +160,12 @@ static int _action_ping(args_t *args) {
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(args->msg_size);
   char *msg_ping;
   char *msg_pong;
+  int myiters;
   hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 
-  for (int i = 0; i < iters; i++) {
+  myiters = (args->msg_size >= large_msg_size)?large_msg_iters:iters;
+
+  for (int i = 0; i < myiters; i++) {
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 1, args->msg_size,
                             msg_ping_gas, lsync, HPX_NULL);
@@ -180,9 +187,12 @@ static int _action_pong(args_t *args) {
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(args->msg_size);
   char *msg_ping;
   char *msg_pong;
+  int myiters;
   hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
 
-  for (int i = 0; i < iters; i++) {
+  myiters = (args->msg_size >= large_msg_size)?large_msg_iters:iters;
+
+  for (int i = 0; i < myiters; i++) {
     msg_ping_gas = hpx_lco_netfuture_getat(args->pingpong, 1, args->msg_size);
     hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 
