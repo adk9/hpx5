@@ -28,7 +28,6 @@ static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t dist
 
 typedef struct {
   adj_list_t graph;
-  uint32_t block_size;
   uint64_t distance;
 #ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
@@ -100,7 +99,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
       args->distance = old_distance + e->weight;
 
       const hpx_addr_t index
-          = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t), args->block_size);
+          = hpx_addr_add(args->graph, e->dest * sizeof(hpx_addr_t), _index_array_block_size);
 
       hpx_call(index, _sssp_visit_vertex, args, sizeof(*args), edges);
     }
@@ -109,6 +108,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     // printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
+
 #ifdef GATHER_STAT
     hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(uint64_t),NULL,0);
     hpx_call_sync(args->sssp_stat, _useful_work_update, NULL,0,NULL,0);
@@ -146,11 +146,9 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
 hpx_action_t call_sssp = 0;
 int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
-    = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), args->block_size);
+    = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), _index_array_block_size);
 
-  _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph,
-                                          .block_size = args->block_size,
-                                          .distance = 0 };
+  _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
 
 #ifdef GATHER_STAT
   sssp_args.sssp_stat = args->sssp_stat;

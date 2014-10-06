@@ -171,7 +171,6 @@ static int _main_action(_sssp_args_t *args) {
 
   // Construct the graph as an adjacency list
   hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
-  sargs.block_size = _index_array_block_size;
 
   for (int i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
