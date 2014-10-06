@@ -217,7 +217,6 @@ static int _action_evolve(InitArgs *init) {
     if ( ld->cycle == 0 ) {
       SBN1(ld,sbn1);
     }
-
     double targetdt = ld->stoptime - ld->time;
     if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
       double gnewdt = 1.0e+20;
@@ -230,13 +229,10 @@ static int _action_evolve(InitArgs *init) {
       hpx_lco_set(lco_newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
     }
 
-    CalcForceForNodes(sbn3,ld,ld->rank);
-
+  //  CalcForceForNodes(sbn3,ld,ld->rank);
     if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
       double newdt;
-      printf("lulesh started get\n");
       hpx_lco_get(lco_newdt,sizeof(double),&newdt);
-      printf("lulesh got %f\n", newdt);
       double olddt = ld->deltatime;
       double ratio = newdt/olddt;
       if (ratio >= 1.0) {
@@ -253,7 +249,6 @@ static int _action_evolve(InitArgs *init) {
 
       ld->deltatime = newdt;
     }
-    
 
     ld->time += ld->deltatime;
 

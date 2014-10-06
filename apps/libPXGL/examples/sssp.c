@@ -33,6 +33,7 @@ static void _usage(FILE *stream) {
           "\t-p, set per-PE global heap size\n"
 	  "\t-r, set send/receive request limit\n"
           "\t-b, set block-translation-table size\n"
+          "\t-q, limit time for SSSP executions in seconds\n"	  
           "\t-h, this help display\n");
 }
 
@@ -106,6 +107,7 @@ typedef struct {
   uint64_t nproblems;
   uint64_t *problems;
   char *prob_file;
+  uint64_t time_limit;
 } _sssp_args_t;
 
 
@@ -172,6 +174,11 @@ static int _main_action(_sssp_args_t *args) {
   sargs.block_size = _index_array_block_size;
 
   for (int i = 0; i < args->nproblems; ++i) {
+    if(total_elapsed_time > args->time_limit) {
+      printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
+      args->nproblems = i;
+      break;
+    }
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
@@ -286,9 +293,10 @@ static int _main_action(_sssp_args_t *args) {
 
 int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  uint64_t time_limit = 1000;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -322,6 +330,9 @@ int main(int argc, char *const argv[argc]) {
       break;
      case 'b':
       cfg.btt_size = strtoul(optarg, NULL, 0);
+      break;
+     case 'q':
+      time_limit = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);
@@ -365,7 +376,8 @@ int main(int argc, char *const argv[argc]) {
   _sssp_args_t args = { .filename = graph_file,
                         .nproblems = nproblems,
                         .problems = problems,
-                        .prob_file = problem_file
+                        .prob_file = problem_file,
+			.time_limit = time_limit
   };
 
   int e = hpx_init(&cfg);

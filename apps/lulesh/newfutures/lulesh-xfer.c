@@ -6,12 +6,15 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
   const int    nsTF = domain->sendTF[0];
   const int *sendTF = &domain->sendTF[1]; 
 
-  int i,destLocalIdx;
+  int i,destLocalIdx,srcRemoteIdx,srcLocalIdx,distance;
   int           nx = domain->sizeX + 1;
   int           ny = domain->sizeY + 1;
   int           nz = domain->sizeZ + 1;
   for (i = 0; i < nsTF; ++i) {
     destLocalIdx = sendTF[i];
+    srcRemoteIdx = destLocalIdx;
+    srcLocalIdx = 25 - srcRemoteIdx;
+    distance = -OFFSET[srcLocalIdx];
     const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
     double *data;
     const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
@@ -19,7 +22,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
     hpx_gas_unpin(data_addr);
-    hpx_lco_netfuture_setat(sbn1, destLocalIdx + domain->rank*26, BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+    hpx_lco_netfuture_setat(sbn1, srcLocalIdx + (domain->rank+distance)*26, BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
   // wait for incoming data
@@ -28,9 +31,8 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
 
   for (i = 0; i < nrTF; i++) {
     int srcLocalIdx = recvTF[i];
-    int fromDomain = OFFSET[srcLocalIdx] + domain->rank;
     int srcRemoteIdx = 25 - srcLocalIdx;
-    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, srcRemoteIdx + fromDomain*26, BUFSZ[srcRemoteIdx]);
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, srcLocalIdx + domain->rank*26, BUFSZ[srcRemoteIdx]);
     double *src;
     const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
     assert(pin_success);
