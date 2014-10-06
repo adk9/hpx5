@@ -181,8 +181,12 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 #ifdef HPX_PROFILE_STACKS
   unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
   unsigned long max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
-  if (stacks + 1 > max_stacks)
-    sync_fadd(&here->sched->stats.max_stacks, 1, SYNC_SEQ_CST);
+  while (stacks + 1 > max_stacks) {
+    if (sync_cas(&here->sched->stats.max_stacks, max_stacks, stacks, SYNC_SEQ_CST,
+                  SYNC_RELAXED))
+      break;
+    max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
+  }
 #endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
