@@ -198,8 +198,8 @@ static int init_action(struct init_args *args) {
   //  s->curr_mpi_rank_available = -1 * num_localities;
 
   int success = log_lock_init();
-  if (success != 0)
-    return -1;
+  if (success < 0)
+    return success;
 
   dbg_printf("Done initing and allocing shared data\n");
   return HPX_SUCCESS;

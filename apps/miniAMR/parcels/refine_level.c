@@ -68,17 +68,19 @@ int refine_level(Domain *ld,unsigned long epoch,int *iter)
                            }
                         }
                      /* neighbors in level below must refine */
-                     else if (bp->nei_level[i] == level-1)
+                     else if (bp->nei_level[i] == level-1) {
                         if ((nei = bp->nei[i][0][0]) >= 0) {
                            if (ld->blocks[nei].refine != 1) {
                               ld->blocks[nei].refine = 1;
                               lchange++;
                            }
-                        } else
+                        } else {
                            if (bp->nei_refine[i] != 1) {
                               bp->nei_refine[i] = 1;
                               lchange++;
                            }
+                        }
+                     }
                }
                if (bp->level == level && bp->refine == -1)
                   // check if block can be unrefined
