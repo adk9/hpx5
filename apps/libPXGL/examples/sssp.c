@@ -152,6 +152,12 @@ static int _main_action(_sssp_args_t *args) {
   printf("Edge List: #v = %lu, #e = %lu\n",
          el.num_vertices, el.num_edges);
 
+  // Open the results file and write the basic info out
+  FILE *results_file = fopen("sample.ss.chk", "a+");
+  fprintf(results_file, "%s\n","p chk sp ss sssp");
+  fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
+  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+
   call_sssp_args_t sargs;
 
   double total_elapsed_time = 0.0;
@@ -168,7 +174,7 @@ static int _main_action(_sssp_args_t *args) {
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
-
+  
   for (int i = 0; i < args->nproblems; ++i) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
@@ -224,6 +230,7 @@ static int _main_action(_sssp_args_t *args) {
     //printf("Gteps is %zu\n", gteps);
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
+    fprintf(results_file, "d %zu\n", checksum);
 
     hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
   }
@@ -249,16 +256,7 @@ static int _main_action(_sssp_args_t *args) {
   //fprintf(fp,"%s %s %f\n","c ", "The GTEPS measure is ",(total_edge_traversal/(total_elapsed_time*1.0E9)));
 
   fclose(fp);
-
-  fp = fopen("sample.ss.chk", "a+");
-
-  fprintf(fp , "%s\n","p chk sp ss sssp");
-  fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
-  fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
 #endif
-
-
-  // Verification of results.
 
 #ifdef VERBOSE
   printf("\nElapsed time\n");
