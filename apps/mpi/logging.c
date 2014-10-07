@@ -25,8 +25,8 @@ static struct p2p_log log;
 static struct lock_log lock_log;
 static struct generic_log generic_log;
 
-static int log_open(const char *name, size_t size, int* fd, void** log_addr) { 
 #ifdef LOGGING_ENABLED
+static int log_open(const char *name, size_t size, int* fd, void** log_addr) { 
   char filename[256];
   snprintf(filename, 255, "./log.%s.%u", name, getpid());
   *fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -44,13 +44,11 @@ static int log_open(const char *name, size_t size, int* fd, void** log_addr) {
     perror("init_action: mmap");
     printf("errno = %d (%s)\n", errno, strerror(errno));
     return -1;
-  }   
-#endif
+  }
   return 0;
 }
 
 static void log_close(void* log_addr, size_t size, int fd, size_t fsize){
-#ifdef LOGGING_ENABLED
   munmap(log_addr, size);
   int error = ftruncate(fd, fsize);
   if (error)
@@ -58,8 +56,9 @@ static void log_close(void* log_addr, size_t size, int fd, size_t fsize){
   error = close(fd);
   if (error)
     perror("shutdown: close");
-#endif
 }
+#endif
+
 
 int log_p2p_init() {
 #ifdef LOGGING_P2P

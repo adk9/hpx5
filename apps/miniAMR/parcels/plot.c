@@ -75,7 +75,7 @@ int _plot_sends_action(plotSBN *psbn)
 // Write block information (level and center) to plot file.
 void plot(int ts,Domain *ld,unsigned long epoch)
 {
-   int i, j, n, total_num_blocks, *buf, buf_size, size;
+   int i, j, n, total_num_blocks, *buf, size;
    char fname[20];
    block *bp;
    FILE *fp;
@@ -144,7 +144,6 @@ void plot(int ts,Domain *ld,unsigned long epoch)
       fprintf(fp, "%d %d %d %d %d\n", total_num_blocks, ld->num_refine,
                                       ld->npx*ld->init_block_x, ld->npy*ld->init_block_y,
                                       ld->npz*ld->init_block_z);
-      buf_size = 0;
       fprintf(fp, "%d\n", ld->num_active);
       for (n = 0; n < ld->max_active_block; n++)
          if ((bp = &ld->blocks[n])->number >= 0)

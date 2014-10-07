@@ -40,7 +40,7 @@ int mpi_test_routine(int its)
   MPI_Status   status;
   MPI_Request   send_request,recv_request;
   int ierr = 0,inittime,itask;
-  double sendbuffsum,recvbuffsum;
+  double recvbuffsum;
   double *recvtimes, *sendbuffsums,*recvbuffsums;
   recvtimes=(double *)malloc(sizeof(double)*ntasks);
   sendbuffsums=(double *)malloc(sizeof(double)*ntasks);
