@@ -256,13 +256,13 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   struct  photon_buffer_t buffer;
   buffer.addr = (uintptr_t)_netfuture_table.base;
 
-  photon_get_buffer_private(_netfuture_table.base, _NETFUTURES_MEMORY_DEFAULT, &buffer.priv);
+  //photon_get_buffer_private(_netfuture_table.base, _NETFUTURES_MEMORY_DEFAULT, &buffer.priv);
   
   dbg_printf("  At %d buffer = %p\n", hpx_get_my_rank(), _netfuture_table.base);
   
   hpx_lco_allgather_setid(*ag, hpx_get_my_rank(), 
-			  sizeof(struct photon_buffer_t), &buffer,
-			  HPX_NULL, HPX_NULL);
+  			  sizeof(struct photon_buffer_t), &buffer,
+  			  HPX_NULL, HPX_NULL);
   
   hpx_lco_get(*ag, hpx_get_num_ranks() * sizeof(struct photon_buffer_t), _netfuture_table.buffers);
 
