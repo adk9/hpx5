@@ -111,6 +111,72 @@ SBN3(hpx_netfuture_t sbn3,Domain *domain, int rank)
 
 }
 
+void
+PosVel(hpx_netfuture_t posvel,Domain *domain, int rank)
+{
+  printf("================= PosVel =====================================");
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  int tag = domain->cycle;
+  int i,destLocalIdx;
+
+  // pack outgoing data
+  int nsFF = domain->sendFF[0];
+  int *sendFF = &domain->sendFF[1];
+  
+  int gen = tag%2;
+  for (i = 0; i < nsFF; i++) {
+    int destLocalIdx = sendFF[i];
+    // the neighbor this is being sent to
+    int srcRemoteIdx = destLocalIdx;
+    int srcLocalIdx = 25 - srcRemoteIdx;
+    int distance = -OFFSET[srcLocalIdx];
+    int sendcnt = XFERCNT[destLocalIdx];
+    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
+    double *data;
+    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
+    send_t pack = SENDER[destLocalIdx];
+
+    pack(nx, ny, nz, domain->x, data);
+    pack(nx, ny, nz, domain->y, data + sendcnt);
+    pack(nx, ny, nz, domain->z, data + sendcnt*2);
+    pack(nx, ny, nz, domain->xd, data + sendcnt*3);
+    pack(nx, ny, nz, domain->yd, data + sendcnt*4);
+    pack(nx, ny, nz, domain->zd, data + sendcnt*5);
+
+    hpx_gas_unpin(data_addr);
+
+    hpx_lco_netfuture_setat(posvel, get_bs_index((srcLocalIdx + 26*(domain->rank+distance + gen*2))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+  } 
+
+  // wait for incoming data
+  int nrFF = domain->recvFF[0];
+  int *recvFF = &domain->recvFF[1];
+
+  for (i = 0; i < nrFF; i++) {
+    int srcLocalIdx = recvFF[i];
+    int srcRemoteIdx = 25 - srcLocalIdx;
+    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(posvel, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
+    double *src;
+    const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
+    assert(hpx_pin_success);
+    int recvcnt = XFERCNT[srcLocalIdx];
+    recv_t unpack = RECEIVER[srcLocalIdx];
+
+    unpack(nx, ny, nz, src, domain->x, 1);
+    unpack(nx, ny, nz, src + recvcnt, domain->y, 1);
+    unpack(nx, ny, nz, src + recvcnt*2, domain->z, 1);
+    unpack(nx, ny, nz, src + recvcnt*3, domain->xd, 1);
+    unpack(nx, ny, nz, src + recvcnt*4, domain->yd, 1);
+    unpack(nx, ny, nz, src + recvcnt*5, domain->zd, 1);
+
+    // unpin the buffer
+    hpx_gas_unpin(src_addr);
+  }
+
+}
+
 void send1(int nx, int ny, int nz, double *src, double *dest)
 {
   dest[0] = src[0];
