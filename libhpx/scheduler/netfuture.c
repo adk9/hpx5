@@ -234,8 +234,8 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
-  _outstanding_send_limit = here->transport->get_send_limit(here->transport);
-  // _outstanding_send_limit = 1;
+  //_outstanding_send_limit = here->transport->get_send_limit(here->transport);
+   _outstanding_send_limit = 1;
   
   dbg_printf("  Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
@@ -609,9 +609,12 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   uint32_t old, new;
   old = _outstanding_send_limit;
   do {
-    while (old >= _outstanding_send_limit)
+    while (old >= _outstanding_send_limit) {
       old = sync_load(&_outstanding_sends, SYNC_RELAXED);
+      hpx_thread_yield();
+    }
     new = old + 1;
+    hpx_thread_yield();
   } while (!sync_cas(&_outstanding_sends, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
   // need the following information:
