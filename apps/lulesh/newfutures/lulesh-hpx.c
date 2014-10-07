@@ -174,8 +174,12 @@ static int _action_main(int *input) {
 
   hpx_netfutures_init();
   hpx_netfuture_t sbn1 = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
-  hpx_netfuture_t sbn3 = hpx_lco_netfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
-  hpx_netfuture_t posvel = hpx_lco_netfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t sbn3_a = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t sbn3_b = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t posvel_a = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t posvel_b = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t monoq_a = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t monoq_b = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
@@ -191,8 +195,12 @@ static int _action_main(int *input) {
       .cores = cores,
       .newdt = newdt,
       .sbn1 = sbn1,
-      .sbn3 = sbn3,
-      .posvel = posvel
+      .sbn3_a = sbn3_a,
+      .sbn3_b = sbn3_b,
+      .posvel_a = posvel_a,
+      .posvel_b = posvel_b,
+      .monoq_a = monoq_a,
+      .monoq_b = monoq_b
     };
     hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
@@ -221,8 +229,12 @@ static int _action_evolve(InitArgs *init) {
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
   hpx_netfuture_t sbn1 = init->sbn1;
-  hpx_netfuture_t sbn3 = init->sbn3;
-  hpx_netfuture_t posvel = init->posvel;
+  hpx_netfuture_t sbn3_a = init->sbn3_a;
+  hpx_netfuture_t sbn3_b = init->sbn3_b;
+  hpx_netfuture_t posvel_a = init->posvel_a;
+  hpx_netfuture_t posvel_b = init->posvel_b;
+  hpx_netfuture_t monoq_a = init->monoq_a;
+  hpx_netfuture_t monoq_b = init->monoq_b;
   hpx_addr_t lco_newdt = init->newdt;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
@@ -244,7 +256,7 @@ static int _action_evolve(InitArgs *init) {
       hpx_lco_set(lco_newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
     }
 
-  //  CalcForceForNodes(sbn3,ld,ld->rank);
+    CalcForceForNodes(sbn3_a,sbn3_b,ld,ld->rank);
     CalcAccelerationForNodes(ld->xdd, ld->ydd, ld->zdd,
                              ld->fx, ld->fy, ld->fz,
                              ld->nodalMass, ld->numNode);
@@ -289,7 +301,11 @@ static int _action_evolve(InitArgs *init) {
                          ld->xd, ld->yd, ld->zd,
                          ld->deltatime, ld->numNode);
 
-   // PosVel(posvel,ld,ld->rank);
+    PosVel(posvel_a,posvel_b,ld,ld->rank);
+
+    LagrangeElements(monoq_a,monoq_b,ld);
+
+    CalcTimeConstraintsForElems(ld);
 
     ld->time += ld->deltatime;
 
