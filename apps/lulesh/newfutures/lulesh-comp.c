@@ -1,6 +1,6 @@
 #include "lulesh-hpx.h"
 
-void CalcForceForNodes(hpx_netfuture_t sbn3,Domain *domain,int rank)
+void CalcForceForNodes(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain,int rank)
 {
   int numNode = domain->numNode; 
   int i; 
@@ -13,7 +13,7 @@ void CalcForceForNodes(hpx_netfuture_t sbn3,Domain *domain,int rank)
 
   CalcVolumeForceForElems(domain,rank); 
 
-  SBN3(sbn3,domain,rank);
+  SBN3(sbn3_a,sbn3_b,domain,rank);
 }
 
 void CalcVolumeForceForElems(Domain *domain,int rank)
@@ -937,7 +937,7 @@ void CalcPositionForNodes(double *x, double *y, double *z,
   }
 }
 
-void LagrangeElements(Domain *domain,int rank)
+void LagrangeElements(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
 {
   int numElem = domain->numElem; 
 
@@ -945,7 +945,7 @@ void LagrangeElements(Domain *domain,int rank)
   
   CalcLagrangeElements(domain);
 
-  CalcQForElems(domain,rank); 
+  CalcQForElems(monoq_a,monoq_b,domain); 
 
   ApplyMaterialPropertiesForElems(domain);
 
@@ -1560,7 +1560,7 @@ double CalcElemVolume(const double x[8], const double y[8], const double z[8])
   return volume; 
 }
 
-void CalcQForElems(Domain *domain,int rank)
+void CalcQForElems(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
 {
   int numElem = domain->numElem; 
 
@@ -1583,8 +1583,7 @@ void CalcQForElems(Domain *domain,int rank)
 				    domain->delx_xi, domain->delx_eta, domain->delx_zeta,
 				    domain->nodelist, domain->numElem);
 
-    // FIXME
-    //MonoQ(rank);
+    MonoQ(monoq_a,monoq_b,domain);
 
     CalcMonotonicQForElems(domain);
 

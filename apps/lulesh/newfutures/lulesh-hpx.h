@@ -64,8 +64,12 @@ typedef struct {
   int       maxcycles;
   int           cores;
   hpx_netfuture_t sbn1;
-  hpx_netfuture_t sbn3;
-  hpx_netfuture_t posvel;
+  hpx_netfuture_t sbn3_a;
+  hpx_netfuture_t sbn3_b;
+  hpx_netfuture_t posvel_a;
+  hpx_netfuture_t posvel_b;
+  hpx_netfuture_t monoq_a;
+  hpx_netfuture_t monoq_b;
   hpx_addr_t newdt;
 } InitArgs;
 
@@ -306,7 +310,11 @@ recv_t RECEIVER[26];
 //hpx_future_t *fut_deltaTime;
 
 void SBN1(Domain *,hpx_netfuture_t);
-void SBN3(hpx_netfuture_t,Domain *,int);
+void SBN3(hpx_netfuture_t,hpx_netfuture_t,Domain *,int);
+void PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int rank);
+void MonoQ(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain);
+
+void LagrangeElements(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain);
 
 void Init(int tp, int nx);
 
@@ -317,11 +325,11 @@ void DestroyDomain(Domain *domain);
 
 void AdvanceDomain(void *data);
 
-void CalcForceForNodes(hpx_netfuture_t, Domain *domain,int rank);
+void CalcForceForNodes(hpx_netfuture_t,hpx_netfuture_t, Domain *domain,int rank);
 
 void CalcVolumeForceForElems(Domain *domain,int rank);
 
-void CalcQForElems(Domain *domain,int rank);
+void CalcQForElems(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain);
 
 void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
                  double *sigzz, int numElem);
@@ -393,8 +401,6 @@ void CalcVelocityForNodes(double *xd, double *yd, double *zd,
 void CalcPositionForNodes(double *x, double *y, double *z,
               double *xd, double *yd, double *zd,
               const double dt, int numNode);
-
-void LagrangeElements(Domain *domain,int rank);
 
 void CalcLagrangeElements(Domain *domain);
 
