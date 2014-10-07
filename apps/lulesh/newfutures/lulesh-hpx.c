@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   cores = 10;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dl:s:p:r:mvh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:d:Dl:s:p:n:r:mvh")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
