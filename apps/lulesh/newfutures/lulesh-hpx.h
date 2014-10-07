@@ -65,6 +65,7 @@ typedef struct {
   int           cores;
   hpx_netfuture_t sbn1;
   hpx_netfuture_t sbn3;
+  hpx_netfuture_t posvel;
   hpx_addr_t newdt;
 } InitArgs;
 

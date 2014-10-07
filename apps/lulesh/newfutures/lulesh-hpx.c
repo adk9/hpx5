@@ -175,6 +175,7 @@ static int _action_main(int *input) {
   hpx_netfutures_init();
   hpx_netfuture_t sbn1 = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_netfuture_t sbn3 = hpx_lco_netfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
+  hpx_netfuture_t posvel = hpx_lco_netfuture_new_all(2*26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
@@ -190,7 +191,8 @@ static int _action_main(int *input) {
       .cores = cores,
       .newdt = newdt,
       .sbn1 = sbn1,
-      .sbn3 = sbn3
+      .sbn3 = sbn3,
+      .posvel = posvel
     };
     hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
@@ -220,6 +222,7 @@ static int _action_evolve(InitArgs *init) {
   int plane    = index/(tp*tp);
   hpx_netfuture_t sbn1 = init->sbn1;
   hpx_netfuture_t sbn3 = init->sbn3;
+  hpx_netfuture_t posvel = init->posvel;
   hpx_addr_t lco_newdt = init->newdt;
   
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
@@ -242,6 +245,14 @@ static int _action_evolve(InitArgs *init) {
     }
 
   //  CalcForceForNodes(sbn3,ld,ld->rank);
+    CalcAccelerationForNodes(ld->xdd, ld->ydd, ld->zdd,
+                             ld->fx, ld->fy, ld->fz,
+                             ld->nodalMass, ld->numNode);
+
+    ApplyAccelerationBoundaryConditionsForNodes(ld->xdd, ld->ydd, ld->zdd,
+                                              ld->symmX, ld->symmY, ld->symmZ,
+                                              ld->sizeX);
+
     if ((ld->dtfixed <= 0.0) && (ld->cycle != 0)) {
       double newdt;
       hpx_lco_get(lco_newdt,sizeof(double),&newdt);
@@ -261,6 +272,24 @@ static int _action_evolve(InitArgs *init) {
 
       ld->deltatime = newdt;
     }
+
+    if ((targetdt > ld->deltatime) && (targetdt < 4.0*ld->deltatime/3.0)) {
+      targetdt = 2.0*ld->deltatime/3.0;
+    }
+
+    if (targetdt < ld->deltatime) {
+      ld->deltatime = targetdt;
+    }
+
+    CalcVelocityForNodes(ld->xd, ld->yd, ld->zd,
+                         ld->xdd, ld->ydd, ld->zdd,
+                         ld->deltatime, ld->u_cut, ld->numNode);
+
+    CalcPositionForNodes(ld->x, ld->y, ld->z,
+                         ld->xd, ld->yd, ld->zd,
+                         ld->deltatime, ld->numNode);
+
+   // PosVel(posvel,ld,ld->rank);
 
     ld->time += ld->deltatime;
 
