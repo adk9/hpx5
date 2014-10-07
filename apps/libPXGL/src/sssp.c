@@ -1,4 +1,3 @@
-
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
@@ -13,7 +12,6 @@
 
 static hpx_action_t _sssp_visit_vertex;
 static hpx_action_t _sssp_update_vertex_distance;
-
 
 static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t distance) {
   uint64_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED);
