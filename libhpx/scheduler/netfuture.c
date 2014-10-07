@@ -124,6 +124,8 @@ typedef struct {
 
 static _netfuture_table_t _netfuture_table = {.inited = 0};
 
+lockable_ptr_t pwc_lock;
+
 // which rank is the future on?
 static int 
 _netfuture_get_rank(hpx_netfuture_t *f) {
@@ -205,12 +207,13 @@ _progress_action(void *args) {
       lco_lock(&f->lco);
       
       // do set stuff
-      if (!_empty(f))
-	hpx_call_async(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(&f), HPX_NULL, HPX_NULL);
-      else {
+      if (!_empty(f)) {
+        lco_unlock(&f->lco);
+	hpx_call(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(f), HPX_NULL);
+      } else {
 	_future_set_no_copy(f);
+        lco_unlock(&f->lco);
       }
-      lco_unlock(&f->lco);
     } // end if
     /*
     i = (i + 1) % YIELD_COUNT;
@@ -234,8 +237,11 @@ _table_unlock() {
 
 static int 
 _initialize_netfutures_action(hpx_addr_t *ag) {
-  //_outstanding_send_limit = here->transport->get_send_limit(here->transport);
-   _outstanding_send_limit = 1;
+  _outstanding_send_limit = here->transport->get_send_limit(here->transport);
+  //_outstanding_send_limit = 1;
+
+  //pwc_lock = malloc(sizeof(*pwc_lock) * HPX_LOCALITIES);
+  //assert(pwc_lock);
   
   dbg_printf("  Initializing futures on rank %d\n", hpx_get_my_rank());
   _table_lock();
@@ -336,12 +342,6 @@ _future_set_with_copy(lco_t *lco, int size, const void *from)
     memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
     memcpy(ptr, from, size);
   }
-
-  uint64_t buffer;
-  if (_is_inplace(f))
-    memcpy(&buffer, &f->value, 4);
-  else
-    memcpy(&buffer, f->value, 4);
 
   f->bits ^= HPX_UNSET; // not empty anymore!
   f->bits |= HPX_SET;
@@ -609,12 +609,9 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   uint32_t old, new;
   old = _outstanding_send_limit;
   do {
-    while (old >= _outstanding_send_limit) {
-      old = sync_load(&_outstanding_sends, SYNC_RELAXED);
-      hpx_thread_yield();
-    }
+    while (old >= _outstanding_send_limit)
+      old = sync_load(&_outstanding_sends, SYNC_ACQ_REL);
     new = old + 1;
-    hpx_thread_yield();
   } while (!sync_cas(&_outstanding_sends, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
   // need the following information:
@@ -644,8 +641,11 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   }
   photon_rid remote_rid = _netfuture_get_addr(future);
   dbg_printf("  pwc with at %d for %d remote_rid == %" PRIx64 "\n", hpx_get_my_rank(), remote_rank, remote_rid);
+
+  sync_lockable_ptr_lock(&pwc_lock);
   photon_put_with_completion(remote_rank, data, size, remote_ptr, remote_priv, 
 			     local_rid, remote_rid, PHOTON_REQ_ONE_CQE);
+  sync_lockable_ptr_unlock(&pwc_lock);
   
   // TODO add to queue for threads to check
 
