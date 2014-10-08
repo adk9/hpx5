@@ -35,7 +35,7 @@
 #define PHOTON_DEFAULT_TAG 13
 
 static char* photon_default_eth_dev = "roce0";
-static char* photon_default_ib_dev = "qib0";
+static char* photon_default_ib_dev = "mlx4_0";
 static int   photon_default_ib_port = 1;
 static char* photon_default_backend = "verbs";
 static int   photon_default_srlimit = 32;
