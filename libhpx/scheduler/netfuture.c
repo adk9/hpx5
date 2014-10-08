@@ -191,7 +191,7 @@ _progress_action(void *args) {
   while (!shutdown) {
     // check send completion
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
-    if (flag) {
+    if (flag > 0) {
       dbg_printf("  Received send completion on rank %d for %" PRIx64 "\n", hpx_get_my_rank(), request);
       sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
       if (request != 0){
@@ -256,8 +256,10 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   */
   _netfuture_table.mem_size = _NETFUTURES_MEMORY_DEFAULT;
   _netfuture_table.base_gas = hpx_gas_alloc(_NETFUTURES_MEMORY_DEFAULT);
-  dbg_printf("GAS base = %p.\n", _netfuture_table.base_gas);
+  dbg_printf("GAS base = 0x%"PRIx64".\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
+
+  memset(_netfuture_table.base, -1, _NETFUTURES_MEMORY_DEFAULT);
 
   struct  photon_buffer_t buffer;
   buffer.addr = (uintptr_t)_netfuture_table.base;
@@ -672,8 +674,13 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
   if (_netfuture_get_rank(&future_i) != hpx_get_my_rank()) {
     _put_with_completion(&future_i, id, size, data, lsync_lco, rsync_lco);
   }
-  else
+  else {
     _future_set_with_copy((lco_t*)_netfuture_get_addr(&future_i), size, data);  
+  if (!(hpx_addr_eq(lsync_lco, HPX_NULL)))
+    hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
+  if (!(hpx_addr_eq(rsync_lco, HPX_NULL)))
+    hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
+  }
 
   dbg_printf("  Done setting to (%d, %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 }
