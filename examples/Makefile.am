@@ -3,7 +3,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
                        countdown seqspawn parspawn future agas_test memput \
                        memget guppie sendrecv sendrecv-chan allreduce-chan \
-                       pingpong-chan hello alltoall netfutures
+                       pingpong-chan hello alltoall
 
 hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
@@ -20,7 +20,6 @@ agas_test_SOURCES       = agas_test.c
 memput_SOURCES          = memput.c
 memget_SOURCES          = memget.c
 guppie_SOURCES          = guppie.c
-netfutures_SOURCES        = netfutures.c
 sendrecv_SOURCES        = sendrecv.c
 sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
@@ -31,13 +30,11 @@ all_LIBS = $(top_builddir)/libhpx/libhpx.la
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 
-if HAVE_PAPI
-AM_CFLAGS           += @PAPI_CFLAGS@
-endif
-
 if HAVE_PHOTON
+examples_PROGRAMS   += netfutures
+netfutures_SOURCES   = netfutures.c
 AM_CFLAGS           += @PHOTON_CFLAGS@
-all_LIBS            += -lphoton
+all_LIBS            += @PHOTON_LIBS@
 endif
 
 if HAVE_MPI

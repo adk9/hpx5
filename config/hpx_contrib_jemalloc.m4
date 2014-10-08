@@ -65,8 +65,8 @@ esac
    AC_SUBST(HPX_JEMALLOC_BUILD_CPPFLAGS, "$JEMALLOC_CPPFLAGS")
    AC_SUBST(HPX_JEMALLOC_BUISD_LIBS, "$JEMALLOC_LIBS")
 
-   AC_CONFIG_FILES([contrib/jemalloc/Makefile])
-   AC_CONFIG_FILES([contrib/jemalloc/src/Makefile])
-   AC_CONFIG_FILES([contrib/jemalloc/include/Makefile])
-   AC_CONFIG_FILES([contrib/jemalloc/include/jemalloc/internal/Makefile])
-   AC_CONFIG_FILES([contrib/jemalloc/include/jemalloc/Makefile])])
+   AC_CONFIG_FILES([$1/Makefile])
+   AC_CONFIG_FILES([$1/src/Makefile])
+   AC_CONFIG_FILES([$1/include/Makefile])
+   AC_CONFIG_FILES([$1/include/jemalloc/internal/Makefile])
+   AC_CONFIG_FILES([$1/include/jemalloc/Makefile])])
