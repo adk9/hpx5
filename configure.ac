@@ -114,6 +114,13 @@ HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
 
+HPX_WITH_VERBS
+HPX_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
+
+AM_CONDITIONAL([HAVE_XSP], [false])
+AS_IF([test "x$with_photon" != xno],
+  [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])])
+
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=yes],
