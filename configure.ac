@@ -193,6 +193,10 @@ AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=no])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
+# Set source and build directories
+AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
+AC_SUBST(PHOTON_BUILDDIR, "\${top_builddir}")
+
 AC_CONFIG_FILES([
 	Makefile
 	src/util/Makefile
