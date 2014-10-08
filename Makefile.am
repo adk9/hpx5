@@ -12,13 +12,16 @@ EXTRA_DIST = autogen.sh      \
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
 SUBDIRS = . src/util src
+DIST_SUBDIRS = . src/util src
 
 if HAVE_MPI
- SUBDIRS += test
+SUBDIRS += test
+DIST_SUBDIRS += test
 endif
 
 if ENABLE_TESTS
 SUBDIRS += tests
+DIST_SUBDIRS += tests
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig
