@@ -2,7 +2,7 @@
 
 int get_bs_index(int i, int bi, int bs) {
   int r = hpx_get_num_ranks();
-  //printf("(%d, %d) -> %d\n", bi, i, (bi % r) + (bi/r)*bs*r + i*r);
+  //  printf("(%d, %d) -> %d\n", bi, i, (bi % r) + (bi/r)*bs*r + i*r);
 
   return (bi%r) + (bi/r)*bs*r + i*r;
 }
@@ -28,9 +28,11 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     assert(pin_success);
     send_t      pack = SENDER[destLocalIdx];
     pack(nx, ny, nz, domain->nodalMass, data);
+    hpx_addr_t lsync = hpx_lco_future_new(0);
+    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
+    hpx_lco_wait(lsync);
+    hpx_lco_delete(lsync, HPX_NULL);
     hpx_gas_unpin(data_addr);
-    //printf("SBN1 setting at %d\n", srcLocalIdx + (domain->rank+distance)*26);
-    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
   }
 
   // wait for incoming data
@@ -40,7 +42,6 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
   for (i = 0; i < nrTF; i++) {
     int srcLocalIdx = recvTF[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
-    //printf("SBN1 getting at %d\n", srcLocalIdx + domain->rank*26);
     const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
     double *src;
     const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
@@ -83,11 +84,15 @@ SBN3(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain, int rank)
 
     hpx_gas_unpin(data_addr);
 
+    hpx_addr_t lsync = hpx_lco_future_new(0);
     if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     } else {
-      hpx_lco_netfuture_setat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     }
+    hpx_lco_wait(lsync);
+    hpx_lco_delete(lsync, HPX_NULL);
+    
   } 
 
   // wait for incoming data
@@ -154,11 +159,14 @@ PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int ran
 
     hpx_gas_unpin(data_addr);
 
+    hpx_addr_t lsync = hpx_lco_future_new(0);
     if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     } else {
-      hpx_lco_netfuture_setat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     }
+    hpx_lco_wait(lsync);
+    hpx_lco_delete(lsync, HPX_NULL);
   } 
 
   // wait for incoming data
@@ -180,13 +188,12 @@ PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int ran
     int recvcnt = XFERCNT[srcLocalIdx];
     recv_t unpack = RECEIVER[srcLocalIdx];
 
-  // FIXME
-  //  unpack(nx, ny, nz, src, domain->x, 1);
-  //  unpack(nx, ny, nz, src + recvcnt, domain->y, 1);
-  //  unpack(nx, ny, nz, src + recvcnt*2, domain->z, 1);
-  //  unpack(nx, ny, nz, src + recvcnt*3, domain->xd, 1);
-  //  unpack(nx, ny, nz, src + recvcnt*4, domain->yd, 1);
-  //  unpack(nx, ny, nz, src + recvcnt*5, domain->zd, 1);
+   unpack(nx, ny, nz, src, domain->x, 1);
+   unpack(nx, ny, nz, src + recvcnt, domain->y, 1);
+   unpack(nx, ny, nz, src + recvcnt*2, domain->z, 1);
+   unpack(nx, ny, nz, src + recvcnt*3, domain->xd, 1);
+   unpack(nx, ny, nz, src + recvcnt*4, domain->yd, 1);
+   unpack(nx, ny, nz, src + recvcnt*5, domain->zd, 1);
 
     // unpin the buffer
     hpx_gas_unpin(src_addr);
@@ -233,11 +240,14 @@ MonoQ(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
 
     hpx_gas_unpin(data_addr);
 
+    hpx_addr_t lsync = hpx_lco_future_new(0);
     if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     } else {
-      hpx_lco_netfuture_setat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, HPX_NULL, HPX_NULL);
+      hpx_lco_netfuture_setat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
     }
+    hpx_lco_wait(lsync);
+    hpx_lco_delete(lsync, HPX_NULL);
   } 
 
   // wait for incoming data

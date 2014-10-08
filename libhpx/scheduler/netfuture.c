@@ -52,7 +52,6 @@ typedef struct {
   cvar_t full;
   cvar_t empty;
   uint32_t bits;
-  void *value;
   int home_rank;
   void* home_address;
   char data[];
@@ -322,9 +321,8 @@ _wait(_netfuture_t *f) {
 
 // this version is for when we need to copy memory
 static void
-_future_set_with_copy(lco_t *lco, int size, const void *from)
+_future_set_with_copy(_netfuture_t *f, int size, const void *from)
 {
-  _netfuture_t *f = (_netfuture_t *)lco;
   lco_lock(&f->lco);
 
   hpx_status_t status;
@@ -337,12 +335,13 @@ _future_set_with_copy(lco_t *lco, int size, const void *from)
   }
 
   if (from && _is_inplace(f)) {
-    memcpy(&f->value, from, size);
+    memcpy(&f->data, from, size);
   }
   else if (from) {
-    void *ptr = NULL;
-    memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
-    memcpy(ptr, from, size);
+    //    void *ptr = NULL;
+    //    memcpy(&ptr, &f->data, sizeof(ptr));       // strict aliasing
+    //    memcpy(ptr, from, size);
+    memcpy(f->data, from, size);
   }
 
   f->bits ^= HPX_UNSET; // not empty anymore!
@@ -404,13 +403,13 @@ _future_get(lco_t *lco, int size, void *out)
     goto unlock;
 
   if (out && _is_inplace(f)) {
-    memcpy(out, &f->value, size);
+    memcpy(out, &f->data, size);
     goto unlock;
   }
 
   if (out) {
     void *ptr = NULL;
-    memcpy(&ptr, &f->value, sizeof(ptr));       // strict aliasing
+    memcpy(&ptr, &f->data, sizeof(ptr));       // strict aliasing
     memcpy(out, ptr, size);
   }
 
@@ -484,25 +483,19 @@ _future_init(_netfuture_t *f, int size, bool shared)
   static const lco_class_t vtable = {
     NULL,
     _future_error,
-    _future_set_with_copy,
+    NULL,
     _future_get,
     _future_wait
   };
 
-  bool inplace = (size <= sizeof(f->value));
+  bool inplace = false;
   lco_init(&f->lco, &vtable, inplace);
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | HPX_UNSET; // future starts out empty
   if (shared)
     f->bits |= FT_SHARED;
-  if (!inplace) {
-    f->value = malloc(size);                    // allocate if necessary
-    assert(f->value);
-  }
-  else {
-    memset(&f->value, 0, sizeof(f->value));
-  }
+  // we don't allocate - the system does that
 }
 
 hpx_netfuture_t 
@@ -629,6 +622,7 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   struct photon_buffer_t *buffer = &_netfuture_table.buffers[_netfuture_get_rank(f)];
 
   int remote_rank = _netfuture_get_rank(future);
+  assert(remote_rank == id % hpx_get_num_ranks()); // TODO take out when base not 0 or refactored
   void *remote_ptr = (void*)_netfuture_get_data_addr(future);
   struct photon_buffer_priv_t remote_priv = buffer->priv;
   
@@ -666,7 +660,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(future, id);
 
-  dbg_printf("  Setating to (%d, future at %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("  Setating to %d (%d, future at %p) from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 
   //  dbg_printf("  Putting to (%d, %p) from %d\n", _netfuture_get_rank(future_i), (void*)future_i->buffer.addr, hpx_get_my_rank());
   
@@ -675,7 +669,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
     _put_with_completion(&future_i, id, size, data, lsync_lco, rsync_lco);
   }
   else {
-    _future_set_with_copy((lco_t*)_netfuture_get_addr(&future_i), size, data);  
+    _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);  
   if (!(hpx_addr_eq(lsync_lco, HPX_NULL)))
     hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   if (!(hpx_addr_eq(rsync_lco, HPX_NULL)))
@@ -694,7 +688,7 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
 
   lco_t *lco;
 
-  dbg_printf("  Getating from (%d, future at %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("  Getating %d from (%d, future at %p) to %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
 
   assert(_netfuture_get_rank(&future_i) == hpx_get_my_rank());
   
