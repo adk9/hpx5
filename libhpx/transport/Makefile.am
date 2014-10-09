@@ -15,9 +15,7 @@ libtransport_la_LIBADD   += @MPI_LIBS@
 endif
 
 if HAVE_PHOTON
-libtransport_la_CFLAGS   += @PHOTON_CFLAGS@
 libtransport_la_SOURCES  += photon.c progress.c
-libtransport_la_LIBADD   += @PHOTON_LIBS@
 endif
 
 if HAVE_PORTALS

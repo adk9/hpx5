@@ -54,23 +54,27 @@
 /examples/allreduce-bench
 /examples/alltoall
 /examples/hello
+/examples/netfutures
 
 # /apps/
-apps/miniAMR/Makefile
-apps/miniAMR/parcels/Makefile
-apps/mpi/Makefile
-apps/Makefile
-apps/fmm/Makefile
-apps/fmm/parcels/Makefile
-apps/lulesh/parcels/Makefile
-apps/lulesh/Makefile
-apps/fmm/parcels/fmmparcels
-apps/lulesh/mpi/luleshMPI
-apps/miniAMR/parcels/miniamr
-apps/mpi/hpxmpi
-apps/lulesh/parcels/luleshparcels
-apps/libPXGL/Makefile
-apps/libPXGL/sssp
+/apps/miniAMR/Makefile
+/apps/miniAMR/parcels/Makefile
+/apps/mpi/Makefile
+/apps/Makefile
+/apps/fmm/Makefile
+/apps/fmm/parcels/Makefile
+/apps/lulesh/parcels/Makefile
+/apps/lulesh/parcels/luleshparcels
+/apps/lulesh/Makefile
+/apps/fmm/parcels/fmmparcels
+/apps/lulesh/mpi/luleshMPI
+/apps/miniAMR/parcels/miniamr
+/apps/mpi/hpxmpi
+/apps/lulesh/newfutures/Makefile
+/apps/lulesh/newfutures/luleshnewfutures
+/apps/libPXGL/Makefile
+/apps/libPXGL/examples/Makefile
+/apps/libPXGL/examples/sssp
 
 # /include/
 /include/stamp-h1
@@ -79,6 +83,9 @@ apps/libPXGL/sssp
 /include/.deps
 /include/Makefile
 /include/Makefile.in
+/include/hpx/Makefile
+/include/libhpx/Makefile
+/include/libsync/Makefile
 
 # /contrib/
 contrib/hwloc-1.9.1/Makefile
@@ -95,36 +102,55 @@ contrib/jemalloc/include/jemalloc/Makefile
 contrib/jemalloc/include/jemalloc/internal/Makefile
 contrib/jemalloc/src/Makefile
 
-include/hpx/Makefile
-include/libhpx/Makefile
-include/libsync/Makefile
 
-libhpx/Makefile
-libhpx/boot/Makefile
-libhpx/gas/Makefile
-libhpx/network/Makefile
-libhpx/scheduler/Makefile
-libhpx/scheduler/arch/Makefile
-libhpx/system/Makefile
-libhpx/transport/Makefile
-libsync/Makefile
-libsync/arch/Makefile
+# /libhpx/
+/libhpx/Makefile
+/libhpx/boot/Makefile
+/libhpx/gas/Makefile
+/libhpx/network/Makefile
+/libhpx/scheduler/Makefile
+/libhpx/scheduler/arch/Makefile
+/libhpx/system/Makefile
+/libhpx/transport/Makefile
+/libsync/Makefile
+/libsync/arch/Makefile
 
 # /tests/
 /tests/.deps
 /tests/hpxtest
 /tests/Makefile
 /tests/Makefile.in
+/tests/performance/Makefile
+/tests/performance/MicroBench/Makefile
+/tests/performance/MicroBench/memget
+/tests/performance/MicroBench/memput
+/tests/performance/MicroBench/perfmain
+/tests/performance/MicroBench/pingpong
+/tests/performance/Overheads/Makefile
+/tests/performance/Overheads/perfmain
+/tests/performance/Overheads/time_gas_addr_trans
+/tests/performance/Overheads/time_gas_alloc
+/tests/performance/Overheads/time_lco_allgather
+/tests/performance/Overheads/time_lco_allreduce
+/tests/performance/Overheads/time_lco_alltoall
+/tests/performance/Overheads/time_lco_and
+/tests/performance/Overheads/time_lco_chan
+/tests/performance/Overheads/time_lco_future
+/tests/performance/Overheads/time_lco_netfutures
+/tests/performance/Overheads/time_lco_netfutures_msgSize
+/tests/performance/Overheads/time_lco_sema
+/tests/performance/PutGetSM/Makefile
+/tests/performance/PutGetSM/guppie
+/tests/performance/PutGetSM/perfmain
+/tests/performance/TaskSpawningSO/Makefile
+/tests/performance/TaskSpawningSO/fibonacci
+/tests/performance/TaskSpawningSO/parspawn
+/tests/performance/TaskSpawningSO/perfmain
+/tests/performance/TaskSpawningSO/seqspawn
+/tests/unit/Makefile
+/tests/unit/hpxtest
 
-# /tests/arch/
-/tests/arch/.deps
-/tests/arch/Makefile
-/tests/arch/Makefile.in
 
-# /tests/arch/x86_64/
-/tests/arch/x86_64/.deps
-/tests/arch/x86_64/Makefile
-/tests/arch/x86_64/Makefile.in
 
 # /docs
 /docs/doxyfile.stamp
