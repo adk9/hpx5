@@ -258,22 +258,67 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 }
 
 
-hpx_action_t free_adj_list;
-int free_adj_list_action(void *arg) {
-  hpx_gas_free(count_array, HPX_NULL);
-  hpx_gas_free(index_array, HPX_NULL);
+static hpx_action_t _init_vertex_distance;
+static int _init_vertex_distance_action(void *arg) {
+   const hpx_addr_t target = hpx_thread_current_target();
+
+   adj_list_vertex_t *vertex;
+   if (!hpx_gas_try_pin(target, (void**)&vertex))
+     return HPX_RESEND;
+
+   vertex->distance = UINT64_MAX;
+
+   hpx_gas_unpin(target);
+   return HPX_SUCCESS;
+}
+
+
+hpx_action_t _reset_vertex = 0;
+static int _reset_vertex_action(void *args) {
+  const hpx_addr_t target = hpx_thread_current_target();
+  hpx_addr_t vertex;
+  hpx_addr_t *v;
+  if (!hpx_gas_try_pin(target, (void**)&v))
+    return HPX_RESEND;
+
+  vertex = *v;
+  hpx_gas_unpin(target);
+  return hpx_call_sync(vertex, _init_vertex_distance, NULL, 0, NULL, 0);
+}
+
+
+int reset_adj_list(adj_list_t adj_list, edge_list_t *el) {
+  hpx_addr_t vertices = hpx_lco_and_new(el->num_vertices);
+  for (int i = 0; i < el->num_vertices; ++i) {
+    hpx_addr_t index = hpx_addr_add(index_array, i * sizeof(hpx_addr_t), _index_array_block_size);
+    hpx_call(index, _reset_vertex, NULL, 0, vertices);
+  }
+  hpx_lco_wait(vertices);
+  hpx_lco_delete(vertices, HPX_NULL);
   return HPX_SUCCESS;
+}
+
+
+void free_adj_list(adj_list_t adj_list) {
+  if (!hpx_addr_eq(count_array, HPX_NULL))
+    hpx_gas_free(count_array, HPX_NULL);
+  count_array = HPX_NULL;
+
+  if (!hpx_addr_eq(adj_list, HPX_NULL))
+    hpx_gas_free(adj_list, HPX_NULL);
+  index_array = HPX_NULL;
 }
 
 
 static __attribute__((constructor)) void _adj_list_register_actions() {
   adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
-  free_adj_list            = HPX_REGISTER_ACTION(free_adj_list_action);
   _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
   _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
   _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
   _count_edge              = HPX_REGISTER_ACTION(_count_edge_action);
   _init_vertex             = HPX_REGISTER_ACTION(_init_vertex_action);
+  _init_vertex_distance    = HPX_REGISTER_ACTION(_init_vertex_distance_action);
+  _reset_vertex            = HPX_REGISTER_ACTION(_reset_vertex_action);
   _alloc_vertex            = HPX_REGISTER_ACTION(_alloc_vertex_action);
   _alloc_adj_list_entry    = HPX_REGISTER_ACTION(_alloc_adj_list_entry_action);
   _print_edge              = HPX_REGISTER_ACTION(_print_edge_action);
