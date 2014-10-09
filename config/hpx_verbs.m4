@@ -17,8 +17,7 @@ AC_DEFUN([HPX_WITH_VERBS],[
        AC_SUBST(VERBS_PKG, [$with_verbs])])
 
   AS_IF([test "x$have_verbs" == "xyes"],
-    [AC_DEFINE(HAVE_VERBS, 1, Build with VERBS support)],
-    [AC_MSG_ERROR([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])])
+    [AC_DEFINE(HAVE_VERBS, 1, Build with VERBS support)])
 
   AM_CONDITIONAL([HAVE_VERBS], [test x$have_verbs = xyes])
 ])
