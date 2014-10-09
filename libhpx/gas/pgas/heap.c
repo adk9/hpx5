@@ -26,6 +26,9 @@
 #include "libhpx/transport.h"
 #include "../mallctl.h"
 #include "heap.h"
+#ifdef CRAY_HUGE_HACK
+#include <hugetlbfs.h>
+#endif
 
 static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
@@ -38,7 +41,11 @@ static bitmap_t *_new_bitmap(size_t nchunks) {
 static void *_map_heap(const size_t bytes) {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
+#ifdef CRAY_HUGE_HACK
+  void *heap = get_huge_pages(bytes, GHP_DEFAULT);
+#else
   void *heap = mmap(NULL, bytes, prot, flags, -1, 0);
+#endif
   if (!heap) {
     dbg_error("failed to mmap %lu bytes for the shared heap\n", bytes);
   }
@@ -93,9 +100,13 @@ void heap_fini(heap_t *heap) {
     if (heap->transport)
       heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
 
+#ifdef CRAY_HUGE_HACK
+    free_huge_pages(heap->raw_base);
+#else
     int e = munmap(heap->raw_base, heap->raw_nbytes);
     if (e)
       dbg_error("pgas: failed to munmap the heap.\n");
+#endif
   }
 }
 
