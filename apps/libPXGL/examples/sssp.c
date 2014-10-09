@@ -174,13 +174,16 @@ static int _main_action(_sssp_args_t *args) {
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
-  
+
+  // Construct the graph as an adjacency list
+  hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+
   for (int i = 0; i < args->nproblems; ++i) {
-    // Construct the graph as an adjacency list
-    hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
-
-    //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
-
+    if(total_elapsed_time > args->time_limit) {
+      printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
+      args->nproblems = i;
+      break;
+    }
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
@@ -206,7 +209,7 @@ static int _main_action(_sssp_args_t *args) {
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
-      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), _index_array_block_size);
+      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), sargs.block_size);
       hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
     }
     hpx_lco_wait(vertices);
@@ -232,8 +235,10 @@ static int _main_action(_sssp_args_t *args) {
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
     fprintf(results_file, "d %zu\n", checksum);
 
-    hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
+    reset_adj_list(sargs.graph, &el);
   }
+
+  free_adj_list(sargs.graph);
 
 #ifdef GATHER_STAT
   double avg_time_per_source = total_elapsed_time/args->nproblems;
