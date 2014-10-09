@@ -22,12 +22,8 @@ hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 
-hpxtest_CFLAGS          = @PHOTON_CFLAGS@ @MPI_CFLAGS@
-hpxtest_CFLAGS         += @CHECK_CFLAGS@ @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+hpxtest_CFLAGS          = @MPI_CFLAGS@ @CHECK_CFLAGS@
+hpxtest_CFLAGS         += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 # Turn off some warnings for the tests
 hpxtest_CFLAGS         += -Wno-unused
-
-if HAVE_PHOTON
-hpxtest_LDADD          += -lphoton
-endif

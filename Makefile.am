@@ -5,21 +5,26 @@
 EXTRA_DIST = \
         autogen.sh           \
         README NEWS TODO     \
+        INSTALL AUTHORS      \
         docs
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.9.1/config
 
-SUBDIRS = contrib libsync libhpx include examples bench
+SUBDIRS       = contrib libsync libhpx include examples bench
+DIST_SUBDIRS  = contrib libsync libhpx include examples bench
 
 if ENABLE_DOCS
-SUBDIRS += docs
+SUBDIRS      += docs
+DIST_SUBDIRS += docs
 endif
 
 if ENABLE_TESTS
-SUBDIRS += tests
+SUBDIRS      += tests
+DIST_SUBDIRS += tests
 endif
 
 if ENABLE_APPS
-SUBDIRS += apps
+SUBDIRS      += apps
+DIST_SUBDIRS += apps
 endif
