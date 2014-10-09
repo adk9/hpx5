@@ -61,7 +61,5 @@ check_PROGRAMS      += time_lco_netfutures \
 endif
 time_lco_netfutures_SOURCES		= time_lco_netfutures.c
 time_lco_netfutures_msgSize_SOURCES	= time_lco_netfutures_msgSize.c
-AM_CFLAGS           += @PHOTON_CFLAGS@
-LD_ADD               = @PHOTON_LIBS@
 endif
 

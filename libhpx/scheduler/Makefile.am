@@ -11,6 +11,4 @@ libscheduler_la_LIBADD   = arch/libarch.la $(top_builddir)/libsync/libsync.la
 
 if HAVE_PHOTON
 libscheduler_la_SOURCES  += netfuture.c
-libscheduler_la_CFLAGS    = @PHOTON_CFLAGS@
-libscheduler_la_LIBADD   += @PHOTON_LIBS@
 endif

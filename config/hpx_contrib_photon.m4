@@ -38,25 +38,24 @@ AC_DEFUN([HPX_CONTRIB_PHOTON],
    
   AC_ARG_WITH([photon-lib-dir],
    [AS_HELP_STRING([--with-photon-lib-dir], [path to libphoton.{a,so}])],
-   [hpx_with_photon_lib_dir=$withval],
+    [hpx_with_photon_lib_dir=$withval
+     AS_IF([test "x$hpx_with_photon_lib_dir" != xno],
+      [AC_SUBST(HPX_PHOTON_LDFLAGS,
+        ["-L$hpx_with_photon_lib_dir -Wl,-rpath,$hpx_with_photon_lib_dir"])
+      ]
+     )
+
+     AC_ARG_WITH([photon-lib],
+      [AS_HELP_STRING([--with-photon-lib], [photon library @<:@default=photon@:>@])],
+      [hpx_with_photon_lib=$withval],
+      [hpx_with_photon_lib=photon]
+     )
+     AC_SUBST(HPX_PHOTON_LIBS, [-l"$hpx_with_photon_lib"])
+   ],
    [hpx_with_photon_lib_dir=no]
   )
 
-  AS_IF([test "x$hpx_with_photon_lib_dir" != xno],
-   [AC_SUBST(HPX_PHOTON_LDFLAGS,
-     ["-L$hpx_with_photon_lib_dir -Wl,-rpath,$hpx_with_photon_lib_dir"])
-   ]
-  )
-
-  AC_ARG_WITH([photon-lib],
-   [AS_HELP_STRING([--with-photon-lib], [photon library @<:@default=photon@:>@])],
-   [hpx_with_photon_lib=$withval],
-   [hpx_with_photon_lib=photon]
-  )
-
-  AC_SUBST(HPX_PHOTON_LIBS, [-l"$hpx_with_photon_lib"])
-
-  AS_IF([test "x$hpx_with_photon_include_dir" == xno -o "x$hpx_with_photon_lib_dir" == xno -o "x$hpx_with_photon_lib" == x],
+  AS_IF([test "x$hpx_with_photon_include_dir" == xno -o "x$hpx_with_photon_lib_dir" == xno],
    [AC_MSG_RESULT([no])
     AC_MSG_CHECKING([whether to build internal Photon])
 
@@ -76,12 +75,13 @@ AC_DEFUN([HPX_CONTRIB_PHOTON],
     AC_CONFIG_FILES([$1/Makefile])
     AC_CONFIG_FILES([$1/src/Makefile])
     AC_CONFIG_FILES([$1/src/util/Makefile])
+    hpx_have_photon=internal
+    AC_MSG_RESULT([yes])],
+   [hpx_have_photon=installed
     AC_MSG_RESULT([yes])])
 
   # TODO: Check if the photon installation we found is usable or not.
-  hpx_have_photon=yes
   AC_DEFINE([HAVE_PHOTON], [1], [Photon support enabled])
-  AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 
   # restore flags and outer language
   LIBS="$hpx_old_photon_LIBS"

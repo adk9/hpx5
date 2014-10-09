@@ -14,12 +14,11 @@ ACLOCAL_AMFLAGS= -I config
 SUBDIRS = . src/util src
 DIST_SUBDIRS = . src/util src
 
+if PHOTON_ENABLE_TESTS
 if HAVE_MPI
-SUBDIRS += test
-DIST_SUBDIRS += test
+ SUBDIRS += test
+ DIST_SUBDIRS += test
 endif
-
-if ENABLE_TESTS
 SUBDIRS += tests
 DIST_SUBDIRS += tests
 endif
