@@ -204,11 +204,10 @@ AC_CONFIG_FILES([
 	photon.pc
 ])
 
-AS_IF([test x$have_mpi = xyes || test x$with_mpi != xno],
-  [AC_CONFIG_FILES([test/Makefile])])
-
 AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/Makefile])])
+  [AC_CONFIG_FILES([tests/Makefile])
+   AS_IF([test x$have_mpi = xyes || test x$with_mpi != xno],
+     [AC_CONFIG_FILES([test/Makefile])])])
 
 AC_OUTPUT
 
