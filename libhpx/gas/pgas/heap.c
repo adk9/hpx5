@@ -42,7 +42,7 @@ static void *_map_heap(const size_t bytes) {
   const int prot = PROT_READ | PROT_WRITE;
   const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
 #ifdef CRAY_HUGE_HACK
-  void *heap = get_huge_pages(bytes, GHP_DEFAULT);
+  void *heap = get_huge_pages((bytes + gethugepagesize() - 1) / gethugepagesize() * gethugepagesize(), GHP_DEFAULT);
 #else
   void *heap = mmap(NULL, bytes, prot, flags, -1, 0);
 #endif
