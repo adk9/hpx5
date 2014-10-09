@@ -191,7 +191,7 @@ PHOTON_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=yes],
   [enable_tests=no])
-AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
+AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 # Set source and build directories
 AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
@@ -201,9 +201,11 @@ AC_CONFIG_FILES([
 	Makefile
 	src/util/Makefile
 	src/Makefile
-	test/Makefile
 	photon.pc
 ])
+
+AS_IF([test x$have_mpi = xyes || test x$with_mpi != xno],
+  [AC_CONFIG_FILES([test/Makefile])])
 
 AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile])])

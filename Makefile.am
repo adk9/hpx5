@@ -19,7 +19,7 @@ SUBDIRS += test
 DIST_SUBDIRS += test
 endif
 
-if ENABLE_TESTS
+if PHOTON_ENABLE_TESTS
 SUBDIRS += tests
 DIST_SUBDIRS += tests
 endif
