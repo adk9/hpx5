@@ -21,8 +21,3 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
 
 libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include
 libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la -lm
-
-if HAVE_PHOTON
-libpxgl_la_CFLAGS    = @PHOTON_CFLAGS@
-libpxgl_la_LIBADD   += -lphoton
-endif

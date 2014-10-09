@@ -23,12 +23,8 @@ miniamr_LDFLAGS  = -static
 miniamr_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 miniamr_CPPFLAGS = -I$(top_srcdir)/include
-miniamr_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
+miniamr_CFLAGS   = @MPI_CFLAGS@
 miniamr_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 
 miniamr_CFLAGS  += -Wno-unused -Wno-implicit-function-declaration -Wno-unused-variable
 miniamr_CFLAGS  += -Wno-uninitialized
-
-if HAVE_PHOTON
-miniamr_LDADD   += -lphoton
-endif
