@@ -8,9 +8,5 @@ fmmparcels_LDFLAGS  = -static
 fmmparcels_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 fmmparcels_CPPFLAGS = -I$(top_srcdir)/include
-fmmparcels_CFLAGS   = @PHOTON_CFLAGS@ @MPI_CFLAGS@
+fmmparcels_CFLAGS   = @MPI_CFLAGS@
 fmmparcels_CFLAGS  += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
-
-if HAVE_PHOTON
-fmmparcels_LDADD   += -lphoton
-endif
