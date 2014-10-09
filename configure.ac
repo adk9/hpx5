@@ -109,17 +109,25 @@ HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
-HPX_WITH_PKG([photon],[photon],[build with Photon networking],[no],[PHOTON])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
-AS_IF([test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno],
-  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
 
 HPX_WITH_VERBS
 HPX_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
 
 AM_CONDITIONAL([HAVE_XSP], [false])
-AS_IF([test "x$with_photon" != xno],
-  [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])])
+AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [false])
+
+AC_ARG_ENABLE([photon],
+ [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
+ [enable_photon=no])
+AS_IF([test "x$enable_photon" != xno],
+  [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
+  [hpx_have_photon=no])
+AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
+AM_CONDITIONAL([BUILD_PHOTON], [test "x$hpx_have_photon" == xinternal])
+
+AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
+  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
 
 HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
@@ -162,7 +170,7 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$with_photon" != xno -o "x$with_portals" != xno])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
@@ -175,11 +183,11 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS"
-hpx_extra_ldflags=""
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS"
+hpx_extra_ldflags="$HPX_PHOTON_CPPFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -249,7 +257,7 @@ AC_OUTPUT
 AS_IF([test "x$with_mpi" != xno],
   [networks="MPI"],
   [])
-AS_IF([test "x$with_photon" != xno],
+AS_IF([test "x$enable_photon" != xno],
   [networks="Photon $networks"],
   [])
 AS_IF([test "x$with_portals" != xno],

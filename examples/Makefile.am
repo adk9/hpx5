@@ -33,8 +33,6 @@ AM_CFLAGS            =
 if HAVE_PHOTON
 examples_PROGRAMS   += netfutures
 netfutures_SOURCES   = netfutures.c
-AM_CFLAGS           += @PHOTON_CFLAGS@
-all_LIBS            += @PHOTON_LIBS@
 endif
 
 if HAVE_MPI
