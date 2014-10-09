@@ -187,7 +187,7 @@ hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPF
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS"
-hpx_extra_ldflags="$HPX_PHOTON_CPPFLAGS"
+hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
