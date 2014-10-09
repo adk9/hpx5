@@ -605,7 +605,7 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   old = _outstanding_send_limit;
   do {
     while (old >= _outstanding_send_limit)
-      old = sync_load(&_outstanding_sends, SYNC_ACQ_REL);
+      old = sync_load(&_outstanding_sends, SYNC_SEQ_CST);
     new = old + 1;
   } while (!sync_cas(&_outstanding_sends, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
