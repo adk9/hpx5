@@ -49,6 +49,7 @@ SBN1(Domain *domain, hpx_netfuture_t sbn1)
     recv_t unpack = RECEIVER[srcLocalIdx];
     unpack(nx, ny, nz, src, domain->nodalMass, 0);
     hpx_gas_unpin(src_addr);
+    hpx_lco_netfuture_emptyat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), HPX_NULL);
   }
 }
 
@@ -120,6 +121,11 @@ SBN3(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain, int rank)
 
     // unpin the buffer
     hpx_gas_unpin(src_addr);
+    if ( gen == 0 ) {
+      hpx_lco_netfuture_emptyat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), HPX_NULL);
+    } else {
+      hpx_lco_netfuture_emptyat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), HPX_NULL);
+    }
   }
 
 }
@@ -197,6 +203,11 @@ PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int ran
 
     // unpin the buffer
     hpx_gas_unpin(src_addr);
+    if ( gen == 0 ) {
+      hpx_lco_netfuture_emptyat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
+    } else {
+      hpx_lco_netfuture_emptyat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
+    }
   }
 
 }
@@ -278,6 +289,12 @@ MonoQ(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
 
     // unpin the buffer
     hpx_gas_unpin(src_addr);
+    if ( gen == 0 ) {
+      hpx_lco_netfuture_emptyat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
+    } else {
+      hpx_lco_netfuture_emptyat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
+    }
+
   }
   
 }
