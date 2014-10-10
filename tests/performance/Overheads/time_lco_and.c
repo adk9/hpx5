@@ -26,6 +26,11 @@ static void _usage(FILE *stream) {
           "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-l, set logging level\n"
+          "\t-s, set stack size\n"
+          "\t-p, set per-PE global heap size\n"
+          "\t-r, set send/receive request limit\n"
+          "\t-b, set block-translation-table size\n"
           "\t-h, this help display\n");
 }
 
@@ -91,7 +96,7 @@ int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -110,6 +115,21 @@ int main(int argc, char *argv[]) {
      case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
+      break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'p':
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
+      break;
+     case 'b':
+      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);
