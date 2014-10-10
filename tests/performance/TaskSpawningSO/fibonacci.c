@@ -26,13 +26,18 @@
 #include "hpx/hpx.h"
 #include "common.h"
 
-static void _usage(FILE *stream) {
+static void usage(FILE *stream) {
   fprintf(stream, "Usage: fibonacci [options] NUMBER\n"
           "\t-c, number of cores to run on\n"
           "\t-t, number of scheduler threads\n"
           "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
+          "\t-l, set logging level\n"
+          "\t-s, set stack size\n"
+          "\t-p, set per-PE global heap size\n"
+          "\t-r, set send/receive request limit\n"
+          "\t-b, set block-translation-table size\n"
           "\t-h, this help display\n");
 }
 
@@ -106,7 +111,7 @@ int main(int argc, char *argv[]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -126,12 +131,27 @@ int main(int argc, char *argv[]) {
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
       break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'p':
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
+      break;
+     case 'b':
+      cfg.btt_size = strtoul(optarg, NULL, 0);
+      break;
      case 'h':
-      _usage(stdout);
+      usage(stdout);
       return 0;
      case '?':
      default:
-      _usage(stderr);
+      usage(stderr);
       return -1;
     }
   }
@@ -144,7 +164,7 @@ int main(int argc, char *argv[]) {
    case 0:
     fprintf(stderr, "\nMissing fib number.\n"); // fall through
    default:
-    _usage(stderr);
+    usage(stderr);
     return -1;
    case 1:
      n = atoi(argv[0]);

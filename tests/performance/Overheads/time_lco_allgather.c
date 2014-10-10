@@ -58,19 +58,19 @@ static hpx_action_t _initDomain = 0;
 static hpx_action_t _advanceDomain = 0;
 
 static void
-_usage(FILE *f, int error) {
+_usage(FILE *f) {
   fprintf(f, "Usage: ./example [options] [CYCLES]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-s, stack size in bytes\n"
+           "\t-c, number of cores to run on\n"
+          "\t-t, number of scheduler threads\n"
           "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
-          "\t-n, number of domains\n"
-          "\t-i, maxcycles\n"
-          "\t-h, show help\n");
-  fflush(f);
-  exit(error);
+          "\t-l, set logging level\n"
+          "\t-s, set stack size\n"
+          "\t-p, set per-PE global heap size\n"
+          "\t-r, set send/receive request limit\n"
+          "\t-b, set block-translation-table size\n"
+          "\t-h, this help display\n");
 }
 
 static int
@@ -204,13 +204,12 @@ main(int argc, char * const argv[argc])
 
   // allocate the default HPX configuration on the stack
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-
-  // parse the command line
+  
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:s:d:D:n:i:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
      case 'c':
-      args.cores = cfg.cores = atoi(optarg);
+      cfg.cores = atoi(optarg);
       break;
      case 't':
       cfg.threads = atoi(optarg);
@@ -218,9 +217,6 @@ main(int argc, char * const argv[argc])
      case 'T':
       cfg.transport = atoi(optarg);
       assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 's':
-      cfg.stack_bytes = atoi(optarg);
       break;
      case 'D':
       cfg.wait = HPX_WAIT;
@@ -230,16 +226,31 @@ main(int argc, char * const argv[argc])
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
       break;
-     case 'n':
-      args.nDoms = atoi(optarg);
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'p':
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
+      break;
+     case 'b':
+      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
-      _usage(stdout, 0);
+      _usage(stdout);
+      return 0;
      case '?':
      default:
-      _usage(stderr, -1);
+      _usage(stderr);
+      return -1;
     }
   }
+
 
   // initialize HPX
   int err = hpx_init(&cfg);
@@ -256,7 +267,7 @@ main(int argc, char * const argv[argc])
    case 0:
     break;
    default:
-    _usage(stderr, -1);
+    _usage(stderr);
     return -1;
   }
 

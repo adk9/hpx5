@@ -42,6 +42,21 @@ char buffer[MAX_MSG_SIZE];
 #define BENCHMARK "HPX COST OF CHAN LCO (ms)"
 #define HEADER "# " BENCHMARK "\n"
 
+static void _usage(FILE *stream) {
+  fprintf(stream, "Usage: time_lco_chan\n"
+          "\t-c, number of cores to run on\n"
+          "\t-t, number of scheduler threads\n"
+          "\t-T, select a transport by number (see hpx_config.h)\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
+          "\t-l, set logging level\n"
+          "\t-s, set stack size\n"
+          "\t-p, set per-PE global heap size\n"
+          "\t-r, set send/receive request limit\n"
+          "\t-b, set block-translation-table size\n"
+          "\t-h, this help display\n");
+}
+
 static int _pinger_action(hpx_addr_t *chans) {
   fprintf(test_log, HEADER);
   fprintf(test_log, "%s%*s\n", "# Size ", FIELD_WIDTH, "Latency");
@@ -114,47 +129,55 @@ static int _main_action(void *args) {
   hpx_shutdown(0);
 }
 
-
-static void usage(FILE *f) {
-  fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-h, show help\n");
-}
-
-
 int main(int argc, char *argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  //cfg.gas          = HPX_GAS_SMP;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
-      case 'c':
-        cfg.cores = atoi(optarg);
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
-      case 'h':
-        usage(stdout);
-        return 0;
-      case '?':
-      default:
-        usage(stderr);
-        return -1;
+     case 'c':
+      cfg.cores = atoi(optarg);
+      break;
+     case 't':
+      cfg.threads = atoi(optarg);
+      break;
+     case 'T':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
+      break;
+     case 'D':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = HPX_LOCALITY_ALL;
+      break;
+     case 'd':
+      cfg.wait = HPX_WAIT;
+      cfg.wait_at = atoi(optarg);
+      break;
+     case 'l':
+      cfg.log_level = atoi(optarg);
+      break;
+     case 's':
+      cfg.stack_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'p':
+      cfg.heap_bytes = strtoul(optarg, NULL, 0);
+      break;
+     case 'r':
+      cfg.req_limit = strtoul(optarg, NULL, 0);
+      break;
+     case 'b':
+      cfg.btt_size = strtoul(optarg, NULL, 0);
+      break;
+     case 'h':
+      _usage(stdout);
+      return 0;
+     case '?':
+     default:
+      _usage(stderr);
+      return -1;
     }
   }
+
 
   if (hpx_init(&cfg)) {
     fprintf(stderr, "HPX failed to initialize.\n");
