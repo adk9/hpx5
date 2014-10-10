@@ -1,1 +1,1 @@
-mpirun -np 2 hpxtest
+mpirun -np 2  hpxtest

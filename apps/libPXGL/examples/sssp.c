@@ -34,6 +34,7 @@ static void _usage(FILE *stream) {
 	  "\t-r, set send/receive request limit\n"
           "\t-b, set block-translation-table size\n"
           "\t-q, limit time for SSSP executions in seconds\n"	  
+          "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
 }
 
@@ -108,6 +109,7 @@ typedef struct {
   uint64_t *problems;
   char *prob_file;
   uint64_t time_limit;
+  int realloc_adj_list;
 } _sssp_args_t;
 
 
@@ -144,10 +146,11 @@ static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
 
 static hpx_action_t _main;
 static int _main_action(_sssp_args_t *args) {
+  const int realloc_adj_list = args->realloc_adj_list;
 
   // Create an edge list structure from the given filename
   edge_list_t el;
-  printf("Allocated edge-list from file %s.\n", args->filename);
+  printf("Allocating edge-list from file %s.\n", args->filename);
   hpx_call_sync(HPX_HERE, edge_list_from_file, &args->filename, sizeof(char*), &el, sizeof(el));
   printf("Edge List: #v = %lu, #e = %lu\n",
          el.num_vertices, el.num_edges);
@@ -174,12 +177,23 @@ static int _main_action(_sssp_args_t *args) {
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
-  
-  for (int i = 0; i < args->nproblems; ++i) {
+
+  if(!realloc_adj_list) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+  }
 
-    //hpx_call_sync(sssp_stats,_get_sssp_stat,&sargs,sizeof(sargs), NULL,0);
+  for (int i = 0; i < args->nproblems; ++i) {
+    if(total_elapsed_time > args->time_limit) {
+      printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
+      args->nproblems = i;
+      break;
+    }
+
+    if(realloc_adj_list) {
+      // Construct the graph as an adjacency list
+      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));    
+    }
 
     sargs.source = args->problems[i];
 
@@ -232,6 +246,14 @@ static int _main_action(_sssp_args_t *args) {
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
     fprintf(results_file, "d %zu\n", checksum);
 
+    if(realloc_adj_list) {
+      hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
+    } else {
+      reset_adj_list(sargs.graph, &el);
+    }
+  }
+
+  if(!realloc_adj_list) {
     hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
   }
 
@@ -286,9 +308,10 @@ static int _main_action(_sssp_args_t *args) {
 int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   uint64_t time_limit = 1000;
+  int realloc_adj_list = 1;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:ah")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
@@ -325,6 +348,9 @@ int main(int argc, char *const argv[argc]) {
       break;
      case 'q':
       time_limit = strtoul(optarg, NULL, 0);
+      break;
+     case 'a':
+      realloc_adj_list = 0;
       break;
      case 'h':
       _usage(stdout);
@@ -369,7 +395,8 @@ int main(int argc, char *const argv[argc]) {
                         .nproblems = nproblems,
                         .problems = problems,
                         .prob_file = problem_file,
-			.time_limit = time_limit
+			.time_limit = time_limit,
+			.realloc_adj_list = realloc_adj_list
   };
 
   int e = hpx_init(&cfg);
