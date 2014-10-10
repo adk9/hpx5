@@ -85,7 +85,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  // printf("Distance Action on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+  // printf("Distance Action on %" PRIu64 "\n", target);
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     const uint64_t num_edges = vertex->num_edges;
@@ -118,7 +118,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     hpx_gas_unpin(target);
   }
 
-  // printf("Distance Action finished on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+  // printf("Distance Action finished on %" PRIu64 "\n", target);
 
   return HPX_SUCCESS;
 }
@@ -135,7 +135,7 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
   vertex = *v;
   hpx_gas_unpin(target);
 
-  // printf("Calling update distance on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", vertex.offset, vertex.base_id, vertex.block_bytes);
+  // printf("Calling update distance on %" PRIu64 "\n", vertex);
 
   return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
 }

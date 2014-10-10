@@ -199,6 +199,7 @@ static int _main_action(_sssp_args_t *args) {
 
     hpx_time_t now = hpx_time_now();
 
+    // printf("Calling SSSP in the %d iteration\n", i);
     // Call the SSSP algorithm
     hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
 
