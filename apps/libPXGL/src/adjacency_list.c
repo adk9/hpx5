@@ -299,19 +299,17 @@ int reset_adj_list(adj_list_t adj_list, edge_list_t *el) {
 }
 
 
-void free_adj_list(adj_list_t adj_list) {
-  if (!hpx_addr_eq(count_array, HPX_NULL))
-    hpx_gas_free(count_array, HPX_NULL);
-  count_array = HPX_NULL;
-
-  if (!hpx_addr_eq(adj_list, HPX_NULL))
-    hpx_gas_free(adj_list, HPX_NULL);
-  index_array = HPX_NULL;
+hpx_action_t free_adj_list = 0;
+int free_adj_list_action(void *arg) {
+  hpx_gas_free(count_array, HPX_NULL);
+  hpx_gas_free(index_array, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 
 static __attribute__((constructor)) void _adj_list_register_actions() {
   adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
+  free_adj_list            = HPX_REGISTER_ACTION(free_adj_list_action);
   _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
   _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
   _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
