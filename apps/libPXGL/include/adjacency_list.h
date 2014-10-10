@@ -50,6 +50,8 @@ extern hpx_action_t adj_list_from_edge_list;
 extern int adj_list_from_edge_list_action(const edge_list_t * const el);
 
 extern int reset_adj_list(adj_list_t al, edge_list_t *el);
-extern void free_adj_list(adj_list_t al);
+extern hpx_action_t free_adj_list;
+extern int free_adj_list_action(void*);
+
 
 #endif // PXGL_ADJ_LIST_H
