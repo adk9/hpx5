@@ -22,3 +22,6 @@ mpirun seqspawn 4000000
 mpirun seqspawn 5000000
 mpirun seqspawn 6000000
 mpirun seqspawn 7000000
+mpirun seqspawn 8000000
+mpirun seqspawn 9000000
+mpirun seqspawn 10000000
