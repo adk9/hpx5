@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
 }
 
 static int _action_main(void *args) {
-  hpx_status_t status =  hpx_netfutures_init();
+  hpx_status_t status =  hpx_netfutures_init(NULL);
   if (status != HPX_SUCCESS)
     return status;
 
