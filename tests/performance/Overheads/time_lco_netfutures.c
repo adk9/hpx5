@@ -187,6 +187,9 @@ static int _action_ping(args_t *args) {
     hpx_lco_delete(lsync, HPX_NULL);
     msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE);
     hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
+    hpx_gas_unpin(msg_pong_gas);
+
+    hpx_lco_netfuture_emptyat(args->pingpong, 0, HPX_NULL);
   }
 
   return HPX_SUCCESS;
@@ -206,6 +209,8 @@ static int _action_pong(args_t *args) {
   for (int i = 0; i < args->iterations; i++) {
     msg_ping_gas = hpx_lco_netfuture_getat(args->pingpong, 1, BUFFER_SIZE);
     hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
+    hpx_gas_unpin(msg_ping_gas);
+    hpx_lco_netfuture_emptyat(args->pingpong, 1, HPX_NULL);
 
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);

@@ -146,7 +146,6 @@ main(int argc, char *argv[])
   }
 
   test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the parspawn test\n");
 
   // register the actions
   _nop     = HPX_REGISTER_ACTION(_nop_action);

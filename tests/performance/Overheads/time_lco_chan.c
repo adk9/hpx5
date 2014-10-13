@@ -30,8 +30,8 @@
 
 #define FIELD_WIDTH 20
 
-int skip = 1000;
-int loop = 10000;
+static const int skip = 1000;
+static const int loop = 10000;
 
 static hpx_action_t _main   = 0;
 static hpx_action_t _pinger = 0;
@@ -58,18 +58,21 @@ static void _usage(FILE *stream) {
 }
 
 static int _pinger_action(hpx_addr_t *chans) {
+  int _loop = loop;
+  int _skip = skip;
+
   fprintf(test_log, HEADER);
   fprintf(test_log, "%s%*s\n", "# Size ", FIELD_WIDTH, "Latency");
 
   hpx_thread_set_affinity(0);
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     if (size > LARGE_MESSAGE_SIZE) {
-      loop = LOOP_LARGE;
-      skip = SKIP_LARGE;
+      _loop = LOOP_LARGE;
+      _skip = SKIP_LARGE;
     }
 
     hpx_time_t start;
-    for (int i = 0; i < loop + skip; i++) {
+    for (int i = 0; i < _loop + _skip; i++) {
       if(i == skip)
         start = hpx_time_now();
 
@@ -82,21 +85,23 @@ static int _pinger_action(hpx_addr_t *chans) {
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
-    fprintf(test_log, "%-*lu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * loop));
+    fprintf(test_log, "%-*lu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * _loop));
   }
   fclose(test_log);
   return HPX_SUCCESS;
 }
 
 static int _ponger_action(hpx_addr_t *chans) {
+  int _loop = loop;
+  int _skip = skip;
   hpx_thread_set_affinity(1);
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
     if (size > LARGE_MESSAGE_SIZE) {
-      loop = LOOP_LARGE;
-      skip = SKIP_LARGE;
+      _loop = LOOP_LARGE;
+      _skip = SKIP_LARGE;
     }
 
-    for (int i = 0; i < loop + skip; i++) {
+    for (int i = 0; i < _loop + _skip; i++) {
       void *rbuf;
       hpx_lco_chan_recv(chans[0], NULL, &rbuf);
       free(rbuf);
