@@ -34,8 +34,14 @@ static hpx_action_t _main    = 0;
 static int _main_action(void *args) {
   hpx_addr_t local, global, calloc_global;
   hpx_time_t t;
+  int size = HPX_LOCALITIES;
+  int ranks = hpx_get_num_ranks();
+  uint32_t blocks = size;
 
   fprintf(test_log, HEADER);
+  fprintf(test_log, "localities: %d, ranks and blocks per rank = %d, %d\n", 
+                  size, ranks, blocks/ranks);
+
   fprintf(test_log, "%s\t%*s%*s%*s%*s%*s%*s\n", "# Size ", HEADER_FIELD_WIDTH,
            " LOCAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH, 
            " GLOBAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
@@ -51,7 +57,7 @@ static int _main_action(void *args) {
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
-    global = hpx_gas_global_alloc(hpx_get_num_ranks(), size);
+    global = hpx_gas_global_alloc(blocks, size);
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));   
 
     t = hpx_time_now();
@@ -59,7 +65,7 @@ static int _main_action(void *args) {
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
-    calloc_global = hpx_gas_global_calloc(hpx_get_num_ranks(), size);
+    calloc_global = hpx_gas_global_calloc(blocks, size);
     fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
