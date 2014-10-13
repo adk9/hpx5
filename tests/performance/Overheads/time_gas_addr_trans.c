@@ -23,6 +23,10 @@ static void _usage(FILE *stream) {
 static hpx_action_t _address_translation = 0;
 static hpx_action_t _main = 0;
 
+#define BENCHMARK "HPX COST OF GAS ADDRESS TRANSLATION (ms)"
+
+#define HEADER "# " BENCHMARK "\n"
+
 #define TEST_BUF_SIZE (1024*64) //64k
 #define FIELD_WIDTH 20
 
@@ -55,7 +59,13 @@ static int _address_translation_action(void* args) {
 static int _main_action(void *args) {
   hpx_time_t now;
   double elapsed;
+  int size = HPX_LOCALITIES;
+  int ranks = hpx_get_num_ranks();
+  uint32_t blocks = size;
 
+  fprintf(test_log, HEADER);
+  fprintf(test_log, "localities: %d, ranks and blocks per rank = %d, %d\n",
+                  size, ranks, blocks/ranks);
   fprintf(test_log, "%s%*s%*s%*s\n", "# Num threads ", FIELD_WIDTH, 
           "GAS ALLOC", FIELD_WIDTH, "GLOBAL_ALLOC", FIELD_WIDTH, 
           "GLOBAL_CALLOC");
@@ -74,7 +84,7 @@ static int _main_action(void *args) {
     hpx_lco_delete(completed, HPX_NULL);
     hpx_gas_free(local, HPX_NULL);
 
-    hpx_addr_t global = hpx_gas_global_alloc(hpx_get_num_ranks(), TEST_BUF_SIZE);
+    hpx_addr_t global = hpx_gas_global_alloc(blocks, TEST_BUF_SIZE);
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
@@ -85,7 +95,7 @@ static int _main_action(void *args) {
     hpx_lco_delete(done, HPX_NULL);
     hpx_gas_free(global, HPX_NULL);
    
-    hpx_addr_t callocMem = hpx_gas_global_calloc(hpx_get_num_ranks(), TEST_BUF_SIZE);
+    hpx_addr_t callocMem = hpx_gas_global_calloc(blocks, TEST_BUF_SIZE);
     hpx_addr_t and = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
@@ -162,9 +172,6 @@ main(int argc, char *argv[])
   }
 
   test_log = fopen("test.log", "a+");
-  fprintf(test_log,"\n");
-  fprintf(test_log, "Starting the overhead for address translation test\n");
-  fprintf(test_log, "Time elapsed in seconds\n");
   // register the actions
   _address_translation     = HPX_REGISTER_ACTION(_address_translation_action);
   _main    = HPX_REGISTER_ACTION(_main_action);

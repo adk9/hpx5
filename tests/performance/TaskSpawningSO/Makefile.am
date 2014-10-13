@@ -1,5 +1,4 @@
 all: $(check_PROGRAMS)
-#noinst_bindir           = $(builddir)
 check_SCRIPTS           = $(srcdir)/run_tests.sh
 TESTS                   = $(srcdir)/run_tests.sh
 
@@ -11,13 +10,15 @@ PERFTESTS += \
         perfmain \
         parspawn \
         seqspawn \
-        fibonacci
+        fibonacci \
+        parallelQuickSort
 else
 check_PROGRAMS += \
         perfmain \
         parspawn \
         seqspawn \
-        fibonacci
+        fibonacci \
+        parallelQuickSort
 endif
 
 NPROCS ?= 2
@@ -33,3 +34,4 @@ perfmain_SOURCES     = perfmain.c
 parspawn_SOURCES     = parspawn.c 
 seqspawn_SOURCES     = seqspawn.c
 fibonacci_SOURCES    = fibonacci.c
+parallelQuickSort_SOURCES = parallelQuickSort.c
