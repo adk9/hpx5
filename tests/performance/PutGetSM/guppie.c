@@ -388,7 +388,6 @@ int main(int argc, char *argv[])
   }
 
   test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the guppie test\n");
 
   // register the actions
   _main         = HPX_REGISTER_ACTION(_main_action);

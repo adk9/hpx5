@@ -88,6 +88,7 @@ int main(int argc, char *argv[]) {
       break;
      case 'm':
       _text = true;
+      break;
      case 'v':
       _verbose = true;
       break;
@@ -197,6 +198,8 @@ static int _action_ping(args_t *args) {
     hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
 
     RANK_PRINTF("Received pong msg= '%s'\n", msg_pong->data);
+    hpx_gas_unpin(msg_pong_gas);
+    hpx_lco_netfuture_emptyat(args->pingpong, 0, HPX_NULL);
   }
 
   return HPX_SUCCESS;
@@ -224,6 +227,9 @@ static int _action_pong(args_t *args) {
 	       hpx_get_my_rank(), hpx_get_my_thread_id());
 
     RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong->data);
+
+    hpx_gas_unpin(msg_ping_gas);
+    hpx_lco_netfuture_emptyat(args->pingpong, 1, HPX_NULL);
 
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);

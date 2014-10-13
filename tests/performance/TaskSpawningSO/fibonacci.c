@@ -178,7 +178,6 @@ int main(int argc, char *argv[]) {
   }
 
   test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the Fibonacci test\n");
 
   // register the fib action
   _fib      = HPX_REGISTER_ACTION(_fib_action);

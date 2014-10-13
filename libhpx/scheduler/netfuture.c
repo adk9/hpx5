@@ -389,7 +389,7 @@ _future_error(lco_t *lco, hpx_status_t code)
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t
-_future_get(lco_t *lco, int size, void *out)
+_future_get(lco_t *lco, int size, void *out, bool set_empty)
 {
   _netfuture_t *f = (_netfuture_t *)lco;
   lco_lock(&f->lco);
@@ -408,15 +408,17 @@ _future_get(lco_t *lco, int size, void *out)
   }
 
   if (out) {
-    void *ptr = NULL;
-    memcpy(&ptr, &f->data, sizeof(ptr));       // strict aliasing
-    memcpy(out, ptr, size);
+    //    void *ptr = NULL;
+    //    memcpy(&ptr, &f->data, sizeof(ptr));       // strict aliasing
+    memcpy(out, f->data, size);
   }
 
-  f->bits ^= HPX_SET;
-  f->bits |= HPX_UNSET;
-  cvar_reset(&f->full);
-  scheduler_signal_all(&f->empty);
+  if (set_empty) {
+    f->bits ^= HPX_SET;
+    f->bits |= HPX_UNSET;
+    cvar_reset(&f->full);
+    scheduler_signal_all(&f->empty);
+  }
 
  unlock:
   lco_unlock(&f->lco);
@@ -482,10 +484,10 @@ _future_init(_netfuture_t *f, int size, bool shared)
   // the future vtable
   static const lco_class_t vtable = {
     NULL,
-    _future_error,
     NULL,
-    _future_get,
-    _future_wait
+    NULL,
+    NULL, 
+    NULL
   };
 
   bool inplace = false;
@@ -680,6 +682,24 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 }
 
 void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco) {
+  hpx_netfuture_t future_i = hpx_lco_netfuture_at(base, i);
+
+  assert(_netfuture_get_rank(&future_i) == hpx_get_my_rank());
+
+  lco_t *lco;
+  _netfuture_t *f = (_netfuture_t*)_netfuture_get_addr(&future_i);
+  lco = (lco_t*)f;
+
+  assert(_full(f));
+
+  lco_lock(&f->lco);
+  
+  f->bits ^= HPX_SET;
+  f->bits |= HPX_UNSET;
+  cvar_reset(&f->full);
+  scheduler_signal_all(&f->empty);
+
+  lco_unlock(&f->lco);
 }
 
 hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
@@ -694,7 +714,12 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
   
   lco = (lco_t*)_netfuture_get_addr(&future_i);
   retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), 1);
-  _future_get(lco, size, NULL);
+  //  hpx_addr_t out_gas = hpx_gas_alloc(size);
+  //  retval = out_gas;
+  //  void *out;
+  //  assert(hpx_gas_try_pin(out_gas, &out));
+  _future_get(lco, size, NULL, false);
+  //  hpx_gas_unpin(out_gas);
   dbg_printf("  Done getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
   return retval;
 }
