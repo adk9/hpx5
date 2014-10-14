@@ -10,6 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
+/*
+-Joshua Stough
+-Washington and Lee University
+-Quicksort a random list of size given by the argument (default 1M)
+-Time both sequential quicksort and parallel.
+-$ ./quicksort [1000000]
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
