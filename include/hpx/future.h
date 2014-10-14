@@ -224,8 +224,11 @@ bool hpx_lco_netfuture_is_shared(hpx_netfuture_t future);
 int hpx_lco_netfuture_get_rank(hpx_netfuture_t future);
 
 /// Must be called first, from the main action
-hpx_status_t hpx_netfutures_init();
+/// @param cfg A configuration object, which may be NULL (which sets all values
+///            to their defaults. If any field is set, all fields must be set.
+hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg);
 
+/// Must be called from main action after last use of netfutures.
 void hpx_netfutures_fini();
 
 #endif
