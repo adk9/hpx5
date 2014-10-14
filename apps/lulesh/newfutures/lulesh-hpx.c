@@ -174,7 +174,7 @@ static int _action_main(int *input) {
 
   hpx_netfuture_config_t cfg = {
     .total_size = (size_t)100*1024*1024,
-    .total_number = 2
+    .total_number = 100
   };
   hpx_netfutures_init(&cfg);
   hpx_netfuture_t sbn1 = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));

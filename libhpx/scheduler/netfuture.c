@@ -517,6 +517,7 @@ int _add_futures(hpx_netfuture_t *f) {
     dbg_printf("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
     fi.index += hpx_get_num_ranks();
   }
+  fi.index = 0;
   return HPX_SUCCESS;
 }
 
@@ -534,6 +535,12 @@ _add_future_to_table_action(hpx_netfuture_t *f) {
 hpx_netfuture_t
 hpx_lco_netfuture_new_all(int n, size_t size) {
   hpx_netfuture_t f;
+
+    assert(_netfuture_table.curr_offset + n * (size + sizeof(_netfuture_t)) 
+	            <  _netfuture_cfg.total_size * hpx_get_num_ranks());
+    assert(_netfuture_table.curr_index + 1 < _netfuture_cfg.total_number);
+
+
 
   _table_lock();
 
@@ -578,6 +585,7 @@ hpx_netfuture_t hpx_lco_netfuture_shared_new_all(int num_participants, size_t si
 // provide this array indexer.
 hpx_netfuture_t 
 hpx_lco_netfuture_at(hpx_netfuture_t array, int i) {
+  assert(i >= 0 && i <= array.count);
   //  return &array[i];
   //return &_netfuture_table.futs[array->table_index][i];
   hpx_netfuture_t fut = array;
@@ -643,6 +651,8 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
 
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
 			     hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+
+  assert(id >= 0 && id <= future.count);
   void *data;
   assert(hpx_gas_try_pin(value, &data)); // TODO: unpin this
 
@@ -670,6 +680,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco) {
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(base, i);
 
+  assert(i >= 0 && i <= base.count);
   assert(_netfuture_get_rank(&future_i) == hpx_get_my_rank());
 
   _netfuture_t *f = (_netfuture_t*)_netfuture_get_addr(&future_i);
@@ -687,6 +698,8 @@ void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco
 }
 
 hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
+  assert(i >= 0 && i <= base.count);
+
   hpx_addr_t retval = HPX_NULL;
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(base, i);
 
