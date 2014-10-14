@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
 
 static int _action_main(args_t *args) {
   printf("In main on rank %d\n", hpx_get_my_rank());
-  hpx_status_t status =  hpx_netfutures_init();
+  hpx_status_t status =  hpx_netfutures_init(NULL);
   if (status != HPX_SUCCESS)
     return status;
 

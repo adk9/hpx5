@@ -172,7 +172,11 @@ static int _action_main(int *input) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_netfutures_init();
+  hpx_netfuture_config_t cfg = {
+    .total_size = (size_t)100*1024*1024,
+    .total_number = 100
+  };
+  hpx_netfutures_init(&cfg);
   hpx_netfuture_t sbn1 = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_netfuture_t sbn3_a = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
   hpx_netfuture_t sbn3_b = hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double));
@@ -208,6 +212,7 @@ static int _action_main(int *input) {
   hpx_lco_delete(complete, HPX_NULL);
 
   printf("finished main\n");
+  hpx_netfutures_fini();
   hpx_shutdown(HPX_ERROR);
   return HPX_SUCCESS;
 }
