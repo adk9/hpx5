@@ -1,4 +1,5 @@
 mpirun perfmain
+mpirun parallelQuickSort
 mpirun fibonacci 15
 mpirun fibonacci 20
 mpirun fibonacci 25

@@ -10,14 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
-/*
-Joshua Stough
-Washington and Lee University
-Quicksort a random list of size given by the argument (default 1M)
-Time both sequential quicksort and parallel.
-$ ./quicksort [1000000]
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -69,7 +61,7 @@ struct thread_data{
 //thread_data should be thread-safe, since while lyst is 
 //shared, [low, high] will not overlap among threads.
 
-//for the builtin qsort, for fun:
+//for the builtin libc qsort:
 int compare_doubles (const void *a, const void *b);
 
 /*
@@ -83,6 +75,8 @@ static int _main_action(uint64_t *args) {
   hpx_time_t start;
   srand(time(NULL)); //seed random
   uint64_t NUM = *(uint64_t *)args;
+
+  fprintf(test_log, "parallel Quick Sort for %"PRIu64"\n", NUM);
   //Want to compare sorting on the same list,
   //so backup.
   double *lystbck = (double *) malloc(NUM*sizeof(double));
@@ -98,34 +92,30 @@ static int _main_action(uint64_t *args) {
   //Sequential mergesort, and timing
   start = hpx_time_now();
   quicksort(lyst, NUM);
-
+  fprintf(test_log, "Sequential quicksort took: %g ms. \n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by quicksort.\n");
   }
-  printf("Sequential quicksort took: %g ms. \n", hpx_time_elapsed_ms(start));
 
   //Now, parallel quicksort.    
   //copy list.
   memcpy(lyst, lystbck, NUM*sizeof(double));
   start = hpx_time_now();
   parallelQuicksort(lyst, NUM, THREAD_LEVEL);
-
+  fprintf(test_log, "Parallel quicksort took: %g ms.\n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by parallelQuicksort.\n");
   }
-  printf("Parallel quicksort took: %g ms.\n", hpx_time_elapsed_ms(start));
 
   //Finally, built-in for reference:
   memcpy(lyst, lystbck, NUM*sizeof(double));
   start = hpx_time_now();
   qsort(lyst, NUM, sizeof(double), compare_doubles);
-
+  //Compute time difference.
+  fprintf(test_log, "Built-in qsort took: %g ms.\n\n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by qsort.\n");
   }
-
-  //Compute time difference.
-  printf("Built-in qsort took: %g ms.\n", hpx_time_elapsed_ms(start));
 
   free(lyst);
   free(lystbck);
@@ -216,7 +206,6 @@ void quicksortHelper(double lyst[], int lo, int hi)
   quicksortHelper(lyst, lo, b-1);
   quicksortHelper(lyst, b+1, hi);
 } 
-
 void swap(double lyst[], int i, int j)
 {
   double temp = lyst[i];
@@ -224,20 +213,21 @@ void swap(double lyst[], int i, int j)
   lyst[j] = temp;
 }
 
-int partition(double lyst[], int lo, int hi)
+int partition(double *lyst, int lo, int hi)
 {
-  int b = lo;
-  int r = (int) (lo + (hi-lo + 1)*(1.0*rand()/RAND_MAX));
-  double pivot = lyst[r];
-  swap(lyst, r, hi);
-  for (int i = lo; i < hi; i ++) {
-    if (lyst[i] < pivot) {
-      swap(lyst, i, b);
-      b ++;
+  int pivot = (int) ((lo + hi)/2);
+  //int pivot = (int) (lo + (hi-lo + 1)*(1.0*rand()/RAND_MAX));
+  double pivotValue = lyst[pivot];
+  swap(lyst, pivot, hi);
+  int storeIndex = lo;
+  for (int i=lo ; i<hi ; i++) {
+    if (lyst[i] <= pivotValue) {
+      swap(lyst, i, storeIndex);
+      storeIndex++;
     }
   }
-  swap(lyst, hi, b);
-  return b;
+  swap(lyst, storeIndex, hi);
+  return storeIndex;
 }
 
 /*
@@ -288,7 +278,7 @@ static int _parallelQuicksortHelper_action(void *threadarg)
 
   //Now we partition our part of the lyst.
   mid = partition(my_data->lyst, my_data->low, my_data->high);
-
+  
   //At this point, we will create threads for the 
   //left and right sides.  Must create their data args.
   struct thread_data thread_data_array[2];
@@ -298,8 +288,16 @@ static int _parallelQuicksortHelper_action(void *threadarg)
     thread_data_array[t].level = my_data->level - 1;
   }
   thread_data_array[0].low = my_data->low;
-  thread_data_array[0].high = mid-1;
-  thread_data_array[1].low = mid+1;
+  if (mid > my_data->low) {
+    thread_data_array[0].high = mid-1;
+  } else {
+    thread_data_array[0].high = my_data->low; 
+  }
+  if (mid < my_data->high) {
+    thread_data_array[1].low = mid+1;
+  } else {
+    thread_data_array[1].low = my_data->high;
+  }
   thread_data_array[1].high = my_data->high;
 
   //Now, instantiate the threads.
