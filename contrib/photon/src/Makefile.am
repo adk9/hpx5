@@ -1,4 +1,4 @@
-AM_CFLAGS = @CFLAGS@                            \
+AM_CFLAGS = @CFLAGS@ -Wno-variadic-macros       \
             -I@PHOTON_SRCDIR@/include           \
             -I@PHOTON_SRCDIR@/src/util          \
             -I@PHOTON_SRCDIR@/src/libphoton     \
