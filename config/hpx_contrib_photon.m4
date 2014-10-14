@@ -66,8 +66,6 @@ AC_DEFUN([HPX_CONTRIB_PHOTON],
     AC_SUBST(PHOTON_SRCDIR, "\$(top_srcdir)/$1")
     AC_SUBST(PHOTON_BUILDDIR, "\$(top_builddir)/$1")
 
-    CPPFLAGS="$CPPFLAGS -Wno-variadic-macros"
-
     $2photon_cppflags="-I\$(top_srcdir)/$1/include"
     AC_SUBST(HPX_PHOTON_CPPFLAGS, "-I\$(top_srcdir)/$1/include")
     AC_SUBST(HPX_PHOTON_LDADD, "\$(top_builddir)/$1/src/libphoton.la")

@@ -18,6 +18,19 @@ typedef enum {
 
 typedef enum {HPX_UNSET = 0x01, HPX_SET = 0x02} hpx_set_t;
 
+/// Objects of hpx_netfuture_config_t are used to configure the netfutures
+/// system at initialization time.
+typedef struct {
+  size_t total_size;   /// The maximum amount of total memory available for all 
+                       /// allocated netfutures.
+  size_t total_number; /// The maximum number of netfutures that may be allocated.
+} hpx_netfuture_config_t;
+
+#define HPX_NETFUTURE_CONFIG_DEFAULTS { \
+    .total_size = 1024*1024*100,	\
+    .total_number = 1000		\
+}
+
 typedef struct  {
   int table_index;
   uintptr_t base_offset;
@@ -211,8 +224,11 @@ bool hpx_lco_netfuture_is_shared(hpx_netfuture_t future);
 int hpx_lco_netfuture_get_rank(hpx_netfuture_t future);
 
 /// Must be called first, from the main action
-hpx_status_t hpx_netfutures_init();
+/// @param cfg A configuration object, which may be NULL (which sets all values
+///            to their defaults. If any field is set, all fields must be set.
+hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg);
 
+/// Must be called from main action after last use of netfutures.
 void hpx_netfutures_fini();
 
 #endif
