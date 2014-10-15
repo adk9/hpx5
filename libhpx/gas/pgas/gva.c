@@ -47,6 +47,27 @@ static uint64_t _block_of(hpx_addr_t gva, uint32_t bsize) {
   return (gva << lshift) >> rshift;
 }
 
+static hpx_addr_t _triple_to_gva(uint32_t rank, uint64_t bid, uint32_t phase,
+                                 uint32_t bsize) {
+  // make sure that the phase is in the expected range, locality will be checked
+  DEBUG_IF (bsize && phase) {
+    if (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
+      dbg_error("phase %u must be less than %u\n", phase,
+                pgas_fit_log2_32(bsize));
+    }
+  }
+
+  DEBUG_IF (!bsize && phase) {
+    dbg_error("cannot initialize a non-cyclic gva with a phase of %u\n", phase);
+  }
+
+  // forward to pgas_offset_to_gva(), by computing the offset by combining bid
+  // and phase
+  const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
+  const uint64_t offset = (bid << shift) + phase;
+  return pgas_offset_to_gva(rank, offset);
+}
+
 
 uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
   // the locality is stored in the most significant bits of the gva, we just
@@ -91,30 +112,6 @@ hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
   const uint64_t high = ((uint64_t)rank) << shift;
   return high + offset;
 }
-
-hpx_addr_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
-                                uint32_t phase, uint32_t ranks, uint32_t bsize)
-{
-  // make sure that the phase is in the expected range, locality will be checked
-  DEBUG_IF (bsize && phase) {
-    if (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
-      dbg_error("phase %u must be less than %u\n", phase,
-                pgas_fit_log2_32(bsize));
-    }
-  }
-
-  DEBUG_IF (!bsize && phase) {
-    dbg_error("cannot initialize a non-cyclic gva with a phase of %u\n", phase);
-  }
-
-  // forward to the heap_offset version, by computing the heap offset through a
-  // shift of the gva offset
-  const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
-
-  return pgas_offset_to_gva(locality, (offset << shift) + phase);
-}
-
-
 
 int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
                      uint32_t bsize)
@@ -171,15 +168,16 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
   const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / ranks;
   const uint64_t block = _block_of(gva, bsize) + cycles;
 
-  const hpx_addr_t next = pgas_gva_from_triple(rank, block, phase, ranks, bsize);
+  const hpx_addr_t addr = _triple_to_gva(rank, block, phase, bsize);
 
   // sanity check
-  const uint64_t offset = pgas_gva_to_offset(next);
-  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
-    dbg_error("computed out of bounds address\n");
+  DEBUG_IF (true) {
+    const uint64_t offset = pgas_gva_to_offset(addr);
+    if (!heap_offset_inbounds(global_heap, offset))
+      dbg_error("computed out of bounds address\n");
   }
 
-  return next;
+  return addr;
 }
 
 hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes, uint32_t ranks) {

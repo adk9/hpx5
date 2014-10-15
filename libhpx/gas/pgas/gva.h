@@ -43,23 +43,6 @@ uint64_t pgas_gva_to_offset(hpx_addr_t gva)
 hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
   HPX_INTERNAL;
 
-/// Create a global virtual address from a locality, gva-offset, and phase.
-///
-/// We need to know both the number of ranks and the block size in order to
-/// determine how many bits in the address we're using to store the locality and
-/// the phase.
-///
-/// @param      locality The locality where we want the address to point.
-/// @param        offset The offset chunk of the address.
-/// @param         phase The phase we want for the address
-/// @param         ranks The number of ranks overall in the system
-/// @param         bsize The block size for the allocation
-///
-/// @returns The encoded gva.
-hpx_addr_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
-                                uint32_t phase, uint32_t ranks, uint32_t bsize)
-  HPX_INTERNAL;
-
 /// Compute the (signed) distance, in bytes, between two global addresses.
 ///
 /// This is only valid if @p lhs and @p rhs come from the same global
