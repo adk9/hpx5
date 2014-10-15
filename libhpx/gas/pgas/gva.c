@@ -21,7 +21,6 @@
 #include "gva.h"
 #include "pgas.h"
 
-
 /// Compute the phase (offset within block) of a global address.
 static uint32_t _phase_of(hpx_addr_t gva, uint32_t bsize) {
   // the phase is stored in the least significant bits of the gva, we merely
@@ -40,12 +39,13 @@ static uint64_t _block_of(hpx_addr_t gva, uint32_t bsize) {
   // down to the right place
   //
   // before: (locality, block, phase)
-  //  after: (00000000000      offset)
+  //  after: (00000000000      block)
   const uint32_t ranks = here->ranks;
   const uint32_t lshift = ceil_log2_32(ranks);
   const uint32_t rshift = ceil_log2_32(bsize) + lshift;
   return (gva << lshift) >> rshift;
 }
+
 
 static hpx_addr_t _triple_to_gva(uint32_t rank, uint64_t bid, uint32_t phase,
                                  uint32_t bsize) {
