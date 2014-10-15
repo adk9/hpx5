@@ -92,7 +92,7 @@ static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
 
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   libhpx_free(_smp_gva_to_lva(addr));
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -104,7 +104,8 @@ static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
   void *lto = gva_to_lva(to);
   const void *lfrom = gva_to_lva(from);
   memcpy(lto, lfrom, size);
-  if (!hpx_addr_eq(sync, HPX_NULL))
+
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 
   return HPX_SUCCESS;
@@ -117,10 +118,13 @@ static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
 
   void *lto = gva_to_lva(to);
   memcpy(lto, from, size);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
@@ -131,13 +135,15 @@ static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
 
   const void *lfrom = gva_to_lva(from);
   memcpy(to, lfrom, size);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
 static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 

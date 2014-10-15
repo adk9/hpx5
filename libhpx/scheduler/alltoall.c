@@ -291,9 +291,9 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
   }
   else {
     status = _alltoall_setid(local, id, size, value);
-    if (!hpx_addr_eq(lsync, HPX_NULL))
+    if (lsync)
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    if (!hpx_addr_eq(rsync, HPX_NULL))
+    if (rsync)
       hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   }
 

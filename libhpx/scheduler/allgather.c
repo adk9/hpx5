@@ -226,9 +226,9 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
   }
   else {
     status = _allgather_setid(local, id, size, value);
-    if (!hpx_addr_eq(lsync, HPX_NULL))
+    if (lsync)
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    if (!hpx_addr_eq(rsync, HPX_NULL))
+    if (rsync)
       hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   }
 

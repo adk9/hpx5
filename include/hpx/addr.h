@@ -74,6 +74,4 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
 
 
-bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
-
 #endif

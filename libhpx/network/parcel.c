@@ -203,7 +203,7 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
   // otherwise, do a synchronous send and set the lsync LCO, if there is one
   hpx_parcel_send_sync(p);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 

@@ -247,7 +247,7 @@ static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
     return parcel_memcpy(to, from, size, sync);
   }
 
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 
   return HPX_SUCCESS;
@@ -269,9 +269,9 @@ static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
     return parcel_memput(to, from, size, lsync, rsync);
   }
 
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -292,13 +292,13 @@ static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
     return parcel_memget(to, from, size, lsync);
   }
 
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
