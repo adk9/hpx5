@@ -39,13 +39,6 @@ uint64_t pgas_gva_offset_of(hpx_addr_t gva, uint32_t ranks, uint32_t bsize)
 uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks)
   HPX_INTERNAL;
 
-/// Extract the phase of a global virtual address, given the block size.
-///
-/// The phase is the number of bytes into the current block the gva is pointing
-/// to.
-uint32_t pgas_gva_phase_of(hpx_addr_t gva, uint32_t bsize)
-  HPX_INTERNAL;
-
 /// Create a global virtual address from a locality and heap offset pair.
 ///
 /// We need to know the number of ranks to perform this operation because that
