@@ -15,7 +15,7 @@
 
 #include "hpx/config.h"
 
-/// @file
+/// @file include/hpx/topology.h
 /// @brief HPX topology interface
 
 /// Get the "rank" the current code is running on
