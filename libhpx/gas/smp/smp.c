@@ -74,7 +74,7 @@ static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
 static void _smp_unpin(const hpx_addr_t addr) {
 }
 
-static hpx_addr_t _smp_there(hpx_locality_t i) {
+static hpx_addr_t _smp_there(uint32_t i) {
   return _smp_lva_to_gva(0);
 }
 

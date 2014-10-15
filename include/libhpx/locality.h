@@ -56,8 +56,8 @@ struct hpx_config;
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
 typedef struct {
-  hpx_locality_t               rank;
-  int                         ranks;
+  uint32_t                     rank;
+  uint32_t                    ranks;
   struct boot_class           *boot;
   struct gas_class             *gas;
   struct transport_class *transport;

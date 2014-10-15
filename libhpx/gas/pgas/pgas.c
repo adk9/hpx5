@@ -111,7 +111,7 @@ static hpx_addr_t _pgas_lva_to_gva(void *lva) {
 
 
 // Compute a global address for a locality.
-hpx_addr_t _pgas_there(hpx_locality_t i) {
+hpx_addr_t _pgas_there(uint32_t i) {
   const uint32_t ranks = here->ranks;
   return pgas_gva_from_heap_offset(i, 0, ranks);
 }
