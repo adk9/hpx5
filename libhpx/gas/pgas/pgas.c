@@ -60,15 +60,6 @@ static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
   return pgas_fit_log2_32(bsize);
 }
 
-static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  DEBUG_IF (!bsize && heap_offset_is_cyclic(global_heap, (uint64_t)gva)) {
-    dbg_error("invalid block size for cyclic address\n");
-  }
-
-  bsize = _check_cyclic(gva, bsize);
-  return pgas_gva_offset_of(gva, here->ranks, bsize);
-}
-
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const uint32_t lbs = _check_cyclic(lhs, bsize);
   const uint32_t rbs = _check_cyclic(rhs, bsize);
@@ -303,7 +294,6 @@ static gas_class_t _pgas_vtable = {
     .posix_memalign = pgas_local_posix_memalign
   },
   .locality_of   = pgas_gva_to_rank,
-  .offset_of     = _pgas_offset_of,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
   .lva_to_gva    = _pgas_lva_to_gva,

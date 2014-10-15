@@ -22,15 +22,6 @@
 uint32_t pgas_gva_to_rank(hpx_addr_t gva)
   HPX_INTERNAL;
 
-/// Extract the offset from a gva, given the number of ranks and the block
-/// size.
-///
-/// The offset is basically just the bits the live between the phase and
-/// locality in the gva.
-///
-uint64_t pgas_gva_offset_of(hpx_addr_t gva, uint32_t ranks, uint32_t bsize)
-  HPX_INTERNAL;
-
 /// Extract the heap offset of a gva, given the number of ranks.
 ///
 /// The heap_offset is the complete relative offset of the global virtual
