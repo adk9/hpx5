@@ -59,23 +59,22 @@ static inline uint32_t _min32(uint32_t lhs, uint32_t rhs) {
 
 
 static inline block_t _create_mask(uint32_t offset, uint32_t length) {
-  // We want to match a mask from bit that can either satisfy the number of
-  // remaining bits we're searching for, or goes to the end of the block
-  // boundary.
+  // We want to mask set to ones from offset that can either satisfy length, or
+  // goes to the end of the block boundary.
   //
   // before: mask == (1111 ... 1111)
-  //  after: mask == (0011 ... 1000) for bit == 3
-  //                                 and remaining == (BITS_PER_BLOCK - 5)
+  //  after: mask == (0011 ... 1000) for offset == 3
+  //                                 and length == (BITS_PER_BLOCK - 5)
   //
   // rshift: the number of most significant zeros we will initially add
-  //   mask: the resulting mask after the shifts
-  //   bits: the result of the mask operation.
   //
+  const uint32_t rshift = _sat_sub32(BITS_PER_BLOCK, length);
+
   // Shifting BLOCK_ALL_FREE right first creates the maximum length string of
   // 1s that we might match in this block, then shifting left might push some
   // of those bits off the end. Regardless, the resulting mask has the correct
-  // bits set.
-  const uint32_t rshift = _sat_sub32(BITS_PER_BLOCK, length);
+  // bits set
+  //
   return (BLOCK_ALL_FREE >> rshift) << offset;
 }
 
