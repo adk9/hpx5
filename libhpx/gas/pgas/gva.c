@@ -21,6 +21,8 @@
 #include "gva.h"
 #include "pgas.h"
 
+
+/// Compute the phase (offset within block) of a global address.
 static uint32_t _phase_of(hpx_addr_t gva, uint32_t bsize) {
   // the phase is stored in the least significant bits of the gva, we merely
   // mask it out
@@ -29,6 +31,20 @@ static uint32_t _phase_of(hpx_addr_t gva, uint32_t bsize) {
   //  after: (00000000  000000  phase)
   const uint64_t mask = ceil_log2_32(bsize) - 1;
   return (uint32_t)(gva & mask);
+}
+
+
+/// Compute the block ID for a global address.
+static uint64_t _block_of(hpx_addr_t gva, uint32_t bsize) {
+  // clear the upper bits by shifting them out, and then shifting the offset
+  // down to the right place
+  //
+  // before: (locality, block, phase)
+  //  after: (00000000000      offset)
+  const uint32_t ranks = here->ranks;
+  const uint32_t lshift = ceil_log2_32(ranks);
+  const uint32_t rshift = ceil_log2_32(bsize) + lshift;
+  return (gva << lshift) >> rshift;
 }
 
 
@@ -41,17 +57,6 @@ uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
   const uint32_t ranks = here->ranks;
   const uint32_t rshift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
   return (uint32_t)(gva >> rshift);
-}
-
-uint64_t pgas_gva_offset_of(hpx_addr_t gva, uint32_t ranks, uint32_t bsize) {
-  // clear the upper bits by shifting them out, and then shifting the offset
-  // down to the right place
-  //
-  // before: (locality, offset, phase)
-  //  after: (00000000000      offset)
-  const uint32_t lshift = ceil_log2_32(ranks);
-  const uint32_t rshift = ceil_log2_32(bsize) + lshift;
-  return (gva << lshift) >> rshift;
 }
 
 uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks) {
@@ -132,17 +137,17 @@ int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
     const uint32_t prhs = _phase_of(rhs, bsize);
     const uint32_t llhs = pgas_gva_to_rank(lhs);
     const uint32_t lrhs = pgas_gva_to_rank(rhs);
-    const uint32_t olhs = pgas_gva_offset_of(lhs, ranks, bsize);
-    const uint32_t orhs = pgas_gva_offset_of(rhs, ranks, bsize);
+    const uint32_t blhs = _block_of(lhs, bsize);
+    const uint32_t brhs = _block_of(rhs, bsize);
 
     const int32_t dphase = plhs - prhs;
     const int32_t dlocality = llhs - lrhs;
-    const int64_t doffset = olhs - orhs;
+    const int64_t dblock = blhs - brhs;
 
     // each difference in the phase is just one byte,
     // each difference in the locality is bsize bytes, and
     // each difference in the phase is entire cycle of bsize bytes
-    const int64_t dist = doffset * ranks * bsize + dlocality * bsize + dphase;
+    const int64_t dist = dblock * ranks * bsize + dlocality * bsize + dphase;
 
     // make sure we're not crazy
     DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, ranks, bsize) != rhs) {
@@ -163,7 +168,7 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
   const uint32_t blocks = (_phase_of(gva, bsize) + bytes) / bsize;
   const uint32_t locality = (pgas_gva_to_rank(gva) + blocks) % ranks;
   const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / ranks;
-  const uint64_t offset = pgas_gva_offset_of(gva, ranks, bsize) + cycles;
+  const uint64_t offset = _block_of(gva, bsize) + cycles;
 
   const hpx_addr_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
                                                bsize);

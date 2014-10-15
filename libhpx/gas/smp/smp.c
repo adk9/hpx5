@@ -39,10 +39,6 @@ static uint32_t _smp_locality_of(hpx_addr_t addr) {
   return 0;
 }
 
-static uint64_t _smp_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  return gva;
-}
-
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return (lhs - rhs);
 }
@@ -172,7 +168,6 @@ static gas_class_t _smp_vtable = {
     .posix_memalign = libhpx_posix_memalign
   },
   .locality_of = _smp_locality_of,
-  .offset_of = _smp_offset_of,
   .sub = _smp_sub,
   .add = _smp_add,
   .lva_to_gva    = _smp_lva_to_gva,
