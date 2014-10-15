@@ -33,7 +33,7 @@ bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
 
 
 /// Perform global address arithmetic
-/// 
+///
 /// Get the address of @p bytes into memory with address @p addr .
 /// @param  addr a global address
 /// @param bytes an offset in bytes into the memory referenced by @p addr
@@ -41,16 +41,16 @@ bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
 hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes, uint32_t block_size);
 
 /// The equivalent of NULL for global memory
-extern const hpx_addr_t HPX_NULL;
+static const hpx_addr_t HPX_NULL = 0;
 
-/// An address representing this locality in general;suitable for use as a 
+/// An address representing this locality in general;suitable for use as a
 /// destination
 extern hpx_addr_t HPX_HERE;
 
-/// An address representing some other locality, suitable for use as a 
+/// An address representing some other locality, suitable for use as a
 /// destination.
 /// @param i a locality
 /// @returns an address representing that locality
-hpx_addr_t HPX_THERE(hpx_locality_t i);
+hpx_addr_t HPX_THERE(uint32_t i);
 
 #endif

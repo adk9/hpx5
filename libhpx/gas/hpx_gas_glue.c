@@ -19,11 +19,9 @@
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 
-const hpx_addr_t HPX_NULL = 0;
-
 hpx_addr_t HPX_HERE = 0;
 
-hpx_addr_t HPX_THERE(hpx_locality_t i) {
+hpx_addr_t HPX_THERE(uint32_t i) {
   assert(here && here->gas && here->gas->there);
   return here->gas->there(i);
 }
