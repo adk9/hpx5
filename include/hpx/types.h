@@ -13,7 +13,7 @@
 #ifndef HPX_TYPES_H
 #define HPX_TYPES_H
 
-/// @file
+/// @file include/hpx/types.h
 
 /// Extern HPX macros
 /// @{
