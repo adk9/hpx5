@@ -169,9 +169,14 @@ int system_startup(void) {
   int e = scheduler_startup(here->sched);
 
   // need to flush the transport
-  transport_op_t op = (network_get_shutdown_src(here->network) == here->rank)?
-    TRANSPORT_FLUSH:TRANSPORT_CANCEL;
-  transport_progress(here->transport, op);
+  const uint32_t src = network_get_shutdown_src(here->network);
+  if (src == here->rank) {
+    transport_progress(here->transport, TRANSPORT_FLUSH);
+  }
+  else {
+    dbg_assert(src != UINT32_MAX);
+    transport_progress(here->transport, TRANSPORT_CANCEL);
+  }
 
   // and cleanup the system
   return _cleanup(here, e);
@@ -242,7 +247,7 @@ void
 hpx_shutdown(int code) {
   // do an asynchronous broadcast of shutdown requests
   network_set_shutdown_src(here->network, here->rank);
-  hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
+  hpx_bcast(locality_shutdown, &here->rank, sizeof(here->rank), HPX_NULL);
   hpx_thread_exit(code);
 }
 
