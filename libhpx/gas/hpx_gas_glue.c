@@ -26,10 +26,6 @@ hpx_addr_t HPX_THERE(uint32_t i) {
   return here->gas->there(i);
 }
 
-bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs) {
-  return (lhs == rhs);
-}
-
 hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   assert(here && here->gas && here->gas->add);
   return here->gas->add(addr, bytes, bsize);

@@ -655,8 +655,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   hpx_parcel_t *parcel = self.current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if (!hpx_addr_eq(c_target, HPX_NULL) &&
-      !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+  if (c_target && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
     // Double the credit so that we can pass it on to the continuation
     // without splitting it up.
     --parcel->credit;

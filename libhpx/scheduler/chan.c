@@ -464,7 +464,7 @@ hpx_lco_chan_array_at(hpx_addr_t array, int i, int size, int bsize) {
 void
 hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   dbg_log_lco("chan: array delete unimplemented");
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
