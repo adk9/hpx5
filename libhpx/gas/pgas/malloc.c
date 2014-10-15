@@ -31,11 +31,58 @@ static __thread unsigned _local_arena = UINT_MAX;
 static __thread unsigned _primordial_arena = UINT_MAX;
 static __thread bool _joined = false;
 
-static void *_chunk_alloc(size_t size, size_t alignment, bool *zero,
+/// The static chunk allocator callback that we give to jemalloc arenas that
+/// manage our global heap.
+///
+/// When a jemalloc arena needs to service an allocation request that it does
+/// not currently have enough correctly aligned space to deal with, it will use
+/// the its currently configured chunk_alloc_t callback to get more space from
+/// the system. This is typically done using mmap(), however for memory
+/// corresponding to the global address space we want to provide memory from our
+/// pre-registered global heap. This callback performs that operation.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allow us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what the @p arena index is useful for---Luke.
+///
+/// @param[in]   size The number of bytes we need to allocate.
+/// @param[in]  align The alignment that is being requested.
+/// @param[out]  zero Set to zero if the chunk is pre-zeroed.
+/// @param[in]  arena The index of the arena making this allocation request.
+///
+/// @returns The base pointer of the newly allocated chunk.
+static void *_chunk_alloc(size_t size, size_t align, bool *zero,
                           unsigned arena) {
   return heap_chunk_alloc(global_heap, size, alignment, zero, arena);
 }
 
+/// The static chunk de-allocator callback that we give to jemalloc arenas that
+/// manage our global heap.
+///
+/// When a jemalloc arena wants to de-allocate a previously-allocated chunk for
+/// any reason, it will use its currently configured chunk_dalloc_t callback to
+/// do so. This is typically munmap(), however for memory corresponding to the
+/// global address space we want to return the memory to our heap. This callback
+/// performs that operation.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allows us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what use the @p arena index is---Luke.
+///
+/// @note I do not know what the return value is used for---Luke.
+///
+/// @param   chunk The base address of the chunk to de-allocate, must match an
+///                address returned from _chunk_alloc().
+/// @param    size The number of bytes that were originally requested, must
+///                match the number of bytes provided to the _chunk_alloc()
+///                request associated with @p chunk.
+/// @param   arena The index of the arena making the call to _chunk_dalloc().
+///
+/// @returns UNKNOWN---Luke.
 static bool _chunk_dalloc(void *chunk, size_t size, unsigned arena) {
   return heap_chunk_dalloc(global_heap, chunk, size, arena);
 }
