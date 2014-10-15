@@ -53,9 +53,9 @@ static __thread bool _joined = false;
 /// @param[in]  arena The index of the arena making this allocation request.
 ///
 /// @returns The base pointer of the newly allocated chunk.
-static void *_chunk_alloc(size_t size, size_t align, bool *zero,
-                          unsigned arena) {
-  return heap_chunk_alloc(global_heap, size, alignment, zero, arena);
+static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned arena)
+{
+  return heap_chunk_alloc(global_heap, size, align, zero, arena);
 }
 
 /// The static chunk de-allocator callback that we give to jemalloc arenas that
@@ -193,16 +193,16 @@ void *pgas_global_memalign(size_t boundary, size_t size) {
   return addr;
 }
 
-int pgas_global_posix_memalign(void **memptr, size_t alignment, size_t size) {
-  int e = (_joined) ? default_posix_memalign(memptr, alignment, size)
-                    : arena_posix_memalign(_global_arena, memptr, alignment, size);
+int pgas_global_posix_memalign(void **memptr, size_t align, size_t size) {
+  int e = (_joined) ? default_posix_memalign(memptr, align, size)
+                    : arena_posix_memalign(_global_arena, memptr, align, size);
 
   DEBUG_IF (!e && !lva_is_global(*memptr)) {
     dbg_error("global posix memalign returned local pointer %p.\n", *memptr);
   }
 
   if (!e)
-    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, alignment, size);
+    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, align, size);
   return e;
 }
 
@@ -287,15 +287,15 @@ void *pgas_local_memalign(size_t boundary, size_t size) {
   return addr;
 }
 
-int pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size) {
-  int e = (_joined) ? arena_posix_memalign(_local_arena, memptr, alignment, size)
-                    : default_posix_memalign(memptr, alignment, size);
+int pgas_local_posix_memalign(void **memptr, size_t align, size_t size) {
+  int e = (_joined) ? arena_posix_memalign(_local_arena, memptr, align, size)
+                    : default_posix_memalign(memptr, align, size);
 
   DEBUG_IF (!e && lva_is_global(*memptr)) {
     dbg_error("local posix memalign returned global pointer %p.\n", *memptr);
   }
 
   if (!e)
-    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, alignment, size);
+    dbg_log_gas("%d, %p, %lu, %lu\n", e, *memptr, align, size);
   return e;
 }
