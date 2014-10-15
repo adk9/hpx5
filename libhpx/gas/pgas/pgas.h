@@ -53,7 +53,7 @@ typedef struct {
 } pgas_alloc_args_t;
 
 typedef struct {
-  uint64_t heap_offset;
+  uint64_t      offset;
   uint64_t       value;
   uint64_t      length;
 } pgas_memset_args_t;

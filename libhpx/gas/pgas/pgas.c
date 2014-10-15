@@ -85,17 +85,14 @@ static hpx_addr_t _pgas_lva_to_gva(void *lva) {
     dbg_error("the global heap does not contain %p", lva);
   }
 
-  const uint64_t heap_offset = heap_offset_of(global_heap, lva);
-  const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  const uint64_t offset = heap_offset_of(global_heap, lva);
+  return pgas_offset_to_gva(here->rank, offset);
 }
 
 
 // Compute a global address for a locality.
 hpx_addr_t _pgas_there(uint32_t i) {
-  const uint32_t ranks = here->ranks;
-  return pgas_gva_from_heap_offset(i, 0, ranks);
+  return pgas_offset_to_gva(i, 0);
 }
 
 
@@ -103,16 +100,13 @@ hpx_addr_t _pgas_there(uint32_t i) {
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
 bool pgas_try_pin(const hpx_addr_t gva, void **local) {
-  const uint32_t ranks = here->ranks;
-  const uint32_t locality = pgas_gva_to_rank(gva);
-
-  if (locality != here->rank) {
+  if (pgas_gva_to_rank(gva) != here->rank) {
     return false;
   }
 
   if (local) {
-    const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
-    *local = heap_offset_to_local(global_heap, heap_offset);
+    const uint64_t offset = pgas_gva_to_offset(gva);
+    *local = heap_offset_to_local(global_heap, offset);
   }
 
   return true;
@@ -169,10 +163,8 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = pgas_global_malloc(bytes);
   assert(lva && heap_contains(global_heap, lva));
 
-  const uint64_t heap_offset = heap_offset_of(global_heap, lva);
-  const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  const uint64_t offset = heap_offset_of(global_heap, lva);
+  return pgas_offset_to_gva(here->rank, offset);
 }
 
 /// Free a global address.
@@ -181,19 +173,18 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
-  const uint32_t ranks = here->ranks;
-  const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
+  const uint64_t offset = pgas_gva_to_offset(gva);
 
-  DEBUG_IF (!heap_offset_inbounds(global_heap, heap_offset)) {
-    dbg_error("attempt to free out of bounds offset %lu", heap_offset);
+  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
+    dbg_error("attempt to free out of bounds offset %lu", offset);
   }
 
-  if (heap_offset_is_cyclic(global_heap, heap_offset)) {
+  if (heap_offset_is_cyclic(global_heap, offset)) {
     dbg_log_gas("global free of cyclic address detected, HPX does not currently "
                 "handle this operation");
   }
-  else if (here->rank == pgas_gva_to_rank(gva)) {
-    pgas_global_free(heap_offset_to_local(global_heap, heap_offset));
+  else if (pgas_gva_to_rank(gva) == here->rank) {
+    pgas_global_free(heap_offset_to_local(global_heap, offset));
   }
   else {
     int e = hpx_call(gva, pgas_free, NULL, 0, sync);

@@ -52,43 +52,44 @@ uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
   // the locality is stored in the most significant bits of the gva, we just
   // need to shift it down correctly
   //
-  // before: (locality, offset, phase)
+  // before: (locality, block, phase)
   //  after: (00000000000000 locality)
   const uint32_t ranks = here->ranks;
   const uint32_t rshift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
   return (uint32_t)(gva >> rshift);
 }
 
-uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks) {
+uint64_t pgas_gva_to_offset(hpx_addr_t gva) {
   // the heap offset is just the least significant chunk of the gva, we shift
   // the locality out rather than masking because it's easier for us to express
   //
-  // before: (locality, heap_offset)
-  //  after: (00000000  heap_offset)
+  // before: (locality, offset)
+  //  after: (00000000  offset)
+  const uint32_t ranks = here->ranks;
   const uint32_t shift = ceil_log2_32(ranks);
   return (gva << shift) >> shift;
 }
 
-hpx_addr_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
-                                     uint32_t ranks) {
+hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
   // make sure the locality is in the expected range
-  DEBUG_IF (ranks < locality) {
-    assert(ranks > 0);
-    dbg_error("locality %u must be less than %u\n", locality,
+  const uint32_t ranks = here->ranks;
+  DEBUG_IF (rank >= ranks) {
+    assert(ranks != 0);
+    dbg_error("locality %u must be less than %u\n", rank,
               pgas_fit_log2_32(ranks));
   }
 
   // make sure that the heap offset is in the expected range (everyone has the
   // same size, so the locality is irrelevant here)
-  DEBUG_IF (!heap_offset_inbounds(global_heap, heap_offset)) {
-    dbg_error("heap offset %lu is out of range\n", heap_offset);
+  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
+    dbg_error("heap offset %lu is out of range\n", offset);
   }
 
   // construct the gva by shifting the locality into the most significant bits
   // of the gva and then adding in the heap offset
   const uint32_t shift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
-  const uint64_t high = ((uint64_t)locality) << shift;
-  return high + heap_offset;
+  const uint64_t high = ((uint64_t)rank) << shift;
+  return high + offset;
 }
 
 hpx_addr_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
@@ -110,7 +111,7 @@ hpx_addr_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
   // shift of the gva offset
   const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
 
-  return pgas_gva_from_heap_offset(locality, (offset << shift) + phase, ranks);
+  return pgas_offset_to_gva(locality, (offset << shift) + phase);
 }
 
 
@@ -166,16 +167,15 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
 
   const uint32_t phase = (_phase_of(gva, bsize) + bytes) % bsize;
   const uint32_t blocks = (_phase_of(gva, bsize) + bytes) / bsize;
-  const uint32_t locality = (pgas_gva_to_rank(gva) + blocks) % ranks;
+  const uint32_t rank = (pgas_gva_to_rank(gva) + blocks) % ranks;
   const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / ranks;
-  const uint64_t offset = _block_of(gva, bsize) + cycles;
+  const uint64_t block = _block_of(gva, bsize) + cycles;
 
-  const hpx_addr_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
-                                               bsize);
+  const hpx_addr_t next = pgas_gva_from_triple(rank, block, phase, ranks, bsize);
 
   // sanity check
-  const uint32_t nextho = pgas_gva_heap_offset_of(next, ranks);
-  DEBUG_IF (!heap_offset_inbounds(global_heap, nextho)) {
+  const uint64_t offset = pgas_gva_to_offset(next);
+  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
     dbg_error("computed out of bounds address\n");
   }
 

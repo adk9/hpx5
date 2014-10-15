@@ -37,25 +37,21 @@ hpx_action_t pgas_set_csbrk = 0;
 ///
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
-  const uint32_t ranks = here->ranks;
   const uint64_t blocks_per_locality = pgas_n_per_locality(n, here->ranks);
   const uint32_t padded_bsize = pgas_fit_log2_32(bsize);
-
-
-  const uint64_t heap_offset = heap_csbrk(global_heap, blocks_per_locality,
-                                          padded_bsize);
+  const uint64_t offset = heap_csbrk(global_heap, blocks_per_locality,
+                                     padded_bsize);
 
   DEBUG_IF (true) {
     // during DEBUG execution we broadcast the csbrk to the system to make sure
     // that people can do effective cyclic vs. gas allocations
     hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(pgas_set_csbrk, &heap_offset, sizeof(heap_offset), sync);
+    hpx_bcast(pgas_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
 
-  const uint32_t rank = here->rank;
-  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_offset_to_gva(here->rank, offset);
 }
 
 /// Allocate zeroed memory from the cyclic space.
@@ -73,11 +69,11 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   const uint32_t ranks = here->ranks;
   const uint64_t blocks_per_locality = pgas_n_per_locality(n, ranks);
   const uint32_t padded_bsize = pgas_fit_log2_32(bsize);
-  const size_t heap_offset = heap_csbrk(global_heap, blocks_per_locality,
-                                        padded_bsize);
+  const size_t offset = heap_csbrk(global_heap, blocks_per_locality,
+                                   padded_bsize);
 
   pgas_memset_args_t args = {
-    .heap_offset = heap_offset,
+    .offset = offset,
     .value = 0,
     .length = blocks_per_locality * padded_bsize
   };
@@ -88,7 +84,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
     //
     // NB: we're already broadcasting memset, we could just do it then...?
     hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(pgas_set_csbrk, &heap_offset, sizeof(heap_offset), sync);
+    hpx_bcast(pgas_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
@@ -97,8 +93,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   hpx_bcast(pgas_memset, &args, sizeof(args), sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
-  const uint32_t rank = here->rank;
-  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  return pgas_offset_to_gva(here->rank, offset);
 }
 
 
@@ -116,7 +111,7 @@ static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
 
 /// This is the hpx_call_* target for memset, used in calloc broadcast.
 static int _pgas_memset_handler(pgas_memset_args_t *args) {
-  void *dest = heap_offset_to_local(global_heap, args->heap_offset);
+  void *dest = heap_offset_to_local(global_heap, args->offset);
   memset(dest, args->value, args->length);
   return HPX_SUCCESS;
 }
@@ -132,8 +127,8 @@ static int _pgas_free_handler(void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static int _pgas_set_csbrk_handler(size_t *heap_offset) {
-  int e = heap_set_csbrk(global_heap, *heap_offset);
+static int _pgas_set_csbrk_handler(size_t *offset) {
+  int e = heap_set_csbrk(global_heap, *offset);
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
