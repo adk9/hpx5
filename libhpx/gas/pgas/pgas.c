@@ -69,11 +69,6 @@ static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
   return pgas_gva_offset_of(gva, here->ranks, bsize);
 }
 
-static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
-  bsize = _check_cyclic(gva, bsize);
-  return pgas_gva_phase_of(gva, bsize);
-}
-
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const uint32_t lbs = _check_cyclic(lhs, bsize);
   const uint32_t rbs = _check_cyclic(rhs, bsize);
@@ -309,7 +304,6 @@ static gas_class_t _pgas_vtable = {
   },
   .locality_of   = pgas_gva_to_rank,
   .offset_of     = _pgas_offset_of,
-  .phase_of      = _pgas_phase_of,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
   .lva_to_gva    = _pgas_lva_to_gva,

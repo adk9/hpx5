@@ -21,6 +21,17 @@
 #include "gva.h"
 #include "pgas.h"
 
+static uint32_t _phase_of(hpx_addr_t gva, uint32_t bsize) {
+  // the phase is stored in the least significant bits of the gva, we merely
+  // mask it out
+  //
+  // before: (locality, offset, phase)
+  //  after: (00000000  000000  phase)
+  const uint64_t mask = ceil_log2_32(bsize) - 1;
+  return (uint32_t)(gva & mask);
+}
+
+
 uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
   // the locality is stored in the most significant bits of the gva, we just
   // need to shift it down correctly
@@ -51,16 +62,6 @@ uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks) {
   //  after: (00000000  heap_offset)
   const uint32_t shift = ceil_log2_32(ranks);
   return (gva << shift) >> shift;
-}
-
-uint32_t pgas_gva_phase_of(hpx_addr_t gva, uint32_t bsize) {
-  // the phase is stored in the least significant bits of the gva, we merely
-  // mask it out
-  //
-  // before: (locality, offset, phase)
-  //  after: (00000000  000000  phase)
-  const uint64_t mask = ceil_log2_32(bsize) - 1;
-  return (uint32_t)(gva & mask);
 }
 
 hpx_addr_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
@@ -127,8 +128,8 @@ int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
   else {
     // for a block cyclic computation, we look at the three components
     // separately, and combine them to get the overall offset
-    const uint32_t plhs = pgas_gva_phase_of(lhs, bsize);
-    const uint32_t prhs = pgas_gva_phase_of(rhs, bsize);
+    const uint32_t plhs = _phase_of(lhs, bsize);
+    const uint32_t prhs = _phase_of(rhs, bsize);
     const uint32_t llhs = pgas_gva_to_rank(lhs);
     const uint32_t lrhs = pgas_gva_to_rank(rhs);
     const uint32_t olhs = pgas_gva_offset_of(lhs, ranks, bsize);
@@ -158,8 +159,8 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
   if (!bsize)
     return gva + bytes;
 
-  const uint32_t phase = (pgas_gva_phase_of(gva, bsize) + bytes) % bsize;
-  const uint32_t blocks = (pgas_gva_phase_of(gva, bsize) + bytes) / bsize;
+  const uint32_t phase = (_phase_of(gva, bsize) + bytes) % bsize;
+  const uint32_t blocks = (_phase_of(gva, bsize) + bytes) / bsize;
   const uint32_t locality = (pgas_gva_to_rank(gva) + blocks) % ranks;
   const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / ranks;
   const uint64_t offset = pgas_gva_offset_of(gva, ranks, bsize) + cycles;
