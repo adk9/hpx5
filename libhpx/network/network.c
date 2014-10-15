@@ -24,7 +24,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libsync/queues.h"
+#include <libsync/sync.h>
+#include <libsync/queues.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -44,13 +45,11 @@
 #define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
 
 
-/// ----------------------------------------------------------------------------
 /// The network class data.
-/// ----------------------------------------------------------------------------
 struct network_class {
   _QUEUE_T                         tx;          // half duplex port for send
   _QUEUE_T                         rx;          // half duplex port
-  hpx_locality_t         shutdown_src;          // the HPX locality that
+  volatile uint32_t      shutdown_src;          // the HPX locality that
                                                 // called hpx_shutdown()
   routing_t                  *routing;          // for adaptive routing
 };
@@ -87,14 +86,14 @@ network_class_t *network_new(void) {
   _QUEUE_INIT(&n->tx, NULL);
   _QUEUE_INIT(&n->rx, NULL);
 
-  n->shutdown_src = HPX_LOCALITY_NONE;
-
   n->routing = routing_new();
   if (!n->routing) {
     dbg_error("network: failed to start routing update manager.\n");
     free(n);
     return NULL;
   }
+
+  network_set_shutdown_src(n, UINT32_MAX);
   return n;
 }
 
@@ -125,13 +124,13 @@ void network_barrier(network_class_t *network) {
 }
 
 
-void network_set_shutdown_src(network_class_t *network, hpx_locality_t locality) {
-  network->shutdown_src = locality;
+void network_set_shutdown_src(network_class_t *network, uint32_t src) {
+  sync_store(&network->shutdown_src, src, SYNC_RELAXED);
 }
 
 
-hpx_locality_t network_get_shutdown_src(network_class_t *network) {
-  return network->shutdown_src;
+uint32_t network_get_shutdown_src(network_class_t *network) {
+  return sync_load(&network->shutdown_src, SYNC_RELAXED);
 }
 
 
