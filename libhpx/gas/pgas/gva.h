@@ -18,8 +18,8 @@
 #include <stdint.h>
 #include <hpx/hpx.h>
 
-/// Extract the locality from a gva, given the number of ranks.
-uint32_t pgas_gva_locality_of(hpx_addr_t gva, uint32_t ranks)
+/// Extract the locality from a gva.
+uint32_t pgas_gva_to_rank(hpx_addr_t gva)
   HPX_INTERNAL;
 
 /// Extract the offset from a gva, given the number of ranks and the block

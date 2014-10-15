@@ -45,10 +45,6 @@ static bool _pgas_is_global(gas_class_t *gas, void *addr) {
   return heap_contains(global_heap, addr);
 }
 
-static uint32_t _pgas_locality_of(hpx_addr_t gva) {
-  return pgas_gva_locality_of(gva, here->ranks);
-}
-
 static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
   bool cyclic = heap_offset_is_cyclic(global_heap, (uint64_t)gva);
 
@@ -122,7 +118,7 @@ hpx_addr_t _pgas_there(uint32_t i) {
 /// the address if its local.
 bool pgas_try_pin(const hpx_addr_t gva, void **local) {
   const uint32_t ranks = here->ranks;
-  const uint32_t locality = pgas_gva_locality_of(gva, ranks);
+  const uint32_t locality = pgas_gva_to_rank(gva);
 
   if (locality != here->rank) {
     return false;
@@ -210,7 +206,7 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
     dbg_log_gas("global free of cyclic address detected, HPX does not currently "
                 "handle this operation");
   }
-  else if (here->rank == pgas_gva_locality_of(gva, ranks)) {
+  else if (here->rank == pgas_gva_to_rank(gva)) {
     pgas_global_free(heap_offset_to_local(global_heap, heap_offset));
   }
   else {
@@ -223,22 +219,13 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static uint32_t _pgas_owner_of(hpx_addr_t gva) {
-  const uint32_t ranks = here->ranks;
-  return pgas_gva_locality_of(gva, ranks);
-}
-
-
 static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
                                hpx_addr_t sync) {
   if (!size)
     return HPX_SUCCESS;
 
   const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-
-  if (pgas_gva_locality_of(to, ranks) == rank &&
-      pgas_gva_locality_of(from, ranks) == rank) {
+  if (pgas_gva_to_rank(to) == rank && pgas_gva_to_rank(from) == rank) {
     void *lto = gva_to_lva(to);
     const void *lfrom = gva_to_lva(from);
     memcpy(lto, lfrom, size);
@@ -258,10 +245,7 @@ static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
   if (!size)
     return HPX_SUCCESS;
 
-  const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-
-  if (pgas_gva_locality_of(to, ranks) == rank) {
+  if (pgas_gva_to_rank(to) == here->rank) {
     void *lto = gva_to_lva(to);
     memcpy(lto, from, size);
   }
@@ -281,10 +265,7 @@ static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
   if (!size)
     return HPX_SUCCESS;
 
-  const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-
-  if (pgas_gva_locality_of(from, ranks) == rank) {
+  if (pgas_gva_to_rank(from) == here->rank) {
     const void *lfrom = gva_to_lva(from);
     memcpy(to, lfrom, size);
   }
@@ -326,7 +307,7 @@ static gas_class_t _pgas_vtable = {
     .memalign       = pgas_local_memalign,
     .posix_memalign = pgas_local_posix_memalign
   },
-  .locality_of   = _pgas_locality_of,
+  .locality_of   = pgas_gva_to_rank,
   .offset_of     = _pgas_offset_of,
   .phase_of      = _pgas_phase_of,
   .sub           = _pgas_sub,
@@ -344,7 +325,7 @@ static gas_class_t _pgas_vtable = {
   .memget        = _pgas_parcel_memget,
   .memput        = _pgas_parcel_memput,
   .memcpy        = _pgas_parcel_memcpy,
-  .owner_of      = _pgas_owner_of
+  .owner_of      = pgas_gva_to_rank
 };
 
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
