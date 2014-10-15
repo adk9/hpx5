@@ -27,22 +27,20 @@ uint32_t pgas_gva_to_rank(hpx_addr_t gva)
 /// The heap_offset is the complete relative offset of the global virtual
 /// address in its global heap. It encodes both the gva offset and the gva
 /// phase, and can be used to extract either of those in the future.
-uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks)
+///
+/// @param      gva The global address.
+///
+/// @returns The offset within the global heap that corresponds to the address.
+uint64_t pgas_gva_to_offset(hpx_addr_t gva)
   HPX_INTERNAL;
 
 /// Create a global virtual address from a locality and heap offset pair.
 ///
-/// We need to know the number of ranks to perform this operation because that
-/// will tell us how many bits we are using to describe the rank.
+/// @param locality The locality where we want the address to point.
+/// @param   offset The offset into the heap.
 ///
-/// @param      locality The locality where we want the address to point.
-/// @param   heap_offset The offset into the heap.
-/// @param         ranks The number of ranks overall in the system
-///
-/// @returns A global address that contains the appropriate triple of
-///          information.
-hpx_addr_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
-                                     uint32_t ranks)
+/// @returns A global address representing the offset at the locality.
+hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
   HPX_INTERNAL;
 
 /// Create a global virtual address from a locality, gva-offset, and phase.
