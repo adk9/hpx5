@@ -46,7 +46,7 @@ static bool _pgas_is_global(gas_class_t *gas, void *addr) {
 }
 
 static uint32_t _pgas_locality_of(hpx_addr_t gva) {
-  return pgas_gva_locality_of((pgas_gva_t)gva, here->ranks);
+  return pgas_gva_locality_of(gva, here->ranks);
 }
 
 static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
@@ -70,12 +70,12 @@ static uint64_t _pgas_offset_of(hpx_addr_t gva, uint32_t bsize) {
   }
 
   bsize = _check_cyclic(gva, bsize);
-  return pgas_gva_offset_of((pgas_gva_t)gva, here->ranks, bsize);
+  return pgas_gva_offset_of(gva, here->ranks, bsize);
 }
 
 static uint32_t _pgas_phase_of(hpx_addr_t gva, uint32_t bsize) {
   bsize = _check_cyclic(gva, bsize);
-  return pgas_gva_phase_of((pgas_gva_t)gva, bsize);
+  return pgas_gva_phase_of(gva, bsize);
 }
 
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
@@ -84,15 +84,15 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   DEBUG_IF (lbs != rbs) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return pgas_gva_sub((pgas_gva_t)lhs, (pgas_gva_t)rhs, here->ranks, lbs);
+  return pgas_gva_sub(lhs, rhs, here->ranks, lbs);
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   hpx_addr_t gva1 = HPX_NULL;
   if (!_check_cyclic(gva, bsize))
-    gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks);
+    gva1 = pgas_gva_add(gva, bytes, here->ranks);
   else
-    gva1 = pgas_gva_add_cyclic((pgas_gva_t)gva, bytes, here->ranks, bsize);
+    gva1 = pgas_gva_add_cyclic(gva, bytes, here->ranks, bsize);
   return gva1;
 }
 
@@ -106,24 +106,21 @@ static hpx_addr_t _pgas_lva_to_gva(void *lva) {
   const uint64_t heap_offset = heap_offset_of(global_heap, lva);
   const uint32_t rank = here->rank;
   const uint32_t ranks = here->ranks;
-  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
-  return pgas_gva_to_hpx_addr(gva);
+  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
 }
 
 
 // Compute a global address for a locality.
 hpx_addr_t _pgas_there(hpx_locality_t i) {
   const uint32_t ranks = here->ranks;
-  const pgas_gva_t gva = pgas_gva_from_heap_offset(i, 0, ranks);
-  return pgas_gva_to_hpx_addr(gva);
+  return pgas_gva_from_heap_offset(i, 0, ranks);
 }
 
 
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
-bool pgas_try_pin(const hpx_addr_t addr, void **local) {
-  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+bool pgas_try_pin(const hpx_addr_t gva, void **local) {
   const uint32_t ranks = here->ranks;
   const uint32_t locality = pgas_gva_locality_of(gva, ranks);
 
@@ -193,8 +190,7 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   const uint64_t heap_offset = heap_offset_of(global_heap, lva);
   const uint32_t rank = here->rank;
   const uint32_t ranks = here->ranks;
-  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
-  return pgas_gva_to_hpx_addr(gva);
+  return pgas_gva_from_heap_offset(rank, heap_offset, ranks);
 }
 
 /// Free a global address.
@@ -202,8 +198,7 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// This global address must either be the base of a cyclic allocation, or a
 /// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
-static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
   const uint32_t ranks = here->ranks;
   const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
 
@@ -219,17 +214,16 @@ static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
     pgas_global_free(heap_offset_to_local(global_heap, heap_offset));
   }
   else {
-    int e = hpx_call(addr, pgas_free, NULL, 0, sync);
+    int e = hpx_call(gva, pgas_free, NULL, 0, sync);
     dbg_check(e, "failed to call pgas_free on %lu", gva);
     return;
   }
 
-  if (pgas_gva_from_hpx_addr(sync) != 0)
+  if (sync != HPX_NULL)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static uint32_t _pgas_owner_of(hpx_addr_t addr) {
-  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
+static uint32_t _pgas_owner_of(hpx_addr_t gva) {
   const uint32_t ranks = here->ranks;
   return pgas_gva_locality_of(gva, ranks);
 }

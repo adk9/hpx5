@@ -20,17 +20,17 @@
 #include "gva.h"
 #include "pgas.h"
 
-uint32_t pgas_gva_locality_of(pgas_gva_t gva, uint32_t ranks) {
+uint32_t pgas_gva_locality_of(hpx_addr_t gva, uint32_t ranks) {
   // the locality is stored in the most significant bits of the gva, we just
   // need to shift it down correctly
   //
   // before: (locality, offset, phase)
   //  after: (00000000000000 locality)
-  const uint32_t rshift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
+  const uint32_t rshift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
   return (uint32_t)(gva >> rshift);
 }
 
-uint64_t pgas_gva_offset_of(pgas_gva_t gva, uint32_t ranks, uint32_t bsize) {
+uint64_t pgas_gva_offset_of(hpx_addr_t gva, uint32_t ranks, uint32_t bsize) {
   // clear the upper bits by shifting them out, and then shifting the offset
   // down to the right place
   //
@@ -41,7 +41,7 @@ uint64_t pgas_gva_offset_of(pgas_gva_t gva, uint32_t ranks, uint32_t bsize) {
   return (gva << lshift) >> rshift;
 }
 
-uint64_t pgas_gva_heap_offset_of(pgas_gva_t gva, uint32_t ranks) {
+uint64_t pgas_gva_heap_offset_of(hpx_addr_t gva, uint32_t ranks) {
   // the heap offset is just the least significant chunk of the gva, we shift
   // the locality out rather than masking because it's easier for us to express
   //
@@ -51,7 +51,7 @@ uint64_t pgas_gva_heap_offset_of(pgas_gva_t gva, uint32_t ranks) {
   return (gva << shift) >> shift;
 }
 
-uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize) {
+uint32_t pgas_gva_phase_of(hpx_addr_t gva, uint32_t bsize) {
   // the phase is stored in the least significant bits of the gva, we merely
   // mask it out
   //
@@ -61,7 +61,7 @@ uint32_t pgas_gva_phase_of(pgas_gva_t gva, uint32_t bsize) {
   return (uint32_t)(gva & mask);
 }
 
-pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
+hpx_addr_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
                                      uint32_t ranks) {
   // make sure the locality is in the expected range
   DEBUG_IF (ranks < locality) {
@@ -78,22 +78,12 @@ pgas_gva_t pgas_gva_from_heap_offset(uint32_t locality, uint64_t heap_offset,
 
   // construct the gva by shifting the locality into the most significant bits
   // of the gva and then adding in the heap offset
-  const uint32_t shift = (sizeof(pgas_gva_t) * 8) - ceil_log2_32(ranks);
+  const uint32_t shift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
   const uint64_t high = ((uint64_t)locality) << shift;
   return high + heap_offset;
 }
 
-pgas_gva_t pgas_gva_from_hpx_addr(hpx_addr_t addr) {
-  return (pgas_gva_t)addr;
-}
-
-hpx_addr_t pgas_gva_to_hpx_addr(pgas_gva_t gva) {
-  const hpx_addr_t addr = (hpx_addr_t)gva;
-  return addr;
-}
-
-
-pgas_gva_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
+hpx_addr_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
                                 uint32_t phase, uint32_t ranks, uint32_t bsize)
 {
   // make sure that the phase is in the expected range, locality will be checked
@@ -117,7 +107,7 @@ pgas_gva_t pgas_gva_from_triple(uint32_t locality, uint64_t offset,
 
 
 
-int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
+int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
                      uint32_t bsize)
 {
   if (!bsize) {
@@ -161,7 +151,7 @@ int64_t pgas_gva_sub(pgas_gva_t lhs, pgas_gva_t rhs, uint32_t ranks,
 }
 
 /// Perform address arithmetic on a PGAS global address.
-pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
+hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
                                uint32_t bsize) {
   if (!bsize)
     return gva + bytes;
@@ -172,7 +162,7 @@ pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
   const uint32_t cycles = (pgas_gva_locality_of(gva, ranks) + blocks) / ranks;
   const uint64_t offset = pgas_gva_offset_of(gva, ranks, bsize) + cycles;
 
-  const pgas_gva_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
+  const hpx_addr_t next = pgas_gva_from_triple(locality, offset, phase, ranks,
                                                bsize);
 
   // sanity check
@@ -184,6 +174,6 @@ pgas_gva_t pgas_gva_add_cyclic(pgas_gva_t gva, int64_t bytes, uint32_t ranks,
   return next;
 }
 
-pgas_gva_t pgas_gva_add(pgas_gva_t gva, int64_t bytes, uint32_t ranks) {
+hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes, uint32_t ranks) {
   return gva + bytes;
 }
