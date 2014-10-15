@@ -113,9 +113,7 @@ hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
   return high + offset;
 }
 
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
-                     uint32_t bsize)
-{
+int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   if (!bsize) {
     // if bsize is zero then this should be a local computation, check to make
     // sure the localities match, and then just compute the
@@ -145,10 +143,12 @@ int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
     // each difference in the phase is just one byte,
     // each difference in the locality is bsize bytes, and
     // each difference in the phase is entire cycle of bsize bytes
-    const int64_t dist = dblock * ranks * bsize + dlocality * bsize + dphase;
+    const int64_t dist = dblock * here->ranks * bsize +
+                         dlocality * bsize +
+                         dphase;
 
     // make sure we're not crazy
-    DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, ranks, bsize) != rhs) {
+    DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, bsize) != rhs) {
       dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
                 lhs, rhs, dist);
     }
@@ -157,15 +157,14 @@ int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
 }
 
 /// Perform address arithmetic on a PGAS global address.
-hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
-                               uint32_t bsize) {
+hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   if (!bsize)
     return gva + bytes;
 
   const uint32_t phase = (_phase_of(gva, bsize) + bytes) % bsize;
   const uint32_t blocks = (_phase_of(gva, bsize) + bytes) / bsize;
-  const uint32_t rank = (pgas_gva_to_rank(gva) + blocks) % ranks;
-  const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / ranks;
+  const uint32_t rank = (pgas_gva_to_rank(gva) + blocks) % here->ranks;
+  const uint32_t cycles = (pgas_gva_to_rank(gva) + blocks) / here->ranks;
   const uint64_t block = _block_of(gva, bsize) + cycles;
 
   const hpx_addr_t addr = _triple_to_gva(rank, block, phase, bsize);
@@ -180,6 +179,6 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
   return addr;
 }
 
-hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes, uint32_t ranks) {
+hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes) {
   return gva + bytes;
 }
