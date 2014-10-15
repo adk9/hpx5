@@ -48,29 +48,30 @@ hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
 /// This is only valid if @p lhs and @p rhs come from the same global
 /// allocation.
 ///
-/// @param   lhs The left-hand-side address.
-/// @param   rhs The right-hand-size address.
-/// @param ranks The number of localities in the system.
-/// @param bsize The block size for the allocation.
+/// @param      lhs The left-hand-side address.
+/// @param      rhs The right-hand-size address.
+/// @param    bsize The block size for the allocation.
 ///
 /// @returns The equivalent of (@p lhs - @p rhs) if @p lhs and @p rhs were
 ///          char*.
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t ranks,
-                     uint32_t bsize)
+int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_INTERNAL;
+
 
 /// Compute cyclic address arithmetic on the global address.
 ///
-/// @param ranks The number of localities in the system.
-/// @param bsize The block size in bytes for the allocation.
-
-hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t ranks,
-                               uint32_t bsize)
+/// @param      gva The global address base.
+/// @param    bytes The displacement in the number of bytes (may be negative).
+/// @param    bsize The block size in bytes for the allocation.
+///
+/// @returns The global address representation that is @p bytes away from
+///          @gva.
+hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize)
   HPX_INTERNAL;
 
 
 /// Compute standard address arithmetic on the global address.
-hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes, uint32_t ranks)
+hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes)
   HPX_INTERNAL;
 
 

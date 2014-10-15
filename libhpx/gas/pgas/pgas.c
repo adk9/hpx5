@@ -66,15 +66,15 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   DEBUG_IF (lbs != rbs) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return pgas_gva_sub(lhs, rhs, here->ranks, lbs);
+  return pgas_gva_sub(lhs, rhs, lbs);
 }
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   hpx_addr_t gva1 = HPX_NULL;
   if (!_check_cyclic(gva, bsize))
-    gva1 = pgas_gva_add(gva, bytes, here->ranks);
+    gva1 = pgas_gva_add(gva, bytes);
   else
-    gva1 = pgas_gva_add_cyclic(gva, bytes, here->ranks, bsize);
+    gva1 = pgas_gva_add_cyclic(gva, bytes, bsize);
   return gva1;
 }
 
