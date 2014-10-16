@@ -111,7 +111,7 @@ static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
 
 /// This is the hpx_call_* target for memset, used in calloc broadcast.
 static int _pgas_memset_handler(pgas_memset_args_t *args) {
-  void *dest = heap_offset_to_local(global_heap, args->offset);
+  void *dest = heap_offset_to_lva(global_heap, args->offset);
   memset(dest, args->value, args->length);
   return HPX_SUCCESS;
 }

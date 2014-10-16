@@ -144,6 +144,16 @@ uint64_t heap_lva_to_offset(heap_t *heap, void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
+/// Convert a heap offset into a local virtual address.
+///
+/// @param         heap The heap object.
+/// @param       offset The absolute offset within the heap.
+///
+/// @returns The local virtual address corresponding to the offset.
+void *heap_offset_to_lva(heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
 /// Check to see if the given offset is cyclic.
 ///
 /// This will verify that the @p heap_offset is in the heap, out-of-bounds
@@ -154,16 +164,6 @@ uint64_t heap_lva_to_offset(heap_t *heap, void *lva)
 ///
 /// @returns TRUE if the offset is a cyclic offset, FALSE otherwise.
 bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
-/// Convert a heap offset into a local virtual address.
-///
-/// @param         heap The heap object.
-/// @param       offset The absolute offset within the heap.
-///
-/// @returns The local virtual address corresponding to the offset.
-void *heap_offset_to_local(heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
