@@ -221,21 +221,19 @@ void *pgas_local_malloc(size_t bytes) {
   return addr;
 }
 
-void pgas_local_free(void *ptr) {
-  if (!ptr)
+void pgas_local_free(void *lva) {
+  if (!lva)
     return;
 
-  assert(!heap_contains(global_heap, ptr));
-  dbg_log_gas("%p\n", ptr);
-
-  DEBUG_IF (lva_is_global(ptr)) {
-    dbg_error("local free passed global pointer %p.\n", ptr);
+  DEBUG_IF (lva_is_global(lva)) {
+    dbg_error("local free passed global pointer %p.\n", lva);
   }
+  dbg_log_gas("%p\n", lva);
 
   if (_joined)
-    arena_free(_local_arena, ptr);
+    arena_free(_local_arena, lva);
   else
-    default_free(ptr);
+    default_free(lva);
 }
 
 void *pgas_local_calloc(size_t nmemb, size_t size) {

@@ -41,8 +41,8 @@ static void _pgas_delete(gas_class_t *gas) {
   }
 }
 
-static bool _pgas_is_global(gas_class_t *gas, void *addr) {
-  return heap_contains(global_heap, addr);
+static bool _pgas_is_global(gas_class_t *gas, void *lva) {
+  return heap_contains_lva(global_heap, lva);
 }
 
 static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
