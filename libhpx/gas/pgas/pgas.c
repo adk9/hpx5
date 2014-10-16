@@ -33,6 +33,7 @@
 /// The PGAS type is a global address space that manages a shared heap.
 heap_t *global_heap = NULL;
 
+
 static void _pgas_delete(gas_class_t *gas) {
   if (global_heap) {
     heap_fini(global_heap);
@@ -41,13 +42,20 @@ static void _pgas_delete(gas_class_t *gas) {
   }
 }
 
+
 static bool _pgas_is_global(gas_class_t *gas, void *lva) {
   return heap_contains_lva(global_heap, lva);
 }
 
+
+static bool _gva_is_cyclic(hpx_addr_t gva) {
+  return heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(gva));
+}
+
+
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  const bool l = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(lhs));
-  const bool r = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(rhs));
+  const bool l = _gva_is_cyclic(lhs);
+  const bool r = _gva_is_cyclic(rhs);
   DEBUG_IF (l != r) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
@@ -57,13 +65,16 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
     return pgas_gva_sub_cyclic(lhs, rhs, bsize);
   }
   else {
+    DEBUG_IF (l || r) {
+      dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
+    }
     return pgas_gva_sub(lhs, rhs);
   }
 }
 
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  const bool cyclic = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(gva));
+  const bool cyclic = _gva_is_cyclic(gva);
   return (cyclic) ? pgas_gva_add_cyclic(gva, bytes, bsize)
                   : pgas_gva_add(gva, bytes);
 }
@@ -81,8 +92,9 @@ static void *_gva_to_lva(hpx_addr_t gva) {
    return heap_offset_to_lva(global_heap, offset);
 }
 
+
 // Compute a global address for a locality.
-hpx_addr_t _pgas_there(uint32_t i) {
+static hpx_addr_t _pgas_there(uint32_t i) {
   return pgas_offset_to_gva(i, 0);
 }
 
