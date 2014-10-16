@@ -81,11 +81,7 @@ static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 /// Convert a local virtual address into a globa address.
 static hpx_addr_t _pgas_lva_to_gva(void *lva) {
-  DEBUG_IF (!heap_contains(global_heap, lva)) {
-    dbg_error("the global heap does not contain %p", lva);
-  }
-
-  const uint64_t offset = heap_offset_of(global_heap, lva);
+  const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gva(here->rank, offset);
 }
 
@@ -162,8 +158,8 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = pgas_global_malloc(bytes);
   assert(lva && heap_contains(global_heap, lva));
-
-  const uint64_t offset = heap_offset_of(global_heap, lva);
+  const uint64_t offset = heap_lva_to_offset(global_heap, lva);
+  assert(!heap_offset_is_cyclic(global_heap, offset));
   return pgas_offset_to_gva(here->rank, offset);
 }
 

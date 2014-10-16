@@ -140,7 +140,7 @@ bool heap_contains(heap_t *heap, void *lva)
 /// @param          lva The local virtual address.
 ///
 /// @returns The absolute offset of the @p lva within the global heap.
-uint64_t heap_offset_of(heap_t *heap, void *lva)
+uint64_t heap_lva_to_offset(heap_t *heap, void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
