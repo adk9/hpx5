@@ -154,12 +154,12 @@ int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   return transport->pin(transport, heap->base, heap->nbytes);
 }
 
-bool heap_contains_lva(heap_t *heap, void *lva) {
+bool heap_contains_lva(heap_t *heap, const void *lva) {
   const ptrdiff_t d = (char*)lva - heap->base;
   return (0 <= d && d < heap->nbytes);
 }
 
-uint64_t heap_lva_to_offset(heap_t *heap, void *lva) {
+uint64_t heap_lva_to_offset(heap_t *heap, const void *lva) {
   DEBUG_IF (!heap_contains_lva(heap, lva)) {
     dbg_error("local virtual address %p is not in the global heap\n", lva);
   }
@@ -174,17 +174,17 @@ void *heap_offset_to_lva(heap_t *heap, uint64_t offset) {
   return heap->base + offset;
 }
 
-bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
-  if (!heap_offset_inbounds(heap, heap_offset)) {
-    dbg_log_gas("offset %lu is not in the heap\n", heap_offset);
+bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset) {
+  if (offset >= heap->nbytes) {
+    dbg_log_gas("offset %lu is not in the heap\n", offset);
     return false;
   }
 
   if (HEAP_USE_CYCLIC_CSBRK_BARRIER)
-    return heap_offset > (heap->nbytes - heap->csbrk);
+    return (offset > (heap->nbytes - heap->csbrk));
 
   // see if the chunk is allocated
-  const uint32_t chunk = heap_offset / heap->bytes_per_chunk;
+  const uint32_t chunk = offset / heap->bytes_per_chunk;
   const bool acyclic = bitmap_is_set(heap->chunks, chunk);
   return !acyclic;
 }
@@ -225,22 +225,22 @@ size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
               "\t-current allocation request: %lu bytes\n",
               heap->nbytes, old, bytes);
 
-  const uint64_t heap_offset = (heap->nbytes - new);
-  assert(heap_offset % bsize == 0);
-  assert(heap_offset_inbounds(heap, heap_offset));
-  _check_heap_offsets(heap, heap_offset, bytes);
-  return heap_offset;
+  const uint64_t offset = (heap->nbytes - new);
+  assert(offset % bsize == 0);
+  assert(offset < heap->nbytes);
+  _check_heap_offsets(heap, offset, bytes);
+  return offset;
 }
 
-bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset) {
-  return (heap_offset < heap->nbytes);
+bool heap_offset_inbounds(heap_t *heap, uint64_t offset) {
+  return (offset < heap->nbytes);
 }
 
-int heap_set_csbrk(heap_t *heap, uint64_t heap_offset) {
-  const uint64_t new = heap->nbytes - heap_offset;
+int heap_set_csbrk(heap_t *heap, uint64_t offset) {
+  const uint64_t new = heap->nbytes - offset;
   const size_t old = sync_swap(&heap->csbrk, new, SYNC_ACQ_REL);
   if (new < old)
     dbg_error("csbrk should be monotonically increasing");
 
-  return _check_heap_offsets(heap, heap_offset, new - old);
+  return _check_heap_offsets(heap, offset, new - old);
 }
