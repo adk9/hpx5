@@ -166,6 +166,14 @@ uint64_t heap_lva_to_offset(heap_t *heap, void *lva) {
   return ((char*)lva - heap->base);
 }
 
+void *heap_offset_to_lva(heap_t *heap, uint64_t offset) {
+  DEBUG_IF (heap->nbytes < offset) {
+    dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
+  }
+
+  return heap->base + offset;
+}
+
 bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
   if (!heap_offset_inbounds(heap, heap_offset)) {
     dbg_log_gas("offset %lu is not in the heap\n", heap_offset);
@@ -179,14 +187,6 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
   const uint32_t chunk = heap_offset / heap->bytes_per_chunk;
   const bool acyclic = bitmap_is_set(heap->chunks, chunk);
   return !acyclic;
-}
-
-void *heap_offset_to_local(heap_t *heap, uint64_t offset) {
-  DEBUG_IF (heap->nbytes < offset) {
-    dbg_wait();
-    dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
-  }
-  return heap->base + offset;
 }
 
 int _check_heap_offsets(heap_t *heap, uint64_t base, uint64_t size) {

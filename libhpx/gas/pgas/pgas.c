@@ -80,11 +80,16 @@ static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 
 /// Convert a local virtual address into a globa address.
-static hpx_addr_t _pgas_lva_to_gva(void *lva) {
+static hpx_addr_t _lva_to_gva(void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gva(here->rank, offset);
 }
 
+
+static void *_gva_to_lva(hpx_addr_t gva) {
+   const uint64_t offset = pgas_gva_to_offset(gva);
+   return heap_offset_to_lva(global_heap, offset);
+}
 
 // Compute a global address for a locality.
 hpx_addr_t _pgas_there(uint32_t i) {
@@ -96,25 +101,13 @@ hpx_addr_t _pgas_there(uint32_t i) {
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
 bool pgas_try_pin(const hpx_addr_t gva, void **local) {
-  if (pgas_gva_to_rank(gva) != here->rank) {
+  if (pgas_gva_to_rank(gva) != here->rank)
     return false;
-  }
 
-  if (local) {
-    const uint64_t offset = pgas_gva_to_offset(gva);
-    *local = heap_offset_to_local(global_heap, offset);
-  }
+  if (local)
+    *local = _gva_to_lva(gva);
 
   return true;
-}
-
-static void *_pgas_gva_to_lva(hpx_addr_t addr) {
-  void *local = NULL;
-  bool is_local = pgas_try_pin(addr, &local);
-  DEBUG_IF (!is_local) {
-    dbg_error("%lu is not local to %u\n", addr, here->rank);
-  }
-  return local;
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
@@ -157,10 +150,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = pgas_global_malloc(bytes);
-  assert(lva && heap_contains(global_heap, lva));
-  const uint64_t offset = heap_lva_to_offset(global_heap, lva);
-  assert(!heap_offset_is_cyclic(global_heap, offset));
-  return pgas_offset_to_gva(here->rank, offset);
+  return _lva_to_gva(lva);
 }
 
 /// Free a global address.
@@ -180,7 +170,7 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
                 "handle this operation");
   }
   else if (pgas_gva_to_rank(gva) == here->rank) {
-    pgas_global_free(heap_offset_to_local(global_heap, offset));
+    pgas_global_free(_gva_to_lva(offset));
   }
   else {
     int e = hpx_call(gva, pgas_free, NULL, 0, sync);
@@ -283,8 +273,8 @@ static gas_class_t _pgas_vtable = {
   .locality_of   = pgas_gva_to_rank,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
-  .lva_to_gva    = _pgas_lva_to_gva,
-  .gva_to_lva    = _pgas_gva_to_lva,
+  .lva_to_gva    = _lva_to_gva,
+  .gva_to_lva    = _gva_to_lva,
   .there         = _pgas_there,
   .try_pin       = pgas_try_pin,
   .unpin         = _pgas_unpin,
