@@ -149,18 +149,18 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   return true;
 }
 
-bool heap_contains(heap_t *heap, void *addr) {
-  const ptrdiff_t d = (char*)addr - heap->base;
-  return (0 <= d && d < heap->nbytes);
-}
-
 int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   heap->transport = transport;
   return transport->pin(transport, heap->base, heap->nbytes);
 }
 
+bool heap_contains_lva(heap_t *heap, void *lva) {
+  const ptrdiff_t d = (char*)lva - heap->base;
+  return (0 <= d && d < heap->nbytes);
+}
+
 uint64_t heap_lva_to_offset(heap_t *heap, void *lva) {
-  DEBUG_IF (!heap_contains(heap, lva)) {
+  DEBUG_IF (!heap_contains_lva(heap, lva)) {
     dbg_error("local virtual address %p is not in the global heap\n", lva);
   }
   return ((char*)lva - heap->base);

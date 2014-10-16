@@ -130,7 +130,7 @@ int heap_bind_transport(heap_t *heap, struct transport_class *transport)
 /// @param          lva The local virtual address to test.
 ///
 /// @returns TRUE if the @p lva is contained in the global heap.
-bool heap_contains(heap_t *heap, void *lva)
+bool heap_contains_lva(heap_t *heap, void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
