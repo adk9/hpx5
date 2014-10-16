@@ -53,9 +53,12 @@ static __thread bool _joined = false;
 /// @param[in]  arena The index of the arena making this allocation request.
 ///
 /// @returns The base pointer of the newly allocated chunk.
-static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned arena)
+static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned UNUSED)
 {
-  return heap_chunk_alloc(global_heap, size, align, zero, arena);
+  if (zero)
+    *zero = false;
+
+  return heap_chunk_alloc(global_heap, size, align);
 }
 
 /// The static chunk de-allocator callback that we give to jemalloc arenas that
@@ -83,8 +86,8 @@ static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned arena)
 /// @param   arena The index of the arena making the call to _chunk_dalloc().
 ///
 /// @returns UNKNOWN---Luke.
-static bool _chunk_dalloc(void *chunk, size_t size, unsigned arena) {
-  return heap_chunk_dalloc(global_heap, chunk, size, arena);
+static bool _chunk_dalloc(void *chunk, size_t size, unsigned UNUSED) {
+  return heap_chunk_dalloc(global_heap, chunk, size);
 }
 
 int pgas_join(void) {
