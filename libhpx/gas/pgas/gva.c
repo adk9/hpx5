@@ -115,47 +115,42 @@ hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
   return high + offset;
 }
 
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  if (!bsize) {
-    // if bsize is zero then this should be a local computation, check to make
-    // sure the localities match, and then just compute the
-    // heap_offset_difference.
-    const uint32_t llhs = pgas_gva_to_rank(lhs);
-    const uint32_t lrhs = pgas_gva_to_rank(rhs);
-    DEBUG_IF (lrhs != llhs) {
-      dbg_error("local arithmetic failed between %u and %u\n", llhs, lrhs);
-    }
-
-    return lhs - rhs;
+int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
+  // check to make sure the localities match, and then just compute the
+  // difference
+  const uint32_t rlhs = pgas_gva_to_rank(lhs);
+  const uint32_t rrhs = pgas_gva_to_rank(rhs);
+  DEBUG_IF (rrhs != rlhs) {
+    dbg_error("local arithmetic failed between ranks %u and %u\n", rlhs, rrhs);
   }
-  else {
-    // for a block cyclic computation, we look at the three components
-    // separately, and combine them to get the overall offset
-    const uint32_t plhs = _phase_of(lhs, bsize);
-    const uint32_t prhs = _phase_of(rhs, bsize);
-    const uint32_t llhs = pgas_gva_to_rank(lhs);
-    const uint32_t lrhs = pgas_gva_to_rank(rhs);
-    const uint32_t blhs = _block_of(lhs, bsize);
-    const uint32_t brhs = _block_of(rhs, bsize);
+  return (lhs - rhs);
+}
 
-    const int32_t dphase = plhs - prhs;
-    const int32_t dlocality = llhs - lrhs;
-    const int64_t dblock = blhs - brhs;
+int64_t pgas_gva_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+  // for a block cyclic computation, we look at the three components
+  // separately, and combine them to get the overall offset
+  const uint32_t plhs = _phase_of(lhs, bsize);
+  const uint32_t prhs = _phase_of(rhs, bsize);
+  const uint32_t llhs = pgas_gva_to_rank(lhs);
+  const uint32_t lrhs = pgas_gva_to_rank(rhs);
+  const uint32_t blhs = _block_of(lhs, bsize);
+  const uint32_t brhs = _block_of(rhs, bsize);
 
-    // each difference in the phase is just one byte,
-    // each difference in the locality is bsize bytes, and
-    // each difference in the phase is entire cycle of bsize bytes
-    const int64_t dist = dblock * here->ranks * bsize +
-                         dlocality * bsize +
-                         dphase;
+  const int32_t dphase = plhs - prhs;
+  const int32_t dlocality = llhs - lrhs;
+  const int64_t dblock = blhs - brhs;
 
-    // make sure we're not crazy
-    DEBUG_IF (pgas_gva_add_cyclic(lhs, dist, bsize) != rhs) {
-      dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
-                lhs, rhs, dist);
-    }
-    return dist;
+  // each difference in the phase is just one byte,
+  // each difference in the locality is bsize bytes, and
+  // each difference in the phase is entire cycle of bsize bytes
+  const int64_t d = dblock * here->ranks * bsize + dlocality * bsize + dphase;
+
+  // make sure we're not crazy
+  DEBUG_IF (pgas_gva_add_cyclic(lhs, d, bsize) != rhs) {
+    dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
+              lhs, rhs, d);
   }
+  return d;
 }
 
 /// Perform address arithmetic on a PGAS global address.

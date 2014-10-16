@@ -43,7 +43,9 @@ uint64_t pgas_gva_to_offset(hpx_addr_t gva)
 hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
   HPX_INTERNAL;
 
-/// Compute the (signed) distance, in bytes, between two global addresses.
+
+/// Compute the (signed) distance, in bytes, between two global addresses from a
+/// cyclic allocation.
 ///
 /// This is only valid if @p lhs and @p rhs come from the same global
 /// allocation.
@@ -52,9 +54,26 @@ hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
 /// @param      rhs The right-hand-size address.
 /// @param    bsize The block size for the allocation.
 ///
-/// @returns The equivalent of (@p lhs - @p rhs) if @p lhs and @p rhs were
-///          char*.
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
+/// @returns The difference between the two addresses such that
+///          @code
+///          lhs == pgas_gva_add_cyclic(rhs,
+///                                     pgas_gva_sub_cyclic(lhs, rhs, bsize),
+///                                     bsize)
+///          @endcode
+int64_t pgas_gva_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
+  HPX_INTERNAL;
+
+
+/// Compute the (signed) gistance, in bytes, between two global addresses.
+///
+/// This is only balid if @p lhs and @p rhs come from the same global
+/// allocation.
+///
+/// @param      lhs The left-hand-side address.
+/// @param      rhs The right-hand-side address.
+///
+/// @returns lhs - rhs
+int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs)
   HPX_INTERNAL;
 
 
