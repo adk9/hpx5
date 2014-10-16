@@ -159,11 +159,11 @@ int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   return transport->pin(transport, heap->base, heap->nbytes);
 }
 
-uint64_t heap_offset_of(heap_t *heap, void *addr) {
-  DEBUG_IF (!heap_contains(heap, addr)) {
-    dbg_error("local virtual address %p is not in the global heap\n", addr);
+uint64_t heap_lva_to_offset(heap_t *heap, void *lva) {
+  DEBUG_IF (!heap_contains(heap, lva)) {
+    dbg_error("local virtual address %p is not in the global heap\n", lva);
   }
-  return ((char*)addr - heap->base);
+  return ((char*)lva - heap->base);
 }
 
 bool heap_offset_is_cyclic(heap_t *heap, uint64_t heap_offset) {
