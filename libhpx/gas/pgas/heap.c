@@ -24,8 +24,8 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
-#include "../bitmap.h"
 #include "../mallctl.h"
+#include "bitmap.h"
 #include "heap.h"
 #ifdef CRAY_HUGE_HACK
 #include <hugetlbfs.h>
