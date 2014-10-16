@@ -24,6 +24,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
+#include "../bitmap.h"
 #include "../mallctl.h"
 #include "heap.h"
 #ifdef CRAY_HUGE_HACK
@@ -110,9 +111,7 @@ void heap_fini(heap_t *heap) {
   }
 }
 
-void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
-                       unsigned arena) {
-  assert(arena == mallctl_thread_get_arena());
+void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment) {
   const uint32_t blocks = ceil_div_64(size, heap->bytes_per_chunk);
   const uint32_t align  = ceil_div_64(alignment, heap->bytes_per_chunk);
   uint32_t chunk_offset = 0;
@@ -138,13 +137,10 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t alignment, bool *zero,
               actual_alignment);
   }
 
-  if (zero)
-    *zero = false;
-
   return chunk;
 }
 
-bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size, unsigned arena) {
+bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   const uint32_t offset = (char*)chunk - heap->base;
   assert(offset % heap->bytes_per_chunk == 0);
   const uint32_t i = offset / heap->bytes_per_chunk;
