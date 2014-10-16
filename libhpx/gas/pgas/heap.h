@@ -183,11 +183,6 @@ bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Check to make sure that a range of offsets is in the heap.
-bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Set the csbrk to correspond to the given heap_offset value.
 ///
 /// @returns LIBHPX_OK for success, LIBHPX_ENOMEM for failure.
