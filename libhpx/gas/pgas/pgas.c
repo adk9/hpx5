@@ -45,37 +45,27 @@ static bool _pgas_is_global(gas_class_t *gas, void *lva) {
   return heap_contains_lva(global_heap, lva);
 }
 
-static uint32_t _check_cyclic(hpx_addr_t gva, uint32_t bsize) {
-  bool cyclic = heap_offset_is_cyclic(global_heap, (uint64_t)gva);
-
-  if (cyclic && !bsize) {
-    dbg_error("heap offset %lu is cyclic but user defined block size 0\n", gva);
-  }
-
-  if (!cyclic && bsize) {
-    dbg_log_gas("heap offset %lu specific bsize %u suppressed\n", gva, bsize);
-    return 0;
-  }
-
-  return pgas_fit_log2_32(bsize);
-}
-
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  const uint32_t lbs = _check_cyclic(lhs, bsize);
-  const uint32_t rbs = _check_cyclic(rhs, bsize);
-  DEBUG_IF (lbs != rbs) {
+  const bool l = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(lhs));
+  const bool r = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(rhs));
+  DEBUG_IF (l != r) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
-  return (lbs) ? pgas_gva_sub_cyclic(lhs, rhs, lbs) : pgas_gva_sub(lhs, rhs);
+
+  if (l && r) {
+    assert(bsize);
+    return pgas_gva_sub_cyclic(lhs, rhs, bsize);
+  }
+  else {
+    return pgas_gva_sub(lhs, rhs);
+  }
 }
 
+
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  hpx_addr_t gva1 = HPX_NULL;
-  if (!_check_cyclic(gva, bsize))
-    gva1 = pgas_gva_add(gva, bytes);
-  else
-    gva1 = pgas_gva_add_cyclic(gva, bytes, bsize);
-  return gva1;
+  const bool cyclic = heap_offset_is_cyclic(global_heap, pgas_gva_to_offset(gva));
+  return (cyclic) ? pgas_gva_add_cyclic(gva, bytes, bsize)
+                  : pgas_gva_add(gva, bytes);
 }
 
 
