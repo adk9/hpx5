@@ -161,8 +161,10 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
   const uint64_t offset = pgas_gva_to_offset(gva);
 
-  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
-    dbg_error("attempt to free out of bounds offset %lu", offset);
+  DEBUG_IF (true) {
+    const void *lva = heap_offset_to_lva(global_heap, offset);
+    if (!heap_contains_lva(global_heap, lva))
+      dbg_error("attempt to free out of bounds offset %lu", offset);
   }
 
   if (heap_offset_is_cyclic(global_heap, offset)) {

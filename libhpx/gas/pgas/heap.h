@@ -130,7 +130,7 @@ int heap_bind_transport(heap_t *heap, struct transport_class *transport)
 /// @param          lva The local virtual address to test.
 ///
 /// @returns TRUE if the @p lva is contained in the global heap.
-bool heap_contains_lva(heap_t *heap, void *lva)
+bool heap_contains_lva(heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -140,7 +140,7 @@ bool heap_contains_lva(heap_t *heap, void *lva)
 /// @param          lva The local virtual address.
 ///
 /// @returns The absolute offset of the @p lva within the global heap.
-uint64_t heap_lva_to_offset(heap_t *heap, void *lva)
+uint64_t heap_lva_to_offset(heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -178,15 +178,10 @@ size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned_bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Check to make sure a heap offset is actually in the heap.
-bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Set the csbrk to correspond to the given heap_offset value.
 ///
 /// @returns LIBHPX_OK for success, LIBHPX_ENOMEM for failure.
-int heap_set_csbrk(heap_t *heap, uint64_t heap_offset)
+int heap_set_csbrk(heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif

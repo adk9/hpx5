@@ -102,8 +102,10 @@ hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
 
   // make sure that the heap offset is in the expected range (everyone has the
   // same size, so the locality is irrelevant here)
-  DEBUG_IF (!heap_offset_inbounds(global_heap, offset)) {
-    dbg_error("heap offset %lu is out of range\n", offset);
+  DEBUG_IF (true) {
+    const void *lva = heap_offset_to_lva(global_heap, offset);
+    if (!heap_contains_lva(global_heap, lva))
+      dbg_error("heap offset %lu is out of range\n", offset);
   }
 
   // construct the gva by shifting the locality into the most significant bits
@@ -171,8 +173,8 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
   // sanity check
   DEBUG_IF (true) {
-    const uint64_t offset = pgas_gva_to_offset(addr);
-    if (!heap_offset_inbounds(global_heap, offset))
+    const void *lva = gva_to_lva(addr);
+    if (!heap_contains_lva(global_heap, lva))
       dbg_error("computed out of bounds address\n");
   }
 
