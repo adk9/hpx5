@@ -236,11 +236,6 @@ bool heap_offset_inbounds(heap_t *heap, uint64_t heap_offset) {
   return (heap_offset < heap->nbytes);
 }
 
-bool heap_range_inbounds(heap_t *heap, uint64_t start, int64_t length) {
-  uint64_t end = start + length;
-  return (start < heap->nbytes) && (end < heap->nbytes);
-}
-
 int heap_set_csbrk(heap_t *heap, uint64_t heap_offset) {
   const uint64_t new = heap->nbytes - heap_offset;
   const size_t old = sync_swap(&heap->csbrk, new, SYNC_ACQ_REL);
