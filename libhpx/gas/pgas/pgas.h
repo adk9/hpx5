@@ -149,10 +149,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize)
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
   HPX_INTERNAL;
 
-/// @}
 
-/// Register actions required by PGAS.
-void pgas_register_actions(void)
-  HPX_INTERNAL;
+/// @}
 
 #endif // LIBHPX_GAS_PGAS_H
