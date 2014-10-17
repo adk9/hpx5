@@ -15,7 +15,6 @@
 
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
-#include <hpx/builtins.h>
 
 extern struct heap *global_heap;
 
