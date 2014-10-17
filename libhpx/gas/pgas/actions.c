@@ -15,7 +15,8 @@
 #endif
 
 #include <string.h>
-#include "libhpx/locality.h"
+#include <hpx/builtins.h>
+#include <libhpx/locality.h>
 #include "gva.h"
 #include "heap.h"
 #include "pgas.h"
