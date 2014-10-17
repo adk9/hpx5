@@ -87,7 +87,7 @@ static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 }
 
 
-/// Convert a local virtual address into a globa address.
+/// Convert a local virtual address into a global address.
 static hpx_addr_t _lva_to_gva(void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gva(here->rank, offset);
