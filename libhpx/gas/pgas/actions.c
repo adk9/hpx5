@@ -178,7 +178,7 @@ static int _set_csbrk_handler(size_t *offset) {
 }
 
 
-void pgas_register_actions(void) {
+static void _pgas_register_actions(void) {
   pgas_cyclic_alloc  = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
   pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
   pgas_free          = HPX_REGISTER_ACTION(_pgas_free_handler);
@@ -188,5 +188,5 @@ void pgas_register_actions(void) {
 }
 
 static void HPX_CONSTRUCTOR _register(void) {
-  pgas_register_actions();
+  _pgas_register_actions();
 }
