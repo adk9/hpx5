@@ -104,21 +104,49 @@ int pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size)
   HPX_INTERNAL;
 /// @}
 
-/// Implementation of the distributed functionality that supports cyclic malloc.
+/// Implementation of the distributed functionality that supports cyclic malloc
+/// and calloc.
 /// @{
 
+/// The structure that describes the cyclic operations, we just need to know the
+/// overall number of bytes to allocate, and the block size.
 typedef struct {
   size_t n;
   uint32_t bsize;
 } pgas_alloc_args_t;
 
+/// Asynchronous entry point for alloc.
 extern hpx_action_t pgas_cyclic_alloc;
+
+/// Asynchronous entry point for calloc.
 extern hpx_action_t pgas_cyclic_calloc;
+
+/// Asynchronous entry point for free.
 extern hpx_action_t pgas_free;
+
 extern hpx_action_t pgas_set_csbrk;
 
-hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
-hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
+/// Synchronous entry point for alloc.
+///
+/// @param            n The total number of bytes to allocate.
+/// @param        bsize The size of each block, in bytes.
+///
+/// @returns A global address representing the base of the allocation, or
+///          HPX_NULL if there is an error.
+hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize)
+  HPX_INTERNAL;
+
+
+/// Synchronous entry point for calloc.
+///
+/// @param            n The total number of bytes to allocate.
+/// @param        bsize The size of each block, in bytes.
+///
+/// @returns A global address representing the base of the allocation, or
+///          HPX_NULL if there is an error.
+hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
+  HPX_INTERNAL;
+
 /// @}
 
 /// Register actions required by PGAS.
