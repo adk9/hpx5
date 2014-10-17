@@ -585,7 +585,7 @@ hpx_netfuture_t hpx_lco_netfuture_shared_new_all(int num_participants, size_t si
 // provide this array indexer.
 hpx_netfuture_t 
 hpx_lco_netfuture_at(hpx_netfuture_t array, int i) {
-  assert(i >= 0 && i <= array.count);
+  //  assert(i >= 0 && i <= array.count);
   //  return &array[i];
   //return &_netfuture_table.futs[array->table_index][i];
   hpx_netfuture_t fut = array;
