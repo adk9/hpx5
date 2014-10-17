@@ -102,7 +102,7 @@ static hpx_addr_t _pgas_there(uint32_t i) {
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
-bool pgas_try_pin(const hpx_addr_t gva, void **local) {
+static bool _pgas_try_pin(const hpx_addr_t gva, void **local) {
   if (pgas_gva_to_rank(gva) != here->rank)
     return false;
 
@@ -113,7 +113,7 @@ bool pgas_try_pin(const hpx_addr_t gva, void **local) {
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
-  DEBUG_IF(!pgas_try_pin(addr, NULL)) {
+  DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
     dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
 }
@@ -280,7 +280,7 @@ static gas_class_t _pgas_vtable = {
   .lva_to_gva    = _lva_to_gva,
   .gva_to_lva    = _gva_to_lva,
   .there         = _pgas_there,
-  .try_pin       = pgas_try_pin,
+  .try_pin       = _pgas_try_pin,
   .unpin         = _pgas_unpin,
   .cyclic_alloc  = _pgas_gas_cyclic_alloc,
   .cyclic_calloc = _pgas_gas_cyclic_calloc,
