@@ -115,16 +115,18 @@ typedef struct {
   uint32_t bsize;
 } pgas_alloc_args_t;
 
+
 /// Asynchronous entry point for alloc.
 extern hpx_action_t pgas_cyclic_alloc;
+
 
 /// Asynchronous entry point for calloc.
 extern hpx_action_t pgas_cyclic_calloc;
 
+
 /// Asynchronous entry point for free.
 extern hpx_action_t pgas_free;
 
-extern hpx_action_t pgas_set_csbrk;
 
 /// Synchronous entry point for alloc.
 ///

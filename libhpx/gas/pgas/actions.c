@@ -20,11 +20,16 @@
 #include "heap.h"
 #include "pgas.h"
 
+/// Definitions of the external action handles.
+/// @{
 hpx_action_t pgas_cyclic_alloc = 0;
 hpx_action_t pgas_cyclic_calloc = 0;
 hpx_action_t pgas_free = 0;
-hpx_action_t pgas_set_csbrk = 0;
+/// @}
 
+
+/// Internal utility actions for dealing with calloc.
+/// @{
 typedef struct {
   uint64_t      offset;
   uint32_t      blocks;
@@ -32,6 +37,8 @@ typedef struct {
 } _calloc_init_args_t;
 
 static hpx_action_t _calloc_init = 0;
+static hpx_action_t _set_csbrk = 0;
+/// @}
 
 
 /// Allocate from the cyclic space.
@@ -52,13 +59,14 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
     // during DEBUG execution we broadcast the csbrk to the system to make sure
     // that people can do effective cyclic vs. gas allocations
     hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(pgas_set_csbrk, &offset, sizeof(offset), sync);
+    hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
 
   return pgas_offset_to_gva(here->rank, offset);
 }
+
 
 /// Allocate zeroed memory from the cyclic space.
 ///
@@ -81,7 +89,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
     //
     // NB: we're already broadcasting calloc_init, we could just do it then...?
     hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(pgas_set_csbrk, &offset, sizeof(offset), sync);
+    hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
@@ -101,16 +109,24 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
 
 
 /// This is the hpx_call_* target for a cyclic allocation.
+///
+/// This just unpacks the arguments and forwards to the synchronous form of
+/// alloc locally, and continues the resulting base.
 static int _pgas_cyclic_alloc_handler(pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_alloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
 
+
 /// This is the hpx_call_* target for cyclic zeroed allocation.
+///
+/// This just unpacks the arguments and forwards to the synchronous form of
+/// calloc locally, and continues the resulting base.
 static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_calloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
+
 
 /// This is the hpx_call_* target for doing a calloc initialization.
 ///
@@ -141,6 +157,7 @@ static int _calloc_init_handler(_calloc_init_args_t *args) {
   return HPX_SUCCESS;
 }
 
+
 static int _pgas_free_handler(void *UNUSED) {
   hpx_addr_t gva = hpx_thread_current_target();
   if (here->rank != pgas_gva_to_rank(gva)) {
@@ -153,18 +170,21 @@ static int _pgas_free_handler(void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static int _pgas_set_csbrk_handler(size_t *offset) {
+
+static int _set_csbrk_handler(size_t *offset) {
   int e = heap_set_csbrk(global_heap, *offset);
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
 
+
 void pgas_register_actions(void) {
-  pgas_cyclic_alloc = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
+  pgas_cyclic_alloc  = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
   pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
-  _calloc_init = HPX_REGISTER_ACTION(_calloc_init_handler);
-  pgas_free = HPX_REGISTER_ACTION(_pgas_free_handler);
-  pgas_set_csbrk = HPX_REGISTER_ACTION(_pgas_set_csbrk_handler);
+  pgas_free          = HPX_REGISTER_ACTION(_pgas_free_handler);
+
+  _calloc_init       = HPX_REGISTER_ACTION(_calloc_init_handler);
+  _set_csbrk         = HPX_REGISTER_ACTION(_set_csbrk_handler);
 }
 
 static void HPX_CONSTRUCTOR _register(void) {
