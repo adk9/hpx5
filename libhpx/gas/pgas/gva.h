@@ -22,6 +22,7 @@
 uint32_t pgas_gva_to_rank(hpx_addr_t gva)
   HPX_INTERNAL;
 
+
 /// Extract the heap offset of a gva, given the number of ranks.
 ///
 /// The heap_offset is the complete relative offset of the global virtual
@@ -33,6 +34,7 @@ uint32_t pgas_gva_to_rank(hpx_addr_t gva)
 /// @returns The offset within the global heap that corresponds to the address.
 uint64_t pgas_gva_to_offset(hpx_addr_t gva)
   HPX_INTERNAL;
+
 
 /// Create a global virtual address from a locality and heap offset pair.
 ///
