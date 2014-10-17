@@ -29,9 +29,9 @@ typedef struct {
   uint64_t      offset;
   uint32_t      blocks;
   uint32_t       bsize;
-} _pgas_calloc_init_args_t;
+} _calloc_init_args_t;
 
-static hpx_action_t _pgas_calloc_init = 0;
+static hpx_action_t _calloc_init = 0;
 
 
 /// Allocate from the cyclic space.
@@ -86,14 +86,14 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
     hpx_lco_delete(sync, HPX_NULL);
   }
 
-  _pgas_calloc_init_args_t args = {
+  _calloc_init_args_t args = {
     .offset = offset,
     .blocks = blocks,
     .bsize  = bsize
   };
 
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_pgas_calloc_init, &args, sizeof(args), sync);
+  hpx_bcast(_calloc_init, &args, sizeof(args), sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return pgas_offset_to_gva(here->rank, offset);
@@ -123,7 +123,7 @@ static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
 ///                     the number of blocks and the size of each block.
 ///
 /// @returns HPX_SUCCESS
-static int _pgas_calloc_init_handler(_pgas_calloc_init_args_t *args) {
+static int _calloc_init_handler(_calloc_init_args_t *args) {
   // Create a global virtual address from the offset so that we can perform
   // cyclic address arithmetic on it. This avoids any issues with internal
   // padding, since the addr_add already needs to be able to deal with that
@@ -162,7 +162,7 @@ static int _pgas_set_csbrk_handler(size_t *offset) {
 void pgas_register_actions(void) {
   pgas_cyclic_alloc = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
   pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
-  _pgas_calloc_init = HPX_REGISTER_ACTION(_pgas_calloc_init_handler);
+  _calloc_init = HPX_REGISTER_ACTION(_calloc_init_handler);
   pgas_free = HPX_REGISTER_ACTION(_pgas_free_handler);
   pgas_set_csbrk = HPX_REGISTER_ACTION(_pgas_set_csbrk_handler);
 }
