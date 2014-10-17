@@ -166,7 +166,7 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
   // sanity check
   DEBUG_IF (true) {
-    const void *lva = gva_to_lva(addr);
+    const void *lva = pgas_gva_to_lva(addr);
     if (!heap_contains_lva(global_heap, lva))
       dbg_error("computed out of bounds address\n");
   }

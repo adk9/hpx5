@@ -151,4 +151,14 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
 
 /// @}
 
+
+/// Convert a global address into a local virtual address.
+///
+/// @param          gva The global address.
+///
+/// @returns The corresponding local virtual address.
+void *pgas_gva_to_lva(hpx_addr_t gva)
+  HPX_INTERNAL;
+
+
 #endif // LIBHPX_GAS_PGAS_H
