@@ -104,9 +104,6 @@ int pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size)
   HPX_INTERNAL;
 /// @}
 
-bool pgas_try_pin(const hpx_addr_t addr, void **local)
-  HPX_INTERNAL;
-
 /// Implementation of the distributed functionality that supports cyclic malloc.
 /// @{
 

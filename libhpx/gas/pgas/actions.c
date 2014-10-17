@@ -142,13 +142,14 @@ static int _pgas_calloc_init_handler(_pgas_calloc_init_args_t *args) {
 }
 
 static int _pgas_free_handler(void *UNUSED) {
-  void *local = NULL;
-  hpx_addr_t addr = hpx_thread_current_target();
-  if (!pgas_try_pin(addr, &local)) {
-    dbg_error("failed to translate an address during free.\n");
+  hpx_addr_t gva = hpx_thread_current_target();
+  if (here->rank != pgas_gva_to_rank(gva)) {
+    dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
+              pgas_gva_to_rank(gva), here->rank);
     return HPX_ERROR;
   }
-  pgas_global_free(local);
+  void *lva = gva_to_lva(gva);
+  pgas_global_free(lva);
   return HPX_SUCCESS;
 }
 
