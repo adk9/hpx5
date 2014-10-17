@@ -51,9 +51,8 @@ static hpx_addr_t _triple_to_gva(uint32_t rank, uint64_t bid, uint32_t phase,
                                  uint32_t bsize) {
   // make sure that the phase is in the expected range, locality will be checked
   DEBUG_IF (bsize && phase) {
-    if (ceil_log2_32(bsize) < ceil_log2_32(phase)) {
-      dbg_error("phase %u must be less than %u\n", phase,
-                pgas_fit_log2_32(bsize));
+    if (phase >= bsize) {
+      dbg_error("phase %u must be less than %u\n", phase, bsize);
     }
   }
 
@@ -96,8 +95,7 @@ hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
   const uint32_t ranks = here->ranks;
   DEBUG_IF (rank >= ranks) {
     assert(ranks != 0);
-    dbg_error("locality %u must be less than %u\n", rank,
-              pgas_fit_log2_32(ranks));
+    dbg_error("locality %u must be less than %u\n", rank, ranks);
   }
 
   // make sure that the heap offset is in the expected range (everyone has the

@@ -206,14 +206,15 @@ int _check_heap_offsets(heap_t *heap, uint64_t base, uint64_t size) {
 
 size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
   // need to allocate properly aligned offset
-  const size_t bytes = n * bsize;
+  const uint32_t padded_bsize = (uint32_t)1 << ceil_log2_32(bsize);
+  const size_t bytes = n * padded_bsize;
   uint64_t old = 0;
   uint64_t new = 0;
   do {
     old = sync_load(&heap->csbrk, SYNC_RELAXED);
     const size_t end = old + bytes;
     const size_t offset = heap->nbytes - end;
-    const uint32_t r = offset % bsize;
+    const uint32_t r = offset % padded_bsize;
     new = end + r;
   } while (!sync_cas(&heap->csbrk, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
@@ -226,7 +227,7 @@ size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
               heap->nbytes, old, bytes);
 
   const uint64_t offset = (heap->nbytes - new);
-  assert(offset % bsize == 0);
+  assert(offset % padded_bsize == 0);
   assert(offset < heap->nbytes);
   _check_heap_offsets(heap, offset, bytes);
   return offset;

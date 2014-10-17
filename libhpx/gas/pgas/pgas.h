@@ -19,63 +19,113 @@
 
 extern struct heap *global_heap;
 
-//  ----------------------------------------------------------------------------
-/// Declare the Address Space interface functions for PGAS. These are
-/// implemented in malloc.c.
-//  ----------------------------------------------------------------------------
+/// Called by each OS thread (pthread) to initialize and setup the thread local
+/// structures required for it to use PGAS.
+///
+/// @note This currently only works with the global_heap object. A more flexible
+///       solution might be appropriate some day.
+///
+/// @note Implemented in malloc.c.
+///
+/// @returns LIBHPX_OK, or LIBHPX_ERROR if there is an error.
+///
+int pgas_join(void)
+  HPX_INTERNAL;
+
+/// Called by each OS thread (pthread) to clean up any thread local structures
+/// that were initialized during pgas_join().
+///
+/// @note Implemented in malloc.c.
+///
+void pgas_leave(void)
+  HPX_INTERNAL;
+
+/// Global versions of the standard malloc() functions.
+///
+/// These have exactly the same semantics as the traditional set of malloc
+/// functions, except that they allocate their memory from the global heap. This
+/// memory all has a GVA equivalent (@see heap.h pgas_lva_to_gva()) and can be
+/// used in the network. It can also be shared directly between threads on an
+/// SMP.
+///
+/// @note Implemented in malloc.c
 /// @{
-int   pgas_join(void) HPX_INTERNAL;
-void  pgas_leave(void) HPX_INTERNAL;
+void *pgas_global_malloc(size_t bytes)
+  HPX_INTERNAL;
 
-void *pgas_global_malloc(size_t bytes) HPX_INTERNAL;
-void  pgas_global_free(void *ptr) HPX_INTERNAL;
-void *pgas_global_calloc(size_t nmemb, size_t size) HPX_INTERNAL;
-void *pgas_global_realloc(void *ptr, size_t size) HPX_INTERNAL;
-void *pgas_global_valloc(size_t size) HPX_INTERNAL;
-void *pgas_global_memalign(size_t boundary, size_t size) HPX_INTERNAL;
-int   pgas_global_posix_memalign(void **memptr, size_t alignment, size_t size) HPX_INTERNAL;
+void pgas_global_free(void *ptr)
+  HPX_INTERNAL;
 
-void *pgas_local_malloc(size_t bytes) HPX_INTERNAL;
-void  pgas_local_free(void *ptr) HPX_INTERNAL;
-void *pgas_local_calloc(size_t nmemb, size_t size) HPX_INTERNAL;
-void *pgas_local_realloc(void *ptr, size_t size) HPX_INTERNAL;
-void *pgas_local_valloc(size_t size) HPX_INTERNAL;
-void *pgas_local_memalign(size_t boundary, size_t size) HPX_INTERNAL;
-int   pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size) HPX_INTERNAL;
+void *pgas_global_calloc(size_t nmemb, size_t size)
+  HPX_INTERNAL;
+
+void *pgas_global_realloc(void *ptr, size_t size)
+  HPX_INTERNAL;
+
+void *pgas_global_valloc(size_t size)
+  HPX_INTERNAL;
+
+void *pgas_global_memalign(size_t boundary, size_t size)
+  HPX_INTERNAL;
+
+int pgas_global_posix_memalign(void **memptr, size_t alignment, size_t size)
+  HPX_INTERNAL;
+/// @}
+
+/// PGAS-specific local versions of the standard malloc() functions.
+///
+/// These have exactly the same semantics as the traditional set. The resulting
+/// memory cannot be used by the network, but could be shared between threads
+/// within an SMP. These are necessary because we override the standard
+/// interface functions to call GAS versions since each GAS implementation does
+/// things differently.
+///
+/// @note Implemented in malloc.c
+/// @{
+void *pgas_local_malloc(size_t bytes)
+  HPX_INTERNAL;
+
+void pgas_local_free(void *ptr)
+  HPX_INTERNAL;
+
+void *pgas_local_calloc(size_t nmemb, size_t size)
+  HPX_INTERNAL;
+
+void *pgas_local_realloc(void *ptr, size_t size)
+  HPX_INTERNAL;
+
+void *pgas_local_valloc(size_t size)
+  HPX_INTERNAL;
+
+void *pgas_local_memalign(size_t boundary, size_t size)
+  HPX_INTERNAL;
+
+int pgas_local_posix_memalign(void **memptr, size_t alignment, size_t size)
+  HPX_INTERNAL;
 /// @}
 
 bool pgas_try_pin(const hpx_addr_t addr, void **local)
   HPX_INTERNAL;
+
+/// Implementation of the distributed functionality that supports cyclic malloc.
+/// @{
 
 typedef struct {
   size_t n;
   uint32_t bsize;
 } pgas_alloc_args_t;
 
-typedef struct {
-  uint64_t      offset;
-  uint64_t       value;
-  uint64_t      length;
-} pgas_memset_args_t;
-
 extern hpx_action_t pgas_cyclic_alloc;
 extern hpx_action_t pgas_cyclic_calloc;
-extern hpx_action_t pgas_memset;
 extern hpx_action_t pgas_free;
 extern hpx_action_t pgas_set_csbrk;
 
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) HPX_INTERNAL;
+/// @}
 
-void pgas_register_actions(void) HPX_INTERNAL;
-
-static inline uint32_t pgas_n_per_locality(size_t m, uint32_t ranks) {
-  return (m / ranks) + ((m % ranks) ? 1 : 0);
-}
-
-static inline uint32_t pgas_fit_log2_32(uint32_t n) {
-  return 1 << ceil_log2_32(n);
-}
-
+/// Register actions required by PGAS.
+void pgas_register_actions(void)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_GAS_PGAS_H
