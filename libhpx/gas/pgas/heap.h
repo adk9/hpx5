@@ -159,8 +159,8 @@ void *heap_offset_to_lva(heap_t *heap, uint64_t offset)
 /// This will verify that the @p heap_offset is in the heap, out-of-bounds
 /// offsets result in false.
 ///
-/// @param          heap The heap to check in.
-/// @param        offset The heap-relative offset to check.
+/// @param         heap The heap to check in.
+/// @param       offset The heap-relative offset to check.
 ///
 /// @returns TRUE if the offset is a cyclic offset, FALSE otherwise.
 bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
@@ -169,12 +169,12 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
 
 /// Allocate a cyclic array of blocks.
 ///
-/// @param           heap The heap from which to allocate.
-/// @param              n The number of blocks per locality to allocate.
-/// @param  aligned_bsize The base 2 aligned size of the block.
+/// @param         heap The heap from which to allocate.
+/// @param            n The number of blocks per locality to allocate.
+/// @param        bsize The size of the block.
 ///
 /// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t aligned_bsize)
+size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
