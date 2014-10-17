@@ -31,6 +31,17 @@
 #include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
+///
+/// @note This is sort of silly. The PGAS gas is basically an instance of an
+///       object that uses the heap. A more normal approach to this would be to
+///       make the heap an instance variable of the PGAS gas subtype. The reason
+///       we're currently doing the global_heap as a static is that other files
+///       in the pgas module want to interact with the global_heap directly, and
+///       we didn't really want to expose the entire PGAS class. For a nicer
+///       look, we could adjust this and make everyone in PGAS that needs the
+///       heap go through a cast of the locality gas reference, e.g.,
+///       (pgas_gas_t*)here->gas->heap.
+///
 heap_t *global_heap = NULL;
 
 
@@ -60,16 +71,12 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
 
-  if (l && r) {
-    assert(bsize);
-    return pgas_gva_sub_cyclic(lhs, rhs, bsize);
+  DEBUG_IF (l ^ r) {
+    dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
   }
-  else {
-    DEBUG_IF (l || r) {
-      dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
-    }
-    return pgas_gva_sub(lhs, rhs);
-  }
+
+  return (l && r) ? pgas_gva_sub_cyclic(lhs, rhs, bsize)
+                  : pgas_gva_sub(lhs, rhs);
 }
 
 
