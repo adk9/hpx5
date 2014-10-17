@@ -53,12 +53,23 @@ static hpx_action_t _set_csbrk = 0;
 ///
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
+  assert(here->rank == 0);
+
+  // Figure out how many blocks per node that we need, and then allocate that
+  // much cyclic space from the heap.
   const uint64_t blocks = ceil_div_64(n, here->ranks);
   const uint64_t offset = heap_csbrk(global_heap, blocks, bsize);
 
+  //  During DEBUG execution we broadcast the csbrk to the system to make sure
+  //  that people can do effective cyclic vs. gas allocations. This isn't
+  //  strictly necessary since the cyclic allocation server is centralized, and
+  //  it adds overhead to do the broadcast.
+
+  /// @todo Maybe this should be our standard behavior? We haven't really made
+  ///       an effort to optimize these operations in any other way, so why
+  ///       worry about the broadcast?
+  ///       Luke
   DEBUG_IF (true) {
-    // during DEBUG execution we broadcast the csbrk to the system to make sure
-    // that people can do effective cyclic vs. gas allocations
     hpx_addr_t sync = hpx_lco_future_new(0);
     hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
@@ -81,30 +92,40 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
 ///
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
+  assert(here->rank == 0);
+
+  // Figure out how many blocks ber node that we need, and then allocate that
+  // much cyclic space from the heap.
   const uint64_t blocks = ceil_div_64(n, here->ranks);
   const uint64_t offset = heap_csbrk(global_heap, blocks, bsize);
 
+  // During DEBUG execution we broadcast the csbrk to the system to make sure
+  // that people can do effective cyclic vs. gas allocations.
+
+  /// @todo We're already broadcasting calloc_init, we should just do it then in
+  ///       a DEBUG_IF() there.
+  ///       Luke
   DEBUG_IF (true) {
-    // during DEBUG execution we broadcast the csbrk to the system to make sure
-    // that people can do effective cyclic vs. gas allocations
-    //
-    // NB: we're already broadcasting calloc_init, we could just do it then...?
     hpx_addr_t sync = hpx_lco_future_new(0);
     hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
 
-  _calloc_init_args_t args = {
-    .offset = offset,
-    .blocks = blocks,
-    .bsize  = bsize
-  };
+  // Broadcast the calloc so that each locality can zero the correct memory.
+  {
+    _calloc_init_args_t args = {
+      .offset = offset,
+      .blocks = blocks,
+      .bsize  = bsize
+    };
 
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_calloc_init, &args, sizeof(args), sync);
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+    hpx_addr_t sync = hpx_lco_future_new(0);
+    hpx_bcast(_calloc_init, &args, sizeof(args), sync);
+    hpx_lco_wait(sync);
+    hpx_lco_delete(sync, HPX_NULL);
+  }
+
   return pgas_offset_to_gva(here->rank, offset);
 }
 
