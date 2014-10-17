@@ -171,7 +171,7 @@ static int _calloc_init_handler(_calloc_init_args_t *args) {
   // memset it.
   hpx_addr_t gva = pgas_offset_to_gva(here->rank, args->offset);
   for (int i = 0, e = args->blocks; i < e; ++i) {
-    void *lva = gva_to_lva(gva);
+    void *lva = pgas_gva_to_lva(gva);
     memset(lva, 0, args->bsize);
     // increment the global address by one cycle
     gva = hpx_addr_add(gva, args->bsize * here->ranks, args->bsize);
@@ -187,7 +187,7 @@ static int _pgas_free_handler(void *UNUSED) {
               pgas_gva_to_rank(gva), here->rank);
     return HPX_ERROR;
   }
-  void *lva = gva_to_lva(gva);
+  void *lva = pgas_gva_to_lva(gva);
   pgas_global_free(lva);
   return HPX_SUCCESS;
 }
