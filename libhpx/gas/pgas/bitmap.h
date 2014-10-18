@@ -36,6 +36,7 @@
 ///
 typedef struct bitmap bitmap_t;
 
+
 /// Allocate and initialize a bitmap.
 ///
 /// @param        nbits The number of bits we need to manage.
@@ -44,14 +45,18 @@ typedef struct bitmap bitmap_t;
 bitmap_t *bitmap_new(uint32_t nbits)
   HPX_INTERNAL;
 
+
 /// Delete a bitmap that was previously allocated with bitmap_new().
 ///
 /// @param   bitmap The bitmap to free,
 void bitmap_delete(bitmap_t *bitmap)
   HPX_INTERNAL;
 
+
 /// Allocate @p nbits contiguous bits from the bitmap, aligned to a @p align
 /// boundary.
+///
+/// This performs a least->most significant bit search for space.
 ///
 /// @param[in]      map The bitmap to allocate from.
 /// @param[in]    nbits The number of continuous bits to allocate.
@@ -62,6 +67,22 @@ void bitmap_delete(bitmap_t *bitmap)
 int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
   HPX_INTERNAL HPX_NON_NULL(1, 4);
 
+
+/// Allocate @p nbits contiguous bits from the bitmap, aligned to a @p align
+/// boundary.
+///
+/// This performs a most->least significant bit search.
+///
+/// @param[in]      map The bitmap to allocate from.
+/// @param[in]    nbits The number of continuous bits to allocate.
+/// @param[in]    align The alignment required.
+/// @param[out]       i The offset of the start of the allocation.
+///
+/// @returns LIBHPX_OK, LIBHPX_ENOMEM
+int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
+  HPX_INTERNAL HPX_NON_NULL(1, 4);
+
+
 /// Free @p nbits contiguous bits of memory, starting at offset @p i.
 ///
 /// @param          map The bitmap to free from.
@@ -69,6 +90,7 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 /// @param        nbits The number of bits to free.
 void bitmap_release(bitmap_t *map, uint32_t i, uint32_t nbits)
   HPX_INTERNAL HPX_NON_NULL(1);
+
 
 /// Determine if a particular bit has been allocated.
 ///
@@ -78,5 +100,6 @@ void bitmap_release(bitmap_t *map, uint32_t i, uint32_t nbits)
 /// @returns true if the bit is set, false otherwise.
 bool bitmap_is_set(bitmap_t *map, uint32_t bit)
   HPX_INTERNAL HPX_NON_NULL(1);
+
 
 #endif
