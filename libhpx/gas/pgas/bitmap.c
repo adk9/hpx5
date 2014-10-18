@@ -105,10 +105,12 @@ static uint32_t _search(bitmap_t *map,
   // make sure that we start with a good alignment
   const uint32_t r = bit % align;
   if (r) {
-    // we have a bad alignment, shift the search r bits and restart
-    block += (bit + r) / BITS_PER_BLOCK;
-    bit   += (bit + r) % BITS_PER_BLOCK;
-    accum += r;
+    // we have a bad alignment, shift the search and restart
+    const uint32_t shift = align - r;
+    block += (bit + shift) / BITS_PER_BLOCK;
+    bit   += (bit + shift) % BITS_PER_BLOCK;
+    accum += shift;
+    assert(bit % align == 0);
     return _search(map, nbits, align, block, bit, accum);
   }
 
@@ -139,7 +141,7 @@ static uint32_t _search(bitmap_t *map,
       // the block alone and update the current bit offset to the msm.
       //
       block += (leading) ? 0 : 1;
-      bit = (leading) ? 0 : msm;
+      bit    = (leading) ? 0 : msm;
 
       // restart the search
       return _search(map, nbits, align, block, bit, accum);
