@@ -171,7 +171,8 @@ static int _action_ping(args_t *args) {
   struct buffer *msg_pong;
   hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 
-  for (int i = 0; i < args->iterations; i++) {
+  int i;
+  for (i = 0; i < args->iterations; i++) {
     if (_text)
       snprintf(msg_ping->data, BUFFER_SIZE, "ping %d from (%d, %d)", i,
 	       hpx_get_my_rank(), hpx_get_my_thread_id());
@@ -205,8 +206,8 @@ static int _action_pong(args_t *args) {
   struct buffer *msg_pong;
   hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);
 
-
-  for (int i = 0; i < args->iterations; i++) {
+  int i;
+  for (i = 0; i < args->iterations; i++) {
     msg_ping_gas = hpx_lco_netfuture_getat(args->pingpong, 1, BUFFER_SIZE);
     hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
 

@@ -201,16 +201,21 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Start allocating the index array.
   _index_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
-  hpx_addr_t index_arr_sync = hpx_lco_future_new(0);
+
+  hpx_addr_t index_arr_sync;
+
+  index_arr_sync = hpx_lco_future_new(0);
   hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(uint32_t), index_arr_sync);
 
   // Array is allocated whyle the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
 
-
   // Start allocating the count array for creating an edge histogram
   _count_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(count_t);
-  hpx_addr_t count_arr_sync = hpx_lco_future_new(0);
+
+  hpx_addr_t count_arr_sync;
+
+  count_arr_sync = hpx_lco_future_new(0);
   hpx_bcast(_set_count_array_bsize, &_count_array_block_size, sizeof(uint32_t), count_arr_sync);
 
   // Array is allocated while the broadcast of the block size is performed
@@ -222,7 +227,8 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Count the number of edges per source vertex
   hpx_addr_t edges_sync = hpx_lco_and_new(el->num_edges);
-  for (int i = 0; i < el->num_edges; ++i) {
+  int i;
+  for (i = 0; i < el->num_edges; ++i) {
     hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
     hpx_call(edge, _count_edge, &count_array, sizeof(count_array), edges_sync);
   }
@@ -235,9 +241,10 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Allocate the adjacency list according to the count of edges per vertex
   hpx_addr_t vertices_alloc_sync = hpx_lco_and_new(el->num_vertices);
-  for (int i = 0; i < el->num_vertices; ++i) {
-    hpx_addr_t count = hpx_addr_add(count_array, i * sizeof(count_t), _count_array_block_size);
-    hpx_addr_t index = hpx_addr_add(index_array, i * sizeof(hpx_addr_t), _index_array_block_size);
+  int k;
+  for (k = 0; k < el->num_vertices; ++k) {
+    hpx_addr_t count = hpx_addr_add(count_array, k * sizeof(count_t), _count_array_block_size);
+    hpx_addr_t index = hpx_addr_add(index_array, k * sizeof(hpx_addr_t), _index_array_block_size);
     hpx_call(count, _alloc_adj_list_entry, &index, sizeof(index), vertices_alloc_sync);
   }
   hpx_lco_wait(vertices_alloc_sync);
@@ -246,8 +253,9 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   // For each edge in the edge list, we add it as an adjacency to a
   // vertex
   edges_sync = hpx_lco_and_new(el->num_edges);
-  for (int i = 0; i < el->num_edges; ++i) {
-    hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
+  int t;
+  for (t = 0; t < el->num_edges; ++t) {
+    hpx_addr_t edge = hpx_addr_add(el->edge_list, t * sizeof(edge_list_edge_t), el->edge_list_bsize);
     hpx_call(edge, _insert_edge, &index_array, sizeof(index_array), edges_sync);
   }
   hpx_lco_wait(edges_sync);
@@ -289,7 +297,8 @@ static int _reset_vertex_action(void *args) {
 
 int reset_adj_list(adj_list_t adj_list, edge_list_t *el) {
   hpx_addr_t vertices = hpx_lco_and_new(el->num_vertices);
-  for (int i = 0; i < el->num_vertices; ++i) {
+  int i;
+  for (i = 0; i < el->num_vertices; ++i) {
     hpx_addr_t index = hpx_addr_add(index_array, i * sizeof(hpx_addr_t), _index_array_block_size);
     hpx_call(index, _reset_vertex, NULL, 0, vertices);
   }

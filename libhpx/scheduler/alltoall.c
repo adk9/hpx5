@@ -81,6 +81,11 @@
 #include "cvar.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static const int _gathering = 0;
 static const int _reading   = 1;
 
@@ -173,6 +178,10 @@ static hpx_status_t _alltoall_getid(_alltoall_t *g, unsigned offset, int size,
 /// @param   value       Address of the value buffer
 hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
                                     void *value) {
+
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_alltoall_getid");
+#endif
   hpx_status_t status = HPX_SUCCESS;
   _alltoall_t *local;
 
@@ -184,6 +193,9 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 
   status = _alltoall_getid(local, id, size, value);
   hpx_gas_unpin(alltoall);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_alltoall_getid");
+#endif
   return status;
 }
 
@@ -238,7 +250,8 @@ static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
   elementSize = size / nDoms;
   columnOffset = offset * elementSize;
 
-  for (int i = 0; i < nDoms; i++)
+  int i;
+  for (i = 0; i < nDoms; i++)
   {
     int rowOffset = i * size;
     int tempOffset = rowOffset + columnOffset;
@@ -272,6 +285,10 @@ static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
 hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
                                     const void *value, hpx_addr_t lsync,
                                     hpx_addr_t rsync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_alltoall_setid");
+#endif
+
   hpx_status_t status = HPX_SUCCESS;
   _alltoall_t *local;
 
@@ -296,6 +313,9 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
     if (rsync)
       hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_alltoall_setid");
+#endif
 
   return status;
 }
@@ -368,8 +388,14 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_alltoall_new");
+#endif
   _alltoall_t *g = libhpx_global_malloc(sizeof(*g));
   assert(g);
   _alltoall_init(g, inputs, size);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_alltoall_new");
+#endif
   return lva_to_gva(g);
 }

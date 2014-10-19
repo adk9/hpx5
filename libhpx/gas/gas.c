@@ -51,5 +51,6 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
     return gas;
 
   dbg_error("Could not initialize GAS model %s", HPX_GAS_TO_STRING[type]);
+
   return NULL;
 }

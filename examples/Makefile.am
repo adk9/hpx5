@@ -5,6 +5,8 @@ examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
                        memget guppie sendrecv sendrecv-chan allreduce-chan \
                        pingpong-chan hello alltoall
 
+CC=tau_cc.sh
+
 hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c

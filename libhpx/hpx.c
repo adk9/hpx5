@@ -41,11 +41,19 @@
 
 #include "network/servers.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated, and return
 /// the passed code.
 static int _cleanup(locality_t *l, int code) {
+#ifdef ENABLE_TAU
+          TAU_START("system_cleanup");
+#endif
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -74,11 +82,16 @@ static int _cleanup(locality_t *l, int code) {
   if (l)
     free(l);
 
+#ifdef ENABLE_TAU
+          TAU_STOP("system_cleanup");
+#endif
   return code;
 }
 
-
 int hpx_init(int *argc, char ***argv) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_init");
+#endif
   // 0) parse the provided options into a usable configuration
   hpx_config_t *cfg = hpx_parse_options(argc, argv);
 
@@ -149,6 +162,10 @@ int hpx_init(int *argc, char ***argv) {
     network_rx_enqueue(here->network, p);
   }
 
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_init");
+#endif
+
   return HPX_SUCCESS;
 }
 
@@ -175,6 +192,9 @@ int system_startup(void) {
 /// Called to run HPX.
 int
 hpx_run(hpx_action_t act, const void *args, size_t size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_run");
+#endif
   if (here->rank == 0) {
     // start the main process. enqueue parcels directly---schedulers
     // don't exist yet
@@ -182,6 +202,9 @@ hpx_run(hpx_action_t act, const void *args, size_t size) {
                                     HPX_ACTION_NULL, HPX_NULL, true);
     network_rx_enqueue(here->network, p);
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_run");
+#endif
 
   // start the HPX runtime (scheduler) on all of the localities
   return hpx_start();
@@ -218,20 +241,32 @@ hpx_get_num_threads(void) {
 
 
 void system_shutdown(int code) {
+#ifdef ENABLE_TAU
+          TAU_START("system_shutdown");
+#endif
   if (!here || !here->sched)
     dbg_error("hpx_shutdown called without a scheduler.\n");
 
   scheduler_shutdown(here->sched);
+#ifdef ENABLE_TAU
+          TAU_STOP("system_shutdown");
+#endif
 }
 
 
 /// Called by the application to terminate the scheduler and network.
 void
 hpx_shutdown(int code) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_shutdown");
+#endif
   // do an asynchronous broadcast of shutdown requests
   network_set_shutdown_src(here->network, here->rank);
   hpx_bcast(locality_shutdown, &here->rank, sizeof(here->rank), HPX_NULL);
   hpx_thread_exit(code);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_shutdown");
+#endif
 }
 
 
@@ -239,11 +274,18 @@ hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void
 hpx_abort(void) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_abort");
+#endif
+
 #ifdef LIBHPX_DBG_WAIT_ON_ABORT
   dbg_wait();
 #endif
   assert(here->boot);
   boot_abort(here->boot);
   abort();
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_abort");
+#endif
 }
 

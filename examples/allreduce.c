@@ -28,7 +28,8 @@ static hpx_action_t allreduce = 0;
 static T
 sum(T count, T values[count]) {
   T total = 0;
-  for (int i = 0; i < count; ++i, total += values[i])
+  int i;
+  for (i = 0; i < count; ++i, total += values[i])
     ;
   return total;
 }
@@ -55,8 +56,8 @@ action_allreduce(void *unused) {
   void      *addrs[num_ranks];
   int        sizes[num_ranks];
   hpx_addr_t futures[num_ranks];
-
-  for (int i = 0; i < num_ranks; ++i) {
+  int i;
+  for (i = 0; i < num_ranks; ++i) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(T);
     futures[i] = hpx_lco_future_new(sizeof(T));
@@ -67,7 +68,7 @@ action_allreduce(void *unused) {
 
   value = sum(num_ranks, values);
 
-  for (int i = 0; i < num_ranks; ++i) {
+  for (i = 0; i < num_ranks; ++i) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
     hpx_call(HPX_THERE(i), set_value, &value, sizeof(value), futures[i]);
@@ -75,7 +76,7 @@ action_allreduce(void *unused) {
 
   hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
 
-  for (int i = 0; i < num_ranks; ++i)
+  for (i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
 
   hpx_shutdown(HPX_SUCCESS);

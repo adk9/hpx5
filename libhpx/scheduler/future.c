@@ -28,6 +28,11 @@
 #include "lco.h"
 #include "cvar.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 /// Local future interface.
 /// @{
 typedef struct {
@@ -70,6 +75,9 @@ static void _future_fini(lco_t *lco) {
 /// Copies @p from into the appropriate location.
 static void _future_set(lco_t *lco, int size, const void *from)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_set");
+#endif
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
 
@@ -84,6 +92,10 @@ static void _future_set(lco_t *lco, int size, const void *from)
 
  unlock:
   lco_unlock(&f->lco);
+
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_set");
+#endif
 }
 
 void lco_future_set(lco_t *lco, int size, const void *from) {
@@ -100,6 +112,10 @@ static void _future_error(lco_t *lco, hpx_status_t code) {
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_get");
+#endif
+
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
   hpx_status_t status = _wait(f);
@@ -108,6 +124,10 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
     memcpy(out, &f->value, size);
 
   lco_unlock(&f->lco);
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_get");
+#endif
+
   return status;
 }
 
@@ -159,7 +179,8 @@ static int _future_block_init_handler(uint32_t *args) {
     return HPX_RESEND;
 
   // sequentially initialize each future
-  for (uint32_t i = 0; i < nfutures; ++i)
+  uint32_t i;
+  for (i = 0; i < nfutures; ++i)
     _future_init((_future_t*)(base + i * size), size);
 
   hpx_gas_unpin(target);
@@ -174,15 +195,26 @@ static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
 
 
 hpx_addr_t hpx_lco_future_new(int size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_new");
+#endif 
   _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
   assert(local);
   _future_init(local, size);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_future_new");
+#endif
+
   return lva_to_gva(local);
 }
 
 
 // Allocate a global array of futures.
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_future_array_new");
+#endif
+
   // perform the global allocation
   uint32_t       blocks = ceil_div_32(n, futures_per_block);
   uint32_t future_bytes = sizeof(_future_t) + size;
@@ -193,14 +225,17 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   uint32_t args[] = { size, futures_per_block };
 
   hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (int i = 0; i < blocks; ++i) {
+  int i;
+  for (i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
     int e = hpx_call(there, _block_init, args, sizeof(args), and);
     dbg_check(e, "call of _block_init failed\n");
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
-
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_future_array_new");
+#endif
   // return the base address of the allocation
   return base;
 }

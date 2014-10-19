@@ -61,7 +61,8 @@ void cr_bitmap_delete(bitmap_t *b) {
     return;
 
   // delete all pages
-  for (int i = 0; i < _bitmap_num_pages; ++i) {
+  int i;
+  for (i = 0; i < _bitmap_num_pages; ++i) {
     _bitmap_page_t p = sync_load(&b[i].page, SYNC_ACQUIRE);
     if (p)
       free((void*)p);

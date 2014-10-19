@@ -29,6 +29,10 @@
 #include "cvar.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 /// Local gencount interface.
 /// @{
@@ -58,7 +62,8 @@ static void _gencount_error(lco_t *lco, hpx_status_t code) {
   _gencount_t *gen = (_gencount_t *)lco;
   lco_lock(&gen->lco);
 
-  for (unsigned i = 0, e = gen->ninplace; i < e; ++i)
+  unsigned i, e;
+  for (i = 0, e = gen->ninplace; i < e; ++i)
     scheduler_signal_error(&gen->inplace[i], code);
   scheduler_signal_error(&gen->oflow, code);
 
@@ -68,6 +73,9 @@ static void _gencount_error(lco_t *lco, hpx_status_t code) {
 
 /// Set is equivalent to incrementing the generation count
 static void _gencount_set(lco_t *lco, int size, const void *from) {
+#ifdef ENABLE_TAU
+          TAU_START("gencount_set");
+#endif
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
   unsigned long gen = gencnt->gen++;
@@ -78,16 +86,25 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
     scheduler_signal_all(cvar);
   }
   lco_unlock(&gencnt->lco);
+#ifdef ENABLE_TAU
+          TAU_STOP("gencount_set");
+#endif
 }
 
 
 /// Get returns the current generation, it does not block.
 static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
+#ifdef ENABLE_TAU
+          TAU_START("gencount_get");
+#endif
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
   if (size)
     memcpy(out, &gencnt->gen, size);
   lco_unlock(&gencnt->lco);
+#ifdef ENABLE_TAU
+          TAU_STOP("gencount_get");
+#endif
   return HPX_SUCCESS;
 }
 
@@ -140,7 +157,8 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;
-  for (unsigned long i = 0, e = ninplace; i < e; ++i)
+  unsigned long i, e; 
+  for (i = 0, e = ninplace; i < e; ++i)
     cvar_reset(&gencnt->inplace[i]);
 }
 
@@ -156,24 +174,42 @@ static HPX_CONSTRUCTOR void _initialize_actions(void) {
 
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_gencount_new");
+#endif
   _gencount_t *cnt = libhpx_global_malloc(sizeof(*cnt) +
                                           ninplace * sizeof(cvar_t));
   assert(cnt);
   _gencount_init(cnt, ninplace);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_gencount_new");
+#endif
   return lva_to_gva(cnt);
 }
 
 void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_gencount_inc");
+#endif
   hpx_lco_set(gencnt, 0, NULL, HPX_NULL, rsync);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_gencount_inc");
+#endif
 }
 
 
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_gencount_wait");
+#endif
   _gencount_t *local;
   if (!hpx_gas_try_pin(gencnt, (void**)&local))
     return hpx_call_sync(gencnt, _gencount_wait_gen_action, &gen, gen, NULL, 0);
 
   hpx_status_t status = _gencount_wait_gen(local, gen);
   hpx_gas_unpin(gencnt);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_gencount_wait");
+#endif
   return status;
 }

@@ -18,7 +18,7 @@
 #include <sys/time.h>
 #include "hpx/hpx.h"
 
-static int counts[24] = {
+static int counts[18] = {
   1,
   2,
   3,
@@ -36,13 +36,7 @@ static int counts[24] = {
   25000,
   50000,
   75000,
-  100000,
-  125000,
-  500000,
-  1000000,
-  2000000,
-  3000000,
-  4000000
+  100000
 };
 
 static hpx_action_t _main     = 0;
@@ -62,10 +56,10 @@ static int _main_action(int *args) {
 
   hpx_time_t tick = hpx_time_now();
   printf(" Tick: %g\n", hpx_time_us(tick));
-
-  for (int i = 0, e = args[0]; i < e; ++i) {
+  int i, j, e, k;
+  for (i = 0, e = args[0]; i < e; ++i) {
     double *buf = malloc(sizeof(double)*counts[i]);
-    for (int j=0;j<counts[i];++j)
+    for (j=0;j<counts[i];++j)
       buf[j] = j*rand();
 
     printf("%d, %d: ", i, counts[i]);
@@ -74,14 +68,14 @@ static int _main_action(int *args) {
     // for completing the entire loop
     hpx_addr_t done = hpx_lco_and_new(avg);
 
-    for (int k=0; k<avg; ++k) {
+    for (k=0; k<avg; ++k) {
       // set up the asynchronous send
       hpx_addr_t send = hpx_lco_future_new(0);
       hpx_call_async(HPX_HERE, _receiver, buf, sizeof(double)*counts[i], send, HPX_NULL);
 
       // do the useless work
       double volatile d = 0.;
-      for (int i = 0, e = args[1]; i < e; ++i)
+      for (i = 0, e = args[1]; i < e; ++i)
         d += 1./(2.*i+1.);
 
       // and wait for the most recent send to complete
@@ -148,7 +142,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  if (args[0] > 24) {
+  if (args[0] > 18) {
     usage(stderr);
     return -1;
   }

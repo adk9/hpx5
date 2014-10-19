@@ -1,6 +1,8 @@
 # LT Utility libraries
 noinst_LTLIBRARIES	  = libboot.la
 
+CC=tau_cc.sh
+
 # libboot files and flags
 libboot_la_CPPFLAGS = -I$(top_srcdir)/include
 libboot_la_CFLAGS   =

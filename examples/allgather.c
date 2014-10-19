@@ -135,8 +135,8 @@ allgather_main_action(const main_args_t *args)
   // Call the allgather function here.
   hpx_addr_t newdt = hpx_lco_allgather_new(args->nDoms, sizeof(double));
 
-
-  for (int i = 0, e = args->nDoms; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = args->nDoms; i < e; ++i) {
     InitArgs init = {
       .index = i,
       .nDoms = args->nDoms,
@@ -154,7 +154,7 @@ allgather_main_action(const main_args_t *args)
   fflush(stdout);
 
   const unsigned long epoch = 0;
-  for (int i = 0, e = args->nDoms; i < e; ++i) {
+  for (i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
   }

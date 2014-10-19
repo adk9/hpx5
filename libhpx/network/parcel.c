@@ -36,6 +36,11 @@
 #include "libhpx/scheduler.h"
 #include "padding.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static const uintptr_t _INPLACE_MASK = 0x1;
 static const uintptr_t   _STATE_MASK = 0x1;
 static const size_t _SMALL_THRESHOLD = HPX_PAGE_SIZE;
@@ -47,30 +52,60 @@ static size_t _max(size_t lhs, size_t rhs) {
 }
 
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_set_action");
+#endif
   p->action = action;
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_set_action");
+#endif
 }
 
 
 void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_set_target");
+#endif
   p->target = addr;
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_set_target");
+#endif
 }
 
 
 void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_set_cont_action");
+#endif
   p->c_action = action;
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_set_cont_action");
+#endif
 }
 
 
 void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_set_cont_target");
+#endif
   p->c_target = cont;
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_set_cont_target");
+#endif
 }
 
 
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_set_data");
+#endif
   if (size) {
     void *to = hpx_parcel_get_data(p);
     memcpy(to, data, size);
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_set_data");
+#endif
 }
 
 
@@ -134,6 +169,9 @@ hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p) {
 // ----------------------------------------------------------------------------
 hpx_parcel_t *
 hpx_parcel_acquire(const void *buffer, size_t bytes) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_acquire");
+#endif
   // figure out how big a parcel buffer I actually need
   size_t size = sizeof(hpx_parcel_t);
   if (bytes != 0)
@@ -162,7 +200,9 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
     p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
-
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_acquire");
+#endif
   return p;
 }
 
@@ -192,6 +232,9 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 
 void
 hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_send");
+#endif
   bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
   bool small = p->size < _SMALL_THRESHOLD;
 
@@ -205,11 +248,17 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   hpx_parcel_send_sync(p);
   if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_send");
+#endif
 }
 
 
 void
 hpx_parcel_send_sync(hpx_parcel_t *p) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_send_sync");
+#endif
   // an out-of-place parcel always needs to be serialized, either for a local or
   // remote send---parcels are always allocated with a serialization buffer for
   // this purpose
@@ -251,12 +300,21 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
   // do a network send
   network_tx_enqueue(here->network, p);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_send_sync");
+#endif
 }
 
 
 void
 hpx_parcel_release(hpx_parcel_t *p) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_parcel_release");
+#endif
   libhpx_global_free(p);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_parcel_release");
+#endif
 }
 
 

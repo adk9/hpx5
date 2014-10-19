@@ -81,6 +81,11 @@
 #include "cvar.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static const int _gathering = 0;
 static const int _reading   = 1;
 
@@ -301,9 +306,15 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_allgather_new");
+#endif
   _allgather_t *g = libhpx_global_malloc(sizeof(*g));
   assert(g);
   _allgather_init(g, inputs, size);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_allgather_new");
+#endif
   return lva_to_gva(g);
 }
 

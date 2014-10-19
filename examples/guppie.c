@@ -95,7 +95,8 @@ static int _init_table_action(guppie_config_t *cfg) {
   long r = cfg->tabsize % nranks;
   long blocks = cfg->tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (long b = 0, i = me; b < blocks; ++b, i += nranks)
+  long b, i;
+  for (b = 0, i = me; b < blocks; ++b, i += nranks)
     table_set(cfg->table, i, i, and);
 
   hpx_lco_wait(and);

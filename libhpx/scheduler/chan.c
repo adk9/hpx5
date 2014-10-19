@@ -28,6 +28,10 @@
 #include "cvar.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 /// Local channel interface.
 ///
@@ -307,7 +311,8 @@ _block_init_handler(uint32_t *args)
 
   // sequentially initialize each channel
   uint32_t block_size = args[0];
-  for (uint32_t i = 0; i < block_size; ++i)
+  uint32_t i;
+  for (i = 0; i < block_size; ++i)
     _chan_init(&channels[i]);
 
   hpx_gas_unpin(target);
@@ -345,9 +350,16 @@ _register_actions(void) {
 ///
 /// @returns the global address of the allocated channel
 hpx_addr_t hpx_lco_chan_new(void) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_new");
+#endif
   _chan_t *local = libhpx_global_malloc(sizeof(_chan_t));
   assert(local);
   _chan_init(local);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_new");
+#endif
+
   return lva_to_gva(local);
 }
 
@@ -365,10 +377,17 @@ void
 hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *value,
                           hpx_addr_t lsync)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_send_inorder");
+#endif
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_lco_chan_send(chan, size, value, lsync, rsync);
   hpx_lco_wait(rsync);
   hpx_lco_delete(rsync, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_send_inorder");
+#endif
+
 }
 
 
@@ -407,6 +426,10 @@ hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer)
 hpx_status_t
 hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_try_recv");
+#endif
+
   _chan_t          *c = NULL;
   hpx_status_t status = HPX_SUCCESS;
   if (hpx_gas_try_pin(chan, (void**)&c)) {
@@ -419,6 +442,10 @@ hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
     status = hpx_lco_chan_try_recv(proxy, size, buffer);
     hpx_lco_delete(proxy, HPX_NULL);
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_try_recv");
+#endif
+
   return status;
 }
 
@@ -430,6 +457,10 @@ hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
 hpx_addr_t
 hpx_lco_chan_array_new(int n, int size, int chans_per_block)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_array_new");
+#endif
+
   // perform the global allocation
   uint32_t     blocks   = ceil_div_32(n, chans_per_block);;
   uint32_t chan_bytes   = sizeof(_chan_t) + size;
@@ -440,13 +471,18 @@ hpx_lco_chan_array_new(int n, int size, int chans_per_block)
   uint32_t args[] = { size, chans_per_block };
 
   hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (int i = 0; i < blocks; ++i) {
+  int i;
+  for (i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
     int e = hpx_call(there, _block_init_action, args, sizeof(args), and);
     dbg_check(e, "call of _block_init_action failed\n");
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
+
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_array_new");
+#endif
 
   // return the base address of the allocation
   return base;
@@ -463,9 +499,17 @@ hpx_lco_chan_array_at(hpx_addr_t array, int i, int size, int bsize) {
 
 void
 hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_array_delete");
+#endif
+
   dbg_log_lco("chan: array delete unimplemented");
   if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_array_delete");
+#endif
+
 }
 
 
@@ -473,12 +517,20 @@ hpx_status_t
 hpx_lco_chan_array_select(int n, hpx_addr_t channels[],
                           int *i, int *size, void **out)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_chan_array_select");
+#endif
+
   *i = 0;
   hpx_status_t status = hpx_lco_chan_try_recv(channels[*i], size, out);
   while (status == HPX_LCO_CHAN_EMPTY) {
     *i = (*i + 1) % n;
     status = hpx_lco_chan_try_recv(channels[*i], size, out);
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_chan_array_select");
+#endif
+
   return status;
 }
 

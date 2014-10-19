@@ -28,6 +28,11 @@
 #include "cvar.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 /// Local reduce interface.
 /// @{
 static const int _reducing = 0;
@@ -66,6 +71,11 @@ static void _allreduce_error(lco_t *lco, hpx_status_t code) {
 
 /// Update the reduction, will wait if the phase is reading.
 static void _allreduce_set(lco_t *lco, int size, const void *from) {
+
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_allreduce_set");
+#endif
+
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
@@ -88,6 +98,10 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
     r->phase = _reading;
     scheduler_signal_all(&r->wait);
   }
+
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_allreduce_set");
+#endif
 
   unlock:
    lco_unlock(lco);
@@ -180,8 +194,14 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_commutative_associative_op_t op,
                                  void (*init)(void*, const size_t size))
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_allreduce_new");
+#endif
   _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
   _allreduce_init(r, inputs, outputs, size, op, init);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_allreduce_new");
+#endif
   return lva_to_gva(r);
 }

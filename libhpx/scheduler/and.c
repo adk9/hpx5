@@ -27,6 +27,10 @@
 #include "lco.h"
 #include "cvar.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 /// And LCO class interface.
 /// @{
@@ -105,6 +109,9 @@ static void _and_error(lco_t *lco, hpx_status_t code) {
 
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_and_set");
+#endif
   _and_t *and = (_and_t *)lco;
   intptr_t val = sync_fadd(&and->value, -1, SYNC_ACQ_REL);
 
@@ -119,6 +126,9 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   lco_lock(&and->lco);
   scheduler_signal_all(&and->barrier);
   lco_unlock(&and->lco);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_and_set");
+#endif
 }
 
 static hpx_status_t _and_wait(lco_t *lco) {
@@ -167,16 +177,28 @@ static void _and_init(_and_t *and, intptr_t value) {
 
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_and_new");
+#endif
   _and_t *and = libhpx_global_malloc(sizeof(*and));
   if (!and)
     dbg_error("Could not malloc global memory\n");
 
   _and_init(and, limit);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_and_new");
+#endif
   return lva_to_gva(and);;
 }
 
 
 /// Join the and.
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_and_set");
+#endif
   hpx_lco_set(and, 0, NULL, HPX_NULL, rsync);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_and_set");
+#endif
 }

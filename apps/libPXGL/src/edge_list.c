@@ -12,6 +12,7 @@
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
 
+#define LINE_MAX 2048
 
 static hpx_action_t _put_edge;
 static int _put_edge_action(edge_list_edge_t *e)

@@ -30,6 +30,10 @@
 #include "libhpx/scheduler.h"
 #include "termination.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 typedef struct {
   volatile uint64_t    credit;               // credit balance
@@ -161,6 +165,9 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
 /// Create a new HPX process.
 hpx_addr_t
 hpx_process_new(hpx_addr_t termination) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_process_new");
+#endif
   if (termination == HPX_NULL)
     return HPX_NULL;
   _process_t *p;
@@ -170,6 +177,9 @@ hpx_process_new(hpx_addr_t termination) {
   }
   _init(p, termination);
   hpx_gas_unpin(process);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_process_new");
+#endif
   return process;
 }
 
@@ -193,6 +203,9 @@ hpx_process_getpid(hpx_addr_t process) {
 int
 hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_process_call");
+#endif
   hpx_parcel_t *p;
 
   if (process == HPX_NULL)
@@ -216,6 +229,9 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
   }
 
   hpx_parcel_send_sync(p);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_process_call");
+#endif
   return HPX_SUCCESS;
 }
 
@@ -225,10 +241,17 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
 /// ----------------------------------------------------------------------------
 void
 hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_process_delete");
+#endif
   if (process == HPX_NULL)
     return;
 
   hpx_call_sync(process, _delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
+
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_process_delete");
+#endif
 }
 

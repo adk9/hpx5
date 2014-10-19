@@ -25,6 +25,11 @@
 #include "libhpx/parcel.h"
 #include "lco.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
@@ -248,6 +253,9 @@ void
 hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
             hpx_addr_t rsync)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_set");
+#endif
   lco_t *lco = NULL;
   if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
@@ -260,6 +268,9 @@ hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_set");
+#endif
 }
 
 
@@ -323,7 +334,8 @@ hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
-  for (int i = 0; i < n; ++i) {
+  int i;
+  for (i = 0; i < n; ++i) {
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
@@ -335,7 +347,8 @@ hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
   // local translation for it) we use the local get operation, otherwise we wait
   // for the completion of the remote proxy.
   int errors = 0;
-  for (int i = 0; i < n; ++i) {
+  
+  for (i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
       const lco_class_t *lco = _lco_class(locals[i]);
@@ -359,6 +372,9 @@ int
 hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                 hpx_status_t statuses[])
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_get_all");
+#endif
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
@@ -368,7 +384,8 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote get. This
   // two-phase approach achieves some parallelism.
-  for (int i = 0; i < n; ++i) {
+  int i;
+  for (i = 0; i < n; ++i) {
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
@@ -381,7 +398,7 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // local translation for it) we use the local get operation, otherwise we wait
   // for the completion of the remote proxy.
   int errors = 0;
-  for (int i = 0; i < n; ++i) {
+  for (i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
       const lco_class_t *lco = _lco_class(locals[i]);
@@ -397,5 +414,8 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     if (statuses)
       statuses[i] = status;
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_get_all");
+#endif
   return errors;
 }

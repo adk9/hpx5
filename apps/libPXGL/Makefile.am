@@ -18,6 +18,7 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
 		       src/dimacs.c \
 		       src/gteps.c \
 		       src/statistics.c		
+CC = tau_cc.sh
 
 libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include
 libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la -lm

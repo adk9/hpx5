@@ -24,7 +24,10 @@
 #include "libhpx/scheduler.h"
 #include "hpx/hpx.h"
 
-
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 typedef struct {
   hpx_for_action_t f;
@@ -36,7 +39,8 @@ typedef struct {
 static int
 _par_for_async_action(par_for_async_args_t *args)
 {
-  for (int i = args->min, e = args->max; i < e; ++i)
+  int i, e;
+  for (i = args->min, e = args->max; i < e; ++i)
     args->f(i, args->args);
   return HPX_SUCCESS;
 }
@@ -46,6 +50,10 @@ static hpx_action_t _par_for_async = 0;
 int
 hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, hpx_addr_t sync)
 {
+ #ifdef ENABLE_TAU
+          TAU_START("hpx_par_for");
+  #endif
+
   assert(max - min > 0);
 
   // get the number of scheduler threads
@@ -56,7 +64,8 @@ hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, 
   int r = n % nworkers;
 
   int base = min;
-  for (int i = 0, e = nworkers; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = nworkers; i < e; ++i) {
     par_for_async_args_t *a = malloc(sizeof(*a));
     a->f = f;
     a->min = base;
@@ -68,6 +77,9 @@ hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, 
     if (e)
       return e;
   }
+  #ifdef ENABLE_TAU
+          TAU_STOP("hpx_par_for");
+  #endif
 
   return HPX_SUCCESS;
 }
@@ -75,6 +87,9 @@ hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, 
 int
 hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *args)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_par_for_sync");
+#endif
   assert(max - min > 0);
   // HACK
   int nworkers = here->sched->n_workers;
@@ -83,6 +98,9 @@ hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *a
   if (!e)
     e = hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_par_for_sync");
+#endif
   return e;
 }
 
@@ -130,6 +148,9 @@ hpx_par_call(hpx_action_t action, const int min, const int max,
             const size_t env_size, const void *env,
             hpx_addr_t sync)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_par_call");
+#endif
   assert(max - min > 0);
   assert(branching_factor > 1);
   assert(cutoff > 0);
@@ -153,7 +174,8 @@ hpx_par_call(hpx_action_t action, const int min, const int max,
     args->sync = sync;
     memcpy(&args->env, env, env_size);
 
-    for (int i = 0, e = branching_factor; i < e; ++i) {
+   int i, e;
+    for (i = 0, e = branching_factor; i < e; ++i) {
       int e = hpx_call(HPX_HERE, _par_call_async, args, sizeof(*args) + env_size,
                        HPX_NULL);
       if (e)
@@ -169,7 +191,8 @@ hpx_par_call(hpx_action_t action, const int min, const int max,
   }
   else {
     // otherwise we're in the cutoff region, do the actions sequentially
-    for (int i = min, e = max; i < e; ++i) {
+    int i, e;
+    for (i = min, e = max; i < e; ++i) {
       hpx_parcel_t *p = hpx_parcel_acquire(NULL, arg_size);
       hpx_parcel_set_action(p, action);
       hpx_parcel_set_cont_action(p, hpx_lco_set_action);
@@ -179,7 +202,9 @@ hpx_par_call(hpx_action_t action, const int min, const int max,
       hpx_parcel_send(p, HPX_NULL);
     }
   }
-
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_par_call");
+#endif
   return HPX_SUCCESS;
 }
 
@@ -192,6 +217,9 @@ hpx_par_call_sync(hpx_action_t action,
                  void (*arg_init)(void*, const int, const void*),
                  const size_t env_size, const void *env)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_par_call_sync");
+#endif
   assert(max - min > 0);
   hpx_addr_t sync = hpx_lco_and_new(max - min);
   int e = hpx_par_call(action, min, max, branching_factor, cutoff, arg_size,
@@ -199,5 +227,8 @@ hpx_par_call_sync(hpx_action_t action,
   if (!e)
     e = hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_par_call_sync");
+#endif
   return e;
 }

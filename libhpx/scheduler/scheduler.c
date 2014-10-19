@@ -28,11 +28,18 @@
 #include "thread.h"
 #include "worker.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 scheduler_t *
 scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
               bool stats)
 {
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler_new", "", TAU_DEFAULT);
+#endif
   scheduler_t *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("scheduler: could not allocate a scheduler.\n");
@@ -70,6 +77,10 @@ void scheduler_delete(scheduler_t *sched) {
   if (!sched)
     return;
 
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler delete", "", TAU_DEFAULT);
+#endif
+
 #ifdef HPX_PROFILE_STACKS
   printf("High water mark for stacks was %lu\n", sched->stats.max_stacks);
 #endif
@@ -84,18 +95,24 @@ void scheduler_delete(scheduler_t *sched) {
 }
 
 int scheduler_startup(scheduler_t *sched) {
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler startup", "", TAU_DEFAULT);
+#endif
+
   // start all of the other worker threads
-  for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = sched->n_workers - 1; i < e; ++i) {
     if (worker_start(sched) == 0)
       continue;
 
     dbg_error("scheduler: could not start worker %d.\n", i);
-
-    for (int j = 0; j < i; ++j)
+    int j;
+    for (j = 0; j < i; ++j)
       worker_cancel(sched->workers[j]);
 
-    for (int j = 0; j < i; ++j)
-      worker_join(sched->workers[j]);
+    int k;
+    for (k = 0; k < i; ++k)
+      worker_join(sched->workers[k]);
 
     return HPX_ERROR;
   }
@@ -108,16 +125,24 @@ int scheduler_startup(scheduler_t *sched) {
 
 
 void scheduler_shutdown(scheduler_t *sched) {
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler_shutdown", "", TAU_DEFAULT);
+#endif
   // signal all of the shutdown requests
-  for (int i = 0; i < sched->n_workers; ++i)
+  int i;
+  for (i = 0; i < sched->n_workers; ++i)
     worker_shutdown(sched->workers[i]);
 }
 
 
 void scheduler_join(scheduler_t *sched) {
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler_join", "", TAU_DEFAULT);
+#endif
   int me = hpx_get_my_thread_id();
   // wait for the workers to shutdown
-  for (int i = 0; i < sched->n_workers; ++i) {
+  int i;
+  for (i = 0; i < sched->n_workers; ++i) {
     if (i == me)
       continue;
     worker_join(sched->workers[i]);
@@ -131,7 +156,11 @@ void scheduler_join(scheduler_t *sched) {
 /// since we have no way to know if they are in async-safe functions that we
 /// need during cleanup (e.g., holding the malloc lock).
 void scheduler_abort(scheduler_t *sched) {
-  for (int i = 0, e = sched->n_workers; i < e; ++i)
+#ifdef ENABLE_TAU
+  TAU_PROFILE("scheduler_abort", "", TAU_DEFAULT);
+#endif
+  int i, e;
+  for (i = 0, e = sched->n_workers; i < e; ++i)
     worker_cancel(sched->workers[i]);
 }
 

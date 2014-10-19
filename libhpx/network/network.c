@@ -36,6 +36,12 @@
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
 
+
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 #define _QUEUE(pre, post) pre##two_lock_queue##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
 #define _QUEUE_T _QUEUE(, _t)
@@ -101,6 +107,11 @@ hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
 /// requests, and a freelist for request. There's also a shutdown flag that is
 /// set asynchronously and tested in the progress loop.
 network_class_t *network_new(void) {
+
+#ifdef ENABLE_TAU
+          TAU_START("network_new");
+#endif
+
   network_class_t *n = malloc(sizeof(*n));
   if (!n) {
     dbg_error("network: failed to allocate a network.\n");
@@ -118,11 +129,19 @@ network_class_t *network_new(void) {
   }
 
   network_set_shutdown_src(n, UINT32_MAX);
+
+#ifdef ENABLE_TAU
+          TAU_STOP("network_new");
+#endif
+
   return n;
 }
 
 
 void network_delete(network_class_t *network) {
+#ifdef ENABLE_TAU
+          TAU_START("network_delete");
+#endif
   if (!network)
     return;
 
@@ -140,11 +159,20 @@ void network_delete(network_class_t *network) {
     routing_delete(network->routing);
 
   free(network);
+#ifdef ENABLE_TAU
+          TAU_STOP("network_delete");
+#endif
 }
 
 
 void network_barrier(network_class_t *network) {
+#ifdef ENABLE_TAU
+          TAU_START("network_barrier");
+#endif
   transport_barrier(here->transport);
+#ifdef ENABLE_TAU
+          TAU_STOP("network_barrier");
+#endif
 }
 
 

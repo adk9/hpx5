@@ -4,7 +4,9 @@ bench_PROGRAMS    = netbench
 
 netbench_SOURCES  = netbench.c
 
-AM_CPPFLAGS        = -I$(top_srcdir)/include
+CC = tau_cc.sh
+
+AM_CPPFLAGS        = -I/u/jayaajay/tau-2.23.2b3/include  -I$(top_srcdir)/include
 AM_CFLAGS          =
 AM_LDFLAGS         = -static $(top_builddir)/libhpx/libhpx.la
 

@@ -46,6 +46,11 @@
 #include "termination.h"
 #include "worker.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -152,8 +157,11 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
-
 static void _bind(hpx_parcel_t *p) {
+static hpx_parcel_t *_bind(hpx_parcel_t *p) {
+#ifdef ENABLE_TAU
+          TAU_START("thread_bind");
+#endif
   assert(!parcel_get_stack(p));
 #ifdef HPX_PROFILE_STACKS
   unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
@@ -167,6 +175,9 @@ static void _bind(hpx_parcel_t *p) {
 #endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
+#ifdef ENABLE_TAU
+          TAU_STOP("thread_bind");
+#endif
 }
 
 
@@ -204,6 +215,7 @@ static hpx_parcel_t *_steal(void) {
   else {
     self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
   } //
+
 
   return p;
 }
@@ -297,6 +309,9 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
+#ifdef ENABLE_TAU
+          TAU_START("thread_schedule");
+#endif
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
   int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
@@ -355,6 +370,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     _backoff();
 
   p = hpx_parcel_acquire(NULL, 0);
+
+#ifdef ENABLE_TAU
+          TAU_STOP("thread_schedule");
+#endif
 
   // lazy stack binding
  exit:
@@ -459,14 +478,26 @@ void *worker_run(scheduler_t *sched) {
 }
 
 int worker_start(scheduler_t *sched) {
+#ifdef ENABLE_TAU
+          TAU_START("worker_thread_create");
+#endif
   pthread_t thread;
   int e = pthread_create(&thread, NULL, (void* (*)(void*))worker_run, sched);
+#ifdef ENABLE_TAU
+          TAU_STOP("worker_thread_create");
+#endif
   return (e) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 
 void worker_shutdown(worker_t *worker) {
+#ifdef ENABLE_TAU
+          TAU_START("worker_thread_shutdown");
+#endif
   sync_store(&worker->shutdown, 1, SYNC_RELEASE);
+#ifdef ENABLE_TAU
+          TAU_STOP("worker_thread_shutdown");
+#endif
 }
 
 
@@ -480,18 +511,30 @@ void worker_join(worker_t *worker) {
 
 
 void worker_cancel(worker_t *worker) {
+#ifdef ENABLE_TAU
+          TAU_START("worker_thread_cancel");
+#endif
   if (worker && pthread_cancel(worker->thread))
     dbg_error("worker: cannot cancel worker thread %d.\n", worker->id);
+#ifdef ENABLE_TAU
+          TAU_STOP("worker_thread_cancel");
+#endif
 }
 
 
 /// Spawn a user-level thread.
 void scheduler_spawn(hpx_parcel_t *p) {
+#ifdef ENABLE_TAU
+          TAU_START("scheduler_spawn");
+#endif
   assert(self.id >= 0);
   assert(p);
   assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
   profile_ctr(self.stats.spawns++);
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
+#ifdef ENABLE_TAU
+          TAU_STOP("scheduler_spawn");
+#endif
 }
 
 
@@ -525,9 +568,7 @@ static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 void scheduler_yield(void) {
-  // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self.current;
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
@@ -542,7 +583,13 @@ void scheduler_yield(void) {
 
 
 void hpx_thread_yield(void) {
+#ifdef ENABLE_TAU
+          TAU_START("scheduler_yield");
+#endif
   scheduler_yield();
+#ifdef ENABLE_TAU
+          TAU_STOP("scheduler_yield");
+#endif
 }
 
 
@@ -582,15 +629,48 @@ static inline void _resume(ustack_t *thread) {
 }
 
 void scheduler_signal(cvar_t *cvar) {
+#ifdef ENABLE_TAU
+          TAU_START("scheduler_signal");
+#endif
   ustack_t *thread = cvar_pop_thread(cvar);
+<<<<<<< HEAD
   if (thread)
     _resume(thread);
+=======
+  if (!thread)
+    return;
+
+  if (thread->wait_affinity != self.id)
+    _send_mail(thread->wait_affinity, thread->parcel);
+  else
+    sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
+#ifdef ENABLE_TAU
+          TAU_STOP("scheduler_signal");
+#endif
+>>>>>>> tau instrumentation of sssp
 }
 
 
 void scheduler_signal_all(struct cvar *cvar) {
+<<<<<<< HEAD
   for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
     _resume(thread);
+=======
+#ifdef ENABLE_TAU
+          TAU_START("scheduler_signal_all");
+#endif
+  ustack_t *thread = cvar_pop_all(cvar);
+  while (thread) {
+    if (thread->wait_affinity != self.id)
+      _send_mail(thread->wait_affinity, thread->parcel);
+    else
+      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
+    thread = thread->next;
+  }
+#ifdef ENABLE_TAU
+          TAU_STOP("scheduler_signal_all");
+#endif
+>>>>>>> tau instrumentation of sssp
 }
 
 
@@ -623,6 +703,7 @@ static void _call_continuation(hpx_addr_t target, hpx_action_t action,
 static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
                                    const void *value,
                                    void (*cleanup)(void*), void *env) {
+
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
@@ -654,17 +735,32 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
 
 
 void hpx_thread_continue(size_t size, const void *value) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_thread_continue");
+#endif
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_thread_continue");
+#endif
 }
 
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_thread_continue_cleanup");
+#endif
   _continue(HPX_SUCCESS, size, value, cleanup, env);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_thread_continue_cleanup");
+#endif
 }
 
 
 void hpx_thread_exit(int status) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_thread_exit");
+#endif
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
       unlikely(status == HPX_ERROR)) {
     hpx_parcel_t *parcel = self.current;
@@ -691,6 +787,9 @@ void hpx_thread_exit(int status) {
 
   dbg_error("worker: unexpected status %d.\n", status);
   hpx_abort();
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_thread_exit");
+#endif
 }
 
 

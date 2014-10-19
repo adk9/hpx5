@@ -1,6 +1,8 @@
 # LT Utility libraries
 noinst_LTLIBRARIES	= libgas.la
 
+CC=tau_cc.sh
+
 # libgas files and flags
 libgas_la_CPPFLAGS = -I$(top_srcdir)/include
 libgas_la_SOURCES  = hpx_gas_glue.c \

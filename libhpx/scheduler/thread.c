@@ -30,6 +30,11 @@
 #include <libhpx/debug.h>
 #include "thread.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 #define _DEFAULT_PAGES 4
 
 static int _thread_size = 0;

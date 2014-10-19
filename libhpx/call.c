@@ -24,6 +24,11 @@
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static hpx_action_t _bcast = 0;
 
 
@@ -36,7 +41,8 @@ typedef struct {
 static int _bcast_action(_bcast_args_t *args) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
-  for (int i = 0, e = here->ranks; i < e; ++i)
+  int i, e;
+  for (i = 0, e = here->ranks; i < e; ++i)
     hpx_call(HPX_THERE(i), args->action, args->data, len, and);
 
   hpx_lco_wait(and);
@@ -57,12 +63,22 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                            const void *args, size_t len,
                            hpx_addr_t c_target, hpx_action_t c_action)
 {
+/*
+#ifdef ENABLE_TAU
+          TAU_START("hpx_call_with_continuation");
+#endif
+*/
   hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
                                   hpx_thread_current_pid(), true);
   if (!p)
     return dbg_error("rpc: failed to create parcel.\n");
 
   hpx_parcel_send_sync(p);
+/*
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_call_with_continuation");
+#endif
+*/
   return HPX_SUCCESS;
 }
 
@@ -81,10 +97,20 @@ hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
               const void *args, size_t alen,
               void *out, size_t olen)
 {
+/*
+#ifdef ENABLE_TAU
+          TAU_START("hpx_call_sync");
+#endif
+*/
   hpx_addr_t result = hpx_lco_future_new(olen);
   hpx_call(addr, action, args, alen, result);
   int status = hpx_lco_get(result, olen, out);
   hpx_lco_delete(result, HPX_NULL);
+/*
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_call_sync");
+#endif
+*/
   return status;
 }
 
@@ -94,6 +120,11 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                const void *args, size_t len,
                hpx_addr_t args_reuse, hpx_addr_t result)
 {
+/*
+#ifdef ENABLE_TAU
+          TAU_START("hpx_call_async");
+#endif
+*/
   hpx_parcel_t *p =
       parcel_create(addr, action, args, len, result, hpx_lco_set_action,
                     hpx_thread_current_pid(), false);
@@ -101,6 +132,11 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
     return dbg_error("rpc: failed to create parcel.\n");
 
   hpx_parcel_send(p, args_reuse);
+/*
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_call_async");
+#endif
+*/
   return HPX_SUCCESS;
 }
 
@@ -108,6 +144,12 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
 /// Encapsulates a RPC called on all available localities.
 int
 hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
+
+/*
+#ifdef ENABLE_TAU
+          TAU_START("hpx_bcast");
+#endif
+*/  
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, _bcast);
@@ -119,5 +161,10 @@ hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
   memcpy(&args->data, data, len);
 
   hpx_parcel_send_sync(p);
+/*
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_bcast");
+#endif
+*/
   return HPX_SUCCESS;
 }

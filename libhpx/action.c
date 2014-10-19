@@ -17,6 +17,11 @@
 #include "libhpx/action.h"
 #include "uthash.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 typedef struct {
   void *f;
   const char *key;
@@ -68,5 +73,8 @@ const char *action_get_key(hpx_action_t id) {
 
 hpx_action_t
 hpx_register_action(const char *id, hpx_action_handler_t func) {
+#ifdef ENABLE_TAU
+    TAU_PROFILE("hpx_register_action", "", TAU_DEFAULT);
+#endif
   return action_register(id, func);
 }

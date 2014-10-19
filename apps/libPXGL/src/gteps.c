@@ -57,7 +57,8 @@ int gteps_calculate_action(const uint64_t *const num_vertices) {
   // since we know how we have allocated the index block array, we
   // compute the block size here from the number of vertices.
   uint32_t block_size = ((*num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
-  for (int i = 0; i < *num_vertices; ++i) {
+  int i;
+  for (i = 0; i < *num_vertices; ++i) {
     const hpx_addr_t vertex_index = hpx_addr_add(adj_list, i * sizeof(hpx_addr_t), block_size);
     hpx_call(vertex_index, _gteps_visit_vertex, &calculate_lco, sizeof(calculate_lco), HPX_NULL);
   }

@@ -79,7 +79,8 @@ int hpx_main_action(void *args) {
   //  hpx_addr_t lco = hpx_lco_gencount_new(num_sizes);
   hpx_addr_t lco;
   printf("size\tS_time_ms\tavg_time_ms\tmsgs/s\tbytes/s\n");
-  for (int i = 0; i < num_sizes; i++) {
+  int i, j;
+  for (i = 0; i < num_sizes; i++) {
     size_t actual_size = sizes[i];
     if (sizeof(echo_args_t) > sizes[i])
       actual_size = sizeof(echo_args_t);
@@ -87,7 +88,7 @@ int hpx_main_action(void *args) {
     lco = hpx_lco_and_new(iterations);
     //lco = hpx_lco_gencount_new(iterations);
     hpx_time_t time_start = hpx_time_now();
-    for (int j = 0; j < iterations; j++) {
+    for (j = 0; j < iterations; j++) {
       send_ping(lco, 0, 1, actual_size);  
       if (yield_iterations > 0 && j % yield_iterations)
 	hpx_thread_yield();

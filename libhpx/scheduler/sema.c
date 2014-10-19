@@ -24,6 +24,11 @@
 #include "lco.h"
 #include "cvar.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 /// ----------------------------------------------------------------------------
 /// Local semaphore interface.
 /// ----------------------------------------------------------------------------
@@ -131,9 +136,17 @@ _sema_init(_sema_t *sema, unsigned count)
 hpx_addr_t
 hpx_lco_sema_new(unsigned count)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_sema_new");
+#endif
+
   _sema_t *local = libhpx_global_malloc(sizeof(*local));;
+
   assert(local);
   _sema_init(local, count);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_sema_new");
+#endif
   return lva_to_gva(local);
 }
 
@@ -164,5 +177,11 @@ hpx_lco_sema_p(hpx_addr_t sema)
 void
 hpx_lco_sema_v(hpx_addr_t sema)
 {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_lco_sema_v");
+#endif
   hpx_lco_set(sema, 0, NULL, HPX_NULL, HPX_NULL);
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_lco_sema_v");
+#endif
 }

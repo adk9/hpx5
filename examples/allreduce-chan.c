@@ -55,7 +55,8 @@ static int _main_action(void *args) {
   // initialize persistent threads---one per locality.
   hpx_addr_t channels = hpx_lco_chan_array_new(HPX_LOCALITIES, 1, 1);
   hpx_addr_t and = hpx_lco_and_new(ranks-1);
-  for (int k=0; k<ranks; ++k) {
+  int k;
+  for (k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, k, 1, 1);
     hpx_call(rank, _allreduce, &channels, sizeof(channels), and);
@@ -66,7 +67,7 @@ static int _main_action(void *args) {
   // receive from each rank.
   double *buf;
   double accum = 0;
-  for (int k=0; k<ranks; ++k) {
+  for (k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, HPX_LOCALITY_ID, 1, 1);
     hpx_lco_chan_recv(rank, NULL, (void**)&buf);
@@ -76,7 +77,7 @@ static int _main_action(void *args) {
 
   printf("root %d allreduce value %f. (ranks = %d)\n", HPX_LOCALITY_ID, accum, ranks);
 
-  for (int k=0; k<ranks; ++k) {
+  for (k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, k, 1, 1);
     hpx_lco_chan_send(rank, sizeof(accum), &accum, HPX_NULL, HPX_NULL);

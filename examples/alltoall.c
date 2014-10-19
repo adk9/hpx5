@@ -98,7 +98,8 @@ _advanceDomain_action(const unsigned long *epoch)
   // Compute my gnewdt, and then start the alltoall
   int gnewdt[domain->nDoms];
   //printf("Input rank = %d : ", domain->rank);
-  for (int k=0; k < domain->nDoms; k++) {
+  int k;
+  for (k=0; k < domain->nDoms; k++) {
     gnewdt[k] = (k+1) + domain->rank * domain->nDoms;
     //printf(" %d ", gnewdt[k]);
   }
@@ -112,7 +113,8 @@ _advanceDomain_action(const unsigned long *epoch)
   hpx_lco_alltoall_getid(domain->newdt, domain->rank, sizeof(newdt), &newdt);
 
   printf("TEST Cycle %d rank %d newdt = ", domain->cycle, domain->rank);
-  for(int i=0; i < domain->nDoms; i++)
+  int i;
+  for(i=0; i < domain->nDoms; i++)
      printf(" %d ", newdt[i]);
   printf("\n");
 
@@ -137,7 +139,8 @@ alltoall_main_action(const main_args_t *args)
   // Call the alltoall function here.
   hpx_addr_t newdt = hpx_lco_alltoall_new(args->nDoms, args->nDoms * sizeof(int));
 
-  for (int i = 0, e = args->nDoms; i < e; ++i) {
+  int i,e;
+  for (i = 0, e = args->nDoms; i < e; ++i) {
     InitArgs init = {
       .index = i,
       .nDoms = args->nDoms,
@@ -155,7 +158,7 @@ alltoall_main_action(const main_args_t *args)
   fflush(stdout);
 
   const unsigned long epoch = 0;
-  for (int i = 0, e = args->nDoms; i < e; ++i) {
+  for (i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
   }

@@ -314,7 +314,8 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
   if (hpx_get_my_rank() != 0)
     return HPX_ERROR;
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks());
-  for (int i = 0; i < hpx_get_num_ranks(); i++)
+  int i;
+  for (i = 0; i < hpx_get_num_ranks(); i++)
     hpx_call(HPX_THERE(i), _initialize_netfutures, &ag, sizeof(hpx_addr_t), done);
   hpx_lco_wait(done);
   return HPX_SUCCESS;
@@ -447,7 +448,8 @@ int _update_table(hpx_netfuture_t *f) {
 int _add_futures(hpx_netfuture_t *f) {
     hpx_netfuture_t fi = hpx_lco_netfuture_at(*f, hpx_get_my_rank());
     //    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
-  for (int i = 0; i < _netfutures_at_rank(f); i ++) {
+  int i;
+  for (i = 0; i < _netfutures_at_rank(f); i ++) {
     _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
     _future_init(nf, f->size, false);
     dbg_printf("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
@@ -493,7 +495,8 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
   _table_unlock();
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
-  for (int i = 1; i < hpx_get_num_ranks(); i++)
+  int i;
+  for (i = 1; i < hpx_get_num_ranks(); i++)
     hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
 
   hpx_lco_wait(done);

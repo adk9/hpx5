@@ -21,7 +21,16 @@
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static boot_class_t *_default(void) {
+#ifdef ENABLE_TAU
+          TAU_START("boot_new");
+#endif
+
 #ifdef HAVE_PMI
   return boot_new_pmi();
 #endif
@@ -72,6 +81,9 @@ boot_class_t *boot_new(hpx_boot_t type) {
   if (!boot) {
     dbg_error("boot: failed to initialize the bootstrapper.\n");
   }
+#ifdef ENABLE_TAU
+          TAU_STOP("boot_new");
+#endif
   return boot;
 }
 

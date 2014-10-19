@@ -9,6 +9,10 @@
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 
+#ifdef ENABLE_TAU
+#include <TAU.h>
+#endif
+
 /// SSSP Chaotic-relaxation
 
 /// Termination detection counts
@@ -123,7 +127,10 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     return HPX_RESEND;
 
   // printf("Distance Action on %" PRIu64 "\n", target);
-
+#ifdef ENABLE_TAU
+          TAU_START("SSSP_update_vertex");
+#endif
+ 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     const uint64_t num_edges = vertex->num_edges;
     const uint64_t old_distance = args->distance;
@@ -143,6 +150,10 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
       hpx_call(index, _sssp_visit_vertex, args, sizeof(*args), 
                get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL);
     }
+#ifdef ENABLE_TAU
+          TAU_STOP("SSSP_update_vertex");
+#endif
+ 
 
     hpx_gas_unpin(target);
     // printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);

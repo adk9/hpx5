@@ -38,7 +38,6 @@ static void _usage(FILE *stream) {
   fflush(stream);
 }
 
-
 static hpx_action_t _print_vertex_distance;
 static int _print_vertex_distance_action(int *i)
 {
@@ -179,7 +178,8 @@ static int _main_action(_sssp_args_t *args) {
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
   }
 
-  for (int i = 0; i < args->nproblems; ++i) {
+  int i;
+  for (i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
       printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
       args->nproblems = i;
@@ -220,9 +220,10 @@ static int _main_action(_sssp_args_t *args) {
 #ifdef VERBOSE
     // Action to print the distances of each vertex from the source
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
-    for (int i = 0; i < el.num_vertices; ++i) {
-      hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), _index_array_block_size);
-      hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
+    int k;
+    for (k = 0; k < el.num_vertices; ++k) {
+      hpx_addr_t index = hpx_addr_add(sargs.graph, k * sizeof(hpx_addr_t), _index_array_block_size);
+      hpx_call(index, _print_vertex_distance_index, &k, sizeof(k), vertices);
     }
     hpx_lco_wait(vertices);
     hpx_lco_delete(vertices, HPX_NULL);
@@ -283,20 +284,23 @@ static int _main_action(_sssp_args_t *args) {
 
 #ifdef VERBOSE
   printf("\nElapsed time\n");
-  for(int i = 0; i < args->nproblems; i++)
-    printf("%f\n", elapsed_time[i]);
+  int t;
+  for(t = 0; t < args->nproblems; t++)
+    printf("%f\n", elapsed_time[t]);
 
   printf("\nEdges traversed\n");
-  for(int i = 0; i < args->nproblems; i++)
-    printf("%zu\n", edge_traversed[i]);
+  int s;
+  for(s = 0; s < args->nproblems; s++)
+    printf("%zu\n", edge_traversed[s]);
 #endif
 
   printf("\nTEPS statistics:\n");
   double *tm = (double*)malloc(sizeof(double)*args->nproblems);
   double *stats = (double*)malloc(sizeof(double)*9);
 
-  for(int i = 0; i < args->nproblems; i++)
-    tm[i] = edge_traversed[i]/elapsed_time[i];
+  int m;
+  for(m = 0; m < args->nproblems; m++)
+    tm[m] = edge_traversed[m]/elapsed_time[m];
 
   statistics (stats, tm, args->nproblems);
   PRINT_STATS("TEPS", 1);

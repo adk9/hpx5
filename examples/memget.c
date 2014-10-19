@@ -47,8 +47,8 @@ static int _init_array_action(size_t *args) {
   char *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
-
-  for(int i = 0; i < n; i++)
+  int i;
+  for(i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
   HPX_THREAD_CONTINUE(local);
 }
@@ -73,17 +73,17 @@ static int _main_action(void *args) {
   fprintf(stdout, "# [ pairs: %d ]\n", size/2);
   fprintf(stdout, "%-*s%*s\n", 10, "# Size", FIELD_WIDTH, "Latency (us)");
   fflush(stdout);
-
-  for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
+  size_t k;
+  for (k = 1; k <= MAX_MSG_SIZE; k*=2) {
     char *local;
 
     hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, _init_array, &size, sizeof(size), rfut);
-    hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
+    hpx_call(remote, _init_array, &k, sizeof(k), rfut);
+    hpx_call_sync(data, _init_array, &k, sizeof(k), &local, sizeof(local));
     hpx_lco_wait(rfut);
     hpx_lco_delete(rfut, HPX_NULL);
 
-    if (size > LARGE_MESSAGE_SIZE) {
+    if (k > LARGE_MESSAGE_SIZE) {
       loop = LOOP_LARGE;
       skip = SKIP_LARGE;
     }
@@ -93,7 +93,7 @@ static int _main_action(void *args) {
         wtime(&t_start);
 
       hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_gas_memcpy(data, remote, size, done);
+      hpx_gas_memcpy(data, remote, k, done);
       hpx_lco_wait(done);
       hpx_lco_delete(done, HPX_NULL);
     }
@@ -101,7 +101,7 @@ static int _main_action(void *args) {
     wtime(&t_end);
 
     double latency = (t_end - t_start)/(1.0 * loop);
-    fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
+    fprintf(stdout, "%-*lu%*.*f\n", 10, k, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }

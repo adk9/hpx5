@@ -22,7 +22,7 @@
 /// @file examples/sendrecv-chan.c
 /// ----------------------------------------------------------------------------
 
-#define LIMIT 24
+#define LIMIT 18
 
 static int counts[LIMIT] = {
   1,
@@ -42,13 +42,7 @@ static int counts[LIMIT] = {
   25000,
   50000,
   75000,
-  100000,
-  125000,
-  500000,
-  1000000,
-  2000000,
-  3000000,
-  4000000
+  100000
 };
 
 static hpx_action_t _main     = 0;
@@ -60,8 +54,8 @@ static int _worker_action(int *args) {
   double volatile d = 0.;
 
   hpx_thread_set_affinity(1);
-
-  for (int i=0;i<delay;++i) {
+  int i;
+  for (i=0;i<delay;++i) {
     d += 1./(2.*i+1.);
   }
 
@@ -73,9 +67,9 @@ static int _receiver_action(hpx_addr_t *args) {
   int avg = 10000;
 
   hpx_thread_set_affinity(1);
-
-  for (int i=0;i<LIMIT;++i) {
-    for (int k=0;k<avg;k++) {
+  int i, k;
+  for (i=0;i<LIMIT;++i) {
+    for (k=0;k<avg;k++) {
       hpx_addr_t done = hpx_lco_future_new(0);
       // 10.6 microseconds
       // int delay = 1000;
@@ -106,16 +100,16 @@ static int _main_action(void *args) {
   hpx_addr_t chan = hpx_lco_chan_new();
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_call(HPX_HERE, _receiver, &chan, sizeof(chan), done);
-
-  for (int i=0;i<LIMIT;++i) {
+  int i, j, k;
+  for (i=0;i<LIMIT;++i) {
     double *buf = (double *) malloc(sizeof(double)*counts[i]);
-    for (int j=0;j<counts[i];++j)
+    for (j=0;j<counts[i];++j)
       buf[j] = j*rand();
 
     hpx_time_t t1 = hpx_time_now();
     hpx_addr_t sfut = hpx_lco_and_new(avg);
     // sfut just controls local completion, these sends may occur out-of-order
-    for (int k=0; k<avg; ++k)
+    for (k=0; k<avg; ++k)
       hpx_lco_chan_send(chan, sizeof(double)*counts[i], buf, sfut, HPX_NULL);
     hpx_lco_wait(sfut);
     hpx_lco_delete(sfut, HPX_NULL);

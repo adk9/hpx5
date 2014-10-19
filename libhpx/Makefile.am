@@ -3,6 +3,8 @@
 ####################
 SUBDIRS = system util boot gas transport network scheduler
 
+CC=tau_cc.sh
+
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
 

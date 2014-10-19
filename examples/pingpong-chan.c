@@ -40,14 +40,16 @@ static int _pinger_action(hpx_addr_t *chans) {
   int _loop = loop;
   int _skip = skip;
   hpx_thread_set_affinity(0);
-  for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
+  size_t size;
+  for (size = 1; size <= MAX_MSG_SIZE; size*=2) {
     if (size > LARGE_MESSAGE_SIZE) {
       _loop = LOOP_LARGE;
       _skip = SKIP_LARGE;
     }
 
     hpx_time_t start;
-    for (int i = 0; i < _loop + _skip; i++) {
+    int i;
+    for (i = 0; i < _loop + _skip; i++) {
       if(i == skip)
         start = hpx_time_now();
 
@@ -69,13 +71,15 @@ static int _ponger_action(hpx_addr_t *chans) {
   int _loop = loop;
   int _skip = skip;
   hpx_thread_set_affinity(1);
-  for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
+  size_t size;
+  for (size = 1; size <= MAX_MSG_SIZE; size*=2) {
     if (size > LARGE_MESSAGE_SIZE) {
       _loop = LOOP_LARGE;
       _skip = SKIP_LARGE;
     }
 
-    for (int i = 0; i < _loop + _skip; i++) {
+    int i;
+    for (i = 0; i < _loop + _skip; i++) {
       void *rbuf;
       hpx_lco_chan_recv(chans[0], NULL, &rbuf);
       free(rbuf);

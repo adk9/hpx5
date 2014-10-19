@@ -105,6 +105,13 @@ AC_ARG_ENABLE([profiling],
 AS_IF([test "x$enable_profiling" != xno],
   [AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])])
 
+AC_ARG_ENABLE([tau],
+  [AS_HELP_STRING([--enable-tau],
+                  [Enable tau support @<:@default=no@:>@])],
+  [], [enable_tau=no])
+AS_IF([test "x$enable_tau" != xno],
+  [AC_DEFINE([ENABLE_TAU], [1], [Enable tau support])])
+
 AC_ARG_ENABLE([lengthy-tests],
     [AC_HELP_STRING([--enable-lengthy-tests],
                     [Enable long running tests in the test suite (default: disabled)])])
