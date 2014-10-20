@@ -48,7 +48,7 @@ bitmap_t *bitmap_new(uint32_t nbits)
 
 /// Delete a bitmap that was previously allocated with bitmap_new().
 ///
-/// @param   bitmap The bitmap to free,
+/// @param       bitmap The bitmap to free,
 void bitmap_delete(bitmap_t *bitmap)
   HPX_INTERNAL;
 
@@ -92,13 +92,13 @@ void bitmap_release(bitmap_t *map, uint32_t i, uint32_t nbits)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Determine if a particular bit has been allocated.
+/// Determine if a particular region has been allocated.
 ///
 /// @param          map The bitmap to check.
 /// @param            i The bit offset to check.
 ///
 /// @returns true if the bit is set, false otherwise.
-bool bitmap_is_set(bitmap_t *map, uint32_t bit)
+bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

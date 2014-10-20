@@ -55,7 +55,7 @@ struct transport_class;
 struct bitmap;
 
 typedef struct heap {
-  volatile size_t             csbrk;
+  volatile uint64_t           csbrk;
   size_t            bytes_per_chunk;
   size_t                raw_nchunks;
   size_t                    nchunks;
@@ -130,7 +130,7 @@ int heap_bind_transport(heap_t *heap, struct transport_class *transport)
 /// @param          lva The local virtual address to test.
 ///
 /// @returns TRUE if the @p lva is contained in the global heap.
-bool heap_contains_lva(heap_t *heap, const void *lva)
+bool heap_contains_lva(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -140,7 +140,7 @@ bool heap_contains_lva(heap_t *heap, const void *lva)
 /// @param          lva The local virtual address.
 ///
 /// @returns The absolute offset of the @p lva within the global heap.
-uint64_t heap_lva_to_offset(heap_t *heap, const void *lva)
+uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -150,7 +150,7 @@ uint64_t heap_lva_to_offset(heap_t *heap, const void *lva)
 /// @param       offset The absolute offset within the heap.
 ///
 /// @returns The local virtual address corresponding to the offset.
-void *heap_offset_to_lva(heap_t *heap, uint64_t offset)
+void *heap_offset_to_lva(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -163,7 +163,7 @@ void *heap_offset_to_lva(heap_t *heap, uint64_t offset)
 /// @param       offset The heap-relative offset to check.
 ///
 /// @returns TRUE if the offset is a cyclic offset, FALSE otherwise.
-bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
+bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -173,8 +173,17 @@ bool heap_offset_is_cyclic(heap_t *heap, uint64_t offset)
 /// @param            n The number of blocks per locality to allocate.
 /// @param        bsize The size of the block.
 ///
-/// @returns the base offset of the new allocation---csbrk == heap->nbytes - offset
-size_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
+/// @returns the base offset of the new allocation.
+uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
+/// Get the csbrk.
+///
+/// @param         heap The heap.
+///
+/// @returns The current value of csbrk.
+uint64_t heap_get_csbrk(const heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
