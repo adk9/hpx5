@@ -161,4 +161,13 @@ void *pgas_gva_to_lva(hpx_addr_t gva)
   HPX_INTERNAL;
 
 
+/// Convert a local address into a global virtual address.
+///
+/// @param          gva The global address.
+///
+/// @returns The corresponding local virtual address.
+hpx_addr_t pgas_lva_to_gva(void *lva)
+  HPX_INTERNAL;
+
+
 #endif // LIBHPX_GAS_PGAS_H

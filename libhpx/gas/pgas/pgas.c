@@ -64,7 +64,7 @@ static bool _gva_is_cyclic(hpx_addr_t gva) {
 }
 
 
-static hpx_addr_t _pgas_lva_to_gva(void *lva) {
+hpx_addr_t pgas_lva_to_gva(void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gva(here->rank, offset);
 }
@@ -157,7 +157,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = pgas_global_malloc(bytes);
-  return _pgas_lva_to_gva(lva);
+  return pgas_lva_to_gva(lva);
 }
 
 /// Free a global address.
@@ -283,7 +283,7 @@ static gas_class_t _pgas_vtable = {
   .locality_of   = pgas_gva_to_rank,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
-  .lva_to_gva    = _pgas_lva_to_gva,
+  .lva_to_gva    = pgas_lva_to_gva,
   .gva_to_lva    = pgas_gva_to_lva,
   .there         = _pgas_there,
   .try_pin       = _pgas_try_pin,
