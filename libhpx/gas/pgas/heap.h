@@ -164,6 +164,10 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
+void heap_free_cyclic(heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
 /// Check to see if the given offset is cyclic.
 ///
 /// This will verify that the @p heap_offset is in the heap, out-of-bounds

@@ -300,6 +300,13 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
 }
 
 
+void heap_free_cyclic(heap_t *heap, uint64_t offset) {
+  void *lva = heap_offset_to_lva(heap, offset);
+  int flags = MALLOCX_ARENA(heap->cyclic_arena);
+  libhpx_dallocx(lva, flags);
+}
+
+
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
   if (offset >= heap->nbytes) {
     dbg_log_gas("offset %lu is not in the heap\n", offset);

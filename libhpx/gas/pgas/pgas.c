@@ -176,8 +176,7 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
   }
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
-    dbg_log_gas("global free of cyclic address detected, HPX does not currently "
-                "handle this operation");
+    heap_free_cyclic(global_heap, offset);
   }
   else if (pgas_gva_to_rank(gva) == here->rank) {
     pgas_global_free(pgas_gva_to_lva(offset));
