@@ -32,9 +32,9 @@ hpx_action_t pgas_free = 0;
 /// Internal utility actions for dealing with calloc.
 /// @{
 typedef struct {
-  uint64_t      offset;
-  uint32_t      blocks;
-  uint32_t       bsize;
+  uint64_t offset;
+  uint32_t  bytes;
+  uint32_t  bsize;
 } _calloc_init_args_t;
 
 static hpx_action_t _calloc_init = 0;
@@ -53,30 +53,7 @@ static hpx_action_t _set_csbrk = 0;
 ///
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
-  assert(here->rank == 0);
-
-  // Figure out how many blocks per node that we need, and then allocate that
-  // much cyclic space from the heap.
-  const uint64_t blocks = ceil_div_64(n, here->ranks);
-  const uint64_t offset = heap_csbrk(global_heap, blocks, bsize);
-
-  //  During DEBUG execution we broadcast the csbrk to the system to make sure
-  //  that people can do effective cyclic vs. gas allocations. This isn't
-  //  strictly necessary since the cyclic allocation server is centralized, and
-  //  it adds overhead to do the broadcast.
-
-  /// @todo Maybe this should be our standard behavior? We haven't really made
-  ///       an effort to optimize these operations in any other way, so why
-  ///       worry about the broadcast?
-  ///       Luke
-  DEBUG_IF (true) {
-    const uint64_t csbrk = heap_get_csbrk(global_heap);
-    hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(_set_csbrk, &csbrk, sizeof(offset), sync);
-    hpx_lco_wait(sync);
-    hpx_lco_delete(sync, HPX_NULL);
-  }
-
+  uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
   return pgas_offset_to_gva(here->rank, offset);
 }
 
@@ -97,8 +74,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
 
   // Figure out how many blocks ber node that we need, and then allocate that
   // much cyclic space from the heap.
-  const uint64_t blocks = ceil_div_64(n, here->ranks);
-  const uint64_t offset = heap_csbrk(global_heap, blocks, bsize);
+  uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
 
   // During DEBUG execution we broadcast the csbrk to the system to make sure
   // that people can do effective cyclic vs. gas allocations.
@@ -117,7 +93,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   {
     _calloc_init_args_t args = {
       .offset = offset,
-      .blocks = blocks,
+      .bytes  = n,
       .bsize  = bsize
     };
 
@@ -170,8 +146,9 @@ static int _calloc_init_handler(_calloc_init_args_t *args) {
   //
   // Then compute the gva for each local block, convert it to an lva, and then
   // memset it.
+  uint32_t blocks = ceil_div_64(args->bytes, here->ranks);
   hpx_addr_t gva = pgas_offset_to_gva(here->rank, args->offset);
-  for (int i = 0, e = args->blocks; i < e; ++i) {
+  for (int i = 0, e = blocks; i < e; ++i) {
     void *lva = pgas_gva_to_lva(gva);
     memset(lva, 0, args->bsize);
     // increment the global address by one cycle

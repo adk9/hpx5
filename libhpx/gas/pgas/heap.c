@@ -27,9 +27,96 @@
 #include "../mallctl.h"
 #include "bitmap.h"
 #include "heap.h"
+#include "pgas.h"
 #ifdef CRAY_HUGE_HACK
 #include <hugetlbfs.h>
 #endif
+
+
+static uint32_t _fetch_align_and_add(volatile uint64_t *csbrk, uint32_t bytes,
+                                     uint32_t align) {
+  uint64_t fetch = 0;
+  uint64_t add = 0;
+  do {
+    fetch = sync_load(csbrk, SYNC_ACQUIRE);
+    uint64_t r = (align - (fetch % align)) % align;
+    add   = fetch + r + bytes;
+  } while (!sync_cas(csbrk, fetch, add, SYNC_ACQ_REL, SYNC_RELAXED));
+  return fetch;
+}
+
+
+static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
+{
+  assert(bytes % heap->bytes_per_chunk == 0);
+  assert(align % heap->bytes_per_chunk == 0);
+
+  uint64_t offset = _fetch_align_and_add(&heap->csbrk, bytes, align);
+  return heap_offset_to_lva(heap, offset);
+}
+
+
+static bool _heap_chunk_dalloc_cyclic(heap_t *heap, void *chunk, size_t size) {
+  return true;
+}
+
+
+/// The static chunk allocator callback that we give to jemalloc arenas that
+/// manage the cyclic portion of our global heap.
+///
+/// When the cyclic arena needs to service an allocation request that it does
+/// not currently have enough correctly aligned space to deal with, it will use
+/// this callback, which will get a cyclic chunk from the heap.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allow us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what the @p arena index is useful for---Luke.
+///
+/// @param[in]   size The number of bytes we need to allocate.
+/// @param[in]  align The alignment that is being requested.
+/// @param[out]  zero Set to zero if the chunk is pre-zeroed.
+/// @param[in]  arena The index of the arena making this allocation request.
+///
+/// @returns The base pointer of the newly allocated chunk.
+static void *_chunk_alloc_cyclic(size_t size, size_t align, bool *zero,
+                                 unsigned UNUSED) {
+  if (zero)
+    *zero = false;
+  return _heap_chunk_alloc_cyclic(global_heap, size, align);
+}
+
+
+/// The static chunk de-allocator callback that we give to jemalloc arenas that
+/// manage the cyclic region of our global heap.
+///
+/// When a jemalloc arena wants to de-allocate a previously-allocated chunk for
+/// any reason, it will use its currently configured chunk_dalloc_t callback to
+/// do so. This is typically munmap(), however for memory corresponding to the
+/// global address space we want to return the memory to our heap. This callback
+/// performs that operation.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allows us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what use the @p arena index is---Luke.
+///
+/// @note I do not know what the return value is used for---Luke.
+///
+/// @param   chunk The base address of the chunk to de-allocate, must match an
+///                address returned from _chunk_alloc().
+/// @param    size The number of bytes that were originally requested, must
+///                match the number of bytes provided to the _chunk_alloc()
+///                request associated with @p chunk.
+/// @param   arena The index of the arena making the call to _chunk_dalloc().
+///
+/// @returns UNKNOWN---Luke.
+static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
+  return _heap_chunk_dalloc_cyclic(global_heap, chunk, size);
+}
+
 
 ///
 static bitmap_t *_new_bitmap(size_t nchunks) {
@@ -39,6 +126,7 @@ static bitmap_t *_new_bitmap(size_t nchunks) {
     dbg_error("failed to allocate a bitmap to track free chunks.\n");
   return bitmap;
 }
+
 
 static void *_map_heap(const size_t bytes) {
   const int prot = PROT_READ | PROT_WRITE;
@@ -57,7 +145,8 @@ static void *_map_heap(const size_t bytes) {
   return heap;
 }
 
-int heap_init(heap_t *heap, const size_t size) {
+
+int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   assert(heap);
   assert(size);
 
@@ -89,8 +178,17 @@ int heap_init(heap_t *heap, const size_t size) {
 
   heap->chunks = _new_bitmap(heap->nchunks);
   dbg_log_gas("allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
-  dbg_log_gas("allocated heap.\n");
 
+  if (init_cyclic) {
+    heap->cyclic_arena = mallctl_create_arena(_chunk_alloc_cyclic,
+                                              _chunk_dalloc_cyclic);
+    dbg_log_gas("allocated the arena to manage cyclic allocations.\n");
+  }
+  else {
+    heap->cyclic_arena = UINT_MAX;
+  }
+
+  dbg_log_gas("allocated heap.\n");
   return LIBHPX_OK;
 }
 
@@ -114,6 +212,7 @@ void heap_fini(heap_t *heap) {
 #endif
   }
 }
+
 
 void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
@@ -141,6 +240,7 @@ void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
   return NULL;
 }
 
+
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   const uint64_t offset = (char*)chunk - heap->base;
   assert(offset % heap->bytes_per_chunk == 0);
@@ -153,15 +253,18 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   return true;
 }
 
+
 int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
   heap->transport = transport;
   return transport->pin(transport, heap->base, heap->nbytes);
 }
 
+
 bool heap_contains_lva(const heap_t *heap, const void *lva) {
   const ptrdiff_t d = (char*)lva - heap->base;
   return (0 <= d && d < heap->nbytes);
 }
+
 
 uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
   DEBUG_IF (!heap_contains_lva(heap, lva)) {
@@ -170,6 +273,7 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
   return ((char*)lva - heap->base);
 }
 
+
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
   DEBUG_IF (heap->nbytes < offset) {
     dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
@@ -177,6 +281,24 @@ void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
   return heap->base + offset;
 }
+
+
+uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
+  assert(heap->cyclic_arena < UINT32_MAX);
+
+  // Figure out how many blocks per node that we need, and then allocate that
+  // much cyclic space from the heap.
+  uint64_t blocks = ceil_div_64(n, here->ranks);
+  uint32_t  align = ceil_log2_32(bsize);
+  assert(align < 32);
+  uint32_t padded = 1u << align;
+  int       flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
+  void      *base = libhpx_mallocx(blocks * padded, flags);
+  if (!base)
+    dbg_error("failed cyclic allocation\n");
+  return heap_lva_to_offset(heap, base);
+}
+
 
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
   if (offset >= heap->nbytes) {
@@ -197,19 +319,6 @@ static bool _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
   uint32_t from = offset / heap->bytes_per_chunk;
   uint32_t to = (offset + n) / heap->bytes_per_chunk + 1;
   return bitmap_is_set(heap->chunks, from, to - from);
-}
-
-
-static uint32_t _fetch_align_and_add(volatile uint64_t *csbrk, uint32_t bytes,
-                                     uint32_t align) {
-  uint64_t fetch = 0;
-  uint64_t add = 0;
-  do {
-    fetch = sync_load(csbrk, SYNC_ACQUIRE);
-    uint64_t r = (align - (fetch % align)) % align;
-    add   = fetch + r + bytes;
-  } while (!sync_cas(csbrk, fetch, add, SYNC_ACQ_REL, SYNC_RELAXED));
-  return fetch;
 }
 
 

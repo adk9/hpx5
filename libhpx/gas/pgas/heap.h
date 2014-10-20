@@ -65,16 +65,19 @@ typedef struct heap {
   size_t                 raw_nbytes;
   char                    *raw_base;
   struct transport_class *transport;
+  unsigned             cyclic_arena;
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
 ///
 /// @param         heap The heap pointer to initialize.
 /// @param         size The number of bytes to allocate for the heap.
+/// @param  init_cyclic True if we should initialize support for cyclic
+///                     allocations from this heap object.
 ///
 /// @returns LIBHPX_OK, or LIBHPX_ENOMEM if there is a problem allocating the
 ///          requested heap size.
-int heap_init(heap_t *heap, size_t size)
+int heap_init(heap_t *heap, size_t size, bool init_cyclic)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -92,6 +95,9 @@ void heap_fini(heap_t *heap)
 /// @param         heap The heap object.
 /// @param         size The number of bytes to allocate.
 /// @param        align The alignment required for the chunk.
+///
+/// @returns The address of the base of the allocated chunk, or NULL if we are
+///          out of memory.
 void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
   HPX_INTERNAL;
 
@@ -151,6 +157,10 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
 ///
 /// @returns The local virtual address corresponding to the offset.
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
+uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
