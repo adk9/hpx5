@@ -123,6 +123,7 @@ static void _pgas_unpin(const hpx_addr_t addr) {
   }
 }
 
+
 static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
   if (here->rank == 0)
     return pgas_cyclic_alloc_sync(n, bsize);
@@ -315,7 +316,7 @@ gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
     return NULL;
   }
 
-  int e = heap_init(global_heap, heap_size);
+  int e = heap_init(global_heap, heap_size, (here->rank == 0));
   if (e) {
     dbg_error("pgas: failed to allocate global heap\n");
     free(global_heap);
