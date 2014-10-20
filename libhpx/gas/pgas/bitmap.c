@@ -26,223 +26,192 @@
 #include "libhpx/libhpx.h"
 #include "bitmap.h"
 
+/// We manage bitmaps in the granularity of chunks. In C++ this would be a
+/// template parameter, here, we use a typedef to set up our block size.
+/// @{
+
+/// The block_t is currently a word.
+///
+/// @note We could use vector extensions to do this in the future, if we wanted
+///       to write a best-fit algorithm that might make a difference.
 typedef uintptr_t block_t;
 
-static const block_t   BLOCK_ALL_FREE = UINTPTR_MAX;
-static const uint32_t BYTES_PER_BLOCK = sizeof(block_t);
-static const uint32_t  BITS_PER_BLOCK = sizeof(block_t) * 8;
+/// Constants related to the block type.
+static const block_t BLOCK_ALL_FREE = UINTPTR_MAX;
+static const uint32_t   BLOCK_BYTES = sizeof(block_t);
+static const uint32_t    BLOCK_BITS = sizeof(block_t) * 8;
 
-static inline uint32_t block_clz(block_t b) {
-  assert(b);
-  return clzl(b);
+
+/// Bitwise and between blocks.
+static inline block_t block_and(block_t lhs, block_t rhs) {
+  return (lhs & rhs);
 }
 
-static inline uint32_t block_ctz(block_t b) {
+
+/// Bitwise xor between blocks.
+static inline block_t block_xor(block_t lhs, block_t rhs) {
+  return (lhs ^ rhs);
+}
+
+
+/// Return the 0-based index of the first 1 bit in the block. At least one bit
+/// in @p b must be set.
+///
+/// @code
+/// block_ifs(0001 0001 0001 0000) -> 4
+/// block_ifs(0001 0001 0000 0000) -> 8
+/// @endcode
+static inline uint32_t block_ifs(block_t b) {
   assert(b);
   return ctzl(b);
 }
 
+
+/// Return the 0-based index of the last 1 bit in the block. At least one bit in
+/// @p b must be set.
+///
+/// @code
+/// block_lfs(0001 0001 0001 0000) -> 12
+/// block_lfs(0000 0001 0001 0000) -> 8
+/// @endcode
+static inline uint32_t block_ils(block_t b) {
+  assert(b);
+  return BLOCK_BITS - clzl(b) - 1;
+}
+
+
+/// Count the number of bits set in a block.
 static inline uint32_t block_popcount(block_t b) {
   return popcountl(b);
 }
 
-/// Perform a saturating 32-bit subtraction.
-static inline uint32_t _sat_sub32(uint32_t lhs, uint32_t rhs) {
-  return (lhs < rhs) ? 0 : lhs - rhs;
-}
 
-
-/// Perform a 32-bit minimum operations.
-static inline uint32_t _min32(uint32_t lhs, uint32_t rhs) {
-  return (lhs < rhs) ? lhs : rhs;
-}
-
-
+/// Create a block bitmask of min(@p length, BLOCK_BITS - offset) 1s starting at
+/// @p offset.
+///
+/// @param       offset The index of the least-significant 1 in the resulting
+///                     mask.
+/// @param       length The number of contiguous 1s in the mask.
+///
+/// @returns A constructed mask.
 static inline block_t _create_mask(uint32_t offset, uint32_t length) {
-  // We want to mask set to ones from offset that can either satisfy length, or
-  // goes to the end of the block boundary.
-  //
-  // before: mask == (1111 ... 1111)
-  //  after: mask == (0011 ... 1000) for offset == 3
-  //                                 and length == (BITS_PER_BLOCK - 5)
-  //
-  // rshift: the number of most significant zeros we will initially add
-  //
-  const uint32_t rshift = _sat_sub32(BITS_PER_BLOCK, length);
+  assert(offset < BLOCK_BITS);
 
-  // Shifting BLOCK_ALL_FREE right first creates the maximum length string of
-  // 1s that we might match in this block, then shifting left might push some
-  // of those bits off the end. Regardless, the resulting mask has the correct
-  // bits set
+  // We construct the mask by shifting the BLOCK_ALL_FREE constant right the
+  // number of bits to result in the correct number of 1s, and then
+  // left-shifting that string back up to the offset. If the left-shift happens
+  // to push some bits back off the right end, that's fine and what we expect.
   //
+  uint32_t rshift = (BLOCK_BITS < length) ? 0 : BLOCK_BITS - length;
   return (BLOCK_ALL_FREE >> rshift) << offset;
 }
+/// @}
 
+
+/// The bitmap structure.
+///
+/// The bitmap is fundamentally an array of bits chunked up into blocks combined
+/// with some header data describing the block array and a lock for
+/// concurrency.
+///
+/// @field         lock A single lock to serialize access to the bitmap.
+/// @field          min An index such that there are no free bits < min.
+/// @field          max An index such that there are no free bits >= max.
+/// @field        nbits The number of bits in the bitmap.
+/// @field      nblocks The number of blocks in the block array.
+/// @field       blocks The block array.
+///
 struct bitmap {
   tatas_lock_t      lock;
-  uint32_t     min_block;
+  uint32_t           min;
+  uint32_t           max;
   uint32_t         nbits;
   uint32_t       nblocks;
   block_t       blocks[];
-};
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
-/// Search for a contiguous region of @p n free bits in the @p bits bitmap.
+/// Try to match the range of bits from [@p bit, @p bit + @p nbits).
 ///
-/// This searches in a least-significant to most-significant order,
-/// deterministically finding the lowest fit that matches. It does not worry
-/// about fragmentation.
+/// This will scan the bitmap for @p nbits free bits starting at @p bit. If it
+/// succeeds, it will return @p nbits. It failure mode is controlled by the @p f
+/// parameter. If @p f is _block_ifs(), it will return the number of bits
+/// successfully matched. If @p f is _block_ils(), it will return the number of
+/// bits matched to get to the last failure.
 ///
-/// @param     map The bitmap.
-/// @param   nbits The number of contiguous bits we need to find.
-/// @param   align The alignment requirements for the allocation.
-/// @param   block The block offset into @p bits where the search starts.
-/// @param     bit The bit offset into (@p map)->blocks[(@p b)] where the search
-///                starts.
-/// @param   accum The total number of bits we've already searched.
+/// This @p f customization is an optimization. The caller knows if it's going
+/// to shift the test left or right in the presence of a failure, and the index
+/// of the first failure or last failure can help avoid useless retries,
+/// depending on which way the shift will be.
 ///
-/// @returns The absolute offset where we found a region of free bits.
-static uint32_t _search(bitmap_t *map,
-                        const uint32_t nbits, const uint32_t align,
-                        uint32_t block, uint32_t bit, uint32_t accum) {
+/// @param       blocks The bits we are testing.
+/// @param          bit The base offset.
+/// @param        nbits The number of bits to match.
+/// @param            f On failure, count to the first or last mismatch.
+///
+/// @returns @p nbits for success, customizable for failure (see description).
+static uint32_t _match(const block_t *blocks, uint32_t bit, uint32_t nbits,
+                       uint32_t (*f)(block_t)) {
+  assert(blocks);
+  assert(nbits);
 
-  // make sure that we start with a good alignment
-  const uint32_t r = bit % align;
-  if (r) {
-    // we have a bad alignment, shift the search and restart
-    const uint32_t shift = align - r;
-    block += (bit + shift) / BITS_PER_BLOCK;
-    bit   += (bit + shift) % BITS_PER_BLOCK;
-    accum += shift;
-    assert(bit % align == 0);
-    return _search(map, nbits, align, block, bit, accum);
+  uint32_t  block = bit / BLOCK_BITS;            // block index
+  uint32_t offset = bit % BLOCK_BITS;            // initial offset in block
+  block_t    mask = _create_mask(offset, nbits); // mask to match
+  uint32_t      n = 0;                           // bits processed
+
+  while (n < nbits) {
+    block_t    match = block_and(mask, blocks[block++]);
+    block_t mismatch = block_xor(mask, match);
+    if (mismatch) {
+      // return the number of bits we've matched so far, plus the number of bits
+      // in the current word depending on if the user wants the first or last
+      // mismatch. The trailing block_ifs(mask) deals with mismatches in the
+      // first block only, the mask starts at index 0 for all other blocks.
+      return n + f(mismatch) - block_ifs(mask);
+    }
+
+    // we matched each bit in the mask
+    n += block_popcount(mask);
+    mask = _create_mask(0, nbits - n);
   }
 
-  // scan for enough bits at this location
-  uint32_t remaining = nbits;
-  while (remaining > 0) {
-    const block_t mask = _create_mask(bit, remaining);
-    const block_t bits = mask & map->blocks[block];
-
-    if (bits != mask) {
-      // If we mismatch, restart from the most significant bit of the mismatch,
-      // keeping track of the total number of bits we've searched so far.
-      //
-      //  leading: the number of leading zeros before we get our mismatch
-      //      msm: the index of the most significant mismatch
-      const uint32_t leading = block_clz(mask ^ bits);
-      const uint32_t     msm = BITS_PER_BLOCK - leading;
-
-      // Update the number of accumulated bits we're skipping based on the
-      // number of bits that we've successfully matched in the loop (nbits -
-      // remaining), as well as the number of bits we're skipping in this block
-      // [bit, msm).
-      //
-      accum += (nbits - remaining) + (msm - bit);
-
-      // If the mismatch is in the block's most significant bit, then we need to
-      // roll over into the next block for the restart, otherwise we just leave
-      // the block alone and update the current bit offset to the msm.
-      //
-      block += (leading) ? 0 : 1;
-      bit    = (leading) ? 0 : msm;
-
-      // restart the search
-      return _search(map, nbits, align, block, bit, accum);
-    }
-    else {
-      // update the number of bits remaining to match, along with the current
-      // block index (we're doing this loop per-block), and after the first
-      // block the bit offset should be 0
-      remaining -= block_popcount(bits);
-      ++block;
-      bit = 0;
-    }
-  }
-
-  // found a matching allocation
-  return accum;
+  assert(n == nbits);
+  return n;
 }
 
 
-/// Search for a contiguous region of @p n free bits in the @p bits bitmap.
+/// Scan through the blocks looking for the first free bit.
 ///
-/// This searches in most-significant to least-significant order,
-/// deterministically finding the most-significant match. It does not worry
-/// about fragmentation.
+/// @param       blocks The blocks to scan.
+/// @param          bit The starting bit index.
+/// @param          max The end bit index.
 ///
-/// Ultimately, what we are looking for is min(@p accum) such that (map - accum
-/// == bit), (bit - nbits, bit], and ((bit - nbits) % align == 0).
-///
-/// @param     map The bitmap.
-/// @param   nbits The number of contiguous bits we need to find.
-/// @param   align The alignment requirements for the allocation.
-/// @param   block The block offset into @p bits where the search starts.
-/// @param     bit The bit offset into (@p map)->blocks[(@p b)] where the search
-///                starts.
-/// @param   accum The total number of bits we've already searched.
-///
-/// @returns The absolute offset where we found a region of free bits.
-static uint32_t _rsearch(bitmap_t *map,
-                         const uint32_t nbits, const uint32_t align,
-                         uint32_t block, uint32_t bit, uint32_t accum) {
+/// @returns The first free bit, or max if there are no free bits.
+static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
+  assert(blocks);
+  assert(bit < max);
+  dbg_log_gas("finding the first free bit during allocation\n");
 
-  // If this hole is going to match, then the resulting base offset, (bit -
-  // nbits + 1), needs to be properly aligned.
-  const uint32_t r = (bit - nbits + 1) % align;
-  if (r) {
-    // we have a bad alignment, shift the search and try again
-    block += (bit - r) / BITS_PER_BLOCK;
-    bit   += (bit - r) % BITS_PER_BLOCK;
-    accum += r;
-    assert(bit % align == 0);
-    return _search(map, nbits, align, block, bit, accum);
+  uint32_t  block = bit / BLOCK_BITS;
+  uint32_t offset = bit % BLOCK_BITS;
+  block_t    mask = _create_mask(offset, BLOCK_BITS);
+
+  while (bit < max) {
+    block_t match = block_and(mask, blocks[block++]);
+    if (match) {
+      // For a match in the first block, we need to account for the fact that
+      // the first set bit in mask might not be the 0th bit, so we subtract that
+      // out.
+      return bit + block_ifs(match) - block_ifs(mask);
+    }
+
+    // we matched each bit in the mask
+    bit += block_popcount(mask);
+    mask = BLOCK_ALL_FREE;
   }
 
-  // scan for enough bits at this location
-  uint32_t remaining = nbits;
-  while (remaining > 0) {
-    const block_t mask = _create_mask(bit, remaining);
-    const block_t bits = mask & map->blocks[block];
-
-    if (bits != mask) {
-      // If we mismatch, restart from the most significant bit of the mismatch,
-      // keeping track of the total number of bits we've searched so far.
-      //
-      //  leading: the number of leading zeros before we get our mismatch
-      //      msm: the index of the most significant mismatch
-      const uint32_t leading = block_clz(mask ^ bits);
-      const uint32_t     msm = BITS_PER_BLOCK - leading;
-
-      // Update the number of accumulated bits we're skipping based on the
-      // number of bits that we've successfully matched in the loop (nbits -
-      // remaining), as well as the number of bits we're skipping in this block
-      // [bit, msm).
-      //
-      accum += (nbits - remaining) + (msm - bit);
-
-      // If the mismatch is in the block's most significant bit, then we need to
-      // roll over into the next block for the restart, otherwise we just leave
-      // the block alone and update the current bit offset to the msm.
-      //
-      block += (leading) ? 0 : 1;
-      bit    = (leading) ? 0 : msm;
-
-      // restart the search
-      return _search(map, nbits, align, block, bit, accum);
-    }
-    else {
-      // update the number of bits remaining to match, along with the current
-      // block index (we're doing this loop per-block), and after the first
-      // block the bit offset should be 0
-      remaining -= block_popcount(bits);
-      ++block;
-      bit = 0;
-    }
-  }
-
-  // found a matching allocation
-  return accum;
+  return max;
 }
 
 
@@ -251,31 +220,28 @@ static uint32_t _rsearch(bitmap_t *map,
 /// @param          map The bitmap we're updating.
 /// @param            i The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're setting.
-static void _set(bitmap_t *map, uint32_t i, uint32_t nbits) {
-  uint32_t block = i / BITS_PER_BLOCK;
-  uint32_t   bit = i % BITS_PER_BLOCK;
+static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
+  assert(blocks);
+  assert(nbits);
+
+  uint32_t  block = bit / BLOCK_BITS;
+  uint32_t offset = bit % BLOCK_BITS;
+  block_t    mask = _create_mask(offset, nbits);
 
   while (nbits > 0) {
-    // ok to read naked because we're holding the lock and thus ordered with all
-    // other writers
-    const block_t  val = map->blocks[block];
-    const block_t mask = _create_mask(bit, nbits);
-
     //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 0 0 1
+    //
+    // synchronized write so that it can be read non-blockingly in is_set, not a
+    // release though since we're holding a lock
+    block_t val = sync_load(&blocks[block], SYNC_RELAXED);
+    sync_store(&blocks[block++], val & ~mask, SYNC_RELAXED);
 
-    // synchronized write so that it can be read non-blockingly in is_set, the
-    // write doesn't have to serve as a releasing write though, it just needs to
-    // not race w.r.t. the read in is_set, so we use relaxed ordering
-    sync_store(&map->blocks[block], val & ~mask, SYNC_RELAXED);
-
-    // decrement the number of bits left to deal with, move to the next block,
-    // and reset the bit offset to the first bit in the next block (always safe)
+    // we set each bit in the mask
     nbits -= block_popcount(mask);
-    ++block;
-    bit = 0;
+    mask = _create_mask(0, nbits);
   }
 }
 
@@ -285,47 +251,78 @@ static void _set(bitmap_t *map, uint32_t i, uint32_t nbits) {
 /// @param          map The bitmap we're updating.
 /// @param            i The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're clearing.
-static void _clear(bitmap_t *map, uint32_t i, uint32_t nbits) {
-  uint32_t block = i / BITS_PER_BLOCK;
-  uint32_t   bit = i % BITS_PER_BLOCK;
+static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
+  assert(blocks);
+  assert(nbits);
+
+  uint32_t  block = bit / BLOCK_BITS;
+  uint32_t offset = bit % BLOCK_BITS;
+  block_t    mask = _create_mask(offset, nbits);
 
   while (nbits > 0) {
-    // ok to read naked because we're holding the lock and thus ordered with all
-    // other writers
-    const block_t  val = map->blocks[block];
-    const block_t mask = _create_mask(bit, nbits);
-
     //    val   0 0 1 1
     //   mask   0 1 1 0
     //          -------
     // result   0 1 1 1
+    //
+    // synchronized write so that it can be read non-blockingly in is_set, not a
+    // release though since we're holding a lock
+    block_t val = sync_load(&blocks[block], SYNC_RELAXED);
+    sync_store(&blocks[block++], val | mask, SYNC_RELAXED);
 
-
-    // synchronized write so that it can be read non-blockingly in is_set, the
-    // write doesn't have to serve as a releasing write though, it just needs to
-    // not race w.r.t. the read in is_set, so we use relaxed ordering
-    sync_store(&map->blocks[block], val | mask, SYNC_RELAXED);
-
-    // decrement the number of bits left to deal with, move to the next block,
-    // and reset the bit offset to the first bit in the next block (always safe)
+    // we cleared each bit in the mask
     nbits -= block_popcount(mask);
-    ++block;
-    bit = 0;
+    mask = _create_mask(0, nbits);
   }
 }
 
 
+/// Count the number of unused blocks in the bitmap.
+static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
+  uint32_t unused = 0;
+  for (uint32_t i = 0, e = map->nblocks; i < e; ++i)
+    unused += block_popcount(map->blocks[i]);
+
+  uint32_t extra = BLOCK_BITS - (map->nbits % BLOCK_BITS);
+  assert(unused >= extra);
+  return (unused - extra);
+}
+
+
+/// Handle an out-of-memory condition.
+///
+/// @param          map The map that is full.
+/// @param        nbits The request size that triggered the OOM.
+/// @param        align The alignment that triggered the OOM.
+///
+/// @returns LIBHPX_ENOMEM
+static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
+  uint32_t unused = _bitmap_unused_blocks(map);
+  dbg_error("Application ran out of global address space.\n"
+            "\t-%u blocks requested with alignment %u\n"
+            "\t-%u blocks available\n"
+            "This space is used for all global allocation, as well as all\n"
+            "stacks and parcel data. Pathological allocation may introduce\n"
+            "fragmentation leading to unexpected counts above. Try adjusting\n"
+            "your configuration.\n", nbits, align, unused);
+  return LIBHPX_ENOMEM;
+}
+
+
 bitmap_t *bitmap_new(uint32_t nbits) {
-  uint32_t nblocks = ceil_div_32(nbits, BITS_PER_BLOCK);
-  bitmap_t *map = malloc(sizeof(*map) + nblocks * BYTES_PER_BLOCK);
-  if (!map)
+  uint32_t nblocks = ceil_div_32(nbits, BLOCK_BITS);
+  bitmap_t *map = NULL;
+  int e = posix_memalign((void**)&map, HPX_CACHELINE_SIZE,
+                         sizeof(*map) + nblocks * BLOCK_BYTES);
+  if (e)
     dbg_error("failed to allocate a bitmap for %u bits\n", nbits);
 
   sync_tatas_init(&map->lock);
-  map->min_block = 0;
-  map->nbits     = nbits;
-  map->nblocks   = nblocks;
-  memset(&map->blocks, BLOCK_ALL_FREE, nblocks * BYTES_PER_BLOCK);
+  map->min     = 0;
+  map->max     = nbits;
+  map->nbits   = nbits;
+  map->nblocks = nblocks;
+  memset(&map->blocks, BLOCK_ALL_FREE, nblocks * BLOCK_BYTES);
   return map;
 }
 
@@ -337,46 +334,50 @@ void bitmap_delete(bitmap_t *map) {
 
 
 int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
-  dbg_log_gas("searching for %u blocks with %u alignment.\n", nbits, align);
+  dbg_log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
   if (nbits == 0)
     return LIBHPX_EINVAL;
 
+  uint32_t bit;
   sync_tatas_acquire(&map->lock);
+  {
+    // scan for a match, starting with the minimum available bit
+    bit = map->min;
+    while (true) {
+      // only test properly aligned offsets
+      uint32_t r = (align - bit % align) % align;
+      bit = bit + r;
 
-  // Find the first potential bit offset, using the cached min block.
-  const uint32_t    block = map->min_block;
-  const block_t     start = map->blocks[block];
-  const uint32_t      bit = block_ctz(start);
-  const uint32_t relative = _search(map, nbits, align, block, bit, 0);
-  const uint32_t      abs = map->min_block * BITS_PER_BLOCK + bit + relative;
-  const uint32_t      end = abs + nbits;
+      // make sure the match is inbounds
+      if (bit + nbits > map->max)
+        return _bitmap_oom(map, nbits, align);
 
-  assert(abs % align == 0);
-  if (end >= map->nbits) {
-    dbg_error("application ran out of global address space. This space is used\n"
-              "for all global allocation, as well as all stacks and parcel\n"
-              "data. Try adjusting your configuration.\n");
-  }
+      uint32_t matched = _match(map->blocks, bit, nbits, block_ils);
+      if (matched == nbits)
+        break;
 
-  // set the bits
-  _set(map, abs, nbits);
-
-  // update our min block, ensuring the invariant that it always points to a
-  // block with at least one free bit
-  if (relative == 0) {
-    map->min_block = end / BITS_PER_BLOCK;
-    while (!map->blocks[map->min_block]) {
-      ++map->min_block;
-      dbg_log_gas("updated min to %u, for blocks %p.\n", map->min_block,
-                  (void*)map->blocks[map->min_block]);
+      bit = _first_free(map->blocks, bit + matched, map->nbits);
     }
+
+    // make sure we got an aligned match and we didn't run out of memory
+    assert(bit % align == 0);
+    assert(bit + nbits < map->max);
+
+    if (map->min == bit) {
+      uint32_t min = bit + nbits;
+      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, min);
+      map->min = min;
+    }
+
+    _set(map->blocks, bit, nbits);
   }
-
-  // output the absolute total start of the allocation
-  *i = abs;
-
   sync_tatas_release(&map->lock);
-  dbg_log_gas("found at offset %u.\n", abs);
+
+  dbg_log_gas("found at offset %u.\n", bit);
+
+  if (i)
+    *i = bit;
+
   return LIBHPX_OK;
 }
 
@@ -387,89 +388,96 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
   if (nbits == 0)
     return LIBHPX_EINVAL;
 
+  uint32_t bit;
   sync_tatas_acquire(&map->lock);
+  {
+    // scan for a match, starting with the max available bit
+    bit = map->max;
+    uint32_t matched = 0;
 
-  // Figure out the right block to start the search in (a block with at least 1
-  // free bit in it, and not any of the bits that might be "extra" in the last
-  // word when nbits % nwords != 0). We also need to keep track of the number of
-  // bits we skip.
-  const uint32_t r = map->nbits % map->nblocks;
-  block_t     mask = _create_mask(r, BITS_PER_BLOCK - r);
-  uint32_t      bi = map->nblocks;
-  block_t    block = map->blocks[bi] & ~mask;
-  uint32_t   accum = 0;
+    while (matched != nbits) {
+      assert(matched <= nbits);
 
-  while (!block && bi > 0) {
-    accum += block_popcount(mask);
-    mask   = _create_mask(0, BITS_PER_BLOCK);
-    bi     = bi - 1;
-    block  = map->blocks[bi] & ~mask;
+      uint32_t shift = nbits - matched;
+      if (shift > bit)
+        return _bitmap_oom(map, nbits, align);
+
+      bit = bit - shift;
+
+      uint32_t r = bit % align;
+      if (r > bit)
+        return _bitmap_oom(map, nbits, align);
+
+      bit = bit - r;
+
+      if (bit < map->min)
+        return _bitmap_oom(map, nbits, align);
+
+      matched = _match(map->blocks, bit, nbits, block_ifs);
+    }
+
+    // make sure we got an aligned match and we didn't run out of memory
+    assert(bit % align == 0);
+    assert(bit + nbits <= map->max);
+
+    uint32_t max = bit + nbits;
+    if (map->max == max) {
+      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, bit);
+      map->max = bit;
+    }
+
+    _set(map->blocks, bit, nbits);
   }
-
-  if (!block) {
-    dbg_error("Application ran out of global address space during cyclic "
-              "allocation.\n");
-  }
-
-  // perform the actual search starting at the first set bit, and accumulating
-  // the number of additional bits that we need to skip during the pass.
-  const uint32_t bit = BITS_PER_BLOCK - block_clz(block) - 1;
-  accum = _rsearch(map, nbits, align, bi, bit, accum);
-  if (accum > map->nbits) {
-    dbg_error("Application round out of global adddress space. This space is\n"
-              "used for all global allocation, as well as all stacks and\n"
-              "parcel data. Try adjusting your configuration.\n");
-  }
-
-  // Ok, we found a satisfying allocation. Compute the beginning bit index.
-  const uint32_t start = map->nbits - accum;
-  assert(start % align == 0);
-
-  // And the end index so that we can do some error checking.
-  const uint32_t end = start + nbits;
-  if (end >= map->nbits) {
-    dbg_error("application ran out of global address space. This space is used\n"
-              "for all global allocation, as well as all stacks and parcel\n"
-              "data. Try adjusting your configuration.\n");
-  }
-
-  // set the bits
-  _set(map, start, nbits);
-
-  // output the absolute total start of the allocation
-  *i = start;
-
   sync_tatas_release(&map->lock);
-  dbg_log_gas("found at offset %u.\n", start);
+
+  dbg_log_gas("found at offset %u.\n", bit);
+
+  if (i)
+    *i = bit;
+
   return LIBHPX_OK;
 }
 
 
-void bitmap_release(bitmap_t *map, uint32_t i, uint32_t nbits) {
-  dbg_log_gas("release %u blocks at %u.\n", nbits, i);
+void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
+  dbg_log_gas("release %u blocks at %u.\n", nbits, bit);
+
   sync_tatas_acquire(&map->lock);
-  _clear(map, i, nbits);
-  uint32_t min = _min32(map->min_block, i / BITS_PER_BLOCK);
-  if (min != map->min_block)
-    dbg_log_gas("updated min from %u to %u, for block %p.\n",
-                map->min_block, min, (void*)map->blocks[map->min_block]);
-  map->min_block = min;
-  assert(map->blocks[map->min_block]);
+  {
+    _clear(map->blocks, bit, nbits);
+
+    if (bit < map->min) {
+      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, bit);
+      map->min = bit;
+    }
+
+    uint32_t max = bit + nbits;
+    if (max > map->max) {
+      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, max);
+      map->max = max;
+    }
+  }
   sync_tatas_release(&map->lock);
 }
 
 
-bool bitmap_is_set(bitmap_t *map, uint32_t bit) {
-  const uint32_t i = bit / BITS_PER_BLOCK;
-  const uint32_t r = bit % BITS_PER_BLOCK;
-  const block_t block = sync_load(&map->blocks[i], SYNC_RELAXED);
-  const block_t mask = ((block_t)1) << r;
+bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits) {
+  assert(map);
+  assert(bit + nbits <= map->nbits);
 
-  // block:  0 0 1 1     ~block:  1 1 0 0
-  //  mask:  1 0 1 0       mask:  1 0 1 0
-  // -------------
-  //  val  1 0 0 0
+  uint32_t  block = bit / BLOCK_BITS;
+  uint32_t offset = bit % BLOCK_BITS;
+  block_t    mask = _create_mask(offset, nbits);
 
-  const block_t val = ~block & mask;
-  return val != 0;
+  while (nbits) {
+    block_t    match = block_and(mask, map->blocks[block++]);
+    block_t mismatch = block_xor(mask, match);
+    if (mismatch)
+      return true;
+
+    nbits -= block_popcount(mask);
+    mask   = _create_mask(0, nbits);
+  }
+
+  return false;
 }

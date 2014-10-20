@@ -70,8 +70,9 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   ///       worry about the broadcast?
   ///       Luke
   DEBUG_IF (true) {
+    const uint64_t csbrk = heap_get_csbrk(global_heap);
     hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
+    hpx_bcast(_set_csbrk, &csbrk, sizeof(offset), sync);
     hpx_lco_wait(sync);
     hpx_lco_delete(sync, HPX_NULL);
   }
