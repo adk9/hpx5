@@ -28,6 +28,11 @@ uint64_t inactive_count;
 
 //#define VERBOSE 1
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
+
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
           "\t-k, use and-lco-based terminaiton detection\n"
@@ -316,6 +321,9 @@ static int _main_action(_sssp_args_t *args) {
 
 
 int main(int argc, char *argv[argc]) {
+#ifdef ENABLE_TAU
+    TAU_PROFILE("SSSP_main", "", TAU_DEFAULT);
+#endif
   uint64_t time_limit = 1000;
   int realloc_adj_list = 0;
 
