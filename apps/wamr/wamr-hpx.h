@@ -116,6 +116,40 @@ void forward_wavelet_trans(const coll_point_t *point, const char type,
 coll_point_t *get_coll_point(const int index[n_dim],Domain *ld);
 uint64_t morton_key(const int index[n_dim]);
 uint64_t hash(const uint64_t k);
-
+void create_neighboring_point(coll_point_t *essen_point, const double stamp,Domain *ld);
+void create_adap_grids(Domain *ld);
+void advance_time_stamp(coll_point_t *point, const double stamp,
+                        const int gen,Domain *ld); 
+void create_nonessential_point(coll_point_t *nonessen_point,
+                               const int index[n_dim], const double stamp,Domain *ld);
+coll_point_t *add_coll_point(const int index[n_dim], int *flag,Domain *ld);
+int get_level(const int index);
+void deriv_stencil_config(const double stamp,Domain *ld); 
+void deriv_stencil_helper(coll_point_t *point, const int dir, const double stamp,Domain *ld);
+void get_deriv_stencil(coll_point_t *point, const int dir, const double stamp,Domain *ld);
+coll_point_t *get_closest_point(coll_point_t *point, const int dir, const int type,Domain *ld); 
+double get_global_dt(Domain *ld); 
+void global_dt_helper(coll_point_t *point, double *dt,Domain *ld);
+double get_local_dt(const coll_point_t *point,Domain *ld);
+void apply_time_integrator(const double t, const double dt,Domain *ld);
+void rhs_nonessen_stage3(coll_point_t *point, const int gen,Domain *ld);
+void rhs_active_stage3(coll_point_t *point, const int gen,Domain *ld);
+void rhs_nonessen_stage2(coll_point_t *point, const int gen,Domain *ld);
+void rhs_active_stage2(coll_point_t *point, const int gen,Domain *ld);
+void rhs_nonessen_stage1(coll_point_t *point, const int gen,Domain *ld);
+void rhs_active_stage1(coll_point_t *point, const int gen,Domain *ld);
+void compute_rhs(const double t, const int gen,Domain *ld);
+void rk4_helper4(coll_point_t *point, const double dt);
+void rk4_helper3(coll_point_t *point, const double dt);
+void rk4_helper2(coll_point_t *point, const double dt);
+void rk4_helper1(coll_point_t *point, const double dt);
+void integrator_helper(coll_point_t *point, const double dt, void(*func)(coll_point_t *, const double),Domain *ld);
+void rhs_helper(coll_point_t *point, const int gen,
+                void(*func)(coll_point_t *, const int,Domain *ld),Domain *ld);
+void deriv_nonessen_helper2(coll_point_t *point, const int gen,Domain *ld);
+void deriv_nonessen_helper1(coll_point_t *point, const int stage, const int gen,
+                            void(*func)(coll_point_t *, const int,Domain *ld),Domain *ld);
+void stage_reset_helper(coll_point_t *point,Domain *ld);
+double get_deriv(const int ivar, const int dir, const int gen, const int order, coll_point_t *point,Domain *ld);
 
 #endif
