@@ -198,8 +198,31 @@ static int _action_evolve(InitArgs *init) {
 
   // generate initial adaptive grid
   storage_init(ld);
-
   create_full_grids(ld);
+  create_adap_grids(ld);
+  printf("max_level = %d\n", ld->max_level);
+
+  // configure derivative stencil for all active points
+  deriv_stencil_config(ld->t0,ld);
+
+  double t = ld->t0;
+  int count = 0;
+
+  while (count < 1 && t < ld->tf) {
+    double dt = get_global_dt(ld);
+    dt = fmin(dt, ld->tf - t);
+
+    apply_time_integrator(t, dt,ld);
+    
+    // update simulation time stamp. within the time integrator, time step is
+    // updated incremently throughout all the generations. the following for
+    // loop forces the time stamp computed here is exactly the same as computed
+    // inside the time integrator 
+    for (int igen = 0; igen < n_gen; igen++)
+      t += dt / n_gen;
+
+    count++;
+  }
 
   free(ld);
   return HPX_SUCCESS;
