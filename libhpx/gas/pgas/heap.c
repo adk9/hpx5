@@ -33,16 +33,25 @@
 #endif
 
 
-static uint32_t _fetch_align_and_add(volatile uint64_t *csbrk, uint32_t bytes,
+/// This operates as an atomic fetch and add, with the added caveat that the
+/// "fetched" value will be aligned to an @p align alignment.
+///
+/// @param            p The pointer to update.
+/// @param            n The integer to add.
+/// @param        align The alignment we need.
+///
+/// @returns The @p align-aligned fetched value.
+static uint32_t _fetch_align_and_add(volatile uint64_t *p, uint32_t n,
                                      uint32_t align) {
   uint64_t fetch = 0;
   uint64_t add = 0;
   do {
-    fetch = sync_load(csbrk, SYNC_ACQUIRE);
+    fetch = sync_load(p, SYNC_ACQUIRE);
     uint64_t r = (align - (fetch % align)) % align;
-    add   = fetch + r + bytes;
-  } while (!sync_cas(csbrk, fetch, add, SYNC_ACQ_REL, SYNC_RELAXED));
-  return fetch;
+    add = fetch + r;
+  } while (!sync_cas(p, fetch, add + n, SYNC_ACQ_REL, SYNC_RELAXED));
+
+  return add;
 }
 
 
@@ -51,13 +60,28 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(align % heap->bytes_per_chunk == 0);
 
-  uint64_t offset = _fetch_align_and_add(&heap->csbrk, bytes, align);
+  uint64_t   bits = bytes / heap->bytes_per_chunk;
+  uint64_t balign = align / heap->bytes_per_chunk;
+  assert(bits < UINT32_MAX);
+  assert(balign < UINT32_MAX);
+
+  uint32_t bit = 0;
+  if (bitmap_reserve(heap->chunks, bits, balign, &bit))
+    goto oom;
+
+  uint64_t offset = bit * heap->bytes_per_chunk;
+  assert(offset % align == 0);
+  heap_set_csbrk(heap, offset + bytes);
   return heap_offset_to_lva(heap, offset);
+
+ oom:
+  dbg_error("out-of-memory detected\n");
+  return NULL;
 }
 
 
 static bool _heap_chunk_dalloc_cyclic(heap_t *heap, void *chunk, size_t size) {
-  return true;
+  return heap_chunk_dalloc(global_heap, chunk, size);
 }
 
 
@@ -313,12 +337,7 @@ bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
     return false;
   }
 
-  if (HEAP_USE_CYCLIC_CSBRK_BARRIER)
-    return (offset < heap->csbrk);
-
-  // see if the chunk is allocated
-  const uint32_t chunk = offset / heap->bytes_per_chunk;
-  return !bitmap_is_set(heap->chunks, chunk, 1);
+  return (offset < heap->csbrk);
 }
 
 
