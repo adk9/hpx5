@@ -206,22 +206,13 @@ AC_CANONICAL_HOST
 dnl CPU-specific settings.
 CPU_SPINWAIT=""
 case "${host_cpu}" in
-  i[[345]]86)
-	;;
   i686|x86_64)
-	JE_COMPILABLE([pause instruction], [],
-	              [[__asm__ volatile("pause"); return 0;]],
-	              [je_cv_pause])
+	AC_CACHE_VAL([je_cv_pause],
+	  [JE_COMPILABLE([pause instruction], [],
+	                [[__asm__ volatile("pause"); return 0;]],
+	                [je_cv_pause])])
 	if test "x${je_cv_pause}" = "xyes" ; then
 	    CPU_SPINWAIT='__asm__ volatile("pause")'
-	fi
-	dnl emmintrin.h fails to compile unless MMX, SSE, and SSE2 are
-	dnl supported.
-	JE_COMPILABLE([SSE2 intrinsics], [
-#include <emmintrin.h>
-], [], [je_cv_sse2])
-	if test "x${je_cv_sse2}" = "xyes" ; then
-	  AC_DEFINE_UNQUOTED([HAVE_SSE2], [ ])
 	fi
 	;;
   powerpc)
@@ -330,7 +321,7 @@ case "${host}" in
 	fi
 	abi="xcoff"
 	;;
-  *-*-mingw*)
+  *-*-mingw* | *-*-cygwin*)
 	abi="pecoff"
 	force_tls="0"
 	RPATH=""
@@ -793,11 +784,6 @@ fi
 AC_MSG_CHECKING([configured backtracing method])
 AC_MSG_RESULT([$backtrace_method])
 if test "x$enable_prof" = "x1" ; then
-  if test "x${force_tls}" = "x0" ; then
-    AC_MSG_ERROR([Heap profiling requires TLS]);
-  fi
-  force_tls="1"
-
   if test "x$abi" != "xpecoff"; then
     dnl Heap profiling uses the log(3) function.
     LIBS="$LIBS -lm"
@@ -984,8 +970,28 @@ else
   fi
 fi
 
-AC_CACHE_CHECK([STATIC_PAGE_SHIFT],
-               [je_cv_static_page_shift],
+AC_ARG_WITH([lg_tiny_min],
+  [AS_HELP_STRING([--with-lg-tiny-min=<lg-tiny-min>],
+   [Base 2 log of minimum tiny size class to support])],
+  [LG_TINY_MIN="$with_lg_tiny_min"],
+  [LG_TINY_MIN="3"])
+AC_DEFINE_UNQUOTED([LG_TINY_MIN], [$LG_TINY_MIN])
+
+AC_ARG_WITH([lg_quantum],
+  [AS_HELP_STRING([--with-lg-quantum=<lg-quantum>],
+   [Base 2 log of minimum allocation alignment])],
+  [LG_QUANTA="$with_lg_quantum"],
+  [LG_QUANTA="3 4"])
+if test "x$with_lg_quantum" != "x" ; then
+  AC_DEFINE_UNQUOTED([LG_QUANTUM], [$with_lg_quantum])
+fi
+
+AC_ARG_WITH([lg_page],
+  [AS_HELP_STRING([--with-lg-page=<lg-page>], [Base 2 log of system page size])],
+  [LG_PAGE="$with_lg_page"], [LG_PAGE="detect"])
+if test "x$LG_PAGE" == "xdetect"; then
+  AC_CACHE_CHECK([LG_PAGE],
+               [je_cv_lg_page],
                AC_RUN_IFELSE([AC_LANG_PROGRAM(
 [[
 #include <strings.h>
@@ -1021,15 +1027,29 @@ AC_CACHE_CHECK([STATIC_PAGE_SHIFT],
 
     return 0;
 ]])],
-                             [je_cv_static_page_shift=`cat conftest.out`],
-                             [je_cv_static_page_shift=undefined],
-                             [je_cv_static_page_shift=12]))
-
-if test "x$je_cv_static_page_shift" != "xundefined"; then
-   AC_DEFINE_UNQUOTED([STATIC_PAGE_SHIFT], [$je_cv_static_page_shift])
-else
-   AC_MSG_ERROR([cannot determine value for STATIC_PAGE_SHIFT])
+                             [je_cv_lg_page=`cat conftest.out`],
+                             [je_cv_lg_page=undefined],
+                             [je_cv_lg_page=12]))
 fi
+if test "x${je_cv_lg_page}" != "x" ; then
+  LG_PAGE="${je_cv_lg_page}"
+fi
+if test "x${LG_PAGE}" != "xundefined" ; then
+   AC_DEFINE_UNQUOTED([LG_PAGE], [$LG_PAGE])
+else
+   AC_MSG_ERROR([cannot determine value for LG_PAGE])
+fi
+
+AC_ARG_WITH([lg_page_sizes],
+  [AS_HELP_STRING([--with-lg-page-sizes=<lg-page-sizes>],
+   [Base 2 logs of system page sizes to support])],
+  [LG_PAGE_SIZES="$with_lg_page_sizes"], [LG_PAGE_SIZES="$LG_PAGE"])
+
+AC_ARG_WITH([lg_size_class_group],
+  [AS_HELP_STRING([--with-lg-size-class-group=<lg-size-class-group>],
+   [Base 2 log of size classes per doubling])],
+  [LG_SIZE_CLASS_GROUP="$with_lg_size_class_group"],
+  [LG_SIZE_CLASS_GROUP="2"])
 
 dnl ============================================================================
 dnl jemalloc configuration.
@@ -1343,7 +1363,7 @@ if test "x${enable_zone_allocator}" = "x1" ; then
   AC_DEFUN([JE_ZONE_PROGRAM],
     [AC_LANG_PROGRAM(
       [#include <malloc/malloc.h>],
-      [static foo[[sizeof($1) $2 sizeof(void *) * $3 ? 1 : -1]]]
+      [static int foo[[sizeof($1) $2 sizeof(void *) * $3 ? 1 : -1]]]
     )])
 
   AC_COMPILE_IFELSE([JE_ZONE_PROGRAM(malloc_zone_t,==,14)],[JEMALLOC_ZONE_VERSION=3],[
@@ -1397,6 +1417,18 @@ extern void *(* __memalign_hook)(size_t alignment, size_t size);
 ], [je_cv_glibc_memalign_hook])
 if test "x${je_cv_glibc_memalign_hook}" = "xyes" ; then
   AC_DEFINE([JEMALLOC_GLIBC_MEMALIGN_HOOK], [ ])
+fi
+
+JE_COMPILABLE([pthreads adaptive mutexes], [
+#include <pthread.h>
+], [
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+  pthread_mutexattr_destroy(&attr);
+], [je_cv_pthread_mutex_adaptive_np])
+if test "x${je_cv_pthread_mutex_adaptive_np}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP], [ ])
 fi
 
 dnl ============================================================================
@@ -1459,10 +1491,14 @@ AC_CONFIG_COMMANDS([include/jemalloc/internal/public_unnamespace.h], [
 ])
 AC_CONFIG_COMMANDS([include/jemalloc/internal/size_classes.h], [
   mkdir -p "${objroot}include/jemalloc/internal"
-  "${srcdir}/include/jemalloc/internal/size_classes.sh" > "${objroot}include/jemalloc/internal/size_classes.h"
+  "${srcdir}/include/jemalloc/internal/size_classes.sh" "${LG_QUANTA}" ${LG_TINY_MIN} "${LG_PAGE_SIZES}" ${LG_SIZE_CLASS_GROUP} > "${objroot}include/jemalloc/internal/size_classes.h"
 ], [
   srcdir="${srcdir}"
   objroot="${objroot}"
+  LG_QUANTA="${LG_QUANTA}"
+  LG_TINY_MIN=${LG_TINY_MIN}
+  LG_PAGE_SIZES="${LG_PAGE_SIZES}"
+  LG_SIZE_CLASS_GROUP=${LG_SIZE_CLASS_GROUP}
 ])
 AC_CONFIG_COMMANDS([include/jemalloc/jemalloc_protos_jet.h], [
   mkdir -p "${objroot}include/jemalloc"

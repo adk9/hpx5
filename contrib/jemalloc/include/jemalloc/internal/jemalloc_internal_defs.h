@@ -6,8 +6,8 @@
  * public APIs to be prefixed.  This makes it possible, with some care, to use
  * multiple allocators simultaneously.
  */
-#define JEMALLOC_PREFIX "libhpx_"
-#define JEMALLOC_CPREFIX "LIBHPX_"
+#define JEMALLOC_PREFIX "hpx_"
+#define JEMALLOC_CPREFIX "HPX_"
 
 /*
  * JEMALLOC_PRIVATE_NAMESPACE is used as a prefix for all library-private APIs.
@@ -145,8 +145,17 @@
 /* Support lazy locking (avoid locking unless a second thread is launched). */
 /* #undef JEMALLOC_LAZY_LOCK */
 
-/* One page is 2^STATIC_PAGE_SHIFT bytes. */
-#define STATIC_PAGE_SHIFT 12
+/* Minimum size class to support is 2^LG_TINY_MIN bytes. */
+#define LG_TINY_MIN 3
+
+/*
+ * Minimum allocation alignment is 2^LG_QUANTUM bytes (ignoring tiny size
+ * classes).
+ */
+/* #undef LG_QUANTUM */
+
+/* One page is 2^LG_PAGE bytes. */
+#define LG_PAGE 12
 
 /*
  * If defined, use munmap() to unmap freed chunks, rather than storing them for
