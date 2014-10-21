@@ -26,7 +26,8 @@
 /// Furthermore, this file defines a number of inline convenience functions that
 /// wrap common functionality that needs access to the global here object.
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include <jemalloc/jemalloc.h>
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 
@@ -98,47 +99,41 @@ inline static bool lva_is_global(void *addr) {
 /// Allocate global memory using the malloc interface and the global address
 /// space implementation.
 inline static void *global_malloc(size_t bytes) {
-  dbg_assert(here && here->gas && here->gas->global.malloc);
-  return here->gas->global.malloc(bytes);
+  return libhpx_malloc(bytes);
 }
 
 
 /// Free global memory using the global address space implementation.
 inline static void global_free(void *ptr) {
-  dbg_assert(here && here->gas && here->gas->global.free);
-  here->gas->global.free(ptr);
+  libhpx_free(ptr);
 }
 
 
 /// Allocate global memory using the calloc interface and the global address
 /// space implementation.
 inline static void *global_calloc(size_t nmemb, size_t size) {
-  dbg_assert(here && here->gas && here->gas->global.calloc);
-  return here->gas->global.calloc(nmemb, size);
+  return libhpx_calloc(nmemb, size);
 }
 
 
 /// Allocate global memory using the realloc interface and the global address
 /// space implementation.
 inline static void *global_realloc(void *ptr, size_t size) {
-  dbg_assert(here && here->gas && here->gas->global.realloc);
-  return here->gas->global.realloc(ptr, size);
+  return libhpx_realloc(ptr, size);
 }
 
 
 /// Allocate global memory using the valloc interface and the global address
 /// space implementation.
 inline static void *global_valloc(size_t size) {
-  dbg_assert(here && here->gas && here->gas->global.valloc);
-  return here->gas->global.valloc(size);
+  return libhpx_valloc(size);
 }
 
 
 /// Allocate global memory using the memalign interface and the global address
 /// space implementation.
 inline static void *global_memalign(size_t boundary, size_t size) {
-  dbg_assert(here && here->gas && here->gas->global.memalign);
-  return here->gas->global.memalign(boundary, size);
+  return libhpx_memalign(boundary, size);
 }
 
 
@@ -146,80 +141,21 @@ inline static void *global_memalign(size_t boundary, size_t size) {
 /// address space implementation.
 inline static int global_posix_memalign(void **memptr, size_t alignment,
                                         size_t size) {
-  dbg_assert(here && here->gas && here->gas->global.posix_memalign);
-  return here->gas->global.posix_memalign(memptr, alignment, size);
+  return libhpx_posix_memalign(memptr, alignment, size);
 }
 
-
-/// Allocate local memory using the malloc interface and the global address
-/// space implementation.
-inline static void *local_malloc(size_t bytes) {
-  dbg_assert(here && here->gas && here->gas->local.malloc);
-  return here->gas->local.malloc(bytes);
-}
-
-
-/// Fee local memory using the global address space implementation.
-inline static void local_free(void *ptr) {
-  dbg_assert(here && here->gas && here->gas->local.free);
-  here->gas->local.free(ptr);
-}
-
-
-/// Allocate local memory using the calloc interface and the global address
-/// space implementation.
-inline static void *local_calloc(size_t nmemb, size_t size) {
-  dbg_assert(here && here->gas && here->gas->local.calloc);
-  return here->gas->local.calloc(nmemb, size);
-}
-
-/// Allocate local memory using the realloc interface and the global address
-/// space implementation.
-inline static void *local_realloc(void *ptr, size_t size) {
-  dbg_assert(here && here->gas && here->gas->local.realloc);
-  return here->gas->local.realloc(ptr, size);
-}
-
-
-/// Allocate local memory using the valloc interface and the global address
-/// space implementation.
-inline static void *local_valloc(size_t size) {
-  dbg_assert(here && here->gas && here->gas->local.valloc);
-  return here->gas->local.valloc(size);
-}
-
-
-/// Allocate local memory using the memalign interface and the global address
-/// space implementation.
-inline static void *local_memalign(size_t boundary, size_t size) {
-  dbg_assert(here && here->gas && here->gas->local.memalign);
-  return here->gas->local.memalign(boundary, size);
-}
-
-
-/// Allocate local memory using the posix memalign interface and the global
-/// address space implementation.
-inline static int local_posix_memalign(void **memptr, size_t alignment,
-                                        size_t size) {
-  dbg_assert(here && here->gas && here->gas->local.posix_memalign);
-  return here->gas->local.posix_memalign(memptr, alignment, size);
-}
-
-
-/// Convert a local virtual address to a global virtual address using the global
-/// address space.
+/// Translate a local address to a global address. This only works for some
+/// local addresses, so we need to use it carefully.
 inline static hpx_addr_t lva_to_gva(void *lva) {
   dbg_assert(here && here->gas && here->gas->lva_to_gva);
   return here->gas->lva_to_gva(lva);
 }
 
-
-/// Convert a global virtual address to a local virtual address using the global
-/// address space.
+/// Translate a global address to a local address.
 inline static void *gva_to_lva(hpx_addr_t gva) {
   dbg_assert(here && here->gas && here->gas->gva_to_lva);
   return here->gas->gva_to_lva(gva);
 }
-/// @}
+
 
 #endif // LIBHPX_LOCALITY_H

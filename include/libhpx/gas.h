@@ -18,17 +18,6 @@
 struct boot_class;
 struct transport_class;
 
-typedef struct as_class as_class_t;
-struct as_class {
-  void *(*malloc)(size_t bytes);
-  void (*free)(void *ptr);
-  void *(*calloc)(size_t nmemb, size_t size);
-  void *(*realloc)(void *ptr, size_t size);
-  void *(*valloc)(size_t size);
-  void *(*memalign)(size_t boundary, size_t size);
-  int (*posix_memalign)(void **memptr, size_t alignment, size_t size);
-};
-
 /// Generic object oriented interface to the global address space.
 typedef struct gas_class gas_class_t;
 struct gas_class {
@@ -39,10 +28,6 @@ struct gas_class {
   int (*join)(void);
   void (*leave)(void);
   bool (*is_global)(gas_class_t *gas, void *addr);
-
-  //
-  as_class_t global;
-  as_class_t local;
 
   // Dealing with global addresses
   uint32_t (*locality_of)(hpx_addr_t gva);
