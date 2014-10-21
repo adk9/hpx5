@@ -54,6 +54,13 @@ static hpx_action_t _set_csbrk = 0;
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
+
+  uint64_t csbrk = heap_get_csbrk(global_heap);
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_bcast(_set_csbrk, &csbrk, sizeof(csbrk), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+
   return pgas_offset_to_gva(here->rank, offset);
 }
 
@@ -76,32 +83,25 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   // much cyclic space from the heap.
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
 
-  // During DEBUG execution we broadcast the csbrk to the system to make sure
-  // that people can do effective cyclic vs. gas allocations.
-
-  /// @todo We're already broadcasting calloc_init, we should just do it then in
-  ///       a DEBUG_IF() there.
-  ///       Luke
-  DEBUG_IF (true) {
-    hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(_set_csbrk, &offset, sizeof(offset), sync);
-    hpx_lco_wait(sync);
-    hpx_lco_delete(sync, HPX_NULL);
-  }
+  // We broadcast the csbrk to the system to make sure that people can do
+  // effective heap_is_cyclic tests.
+  uint64_t csbrk = heap_get_csbrk(global_heap);
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_bcast(_set_csbrk, &csbrk, sizeof(csbrk), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
 
   // Broadcast the calloc so that each locality can zero the correct memory.
-  {
-    _calloc_init_args_t args = {
-      .offset = offset,
-      .bytes  = n,
-      .bsize  = bsize
-    };
+  _calloc_init_args_t args = {
+    .offset = offset,
+    .bytes  = n,
+    .bsize  = bsize
+  };
 
-    hpx_addr_t sync = hpx_lco_future_new(0);
-    hpx_bcast(_calloc_init, &args, sizeof(args), sync);
-    hpx_lco_wait(sync);
-    hpx_lco_delete(sync, HPX_NULL);
-  }
+  sync = hpx_lco_future_new(0);
+  hpx_bcast(_calloc_init, &args, sizeof(args), sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
 
   return pgas_offset_to_gva(here->rank, offset);
 }
