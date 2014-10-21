@@ -49,9 +49,6 @@
 typedef volatile int atomic_int_t;
 typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
 
-typedef two_lock_queue_t _mailbox_t;
-typedef two_lock_queue_node_t _envelope_t;
-
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -76,9 +73,8 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  _envelope_t    *envelopes;                    // free envelopes
   chase_lev_ws_deque_t work;                    // my work
-  _mailbox_t          inbox;                    // envelopes sent to me
+  two_lock_queue_t    inbox;                    // mail sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 } self = {
@@ -89,36 +85,11 @@ static __thread struct worker {
   .backoff    = 0,
   .sp         = NULL,
   .current    = NULL,
-  .envelopes  = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
   .shutdown   = 0,
   .stats      = SCHEDULER_STATS_INIT
 };
-
-
-/// Enclose a parcel in an envelope so that it can be sent to another worker
-/// using the mailbox functionality.
-static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
-  _envelope_t *envelope = w->envelopes;
-  if (envelope != NULL)
-    w->envelopes = w->envelopes->next;
-  else
-    envelope = malloc(sizeof(*envelope));
-
-  envelope->next  = NULL;
-  envelope->value = p;
-  return envelope;
-}
-
-
-/// Extract a parcel from an envelope.
-static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
-  mail->next = w->envelopes;
-  w->envelopes = mail;
-  return mail->value;
-}
-
 
 /// The entry function for all of the lightweight threads.
 ///
@@ -241,18 +212,16 @@ static hpx_parcel_t *_network(void) {
 
 /// Send a mail message to another worker.
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
-  worker_t    *w = here->sched->workers[id];
-  _envelope_t *letter = _enclose(&self, p);
-  sync_two_lock_queue_enqueue(&(w->inbox), letter);
+  worker_t *w = here->sched->workers[id];
+  sync_two_lock_queue_enqueue(&(w->inbox), p);
 }
 
 
 /// Process my mail queue.
 static void _handle_mail(void) {
-  _envelope_t *letter = NULL;
-  while ((letter = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
+  hpx_parcel_t *p = NULL;
+  while ((p = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
-    hpx_parcel_t *p = _open(&self, letter);
     sync_chase_lev_ws_deque_push(&self.work, p);
   }
 }
