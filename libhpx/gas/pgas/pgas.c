@@ -44,6 +44,102 @@
 ///
 heap_t *global_heap = NULL;
 
+/// Some arena stuff for jemalloc.
+static __thread unsigned _global_arena = UINT_MAX;
+static __thread unsigned _local_arena = UINT_MAX;
+static __thread unsigned _primordial_arena = UINT_MAX;
+
+/// The static chunk allocator callback that we give to jemalloc arenas that
+/// manage our global heap.
+///
+/// When a jemalloc arena needs to service an allocation request that it does
+/// not currently have enough correctly aligned space to deal with, it will use
+/// the its currently configured chunk_alloc_t callback to get more space from
+/// the system. This is typically done using mmap(), however for memory
+/// corresponding to the global address space we want to provide memory from our
+/// pre-registered global heap. This callback performs that operation.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allow us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what the @p arena index is useful for---Luke.
+///
+/// @param[in]   size The number of bytes we need to allocate.
+/// @param[in]  align The alignment that is being requested.
+/// @param[out]  zero Set to zero if the chunk is pre-zeroed.
+/// @param[in]  arena The index of the arena making this allocation request.
+///
+/// @returns The base pointer of the newly allocated chunk.
+static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned UNUSED)
+{
+  if (zero)
+    *zero = false;
+
+  return heap_chunk_alloc(global_heap, size, align);
+}
+
+
+/// The static chunk de-allocator callback that we give to jemalloc arenas that
+/// manage our global heap.
+///
+/// When a jemalloc arena wants to de-allocate a previously-allocated chunk for
+/// any reason, it will use its currently configured chunk_dalloc_t callback to
+/// do so. This is typically munmap(), however for memory corresponding to the
+/// global address space we want to return the memory to our heap. This callback
+/// performs that operation.
+///
+/// @note This callback is only necessary to pick up the global heap pointer,
+///       because the jemalloc callback registration doesn't allows us to
+///       register user data to be passed back to us.
+///
+/// @note I do not know what use the @p arena index is---Luke.
+///
+/// @note I do not know what the return value is used for---Luke.
+///
+/// @param   chunk The base address of the chunk to de-allocate, must match an
+///                address returned from _chunk_alloc().
+/// @param    size The number of bytes that were originally requested, must
+///                match the number of bytes provided to the _chunk_alloc()
+///                request associated with @p chunk.
+/// @param   arena The index of the arena making the call to _chunk_dalloc().
+///
+/// @returns UNKNOWN---Luke.
+static bool _chunk_dalloc(void *chunk, size_t size, unsigned UNUSED) {
+  return heap_chunk_dalloc(global_heap, chunk, size);
+}
+
+
+int pgas_join(void) {
+  if (!global_heap) {
+    dbg_error("pgas: attempt to join GAS before global heap allocation.\n");
+    return LIBHPX_ERROR;
+  }
+
+  if (_global_arena == UINT_MAX)
+    _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
+
+  if (_local_arena == UINT_MAX)
+    _local_arena =  mallctl_create_arena(NULL, NULL);
+
+  mallctl_thread_enable_cache();
+  mallctl_thread_flush_cache();
+  unsigned old = mallctl_thread_set_arena(_global_arena);
+  if (_primordial_arena == UINT_MAX)
+    _primordial_arena = old;
+
+  return LIBHPX_OK;
+}
+
+
+void pgas_leave(void) {
+  if (_local_arena == UINT_MAX || _global_arena == UINT_MAX)
+    dbg_error("pgas: trying to leave the GAS before joining it.\n");
+
+  mallctl_thread_flush_cache();
+  mallctl_thread_set_arena(_local_arena);
+}
+
 
 static void _pgas_delete(gas_class_t *gas) {
   if (global_heap) {
@@ -157,7 +253,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-  void *lva = pgas_global_malloc(bytes);
+  void *lva = libhpx_malloc(bytes);
   return pgas_lva_to_gva(lva);
 }
 
@@ -179,7 +275,7 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
     heap_free_cyclic(global_heap, offset);
   }
   else if (pgas_gva_to_rank(gva) == here->rank) {
-    pgas_global_free(pgas_gva_to_lva(offset));
+    libhpx_free(pgas_gva_to_lva(offset));
   }
   else {
     int e = hpx_call(gva, pgas_free, NULL, 0, sync);
@@ -257,29 +353,11 @@ static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 
 
 static gas_class_t _pgas_vtable = {
-  .type   = HPX_GAS_PGAS,
-  .delete = _pgas_delete,
-  .join   = pgas_join,
-  .leave  = pgas_leave,
-  .is_global = _pgas_is_global,
-  .global = {
-    .malloc         = pgas_global_malloc,
-    .free           = pgas_global_free,
-    .calloc         = pgas_global_calloc,
-    .realloc        = pgas_global_realloc,
-    .valloc         = pgas_global_valloc,
-    .memalign       = pgas_global_memalign,
-    .posix_memalign = pgas_global_posix_memalign
-  },
-  .local  = {
-    .malloc         = pgas_local_malloc,
-    .free           = pgas_local_free,
-    .calloc         = pgas_local_calloc,
-    .realloc        = pgas_local_realloc,
-    .valloc         = pgas_local_valloc,
-    .memalign       = pgas_local_memalign,
-    .posix_memalign = pgas_local_posix_memalign
-  },
+  .type          = HPX_GAS_PGAS,
+  .delete        = _pgas_delete,
+  .join          = pgas_join,
+  .leave         = pgas_leave,
+  .is_global     = _pgas_is_global,
   .locality_of   = pgas_gva_to_rank,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
