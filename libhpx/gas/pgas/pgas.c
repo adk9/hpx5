@@ -46,7 +46,6 @@ heap_t *global_heap = NULL;
 
 /// Some arena stuff for jemalloc.
 static __thread unsigned _global_arena = UINT_MAX;
-static __thread unsigned _local_arena = UINT_MAX;
 static __thread unsigned _primordial_arena = UINT_MAX;
 
 
@@ -122,9 +121,6 @@ int pgas_join(void) {
   if (_global_arena == UINT_MAX)
     _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
 
-  if (_local_arena == UINT_MAX)
-    _local_arena =  mallctl_create_arena(NULL, NULL);
-
   mallctl_thread_enable_cache();
   mallctl_thread_flush_cache();
   unsigned old = mallctl_thread_set_arena(_global_arena);
@@ -136,11 +132,11 @@ int pgas_join(void) {
 
 
 void pgas_leave(void) {
-  if (_local_arena == UINT_MAX || _global_arena == UINT_MAX)
+  if (_global_arena == UINT_MAX)
     dbg_error("pgas: trying to leave the GAS before joining it.\n");
 
   mallctl_thread_flush_cache();
-  mallctl_thread_set_arena(_local_arena);
+  mallctl_thread_set_arena(_primordial_arena);
 }
 
 
