@@ -69,6 +69,9 @@ typedef struct {
   int           nDoms;
   int       maxcycles;
   int           cores;
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+  hpx_addr_t newdt;
 } InitArgs;
 
 typedef struct Domain {

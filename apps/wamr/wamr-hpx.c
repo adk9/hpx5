@@ -163,14 +163,24 @@ static int _action_main(int *input) {
   maxcycles = input[1];
   cores = input[2];
 
+  int npts_array = (2 * ns_x + 1) * (2 * ns_y + 1) * (2 * ns_z + 1);
+  int bignumber = 100000;
+  hpx_addr_t basecollpoints = hpx_gas_global_alloc(npts_array,sizeof(coll_point_t));
+  hpx_addr_t collpoints = hpx_gas_global_alloc(bignumber,sizeof(coll_point_t));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
+  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
+                                           (hpx_commutative_associative_op_t)_maxDouble,
+                                           (void (*)(void *, const size_t size)) _initDouble);
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .index = k,
       .nDoms = nDoms,
       .maxcycles = maxcycles,
-      .cores = cores
+      .cores = cores,
+      .basecollpoints = basecollpoints,
+      .collpoints = collpoints,
+      .newdt = newdt
     };
     hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
@@ -187,6 +197,9 @@ static int _action_evolve(InitArgs *init) {
   int maxcycles = init->maxcycles;
   //int cores     = init->cores;
   int index     = init->index;
+  hpx_addr_t basecollpoints = init->basecollpoints; 
+  hpx_addr_t collpoints = init->collpoints; 
+  hpx_addr_t newdt = init->newdt; 
 
   Domain *ld;
   ld = (Domain *) malloc(sizeof(Domain));
