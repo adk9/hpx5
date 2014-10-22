@@ -114,24 +114,22 @@ static bool _chunk_dalloc(void *chunk, size_t size, unsigned UNUSED) {
 
 int pgas_join(void) {
   if (!global_heap) {
-    dbg_error("pgas: attempt to join GAS before global heap allocation.\n");
+    dbg_error("attempt to join GAS before global heap allocation.\n");
     return LIBHPX_ERROR;
   }
 
-  if (_global_arena == UINT_MAX)
-    _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
-
+  assert(_global_arena == UINT_MAX);
+  _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
   mallctl_thread_enable_cache();
   mallctl_thread_flush_cache();
   _primordial_arena = mallctl_thread_set_arena(_global_arena);
-
   return LIBHPX_OK;
 }
 
 
 void pgas_leave(void) {
   if (_global_arena == UINT_MAX)
-    dbg_error("pgas: trying to leave the GAS before joining it.\n");
+    dbg_error("trying to leave the GAS before joining it.\n");
 
   mallctl_thread_flush_cache();
   mallctl_thread_set_arena(_primordial_arena);
