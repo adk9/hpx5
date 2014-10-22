@@ -140,7 +140,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
     size += _max(sizeof(void*), bytes);
 
   // allocate a parcel with enough space to buffer the @p buffer
-  hpx_parcel_t *p = global_memalign(HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = libhpx_global_memalign(HPX_CACHELINE_SIZE, size);
 
   if (!p) {
     dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
@@ -256,7 +256,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 void
 hpx_parcel_release(hpx_parcel_t *p) {
-  global_free(p);
+  libhpx_global_free(p);
 }
 
 

@@ -110,14 +110,14 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = global_valloc(_thread_size);
+  ustack_t *stack = libhpx_global_valloc(_thread_size);
   assert(stack);
   thread_init(stack, parcel, f);
   return stack;
 }
 
 void thread_delete(ustack_t *stack) {
-  global_free(stack);
+  libhpx_global_free(stack);
 }
 
 #if 0

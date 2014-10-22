@@ -116,7 +116,7 @@ static void _alltoall_fini(lco_t *lco) {
   _alltoall_t *g = (_alltoall_t *)lco;
   if (g->value)
     free(g->value);
-  global_free(g);
+  libhpx_global_free(g);
 }
 
 
@@ -368,7 +368,7 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  _alltoall_t *g = global_malloc(sizeof(*g));
+  _alltoall_t *g = libhpx_global_malloc(sizeof(*g));
   assert(g);
   _alltoall_init(g, inputs, size);
   return lva_to_gva(g);

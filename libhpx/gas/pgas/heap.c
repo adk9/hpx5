@@ -15,7 +15,7 @@
 #endif
 
 #include <inttypes.h>
-#include <stdbool.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <jemalloc/jemalloc.h>
 #include <libsync/sync.h>
@@ -80,11 +80,6 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 }
 
 
-static bool _heap_chunk_dalloc_cyclic(heap_t *heap, void *chunk, size_t size) {
-  return heap_chunk_dalloc(global_heap, chunk, size);
-}
-
-
 /// The static chunk allocator callback that we give to jemalloc arenas that
 /// manage the cyclic portion of our global heap.
 ///
@@ -98,17 +93,19 @@ static bool _heap_chunk_dalloc_cyclic(heap_t *heap, void *chunk, size_t size) {
 ///
 /// @note I do not know what the @p arena index is useful for---Luke.
 ///
-/// @param[in]   size The number of bytes we need to allocate.
-/// @param[in]  align The alignment that is being requested.
-/// @param[out]  zero Set to zero if the chunk is pre-zeroed.
-/// @param[in]  arena The index of the arena making this allocation request.
+/// @param[in]  UNUSED1 A requested address for realloc.
+/// @param[in]     size The number of bytes we need to allocate.
+/// @param[in]    align The alignment that is being requested.
+/// @param[in/out] zero Set to zero if the chunk is pre-zeroed.
+/// @param[in]  UNUSED2 The index of the arena making this allocation request.
 ///
 /// @returns The base pointer of the newly allocated chunk.
-static void *_chunk_alloc_cyclic(size_t size, size_t align, bool *zero,
-                                 unsigned UNUSED) {
-  if (zero)
-    *zero = false;
-  return _heap_chunk_alloc_cyclic(global_heap, size, align);
+static void *_chunk_alloc_cyclic(void *UNUSED1, size_t size, size_t align,
+                                   bool *zero, unsigned UNUSED) {
+  void *chunk = _heap_chunk_alloc_cyclic(global_heap, size, align);
+  if (zero && *zero)
+    memset(chunk, 0, size);
+  return chunk;
 }
 
 
@@ -138,7 +135,7 @@ static void *_chunk_alloc_cyclic(size_t size, size_t align, bool *zero,
 ///
 /// @returns UNKNOWN---Luke.
 static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
-  return _heap_chunk_dalloc_cyclic(global_heap, chunk, size);
+  return heap_chunk_dalloc(global_heap, chunk, size);
 }
 
 
@@ -317,7 +314,7 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   assert(align < 32);
   uint32_t padded = 1u << align;
   int       flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
-  void      *base = libhpx_mallocx(blocks * padded, flags);
+  void      *base = libhpx_global_mallocx(blocks * padded, flags);
   if (!base)
     dbg_error("failed cyclic allocation\n");
   return heap_lva_to_offset(heap, base);
@@ -327,7 +324,7 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
 void heap_free_cyclic(heap_t *heap, uint64_t offset) {
   void *lva = heap_offset_to_lva(heap, offset);
   int flags = MALLOCX_ARENA(heap->cyclic_arena);
-  libhpx_dallocx(lva, flags);
+  libhpx_global_dallocx(lva, flags);
 }
 
 

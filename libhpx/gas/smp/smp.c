@@ -71,19 +71,19 @@ static hpx_addr_t _smp_there(uint32_t i) {
 }
 
 static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
-  return _smp_lva_to_gva(libhpx_malloc(n * bsize));
+  return _smp_lva_to_gva(libhpx_global_malloc(n * bsize));
 }
 
 static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
-  return _smp_lva_to_gva(libhpx_calloc(n, bsize));
+  return _smp_lva_to_gva(libhpx_global_calloc(n, bsize));
 }
 
 static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
-  return _smp_lva_to_gva(libhpx_malloc(bytes));
+  return _smp_lva_to_gva(libhpx_global_malloc(bytes));
 }
 
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  libhpx_free(_smp_gva_to_lva(addr));
+  libhpx_global_free(_smp_gva_to_lva(addr));
   if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
