@@ -123,9 +123,7 @@ int pgas_join(void) {
 
   mallctl_thread_enable_cache();
   mallctl_thread_flush_cache();
-  unsigned old = mallctl_thread_set_arena(_global_arena);
-  if (_primordial_arena == UINT_MAX)
-    _primordial_arena = old;
+  _primordial_arena = mallctl_thread_set_arena(_global_arena);
 
   return LIBHPX_OK;
 }
