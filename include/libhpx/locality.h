@@ -95,55 +95,6 @@ inline static bool lva_is_global(void *addr) {
   return here->gas->is_global(here->gas, addr);
 }
 
-
-/// Allocate global memory using the malloc interface and the global address
-/// space implementation.
-inline static void *global_malloc(size_t bytes) {
-  return libhpx_malloc(bytes);
-}
-
-
-/// Free global memory using the global address space implementation.
-inline static void global_free(void *ptr) {
-  libhpx_free(ptr);
-}
-
-
-/// Allocate global memory using the calloc interface and the global address
-/// space implementation.
-inline static void *global_calloc(size_t nmemb, size_t size) {
-  return libhpx_calloc(nmemb, size);
-}
-
-
-/// Allocate global memory using the realloc interface and the global address
-/// space implementation.
-inline static void *global_realloc(void *ptr, size_t size) {
-  return libhpx_realloc(ptr, size);
-}
-
-
-/// Allocate global memory using the valloc interface and the global address
-/// space implementation.
-inline static void *global_valloc(size_t size) {
-  return libhpx_valloc(size);
-}
-
-
-/// Allocate global memory using the memalign interface and the global address
-/// space implementation.
-inline static void *global_memalign(size_t boundary, size_t size) {
-  return libhpx_memalign(boundary, size);
-}
-
-
-/// Allocate global memory using the posix memalign interface and the global
-/// address space implementation.
-inline static int global_posix_memalign(void **memptr, size_t alignment,
-                                        size_t size) {
-  return libhpx_posix_memalign(memptr, alignment, size);
-}
-
 /// Translate a local address to a global address. This only works for some
 /// local addresses, so we need to use it carefully.
 inline static hpx_addr_t lva_to_gva(void *lva) {

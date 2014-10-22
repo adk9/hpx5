@@ -49,6 +49,7 @@ static __thread unsigned _global_arena = UINT_MAX;
 static __thread unsigned _local_arena = UINT_MAX;
 static __thread unsigned _primordial_arena = UINT_MAX;
 
+
 /// The static chunk allocator callback that we give to jemalloc arenas that
 /// manage our global heap.
 ///
@@ -65,18 +66,20 @@ static __thread unsigned _primordial_arena = UINT_MAX;
 ///
 /// @note I do not know what the @p arena index is useful for---Luke.
 ///
-/// @param[in]   size The number of bytes we need to allocate.
-/// @param[in]  align The alignment that is being requested.
-/// @param[out]  zero Set to zero if the chunk is pre-zeroed.
-/// @param[in]  arena The index of the arena making this allocation request.
+/// @param[in]   UNUSED1 A requested address for chunk extension.
+/// @param[in]      size The number of bytes we need to allocate.
+/// @param[in]     align The alignment that is being requested.
+/// @param[in/out]  zero Set to zero if the chunk should be zeroed.
+/// @param[in]   UNUSED2 The index of the arena making this allocation request.
 ///
 /// @returns The base pointer of the newly allocated chunk.
-static void *_chunk_alloc(size_t size, size_t align, bool *zero, unsigned UNUSED)
+static void *_chunk_alloc(void *UNUSED1, size_t size, size_t align, bool *zero,
+                          unsigned UNUSED2)
 {
-  if (zero)
-    *zero = false;
-
-  return heap_chunk_alloc(global_heap, size, align);
+  void *chunk = heap_chunk_alloc(global_heap, size, align);
+  if (zero && *zero)
+    memset(chunk, 0, size);
+  return chunk;
 }
 
 
@@ -253,7 +256,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-  void *lva = libhpx_malloc(bytes);
+  void *lva = libhpx_global_malloc(bytes);
   return pgas_lva_to_gva(lva);
 }
 
@@ -275,7 +278,7 @@ static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
     heap_free_cyclic(global_heap, offset);
   }
   else if (pgas_gva_to_rank(gva) == here->rank) {
-    libhpx_free(pgas_gva_to_lva(offset));
+    libhpx_global_free(pgas_gva_to_lva(offset));
   }
   else {
     int e = hpx_call(gva, pgas_free, NULL, 0, sync);

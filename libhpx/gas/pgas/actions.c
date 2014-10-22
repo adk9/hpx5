@@ -166,7 +166,7 @@ static int _pgas_free_handler(void *UNUSED) {
     return HPX_ERROR;
   }
   void *lva = pgas_gva_to_lva(gva);
-  global_free(lva);
+  libhpx_global_free(lva);
   return HPX_SUCCESS;
 }
 
