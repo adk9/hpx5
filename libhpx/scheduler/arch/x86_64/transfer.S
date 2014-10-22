@@ -83,7 +83,7 @@ LABEL(thread_transfer)
         push %r14                               // 5
         push %r15                               // 6
         //push %rdi                             // 7
-        sub $16, %rsp                           // 
+        sub $24, %rsp                           // 
         fnstcw 4(%rsp)                          // 8.5
         stmxcsr	(%rsp)                          // 8
         mov %rsi, %rbx                          // cont
@@ -94,7 +94,7 @@ LABEL(thread_transfer)
         call *%rbx                              // cont(p, sp, env)
         ldmxcsr	(%rsp)                          // 8
         fldcw 4(%rsp)                           // 8.5
-        add $8, %rsp                            // 
+        add $16, %rsp                           // 
         pop %rdi                                // 7
         pop %r15                                // 6
         pop %r14                                // 5

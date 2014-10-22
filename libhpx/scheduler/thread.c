@@ -59,6 +59,7 @@ typedef struct {
   uint32_t     mxcsr;                           // 8
   uint16_t     fpucw;                           // 8.5
   uint16_t   padding;                           // 8.74 has to match transfer.S
+  void    *alignment;
   void          *rdi;                           // 7 passes initial parcel
   void          *r15;                           // 6
   void          *r14;                           // 5
@@ -67,7 +68,6 @@ typedef struct {
   void          *rbx;                           // 2
   void          *rbp;                           // 1
   thread_entry_t rip;                           // 0
-  void *alignment[1];                           // offset for stack alignment
 } HPX_PACKED _frame_t;
 #endif
 
