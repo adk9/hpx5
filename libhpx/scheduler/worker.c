@@ -161,6 +161,10 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 #endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
+
+  // make sure the initial stack pointer we're going to jump to is 16 byte aligned.
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+
   return p;
 }
 
@@ -350,6 +354,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // lazy stack binding
  exit:
   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
+
   if (!parcel_get_stack(p))
     return _bind(p);
 
