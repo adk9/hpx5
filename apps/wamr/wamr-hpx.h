@@ -100,7 +100,23 @@ typedef struct Domain {
   double nfd_diff_coeff[2][nstn][nstn];
   wamr_storage_t *coll_points;
   int max_level;
+
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
 } Domain;
+
+typedef struct Cfg_action_helper{
+  int i;
+  double L_dim[n_dim]; 
+  int step_size;
+  double Prr;
+  double p_r;
+  double Gamma_r;
+  double t0;
+} Cfg_action_helper;
+
+int _cfg_action(Cfg_action_helper *ld);
+extern hpx_action_t _cfg;
 
 void problem_init(Domain *);
 double compute_numer_1st(const int ell, const int j, const int p);
@@ -108,9 +124,8 @@ double compute_numer_2nd(const int ell, const int j, const int p);
 double compute_denom(const int j, const int p);
 void set_lagrange_deriv_coef(Domain *);
 void set_lagrange_coef(Domain *);
-void storage_init(Domain *);
 void create_full_grids(Domain *ld);
-void initial_condition(const double coords[n_dim], double *u,Domain *ld);
+void initial_condition(const double coords[n_dim], double *u,double Prr,double p_r,double Gamma_r);
 int get_stencil_type(const int myorder, const int range);
 void get_stencil_indices(const int myindex, const int index_range,
                          const int step, int indices[np]);
