@@ -46,7 +46,6 @@ struct ctl_arena_stats_s {
 
 	malloc_bin_stats_t	bstats[NBINS];
 	malloc_large_stats_t	*lstats;	/* nlclasses elements. */
-	malloc_huge_stats_t	*hstats;	/* nhclasses elements. */
 };
 
 struct ctl_stats_s {

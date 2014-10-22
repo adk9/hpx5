@@ -145,17 +145,8 @@
 /* Support lazy locking (avoid locking unless a second thread is launched). */
 /* #undef JEMALLOC_LAZY_LOCK */
 
-/* Minimum size class to support is 2^LG_TINY_MIN bytes. */
-#define LG_TINY_MIN 3
-
-/*
- * Minimum allocation alignment is 2^LG_QUANTUM bytes (ignoring tiny size
- * classes).
- */
-/* #undef LG_QUANTUM */
-
-/* One page is 2^LG_PAGE bytes. */
-#define LG_PAGE 12
+/* One page is 2^STATIC_PAGE_SHIFT bytes. */
+#define STATIC_PAGE_SHIFT 12
 
 /*
  * If defined, use munmap() to unmap freed chunks, rather than storing them for
