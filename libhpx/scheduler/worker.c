@@ -209,16 +209,20 @@ static hpx_parcel_t *_network(void) {
 /// Send a mail message to another worker.
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
   worker_t *w = here->sched->workers[id];
-  sync_two_lock_queue_enqueue(&(w->inbox), p);
+  two_lock_queue_node_t *node = malloc(sizeof(*node));
+  node->value = p;
+  sync_two_lock_queue_enqueue_node(&(w->inbox), node);
 }
 
 
 /// Process my mail queue.
 static void _handle_mail(void) {
-  hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
+  two_lock_queue_node_t *node = NULL;
+  while ((node = sync_two_lock_queue_dequeue_node(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
+    hpx_parcel_t *p = node->value;
     sync_chase_lev_ws_deque_push(&self.work, p);
+    free(p);
   }
 }
 
