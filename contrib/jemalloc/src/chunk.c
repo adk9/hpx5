@@ -27,6 +27,9 @@ rtree_t		*chunks_rtree;
 size_t		chunksize;
 size_t		chunksize_mask; /* (chunksize - 1). */
 size_t		chunk_npages;
+size_t		map_bias;
+size_t		map_misc_offset;
+size_t		arena_maxclass; /* Max size class for arenas. */
 
 /******************************************************************************/
 /*
@@ -254,17 +257,9 @@ void *
 chunk_alloc_default(void *new_addr, size_t size, size_t alignment, bool *zero,
     unsigned arena_ind)
 {
-	arena_t *arena;
-
-	arena = arena_get(tsd_fetch(), arena_ind, false, true);
-	/*
-	 * The arena we're allocating on behalf of must have been initialized
-	 * already.
-	 */
-	assert(arena != NULL);
 
 	return (chunk_alloc_core(new_addr, size, alignment, false, zero,
-	    arena->dss_prec));
+	    arenas[arena_ind]->dss_prec));
 }
 
 static void
@@ -409,10 +404,11 @@ chunk_boot(void)
 	chunksize_mask = chunksize - 1;
 	chunk_npages = (chunksize >> LG_PAGE);
 
-	if (malloc_mutex_init(&chunks_mtx))
-		return (true);
-	if (config_stats || config_prof)
+	if (config_stats || config_prof) {
+		if (malloc_mutex_init(&chunks_mtx))
+			return (true);
 		memset(&stats_chunks, 0, sizeof(chunk_stats_t));
+	}
 	if (have_dss && chunk_dss_boot())
 		return (true);
 	extent_tree_szad_new(&chunks_szad_mmap);

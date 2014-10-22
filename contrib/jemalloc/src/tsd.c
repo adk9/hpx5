@@ -15,14 +15,16 @@ void *
 malloc_tsd_malloc(size_t size)
 {
 
-	return (a0malloc(CACHELINE_CEILING(size)));
+	/* Avoid choose_arena() in order to dodge bootstrapping issues. */
+	return (arena_malloc(NULL, arenas[0], CACHELINE_CEILING(size), false,
+	    false));
 }
 
 void
 malloc_tsd_dalloc(void *wrapper)
 {
 
-	a0free(wrapper);
+	idalloct(NULL, wrapper, false);
 }
 
 void
@@ -104,22 +106,13 @@ MALLOC_TSD
 }
 
 bool
-malloc_tsd_boot0(void)
+malloc_tsd_boot(void)
 {
 
 	ncleanups = 0;
-	if (tsd_boot0())
+	if (tsd_boot())
 		return (true);
-	*tsd_arenas_cache_bypassp_get(tsd_fetch()) = true;
 	return (false);
-}
-
-void
-malloc_tsd_boot1(void)
-{
-
-	tsd_boot1();
-	*tsd_arenas_cache_bypassp_get(tsd_fetch()) = false;
 }
 
 #ifdef _WIN32
