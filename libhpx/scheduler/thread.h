@@ -29,7 +29,6 @@ typedef struct ustack {
   struct ustack  *next;                         // freelists and condition vars
   int           tls_id;
   short       affinity;                         // set by user
-  short  wait_affinity;                         // set during scheduler_wait()
   char         stack[];
 } ustack_t;
 

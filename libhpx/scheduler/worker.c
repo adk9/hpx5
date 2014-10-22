@@ -546,12 +546,8 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   ustack_t *thread = parcel_get_stack(self.current);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
-  // if we successfully pushed, then do a transfer away from this thread,
-  // setting the soft affinity so that the thread is woken up in the right
-  // place, and releasing the lock across the wait
+  // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
-    thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
-    assert(thread->wait_affinity < here->sched->n_workers);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
@@ -560,40 +556,31 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   return status;
 }
 
-
-void scheduler_signal(cvar_t *cvar) {
-  ustack_t *thread = cvar_pop_thread(cvar);
-  if (!thread)
-    return;
-
-  if (thread->wait_affinity != self.id)
-    _send_mail(thread->wait_affinity, thread->parcel);
+/// Resume a thread.
+static inline void _resume(ustack_t *thread) {
+  if (thread->affinity >= 0 && thread->affinity != self.id)
+    _send_mail(thread->affinity, thread->parcel);
   else
     sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
 }
 
+void scheduler_signal(cvar_t *cvar) {
+  ustack_t *thread = cvar_pop_thread(cvar);
+  if (thread)
+    _resume(thread);
+}
+
 
 void scheduler_signal_all(struct cvar *cvar) {
-  ustack_t *thread = cvar_pop_all(cvar);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
+    _resume(thread);
 }
 
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  ustack_t *thread = cvar_set_error(cvar, code);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_set_error(cvar, code); thread;
+       thread = thread->next)
+    _resume(thread);
 }
 
 
