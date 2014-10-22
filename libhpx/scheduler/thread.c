@@ -56,21 +56,20 @@ static void HPX_CONSTRUCTOR _init_thread(void) {
 #error No stack frame for your architecture
 #else
 typedef struct {
-  uint32_t     mxcsr;                           // 8
-  uint16_t     fpucw;                           // 8.5
-  uint16_t   padding;                           // 8.74 has to match transfer.S
-  void    *alignment;
-  void          *rdi;                           // 7 passes initial parcel
+  uint32_t     mxcsr;                           // 7
+  uint16_t     fpucw;                           // 7.5
+  uint16_t   padding;                           // 7.75 has to match transfer.S
   void          *r15;                           // 6
   void          *r14;                           // 5
   void          *r13;                           // 4
-  void          *r12;                           // 3
-  void          *rbx;                           // 2
+  hpx_parcel_t  *r12;                           // 3
+  thread_entry_t rbx;                           // 2
   void          *rbp;                           // 1
-  thread_entry_t rip;                           // 0
+  void         (*rip)(void);                    // 0
 } HPX_PACKED _frame_t;
 #endif
 
+HPX_INTERNAL void _stack_align_trampoline(void);
 
 static _frame_t *_get_top_frame(ustack_t *stack) {
   return (_frame_t*)((char*)stack + _thread_size - sizeof(_frame_t));
@@ -96,9 +95,10 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
   _frame_t *frame = _get_top_frame(stack);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
-  frame->rdi     = parcel;
+  frame->r12     = parcel;
+  frame->rbx     = f;
   frame->rbp     = &frame->rip;
-  frame->rip     = f;
+  frame->rip     = _stack_align_trampoline;
 
   // set the stack stuff
   stack->sp            = frame;

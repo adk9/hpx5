@@ -126,8 +126,6 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
 static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
-  assert(sp);
-
   // checkpoint my native stack pointer
   self.sp = sp;
   self.current = to;
@@ -145,9 +143,8 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
-///
-/// @returns A new lightweight thread, as defined by the parcel.
-static hpx_parcel_t *_bind(hpx_parcel_t *p) {
+
+static void _bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
 #ifdef HPX_PROFILE_STACKS
   unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
@@ -161,11 +158,6 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 #endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
-
-  // make sure the initial stack pointer we're going to jump to is 16 byte aligned.
-  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
-
-  return p;
 }
 
 
@@ -354,10 +346,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // lazy stack binding
  exit:
   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
-
   if (!parcel_get_stack(p))
-    return _bind(p);
+    _bind(p);
 
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
   return p;
 }
 
@@ -406,6 +398,8 @@ void *worker_run(scheduler_t *sched) {
 
   // bind a stack to transfer to
   _bind(p);
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+
   if (!p) {
     dbg_error("worker: failed to bind an initial stack.\n");
     hpx_parcel_release(p);
