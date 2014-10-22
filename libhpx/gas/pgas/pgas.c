@@ -118,11 +118,12 @@ int pgas_join(void) {
     return LIBHPX_ERROR;
   }
 
-  assert(_global_arena == UINT_MAX);
-  _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
-  mallctl_thread_enable_cache();
-  mallctl_thread_flush_cache();
-  _primordial_arena = mallctl_thread_set_arena(_global_arena);
+  if (_global_arena == UINT_MAX) {
+    _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
+    mallctl_thread_enable_cache();
+    mallctl_thread_flush_cache();
+    _primordial_arena = mallctl_thread_set_arena(_global_arena);
+  }
   return LIBHPX_OK;
 }
 
