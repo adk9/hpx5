@@ -189,6 +189,8 @@ int _cfg_action(Cfg_action_helper *ld)
     }
   }
   hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
 }
 
 void create_full_grids(Domain *ld) {
@@ -217,6 +219,7 @@ void create_full_grids(Domain *ld) {
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete,HPX_NULL);
+
 #if 0
   for (int i = 0; i <= ns_x * 2; i++) {
       int i2 = i / 2;
