@@ -21,6 +21,8 @@ static bool      _verbose = false;            //!< print to the terminal
 static hpx_action_t _main = 0;
 static hpx_action_t _evolve = 0;
 
+hpx_action_t _cfg = 0;
+
 
 /* helper functions */
 static void _usage(FILE *stream) {
@@ -167,20 +169,19 @@ static int _action_main(int *input) {
   int bignumber = 100000;
   hpx_addr_t basecollpoints = hpx_gas_global_alloc(npts_array,sizeof(coll_point_t));
   hpx_addr_t collpoints = hpx_gas_global_alloc(bignumber,sizeof(coll_point_t));
-  hpx_addr_t complete = hpx_lco_and_new(nDoms);
-  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
-                                           (hpx_commutative_associative_op_t)_maxDouble,
-                                           (void (*)(void *, const size_t size)) _initDouble);
+  hpx_addr_t complete = hpx_lco_and_new(1);
+  //hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
+  //                                         (hpx_commutative_associative_op_t)_maxDouble,
+  //                                         (void (*)(void *, const size_t size)) _initDouble);
 
-  for (k=0;k<nDoms;k++) {
+  for (k=0;k<1;k++) {
     InitArgs args = {
       .index = k,
       .nDoms = nDoms,
       .maxcycles = maxcycles,
       .cores = cores,
       .basecollpoints = basecollpoints,
-      .collpoints = collpoints,
-      .newdt = newdt
+      .collpoints = collpoints
     };
     hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
@@ -199,19 +200,21 @@ static int _action_evolve(InitArgs *init) {
   int index     = init->index;
   hpx_addr_t basecollpoints = init->basecollpoints; 
   hpx_addr_t collpoints = init->collpoints; 
-  hpx_addr_t newdt = init->newdt; 
 
   Domain *ld;
   ld = (Domain *) malloc(sizeof(Domain));
 
   ld->nDoms = nDoms;
   ld->myindex = index;
+  ld->basecollpoints = basecollpoints;
+  ld->collpoints = collpoints;
 
   problem_init(ld);
 
   // generate initial adaptive grid
-  storage_init(ld);
+  //storage_init(ld);
   create_full_grids(ld);
+#if 0
   create_adap_grids(ld);
   printf("max_level = %d\n", ld->max_level);
 
@@ -236,7 +239,7 @@ static int _action_evolve(InitArgs *init) {
 
     count++;
   }
-
+#endif
   free(ld);
   return HPX_SUCCESS;
 }
@@ -248,6 +251,7 @@ void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
   _main = HPX_REGISTER_ACTION(_action_main);
   _evolve = HPX_REGISTER_ACTION(_action_evolve);
+  _cfg = HPX_REGISTER_ACTION(_cfg_action);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }
