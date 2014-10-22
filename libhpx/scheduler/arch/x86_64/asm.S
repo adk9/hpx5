@@ -12,15 +12,14 @@
 // =============================================================================
 #include "asm_macros.h"
         
-        .file "asm.S"
-/// ----------------------------------------------------------------------------
 /// Implementation of some simple asm utilities.
 ///
 /// These could be done simply as inline asm if we only wanted to support
 /// gcc-compatible inline asm implementations, but we care about CrayCC and we
 /// haven't seen such support there yet. This costs us a function call (and
-/// associated caller-side register churn) for these operations. 
-/// ----------------------------------------------------------------------------
+/// associated caller-side register churn) for these operations.
+        .file "libhpx/scheduler/arch/x86_64/asm.S"
+        
 	    INTERNAL(get_mxcsr)
 	    GLOBAL(get_mxcsr)
 LABEL(get_mxcsr)
@@ -34,3 +33,11 @@ LABEL(get_fpucw)
 	    fnstcw (%rdi)
 	    ret
         SIZE(get_fpucw)
+
+        INTERNAL(align_rsp_trampoline)
+        GLOBAL(align_rsp_trampoline)
+LABEL(align_rsp_trampoline)
+        mov %r12, %rdi
+        call *%rbx
+        SIZE(align_rsp_trampoline)
+

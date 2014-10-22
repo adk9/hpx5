@@ -21,63 +21,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "hpx/builtins.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "asm.h"
+#include <jemalloc/jemalloc.h>
 #include "thread.h"
-
 
 #define _DEFAULT_PAGES 4
 
-
 static int _thread_size = 0;
-static uint32_t  _mxcsr = 0;
-static uint16_t  _fpucw = 0;
 
-
-static void HPX_CONSTRUCTOR _init_thread(void) {
-  get_mxcsr(&_mxcsr);
-  get_fpucw(&_fpucw);
-  thread_set_stack_size(0);
-}
-
-
-/// ----------------------------------------------------------------------------
-/// A structure describing the initial frame on a stack.
-///
-/// This must match the transfer.S asm file usage.
-///
-/// This should be managed in an asm-specific manner, but we are just worried
-/// about x86-64 at the moment.
-/// ----------------------------------------------------------------------------
-#ifndef __x86_64__
-#error No stack frame for your architecture
-#else
-typedef struct {
-  uint32_t     mxcsr;                           // 7
-  uint16_t     fpucw;                           // 7.5
-  uint16_t   padding;                           // 7.75 has to match transfer.S
-  void          *r15;                           // 6
-  void          *r14;                           // 5
-  void          *r13;                           // 4
-  hpx_parcel_t  *r12;                           // 3
-  thread_entry_t rbx;                           // 2
-  void          *rbp;                           // 1
-  void         (*rip)(void);                    // 0
-} HPX_PACKED _frame_t;
-#endif
-
-HPX_INTERNAL void _stack_align_trampoline(void);
-
-static _frame_t *_get_top_frame(ustack_t *stack) {
-  return (_frame_t*)((char*)stack + _thread_size - sizeof(_frame_t));
-}
-
-
-void
-thread_set_stack_size(int stack_bytes) {
+void thread_set_stack_size(int stack_bytes) {
   if (!stack_bytes) {
     thread_set_stack_size(HPX_PAGE_SIZE * _DEFAULT_PAGES);
     return;
@@ -89,70 +40,13 @@ thread_set_stack_size(int stack_bytes) {
   _thread_size = HPX_PAGE_SIZE * pages;
 }
 
-
-void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
-  // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(stack);
-  frame->mxcsr   = _mxcsr;
-  frame->fpucw   = _fpucw;
-  frame->r12     = parcel;
-  frame->rbx     = f;
-  frame->rbp     = &frame->rip;
-  frame->rip     = _stack_align_trampoline;
-
-  // set the stack stuff
-  stack->sp            = frame;
-  stack->next          = NULL;
-  stack->parcel        = parcel;
-  stack->tls_id        = -1;
-  stack->affinity      = -1;
-}
-
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   ustack_t *stack = libhpx_global_valloc(_thread_size);
   assert(stack);
-  thread_init(stack, parcel, f);
+  thread_init(stack, parcel, f, _thread_size);
   return stack;
 }
 
 void thread_delete(ustack_t *stack) {
   libhpx_global_free(stack);
 }
-
-#if 0
-#include "libsync/sync.h"
-
-static uint64_t _stacks = 0;
-
-ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  sync_fadd(&_stacks, 1, SYNC_ACQ_REL);
-  // Allocate a page-aligned thread structure, along with a guard page to detect
-  // stack overflow.
-  char *m = valloc(HPX_PAGE_SIZE + _thread_size);
-  assert(m);
-
-  // set up the guard page at the top of the thread structure
-  int e = mprotect((void*)m, HPX_PAGE_SIZE, PROT_NONE);
-  if (e) {
-    uint64_t stacks;
-    sync_load(stacks, &_stacks, SYNC_ACQUIRE);
-    dbg_error("thread: failed to mark a guard page for thread %lu.\n", stacks);
-    hpx_abort();
-  }
-
-  ustack_t *stack = (ustack_t*)(m + HPX_PAGE_SIZE);
-  thread_init(stack, parcel, f);
-  return stack;
-}
-
-void thread_delete(ustack_t *stack) {
-  char *block = (char*)stack - HPX_PAGE_SIZE;
-  int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
-  if (e) {
-    dbg_error("thread: failed to unprotect the guard page.\n");
-    // don't abort
-  }
-  free(block);
-}
-
-#endif
