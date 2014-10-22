@@ -118,6 +118,16 @@ typedef struct Cfg_action_helper{
 int _cfg_action(Cfg_action_helper *ld);
 extern hpx_action_t _cfg;
 
+typedef struct Cfg_action_helper2{
+  int i;
+  double lag_coef[np - 1][np];
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} Cfg_action_helper2;
+
+int _cfg2_action(Cfg_action_helper2 *ld);
+extern hpx_action_t _cfg2;
+
 void problem_init(Domain *);
 double compute_numer_1st(const int ell, const int j, const int p);
 double compute_numer_2nd(const int ell, const int j, const int p);

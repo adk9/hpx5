@@ -193,6 +193,61 @@ int _cfg_action(Cfg_action_helper *ld)
   return HPX_SUCCESS;
 }
 
+int _cfg2_action(Cfg_action_helper2 *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *point = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point))
+    return HPX_RESEND;
+
+  int i = ld->i;
+
+  int i2 = i / 2;
+  int ihalf = i % 2;
+  if (ihalf) { // point is level 1, configure its wavelet stencil
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i-1)*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    coll_point_t *parent;
+    hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+
+    int indices[np] = {0};
+    get_stencil_indices(i, 2 * ns_x, 2, indices);
+
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    point->parent[0] = parent->index[0];
+#if 0
+    for (int j = 0; j < np; j++)
+      point->wavelet_stencil[0][j][0] =
+        ld->coll_points->array[indices[j]].index[0];
+
+    // perform wavelet transform
+    double approx[n_variab + n_aux] = {0};
+    forward_wavelet_trans(point, 'u', mask, 0, approx,ld);
+    for (int ivar = 0; ivar < n_variab; ivar++) {
+      if (fabs(point->u[0][ivar] - approx[ivar]) >= ld->eps[ivar]) {
+        point->status[0] = essential;
+        break;
+      }
+    }
+#endif
+  } else {
+#if 0
+    point->wavelet_coef[0] = -1; // -1 means wavelet transform not needed
+    point->parent[0] = -1; // no parent 
+    if (i >= 1)
+      point->neighbors[0][0] = ld->coll_points->array[i - 1].index[0];
+
+    if (i <= ns_x * 2 - 1)
+      point->neighbors[1][0] = ld->coll_points->array[i + 1].index[0];
+#endif
+  }
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
 void create_full_grids(Domain *ld) {
   //assert(ld->coll_points != NULL);
   const int step_size = 1 << JJ;
@@ -204,7 +259,7 @@ void create_full_grids(Domain *ld) {
 
   Cfg_action_helper cfg[ns_x*2+1]; 
   hpx_addr_t complete = hpx_lco_and_new(ns_x*2+1);
-  int j;
+  int j,k;
   for (int i = 0; i <= ns_x * 2; i++) {
     cfg[i].i = i; 
     for (j=0;j<n_dim;j++) {
@@ -219,6 +274,24 @@ void create_full_grids(Domain *ld) {
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete,HPX_NULL);
+
+  hpx_addr_t complete2 = hpx_lco_and_new(ns_x*2+1);
+  Cfg_action_helper2 cfg2[ns_x*2+1];
+  for (int i = 0; i <= ns_x * 2; i++) {
+    cfg2[i].i = i; 
+    for (j=0;j<np-1;j++) {
+      for (k=0;k<np;k++) {
+        cfg2[i].lag_coef[j][k] = ld->lag_coef[j][k];
+      }
+    }
+    cfg2[i].basecollpoints = ld->basecollpoints;
+    cfg2[i].collpoints = ld->collpoints;
+
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_call(there,_cfg2,&cfg2[i],sizeof(Cfg_action_helper2),complete2);
+  }
+  hpx_lco_wait(complete2);
+  hpx_lco_delete(complete2,HPX_NULL);
 
 #if 0
   for (int i = 0; i <= ns_x * 2; i++) {
@@ -269,5 +342,24 @@ void initial_condition(const double coords[n_dim], double *u,double Prr,double p
   u[0] = p_h;
   u[1] = 0.0;
   u[2] = p_h * e_h;
+}
+
+/// @brief Determines the indices of points used by the interpolation stencil
+/// ---------------------------------------------------------------------------
+void get_stencil_indices(const int myindex, const int index_range,
+                         const int step, int indices[np]) {
+  int start;
+  int temp = (np - 1) * step / 2;
+
+  if (myindex - temp < 0) {
+    start = 0;
+  } else if (myindex + temp > index_range) {
+    start = index_range - step * (np - 1);
+  } else {
+    start = myindex - temp;
+  }
+
+  for (int i = 0; i < np; i++)
+    indices[i] = start + i * step;
 }
 

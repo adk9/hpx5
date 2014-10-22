@@ -22,6 +22,7 @@ static hpx_action_t _main = 0;
 static hpx_action_t _evolve = 0;
 
 hpx_action_t _cfg = 0;
+hpx_action_t _cfg2 = 0;
 
 
 /* helper functions */
@@ -252,6 +253,7 @@ void _register_actions(void) {
   _main = HPX_REGISTER_ACTION(_action_main);
   _evolve = HPX_REGISTER_ACTION(_action_evolve);
   _cfg = HPX_REGISTER_ACTION(_cfg_action);
+  _cfg2 = HPX_REGISTER_ACTION(_cfg2_action);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }
