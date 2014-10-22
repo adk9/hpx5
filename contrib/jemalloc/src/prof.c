@@ -20,7 +20,7 @@ bool		opt_prof_thread_active_init = true;
 size_t		opt_lg_prof_sample = LG_PROF_SAMPLE_DEFAULT;
 ssize_t		opt_lg_prof_interval = LG_PROF_INTERVAL_DEFAULT;
 bool		opt_prof_gdump = false;
-bool		opt_prof_final = false;
+bool		opt_prof_final = true;
 bool		opt_prof_leak = false;
 bool		opt_prof_accum = false;
 char		opt_prof_prefix[
@@ -128,8 +128,8 @@ static char	*prof_thread_name_alloc(tsd_t *tsd, const char *thread_name);
 JEMALLOC_INLINE_C int
 prof_tctx_comp(const prof_tctx_t *a, const prof_tctx_t *b)
 {
-	uint64_t a_uid = a->thr_uid;
-	uint64_t b_uid = b->thr_uid;
+	uint64_t a_uid = a->tdata->thr_uid;
+	uint64_t b_uid = b->tdata->thr_uid;
 
 	return ((a_uid > b_uid) - (a_uid < b_uid));
 }
@@ -609,7 +609,7 @@ prof_tctx_destroy(tsd_t *tsd, prof_tctx_t *tctx)
 {
 	prof_tdata_t *tdata = tctx->tdata;
 	prof_gctx_t *gctx = tctx->gctx;
-	bool destroy_tdata, destroy_tctx, destroy_gctx;
+	bool destroy_tdata, destroy_gctx;
 
 	assert(tctx->cnts.curobjs == 0);
 	assert(tctx->cnts.curbytes == 0);
@@ -622,38 +622,25 @@ prof_tctx_destroy(tsd_t *tsd, prof_tctx_t *tctx)
 	malloc_mutex_unlock(tdata->lock);
 
 	malloc_mutex_lock(gctx->lock);
-	if (tctx->state != prof_tctx_state_dumping) {
-		tctx_tree_remove(&gctx->tctxs, tctx);
-		destroy_tctx = true;
-		if (prof_gctx_should_destroy(gctx)) {
-			/*
-			 * Increment gctx->nlimbo in order to keep another
-			 * thread from winning the race to destroy gctx while
-			 * this one has gctx->lock dropped.  Without this, it
-			 * would be possible for another thread to:
-			 *
-			 * 1) Sample an allocation associated with gctx.
-			 * 2) Deallocate the sampled object.
-			 * 3) Successfully prof_gctx_try_destroy(gctx).
-			 *
-			 * The result would be that gctx no longer exists by the
-			 * time this thread accesses it in
-			 * prof_gctx_try_destroy().
-			 */
-			gctx->nlimbo++;
-			destroy_gctx = true;
-		} else
-			destroy_gctx = false;
-	} else {
+	tctx_tree_remove(&gctx->tctxs, tctx);
+	if (prof_gctx_should_destroy(gctx)) {
 		/*
-		 * A dumping thread needs tctx to remain valid until dumping
-		 * has finished.  Change state such that the dumping thread will
-		 * complete destruction during a late dump iteration phase.
+		 * Increment gctx->nlimbo in order to keep another thread from
+		 * winning the race to destroy gctx while this one has
+		 * gctx->lock dropped.  Without this, it would be possible for
+		 * another thread to:
+		 *
+		 * 1) Sample an allocation associated with gctx.
+		 * 2) Deallocate the sampled object.
+		 * 3) Successfully prof_gctx_try_destroy(gctx).
+		 *
+		 * The result would be that gctx no longer exists by the time
+		 * this thread accesses it in prof_gctx_try_destroy().
 		 */
-		tctx->state = prof_tctx_state_purgatory;
-		destroy_tctx = false;
+		gctx->nlimbo++;
+		destroy_gctx = true;
+	} else
 		destroy_gctx = false;
-	}
 	malloc_mutex_unlock(gctx->lock);
 	if (destroy_gctx)
 		prof_gctx_try_destroy(tsd, gctx, tdata);
@@ -661,8 +648,7 @@ prof_tctx_destroy(tsd_t *tsd, prof_tctx_t *tctx)
 	if (destroy_tdata)
 		prof_tdata_destroy(tsd, tdata, false);
 
-	if (destroy_tctx)
-		idalloc(tsd, tctx);
+	idalloc(tsd, tctx);
 }
 
 static bool
@@ -755,7 +741,6 @@ prof_lookup(tsd_t *tsd, prof_bt_t *bt)
 			return (NULL);
 		}
 		ret.p->tdata = tdata;
-		ret.p->thr_uid = tdata->thr_uid;
 		memset(&ret.p->cnts, 0, sizeof(prof_cnt_t));
 		ret.p->gctx = gctx;
 		ret.p->prepared = true;
@@ -1052,8 +1037,9 @@ prof_tctx_dump_iter(prof_tctx_tree_t *tctxs, prof_tctx_t *tctx, void *arg)
 
 	if (prof_dump_printf(propagate_err,
 	    "  t%"PRIu64": %"PRIu64": %"PRIu64" [%"PRIu64": %"PRIu64"]\n",
-	    tctx->thr_uid, tctx->dump_cnts.curobjs, tctx->dump_cnts.curbytes,
-	    tctx->dump_cnts.accumobjs, tctx->dump_cnts.accumbytes))
+	    tctx->tdata->thr_uid, tctx->dump_cnts.curobjs,
+	    tctx->dump_cnts.curbytes, tctx->dump_cnts.accumobjs,
+	    tctx->dump_cnts.accumbytes))
 		return (tctx);
 	return (NULL);
 }
@@ -1487,17 +1473,17 @@ prof_fdump(void)
 	char filename[DUMP_FILENAME_BUFSIZE];
 
 	cassert(config_prof);
-	assert(opt_prof_final);
-	assert(opt_prof_prefix[0] != '\0');
 
 	if (!prof_booted)
 		return;
 	tsd = tsd_fetch();
 
-	malloc_mutex_lock(&prof_dump_seq_mtx);
-	prof_dump_filename(filename, 'f', VSEQ_INVALID);
-	malloc_mutex_unlock(&prof_dump_seq_mtx);
-	prof_dump(tsd, false, filename, opt_prof_leak);
+	if (opt_prof_final && opt_prof_prefix[0] != '\0') {
+		malloc_mutex_lock(&prof_dump_seq_mtx);
+		prof_dump_filename(filename, 'f', VSEQ_INVALID);
+		malloc_mutex_unlock(&prof_dump_seq_mtx);
+		prof_dump(tsd, false, filename, opt_prof_leak);
+	}
 }
 
 void
@@ -2023,8 +2009,7 @@ prof_boot2(void)
 		if (malloc_mutex_init(&prof_dump_mtx))
 			return (true);
 
-		if (opt_prof_final && opt_prof_prefix[0] != '\0' &&
-		    atexit(prof_fdump) != 0) {
+		if (atexit(prof_fdump) != 0) {
 			malloc_write("<jemalloc>: Error in atexit()\n");
 			if (opt_abort)
 				abort();
