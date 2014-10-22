@@ -91,7 +91,15 @@ LABEL(thread_transfer)
         and $0xfffffffffffffffc, %rsi           // p->stack & ~sizeof(void*)
         mov (%rsi), %rsi                        // p->stack->sp
         xchg %rsp, %rsi
+
+        // make sure rsp has 16 byte alignment
+        // @todo Figure out why we're getting misaligned stack addresses.
+        mov %rsp, %r15
+        and $0xF, %r15
+        sub %r15, %rsp
         call *%rbx                              // cont(p, sp, env)
+        add %r15, %rsp
+
         ldmxcsr	(%rsp)                          // 8
         fldcw 4(%rsp)                           // 8.5
         add $8, %rsp                            // 
