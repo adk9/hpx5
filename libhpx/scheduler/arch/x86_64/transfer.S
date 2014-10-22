@@ -25,13 +25,12 @@
         /// know what the frame looks like, so we can manufacture one. The only
         /// sneakiness in doign this is that we need to make sure that the stack
         /// pointer is aligned correctly, which is what the
-        /// _stack_align_trampoline is for.
+        /// align_rsp_trampoline is for. See frame.c for details.
         ///
-        /// @todo: This has to 100% match with the _frame_t in thread.c. We
-        ///        should extract that type and its functionality into a
-        ///        platform-specific object file that lives here.
+        /// The stack pointer pointer may have some extra bits set in its least
+        /// significant bits, so we mask them out before trying to load from it.
         ///
-        /// @param %rdi A pointer to the stack pointer to transfer to.
+        /// @param %rdi A (mangled) pointer to the stack pointer to transfer to.
         /// @param %rsi The continuation to call after the sp exchange.
         /// @param %rdx The environment for the continutation.
         ///
@@ -39,13 +38,6 @@
 
         .file "libhpx/scheduler/arch/x86_64/transfer.S"
         .text
-        INTERNAL(_stack_align_trampoline)
-        GLOBAL(_stack_align_trampoline)
-LABEL(_stack_align_trampoline)
-        mov %r12, %rdi
-        call *%rbx
-        SIZE(_stack_align_trampoline)
-
         INTERNAL(thread_transfer)
         GLOBAL(thread_transfer)
 LABEL(thread_transfer)
