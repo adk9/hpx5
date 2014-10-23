@@ -121,7 +121,7 @@ int hpx_init(const hpx_config_t *cfg) {
     return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
-  here->gas = gas_new(cfg->heap_bytes, here->boot, here->transport, cfg->gas, cfg->alloc);
+  here->gas = gas_new(cfg->heap_bytes, here->boot, here->transport, cfg->gas);
   if (here->gas == NULL)
     return _cleanup(here, dbg_error("init: failed to create the global address "
                                     "space.\n"));

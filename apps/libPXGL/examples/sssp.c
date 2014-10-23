@@ -29,12 +29,12 @@ static void _usage(FILE *stream) {
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-l, set logging level\n"
-	  "\t-b, select allocator for PGAS heap (see hpx config)\n"
+      "\t-b, select allocator for PGAS heap (see hpx config)\n"
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
-	  "\t-r, set send/receive request limit\n"
+      "\t-r, set send/receive request limit\n"
           "\t-b, set block-translation-table size\n"
-          "\t-q, limit time for SSSP executions in seconds\n"	  
+          "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
 }
@@ -193,7 +193,7 @@ static int _main_action(_sssp_args_t *args) {
 
     if(realloc_adj_list) {
       // Construct the graph as an adjacency list
-      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));    
+      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
     }
 
     sargs.source = args->problems[i];
@@ -312,11 +312,8 @@ int main(int argc, char *const argv[argc]) {
   uint64_t time_limit = 1000;
   int realloc_adj_list = 1;
 
-  // By default use malloc
-  cfg.alloc = HPX_PGAS_ALLOC_MALLOC;
-
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:ah")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:ah")) != -1) {
     switch (opt) {
     case 'c':
       cfg.cores = atoi(optarg);
@@ -338,10 +335,6 @@ int main(int argc, char *const argv[argc]) {
       break;
     case 'l':
       cfg.log_level = atoi(optarg);
-      break;
-    case 'b':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.alloc && cfg.alloc < HPX_PGAS_ALLOC_MAX);
       break;
     case 's':
       cfg.stack_bytes = strtoul(optarg, NULL, 0);
@@ -401,8 +394,8 @@ int main(int argc, char *const argv[argc]) {
                         .nproblems = nproblems,
                         .problems = problems,
                         .prob_file = problem_file,
-			.time_limit = time_limit,
-			.realloc_adj_list = realloc_adj_list
+            .time_limit = time_limit,
+            .realloc_adj_list = realloc_adj_list
   };
 
   int e = hpx_init(&cfg);

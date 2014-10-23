@@ -16,7 +16,6 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <jemalloc/jemalloc.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
@@ -149,27 +148,6 @@ static bitmap_t *_new_bitmap(size_t nchunks) {
 }
 
 
-static void *_map_heap(const size_t bytes, hpx_pgas_alloc_t alloc) {
-  void *heap;
-  if(alloc == HPX_PGAS_ALLOC_MALLOC)
-    heap = malloc(bytes);
-  else {
-    const int prot = PROT_READ | PROT_WRITE;
-    const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
-    heap = mmap(NULL, bytes, prot, flags, -1, 0);
-  }
-  if (!heap) {
-    dbg_error("failed to mmap %lu bytes for the shared heap\n", bytes);
-  }
-  else if (alloc == HPX_PGAS_ALLOC_MALLOC) {
-    dbg_log_gas("malloced %lu bytes for the shared heap\n", bytes);
-  } else {
-    dbg_log_gas("mmaped %lu bytes for the shared heap\n", bytes);
-  }
-  return heap;
-}
-
-
 int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   assert(heap);
   assert(size);
@@ -188,8 +166,14 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
 
   // use one extra chunk to deal with alignment
   heap->raw_nchunks = heap->nchunks + 1;
-  heap->raw_nbytes = heap->raw_nchunks * heap->bytes_per_chunk;
-  heap->raw_base = _map_heap(heap->raw_nbytes, heap->alloc);
+  heap->raw_nbytes  = heap->raw_nchunks * heap->bytes_per_chunk;
+  heap->raw_base    = malloc(heap->raw_nbytes);
+  if (!heap->raw_base) {
+    dbg_error("could not allocate %lu bytes for the global heap\n",
+              heap->raw_nbytes);
+    return LIBHPX_ENOMEM;
+  }
+  dbg_log_gas("allocated %lu bytes for the global heap\n", heap->raw_nbytes);
 
   // adjust stored base based on alignment requirements
   const size_t r = ((uintptr_t)heap->raw_base % heap->bytes_per_chunk);
@@ -226,14 +210,7 @@ void heap_fini(heap_t *heap) {
   if (heap->raw_base) {
     if (heap->transport)
       heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
-
-    if(heap->alloc == HPX_PGAS_ALLOC_MALLOC)
-      free(heap->raw_base);
-    else {
-      int e = munmap(heap->raw_base, heap->raw_nbytes);
-      if (e)
-    dbg_error("pgas: failed to munmap the heap.\n");
-    }
+    free(heap->raw_base);
   }
 }
 
