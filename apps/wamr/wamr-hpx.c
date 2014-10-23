@@ -23,6 +23,7 @@ static hpx_action_t _evolve = 0;
 
 hpx_action_t _cfg = 0;
 hpx_action_t _cfg2 = 0;
+hpx_action_t _cag = 0;
 
 
 /* helper functions */
@@ -169,7 +170,7 @@ static int _action_main(int *input) {
   int npts_array = (2 * ns_x + 1) * (2 * ns_y + 1) * (2 * ns_z + 1);
   int bignumber = 100000;
   hpx_addr_t basecollpoints = hpx_gas_global_alloc(npts_array,sizeof(coll_point_t));
-  hpx_addr_t collpoints = hpx_gas_global_alloc(bignumber,sizeof(coll_point_t));
+  hpx_addr_t collpoints = hpx_gas_global_alloc(bignumber,sizeof(hash_entry_t));
   hpx_addr_t complete = hpx_lco_and_new(1);
   //hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
   //                                         (hpx_commutative_associative_op_t)_maxDouble,
@@ -215,8 +216,8 @@ static int _action_evolve(InitArgs *init) {
   // generate initial adaptive grid
   //storage_init(ld);
   create_full_grids(ld);
-#if 0
   create_adap_grids(ld);
+#if 0
   printf("max_level = %d\n", ld->max_level);
 
   // configure derivative stencil for all active points
@@ -254,6 +255,7 @@ void _register_actions(void) {
   _evolve = HPX_REGISTER_ACTION(_action_evolve);
   _cfg = HPX_REGISTER_ACTION(_cfg_action);
   _cfg2 = HPX_REGISTER_ACTION(_cfg2_action);
+  _cag = HPX_REGISTER_ACTION(_cag_action);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }
