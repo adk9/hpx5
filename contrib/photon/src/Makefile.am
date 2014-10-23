@@ -6,7 +6,7 @@ AM_CFLAGS = @CFLAGS@ -Wno-variadic-macros       \
 #-DPHOTON_MULTITHREADED
 SUBDIRS = .
 
-lib_LTLIBRARIES = libphoton.la
+noinst_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c                   \
                        libphoton/photon_backend.c              \
                        libphoton/photon_exchange.c             \
