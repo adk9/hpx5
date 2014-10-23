@@ -29,7 +29,6 @@ static void _usage(FILE *stream) {
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-l, set logging level\n"
-      "\t-b, select allocator for PGAS heap (see hpx config)\n"
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
       "\t-r, set send/receive request limit\n"
