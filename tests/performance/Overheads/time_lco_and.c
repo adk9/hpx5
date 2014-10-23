@@ -57,7 +57,7 @@ static int _main_action(int *args) {
 
   for (int i = 0; i < sizeof(num)/sizeof(num[0]) ; i++) {
     fprintf(test_log, "%d", num[i]);
-   
+
     hpx_addr_t done = hpx_lco_future_new(num[i]);
 
     t = hpx_time_now();
@@ -127,9 +127,6 @@ int main(int argc, char *argv[]) {
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);

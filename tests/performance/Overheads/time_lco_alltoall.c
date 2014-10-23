@@ -122,7 +122,7 @@ _advanceDomain_action(const unsigned long *epoch)
   }
 
   t = hpx_time_now();
-  hpx_lco_alltoall_setid(domain->newdt, domain->rank, 
+  hpx_lco_alltoall_setid(domain->newdt, domain->rank,
                          domain->nDoms * sizeof(int),
                          gnewdt, HPX_NULL, HPX_NULL);
   sync_addf(&timeSet, (unsigned long)(hpx_time_elapsed_ms(t)*1000), SYNC_RELAXED);
@@ -154,7 +154,7 @@ alltoall_main_action(const main_args_t *args)
 
   // Call the alltoall function here.
   t1 = hpx_time_now();
-  hpx_addr_t newdt = hpx_lco_alltoall_new(args->nDoms, 
+  hpx_addr_t newdt = hpx_lco_alltoall_new(args->nDoms,
                                   args->nDoms * sizeof(int));
   fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t1));
 
@@ -244,9 +244,6 @@ main(int argc, char * const argv[argc])
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);

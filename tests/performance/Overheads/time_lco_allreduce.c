@@ -71,7 +71,7 @@ _usage(FILE *f) {
           "\t-p, set per-PE global heap size\n"
           "\t-r, set send/receive request limit\n"
           "\t-b, set block-translation-table size\n"
-          "\t-h, this help display\n");  
+          "\t-h, this help display\n");
 }
 
 /// Initialize a double zero.
@@ -254,9 +254,6 @@ main(int argc, char * const argv[argc])
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);

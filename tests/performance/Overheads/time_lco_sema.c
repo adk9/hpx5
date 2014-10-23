@@ -51,7 +51,7 @@ static int _thread1_action(uint32_t *args) {
   }
   fprintf(test_log, "Thread 1: %d%*g\n", iter, FIELD_WIDTH,
               hpx_time_elapsed_ms(t));
- 
+
   return HPX_SUCCESS;
 }
 
@@ -62,7 +62,7 @@ static int _thread2_action(uint32_t *args) {
     hpx_lco_sema_p(sem2);
     hpx_lco_sema_v(sem1);
   }
-  fprintf(test_log, "Thread 2: %d%*g\n", iter, FIELD_WIDTH, 
+  fprintf(test_log, "Thread 2: %d%*g\n", iter, FIELD_WIDTH,
               hpx_time_elapsed_ms(t));
 
   return HPX_SUCCESS;
@@ -157,9 +157,6 @@ main(int argc, char *argv[])
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       usage(stdout);
