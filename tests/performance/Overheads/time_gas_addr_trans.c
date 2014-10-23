@@ -66,10 +66,10 @@ static int _main_action(void *args) {
   fprintf(test_log, HEADER);
   fprintf(test_log, "localities: %d, ranks and blocks per rank = %d, %d\n",
                   size, ranks, blocks/ranks);
-  fprintf(test_log, "%s%*s%*s%*s\n", "# Num threads ", FIELD_WIDTH, 
-          "GAS ALLOC", FIELD_WIDTH, "GLOBAL_ALLOC", FIELD_WIDTH, 
+  fprintf(test_log, "%s%*s%*s%*s\n", "# Num threads ", FIELD_WIDTH,
+          "GAS ALLOC", FIELD_WIDTH, "GLOBAL_ALLOC", FIELD_WIDTH,
           "GLOBAL_CALLOC");
-  
+
   for (int i = 0; i < sizeof(num)/sizeof(num[0]); i++) {
     fprintf(test_log, "%d", num[i]);
 
@@ -88,13 +88,13 @@ static int _main_action(void *args) {
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(global, _address_translation, 0 , 0, done); 
+      hpx_call(global, _address_translation, 0 , 0, done);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
     hpx_lco_wait(done);
     fprintf(test_log, "%*.7f", FIELD_WIDTH,  elapsed);
     hpx_lco_delete(done, HPX_NULL);
     hpx_gas_free(global, HPX_NULL);
-   
+
     hpx_addr_t callocMem = hpx_gas_global_calloc(blocks, TEST_BUF_SIZE);
     hpx_addr_t and = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
@@ -149,9 +149,6 @@ main(int argc, char *argv[])
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);

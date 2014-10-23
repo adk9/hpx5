@@ -61,12 +61,12 @@ static hpx_action_t _parallelQuicksortHelper = 0;
 int parallelQuicksort(double lyst[], int size, int tlevel);
 static int _parallelQuicksortHelper_action(void *threadarg);
 struct thread_data{
-	double *lyst;
-	int low;
-	int high;
-	int level;
+    double *lyst;
+    int low;
+    int high;
+    int level;
 };
-//thread_data should be thread-safe, since while lyst is 
+//thread_data should be thread-safe, since while lyst is
 //shared, [low, high] will not overlap among threads.
 
 //for the builtin libc qsort:
@@ -105,7 +105,7 @@ static int _main_action(uint64_t *args) {
     printf("Oops, lyst did not get sorted by quicksort.\n");
   }
 
-  //Now, parallel quicksort.    
+  //Now, parallel quicksort.
   //copy list.
   memcpy(lyst, lystbck, NUM*sizeof(double));
   start = hpx_time_now();
@@ -170,9 +170,6 @@ int main (int argc, char *argv[])
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
       break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
       usage(stdout);
       return 0;
@@ -193,7 +190,7 @@ int main (int argc, char *argv[])
     return 1;
   }
 
-  test_log = fopen("test.log", "a+");  
+  test_log = fopen("test.log", "a+");
 
   // Register the main action
   _main = HPX_REGISTER_ACTION(_main_action);
@@ -213,7 +210,7 @@ void quicksortHelper(double lyst[], int lo, int hi)
   int b = partition(lyst, lo, hi);
   quicksortHelper(lyst, lo, b-1);
   quicksortHelper(lyst, b+1, hi);
-} 
+}
 void swap(double lyst[], int i, int j)
 {
   double temp = lyst[i];
@@ -240,7 +237,7 @@ int partition(double *lyst, int lo, int hi)
 
 /*
 parallel quicksort top level:
-instantiate parallelQuicksortHelper thread, and that's 
+instantiate parallelQuicksortHelper thread, and that's
 basically it.
 */
 int parallelQuicksort(double lyst[], int size, int tlevel)
@@ -263,8 +260,8 @@ int parallelQuicksort(double lyst[], int size, int tlevel)
 
 /*
 parallelQuicksortHelper
--if the level is still > 0, then partition and make 
-parallelQuicksortHelper threads to solve the left and 
+-if the level is still > 0, then partition and make
+parallelQuicksortHelper threads to solve the left and
 right-hand sides, then quit. Otherwise, call sequential.
 */
 static int _parallelQuicksortHelper_action(void *threadarg)
@@ -273,11 +270,11 @@ static int _parallelQuicksortHelper_action(void *threadarg)
 
   struct thread_data *my_data;
   my_data = (struct thread_data *) threadarg;
-	
+
   //fyi:
   //printf("Thread responsible for [%d, %d], level %d.\n",
-		//my_data->low, my_data->high, my_data->level);
-	
+        //my_data->low, my_data->high, my_data->level);
+
   if (my_data->level <= 0 || my_data->low == my_data->high) {
     //We have plenty of threads, finish with sequential.
     quicksortHelper(my_data->lyst, my_data->low, my_data->high);
@@ -286,8 +283,8 @@ static int _parallelQuicksortHelper_action(void *threadarg)
 
   //Now we partition our part of the lyst.
   mid = partition(my_data->lyst, my_data->low, my_data->high);
-  
-  //At this point, we will create threads for the 
+
+  //At this point, we will create threads for the
   //left and right sides.  Must create their data args.
   struct thread_data thread_data_array[2];
 
@@ -299,7 +296,7 @@ static int _parallelQuicksortHelper_action(void *threadarg)
   if (mid > my_data->low) {
     thread_data_array[0].high = mid-1;
   } else {
-    thread_data_array[0].high = my_data->low; 
+    thread_data_array[0].high = my_data->low;
   }
   if (mid < my_data->high) {
     thread_data_array[1].low = mid+1;
@@ -341,7 +338,7 @@ static int _parallelQuicksortHelper_action(void *threadarg)
     hpx_call(threads[t], _parallelQuicksortHelper, (void *) &thread_data_array[t],
              sizeof(thread_data_array[t]), futures[t]);
   }
-  hpx_lco_get_all(2, futures, sizes, addrs, NULL);	
+  hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   hpx_lco_delete(futures[0], HPX_NULL);
   hpx_lco_delete(futures[1], HPX_NULL);
   return HPX_SUCCESS;
@@ -366,6 +363,6 @@ int compare_doubles (const void *a, const void *b)
 {
   const double *da = (const double *) a;
   const double *db = (const double *) b;
-     
+
   return (*da > *db) - (*da < *db);
 }

@@ -204,7 +204,7 @@ main(int argc, char * const argv[argc])
 
   // allocate the default HPX configuration on the stack
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
     switch (opt) {
@@ -237,9 +237,6 @@ main(int argc, char * const argv[argc])
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);

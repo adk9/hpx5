@@ -78,7 +78,7 @@ static int _main_action(int *args) {
   hpx_lco_delete(done, HPX_NULL);
   fprintf(test_log, "Deletion time: %g\n", hpx_time_elapsed_ms(t));
 
-  fprintf(test_log, "%s\t%*s%*s%*s\n", "# NumReaders " , FIELD_WIDTH, 
+  fprintf(test_log, "%s\t%*s%*s%*s\n", "# NumReaders " , FIELD_WIDTH,
          "Get_Value ", FIELD_WIDTH, " LCO_Getall ", FIELD_WIDTH, "Delete");
 
   for (int i = 0; i < sizeof(num_readers)/sizeof(num_readers[0]); i++) {
@@ -87,14 +87,14 @@ static int _main_action(int *args) {
     int values[count];
     void *addrs[count];
     int sizes[count];
-    hpx_addr_t futures[count];  
-   
+    hpx_addr_t futures[count];
+
     for (int j = 0; j < count; j++) {
       addrs[j] = &values[j];
       sizes[j] = sizeof(int);
       futures[j] = hpx_lco_future_new(sizeof(int));
     }
-   
+
     t = hpx_time_now();
     for (int j = 0; j < count; j++) {
       t = hpx_time_now();
@@ -109,8 +109,8 @@ static int _main_action(int *args) {
 
     t = hpx_time_now();
     for (int j = 0; j < count; j++)
-      hpx_lco_delete(futures[j], HPX_NULL); 
-    fprintf(test_log, "%*g\n", FIELD_WIDTH, hpx_time_elapsed_ms(t));   
+      hpx_lco_delete(futures[j], HPX_NULL);
+    fprintf(test_log, "%*g\n", FIELD_WIDTH, hpx_time_elapsed_ms(t));
   }
   fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
@@ -151,9 +151,6 @@ int main(int argc, char *argv[]) {
       break;
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
       break;
      case 'h':
       _usage(stdout);
