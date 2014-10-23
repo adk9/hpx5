@@ -13,7 +13,7 @@
 #ifndef HPX_PROCESS_H
 #define HPX_PROCESS_H
 
-typedef uint32_t hpx_pid_t;
+typedef hpx_addr_t hpx_pid_t;
 
 /// ----------------------------------------------------------------------------
 /// HPX Process creation.
@@ -33,7 +33,5 @@ int hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args, 
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync);
 
 hpx_pid_t hpx_process_getpid(hpx_addr_t process);
-
-hpx_addr_t hpx_process_owner(hpx_pid_t pid);
 
 #endif

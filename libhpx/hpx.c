@@ -189,7 +189,7 @@ hpx_run(hpx_action_t act, const void *args, size_t size) {
     // start the main process. enqueue parcels directly---schedulers
     // don't exist yet
     hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
-                                    HPX_ACTION_NULL, 0, true);
+                                    HPX_ACTION_NULL, HPX_NULL, true);
     network_rx_enqueue(here->network, p);
   }
 

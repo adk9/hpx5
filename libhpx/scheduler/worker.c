@@ -614,10 +614,11 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   hpx_parcel_t *parcel = self.current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if (c_target && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+  if ((c_target != HPX_NULL) && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
     // Double the credit so that we can pass it on to the continuation
     // without splitting it up.
-    --parcel->credit;
+    if (parcel->pid != HPX_NULL)
+      --parcel->credit;
     if (hpx_action_eq(c_act, hpx_lco_set_action))
       hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
                                  HPX_ACTION_NULL);
@@ -653,7 +654,7 @@ void hpx_thread_exit(int status) {
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
       unlikely(status == HPX_ERROR)) {
     hpx_parcel_t *parcel = self.current;
-    if (parcel->pid > 0 && parcel->credit)
+    if ((parcel->pid != HPX_NULL) && parcel->credit)
       parcel_recover_credit(parcel);
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
@@ -716,7 +717,7 @@ uint32_t hpx_thread_current_args_size(void) {
 
 hpx_pid_t hpx_thread_current_pid(void) {
   if (self.current == NULL)
-    return 0;
+    return HPX_NULL;
   return self.current->pid;
 }
 

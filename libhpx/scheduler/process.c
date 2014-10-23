@@ -32,9 +32,9 @@
 
 
 typedef struct {
-  volatile uint64_t credit;                  // credit balance
-  bitmap_t              *debt;                  // the credit that was recovered
-  hpx_addr_t      termination;                  // the termination LCO
+  volatile uint64_t    credit;               // credit balance
+  bitmap_t              *debt;               // the credit that was recovered
+  hpx_addr_t      termination;               // the termination LCO
 } _process_t;
 
 
@@ -56,10 +56,8 @@ static void _free(_process_t *p) {
   cr_bitmap_delete(p->debt);
 
   // set the termination LCO if the process is being deleted
-  if (_is_tracked(p))
-    hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
-
-  // TODO: hpx_gas_free?
+  // if (_is_tracked(p))
+  //   hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
@@ -124,11 +122,11 @@ static int _return_credit_action(uint64_t *args) {
 
   // add credit to the credit-accounting bitmap
   cr_bitmap_add(p->debt, credit);
-  uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
 
   // test for quiescence
   if (cr_bitmap_test(p->debt)) {
     dbg_log("detected quiescence. HPX is now terminating...\n");
+    uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
     assert(total_credit == 0);
     assert(_is_tracked(p));
     hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
@@ -163,8 +161,8 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
 /// Create a new HPX process.
 hpx_addr_t
 hpx_process_new(hpx_addr_t termination) {
-  if (termination != HPX_NULL)
-    return HPX_HERE;
+  if (termination == HPX_NULL)
+    return HPX_NULL;
   _process_t *p;
   hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -197,6 +195,9 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
   hpx_parcel_t *p;
 
+  if (process == HPX_NULL)
+    return HPX_ERROR;
+
   // do an immediate call if it is an untracked process
   hpx_pid_t pid = hpx_process_getpid(process);
   if (!pid) {
@@ -207,7 +208,7 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
     hpx_parcel_set_action(p, _call);
     hpx_parcel_set_cont_action(p, action);
     hpx_parcel_set_cont_target(p, process);
-    hpx_parcel_set_pid(p, pid);
+    hpx_parcel_set_pid(p, 0);
 
     _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
     call_args->result = result;
@@ -224,19 +225,10 @@ hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
 /// ----------------------------------------------------------------------------
 void
 hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
-  hpx_pid_t pid = hpx_process_getpid(process);
-  if (!pid)
+  if (process == HPX_NULL)
     return;
 
-  _process_t *p = NULL;
-  if (hpx_gas_try_pin(process, (void**)&p)) {
-    _free(p);
-    hpx_gas_unpin(process);
-    if (sync)
-      hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-    return;
-  }
-
-  hpx_call(process, _delete, NULL, 0, sync);
+  hpx_call_sync(process, _delete, NULL, 0, NULL, 0);
+  hpx_gas_free(process, sync);
 }
 
