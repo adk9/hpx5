@@ -220,7 +220,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
 
-  if (p->pid != 0) {
+  if (p->pid != HPX_NULL) {
     uint64_t credit = 0;
     // split the parent's current credit. the parent retains half..
     hpx_parcel_t *parent = scheduler_current_parcel();
@@ -232,12 +232,12 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
+    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
                    p->pid, p->credit, action_get_key(p->action),
                    hpx_parcel_get_data(p), p->size, p->target,
                    action_get_key(p->c_action), p->c_target);
   } else {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu)\n",
+    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu)\n",
                    p->pid,  p->credit, action_get_key(p->action),
                    hpx_parcel_get_data(p), p->size, p->target);
   }
