@@ -211,6 +211,7 @@ static void _send_mail(uint32_t id, hpx_parcel_t *p) {
   worker_t *w = here->sched->workers[id];
   two_lock_queue_node_t *node = malloc(sizeof(*node));
   node->value = p;
+  node->next = NULL;
   sync_two_lock_queue_enqueue_node(&(w->inbox), node);
 }
 
@@ -220,9 +221,8 @@ static void _handle_mail(void) {
   two_lock_queue_node_t *node = NULL;
   while ((node = sync_two_lock_queue_dequeue_node(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
-    hpx_parcel_t *p = node->value;
-    sync_chase_lev_ws_deque_push(&self.work, p);
-    free(p);
+    sync_chase_lev_ws_deque_push(&self.work, node->value);
+    free(node);
   }
 }
 
