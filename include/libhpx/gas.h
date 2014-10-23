@@ -59,12 +59,12 @@ gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
                          struct transport_class *transport)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_pgas_new(size_t heap_size, hpx_pgas_alloc_t alloc, struct boot_class *boot,
-                         struct transport_class *transport)
-  HPX_INTERNAL HPX_NON_NULL(3,4);
+gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot,
+                          struct transport_class *transport)
+  HPX_INTERNAL HPX_NON_NULL(2,3);
 
 gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type, hpx_pgas_alloc_t alloc)
+                     struct transport_class *transport, hpx_gas_t type)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
 inline static void gas_delete(gas_class_t *gas) {

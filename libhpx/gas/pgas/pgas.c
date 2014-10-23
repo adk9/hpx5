@@ -373,7 +373,7 @@ static gas_class_t _pgas_vtable = {
   .owner_of      = pgas_gva_to_rank
 };
 
-gas_class_t *gas_pgas_new(size_t heap_size, hpx_pgas_alloc_t alloc, boot_class_t *boot,
+gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
                           struct transport_class *transport) {
   if (here->ranks == 1) {
     dbg_log_gas("PGAS requires at least two ranks\n");
@@ -388,7 +388,6 @@ gas_class_t *gas_pgas_new(size_t heap_size, hpx_pgas_alloc_t alloc, boot_class_t
     dbg_error("pgas: could not allocate global heap\n");
     return NULL;
   }
-  global_heap->alloc = alloc;
 
   int e = heap_init(global_heap, heap_size, (here->rank == 0));
   if (e) {
