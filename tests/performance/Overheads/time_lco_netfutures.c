@@ -109,9 +109,6 @@ int main(int argc, char *argv[]) {
      case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
       break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
       _usage(stdout);
       return 0;
