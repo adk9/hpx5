@@ -221,8 +221,6 @@ static int _main_action(_sssp_args_t *args) {
 
     printf("Calling SSSP in the %d iteration\n", i);
     // Call the SSSP algorithm
-    //MODIFIED to use and lco
-    //hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     hpx_addr_t sssp_lco = hpx_lco_and_new(1);
     hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), sssp_lco);
     hpx_lco_wait(sssp_lco);

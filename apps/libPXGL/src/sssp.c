@@ -155,41 +155,25 @@ void _increment_active_count(){
 
 
 static void termination_detection_op(size_t *const output, const size_t *const input, const size_t size) {
-  printf("Before setting value\n");
   *output = *output + *input ;//== UINT64_MAX ? 0 : *input % MODUL) % MODUL;
-  printf("After setting value\n");
+
 }
 
 static void termination_detection_init(void *init_val, const size_t init_val_size) {
-  printf("initializing the val\n");
   *(uint64_t*)init_val = 0;
 }
 
 
 static hpx_action_t _set_termination_lco;
 static int _set_termination_lco_action(const hpx_addr_t *const args){
-  printf("Inside the set_termination function\n");
   uint64_t current_count;
   sync_load(&active_count, SYNC_RELAXED);
   sync_load(&inactive_count, SYNC_RELAXED);
   current_count =  active_count + inactive_count;
-  printf("Current count %ld\n",current_count);
   hpx_lco_set(*args, sizeof(uint64_t), &current_count, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static hpx_action_t _check_termination;
-static int _check_termination_action() {
-    printf("Inside check termination action\n");
-    hpx_addr_t termination_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
-    //Invoke the lco on all localities
-    //hpx_addr_t termination_check_lco = hpx_lco_future_new(0);
-    hpx_bcast(_set_termination_lco, &termination_lco, sizeof(termination_lco), HPX_NULL);
-    //return the lco value
-    printf("After getting the lco value\n");
-    hpx_thread_continue(sizeof(termination_lco), &termination_lco);
-    return HPX_SUCCESS;
-}
 
 
 
@@ -214,41 +198,21 @@ int call_sssp_action(const call_sssp_args_t *const args) {
    
   int terminate_now = 1;
   while(true){
-    printf("Entering termination detection\n");
-    //check with allreducelco
-   
-    //tell every locality to set the lco value
-    /*hpx_addr_t termination_count_lco = HPX_NULL;
-    //hpx_call_sync(HPX_HERE, _check_termination, NULL, 0, &termination_count_lco, sizeof(termination_count_lco));*/
-
-    printf("calling check termination action first time\n");
     hpx_addr_t termination_count_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
     //Invoke the lco on all localities
-    //hpx_addr_t termination_check_lco = hpx_lco_future_new(0);
-    printf("created the allreduce lco\n");
     hpx_bcast(_set_termination_lco, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
-    //return the lco value
-  
 
-    printf("Done broadcasting\n");
     uint64_t terminate = 0;
     hpx_lco_get(termination_count_lco, sizeof(terminate), &terminate);
-    printf("after lco get\n");
     hpx_lco_delete(termination_count_lco, HPX_NULL);
-    printf("After getting the lco value with count %ld\n",terminate);
     if(terminate == 0){
       //recheck
-      /* hpx_addr_t termination_count_recheck_lco = HPX_NULL;
-      hpx_call_sync(HPX_HERE, _check_termination, NULL, 0, &termination_count_recheck_lco, sizeof(termination_count_recheck_lco));
-      */
-      printf("calling check termination action second time\n");
       hpx_addr_t termination_count_recheck_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
       hpx_bcast(_set_termination_lco, &termination_count_recheck_lco, sizeof(termination_count_recheck_lco), HPX_NULL);
 
       uint64_t terminate_recheck = 0;
       hpx_lco_get(termination_count_recheck_lco, sizeof(terminate_recheck), &terminate_recheck);
       hpx_lco_delete(termination_count_recheck_lco, HPX_NULL);
-      printf("After getting the lco value with count %ld\n",terminate_recheck);
       if(terminate_recheck == 0){
 	terminate_now = 0;
       }
@@ -259,7 +223,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   printf("Finished algorithm\n");
   return HPX_SUCCESS;
 
-  // printf("SSSP is done\n");
+
 }
 
 
@@ -267,11 +231,11 @@ static __attribute__((constructor)) void _sssp_register_actions() {
   call_sssp                    = HPX_REGISTER_ACTION(call_sssp_action);
   _sssp_visit_vertex           = HPX_REGISTER_ACTION(_sssp_visit_vertex_action);
   _sssp_update_vertex_distance = HPX_REGISTER_ACTION(_sssp_update_vertex_distance_action);
+ _set_termination_lco          = HPX_REGISTER_ACTION(_set_termination_lco_action);
+
 #ifdef GATHER_STAT
   _useful_work_update          = HPX_REGISTER_ACTION(_useful_work_update_action);
  _useless_work_update          = HPX_REGISTER_ACTION(_useless_work_update_action);
  _edge_traversal_count         = HPX_REGISTER_ACTION(_edge_traversal_count_action);
- _check_termination            = HPX_REGISTER_ACTION(_check_termination_action);
- _set_termination_lco          = HPX_REGISTER_ACTION(_set_termination_lco_action);
 #endif // GATHER_STAT
 }
