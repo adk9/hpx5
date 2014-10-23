@@ -45,7 +45,7 @@ static hpx_action_t _return_credit;
 
 
 static bool _is_tracked(_process_t *p) {
-  return (!hpx_addr_eq(p->termination, HPX_NULL));
+  return (p->termination != HPX_NULL);
 }
 
 /// Remote action to delete a process.
@@ -163,7 +163,7 @@ static void HPX_CONSTRUCTOR _initialize_actions(void) {
 /// Create a new HPX process.
 hpx_addr_t
 hpx_process_new(hpx_addr_t termination) {
-  if (!hpx_addr_eq(termination, HPX_NULL))
+  if (termination != HPX_NULL)
     return HPX_HERE;
   _process_t *p;
   hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
@@ -232,7 +232,7 @@ hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
   if (hpx_gas_try_pin(process, (void**)&p)) {
     _free(p);
     hpx_gas_unpin(process);
-    if (!hpx_addr_eq(sync, HPX_NULL))
+    if (sync)
       hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }

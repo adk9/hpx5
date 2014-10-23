@@ -178,7 +178,7 @@ arena_run_reg_alloc(arena_run_t *run, arena_bin_info_t *bin_info)
 	void *rpages;
 
 	assert(run->nfree > 0);
-	assert(bitmap_full(run->bitmap, &bin_info->bitmap_info) == false);
+	assert(!bitmap_full(run->bitmap, &bin_info->bitmap_info));
 
 	regind = bitmap_sfu(run->bitmap, &bin_info->bitmap_info);
 	miscelm = arena_run_to_miscelm(run);
@@ -450,7 +450,7 @@ arena_chunk_alloc_internal(arena_t *arena, size_t size, size_t alignment,
 	chunk_dalloc = arena->chunk_dalloc;
 	malloc_mutex_unlock(&arena->lock);
 	chunk = (arena_chunk_t *)chunk_alloc_arena(chunk_alloc, chunk_dalloc,
-	    arena->ind, size, alignment, zero);
+	    arena->ind, NULL, size, alignment, zero);
 	malloc_mutex_lock(&arena->lock);
 	if (config_stats && chunk != NULL)
 		arena->stats.mapped += chunksize;
@@ -459,8 +459,8 @@ arena_chunk_alloc_internal(arena_t *arena, size_t size, size_t alignment,
 }
 
 void *
-arena_chunk_alloc_huge(arena_t *arena, size_t size, size_t alignment,
-    bool *zero)
+arena_chunk_alloc_huge(arena_t *arena, void *new_addr, size_t size,
+    size_t alignment, bool *zero)
 {
 	void *ret;
 	chunk_alloc_t *chunk_alloc;
@@ -480,7 +480,7 @@ arena_chunk_alloc_huge(arena_t *arena, size_t size, size_t alignment,
 	malloc_mutex_unlock(&arena->lock);
 
 	ret = chunk_alloc_arena(chunk_alloc, chunk_dalloc, arena->ind,
-	    size, alignment, zero);
+	    new_addr, size, alignment, zero);
 	if (config_stats) {
 		if (ret != NULL)
 			stats_cactive_add(size);
@@ -524,7 +524,7 @@ arena_chunk_init_hard(arena_t *arena)
 	 * There is no need to initialize the internal page map entries unless
 	 * the chunk is not zeroed.
 	 */
-	if (zero == false) {
+	if (!zero) {
 		JEMALLOC_VALGRIND_MAKE_MEM_UNDEFINED(
 		    (void *)arena_bitselm_get(chunk, map_bias+1),
 		    (size_t)((uintptr_t) arena_bitselm_get(chunk,
@@ -782,7 +782,7 @@ arena_compute_npurge(arena_t *arena, bool all)
 	 * Compute the minimum number of pages that this thread should try to
 	 * purge.
 	 */
-	if (all == false) {
+	if (!all) {
 		size_t threshold = (arena->nactive >> opt_lg_dirty_mult);
 
 		npurge = arena->ndirty - threshold;
@@ -829,7 +829,7 @@ arena_stash_dirty(arena_t *arena, bool all, size_t npurge,
 
 		nstashed += npages;
 
-		if (all == false && nstashed >= npurge)
+		if (!all && nstashed >= npurge)
 			break;
 	}
 
@@ -1049,7 +1049,7 @@ arena_run_dalloc(arena_t *arena, arena_run_t *run, bool dirty, bool cleaned)
 	 */
 	assert(arena_mapbits_dirty_get(chunk, run_ind) ==
 	    arena_mapbits_dirty_get(chunk, run_ind+run_pages-1));
-	if (cleaned == false && arena_mapbits_dirty_get(chunk, run_ind) != 0)
+	if (!cleaned && arena_mapbits_dirty_get(chunk, run_ind) != 0)
 		dirty = true;
 	flag_dirty = dirty ? CHUNK_MAP_DIRTY : 0;
 
@@ -1330,8 +1330,19 @@ arena_tcache_fill_small(arena_t *arena, tcache_bin_t *tbin, size_t binind,
 			ptr = arena_run_reg_alloc(run, &arena_bin_info[binind]);
 		else
 			ptr = arena_bin_malloc_hard(arena, bin);
-		if (ptr == NULL)
+		if (ptr == NULL) {
+			/*
+			 * OOM.  tbin->avail isn't yet filled down to its first
+			 * element, so the successful allocations (if any) must
+			 * be moved to the base of tbin->avail before bailing
+			 * out.
+			 */
+			if (i > 0) {
+				memmove(tbin->avail, &tbin->avail[nfill - i],
+				    i * sizeof(void *));
+			}
 			break;
+		}
 		if (config_fill && unlikely(opt_junk)) {
 			arena_alloc_junk_small(ptr, &arena_bin_info[binind],
 			    true);
@@ -1481,10 +1492,10 @@ arena_malloc_small(arena_t *arena, size_t size, bool zero)
 		bin->stats.nrequests++;
 	}
 	malloc_mutex_unlock(&bin->lock);
-	if (config_prof && isthreaded == false && arena_prof_accum(arena, size))
+	if (config_prof && !isthreaded && arena_prof_accum(arena, size))
 		prof_idump();
 
-	if (zero == false) {
+	if (!zero) {
 		if (config_fill) {
 			if (unlikely(opt_junk)) {
 				arena_alloc_junk_small(ret,
@@ -1537,7 +1548,7 @@ arena_malloc_large(arena_t *arena, size_t size, bool zero)
 	if (config_prof && idump)
 		prof_idump();
 
-	if (zero == false) {
+	if (!zero) {
 		if (config_fill) {
 			if (unlikely(opt_junk))
 				memset(ret, 0xa5, size);
@@ -1608,7 +1619,7 @@ arena_palloc(arena_t *arena, size_t size, size_t alignment, bool zero)
 	}
 	malloc_mutex_unlock(&arena->lock);
 
-	if (config_fill && zero == false) {
+	if (config_fill && !zero) {
 		if (unlikely(opt_junk))
 			memset(ret, 0xa5, size);
 		else if (unlikely(opt_zero))
@@ -2008,7 +2019,7 @@ arena_ralloc_large(void *ptr, size_t oldsize, size_t size, size_t extra,
 			bool ret = arena_ralloc_large_grow(arena, chunk, ptr,
 			    oldsize, PAGE_CEILING(size),
 			    psize - PAGE_CEILING(size), zero);
-			if (config_fill && ret == false && zero == false) {
+			if (config_fill && !ret && !zero) {
 				if (unlikely(opt_junk)) {
 					memset((void *)((uintptr_t)ptr +
 					    oldsize), 0xa5, isalloc(ptr,
@@ -2044,8 +2055,8 @@ arena_ralloc_no_move(void *ptr, size_t oldsize, size_t size, size_t extra,
 		} else {
 			assert(size <= arena_maxclass);
 			if (size + extra > SMALL_MAXCLASS) {
-				if (arena_ralloc_large(ptr, oldsize, size,
-				    extra, zero) == false)
+				if (!arena_ralloc_large(ptr, oldsize, size,
+				    extra, zero))
 					return (false);
 			}
 		}
@@ -2064,7 +2075,7 @@ arena_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 	size_t copysize;
 
 	/* Try to avoid moving the allocation. */
-	if (arena_ralloc_no_move(ptr, oldsize, size, extra, zero) == false)
+	if (!arena_ralloc_no_move(ptr, oldsize, size, extra, zero))
 		return (ptr);
 
 	/*
@@ -2130,7 +2141,7 @@ bool
 arena_dss_prec_set(arena_t *arena, dss_prec_t dss_prec)
 {
 
-	if (have_dss == false)
+	if (!have_dss)
 		return (dss_prec != dss_prec_disabled);
 	malloc_mutex_lock(&arena->lock);
 	arena->dss_prec = dss_prec;

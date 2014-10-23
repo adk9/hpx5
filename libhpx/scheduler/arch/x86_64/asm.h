@@ -22,7 +22,8 @@
 /// are suitable for gcc inline assembly, but are done as asm to support
 /// compilers that do not support inline asm.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void  get_mxcsr(uint32_t *out);
-HPX_INTERNAL void  get_fpucw(uint16_t *out);
+HPX_INTERNAL void get_mxcsr(uint32_t *out);
+HPX_INTERNAL void get_fpucw(uint16_t *out);
+HPX_INTERNAL void align_rsp_trampoline(void);
 
 #endif // LIBHPX_ASM_H
