@@ -35,6 +35,14 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "HPX_GAS_AGAS_SWITCH"
 };
 
+//! Configuration options for heap allocator in PGAS
+typedef enum {
+  HPX_PGAS_ALLOC_DEFAULT = 0, //!< Let HPX choose the allocator
+  HPX_PGAS_ALLOC_MMAP,        //!< Use mmap to get heap space
+  HPX_PGAS_ALLOC_MALLOC,      //!< Use malloc to get heap space
+  HPX_PGAS_ALLOC_MAX
+} hpx_pgas_alloc_t;
+
 //! Configuration options for the network transports HPX can use.
 typedef enum {
   HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
@@ -91,6 +99,7 @@ typedef struct {
   int           stack_bytes;          //!< minimum stack size in bytes.
   size_t         heap_bytes;          //!< shared heap size in bytes
   hpx_gas_t             gas;          //!< Type of GAS.
+  hpx_pgas_alloc_t    alloc;          //!< PGAS heap allocator
   hpx_boot_t           boot;          //!< bootstrap method to use.
   hpx_transport_t transport;          //!< transport to use.
   hpx_wait_t           wait;          //!< when to wait for a debugger.
@@ -106,14 +115,15 @@ typedef struct {
     .threads     = 0,                           \
     .backoff_max = 1024,                        \
     .stack_bytes = 32768,                       \
-    .heap_bytes  = 1lu << 30, /* 1GB */           \
+    .heap_bytes  = 1lu << 30, /* 1GB */         \
     .gas         = HPX_GAS_PGAS,                \
+    .alloc       = HPX_PGAS_ALLOC_DEFAULT,      \
     .boot        = HPX_BOOT_DEFAULT,            \
     .transport   = HPX_TRANSPORT_DEFAULT,       \
     .wait        = HPX_WAIT_NONE,               \
     .wait_at     = HPX_LOCALITY_NONE,           \
     .log_level   = HPX_LOG_DEFAULT,             \
-    .statistics  = true,            \
+    .statistics  = true,                        \
     .req_limit   = 0                            \
   }
 

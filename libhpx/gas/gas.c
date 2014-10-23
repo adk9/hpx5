@@ -18,7 +18,8 @@
 #include "libhpx/debug.h"
 
 gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type)
+                     struct transport_class *transport, hpx_gas_t type,
+		     hpx_pgas_alloc_t alloc)
 {
   gas_class_t *gas = NULL;
 
@@ -27,7 +28,7 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
   }
 
   if (type == HPX_GAS_PGAS) {
-    gas = gas_pgas_new(heap_size, boot, transport);
+    gas = gas_pgas_new(heap_size, alloc, boot, transport);
     if (!gas) {
       dbg_log_gas("PGAS failed to initialize\n");
     }

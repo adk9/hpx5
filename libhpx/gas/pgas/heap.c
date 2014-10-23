@@ -149,18 +149,21 @@ static bitmap_t *_new_bitmap(size_t nchunks) {
 }
 
 
-static void *_map_heap(const size_t bytes) {
-  const int prot = PROT_READ | PROT_WRITE;
-  const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
-#ifdef CRAY_HUGE_HACK
-  void *heap = get_huge_pages((bytes + gethugepagesize() - 1) / gethugepagesize() * gethugepagesize(), GHP_DEFAULT);
-#else
-  void *heap = mmap(NULL, bytes, prot, flags, -1, 0);
-#endif
+static void *_map_heap(const size_t bytes, hpx_pgas_alloc_t alloc) {
+  void *heap;
+  if(alloc == HPX_PGAS_ALLOC_MALLOC) 
+    heap = malloc(bytes);
+  else {
+    const int prot = PROT_READ | PROT_WRITE;
+    const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
+    heap = mmap(NULL, bytes, prot, flags, -1, 0);
+  }
   if (!heap) {
     dbg_error("failed to mmap %lu bytes for the shared heap\n", bytes);
   }
-  else {
+  else if(alloc = HPX_PGAS_ALLOC_MALLOC) {
+    dbg_log_gas("malloced %lu bytes for the shared heap\n", bytes);
+  } else {
     dbg_log_gas("mmaped %lu bytes for the shared heap\n", bytes);
   }
   return heap;
@@ -186,7 +189,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   // use one extra chunk to deal with alignment
   heap->raw_nchunks = heap->nchunks + 1;
   heap->raw_nbytes = heap->raw_nchunks * heap->bytes_per_chunk;
-  heap->raw_base = _map_heap(heap->raw_nbytes);
+  heap->raw_base = _map_heap(heap->raw_nbytes, heap->alloc);
 
   // adjust stored base based on alignment requirements
   const size_t r = ((uintptr_t)heap->raw_base % heap->bytes_per_chunk);
@@ -224,13 +227,13 @@ void heap_fini(heap_t *heap) {
     if (heap->transport)
       heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
 
-#ifdef CRAY_HUGE_HACK
-    free_huge_pages(heap->raw_base);
-#else
-    int e = munmap(heap->raw_base, heap->raw_nbytes);
-    if (e)
-      dbg_error("pgas: failed to munmap the heap.\n");
-#endif
+    if(heap->alloc == HPX_PGAS_ALLOC_MALLOC)
+      free(heap->raw_base);
+    else {
+      int e = munmap(heap->raw_base, heap->raw_nbytes);
+      if (e)
+	dbg_error("pgas: failed to munmap the heap.\n");
+    }
   }
 }
 
