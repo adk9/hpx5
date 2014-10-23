@@ -31,6 +31,7 @@
 
 
 static request_t *request_init(request_t *request, hpx_parcel_t *p) {
+  request->next = NULL;
   request->parcel = p;
   return request;
 }
@@ -63,34 +64,13 @@ static void request_delete(request_t *r) {
 /// This allocator mallocs enough space for the current transport's request
 /// size.
 static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p) {
-  request_t *r = progress->free;
-  if (r) {
-    progress->free = progress->free->next;
-    request_init(r, p);
-  }
-  else {
-    int bytes = transport_request_size(here->transport);
-    r = request_new(p, bytes);
-  }
-  return r;
+  int bytes = transport_request_size(here->transport);
+  return request_new(p, bytes);
 }
-
-
-/// Frees a previously allocated request.
-///
-/// This uses a freelist algorithm for request nodes.
-///
-/// @param progress - the progress object
-/// @param request  - the request
-static void _delete_request(progress_t *progress, request_t *request) {
-  request->next = progress->free;
-  progress->free = request->next;
-}
-
 
 /// Finish a generic request.
 static void _finish_request(progress_t *progress, request_t *r) {
-  _delete_request(progress, r);
+  request_delete(r);
 }
 
 
@@ -164,7 +144,7 @@ static int _try_start_send(progress_t *progress) {
   return 1;
 
 unwind1:
-  _delete_request(progress, r);
+  request_delete(r);
 unwind0:
   hpx_parcel_release(p);
   return 0;
@@ -214,7 +194,7 @@ static int _try_start_recv(progress_t *progress) {
   return 1;
 
 unwind1:
-  _delete_request(progress, r);
+  request_delete(r);
 unwind0:
   hpx_parcel_release(p);
   return 0;
@@ -315,18 +295,10 @@ progress_t *network_progress_new(transport_class_t *t) {
   p->precv_limit   = t->get_recv_limit(t);
   p->nprecvs       = 0;
   p->pending_recvs = NULL;
-  p->free          = NULL;
   return p;
 }
 
 void network_progress_delete(progress_t *p) {
-  request_t *i = NULL;
-
-  while ((i = p->free) != NULL) {
-    p->free = p->free->next;
-    request_delete(i);
-  }
-
 #if 0
   if (p->pending_sends)
     dbg_log_trans("progress: abandoning active send.\n");

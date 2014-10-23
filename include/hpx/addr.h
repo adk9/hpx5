@@ -13,44 +13,65 @@
 #ifndef HPX_ADDR_H
 #define HPX_ADDR_H
 
-/// @file
+/// @file include/hpx/addr.h
 /// @brief Types and functions specific to dealing with global addresses.
 
 /// An HPX global address.
-///
-/// HPX manages global addresses on a per-block basis. Blocks are
-/// allocated during hpx_gas_alloc() or hpx_gas_global_alloc(), and can be
-/// up to 2^32 bytes large.
 typedef uint64_t hpx_addr_t;
 
 
-/// Compare two global addresses
-///
-/// @param lhs a global address
-/// @param rhs a global address
-/// @returns   true if the addresses are equal
-bool hpx_addr_eq(const hpx_addr_t lhs, const hpx_addr_t rhs);
-
-
-/// Perform global address arithmetic
-/// 
-/// Get the address of @p bytes into memory with address @p addr .
-/// @param  addr a global address
-/// @param bytes an offset in bytes into the memory referenced by @p addr
-/// @returns     the address of the memory at offset @p bytes from @p addr
-hpx_addr_t hpx_addr_add(const hpx_addr_t addr, int bytes, uint32_t block_size);
-
 /// The equivalent of NULL for global memory
-extern const hpx_addr_t HPX_NULL;
+static const hpx_addr_t HPX_NULL = (hpx_addr_t)0u;
 
-/// An address representing this locality in general;suitable for use as a 
-/// destination
+
+/// An address representing this locality in general, that is suitable for use
+/// as a parcel target.
 extern hpx_addr_t HPX_HERE;
 
-/// An address representing some other locality, suitable for use as a 
-/// destination.
-/// @param i a locality
-/// @returns an address representing that locality
-hpx_addr_t HPX_THERE(hpx_locality_t i);
+
+/// An address representing some other locality, that is suitable for use as a
+/// parcel target.
+///
+/// @param         i A locality.
+///
+/// @returns An address representing that locality.
+hpx_addr_t HPX_THERE(uint32_t i);
+
+
+/// Perform global address displacement arithmetic.
+///
+/// Get the address of @p bytes into memory with address @p addr. As with normal
+/// C pointer arithmetic, the @p bytes displacement must result in an address
+/// associated with the same allocation as @p addr, or one-off-the-end if the
+/// allocation was an array. The @p bsize must correspond to the block size
+/// specified during the initial allocation (or the size of the object for
+/// allocations performed by hpx_gas_alloc()).
+///
+/// @param     addr A valid  global address.
+/// @param    bytes An offset in bytes into the memory referenced by @p addr.
+/// @param    bsize The block size of the allocation associated with @p addr.
+///
+/// @returns The address of the memory at offset @p bytes from @p addr.
+hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
+
+
+/// Perform global address distance arithmetic.
+///
+/// Computes the (signed) distance between @p lhs and @p rhs, in bytes. As with
+/// standard C pointer arithmetic, both @p lhs and @p rhs must be part of the
+/// same allocation. Furthermore, @p bsize must correspond to the block size
+/// specified during the initial allocation (or the size of the object for
+/// allocations performed by hpx_gas_alloc()).
+///
+/// @param      lhs The "left-hand-size" address for the computation.
+/// @param      rhs The "right-hand-size" address for the computation.
+/// @param    bsize The block size associated with the initial allocation.
+///
+/// @returns The number of bytes between @p lhs and @p rhs.
+///          - positive if @p lhs > @p rhs
+///          - 0 if @p lhs == @p rhs
+///          - negative if @p lhs < @p rhs
+int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
+
 
 #endif

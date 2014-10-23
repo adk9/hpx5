@@ -33,39 +33,42 @@ extern "C" {
  */
 #ifndef JEMALLOC_NO_RENAME
 #  define je_no
-#  define je_malloc_conf libhpx_malloc_conf
-#  define je_malloc_message libhpx_malloc_message
-#  define je_malloc libhpx_malloc
-#  define je_calloc libhpx_calloc
-#  define je_posix_memalign libhpx_posix_memalign
-#  define je_aligned_alloc libhpx_aligned_alloc
-#  define je_realloc libhpx_realloc
-#  define je_free libhpx_free
-#  define je_mallocx libhpx_mallocx
-#  define je_rallocx libhpx_rallocx
-#  define je_xallocx libhpx_xallocx
-#  define je_sallocx libhpx_sallocx
-#  define je_dallocx libhpx_dallocx
-#  define je_sdallocx libhpx_sdallocx
-#  define je_nallocx libhpx_nallocx
-#  define je_mallctl libhpx_mallctl
-#  define je_mallctlnametomib libhpx_mallctlnametomib
-#  define je_mallctlbymib libhpx_mallctlbymib
-#  define je_malloc_stats_print libhpx_malloc_stats_print
-#  define je_malloc_usable_size libhpx_malloc_usable_size
-#  define je_memalign libhpx_memalign
-#  define je_valloc libhpx_valloc
+#  define je_malloc_conf libhpx_global_malloc_conf
+#  define je_malloc_message libhpx_global_malloc_message
+#  define je_malloc libhpx_global_malloc
+#  define je_calloc libhpx_global_calloc
+#  define je_posix_memalign libhpx_global_posix_memalign
+#  define je_aligned_alloc libhpx_global_aligned_alloc
+#  define je_realloc libhpx_global_realloc
+#  define je_free libhpx_global_free
+#  define je_mallocx libhpx_global_mallocx
+#  define je_rallocx libhpx_global_rallocx
+#  define je_xallocx libhpx_global_xallocx
+#  define je_sallocx libhpx_global_sallocx
+#  define je_dallocx libhpx_global_dallocx
+#  define je_sdallocx libhpx_global_sdallocx
+#  define je_nallocx libhpx_global_nallocx
+#  define je_mallctl libhpx_global_mallctl
+#  define je_mallctlnametomib libhpx_global_mallctlnametomib
+#  define je_mallctlbymib libhpx_global_mallctlbymib
+#  define je_malloc_stats_print libhpx_global_malloc_stats_print
+#  define je_malloc_usable_size libhpx_global_malloc_usable_size
+#  define je_memalign libhpx_global_memalign
+#  define je_valloc libhpx_global_valloc
 #endif
 
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <limits.h>
 #include <strings.h>
 
-#define	JEMALLOC_VERSION "3.6.0-136-g4dcf04bfc03b9e9eb50015a8fc8735de28c23090"
+#define	JEMALLOC_VERSION "3.6.0-155-g3c3b3b1a94705c8019b973fb679dd99bd19305af"
 #define	JEMALLOC_VERSION_MAJOR 3
 #define	JEMALLOC_VERSION_MINOR 6
 #define	JEMALLOC_VERSION_BUGFIX 0
-#define	JEMALLOC_VERSION_NREV 136
-#define	JEMALLOC_VERSION_GID "4dcf04bfc03b9e9eb50015a8fc8735de28c23090"
+#define	JEMALLOC_VERSION_NREV 155
+#define	JEMALLOC_VERSION_GID "3c3b3b1a94705c8019b973fb679dd99bd19305af"
 
 #  define MALLOCX_LG_ALIGN(la)	(la)
 #  if LG_SIZEOF_PTR == 2
@@ -153,7 +156,7 @@ JEMALLOC_EXPORT void *	je_memalign(size_t alignment, size_t size)
 JEMALLOC_EXPORT void *	je_valloc(size_t size) JEMALLOC_ATTR(malloc);
 #endif
 
-typedef void *(chunk_alloc_t)(size_t, size_t, bool *, unsigned);
+typedef void *(chunk_alloc_t)(void *, size_t, size_t, bool *, unsigned);
 typedef bool (chunk_dalloc_t)(void *, size_t, unsigned);
 
 /*

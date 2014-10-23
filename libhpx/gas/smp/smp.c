@@ -39,14 +39,6 @@ static uint32_t _smp_locality_of(hpx_addr_t addr) {
   return 0;
 }
 
-static uint64_t _smp_offset_of(hpx_addr_t gva, uint32_t bsize) {
-  return gva;
-}
-
-static uint32_t _smp_phase_of(hpx_addr_t gva, uint32_t bsize) {
-  return 0;
-}
-
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return (lhs - rhs);
 }
@@ -74,25 +66,25 @@ static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
 static void _smp_unpin(const hpx_addr_t addr) {
 }
 
-static hpx_addr_t _smp_there(hpx_locality_t i) {
+static hpx_addr_t _smp_there(uint32_t i) {
   return _smp_lva_to_gva(0);
 }
 
 static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
-  return _smp_lva_to_gva(libhpx_malloc(n * bsize));
+  return _smp_lva_to_gva(libhpx_global_malloc(n * bsize));
 }
 
 static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
-  return _smp_lva_to_gva(libhpx_calloc(n, bsize));
+  return _smp_lva_to_gva(libhpx_global_calloc(n, bsize));
 }
 
 static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
-  return _smp_lva_to_gva(libhpx_malloc(bytes));
+  return _smp_lva_to_gva(libhpx_global_malloc(bytes));
 }
 
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  libhpx_free(_smp_gva_to_lva(addr));
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  libhpx_global_free(_smp_gva_to_lva(addr));
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -101,10 +93,11 @@ static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
   if (!size)
     return HPX_SUCCESS;
 
-  void *lto = gva_to_lva(to);
-  const void *lfrom = gva_to_lva(from);
+  void *lto = _smp_gva_to_lva(to);
+  const void *lfrom = _smp_gva_to_lva(from);
   memcpy(lto, lfrom, size);
-  if (!hpx_addr_eq(sync, HPX_NULL))
+
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 
   return HPX_SUCCESS;
@@ -115,12 +108,15 @@ static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
   if (!size)
     return HPX_SUCCESS;
 
-  void *lto = gva_to_lva(to);
+  void *lto = _smp_gva_to_lva(to);
   memcpy(lto, from, size);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
@@ -129,15 +125,17 @@ static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
   if (!size)
     return HPX_SUCCESS;
 
-  const void *lfrom = gva_to_lva(from);
+  const void *lfrom = _smp_gva_to_lva(from);
   memcpy(to, lfrom, size);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
 static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -146,34 +144,14 @@ static uint32_t _smp_owner_of(hpx_addr_t addr) {
 }
 
 static gas_class_t _smp_vtable = {
-  .type   = HPX_GAS_SMP,
-  .delete = _smp_delete,
-  .join   = _smp_join,
-  .leave  = _smp_leave,
-  .is_global = _smp_is_global,
-  .global = {
-    .malloc         = libhpx_malloc,
-    .free           = libhpx_free,
-    .calloc         = libhpx_calloc,
-    .realloc        = libhpx_realloc,
-    .valloc         = libhpx_valloc,
-    .memalign       = libhpx_memalign,
-    .posix_memalign = libhpx_posix_memalign
-  },
-  .local  = {
-    .malloc         = libhpx_malloc,
-    .free           = libhpx_free,
-    .calloc         = libhpx_calloc,
-    .realloc        = libhpx_realloc,
-    .valloc         = libhpx_valloc,
-    .memalign       = libhpx_memalign,
-    .posix_memalign = libhpx_posix_memalign
-  },
-  .locality_of = _smp_locality_of,
-  .offset_of = _smp_offset_of,
-  .phase_of = _smp_phase_of,
-  .sub = _smp_sub,
-  .add = _smp_add,
+  .type          = HPX_GAS_SMP,
+  .delete        = _smp_delete,
+  .join          = _smp_join,
+  .leave         = _smp_leave,
+  .is_global     = _smp_is_global,
+  .locality_of   = _smp_locality_of,
+  .sub           = _smp_sub,
+  .add           = _smp_add,
   .lva_to_gva    = _smp_lva_to_gva,
   .gva_to_lva    = _smp_gva_to_lva,
   .there         = _smp_there,

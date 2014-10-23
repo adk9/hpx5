@@ -42,7 +42,7 @@ int edge_list_from_file_action(char **filename) {
 
   edge_list_edge_t *edge = malloc(sizeof(*edge));
   assert(edge);
- 
+
   hpx_addr_t edges = HPX_NULL;
   uint64_t count = 0;
 
@@ -53,16 +53,16 @@ int edge_list_from_file_action(char **filename) {
       case 'a':
 
         sscanf(&line[1], " %lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
-	if(el->min_edge_weight > edge->weight)
-	  el->min_edge_weight = edge->weight;
-	if(el->max_edge_weight < edge->weight)
-	  el->max_edge_weight = edge->weight;
+    if(el->min_edge_weight > edge->weight)
+      el->min_edge_weight = edge->weight;
+    if(el->max_edge_weight < edge->weight)
+      el->max_edge_weight = edge->weight;
 
         sscanf(&line[1], " %" PRIu64 " %" PRIu64 " %" PRIu64, &edge->source, &edge->dest, &edge->weight);
 
         hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t), el->edge_list_bsize);
         count++;
-        assert(!hpx_addr_eq(edges, HPX_NULL));
+        assert(edges != HPX_NULL);
         hpx_call(e, _put_edge, edge, sizeof(*edge), edges);
         break;
 
@@ -75,7 +75,7 @@ int edge_list_from_file_action(char **filename) {
 
         // Set an appropriate block size
         el->edge_list_bsize = ((el->num_edges + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(edge_list_edge_t);
-        
+
         // Allocate an edge_list array in the global address space
         el->edge_list = hpx_gas_global_alloc(HPX_LOCALITIES, el->edge_list_bsize);
 
@@ -88,7 +88,7 @@ int edge_list_from_file_action(char **filename) {
     }
   }
 
-  assert(!hpx_addr_eq(edges, HPX_NULL));
+  assert(edges != HPX_NULL);
   hpx_lco_wait(edges);
   hpx_lco_delete(edges, HPX_NULL);
   free(edge);

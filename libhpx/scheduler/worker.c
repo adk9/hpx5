@@ -49,9 +49,6 @@
 typedef volatile int atomic_int_t;
 typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
 
-typedef two_lock_queue_t _mailbox_t;
-typedef two_lock_queue_node_t _envelope_t;
-
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -76,9 +73,8 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  _envelope_t    *envelopes;                    // free envelopes
   chase_lev_ws_deque_t work;                    // my work
-  _mailbox_t          inbox;                    // envelopes sent to me
+  two_lock_queue_t    inbox;                    // mail sent to me
   atomic_int_t     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 } self = {
@@ -89,36 +85,11 @@ static __thread struct worker {
   .backoff    = 0,
   .sp         = NULL,
   .current    = NULL,
-  .envelopes  = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
   .shutdown   = 0,
   .stats      = SCHEDULER_STATS_INIT
 };
-
-
-/// Enclose a parcel in an envelope so that it can be sent to another worker
-/// using the mailbox functionality.
-static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
-  _envelope_t *envelope = w->envelopes;
-  if (envelope != NULL)
-    w->envelopes = w->envelopes->next;
-  else
-    envelope = malloc(sizeof(*envelope));
-
-  envelope->next  = NULL;
-  envelope->value = p;
-  return envelope;
-}
-
-
-/// Extract a parcel from an envelope.
-static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
-  mail->next = w->envelopes;
-  w->envelopes = mail;
-  return mail->value;
-}
-
 
 /// The entry function for all of the lightweight threads.
 ///
@@ -155,8 +126,6 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
 static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
-  assert(sp);
-
   // checkpoint my native stack pointer
   self.sp = sp;
   self.current = to;
@@ -174,9 +143,8 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
-///
-/// @returns A new lightweight thread, as defined by the parcel.
-static hpx_parcel_t *_bind(hpx_parcel_t *p) {
+
+static void _bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
 #ifdef HPX_PROFILE_STACKS
   unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
@@ -190,7 +158,6 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 #endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
-  return p;
 }
 
 
@@ -241,19 +208,21 @@ static hpx_parcel_t *_network(void) {
 
 /// Send a mail message to another worker.
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
-  worker_t    *w = here->sched->workers[id];
-  _envelope_t *letter = _enclose(&self, p);
-  sync_two_lock_queue_enqueue(&(w->inbox), letter);
+  worker_t *w = here->sched->workers[id];
+  two_lock_queue_node_t *node = malloc(sizeof(*node));
+  node->value = p;
+  node->next = NULL;
+  sync_two_lock_queue_enqueue_node(&(w->inbox), node);
 }
 
 
 /// Process my mail queue.
 static void _handle_mail(void) {
-  _envelope_t *letter = NULL;
-  while ((letter = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
+  two_lock_queue_node_t *node = NULL;
+  while ((node = sync_two_lock_queue_dequeue_node(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
-    hpx_parcel_t *p = _open(&self, letter);
-    sync_chase_lev_ws_deque_push(&self.work, p);
+    sync_chase_lev_ws_deque_push(&self.work, node->value);
+    free(node);
   }
 }
 
@@ -382,8 +351,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
  exit:
   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
   if (!parcel_get_stack(p))
-    return _bind(p);
+    _bind(p);
 
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
   return p;
 }
 
@@ -432,6 +402,8 @@ void *worker_run(scheduler_t *sched) {
 
   // bind a stack to transfer to
   _bind(p);
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+
   if (!p) {
     dbg_error("worker: failed to bind an initial stack.\n");
     hpx_parcel_release(p);
@@ -577,12 +549,8 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   ustack_t *thread = parcel_get_stack(self.current);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
-  // if we successfully pushed, then do a transfer away from this thread,
-  // setting the soft affinity so that the thread is woken up in the right
-  // place, and releasing the lock across the wait
+  // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
-    thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
-    assert(thread->wait_affinity < here->sched->n_workers);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
@@ -591,40 +559,31 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   return status;
 }
 
-
-void scheduler_signal(cvar_t *cvar) {
-  ustack_t *thread = cvar_pop_thread(cvar);
-  if (!thread)
-    return;
-
-  if (thread->wait_affinity != self.id)
-    _send_mail(thread->wait_affinity, thread->parcel);
+/// Resume a thread.
+static inline void _resume(ustack_t *thread) {
+  if (thread->affinity >= 0 && thread->affinity != self.id)
+    _send_mail(thread->affinity, thread->parcel);
   else
     sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
 }
 
+void scheduler_signal(cvar_t *cvar) {
+  ustack_t *thread = cvar_pop_thread(cvar);
+  if (thread)
+    _resume(thread);
+}
+
 
 void scheduler_signal_all(struct cvar *cvar) {
-  ustack_t *thread = cvar_pop_all(cvar);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
+    _resume(thread);
 }
 
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  ustack_t *thread = cvar_set_error(cvar, code);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_set_error(cvar, code); thread;
+       thread = thread->next)
+    _resume(thread);
 }
 
 
@@ -655,8 +614,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   hpx_parcel_t *parcel = self.current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if (!hpx_addr_eq(c_target, HPX_NULL) &&
-      !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+  if (c_target && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
     // Double the credit so that we can pass it on to the continuation
     // without splitting it up.
     --parcel->credit;

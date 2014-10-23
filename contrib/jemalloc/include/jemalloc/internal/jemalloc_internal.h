@@ -714,7 +714,7 @@ isalloc(const void *ptr, bool demote)
 
 	assert(ptr != NULL);
 	/* Demotion only makes sense if config_prof is true. */
-	assert(config_prof || demote == false);
+	assert(config_prof || !demote);
 
 	chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
 	if (chunk != ptr)
@@ -902,7 +902,7 @@ ixalloc(void *ptr, size_t size, size_t extra, size_t alignment, bool zero)
 	if (size <= arena_maxclass)
 		return (arena_ralloc_no_move(ptr, oldsize, size, extra, zero));
 	else
-		return (huge_ralloc_no_move(ptr, oldsize, size, extra));
+		return (huge_ralloc_no_move(ptr, oldsize, size, extra, zero));
 }
 #endif
 
