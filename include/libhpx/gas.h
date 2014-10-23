@@ -68,14 +68,17 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
 inline static void gas_delete(gas_class_t *gas) {
+  assert(gas && gas->delete);
   gas->delete(gas);
 }
 
 inline static int gas_join(gas_class_t *gas) {
+  assert(gas && gas->join);
   return gas->join();
 }
 
 inline static void gas_leave(gas_class_t *gas) {
+  assert(gas && gas->leave);
   gas->leave();
 }
 
