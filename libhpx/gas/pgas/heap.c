@@ -151,7 +151,7 @@ static bitmap_t *_new_bitmap(size_t nchunks) {
 
 static void *_map_heap(const size_t bytes, hpx_pgas_alloc_t alloc) {
   void *heap;
-  if(alloc == HPX_PGAS_ALLOC_MALLOC) 
+  if(alloc == HPX_PGAS_ALLOC_MALLOC)
     heap = malloc(bytes);
   else {
     const int prot = PROT_READ | PROT_WRITE;
@@ -161,7 +161,7 @@ static void *_map_heap(const size_t bytes, hpx_pgas_alloc_t alloc) {
   if (!heap) {
     dbg_error("failed to mmap %lu bytes for the shared heap\n", bytes);
   }
-  else if(alloc = HPX_PGAS_ALLOC_MALLOC) {
+  else if (alloc == HPX_PGAS_ALLOC_MALLOC) {
     dbg_log_gas("malloced %lu bytes for the shared heap\n", bytes);
   } else {
     dbg_log_gas("mmaped %lu bytes for the shared heap\n", bytes);
@@ -232,7 +232,7 @@ void heap_fini(heap_t *heap) {
     else {
       int e = munmap(heap->raw_base, heap->raw_nbytes);
       if (e)
-	dbg_error("pgas: failed to munmap the heap.\n");
+    dbg_error("pgas: failed to munmap the heap.\n");
     }
   }
 }
