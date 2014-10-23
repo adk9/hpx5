@@ -54,7 +54,7 @@ typedef struct coll_point_t {
 } coll_point_t;
 
 typedef struct hash_entry_t{
-  coll_point_t *point; ///< pointer to the collocation point
+  coll_point_t point; ///< pointer to the collocation point
   uint64_t mkey;  ///< morton key for this entry
   struct hash_entry_t *next; ///< pointer to the next entry
 } hash_entry_t;
@@ -130,6 +130,16 @@ typedef struct Cfg_action_helper2{
 int _cfg2_action(Cfg_action_helper2 *ld);
 extern hpx_action_t _cfg2;
 
+typedef struct Cag_action_helper{
+  int i;
+  double t0;
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} Cag_action_helper;
+
+int _cag_action(Cag_action_helper *ld);
+extern hpx_action_t _cag;
+
 void problem_init(Domain *);
 double compute_numer_1st(const int ell, const int j, const int p);
 double compute_numer_2nd(const int ell, const int j, const int p);
@@ -146,13 +156,13 @@ void forward_wavelet_trans(const coll_point_t *point, const char type,
 coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hpx_addr_t collpoints);
 uint64_t morton_key(const int index[n_dim]);
 uint64_t hash(const uint64_t k);
-void create_neighboring_point(coll_point_t *essen_point, const double stamp,Domain *ld);
+void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_addr_t,hpx_addr_t);
 void create_adap_grids(Domain *ld);
 void advance_time_stamp(coll_point_t *point, const double stamp,
                         const int gen,Domain *ld); 
 void create_nonessential_point(coll_point_t *nonessen_point,
                                const int index[n_dim], const double stamp,Domain *ld);
-coll_point_t *add_coll_point(const int index[n_dim], int *flag,Domain *ld);
+coll_point_t *add_coll_point(const int index[n_dim], int *flag,hpx_addr_t,hpx_addr_t);
 int get_level(const int index);
 void deriv_stencil_config(const double stamp,Domain *ld); 
 void deriv_stencil_helper(coll_point_t *point, const int dir, const double stamp,Domain *ld);
