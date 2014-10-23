@@ -29,6 +29,7 @@ static void _usage(FILE *stream) {
           "\t-D, all localities wait for debugger\n"
           "\t-d, wait for debugger at specific locality\n"
           "\t-l, set logging level\n"
+	  "\t-b, select allocator for PGAS heap (see hpx config)\n"
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
 	  "\t-r, set send/receive request limit\n"
@@ -311,50 +312,57 @@ int main(int argc, char *const argv[argc]) {
   uint64_t time_limit = 1000;
   int realloc_adj_list = 1;
 
+  // By default use malloc
+  cfg.alloc = HPX_PGAS_ALLOC_MALLOC;
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:ah")) != -1) {
     switch (opt) {
-     case 'c':
+    case 'c':
       cfg.cores = atoi(optarg);
       break;
-     case 't':
+    case 't':
       cfg.threads = atoi(optarg);
       break;
-     case 'T':
+    case 'T':
       cfg.transport = atoi(optarg);
       assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
-     case 'D':
+    case 'D':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = HPX_LOCALITY_ALL;
       break;
-     case 'd':
+    case 'd':
       cfg.wait = HPX_WAIT;
       cfg.wait_at = atoi(optarg);
       break;
-     case 'l':
+    case 'l':
       cfg.log_level = atoi(optarg);
       break;
-     case 's':
+    case 'b':
+      cfg.transport = atoi(optarg);
+      assert(0 <= cfg.alloc && cfg.alloc < HPX_PGAS_ALLOC_MAX);
+      break;
+    case 's':
       cfg.stack_bytes = strtoul(optarg, NULL, 0);
       break;
-     case 'p':
+    case 'p':
       cfg.heap_bytes = strtoul(optarg, NULL, 0);
       break;
-     case 'r':
+    case 'r':
       cfg.req_limit = strtoul(optarg, NULL, 0);
       break;
-     case 'q':
+    case 'q':
       time_limit = strtoul(optarg, NULL, 0);
       break;
-     case 'a':
+    case 'a':
       realloc_adj_list = 0;
       break;
-     case 'h':
+    case 'h':
       _usage(stdout);
       return 0;
-     case '?':
-     default:
+    case '?':
+    default:
       _usage(stderr);
       return -1;
     }
