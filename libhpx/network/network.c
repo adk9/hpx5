@@ -41,9 +41,9 @@
 #define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
-#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
-#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
-
+#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue_node)
+#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue_node)
+#define _QUEUE_NODE _QUEUE(,_node_t)
 
 /// The network class data.
 struct network_class {
@@ -56,19 +56,43 @@ struct network_class {
 
 
 void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(&network->tx, p);
+  assert(p);
+  _QUEUE_NODE *node = malloc(sizeof(*node));
+  assert(node);
+  node->value = p;
+  node->next = NULL;
+  _QUEUE_ENQUEUE(&network->tx, node);
 }
 
 hpx_parcel_t *network_tx_dequeue(network_class_t *network) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->tx);
+  hpx_parcel_t *p  = NULL;
+  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->tx);
+  if (node) {
+    p = node->value;
+    assert(p);
+    free(node);
+  }
+  return p;
 }
 
 void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(&network->rx, p);
+  assert(p);
+  _QUEUE_NODE *node = malloc(sizeof(*node));
+  assert(node);
+  node->value = p;
+  node->next = NULL;
+  _QUEUE_ENQUEUE(&network->rx, node);
 }
 
 hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->rx);
+  hpx_parcel_t *p  = NULL;
+  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->rx);
+  if (node) {
+    p = node->value;
+    assert(p);
+    free(node);
+  }
+  return p;
 }
 
 
@@ -104,11 +128,11 @@ void network_delete(network_class_t *network) {
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = _QUEUE_DEQUEUE(&network->tx)))
+  while ((p = network_tx_dequeue(network)))
     hpx_parcel_release(p);
   _QUEUE_FINI(&network->tx);
 
-  while ((p =_QUEUE_DEQUEUE(&network->rx)))
+  while ((p = network_rx_dequeue(network)))
     hpx_parcel_release(p);
   _QUEUE_FINI(&network->rx);
 
