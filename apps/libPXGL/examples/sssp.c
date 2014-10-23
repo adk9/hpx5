@@ -33,7 +33,6 @@ static void _usage(FILE *stream) {
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
       "\t-r, set send/receive request limit\n"
-          "\t-b, set block-translation-table size\n"
           "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");

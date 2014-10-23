@@ -35,7 +35,6 @@ static void usage(FILE *stream) {
           "\t-s, set stack size\n"
           "\t-p, set per-PE global heap size\n"
           "\t-r, set send/receive request limit\n"
-          "\t-b, set block-translation-table size\n"
           "\t-h, this help display\n");
 }
 
@@ -80,7 +79,7 @@ main(int argc, char *argv[])
   //cfg.gas          = HPX_GAS_SMP;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:h")) != -1) {
     switch (opt) {
      case 'c':
       cfg.cores = atoi(optarg);
