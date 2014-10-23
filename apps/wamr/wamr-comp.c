@@ -452,18 +452,23 @@ coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hp
   } else {
     uint64_t mkey = morton_key(index);
     uint64_t hidx = hash(mkey);
+    printf(" PUT BIG NUMBER TEST HERE %ld\n",hidx);
     hash_entry_t *curr = malloc(sizeof(*curr)); 
     hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
     hpx_addr_t complete = hpx_lco_and_new(1);
     hpx_gas_memget(curr,there,sizeof(hash_entry_t),complete);
     hpx_lco_wait(complete);
     hpx_lco_delete(complete,HPX_NULL);
-    while (curr != NULL) {
+    while (curr->initialized) {
       if (curr->mkey == mkey) {
         retval = &curr->point;
         break;
       }
-      curr = curr->next;
+      hpx_addr_t finished = hpx_lco_and_new(1);
+      hpx_addr_t next = curr->next;
+      hpx_gas_memget(curr,next,sizeof(hash_entry_t),finished);
+      hpx_lco_wait(finished);
+      hpx_lco_delete(finished,HPX_NULL);
     }
   }
 
@@ -678,9 +683,8 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_
 coll_point_t *add_coll_point(const int index[n_dim], int *flag,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
   // check if the point exists in the hash table
 
-  coll_point_t *retval;
-#if 0
   coll_point_t *retval = get_coll_point(index,basecollpoints,collpoints);
+#if 0
 
   if (retval != NULL) {
     *flag = 1; // the point already exists

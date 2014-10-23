@@ -26,7 +26,16 @@
 #define n_gen   4 // number of buffers for the RK4 integrator
 #define n_neighbors 2
 
-#define HASH_TBL_SIZE 6291469
+#define HASH_TBL_SIZE 3145739
+// #define HASH_TBL_SIZE 6291469
+// #define HASH_TBL_SIZE 12582917
+// #define HASH_TBL_SIZE 25165843
+// #define HASH_TBL_SIZE 50331653
+// #define HASH_TBL_SIZE 100663319
+// #define HASH_TBL_SIZE 201326611
+// #define HASH_TBL_SIZE 402653189
+// #define HASH_TBL_SIZE 805306457
+//#define HASH_TBL_SIZE 1610612741
 
 typedef enum {
   essential    = 3,
@@ -54,9 +63,10 @@ typedef struct coll_point_t {
 } coll_point_t;
 
 typedef struct hash_entry_t{
+  int initialized;
   coll_point_t point; ///< pointer to the collocation point
   uint64_t mkey;  ///< morton key for this entry
-  struct hash_entry_t *next; ///< pointer to the next entry
+  hpx_addr_t next; ///< pointer to the next entry
 } hash_entry_t;
 
 typedef struct {
