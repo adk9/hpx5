@@ -121,6 +121,8 @@ extern hpx_action_t _cfg;
 typedef struct Cfg_action_helper2{
   int i;
   double lag_coef[np - 1][np];
+  int mask[n_variab + n_aux];
+  double eps[n_variab];
   hpx_addr_t basecollpoints;
   hpx_addr_t collpoints;
 } Cfg_action_helper2;
@@ -140,8 +142,8 @@ int get_stencil_type(const int myorder, const int range);
 void get_stencil_indices(const int myindex, const int index_range,
                          const int step, int indices[np]);
 void forward_wavelet_trans(const coll_point_t *point, const char type,
-                           const int *mask, const int gen, double *approx,Domain *ld);
-coll_point_t *get_coll_point(const int index[n_dim],Domain *ld);
+                           const int *mask, const int gen, double *approx,hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]);
+coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hpx_addr_t collpoints);
 uint64_t morton_key(const int index[n_dim]);
 uint64_t hash(const uint64_t k);
 void create_neighboring_point(coll_point_t *essen_point, const double stamp,Domain *ld);

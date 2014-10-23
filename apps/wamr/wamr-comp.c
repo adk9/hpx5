@@ -207,7 +207,7 @@ int _cfg2_action(Cfg_action_helper2 *ld)
   if (ihalf) { // point is level 1, configure its wavelet stencil
     hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i-1)*sizeof(coll_point_t),sizeof(coll_point_t));
     hpx_addr_t complete = hpx_lco_and_new(1);
-    coll_point_t *parent;
+    coll_point_t *parent = malloc(sizeof(*parent));
     hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
 
     int indices[np] = {0};
@@ -216,31 +216,61 @@ int _cfg2_action(Cfg_action_helper2 *ld)
     hpx_lco_wait(complete);
     hpx_lco_delete(complete,HPX_NULL);
     point->parent[0] = parent->index[0];
-#if 0
-    for (int j = 0; j < np; j++)
-      point->wavelet_stencil[0][j][0] =
-        ld->coll_points->array[indices[j]].index[0];
+    free(parent);
 
+    coll_point_t **pnts = malloc(np*sizeof(*pnts));
+    for (int j = 0; j < np; j++) {
+      pnts[j] = malloc(sizeof(**pnts));
+    }
+    hpx_addr_t finish = hpx_lco_and_new(np);
+    for (int j = 0; j < np; j++) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,indices[j]*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_gas_memget(pnts[j],there,sizeof(coll_point_t),finish);
+    }
+    hpx_lco_wait(finish);
+    hpx_lco_delete(finish,HPX_NULL);
+
+    for (int j = 0; j < np; j++) { 
+      point->wavelet_stencil[0][j][0] = pnts[j]->index[0];
+    }
+
+    for (int j = 0; j < np; j++) 
+      free(pnts[j]);
+    free(pnts);
+    
     // perform wavelet transform
     double approx[n_variab + n_aux] = {0};
-    forward_wavelet_trans(point, 'u', mask, 0, approx,ld);
+    forward_wavelet_trans(point, 'u', ld->mask, 0, approx,ld->basecollpoints,ld->collpoints,ld->lag_coef);
     for (int ivar = 0; ivar < n_variab; ivar++) {
       if (fabs(point->u[0][ivar] - approx[ivar]) >= ld->eps[ivar]) {
         point->status[0] = essential;
         break;
       }
     }
-#endif
   } else {
-#if 0
     point->wavelet_coef[0] = -1; // -1 means wavelet transform not needed
     point->parent[0] = -1; // no parent 
-    if (i >= 1)
-      point->neighbors[0][0] = ld->coll_points->array[i - 1].index[0];
+    if (i >= 1) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i-1)*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_addr_t complete = hpx_lco_and_new(1);
+      coll_point_t *parent = malloc(sizeof(*parent));
+      hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+      hpx_lco_wait(complete);
+      hpx_lco_delete(complete,HPX_NULL);
+      point->neighbors[0][0] = parent->index[0];
+      free(parent);
+    }
 
-    if (i <= ns_x * 2 - 1)
-      point->neighbors[1][0] = ld->coll_points->array[i + 1].index[0];
-#endif
+    if (i <= ns_x * 2 - 1) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i+1)*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_addr_t complete = hpx_lco_and_new(1);
+      coll_point_t *parent = malloc(sizeof(*parent));
+      hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+      hpx_lco_wait(complete);
+      hpx_lco_delete(complete,HPX_NULL);
+      point->neighbors[1][0] = parent->index[0];
+      free(parent);
+    }
   }
 
   hpx_gas_unpin(local);
@@ -252,10 +282,6 @@ void create_full_grids(Domain *ld) {
   //assert(ld->coll_points != NULL);
   const int step_size = 1 << JJ;
   ld->max_level = 1;
-
-  int mask[n_variab + n_aux] = {0};
-  for (int ivar = 0; ivar < n_variab; ivar++)
-    mask[ivar] = 1;
 
   Cfg_action_helper cfg[ns_x*2+1]; 
   hpx_addr_t complete = hpx_lco_and_new(ns_x*2+1);
@@ -269,6 +295,7 @@ void create_full_grids(Domain *ld) {
     cfg[i].p_r = ld->p_r;
     cfg[i].Gamma_r = ld->Gamma_r;
     cfg[i].t0 = ld->t0;
+    cfg[i].step_size = step_size;
     hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
     hpx_call(there,_cfg,&cfg[i],sizeof(Cfg_action_helper),complete);
   }
@@ -279,6 +306,13 @@ void create_full_grids(Domain *ld) {
   Cfg_action_helper2 cfg2[ns_x*2+1];
   for (int i = 0; i <= ns_x * 2; i++) {
     cfg2[i].i = i; 
+    for (int ivar = 0; ivar < n_variab; ivar++) {
+      cfg2->mask[ivar] = 1;
+      cfg2->eps[ivar] = ld->eps[ivar];
+    }
+    for (int ivar = n_variab; ivar < n_variab+n_aux; ivar++)
+      cfg2->mask[ivar] = 0;
+
     for (j=0;j<np-1;j++) {
       for (k=0;k<np;k++) {
         cfg2[i].lag_coef[j][k] = ld->lag_coef[j][k];
@@ -292,41 +326,6 @@ void create_full_grids(Domain *ld) {
   }
   hpx_lco_wait(complete2);
   hpx_lco_delete(complete2,HPX_NULL);
-
-#if 0
-  for (int i = 0; i <= ns_x * 2; i++) {
-      int i2 = i / 2;
-      int ihalf = i % 2;
-      coll_point_t *point = &(ld->coll_points->array[i]);
-      if (ihalf) { // point is level 1, configure its wavelet stencil
-        point->parent[0] = ld->coll_points->array[i - 1].index[0];
-        int indices[np] = {0};
-        point->wavelet_coef[0] = get_stencil_type(i2, ns_x - 1);
-        get_stencil_indices(i, 2 * ns_x, 2, indices);
-        for (int j = 0; j < np; j++)
-          point->wavelet_stencil[0][j][0] =
-            ld->coll_points->array[indices[j]].index[0];
-
-        // perform wavelet transform
-        double approx[n_variab + n_aux] = {0};
-        forward_wavelet_trans(point, 'u', mask, 0, approx,ld);
-        for (int ivar = 0; ivar < n_variab; ivar++) {
-          if (fabs(point->u[0][ivar] - approx[ivar]) >= ld->eps[ivar]) {
-            point->status[0] = essential;
-            break;
-          }
-        }
-      } else {
-        point->wavelet_coef[0] = -1; // -1 means wavelet transform not needed
-        point->parent[0] = -1; // no parent 
-        if (i >= 1)
-          point->neighbors[0][0] = ld->coll_points->array[i - 1].index[0];
-  
-        if (i <= ns_x * 2 - 1)
-          point->neighbors[1][0] = ld->coll_points->array[i + 1].index[0];
-      }
-  }
-#endif
 }
 
 void initial_condition(const double coords[n_dim], double *u,double Prr,double p_r,double Gamma_r) {
@@ -362,4 +361,95 @@ void get_stencil_indices(const int myindex, const int index_range,
   for (int i = 0; i < np; i++)
     indices[i] = start + i * step;
 }
+
+/// Forward wavelet transform
+/// ---------------------------------------------------------------------------
+void forward_wavelet_trans(const coll_point_t *point, const char type,
+                           const int *mask, const int gen, double *approx,hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]) {
+  assert(type == 'u' || type == 'd');
+  coll_point_t *wavelet_stencil[np] = {NULL};
+  double *coef = NULL;
+
+  // In general, a point may have multiple interpolation direction to complete
+  // the transformation. If the data is distributed, one would ideally choose
+  // the direction based on the amount of local data. The current version,
+  // however, will just choose the first direction in which interpolation is
+  // required. 
+  for (int dir = 0; dir < n_dim; dir++) {
+    int interp_case = point->wavelet_coef[dir];
+    if (interp_case != -1) {
+      coef = &(lag_coef[interp_case][0]);
+      for (int j = 0; j < np; j++) 
+        wavelet_stencil[j] = get_coll_point(point->wavelet_stencil[dir][j],basecollpoints,collpoints);
+    }
+  }
+
+  if (type == 'u') {
+    int nvar = n_variab + n_aux; // length of the mask
+    for (int ivar = 0; ivar < nvar; ivar++)
+      approx[ivar] = 0;
+
+    for (int i = 0; i < np; i++) {
+      double *ui = &wavelet_stencil[i]->u[gen][0];
+      for (int ivar = 0; ivar < nvar; ivar++) 
+        approx[ivar] += coef[i] * ui[ivar] * mask[ivar];
+    }
+    for (int i = 0; i < np; i++) {
+      free(wavelet_stencil[i]);
+    }
+  } else {
+    int nvar = n_deriv;
+    for (int ivar = 0; ivar < nvar; ivar++)
+      approx[ivar] = 0;
+
+    for (int i = 0; i < np; i++) {
+      double *dui = &wavelet_stencil[i]->du[gen][0];
+      for (int ivar = 0; ivar < nvar; ivar++)
+        approx[ivar] += coef[i] * dui[ivar] * mask[ivar];
+    }
+    for (int i = 0; i < np; i++) {
+      free(wavelet_stencil[i]);
+    }
+  }
+}
+
+/// @brief Retrieve collocation point based on its Morton key  
+/// ---------------------------------------------------------------------------
+coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+  static const int step = 1 << (JJ - 1);
+  coll_point_t *retval = NULL;
+
+  bool stored_in_array = true;
+  for (int dir = 0; dir < n_dim; dir++)
+    stored_in_array &= (index[dir] % step == 0);
+
+  if (stored_in_array) {
+   // retval = &(ld->coll_points->array[index[0] / step]);
+
+    hpx_addr_t there = hpx_addr_add(basecollpoints,(index[0] / step)*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    coll_point_t *point = malloc(sizeof(*point));
+    hpx_gas_memget(point,there,sizeof(coll_point_t),complete);
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    return point;
+  } else {
+    printf(" PROBLEM!!!!\n");
+/*
+    uint64_t mkey = morton_key(index);
+    uint64_t hidx = hash(mkey);
+    hash_entry_t *curr = ld->coll_points->hash_table[hidx];
+    while (curr != NULL) {
+      if (curr->mkey == mkey) {
+        retval = curr->point;
+        break;
+      }
+      curr = curr->next;
+    }
+ */
+  }
+
+  return retval;
+}
+
 
