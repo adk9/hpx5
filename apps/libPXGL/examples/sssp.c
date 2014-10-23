@@ -20,6 +20,12 @@
 
 #include "hpx/hpx.h"
 #include "libpxgl.h"
+#include "libsync/sync.h"
+
+uint64_t active_count;
+uint64_t inactive_count;
+
+#define VERBOSE 1
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
@@ -144,6 +150,15 @@ static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
   return HPX_SUCCESS;
 }
 
+static hpx_action_t _set_termination_count_zero;
+static int _set_termination_count_zero_action(){
+  sync_store(&active_count, 0, SYNC_RELAXED);
+  sync_store(&inactive_count, 0, SYNC_RELAXED);
+  return HPX_SUCCESS;
+}
+
+
+
 static hpx_action_t _main;
 static int _main_action(_sssp_args_t *args) {
   const int realloc_adj_list = args->realloc_adj_list;
@@ -197,11 +212,22 @@ static int _main_action(_sssp_args_t *args) {
 
     sargs.source = args->problems[i];
 
+    //initialize termination detection algorithm variables to zero
+    hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
+    hpx_bcast(_set_termination_count_zero, NULL, 0, init_termination_count_lco);
+
+
     hpx_time_t now = hpx_time_now();
 
-    // printf("Calling SSSP in the %d iteration\n", i);
+    printf("Calling SSSP in the %d iteration\n", i);
     // Call the SSSP algorithm
-    hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
+    //MODIFIED to use and lco
+    //hpx_addr_t sssp_lco = hpx_lco_future_new(0);
+    hpx_addr_t sssp_lco = hpx_lco_and_new(1);
+    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), sssp_lco);
+    hpx_lco_wait(sssp_lco);
+    hpx_lco_delete(sssp_lco, HPX_NULL);
+
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     elapsed_time[i] = elapsed;
@@ -404,6 +430,7 @@ int main(int argc, char *const argv[argc]) {
   }
 
   // register the actions
+  _set_termination_count_zero  = HPX_REGISTER_ACTION(_set_termination_count_zero_action);
   _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);
   _print_vertex_distance       = HPX_REGISTER_ACTION(_print_vertex_distance_action);
   _get_sssp_stat               = HPX_REGISTER_ACTION(_get_sssp_stat_action);
