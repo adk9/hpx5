@@ -23,6 +23,10 @@
 #define LABEL(S) S:
 #define INTERNAL(S) .internal S
 #define SIZE(S) .size S, .-S
+#define TYPE(S, T) .type S, T
+#define STARTPROC .cfi_startproc
+#define ENDPROC .cfi_endproc
+#define CFA_OFFSET(N) .cfi_def_cfa_offset N
 #else
 #error No ASM support for your platform.
 #endif
