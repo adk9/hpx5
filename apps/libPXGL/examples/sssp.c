@@ -308,7 +308,7 @@ static int _main_action(_sssp_args_t *args) {
 int main(int argc, char *const argv[argc]) {
   hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   uint64_t time_limit = 1000;
-  int realloc_adj_list = 1;
+  int realloc_adj_list = 0;
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:ah")) != -1) {
@@ -347,7 +347,7 @@ int main(int argc, char *const argv[argc]) {
       time_limit = strtoul(optarg, NULL, 0);
       break;
     case 'a':
-      realloc_adj_list = 0;
+      realloc_adj_list = 1;
       break;
     case 'h':
       _usage(stdout);
