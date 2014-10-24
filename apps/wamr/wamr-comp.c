@@ -452,7 +452,6 @@ coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hp
   } else {
     uint64_t mkey = morton_key(index);
     uint64_t hidx = hash(mkey);
-    printf(" PUT BIG NUMBER TEST HERE %ld\n",hidx);
     hash_entry_t *curr = malloc(sizeof(*curr)); 
     hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
     hpx_addr_t complete = hpx_lco_and_new(1);
@@ -475,6 +474,53 @@ coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hp
   return retval;
 }
 
+/// @brief Retrieve collocation point based on its Morton key  
+/// ---------------------------------------------------------------------------
+hpx_addr_t get_hpx_coll_point(const int index[n_dim],int *flag,int *type,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+  static const int step = 1 << (JJ - 1);
+
+  bool stored_in_array = true;
+  for (int dir = 0; dir < n_dim; dir++)
+    stored_in_array &= (index[dir] % step == 0);
+
+  // defaults
+  *flag = 0;  // the point doesn't exist
+  *type = 1;  
+
+  if (stored_in_array) {
+    *flag = 1; // the point already exists
+    *type = 0; // the point exists in the array
+    hpx_addr_t there = hpx_addr_add(basecollpoints,(index[0] / step)*sizeof(coll_point_t),sizeof(coll_point_t));
+    return there;
+  } else {
+    uint64_t mkey = morton_key(index);
+    uint64_t hidx = hash(mkey);
+    hash_entry_t *curr = malloc(sizeof(*curr)); 
+    hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    hpx_gas_memget(curr,there,sizeof(hash_entry_t),complete);
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    hpx_addr_t next = there;  
+    while (curr->initialized) {
+      if (curr->mkey == mkey) {
+        *flag = 1; // the point already exists
+        *type = 1; // the point exists in the hash
+        return next;
+        break;
+      }
+      hpx_addr_t finished = hpx_lco_and_new(1);
+      next = curr->next;
+      hpx_gas_memget(curr,next,sizeof(hash_entry_t),finished);
+      hpx_lco_wait(finished);
+      hpx_lco_delete(finished,HPX_NULL);
+    }
+    return next;
+  }
+
+  return HPX_NULL;
+}
+
 int _cag_action(Cag_action_helper *ld)
 {
   hpx_addr_t local = hpx_thread_current_target();
@@ -483,7 +529,8 @@ int _cag_action(Cag_action_helper *ld)
     return HPX_RESEND;
 
   if (point->status[0] == essential)
-      create_neighboring_point(point, ld->t0,ld->basecollpoints,ld->collpoints);
+      create_neighboring_point(point, ld->t0,ld->L_dim[0],
+           ld->basecollpoints,ld->collpoints,ld->lag_coef);
 
   hpx_gas_unpin(local);
 
@@ -500,8 +547,15 @@ void create_adap_grids(Domain *ld) {
   for (int i = 1; i <= ns_x * 2; i += 2) {
     cag[i].i = i;
     cag[i].t0 = ld->t0;
+    cag[i].L_dim[0] = ld->L_dim[0];
     cag[i].basecollpoints = ld->basecollpoints;
     cag[i].collpoints = ld->collpoints;
+    int j,k;
+    for (j=0;j<np-1;j++) {
+      for (k=0;k<np;k++) {
+        cag[i].lag_coef[j][k] = ld->lag_coef[j][k];
+      }
+    }
     hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
     hpx_call(there,_cag,&cag[i],sizeof(Cag_action_helper),complete);
   }
@@ -510,10 +564,180 @@ void create_adap_grids(Domain *ld) {
   free(cag);
 
 }
+
+int _nah_action(Neighbor_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  hash_entry_t *neighbor_hash = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&neighbor_hash))
+    return HPX_RESEND;
+
+  // this is a new point -- initialize it
+  neighbor_hash->initialized = 1;
+  neighbor_hash->mkey = ld->mkey;
+  neighbor_hash->next = hpx_gas_alloc(sizeof(hash_entry_t));
+
+  coll_point_t *neighbor = &neighbor_hash->point;
+
+  neighbor->parent[0] = ld->essen_point.index[0]; 
+  neighbor->coords[0] = ld->L_dim0 * ld->index[0] / ld->nt_x; 
+  neighbor->index[0] = ld->index[0];
+  neighbor->level = ld->level + 1; 
+  neighbor->stamp = ld->stamp; 
+  for (int j = 0; j < n_neighbors; j++) {
+    for (int dir = 0; dir < n_dim; dir++) {
+      neighbor->neighbors[j][dir] = -1; 
+    }
+  }
+
+  // configure the wavelet stencil
+  int indices_x[np] = {0}; 
+  neighbor->wavelet_coef[0] = 
+    get_stencil_type((ld->index[0] - ld->step_n) / ld->step_e, ld->nnbr_x - 1); 
+  get_stencil_indices(ld->index[0], ld->nt_x, ld->step_e, indices_x); 
+
+  for (int j = 0; j < np; j++) {
+    neighbor->wavelet_stencil[0][j][0] = indices_x[j]; 
+    int flag1,type1; 
+    //coll_point_t *temp = add_coll_point(&indices_x[j], &flag1,ld); 
+    hpx_addr_t temp_addr = get_hpx_coll_point(&indices_x[j], &flag1,&type1,
+                  ld->basecollpoints,ld->collpoints); 
+    if (!flag1) { // the point has just been created
+#if 0
+      create_nonessential_point(temp, &indices_x[j], stamp,ld); 
+#endif
+    } else { 
+      double tstamp;
+      if ( type1 == 1 ) {
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        hash_entry_t *temp_hash = malloc(sizeof(*temp_hash)); 
+        hpx_gas_memget(temp_hash,temp_addr,sizeof(hash_entry_t),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        tstamp = temp_hash->point.stamp;
+      } else {
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        coll_point_t *temp = malloc(sizeof(*temp));
+        hpx_gas_memget(temp,temp_addr,sizeof(coll_point_t),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        tstamp = temp->stamp;
+      }
+      if (tstamp < ld->stamp) {
+        ATS_action_helper *ats;
+        ats = malloc(sizeof(ATS_action_helper));
+        ats->basecollpoints = ld->basecollpoints;
+        ats->collpoints = ld->collpoints;
+        ats->stamp = ld->stamp;
+        int j,k;
+        for (j=0;j<np-1;j++) {
+          for (k=0;k<np;k++) {
+            ats->lag_coef[j][k] = ld->lag_coef[j][k];
+          }
+        }
+
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        if ( type1 == 1 ) {
+          // this resolves the hash
+          hpx_call(temp_addr,_ats1,ats,sizeof(ATS_action_helper),complete);
+        } else {
+          // this resolves the coll point
+          hpx_call(temp_addr,_ats0,ats,sizeof(ATS_action_helper),complete);
+        }
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        free(ats);
+#if 0
+        // reason for setting status[1]: the point has a time stamp when it
+        // is created. If the input stamp is t0, this branch never
+        // happens. 
+        temp->status[1] = nonessential; 
+        advance_time_stamp(temp, stamp, 0,ld); 
+#endif
+      }
+    }
+  }
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+int _ats0_action(ATS_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *temp = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&temp))
+    return HPX_RESEND;
+
+  // reason for setting status[1]: the point has a time stamp when it
+  // is created. If the input stamp is t0, this branch never
+  // happens. 
+  temp->status[1] = nonessential; 
+  advance_time_stamp(temp, ld->stamp, 0,ld->basecollpoints,ld->collpoints,ld->lag_coef); 
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+int _ats1_action(ATS_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  hash_entry_t *point_hash = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point_hash))
+    return HPX_RESEND;
+
+  coll_point_t *temp = &point_hash->point;
+
+  // reason for setting status[1]: the point has a time stamp when it
+  // is created. If the input stamp is t0, this branch never
+  // happens. 
+  temp->status[1] = nonessential; 
+  advance_time_stamp(temp, ld->stamp, 0,ld->basecollpoints,ld->collpoints,ld->lag_coef); 
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// @brief Advance time stamp of the specified collocation point
+/// ----------------------------------------------------------------------------
+void advance_time_stamp(coll_point_t *point, const double stamp,
+                        const int gen,
+                        hpx_addr_t basecollpoints,hpx_addr_t collpoints,
+                        double lag_coef[np - 1][np]) {
+#if 0
+  // make sure the time stamps of the stencil are up-to-date
+  for (int dir = 0; dir < n_dim; dir++) {
+    if (point->wavelet_coef[dir] != -1) {
+      for (int j = 0; j < np; j++) {
+        coll_point_t *temp =
+          get_coll_point(point->wavelet_stencil[dir][j],ld);
+        if (temp->stamp < stamp) {
+          temp->status[1] = nonessential;
+          advance_time_stamp(temp, stamp, gen,ld);
+        }
+      }
+    }
+  }
+
+  // perform wavelet transform to set value of the point
+  int mask[n_variab + n_aux] = {0};
+  for (int ivar = 0; ivar < n_variab; ivar++)
+    mask[ivar] = 1;
+
+  forward_wavelet_trans(point, 'u', mask, 0, point->u[gen],
+         basecollpoints,collpoints,lag_coef);
+
+  // update the time stamp
+  point->stamp = stamp;
+#endif
+}
+
 /// ----------------------------------------------------------------------------
 /// @brief Add neighboring point around an essential point
 /// ----------------------------------------------------------------------------
-void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+void create_neighboring_point(coll_point_t *essen_point, const double stamp,double L_dim0,
+     hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]) {
   // set up mask for wavelet transform
   int mask[n_variab + n_aux] = {0}; 
   for (int ivar = 0; ivar < n_variab; ivar++) 
@@ -545,12 +769,41 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_
       essen_point->neighbors[i][0] = -1; // neighbor is out-of-range
     } else {
       essen_point->neighbors[i][0] = index[0]; 
-      int flag; 
+      int flag,type; 
 
-      coll_point_t *neighbor = add_coll_point(index, &flag,basecollpoints,collpoints); 
-#if 0
+      hpx_addr_t neighbor_addr = get_hpx_coll_point(index, &flag,&type,basecollpoints,collpoints); 
 
       if (flag == 0) { // the point has just been created
+        if ( type != 1 ) {
+          printf(" PROBLEM : trying to allocate point on the array! \n");
+          exit(0);
+        }
+        Neighbor_action_helper *nah;
+        nah = malloc(sizeof(Neighbor_action_helper));
+
+        nah->L_dim0 = L_dim0;
+        memcpy(&nah->essen_point,essen_point,sizeof(coll_point_t));
+        nah->index[0] = index[0];
+        nah->level = level;
+        nah->stamp = stamp;
+        nah->nt_x = nt_x;
+        nah->nnbr_x = nnbr_x;
+        nah->step_e = step_e;
+        nah->step_n = step_n;
+        nah->mkey = morton_key(index);
+        int j,k;
+        for (j=0;j<np-1;j++) {
+          for (k=0;k<np;k++) {
+            nah->lag_coef[j][k] = lag_coef[j][k];
+          }
+        }
+
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        hpx_call(neighbor_addr,_nah,nah,sizeof(Neighbor_action_helper),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        free(nah);
+#if 0
         neighbor->parent[0] = essen_point->index[0]; 
         neighbor->coords[0] = ld->L_dim[0] * index[0] / nt_x; 
         neighbor->index[0] = index[0];
@@ -608,7 +861,9 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_
           forward_wavelet_trans(neighbor, 'u', mask, 0, neighbor->u[0],ld);
           ld->max_level = fmax(ld->max_level, neighbor->level);
         }
+#endif
       } else {        
+#if 0
         if (stamp == ld->t0) {
           // the point was previously created as an nonessential point in the
           // initial grid construction, we need to update its status to
@@ -669,8 +924,8 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_
           // 5. update time stamp
           neighbor->stamp = stamp; 
         }
-      }
 #endif
+      }
     }  // move on to the next neighboring point 
   } // i 
 }
@@ -680,11 +935,10 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,hpx_
 /// in the hash table part. 
 /// @note When distributed, this function should be protected by lock.
 /// ----------------------------------------------------------------------------
-coll_point_t *add_coll_point(const int index[n_dim], int *flag,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+coll_point_t *add_coll_point(const int index[n_dim],int *flag,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
   // check if the point exists in the hash table
 
   coll_point_t *retval = get_coll_point(index,basecollpoints,collpoints);
-#if 0
 
   if (retval != NULL) {
     *flag = 1; // the point already exists
@@ -692,18 +946,39 @@ coll_point_t *add_coll_point(const int index[n_dim], int *flag,hpx_addr_t baseco
     *flag = 0; // the point does not exist
     uint64_t mkey = morton_key(index);
     uint64_t hidx = hash(mkey);
-    hash_entry_t *h_entry = calloc(1, sizeof(hash_entry_t));
-    retval = calloc(1, sizeof(coll_point_t));
-    assert(h_entry != NULL);
-    assert(retval != NULL);
-    h_entry->point = retval;
-    h_entry->mkey = mkey;
-    h_entry->next = ld->coll_points->hash_table[hidx];
-    ld->coll_points->hash_table[hidx] = h_entry;
+    hash_entry_t *curr = malloc(sizeof(*curr)); 
+    curr->initialized = 1;
+    curr->mkey == mkey;
+    curr->next = hpx_gas_alloc(sizeof(hash_entry_t));
+
+    hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
+    hpx_addr_t complete_local = hpx_lco_and_new(1);
+    hpx_addr_t complete_global = hpx_lco_and_new(1);
+    hpx_gas_memput(there,curr,sizeof(hash_entry_t),complete_local,complete_global);
+    hpx_lco_wait(complete_local);
+    hpx_lco_delete(complete_local,HPX_NULL);
+    free(curr);
+    hpx_lco_wait(complete_global);
+    hpx_lco_delete(complete_global,HPX_NULL);
   }
-#endif
 
   return retval;
+}
+
+/// @brief Determines which row in lag_coef to use by the stencil point
+/// ---------------------------------------------------------------------------
+int get_stencil_type(const int myorder, const int range) {
+  int stencil_type;
+
+  if (myorder < np / 2 - 1) {
+    stencil_type = myorder;
+  } else if ((range - myorder) < np / 2 - 1) {
+    stencil_type = (np - 2) - (range - myorder);
+  } else {
+    stencil_type = np / 2 - 1;
+  }
+
+  return stencil_type;
 }
 #if 0
 
