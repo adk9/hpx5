@@ -36,35 +36,54 @@
         ///
         /// @returns %rax from the continuation call
 
-        .file "libhpx/scheduler/arch/x86_64/transfer.S"
+        .file "transfer.S"
         .text
+        .section .rodata
+        TYPE(thread_transfer, @function)
         INTERNAL(thread_transfer)
         GLOBAL(thread_transfer)
 LABEL(thread_transfer)
-        push %rbp                               // 1
-        push %rbx                               // 2
-        push %r12                               // 3
-        push %r13                               // 4
-        push %r14                               // 5
-        push %r15                               // 6
-        sub $8, %rsp                            // 7
-        fnstcw 4(%rsp)                          // 7.5
-        stmxcsr	(%rsp)                          // 7
+        STARTPROC
+        push %rbp
+        CFA_OFFSET(16)
+        push %rbx
+        CFA_OFFSET(24)
+        push %r12
+        CFA_OFFSET(32)
+        push %r13
+        CFA_OFFSET(40)
+        push %r14
+        CFA_OFFSET(48)
+        push %r15
+        CFA_OFFSET(56)
+        sub $8, %rsp
+        CFA_OFFSET(64)
+        fnstcw 4(%rsp)
+        stmxcsr	(%rsp)
         mov %rsi, %rbx                          // cont
         mov (%rdi), %rsi                        // p->stack
         and $0xfffffffffffffffc, %rsi           // p->stack & ~sizeof(void*)
         mov (%rsi), %rsi                        // p->stack->sp
         xchg %rsp, %rsi
         call *%rbx                              // cont(p, sp, env)
-        ldmxcsr	(%rsp)                          // 7
-        fldcw 4(%rsp)                           // 7.5
-        add $8, %rsp                            // 
-        pop %r15                                // 6
-        pop %r14                                // 5
-        pop %r13                                // 4
-        pop %r12                                // 3
-        pop %rbx                                // 2
-        pop %rbp                                // 1
+        ldmxcsr	(%rsp)
+        fldcw 4(%rsp)
+        add $8, %rsp
+        CFA_OFFSET(56)
+        pop %r15
+        CFA_OFFSET(48)
+        pop %r14
+        CFA_OFFSET(40)
+        pop %r13
+        CFA_OFFSET(32)
+        pop %r12
+        CFA_OFFSET(24)
+        pop %rbx
+        CFA_OFFSET(16)
+        pop %rbp
+        CFA_OFFSET(8)
         ret
+        ENDPROC
         SIZE(thread_transfer)
+
 

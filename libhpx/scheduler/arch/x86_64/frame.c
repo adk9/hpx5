@@ -2,6 +2,8 @@
 // #include "libhpx/debug.h"
 // #include "libhpx/locality.h"
 // #include "libhpx/scheduler.h"
+#include <string.h>
+#include "libhpx/debug.h"
 #include "../../thread.h"
 #include "asm.h"
 
@@ -34,6 +36,7 @@ typedef struct {
   thread_entry_t rbx;                           // 2
   void          *rbp;                           // 1
   void         (*rip)(void);                    // 0
+  // void          *end[2];
 } HPX_PACKED _frame_t;
 
 
@@ -41,13 +44,18 @@ static _frame_t *_get_top_frame(ustack_t *stack, size_t size) {
   return (_frame_t*)((char*)stack + size - sizeof(_frame_t));
 }
 
-
 void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(stack, size);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
+  DEBUG_IF(true) {
+    frame->r15 = NULL;
+    frame->r14 = NULL;
+    frame->r13 = NULL;
+    // memset(&frame->end, 0, sizeof(frame->end));
+  }
   frame->r12     = parcel;
   frame->rbx     = f;
   frame->rbp     = &frame->rip;

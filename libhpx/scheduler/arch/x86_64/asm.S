@@ -23,21 +23,39 @@
 	    INTERNAL(get_mxcsr)
 	    GLOBAL(get_mxcsr)
 LABEL(get_mxcsr)
+        STARTPROC
+        CFA_OFFSET(8)
 	    stmxcsr (%rdi)
 	    ret
+        ENDPROC
 	    SIZE(get_mxcsr)
 
         INTERNAL(get_fpucw)
 	    GLOBAL(get_fpucw)
 LABEL(get_fpucw)
+        STARTPROC
+        CFA_OFFSET(8)
 	    fnstcw (%rdi)
 	    ret
+        ENDPROC
         SIZE(get_fpucw)
 
+        // This label is a complete hack. It's just here so that gdb outputs
+        // some useful initial thread_transfer information on bt, without it,
+        // thinks that the outer frame is get_fpucw. With it, it will report
+        // this symbol name.
+        //INTERNAL(_align_rsp_trampoline_new_thread_gdb_label_hack)
+LABEL(_align_rsp_trampoline_new_thread_gdb_label_hack)
+        nop
+        SIZE(_align_rsp_trampoline_new_thread_gdb_label_hack)
+        
         INTERNAL(align_rsp_trampoline)
         GLOBAL(align_rsp_trampoline)
 LABEL(align_rsp_trampoline)
+        STARTPROC
+        CFA_OFFSET(16)
         mov %r12, %rdi
         call *%rbx
+        ENDPROC
         SIZE(align_rsp_trampoline)
 
