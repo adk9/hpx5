@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <jemalloc/jemalloc.h>
 #include "thread.h"
 
 #define _DEFAULT_PAGES 4
@@ -41,12 +40,12 @@ void thread_set_stack_size(int stack_bytes) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = libhpx_global_valloc(_thread_size);
+  ustack_t *stack = valloc(_thread_size);
   assert(stack);
   thread_init(stack, parcel, f, _thread_size);
   return stack;
 }
 
 void thread_delete(ustack_t *stack) {
-  libhpx_global_free(stack);
+  free(stack);
 }
