@@ -354,6 +354,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     _bind(p);
 
   assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+  assert(here->gas->owner_of(p->target) == here->rank);
   return p;
 }
 
