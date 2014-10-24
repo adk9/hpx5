@@ -40,8 +40,9 @@ void thread_set_stack_size(int stack_bytes) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = valloc(_thread_size);
-  assert(stack);
+  ustack_t *stack = NULL;
+  int e = posix_memalign((void**)&stack, 16, _thread_size);
+  assert(!e);
   thread_init(stack, parcel, f, _thread_size);
   return stack;
 }
