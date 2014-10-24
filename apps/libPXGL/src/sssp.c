@@ -175,6 +175,15 @@ static int _set_termination_lco_action(const hpx_addr_t *const args){
 }
 
 
+void check_termination(uint64_t* message_count){
+      hpx_addr_t termination_count_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
+      //Invoke the lco on all localities
+      hpx_bcast(_set_termination_lco, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
+
+      hpx_lco_get(termination_count_lco, sizeof(*message_count), message_count);
+      hpx_lco_delete(termination_count_lco, HPX_NULL);
+      
+} 
 
 
 hpx_action_t call_sssp = 0;
@@ -196,30 +205,34 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   //start the algorithm from source once
   hpx_call(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), HPX_NULL);
    
-  int terminate_now = 1;
+  uint64_t message_count = 0;
+  int phase = 1;
   while(true){
-    hpx_addr_t termination_count_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
-    //Invoke the lco on all localities
-    hpx_bcast(_set_termination_lco, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
-
-    uint64_t terminate = 0;
-    hpx_lco_get(termination_count_lco, sizeof(terminate), &terminate);
-    hpx_lco_delete(termination_count_lco, HPX_NULL);
-    if(terminate == 0){
-      //recheck
-      hpx_addr_t termination_count_recheck_lco = hpx_lco_allreduce_new( HPX_LOCALITIES, 1, sizeof(uint64_t), (hpx_commutative_associative_op_t) termination_detection_op, termination_detection_init);
-      hpx_bcast(_set_termination_lco, &termination_count_recheck_lco, sizeof(termination_count_recheck_lco), HPX_NULL);
-
-      uint64_t terminate_recheck = 0;
-      hpx_lco_get(termination_count_recheck_lco, sizeof(terminate_recheck), &terminate_recheck);
-      hpx_lco_delete(termination_count_recheck_lco, HPX_NULL);
-      if(terminate_recheck == 0){
-	terminate_now = 0;
+    if(phase == 1){
+      check_termination(&message_count);
+      if(message_count == 0){
+	phase = 2;
+	message_count = 0 ;
+      }
+      else{
+	phase = 1 ;
+	message_count = 0 ;
       }
     }
-    if(terminate_now == 0)
-      break;
+   
+    else if(phase == 2){
+      check_termination(&message_count);
+      if(message_count == 0){
+	break;
+      }
+      else{
+	phase = 1 ;
+	message_count = 0 ;
+      }
+    } 
+  
   }
+
   printf("Finished algorithm\n");
   return HPX_SUCCESS;
 

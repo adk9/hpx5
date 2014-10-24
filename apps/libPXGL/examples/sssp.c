@@ -25,7 +25,7 @@
 uint64_t active_count;
 uint64_t inactive_count;
 
-#define VERBOSE 1
+//#define VERBOSE 1
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
