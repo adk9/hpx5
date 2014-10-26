@@ -174,7 +174,8 @@ static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
 
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *local = libhpx_global_malloc(sizeof(_future_t) + size);
+  _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
+  assert(local);
   _future_init(local, size);
   return lva_to_gva(local);
 }
