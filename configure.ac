@@ -46,6 +46,7 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
+HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -183,7 +184,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $hpx_valgrind_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS"
