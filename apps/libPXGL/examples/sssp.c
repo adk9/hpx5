@@ -300,6 +300,11 @@ static int _main_action(_sssp_args_t *args) {
   statistics (stats, tm, args->nproblems);
   PRINT_STATS("TEPS", 1);
 
+  free(tm);
+  free(stats);
+  free(edge_traversed);
+  free(elapsed_time);
+
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
@@ -409,5 +414,7 @@ int main(int argc, char *const argv[argc]) {
   _print_sssp_stat             = HPX_REGISTER_ACTION(_print_sssp_stat_action);
   _main                        = HPX_REGISTER_ACTION(_main_action);
 
-  return hpx_run(_main, &args, sizeof(args));
+  e = hpx_run(_main, &args, sizeof(args));
+  free(problems);
+  return e;
 }
