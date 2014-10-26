@@ -94,7 +94,7 @@ int edge_list_from_file_action(char **filename) {
   free(edge);
   fclose(f);
 
-  hpx_thread_continue(sizeof(*el), el);
+  hpx_thread_continue_cleanup(sizeof(*el), el, free, el);
   return HPX_SUCCESS;
 }
 
