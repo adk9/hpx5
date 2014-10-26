@@ -23,6 +23,7 @@ typedef struct ustack {
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
   int           tls_id;
+  int         stack_id;
   short       affinity;                         // set by user
   char         stack[];
 } ustack_t;
