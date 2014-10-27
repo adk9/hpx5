@@ -31,7 +31,7 @@ int buffertable_find_containing(void* start, uint64_t size, photonBI* result) {
   for(i=0; i<num_registered_buffers; i++) {
     photonBI tmpbuf = registered_buffers[i];
     cond =  ((void *)(tmpbuf->buf.addr) <= start);
-    cond &= ((void *)(tmpbuf->buf.addr+tmpbuf->buf.size) >= start+size);
+    cond &= ((char *)(tmpbuf->buf.addr+tmpbuf->buf.size) >= (char *)start+size);
     if ( cond ) {
       if( result )
         *result = tmpbuf;

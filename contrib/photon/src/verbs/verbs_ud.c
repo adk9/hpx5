@@ -52,7 +52,7 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
     }
   }
 
-  dbg_info("Created UD QP, qpn=%d", ctx->ud_qp->qp_num);
+  dbg_trace("Created UD QP, qpn=%d", ctx->ud_qp->qp_num);
 
   {
     struct ibv_qp_attr attr = {
@@ -75,7 +75,7 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
     }
   }
 
-  dbg_info("UD QP is transitioned to RTR and RTS");
+  dbg_trace("UD QP is transitioned to RTR and RTS");
 
   return PHOTON_OK;
 }
@@ -112,7 +112,7 @@ int __verbs_ud_attach_addr(verbs_cnct_ctx *ctx, union ibv_gid *gid) {
 
   //char buf[40];
   //inet_ntop(AF_INET6, gid->raw, buf, 40);
-  //dbg_info("(%s)", buf);
+  //dbg_trace("(%s)", buf);
 
   int ret;
   ret = ibv_attach_mcast(ctx->ud_qp, gid, 0x0);

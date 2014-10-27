@@ -67,7 +67,7 @@ int photon_buffer_get_private(photonBI buf, photonBufferPriv ret_priv) {
 photonBI _photon_buffer_create(void *buf, uint64_t size) {
   photonBI new_buf;
 
-  dbg_info();
+  dbg_trace("%llu", size);
 
   new_buf = malloc(sizeof(struct photon_buffer_internal_t));
   if (!new_buf) {
@@ -77,8 +77,8 @@ photonBI _photon_buffer_create(void *buf, uint64_t size) {
 
   memset(new_buf, 0, sizeof(*new_buf));
 
-  dbg_info("allocated buffer struct: %p", new_buf);
-  dbg_info("contains buffer pointer: %p of size %" PRIu64, buf, size);
+  dbg_trace("allocated buffer struct: %p", new_buf);
+  dbg_trace("contains buffer pointer: %p of size %" PRIu64, buf, size);
   
   new_buf->buf.addr = (uintptr_t)buf;
   new_buf->buf.size = size;
