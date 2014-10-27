@@ -4,9 +4,9 @@
 #include "verbs.h"
 
 typedef struct verbs_cnct_info_t {
-  int lid;
-  int qpn;
-  int psn;
+  unsigned lid;
+  unsigned qpn;
+  unsigned psn;
   int cma_port;
   struct in_addr ip;
   union ibv_gid gid;

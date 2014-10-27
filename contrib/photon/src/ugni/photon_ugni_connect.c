@@ -43,7 +43,7 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
     goto error_exit;
   }
 
-  dbg_info("GNI_CdmCreate inst_id: %i ptag: %u cookie: 0x%x", ctx->cdm_id, ptag, cookie);
+  dbg_trace("GNI_CdmCreate inst_id: %i ptag: %u cookie: 0x%x", ctx->cdm_id, ptag, cookie);
 
   status = GNI_CdmAttach(ctx->cdm_handle, GEMINI_DEVICE_ID, &local_address, &ctx->nic_handle);
   if (status != GNI_RC_SUCCESS) {
@@ -51,7 +51,7 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
     goto error_exit;
   }
 
-  dbg_info("Attached to GEMINI PE: %d", local_address);
+  dbg_trace("Attached to GEMINI PE: %d", local_address);
 
   /* setup completion queue for local events */
   status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->local_cq_handle));
@@ -108,7 +108,7 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
   memset(remote_lids, 0, _photon_nproc*sizeof(unsigned int));
 
   if (getifaddrs(&ifaddr) == -1) {
-    dbg_info("Cannot get interface addrs");
+    dbg_trace("Cannot get interface addrs");
     ifa = NULL;
   }
   else {
@@ -124,12 +124,12 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
   }
 
   if (!ifa) {
-    dbg_info("Did not find interface info for %s\n", ctx->gemini_dev);
+    dbg_trace("Did not find interface info for %s\n", ctx->gemini_dev);
     local_info.ip.s_addr = 0x0;
   }
   else {
     local_info.ip = ((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
-    dbg_info("Found local IP: %s", inet_ntoa(local_info.ip));
+    dbg_trace("Found local IP: %s", inet_ntoa(local_info.ip));
   }
 
   local_info.lid = get_gni_nic_address(GEMINI_DEVICE_ID);
@@ -150,7 +150,7 @@ int __ugni_connect_peers(ugni_cnct_ctx *ctx) {
   for (i=0; i<_photon_nproc; i++) {
     curr_info[i].lid = remote_lids[i];
     curr_info[i].ip.s_addr = remote_ips[i];
-    dbg_info(">>>> from rank: %d, ID: %u, IP: %s", i, curr_info[i].lid, inet_ntoa(curr_info[i].ip));
+    dbg_trace(">>>> from rank: %d, ID: %u, IP: %s", i, curr_info[i].lid, inet_ntoa(curr_info[i].ip));
   }
 
   if (__ugni_connect_endpoints(ctx, &local_info, remote_info)) {
@@ -182,7 +182,7 @@ int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugn
       dbg_err("GNI_EpCreate ERROR status: %s (%d)", gni_err_str[status], status);
       goto error_exit;
     }
-    dbg_info("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, ctx->nic_handle,
+    dbg_trace("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, ctx->nic_handle,
              ctx->local_cq_handle, ctx->ep_handles[i]);
 
 
@@ -193,7 +193,7 @@ int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugn
       dbg_err("GNI_EpBind ERROR status: %s (%d)", gni_err_str[status], status);
       goto error_exit;
     }
-    dbg_info("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
+    dbg_trace("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
              ctx->ep_handles[i], remote_info[i].lid, bind_id);
   }
 
