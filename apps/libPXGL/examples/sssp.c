@@ -152,8 +152,8 @@ static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
 
 static hpx_action_t _set_termination_count_zero;
 static int _set_termination_count_zero_action(){
-  sync_store(&active_count, 0, SYNC_RELAXED);
-  sync_store(&inactive_count, 0, SYNC_RELAXED);
+  sync_store(&active_count, 0, SYNC_SEQ_CST);
+  sync_store(&inactive_count, 0, SYNC_SEQ_CST); //SYNC_RELAXED
   return HPX_SUCCESS;
 }
 
@@ -213,8 +213,10 @@ static int _main_action(_sssp_args_t *args) {
     sargs.source = args->problems[i];
 
     //initialize termination detection algorithm variables to zero
-    hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
+    hpx_addr_t init_termination_count_lco = hpx_lco_and_new(1);
     hpx_bcast(_set_termination_count_zero, NULL, 0, init_termination_count_lco);
+    hpx_lco_wait(init_termination_count_lco);
+    hpx_lco_delete(init_termination_count_lco, HPX_NULL);
 
 
     hpx_time_t now = hpx_time_now();
