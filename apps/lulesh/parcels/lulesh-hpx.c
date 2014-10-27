@@ -189,6 +189,7 @@ static int _initDomain_action(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
+  ld->base     = init->base;
   ld->sem_sbn1 = hpx_lco_sema_new(1);
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   ld->sem_posvel = hpx_lco_sema_new(1);
@@ -253,6 +254,7 @@ static int _main_action(int *input)
                                            (void (*)(void *, const size_t size)) initdouble);
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
+      .base = domain,
       .index = k,
       .nDoms = nDoms,
       .nx = nx,
