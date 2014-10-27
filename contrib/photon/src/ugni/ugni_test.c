@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
     goto error_exit;
   }
 
-  dbg_info("GNI_CdmCreate inst_id: %i ptag: %u cookie: 0x%x", cdm_id, ptag, cookie);
+  dbg_trace("GNI_CdmCreate inst_id: %i ptag: %u cookie: 0x%x", cdm_id, ptag, cookie);
 
   status = GNI_CdmAttach(cdm_handle, GEMINI_DEVICE_ID, &local_dev, &nic_handle);
   if (status != GNI_RC_SUCCESS) {
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     goto error_exit;
   }
 
-  dbg_info("Attached to GEMINI PE: %d", local_dev);
+  dbg_trace("Attached to GEMINI PE: %d", local_dev);
 
   /* setup completion queue for local events */
   status = GNI_CqCreate(nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &local_cq_handle);
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
       dbg_err("GNI_EpCreate ERROR status: %s (%d)", gni_err_str[status], status);
       goto error_exit;
     }
-    dbg_info("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, nic_handle,
+    dbg_trace("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, nic_handle,
              local_cq_handle, ep_handles[i]);
 
 
@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
       dbg_err("GNI_EpBind ERROR status: %s (%d)", gni_err_str[status], status);
       goto error_exit;
     }
-    dbg_info("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
+    dbg_trace("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
              ep_handles[i], nic_addrs[i], bind_id);
   }
 
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
     dbg_err("GNI_MemRegister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
-  dbg_info("GNI_MemRegister SEND size: %lu address: %p", size*sizeof(struct ledger), send_buf);
+  dbg_trace("GNI_MemRegister SEND size: %lu address: %p", size*sizeof(struct ledger), send_buf);
 
   status = GNI_MemRegister(nic_handle, (uint64_t)recv_buf, size*sizeof(struct ledger),
                            remote_cq_handle, GNI_MEM_READWRITE, -1, &recv_mem_handle.mdh);
@@ -167,10 +167,10 @@ int main(int argc, char **argv) {
     dbg_err("GNI_MemRegister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
-  dbg_info("GNI_MemRegister RECV size: %lu address: %p", size*sizeof(struct ledger), recv_buf);
+  dbg_trace("GNI_MemRegister RECV size: %lu address: %p", size*sizeof(struct ledger), recv_buf);
 
 
-  dbg_info("My receive buffer (0x%lx) mem handle: 0x%016lx / 0x%016lx", (uint64_t)recv_buf,
+  dbg_trace("My receive buffer (0x%lx) mem handle: 0x%016lx / 0x%016lx", (uint64_t)recv_buf,
            recv_mem_handle.mdh.qword1, recv_mem_handle.mdh.qword2);
 
   req = (MPI_Request *)malloc(size * sizeof(MPI_Request));
@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
   }
 
   for (i=0; i<size; i++) {
-    dbg_info("Remote recv buf (0x%lx) mem handle for rank %d: 0x%016lx / 0x%016lx", mem_handles[i].addr, i,
+    dbg_trace("Remote recv buf (0x%lx) mem handle for rank %d: 0x%016lx / 0x%016lx", mem_handles[i].addr, i,
              mem_handles[i].mdh.qword1, mem_handles[i].mdh.qword2);
   }
 
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
     if (i==rank)
       continue;
 
-    dbg_info("Sending to %d, receiving from %d", send_to, receive_from);
+    dbg_trace("Sending to %d, receiving from %d", send_to, receive_from);
 
     gni_post_descriptor_t fma_desc;
     gni_post_descriptor_t *event_post_desc_ptr;
@@ -233,8 +233,8 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    dbg_info("GNI_PostFma data transfer: %4i successful", i);
-    dbg_info("data transfer complete, checking CQ events");
+    dbg_trace("GNI_PostFma data transfer: %4i successful", i);
+    dbg_trace("data transfer complete, checking CQ events");
 
     status = get_cq_event(local_cq_handle, 1, 1, &current_event);
     if (status == 0) {
@@ -247,13 +247,13 @@ int main(int argc, char **argv) {
                 event_post_desc_ptr->post_id, send_post_id);
       }
       else {
-        dbg_info("GNI_GetCompleted  data transfer: %4i send to: %4i remote addr: 0x%lx post_id: %lu", i, send_to,
+        dbg_trace("GNI_GetCompleted  data transfer: %4i send to: %4i remote addr: 0x%lx post_id: %lu", i, send_to,
                  event_post_desc_ptr->remote_addr,
                  event_post_desc_ptr->post_id);
       }
 
       event_inst_id = GNI_CQ_GET_INST_ID(current_event);
-      dbg_info("Got event ID: %u", event_inst_id);
+      dbg_trace("Got event ID: %u", event_inst_id);
 
     }
     else {
