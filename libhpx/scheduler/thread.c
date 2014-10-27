@@ -21,6 +21,7 @@
 
 #if defined(ENABLE_DEBUG) && defined(LIBHPX_DBG_PROTECT_STACK)
 #include <sys/mman.h>
+#include <errno.h>
 #endif
 
 #include <hpx/builtins.h>
@@ -44,6 +45,9 @@ static void _prot(char *base, int prot) {
   int e = mprotect(base, HPX_PAGE_SIZE, prot);
   assert(!e);
   e = mprotect(base + _thread_size + HPX_PAGE_SIZE, HPX_PAGE_SIZE, prot);
+  DEBUG_IF(e) {
+    dbg_error("Mprotect error: %d (EACCES %d, EINVAL %d, ENOMEM %d)\n", errno, EACCES, EINVAL, ENOMEM);
+  }
   assert(!e);
 }
 #endif
