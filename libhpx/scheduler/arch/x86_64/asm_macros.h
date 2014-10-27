@@ -26,7 +26,13 @@
 #define TYPE(S, T) .type S, T
 #define STARTPROC .cfi_startproc
 #define ENDPROC .cfi_endproc
-#define CFA_OFFSET(N) .cfi_def_cfa_offset N
+#define CFA_DEF_OFFSET(N) .cfi_def_cfa_offset N
+#define CFA_ADJ_OFFSET(N) .cfi_adjust_cfa_offset N
+#define CFA_REGISTER(R) .cfi_def_cfa_register R
+#define CFA_DEF(R,N) .cfi_def_cfa R,N
+#define CFI_RESTORE(R) .cfi_restore R
+#define CFI_OFFSET(R,N) .cfi_offset R,N
+#define CFI_REL_OFFSET(R,N) .cfi_rel_offset R,N
 #else
 #error No ASM support for your platform.
 #endif
