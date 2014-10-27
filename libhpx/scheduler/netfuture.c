@@ -587,9 +587,9 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
   }
   else {
     _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);  
-    if (!(hpx_addr_eq(lsync_lco, HPX_NULL)))
+    if (!(lsync_lco == HPX_NULL))
       hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
-    if (!(hpx_addr_eq(rsync_lco, HPX_NULL)))
+    if (!(rsync_lco == HPX_NULL))
       hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
