@@ -70,14 +70,22 @@ int photon_init(photonConfig cfg) {
   }
 
   memcpy(lcfg, cfg, sizeof(struct photon_config_t));
-  if (cfg->ibv.eth_dev)
-    lcfg->ibv.eth_dev = strdup(cfg->ibv.eth_dev);
-  if (cfg->ibv.ib_dev)
-    lcfg->ibv.ib_dev = strdup(cfg->ibv.ib_dev);
-  if (cfg->ibv.ud_gid_prefix)
-    lcfg->ibv.ud_gid_prefix = strdup(cfg->ibv.ud_gid_prefix);
-  if (cfg->backend)
-    lcfg->backend = strdup(cfg->backend);
+  if (cfg->ibv.eth_dev) {    
+    lcfg->ibv.eth_dev = malloc(sizeof(cfg->ibv.eth_dev));
+    memcpy(lcfg->ibv.eth_dev, cfg->ibv.eth_dev, sizeof(cfg->ibv.eth_dev));
+  }
+  if (cfg->ibv.ib_dev) {
+    lcfg->ibv.ib_dev = malloc(sizeof(cfg->ibv.ib_dev));
+    memcpy(lcfg->ibv.ib_dev, cfg->ibv.ib_dev, sizeof(cfg->ibv.ib_dev));
+  }
+  if (cfg->ibv.ud_gid_prefix) {
+    lcfg->ibv.ud_gid_prefix = malloc(sizeof(cfg->ibv.ud_gid_prefix));
+    memcpy(lcfg->ibv.ud_gid_prefix, cfg->ibv.ud_gid_prefix, sizeof(cfg->ibv.ud_gid_prefix));
+  }
+  if (cfg->backend) {
+    lcfg->backend = malloc(sizeof(cfg->backend));
+    memcpy(lcfg->backend, cfg->backend, sizeof(cfg->backend));
+  }
 
   /* track the config with a global */
   __photon_config = lcfg;
@@ -222,6 +230,8 @@ int photon_init(photonConfig cfg) {
     log_warn("Photon already initialized");
     return PHOTON_OK;
   }
+
+  dbg_info("Photon initialized");
 
   /* the configured backend init gets called from within the default library init */
   return __photon_default->init(lcfg, NULL, NULL);

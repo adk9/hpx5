@@ -147,7 +147,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
 
   __initialized = 1;
 
-  dbg_info("ended successfully =============");
+  dbg_trace("ended successfully =============");
 
   return PHOTON_OK;
 
@@ -197,7 +197,7 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
     log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
     goto error_exit;
   }
-  dbg_info("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
+  dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
 
   return PHOTON_OK;
 
@@ -237,7 +237,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
     log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
     goto error_exit;
   }
-  dbg_info("GNI_PostFma data transfer successful: %"PRIx64, args->id);
+  dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
 
   return PHOTON_OK;
 
@@ -316,7 +316,7 @@ static int ugni_get_event(photonEventStatus stat) {
   }
 
   cookie = event_post_desc_ptr->post_id;
-  dbg_info("received event with cookie:%"PRIx64, cookie);
+  dbg_trace("received event with cookie:%"PRIx64, cookie);
 
   stat->id = cookie;
   stat->proc = 0x0;

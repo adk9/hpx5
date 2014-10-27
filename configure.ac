@@ -16,7 +16,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
 LT_INIT
 
-AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_LN_S
@@ -81,6 +81,11 @@ AC_ARG_ENABLE(debug,
 	[  --enable-debug          turn on debugging],
 	[CFLAGS="-g -O0 -Wall -DDEBUG ${CFLAGS}"],
 	[CFLAGS="-O2 -Wall ${CFLAGS}"])
+
+AC_ARG_ENABLE(trace,
+	[  --enable-trace          turn on calltrace to file],
+	[CFLAGS="-DCALLTRACE ${CFLAGS}"],
+	[CFLAGS="${CFLAGS}"])
 
 dnl Check for infiniband verbs
 AC_ARG_ENABLE(verbs, AC_HELP_STRING([--disable-verbs],

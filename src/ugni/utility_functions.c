@@ -276,14 +276,14 @@ get_cq_event(gni_cq_handle_t cq_handle,
 
         if (event_type == GNI_CQ_EVENT_TYPE_POST) {
           if (source_cq == 1) {
-            dbg_info("GNI_CqGetEvent    source      type: POST(%lu) inst_id: %lu tid: %lu event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    source      type: POST(%lu) inst_id: %lu tid: %lu event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_INST_ID(event_data),
                      GNI_CQ_GET_TID(event_data),
                      event_data);
           }
           else {
-            dbg_info("GNI_CqGetEvent    destination type: POST(%lu) inst_id: %lu event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    destination type: POST(%lu) inst_id: %lu event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_INST_ID(event_data),
                      event_data);
@@ -291,13 +291,13 @@ get_cq_event(gni_cq_handle_t cq_handle,
         }
         else if (event_type == GNI_CQ_EVENT_TYPE_SMSG) {
           if (source_cq == 1) {
-            dbg_info("GNI_CqGetEvent    source      type: SMSG(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    source      type: SMSG(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
                      event_type,
                      (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
                      event_data);
           }
           else {
-            dbg_info("GNI_CqGetEvent    destination type: SMSG(%lu) data: 0x%16.16lx event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    destination type: SMSG(%lu) data: 0x%16.16lx event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_DATA(event_data),
                      event_data);
@@ -305,13 +305,13 @@ get_cq_event(gni_cq_handle_t cq_handle,
         }
         else if (event_type == GNI_CQ_EVENT_TYPE_MSGQ) {
           if (source_cq == 1) {
-            dbg_info("GNI_CqGetEvent    source      type: MSGQ(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    source      type: MSGQ(%lu) msg_id: 0x%8.8x event: 0x%16.16lx",
                      event_type,
                      (unsigned int) GNI_CQ_GET_MSG_ID(event_data),
                      event_data);
           }
           else {
-            dbg_info("GNI_CqGetEvent    destination type: MSGQ(%lu) data: 0x%16.16lx event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    destination type: MSGQ(%lu) data: 0x%16.16lx event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_DATA(event_data),
                      event_data);
@@ -319,13 +319,13 @@ get_cq_event(gni_cq_handle_t cq_handle,
         }
         else {
           if (source_cq == 1) {
-            dbg_info("GNI_CqGetEvent    source      type: %lu inst_id: %lu event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    source      type: %lu inst_id: %lu event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_DATA(event_data),
                      event_data);
           }
           else {
-            dbg_info("GNI_CqGetEvent    destination type: %lu data: 0x%16.16lx event: 0x%16.16lx",
+            dbg_trace("GNI_CqGetEvent    destination type: %lu data: 0x%16.16lx event: 0x%16.16lx",
                      event_type,
                      GNI_CQ_GET_DATA(event_data),
                      event_data);
@@ -366,7 +366,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
         error_code = 2;
 
         if (v_option > 2) {
-          dbg_info("ERROR CQ_OVERRUN detected");
+          dbg_trace("ERROR CQ_OVERRUN detected");
         }
       }
 
@@ -379,7 +379,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
 
         tmp_status = GNI_CqErrorStr(event_data, cqErrorStr, 256);
         if (tmp_status == GNI_RC_SUCCESS) {
-          dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx GNI_CqErrorStr: %s",
+          dbg_trace("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx GNI_CqErrorStr: %s",
                    cqOverrunErrorStr, gni_err_str[status], status,
                    GNI_CQ_GET_INST_ID(event_data),
                    event_data,
@@ -391,7 +391,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
            * Print the error number.
            */
 
-          dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
+          dbg_trace("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
                    cqOverrunErrorStr, gni_err_str[status], status,
                    GNI_CQ_GET_INST_ID(event_data),
                    event_data);
@@ -405,7 +405,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
          * Print the error number.
          */
 
-        dbg_info("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
+        dbg_trace("GNI_CqGetEvent    ERROR %sstatus: %s (%d) inst_id: %lu event: 0x%16.16lx",
                  cqOverrunErrorStr, gni_err_str[status], status,
                  GNI_CQ_GET_INST_ID(event_data),
                  event_data);
@@ -429,7 +429,7 @@ get_cq_event(gni_cq_handle_t cq_handle,
          * application.
          */
 
-        dbg_info("GNI_CqGetEvent    ERROR no event was received status: %d retry count: %d",
+        dbg_trace("GNI_CqGetEvent    ERROR no event was received status: %d retry count: %d",
                  status, wait_count);
         return 3;
       }
@@ -542,7 +542,7 @@ print_results(void) {
    * Print the results from this test.
    */
 
-  dbg_info("%s:    %s    Test Results    Passed: %i/%i Failed: %i Aborted: %i",
+  dbg_trace("%s:    %s    Test Results    Passed: %i/%i Failed: %i Aborted: %i",
            command_name, exit_status,
            passed, expected_passed, failed, aborted);
 

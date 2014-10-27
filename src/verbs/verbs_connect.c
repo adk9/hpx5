@@ -118,7 +118,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 
     for (i=0; i<num_devs; i++) {
       if (!strcmp(ibv_get_device_name(dev_list[i]), ctx->ib_dev)) {
-        dbg_info("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
+        dbg_trace("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
         break;
       }
     }
@@ -133,7 +133,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       dbg_err("Could not get context for %s\n", ibv_get_device_name(dev_list[i]));
       return PHOTON_ERROR;
     }
-    dbg_info("context has device %s", ibv_get_device_name(ctx->ib_context->device));
+    dbg_trace("context has device %s", ibv_get_device_name(ctx->ib_context->device));
 
     // get my local lid
     struct ibv_port_attr attr;
@@ -299,7 +299,7 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
       else {
         // can only query gid in in non-CMA mode, CMA will exchange this for us
         if (ibv_query_gid(ctx->ib_context, ctx->ib_port, 0, &(ctx->local_ci[iproc][i].gid))) {
-          dbg_info("Could not get local gid for gid index 0");
+          dbg_trace("Could not get local gid for gid index 0");
         }
         ctx->local_ci[iproc][i].qpn = ctx->qp[iproc]->qp_num;
       }
@@ -374,7 +374,7 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, ver
 int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   int iproc;
 
-  dbg_info();
+  dbg_trace("Connecting peers");
 
   ctx->remote_ci = __exch_cnct_info(ctx, ctx->local_ci, MAX_QP);
   if( !ctx->remote_ci ) {
@@ -405,9 +405,9 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   // make sure everyone is connected before proceeding
   if (__photon_config->ibv.use_cma) {
     if (_photon_myrank > 0) {
-      dbg_info("waiting for listener to finish...");
+      dbg_trace("waiting for listener to finish...");
       pthread_join(cma_listener, NULL);
-      dbg_info("DONE");
+      dbg_trace("DONE");
     }
 
     photon_exchange_barrier();
@@ -593,7 +593,7 @@ static void *__rdma_cma_listener_thread(void *arg) {
     goto error_exit;
   }
 
-  dbg_info("Listening for %d connections on port %d", num_listeners, port);
+  dbg_trace("Listening for %d connections on port %d", num_listeners, port);
 
   // accept some number of connections
   // this currently depends on rank position
@@ -629,13 +629,13 @@ static void *__rdma_cma_listener_thread(void *arg) {
         goto error_exit;
       }
 
-      dbg_info("got connection request from %d", (int)priv->address);
+      dbg_trace("got connection request from %d", (int)priv->address);
 
       if (__verbs_init_context_cma(ctx, child_cm_id) != PHOTON_OK) {
         goto error_exit;
       }
 
-      dbg_info("created context");
+      dbg_trace("created context");
 
       if (args->pindex >= 0) {
         pindex = args->pindex;
@@ -663,7 +663,7 @@ static void *__rdma_cma_listener_thread(void *arg) {
     }
     break;
     case RDMA_CM_EVENT_ESTABLISHED:
-      dbg_info("connection established");
+      dbg_trace("connection established");
       num_connected++;
       break;
     default:
@@ -685,7 +685,7 @@ static void *__rdma_cma_listener_thread(void *arg) {
     free(args);
   }
 
-  dbg_info("Listener thread done");
+  dbg_trace("Listener thread done");
 
 error_exit:
   return NULL;
@@ -716,7 +716,7 @@ static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info *local_i
   host = inet_ntoa(remote_info[0].ip);
   port = remote_info[0].cma_port;
 
-  dbg_info("connecting to %d (%s) on port %d", i, host, port);
+  dbg_trace("connecting to %d (%s) on port %d", i, host, port);
 
   if (asprintf(&service, "%d", port) < 0)
     goto error_exit;
@@ -829,17 +829,17 @@ error_exit:
 static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp) {
   int i;
   int err;
-#ifdef DEBUG
+#ifdef CALLTRACE
   char gid[40];
 #endif
-
+  
   for (i = 0; i < num_qp; ++i) {
-    dbg_info("[%d/%d], pindex=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x, gid=%s",
-             _photon_myrank, _photon_nproc, pindex,
-             remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
-             ctx->qp[pindex]->qp_num,
-             inet_ntop(AF_INET6, remote_info[i].gid.raw, gid, 40));
-
+    dbg_trace("[%d/%d], pindex=%d lid=%x qpn=%x, psn=%x, qp[i].qpn=%x, gid=%s",
+	      _photon_myrank, _photon_nproc, pindex,
+	      remote_info[i].lid, remote_info[i].qpn, remote_info[i].psn,
+	      ctx->qp[pindex]->qp_num,
+	      inet_ntop(AF_INET6, remote_info[i].gid.raw, gid, 40));
+    
     struct ibv_ah_attr ah_attr = {
       .is_global     = 0,
       .dlid          = remote_info[i].lid,
