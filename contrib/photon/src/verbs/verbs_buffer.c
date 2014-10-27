@@ -24,7 +24,7 @@ static int __verbs_buffer_register(photonBI dbuffer, void *ctx) {
   enum ibv_access_flags flags;
   struct ibv_mr *mr;
 
-  dbg_info("buffer address: %p", dbuffer);
+  dbg_trace("buffer address: %p", dbuffer);
 
   if (dbuffer->is_registered)
     return 0;
@@ -52,7 +52,7 @@ error_exit:
 static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx) {
   int retval;
 
-  dbg_info();
+  dbg_trace("buffer address: %p", dbuffer);
 
   retval = ibv_dereg_mr((struct ibv_mr *)dbuffer->priv_ptr);
   if(retval) {
