@@ -45,19 +45,25 @@
 LABEL(thread_transfer)
         STARTPROC
         push %rbp
-        CFA_OFFSET(16)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%rbp, 0)
         push %rbx
-        CFA_OFFSET(24)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%rbx, 0)
         push %r12
-        CFA_OFFSET(32)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%r12, 0)
         push %r13
-        CFA_OFFSET(40)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%r13, 0)
         push %r14
-        CFA_OFFSET(48)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%r14,0)
         push %r15
-        CFA_OFFSET(56)
+        CFA_ADJ_OFFSET(8)
+	CFI_REL_OFFSET(%r15,0)
         sub $8, %rsp
-        CFA_OFFSET(64)
+        CFA_ADJ_OFFSET(8)
         fnstcw 4(%rsp)
         stmxcsr	(%rsp)
         mov %rsi, %rbx                          // cont
@@ -65,23 +71,31 @@ LABEL(thread_transfer)
         and $0xfffffffffffffffc, %rsi           // p->stack & ~sizeof(void*)
         mov (%rsi), %rsi                        // p->stack->sp
         xchg %rsp, %rsi
+	CFA_REGISTER(rsi)
         call *%rbx                              // cont(p, sp, env)
+	CFA_DEF(rsp,64)
         ldmxcsr	(%rsp)
         fldcw 4(%rsp)
         add $8, %rsp
-        CFA_OFFSET(56)
+        CFA_ADJ_OFFSET(-8)
         pop %r15
-        CFA_OFFSET(48)
+	CFI_RESTORE(r15)
+        CFA_ADJ_OFFSET(-8)
         pop %r14
-        CFA_OFFSET(40)
+	CFI_RESTORE(r14)
+        CFA_ADJ_OFFSET(-8)
         pop %r13
-        CFA_OFFSET(32)
+	CFI_RESTORE(r13)
+        CFA_ADJ_OFFSET(-8)
         pop %r12
-        CFA_OFFSET(24)
+	CFI_RESTORE(r12)
+        CFA_ADJ_OFFSET(-8)
         pop %rbx
-        CFA_OFFSET(16)
+	CFI_RESTORE(rbx)
+        CFA_ADJ_OFFSET(-8)
         pop %rbp
-        CFA_OFFSET(8)
+	CFI_RESTORE(rbp)
+        CFA_ADJ_OFFSET(-8)
         ret
         ENDPROC
         SIZE(thread_transfer)
