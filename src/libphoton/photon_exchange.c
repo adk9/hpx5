@@ -23,7 +23,8 @@ int photon_exchange_allgather(void *ptr, void *ivec_ptr, int n) {
   case PHOTON_EXCH_MPI:
     {
 #ifdef HAVE_MPI
-      MPI_Comm _photon_comm = __photon_config->comm;
+      //MPI_Comm _photon_comm = __photon_config->comm;
+      MPI_Comm _photon_comm = 0;
       if (!_photon_comm)
 	_photon_comm = MPI_COMM_WORLD;
       rc = MPI_Allgather(ptr, n, MPI_BYTE, ivec_ptr, n, MPI_BYTE, _photon_comm);
@@ -68,7 +69,8 @@ int photon_exchange_barrier() {
   case PHOTON_EXCH_MPI:
     {
 #ifdef HAVE_MPI
-      MPI_Comm _photon_comm = __photon_config->comm;
+      //MPI_Comm _photon_comm = __photon_config->comm;
+      MPI_Comm _photon_comm = 0;
       if (!_photon_comm)
 	_photon_comm = MPI_COMM_WORLD;
       rc = MPI_Barrier(_photon_comm);
