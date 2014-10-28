@@ -57,6 +57,7 @@ typedef void (*send_t)(int nx, int ny, int nz, double *src, double *dest);
 typedef void (*recv_t)(int nx, int ny, int nz, double *src, double *dest, int type);
 
 typedef struct {
+  hpx_addr_t     base;
   int           index;
   int           nDoms;
   int              nx;
@@ -173,6 +174,7 @@ typedef struct {
 } CalcFBHourglassForceForElemsArgs;
 
 typedef struct Domain {
+  hpx_addr_t base; // the base address for the array of all domains
   hpx_addr_t newdt;
   hpx_addr_t complete;
   hpx_addr_t sem_sbn1;
