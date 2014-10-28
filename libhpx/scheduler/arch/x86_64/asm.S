@@ -42,18 +42,15 @@ LABEL(get_fpucw)
         ENDPROC
         SIZE(get_fpucw)
 
-        // This label will look like the top of the stack for a running thread. 
-LABEL(libhpx_top_of_stack)
-        nop
-
-	    TYPE(align_stack, @function)
-        INTERNAL(align_stack)
-        GLOBAL(align_stack)        
-LABEL(align_stack)
+	    TYPE(align_stack_trampoline, @function)
+        INTERNAL(align_stack_trampoline)
+        GLOBAL(align_stack_trampoline)
+LABEL(align_stack_trampoline)
         STARTPROC
-        CFA_DEF_OFFSET(8)
+        CFA_DEF_OFFSET(16)
+        push $0x0
         mov %r12, %rdi
-        call *%rbx
+        jmp *%rbx
         ENDPROC
-        SIZE(align_stack)
+        SIZE(align_stack_trampoline)
 

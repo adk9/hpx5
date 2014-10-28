@@ -49,8 +49,8 @@ typedef struct {
   void          *rbp;                           // 1
   void         (*rip)(void);                    // 0
 #ifdef ENABLE_DEBUG
+  void      *top_rbp;
   void     (*top_rip)(void);
-  void        *align;
 #endif
 } HPX_PACKED _frame_t;
 
@@ -76,11 +76,11 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
   frame->r12 = parcel;
   frame->rbx = f;
   frame->rbp = &frame->rip;
-  frame->rip = align_stack;
+  frame->rip = align_stack_trampoline;
 
 #ifdef ENABLE_DEBUG
-  frame->top_rip = align_stack;
-  frame->align = NULL;
+  frame->top_rbp = NULL;
+  frame->top_rip = NULL;
 #endif
 
   // set the stack stuff
