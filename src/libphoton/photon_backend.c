@@ -22,10 +22,11 @@
 #define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 
 photonBI shared_storage;
+photonRequestTable request_table;
+ProcessInfo *photon_processes;
 
 static photonMsgBuf sendbuf;
 static photonMsgBuf recvbuf;
-static ProcessInfo *photon_processes;
 static htable_t *reqtable, *pwc_reqtable, *sr_reqtable;
 static photonRequest requests;
 static int num_requests;

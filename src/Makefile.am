@@ -2,9 +2,12 @@ AM_CFLAGS = @CFLAGS@                            \
             -I@PHOTON_SRCDIR@/include           \
             -I@PHOTON_SRCDIR@/src/util          \
             -I@PHOTON_SRCDIR@/src/libphoton     \
-            -I@PHOTON_SRCDIR@/src/forwarder
+            -I@PHOTON_SRCDIR@/src/forwarder     \
+	    -I@PHOTON_SRCDIR@/src/contrib
 #-DPHOTON_MULTITHREADED
-SUBDIRS = .
+
+SUBDIRS      = util contrib
+DIST_SUBDIRS = util contrib
 
 lib_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c                   \
@@ -19,7 +22,9 @@ libphoton_la_SOURCES = libphoton/libphoton.c                   \
 
 libphoton_ladir = @PHOTON_SRCDIR@/src/libphoton
 libphoton_la_LDFLAGS = @THREAD_LIBS@
-libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la
+libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la    \
+ @PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la       \
+ @PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la
 
 if HAVE_VERBS
 AM_CFLAGS += -I@PHOTON_SRCDIR@/src/verbs
