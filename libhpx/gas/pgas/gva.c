@@ -67,63 +67,6 @@ static hpx_addr_t _triple_to_gva(uint32_t rank, uint64_t bid, uint32_t phase,
   return pgas_offset_to_gva(rank, offset);
 }
 
-
-uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
-  // the locality is stored in the most significant bits of the gva, we just
-  // need to shift it down correctly
-  //
-  // before: (locality, block, phase)
-  //  after: (00000000000000 locality)
-  const uint32_t ranks = here->ranks;
-  const uint32_t rshift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
-  return (uint32_t)(gva >> rshift);
-}
-
-uint64_t pgas_gva_to_offset(hpx_addr_t gva) {
-  // the heap offset is just the least significant chunk of the gva, we shift
-  // the locality out rather than masking because it's easier for us to express
-  //
-  // before: (locality, offset)
-  //  after: (00000000  offset)
-  const uint32_t ranks = here->ranks;
-  const uint32_t shift = ceil_log2_32(ranks);
-  return (gva << shift) >> shift;
-}
-
-hpx_addr_t pgas_offset_to_gva(uint32_t rank, uint64_t offset) {
-  // make sure the locality is in the expected range
-  const uint32_t ranks = here->ranks;
-  DEBUG_IF (rank >= ranks) {
-    assert(ranks != 0);
-    dbg_error("locality %u must be less than %u\n", rank, ranks);
-  }
-
-  // make sure that the heap offset is in the expected range (everyone has the
-  // same size, so the locality is irrelevant here)
-  DEBUG_IF (true) {
-    const void *lva = heap_offset_to_lva(global_heap, offset);
-    if (!heap_contains_lva(global_heap, lva))
-      dbg_error("heap offset %lu is out of range\n", offset);
-  }
-
-  // construct the gva by shifting the locality into the most significant bits
-  // of the gva and then adding in the heap offset
-  const uint32_t shift = (sizeof(hpx_addr_t) * 8) - ceil_log2_32(ranks);
-  const uint64_t high = ((uint64_t)rank) << shift;
-  return high + offset;
-}
-
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
-  // check to make sure the localities match, and then just compute the
-  // difference
-  const uint32_t rlhs = pgas_gva_to_rank(lhs);
-  const uint32_t rrhs = pgas_gva_to_rank(rhs);
-  DEBUG_IF (rrhs != rlhs) {
-    dbg_error("local arithmetic failed between ranks %u and %u\n", rlhs, rrhs);
-  }
-  return (lhs - rhs);
-}
-
 int64_t pgas_gva_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   // for a block cyclic computation, we look at the three components
   // separately, and combine them to get the overall offset
@@ -172,8 +115,4 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   }
 
   return addr;
-}
-
-hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes) {
-  return gva + bytes;
 }

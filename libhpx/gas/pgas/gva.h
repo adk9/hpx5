@@ -18,9 +18,17 @@
 #include <stdint.h>
 #include <hpx/hpx.h>
 
+#define   GVA_RANK_BITS (16)
+#define GVA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GVA_RANK_BITS)
+#define   GVA_RANK_MASK (UINTPTR_MAX << GVA_OFFSET_BITS)
+#define GVA_OFFSET_MASK (~(GVA_RANK_MASK))
+
 /// Extract the locality from a gva.
-uint32_t pgas_gva_to_rank(hpx_addr_t gva)
-  HPX_INTERNAL;
+// uint32_t pgas_gva_to_rank(hpx_addr_t gva)
+//   HPX_INTERNAL;
+static inline uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
+  return gva >> GVA_OFFSET_BITS;
+}
 
 
 /// Extract the heap offset of a gva, given the number of ranks.
@@ -32,8 +40,11 @@ uint32_t pgas_gva_to_rank(hpx_addr_t gva)
 /// @param      gva The global address.
 ///
 /// @returns The offset within the global heap that corresponds to the address.
-uint64_t pgas_gva_to_offset(hpx_addr_t gva)
-  HPX_INTERNAL;
+// uint64_t pgas_gva_to_offset(hpx_addr_t gva)
+//   HPX_INTERNAL;
+static inline uint64_t pgas_gva_to_offset(hpx_addr_t gva) {
+  return gva & GVA_OFFSET_MASK;
+}
 
 
 /// Create a global virtual address from a locality and heap offset pair.
@@ -42,8 +53,29 @@ uint64_t pgas_gva_to_offset(hpx_addr_t gva)
 /// @param   offset The offset into the heap.
 ///
 /// @returns A global address representing the offset at the locality.
-hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
-  HPX_INTERNAL;
+static inline hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset) {
+  return (((uint64_t)locality) << GVA_OFFSET_BITS) + (offset & GVA_OFFSET_MASK);
+}
+
+
+/// Compute the (signed) distance, in bytes, between two global addresses.
+///
+/// This is only balid if @p lhs and @p rhs come from the same global
+/// allocation.
+///
+/// @param      lhs The left-hand-side address.
+/// @param      rhs The right-hand-side address.
+///
+/// @returns lhs - rhs
+static inline int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
+    return (lhs - rhs);
+}
+
+
+/// Compute standard address arithmetic on the global address.
+static inline hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes) {
+  return gva + bytes;
+}
 
 
 /// Compute the (signed) distance, in bytes, between two global addresses from a
@@ -65,20 +97,6 @@ hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset)
 int64_t pgas_gva_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_INTERNAL;
 
-
-/// Compute the (signed) gistance, in bytes, between two global addresses.
-///
-/// This is only balid if @p lhs and @p rhs come from the same global
-/// allocation.
-///
-/// @param      lhs The left-hand-side address.
-/// @param      rhs The right-hand-side address.
-///
-/// @returns lhs - rhs
-int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs)
-  HPX_INTERNAL;
-
-
 /// Compute cyclic address arithmetic on the global address.
 ///
 /// @param      gva The global address base.
@@ -88,11 +106,6 @@ int64_t pgas_gva_sub(hpx_addr_t lhs, hpx_addr_t rhs)
 /// @returns The global address representation that is @p bytes away from
 ///          @gva.
 hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize)
-  HPX_INTERNAL;
-
-
-/// Compute standard address arithmetic on the global address.
-hpx_addr_t pgas_gva_add(hpx_addr_t gva, int64_t bytes)
   HPX_INTERNAL;
 
 
