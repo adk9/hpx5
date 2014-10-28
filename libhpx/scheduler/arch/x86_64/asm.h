@@ -27,7 +27,7 @@ void get_mxcsr(uint32_t *out)
 void get_fpucw(uint16_t *out)
   HPX_INTERNAL;
 
-void align_stack(void)
+void align_stack_trampoline(void)
   HPX_INTERNAL;
 
 #endif // LIBHPX_ASM_H
