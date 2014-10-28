@@ -38,7 +38,7 @@
 
         .file "transfer.S"
         .text
-        .section .rodata
+        SECTION(rodata)
         TYPE(thread_transfer, @function)
         INTERNAL(thread_transfer)
         GLOBAL(thread_transfer)
