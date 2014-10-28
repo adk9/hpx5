@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/worker.c
@@ -25,12 +25,13 @@
 
 #include "hpx/hpx.h"
 
-#include "libsync/backoff.h"
-#include "libsync/barriers.h"
-#include "libsync/deques.h"
-#include "libsync/queues.h"
+#include <libsync/backoff.h>
+#include <libsync/barriers.h>
+#include <libsync/deques.h>
+#include <libsync/queues.h>
+#include <libsync/spscq.h>
 
-#include "hpx/builtins.h"
+#include <hpx/builtins.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
@@ -53,6 +54,13 @@ static unsigned int _min(unsigned int lhs, unsigned int rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
+#define CAT1(s, t) s##t
+
+#define CAT2(s, t) CAT1(s, t)
+
+#define PAD_TO_CACHELINE(B)                                             \
+  const char CAT2(pad,  __LINE__)[(HPX_CACHELINE_SIZE - (B))]
+
 /// Class representing a worker thread's state.
 ///
 /// Worker threads are "object-oriented" insofar as that goes, but each native
@@ -69,11 +77,15 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
+PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   chase_lev_ws_deque_t work;                    // my work
+  // already aligned PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
+  // already aligned PAD_TO_CACHELINE(sizeof(two_lock_queue_t));
+  sync_spscq_t  completions;                    // local completions
   volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
-} self = {
+} self HPX_ALIGNED(HPX_CACHELINE_SIZE) = {
   .thread     = 0,
   .id         = -1,
   .core_id    = -1,
@@ -83,6 +95,7 @@ static __thread struct worker {
   .current    = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
+  .completions = SYNC_SPSCQ_INIT,
   .shutdown   = 0,
   .stats      = SCHEDULER_STATS_INIT
 };
@@ -368,6 +381,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 void *worker_run(scheduler_t *sched) {
   // join the global address space
   assert(here && here->gas);
+  assert((uintptr_t)&self % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.work % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.inbox % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.completions % HPX_CACHELINE_SIZE == 0);
   int e = gas_join(here->gas);
   dbg_check(e, "worker: failed to join the global address space.\n");
 
