@@ -7,10 +7,8 @@
 #include "../../thread.h"
 #include "asm.h"
 
-
 static uint32_t  _mxcsr = 0;
 static uint16_t  _fpucw = 0;
-
 
 static void HPX_CONSTRUCTOR _init_thread(void) {
   get_mxcsr(&_mxcsr);
@@ -59,7 +57,7 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
   frame->r12     = parcel;
   frame->rbx     = f;
   frame->rbp     = &frame->rip;
-  frame->rip     = align_rsp_trampoline;
+  frame->rip     = align_stack;
 
   // set the stack stuff
   stack->sp            = frame;

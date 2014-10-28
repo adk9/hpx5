@@ -42,13 +42,13 @@ LABEL(get_fpucw)
         ENDPROC
         SIZE(get_fpucw)
 
-	    TYPE(align_rsp_trampoline, @function)
-        INTERNAL(align_rsp_trampoline)
-        GLOBAL(align_rsp_trampoline)
-LABEL(align_rsp_trampoline)
+	    TYPE(align_stack, @function)
+        INTERNAL(align_stack)
+        GLOBAL(align_stack)
+LABEL(align_stack)
         STARTPROC
         mov %r12, %rdi
         call *%rbx
         ENDPROC
-        SIZE(align_rsp_trampoline)
+        SIZE(align_stack)
 
