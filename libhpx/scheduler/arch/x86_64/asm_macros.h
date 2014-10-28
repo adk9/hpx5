@@ -14,11 +14,12 @@
 #define LIBHPX_ASM_MACROS_H
 
 #if defined(__APPLE__)
-# define GLOBAL(S) .globl _##S
-# define LABEL(S) _##S:
-# define INTERNAL(S) .private_extern _##S
+# define SYMBOL(S) _##S
+# define GLOBAL(S) .globl SYMBOL(S)
+# define LABEL(S) SYMBOL(S):
+# define INTERNAL(S) .private_extern SYMBOL(S)
 # define SIZE(S)
-# define TYPE(S, T) .type _##S, T
+# define TYPE(S, T) .type SYMBOL(S), T
 # define STARTPROC .cfi_startproc
 # define ENDPROC .cfi_endproc
 # define SECTION(S) .section .S
@@ -30,11 +31,12 @@
 # define CFI_OFFSET(R,N) .cfi_offset R,N
 # define CFI_REL_OFFSET(R,N) .cfi_rel_offset R,N
 #elif defined(__linux__)
-# define GLOBAL(S) .globl S
-# define LABEL(S) S:
-# define INTERNAL(S) .internal S
-# define SIZE(S) .size S, .-S
-# define TYPE(S, T) .type S, T
+# define SYMBOL(S) S
+# define GLOBAL(S) .globl SYMBOL(S)
+# define LABEL(S) SYMBOL(S):
+# define INTERNAL(S) .internal SYMBOL(S)
+# define SIZE(S) .size SYMBOL(S), .-SYMBOL(S)
+# define TYPE(S, T) .type SYMBOL(S), T
 # define STARTPROC .cfi_startproc
 # define ENDPROC .cfi_endproc
 # define SECTION(S) .section .S
