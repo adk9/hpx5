@@ -20,9 +20,9 @@
 /// associated caller-side register churn) for these operations.
         .file "libhpx/scheduler/arch/x86_64/asm.S"
 
-	TYPE(get_mxcsr, @function)
-	INTERNAL(get_mxcsr)
-	GLOBAL(get_mxcsr)
+	    TYPE(get_mxcsr, @function)
+	    INTERNAL(get_mxcsr)
+	    GLOBAL(get_mxcsr)
 LABEL(get_mxcsr)
         STARTPROC
         CFA_DEF_OFFSET(8)
@@ -31,7 +31,7 @@ LABEL(get_mxcsr)
         ENDPROC
 	    SIZE(get_mxcsr)
 
-	TYPE(get_fpucw, @function)
+	    TYPE(get_fpucw, @function)
         INTERNAL(get_fpucw)
 	    GLOBAL(get_fpucw)
 LABEL(get_fpucw)
@@ -51,7 +51,7 @@ LABEL(get_fpucw)
 //         nop
 //         SIZE(_align_rsp_trampoline_new_thread_gdb_label_hack)
 
-	TYPE(align_rsp_trampoline, @function)
+	    TYPE(align_rsp_trampoline, @function)
         INTERNAL(align_rsp_trampoline)
         GLOBAL(align_rsp_trampoline)
 LABEL(align_rsp_trampoline)
