@@ -211,6 +211,9 @@ AC_SUBST(PHOTON_BUILDDIR, "\${top_builddir}")
 
 AC_CONFIG_FILES([
 	Makefile
+	src/contrib/Makefile
+	src/contrib/bit_array/Makefile
+	src/contrib/libsync/Makefile
 	src/util/Makefile
 	src/Makefile
 	photon.pc

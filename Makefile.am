@@ -11,8 +11,8 @@ EXTRA_DIST = autogen.sh      \
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config
-SUBDIRS = . src/util src
-DIST_SUBDIRS = . src/util src
+SUBDIRS = src
+DIST_SUBDIRS = src
 
 if PHOTON_ENABLE_TESTS
 if HAVE_MPI
@@ -25,13 +25,3 @@ endif
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = photon.pc
-
-#if HAVE_VERBS
-#SUBDIRS += src/verbs
-#endif
-
-#if HAVE_UGNI
-#SUBDIRS += src/ugni
-#endif
-
-#SUBDIRS += src/libphoton test

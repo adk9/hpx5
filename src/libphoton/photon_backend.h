@@ -8,8 +8,10 @@
 #include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "photon_rdma_EAGER_buf.h"
+
 #include "squeue.h"
-#include "bit_array.h"
+#include "bit_array/bit_array.h"
+#include "libsync/include/sync.h"
 
 #ifdef HAVE_XSP
 #include "photon_xsp_forwarder.h"
@@ -101,15 +103,18 @@ typedef struct photon_req_t {
   struct photon_buffer_internal_t remote_buffer;
 } photon_req;
 
-typedef struct photon_req_t * photonRequest;
+typedef struct photon_req_table_t {
+  unsigned head;
+  unsigned tail;
+  unsigned count;
+  struct photon_req_t *reqs;
+} photon_req_table;
 
 typedef struct photon_event_status_t {
   photon_rid id;
   int proc;
   void *priv;
 } photon_event_status;
-
-typedef struct photon_event_status_t * photonEventStatus;
 
 /* photon memory registration requests */
 struct photon_mem_register_req {
@@ -133,6 +138,11 @@ typedef struct photon_eb_hdr_t {
   uint16_t length;
   volatile uint8_t head;
 } photon_eb_hdr;
+
+typedef struct photon_req_t          * photonRequest;
+typedef struct photon_req_table_t    * photonRequestTable;
+typedef struct photon_event_status_t * photonEventStatus;
+typedef struct photon_backend_t      * photonBackend;
 
 struct photon_backend_t {
   void *context;
@@ -188,9 +198,8 @@ struct photon_backend_t {
   int (*get_event)(photonEventStatus stat);
 };
 
-typedef struct photon_backend_t * photonBackend;
-
 extern struct photon_backend_t photon_default_backend;
+extern ProcessInfo *photon_processes;
 
 #ifdef HAVE_XSP
 int photon_xsp_lookup_proc(libxspSess *sess, ProcessInfo **ret_pi, int *index);
