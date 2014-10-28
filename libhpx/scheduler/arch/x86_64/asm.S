@@ -42,15 +42,6 @@ LABEL(get_fpucw)
         ENDPROC
         SIZE(get_fpucw)
 
-        // This label is a complete hack. It's just here so that gdb outputs
-        // some useful initial thread_transfer information on bt, without it,
-        // thinks that the outer frame is get_fpucw. With it, it will report
-        // this symbol name.
-        //INTERNAL(_align_rsp_trampoline_new_thread_gdb_label_hack)
-// LABEL(_align_rsp_trampoline_new_thread_gdb_label_hack)
-//         nop
-//         SIZE(_align_rsp_trampoline_new_thread_gdb_label_hack)
-
 	    TYPE(align_rsp_trampoline, @function)
         INTERNAL(align_rsp_trampoline)
         GLOBAL(align_rsp_trampoline)
