@@ -50,6 +50,22 @@ typedef struct {
   const char pad[HPX_CACHELINE_SIZE - sizeof(sync_spscq_buffer_t *)];
 } sync_spscq_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
+#define SYNC_SPSCQ_INIT { \
+    .head = {             \
+      .index = 0,         \
+      .cached = 0,        \
+      .capacity = 0,      \
+      .pad = {0}          \
+    },                    \
+    .tail = {             \
+      .index = 0,         \
+      .cached = 0,        \
+      .pad = {0}          \
+    },                    \
+  .buffer = NULL,         \
+     .pad = {0}           \
+  }
+
 #define SYNC_SPSCQ_OK 0
 #define SYNC_SPSCQ_EMPTY 1
 #define SYNC_SPSCQ_FULL 1
