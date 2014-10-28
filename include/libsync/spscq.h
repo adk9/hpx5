@@ -47,6 +47,7 @@ typedef struct {
     const char pad[HPX_CACHELINE_SIZE - 8];
   } tail;
   sync_spscq_buffer_t * volatile buffer;
+  const char pad[HPX_CACHELINE_SIZE - sizeof(sync_spscq_buffer_t *)];
 } sync_spscq_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 #define SYNC_SPSCQ_OK 0
