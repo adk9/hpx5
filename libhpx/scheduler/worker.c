@@ -45,10 +45,6 @@
 #include "termination.h"
 #include "worker.h"
 
-
-typedef volatile int atomic_int_t;
-typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
-
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -75,7 +71,7 @@ static __thread struct worker {
   hpx_parcel_t     *current;                    // current thread
   chase_lev_ws_deque_t work;                    // my work
   two_lock_queue_t    inbox;                    // mail sent to me
-  atomic_int_t     shutdown;                    // cooperative shutdown flag
+  volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 } self = {
   .thread     = 0,
@@ -290,7 +286,7 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
-  atomic_int_t shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
+  int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
   if (shutdown) {
     void **temp = &self.sp;
     assert(temp);
