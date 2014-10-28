@@ -95,7 +95,7 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 /// @param       cont A continuation function to handle the old stack pointer.
 /// @param        env The environment for the continuation.
 ///
-/// @param
+/// @returns HPX_SUCCESS or an error code
 int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
