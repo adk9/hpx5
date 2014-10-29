@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include "libphoton.h"
+#include "photon_backend.h"
+#include "photon_forwarder.h"
 #include "logging.h"
 
 #ifdef HAVE_VERBS
@@ -565,6 +568,7 @@ void photon_io_print_info(void *io) {
     __photon_forwarder->io_print(io);
   }
 }
+
 /* end I/O */
 
 /* utility API method to get backend-specific buffer info */

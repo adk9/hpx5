@@ -1,6 +1,8 @@
 #ifndef PHOTON_EXCHANGE
 #define PHOTON_EXCHANGE
 
+#include "photon_backend.h"
+
 #define PHOTON_TPROC (_photon_nproc + _photon_nforw)
 #define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_ri_ledger_entry_t))
 #define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_ledger_entry_t))

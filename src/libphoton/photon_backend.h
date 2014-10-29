@@ -1,14 +1,16 @@
 #ifndef PHOTON_BACKEND_H
 #define PHOTON_BACKEND_H
 
-#include "photon.h"
-#include "photon_io.h"
+#include "libphoton.h"
 #include "photon_buffer.h"
 #include "photon_msgbuffer.h"
 #include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "photon_rdma_EAGER_buf.h"
 
+#include "htable.h"
+#include "counter.h"
+#include "logging.h"
 #include "squeue.h"
 #include "bit_array/bit_array.h"
 #include "libsync/include/sync.h"
@@ -16,6 +18,12 @@
 #ifdef HAVE_XSP
 #include "photon_xsp_forwarder.h"
 #endif
+
+DEFINE_COUNTER(curr_cookie, uint32_t)
+
+#define NEXT_LEDGER_ENTRY(l) (l->curr = (l->curr + 1) % l->num_entries)
+#define NEXT_EAGER_BUF(e, s) (e->offset = (e->offset + s) % _photon_ebsize)
+#define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 
 #define DEF_NUM_REQUESTS     (1024*5)   // 5k pre-allocated requests
 #define DEF_EAGER_BUF_SIZE   (1024*128) // 128k bytes of space per rank
@@ -142,7 +150,6 @@ typedef struct photon_eb_hdr_t {
 typedef struct photon_req_t          * photonRequest;
 typedef struct photon_req_table_t    * photonRequestTable;
 typedef struct photon_event_status_t * photonEventStatus;
-typedef struct photon_backend_t      * photonBackend;
 
 struct photon_backend_t {
   void *context;
@@ -198,13 +205,34 @@ struct photon_backend_t {
   int (*get_event)(photonEventStatus stat);
 };
 
-extern struct photon_backend_t photon_default_backend;
-extern ProcessInfo *photon_processes;
+extern struct photon_backend_t  photon_default_backend;
+extern ProcessInfo             *photon_processes;
+extern photonBI                 shared_storage;
+extern htable_t                *reqtable, *pwc_reqtable, *sr_reqtable;
+
+LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
+SLIST_HEAD(pendingpwc, photon_req_t) pending_pwc_list;
+SLIST_HEAD(pendingrecvlist, photon_req_t) pending_recv_list;
+SLIST_HEAD(pendingmemregs, photon_mem_register_req) pending_mem_register_list;
 
 #ifdef HAVE_XSP
 int photon_xsp_lookup_proc(libxspSess *sess, ProcessInfo **ret_pi, int *index);
 int photon_xsp_unused_proc(ProcessInfo **ret_pi, int *index);
 #endif
+
+PHOTON_INTERNAL int __photon_setup_request_direct(photonBuffer rbuf, int proc, int tag,
+						  int entries, photon_rid rid, photon_rid eid);
+PHOTON_INTERNAL int __photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int curr,
+						       int proc, photon_rid *request);
+PHOTON_INTERNAL int __photon_setup_request_ledger_eager(photonLedgerEntry l_entry, int curr,
+							int proc, photon_rid *request);
+PHOTON_INTERNAL int __photon_setup_request_send(photonAddr addr, int *bufs, int nbufs,
+						photon_rid request);
+PHOTON_INTERNAL photonRequest __photon_setup_request_recv(photonAddr addr, int msn, int msize,
+							  int bindex, int nbufs, photon_rid request);
+PHOTON_INTERNAL int __photon_handle_cq_event(photonRequest req, photon_rid id);
+PHOTON_INTERNAL int __photon_handle_send_event(photonRequest req, photon_rid id);
+PHOTON_INTERNAL int __photon_handle_recv_event(photon_rid id);
 
 /* util */
 PHOTON_INTERNAL int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
