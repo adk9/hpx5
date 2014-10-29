@@ -183,7 +183,8 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   }
 
   fma_desc->type = opcode;
-  fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+  //fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+  fma_desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
   fma_desc->local_addr = args->laddr;
   fma_desc->local_mem_hndl = args->lmdh;
   fma_desc->remote_addr = args->raddr;
@@ -223,7 +224,8 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   }
 
   fma_desc->type = opcode;
-  fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+  //fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+  fma_desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
   fma_desc->local_addr = args->laddr;
   fma_desc->local_mem_hndl = args->lmdh;
   fma_desc->remote_addr = args->raddr;

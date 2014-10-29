@@ -69,8 +69,7 @@ _SBN1_sends_action(pSBN *psbn)
   int    srcRemoteIdx = destLocalIdx;
   int     srcLocalIdx = 25 - srcRemoteIdx;
   int        distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t    local = hpx_thread_current_target();
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -194,7 +193,7 @@ int _SBN3_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -321,7 +320,7 @@ int _PosVel_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -458,7 +457,7 @@ int _MonoQ_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
