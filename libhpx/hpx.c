@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <sys/mman.h>
 
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
@@ -74,16 +73,11 @@ static int _cleanup(locality_t *l, int code) {
     l->boot = NULL;
   }
 
+  if (l)
+    free(l);
+
   return code;
 }
-
-
-static void *_map_local(uint32_t bytes) {
-  int prot = PROT_READ | PROT_WRITE;
-  int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
-  return mmap(NULL, bytes, prot, flags, -1, 0);
-}
-
 
 int hpx_init(const hpx_config_t *cfg) {
   // 0) use a default configuration if one is necessary
@@ -91,8 +85,7 @@ int hpx_init(const hpx_config_t *cfg) {
     cfg = &_default_cfg;
 
   dbg_log_level = cfg->log_level;
-  // 1) start by initializing the entire local data segment
-  here = _map_local(UINT32_MAX);
+  here = malloc(sizeof(*here));
   if (!here)
     return dbg_error("init: failed to map the local data segment.\n");
 
