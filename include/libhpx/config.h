@@ -10,8 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef HPX_CONFIG_H
-#define HPX_CONFIG_H
+#ifndef LIBHPX_CONFIG_H
+#define LIBHPX_CONFIG_H
 
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
@@ -23,7 +23,8 @@ typedef enum {
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
   HPX_GAS_PGAS_SWITCH, //!< Use hardware-accelerated PGAS.
-  HPX_GAS_AGAS_SWITCH  //!< Use hardware-accelerated AGAS.
+  HPX_GAS_AGAS_SWITCH, //!< Use hardware-accelerated AGAS.
+  HPX_GAS_MAX
 } hpx_gas_t;
 
 static const char* const HPX_GAS_TO_STRING[] = {
@@ -32,8 +33,10 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "HPX_GAS_PGAS",
   "HPX_GAS_AGAS",
   "HPX_GAS_PGAS_SWITCH",
-  "HPX_GAS_AGAS_SWITCH"
+  "HPX_GAS_AGAS_SWITCH",
+  "HPX_GAS_MAX"
 };
+
 
 //! Configuration options for the network transports HPX can use.
 typedef enum {
@@ -45,13 +48,33 @@ typedef enum {
   HPX_TRANSPORT_MAX
 } hpx_transport_t;
 
+static const char* const HPX_TRANSPORT_TO_STRING[] = {
+  "HPX_TRANSPORT_DEFAULT",
+  "HPX_TRANSPORT_SMP",
+  "HPX_TRANSPORT_MPI",
+  "HPX_TRANSPORT_PORTALS",
+  "HPX_TRANSPORT_PHOTON",
+  "HPX_TRANSPORT_MAX"
+};
+
+
 //! Configuration options for which bootstrappers HPX can use.
 typedef enum {
   HPX_BOOT_DEFAULT = 0,      //!< Let HPX choose what bootstrapper to use.
   HPX_BOOT_SMP,              //!< Use the SMP bootstrapper.
   HPX_BOOT_MPI,              //!< Use mpirun to bootstrap HPX.
-  HPX_BOOT_PMI               //!< Use the PMI bootstrapper.
+  HPX_BOOT_PMI,              //!< Use the PMI bootstrapper.
+  HPX_BOOT_MAX
 } hpx_boot_t;
+
+static const char* const HPX_BOOT_TO_STRING[] = {
+  "HPX_BOOT_DEFAULT",
+  "HPX_BOOT_SMP",
+  "HPX_BOOT_MPI",
+  "HPX_BOOT_PMI",
+  "HPX_BOOT_MAX"
+};
+
 
 //! Configuration option for whether to wait for a debugger.
 typedef enum {
@@ -59,11 +82,23 @@ typedef enum {
   HPX_WAIT                   //!< Wait for a debugger to attach.
 } hpx_wait_t;
 
+static const char* const HPX_WAIT_TO_STRING[] = {
+  "HPX_WAIT_NONE",
+  "HPX_WAIT"
+};
+
+
 //! Locality types in HPX.
 typedef enum {
   HPX_LOCALITY_NONE = -2,    //!< Represents no locality.
   HPX_LOCALITY_ALL = -1      //!< Represents all localities.
 } hpx_locality_t;
+
+static const char* const HPX_LOCALITY_TO_STRING[] = {
+  "HPX_LOCALITY_NONE",
+  "HPX_LOCALITY_ALL"
+};
+
 
 //! Configuration options for runtime logging in HPX.
 typedef enum {
@@ -77,6 +112,19 @@ typedef enum {
   HPX_LOG_PARCEL  = (1<<7),  //!< Parcel logging.
   HPX_LOG_ALL     =   (-1)   //!< Turn on all logging.
 } hpx_log_t;
+
+static const char* const HPX_LOG_TO_STRING[] = {
+  "HPX_LOG_DEFAULT",
+  "HPX_LOG_BOOT",
+  "HPX_LOG_SCHED",
+  "HPX_LOG_GAS",
+  "HPX_LOG_LCO",
+  "HPX_LOG_NET",
+  "HPX_LOG_TRANS",
+  "HPX_LOG_PARCEL",
+  "HPX_LOG_ALL"
+};
+
 
 // ----------------------------------------------------------------------------
 /// The HPX configuration type (to give hpx_init()).
@@ -119,4 +167,4 @@ typedef struct {
 
 const char* hpx_get_network_id(void);
 
-#endif
+#endif // LIBHPX_CONFIG_H
