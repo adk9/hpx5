@@ -37,13 +37,19 @@ static void maxdouble(double *output,const double *input, const size_t size) {
 
 // perform one epoch of the algorithm
 static int _advanceDomain_action(unsigned long *epoch) {
-  static hpx_time_t start_time;
+  hpx_time_t start_time;
+  double time_in_SBN3 = 0.0;
+  double time_in_PosVel = 0.0;
+  double time_in_MonoQ = 0.0;
+  hpx_time_t t_s, t_e;
 
-  const unsigned long n = *epoch;
+  unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
   if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
+
+  while (true) {
 
   // 0. If I've run enough cycles locally, then I want to join the global
   //    complete barrier (stored in my local domain as domain->complete)---this
@@ -84,6 +90,13 @@ static int _advanceDomain_action(unsigned long *epoch) {
          "  MaxAbsDiff   = %12.6e\n"
          "  TotalAbsDiff = %12.6e\n"
          "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+
+
+
+      printf("\n\n\n");
+      printf("time_in_SBN3 = %e\n", time_in_SBN3/1000.0);
+      printf("time_in_PosVel = %e\n", time_in_PosVel/1000.0);
+      printf("time_in_MonoQ = %e\n", time_in_MonoQ/1000.0);
     }
 
     hpx_gas_unpin(local);
@@ -94,11 +107,6 @@ static int _advanceDomain_action(unsigned long *epoch) {
   if ( domain->cycle == 0 ) {
     // Send our allreduce messages for epoch n
     SBN1(local, domain, n);
-
-    //  update the domain's epoch, this releases any pending the
-    //    _SBN1_result_action messages, which will all acquire and release the
-    //    domain lock and then join the sbn1_and reduction for the nth epoch
-    hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
 
     //  wait for the allreduce for this epoch to complete locally
     hpx_lco_wait(domain->sbn1_and);
@@ -124,13 +132,14 @@ static int _advanceDomain_action(unsigned long *epoch) {
   }
 
   domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
-
+  
   // send messages for epoch n
+  t_s = hpx_time_now();
   CalcForceForNodes(local,domain,domain->rank,n);
-  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
   hpx_lco_wait(domain->sbn3_and[n % 2]);
   //  printf("Done with SBN3 on %d\n", domain->rank);
   hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
+  time_in_SBN3 += hpx_time_elapsed_ms(t_s);
 
   CalcAccelerationForNodes(domain->xdd, domain->ydd, domain->zdd,
                              domain->fx, domain->fy, domain->fz,
@@ -176,14 +185,17 @@ static int _advanceDomain_action(unsigned long *epoch) {
                          domain->xd, domain->yd, domain->zd,
                          domain->deltatime, domain->numNode);
 
+  t_s = hpx_time_now();
   domain->posvel_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvFF[0]);
   PosVel(local,domain,n);
-  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
   hpx_lco_wait(domain->posvel_and[n % 2]);
   hpx_lco_delete(domain->posvel_and[n % 2], HPX_NULL);
+  time_in_PosVel += hpx_time_elapsed_ms(t_s);
 
+  t_s = hpx_time_now();
   domain->monoq_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTT[0]);
   LagrangeElements(local,domain,n);
+  time_in_MonoQ += hpx_time_elapsed_ms(t_s);
 
   CalcTimeConstraintsForElems(domain);
 
@@ -198,8 +210,11 @@ static int _advanceDomain_action(unsigned long *epoch) {
 
   // 5. spawn the next epoch
   unsigned long next = n + 1;
+  n = n + 1;
 
-  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  //  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  } // end while(true)
+  return HPX_ERROR;
 }
 
 static int _initDomain_action(InitArgs *init) {
