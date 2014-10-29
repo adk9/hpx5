@@ -20,6 +20,13 @@
 
 #include "hpx/hpx.h"
 #include "libpxgl.h"
+#include "libsync/sync.h"
+#include "libhpx/debug.h"
+
+uint64_t active_count;
+uint64_t inactive_count;
+
+//#define VERBOSE 1
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
@@ -30,8 +37,9 @@ static void _usage(FILE *stream) {
           "\t-d, wait for debugger at specific locality\n"
           "\t-l, set logging level\n"
           "\t-s, set stack size\n"
+          "\t-k, use and-lco-based terminaiton detection\n"
           "\t-p, set per-PE global heap size\n"
-      "\t-r, set send/receive request limit\n"
+          "\t-r, set send/receive request limit\n"
           "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
@@ -73,7 +81,6 @@ static int _print_vertex_distance_index_action(int *i)
 
 
 static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **problems) {
-
   FILE *f = fopen(*filename, "r");
   assert(f);
 
@@ -99,8 +106,6 @@ static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pr
   return 0;
 }
 
-
-
 // Arguments for the main SSSP action
 typedef struct {
   char *filename;
@@ -111,21 +116,20 @@ typedef struct {
   int realloc_adj_list;
 } _sssp_args_t;
 
+/* static hpx_action_t _get_sssp_stat; */
+/* static int _get_sssp_stat_action(call_sssp_args_t* sargs) */
+/* { */
+/*   const hpx_addr_t target = hpx_thread_current_target(); */
 
-static hpx_action_t _get_sssp_stat;
-static int _get_sssp_stat_action(call_sssp_args_t* sargs)
-{
-  const hpx_addr_t target = hpx_thread_current_target();
+/*   hpx_addr_t *sssp_stats; */
+/*   if (!hpx_gas_try_pin(target, (void**)&sssp_stats)) */
+/*     return HPX_RESEND; */
 
-  hpx_addr_t *sssp_stats;
-  if (!hpx_gas_try_pin(target, (void**)&sssp_stats))
-    return HPX_RESEND;
+/*   sargs->sssp_stat = *sssp_stats; */
+/*   hpx_gas_unpin(target); */
 
-  sargs->sssp_stat = *sssp_stats;
-  hpx_gas_unpin(target);
-
-  return HPX_SUCCESS;
-}
+/*   return HPX_SUCCESS; */
+/* } */
 
 static hpx_action_t _print_sssp_stat;
 static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
@@ -196,11 +200,18 @@ static int _main_action(_sssp_args_t *args) {
 
     sargs.source = args->problems[i];
 
+
+
+
     hpx_time_t now = hpx_time_now();
 
-    // printf("Calling SSSP in the %d iteration\n", i);
     // Call the SSSP algorithm
-    hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
+    hpx_addr_t sssp_lco = hpx_lco_and_new(1);
+    sargs.termination_lco = sssp_lco;
+    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    hpx_lco_wait(sssp_lco);
+    hpx_lco_delete(sssp_lco, HPX_NULL);
+
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     elapsed_time[i] = elapsed;
@@ -316,7 +327,7 @@ int main(int argc, char *const argv[argc]) {
   int realloc_adj_list = 0;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:ah")) != -1) {
+  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:ahk")) != -1) {
     switch (opt) {
     case 'c':
       cfg.cores = atoi(optarg);
@@ -353,6 +364,9 @@ int main(int argc, char *const argv[argc]) {
       break;
     case 'a':
       realloc_adj_list = 1;
+      break;
+    case 'k':
+      termination = AND_LCO_TERMINATION;
       break;
     case 'h':
       _usage(stdout);
@@ -410,7 +424,6 @@ int main(int argc, char *const argv[argc]) {
   // register the actions
   _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);
   _print_vertex_distance       = HPX_REGISTER_ACTION(_print_vertex_distance_action);
-  _get_sssp_stat               = HPX_REGISTER_ACTION(_get_sssp_stat_action);
   _print_sssp_stat             = HPX_REGISTER_ACTION(_print_sssp_stat_action);
   _main                        = HPX_REGISTER_ACTION(_main_action);
 
