@@ -104,17 +104,16 @@ int hpx_init(const hpx_config_t *cfg) {
   here->ranks = boot_n_ranks(here->boot);
 
   // 3a) wait if the user wants us to
-  if (cfg->wait == HPX_WAIT)
-    if (cfg->wait_at == HPX_LOCALITY_ALL || cfg->wait_at == here->rank)
-      dbg_wait();
+  if (cfg->waitat == HPX_LOCALITY_ALL || cfg->waitat == here->rank)
+    dbg_wait();
 
   // 6) allocate the transport
-  here->transport = transport_new(cfg->transport, cfg->req_limit);
+  here->transport = transport_new(cfg->transport, cfg->reqlimit);
   if (here->transport == NULL)
     return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
-  here->gas = gas_new(cfg->heap_bytes, here->boot, here->transport, cfg->gas);
+  here->gas = gas_new(cfg->heapsize, here->boot, here->transport, cfg->gas);
   if (here->gas == NULL)
     return _cleanup(here, dbg_error("init: failed to create the global address "
                                     "space.\n"));
@@ -133,8 +132,8 @@ int hpx_init(const hpx_config_t *cfg) {
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
-  here->sched = scheduler_new(cores, workers, cfg->stack_bytes,
-                              cfg->backoff_max, cfg->statistics);
+  here->sched = scheduler_new(cores, workers, cfg->stacksize,
+                              cfg->backoffmax, cfg->statistics);
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
 
