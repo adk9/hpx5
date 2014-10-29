@@ -7,6 +7,7 @@
 #include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libhpx/debug.h"
 
 /// SSSP Chaotic-relaxation
 
@@ -95,6 +96,7 @@ static int _edge_traversal_count_action(uint64_t* num_edges)
 #endif // GATHER_STAT
 
 static int _initialize_termination_detection_action(void *arg){
+  // printf("Initializing termination detection.\n");
   sync_store(&active_count, 0, SYNC_SEQ_CST);
   sync_store(&finished_count, 0, SYNC_SEQ_CST);
   sync_store(&termination, COUNT_TERMINATION, SYNC_SEQ_CST);
@@ -179,7 +181,11 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
 
   // printf("Calling update distance on %" PRIu64 "\n", vertex);
 
-  return hpx_call(vertex, _sssp_update_vertex_distance, args, sizeof(*args), HPX_NULL);
+  if(termination == AND_LCO_TERMINATION) {
+    return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
+  } else {
+    return hpx_call(vertex, _sssp_update_vertex_distance, args, sizeof(*args), HPX_NULL);
+  }
 }
 
 static int _send_termination_count_action(const hpx_addr_t *const args){
@@ -200,6 +206,7 @@ static void detect_termination(const hpx_addr_t termination_lco){
     hpx_bcast(_send_termination_count, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
     int64_t activity_count;
     hpx_lco_get(termination_count_lco, sizeof(activity_count), &activity_count);
+    // printf("activity_count: %" PRId64 ", phase: %d\n", activity_count, phase);
     if(activity_count != 0) {
       phase = PHASE_1;
       continue;
@@ -207,7 +214,7 @@ static void detect_termination(const hpx_addr_t termination_lco){
       hpx_lco_set(termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       break;
     } else {
-      phase = PHASE_1;
+      phase = PHASE_2;
     }
   }
 
@@ -227,17 +234,21 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   // We expect that the termination global variable is set correctly on this locality.  This is true because call_sssp_action is called with HPX_HERE and termination is set before the call by program flags.
   if(get_termination() == COUNT_TERMINATION) {
     hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
+    // printf("Starting initialization bcast.\n");
     hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+    // printf("Waiting on bcast.\n");
     hpx_lco_wait(init_termination_count_lco);
     hpx_lco_delete(init_termination_count_lco, HPX_NULL);
     _increment_active_count(1);
   }
 
+  // printf("Calling first visit vertex.\n");
   // start the algorithm from source once
   if(get_termination() == AND_LCO_TERMINATION) {
     hpx_call(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), args->termination_lco);
   } else {
     hpx_call(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), HPX_NULL);
+    // printf("starting termination detection\n");
     detect_termination(args->termination_lco);
   }
 
