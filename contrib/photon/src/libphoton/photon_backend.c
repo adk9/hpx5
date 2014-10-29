@@ -1859,6 +1859,7 @@ static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photo
   count = 1;
   still_searching = 1;
   entry_iterator = curr_entry;
+  /* TODO:  clean up this hacked loop */
   do {
     while((entry_iterator->header == 0 || entry_iterator->footer == 0) && (eager_entry->request == 0)) {
       ;
@@ -1871,15 +1872,17 @@ static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photo
       still_searching = 0;
       eager = true;
     }
-    if( ((tag < 0) || (entry_iterator->tag == tag )) && (size == PHOTON_ANY_SIZE) ) {
-      still_searching = 0;
-    }
-    else if (((tag < 0) || (entry_iterator->tag == tag )) && (size == entry_iterator->size)) {
-      still_searching = 0;
-    }
-    else {
-      curr = (photon_processes[proc].local_snd_info_ledger->curr + count++) % photon_processes[proc].local_snd_info_ledger->num_entries;
-      entry_iterator = &(photon_processes[proc].local_snd_info_ledger->entries[curr]);
+    if (still_searching) {
+      if( ((tag < 0) || (entry_iterator->tag == tag )) && (size == PHOTON_ANY_SIZE) ) {
+	still_searching = 0;
+      }
+      else if (((tag < 0) || (entry_iterator->tag == tag )) && (size == entry_iterator->size)) {
+	still_searching = 0;
+      }
+      else {
+	curr = (photon_processes[proc].local_snd_info_ledger->curr + count++) % photon_processes[proc].local_snd_info_ledger->num_entries;
+	entry_iterator = &(photon_processes[proc].local_snd_info_ledger->entries[curr]);
+      }
     }
   }
   while(still_searching);

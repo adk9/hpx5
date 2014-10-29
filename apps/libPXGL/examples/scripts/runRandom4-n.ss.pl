@@ -20,8 +20,8 @@
 # ============================================================================
 
 # param setup:
-$START   = 21;      # num nodes goes from 2^$START to 2^$END
-$END     = 21;      # please adjust this limit to fit your available mem
+$START   = 10;      # num nodes goes from 2^$START to 2^$END
+$END     = 10;      # please adjust this limit to fit your available mem
 $TRIALS  = 1;       # number of trials per data point
 
 $RESFILE   = "../results/Random4-n.ss.res";
@@ -47,10 +47,11 @@ for ( $p = $START; $p < $END + 1 ; $p++ ) {
 		
         $graphname = sprintf $GRAPH, $p, $trial;
         $auxname   = sprintf $AUX, $p, $trial;
-	print 'working with $graphname';
+	print `working with $graphname`;
 	# run experiment and collect stdout
 	#$out = `mpirun -np 1 $SOLVER $graphname $auxname`;
-	$out = `mpirun -np 4 --map-by node $SOLVER  -c 8  -s 8192 -p 32000000000  $graphname $auxname`;
+	$out = `mpirun -np 2 --map-by node $SOLVER   -T 2  -s 20000 -p 4294967296 $graphname $auxname`;
+#mpirun -np 4 --map-by node $SOLVER  -c 8  -s 8192 -p 32000000000  $graphname $auxname`;
 	    print FILE $out;
 	}
 }
