@@ -2,9 +2,8 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "photon.h"
 #include "libphoton.h"
-#include "logging.h"
+#include "photon_backend.h"
 #include "photon_buffer.h"
 
 static photonBufferInterface bi = NULL;

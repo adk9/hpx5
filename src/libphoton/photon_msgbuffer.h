@@ -44,4 +44,7 @@ PHOTON_INTERNAL int photon_msgbuffer_free(photonMsgBuf mbuf);
 PHOTON_INTERNAL photon_mbe *photon_msgbuffer_get_entry(photonMsgBuf mbuf, int *ind);
 PHOTON_INTERNAL int photon_msgbuffer_free_entry(photonMsgBuf mbuf, int ind);
 
+extern photonMsgBuf sendbuf;
+extern photonMsgBuf recvbuf;
+
 #endif

@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include "libphoton.h"
+#include "photon_backend.h"
 #include "photon_exchange.h"
 #include "logging.h"
 
@@ -13,8 +14,6 @@
 #ifdef HAVE_PMI
 #include <pmi_cray.h>
 #endif
-
-extern photonBI shared_storage;
 
 int photon_exchange_allgather(void *ptr, void *ivec_ptr, int n) {
   int rc;

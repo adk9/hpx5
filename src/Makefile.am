@@ -11,6 +11,9 @@ DIST_SUBDIRS = util contrib
 
 lib_LTLIBRARIES = libphoton.la
 libphoton_la_SOURCES = libphoton/libphoton.c                   \
+		       libphoton/photon_request.c              \
+		       libphoton/photon_event.c                \
+		       libphoton/photon_pwc.c                  \
                        libphoton/photon_backend.c              \
                        libphoton/photon_exchange.c             \
                        libphoton/photon_buffer.c               \

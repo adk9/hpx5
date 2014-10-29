@@ -13,9 +13,8 @@
 #include <errno.h>
 #include <netdb.h>
 
-#include "libphoton.h"
-#include "photon_exchange.h"
 #include "logging.h"
+#include "photon_exchange.h"
 #include "verbs_connect.h"
 #include "verbs_util.h"
 #include "verbs_ud.h"
