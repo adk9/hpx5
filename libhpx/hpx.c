@@ -28,6 +28,7 @@
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
+#include "libhpx/config.h"
 #include "libhpx/gas.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -39,9 +40,6 @@
 #include "libhpx/transport.h"
 
 #include "network/servers.h"
-
-/// The default configuration.
-static const hpx_config_t _default_cfg = HPX_CONFIG_DEFAULTS;
 
 /// Cleanup utility function.
 ///
@@ -79,10 +77,10 @@ static int _cleanup(locality_t *l, int code) {
   return code;
 }
 
-int hpx_init(const hpx_config_t *cfg) {
-  // 0) use a default configuration if one is necessary
-  if (!cfg)
-    cfg = &_default_cfg;
+
+int hpx_init(int *argc, char ***argv) {
+  // 0) parse the provided options into a usable configuration
+  hpx_config_t *cfg = hpx_parse_options(argc, argv);
 
   dbg_log_level = cfg->log_level;
   here = malloc(sizeof(*here));

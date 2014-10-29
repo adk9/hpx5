@@ -114,11 +114,10 @@ static const char* const HPX_LOG_TO_STRING[] = {
 };
 
 
-// ----------------------------------------------------------------------------
-/// The HPX configuration type (to give hpx_init()).
-// ----------------------------------------------------------------------------
-/// This configuration can be passed to hpx_init() to control some
-/// runtime parameters for the HPX system.
+/// The HPX configuration type.
+///
+/// This configuration is used to control some of the runtime
+/// parameters for the HPX system.
 
 typedef struct {
   int                 cores;          //!< number of cores to run on.
@@ -135,7 +134,7 @@ typedef struct {
   uint32_t         reqlimit;          //!< max transport requests
 } hpx_config_t;
 
-/// The default configuration parameters HPX will start with.
+/// The default configuration parameters that HPX will start with.
 #define HPX_CONFIG_DEFAULTS {                   \
     .cores       = 0,                           \
     .threads     = 0,                           \
@@ -150,6 +149,8 @@ typedef struct {
     .statistics  = true,                        \
     .reqlimit    = 0                            \
   }
+
+HPX_INTERNAL hpx_config_t *hpx_parse_options(int *argc, char ***argv);
 
 const char* hpx_get_network_id(void);
 

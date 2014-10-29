@@ -27,12 +27,8 @@
 
 
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: fibonacci [options] NUMBER\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-h, this help display\n");
+  fprintf(stream, "Usage: fibonacci [hpx-options] NUMBER\n");
+  hpx_print_help();
 }
 
 static hpx_action_t _fib      = 0;
@@ -101,39 +97,14 @@ static int _fib_main_action(int *args) {
 }
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  int n = 0;
 
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
-    switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'h':
-      _usage(stdout);
-      return 0;
-     case '?':
-     default:
-      _usage(stderr);
-      return -1;
-    }
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
   }
 
-  argc -= optind;
-  argv += optind;
-
-  int n = 0;
   switch (argc) {
    case 0:
     fprintf(stderr, "\nMissing fib number.\n"); // fall through
@@ -143,12 +114,6 @@ int main(int argc, char *argv[]) {
    case 1:
      n = atoi(argv[0]);
      break;
-  }
-
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
   }
 
   // register the fib action
