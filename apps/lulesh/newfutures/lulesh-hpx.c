@@ -24,8 +24,21 @@ static void mindouble(double *output,const double *input, const size_t size) {
   return;
 }
 
+static void initmaxdouble(double *input, const size_t size) {  
+  assert(sizeof(double) == size);
+  *input = 0;
+}
+
+static void maxdouble(double *output,const double *input, const size_t size) {
+  assert(sizeof(double) == size);
+  if ( *output < *input ) *output = *input;
+  return;
+}
+
 // perform one epoch of the algorithm
 static int _advanceDomain_action(unsigned long *epoch) {
+  static hpx_time_t start_time;
+
   const unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
@@ -36,8 +49,17 @@ static int _advanceDomain_action(unsigned long *epoch) {
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
   if ( (domain->time >= domain->stoptime) || (domain->cycle >= domain->maxcycles)) {
+    double elapsed_time_local = hpx_time_elapsed_ms(start_time);
+    hpx_lco_set(domain->elapsed_ar, sizeof(double), &elapsed_time_local, HPX_NULL, HPX_NULL);
+
     if ( domain->rank == 0 ) {
       int nx = domain->sizeX;
+
+      double elapsed_time_max;
+      hpx_lco_get(domain->elapsed_ar, sizeof(double), &elapsed_time_max);
+
+      printf("\n\nElapsed time = %12.6e\n\n", elapsed_time_max/1000.0);
+      printf("Run completed:  \n");
       printf("  Problem size = %d \n"
              "  Iteration count = %d \n"
              "  Final origin energy = %12.6e\n",nx,domain->cycle,domain->e[0]);
@@ -80,8 +102,11 @@ static int _advanceDomain_action(unsigned long *epoch) {
 
     //  wait for the allreduce for this epoch to complete locally
     hpx_lco_wait(domain->sbn1_and);
-    printf("Done with SBN1 on %d\n", domain->rank);
+    //    printf("Done with SBN1 on %d\n", domain->rank);
     hpx_lco_delete(domain->sbn1_and, HPX_NULL);
+
+
+    start_time = hpx_time_now();
   }
 
 
@@ -104,7 +129,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   CalcForceForNodes(local,domain,domain->rank,n);
   hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
   hpx_lco_wait(domain->sbn3_and[n % 2]);
-  printf("Done with SBN3 on %d\n", domain->rank);
+  //  printf("Done with SBN3 on %d\n", domain->rank);
   hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
 
   CalcAccelerationForNodes(domain->xdd, domain->ydd, domain->zdd,
@@ -169,7 +194,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   // don't need this domain to be pinned anymore---let it move
   hpx_gas_unpin(local);
 
-  printf("============================================================== domain %d iter %d\n", domain->rank, n);
+  //  printf("============================================================== domain %d iter %d\n", domain->rank, n);
 
   // 5. spawn the next epoch
   unsigned long next = n + 1;
@@ -201,6 +226,7 @@ static int _initDomain_action(InitArgs *init) {
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
+  ld->elapsed_ar = init->elapsed_ar;
 
   // remember the LCO we're supposed to set when we've completed maxcycles
   ld->complete = init->complete;
@@ -255,9 +281,14 @@ static int _main_action(int *input)
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
 					   (hpx_commutative_associative_op_t)mindouble,
 					   (void (*)(void *, const size_t size)) initdouble);
+  hpx_addr_t elapsed_ar;
+  elapsed_ar = hpx_lco_allreduce_new(nDoms, 1, sizeof(double),
+				     (hpx_commutative_associative_op_t)maxdouble,
+				     (void (*)(void *, const size_t size)) initmaxdouble);
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .base = domain,
+      .elapsed_ar = elapsed_ar,
       .index = k,
       .nDoms = nDoms,
       .nx = nx,
