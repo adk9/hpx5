@@ -21,6 +21,7 @@
 #include "hpx/hpx.h"
 #include "libpxgl.h"
 #include "libsync/sync.h"
+#include "libhpx/debug.h"
 
 uint64_t active_count;
 uint64_t inactive_count;
@@ -207,7 +208,8 @@ static int _main_action(_sssp_args_t *args) {
 
     // Call the SSSP algorithm
     hpx_addr_t sssp_lco = hpx_lco_and_new(1);
-    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), sssp_lco);
+    sargs.termination_lco = sssp_lco;
+    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
     hpx_lco_wait(sssp_lco);
     hpx_lco_delete(sssp_lco, HPX_NULL);
 
