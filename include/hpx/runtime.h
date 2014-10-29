@@ -106,4 +106,9 @@ void hpx_abort(void)
   HPX_NORETURN;
 
 
+/// Print the help string associated with the runtime configuration
+/// options supported by the HPX runtime.
+///
+void hpx_print_help(void);
+
 #endif
