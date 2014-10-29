@@ -24,7 +24,7 @@ extern int _forwarder;
 
 #ifdef DEBUG
 /* defined in util.c */
-time_t _tictoc(time_t stime, int proc);
+PHOTON_INTERNAL time_t _tictoc(time_t stime, int proc);
 #endif
 
 #endif

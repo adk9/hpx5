@@ -14,6 +14,7 @@
 #define PHOTON_H
 
 #include <stdint.h>
+#include "photon_attributes.h"
 
 struct photon_config_t {
   uint64_t address;         // i.e. process rank

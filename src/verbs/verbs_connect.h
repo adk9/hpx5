@@ -44,10 +44,10 @@ typedef struct verbs_cnct_ctx_t {
   verbs_cnct_info          **remote_ci;
 } verbs_cnct_ctx;
 
-int __verbs_init_context(verbs_cnct_ctx *ctx);
-int __verbs_connect_peers(verbs_cnct_ctx *ctx);
-int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
-                           verbs_cnct_info *remote_info, int pindex, verbs_cnct_info **ret_ci,
-                           int *ret_len, photon_connect_mode_t mode);
+PHOTON_INTERNAL int __verbs_init_context(verbs_cnct_ctx *ctx);
+PHOTON_INTERNAL int __verbs_connect_peers(verbs_cnct_ctx *ctx);
+PHOTON_INTERNAL int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
+					   verbs_cnct_info *remote_info, int pindex, verbs_cnct_info **ret_ci,
+					   int *ret_len, photon_connect_mode_t mode);
 
 #endif

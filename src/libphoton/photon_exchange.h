@@ -27,16 +27,14 @@
 #define PHOTON_LPB_PTR(a) (PHOTON_LEB_PTR(a) + PHOTON_NP_EBUF_SIZE * 2)
 #define PHOTON_RPB_PTR(a) (PHOTON_LEB_PTR(a) + PHOTON_NP_EBUF_SIZE * 3)
 
-int photon_exchange_allgather(void *s, void *d, int n);
-int photon_exchange_barrier();
-
-int photon_exchange_ledgers(ProcessInfo *processes, int flags);
-
-int photon_setup_ri_ledger(ProcessInfo *processes, char *buf, int num_entries);
-int photon_setup_eager_ledger(ProcessInfo *processes, char *buf, int num_entries);
-int photon_setup_fin_ledger(ProcessInfo *processes, char *buf, int num_entries);
-int photon_setup_pwc_ledger(ProcessInfo *processes, char *buf, int num_entries);
-int photon_setup_eager_buf(ProcessInfo *processes, char *buf, int num_entries);
-int photon_setup_pwc_buf(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_exchange_allgather(void *s, void *d, int n);
+PHOTON_INTERNAL int photon_exchange_barrier();
+PHOTON_INTERNAL int photon_exchange_ledgers(ProcessInfo *processes, int flags);
+PHOTON_INTERNAL int photon_setup_ri_ledger(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_setup_eager_ledger(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_setup_fin_ledger(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_setup_pwc_ledger(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_setup_eager_buf(ProcessInfo *processes, char *buf, int num_entries);
+PHOTON_INTERNAL int photon_setup_pwc_buf(ProcessInfo *processes, char *buf, int num_entries);
 
 #endif

@@ -29,17 +29,17 @@ struct photon_buffer_interface_t {
 typedef struct photon_buffer_interface_t * photonBufferInterface;
 
 /* internal buffer API */
-void photon_buffer_init(photonBufferInterface buf_interface);
-photonBI photon_buffer_create(void *buf, uint64_t size);
-void photon_buffer_free(photonBI buf);
-int photon_buffer_register(photonBI buf, void *ctx);
-int photon_buffer_unregister(photonBI buf, void *ctx);
-int photon_buffer_get_private(photonBI buf, photonBufferPriv ret_priv);
+PHOTON_INTERNAL void photon_buffer_init(photonBufferInterface buf_interface);
+PHOTON_INTERNAL photonBI photon_buffer_create(void *buf, uint64_t size);
+PHOTON_INTERNAL void photon_buffer_free(photonBI buf);
+PHOTON_INTERNAL int photon_buffer_register(photonBI buf, void *ctx);
+PHOTON_INTERNAL int photon_buffer_unregister(photonBI buf, void *ctx);
+PHOTON_INTERNAL int photon_buffer_get_private(photonBI buf, photonBufferPriv ret_priv);
 
 /* default buffer interface methods */
-photonBI _photon_buffer_create(void *buf, uint64_t size);
-void _photon_buffer_free(photonBI buf);
-int _photon_buffer_register(photonBI buf, void *ctx);
-int _photon_buffer_unregister(photonBI buf, void *ctx);
+PHOTON_INTERNAL photonBI _photon_buffer_create(void *buf, uint64_t size);
+PHOTON_INTERNAL void _photon_buffer_free(photonBI buf);
+PHOTON_INTERNAL int _photon_buffer_register(photonBI buf, void *ctx);
+PHOTON_INTERNAL int _photon_buffer_unregister(photonBI buf, void *ctx);
 
 #endif
