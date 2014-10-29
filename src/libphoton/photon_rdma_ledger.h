@@ -17,7 +17,7 @@ typedef struct photon_rdma_ledger_t {
 typedef struct photon_rdma_ledger_entry_t * photonLedgerEntry;
 typedef struct photon_rdma_ledger_t * photonLedger;
 
-photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, int num_entries);
-void photon_rdma_ledger_free(photonLedger ledger);
+PHOTON_INTERNAL photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, int num_entries);
+PHOTON_INTERNAL void photon_rdma_ledger_free(photonLedger ledger);
 
 #endif

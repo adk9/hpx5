@@ -3,7 +3,10 @@
 #######################
 
 instdir = $(prefix)/include
-inst_HEADERS=include/photon.h include/photon_io.h include/photon_xsp_forwarder.h
+inst_HEADERS=include/photon.h                 \
+	     include/photon_io.h              \
+	     include/photon_xsp_forwarder.h   \
+	     include/photon_attributes.h
 
 EXTRA_DIST = autogen.sh      \
         README NEWS TODO     \
