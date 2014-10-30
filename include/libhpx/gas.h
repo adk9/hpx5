@@ -14,6 +14,7 @@
 #define LIBHPX_GAS_H
 
 #include <hpx/hpx.h>
+#include "libhpx/config.h"
 
 struct boot_class;
 struct transport_class;

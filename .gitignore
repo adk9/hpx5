@@ -112,6 +112,7 @@ contrib/jemalloc/src/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
 /libhpx/transport/Makefile
+/libhpx/util/Makefile
 /libsync/Makefile
 /libsync/arch/Makefile
 

@@ -15,6 +15,7 @@
 
 #include "hpx/attributes.h"
 #include "hpx/hpx.h"
+#include "libhpx/config.h"
 
 typedef struct boot_class boot_class_t;
 struct boot_class {
