@@ -45,30 +45,25 @@ static int _hpxmain_action(int args[2] /* hpxranks, its */) {
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
   mpi_system_shutdown();
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[])
 {
-  if ( argc < 3 ) {
-    printf(" Usage: test <number of OS threads> <# of persistent hpx threads>\n");
+
+  int error = hpx_init(&argc, &argv);
+  if (error != HPX_SUCCESS)
+    exit(-1);
+  
+  if ( argc < 2 ) {
+    printf(" Usage: test <# of persistent hpx threads>\n");
     exit(0);
   }
 
-  uint64_t numos = atoll(argv[1]);
-  int numhpx = atoi(argv[2]);
+  int numhpx = atoi(argv[1]);
   int its = 1;
 
-  printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx,its);
-
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.cores = numos;
-  cfg.threads = numos;
-  // cfg.stack_bytes = 2<<24
-
-  int error = hpx_init(&cfg);
-  if (error != HPX_SUCCESS)
-    exit(-1);
+  printf(" Number persistent lightweight threads: %d its: %d\n",numhpx,its);
 
   mpi_system_register_actions();
 

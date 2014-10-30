@@ -374,31 +374,19 @@ static int _hpxmain_action(int args[2] /* hpxranks, its */) {
 int main(int argc, char *argv[])
 {
 
-   char hostname[256];
-   gethostname(hostname, sizeof(hostname));
-   printf("PID %d on %s ready for attach\n", getpid(), hostname);
-   fflush(stdout);
-   //   sleep(8);
+  int error = hpx_init(&argc, &argv);
+  if (error != HPX_SUCCESS)
+    exit(-1);
 
-  if ( argc < 4 ) {
-    printf(" Usage: test <number of OS threads> <# of persistent hpx threads> <# of iterations>\n");
+  if ( argc < 3 ) {
+    printf(" Usage: test <# of persistent hpx threads> <# of iterations>\n");
     exit(0);
   }
 
-  uint64_t numos = atoll(argv[1]);
-  int numhpx = atoi(argv[2]);
-  int its = atoi(argv[3]);
+  int numhpx = atoi(argv[1]);
+  int its = atoi(argv[2]);
 
-  printf(" Number OS threads: %ld Number persistent lightweight threads: %d its: %d\n",numos,numhpx,its);
-
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.cores = numos;
-  cfg.threads = numos;
-  // cfg.stack_bytes = 2<<24
-
-  int error = hpx_init(&cfg);
-  if (error != HPX_SUCCESS)
-    exit(-1);
+  printf("Number persistent lightweight threads: %d its: %d\n",numhpx,its);
 
   mpi_system_register_actions();
 

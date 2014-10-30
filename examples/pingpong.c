@@ -28,16 +28,14 @@ static hpx_action_t _ping = 0;
 static hpx_action_t _pong = 0;
 
 /* helper functions */
-static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
-          "\t-c, the number of cores to run on\n"
-          "\t-t, the number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
+static void _usage(FILE *f, int error) {
+  fprintf(f, "Usage: pingponghpx [options] ITERATIONS\n"
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
+  exit(error);
 }
 
 static void _register_actions(void);
@@ -66,41 +64,26 @@ typedef struct {
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "Failed to initialize hpx\n");
+    return -1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "mvh?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
      case 'm':
-      _text = true;
+       _text = true;
      case 'v':
-      _verbose = true;
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
+       _verbose = true;
+       break;
      case 'h':
-      _usage(stdout);
-      return 0;
+       _usage(stdout, EXIT_SUCCESS);
      case '?':
      default:
-      _usage(stderr);
-      return -1;
+       _usage(stderr, EXIT_FAILURE);
     }
   }
 
@@ -108,9 +91,8 @@ int main(int argc, char *argv[]) {
   argv += optind;
 
   if (argc == 0) {
-    _usage(stderr);
     fprintf(stderr, "\nMissing iteration limit\n");
-    return -1;
+    _usage(stderr, EXIT_FAILURE);
   }
 
   args_t args = {
@@ -119,29 +101,20 @@ int main(int argc, char *argv[]) {
   };
 
   if (args.id == 0) {
-    _usage(stderr);
     printf("read ITERATIONS as 0, exiting.\n");
-    return -1;
+    _usage(stderr, EXIT_FAILURE);
   }
 
   printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.id, _text, _verbose);
 
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "Failed to initialize hpx\n");
-    return -1;
-  }
-
   _register_actions();
-
-  const char *network = hpx_get_network_id();
 
   hpx_time_t start = hpx_time_now();
   e = hpx_run(_ping, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.id * 2);
-  printf("average oneway latency (%s):   %f ms\n", network, latency);
+  printf("average oneway latency:   %f ms\n", latency);
   return e;
 }
 
@@ -160,8 +133,7 @@ static int _action_ping(args_t *args) {
   // If we completed the number of ping-pong operations that we set out to do,
   // then output the latency and terminate execution.
   if (args->id < 0)
-    hpx_shutdown(0);
-
+    hpx_shutdown(HPX_SUCCESS);
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();
