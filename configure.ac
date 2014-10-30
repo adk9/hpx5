@@ -96,20 +96,27 @@ AC_ARG_ENABLE(verbs, AC_HELP_STRING([--disable-verbs],
 if test "$enable_verbs" != "no" ; then
         AH_TEMPLATE(HAVE_VERBS, Whether or not ibverbs is installed on the system)
         AC_CHECK_LIB(ibverbs, main, [
-                AC_CHECK_HEADERS([infiniband/verbs.h rdma/rdma_cma.h], [
-                        VERBS_LIBS="-libverbs -lrdmacm"
-                        AC_SUBST(VERBS_LIBS)
+                AC_CHECK_HEADERS([infiniband/verbs.h], [
+                        VERBS_LIBS="-libverbs"
                         have_verbs=yes
                 ])
         ])
+	AC_CHECK_LIB(rdmacm, main, [
+                AC_CHECK_HEADERS([rdma/rdma_cma.h], [
+                        VERBS_LIBS+=" -lrdmacm"
+                        have_rdmacm=yes
+                ])
+        ])
 
-        if test "x$have_verbs" == "xyes"; then
+        if test "x$have_verbs" == "xyes" && test "x$have_rdmacm" == "xyes"; then
                 AC_DEFINE(HAVE_VERBS, 1, Build with VERBS support)
+		AC_SUBST(VERBS_LIBS)
+		have_vr=yes
         else
-		AC_MSG_ERROR([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])
+		AC_MSG_NOTICE([IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel])
 	fi
 fi
-AM_CONDITIONAL(HAVE_VERBS, test x$have_verbs = xyes)
+AM_CONDITIONAL(HAVE_VERBS, test x$have_vr == xyes)
 
 PHOTON_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 PHOTON_WITH_PKG([pmi],[cray-pmi],[Build with PMI],[no],[PMI])
