@@ -82,6 +82,22 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
+AC_ARG_ENABLE([photon-debug],
+  [AS_HELP_STRING([--enable-photon-debug],
+                  [Enable photon debugging @<:@default=no@:>@])],
+  [], [enable_photon_debug=no])
+AS_IF([test "x$enable_photon_debug" != xno],
+  [AC_DEFINE([ENABLE_PHOTON_DEBUG], [1], [Enable photon debugging stuff])])
+AM_CONDITIONAL([ENABLE_PHOTON_DEBUG], [test "$enable_photon_debug" = "yes"])
+
+AC_ARG_ENABLE([photon-trace],
+  [AS_HELP_STRING([--enable-photon-trace],
+                  [Enable photon call tracing @<:@default=no@:>@])],
+  [], [enable_photon_trace=no])
+AS_IF([test "x$enable_photon_trace" != xno],
+  [AC_DEFINE([ENABLE_PHOTON_TRACE], [1], [Enable photon call tracing (files)])])
+AM_CONDITIONAL([ENABLE_PHOTON_TRACE], [test "$enable_photon_trace" = "yes"])
+
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
                   [Enable profiling support @<:@default=no@:>@])],

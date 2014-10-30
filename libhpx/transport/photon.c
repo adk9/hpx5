@@ -35,8 +35,7 @@
 #define PHOTON_DEFAULT_TAG 13
 
 static char* photon_default_eth_dev = "roce0";
-static char* photon_default_ib_dev = "mlx4_0";
-static int   photon_default_ib_port = 1;
+static char* photon_default_ib_dev = "";
 static char* photon_default_backend = "verbs";
 static int   photon_default_srlimit = 32;
 
@@ -456,10 +455,6 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
     use_cma = 0;
   else
     use_cma = atoi(getenv("HPX_USE_CMA"));
-  if (getenv("HPX_USE_IB_PORT") == NULL)
-    ib_port = photon_default_ib_port;
-  else
-    ib_port = atoi(getenv("HPX_USE_IB_PORT"));
 
   struct photon_config_t *cfg = &photon->cfg;
   cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
@@ -472,7 +467,6 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->ibv.eth_dev         = eth_dev;
   cfg->ibv.ib_dev          = ib_dev;
-  cfg->ibv.ib_port         = ib_port;
   cfg->cap.eager_buf_size  = -1;     // default 128k
   cfg->cap.small_msg_size  = -1;     // default 8192
   cfg->cap.small_pwc_size  =  1024;     // 0 disabled
