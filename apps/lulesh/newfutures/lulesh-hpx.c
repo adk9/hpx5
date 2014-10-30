@@ -274,9 +274,6 @@ static int _initDomain_action(InitArgs *init) {
 
 static int _main_action(int *input)
 {
-  hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  hpx_netfutures_init(&cfg);
-
   hpx_time_t tick = hpx_time_now();
   //printf(" Tick: %g\n", hpx_time_us(tick));
 
@@ -292,6 +289,10 @@ static int _main_action(int *input)
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
     return -1;
   }
+
+  hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
+  cfg.total_size = 2 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
+  hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
