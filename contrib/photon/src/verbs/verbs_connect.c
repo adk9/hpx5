@@ -15,6 +15,7 @@
 
 #include "libphoton.h"
 #include "photon_exchange.h"
+#include "util.h"
 #include "logging.h"
 #include "verbs_connect.h"
 #include "verbs_util.h"
@@ -51,7 +52,7 @@ struct rdma_cma_thread_args {
 int __verbs_init_context(verbs_cnct_ctx *ctx) {
   struct ibv_device **dev_list;
   struct ibv_context **ctx_list;
-  int i, iproc, num_devs;
+  int i, iproc, num_devs, rc, found = 0;
 
   // initialize the QP array
   ctx->num_qp = MAX_QP;
@@ -112,53 +113,88 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
   else {
     dev_list = ibv_get_device_list(&num_devs);
     if (!num_devs) {
-      log_err("No IB devices found");
+      log_err("No IB HCAs found");
       return PHOTON_ERROR;
     }
-
+    
+    photon_dev_list *dlist;
+    rc = photon_parse_devstr(__photon_config->ibv.ib_dev, &dlist);
+    if (rc < 0) {
+      dbg_err("Could not parse HCA device filter: %s", __photon_config->ibv.ib_dev);
+      return PHOTON_ERROR;
+    }
+    
+    // just match the first port that's active and in the filter (if set)
     for (i=0; i<num_devs; i++) {
-      if (!strcmp(ibv_get_device_name(dev_list[i]), ctx->ib_dev)) {
-        dbg_trace("using device %s:%d", ibv_get_device_name(dev_list[i]), ctx->ib_port);
-        break;
+      const char *dev_name = ibv_get_device_name(dev_list[i]);
+      struct ibv_context *dev_ctx;
+      struct ibv_device_attr dattr;
+      struct ibv_port_attr attr;
+      int cport;
+
+      if (!photon_match_dev(dlist, dev_name, 0)) {
+	dbg_info("Skipping HCA: %s - no match", dev_name);
+	continue;
+      }
+      // now we have a dev name match
+      dev_ctx = ibv_open_device(dev_list[i]);
+      if (dev_ctx) {
+	dbg_info("Found HCA: %s", dev_name);
+      }
+      else {
+	dbg_err("Could not open HCA: %s", dev_name);
+	continue;
+      }
+
+      if (ibv_query_device(dev_ctx, &dattr)) {
+	dbg_err("Could not query HCA: %s", dev_name);
+	continue;
+      }
+      
+      for (cport = 1; cport <= dattr.phys_port_cnt; cport++) {
+	if (!photon_match_dev(dlist, dev_name, cport)) {
+	  dbg_info("Skipping HCA: %s, port: %d - no match", dev_name, cport);
+	  continue;
+	}
+
+	memset(&attr, 0, sizeof(attr));
+	if (ibv_query_port(dev_ctx, cport, &attr)) {
+	  dbg_err("Could not query port: %d (%s)", cport, dev_name);
+	  continue;
+	}
+
+	// we found an active HCA port to use
+	if (attr.state == IBV_PORT_ACTIVE) {
+	  ctx->ib_context = dev_ctx;
+	  ctx->ib_lid = attr.lid;
+	  ctx->ib_mtu = 1 << (attr.active_mtu + 7);
+	  ctx->ib_mtu_attr = attr.active_mtu;
+	  ctx->max_srq_wr = dattr.max_srq_wr;
+	  ctx->ib_dev = strdup(dev_name);
+	  ctx->ib_port = cport;
+
+	  dbg_info("Found HCA: %s, port: %d", dev_name, cport);
+	  found = 1;
+	  break;
+	}
+      }
+      if (found) {
+	photon_free_devlist(dlist);
+	break;
+      }
+      else {
+	ibv_close_device(dev_ctx);
       }
     }
 
-    if (i==num_devs) {
-      log_err("Could not find IB device: %s", ctx->ib_dev);
+    if (!found) {
+      log_err("Could not find a suitable IB HCA (filter='%s')", __photon_config->ibv.ib_dev);
       return PHOTON_ERROR;
     }
-
-    ctx->ib_context = ibv_open_device(dev_list[i]);
-    if (!ctx->ib_context) {
-      dbg_err("Could not get context for %s\n", ibv_get_device_name(dev_list[i]));
-      return PHOTON_ERROR;
-    }
-    dbg_trace("context has device %s", ibv_get_device_name(ctx->ib_context->device));
-
-    // get my local lid
-    struct ibv_port_attr attr;
-    memset(&attr, 0, sizeof(attr));
-    if(ibv_query_port(ctx->ib_context, ctx->ib_port, &attr) ) {
-      dbg_err("Could not query port");
-      return PHOTON_ERROR;
-    }
-    ctx->ib_lid = attr.lid;
-    ctx->ib_mtu = 1 << (attr.active_mtu + 7);
-    ctx->ib_mtu_attr = attr.active_mtu;
-
-    if (attr.state != IBV_PORT_ACTIVE) {
-      log_warn("Requested ibv port is not active! : %s:%d", ctx->ib_dev, ctx->ib_port);
-    }
-
+    
     ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
     if (!ctx->ib_pd) {
       dbg_err("Could not create protection domain");
-      return PHOTON_ERROR;
-    }
-
-    struct ibv_device_attr dattr;
-    if (ibv_query_device(ctx->ib_context, &dattr)) {
-      log_err("Could not query IB device");
       return PHOTON_ERROR;
     }
 
@@ -175,7 +211,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       // create shared receive queue
       struct ibv_srq_init_attr attr = {
         .attr = {
-          .max_wr  = dattr.max_srq_wr,
+          .max_wr  = ctx->max_srq_wr,
           .max_sge = 1
         }
       };
@@ -273,12 +309,13 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
 
     if (!strcmp(ifa->ifa_name, __photon_config->ibv.eth_dev) &&
         ifa->ifa_addr->sa_family == AF_INET) {
+      dbg_info("Found ETH dev for CMA: %s", ifa->ifa_name);
       break;
     }
   }
 
   if (__photon_config->ibv.use_cma && !ifa) {
-    log_err("verbs_connect_peers(): Could not find interface %s", __photon_config->ibv.eth_dev);
+    log_err("Could not find ETH dev for CMA: %s", __photon_config->ibv.eth_dev);
     goto error_exit;
   }
 

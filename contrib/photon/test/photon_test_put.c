@@ -24,7 +24,8 @@ int main(int argc, char *argv[]) {
   cfg.nproc = size;
   cfg.address = rank;
 
-  photon_init(&cfg);
+  if (photon_init(&cfg))
+    exit(1);
 
   posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
   posix_memalign((void **) &recv, 64, PHOTON_SEND_SIZE*sizeof(char));
