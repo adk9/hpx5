@@ -152,6 +152,4 @@ typedef struct {
 
 HPX_INTERNAL hpx_config_t *hpx_parse_options(int *argc, char ***argv);
 
-const char* hpx_get_network_id(void);
-
 #endif // LIBHPX_CONFIG_H

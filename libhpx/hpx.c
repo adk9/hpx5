@@ -217,13 +217,6 @@ hpx_get_num_threads(void) {
 }
 
 
-const char *
-hpx_get_network_id(void) {
-  if (!here || !here->transport)
-    return "cannot query network now";
-  return transport_id(here->transport);
-}
-
 void system_shutdown(int code) {
   if (!here || !here->sched)
     dbg_error("hpx_shutdown called without a scheduler.\n");

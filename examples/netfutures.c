@@ -71,20 +71,14 @@ struct buffer {
 };
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.heap_bytes = 1L<<31;
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
      case 'c':
-      cfg.cores = atoi(optarg);
       break;
      case 't':
-      cfg.threads = atoi(optarg);
       break;
      case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
       break;
      case 'm':
       _text = true;
@@ -93,12 +87,8 @@ int main(int argc, char *argv[]) {
       _verbose = true;
       break;
      case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
       break;
      case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
       break;
      case 'h':
       _usage(stdout);
@@ -132,7 +122,7 @@ int main(int argc, char *argv[]) {
   printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.iterations, _text, _verbose);
 
-  int e = hpx_init(&cfg);
+  int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
@@ -140,13 +130,11 @@ int main(int argc, char *argv[]) {
 
   _register_actions();
 
-  const char *network = hpx_get_network_id();
-
   hpx_time_t start = hpx_time_now();
   e = hpx_run(_main, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.iterations * 2);
-  printf("average oneway latency (%s):   %f ms\n", network, latency);
+  printf("average oneway latency:   %f ms\n", latency);
   return e;
 }
 

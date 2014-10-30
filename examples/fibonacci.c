@@ -26,9 +26,12 @@
 #include "hpx/hpx.h"
 
 
-static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: fibonacci [hpx-options] NUMBER\n");
+static void _usage(FILE *f, int error) {
+  fprintf(f, "Usage: fibonacci [options] NUMBER\n"
+          "\t-h, show help\n");
   hpx_print_help();
+  fflush(f);
+  exit(error);
 }
 
 static hpx_action_t _fib      = 0;
@@ -97,20 +100,34 @@ static int _fib_main_action(int *args) {
 }
 
 int main(int argc, char *argv[]) {
-  int n = 0;
-  
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
 
+  // parse the command line
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
+    switch (opt) {
+     case 'h':
+       _usage(stdout, EXIT_SUCCESS);
+     case '?':
+     default:
+       _usage(stderr, EXIT_FAILURE);
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  int n = 0;
   switch (argc) {
    case 0:
-    fprintf(stderr, "\nMissing fib number.\n"); // fall through
+     fprintf(stderr, "\nMissing fib number.\n"); // fall through
    default:
-    _usage(stderr);
-    return -1;
+     _usage(stderr, EXIT_FAILURE);
    case 1:
      n = atoi(argv[0]);
      break;

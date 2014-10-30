@@ -21,9 +21,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <libgen.h>
 #include <string.h>
-#include <pthread.h>
+#include <unistd.h>
 
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
@@ -148,9 +147,11 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
   hpx_config_t *cfg = malloc(sizeof(*cfg));
   *cfg = _default_cfg;
 
+  char *progname = (argv) ? (*argv)[0] : "";
+
   // then, read the environment for the specified configuration values
   hpx_options_t env_opts;
-  int e = _read_options_from_env(&env_opts, basename((*argv)[0]));
+  int e = _read_options_from_env(&env_opts, progname);
   if (e)
     fprintf(stderr, "failed to read options from the environment variables.\n");
 
@@ -158,9 +159,10 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
 
   // finally, use the CLI-specified options to override the above
   // values
-
+  if (!argc || !argv)
+    return cfg;
   
-  int nargs = 1;
+  int nargs = 0;
   UT_string *str;
   UT_string *arg;
 
@@ -178,7 +180,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
 
   hpx_options_t cli_opts;
   const char *cmdline = utstring_body(str);
-  e = hpx_option_parser_string(cmdline, &cli_opts, basename((*argv)[0]));
+  e = hpx_option_parser_string(cmdline, &cli_opts, progname);
   if (e)
     fprintf(stderr, "failed to parse options specified on the command-line.\n");
 
@@ -187,8 +189,10 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
 
   if (nargs) {
     *argc -= nargs;
-    *argv += nargs;
+    for (int i = 1; i < *argc; ++i)
+      (*argv)[i] = (*argv)[nargs+i];
   }
 
+  optind = 0;
   return cfg;
 }
