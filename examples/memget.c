@@ -109,43 +109,22 @@ static int _main_action(void *args) {
 }
 
 static void usage(FILE *f) {
-  fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, logging level\n"
+  fprintf(f, "Usage: memget [options]\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
 }
 
 int main(int argc, char *argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:h")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
      case 'h':
       usage(stdout);
       return 0;
@@ -154,11 +133,6 @@ int main(int argc, char *argv[argc]) {
       usage(stderr);
       return -1;
     }
-  }
-
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
   }
 
   int ranks = HPX_LOCALITIES;
