@@ -309,20 +309,15 @@ void _main_action(guppie_config_t *cfg)
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger\n"
-          "\t-s, stack size in bytes\n"
+          "\t-M, enable AGAS data movement\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 // main routine
 int main(int argc, char *argv[])
 {
-  hpx_config_t hpx_cfg = HPX_CONFIG_DEFAULTS;
-
   guppie_config_t guppie_cfg = {
     .ltabsize = LTABSIZE,
     .tabsize  = TABSIZE,
@@ -330,30 +325,15 @@ int main(int argc, char *argv[])
     .table    = HPX_NULL,
   };
 
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:s:d:DMh")) != -1) {
+  while ((opt = getopt(argc, argv, "Mh?")) != -1) {
     switch (opt) {
-     case 'c':
-      hpx_cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      hpx_cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      hpx_cfg.transport = atoi(optarg);
-      assert(0 <= hpx_cfg.transport && hpx_cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 's':
-      hpx_cfg.stack_bytes = atoi(optarg);
-      break;
-     case 'D':
-      hpx_cfg.wait = HPX_WAIT;
-      hpx_cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      hpx_cfg.wait = HPX_WAIT;
-      hpx_cfg.wait_at = atoi(optarg);
-      break;
      case 'M':
       _move = 1;
       break;
@@ -380,12 +360,6 @@ int main(int argc, char *argv[])
     guppie_cfg.ltabsize = (atoi(argv[0]));
     guppie_cfg.tabsize = 1L << guppie_cfg.ltabsize;
   };
-
-  int e = hpx_init(&hpx_cfg);
-  if (e) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
-  }
 
   // register the actions
   _main         = HPX_REGISTER_ACTION(_main_action);

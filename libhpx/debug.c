@@ -18,9 +18,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include "libsync/locks.h"
-#include "hpx/config.h"
 #include "hpx/hpx.h"
 
+#include "libhpx/config.h"
 #include "libhpx/debug.h"
 
 hpx_log_t dbg_log_level = HPX_LOG_DEFAULT;

@@ -181,7 +181,6 @@ static int _initDomain_action(InitArgs *init) {
   int nx        = init->nx;
   int nDoms     = init->nDoms;
   int maxcycles = init->maxcycles;
-  //int cores     = init->cores;
   int index     = init->index;
   int tp        = (int) (cbrt(nDoms) + 0.5);
 
@@ -232,11 +231,10 @@ static int _main_action(int *input)
 
   hpx_time_t t1 = hpx_time_now();
 
-  int nDoms, nx, maxcycles, cores, tp, i, j, k;
+  int nDoms, nx, maxcycles, tp, i, j, k;
   nDoms = input[0];
   nx = input[1];
   maxcycles = input[2];
-  cores = input[3];
 
   tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
@@ -259,7 +257,6 @@ static int _main_action(int *input)
       .nDoms = nDoms,
       .nx = nx,
       .maxcycles = maxcycles,
-      .cores = cores,
       .complete = complete,
       .newdt = newdt
     };
@@ -289,47 +286,32 @@ static int _main_action(int *input)
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-n, number of domains,nDoms\n"
           "\t-x, nx\n"
           "\t-i, maxcycles\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
 }
 
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
-  int nDoms, nx, maxcycles,cores;
+  int nDoms, nx, maxcycles;
   // default
   nDoms = 8;
   nx = 15;
   maxcycles = 10;
-  cores = 8;
-  cfg.cores = cores;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:D:n:x:i:h")) != -1) {
+  while ((opt = getopt(argc, argv, "n:x:i:h?")) != -1) {
     switch (opt) {
-      case 'c':
-        cfg.cores = atoi(optarg);
-        cores = cfg.cores;
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
       case 'n':
         nDoms = atoi(optarg);
         break;
@@ -349,11 +331,6 @@ int main(int argc, char **argv)
     }
   }
 
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
@@ -367,14 +344,13 @@ int main(int argc, char **argv)
   _MonoQ_sends = HPX_REGISTER_ACTION(_MonoQ_sends_action);
   _MonoQ_result = HPX_REGISTER_ACTION(_MonoQ_result_action);
 
-  int input[4];
+  int input[3];
   input[0] = nDoms;
   input[1] = nx;
   input[2] = maxcycles;
-  input[3] = cores;
-  printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
+  printf(" Number of domains: %d nx: %d maxcycles: %d\n",nDoms,nx,maxcycles);
 
-  return hpx_run(_main, input, 4*sizeof(int));
+  return hpx_run(_main, input, 3*sizeof(int));
 
   return 0;
 }

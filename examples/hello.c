@@ -16,11 +16,11 @@
 
 static int _hello_action(void *args) {
   printf("Hello World from %u.\n", hpx_get_my_rank());
-  hpx_shutdown(0);
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 int main(int argc, char *const argv[argc]) {
-  if (hpx_init(NULL) != 0)
+  if (hpx_init(NULL, NULL) != 0)
     return -1;
   hpx_action_t hello = HPX_REGISTER_ACTION(_hello_action);
   return hpx_run(hello, NULL, 0);

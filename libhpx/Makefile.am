@@ -1,7 +1,7 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = system boot gas transport network scheduler
+SUBDIRS = system util boot gas transport network scheduler
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -17,6 +17,7 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      transport/libtransport.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
+                     util/libutil.la \
                      $(HWLOC_EMBEDDED_LDADD) \
                      $(HPX_JEMALLOC_LDADD) \
                      $(HPX_PHOTON_LDADD)

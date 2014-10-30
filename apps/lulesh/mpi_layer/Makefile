@@ -12,13 +12,10 @@
 
 # The name of the output program 
 PROG = depicx
-PROG2 = test
-PROG3 = lulesh_mpi
 
 # Object files that go into the final executable
 OBJS = depicx.o mpi_system.o reduce.o allreduce.o bcast.o scatterv.o gather.o gatherv.o alltoall.o allgather.o alltoallv.o p2p.o logging.o luleshMPI.o 
 #OBJS = depicx.o mpi_system.o reduce.o allreduce.o bcast.o scatterv.o gather.o gatherv.o alltoall.o allgather.o alltoallv.o p2p.o luleshMPI_OMP.o
-OBJS2 = test.o mpi_system.o reduce.o allreduce.o bcast.o scatterv.o gather.o gatherv.o alltoall.o allgather.o alltoallv.o p2p.o logging.o  mpi_pingpong.o
 
 # Header files 
 HDRS = hpx_mpif.h mpi_wrapper.h mpi_system.h
@@ -107,20 +104,14 @@ LINK            = $(CXX) $(LDFLAGS.all) -o $@ $^ $(LIBS.all)
 
 .PHONY: all clean dataclean
 
-all: $(PROG) $(PROG2)
+all: $(PROG)
 
 # re-link the program when the object files change
 $(PROG): $(OBJS)
 	$(LINK)
 
-$(PROG2): $(OBJS2)
-	$(LINK)
-
-$(PROG3): $(OBJS3)
-	$(LINK)
-
 clean:
-	$(RM) $(PROG) $(PROG2) $(OBJS) $(OBJS:.o=.d) $(OBJS2) $(OBJS2:.o=.d) *.sdf *.matlab *.idl core*
+	$(RM) $(PROG) $(OBJS) $(OBJS:.o=.d) *.sdf *.matlab *.idl core*
 
 dataclean:
 	$(RM) $(OBJS) *.sdf *.matlab *.idl core*

@@ -24,7 +24,6 @@ extern "C" {
 
 #include "hpx/attributes.h"
 #include "hpx/types.h"
-#include "hpx/config.h"
 #include "hpx/action.h"
 #include "hpx/addr.h"
 #include "hpx/future.h"
