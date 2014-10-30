@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <libgen.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -38,15 +39,20 @@
 #include "libhpx/transport.h"
 
 #include "utstring.h"
+#include "parser.h"
 
 typedef struct hpx_options_t hpx_options_t;
 
 
-#define HPX_SET_OPT(cfg,opts,option)                         \
-  { if (##opts->hpx_##option_given)                          \
-      ##cfg->##option = ##opts->hpx_##option_arg; }
+#define HPX_SET_VAR(cfg,opts,option)                       \
+  { if (opts->hpx_##option##_given)                        \
+      cfg->option = opts->hpx_##option##_arg; }
 
-#define HPX_GET_CONFIG_ENV(opt,str) _get_config_env(str, "hpx_" #opt, "hpx-" #opt)
+#define HPX_SET_FLAG(cfg,opts,option)                      \
+  { if (opts->hpx_##option##_given)                        \
+      cfg->option = opts->hpx_##option##_flag; }
+
+#define HPX_GET_CONFIG_ENV(str,opt) _get_config_env(str, "hpx_" #opt, "hpx-" #opt)
 
 /// The default configuration.
 static const hpx_config_t _default_cfg = HPX_CONFIG_DEFAULTS;
@@ -75,12 +81,12 @@ static void _get_config_env(UT_string *str, const char *var, const char *optstr)
   }
 
   if (c)
-    utstring_printf(str, " --%s=%s", optstr, c);
+    utstring_printf(str, "--%s=%s ", optstr, c);
 }
 
 /// Try to read values of all of the configuration variables that we
 /// support from the environment.
-int _read_options_from_env(hpx_options_t *env_args) {
+int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
   UT_string *str;
 
   utstring_new(str);
@@ -92,15 +98,16 @@ int _read_options_from_env(hpx_options_t *env_args) {
   HPX_GET_CONFIG_ENV(str, gas);
   HPX_GET_CONFIG_ENV(str, boot);
   HPX_GET_CONFIG_ENV(str, transport);
-  HPX_GET_CONFIG_ENV(str, wait);
+  HPX_GET_CONFIG_ENV(str, waitat);
   HPX_GET_CONFIG_ENV(str, loglevel);
   HPX_GET_CONFIG_ENV(str, statistics);
   HPX_GET_CONFIG_ENV(str, reqlimit);
 
   const char *cmdline = utstring_body(str);
-  int e = hpx_option_parser_string(cmdline, env_args, "./hpx");
-  if (!e)
-    dbg_log("failed to parse configuration from the environment variables.\n");
+
+  if (cmdline)
+    hpx_option_parser_string(cmdline, env_args, progname);
+
   utstring_free(str);
   return 0;
 }
@@ -108,25 +115,31 @@ int _read_options_from_env(hpx_options_t *env_args) {
 
 /// Update the configuration structure @p cfg with the option values
 /// specified in @p opts.
-static void _set_config_options(hpx_config_t *cfg, hpx_option_t *opts) {
-  HPX_SET_OPT(cfg, opts, cores);
-  HPX_SET_OPT(cfg, opts, threads);
-  HPX_SET_OPT(cfg, opts, backoffmax);
-  HPX_SET_OPT(cfg, opts, stacksize);
-  HPX_SET_OPT(cfg, opts, heapsize);
-  HPX_SET_OPT(cfg, opts, gas);
-  HPX_SET_OPT(cfg, opts, boot);
-  HPX_SET_OPT(cfg, opts, transport);
-  HPX_SET_OPT(cfg, opts, wait);
-  HPX_SET_OPT(cfg, opts, loglevel);
-  HPX_SET_OPT(cfg, opts, statistics);
-  HPX_SET_OPT(cfg, opts, reqlimit);  
+static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
+  HPX_SET_VAR(cfg, opts, cores);
+  HPX_SET_VAR(cfg, opts, threads);
+  HPX_SET_VAR(cfg, opts, backoffmax);
+  HPX_SET_VAR(cfg, opts, stacksize);
+  HPX_SET_VAR(cfg, opts, heapsize);
+  HPX_SET_VAR(cfg, opts, gas);
+  HPX_SET_VAR(cfg, opts, boot);
+  HPX_SET_VAR(cfg, opts, transport);
+  HPX_SET_VAR(cfg, opts, waitat);
+  HPX_SET_FLAG(cfg, opts, statistics);
+  HPX_SET_VAR(cfg, opts, reqlimit);
+
+  if (opts->hpx_loglevel_given) {
+    if (opts->hpx_loglevel_arg == hpx_loglevel_arg_all)
+      cfg->loglevel = -1;
+    else
+      cfg->loglevel = (1 << opts->hpx_loglevel_arg);
+  }
 }
 
 /// Print the help associated with the HPX runtime options
 void hpx_print_help(void) {
   hpx_option_parser_print_help();
-};
+}
 
 /// Parse HPX command-line options
 hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
@@ -137,33 +150,40 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
 
   // then, read the environment for the specified configuration values
   hpx_options_t env_opts;
-  int e = _read_options_from_env(&env_opts);
-  if (!e)
-    dbg_log("failed to read options from the environment variables.\n");
+  int e = _read_options_from_env(&env_opts, basename((*argv)[0]));
+  if (e)
+    fprintf(stderr, "failed to read options from the environment variables.\n");
 
   _set_config_options(cfg, &env_opts);
 
   // finally, use the CLI-specified options to override the above
   // values
 
+  
+  int nargs = 1;
   UT_string *str;
-  int nargs = 0;
+  UT_string *arg;
 
   utstring_new(str);
+  utstring_new(arg);
+
   for (int i = 1; i < *argc; ++i) {
-    if (utstring_find(argv[i], 0, "--hpx-", 6) != -1) {
-      utstring_printf(str, " %s", optstr, c);
+    utstring_printf(arg, "%s ", (*argv)[i]);
+    if (utstring_find(arg, 0, "--hpx-", 6) != -1) {
+      utstring_concat(str, arg);
       nargs++;
     }
+    utstring_clear(arg);
   }
 
   hpx_options_t cli_opts;
   const char *cmdline = utstring_body(str);
-  e = hpx_option_parser(cmdline, &cli_opts, argv[0]);
-  if (!e)
-    dbg_log("failed to parse options specified on the command-line.\n");
+  e = hpx_option_parser_string(cmdline, &cli_opts, basename((*argv)[0]));
+  if (e)
+    fprintf(stderr, "failed to parse options specified on the command-line.\n");
 
   _set_config_options(cfg, &cli_opts);
+  utstring_free(str);
 
   if (nargs) {
     *argc -= nargs;

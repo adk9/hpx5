@@ -82,7 +82,7 @@ int hpx_init(int *argc, char ***argv) {
   // 0) parse the provided options into a usable configuration
   hpx_config_t *cfg = hpx_parse_options(argc, argv);
 
-  dbg_log_level = cfg->log_level;
+  dbg_log_level = cfg->loglevel;
   here = malloc(sizeof(*here));
   if (!here)
     return dbg_error("init: failed to map the local data segment.\n");

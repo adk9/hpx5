@@ -15,7 +15,6 @@
 
 #include "hpx/attributes.h"
 #include "hpx/action.h"
-#include "hpx/config.h"
 
 /// @file
 /// @brief HPX system interface.
@@ -39,9 +38,10 @@
 /// scheduler, network, and locality and should be called before any other HPX
 /// functions.
 ///
-/// @param config HPX runtime confoguration; may be HPX_NULL
+/// @param argc   count of command-line arguments
+/// @param argv   array of command-line arguments
 /// @returns      HPX_SUCCESS on success
-int hpx_init(const hpx_config_t *config);
+int hpx_init(int *argc, char ***argv);
 
 
 /// Start the HPX runtime, and run a given action.
