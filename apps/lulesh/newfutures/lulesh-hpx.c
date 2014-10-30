@@ -238,6 +238,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   ld->sem_posvel = hpx_lco_sema_new(1);
   ld->sem_monoq = hpx_lco_sema_new(1);
+  ld->sbn3[0] = init->sbn3[0];
+  ld->sbn3[1] = init->sbn3[1];
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
@@ -272,6 +274,9 @@ static int _initDomain_action(InitArgs *init) {
 
 static int _main_action(int *input)
 {
+  hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
+  hpx_netfutures_init(&cfg);
+
   hpx_time_t tick = hpx_time_now();
   //printf(" Tick: %g\n", hpx_time_us(tick));
 
@@ -300,6 +305,9 @@ static int _main_action(int *input)
   elapsed_ar = hpx_lco_allreduce_new(nDoms, 1, sizeof(double),
 				     (hpx_commutative_associative_op_t)maxdouble,
 				     (void (*)(void *, const size_t size)) initmaxdouble);
+  hpx_netfuture_t sbn3[2] = {hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs)),
+			     hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs))};
+
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .base = domain,
@@ -309,7 +317,8 @@ static int _main_action(int *input)
       .nx = nx,
       .maxcycles = maxcycles,
       .complete = complete,
-      .newdt = newdt
+      .newdt = newdt,
+      .sbn3 = {sbn3[0], sbn3[1]}
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, &args, sizeof(args), init);

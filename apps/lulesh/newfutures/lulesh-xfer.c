@@ -1,5 +1,12 @@
 #include "lulesh-hpx.h"
 
+int get_bs_index(int i, int bi, int bs) {
+  int r = hpx_get_num_ranks();
+  //  printf("(%d, %d) -> %d\n", bi, i, (bi % r) + (bi/r)*bs*r + i*r);
+
+  return (bi%r) + (bi/r)*bs*r + i*r;
+}
+
 // Performs the SBN1 update (allreduce)
 int
 _SBN1_result_action(NodalArgs *args) {
@@ -154,6 +161,22 @@ int _SBN3_result_action(NodalArgs *args) {
 
   hpx_gas_unpin(local);
 
+
+  int gen = ld->cycle % 2;
+  int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
+  hpx_addr_t nodal_global;
+  //  printf("Domain %d receiving from nf %d (%d, %d) in cycle %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
+  printf("-1, %d, %d, %d, %d, %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
+  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
+  NodalArgs *nodal;
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+  src = nodal->buf;
+  unpack(nx, ny, nz, src, ld->fx, 0);
+  unpack(nx, ny, nz, src + recvcnt, ld->fy, 0);
+  unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
+  hpx_lco_netfuture_emptyat(ld->sbn3[gen], fi, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
@@ -168,7 +191,7 @@ int _SBN3_sends_action(pSBN *psbn)
   // - NULL first parameter means it comes with the parcel and is managed by
   //   the parcel and freed by the system inside of send()
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
-                                       BUFSZ[destLocalIdx]);
+				       BUFSZ[destLocalIdx]);
   assert(p);
 
   // "interpret the parcel buffer as a Nodal"
@@ -197,11 +220,34 @@ int _SBN3_sends_action(pSBN *psbn)
   hpx_parcel_set_target(p, neighbor);
   hpx_parcel_set_action(p, _SBN3_result);
   hpx_parcel_send_sync(p);
+
+  hpx_addr_t nodal_global = hpx_gas_alloc(BUFSZ[destLocalIdx] + sizeof(NodalArgs));
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+  pack(nx, ny, nz, domain->fx, nodal->buf);
+  pack(nx, ny, nz, domain->fy, nodal->buf + sendcnt);
+  pack(nx, ny, nz, domain->fz, nodal->buf + sendcnt*2);
+
+
+  int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26,
+			domain->rank + distance, 26);
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  int gen = domain->cycle % 2;
+  // printf("Domain %d sending to nf %d (%d, %d) in cycle %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
+  printf("1, %d, %d, %d, %d, %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
+  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+
   return HPX_SUCCESS;
 }
 
 void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
+  printf("sendrecv, domain, nfi, nf_b, nf_i, cycle\n");
   // pack outgoing data
   int nsTF = domain->sendTF[0];
   int *sendTF = &domain->sendTF[1];
