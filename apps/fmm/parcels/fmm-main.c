@@ -57,8 +57,6 @@ hpx_action_t _mpole_to_target;
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: fmm [options]\n"
-      "\t-c, number of cores to run on\n"
-      "\t-t, number of scheduler threads\n"
       "\t-n, number of source points\n"
       "\t-m, number of target points\n"
       "\t-a, accuracy requirement, only 3 and 6 are valid\n"
@@ -66,28 +64,28 @@ static void _usage(FILE *stream) {
       "\t    type-1 data is uniformly distributed inside a box\n"
       "\t    type-2 data is uniformly distributed over a sphere\n"
       "\t-s, maximum number of points allowed per leaf box\n"
-      "\t-D, wait for debugger\n");
+      "\t-h, show help\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 int main(int argc, char *argv[]) {
-  hpx_config_t hpx_cfg = HPX_CONFIG_DEFAULTS;
-  hpx_cfg.stack_bytes  = 8192;
-
   nsources = 10000;
   ntargets = 10000;
   datatype = 1;
   accuracy = 3;
   s        = 40;
 
+  // Initialize hpx runtime
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX:failed to initialize.\n");
+    return e;
+  }
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:n:m:a:d:s:D:h")) != -1) {
+  while ((opt = getopt(argc, argv, "n:m:a:d:s:h?")) != -1) {
     switch (opt) {
-    case 'c':
-      hpx_cfg.cores = atoi(optarg);
-      break;
-    case 't':
-      hpx_cfg.threads = atoi(optarg);
-      break;
     case 'n':
       nsources = atoi(optarg);
       break;
@@ -111,13 +109,6 @@ int main(int argc, char *argv[]) {
       _usage(stderr);
       return -1;
     }
-  }
-
-  // Initialize hpx runtime
-  int e = hpx_init(&hpx_cfg);
-  if (e) {
-    fprintf(stderr, "HPX:failed to initialize.\n");
-    return e;
   }
 
   // Register actions

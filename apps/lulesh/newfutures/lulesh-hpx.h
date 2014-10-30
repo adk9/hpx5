@@ -62,7 +62,6 @@ typedef struct {
   int           nDoms;
   int              nx;
   int       maxcycles;
-  int           cores;
   hpx_netfuture_t sbn1;
   hpx_netfuture_t sbn3_a;
   hpx_netfuture_t sbn3_b;
