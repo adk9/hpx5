@@ -146,12 +146,6 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   verbs_ctx.tx_depth = _LEDGER_SIZE;
   verbs_ctx.rx_depth = _LEDGER_SIZE;
 
-  if (cfg->ibv.ib_dev)
-    verbs_ctx.ib_dev = cfg->ibv.ib_dev;
-
-  if (cfg->ibv.ib_port)
-    verbs_ctx.ib_port = cfg->ibv.ib_port;
-
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
     goto error_exit;
