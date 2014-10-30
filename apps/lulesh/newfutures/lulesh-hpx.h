@@ -65,6 +65,7 @@ typedef struct {
   hpx_addr_t complete;
   hpx_addr_t newdt;
   hpx_addr_t elapsed_ar;
+  hpx_netfuture_t sbn3[2];
 } InitArgs;
 
 typedef struct {
@@ -216,6 +217,8 @@ typedef struct Domain {
   hpx_addr_t sbn3_and[2];                       // local completion reduction
   hpx_addr_t posvel_and[2];
   hpx_addr_t monoq_and[2];
+
+  hpx_netfuture_t sbn3[2];
 } Domain;
 
 typedef struct {
