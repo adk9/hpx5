@@ -198,7 +198,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
   if (cfg->configfile) {
     struct hpx_option_parser_params *params = hpx_option_parser_params_create();
     params->initialize = 0;
-    params->override = 1;
+    params->override = 0;
     int e = hpx_option_parser_config_file(cfg->configfile, &opts, params);
     if (!e)
       _set_config_options(cfg, &opts);
