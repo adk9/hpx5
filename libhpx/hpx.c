@@ -28,6 +28,7 @@
 #include "hpx/hpx.h"
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
+#include "libhpx/config.h"
 #include "libhpx/gas.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
@@ -39,9 +40,6 @@
 #include "libhpx/transport.h"
 
 #include "network/servers.h"
-
-/// The default configuration.
-static const hpx_config_t _default_cfg = HPX_CONFIG_DEFAULTS;
 
 /// Cleanup utility function.
 ///
@@ -79,12 +77,12 @@ static int _cleanup(locality_t *l, int code) {
   return code;
 }
 
-int hpx_init(const hpx_config_t *cfg) {
-  // 0) use a default configuration if one is necessary
-  if (!cfg)
-    cfg = &_default_cfg;
 
-  dbg_log_level = cfg->log_level;
+int hpx_init(int *argc, char ***argv) {
+  // 0) parse the provided options into a usable configuration
+  hpx_config_t *cfg = hpx_parse_options(argc, argv);
+
+  dbg_log_level = cfg->loglevel;
   here = malloc(sizeof(*here));
   if (!here)
     return dbg_error("init: failed to map the local data segment.\n");
@@ -104,17 +102,16 @@ int hpx_init(const hpx_config_t *cfg) {
   here->ranks = boot_n_ranks(here->boot);
 
   // 3a) wait if the user wants us to
-  if (cfg->wait == HPX_WAIT)
-    if (cfg->wait_at == HPX_LOCALITY_ALL || cfg->wait_at == here->rank)
-      dbg_wait();
+  if (cfg->waitat == HPX_LOCALITY_ALL || cfg->waitat == here->rank)
+    dbg_wait();
 
   // 6) allocate the transport
-  here->transport = transport_new(cfg->transport, cfg->req_limit);
+  here->transport = transport_new(cfg->transport, cfg->reqlimit);
   if (here->transport == NULL)
     return _cleanup(here, dbg_error("init: failed to create transport.\n"));
   dbg_log("initialized the %s transport.\n", transport_id(here->transport));
 
-  here->gas = gas_new(cfg->heap_bytes, here->boot, here->transport, cfg->gas);
+  here->gas = gas_new(cfg->heapsize, here->boot, here->transport, cfg->gas);
   if (here->gas == NULL)
     return _cleanup(here, dbg_error("init: failed to create the global address "
                                     "space.\n"));
@@ -133,8 +130,8 @@ int hpx_init(const hpx_config_t *cfg) {
 
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
-  here->sched = scheduler_new(cores, workers, cfg->stack_bytes,
-                              cfg->backoff_max, cfg->statistics);
+  here->sched = scheduler_new(cores, workers, cfg->stacksize,
+                              cfg->backoffmax, cfg->statistics);
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
 
@@ -219,13 +216,6 @@ hpx_get_num_threads(void) {
   return here->sched->n_workers;
 }
 
-
-const char *
-hpx_get_network_id(void) {
-  if (!here || !here->transport)
-    return "cannot query network now";
-  return transport_id(here->transport);
-}
 
 void system_shutdown(int code) {
   if (!here || !here->sched)

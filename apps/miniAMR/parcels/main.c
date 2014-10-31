@@ -486,10 +486,6 @@ static int _main_action(RunArgs *runargs)
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t--help, show help\n");
    printf("(Optional) command line input is of the form: \n\n");
 
@@ -531,6 +527,7 @@ static void usage(FILE *f) {
    printf("--object - type, position, movement, size, size rate of change\n");
 
    printf("All associated settings are integers except for objects\n");
+   hpx_print_help();
 }
 
 int check_input(int *params)
@@ -658,11 +655,8 @@ if (stencil != 7 && stencil != 27) {
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   // default
   int num_pes = 8;
-  cfg.threads = 8;
-  cfg.cores = 8;
   int params[34];
 
   int max_num_blocks = 500;
@@ -701,20 +695,15 @@ int main(int argc, char **argv)
   int object_num = 0;
 
   RunArgs *runargs = NULL;
+  
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int i;
   for (i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "-c"))
-      cfg.cores = atoi(argv[++i]);
-    else if (!strcmp(argv[i], "-t" ))
-      cfg.threads = atoi(argv[++i]);
-    else if (!strcmp(argv[i], "-D" )) {
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-    } else if (!strcmp(argv[i], "-d" )) {
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(argv[++i]);
-    } else if (!strcmp(argv[i], "--num_pes"))
+    if (!strcmp(argv[i], "--num_pes"))
       num_pes = atoi(argv[++i]);
     else if (!strcmp(argv[i], "--max_blocks"))
       max_num_blocks = atoi(argv[++i]);
@@ -873,11 +862,6 @@ int main(int argc, char **argv)
          runargs->objects[object_num].orig_size[i] = runargs->objects[object_num].size[i];
       }
 
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advance   = HPX_REGISTER_ACTION(_advance_action);
@@ -896,13 +880,11 @@ int main(int argc, char **argv)
   _comm_parent_proc_sends = HPX_REGISTER_ACTION(_comm_parent_proc_sends_action);
   _comm_parent_proc_result = HPX_REGISTER_ACTION(_comm_parent_proc_result_action);
 
-  printf(" Number of domains: %d cores: %d threads: %d\n",num_pes,cfg.cores,cfg.threads);
+  printf(" Number of domains: %d\n",num_pes);
 
   runargs->params = params;
   runargs->paramsize = 34;
   runargs->objectsize = num_objects;
   return hpx_run(_main, runargs, RunArgs_size(runargs));
-
-  return 0;
 }
 

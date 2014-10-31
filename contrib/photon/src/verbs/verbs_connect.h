@@ -39,6 +39,7 @@ typedef struct verbs_cnct_ctx_t {
   int                        atomic_depth;
   int                        max_sge;
   int                        max_inline;
+  int                        max_srq_wr;
 
   verbs_cnct_info          **local_ci;
   verbs_cnct_info          **remote_ci;

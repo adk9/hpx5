@@ -62,7 +62,6 @@ typedef struct {
   int           nDoms;
   int              nx;
   int       maxcycles;
-  int           cores;
   hpx_addr_t complete;
   hpx_addr_t newdt;
 } InitArgs;

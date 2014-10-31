@@ -224,7 +224,7 @@ int photon_init(photonConfig cfg) {
     return PHOTON_OK;
   }
 
-  dbg_info("Photon initialized");
+  dbg_info("Photon initializing");
 
   /* the configured backend init gets called from within the default library init */
   return __photon_default->init(lcfg, NULL, NULL);
