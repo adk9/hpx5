@@ -21,8 +21,7 @@ struct photon_config_t {
 
   struct {                  // OPTIONS for InfiniBand Verbs backend
     char *eth_dev;          // Device name for CMA mode
-    char *ib_dev;           // IB device as listed by ibv_devinfo
-    int ib_port;            // An active IB port
+    char *ib_dev;           // IB device filter, e.g.: 'qib0:1+mlx4_0:2'
     int use_cma;            // Use connection manager to establish RDMA context
     int use_ud;             // EXPERIMENTAL: unreliable datagram mode (uses multicast)
     char *ud_gid_prefix;    // EXPERIMENTAL: GID prefix to use for UD multicast

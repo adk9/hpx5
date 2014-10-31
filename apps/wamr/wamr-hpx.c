@@ -25,16 +25,12 @@ static hpx_action_t _evolve = 0;
 /* helper functions */
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: lulesh [options]\n"
-          "\t-c, the number of cores to run on\n"
-          "\t-t, the number of scheduler threads\n"
-          "\t-m, send text in message\n"
-          "\t-v, print verbose output \n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-n, number of domains,nDoms\n"
           "\t-x, nx\n"
           "\t-i, maxcycles\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 static void _register_actions(void);
@@ -69,50 +65,20 @@ _maxDouble(double *lhs, const double *rhs) {
 }
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  //cfg.heap_bytes = 2e9;
-
-  int nDoms, nx, maxcycles,cores;
+  int nDoms, nx, maxcycles;
   // default
   nDoms = 8;
   maxcycles = 10;
-  cores = 10;
+
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "Failed to initialize hpx\n");
+    return -1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dl:s:p:n:x:i:r:mvh")) != -1) {
+  while ((opt = getopt(argc, argv, "n:x:i:h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      cores = cfg.cores;
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-      case 'm':
-      _text = true;
-     case 'v':
-      _verbose = true;
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
      case 'n':
       nDoms = atoi(optarg);
       break;
@@ -132,24 +98,15 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "Failed to initialize hpx\n");
-    return -1;
-  }
-
   _register_actions();
 
-  //const char *network = hpx_get_network_id();
-
-  int input[4];
+  int input[3];
   input[0] = nDoms;
   input[1] = maxcycles;
-  input[2] = cores;
-  printf(" Number of domains: %d maxcycles: %d cores: %d\n",nDoms,maxcycles,cores);
+  printf(" Number of domains: %d maxcycles: %d\n",nDoms,maxcycle);
 
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_main, input, 4*sizeof(int));
+  e = hpx_run(_main, input, 3*sizeof(int));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   printf("average elapsed:   %f ms\n", elapsed);
   return e;
@@ -158,10 +115,9 @@ int main(int argc, char *argv[]) {
 static int _action_main(int *input) {
   printf("In main\n");
 
-  int nDoms, nx, maxcycles, cores,k;
+  int nDoms, nx, maxcycles,k;
   nDoms = input[0];
   maxcycles = input[1];
-  cores = input[2];
 
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -170,7 +126,6 @@ static int _action_main(int *input) {
       .index = k,
       .nDoms = nDoms,
       .maxcycles = maxcycles,
-      .cores = cores
     };
     hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
   }
@@ -185,7 +140,6 @@ static int _action_main(int *input) {
 static int _action_evolve(InitArgs *init) {
   int nDoms     = init->nDoms;
   int maxcycles = init->maxcycles;
-  //int cores     = init->cores;
   int index     = init->index;
 
   Domain *ld;

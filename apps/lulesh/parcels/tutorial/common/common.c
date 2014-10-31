@@ -6,14 +6,10 @@
 static void
 _usage(FILE *f, int error) {
   fprintf(f, "Usage: ./example [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-s, stack size in bytes\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-n, number of domains\n"
           "\t-i, maxcycles\n"
           "\t-h, show help\n");
+  hpx_print_help();
   fflush(f);
   exit(error);
 }
@@ -25,35 +21,17 @@ main(int argc, char * const argv[argc])
   main_args_t args = {
     .nDoms = 8,
     .maxCycles = 10,
-    .cores = 8
   };
 
-  // allocate the default HPX configuration on the stack
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.cores = args.cores;
-  cfg.threads = args.cores;
+  // initialize HPX
+  int err = hpx_init(&argc, &argv);
+  if (err)
+    return err;
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:s:d:D:n:i:h")) != -1) {
+  while ((opt = getopt(argc, argv, "n:i:h?")) != -1) {
     switch (opt) {
-     case 'c':
-      args.cores = cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
      case 'n':
       args.nDoms = atoi(optarg);
       break;
@@ -67,11 +45,6 @@ main(int argc, char * const argv[argc])
       _usage(stderr, -1);
     }
   }
-
-  // initialize HPX
-  int err = hpx_init(&cfg);
-  if (err)
-    return err;
 
   // register HPX actions
   tutorial_init_actions();

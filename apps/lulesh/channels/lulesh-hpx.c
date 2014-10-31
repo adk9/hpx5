@@ -191,20 +191,17 @@ static int _main_action(int *input)
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-n, number of domains,nDoms\n"
           "\t-x, nx\n"
           "\t-i, maxcycles\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
 }
 
 
 int main(int argc, char **argv)
 {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
   int nDoms, nx, maxcycles,cores;
   // default
@@ -212,26 +209,15 @@ int main(int argc, char **argv)
   nx = 15;
   maxcycles = 10;
   cores = 8;
-  cfg.cores = cores;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:D:n:x:ih")) != -1) {
+  while ((opt = getopt(argc, argv, "n:x:ih")) != -1) {
     switch (opt) {
-      case 'c':
-        cfg.cores = atoi(optarg);
-        cores = cfg.cores;
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
       case 'n':
         nDoms = atoi(optarg);
         break;
@@ -250,14 +236,8 @@ int main(int argc, char **argv)
         return -1;
     }
   }
-
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
-  _main      = HPX_REGISTER_ACTION(_main_action);
-  _advanceDomain      = HPX_REGISTER_ACTION(_advanceDomain_action);
+  _main          = HPX_REGISTER_ACTION(_main_action);
+  _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
 
   int input[4];
   input[0] = nDoms;

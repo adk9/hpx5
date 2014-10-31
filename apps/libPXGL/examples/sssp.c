@@ -30,19 +30,12 @@ uint64_t inactive_count;
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
           "\t-k, use and-lco-based terminaiton detection\n"
-          "\t-p, set per-PE global heap size\n"
-          "\t-r, set send/receive request limit\n"
           "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 
@@ -200,9 +193,6 @@ static int _main_action(_sssp_args_t *args) {
 
     sargs.source = args->problems[i];
 
-
-
-
     hpx_time_t now = hpx_time_now();
 
     // Call the SSSP algorithm
@@ -321,44 +311,19 @@ static int _main_action(_sssp_args_t *args) {
 }
 
 
-int main(int argc, char *const argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+int main(int argc, char *argv[argc]) {
   uint64_t time_limit = 1000;
   int realloc_adj_list = 0;
 
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:ahk")) != -1) {
+  while ((opt = getopt(argc, argv, "q:ahk?")) != -1) {
     switch (opt) {
-    case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-    case 't':
-      cfg.threads = atoi(optarg);
-      break;
-    case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-    case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-    case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-    case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-    case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-    case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-    case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
       break;
@@ -414,12 +379,6 @@ int main(int argc, char *const argv[argc]) {
             .time_limit = time_limit,
             .realloc_adj_list = realloc_adj_list
   };
-
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
-  }
 
   // register the actions
   _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);

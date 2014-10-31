@@ -14,6 +14,7 @@
 #define LIBHPX_TRANSPORT_H
 
 #include "hpx/hpx.h"
+#include "libhpx/config.h"
 
 #define TRANSPORT_ANY_SOURCE -1
 
