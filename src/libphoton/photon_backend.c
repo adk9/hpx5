@@ -15,6 +15,7 @@
 #include "photon_request.h"
 #include "photon_event.h"
 
+uint32_t             req_counter;
 photonBI             shared_storage;
 photonRequestTable   request_table;
 ProcessInfo         *photon_processes;
@@ -126,7 +127,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   dbg_trace("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
 
-  INIT_COUNTER(curr_cookie, 1);
+  req_counter = 1;
 
   requests = malloc(sizeof(struct photon_req_t) * DEF_NUM_REQUESTS);
   if (!requests) {
@@ -346,7 +347,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   buffertable_finalize();
  error_exit_req:
   free(requests);
-  DESTROY_COUNTER(curr_cookie);
   
   return PHOTON_ERROR;
 }
@@ -635,7 +635,7 @@ static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, ph
   dbg_trace("(%s, %p, %lu, %d)", buf2, ptr, size, flags);
 #endif
 
-  request_id = INC_COUNTER(curr_cookie);
+  request_id = NEXT_REQUEST_ID();
   
   // segment and send as entries of the sendbuf
   bytes_remaining = size;
@@ -797,7 +797,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+  request_id = PROC_REQUEST_ID(proc);
   dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", request_id);
 
   /* proc == -1 means ANY_SOURCE.  In this case all potential senders must post a send request
@@ -892,8 +892,8 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
-  dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", request_id);
+  request_id = PROC_REQUEST_ID(proc);
+  dbg_trace("Incrementing req_counter to: 0x%016lx", request_id);
   
   {
     if (size <= _photon_smsize) {
@@ -1029,8 +1029,8 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
 
   dbg_trace("(%d, %lu, %d, %p)", proc, size, tag, request);
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
-  dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", request_id);
+  request_id = PROC_REQUEST_ID(proc);
+  dbg_trace("Incrementing req counter to: 0x%016lx", request_id);
 
   curr = photon_processes[proc].remote_snd_info_ledger->curr;
   entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
@@ -1464,8 +1464,8 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
     return -1;
   }
 
-  event_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
-  dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", event_id);
+  event_id = PROC_REQUEST_ID(proc);
+  dbg_trace("Incrementing req counter to: 0x%016lx", event_id);
 
   if ((flags & PHOTON_REQ_USERID) && request) {
     request_id = *request;
@@ -1518,8 +1518,8 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
     return -1;
   }
 
-  event_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
-  dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", event_id);
+  event_id = PROC_REQUEST_ID(proc);
+  dbg_trace("Incrementing req counter to: 0x%016lx", event_id);
 
   if ((flags & PHOTON_REQ_USERID) && request) {
     request_id = *request;

@@ -81,7 +81,7 @@ int __photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int curr, i
   photonRequest req;
   photon_rid request_id;
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+  request_id = (( (uint64_t)proc)<<32) | sync_fadd(&req_counter, 1, SYNC_RELEASE);
   dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", request_id);
 
   *request = request_id;
@@ -136,7 +136,7 @@ int __photon_setup_request_ledger_eager(photonLedgerEntry entry, int curr, int p
   photonRequest req;
   photon_rid request_id;
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+  request_id = (( (uint64_t)proc)<<32) | sync_fadd(&req_counter, 1, SYNC_RELEASE);
   dbg_trace("Incrementing curr_cookie_count to: 0x%016lx", request_id);
 
   *request = request_id;

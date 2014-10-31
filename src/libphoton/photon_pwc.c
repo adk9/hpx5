@@ -20,7 +20,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+  request_id = PROC_REQUEST_ID(proc);
   
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
@@ -145,7 +145,7 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     goto error_exit;
   }
 
-  request_id = (( (uint64_t)proc)<<32) | INC_COUNTER(curr_cookie);
+  request_id = PROC_REQUEST_ID(proc);
 
   if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
     log_err("Tried posting from a buffer that's not registered");

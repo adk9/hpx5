@@ -9,7 +9,6 @@
 #include "photon_rdma_EAGER_buf.h"
 
 #include "htable.h"
-#include "counter.h"
 #include "logging.h"
 #include "squeue.h"
 #include "bit_array/bit_array.h"
@@ -19,8 +18,8 @@
 #include "photon_xsp_forwarder.h"
 #endif
 
-DEFINE_COUNTER(curr_cookie, uint32_t)
-
+#define PROC_REQUEST_ID(p)   ((( (uint64_t)p)<<32) | sync_fadd(&req_counter, 1, SYNC_RELEASE))
+#define NEXT_REQUEST_ID(v)   (sync_fadd(&req_counter, 1, SYNC_RELEASE))
 #define NEXT_LEDGER_ENTRY(l) (l->curr = (l->curr + 1) % l->num_entries)
 #define NEXT_EAGER_BUF(e, s) (e->offset = (e->offset + s) % _photon_ebsize)
 #define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
@@ -209,6 +208,7 @@ extern struct photon_backend_t  photon_default_backend;
 extern ProcessInfo             *photon_processes;
 extern photonBI                 shared_storage;
 extern htable_t                *reqtable, *pwc_reqtable, *sr_reqtable;
+extern uint32_t                 req_counter;
 
 LIST_HEAD(freereqs, photon_req_t) free_reqs_list;
 SLIST_HEAD(pendingpwc, photon_req_t) pending_pwc_list;
