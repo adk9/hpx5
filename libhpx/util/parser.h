@@ -78,9 +78,12 @@ struct hpx_options_t
   const char *hpx_loglevel_help; /**< @brief set the logging level help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
-  long hpx_reqlimit_arg;	/**< @brief HPX transport-specific request Limit.  */
-  char * hpx_reqlimit_orig;	/**< @brief HPX transport-specific request Limit original value given at command line.  */
-  const char *hpx_reqlimit_help; /**< @brief HPX transport-specific request Limit help description.  */
+  long hpx_reqlimit_arg;	/**< @brief HPX transport-specific request limit.  */
+  char * hpx_reqlimit_orig;	/**< @brief HPX transport-specific request limit original value given at command line.  */
+  const char *hpx_reqlimit_help; /**< @brief HPX transport-specific request limit help description.  */
+  char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
+  char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
+  const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
   
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
@@ -94,6 +97,7 @@ struct hpx_options_t
   unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_reqlimit_given ;	/**< @brief Whether hpx-reqlimit was given.  */
+  unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
 
 } ;
 

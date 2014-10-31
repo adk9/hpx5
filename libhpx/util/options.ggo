@@ -2,7 +2,10 @@ args "--input=options.ggo --func-name=hpx_option_parser --arg-struct-name=hpx_op
 
 section "HPX Runtime Options"
 
-text ""
+text "All of the following options can either be set through the
+command-line using the flags given below, or through environment
+variables of the form HPX_OPTION=value, where the option corresponds
+to the flag suffix given below."
 
 option "hpx-cores" - "number of cores to run on"
 typestr="cores"
@@ -51,6 +54,10 @@ enum optional argoptional
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
-option "hpx-reqlimit" - "HPX transport-specific request Limit"
+option "hpx-reqlimit" - "HPX transport-specific request limit"
 typestr="requests"
 long optional
+
+option "hpx-configfile" - "HPX runtime configuration file"
+typestr="file"
+string optional
