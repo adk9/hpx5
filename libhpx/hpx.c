@@ -71,6 +71,9 @@ static int _cleanup(locality_t *l, int code) {
     l->boot = NULL;
   }
 
+  if (l->config)
+    free(l->config);
+
   if (l)
     free(l);
 
@@ -79,13 +82,15 @@ static int _cleanup(locality_t *l, int code) {
 
 
 int hpx_init(int *argc, char ***argv) {
-  // 0) parse the provided options into a usable configuration
-  hpx_config_t *cfg = hpx_parse_options(argc, argv);
-
-  dbg_log_level = cfg->loglevel;
   here = malloc(sizeof(*here));
   if (!here)
     return dbg_error("init: failed to map the local data segment.\n");
+
+  // 0) parse the provided options into a usable configuration
+  hpx_config_t *cfg = hpx_parse_options(argc, argv);
+  here->config = cfg;
+
+  dbg_log_level = cfg->loglevel;
 
   // for debugging
   here->rank = -1;

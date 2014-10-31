@@ -77,6 +77,7 @@ static void _get_config_env(UT_string *str, const char *var, const char *optstr)
       uvar[i] = toupper(var[i]);
     }
     c = getenv(uvar);
+    free(uvar);
   }
 
   if (c)
@@ -184,6 +185,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
     }
     utstring_clear(arg);
   }
+  utstring_free(arg);
 
   const char *cmdline = utstring_body(str);
   e = hpx_option_parser_string(cmdline, &opts, progname);
