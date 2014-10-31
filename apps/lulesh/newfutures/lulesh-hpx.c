@@ -240,6 +240,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_monoq = hpx_lco_sema_new(1);
   ld->sbn3[0] = init->sbn3[0];
   ld->sbn3[1] = init->sbn3[1];
+  ld->posvel[0] = init->posvel[0];
+  ld->posvel[1] = init->posvel[1];
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
@@ -308,6 +310,11 @@ static int _main_action(int *input)
 				     (void (*)(void *, const size_t size)) initmaxdouble);
   hpx_netfuture_t sbn3[2] = {hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs)),
 			     hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs))};
+  hpx_netfuture_t posvel[2] = {hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs)),
+			     hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs))};
+
+
+
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
@@ -319,7 +326,8 @@ static int _main_action(int *input)
       .maxcycles = maxcycles,
       .complete = complete,
       .newdt = newdt,
-      .sbn3 = {sbn3[0], sbn3[1]}
+      .sbn3 = {sbn3[0], sbn3[1]},
+      .posvel = {posvel[0], posvel[1]}
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, &args, sizeof(args), init);
