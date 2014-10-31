@@ -35,7 +35,7 @@ const char *hpx_options_t_description = "";
 
 const char *hpx_options_t_help[] = {
   "HPX Runtime Options:",
-  "",
+  "All of the following options can either be set through the\ncommand-line using the flags given below, or through environment\nvariables of the form HPX_OPTION=value, where the option corresponds\nto the flag suffix given below.",
   "      --hpx-cores=cores        number of cores to run on",
   "      --hpx-threads=threads    number of scheduler threads",
   "      --hpx-backoffmax=count   upper bound for worker-thread backoff",
@@ -47,12 +47,14 @@ const char *hpx_options_t_help[] = {
   "      --hpx-waitat[=locality]  wait for debugger at specific locality",
   "      --hpx-loglevel[=level]   set the logging level  (possible\n                                 values=\"default\", \"boot\", \"sched\",\n                                 \"gas\", \"lco\", \"net\", \"trans\",\n                                 \"parcel\", \"all\")",
   "      --hpx-statistics         print HPX runtime statistics  (default=off)",
-  "      --hpx-reqlimit=requests  HPX transport-specific request Limit",
+  "      --hpx-reqlimit=requests  HPX transport-specific request limit",
+  "      --hpx-configfile=file    HPX runtime configuration file",
     0
 };
 
 typedef enum {ARG_NO
   , ARG_FLAG
+  , ARG_STRING
   , ARG_INT
   , ARG_LONG
   , ARG_ENUM
@@ -115,6 +117,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_loglevel_given = 0 ;
   args_info->hpx_statistics_given = 0 ;
   args_info->hpx_reqlimit_given = 0 ;
+  args_info->hpx_configfile_given = 0 ;
 }
 
 static
@@ -137,6 +140,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_loglevel_orig = NULL;
   args_info->hpx_statistics_flag = 0;
   args_info->hpx_reqlimit_orig = NULL;
+  args_info->hpx_configfile_arg = NULL;
+  args_info->hpx_configfile_orig = NULL;
   
 }
 
@@ -157,6 +162,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_loglevel_help = hpx_options_t_help[11] ;
   args_info->hpx_statistics_help = hpx_options_t_help[12] ;
   args_info->hpx_reqlimit_help = hpx_options_t_help[13] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[14] ;
   
 }
 
@@ -251,6 +257,8 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_waitat_orig));
   free_string_field (&(args_info->hpx_loglevel_orig));
   free_string_field (&(args_info->hpx_reqlimit_orig));
+  free_string_field (&(args_info->hpx_configfile_arg));
+  free_string_field (&(args_info->hpx_configfile_orig));
   
   
 
@@ -346,6 +354,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-statistics", 0, 0 );
   if (args_info->hpx_reqlimit_given)
     write_into_file(outfile, "hpx-reqlimit", args_info->hpx_reqlimit_orig, 0);
+  if (args_info->hpx_configfile_given)
+    write_into_file(outfile, "hpx-configfile", args_info->hpx_configfile_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -481,6 +491,7 @@ int update_arg(void *field, char **orig_field,
   char *stop_char = 0;
   const char *val = value;
   int found;
+  char **string_field;
   FIX_UNUSED (field);
 
   stop_char = 0;
@@ -533,6 +544,14 @@ int update_arg(void *field, char **orig_field,
     break;
   case ARG_ENUM:
     if (val) *((int *)field) = found;
+    break;
+  case ARG_STRING:
+    if (val) {
+      string_field = (char **)field;
+      if (!no_free && *string_field)
+        free (*string_field); /* free previous string */
+      *string_field = gengetopt_strdup (val);
+    }
     break;
   default:
     break;
@@ -621,6 +640,7 @@ hpx_option_parser_internal (
         { "hpx-loglevel",	2, NULL, 0 },
         { "hpx-statistics",	0, NULL, 0 },
         { "hpx-reqlimit",	1, NULL, 0 },
+        { "hpx-configfile",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
@@ -784,7 +804,7 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* HPX transport-specific request Limit.  */
+          /* HPX transport-specific request limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-reqlimit") == 0)
           {
           
@@ -794,6 +814,20 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_reqlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-reqlimit", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* HPX runtime configuration file.  */
+          else if (strcmp (long_options[option_index].name, "hpx-configfile") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_configfile_arg), 
+                 &(args_info->hpx_configfile_orig), &(args_info->hpx_configfile_given),
+                &(local_args_info.hpx_configfile_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "hpx-configfile", '-',
                 additional_error))
               goto failure;
           

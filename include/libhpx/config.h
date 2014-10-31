@@ -132,6 +132,7 @@ typedef struct {
   hpx_log_t        loglevel;          //!< the logging level to use.
   int            statistics;          //!< print statistics.
   uint32_t         reqlimit;          //!< max transport requests
+  char          *configfile;          //!< configuration file
 } hpx_config_t;
 
 /// The default configuration parameters that HPX will start with.
@@ -147,7 +148,8 @@ typedef struct {
     .waitat      = HPX_LOCALITY_NONE,           \
     .loglevel    = HPX_LOG_DEFAULT,             \
     .statistics  = true,                        \
-    .reqlimit    = 0                            \
+    .reqlimit    = 0,                           \
+    .configfile  = NULL                         \
   }
 
 HPX_INTERNAL hpx_config_t *hpx_parse_options(int *argc, char ***argv);

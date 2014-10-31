@@ -101,6 +101,7 @@ int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
   HPX_GET_CONFIG_ENV(str, loglevel);
   HPX_GET_CONFIG_ENV(str, statistics);
   HPX_GET_CONFIG_ENV(str, reqlimit);
+  HPX_GET_CONFIG_ENV(str, configfile);
 
   const char *cmdline = utstring_body(str);
 
@@ -133,6 +134,12 @@ static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
     else
       cfg->loglevel = (1 << opts->hpx_loglevel_arg);
   }
+
+  if (opts->hpx_configfile_given) {
+    if (cfg->configfile)
+      free(cfg->configfile);
+    cfg->configfile = strdup(opts->hpx_configfile_arg);
+  }
 }
 
 /// Print the help associated with the HPX runtime options
@@ -150,12 +157,12 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
   char *progname = (argv) ? (*argv)[0] : "";
 
   // then, read the environment for the specified configuration values
-  hpx_options_t env_opts;
-  int e = _read_options_from_env(&env_opts, progname);
+  hpx_options_t opts;
+  int e = _read_options_from_env(&opts, progname);
   if (e)
     fprintf(stderr, "failed to read options from the environment variables.\n");
 
-  _set_config_options(cfg, &env_opts);
+  _set_config_options(cfg, &opts);
 
   // finally, use the CLI-specified options to override the above
   // values
@@ -178,14 +185,26 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
     utstring_clear(arg);
   }
 
-  hpx_options_t cli_opts;
   const char *cmdline = utstring_body(str);
-  e = hpx_option_parser_string(cmdline, &cli_opts, progname);
+  e = hpx_option_parser_string(cmdline, &opts, progname);
   if (e)
     fprintf(stderr, "failed to parse options specified on the command-line.\n");
 
-  _set_config_options(cfg, &cli_opts);
+  _set_config_options(cfg, &opts);
   utstring_free(str);
+
+  // the config file takes the highest precedence in determining the
+  // runtime parameters
+  if (cfg->configfile) {
+    struct hpx_option_parser_params *params = hpx_option_parser_params_create();
+    params->initialize = 0;
+    params->override = 1;
+    int e = hpx_option_parser_config_file(cfg->configfile, &opts, params);
+    if (!e)
+      _set_config_options(cfg, &opts);
+
+    free(params);
+  }
 
   if (nargs) {
     *argc -= nargs;
