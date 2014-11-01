@@ -29,6 +29,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/transport.h"
+#include "libsync/queues.h"
 #include "lco.h"
 #include "cvar.h"
 
@@ -36,6 +37,12 @@
 //#define dbg_printf printf
 #define PHOTON_NOWAIT_TAG 0
 #define FT_SHARED 1<<3
+
+#define PWC_QUEUE_T two_lock_queue_t
+#define PWC_QUEUE_NEW sync_two_lock_queue_new
+#define PWC_QUEUE_FINI sync_two_lock_queue_fini
+#define PWC_QUEUE_ENQUEUE sync_two_lock_queue_enqueue
+#define PWC_QUEUE_DEQUEUE sync_two_lock_queue_dequeue
 
 /// This is the guts of the netfuture, containing all locks, condition 
 /// variables, the state bit array, and the data (or potentially in the 
@@ -80,6 +87,16 @@ typedef struct {
 
 } _netfuture_table_t;
 
+typedef struct {
+  int remote_rank;
+  void *data;
+  size_t size;
+  void* remote_ptr;
+  struct photon_buffer_priv_t remote_priv;
+  photon_rid local_rid;
+  photon_rid remote_rid;
+} pwc_args_t;
+
 static hpx_netfuture_config_t _netfuture_cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
 static const int _NETFUTURE_EXCHG = -37;
 static bool shutdown = false;
@@ -92,7 +109,8 @@ static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
 static _netfuture_table_t _netfuture_table = {.inited = 0};
-static lockable_ptr_t pwc_lock;
+//static lockable_ptr_t pwc_lock;
+static PWC_QUEUE_T *pwc_q;
 
 /// Is this netfuture empty?
 static bool _empty(const _netfuture_t *f) {
@@ -198,6 +216,17 @@ _progress_action(void *args) {
   //  int send_rank = -1;
   //  int i = 0;
   while (!shutdown) {
+    // do sends
+    pwc_args_t *pwc_args = PWC_QUEUE_DEQUEUE(pwc_q);
+    if (pwc_args != NULL) {
+      photon_put_with_completion(pwc_args->remote_rank, 
+				 pwc_args->data, pwc_args->size, 
+				 pwc_args->remote_ptr, pwc_args->remote_priv,
+				 pwc_args->local_rid, pwc_args->remote_rid, 
+				 PHOTON_REQ_ONE_CQE);
+      free(pwc_args);
+    }
+
     // check send completion
     photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
     if (flag > 0) {
@@ -257,6 +286,8 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   //assert(pwc_lock);
 
   dbg_printf("  Initializing futures on rank %d\n", hpx_get_my_rank());
+
+  pwc_q = PWC_QUEUE_NEW();
 
   _table_lock();
   _netfuture_table.curr_index = 0;
@@ -524,16 +555,8 @@ hpx_lco_netfuture_at(hpx_netfuture_t array, int i) {
 }
 
 static void
-_put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
+_enqueue_put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
               hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
-
-  uint32_t old, new;
-  old = _outstanding_send_limit;
-  do {
-    while (old >= _outstanding_send_limit)
-      old = sync_load(&_outstanding_sends, SYNC_SEQ_CST);
-    new = old + 1;
-  } while (!sync_cas(&_outstanding_sends, old, new, SYNC_ACQ_REL, SYNC_RELAXED));
 
   // need the following information:
 
@@ -544,30 +567,31 @@ _put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void *data,
   // remote_rid can make the same as the identifier for the future being set
   // local_rid can be the same?
 
+  pwc_args_t *args = malloc(sizeof(*args));
   hpx_netfuture_t *f = future;
+
+  args->remote_rank = _netfuture_get_rank(future);
+  assert(args->remote_rank == id % hpx_get_num_ranks());
+
+  args->remote_ptr = (void*)_netfuture_get_data_addr(future);
+
   struct photon_buffer_t *buffer = &_netfuture_table.buffers[_netfuture_get_rank(f)];
-
-  int remote_rank = _netfuture_get_rank(future);
-  assert(remote_rank == id % hpx_get_num_ranks());
-  void *remote_ptr = (void*)_netfuture_get_data_addr(future);
-  struct photon_buffer_priv_t remote_priv = buffer->priv;
-
-  photon_rid local_rid;
+  args->remote_priv = buffer->priv;
 
   if (lsync_lco == HPX_NULL)
-    local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
+    args->local_rid = PHOTON_NOWAIT_TAG; // TODO if lsync != NULL use local_rid to represent local LCOs address
   else {
     void *ptr;
     hpx_gas_try_pin(lsync_lco, &ptr);
-    local_rid = (photon_rid)ptr;
+    args->local_rid = (photon_rid)ptr;
   }
-  photon_rid remote_rid = _netfuture_get_addr(future);
+  args->remote_rid = _netfuture_get_addr(future);
   dbg_printf("  pwc with at %d for %d remote_rid == %" PRIx64 "\n", hpx_get_my_rank(), remote_rank, remote_rid);
 
-  sync_lockable_ptr_lock(&pwc_lock);
-  photon_put_with_completion(remote_rank, data, size, remote_ptr, remote_priv,
-                 local_rid, remote_rid, PHOTON_REQ_ONE_CQE);
-  sync_lockable_ptr_unlock(&pwc_lock);
+  args->data = data;
+  args->size = size;
+
+  PWC_QUEUE_ENQUEUE(pwc_q, args);
 }
 
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
@@ -583,7 +607,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 
   // normally lco_set does all this
   if (_netfuture_get_rank(&future_i) != hpx_get_my_rank()) {
-    _put_with_completion(&future_i, id, size, data, lsync_lco, rsync_lco);
+    _enqueue_put_with_completion(&future_i, id, size, data, lsync_lco, rsync_lco);
   }
   else {
     _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);  
