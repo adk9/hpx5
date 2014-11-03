@@ -118,40 +118,13 @@ static const char* const HPX_LOG_TO_STRING[] = {
 ///
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
-
 typedef struct {
-  int                 cores;          //!< number of cores to run on.
-  int               threads;          //!< number of HPX scheduler threads.
-  unsigned int   backoffmax;          //!< upper bound for backoff.
-  int             stacksize;          //!< minimum stack size in bytes.
-  size_t           heapsize;          //!< shared heap size in bytes
-  hpx_gas_t             gas;          //!< Type of GAS.
-  hpx_boot_t           boot;          //!< bootstrap method to use.
-  hpx_transport_t transport;          //!< transport to use.
-  hpx_locality_t     waitat;          //!< locality to wait on.
-  hpx_log_t        loglevel;          //!< the logging level to use.
-  int            statistics;          //!< print statistics.
-  uint32_t         reqlimit;          //!< max transport requests
-  char          *configfile;          //!< configuration file
+#define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
+# include "options.def"
+#undef LIBHPX_DECL_OPTION
 } hpx_config_t;
 
-/// The default configuration parameters that HPX will start with.
-#define HPX_CONFIG_DEFAULTS {                   \
-    .cores       = 0,                           \
-    .threads     = 0,                           \
-    .backoffmax  = 1024,                        \
-    .stacksize   = 32768,                       \
-    .heapsize    = 1lu << 30, /* 1GB */         \
-    .gas         = HPX_GAS_PGAS,                \
-    .boot        = HPX_BOOT_DEFAULT,            \
-    .transport   = HPX_TRANSPORT_DEFAULT,       \
-    .waitat      = HPX_LOCALITY_NONE,           \
-    .loglevel    = HPX_LOG_DEFAULT,             \
-    .statistics  = true,                        \
-    .reqlimit    = 0,                           \
-    .configfile  = NULL                         \
-  }
-
-HPX_INTERNAL hpx_config_t *hpx_parse_options(int *argc, char ***argv);
+hpx_config_t *hpx_parse_options(int *argc, char ***argv)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_CONFIG_H
