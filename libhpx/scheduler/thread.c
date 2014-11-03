@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if defined(ENABLE_DEBUG) && defined(LIBHPX_DBG_PROTECT_STACK)
+#if defined(ENABLE_DEBUG)
 #include <sys/mman.h>
 #include <errno.h>
 #endif
@@ -28,6 +28,7 @@
 #include <jemalloc/jemalloc.h>
 #include <valgrind/valgrind.h>
 #include <libhpx/debug.h>
+#include <libhpx/locality.h>
 #include "thread.h"
 
 #define _DEFAULT_PAGES 4
@@ -40,8 +41,11 @@ void thread_set_stack_size(int stack_bytes) {
   _thread_size = HPX_PAGE_SIZE * pages;
 }
 
-#if defined(ENABLE_DEBUG) && defined(LIBHPX_DBG_PROTECT_STACK)
+#if defined(ENABLE_DEBUG)
 static void _prot(char *base, int prot) {
+  if (!here->config->mprotectstacks)
+    return;
+
   int e = mprotect(base, HPX_PAGE_SIZE, prot);
   assert(!e);
   e = mprotect(base + _thread_size + HPX_PAGE_SIZE, HPX_PAGE_SIZE, prot);
@@ -54,7 +58,7 @@ static void _prot(char *base, int prot) {
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   ustack_t *stack = NULL;
-#if defined(ENABLE_DEBUG) && defined(LIBHPX_DBG_PROTECT_STACK)
+#if defined(ENABLE_DEBUG)
   char *base = NULL;
   int e = posix_memalign((void**)&base, HPX_PAGE_SIZE, _thread_size + 2 *
                          HPX_PAGE_SIZE);
@@ -75,7 +79,7 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
 
 void thread_delete(ustack_t *stack) {
   VALGRIND_STACK_DEREGISTER(stack->stack_id);
-#if defined(ENABLE_DEBUG) && defined(LIBHPX_DBG_PROTECT_STACK)
+#if defined(ENABLE_DEBUG)
   char *base = (char*)stack - HPX_PAGE_SIZE;
   _prot(base, PROT_READ | PROT_WRITE);
   free(base);
