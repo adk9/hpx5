@@ -29,28 +29,39 @@ void _bitmap_bounds_check(bitmap_t *b, uint32_t page, uint32_t word) {
   assert(word < _bitmap_num_words);
 
   // check if the page has been allocated or not
-  _bitmap_page_t p = sync_load(&b[page].page, SYNC_ACQUIRE);
-  if (!p) {
-    _bitmap_page_t newp = (_bitmap_page_t)calloc(_bitmap_num_words, sizeof(_bitmap_word_t));
-    if (!sync_cas(&b[page].page, p, newp, SYNC_RELEASE, SYNC_RELAXED)) {
-      free((void*)newp);
-      // try again..
-      _bitmap_bounds_check(b, page, word);
-    } else {
-      // move on to the previous page
-      _bitmap_bounds_check(b, page-1, word);
+  for (;;) {
+    _bitmap_page_t p = sync_load(&b[page].page, SYNC_ACQUIRE);
+    if (!p) {
+      _bitmap_page_t newp = (_bitmap_page_t)calloc(_bitmap_num_words, sizeof(_bitmap_word_t));
+      if (!sync_cas(&b[page].page, p, newp, SYNC_RELEASE, SYNC_RELAXED)) {
+        free((void*)newp);
+        // try again..
+        continue;
+      } else {
+        // move on to the previous page
+        page--;
+        continue;
+      }
     }
+    break;
   }
 }
 
 
 bitmap_t *cr_bitmap_new(void) {
   // allocate _bitmap_num_pages
-  bitmap_t *b = (bitmap_t*)calloc(_bitmap_num_pages, sizeof(_bitmap_page_t));
-  assert(b);
+  bitmap_t *b = NULL;
+  int e = posix_memalign((void**)&b, HPX_CACHELINE_SIZE,
+                         _bitmap_num_pages * sizeof(_bitmap_page_t));
+  if (e)
+    dbg_error("failed to allocate a bitmap for %u pages\n", _bitmap_num_pages);
 
   // allocate the first page
-  void *p = (_bitmap_page_t)calloc(_bitmap_num_words, sizeof(_bitmap_word_t));
+  void *p;
+  e = posix_memalign((void**)&p, HPX_CACHELINE_SIZE,
+                     _bitmap_num_words * sizeof(_bitmap_word_t));
+  if (e)
+    dbg_error("failed to allocate a page for %u words\n", _bitmap_num_words);
   sync_store(&b[0].page, p, SYNC_RELEASE);
   return b;
 }
