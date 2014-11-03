@@ -44,6 +44,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-reqlimit=requests  HPX transport-specific request limit",
   "      --hpx-configfile=file    HPX runtime configuration file",
   "      --hpx-mprotectstacks     use mprotect() to bracket stacks to look for \n                                 stack overflows  (default=off)",
+  "      --hpx-waitonabort        call hpx_wait() inside of hpx_abort() for \n                                 debugging  (default=off)",
     0
 };
 
@@ -114,6 +115,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_reqlimit_given = 0 ;
   args_info->hpx_configfile_given = 0 ;
   args_info->hpx_mprotectstacks_given = 0 ;
+  args_info->hpx_waitonabort_given = 0 ;
 }
 
 static
@@ -138,6 +140,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_configfile_arg = NULL;
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_mprotectstacks_flag = 0;
+  args_info->hpx_waitonabort_flag = 0;
   
 }
 
@@ -160,6 +163,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_reqlimit_help = hpx_options_t_help[13] ;
   args_info->hpx_configfile_help = hpx_options_t_help[14] ;
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[15] ;
+  args_info->hpx_waitonabort_help = hpx_options_t_help[16] ;
   
 }
 
@@ -350,6 +354,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-configfile", args_info->hpx_configfile_orig, 0);
   if (args_info->hpx_mprotectstacks_given)
     write_into_file(outfile, "hpx-mprotectstacks", 0, 0 );
+  if (args_info->hpx_waitonabort_given)
+    write_into_file(outfile, "hpx-waitonabort", 0, 0 );
   
 
   i = EXIT_SUCCESS;
@@ -631,6 +637,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-reqlimit",	1, NULL, 0 },
         { "hpx-configfile",	1, NULL, 0 },
         { "hpx-mprotectstacks",	0, NULL, 0 },
+        { "hpx-waitonabort",	0, NULL, 0 },
         { NULL,	0, NULL, 0 }
       };
 
@@ -830,6 +837,18 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
             if (update_arg((void *)&(args_info->hpx_mprotectstacks_flag), 0, &(args_info->hpx_mprotectstacks_given),
                 &(local_args_info.hpx_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-mprotectstacks", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* call hpx_wait() inside of hpx_abort() for debugging.  */
+          else if (strcmp (long_options[option_index].name, "hpx-waitonabort") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_waitonabort_flag), 0, &(args_info->hpx_waitonabort_given),
+                &(local_args_info.hpx_waitonabort_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-waitonabort", '-',
                 additional_error))
               goto failure;
           

@@ -77,6 +77,8 @@ struct hpx_options_t
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
   int hpx_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
   const char *hpx_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
+  int hpx_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
+  const char *hpx_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
   
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
@@ -92,6 +94,7 @@ struct hpx_options_t
   unsigned int hpx_reqlimit_given ;	/**< @brief Whether hpx-reqlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
+  unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
 
 } ;
 

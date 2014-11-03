@@ -64,3 +64,6 @@ string optional
 
 option "hpx-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
+
+option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+flag off

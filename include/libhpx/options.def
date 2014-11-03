@@ -44,6 +44,7 @@ LIBHPX_DECL_OPTION(hpx, arg, char *, configfile, 0)
 LIBHPX_DECL_OPTION(hpx, flag, int, statistics, 1)
 
 LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
+LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
 
 
 #ifdef _LIBHPX_DECL_OPTION_UNDEF
