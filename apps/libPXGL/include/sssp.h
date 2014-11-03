@@ -30,7 +30,9 @@ typedef struct {
   hpx_addr_t termination_lco;
 } call_sssp_args_t;
 
-typedef enum { COUNT_TERMINATION, AND_LCO_TERMINATION } termination_t;
+typedef enum { COUNT_TERMINATION,
+               AND_LCO_TERMINATION,
+               PROCESS_TERMINATION } termination_t;
 extern termination_t termination;
 
 // This invokes the chaotic-relaxation SSSP algorithm on the given
