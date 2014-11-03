@@ -244,9 +244,8 @@ hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void
 hpx_abort(void) {
-#ifdef LIBHPX_DBG_WAIT_ON_ABORT
-  dbg_wait();
-#endif
+  if (here && here->config && here->config->waitonabort)
+    dbg_wait();
   assert(here->boot);
   boot_abort(here->boot);
   abort();
