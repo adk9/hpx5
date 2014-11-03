@@ -211,34 +211,44 @@ _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
 /// the netfutures system.
 static int
 _progress_action(void *args) {
+  int phstat;
   int flag;
   photon_rid request;
   //  int send_rank = -1;
   //  int i = 0;
   while (!shutdown) {
     // do sends
-    pwc_args_t *pwc_args = PWC_QUEUE_DEQUEUE(pwc_q);
-    if (pwc_args != NULL) {
-      photon_put_with_completion(pwc_args->remote_rank, 
-				 pwc_args->data, pwc_args->size, 
-				 pwc_args->remote_ptr, pwc_args->remote_priv,
-				 pwc_args->local_rid, pwc_args->remote_rid, 
-				 PHOTON_REQ_ONE_CQE);
-      free(pwc_args);
+    if (_outstanding_sends < _outstanding_send_limit) {
+      pwc_args_t *pwc_args = PWC_QUEUE_DEQUEUE(pwc_q);
+      if (pwc_args != NULL) {
+	_outstanding_sends++;
+	phstat = 
+	  photon_put_with_completion(pwc_args->remote_rank, 
+				     pwc_args->data, pwc_args->size, 
+				     pwc_args->remote_ptr, pwc_args->remote_priv,
+				     pwc_args->local_rid, pwc_args->remote_rid, 
+				     PHOTON_REQ_ONE_CQE);
+	assert(phstat == PHOTON_OK);
+	free(pwc_args);
+      }
     }
 
     // check send completion
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    //assert(phstat == PHOTON_OK);
+    //    printf("photon_probe_completion = %d\n", phstat);
     if (flag > 0) {
       dbg_printf("  Received send completion on rank %d for %" PRIx64 "\n", hpx_get_my_rank(), request);
-      sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
+      //      sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
+      _outstanding_sends--;
       if (request != 0){
     lco_t *lco = (lco_t*)request;
     lco_future_set(lco, 0, NULL);
       }
     }
 
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    assert(phstat == PHOTON_OK);
     if (flag && request != 0) {
       dbg_printf("  Received recv completion on rank %d for future at %" PRIx64 "\n", hpx_get_my_rank(), request);
       _netfuture_t *f = (_netfuture_t*)request;
@@ -297,6 +307,7 @@ _initialize_netfutures_action(hpx_addr_t *ag) {
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
   _netfuture_table.mem_size = _netfuture_cfg.total_size;
   _netfuture_table.base_gas = hpx_gas_alloc(_netfuture_cfg.total_size);
+  assert(_netfuture_table.base_gas != HPX_NULL);
   dbg_printf("GAS base = 0x%"PRIx64".\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
 
@@ -503,6 +514,10 @@ hpx_netfuture_t
 hpx_lco_netfuture_new_all(int n, size_t size) {
   hpx_netfuture_t f;
 
+  int num_futures_per_rank = (n / hpx_get_num_ranks()) + ((n % hpx_get_num_ranks()) % 2);
+  assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(_netfuture_t))
+	 < _netfuture_cfg.total_size);
+  
     assert(_netfuture_table.curr_offset + n * (size + sizeof(_netfuture_t))
                 <  _netfuture_cfg.total_size * hpx_get_num_ranks());
     assert(_netfuture_table.curr_index + 1 < _netfuture_cfg.total_number);
@@ -597,6 +612,8 @@ _enqueue_put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
                  hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
 
+  //  if (!(id >= 0 && id <= future.count))
+  //    printf("Error id = %d is not in valid range >= 0 <= %d !!!\n", id, future.count);
   assert(id >= 0 && id <= future.count);
   void *data;
   assert(hpx_gas_try_pin(value, &data)); // TODO: unpin this
