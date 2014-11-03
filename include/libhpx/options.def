@@ -20,6 +20,7 @@
 ///
 /// @param     group The option category.
 /// @param      type The option type.
+/// @param     ctype The C type for the option.
 /// @param        id The option category.
 /// @param   default The default value.
 
