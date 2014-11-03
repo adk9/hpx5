@@ -293,7 +293,7 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  cfg.total_size = 2 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
+  cfg.total_size = 4 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
   hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
