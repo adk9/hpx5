@@ -170,21 +170,24 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
   if (!argc || !argv)
     return cfg;
   
-  int nargs = 0;
   UT_string *str;
   UT_string *arg;
 
   utstring_new(str);
   utstring_new(arg);
 
-  for (int i = 1; i < *argc; ++i) {
+  int nargs = *argc;
+  for (int i = 1, n = 1; i < *argc; ++i) {
     utstring_printf(arg, "%s ", (*argv)[i]);
     if (utstring_find(arg, 0, "--hpx-", 6) != -1) {
       utstring_concat(str, arg);
-      nargs++;
+      nargs--;
+    } else {
+      (*argv)[n++] = (*argv)[i];
     }
     utstring_clear(arg);
   }
+  *argc = nargs;
   utstring_free(arg);
 
   const char *cmdline = utstring_body(str);
@@ -206,12 +209,6 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
       _set_config_options(cfg, &opts);
 
     free(params);
-  }
-
-  if (nargs) {
-    *argc -= nargs;
-    for (int i = 1; i < *argc; ++i)
-      (*argv)[i] = (*argv)[nargs+i];
   }
 
   optind = 0;
