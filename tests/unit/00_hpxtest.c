@@ -94,15 +94,11 @@ hpx_action_t t13_memput_verify;
 // Options
 //****************************************************************************
 static void usage(FILE *f) {
-  fprintf(f, "Usage: CHECK [options] ROUNDS \n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-s, set timeout (0 disables)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, logging level\n"
+  fprintf(f, "Usage: hpxtext [options] ROUNDS \n"
+          "\t-s, set timeout for the test-suite\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
 }
 
 static unsigned _timeout = 1200;
@@ -238,37 +234,16 @@ void _register_actions(void) {
 // Initialize the check and run as a HPX application
 //****************************************************************************
 int main(int argc, char * argv[]) {
-  //dbg_wait();
 
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  // Initialize HPX
+  hpx_init(&argc, &argv);
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:T:s:l:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "s:h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
      case 's':
       _timeout = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
       break;
      case 'h':
       usage(stdout);
@@ -279,9 +254,6 @@ int main(int argc, char * argv[]) {
       return -1;
     }
   }
-
-  // Initialize HPX
-  hpx_init(&cfg);
 
   // Register all the actions
   _register_actions();

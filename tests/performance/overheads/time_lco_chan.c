@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "hpx/hpx.h"
-#include "common.h"
 
 /// ----------------------------------------------------------------------------
 /// @file examples/pingpong-chan.c
@@ -43,25 +42,18 @@ char buffer[MAX_MSG_SIZE];
 #define HEADER "# " BENCHMARK "\n"
 
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: time_lco_chan\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
-          "\t-p, set per-PE global heap size\n"
-          "\t-r, set send/receive request limit\n"
+  fprintf(stream, "Usage: time_lco_chan [options]\n"
           "\t-h, this help display\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 static int _pinger_action(hpx_addr_t *chans) {
   int _loop = loop;
   int _skip = skip;
 
-  fprintf(test_log, HEADER);
-  fprintf(test_log, "%s%*s\n", "# Size ", FIELD_WIDTH, "Latency");
+  fprintf(stdout, HEADER);
+  fprintf(stdout, "%s%*s\n", "# Size ", FIELD_WIDTH, "Latency");
 
   hpx_thread_set_affinity(0);
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
@@ -84,9 +76,8 @@ static int _pinger_action(hpx_addr_t *chans) {
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
-    fprintf(test_log, "%-*lu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * _loop));
+    fprintf(stdout, "%-*lu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * _loop));
   }
-  fclose(test_log);
   return HPX_SUCCESS;
 }
 
@@ -134,41 +125,15 @@ static int _main_action(void *args) {
 }
 
 int main(int argc, char *argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
+  
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
       _usage(stdout);
       return 0;
@@ -179,19 +144,10 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
-
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
   if (HPX_THREADS < 2) {
     fprintf(stderr, "This test only runs with at least 2 threads!\n");
     return -1;
   }
-
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "\n");
 
   _main   = HPX_REGISTER_ACTION(_main_action);
   _pinger = HPX_REGISTER_ACTION(_pinger_action);

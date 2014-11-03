@@ -27,7 +27,6 @@
 #include <string.h>
 #include <check.h>
 #include "hpx/hpx.h"
-#include "common.h"
 
 #define DNUM 1000000
 #define THREAD_LEVEL 10
