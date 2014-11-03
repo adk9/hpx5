@@ -61,3 +61,6 @@ long optional
 option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
+
+option "hpx-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
+flag off
