@@ -27,7 +27,6 @@ HPX_CONSTRUCTOR
 static void _init_thread(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
-  thread_set_stack_size(0);
 }
 
 
@@ -55,15 +54,17 @@ typedef struct {
 } HPX_PACKED _frame_t;
 
 
-static _frame_t *_get_top_frame(ustack_t *stack, size_t size) {
-  return (_frame_t*)((char*)stack + size - sizeof(_frame_t));
+static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
+  int offset = size - sizeof(_frame_t);
+  return (_frame_t*)((char*)thread + offset);
 }
 
 
-void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
+void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size) {
   // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(stack, size);
+  _frame_t *frame = _get_top_frame(thread, size);
+  assert((uintptr_t)frame % 16 == 0);
   frame->mxcsr   = _mxcsr;
   frame->fpucw   = _fpucw;
 
@@ -84,9 +85,9 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
 #endif
 
   // set the stack stuff
-  stack->sp            = frame;
-  stack->next          = NULL;
-  stack->parcel        = parcel;
-  stack->tls_id        = -1;
-  stack->affinity      = -1;
+  thread->sp            = frame;
+  thread->next          = NULL;
+  thread->parcel        = parcel;
+  thread->tls_id        = -1;
+  thread->affinity      = -1;
 }

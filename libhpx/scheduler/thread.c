@@ -18,11 +18,8 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#if defined(ENABLE_DEBUG)
 #include <sys/mman.h>
 #include <errno.h>
-#endif
 
 #include <hpx/builtins.h>
 #include <jemalloc/jemalloc.h>
@@ -31,59 +28,111 @@
 #include <libhpx/locality.h>
 #include "thread.h"
 
-#define _DEFAULT_PAGES 4
-
+static int _buffer_size = 0;
 static int _thread_size = 0;
 
 void thread_set_stack_size(int stack_bytes) {
-  int pages = (stack_bytes) ? ceil_div_32(stack_bytes, HPX_PAGE_SIZE) :
-              _DEFAULT_PAGES;
-  _thread_size = HPX_PAGE_SIZE * pages;
+  assert(stack_bytes);
+  int pages = ceil_div_32(stack_bytes, HPX_PAGE_SIZE);
+  _thread_size = pages * HPX_PAGE_SIZE;
+  _buffer_size = _thread_size;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (here->config->mprotectstacks)
+    _buffer_size = _buffer_size + 2 * HPX_PAGE_SIZE;
+#endif
 }
 
-#if defined(ENABLE_DEBUG)
-static void _prot(char *base, int prot) {
-  if (!here->config->mprotectstacks)
-    return;
 
-  int e = mprotect(base, HPX_PAGE_SIZE, prot);
-  assert(!e);
-  e = mprotect(base + _thread_size + HPX_PAGE_SIZE, HPX_PAGE_SIZE, prot);
-  DEBUG_IF(e) {
-    dbg_error("Mprotect error: %d (EACCES %d, EINVAL %d, ENOMEM %d)\n", errno, EACCES, EINVAL, ENOMEM);
+/// Update the protections on the first and last page in the stack.
+///
+/// @param         base The base address.
+/// @param         prot The new permissions.
+static void _mprot(void *base, int prot) {
+  char *p1 = base;
+  char *p2 = p1 + _thread_size + HPX_PAGE_SIZE;
+  int e1 = mprotect(p1, HPX_PAGE_SIZE, prot);
+  int e2 = mprotect(p2, HPX_PAGE_SIZE, prot);
+
+  if (e1 || e2) {
+    dbg_error("Mprotect error: %d (EACCES %d, EINVAL %d, ENOMEM %d)\n", errno,
+              EACCES, EINVAL, ENOMEM);
   }
-  assert(!e);
 }
+
+
+/// Protect the stack so that stack over/underflow will result in a segfault.
+///
+/// This returns the correct address for use in the stack structure. When we're
+/// protecting the stack we want a 1-page offset here.
+static ustack_t *_protect(void *base) {
+  ustack_t *stack = base;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (!here->config->mprotectstacks) {
+    return stack;
+  }
+  _mprot(base, PROT_NONE);
+  stack = (ustack_t*)((char*)base + HPX_PAGE_SIZE);
 #endif
-
-ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = NULL;
-#if defined(ENABLE_DEBUG)
-  char *base = NULL;
-  int e = posix_memalign((void**)&base, HPX_PAGE_SIZE, _thread_size + 2 *
-                         HPX_PAGE_SIZE);
-  assert(!e);
-  _prot(base, PROT_NONE);
-  stack = (void*)(base + HPX_PAGE_SIZE);
-#else
-  int e = posix_memalign((void**)&stack, 16, _thread_size);
-  assert(!e);
-#endif
-
-  assert(stack);
-  stack->stack_id = VALGRIND_STACK_REGISTER(&stack->stack, (char*)stack + _thread_size);
-
-  thread_init(stack, parcel, f, _thread_size);
   return stack;
 }
 
-void thread_delete(ustack_t *stack) {
-  VALGRIND_STACK_DEREGISTER(stack->stack_id);
-#if defined(ENABLE_DEBUG)
-  char *base = (char*)stack - HPX_PAGE_SIZE;
-  _prot(base, PROT_READ | PROT_WRITE);
+
+/// Unprotect the stack so that the pages can be reused.
+///
+/// This returns the base address of the original allocation so that it can be
+/// freed by the caller.
+static void *_unprotect(ustack_t *stack) {
+  void *base = stack;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (!here->config->mprotectstacks) {
+    return base;
+  }
+  base = (char*)stack - HPX_PAGE_SIZE;
+  _mprot(base, PROT_READ | PROT_WRITE);
+#endif
+  return base;
+}
+
+/// Register a stack with valgrind, so that it doesn't incorrectly complain
+/// about stack accesses.
+static int _register(ustack_t *thread) {
+  void *begin = &thread->stack[0];
+  void *end = &thread->stack[_thread_size - sizeof(*thread)];
+  return VALGRIND_STACK_REGISTER(begin, end);
+}
+
+static void _deregister(ustack_t *thread) {
+  VALGRIND_STACK_DEREGISTER(thread->stack_id);
+}
+
+static size_t _alignment(void) {
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (here->config->mprotectstacks) {
+    return HPX_PAGE_SIZE;
+  }
+  else
+#endif
+    return 16;
+}
+
+ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
+  void *base = NULL;
+  int e = posix_memalign((void**)&base, _alignment(), _buffer_size);
+  assert(!e);
+  assert((uintptr_t)base % _alignment() == 0);
+
+  ustack_t *thread = _protect(base);
+  thread->stack_id = _register(thread);
+  thread_init(thread, parcel, f, _thread_size);
+  return thread;
+}
+
+void thread_delete(ustack_t *thread) {
+  _deregister(thread);
+  void *base = _unprotect(thread);
   free(base);
-#else
-  free(stack);
-#endif  // OB
 }
