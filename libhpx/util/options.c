@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/util/options.c
@@ -42,19 +42,12 @@
 
 typedef struct hpx_options_t hpx_options_t;
 
-
-#define HPX_SET_VAR(cfg,opts,option)                       \
-  { if (opts->hpx_##option##_given)                        \
-      cfg->option = opts->hpx_##option##_arg; }
-
-#define HPX_SET_FLAG(cfg,opts,option)                      \
-  { if (opts->hpx_##option##_given)                        \
-      cfg->option = opts->hpx_##option##_flag; }
-
-#define HPX_GET_CONFIG_ENV(str,opt) _get_config_env(str, "hpx_" #opt, "hpx-" #opt)
-
 /// The default configuration.
-static const hpx_config_t _default_cfg = HPX_CONFIG_DEFAULTS;
+static const hpx_config_t _default_cfg = {
+#define LIBHPX_DECL_OPTION(group, type, ctype, id, default) .id = default,
+# include "libhpx/options.def"
+#undef LIBHPX_DECL_OPTION
+};
 
 
 /// Get a configuration value from an environment variable.
@@ -90,19 +83,12 @@ int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
   UT_string *str;
 
   utstring_new(str);
-  HPX_GET_CONFIG_ENV(str, cores);
-  HPX_GET_CONFIG_ENV(str, threads);
-  HPX_GET_CONFIG_ENV(str, backoffmax);
-  HPX_GET_CONFIG_ENV(str, stacksize);
-  HPX_GET_CONFIG_ENV(str, heapsize);
-  HPX_GET_CONFIG_ENV(str, gas);
-  HPX_GET_CONFIG_ENV(str, boot);
-  HPX_GET_CONFIG_ENV(str, transport);
-  HPX_GET_CONFIG_ENV(str, waitat);
-  HPX_GET_CONFIG_ENV(str, loglevel);
-  HPX_GET_CONFIG_ENV(str, statistics);
-  HPX_GET_CONFIG_ENV(str, reqlimit);
-  HPX_GET_CONFIG_ENV(str, configfile);
+
+#define _GET_CONFIG_ENV(str,opt) _get_config_env(str, "hpx_" #opt, "hpx-" #opt)
+#define LIBHPX_DECL_OPTION(group, type, ctype, id, default) _GET_CONFIG_ENV(str, id);
+# include "libhpx/options.def"
+#undef LIBHPX_DECL_OPTION
+#undef _GET_CONFIG_ENV
 
   const char *cmdline = utstring_body(str);
 
@@ -117,17 +103,15 @@ int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
 /// Update the configuration structure @p cfg with the option values
 /// specified in @p opts.
 static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
-  HPX_SET_VAR(cfg, opts, cores);
-  HPX_SET_VAR(cfg, opts, threads);
-  HPX_SET_VAR(cfg, opts, backoffmax);
-  HPX_SET_VAR(cfg, opts, stacksize);
-  HPX_SET_VAR(cfg, opts, heapsize);
-  HPX_SET_VAR(cfg, opts, gas);
-  HPX_SET_VAR(cfg, opts, boot);
-  HPX_SET_VAR(cfg, opts, transport);
-  HPX_SET_VAR(cfg, opts, waitat);
-  HPX_SET_FLAG(cfg, opts, statistics);
-  HPX_SET_VAR(cfg, opts, reqlimit);
+
+#define LIBHPX_DECL_OPTION(group, type, ctype, id, default)   \
+  {                                                           \
+    if (opts->hpx_##id##_given)                               \
+      cfg->id = opts->hpx_##id##_##type;                      \
+  }
+# include "libhpx/options.def"
+#undef LIBHPX_DECL_OPTION
+#undef _SET_VAR
 
   if (opts->hpx_loglevel_given) {
     if (opts->hpx_loglevel_arg == hpx_loglevel_arg_all)
@@ -169,7 +153,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
   // values
   if (!argc || !argv)
     return cfg;
-  
+
   UT_string *str;
   UT_string *arg;
 
