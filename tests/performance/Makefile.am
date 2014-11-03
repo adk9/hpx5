@@ -1,19 +1,13 @@
-SUBDIRS = . TaskSpawningSO MicroBench Overheads PutGetSM
+SUBDIRS = . overheads
 
-TaskSpawningSOtests: $(MAKE) -C TaskSpawningSO buildtests
+Overheadstests: $(MAKE) -C overheads buildtests
 
-MicroBenchtests: $(MAKE) -C MicroBench buildtests
-
-Overheadstests: $(MAKE) -C Overheads buildtests
-
-PutGetSMtests: $(MAKE) -C PutGetSM buildtests
-
-tests: TaskSpawningSOtests MicroBenchtests Overheadsstests PutGetSMtests
+tests: overheads_tests
 
 buildtests: tests
 
 buildall: buildtests
-.PHONY: buildall tests buildtests TaskSpawningSOtests MicroBenchtests Overheadstests putGetSM
+.PHONY: buildall tests buildtests overheads_tests 
 
 NPROCS ?= 2
 LOG_COMPILER = $(TEST_RUNNER)
@@ -21,9 +15,5 @@ LOG_COMPILER = $(TEST_RUNNER)
 AM_LDFLAGS         = $(LIBTOOL_WRAPPER_LDFLAGS)
 LDADD              = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm
 AM_CPPFLAGS        = -I$(top_srcdir)/include -D_POSIX_C_SOURCE=200809L
-AM_CFLAGS          = @PHOTON_CFLAGS@ @MPI_CFLAGS@
-AM_CFLAGS         += @CHECK_CFLAGS@ @HWLOC_CFLAGS@
+AM_CFLAGS          = @MPI_CFLAGS@ @CHECK_CFLAGS@ @HWLOC_CFLAGS@
 
-if HAVE_PHOTON
-LDADD            += @PHOTON_LIBS@
-endif

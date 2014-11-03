@@ -8,7 +8,6 @@ PERFTESTS               =
 
 if ENABLE_LENGTHY_TESTS
 PERFTESTS += \
-        perfmain \
         time_gas_alloc \
         time_gas_addr_trans \
         time_lco_chan \
@@ -20,7 +19,6 @@ PERFTESTS += \
         time_lco_alltoall
 else
 check_PROGRAMS += \
-        perfmain \
         time_gas_alloc \
         time_gas_addr_trans \
         time_lco_chan \
@@ -37,10 +35,9 @@ LOG_COMPILER = $(TEST_RUNNER)
 
 AM_LDFLAGS         = $(LIBTOOL_WRAPPER_LDFLAGS)
 LDADD              = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ @MPI_LIBS@ -lm
-AM_CPPFLAGS        = -I$(top_srcdir)/include -I$(top_srcdir)/tests/performance/common -D_POSIX_C_SOURCE=200809L
+AM_CPPFLAGS        = -I$(top_srcdir)/include -D_POSIX_C_SOURCE=200809L
 AM_CFLAGS          = @MPI_CFLAGS@ @CHECK_CFLAGS@ @HWLOC_CFLAGS@
 
-perfmain_SOURCES		= perfmain.c
 time_gas_alloc_SOURCES		= time_gas_alloc.c
 time_gas_addr_trans_SOURCES	= time_gas_addr_trans.c
 time_lco_chan_SOURCES		= time_lco_chan.c
