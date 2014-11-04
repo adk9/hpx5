@@ -15,14 +15,10 @@ photonRequest photon_get_request(int proc) {
   assert(proc >= 0 && proc < _photon_nproc);
 
   rt = photon_processes[proc].request_table;
-  // skip index 0 since it is our NULL_COOKIE
-  do {
-    req_curr = sync_fadd(&rt->curr, 1, SYNC_RELAXED);
-  } while (!(req_curr % rt->size));
-
-  req_ind = req_curr % rt->size;
+  req_curr = sync_fadd(&rt->count, 1, SYNC_RELAXED);
+  // offset request index by 1  since 0 is our NULL_COOKIE
+  req_ind = (req_curr % rt->size) + 1;
   tail = sync_load(&rt->tind, SYNC_RELAXED);
-
   if (req_ind == tail) {
     log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
     return NULL;
@@ -57,7 +53,7 @@ photonRequest photon_lookup_request(photon_rid rid) {
     log_err("Unknown proc (%u) obtained from rid: 0x%016lx", proc, rid);
     return NULL;
   }
-  if (id >= 0 && id < rt->size) {
+  if (id > 0 && id <= rt->size) {
     return &rt->reqs[id];
   }
   else {
@@ -72,7 +68,7 @@ int photon_count_request(int proc) {
   if (proc >= 0 && proc < _photon_nproc) {
     rt = photon_processes[proc].request_table;
     tind = sync_load(&rt->tind, SYNC_RELAXED);
-    curr = sync_load(&rt->curr, SYNC_RELAXED);
+    curr = sync_load(&rt->count, SYNC_RELAXED);
     return (curr % rt->size) - (tind - rt->size);
   }
   else {
@@ -84,7 +80,7 @@ int photon_free_request(photonRequest req) {
   photonRequestTable rt;
   uint32_t new_tind;
   rt = photon_processes[req->proc].request_table;
-  new_tind = (req->index == (rt->size - 1))?0:req->index;
+  new_tind = req->index % rt->size;
   sync_cas(&rt->tind, req->index-1, new_tind, SYNC_RELAXED, SYNC_RELAXED);
   return PHOTON_OK;
 }

@@ -145,11 +145,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       goto error_exit_bt;
     }
     photonRequestTable rt = photon_processes[i].request_table;
-    rt->curr = 1;
-    rt->cind = 1;
+    rt->count = 0;
+    rt->cind = 0;
     rt->tind = 0;
     rt->size = DEF_NUM_REQUESTS;
-    rt->reqs = (photonRequest)malloc(DEF_NUM_REQUESTS * sizeof(struct photon_req_t));
+    rt->reqs = (photonRequest)malloc((DEF_NUM_REQUESTS + 1) * sizeof(struct photon_req_t));
     if (!rt->reqs) {
       log_err("Could not allocate request descriptors for proc %d", i);
       goto error_exit_bt;
