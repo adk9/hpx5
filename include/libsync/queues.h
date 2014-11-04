@@ -16,7 +16,8 @@
 /// ----------------------------------------------------------------------------
 /// @file include/libsync/queues.h
 /// ----------------------------------------------------------------------------
-#include "hpx/attributes.h"
+#include <config.h>
+#include <hpx/attributes.h>
 #include "cptr.h"
 
 typedef struct queue {
