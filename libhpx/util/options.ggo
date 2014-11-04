@@ -49,7 +49,7 @@ int optional argoptional
 option "hpx-loglevel" - "set the logging level"
 typestr="level"
 values="default","boot","sched","gas","lco","net","trans","parcel","all"
-enum optional argoptional
+enum optional argoptional multiple
 
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
