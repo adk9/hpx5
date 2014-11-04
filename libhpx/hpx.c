@@ -158,8 +158,17 @@ int hpx_init(int *argc, char ***argv) {
 }
 
 
-/// Called to start up the HPX runtime.
-int system_startup(void) {
+/// Called to run HPX.
+int
+hpx_run(hpx_action_t act, const void *args, size_t size) {
+  if (here->rank == 0) {
+    // start the main process. enqueue parcels directly---schedulers
+    // don't exist yet
+    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
+                                    HPX_ACTION_NULL, HPX_NULL, true);
+    network_rx_enqueue(here->network, p);
+  }
+
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
 
@@ -175,28 +184,6 @@ int system_startup(void) {
 
   // and cleanup the system
   return _cleanup(here, e);
-}
-
-/// Called to run HPX.
-int
-hpx_run(hpx_action_t act, const void *args, size_t size) {
-  if (here->rank == 0) {
-    // start the main process. enqueue parcels directly---schedulers
-    // don't exist yet
-    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
-                                    HPX_ACTION_NULL, HPX_NULL, true);
-    network_rx_enqueue(here->network, p);
-  }
-
-  // start the HPX runtime (scheduler) on all of the localities
-  return hpx_start();
-}
-
-
-// This function is used to start the HPX scheduler and runtime on
-// all of the available localities.
-int hpx_start(void) {
-  return system_startup();
 }
 
 
