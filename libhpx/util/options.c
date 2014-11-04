@@ -114,10 +114,14 @@ static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
 #undef _SET_VAR
 
   if (opts->hpx_loglevel_given) {
-    if (opts->hpx_loglevel_arg == hpx_loglevel_arg_all)
-      cfg->loglevel = -1;
-    else
-      cfg->loglevel = (1 << opts->hpx_loglevel_arg);
+    cfg->loglevel = 0;
+    for (int i = 0; i < opts->hpx_loglevel_given; ++i) {
+      if (opts->hpx_loglevel_arg[i] == hpx_loglevel_arg_all) {
+        cfg->loglevel = -1;
+        break;
+      }
+      cfg->loglevel |= (1 << opts->hpx_loglevel_arg[i]);
+    }
   }
 
   if (opts->hpx_configfile_given) {
