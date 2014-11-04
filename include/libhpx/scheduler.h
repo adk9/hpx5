@@ -13,12 +13,6 @@
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
-#include "hpx/hpx.h"
-#include "libsync/sync.h"
-#include "libsync/lockable_ptr.h"
-#include "libhpx/stats.h"
-
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/scheduler.h
 /// @brief The internal interface to the scheduler.
 ///
@@ -26,7 +20,13 @@
 /// threads and local-control-objects (monitor/condition variables). It is
 /// designed to work as part of a distributed set of schedulers to support a
 /// large-scale, lightweight thread-based application.
-/// ----------------------------------------------------------------------------
+
+
+#include <hpx/hpx.h>
+#include <libsync/sync.h>
+#include <libsync/lockable_ptr.h>
+#include <libsync/queues.h>
+#include <libhpx/stats.h>
 
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
@@ -43,7 +43,13 @@ struct barrier;
 struct cvar;
 /// @}
 
-/// ----------------------------------------------------------------------------
+typedef two_lock_queue_t yield_queue_t;
+#define YIELD_QUEUE_INIT sync_two_lock_queue_init
+#define YIELD_QUEUE_FINI sync_two_lock_queue_fini
+#define YIELD_QUEUE_ENQUEUE sync_two_lock_queue_enqueue
+#define YIELD_QUEUE_DEQUEUE sync_two_lock_queue_dequeue
+
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -57,10 +63,10 @@ struct cvar;
 /// by updating the worker's scheduler pointer and the scheduler's worker
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
-/// ----------------------------------------------------------------------------
 typedef struct scheduler {
-  volatile int     next_id;
-  volatile int next_tls_id;
+  yield_queue_t       yielded;
+  volatile int        next_id;
+  volatile int    next_tls_id;
   int                   cores;
   int               n_workers;
   unsigned int    backoff_max;
@@ -70,90 +76,89 @@ typedef struct scheduler {
 } scheduler_t;
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate and initialize a new scheduler.
 ///
-/// @param       cores - the number of processors this scheduler will run on
-/// @param     workers - the number of worker threads to start
-/// @param  stack_size - the size of the stacks to allocate
-/// @param backoff_max - the upper bound for worker backoff
-/// @param  statistics - the flag that indicates if statistics are on or off.
-/// @returns           - the scheduler object, or NULL if there was an error.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL scheduler_t *scheduler_new(int cores, int workers, int stack_size,
-                                        unsigned int backoff_max, bool stats);
+/// @param        cores The number of processors this scheduler will run on.
+/// @param      workers The number of worker threads to start.
+/// @param   stack_size The size of the stacks to allocate.
+/// @param  backoff_max The upper bound for worker backoff.
+/// @param   statistics The flag that indicates if statistics are on or off.
+///
+/// @returns            The scheduler object, or NULL if there was an error.
+scheduler_t *scheduler_new(int cores, int workers, int stack_size,
+                           unsigned int backoff_max, bool stats)
+  HPX_INTERNAL;
 
-/// ----------------------------------------------------------------------------
+
 /// Finalize and free the scheduler object.
 ///
 /// The scheduler must already have been shutdown with
 /// scheduler_shutdown(). Shutting down a scheduler that is active, or was
 /// aborted with scheduler_abort(), results in undefined behavior.
 ///
-/// @param s - the scheduler to free.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_delete(scheduler_t *s)
-  HPX_NON_NULL(1);
+/// @param    scheduler The scheduler to free.
+void scheduler_delete(scheduler_t *scheduler)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Starts the scheduler.
 ///
 /// This starts all of the low-level scheduler threads. After this call, threads
 /// can be spawned using the scheduler_spawn() routine. Parcels for this queue
 /// may come from the network, or from the main thread.
 ///
-/// @param config - the configuration object
-/// @returns      - non-0 if there is a startup problem
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int scheduler_startup(scheduler_t*);
+/// @param    scheduler The scheduler to start.
+///
+/// @returns            LIBHPX_OK or an error if there is a startup problem.
+int scheduler_startup(scheduler_t *scheduler)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Stops the scheduler cooperatively.
 ///
 /// This asks all of the threads to shutdown the next time they get a chance to
 /// schedule. It is nonblocking.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_shutdown(scheduler_t*);
+///
+/// @param    scheduler The scheduler to shutdown.
+void scheduler_shutdown(scheduler_t *scheduler)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Join the scheduler at shutdown.
 ///
 /// This will wait until all of the scheduler's worker threads have shutdown.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_join(scheduler_t*);
+///
+/// @param    scheduler The scheduler to join.
+void scheduler_join(scheduler_t *scheduler)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Stops the scheduler asynchronously.
 ///
 /// This cancels and joins all of the scheduler threads, and then returns. It
 /// should only be called by the main thread that called scheduler_startup().
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_abort(scheduler_t*);
+///
+/// @param    scheduler The scheduler to abort.
+void scheduler_abort(scheduler_t *scheduler)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Spawn a new user-level thread for the parcel.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_spawn(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
+///
+void scheduler_spawn(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Yield a user-level thread.
 ///
 /// This triggers a scheduling event, and possibly selects a new user-level
 /// thread to run. If a new thread is selected, this moves the thread into the
 /// next local epoch, and also makes the thread available to be stolen within
 /// the locality.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_yield(void);
+void scheduler_yield(void)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Wait for an condition.
 ///
 /// This suspends execution of the current user level thread until the condition
@@ -163,58 +168,50 @@ HPX_INTERNAL void scheduler_yield(void);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param  lco - the lco containing the condition
-/// @param cvar - the LCO condition we'd like to wait for
-/// @returns    - HPX_SUCCESS or HPX_LCO_ERROR
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
-  HPX_NON_NULL(1, 2);
+/// @param         lock The lock protecting the condition.
+/// @param         cvar The condition we'd like to wait for.
+///
+/// @returns            LIBHPX_OK or an error
+int scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Signal a condition.
 ///
-/// The calling thread must hold the lock on whatever LCO is protecting the
-/// condition. This call is synchronous (MESA style) and one waiting thread will
-/// be woken up.
+/// The calling thread must hold the lock protecting the condition. This call is
+/// synchronous (MESA style) and one waiting thread will be woken up.
 ///
-/// @param   cvar - the LCO condition we'd like to signal
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal(struct cvar *cond)
-  HPX_NON_NULL(1);
+/// @param         cvar The condition we'd like to signal.
+void scheduler_signal(struct cvar *cond)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Signal a condition.
 ///
-/// The calling thread must hold the lock on whatever LCO is protecting the
-/// condition. This call is synchronous (MESA style) and all waiting threads
-/// will be woken up.
+/// The calling thread must hold the lock protecting the condition. This call is
+/// synchronous (MESA style) and all waiting threads will be woken up.
 ///
-/// @param   cvar - the LCO condition we'd like to signal
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal_all(struct cvar *cvar)
-  HPX_NON_NULL(1);
+/// @param         cvar The condition we'd like to signal.
+void scheduler_signal_all(struct cvar *cvar)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Signal an error condition.
 ///
-/// The calling thread must hold the lock on whatever LCO is protecting the
-/// condition. This call is synchronous (MESA style) and all of the waiting
-/// threads will be woken up, with the return value of HPX_LCO_ERROR. The
-/// user-supplied error can be retrieved from the condition.
+/// The calling thread must hold the lock on protecting the condition. This call
+/// is synchronous (MESA style) and all of the waiting threads will be woken up,
+/// with the return value of HPX_LCO_ERROR. The user-supplied error can be
+/// retrieved from the condition.
 ///
-/// @param cvar - the LCO condition we'd like to signal
-/// @param code - the error code to set in the condition
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
-  HPX_NON_NULL(1);
+/// @param         cvar The condition we'd like to signal an error on.
+/// @param         code The error code to set in the condition.
+void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Get the parcel bound to the current executing thread.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *scheduler_current_parcel(void);
+hpx_parcel_t *scheduler_current_parcel(void)
+  HPX_INTERNAL;
+
 
 #endif // LIBHPX_SCHEDULER_H

@@ -14,6 +14,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -24,16 +25,10 @@ typedef struct {
   void *value;
 } _node_t;
 
-static __thread _node_t *_free = NULL;
-
 static _node_t * _node_new(void *value) {
-  _node_t *node = _free;
-  if (node) {
-    _free = node->next.p;
-  }
-  else {
-    node = malloc(sizeof(*node));
-  }
+  _node_t *node = malloc(sizeof(*node));
+  assert(node);
+
   node->next.p = NULL;
   node->next.c = 0;
   node->value = value;
@@ -42,9 +37,7 @@ static _node_t * _node_new(void *value) {
 
 
 static void _node_delete(void *node) {
-  _node_t *n = node;
-  n->next.p = _free;
-  _free = n;
+  free(node);
 }
 
 

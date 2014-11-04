@@ -140,6 +140,12 @@ int hpx_init(int *argc, char ***argv) {
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
 
+  return HPX_SUCCESS;
+}
+
+
+/// Called to run HPX.
+int hpx_run(hpx_action_t act, const void *args, size_t size) {
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
@@ -150,23 +156,15 @@ int hpx_init(int *argc, char ***argv) {
     hpx_parcel_set_action(p, light_network);
     hpx_parcel_set_target(p, HPX_HERE);
 
-    // enqueue directly---network exists but schedulers don't yet
-    network_rx_enqueue(here->network, p);
+    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
   }
 
-  return HPX_SUCCESS;
-}
-
-
-/// Called to run HPX.
-int
-hpx_run(hpx_action_t act, const void *args, size_t size) {
   if (here->rank == 0) {
     // start the main process. enqueue parcels directly---schedulers
     // don't exist yet
     hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
                                     HPX_ACTION_NULL, HPX_NULL, true);
-    network_rx_enqueue(here->network, p);
+    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
