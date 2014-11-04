@@ -36,7 +36,6 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
-#include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
 #include "libhpx/stats.h"
@@ -206,12 +205,6 @@ static hpx_parcel_t *_steal(void) {
   } //
 
   return p;
-}
-
-
-/// Check the network during scheduling.
-static hpx_parcel_t *_network(void) {
-  return network_rx_dequeue(here->network);
 }
 
 
@@ -497,9 +490,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
 /// This is the continuation that we use to yield a thread.
 ///
-/// This make flagrantly bad use of the network queue to deal with a number of
-/// issues related to yielding threads and workstealing queues.
-///
 /// 1) We can't put a yielding thread onto our workqueue with the normal push
 ///    operation, because two threads who are yielding will prevent progress
 ///    in that scheduler.
@@ -513,11 +503,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-/// We already have the network RX queue, so we'll use it for now. It's checked
-/// before stealing though, so two yielders could theoretically inhibit
-/// liveness. Ultimately we'll want a separate yielded queue (or queues) to deal
-/// with the issue.
-static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
+static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
