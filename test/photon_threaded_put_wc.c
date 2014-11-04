@@ -20,7 +20,7 @@
 #define PHOTON_TAG UINT32_MAX
 #define SQ_SIZE 10
 
-static int ITERS = 20;
+static int ITERS = 10000;
 
 static int sizes[] = {
   0,
