@@ -315,18 +315,20 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
-  // no ready parcels try to get some work from the network, if we're not in a
-  // hurry
-  if (!fast)
-    if ((p = _network())) {
+  // no ready parcels try to see if there are any yielded threads
+  if (!fast) {
+    if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
       assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
       goto exit;
     }
+  }
 
   // try to steal some work, if we're not in a hurry
-  if (!fast)
-    if ((p = _steal()))
+  if (!fast) {
+    if ((p = _steal())) {
       goto exit;
+    }
+  }
 
   // statistically-speaking, we consider this condition to be a spin
   profile_ctr(++self.stats.spins);
@@ -344,8 +346,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   //
   // If we're not in a hurry, we'd like to backoff so that we don't thrash the
   // network port and other people's scheduler queues.
-  if (!fast)
+  if (!fast) {
     _backoff();
+  }
 
   p = hpx_parcel_acquire(NULL, 0);
 
@@ -507,7 +510,7 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
-  network_rx_enqueue(here->network, prev);
+  YIELD_QUEUE_ENQUEUE(&here->sched->yielded, prev);
   return HPX_SUCCESS;
 }
 
@@ -523,7 +526,7 @@ void scheduler_yield(void) {
   assert(parcel_get_stack(to));
   assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_network_push, self.current);
+  thread_transfer(to, _checkpoint_yield, self.current);
 }
 
 
