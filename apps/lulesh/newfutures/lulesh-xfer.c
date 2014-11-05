@@ -246,6 +246,7 @@ int _SBN3_sends_action(pSBN *psbn)
   hpx_lco_netfuture_setat(domain->sbn3[gen], fi, sendcnt*3 + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
+  hpx_gas_free(nodal_global, HPX_NULL);
 
   return HPX_SUCCESS;
 }
@@ -413,6 +414,7 @@ int _PosVel_sends_action(pSBN *psbn)
   hpx_lco_netfuture_setat(domain->posvel[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
+  hpx_gas_free(nodal_global, HPX_NULL);
 
   return HPX_SUCCESS;
 }
