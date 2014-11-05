@@ -265,12 +265,13 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     detect_termination(args->termination_lco);
 
   } else if (get_termination() == PROCESS_TERMINATION) {
-    hpx_addr_t termination = hpx_lco_future_new(0);
-    hpx_addr_t process = hpx_process_new(termination);
+    hpx_addr_t process = hpx_process_new(args->termination_lco);
+    hpx_addr_t termination_lco = hpx_lco_future_new(0);
     hpx_process_call(process, index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), HPX_NULL);
-    hpx_lco_wait(termination);
-    hpx_lco_delete(termination, HPX_NULL);
+    hpx_lco_wait(termination_lco);
+    hpx_lco_delete(termination_lco, HPX_NULL);
     hpx_process_delete(process, HPX_NULL);
+    hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
 
   } else if (get_termination() == AND_LCO_TERMINATION) {
     // printf("Calling first visit vertex.\n");
