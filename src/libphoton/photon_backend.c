@@ -627,9 +627,9 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
   
-  // photon_post_send_buffer_rdma() initiates a sender initiated handshake.	For this reason,
+  // photon_post_send_buffer_rdma() initiates a sender initiated handshake.For this reason,
   // we don't care when the function is completed, but rather when the transfer associated with
-  // this handshake is completed.	 This will be reflected in the LEDGER by the corresponding
+  // this handshake is completed. This will be reflected in the LEDGER by the corresponding  
   // photon_send_FIN() posted by the receiver.
   req->state = REQUEST_PENDING;
   req->type = LEDGER;
@@ -637,7 +637,6 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   req->tag = tag;
   req->length = size;
   req->events = 1;
-  req->flags = (eager)?REQUEST_FLAG_EAGER:REQUEST_FLAG_NIL;
 
   if (request != NULL) {
     *request = req->id;
@@ -652,12 +651,11 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       photon_rid eager_cookie;
       photonLedgerEntry entry;
       photonEagerBuf eb;
+      uint64_t offset;
 
       eb = photon_processes[proc].remote_eager_buf;
-      if (((eb->curr % _photon_ebsize) + size) > _photon_ebsize)
-        NEXT_EAGER_BUF(eb, size);
-
-      eager_addr = (uintptr_t)eb->remote.addr + (eb->curr % _photon_ebsize);
+      offset = photon_rdma_eager_buf_get_offset(eb, size);      
+      eager_addr = (uintptr_t)eb->remote.addr + offset;
       eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | req->id;
       
       dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
@@ -669,7 +667,6 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 	dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
 	goto error_exit;
       }
-      NEXT_EAGER_BUF(eb, size);
 
       curr = NEXT_ENTRY(photon_processes[proc].remote_eager_ledger);
       dbg_trace("new eager curr == %d", curr);
@@ -727,6 +724,8 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       }
     }
   }
+
+  req->flags = (eager)?REQUEST_FLAG_EAGER:REQUEST_FLAG_NIL;
   
   return PHOTON_OK;
 
@@ -1131,17 +1130,27 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
 
   if (req->flags & REQUEST_FLAG_EAGER) {
     photonEagerBuf eb = photon_processes[proc].local_eager_buf;
-    if ((eb->curr % _photon_ebsize + size) > _photon_ebsize)
-      NEXT_EAGER_BUF(eb, size);
-    dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&eb->data[eb->curr % _photon_ebsize]);
-    memcpy(ptr, &eb->data[eb->curr % _photon_ebsize], size);
-    memset(&eb->data[eb->curr % _photon_ebsize], 0, size);
-    NEXT_EAGER_BUF(eb, size);
-    //req->state = REQUEST_COMPLETED;
-    req->flags |= REQUEST_FLAG_EDONE;
+    uint64_t offset, curr, new;
+
+    curr = sync_load(&eb->curr, SYNC_ACQUIRE);
+    offset = curr % eb->size;
+    if ((offset + size) > eb->size) {
+      new = (eb->size - offset) + curr + size;
+      offset = 0;
+    }
+    else {
+      new = curr + size;
+    }
+    
+    if (sync_cas(&eb->curr, curr, new, SYNC_ACQ_REL, SYNC_RELAXED)) {
+      dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&eb->data[offset]);
+      memcpy(ptr, &eb->data[offset], size);
+      memset(&eb->data[offset], 0, size);
+      req->flags |= REQUEST_FLAG_EDONE;
+    }
     return PHOTON_OK;
   }
-
+  
   dbg_trace("Posted Request ID: %d/0x%016lx", proc, request);
 
   {
@@ -1399,7 +1408,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
 
     i=(i+1)%_photon_nproc;
     // check if an event occurred on the RDMA end of things
-    curr = NEXT_ENTRY(photon_processes[i].local_fin_ledger);
+    curr = photon_processes[i].local_fin_ledger->curr;
     dbg_trace("Wait All Out: %d", curr);
     curr_entry = &(photon_processes[i].local_fin_ledger->entries[curr]);
 
@@ -1415,6 +1424,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
         break;
       }
       curr_entry->request = 0;
+      INC_ENTRY(photon_processes[i].local_fin_ledger);
     }
   }
   

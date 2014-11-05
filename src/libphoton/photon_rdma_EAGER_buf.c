@@ -3,6 +3,7 @@
 
 #include "photon_rdma_EAGER_buf.h"
 #include "logging.h"
+#include "libsync/include/sync.h"
 
 photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size) {
   photonEagerBuf new;
@@ -17,7 +18,8 @@ photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int siz
   
   new->data = eager_buffer;
   memset(new->data, 0, sizeof(uint8_t) * size);
-  
+
+  new->size = size;
   new->curr = 0;
   new->ackp = 0;
 
@@ -29,4 +31,21 @@ error_exit:
 
 void photon_rdma_eager_buf_free(photonEagerBuf buf) {
   free(buf);
+}
+
+uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, uint64_t size) {
+  uint64_t curr, new, offset;
+  do {
+    curr = sync_load(&buf->curr, SYNC_ACQUIRE);
+    offset = curr % buf->size;
+    if ((offset + size) > buf->size) {
+      new = (buf->size - offset) + curr + size;
+      offset = 0;
+    }
+    else {
+      new = curr + size;
+    }
+  } while (!sync_cas(&buf->curr, curr, new, SYNC_ACQ_REL, SYNC_RELAXED));
+  
+  return offset;
 }
