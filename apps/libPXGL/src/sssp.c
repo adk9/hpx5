@@ -131,7 +131,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     const uint64_t old_distance = args->distance;
 
     // increase active_count
-    _increment_active_count(num_edges-1);
+    if (get_termination() == COUNT_TERMINATION) _increment_active_count(num_edges);
 
     hpx_addr_t edges = HPX_NULL;
     if (get_termination() == AND_LCO_TERMINATION)
@@ -159,12 +159,18 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(uint64_t),NULL,0);
     hpx_call_sync(args->sssp_stat, _useful_work_update, NULL,0,NULL,0);
 #endif
-  } else if (get_termination() == COUNT_TERMINATION) {
+  } else {
     hpx_gas_unpin(target);
-    _increment_finished_count();
 #ifdef GATHER_STAT
     hpx_call_sync(args->sssp_stat, _useless_work_update, NULL,0,NULL,0);
 #endif
+  }
+
+  // Finished count increment could be hoisted up to the points where
+  // the last "important" thing happens, but the code would be much
+  // uglier.
+  if (get_termination() == COUNT_TERMINATION) {
+    _increment_finished_count();
   }
 
   // printf("Distance Action finished on %" PRIu64 "\n", target);
@@ -213,7 +219,7 @@ static void detect_termination(const hpx_addr_t termination_lco) {
     uint64_t activity_counts[2];
     hpx_lco_get(termination_count_lco, sizeof(activity_counts), activity_counts);
     const uint64_t active_count = activity_counts[0];
-    const uint64_t finished_count = activity_counts[0];
+    const uint64_t finished_count = activity_counts[1];
     int64_t activity_count = active_count - finished_count;
     // printf("activity_count: %" PRId64 ", phase: %d\n", activity_count, phase);
     if (activity_count != 0) {
