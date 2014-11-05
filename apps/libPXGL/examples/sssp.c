@@ -153,7 +153,7 @@ static int _main_action(_sssp_args_t *args) {
          el.num_vertices, el.num_edges);
 
   // Open the results file and write the basic info out
-  FILE *results_file = fopen("sample.ss.chk", "a+");
+  FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
   fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
   fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
