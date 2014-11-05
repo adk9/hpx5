@@ -58,8 +58,7 @@ typedef struct {
 HPX_INTERNAL bitmap_t *cr_bitmap_new(void) HPX_MALLOC;
 HPX_INTERNAL void cr_bitmap_delete(bitmap_t *b) HPX_NON_NULL(1);
 
-HPX_INTERNAL void cr_bitmap_add(bitmap_t *b, int i) HPX_NON_NULL(1);
-HPX_INTERNAL bool cr_bitmap_test(bitmap_t *b) HPX_NON_NULL(1);
+HPX_INTERNAL bool cr_bitmap_add_and_test(bitmap_t *b, int64_t i) HPX_NON_NULL(1);
 
 HPX_INTERNAL int parcel_recover_credit(hpx_parcel_t *p)
   HPX_NON_NULL(1);
