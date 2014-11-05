@@ -8,7 +8,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <check.h>
 #include <pthread.h>
 #include <assert.h>
 #include <semaphore.h>

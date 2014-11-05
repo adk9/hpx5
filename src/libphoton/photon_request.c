@@ -78,10 +78,12 @@ int photon_count_request(int proc) {
 
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
-  uint32_t new_tind;
+  uint32_t from, to;
+  dbg_trace("Clearing request (ind=%u) 0x%016lx", req->index, req->id);
   rt = photon_processes[req->proc].request_table;
-  new_tind = req->index % rt->size;
-  sync_cas(&rt->tind, req->index-1, new_tind, SYNC_RELAXED, SYNC_RELAXED);
+  from = req->index - 1;
+  to = req->index % rt->size;
+  sync_cas(&rt->tind, from, to, SYNC_RELAXED, SYNC_RELAXED);
   return PHOTON_OK;
 }
 
