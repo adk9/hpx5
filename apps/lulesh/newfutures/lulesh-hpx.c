@@ -206,7 +206,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   // don't need this domain to be pinned anymore---let it move
   hpx_gas_unpin(local);
 
-  //  printf("============================================================== domain %d iter %d\n", domain->rank, n);
+  // printf("============================================================== domain %d iter %d\n", domain->rank, n);
 
   // 5. spawn the next epoch
   unsigned long next = n + 1;
@@ -293,7 +293,8 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  cfg.total_size = 4 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
+  cfg.max_size = 4 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
+  cfg.max_number = 4 * 26 * nDoms;
   hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));

@@ -227,7 +227,7 @@ _progress_action(void *args) {
 	dbg_printf0("Progress thread putting to %p on %d from %d\n", pwc_args->remote_ptr, pwc_args->remote_rank, hpx_get_my_rank());
 	assert((size_t)pwc_args->remote_ptr + pwc_args->size < 
 	       _netfuture_table.buffers[pwc_args->remote_rank].addr + 
-	       _netfuture_cfg.total_size);
+	       _netfuture_cfg.max_size);
 	phstat = 
 	  photon_put_with_completion(pwc_args->remote_rank, 
 				     pwc_args->data, pwc_args->size, 
@@ -318,22 +318,22 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 
   _table_lock();
   _netfuture_table.curr_index = 0;
-  _netfuture_table.curr_capacity = _netfuture_cfg.total_number;
+  _netfuture_table.curr_capacity = _netfuture_cfg.max_array_number;
   _netfuture_table.curr_offset = 0;
   _netfuture_table.buffers = calloc(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
-  _netfuture_table.mem_size = _netfuture_cfg.total_size;
-  _netfuture_table.base_gas = hpx_gas_alloc(_netfuture_cfg.total_size);
+  _netfuture_table.mem_size = _netfuture_cfg.max_size;
+  _netfuture_table.base_gas = hpx_gas_alloc(_netfuture_cfg.max_size);
   assert(_netfuture_table.base_gas != HPX_NULL);
   dbg_printf("GAS base = 0x%"PRIx64".\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
 
 #if DEBUG
-  memset(_netfuture_table.base, -1, _netfuture_cfg.total_size);
+  memset(_netfuture_table.base, -1, _netfuture_cfg.max_size);
 #endif
 
   dbg_printf("  At %d netfutures base = %p\n", hpx_get_my_rank(), _netfuture_table.base);
-  dbg_printf0("  At %d netfutures base = %p top = %p\n", hpx_get_my_rank(), _netfuture_table.base, _netfuture_table.base + _netfuture_cfg.total_size);
+  dbg_printf0("  At %d netfutures base = %p top = %p\n", hpx_get_my_rank(), _netfuture_table.base, _netfuture_table.base + _netfuture_cfg.max_size);
 
   if (hpx_get_num_ranks() > 1) {
     for (int i = 0; i < hpx_get_num_ranks(); i++) {
@@ -366,13 +366,13 @@ void hpx_netfutures_fini() {
 
 hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
   if (cfg != NULL) {
-    assert(cfg->total_size != 0);
-    assert(cfg->total_number != 0);
-    _netfuture_cfg.total_size = cfg->total_size + cfg->total_number*sizeof(_netfuture_t);
-    _netfuture_cfg.total_number = cfg->total_number;
+    assert(cfg->max_size != 0);
+    assert(cfg->max_array_number != 0);
+    _netfuture_cfg.max_size = cfg->max_size + cfg->max_number*sizeof(_netfuture_t);
+    _netfuture_cfg.max_array_number = cfg->max_array_number;
   }
 
-  printf("Initializing netfutures with %zu bytes per rank\n", _netfuture_cfg.total_size);
+  printf("Initializing netfutures with %zu bytes per rank\n", _netfuture_cfg.max_size);
 
   hpx_addr_t ag = hpx_lco_allgather_new(hpx_get_num_ranks(), sizeof(struct photon_buffer_t));
   if (hpx_get_my_rank() != 0)
@@ -540,11 +540,11 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
 
   int num_futures_per_rank = (n / hpx_get_num_ranks()) + ((n % hpx_get_num_ranks()) % 2);
   assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(_netfuture_t))
-	 < _netfuture_cfg.total_size);
+	 < _netfuture_cfg.max_size);
   
     assert(_netfuture_table.curr_offset + n * (size + sizeof(_netfuture_t))
-                <  _netfuture_cfg.total_size * hpx_get_num_ranks());
-    assert(_netfuture_table.curr_index + 1 < _netfuture_cfg.total_number);
+                <  _netfuture_cfg.max_size * hpx_get_num_ranks());
+    assert(_netfuture_table.curr_index + 1 < _netfuture_cfg.max_array_number);
 
 
 
@@ -632,16 +632,16 @@ _enqueue_put_with_completion(hpx_netfuture_t *future,  int id, size_t size, void
 
   if ((size_t)args->remote_ptr + size >= 
       _netfuture_table.buffers[args->remote_rank].addr + 
-      _netfuture_cfg.total_size)
+      _netfuture_cfg.max_size)
     printf("ERROR on %d: bad address: %zu >= %zu on %d\n", 
 	   hpx_get_my_rank(), args->remote_ptr + size,
 	   _netfuture_table.buffers[args->remote_rank].addr 
-	   + _netfuture_cfg.total_size,
+	   + _netfuture_cfg.max_size,
 	   args->remote_rank);
 
   assert((size_t)args->remote_ptr < 
 	 _netfuture_table.buffers[args->remote_rank].addr + 
-	 _netfuture_cfg.total_size);
+	 _netfuture_cfg.max_size);
 
   PWC_QUEUE_ENQUEUE(pwc_q, args);
 }
