@@ -1,54 +1,113 @@
-Building and Running HPX
+# HPX
+
+Building and Running a network-capable HPX
 ========================================== 
 
-HPX will build and run successfully without any network backend, but
-to be able to use HPX with multiple seperate processes, there are several
-pre-requisites.
+There are several pre-requisites to successfully configure and run HPX.
 
 Requirements
 ------------
+* autoconf 2.6.3+
+* libtool, pkg-config (only required for developer builds)
 * MPI (optional)
-* Photon (optional, requires MPI also)
+* check           (optional)
+* doxygen         (optional)
+* Photon          (optional / embedded with HPX)
+* jemalloc        (optional / embedded with HPX)
+* hwloc           (optional / embedded with HPX)
 
-At present, MPI is required for networking by HPX. However, Photon may
-be used in addition to take advantage of RDMA over IB.
+HPX can build and run successfully without any network backend, but at
+present, MPI or Photon is required for networking by HPX. Photon can
+take advantage of RDMA over IB resulting in better performance.
 
 Configuration
 -------------
+The HPX configuration relies on `pkg-config` to look for installed
+packages. For custom builds using non-default configuration options,
+you need to a) point to the appropriate `pkg-config` (.pc) files or
+b) set the appropriate `LIBS` and `CFLAGS` environment variables.
+
+See `./configure --help` for further details.
+
 The easiest way to configure HPX is as follows: 
 
-* Download and build Photon 
+### Configuring with MPI
 
-* "./configure --with-mpi --with-photon"
+* Install MPI.
 
-Example Configuration on Cray Systems
----------------------
-* Install check dependency
+* By default, HPX will try to find `ompi.pc` installed by Open MPI.
+  * Instead, if you have MPICH installed, you need to specify:
+    `$ ./configure --with-mpi=mpich` to instruct `configure` to look for
+    `mpich.pc`.
+  * If the relecant `pkg-config` file is not installed in the standard
+    system path (say, for a local MPI installation), append the
+    relevant paths to `$PKG_CONFIG_PATH`. I have installed Open MPI in
+    `$HOME/opt/`; the configure flags I use are:
+    ```
+    $ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/opt/lib/pkgconfig
+    $ ./configure --with-mpi
 
-> module swap PrgEnv-cray PrgEnv-gnu
+* Alternatively, you can also set `MPI_CFLAGS` and `MPI_LIBS`
+  appropriately. Eg. `$ ./configure --with-mpi
+  MPI_CFLAGS=$MPI_HOME/include MPI_LIBS=$MPI_HOME/lib`
 
-Building
---------
-* make
+* Ensure that `mpicc` and `mpirun` are in your `$PATH`.
+
+### Configuring with Photon
+
+* The instructions for building with Photon are similar to those above
+  (as for MPI), mutatis mutandis:
+  * `--with-photon` flag is required, and the environment variables to
+    be set are `$PHOTON_CFLAGS` and `$PHOTON_LIBS`
+
+### Configuring with the test-suite enabled
+
+* Install the `check` package.
+  * `check` is available in most package repositories.
+  ``` $ sudo apt-get install check
+      $ yum install check
+      $ sudo port install check
+  ``` all should work. Otherwise, build it from the source: [http://check.sourceforge.net/]
+
+* To build and run the unit and performance testsuite enabled:
+
+  ```
+      $ ./configure --with-check --enable-testsuite"
+      $ make check
+  ```
+
+### Cray
+
+On the Cray systems, HPX is known to build with the GNU toolchain:
+
+` > module swap PrgEnv-cray PrgEnv-gnu`
 
 Running
--------
+--------
 
-try running pingpong in hpx/examples:
-"./pingpong 100"
+HPX programs can be run using any of the MPI or PMI launchers such as mpirun/mpiexec.
+E.g. to run the pingpong example,
 
-hpx can benefit from allocators like jemalloc or tcmalloc, try preloading one:
-"LD_PRELOAD=libjemalloc.so ./fibonacci"
-"LD_PRELOAD=libtcmalloc.so ./fibonacci"
+`$ mpirun -np 1 examples/hpx/pingponghpx 100 0 0`
 
-Running test directory
-----------------------
-To run the unit and performance test in tests directory:
+The Photon transport allows further control over device selection using the following
+environment variables:
 
-"./configure --with-mpi --with-photon --with-check --enable-testsuite"
-* make
-
-Grab 2 nodes and 
-* make check
-
-
+Four environment variables are recognized: HPX_USE_ETH_DEV,
+HPX_USE_IB_DEV, HPX_USE_CMA, HPX_USE_BACKEND. E.g.,
+  
+```
+  HPX_USE_ETH_DEV=eth0
+  HPX_USE_IB_DEV=qib0
+  HPX_USE_CMA=0
+  HPX_USE_BACKEND=verbs
+```
+  
+or
+  
+```
+  HPX_USE_ETH_DEV=roce0
+  HPX_USE_IB_DEV=mlx4_1
+  HPX_USE_CMA=1
+  HPX_USE_BACKEND=ugni
+```
