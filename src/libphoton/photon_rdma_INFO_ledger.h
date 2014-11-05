@@ -16,8 +16,8 @@ typedef struct photon_ri_ledger_entry_t {
 
 typedef struct photon_ri_ledger_t {
   photon_ri_ledger_entry *entries;
-  int num_entries;
-  int curr;
+  uint64_t curr;
+  uint32_t num_entries;
   struct photon_buffer_t remote;
 } photon_ri_ledger;
 

@@ -9,9 +9,9 @@ typedef struct photon_rdma_ledger_entry_t {
 
 typedef struct photon_rdma_ledger_t {
   photon_rdma_ledger_entry *entries;
-  int num_entries;
+  uint64_t curr;
+  uint32_t num_entries;
   struct photon_buffer_t remote;
-  int curr;
 } photon_rdma_ledger;
 
 typedef struct photon_rdma_ledger_entry_t * photonLedgerEntry;

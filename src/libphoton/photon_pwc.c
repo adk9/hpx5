@@ -59,7 +59,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     int tadd = 0;
 
     eb = photon_processes[proc].remote_pwc_buf;
-    hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
+    hdr = (photon_eb_hdr *)&(eb->data[eb->curr]);
     hdr->request = remote;
     hdr->addr = (uintptr_t)rptr;
     hdr->length = size;
@@ -72,7 +72,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     tail += tadd;
     *tail = UINT8_MAX;
 
-    eager_addr = (uintptr_t)eb->remote.addr + eb->offset;
+    eager_addr = (uintptr_t)eb->remote.addr + eb->curr;
     rbuf.addr = eager_addr;
     rbuf.size = EB_MSG_SIZE(size+tadd);
     rbuf.priv = shared_storage->buf.priv;
@@ -85,8 +85,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     }
 
     NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size+tadd));
-    if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
-      eb->offset = 0;
+    if ((_photon_ebsize - eb->curr) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
+      eb->curr = 0;
   }
   // do the unpacked 2-put version instead
   else { 
@@ -107,8 +107,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
         goto error_exit;
       }
     }
-    
-    curr = photon_processes[proc].remote_pwc_ledger->curr;
+
+    curr = NEXT_ENTRY(photon_processes[proc].remote_pwc_ledger);
     entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
     rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);
     
@@ -123,7 +123,6 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
       dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", cookie);
       goto error_exit;
     }
-    NEXT_LEDGER_ENTRY(photon_processes[proc].remote_pwc_ledger);
   }
   
   dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
@@ -221,7 +220,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     for (i=start; i<end; i++) {
       // check eager region first
       eb = photon_processes[i].local_pwc_buf;
-      hdr = (photon_eb_hdr *)&(eb->data[eb->offset]);
+      hdr = (photon_eb_hdr *)&(eb->data[eb->curr]);
       if (hdr->head == UINT8_MAX) {
         // now check for tail flag (or we could return to check later)
 	uint16_t size = hdr->length;
@@ -236,8 +235,8 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
         *request = req;
         *flag = 1;
         NEXT_EAGER_BUF(eb, EB_MSG_SIZE(size+tadd));
-        if ((_photon_ebsize - eb->offset) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
-          eb->offset = 0;
+        if ((_photon_ebsize - eb->curr) < EB_MSG_SIZE(__photon_config->cap.small_pwc_size))
+          eb->curr = 0;
         dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
                  size, addr, req);
         memset((void*)hdr, 0, EB_MSG_SIZE(size+tadd));
@@ -251,7 +250,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
         *request = entry_iter->request;
         *flag = 1;
         entry_iter->request = UINT64_MAX;
-        NEXT_LEDGER_ENTRY(photon_processes[i].local_pwc_ledger);
+        NEXT_ENTRY(photon_processes[i].local_pwc_ledger);
         dbg_trace("Popped ledger event with id: 0x%016lx", *request);
         return PHOTON_OK;
       }

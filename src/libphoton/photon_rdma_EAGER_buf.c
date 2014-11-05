@@ -15,15 +15,10 @@ photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int siz
   
   memset(new, 0, sizeof(struct photon_rdma_eager_buf_t));
   
-  //new->entries = eager_buffer;
   new->data = eager_buffer;
-
   memset(new->data, 0, sizeof(uint8_t) * size);
   
-  //new->curr = 0;
-  //new->num_entries = size;
-
-  new->offset = 0;
+  new->curr = 0;
   new->ackp = 0;
 
   return new;
