@@ -21,7 +21,7 @@ photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int siz
 
   new->size = size;
   new->curr = 0;
-  new->ackp = 0;
+  new->tail = 0;
 
   return new;
 
@@ -33,20 +33,30 @@ void photon_rdma_eager_buf_free(photonEagerBuf buf) {
   free(buf);
 }
 
-uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim) {
-  uint64_t curr, new, offset, left;
+int photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim) {
+  uint64_t curr, new, left, tail;
+  int offset;
+
   do {
     curr = sync_load(&buf->curr, SYNC_ACQUIRE);
+    tail = sync_load(&buf->tail, SYNC_RELAXED);
+    if ((curr - tail) > buf->size) {
+      log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
+      return -1;
+    }
     offset = curr % buf->size;
     left = buf->size - offset;
     if (left < lim) {
-      new = left + curr + size;
+      new = curr + left + size;
       offset = 0;
     }
     else {
       new = curr + size;
     }
   } while (!sync_cas(&buf->curr, curr, new, SYNC_ACQ_REL, SYNC_RELAXED));
+
+  if (left < lim)
+    sync_fadd(&buf->tail, left, SYNC_RELAXED);
   
   return offset;
 }

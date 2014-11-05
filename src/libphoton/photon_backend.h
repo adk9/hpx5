@@ -19,14 +19,13 @@
 #endif
 
 #define INC_ENTRY(e)         (e->curr = (e->curr + 1) % e->num_entries)
-#define NEXT_ENTRY(e)        (sync_fadd(&e->curr, 1, SYNC_RELAXED) % e->num_entries)
-#define NEXT_EAGER_BUF(e,s)  (sync_fadd(&e->curr, s, SYNC_RELAXED) % _photon_ebsize)
+#define MARK_DONE(e,s)       (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 
 #define DEF_NUM_REQUESTS     (1024*4)   // 4K pre-allocated requests per rank
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
 #define DEF_SMALL_MSG_SIZE   8192
-#define DEF_LEDGER_SIZE      32         // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_LEDGER_SIZE      64         // This should not exceed MCA max_qp_wr (typically 16K)
 
 #define NULL_COOKIE          0x0
 #define UD_MASK_SIZE         1<<6

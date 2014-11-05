@@ -566,7 +566,10 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     proc = photon_wait_send_request_rdma(tag);
   }
 
-  curr = NEXT_ENTRY(photon_processes[proc].remote_rcv_info_ledger);
+  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_rcv_info_ledger);
+  if (curr < 0) {
+    goto error_exit;
+  }
   dbg_trace("New curr (proc=%d): %u", proc, curr);
   entry = &photon_processes[proc].remote_rcv_info_ledger->entries[curr];
 
@@ -651,10 +654,14 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       photon_rid eager_cookie;
       photonLedgerEntry entry;
       photonEagerBuf eb;
-      uint64_t offset;
+      int offset;
 
       eb = photon_processes[proc].remote_eager_buf;
       offset = photon_rdma_eager_buf_get_offset(eb, size, size);
+      if (offset < 0) {
+	log_err("Exceeded outstanding eager buffer limit - increase eager buf size or wait for local completion");
+	goto error_exit;
+      }
       eager_addr = (uintptr_t)eb->remote.addr + offset;
       eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | req->id;
       
@@ -668,7 +675,10 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 	goto error_exit;
       }
 
-      curr = NEXT_ENTRY(photon_processes[proc].remote_eager_ledger);
+      curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_eager_ledger);
+      if (curr < 0) {
+	goto error_exit;
+      }
       dbg_trace("new eager curr == %d", curr);
       rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
       rmt_addr += curr * sizeof(*entry);
@@ -691,7 +701,10 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       uintptr_t rmt_addr;
       photonRILedgerEntry entry;
 
-      curr = NEXT_ENTRY(photon_processes[proc].remote_snd_info_ledger);
+      curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+      if (curr < 0) {
+	goto error_exit;
+      }
       dbg_trace("new curr == %d", curr);
 
       rmt_addr  = photon_processes[proc].remote_snd_info_ledger->remote.addr;
@@ -765,7 +778,10 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
   }  
 
-  curr = NEXT_ENTRY(photon_processes[proc].remote_snd_info_ledger);
+  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+  if (curr < 0) {
+    goto error_exit;
+  }
   dbg_trace("new curr == %d", curr);
 
   entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
@@ -1290,7 +1306,10 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
     goto error_exit;
   }
 
-  curr = NEXT_ENTRY(photon_processes[proc].remote_fin_ledger);
+  curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_fin_ledger);
+  if (curr < 0) {
+    goto error_exit;
+  }
   entry = &photon_processes[proc].remote_fin_ledger->entries[curr];
   dbg_trace("photon_processes[%d].remote_fin_ledger->curr==%d", proc, curr);
   
@@ -1323,6 +1342,8 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
     req->flags = REQUEST_FLAG_FIN;
     req->remote_buffer.request = NULL_COOKIE;
   }
+
+  MARK_DONE(photon_processes[proc].remote_fin_ledger, 1);
 
   return PHOTON_OK;
 

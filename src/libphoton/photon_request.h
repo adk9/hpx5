@@ -14,11 +14,13 @@
 #define REQUEST_COMPLETED    0x04
 
 #define REQUEST_FLAG_NIL     0x00
-#define REQUEST_FLAG_FIN     0x01
-#define REQUEST_FLAG_EAGER   0x02
-#define REQUEST_FLAG_EDONE   0x04
-#define REQUEST_FLAG_LDONE   0x08
-#define REQUEST_FLAG_USERID  0x10
+#define REQUEST_FLAG_FIN     1<<1
+#define REQUEST_FLAG_EAGER   1<<2
+#define REQUEST_FLAG_EDONE   1<<3
+#define REQUEST_FLAG_LDONE   1<<4
+#define REQUEST_FLAG_USERID  1<<5
+#define REQUEST_FLAG_1PWC    1<<6
+#define REQUEST_FLAG_2PWC    1<<7
 
 #define PROC_REQUEST_ID(p, id) (((uint64_t)p<<32) | id)
 

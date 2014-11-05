@@ -5,7 +5,6 @@
 
 #define PWC_ALIGN      8
 
-
 PHOTON_INTERNAL int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 						struct photon_buffer_priv_t priv,
 						photon_rid local, photon_rid remote, int flags);

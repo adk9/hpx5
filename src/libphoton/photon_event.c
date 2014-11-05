@@ -170,7 +170,7 @@ int __photon_wait_ledger(photonRequest req) {
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
-      curr = NEXT_ENTRY(photon_processes[i].local_fin_ledger);
+      curr = photon_processes[i].local_fin_ledger->curr;
       curr_entry = &(photon_processes[i].local_fin_ledger->entries[curr]);
       if (curr_entry->request != (uint64_t) 0) {
         dbg_trace("Found: %d/0x%016lx/0x%016lx", curr, curr_entry->request, req->id);
@@ -185,6 +185,7 @@ int __photon_wait_ledger(photonRequest req) {
 	  }
 	}
         curr_entry->request = 0;
+	INC_ENTRY(photon_processes[i].local_fin_ledger);
       }
     }
   }

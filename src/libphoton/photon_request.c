@@ -100,18 +100,19 @@ photonRequest photon_setup_request_direct(photonBuffer rbuf, int proc, int event
   req->proc = proc;
   req->type = EVQUEUE;
   req->tag = 0;
-  req->length = rbuf->size;
   req->events = events;
-  
-  // fill in the internal buffer with the rbuf contents
-  memcpy(&req->remote_buffer, rbuf, sizeof(*rbuf));
-  // there is no matching request from the remote side, so fill in local values */
-  req->remote_buffer.request = 0;
-  req->remote_buffer.tag = 0;
-  
-  dbg_trace("Addr: %p", (void *)rbuf->addr);
-  dbg_trace("Size: %lu", rbuf->size);
-  dbg_trace("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
+
+  if (rbuf) {
+    // fill in the internal buffer with the rbuf contents
+    memcpy(&req->remote_buffer, rbuf, sizeof(*rbuf));
+    // there is no matching request from the remote side, so fill in local values */
+    req->remote_buffer.request = 0;
+    req->remote_buffer.tag = 0;
+
+    dbg_trace("Addr: %p", (void *)rbuf->addr);
+    dbg_trace("Size: %lu", rbuf->size);
+    dbg_trace("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
+  }
 
   return req;
   

@@ -14,7 +14,6 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   photonRequest req;
   photonLedgerEntry entry;
   photon_rid cookie;
-  struct photon_buffer_t rbuf;
   uintptr_t rmt_addr;
   int rc, curr, nentries;
   int p0_flags = 0, p1_flags = 0;
@@ -37,7 +36,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     nentries = 0;
   
   if (nentries > 0) {
-    req = photon_setup_request_direct(&rbuf, proc, nentries);
+    req = photon_setup_request_direct(NULL, proc, nentries);
     if (req == NULL) {
       dbg_trace("Could not setup direct buffer request");
       goto error_exit;
@@ -55,12 +54,15 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uintptr_t eager_addr;
-    uint64_t offset;
     uint8_t *tail;
+    int offset;
     int tadd = 0;
 
     eb = photon_processes[proc].remote_pwc_buf;
     offset = photon_rdma_eager_buf_get_offset(eb, EB_MSG_SIZE(size), EB_MSG_SIZE(_photon_spsize));
+    if (offset < 0) {
+      goto error_exit;
+    }
     hdr = (photon_eb_hdr *)&(eb->data[offset]);
     hdr->request = remote;
     hdr->addr = (uintptr_t)rptr;
@@ -75,9 +77,11 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     *tail = UINT8_MAX;
 
     eager_addr = (uintptr_t)eb->remote.addr + offset;
-    rbuf.addr = eager_addr;
-    rbuf.size = EB_MSG_SIZE(size);
-    rbuf.priv = shared_storage->buf.priv;
+    req->remote_buffer.buf.addr = eager_addr;
+    req->remote_buffer.buf.size = EB_MSG_SIZE(size);
+    req->remote_buffer.buf.priv = shared_storage->buf.priv;
+    req->length = EB_MSG_SIZE(size);
+    req->flags |= REQUEST_FLAG_1PWC;
 
     rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size),
                                     &(shared_storage->buf), &eb->remote, cookie, p1_flags);
@@ -88,31 +92,37 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   }
   // do the unpacked 2-put version instead
   else { 
+    curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_pwc_ledger);
+    if (curr < 0) {
+      goto error_exit;
+    }
+
     if (size > 0) {
       if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
         log_err("Tried posting from a buffer that's not registered");
         goto error_exit;
       }
       
-      rbuf.addr = (uintptr_t)rptr;
-      rbuf.size = size;
-      rbuf.priv = priv;
-      
+      req->remote_buffer.buf.addr = (uintptr_t)rptr;
+      req->remote_buffer.buf.size = size;
+      req->remote_buffer.buf.priv = priv;
+
       rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
-                                      &rbuf, cookie, p0_flags);
+                                      &req->remote_buffer.buf, cookie, p0_flags);
       if (rc != PHOTON_OK) {
         dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", cookie);
         goto error_exit;
       }
     }
 
-    curr = NEXT_ENTRY(photon_processes[proc].remote_pwc_ledger);
     entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
-    rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);
-    
     entry->request = remote;
-    
+
+    rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);        
     dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
+
+    req->length = size;
+    req->flags |= REQUEST_FLAG_2PWC;
     
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
                                     &(photon_processes[proc].remote_pwc_ledger->remote), cookie, p1_flags);
@@ -161,12 +171,12 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   cookie = req->id;
   req->id = local;
   req->flags = REQUEST_FLAG_USERID;
-
-  rbuf.addr = (uintptr_t)rptr;
-  rbuf.size = size;
-  rbuf.priv = priv;
+  req->remote_buffer.buf.addr = (uintptr_t)rptr;
+  req->remote_buffer.buf.size = size;
+  req->remote_buffer.buf.priv = priv;
   
-  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf), &rbuf, cookie, 0);
+  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
+				  &req->remote_buffer.buf, cookie, 0);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", cookie);
     goto error_exit;
@@ -277,6 +287,13 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       if ( (--req->events) == 0) {
 	*flag = 1;
 	*request = req->id;
+	// accounting
+	if (req->flags & REQUEST_FLAG_1PWC) {
+	  MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->length);
+	}
+	else if (req->flags & REQUEST_FLAG_2PWC) {
+	  MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
+	}
 	dbg_trace("Completed and removing pwc request: 0x%016lx", cookie);
 	photon_free_request(req);
 	return PHOTON_OK;
