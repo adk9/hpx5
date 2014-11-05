@@ -133,7 +133,6 @@ photonRequest photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int
   req->state = REQUEST_NEW;
   req->type = EVQUEUE;
   req->proc = proc;
-  req->curr = curr;
   req->flags = ri_entry->flags;
   req->length = ri_entry->size;
   req->events = 1;
@@ -175,7 +174,6 @@ photonRequest photon_setup_request_ledger_eager(photonLedgerEntry entry, int cur
   req->state = REQUEST_NEW;
   req->type = EVQUEUE;
   req->proc = proc;
-  req->curr = curr;
   req->flags = REQUEST_FLAG_EAGER;
   req->length = (entry->request>>32);
   req->events = 1;

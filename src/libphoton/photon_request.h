@@ -30,7 +30,6 @@ typedef struct photon_req_t {
   int type;
   int proc;
   int tag;
-  int curr;
   int events;
   //int bentries[DEF_MAX_BUF_ENTRIES];
   //BIT_ARRAY *mmask;

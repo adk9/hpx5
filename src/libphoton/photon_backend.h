@@ -21,7 +21,7 @@
 #define INC_ENTRY(e)         (e->curr = (e->curr + 1) % e->num_entries)
 #define NEXT_ENTRY(e)        (sync_fadd(&e->curr, 1, SYNC_RELAXED) % e->num_entries)
 #define NEXT_EAGER_BUF(e,s)  (sync_fadd(&e->curr, s, SYNC_RELAXED) % _photon_ebsize)
-#define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t) + sizeof(void*))
+#define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 
 #define DEF_NUM_REQUESTS     (1024*4)   // 4K pre-allocated requests per rank
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank

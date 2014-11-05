@@ -654,7 +654,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       uint64_t offset;
 
       eb = photon_processes[proc].remote_eager_buf;
-      offset = photon_rdma_eager_buf_get_offset(eb, size);      
+      offset = photon_rdma_eager_buf_get_offset(eb, size, size);
       eager_addr = (uintptr_t)eb->remote.addr + offset;
       eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | req->id;
       

@@ -33,13 +33,14 @@ void photon_rdma_eager_buf_free(photonEagerBuf buf) {
   free(buf);
 }
 
-uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, uint64_t size) {
-  uint64_t curr, new, offset;
+uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim) {
+  uint64_t curr, new, offset, left;
   do {
     curr = sync_load(&buf->curr, SYNC_ACQUIRE);
     offset = curr % buf->size;
-    if ((offset + size) > buf->size) {
-      new = (buf->size - offset) + curr + size;
+    left = buf->size - offset;
+    if (left < lim) {
+      new = left + curr + size;
       offset = 0;
     }
     else {

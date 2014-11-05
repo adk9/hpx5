@@ -31,6 +31,7 @@ int _photon_nforw;
 int _photon_fproc;
 int _photon_ebsize;
 int _photon_smsize;
+int _photon_spsize;
 int _forwarder;
 
 #ifdef DEBUG
@@ -156,6 +157,7 @@ int photon_init(photonConfig cfg) {
   _photon_nforw = lcfg->forwarder.use_forwarder;
   _photon_ebsize = lcfg->cap.eager_buf_size;
   _photon_smsize = lcfg->cap.small_msg_size;
+  _photon_spsize = lcfg->cap.small_pwc_size;
   _LEDGER_SIZE = lcfg->cap.ledger_entries;
   
   /* update defaults */
@@ -535,10 +537,10 @@ int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, s
 }
 
 int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
-  if(__photon_default->initialized() != PHOTON_OK) {
-    init_err();
-    return PHOTON_ERROR_NOINIT;
-  }
+  //if(__photon_default->initialized() != PHOTON_OK) {
+  //  init_err();
+  //  return PHOTON_ERROR_NOINIT;
+  //}
   
   return __photon_default->probe_completion(proc, flag, request, flags);
 }

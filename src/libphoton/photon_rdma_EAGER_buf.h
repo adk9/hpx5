@@ -22,6 +22,6 @@ typedef struct photon_rdma_eager_buf_t       * photonEagerBuf;
 
 PHOTON_INTERNAL photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size);
 PHOTON_INTERNAL void photon_rdma_eager_buf_free(photonEagerBuf buf);
-PHOTON_INTERNAL uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, uint64_t size);
+PHOTON_INTERNAL uint64_t photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim);
 
 #endif

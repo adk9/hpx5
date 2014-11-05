@@ -27,7 +27,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   // if we didn't send any data, then we only wait on one event
   nentries = (size > 0)?2:1;
   // if we are under the small pwc eager limit, only one event
-  nentries = (size <= __photon_config->cap.small_pwc_size)?1:2;
+  nentries = (size <= _photon_spsize)?1:2;
 
   // check if we only get event for one put
   if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
@@ -51,7 +51,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   }
 
   // see if we should pack into an eager buffer and send in one put
-  if ((size > 0) && (size <= __photon_config->cap.small_pwc_size) && (size <= _photon_ebsize)) {
+  if ((size > 0) && (size <= _photon_spsize) && (size <= _photon_ebsize)) {
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uintptr_t eager_addr;
@@ -60,7 +60,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     int tadd = 0;
 
     eb = photon_processes[proc].remote_pwc_buf;
-    offset = photon_rdma_eager_buf_get_offset(eb, EB_MSG_SIZE(size));
+    offset = photon_rdma_eager_buf_get_offset(eb, EB_MSG_SIZE(size), EB_MSG_SIZE(_photon_spsize));
     hdr = (photon_eb_hdr *)&(eb->data[offset]);
     hdr->request = remote;
     hdr->addr = (uintptr_t)rptr;
@@ -215,26 +215,26 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
 
   // prioritize the EVQ
   if ((flags & PHOTON_PROBE_LEDGER) && (cookie == UINT64_MAX)) {
-    uint64_t offset, curr, new;
+    uint64_t offset, curr, new, left;
     for (i=start; i<end; i++) {
       // check eager region first
       eb = photon_processes[i].local_pwc_buf;
       curr = sync_load(&eb->curr, SYNC_RELAXED);
       offset = curr % eb->size;
+      left = eb->size - offset;
+      if (left < EB_MSG_SIZE(_photon_spsize)) {
+	new = left + curr;
+	offset = 0;
+      }
+      else {
+	new = curr;
+      }
       hdr = (photon_eb_hdr *)&(eb->data[offset]);
       if (hdr->head == UINT8_MAX) {
 	uint16_t size = hdr->length;
 	photon_rid req = hdr->request;
 	uintptr_t addr = hdr->addr;
-	
-	if ((offset + EB_MSG_SIZE(size)) > eb->size) {
-	  new = (eb->size - offset) + curr + EB_MSG_SIZE(size);
-	  offset = 0;
-	}
-	else {
-	  new = curr + EB_MSG_SIZE(size);
-	}
-	
+	new += EB_MSG_SIZE(size);
 	if (sync_cas(&eb->curr, curr, new, SYNC_RELAXED, SYNC_RELAXED)) {
 	  // now check for tail flag (or we could return to check later)
 	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + sizeof(*hdr) + size);
@@ -254,14 +254,16 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       
       // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
-      entry_iter = &(ledger->entries[ledger->curr]);
-      if (entry_iter->request != (photon_rid) UINT64_MAX) {
-        *request = entry_iter->request;
-        *flag = 1;
-        entry_iter->request = UINT64_MAX;
-        NEXT_ENTRY(photon_processes[i].local_pwc_ledger);
-        dbg_trace("Popped ledger event with id: 0x%016lx", *request);
-        return PHOTON_OK;
+      curr = sync_load(&ledger->curr, SYNC_RELAXED);
+      offset = curr % ledger->num_entries;
+      entry_iter = &(ledger->entries[offset]);
+      if (entry_iter->request != (photon_rid) UINT64_MAX && 
+	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	  *request = entry_iter->request;
+	  *flag = 1;
+	  entry_iter->request = UINT64_MAX;
+	  dbg_trace("Popped ledger event with id: 0x%016lx", *request);
+	  return PHOTON_OK;
       }
     }
   }
