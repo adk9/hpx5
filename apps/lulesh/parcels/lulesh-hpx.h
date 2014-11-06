@@ -64,43 +64,8 @@ typedef struct {
   int       maxcycles;
   hpx_addr_t complete;
   hpx_addr_t newdt;
+  hpx_addr_t elapsed_ar;
 } InitArgs;
-
-typedef struct {
-  double *xd;
-  double *yd;
-  double *zd;
-  double *x;
-  double *y;
-  double *z;
-  double dt;
-} CalcPositionForNodesArgs;
-
-typedef struct {
-  double *xd;
-  double *yd;
-  double *zd;
-  double *xdd;
-  double *ydd;
-  double *zdd;
-  double dt;
-  double u_cut;
-} CalcVelocityForNodesArgs;
-
-typedef struct {
-  double *dd;
-  int *symm;
-} ApplyAccelerationBoundaryConditionsForNodesArgs;
-
-typedef struct {
-  double *xdd;
-  double *ydd;
-  double *zdd;
-  double *fx;
-  double *fy;
-  double *fz;
-  double *nodalMass;
-} CalcAccelerationForNodesArgs;
 
 typedef struct {
   unsigned long epoch;
@@ -108,73 +73,10 @@ typedef struct {
   double        buf[];                         // inline, variable length buffer
 } NodalArgs;
 
-typedef struct {
-  double *p;
-  double *q;
-  double *sigxx;
-  double *sigyy;
-  double *sigzz;
-} InitStressTermsForElemsArgs;
-
-typedef struct {
-  int *nodelist;
-  double *x;
-  double *y;
-  double *z;
-  double *x1;
-  double *y1;
-  double *z1;
-  double *pfx;
-  double *pfy;
-  double *pfz;
-  double *dvdx;
-  double *dvdy;
-  double *dvdz;
-  double *x8n;
-  double *y8n;
-  double *z8n;
-  double *determ;
-  double *volo;
-  double *v;
-} CalcHourglassControlForElemsArgs;
-
-typedef struct {
-  int *nodelist;
-  double *x;
-  double *y;
-  double *z;
-  double *fx;
-  double *fy;
-  double *fz;
-  double *sigxx;
-  double *sigyy;
-  double *sigzz;
-  double *determ;
-} IntegrateStressForElemsArgs;
-
-typedef struct {
-  int *nodelist;
-  double *ss;
-  double *elemMass;
-  double *xd;
-  double *yd;
-  double *zd;
-  double *fx;
-  double *fy;
-  double *fz;
-  double *determ;
-  double *x8n;
-  double *y8n;
-  double *z8n;
-  double *dvdx;
-  double *dvdy;
-  double *dvdz;
-  double hourg;
-} CalcFBHourglassForceForElemsArgs;
-
 typedef struct Domain {
-  hpx_addr_t base; // the base address for the array of all domains
+  hpx_addr_t base;
   hpx_addr_t newdt;
+  hpx_addr_t elapsed_ar;
   hpx_addr_t complete;
   hpx_addr_t sem_sbn1;
   hpx_addr_t sem_sbn3;
@@ -509,7 +411,6 @@ extern hpx_action_t _MonoQ_sends;
 int _MonoQ_result_action(NodalArgs *nodal);
 extern hpx_action_t _MonoQ_result;
 void MonoQ(hpx_addr_t address,Domain *domain, unsigned long epoch);
-
 
 void send1(int nx, int ny, int nz, double *src, double *dest);
 
