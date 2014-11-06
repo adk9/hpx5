@@ -633,44 +633,23 @@ void scheduler_signal(cvar_t *cvar) {
           TAU_START("scheduler_signal");
 #endif
   ustack_t *thread = cvar_pop_thread(cvar);
-<<<<<<< HEAD
-  if (thread)
-    _resume(thread);
-=======
-  if (!thread)
-    return;
-
-  if (thread->wait_affinity != self.id)
-    _send_mail(thread->wait_affinity, thread->parcel);
-  else
-    sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
 #ifdef ENABLE_TAU
           TAU_STOP("scheduler_signal");
 #endif
->>>>>>> tau instrumentation of sssp
+  if (thread)
+    _resume(thread);
 }
 
 
 void scheduler_signal_all(struct cvar *cvar) {
-<<<<<<< HEAD
-  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
-    _resume(thread);
-=======
 #ifdef ENABLE_TAU
           TAU_START("scheduler_signal_all");
 #endif
-  ustack_t *thread = cvar_pop_all(cvar);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
+    _resume(thread);
 #ifdef ENABLE_TAU
           TAU_STOP("scheduler_signal_all");
 #endif
->>>>>>> tau instrumentation of sssp
 }
 
 

@@ -178,26 +178,9 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
     dbg_error("cannot compare addresses between different allocations.\n");
   }
 
-<<<<<<< HEAD
   DEBUG_IF (l ^ r) {
     dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
   }
-=======
-static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-#ifdef ENABLE_TAU
-          TAU_START("pgas_add");
-#endif
-  hpx_addr_t gva1 = HPX_NULL;
-  if (!_check_cyclic(gva, bsize))
-    gva1 = pgas_gva_add((pgas_gva_t)gva, bytes, here->ranks);
-  else
-    gva1 = pgas_gva_add_cyclic((pgas_gva_t)gva, bytes, here->ranks, bsize);
-#ifdef ENABLE_TAU
-          TAU_STOP("pgas_add");
-#endif
-  return gva1;
-}
->>>>>>> tau instrumentation of sssp
 
   return (l && r) ? pgas_gva_sub_cyclic(lhs, rhs, bsize)
                   : pgas_gva_sub(lhs, rhs);
@@ -205,7 +188,13 @@ static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 
 static hpx_addr_t _pgas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+#ifdef ENABLE_TAU
+          TAU_START("pgas_add");
+#endif
   const bool cyclic = _gva_is_cyclic(gva);
+#ifdef ENABLE_TAU
+          TAU_STOP("pgas_add");
+#endif
   return (cyclic) ? pgas_gva_add_cyclic(gva, bytes, bsize)
                   : pgas_gva_add(gva, bytes);
 }
@@ -222,45 +211,29 @@ static hpx_addr_t _pgas_there(uint32_t i) {
 /// the address if its local.
 <<<<<<< HEAD
 static bool _pgas_try_pin(const hpx_addr_t gva, void **local) {
-  if (pgas_gva_to_rank(gva) != here->rank)
-=======
-bool pgas_try_pin(const hpx_addr_t addr, void **local) {
 #ifdef ENABLE_TAU
           TAU_START("pgas_try_pin");
 #endif
-  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
-  const uint32_t ranks = here->ranks;
-  const uint32_t locality = pgas_gva_locality_of(gva, ranks);
-
-  if (locality != here->rank) {
->>>>>>> tau instrumentation of sssp
-    return false;
-
-<<<<<<< HEAD
-  if (local)
-    *local = pgas_gva_to_lva(gva);
-
-=======
-  if (local) {
-    const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
-    *local = heap_offset_to_local(global_heap, heap_offset);
-  }
+  if (pgas_gva_to_rank(gva) != here->rank) {
 #ifdef ENABLE_TAU
           TAU_STOP("pgas_try_pin");
 #endif
->>>>>>> tau instrumentation of sssp
+    return false;
+  }
+  if (local)
+    *local = pgas_gva_to_lva(gva);
+
+#ifdef ENABLE_TAU
+          TAU_STOP("pgas_try_pin");
+#endif
   return true;
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
-<<<<<<< HEAD
-  DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
-=======
 #ifdef ENABLE_TAU
           TAU_START("pgas_unpin");
 #endif
-  DEBUG_IF(!pgas_try_pin(addr, NULL)) {
->>>>>>> tau instrumentation of sssp
+  DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
     dbg_error("%lu is not local to %u\n", addr, here->rank);
   }
 #ifdef ENABLE_TAU
@@ -314,25 +287,14 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-<<<<<<< HEAD
-  void *lva = libhpx_global_malloc(bytes);
-  return pgas_lva_to_gva(lva);
-=======
 #ifdef ENABLE_TAU
           TAU_START("pgas_gas_alloc");
 #endif
-  void *lva = pgas_global_malloc(bytes);
-  assert(lva && heap_contains(global_heap, lva));
-
-  const uint64_t heap_offset = heap_offset_of(global_heap, lva);
-  const uint32_t rank = here->rank;
-  const uint32_t ranks = here->ranks;
-  const pgas_gva_t gva = pgas_gva_from_heap_offset(rank, heap_offset, ranks);
+  void *lva = libhpx_global_malloc(bytes);
 #ifdef ENABLE_TAU
           TAU_STOP("pgas_gas_alloc");
 #endif
-  return pgas_gva_to_hpx_addr(gva);
->>>>>>> tau instrumentation of sssp
+  return pgas_lva_to_gva(lva);
 }
 
 /// Free a global address.
@@ -340,18 +302,12 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// This global address must either be the base of a cyclic allocation, or a
 /// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
-<<<<<<< HEAD
 static void _pgas_gas_free(hpx_addr_t gva, hpx_addr_t sync) {
-  const uint64_t offset = pgas_gva_to_offset(gva);
-=======
-static void _pgas_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
 #ifdef ENABLE_TAU
           TAU_START("pgas_gas_free");
 #endif
-  const pgas_gva_t gva = pgas_gva_from_hpx_addr(addr);
-  const uint32_t ranks = here->ranks;
-  const uint64_t heap_offset = pgas_gva_heap_offset_of(gva, ranks);
->>>>>>> tau instrumentation of sssp
+
+  const uint64_t offset = pgas_gva_to_offset(gva);
 
   DEBUG_IF (true) {
     const void *lva = heap_offset_to_lva(global_heap, offset);
@@ -456,14 +412,10 @@ static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
 }
 
 static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-<<<<<<< HEAD
-  if (sync)
-=======
 #ifdef ENABLE_TAU
           TAU_START("pgas_gas_move");
 #endif
-  if (!hpx_addr_eq(sync, HPX_NULL))
->>>>>>> tau instrumentation of sssp
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 
 #ifdef ENABLE_TAU
