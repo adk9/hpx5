@@ -161,7 +161,7 @@ int _SBN3_result_action(NodalArgs *args) {
   //  printf("Domain %d receiving from nf %d (%d, %d) in cycle %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
   //  printf("-1, %d, %d, %d, %d, %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
   //  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
-  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, recvcnt*3 + sizeof(NodalArgs));
+  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, recvcnt*3*sizeof(double) + sizeof(NodalArgs));
   NodalArgs *nodal;
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
@@ -199,7 +199,7 @@ int _SBN3_sends_action(pSBN *psbn)
   NodalArgs *nodal = hpx_parcel_get_data(p);
 #endif
   NodalArgs *nodal;
-  hpx_addr_t nodal_global = hpx_gas_alloc(BUFSZ[destLocalIdx] + sizeof(NodalArgs));
+  hpx_addr_t nodal_global = hpx_gas_alloc(XFERCNT[destLocalIdx]*3*sizeof(double) + sizeof(NodalArgs));
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
 
@@ -243,7 +243,7 @@ int _SBN3_sends_action(pSBN *psbn)
   // printf("Domain %d sending to nf %d (%d, %d) in cycle %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
   //  printf("1, %d, %d, %d, %d, %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
   //  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
-  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, sendcnt*3 + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, sendcnt*3*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
   hpx_gas_free(nodal_global, HPX_NULL);
@@ -325,8 +325,8 @@ int _PosVel_result_action(NodalArgs *args) {
   int gen = ld->cycle % 2;
   int fi = get_bs_index((srcLocalIdx + 26*ld->rank)%26, ld->rank, 26);
   hpx_addr_t nodal_global;
-  //  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, recvcnt*6 + sizeof(NodalArgs));
-  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
+  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, recvcnt*6*sizeof(double) + sizeof(NodalArgs));
+  //  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
   NodalArgs *nodal;
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
@@ -374,7 +374,8 @@ int _PosVel_sends_action(pSBN *psbn)
 #endif
 
   NodalArgs *nodal;
-  hpx_addr_t nodal_global = hpx_gas_alloc(BUFSZ[destLocalIdx] + sizeof(NodalArgs));
+  //  hpx_addr_t nodal_global = hpx_gas_alloc(BUFSZ[destLocalIdx] + sizeof(NodalArgs));
+  hpx_addr_t nodal_global = hpx_gas_alloc(XFERCNT[destLocalIdx]*6*sizeof(double) + sizeof(NodalArgs));
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
 
@@ -410,8 +411,8 @@ int _PosVel_sends_action(pSBN *psbn)
   int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26);
   hpx_addr_t lsync = hpx_lco_future_new(0);
   int gen = domain->cycle % 2;
-  //  hpx_lco_netfuture_setat(domain->posvel[gen], fi, sendcnt*6 + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
-  hpx_lco_netfuture_setat(domain->posvel[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_netfuture_setat(domain->posvel[gen], fi, sendcnt*6*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  //  hpx_lco_netfuture_setat(domain->posvel[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
   hpx_gas_free(nodal_global, HPX_NULL);
