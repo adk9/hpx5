@@ -10,24 +10,24 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_PGAS_GVA_H
-#define LIBHPX_GAS_PGAS_GVA_H
+#ifndef LIBHPX_GAS_PGAS_GPA_H
+#define LIBHPX_GAS_PGAS_GPA_H
 
 /// @file libhpx/gas/pgas/addr.h
 /// @brief Declaration of the PGAS-specific address.
 #include <stdint.h>
 #include <hpx/hpx.h>
 
-#define   GVA_RANK_BITS (16)
-#define GVA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GVA_RANK_BITS)
-#define   GVA_RANK_MASK (UINTPTR_MAX << GVA_OFFSET_BITS)
-#define GVA_OFFSET_MASK (~(GVA_RANK_MASK))
+#define     GPA_PE_BITS (16)
+#define   GPA_CORE_BITS (8)
+#define GPA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GPA_PE_BITS - GPA_CORE_BITS)
+#define     GPA_PE_MASK (UINTPTR_MAX << GPA_OFFSET_BITS)
+#define GPA_OFFSET_MASK (~(GPA_PE_MASK))
+
 
 /// Extract the locality from a gva.
-// uint32_t pgas_gva_to_rank(hpx_addr_t gva)
-//   HPX_INTERNAL;
 static inline uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
-  return gva >> GVA_OFFSET_BITS;
+  return gva >> GPA_OFFSET_BITS;
 }
 
 
@@ -40,10 +40,8 @@ static inline uint32_t pgas_gva_to_rank(hpx_addr_t gva) {
 /// @param      gva The global address.
 ///
 /// @returns The offset within the global heap that corresponds to the address.
-// uint64_t pgas_gva_to_offset(hpx_addr_t gva)
-//   HPX_INTERNAL;
 static inline uint64_t pgas_gva_to_offset(hpx_addr_t gva) {
-  return gva & GVA_OFFSET_MASK;
+  return gva & GPA_OFFSET_MASK;
 }
 
 
@@ -54,7 +52,7 @@ static inline uint64_t pgas_gva_to_offset(hpx_addr_t gva) {
 ///
 /// @returns A global address representing the offset at the locality.
 static inline hpx_addr_t pgas_offset_to_gva(uint32_t locality, uint64_t offset) {
-  return (((uint64_t)locality) << GVA_OFFSET_BITS) + (offset & GVA_OFFSET_MASK);
+  return (((uint64_t)locality) << GPA_OFFSET_BITS) + (offset & GPA_OFFSET_MASK);
 }
 
 
@@ -109,4 +107,4 @@ hpx_addr_t pgas_gva_add_cyclic(hpx_addr_t gva, int64_t bytes, uint32_t bsize)
   HPX_INTERNAL;
 
 
-#endif // LIBHPX_GAS_PGAS_GVA_H
+#endif // LIBHPX_GAS_PGAS_GPA_H
