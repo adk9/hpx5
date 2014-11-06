@@ -295,8 +295,14 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  cfg.max_size = 6 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
-  cfg.max_number = 6 * 26 * nDoms;
+  int num_arrays = 6; // SBN3, PosVel, MonoQ; 3 * 2 because double buffered
+  size_t num_elements_per_array = 26 * nDoms;
+  size_t points_cubed = (nx + 1) * (nx + 1) * (nx + 1);
+  size_t element_size = points_cubed * sizeof(double) + sizeof(NodalArgs);
+  size_t size_of_nf_array = element_size * num_elements_per_array;
+  size_t total_size = size_of_nf_array * num_arrays;
+  cfg.max_size = (total_size + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  cfg.max_number = num_arrays * num_elements_per_array;
   hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
