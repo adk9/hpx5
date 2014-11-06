@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include "hpx/hpx.h"
 #include "hpx/future.h"
-#include "common.h"
 
 #define BUFFER_SIZE 128
 #define FIELD_WIDTH 20
@@ -35,18 +34,10 @@ static int iters[] = {
 };
 /* helper functions */
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: pingponghpx \n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
-          "\t-p, set per-PE global heap size\n"
-          "\t-r, set send/receive request limit\n"
+  fprintf(stream, "Usage: time_lco_netfutures \n"
           "\t-h, this help display\n");
-
+  hpx_print_help();
+  fflush(stream);
 }
 
 static void _register_actions(void);
@@ -58,57 +49,32 @@ typedef struct {
 } args_t;
 
 /* utility macros */
-#define CHECK_NOT_NULL(p, err)                                \
-  do {                                                        \
-  if (!p) {                                                 \
-  fprintf(stderr, err);                                   \
-  hpx_shutdown(1);                                        \
-  }                                                         \
+#define CHECK_NOT_NULL(p, err)                  \
+  do {                                          \
+  if (!p) {                                     \
+  fprintf(stderr, err);                         \
+  hpx_shutdown(1);                              \
+  }                                             \
   } while (0)
 
-#define RANK_PRINTF(format, ...)                                        \
-  do {                                                                  \
-  if (_verbose)                                                       \
+#define RANK_PRINTF(format, ...)                \
+  do {                                          \
+  if (_verbose)                                 \
     printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), \
-       __VA_ARGS__);                                              \
+       __VA_ARGS__);                            \
   } while (0)
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
 
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "Failed to initialize hpx\n");
+    return -1;
+  }
+  
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
       _usage(stdout);
       return 0;
@@ -119,16 +85,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "Failed to initialize hpx\n");
-    return -1;
-  }
-
-  test_log = fopen("test.log", "a+");
-  fprintf(test_log, "Starting the cost of Netfutures pingpong benchmark\n");
-  fprintf(test_log, "%s%*s\n", "# ITERS ", FIELD_WIDTH, "LATENCY (ms)");
+  fprintf(stdout, "Starting the cost of Netfutures pingpong benchmark\n");
+  fprintf(stdout, "%s%*s\n", "# ITERS ", FIELD_WIDTH, "LATENCY (ms)");
   _register_actions();
 
   return hpx_run(_main, NULL, 0);
@@ -140,7 +98,7 @@ static int _action_main(void *args) {
     return status;
 
   for (int i = 0; i < sizeof(iters)/sizeof(iters[0]); i++) {
-    fprintf(test_log, "%d\t", iters[i]);
+    fprintf(stdout, "%d\t", iters[i]);
 
     args_t args = {
       .iterations = iters[i],
@@ -160,7 +118,7 @@ static int _action_main(void *args) {
 
     double elapsed = (double)hpx_time_elapsed_ms(start);
     double latency = elapsed / (args.iterations * 2);
-    fprintf(test_log, "%*f\n", FIELD_WIDTH, latency);
+    fprintf(stdout, "%*f\n", FIELD_WIDTH, latency);
   }
   hpx_netfutures_fini();
   hpx_shutdown(HPX_SUCCESS);
@@ -212,7 +170,6 @@ static int _action_pong(args_t *args) {
     hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);
     hpx_lco_wait(lsync);
     hpx_lco_delete(lsync, HPX_NULL);
-
   }
 
   return HPX_SUCCESS;

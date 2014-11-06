@@ -35,7 +35,8 @@ uint64_t inactive_count;
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
-          "\t-k, use and-lco-based terminaiton detection\n"
+          "\t-k, use and-lco-based termination detection\n"
+          "\t-p, use process-based termination detection\n"
           "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
@@ -156,7 +157,7 @@ static int _main_action(_sssp_args_t *args) {
          el.num_vertices, el.num_edges);
 
   // Open the results file and write the basic info out
-  FILE *results_file = fopen("sample.ss.chk", "a+");
+  FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
   fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
   fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
@@ -334,7 +335,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:ahk?")) != -1) {
+  while ((opt = getopt(argc, argv, "q:aphk?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -344,6 +345,9 @@ int main(int argc, char *argv[argc]) {
       break;
     case 'k':
       termination = AND_LCO_TERMINATION;
+      break;
+    case 'p':
+      termination = PROCESS_TERMINATION;
       break;
     case 'h':
       _usage(stdout);

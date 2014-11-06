@@ -75,6 +75,8 @@ static void _init(_process_t *p, hpx_addr_t termination) {
 
 
 typedef struct {
+  hpx_addr_t target;
+  hpx_action_t action;
   hpx_addr_t result;
   char data[];
 } _call_args_t;
@@ -90,15 +92,13 @@ static int _call_action(_call_args_t *args) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
-  hpx_addr_t target = hpx_thread_current_cont_target();
-  hpx_action_t action = hpx_thread_current_cont_action();
-  uint32_t len = hpx_thread_current_args_size() - sizeof(args->result);
+  uint32_t len = hpx_thread_current_args_size() - (sizeof(args->target)+sizeof(args->action)+sizeof(args->result));
   hpx_parcel_t *parcel =
-      parcel_create(target, action, args->data, len, args->result,
+      parcel_create(args->target, args->action, args->data, len, args->result,
                     hpx_lco_set_action, pid, true);
-  parcel_set_credit(parcel, credit);
   if (!parcel)
     return dbg_error("process: call_action failed.\n");
+  parcel_set_credit(parcel, credit);
 
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
@@ -125,11 +125,8 @@ static int _return_credit_action(uint64_t *args) {
     return HPX_RESEND;
 
   // add credit to the credit-accounting bitmap
-  cr_bitmap_add(p->debt, credit);
-
-  // test for quiescence
-  if (cr_bitmap_test(p->debt)) {
-    dbg_log("detected quiescence. HPX is now terminating...\n");
+  if (cr_bitmap_add_and_test(p->debt, credit)) {
+    //dbg_log("detected quiescence...\n");
     uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
     assert(total_credit == 0);
     assert(_is_tracked(p));
@@ -149,6 +146,7 @@ parcel_recover_credit(hpx_parcel_t *p) {
                     HPX_NULL, HPX_ACTION_NULL, 0, false);
   if (!pp)
     return dbg_error("parcel_recover_credit failed.\n");
+  parcel_set_credit(pp, 0);
 
   hpx_parcel_send_sync(pp);
   return HPX_SUCCESS;
@@ -201,32 +199,22 @@ hpx_process_getpid(hpx_addr_t process) {
 /// continuation as an argument to the _call action.
 /// ----------------------------------------------------------------------------
 int
-hpx_process_call(hpx_addr_t process, hpx_action_t action, const void *args,
+hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
 #ifdef ENABLE_TAU
           TAU_START("hpx_process_call");
 #endif
-  hpx_parcel_t *p;
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
+  hpx_parcel_set_target(p, process);
+  hpx_parcel_set_action(p, _call);
+  hpx_parcel_set_pid(p, 0);
+  parcel_set_credit(p, 0);
 
-  if (process == HPX_NULL)
-    return HPX_ERROR;
-
-  // do an immediate call if it is an untracked process
-  hpx_pid_t pid = hpx_process_getpid(process);
-  if (!pid) {
-    p = parcel_create(HPX_HERE, action, args, len, result, hpx_lco_set_action, 0, true);
-  } else {
-    p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
-    hpx_parcel_set_target(p, process);
-    hpx_parcel_set_action(p, _call);
-    hpx_parcel_set_cont_action(p, action);
-    hpx_parcel_set_cont_target(p, process);
-    hpx_parcel_set_pid(p, 0);
-
-    _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
-    call_args->result = result;
-    memcpy(&call_args->data, args, len);
-  }
+  _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
+  call_args->result = result;
+  call_args->target = addr;
+  call_args->action = action;
+  memcpy(&call_args->data, args, len);
 
   hpx_parcel_send_sync(p);
 #ifdef ENABLE_TAU

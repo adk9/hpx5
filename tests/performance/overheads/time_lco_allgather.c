@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #include <limits.h>
 #include <string.h>
 #include <stdio.h>
@@ -20,10 +19,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "hpx/hpx.h"
-#include "common.h"
 #include "libsync/sync.h"
 
-#define BENCHMARK "HPX COST OF AllReduce LCO (us)"
+#define BENCHMARK "HPX COST OF AllGather LCO (us)"
 #define HEADER "# " BENCHMARK "\n"
 #define FIELD_WIDTH 10
 #define HEADER_FIELD_WIDTH 5
@@ -52,38 +50,18 @@ typedef struct {
   hpx_addr_t newdt;
 } InitArgs;
 
-int allreduce_main_action(const main_args_t *args);
+int allgather_main_action(const main_args_t *args);
 
-void allreduce_init_actions(void);
+void allgather_init_actions(void);
 static hpx_action_t _initDomain = 0;
 static hpx_action_t _advanceDomain = 0;
 
 static void
 _usage(FILE *f) {
-  fprintf(f, "Usage: ./example [options] [CYCLES]\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
-          "\t-p, set per-PE global heap size\n"
-          "\t-r, set send/receive request limit\n"
+  fprintf(f, "Usage: time_lco_allgather [options] [CYCLES]\n"
           "\t-h, this help display\n");
-}
-
-/// Initialize a double zero.
-static void
-_initDouble(double *input)
-{
-  *input = 0;
-}
-
-/// Update *lhs with with the max(lhs, rhs);
-static void
-_maxDouble(double *lhs, const double *rhs) {
-  *lhs = (*lhs > *rhs) ? *lhs : *rhs;
+  hpx_print_help();
+  fflush(f);
 }
 
 static int
@@ -127,16 +105,17 @@ _advanceDomain_action(const unsigned long *epoch)
     return HPX_SUCCESS;
   }
 
-  // Compute my gnewdt, and then start the allreduce
+  // Compute my gnewdt, and then start the allgather
   double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
   t = hpx_time_now();
-  hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
+  hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt,
+                          HPX_NULL, HPX_NULL);
   sync_addf(&timeSet, (unsigned long)(hpx_time_elapsed_ms(t)*1000), SYNC_RELAXED);
 
   // Get the gathered value, and print the debugging string.
-  double newdt;
+  double newdt[domain->nDoms];
   t = hpx_time_now();
-  hpx_lco_get(domain->newdt, sizeof(double), &newdt);
+  hpx_lco_get(domain->newdt, sizeof(newdt), &newdt);
   sync_addf(&timeGet, (unsigned long)(hpx_time_elapsed_ms(t)*1000), SYNC_RELAXED);
 
   ++domain->cycle;
@@ -145,26 +124,23 @@ _advanceDomain_action(const unsigned long *epoch)
 }
 
 int
-allreduce_main_action(const main_args_t *args)
+allgather_main_action(const main_args_t *args)
 {
   hpx_time_t t1;
 
-  fprintf(test_log, HEADER);
-  fprintf(test_log, "%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH,
+  fprintf(stdout, HEADER);
+  fprintf(stdout, "%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH,
            "Init time ", FIELD_WIDTH, "LCO Set", FIELD_WIDTH, "LCO Get");
-  fprintf(test_log, "%d\t", args->maxCycles);
+  fprintf(stdout, "%d\t", args->maxCycles);
 
   hpx_addr_t domain = hpx_gas_global_alloc(args->nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(args->nDoms);
   hpx_addr_t complete = hpx_lco_and_new(args->nDoms);
 
-  // Call the allreduce function here.
+  // Call the allgather function here.
   t1 = hpx_time_now();
-  hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, args->nDoms,
-                      sizeof(double),
-                      (hpx_commutative_associative_op_t)_maxDouble,
-                      (void (*)(void *, const size_t size)) _initDouble);
-  fprintf(test_log, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t1));
+  hpx_addr_t newdt = hpx_lco_allgather_new(args->nDoms, sizeof(double));
+  fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t1));
 
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     InitArgs init = {
@@ -183,7 +159,6 @@ allreduce_main_action(const main_args_t *args)
   hpx_lco_delete(done, HPX_NULL);
 
   const unsigned long epoch = 0;
-
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
     hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
@@ -194,22 +169,22 @@ allreduce_main_action(const main_args_t *args)
 
   hpx_gas_free(domain, HPX_NULL);
 
-  fprintf(test_log, "%*lu", FIELD_WIDTH, timeSet);
-  fprintf(test_log, "%*lu\n", FIELD_WIDTH, timeGet);
+  fprintf(stdout, "%*lu", FIELD_WIDTH, timeSet);
+  fprintf(stdout, "%*lu\n", FIELD_WIDTH, timeGet);
 
   hpx_shutdown(0);
 }
 
 /// Register the actions that we need.
 void
-allreduce_init_actions(void)
+allgather_init_actions(void)
 {
   _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
 }
 
 int
-main(int argc, char * const argv[argc])
+main(int argc, char *argv[argc])
 {
   // allocate the default argument structure on the stack
   main_args_t args = {
@@ -218,42 +193,14 @@ main(int argc, char * const argv[argc])
     .cores = 8
   };
 
-  // allocate the default HPX configuration on the stack
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  // initialize HPX
+  int err = hpx_init(&argc, &argv);
+  if (err)
+    return err;
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
       _usage(stdout);
       return 0;
@@ -263,12 +210,6 @@ main(int argc, char * const argv[argc])
       return -1;
     }
   }
-
-
-  // initialize HPX
-  int err = hpx_init(&cfg);
-  if (err)
-    return err;
 
   argc -= optind;
   argv += optind;
@@ -284,13 +225,11 @@ main(int argc, char * const argv[argc])
     return -1;
   }
 
-  test_log = fopen("test.log", "a+");
-
   // register HPX actions
-  allreduce_init_actions();
+  allgather_init_actions();
 
   // register the main action
-  hpx_action_t _main = HPX_REGISTER_ACTION(allreduce_main_action);
+  hpx_action_t _main = HPX_REGISTER_ACTION(allgather_main_action);
 
   // run HPX (this copies the args structure)
   return hpx_run(_main, &args, sizeof(args));

@@ -7,94 +7,284 @@ int get_bs_index(int i, int bi, int bs) {
   return (bi%r) + (bi/r)*bs*r + i*r;
 }
 
-void
-SBN1(Domain *domain, hpx_netfuture_t sbn1)
-{
-  const int    nsTF = domain->sendTF[0];
-  const int *sendTF = &domain->sendTF[1]; 
+// Performs the SBN1 update (allreduce)
+int
+_SBN1_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain       *ld = NULL;
 
-  int i,destLocalIdx,srcRemoteIdx,srcLocalIdx,distance;
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+  double     *src = args->buf;
+  int          nx = ld->sizeX + 1;
+  int          ny = ld->sizeY + 1;
+  int          nz = ld->sizeZ + 1;
+  recv_t   unpack = RECEIVER[srcLocalIdx];
+
+  // 1. acquire the domain lock
+  //  hpx_lco_sema_p(ld->sem_sbn1);
+
+  // static unsigned count[8] = {0};
+  // printf("recv %u %u\n", ld->rank, count[ld->rank]++);
+  // fflush(stdout);
+
+  // 2. update the domain
+  unpack(nx, ny, nz, src, ld->nodalMass, 0);
+
+  // 3. release the domain lock
+  //  hpx_lco_sema_v(ld->sem_sbn1);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->sbn1_and, HPX_NULL);
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+/// Perform a single send operation for SBN1---basically just allocate and pack
+/// a parcel. Exposed here as an action so that we can perform it in a parallel
+/// spawn.
+int
+_SBN1_sends_action(pSBN *psbn)
+{
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  int destLocalIdx = psbn->destLocalIdx;
+  hpx_parcel_t  *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+                                        BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // interpret the parcel's buffer as a NodalArgs, and pack into its buffer
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+  Domain   *domain = psbn->domain;
   int           nx = domain->sizeX + 1;
   int           ny = domain->sizeY + 1;
   int           nz = domain->sizeZ + 1;
-  for (i = 0; i < nsTF; ++i) {
-    destLocalIdx = sendTF[i];
-    srcRemoteIdx = destLocalIdx;
-    srcLocalIdx = 25 - srcRemoteIdx;
-    distance = -OFFSET[srcLocalIdx];
-    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
-    double *data;
-    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
-    assert(pin_success);
-    send_t      pack = SENDER[destLocalIdx];
-    pack(nx, ny, nz, domain->nodalMass, data);
-    hpx_addr_t lsync = hpx_lco_future_new(0);
-    hpx_lco_netfuture_setat(sbn1, get_bs_index((srcLocalIdx + (domain->rank+distance)*26)%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    hpx_lco_wait(lsync);
-    hpx_lco_delete(lsync, HPX_NULL);
-    hpx_gas_unpin(data_addr);
-  }
+  send_t      pack = SENDER[destLocalIdx];
+  pack(nx, ny, nz, domain->nodalMass, nodal->buf);
 
-  // wait for incoming data
-  int nrTF = domain->recvTF[0];
-  int *recvTF = &domain->recvTF[1];
+  // compute the neighbor we are sending to (as byte offset in the domain)
+  int    srcRemoteIdx = destLocalIdx;
+  int     srcLocalIdx = 25 - srcRemoteIdx;
+  int        distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t    local = hpx_thread_current_target();
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
-  for (i = 0; i < nrTF; i++) {
-    int srcLocalIdx = recvTF[i];
-    int srcRemoteIdx = 25 - srcLocalIdx;
-    const hpx_addr_t src_addr = hpx_lco_netfuture_getat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    double *src;
-    const bool pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
-    assert(pin_success);
-    recv_t unpack = RECEIVER[srcLocalIdx];
-    unpack(nx, ny, nz, src, domain->nodalMass, 0);
-    hpx_gas_unpin(src_addr);
-    hpx_lco_netfuture_emptyat(sbn1, get_bs_index((srcLocalIdx + domain->rank*26)%26, domain->rank, 26), HPX_NULL);
-  }
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+
+  // static unsigned count[8] = {0};
+  // printf("send %u %u\n", domain->rank, count[domain->rank]++);
+  // fflush(stdout);
+
+  // send the parcel--sync is fine because we packed in-place, we don't have a
+  // continuation for this action since it's going to join the allreduce barrier
+  // allocated at the remote domain, and we don't know it's global address here
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _SBN1_result);
+  hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
 }
 
+
+/// Perform a parallel spawn of SBN1 messages for the domain and epoch
 void
-SBN3(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain, int rank)
+SBN1(hpx_addr_t local, Domain *domain, unsigned long epoch)
 {
+  const int    nsTF = domain->sendTF[0];
+  const int *sendTF = &domain->sendTF[1];
+  hpx_addr_t   done = hpx_lco_and_new(nsTF);
+
+  int i;
+  for (i = 0; i < nsTF; ++i) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
+
+    pSBN *psbn = hpx_parcel_get_data(p);
+
+    psbn->domain       = domain;
+    psbn->destLocalIdx = sendTF[i];
+    psbn->epoch        = epoch;
+
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _SBN1_sends);
+    hpx_parcel_set_cont_target(p, done);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_send(p, HPX_NULL);
+  }
+
+  // Make sure the parallel spawn loop above is complete before returning
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+}
+
+int _SBN3_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+  //  double *src = args->buf;
+
+  int recvcnt = XFERCNT[srcLocalIdx];
+  recv_t unpack = RECEIVER[srcLocalIdx];
+
+  int nx = ld->sizeX + 1;
+  int ny = ld->sizeY + 1;
+  int nz = ld->sizeZ + 1;
+
+  // 1. acquire the domain lock
+  //  hpx_lco_sema_p(ld->sem_sbn3);
+
+  // 2. update 
+  //  unpack(nx, ny, nz, src, ld->fx, 0);
+  //  unpack(nx, ny, nz, src + recvcnt, ld->fy, 0);
+  //  unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
+
+  // 3. release the domain lock
+  //  hpx_lco_sema_v(ld->sem_sbn3);
+
+  int gen = ld->cycle % 2;
+  int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
+  hpx_addr_t nodal_global;
+  //  printf("Domain %d receiving from nf %d (%d, %d) in cycle %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
+  //  printf("-1, %d, %d, %d, %d, %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
+  //  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
+  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, recvcnt*3*sizeof(double) + sizeof(NodalArgs));
+  NodalArgs *nodal;
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+  double *src = nodal->buf;
+  unpack(nx, ny, nz, src, ld->fx, 0);
+  unpack(nx, ny, nz, src + recvcnt, ld->fy, 0);
+  unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
+  hpx_lco_netfuture_emptyat(ld->sbn3[gen], fi, HPX_NULL);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->sbn3_and[args->epoch % 2], HPX_NULL);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _SBN3_sends_action(pSBN *psbn)
+{
+  Domain *domain;
+  domain = psbn->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn->destLocalIdx;
+
+#if 0
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+				       BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+#endif
+  NodalArgs *nodal;
+  hpx_addr_t nodal_global = hpx_gas_alloc(XFERCNT[destLocalIdx]*3*sizeof(double) + sizeof(NodalArgs));
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+
+  send_t pack = SENDER[destLocalIdx];
+
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
   int nz = domain->sizeZ + 1;
-  int tag = domain->cycle;
-  int i,destLocalIdx;
+  int sendcnt = XFERCNT[destLocalIdx];
+  pack(nx, ny, nz, domain->fx, nodal->buf);
+  pack(nx, ny, nz, domain->fy, nodal->buf + sendcnt);
+  pack(nx, ny, nz, domain->fz, nodal->buf + sendcnt*2);
 
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+#if 0
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _SBN3_result);
+  hpx_parcel_send_sync(p);
+#endif
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+  pack(nx, ny, nz, domain->fx, nodal->buf);
+  pack(nx, ny, nz, domain->fy, nodal->buf + sendcnt);
+  pack(nx, ny, nz, domain->fz, nodal->buf + sendcnt*2);
+
+  int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26,
+			domain->rank + distance, 26);
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  int gen = domain->cycle % 2;
+  // printf("Domain %d sending to nf %d (%d, %d) in cycle %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
+  //  printf("1, %d, %d, %d, %d, %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
+  //  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, sendcnt*3*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+  hpx_gas_free(nodal_global, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
+{
+  //  printf("sendrecv, domain, nfi, nf_b, nf_i, cycle\n");
   // pack outgoing data
   int nsTF = domain->sendTF[0];
   int *sendTF = &domain->sendTF[1];
-  
-  int gen = tag%2;
+
+  // for completing the parallel _SBN3_sends operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsTF);
+
+  int i;
   for (i = 0; i < nsTF; i++) {
-    int destLocalIdx = sendTF[i];
-    // the neighbor this is being sent to
-    int srcRemoteIdx = destLocalIdx;
-    int srcLocalIdx = 25 - srcRemoteIdx;
-    int distance = -OFFSET[srcLocalIdx];
-    int sendcnt = XFERCNT[destLocalIdx];
-    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
-    double *data;
-    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
-    send_t pack = SENDER[destLocalIdx];
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
 
-    pack(nx, ny, nz, domain->fx, data);
-    pack(nx, ny, nz, domain->fy, data + sendcnt);
-    pack(nx, ny, nz, domain->fz, data + sendcnt*2);
+    pSBN *psbn = hpx_parcel_get_data(p);
 
-    hpx_gas_unpin(data_addr);
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendTF[i];
+    psbn->epoch        = epoch;
 
-    hpx_addr_t lsync = hpx_lco_future_new(0);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    } else {
-      hpx_lco_netfuture_setat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    }
-    hpx_lco_wait(lsync);
-    hpx_lco_delete(lsync, HPX_NULL);
-    
-  } 
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _SBN3_sends);
+    hpx_parcel_set_cont_target(p, sends);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
+  }
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
   // wait for incoming data
   int nrTF = domain->recvTF[0];
@@ -104,76 +294,171 @@ SBN3(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain, int rank)
   for (i = 0; i < nrTF; i++) {
     int srcLocalIdx = recvTF[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
-    if ( gen == 0 ) {
-      src_addr = hpx_lco_netfuture_getat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    } else {
-      src_addr = hpx_lco_netfuture_getat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    }
-    double *src;
-    const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
-    assert(hpx_pin_success);
-    int recvcnt = XFERCNT[srcLocalIdx];
-    recv_t unpack = RECEIVER[srcLocalIdx];
-
-    unpack(nx, ny, nz, src, domain->fx, 0);
-    unpack(nx, ny, nz, src + recvcnt, domain->fy, 0);
-    unpack(nx, ny, nz, src + recvcnt*2, domain->fz, 0);
-
-    // unpin the buffer
-    hpx_gas_unpin(src_addr);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_emptyat(sbn3_a, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), HPX_NULL);
-    } else {
-      hpx_lco_netfuture_emptyat(sbn3_b, get_bs_index((srcLocalIdx + 26*(domain->rank + gen*2))%26, domain->rank, 26), HPX_NULL);
-    }
+    NodalArgs args;
+    args.srcLocalIdx = srcLocalIdx;
+    args.epoch = epoch;
+    hpx_call(local, _SBN3_result, &args, sizeof(args), HPX_NULL);
   }
-
 }
 
-void
-PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int rank)
+int _PosVel_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+
+  int recvcnt = XFERCNT[srcLocalIdx];
+  recv_t unpack = RECEIVER[srcLocalIdx];
+
+  int nx = ld->sizeX + 1;
+  int ny = ld->sizeY + 1;
+  int nz = ld->sizeZ + 1;
+
+  // 1. acquire the domain lock
+  //  hpx_lco_sema_p(ld->sem_posvel);
+
+  int gen = ld->cycle % 2;
+  int fi = get_bs_index((srcLocalIdx + 26*ld->rank)%26, ld->rank, 26);
+  hpx_addr_t nodal_global;
+  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, recvcnt*6*sizeof(double) + sizeof(NodalArgs));
+  //  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
+  NodalArgs *nodal;
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+  double *src = nodal->buf;
+
+  // 2. update 
+  unpack(nx, ny, nz, src, ld->x, 1);
+  unpack(nx, ny, nz, src + recvcnt, ld->y, 1);
+  unpack(nx, ny, nz, src + recvcnt*2, ld->z, 1);
+  unpack(nx, ny, nz, src + recvcnt*3, ld->xd, 1);
+  unpack(nx, ny, nz, src + recvcnt*4, ld->yd, 1);
+  unpack(nx, ny, nz, src + recvcnt*5, ld->zd, 1);
+
+  // 3. release the domain lock
+  //  hpx_lco_sema_v(ld->sem_posvel);
+
+  hpx_lco_netfuture_emptyat(ld->posvel[gen], fi, HPX_NULL);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->posvel_and[args->epoch % 2], HPX_NULL);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _PosVel_sends_action(pSBN *psbn)
 {
+  Domain *domain;
+  domain = psbn->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn->destLocalIdx;
+
+#if 0
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+                                       BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+#endif
+
+  NodalArgs *nodal;
+  //  hpx_addr_t nodal_global = hpx_gas_alloc(BUFSZ[destLocalIdx] + sizeof(NodalArgs));
+  hpx_addr_t nodal_global = hpx_gas_alloc(XFERCNT[destLocalIdx]*6*sizeof(double) + sizeof(NodalArgs));
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+
+  send_t pack = SENDER[destLocalIdx];
+
+  int nx = domain->sizeX + 1;
+  int ny = domain->sizeY + 1;
+  int nz = domain->sizeZ + 1;
+  int sendcnt = XFERCNT[destLocalIdx];
+
+  pack(nx, ny, nz, domain->x, nodal->buf);
+  pack(nx, ny, nz, domain->y, nodal->buf + sendcnt);
+  pack(nx, ny, nz, domain->z, nodal->buf + sendcnt*2);
+  pack(nx, ny, nz, domain->xd, nodal->buf + sendcnt*3);
+  pack(nx, ny, nz, domain->yd, nodal->buf + sendcnt*4);
+  pack(nx, ny, nz, domain->zd, nodal->buf + sendcnt*5);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+#if 0
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _PosVel_result);
+  hpx_parcel_send_sync(p);
+#endif
+
+  int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26);
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  int gen = domain->cycle % 2;
+  hpx_lco_netfuture_setat(domain->posvel[gen], fi, sendcnt*6*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  //  hpx_lco_netfuture_setat(domain->posvel[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+  hpx_gas_free(nodal_global, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
+{
+  // doRecv = F, doSend = F, planeOnly = F, data = x, y, z, xd, yd, zd
   int nx = domain->sizeX + 1;
   int ny = domain->sizeY + 1;
   int nz = domain->sizeZ + 1;
   int tag = domain->cycle;
-  int i,destLocalIdx;
+  int i;
 
   // pack outgoing data
   int nsFF = domain->sendFF[0];
   int *sendFF = &domain->sendFF[1];
-  
-  int gen = tag%2;
+  // for completing the PosVel_sends operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsFF);
+
   for (i = 0; i < nsFF; i++) {
-    int destLocalIdx = sendFF[i];
-    // the neighbor this is being sent to
-    int srcRemoteIdx = destLocalIdx;
-    int srcLocalIdx = 25 - srcRemoteIdx;
-    int distance = -OFFSET[srcLocalIdx];
-    int sendcnt = XFERCNT[destLocalIdx];
-    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
-    double *data;
-    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
-    send_t pack = SENDER[destLocalIdx];
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
 
-    pack(nx, ny, nz, domain->x, data);
-    pack(nx, ny, nz, domain->y, data + sendcnt);
-    pack(nx, ny, nz, domain->z, data + sendcnt*2);
-    pack(nx, ny, nz, domain->xd, data + sendcnt*3);
-    pack(nx, ny, nz, domain->yd, data + sendcnt*4);
-    pack(nx, ny, nz, domain->zd, data + sendcnt*5);
+    pSBN *psbn = hpx_parcel_get_data(p);
 
-    hpx_gas_unpin(data_addr);
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendFF[i];
+    psbn->epoch        = epoch;
 
-    hpx_addr_t lsync = hpx_lco_future_new(0);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    } else {
-      hpx_lco_netfuture_setat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    }
-    hpx_lco_wait(lsync);
-    hpx_lco_delete(lsync, HPX_NULL);
-  } 
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _PosVel_sends);
+    hpx_parcel_set_cont_target(p, sends);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
+  }
+
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
   // wait for incoming data
   int nrFF = domain->recvFF[0];
@@ -183,43 +468,88 @@ PosVel(hpx_netfuture_t posvel_a,hpx_netfuture_t posvel_b,Domain *domain, int ran
   for (i = 0; i < nrFF; i++) {
     int srcLocalIdx = recvFF[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
-    if ( gen == 0 ) {
-      src_addr = hpx_lco_netfuture_getat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    } else {
-      src_addr = hpx_lco_netfuture_getat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    }
-    double *src;
-    const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
-    assert(hpx_pin_success);
-    int recvcnt = XFERCNT[srcLocalIdx];
-    recv_t unpack = RECEIVER[srcLocalIdx];
+    NodalArgs args;
+    args.srcLocalIdx = srcLocalIdx;
+    args.epoch = epoch;
+    hpx_call(local, _PosVel_result, &args, sizeof(args), HPX_NULL);
 
-   unpack(nx, ny, nz, src, domain->x, 1);
-   unpack(nx, ny, nz, src + recvcnt, domain->y, 1);
-   unpack(nx, ny, nz, src + recvcnt*2, domain->z, 1);
-   unpack(nx, ny, nz, src + recvcnt*3, domain->xd, 1);
-   unpack(nx, ny, nz, src + recvcnt*4, domain->yd, 1);
-   unpack(nx, ny, nz, src + recvcnt*5, domain->zd, 1);
-
-    // unpin the buffer
-    hpx_gas_unpin(src_addr);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_emptyat(posvel_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
-    } else {
-      hpx_lco_netfuture_emptyat(posvel_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
-    }
   }
 
 }
 
-void
-MonoQ(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
+int _MonoQ_result_action(NodalArgs *args) {
+  hpx_addr_t local = hpx_thread_current_target();
+  Domain *ld = NULL;
+
+  if (!hpx_gas_try_pin(local, (void**)&ld))
+    return HPX_RESEND;
+
+  // prepare for the unpack, do this here to minimize the time spent holding the
+  // lock
+  int srcLocalIdx = args->srcLocalIdx;
+
+  // move pointers to the ghost area
+  double *delv_xi = ld->delv_xi;
+  double *delv_eta = ld->delv_eta;
+  double *delv_zeta = ld->delv_zeta;
+  delv_xi += ld->numElem;
+  delv_eta += ld->numElem;
+  delv_zeta += ld->numElem;
+
+  int nx = ld->sizeX;
+  int planeElem = nx*nx;
+  int data_size = planeElem * 3 * sizeof(double) + sizeof(NodalArgs);  
+
+  // 2. update 
+  int i = ld->reverse_recvTT[srcLocalIdx];
+
+  int gen = ld->cycle % 2;
+  int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
+  hpx_addr_t nodal_global;
+  nodal_global = hpx_lco_netfuture_getat(ld->monoq[gen], fi, data_size);
+  NodalArgs *nodal;
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+  double *src = nodal->buf;
+
+  memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
+  memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
+  memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
+  hpx_lco_netfuture_emptyat(ld->monoq[gen], fi, HPX_NULL);
+
+  // 4. join the and for this epoch---the _advanceDomain action is waiting on
+  //    this before it performs local computation for the epoch
+  hpx_lco_and_set(ld->monoq_and[args->epoch % 2], HPX_NULL);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _MonoQ_sends_action(pSBN *psbn)
 {
+  Domain *domain;
+  domain = psbn->domain;
+  hpx_addr_t local = hpx_thread_current_target();
+  int destLocalIdx = psbn->destLocalIdx;
+
+#if 0
+  // Acquire a large-enough buffer to pack into.
+  // - NULL first parameter means it comes with the parcel and is managed by
+  //   the parcel and freed by the system inside of send()
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(NodalArgs) +
+                                       BUFSZ[destLocalIdx]);
+  assert(p);
+
+  // "interpret the parcel buffer as a Nodal"
+  NodalArgs *nodal = hpx_parcel_get_data(p);
+#endif
+  NodalArgs *nodal;
+  send_t pack = SENDER[destLocalIdx];
+ 
   int nx = domain->sizeX;
   int ny = domain->sizeY;
   int nz = domain->sizeZ;
-  int tag = domain->cycle;
-  int i,destLocalIdx;
 
   double *delv_xi = domain->delv_xi;
   double *delv_eta = domain->delv_eta;
@@ -228,75 +558,87 @@ MonoQ(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
   int numElem = domain->numElem;
   int planeElem = nx*nx;
 
+  int data_size = planeElem * 3 * sizeof(double) + sizeof(NodalArgs);
+  hpx_addr_t nodal_global = hpx_gas_alloc(data_size);
+  bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
+  assert(pin_success);
+
+  pack(nx, ny, nz, delv_xi, nodal->buf);
+  pack(nx, ny, nz, delv_eta, nodal->buf + planeElem);
+  pack(nx, ny, nz, delv_zeta, nodal->buf + planeElem*2);
+
+  // the neighbor this is being sent to
+  int srcRemoteIdx = destLocalIdx;
+  int srcLocalIdx = 25 - srcRemoteIdx;
+  int distance = -OFFSET[srcLocalIdx];
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
+
+  // pass along the source local index and epoch
+  nodal->srcLocalIdx = srcLocalIdx;
+  nodal->epoch = psbn->epoch;
+#if 0
+  hpx_parcel_set_target(p, neighbor);
+  hpx_parcel_set_action(p, _MonoQ_result);
+  hpx_parcel_send_sync(p);
+#endif
+
+  int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26);
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  int gen = domain->cycle % 2;
+  hpx_lco_netfuture_setat(domain->monoq[gen], fi, data_size, nodal_global, lsync, HPX_NULL);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+  hpx_gas_free(nodal_global, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
+void MonoQ(hpx_addr_t local,Domain *domain,unsigned long epoch)
+{
   // pack outgoing data
   int nsTT = domain->sendTT[0];
   int *sendTT = &domain->sendTT[1];
 
-  int gen = tag%2;
+  // for completing the parallel send operations, so that we don't
+  // release the lock too early
+  hpx_addr_t sends = hpx_lco_and_new(nsTT);
+
+  int i; 
   for (i = 0; i < nsTT; i++) {
-    int destLocalIdx = sendTT[i];
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(pSBN));
+    assert(p);
 
-    // the neighbor this is being sent to
-    int srcRemoteIdx = destLocalIdx;
-    int srcLocalIdx = 25 - srcRemoteIdx;
-    int distance = -OFFSET[srcLocalIdx];
-    const hpx_addr_t data_addr = hpx_gas_alloc(BUFSZ[destLocalIdx]);
-    double *data;
-    const bool pin_success = hpx_gas_try_pin(data_addr, (void**) &data);
-    send_t pack = SENDER[destLocalIdx];
+    pSBN *psbn = hpx_parcel_get_data(p);
 
-    pack(nx, ny, nz, delv_xi, data);
-    pack(nx, ny, nz, delv_eta, data + planeElem);
-    pack(nx, ny, nz, delv_zeta, data + planeElem*2);
+    psbn->domain = domain;
+    psbn->destLocalIdx = sendTT[i];
+    psbn->epoch        = epoch;
 
-    hpx_gas_unpin(data_addr);
+    hpx_parcel_set_target(p, local);
+    hpx_parcel_set_action(p, _MonoQ_sends);
+    hpx_parcel_set_cont_target(p, sends);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
-    hpx_addr_t lsync = hpx_lco_future_new(0);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_setat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    } else {
-      hpx_lco_netfuture_setat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26), BUFSZ[destLocalIdx], data_addr, lsync, HPX_NULL);
-    }
-    hpx_lco_wait(lsync);
-    hpx_lco_delete(lsync, HPX_NULL);
-  } 
+    // async is fine, since we're waiting on sends below
+    hpx_parcel_send(p, HPX_NULL);
+  }
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
   // wait for incoming data
   int nrTT = domain->recvTT[0];
   int *recvTT = &domain->recvTT[1];
 
-  // move pointers to the ghost area
-  delv_xi += numElem;
-  delv_eta += numElem;
-  delv_zeta += numElem;
-
-  hpx_addr_t src_addr;
   for (i = 0; i < nrTT; i++) {
     int srcLocalIdx = recvTT[i];
     int srcRemoteIdx = 25 - srcLocalIdx;
-    if ( gen == 0 ) {
-      src_addr = hpx_lco_netfuture_getat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    } else {
-      src_addr = hpx_lco_netfuture_getat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), BUFSZ[srcRemoteIdx]);
-    }
-    double *src;
-    const bool hpx_pin_success = hpx_gas_try_pin(src_addr, (void**) &src);
-    assert(hpx_pin_success);
-
-    memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
-    memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
-    memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
-
-    // unpin the buffer
-    hpx_gas_unpin(src_addr);
-    if ( gen == 0 ) {
-      hpx_lco_netfuture_emptyat(monoq_a, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
-    } else {
-      hpx_lco_netfuture_emptyat(monoq_b, get_bs_index((srcLocalIdx + 26*(domain->rank))%26, domain->rank, 26), HPX_NULL);
-    }
-
+    NodalArgs args;
+    args.srcLocalIdx = srcLocalIdx;
+    args.epoch = epoch;
+    hpx_call(local, _MonoQ_result, &args, sizeof(args), HPX_NULL);
   }
-  
 }
 
 void send1(int nx, int ny, int nz, double *src, double *dest)

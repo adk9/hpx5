@@ -68,6 +68,8 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
 
   s->stats = (scheduler_stats_t) SCHEDULER_STATS_INIT;
 
+  YIELD_QUEUE_INIT(&s->yielded, NULL);
+
   thread_set_stack_size(stack_size);
   dbg_log_sched("initialized a new scheduler.\n");
   return s;
@@ -90,6 +92,8 @@ void scheduler_delete(scheduler_t *sched) {
 
   if (sched->workers)
     free(sched->workers);
+
+  YIELD_QUEUE_FINI(&sched->yielded);
 
   free(sched);
 }

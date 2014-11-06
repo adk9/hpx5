@@ -73,8 +73,10 @@ struct hpx_options_t
   int hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
   char * hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
   const char *hpx_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
-  enum enum_hpx_loglevel hpx_loglevel_arg;	/**< @brief set the logging level.  */
-  char * hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */
+  enum enum_hpx_loglevel *hpx_loglevel_arg;	/**< @brief set the logging level.  */
+  char ** hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */
+  unsigned int hpx_loglevel_min; /**< @brief set the logging level's minimum occurreces */
+  unsigned int hpx_loglevel_max; /**< @brief set the logging level's maximum occurreces */
   const char *hpx_loglevel_help; /**< @brief set the logging level help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
@@ -84,6 +86,10 @@ struct hpx_options_t
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
+  int hpx_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
+  const char *hpx_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
+  int hpx_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
+  const char *hpx_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
   
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
@@ -98,6 +104,8 @@ struct hpx_options_t
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_reqlimit_given ;	/**< @brief Whether hpx-reqlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
+  unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
+  unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
 
 } ;
 

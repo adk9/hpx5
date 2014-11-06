@@ -64,6 +64,7 @@ typedef struct {
   struct transport_class *transport;
   struct network_class     *network;
   struct scheduler           *sched;
+  hpx_config_t              *config;
 } locality_t;
 
 

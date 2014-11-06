@@ -79,6 +79,9 @@ static int _cleanup(locality_t *l, int code) {
     l->boot = NULL;
   }
 
+  if (l->config)
+    free(l->config);
+
   if (l)
     free(l);
 
@@ -92,13 +95,15 @@ int hpx_init(int *argc, char ***argv) {
 #ifdef ENABLE_TAU
           TAU_START("hpx_init");
 #endif
-  // 0) parse the provided options into a usable configuration
-  hpx_config_t *cfg = hpx_parse_options(argc, argv);
-
-  dbg_log_level = cfg->loglevel;
   here = malloc(sizeof(*here));
   if (!here)
     return dbg_error("init: failed to map the local data segment.\n");
+
+  // 0) parse the provided options into a usable configuration
+  hpx_config_t *cfg = hpx_parse_options(argc, argv);
+  here->config = cfg;
+
+  dbg_log_level = cfg->loglevel;
 
   // for debugging
   here->rank = -1;
@@ -148,6 +153,19 @@ int hpx_init(int *argc, char ***argv) {
   if (here->sched == NULL)
     return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
 
+#ifdef ENABLE_TAU
+          TAU_STOP("hpx_init");
+#endif
+  return HPX_SUCCESS;
+}
+
+
+/// Called to run HPX.
+int hpx_run(hpx_action_t act, const void *args, size_t size) {
+#ifdef ENABLE_TAU
+          TAU_START("hpx_run");
+#endif
+
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
@@ -158,20 +176,17 @@ int hpx_init(int *argc, char ***argv) {
     hpx_parcel_set_action(p, light_network);
     hpx_parcel_set_target(p, HPX_HERE);
 
-    // enqueue directly---network exists but schedulers don't yet
-    network_rx_enqueue(here->network, p);
+    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
   }
 
-#ifdef ENABLE_TAU
-          TAU_STOP("hpx_init");
-#endif
+  if (here->rank == 0) {
+    // start the main process. enqueue parcels directly---schedulers
+    // don't exist yet
+    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
+                                    HPX_ACTION_NULL, HPX_NULL, true);
+    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
+  }
 
-  return HPX_SUCCESS;
-}
-
-
-/// Called to start up the HPX runtime.
-int system_startup(void) {
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
 
@@ -186,37 +201,12 @@ int system_startup(void) {
   }
 
   // and cleanup the system
-  return _cleanup(here, e);
-}
-
-/// Called to run HPX.
-int
-hpx_run(hpx_action_t act, const void *args, size_t size) {
-#ifdef ENABLE_TAU
-          TAU_START("hpx_run");
-#endif
-  if (here->rank == 0) {
-    // start the main process. enqueue parcels directly---schedulers
-    // don't exist yet
-    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
-                                    HPX_ACTION_NULL, HPX_NULL, true);
-    network_rx_enqueue(here->network, p);
-  }
+  int retval = _cleanup(here, e);
 #ifdef ENABLE_TAU
           TAU_STOP("hpx_run");
 #endif
-
-  // start the HPX runtime (scheduler) on all of the localities
-  return hpx_start();
+  return retval; 
 }
-
-
-// This function is used to start the HPX scheduler and runtime on
-// all of the available localities.
-int hpx_start(void) {
-  return system_startup();
-}
-
 
 int
 hpx_get_my_rank(void) {
@@ -278,9 +268,8 @@ hpx_abort(void) {
           TAU_START("hpx_abort");
 #endif
 
-#ifdef LIBHPX_DBG_WAIT_ON_ABORT
-  dbg_wait();
-#endif
+  if (here && here->config && here->config->waitonabort)
+    dbg_wait();
   assert(here->boot);
   boot_abort(here->boot);
   abort();

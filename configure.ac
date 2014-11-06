@@ -269,10 +269,7 @@ AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
   tests/performance/Makefile
-  tests/performance/TaskSpawningSO/Makefile
-  tests/performance/MicroBench/Makefile
-  tests/performance/Overheads/Makefile
-  tests/performance/PutGetSM/Makefile])])
+  tests/performance/overheads/Makefile])])
   
 AC_OUTPUT
 
