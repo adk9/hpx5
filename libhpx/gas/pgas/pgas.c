@@ -209,7 +209,6 @@ static hpx_addr_t _pgas_there(uint32_t i) {
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
-<<<<<<< HEAD
 static bool _pgas_try_pin(const hpx_addr_t gva, void **local) {
 #ifdef ENABLE_TAU
           TAU_START("pgas_try_pin");

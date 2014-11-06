@@ -81,7 +81,7 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
+  PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   chase_lev_ws_deque_t work;                    // my work
   // already aligned PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
@@ -121,15 +121,15 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 
   int status = action_invoke(action, args);
   switch (status) {
-   default:
+  default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
     hpx_shutdown(status);
-   case HPX_ERROR:
+  case HPX_ERROR:
     dbg_error("action: produced error.\n");
     hpx_abort();
-   case HPX_RESEND:
-   case HPX_SUCCESS:
-   case HPX_LCO_ERROR:
+  case HPX_RESEND:
+  case HPX_SUCCESS:
+  case HPX_LCO_ERROR:
     hpx_thread_exit(status);
   }
   unreachable();
@@ -156,10 +156,10 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
+
 static void _bind(hpx_parcel_t *p) {
-static hpx_parcel_t *_bind(hpx_parcel_t *p) {
 #ifdef ENABLE_TAU
-          TAU_START("thread_bind");
+  TAU_START("thread_bind");
 #endif
   assert(!parcel_get_stack(p));
 #ifdef HPX_PROFILE_STACKS
@@ -167,7 +167,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   unsigned long max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
   while (stacks + 1 > max_stacks) {
     if (sync_cas(&here->sched->stats.max_stacks, max_stacks, stacks, SYNC_SEQ_CST,
-                  SYNC_RELAXED))
+		 SYNC_RELAXED))
       break;
     max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
   }
@@ -175,7 +175,7 @@ static hpx_parcel_t *_bind(hpx_parcel_t *p) {
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
 #ifdef ENABLE_TAU
-          TAU_STOP("thread_bind");
+  TAU_STOP("thread_bind");
 #endif
 }
 
@@ -214,7 +214,6 @@ static hpx_parcel_t *_steal(void) {
   else {
     self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
   } //
-
 
   return p;
 }
@@ -303,7 +302,7 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 #ifdef ENABLE_TAU
-          TAU_START("thread_schedule");
+  TAU_START("thread_schedule");
 #endif
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
@@ -368,7 +367,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   p = hpx_parcel_acquire(NULL, 0);
 
 #ifdef ENABLE_TAU
-          TAU_STOP("thread_schedule");
+  TAU_STOP("thread_schedule");
 #endif
 
   // lazy stack binding
@@ -475,12 +474,12 @@ void *worker_run(scheduler_t *sched) {
 
 int worker_start(scheduler_t *sched) {
 #ifdef ENABLE_TAU
-          TAU_START("worker_thread_create");
+  TAU_START("worker_thread_create");
 #endif
   pthread_t thread;
   int e = pthread_create(&thread, NULL, (void* (*)(void*))worker_run, sched);
 #ifdef ENABLE_TAU
-          TAU_STOP("worker_thread_create");
+  TAU_STOP("worker_thread_create");
 #endif
   return (e) ? HPX_ERROR : HPX_SUCCESS;
 }
@@ -488,11 +487,11 @@ int worker_start(scheduler_t *sched) {
 
 void worker_shutdown(worker_t *worker) {
 #ifdef ENABLE_TAU
-          TAU_START("worker_thread_shutdown");
+  TAU_START("worker_thread_shutdown");
 #endif
   sync_store(&worker->shutdown, 1, SYNC_RELEASE);
 #ifdef ENABLE_TAU
-          TAU_STOP("worker_thread_shutdown");
+  TAU_STOP("worker_thread_shutdown");
 #endif
 }
 
@@ -508,12 +507,12 @@ void worker_join(worker_t *worker) {
 
 void worker_cancel(worker_t *worker) {
 #ifdef ENABLE_TAU
-          TAU_START("worker_thread_cancel");
+  TAU_START("worker_thread_cancel");
 #endif
   if (worker && pthread_cancel(worker->thread))
     dbg_error("worker: cannot cancel worker thread %d.\n", worker->id);
 #ifdef ENABLE_TAU
-          TAU_STOP("worker_thread_cancel");
+  TAU_STOP("worker_thread_cancel");
 #endif
 }
 
@@ -521,7 +520,7 @@ void worker_cancel(worker_t *worker) {
 /// Spawn a user-level thread.
 void scheduler_spawn(hpx_parcel_t *p) {
 #ifdef ENABLE_TAU
-          TAU_START("scheduler_spawn");
+  TAU_START("scheduler_spawn");
 #endif
   assert(self.id >= 0);
   assert(p);
@@ -529,7 +528,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   profile_ctr(self.stats.spawns++);
   sync_chase_lev_ws_deque_push(&self.work, p);  // lazy binding
 #ifdef ENABLE_TAU
-          TAU_STOP("scheduler_spawn");
+  TAU_STOP("scheduler_spawn");
 #endif
 }
 
@@ -557,7 +556,9 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
+
 void scheduler_yield(void) {
+  // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self.current;
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
@@ -573,11 +574,11 @@ void scheduler_yield(void) {
 
 void hpx_thread_yield(void) {
 #ifdef ENABLE_TAU
-          TAU_START("scheduler_yield");
+  TAU_START("scheduler_yield");
 #endif
   scheduler_yield();
 #ifdef ENABLE_TAU
-          TAU_STOP("scheduler_yield");
+  TAU_STOP("scheduler_yield");
 #endif
 }
 
@@ -619,25 +620,25 @@ static inline void _resume(ustack_t *thread) {
 
 void scheduler_signal(cvar_t *cvar) {
 #ifdef ENABLE_TAU
-          TAU_START("scheduler_signal");
+  TAU_START("scheduler_signal");
 #endif
   ustack_t *thread = cvar_pop_thread(cvar);
-#ifdef ENABLE_TAU
-          TAU_STOP("scheduler_signal");
-#endif
   if (thread)
     _resume(thread);
+#ifdef ENABLE_TAU
+  TAU_STOP("scheduler_signal");
+#endif
 }
 
 
 void scheduler_signal_all(struct cvar *cvar) {
 #ifdef ENABLE_TAU
-          TAU_START("scheduler_signal_all");
+  TAU_START("scheduler_signal_all");
 #endif
   for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
     _resume(thread);
 #ifdef ENABLE_TAU
-          TAU_STOP("scheduler_signal_all");
+  TAU_STOP("scheduler_signal_all");
 #endif
 }
 
@@ -671,7 +672,6 @@ static void _call_continuation(hpx_addr_t target, hpx_action_t action,
 static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
                                    const void *value,
                                    void (*cleanup)(void*), void *env) {
-
   // if there's a continuation future, then we set it, which could spawn a
   // message if the future isn't local
   hpx_parcel_t *parcel = self.current;
@@ -704,11 +704,11 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
 
 void hpx_thread_continue(size_t size, const void *value) {
 #ifdef ENABLE_TAU
-          TAU_START("hpx_thread_continue");
+  TAU_START("hpx_thread_continue");
 #endif
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 #ifdef ENABLE_TAU
-          TAU_STOP("hpx_thread_continue");
+  TAU_STOP("hpx_thread_continue");
 #endif
 }
 
@@ -716,18 +716,18 @@ void hpx_thread_continue(size_t size, const void *value) {
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
 #ifdef ENABLE_TAU
-          TAU_START("hpx_thread_continue_cleanup");
+  TAU_START("hpx_thread_continue_cleanup");
 #endif
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 #ifdef ENABLE_TAU
-          TAU_STOP("hpx_thread_continue_cleanup");
+  TAU_STOP("hpx_thread_continue_cleanup");
 #endif
 }
 
 
 void hpx_thread_exit(int status) {
 #ifdef ENABLE_TAU
-          TAU_START("hpx_thread_exit");
+  TAU_START("hpx_thread_exit");
 #endif
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
       unlikely(status == HPX_ERROR)) {
@@ -756,7 +756,7 @@ void hpx_thread_exit(int status) {
   dbg_error("worker: unexpected status %d.\n", status);
   hpx_abort();
 #ifdef ENABLE_TAU
-          TAU_STOP("hpx_thread_exit");
+  TAU_STOP("hpx_thread_exit");
 #endif
 }
 
