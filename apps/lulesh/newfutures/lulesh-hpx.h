@@ -67,6 +67,7 @@ typedef struct {
   hpx_addr_t elapsed_ar;
   hpx_netfuture_t sbn3[2];
   hpx_netfuture_t posvel[2];
+  hpx_netfuture_t monoq[2];
 } InitArgs;
 
 typedef struct {
@@ -221,6 +222,7 @@ typedef struct Domain {
 
   hpx_netfuture_t sbn3[2];
   hpx_netfuture_t posvel[2];
+  hpx_netfuture_t monoq[2];
 } Domain;
 
 typedef struct {

@@ -242,6 +242,8 @@ static int _initDomain_action(InitArgs *init) {
   ld->sbn3[1] = init->sbn3[1];
   ld->posvel[0] = init->posvel[0];
   ld->posvel[1] = init->posvel[1];
+  ld->monoq[0] = init->monoq[0];
+  ld->monoq[1] = init->monoq[1];
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
@@ -293,8 +295,8 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  cfg.max_size = 4 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
-  cfg.max_number = 4 * 26 * nDoms;
+  cfg.max_size = 6 * 26 * nDoms * ((nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs));
+  cfg.max_number = 6 * 26 * nDoms;
   hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
@@ -309,13 +311,19 @@ static int _main_action(int *input)
   elapsed_ar = hpx_lco_allreduce_new(nDoms, 1, sizeof(double),
 				     (hpx_commutative_associative_op_t)maxdouble,
 				     (void (*)(void *, const size_t size)) initmaxdouble);
-  hpx_netfuture_t sbn3[2] = {hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs)),
-			     hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs))};
-  hpx_netfuture_t posvel[2] = {hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs)),
-			     hpx_lco_netfuture_new_all(26*nDoms,(nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs))};
-
-
-
+  int nf_data_size = (nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs);
+  hpx_netfuture_t sbn3[2] = {
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+  };
+  hpx_netfuture_t posvel[2] = {
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+  };
+  hpx_netfuture_t monoq[2] = {
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+  };
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
@@ -328,7 +336,8 @@ static int _main_action(int *input)
       .complete = complete,
       .newdt = newdt,
       .sbn3 = {sbn3[0], sbn3[1]},
-      .posvel = {posvel[0], posvel[1]}
+      .posvel = {posvel[0], posvel[1]},
+      .monoq = {monoq[0], monoq[1]}
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, &args, sizeof(args), init);
