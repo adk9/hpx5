@@ -197,7 +197,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   photonEagerBuf eb;
   photon_event_status event;
   photon_eb_hdr *hdr;
-  photon_rid cookie = UINT64_MAX;
+  photon_rid cookie = NULL_COOKIE;
   int i, rc, start, end;
 
   *flag = 0;
@@ -223,8 +223,8 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     }
   }
 
-  // prioritize the EVQ
-  if ((flags & PHOTON_PROBE_LEDGER) && (cookie == UINT64_MAX)) {
+  // only check recv ledgers if an event we don't care about was popped
+  if ((cookie == NULL_COOKIE) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
     for (i=start; i<end; i++) {
       // check eager region first
@@ -279,7 +279,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   }
   
   // we found something to process
-  if (cookie != UINT64_MAX) {
+  if (cookie != NULL_COOKIE) {
     req = photon_lookup_request(cookie);
     if (req) {
       // set flag and request only if we have processed the number of outstanding

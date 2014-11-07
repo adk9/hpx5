@@ -147,7 +147,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     photonRequestTable rt = photon_processes[i].request_table;
     rt->count = 0;
     rt->cind = 0;
-    rt->tind = 0;
+    rt->tail = 0;
     rt->size = DEF_NUM_REQUESTS;
     rt->reqs = (photonRequest)malloc((DEF_NUM_REQUESTS + 1) * sizeof(struct photon_req_t));
     if (!rt->reqs) {
@@ -1336,7 +1336,7 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
   if (req->state == REQUEST_COMPLETED || flags & PHOTON_REQ_COMPLETED) {
     dbg_trace("Removing request 0x%016lx for remote buffer request 0x%016lx", request, req->remote_buffer.request);
     photon_free_request(req);
-    dbg_trace("%d requests left in reqtable for proc %d", req->proc, photon_count_request(req->proc));
+    dbg_trace("%d requests left in reqtable for proc %d", photon_count_request(req->proc), req->proc);
   }
   else {
     req->flags = REQUEST_FLAG_FIN;

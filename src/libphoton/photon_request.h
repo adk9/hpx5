@@ -41,10 +41,10 @@ typedef struct photon_req_t {
 } photon_req;
 
 typedef struct photon_req_table_t {
-  uint32_t count;
+  uint64_t count;
+  uint64_t tail;
+  uint64_t cind;
   uint32_t size;
-  uint32_t cind;
-  uint32_t tind;
   struct photon_req_t *reqs;
 } photon_req_table;
 

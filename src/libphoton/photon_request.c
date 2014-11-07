@@ -16,10 +16,10 @@ photonRequest photon_get_request(int proc) {
 
   rt = photon_processes[proc].request_table;
   req_curr = sync_fadd(&rt->count, 1, SYNC_RELAXED);
-  // offset request index by 1  since 0 is our NULL_COOKIE
+  // offset request index by 1 since 0 is our NULL_COOKIE
   req_ind = (req_curr % rt->size) + 1;
-  tail = sync_load(&rt->tind, SYNC_RELAXED);
-  if (req_ind == tail) {
+  tail = sync_load(&rt->tail, SYNC_RELAXED);
+  if ((req_curr - tail) > rt->size) {
     log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
     return NULL;
   }
@@ -30,13 +30,19 @@ photonRequest photon_get_request(int proc) {
     return NULL;
   }
 
+  if (req->state && (req->state != REQUEST_COMPLETED)) {
+    log_warn("Overwriting a request (id=0x%016lx) that hasn't completed...", req->id);
+  }
+
   req->id = PROC_REQUEST_ID(proc, req_ind);
   req->index = req_ind;
+  req->state = REQUEST_NEW;
   req->flags = REQUEST_FLAG_NIL;
   req->events = 0;
   //bit_array_clear_all(req->mmask);
-
-  dbg_trace("Returning a new request (curr=%u) with id: 0x%016lx, tail=%u", req_curr, req->id, tail);
+  
+  dbg_trace("Returning a new request (curr=%u) with id: 0x%016lx, tail=%u",
+	    req_curr, req->id, tail);
 
   return req;
 }
@@ -64,12 +70,12 @@ photonRequest photon_lookup_request(photon_rid rid) {
 
 int photon_count_request(int proc) {
   photonRequestTable rt;
-  uint32_t tind, curr;
+  uint32_t curr, tail;
   if (proc >= 0 && proc < _photon_nproc) {
     rt = photon_processes[proc].request_table;
-    tind = sync_load(&rt->tind, SYNC_RELAXED);
+    tail = sync_load(&rt->tail, SYNC_RELAXED);
     curr = sync_load(&rt->count, SYNC_RELAXED);
-    return (curr % rt->size) - (tind - rt->size);
+    return curr - tail;
   }
   else {
     return 0;
@@ -78,12 +84,10 @@ int photon_count_request(int proc) {
 
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
-  uint32_t from, to;
-  dbg_trace("Clearing request (ind=%u) 0x%016lx", req->index, req->id);
+  req->state = REQUEST_COMPLETED;
   rt = photon_processes[req->proc].request_table;
-  from = req->index - 1;
-  to = req->index % rt->size;
-  sync_cas(&rt->tind, from, to, SYNC_RELAXED, SYNC_RELAXED);
+  sync_fadd(&rt->tail, 1, SYNC_RELAXED);
+  dbg_trace("Cleared request (ind=%u) 0x%016lx", req->index, req->id);
   return PHOTON_OK;
 }
 

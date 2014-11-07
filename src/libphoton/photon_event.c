@@ -74,7 +74,7 @@ int __photon_nbpop_event(photonRequest req) {
   if ((req->state == REQUEST_COMPLETED) && (req->flags & REQUEST_FLAG_FIN)) {
     dbg_trace("Marking request 0x%016lx (remote=0x%016lx) as completed", req->id, req->remote_buffer.request);
     photon_free_request(req);
-    dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc));
+    dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc), req->proc);
   } 
   
   dbg_trace("returning %d", (req->state == REQUEST_COMPLETED)?0:1 );
@@ -190,7 +190,7 @@ int __photon_wait_ledger(photonRequest req) {
     }
   }
   dbg_trace("Removing RDMA: %u/0x%016lx", i, req->id);
-  dbg_trace("%d requests left in %d's reqtable", req->proc, photon_count_request(req->proc));
+  dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc), req->proc);
 
   return (req->state == REQUEST_COMPLETED)?0:-1;
 }
