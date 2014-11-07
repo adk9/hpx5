@@ -18,10 +18,6 @@
 #include "photon_xsp_forwarder.h"
 #endif
 
-#define INC_ENTRY(e)         (e->curr = (e->curr + 1) % e->num_entries)
-#define MARK_DONE(e,s)       (sync_fadd(&e->tail, s, SYNC_RELAXED))
-#define EB_MSG_SIZE(s)       (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
-
 #define DEF_NUM_REQUESTS     (1024*4)   // 4K pre-allocated requests per rank
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
 #define DEF_SMALL_MSG_SIZE   8192
@@ -38,17 +34,13 @@
 #define RDMA_FLAG_NIL        0x00
 #define RDMA_FLAG_NO_CQE     0x01
 
-#define REQUEST_COOK_SEND    0xbeef
-#define REQUEST_COOK_RECV    0xcafebabe
-#define REQUEST_COOK_EAGER   0xdeadfeed
-
 #define LEDGER_ALL           0xff
-#define LEDGER_INFO          0x01
-#define LEDGER_EAGER         0x02
-#define LEDGER_FIN           0x04
-#define LEDGER_PWC           0x08
-#define LEDGER_BUF           0x10
-#define LEDGER_PBUF          0x11
+#define LEDGER_INFO          1<<1
+#define LEDGER_EAGER         1<<2
+#define LEDGER_FIN           1<<3
+#define LEDGER_PWC           1<<4
+#define LEDGER_BUF           1<<5
+#define LEDGER_PBUF          1<<6
 
 typedef enum { PHOTON_CONN_ACTIVE, PHOTON_CONN_PASSIVE } photon_connect_mode_t;
 

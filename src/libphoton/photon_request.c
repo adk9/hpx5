@@ -5,6 +5,8 @@
 #include "photon_backend.h"
 #include "photon_request.h"
 
+static int __photon_cleanup_request(photonRequest req);
+
 photonRequest photon_get_request(int proc) {
   photonRequestTable rt;
   photonRequest      req;
@@ -34,10 +36,11 @@ photonRequest photon_get_request(int proc) {
     log_warn("Overwriting a request (id=0x%016lx) that hasn't completed...", req->id);
   }
 
-  req->id = PROC_REQUEST_ID(proc, req_ind);
-  req->index = req_ind;
-  req->state = REQUEST_NEW;
-  req->flags = REQUEST_FLAG_NIL;
+  req->id     = PROC_REQUEST_ID(proc, req_ind);
+  req->index  = req_ind;
+  req->op     = REQUEST_OP_DEFAULT;
+  req->state  = REQUEST_NEW;
+  req->flags  = REQUEST_FLAG_NIL;
   req->events = 0;
   //bit_array_clear_all(req->mmask);
   
@@ -84,7 +87,7 @@ int photon_count_request(int proc) {
 
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
-  req->state = REQUEST_COMPLETED;
+  __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
   sync_fadd(&rt->tail, 1, SYNC_RELAXED);
   dbg_trace("Cleared request (ind=%u) 0x%016lx", req->index, req->id);
@@ -249,4 +252,43 @@ photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs) {
   
  error_exit:
   return NULL;
+}
+
+static int __photon_cleanup_request(photonRequest req) {
+  switch (req->op) {
+  case REQUEST_OP_SENDBUF:
+    if (req->flags & REQUEST_FLAG_EAGER) {
+      MARK_DONE(photon_processes[req->proc].remote_eager_buf, req->length);
+      MARK_DONE(photon_processes[req->proc].remote_eager_ledger, 1);
+    }
+    else {
+      MARK_DONE(photon_processes[req->proc].remote_snd_info_ledger, 1);
+    }
+    break;
+  case REQUEST_OP_SENDREQ:
+    MARK_DONE(photon_processes[req->proc].remote_snd_info_ledger, 1);
+    break;
+  case REQUEST_OP_SENDFIN:
+    break;
+  case REQUEST_OP_RECVBUF:
+    MARK_DONE(photon_processes[req->proc].remote_rcv_info_ledger, 1);
+    break;
+  case REQUEST_OP_PWC:
+    if (req->flags & REQUEST_FLAG_1PWC) {
+      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->length);
+    }
+    else if (req->flags & REQUEST_FLAG_2PWC) {
+      MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
+    }
+    break;
+  case REQUEST_OP_DEFAULT:
+    break;
+  default:
+    log_err("Tried to cleanup a request op we don't recognize: %d", req->op);
+    break;
+  }
+
+  req->state = REQUEST_COMPLETED;
+
+  return PHOTON_OK;
 }

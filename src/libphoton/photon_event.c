@@ -23,7 +23,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
       else {
 	// this was an RDMA event associated with a ledger
 	// mark the request as having the local completion popped
-	treq->flags &= REQUEST_FLAG_LDONE;
+	treq->flags |= REQUEST_FLAG_LDONE;
 	dbg_trace("Set local completion done flag for ledger rid: 0x%016lx", cookie);
       }
     }
@@ -190,6 +190,7 @@ int __photon_wait_ledger(photonRequest req) {
     }
   }
   dbg_trace("Removing RDMA: %u/0x%016lx", i, req->id);
+  photon_free_request(req);
   dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc), req->proc);
 
   return (req->state == REQUEST_COMPLETED)?0:-1;
@@ -209,13 +210,8 @@ int __photon_wait_event(photonRequest req) {
     }
     
     cookie = event.id;
-    if (cookie == req->id) {
-      req->state = REQUEST_COMPLETED;
-      dbg_trace("setting request complete with cookie: 0x%016lx", cookie);
-    }
-    else {
-      log_warn("Ignoring received event: 0x%016lx", cookie);
-    }
+    rc = __photon_handle_cq_event(req, cookie);
+    if (rc) return rc;
   }
 
   return (req->state == REQUEST_COMPLETED)?0:-1;

@@ -43,7 +43,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     }
     cookie = req->id;
     req->id = local;
-    req->flags = PHOTON_REQ_USERID;
+    req->op = REQUEST_OP_PWC;
+    req->flags = REQUEST_FLAG_USERID;
   }
   else {
     cookie = NULL_COOKIE;
@@ -287,13 +288,6 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       if ( (--req->events) == 0) {
 	*flag = 1;
 	*request = req->id;
-	// accounting
-	if (req->flags & REQUEST_FLAG_1PWC) {
-	  MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->length);
-	}
-	else if (req->flags & REQUEST_FLAG_2PWC) {
-	  MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
-	}
 	dbg_trace("Completed and removing pwc request: 0x%016lx", cookie);
 	photon_free_request(req);
 	return PHOTON_OK;
