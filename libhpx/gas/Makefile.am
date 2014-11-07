@@ -9,7 +9,7 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      smp/smp.c \
                      pgas/actions.c \
                      pgas/bitmap.c \
-                     pgas/gva.c \
+                     pgas/gpa.c \
                      pgas/pgas.c \
                      pgas/heap.c \
                      parcel/memget.c \

@@ -25,7 +25,7 @@
 #include "libhpx/transport.h"
 #include "../mallctl.h"
 #include "bitmap.h"
-#include "gva.h"
+#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 

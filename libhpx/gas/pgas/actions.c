@@ -17,7 +17,7 @@
 #include <string.h>
 #include <hpx/builtins.h>
 #include <libhpx/locality.h>
-#include "gva.h"
+#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 
@@ -61,7 +61,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  return pgas_offset_to_gva(here->rank, offset);
+  return pgas_offset_to_gpa(here->rank, offset);
 }
 
 
@@ -103,7 +103,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  return pgas_offset_to_gva(here->rank, offset);
+  return pgas_offset_to_gpa(here->rank, offset);
 }
 
 
@@ -139,33 +139,33 @@ static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
 ///
 /// @returns HPX_SUCCESS
 static int _calloc_init_handler(_calloc_init_args_t *args) {
-  // Create a global virtual address from the offset so that we can perform
+  // Create a global physical address from the offset so that we can perform
   // cyclic address arithmetic on it. This avoids any issues with internal
   // padding, since the addr_add already needs to be able to deal with that
   // correctly.
   //
-  // Then compute the gva for each local block, convert it to an lva, and then
+  // Then compute the gpa for each local block, convert it to an lva, and then
   // memset it.
   uint32_t blocks = ceil_div_64(args->bytes, here->ranks);
-  hpx_addr_t gva = pgas_offset_to_gva(here->rank, args->offset);
+  hpx_addr_t gpa = pgas_offset_to_gpa(here->rank, args->offset);
   for (int i = 0, e = blocks; i < e; ++i) {
-    void *lva = pgas_gva_to_lva(gva);
+    void *lva = pgas_gpa_to_lva(gpa);
     memset(lva, 0, args->bsize);
     // increment the global address by one cycle
-    gva = hpx_addr_add(gva, args->bsize * here->ranks, args->bsize);
+    gpa = hpx_addr_add(gpa, args->bsize * here->ranks, args->bsize);
   }
   return HPX_SUCCESS;
 }
 
 
 static int _pgas_free_handler(void *UNUSED) {
-  hpx_addr_t gva = hpx_thread_current_target();
-  if (here->rank != pgas_gva_to_rank(gva)) {
+  hpx_addr_t gpa = hpx_thread_current_target();
+  if (here->rank != pgas_gpa_to_rank(gpa)) {
     dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
-              pgas_gva_to_rank(gva), here->rank);
+              pgas_gpa_to_rank(gpa), here->rank);
     return HPX_ERROR;
   }
-  void *lva = pgas_gva_to_lva(gva);
+  void *lva = pgas_gpa_to_lva(gpa);
   libhpx_global_free(lva);
   return HPX_SUCCESS;
 }

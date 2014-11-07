@@ -90,19 +90,19 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
 
 /// Convert a global address into a local virtual address.
 ///
-/// @param          gva The global address.
+/// @param          gpa The global physical address.
 ///
 /// @returns The corresponding local virtual address.
-void *pgas_gva_to_lva(hpx_addr_t gva)
+void *pgas_gpa_to_lva(hpx_addr_t gpa)
   HPX_INTERNAL;
 
 
-/// Convert a local address into a global virtual address.
+/// Convert a local address into a global physical address.
 ///
-/// @param          gva The global address.
+/// @param          lva The local virtual address.
 ///
 /// @returns The corresponding local virtual address.
-hpx_addr_t pgas_lva_to_gva(void *lva)
+hpx_addr_t pgas_lva_to_gpa(void *lva)
   HPX_INTERNAL;
 
 
