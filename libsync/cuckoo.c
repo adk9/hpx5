@@ -21,7 +21,7 @@
 
 struct cuckoo_bucket {
   long key;
-  void *value;
+  const void *value;
   UT_hash_handle hh;                            // HACK
 };
 
@@ -63,7 +63,7 @@ sync_cuckoo_hashtable_delete(cuckoo_hashtable_t *ht) {
 
 
 int
-sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *ht, long key, void *value) {
+sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *ht, long key, const void *value) {
   _cuckoo_lock(ht);
   cuckoo_bucket_t *entry = malloc(sizeof(*entry));
   assert(entry);
@@ -75,13 +75,14 @@ sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *ht, long key, void *value) {
 }
 
 
-void *
+const void *
 sync_cuckoo_hashtable_lookup(cuckoo_hashtable_t *ht, long key) {
   cuckoo_bucket_t *entry;
   _cuckoo_lock(ht);
   HASH_FIND_INT(ht->table, &key, entry);
   _cuckoo_unlock(ht);
-  assert(entry);
+  if (!entry)
+    return NULL;
   return entry->value;
 }
 
