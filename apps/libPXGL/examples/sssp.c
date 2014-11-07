@@ -110,20 +110,6 @@ typedef struct {
   int realloc_adj_list;
 } _sssp_args_t;
 
-/* static hpx_action_t _get_sssp_stat; */
-/* static int _get_sssp_stat_action(call_sssp_args_t* sargs) */
-/* { */
-/*   const hpx_addr_t target = hpx_thread_current_target(); */
-
-/*   hpx_addr_t *sssp_stats; */
-/*   if (!hpx_gas_try_pin(target, (void**)&sssp_stats)) */
-/*     return HPX_RESEND; */
-
-/*   sargs->sssp_stat = *sssp_stats; */
-/*   hpx_gas_unpin(target); */
-
-/*   return HPX_SUCCESS; */
-/* } */
 
 static hpx_action_t _print_sssp_stat;
 static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
