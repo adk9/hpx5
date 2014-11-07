@@ -1,6 +1,6 @@
 noinst_PROGRAMS 	= hpxtest
 check_SCRIPTS           = $(srcdir)/run_tests.sh
-TESTS                   = $(srcdir)/run_tests.sh
+TESTS                   = run_tests.sh
 check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
                           01_TestRuntime.c \
