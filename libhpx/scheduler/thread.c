@@ -44,6 +44,7 @@ void thread_set_stack_size(int stack_bytes) {
 }
 
 
+#ifdef ENABLE_DEBUG
 /// Update the protections on the first and last page in the stack.
 ///
 /// @param         base The base address.
@@ -59,7 +60,7 @@ static void _mprot(void *base, int prot) {
               EACCES, EINVAL, ENOMEM);
   }
 }
-
+#endif
 
 /// Protect the stack so that stack over/underflow will result in a segfault.
 ///
