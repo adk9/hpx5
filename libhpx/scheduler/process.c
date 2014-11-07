@@ -92,9 +92,9 @@ static int _call_action(_call_args_t *args) {
   hpx_parcel_t *parcel =
       parcel_create(args->target, args->action, args->data, len, args->result,
                     hpx_lco_set_action, pid, true);
-  parcel_set_credit(parcel, credit);
   if (!parcel)
     return dbg_error("process: call_action failed.\n");
+  parcel_set_credit(parcel, credit);
 
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
@@ -121,11 +121,8 @@ static int _return_credit_action(uint64_t *args) {
     return HPX_RESEND;
 
   // add credit to the credit-accounting bitmap
-  cr_bitmap_add(p->debt, credit);
-
-  // test for quiescence
-  if (cr_bitmap_test(p->debt)) {
-    dbg_log("detected quiescence...\n");
+  if (cr_bitmap_add_and_test(p->debt, credit)) {
+    //dbg_log("detected quiescence...\n");
     uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
     assert(total_credit == 0);
     assert(_is_tracked(p));
@@ -145,6 +142,7 @@ parcel_recover_credit(hpx_parcel_t *p) {
                     HPX_NULL, HPX_ACTION_NULL, 0, false);
   if (!pp)
     return dbg_error("parcel_recover_credit failed.\n");
+  parcel_set_credit(pp, 0);
 
   hpx_parcel_send_sync(pp);
   return HPX_SUCCESS;
@@ -197,6 +195,7 @@ hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const
   hpx_parcel_set_target(p, process);
   hpx_parcel_set_action(p, _call);
   hpx_parcel_set_pid(p, 0);
+  parcel_set_credit(p, 0);
 
   _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
   call_args->result = result;

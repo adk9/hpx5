@@ -21,14 +21,16 @@ typedef enum {HPX_UNSET = 0x01, HPX_SET = 0x02} hpx_set_t;
 /// Objects of hpx_netfuture_config_t are used to configure the netfutures
 /// system at initialization time.
 typedef struct {
-  size_t total_size;   /// The maximum amount of total memory available for all 
-                       /// allocated netfutures.
-  size_t total_number; /// The maximum number of netfutures that may be allocated.
+  size_t max_size;         /// The maximum amount of total memory available
+                           /// for all allocated netfutures.
+  size_t max_array_number; /// The number of netfuture arrays
+  size_t max_number;       /// The number of netfuture elements over all arrays
 } hpx_netfuture_config_t;
 
 #define HPX_NETFUTURE_CONFIG_DEFAULTS { \
-    .total_size = 1024*1024*100,	\
-    .total_number = 1000		\
+    .max_size = 1024*1024*100,	\
+    .max_array_number = 100,	\
+    .max_number = 100000        \
 }
 
 typedef struct  {
