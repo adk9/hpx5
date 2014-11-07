@@ -74,9 +74,9 @@ static inline void
 _end(uint64_t *h0, uint64_t *h1,uint64_t *h2,uint64_t *h3,
      uint64_t *h4, uint64_t *h5,uint64_t *h6,uint64_t *h7,
      uint64_t *h8, uint64_t *h9,uint64_t *h10,uint64_t *h11) {
-  end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
-  end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
-  end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
+  _end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
+  _end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
+  _end_partial(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11);
 }
 
 
@@ -128,12 +128,9 @@ spooky_hash(const void *str, size_t len)
 }
 
 
-// Hash the passed string.
-//
-// Prefer glib GQuark-based hashing. If that's not available, then fall back to
-// using MD5 from libcrypto. If that's not available, then we use Jenkins hash.
+// Hash a string.
 //
 const uintptr_t
-hashstr(const char *str, size_t len) {
+hpx_hash_string(const char *str, size_t len) {
   return spooky_hash(str, len);
 }
