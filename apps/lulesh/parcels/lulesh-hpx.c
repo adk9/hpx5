@@ -13,7 +13,7 @@ hpx_action_t _PosVel_result = 0;
 hpx_action_t _MonoQ_sends = 0;
 hpx_action_t _MonoQ_result = 0;
 
-static void initdouble(double *input, const size_t size) {
+static void initdouble(double *input, const size_t size) {  
   assert(sizeof(double) == size);
   *input = 99999999.0;
 }
@@ -24,20 +24,48 @@ static void mindouble(double *output,const double *input, const size_t size) {
   return;
 }
 
+static void initmaxdouble(double *input, const size_t size) {  
+  assert(sizeof(double) == size);
+  *input = 0;
+}
+
+static void maxdouble(double *output,const double *input, const size_t size) {
+  assert(sizeof(double) == size);
+  if ( *output < *input ) *output = *input;
+  return;
+}
+
 // perform one epoch of the algorithm
 static int _advanceDomain_action(unsigned long *epoch) {
-  const unsigned long n = *epoch;
+  hpx_time_t start_time;
+  double time_in_SBN3 = 0.0;
+  double time_in_PosVel = 0.0;
+  double time_in_MonoQ = 0.0;
+  hpx_time_t t_s, t_e;
+
+  unsigned long n = *epoch;
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
   if (!hpx_gas_try_pin(local, (void**)&domain))
     return HPX_RESEND;
 
+  while (true) {
+
   // 0. If I've run enough cycles locally, then I want to join the global
   //    complete barrier (stored in my local domain as domain->complete)---this
   //    is the barrier the _main_action() thread is waiting on.
   if ( (domain->time >= domain->stoptime) || (domain->cycle >= domain->maxcycles)) {
+    double elapsed_time_local = hpx_time_elapsed_ms(start_time);
+    hpx_lco_set(domain->elapsed_ar, sizeof(double), &elapsed_time_local, HPX_NULL, HPX_NULL);
+
     if ( domain->rank == 0 ) {
       int nx = domain->sizeX;
+
+      double elapsed_time_max;
+      hpx_lco_get(domain->elapsed_ar, sizeof(double), &elapsed_time_max);
+
+      printf("\n\nElapsed time = %12.6e\n\n", elapsed_time_max/1000.0);
+      printf("Run completed:  \n");
       printf("  Problem size = %d \n"
              "  Iteration count = %d \n"
              "  Final origin energy = %12.6e\n",nx,domain->cycle,domain->e[0]);
@@ -62,8 +90,14 @@ static int _advanceDomain_action(unsigned long *epoch) {
          "  MaxAbsDiff   = %12.6e\n"
          "  TotalAbsDiff = %12.6e\n"
          "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
-    }
 
+
+
+      printf("\n\n\n");
+      printf("time_in_SBN3 = %e\n", time_in_SBN3/1000.0);
+      printf("time_in_PosVel = %e\n", time_in_PosVel/1000.0);
+      printf("time_in_MonoQ = %e\n", time_in_MonoQ/1000.0);
+    }
 
     hpx_gas_unpin(local);
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
@@ -74,15 +108,15 @@ static int _advanceDomain_action(unsigned long *epoch) {
     // Send our allreduce messages for epoch n
     SBN1(local, domain, n);
 
-    //  update the domain's epoch, this releases any pending the
-    //    _SBN1_result_action messages, which will all acquire and release the
-    //    domain lock and then join the sbn1_and reduction for the nth epoch
-    hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
-
     //  wait for the allreduce for this epoch to complete locally
     hpx_lco_wait(domain->sbn1_and);
+    //    printf("Done with SBN1 on %d\n", domain->rank);
     hpx_lco_delete(domain->sbn1_and, HPX_NULL);
+
+
+    start_time = hpx_time_now();
   }
+
 
   // 4. Perform the local computation for epoch n
   double targetdt = domain->stoptime - domain->time;
@@ -98,12 +132,14 @@ static int _advanceDomain_action(unsigned long *epoch) {
   }
 
   domain->sbn3_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTF[0]);
-
+  
   // send messages for epoch n
+  t_s = hpx_time_now();
   CalcForceForNodes(local,domain,domain->rank,n);
-  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
   hpx_lco_wait(domain->sbn3_and[n % 2]);
+  //  printf("Done with SBN3 on %d\n", domain->rank);
   hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
+  time_in_SBN3 += hpx_time_elapsed_ms(t_s);
 
   CalcAccelerationForNodes(domain->xdd, domain->ydd, domain->zdd,
                              domain->fx, domain->fy, domain->fz,
@@ -149,14 +185,17 @@ static int _advanceDomain_action(unsigned long *epoch) {
                          domain->xd, domain->yd, domain->zd,
                          domain->deltatime, domain->numNode);
 
+  t_s = hpx_time_now();
   domain->posvel_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvFF[0]);
   PosVel(local,domain,n);
-  hpx_lco_gencount_inc(domain->epoch, HPX_NULL);
   hpx_lco_wait(domain->posvel_and[n % 2]);
   hpx_lco_delete(domain->posvel_and[n % 2], HPX_NULL);
+  time_in_PosVel += hpx_time_elapsed_ms(t_s);
 
+  t_s = hpx_time_now();
   domain->monoq_and[(n + 1) % 2] = hpx_lco_and_new(domain->recvTT[0]);
   LagrangeElements(local,domain,n);
+  time_in_MonoQ += hpx_time_elapsed_ms(t_s);
 
   CalcTimeConstraintsForElems(domain);
 
@@ -167,9 +206,15 @@ static int _advanceDomain_action(unsigned long *epoch) {
   // don't need this domain to be pinned anymore---let it move
   hpx_gas_unpin(local);
 
+  //  printf("============================================================== domain %d iter %d\n", domain->rank, n);
+
   // 5. spawn the next epoch
   unsigned long next = n + 1;
-  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  n = n + 1;
+
+  //  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  } // end while(true)
+  return HPX_ERROR;
 }
 
 static int _initDomain_action(InitArgs *init) {
@@ -188,7 +233,7 @@ static int _initDomain_action(InitArgs *init) {
   int col      = index%tp;
   int row      = (index/tp)%tp;
   int plane    = index/(tp*tp);
-  ld->base     = init->base;
+  ld->base = init->base;
   ld->sem_sbn1 = hpx_lco_sema_new(1);
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   ld->sem_posvel = hpx_lco_sema_new(1);
@@ -196,6 +241,7 @@ static int _initDomain_action(InitArgs *init) {
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
+  ld->elapsed_ar = init->elapsed_ar;
 
   // remember the LCO we're supposed to set when we've completed maxcycles
   ld->complete = init->complete;
@@ -239,7 +285,7 @@ static int _main_action(int *input)
   tp = (int) (cbrt(nDoms) + 0.5);
   if (tp*tp*tp != nDoms) {
     fprintf(stderr, "Number of domains must be a cube of an integer (1, 8, 27, ...)\n");
-    hpx_shutdown(HPX_ERROR);
+    return -1;
   }
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
@@ -248,11 +294,16 @@ static int _main_action(int *input)
   // Initialize the domains
   hpx_addr_t init = hpx_lco_and_new(nDoms);
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
-                                           (hpx_commutative_associative_op_t)mindouble,
-                                           (void (*)(void *, const size_t size)) initdouble);
+					   (hpx_commutative_associative_op_t)mindouble,
+					   (void (*)(void *, const size_t size)) initdouble);
+  hpx_addr_t elapsed_ar;
+  elapsed_ar = hpx_lco_allreduce_new(nDoms, 1, sizeof(double),
+				     (hpx_commutative_associative_op_t)maxdouble,
+				     (void (*)(void *, const size_t size)) initmaxdouble);
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
       .base = domain,
+      .elapsed_ar = elapsed_ar,
       .index = k,
       .nDoms = nDoms,
       .nx = nx,
@@ -281,34 +332,36 @@ static int _main_action(int *input)
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n",elapsed);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_shutdown(0);
 }
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: [options]\n"
+          "\t-c, cores\n"
+          "\t-t, scheduler threads\n"
+          "\t-D, all localities wait for debugger\n"
+          "\t-d, wait for debugger at specific locality\n"
           "\t-n, number of domains,nDoms\n"
           "\t-x, nx\n"
           "\t-i, maxcycles\n"
           "\t-h, show help\n");
-  hpx_print_help();
-  fflush(f);
 }
 
 
 int main(int argc, char **argv)
 {
-
   int nDoms, nx, maxcycles;
   // default
   nDoms = 8;
   nx = 15;
   maxcycles = 10;
 
-  if (hpx_init(&argc, &argv)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
+ int e = hpx_init(&argc, &argv); 
+ if (e) {
+   fprintf(stderr, "Failed to initialize hpx\n");
+   return -1;
+ }
+ 
   int opt = 0;
   while ((opt = getopt(argc, argv, "n:x:i:h?")) != -1) {
     switch (opt) {
@@ -334,7 +387,6 @@ int main(int argc, char **argv)
   _main      = HPX_REGISTER_ACTION(_main_action);
   _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
-
   _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
   _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
   _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);

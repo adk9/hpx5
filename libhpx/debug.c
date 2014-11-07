@@ -15,6 +15,7 @@
 #endif
 
 #include <stdio.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include "libsync/locks.h"
@@ -65,8 +66,8 @@ dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
 HPX_OPTIMIZE("O0")
 void dbg_wait(void) {
   int i = 0;
-  char hostname[256];
-  gethostname(hostname, sizeof(hostname));
+  char hostname[HOST_NAME_MAX];
+  gethostname(hostname, HOST_NAME_MAX);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)

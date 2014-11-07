@@ -1,7 +1,7 @@
 all: $(check_PROGRAMS)
 #noinst_bindir           = $(builddir)
 check_SCRIPTS           = $(srcdir)/run_tests.sh
-TESTS                   = $(srcdir)/run_tests.sh
+TESTS                   = run_tests.sh
 
 check_PROGRAMS          = $(PERFTESTS)
 PERFTESTS               =
