@@ -281,10 +281,6 @@ void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
     // async is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
   }
-  // Make sure the parallel spawn loop above is done so that we can release the
-  // domain lock.
-  hpx_lco_wait(sends);
-  hpx_lco_delete(sends, HPX_NULL);
 
   // wait for incoming data
   int nrTF = domain->recvTF[0];
@@ -299,6 +295,11 @@ void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
     args.epoch = epoch;
     hpx_call(local, _SBN3_result, &args, sizeof(args), HPX_NULL);
   }
+
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 }
 
 int _PosVel_result_action(NodalArgs *args) {
@@ -455,11 +456,6 @@ void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
     hpx_parcel_send(p, HPX_NULL);
   }
 
-  // Make sure the parallel spawn loop above is done so that we can release the
-  // domain lock.
-  hpx_lco_wait(sends);
-  hpx_lco_delete(sends, HPX_NULL);
-
   // wait for incoming data
   int nrFF = domain->recvFF[0];
   int *recvFF = &domain->recvFF[1];
@@ -474,6 +470,11 @@ void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
     hpx_call(local, _PosVel_result, &args, sizeof(args), HPX_NULL);
 
   }
+
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 
 }
 
@@ -622,10 +623,6 @@ void MonoQ(hpx_addr_t local,Domain *domain,unsigned long epoch)
     // async is fine, since we're waiting on sends below
     hpx_parcel_send(p, HPX_NULL);
   }
-  // Make sure the parallel spawn loop above is done so that we can release the
-  // domain lock.
-  hpx_lco_wait(sends);
-  hpx_lco_delete(sends, HPX_NULL);
 
   // wait for incoming data
   int nrTT = domain->recvTT[0];
@@ -639,6 +636,11 @@ void MonoQ(hpx_addr_t local,Domain *domain,unsigned long epoch)
     args.epoch = epoch;
     hpx_call(local, _MonoQ_result, &args, sizeof(args), HPX_NULL);
   }
+
+  // Make sure the parallel spawn loop above is done so that we can release the
+  // domain lock.
+  hpx_lco_wait(sends);
+  hpx_lco_delete(sends, HPX_NULL);
 }
 
 void send1(int nx, int ny, int nz, double *src, double *dest)
