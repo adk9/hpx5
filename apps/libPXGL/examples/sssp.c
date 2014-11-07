@@ -110,20 +110,6 @@ typedef struct {
   int realloc_adj_list;
 } _sssp_args_t;
 
-/* static hpx_action_t _get_sssp_stat; */
-/* static int _get_sssp_stat_action(call_sssp_args_t* sargs) */
-/* { */
-/*   const hpx_addr_t target = hpx_thread_current_target(); */
-
-/*   hpx_addr_t *sssp_stats; */
-/*   if (!hpx_gas_try_pin(target, (void**)&sssp_stats)) */
-/*     return HPX_RESEND; */
-
-/*   sargs->sssp_stat = *sssp_stats; */
-/*   hpx_gas_unpin(target); */
-
-/*   return HPX_SUCCESS; */
-/* } */
 
 static hpx_action_t _print_sssp_stat;
 static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
@@ -153,7 +139,7 @@ static int _main_action(_sssp_args_t *args) {
          el.num_vertices, el.num_edges);
 
   // Open the results file and write the basic info out
-  FILE *results_file = fopen("sample.ss.chk", "a+");
+  FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
   fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
   fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
