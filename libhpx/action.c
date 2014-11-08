@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "libhpx/action.h"
+#include "libhpx/debug.h"
 #include "libhpx/utils.h"
 #include "libsync/hashtables.h"
 
@@ -38,20 +39,29 @@ bool hpx_action_eq(const hpx_action_t lhs, const hpx_action_t rhs) {
 }
 
 
-hpx_action_t action_register(const char *key, hpx_action_handler_t f) {
-#ifdef ENABLE_ACTION_TABLE
-  size_t len = strlen(key);
-  const long k = hpx_hash_string(key, len);
-  int e = sync_cuckoo_hashtable_insert(&_action_table, k, (const void*)(hpx_action_t)f);
-  assert(e);
-  return (hpx_action_t)k;
-#endif
-
-#ifdef ENABLE_DEBUG
+int _dbg_action_insert(const long hkey, const hpx_action_handler_t f, const char *key) {
   _action_entry_t *entry = malloc(sizeof(*entry));
   entry->f = f;
   entry->key = key;
-  int e = sync_cuckoo_hashtable_insert(&_action_table, (long)f, entry);
+  return sync_cuckoo_hashtable_insert(&_action_table, (long)hkey, entry);
+}
+
+hpx_action_t action_register(const char *key, hpx_action_handler_t f) {
+  int e;
+#ifdef ENABLE_ACTION_TABLE
+  size_t len = strlen(key);
+  const long hkey = hpx_hash_string(key, len);
+#if ENABLE_DEBUG
+  e = _dbg_action_insert(hkey, f, key);
+#else
+  e = sync_cuckoo_hashtable_insert(&_action_table, hkey, (const void*)(hpx_action_t)f);
+#endif
+  assert(e);
+  return (hpx_action_t)hkey;
+#endif
+
+#if ENABLE_DEBUG
+  e = _dbg_action_insert((long)f, f, key);
   assert(e);
 #endif
   return (hpx_action_t)f;
@@ -62,6 +72,9 @@ hpx_action_handler_t action_lookup(hpx_action_t id) {
 #ifdef ENABLE_ACTION_TABLE
   const void *f = sync_cuckoo_hashtable_lookup(&_action_table, (long)id);
   assert(f);
+#ifdef ENABLE_DEBUG
+  return ((_action_entry_t*)f)->f;
+#endif
   return (hpx_action_handler_t)(hpx_action_t)f;
 #endif
   return (hpx_action_handler_t)id;
@@ -77,7 +90,7 @@ int action_invoke(hpx_action_t action, void *args) {
 const char *action_get_key(hpx_action_t id) {
   const char *key = NULL;
 #ifdef ENABLE_DEBUG
-  _action_entry_t *entry = sync_cuckoo_hashtable_lookup(&_action_table, id);
+  const _action_entry_t *entry = sync_cuckoo_hashtable_lookup(&_action_table, id);
   if (entry)
     key = entry->key;
 #endif
