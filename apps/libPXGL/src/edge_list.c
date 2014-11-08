@@ -13,8 +13,8 @@
 #include "libsync/sync.h"
 
 
-static hpx_action_t _put_edge;
-static int _put_edge_action(edge_list_edge_t *e)
+static hpx_action_t _put_edge_edgelist;
+static int _put_edge_edgelist_action(edge_list_edge_t *e)
 {
    const hpx_addr_t target = hpx_thread_current_target();
 
@@ -53,17 +53,18 @@ int edge_list_from_file_action(char **filename) {
       case 'a':
 
         sscanf(&line[1], " %lu %lu %lu", &edge->source, &edge->dest, &edge->weight);
-    if(el->min_edge_weight > edge->weight)
-      el->min_edge_weight = edge->weight;
-    if(el->max_edge_weight < edge->weight)
-      el->max_edge_weight = edge->weight;
+        if (el->min_edge_weight > edge->weight)
+          el->min_edge_weight = edge->weight;
+
+        if (el->max_edge_weight < edge->weight)
+          el->max_edge_weight = edge->weight;
 
         sscanf(&line[1], " %" PRIu64 " %" PRIu64 " %" PRIu64, &edge->source, &edge->dest, &edge->weight);
 
         hpx_addr_t e = hpx_addr_add(el->edge_list, count * sizeof(edge_list_edge_t), el->edge_list_bsize);
         count++;
         assert(edges != HPX_NULL);
-        hpx_call(e, _put_edge, edge, sizeof(*edge), edges);
+        hpx_call(e, _put_edge_edgelist, edge, sizeof(*edge), edges);
         break;
 
       case 'p':
@@ -100,6 +101,6 @@ int edge_list_from_file_action(char **filename) {
 
 
 static __attribute__((constructor)) void _edge_list_register_actions() {
-  _put_edge           = HPX_REGISTER_ACTION(_put_edge_action);
+  _put_edge_edgelist  = HPX_REGISTER_ACTION(_put_edge_edgelist_action);
   edge_list_from_file = HPX_REGISTER_ACTION(edge_list_from_file_action);
 }
