@@ -772,6 +772,6 @@ void hpx_thread_set_affinity(int affinity) {
   if (affinity == self.id)
     return;
 
-  hpx_parcel_t *to = _schedule(NULL, false);
+  hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
 }
