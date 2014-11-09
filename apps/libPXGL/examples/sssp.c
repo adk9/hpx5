@@ -134,7 +134,13 @@ static int _main_action(_sssp_args_t *args) {
   // Create an edge list structure from the given filename
   edge_list_t el;
   printf("Allocating edge-list from file %s.\n", args->filename);
-  hpx_call_sync(HPX_HERE, edge_list_from_file, &args->filename, sizeof(char*), &el, sizeof(el));
+  const edge_list_from_file_args_t edge_list_from_file_args = {
+    .locality_readers = HPX_LOCALITIES,
+    .thread_readers = 1,
+    .filename = args->filename
+  };
+  hpx_call_sync(HPX_HERE, edge_list_from_file, &edge_list_from_file_args,
+		sizeof(edge_list_from_file_args), &el, sizeof(el));
   printf("Edge List: #v = %lu, #e = %lu\n",
          el.num_vertices, el.num_edges);
 
@@ -142,7 +148,9 @@ static int _main_action(_sssp_args_t *args) {
   FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
   fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
-  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges, 0L, 0L);
+  // min and max edge weight needs to be reimplemented
+  // el.min_edge_weight, el.max_edge_weight);
 
   call_sssp_args_t sargs;
 
