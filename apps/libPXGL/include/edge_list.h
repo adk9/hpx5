@@ -26,8 +26,6 @@ typedef struct {
 typedef struct {
   uint64_t       num_edges;
   uint64_t    num_vertices;
-  uint64_t min_edge_weight;
-  uint64_t max_edge_weight;
   hpx_addr_t     edge_list;
   uint32_t edge_list_bsize;
 } edge_list_t;
@@ -35,7 +33,12 @@ typedef struct {
 
 // This action "returns" (continues) the constructed edge list as a
 // edge_list_t structure.
+typedef struct {
+  unsigned int locality_readers;
+  unsigned int thread_readers;
+  char *filename;
+} edge_list_from_file_args_t;
 extern hpx_action_t edge_list_from_file;
-extern int edge_list_from_file_action(char **filename);
+extern int edge_list_from_file_action(const edge_list_from_file_args_t * const args);
 
 #endif // PXGL_EDGE_LIST_H
