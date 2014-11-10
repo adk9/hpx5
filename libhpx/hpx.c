@@ -43,9 +43,8 @@
 
 /// Cleanup utility function.
 ///
-/// This will delete the global objects, if they've been allocated, and return
-/// the passed code.
-static int _cleanup(locality_t *l, int code) {
+/// This will delete the global objects, if they've been allocated.
+static void _cleanup(locality_t *l) {
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -76,69 +75,67 @@ static int _cleanup(locality_t *l, int code) {
 
   if (l)
     free(l);
-
-  return code;
 }
 
 
 int hpx_init(int *argc, char ***argv) {
-  here = malloc(sizeof(*here));
-  if (!here)
-    return dbg_error("init: failed to map the local data segment.\n");
-
-  // 0) parse the provided options into a usable configuration
   hpx_config_t *cfg = hpx_parse_options(argc, argv);
-  here->config = cfg;
-
   dbg_log_level = cfg->loglevel;
 
-  // for debugging
-  here->rank = -1;
-  here->ranks = -1;
-
-  // 2) bootstrap, to figure out some topology information
-  here->boot = boot_new(cfg->boot);
-  if (here->boot == NULL)
-    return _cleanup(here, dbg_error("init: failed to create the bootstrapper.\n"));
-
-  // 3) grab the rank and ranks, these are used all over the place so we expose
-  //    them directly
-  here->rank = boot_rank(here->boot);
-  here->ranks = boot_n_ranks(here->boot);
-
-  // 3a) wait if the user wants us to
   if (cfg->waitat == HPX_LOCALITY_ALL || cfg->waitat == here->rank)
     dbg_wait();
 
-  // 6) allocate the transport
+  // locality
+  here = malloc(sizeof(*here));
+  if (!here)
+    return dbg_error("failed to allocate a locality.\n");
+  here->config = cfg;
+
+  // bootstrap
+  here->boot = boot_new(cfg->boot);
+  if (!here->boot) {
+    _cleanup(here);
+    return dbg_error("failed to bootstrap.\n");
+  }
+  here->rank = boot_rank(here->boot);
+  here->ranks = boot_n_ranks(here->boot);
+
+  // byte transport
   here->transport = transport_new(cfg->transport, cfg->reqlimit);
-  if (here->transport == NULL)
-    return _cleanup(here, dbg_error("init: failed to create transport.\n"));
-  dbg_log("initialized the %s transport.\n", transport_id(here->transport));
+  if (!here->transport) {
+    _cleanup(here);
+    return dbg_error("failed to create transport.\n");
+  }
 
+  // global address space
   here->gas = gas_new(cfg->heapsize, here->boot, here->transport, cfg->gas);
-  if (here->gas == NULL)
-    return _cleanup(here, dbg_error("init: failed to create the global address "
-                                    "space.\n"));
-  int e = here->gas->join();
-  if (e)
-    return _cleanup(here, dbg_error("init: failed to join the global address "
-                                    "space.\n"));
-
-  // 4) update the HPX_HERE global address, depends on GAS initialization
+  if (!here->gas) {
+    _cleanup(here);
+    return dbg_error("failed to create the global address space.\n");
+  }
+  if (here->gas->join()) {
+    _cleanup(here);
+    return dbg_error("failed to join the global address space.\n");
+  }
   HPX_HERE = HPX_THERE(here->rank);
 
-  here->network = network_new();
-  if (here->network == NULL)
-    return _cleanup(here, dbg_error("init: failed to create network.\n"));
-  dbg_log("initialized the network.\n");
 
+  // parcel network
+  here->network = network_new();
+  if (!here->network) {
+    _cleanup(here);
+    return dbg_error("failed to create network.\n");
+  }
+
+  // thread scheduler
   int cores = (cfg->cores) ? cfg->cores : system_get_cores();
   int workers = (cfg->threads) ? cfg->threads : cores;
   here->sched = scheduler_new(cores, workers, cfg->stacksize,
                               cfg->backoffmax, cfg->statistics);
-  if (here->sched == NULL)
-    return _cleanup(here, dbg_error("init: failed to create scheduler.\n"));
+  if (!here->sched) {
+    _cleanup(here);
+    return dbg_error("failed to create scheduler.\n");
+  }
 
   return HPX_SUCCESS;
 }
@@ -169,38 +166,24 @@ int hpx_run(hpx_action_t act, const void *args, size_t size) {
 
   // start the scheduler, this will return after scheduler_shutdown()
   int e = scheduler_startup(here->sched);
-
-  // need to flush the transport
-  const uint32_t src = network_get_shutdown_src(here->network);
-  if (src == here->rank) {
-    transport_progress(here->transport, TRANSPORT_FLUSH);
-  }
-  else {
-    dbg_assert(src != UINT32_MAX);
-    transport_progress(here->transport, TRANSPORT_CANCEL);
-  }
-
-  // and cleanup the system
-  return _cleanup(here, e);
+  _cleanup(here);
+  return e;
 }
 
 
-int
-hpx_get_my_rank(void) {
+int hpx_get_my_rank(void) {
   assert(here);
   return here->rank;
 }
 
 
-int
-hpx_get_num_ranks(void) {
+int hpx_get_num_ranks(void) {
   assert(here);
   return here->ranks;
 }
 
 
-int
-hpx_get_num_threads(void) {
+int hpx_get_num_threads(void) {
   if (!here || !here->sched)
     return 0;
   return here->sched->n_workers;
@@ -216,19 +199,34 @@ void system_shutdown(int code) {
 
 
 /// Called by the application to terminate the scheduler and network.
-void
-hpx_shutdown(int code) {
-  // do an asynchronous broadcast of shutdown requests
-  network_set_shutdown_src(here->network, here->rank);
-  hpx_bcast(locality_shutdown, &here->rank, sizeof(here->rank), HPX_NULL);
-  hpx_thread_exit(code);
+void hpx_shutdown(int code) {
+  if (!here->ranks) {
+    dbg_error("hpx_shutdown can only be called when the system is running.\n");
+  }
+
+  // broadcast shutdown to everyone else
+  int e = HPX_SUCCESS;
+  hpx_addr_t and = hpx_lco_and_new(here->ranks - 1);
+  for (uint32_t i = 0, end = here->ranks; i < end; ++i) {
+    if (i != here->rank) {
+      e = hpx_call(HPX_THERE(i), locality_shutdown, &code, sizeof(code), and);
+      dbg_check(e, "failed to broadcast shutdown.\n");
+    }
+  }
+  // and wait until they've all acknowledged the shutdown
+  e = hpx_lco_wait(and);
+  dbg_check(e, "error while shutting down.\n");
+  hpx_lco_delete(and, HPX_NULL);
+
+  // run shutdown here and exit
+  e = hpx_call(HPX_HERE, locality_shutdown, &code, sizeof(code), HPX_NULL);
+  hpx_thread_exit(e);
 }
 
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
-void
-hpx_abort(void) {
+void hpx_abort(void) {
   if (here && here->config && here->config->waitonabort)
     dbg_wait();
   assert(here->boot);

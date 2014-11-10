@@ -20,6 +20,11 @@
 #include "libhpx/debug.h"
 
 
+static HPX_RETURNS_NON_NULL const char *_id(void) {
+  return "MPI";
+}
+
+
 static void _delete(boot_class_t *boot) {
   int finalized;
   MPI_Finalized(&finalized);
@@ -68,6 +73,7 @@ static void _abort(const boot_class_t *boot) {
 
 static boot_class_t _mpi = {
   .type      = HPX_BOOT_MPI,
+  .id        = _id,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,
