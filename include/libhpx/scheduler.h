@@ -109,7 +109,7 @@ void scheduler_delete(scheduler_t *scheduler)
 ///
 /// @param    scheduler The scheduler to start.
 ///
-/// @returns            LIBHPX_OK or an error if there is a startup problem.
+/// @returns            LIBHPX_OK or an error code.
 int scheduler_startup(scheduler_t *scheduler)
   HPX_INTERNAL;
 
@@ -120,7 +120,8 @@ int scheduler_startup(scheduler_t *scheduler)
 /// schedule. It is nonblocking.
 ///
 /// @param    scheduler The scheduler to shutdown.
-void scheduler_shutdown(scheduler_t *scheduler)
+/// @param         code The code to return from scheduler_startup().
+void scheduler_shutdown(scheduler_t *scheduler, int code)
   HPX_INTERNAL;
 
 

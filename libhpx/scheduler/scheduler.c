@@ -20,10 +20,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "hpx/builtins.h"
-#include "libsync/sync.h"
-#include "libsync/barriers.h"
+#include <hpx/builtins.h>
+#include <libsync/sync.h>
+#include <libsync/barriers.h>
+
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 #include "worker.h"
@@ -72,10 +74,6 @@ void scheduler_delete(scheduler_t *sched) {
   if (!sched)
     return;
 
-#ifdef HPX_PROFILE_STACKS
-  printf("High water mark for stacks was %lu\n", sched->stats.max_stacks);
-#endif
-
   if (sched->barrier)
     sync_barrier_delete(sched->barrier);
 
@@ -90,31 +88,29 @@ void scheduler_delete(scheduler_t *sched) {
 int scheduler_startup(scheduler_t *sched) {
   // start all of the other worker threads
   for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
-    if (worker_start(sched) == 0)
-      continue;
+    if (worker_start(sched) != 0) {
+      dbg_error("could not start worker %d.\n", i);
 
-    dbg_error("scheduler: could not start worker %d.\n", i);
+      for (int j = 0; j < i; ++j)
+        worker_cancel(sched->workers[j]);
 
-    for (int j = 0; j < i; ++j)
-      worker_cancel(sched->workers[j]);
+      for (int j = 0; j < i; ++j)
+        worker_join(sched->workers[j]);
 
-    for (int j = 0; j < i; ++j)
-      worker_join(sched->workers[j]);
-
-    return HPX_ERROR;
+      return LIBHPX_ERROR;
+    }
   }
 
   worker_run(sched);
   scheduler_join(sched);
-
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
 
-void scheduler_shutdown(scheduler_t *sched) {
+void scheduler_shutdown(scheduler_t *sched, int code) {
   // signal all of the shutdown requests
   for (int i = 0; i < sched->n_workers; ++i)
-    worker_shutdown(sched->workers[i]);
+    worker_shutdown(sched->workers[i], code);
 }
 
 

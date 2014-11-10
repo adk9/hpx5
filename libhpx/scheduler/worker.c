@@ -23,7 +23,8 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include <hpx/builtins.h>
 
 #include <libsync/backoff.h>
 #include <libsync/barriers.h>
@@ -31,10 +32,10 @@
 #include <libsync/queues.h>
 #include <libsync/spscq.h>
 
-#include <hpx/builtins.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
@@ -68,7 +69,7 @@ static unsigned int _min(unsigned int lhs, unsigned int rhs) {
 /// __thread local storage.
 ///
 /// @{
-static __thread struct worker {
+typedef struct worker {
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this workers's id
   int               core_id;                    // useful for "smart" stealing
@@ -78,13 +79,15 @@ static __thread struct worker {
   hpx_parcel_t     *current;                    // current thread
 PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   chase_lev_ws_deque_t work;                    // my work
-  // already aligned PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
+  // already aligned
   two_lock_queue_t    inbox;                    // mail sent to me
-  // already aligned PAD_TO_CACHELINE(sizeof(two_lock_queue_t));
+  // already aligned
   sync_spscq_t  completions;                    // local completions
   volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
-} self HPX_ALIGNED(HPX_CACHELINE_SIZE) = {
+} worker_t;
+
+static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread worker_t self = {
   .thread     = 0,
   .id         = -1,
   .core_id    = -1,
@@ -95,7 +98,7 @@ PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
   .completions = SYNC_SPSCQ_INIT,
-  .shutdown   = 0,
+  .shutdown   = INT_MAX,
   .stats      = SCHEDULER_STATS_INIT
 };
 
@@ -133,7 +136,7 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
-static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
+static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self.sp = sp;
   self.current = to;
@@ -154,16 +157,6 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 
 static void _bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
-#ifdef HPX_PROFILE_STACKS
-  unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
-  unsigned long max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
-  while (stacks + 1 > max_stacks) {
-    if (sync_cas(&here->sched->stats.max_stacks, max_stacks, stacks, SYNC_SEQ_CST,
-                  SYNC_RELAXED))
-      break;
-    max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
-  }
-#endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
 }
@@ -241,9 +234,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   thread_delete(stack);
-#ifdef HPX_PROFILE_STACKS
-  sync_fadd(&here->sched->stats.stacks, -1, SYNC_SEQ_CST);
-#endif
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
@@ -293,11 +283,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
   int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
-  if (shutdown) {
-    void **temp = &self.sp;
-    assert(temp);
-    assert(*temp != NULL);
-    thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
+  if (shutdown != INT_MAX) {
+    void **sp = &self.sp;
+    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, self.current);
   }
 
   // messages in my inbox are "in limbo" until I receive them---while this call
@@ -372,17 +360,18 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 ///
 /// Under normal HPX shutdown, we return to the original transfer site and
 /// cleanup.
-///
-/// @param      sched The scheduler that this thread should be attached to.
-void *worker_run(scheduler_t *sched) {
-  // join the global address space
+void *worker_run(void *args) {
+  scheduler_t *sched = args;
+
   assert(here && here->gas);
   assert((uintptr_t)&self % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.work % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.inbox % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.completions % HPX_CACHELINE_SIZE == 0);
-  int e = gas_join(here->gas);
-  dbg_check(e, "worker: failed to join the global address space.\n");
+  if (gas_join(here->gas)) {
+    dbg_error("failed to join the global address space.\n");
+    return NULL;
+  }
 
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -406,7 +395,7 @@ void *worker_run(scheduler_t *sched) {
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
   if (!p) {
-    dbg_error("worker: failed to acquire an initial parcel.\n");
+    dbg_error("failed to acquire an initial parcel.\n");
     return NULL;
   }
 
@@ -415,22 +404,22 @@ void *worker_run(scheduler_t *sched) {
   assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
 
   if (!p) {
-    dbg_error("worker: failed to bind an initial stack.\n");
+    dbg_error("failed to bind an initial stack.\n");
     hpx_parcel_release(p);
     return NULL;
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  e = thread_transfer(p, _on_start, NULL);
-  if (e) {
-    dbg_error("worker: shutdown returned error.\n");
+  if (thread_transfer(p, _on_startup, NULL)) {
+    dbg_error("shutdown returned error.\n");
     return NULL;
   }
 
   // cleanup the thread's resources---we only return here under normal shutdown
   // termination, otherwise we're canceled and vanish
-  while ((p = sync_chase_lev_ws_deque_pop(&self.work)))
+  while ((p = sync_chase_lev_ws_deque_pop(&self.work))) {
     hpx_parcel_release(p);
+  }
 
   // print my stats and accumulate into total stats
   {
@@ -441,28 +430,33 @@ void *worker_run(scheduler_t *sched) {
   }
 
   // join the barrier, last one to the barrier prints the totals
-  if (sync_barrier_join(sched->barrier, self.id))
+  if (sync_barrier_join(sched->barrier, self.id)) {
     scheduler_print_stats("<totals>", &sched->stats);
+  }
 
   // delete my deque last, as someone might be stealing from it up until the
   // point where everyone has joined the barrier
   sync_chase_lev_ws_deque_fini(&self.work);
 
   // leave the global address space
-  assert(here && here->gas);
   gas_leave(here->gas);
   return NULL;
 }
 
+
 int worker_start(scheduler_t *sched) {
   pthread_t thread;
-  int e = pthread_create(&thread, NULL, (void* (*)(void*))worker_run, sched);
-  return (e) ? HPX_ERROR : HPX_SUCCESS;
+  int e = pthread_create(&thread, NULL, worker_run, sched);
+  if (e) {
+    dbg_error("failed to start a scheduler worker pthread.\n");
+    return e;
+  }
+  return LIBHPX_OK;
 }
 
 
-void worker_shutdown(worker_t *worker) {
-  sync_store(&worker->shutdown, 1, SYNC_RELEASE);
+void worker_shutdown(worker_t *worker, int code) {
+  sync_store(&worker->shutdown, code, SYNC_RELEASE);
 }
 
 

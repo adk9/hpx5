@@ -20,6 +20,11 @@
 #include "libhpx/debug.h"
 
 
+static HPX_RETURNS_NON_NULL const char *_id(void) {
+  return "MPI";
+}
+
+
 static void _delete(boot_class_t *boot) {
   int finalized;
   MPI_Finalized(&finalized);
@@ -68,6 +73,7 @@ static void _abort(const boot_class_t *boot) {
 
 static boot_class_t _mpi = {
   .type      = HPX_BOOT_MPI,
+  .id        = _id,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,
@@ -84,10 +90,10 @@ boot_class_t *boot_new_mpi(void) {
     return &_mpi;
 
   if (MPI_Init(0, NULL) == MPI_SUCCESS) {
-    dbg_log_boot("mpirun: initialized MPI bootstrapper.\n");
+    dbg_log_boot("initialized MPI bootstrapper.\n");
     return &_mpi;
   }
 
-  dbg_error("mpirun: initialization failed.\n");
+  dbg_error("initialization failed.\n");
   return NULL;
 }
