@@ -118,6 +118,7 @@ network_class_t *network_new(void) {
   }
 
   network_set_shutdown_src(n, UINT32_MAX);
+  dbg_log("initialized parcel network.\n");
   return n;
 }
 
