@@ -90,10 +90,10 @@ boot_class_t *boot_new_mpi(void) {
     return &_mpi;
 
   if (MPI_Init(0, NULL) == MPI_SUCCESS) {
-    dbg_log_boot("mpirun: initialized MPI bootstrapper.\n");
+    dbg_log_boot("initialized MPI bootstrapper.\n");
     return &_mpi;
   }
 
-  dbg_error("mpirun: initialization failed.\n");
+  dbg_error("initialization failed.\n");
   return NULL;
 }
