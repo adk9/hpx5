@@ -78,7 +78,7 @@ void _expand(_action_table_t *ht) {
   // This could trigger recursive expansion, but that's ok, because this
   // loop will insert anything that wasn't inserted in the inner
   // expansion.
- int i, e; 
+ int i; 
  for (i = 0; i < e; ++i) {
     if (copy[i].value != NULL)
       _insert(ht, copy[i].key, copy[i].value);

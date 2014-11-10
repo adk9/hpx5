@@ -214,7 +214,7 @@ static bool _pgas_try_pin(const hpx_addr_t gpa, void **local) {
 #endif
   if (pgas_gpa_to_rank(gpa) != here->rank)
     return false;
-  }
+  
   if (local)
     *local = pgas_gpa_to_lva(gpa);
 

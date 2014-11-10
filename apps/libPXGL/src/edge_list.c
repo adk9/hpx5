@@ -116,8 +116,9 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   memcpy(local_args->filename, args->filename, filename_len);
   const uint64_t thread_chunk = el->num_edges / (args->thread_readers * args->locality_readers) + 1;
   local_args->edges_no = thread_chunk;
-  for(unsigned int locality_desc = 0; locality_desc < args->locality_readers; ++locality_desc) {
-    for(unsigned int thread_desc = 0; thread_desc < args->thread_readers; ++thread_desc) {
+  unsigned int locality_desc, thread_desc;
+  for(locality_desc = 0; locality_desc < args->locality_readers; ++locality_desc) {
+    for(thread_desc = 0; thread_desc < args->thread_readers; ++thread_desc) {
       local_args->edges_skip = ((locality_desc * args->thread_readers) + thread_desc) * thread_chunk;
       hpx_call(HPX_THERE(locality_desc), _edge_list_from_file_local, local_args, local_args_size, HPX_NULL);
     }
