@@ -67,7 +67,7 @@ typedef struct {
 /// table at each locality.
 typedef struct {
   int table_index;
-  int offset; // from base
+  size_t offset; // from base
 } _fut_info_t;
 
 /// This struct manages the data the entire netfutures system at this 

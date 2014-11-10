@@ -25,11 +25,11 @@
 #include "libhpx/transport.h"
 #include "../mallctl.h"
 #include "bitmap.h"
+#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
-#ifdef CRAY_HUGE_HACK
-#include <hugetlbfs.h>
-#endif
+
+const uintptr_t MAX_HEAP_BYTES = 1lu << GPA_OFFSET_BITS;
 
 
 /// This operates as an atomic fetch and add, with the added caveat that the
@@ -142,8 +142,9 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 static bitmap_t *_new_bitmap(size_t nchunks) {
   assert(nchunks <= UINT32_MAX);
   bitmap_t *bitmap = bitmap_new((uint32_t)nchunks);
-  if (!bitmap)
+  if (!bitmap) {
     dbg_error("failed to allocate a bitmap to track free chunks.\n");
+  }
   return bitmap;
 }
 
@@ -160,6 +161,9 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   // align size to bytes-per-chunk boundary
   heap->nbytes = size - (size % heap->bytes_per_chunk);
   dbg_log_gas("heap nbytes is aligned as %lu\n", heap->nbytes);
+  if (heap->nbytes > MAX_HEAP_BYTES) {
+    dbg_error("%lu > max heap bytes of %lu\n", heap->nbytes, MAX_HEAP_BYTES);
+  }
 
   heap->nchunks = ceil_div_64(heap->nbytes, heap->bytes_per_chunk);
   dbg_log_gas("heap nchunks is %lu\n", heap->nchunks);
@@ -199,6 +203,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   dbg_log_gas("allocated heap.\n");
   return LIBHPX_OK;
 }
+
 
 void heap_fini(heap_t *heap) {
   if (!heap)
