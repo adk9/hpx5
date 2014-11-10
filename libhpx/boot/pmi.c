@@ -27,6 +27,11 @@
 #include "libhpx/debug.h"
 
 
+static HPX_RETURNS_NON_NULL const char *_id(void) {
+  return "PMI";
+}
+
+
 static void _delete(boot_class_t *boot) {
   PMI_Finalize();
 }
@@ -256,6 +261,7 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
 
 static boot_class_t _pmi = {
   .type      = HPX_BOOT_PMI,
+  .id        = _id,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,

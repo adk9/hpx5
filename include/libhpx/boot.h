@@ -20,6 +20,9 @@
 typedef struct boot_class boot_class_t;
 struct boot_class {
   hpx_boot_t type;
+
+  const char *(*id)(void) HPX_RETURNS_NON_NULL;
+
   void (*delete)(boot_class_t*);
   int (*rank)(const boot_class_t*);
   int (*n_ranks)(const boot_class_t*);
