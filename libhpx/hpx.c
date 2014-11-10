@@ -25,12 +25,14 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
-#include "libhpx/gas.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/newfuture.h"
@@ -80,10 +82,13 @@ static void _cleanup(locality_t *l) {
 
 int hpx_init(int *argc, char ***argv) {
   hpx_config_t *cfg = hpx_parse_options(argc, argv);
+  if (!cfg) {
+    return dbg_error("failed to create a configuration.\n");
+  }
   dbg_log_level = cfg->loglevel;
-
-  if (cfg->waitat == HPX_LOCALITY_ALL || cfg->waitat == here->rank)
+  if (cfg->waitat == HPX_LOCALITY_ALL) {
     dbg_wait();
+  }
 
   // locality
   here = malloc(sizeof(*here));
@@ -99,6 +104,9 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
+  if (cfg->waitat == here->rank) {
+    dbg_wait();
+  }
 
   // byte transport
   here->transport = transport_new(cfg->transport, cfg->reqlimit);
@@ -165,9 +173,13 @@ int hpx_run(hpx_action_t act, const void *args, size_t size) {
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
-  int e = scheduler_startup(here->sched);
+  if (scheduler_startup(here->sched) != LIBHPX_OK) {
+    return HPX_ERROR;
+  }
+
+  network_shutdown(here->network);
   _cleanup(here);
-  return e;
+  return HPX_SUCCESS;
 }
 
 
@@ -190,37 +202,16 @@ int hpx_get_num_threads(void) {
 }
 
 
-void system_shutdown(int code) {
-  if (!here || !here->sched)
-    dbg_error("hpx_shutdown called without a scheduler.\n");
-
-  scheduler_shutdown(here->sched);
-}
-
-
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
   if (!here->ranks) {
     dbg_error("hpx_shutdown can only be called when the system is running.\n");
   }
 
-  // broadcast shutdown to everyone else
-  int e = HPX_SUCCESS;
-  hpx_addr_t and = hpx_lco_and_new(here->ranks - 1);
-  for (uint32_t i = 0, end = here->ranks; i < end; ++i) {
-    if (i != here->rank) {
-      e = hpx_call(HPX_THERE(i), locality_shutdown, &code, sizeof(code), and);
-      dbg_check(e, "failed to broadcast shutdown.\n");
-    }
-  }
-  // and wait until they've all acknowledged the shutdown
-  e = hpx_lco_wait(and);
-  dbg_check(e, "error while shutting down.\n");
-  hpx_lco_delete(and, HPX_NULL);
-
-  // run shutdown here and exit
-  e = hpx_call(HPX_HERE, locality_shutdown, &code, sizeof(code), HPX_NULL);
-  hpx_thread_exit(e);
+  // make sure we flush our local network when we shutdown
+  network_flush_on_shutdown(here->network);
+  hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
+  hpx_thread_exit(0);
 }
 
 

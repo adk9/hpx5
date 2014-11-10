@@ -18,6 +18,11 @@
 #include "libhpx/boot.h"
 
 
+static const char *_id(void) {
+  return "SMP";
+}
+
+
 static void _delete(boot_class_t *boot) {
 }
 
@@ -49,6 +54,7 @@ static void _abort(const boot_class_t *boot) {
 
 static boot_class_t _smp = {
   .type      = HPX_BOOT_SMP,
+  .id        = _id,
   .delete    = _delete,
   .rank      = _rank,
   .n_ranks   = _n_ranks,
