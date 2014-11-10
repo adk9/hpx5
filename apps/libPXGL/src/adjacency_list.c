@@ -236,7 +236,8 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   hpx_lco_wait(count_arr_sync);
   hpx_lco_delete(count_arr_sync, HPX_NULL);
 
-  // printf("Count the number of edges per source vertex\n");
+  printf("Count the number of edges per source vertex\n");
+  hpx_time_t now = hpx_time_now();
   // Count the number of edges per source vertex
   hpx_addr_t edges_sync = hpx_lco_and_new(el->num_edges);
   for (int i = 0; i < el->num_edges; ++i) {
@@ -244,15 +245,21 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
     _count_edge_args_t _count_edge_args = { .count_array = count_array, .edges_sync = edges_sync };
     hpx_call(edge, _count_edge, &_count_edge_args, sizeof(_count_edge_args), HPX_NULL);
   }
+  double elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed in the loop: %f\n", elapsed);
+  now = hpx_time_now();
   hpx_lco_wait(edges_sync);
+  elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed waiting for completion: %f\n", elapsed);
   hpx_lco_delete(edges_sync, HPX_NULL);
 
   // Finish allocating the index array now
   hpx_lco_wait(index_arr_sync);
   hpx_lco_delete(index_arr_sync, HPX_NULL);
 
-  // printf("Allocate the adjacency list according to the count of edges per vertex\n");
+  printf("Allocate the adjacency list according to the count of edges per vertex\n");
   // Allocate the adjacency list according to the count of edges per vertex
+  now = hpx_time_now();
   hpx_addr_t vertices_alloc_sync = hpx_lco_and_new(el->num_vertices);
   for (int i = 0; i < el->num_vertices; ++i) {
     hpx_addr_t count = hpx_addr_add(count_array, i * sizeof(count_t), _count_array_block_size);
@@ -264,12 +271,18 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
     hpx_call(count, _alloc_adj_list_entry, &_alloc_adj_list_entry_args, 
 	     sizeof(_alloc_adj_list_entry_args), HPX_NULL);
   }
+  elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed in the loop: %f\n", elapsed);
+  now = hpx_time_now();
   hpx_lco_wait(vertices_alloc_sync);
+  elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed waiting for completion: %f\n", elapsed);
   hpx_lco_delete(vertices_alloc_sync, HPX_NULL);
 
-  // printf("For each edge in the edge list, we add it as an adjacency to a vertex.\n");
+  printf("Convert edges to adjacencies\n");
   // For each edge in the edge list, we add it as an adjacency to a
   // vertex
+  now = hpx_time_now();
   edges_sync = hpx_lco_and_new(el->num_edges);
   for (int i = 0; i < el->num_edges; ++i) {
     hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
@@ -280,9 +293,13 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
     hpx_call(edge, _insert_edge, &_insert_edge_args, 
 	     sizeof(_insert_edge_args), HPX_NULL);
   }
+  elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed in the loop: %f\n", elapsed);
+  now = hpx_time_now();
   hpx_lco_wait(edges_sync);
   hpx_lco_delete(edges_sync, HPX_NULL);
-
+  elapsed = hpx_time_elapsed_ms(now)/1e3;
+  printf("Time elapsed waiting for completion: %f\n", elapsed);
   HPX_THREAD_CONTINUE(index_array);
   return HPX_SUCCESS;
 }
