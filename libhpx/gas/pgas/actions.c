@@ -148,7 +148,8 @@ static int _calloc_init_handler(_calloc_init_args_t *args) {
   // memset it.
   uint32_t blocks = ceil_div_64(args->bytes, here->ranks);
   hpx_addr_t gpa = pgas_offset_to_gpa(here->rank, args->offset);
-  for (int i = 0, e = blocks; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = blocks; i < e; ++i) {
     void *lva = pgas_gpa_to_lva(gpa);
     memset(lva, 0, args->bsize);
     // increment the global address by one cycle

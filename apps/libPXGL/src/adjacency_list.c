@@ -293,7 +293,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   now = hpx_time_now();
   edges_sync = hpx_lco_and_new(el->num_edges);
   int k;
-  for (int k = 0; k < el->num_edges; ++k) {
+  for (k = 0; k < el->num_edges; ++k) {
     hpx_addr_t edge = hpx_addr_add(el->edge_list, k * sizeof(edge_list_edge_t), el->edge_list_bsize);
     _insert_edge_args_t _insert_edge_args = {
       .index_array = index_array,
