@@ -318,17 +318,21 @@ static int _main_action(int *input)
 				     (hpx_commutative_associative_op_t)maxdouble,
 				     (void (*)(void *, const size_t size)) initmaxdouble);
   int nf_data_size = (nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs);
+  // max data sbn3 sends is the following:
+  int sbn3_data_size = (nx + 1) * (nx + 1) * 3 * sizeof(double) + sizeof(NodalArgs);
   hpx_netfuture_t sbn3[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+    hpx_lco_netfuture_new_all(26*nDoms, sbn3_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms, sbn3_data_size)
   };
+  int posvel_data_size = (nx + 1) * (nx + 1) * 6 * sizeof(double) + sizeof(NodalArgs);
   hpx_netfuture_t posvel[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+    hpx_lco_netfuture_new_all(26*nDoms, posvel_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms, posvel_data_size)
   };
+  int monoq_data_size = nx * nx * 3 * sizeof(double) + sizeof(NodalArgs);
   hpx_netfuture_t monoq[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
+    hpx_lco_netfuture_new_all(26*nDoms, monoq_data_size),
+    hpx_lco_netfuture_new_all(26*nDoms, monoq_data_size)
   };
 
   for (k=0;k<nDoms;k++) {
