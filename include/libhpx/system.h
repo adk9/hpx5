@@ -16,8 +16,10 @@
 #include <pthread.h>
 #include "hpx/attributes.h"
 
-HPX_INTERNAL int system_get_cores(void);
-HPX_INTERNAL int system_set_affinity(pthread_t *thread, int core_id);
-HPX_INTERNAL void system_shutdown(int code);
+int system_get_cores(void)
+  HPX_INTERNAL;
+
+int system_set_affinity(pthread_t *thread, int core_id)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_SYSTEM_H
