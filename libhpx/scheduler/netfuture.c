@@ -336,7 +336,8 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
   dbg_printf0("  At %d netfutures base = %p top = %p\n", hpx_get_my_rank(), _netfuture_table.base, _netfuture_table.base + _netfuture_cfg.max_size);
 
   if (hpx_get_num_ranks() > 1) {
-    for (int i = 0; i < hpx_get_num_ranks(); i++) {
+    int i;
+    for ( i = 0; i < hpx_get_num_ranks(); i++) {
       transport_class_t *transport = here->transport;
       memcpy(&_netfuture_table.buffers[i].priv, &transport->rkey_table[i].rkey, sizeof(_netfuture_table.buffers[i].priv));
       dbg_printf("  At rank %d, buffer[%d].priv = %"PRIx64",%"PRIx64"\n", hpx_get_my_rank(), i, _netfuture_table.buffers[i].priv.key0,  _netfuture_table.buffers[i].priv.key1);
@@ -379,7 +380,8 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
     return HPX_ERROR;
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks());
   _nf_init_args_t init_args = {.ag = ag, .cfg = _netfuture_cfg};
-  for (int i = 0; i < hpx_get_num_ranks(); i++)
+  int i;
+  for ( i = 0; i < hpx_get_num_ranks(); i++)
     hpx_call(HPX_THERE(i), _initialize_netfutures, &init_args, sizeof(init_args), done);
   hpx_lco_wait(done);
   return HPX_SUCCESS;

@@ -372,9 +372,6 @@ int
 hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                 hpx_status_t statuses[])
 {
-#ifdef ENABLE_TAU
-          TAU_START("hpx_lco_get_all");
-#endif
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
@@ -414,8 +411,5 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     if (statuses)
       statuses[i] = status;
   }
-#ifdef ENABLE_TAU
-          TAU_STOP("hpx_lco_get_all");
-#endif
   return errors;
 }

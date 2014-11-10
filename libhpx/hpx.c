@@ -162,9 +162,9 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int hpx_run(hpx_action_t act, const void *args, size_t size) {
-#ifdef ENABLE_TAU
+/*#ifdef ENABLE_TAU
           TAU_START("hpx_run");
-#endif
+#endif*/
 
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
@@ -202,9 +202,9 @@ int hpx_run(hpx_action_t act, const void *args, size_t size) {
 
   // and cleanup the system
   int retval = _cleanup(here, e);
-#ifdef ENABLE_TAU
+/*#ifdef ENABLE_TAU
           TAU_STOP("hpx_run");
-#endif
+#endif*/
   return retval; 
 }
 

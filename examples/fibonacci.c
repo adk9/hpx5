@@ -25,6 +25,10 @@
 #include <inttypes.h>
 #include "hpx/hpx.h"
 
+#ifdef ENABLE_TAU
+#define TAU_DEFAULT 1
+#include <TAU.h>
+#endif
 
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: fibonacci [options] NUMBER\n"
@@ -89,7 +93,14 @@ static int _fib_main_action(int *args) {
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t now = hpx_time_now();
+
+#ifdef ENABLE_TAU
+          TAU_START("fibonacci_main_action");
+#endif
   hpx_call_sync(HPX_HERE, _fib, &n, sizeof(n), &fn, sizeof(fn));
+#ifdef ENABLE_TAU
+          TAU_STOP("fibonacci_main_action");
+#endif
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
   printf("%d\n", fn);

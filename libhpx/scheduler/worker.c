@@ -635,7 +635,8 @@ void scheduler_signal_all(struct cvar *cvar) {
 #ifdef ENABLE_TAU
   TAU_START("scheduler_signal_all");
 #endif
-  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
+  ustack_t *thread;
+  for (thread = cvar_pop_all(cvar); thread; thread = thread->next)
     _resume(thread);
 #ifdef ENABLE_TAU
   TAU_STOP("scheduler_signal_all");
@@ -644,7 +645,8 @@ void scheduler_signal_all(struct cvar *cvar) {
 
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  for (ustack_t *thread = cvar_set_error(cvar, code); thread;
+  ustack_t *thread;
+  for (thread = cvar_set_error(cvar, code); thread;
        thread = thread->next)
     _resume(thread);
 }

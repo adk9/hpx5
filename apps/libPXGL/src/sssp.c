@@ -144,8 +144,8 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     hpx_addr_t edges = HPX_NULL;
     if (get_termination() == AND_LCO_TERMINATION)
       edges = hpx_lco_and_new(num_edges);
-
-    for (int i = 0; i < num_edges; ++i) {
+    int i; 
+    for ( i = 0; i < num_edges; ++i) {
       adj_list_edge_t *e = &vertex->edge_list[i];
       args->distance = old_distance + e->weight;
 
