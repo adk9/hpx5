@@ -137,7 +137,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   t_s = hpx_time_now();
   CalcForceForNodes(local,domain,domain->rank,n);
   hpx_lco_wait(domain->sbn3_and[n % 2]);
-  printf("Done with SBN3 on %d\n", domain->rank);
+  //  printf("Done with SBN3 on %d\n", domain->rank);
   hpx_lco_delete(domain->sbn3_and[n % 2], HPX_NULL);
   time_in_SBN3 += hpx_time_elapsed_ms(t_s);
 

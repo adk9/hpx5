@@ -159,7 +159,7 @@ int _SBN3_result_action(NodalArgs *args) {
   int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
   hpx_addr_t nodal_global;
   //  printf("Domain %d receiving from nf %d (%d, %d) in cycle %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
-  printf("-1, %d, %d, %d, %d\n", ld->rank, ld->rank, srcLocalIdx, ld->cycle);
+  //  printf("-1, %d, %d, %d, %d\n", ld->rank, ld->rank, srcLocalIdx, ld->cycle);
   //  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
   int bi = ld->rank;
   size_t data_size = recvcnt * 3 * sizeof(double) + sizeof(NodalArgs);
@@ -243,7 +243,7 @@ int _SBN3_sends_action(pSBN *psbn)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   int gen = domain->cycle % 2;
   // printf("Domain %d sending to nf %d (%d, %d) in cycle %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
-  printf("1, %d, %d, %d, %d\n", domain->rank, domain->rank + distance, srcLocalIdx, domain->cycle);
+  //  printf("1, %d, %d, %d, %d\n", domain->rank, domain->rank + distance, srcLocalIdx, domain->cycle);
   //  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
   int bi = domain->rank + distance;
   size_t data_size = sendcnt*3*sizeof(double) + sizeof(NodalArgs);
