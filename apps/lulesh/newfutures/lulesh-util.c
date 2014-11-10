@@ -1078,3 +1078,205 @@ void DestroyDomain(Domain *domain)
     //free(domain->dataSendFF[i]);
   }
 }
+
+inline size_t NF_BUFFER_SIZE(size_t points) {
+  return (points) * sizeof(double) + sizeof(NodalArgs);
+}
+
+
+void create_nf_arrays(int nDoms,
+		      int nx,
+		      hpx_netfuture_t sbn3[2][26], 
+		      hpx_netfuture_t posvel[2][26], 
+		      hpx_netfuture_t monoq[2][26]) {
+  size_t XFERCNT[26];
+
+  XFERCNT[4] = XFERCNT[21] = XFERCNT[10] = (nx + 1)*(nx + 1);
+  XFERCNT[15] = XFERCNT[12] = XFERCNT[13] = (nx + 1)*(nx + 1);;
+
+  XFERCNT[9] = XFERCNT[1] = XFERCNT[3] = XFERCNT[16] = nx + 1;
+  XFERCNT[24] = XFERCNT[22] = XFERCNT[14] = XFERCNT[18] = nx + 1;
+  XFERCNT[20] = XFERCNT[11] = XFERCNT[7] = XFERCNT[5] = nx + 1;
+
+  XFERCNT[0] = XFERCNT[17] = XFERCNT[2] = XFERCNT[19] = 1;
+  XFERCNT[6] = XFERCNT[23] = XFERCNT[8] = XFERCNT[25] = 1;
+
+
+  hpx_netfuture_t _sbn3[2][26] = {
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[0] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[1] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[2] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[3] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[4] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[5] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[6] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[7] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[8] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[9] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[10] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[11] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[12] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[13] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[14] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[15] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[16] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[17] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[18] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[19] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[20] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[21] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[22] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[23] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[24] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[25] * 3))
+    },
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[0] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[1] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[2] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[3] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[4] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[5] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[6] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[7] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[8] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[9] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[10] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[11] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[12] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[13] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[14] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[15] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[16] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[17] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[18] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[19] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[20] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[21] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[22] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[23] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[24] * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[25] * 3))
+    }
+  };
+  hpx_netfuture_t _posvel[2][26] = {
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[0] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[1] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[2] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[3] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[4] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[5] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[6] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[7] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[8] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[9] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[10] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[11] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[12] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[13] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[14] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[15] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[16] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[17] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[18] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[19] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[20] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[21] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[22] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[23] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[24] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[25] * 6))
+    },
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[0] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[1] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[2] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[3] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[4] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[5] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[6] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[7] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[8] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[9] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[10] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[11] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[12] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[13] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[14] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[15] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[16] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[17] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[18] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[19] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[20] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[21] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[22] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[23] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[24] * 6)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(XFERCNT[25] * 6))
+    }
+  };
+  hpx_netfuture_t _monoq[2][26] = {
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3))
+    },
+    {
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3)),
+      hpx_lco_netfuture_new_all(nDoms, NF_BUFFER_SIZE(nx * nx * 3))
+    }
+  };
+  memcpy(sbn3, _sbn3, 2 * 26 * sizeof(hpx_netfuture_t));
+  memcpy(posvel, _posvel, 2 * 26 * sizeof(hpx_netfuture_t));
+  memcpy(monoq, _monoq, 2 * 26 * sizeof(hpx_netfuture_t));
+}

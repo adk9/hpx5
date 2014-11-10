@@ -159,9 +159,11 @@ int _SBN3_result_action(NodalArgs *args) {
   int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
   hpx_addr_t nodal_global;
   //  printf("Domain %d receiving from nf %d (%d, %d) in cycle %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
-  //  printf("-1, %d, %d, %d, %d, %d\n", ld->rank, fi, ld->rank, (srcLocalIdx + 26*(ld->rank))%26, ld->cycle);
+  printf("-1, %d, %d, %d, %d\n", ld->rank, ld->rank, srcLocalIdx, ld->cycle);
   //  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
-  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen], fi, recvcnt*3*sizeof(double) + sizeof(NodalArgs));
+  int bi = ld->rank;
+  size_t data_size = recvcnt * 3 * sizeof(double) + sizeof(NodalArgs);
+  nodal_global = hpx_lco_netfuture_getat(ld->sbn3[gen][srcLocalIdx], bi, data_size);
   NodalArgs *nodal;
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
@@ -169,7 +171,7 @@ int _SBN3_result_action(NodalArgs *args) {
   unpack(nx, ny, nz, src, ld->fx, 0);
   unpack(nx, ny, nz, src + recvcnt, ld->fy, 0);
   unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
-  hpx_lco_netfuture_emptyat(ld->sbn3[gen], fi, HPX_NULL);
+  hpx_lco_netfuture_emptyat(ld->sbn3[gen][srcLocalIdx], bi, HPX_NULL);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -241,9 +243,13 @@ int _SBN3_sends_action(pSBN *psbn)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   int gen = domain->cycle % 2;
   // printf("Domain %d sending to nf %d (%d, %d) in cycle %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
-  //  printf("1, %d, %d, %d, %d, %d\n", domain->rank, fi, domain->rank + distance, (srcLocalIdx + 26*(domain->rank+distance))%26, domain->cycle);
+  printf("1, %d, %d, %d, %d\n", domain->rank, domain->rank + distance, srcLocalIdx, domain->cycle);
   //  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
-  hpx_lco_netfuture_setat(domain->sbn3[gen], fi, sendcnt*3*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  int bi = domain->rank + distance;
+  size_t data_size = sendcnt*3*sizeof(double) + sizeof(NodalArgs);
+  hpx_lco_netfuture_setat(domain->sbn3[gen][srcLocalIdx], bi, 
+			  data_size, nodal_global, 
+			  lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
   hpx_gas_free(nodal_global, HPX_NULL);
@@ -326,8 +332,10 @@ int _PosVel_result_action(NodalArgs *args) {
   int gen = ld->cycle % 2;
   int fi = get_bs_index((srcLocalIdx + 26*ld->rank)%26, ld->rank, 26);
   hpx_addr_t nodal_global;
-  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, recvcnt*6*sizeof(double) + sizeof(NodalArgs));
-  //  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen], fi, BUFSZ[srcLocalIdx] + sizeof(NodalArgs));
+  int bi = ld->rank;
+  size_t data_size = recvcnt*6*sizeof(double) + sizeof(NodalArgs);
+  nodal_global = hpx_lco_netfuture_getat(ld->posvel[gen][srcLocalIdx], bi, data_size);
+
   NodalArgs *nodal;
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
@@ -344,7 +352,7 @@ int _PosVel_result_action(NodalArgs *args) {
   // 3. release the domain lock
   //  hpx_lco_sema_v(ld->sem_posvel);
 
-  hpx_lco_netfuture_emptyat(ld->posvel[gen], fi, HPX_NULL);
+  hpx_lco_netfuture_emptyat(ld->posvel[gen][srcLocalIdx], bi, HPX_NULL);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -412,8 +420,11 @@ int _PosVel_sends_action(pSBN *psbn)
   int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26);
   hpx_addr_t lsync = hpx_lco_future_new(0);
   int gen = domain->cycle % 2;
-  hpx_lco_netfuture_setat(domain->posvel[gen], fi, sendcnt*6*sizeof(double) + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
-  //  hpx_lco_netfuture_setat(domain->posvel[gen], fi, BUFSZ[destLocalIdx] + sizeof(NodalArgs), nodal_global, lsync, HPX_NULL);
+  int bi = domain->rank + distance;
+  int data_size =  sendcnt*6*sizeof(double) + sizeof(NodalArgs);
+  hpx_lco_netfuture_setat(domain->posvel[gen][srcLocalIdx], bi, 
+			  data_size, nodal_global, 
+			  lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
   hpx_gas_free(nodal_global, HPX_NULL);
@@ -507,7 +518,8 @@ int _MonoQ_result_action(NodalArgs *args) {
   int gen = ld->cycle % 2;
   int fi = get_bs_index((srcLocalIdx + 26*(ld->rank))%26, ld->rank, 26);
   hpx_addr_t nodal_global;
-  nodal_global = hpx_lco_netfuture_getat(ld->monoq[gen], fi, data_size);
+  int bi = ld->rank;
+  nodal_global = hpx_lco_netfuture_getat(ld->monoq[gen][srcLocalIdx], bi, data_size);
   NodalArgs *nodal;
   bool pin_success = hpx_gas_try_pin(nodal_global, (void**)&nodal);
   assert(pin_success);
@@ -516,7 +528,7 @@ int _MonoQ_result_action(NodalArgs *args) {
   memcpy(delv_xi + i*planeElem, src, sizeof(double)*planeElem);
   memcpy(delv_eta + i*planeElem, src + planeElem, sizeof(double)*planeElem);
   memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
-  hpx_lco_netfuture_emptyat(ld->monoq[gen], fi, HPX_NULL);
+  hpx_lco_netfuture_emptyat(ld->monoq[gen][srcLocalIdx], bi, HPX_NULL);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -586,7 +598,10 @@ int _MonoQ_sends_action(pSBN *psbn)
   int fi = get_bs_index((srcLocalIdx + 26*(domain->rank+distance))%26, domain->rank+distance, 26);
   hpx_addr_t lsync = hpx_lco_future_new(0);
   int gen = domain->cycle % 2;
-  hpx_lco_netfuture_setat(domain->monoq[gen], fi, data_size, nodal_global, lsync, HPX_NULL);
+  int bi = domain->rank + distance;
+  hpx_lco_netfuture_setat(domain->monoq[gen][srcLocalIdx], bi, 
+			  data_size, nodal_global, 
+			  lsync, HPX_NULL);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
   hpx_gas_free(nodal_global, HPX_NULL);
