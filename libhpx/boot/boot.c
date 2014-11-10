@@ -41,9 +41,9 @@ boot_class_t *boot_new(hpx_boot_t type) {
 #ifdef HAVE_PMI
     boot = boot_new_pmi();
     if (boot)
-      dbg_log_boot("boot: initialized PMI bootstrapper.\n");
+      dbg_log_boot("initialized PMI bootstrapper.\n");
 #else
-    dbg_error("boot: PMI bootstrap not supported in current configuration.\n");
+    dbg_error("PMI bootstrap not supported in current configuration.\n");
 #endif
     break;
 
@@ -51,16 +51,16 @@ boot_class_t *boot_new(hpx_boot_t type) {
 #ifdef HAVE_MPI
     boot = boot_new_mpi();
     if (boot)
-      dbg_log_boot("boot: initialized mpirun bootstrapper.\n");
+      dbg_log_boot("initialized mpirun bootstrapper.\n");
 #else
-    dbg_error("boot: MPI bootstrap not supported in current configuration.\n");
+    dbg_error("MPI bootstrap not supported in current configuration.\n");
 #endif
     break;
 
    case (HPX_BOOT_SMP):
     boot = boot_new_smp();
     if (boot)
-      dbg_log_boot("boot: initialized the SMP bootstrapper.\n");
+      dbg_log_boot("initialized the SMP bootstrapper.\n");
     break;
 
    case HPX_BOOT_DEFAULT:
@@ -70,8 +70,16 @@ boot_class_t *boot_new(hpx_boot_t type) {
   }
 
   if (!boot) {
-    dbg_error("boot: failed to initialize the bootstrapper.\n");
+    boot = _default();
   }
+
+  if (!boot) {
+    dbg_error("failed to initialize the bootstrapper.\n");
+  }
+  else {
+    dbg_log("bootstrapped using %s.\n", boot->id());
+  }
+
   return boot;
 }
 

@@ -108,11 +108,8 @@ struct routing *network_get_routing(network_class_t *network)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-void network_set_shutdown_src(network_class_t *network, uint32_t src)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
-uint32_t network_get_shutdown_src(network_class_t *network)
+///
+void network_flush_on_shutdown(network_class_t *network)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_H
