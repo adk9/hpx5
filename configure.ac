@@ -43,7 +43,7 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # intialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
