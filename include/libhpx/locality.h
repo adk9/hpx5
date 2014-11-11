@@ -28,6 +28,8 @@
 
 #include <hpx/hpx.h>
 #include <jemalloc/jemalloc.h>
+#include <hwloc.h>
+
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 
@@ -65,6 +67,7 @@ typedef struct {
   struct network_class     *network;
   struct scheduler           *sched;
   hpx_config_t              *config;
+  libhpx_hwloc_topology_t  topology;
 } locality_t;
 
 
