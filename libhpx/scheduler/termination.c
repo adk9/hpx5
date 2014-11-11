@@ -34,7 +34,7 @@ void _bitmap_bounds_check(bitmap_t *b, uint32_t page, uint32_t word) {
   for (;;) {
     _bitmap_page_t p = sync_load(&b[page].page, SYNC_ACQUIRE);
     if (!p) {
-      void *newp;
+      void *newp = NULL;
       int e = posix_memalign((void**)&newp, HPX_CACHELINE_SIZE,
                              _bitmap_num_words * sizeof(_bitmap_word_t));
       if (e)
@@ -66,7 +66,7 @@ bitmap_t *cr_bitmap_new(void) {
   memset(b, 0, _bitmap_num_pages * sizeof(_bitmap_page_t));
 
   // allocate the first page
-  void *p;
+  void *p = NULL;
   e = posix_memalign((void**)&p, HPX_CACHELINE_SIZE,
                      _bitmap_num_words * sizeof(_bitmap_word_t));
   if (e)
