@@ -11,159 +11,182 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/network/network.c
 /// @brief Manages the HPX network.
 ///
 /// This file deals with the complexities of the HPX network interface,
 /// shielding it from the details of the underlying transport interface.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <libsync/sync.h>
 #include <libsync/queues.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
+#include "libhpx/stats.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
+
 
 #define _QUEUE(pre, post) pre##two_lock_queue##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
 #define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
-#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue_node)
-#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue_node)
+#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
+#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
 #define _QUEUE_NODE _QUEUE(,_node_t)
 
+
 /// The network class data.
-struct network_class {
-  _QUEUE_T                         tx;          // half duplex port for send
-  _QUEUE_T                         rx;          // half duplex port
-  routing_t                  *routing;          // for adaptive routing
-  int                           flush;
+struct _network {
+  struct network       vtable;
+  const char          padding[HPX_CACHELINE_SIZE - sizeof(struct network)];
+  _QUEUE_T                 tx;                  // half duplex port for send
+  _QUEUE_T                 rx;                  // half duplex port
+  struct transport_class *transport;
+  pthread_t          progress;
+  volatile int          flush;
 };
 
 
-void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  assert(p);
-  _QUEUE_NODE *node = malloc(sizeof(*node));
-  assert(node);
-  node->value = p;
-  node->next = NULL;
-  _QUEUE_ENQUEUE(&network->tx, node);
-}
-
-
-hpx_parcel_t *network_tx_dequeue(network_class_t *network) {
-  hpx_parcel_t *p  = NULL;
-  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->tx);
-  if (node) {
-    p = node->value;
-    assert(p);
-    free(node);
-  }
-  return p;
-}
-
-void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  assert(p);
-  _QUEUE_NODE *node = malloc(sizeof(*node));
-  assert(node);
-  node->value = p;
-  node->next = NULL;
-  _QUEUE_ENQUEUE(&network->rx, node);
-}
-
-hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
-  hpx_parcel_t *p  = NULL;
-  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->rx);
-  if (node) {
-    p = node->value;
-    assert(p);
-    free(node);
-  }
-  return p;
-}
-
-
-/// Allocate a new network. The network currently consists of a single, shared
-/// Tx/Rx port---implemented as two M&S queues, two lists of pending transport
-/// requests, and a freelist for request. There's also a shutdown flag that is
-/// set asynchronously and tested in the progress loop.
-network_class_t *network_new(void) {
-  network_class_t *n = malloc(sizeof(*n));
-  if (!n) {
-    dbg_error("network: failed to allocate a network.\n");
-    return NULL;
+static void *_progress(void *o) {
+  struct _network *network = o;
+  int e = here->gas->join();
+  if (e) {
+    dbg_error("network failed to join the global address space.\n");
   }
 
-  _QUEUE_INIT(&n->tx, NULL);
-  _QUEUE_INIT(&n->rx, NULL);
-
-  n->routing = routing_new();
-  if (!n->routing) {
-    dbg_error("network: failed to start routing update manager.\n");
-    free(n);
-    return NULL;
+  while (true) {
+    pthread_testcancel();
+    profile_ctr(thread_get_stats()->progress++);
+    transport_progress(network->transport, TRANSPORT_POLL);
+    pthread_yield();
   }
-
-  n->flush = 0;
-  dbg_log("initialized parcel network.\n");
-  return n;
+  return NULL;
 }
 
 
-void network_delete(network_class_t *network) {
-  if (!network)
+static void _delete(struct network *o) {
+  if (!o)
     return;
+
+  struct _network *network = (struct _network*)o;
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = network_tx_dequeue(network))) {
+  while ((p = _QUEUE_DEQUEUE(&network->tx))) {
     hpx_parcel_release(p);
   }
   _QUEUE_FINI(&network->tx);
 
-  while ((p = network_rx_dequeue(network))) {
+  while ((p = _QUEUE_DEQUEUE(&network->rx))) {
     hpx_parcel_release(p);
   }
   _QUEUE_FINI(&network->rx);
-
-  if (network->routing) {
-    routing_delete(network->routing);
-  }
 
   free(network);
 }
 
 
-void network_shutdown(network_class_t *network) {
-  if (network->flush)
-    transport_progress(here->transport, TRANSPORT_FLUSH);
-  else
-    transport_progress(here->transport, TRANSPORT_CANCEL);
+static int _startup(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  int e = pthread_create(&network->progress, NULL, _progress, network);
+  if (e) {
+    dbg_error("failed to start network progress.\n");
+    return LIBHPX_ERROR;
+  }
+  else {
+    dbg_log("started network progress.\n");
+    return LIBHPX_OK;
+  }
 }
 
 
-void network_barrier(network_class_t *network) {
-  transport_barrier(here->transport);
+static void _shutdown(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  int e = pthread_cancel(network->progress);
+  if (e) {
+    dbg_error("could not cancel the network progress thread.\n");
+  }
+
+  e = pthread_join(network->progress, NULL);
+  if (e) {
+    dbg_error("could not join the network progress thread.\n");
+  }
+  else {
+    dbg_log("shutdown network progress.\n");
+  }
+
+  if (sync_load(&network->flush, SYNC_ACQUIRE)) {
+    transport_progress(network->transport, TRANSPORT_FLUSH);
+  }
+  else {
+    transport_progress(network->transport, TRANSPORT_CANCEL);
+  }
 }
 
 
-routing_t *network_get_routing(network_class_t *network) {
-  return network->routing;
+static void _barrier(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  transport_barrier(network->transport);
 }
 
-void network_flush_on_shutdown(network_class_t *network) {
-  network->flush = 1;
+
+void network_tx_enqueue(struct network *o, hpx_parcel_t *p) {
+  struct _network *network = (struct _network*)o;
+  _QUEUE_ENQUEUE(&network->tx, p);
+}
+
+
+hpx_parcel_t *network_tx_dequeue(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  return _QUEUE_DEQUEUE(&network->tx);
+}
+
+
+void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
+  struct _network *network = (struct _network*)o;
+  _QUEUE_ENQUEUE(&network->rx, p);
+}
+
+
+hpx_parcel_t *network_rx_dequeue(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  return _QUEUE_DEQUEUE(&network->rx);
+}
+
+void network_flush_on_shutdown(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  sync_store(&network->flush, 1, SYNC_RELEASE);
+}
+
+struct network *network_new(void) {
+  struct _network *n = malloc(sizeof(*n));
+  if (!n) {
+    dbg_error("failed to allocate a network.\n");
+    return NULL;
+  }
+
+  n->vtable.delete = _delete;
+  n->vtable.startup = _startup;
+  n->vtable.shutdown = _shutdown;
+  n->vtable.barrier = _barrier;
+
+  _QUEUE_INIT(&n->tx, NULL);
+  _QUEUE_INIT(&n->rx, NULL);
+  n->transport = here->transport;
+  sync_store(&n->flush, 0, SYNC_RELEASE);
+
+  return &n->vtable;
 }
