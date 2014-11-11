@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/hpx.c
@@ -40,8 +40,6 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
-
-#include "network/servers.h"
 
 /// Cleanup utility function.
 ///
@@ -188,25 +186,16 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     goto unwind0;
   }
 
-  // we start a transport server for the transport, if necessary
-  // FIXME: move this functionality into the transport initialization, rather
-  //        than branching here
-  if (here->transport->type != HPX_TRANSPORT_SMP) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
-    if (!p)
-      return dbg_error("could not allocate a network server parcel");
-    hpx_parcel_set_action(p, light_network);
-    hpx_parcel_set_target(p, HPX_HERE);
-
-    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
-  }
-
   if (here->rank == 0) {
     // start the main process. enqueue parcels directly---schedulers
     // don't exist yet
     hpx_parcel_t *p = parcel_create(HPX_HERE, *act, args, size, HPX_NULL,
                                     HPX_ACTION_NULL, HPX_NULL, true);
     YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
+  }
+
+  if (network_startup(here->network) != LIBHPX_OK) {
+    return HPX_ERROR;
   }
 
   // start the scheduler, this will return after scheduler_shutdown()

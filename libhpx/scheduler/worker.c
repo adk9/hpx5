@@ -37,6 +37,7 @@
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
+#include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
 #include "libhpx/stats.h"
@@ -304,6 +305,14 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
+  if (!fast) {
+    if ((p = network_rx_dequeue(here->network))) {
+      assert(!parcel_get_stack(p));
+      assert(here->gas->owner_of(p->target) == here->rank);
+      goto exit;
+    }
+  }
+
   // no ready parcels try to see if there are any yielded threads
   if (!fast) {
     if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
@@ -347,8 +356,6 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   if (!parcel_get_stack(p))
     _bind(p);
 
-  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
-  assert(here->gas->owner_of(p->target) == here->rank);
   return p;
 }
 

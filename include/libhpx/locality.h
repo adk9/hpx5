@@ -37,7 +37,7 @@
 /// Forward declarations.
 /// @{
 struct boot_class;
-struct network_class;
+struct network;
 struct scheduler;
 struct transport_class;
 /// @}
