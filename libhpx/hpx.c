@@ -98,6 +98,13 @@ int hpx_init(int *argc, char ***argv) {
     return dbg_error("failed to allocate a locality.\n");
   here->config = cfg;
 
+  // actions
+  here->actions = libhpx_initialize_actions();
+  if (!here->actions) {
+    _cleanup(here);
+    return dbg_error("failed to allocate an action table.\n");
+  }
+
   // topology
   int e = libhpx_hwloc_topology_init(&here->topology);
   if (e) {
@@ -164,7 +171,12 @@ int hpx_init(int *argc, char ***argv) {
 
 
 /// Called to run HPX.
-int hpx_run(hpx_action_t act, const void *args, size_t size) {
+int hpx_run(hpx_action_t *act, const void *args, size_t size) {
+  // we finalize the actions first
+  int e = hpx_finalize_actions();
+  if (e)
+    return dbg_error("error finalizing action registration");
+
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
   //        than branching here
@@ -181,7 +193,7 @@ int hpx_run(hpx_action_t act, const void *args, size_t size) {
   if (here->rank == 0) {
     // start the main process. enqueue parcels directly---schedulers
     // don't exist yet
-    hpx_parcel_t *p = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
+    hpx_parcel_t *p = parcel_create(HPX_HERE, *act, args, size, HPX_NULL,
                                     HPX_ACTION_NULL, HPX_NULL, true);
     YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
   }

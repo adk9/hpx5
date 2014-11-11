@@ -766,9 +766,8 @@ hpx_lco_netfuture_get_rank(hpx_netfuture_t future) {
 
 static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
-  _future_set_no_copy_from_remote = HPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action);
-
-  _progress = HPX_REGISTER_ACTION(_progress_action);
-  _add_future_to_table = HPX_REGISTER_ACTION(_add_future_to_table_action);
-  _initialize_netfutures = HPX_REGISTER_ACTION(_initialize_netfutures_action);
+  LIBHPX_REGISTER_ACTION(&_future_set_no_copy_from_remote, _future_set_no_copy_from_remote_action);
+  LIBHPX_REGISTER_ACTION(&_progress, _progress_action);
+  LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
+  LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
 }

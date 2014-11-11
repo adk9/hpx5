@@ -259,5 +259,5 @@ int main(int argc, char * argv[]) {
   _register_actions();
 
   // Run HPX
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }

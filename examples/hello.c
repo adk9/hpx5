@@ -22,6 +22,7 @@ static int _hello_action(void *args) {
 int main(int argc, char *const argv[argc]) {
   if (hpx_init(NULL, NULL) != 0)
     return -1;
-  hpx_action_t hello = HPX_REGISTER_ACTION(_hello_action);
-  return hpx_run(hello, NULL, 0);
+  hpx_action_t hello;
+  HPX_REGISTER_ACTION(&hello, _hello_action);
+  return hpx_run(&hello, NULL, 0);
 }
