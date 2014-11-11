@@ -42,10 +42,6 @@ static void _node_delete(void *node) {
 
 
 void sync_ms_queue_init(ms_queue_t *q, void *val) {
-  q->vtable.delete      = (__typeof__(q->vtable.delete))sync_ms_queue_delete;
-  q->vtable.enqueue     = (__typeof__(q->vtable.enqueue))sync_ms_queue_enqueue;
-  q->vtable.dequeue     = (__typeof__(q->vtable.dequeue))sync_ms_queue_dequeue;
-
   q->head.c             = 0;
   q->tail.c             = 0;
   q->head.p = q->tail.p = _node_new(val);
