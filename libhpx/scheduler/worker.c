@@ -30,7 +30,6 @@
 #include <libsync/barriers.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
-#include <libsync/spscq.h>
 
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -82,8 +81,6 @@ PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   chase_lev_ws_deque_t work;                    // my work
   // already aligned
   two_lock_queue_t    inbox;                    // mail sent to me
-  // already aligned
-  sync_spscq_t  completions;                    // local completions
   volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 } worker_t;
@@ -98,7 +95,6 @@ static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread worker_t self = {
   .current    = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = SYNC_TWO_LOCK_QUEUE_INIT,
-  .completions = SYNC_SPSCQ_INIT,
   .shutdown   = INT_MAX,
   .stats      = SCHEDULER_STATS_INIT
 };
@@ -375,7 +371,6 @@ void *worker_run(void *args) {
   assert((uintptr_t)&self % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.work % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.inbox % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&self.completions % HPX_CACHELINE_SIZE == 0);
   if (gas_join(here->gas)) {
     dbg_error("failed to join the global address space.\n");
     return NULL;
