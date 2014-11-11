@@ -16,7 +16,9 @@
 
 #include <string.h>
 #include <hpx/builtins.h>
-#include <libhpx/locality.h>
+#include "libhpx/locality.h"
+#include "libhpx/action.h"
+
 #include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
@@ -178,15 +180,10 @@ static int _set_csbrk_handler(size_t *offset) {
 }
 
 
-static void _pgas_register_actions(void) {
-  pgas_cyclic_alloc  = HPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler);
-  pgas_cyclic_calloc = HPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler);
-  pgas_free          = HPX_REGISTER_ACTION(_pgas_free_handler);
-
-  _calloc_init       = HPX_REGISTER_ACTION(_calloc_init_handler);
-  _set_csbrk         = HPX_REGISTER_ACTION(_set_csbrk_handler);
-}
-
-static void HPX_CONSTRUCTOR _register(void) {
-  _pgas_register_actions();
+static void HPX_CONSTRUCTOR _pgas_register_actions(void) {
+  LIBHPX_REGISTER_ACTION(&pgas_cyclic_alloc, _pgas_cyclic_alloc_handler);
+  LIBHPX_REGISTER_ACTION(&pgas_cyclic_calloc, _pgas_cyclic_calloc_handler);
+  LIBHPX_REGISTER_ACTION(&pgas_free, _pgas_free_handler);
+  LIBHPX_REGISTER_ACTION(&_calloc_init, _calloc_init_handler);
+  LIBHPX_REGISTER_ACTION(&_set_csbrk, _set_csbrk_handler);
 }

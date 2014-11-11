@@ -109,5 +109,5 @@ int main(int argc, char *argv[]) {
   _empty = HPX_REGISTER_ACTION(_empty_action);
 
   // run the main action
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }

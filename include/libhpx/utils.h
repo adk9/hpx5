@@ -15,6 +15,6 @@
 
 #include "hpx/hpx.h"
 
-HPX_INTERNAL const uintptr_t hpx_hash_string(const char *str, size_t len);
+HPX_INTERNAL const uint32_t hpx_hash_string(const char *str, size_t len);
 
 #endif // LIBHPX_UTILS_H

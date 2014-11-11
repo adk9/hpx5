@@ -15,6 +15,7 @@
 #endif
 
 #include <pthread.h>
+#include "libhpx/action.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/stats.h"
@@ -34,5 +35,5 @@ static int _light_network_action(void *args) {
 
 
 static void HPX_CONSTRUCTOR _init_actions(void) {
-  light_network = HPX_REGISTER_ACTION(_light_network_action);
+  LIBHPX_REGISTER_ACTION(&light_network, _light_network_action);
 }

@@ -39,8 +39,8 @@ typedef struct {
 
 
 /// Remote action interface to a process.
-static hpx_action_t          _call;
-static hpx_action_t        _delete;
+static hpx_action_t _process_call;
+static hpx_action_t _process_delete;
 static hpx_action_t _return_credit;
 
 
@@ -71,14 +71,14 @@ static void _init(_process_t *p, hpx_addr_t termination) {
 
 
 typedef struct {
-  hpx_addr_t target;
+  hpx_addr_t   target;
   hpx_action_t action;
-  hpx_addr_t result;
-  char data[];
+  hpx_addr_t   result;
+  char         data[];
 } _call_args_t;
 
 
-static int _call_action(_call_args_t *args) {
+static int _process_call_action(_call_args_t *args) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p))
@@ -101,7 +101,7 @@ static int _call_action(_call_args_t *args) {
 }
 
 
-static int _delete_action(void *args) {
+static int _process_delete_action(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(target, (void**)&p))
@@ -150,9 +150,9 @@ parcel_recover_credit(hpx_parcel_t *p) {
 
 
 static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  _call          = HPX_REGISTER_ACTION(_call_action);
-  _delete        = HPX_REGISTER_ACTION(_delete_action);
-  _return_credit = HPX_REGISTER_ACTION(_return_credit_action);
+  LIBHPX_REGISTER_ACTION(&_process_call, _process_call_action);
+  LIBHPX_REGISTER_ACTION(&_process_delete, _process_delete_action);
+  LIBHPX_REGISTER_ACTION(&_return_credit, _return_credit_action);
 }
 
 
@@ -186,14 +186,14 @@ hpx_process_getpid(hpx_addr_t process) {
 /// request credit from the process owner represented by the address
 /// @p process. We set the continuation targets and actions to be the
 /// actual action which is to be invoked, and pass the completion
-/// continuation as an argument to the _call action.
+/// continuation as an argument to the _process_call action.
 /// ----------------------------------------------------------------------------
 int
 hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const void *args,
                  size_t len, hpx_addr_t result) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
   hpx_parcel_set_target(p, process);
-  hpx_parcel_set_action(p, _call);
+  hpx_parcel_set_action(p, _process_call);
   hpx_parcel_set_pid(p, 0);
   parcel_set_credit(p, 0);
 
@@ -216,7 +216,7 @@ hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
   if (process == HPX_NULL)
     return;
 
-  hpx_call_sync(process, _delete, NULL, 0, NULL, 0);
+  hpx_call_sync(process, _process_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
 }
 
