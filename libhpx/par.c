@@ -20,10 +20,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "libhpx/action.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "hpx/hpx.h"
-
 
 
 typedef struct {
@@ -33,9 +33,7 @@ typedef struct {
   int max;
 } par_for_async_args_t;
 
-static int
-_par_for_async_action(par_for_async_args_t *args)
-{
+static int _par_for_async_action(par_for_async_args_t *args) {
   for (int i = args->min, e = args->max; i < e; ++i)
     args->f(i, args->args);
   return HPX_SUCCESS;
@@ -43,9 +41,8 @@ _par_for_async_action(par_for_async_args_t *args)
 
 static hpx_action_t _par_for_async = 0;
 
-int
-hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, hpx_addr_t sync)
-{
+int hpx_par_for(hpx_for_action_t f, const int min, const int max,
+                const void *args, hpx_addr_t sync) {
   assert(max - min > 0);
 
   // get the number of scheduler threads
@@ -72,9 +69,9 @@ hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args, 
   return HPX_SUCCESS;
 }
 
-int
-hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *args)
-{
+
+int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
+                     const void *args) {
   assert(max - min > 0);
   // HACK
   int nworkers = here->sched->n_workers;
@@ -101,9 +98,7 @@ typedef struct {
   char env[];
 } par_call_async_args_t;
 
-static int
-_par_call_async_action(par_call_async_args_t *args)
-{
+static int _par_call_async_action(par_call_async_args_t *args) {
   const size_t env_size = hpx_thread_current_args_size() - sizeof(*args);
   return hpx_par_call(args->action,
                      args->min, args->max, args->branching_factor, args->cutoff,
@@ -114,22 +109,19 @@ _par_call_async_action(par_call_async_args_t *args)
 
 static hpx_action_t _par_call_async = 0;
 
-static HPX_CONSTRUCTOR void
-_init_actions(void) {
-  _par_for_async = HPX_REGISTER_ACTION(_par_for_async_action);
-  _par_call_async = HPX_REGISTER_ACTION(_par_call_async_action);
+static HPX_CONSTRUCTOR void _init_actions(void) {
+  LIBHPX_REGISTER_ACTION(&_par_for_async, _par_for_async_action);
+  LIBHPX_REGISTER_ACTION(&_par_call_async, _par_call_async_action);
 }
 
 
-int
-hpx_par_call(hpx_action_t action, const int min, const int max,
-            const int branching_factor,
-            const int cutoff,
-            const size_t arg_size,
-            void (*arg_init)(void*, const int, const void*),
-            const size_t env_size, const void *env,
-            hpx_addr_t sync)
-{
+int hpx_par_call(hpx_action_t action, const int min, const int max,
+                 const int branching_factor,
+                 const int cutoff,
+                 const size_t arg_size,
+                 void (*arg_init)(void*, const int, const void*),
+                 const size_t env_size, const void *env,
+                 hpx_addr_t sync) {
   assert(max - min > 0);
   assert(branching_factor > 1);
   assert(cutoff > 0);
@@ -183,15 +175,13 @@ hpx_par_call(hpx_action_t action, const int min, const int max,
   return HPX_SUCCESS;
 }
 
-int
-hpx_par_call_sync(hpx_action_t action,
-                 const int min, const int max,
-                 const int branching_factor,
-                 const int cutoff,
-                 const size_t arg_size,
-                 void (*arg_init)(void*, const int, const void*),
-                 const size_t env_size, const void *env)
-{
+int hpx_par_call_sync(hpx_action_t action,
+                      const int min, const int max,
+                      const int branching_factor,
+                      const int cutoff,
+                      const size_t arg_size,
+                      void (*arg_init)(void*, const int, const void*),
+                      const size_t env_size, const void *env) {
   assert(max - min > 0);
   hpx_addr_t sync = hpx_lco_and_new(max - min);
   int e = hpx_par_call(action, min, max, branching_factor, cutoff, arg_size,

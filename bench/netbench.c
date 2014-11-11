@@ -147,10 +147,11 @@ int main(int argc, char *argv[]) {
     printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
   }
 
-  echo_pong = HPX_REGISTER_ACTION(echo_pong_action);
-  echo_finish = HPX_REGISTER_ACTION(echo_finish_action);
-  hpx_action_t hpx_main = HPX_REGISTER_ACTION(hpx_main_action);
+  HPX_REGISTER_ACTION(&echo_pong, echo_pong_action);
+  HPX_REGISTER_ACTION(&echo_finish, echo_finish_action);
+  hpx_action_t hpx_main;
+  HPX_REGISTER_ACTION(&hpx_main, hpx_main_action);
 
-  int e = hpx_run(hpx_main, NULL, 0);
+  int e = hpx_run(&hpx_main, NULL, 0);
   return e;
 }

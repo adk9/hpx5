@@ -523,8 +523,8 @@ transport_class_t *transport_new_portals(uint32_t req_limit) {
   portals->pte                  = PTL_PT_ANY;
   portals->bufdesc              = PTL_INVALID_HANDLE;
 
-  _send_progress_action = HPX_REGISTER_ACTION(_send_progress);
-  _recv_progress_action = HPX_REGISTER_ACTION(_recv_progress);
+  LIBHPX_REGISTER_ACTION(&_send_progress_action, _send_progress);
+  LIBHPX_REGISTER_ACTION(&_recv_progress_action, _recv_progress);
 
   _portals_init(portals);
   _set_map(portals);

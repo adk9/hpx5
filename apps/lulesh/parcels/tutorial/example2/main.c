@@ -91,5 +91,5 @@ tutorial_main_action(const main_args_t *args)
 void
 tutorial_init_actions(void)
 {
-  _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
+  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
 }

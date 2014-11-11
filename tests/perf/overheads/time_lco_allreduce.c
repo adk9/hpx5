@@ -249,7 +249,7 @@ main(int argc, char *argv[argc])
   hpx_action_t _main = HPX_REGISTER_ACTION(allreduce_main_action);
 
   // run HPX (this copies the args structure)
-  return hpx_run(_main, &args, sizeof(args));
+  return hpx_run(&_main, &args, sizeof(args));
 }
 
 

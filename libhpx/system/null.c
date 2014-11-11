@@ -15,6 +15,7 @@
 #endif
 
 #include "hpx/hpx.h"
+#include "libhpx/action.h"
 
 
 /// @file libhpx/system/null.c
@@ -31,6 +32,6 @@ static int _null_action(void *args) {
 
 /// Register the global actions.
 static void HPX_CONSTRUCTOR _init(void) {
-  HPX_ACTION_NULL = hpx_register_action("_null_action", _null_action);
+  LIBHPX_REGISTER_ACTION(&HPX_ACTION_NULL, _null_action);
 }
 

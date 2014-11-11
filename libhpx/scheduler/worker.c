@@ -117,7 +117,8 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
   hpx_action_t action = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
-  int status = action_invoke(action, args);
+  hpx_action_handler_t handler = (hpx_action_handler_t)(here->actions[action].func);
+  int status = handler(args);
   switch (status) {
    default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
@@ -611,12 +612,12 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   hpx_parcel_t *parcel = self.current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if ((c_target != HPX_NULL) && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
     // Double the credit so that we can pass it on to the continuation
     // without splitting it up.
     if (parcel->pid != HPX_NULL)
       --parcel->credit;
-    if (hpx_action_eq(c_act, hpx_lco_set_action))
+    if (c_act == hpx_lco_set_action)
       hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
                                  HPX_ACTION_NULL);
     else

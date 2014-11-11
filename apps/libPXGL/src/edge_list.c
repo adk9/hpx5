@@ -137,7 +137,8 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
 
 
 static __attribute__((constructor)) void _edge_list_register_actions() {
-  _put_edge_edgelist  = HPX_REGISTER_ACTION(_put_edge_edgelist_action);
-  edge_list_from_file = HPX_REGISTER_ACTION(edge_list_from_file_action);
-  _edge_list_from_file_local = HPX_REGISTER_ACTION(_edge_list_from_file_local_action);
+  HPX_REGISTER_ACTION(&_put_edge_edgelist, _put_edge_edgelist_action);
+  HPX_REGISTER_ACTION(&edge_list_from_file, edge_list_from_file_action);
+  HPX_REGISTER_ACTION(&_edge_list_from_file_local,
+                      _edge_list_from_file_local_action);
 }
