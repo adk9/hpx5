@@ -106,7 +106,7 @@ static void _flush(progress_t *progress, request_t *r) {
 /// @param progress - The progress object.
 /// @param        r - The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
-  scheduler_spawn(r->parcel);
+  network_rx_enqueue(here->network, r->parcel);
   _finish_request(progress, r);
 }
 
