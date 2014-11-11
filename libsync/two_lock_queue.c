@@ -17,20 +17,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "hpx/builtins.h"
+#include <hpx/builtins.h>
+
 #include "libsync/queues.h"
 #include "libsync/backoff.h"
 
-static __thread two_lock_queue_node_t *_free = NULL;
-
 static two_lock_queue_node_t *_node_new(void *value) {
-  two_lock_queue_node_t *node = _free;
-  if (node) {
-    _free = node->next;
-  }
-  else {
-    node = malloc(sizeof(*node));
-  }
+  two_lock_queue_node_t *node = malloc(sizeof(*node));
   node->next = NULL;
   node->value = value;
   return node;
@@ -38,8 +31,7 @@ static two_lock_queue_node_t *_node_new(void *value) {
 
 
 static void _node_delete(two_lock_queue_node_t *node) {
-  node->next = _free;
-  _free = node;
+  free(node);
 }
 
 
