@@ -62,6 +62,8 @@ struct _network {
 
 static void *_progress(void *o) {
   struct _network *network = o;
+
+  // we have to join the GAS so that we can allocate parcels in here.
   int e = here->gas->join();
   if (e) {
     dbg_error("network failed to join the global address space.\n");
