@@ -30,7 +30,7 @@ endif
 noinst_apps_PROGRAMS  = hpxmpi
 
 hpxmpi_SOURCES  = main.c
-hpxmpi_LDFLAGS  = -static
+hpxmpi_LDFLAGS  = 
 
 hpxmpi_CPPFLAGS = -I$(top_srcdir)/include
 hpxmpi_CFLAGS   = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
