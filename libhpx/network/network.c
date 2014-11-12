@@ -130,7 +130,8 @@ static void _shutdown(struct network *o) {
     dbg_log("shutdown network progress.\n");
   }
 
-  if (sync_load(&network->flush, SYNC_ACQUIRE)) {
+  int flush = sync_load(&network->flush, SYNC_ACQUIRE);
+  if (flush) {
     transport_progress(network->transport, TRANSPORT_FLUSH);
   }
   else {
