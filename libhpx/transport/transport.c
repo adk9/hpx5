@@ -67,6 +67,7 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t req_limit) {
 
    case (HPX_TRANSPORT_SMP):
     transport = transport_new_smp(req_limit);
+    break;
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
