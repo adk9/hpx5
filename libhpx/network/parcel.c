@@ -316,3 +316,51 @@ uint64_t
 parcel_get_credit(hpx_parcel_t *p) {
   return p->credit;
 }
+
+hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
+  hpx_parcel_t *top = *stack;
+  if (top) {
+    DEBUG_IF (parcel_get_stack(top) != NULL) {
+      dbg_error("parcel should not have an active stack during pop.\n");
+    }
+    *stack = (void*)top->ustack;
+  }
+  return top;
+}
+
+void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
+  DEBUG_IF (parcel_get_stack(parcel) != NULL) {
+    dbg_error("parcel should not have an active stack during push.\n");
+  }
+  hpx_parcel_t *top = *stack;
+  parcel->ustack = (void*)top;
+  *stack = parcel;
+}
+
+
+hpx_parcel_t *parcel_stack_sync_pop(hpx_parcel_t **stack) {
+  hpx_parcel_t *top = NULL;
+
+  do {
+    top = sync_load(stack, SYNC_ACQUIRE);
+  } while (!sync_cas(stack, top, top->ustack, SYNC_RELEASE, SYNC_RELAXED));
+
+  DEBUG_IF(true) {
+    parcel_set_stack(top, NULL);
+  }
+
+  return top;
+}
+
+void parcel_stack_sync_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
+  DEBUG_IF (parcel_get_stack(parcel) != NULL) {
+    dbg_error("parcel should not have an active stack during push.\n");
+  }
+
+  hpx_parcel_t *top = NULL;
+
+  do {
+    top = sync_load(stack, SYNC_ACQUIRE);
+    parcel->ustack = (void*)top;
+  } while (!sync_cas(stack, top, parcel, SYNC_RELEASE, SYNC_RELAXED));
+}
