@@ -46,24 +46,24 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t req_limit) {
     transport = transport_new_photon(req_limit);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
     transport = transport_new_mpi(req_limit);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
     transport = transport_new_portals(req_limit);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_SMP):
     transport = transport_new_smp(req_limit);
