@@ -71,20 +71,6 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Treat a parcel as a stack of parcels, and pop the top using
-/// synchronization.
-///
-/// This uses the stack field of the parcel to chain the parcels together, so it
-/// can't be used with parcels that have active stacks.
-///
-/// @param[in,out] stack The address of the top parcel in the stack, modified
-///                      as a side effect of the call.
-///
-/// @returns            NULL, or the parcel that was on top of the stack.
-hpx_parcel_t *parcel_stack_sync_pop(hpx_parcel_t **stack)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
 /// Treat a parcel as a stack of parcels, and push the parcel.
 ///
 /// This uses the stack field of the parcel to chain the parcels together, so it
@@ -94,19 +80,6 @@ hpx_parcel_t *parcel_stack_sync_pop(hpx_parcel_t **stack)
 ///                      as a side effect of the call.
 /// @param[in]    parcel The new top of the stack.
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
-
-/// Treat a parcel as a stack of parcels, and push the parcel using
-/// synchronization.
-///
-/// This uses the stack field of the parcel to chain the parcels together, so it
-/// can't be used with parcels that have active stacks.
-///
-/// @param[in,out] stack The address of the top parcel in the stack, modified
-///                      as a side effect of the call.
-/// @param[in]    parcel The new top of the stack.
-void parcel_stack_sync_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 
