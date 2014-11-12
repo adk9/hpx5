@@ -4,7 +4,7 @@ noinst_apps_PROGRAMS   = luleshnewfutures
 
 luleshnewfutures_SOURCES  = lulesh-comp.c  lulesh-hpx.c  lulesh-util.c  lulesh-xfer.c
 
-luleshnewfutures_LDFLAGS  = -static
+luleshnewfutures_LDFLAGS  = 
 luleshnewfutures_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 luleshnewfutures_CPPFLAGS = -I$(top_srcdir)/include
