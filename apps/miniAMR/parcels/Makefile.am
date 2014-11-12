@@ -19,7 +19,7 @@ miniamr_SOURCES  = comm_parent.c \
                    refine.c \
                    refine_level.c
 
-miniamr_LDFLAGS  = -static
+miniamr_LDFLAGS  = 
 miniamr_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 miniamr_CPPFLAGS = -I$(top_srcdir)/include

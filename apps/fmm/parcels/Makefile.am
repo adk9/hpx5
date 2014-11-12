@@ -4,7 +4,7 @@ noinst_apps_PROGRAMS   = fmmparcels
 
 fmmparcels_SOURCES  = fmm-action.c  fmm-main.c  fmm-param.c
 
-fmmparcels_LDFLAGS  = -static
+fmmparcels_LDFLAGS  = 
 fmmparcels_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 fmmparcels_CPPFLAGS = -I$(top_srcdir)/include
