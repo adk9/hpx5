@@ -175,6 +175,18 @@ static void _backoff(void) {
 }
 
 
+/// Process the next available parcel from our work queue in a fifo order.
+static hpx_parcel_t *_fifo(void) {
+  return sync_chase_lev_ws_deque_steal(&self.work);
+}
+
+
+/// Process the next available parcel from our work queue in a lifo order.
+static hpx_parcel_t *_lifo(void) {
+  return sync_chase_lev_ws_deque_pop(&self.work);
+}
+
+
 /// Steal a lightweight thread during scheduling.
 ///
 /// NB: we can be much smarter about who to steal from and how much to
@@ -193,9 +205,19 @@ static hpx_parcel_t *_steal(void) {
   }
   else {
     self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
-  } //
+  }
 
   return p;
+}
+
+
+static hpx_parcel_t *_network(void) {
+  hpx_parcel_t *stack = network_rx_dequeue(here->network);
+  hpx_parcel_t *p = NULL;
+  while ((p = parcel_stack_pop(&stack))) {
+    sync_chase_lev_ws_deque_push(&self.work, p);
+  }
+  return _lifo();
 }
 
 
@@ -294,7 +316,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     _handle_mail();
 
   // if there are ready parcels, select the next one
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&self.work);
+  hpx_parcel_t *p = _lifo();
 
   if (p) {
     assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
@@ -302,9 +324,7 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   }
 
   if (!fast) {
-    if ((p = network_rx_dequeue(here->network))) {
-      assert(!parcel_get_stack(p));
-      assert(here->gas->owner_of(p->target) == here->rank);
+    if ((p = _network())) {
       goto exit;
     }
   }
