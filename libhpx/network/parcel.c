@@ -14,20 +14,19 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @brief The parcel layer.
 ///
 /// Parcels are the foundation of HPX. The parcel structure serves as both the
 /// actual, "on-the-wire," network data structure, as well as the
 /// "thread-control-block" descriptor for the threading subsystem.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hpx/hpx.h"
+
+#include <hpx/hpx.h>
+#include <libsync/sync.h>
 
 #include "libhpx/action.h"
-#include "libsync/sync.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
@@ -39,8 +38,7 @@
 static const uintptr_t _INPLACE_MASK = 0x1;
 static const uintptr_t   _STATE_MASK = 0x1;
 static const size_t _SMALL_THRESHOLD = HPX_PAGE_SIZE;
-//PAD_TO_CACHELINE(sizeof(hpx_parcel_t)) +
-//                                     HPX_CACHELINE_SIZE;
+
 
 static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
@@ -117,7 +115,6 @@ hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p) {
 }
 
 
-// ----------------------------------------------------------------------------
 /// Acquire a parcel structure.
 ///
 /// Parcels are always acquired with enough inline space to support
@@ -131,9 +128,7 @@ hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p) {
 /// out-of-place buffer into the parcel's inline buffer, either synchronously or
 /// asynchronously depending on which interface is used, and how big the buffer
 /// is.
-// ----------------------------------------------------------------------------
-hpx_parcel_t *
-hpx_parcel_acquire(const void *buffer, size_t bytes) {
+hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // figure out how big a parcel buffer I actually need
   size_t size = sizeof(hpx_parcel_t);
   if (bytes != 0)
@@ -167,15 +162,15 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
 }
 
 
-// ----------------------------------------------------------------------------
 /// Perform an asynchronous send operation.
 ///
 /// Simply wraps the send operation in an asynchronous interface.
 ///
-/// @param   p the parcel to send (may need serialization)
-/// @continues NULL
-/// @returns   HPX_SUCCESS
-// ----------------------------------------------------------------------------
+/// @param            p The parcel to send (may need serialization)
+///
+/// @continues          NULL
+///
+/// @returns            HPX_SUCCESS
 static hpx_action_t _send_async = 0;
 
 
@@ -190,8 +185,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 }
 
 
-void
-hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
+void hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   bool inplace = ((uintptr_t)p->ustack & _INPLACE_MASK);
   bool small = p->size < _SMALL_THRESHOLD;
 
@@ -208,8 +202,7 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 }
 
 
-void
-hpx_parcel_send_sync(hpx_parcel_t *p) {
+void hpx_parcel_send_sync(hpx_parcel_t *p) {
   // an out-of-place parcel always needs to be serialized, either for a local or
   // remote send---parcels are always allocated with a serialization buffer for
   // this purpose
@@ -263,16 +256,14 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 }
 
 
-void
-hpx_parcel_release(hpx_parcel_t *p) {
+void hpx_parcel_release(hpx_parcel_t *p) {
   libhpx_global_free(p);
 }
 
 
-hpx_parcel_t *
-parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
-              size_t len, hpx_addr_t c_target, hpx_action_t c_action,
-              hpx_pid_t pid, bool inplace)
+hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
+                            const void*args, size_t len, hpx_addr_t c_target,
+                            hpx_action_t c_action, hpx_pid_t pid, bool inplace)
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
   if (!p) {
@@ -292,48 +283,44 @@ parcel_create(hpx_addr_t target, hpx_action_t action, const void *args,
 }
 
 
-void
-parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
+void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
   assert((uintptr_t)stack % sizeof(void*) == 0);
   uintptr_t state = (uintptr_t)p->ustack & _STATE_MASK;
   p->ustack = (struct ustack*)(state | (uintptr_t)stack);
 }
 
 
-struct ustack *
-parcel_get_stack(hpx_parcel_t *p) {
+struct ustack *parcel_get_stack(hpx_parcel_t *p) {
   return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
 }
 
 
-void
-parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
+void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
   p->credit = credit;
 }
 
 
-uint64_t
-parcel_get_credit(hpx_parcel_t *p) {
+uint64_t parcel_get_credit(hpx_parcel_t *p) {
   return p->credit;
 }
+
 
 hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
   hpx_parcel_t *top = *stack;
   if (top) {
-    DEBUG_IF (parcel_get_stack(top) != NULL) {
-      dbg_error("parcel should not have an active stack during pop.\n");
-    }
-    *stack = (void*)top->ustack;
+    *stack = (void*)parcel_get_stack(top);
+    parcel_set_stack(top, NULL);
   }
   return top;
 }
+
 
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
   DEBUG_IF (parcel_get_stack(parcel) != NULL) {
     dbg_error("parcel should not have an active stack during push.\n");
   }
   hpx_parcel_t *top = *stack;
-  parcel->ustack = (void*)top;
+  parcel_set_stack(parcel, (void*)top);
   *stack = parcel;
 }
 
