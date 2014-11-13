@@ -43,7 +43,7 @@ struct network {
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-struct network *network_new(void)
+struct network *network_new(int nrx)
   HPX_MALLOC HPX_INTERNAL;
 
 
@@ -115,7 +115,7 @@ void network_tx_enqueue(struct network *network, hpx_parcel_t *p)
 
 
 /// Probe for received parcels.
-hpx_parcel_t *network_rx_dequeue(struct network *network)
+hpx_parcel_t *network_rx_dequeue(struct network *network, int nrx)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
