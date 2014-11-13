@@ -132,7 +132,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // byte transport
-  here->transport = transport_new(cfg->transport, cfg->reqlimit);
+  here->transport = transport_new(cfg->transport, cfg->sendlimit, cfg->recvlimit);
   if (!here->transport) {
     _cleanup(here);
     return dbg_error("failed to create transport.\n");

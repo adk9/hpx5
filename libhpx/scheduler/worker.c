@@ -324,21 +324,20 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   }
 
   if (!fast) {
+
+    // we prioritize the network over stealing
     if ((p = _network())) {
+      assert(!parcel_get_stack(p));
       goto exit;
     }
-  }
 
-  // no ready parcels try to see if there are any yielded threads
-  if (!fast) {
+    // we prioritize yielded threads over stealing
     if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
       assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
       goto exit;
     }
-  }
 
-  // try to steal some work, if we're not in a hurry
-  if (!fast) {
+    // try to steal some work
     if ((p = _steal())) {
       goto exit;
     }

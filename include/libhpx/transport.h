@@ -104,17 +104,18 @@ struct transport_class {
   void (*progress)(transport_class_t *t, transport_op_t op)
     HPX_NON_NULL(1);
 
-  uint32_t req_limit;
+  uint32_t send_limit;
+  uint32_t recv_limit;
 
   rkey_t *rkey_table;
 };
 
 
-HPX_INTERNAL transport_class_t *transport_new_photon(uint32_t req_limit);
-HPX_INTERNAL transport_class_t *transport_new_mpi(uint32_t req_limit);
-HPX_INTERNAL transport_class_t *transport_new_portals(uint32_t req_limit);
-HPX_INTERNAL transport_class_t *transport_new_smp(uint32_t req_limit);
-HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport, uint32_t req_limit);
+HPX_INTERNAL transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_class_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_class_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_class_t *transport_new_smp(uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_class_t *transport_new(hpx_transport_t transport, uint32_t send_limit, uint32_t recv_limit);
 
 
 
