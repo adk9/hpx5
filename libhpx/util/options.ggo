@@ -54,7 +54,11 @@ enum optional argoptional multiple
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
-option "hpx-reqlimit" - "HPX transport-specific request limit"
+option "hpx-sendlimit" - "HPX transport-specific send limit"
+typestr="requests"
+long optional
+
+option "hpx-recvlimit" - "HPX transport-specific recv limit"
 typestr="requests"
 long optional
 
