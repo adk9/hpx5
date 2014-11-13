@@ -543,10 +543,8 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
 
   int num_futures_per_rank = (n / hpx_get_num_ranks()) + ((n % hpx_get_num_ranks()) % 2);
   assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(_netfuture_t))
-	 < _netfuture_cfg.max_size);
+	 <= _netfuture_cfg.max_size);
   
-    assert(_netfuture_table.curr_offset + n * (size + sizeof(_netfuture_t))
-                <  _netfuture_cfg.max_size * hpx_get_num_ranks());
     assert(_netfuture_table.curr_index < _netfuture_cfg.max_array_number);
 
 
