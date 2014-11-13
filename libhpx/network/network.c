@@ -25,6 +25,7 @@
 
 #include <libsync/sync.h>
 #include <libsync/queues.h>
+#include <libsync/locks.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -50,14 +51,29 @@
 
 /// The network class data.
 struct _network {
-  struct network       vtable;
-  const char          padding[HPX_CACHELINE_SIZE - sizeof(struct network)];
+  struct network             vtable;
+  volatile int                flush;
+  struct transport_class *transport;
+  pthread_t                progress;
+  int                           nrx;
+
+  // make sure the rest of this structure is cacheline aligned
+  const char _paddinga[HPX_CACHELINE_SIZE - ((sizeof(struct network) +
+                                              sizeof(int) +
+                                              sizeof(struct transport_class*) +
+                                              sizeof(pthread_t) +
+                                              sizeof(int)) %
+                                             HPX_CACHELINE_SIZE)];
+
   _QUEUE_T                 tx;                  // half duplex port for send
   _QUEUE_T                 rx;                  // half duplex port
-  struct transport_class *transport;
-  pthread_t          progress;
-  volatile int          flush;
-};
+  struct clh_lock      rxlock;
+
+  const char _paddingb[HPX_CACHELINE_SIZE - (sizeof(struct clh_lock) %
+                                             HPX_CACHELINE_SIZE)];
+
+  struct clh_node     rxnodes[];
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
 static void *_progress(void *o) {
@@ -164,7 +180,7 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 }
 
 
-hpx_parcel_t *network_rx_dequeue(struct network *o) {
+hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
   return _QUEUE_DEQUEUE(&network->rx);
 }
@@ -174,22 +190,34 @@ void network_flush_on_shutdown(struct network *o) {
   sync_store(&network->flush, 1, SYNC_RELEASE);
 }
 
-struct network *network_new(void) {
-  struct _network *n = malloc(sizeof(*n));
-  if (!n) {
+struct network *network_new(int nrx) {
+  struct _network *n = NULL;
+  int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n) + nrx *
+                         sizeof(n->rxnodes[0]));
+  if (e) {
     dbg_error("failed to allocate a network.\n");
     return NULL;
   }
+
+  assert((uintptr_t)&n->tx % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&n->rx % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&n->rxlock % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&n->rxnodes % HPX_CACHELINE_SIZE == 0);
 
   n->vtable.delete = _delete;
   n->vtable.startup = _startup;
   n->vtable.shutdown = _shutdown;
   n->vtable.barrier = _barrier;
 
-  _QUEUE_INIT(&n->tx, NULL);
-  _QUEUE_INIT(&n->rx, NULL);
   n->transport = here->transport;
   sync_store(&n->flush, 0, SYNC_RELEASE);
+  n->nrx = nrx;
+
+  _QUEUE_INIT(&n->tx, NULL);
+  _QUEUE_INIT(&n->rx, NULL);
+  sync_clh_lock_init(&n->rxlock);
+  for (int i = 0; i < nrx; ++i)
+    sync_clh_node_init(&n->rxnodes[i]);
 
   return &n->vtable;
 }

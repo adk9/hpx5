@@ -150,17 +150,17 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
+  int cores = (cfg->cores) ? cfg->cores : system_get_cores();
+  int workers = (cfg->threads) ? cfg->threads : cores;
 
   // parcel network
-  here->network = network_new();
+  here->network = network_new(workers);
   if (!here->network) {
     _cleanup(here);
     return dbg_error("failed to create network.\n");
   }
 
   // thread scheduler
-  int cores = (cfg->cores) ? cfg->cores : system_get_cores();
-  int workers = (cfg->threads) ? cfg->threads : cores;
   here->sched = scheduler_new(cores, workers, cfg->stacksize,
                               cfg->backoffmax, cfg->statistics);
   if (!here->sched) {

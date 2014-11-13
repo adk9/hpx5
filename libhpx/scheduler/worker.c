@@ -212,7 +212,7 @@ static hpx_parcel_t *_steal(void) {
 
 
 static hpx_parcel_t *_network(void) {
-  hpx_parcel_t *stack = network_rx_dequeue(here->network);
+  hpx_parcel_t *stack = network_rx_dequeue(here->network, self.id);
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
     sync_chase_lev_ws_deque_push(&self.work, p);
