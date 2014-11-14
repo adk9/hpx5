@@ -438,6 +438,7 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   char* backend;
   int ib_port;
   int use_cma;
+  int ledger_entries = -1;  // default is 64
   int val = 0;
 
   // TODO: make eth_dev and ib_dev runtime configurable!
@@ -455,6 +456,11 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
     use_cma = 0;
   else
     use_cma = atoi(getenv("HPX_USE_CMA"));
+  if(getenv("HPX_LEDGER_ENTRIES") != NULL) {
+    ledger_entries = atoi(getenv("HPX_LEDGER_ENTRIES"));
+    if (here->rank == 0)
+      printf("Setting ledger entries limit for photon to %d\n", ledger_entries);
+  }
 
   struct photon_config_t *cfg = &photon->cfg;
   cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
@@ -470,7 +476,7 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   cfg->cap.eager_buf_size  = -1;     // default 128k
   cfg->cap.small_msg_size  = -1;     // default 8192
   cfg->cap.small_pwc_size  =  1024;     // 0 disabled
-  cfg->cap.ledger_entries  = -1;     // default 64;
+  cfg->cap.ledger_entries  = ledger_entries;     // default 64;
   cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
   cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
   cfg->backend             = backend;
