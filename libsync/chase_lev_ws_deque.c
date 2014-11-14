@@ -55,7 +55,7 @@ static _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity) {
   b->parent = parent;
   b->capacity = capacity;
   b->bits = bits;
-  b->mask = bits - 1;
+  b->mask = capacity - 1;
   return b;
 }
 
