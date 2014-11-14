@@ -41,8 +41,8 @@
 
 
 ///#define _QUEUE(pre, post) pre##spscq##post
-#define _QUEUE(pre, post) pre##two_lock_queue##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
+#define _QUEUE(pre, post) pre##two_lock_queue##post
 #define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
@@ -69,11 +69,11 @@ struct _network {
 
   _QUEUE_T                 tx;                  // half duplex port for send
   _QUEUE_T                 rx;                  // half duplex port
-  struct clh_lock      rxlock;
-  struct {
-    struct clh_node     *node;
-    const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
-  } rxnodes[];
+  // struct clh_lock      rxlock;
+  // struct {
+  //   struct clh_node     *node;
+  //   const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
+  // } rxnodes[];
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
@@ -114,8 +114,9 @@ static void _delete(struct network *o) {
   }
   _QUEUE_FINI(&network->rx);
 
-  for (int i = 0, e = network->nrx; i < e; ++i)
-    sync_clh_node_delete(network->rxnodes[i].node);
+  // for (int i = 0, e = network->nrx; i < e; ++i)
+  //   sync_clh_node_delete(network->rxnodes[i].node);
+  // sync_clh_lock_fini(&network->rxlock);
 
   free(network);
 }
@@ -186,12 +187,13 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 
 hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
-  struct clh_node *node = network->rxnodes[nrx].node;
-  sync_clh_lock_acquire(&network->rxlock, node);
-  hpx_parcel_t * p = _QUEUE_DEQUEUE(&network->rx);
-  node = sync_clh_lock_release(&network->rxlock, node);
-  network->rxnodes[nrx].node = node;
-  return p;
+  return _QUEUE_DEQUEUE(&network->rx);
+  // struct clh_node *node = network->rxnodes[nrx].node;
+  // sync_clh_lock_acquire(&network->rxlock, node);
+  // hpx_parcel_t * p = _QUEUE_DEQUEUE(&network->rx);
+  // node = sync_clh_lock_release(&network->rxlock, node);
+  // network->rxnodes[nrx].node = node;
+  // return p;
 }
 
 void network_flush_on_shutdown(struct network *o) {
@@ -201,8 +203,8 @@ void network_flush_on_shutdown(struct network *o) {
 
 struct network *network_new(int nrx) {
   struct _network *n = NULL;
-  int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n) + nrx *
-                         sizeof(n->rxnodes[0]));
+  int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n));
+  // + nrx * sizeof(n->rxnodes[0]));
   if (e) {
     dbg_error("failed to allocate a network.\n");
     return NULL;
@@ -210,8 +212,8 @@ struct network *network_new(int nrx) {
 
   assert((uintptr_t)&n->tx % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&n->rx % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&n->rxlock % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&n->rxnodes % HPX_CACHELINE_SIZE == 0);
+  // assert((uintptr_t)&n->rxlock % HPX_CACHELINE_SIZE == 0);
+  // assert((uintptr_t)&n->rxnodes % HPX_CACHELINE_SIZE == 0);
 
   n->vtable.delete = _delete;
   n->vtable.startup = _startup;
@@ -224,10 +226,10 @@ struct network *network_new(int nrx) {
 
   _QUEUE_INIT(&n->tx, 0);
   _QUEUE_INIT(&n->rx, 0);
-  sync_clh_lock_init(&n->rxlock);
-  for (int i = 0; i < nrx; ++i) {
-    n->rxnodes[i].node = sync_clh_node_new();
-  }
+  // sync_clh_lock_init(&n->rxlock);
+  // for (int i = 0; i < nrx; ++i) {
+  //   n->rxnodes[i].node = sync_clh_node_new();
+  // }
 
   return &n->vtable;
 }
