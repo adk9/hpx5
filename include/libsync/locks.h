@@ -50,12 +50,15 @@ struct clh_node {
     ._padding = {0}                             \
   }
 
-void sync_clh_node_init(struct clh_node *n)
+struct clh_node * sync_clh_node_new(void)
+  HPX_MALLOC HPX_INTERNAL;
+
+void sync_clh_node_delete(struct clh_node *node)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 struct clh_lock {
-  struct clh_node dummy;
   struct clh_node *tail;
+  const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 #define SYNC_CLH_LOCK_INIT {                    \
@@ -72,7 +75,7 @@ void sync_clh_lock_fini(struct clh_lock *lock)
 void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
-void sync_clh_lock_release(struct clh_lock *lock, struct clh_node **n)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL HPX_RETURNS_NON_NULL;
 
 #endif /* HPX_SYNC_LOCKS_H_ */
