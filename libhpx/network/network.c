@@ -24,6 +24,7 @@
 #include <pthread.h>
 
 #include <libsync/sync.h>
+#include <libsync/queues.h>
 #include <libsync/spscq.h>
 #include <libsync/locks.h>
 
@@ -39,10 +40,10 @@
 #include "libhpx/routing.h"
 
 
-#define _QUEUE(pre, post) pre##spscq##post
-//#define _QUEUE(pre, post) pre##two_lock_queue##post
+///#define _QUEUE(pre, post) pre##spscq##post
+#define _QUEUE(pre, post) pre##two_lock_queue##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
-#define _QUEUE_T _QUEUE(sync_, _t)
+#define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
 #define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
@@ -221,8 +222,8 @@ struct network *network_new(int nrx) {
   sync_store(&n->flush, 0, SYNC_RELEASE);
   n->nrx = nrx;
 
-  _QUEUE_INIT(&n->tx, 128);
-  _QUEUE_INIT(&n->rx, 128);
+  _QUEUE_INIT(&n->tx, 0);
+  _QUEUE_INIT(&n->rx, 0);
   sync_clh_lock_init(&n->rxlock);
   for (int i = 0; i < nrx; ++i) {
     n->rxnodes[i].node = sync_clh_node_new();
