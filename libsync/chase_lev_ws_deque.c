@@ -36,17 +36,26 @@
 typedef struct chase_lev_ws_deque_buffer {
   struct chase_lev_ws_deque_buffer *parent;
   uint32_t capacity;
-  void    *buffer[];
+  uint32_t     bits;
+  uint64_t     mask;
+  void      *buffer[];
 } _buffer_t;
 
 
 /// Allocate a new buffer of the right capacity.
 static _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity) {
+  assert(capacity > 0);
+
+  // best-fit power of two
+  uint32_t bits = ceil_log2_32(capacity);
+  capacity = 1 << bits;
   _buffer_t *b = malloc(sizeof(_buffer_t) + capacity * sizeof(void*));
   assert(b);
   memset(&b->buffer, 0, capacity * sizeof(void*));
   b->parent = parent;
   b->capacity = capacity;
+  b->bits = bits;
+  b->mask = bits - 1;
   return b;
 }
 
@@ -63,13 +72,13 @@ static void _buffer_delete(_buffer_t *b) {
 
 /// Insert into the buffer, modulo its capacity.
 static void _buffer_put(_buffer_t *b, uint64_t i, void *val) {
-  b->buffer[i % b->capacity] = val;
+  b->buffer[i & b->mask] = val;
 }
 
 
 /// Lookup in the buffer, modulo its capacity.
 static void *_buffer_get(_buffer_t *b, uint64_t i) {
-  return b->buffer[i % b->capacity];
+  return b->buffer[i & b->mask];
 }
 
 
