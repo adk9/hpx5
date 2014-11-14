@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <hpx/builtins.h>
+
 #include "libsync/deques.h"
 
 
@@ -33,14 +35,13 @@
 /// larger or smaller buffers.
 typedef struct chase_lev_ws_deque_buffer {
   struct chase_lev_ws_deque_buffer *parent;
-  size_t capacity;
-  void * buffer[];
+  uint32_t capacity;
+  void    *buffer[];
 } _buffer_t;
 
 
 /// Allocate a new buffer of the right capacity.
-static _buffer_t *_buffer_new(_buffer_t *parent, size_t capacity) {
-  assert(capacity > 0);
+static _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity) {
   _buffer_t *b = malloc(sizeof(_buffer_t) + capacity * sizeof(void*));
   assert(b);
   memset(&b->buffer, 0, capacity * sizeof(void*));
@@ -114,7 +115,7 @@ static bool _deque_try_inc_top(chase_lev_ws_deque_t *deque, uint64_t top) {
 /// @}
 
 
-chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t size) {
+chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(uint32_t size) {
   chase_lev_ws_deque_t *deque = malloc(sizeof(*deque));
   if (deque)
     sync_chase_lev_ws_deque_init(deque, size);
@@ -122,7 +123,7 @@ chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t size) {
 }
 
 
-void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, size_t capacity) {
+void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, uint32_t capacity) {
   _buffer_t *buffer = _buffer_new(NULL, capacity);
   assert(buffer);
 

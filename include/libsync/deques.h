@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hpx/attributes.h"
+#include <hpx/attributes.h>
 #include "libsync/sync.h"
 
 /// A workstealing deque implementation based on the design presented in
@@ -41,10 +41,10 @@ typedef struct chase_lev_ws_deque {
     .top_bound = 1                              \
     }
 
-HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t capacity);
+HPX_INTERNAL chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(uint32_t capacity);
 
 HPX_INTERNAL void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d,
-                                               size_t capacity)
+                                               uint32_t capacity)
   HPX_NON_NULL(1);
 
 HPX_INTERNAL void sync_chase_lev_ws_deque_fini(chase_lev_ws_deque_t *d)
