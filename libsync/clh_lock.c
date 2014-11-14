@@ -15,55 +15,70 @@
 #endif
 
 #include <stddef.h>
+#include <stdlib.h>
 #include "libsync/locks.h"
 #include "libsync/sync.h"
 
 static const uintptr_t _MUST_WAIT_MASK = 0x1;
 
-static void _set_must_wait(struct clh_node *n) {
-  uintptr_t temp = (uintptr_t)n->prev;
+static void _set(struct clh_node *node, struct clh_node *pred) {
+  uintptr_t temp = (uintptr_t)pred;
   temp |= _MUST_WAIT_MASK;
-  sync_store(&n->prev, (struct clh_node *)temp, SYNC_RELEASE);
+  sync_store(&node->prev, (struct clh_node *)temp, SYNC_RELEASE);
 }
 
-static void _clear_must_wait(struct clh_node *n) {
-  uintptr_t temp = (uintptr_t)n->prev;
-  temp |= ~_MUST_WAIT_MASK;
-  sync_store(&n->prev, (struct clh_node *)temp, SYNC_RELEASE);
+static struct clh_node *_reset(struct clh_node *node) {
+  struct clh_node *pred = sync_load(&node->prev, SYNC_RELAXED);
+  sync_store(&node->prev, NULL, SYNC_RELEASE);
+  return (struct clh_node *)((uintptr_t)pred & ~_MUST_WAIT_MASK);
 }
 
-static uintptr_t _get_must_wait(struct clh_node *n) {
+static uintptr_t _must_wait(struct clh_node *n) {
   uintptr_t temp = (uintptr_t)sync_load(&n->prev, SYNC_ACQUIRE);
   return temp & _MUST_WAIT_MASK;
 }
 
-static struct clh_node *_get_prev(struct clh_node *n) {
-  uintptr_t temp = (uintptr_t)sync_load(&n->prev, SYNC_RELAXED);
-  temp = temp & ~_MUST_WAIT_MASK;
-  return (struct clh_node*)temp;
+struct clh_node *sync_clh_node_new(void) {
+  struct clh_node *node = NULL;
+  int e = posix_memalign((void**)&node, HPX_CACHELINE_SIZE, sizeof(*node));
+  if (e) {
+    return NULL;
+  }
+  node->prev = NULL;
+  return node;
 }
 
-void sync_clh_node_init(struct clh_node *n) {
-  sync_store(&n->prev, NULL, SYNC_RELEASE);
+void sync_clh_node_delete(struct clh_node *node) {
+  free(node);
 }
 
 void sync_clh_lock_init(struct clh_lock *lock) {
-  sync_clh_node_init(&lock->dummy);
-  sync_store(&lock->tail, &lock->dummy, SYNC_RELEASE);
+  lock->tail = sync_clh_node_new();
 }
 
 void sync_clh_lock_fini(struct clh_lock *lock) {
+  sync_clh_node_delete(lock->tail);
 }
 
-void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n) {
-  _set_must_wait(n);
-  n = sync_swap(&lock->tail, n, SYNC_RELEASE);
-  while (_get_must_wait(n))
+void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *node) {
+  // the must wait bit must be set before we swap this node in, but the pointer
+  // value isn't important yet
+  _set(node, NULL);
+
+  // swap this node in to the tail, anyone who sees it will have to wait
+  struct clh_node *tail = sync_swap(&lock->tail, node, SYNC_RELEASE);
+
+  // and remember the old tail, because that's the node we're going to take with
+  // us when we release this node
+  _set(node, tail);
+
+  // spin on the old tail
+  while (_must_wait(tail))
     ;
 }
 
-void sync_clh_lock_release(struct clh_lock *lock, struct clh_node **n) {
-  struct clh_node *pred = _get_prev(*n);
-  _clear_must_wait(*n);
-  *n = pred;
+struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *node) {
+  // we can re-use the predecessor of the current node, but we can't use the
+  // current node since we have no idea when our successor will finish.
+  return _reset(node);
 }

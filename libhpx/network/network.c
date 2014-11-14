@@ -24,7 +24,7 @@
 #include <pthread.h>
 
 #include <libsync/sync.h>
-#include <libsync/queues.h>
+#include <libsync/spscq.h>
 #include <libsync/locks.h>
 
 #include "libhpx/boot.h"
@@ -39,9 +39,10 @@
 #include "libhpx/routing.h"
 
 
-#define _QUEUE(pre, post) pre##two_lock_queue##post
+#define _QUEUE(pre, post) pre##spscq##post
+//#define _QUEUE(pre, post) pre##two_lock_queue##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
-#define _QUEUE_T _QUEUE(, _t)
+#define _QUEUE_T _QUEUE(sync_, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
 #define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
@@ -68,11 +69,10 @@ struct _network {
   _QUEUE_T                 tx;                  // half duplex port for send
   _QUEUE_T                 rx;                  // half duplex port
   struct clh_lock      rxlock;
-
-  const char _paddingb[HPX_CACHELINE_SIZE - (sizeof(struct clh_lock) %
-                                             HPX_CACHELINE_SIZE)];
-
-  struct clh_node     rxnodes[];
+  struct {
+    struct clh_node     *node;
+    const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
+  } rxnodes[];
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
@@ -112,6 +112,9 @@ static void _delete(struct network *o) {
     hpx_parcel_release(p);
   }
   _QUEUE_FINI(&network->rx);
+
+  for (int i = 0, e = network->nrx; i < e; ++i)
+    sync_clh_node_delete(network->rxnodes[i].node);
 
   free(network);
 }
@@ -182,7 +185,12 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 
 hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
-  return _QUEUE_DEQUEUE(&network->rx);
+  struct clh_node *node = network->rxnodes[nrx].node;
+  sync_clh_lock_acquire(&network->rxlock, node);
+  hpx_parcel_t * p = _QUEUE_DEQUEUE(&network->rx);
+  node = sync_clh_lock_release(&network->rxlock, node);
+  network->rxnodes[nrx].node = node;
+  return p;
 }
 
 void network_flush_on_shutdown(struct network *o) {
@@ -213,11 +221,12 @@ struct network *network_new(int nrx) {
   sync_store(&n->flush, 0, SYNC_RELEASE);
   n->nrx = nrx;
 
-  _QUEUE_INIT(&n->tx, NULL);
-  _QUEUE_INIT(&n->rx, NULL);
+  _QUEUE_INIT(&n->tx, 128);
+  _QUEUE_INIT(&n->rx, 128);
   sync_clh_lock_init(&n->rxlock);
-  for (int i = 0; i < nrx; ++i)
-    sync_clh_node_init(&n->rxnodes[i]);
+  for (int i = 0; i < nrx; ++i) {
+    n->rxnodes[i].node = sync_clh_node_new();
+  }
 
   return &n->vtable;
 }
