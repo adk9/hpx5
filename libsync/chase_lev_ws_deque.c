@@ -11,27 +11,26 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
+/// @file libsync/chase_lev_ws_dequeue.c
+///
 /// A workstealing deque implementation based on the design presented in
 /// "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
 /// @url http://dl.acm.org/citation.cfm?id=1073974.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "libsync/deques.h"
 
-/// ----------------------------------------------------------------------------
+
 /// A Chase-Lev WS Deque buffer.
 ///
 /// The buffer contains its capacity, and an inline block for the buffer
 /// itself. Buffers can't be resized themselves, they can only be replaced with
 /// larger or smaller buffers.
-/// ----------------------------------------------------------------------------
 typedef struct chase_lev_ws_deque_buffer {
   struct chase_lev_ws_deque_buffer *parent;
   size_t capacity;
@@ -39,9 +38,7 @@ typedef struct chase_lev_ws_deque_buffer {
 } _buffer_t;
 
 
-/// ----------------------------------------------------------------------------
 /// Allocate a new buffer of the right capacity.
-/// ----------------------------------------------------------------------------
 static _buffer_t *_buffer_new(_buffer_t *parent, size_t capacity) {
   assert(capacity > 0);
   _buffer_t *b = malloc(sizeof(_buffer_t) + capacity * sizeof(void*));
@@ -53,9 +50,7 @@ static _buffer_t *_buffer_new(_buffer_t *parent, size_t capacity) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Delete a buffer, and all of its parents.
-/// ----------------------------------------------------------------------------
 static void _buffer_delete(_buffer_t *b) {
   if (!b)
     return;
@@ -65,30 +60,24 @@ static void _buffer_delete(_buffer_t *b) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Insert into the buffer, modulo its capacity.
-/// ----------------------------------------------------------------------------
 static void _buffer_put(_buffer_t *b, uint64_t i, void *val) {
   b->buffer[i % b->capacity] = val;
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Lookup in the buffer, modulo its capacity.
-/// ----------------------------------------------------------------------------
 static void *_buffer_get(_buffer_t *b, uint64_t i) {
   return b->buffer[i % b->capacity];
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Grow a Chase-Lev WS Deque buffer.
 ///
 /// @param    old - the current buffer
 /// @param bottom - the deque bottom index
 /// @param    top - the deque top index
 /// @returns      - the new buffer
-/// ----------------------------------------------------------------------------
 static _buffer_t *_buffer_grow(_buffer_t *old, uint64_t bottom, uint64_t top) {
   _buffer_t *new = _buffer_new(old, 2 * old->capacity);
   for (; top < bottom; ++top)
@@ -97,13 +86,12 @@ static _buffer_t *_buffer_grow(_buffer_t *old, uint64_t bottom, uint64_t top) {
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Utility functions to set and CAS deque fields.
 ///
 /// We don't have _get versions because we use different memory consistency
 /// models for these in different places. Sets and CASes are always releases
 /// though, based on how they are used.
-/// ----------------------------------------------------------------------------
+///
 /// @{
 static void _deque_set_bottom(chase_lev_ws_deque_t *deque, uint64_t val) {
   sync_store(&deque->bottom, val, SYNC_RELEASE);
@@ -135,12 +123,6 @@ chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(size_t size) {
 
 
 void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, size_t capacity) {
-  // initialize vtable
-  d->vtable.delete = (__typeof__(d->vtable.delete))sync_chase_lev_ws_deque_delete;
-  d->vtable.push = (__typeof__(d->vtable.push))sync_chase_lev_ws_deque_push;
-  d->vtable.pop = (__typeof__(d->vtable.pop))sync_chase_lev_ws_deque_pop;
-  d->vtable.steal = (__typeof__(d->vtable.steal))sync_chase_lev_ws_deque_steal;
-
   _buffer_t *buffer = _buffer_new(NULL, capacity);
   assert(buffer);
 
@@ -166,6 +148,7 @@ void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) {
   free(d);
 }
 
+
 void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // read bottom and buffer, using Chase-Lev 2.3 for top upper bound
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
@@ -186,6 +169,7 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   _buffer_put(buffer, bottom, val);
   _deque_set_bottom(d, bottom + 1);
 }
+
 
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
