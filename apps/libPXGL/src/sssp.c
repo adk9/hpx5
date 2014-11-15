@@ -12,12 +12,12 @@
 /// SSSP Chaotic-relaxation
 
 /// Termination detection counts
-static uint64_t active_count;
-static uint64_t finished_count;
+static SSSP_UINT_T active_count;
+static SSSP_UINT_T finished_count;
 /// Termination detection choice
 termination_t termination;
 
-static void _increment_active_count(uint64_t n) {
+static void _increment_active_count(SSSP_UINT_T n) {
   sync_fadd(&active_count, n, SYNC_RELEASE);
 }
 
@@ -29,19 +29,19 @@ static termination_t get_termination() {
   return sync_load(&termination, SYNC_CONSUME);
 }
 
-static void _termination_detection_op(uint64_t *const output, const uint64_t *const input, const size_t size) {
+static void _termination_detection_op(SSSP_UINT_T *const output, const SSSP_UINT_T *const input, const size_t size) {
   output[0] = output[0] + input[0];
   output[1] = output[1] + input[1];
 }
 
 static void _termination_detection_init(void *init_val, const size_t init_val_size) {
-  ((uint64_t*)init_val)[0] = 0;
-  ((uint64_t*)init_val)[1] = 0;  
+  ((SSSP_UINT_T*)init_val)[0] = 0;
+  ((SSSP_UINT_T*)init_val)[1] = 0;  
 }
 
 typedef struct {
   adj_list_t graph;
-  uint64_t distance;
+  SSSP_UINT_T distance;
 #ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
 #endif
@@ -84,7 +84,7 @@ static int _useless_work_update_action()
   return HPX_SUCCESS;
 }
 
-static int _edge_traversal_count_action(uint64_t* num_edges)
+static int _edge_traversal_count_action(SSSP_UINT_T* num_edges)
 {
   const hpx_addr_t target = hpx_thread_current_target();
   _sssp_statistics *sssp_stat;
@@ -105,9 +105,9 @@ static int _initialize_termination_detection_action(void *arg) {
   return HPX_SUCCESS;
 }
 
-static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, uint64_t distance) {
-  uint64_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED);
-  uint64_t old_dist = prev_dist;
+static bool _try_update_vertex_distance(adj_list_vertex_t *vertex, SSSP_UINT_T distance) {
+  SSSP_UINT_T prev_dist = sync_load(&vertex->distance, SYNC_RELAXED);
+  SSSP_UINT_T old_dist = prev_dist;
   while (distance < prev_dist) {
     old_dist = prev_dist;
     prev_dist = sync_cas_val(&vertex->distance, prev_dist, distance, SYNC_RELAXED, SYNC_RELAXED);
@@ -124,11 +124,11 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  // printf("Distance Action on %" PRIu64 "\n", target);
+  // printf("Distance Action on %" SSSP_UINT_PRI "\n", target);
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
-    const uint64_t num_edges = vertex->num_edges;
-    const uint64_t old_distance = args->distance;
+    const SSSP_UINT_T num_edges = vertex->num_edges;
+    const SSSP_UINT_T old_distance = args->distance;
 
     // increase active_count
     if (get_termination() == COUNT_TERMINATION) _increment_active_count(num_edges);
@@ -149,14 +149,14 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     }
 
     hpx_gas_unpin(target);
-    // printf("Distance Action waiting on edges on (%" PRIu64 ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+    // printf("Distance Action waiting on edges on (%" SSSP_UINT_PRI ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
     if (get_termination() == AND_LCO_TERMINATION) {
       hpx_lco_wait(edges);
       hpx_lco_delete(edges, HPX_NULL);
     }
 
 #ifdef GATHER_STAT
-    hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(uint64_t),NULL,0);
+    hpx_call_sync(args->sssp_stat, _edge_traversal_count, &num_edges,sizeof(SSSP_UINT_T),NULL,0);
     hpx_call_sync(args->sssp_stat, _useful_work_update, NULL,0,NULL,0);
 #endif
   } else {
@@ -173,7 +173,7 @@ static int _sssp_update_vertex_distance_action(_sssp_visit_vertex_args_t *const 
     _increment_finished_count();
   }
 
-  // printf("Distance Action finished on %" PRIu64 "\n", target);
+  // printf("Distance Action finished on %" SSSP_UINT_PRI "\n", target);
 
   return HPX_SUCCESS;
 }
@@ -189,7 +189,7 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
   vertex = *v;
   hpx_gas_unpin(target);
 
-  // printf("Calling update distance on %" PRIu64 "\n", vertex);
+  // printf("Calling update distance on %" SSSP_UINT_PRI "\n", vertex);
 
   if (termination == AND_LCO_TERMINATION) {
     return hpx_call_sync(vertex, _sssp_update_vertex_distance, args, sizeof(*args), NULL, 0);
@@ -199,7 +199,7 @@ static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args
 }
 
 static int _send_termination_count_action(const hpx_addr_t *const args) {
-  uint64_t current_counts[2];
+  SSSP_UINT_T current_counts[2];
   // Does the order matter? We want to make sure we got all the active
   // actions last. We may make a mistake that will hold off
   // termination, but we won't terminate prematurely.
@@ -210,18 +210,18 @@ static int _send_termination_count_action(const hpx_addr_t *const args) {
 }
 
 static void detect_termination(const hpx_addr_t termination_lco) {
-  hpx_addr_t termination_count_lco = hpx_lco_allreduce_new(HPX_LOCALITIES, 1, 2*sizeof(int64_t), (hpx_commutative_associative_op_t) _termination_detection_op, _termination_detection_init);
+  hpx_addr_t termination_count_lco = hpx_lco_allreduce_new(HPX_LOCALITIES, 1, 2*sizeof(sssp_int_t), (hpx_commutative_associative_op_t) _termination_detection_op, _termination_detection_init);
   enum { PHASE_1, PHASE_2 } phase = PHASE_1;
-  uint64_t last_finished_count = 0;
+  SSSP_UINT_T last_finished_count = 0;
 
   while(true) {
     hpx_bcast(_send_termination_count, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
-    uint64_t activity_counts[2];
+    SSSP_UINT_T activity_counts[2];
     hpx_lco_get(termination_count_lco, sizeof(activity_counts), activity_counts);
-    const uint64_t active_count = activity_counts[0];
-    const uint64_t finished_count = activity_counts[1];
-    int64_t activity_count = active_count - finished_count;
-    // printf("activity_count: %" PRId64 ", phase: %d\n", activity_count, phase);
+    const SSSP_UINT_T active_count = activity_counts[0];
+    const SSSP_UINT_T finished_count = activity_counts[1];
+    sssp_int_t activity_count = active_count - finished_count;
+    // printf("activity_count: %" SSSPI_INT_PRI ", phase: %d\n", activity_count, phase);
     if (activity_count != 0) {
       phase = PHASE_1;
       continue;

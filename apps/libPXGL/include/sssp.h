@@ -11,19 +11,21 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include "defs.h"
+
 #ifndef PXGL_SSSP_H
 #define PXGL_SSSP_H
 //#define GATHER_STAT 1
 
 typedef struct {
-  uint64_t useful_work;
-  uint64_t useless_work;
-  uint64_t edge_traversal_count;
+  sssp_uint_t useful_work;
+  sssp_uint_t useless_work;
+  sssp_uint_t edge_traversal_count;
 }_sssp_statistics;
 
 typedef struct {
   adj_list_t graph;
-  uint64_t source;
+  sssp_uint_t source;
 #ifdef GATHER_STAT
   hpx_addr_t sssp_stat;
 #endif

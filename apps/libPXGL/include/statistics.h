@@ -1,6 +1,8 @@
 #ifndef PXGL_STAT_H
 #define PXGL_STAT_H
 
+#include "defs.h"
+
 #include "hpx/hpx.h"
 #include "adjacency_list.h"
 
@@ -22,7 +24,7 @@
 
 
 
-extern void statistics (double *out, double *data, int64_t n);
+extern void statistics (double *out, double *data, sssp_int_t n);
 
 
 #endif

@@ -14,20 +14,22 @@
 #ifndef PXGL_EDGE_LIST_H
 #define PXGL_EDGE_LIST_H
 
+#include "defs.h"
+
 #include "hpx/hpx.h"
 
 typedef struct {
-  uint64_t source;
-  uint64_t dest;
-  uint64_t weight;
+  sssp_uint_t source;
+  sssp_uint_t dest;
+  sssp_uint_t weight;
 } edge_list_edge_t;
 
 
 typedef struct {
-  uint64_t       num_edges;
-  uint64_t    num_vertices;
-  hpx_addr_t     edge_list;
-  uint32_t edge_list_bsize;
+  sssp_uint_t num_edges;
+  sssp_uint_t num_vertices;
+  hpx_addr_t  edge_list;
+  uint32_t   edge_list_bsize;
 } edge_list_t;
 
 

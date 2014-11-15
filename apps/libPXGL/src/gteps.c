@@ -5,7 +5,7 @@
 #define MODUL ((distance_t) 1 << 62)
 
 static void gteps_calculate_op(size_t *const output, const size_t *const input, const size_t size) {
-  *output = *output + *input ;//== UINT64_MAX ? 0 : *input % MODUL) % MODUL;
+  *output = *output + *input ;
 }
 
 static void gteps_calculate_init(void *init_val, const size_t init_val_size) {
@@ -24,7 +24,7 @@ static int _gteps_send_dist_action(const hpx_addr_t *const args) {
   vertex = *v;
   hpx_gas_unpin(target);
 
-  if(vertex.distance==UINT64_MAX){
+  if(vertex.distance==SSSP_UINT_MAX){
     const size_t edge_traversed = 0;
     hpx_lco_set(*args, sizeof(edge_traversed), &edge_traversed, HPX_NULL, HPX_NULL);
   }
@@ -50,7 +50,7 @@ static int _gteps_visit_vertex_action(const hpx_addr_t *const args) {
 }
 
 hpx_action_t gteps_calculate = 0;
-int gteps_calculate_action(const uint64_t *const num_vertices) {
+int gteps_calculate_action(const sssp_uint_t *const num_vertices) {
   const hpx_addr_t adj_list = hpx_thread_current_target();
   hpx_addr_t calculate_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(size_t), (hpx_commutative_associative_op_t) gteps_calculate_op, gteps_calculate_init);
 
