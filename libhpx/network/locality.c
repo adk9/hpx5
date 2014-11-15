@@ -11,18 +11,18 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 
-/// ----------------------------------------------------------------------------
 /// Implement the locality actions.
-/// ----------------------------------------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/scheduler.h"
@@ -30,12 +30,12 @@
 
 locality_t *here = NULL;
 
-hpx_action_t locality_shutdown          = 0;
+hpx_action_t locality_shutdown = 0;
 hpx_action_t locality_call_continuation = 0;
 
 /// The action that shuts down the HPX scheduler.
-static int _shutdown_handler(void *args) {
-  scheduler_shutdown(here->sched);
+static int _shutdown_handler(void *UNUSED) {
+  scheduler_shutdown(here->sched, LIBHPX_OK);
   return HPX_SUCCESS;
 }
 

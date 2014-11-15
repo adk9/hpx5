@@ -43,9 +43,10 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # intialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
+HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -80,6 +81,30 @@ AC_ARG_ENABLE([debug],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
+
+AC_ARG_ENABLE([action-table],
+  [AS_HELP_STRING([--enable-action-table],
+                  [Enable asymmetric, dynamic action-registration @<:@default=no@:>@])],
+  [], [enable_action_table=no])
+AS_IF([test "x$enable_action_table" != xno],
+  [AC_DEFINE([ENABLE_ACTION_TABLE], [1], [Enable asymmetric, dynamic action-registration])])
+AM_CONDITIONAL([ENABLE_ACTION_TABLE], [test "$enable_action_table" = "yes"])
+
+AC_ARG_ENABLE([photon-debug],
+  [AS_HELP_STRING([--enable-photon-debug],
+                  [Enable photon debugging @<:@default=no@:>@])],
+  [], [enable_photon_debug=no])
+AS_IF([test "x$enable_photon_debug" != xno],
+  [AC_DEFINE([ENABLE_PHOTON_DEBUG], [1], [Enable photon debugging stuff])])
+AM_CONDITIONAL([ENABLE_PHOTON_DEBUG], [test "$enable_photon_debug" = "yes"])
+
+AC_ARG_ENABLE([photon-trace],
+  [AS_HELP_STRING([--enable-photon-trace],
+                  [Enable photon call tracing @<:@default=no@:>@])],
+  [], [enable_photon_trace=no])
+AS_IF([test "x$enable_photon_trace" != xno],
+  [AC_DEFINE([ENABLE_PHOTON_TRACE], [1], [Enable photon call tracing (files)])])
+AM_CONDITIONAL([ENABLE_PHOTON_TRACE], [test "$enable_photon_trace" = "yes"])
 
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
@@ -183,10 +208,10 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
 hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
@@ -217,6 +242,7 @@ AC_CONFIG_FILES([
   libhpx/transport/Makefile
   libhpx/network/Makefile
   libhpx/system/Makefile
+  libhpx/util/Makefile
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
   include/Makefile
@@ -244,10 +270,7 @@ AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
   tests/performance/Makefile
-  tests/performance/TaskSpawningSO/Makefile
-  tests/performance/MicroBench/Makefile
-  tests/performance/Overheads/Makefile
-  tests/performance/PutGetSM/Makefile])])
+  tests/performance/overheads/Makefile])])
   
 AC_OUTPUT
 

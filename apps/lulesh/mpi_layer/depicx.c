@@ -60,33 +60,21 @@ void mpi_barrier_( MPI_Comm *pcomm,int *pier)
 int main(int argc, char *argv[])
 {
 
-   char hostname[256];
-   gethostname(hostname, sizeof(hostname));
-   printf("PID %d on %s ready for attach\n", getpid(), hostname);
-   fflush(stdout);
-   //   sleep(8);
+  int error = hpx_init(&argc, &argv);
+  if (error != HPX_SUCCESS)
+    exit(-1);
 
-  if ( argc < 5 ) {
-    printf(" Usage: depicx <number of OS threads> <number of hpx threads (must be a power of 3)> <lulesh nx> <lulesh iterations>\n");
+  if ( argc < 4 ) {
+    printf(" Usage: depicx <number of hpx threads (must be a power of 3)> <lulesh nx> <lulesh iterations>\n");
     printf("        (Hint: for testing try 8 hpx threads, nx = 24, iterations = 10 for testing)\n");
     exit(0);
   }
 
-  uint64_t numos = atoll(argv[1]);
-  int numhpx = atoi(argv[2]);
-  int nx = atoi(argv[3]);
-  int its = atoi(argv[4]);
+  int numhpx = atoi(argv[1]);
+  int nx = atoi(argv[2]);
+  int its = atoi(argv[3]);
 
-  printf(" Number OS threads: %ld Number lightweight threads: %d nx: %d its: %d\n",numos,numhpx,nx,its);
-
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  cfg.cores = numos;
-  cfg.threads = numos;
-  // cfg.stack_bytes = 2<<24
-
-  int error = hpx_init(&cfg);
-  if (error != HPX_SUCCESS)
-    exit(-1);
+  printf("Number lightweight threads: %d nx: %d its: %d\n",numhpx,nx,its);
 
   mpi_system_register_actions();
 

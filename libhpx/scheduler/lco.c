@@ -222,7 +222,7 @@ hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
 
   _lco_class(lco)->on_fini(lco);
   hpx_gas_unpin(target);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -239,7 +239,7 @@ hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync)
 
   _lco_class(lco)->on_error(lco, code);
   hpx_gas_unpin(target);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -249,17 +249,16 @@ hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
             hpx_addr_t rsync)
 {
   lco_t *lco = NULL;
-  if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco))
-  {
+  if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
     return;
   }
 
   _lco_class(lco)->on_set(lco, size, value);
   hpx_gas_unpin(target);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  if (!hpx_addr_eq(rsync, HPX_NULL))
+  if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 

@@ -21,11 +21,9 @@ typedef struct {
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: netbench [options] [ITERATIONS]\n"
 	  "\t-y, the number of iterations after which to yield\n"
-          "\t-c, the number of cores to run on\n"
-          "\t-t, the number of scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 void send_ping(hpx_addr_t lco, int src, int dst, size_t size) {
@@ -108,36 +106,25 @@ int hpx_main_action(void *args) {
     hpx_lco_delete(lco, HPX_NULL);
   }
 
-  hpx_shutdown(0);
-  //return HPX_SUCCESS;
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 
 
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   yield_iterations = 0;
 
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return -1;
+  }
+
   int opt = 0;
-  while ((opt = getopt(argc, argv, "y:c:t:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "y:h?")) != -1) {
     switch (opt) {
       case 'y':
 	yield_iterations = atol(optarg);
 	break;
-      case 'c':
-        cfg.cores = atoi(optarg);
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
       case 'h':
         _usage(stdout);
         return 0;
@@ -159,8 +146,6 @@ int main(int argc, char *argv[]) {
     iterations = DEFAULT_ITERS;
     printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
   }
-
-  hpx_init(&cfg);
 
   echo_pong = HPX_REGISTER_ACTION(echo_pong_action);
   echo_finish = HPX_REGISTER_ACTION(echo_finish_action);

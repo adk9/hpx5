@@ -3,16 +3,16 @@
 // @Project       High Performance ParallelX Library (libhpx)
 //----------------------------------------------------------------------------
 // @Subject       Library Unit Test Harness - Memory Management
-// 
+//
 // @Compiler      GCC
 // @OS            Linux
 // @Description   Tests the parcel funcitonalities
 // @Goal          Goal of this testcase is to test the Parcels
-//                1.  hpx_parcel_aquire()             
+//                1.  hpx_parcel_aquire()
 //                2.  hpx_parcel_set_target()
 //                3.  hpx_parcel_set_action()
 //                4.  hpx_parcel_set_data()
-//                5.  hpx_parcel_send_sync()                   
+//                5.  hpx_parcel_send_sync()
 //                6.  hpx_parcel_release()
 //                7.  hpx_parcel_send()
 //                8.  hpx_parcel_get_action()
@@ -21,20 +21,20 @@
 //                11. hpx_parcel_get_cont_target()
 //                12. hpx_parcel_get_data()
 //                13. hpx_parcel_set_cont_action()
-//                14. hpx_parcel_set_cont_target()            
+//                14. hpx_parcel_set_cont_target()
 // @Copyright     Copyright (c) 2014, Trustees of Indiana University
 //                All rights reserved.
 //
 //                This software may be modified and distributed under the terms
 //                of the BSD license.  See the COPYING file for details.
 //
-//                This software was created at the Indiana University Center 
+//                This software was created at the Indiana University Center
 //                for Research in Extreme Scale Technologies (CREST).
 //----------------------------------------------------------------------------
 // @Date          08/21/2014
 // @Author        Jayashree Candadai <jayaajay [at] indiana.edu>
 // @Version       0.1
-// Commands to Run: make, mpirun hpxtest 
+// Commands to Run: make, mpirun hpxtest
 //****************************************************************************
 
 //****************************************************************************
@@ -106,12 +106,12 @@ hpx_addr_t _partner(void) {
 }
 
 int t04_sendData_action(const initBuffer_t *args) {
-  //printf("Received message = '%s', %d from (%d, %d)\n", args->message, 
+  //printf("Received message = '%s', %d from (%d, %d)\n", args->message,
   //       args->index, hpx_get_my_rank(), hpx_get_my_thread_id());
   return HPX_SUCCESS;
 }
 
-START_TEST (test_libhpx_parcelGetAction) 
+START_TEST (test_libhpx_parcelGetAction)
 {
   fprintf(test_log, "Testing the parcel create with arguments\n");
   initBuffer_t args = {
@@ -120,17 +120,17 @@ START_TEST (test_libhpx_parcelGetAction)
   };
 
   hpx_addr_t to = _partner();
-  
+
   hpx_parcel_t *p = hpx_parcel_acquire(&args, sizeof(args));
   hpx_parcel_set_action(p, t04_sendData);
-  
+
   hpx_action_t get_act = hpx_parcel_get_action(p);
   ck_assert_msg(get_act == t04_sendData, "Error creating parcel - wrong action");
 
   hpx_parcel_set_data(p, &args, sizeof(args));
   hpx_parcel_set_target(p, to);
 
-  hpx_parcel_send_sync(p); 
+  hpx_parcel_send_sync(p);
 }
 END_TEST
 
@@ -139,7 +139,7 @@ END_TEST
 // the data buffer for a parcel. The data for a parcel can be written to
 // directly, which in some cases may allow one to avoid an extra copy.
 //****************************************************************************
-START_TEST(test_libhpx_parcelGetData) 
+START_TEST(test_libhpx_parcelGetData)
 {
   fprintf(test_log, "Testing the parcel get data function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
@@ -153,7 +153,7 @@ START_TEST(test_libhpx_parcelGetData)
 END_TEST
 
 //****************************************************************************
-// Testcase to test hpx_parcel_release function which explicitly releases a 
+// Testcase to test hpx_parcel_release function which explicitly releases a
 // a parcel. The input argument must correspond to a parcel pointer returned
 // from hpx_parcel_acquire
 //****************************************************************************
@@ -171,16 +171,16 @@ START_TEST(test_libhpx_parcelRelease)
 END_TEST
 
 //****************************************************************************
-// This testcase tests hpx_parcel_send function, which sends a parcel with 
+// This testcase tests hpx_parcel_send function, which sends a parcel with
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
-// the continuous action, hpx_pargel_set_cont_target - set the continuous 
+// the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
 //****************************************************************************
 int t04_recv_action(double *args) {
   return HPX_SUCCESS;
 }
 
-START_TEST(test_libhpx_parcelSend) 
+START_TEST(test_libhpx_parcelSend)
 {
   fprintf(test_log, "Testing the hpx parcel send function\n");
   int buffer[4] = {1, 100, 1000, 10000};
@@ -197,7 +197,7 @@ START_TEST(test_libhpx_parcelSend)
 
     // Set the lco for completing the entire loop
     hpx_addr_t completed = hpx_lco_and_new(avg);
-    
+
     for(int k = 0; k < avg; k++) {
       // Set up a asynchronous parcel send
       hpx_addr_t send = hpx_lco_future_new(0);
@@ -217,14 +217,14 @@ START_TEST(test_libhpx_parcelSend)
       hpx_lco_wait(send);
       hpx_lco_delete(send, HPX_NULL);
     }
-    
+
     hpx_lco_wait(completed);
     hpx_lco_delete(completed, HPX_NULL);
 
     double elapsed = hpx_time_elapsed_ms(t1);
     fprintf(test_log, "Elapsed: %g\n", elapsed/avg);
     free(buf);
-  }  
+  }
 }
 END_TEST
 
@@ -251,7 +251,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
 
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_global_alloc(1, sizeof(uint64_t));  
+  hpx_addr_t addr = hpx_gas_global_alloc(1, sizeof(uint64_t));
 
   hpx_addr_t done = hpx_lco_and_new(1);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(uint64_t));
@@ -269,10 +269,10 @@ START_TEST(test_libhpx_parcelGetContinuation)
   hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
   hpx_action_t get_act = hpx_parcel_get_cont_action(p);
-  ck_assert_msg(get_act == hpx_lco_set_action, 
+  ck_assert_msg(get_act == hpx_lco_set_action,
                 "Error in getting cont action");
 
-  assert(hpx_addr_eq(hpx_parcel_get_cont_target(p), done));
+  assert(hpx_parcel_get_cont_target(p) == done);
 
   // Send the parcel
   hpx_parcel_send(p, HPX_NULL);
@@ -281,7 +281,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
   hpx_lco_delete(done, HPX_NULL);
   hpx_gas_free(addr, HPX_NULL);
 
-  fprintf(test_log,"Elapsed: %g\n", hpx_time_elapsed_ms(t1)); 
+  fprintf(test_log,"Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 END_TEST
 

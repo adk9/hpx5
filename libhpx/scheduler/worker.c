@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/worker.c
@@ -23,19 +23,20 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include <hpx/builtins.h>
 
-#include "libsync/backoff.h"
-#include "libsync/barriers.h"
-#include "libsync/deques.h"
-#include "libsync/queues.h"
+#include <libsync/backoff.h>
+#include <libsync/barriers.h>
+#include <libsync/deques.h>
+#include <libsync/queues.h>
+#include <libsync/spscq.h>
 
-#include "hpx/builtins.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
-#include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
 #include "libhpx/stats.h"
@@ -45,13 +46,6 @@
 #include "termination.h"
 #include "worker.h"
 
-
-typedef volatile int atomic_int_t;
-typedef atomic_int_t* volatile atomic_int_atomic_ptr_t;
-
-typedef two_lock_queue_t _mailbox_t;
-typedef two_lock_queue_node_t _envelope_t;
-
 static unsigned int _max(unsigned int lhs, unsigned int rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
@@ -59,6 +53,13 @@ static unsigned int _max(unsigned int lhs, unsigned int rhs) {
 static unsigned int _min(unsigned int lhs, unsigned int rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
+
+#define CAT1(s, t) s##t
+
+#define CAT2(s, t) CAT1(s, t)
+
+#define PAD_TO_CACHELINE(B)                                             \
+  const char CAT2(pad,  __LINE__)[(HPX_CACHELINE_SIZE - (B))]
 
 /// Class representing a worker thread's state.
 ///
@@ -68,7 +69,7 @@ static unsigned int _min(unsigned int lhs, unsigned int rhs) {
 /// __thread local storage.
 ///
 /// @{
-static __thread struct worker {
+typedef struct worker {
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this workers's id
   int               core_id;                    // useful for "smart" stealing
@@ -76,12 +77,17 @@ static __thread struct worker {
   unsigned int      backoff;                    // the backoff factor
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  _envelope_t    *envelopes;                    // free envelopes
+PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
   chase_lev_ws_deque_t work;                    // my work
-  _mailbox_t          inbox;                    // envelopes sent to me
-  atomic_int_t     shutdown;                    // cooperative shutdown flag
+  // already aligned
+  two_lock_queue_t    inbox;                    // mail sent to me
+  // already aligned
+  sync_spscq_t  completions;                    // local completions
+  volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
-} self = {
+} worker_t;
+
+static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread worker_t self = {
   .thread     = 0,
   .id         = -1,
   .core_id    = -1,
@@ -89,36 +95,12 @@ static __thread struct worker {
   .backoff    = 0,
   .sp         = NULL,
   .current    = NULL,
-  .envelopes  = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
   .inbox      = {{0}},
-  .shutdown   = 0,
+  .completions = SYNC_SPSCQ_INIT,
+  .shutdown   = INT_MAX,
   .stats      = SCHEDULER_STATS_INIT
 };
-
-
-/// Enclose a parcel in an envelope so that it can be sent to another worker
-/// using the mailbox functionality.
-static _envelope_t *_enclose(worker_t *w, hpx_parcel_t *p) {
-  _envelope_t *envelope = w->envelopes;
-  if (envelope != NULL)
-    w->envelopes = w->envelopes->next;
-  else
-    envelope = malloc(sizeof(*envelope));
-
-  envelope->next  = NULL;
-  envelope->value = p;
-  return envelope;
-}
-
-
-/// Extract a parcel from an envelope.
-static hpx_parcel_t *_open(worker_t *w, _envelope_t *mail) {
-  mail->next = w->envelopes;
-  w->envelopes = mail;
-  return mail->value;
-}
-
 
 /// The entry function for all of the lightweight threads.
 ///
@@ -154,9 +136,7 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
-static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
-  assert(sp);
-
+static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self.sp = sp;
   self.current = to;
@@ -174,23 +154,11 @@ static int _on_start(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
-///
-/// @returns A new lightweight thread, as defined by the parcel.
-static hpx_parcel_t *_bind(hpx_parcel_t *p) {
+
+static void _bind(hpx_parcel_t *p) {
   assert(!parcel_get_stack(p));
-#ifdef HPX_PROFILE_STACKS
-  unsigned long stacks = sync_fadd(&here->sched->stats.stacks, 1, SYNC_SEQ_CST);
-  unsigned long max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
-  while (stacks + 1 > max_stacks) {
-    if (sync_cas(&here->sched->stats.max_stacks, max_stacks, stacks, SYNC_SEQ_CST,
-                  SYNC_RELAXED))
-      break;
-    max_stacks = sync_load(&here->sched->stats.max_stacks, SYNC_SEQ_CST);
-  }
-#endif
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
-  return p;
 }
 
 
@@ -233,27 +201,23 @@ static hpx_parcel_t *_steal(void) {
 }
 
 
-/// Check the network during scheduling.
-static hpx_parcel_t *_network(void) {
-  return network_rx_dequeue(here->network);
-}
-
-
 /// Send a mail message to another worker.
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
-  worker_t    *w = here->sched->workers[id];
-  _envelope_t *letter = _enclose(&self, p);
-  sync_two_lock_queue_enqueue(&(w->inbox), letter);
+  worker_t *w = here->sched->workers[id];
+  two_lock_queue_node_t *node = malloc(sizeof(*node));
+  node->value = p;
+  node->next = NULL;
+  sync_two_lock_queue_enqueue_node(&(w->inbox), node);
 }
 
 
 /// Process my mail queue.
 static void _handle_mail(void) {
-  _envelope_t *letter = NULL;
-  while ((letter = sync_two_lock_queue_dequeue(&self.inbox)) != NULL) {
+  two_lock_queue_node_t *node = NULL;
+  while ((node = sync_two_lock_queue_dequeue_node(&self.inbox)) != NULL) {
     profile_ctr(++self.stats.mail);
-    hpx_parcel_t *p = _open(&self, letter);
-    sync_chase_lev_ws_deque_push(&self.work, p);
+    sync_chase_lev_ws_deque_push(&self.work, node->value);
+    free(node);
   }
 }
 
@@ -270,9 +234,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   thread_delete(stack);
-#ifdef HPX_PROFILE_STACKS
-  sync_fadd(&here->sched->stats.stacks, -1, SYNC_SEQ_CST);
-#endif
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
@@ -321,12 +282,10 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // if we're supposed to shutdown, then do so
   // NB: leverages non-public knowledge about transfer asm
-  atomic_int_t shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
-  if (shutdown) {
-    void **temp = &self.sp;
-    assert(temp);
-    assert(*temp != NULL);
-    thread_transfer((hpx_parcel_t*)&temp, _free_parcel, self.current);
+  int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
+  if (shutdown != INT_MAX) {
+    void **sp = &self.sp;
+    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, self.current);
   }
 
   // messages in my inbox are "in limbo" until I receive them---while this call
@@ -344,18 +303,20 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     goto exit;
   }
 
-  // no ready parcels try to get some work from the network, if we're not in a
-  // hurry
-  if (!fast)
-    if ((p = _network())) {
+  // no ready parcels try to see if there are any yielded threads
+  if (!fast) {
+    if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
       assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
       goto exit;
     }
+  }
 
   // try to steal some work, if we're not in a hurry
-  if (!fast)
-    if ((p = _steal()))
+  if (!fast) {
+    if ((p = _steal())) {
       goto exit;
+    }
+  }
 
   // statistically-speaking, we consider this condition to be a spin
   profile_ctr(++self.stats.spins);
@@ -373,8 +334,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   //
   // If we're not in a hurry, we'd like to backoff so that we don't thrash the
   // network port and other people's scheduler queues.
-  if (!fast)
+  if (!fast) {
     _backoff();
+  }
 
   p = hpx_parcel_acquire(NULL, 0);
 
@@ -382,8 +344,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
  exit:
   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
   if (!parcel_get_stack(p))
-    return _bind(p);
+    _bind(p);
 
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+  assert(here->gas->owner_of(p->target) == here->rank);
   return p;
 }
 
@@ -396,13 +360,18 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 ///
 /// Under normal HPX shutdown, we return to the original transfer site and
 /// cleanup.
-///
-/// @param      sched The scheduler that this thread should be attached to.
-void *worker_run(scheduler_t *sched) {
-  // join the global address space
+void *worker_run(void *args) {
+  scheduler_t *sched = args;
+
   assert(here && here->gas);
-  int e = gas_join(here->gas);
-  dbg_check(e, "worker: failed to join the global address space.\n");
+  assert((uintptr_t)&self % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.work % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.inbox % HPX_CACHELINE_SIZE == 0);
+  assert((uintptr_t)&self.completions % HPX_CACHELINE_SIZE == 0);
+  if (gas_join(here->gas)) {
+    dbg_error("failed to join the global address space.\n");
+    return NULL;
+  }
 
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -426,29 +395,31 @@ void *worker_run(scheduler_t *sched) {
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
   if (!p) {
-    dbg_error("worker: failed to acquire an initial parcel.\n");
+    dbg_error("failed to acquire an initial parcel.\n");
     return NULL;
   }
 
   // bind a stack to transfer to
   _bind(p);
+  assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
+
   if (!p) {
-    dbg_error("worker: failed to bind an initial stack.\n");
+    dbg_error("failed to bind an initial stack.\n");
     hpx_parcel_release(p);
     return NULL;
   }
 
   // transfer to the thread---ordinary shutdown will return here
-  e = thread_transfer(p, _on_start, NULL);
-  if (e) {
-    dbg_error("worker: shutdown returned error.\n");
+  if (thread_transfer(p, _on_startup, NULL)) {
+    dbg_error("shutdown returned error.\n");
     return NULL;
   }
 
   // cleanup the thread's resources---we only return here under normal shutdown
   // termination, otherwise we're canceled and vanish
-  while ((p = sync_chase_lev_ws_deque_pop(&self.work)))
+  while ((p = sync_chase_lev_ws_deque_pop(&self.work))) {
     hpx_parcel_release(p);
+  }
 
   // print my stats and accumulate into total stats
   {
@@ -459,28 +430,33 @@ void *worker_run(scheduler_t *sched) {
   }
 
   // join the barrier, last one to the barrier prints the totals
-  if (sync_barrier_join(sched->barrier, self.id))
+  if (sync_barrier_join(sched->barrier, self.id)) {
     scheduler_print_stats("<totals>", &sched->stats);
+  }
 
   // delete my deque last, as someone might be stealing from it up until the
   // point where everyone has joined the barrier
   sync_chase_lev_ws_deque_fini(&self.work);
 
   // leave the global address space
-  assert(here && here->gas);
   gas_leave(here->gas);
   return NULL;
 }
 
+
 int worker_start(scheduler_t *sched) {
   pthread_t thread;
-  int e = pthread_create(&thread, NULL, (void* (*)(void*))worker_run, sched);
-  return (e) ? HPX_ERROR : HPX_SUCCESS;
+  int e = pthread_create(&thread, NULL, worker_run, sched);
+  if (e) {
+    dbg_error("failed to start a scheduler worker pthread.\n");
+    return e;
+  }
+  return LIBHPX_OK;
 }
 
 
-void worker_shutdown(worker_t *worker) {
-  sync_store(&worker->shutdown, 1, SYNC_RELEASE);
+void worker_shutdown(worker_t *worker, int code) {
+  sync_store(&worker->shutdown, code, SYNC_RELEASE);
 }
 
 
@@ -511,9 +487,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
 /// This is the continuation that we use to yield a thread.
 ///
-/// This make flagrantly bad use of the network queue to deal with a number of
-/// issues related to yielding threads and workstealing queues.
-///
 /// 1) We can't put a yielding thread onto our workqueue with the normal push
 ///    operation, because two threads who are yielding will prevent progress
 ///    in that scheduler.
@@ -527,15 +500,11 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-/// We already have the network RX queue, so we'll use it for now. It's checked
-/// before stealing though, so two yielders could theoretically inhibit
-/// liveness. Ultimately we'll want a separate yielded queue (or queues) to deal
-/// with the issue.
-static int _checkpoint_network_push(hpx_parcel_t *to, void *sp, void *env) {
+static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   self.current = to;
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
-  network_rx_enqueue(here->network, prev);
+  YIELD_QUEUE_ENQUEUE(&here->sched->yielded, prev);
   return HPX_SUCCESS;
 }
 
@@ -551,7 +520,7 @@ void scheduler_yield(void) {
   assert(parcel_get_stack(to));
   assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_network_push, self.current);
+  thread_transfer(to, _checkpoint_yield, self.current);
 }
 
 
@@ -577,12 +546,8 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   ustack_t *thread = parcel_get_stack(self.current);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
-  // if we successfully pushed, then do a transfer away from this thread,
-  // setting the soft affinity so that the thread is woken up in the right
-  // place, and releasing the lock across the wait
+  // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
-    thread->wait_affinity = (thread->affinity < 0) ? self.id : thread->affinity;
-    assert(thread->wait_affinity < here->sched->n_workers);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
     sync_lockable_ptr_lock(lock);
@@ -591,40 +556,31 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   return status;
 }
 
-
-void scheduler_signal(cvar_t *cvar) {
-  ustack_t *thread = cvar_pop_thread(cvar);
-  if (!thread)
-    return;
-
-  if (thread->wait_affinity != self.id)
-    _send_mail(thread->wait_affinity, thread->parcel);
+/// Resume a thread.
+static inline void _resume(ustack_t *thread) {
+  if (thread->affinity >= 0 && thread->affinity != self.id)
+    _send_mail(thread->affinity, thread->parcel);
   else
     sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
 }
 
+void scheduler_signal(cvar_t *cvar) {
+  ustack_t *thread = cvar_pop_thread(cvar);
+  if (thread)
+    _resume(thread);
+}
+
 
 void scheduler_signal_all(struct cvar *cvar) {
-  ustack_t *thread = cvar_pop_all(cvar);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_pop_all(cvar); thread; thread = thread->next)
+    _resume(thread);
 }
 
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  ustack_t *thread = cvar_set_error(cvar, code);
-  while (thread) {
-    if (thread->wait_affinity != self.id)
-      _send_mail(thread->wait_affinity, thread->parcel);
-    else
-      sync_chase_lev_ws_deque_push(&self.work, thread->parcel);
-    thread = thread->next;
-  }
+  for (ustack_t *thread = cvar_set_error(cvar, code); thread;
+       thread = thread->next)
+    _resume(thread);
 }
 
 
@@ -655,11 +611,11 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   hpx_parcel_t *parcel = self.current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if (!hpx_addr_eq(c_target, HPX_NULL) &&
-      !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
+  if ((c_target != HPX_NULL) && !hpx_action_eq(c_act, HPX_ACTION_NULL)) {
     // Double the credit so that we can pass it on to the continuation
     // without splitting it up.
-    --parcel->credit;
+    if (parcel->pid != HPX_NULL)
+      --parcel->credit;
     if (hpx_action_eq(c_act, hpx_lco_set_action))
       hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
                                  HPX_ACTION_NULL);
@@ -695,7 +651,7 @@ void hpx_thread_exit(int status) {
   if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
       unlikely(status == HPX_ERROR)) {
     hpx_parcel_t *parcel = self.current;
-    if (parcel->pid > 0 && parcel->credit)
+    if ((parcel->pid != HPX_NULL) && parcel->credit)
       parcel_recover_credit(parcel);
     _continue(status, 0, NULL, NULL, NULL);
     unreachable();
@@ -758,7 +714,7 @@ uint32_t hpx_thread_current_args_size(void) {
 
 hpx_pid_t hpx_thread_current_pid(void) {
   if (self.current == NULL)
-    return 0;
+    return HPX_NULL;
   return self.current->pid;
 }
 
@@ -810,6 +766,6 @@ void hpx_thread_set_affinity(int affinity) {
   if (affinity == self.id)
     return;
 
-  hpx_parcel_t *to = _schedule(NULL, false);
+  hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
 }

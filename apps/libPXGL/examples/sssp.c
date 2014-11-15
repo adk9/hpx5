@@ -20,22 +20,18 @@
 
 #include "hpx/hpx.h"
 #include "libpxgl.h"
+#include "libsync/sync.h"
+#include "libhpx/debug.h"
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
-          "\t-p, set per-PE global heap size\n"
-	  "\t-r, set send/receive request limit\n"
-          "\t-b, set block-translation-table size\n"
-          "\t-q, limit time for SSSP executions in seconds\n"	  
+          "\t-k, use and-lco-based termination detection\n"
+          "\t-p, use process-based termination detection\n"
+          "\t-q, limit time for SSSP executions in seconds\n"
           "\t-a, instead resetting adj list between the runs, reallocate it\n"
           "\t-h, this help display\n");
+  hpx_print_help();
+  fflush(stream);
 }
 
 
@@ -73,8 +69,7 @@ static int _print_vertex_distance_index_action(int *i)
 }
 
 
-static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **problems) {
-
+static int _read_dimacs_spec(char **filename, sssp_uint_t *nproblems, sssp_uint_t **problems) {
   FILE *f = fopen(*filename, "r");
   assert(f);
 
@@ -87,8 +82,8 @@ static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pr
         sscanf(&line[1], " %lu", &((*problems)[count++]));
         break;
       case 'p':
-        sscanf(&line[1], " aux sp ss %" PRIu64, nproblems);
-        *problems = malloc(*nproblems * sizeof(uint64_t));
+        sscanf(&line[1], " aux sp ss %" SSSP_UINT_PRI, nproblems);
+        *problems = malloc(*nproblems * sizeof(sssp_uint_t));
         assert(*problems);
         break;
       default:
@@ -100,33 +95,16 @@ static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pr
   return 0;
 }
 
-
-
 // Arguments for the main SSSP action
 typedef struct {
   char *filename;
-  uint64_t nproblems;
-  uint64_t *problems;
+  sssp_uint_t nproblems;
+  sssp_uint_t *problems;
   char *prob_file;
-  uint64_t time_limit;
+  sssp_uint_t time_limit;
   int realloc_adj_list;
 } _sssp_args_t;
 
-
-static hpx_action_t _get_sssp_stat;
-static int _get_sssp_stat_action(call_sssp_args_t* sargs)
-{
-  const hpx_addr_t target = hpx_thread_current_target();
-
-  hpx_addr_t *sssp_stats;
-  if (!hpx_gas_try_pin(target, (void**)&sssp_stats))
-    return HPX_RESEND;
-
-  sargs->sssp_stat = *sssp_stats;
-  hpx_gas_unpin(target);
-
-  return HPX_SUCCESS;
-}
 
 static hpx_action_t _print_sssp_stat;
 static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
@@ -151,15 +129,23 @@ static int _main_action(_sssp_args_t *args) {
   // Create an edge list structure from the given filename
   edge_list_t el;
   printf("Allocating edge-list from file %s.\n", args->filename);
-  hpx_call_sync(HPX_HERE, edge_list_from_file, &args->filename, sizeof(char*), &el, sizeof(el));
+  const edge_list_from_file_args_t edge_list_from_file_args = {
+    .locality_readers = HPX_LOCALITIES,
+    .thread_readers = 1,
+    .filename = args->filename
+  };
+  hpx_call_sync(HPX_HERE, edge_list_from_file, &edge_list_from_file_args,
+		sizeof(edge_list_from_file_args), &el, sizeof(el));
   printf("Edge List: #v = %lu, #e = %lu\n",
          el.num_vertices, el.num_edges);
 
   // Open the results file and write the basic info out
-  FILE *results_file = fopen("sample.ss.chk", "a+");
+  FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
   fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
-  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
+  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges, 0L, 0L);
+  // min and max edge weight needs to be reimplemented
+  // el.min_edge_weight, el.max_edge_weight);
 
   call_sssp_args_t sargs;
 
@@ -170,38 +156,42 @@ static int _main_action(_sssp_args_t *args) {
   const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
   sargs.sssp_stat = sssp_stats;
 
-  uint64_t total_vertex_visit = 0;
-  uint64_t total_edge_traversal = 0;
-  uint64_t total_distance_updates = 0;
+  sssp_uint_t total_vertex_visit = 0;
+  sssp_uint_t total_edge_traversal = 0;
+  sssp_uint_t total_distance_updates = 0;
 #endif // GATHER_STAT
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
 
-  if(!realloc_adj_list) {
+  if (!realloc_adj_list) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
   }
 
   for (int i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
-      printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
+      printf("Time limit of %" SSSP_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
       args->nproblems = i;
       break;
     }
 
-    if(realloc_adj_list) {
+    if (realloc_adj_list) {
       // Construct the graph as an adjacency list
-      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));    
+      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
     }
 
     sargs.source = args->problems[i];
 
     hpx_time_t now = hpx_time_now();
 
-    // printf("Calling SSSP in the %d iteration\n", i);
     // Call the SSSP algorithm
-    hpx_call_sync(HPX_HERE, call_sssp, &sargs, sizeof(sargs),NULL,0);
+    hpx_addr_t sssp_lco = hpx_lco_and_new(1);
+    sargs.termination_lco = sssp_lco;
+    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    hpx_lco_wait(sssp_lco);
+    hpx_lco_delete(sssp_lco, HPX_NULL);
+
 
     double elapsed = hpx_time_elapsed_ms(now)/1e3;
     elapsed_time[i] = elapsed;
@@ -210,11 +200,11 @@ static int _main_action(_sssp_args_t *args) {
 #ifdef GATHER_STAT
     _sssp_statistics *sssp_stat=(_sssp_statistics *)malloc(sizeof(_sssp_statistics));
     hpx_call_sync(sargs.sssp_stat, _print_sssp_stat,sssp_stat,sizeof(_sssp_statistics),sssp_stat,sizeof(_sssp_statistics));
-     printf("\nuseful work = %lu,  useless work = %lu\n", sssp_stat->useful_work, sssp_stat->useless_work);
+    printf("\nuseful work = %lu,  useless work = %lu\n", sssp_stat->useful_work, sssp_stat->useless_work);
 
-     total_vertex_visit += (sssp_stat->useful_work + sssp_stat->useless_work);
-     total_distance_updates += sssp_stat->useful_work;
-     total_edge_traversal += sssp_stat->edge_traversal_count;
+    total_vertex_visit += (sssp_stat->useful_work + sssp_stat->useless_work);
+    total_distance_updates += sssp_stat->useful_work;
+    total_edge_traversal += sssp_stat->edge_traversal_count;
 #endif
 
 #ifdef VERBOSE
@@ -247,14 +237,14 @@ static int _main_action(_sssp_args_t *args) {
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
     fprintf(results_file, "d %zu\n", checksum);
 
-    if(realloc_adj_list) {
+    if (realloc_adj_list) {
       hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
     } else {
       reset_adj_list(sargs.graph, &el);
     }
   }
 
-  if(!realloc_adj_list) {
+  if (!realloc_adj_list) {
     hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
   }
 
@@ -269,7 +259,7 @@ static int _main_action(_sssp_args_t *args) {
   FILE *fp;
   fp = fopen("perf.ss.res", "a+");
 
-  fprintf(fp , "%s\n","p res sp ss sssp");
+  fprintf(fp, "%s\n","p res sp ss sssp");
   fprintf(fp, "%s %s %s\n","f",args->filename,args->prob_file);
   fprintf(fp,"%s %lu %lu %lu %lu\n","g",el.num_vertices, el.num_edges,el.min_edge_weight, el.max_edge_weight);
   fprintf(fp,"%s %f\n","t",avg_time_per_source);
@@ -301,63 +291,46 @@ static int _main_action(_sssp_args_t *args) {
   statistics (stats, tm, args->nproblems);
   PRINT_STATS("TEPS", 1);
 
+  free(tm);
+  free(stats);
+  free(edge_traversed);
+  free(elapsed_time);
+
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
 
 
-int main(int argc, char *const argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  uint64_t time_limit = 1000;
-  int realloc_adj_list = 1;
+int main(int argc, char *argv[argc]) {
+  sssp_uint_t time_limit = 1000;
+  int realloc_adj_list = 0;
+
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:b:r:q:ah")) != -1) {
+  while ((opt = getopt(argc, argv, "q:aphk?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
-     case 'b':
-      cfg.btt_size = strtoul(optarg, NULL, 0);
-      break;
-     case 'q':
+    case 'q':
       time_limit = strtoul(optarg, NULL, 0);
       break;
-     case 'a':
-      realloc_adj_list = 0;
+    case 'a':
+      realloc_adj_list = 1;
       break;
-     case 'h':
+    case 'k':
+      termination = AND_LCO_TERMINATION;
+      break;
+    case 'p':
+      termination = PROCESS_TERMINATION;
+      break;
+    case 'h':
       _usage(stdout);
       return 0;
-     case '?':
-     default:
+    case '?':
+    default:
       _usage(stderr);
       return -1;
     }
@@ -387,8 +360,8 @@ int main(int argc, char *const argv[argc]) {
      break;
   }
 
-  uint64_t nproblems;
-  uint64_t *problems;
+  sssp_uint_t nproblems;
+  sssp_uint_t *problems;
   // Read the DIMACS problem specification file
   _read_dimacs_spec(&problem_file, &nproblems, &problems);
 
@@ -396,22 +369,17 @@ int main(int argc, char *const argv[argc]) {
                         .nproblems = nproblems,
                         .problems = problems,
                         .prob_file = problem_file,
-			.time_limit = time_limit,
-			.realloc_adj_list = realloc_adj_list
+                        .time_limit = time_limit,
+                        .realloc_adj_list = realloc_adj_list
   };
-
-  int e = hpx_init(&cfg);
-  if (e) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
-  }
 
   // register the actions
   _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);
   _print_vertex_distance       = HPX_REGISTER_ACTION(_print_vertex_distance_action);
-  _get_sssp_stat               = HPX_REGISTER_ACTION(_get_sssp_stat_action);
   _print_sssp_stat             = HPX_REGISTER_ACTION(_print_sssp_stat_action);
   _main                        = HPX_REGISTER_ACTION(_main_action);
 
-  return hpx_run(_main, &args, sizeof(args));
+  e = hpx_run(_main, &args, sizeof(args));
+  free(problems);
+  return e;
 }

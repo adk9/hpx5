@@ -14,6 +14,7 @@
 #define LIBHPX_DEBUG_H
 
 #include "hpx/hpx.h"
+#include "libhpx/config.h"
 
 HPX_INTERNAL extern hpx_log_t dbg_log_level;
 

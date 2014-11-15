@@ -93,7 +93,7 @@ static void _and_fini(lco_t *lco)
 
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
-  global_free(and);
+  libhpx_global_free(and);
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
@@ -167,7 +167,7 @@ static void _and_init(_and_t *and, intptr_t value) {
 
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
-  _and_t *and = global_malloc(sizeof(*and));
+  _and_t *and = libhpx_global_malloc(sizeof(*and));
   if (!and)
     dbg_error("Could not malloc global memory\n");
 

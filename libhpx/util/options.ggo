@@ -1,0 +1,69 @@
+args "--input=options.ggo --func-name=hpx_option_parser --arg-struct-name=hpx_options_t --file-name=parser --default-optional --string-parser --conf-parser --no-help --no-version"
+
+section "HPX Runtime Options"
+
+text "All of the following options can either be set through the
+command-line using the flags given below, or through environment
+variables of the form HPX_OPTION=value, where the option corresponds
+to the flag suffix given below."
+
+option "hpx-cores" - "number of cores to run on"
+typestr="cores"
+int optional
+
+option "hpx-threads" - "number of scheduler threads"
+typestr="threads"
+int optional
+
+option "hpx-backoffmax" - "upper bound for worker-thread backoff"
+typestr="count"
+int optional
+
+option "hpx-stacksize" - "set HPX stack size"
+typestr="bytes"
+long optional
+
+option "hpx-heapsize" - "set HPX per-PE global heap size"
+typestr="bytes"
+long optional
+
+option "hpx-gas" - "type of Global Address Space (GAS)"
+typestr="type"
+values="default","smp","pgas","agas","pgas_switch","agas_switch"
+enum optional
+
+option "hpx-boot" - "HPX bootstrap method to use"
+typestr="type"
+values="default","smp","mpi","pmi"
+enum optional
+
+option "hpx-transport" - "type of transport to use"
+typestr="type"
+values="default","smp","mpi","portals","photon"
+enum optional
+
+option "hpx-waitat" - "wait for debugger at specific locality"
+typestr="locality"
+int optional argoptional
+
+option "hpx-loglevel" - "set the logging level"
+typestr="level"
+values="default","boot","sched","gas","lco","net","trans","parcel","all"
+enum optional argoptional multiple
+
+option "hpx-statistics" - "print HPX runtime statistics"
+flag off
+
+option "hpx-reqlimit" - "HPX transport-specific request limit"
+typestr="requests"
+long optional
+
+option "hpx-configfile" - "HPX runtime configuration file"
+typestr="file"
+string optional
+
+option "hpx-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
+flag off
+
+option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+flag off

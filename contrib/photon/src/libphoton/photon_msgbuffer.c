@@ -16,13 +16,13 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   if (!mbuf)
     goto error_exit;
   
-  memset(mbuf, 0, sizeof(mbuf));
+  memset(mbuf, 0, sizeof(*mbuf));
 
   // TODO: probably want to align each entry (p_size) on a cacheline  
   ret = posix_memalign((void*)&bptr, getpagesize(), size);
   if (ret) {
     dbg_err("could not allocate buffer space");
-    goto error_exit_buf;
+    goto error_exit;
   }
 
   mbuf->db = photon_buffer_create(bptr, size);

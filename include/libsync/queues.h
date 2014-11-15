@@ -16,7 +16,8 @@
 /// ----------------------------------------------------------------------------
 /// @file include/libsync/queues.h
 /// ----------------------------------------------------------------------------
-#include "hpx/attributes.h"
+#include <config.h>
+#include <hpx/attributes.h>
 #include "cptr.h"
 
 typedef struct queue {
@@ -24,6 +25,13 @@ typedef struct queue {
   void (*enqueue)(struct queue *q, void *val) HPX_NON_NULL(1);
   void *(*dequeue)(struct queue *q) HPX_NON_NULL(1);
 } queue_t;
+
+#define SYNC_QUEUE_INIT {                       \
+    .delete = NULL,                             \
+    .enqueue = NULL,                            \
+    .dequeue = NULL                             \
+  }
+
 
 static inline void sync_queue_delete(queue_t *q) {
   q->delete(q);
@@ -53,29 +61,61 @@ struct two_lock_queue_node {
 /// more scalable if higher contention.
 typedef struct {
   queue_t vtable;
-  const char *_paddinga[64 - sizeof(queue_t)];
+  const char _paddinga[HPX_CACHELINE_SIZE - sizeof(queue_t)];
   two_lock_queue_node_t *head;
-  const char *_paddingb[64 - sizeof(two_lock_queue_node_t*)];
+  const char _paddingb[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
   two_lock_queue_node_t *tail;
-  const char *_paddingc[64 - sizeof(two_lock_queue_node_t*)];
+  const char _paddingc[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
 } HPX_ALIGNED(64) two_lock_queue_t;
+
+#define SYNC_TWO_LOCK_QUEUE_INIT {              \
+    .vtable = SYNC_QUEUE_INIT,                  \
+    ._paddinga = {0},                           \
+    .head = NULL,                               \
+    ._paddingb = {0},                           \
+    .tail = NULL,                               \
+    ._paddingc = {0}                            \
+  }
 
 two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
 void sync_two_lock_queue_delete(two_lock_queue_t *q) HPX_NON_NULL(1);
 
-void  sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *init)
+void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *init)
   HPX_NON_NULL(1);
-void  sync_two_lock_queue_fini(two_lock_queue_t *q) HPX_NON_NULL(1);
-void  sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) HPX_NON_NULL(1);
-void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) HPX_NON_NULL(1);
-void  sync_two_lock_queue_enqueue_node(two_lock_queue_t *q, two_lock_queue_node_t *node) HPX_NON_NULL(2);
-two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q) HPX_NON_NULL(1);
+
+void sync_two_lock_queue_fini(two_lock_queue_t *q)
+  HPX_NON_NULL(1);
+
+void sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val)
+  HPX_NON_NULL(1);
+
+void *sync_two_lock_queue_dequeue(two_lock_queue_t *q)
+  HPX_NON_NULL(1);
+
+void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
+                                      two_lock_queue_node_t *node)
+  HPX_NON_NULL(2);
+
+two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q)
+  HPX_NON_NULL(1);
 
 typedef struct {
   queue_t vtable;
+  const char _paddinga[HPX_CACHELINE_SIZE - sizeof(queue_t)];
   volatile cptr_t head;
+  const char _paddingb[HPX_CACHELINE_SIZE - sizeof(cptr_t)];
   volatile cptr_t tail;
+  const char _paddingc[HPX_CACHELINE_SIZE - sizeof(cptr_t)];
 } ms_queue_t;
+
+#define SYNC_MS_QUEUE_INIT {                    \
+    .vtable = SYNC_QUEUE_INIT,                  \
+    ._paddinga = {0},                           \
+    .head = SYNC_CPTR_INITITIALIZER,            \
+ ._paddingb = {0},                              \
+    .tail = SYNC_CPTR_INITITIALIZER,            \
+ ._paddingc = {0}                               \
+  }
 
 ms_queue_t *sync_ms_queue_new(void) HPX_MALLOC;
 void sync_ms_queue_delete(ms_queue_t *q) HPX_NON_NULL(1);

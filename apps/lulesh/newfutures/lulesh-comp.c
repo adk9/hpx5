@@ -1,6 +1,6 @@
 #include "lulesh-hpx.h"
 
-void CalcForceForNodes(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *domain,int rank)
+void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch)
 {
   int numNode = domain->numNode; 
   int i; 
@@ -13,7 +13,7 @@ void CalcForceForNodes(hpx_netfuture_t sbn3_a,hpx_netfuture_t sbn3_b,Domain *dom
 
   CalcVolumeForceForElems(domain,rank); 
 
-  SBN3(sbn3_a,sbn3_b,domain,rank);
+  SBN3(local,domain,epoch);
 }
 
 void CalcVolumeForceForElems(Domain *domain,int rank)
@@ -937,7 +937,7 @@ void CalcPositionForNodes(double *x, double *y, double *z,
   }
 }
 
-void LagrangeElements(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
+void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
   int numElem = domain->numElem; 
 
@@ -945,7 +945,7 @@ void LagrangeElements(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *do
   
   CalcLagrangeElements(domain);
 
-  CalcQForElems(monoq_a,monoq_b,domain); 
+  CalcQForElems(local,domain,epoch); 
 
   ApplyMaterialPropertiesForElems(domain);
 
@@ -1560,7 +1560,7 @@ double CalcElemVolume(const double x[8], const double y[8], const double z[8])
   return volume; 
 }
 
-void CalcQForElems(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domain)
+void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
   int numElem = domain->numElem; 
 
@@ -1568,13 +1568,13 @@ void CalcQForElems(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domai
     int allElem = numElem + 2*domain->sizeX*domain->sizeY + 
       2*domain->sizeX*domain->sizeZ + 2*domain->sizeY*domain->sizeZ; 
 
-    domain->delv_xi = malloc(sizeof(double)*allElem);
-    domain->delv_eta = malloc(sizeof(double)*allElem);
-    domain->delv_zeta = malloc(sizeof(double)*allElem);
+    //domain->delv_xi = malloc(sizeof(double)*allElem);
+    //domain->delv_eta = malloc(sizeof(double)*allElem);
+    //domain->delv_zeta = malloc(sizeof(double)*allElem);
 
-    domain->delx_xi = malloc(sizeof(double)*numElem);
-    domain->delx_eta = malloc(sizeof(double)*numElem);
-    domain->delx_zeta = malloc(sizeof(double)*numElem);
+    //domain->delx_xi = malloc(sizeof(double)*numElem);
+    //domain->delx_eta = malloc(sizeof(double)*numElem);
+    //domain->delx_zeta = malloc(sizeof(double)*numElem);
 
     CalcMonotonicQGradientsForElems(domain->x, domain->y, domain->z, 
 				    domain->xd, domain->yd, domain->zd, 
@@ -1583,17 +1583,19 @@ void CalcQForElems(hpx_netfuture_t monoq_a,hpx_netfuture_t monoq_b,Domain *domai
 				    domain->delx_xi, domain->delx_eta, domain->delx_zeta,
 				    domain->nodelist, domain->numElem);
 
-    MonoQ(monoq_a,monoq_b,domain);
+    MonoQ(local,domain,epoch);
+    hpx_lco_wait(domain->monoq_and[epoch % 2]);
+    hpx_lco_delete(domain->monoq_and[epoch % 2], HPX_NULL);
 
     CalcMonotonicQForElems(domain);
 
-    free(domain->delx_zeta);
-    free(domain->delx_eta);
-    free(domain->delx_xi);
+    //free(domain->delx_zeta);
+    //free(domain->delx_eta);
+    //free(domain->delx_xi);
 
-    free(domain->delv_zeta);
-    free(domain->delv_eta);
-    free(domain->delv_xi);
+    //free(domain->delv_zeta);
+    //free(domain->delv_eta);
+    //free(domain->delv_xi);
 
     double qstop = domain->qstop;
     int i, idx = -1;

@@ -330,7 +330,7 @@ case "${host}" in
 	fi
 	abi="xcoff"
 	;;
-  *-*-mingw*)
+  *-*-mingw* | *-*-cygwin*)
 	abi="pecoff"
 	force_tls="0"
 	RPATH=""
@@ -793,11 +793,6 @@ fi
 AC_MSG_CHECKING([configured backtracing method])
 AC_MSG_RESULT([$backtrace_method])
 if test "x$enable_prof" = "x1" ; then
-  if test "x${force_tls}" = "x0" ; then
-    AC_MSG_ERROR([Heap profiling requires TLS]);
-  fi
-  force_tls="1"
-
   if test "x$abi" != "xpecoff"; then
     dnl Heap profiling uses the log(3) function.
     LIBS="$LIBS -lm"
@@ -1397,6 +1392,18 @@ extern void *(* __memalign_hook)(size_t alignment, size_t size);
 ], [je_cv_glibc_memalign_hook])
 if test "x${je_cv_glibc_memalign_hook}" = "xyes" ; then
   AC_DEFINE([JEMALLOC_GLIBC_MEMALIGN_HOOK], [ ])
+fi
+
+JE_COMPILABLE([pthreads adaptive mutexes], [
+#include <pthread.h>
+], [
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+  pthread_mutexattr_destroy(&attr);
+], [je_cv_pthread_mutex_adaptive_np])
+if test "x${je_cv_pthread_mutex_adaptive_np}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP], [ ])
 fi
 
 dnl ============================================================================

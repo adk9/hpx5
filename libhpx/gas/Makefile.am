@@ -3,13 +3,13 @@ noinst_LTLIBRARIES	= libgas.la
 
 # libgas files and flags
 libgas_la_CPPFLAGS = -I$(top_srcdir)/include
-libgas_la_SOURCES  = addr.c \
-                     hpx_gas_glue.c \
-                     gas.c bitmap.c mallctl.c malloc.c \
+libgas_la_SOURCES  = hpx_gas_glue.c \
+                     gas.c \
+                     mallctl.c \
                      smp/smp.c \
                      pgas/actions.c \
-                     pgas/gva.c \
-                     pgas/malloc.c \
+                     pgas/bitmap.c \
+                     pgas/gpa.c \
                      pgas/pgas.c \
                      pgas/heap.c \
                      parcel/memget.c \

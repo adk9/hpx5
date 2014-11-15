@@ -4,7 +4,7 @@ noinst_apps_PROGRAMS   = luleshparcels
 
 luleshparcels_SOURCES  = lulesh-comp.c  lulesh-hpx.c  lulesh-util.c  lulesh-xfer.c
 
-luleshparcels_LDFLAGS  = -static
+luleshparcels_LDFLAGS  = 
 luleshparcels_LDADD    = $(top_builddir)/libhpx/libhpx.la -lm
 
 luleshparcels_CPPFLAGS = -I$(top_srcdir)/include

@@ -58,7 +58,7 @@ int photon_initialized() {
 }
 
 int photon_init(photonConfig cfg) {
-  photonBackend be;
+  photonBackend be = NULL;
   photonConfig lcfg = NULL;
   char *errmsg = "";
 
@@ -104,6 +104,7 @@ int photon_init(photonConfig cfg) {
 #endif
     }
     else {
+      errmsg = "unknown backend";
       goto error_exit;
     }
   }
@@ -222,6 +223,8 @@ int photon_init(photonConfig cfg) {
     log_warn("Photon already initialized");
     return PHOTON_OK;
   }
+
+  dbg_info("Photon initializing");
 
   /* the configured backend init gets called from within the default library init */
   return __photon_default->init(lcfg, NULL, NULL);

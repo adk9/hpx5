@@ -6,8 +6,8 @@
  * public APIs to be prefixed.  This makes it possible, with some care, to use
  * multiple allocators simultaneously.
  */
-#define JEMALLOC_PREFIX "libhpx_"
-#define JEMALLOC_CPREFIX "LIBHPX_"
+#define JEMALLOC_PREFIX "hpx_"
+#define JEMALLOC_CPREFIX "HPX_"
 
 /*
  * JEMALLOC_PRIVATE_NAMESPACE is used as a prefix for all library-private APIs.

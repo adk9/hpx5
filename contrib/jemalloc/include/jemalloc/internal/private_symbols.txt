@@ -285,6 +285,9 @@ opt_zero
 p2rz
 pages_purge
 pow2_ceil
+prof_active_get
+prof_active_get_unlocked
+prof_active_set
 prof_alloc_prep
 prof_alloc_rollback
 prof_backtrace
@@ -292,6 +295,7 @@ prof_boot0
 prof_boot1
 prof_boot2
 prof_bt_count
+prof_dump_header
 prof_dump_open
 prof_free
 prof_free_sampled_object
@@ -315,6 +319,8 @@ prof_tdata_cleanup
 prof_tdata_get
 prof_tdata_init
 prof_thread_active_get
+prof_thread_active_init_get
+prof_thread_active_init_set
 prof_thread_active_set
 prof_thread_name_get
 prof_thread_name_set
@@ -384,12 +390,14 @@ tsd_arena_set
 tsd_boot
 tsd_cleanup
 tsd_cleanup_wrapper
+tsd_fetch
 tsd_get
 tsd_get_wrapper
 tsd_initialized
 tsd_init_check_recursion
 tsd_init_finish
 tsd_init_head
+tsd_nominal
 tsd_quarantine_get
 tsd_quarantine_set
 tsd_set
@@ -405,7 +413,6 @@ tsd_thread_allocated_get
 tsd_thread_allocated_set
 tsd_thread_deallocated_get
 tsd_thread_deallocated_set
-tsd_tryget
 u2rz
 valgrind_freelike_block
 valgrind_make_mem_defined

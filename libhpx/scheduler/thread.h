@@ -13,96 +13,76 @@
 #ifndef LIBHPX_THREAD_H
 #define LIBHPX_THREAD_H
 
-/// ----------------------------------------------------------------------------
-/// @file stack.h
-/// @brief Defines the stack structure and interface for user level threads.
-/// ----------------------------------------------------------------------------
-
+/// @file thread.h
+/// @brief Defines the lightweight thread stack structure and interface for user
+///        level threads.
 #include "hpx/hpx.h"
 
-
-/// ----------------------------------------------------------------------------
-/// ----------------------------------------------------------------------------
 typedef struct ustack {
   void             *sp;                         // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
   int           tls_id;
+  int         stack_id;
   short       affinity;                         // set by user
-  short  wait_affinity;                         // set during scheduler_wait()
   char         stack[];
 } ustack_t;
 
 
-/// ----------------------------------------------------------------------------
 /// This is the type of an HPX thread entry function.
-/// ----------------------------------------------------------------------------
 typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
 
 
-/// ----------------------------------------------------------------------------
 /// Sets the size of a stack.
 ///
 /// All of the stacks in the system need to have the same size.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_set_stack_size(int stack_bytes);
+void thread_set_stack_size(int stack_bytes)
+  HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Initializes a thread.
 ///
 /// The thread can be transferred to using thread_transfer() in order to start
 /// execution. The @p entry function will be run as a result of the initial
 /// transfer.
 ///
-/// @param thread - The thread to initialize.
-/// @param parcel - The parcel that is generating this thread.
-/// @param      f - The entry function for the thread.
-/// @returns      - NULL if there is an error, or a pointer to the stack pointer
-///                 to transfer to in order to start this thread
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_init(ustack_t *stack, hpx_parcel_t *parcel,
-                              thread_entry_t f)
-  HPX_NON_NULL(1, 2);
+/// @param       thread The thread to initialize.
+/// @param       parcel The parcel that is generating this thread.
+/// @param            f The entry function for the thread.
+void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
+                 size_t size)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 
-/// ----------------------------------------------------------------------------
 /// Allocates and initializes a new thread.
 ///
-/// This allocates and initializes a new user-level stack. User-level stacks are
-/// allocated in the global address space.
+/// This allocates and initializes a new user-level thread. User-level threads
+/// are allocated in the global address space.
 ///
-/// @param parcel - The parcel that is generating this thread.
-/// @param      f - The entry function for the thread.
-/// @returns      - NULL if there is an error, or a pointer to the sp for the
-///                 stack
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
-  HPX_NON_NULL(1) HPX_MALLOC;
+/// @param       parcel The parcel that is generating this thread.
+/// @param            f The entry function for the thread.
+///
+/// @returns A new thread that can be transferred to.
+ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
+  HPX_INTERNAL HPX_NON_NULL(1) HPX_MALLOC;
 
 
-/// ----------------------------------------------------------------------------
 /// Deletes the thread.
 ///
 /// @param thread - The thread pointer.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_delete(ustack_t *stack) HPX_NON_NULL(1);
+void thread_delete(ustack_t *stack)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// ----------------------------------------------------------------------------
 /// Exit the current user-level thread, possibly with a return value.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void thread_exit(int status, const void *value, size_t size)
-  HPX_NORETURN;
+void thread_exit(int status, const void *value, size_t size)
+  HPX_INTERNAL HPX_NORETURN;
 
 
-/// ----------------------------------------------------------------------------
 /// The transfer continuation function type.
-/// ----------------------------------------------------------------------------
 typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 
 
-/// ----------------------------------------------------------------------------
 /// The actual routine to transfer between thread.
 ///
 /// This pushes the callee-saves state on the current stack, and swaps the stack
@@ -111,13 +91,13 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 ///
 /// The continuation's return value is also returned by transfer.
 ///
-/// @param    p - the parcel to transfer to
-/// @param cont - a continuation function to handle the old stack pointer
-/// @param  env - the environment for the continuation
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont,
-                                 void *env)
-  HPX_NON_NULL(1, 2);
+/// @param          p The parcel to transfer to.
+/// @param       cont A continuation function to handle the old stack pointer.
+/// @param        env The environment for the continuation.
+///
+/// @returns HPX_SUCCESS or an error code
+int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 
 

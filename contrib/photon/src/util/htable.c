@@ -20,7 +20,7 @@ htable_t *htable_create(int size) {
   if (!htable->table)
     goto error_exit2;
 
-  bzero(htable->table, sizeof(hash_element_t *) * size);
+  memset(htable->table, 0, sizeof(hash_element_t *) * size);
 
   htable->size = size;
   htable->elements = 0;

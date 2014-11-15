@@ -18,8 +18,7 @@
 #include "libhpx/debug.h"
 
 gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type)
-{
+                     struct transport_class *transport, hpx_gas_t type) {
   gas_class_t *gas = NULL;
 
   if (type == HPX_GAS_DEFAULT) {

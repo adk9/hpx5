@@ -110,7 +110,7 @@ static void _allgather_fini(lco_t *lco) {
   _allgather_t *g = (_allgather_t *)lco;
   if (g->value)
     free(g->value);
-  global_free(g);
+  libhpx_global_free(g);
 }
 
 
@@ -226,9 +226,9 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
   }
   else {
     status = _allgather_setid(local, id, size, value);
-    if (!hpx_addr_eq(lsync, HPX_NULL))
+    if (lsync)
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    if (!hpx_addr_eq(rsync, HPX_NULL))
+    if (rsync)
       hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
@@ -301,7 +301,7 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
-  _allgather_t *g = global_malloc(sizeof(*g));
+  _allgather_t *g = libhpx_global_malloc(sizeof(*g));
   assert(g);
   _allgather_init(g, inputs, size);
   return lva_to_gva(g);
