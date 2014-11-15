@@ -274,10 +274,13 @@ void network_progress_poll(progress_t *p) {
     DEBUG_IF (recvs) {
       dbg_log_trans("finished %d receives.\n", recvs);
     }
-    hpx_parcel_t *completed = p->recvs;
-    if (completed) {
-      p->recvs = NULL;
-      network_rx_enqueue(here->network, completed);
+
+    // if I have completed recvs, try to pass them along to the parcel network
+    // layer
+    if (p->recvs) {
+      if (network_try_notify_rx(here->network, p->recvs)) {
+        p->recvs = NULL;
+      }
     }
   } while (network_progress_drain_sends(p) || network_progress_drain_recvs(p));
 
