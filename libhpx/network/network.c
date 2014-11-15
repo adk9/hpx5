@@ -70,9 +70,17 @@ struct _network {
   _QUEUE_T                 tx;                  // half duplex port for send
   _QUEUE_T                 rx;                  // half duplex port
   struct clh_lock      rxlock;
-  struct {
+  const char _paddingb[HPX_CACHELINE_SIZE - sizeof(struct clh_lock)];
+  hpx_parcel_t * volatile *volatile prx;
+  const char _paddingc[HPX_CACHELINE_SIZE - sizeof(hpx_parcel_t*)];
+  struct _rxnode {
     struct clh_node     *node;
-    const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
+    struct clh_node     *poll;
+    hpx_parcel_t * volatile stack;
+    int           handshaking;
+    const char _padding[HPX_CACHELINE_SIZE - (2 * sizeof(struct clh_node*) +
+                                              sizeof(hpx_parcel_t *) +
+                                              sizeof(int))];
   } rxnodes[];
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
@@ -114,8 +122,10 @@ static void _delete(struct network *o) {
   }
   _QUEUE_FINI(&network->rx);
 
-  for (int i = 0, e = network->nrx; i < e; ++i)
+  for (int i = 0, e = network->nrx; i < e; ++i) {
     sync_clh_node_delete(network->rxnodes[i].node);
+    assert(network->rxnodes[i].poll == NULL);
+  }
   sync_clh_lock_fini(&network->rxlock);
 
   free(network);
@@ -187,12 +197,60 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 
 hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
-  struct clh_node *node = network->rxnodes[nrx].node;
-  sync_clh_lock_acquire(&network->rxlock, node);
-  hpx_parcel_t * p = _QUEUE_DEQUEUE(&network->rx);
-  node = sync_clh_lock_release(&network->rxlock, node);
-  network->rxnodes[nrx].node = node;
+  struct _rxnode *rxn = &network->rxnodes[nrx];
+  struct clh_node *node = rxn->node;
+  struct clh_node *poll = rxn->poll;
+
+  // publish my intent to process the network
+  if (!poll) {
+    poll = sync_clh_lock_start_acquire(&network->rxlock, node);
+    rxn->poll = poll;
+  }
+
+  // wait until I get control of the network
+  if (sync_clh_node_must_wait(poll)) {
+    return NULL;
+  }
+
+  // first time through publish my parcel stack pointer
+  if (!rxn->handshaking) {
+    sync_store(&network->prx, &rxn->stack, SYNC_RELEASE);
+    rxn->handshaking = 1;
+  }
+
+  // see if the network thread noticed me yet
+  hpx_parcel_t *p = sync_load(&rxn->stack, SYNC_ACQUIRE);
+  static int i = 0, j = 0;
+  if (p) {
+    (void)i;
+    dbg_log_trans("got a parcel %d.\n", i++);
+  }
+  else {
+    (void)j;
+    dbg_log_trans("didn't get a parcel %d.\n", j++);
+    return NULL;
+  }
+
+  // I got some work, release the lock, and reset my rxnode
+  rxn->node = sync_clh_lock_release(&network->rxlock, node);
+  rxn->poll = NULL;
+  rxn->stack = NULL;
+  rxn->handshaking = 0;
   return p;
+}
+
+int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
+  struct _network *network = (struct _network*)o;
+  // if someone has published a rendevous location, pass along the parcel
+  // stack
+  hpx_parcel_t * volatile *prx = sync_load(&network->prx, SYNC_ACQUIRE);
+  if (!prx) {
+    return 0;
+  }
+  dbg_log_trans("sent a parcel.\n");
+  sync_store(&network->prx, NULL, SYNC_RELEASE);
+  sync_store(prx, p, SYNC_RELEASE);
+  return 1;
 }
 
 void network_flush_on_shutdown(struct network *o) {
@@ -226,8 +284,12 @@ struct network *network_new(int nrx) {
   _QUEUE_INIT(&n->tx, 0);
   _QUEUE_INIT(&n->rx, 0);
   sync_clh_lock_init(&n->rxlock);
+  sync_store(&n->prx, NULL, SYNC_RELEASE);
   for (int i = 0; i < nrx; ++i) {
     n->rxnodes[i].node = sync_clh_node_new();
+    n->rxnodes[i].poll = NULL;
+    n->rxnodes[i].stack = NULL;
+    n->rxnodes[i].handshaking = 0;
   }
 
   return &n->vtable;
