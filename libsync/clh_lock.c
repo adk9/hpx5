@@ -33,11 +33,6 @@ static struct clh_node *_reset(struct clh_node *node) {
   return (struct clh_node *)((uintptr_t)pred & ~_MUST_WAIT_MASK);
 }
 
-static uintptr_t _must_wait(struct clh_node *n) {
-  uintptr_t temp = (uintptr_t)sync_load(&n->prev, SYNC_ACQUIRE);
-  return temp & _MUST_WAIT_MASK;
-}
-
 struct clh_node *sync_clh_node_new(void) {
   struct clh_node *node = NULL;
   int e = posix_memalign((void**)&node, HPX_CACHELINE_SIZE, sizeof(*node));
@@ -52,6 +47,11 @@ void sync_clh_node_delete(struct clh_node *node) {
   free(node);
 }
 
+uintptr_t sync_clh_node_must_wait(struct clh_node *n) {
+  uintptr_t temp = (uintptr_t)sync_load(&n->prev, SYNC_ACQUIRE);
+  return temp & _MUST_WAIT_MASK;
+}
+
 void sync_clh_lock_init(struct clh_lock *lock) {
   lock->tail = sync_clh_node_new();
 }
@@ -60,7 +60,8 @@ void sync_clh_lock_fini(struct clh_lock *lock) {
   sync_clh_node_delete(lock->tail);
 }
 
-void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *node) {
+struct clh_node *sync_clh_lock_start_acquire(struct clh_lock *lock,
+                                             struct clh_node *node) {
   // the must wait bit must be set before we swap this node in, but the pointer
   // value isn't important yet
   _set(node, NULL);
@@ -72,12 +73,20 @@ void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *node) {
   // us when we release this node
   _set(node, tail);
 
+  /// return the node to spin on
+  return tail;
+}
+
+void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *node) {
+  // swap this node in to the tail, anyone who sees it will have to wait
+  struct clh_node *tail = sync_clh_lock_start_acquire(lock, node);
   // spin on the old tail
-  while (_must_wait(tail))
+  while (sync_clh_node_must_wait(tail))
     ;
 }
 
-struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *node) {
+struct clh_node *sync_clh_lock_release(struct clh_lock *lock,
+                                       struct clh_node *node) {
   // we can re-use the predecessor of the current node, but we can't use the
   // current node since we have no idea when our successor will finish.
   return _reset(node);
