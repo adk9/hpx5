@@ -42,8 +42,8 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
   edge_list_edge_t *edge = malloc(sizeof(*edge));
   assert(edge);
 
-  uint64_t skipped = 0;
-  uint64_t count = 0;
+  sssp_uint_t skipped = 0;
+  sssp_uint_t count = 0;
 
   char line[LINE_MAX];
   while (fgets(line, sizeof(line), f) != NULL && count < args->edges_no) {
@@ -54,9 +54,9 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
 	skipped++;
 	continue;
       }
-      sscanf(&line[1], " %" PRIu64 " %" PRIu64 " %" PRIu64, &edge->source, &edge->dest, &edge->weight);
+      sscanf(&line[1], " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI, &edge->source, &edge->dest, &edge->weight);
       // printf("%s", &line[1]);
-      const uint64_t position = count++ + skipped;
+      const sssp_uint_t position = count++ + skipped;
       hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize);
       assert(args->edges_sync != HPX_NULL);
       hpx_call(e, _put_edge_edgelist, edge, sizeof(*edge), args->edges_sync);
@@ -90,7 +90,7 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
     case 'c': continue;
     case 'a': continue;
     case 'p':
-      sscanf(&line[1], " sp %" PRIu64 " %" PRIu64, &el->num_vertices, &el->num_edges);
+      sscanf(&line[1], " sp %" SSSP_UINT_PRI " %" SSSP_UINT_PRI, &el->num_vertices, &el->num_edges);
       // Account for the  DIMACS graph format (.gr) where the node
       // ids range from 1..n
       el->num_vertices++;
@@ -114,7 +114,7 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   local_args->el = *el;
   local_args->edges_sync = edges_sync;
   memcpy(local_args->filename, args->filename, filename_len);
-  const uint64_t thread_chunk = el->num_edges / (args->thread_readers * args->locality_readers) + 1;
+  const sssp_uint_t thread_chunk = el->num_edges / (args->thread_readers * args->locality_readers) + 1;
   local_args->edges_no = thread_chunk;
   for(unsigned int locality_desc = 0; locality_desc < args->locality_readers; ++locality_desc) {
     for(unsigned int thread_desc = 0; thread_desc < args->thread_readers; ++thread_desc) {

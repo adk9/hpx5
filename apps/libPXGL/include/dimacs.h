@@ -13,12 +13,14 @@
 #ifndef PXGL_DIMACS_H
 #define PXGL_DIMACS_H
 
+#include "defs.h"
+
 #include "hpx/hpx.h"
 #include "adjacency_list.h"
 
 
 // Compute checksum given an adjacency list
 extern hpx_action_t dimacs_checksum;
-extern int dimacs_checksum_action(const uint64_t *const g);
+extern int dimacs_checksum_action(const sssp_uint_t *const g);
 
 #endif // PXGL_DIMACS_H
