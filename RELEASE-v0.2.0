@@ -1,0 +1,29 @@
+
+HPX Release Notes, v0.2.0
+
+Distributed under the License, Version 0.2.0. (See accompanying file LICENSE_0.2.0.txt)
+
+Improvements/Enhancements
+
+Netfutures
+Netfutures have improved in stability. They now take three parameters at configuration time, to more precisely control memory usage. They now take the maximum amount of memory needed, the maximum number of netfuture arrays, and the maximum number of netfuture elements that will be needed.
+
+It may be necessary when using netfutures heavily to increase the Photon ledger size. An environment variable HPX_LEDGER_ENTRIES can be used to control this amount. For some large lulesh cases, 1024 is appropriate. It is not necessary to set this variable; if it is not set, the default it used.
+
+Lulesh
+Netfutures Lulesh uses much less memory than before. It scales much better also.
+
+Bug Fixes
+Several bugs affecting netfutures were fixed: The means of enforcing the send limit was changed which has improved stability and eliminated many cases that resulted in freezes before. Multiple bugs causing memory corruption bugs were fixed. We previously allowed users to request too large of an allocation for netfutures.
+
+Parcels and netfutures versions of Lulesh were giving incorrect results for some problem sizes. This has been fixed. The netfutures version of Lulesh would sometimes panic; that has been resolved.
+
+Known bugs & limitations
+For Lulesh, some numbers of domains do not work. The number of domains must be a multiple of the number of processes.
+
+For Netfutures:
+  * For cases where the number of elements in a net future array are large and the the number of netfutures modulo the number of processes, it is possible to run out of allocated netfuture space, even though it appears to the user there should be enough space.
+  * Some error checking is being caught by assertions that would be better handled by returning an error.
+  * There should be no memory limit on netfutures (all netfutures per rank are limited to 4GB); this requires netfutures to be more directly integrated with the memory system.
+  * The functionality of netfutures should be a part of HPX futures. They will soon be removed and added as a separate feature of futures.
+
