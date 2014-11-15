@@ -40,8 +40,7 @@ void sync_tatas_release(tatas_lock_t *l) {
 
 struct clh_node {
   struct clh_node *prev;
-  const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
-} HPX_ALIGNED(HPX_CACHELINE_SIZE);
+};
 
 #define SYNC_CLH_NODE_INIT {                    \
     .prev = NULL                                \
@@ -59,8 +58,7 @@ uintptr_t sync_clh_node_must_wait(struct clh_node *node)
 
 struct clh_lock {
   struct clh_node *tail;
-  const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
-} HPX_ALIGNED(HPX_CACHELINE_SIZE);
+};
 
 #define SYNC_CLH_LOCK_INIT {                    \
     .dummy = SYNC_CLH_NODE_INIT,                \
