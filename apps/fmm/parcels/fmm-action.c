@@ -899,8 +899,8 @@ int _disaggregate_action(void *args) {
     output->nlist5 = nlist5;
     output->list5[0] = list5[0];
     for (int i = 0; i < 8; i++) {
-      if (!hpx_addr_eq(tbox->child[i], HPX_NULL))
-    hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL);
+      if (tbox->child[i])
+        hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL);
     }
   } else {
     int nplist1 = input->nlist1;
@@ -925,7 +925,7 @@ int _disaggregate_action(void *args) {
       build_list5_action_return_t temp[4];
       hpx_lco_get(result5[i], sizeof(build_list5_action_return_t) * 4, temp);
       for (int j = 0; j < 4; j++) {
-    if (!hpx_addr_eq(temp[j].box, HPX_NULL)) {
+    if (temp[j].box) {
       if (temp[j].type == 5) {
         list5[nlist5++] = temp[j].box;
       } else {
@@ -972,7 +972,7 @@ int _disaggregate_action(void *args) {
     // Prune the branch below tbox
     char type = 'T';
     for (int i = 0; i < 8; i++) {
-      if (!hpx_addr_eq(tbox->child[i], HPX_NULL))
+      if (tbox->child[i])
         hpx_call(tbox->child[i], _delete_box, &type, sizeof(char), HPX_NULL);
       tbox->child[i] = HPX_NULL;
     }
@@ -1016,7 +1016,7 @@ int _disaggregate_action(void *args) {
     // Wait for completion of the source-to-local operation
     double complex *srcloc = calloc(1, sizeof(double complex) * pgsz);
     for (int i = 0; i < nplist1; i++) {
-      if (!hpx_addr_eq(result1[i], HPX_NULL)) {
+      if (result1[i]) {
     hpx_lco_get(result1[i], sizeof(double complex) * pgsz, srcloc);
     hpx_lco_sema_p(tbox->sema);
     for (int j = 0; j < pgsz; j++)
@@ -1038,7 +1038,7 @@ int _disaggregate_action(void *args) {
       for (int i = 0; i < nlist5; i++)
     output->list5[i] = list5[i];
       for (int i = 0; i < 8; i++) {
-    if (!hpx_addr_eq(tbox->child[i], HPX_NULL)) {
+    if (tbox->child[i]) {
       hpx_call(curr, _local_to_local, &i, sizeof(int), HPX_NULL);
       hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL);
     }
@@ -1085,7 +1085,7 @@ int _build_list5_action(void *args) {
   }
 
   for (int i = 0; i < 8; i++) {
-    if (!hpx_addr_eq(sbox->child[i], HPX_NULL)) {
+    if (sbox->child[i]) {
       int dx = sbox->index[i] * 2 + xoff[i] - input[0];
       int dy = sbox->index[i] * 2 + yoff[i] - input[1];
       int dz = sbox->index[i] * 2 + zoff[i] - input[2];
@@ -1197,7 +1197,7 @@ int _delete_box_action(void *args) {
   fmm_box_t *box = NULL;
   hpx_gas_try_pin(curr, (void *)&box);
   for (int i = 0; i < 8; i++) {
-    if (!hpx_addr_eq(box->child[i], HPX_NULL))
+    if (box->child[i])
       hpx_call(box->child[i], _delete_box, NULL, 0, HPX_NULL);
   }
   hpx_lco_delete(box->sema, HPX_NULL);
@@ -1269,7 +1269,7 @@ int _merge_exponential_action(void *args) {
     for (int j = 0; j < 3; j++) {
       if (dest[j] != -1) {
     int label = dest[j];
-    if (hpx_addr_eq(sbox->child[i], HPX_NULL)) {
+    if (sbox->child[i] == HPX_NULL) {
       merge_update_action_arg_t *merge_update_arg =
         calloc(1, sizeof(merge_update_action_arg_t));
       merge_update_arg->label = label;
@@ -1472,7 +1472,7 @@ int _shift_exponential_c1_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[0], HPX_NULL)) {
+  if (tbox->child[0]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -1578,7 +1578,7 @@ int _shift_exponential_c2_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[1], HPX_NULL)) {
+  if (tbox->child[1]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -1687,7 +1687,7 @@ int _shift_exponential_c3_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[2], HPX_NULL)) {
+  if (tbox->child[2]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -1795,7 +1795,7 @@ int _shift_exponential_c4_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[3], HPX_NULL)) {
+  if (tbox->child[3]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -1904,7 +1904,7 @@ int _shift_exponential_c5_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[4], HPX_NULL)) {
+  if (tbox->child[4]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -2011,7 +2011,7 @@ int _shift_exponential_c6_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[5], HPX_NULL)) {
+  if (tbox->child[5]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -2119,7 +2119,7 @@ int _shift_exponential_c7_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[6], HPX_NULL)) {
+  if (tbox->child[6]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -2227,7 +2227,7 @@ int _shift_exponential_c8_action(void) {
   fmm_box_t *tbox = NULL;
   hpx_gas_try_pin(curr, (void *)&tbox);
 
-  if (!hpx_addr_eq(tbox->child[7], HPX_NULL)) {
+  if (tbox->child[7]) {
     int nexpmax = fmm_param->nexpmax;
     int nexptotp = fmm_param->nexptotp;
     int pgsz = fmm_param->pgsz;
@@ -2880,7 +2880,7 @@ int _proc_list5_action(void *args) {
       int counter = 0;
       hpx_addr_t done[8];
       for (int i = 0; i < 8; i++) {
-    if (!hpx_addr_eq(sbox->child[i], HPX_NULL)) {
+    if (sbox->child[i]) {
       done[counter] = hpx_lco_future_new(sizeof(double) * 4);
       hpx_call(sbox->child[i], _proc_list5, param,
            sizeof(proc_list5_action_arg_t), done[counter]);
@@ -2931,7 +2931,7 @@ int _proc_list5_action(void *args) {
     hpx_lco_get(done, sizeof(double) * 4, contrib);
   }
 
-  if (hpx_addr_eq(curr, param->list5[param->curr])) {
+  if (curr == param->list5[param->curr]) {
     param->potential += contrib[0];
     param->field[0] += contrib[1];
     param->field[1] += contrib[2];

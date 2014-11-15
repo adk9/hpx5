@@ -20,10 +20,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "hpx/builtins.h"
-#include "libsync/sync.h"
-#include "libsync/barriers.h"
+#include <hpx/builtins.h>
+#include <libsync/sync.h>
+#include <libsync/barriers.h>
+
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 #include "worker.h"
@@ -61,6 +63,8 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
 
   s->stats = (scheduler_stats_t) SCHEDULER_STATS_INIT;
 
+  YIELD_QUEUE_INIT(&s->yielded, NULL);
+
   thread_set_stack_size(stack_size);
   dbg_log_sched("initialized a new scheduler.\n");
   return s;
@@ -70,15 +74,13 @@ void scheduler_delete(scheduler_t *sched) {
   if (!sched)
     return;
 
-#ifdef HPX_PROFILE_STACKS
-  printf("High water mark for stacks was %lu\n", sched->stats.max_stacks);
-#endif
-
   if (sched->barrier)
     sync_barrier_delete(sched->barrier);
 
   if (sched->workers)
     free(sched->workers);
+
+  YIELD_QUEUE_FINI(&sched->yielded);
 
   free(sched);
 }
@@ -86,31 +88,29 @@ void scheduler_delete(scheduler_t *sched) {
 int scheduler_startup(scheduler_t *sched) {
   // start all of the other worker threads
   for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
-    if (worker_start(sched) == 0)
-      continue;
+    if (worker_start(sched) != 0) {
+      dbg_error("could not start worker %d.\n", i);
 
-    dbg_error("scheduler: could not start worker %d.\n", i);
+      for (int j = 0; j < i; ++j)
+        worker_cancel(sched->workers[j]);
 
-    for (int j = 0; j < i; ++j)
-      worker_cancel(sched->workers[j]);
+      for (int j = 0; j < i; ++j)
+        worker_join(sched->workers[j]);
 
-    for (int j = 0; j < i; ++j)
-      worker_join(sched->workers[j]);
-
-    return HPX_ERROR;
+      return LIBHPX_ERROR;
+    }
   }
 
   worker_run(sched);
   scheduler_join(sched);
-
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
 
-void scheduler_shutdown(scheduler_t *sched) {
+void scheduler_shutdown(scheduler_t *sched, int code) {
   // signal all of the shutdown requests
   for (int i = 0; i < sched->n_workers; ++i)
-    worker_shutdown(sched->workers[i]);
+    worker_shutdown(sched->workers[i], code);
 }
 
 

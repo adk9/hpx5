@@ -140,7 +140,7 @@ hpx_parcel_acquire(const void *buffer, size_t bytes) {
     size += _max(sizeof(void*), bytes);
 
   // allocate a parcel with enough space to buffer the @p buffer
-  hpx_parcel_t *p = global_memalign(HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = libhpx_global_memalign(HPX_CACHELINE_SIZE, size);
 
   if (!p) {
     dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
@@ -203,7 +203,7 @@ hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
   // otherwise, do a synchronous send and set the lsync LCO, if there is one
   hpx_parcel_send_sync(p);
-  if (!hpx_addr_eq(lsync, HPX_NULL))
+  if (lsync)
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -220,7 +220,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
     p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
   }
 
-  if (p->pid != 0) {
+  if (p->pid != HPX_NULL) {
     uint64_t credit = 0;
     // split the parent's current credit. the parent retains half..
     hpx_parcel_t *parent = scheduler_current_parcel();
@@ -232,12 +232,12 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
+    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
                    p->pid, p->credit, action_get_key(p->action),
                    hpx_parcel_get_data(p), p->size, p->target,
                    action_get_key(p->c_action), p->c_target);
   } else {
-    dbg_log_parcel("PID:%u CREDIT:%lu %s(%p,%u)@(%lu)\n",
+    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu)\n",
                    p->pid,  p->credit, action_get_key(p->action),
                    hpx_parcel_get_data(p), p->size, p->target);
   }
@@ -256,7 +256,7 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 void
 hpx_parcel_release(hpx_parcel_t *p) {
-  global_free(p);
+  libhpx_global_free(p);
 }
 
 

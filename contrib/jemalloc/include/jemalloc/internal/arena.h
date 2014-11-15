@@ -343,8 +343,8 @@ extern arena_bin_info_t	arena_bin_info[NBINS];
 /* Number of large size classes. */
 #define			nlclasses (chunk_npages - map_bias)
 
-void	*arena_chunk_alloc_huge(arena_t *arena, size_t size, size_t alignment,
-    bool *zero);
+void	*arena_chunk_alloc_huge(arena_t *arena, void *new_addr, size_t size,
+    size_t alignment, bool *zero);
 void	arena_chunk_dalloc_huge(arena_t *arena, void *chunk, size_t size);
 void	arena_purge_all(arena_t *arena);
 void	arena_tcache_fill_small(arena_t *arena, tcache_bin_t *tbin,
@@ -1111,13 +1111,12 @@ arena_salloc(const void *ptr, bool demote)
 	pageind = ((uintptr_t)ptr - (uintptr_t)chunk) >> LG_PAGE;
 	assert(arena_mapbits_allocated_get(chunk, pageind) != 0);
 	binind = arena_mapbits_binind_get(chunk, pageind);
-	if (unlikely(binind == BININD_INVALID || (config_prof && demote == false
-	    && arena_mapbits_large_get(chunk, pageind) != 0))) {
+	if (unlikely(binind == BININD_INVALID || (config_prof && !demote &&
+	    arena_mapbits_large_get(chunk, pageind) != 0))) {
 		/*
-		 * Large allocation.  In the common case (demote == true), and
-		 * as this is an inline function, most callers will only end up
-		 * looking at binind to determine that ptr is a small
-		 * allocation.
+		 * Large allocation.  In the common case (demote), and as this
+		 * is an inline function, most callers will only end up looking
+		 * at binind to determine that ptr is a small allocation.
 		 */
 		assert(((uintptr_t)ptr & PAGE_MASK) == 0);
 		ret = arena_mapbits_large_size_get(chunk, pageind);

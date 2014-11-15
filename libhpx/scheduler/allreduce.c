@@ -51,7 +51,7 @@ static void _allreduce_fini(lco_t *lco) {
   _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value)
     free(r->value);
-  global_free(r);
+  libhpx_global_free(r);
 }
 
 
@@ -180,7 +180,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_commutative_associative_op_t op,
                                  void (*init)(void*, const size_t size))
 {
-  _allreduce_t *r = global_malloc(sizeof(*r));
+  _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
   _allreduce_init(r, inputs, outputs, size, op, init);
   return lva_to_gva(r);

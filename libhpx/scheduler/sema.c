@@ -42,7 +42,7 @@ _sema_fini(lco_t *lco)
 
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
-  global_free(sema);
+  libhpx_global_free(sema);
 }
 
 
@@ -131,7 +131,7 @@ _sema_init(_sema_t *sema, unsigned count)
 hpx_addr_t
 hpx_lco_sema_new(unsigned count)
 {
-  _sema_t *local = global_malloc(sizeof(_sema_t));;
+  _sema_t *local = libhpx_global_malloc(sizeof(*local));;
   assert(local);
   _sema_init(local, count);
   return lva_to_gva(local);

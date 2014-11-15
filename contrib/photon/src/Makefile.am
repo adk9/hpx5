@@ -1,4 +1,4 @@
-AM_CFLAGS = @CFLAGS@ -Wno-variadic-macros       \
+AM_CFLAGS = @CFLAGS@                            \
             -I@PHOTON_SRCDIR@/include           \
             -I@PHOTON_SRCDIR@/src/util          \
             -I@PHOTON_SRCDIR@/src/libphoton     \
@@ -60,4 +60,12 @@ if HAVE_XSP
 AM_CFLAGS += @XSP_CFLAGS@
 libphoton_la_LDFLAGS += @XSP_LIBS@
 libphoton_la_SOURCES += forwarder/photon_xsp_forwarder.c
+endif
+
+if ENABLE_PHOTON_DEBUG
+AM_CFLAGS += -DDEBUG
+endif
+
+if ENABLE_PHOTON_TRACE
+AM_CFLAGS += -DCALLTRACE
 endif

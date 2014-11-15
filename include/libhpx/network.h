@@ -13,56 +13,46 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
-/// ----------------------------------------------------------------------------
-/// @file network.h
+/// @file include/libhpx/network.h
+/// @brief Declare the network_class_t structure.
 ///
-/// This file defines the interface to the network subsystem in HPX. The
+/// This file declares the interface to the parcel network subsystem in HPX. The
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
-/// ----------------------------------------------------------------------------
 #include "hpx/hpx.h"
 
 
-/// ----------------------------------------------------------------------------
 /// All network objects implement the network_class interface.
-/// ----------------------------------------------------------------------------
 typedef struct network_class network_class_t;
 
 
-/// ----------------------------------------------------------------------------
 /// Create a new network.
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL network_class_t *network_new(void)
-  HPX_MALLOC;
+network_class_t *network_new(void)
+  HPX_MALLOC HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Delete a network object.
 ///
 /// This does not synchronize. The caller is required to ensure that no other
 /// threads may be operating on the network before making this call.
 ///
-/// @param network - the network to delete
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_delete(network_class_t *network)
-  HPX_NON_NULL(1);
+/// @param  network The network to delete.
+void network_delete(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Shuts down the network.
 ///
 /// Indicates that the network should shut down.
 ///
-/// @param network - the network to shut down.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_shutdown(network_class_t *network)
-  HPX_NON_NULL(1);
+/// @param  network The network to shut down.
+void network_shutdown(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// A network barrier.
 ///
 /// Should only be called by one thread per locality. For a full system barrier,
@@ -74,13 +64,11 @@ HPX_INTERNAL void network_shutdown(network_class_t *network)
 /// scheduler barrier with all of the other threads, thus making a full global
 /// barrier a scheduler->network->scheduler barrier.
 ///
-/// @param network - the network which implements the barrier.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_barrier(network_class_t *network)
-  HPX_NON_NULL(1);
+/// @param  network The network which implements the barrier.
+void network_barrier(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Initiate a parcel send over the network.
 ///
 /// This is an asynchronous interface, the parcel will be sent at some point in
@@ -93,41 +81,35 @@ HPX_INTERNAL void network_barrier(network_class_t *network)
 /// the enqueue. It may progress the network as well, though that behavior is
 /// not guaranteed.
 ///
-/// @todo - There is currently no way to test for send completion. We should add
-/// a future parameter so that the sender can wait if necessary.
+/// @todo There is currently no way to test for send completion. We should add a
+///       future parameter so that the sender can wait if necessary.
 ///
-/// @param network - the network to use for the send
-/// @param       p - the parcel to send
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2);
+/// @param  network The network to use for the send.
+/// @param        p The parcel to send.
+void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
-/// ----------------------------------------------------------------------------
 /// Complete a parcel send over the network.
-/// ----------------------------------------------------------------------------
-HPX_INTERNAL hpx_parcel_t *network_tx_dequeue(network_class_t *network)
-  HPX_NON_NULL(1);
+hpx_parcel_t *network_tx_dequeue(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-HPX_INTERNAL void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2);
+void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
-HPX_INTERNAL hpx_parcel_t *network_rx_dequeue(network_class_t *network)
-  HPX_NON_NULL(1);
+hpx_parcel_t *network_rx_dequeue(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
 struct routing;
-HPX_INTERNAL struct routing *network_get_routing(network_class_t *network)
-  HPX_NON_NULL(1);
+struct routing *network_get_routing(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-HPX_INTERNAL void network_set_shutdown_src(network_class_t *network, hpx_locality_t locality)
-  HPX_NON_NULL(1);
-
-
-HPX_INTERNAL hpx_locality_t network_get_shutdown_src(network_class_t *network)
-  HPX_NON_NULL(1);
+///
+void network_flush_on_shutdown(network_class_t *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_H

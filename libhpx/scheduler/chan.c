@@ -100,7 +100,7 @@ _chan_fini(lco_t *lco)
     node = c->head->next;
   }
 
-  global_free(c);
+  libhpx_global_free(c);
 }
 
 static void
@@ -345,7 +345,7 @@ _register_actions(void) {
 ///
 /// @returns the global address of the allocated channel
 hpx_addr_t hpx_lco_chan_new(void) {
-  _chan_t *local = global_malloc(sizeof(_chan_t));
+  _chan_t *local = libhpx_global_malloc(sizeof(_chan_t));
   assert(local);
   _chan_init(local);
   return lva_to_gva(local);
@@ -464,7 +464,7 @@ hpx_lco_chan_array_at(hpx_addr_t array, int i, int size, int bsize) {
 void
 hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync) {
   dbg_log_lco("chan: array delete unimplemented");
-  if (!hpx_addr_eq(sync, HPX_NULL))
+  if (sync)
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 

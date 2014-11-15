@@ -285,6 +285,9 @@
 #undef p2rz
 #undef pages_purge
 #undef pow2_ceil
+#undef prof_active_get
+#undef prof_active_get_unlocked
+#undef prof_active_set
 #undef prof_alloc_prep
 #undef prof_alloc_rollback
 #undef prof_backtrace
@@ -292,6 +295,7 @@
 #undef prof_boot1
 #undef prof_boot2
 #undef prof_bt_count
+#undef prof_dump_header
 #undef prof_dump_open
 #undef prof_free
 #undef prof_free_sampled_object
@@ -315,6 +319,8 @@
 #undef prof_tdata_get
 #undef prof_tdata_init
 #undef prof_thread_active_get
+#undef prof_thread_active_init_get
+#undef prof_thread_active_init_set
 #undef prof_thread_active_set
 #undef prof_thread_name_get
 #undef prof_thread_name_set
@@ -384,12 +390,14 @@
 #undef tsd_boot
 #undef tsd_cleanup
 #undef tsd_cleanup_wrapper
+#undef tsd_fetch
 #undef tsd_get
 #undef tsd_get_wrapper
 #undef tsd_initialized
 #undef tsd_init_check_recursion
 #undef tsd_init_finish
 #undef tsd_init_head
+#undef tsd_nominal
 #undef tsd_quarantine_get
 #undef tsd_quarantine_set
 #undef tsd_set
@@ -405,7 +413,6 @@
 #undef tsd_thread_allocated_set
 #undef tsd_thread_deallocated_get
 #undef tsd_thread_deallocated_set
-#undef tsd_tryget
 #undef u2rz
 #undef valgrind_freelike_block
 #undef valgrind_make_mem_defined

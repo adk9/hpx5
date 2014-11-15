@@ -1,0 +1,54 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+
+/// Standard declarative option list, designed for multiple inclusion. Before
+/// including this file #define the LIBHPX_DECL_OPTION() macro to expand the
+/// options as you wish.
+///
+
+/// LIBHPX_DECL_OPTION(group, type, id, default)
+///
+/// @param     group The option category.
+/// @param      type The option type.
+/// @param     ctype The C type for the option.
+/// @param        id The option category.
+/// @param   default The default value.
+
+#ifndef LIBHPX_DECL_OPTION
+# warning options.def included without LIBHPX_DECL_OPTION define
+# define LIBHPX_DECL_OPTION(group, type, ctype, id, default)
+# define _LIBHXP_DECL_OPTION_UNDEF
+#endif
+
+LIBHPX_DECL_OPTION(hpx, arg, int, cores, 0)
+LIBHPX_DECL_OPTION(hpx, arg, int, threads, 0)
+LIBHPX_DECL_OPTION(hpx, arg, unsigned int, backoffmax, 1024)
+LIBHPX_DECL_OPTION(hpx, arg, int, stacksize, 32768)
+LIBHPX_DECL_OPTION(hpx, arg, size_t, heapsize, 1lu << 30)
+LIBHPX_DECL_OPTION(hpx, arg, hpx_gas_t, gas, HPX_GAS_PGAS)
+LIBHPX_DECL_OPTION(hpx, arg, hpx_boot_t, boot, HPX_BOOT_DEFAULT)
+LIBHPX_DECL_OPTION(hpx, arg, hpx_transport_t, transport, HPX_TRANSPORT_DEFAULT)
+LIBHPX_DECL_OPTION(hpx, arg, hpx_locality_t, waitat, HPX_LOCALITY_NONE)
+LIBHPX_DECL_OPTION(hpx, arg[0], hpx_log_t, loglevel, HPX_LOG_DEFAULT)
+LIBHPX_DECL_OPTION(hpx, arg, uint32_t, reqlimit, 0)
+LIBHPX_DECL_OPTION(hpx, arg, char *, configfile, 0)
+LIBHPX_DECL_OPTION(hpx, flag, int, statistics, 1)
+
+LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
+LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
+
+
+#ifdef _LIBHPX_DECL_OPTION_UNDEF
+# undef LIBHPX_DECL_OPTION
+# undef _LIBHPX_DECL_OPTION_UNDEF
+#endif

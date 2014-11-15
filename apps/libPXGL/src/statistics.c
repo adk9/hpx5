@@ -53,7 +53,7 @@ dcmp (const void *a, const void *b)
   return 0;
 }
 
-void statistics (double *out, double *data, int64_t n)
+void statistics (double *out, double *data, sssp_int_t n)
 {
   long double s, mean;
   double t;

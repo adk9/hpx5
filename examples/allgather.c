@@ -26,7 +26,6 @@
 typedef struct {
   int nDoms;
   int maxCycles;
-  int cores;
 } main_args_t;
 
 typedef struct Domain {
@@ -42,7 +41,6 @@ typedef struct {
   int           index;
   int           nDoms;
   int       maxcycles;
-  int           cores;
   hpx_addr_t complete;
   hpx_addr_t newdt;
 } InitArgs;
@@ -55,15 +53,8 @@ static hpx_action_t _advanceDomain = 0;
 
 static void
 _usage(FILE *f, int error) {
-  fprintf(f, "Usage: ./example [options] [CYCLES]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-s, stack size in bytes\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
+  fprintf(f, "Usage: ./allgather [options] [CYCLES]\n"
           "\t-n, number of domains\n"
-          "\t-i, maxcycles\n"
           "\t-h, show help\n");
   fflush(f);
   exit(error);
@@ -133,8 +124,8 @@ allgather_main_action(const main_args_t *args)
 {
   hpx_time_t t1 = hpx_time_now();
 
-  printf("Number of domains: %d maxCycles: %d cores: %d\n",
-         args->nDoms, args->maxCycles, args->cores);
+  printf("Number of domains: %d maxCycles: %d\n",
+         args->nDoms, args->maxCycles);
   fflush(stdout);
 
   hpx_addr_t domain = hpx_gas_global_alloc(args->nDoms, sizeof(Domain));
@@ -150,7 +141,6 @@ allgather_main_action(const main_args_t *args)
       .index = i,
       .nDoms = args->nDoms,
       .maxcycles = args->maxCycles,
-      .cores = args->cores,
       .complete = complete,
       .newdt = newdt
     };
@@ -182,78 +172,51 @@ allgather_main_action(const main_args_t *args)
 void
 allgather_init_actions(void)
 {
-  _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
+  _initDomain    = HPX_REGISTER_ACTION(_initDomain_action);
   _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
 }
 
 int
-main(int argc, char * const argv[argc])
+main(int argc, char *argv[])
 {
   // allocate the default argument structure on the stack
   main_args_t args = {
     .nDoms = 8,
     .maxCycles = 1,
-    .cores = 8
   };
 
-  // allocate the default HPX configuration on the stack
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+  // initialize HPX
+  int err = hpx_init(&argc, &argv);
+  if (err)
+    return err;
 
   // parse the command line
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:s:d:D:n:i:h")) != -1) {
+  while ((opt = getopt(argc, argv, "n:h?")) != -1) {
     switch (opt) {
-     case 'c':
-      args.cores = cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 's':
-      cfg.stack_bytes = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
      case 'n':
       args.nDoms = atoi(optarg);
       break;
      case 'h':
-      _usage(stdout, 0);
+      _usage(stdout, EXIT_SUCCESS);
      case '?':
      default:
-      _usage(stderr, -1);
+      _usage(stderr, EXIT_FAILURE);
     }
   }
-
-  // initialize HPX
-  int err = hpx_init(&cfg);
-  if (err)
-    return err;
 
   argc -= optind;
   argv += optind;
 
   switch (argc) {
    case 1:
-    args.maxCycles = atoi(argv[0]);
-    break;
+     args.maxCycles = atoi(argv[0]);
+     break;
    case 0:
     break;
    default:
-    _usage(stderr, -1);
-    return -1;
+     _usage(stderr, EXIT_FAILURE);
   }
-
 
   // register HPX actions
   allgather_init_actions();

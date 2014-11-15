@@ -64,7 +64,7 @@ static void _future_fini(lco_t *lco) {
   _future_t *f = (void*)lco;
   if (f)
     lco_lock(&f->lco);
-  global_free(f);
+  libhpx_global_free(f);
 }
 
 /// Copies @p from into the appropriate location.
@@ -174,7 +174,8 @@ static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
 
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *local = global_malloc(sizeof(_future_t) + size);
+  _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
+  assert(local);
   _future_init(local, size);
   return lva_to_gva(local);
 }

@@ -146,12 +146,6 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   verbs_ctx.tx_depth = _LEDGER_SIZE;
   verbs_ctx.rx_depth = _LEDGER_SIZE;
 
-  if (cfg->ibv.ib_dev)
-    verbs_ctx.ib_dev = cfg->ibv.ib_dev;
-
-  if (cfg->ibv.ib_port)
-    verbs_ctx.ib_port = cfg->ibv.ib_port;
-
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
     goto error_exit;
@@ -160,7 +154,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   if (cfg->ibv.use_ud) {
     verbs_ctx.use_ud = cfg->ibv.use_ud;
     
-    dbg_info("create ah_table");
+    dbg_trace("create ah_table");
     ah_table = htable_create(1009);
     if (!ah_table) {
       log_err("Failed to allocate AH table");
@@ -226,7 +220,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   
   __initialized = 1;
 
-  dbg_info("ended successfully =============");
+  dbg_trace("ended successfully =============");
 
   return PHOTON_OK;
 

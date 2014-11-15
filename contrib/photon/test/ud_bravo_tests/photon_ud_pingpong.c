@@ -16,8 +16,8 @@
 #define PONG         1
 
 #define SUBTRACT_TV(E,S) (((E).tv_sec - (S).tv_sec) + ((E).tv_usec - (S).tv_usec)/1e6)
-//#define dbg_printf(format, args...) fprintf(stderr, format, ## args);
-#define dbg_printf(format, args...)
+//#define dbg_printf(format, ...) fprintf(stderr, format, __VA_ARGS__);
+#define dbg_printf(format, ...)
 
 enum test_type {PHOTON_TEST,
                 PHOTON_UD_TEST,

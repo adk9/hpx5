@@ -27,13 +27,13 @@ static hpx_addr_t rand_rank(void) {
 static hpx_action_t send = 0;
 static hpx_action_t increment = 0;
 
-static int increment_action(int *args) {
+static int _increment_action(int *args) {
   int n = *args + 1;
   HPX_THREAD_CONTINUE(n);
 }
 
 
-static int send_action(int *args) {
+static int _send_action(int *args) {
   int n = *args;
   int i = 0;
   while (i < n) {
@@ -43,47 +43,29 @@ static int send_action(int *args) {
   hpx_shutdown(HPX_SUCCESS);
 }
 
-static void usage(FILE *f) {
-  fprintf(f, "Usage: countdown [options] ROUNDS \n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
+static void usage(FILE *f, int error) {
+  fprintf(f, "Usage: future [options] ROUNDS \n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
+  exit(error);
 }
 
 int main(int argc, char * argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
      case 'h':
-      usage(stdout);
-      return 0;
+       usage(stdout, EXIT_SUCCESS);
      case '?':
      default:
-      usage(stderr);
-      return -1;
+       usage(stderr, EXIT_FAILURE);
     }
   }
 
@@ -93,19 +75,13 @@ int main(int argc, char * argv[argc]) {
   int n = 0;
   switch (argc) {
    default:
-    usage(stderr);
-    return -1;
+     usage(stderr, EXIT_FAILURE);
    case (1):
-    n = atoi(argv[0]);
-    break;
+     n = atoi(argv[0]);
+     break;
   }
 
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
-  }
-
-  send      = HPX_REGISTER_ACTION(send_action);
-  increment = HPX_REGISTER_ACTION(increment_action);
+  send      = HPX_REGISTER_ACTION(_send_action);
+  increment = HPX_REGISTER_ACTION(_increment_action);
   return hpx_run(send, &n, sizeof(n));
 }

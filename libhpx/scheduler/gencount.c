@@ -50,7 +50,7 @@ static void _gencount_fini(lco_t *lco) {
 
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
-  global_free(gencnt);
+  libhpx_global_free(gencnt);
 }
 
 
@@ -156,7 +156,8 @@ static HPX_CONSTRUCTOR void _initialize_actions(void) {
 
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace) {
-  _gencount_t *cnt = global_malloc(sizeof(*cnt) + ninplace * sizeof(cvar_t));
+  _gencount_t *cnt = libhpx_global_malloc(sizeof(*cnt) +
+                                          ninplace * sizeof(cvar_t));
   assert(cnt);
   _gencount_init(cnt, ninplace);
   return lva_to_gva(cnt);

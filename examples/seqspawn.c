@@ -23,19 +23,18 @@
 /// series of NOP threads are spawned sequentially.
 /// ----------------------------------------------------------------------------
 
-static void _usage(FILE *stream) {
+static void _usage(FILE *stream, int error) {
   fprintf(stream, "Usage: seqspawn [options] NUMBER\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
           "\t-h, this help display\n");
+  hpx_print_help();
+  fflush(stream);
+  exit(error);
 }
 
 static hpx_action_t _nop  = 0;
 static hpx_action_t _main = 0;
 
-// The empty action
+/// The empty action
 static int _nop_action(hpx_addr_t *args) {
   hpx_thread_continue(0, NULL);
 }
@@ -58,43 +57,23 @@ static int _main_action(int *args) {
   hpx_shutdown(HPX_SUCCESS);
 }
 
-/// ----------------------------------------------------------------------------
 /// The main function parses the command line, sets up the HPX runtime system,
 /// and initiates the first HPX thread to perform seqspawn(n).
-///
-/// @param argc    - number of strings
-/// @param argv[0] - seqspawn
-/// @param argv[1] - number of cores to use, '0' means use all
-/// @param argv[2] - n
-/// ----------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  //cfg.gas          = HPX_GAS_SMP;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return -1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
      case 'h':
-      _usage(stdout);
-      return 0;
+       _usage(stdout, EXIT_SUCCESS);
      case '?':
      default:
-      _usage(stderr);
-      return -1;
+       _usage(stderr, EXIT_FAILURE);
     }
   }
 
@@ -104,18 +83,12 @@ int main(int argc, char *argv[]) {
   int n = 0;
   switch (argc) {
    case 0:
-    fprintf(stderr, "\nMissing fib number.\n"); // fall through
+     fprintf(stderr, "\nMissing spawn count.\n");
    default:
-    _usage(stderr);
-    return -1;
+     _usage(stderr, EXIT_FAILURE);
    case 1:
      n = atoi(argv[0]);
      break;
-  }
-
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return 1;
   }
 
   // register the actions

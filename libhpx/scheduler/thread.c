@@ -14,146 +14,126 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// User level stacks.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <errno.h>
 
-#include "hpx/builtins.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "asm.h"
+#include <hpx/builtins.h>
+#include <jemalloc/jemalloc.h>
+#include <valgrind/valgrind.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
 #include "thread.h"
 
-
-#define _DEFAULT_PAGES 4
-
-
+static int _buffer_size = 0;
 static int _thread_size = 0;
-static uint32_t  _mxcsr = 0;
-static uint16_t  _fpucw = 0;
 
-
-static void HPX_CONSTRUCTOR _init_thread(void) {
-  get_mxcsr(&_mxcsr);
-  get_fpucw(&_fpucw);
-  thread_set_stack_size(0);
+void thread_set_stack_size(int stack_bytes) {
+  assert(stack_bytes);
+  int pages = ceil_div_32(stack_bytes, HPX_PAGE_SIZE);
+  _thread_size = pages * HPX_PAGE_SIZE;
+  _buffer_size = _thread_size;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (here->config->mprotectstacks)
+    _buffer_size = _buffer_size + 2 * HPX_PAGE_SIZE;
+#endif
 }
 
 
-/// ----------------------------------------------------------------------------
-/// A structure describing the initial frame on a stack.
+#ifdef ENABLE_DEBUG
+/// Update the protections on the first and last page in the stack.
 ///
-/// This must match the transfer.S asm file usage.
-///
-/// This should be managed in an asm-specific manner, but we are just worried
-/// about x86-64 at the moment.
-/// ----------------------------------------------------------------------------
-#ifndef __x86_64__
-#error No stack frame for your architecture
-#else
-typedef struct {
-  uint32_t     mxcsr;                           // 8
-  uint16_t     fpucw;                           // 8.5
-  uint16_t   padding;                           // 8.74 has to match transfer.S
-  void          *rdi;                           // 7 passes initial parcel
-  void          *r15;                           // 6
-  void          *r14;                           // 5
-  void          *r13;                           // 4
-  void          *r12;                           // 3
-  void          *rbx;                           // 2
-  void          *rbp;                           // 1
-  thread_entry_t rip;                           // 0
-  void *alignment[1];                           // offset for stack alignment
-} HPX_PACKED _frame_t;
+/// @param         base The base address.
+/// @param         prot The new permissions.
+static void _mprot(void *base, int prot) {
+  char *p1 = base;
+  char *p2 = p1 + _thread_size + HPX_PAGE_SIZE;
+  int e1 = mprotect(p1, HPX_PAGE_SIZE, prot);
+  int e2 = mprotect(p2, HPX_PAGE_SIZE, prot);
+
+  if (e1 || e2) {
+    dbg_error("Mprotect error: %d (EACCES %d, EINVAL %d, ENOMEM %d)\n", errno,
+              EACCES, EINVAL, ENOMEM);
+  }
+}
 #endif
 
-
-static _frame_t *_get_top_frame(ustack_t *stack) {
-  return (_frame_t*)((char*)stack + _thread_size - sizeof(_frame_t));
-}
-
-
-void
-thread_set_stack_size(int stack_bytes) {
-  if (!stack_bytes) {
-    thread_set_stack_size(HPX_PAGE_SIZE * _DEFAULT_PAGES);
-    return;
+/// Protect the stack so that stack over/underflow will result in a segfault.
+///
+/// This returns the correct address for use in the stack structure. When we're
+/// protecting the stack we want a 1-page offset here.
+static ustack_t *_protect(void *base) {
+  ustack_t *stack = base;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (!here->config->mprotectstacks) {
+    return stack;
   }
-
-  // don't care about performance
-  int pages = stack_bytes / HPX_PAGE_SIZE;
-  pages += (stack_bytes % HPX_PAGE_SIZE) ? 1 : 0;
-  _thread_size = HPX_PAGE_SIZE * pages;
-}
-
-
-void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f) {
-  // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(stack);
-  frame->mxcsr   = _mxcsr;
-  frame->fpucw   = _fpucw;
-  frame->rdi     = parcel;
-  frame->rbp     = &frame->rip;
-  frame->rip     = f;
-
-  // set the stack stuff
-  stack->sp            = frame;
-  stack->next          = NULL;
-  stack->parcel        = parcel;
-  stack->tls_id        = -1;
-  stack->affinity      = -1;
-  stack->wait_affinity = -1;
-}
-
-ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  ustack_t *stack = global_valloc(_thread_size);
-  assert(stack);
-  thread_init(stack, parcel, f);
+  _mprot(base, PROT_NONE);
+  stack = (ustack_t*)((char*)base + HPX_PAGE_SIZE);
+#endif
   return stack;
 }
 
-void thread_delete(ustack_t *stack) {
-  global_free(stack);
+
+/// Unprotect the stack so that the pages can be reused.
+///
+/// This returns the base address of the original allocation so that it can be
+/// freed by the caller.
+static void *_unprotect(ustack_t *stack) {
+  void *base = stack;
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (!here->config->mprotectstacks) {
+    return base;
+  }
+  base = (char*)stack - HPX_PAGE_SIZE;
+  _mprot(base, PROT_READ | PROT_WRITE);
+#endif
+  return base;
 }
 
-#if 0
-#include "libsync/sync.h"
+/// Register a stack with valgrind, so that it doesn't incorrectly complain
+/// about stack accesses.
+static int _register(ustack_t *thread) {
+  void *begin = &thread->stack[0];
+  void *end = &thread->stack[_thread_size - sizeof(*thread)];
+  return VALGRIND_STACK_REGISTER(begin, end);
+}
 
-static uint64_t _stacks = 0;
+static void _deregister(ustack_t *thread) {
+  VALGRIND_STACK_DEREGISTER(thread->stack_id);
+}
+
+static size_t _alignment(void) {
+#ifdef ENABLE_DEBUG
+  assert(here && here->config);
+  if (here->config->mprotectstacks) {
+    return HPX_PAGE_SIZE;
+  }
+  else
+#endif
+    return 16;
+}
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  sync_fadd(&_stacks, 1, SYNC_ACQ_REL);
-  // Allocate a page-aligned thread structure, along with a guard page to detect
-  // stack overflow.
-  char *m = valloc(HPX_PAGE_SIZE + _thread_size);
-  assert(m);
+  void *base = NULL;
+  int e = posix_memalign((void**)&base, _alignment(), _buffer_size);
+  assert(!e);
+  assert((uintptr_t)base % _alignment() == 0);
 
-  // set up the guard page at the top of the thread structure
-  int e = mprotect((void*)m, HPX_PAGE_SIZE, PROT_NONE);
-  if (e) {
-    uint64_t stacks;
-    sync_load(stacks, &_stacks, SYNC_ACQUIRE);
-    dbg_error("thread: failed to mark a guard page for thread %lu.\n", stacks);
-    hpx_abort();
-  }
-
-  ustack_t *stack = (ustack_t*)(m + HPX_PAGE_SIZE);
-  thread_init(stack, parcel, f);
-  return stack;
+  ustack_t *thread = _protect(base);
+  thread->stack_id = _register(thread);
+  thread_init(thread, parcel, f, _thread_size);
+  return thread;
 }
 
-void thread_delete(ustack_t *stack) {
-  char *block = (char*)stack - HPX_PAGE_SIZE;
-  int e = mprotect(block, HPX_PAGE_SIZE, PROT_READ | PROT_WRITE);
-  if (e) {
-    dbg_error("thread: failed to unprotect the guard page.\n");
-    // don't abort
-  }
-  free(block);
+void thread_delete(ustack_t *thread) {
+  _deregister(thread);
+  void *base = _unprotect(thread);
+  free(base);
 }
-
-#endif

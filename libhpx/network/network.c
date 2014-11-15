@@ -24,7 +24,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libsync/queues.h"
+#include <libsync/sync.h>
+#include <libsync/queues.h>
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
@@ -40,36 +41,58 @@
 #define _QUEUE_T _QUEUE(, _t)
 #define _QUEUE_INIT _QUEUE(sync_, _init)
 #define _QUEUE_FINI _QUEUE(sync_, _fini)
-#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
-#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
+#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue_node)
+#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue_node)
+#define _QUEUE_NODE _QUEUE(,_node_t)
 
-
-/// ----------------------------------------------------------------------------
 /// The network class data.
-/// ----------------------------------------------------------------------------
 struct network_class {
   _QUEUE_T                         tx;          // half duplex port for send
   _QUEUE_T                         rx;          // half duplex port
-  hpx_locality_t         shutdown_src;          // the HPX locality that
-                                                // called hpx_shutdown()
   routing_t                  *routing;          // for adaptive routing
+  int                           flush;
 };
 
 
 void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(&network->tx, p);
+  assert(p);
+  _QUEUE_NODE *node = malloc(sizeof(*node));
+  assert(node);
+  node->value = p;
+  node->next = NULL;
+  _QUEUE_ENQUEUE(&network->tx, node);
 }
 
+
 hpx_parcel_t *network_tx_dequeue(network_class_t *network) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->tx);
+  hpx_parcel_t *p  = NULL;
+  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->tx);
+  if (node) {
+    p = node->value;
+    assert(p);
+    free(node);
+  }
+  return p;
 }
 
 void network_rx_enqueue(network_class_t *network, hpx_parcel_t *p) {
-  _QUEUE_ENQUEUE(&network->rx, p);
+  assert(p);
+  _QUEUE_NODE *node = malloc(sizeof(*node));
+  assert(node);
+  node->value = p;
+  node->next = NULL;
+  _QUEUE_ENQUEUE(&network->rx, node);
 }
 
 hpx_parcel_t *network_rx_dequeue(network_class_t *network) {
-  return (hpx_parcel_t*)_QUEUE_DEQUEUE(&network->rx);
+  hpx_parcel_t *p  = NULL;
+  _QUEUE_NODE *node = _QUEUE_DEQUEUE(&network->rx);
+  if (node) {
+    p = node->value;
+    assert(p);
+    free(node);
+  }
+  return p;
 }
 
 
@@ -87,14 +110,15 @@ network_class_t *network_new(void) {
   _QUEUE_INIT(&n->tx, NULL);
   _QUEUE_INIT(&n->rx, NULL);
 
-  n->shutdown_src = HPX_LOCALITY_NONE;
-
   n->routing = routing_new();
   if (!n->routing) {
     dbg_error("network: failed to start routing update manager.\n");
     free(n);
     return NULL;
   }
+
+  n->flush = 0;
+  dbg_log("initialized parcel network.\n");
   return n;
 }
 
@@ -105,18 +129,29 @@ void network_delete(network_class_t *network) {
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = _QUEUE_DEQUEUE(&network->tx)))
+  while ((p = network_tx_dequeue(network))) {
     hpx_parcel_release(p);
+  }
   _QUEUE_FINI(&network->tx);
 
-  while ((p =_QUEUE_DEQUEUE(&network->rx)))
+  while ((p = network_rx_dequeue(network))) {
     hpx_parcel_release(p);
+  }
   _QUEUE_FINI(&network->rx);
 
-  if (network->routing)
+  if (network->routing) {
     routing_delete(network->routing);
+  }
 
   free(network);
+}
+
+
+void network_shutdown(network_class_t *network) {
+  if (network->flush)
+    transport_progress(here->transport, TRANSPORT_FLUSH);
+  else
+    transport_progress(here->transport, TRANSPORT_CANCEL);
 }
 
 
@@ -125,16 +160,10 @@ void network_barrier(network_class_t *network) {
 }
 
 
-void network_set_shutdown_src(network_class_t *network, hpx_locality_t locality) {
-  network->shutdown_src = locality;
-}
-
-
-hpx_locality_t network_get_shutdown_src(network_class_t *network) {
-  return network->shutdown_src;
-}
-
-
 routing_t *network_get_routing(network_class_t *network) {
   return network->routing;
+}
+
+void network_flush_on_shutdown(network_class_t *network) {
+  network->flush = 1;
 }

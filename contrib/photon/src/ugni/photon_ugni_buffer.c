@@ -31,7 +31,7 @@ static int __ugni_buffer_register(photonBI dbuffer, void *ctx) {
     goto error_exit;
   }
 
-  dbg_info("GNI_MemRegister size: %lu address: %p", dbuffer->buf.size, dbuffer->buf.addr);
+  dbg_trace("GNI_MemRegister size: %lu address: %p", dbuffer->buf.size, dbuffer->buf.addr);
 
   smdh = malloc(sizeof(mdh));
   *smdh = mdh;
@@ -57,7 +57,7 @@ static int __ugni_buffer_unregister(photonBI dbuffer, void *ctx) {
     dbg_err("GNI_MemDeregister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
-  dbg_info("GNI_MemDeregister (%p)", (void *)dbuffer->buf.addr);
+  dbg_trace("GNI_MemDeregister (%p)", (void *)dbuffer->buf.addr);
 
   dbuffer->is_registered = 0;
 

@@ -82,24 +82,11 @@ action_allreduce(void *unused) {
 }
 
 int main(int argc, char** argv) {
-  
-  hpx_config_t config = HPX_CONFIG_DEFAULTS;
 
-  switch (argc) {
-   default:
-    fprintf(stderr, "Usage: allreduce [optional THREADS].\n");
-    return -1;
-   case (2):
-    config.threads = atoi(argv[2]);
-    break;
-   case (1):
-    break;
-  }
-
-  int success = hpx_init(&config);
+  int success = hpx_init(&argc, &argv);
   if (success != 0) {
     printf("Error %d in hpx_init!\n", success);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   // register action for parcel
@@ -108,7 +95,7 @@ int main(int argc, char** argv) {
   allreduce = hpx_register_action("allreduce", action_allreduce);
 
   // Initialize the values that we want to reduce
-  value = hpx_get_my_rank();
+  value = HPX_LOCALITY_ID;
 
   return hpx_run(allreduce, NULL, 0);
 }

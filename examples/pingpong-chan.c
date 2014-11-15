@@ -110,36 +110,23 @@ static int _main_action(void *args) {
 
 
 static void usage(FILE *f) {
-  fprintf(f, "Usage: [options]\n"
-          "\t-c, cores\n"
-          "\t-t, scheduler threads\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
+  fprintf(f, "Usage: pingpong-chan [options]\n"
           "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
 }
 
 
 int main(int argc, char *argv[argc]) {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
-  //cfg.gas          = HPX_GAS_SMP;
+
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "HPX failed to initialize.\n");
+    return 1;
+  }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:d:Dh")) != -1) {
+  while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
-      case 'c':
-        cfg.cores = atoi(optarg);
-        break;
-      case 't':
-        cfg.threads = atoi(optarg);
-        break;
-      case 'D':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = HPX_LOCALITY_ALL;
-        break;
-      case 'd':
-        cfg.wait = HPX_WAIT;
-        cfg.wait_at = atoi(optarg);
-        break;
       case 'h':
         usage(stdout);
         return 0;
@@ -148,11 +135,6 @@ int main(int argc, char *argv[argc]) {
         usage(stderr);
         return -1;
     }
-  }
-
-  if (hpx_init(&cfg)) {
-    fprintf(stderr, "HPX failed to initialize.\n");
-    return 1;
   }
 
   if (HPX_THREADS < 2) {

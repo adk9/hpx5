@@ -15,7 +15,6 @@
 
 #include "hpx/attributes.h"
 #include "hpx/action.h"
-#include "hpx/config.h"
 
 /// @file
 /// @brief HPX system interface.
@@ -39,9 +38,10 @@
 /// scheduler, network, and locality and should be called before any other HPX
 /// functions.
 ///
-/// @param config HPX runtime confoguration; may be HPX_NULL
+/// @param argc   count of command-line arguments
+/// @param argv   array of command-line arguments
 /// @returns      HPX_SUCCESS on success
-int hpx_init(const hpx_config_t *config);
+int hpx_init(int *argc, char ***argv);
 
 
 /// Start the HPX runtime, and run a given action.
@@ -51,30 +51,22 @@ int hpx_init(const hpx_config_t *config);
 /// invoked only on the root locality. On termination, it deletes the
 /// main process and returns the status returned by hpx_shutdown()
 ///
+/// hpx_run finalizes action registration, starts up any scheduler and
+/// native threads that need to run, and transfers all control into
+/// the HPX scheduler, beginning execution of the top action in the
+/// scheduler queue.
+///
+/// The scheduler queue could be empty, in which case the entire
+/// scheduler instance is running, waiting for a successful
+/// inter-locality steal operation (if that is implemented) or a
+/// network parcel.
+///
 /// @param entry an action to execute, or HPX_ACTION NULL to wait for an
 ///              incoming parcel or a inter-locality steal (if implemented)
 /// @param  args arguments to pass to @p entry
 /// @param  size the size of @p args
 /// @returns     the status code passed to hpx_shutdown() upon termination
 int hpx_run(hpx_action_t entry, const void *args, size_t size);
-
-
-/// Start the HPX runtime.
-///
-/// This finalizes action registration, starts up any scheduler and
-/// native threads that need to run, and transfers all control into
-/// the HPX scheduler, beginning execution of the top action in the
-/// scheduler queue. Returns the hpx_shutdown() code.
-///
-/// The scheduler queue could be empty, in which case the entire
-/// scheduler instance is running, waiting for a successful
-/// inter-locality steal operation (if that is implemented) or a
-/// network parcel. This function returns when a thread calls
-/// hpx_shutdown() explicitly, or when the runtime sets the @p
-/// termination LCO to signal termination.
-///
-/// @returns           the status code passed to hpx_shutdown() upon termination
-int hpx_start(void);
 
 
 /// Shutdown the HPX runtime.
@@ -105,5 +97,10 @@ void hpx_shutdown(int code)
 void hpx_abort(void)
   HPX_NORETURN;
 
+
+/// Print the help string associated with the runtime configuration
+/// options supported by the HPX runtime.
+///
+void hpx_print_help(void);
 
 #endif

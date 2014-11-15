@@ -9,9 +9,6 @@ _SBN1_result_action(NodalArgs *args) {
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  // 0. wait for the right generation to become active
-  hpx_lco_gencount_wait(ld->epoch, args->epoch);
-
   // prepare for the unpack, do this here to minimize the time spent holding the
   // lock
   int srcLocalIdx = args->srcLocalIdx;
@@ -22,7 +19,7 @@ _SBN1_result_action(NodalArgs *args) {
   recv_t   unpack = RECEIVER[srcLocalIdx];
 
   // 1. acquire the domain lock
-  hpx_lco_sema_p(ld->sem_sbn1);
+  //  hpx_lco_sema_p(ld->sem_sbn1);
 
   // static unsigned count[8] = {0};
   // printf("recv %u %u\n", ld->rank, count[ld->rank]++);
@@ -32,7 +29,7 @@ _SBN1_result_action(NodalArgs *args) {
   unpack(nx, ny, nz, src, ld->nodalMass, 0);
 
   // 3. release the domain lock
-  hpx_lco_sema_v(ld->sem_sbn1);
+  //  hpx_lco_sema_v(ld->sem_sbn1);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -70,7 +67,7 @@ _SBN1_sends_action(pSBN *psbn)
   int     srcLocalIdx = 25 - srcRemoteIdx;
   int        distance = -OFFSET[srcLocalIdx];
   hpx_addr_t    local = hpx_thread_current_target();
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -128,9 +125,6 @@ int _SBN3_result_action(NodalArgs *args) {
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  // 0. wait for the right generation to become active
-  hpx_lco_gencount_wait(ld->epoch, args->epoch);
-
   // prepare for the unpack, do this here to minimize the time spent holding the
   // lock
   int srcLocalIdx = args->srcLocalIdx;
@@ -144,7 +138,7 @@ int _SBN3_result_action(NodalArgs *args) {
   int nz = ld->sizeZ + 1;
 
   // 1. acquire the domain lock
-  hpx_lco_sema_p(ld->sem_sbn3);
+  //  hpx_lco_sema_p(ld->sem_sbn3);
 
   // 2. update 
   unpack(nx, ny, nz, src, ld->fx, 0);
@@ -152,7 +146,7 @@ int _SBN3_result_action(NodalArgs *args) {
   unpack(nx, ny, nz, src + recvcnt*2, ld->fz, 0);
 
   // 3. release the domain lock
-  hpx_lco_sema_v(ld->sem_sbn3);
+  //  hpx_lco_sema_v(ld->sem_sbn3);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -194,7 +188,7 @@ int _SBN3_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -248,9 +242,6 @@ int _PosVel_result_action(NodalArgs *args) {
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  // 0. wait for the right generation to become active
-  hpx_lco_gencount_wait(ld->epoch, args->epoch);
-
   // prepare for the unpack, do this here to minimize the time spent holding the
   // lock
   int srcLocalIdx = args->srcLocalIdx;
@@ -264,7 +255,7 @@ int _PosVel_result_action(NodalArgs *args) {
   int nz = ld->sizeZ + 1;
 
   // 1. acquire the domain lock
-  hpx_lco_sema_p(ld->sem_posvel);
+  //  hpx_lco_sema_p(ld->sem_posvel);
 
   // 2. update 
   unpack(nx, ny, nz, src, ld->x, 1);
@@ -275,7 +266,7 @@ int _PosVel_result_action(NodalArgs *args) {
   unpack(nx, ny, nz, src + recvcnt*5, ld->zd, 1);
 
   // 3. release the domain lock
-  hpx_lco_sema_v(ld->sem_posvel);
+  //  hpx_lco_sema_v(ld->sem_posvel);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -321,7 +312,7 @@ int _PosVel_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;
@@ -380,16 +371,13 @@ int _MonoQ_result_action(NodalArgs *args) {
   if (!hpx_gas_try_pin(local, (void**)&ld))
     return HPX_RESEND;
 
-  // 0. wait for the right generation to become active
-  hpx_lco_gencount_wait(ld->epoch, args->epoch);
-
   // prepare for the unpack, do this here to minimize the time spent holding the
   // lock
   int srcLocalIdx = args->srcLocalIdx;
   double *src = args->buf;
 
   // 1. acquire the domain lock
-  hpx_lco_sema_p(ld->sem_monoq);
+  //  hpx_lco_sema_p(ld->sem_monoq);
 
   // move pointers to the ghost area
   double *delv_xi = ld->delv_xi;
@@ -409,7 +397,7 @@ int _MonoQ_result_action(NodalArgs *args) {
   memcpy(delv_zeta + i*planeElem, src + planeElem*2, sizeof(double)*planeElem);
 
   // 3. release the domain lock
-  hpx_lco_sema_v(ld->sem_monoq);
+  //  hpx_lco_sema_v(ld->sem_monoq);
 
   // 4. join the and for this epoch---the _advanceDomain action is waiting on
   //    this before it performs local computation for the epoch
@@ -458,7 +446,7 @@ int _MonoQ_sends_action(pSBN *psbn)
   int srcRemoteIdx = destLocalIdx;
   int srcLocalIdx = 25 - srcRemoteIdx;
   int distance = -OFFSET[srcLocalIdx];
-  hpx_addr_t neighbor = hpx_addr_add(local, sizeof(Domain) * distance, sizeof(Domain));
+  hpx_addr_t neighbor = hpx_addr_add(domain->base, sizeof(Domain) * (domain->rank + distance), sizeof(Domain));
 
   // pass along the source local index and epoch
   nodal->srcLocalIdx = srcLocalIdx;

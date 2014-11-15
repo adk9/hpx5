@@ -3,7 +3,7 @@ noinst_LTLIBRARIES	= libnetwork.la
 
 libnetwork_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/contrib
 libnetwork_la_CFLAGS   = 
-libnetwork_la_SOURCES  = locality.c network.c parcel.c heavy.c light.c \
+libnetwork_la_SOURCES  = locality.c network.c parcel.c light.c \
                          routing/routing.c routing/dummy.c
 libnetwork_la_LIBADD   =
 

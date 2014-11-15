@@ -24,13 +24,13 @@ libhpxmpi_la_CFLAGS   = -Wno-unused -Wno-implicit-function-declaration -Wno-unus
 
 if HAVE_PHOTON
 libhpxmpi_la_CFLAGS  += $(PHOTON_CFLAGS)
-libhpxmpi_la_LIBADD  += -lphoton @MPI_LIBS@ 
+libhpxmpi_la_LIBADD  += @MPI_LIBS@ 
 endif
 
 noinst_apps_PROGRAMS  = hpxmpi
 
 hpxmpi_SOURCES  = main.c
-hpxmpi_LDFLAGS  = -static
+hpxmpi_LDFLAGS  = 
 
 hpxmpi_CPPFLAGS = -I$(top_srcdir)/include
 hpxmpi_CFLAGS   = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
@@ -38,5 +38,5 @@ hpxmpi_LDADD    = libhpxmpi.la $(top_builddir)/libhpx/libhpx.la
 
 if HAVE_PHOTON
 hpxmpi_CFLAGS   += $(PHOTON_CFLAGS)
-hpxmpi_LDADD    += -lphoton @MPI_LIBS@
+hpxmpi_LDADD    += @MPI_LIBS@
 endif
