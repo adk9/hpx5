@@ -14,14 +14,16 @@
 #ifndef PXGL_ADJ_LIST_H
 #define PXGL_ADJ_LIST_H
 
+#include "defs.h"
+
 #include "edge_list.h"
 #include "hpx/hpx.h"
 
 // Distance
-typedef uint64_t distance_t;
+typedef sssp_uint_t distance_t;
 
 // Vertex Index
-typedef uint64_t vertex_t;
+typedef sssp_uint_t vertex_t;
 
 extern uint32_t _count_array_block_size;
 extern uint32_t _index_array_block_size;

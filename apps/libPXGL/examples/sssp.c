@@ -23,11 +23,6 @@
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 
-uint64_t active_count;
-uint64_t inactive_count;
-
-//#define VERBOSE 1
-
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
           "\t-k, use and-lco-based termination detection\n"
@@ -74,7 +69,7 @@ static int _print_vertex_distance_index_action(int *i)
 }
 
 
-static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **problems) {
+static int _read_dimacs_spec(char **filename, sssp_uint_t *nproblems, sssp_uint_t **problems) {
   FILE *f = fopen(*filename, "r");
   assert(f);
 
@@ -87,8 +82,8 @@ static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pr
         sscanf(&line[1], " %lu", &((*problems)[count++]));
         break;
       case 'p':
-        sscanf(&line[1], " aux sp ss %" PRIu64, nproblems);
-        *problems = malloc(*nproblems * sizeof(uint64_t));
+        sscanf(&line[1], " aux sp ss %" SSSP_UINT_PRI, nproblems);
+        *problems = malloc(*nproblems * sizeof(sssp_uint_t));
         assert(*problems);
         break;
       default:
@@ -103,10 +98,10 @@ static int _read_dimacs_spec(char **filename, uint64_t *nproblems, uint64_t **pr
 // Arguments for the main SSSP action
 typedef struct {
   char *filename;
-  uint64_t nproblems;
-  uint64_t *problems;
+  sssp_uint_t nproblems;
+  sssp_uint_t *problems;
   char *prob_file;
-  uint64_t time_limit;
+  sssp_uint_t time_limit;
   int realloc_adj_list;
 } _sssp_args_t;
 
@@ -161,9 +156,9 @@ static int _main_action(_sssp_args_t *args) {
   const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
   sargs.sssp_stat = sssp_stats;
 
-  uint64_t total_vertex_visit = 0;
-  uint64_t total_edge_traversal = 0;
-  uint64_t total_distance_updates = 0;
+  sssp_uint_t total_vertex_visit = 0;
+  sssp_uint_t total_edge_traversal = 0;
+  sssp_uint_t total_distance_updates = 0;
 #endif // GATHER_STAT
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
@@ -176,7 +171,7 @@ static int _main_action(_sssp_args_t *args) {
 
   for (int i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
-      printf("Time limit of %" PRIu64 " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
+      printf("Time limit of %" SSSP_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
       args->nproblems = i;
       break;
     }
@@ -307,7 +302,7 @@ static int _main_action(_sssp_args_t *args) {
 
 
 int main(int argc, char *argv[argc]) {
-  uint64_t time_limit = 1000;
+  sssp_uint_t time_limit = 1000;
   int realloc_adj_list = 0;
 
   int e = hpx_init(&argc, &argv);
@@ -365,8 +360,8 @@ int main(int argc, char *argv[argc]) {
      break;
   }
 
-  uint64_t nproblems;
-  uint64_t *problems;
+  sssp_uint_t nproblems;
+  sssp_uint_t *problems;
   // Read the DIMACS problem specification file
   _read_dimacs_spec(&problem_file, &nproblems, &problems);
 

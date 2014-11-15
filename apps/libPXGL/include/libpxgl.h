@@ -13,6 +13,9 @@
 #ifndef LIBPXGL_H
 #define LIBPXGL_H
 
+// Common definitions
+#include "defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

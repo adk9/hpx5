@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
-#define MODUL ((distance_t) 1 << 62)
+#define MODUL ((distance_t) 1 << (sizeof(distance_t) * 8 - 2))
 
 static void dimacs_checksum_op(distance_t *const output, const distance_t *const input, const size_t size) {
-  *output = *output + (*input == UINT64_MAX ? 0 : *input % MODUL) % MODUL;
+  *output = *output + (*input == SSSP_UINT_MAX ? 0 : *input % MODUL) % MODUL;
 }
 
 static void dimacs_checksum_init(void *init_val, const size_t init_val_size) {
@@ -45,7 +45,7 @@ static int _dimacs_visit_vertex_action(const hpx_addr_t *const args) {
 }
 
 hpx_action_t dimacs_checksum = 0;
-int dimacs_checksum_action(const uint64_t *const num_vertices) {
+int dimacs_checksum_action(const sssp_uint_t *const num_vertices) {
   const hpx_addr_t adj_list = hpx_thread_current_target();
   hpx_addr_t checksum_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(distance_t), (hpx_commutative_associative_op_t) dimacs_checksum_op, dimacs_checksum_init);
   // since we know how we have allocated the index block array, we

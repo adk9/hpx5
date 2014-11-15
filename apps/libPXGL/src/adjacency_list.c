@@ -80,7 +80,7 @@ static int _init_vertex_action(const hpx_addr_t * const vertices_sync) {
      return HPX_RESEND;
 
    vertex->num_edges = 0;
-   vertex->distance = UINT64_MAX;
+   vertex->distance = SSSP_UINT_MAX;
 
    hpx_lco_set(*vertices_sync, 0, NULL, HPX_NULL, HPX_NULL);
 
@@ -138,7 +138,7 @@ static int _put_edge_action(const _put_edge_args_t *args)
     return HPX_RESEND;
 
   // Increment the size of the vertex
-  uint64_t num_edges = sync_fadd(&vertex->num_edges, 1, SYNC_RELAXED);
+  sssp_uint_t num_edges = sync_fadd(&vertex->num_edges, 1, SYNC_RELAXED);
 
   vertex->edge_list[num_edges] = args->edge;
 
@@ -177,7 +177,7 @@ static int _insert_edge_action(const _insert_edge_args_t * const args)
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
-  const uint64_t source = edge->source;
+  const sssp_uint_t source = edge->source;
 
   adj_list_edge_t e;
   e.dest = edge->dest;
@@ -208,7 +208,7 @@ static int _print_edge_action(int *i)
     return HPX_RESEND;
 
   hpx_gas_unpin(target);
-  printf("%d %lu %lu %lu.\n", *i, edge->source, edge->dest, edge->weight);
+  printf("%d %" SSSP_UINT_PRI " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI ".\n", *i, edge->source, edge->dest, edge->weight);
   return HPX_SUCCESS;
 }
 
@@ -313,7 +313,7 @@ static int _init_vertex_distance_action(void *arg) {
    if (!hpx_gas_try_pin(target, (void**)&vertex))
      return HPX_RESEND;
 
-   vertex->distance = UINT64_MAX;
+   vertex->distance = SSSP_UINT_MAX;
 
    hpx_gas_unpin(target);
    return HPX_SUCCESS;
