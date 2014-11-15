@@ -29,14 +29,12 @@ HPX_INTERNAL void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1);
 static inline void sync_tatas_acquire(tatas_lock_t *l) HPX_NON_NULL(1);
 static inline void sync_tatas_release(tatas_lock_t *l) HPX_NON_NULL(1);
 
-void
-sync_tatas_acquire(tatas_lock_t *l) {
+void sync_tatas_acquire(tatas_lock_t *l) {
   if (sync_swap(&l->lock, 1, SYNC_ACQUIRE))
     sync_tatas_acquire_slow(l);
 }
 
-void
-sync_tatas_release(tatas_lock_t *l) {
+void sync_tatas_release(tatas_lock_t *l) {
   sync_store(&l->lock, 0, SYNC_RELEASE);
 }
 
@@ -56,6 +54,9 @@ struct clh_node * sync_clh_node_new(void)
 void sync_clh_node_delete(struct clh_node *node)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
+uintptr_t sync_clh_node_must_wait(struct clh_node *node)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
 struct clh_lock {
   struct clh_node *tail;
   const char _padding[HPX_CACHELINE_SIZE - sizeof(struct clh_node*)];
@@ -72,9 +73,46 @@ void sync_clh_lock_init(struct clh_lock *lock)
 void sync_clh_lock_fini(struct clh_lock *lock)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
+/// Perform the first half of a CLH acquire operation.
+///
+/// The returned node can be passed to sync_clh_node_must_wait() to test and see
+/// if the caller has acquired the lock. It should not be freed or modified in
+/// any other way during the spin.
+///
+/// @param         lock The CLH lock itself.
+/// @param            n The node to use for this operation. This is also the
+///                     node that should be passed into
+///                     sync_clh_lock_release().
+///
+/// @return             This returns the node that the caller must wait for in
+///                     order to acquire the lock.
+struct clh_node *sync_clh_lock_start_acquire(struct clh_lock *lock,
+                                             struct clh_node *n)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+
+
+/// Perform a blocking acquire operation for a CLH lock.
+///
+/// @param         lock The CLH lock itself.
+/// @param            n The node to use for this operation. This is also the
+///                     node that should be passed into
+///                     sync_clh_lock_release().
 void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
+
+/// Release a CLH lock.
+///
+/// @param         lock The CLH lock itself.
+/// @param            n The node to use for this operation. This is also the
+///                     node that should be passed into
+///                     sync_clh_lock_release().
+///
+/// @return             This returns an unused node that can either be freed (if
+///                     appropriate based on where nodes are coming from) or
+///                     used in a subsequent call to
+///                     sync_clh_lock_start_acquire() or
+///                     sync_clh_lock_acquire().
 struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL HPX_RETURNS_NON_NULL;
 
