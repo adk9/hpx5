@@ -88,11 +88,13 @@ void scheduler_delete(struct scheduler *sched) {
   free(sched);
 }
 
-int scheduler_startup(scheduler_t *sched) {
+int scheduler_startup(scheduler_t *sched, hpx_parcel_t *entry) {
   // start all of the other worker threads
   for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
-    if (worker_start(sched) != 0) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+    if (worker_start(sched, p) != 0) {
       dbg_error("could not start worker %d.\n", i);
+      hpx_parcel_release(p);
 
       for (int j = 0; j < i; ++j)
         worker_cancel(sched->workers[j]);
@@ -104,7 +106,11 @@ int scheduler_startup(scheduler_t *sched) {
     }
   }
 
-  worker_run(sched);
+  if (!entry) {
+    entry = hpx_parcel_acquire(NULL, 0);
+  }
+
+  worker_run(entry);
   scheduler_join(sched);
   return LIBHPX_OK;
 }

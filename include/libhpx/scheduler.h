@@ -108,9 +108,10 @@ void scheduler_delete(scheduler_t *scheduler)
 /// may come from the network, or from the main thread.
 ///
 /// @param    scheduler The scheduler to start.
+/// @param        entry An initial parcel to run.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(scheduler_t *scheduler)
+int scheduler_startup(scheduler_t *scheduler, hpx_parcel_t *entry)
   HPX_INTERNAL;
 
 

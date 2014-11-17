@@ -34,10 +34,11 @@ void *worker_run(void *sched)
 /// Starts a worker thread associated with a scheduler.
 ///
 /// @param        sched The scheduler instance this worker is associated with.
+/// @param        entry The initial parcel for the worker to run.
 ///
 /// @returns            LIBHPX_OK or an error code if the worker failed to
 ///                     start.
-int worker_start(struct scheduler *sched)
+int worker_start(struct scheduler *sched, hpx_parcel_t *entry)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
