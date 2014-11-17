@@ -122,11 +122,11 @@ static void _delete(struct network *o) {
   }
   _QUEUE_FINI(&network->rx);
 
-  for (int i = 0, e = network->nrx; i < e; ++i) {
-    sync_clh_node_delete(network->rxnodes[i].node);
-    assert(network->rxnodes[i].poll == NULL);
-  }
-  sync_clh_lock_fini(&network->rxlock);
+  // for (int i = 0, e = network->nrx; i < e; ++i) {
+  //   sync_clh_node_delete(network->rxnodes[i].node);
+  //   //assert(network->rxnodes[i].poll == NULL);
+  // }
+  // sync_clh_lock_fini(&network->rxlock);
 
   free(network);
 }
@@ -220,14 +220,7 @@ hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
 
   // see if the network thread noticed me yet
   hpx_parcel_t *p = sync_load(&rxn->stack, SYNC_ACQUIRE);
-  static int i = 0, j = 0;
-  if (p) {
-    (void)i;
-    dbg_log_trans("got a parcel %d.\n", i++);
-  }
-  else {
-    (void)j;
-    dbg_log_trans("didn't get a parcel %d.\n", j++);
+  if (!p) {
     return NULL;
   }
 
