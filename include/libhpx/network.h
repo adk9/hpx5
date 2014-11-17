@@ -124,12 +124,9 @@ hpx_parcel_t *network_tx_dequeue(struct network *network)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Used by the progress engine.
-void network_rx_enqueue(struct network *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
 int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
+
 
 void network_flush_on_shutdown(struct network *network)
   HPX_NON_NULL(1) HPX_INTERNAL;
