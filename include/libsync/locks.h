@@ -61,7 +61,6 @@ struct clh_lock {
 };
 
 #define SYNC_CLH_LOCK_INIT {                    \
-    .dummy = SYNC_CLH_NODE_INIT,                \
     .tail = NULL                                \
     }
 
@@ -113,5 +112,42 @@ void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
 ///                     sync_clh_lock_acquire().
 struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL HPX_RETURNS_NON_NULL;
+
+
+struct mcs_node {
+  struct mcs_node *next;
+  uintptr_t owner;
+};
+
+#define SYNC_MCS_NODE_INIT {                    \
+    .next = NULL,                               \
+    .owner = 0,                                 \
+    }
+
+uint64_t sync_mcs_node_test(struct mcs_node *)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+struct mcs_lock {
+  struct mcs_node *tail;
+};
+
+#define SYNC_MCS_LOCK_INIT {                    \
+    .tail = NULL                                \
+    }
+
+void sync_mcs_lock_init(struct mcs_lock *mcs)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+void sync_mcs_lock_fini(struct mcs_lock *mcs)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+void sync_mcs_lock_enter(struct mcs_lock *mcs, struct mcs_node *node)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+
+void sync_mcs_lock_acquire(struct mcs_lock *mcs, struct mcs_node *node)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+
+void sync_mcs_lock_release(struct mcs_lock *mcs, struct mcs_node *node)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 #endif /* HPX_SYNC_LOCKS_H_ */
