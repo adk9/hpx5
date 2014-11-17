@@ -26,7 +26,6 @@
 #include <hpx/hpx.h>
 #include <hpx/builtins.h>
 
-#include <libsync/backoff.h>
 #include <libsync/barriers.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
@@ -45,14 +44,6 @@
 #include "thread.h"
 #include "termination.h"
 #include "worker.h"
-
-static unsigned int _max(unsigned int lhs, unsigned int rhs) {
-  return (lhs > rhs) ? lhs : rhs;
-}
-
-static unsigned int _min(unsigned int lhs, unsigned int rhs) {
-  return (lhs < rhs) ? lhs : rhs;
-}
 
 #define CAT1(s, t) s##t
 
@@ -74,7 +65,7 @@ typedef struct worker {
   int                    id;                    // this workers's id
   int               core_id;                    // useful for "smart" stealing
   unsigned int         seed;                    // my random seed
-  unsigned int      backoff;                    // the backoff factor
+  int                UNUSED;
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
 PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
@@ -90,7 +81,6 @@ static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread worker_t self = {
   .id         = -1,
   .core_id    = -1,
   .seed       = UINT32_MAX,
-  .backoff    = 0,
   .sp         = NULL,
   .current    = NULL,
   .work       = SYNC_CHASE_LEV_WS_DEQUE_INIT,
@@ -153,38 +143,34 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @param          p The parcel that is generating this thread.
 
-static void _bind(hpx_parcel_t *p) {
+static void _try_bind(hpx_parcel_t *p) {
   assert(p);
-  assert(!parcel_get_stack(p));
-  ustack_t *stack = thread_new(p, _thread_enter);
-  parcel_set_stack(p, stack);
-}
-
-
-/// Backoff is called when there is nothing to do.
-///
-/// This is a place where we could do system maintenance for optimization, etc.,
-/// but was is important is that we not try and run any lightweight threads,
-/// based on our backoff integer.
-///
-/// Right now we just use the synchronization library's backoff.
-static void _backoff(void) {
-  // hpx_time_t now = hpx_time_now();
-  // sync_backoff(self.backoff);
-  // self.stats.backoff += hpx_time_elapsed_ms(now);
-  // profile_ctr(++self.stats.backoffs);
+  if (!parcel_get_stack(p)) {
+    ustack_t *stack = thread_new(p, _thread_enter);
+    parcel_set_stack(p, stack);
+  }
 }
 
 
 /// Process the next available parcel from our work queue in a fifo order.
-static hpx_parcel_t *_fifo(void) {
+static hpx_parcel_t *_try_fifo(void) {
   return sync_chase_lev_ws_deque_steal(&self.work);
 }
 
 
 /// Process the next available parcel from our work queue in a lifo order.
-static hpx_parcel_t *_lifo(void) {
+static hpx_parcel_t *_try_lifo(void) {
   return sync_chase_lev_ws_deque_pop(&self.work);
+}
+
+
+/// Process the next available yielded thread.
+static hpx_parcel_t *_try_yielded(void) {
+  hpx_parcel_t *p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded);
+  if (p) {
+    assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
+  }
+  return p;
 }
 
 
@@ -193,7 +179,7 @@ static hpx_parcel_t *_lifo(void) {
 /// NB: we can be much smarter about who to steal from and how much to
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
-static hpx_parcel_t *_steal(void) {
+static hpx_parcel_t *_try_steal(void) {
   int victim_id = rand_r(&self.seed) % here->sched->n_workers;
   if (victim_id == self.id)
     return NULL;
@@ -201,24 +187,26 @@ static hpx_parcel_t *_steal(void) {
   worker_t *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
-    self.backoff = _max(1, self.backoff >> 1);
     profile_ctr(++self.stats.steals);
-  }
-  else {
-    self.backoff = _min(here->sched->backoff_max, self.backoff << 1);
   }
 
   return p;
 }
 
 
-static hpx_parcel_t *_network(void) {
+/// Process a network thread.
+static hpx_parcel_t *_try_network(void) {
   hpx_parcel_t *stack = network_rx_dequeue(here->network, self.id);
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
     sync_chase_lev_ws_deque_push(&self.work, p);
   }
-  return _lifo();
+
+  p = _try_lifo();
+  if (p) {
+    assert(!parcel_get_stack(p));
+  }
+  return p;
 }
 
 
@@ -280,6 +268,16 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
+static void _try_shutdown(void) {
+  int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
+  if (shutdown != INT_MAX) {
+    void **sp = &self.sp;
+    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, self.current);
+    unreachable();
+  }
+}
+
+
 /// The main scheduling "loop."
 ///
 /// Selects a new lightweight thread to run. If @p fast is set then the
@@ -301,77 +299,47 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
-  // if we're supposed to shutdown, then do so
-  // NB: leverages non-public knowledge about transfer asm
-  int shutdown = sync_load(&self.shutdown, SYNC_ACQUIRE);
-  if (shutdown != INT_MAX) {
-    void **sp = &self.sp;
-    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, self.current);
-  }
+  hpx_parcel_t *p;
 
-  // messages in my inbox are "in limbo" until I receive them---while this call
-  // can cause problems with stealing, we currently feel like it is better
-  // (heuristically speaking), to maintain work visibility by cleaning out our
-  // inbox as fast as possible
-  if (!fast)
+  while (true) {
+    _try_shutdown();
+
+    // prioritize our mailbox
     _handle_mail();
 
-  // if there are ready parcels, select the next one
-  hpx_parcel_t *p = _lifo();
+    // if there is any LIFO work, process it
+    p = _try_lifo();
+    if (p) {
+      break;
+    }
 
-  if (p) {
-    assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
-    goto exit;
-  }
-
-  if (!fast) {
+    // if we're in a hurry just return final or a NULL action
+    if (fast) {
+      p = (final) ? final : hpx_parcel_acquire(NULL, 0);
+      break;
+    }
 
     // we prioritize the network over stealing
-    if ((p = _network())) {
-      assert(!parcel_get_stack(p));
-      goto exit;
+    p = _try_network();
+    if (p) {
+      break;
     }
 
     // we prioritize yielded threads over stealing
-    // if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
-    //   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
-    //   goto exit;
+    // p = _try_yielded();
+    // if (p) {
+    //   break;
     // }
 
     // try to steal some work
-    if ((p = _steal())) {
-      goto exit;
+    p = _try_steal();
+    if (p) {
+      break;
     }
   }
 
-  // statistically-speaking, we consider this condition to be a spin
-  profile_ctr(++self.stats.spins);
-
-  // return final, if it was specified
-  if (final) {
-    p = final;
-    goto exit;
-  }
-
-  // We didn't find any new work to do, even given our ability to
-  // _steal()---this means that the network didn't have anything for us to do,
-  // and the victim we randomly selected didn't have anything to do, and we
-  // don't have a thread that yielded().
-  //
-  // If we're not in a hurry, we'd like to backoff so that we don't thrash the
-  // network port and other people's scheduler queues.
-  if (!fast) {
-    _backoff();
-  }
-
-  p = hpx_parcel_acquire(NULL, 0);
-
-  // lazy stack binding
- exit:
-  assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
-  if (!parcel_get_stack(p))
-    _bind(p);
-
+  assert(p);
+  _try_bind(p);
   return p;
 }
 
@@ -402,7 +370,6 @@ void *worker_run(void *args) {
   /* self.core_id   = -1; // let linux do this for now */
   self.core_id   = self.id % sched->cores;       // round robin
   self.seed      = self.id;
-  self.backoff   = 0;
 
   // initialize my work structures
   sync_chase_lev_ws_deque_init(&self.work, 64);
@@ -423,7 +390,7 @@ void *worker_run(void *args) {
   }
 
   // bind a stack to transfer to
-  _bind(p);
+  _try_bind(p);
   assert((uintptr_t)(parcel_get_stack(p)->sp) % 16 == 0);
 
   if (!p) {
