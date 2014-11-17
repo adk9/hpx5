@@ -195,12 +195,19 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
   }
 
   if (network_startup(here->network) != LIBHPX_OK) {
-    return HPX_ERROR;
+    return dbg_error("could not start network progress\n");
+  }
+
+  // get an initial parcel to run
+  hpx_parcel_t *entry = NULL;
+  if (here->rank == 0) {
+    entry = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
+                          HPX_ACTION_NULL, HPX_NULL, true);
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched) != LIBHPX_OK) {
-    return HPX_ERROR;
+  if (scheduler_startup(here->sched, entry) != LIBHPX_OK) {
+    return dbg_error("scheduler shut down with error\n");
   }
 
 unwind2:

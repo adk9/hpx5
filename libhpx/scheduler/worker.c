@@ -154,6 +154,7 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 /// @param          p The parcel that is generating this thread.
 
 static void _bind(hpx_parcel_t *p) {
+  assert(p);
   assert(!parcel_get_stack(p));
   ustack_t *stack = thread_new(p, _thread_enter);
   parcel_set_stack(p, stack);
@@ -168,10 +169,10 @@ static void _bind(hpx_parcel_t *p) {
 ///
 /// Right now we just use the synchronization library's backoff.
 static void _backoff(void) {
-  hpx_time_t now = hpx_time_now();
-  sync_backoff(self.backoff);
-  self.stats.backoff += hpx_time_elapsed_ms(now);
-  profile_ctr(++self.stats.backoffs);
+  // hpx_time_t now = hpx_time_now();
+  // sync_backoff(self.backoff);
+  // self.stats.backoff += hpx_time_elapsed_ms(now);
+  // profile_ctr(++self.stats.backoffs);
 }
 
 
@@ -332,10 +333,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     }
 
     // we prioritize yielded threads over stealing
-    if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
-      assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
-      goto exit;
-    }
+    // if ((p = YIELD_QUEUE_DEQUEUE(&here->sched->yielded))) {
+    //   assert(!parcel_get_stack(p) || parcel_get_stack(p)->sp);
+    //   goto exit;
+    // }
 
     // try to steal some work
     if ((p = _steal())) {
@@ -384,8 +385,6 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 /// Under normal HPX shutdown, we return to the original transfer site and
 /// cleanup.
 void *worker_run(void *args) {
-  scheduler_t *sched = args;
-
   assert(here && here->gas);
   assert((uintptr_t)&self % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&self.work % HPX_CACHELINE_SIZE == 0);
@@ -394,6 +393,8 @@ void *worker_run(void *args) {
     dbg_error("failed to join the global address space.\n");
     return NULL;
   }
+
+  scheduler_t *sched = here->sched;
 
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -415,7 +416,7 @@ void *worker_run(void *args) {
     system_set_affinity(&self.thread, self.core_id);
 
   // get a parcel to start the scheduler loop with
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+  hpx_parcel_t *p = args;
   if (!p) {
     dbg_error("failed to acquire an initial parcel.\n");
     return NULL;
@@ -466,9 +467,9 @@ void *worker_run(void *args) {
 }
 
 
-int worker_start(scheduler_t *sched) {
+int worker_start(scheduler_t *sched, hpx_parcel_t *entry) {
   pthread_t thread;
-  int e = pthread_create(&thread, NULL, worker_run, sched);
+  int e = pthread_create(&thread, NULL, worker_run, entry);
   if (e) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
