@@ -6,7 +6,7 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure 
+../configure --with-mpi --enable-photon --with-check --enable-testsuite --enable-apps
 make
 
 # TODO: activate tests:
