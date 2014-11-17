@@ -1,6 +1,11 @@
 #!/bin/bash
 
-echo "Building HPX"
+DIR=$1
+shift
+
+echo "Building HPX in $DIR"
+cd $DIR
+set -xe
 
 rm -rf ./build/
 ./bootstrap
