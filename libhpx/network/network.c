@@ -68,7 +68,6 @@ struct _network {
                                              HPX_CACHELINE_SIZE)];
 
   _QUEUE_T                 tx;                  // half duplex port for send
-  _QUEUE_T                 rx;                  // half duplex port
   struct clh_lock      rxlock;
   const char _paddingb[HPX_CACHELINE_SIZE - sizeof(struct clh_lock)];
   hpx_parcel_t * volatile *volatile prx;
@@ -116,11 +115,6 @@ static void _delete(struct network *o) {
     hpx_parcel_release(p);
   }
   _QUEUE_FINI(&network->tx);
-
-  while ((p = _QUEUE_DEQUEUE(&network->rx))) {
-    hpx_parcel_release(p);
-  }
-  _QUEUE_FINI(&network->rx);
 
   // for (int i = 0, e = network->nrx; i < e; ++i) {
   //   sync_clh_node_delete(network->rxnodes[i].node);
@@ -190,8 +184,7 @@ hpx_parcel_t *network_tx_dequeue(struct network *o) {
 
 
 void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
-  struct _network *network = (struct _network*)o;
-  _QUEUE_ENQUEUE(&network->rx, p);
+  assert(false);
 }
 
 
@@ -261,7 +254,6 @@ struct network *network_new(int nrx) {
   }
 
   assert((uintptr_t)&n->tx % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&n->rx % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&n->rxlock % HPX_CACHELINE_SIZE == 0);
   assert((uintptr_t)&n->rxnodes % HPX_CACHELINE_SIZE == 0);
 
@@ -275,7 +267,6 @@ struct network *network_new(int nrx) {
   n->nrx = nrx;
 
   _QUEUE_INIT(&n->tx, 0);
-  _QUEUE_INIT(&n->rx, 0);
   sync_clh_lock_init(&n->rxlock);
   sync_store(&n->prx, NULL, SYNC_RELEASE);
   for (int i = 0; i < nrx; ++i) {
