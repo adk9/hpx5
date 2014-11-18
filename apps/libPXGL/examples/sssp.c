@@ -19,7 +19,7 @@
 #include <inttypes.h>
 
 #include "hpx/hpx.h"
-#include "libpxgl.h"
+#include "pxgl.h"
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 

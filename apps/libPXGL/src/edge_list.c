@@ -7,10 +7,9 @@
 #include <limits.h>
 #include <inttypes.h>
 
-#include "edge_list.h"
-#include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libpxgl/edge_list.h"
 
 static hpx_action_t _put_edge_edgelist;
 static int _put_edge_edgelist_action(edge_list_edge_t *e)
