@@ -378,8 +378,10 @@ void worker_bind_self(struct worker *worker) {
   self = worker;
   self->thread = pthread_self();
 
-  if (self->core >= 0)
-    system_set_affinity(&self->thread, self->core);
+  // if (self->core >= 0) {
+  //   dbg_log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
+  //   system_set_affinity(&self->thread, self->core);
+  // }
 }
 
 int worker_start(void) {

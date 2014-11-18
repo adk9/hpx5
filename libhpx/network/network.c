@@ -89,6 +89,8 @@ struct _network {
 
 
 static void *_progress(void *o) {
+  // system_set_affinity(pthread_self(), 0);
+
   struct _network *network = o;
 
   // we have to join the GAS so that we can allocate parcels in here.
