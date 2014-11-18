@@ -240,7 +240,7 @@ void network_flush_on_shutdown(struct network *o) {
   sync_store(&network->flush, 1, SYNC_RELEASE);
 }
 
-struct network *network_new(int nrx) {
+struct network *network_new(libhpx_network_t type, int nrx) {
   struct _network *n = NULL;
   int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n));
   if (e) {
