@@ -164,6 +164,9 @@ static hpx_parcel_t *_schedule_yielded(struct worker *w) {
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
 static hpx_parcel_t *_schedule_steal(struct worker *w) {
+  if (w->sched->n_workers == 1)
+    return NULL;
+
   struct worker *victim = NULL;
   do {
     int id = rand_r(&w->seed) % w->sched->n_workers;
@@ -677,9 +680,12 @@ uint32_t hpx_thread_current_args_size(void) {
 
 
 hpx_pid_t hpx_thread_current_pid(void) {
-  if (self->current == NULL)
+  if (self && self->current) {
+    return self->current->pid;
+  }
+  else {
     return HPX_NULL;
-  return self->current->pid;
+  }
 }
 
 
