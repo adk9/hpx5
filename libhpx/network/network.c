@@ -99,7 +99,7 @@ static void *_progress(void *o) {
 
   while (true) {
     pthread_testcancel();
-    profile_ctr(thread_get_stats()->progress++);
+    profile_ctr(scheduler_get_stats(here->sched)->progress++);
     transport_progress(network->transport, TRANSPORT_POLL);
     pthread_yield();
   }
@@ -126,6 +126,9 @@ static void _delete(struct network *o) {
 
 static int _startup(struct network *o) {
   struct _network *network = (struct _network*)o;
+  if (network->transport->type == HPX_TRANSPORT_SMP)
+    return LIBHPX_OK;
+
   int e = pthread_create(&network->progress, NULL, _progress, network);
   if (e) {
     dbg_error("failed to start network progress.\n");
@@ -140,6 +143,9 @@ static int _startup(struct network *o) {
 
 static void _shutdown(struct network *o) {
   struct _network *network = (struct _network*)o;
+  if (network->transport->type == HPX_TRANSPORT_SMP)
+    return;
+
   int e = pthread_cancel(network->progress);
   if (e) {
     dbg_error("could not cancel the network progress thread.\n");
