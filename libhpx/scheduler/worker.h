@@ -42,6 +42,11 @@ struct worker {
   int                UNUSED;
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
+  const char _padding[HPX_CACHELINE_SIZE - ((sizeof(pthread_t) +
+                                             4 * sizeof(int) +
+                                             sizeof(void *) +
+                                             sizeof(hpx_parcel_t*)) %
+                                            HPX_CACHELINE_SIZE)];
   chase_lev_ws_deque_t work;                    // my work
   two_lock_queue_t    inbox;                    // mail sent to me
   volatile int     shutdown;                    // cooperative shutdown flag
