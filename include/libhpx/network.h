@@ -20,8 +20,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
-
-struct routing;
+#include <libhpx/config.h>
 
 /// All network objects implement the network interface.
 struct network {
@@ -43,7 +42,7 @@ struct network {
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-struct network *network_new(int nrx)
+struct network *network_new(libhpx_network_t type, int nrx)
   HPX_MALLOC HPX_INTERNAL;
 
 

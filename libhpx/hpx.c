@@ -154,7 +154,7 @@ int hpx_init(int *argc, char ***argv) {
   int workers = (cfg->threads) ? cfg->threads : cores;
 
   // parcel network
-  here->network = network_new(workers);
+  here->network = network_new(LIBHPX_NETWORK_DEFAULT, workers);
   if (!here->network) {
     _cleanup(here);
     return dbg_error("failed to create network.\n");
