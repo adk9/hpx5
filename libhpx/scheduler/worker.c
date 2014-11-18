@@ -20,15 +20,11 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
 #include <string.h>
 
-#include <hpx/hpx.h>
 #include <hpx/builtins.h>
 
 #include <libsync/barriers.h>
-#include <libsync/deques.h>
-#include <libsync/queues.h>
 
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -38,45 +34,13 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"                      // used as thread-control block
 #include "libhpx/scheduler.h"
-#include "libhpx/stats.h"
 #include "libhpx/system.h"
 #include "cvar.h"
 #include "thread.h"
 #include "termination.h"
 #include "worker.h"
 
-#define CAT1(s, t) s##t
-
-#define CAT2(s, t) CAT1(s, t)
-
-#define PAD_TO_CACHELINE(B)                                             \
-  const char CAT2(pad,  __LINE__)[(HPX_CACHELINE_SIZE - (B))]
-
-/// Class representing a worker thread's state.
-///
-/// Worker threads are "object-oriented" insofar as that goes, but each native
-/// thread has exactly one, thread-local worker_t structure, so the interface
-/// doesn't take a "this" pointer and instead grabs the "self" structure using
-/// __thread local storage.
-///
-/// @{
-typedef struct worker {
-  pthread_t          thread;                    // this worker's native thread
-  int                    id;                    // this workers's id
-  int               core_id;                    // useful for "smart" stealing
-  unsigned int         seed;                    // my random seed
-  int                UNUSED;
-  void                  *sp;                    // this worker's native stack
-  hpx_parcel_t     *current;                    // current thread
-PAD_TO_CACHELINE(sizeof(pthread_t) + (4*sizeof(int)) + (2*sizeof(void*)));
-  chase_lev_ws_deque_t work;                    // my work
-  // already aligned
-  two_lock_queue_t    inbox;                    // mail sent to me
-  volatile int     shutdown;                    // cooperative shutdown flag
-  scheduler_stats_t   stats;                    // scheduler statistics
-} worker_t;
-
-static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread worker_t self = {
+static HPX_ALIGNED(HPX_CACHELINE_SIZE) __thread struct worker self = {
   .thread     = 0,
   .id         = -1,
   .core_id    = -1,
@@ -184,7 +148,7 @@ static hpx_parcel_t *_try_steal(void) {
   if (victim_id == self.id)
     return NULL;
 
-  worker_t *victim = here->sched->workers[victim_id];
+  struct worker *victim = here->sched->workers[victim_id];
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
     profile_ctr(++self.stats.steals);
@@ -212,7 +176,7 @@ static hpx_parcel_t *_try_network(void) {
 
 /// Send a mail message to another worker.
 static void _send_mail(uint32_t id, hpx_parcel_t *p) {
-  worker_t *w = here->sched->workers[id];
+  struct worker *w = here->sched->workers[id];
   two_lock_queue_node_t *node = malloc(sizeof(*node));
   node->value = p;
   node->next = NULL;
@@ -445,12 +409,12 @@ int worker_start(scheduler_t *sched, hpx_parcel_t *entry) {
 }
 
 
-void worker_shutdown(worker_t *worker, int code) {
+void worker_shutdown(struct worker *worker, int code) {
   sync_store(&worker->shutdown, code, SYNC_RELEASE);
 }
 
 
-void worker_join(worker_t *worker) {
+void worker_join(struct worker *worker) {
   if (worker->thread == pthread_self())
     return;
 
@@ -459,7 +423,7 @@ void worker_join(worker_t *worker) {
 }
 
 
-void worker_cancel(worker_t *worker) {
+void worker_cancel(struct worker *worker) {
   if (worker && pthread_cancel(worker->thread))
     dbg_error("worker: cannot cancel worker thread %d.\n", worker->id);
 }
