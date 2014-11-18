@@ -9,6 +9,7 @@ function add_mpi() {
     export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.6.3/include/
 }
 
+set -xe
 case "$HPXMODE" in
     photon)
 	CFGFLAGS=" --with-mpi --enable-photon "
@@ -25,7 +26,6 @@ esac
 
 echo "Building HPX in $DIR"
 cd $DIR
-set -xe
 
 rm -rf ./build/
 ./bootstrap
