@@ -3,10 +3,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "adjacency_list.h"
-#include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libpxgl/adjacency_list.h"
 
 #define PXGL_ADJ_SYNC_ARG(orig, lco_name, arg_name) \
 typedef struct { \
