@@ -73,6 +73,7 @@
 /apps/lulesh/newfutures/Makefile
 /apps/lulesh/newfutures/luleshnewfutures
 /apps/libPXGL/Makefile
+/apps/libPXGL/include/Makefile
 /apps/libPXGL/examples/Makefile
 /apps/libPXGL/examples/sssp
 
