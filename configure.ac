@@ -261,6 +261,7 @@ AS_IF([test "x$enable_apps" != xno],
   apps/miniAMR/Makefile
   apps/miniAMR/parcels/Makefile
   apps/libPXGL/Makefile
+  apps/libPXGL/include/Makefile
   apps/libPXGL/examples/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
