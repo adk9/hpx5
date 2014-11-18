@@ -369,6 +369,7 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
     assert(cfg->max_size != 0);
     assert(cfg->max_array_number != 0);
     _netfuture_cfg.max_size = cfg->max_size + cfg->max_number*sizeof(_netfuture_t);
+    _netfuture_cfg.max_number = cfg->max_number;
     _netfuture_cfg.max_array_number = cfg->max_array_number;
   }
 
