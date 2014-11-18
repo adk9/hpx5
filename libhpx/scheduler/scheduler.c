@@ -17,18 +17,17 @@
 /// @file libhpx/scheduler/schedule.c
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include <hpx/builtins.h>
-#include <libsync/sync.h>
 #include <libsync/barriers.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
-#include "worker.h"
 
 
 struct scheduler *
@@ -37,36 +36,49 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
 {
   struct scheduler *s = malloc(sizeof(*s));
   if (!s) {
-    dbg_error("scheduler: could not allocate a scheduler.\n");
+    dbg_error("could not allocate a scheduler.\n");
     return NULL;
   }
 
-  sync_store(&s->next_id, 0, SYNC_RELEASE);
-  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
-
-  s->cores       = cores;
-  s->n_workers   = workers;
-  s->backoff_max = backoff_max;
-  s->workers     = calloc(workers, sizeof(s->workers[0]));
-  if (!s->workers) {
-    dbg_error("scheduler: could not allocate an array of workers.\n");
+  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE,
+                         workers * sizeof(s->workers[0]));
+  if (e) {
+    dbg_error("could not allocate a worker array.\n");
     scheduler_delete(s);
     return NULL;
+  }
+
+  for (int i = 0; i < workers; ++i) {
+    e = worker_init(&s->workers[i], s, i, i % cores, i, 64);
+    if (e) {
+      dbg_error("failed to initialize a worker.\n");
+      scheduler_delete(s);
+      return NULL;
+    }
   }
 
   s->barrier = sr_barrier_new(workers);
   if (!s->barrier) {
-    dbg_error("scheduler: failed to allocate the startup barrier.\n");
+    dbg_error("failed to allocate the startup barrier.\n");
     scheduler_delete(s);
     return NULL;
   }
 
-  s->stats = (scheduler_stats_t) SCHEDULER_STATS_INIT;
+  sync_two_lock_queue_init(&s->yielded, NULL);
 
-  YIELD_QUEUE_INIT(&s->yielded, NULL);
+  sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
+  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
+  s->cores       = cores;
+  s->n_workers   = workers;
+  s->backoff_max = backoff_max;
+  scheduler_stats_init(&s->stats);
 
   thread_set_stack_size(stack_size);
   dbg_log_sched("initialized a new scheduler.\n");
+
+  // bind a worker for this thread so that we can spawn lightweight threads
+  worker_bind_self(&s->workers[0]);
+  dbg_log_sched("worker 0 ready.\n");
   return s;
 }
 
@@ -83,64 +95,96 @@ void scheduler_delete(struct scheduler *sched) {
     free(sched->workers);
   }
 
-  YIELD_QUEUE_FINI(&sched->yielded);
+  sync_two_lock_queue_fini(&sched->yielded);
 
   free(sched);
 }
 
-int scheduler_startup(struct scheduler *sched, hpx_parcel_t *entry) {
+
+void scheduler_dump_stats(struct scheduler *sched) {
+  char id[16] = {0};
+  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+    struct worker *w = scheduler_get_worker(sched, i);
+    snprintf(id, 16, "%d", w->id);
+    scheduler_stats_print(id, &w->stats);
+    scheduler_stats_accum(&sched->stats, &w->stats);
+  }
+
+  scheduler_stats_print("<totals>", &sched->stats);
+}
+
+
+struct worker *scheduler_get_worker(struct scheduler *sched, int id) {
+  assert(id >= 0);
+  assert(id < sched->n_workers);
+  return &sched->workers[id];
+}
+
+
+int scheduler_startup(struct scheduler *sched) {
+  struct worker *worker = NULL;
+  int status = LIBHPX_OK;
+
   // start all of the other worker threads
-  for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
-    if (worker_start(sched, p) != 0) {
+  for (int i = 1, e = sched->n_workers; i < e; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    status = worker_create(worker);
+
+    if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);
-      hpx_parcel_release(p);
 
-      for (int j = 0; j < i; ++j)
-        worker_cancel(sched->workers[j]);
+      for (int j = 1; j < i; ++j) {
+        worker = scheduler_get_worker(sched, j);
+        worker_cancel(worker);
+      }
 
-      for (int j = 0; j < i; ++j)
-        worker_join(sched->workers[j]);
+      for (int j = 1; j < i; ++j) {
+        worker = scheduler_get_worker(sched, j);
+        worker_join(worker);
+      }
 
-      return LIBHPX_ERROR;
+      return status;
     }
   }
 
-  if (!entry) {
-    entry = hpx_parcel_acquire(NULL, 0);
+  status = worker_start();
+  if (status != LIBHPX_OK) {
+    scheduler_abort(sched);
   }
 
-  worker_run(entry);
-  scheduler_join(sched);
-  return LIBHPX_OK;
+  for (int i = 1; i < sched->n_workers; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    worker_join(worker);
+  }
+
+  return status;
 }
 
 
 void scheduler_shutdown(struct scheduler *sched, int code) {
-  // signal all of the shutdown requests
-  for (int i = 0; i < sched->n_workers; ++i)
-    worker_shutdown(sched->workers[i], code);
+  sync_store(&sched->shutdown, code, SYNC_RELEASE);
 }
 
 
-void scheduler_join(struct scheduler *sched) {
-  int me = hpx_get_my_thread_id();
-  // wait for the workers to shutdown
-  for (int i = 0; i < sched->n_workers; ++i) {
-    if (i == me)
-      continue;
-    worker_join(sched->workers[i]);
+int scheduler_running(struct scheduler *sched) {
+  int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
+  return (shutdown == INT_MAX);
+}
+
+
+void scheduler_abort(struct scheduler *sched) {
+  struct worker *worker = NULL;
+  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    worker_cancel(worker);
   }
 }
 
-
-/// Abort the scheduler.
-///
-/// This will wait for all of the children to cancel, but won't do any cleanup
-/// since we have no way to know if they are in async-safe functions that we
-/// need during cleanup (e.g., holding the malloc lock).
-void scheduler_abort(struct scheduler *sched) {
-  for (int i = 0, e = sched->n_workers; i < e; ++i)
-    worker_cancel(sched->workers[i]);
+scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
+  if (sched) {
+    return &sched->stats;
+  }
+  else {
+    return NULL;
+  }
 }
-

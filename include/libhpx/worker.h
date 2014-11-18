@@ -20,6 +20,7 @@
 #include <libsync/queues.h>
 #include <libhpx/stats.h>
 
+
 /// Forward declarations.
 /// @{
 struct scheduler;
@@ -35,59 +36,72 @@ struct scheduler;
 ///
 /// @{
 struct worker {
+  struct scheduler   *sched;                    // the scheduler instance
   pthread_t          thread;                    // this worker's native thread
-  int                    id;                    // this workers's id
-  int               core_id;                    // useful for "smart" stealing
-  unsigned int         seed;                    // my random seed
-  int                UNUSED;
+  int                    id;                    // this worker's id
+  int                  core;                    //
+  unsigned             seed;                    // my random seed
+  int                UNUSED;                    // padding
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  const char _padding[HPX_CACHELINE_SIZE - ((sizeof(pthread_t) +
-                                             4 * sizeof(int) +
+  const char _padding[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
+                                             sizeof(pthread_t) +
+                                             sizeof(int) * 4 +
                                              sizeof(void *) +
                                              sizeof(hpx_parcel_t*)) %
                                             HPX_CACHELINE_SIZE)];
   chase_lev_ws_deque_t work;                    // my work
   two_lock_queue_t    inbox;                    // mail sent to me
-  volatile int     shutdown;                    // cooperative shutdown flag
   scheduler_stats_t   stats;                    // scheduler statistics
 };
 
 
-/// The main entry function for a scheduler worker thread.
+/// Initialize a worker structure.
 ///
-/// Each worker will self-assign an ID. IDs are guaranteed to be dense,
-/// contiguous integers.
+/// @param            w The worker structure to initialize.
+/// @param        sched The scheduler instance.
+/// @param           id The worker's id.
+/// @param         core The core affinity for this worker.
+/// @param         seed The random seed for this worker.
+/// @param    work_size The initial size of the work queue.
 ///
-/// @param        sched The scheduler instance this worker is associated with.
-///
-/// @returns            The code passed to worker_shutdown().
-void *worker_run(void *sched)
+/// @returns            LIBHPX_OK or an error code
+int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
+                unsigned seed,  unsigned work_size)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
+
+/// Finalize a worker structure.
+void worker_fini(struct worker *w)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Starts a worker thread associated with a scheduler.
+/// Bind a worker structure to the current pthread.
 ///
-/// @param        sched The scheduler instance this worker is associated with.
-/// @param        entry The initial parcel for the worker to run.
+/// @param       worker The worker structure for the pthread.
+void worker_bind_self(struct worker *worker)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Start processing lightweight threads.
+int worker_start(void)
+  HPX_INTERNAL;
+
+
+/// Creates a worker thread associated with a scheduler.
+///
+/// The created thread will bind itself to the passed worker, and then start
+/// processing lightweight threads.
+///
+/// @param       worker The worker structure for this worker thread.
 ///
 /// @returns            LIBHPX_OK or an error code if the worker failed to
 ///                     start.
-int worker_start(struct scheduler *sched, hpx_parcel_t *entry)
+int worker_create(struct worker *worker)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Cooperatively shutdown a worker.
-///
-/// This does not block.
-///
-/// @param       worker The worker to shutdown.
-/// @param         code An error code to shut down the worker with.
-void worker_shutdown(struct worker *worker, int code)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-/// Joins a worker after worker_shutdown().
+/// Joins a worker after scheduler_shutdown().
 ///
 /// This is done separately to allow for cleanup to happen. Also improves
 /// shutdown performance because all of the workers can be shutting down and

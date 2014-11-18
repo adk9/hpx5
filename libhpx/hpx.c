@@ -186,35 +186,45 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     goto unwind0;
   }
 
-  if (here->rank == 0) {
-    // start the main process. enqueue parcels directly---schedulers
-    // don't exist yet
-    hpx_parcel_t *p = parcel_create(HPX_HERE, *act, args, size, HPX_NULL,
-                                    HPX_ACTION_NULL, HPX_NULL, true);
-    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
+  // we finalize the actions first
+  if (hpx_finalize_actions() != LIBHPX_OK) {
+    status = dbg_error("error finalizing action registration\n");
+    goto unwind1;
   }
 
   if (network_startup(here->network) != LIBHPX_OK) {
-    return dbg_error("could not start network progress\n");
+    status = dbg_error("could not start network progress\n");
+    goto unwind1;
   }
 
-  // get an initial parcel to run
-  hpx_parcel_t *entry = NULL;
+  if (network_startup(here->network) != LIBHPX_OK) {
+    status = dbg_error("failed to start network.\n")
+    goto unwind1;
+  }
+
+  // create the initial application-level thread to run
   if (here->rank == 0) {
-    entry = parcel_create(HPX_HERE, act, args, size, HPX_NULL,
-                          HPX_ACTION_NULL, HPX_NULL, true);
+    if (hpx_call(HPX_HERE, act, args, size, HPX_NULL) != LIBHPX_OK) {
+      status = dbg_error("failed to spawn initial action\n");
+      goto unwind2;
+    }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, entry) != LIBHPX_OK) {
-    return dbg_error("scheduler shut down with error\n");
+  if (scheduler_startup(here->sched) != LIBHPX_OK) {
+    status = dbg_error("scheduler shut down with error.\n");
+    goto unwind2;
   }
 
-unwind2:
+#ifdef ENABLE_PROFILING
+  scheduler_dump_stats(here->sched);
+#endif
+
+ unwind2:
   network_shutdown(here->network);
-unwind1:
+ unwind1:
   _cleanup(here);
-unwind0:
+ unwind0:
   return status;
 }
 
