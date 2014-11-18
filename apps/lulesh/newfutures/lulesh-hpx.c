@@ -293,15 +293,17 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  size_t sbn3_size   = nDoms * (NF_BUFFER_SIZE(3 * (nx + 1) * (nx + 1)) * 6 +
-				NF_BUFFER_SIZE(3 * (nx + 1)) * 12 +
-				NF_BUFFER_SIZE(3) * 8);
-  size_t posvel_size = nDoms * (NF_BUFFER_SIZE(6 * (nx + 1) * (nx + 1)) * 6 +
-				NF_BUFFER_SIZE(6 * (nx + 1)) * 12 +
-				NF_BUFFER_SIZE(6) * 8);
-  size_t monoq_size  = nDoms * NF_BUFFER_SIZE(3 * nx * nx) * 26;
+  int nDoms_up = (nDoms + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  size_t sbn3_size   = nDoms_up * (NF_BUFFER_SIZE(3 * (nx + 1) * (nx + 1)) * 6 +
+				   NF_BUFFER_SIZE(3 * (nx + 1)) * 12 +
+				   NF_BUFFER_SIZE(3) * 8);
+  size_t posvel_size = nDoms_up * (NF_BUFFER_SIZE(6 * (nx + 1) * (nx + 1)) * 6 +
+				   NF_BUFFER_SIZE(6 * (nx + 1)) * 12 +
+				   NF_BUFFER_SIZE(6) * 8);
+  size_t monoq_size  = nDoms_up * NF_BUFFER_SIZE(3 * nx * nx) * 26;
   size_t nf_data_size = sbn3_size * 2 + posvel_size * 2 + monoq_size * 2;
-  cfg.max_size = (nf_data_size + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  //  cfg.max_size = (nf_data_size + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  cfg.max_size = nf_data_size;
   cfg.max_array_number = (2 * 3 * 26); // 2 gens, 3 comm fns, 26 arrays in each
   cfg.max_number = cfg.max_array_number * nDoms;
   hpx_netfutures_init(&cfg);
