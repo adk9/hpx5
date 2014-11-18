@@ -14,26 +14,23 @@
 #define LIBPXGL_H
 
 // Common definitions
-#include "defs.h"
+#include "libpxgl/defs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // Graph representation / formats
-#include "adjacency_list.h"
-#include "edge_list.h"
+#include "libpxgl/adjacency_list.h"
+#include "libpxgl/edge_list.h"
+#include "libpxgl/dimacs.h"
 
 // Algorithms
-#include "sssp.h"
+#include "libpxgl/sssp.h"
 
-// Dimacs
-#include "dimacs.h"
-
-//
-#include "gteps.h"
-
-#include "statistics.h"
+// Metrics
+#include "libpxgl/gteps.h"
+#include "libpxgl/statistics.h"
 
 #ifdef __cplusplus
 }
