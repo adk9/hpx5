@@ -208,25 +208,22 @@ hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
 
 int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
   struct _network *network = (struct _network*)o;
-  // if someone has published a rendevous location, pass along the parcel
-  // stack
-  if (network->head.tail - network->head.i) {
-    uint64_t i = network->head.i++;
-    uint64_t slot = i & 127;
-    sync_store(&network->slots[slot].p, p, SYNC_RELEASE);
-    return 1;
+  // if someone has published a rendevous location, pass along the current
+  // parcel stack
+  uint64_t head = network->head.i;
+  uint64_t tail = network->head.tail;
+  if (tail == head) {
+    network->head.tail = sync_load(&network->tail.i, SYNC_RELAXED);
+    tail = network->head.tail;
+    if (tail == head)
+      return 0;
   }
 
-  network->head.tail = sync_load(&network->tail.i, SYNC_RELAXED);
-
-  if (network->head.tail - network->head.i) {
-    uint64_t i = network->head.i++;
-    uint64_t slot = i & 127;
-    sync_store(&network->slots[slot].p, p, SYNC_RELEASE);
-    return 1;
-  }
-
-  return 0;
+  uint64_t i = head++;
+  uint64_t slot = i & 127;
+  sync_store(&network->slots[slot].p, p, SYNC_RELEASE);
+  network->head.i = head;
+  return 1;
 }
 
 
