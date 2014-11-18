@@ -89,14 +89,14 @@
 /include/libsync/Makefile
 
 # /contrib/
-contrib/hwloc-1.9.1/Makefile
-contrib/hwloc-1.9.1/include/Makefile
-contrib/hwloc-1.9.1/include/hwloc/autogen/config.h
-contrib/hwloc-1.9.1/include/hwloc/autogen/stamp-h3
-contrib/hwloc-1.9.1/include/private/autogen/config.h
-contrib/hwloc-1.9.1/include/private/autogen/stamp-h2
-contrib/hwloc-1.9.1/src/Makefile
-contrib/hwloc-1.9.1/src/static-components.h
+contrib/hwloc-1.10.0/Makefile
+contrib/hwloc-1.10.0/include/Makefile
+contrib/hwloc-1.10.0/include/hwloc/autogen/config.h
+contrib/hwloc-1.10.0/include/hwloc/autogen/stamp-h3
+contrib/hwloc-1.10.0/include/private/autogen/config.h
+contrib/hwloc-1.10.0/include/private/autogen/stamp-h2
+contrib/hwloc-1.10.0/src/Makefile
+contrib/hwloc-1.10.0/src/static-components.h
 contrib/jemalloc/Makefile
 contrib/jemalloc/include/Makefile
 contrib/jemalloc/include/jemalloc/Makefile
@@ -122,21 +122,22 @@ contrib/jemalloc/src/Makefile
 /tests/hpxtest
 /tests/Makefile
 /tests/Makefile.in
-/tests/performance/Makefile
-/tests/performance/overheads/Makefile
-/tests/performance/overheads/perfmain
-/tests/performance/overheads/time_gas_addr_trans
-/tests/performance/overheads/time_gas_alloc
-/tests/performance/overheads/time_lco_allgather
-/tests/performance/overheads/time_lco_allreduce
-/tests/performance/overheads/time_lco_alltoall
-/tests/performance/overheads/time_lco_and
-/tests/performance/overheads/time_lco_chan
-/tests/performance/overheads/time_lco_future
-/tests/performance/overheads/time_lco_netfutures
-/tests/performance/overheads/time_lco_netfutures_msgSize
-/tests/performance/overheads/time_lco_sema
+/tests/perf/Makefile
+/tests/perf/overheads/Makefile
+/tests/perf/overheads/run_tests.sh
+/tests/perf/overheads/time_gas_addr_trans
+/tests/perf/overheads/time_gas_alloc
+/tests/perf/overheads/time_lco_allgather
+/tests/perf/overheads/time_lco_allreduce
+/tests/perf/overheads/time_lco_alltoall
+/tests/perf/overheads/time_lco_and
+/tests/perf/overheads/time_lco_chan
+/tests/perf/overheads/time_lco_future
+/tests/perf/overheads/time_lco_netfutures
+/tests/perf/overheads/time_lco_netfutures_msgSize
+/tests/perf/overheads/time_lco_sema
 /tests/unit/Makefile
+/tests/unit/run_tests.sh
 /tests/unit/hpxtest
 
 

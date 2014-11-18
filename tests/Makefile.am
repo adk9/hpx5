@@ -1,2 +1,2 @@
-SUBDIRS = unit performance
+SUBDIRS = unit perf
 

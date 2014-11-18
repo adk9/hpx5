@@ -1,0 +1,31 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ -n "@MPI_PKG@" ]; then
+  LAUNCHER=mpirun
+  LAUNCHER_ARGS="-np 2"
+fi
+
+BENCHMARKS="time_gas_alloc
+           time_gas_addr_trans
+           time_lco_chan
+           time_lco_sema
+           time_lco_and
+           time_lco_future"
+
+COLL_BENCHMARKS="time_lco_allgather
+                time_lco_allreduce
+                time_lco_alltoall"
+
+COLL_BENCH_ARGS="10 100 1000"
+
+for bench in $BENCHMARKS; do
+  $LAUNCHER $LAUNCHER_ARGS $DIR/$bench 
+done
+
+for bench in $COLL_BENCHMARKS; do
+  for arg in $COLL_BENCH_ARGS; do
+    $LAUNCHER $LAUNCHER_ARGS $DIR/$bench $arg
+  done
+done

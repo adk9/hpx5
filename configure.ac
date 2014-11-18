@@ -268,10 +268,14 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
+  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
+		   [chmod +x tests/unit/run_tests.sh])]
+  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
+		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/performance/Makefile
-  tests/performance/overheads/Makefile])])
+  tests/perf/Makefile
+  tests/perf/overheads/Makefile])])
   
 AC_OUTPUT
 
