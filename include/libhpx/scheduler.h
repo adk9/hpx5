@@ -63,7 +63,7 @@ typedef two_lock_queue_t yield_queue_t;
 /// by updating the worker's scheduler pointer and the scheduler's worker
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
-typedef struct scheduler {
+struct scheduler {
   yield_queue_t       yielded;
   volatile int        next_id;
   volatile int    next_tls_id;
@@ -73,7 +73,7 @@ typedef struct scheduler {
   struct worker     **workers;
   struct barrier     *barrier;
   scheduler_stats_t     stats;
-} scheduler_t;
+};
 
 
 /// Allocate and initialize a new scheduler.
@@ -85,8 +85,8 @@ typedef struct scheduler {
 /// @param   statistics The flag that indicates if statistics are on or off.
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
-scheduler_t *scheduler_new(int cores, int workers, int stack_size,
-                           unsigned int backoff_max, bool stats)
+struct scheduler *scheduler_new(int cores, int workers, int stack_size,
+                                unsigned int backoff_max, bool stats)
   HPX_INTERNAL;
 
 
@@ -97,7 +97,7 @@ scheduler_t *scheduler_new(int cores, int workers, int stack_size,
 /// aborted with scheduler_abort(), results in undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
-void scheduler_delete(scheduler_t *scheduler)
+void scheduler_delete(struct scheduler *scheduler)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
@@ -111,7 +111,7 @@ void scheduler_delete(scheduler_t *scheduler)
 /// @param        entry An initial parcel to run.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(scheduler_t *scheduler, hpx_parcel_t *entry)
+int scheduler_startup(struct scheduler *scheduler, hpx_parcel_t *entry)
   HPX_INTERNAL;
 
 
@@ -122,7 +122,7 @@ int scheduler_startup(scheduler_t *scheduler, hpx_parcel_t *entry)
 ///
 /// @param    scheduler The scheduler to shutdown.
 /// @param         code The code to return from scheduler_startup().
-void scheduler_shutdown(scheduler_t *scheduler, int code)
+void scheduler_shutdown(struct scheduler *scheduler, int code)
   HPX_INTERNAL;
 
 
@@ -131,7 +131,7 @@ void scheduler_shutdown(scheduler_t *scheduler, int code)
 /// This will wait until all of the scheduler's worker threads have shutdown.
 ///
 /// @param    scheduler The scheduler to join.
-void scheduler_join(scheduler_t *scheduler)
+void scheduler_join(struct scheduler *scheduler)
   HPX_INTERNAL;
 
 
@@ -141,7 +141,7 @@ void scheduler_join(scheduler_t *scheduler)
 /// should only be called by the main thread that called scheduler_startup().
 ///
 /// @param    scheduler The scheduler to abort.
-void scheduler_abort(scheduler_t *scheduler)
+void scheduler_abort(struct scheduler *scheduler)
   HPX_INTERNAL;
 
 

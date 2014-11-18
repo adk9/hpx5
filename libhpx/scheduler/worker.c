@@ -326,7 +326,7 @@ void *worker_run(void *args) {
     return NULL;
   }
 
-  scheduler_t *sched = here->sched;
+  struct scheduler *sched = here->sched;
 
   // initialize my worker structure
   self.thread    = pthread_self();
@@ -398,7 +398,7 @@ void *worker_run(void *args) {
 }
 
 
-int worker_start(scheduler_t *sched, hpx_parcel_t *entry) {
+int worker_start(struct scheduler *sched, hpx_parcel_t *entry) {
   pthread_t thread;
   int e = pthread_create(&thread, NULL, worker_run, entry);
   if (e) {
