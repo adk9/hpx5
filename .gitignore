@@ -89,6 +89,7 @@
 /include/libsync/Makefile
 
 # /contrib/
+contrib/Makefile
 contrib/hwloc-1.10.0/Makefile
 contrib/hwloc-1.10.0/include/Makefile
 contrib/hwloc-1.10.0/include/hwloc/autogen/config.h

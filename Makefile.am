@@ -9,7 +9,7 @@ EXTRA_DIST = \
         docs
 
 AUTOMAKE_OPTIONS = foreign
-ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.9.1/config
+ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.10.0/config
 
 SUBDIRS       = contrib libsync libhpx include examples bench
 DIST_SUBDIRS  = contrib libsync libhpx include examples bench
