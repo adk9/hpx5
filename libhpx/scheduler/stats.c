@@ -29,7 +29,7 @@
 #include "libhpx/stats.h"
 
 
-void scheduler_accum_stats(scheduler_t *sched, const scheduler_stats_t *worker) {
+void scheduler_accum_stats(struct scheduler *sched, const scheduler_stats_t *worker) {
 #ifdef ENABLE_PROFILING
   scheduler_stats_t *total = &sched->stats;
   static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;

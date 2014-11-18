@@ -31,11 +31,11 @@
 #include "worker.h"
 
 
-scheduler_t *
+struct scheduler *
 scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
               bool stats)
 {
-  scheduler_t *s = malloc(sizeof(*s));
+  struct scheduler *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("scheduler: could not allocate a scheduler.\n");
     return NULL;
@@ -88,7 +88,7 @@ void scheduler_delete(struct scheduler *sched) {
   free(sched);
 }
 
-int scheduler_startup(scheduler_t *sched, hpx_parcel_t *entry) {
+int scheduler_startup(struct scheduler *sched, hpx_parcel_t *entry) {
   // start all of the other worker threads
   for (int i = 0, e = sched->n_workers - 1; i < e; ++i) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
@@ -116,14 +116,14 @@ int scheduler_startup(scheduler_t *sched, hpx_parcel_t *entry) {
 }
 
 
-void scheduler_shutdown(scheduler_t *sched, int code) {
+void scheduler_shutdown(struct scheduler *sched, int code) {
   // signal all of the shutdown requests
   for (int i = 0; i < sched->n_workers; ++i)
     worker_shutdown(sched->workers[i], code);
 }
 
 
-void scheduler_join(scheduler_t *sched) {
+void scheduler_join(struct scheduler *sched) {
   int me = hpx_get_my_thread_id();
   // wait for the workers to shutdown
   for (int i = 0; i < sched->n_workers; ++i) {
@@ -139,7 +139,7 @@ void scheduler_join(scheduler_t *sched) {
 /// This will wait for all of the children to cancel, but won't do any cleanup
 /// since we have no way to know if they are in async-safe functions that we
 /// need during cleanup (e.g., holding the malloc lock).
-void scheduler_abort(scheduler_t *sched) {
+void scheduler_abort(struct scheduler *sched) {
   for (int i = 0, e = sched->n_workers; i < e; ++i)
     worker_cancel(sched->workers[i]);
 }
