@@ -134,10 +134,10 @@ int main(int argc, char *argv[]) {
   }
 
   // register the fib action
-  _fib      = HPX_REGISTER_ACTION(_fib_action);
-  _fib_main = HPX_REGISTER_ACTION(_fib_main_action);
+  HPX_REGISTER_ACTION(&_fib, _fib_action);
+  HPX_REGISTER_ACTION(&_fib_main, _fib_main_action);
 
   // run the main action
-  return hpx_run(_fib_main, &n, sizeof(n));
+  return hpx_run(&_fib_main, &n, sizeof(n));
 }
 

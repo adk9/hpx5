@@ -132,5 +132,5 @@ int main(int argc, char *argv[]) {
   get_value = hpx_register_action("get_value", action_get_value);
 
   // run the main action
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }
