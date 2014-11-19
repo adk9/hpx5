@@ -82,14 +82,6 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
-AC_ARG_ENABLE([action-table],
-  [AS_HELP_STRING([--enable-action-table],
-                  [Enable asymmetric, dynamic action-registration @<:@default=no@:>@])],
-  [], [enable_action_table=no])
-AS_IF([test "x$enable_action_table" != xno],
-  [AC_DEFINE([ENABLE_ACTION_TABLE], [1], [Enable asymmetric, dynamic action-registration])])
-AM_CONDITIONAL([ENABLE_ACTION_TABLE], [test "$enable_action_table" = "yes"])
-
 AC_ARG_ENABLE([photon-debug],
   [AS_HELP_STRING([--enable-photon-debug],
                   [Enable photon debugging @<:@default=no@:>@])],

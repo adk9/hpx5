@@ -20,6 +20,7 @@
 
 #include <string.h>
 #include <hpx/hpx.h>
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "emulation.h"
 
@@ -37,7 +38,7 @@ static int _memput_request_action(void *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  _memput_request = HPX_REGISTER_ACTION(_memput_request_action);
+  LIBHPX_REGISTER_ACTION(&_memput_request, _memput_request_action);
 }
 
 int parcel_memput(hpx_addr_t to, const void *from, size_t size,

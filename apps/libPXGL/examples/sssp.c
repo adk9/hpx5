@@ -374,12 +374,13 @@ int main(int argc, char *argv[argc]) {
   };
 
   // register the actions
-  _print_vertex_distance_index = HPX_REGISTER_ACTION(_print_vertex_distance_index_action);
-  _print_vertex_distance       = HPX_REGISTER_ACTION(_print_vertex_distance_action);
-  _print_sssp_stat             = HPX_REGISTER_ACTION(_print_sssp_stat_action);
-  _main                        = HPX_REGISTER_ACTION(_main_action);
+  HPX_REGISTER_ACTION(&_print_vertex_distance_index,
+                      _print_vertex_distance_index_action);
+  HPX_REGISTER_ACTION(&_print_vertex_distance, _print_vertex_distance_action);
+  HPX_REGISTER_ACTION(&_print_sssp_stat, _print_sssp_stat_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
 
-  e = hpx_run(_main, &args, sizeof(args));
+  e = hpx_run(&_main, &args, sizeof(args));
   free(problems);
   return e;
 }

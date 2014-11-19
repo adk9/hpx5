@@ -20,6 +20,7 @@
 
 #include <string.h>
 #include <hpx/hpx.h>
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
 #include "emulation.h"
@@ -57,10 +58,10 @@ static int _memget_request_action(_memget_request_args_t *args) {
                                        args->size);
   assert(p);
 
-  p->action = _memget_reply;
-  p->target = args->reply;
-  p->c_action = hpx_lco_set_action;
-  p->c_target = args->lsync;
+  hpx_parcel_set_action(p, _memget_reply);
+  hpx_parcel_set_target(p, args->reply);
+  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+  hpx_parcel_set_cont_target(p, args->lsync);
 
   _memget_reply_args_t *repargs = hpx_parcel_get_data(p);
   repargs->to = args->to;
@@ -71,8 +72,8 @@ static int _memget_request_action(_memget_request_args_t *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  _memget_request = HPX_REGISTER_ACTION(_memget_request_action);
-  _memget_reply = HPX_REGISTER_ACTION(_memget_reply_action);
+  LIBHPX_REGISTER_ACTION(&_memget_request, _memget_request_action);
+  LIBHPX_REGISTER_ACTION(&_memget_reply, _memget_reply_action);
 }
 
 int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {

@@ -66,7 +66,7 @@ int hpx_init(int *argc, char ***argv);
 /// @param  args arguments to pass to @p entry
 /// @param  size the size of @p args
 /// @returns     the status code passed to hpx_shutdown() upon termination
-int hpx_run(hpx_action_t entry, const void *args, size_t size);
+int hpx_run(hpx_action_t *entry, const void *args, size_t size);
 
 
 /// Shutdown the HPX runtime.

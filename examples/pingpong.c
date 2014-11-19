@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   _register_actions();
 
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_ping, &args, sizeof(args));
+  e = hpx_run(&_ping, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.id * 2);
   printf("average oneway latency:   %f ms\n", latency);
@@ -183,8 +183,8 @@ static int _action_pong(args_t *args) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  _ping = HPX_REGISTER_ACTION(_action_ping);
-  _pong = HPX_REGISTER_ACTION(_action_pong);
+  HPX_REGISTER_ACTION(&_ping, _action_ping);
+  HPX_REGISTER_ACTION(&_pong, _action_pong);
 }
 
 

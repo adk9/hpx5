@@ -287,16 +287,19 @@ int call_sssp_action(const call_sssp_args_t *const args) {
 }
 
 static __attribute__((constructor)) void _sssp_register_actions() {
-  call_sssp                    = HPX_REGISTER_ACTION(call_sssp_action);
-  _sssp_visit_vertex           = HPX_REGISTER_ACTION(_sssp_visit_vertex_action);
-  _sssp_update_vertex_distance = HPX_REGISTER_ACTION(_sssp_update_vertex_distance_action);
-  _send_termination_count      = HPX_REGISTER_ACTION(_send_termination_count_action);
-  _initialize_termination_detection = HPX_REGISTER_ACTION(_initialize_termination_detection_action);
+  HPX_REGISTER_ACTION(&call_sssp, call_sssp_action);
+  HPX_REGISTER_ACTION(&_sssp_visit_vertex, _sssp_visit_vertex_action);
+  HPX_REGISTER_ACTION(&_sssp_update_vertex_distance,
+                      _sssp_update_vertex_distance_action);
+  HPX_REGISTER_ACTION(&_send_termination_count,
+                      _send_termination_count_action);
+  HPX_REGISTER_ACTION(&_initialize_termination_detection,
+                      _initialize_termination_detection_action);
   termination                  = COUNT_TERMINATION;
 
 #ifdef GATHER_STAT
-  _useful_work_update          = HPX_REGISTER_ACTION(_useful_work_update_action);
-  _useless_work_update         = HPX_REGISTER_ACTION(_useless_work_update_action);
-  _edge_traversal_count        = HPX_REGISTER_ACTION(_edge_traversal_count_action);
+  HPX_REGISTER_ACTION(&_useful_work_update, _useful_work_update_action);
+  HPX_REGISTER_ACTION(&_useless_work_update, _useless_work_update_action);
+  HPX_REGISTER_ACTION(&_edge_traversal_count, _edge_traversal_count_action);
 #endif // GATHER_STAT
 }

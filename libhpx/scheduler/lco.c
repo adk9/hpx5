@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "libsync/sync.h"
+#include "libhpx/action.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
@@ -136,11 +137,11 @@ _lco_wait(void *args)
 static void HPX_CONSTRUCTOR
 _initialize_actions(void)
 {
-  _lco_fini_action   = HPX_REGISTER_ACTION(_lco_fini);
-  _lco_error_action  = HPX_REGISTER_ACTION(_lco_error);
-  hpx_lco_set_action = HPX_REGISTER_ACTION(_lco_set);
-  _lco_get_action    = HPX_REGISTER_ACTION(_lco_get);
-  _lco_wait_action   = HPX_REGISTER_ACTION(_lco_wait);
+  LIBHPX_REGISTER_ACTION(&_lco_fini_action, _lco_fini);
+  LIBHPX_REGISTER_ACTION(&_lco_error_action, _lco_error);
+  LIBHPX_REGISTER_ACTION(&hpx_lco_set_action, _lco_set);
+  LIBHPX_REGISTER_ACTION(&_lco_get_action, _lco_get);
+  LIBHPX_REGISTER_ACTION(&_lco_wait_action, _lco_wait);
 }
 
 

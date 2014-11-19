@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "%s%*s\n", "# MESG_SIZE ", FIELD_WIDTH, "LATENCY (ms)");
   _register_actions();
 
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }
 
 static int _action_main(void *args) {

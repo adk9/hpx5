@@ -236,8 +236,8 @@ int main(int argc, char **argv)
         return -1;
     }
   }
-  _main          = HPX_REGISTER_ACTION(_main_action);
-  _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
 
   int input[4];
   input[0] = nDoms;
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
   input[3] = cores;
   printf(" Number of domains: %d nx: %d maxcycles: %d cores: %d\n",nDoms,nx,maxcycles,cores);
 
-  return hpx_run(_main, input, 4*sizeof(int));
+  return hpx_run(&_main, input, 4*sizeof(int));
 
   return 0;
 }

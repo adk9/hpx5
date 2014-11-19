@@ -20,6 +20,7 @@
 
 #include <string.h>
 #include <hpx/hpx.h>
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
@@ -46,7 +47,7 @@ static int _bcast_action(_bcast_args_t *args) {
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  _bcast = HPX_REGISTER_ACTION(_bcast_action);
+  LIBHPX_REGISTER_ACTION(&_bcast, _bcast_action);
 }
 
 
