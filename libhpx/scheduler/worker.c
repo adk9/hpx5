@@ -576,7 +576,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
       --parcel->credit;
     }
 
-    if (hpx_action_eq(c_act, hpx_lco_set_action)) {
+    if (c_act == hpx_lco_set_action) {
       hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
                                  HPX_ACTION_NULL);
     }

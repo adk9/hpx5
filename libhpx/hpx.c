@@ -198,13 +198,13 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
   }
 
   if (network_startup(here->network) != LIBHPX_OK) {
-    status = dbg_error("failed to start network.\n")
+    status = dbg_error("failed to start network.\n");
     goto unwind1;
   }
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    if (hpx_call(HPX_HERE, act, args, size, HPX_NULL) != LIBHPX_OK) {
+    if (hpx_call(HPX_HERE, *act, args, size, HPX_NULL) != LIBHPX_OK) {
       status = dbg_error("failed to spawn initial action\n");
       goto unwind2;
     }
