@@ -152,5 +152,5 @@ int main(int argc, char *argv[argc]) {
   _main   = HPX_REGISTER_ACTION(_main_action);
   _pinger = HPX_REGISTER_ACTION(_pinger_action);
   _ponger = HPX_REGISTER_ACTION(_ponger_action);
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }
