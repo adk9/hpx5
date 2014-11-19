@@ -26,7 +26,16 @@
 #define n_gen   4 // number of buffers for the RK4 integrator
 #define n_neighbors 2
 
-#define HASH_TBL_SIZE 6291469
+#define HASH_TBL_SIZE 3145739
+// #define HASH_TBL_SIZE 6291469
+// #define HASH_TBL_SIZE 12582917
+// #define HASH_TBL_SIZE 25165843
+// #define HASH_TBL_SIZE 50331653
+// #define HASH_TBL_SIZE 100663319
+// #define HASH_TBL_SIZE 201326611
+// #define HASH_TBL_SIZE 402653189
+// #define HASH_TBL_SIZE 805306457
+//#define HASH_TBL_SIZE 1610612741
 
 typedef enum {
   essential    = 3,
@@ -54,9 +63,10 @@ typedef struct coll_point_t {
 } coll_point_t;
 
 typedef struct hash_entry_t{
-  coll_point_t *point; ///< pointer to the collocation point
+  int initialized;
+  coll_point_t point; ///< pointer to the collocation point
   uint64_t mkey;  ///< morton key for this entry
-  struct hash_entry_t *next; ///< pointer to the next entry
+  hpx_addr_t next; ///< pointer to the next entry
 } hash_entry_t;
 
 typedef struct {
@@ -69,6 +79,9 @@ typedef struct {
   int           nDoms;
   int       maxcycles;
   int           cores;
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+  hpx_addr_t newdt;
 } InitArgs;
 
 typedef struct Domain {
@@ -97,7 +110,78 @@ typedef struct Domain {
   double nfd_diff_coeff[2][nstn][nstn];
   wamr_storage_t *coll_points;
   int max_level;
+
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
 } Domain;
+
+typedef struct Cfg_action_helper{
+  int i;
+  double L_dim[n_dim]; 
+  int step_size;
+  double Prr;
+  double p_r;
+  double Gamma_r;
+  double t0;
+} Cfg_action_helper;
+
+int _cfg_action(Cfg_action_helper *ld);
+extern hpx_action_t _cfg;
+
+typedef struct Cfg_action_helper2{
+  int i;
+  double lag_coef[np - 1][np];
+  int mask[n_variab + n_aux];
+  double eps[n_variab];
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} Cfg_action_helper2;
+
+int _cfg2_action(Cfg_action_helper2 *ld);
+extern hpx_action_t _cfg2;
+
+typedef struct Cag_action_helper{
+  int i;
+  double t0;
+  double L_dim[n_dim]; 
+  double lag_coef[np - 1][np];
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} Cag_action_helper;
+
+int _cag_action(Cag_action_helper *ld);
+extern hpx_action_t _cag;
+
+typedef struct Neighbor_action_helper{
+  int level;
+  int nt_x;
+  int nnbr_x;
+  int step_e;
+  int step_n;
+  double stamp;
+  int index[n_dim];
+  double L_dim0; 
+  double lag_coef[np - 1][np];
+  uint64_t mkey;
+  coll_point_t essen_point;
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} Neighbor_action_helper;
+
+int _nah_action(Neighbor_action_helper *ld);
+extern hpx_action_t _nah;
+
+typedef struct ATS_action_helper{
+  double lag_coef[np - 1][np];
+  double stamp;
+  hpx_addr_t basecollpoints;
+  hpx_addr_t collpoints;
+} ATS_action_helper;
+
+int _ats0_action(ATS_action_helper *ld);
+extern hpx_action_t _ats0;
+int _ats1_action(ATS_action_helper *ld);
+extern hpx_action_t _ats1;
 
 void problem_init(Domain *);
 double compute_numer_1st(const int ell, const int j, const int p);
@@ -105,24 +189,28 @@ double compute_numer_2nd(const int ell, const int j, const int p);
 double compute_denom(const int j, const int p);
 void set_lagrange_deriv_coef(Domain *);
 void set_lagrange_coef(Domain *);
-void storage_init(Domain *);
 void create_full_grids(Domain *ld);
-void initial_condition(const double coords[n_dim], double *u,Domain *ld);
+void initial_condition(const double coords[n_dim], double *u,double Prr,double p_r,double Gamma_r);
 int get_stencil_type(const int myorder, const int range);
 void get_stencil_indices(const int myindex, const int index_range,
                          const int step, int indices[np]);
 void forward_wavelet_trans(const coll_point_t *point, const char type,
-                           const int *mask, const int gen, double *approx,Domain *ld);
-coll_point_t *get_coll_point(const int index[n_dim],Domain *ld);
+                           const int *mask, const int gen, double *approx,hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]);
+coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hpx_addr_t collpoints);
+hpx_addr_t get_hpx_coll_point(const int index[n_dim],int *flag,int *type,hpx_addr_t basecollpoints,hpx_addr_t collpoints);
+
 uint64_t morton_key(const int index[n_dim]);
 uint64_t hash(const uint64_t k);
-void create_neighboring_point(coll_point_t *essen_point, const double stamp,Domain *ld);
+void create_neighboring_point(coll_point_t *essen_point, const double stamp,double L_dim0,
+ hpx_addr_t,hpx_addr_t,double lag_coef[np - 1][np]);
 void create_adap_grids(Domain *ld);
 void advance_time_stamp(coll_point_t *point, const double stamp,
-                        const int gen,Domain *ld); 
+                        const int gen,
+                        hpx_addr_t basecollpoints,hpx_addr_t collpoints,
+                        double lag_coef[np - 1][np]); 
 void create_nonessential_point(coll_point_t *nonessen_point,
                                const int index[n_dim], const double stamp,Domain *ld);
-coll_point_t *add_coll_point(const int index[n_dim], int *flag,Domain *ld);
+coll_point_t *add_coll_point(const int index[n_dim], int *flag,hpx_addr_t,hpx_addr_t);
 int get_level(const int index);
 void deriv_stencil_config(const double stamp,Domain *ld); 
 void deriv_stencil_helper(coll_point_t *point, const int dir, const double stamp,Domain *ld);

@@ -168,105 +168,182 @@ double compute_numer_2nd(const int ell, const int j, const int p) {
   return numer;
 }
 
-void storage_init(Domain *ld) {
-  ld->coll_points = calloc(1, sizeof(wamr_storage_t));
-  assert(ld->coll_points != NULL);
-  // number of collocation points stored in the array
-  int npts_array = (2 * ns_x + 1) * (2 * ns_y + 1) * (2 * ns_z + 1);
-  ld->coll_points->array = calloc(npts_array, sizeof(coll_point_t));
-  assert(ld->coll_points->array != NULL);
+int _cfg_action(Cfg_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *point = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point))
+    return HPX_RESEND;
+
+  int i = ld->i;
+
+  int i2 = i / 2;
+  int ihalf = i % 2;
+  point->coords[0] = ld->L_dim[0] * i / 2 / ns_x;
+  point->index[0] = (i2 + 0.5 * ihalf) * ld->step_size;
+  initial_condition(point->coords, point->u[0],ld->Prr,ld->p_r,ld->Gamma_r);
+  point->status[0] = ihalf ? neighboring : essential;
+  point->level = ihalf;
+  point->stamp = ld->t0;
+  point->parent[0] = -1;
+  for (int j = 0; j < n_neighbors; j++) {
+    for (int dir = 0; dir < n_dim; dir++) {
+      point->neighbors[j][dir] = -1;
+    }
+  }
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
+int _cfg2_action(Cfg_action_helper2 *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *point = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point))
+    return HPX_RESEND;
+
+  int i = ld->i;
+
+  int i2 = i / 2;
+  int ihalf = i % 2;
+  if (ihalf) { // point is level 1, configure its wavelet stencil
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i-1)*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    coll_point_t *parent = malloc(sizeof(*parent));
+    hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+
+    int indices[np] = {0};
+    get_stencil_indices(i, 2 * ns_x, 2, indices);
+
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    point->parent[0] = parent->index[0];
+    free(parent);
+
+    coll_point_t **pnts = malloc(np*sizeof(*pnts));
+    for (int j = 0; j < np; j++) {
+      pnts[j] = malloc(sizeof(**pnts));
+    }
+    hpx_addr_t finish = hpx_lco_and_new(np);
+    for (int j = 0; j < np; j++) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,indices[j]*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_gas_memget(pnts[j],there,sizeof(coll_point_t),finish);
+    }
+    hpx_lco_wait(finish);
+    hpx_lco_delete(finish,HPX_NULL);
+
+    for (int j = 0; j < np; j++) { 
+      point->wavelet_stencil[0][j][0] = pnts[j]->index[0];
+    }
+
+    for (int j = 0; j < np; j++) 
+      free(pnts[j]);
+    free(pnts);
+    
+    // perform wavelet transform
+    double approx[n_variab + n_aux] = {0};
+    forward_wavelet_trans(point, 'u', ld->mask, 0, approx,ld->basecollpoints,ld->collpoints,ld->lag_coef);
+    for (int ivar = 0; ivar < n_variab; ivar++) {
+      if (fabs(point->u[0][ivar] - approx[ivar]) >= ld->eps[ivar]) {
+        point->status[0] = essential;
+        break;
+      }
+    }
+  } else {
+    point->wavelet_coef[0] = -1; // -1 means wavelet transform not needed
+    point->parent[0] = -1; // no parent 
+    if (i >= 1) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i-1)*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_addr_t complete = hpx_lco_and_new(1);
+      coll_point_t *parent = malloc(sizeof(*parent));
+      hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+      hpx_lco_wait(complete);
+      hpx_lco_delete(complete,HPX_NULL);
+      point->neighbors[0][0] = parent->index[0];
+      free(parent);
+    }
+
+    if (i <= ns_x * 2 - 1) {
+      hpx_addr_t there = hpx_addr_add(ld->basecollpoints,(i+1)*sizeof(coll_point_t),sizeof(coll_point_t));
+      hpx_addr_t complete = hpx_lco_and_new(1);
+      coll_point_t *parent = malloc(sizeof(*parent));
+      hpx_gas_memget(parent,there,sizeof(coll_point_t),complete);
+      hpx_lco_wait(complete);
+      hpx_lco_delete(complete,HPX_NULL);
+      point->neighbors[1][0] = parent->index[0];
+      free(parent);
+    }
+  }
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
 }
 
 void create_full_grids(Domain *ld) {
-  assert(ld->coll_points != NULL);
+  //assert(ld->coll_points != NULL);
   const int step_size = 1 << JJ;
   ld->max_level = 1;
 
-  int mask[n_variab + n_aux] = {0};
-  for (int ivar = 0; ivar < n_variab; ivar++)
-    mask[ivar] = 1;
-
+  Cfg_action_helper cfg[ns_x*2+1]; 
+  hpx_addr_t complete = hpx_lco_and_new(ns_x*2+1);
+  int j,k;
   for (int i = 0; i <= ns_x * 2; i++) {
-      int i2 = i / 2;
-      int ihalf = i % 2;
-      coll_point_t *point = &(ld->coll_points->array[i]);
-      point->coords[0] = ld->L_dim[0] * i / 2 / ns_x;
-      point->index[0] = (i2 + 0.5 * ihalf) * step_size;
-      initial_condition(point->coords, point->u[0],ld);
-      point->status[0] = ihalf ? neighboring : essential;
-      point->level = ihalf;
-      point->stamp = ld->t0;
-      point->parent[0] = -1;
-      for (int j = 0; j < n_neighbors; j++) {
-        for (int dir = 0; dir < n_dim; dir++) {
-          point->neighbors[j][dir] = -1;
-        }
-      }
+    cfg[i].i = i; 
+    for (j=0;j<n_dim;j++) {
+      cfg[i].L_dim[j] = ld->L_dim[j];
+    }
+    cfg[i].Prr = ld->Prr;
+    cfg[i].p_r = ld->p_r;
+    cfg[i].Gamma_r = ld->Gamma_r;
+    cfg[i].t0 = ld->t0;
+    cfg[i].step_size = step_size;
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_call(there,_cfg,&cfg[i],sizeof(Cfg_action_helper),complete);
   }
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete,HPX_NULL);
 
+  hpx_addr_t complete2 = hpx_lco_and_new(ns_x*2+1);
+  Cfg_action_helper2 cfg2[ns_x*2+1];
   for (int i = 0; i <= ns_x * 2; i++) {
-      int i2 = i / 2;
-      int ihalf = i % 2;
-      coll_point_t *point = &(ld->coll_points->array[i]);
-      if (ihalf) { // point is level 1, configure its wavelet stencil
-        point->parent[0] = ld->coll_points->array[i - 1].index[0];
-        int indices[np] = {0};
-        point->wavelet_coef[0] = get_stencil_type(i2, ns_x - 1);
-        get_stencil_indices(i, 2 * ns_x, 2, indices);
-        for (int j = 0; j < np; j++)
-          point->wavelet_stencil[0][j][0] =
-            ld->coll_points->array[indices[j]].index[0];
+    cfg2[i].i = i; 
+    for (int ivar = 0; ivar < n_variab; ivar++) {
+      cfg2->mask[ivar] = 1;
+      cfg2->eps[ivar] = ld->eps[ivar];
+    }
+    for (int ivar = n_variab; ivar < n_variab+n_aux; ivar++)
+      cfg2->mask[ivar] = 0;
 
-        // perform wavelet transform
-        double approx[n_variab + n_aux] = {0};
-        forward_wavelet_trans(point, 'u', mask, 0, approx,ld);
-        for (int ivar = 0; ivar < n_variab; ivar++) {
-          if (fabs(point->u[0][ivar] - approx[ivar]) >= ld->eps[ivar]) {
-            point->status[0] = essential;
-            break;
-          }
-        }
-      } else {
-        point->wavelet_coef[0] = -1; // -1 means wavelet transform not needed
-        point->parent[0] = -1; // no parent 
-        if (i >= 1)
-          point->neighbors[0][0] = ld->coll_points->array[i - 1].index[0];
-  
-        if (i <= ns_x * 2 - 1)
-          point->neighbors[1][0] = ld->coll_points->array[i + 1].index[0];
+    for (j=0;j<np-1;j++) {
+      for (k=0;k<np;k++) {
+        cfg2[i].lag_coef[j][k] = ld->lag_coef[j][k];
       }
+    }
+    cfg2[i].basecollpoints = ld->basecollpoints;
+    cfg2[i].collpoints = ld->collpoints;
+
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_call(there,_cfg2,&cfg2[i],sizeof(Cfg_action_helper2),complete2);
   }
+  hpx_lco_wait(complete2);
+  hpx_lco_delete(complete2,HPX_NULL);
 }
 
-void initial_condition(const double coords[n_dim], double *u,Domain *ld) {
+void initial_condition(const double coords[n_dim], double *u,double Prr,double p_r,double Gamma_r) {
   double Pra = 0.1;
   double p_ra = 0.125;
   double thk = 1.0e-2;
   double x0 = 0.5;
   double x = coords[0];
-  double Prh = 0.5*((ld->Prr + Pra) - (ld->Prr - Pra) * tanh((x - x0) / thk));
-  double p_h = 0.5*((ld->p_r + p_ra) - (ld->p_r - p_ra) * tanh((x - x0) / thk));
-  double e_h = Prh / (ld->Gamma_r - 1) / p_h;
+  double Prh = 0.5*((Prr + Pra) - (Prr - Pra) * tanh((x - x0) / thk));
+  double p_h = 0.5*((p_r + p_ra) - (p_r - p_ra) * tanh((x - x0) / thk));
+  double e_h = Prh / (Gamma_r - 1) / p_h;
 
   u[0] = p_h;
   u[1] = 0.0;
   u[2] = p_h * e_h;
-}
-
-/// @brief Determines which row in lag_coef to use by the stencil point
-/// ---------------------------------------------------------------------------
-int get_stencil_type(const int myorder, const int range) {
-  int stencil_type;
-
-  if (myorder < np / 2 - 1) {
-    stencil_type = myorder;
-  } else if ((range - myorder) < np / 2 - 1) {
-    stencil_type = (np - 2) - (range - myorder);
-  } else {
-    stencil_type = np / 2 - 1;
-  }
-
-  return stencil_type;
 }
 
 /// @brief Determines the indices of points used by the interpolation stencil
@@ -291,7 +368,7 @@ void get_stencil_indices(const int myindex, const int index_range,
 /// Forward wavelet transform
 /// ---------------------------------------------------------------------------
 void forward_wavelet_trans(const coll_point_t *point, const char type,
-                           const int *mask, const int gen, double *approx,Domain *ld) {
+                           const int *mask, const int gen, double *approx,hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]) {
   assert(type == 'u' || type == 'd');
   coll_point_t *wavelet_stencil[np] = {NULL};
   double *coef = NULL;
@@ -304,9 +381,9 @@ void forward_wavelet_trans(const coll_point_t *point, const char type,
   for (int dir = 0; dir < n_dim; dir++) {
     int interp_case = point->wavelet_coef[dir];
     if (interp_case != -1) {
-      coef = &(ld->lag_coef[interp_case][0]);
-      for (int j = 0; j < np; j++)
-        wavelet_stencil[j] = get_coll_point(point->wavelet_stencil[dir][j],ld);
+      coef = &(lag_coef[interp_case][0]);
+      for (int j = 0; j < np; j++) 
+        wavelet_stencil[j] = get_coll_point(point->wavelet_stencil[dir][j],basecollpoints,collpoints);
     }
   }
 
@@ -317,8 +394,11 @@ void forward_wavelet_trans(const coll_point_t *point, const char type,
 
     for (int i = 0; i < np; i++) {
       double *ui = &wavelet_stencil[i]->u[gen][0];
-      for (int ivar = 0; ivar < nvar; ivar++)
+      for (int ivar = 0; ivar < nvar; ivar++) 
         approx[ivar] += coef[i] * ui[ivar] * mask[ivar];
+    }
+    for (int i = 0; i < np; i++) {
+      free(wavelet_stencil[i]);
     }
   } else {
     int nvar = n_deriv;
@@ -330,35 +410,10 @@ void forward_wavelet_trans(const coll_point_t *point, const char type,
       for (int ivar = 0; ivar < nvar; ivar++)
         approx[ivar] += coef[i] * dui[ivar] * mask[ivar];
     }
-  }
-}
-
-/// @brief Retrieve collocation point based on its Morton key  
-/// ---------------------------------------------------------------------------
-coll_point_t *get_coll_point(const int index[n_dim],Domain *ld) {
-  static const int step = 1 << (JJ - 1);
-  coll_point_t *retval = NULL;
-
-  bool stored_in_array = true;
-  for (int dir = 0; dir < n_dim; dir++)
-    stored_in_array &= (index[dir] % step == 0);
-
-  if (stored_in_array) {
-    retval = &(ld->coll_points->array[index[0] / step]);
-  } else {
-    uint64_t mkey = morton_key(index);
-    uint64_t hidx = hash(mkey);
-    hash_entry_t *curr = ld->coll_points->hash_table[hidx];
-    while (curr != NULL) {
-      if (curr->mkey == mkey) {
-        retval = curr->point;
-        break;
-      }
-      curr = curr->next;
+    for (int i = 0; i < np; i++) {
+      free(wavelet_stencil[i]);
     }
   }
-
-  return retval;
 }
 
 /// @brief Computes the morton key for the given indices.
@@ -376,20 +431,313 @@ uint64_t hash(const uint64_t k) {
   return (k % HASH_TBL_SIZE);
 }
 
+/// @brief Retrieve collocation point based on its Morton key  
+/// ---------------------------------------------------------------------------
+coll_point_t *get_coll_point(const int index[n_dim],hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+  static const int step = 1 << (JJ - 1);
+  coll_point_t *retval = NULL;
+
+  bool stored_in_array = true;
+  for (int dir = 0; dir < n_dim; dir++)
+    stored_in_array &= (index[dir] % step == 0);
+
+  if (stored_in_array) {
+    hpx_addr_t there = hpx_addr_add(basecollpoints,(index[0] / step)*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    coll_point_t *point = malloc(sizeof(*point));
+    hpx_gas_memget(point,there,sizeof(coll_point_t),complete);
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    return point;
+  } else {
+    uint64_t mkey = morton_key(index);
+    uint64_t hidx = hash(mkey);
+    hash_entry_t *curr = malloc(sizeof(*curr)); 
+    hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    hpx_gas_memget(curr,there,sizeof(hash_entry_t),complete);
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    while (curr->initialized) {
+      if (curr->mkey == mkey) {
+        retval = &curr->point;
+        break;
+      }
+      hpx_addr_t finished = hpx_lco_and_new(1);
+      hpx_addr_t next = curr->next;
+      hpx_gas_memget(curr,next,sizeof(hash_entry_t),finished);
+      hpx_lco_wait(finished);
+      hpx_lco_delete(finished,HPX_NULL);
+    }
+  }
+
+  return retval;
+}
+
+/// @brief Retrieve collocation point based on its Morton key  
+/// ---------------------------------------------------------------------------
+hpx_addr_t get_hpx_coll_point(const int index[n_dim],int *flag,int *type,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
+  static const int step = 1 << (JJ - 1);
+
+  bool stored_in_array = true;
+  for (int dir = 0; dir < n_dim; dir++)
+    stored_in_array &= (index[dir] % step == 0);
+
+  // defaults
+  *flag = 0;  // the point doesn't exist
+  *type = 1;  
+
+  if (stored_in_array) {
+    *flag = 1; // the point already exists
+    *type = 0; // the point exists in the array
+    hpx_addr_t there = hpx_addr_add(basecollpoints,(index[0] / step)*sizeof(coll_point_t),sizeof(coll_point_t));
+    return there;
+  } else {
+    uint64_t mkey = morton_key(index);
+    uint64_t hidx = hash(mkey);
+    hash_entry_t *curr = malloc(sizeof(*curr)); 
+    hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
+    hpx_addr_t complete = hpx_lco_and_new(1);
+    hpx_gas_memget(curr,there,sizeof(hash_entry_t),complete);
+    hpx_lco_wait(complete);
+    hpx_lco_delete(complete,HPX_NULL);
+    hpx_addr_t next = there;  
+    while (curr->initialized) {
+      if (curr->mkey == mkey) {
+        *flag = 1; // the point already exists
+        *type = 1; // the point exists in the hash
+        return next;
+        break;
+      }
+      hpx_addr_t finished = hpx_lco_and_new(1);
+      next = curr->next;
+      hpx_gas_memget(curr,next,sizeof(hash_entry_t),finished);
+      hpx_lco_wait(finished);
+      hpx_lco_delete(finished,HPX_NULL);
+    }
+    return next;
+  }
+
+  return HPX_NULL;
+}
+
+int _cag_action(Cag_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *point = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point))
+    return HPX_RESEND;
+
+  if (point->status[0] == essential)
+      create_neighboring_point(point, ld->t0,ld->L_dim[0],
+           ld->basecollpoints,ld->collpoints,ld->lag_coef);
+
+  hpx_gas_unpin(local);
+
+  return HPX_SUCCESS;
+}
+
 /// @brief Create adaptive grid 
 /// ----------------------------------------------------------------------------
 void create_adap_grids(Domain *ld) {
+
+  Cag_action_helper *cag;
+  cag = malloc((ns_x*2+1)/2*sizeof(Cag_action_helper));
+  hpx_addr_t complete = hpx_lco_and_new((ns_x*2+1)/2);
   for (int i = 1; i <= ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      create_neighboring_point(point, ld->t0,ld);
+    cag[i].i = i;
+    cag[i].t0 = ld->t0;
+    cag[i].L_dim[0] = ld->L_dim[0];
+    cag[i].basecollpoints = ld->basecollpoints;
+    cag[i].collpoints = ld->collpoints;
+    int j,k;
+    for (j=0;j<np-1;j++) {
+      for (k=0;k<np;k++) {
+        cag[i].lag_coef[j][k] = ld->lag_coef[j][k];
+      }
+    }
+    hpx_addr_t there = hpx_addr_add(ld->basecollpoints,i*sizeof(coll_point_t),sizeof(coll_point_t));
+    hpx_call(there,_cag,&cag[i],sizeof(Cag_action_helper),complete);
   }
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete,HPX_NULL);
+  free(cag);
+
+}
+
+int _nah_action(Neighbor_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  hash_entry_t *neighbor_hash = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&neighbor_hash))
+    return HPX_RESEND;
+
+  // this is a new point -- initialize it
+  neighbor_hash->initialized = 1;
+  neighbor_hash->mkey = ld->mkey;
+  neighbor_hash->next = hpx_gas_alloc(sizeof(hash_entry_t));
+
+  coll_point_t *neighbor = &neighbor_hash->point;
+
+  neighbor->parent[0] = ld->essen_point.index[0]; 
+  neighbor->coords[0] = ld->L_dim0 * ld->index[0] / ld->nt_x; 
+  neighbor->index[0] = ld->index[0];
+  neighbor->level = ld->level + 1; 
+  neighbor->stamp = ld->stamp; 
+  for (int j = 0; j < n_neighbors; j++) {
+    for (int dir = 0; dir < n_dim; dir++) {
+      neighbor->neighbors[j][dir] = -1; 
+    }
+  }
+
+  // configure the wavelet stencil
+  int indices_x[np] = {0}; 
+  neighbor->wavelet_coef[0] = 
+    get_stencil_type((ld->index[0] - ld->step_n) / ld->step_e, ld->nnbr_x - 1); 
+  get_stencil_indices(ld->index[0], ld->nt_x, ld->step_e, indices_x); 
+
+  for (int j = 0; j < np; j++) {
+    neighbor->wavelet_stencil[0][j][0] = indices_x[j]; 
+    int flag1,type1; 
+    //coll_point_t *temp = add_coll_point(&indices_x[j], &flag1,ld); 
+    hpx_addr_t temp_addr = get_hpx_coll_point(&indices_x[j], &flag1,&type1,
+                  ld->basecollpoints,ld->collpoints); 
+    if (!flag1) { // the point has just been created
+#if 0
+      create_nonessential_point(temp, &indices_x[j], stamp,ld); 
+#endif
+    } else { 
+      double tstamp;
+      if ( type1 == 1 ) {
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        hash_entry_t *temp_hash = malloc(sizeof(*temp_hash)); 
+        hpx_gas_memget(temp_hash,temp_addr,sizeof(hash_entry_t),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        tstamp = temp_hash->point.stamp;
+      } else {
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        coll_point_t *temp = malloc(sizeof(*temp));
+        hpx_gas_memget(temp,temp_addr,sizeof(coll_point_t),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        tstamp = temp->stamp;
+      }
+      if (tstamp < ld->stamp) {
+        ATS_action_helper *ats;
+        ats = malloc(sizeof(ATS_action_helper));
+        ats->basecollpoints = ld->basecollpoints;
+        ats->collpoints = ld->collpoints;
+        ats->stamp = ld->stamp;
+        int j,k;
+        for (j=0;j<np-1;j++) {
+          for (k=0;k<np;k++) {
+            ats->lag_coef[j][k] = ld->lag_coef[j][k];
+          }
+        }
+
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        if ( type1 == 1 ) {
+          // this resolves the hash
+          hpx_call(temp_addr,_ats1,ats,sizeof(ATS_action_helper),complete);
+        } else {
+          // this resolves the coll point
+          hpx_call(temp_addr,_ats0,ats,sizeof(ATS_action_helper),complete);
+        }
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        free(ats);
+#if 0
+        // reason for setting status[1]: the point has a time stamp when it
+        // is created. If the input stamp is t0, this branch never
+        // happens. 
+        temp->status[1] = nonessential; 
+        advance_time_stamp(temp, stamp, 0,ld); 
+#endif
+      }
+    }
+  }
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+int _ats0_action(ATS_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  coll_point_t *temp = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&temp))
+    return HPX_RESEND;
+
+  // reason for setting status[1]: the point has a time stamp when it
+  // is created. If the input stamp is t0, this branch never
+  // happens. 
+  temp->status[1] = nonessential; 
+  advance_time_stamp(temp, ld->stamp, 0,ld->basecollpoints,ld->collpoints,ld->lag_coef); 
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+int _ats1_action(ATS_action_helper *ld)
+{
+  hpx_addr_t local = hpx_thread_current_target();
+  hash_entry_t *point_hash = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&point_hash))
+    return HPX_RESEND;
+
+  coll_point_t *temp = &point_hash->point;
+
+  // reason for setting status[1]: the point has a time stamp when it
+  // is created. If the input stamp is t0, this branch never
+  // happens. 
+  temp->status[1] = nonessential; 
+  advance_time_stamp(temp, ld->stamp, 0,ld->basecollpoints,ld->collpoints,ld->lag_coef); 
+
+  hpx_gas_unpin(local);
+  return HPX_SUCCESS;
+}
+
+/// ----------------------------------------------------------------------------
+/// @brief Advance time stamp of the specified collocation point
+/// ----------------------------------------------------------------------------
+void advance_time_stamp(coll_point_t *point, const double stamp,
+                        const int gen,
+                        hpx_addr_t basecollpoints,hpx_addr_t collpoints,
+                        double lag_coef[np - 1][np]) {
+#if 0
+  // make sure the time stamps of the stencil are up-to-date
+  for (int dir = 0; dir < n_dim; dir++) {
+    if (point->wavelet_coef[dir] != -1) {
+      for (int j = 0; j < np; j++) {
+        coll_point_t *temp =
+          get_coll_point(point->wavelet_stencil[dir][j],ld);
+        if (temp->stamp < stamp) {
+          temp->status[1] = nonessential;
+          advance_time_stamp(temp, stamp, gen,ld);
+        }
+      }
+    }
+  }
+
+  // perform wavelet transform to set value of the point
+  int mask[n_variab + n_aux] = {0};
+  for (int ivar = 0; ivar < n_variab; ivar++)
+    mask[ivar] = 1;
+
+  forward_wavelet_trans(point, 'u', mask, 0, point->u[gen],
+         basecollpoints,collpoints,lag_coef);
+
+  // update the time stamp
+  point->stamp = stamp;
+#endif
 }
 
 /// ----------------------------------------------------------------------------
 /// @brief Add neighboring point around an essential point
 /// ----------------------------------------------------------------------------
-void create_neighboring_point(coll_point_t *essen_point, const double stamp,Domain *ld) {
+void create_neighboring_point(coll_point_t *essen_point, const double stamp,double L_dim0,
+     hpx_addr_t basecollpoints,hpx_addr_t collpoints,double lag_coef[np - 1][np]) {
   // set up mask for wavelet transform
   int mask[n_variab + n_aux] = {0}; 
   for (int ivar = 0; ivar < n_variab; ivar++) 
@@ -421,10 +769,41 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,Doma
       essen_point->neighbors[i][0] = -1; // neighbor is out-of-range
     } else {
       essen_point->neighbors[i][0] = index[0]; 
-      int flag; 
-      coll_point_t *neighbor = add_coll_point(index, &flag,ld); 
+      int flag,type; 
+
+      hpx_addr_t neighbor_addr = get_hpx_coll_point(index, &flag,&type,basecollpoints,collpoints); 
 
       if (flag == 0) { // the point has just been created
+        if ( type != 1 ) {
+          printf(" PROBLEM : trying to allocate point on the array! \n");
+          exit(0);
+        }
+        Neighbor_action_helper *nah;
+        nah = malloc(sizeof(Neighbor_action_helper));
+
+        nah->L_dim0 = L_dim0;
+        memcpy(&nah->essen_point,essen_point,sizeof(coll_point_t));
+        nah->index[0] = index[0];
+        nah->level = level;
+        nah->stamp = stamp;
+        nah->nt_x = nt_x;
+        nah->nnbr_x = nnbr_x;
+        nah->step_e = step_e;
+        nah->step_n = step_n;
+        nah->mkey = morton_key(index);
+        int j,k;
+        for (j=0;j<np-1;j++) {
+          for (k=0;k<np;k++) {
+            nah->lag_coef[j][k] = lag_coef[j][k];
+          }
+        }
+
+        hpx_addr_t complete = hpx_lco_and_new(1);
+        hpx_call(neighbor_addr,_nah,nah,sizeof(Neighbor_action_helper),complete);
+        hpx_lco_wait(complete);
+        hpx_lco_delete(complete,HPX_NULL);
+        free(nah);
+#if 0
         neighbor->parent[0] = essen_point->index[0]; 
         neighbor->coords[0] = ld->L_dim[0] * index[0] / nt_x; 
         neighbor->index[0] = index[0];
@@ -482,7 +861,9 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,Doma
           forward_wavelet_trans(neighbor, 'u', mask, 0, neighbor->u[0],ld);
           ld->max_level = fmax(ld->max_level, neighbor->level);
         }
+#endif
       } else {        
+#if 0
         if (stamp == ld->t0) {
           // the point was previously created as an nonessential point in the
           // initial grid construction, we need to update its status to
@@ -543,6 +924,7 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,Doma
           // 5. update time stamp
           neighbor->stamp = stamp; 
         }
+#endif
       }
     }  // move on to the next neighboring point 
   } // i 
@@ -553,9 +935,10 @@ void create_neighboring_point(coll_point_t *essen_point, const double stamp,Doma
 /// in the hash table part. 
 /// @note When distributed, this function should be protected by lock.
 /// ----------------------------------------------------------------------------
-coll_point_t *add_coll_point(const int index[n_dim], int *flag,Domain *ld) {
+coll_point_t *add_coll_point(const int index[n_dim],int *flag,hpx_addr_t basecollpoints,hpx_addr_t collpoints) {
   // check if the point exists in the hash table
-  coll_point_t *retval = get_coll_point(index,ld);
+
+  coll_point_t *retval = get_coll_point(index,basecollpoints,collpoints);
 
   if (retval != NULL) {
     *flag = 1; // the point already exists
@@ -563,18 +946,41 @@ coll_point_t *add_coll_point(const int index[n_dim], int *flag,Domain *ld) {
     *flag = 0; // the point does not exist
     uint64_t mkey = morton_key(index);
     uint64_t hidx = hash(mkey);
-    hash_entry_t *h_entry = calloc(1, sizeof(hash_entry_t));
-    retval = calloc(1, sizeof(coll_point_t));
-    assert(h_entry != NULL);
-    assert(retval != NULL);
-    h_entry->point = retval;
-    h_entry->mkey = mkey;
-    h_entry->next = ld->coll_points->hash_table[hidx];
-    ld->coll_points->hash_table[hidx] = h_entry;
+    hash_entry_t *curr = malloc(sizeof(*curr)); 
+    curr->initialized = 1;
+    curr->mkey == mkey;
+    curr->next = hpx_gas_alloc(sizeof(hash_entry_t));
+
+    hpx_addr_t there = hpx_addr_add(collpoints,hidx*sizeof(hash_entry_t),sizeof(hash_entry_t));
+    hpx_addr_t complete_local = hpx_lco_and_new(1);
+    hpx_addr_t complete_global = hpx_lco_and_new(1);
+    hpx_gas_memput(there,curr,sizeof(hash_entry_t),complete_local,complete_global);
+    hpx_lco_wait(complete_local);
+    hpx_lco_delete(complete_local,HPX_NULL);
+    free(curr);
+    hpx_lco_wait(complete_global);
+    hpx_lco_delete(complete_global,HPX_NULL);
   }
 
   return retval;
 }
+
+/// @brief Determines which row in lag_coef to use by the stencil point
+/// ---------------------------------------------------------------------------
+int get_stencil_type(const int myorder, const int range) {
+  int stencil_type;
+
+  if (myorder < np / 2 - 1) {
+    stencil_type = myorder;
+  } else if ((range - myorder) < np / 2 - 1) {
+    stencil_type = (np - 2) - (range - myorder);
+  } else {
+    stencil_type = np / 2 - 1;
+  }
+
+  return stencil_type;
+}
+#if 0
 
 /// ----------------------------------------------------------------------------
 /// @brief Add nonessential point
@@ -650,727 +1056,4 @@ void create_nonessential_point(coll_point_t *nonessen_point,
   // unitialized, and for this reason, we just directly set status[0] here. 
   nonessen_point->status[0] = nonessential;
 }
-
-/// ----------------------------------------------------------------------------
-/// @brief Advance time stamp of the specified collocation point
-/// ----------------------------------------------------------------------------
-void advance_time_stamp(coll_point_t *point, const double stamp,
-                        const int gen,Domain *ld) {
-  // make sure the time stamps of the stencil are up-to-date
-  for (int dir = 0; dir < n_dim; dir++) {
-    if (point->wavelet_coef[dir] != -1) {
-      for (int j = 0; j < np; j++) {
-        coll_point_t *temp =
-          get_coll_point(point->wavelet_stencil[dir][j],ld);
-        if (temp->stamp < stamp) {
-          temp->status[1] = nonessential;
-          advance_time_stamp(temp, stamp, gen,ld);
-        }
-      }
-    }
-  }
-
-  // perform wavelet transform to set value of the point
-  int mask[n_variab + n_aux] = {0};
-  for (int ivar = 0; ivar < n_variab; ivar++)
-    mask[ivar] = 1;
-
-  forward_wavelet_trans(point, 'u', mask, 0, point->u[gen],ld);
-
-  // update the time stamp
-  point->stamp = stamp;
-}
-
-/// @brief Determines the level to which the index under consideration belongs
-/// ---------------------------------------------------------------------------
-int get_level(const int index) {
-  int level = 0;
-
-  for (int i = JJ; i >= 0; i--) {
-    int step = 1 << i;
-    if (index % step == 0) {
-      level = JJ - i;
-      break;
-    }
-  }
-
-  return level;
-}
-
-/// @brief Set up derivative stencils for all active points
-/// ---------------------------------------------------------------------------
-void deriv_stencil_config(const double stamp,Domain *ld) {
-  int type = (stamp == ld->t0 ? 0 : 1);
-  for (int i = 0; i <= ns_x * 2; i++) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    get_deriv_stencil(point, 0, stamp,ld); // point, direction, stamp
-    if (point->level == 1 && point->status[type] == essential)
-      deriv_stencil_helper(point, 0, stamp,ld);
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Helper function to recurisvely traverse all the active points to 
-/// determine the derivative stencil
-/// ---------------------------------------------------------------------------
-void deriv_stencil_helper(coll_point_t *point, const int dir,
-                          const double stamp,Domain *ld) {
-  int type = (stamp == ld->t0 ? 0 : 1);
-  for (int i = 0; i < n_neighbors; i++) {
-    if (point->neighbors[i][0] != -1) {
-      coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-      get_deriv_stencil(neighbor, dir, stamp,ld);
-      if (neighbor->status[type] == essential)
-        deriv_stencil_helper(neighbor, dir, stamp,ld);
-    }
-  }
-}
-
-/// @brief Find derivative stencil in the specified direction. For
-/// each point found in the stencil, we need to check its status and
-/// if the status is nonessential, its kill flag needs to be set to false.
-/// ---------------------------------------------------------------------------
-void get_deriv_stencil(coll_point_t *point, const int dir, const double stamp,Domain *ld) {
-  int upper_limit[n_dim];
-  upper_limit[0] = ns_x * (1 << JJ);
-
-  int index[n_dim];
-  for (int i = 0; i < n_dim; i++)
-    index[i] = point->index[i];
-
-  int type = (stamp == ld->t0 ? 0 : 1);
-  coll_point_t *closest_point = get_closest_point(point, dir, type,ld);
-  int step = fabs(point->index[dir] - closest_point->index[dir]);
-  int mid = (nstn - 1) / 2; // nstn is an odd number 
-
-  if (point->index[dir] - mid * step < 0) {
-    for (int i = 0; i < nstn; i++) {
-      index[dir] = i * step;
-      if (i * step == point->index[dir])
-        point->derivative_coef[dir] = i;
-      point->derivative_stencil[dir][i][0] = index[0];
-      int flag;
-      coll_point_t *temp = add_coll_point(index, &flag,ld);
-      if (!flag) {
-        create_nonessential_point(temp, index, stamp,ld);
-      } else if (temp->stamp < stamp) {
-        // reason for setting status[1]: each point has the time stamp of its
-        // creation. If the input stamp is t0, this branch is never going to be
-        // executed. the point's new status should be nonessential because its
-        // time stamp is outdated.  
-        temp->status[1] = nonessential;
-        advance_time_stamp(temp, stamp, 0,ld);
-      }
-    }
-  } else if (point->index[dir] + mid * step > upper_limit[dir]) {
-    for (int i = nstn - 1; i >= 0; i--) {
-      index[dir] = upper_limit[dir] - i * step;
-      if (index[dir] == point->index[dir])
-        point->derivative_coef[dir] = nstn - 1 - i;
-      point->derivative_stencil[dir][i][0] = index[0];
-      int flag;
-      coll_point_t *temp = add_coll_point(index, &flag,ld);
-      if (!flag) {
-        create_nonessential_point(temp, index, stamp,ld);
-      } else if (temp->stamp < stamp) {
-        temp->status[1] = nonessential;
-        advance_time_stamp(temp, stamp, 0,ld);
-      }
-    }
-  } else {
-    point->derivative_coef[dir] = mid;
-    point->derivative_stencil[dir][mid][0] = point->index[0];
-
-    int flag;
-    coll_point_t *temp;
-    for (int i = 1; i <= mid; i++) {
-      index[dir] = point->index[dir] + i * step;
-      point->derivative_stencil[dir][mid + i][0] = index[0];
-      temp = add_coll_point(index, &flag,ld);
-      if (!flag) {
-        create_nonessential_point(temp, index, stamp,ld);
-      } else if (temp->stamp < stamp) {
-        temp->status[1] = nonessential;
-        advance_time_stamp(temp, stamp, 0,ld);
-      }
-
-      index[dir] = point->index[dir] - i * step;
-      point->derivative_stencil[dir][mid - i][0] = index[0];
-      temp = add_coll_point(index, &flag,ld);
-      if (!flag) {
-        create_nonessential_point(temp, index, stamp,ld);
-      } else if (temp->stamp < stamp) {
-        temp->status[1] = nonessential;
-        advance_time_stamp(temp, stamp, 0,ld);
-      }
-    }
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Find the closest active point in the specified direction
-/// ---------------------------------------------------------------------------
-coll_point_t *get_closest_point(coll_point_t *point, const int dir,
-                                const int type,Domain *ld) {
-  coll_point_t *retval = NULL;
-  int step = 1 << (JJ - point->level);
-
-  if (point->status[type] == neighboring) {
-    // for an neighboring point, the closet point is either its parent or among
-    // the neighbors of its parent 
-    int indx1 = point->index[dir] + step;
-    int indx2 = point->index[dir] - step;
-    coll_point_t *parent = get_coll_point(point->parent,ld);
-
-    if (parent->index[dir] == indx1 || parent->index[dir] == indx2) {
-      retval = parent;
-    } else {
-      for (int i = 0; i < n_neighbors; i++) {
-        coll_point_t *neighbor = get_coll_point(parent->neighbors[i],ld);
-        if (neighbor->index[dir] == indx1 || neighbor->index[dir] == indx2) {
-          retval = neighbor;
-          break;
-        }
-      }
-    }
-  } else {
-    // for an essential point, search the +/- of the specified direction
-    int indx1 = diag[2 * dir];
-    int indx2 = diag[2 * dir + 1];
-    int dist1 = INT_MAX, dist2 = INT_MAX;
-    coll_point_t *tmp1, *tmp2;
-
-    // the first step is the + direction, then all the following search is along
-    // the - direction
-    if (point->neighbors[indx1][0] != -1) {
-      tmp1 = get_coll_point(point->neighbors[indx1],ld);
-      while (tmp1->status[type] == essential &&
-             tmp1->neighbors[indx2][0] != -1)
-        tmp1 = get_coll_point(tmp1->neighbors[indx2],ld);
-
-      dist1 = fabs(point->index[dir] - tmp1->index[dir]);
-    }
-
-    // search - direction first, followed by the + direction
-    if (point->neighbors[indx2][0] != -1) {
-      tmp2 = get_coll_point(point->neighbors[indx2],ld);
-      while (tmp2->status[type] == essential &&
-             tmp2->neighbors[indx1][0] != -1)
-        tmp2 = get_coll_point(tmp2->neighbors[indx1],ld);
-
-      dist2 = fabs(point->index[dir] - tmp2->index[dir]);
-    }
-
-    retval = (dist1 <= dist2 ? tmp1 : tmp2);
-  }
-
-  return retval;
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Compute the global time increment
-/// ---------------------------------------------------------------------------
-double get_global_dt(Domain *ld) {
-  double global_dt = DBL_MAX;
-  for (int i = 0; i <= ns_x * 2; i++) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    double local_dt = get_local_dt(point,ld);
-    global_dt = fmin(local_dt, global_dt);
-    if (point->level == 1 && point->status[0] == essential)
-      global_dt_helper(point, &global_dt,ld);
-  }
-  return global_dt;
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Helper function to recursively traverse all the active points to 
-/// perform global reduction on the time increment
-/// ---------------------------------------------------------------------------
-void global_dt_helper(coll_point_t *point, double *dt,Domain *ld) {
-  for (int i = 0; i < n_neighbors; i++) {
-    if (point->neighbors[i][0] != -1) {
-      coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-      double local_dt = get_local_dt(neighbor,ld);
-      *dt = fmin(*dt, local_dt);
-      if (neighbor->status[0] == essential)
-        global_dt_helper(neighbor, dt,ld);
-    }
-  }
-}
-
-double get_local_dt(const coll_point_t *point,Domain *ld) {
-  // dx is the grid spacing between the collocation point itself and the closet
-  // point used in its derivative stencil
-  double dx0 = ld->L_dim[0] / ns_x / (1 << JJ);
-  double dx = dx0 * fabs(point->derivative_stencil[0][0][0] -
-                         point->derivative_stencil[0][1][0]);
-  double rho = point->u[0][0];
-  double rho_u = point->u[0][1];
-  double rho_E = point->u[0][2];
-  double u = rho_u / rho;
-  double E = rho_E / rho;
-  double p = (ld->Gamma_r - 1) * rho * (E - 0.5 * u * u);
-  double dt1 = u / dx;
-  double dt2 = 2 * ld->mur / rho / dx / dx;
-  double dt3 = sqrt(ld->Gamma_r * p / rho) / dx;
-  double dt = 0.6 / (dt1 + dt2 + dt3);
-  return dt;
-}
-
-void apply_time_integrator(const double t, const double dt,Domain *ld) {
-  // compute k1 = f(tn, u[0][*])
-  compute_rhs(t, 0,ld);
-
-  // compute u[1][*] = u[0][*] + 0.5 * dt * k1
-  for (int i = 0; i <= ns_x * 2; i++)
-    rk4_helper1(&(ld->coll_points->array[i]), dt);
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      integrator_helper(point, dt, rk4_helper1,ld);
-  }
-
-  // get u[1][*] for the nonessential points involved
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper2(point, 1,ld);
-  }
-
-  // compute k2 = f(tn + 0.5 * dt, u[1][*]) 
-  compute_rhs(t + 0.5 * dt, 1,ld);
-
-  // compute u[2][*] = u[0][*] + 0.5 * dt * k2
-  for (int i = 0; i <= ns_x * 2; i++)
-    rk4_helper2(&(ld->coll_points->array[i]), dt);
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      integrator_helper(point, dt, rk4_helper2,ld);
-  }
-
-  // get u[2][*] for the nonessential points involved
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper2(point, 2,ld);
-  }
-
-  // compute k3 = f(tn + 0.5 * dt, u[2][*])
-  compute_rhs(t + 0.5 * dt, 2,ld);
-
-  // compute u[3][*] = u[0][*] + dt * k3
-  for (int i = 0; i <= ns_x * 2; i++)
-    rk4_helper3(&(ld->coll_points->array[i]), dt);
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      integrator_helper(point, dt, rk4_helper3,ld);
-  }
-
-  // get u[3][*] for the nonessential points involved
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper2(point, 3,ld);
-  }
-
-  // compute k4 = f(tn + dt, u[3][*]) 
-  compute_rhs(t + dt, 3,ld);
-
-  // update u[0][*]
-  for (int i = 0; i <= ns_x * 2; i++)
-    rk4_helper4(&(ld->coll_points->array[i]), dt);
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      integrator_helper(point, dt, rk4_helper4,ld);
-  }
-
-  // update u[0][*] for the nonessential points involved
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper2(point, 0,ld);
-  }
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    coll_point_t *point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      stage_reset_helper(point,ld);
-  }
-}
-
-void rk4_helper1(coll_point_t *point, const double dt) {
-  double *u_curr = point->u[0];
-  double *u_next = point->u[1];
-  double *rhs = point->rhs[0];
-
-  for (int i = 0; i < n_variab; i++)
-    u_next[i] = u_curr[i] + 0.5 * dt * rhs[i];
-
-  point->stamp += dt / n_gen;
-}
-
-void rk4_helper2(coll_point_t *point, const double dt) {
-  double *u_curr = point->u[0];
-  double *u_next = point->u[2];
-  double *rhs = point->rhs[1];
-
-  for (int i = 0; i < n_variab; i++)
-    u_next[i] = u_curr[i] + 0.5 * dt * rhs[i];
-
-  point->stamp += dt / n_gen;
-}
-
-void rk4_helper3(coll_point_t *point, const double dt) {
-  double *u_curr = point->u[0];
-  double *u_next = point->u[3];
-  double *rhs = point->rhs[2];
-
-  for (int i = 0; i < n_variab; i++)
-    u_next[i] = u_curr[i] + dt * rhs[i];
-
-  point->stamp += dt / n_gen;
-}
-
-void rk4_helper4(coll_point_t *point, const double dt) {
-  double *u_curr = point->u[0];
-  double *k1 = point->rhs[0];
-  double *k2 = point->rhs[1];
-  double *k3 = point->rhs[2];
-  double *k4 = point->rhs[3];
-
-  for (int i = 0; i < n_variab; i++)
-    u_curr[i] += dt * (k1[i] + k2[i] * 2 + k3[i] * 2 + k4[i]) / 6;
-
-  point->stamp += dt / n_gen;
-}
-
-void compute_rhs(const double t, const int gen,Domain *ld) {
-  coll_point_t *point;
-
-  // Stage 1: compute u, E, e, p, T, and d(rho*u)/dx
-  for (int i = 0; i <= ns_x * 2; i++) {
-    point = &(ld->coll_points->array[i]);
-    rhs_active_stage1(point, gen,ld);
-  }
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      rhs_helper(point, gen, rhs_active_stage1,ld);
-  }
-
-  for (int i = 0; i <= ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper1(point, 1, gen, rhs_nonessen_stage1,ld);
-  }
-
-  // Stage 2: compute dT/dx, dp/dx, du/dx, set q and tau, apply boundary
-  // condition and set rho*u*u - tau and (rho*E + p)*u + q - u*tau
-  for (int i = 0; i <= ns_x * 2; i++) {
-    point = &(ld->coll_points->array[i]);
-    rhs_active_stage2(point, gen,ld);
-  }
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      rhs_helper(point, gen, rhs_active_stage2,ld);
-  }
-
-  for (int i = 0; i <= ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper1(point, 2, gen, rhs_nonessen_stage2,ld);
-  }
-
-  // Stage 3: compute d/(rho*u*u - tau)/dx and d[(rho*E + p)*u + q - u*tau]/dx,
-  // set rhs[0], rhs[1], and rhs[2]
-  for (int i = 0; i <= ns_x * 2; i++) {
-    point = &(ld->coll_points->array[i]);
-    rhs_active_stage3(point, gen,ld);
-  }
-
-  for (int i = 1; i < ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      rhs_helper(point, gen, rhs_active_stage3,ld);
-  }
-
-
-  for (int i = 0; i <= ns_x * 2; i += 2) {
-    point = &(ld->coll_points->array[i]);
-    if (point->status[0] == essential)
-      deriv_nonessen_helper1(point, 3, gen, rhs_nonessen_stage3,ld);
-  }
-}
-
-void rhs_active_stage1(coll_point_t *point, const int gen,Domain *ld) {
-  double rho = point->u[gen][0];
-  double rho_u = point->u[gen][1];
-  double rho_E = point->u[gen][2];
-
-  double u = rho_u / rho;
-  double E = rho_E / rho;
-  double e = E - 0.5 * u * u;
-  double p = (ld->Gamma_r - 1) * rho * e;
-  double T = e / ld->c_v;
-
-  point->u[gen][3] = T;
-  point->u[gen][4] = p;
-  point->u[gen][5] = u;
-  point->du[gen][0] = get_deriv(1, 0, gen, 1, point,ld); // d(rho*u)/dx
-}
-
-void rhs_nonessen_stage1(coll_point_t *point, const int gen,Domain *ld) {
-  // compute u[0], u[1], u[2] via wavelet transform if gen >= 1
-  if (gen) {
-    int mask[n_variab + n_aux] = {0};
-    for (int ivar = 0; ivar < n_variab; ivar++)
-      mask[ivar] = 1;
-    double approx[n_variab + n_aux] = {0};
-    forward_wavelet_trans(point, 'u', mask, gen, approx,ld);
-    point->u[gen][0] = approx[0];
-    point->u[gen][1] = approx[1];
-    point->u[gen][2] = approx[2];
-  }
-
-  double rho = point->u[gen][0];
-  double rho_u = point->u[gen][1];
-  double rho_E = point->u[gen][2];
-
-  double u = rho_u / rho;
-  double E = rho_E / rho;
-  double e = E - 0.5 * u * u;
-  double p = (ld->Gamma_r - 1) * rho * e;
-  double T = e / ld->c_v;
-
-  point->u[gen][3] = T;
-  point->u[gen][4] = p;
-  point->u[gen][5] = u;
-
-  int mask[n_deriv] = {1, 0, 0, 0, 0, 0};
-  double approx[n_deriv] = {0};
-  forward_wavelet_trans(point, 'd', mask, gen, approx,ld);
-  point->du[gen][0] = approx[0];
-}
-
-void rhs_active_stage2(coll_point_t *point, const int gen,Domain *ld) {
-  static const int upper_bound = ns_x * (1 << JJ);
-
-  point->du[gen][1] = get_deriv(3, 0, gen, 1, point,ld); // dT/dx
-  point->du[gen][2] = get_deriv(4, 0, gen, 1, point,ld); // dp/dx
-  point->du[gen][3] = get_deriv(5, 0, gen, 1, point,ld); // du/dx
-
-  double tau = 4 / 3 * ld->mur * point->du[gen][3];
-  double q = -ld->k_r * point->du[gen][1];
-
-  double rho_u = point->u[gen][1];
-  double rho_E = point->u[gen][2];
-  double p = point->u[gen][4];
-  double u = point->u[gen][5];
-
-  if (point->index[0] == 0 || point->index[0] == upper_bound) {
-    tau = 0;
-    q = 0;
-  }
-
-  point->u[gen][6] = rho_u * u - tau;
-  point->u[gen][7] = (rho_E + p) * u + q - u * tau;
-}
-
-void rhs_nonessen_stage2(coll_point_t *point, const int gen,Domain *ld) {
-  // compute dT/dx, dp/dx, du/dx from wavelet transform
-  int mask[n_deriv] = {0, 1, 1, 1, 0, 0};
-  double approx[n_deriv] = {0};
-  forward_wavelet_trans(point, 'd', mask, gen, approx,ld);
-  point->du[gen][1] = approx[1]; // dT/dx
-  point->du[gen][2] = approx[2]; // dp/dx
-  point->du[gen][3] = approx[3]; // du/dx
-
-  double tau = 4 / 3 * ld->mur * point->du[gen][3];
-  double q = -ld->k_r * point->du[gen][1];
-
-  double rho_u = point->u[gen][1];
-  double rho_E = point->u[gen][2];
-  double p = point->u[gen][4];
-  double u = point->u[gen][5];
-
-  point->u[gen][6] = rho_u * u - tau;
-  point->u[gen][7] = (rho_E + p) * u + q - u *tau;
-}
-
-void rhs_active_stage3(coll_point_t *point, const int gen,Domain *ld) {
-  point->du[gen][4] = get_deriv(6, 0, gen, 1, point,ld);
-  point->du[gen][5] = get_deriv(7, 0, gen, 1, point,ld);
-
-  point->rhs[gen][0] = -point->du[gen][0];
-  point->rhs[gen][1] = -point->du[gen][4] - point->du[gen][2];
-  point->rhs[gen][2] = -point->du[gen][5];
-}
-
-void rhs_nonessen_stage3(coll_point_t *point, const int gen,Domain *ld) {
-  int mask[n_deriv] = {0, 0, 0, 0, 1, 1};
-  double approx[n_deriv] = {0};
-  forward_wavelet_trans(point, 'd', mask, gen, approx,ld);
-  point->du[gen][4] = approx[4];
-  point->du[gen][5] = approx[5];
-
-  // set rhs[0], rhs[1], rhs[2]
-  point->rhs[gen][0] = -point->du[gen][0];
-  point->rhs[gen][1] = -point->du[gen][4] - point->du[gen][2];
-  point->rhs[gen][2] = -point->du[gen][5];
-}
-
-/// @brief Helper function to recursively traverse all the active points to 
-/// perform time integration
-/// ---------------------------------------------------------------------------
-void integrator_helper(coll_point_t *point, const double dt,
-                       void(*func)(coll_point_t *, const double),Domain *ld) {
-  for (int i = 0; i < n_neighbors; i++) {
-    if (point->neighbors[i][0] != -1) {
-      coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-      func(neighbor, dt);
-      if (neighbor->status[0] == essential)
-        integrator_helper(neighbor, dt, func,ld);
-    }
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Helper function to recursively traverse all the active points to 
-/// compute the right hand side function
-/// ---------------------------------------------------------------------------
-void rhs_helper(coll_point_t *point, const int gen,
-                void(*func)(coll_point_t *, const int,Domain *ld),Domain *ld) {
-  for (int i = 0; i < n_neighbors; i++) {
-    if (point->neighbors[i][0] != -1) {
-      coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-      func(neighbor, gen,ld);
-      if (neighbor->status[0] == essential)
-        rhs_helper(neighbor, gen, func,ld);
-    }
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Helper function to traverse all the nonessential points used in the
-/// derivative computation and advance their time stamp. This helper function is
-/// intended to be used before starting a new generation of the time integrator
-/// (such as before computing k2 of the RK4)
-/// ---------------------------------------------------------------------------
-void deriv_nonessen_helper2(coll_point_t *point, const int gen,Domain *ld) {
-  for (int dir = 0; dir < n_dim; dir++) {
-    for (int i = 0; i < nstn; i++) {
-      coll_point_t *temp = get_coll_point(point->derivative_stencil[dir][i],ld);
-      if (temp->status[0] == nonessential && temp->stamp < point->stamp)
-        advance_time_stamp(temp, point->stamp, gen,ld);
-    }
-  }
-
-  if (point->status[0] == essential) {
-    for (int i = 0; i < n_neighbors; i++) {
-      if (point->neighbors[i][0] != -1) {
-        coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-        deriv_nonessen_helper2(neighbor, gen,ld);
-      }
-    }
-  }
-}
-
-/// @brief Reset stage
-/// ----------------------------------------------------------------------------
-void stage_reset_helper(coll_point_t *point,Domain *ld) {
-  for (int i = 0; i < n_neighbors; i++) {
-    if (point->neighbors[i][0] != -1) {
-      coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-      for (int dir = 0; dir < n_dim; dir++) {
-        if (neighbor->wavelet_coef[dir] != -1) {
-          for (int j = 0; j < np; j++) {
-            coll_point_t *temp =
-              get_coll_point(neighbor->wavelet_stencil[dir][j],ld);
-            if (temp->status[0] == nonessential && temp->stage[0] != -1) {
-              for (int igen = 0; igen < n_gen; igen++)
-                temp->stage[igen] = -1;
-            }
-          }
-        }
-
-        for (int j = 0; j < nstn; j++) {
-          coll_point_t *temp =
-            get_coll_point(neighbor->derivative_stencil[dir][j],ld);
-          if (temp->status[0] == nonessential && temp->stage[0] != -1) {
-            for (int igen = 0; igen < n_gen; igen++)
-              temp->stage[igen] = -1;
-          }
-        }
-      }
-
-      if (neighbor->status[0] == essential)
-        stage_reset_helper(neighbor,ld);
-    }
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// @brief Helper function to traverse all the nonessential points used in the 
-/// derivative computation and apply function func. this helper function is
-/// intended to be used within the right hand side computation of a particular
-/// stage of the specified generation
-/// ---------------------------------------------------------------------------
-void deriv_nonessen_helper1(coll_point_t *point, const int stage, const int gen,
-                            void(*func)(coll_point_t *, const int,Domain *ld),Domain *ld) {
-  for (int dir = 0; dir < n_dim; dir++) {
-    for (int i = 0; i < nstn; i++) {
-      coll_point_t *temp = get_coll_point(point->derivative_stencil[dir][i],ld);
-      if (temp->status[0] == nonessential && temp->stage[gen] < stage) {
-        func(temp, gen,ld);
-        temp->stage[gen] = stage;
-      }
-    }
-  }
-
-  if (point->status[0] == essential) {
-    for (int i = 0; i < n_neighbors; i++) {
-      if (point->neighbors[i][0] != -1) {
-        coll_point_t *neighbor = get_coll_point(point->neighbors[i],ld);
-        deriv_nonessen_helper1(neighbor, stage, gen, func,ld);
-      }
-    }
-  }
-}
-
-/// @brief Compute derivative of a variable in the specified direction
-/// ---------------------------------------------------------------------------
-double get_deriv(const int ivar, const int dir, const int gen,
-                 const int order, coll_point_t *point,Domain *ld) {
-  double dvar = 0; // variable for derivative
-  int derivative_coef = point->derivative_coef[dir];
-  double *coef = (order == 1 ?
-                  ld->nfd_diff_coeff[0][derivative_coef] :
-                  ld->nfd_diff_coeff[1][derivative_coef]);
-
-  coll_point_t *derivative_stencil[nstn] = {NULL};
-  for (int i = 0; i < nstn; i++)
-    derivative_stencil[i] = get_coll_point(point->derivative_stencil[dir][i],ld);
-
-  double dx = derivative_stencil[1]->coords[dir] -
-    derivative_stencil[0]->coords[dir];
-  double scale = pow(fabs(dx), -order);
-
-  for (int i = 0; i < nstn; i++)
-    dvar += coef[i] * derivative_stencil[i]->u[gen][ivar];
-
-  dvar *= scale;
-  return dvar;
-}
-
-
-
+#endif

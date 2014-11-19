@@ -38,4 +38,3 @@ make
 make check
 
 # TODO: Run the apps and check their output...
-
