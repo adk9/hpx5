@@ -133,9 +133,9 @@ main(int argc, char *argv[])
   }
 
   // Register the main action
-  _main    = HPX_REGISTER_ACTION(_main_action);
-  _thread1 = HPX_REGISTER_ACTION(_thread1_action);
-  _thread2 = HPX_REGISTER_ACTION(_thread2_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_thread1, _thread1_action);
+  HPX_REGISTER_ACTION(&_thread2, _thread2_action);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

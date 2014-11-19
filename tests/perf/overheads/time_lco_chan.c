@@ -130,7 +130,7 @@ int main(int argc, char *argv[argc]) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
   }
-  
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
@@ -149,8 +149,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  _main   = HPX_REGISTER_ACTION(_main_action);
-  _pinger = HPX_REGISTER_ACTION(_pinger_action);
-  _ponger = HPX_REGISTER_ACTION(_ponger_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_pinger, _pinger_action);
+  HPX_REGISTER_ACTION(&_ponger, _ponger_action);
   return hpx_run(&_main, NULL, 0);
 }
