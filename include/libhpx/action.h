@@ -15,14 +15,32 @@
 
 #include "hpx/hpx.h"
 
-HPX_INTERNAL hpx_action_t action_register(const char * key,
-                                          hpx_action_handler_t f)
-  HPX_NON_NULL(1);
+/// The default libhpx action table size.
+#define LIBHPX_ACTION_TABLE_SIZE 4096
 
-HPX_INTERNAL hpx_action_handler_t action_lookup(hpx_action_t id);
+/// The number of registered actions in the action table.
+extern int LIBHPX_NUM_ACTIONS;
 
-HPX_INTERNAL int action_invoke(hpx_action_t id, void *args);
+/// An HPX action table entry
+typedef struct {
+  hpx_action_handler_t func;
+  hpx_action_t        *action;
+  const char          *key;
+} _action_entry;
 
-HPX_INTERNAL const char *action_get_key(hpx_action_t id);
+typedef _action_entry *hpx_action_table;
+
+extern hpx_action_table _action_table;
+
+const char *action_get_key(hpx_action_t id)
+  HPX_INTERNAL;
+
+hpx_action_table libhpx_initialize_actions(void)
+  HPX_INTERNAL;
+
+/// A convenience macro for registering an HPX action
+#define LIBHPX_REGISTER_ACTION(act, f)                                 \
+  hpx_register_action(act, HPX_STR(_libhpx##f), (hpx_action_handler_t)f)
+
 
 #endif // LIBHPX_ACTION_H

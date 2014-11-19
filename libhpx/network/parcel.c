@@ -226,7 +226,7 @@ static int _send_async_action(hpx_parcel_t **p) {
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  _send_async = HPX_REGISTER_ACTION(_send_async_action);
+  LIBHPX_REGISTER_ACTION(&_send_async, _send_async_action);
 }
 
 

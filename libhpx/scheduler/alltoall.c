@@ -74,6 +74,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
@@ -340,8 +341,8 @@ static hpx_status_t _alltoall_setid_proxy(void *args) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  _alltoall_setid_action = HPX_REGISTER_ACTION(_alltoall_setid_proxy);
-  _alltoall_getid_action = HPX_REGISTER_ACTION(_alltoall_getid_proxy);
+  LIBHPX_REGISTER_ACTION(&_alltoall_setid_action, _alltoall_setid_proxy);
+  LIBHPX_REGISTER_ACTION(&_alltoall_getid_action, _alltoall_getid_proxy);
 }
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {

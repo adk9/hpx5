@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   printf(" Number of domains: %d maxcycles: %d\n",nDoms,maxcycle);
 
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(_main, input, 3*sizeof(int));
+  e = hpx_run(&_main, input, 3*sizeof(int));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   printf("average elapsed:   %f ms\n", elapsed);
   return e;
@@ -187,8 +187,8 @@ static int _action_evolve(InitArgs *init) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  _main = HPX_REGISTER_ACTION(_action_main);
-  _evolve = HPX_REGISTER_ACTION(_action_evolve);
+  HPX_REGISTER_ACTION(&_main, _action_main);
+  HPX_REGISTER_ACTION(&_evolve, _action_evolve);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }

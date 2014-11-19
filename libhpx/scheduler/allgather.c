@@ -74,6 +74,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
@@ -260,7 +261,7 @@ static hpx_status_t _allgather_setid_proxy(void *args) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  _allgather_setid_action = HPX_REGISTER_ACTION(_allgather_setid_proxy);
+  LIBHPX_REGISTER_ACTION(&_allgather_setid_action, _allgather_setid_proxy);
 }
 
 /// Update the gathering, will wait if the phase is reading.

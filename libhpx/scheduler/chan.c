@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <hpx/builtins.h>
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
@@ -322,9 +323,9 @@ _block_init_handler(uint32_t *args)
 
 static void HPX_CONSTRUCTOR
 _register_actions(void) {
-  _block_init_action    = HPX_REGISTER_ACTION(_block_init_handler);
-  _chan_recv_action     = HPX_REGISTER_ACTION(_chan_recv_proxy);
-  _chan_try_recv_action = HPX_REGISTER_ACTION(_chan_try_recv_proxy);
+  LIBHPX_REGISTER_ACTION(&_block_init_action, _block_init_handler);
+  LIBHPX_REGISTER_ACTION(&_chan_recv_action, _chan_recv_proxy);
+  LIBHPX_REGISTER_ACTION(&_chan_try_recv_action, _chan_try_recv_proxy);
 }
 
 /// @}

@@ -79,12 +79,12 @@ int main(int argc, char *argv[])
   mpi_system_register_actions();
 
   // register local actions
-  _lulesh = HPX_REGISTER_ACTION(_lulesh_action);
-  _hpxmain = HPX_REGISTER_ACTION(_hpxmain_action);
+  HPX_REGISTER_ACTION(&_lulesh, _lulesh_action);
+  HPX_REGISTER_ACTION(&_hpxmain, _hpxmain_action);
 
   // do stuff here
   int args[3] = { numhpx, nx, its };
-  hpx_run(_hpxmain, args, sizeof(args));
+  hpx_run(&_hpxmain, args, sizeof(args));
 
   return 0;
 

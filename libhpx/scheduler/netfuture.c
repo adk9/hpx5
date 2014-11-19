@@ -370,8 +370,12 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
     assert(cfg->max_size != 0);
     assert(cfg->max_array_number != 0);
     _netfuture_cfg.max_size = cfg->max_size + cfg->max_number*sizeof(_netfuture_t);
+    _netfuture_cfg.max_number = cfg->max_number;
     _netfuture_cfg.max_array_number = cfg->max_array_number;
   }
+
+  // gas_alloc() only let's us use 32 bits for requesting memory
+  assert(_netfuture_cfg.max_size < UINT32_MAX);
 
   printf("Initializing netfutures with %zu bytes per rank\n", _netfuture_cfg.max_size);
 
@@ -506,7 +510,7 @@ int _update_table(hpx_netfuture_t *f) {
   _netfuture_table.fut_infos[f->table_index].table_index = f->table_index;
   _netfuture_table.fut_infos[f->table_index].offset = f->base_offset;
 
-  _netfuture_table.curr_offset += (_netfutures_at_rank(f)) * f->size;
+  _netfuture_table.curr_offset += (_netfutures_at_rank(f)) * (f->size + sizeof(_netfuture_t));
   _netfuture_table.curr_index++;
   return HPX_SUCCESS;
 }
@@ -543,11 +547,9 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
 
   int num_futures_per_rank = (n / hpx_get_num_ranks()) + ((n % hpx_get_num_ranks()) % 2);
   assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(_netfuture_t))
-	 < _netfuture_cfg.max_size);
+	 <= _netfuture_cfg.max_size);
   
-    assert(_netfuture_table.curr_offset + n * (size + sizeof(_netfuture_t))
-                <  _netfuture_cfg.max_size * hpx_get_num_ranks());
-    assert(_netfuture_table.curr_index + 1 < _netfuture_cfg.max_array_number);
+    assert(_netfuture_table.curr_index < _netfuture_cfg.max_array_number);
 
 
 
@@ -768,9 +770,8 @@ hpx_lco_netfuture_get_rank(hpx_netfuture_t future) {
 
 static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
-  _future_set_no_copy_from_remote = HPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action);
-
-  _progress = HPX_REGISTER_ACTION(_progress_action);
-  _add_future_to_table = HPX_REGISTER_ACTION(_add_future_to_table_action);
-  _initialize_netfutures = HPX_REGISTER_ACTION(_initialize_netfutures_action);
+  LIBHPX_REGISTER_ACTION(&_future_set_no_copy_from_remote, _future_set_no_copy_from_remote_action);
+  LIBHPX_REGISTER_ACTION(&_progress, _progress_action);
+  LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
+  LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
 }

@@ -3,10 +3,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "adjacency_list.h"
-#include "libpxgl.h"
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libpxgl/adjacency_list.h"
 
 #define PXGL_ADJ_SYNC_ARG(orig, lco_name, arg_name) \
 typedef struct { \
@@ -80,7 +79,7 @@ static int _init_vertex_action(const hpx_addr_t * const vertices_sync) {
      return HPX_RESEND;
 
    vertex->num_edges = 0;
-   vertex->distance = UINT64_MAX;
+   vertex->distance = SSSP_UINT_MAX;
 
    hpx_lco_set(*vertices_sync, 0, NULL, HPX_NULL, HPX_NULL);
 
@@ -138,7 +137,7 @@ static int _put_edge_action(const _put_edge_args_t *args)
     return HPX_RESEND;
 
   // Increment the size of the vertex
-  uint64_t num_edges = sync_fadd(&vertex->num_edges, 1, SYNC_RELAXED);
+  sssp_uint_t num_edges = sync_fadd(&vertex->num_edges, 1, SYNC_RELAXED);
 
   vertex->edge_list[num_edges] = args->edge;
 
@@ -177,7 +176,7 @@ static int _insert_edge_action(const _insert_edge_args_t * const args)
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
-  const uint64_t source = edge->source;
+  const sssp_uint_t source = edge->source;
 
   adj_list_edge_t e;
   e.dest = edge->dest;
@@ -208,7 +207,7 @@ static int _print_edge_action(int *i)
     return HPX_RESEND;
 
   hpx_gas_unpin(target);
-  printf("%d %lu %lu %lu.\n", *i, edge->source, edge->dest, edge->weight);
+  printf("%d %" SSSP_UINT_PRI " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI ".\n", *i, edge->source, edge->dest, edge->weight);
   return HPX_SUCCESS;
 }
 
@@ -322,7 +321,7 @@ static int _init_vertex_distance_action(void *arg) {
    if (!hpx_gas_try_pin(target, (void**)&vertex))
      return HPX_RESEND;
 
-   vertex->distance = UINT64_MAX;
+   vertex->distance = SSSP_UINT_MAX;
 
    hpx_gas_unpin(target);
    return HPX_SUCCESS;
@@ -365,19 +364,20 @@ int free_adj_list_action(void *arg) {
 
 
 static __attribute__((constructor)) void _adj_list_register_actions() {
-  adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
-  free_adj_list            = HPX_REGISTER_ACTION(free_adj_list_action);
-  _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
-  _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
-  _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
-  _count_edge              = HPX_REGISTER_ACTION(_count_edge_action);
-  _init_vertex             = HPX_REGISTER_ACTION(_init_vertex_action);
-  _init_vertex_distance    = HPX_REGISTER_ACTION(_init_vertex_distance_action);
-  _reset_vertex            = HPX_REGISTER_ACTION(_reset_vertex_action);
-  _alloc_vertex            = HPX_REGISTER_ACTION(_alloc_vertex_action);
-  _alloc_adj_list_entry    = HPX_REGISTER_ACTION(_alloc_adj_list_entry_action);
-  _print_edge              = HPX_REGISTER_ACTION(_print_edge_action);
-  _insert_edge             = HPX_REGISTER_ACTION(_insert_edge_action);
-  _put_edge_index          = HPX_REGISTER_ACTION(_put_edge_index_action);
-  _put_edge                = HPX_REGISTER_ACTION(_put_edge_action);
+  HPX_REGISTER_ACTION(&adj_list_from_edge_list,
+                      adj_list_from_edge_list_action);
+  HPX_REGISTER_ACTION(&free_adj_list, free_adj_list_action);
+  HPX_REGISTER_ACTION(&_increment_count, _increment_count_action);
+  HPX_REGISTER_ACTION(&_set_count_array_bsize, _set_count_array_bsize_action);
+  HPX_REGISTER_ACTION(&_set_index_array_bsize, _set_index_array_bsize_action);
+  HPX_REGISTER_ACTION(&_count_edge, _count_edge_action);
+  HPX_REGISTER_ACTION(&_init_vertex, _init_vertex_action);
+  HPX_REGISTER_ACTION(&_init_vertex_distance, _init_vertex_distance_action);
+  HPX_REGISTER_ACTION(&_reset_vertex, _reset_vertex_action);
+  HPX_REGISTER_ACTION(&_alloc_vertex, _alloc_vertex_action);
+  HPX_REGISTER_ACTION(&_alloc_adj_list_entry, _alloc_adj_list_entry_action);
+  HPX_REGISTER_ACTION(&_print_edge, _print_edge_action);
+  HPX_REGISTER_ACTION(&_insert_edge, _insert_edge_action);
+  HPX_REGISTER_ACTION(&_put_edge_index, _put_edge_index_action);
+  HPX_REGISTER_ACTION(&_put_edge, _put_edge_action);
 }

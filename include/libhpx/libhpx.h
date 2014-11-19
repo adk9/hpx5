@@ -16,11 +16,12 @@
 #include <errno.h>
 
 enum {
+  LIBHPX_ENOMEM = -(ENOMEM),
+  LIBHPX_EINVAL = -(EINVAL),
   LIBHPX_ERROR = -2,
   LIBHPX_EUNIMPLEMENTED = -1,
-  LIBHPX_OK = 0,
-  LIBHPX_ENOMEM = ENOMEM,
-  LIBHPX_EINVAL = EINVAL
+  LIBHPX_OK = 0
 };
 
-#endif
+
+#endif  // LIBHPX_LIBHPX_H

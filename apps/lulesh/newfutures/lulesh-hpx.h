@@ -65,9 +65,9 @@ typedef struct {
   hpx_addr_t complete;
   hpx_addr_t newdt;
   hpx_addr_t elapsed_ar;
-  hpx_netfuture_t sbn3[2];
-  hpx_netfuture_t posvel[2];
-  hpx_netfuture_t monoq[2];
+  hpx_netfuture_t sbn3[2][26];
+  hpx_netfuture_t posvel[2][26];
+  hpx_netfuture_t monoq[2][26];
 } InitArgs;
 
 typedef struct {
@@ -220,9 +220,9 @@ typedef struct Domain {
   hpx_addr_t posvel_and[2];
   hpx_addr_t monoq_and[2];
 
-  hpx_netfuture_t sbn3[2];
-  hpx_netfuture_t posvel[2];
-  hpx_netfuture_t monoq[2];
+  hpx_netfuture_t sbn3[2][26];
+  hpx_netfuture_t posvel[2][26];
+  hpx_netfuture_t monoq[2][26];
 } Domain;
 
 typedef struct {
@@ -236,6 +236,13 @@ send_t SENDER[26];
 recv_t RECEIVER[26];
 
 //hpx_future_t *fut_deltaTime;
+
+size_t NF_BUFFER_SIZE(size_t points);
+
+void create_nf_arrays(int nDoms, int nx,
+		      hpx_netfuture_t sbn3[2][26], 
+		      hpx_netfuture_t posvel[2][26], 
+		      hpx_netfuture_t monoq[2][26]);
 
 void Init(int tp, int nx);
 

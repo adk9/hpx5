@@ -43,7 +43,7 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # intialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.9.1], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
@@ -81,14 +81,6 @@ AC_ARG_ENABLE([debug],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
-
-AC_ARG_ENABLE([action-table],
-  [AS_HELP_STRING([--enable-action-table],
-                  [Enable asymmetric, dynamic action-registration @<:@default=no@:>@])],
-  [], [enable_action_table=no])
-AS_IF([test "x$enable_action_table" != xno],
-  [AC_DEFINE([ENABLE_ACTION_TABLE], [1], [Enable asymmetric, dynamic action-registration])])
-AM_CONDITIONAL([ENABLE_ACTION_TABLE], [test "$enable_action_table" = "yes"])
 
 AC_ARG_ENABLE([photon-debug],
   [AS_HELP_STRING([--enable-photon-debug],
@@ -215,10 +207,10 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
 hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
@@ -268,16 +260,21 @@ AS_IF([test "x$enable_apps" != xno],
   apps/miniAMR/Makefile
   apps/miniAMR/parcels/Makefile
   apps/libPXGL/Makefile
+  apps/libPXGL/include/Makefile
   apps/libPXGL/examples/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
+  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
+		   [chmod +x tests/unit/run_tests.sh])]
+  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
+		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/performance/Makefile
-  tests/performance/overheads/Makefile])])
+  tests/perf/Makefile
+  tests/perf/overheads/Makefile])])
   
 AC_OUTPUT
 

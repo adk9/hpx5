@@ -159,75 +159,75 @@ int _main_action(void *args)
 // Registers functions as actions.
 //****************************************************************************
 void _register_actions(void) {
-  _main = HPX_REGISTER_ACTION(_main_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
 
   // 02_TestMemAlloc.c
-  t02_init_sources = HPX_REGISTER_ACTION(t02_init_sources_action);
+  HPX_REGISTER_ACTION(&t02_init_sources, t02_init_sources_action);
 
   // 03_TestGlobalMemAlloc.c
-  t03_initDomain = HPX_REGISTER_ACTION(t03_initDomain_action);
+  HPX_REGISTER_ACTION(&t03_initDomain, t03_initDomain_action);
 
   //04_TestParcel.c
-  t04_send = HPX_REGISTER_ACTION(t04_send_action);
-  t04_sendData = HPX_REGISTER_ACTION(t04_sendData_action);
-  t04_recv = HPX_REGISTER_ACTION(t04_recv_action);
-  t04_getContValue = HPX_REGISTER_ACTION(t04_getContValue_action);
+  HPX_REGISTER_ACTION(&t04_send, t04_send_action);
+  HPX_REGISTER_ACTION(&t04_sendData, t04_sendData_action);
+  HPX_REGISTER_ACTION(&t04_recv, t04_recv_action);
+  HPX_REGISTER_ACTION(&t04_getContValue, t04_getContValue_action);
 
   //05_TestThreads.c
-  t05_initData = HPX_REGISTER_ACTION(t05_initData_action);
-  t05_worker   = HPX_REGISTER_ACTION(t05_worker_action);
-  t05_assignID = HPX_REGISTER_ACTION(t05_assignID_action);
-  t05_cont_thread = HPX_REGISTER_ACTION(t05_set_cont_action);
-  t05_thread_cont_cleanup = HPX_REGISTER_ACTION(t05_thread_cont_cleanup_action);
-  t05_thread_current_cont_target = HPX_REGISTER_ACTION(t05_thread_current_cont_target_action);
-  t05_yield_worker = HPX_REGISTER_ACTION(t05_yield_worker_action);
+  HPX_REGISTER_ACTION(&t05_initData, t05_initData_action);
+  HPX_REGISTER_ACTION(&t05_worker, t05_worker_action);
+  HPX_REGISTER_ACTION(&t05_assignID, t05_assignID_action);
+  HPX_REGISTER_ACTION(&t05_cont_thread, t05_set_cont_action);
+  HPX_REGISTER_ACTION(&t05_thread_cont_cleanup, t05_thread_cont_cleanup_action);
+  HPX_REGISTER_ACTION(&t05_thread_current_cont_target, t05_thread_current_cont_target_action);
+  HPX_REGISTER_ACTION(&t05_yield_worker, t05_yield_worker_action);
 
   //06_TestFutures.c
-  t06_set_value = HPX_REGISTER_ACTION(t06_set_value_action);
-  t06_get_value = HPX_REGISTER_ACTION(t06_get_value_action);
-  t06_get_future_value = HPX_REGISTER_ACTION(t06_get_future_value_action);
+  HPX_REGISTER_ACTION(&t06_set_value, t06_set_value_action);
+  HPX_REGISTER_ACTION(&t06_get_value, t06_get_value_action);
+  HPX_REGISTER_ACTION(&t06_get_future_value, t06_get_future_value_action);
 
   //06_TestNewFutures.c
-  /* t06_waitforempty = HPX_REGISTER_ACTION(t06_waitforempty_action); */
-  /* t06_waitforfull = HPX_REGISTER_ACTION(t06_waitforfull_action); */
-  /* t06_getat = HPX_REGISTER_ACTION(t06_getat_action); */
-  /* t06_waitforempty_id = HPX_REGISTER_ACTION(t06_waitforempty_id_action); */
-  /* t06_waitforfull_id = HPX_REGISTER_ACTION(t06_waitforfull_id_action); */
-  /* t06_getat_id = HPX_REGISTER_ACTION(t06_getat_id_action); */
-  /* t06_lcoSetGet = HPX_REGISTER_ACTION(t06_lcoSetGet_action); */
-  /* t06_set = HPX_REGISTER_ACTION(t06_set_action); */
+  /* HPX_REGISTER_ACTION(&t06_waitforempty, t06_waitforempty_action); */
+  /* HPX_REGISTER_ACTION(&t06_waitforfull, t06_waitforfull_action); */
+  /* HPX_REGISTER_ACTION(&t06_getat, t06_getat_action); */
+  /* HPX_REGISTER_ACTION(&t06_waitforempty_id, t06_waitforempty_id_action); */
+  /* HPX_REGISTER_ACTION(&t06_waitforfull_id, t06_waitforfull_id_action); */
+  /* HPX_REGISTER_ACTION(&t06_getat_id, t06_getat_id_action); */
+  /* HPX_REGISTER_ACTION(&t06_lcoSetGet, t06_lcoSetGet_action); */
+  /* HPX_REGISTER_ACTION(&t06_set, t06_set_action); */
 
   //07_TestLCO.c
-  t07_init_array = HPX_REGISTER_ACTION(t07_init_array_action);
-  t07_lcoSetGet = HPX_REGISTER_ACTION(t07_lcoSetGet_action);
-  t07_initMemory = HPX_REGISTER_ACTION(t07_initMemory_action);
-  t07_initBlock = HPX_REGISTER_ACTION(t07_initBlock_action);
-  t07_getAll = HPX_REGISTER_ACTION(t07_getAll_action);
-  t07_errorSet = HPX_REGISTER_ACTION(t07_errorSet_action);
+  HPX_REGISTER_ACTION(&t07_init_array, t07_init_array_action);
+  HPX_REGISTER_ACTION(&t07_lcoSetGet, t07_lcoSetGet_action);
+  HPX_REGISTER_ACTION(&t07_initMemory, t07_initMemory_action);
+  HPX_REGISTER_ACTION(&t07_initBlock, t07_initBlock_action);
+  HPX_REGISTER_ACTION(&t07_getAll, t07_getAll_action);
+  HPX_REGISTER_ACTION(&t07_errorSet, t07_errorSet_action);
 
   //08_TestSema.c
-  t08_handler = HPX_REGISTER_ACTION(t08_handler_action);
+  HPX_REGISTER_ACTION(&t08_handler, t08_handler_action);
 
   //09_TestChannels.c
-  t09_sender = HPX_REGISTER_ACTION(t09_sender_action);
-  t09_receiver = HPX_REGISTER_ACTION(t09_receiver_action);
-  t09_sendInOrder = HPX_REGISTER_ACTION(t09_sendInOrder_action);
-  t09_receiveInOrder = HPX_REGISTER_ACTION(t09_receiveInOrder_action);
-  t09_tryRecvEmpty = HPX_REGISTER_ACTION(t09_tryRecvEmpty_action);
-  t09_senderChannel = HPX_REGISTER_ACTION(t09_senderChannel_action);
-  t09_receiverChannel = HPX_REGISTER_ACTION(t09_receiverChannel_action);
+  HPX_REGISTER_ACTION(&t09_sender, t09_sender_action);
+  HPX_REGISTER_ACTION(&t09_receiver, t09_receiver_action);
+  HPX_REGISTER_ACTION(&t09_sendInOrder, t09_sendInOrder_action);
+  HPX_REGISTER_ACTION(&t09_receiveInOrder, t09_receiveInOrder_action);
+  HPX_REGISTER_ACTION(&t09_tryRecvEmpty, t09_tryRecvEmpty_action);
+  HPX_REGISTER_ACTION(&t09_senderChannel, t09_senderChannel_action);
+  HPX_REGISTER_ACTION(&t09_receiverChannel, t09_receiverChannel_action);
 
   //10_TestAndLCO.c
-  t10_set = HPX_REGISTER_ACTION(t10_set_action);
+  HPX_REGISTER_ACTION(&t10_set, t10_set_action);
 
   //11_TestGenCount.c
-  t11_increment = HPX_REGISTER_ACTION(t11_increment_action);
+  HPX_REGISTER_ACTION(&t11_increment, t11_increment_action);
 
   //12_TestMemget.c
-  t12_init_array = HPX_REGISTER_ACTION(t12_init_array_action);
+  HPX_REGISTER_ACTION(&t12_init_array, t12_init_array_action);
 
   //13_TestMemput.c
-  t13_memput_verify = HPX_REGISTER_ACTION(t13_memput_verify_action);
+  HPX_REGISTER_ACTION(&t13_memput_verify, t13_memput_verify_action);
 }
 
 //****************************************************************************
@@ -259,5 +259,5 @@ int main(int argc, char * argv[]) {
   _register_actions();
 
   // Run HPX
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }

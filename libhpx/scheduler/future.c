@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <hpx/builtins.h>
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
@@ -190,7 +191,7 @@ static int _future_block_init_handler(uint32_t *args) {
 static hpx_action_t _block_init = 0;
 
 static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
-  _block_init = HPX_REGISTER_ACTION(_future_block_init_handler);
+  LIBHPX_REGISTER_ACTION(&_block_init, _future_block_init_handler);
 }
 
 

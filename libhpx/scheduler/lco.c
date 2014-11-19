@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "libsync/sync.h"
+#include "libhpx/action.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
@@ -141,11 +142,11 @@ _lco_wait(void *args)
 static void HPX_CONSTRUCTOR
 _initialize_actions(void)
 {
-  _lco_fini_action   = HPX_REGISTER_ACTION(_lco_fini);
-  _lco_error_action  = HPX_REGISTER_ACTION(_lco_error);
-  hpx_lco_set_action = HPX_REGISTER_ACTION(_lco_set);
-  _lco_get_action    = HPX_REGISTER_ACTION(_lco_get);
-  _lco_wait_action   = HPX_REGISTER_ACTION(_lco_wait);
+  LIBHPX_REGISTER_ACTION(&_lco_fini_action, _lco_fini);
+  LIBHPX_REGISTER_ACTION(&_lco_error_action, _lco_error);
+  LIBHPX_REGISTER_ACTION(&hpx_lco_set_action, _lco_set);
+  LIBHPX_REGISTER_ACTION(&_lco_get_action, _lco_get);
+  LIBHPX_REGISTER_ACTION(&_lco_wait_action, _lco_wait);
 }
 
 
@@ -253,9 +254,6 @@ void
 hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
             hpx_addr_t rsync)
 {
-#ifdef ENABLE_TAU
-          TAU_START("hpx_lco_set");
-#endif
   lco_t *lco = NULL;
   if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
@@ -268,9 +266,6 @@ hpx_lco_set(hpx_addr_t target, int size, const void *value, hpx_addr_t lsync,
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   if (rsync)
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-#ifdef ENABLE_TAU
-          TAU_STOP("hpx_lco_set");
-#endif
 }
 
 

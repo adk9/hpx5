@@ -55,9 +55,8 @@
 struct network_class {
   _QUEUE_T                         tx;          // half duplex port for send
   _QUEUE_T                         rx;          // half duplex port
-  volatile uint32_t      shutdown_src;          // the HPX locality that
-                                                // called hpx_shutdown()
   routing_t                  *routing;          // for adaptive routing
+  int                           flush;
 };
 
 
@@ -69,6 +68,7 @@ void network_tx_enqueue(network_class_t *network, hpx_parcel_t *p) {
   node->next = NULL;
   _QUEUE_ENQUEUE(&network->tx, node);
 }
+
 
 hpx_parcel_t *network_tx_dequeue(network_class_t *network) {
   hpx_parcel_t *p  = NULL;
@@ -128,7 +128,8 @@ network_class_t *network_new(void) {
     return NULL;
   }
 
-  network_set_shutdown_src(n, UINT32_MAX);
+  n->flush = 0;
+  dbg_log("initialized parcel network.\n");
 
 #ifdef ENABLE_TAU
           TAU_STOP("network_new");
@@ -147,21 +148,32 @@ void network_delete(network_class_t *network) {
 
   hpx_parcel_t *p = NULL;
 
-  while ((p = network_tx_dequeue(network)))
+  while ((p = network_tx_dequeue(network))) {
     hpx_parcel_release(p);
+  }
   _QUEUE_FINI(&network->tx);
 
-  while ((p = network_rx_dequeue(network)))
+  while ((p = network_rx_dequeue(network))) {
     hpx_parcel_release(p);
+  }
   _QUEUE_FINI(&network->rx);
 
-  if (network->routing)
+  if (network->routing) {
     routing_delete(network->routing);
+  }
 
   free(network);
 #ifdef ENABLE_TAU
           TAU_STOP("network_delete");
 #endif
+}
+
+
+void network_shutdown(network_class_t *network) {
+  if (network->flush)
+    transport_progress(here->transport, TRANSPORT_FLUSH);
+  else
+    transport_progress(here->transport, TRANSPORT_CANCEL);
 }
 
 
@@ -176,16 +188,10 @@ void network_barrier(network_class_t *network) {
 }
 
 
-void network_set_shutdown_src(network_class_t *network, uint32_t src) {
-  sync_store(&network->shutdown_src, src, SYNC_RELAXED);
-}
-
-
-uint32_t network_get_shutdown_src(network_class_t *network) {
-  return sync_load(&network->shutdown_src, SYNC_RELAXED);
-}
-
-
 routing_t *network_get_routing(network_class_t *network) {
   return network->routing;
+}
+
+void network_flush_on_shutdown(network_class_t *network) {
+  network->flush = 1;
 }

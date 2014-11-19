@@ -60,7 +60,7 @@ int main(int argc, char **argv)
   int cp_interval = 0;
   int restart_cp_num = 0;
 
-  _main      = HPX_REGISTER_ACTION(_main_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
 
   int input[17];
   input[0] = scaling;
@@ -81,6 +81,6 @@ int main(int argc, char **argv)
   input[15] = cp_interval;
   input[16] = restart_cp_num;
 
-  return hpx_run(_main, input, 17*sizeof(int));
+  return hpx_run(&_main, input, 17*sizeof(int));
 }
 

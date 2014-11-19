@@ -37,41 +37,56 @@ static transport_class_t *_default(uint32_t req_limit) {
   return transport_new_smp(req_limit);
 }
 
-transport_class_t *transport_new(hpx_transport_t transport, uint32_t req_limit) {
-  switch (transport) {
+transport_class_t *transport_new(hpx_transport_t type, uint32_t req_limit) {
+  transport_class_t *transport = NULL;
+
+  switch (type) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    return transport_new_photon(req_limit);
+    transport = transport_new_photon(req_limit);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    return transport_new_mpi(req_limit);
+    transport = transport_new_mpi(req_limit);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    return transport_new_portals(req_limit);
+    transport = transport_new_portals(req_limit);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
-    break;
 #endif
+    break;
 
    case (HPX_TRANSPORT_SMP):
-    return transport_new_smp(req_limit);
+    transport = transport_new_smp(req_limit);
+    break;
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
+    transport = _default(req_limit);
     break;
   };
 
-  return _default(req_limit);
+  if (!transport) {
+    transport = _default(req_limit);
+  }
+
+  if (!transport) {
+    dbg_log_trans("failed to initialize a transport.\n");
+  }
+  else {
+    dbg_log("initialized the %s transport.\n", transport->id());
+  }
+
+  return transport;
 }
 
 

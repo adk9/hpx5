@@ -158,8 +158,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  _main     = HPX_REGISTER_ACTION(_main_action);
-  _worker   = HPX_REGISTER_ACTION(_worker_action);
-  _receiver = HPX_REGISTER_ACTION(_receiver_action);
-  return hpx_run(_main, NULL, 0);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_worker, _worker_action);
+  HPX_REGISTER_ACTION(&_receiver, _receiver_action);
+  return hpx_run(&_main, NULL, 0);
 }

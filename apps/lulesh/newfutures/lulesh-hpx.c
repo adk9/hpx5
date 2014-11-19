@@ -238,12 +238,10 @@ static int _initDomain_action(InitArgs *init) {
   ld->sem_sbn3 = hpx_lco_sema_new(1);
   ld->sem_posvel = hpx_lco_sema_new(1);
   ld->sem_monoq = hpx_lco_sema_new(1);
-  ld->sbn3[0] = init->sbn3[0];
-  ld->sbn3[1] = init->sbn3[1];
-  ld->posvel[0] = init->posvel[0];
-  ld->posvel[1] = init->posvel[1];
-  ld->monoq[0] = init->monoq[0];
-  ld->monoq[1] = init->monoq[1];
+  memcpy(ld->sbn3, init->sbn3, 2 * 26 * sizeof(hpx_netfuture_t));
+  memcpy(ld->posvel, init->posvel, 2 * 26 * sizeof(hpx_netfuture_t));
+  memcpy(ld->monoq, init->monoq, 2 * 26 * sizeof(hpx_netfuture_t));
+
   SetDomain(index, col, row, plane, nx, tp, nDoms, maxcycles,ld);
 
   ld->newdt = init->newdt;
@@ -295,14 +293,19 @@ static int _main_action(int *input)
   }
 
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
-  int num_arrays = 6; // SBN3, PosVel, MonoQ; 3 * 2 because double buffered
-  size_t num_elements_per_array = 26 * nDoms;
-  size_t points_cubed = (nx + 1) * (nx + 1) * (nx + 1);
-  size_t element_size = points_cubed * sizeof(double) + sizeof(NodalArgs);
-  size_t size_of_nf_array = element_size * num_elements_per_array;
-  size_t total_size = size_of_nf_array * num_arrays;
-  cfg.max_size = (total_size + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
-  cfg.max_number = num_arrays * num_elements_per_array;
+  int nDoms_up = (nDoms + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  size_t sbn3_size   = nDoms_up * (NF_BUFFER_SIZE(3 * (nx + 1) * (nx + 1)) * 6 +
+				   NF_BUFFER_SIZE(3 * (nx + 1)) * 12 +
+				   NF_BUFFER_SIZE(3) * 8);
+  size_t posvel_size = nDoms_up * (NF_BUFFER_SIZE(6 * (nx + 1) * (nx + 1)) * 6 +
+				   NF_BUFFER_SIZE(6 * (nx + 1)) * 12 +
+				   NF_BUFFER_SIZE(6) * 8);
+  size_t monoq_size  = nDoms_up * NF_BUFFER_SIZE(3 * nx * nx) * 26;
+  size_t nf_data_size = sbn3_size * 2 + posvel_size * 2 + monoq_size * 2;
+  //  cfg.max_size = (nf_data_size + hpx_get_num_ranks() - 1)/hpx_get_num_ranks();
+  cfg.max_size = nf_data_size;
+  cfg.max_array_number = (2 * 3 * 26); // 2 gens, 3 comm fns, 26 arrays in each
+  cfg.max_number = cfg.max_array_number * nDoms;
   hpx_netfutures_init(&cfg);
 
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms,sizeof(Domain));
@@ -317,19 +320,11 @@ static int _main_action(int *input)
   elapsed_ar = hpx_lco_allreduce_new(nDoms, 1, sizeof(double),
 				     (hpx_commutative_associative_op_t)maxdouble,
 				     (void (*)(void *, const size_t size)) initmaxdouble);
-  int nf_data_size = (nx+1)*(nx+1)*(nx+1)*sizeof(double) + sizeof(NodalArgs);
-  hpx_netfuture_t sbn3[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
-  };
-  hpx_netfuture_t posvel[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
-  };
-  hpx_netfuture_t monoq[2] = {
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size),
-    hpx_lco_netfuture_new_all(26*nDoms,nf_data_size)
-  };
+  
+  hpx_netfuture_t sbn3[2][26];
+  hpx_netfuture_t posvel[2][26];
+  hpx_netfuture_t monoq[2][26];
+  create_nf_arrays(nDoms, nx, sbn3, posvel, monoq);
 
   for (k=0;k<nDoms;k++) {
     InitArgs args = {
@@ -341,10 +336,10 @@ static int _main_action(int *input)
       .maxcycles = maxcycles,
       .complete = complete,
       .newdt = newdt,
-      .sbn3 = {sbn3[0], sbn3[1]},
-      .posvel = {posvel[0], posvel[1]},
-      .monoq = {monoq[0], monoq[1]}
     };
+    memcpy(args.sbn3, sbn3, 2 * 26 * sizeof(hpx_netfuture_t));
+    memcpy(args.posvel, posvel, 2 * 26 * sizeof(hpx_netfuture_t));
+    memcpy(args.monoq, monoq, 2 * 26 * sizeof(hpx_netfuture_t));
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
     hpx_call(block, _initDomain, &args, sizeof(args), init);
   }
@@ -418,17 +413,17 @@ int main(int argc, char **argv)
     }
   }
 
-  _main      = HPX_REGISTER_ACTION(_main_action);
-  _initDomain   = HPX_REGISTER_ACTION(_initDomain_action);
-  _advanceDomain   = HPX_REGISTER_ACTION(_advanceDomain_action);
-  _SBN1_sends = HPX_REGISTER_ACTION(_SBN1_sends_action);
-  _SBN1_result = HPX_REGISTER_ACTION(_SBN1_result_action);
-  _SBN3_sends = HPX_REGISTER_ACTION(_SBN3_sends_action);
-  _SBN3_result = HPX_REGISTER_ACTION(_SBN3_result_action);
-  _PosVel_sends = HPX_REGISTER_ACTION(_PosVel_sends_action);
-  _PosVel_result = HPX_REGISTER_ACTION(_PosVel_result_action);
-  _MonoQ_sends = HPX_REGISTER_ACTION(_MonoQ_sends_action);
-  _MonoQ_result = HPX_REGISTER_ACTION(_MonoQ_result_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
+  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
+  HPX_REGISTER_ACTION(&_SBN1_sends, _SBN1_sends_action);
+  HPX_REGISTER_ACTION(&_SBN1_result, _SBN1_result_action);
+  HPX_REGISTER_ACTION(&_SBN3_sends, _SBN3_sends_action);
+  HPX_REGISTER_ACTION(&_SBN3_result, _SBN3_result_action);
+  HPX_REGISTER_ACTION(&_PosVel_sends, _PosVel_sends_action);
+  HPX_REGISTER_ACTION(&_PosVel_result, _PosVel_result_action);
+  HPX_REGISTER_ACTION(&_MonoQ_sends, _MonoQ_sends_action);
+  HPX_REGISTER_ACTION(&_MonoQ_result, _MonoQ_result_action);
 
   int input[3];
   input[0] = nDoms;
@@ -436,7 +431,7 @@ int main(int argc, char **argv)
   input[2] = maxcycles;
   printf(" Number of domains: %d nx: %d maxcycles: %d\n",nDoms,nx,maxcycles);
 
-  return hpx_run(_main, input, 3*sizeof(int));
+  return hpx_run(&_main, input, 3*sizeof(int));
 
   return 0;
 }
