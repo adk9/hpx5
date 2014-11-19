@@ -122,8 +122,8 @@ main(int argc, char *argv[]) {
   }
 
   // register the actions
-  _address_translation  = HPX_REGISTER_ACTION(_address_translation_action);
-  _main                 = HPX_REGISTER_ACTION(_main_action);
+  HPX_REGISTER_ACTION(&_address_translation, _address_translation_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

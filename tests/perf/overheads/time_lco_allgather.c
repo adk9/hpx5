@@ -52,7 +52,6 @@ typedef struct {
 
 int allgather_main_action(const main_args_t *args);
 
-void allgather_init_actions(void);
 static hpx_action_t _initDomain = 0;
 static hpx_action_t _advanceDomain = 0;
 
@@ -175,14 +174,6 @@ allgather_main_action(const main_args_t *args)
   hpx_shutdown(0);
 }
 
-/// Register the actions that we need.
-void
-allgather_init_actions(void)
-{
-  _initDomain = HPX_REGISTER_ACTION(_initDomain_action);
-  _advanceDomain = HPX_REGISTER_ACTION(_advanceDomain_action);
-}
-
 int
 main(int argc, char *argv[argc])
 {
@@ -225,11 +216,11 @@ main(int argc, char *argv[argc])
     return -1;
   }
 
-  // register HPX actions
-  allgather_init_actions();
-
   // register the main action
-  hpx_action_t _main = HPX_REGISTER_ACTION(allgather_main_action);
+  hpx_action_t _main;
+  HPX_REGISTER_ACTION(&_main, allgather_main_action);
+  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
+  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
 
   // run HPX (this copies the args structure)
   return hpx_run(&_main, &args, sizeof(args));

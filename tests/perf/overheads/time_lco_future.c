@@ -18,8 +18,8 @@ static void _usage(FILE *stream) {
 }
 
 static hpx_action_t _main = 0;
-static hpx_action_t set_value = 0;
-static hpx_action_t get_value = 0;
+static hpx_action_t _set_value = 0;
+static hpx_action_t _get_value = 0;
 
 #define T int
 
@@ -58,7 +58,7 @@ static int _main_action(int *args) {
   value = 1234;
 
   t = hpx_time_now();
-  hpx_call(HPX_HERE, set_value, &value, sizeof(value), done);
+  hpx_call(HPX_HERE, _set_value, &value, sizeof(value), done);
   fprintf(stdout, "Value set time: %g\n", hpx_time_elapsed_ms(t));
 
   t = hpx_time_now();
@@ -89,7 +89,7 @@ static int _main_action(int *args) {
     t = hpx_time_now();
     for (int j = 0; j < count; j++) {
       t = hpx_time_now();
-      hpx_call(HPX_HERE, get_value, NULL, 0, futures[j]);
+      hpx_call(HPX_HERE, _get_value, NULL, 0, futures[j]);
       hpx_lco_wait(futures[j]);
     }
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
@@ -127,9 +127,9 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  _main = HPX_REGISTER_ACTION(_main_action);
-  set_value = hpx_register_action("set_value", action_set_value);
-  get_value = hpx_register_action("get_value", action_get_value);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_set_value, action_set_value);
+  HPX_REGISTER_ACTION(&_get_value, action_get_value);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

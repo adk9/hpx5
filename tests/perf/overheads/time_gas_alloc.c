@@ -34,11 +34,11 @@ static int _main_action(void *args) {
   uint32_t blocks = size;
 
   fprintf(stdout, HEADER);
-  fprintf(stdout, "localities: %d, ranks and blocks per rank = %d, %d\n", 
+  fprintf(stdout, "localities: %d, ranks and blocks per rank = %d, %d\n",
                   size, ranks, blocks/ranks);
 
   fprintf(stdout, "%s\t%*s%*s%*s%*s%*s%*s\n", "# Size ", HEADER_FIELD_WIDTH,
-           " LOCAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH, 
+           " LOCAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
            " GLOBAL_ALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
            " GLOBAL_CALLOC ", HEADER_FIELD_WIDTH, " FREE ");
 
@@ -46,14 +46,14 @@ static int _main_action(void *args) {
     t = hpx_time_now();
     local = hpx_gas_alloc(size);
     fprintf(stdout, "%-*lu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
-   
+
     t = hpx_time_now();
     hpx_gas_free(local, HPX_NULL);
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
     global = hpx_gas_global_alloc(blocks, size);
-    fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));   
+    fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
     hpx_gas_free(global, HPX_NULL);
@@ -95,7 +95,7 @@ main(int argc, char *argv[])
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
   // Register the main action
-  _main    = HPX_REGISTER_ACTION(_main_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);
