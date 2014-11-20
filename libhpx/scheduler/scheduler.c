@@ -92,6 +92,10 @@ void scheduler_delete(struct scheduler *sched) {
   }
 
   if (sched->workers) {
+    for (int i = 0, e = sched->n_workers; i < e; ++i) {
+      struct worker *worker = scheduler_get_worker(sched, i);
+      worker_fini(worker);
+    }
     free(sched->workers);
   }
 
