@@ -40,17 +40,15 @@ extern hpx_action_t HPX_ACTION_NULL;
 /// @returns error code
 int hpx_register_action(hpx_action_t *action, const char *id, hpx_action_handler_t func);
 
-
-/// Finalize the registered actions so that they are safe to be used
-/// after hpx_run().
-int hpx_finalize_actions(void);
-
+#define HPX_INVALID_ACTION_ID UINT16_MAX
 
 #define HPX_STR(l) #l
 
 /// A convenience macro for registering an HPX action
-#define HPX_REGISTER_ACTION(act, f)                                   \
-  hpx_register_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f)
+#define HPX_REGISTER_ACTION(act, f) do {                                \
+    *act = HPX_INVALID_ACTION_ID;                                       \
+    hpx_register_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f); \
+  } while (0)
 
 
 #endif

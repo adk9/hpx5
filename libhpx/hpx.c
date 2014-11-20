@@ -47,6 +47,9 @@
 ///
 /// This will delete the global objects, if they've been allocated.
 static void _cleanup(locality_t *l) {
+  if (!l)
+    return;
+
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -72,13 +75,17 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  if (l->config)
-    free(l->config);
-
   libhpx_hwloc_topology_destroy(l->topology);
 
-  if (l)
-    free(l);
+  if (l->actions) {
+    action_table_free(l->actions);
+  }
+
+  if (l->config) {
+    free(l->config);
+  }
+
+  free(l);
 }
 
 
@@ -94,16 +101,13 @@ int hpx_init(int *argc, char ***argv) {
 
   // locality
   here = malloc(sizeof(*here));
-  if (!here)
+  if (!here) {
     return dbg_error("failed to allocate a locality.\n");
-  here->config = cfg;
-
-  // actions
-  here->actions = libhpx_initialize_actions();
-  if (!here->actions) {
-    _cleanup(here);
-    return dbg_error("failed to allocate an action table.\n");
   }
+  here->rank = -1;
+  here->ranks = 0;
+  here->actions = NULL;
+  here->config = cfg;
 
   // topology
   int e = libhpx_hwloc_topology_init(&here->topology);
@@ -172,10 +176,17 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int hpx_run(hpx_action_t *act, const void *args, size_t size) {
-  // we finalize the actions first
-  int e = hpx_finalize_actions();
-  if (e)
-    return dbg_error("error finalizing action registration");
+  int status = HPX_SUCCESS;
+  if (!here || !here->sched) {
+    status = dbg_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
+  }
+
+  here->actions = action_table_finalize();
+  if (!here->actions) {
+    status = dbg_error("failed to finalize the action table.\n");
+    goto unwind0;
+  }
 
   // we start a transport server for the transport, if necessary
   // FIXME: move this functionality into the transport initialization, rather
@@ -203,9 +214,12 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     return HPX_ERROR;
   }
 
+unwind2:
   network_shutdown(here->network);
+unwind1:
   _cleanup(here);
-  return HPX_SUCCESS;
+unwind0:
+  return status;
 }
 
 

@@ -114,10 +114,10 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
     dbg_log_sched("received parcel at incorrect rank, resend likely\n");
   }
 
-  hpx_action_t action = hpx_parcel_get_action(parcel);
+  hpx_action_t id = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
-  hpx_action_handler_t handler = (hpx_action_handler_t)(here->actions[action].func);
+  hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
   int status = handler(args);
   switch (status) {
    default:

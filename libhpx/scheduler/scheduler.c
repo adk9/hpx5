@@ -70,15 +70,18 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
   return s;
 }
 
-void scheduler_delete(scheduler_t *sched) {
-  if (!sched)
+void scheduler_delete(struct scheduler *sched) {
+  if (!sched) {
     return;
+  }
 
-  if (sched->barrier)
+  if (sched->barrier) {
     sync_barrier_delete(sched->barrier);
+  }
 
-  if (sched->workers)
+  if (sched->workers) {
     free(sched->workers);
+  }
 
   YIELD_QUEUE_FINI(&sched->yielded);
 

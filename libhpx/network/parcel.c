@@ -233,13 +233,22 @@ hpx_parcel_send_sync(hpx_parcel_t *p) {
 
   if (p->c_action != HPX_ACTION_NULL) {
     dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
-                   p->pid, p->credit, action_get_key(p->action),
-                   hpx_parcel_get_data(p), p->size, p->target,
-                   action_get_key(p->c_action), p->c_target);
+                   p->pid,
+                   p->credit,
+                   action_table_get_key(here->actions, p->action),
+                   hpx_parcel_get_data(p),
+                   p->size,
+                   p->target,
+                   action_table_get_key(here->actions, p->c_action),
+                   p->c_target);
   } else {
     dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu)\n",
-                   p->pid,  p->credit, action_get_key(p->action),
-                   hpx_parcel_get_data(p), p->size, p->target);
+                   p->pid,
+                   p->credit,
+                   action_table_get_key(here->actions, p->action),
+                   hpx_parcel_get_data(p),
+                   p->size,
+                   p->target);
   }
 
   // do a local send through loopback
