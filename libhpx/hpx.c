@@ -36,7 +36,6 @@
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/newfuture.h"
-#include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
@@ -191,15 +190,11 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     goto unwind1;
   }
 
-  if (network_startup(here->network) != LIBHPX_OK) {
-    status = dbg_error("failed to start network.\n");
-    goto unwind1;
-  }
-
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    if (hpx_call(HPX_HERE, *act, args, size, HPX_NULL) != LIBHPX_OK) {
-      status = dbg_error("failed to spawn initial action\n");
+    status = hpx_call(HPX_HERE, *act, args, size, HPX_NULL);
+    if (status != LIBHPX_OK) {
+      dbg_error("failed to spawn initial action\n");
       goto unwind2;
     }
   }
