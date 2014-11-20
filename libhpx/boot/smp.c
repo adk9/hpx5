@@ -17,13 +17,15 @@
 #include <stdlib.h>
 #include "libhpx/boot.h"
 
+static const char * const _smp_id_string = "SMP";
 
-static const char *_id(void) {
-  return "SMP";
+static const char *_smp_id(void) {
+  return _smp_id_string;
 }
 
 
 static void _delete(boot_class_t *boot) {
+  free(boot);
 }
 
 
@@ -52,18 +54,15 @@ static void _abort(const boot_class_t *boot) {
 }
 
 
-static boot_class_t _smp = {
-  .type      = HPX_BOOT_SMP,
-  .id        = _id,
-  .delete    = _delete,
-  .rank      = _rank,
-  .n_ranks   = _n_ranks,
-  .barrier   = _barrier,
-  .allgather = _allgather,
-  .abort     = _abort
-};
-
-
 boot_class_t *boot_new_smp(void) {
-  return &_smp;
+  boot_class_t *smp = malloc(sizeof(*smp));
+  smp->type      = HPX_BOOT_SMP;
+  smp->id        = _smp_id;
+  smp->delete    = _delete;
+  smp->rank      = _rank;
+  smp->n_ranks   = _n_ranks;
+  smp->barrier   = _barrier;
+  smp->allgather = _allgather;
+  smp->abort     = _abort;
+  return smp;
 }

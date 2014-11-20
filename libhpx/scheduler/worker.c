@@ -662,39 +662,32 @@ int hpx_get_my_thread_id(void) {
 
 
 hpx_addr_t hpx_thread_current_target(void) {
-  return self->current->target;
+  return (self && self->current) ? self->current->target : HPX_NULL;
 }
 
 
 hpx_addr_t hpx_thread_current_cont_target(void) {
-  return self->current->c_target;
+  return (self && self->current) ? self->current->c_target : HPX_NULL;
 }
 
 
 hpx_action_t hpx_thread_current_cont_action(void) {
-  return self->current->c_action;
+  return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
 
 
 uint32_t hpx_thread_current_args_size(void) {
-  return self->current->size;
+  return (self && self->current) ? self->current->size : 0;
 }
 
 
 hpx_pid_t hpx_thread_current_pid(void) {
-  if (self && self->current) {
-    return self->current->pid;
-  }
-  else {
-    return HPX_NULL;
-  }
+  return (self && self->current) ? self->current->pid : HPX_NULL;
 }
 
 
 uint32_t hpx_thread_current_credit(void) {
-  if (self->current == NULL)
-    return 0;
-  return parcel_get_credit(self->current);
+  return (self && self->current) ? parcel_get_credit(self->current) : 0;
 }
 
 

@@ -230,21 +230,17 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 
 
 int hpx_get_my_rank(void) {
-  assert(here);
-  return here->rank;
+  return (here) ? here->rank : -1;
 }
 
 
 int hpx_get_num_ranks(void) {
-  assert(here);
-  return here->ranks;
+  return (here && here->boot) ? here->ranks : -1;
 }
 
 
 int hpx_get_num_threads(void) {
-  if (!here || !here->sched)
-    return 0;
-  return here->sched->n_workers;
+  return (here && here->sched) ? here->sched->n_workers : 0;
 }
 
 
