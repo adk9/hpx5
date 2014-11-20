@@ -60,8 +60,4 @@ HPX_INTERNAL void cr_bitmap_delete(bitmap_t *b) HPX_NON_NULL(1);
 
 HPX_INTERNAL bool cr_bitmap_add_and_test(bitmap_t *b, int64_t i) HPX_NON_NULL(1);
 
-HPX_INTERNAL int parcel_recover_credit(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
-
-
 #endif // LIBHPX_TERMINATION_H
