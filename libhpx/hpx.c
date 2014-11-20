@@ -186,12 +186,6 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     goto unwind0;
   }
 
-  // we finalize the actions first
-  if (hpx_finalize_actions() != LIBHPX_OK) {
-    status = dbg_error("error finalizing action registration\n");
-    goto unwind1;
-  }
-
   if (network_startup(here->network) != LIBHPX_OK) {
     status = dbg_error("could not start network progress\n");
     goto unwind1;
