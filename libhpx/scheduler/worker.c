@@ -26,16 +26,17 @@
 
 #include <libsync/barriers.h>
 
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"                      // used as thread-control block
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
-#include "libhpx/worker.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>                      // used as thread-control block
+#include <libhpx/process.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
+#include <libhpx/worker.h>
 #include "cvar.h"
 #include "thread.h"
 #include "termination.h"
@@ -544,9 +545,10 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 
 static void _call_continuation(hpx_addr_t target, hpx_action_t action,
                                const void *args, size_t len,
-                               hpx_status_t status) {
-  const size_t payload = sizeof(locality_cont_args_t) + len;
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload);
+                               hpx_status_t status)
+{
+  // get a parcel we can use to call locality_call_continuation().
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
   assert(p);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_action(p, locality_call_continuation);
@@ -563,9 +565,8 @@ static void _call_continuation(hpx_addr_t target, hpx_action_t action,
 /// unified continuation handler
 static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
                                    const void *value,
-                                   void (*cleanup)(void*), void *env) {
-  // if there's a continuation future, then we set it, which could spawn a
-  // message if the future isn't local
+                                   void (*cleanup)(void*), void *env)
+{
   hpx_parcel_t *parcel = self->current;
   hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
@@ -611,32 +612,22 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 
 
 void hpx_thread_exit(int status) {
-  if (likely(status == HPX_SUCCESS) || unlikely(status == HPX_LCO_ERROR) ||
-      unlikely(status == HPX_ERROR)) {
-    hpx_parcel_t *parcel = self->current;
-    if ((parcel->pid != HPX_NULL) && parcel->credit) {
-      parcel_recover_credit(parcel);
-    }
-    _continue(status, 0, NULL, NULL, NULL);
-    unreachable();
-  }
+  hpx_parcel_t *parcel = self->current;
 
-  // If we're supposed to be resending, we want to send back an invalidation
-  // our estimated owner for the parcel's target address, and then resend the
-  // parcel.
   if (status == HPX_RESEND) {
-    hpx_parcel_t *parcel = self->current;
-
     // Get a parcel to transfer to, and transfer using the resend continuation.
     hpx_parcel_t *to = _schedule(false, NULL);
-    assert(to);
-    assert(parcel_get_stack(to));
-    assert(parcel_get_stack(to)->sp);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }
 
-  dbg_error("worker: unexpected status %d.\n", status);
+  if (status == HPX_SUCCESS || status == HPX_LCO_ERROR || status == HPX_ERROR) {
+    process_recover_credit(parcel);
+    _continue(status, 0, NULL, NULL, NULL);
+    unreachable();
+  }
+
+  dbg_error("unexpected exit status %d.\n", status);
   hpx_abort();
 }
 
