@@ -28,16 +28,17 @@
 #include <libsync/spscq.h>
 #include <libsync/locks.h>
 
-#include "libhpx/boot.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
-#include "libhpx/stats.h"
-#include "libhpx/system.h"
-#include "libhpx/transport.h"
-#include "libhpx/routing.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/stats.h>
+#include <libhpx/system.h>
+#include <libhpx/transport.h>
+#include <libhpx/routing.h>
 
 
 //#define _QUEUE(pre, post) pre##spscq##post
@@ -68,6 +69,7 @@ struct _network {
                                              HPX_CACHELINE_SIZE)];
 
   _QUEUE_T                 tx;                  // half duplex port for send
+  _QUEUE_T rx;
   struct {
     uint64_t i;
     uint64_t tail;
@@ -112,9 +114,18 @@ static void *_progress(void *o) {
 static hpx_action_t _probe = 0;
 
 
-static int _probe_handler(void *network) {
-  while (true) {
-    hpx_thread_yield();
+static int _probe_handler(void *o) {
+  struct network *network = *(struct network **)o;
+  hpx_parcel_t *stack = NULL;
+  int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
+  if (e != HPX_SUCCESS)
+    return e;
+
+  while ((stack = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
+    hpx_parcel_t *p = NULL;
+    while ((p = parcel_stack_pop(&stack))) {
+      scheduler_spawn(p);
+    }
   }
   return HPX_SUCCESS;
 }
@@ -155,7 +166,7 @@ static int _startup(struct network *o) {
     dbg_log("started network progress.\n");
   }
 
-  e = hpx_call(HPX_HERE, _probe, network, sizeof(network), HPX_NULL);
+  e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
   if (e) {
     return dbg_error("failed to start network probe\n");
   }
@@ -220,6 +231,8 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 
 hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
+  return _QUEUE_DEQUEUE(&network->rx);
+
   uint64_t i = network->map[nrx].i;
   if (!i) {
     i = sync_fadd(&network->tail.i, 1, SYNC_ACQ_REL);
@@ -240,6 +253,9 @@ hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
 
 int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
   struct _network *network = (struct _network*)o;
+  _QUEUE_ENQUEUE(&network->rx, p);
+  return 1;
+
   // if someone has published a rendevous location, pass along the current
   // parcel stack
   uint64_t head = network->head.i;
@@ -264,6 +280,7 @@ void network_flush_on_shutdown(struct network *o) {
   sync_store(&network->flush, 1, SYNC_RELEASE);
 }
 
+
 struct network *network_new(libhpx_network_t type, int nrx) {
   struct _network *n = NULL;
   int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n));
@@ -286,6 +303,7 @@ struct network *network_new(libhpx_network_t type, int nrx) {
   assert(n->nrx < 128);
 
   _QUEUE_INIT(&n->tx, 0);
+  _QUEUE_INIT(&n->rx, 0);
   n->head.i = 1;
   n->head.tail = 1;
   n->tail.i = 1;
