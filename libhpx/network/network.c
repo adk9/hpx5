@@ -69,24 +69,7 @@ struct _network {
                                              HPX_CACHELINE_SIZE)];
 
   _QUEUE_T                 tx;                  // half duplex port for send
-  _QUEUE_T rx;
-  struct {
-    uint64_t i;
-    uint64_t tail;
-    char const _padding[HPX_CACHELINE_SIZE - 16];
-  } head;
-  struct {
-    uint64_t i;
-    char const _padding[HPX_CACHELINE_SIZE - 8];
-  } tail;
-  struct {
-    hpx_parcel_t *p;
-    char const _padding[HPX_CACHELINE_SIZE - sizeof(hpx_parcel_t*)];
-  } slots[128];
-  struct {
-    uint64_t i;
-    char const _padding[HPX_CACHELINE_SIZE - 8];
-  } map[128];
+  _QUEUE_T                 rx;
 };
 
 
@@ -232,45 +215,12 @@ void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
 hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
   struct _network *network = (struct _network*)o;
   return _QUEUE_DEQUEUE(&network->rx);
-
-  uint64_t i = network->map[nrx].i;
-  if (!i) {
-    i = sync_fadd(&network->tail.i, 1, SYNC_ACQ_REL);
-    network->map[nrx].i = i;
-  }
-
-  // see if the network thread noticed me yet
-  uint64_t slot = i & 127lu;
-  hpx_parcel_t *p = sync_load(&network->slots[slot].p, SYNC_ACQUIRE);
-  if (!p) {
-    return NULL;
-  }
-  network->map[nrx].i = 0;
-  network->slots[slot].p = NULL;
-  return p;
 }
 
 
 int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
   struct _network *network = (struct _network*)o;
   _QUEUE_ENQUEUE(&network->rx, p);
-  return 1;
-
-  // if someone has published a rendevous location, pass along the current
-  // parcel stack
-  uint64_t head = network->head.i;
-  uint64_t tail = network->head.tail;
-  if (tail == head) {
-    network->head.tail = sync_load(&network->tail.i, SYNC_RELAXED);
-    tail = network->head.tail;
-    if (tail == head)
-      return 0;
-  }
-
-  uint64_t i = head++;
-  uint64_t slot = i & 127;
-  sync_store(&network->slots[slot].p, p, SYNC_RELEASE);
-  network->head.i = head;
   return 1;
 }
 
@@ -304,11 +254,6 @@ struct network *network_new(libhpx_network_t type, int nrx) {
 
   _QUEUE_INIT(&n->tx, 0);
   _QUEUE_INIT(&n->rx, 0);
-  n->head.i = 1;
-  n->head.tail = 1;
-  n->tail.i = 1;
-  memset(&n->slots, 0, sizeof(n->slots));
-  memset(&n->map, 0, sizeof(n->map));
 
   return &n->vtable;
 }
