@@ -74,7 +74,7 @@ struct _network {
 
 
 static void *_progress(void *o) {
-  // system_set_affinity(pthread_self(), 0);
+  //system_set_affinity(pthread_self(), 0);
 
   struct _network *network = o;
 
