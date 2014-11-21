@@ -19,7 +19,7 @@
 int system_get_cores(void)
   HPX_INTERNAL;
 
-int system_set_affinity(pthread_t *thread, int core_id)
+int system_set_affinity(pthread_t thread, int core_id)
   HPX_INTERNAL;
 
 #endif // LIBHPX_SYSTEM_H

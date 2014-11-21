@@ -29,11 +29,11 @@ int system_get_cores(void) {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
-int system_set_affinity(pthread_t *thread, int core_id) {
+int system_set_affinity(pthread_t thread, int core_id) {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(core_id, &cpuset);
-  int e = pthread_setaffinity_np(*thread, sizeof(cpuset), &cpuset);
+  int e = pthread_setaffinity_np(thread, sizeof(cpuset), &cpuset);
   if (e) // not fatal
     return dbg_error("system: failed to bind thread affinity.\n");
   return HPX_SUCCESS;
