@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
-  
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "h?")) != -1) {
     switch (opt) {
@@ -180,8 +180,8 @@ static int _action_pong(args_t *args) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  _main = HPX_REGISTER_ACTION(_action_main);
-  _ping = HPX_REGISTER_ACTION(_action_ping);
-  _pong = HPX_REGISTER_ACTION(_action_pong);
+  HPX_REGISTER_ACTION(&_main, _action_main);
+  HPX_REGISTER_ACTION(&_ping, _action_ping);
+  HPX_REGISTER_ACTION(&_pong, _action_pong);
 }
 
