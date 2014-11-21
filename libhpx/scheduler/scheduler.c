@@ -55,7 +55,8 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
     return NULL;
   }
 
-  for (int i = 0; i < workers; ++i) {
+  int i;
+  for (i = 0; i < workers; ++i) {
     e = worker_init(&s->workers[i], s, i, i % cores, i, 64);
     if (e) {
       dbg_error("failed to initialize a worker.\n");
@@ -102,7 +103,8 @@ void scheduler_delete(struct scheduler *sched) {
   }
 
   if (sched->workers) {
-    for (int i = 0, e = sched->n_workers; i < e; ++i) {
+    int i, e;
+    for (i = 0, e = sched->n_workers; i < e; ++i) {
       struct worker *worker = scheduler_get_worker(sched, i);
       worker_fini(worker);
     }
@@ -117,7 +119,8 @@ void scheduler_delete(struct scheduler *sched) {
 
 void scheduler_dump_stats(struct scheduler *sched) {
   char id[16] = {0};
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = sched->n_workers; i < e; ++i) {
     struct worker *w = scheduler_get_worker(sched, i);
     snprintf(id, 16, "%d", w->id);
     scheduler_stats_print(id, &w->stats);
@@ -140,21 +143,20 @@ int scheduler_startup(struct scheduler *sched) {
   int status = LIBHPX_OK;
 
   // start all of the other worker threads
-  int i, e;
+  int i, e, j, k;
   for (i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
     status = worker_create(worker);
 
     if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);
-
-      for (int j = 1; j < i; ++j) {
+      for (j = 1; j < i; ++j) {
         worker = scheduler_get_worker(sched, j);
         worker_cancel(worker);
       }
 
-      for (int j = 1; j < i; ++j) {
-        worker = scheduler_get_worker(sched, j);
+      for (k = 1; k < i; ++k) {
+        worker = scheduler_get_worker(sched, k);
         worker_join(worker);
       }
 
@@ -167,9 +169,9 @@ int scheduler_startup(struct scheduler *sched) {
     scheduler_abort(sched);
   }
 
-  int j;
-  for (j = 1; j < sched->n_workers; ++j) {
-    worker = scheduler_get_worker(sched, j);
+  int t;
+  for (t = 1; t < sched->n_workers; ++t) {
+    worker = scheduler_get_worker(sched, t);
     worker_join(worker);
   }
 
@@ -194,7 +196,8 @@ int scheduler_running(struct scheduler *sched) {
 
 void scheduler_abort(struct scheduler *sched) {
   struct worker *worker = NULL;
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
     worker_cancel(worker);
   }

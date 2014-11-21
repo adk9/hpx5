@@ -101,13 +101,13 @@ static _table_t *_get_actions(void) {
 /// Sort the actions in an action table by their key.
 static void _sort_entries(_table_t *table) {
   qsort(&table->entries, table->n, sizeof(_entry_t), _cmp_keys);
->>>>>>> origin/develop
 }
 
 
 /// Assign all of the entry ids in the table.
 static void _assign_ids(_table_t *table) {
-  for (int i = 0, e = table->n; i < e; ++i) {
+  int i, e;
+  for (i = 0, e = table->n; i < e; ++i) {
     *table->entries[i].id = i;
   }
 }
