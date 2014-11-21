@@ -17,20 +17,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "hpx/builtins.h"
+#include <hpx/builtins.h>
+
 #include "libsync/queues.h"
 #include "libsync/backoff.h"
 
-static __thread two_lock_queue_node_t *_free = NULL;
-
 static two_lock_queue_node_t *_node_new(void *value) {
-  two_lock_queue_node_t *node = _free;
-  if (node) {
-    _free = node->next;
-  }
-  else {
-    node = malloc(sizeof(*node));
-  }
+  two_lock_queue_node_t *node = malloc(sizeof(*node));
   node->next = NULL;
   node->value = value;
   return node;
@@ -38,8 +31,7 @@ static two_lock_queue_node_t *_node_new(void *value) {
 
 
 static void _node_delete(two_lock_queue_node_t *node) {
-  node->next = _free;
-  _free = node;
+  free(node);
 }
 
 
@@ -58,12 +50,9 @@ static two_lock_queue_node_t *_acquire(two_lock_queue_node_t **ptr) {
 
 
 void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *n) {
-  q->vtable.delete  = (__typeof__(q->vtable.delete))sync_two_lock_queue_delete;
-  q->vtable.enqueue = (__typeof__(q->vtable.enqueue))sync_two_lock_queue_enqueue;
-  q->vtable.dequeue = (__typeof__(q->vtable.dequeue))sync_two_lock_queue_dequeue;
-
   q->head = q->tail = (n) ? n : _node_new(NULL);
 }
+
 
 two_lock_queue_t *sync_two_lock_queue_new(void) {
   two_lock_queue_t *q = NULL;
@@ -72,6 +61,7 @@ two_lock_queue_t *sync_two_lock_queue_new(void) {
     sync_two_lock_queue_init(q, NULL);
   return q;
 }
+
 
 void sync_two_lock_queue_fini(two_lock_queue_t *q) {
   while (sync_two_lock_queue_dequeue(q))
