@@ -17,8 +17,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "libsync/queues.h"
-#include "libsync/sync.h"
+#include <libsync/queues.h>
+#include <libsync/sync.h>
+
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
@@ -36,6 +37,7 @@ static request_t *request_init(request_t *request, hpx_parcel_t *p) {
   return request;
 }
 
+
 static request_t *request_new(hpx_parcel_t *p, int bytes) {
    request_t *r = malloc(sizeof(*r) + bytes);
    if (!r) {
@@ -45,10 +47,9 @@ static request_t *request_new(hpx_parcel_t *p, int bytes) {
    return request_init(r, p);
 }
 
+
 static void request_delete(request_t *r) {
-   if (!r)
-     return;
-   free(r);
+  free(r);
 }
 
 
@@ -63,14 +64,10 @@ static void request_delete(request_t *r) {
 ///
 /// This allocator mallocs enough space for the current transport's request
 /// size.
-static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p) {
+static HPX_MALLOC request_t *_new_request(progress_t *progress, hpx_parcel_t *p)
+{
   int bytes = transport_request_size(here->transport);
   return request_new(p, bytes);
-}
-
-/// Finish a generic request.
-static void _finish_request(progress_t *progress, request_t *r) {
-  request_delete(r);
 }
 
 
@@ -79,13 +76,14 @@ static void _finish_request(progress_t *progress, request_t *r) {
 /// This finishes a send by freeing the request's parcel, and then calling the
 /// generic finish handler.
 ///
-/// @param progress - the progress object
-/// @param        r - the request to finish
+/// @param     progress The progress object.
+/// @param            r The request to finish.
 static void _finish_send(progress_t *progress, request_t *r) {
   assert(r);
   hpx_parcel_release(r->parcel);
-  _finish_request(progress, r);
+  request_delete(r);
 }
+
 
 /// Flush a request.
 ///
@@ -93,7 +91,7 @@ static void _finish_send(progress_t *progress, request_t *r) {
 /// _finish_send handler, which does what we want. This name just helps with
 /// documentation.
 ///
-static void _flush(progress_t *progress, request_t *r) {
+static void _flush_request(progress_t *progress, request_t *r) {
   _finish_send(progress, r);
 }
 
@@ -101,13 +99,14 @@ static void _flush(progress_t *progress, request_t *r) {
 /// Finish a receive request.
 ///
 /// This finishes a receive by pushing the request's parcel into the receive
-/// queue, and then calling the generic finish handler.
+/// stack, and then calling the generic finish handler.
 ///
-/// @param progress - The progress object.
-/// @param        r - The request to finish.
+/// @param     progress The progress object.
+/// @param            r The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
-  scheduler_spawn(r->parcel);
-  _finish_request(progress, r);
+  parcel_stack_push(&progress->recvs, r->parcel);
+  // network_rx_enqueue(here->network, r->parcel);
+  request_delete(r);
 }
 
 
@@ -116,9 +115,9 @@ static void _finish_recv(progress_t *progress, request_t *r) {
 /// Try and pop a network request off of the send queue, allocate a request node
 /// for it, and initiate a byte-send with the transport.
 ///
-/// @param      progress - The progress object
+/// @param     progress The progress object
 ///
-/// @returns 1 if we initiated a send
+/// @returns            One if we initiated a send, zero otherwise.
 static int _try_start_send(progress_t *progress) {
   uint32_t dest;
   int size;
@@ -201,7 +200,7 @@ unwind0:
 }
 
 
-/// Test a list of results.
+/// Test a list of requests.
 ///
 /// @param   progress The progress object used for testing.
 /// @param     finish A callback to finish the request.
@@ -243,12 +242,13 @@ void network_progress_flush(progress_t *p) {
 
   // flush the pending sends
   while (p->pending_sends)
-    _test(p, &p->pending_sends, _flush);
+    _test(p, &p->pending_sends, _flush_request);
 
   // if we have any pending receives, we wait for those to finish as well
   while (p->pending_recvs)
-    _test(p, &p->pending_recvs, _flush);
+    _test(p, &p->pending_recvs, _flush_request);
 }
+
 
 void network_progress_poll(progress_t *p) {
   do {
@@ -274,6 +274,14 @@ void network_progress_poll(progress_t *p) {
     DEBUG_IF (recvs) {
       dbg_log_trans("finished %d receives.\n", recvs);
     }
+
+    // if I have completed recvs, try to pass them along to the parcel network
+    // layer
+    if (p->recvs) {
+      if (network_try_notify_rx(here->network, p->recvs)) {
+        p->recvs = NULL;
+      }
+    }
   } while (network_progress_drain_sends(p) || network_progress_drain_recvs(p));
 
   int send = 1;
@@ -295,6 +303,7 @@ progress_t *network_progress_new(transport_class_t *t) {
   p->precv_limit   = t->get_recv_limit(t);
   p->nprecvs       = 0;
   p->pending_recvs = NULL;
+  p->recvs         = NULL;
   return p;
 }
 
