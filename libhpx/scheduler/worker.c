@@ -311,10 +311,10 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
     }
 
     // we prioritize yielded threads over stealing
-    // p = _schedule_yielded(self);
-    // if (p) {
-    //   break;
-    // }
+    p = _schedule_yielded(self);
+    if (p) {
+      break;
+    }
 
     // try to steal some work
     p = _schedule_steal(self);

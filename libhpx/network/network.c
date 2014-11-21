@@ -109,6 +109,22 @@ static void *_progress(void *o) {
 }
 
 
+static hpx_action_t _probe = 0;
+
+
+static int _probe_handler(void *network) {
+  while (true) {
+    hpx_thread_yield();
+  }
+  return HPX_SUCCESS;
+}
+
+
+static void HPX_CONSTRUCTOR _register_actions(void) {
+  LIBHPX_REGISTER_ACTION(&_probe, _probe_handler);
+}
+
+
 static void _delete(struct network *o) {
   if (!o)
     return;
@@ -133,13 +149,21 @@ static int _startup(struct network *o) {
 
   int e = pthread_create(&network->progress, NULL, _progress, network);
   if (e) {
-    dbg_error("failed to start network progress.\n");
-    return LIBHPX_ERROR;
+    return dbg_error("failed to start network progress.\n");
   }
   else {
     dbg_log("started network progress.\n");
-    return LIBHPX_OK;
   }
+
+  e = hpx_call(HPX_HERE, _probe, network, sizeof(network), HPX_NULL);
+  if (e) {
+    return dbg_error("failed to start network probe\n");
+  }
+  else {
+    dbg_log("started probing the network.\n");
+  }
+
+  return HPX_SUCCESS;
 }
 
 
