@@ -120,4 +120,10 @@ int sync_spscq_enqueue(sync_spscq_t *q, void *data)
 int sync_spscq_try_dequeue(sync_spscq_t *q, void **data)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
+static inline void *sync_spscq_dequeue(sync_spscq_t *q) {
+  void *data = NULL;
+  sync_spscq_try_dequeue(q, &data);
+  return data;
+}
+
 #endif

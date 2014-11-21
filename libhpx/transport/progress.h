@@ -32,6 +32,7 @@ struct progress {
   uint32_t         precv_limit;       //
   uint32_t             nprecvs;       //
   request_t     *pending_recvs;       // outstanding recv requests
+  hpx_parcel_t          *recvs;       // completed recvs
 };
 
 

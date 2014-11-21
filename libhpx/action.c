@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <stdlib.h>
@@ -27,46 +27,161 @@
 #include <TAU.h>
 #endif
 
-int LIBHPX_NUM_ACTIONS;
-hpx_action_table _action_table = 0;
+/// The default libhpx action table size.
+#define LIBHPX_ACTION_TABLE_SIZE 4096
 
-const char *action_get_key(hpx_action_t id) {
-  return (const char*)(_action_table[id].key);
+
+/// An action table entry type.
+///
+/// This will store the function and unique key associated with the action, as
+/// well as the address of the id the user would like to be assigned during
+/// action finalization.
+///
+/// @note In the future this entry type can contain more information about the
+///       actions, e.g., can they block, should we pre-pin their arguments,
+///       etc.
+typedef struct {
+  hpx_action_handler_t func;
+  hpx_action_t        *id;
+  const char          *key;
+} _entry_t;
+
+
+/// Compare two entries by their keys.
+///
+/// This is used to sort the action table during finalization, so that we can
+/// uniformly assign ids to actions independent of which region in the local
+/// address space the functions are loaded into.
+///
+/// @param          lhs A pointer to the left-hand entry.
+/// @param          rhs A pointer tot he right-hand entry.
+///
+/// @return             The lexicographic comparison of the entries' keys.
+static int _cmp_keys(const void *lhs, const void *rhs) {
+  const _entry_t *el = lhs;
+  const _entry_t *er = rhs;
+  return strcmp(el->key, er->key);
 }
 
 
-int _cmp_keys(const void *a, const void *b) {
-  const _action_entry *ea = (const _action_entry*)a;
-  const _action_entry *eb = (const _action_entry*)b;
-  return strcmp(ea->key, eb->key);
+/// An action table is simply an array that stores its size.
+///
+///
+typedef struct action_table {
+  int n;
+  _entry_t entries[];
+} _table_t;
+
+
+/// A static action table.
+///
+/// We currently need to be able to register actions before we call hpx_init()
+/// because we use constructors inside of libhpx to do action registration. We
+/// expose this action table to be used for that purpose.
+static _table_t *_actions = NULL;
+
+
+/// Get the static action table.
+///
+/// This is not synchronized and thus unsafe to call in a multithreaded
+/// environment, but we make sure to call it in hpx_init() where we assume we
+/// are running in single-threaded mode, so we should be safe.
+static _table_t *_get_actions(void) {
+  if (!_actions) {
+    static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
+    _actions = malloc(sizeof(*_actions) + capacity * sizeof(_entry_t));
+    _actions->n = 0;
+    memset(&_actions->entries, 0, capacity * sizeof(_entry_t));
+  }
+
+  return _actions;
 }
 
 
-int hpx_finalize_actions(void) {
-  qsort(_action_table, LIBHPX_NUM_ACTIONS, sizeof(*_action_table), _cmp_keys);
-  int i;
-  for (i = 0; i < LIBHPX_NUM_ACTIONS; ++i)
-    *(_action_table[i].action) = i;
+/// Sort the actions in an action table by their key.
+static void _sort_entries(_table_t *table) {
+  qsort(&table->entries, table->n, sizeof(_entry_t), _cmp_keys);
+>>>>>>> origin/develop
+}
+
+
+/// Assign all of the entry ids in the table.
+static void _assign_ids(_table_t *table) {
+  for (int i = 0, e = table->n; i < e; ++i) {
+    *table->entries[i].id = i;
+  }
+}
+
+/// Insert an action into a table.
+///
+/// @param        table The table we are inserting into.
+/// @param           id The address of the user's id; written in _assign_ids().
+/// @param          key The unique key for this action; read in _sort_entries().
+/// @param            f The handler for this action.
+///
+/// @return             HPX_SUCCESS or an error if the push fails.
+static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
+                       hpx_action_handler_t f) {
+  static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
+  int i = table->n++;
+  if (i >= capacity) {
+    return dbg_error("exceeded maximum number of actions (%d)\n", capacity);
+  }
+
+  _entry_t *back = &table->entries[i];
+  back->func = f;
+  back->id = id;
+  back->key = key;
   return HPX_SUCCESS;
 }
 
-
-hpx_action_table libhpx_initialize_actions(void) {
-  if (!_action_table)
-    _action_table = malloc(sizeof(*_action_table) * LIBHPX_ACTION_TABLE_SIZE);
-  return _action_table;
+const _table_t *action_table_finalize(void) {
+  _table_t *table = _get_actions();
+  _sort_entries(table);
+  _assign_ids(table);
+  return table;
 }
 
 
-int hpx_register_action(hpx_action_t *action, const char *key, hpx_action_handler_t func) {
-#ifdef ENABLE_TAU
-    TAU_PROFILE("hpx_register_action", "", TAU_DEFAULT);
-#endif
-  if (!_action_table)
-    libhpx_initialize_actions();
-  _action_entry *entry = &(_action_table[LIBHPX_NUM_ACTIONS++]);
-  entry->func = func;
-  entry->action = action;
-  entry->key = key;
-  return HPX_SUCCESS;
+void action_table_free(const _table_t *table) {
+  free((void*)table);
+}
+
+
+const char *action_table_get_key(const struct action_table *table, hpx_action_t id)
+{
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return "LIBHPX UNKNOWN ACTION";;
+  }
+
+  if (id < table->n) {
+    return table->entries[id].key;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return NULL;
+}
+
+
+hpx_action_handler_t action_table_get_handler(const struct action_table *table,
+                                              hpx_action_t id) {
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return NULL;
+  }
+
+  if (id < table->n) {
+    return table->entries[id].func;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return NULL;
+}
+
+
+/// Called by the user to register an action.
+int hpx_register_action(hpx_action_t *id, const char *key,
+                        hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f);
 }

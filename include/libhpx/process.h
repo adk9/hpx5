@@ -10,12 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_SERVERS_H
-#define LIBHPX_NETWORK_SERVERS_H
+#ifndef LIBHPX_PROCESS_H
+#define LIBHPX_PROCESS_H
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 
-HPX_INTERNAL void *heavy_network(void *network);
-HPX_INTERNAL extern hpx_action_t light_network;
 
-#endif // LIBHPX_NETWORK_SERVERS_H
+/// Recover any credit associated with a parcel.
+int process_recover_credit(hpx_parcel_t *p)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+
+#endif // LIBHPX_PROCESS_H

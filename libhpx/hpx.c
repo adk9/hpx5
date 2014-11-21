@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/hpx.c
@@ -36,12 +36,9 @@
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/newfuture.h"
-#include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
-
-#include "network/servers.h"
 
 #ifdef ENABLE_TAU
 #define TAU_DEFAULT 1
@@ -55,6 +52,9 @@ static void _cleanup(locality_t *l) {
 #ifdef ENABLE_TAU
           TAU_START("system_cleanup");
 #endif
+  if (!l)
+    return;
+
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -80,13 +80,17 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  if (l->config)
-    free(l->config);
-
   libhpx_hwloc_topology_destroy(l->topology);
 
-  if (l)
-    free(l);
+  if (l->actions) {
+    action_table_free(l->actions);
+  }
+
+  if (l->config) {
+    free(l->config);
+  }
+
+  free(l);
 
 #ifdef ENABLE_TAU
           TAU_STOP("system_cleanup");
@@ -108,16 +112,13 @@ int hpx_init(int *argc, char ***argv) {
 
   // locality
   here = malloc(sizeof(*here));
-  if (!here)
+  if (!here) {
     return dbg_error("failed to allocate a locality.\n");
-  here->config = cfg;
-
-  // actions
-  here->actions = libhpx_initialize_actions();
-  if (!here->actions) {
-    _cleanup(here);
-    return dbg_error("failed to allocate an action table.\n");
   }
+  here->rank = -1;
+  here->ranks = 0;
+  here->actions = NULL;
+  here->config = cfg;
 
   // topology
   int e = libhpx_hwloc_topology_init(&here->topology);
@@ -144,7 +145,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // byte transport
-  here->transport = transport_new(cfg->transport, cfg->reqlimit);
+  here->transport = transport_new(cfg->transport, cfg->sendlimit, cfg->recvlimit);
   if (!here->transport) {
     _cleanup(here);
     return dbg_error("failed to create transport.\n");
@@ -162,17 +163,29 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
+  int cores = cfg->cores;
+  if (!cores) {
+    cores = system_get_cores();
+  }
+
+  int workers = cfg->threads;
+  if (!workers) {
+    if (cores == system_get_cores()) {
+      workers = cores - 1;
+    }
+    else {
+      workers = cores;
+    }
+  }
 
   // parcel network
-  here->network = network_new();
+  here->network = network_new(LIBHPX_NETWORK_DEFAULT, workers);
   if (!here->network) {
     _cleanup(here);
     return dbg_error("failed to create network.\n");
   }
 
   // thread scheduler
-  int cores = (cfg->cores) ? cfg->cores : system_get_cores();
-  int workers = (cfg->threads) ? cfg->threads : cores;
   here->sched = scheduler_new(cores, workers, cfg->stacksize,
                               cfg->backoffmax, cfg->statistics);
   if (!here->sched) {
@@ -189,58 +202,62 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int hpx_run(hpx_action_t *act, const void *args, size_t size) {
-  // we finalize the actions first
-  int e = hpx_finalize_actions();
-  if (e)
-    return dbg_error("error finalizing action registration");
-
-  // we start a transport server for the transport, if necessary
-  // FIXME: move this functionality into the transport initialization, rather
-  //        than branching here
-  if (here->transport->type != HPX_TRANSPORT_SMP) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
-    if (!p)
-      return dbg_error("could not allocate a network server parcel");
-    hpx_parcel_set_action(p, light_network);
-    hpx_parcel_set_target(p, HPX_HERE);
-
-    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
+  int status = HPX_SUCCESS;
+  if (!here || !here->sched) {
+    status = dbg_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
   }
 
+  here->actions = action_table_finalize();
+  if (!here->actions) {
+    status = dbg_error("failed to finalize the action table.\n");
+    goto unwind0;
+  }
+
+  if (network_startup(here->network) != LIBHPX_OK) {
+    status = dbg_error("could not start network progress\n");
+    goto unwind1;
+  }
+
+  // create the initial application-level thread to run
   if (here->rank == 0) {
-    // start the main process. enqueue parcels directly---schedulers
-    // don't exist yet
-    hpx_parcel_t *p = parcel_create(HPX_HERE, *act, args, size, HPX_NULL,
-                                    HPX_ACTION_NULL, HPX_NULL, true);
-    YIELD_QUEUE_ENQUEUE(&here->sched->yielded, p);
+    status = hpx_call(HPX_HERE, *act, args, size, HPX_NULL);
+    if (status != LIBHPX_OK) {
+      dbg_error("failed to spawn initial action\n");
+      goto unwind2;
+    }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched) != LIBHPX_OK) {
-    return HPX_ERROR;
+    status = dbg_error("scheduler shut down with error.\n");
+    goto unwind2;
   }
 
+#ifdef ENABLE_PROFILING
+  scheduler_dump_stats(here->sched);
+#endif
+
+ unwind2:
   network_shutdown(here->network);
+ unwind1:
   _cleanup(here);
-  return HPX_SUCCESS;
+ unwind0:
+  return status;
 }
 
 int hpx_get_my_rank(void) {
-  assert(here);
-  return here->rank;
+  return (here) ? here->rank : -1;
 }
 
 
 int hpx_get_num_ranks(void) {
-  assert(here);
-  return here->ranks;
+  return (here && here->boot) ? here->ranks : -1;
 }
 
 
 int hpx_get_num_threads(void) {
-  if (!here || !here->sched)
-    return 0;
-  return here->sched->n_workers;
+  return (here && here->sched) ? here->sched->n_workers : 0;
 }
 
 /// Called by the application to terminate the scheduler and network.

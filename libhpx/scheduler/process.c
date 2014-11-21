@@ -11,12 +11,10 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/process.c
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -27,6 +25,7 @@
 #include "libhpx/action.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
+#include "libhpx/process.h"
 #include "libhpx/scheduler.h"
 #include "termination.h"
 
@@ -43,14 +42,26 @@ typedef struct {
 
 
 /// Remote action interface to a process.
-static hpx_action_t _process_call;
-static hpx_action_t _process_delete;
-static hpx_action_t _return_credit;
+static hpx_action_t _proc_call;
+static hpx_action_t _proc_delete;
+static hpx_action_t _proc_return_credit;
+
+typedef struct _call_args _call_args_t;
+static int _proc_call_handler(_call_args_t *args);
+static int _proc_delete_handler(void *args);
+static int _proc_return_credit_handler(uint64_t *args);
+
+static void HPX_CONSTRUCTOR _initialize_actions(void) {
+  LIBHPX_REGISTER_ACTION(&_proc_call, _proc_call_handler);
+  LIBHPX_REGISTER_ACTION(&_proc_delete, _proc_delete_handler);
+  LIBHPX_REGISTER_ACTION(&_proc_return_credit, _proc_return_credit_handler);
+}
 
 
 static bool _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
 }
+
 
 /// Remote action to delete a process.
 static void _free(_process_t *p) {
@@ -74,15 +85,15 @@ static void _init(_process_t *p, hpx_addr_t termination) {
 }
 
 
-typedef struct {
+struct _call_args {
   hpx_addr_t   target;
   hpx_action_t action;
   hpx_addr_t   result;
   char         data[];
-} _call_args_t;
+};
 
 
-static int _process_call_action(_call_args_t *args) {
+int _proc_call_handler(_call_args_t *args) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p))
@@ -92,12 +103,13 @@ static int _process_call_action(_call_args_t *args) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
-  uint32_t len = hpx_thread_current_args_size() - (sizeof(args->target)+sizeof(args->action)+sizeof(args->result));
-  hpx_parcel_t *parcel =
-      parcel_create(args->target, args->action, args->data, len, args->result,
-                    hpx_lco_set_action, pid, true);
-  if (!parcel)
+  uint32_t len = hpx_thread_current_args_size() - sizeof(*args);
+  hpx_parcel_t *parcel = parcel_create(args->target, args->action, args->data,
+                                       len, args->result,
+                                       hpx_lco_set_action, pid, true);
+  if (!parcel) {
     return dbg_error("process: call_action failed.\n");
+  }
   parcel_set_credit(parcel, credit);
 
   hpx_parcel_send_sync(parcel);
@@ -105,7 +117,7 @@ static int _process_call_action(_call_args_t *args) {
 }
 
 
-static int _process_delete_action(void *args) {
+int _proc_delete_handler(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(target, (void**)&p))
@@ -117,7 +129,7 @@ static int _process_delete_action(void *args) {
 }
 
 
-static int _return_credit_action(uint64_t *args) {
+int _proc_return_credit_handler(uint64_t *args) {
   uint64_t credit = *args;
   hpx_addr_t target = hpx_thread_current_target();
   _process_t *p = NULL;
@@ -138,14 +150,22 @@ static int _return_credit_action(uint64_t *args) {
 }
 
 
-int
-parcel_recover_credit(hpx_parcel_t *p) {
+int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;
-  hpx_parcel_t *pp =
-      parcel_create(process, _return_credit, &p->credit, sizeof(p->credit),
-                    HPX_NULL, HPX_ACTION_NULL, 0, false);
-  if (!pp)
+  if (process == HPX_NULL) {
+    return HPX_SUCCESS;
+  }
+
+  if (!p->credit) {
+    return HPX_SUCCESS;
+  }
+
+  hpx_parcel_t *pp = parcel_create(process, _proc_return_credit, &p->credit,
+                                   sizeof(p->credit), HPX_NULL, HPX_ACTION_NULL,
+                                   0, false);
+  if (!pp) {
     return dbg_error("parcel_recover_credit failed.\n");
+  }
   parcel_set_credit(pp, 0);
 
   hpx_parcel_send_sync(pp);
@@ -153,16 +173,7 @@ parcel_recover_credit(hpx_parcel_t *p) {
 }
 
 
-static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_process_call, _process_call_action);
-  LIBHPX_REGISTER_ACTION(&_process_delete, _process_delete_action);
-  LIBHPX_REGISTER_ACTION(&_return_credit, _return_credit_action);
-}
-
-
-/// Create a new HPX process.
-hpx_addr_t
-hpx_process_new(hpx_addr_t termination) {
+hpx_addr_t hpx_process_new(hpx_addr_t termination) {
 #ifdef ENABLE_TAU
           TAU_START("hpx_process_new");
 #endif
@@ -182,31 +193,20 @@ hpx_process_new(hpx_addr_t termination) {
 }
 
 
-/// Get a process' PID.
-hpx_pid_t
-hpx_process_getpid(hpx_addr_t process) {
+hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
 
 
-/// ----------------------------------------------------------------------------
-/// Call an action in a specified process context.
-///
-/// When an action is invoked in a process context, the parcel has to
-/// request credit from the process owner represented by the address
-/// @p process. We set the continuation targets and actions to be the
-/// actual action which is to be invoked, and pass the completion
-/// continuation as an argument to the _process_call action.
-/// ----------------------------------------------------------------------------
-int
-hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const void *args,
-                 size_t len, hpx_addr_t result) {
+int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+                     const void *args, size_t len, hpx_addr_t result)
+{
 #ifdef ENABLE_TAU
           TAU_START("hpx_process_call");
 #endif
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
   hpx_parcel_set_target(p, process);
-  hpx_parcel_set_action(p, _process_call);
+  hpx_parcel_set_action(p, _proc_call);
   hpx_parcel_set_pid(p, 0);
   parcel_set_credit(p, 0);
 
@@ -224,18 +224,15 @@ hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const
 }
 
 
-/// ----------------------------------------------------------------------------
 /// Deletes a process.
-/// ----------------------------------------------------------------------------
-void
-hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
+void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
 #ifdef ENABLE_TAU
           TAU_START("hpx_process_delete");
 #endif
   if (process == HPX_NULL)
     return;
 
-  hpx_call_sync(process, _process_delete, NULL, 0, NULL, 0);
+  hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
 
 #ifdef ENABLE_TAU

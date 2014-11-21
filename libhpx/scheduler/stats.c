@@ -28,31 +28,45 @@
 #include "libhpx/locality.h"
 #include "libhpx/stats.h"
 
+void scheduler_stats_init(struct scheduler_stats *stats) {
+  stats->spins      = 0;
+  stats->spawns     = 0;
+  stats->steals     = 0;
+  stats->mail       = 0;
+  stats->started    = 0;
+  stats->finished   = 0;
+  stats->progress   = 0;
+  stats->backoffs   = 0;
+  stats->max_stacks = 0;
+  stats->stacks     = 0;
+  stats->backoff  = 0.0;
+}
 
-void scheduler_accum_stats(scheduler_t *sched, const scheduler_stats_t *worker) {
-#ifdef ENABLE_PROFILING
-  scheduler_stats_t *total = &sched->stats;
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  sync_tatas_acquire(&lock);
-  total->spins    += worker->spins;
-  total->spawns   += worker->spawns;
-  total->steals   += worker->steals;
-  total->stacks   += worker->stacks;
-  total->mail     += worker->mail;
-  total->started  += worker->started;
-  total->finished += worker->finished;
-  total->progress += worker->progress;
-  total->backoffs += worker->backoffs;
-  total->backoff  += worker->backoff;
-  sync_tatas_release(&lock);
-#endif
+struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
+                                              const struct scheduler_stats *rhs)
+{
+  if (lhs && rhs) {
+    lhs->spins    += rhs->spins;
+    lhs->spawns   += rhs->spawns;
+    lhs->steals   += rhs->steals;
+    lhs->stacks   += rhs->stacks;
+    lhs->mail     += rhs->mail;
+    lhs->started  += rhs->started;
+    lhs->finished += rhs->finished;
+    lhs->progress += rhs->progress;
+    lhs->backoffs += rhs->backoffs;
+    lhs->backoff  += rhs->backoff;
+  }
+  return lhs;
 }
 
 
-void scheduler_print_stats(const char *id, const scheduler_stats_t *counts) {
+void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
+{
 #ifdef ENABLE_PROFILING
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  sync_tatas_acquire(&lock);
+  if (!here || !counts)
+    return;
+
   printf("node %d, ", here->rank);
   printf("thread %s, ", id);
   printf("spins: %lu, ", counts->spins);
@@ -66,12 +80,6 @@ void scheduler_print_stats(const char *id, const scheduler_stats_t *counts) {
   printf("backoffs: %lu (%.1fms)", counts->backoffs, counts->backoff);
   printf("\n");
   fflush(stdout);
-  sync_tatas_release(&lock);
 #endif
-}
-
-
-scheduler_stats_t *scheduler_get_stats(void) {
-  return &here->sched->stats;
 }
 
