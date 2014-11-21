@@ -149,8 +149,20 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  int cores = (cfg->cores) ? cfg->cores : system_get_cores();
-  int workers = (cfg->threads) ? cfg->threads : cores;
+  int cores = cfg->cores;
+  if (!cores) {
+    cores = system_get_cores();
+  }
+
+  int workers = cfg->threads;
+  if (!workers) {
+    if (cores == system_get_cores()) {
+      workers = cores - 1;
+    }
+    else {
+      workers = cores;
+    }
+  }
 
   // parcel network
   here->network = network_new(LIBHPX_NETWORK_DEFAULT, workers);
