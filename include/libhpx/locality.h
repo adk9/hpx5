@@ -37,7 +37,7 @@
 /// Forward declarations.
 /// @{
 struct boot_class;
-struct network_class;
+struct network;
 struct scheduler;
 struct transport_class;
 /// @}
@@ -64,7 +64,7 @@ typedef struct {
   struct boot_class            *boot;
   struct gas_class              *gas;
   struct transport_class  *transport;
-  struct network_class      *network;
+  struct network            *network;
   struct scheduler            *sched;
   hpx_config_t               *config;
   const struct action_table *actions;

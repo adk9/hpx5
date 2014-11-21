@@ -27,7 +27,7 @@
 #include <libsync/lockable_ptr.h>
 #include <libsync/queues.h>
 #include <libhpx/stats.h>
-
+#include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
 /// preemptive. Unused at this point
@@ -38,17 +38,14 @@
 /// Forward declarations
 /// @{
 struct thread;
-struct worker;
 struct barrier;
 struct cvar;
 /// @}
 
+/// Typedefs
+/// @{
 typedef two_lock_queue_t yield_queue_t;
-#define YIELD_QUEUE_INIT sync_two_lock_queue_init
-#define YIELD_QUEUE_FINI sync_two_lock_queue_fini
-#define YIELD_QUEUE_ENQUEUE sync_two_lock_queue_enqueue
-#define YIELD_QUEUE_DEQUEUE sync_two_lock_queue_dequeue
-
+/// @}
 
 /// The scheduler class.
 ///
@@ -63,17 +60,17 @@ typedef two_lock_queue_t yield_queue_t;
 /// by updating the worker's scheduler pointer and the scheduler's worker
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
-typedef struct scheduler {
+struct scheduler {
   yield_queue_t       yielded;
-  volatile int        next_id;
+  volatile int       shutdown;
   volatile int    next_tls_id;
   int                   cores;
   int               n_workers;
   unsigned int    backoff_max;
-  struct worker     **workers;
   struct barrier     *barrier;
+  struct worker      *workers;
   scheduler_stats_t     stats;
-} scheduler_t;
+};
 
 
 /// Allocate and initialize a new scheduler.
@@ -85,9 +82,9 @@ typedef struct scheduler {
 /// @param   statistics The flag that indicates if statistics are on or off.
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
-scheduler_t *scheduler_new(int cores, int workers, int stack_size,
-                           unsigned int backoff_max, bool stats)
-  HPX_INTERNAL;
+struct scheduler *scheduler_new(int cores, int workers, int stack_size,
+                                unsigned int backoff_max, bool stats)
+  HPX_INTERNAL HPX_MALLOC;
 
 
 /// Finalize and free the scheduler object.
@@ -97,8 +94,17 @@ scheduler_t *scheduler_new(int cores, int workers, int stack_size,
 /// aborted with scheduler_abort(), results in undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
-void scheduler_delete(scheduler_t *scheduler)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+void scheduler_delete(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Print collected statistics.
+///
+/// The scheduler should not be running during this call.
+///
+/// @param    scheduler The scheduler.
+void scheduler_dump_stats(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
 /// Starts the scheduler.
@@ -110,8 +116,8 @@ void scheduler_delete(scheduler_t *scheduler)
 /// @param    scheduler The scheduler to start.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(scheduler_t *scheduler)
-  HPX_INTERNAL;
+int scheduler_startup(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
 /// Stops the scheduler cooperatively.
@@ -121,8 +127,17 @@ int scheduler_startup(scheduler_t *scheduler)
 ///
 /// @param    scheduler The scheduler to shutdown.
 /// @param         code The code to return from scheduler_startup().
-void scheduler_shutdown(scheduler_t *scheduler, int code)
-  HPX_INTERNAL;
+void scheduler_shutdown(struct scheduler *scheduler, int code)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Check to see if the scheduler is still running.
+///
+/// @param    scheduler The scheduler to check.
+///
+/// @returns            True if the scheduler is running.
+int scheduler_running(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
 /// Join the scheduler at shutdown.
@@ -130,8 +145,8 @@ void scheduler_shutdown(scheduler_t *scheduler, int code)
 /// This will wait until all of the scheduler's worker threads have shutdown.
 ///
 /// @param    scheduler The scheduler to join.
-void scheduler_join(scheduler_t *scheduler)
-  HPX_INTERNAL;
+void scheduler_join(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
 /// Stops the scheduler asynchronously.
@@ -140,8 +155,8 @@ void scheduler_join(scheduler_t *scheduler)
 /// should only be called by the main thread that called scheduler_startup().
 ///
 /// @param    scheduler The scheduler to abort.
-void scheduler_abort(scheduler_t *scheduler)
-  HPX_INTERNAL;
+void scheduler_abort(struct scheduler *scheduler)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 
 /// Spawn a new user-level thread for the parcel.
@@ -213,6 +228,11 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 /// Get the parcel bound to the current executing thread.
 hpx_parcel_t *scheduler_current_parcel(void)
   HPX_INTERNAL;
+
+
+/// Get a worker by id.
+struct worker *scheduler_get_worker(struct scheduler *sched, int id)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 
 #endif // LIBHPX_SCHEDULER_H

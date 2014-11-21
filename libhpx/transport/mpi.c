@@ -31,7 +31,6 @@
 typedef struct {
   transport_class_t class;
   progress_t *progress;
-  uint32_t req_limit;
 } mpi_t;
 
 
@@ -223,14 +222,14 @@ static void _mpi_progress(transport_class_t *t, transport_op_t op) {
 }
 
 static uint32_t _mpi_get_send_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->send_limit;
 }
 
 static uint32_t _mpi_get_recv_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->recv_limit;
 }
 
-transport_class_t *transport_new_mpi(uint32_t req_limit) {
+transport_class_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
   int val = 0;
   MPI_Initialized(&val);
 
@@ -266,7 +265,8 @@ transport_class_t *transport_new_mpi(uint32_t req_limit) {
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
 
-  mpi->class.req_limit      = req_limit == 0 ? UINT16_MAX : req_limit;
+  mpi->class.send_limit     = (send_limit == 0) ? UINT16_MAX : send_limit;
+  mpi->class.recv_limit     = (recv_limit == 0) ? UINT16_MAX : recv_limit;
   mpi->class.rkey_table     = NULL;
 
   mpi->progress             = network_progress_new(&mpi->class);

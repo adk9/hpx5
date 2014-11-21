@@ -18,18 +18,16 @@
 
 struct ustack;
 
-/// ----------------------------------------------------------------------------
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
-/// @field   ustack - a pointer to a stack
-/// @field      src - the src rank for the parcel
-/// @field     size - the data size in bytes
-/// @field   action - the target action identifier
-/// @field   target - the target address for parcel_send()
-/// @field c_action - the continuation action identifier
-/// @field c_target - the target address for the continuation 
-/// @field   buffer - either an in-place payload, or a pointer
-/// ----------------------------------------------------------------------------
+/// @field       ustack A pointer to a stack.
+/// @field          src The src rank for the parcel.
+/// @field         size The data size in bytes.
+/// @field       action The target action identifier.
+/// @field       target The target address for parcel_send().
+/// @field     c_action The continuation action identifier.
+/// @field     c_target The target address for the continuation.
+/// @field       buffer Either an in-place payload, or a pointer.
 struct hpx_parcel {
   struct ustack *ustack;
   int               src;
@@ -43,19 +41,46 @@ struct hpx_parcel {
   char         buffer[];
 };
 
-HPX_INTERNAL hpx_parcel_t *
-parcel_create(hpx_addr_t addr, hpx_action_t action, const void *args,
-              size_t len, hpx_addr_t c_target, hpx_action_t c_action,
-              hpx_pid_t pid, bool inplace);
+hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
+                            const void *args, size_t len, hpx_addr_t c_target,
+                            hpx_action_t c_action, hpx_pid_t pid, bool inplace)
+  HPX_INTERNAL;
 
-HPX_INTERNAL void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
-  HPX_NON_NULL(1);
-HPX_INTERNAL struct ustack *parcel_get_stack(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
+void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+struct ustack *parcel_get_stack(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
-HPX_INTERNAL void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
-  HPX_NON_NULL(1);
-HPX_INTERNAL uint64_t parcel_get_credit(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
+void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+uint64_t parcel_get_credit(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
+/// Treat a parcel as a stack of parcels, and pop the top.
+///
+/// This uses the stack field of the parcel to chain the parcels together, so it
+/// can't be used with parcels that have active stacks.
+///
+/// @param[in,out] stack The address of the top parcel in the stack, modified
+///                      as a side effect of the call.
+///
+/// @returns            NULL, or the parcel that was on top of the stack.
+hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Treat a parcel as a stack of parcels, and push the parcel.
+///
+/// This uses the stack field of the parcel to chain the parcels together, so it
+/// can't be used with parcels that have active stacks.
+///
+/// @param[in,out] stack The address of the top parcel in the stack, modified
+///                      as a side effect of the call.
+/// @param[in]    parcel The new top of the stack.
+void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
 
 #endif // LIBHPX_PARCEL_H
