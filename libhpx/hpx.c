@@ -126,6 +126,9 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
+  if (cfg->waitat == here->rank) {
+    dbg_wait();
+  }
 
   // byte transport
   here->transport = transport_new(cfg->transport, cfg->sendlimit, cfg->recvlimit);
