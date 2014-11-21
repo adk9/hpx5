@@ -141,11 +141,6 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 }
 
 
-/// Process the next available parcel from our work queue in a fifo order.
-static hpx_parcel_t *_schedule_fifo(struct worker *w) {
-  return sync_chase_lev_ws_deque_steal(&w->work);
-}
-
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
@@ -179,22 +174,6 @@ static hpx_parcel_t *_schedule_steal(struct worker *w) {
     profile_ctr(++w->stats.steals);
   }
 
-  return p;
-}
-
-
-/// Process a network thread.
-static hpx_parcel_t *_schedule_network(struct worker *w) {
-  hpx_parcel_t *stack = network_rx_dequeue(here->network, w->id);
-  hpx_parcel_t *p = NULL;
-  while ((p = parcel_stack_pop(&stack))) {
-    _spawn_lifo(w, p);
-  }
-
-  p = _schedule_lifo(w);
-  if (p) {
-    assert(!parcel_get_stack(p));
-  }
   return p;
 }
 
@@ -303,12 +282,6 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
       p = (final) ? final : hpx_parcel_acquire(NULL, 0);
       break;
     }
-
-    // we prioritize the network over stealing
-    // p = _schedule_network(self);
-    // if (p) {
-    //   break;
-    // }
 
     // we prioritize yielded threads over stealing
     p = _schedule_yielded(self);
