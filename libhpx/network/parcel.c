@@ -254,7 +254,10 @@ void hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   // do a network send
-  network_tx_enqueue(here->network, p);
+  int e = network_send(here->network, p);
+  if (e) {
+    dbg_error("failed to perform a network send\n");
+  }
 }
 
 
