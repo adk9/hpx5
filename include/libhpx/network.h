@@ -41,6 +41,9 @@ struct network {
 
   hpx_parcel_t *(*probe)(struct network *, int nrx)
     HPX_NON_NULL(1);
+
+  void (*set_flush)(struct network *)
+    HPX_NON_NULL(1);
 };
 
 
@@ -115,6 +118,8 @@ static inline void network_barrier(struct network *network) {
 ///
 /// @param      network The network to use for the send.
 /// @param            p The parcel to send.
+///
+/// @returns            LIBHPX_OK
 static inline int network_send(struct network *network, hpx_parcel_t *p) {
   return network->send(network, p, HPX_NULL);
 }
@@ -135,7 +140,18 @@ int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
-void network_flush_on_shutdown(struct network *network)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+/// Set the network's flush-on-shutdown flag.
+///
+/// Normally the network progress engine will cancel outstanding requests when
+/// it shuts down. This will change that functionality to flush the outstanding
+/// requests during shutdown. This is used to ensure that the hpx_shutdown()
+/// broadcast operation is sent successfully before the local network stops
+/// progressing.
+///
+/// @param      network The network to modify.
+static inline void network_flush_on_shutdown(struct network *network) {
+  network->set_flush(network);
+}
+
 
 #endif // LIBHPX_NETWORK_H

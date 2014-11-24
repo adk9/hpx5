@@ -217,6 +217,12 @@ static hpx_parcel_t *_probe_parcel(struct network *o, int nrx) {
 }
 
 
+static void _set_flush(struct network *o) {
+  struct _network *network = (struct _network*)o;
+  sync_store(&network->flush, 1, SYNC_RELEASE);
+}
+
+
 void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
   assert(false);
 }
@@ -229,10 +235,6 @@ int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
 }
 
 
-void network_flush_on_shutdown(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  sync_store(&network->flush, 1, SYNC_RELEASE);
-}
 
 
 struct network *network_new(libhpx_network_t type, int nrx) {
@@ -243,14 +245,13 @@ struct network *network_new(libhpx_network_t type, int nrx) {
     return NULL;
   }
 
-  assert((uintptr_t)&n->tx % HPX_CACHELINE_SIZE == 0);
-
   n->vtable.delete = _delete;
   n->vtable.startup = _startup;
   n->vtable.shutdown = _shutdown;
   n->vtable.barrier = _barrier;
   n->vtable.send = _send;
   n->vtable.probe = _probe_parcel;
+  n->vtable.set_flush = _set_flush;
 
   n->transport = here->transport;
   sync_store(&n->flush, 0, SYNC_RELEASE);
