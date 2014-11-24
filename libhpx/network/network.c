@@ -105,7 +105,7 @@ static int _probe_handler(void *o) {
   if (e != HPX_SUCCESS)
     return e;
 
-  while ((stack = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
+  while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
     hpx_parcel_t *p = NULL;
     while ((p = parcel_stack_pop(&stack))) {
       scheduler_spawn(p);
@@ -211,14 +211,14 @@ hpx_parcel_t *network_tx_dequeue(struct network *o) {
 }
 
 
-void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
-  assert(false);
+static hpx_parcel_t *_probe_parcel(struct network *o, int nrx) {
+  struct _network *network = (struct _network*)o;
+  return _QUEUE_DEQUEUE(&network->rx);
 }
 
 
-hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
-  struct _network *network = (struct _network*)o;
-  return _QUEUE_DEQUEUE(&network->rx);
+void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
+  assert(false);
 }
 
 
@@ -250,6 +250,7 @@ struct network *network_new(libhpx_network_t type, int nrx) {
   n->vtable.shutdown = _shutdown;
   n->vtable.barrier = _barrier;
   n->vtable.send = _send;
+  n->vtable.probe = _probe_parcel;
 
   n->transport = here->transport;
   sync_store(&n->flush, 0, SYNC_RELEASE);
