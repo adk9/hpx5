@@ -2,8 +2,8 @@
 
 void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long epoch)
 {
-  int numNode = domain->numNode; 
-  int i; 
+  int numNode = domain->numNode;
+  int i;
 
   for (i = 0; i < numNode; i++) {
     domain->fx[i] = 0.0;
@@ -11,34 +11,34 @@ void CalcForceForNodes(hpx_addr_t local,Domain *domain,int rank,unsigned long ep
     domain->fz[i] = 0.0;
   }
 
-  CalcVolumeForceForElems(domain,rank); 
+  CalcVolumeForceForElems(domain,rank);
 
   SBN3(local,domain,epoch);
 }
 
 void CalcVolumeForceForElems(Domain *domain,int rank)
 {
-  int numElem = domain->numElem; 
+  int numElem = domain->numElem;
 
   if (numElem != 0) {
-    double hgcoef = domain->hgcoef; 
+    double hgcoef = domain->hgcoef;
     double *sigxx = malloc(sizeof(double)*numElem);
     double *sigyy = malloc(sizeof(double)*numElem);
     double *sigzz = malloc(sizeof(double)*numElem);
-    double *determ = malloc(sizeof(double)*numElem); 
+    double *determ = malloc(sizeof(double)*numElem);
 
-    InitStressTermsForElems(domain->p, domain->q, sigxx, sigyy, sigzz, numElem); 
+    InitStressTermsForElems(domain->p, domain->q, sigxx, sigyy, sigzz, numElem);
 
-    IntegrateStressForElems(domain->nodelist, domain->x, domain->y, domain->z, 
-			    domain->fx, domain->fy, domain->fz, sigxx, sigyy, sigzz, 
-			    determ, numElem);
-    int k; 
+    IntegrateStressForElems(domain->nodelist, domain->x, domain->y, domain->z,
+                domain->fx, domain->fy, domain->fz, sigxx, sigyy, sigzz,
+                determ, numElem);
+    int k;
     for (k = 0; k < numElem; k++) {
       if (determ[k] <= 0.0) {
-	// need an abort here, temporarily using exit function
-	printf("rank %d: CalcVolumeForceForElems exit(-1) at cycle %d\n", 
-	       rank, domain->cycle);
-	exit(-1);
+    // need an abort here, temporarily using exit function
+    printf("rank %d: CalcVolumeForceForElems exit(-1) at cycle %d\n",
+           rank, domain->cycle);
+    exit(-1);
       }
     }
 
@@ -47,23 +47,23 @@ void CalcVolumeForceForElems(Domain *domain,int rank)
     free(sigxx);
     free(sigyy);
     free(sigzz);
-    free(determ);   
+    free(determ);
   }
 }
 
-void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy, 
-			     double *sigzz, int numElem)
+void InitStressTermsForElems(double *p, double *q, double *sigxx, double *sigyy,
+                 double *sigzz, int numElem)
 {
-  int i; 
+  int i;
   for (i = 0; i < numElem; i++) {
     sigxx[i] = sigyy[i] = sigzz[i] = -p[i] - q[i];
   }
 }
 
-void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z, 
-			     double *fx, double *fy, double *fz, 
-			     double *sigxx, double *sigyy, double *sigzz, 
-			     double *determ, int numElem)
+void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
+                 double *fx, double *fy, double *fz,
+                 double *sigxx, double *sigyy, double *sigzz,
+                 double *determ, int numElem)
 {
   double B[3][8];
   double x_local[8];
@@ -73,15 +73,15 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
   double fy_local[8];
   double fz_local[8];
 
-  int k; 
+  int k;
   for (k = 0; k < numElem; k++) {
-    const int * const elemNodes = &nodelist[8*k]; 
-    
-    int lnode; 
+    const int * const elemNodes = &nodelist[8*k];
+
+    int lnode;
     for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemNodes[lnode]; 
-      x_local[lnode] = x[gnode]; 
-      y_local[lnode] = y[gnode]; 
+      int gnode = elemNodes[lnode];
+      x_local[lnode] = x[gnode];
+      y_local[lnode] = y[gnode];
       z_local[lnode] = z[gnode];
     }
 
@@ -89,13 +89,13 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
 
     CalcElemNodeNormals(B[0], B[1], B[2], x_local, y_local, z_local);
 
-    SumElemStressesToNodeForces(B, sigxx[k], sigyy[k], sigzz[k], 
-				fx_local, fy_local, fz_local);
+    SumElemStressesToNodeForces(B, sigxx[k], sigyy[k], sigzz[k],
+                fx_local, fy_local, fz_local);
 
     for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemNodes[lnode]; 
+      int gnode = elemNodes[lnode];
       fx[gnode] += fx_local[lnode];
-      fy[gnode] += fy_local[lnode]; 
+      fy[gnode] += fy_local[lnode];
       fz[gnode] += fz_local[lnode];
     }
   }
@@ -104,10 +104,10 @@ void IntegrateStressForElems(int *nodelist, double *x, double *y, double *z,
 void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef)
 {
   int i, ii, jj;
-  double x1[8], y1[8], z1[8]; 
-  double pfx[8], pfy[8], pfz[8]; 
+  double x1[8], y1[8], z1[8];
+  double pfx[8], pfy[8], pfz[8];
   int numElem = domain->numElem;
-  int numElem8 = numElem*8; 
+  int numElem8 = numElem*8;
   double *dvdx = malloc(sizeof(double)*numElem8);
   double *dvdy = malloc(sizeof(double)*numElem8);
   double *dvdz = malloc(sizeof(double)*numElem8);
@@ -116,39 +116,39 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
   double *z8n = malloc(sizeof(double)*numElem8);
 
   for (i = 0; i < numElem; i++) {
-    int *elemToNode = &domain->nodelist[8*i]; 
-    
+    int *elemToNode = &domain->nodelist[8*i];
+
     CollectDomainNodesToElemNodes(domain->x, domain->y, domain->z, elemToNode, x1, y1, z1);
 
     CalcElemVolumeDerivative(pfx, pfy, pfz, x1, y1, z1);
 
     for (ii = 0; ii < 8; ii++) {
-      jj = 8*i + ii; 
+      jj = 8*i + ii;
 
-      dvdx[jj] = pfx[ii]; 
-      dvdy[jj] = pfy[ii]; 
-      dvdz[jj] = pfz[ii]; 
-      x8n[jj] = x1[ii]; 
-      y8n[jj] = y1[ii]; 
-      z8n[jj] = z1[ii]; 
+      dvdx[jj] = pfx[ii];
+      dvdy[jj] = pfy[ii];
+      dvdz[jj] = pfz[ii];
+      x8n[jj] = x1[ii];
+      y8n[jj] = y1[ii];
+      z8n[jj] = z1[ii];
     }
 
-    determ[i] = domain->volo[i]*domain->v[i]; 
+    determ[i] = domain->volo[i]*domain->v[i];
 
     if (domain->v[i] <= 0.0) {
       // need an abort function here, temporarily using exit function
-      printf("rank %d: CalcHourglassControlForElems exit(-1) at cycle %d\n", 
-	     domain->rank, domain->cycle);
+      printf("rank %d: CalcHourglassControlForElems exit(-1) at cycle %d\n",
+         domain->rank, domain->cycle);
       exit(-1);
     }
   }
 
   if (hgcoef > 0.0) {
-    CalcFBHourglassForceForElems(domain->nodelist, domain->ss, domain->elemMass, 
-				 domain->xd, domain->yd, domain->zd, 
-				 domain->fx, domain->fy, domain->fz, 
-				 determ, x8n, y8n, z8n, dvdx, dvdy, dvdz, 
-				 hgcoef, numElem);
+    CalcFBHourglassForceForElems(domain->nodelist, domain->ss, domain->elemMass,
+                 domain->xd, domain->yd, domain->zd,
+                 domain->fx, domain->fy, domain->fz,
+                 determ, x8n, y8n, z8n, dvdx, dvdy, dvdz,
+                 hgcoef, numElem);
   }
 
   free(z8n);
@@ -159,8 +159,8 @@ void CalcHourglassControlForElems(Domain *domain, double determ[], double hgcoef
   free(dvdx);
 }
 
-void CollectDomainNodesToElemNodes(double *x, double *y, double *z, const int *elemToNode, 
-				   double elemX[8], double elemY[8], double elemZ[8])
+void CollectDomainNodesToElemNodes(double *x, double *y, double *z, const int *elemToNode,
+                   double elemX[8], double elemY[8], double elemZ[8])
 {
    int nd0i = elemToNode[0];
    int nd1i = elemToNode[1];
@@ -199,73 +199,73 @@ void CollectDomainNodesToElemNodes(double *x, double *y, double *z, const int *e
    elemZ[7] = z[nd7i];
 }
 
-void CalcElemVolumeDerivative(double dvdx[8], double dvdy[8], double dvdz[8], 
-			      const double x[8], const double y[8], const double z[8])
+void CalcElemVolumeDerivative(double dvdx[8], double dvdy[8], double dvdz[8],
+                  const double x[8], const double y[8], const double z[8])
 {
   VoluDer(x[1], x[2], x[3], x[4], x[5], x[7],
-	  y[1], y[2], y[3], y[4], y[5], y[7],
-	  z[1], z[2], z[3], z[4], z[5], z[7],
-	  &dvdx[0], &dvdy[0], &dvdz[0]);
+      y[1], y[2], y[3], y[4], y[5], y[7],
+      z[1], z[2], z[3], z[4], z[5], z[7],
+      &dvdx[0], &dvdy[0], &dvdz[0]);
 
   VoluDer(x[0], x[1], x[2], x[7], x[4], x[6],
-	  y[0], y[1], y[2], y[7], y[4], y[6],
-	  z[0], z[1], z[2], z[7], z[4], z[6],
-	  &dvdx[3], &dvdy[3], &dvdz[3]);
+      y[0], y[1], y[2], y[7], y[4], y[6],
+      z[0], z[1], z[2], z[7], z[4], z[6],
+      &dvdx[3], &dvdy[3], &dvdz[3]);
 
   VoluDer(x[3], x[0], x[1], x[6], x[7], x[5],
-	  y[3], y[0], y[1], y[6], y[7], y[5],
-	  z[3], z[0], z[1], z[6], z[7], z[5],
-	  &dvdx[2], &dvdy[2], &dvdz[2]);
+      y[3], y[0], y[1], y[6], y[7], y[5],
+      z[3], z[0], z[1], z[6], z[7], z[5],
+      &dvdx[2], &dvdy[2], &dvdz[2]);
 
   VoluDer(x[2], x[3], x[0], x[5], x[6], x[4],
-	  y[2], y[3], y[0], y[5], y[6], y[4],
-	  z[2], z[3], z[0], z[5], z[6], z[4],
-	  &dvdx[1], &dvdy[1], &dvdz[1]);
+      y[2], y[3], y[0], y[5], y[6], y[4],
+      z[2], z[3], z[0], z[5], z[6], z[4],
+      &dvdx[1], &dvdy[1], &dvdz[1]);
 
   VoluDer(x[7], x[6], x[5], x[0], x[3], x[1],
-	  y[7], y[6], y[5], y[0], y[3], y[1],
-	  z[7], z[6], z[5], z[0], z[3], z[1],
-	  &dvdx[4], &dvdy[4], &dvdz[4]);
+      y[7], y[6], y[5], y[0], y[3], y[1],
+      z[7], z[6], z[5], z[0], z[3], z[1],
+      &dvdx[4], &dvdy[4], &dvdz[4]);
 
   VoluDer(x[4], x[7], x[6], x[1], x[0], x[2],
-	  y[4], y[7], y[6], y[1], y[0], y[2],
-	  z[4], z[7], z[6], z[1], z[0], z[2],
-	  &dvdx[5], &dvdy[5], &dvdz[5]);
+      y[4], y[7], y[6], y[1], y[0], y[2],
+      z[4], z[7], z[6], z[1], z[0], z[2],
+      &dvdx[5], &dvdy[5], &dvdz[5]);
 
   VoluDer(x[5], x[4], x[7], x[2], x[1], x[3],
-	  y[5], y[4], y[7], y[2], y[1], y[3],
-	  z[5], z[4], z[7], z[2], z[1], z[3],
-	  &dvdx[6], &dvdy[6], &dvdz[6]);
+      y[5], y[4], y[7], y[2], y[1], y[3],
+      z[5], z[4], z[7], z[2], z[1], z[3],
+      &dvdx[6], &dvdy[6], &dvdz[6]);
 
   VoluDer(x[6], x[5], x[4], x[3], x[2], x[0],
-	  y[6], y[5], y[4], y[3], y[2], y[0],
-	  z[6], z[5], z[4], z[3], z[2], z[0],
-	  &dvdx[7], &dvdy[7], &dvdz[7]);
+      y[6], y[5], y[4], y[3], y[2], y[0],
+      z[6], z[5], z[4], z[3], z[2], z[0],
+      &dvdx[7], &dvdy[7], &dvdz[7]);
 }
 
-void VoluDer(const double x0, const double x1, const double x2, 
-	     const double x3, const double x4, const double x5,
-	     const double y0, const double y1, const double y2, 
-	     const double y3, const double y4, const double y5,
-	     const double z0, const double z1, const double z2,
-	     const double z3, const double z4, const double z5,
-	     double *dvdx, double *dvdy, double *dvdz)
+void VoluDer(const double x0, const double x1, const double x2,
+         const double x3, const double x4, const double x5,
+         const double y0, const double y1, const double y2,
+         const double y3, const double y4, const double y5,
+         const double z0, const double z1, const double z2,
+         const double z3, const double z4, const double z5,
+         double *dvdx, double *dvdy, double *dvdz)
 {
   const double twelfth = 1.0/12.0;
 
-  *dvdx = 
-    (y1 + y2)*(z0 + z1) - (y0 + y1)*(z1 + z2) + 
-    (y0 + y4)*(z3 + z4) - (y3 + y4)*(z0 + z4) - 
+  *dvdx =
+    (y1 + y2)*(z0 + z1) - (y0 + y1)*(z1 + z2) +
+    (y0 + y4)*(z3 + z4) - (y3 + y4)*(z0 + z4) -
     (y2 + y5)*(z3 + z5) + (y3 + y5)*(z2 + z5);
 
-  *dvdy = 
-    -(x1 + x2)*(z0 + z1) + (x0 + x1)*(z1 + z2) - 
-    (x0 + x4)*(z3 + z4) + (x3 + x4)*(z0 + z4) + 
+  *dvdy =
+    -(x1 + x2)*(z0 + z1) + (x0 + x1)*(z1 + z2) -
+    (x0 + x4)*(z3 + z4) + (x3 + x4)*(z0 + z4) +
     (x2 + x5)*(z3 + z5) - (x3 + x5)*(z2 + z5);
 
-  *dvdz = 
-    -(y1 + y2)*(x0 + x1) + (y0 + y1)*(x1 + x2) - 
-    (y0 + y4)*(x3 + x4) + (y3 + y4)*(x0 + x4) + 
+  *dvdz =
+    -(y1 + y2)*(x0 + x1) + (y0 + y1)*(x1 + x2) -
+    (y0 + y4)*(x3 + x4) + (y3 + y4)*(x0 + x4) +
     (y2 + y5)*(x3 + x5) - (y3 + y5)*(x2 + x5);
 
   *dvdx *= twelfth;
@@ -273,20 +273,20 @@ void VoluDer(const double x0, const double x1, const double x2,
   *dvdz *= twelfth;
 }
 
-void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass, 
-				  double *xd, double *yd, double *zd, 
-				  double *fx, double *fy, double *fz, double *determ,
-				  double *x8n, double *y8n, double *z8n, 
-				  double *dvdx, double *dvdy, double *dvdz, 
-				  double hourg, int numElem)
+void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
+                  double *xd, double *yd, double *zd,
+                  double *fx, double *fy, double *fz, double *determ,
+                  double *x8n, double *y8n, double *z8n,
+                  double *dvdx, double *dvdy, double *dvdz,
+                  double hourg, int numElem)
 {
-  double hgfx[8], hgfy[8], hgfz[8]; 
-  double coefficient; 
+  double hgfx[8], hgfy[8], hgfz[8];
+  double coefficient;
 
   double gamma[4][8];
   double hourgam0[4], hourgam1[4], hourgam2[4], hourgam3[4];
   double hourgam4[4], hourgam5[4], hourgam6[4], hourgam7[4];
-  double xd1[8], yd1[8], zd1[8]; 
+  double xd1[8], yd1[8], zd1[8];
 
   gamma[0][0] = 1.0;
   gamma[0][1] = 1.0;
@@ -298,87 +298,87 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
   gamma[0][7] = 1.0;
   gamma[1][0] = 1.0;
   gamma[1][1] = -1.0;
-  gamma[1][2] = -1.0; 
-  gamma[1][3] = 1.0; 
-  gamma[1][4] = -1.0; 
-  gamma[1][5] = 1.0; 
-  gamma[1][6] = 1.0; 
-  gamma[1][7] = -1.0; 
-  gamma[2][0] = 1.0; 
-  gamma[2][1] = -1.0; 
+  gamma[1][2] = -1.0;
+  gamma[1][3] = 1.0;
+  gamma[1][4] = -1.0;
+  gamma[1][5] = 1.0;
+  gamma[1][6] = 1.0;
+  gamma[1][7] = -1.0;
+  gamma[2][0] = 1.0;
+  gamma[2][1] = -1.0;
   gamma[2][2] = 1.0;
-  gamma[2][3] = -1.0; 
-  gamma[2][4] = 1.0; 
-  gamma[2][5] = -1.0; 
-  gamma[2][6] = 1.0; 
-  gamma[2][7] = -1.0; 
-  gamma[3][0] = -1.0; 
-  gamma[3][1] = 1.0; 
-  gamma[3][2] = -1.0; 
-  gamma[3][3] = 1.0; 
-  gamma[3][4] = 1.0; 
-  gamma[3][5] = -1.0; 
-  gamma[3][6] = 1.0; 
-  gamma[3][7] = -1.0; 
+  gamma[2][3] = -1.0;
+  gamma[2][4] = 1.0;
+  gamma[2][5] = -1.0;
+  gamma[2][6] = 1.0;
+  gamma[2][7] = -1.0;
+  gamma[3][0] = -1.0;
+  gamma[3][1] = 1.0;
+  gamma[3][2] = -1.0;
+  gamma[3][3] = 1.0;
+  gamma[3][4] = 1.0;
+  gamma[3][5] = -1.0;
+  gamma[3][6] = 1.0;
+  gamma[3][7] = -1.0;
 
 
-  int i2, i1; 
+  int i2, i1;
 
   for (i2 = 0; i2 < numElem; i2++) {
-    const int *elemToNode = &nodelist[8*i2]; 
-    int i3 = 8*i2; 
-    double volinv = 1.0/determ[i2]; 
+    const int *elemToNode = &nodelist[8*i2];
+    int i3 = 8*i2;
+    double volinv = 1.0/determ[i2];
     double ss1, mass1, volume13;
     for (i1 = 0; i1 < 4; i1++) {
-      
-      double hourmodx = 
-	x8n[i3]*gamma[i1][0] + x8n[i3 + 1]*gamma[i1][1] + 
-	x8n[i3 + 2]*gamma[i1][2] + x8n[i3 + 3]*gamma[i1][3] +
-	x8n[i3 + 4]*gamma[i1][4] + x8n[i3 + 5]*gamma[i1][5] + 
-	x8n[i3 + 6]*gamma[i1][6] + x8n[i3 + 7]*gamma[i1][7]; 
 
-      double hourmody = 
-	y8n[i3]*gamma[i1][0] + y8n[i3 + 1]*gamma[i1][1] + 
-	y8n[i3 + 2]*gamma[i1][2] + y8n[i3 + 3]*gamma[i1][3] +
-	y8n[i3 + 4]*gamma[i1][4] + y8n[i3 + 5]*gamma[i1][5] + 
-	y8n[i3 + 6]*gamma[i1][6] + y8n[i3 + 7]*gamma[i1][7]; 
-	
+      double hourmodx =
+    x8n[i3]*gamma[i1][0] + x8n[i3 + 1]*gamma[i1][1] +
+    x8n[i3 + 2]*gamma[i1][2] + x8n[i3 + 3]*gamma[i1][3] +
+    x8n[i3 + 4]*gamma[i1][4] + x8n[i3 + 5]*gamma[i1][5] +
+    x8n[i3 + 6]*gamma[i1][6] + x8n[i3 + 7]*gamma[i1][7];
 
-      double hourmodz = 
-	z8n[i3]*gamma[i1][0] + z8n[i3 + 1]*gamma[i1][1] + 
-	z8n[i3 + 2]*gamma[i1][2] + z8n[i3 + 3]*gamma[i1][3] +
-	z8n[i3 + 4]*gamma[i1][4] + z8n[i3 + 5]*gamma[i1][5] + 
-	z8n[i3 + 6]*gamma[i1][6] + z8n[i3 + 7]*gamma[i1][7]; 
+      double hourmody =
+    y8n[i3]*gamma[i1][0] + y8n[i3 + 1]*gamma[i1][1] +
+    y8n[i3 + 2]*gamma[i1][2] + y8n[i3 + 3]*gamma[i1][3] +
+    y8n[i3 + 4]*gamma[i1][4] + y8n[i3 + 5]*gamma[i1][5] +
+    y8n[i3 + 6]*gamma[i1][6] + y8n[i3 + 7]*gamma[i1][7];
 
 
-      hourgam0[i1] = gamma[i1][0] - 
-	volinv*(dvdx[i3]*hourmodx  + dvdy[i3]*hourmody + dvdz[i3]*hourmodz); 
+      double hourmodz =
+    z8n[i3]*gamma[i1][0] + z8n[i3 + 1]*gamma[i1][1] +
+    z8n[i3 + 2]*gamma[i1][2] + z8n[i3 + 3]*gamma[i1][3] +
+    z8n[i3 + 4]*gamma[i1][4] + z8n[i3 + 5]*gamma[i1][5] +
+    z8n[i3 + 6]*gamma[i1][6] + z8n[i3 + 7]*gamma[i1][7];
 
-      hourgam1[i1] = gamma[i1][1] - 
-	volinv*(dvdx[i3 + 1]*hourmodx  + dvdy[i3 + 1]*hourmody + dvdz[i3 + 1]*hourmodz); 
 
-      hourgam2[i1] = gamma[i1][2] - 
-	volinv*(dvdx[i3 + 2]*hourmodx + dvdy[i3 + 2]*hourmody + dvdz[i3 + 2]*hourmodz);
+      hourgam0[i1] = gamma[i1][0] -
+    volinv*(dvdx[i3]*hourmodx  + dvdy[i3]*hourmody + dvdz[i3]*hourmodz);
 
-      hourgam3[i1] = gamma[i1][3] - 
-	volinv*(dvdx[i3 + 3]*hourmodx + dvdy[i3 + 3]*hourmody + dvdz[i3 + 3]*hourmodz);
+      hourgam1[i1] = gamma[i1][1] -
+    volinv*(dvdx[i3 + 1]*hourmodx  + dvdy[i3 + 1]*hourmody + dvdz[i3 + 1]*hourmodz);
 
-      hourgam4[i1] = gamma[i1][4] - 
-	volinv*(dvdx[i3 + 4]*hourmodx + dvdy[i3 + 4]*hourmody + dvdz[i3 + 4]*hourmodz);
+      hourgam2[i1] = gamma[i1][2] -
+    volinv*(dvdx[i3 + 2]*hourmodx + dvdy[i3 + 2]*hourmody + dvdz[i3 + 2]*hourmodz);
 
-      hourgam5[i1] = gamma[i1][5] - 
-	volinv*(dvdx[i3 + 5]*hourmodx + dvdy[i3 + 5]*hourmody + dvdz[i3 + 5]*hourmodz);
+      hourgam3[i1] = gamma[i1][3] -
+    volinv*(dvdx[i3 + 3]*hourmodx + dvdy[i3 + 3]*hourmody + dvdz[i3 + 3]*hourmodz);
 
-      hourgam6[i1] = gamma[i1][6] - 
-	volinv*(dvdx[i3 + 6]*hourmodx + dvdy[i3 + 6]*hourmody + dvdz[i3 + 6]*hourmodz);
+      hourgam4[i1] = gamma[i1][4] -
+    volinv*(dvdx[i3 + 4]*hourmodx + dvdy[i3 + 4]*hourmody + dvdz[i3 + 4]*hourmodz);
 
-      hourgam7[i1] = gamma[i1][7] - 
-	volinv*(dvdx[i3 + 7]*hourmodx + dvdy[i3 + 7]*hourmody + dvdz[i3 + 7]*hourmodz);
+      hourgam5[i1] = gamma[i1][5] -
+    volinv*(dvdx[i3 + 5]*hourmodx + dvdy[i3 + 5]*hourmody + dvdz[i3 + 5]*hourmodz);
+
+      hourgam6[i1] = gamma[i1][6] -
+    volinv*(dvdx[i3 + 6]*hourmodx + dvdy[i3 + 6]*hourmody + dvdz[i3 + 6]*hourmodz);
+
+      hourgam7[i1] = gamma[i1][7] -
+    volinv*(dvdx[i3 + 7]*hourmodx + dvdy[i3 + 7]*hourmody + dvdz[i3 + 7]*hourmodz);
     }
 
 
-    ss1 = ss[i2]; 
-    mass1 = elemMass[i2]; 
+    ss1 = ss[i2];
+    mass1 = elemMass[i2];
     volume13 = cbrt(determ[i2]);
 
     int n0si2 = elemToNode[0];
@@ -398,7 +398,7 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
     xd1[5] = xd[n5si2];
     xd1[6] = xd[n6si2];
     xd1[7] = xd[n7si2];
-    
+
     yd1[0] = yd[n0si2];
     yd1[1] = yd[n1si2];
     yd1[2] = yd[n2si2];
@@ -407,7 +407,7 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
     yd1[5] = yd[n5si2];
     yd1[6] = yd[n6si2];
     yd1[7] = yd[n7si2];
-      
+
     zd1[0] = zd[n0si2];
     zd1[1] = zd[n1si2];
     zd1[2] = zd[n2si2];
@@ -417,60 +417,60 @@ void CalcFBHourglassForceForElems(int *nodelist, double *ss, double *elemMass,
     zd1[6] = zd[n6si2];
     zd1[7] = zd[n7si2];
 
-    coefficient = -hourg*0.01*ss1*mass1/volume13; 
+    coefficient = -hourg*0.01*ss1*mass1/volume13;
 
-    CalcElemFBHourglassForce(xd1, yd1, zd1, hourgam0, hourgam1, hourgam2, hourgam3, 
-			     hourgam4, hourgam5, hourgam6, hourgam7, 
-			     coefficient, hgfx, hgfy, hgfz);
+    CalcElemFBHourglassForce(xd1, yd1, zd1, hourgam0, hourgam1, hourgam2, hourgam3,
+                 hourgam4, hourgam5, hourgam6, hourgam7,
+                 coefficient, hgfx, hgfy, hgfz);
 
     fx[n0si2] += hgfx[0];
     fy[n0si2] += hgfy[0];
     fz[n0si2] += hgfz[0];
-    
+
     fx[n1si2] += hgfx[1];
     fy[n1si2] += hgfy[1];
     fz[n1si2] += hgfz[1];
-    
+
     fx[n2si2] += hgfx[2];
     fy[n2si2] += hgfy[2];
     fz[n2si2] += hgfz[2];
-    
+
     fx[n3si2] += hgfx[3];
     fy[n3si2] += hgfy[3];
     fz[n3si2] += hgfz[3];
-    
+
     fx[n4si2] += hgfx[4];
     fy[n4si2] += hgfy[4];
     fz[n4si2] += hgfz[4];
-    
+
     fx[n5si2] += hgfx[5];
     fy[n5si2] += hgfy[5];
     fz[n5si2] += hgfz[5];
-    
+
     fx[n6si2] += hgfx[6];
     fy[n6si2] += hgfy[6];
     fz[n6si2] += hgfz[6];
-    
+
     fx[n7si2] += hgfx[7];
     fy[n7si2] += hgfy[7];
     fz[n7si2] += hgfz[7];
   }
 }
 
-void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourgam0, 
-			      double *hourgam1, double *hourgam2, double *hourgam3, 
-			      double *hourgam4, double *hourgam5, double *hourgam6,
-			      double *hourgam7, double coefficient, 
-			      double *hgfx, double *hgfy, double *hgfz)
+void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourgam0,
+                  double *hourgam1, double *hourgam2, double *hourgam3,
+                  double *hourgam4, double *hourgam5, double *hourgam6,
+                  double *hourgam7, double coefficient,
+                  double *hgfx, double *hgfy, double *hgfz)
 {
   int i00 = 0;
   int i01 = 1;
   int i02 = 2;
   int i03 = 3;
 
-  double h00 = 
-    hourgam0[i00]*xd[0] + hourgam1[i00]*xd[1] + 
-    hourgam2[i00]*xd[2] + hourgam3[i00]*xd[3] + 
+  double h00 =
+    hourgam0[i00]*xd[0] + hourgam1[i00]*xd[1] +
+    hourgam2[i00]*xd[2] + hourgam3[i00]*xd[3] +
     hourgam4[i00]*xd[4] + hourgam5[i00]*xd[5] +
     hourgam6[i00]*xd[6] + hourgam7[i00]*xd[7];
 
@@ -479,7 +479,7 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
     hourgam2[i01]*xd[2] + hourgam3[i01]*xd[3] +
     hourgam4[i01]*xd[4] + hourgam5[i01]*xd[5] +
     hourgam6[i01]*xd[6] + hourgam7[i01]*xd[7];
-  
+
   double h02 =
     hourgam0[i02]*xd[0] + hourgam1[i02]*xd[1]+
     hourgam2[i02]*xd[2] + hourgam3[i02]*xd[3]+
@@ -491,39 +491,39 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
     hourgam2[i03]*xd[2] + hourgam3[i03]*xd[3] +
     hourgam4[i03]*xd[4] + hourgam5[i03]*xd[5] +
     hourgam6[i03]*xd[6] + hourgam7[i03]*xd[7];
-  
+
   hgfx[0] = coefficient*
     (hourgam0[i00]*h00 + hourgam0[i01]*h01 +
      hourgam0[i02]*h02 + hourgam0[i03]*h03);
-  
+
   hgfx[1] = coefficient*
     (hourgam1[i00]*h00 + hourgam1[i01]*h01 +
      hourgam1[i02]*h02 + hourgam1[i03]*h03);
-  
+
   hgfx[2] = coefficient*
     (hourgam2[i00]*h00 + hourgam2[i01]*h01 +
      hourgam2[i02]*h02 + hourgam2[i03]*h03);
-  
+
   hgfx[3] = coefficient*
     (hourgam3[i00]*h00 + hourgam3[i01]*h01 +
      hourgam3[i02]*h02 + hourgam3[i03]*h03);
-  
+
   hgfx[4] = coefficient*
     (hourgam4[i00]*h00 + hourgam4[i01]*h01 +
      hourgam4[i02]*h02 + hourgam4[i03]*h03);
-  
+
   hgfx[5] = coefficient*
     (hourgam5[i00]*h00 + hourgam5[i01]*h01 +
      hourgam5[i02]*h02 + hourgam5[i03]*h03);
-  
+
   hgfx[6] = coefficient*
     (hourgam6[i00]*h00 + hourgam6[i01]*h01 +
      hourgam6[i02]*h02 + hourgam6[i03]*h03);
-  
+
   hgfx[7] = coefficient*
     (hourgam7[i00]*h00 + hourgam7[i01]*h01 +
      hourgam7[i02]*h02 + hourgam7[i03]*h03);
-  
+
   h00 =
     hourgam0[i00]*yd[0] + hourgam1[i00]*yd[1] +
     hourgam2[i00]*yd[2] + hourgam3[i00]*yd[3] +
@@ -535,7 +535,7 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
     hourgam2[i01]*yd[2] + hourgam3[i01]*yd[3] +
     hourgam4[i01]*yd[4] + hourgam5[i01]*yd[5] +
     hourgam6[i01]*yd[6] + hourgam7[i01]*yd[7];
-  
+
   h02 =
     hourgam0[i02]*yd[0] + hourgam1[i02]*yd[1]+
     hourgam2[i02]*yd[2] + hourgam3[i02]*yd[3]+
@@ -552,15 +552,15 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
   hgfy[0] = coefficient*
     (hourgam0[i00]*h00 + hourgam0[i01]*h01 +
      hourgam0[i02]*h02 + hourgam0[i03]*h03);
-  
+
   hgfy[1] = coefficient*
     (hourgam1[i00]*h00 + hourgam1[i01]*h01 +
      hourgam1[i02]*h02 + hourgam1[i03]*h03);
-  
+
   hgfy[2] = coefficient*
     (hourgam2[i00]*h00 + hourgam2[i01]*h01 +
      hourgam2[i02]*h02 + hourgam2[i03]*h03);
-  
+
   hgfy[3] = coefficient*
     (hourgam3[i00]*h00 + hourgam3[i01]*h01 +
      hourgam3[i02]*h02 + hourgam3[i03]*h03);
@@ -568,60 +568,60 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
   hgfy[4] = coefficient*
     (hourgam4[i00]*h00 + hourgam4[i01]*h01 +
      hourgam4[i02]*h02 + hourgam4[i03]*h03);
-  
+
   hgfy[5] = coefficient*
     (hourgam5[i00]*h00 + hourgam5[i01]*h01 +
      hourgam5[i02]*h02 + hourgam5[i03]*h03);
-  
+
   hgfy[6] = coefficient*
     (hourgam6[i00]*h00 + hourgam6[i01]*h01 +
      hourgam6[i02]*h02 + hourgam6[i03]*h03);
-  
+
   hgfy[7] = coefficient*
     (hourgam7[i00]*h00 + hourgam7[i01]*h01 +
      hourgam7[i02]*h02 + hourgam7[i03]*h03);
-  
+
   h00 =
     hourgam0[i00]*zd[0] + hourgam1[i00]*zd[1] +
     hourgam2[i00]*zd[2] + hourgam3[i00]*zd[3] +
     hourgam4[i00]*zd[4] + hourgam5[i00]*zd[5] +
     hourgam6[i00]*zd[6] + hourgam7[i00]*zd[7];
-  
+
   h01 =
     hourgam0[i01]*zd[0] + hourgam1[i01]*zd[1] +
     hourgam2[i01]*zd[2] + hourgam3[i01]*zd[3] +
     hourgam4[i01]*zd[4] + hourgam5[i01]*zd[5] +
     hourgam6[i01]*zd[6] + hourgam7[i01]*zd[7];
-  
+
   h02 =
     hourgam0[i02]*zd[0] + hourgam1[i02]*zd[1]+
     hourgam2[i02]*zd[2] + hourgam3[i02]*zd[3]+
     hourgam4[i02]*zd[4] + hourgam5[i02]*zd[5]+
     hourgam6[i02]*zd[6] + hourgam7[i02]*zd[7];
-  
+
   h03 =
     hourgam0[i03]*zd[0] + hourgam1[i03]*zd[1] +
     hourgam2[i03]*zd[2] + hourgam3[i03]*zd[3] +
     hourgam4[i03]*zd[4] + hourgam5[i03]*zd[5] +
     hourgam6[i03]*zd[6] + hourgam7[i03]*zd[7];
-  
+
 
   hgfz[0] = coefficient*
     (hourgam0[i00]*h00 + hourgam0[i01]*h01 +
      hourgam0[i02]*h02 + hourgam0[i03]*h03);
-  
+
   hgfz[1] = coefficient*
     (hourgam1[i00]*h00 + hourgam1[i01]*h01 +
      hourgam1[i02]*h02 + hourgam1[i03]*h03);
-  
+
   hgfz[2] = coefficient*
     (hourgam2[i00]*h00 + hourgam2[i01]*h01 +
      hourgam2[i02]*h02 + hourgam2[i03]*h03);
-  
+
   hgfz[3] = coefficient*
     (hourgam3[i00]*h00 + hourgam3[i01]*h01 +
      hourgam3[i02]*h02 + hourgam3[i03]*h03);
-  
+
   hgfz[4] = coefficient*
     (hourgam4[i00]*h00 + hourgam4[i01]*h01 +
      hourgam4[i02]*h02 + hourgam4[i03]*h03);
@@ -637,10 +637,10 @@ void CalcElemFBHourglassForce(double *xd, double *yd, double *zd, double *hourga
   hgfz[7] = coefficient*
     (hourgam7[i00]*h00 + hourgam7[i01]*h01 +
      hourgam7[i02]*h02 + hourgam7[i03]*h03);
-} 
+}
 
-void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double const z[], 
-				      double b[][8], double *const volume)
+void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double const z[],
+                      double b[][8], double *const volume)
 {
   const double x0 = x[0];   const double x1 = x[1];
   const double x2 = x[2];   const double x3 = x[3];
@@ -676,7 +676,7 @@ void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double
   fjzet = .125*((z6 - z0) - (z5 - z3) + (z7 - z1) - (z4 - z2));
   fjzze = .125*((z6 - z0) + (z5 - z3) + (z7 - z1) + (z4 - z2));
 
-  // compute cofactors 
+  // compute cofactors
   cjxxi =    (fjyet*fjzze) - (fjzet*fjyze);
   cjxet =  - (fjyxi*fjzze) + (fjzxi*fjyze);
   cjxze =    (fjyxi*fjzet) - (fjzxi*fjyet);
@@ -692,7 +692,7 @@ void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double
   // calculate partials :
   //   this need only be done for l = 0,1,2,3   since , by symmetry ,
   //   (6,7,4,5) = - (0,1,2,3) .
-  
+
   b[0][0] =   -  cjxxi  -  cjxet  -  cjxze;
   b[0][1] =      cjxxi  -  cjxet  -  cjxze;
   b[0][2] =      cjxxi  +  cjxet  -  cjxze;
@@ -720,14 +720,14 @@ void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double
   b[2][6] = -b[2][0];
   b[2][7] = -b[2][1];
 
-  // calculate jacobian determinant (volume) 
+  // calculate jacobian determinant (volume)
   *volume = 8.0*(fjxet*cjxet + fjyet*cjyet + fjzet*cjzet);
 }
 
-void CalcElemNodeNormals(double pfx[8], double pfy[8], double pfz[8], 
-			 const double x[8], const double y[8], const double z[8])
+void CalcElemNodeNormals(double pfx[8], double pfy[8], double pfz[8],
+             const double x[8], const double y[8], const double z[8])
 {
-  int i = 0; 
+  int i = 0;
   for (i = 0; i < 8; i++) {
     pfx[i] = 0.0;
     pfy[i] = 0.0;
@@ -736,61 +736,61 @@ void CalcElemNodeNormals(double pfx[8], double pfy[8], double pfz[8],
 
   // evaluate face one: nodes 0, 1, 2, 3
   SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0],
-		    &pfx[1], &pfy[1], &pfz[1],
-		    &pfx[2], &pfy[2], &pfz[2],
-		    &pfx[3], &pfy[3], &pfz[3],
-		    x[0], y[0], z[0], x[1], y[1], z[1],
-		    x[2], y[2], z[2], x[3], y[3], z[3]);
+            &pfx[1], &pfy[1], &pfz[1],
+            &pfx[2], &pfy[2], &pfz[2],
+            &pfx[3], &pfy[3], &pfz[3],
+            x[0], y[0], z[0], x[1], y[1], z[1],
+            x[2], y[2], z[2], x[3], y[3], z[3]);
 
-  // evaluate face two: nodes 0, 4, 5, 1 
+  // evaluate face two: nodes 0, 4, 5, 1
   SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0],
-		    &pfx[4], &pfy[4], &pfz[4],
-		    &pfx[5], &pfy[5], &pfz[5],
-		    &pfx[1], &pfy[1], &pfz[1],
-		    x[0], y[0], z[0], x[4], y[4], z[4],
-		    x[5], y[5], z[5], x[1], y[1], z[1]);
+            &pfx[4], &pfy[4], &pfz[4],
+            &pfx[5], &pfy[5], &pfz[5],
+            &pfx[1], &pfy[1], &pfz[1],
+            x[0], y[0], z[0], x[4], y[4], z[4],
+            x[5], y[5], z[5], x[1], y[1], z[1]);
 
-  // evaluate face three: nodes 1, 5, 6, 2 
+  // evaluate face three: nodes 1, 5, 6, 2
   SumElemFaceNormal(&pfx[1], &pfy[1], &pfz[1],
-		    &pfx[5], &pfy[5], &pfz[5],
-		    &pfx[6], &pfy[6], &pfz[6],
-		    &pfx[2], &pfy[2], &pfz[2],
-		    x[1], y[1], z[1], x[5], y[5], z[5],
-		    x[6], y[6], z[6], x[2], y[2], z[2]);
+            &pfx[5], &pfy[5], &pfz[5],
+            &pfx[6], &pfy[6], &pfz[6],
+            &pfx[2], &pfy[2], &pfz[2],
+            x[1], y[1], z[1], x[5], y[5], z[5],
+            x[6], y[6], z[6], x[2], y[2], z[2]);
 
-  // evaluate face four: nodes 2, 6, 7, 3 
+  // evaluate face four: nodes 2, 6, 7, 3
   SumElemFaceNormal(&pfx[2], &pfy[2], &pfz[2],
-		    &pfx[6], &pfy[6], &pfz[6],
-		    &pfx[7], &pfy[7], &pfz[7],
-		    &pfx[3], &pfy[3], &pfz[3],
-		    x[2], y[2], z[2], x[6], y[6], z[6],
-		    x[7], y[7], z[7], x[3], y[3], z[3]);
+            &pfx[6], &pfy[6], &pfz[6],
+            &pfx[7], &pfy[7], &pfz[7],
+            &pfx[3], &pfy[3], &pfz[3],
+            x[2], y[2], z[2], x[6], y[6], z[6],
+            x[7], y[7], z[7], x[3], y[3], z[3]);
 
-  // evaluate face five: nodes 3, 7, 4, 0 
+  // evaluate face five: nodes 3, 7, 4, 0
   SumElemFaceNormal(&pfx[3], &pfy[3], &pfz[3],
-		    &pfx[7], &pfy[7], &pfz[7],
-		    &pfx[4], &pfy[4], &pfz[4],
-		    &pfx[0], &pfy[0], &pfz[0],
-		    x[3], y[3], z[3], x[7], y[7], z[7],
-		    x[4], y[4], z[4], x[0], y[0], z[0]);
+            &pfx[7], &pfy[7], &pfz[7],
+            &pfx[4], &pfy[4], &pfz[4],
+            &pfx[0], &pfy[0], &pfz[0],
+            x[3], y[3], z[3], x[7], y[7], z[7],
+            x[4], y[4], z[4], x[0], y[0], z[0]);
 
-  // evaluate face six: nodes 4, 7, 6, 5 
+  // evaluate face six: nodes 4, 7, 6, 5
   SumElemFaceNormal(&pfx[4], &pfy[4], &pfz[4],
-		    &pfx[7], &pfy[7], &pfz[7],
-		    &pfx[6], &pfy[6], &pfz[6],
-		    &pfx[5], &pfy[5], &pfz[5],
-		    x[4], y[4], z[4], x[7], y[7], z[7],
-		    x[6], y[6], z[6], x[5], y[5], z[5]);
+            &pfx[7], &pfy[7], &pfz[7],
+            &pfx[6], &pfy[6], &pfz[6],
+            &pfx[5], &pfy[5], &pfz[5],
+            x[4], y[4], z[4], x[7], y[7], z[7],
+            x[6], y[6], z[6], x[5], y[5], z[5]);
 }
 
-void SumElemFaceNormal(double *normalX0, double *normalY0, double *normalZ0, 
-		       double *normalX1, double *normalY1, double *normalZ1, 
-		       double *normalX2, double *normalY2, double *normalZ2, 
-		       double *normalX3, double *normalY3, double *normalZ3, 
-		       const double x0, const double y0, const double z0, 
-		       const double x1, const double y1, const double z1, 
-		       const double x2, const double y2, const double z2,
-		       const double x3, const double y3, const double z3)
+void SumElemFaceNormal(double *normalX0, double *normalY0, double *normalZ0,
+               double *normalX1, double *normalY1, double *normalZ1,
+               double *normalX2, double *normalY2, double *normalZ2,
+               double *normalX3, double *normalY3, double *normalZ3,
+               const double x0, const double y0, const double z0,
+               const double x1, const double y1, const double z1,
+               const double x2, const double y2, const double z2,
+               const double x3, const double y3, const double z3)
 {
   double bisectX0 = 0.5*(x3 + x2 - x1 - x0);
   double bisectY0 = 0.5*(y3 + y2 - y1 - y0);
@@ -807,21 +807,21 @@ void SumElemFaceNormal(double *normalX0, double *normalY0, double *normalZ0,
   *normalX1 += areaX;
   *normalX2 += areaX;
   *normalX3 += areaX;
-  
+
   *normalY0 += areaY;
   *normalY1 += areaY;
   *normalY2 += areaY;
   *normalY3 += areaY;
-  
+
   *normalZ0 += areaZ;
   *normalZ1 += areaZ;
   *normalZ2 += areaZ;
   *normalZ3 += areaZ;
 }
 
-void SumElemStressesToNodeForces(double B[][8], const double stress_xx, 
-				 const double stress_yy, const double stress_zz,
-				 double fx[], double fy[], double fz[])
+void SumElemStressesToNodeForces(double B[][8], const double stress_xx,
+                 const double stress_yy, const double stress_zz,
+                 double fx[], double fy[], double fz[])
 {
   double pfx0 = B[0][0];   double pfx1 = B[0][1];
   double pfx2 = B[0][2];   double pfx3 = B[0][3];
@@ -867,8 +867,8 @@ void SumElemStressesToNodeForces(double B[][8], const double stress_xx,
 }
 
 void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
-			      double *fx, double *fy, double *fz,
-			      double *nodalMass, int numNode)
+                  double *fx, double *fy, double *fz,
+                  double *nodalMass, int numNode)
 {
   int i;
   for (i = 0; i < numNode; i++) {
@@ -879,10 +879,10 @@ void CalcAccelerationForNodes(double *xdd, double *ydd, double *zdd,
 }
 
 void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, double *zdd,
-						 int *symmX, int *symmY, int *symmZ, int size)
+                         int *symmX, int *symmY, int *symmZ, int size)
 {
   int numNodeBC = (size + 1)*(size + 1);
-  int i; 
+  int i;
 
   if (symmX != 0) {
     for (i = 0; i < numNodeBC; i++)
@@ -900,23 +900,23 @@ void ApplyAccelerationBoundaryConditionsForNodes(double *xdd, double *ydd, doubl
   }
 }
 
-void CalcVelocityForNodes(double *xd, double *yd, double *zd, 
-			  double *xdd, double *ydd, double *zdd,
-			  const double dt, const double u_cut, int numNode)
+void CalcVelocityForNodes(double *xd, double *yd, double *zd,
+              double *xdd, double *ydd, double *zdd,
+              const double dt, const double u_cut, int numNode)
 {
-  int i; 
+  int i;
   for (i = 0; i < numNode; i++) {
-    double xdtmp, ydtmp, zdtmp; 
+    double xdtmp, ydtmp, zdtmp;
 
-    xdtmp = xd[i] + xdd[i]*dt; 
-    if (fabs(xdtmp) < u_cut) 
+    xdtmp = xd[i] + xdd[i]*dt;
+    if (fabs(xdtmp) < u_cut)
       xdtmp = 0.0;
-    xd[i] = xdtmp; 
+    xd[i] = xdtmp;
 
     ydtmp = yd[i] + ydd[i]*dt;
     if (fabs(ydtmp) < u_cut)
       ydtmp = 0.0;
-    yd[i] = ydtmp; 
+    yd[i] = ydtmp;
 
     zdtmp = zd[i] + zdd[i]*dt;
     if (fabs(zdtmp) < u_cut)
@@ -925,11 +925,11 @@ void CalcVelocityForNodes(double *xd, double *yd, double *zd,
   }
 }
 
-void CalcPositionForNodes(double *x, double *y, double *z, 
-			  double *xd, double *yd, double *zd, 
-			  const double dt, int numNode)
+void CalcPositionForNodes(double *x, double *y, double *z,
+              double *xd, double *yd, double *zd,
+              const double dt, int numNode)
 {
-  int i; 
+  int i;
   for (i = 0; i < numNode; i++) {
     x[i] += xd[i]*dt;
     y[i] += yd[i]*dt;
@@ -939,13 +939,13 @@ void CalcPositionForNodes(double *x, double *y, double *z,
 
 void LagrangeElements(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
-  int numElem = domain->numElem; 
+  int numElem = domain->numElem;
 
   domain->vnew = malloc(sizeof(double)*numElem);
-  
+
   CalcLagrangeElements(domain);
 
-  CalcQForElems(local,domain,epoch); 
+  CalcQForElems(local,domain,epoch);
 
   ApplyMaterialPropertiesForElems(domain);
 
@@ -959,19 +959,19 @@ void CalcLagrangeElements(Domain *domain)
   int numElem = domain->numElem;
 
   if (numElem > 0) {
-    const double deltatime = domain->deltatime; 
+    const double deltatime = domain->deltatime;
 
     domain->dxx = malloc(sizeof(double)*numElem);
     domain->dyy = malloc(sizeof(double)*numElem);
     domain->dzz = malloc(sizeof(double)*numElem);
 
-    CalcKinematicsForElems(domain->nodelist, domain->x, domain->y, domain->z, 
-			   domain->xd, domain->yd, domain->zd, 
-			   domain->dxx, domain->dyy, domain->dzz, domain->v, 
-			   domain->volo, domain->vnew, domain->delv, 
-			   domain->arealg, deltatime, numElem);
+    CalcKinematicsForElems(domain->nodelist, domain->x, domain->y, domain->z,
+               domain->xd, domain->yd, domain->zd,
+               domain->dxx, domain->dyy, domain->dzz, domain->v,
+               domain->volo, domain->vnew, domain->delv,
+               domain->arealg, deltatime, numElem);
 
-    int k; 
+    int k;
     for (k = 0; k < numElem; k++) {
       double vdov = domain->dxx[k] + domain->dyy[k] + domain->dzz[k];
       double vdovthird = vdov/3.0;
@@ -982,10 +982,10 @@ void CalcLagrangeElements(Domain *domain)
       domain->dzz[k] -= vdovthird;
 
       if (domain->vnew[k] <= 0.0) {
-	// need an abort function here, temporarily using exit function
-	printf("rank %d: CalcLagrangeElements exit(-1) at cycle %d\n", 
-	     domain->rank, domain->cycle);
-	exit(-1);
+    // need an abort function here, temporarily using exit function
+    printf("rank %d: CalcLagrangeElements exit(-1) at cycle %d\n",
+         domain->rank, domain->cycle);
+    exit(-1);
       }
     }
 
@@ -995,11 +995,11 @@ void CalcLagrangeElements(Domain *domain)
   }
 }
 
-void CalcKinematicsForElems(int *nodelist, double *x, double *y, double *z, 
-			    double *xd, double *yd, double *zd, 
-			    double *dxx, double *dyy, double *dzz,
-			    double *v, double *volo, double *vnew, double *delv,
-			    double *arealg, double deltaTime, int numElem)
+void CalcKinematicsForElems(int *nodelist, double *x, double *y, double *z,
+                double *xd, double *yd, double *zd,
+                double *dxx, double *dyy, double *dzz,
+                double *v, double *volo, double *vnew, double *delv,
+                double *arealg, double deltaTime, int numElem)
 {
   double B[3][8];
   double D[6];
@@ -1009,24 +1009,24 @@ void CalcKinematicsForElems(int *nodelist, double *x, double *y, double *z,
   double xd_local[8];
   double yd_local[8];
   double zd_local[8];
-  double detJ = 0.0; 
+  double detJ = 0.0;
 
-  int k; 
+  int k;
   for (k = 0; k < numElem; k++) {
     double volume;
     double relativeVolume;
-    const int * const elemToNode = &nodelist[8*k]; 
+    const int * const elemToNode = &nodelist[8*k];
 
-    int lnode; 
+    int lnode;
     for (lnode = 0; lnode < 8; lnode++) {
-      int gnode = elemToNode[lnode]; 
+      int gnode = elemToNode[lnode];
       x_local[lnode] = x[gnode];
       y_local[lnode] = y[gnode];
       z_local[lnode] = z[gnode];
     }
 
     volume = CalcElemVolume(x_local, y_local, z_local);
-    relativeVolume = volume/volo[k]; 
+    relativeVolume = volume/volo[k];
     vnew[k] = relativeVolume;
     delv[k] = relativeVolume - v[k];
 
@@ -1058,40 +1058,40 @@ void CalcKinematicsForElems(int *nodelist, double *x, double *y, double *z,
   }
 }
 
-double CalcElemCharacteristicLength(const double x[8], const double y[8], 
-				    const double z[8], const double volume)
+double CalcElemCharacteristicLength(const double x[8], const double y[8],
+                    const double z[8], const double volume)
 {
   double a, charLength = 0.0;
 
   a = AreaFace(x[0], x[1], x[2], x[3],
-	       y[0], y[1], y[2], y[3],
-	       z[0], z[1], z[2], z[3]);
-  charLength = (a > charLength ? a : charLength); 
+           y[0], y[1], y[2], y[3],
+           z[0], z[1], z[2], z[3]);
+  charLength = (a > charLength ? a : charLength);
 
   a = AreaFace(x[4], x[5], x[6], x[7],
-	       y[4], y[5], y[6], y[7],
-	       z[4], z[5], z[6], z[7]);
-  charLength = (a > charLength ? a : charLength); 
+           y[4], y[5], y[6], y[7],
+           z[4], z[5], z[6], z[7]);
+  charLength = (a > charLength ? a : charLength);
 
   a = AreaFace(x[0], x[1], x[5], x[4],
-	       y[0], y[1], y[5], y[4],
-	       z[0], z[1], z[5], z[4]);
-  charLength = (a > charLength ? a : charLength); 
+           y[0], y[1], y[5], y[4],
+           z[0], z[1], z[5], z[4]);
+  charLength = (a > charLength ? a : charLength);
 
   a = AreaFace(x[1], x[2], x[6], x[5],
-	       y[1], y[2], y[6], y[5],
-	       z[1], z[2], z[6], z[5]);
-  charLength = (a > charLength ? a : charLength); 
+           y[1], y[2], y[6], y[5],
+           z[1], z[2], z[6], z[5]);
+  charLength = (a > charLength ? a : charLength);
 
   a = AreaFace(x[2], x[3], x[7], x[6],
-	       y[2], y[3], y[7], y[6],
-	       z[2], z[3], z[7], z[6]);
-  charLength = (a > charLength ? a : charLength); 
+           y[2], y[3], y[7], y[6],
+           z[2], z[3], z[7], z[6]);
+  charLength = (a > charLength ? a : charLength);
 
   a = AreaFace(x[3], x[0], x[4], x[7],
-	       y[3], y[0], y[4], y[7],
-	       z[3], z[0], z[4], z[7]);
-  charLength = (a > charLength ? a : charLength); 
+           y[3], y[0], y[4], y[7],
+           z[3], z[0], z[4], z[7]);
+  charLength = (a > charLength ? a : charLength);
 
   charLength = 4.0*volume/sqrt(charLength);
 
@@ -1099,8 +1099,8 @@ double CalcElemCharacteristicLength(const double x[8], const double y[8],
 }
 
 double AreaFace(const double x0, const double x1, const double x2, const double x3,
-		const double y0, const double y1, const double y2, const double y3,
-		const double z0, const double z1, const double z2, const double z3)
+        const double y0, const double y1, const double y2, const double y3,
+        const double z0, const double z1, const double z2, const double z3)
 {
   double fx = (x2 - x0) - (x3 - x1);
   double fy = (y2 - y0) - (y3 - y1);
@@ -1108,78 +1108,78 @@ double AreaFace(const double x0, const double x1, const double x2, const double 
   double gx = (x2 - x0) + (x3 - x1);
   double gy = (y2 - y0) + (y3 - y1);
   double gz = (z2 - z0) + (z3 - z1);
-  double area = (fx*fx + fy*fy + fz*fz)*(gx*gx + gy*gy + gz*gz) - 
+  double area = (fx*fx + fy*fy + fz*fz)*(gx*gx + gy*gy + gz*gz) -
     (fx*gx + fy*gy + fz*gz)*(fx*gx + fy*gy + fz*gz);
   return area;
 }
 
 void CalcElemVelocityGradient(const double *const xvel, const double *const yvel,
-			      const double *const zvel, double b[][8],
-			      const double detJ, double *const d)
+                  const double *const zvel, double b[][8],
+                  const double detJ, double *const d)
 {
   const double inv_detJ = 1.0/detJ;
   double dyddx, dxddy, dzddx, dxddz, dzddy, dyddz;
   const double *const pfx = b[0];
   const double *const pfy = b[1];
   const double *const pfz = b[2];
-  
+
 
   d[0] = inv_detJ*(pfx[0]*(xvel[0] - xvel[6])
-		   + pfx[1]*(xvel[1] - xvel[7])
-		   + pfx[2]*(xvel[2] - xvel[4])
-		   + pfx[3]*(xvel[3] - xvel[5]));
-  
+           + pfx[1]*(xvel[1] - xvel[7])
+           + pfx[2]*(xvel[2] - xvel[4])
+           + pfx[3]*(xvel[3] - xvel[5]));
+
   d[1] = inv_detJ*(pfy[0]*(yvel[0] - yvel[6])
-		   + pfy[1]*(yvel[1] - yvel[7])
-		   + pfy[2]*(yvel[2] - yvel[4])
-		   + pfy[3]*(yvel[3] - yvel[5]));
-  
+           + pfy[1]*(yvel[1] - yvel[7])
+           + pfy[2]*(yvel[2] - yvel[4])
+           + pfy[3]*(yvel[3] - yvel[5]));
+
   d[2] = inv_detJ*(pfz[0]*(zvel[0] - zvel[6])
-		   + pfz[1]*(zvel[1] - zvel[7])
-		   + pfz[2]*(zvel[2] - zvel[4])
-		   + pfz[3]*(zvel[3] - zvel[5]));
-  
+           + pfz[1]*(zvel[1] - zvel[7])
+           + pfz[2]*(zvel[2] - zvel[4])
+           + pfz[3]*(zvel[3] - zvel[5]));
+
   dyddx = inv_detJ*(pfx[0]*(yvel[0] - yvel[6])
-		    + pfx[1]*(yvel[1] - yvel[7])
-		    + pfx[2]*(yvel[2] - yvel[4])
-		    + pfx[3]*(yvel[3] - yvel[5]));
-  
+            + pfx[1]*(yvel[1] - yvel[7])
+            + pfx[2]*(yvel[2] - yvel[4])
+            + pfx[3]*(yvel[3] - yvel[5]));
+
   dxddy = inv_detJ*(pfy[0]*(xvel[0] - xvel[6])
-		    + pfy[1]*(xvel[1] - xvel[7])
-		    + pfy[2]*(xvel[2] - xvel[4])
-		    + pfy[3]*(xvel[3] - xvel[5]));
-  
+            + pfy[1]*(xvel[1] - xvel[7])
+            + pfy[2]*(xvel[2] - xvel[4])
+            + pfy[3]*(xvel[3] - xvel[5]));
+
   dzddx = inv_detJ*(pfx[0]*(zvel[0] - zvel[6])
-		    + pfx[1]*(zvel[1] - zvel[7])
-		    + pfx[2]*(zvel[2] - zvel[4])
-		    + pfx[3]*(zvel[3] - zvel[5]));
+            + pfx[1]*(zvel[1] - zvel[7])
+            + pfx[2]*(zvel[2] - zvel[4])
+            + pfx[3]*(zvel[3] - zvel[5]));
 
   dxddz = inv_detJ*(pfz[0]*(xvel[0]-xvel[6])
-		    + pfz[1]*(xvel[1]-xvel[7])
-		    + pfz[2]*(xvel[2]-xvel[4])
-		    + pfz[3]*(xvel[3]-xvel[5]));
-  
+            + pfz[1]*(xvel[1]-xvel[7])
+            + pfz[2]*(xvel[2]-xvel[4])
+            + pfz[3]*(xvel[3]-xvel[5]));
+
   dzddy = inv_detJ*(pfy[0]*(zvel[0]-zvel[6])
-		    + pfy[1]*(zvel[1]-zvel[7])
-		    + pfy[2]*(zvel[2]-zvel[4])
-		    + pfy[3]*(zvel[3]-zvel[5]));
-  
+            + pfy[1]*(zvel[1]-zvel[7])
+            + pfy[2]*(zvel[2]-zvel[4])
+            + pfy[3]*(zvel[3]-zvel[5]));
+
   dyddz = inv_detJ*(pfz[0]*(yvel[0] - yvel[6])
-		    + pfz[1]*(yvel[1] - yvel[7])
-		    + pfz[2]*(yvel[2] - yvel[4])
-		    + pfz[3]*(yvel[3] - yvel[5]));
-  
+            + pfz[1]*(yvel[1] - yvel[7])
+            + pfz[2]*(yvel[2] - yvel[4])
+            + pfz[3]*(yvel[3] - yvel[5]));
+
   d[5] = 0.5*(dxddy + dyddx);
   d[4] = 0.5*(dxddz + dzddx);
   d[3] = 0.5*(dzddy + dyddz);
 }
 
 void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
-				     double *xd, double *yd, double *zd, 
-				     double *volo, double *vnew, double *delv_xi,
-				     double *delv_eta, double *delv_zeta, 
-				     double *delx_xi, double *delx_eta, double *delx_zeta,
-				     int *nodelist, int numElem)
+                     double *xd, double *yd, double *zd,
+                     double *volo, double *vnew, double *delv_xi,
+                     double *delv_eta, double *delv_zeta,
+                     double *delx_xi, double *delx_eta, double *delx_zeta,
+                     int *nodelist, int numElem)
 {
 #define SUM4(a,b,c,d) (a + b + c + d)
   const double ptiny = 1.e-36;
@@ -1206,7 +1206,7 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double x5 = x[n5];
     double x6 = x[n6];
     double x7 = x[n7];
-    
+
     double y0 = y[n0];
     double y1 = y[n1];
     double y2 = y[n2];
@@ -1215,7 +1215,7 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double y5 = y[n5];
     double y6 = y[n6];
     double y7 = y[n7];
-    
+
     double z0 = z[n0];
     double z1 = z[n1];
     double z2 = z[n2];
@@ -1224,7 +1224,7 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double z5 = z[n5];
     double z6 = z[n6];
     double z7 = z[n7];
-    
+
     double xv0 = xd[n0];
     double xv1 = xd[n1];
     double xv2 = xd[n2];
@@ -1233,7 +1233,7 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double xv5 = xd[n5];
     double xv6 = xd[n6];
     double xv7 = xd[n7];
-    
+
     double yv0 = yd[n0];
     double yv1 = yd[n1];
     double yv2 = yd[n2];
@@ -1251,7 +1251,7 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double zv5 = zd[n5];
     double zv6 = zd[n6];
     double zv7 = zd[n7];
-    
+
     double vol = volo[i]*vnew[i];
     double norm = 1.0/(vol + ptiny);
 
@@ -1262,17 +1262,17 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     double dxi = 0.25*(SUM4(x1,x2,x6,x5) - SUM4(x0,x3,x7,x4));
     double dyi = 0.25*(SUM4(y1,y2,y6,y5) - SUM4(y0,y3,y7,y4));
     double dzi = 0.25*(SUM4(z1,z2,z6,z5) - SUM4(z0,z3,z7,z4));
-    
+
     double dxk = 0.25*(SUM4(x4,x5,x6,x7) - SUM4(x0,x1,x2,x3));
     double dyk = 0.25*(SUM4(y4,y5,y6,y7) - SUM4(y0,y1,y2,y3));
     double dzk = 0.25*(SUM4(z4,z5,z6,z7) - SUM4(z0,z1,z2,z3));
 
-    // find delvk and delxk ( i cross j ) 
-    
+    // find delvk and delxk ( i cross j )
+
     ax = dyi*dzj - dzi*dyj;
     ay = dzi*dxj - dxi*dzj;
     az = dxi*dyj - dyi*dxj;
-    
+
     delx_zeta[i] = vol/sqrt(ax*ax + ay*ay + az*az + ptiny);
 
     ax *= norm;
@@ -1282,10 +1282,10 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     dxv = 0.25*(SUM4(xv4,xv5,xv6,xv7) - SUM4(xv0,xv1,xv2,xv3));
     dyv = 0.25*(SUM4(yv4,yv5,yv6,yv7) - SUM4(yv0,yv1,yv2,yv3));
     dzv = 0.25*(SUM4(zv4,zv5,zv6,zv7) - SUM4(zv0,zv1,zv2,zv3));
-    
+
     delv_zeta[i] = ax*dxv + ay*dyv + az*dzv;
 
-    // find delxi and delvi ( j cross k ) 
+    // find delxi and delvi ( j cross k )
 
     ax = dyj*dzk - dzj*dyk;
     ay = dzj*dxk - dxj*dzk;
@@ -1303,12 +1303,12 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
 
     delv_xi[i] = ax*dxv + ay*dyv + az*dzv;
 
-    // find delxj and delvj ( k cross i ) 
+    // find delxj and delvj ( k cross i )
 
     ax = dyk*dzi - dzk*dyi;
     ay = dzk*dxi - dxk*dzi;
     az = dxk*dyi - dyk*dxi;
-    
+
     delx_eta[i] = vol/sqrt(ax*ax + ay*ay + az*az + ptiny);
 
     ax *= norm;
@@ -1318,28 +1318,28 @@ void CalcMonotonicQGradientsForElems(double *x, double *y, double *z,
     dxv = -0.25*(SUM4(xv0,xv1,xv5,xv4) - SUM4(xv3,xv2,xv6,xv7));
     dyv = -0.25*(SUM4(yv0,yv1,yv5,yv4) - SUM4(yv3,yv2,yv6,yv7));
     dzv = -0.25*(SUM4(zv0,zv1,zv5,zv4) - SUM4(zv3,zv2,zv6,zv7));
-    
+
     delv_eta[i] = ax*dxv + ay*dyv + az*dzv;
   }
 #undef SUM4
 }
 
 void CalcMonotonicQRegionForElems(int *matElemlist, int *elemBC, int *lxim, int *lxip,
-				  int *letam, int *letap, int *lzetam, int *lzetap, 
-				  double *delv_xi, double *delv_eta, double *delv_zeta,
-				  double *delx_xi, double *delx_eta, double *delx_zeta,
-				  double *vdov, double *volo, double *vnew, 
-				  double *elemMass, double *qq, double *ql, 
-				  double qlc_monoq, double qqc_monoq, double monoq_limiter_mult,
-				  double monoq_max_slope, double ptiny, int numElem)
+                  int *letam, int *letap, int *lzetam, int *lzetap,
+                  double *delv_xi, double *delv_eta, double *delv_zeta,
+                  double *delx_xi, double *delx_eta, double *delx_zeta,
+                  double *vdov, double *volo, double *vnew,
+                  double *elemMass, double *qq, double *ql,
+                  double qlc_monoq, double qqc_monoq, double monoq_limiter_mult,
+                  double monoq_max_slope, double ptiny, int numElem)
 {
-  int ielem; 
+  int ielem;
   for (ielem = 0; ielem < numElem; ielem++) {
-    double qlin, qquad; 
-    double phixi, phieta, phizeta; 
-    int i = matElemlist[ielem]; 
-    int bcMask = elemBC[i]; 
-    double delvm, delvp; 
+    double qlin, qquad;
+    double phixi, phieta, phizeta;
+    int i = matElemlist[ielem];
+    int bcMask = elemBC[i];
+    double delvm = 0.0, delvp = 0.0;
 
     // phixi
     double norm = 1.0/(delv_xi[i] + ptiny);
@@ -1370,7 +1370,7 @@ void CalcMonotonicQRegionForElems(int *matElemlist, int *elemBC, int *lxim, int 
 
     if (delvm < phixi) phixi = delvm;
     if (delvp < phixi) phixi = delvp;
-    if (phixi < 0.0) phixi = 0.0; 
+    if (phixi < 0.0) phixi = 0.0;
     if (phixi > monoq_max_slope) phixi = monoq_max_slope;
 
     // phieta
@@ -1394,18 +1394,18 @@ void CalcMonotonicQRegionForElems(int *matElemlist, int *elemBC, int *lxim, int 
 
     delvm = delvm*norm;
     delvp = delvp*norm;
-    
+
     phieta = 0.5*(delvm + delvp);
-    
+
     delvm *= monoq_limiter_mult;
     delvp *= monoq_limiter_mult;
-    
+
     if (delvm  < phieta) phieta = delvm;
     if (delvp  < phieta ) phieta = delvp;
     if (phieta < 0.0) phieta = 0.0;
     if (phieta > monoq_max_slope)  phieta = monoq_max_slope;
 
-    //  phizeta     
+    //  phizeta
     norm = 1.0/(delv_zeta[i] + ptiny);
 
     switch (bcMask & ZETA_M) {
@@ -1426,39 +1426,39 @@ void CalcMonotonicQRegionForElems(int *matElemlist, int *elemBC, int *lxim, int 
 
     delvm = delvm*norm;
     delvp = delvp*norm;
-    
+
     phizeta = 0.5*(delvm + delvp);
-    
+
     delvm *= monoq_limiter_mult;
     delvp *= monoq_limiter_mult;
-    
+
     if (delvm < phizeta) phizeta = delvm;
     if (delvp < phizeta) phizeta = delvp;
     if (phizeta < 0.0) phizeta = 0.0;
     if (phizeta > monoq_max_slope) phizeta = monoq_max_slope;
 
-    // Remove length scale 
+    // Remove length scale
     if (vdov[i] > 0.0)  {
       qlin = 0.0;
       qquad = 0.0;
     } else {
-      double delvxxi = delv_xi[i]*delx_xi[i]; 
+      double delvxxi = delv_xi[i]*delx_xi[i];
       double delvxeta = delv_eta[i]*delx_eta[i];
       double delvxzeta = delv_zeta[i]*delx_zeta[i];
 
       if (delvxxi   > 0.0) delvxxi   = 0.0;
       if (delvxeta  > 0.0) delvxeta  = 0.0;
       if (delvxzeta > 0.0) delvxzeta = 0.0;
-      
+
       double rho = elemMass[i]/(volo[i]*vnew[i]);
-      
+
       qlin = -qlc_monoq*rho*
-	(delvxxi*(1.0 - phixi) + delvxeta*(1.0 - phieta) + delvxzeta*(1.0 - phizeta)); 
+    (delvxxi*(1.0 - phixi) + delvxeta*(1.0 - phieta) + delvxzeta*(1.0 - phizeta));
 
       qquad = qqc_monoq*rho*
-	(delvxxi*delvxxi*(1.0 - phixi*phixi) + 
-	 delvxeta*delvxeta*(1.0 - phieta*phieta) + 
-	 delvxzeta*delvxzeta*(1.0 - phizeta*phizeta));
+    (delvxxi*delvxxi*(1.0 - phixi*phixi) +
+     delvxeta*delvxeta*(1.0 - phieta*phieta) +
+     delvxzeta*delvxzeta*(1.0 - phizeta*phizeta));
     }
 
     qq[i] = qquad;
@@ -1468,27 +1468,27 @@ void CalcMonotonicQRegionForElems(int *matElemlist, int *elemBC, int *lxim, int 
 
 void CalcMonotonicQForElems(Domain *domain)
 {
-  int numElem = domain->numElem; 
+  int numElem = domain->numElem;
   if (numElem > 0) {
     const double ptiny = 1.0e-36;
 
     CalcMonotonicQRegionForElems(domain->matElemlist, domain->elemBC, domain->lxim,
-				 domain->lxip, domain->letam, domain->letap, 
-				 domain->lzetam, domain->lzetap, domain->delv_xi, 
-				 domain->delv_eta, domain->delv_zeta, domain->delx_xi, 
-				 domain->delx_eta, domain->delx_zeta, domain->vdov, 
-				 domain->volo, domain->vnew, domain->elemMass, 
-				 domain->qq, domain->ql, domain->qlc_monoq, domain->qqc_monoq,
-				 domain->monoq_limiter_mult, domain->monoq_max_slope, 
-				 ptiny, numElem);
+                 domain->lxip, domain->letam, domain->letap,
+                 domain->lzetam, domain->lzetap, domain->delv_xi,
+                 domain->delv_eta, domain->delv_zeta, domain->delx_xi,
+                 domain->delx_eta, domain->delx_zeta, domain->vdov,
+                 domain->volo, domain->vnew, domain->elemMass,
+                 domain->qq, domain->ql, domain->qlc_monoq, domain->qqc_monoq,
+                 domain->monoq_limiter_mult, domain->monoq_max_slope,
+                 ptiny, numElem);
   }
 }
 
 double CalcElemVolume(const double x[8], const double y[8], const double z[8])
 {
-  double x0 = x[0], x1 = x[1], x2 = x[2], x3 = x[3], x4 = x[4], x5 = x[5], x6 = x[6], x7 = x[7], 
-    y0 = y[0], y1 = y[1], y2 = y[2], y3 = y[3], y4 = y[4], y5 = y[5], y6 = y[6], y7 = y[7], 
-    z0 = z[0], z1 = z[1], z2 = z[2], z3 = z[3], z4 = z[4], z5 = z[5], z6 = z[6], z7 = z[7]; 
+  double x0 = x[0], x1 = x[1], x2 = x[2], x3 = x[3], x4 = x[4], x5 = x[5], x6 = x[6], x7 = x[7],
+    y0 = y[0], y1 = y[1], y2 = y[2], y3 = y[3], y4 = y[4], y5 = y[5], y6 = y[6], y7 = y[7],
+    z0 = z[0], z1 = z[1], z2 = z[2], z3 = z[3], z4 = z[4], z5 = z[5], z6 = z[6], z7 = z[7];
 
   double twelveth = 1.0/12.0;
 
@@ -1556,17 +1556,17 @@ double CalcElemVolume(const double x[8], const double y[8], const double z[8])
 
 #undef TRIPLE_PRODUCT
 
-  volume *= twelveth; 
-  return volume; 
+  volume *= twelveth;
+  return volume;
 }
 
 void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
 {
-  int numElem = domain->numElem; 
+  int numElem = domain->numElem;
 
   if (numElem != 0) {
-    int allElem = numElem + 2*domain->sizeX*domain->sizeY + 
-      2*domain->sizeX*domain->sizeZ + 2*domain->sizeY*domain->sizeZ; 
+    int allElem = numElem + 2*domain->sizeX*domain->sizeY +
+      2*domain->sizeX*domain->sizeZ + 2*domain->sizeY*domain->sizeZ;
 
     //domain->delv_xi = malloc(sizeof(double)*allElem);
     //domain->delv_eta = malloc(sizeof(double)*allElem);
@@ -1576,12 +1576,12 @@ void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
     //domain->delx_eta = malloc(sizeof(double)*numElem);
     //domain->delx_zeta = malloc(sizeof(double)*numElem);
 
-    CalcMonotonicQGradientsForElems(domain->x, domain->y, domain->z, 
-				    domain->xd, domain->yd, domain->zd, 
-				    domain->volo, domain->vnew, domain->delv_xi, 
-				    domain->delv_eta, domain->delv_zeta, 
-				    domain->delx_xi, domain->delx_eta, domain->delx_zeta,
-				    domain->nodelist, domain->numElem);
+    CalcMonotonicQGradientsForElems(domain->x, domain->y, domain->z,
+                    domain->xd, domain->yd, domain->zd,
+                    domain->volo, domain->vnew, domain->delv_xi,
+                    domain->delv_eta, domain->delv_zeta,
+                    domain->delx_xi, domain->delx_eta, domain->delx_zeta,
+                    domain->nodelist, domain->numElem);
 
     MonoQ(local,domain,epoch);
     hpx_lco_wait(domain->monoq_and[epoch % 2]);
@@ -1601,26 +1601,26 @@ void CalcQForElems(hpx_addr_t local,Domain *domain,unsigned long epoch)
     int i, idx = -1;
     for (i = 0; i < numElem; i++) {
       if (domain->q[i] > qstop) {
-	idx = i; 
-	break;
+    idx = i;
+    break;
       }
     }
 
     if (idx >= 0) {
       // need an abort here, temporarily using exit function
-      printf("rank %d: CalcQForElems exit(-1) at cycle %d\n", 
-	     domain->rank, domain->cycle);     
+      printf("rank %d: CalcQForElems exit(-1) at cycle %d\n",
+         domain->rank, domain->cycle);
       exit(-1);
     }
   }
 }
 
-void CalcPressureForElems(double *p_new, double *bvc, double *pbvc, double *e_old, 
-			  double *compression, double *vnewc, double pmin, double p_cut,
-			  double eosvmax, int length)
+void CalcPressureForElems(double *p_new, double *bvc, double *pbvc, double *e_old,
+              double *compression, double *vnewc, double pmin, double p_cut,
+              double eosvmax, int length)
 {
   double c1s = 2.0/3.0;
-  int i; 
+  int i;
   for (i = 0; i < length; i++) {
     bvc[i] = c1s*(compression[i] + 1.0);
     pbvc[i] = c1s;
@@ -1629,7 +1629,7 @@ void CalcPressureForElems(double *p_new, double *bvc, double *pbvc, double *e_ol
   for (i = 0; i < length; i++) {
     p_new[i] = bvc[i]*e_old[i];
 
-    if (fabs(p_new[i]) < p_cut) 
+    if (fabs(p_new[i]) < p_cut)
       p_new[i] = 0.0;
 
     if (vnewc[i] >= eosvmax)
@@ -1641,10 +1641,10 @@ void CalcPressureForElems(double *p_new, double *bvc, double *pbvc, double *e_ol
 }
 
 void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc, double *pbvc,
-			double *p_old, double *e_old, double *q_old, double *compression,
-			double *compHalfStep, double *vnewc, double *work, double *delvc, 
-			double pmin, double p_cut, double e_cut, double q_cut, double emin,
-			double *qq_old, double *ql_old, double rho0, double eosvmax, int length)
+            double *p_old, double *e_old, double *q_old, double *compression,
+            double *compHalfStep, double *vnewc, double *work, double *delvc,
+            double pmin, double p_cut, double e_cut, double q_cut, double emin,
+            double *qq_old, double *ql_old, double rho0, double eosvmax, int length)
 {
   const double sixth = 1.0/6.0;
   double *pHalfStep = malloc(sizeof(double)*length);
@@ -1653,12 +1653,12 @@ void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc
   for (i = 0; i < length; i++) {
     e_new[i] = e_old[i] - 0.5*delvc[i]*(p_old[i] + q_old[i]) + 0.5*work[i];
 
-    if (e_new[i] < emin) 
+    if (e_new[i] < emin)
       e_new[i] = emin;
   }
 
-  CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc, pmin, 
-		       p_cut, eosvmax, length);
+  CalcPressureForElems(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc, pmin,
+               p_cut, eosvmax, length);
 
   for (i = 0; i < length; i++) {
     double vhalf = 1.0/(1.0 + compHalfStep[i]);
@@ -1669,9 +1669,9 @@ void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc
       double ssc = (pbvc[i]*e_new[i] + vhalf*vhalf*bvc[i]*pHalfStep[i])/rho0;
 
       if (ssc <= 1.111111e-36) {
-	ssc = .333333e-18;
+    ssc = .333333e-18;
       } else {
-	ssc = sqrt(ssc);
+    ssc = sqrt(ssc);
       }
 
       q_new[i] = (ssc*ql_old[i] + qq_old[i]);
@@ -1683,18 +1683,18 @@ void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc
   for (i = 0; i < length; i++) {
     e_new[i] += 0.5*work[i];
 
-    if (fabs(e_new[i]) < e_cut) 
+    if (fabs(e_new[i]) < e_cut)
       e_new[i] = 0.0;
 
     if (e_new[i] < emin)
       e_new[i] = emin;
   }
 
-  CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc, pmin, 
-		       p_cut, eosvmax, length);
+  CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc, pmin,
+               p_cut, eosvmax, length);
 
   for (i = 0; i < length; i++) {
-    double q_tilde; 
+    double q_tilde;
 
     if (delvc[i] > 0.0) {
       q_tilde = 0.0;
@@ -1702,9 +1702,9 @@ void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc
       double ssc = (pbvc[i]*e_new[i] + vnewc[i]*vnewc[i]*bvc[i]*p_new[i])/rho0;
 
       if (ssc <= 1.111111e-36) {
-	ssc = .333333e-18;
+    ssc = .333333e-18;
       } else {
-	ssc = sqrt(ssc);
+    ssc = sqrt(ssc);
       }
 
       q_tilde = (ssc*ql_old[i] + qq_old[i]);
@@ -1713,43 +1713,43 @@ void CalcEnergyForElems(double *p_new, double *e_new, double *q_new, double *bvc
     e_new[i] = e_new[i] - delvc[i]*sixth*
       (7.0*(p_old[i] + q_old[i]) - 8.0*(pHalfStep[i] + q_new[i]) + (p_new[i] + q_tilde));
 
-    if (fabs(e_new[i]) < e_cut) 
+    if (fabs(e_new[i]) < e_cut)
       e_new[i] = 0.0;
 
     if (e_new[i] < emin)
       e_new[i] = emin;
   }
 
-  CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc, pmin, 
-		       p_cut, eosvmax, length);
+  CalcPressureForElems(p_new, bvc, pbvc, e_new, compression, vnewc, pmin,
+               p_cut, eosvmax, length);
 
   for (i = 0; i < length; i++) {
     if (delvc[i] <= 0.0) {
       double ssc = (pbvc[i]*e_new[i] + vnewc[i]*vnewc[i]*bvc[i]*p_new[i])/rho0;
 
       if (ssc <= 1.111111e-36) {
-	ssc = .333333e-18;
+    ssc = .333333e-18;
       } else {
-	ssc = sqrt(ssc);
+    ssc = sqrt(ssc);
       }
 
       q_new[i] = (ssc*ql_old[i] + qq_old[i]);
 
-      if (fabs(q_new[i]) < q_cut) 
-	q_new[i] = 0.0;
+      if (fabs(q_new[i]) < q_cut)
+    q_new[i] = 0.0;
     }
   }
 
   free(pHalfStep);
 }
 
-void CalcSoundSpeedForElems(int *matElemlist, double *ss, double *vnewc, double rho0, 
-			    double *enewc, double *pnewc, double *pbvc, double *bvc, 
-			    double ss4o3, int nz)
+void CalcSoundSpeedForElems(int *matElemlist, double *ss, double *vnewc, double rho0,
+                double *enewc, double *pnewc, double *pbvc, double *bvc,
+                double ss4o3, int nz)
 {
   int i;
   for (i = 0; i < nz; i++) {
-    int iz = matElemlist[i]; 
+    int iz = matElemlist[i];
     double ssTmp = (pbvc[i]*enewc[i] + vnewc[i]*vnewc[i]*bvc[i]*pnewc[i])/rho0;
 
     if (ssTmp <= 1.111111e-36) {
@@ -1766,7 +1766,7 @@ void EvalEOSForElems(Domain *domain, double *vnewc, int numElem)
   double e_cut = domain->e_cut;
   double p_cut = domain->p_cut;
   double ss4o3 = domain->ss4o3;
-  double q_cut = domain->q_cut; 
+  double q_cut = domain->q_cut;
 
   double eosvmax = domain->eosvmax;
   double eosvmin = domain->eosvmin;
@@ -1789,7 +1789,7 @@ void EvalEOSForElems(Domain *domain, double *vnewc, int numElem)
   double *bvc = malloc(sizeof(double)*numElem);
   double *pbvc = malloc(sizeof(double)*numElem);
 
-  int i; 
+  int i;
   for (i = 0; i < numElem; i++) {
     int zidx = domain->matElemlist[i];
     e_old[i] = domain->e[zidx];
@@ -1810,7 +1810,7 @@ void EvalEOSForElems(Domain *domain, double *vnewc, int numElem)
   if (eosvmin != 0.0) {
     for (i = 0; i < numElem; i++) {
       if (vnewc[i] <= eosvmin) {
-	compHalfStep[i] = compression[i];
+    compHalfStep[i] = compression[i];
       }
     }
   }
@@ -1818,20 +1818,20 @@ void EvalEOSForElems(Domain *domain, double *vnewc, int numElem)
   if (eosvmax != 0.0) {
     for (i = 0; i < numElem; i++) {
       if (vnewc[i] >= eosvmax) {
-	p_old[i] = 0.0;
-	compression[i] = 0.0;
-	compHalfStep[i] = 0.0;
+    p_old[i] = 0.0;
+    compression[i] = 0.0;
+    compHalfStep[i] = 0.0;
       }
     }
   }
 
-  for (i = 0; i < numElem; i++) 
+  for (i = 0; i < numElem; i++)
     work[i] = 0.0;
 
-  CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, 
-		     compression, compHalfStep, vnewc, work, delvc, pmin, 
-		     p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, 
-		     eosvmax, numElem);
+  CalcEnergyForElems(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old,
+             compression, compHalfStep, vnewc, work, delvc, pmin,
+             p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0,
+             eosvmax, numElem);
 
   for (i = 0; i < numElem; i++) {
     int zidx = domain->matElemlist[i];
@@ -1840,8 +1840,8 @@ void EvalEOSForElems(Domain *domain, double *vnewc, int numElem)
     domain->q[zidx] = q_new[i];
   }
 
-  CalcSoundSpeedForElems(domain->matElemlist, domain->ss, vnewc, rho0, 
-			 e_new, p_new, pbvc, bvc, ss4o3, numElem);
+  CalcSoundSpeedForElems(domain->matElemlist, domain->ss, vnewc, rho0,
+             e_new, p_new, pbvc, bvc, ss4o3, numElem);
 
   free(pbvc);
   free(bvc);
@@ -1876,15 +1876,15 @@ void ApplyMaterialPropertiesForElems(Domain *domain)
 
     if (eosvmin != 0.0) {
       for (i = 0; i < numElem; i++) {
-	if (vnewc[i] < eosvmin)
-	  vnewc[i] = eosvmin;
+    if (vnewc[i] < eosvmin)
+      vnewc[i] = eosvmin;
       }
     }
 
     if (eosvmax != 0.0) {
       for (i = 0; i < numElem; i++) {
-	if (vnewc[i] > eosvmax)
-	  vnewc[i] = eosvmax;
+    if (vnewc[i] > eosvmax)
+      vnewc[i] = eosvmax;
       }
     }
 
@@ -1893,20 +1893,20 @@ void ApplyMaterialPropertiesForElems(Domain *domain)
       double vc = domain->v[zn];
 
       if (eosvmin != 0.0) {
-	if (vc < eosvmin) 
-	  vc = eosvmin;
+    if (vc < eosvmin)
+      vc = eosvmin;
       }
 
       if (eosvmax != 0.0) {
-	if (vc > eosvmax)
-	  vc = eosvmax;
+    if (vc > eosvmax)
+      vc = eosvmax;
       }
 
       if (vc <= 0.0) {
-	// need an abort here, temporarily using exit function
-	printf("rank %d: ApplyMaterialProperties exit(-1) at cycle %d\n", 
-	       domain->rank, domain->cycle);      	
-	exit(-1);
+    // need an abort here, temporarily using exit function
+    printf("rank %d: ApplyMaterialProperties exit(-1) at cycle %d\n",
+           domain->rank, domain->cycle);
+    exit(-1);
       }
     }
 
@@ -1921,10 +1921,10 @@ void UpdateVolumesForElems(double *vnew, double *v, double v_cut, int length)
   if (length != 0) {
     int i;
     for (i = 0; i < length; i++) {
-      double tmpV = vnew[i]; 
+      double tmpV = vnew[i];
 
-      if (fabs(tmpV - 1.0) < v_cut) 
-	tmpV = 1.0;
+      if (fabs(tmpV - 1.0) < v_cut)
+    tmpV = 1.0;
 
       v[i] = tmpV;
     }
@@ -1934,17 +1934,17 @@ void UpdateVolumesForElems(double *vnew, double *v, double v_cut, int length)
 
 void CalcTimeConstraintsForElems(Domain *domain)
 {
-  CalcCourantConstraintForElems(domain->matElemlist, domain->ss, 
-				domain->vdov, domain->arealg, domain->qqc, 
-				domain->numElem, &domain->dtcourant);
+  CalcCourantConstraintForElems(domain->matElemlist, domain->ss,
+                domain->vdov, domain->arealg, domain->qqc,
+                domain->numElem, &domain->dtcourant);
 
-  CalcHydroConstraintForElems(domain->matElemlist, domain->vdov, 
-			      domain->dvovmax, domain->numElem, &domain->dthydro);
+  CalcHydroConstraintForElems(domain->matElemlist, domain->vdov,
+                  domain->dvovmax, domain->numElem, &domain->dthydro);
 }
 
 
 void CalcCourantConstraintForElems(int *matElemlist, double *ss, double *vdov, double *arealg,
-				   double qqc, int length, double *dtcourant)
+                   double qqc, int length, double *dtcourant)
 {
   double dtcourant_tmp = 1.0e+20;
   int courant_elem = -1;
@@ -1963,8 +1963,8 @@ void CalcCourantConstraintForElems(int *matElemlist, double *ss, double *vdov, d
 
     if (vdov[indx] != 0.0) {
       if (dtf < dtcourant_tmp) {
-	dtcourant_tmp = dtf;
-	courant_elem = indx;
+    dtcourant_tmp = dtf;
+    courant_elem = indx;
       }
     }
   }
@@ -1974,21 +1974,21 @@ void CalcCourantConstraintForElems(int *matElemlist, double *ss, double *vdov, d
   }
 }
 
-void CalcHydroConstraintForElems(int *matElemlist, double *vdov, double dvovmax, 
-				 int length, double *dthydro)
+void CalcHydroConstraintForElems(int *matElemlist, double *vdov, double dvovmax,
+                 int length, double *dthydro)
 {
   double dthydro_tmp = 1.0e+20;
   int hydro_elem = -1;
 
-  int i; 
+  int i;
   for (i = 0; i < length; i++) {
     int indx = matElemlist[i];
 
     if (vdov[indx] != 0.0) {
       double dtdvov = dvovmax/(fabs(vdov[indx]) + 1.0e-20);
       if (dthydro_tmp > dtdvov) {
-	dthydro_tmp = dtdvov;
-	hydro_elem = indx;
+    dthydro_tmp = dtdvov;
+    hydro_elem = indx;
       }
     }
   }
