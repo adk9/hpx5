@@ -131,15 +131,6 @@ static inline hpx_parcel_t *network_probe(struct network *network, int nrx) {
 }
 
 
-/// Used by the progress engine.
-hpx_parcel_t *network_tx_dequeue(struct network *network)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
-int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
-
-
 /// Set the network's flush-on-shutdown flag.
 ///
 /// Normally the network progress engine will cancel outstanding requests when
@@ -152,6 +143,15 @@ int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
 static inline void network_flush_on_shutdown(struct network *network) {
   network->set_flush(network);
 }
+
+
+/// Used by the progress engine.
+hpx_parcel_t *network_tx_dequeue(struct network *network)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
+int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
 #endif // LIBHPX_NETWORK_H

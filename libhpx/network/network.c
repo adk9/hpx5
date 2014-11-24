@@ -223,18 +223,11 @@ static void _set_flush(struct network *o) {
 }
 
 
-void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
-  assert(false);
-}
-
-
 int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
   struct _network *network = (struct _network*)o;
   _QUEUE_ENQUEUE(&network->rx, p);
   return 1;
 }
-
-
 
 
 struct network *network_new(libhpx_network_t type, int nrx) {
