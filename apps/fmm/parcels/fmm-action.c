@@ -2998,7 +2998,7 @@ int _multipole_to_target_action(void *args) {
   double *input = (double *) args;
 
   int level = sbox->level;
-  int pgsz      = fmm_param->pgsz;
+  // int pgsz      = fmm_param->pgsz;
   int pterms    = fmm_param->pterms;
   double *ytopc = fmm_param->ytopc;
   double *ytopcs = fmm_param->ytopcs;
