@@ -437,7 +437,7 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   char* eth_dev;
   char* ib_dev;
   char* backend;
-  int ib_port;
+  // int ib_port;
   int use_cma;
   int ledger_entries = -1;  // default is 64
   int val = 0;
