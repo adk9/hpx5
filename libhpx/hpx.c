@@ -35,7 +35,6 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
-#include "libhpx/newfuture.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
