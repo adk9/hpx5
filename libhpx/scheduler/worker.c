@@ -43,7 +43,6 @@
 
 static __thread struct worker *self = NULL;
 
-
 /// The pthread entry function for dedicated worker threads.
 ///
 /// This is used by worker_create().
