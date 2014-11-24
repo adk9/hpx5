@@ -36,7 +36,19 @@ struct network {
   void (*barrier)(struct network *)
     HPX_NON_NULL(1);
 
-  int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t complete)
+  int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t local)
+    HPX_NON_NULL(1, 2);
+
+  int (*pwc)(struct network *, hpx_addr_t to, void *from, size_t n,
+             hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+    HPX_NON_NULL(1);
+
+  int (*put)(struct network *, hpx_addr_t to, void *from, size_t n,
+             hpx_addr_t local, hpx_addr_t remote)
+    HPX_NON_NULL(1);
+
+  int (*get)(struct network *, void *to, hpx_addr_t from, size_t n,
+             hpx_addr_t local)
     HPX_NON_NULL(1, 2);
 
   hpx_parcel_t *(*probe)(struct network *, int nrx)
@@ -122,6 +134,73 @@ static inline void network_barrier(struct network *network) {
 /// @returns            LIBHPX_OK
 static inline int network_send(struct network *network, hpx_parcel_t *p) {
   return network->send(network, p, HPX_NULL);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// Furthermore, it will generate a remote completion event encoding (@p op,
+/// @to) at the locality at which @to is currently mapped, allowing two-sided
+/// active-message semantics.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param        local An LCO to signal local completion.
+/// @param       remote An LCO to signal remote completion.
+/// @param           op The remote completion event.
+///
+/// @returns            LIBHPX_OK
+static inline int network_pwc(struct network *network,
+                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t local, hpx_addr_t remote,
+                              hpx_action_t op) {
+  return network->pwc(network, to, from, n, local, remote, op);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param        local An LCO to signal local completion.
+/// @param       remote An LCO to signal remote completion.
+///
+/// @returns            LIBHPX_OK
+static inline int network_put(struct network *network,
+                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t local, hpx_addr_t remote) {
+  return network->put(network, to, from, n, local, remote);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be accessed.
+///
+/// @param      network The network instance to use.
+/// @param           to The local target for the get.
+/// @param         from The global source for the get.
+/// @param            n The number of bytes to get.
+/// @param        local An LCO to signal local completion.
+///
+/// @returns            LIBHPX_OK
+static inline int network_get(struct network *network,
+                              void *to, hpx_addr_t from, size_t n,
+                              hpx_addr_t local) {
+  return network->get(network, to, from, n, local);
 }
 
 
