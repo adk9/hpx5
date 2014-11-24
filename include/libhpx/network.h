@@ -35,6 +35,9 @@ struct network {
 
   void (*barrier)(struct network *)
     HPX_NON_NULL(1);
+
+  int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t complete)
+    HPX_NON_NULL(1, 2);
 };
 
 
@@ -109,8 +112,9 @@ static inline void network_barrier(struct network *network) {
 ///
 /// @param      network The network to use for the send.
 /// @param            p The parcel to send.
-void network_tx_enqueue(struct network *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+static inline int network_send(struct network *network, hpx_parcel_t *p) {
+  return network->send(network, p, HPX_NULL);
+}
 
 
 /// Probe for received parcels.

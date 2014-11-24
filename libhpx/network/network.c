@@ -75,7 +75,7 @@ struct _network {
 
 
 static void *_progress(void *o) {
-  //system_set_affinity(pthread_self(), 0);
+  // system_set_affinity(pthread_self(), 0);
 
   struct _network *network = o;
 
@@ -198,9 +198,10 @@ static void _barrier(struct network *o) {
 }
 
 
-void network_tx_enqueue(struct network *o, hpx_parcel_t *p) {
+static int _send(struct network *o, hpx_parcel_t *p, hpx_addr_t complete) {
   struct _network *network = (struct _network*)o;
   _QUEUE_ENQUEUE(&network->tx, p);
+  return LIBHPX_OK;
 }
 
 
@@ -248,6 +249,7 @@ struct network *network_new(libhpx_network_t type, int nrx) {
   n->vtable.startup = _startup;
   n->vtable.shutdown = _shutdown;
   n->vtable.barrier = _barrier;
+  n->vtable.send = _send;
 
   n->transport = here->transport;
   sync_store(&n->flush, 0, SYNC_RELEASE);
