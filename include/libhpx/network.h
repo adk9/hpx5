@@ -38,6 +38,9 @@ struct network {
 
   int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t complete)
     HPX_NON_NULL(1, 2);
+
+  hpx_parcel_t *(*probe)(struct network *, int nrx)
+    HPX_NON_NULL(1);
 };
 
 
@@ -118,8 +121,9 @@ static inline int network_send(struct network *network, hpx_parcel_t *p) {
 
 
 /// Probe for received parcels.
-hpx_parcel_t *network_rx_dequeue(struct network *network, int nrx)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+static inline hpx_parcel_t *network_probe(struct network *network, int nrx) {
+  return network->probe(network, nrx);
+}
 
 
 /// Used by the progress engine.
