@@ -18,20 +18,20 @@
 #define REQUEST_COOK_EAGER   0xdeadfeed
 
 #define REQUEST_OP_DEFAULT   0x00
-#define REQUEST_OP_SENDBUF   1<<1
-#define REQUEST_OP_SENDREQ   1<<2
-#define REQUEST_OP_SENDFIN   1<<3
-#define REQUEST_OP_RECVBUF   1<<4
-#define REQUEST_OP_PWC       1<<5
+#define REQUEST_OP_SENDBUF   (1<<1)
+#define REQUEST_OP_SENDREQ   (1<<2)
+#define REQUEST_OP_SENDFIN   (1<<3)
+#define REQUEST_OP_RECVBUF   (1<<4)
+#define REQUEST_OP_PWC       (1<<5)
 
 #define REQUEST_FLAG_NIL     0x00
-#define REQUEST_FLAG_FIN     1<<1
-#define REQUEST_FLAG_EAGER   1<<2
-#define REQUEST_FLAG_EDONE   1<<3
-#define REQUEST_FLAG_LDONE   1<<4
-#define REQUEST_FLAG_USERID  1<<5
-#define REQUEST_FLAG_1PWC    1<<6
-#define REQUEST_FLAG_2PWC    1<<7
+#define REQUEST_FLAG_FIN     (1<<1)
+#define REQUEST_FLAG_EAGER   (1<<2)
+#define REQUEST_FLAG_EDONE   (1<<3)
+#define REQUEST_FLAG_LDONE   (1<<4)
+#define REQUEST_FLAG_USERID  (1<<5)
+#define REQUEST_FLAG_1PWC    (1<<6)
+#define REQUEST_FLAG_2PWC    (1<<7)
 
 #define INC_ENTRY(e)           (e->curr = (e->curr + 1) % e->num_entries)
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
@@ -60,7 +60,8 @@ typedef struct photon_req_table_t {
   uint64_t tail;
   uint64_t cind;
   uint32_t size;
-  struct photon_req_t *reqs;
+  struct photon_req_t  *reqs;
+  struct photon_req_t **req_ptrs;
 } photon_req_table;
 
 typedef struct photon_req_t       * photonRequest;

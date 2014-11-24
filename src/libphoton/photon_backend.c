@@ -155,6 +155,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       goto error_exit_bt;
     }
   }
+  
+  // initialize the pwc request table
+  if (photon_pwc_init() != PHOTON_OK) {
+    goto error_exit_bt;
+  }
 
   dbg_trace("Allocated request structures");
   
@@ -299,6 +304,9 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
 static int _photon_cancel(photon_rid request, int flags) {
   photonRequest req;
+
+  // XX: disable cancel for now
+  return PHOTON_OK;
   
   if (flags & PHOTON_SHUTDOWN) {
     

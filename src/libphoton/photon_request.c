@@ -10,9 +10,8 @@ static int __photon_cleanup_request(photonRequest req);
 photonRequest photon_get_request(int proc) {
   photonRequestTable rt;
   photonRequest      req;
-  uint32_t           req_curr;
+  uint64_t           req_curr, tail;
   uint32_t           req_ind;
-  uint32_t           tail;
 
   assert(proc >= 0 && proc < _photon_nproc);
 
@@ -73,7 +72,7 @@ photonRequest photon_lookup_request(photon_rid rid) {
 
 int photon_count_request(int proc) {
   photonRequestTable rt;
-  uint32_t curr, tail;
+  uint64_t curr, tail;
   if (proc >= 0 && proc < _photon_nproc) {
     rt = photon_processes[proc].request_table;
     tail = sync_load(&rt->tail, SYNC_RELAXED);

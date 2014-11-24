@@ -1,4 +1,5 @@
 #include "photon_event.h"
+#include "photon_pwc.h"
 
 int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
   uint32_t prefix;
@@ -9,7 +10,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
   
   if ((cookie == req->id) && (req->type == EVQUEUE)) {
     req->state = REQUEST_COMPLETED;
-    dbg_trace("set request completed with rid: 0x%016lx", cookie);
+    dbg_trace("Set request completed with rid: 0x%016lx", cookie);
   }
   // handle any other request completions we might get from the backend event queue
   else if (cookie != NULL_COOKIE) {
@@ -18,6 +19,11 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
     if (treq) {
       if (treq->type == EVQUEUE && (--treq->events) == 0) {
 	treq->state = REQUEST_COMPLETED;
+	// handle pwc local completions no found via probe_completion()
+	if (treq->op == REQUEST_OP_PWC) {
+	  photon_pwc_add_req(treq);
+	  dbg_info("Enqueuing PWC local completion");
+	}
 	dbg_trace("Set request completed, rid: 0x%016lx", cookie);
       }
       else {

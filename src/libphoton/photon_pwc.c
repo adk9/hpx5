@@ -2,10 +2,65 @@
 #include <string.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "photon_backend.h"
 #include "photon_buffertable.h"
+#include "photon_event.h"
 #include "photon_pwc.h"
+
+static photonRequestTable pwc_table;
+
+int photon_pwc_init() {
+  pwc_table = malloc(sizeof(struct photon_req_table_t));
+  if (!pwc_table) {
+    log_err("Could not allocate PWC request table");
+    goto error_exit;
+  }
+  pwc_table->count = 0;
+  pwc_table->cind = 0;
+  pwc_table->tail = 0;
+  pwc_table->size = _LEDGER_SIZE;
+  pwc_table->req_ptrs = (photonRequest*)malloc(_LEDGER_SIZE * sizeof(photonRequest));
+  if (!pwc_table->req_ptrs) {
+    log_err("Could not allocate request pointers for PWC table");
+    goto error_exit;
+  }
+  memset(pwc_table->req_ptrs, 0, _LEDGER_SIZE);
+ error_exit:
+  return PHOTON_OK;
+}
+
+int photon_pwc_add_req(photonRequest req) {
+  uint64_t req_curr, tail;
+  int req_ind;
+  req_curr = sync_fadd(&pwc_table->count, 1, SYNC_RELAXED);
+  req_ind = req_curr % pwc_table->size;
+  tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
+  if ((req_curr - tail) > pwc_table->size) {
+    log_err("Exceeded PWC table size: %d", pwc_table->size);
+    return PHOTON_ERROR;
+  }
+  pwc_table->req_ptrs[req_ind] = req;
+  return PHOTON_OK;
+}
+
+photonRequest photon_pwc_pop_req() {
+  uint64_t req_curr, tail;
+  int req_ind;
+  req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
+  tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
+  if (tail < req_curr) {
+    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_RELAXED, SYNC_RELAXED)) {
+      photonRequest req;
+      req_ind = tail % pwc_table->size;
+      req = pwc_table->req_ptrs[req_ind];
+      pwc_table->req_ptrs[req_ind] = NULL;
+      return req;
+    }
+  }
+  return NULL;
+}
 
 int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 				       struct photon_buffer_priv_t priv,
@@ -144,8 +199,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 
 // this guy doesn't actually do any completion (yet?), just does a get and sets up a request with local rid
 int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-				       struct photon_buffer_priv_t priv,
-                                       photon_rid local, int flags) {
+				struct photon_buffer_priv_t priv,
+				photon_rid local, int flags) {
   photonBI db;
   photonRequest req;
   photon_rid cookie;
@@ -170,8 +225,8 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     goto error_exit;
   }
   cookie = req->id;
+  req->op = REQUEST_OP_PWC;
   req->id = local;
-  req->flags = REQUEST_FLAG_USERID;
   req->remote_buffer.buf.addr = (uintptr_t)rptr;
   req->remote_buffer.buf.size = size;
   req->remote_buffer.buf.priv = priv;
@@ -210,6 +265,17 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   else {
     start = proc;
     end = proc+1;
+  }
+  
+  // handle any pwc requests that were popped in some other path
+  req = photon_pwc_pop_req();
+  if (req != NULL) {
+    assert(req->op == REQUEST_OP_PWC);
+    *flag = 1;
+    *request = req->id;
+    dbg_trace("Completed and removing pwc request: 0x%016lx", req->id);
+    photon_free_request(req);
+    return PHOTON_OK;
   }
 
   if (flags & PHOTON_PROBE_EVQ) {
@@ -281,11 +347,23 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   
   // we found something to process
   if (cookie != NULL_COOKIE) {
+    uint32_t prefix;
+    prefix = (uint32_t)(cookie>>32);
+    if (prefix == REQUEST_COOK_EAGER) {
+      return PHOTON_OK;
+    }
+   
     req = photon_lookup_request(cookie);
     if (req) {
+      // allow pwc probe to work with photon_test()
+      if (req->op == REQUEST_OP_SENDBUF) {
+	__photon_handle_cq_event(req, cookie);
+	return PHOTON_OK;
+      }
+      
       // set flag and request only if we have processed the number of outstanding
       // events expected for this reqeust
-      if ( (--req->events) == 0) {
+      if ((req->op == REQUEST_OP_PWC) && (--req->events == 0)) {
 	*flag = 1;
 	*request = req->id;
 	dbg_trace("Completed and removing pwc request: 0x%016lx", cookie);
@@ -294,7 +372,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       }
     }
     else {
-      dbg_trace("Got a CQ event not tracked: 0x%016lx", cookie);
+      dbg_warn("Got a CQ event not tracked: 0x%016lx", cookie);
       goto error_exit;
     }
   }
