@@ -3,7 +3,7 @@
 
 void del_comm_list(int dir, int block_f, int pe, int fcase,Domain *ld)
 {
-   int i, j, k, s_len, r_len, n;
+   int i, j, k, s_len = 0, r_len = 0, n;
 
    if (fcase >= 10)    /* +- direction encoded in fcase */
       i = fcase - 10;
