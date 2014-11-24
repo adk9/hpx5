@@ -91,7 +91,7 @@ void check_buff_size(Domain *ld)
 // used to exchange values for ghost cells.
 void add_comm_list(int dir, int block_f, int pe, int fcase, int pos, int pos1,Domain *ld)
 {
-   int i, j, k, s_len, r_len, *tmp, n;
+   int i, j, k, s_len = 0, r_len = 0, *tmp, n;
 
    /* set indexes for send and recieve to determine length of message:
     * for example, if we send a whole face to a quarter face, we will
