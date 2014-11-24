@@ -85,15 +85,31 @@ static boot_class_t _mpi = {
 
 boot_class_t *boot_new_mpi(void) {
   int init;
-  MPI_Initialized(&init);
-  if (init)
-    return &_mpi;
+  int e = MPI_Initialized(&init);
+  if (e != MPI_SUCCESS) {
+    dbg_error("mpi initialization failed\n");
+    return NULL;
+  }
 
-  if (MPI_Init(0, NULL) == MPI_SUCCESS) {
-    dbg_log_boot("initialized MPI bootstrapper.\n");
+  if (init) {
     return &_mpi;
   }
 
-  dbg_error("initialization failed.\n");
-  return NULL;
+  static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+  int level;
+  e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
+  if (e != MPI_SUCCESS) {
+    dbg_error("mpi initialization failed\n");
+    return NULL;
+  }
+
+  if (level != LIBHPX_THREAD_LEVEL) {
+    dbg_error("MPI thread level failed requested %d, received %d.\n",
+              LIBHPX_THREAD_LEVEL, level);
+    return NULL;
+  }
+
+
+  dbg_log_boot("thread_support_provided = %d\n", level);
+  return &_mpi;
 }

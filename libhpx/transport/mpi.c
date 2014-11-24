@@ -230,16 +230,24 @@ static uint32_t _mpi_get_recv_limit(transport_class_t *t) {
 }
 
 transport_class_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
-  int val = 0;
-  MPI_Initialized(&val);
-
-  if (!val) {
-    int threading = 0;
-    if (MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &threading) !=
-        MPI_SUCCESS)
+  int init = 0;
+  MPI_Initialized(&init);
+  if (!init) {
+    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+    int level;
+    int e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
+    if (e != MPI_SUCCESS) {
+      dbg_error("mpi initialization failed\n");
       return NULL;
+    }
 
-    dbg_log_trans("mpi: thread_support_provided = %d\n", threading);
+    if (level != LIBHPX_THREAD_LEVEL) {
+      dbg_error("MPI thread level failed requested %d, received %d.\n",
+                LIBHPX_THREAD_LEVEL, level);
+      return NULL;
+    }
+
+    dbg_log_trans("thread_support_provided = %d\n", level);
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));
