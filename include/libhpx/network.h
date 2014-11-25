@@ -147,6 +147,9 @@ static inline int network_send(struct network *network, hpx_parcel_t *p) {
 /// @to) at the locality at which @to is currently mapped, allowing two-sided
 /// active-message semantics.
 ///
+/// In this context, signaling the @p remote LCO and the delivery of the remote
+/// completion are independent events that potentially proceed in parallel.
+///
 /// @param      network The network instance to use.
 /// @param           to The global target for the put.
 /// @param         from The local source for the put.
