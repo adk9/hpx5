@@ -209,68 +209,90 @@ _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
   return HPX_SUCCESS;
 }
 
+static void 
+_progress_sends() {
+  int phstat;
+  if (_outstanding_sends < _outstanding_send_limit) {
+    pwc_args_t *pwc_args = PWC_QUEUE_DEQUEUE(pwc_q);
+    if (pwc_args != NULL) {
+      _outstanding_sends++;
+      dbg_printf0("Progress thread putting to %p on %d from %d\n", pwc_args->remote_ptr, pwc_args->remote_rank, hpx_get_my_rank());
+      assert((size_t)pwc_args->remote_ptr + pwc_args->size <
+             _netfuture_table.buffers[pwc_args->remote_rank].addr +
+             _netfuture_cfg.max_size);
+      phstat =
+        photon_put_with_completion(pwc_args->remote_rank,
+                                   pwc_args->data, pwc_args->size,
+                                   pwc_args->remote_ptr, pwc_args->remote_priv,
+                                   pwc_args->local_rid, pwc_args->remote_rid,
+                                   PHOTON_REQ_ONE_CQE);
+      assert(phstat == PHOTON_OK);
+      free(pwc_args);
+    }
+  }
+}
+
+static void
+_progress_send_completions() {
+  int phstat;
+  int flag;
+  photon_rid request;
+  phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+  //assert(phstat == PHOTON_OK);
+  //    printf("photon_probe_completion = %d\n", phstat);
+  if (phstat != PHOTON_OK)
+    dbg_printf0("Event %d on %d for request %"PRIx64" with flag %d in probe(PHOTON_PROBE_EVQ)\n", phstat, hpx_get_my_rank(), request, flag);
+  if (flag > 0) {
+    dbg_printf("  Received send completion on rank %d for %" PRIx64 "\n", hpx_get_my_rank(), request);
+    //      sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
+    _outstanding_sends--;
+    if (request != 0){
+      lco_t *lco = (lco_t*)request;
+      lco_future_set(lco, 0, NULL);
+    }
+  }
+}
+
+static void
+_progress_recvs() {
+  int phstat;
+  int flag;
+  photon_rid request;
+  phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+  assert(phstat == PHOTON_OK);
+  if (flag && request != 0) {
+    dbg_printf("  Received recv completion on rank %d for future at %" PRIx64 "\n", hpx_get_my_rank(), request);
+    _netfuture_t *f = (_netfuture_t*)request;
+    lco_lock(&f->lco);
+    
+    // do set stuff
+    if (!_empty(f)) {
+      lco_unlock(&f->lco);
+      hpx_call(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(f), HPX_NULL);
+    } else {
+      _future_set_no_copy(f);
+      lco_unlock(&f->lco);
+    }
+  } // end if
+}
+
+static void 
+_progress_body() {
+  if (_netfuture_table.inited != 1)
+    return;
+  _progress_sends();
+  _progress_send_completions();
+  _progress_recvs();
+}
+
 /// This action handles all Photon completions, local and remote, affecting
 /// the netfutures system.
 static int
 _progress_action(void *args) {
-  int phstat;
-  int flag;
-  photon_rid request;
   //  int send_rank = -1;
   //  int i = 0;
   while (!shutdown) {
-    // do sends
-    if (_outstanding_sends < _outstanding_send_limit) {
-      pwc_args_t *pwc_args = PWC_QUEUE_DEQUEUE(pwc_q);
-      if (pwc_args != NULL) {
-    _outstanding_sends++;
-    dbg_printf0("Progress thread putting to %p on %d from %d\n", pwc_args->remote_ptr, pwc_args->remote_rank, hpx_get_my_rank());
-    assert((size_t)pwc_args->remote_ptr + pwc_args->size <
-           _netfuture_table.buffers[pwc_args->remote_rank].addr +
-           _netfuture_cfg.max_size);
-    phstat =
-      photon_put_with_completion(pwc_args->remote_rank,
-                     pwc_args->data, pwc_args->size,
-                     pwc_args->remote_ptr, pwc_args->remote_priv,
-                     pwc_args->local_rid, pwc_args->remote_rid,
-                     PHOTON_REQ_ONE_CQE);
-    assert(phstat == PHOTON_OK);
-    free(pwc_args);
-      }
-    }
-
-    // check send completion
-    phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
-    //assert(phstat == PHOTON_OK);
-    //    printf("photon_probe_completion = %d\n", phstat);
-    if (phstat != PHOTON_OK)
-      dbg_printf0("Event %d on %d for request %"PRIx64" with flag %d in probe(PHOTON_PROBE_EVQ)\n", phstat, hpx_get_my_rank(), request, flag);
-    if (flag > 0) {
-      dbg_printf("  Received send completion on rank %d for %" PRIx64 "\n", hpx_get_my_rank(), request);
-      //      sync_fadd(&_outstanding_sends, -1, SYNC_RELEASE);
-      _outstanding_sends--;
-      if (request != 0){
-    lco_t *lco = (lco_t*)request;
-    lco_future_set(lco, 0, NULL);
-      }
-    }
-
-    phstat = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    assert(phstat == PHOTON_OK);
-    if (flag && request != 0) {
-      dbg_printf("  Received recv completion on rank %d for future at %" PRIx64 "\n", hpx_get_my_rank(), request);
-      _netfuture_t *f = (_netfuture_t*)request;
-      lco_lock(&f->lco);
-
-      // do set stuff
-      if (!_empty(f)) {
-        lco_unlock(&f->lco);
-    hpx_call(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(f), HPX_NULL);
-      } else {
-    _future_set_no_copy(f);
-        lco_unlock(&f->lco);
-      }
-    } // end if
+    _progress_body();
     /*
     i = (i + 1) % YIELD_COUNT;
     if (i == 0)
@@ -771,3 +793,5 @@ _future_initialize_actions(void) {
   LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
   LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
 }
+
+void (*netfuture_progress)() = _progress_body;
