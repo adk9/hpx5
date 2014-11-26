@@ -8,6 +8,9 @@
 #include "libsync/sync.h"
 #include "libpxgl/adjacency_list.h"
 #include "libpxgl/sssp.h"
+#include "libpxgl/pqueue-wrapper.h"
+typedef locked_pq sssp_queue;
+#include "libpxgl/sssp_queue.h"
 
 /// SSSP Chaotic-relaxation
 

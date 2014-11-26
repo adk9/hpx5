@@ -1,3 +1,7 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -6,16 +10,10 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef PXGL_GTEPS_H
-#define PXGL_GTEPS_H
 
-#include "defs.h"
+#ifndef LIBPXGL_SSSP_CHAOTIC_H
+#define LIBPXGL_SSSP_CHAOTIC_H
 
-#include "hpx/hpx.h"
-#include "adjacency_list.h"
+extern hpx_action_t _sssp_chaotic_process_vertex;
 
-// Compute GTEPS
-extern hpx_action_t gteps_calculate;
-extern int gteps_calculate_action(const sssp_uint_t *const g);
-
-#endif // PXGL_GTEPS_H
+#endif // LIBPXGL_SSSP_CHAOTIC_H

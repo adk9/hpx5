@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-#include "libpxgl/dimacs.h"
+#include "pxgl/dimacs.h"
 
 #define MODUL ((distance_t) 1 << (sizeof(distance_t) * 8 - 2))
 

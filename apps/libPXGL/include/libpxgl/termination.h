@@ -10,31 +10,18 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBPXGL_H
-#define LIBPXGL_H
 
-// Common definitions
-#include "libpxgl/defs.h"
+#ifndef LIBPXGL_TERMINATION_H
+#define LIBPXGL_TERMINATION_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "pxgl/pxgl.h"
 
-// Graph representation / formats
-#include "libpxgl/adjacency_list.h"
-#include "libpxgl/edge_list.h"
-#include "libpxgl/dimacs.h"
+void _increment_active_count(sssp_uint_t n);
+void _increment_finished_count();
+termination_t _get_termination();
+void _detect_termination(const hpx_addr_t termination_lco, 
+			 const hpx_addr_t internal_termination_lco);
+extern hpx_action_t _initialize_termination_detection;
+extern termination_t _termination;
 
-// Algorithms
-#include "libpxgl/sssp.h"
-
-// Metrics
-#include "libpxgl/gteps.h"
-#include "libpxgl/statistics.h"
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // LIBPXGL_H
-
+#endif // LIBPXGL_TERMINATION_H
