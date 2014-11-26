@@ -14,9 +14,9 @@
 #ifndef PXGL_ADJ_LIST_H
 #define PXGL_ADJ_LIST_H
 
-#include "defs.h"
+#include "pxgl/defs.h"
 
-#include "edge_list.h"
+#include "pxgl/edge_list.h"
 #include "hpx/hpx.h"
 
 // Distance

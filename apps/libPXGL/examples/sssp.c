@@ -19,7 +19,7 @@
 #include <inttypes.h>
 
 #include "hpx/hpx.h"
-#include "pxgl.h"
+#include "pxgl/pxgl.h"
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 
@@ -103,24 +103,9 @@ typedef struct {
   char *prob_file;
   sssp_uint_t time_limit;
   int realloc_adj_list;
+  sssp_kind_t sssp_kind;
+  sssp_init_dc_args_t sssp_init_dc_args;
 } _sssp_args_t;
-
-
-static hpx_action_t _print_sssp_stat;
-static int _print_sssp_stat_action(_sssp_statistics *sssp_stat)
-{
-  const hpx_addr_t target = hpx_thread_current_target();
-  _sssp_statistics *stat;
-  if (!hpx_gas_try_pin(target, (void**)&stat))
-    return HPX_RESEND;
-  sssp_stat->useful_work  =  stat->useful_work;
-  sssp_stat->useless_work =  stat->useless_work;
-  sssp_stat->edge_traversal_count = stat->edge_traversal_count;
-  hpx_thread_continue(sizeof(_sssp_statistics), sssp_stat);
-  hpx_gas_unpin(target);
-
-  return HPX_SUCCESS;
-}
 
 static hpx_action_t _main;
 static int _main_action(_sssp_args_t *args) {
@@ -151,16 +136,6 @@ static int _main_action(_sssp_args_t *args) {
 
   double total_elapsed_time = 0.0;
 
-#ifdef GATHER_STAT
-  printf("Gathering of statistics is enabled.\n");
-  const hpx_addr_t sssp_stats = hpx_gas_global_calloc(1, sizeof(_sssp_statistics));
-  sargs.sssp_stat = sssp_stats;
-
-  sssp_uint_t total_vertex_visit = 0;
-  sssp_uint_t total_edge_traversal = 0;
-  sssp_uint_t total_distance_updates = 0;
-#endif // GATHER_STAT
-
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
 
@@ -168,6 +143,15 @@ static int _main_action(_sssp_args_t *args) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
   }
+
+  hpx_addr_t kind_bcast_lco = hpx_lco_future_new(0), dc_bcast_lco = hpx_lco_future_new(0);
+  hpx_bcast(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind), kind_bcast_lco);
+  if(args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
+  hpx_bcast(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args), dc_bcast_lco);
+  hpx_lco_wait(kind_bcast_lco);
+  hpx_lco_wait(dc_bcast_lco);
+  hpx_lco_delete(kind_bcast_lco, HPX_NULL);
+  hpx_lco_delete(dc_bcast_lco, HPX_NULL);
 
   for (int i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
@@ -186,10 +170,12 @@ static int _main_action(_sssp_args_t *args) {
     hpx_time_t now = hpx_time_now();
 
     // Call the SSSP algorithm
-    hpx_addr_t sssp_lco = hpx_lco_and_new(1);
+    hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     sargs.termination_lco = sssp_lco;
     hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    // printf("Waiting for termination LCO at: %zu\n", sssp_lco);
     hpx_lco_wait(sssp_lco);
+    // printf("Finished waiting for termination LCO at: %zu\n", sssp_lco);
     hpx_lco_delete(sssp_lco, HPX_NULL);
 
 
@@ -304,6 +290,8 @@ static int _main_action(_sssp_args_t *args) {
 int main(int argc, char *argv[argc]) {
   sssp_uint_t time_limit = 1000;
   int realloc_adj_list = 0;
+  sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
+  sssp_kind_t sssp_kind = DC_SSSP_KIND;
 
   int e = hpx_init(&argc, &argv);
   if (e) {
@@ -312,7 +300,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:aphk?")) != -1) {
+  while ((opt = getopt(argc, argv, "q:cdaphk?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -321,10 +309,17 @@ int main(int argc, char *argv[argc]) {
       realloc_adj_list = 1;
       break;
     case 'k':
-      termination = AND_LCO_TERMINATION;
+      set_termination(AND_LCO_TERMINATION);
       break;
     case 'p':
-      termination = PROCESS_TERMINATION;
+      set_termination(PROCESS_TERMINATION);
+      break;
+    case 'd':
+      sssp_kind = DC_SSSP_KIND;
+      // TBD: add options to adjust dc parameters
+      break;
+    case 'c':
+      sssp_kind = CHAOTIC_SSSP_KIND;
       break;
     case 'h':
       _usage(stdout);
@@ -370,14 +365,15 @@ int main(int argc, char *argv[argc]) {
                         .problems = problems,
                         .prob_file = problem_file,
                         .time_limit = time_limit,
-                        .realloc_adj_list = realloc_adj_list
+                        .realloc_adj_list = realloc_adj_list,
+			.sssp_kind = sssp_kind,
+			.sssp_init_dc_args = sssp_init_dc_args
   };
 
   // register the actions
   HPX_REGISTER_ACTION(&_print_vertex_distance_index,
                       _print_vertex_distance_index_action);
   HPX_REGISTER_ACTION(&_print_vertex_distance, _print_vertex_distance_action);
-  HPX_REGISTER_ACTION(&_print_sssp_stat, _print_sssp_stat_action);
   HPX_REGISTER_ACTION(&_main, _main_action);
 
   e = hpx_run(&_main, &args, sizeof(args));
