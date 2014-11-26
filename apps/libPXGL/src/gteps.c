@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-#include "libpxgl/gteps.h"
+#include "pxgl/gteps.h"
 
 #define MODUL ((distance_t) 1 << 62)
 
