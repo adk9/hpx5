@@ -58,14 +58,14 @@ photonRequest photon_lookup_request(photon_rid rid) {
     rt = photon_processes[proc].request_table;
   }
   else {
-    log_err("Unknown proc (%u) obtained from rid: 0x%016lx", proc, rid);
+    dbg_trace("Unknown proc (%u) obtained from rid: 0x%016lx", proc, rid);
     return NULL;
   }
   if (id > 0 && id <= rt->size) {
     return &rt->reqs[id];
   }
   else {
-    log_err("Unknown request id (%u) obtained from rid: 0x%016lx", id, rid);
+    dbg_trace("Unknown request id (%u) obtained from rid: 0x%016lx", id, rid);
     return NULL;
   }
 }

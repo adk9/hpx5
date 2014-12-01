@@ -447,7 +447,7 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
 
   req = photon_lookup_request(request);
   if (req == NULL) {
-    dbg_trace("Request could not be found");
+    dbg_warn("Request (id=0x%016lx) could not be found", request);
     // Unlike photon_wait(), we might call photon_test() multiple times on a request,
     // e.g., in an unguarded loop.	flag==-1 will signify that the operation is
     // not pending.	 This means, it might be completed, it might have never been
@@ -1398,8 +1398,14 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
         if (req->type == EVQUEUE && (--req->events) == 0) {
           dbg_trace("Setting request completed with cookie: 0x%016lx", cookie);
           req->state = REQUEST_COMPLETED;
+	  // handle pwc local completions
+	  if (req->op == REQUEST_OP_PWC) {
+	    photon_pwc_add_req(req);
+	    dbg_trace("Enqueuing PWC local completion");
+	  }
         }
-	if (req && req->type == EVQUEUE && req->state == REQUEST_COMPLETED) {
+	if (req && (req->type == EVQUEUE) && (req->state == REQUEST_COMPLETED) &&
+	    (req->op != REQUEST_OP_PWC)) {
 	  dbg_trace("Clearing event with cookie: 0x%016lx", cookie);
 	  photon_free_request(req);
 	  existed = 1;

@@ -266,19 +266,19 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     start = proc;
     end = proc+1;
   }
-  
-  // handle any pwc requests that were popped in some other path
-  req = photon_pwc_pop_req();
-  if (req != NULL) {
-    assert(req->op == REQUEST_OP_PWC);
-    *flag = 1;
-    *request = req->id;
-    dbg_trace("Completed and removing pwc request: 0x%016lx", req->id);
-    photon_free_request(req);
-    return PHOTON_OK;
-  }
 
   if (flags & PHOTON_PROBE_EVQ) {
+    // handle any pwc requests that were popped in some other path
+    req = photon_pwc_pop_req();
+    if (req != NULL) {
+      assert(req->op == REQUEST_OP_PWC);
+      *flag = 1;
+      *request = req->id;
+      dbg_trace("Completed and removing pwc request: 0x%016lx", req->id);
+      photon_free_request(req);
+      return PHOTON_OK;
+    }
+
     rc = __photon_backend->get_event(&event);
     if (rc < 0) {
       dbg_err("Error getting event, rc=%d", rc);

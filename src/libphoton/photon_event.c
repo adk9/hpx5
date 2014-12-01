@@ -19,7 +19,6 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
     if (treq) {
       if (treq->type == EVQUEUE && (--treq->events) == 0) {
 	treq->state = REQUEST_COMPLETED;
-	// handle pwc local completions no found via probe_completion()
 	if (treq->op == REQUEST_OP_PWC) {
 	  photon_pwc_add_req(treq);
 	  dbg_info("Enqueuing PWC local completion");

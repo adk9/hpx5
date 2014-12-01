@@ -41,6 +41,22 @@ static int *recvCompT;
 static int myrank;
 static sem_t sem;
 
+void *test_thread() {
+  photon_rid request;
+  int flag, type, rc;
+  
+  do {
+    rc = photon_wait_any(&flag, &request);
+    if (rc != PHOTON_OK) {
+      fprintf(stderr, "Error in photon_wait_any\n");
+      exit(1);
+    }
+    usleep(10);
+  } while (!DONE);
+
+  pthread_exit(NULL);
+}
+
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
@@ -79,7 +95,7 @@ void *wait_ledger_completions_thread(void *arg) {
 
 int main(int argc, char **argv) {
   int i, j, k, ns, val;
-  int rank, nproc, ret_proc;
+  int rank, nproc;
   long t;
 
   MPI_Init(&argc,&argv);
@@ -94,9 +110,9 @@ int main(int argc, char **argv) {
   photon_init(&cfg);
 
   struct photon_buffer_t rbuf[nproc];
-  photon_rid recvReq[nproc], sendReq[nproc], request;
+  photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
-  pthread_t th, recv_threads[nproc];
+  pthread_t th, th2, recv_threads[nproc];
 
   recvCompT = calloc(nproc, sizeof(int));
 
@@ -115,8 +131,6 @@ int main(int argc, char **argv) {
   for (i=0; i<nproc; i++) {
     // everyone posts their recv buffers
     photon_post_recv_buffer_rdma(i, recv[i], PHOTON_BUF_SIZE, PHOTON_TAG, &recvReq[i]);
-    // make sure we clear the local post event
-    photon_wait_any(&ret_proc, &request);
   }
 
   for (i=0; i<nproc; i++) {
@@ -124,12 +138,17 @@ int main(int argc, char **argv) {
     photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     // get the remote buffer info so we can do our own put
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
+    photon_send_FIN(sendReq[i], i, PHOTON_REQ_COMPLETED);
+    photon_wait(recvReq[i]);
   }
 
   sem_init(&sem, 0, SQ_SIZE);
 
   // Create a thread to wait for local completions 
   pthread_create(&th, NULL, wait_local_completion_thread, NULL);
+
+  // Create a thread that simultaneously tests for a rendezvous completion
+  pthread_create(&th2, NULL, test_thread, NULL);
 
   // Create receive threads one per rank
   for (t=0; t<nproc; t++) {
