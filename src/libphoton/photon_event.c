@@ -21,7 +21,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
 	treq->state = REQUEST_COMPLETED;
 	if (treq->op == REQUEST_OP_PWC) {
 	  photon_pwc_add_req(treq);
-	  dbg_info("Enqueuing PWC local completion");
+	  dbg_trace("Enqueuing PWC local completion");
 	}
 	dbg_trace("Set request completed, rid: 0x%016lx", cookie);
       }

@@ -356,7 +356,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     req = photon_lookup_request(cookie);
     if (req) {
       // allow pwc probe to work with photon_test()
-      if (req->op == REQUEST_OP_SENDBUF) {
+      if (req->op != REQUEST_OP_PWC) {
 	__photon_handle_cq_event(req, cookie);
 	return PHOTON_OK;
       }

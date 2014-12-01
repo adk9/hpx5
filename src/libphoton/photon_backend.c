@@ -673,7 +673,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
 	goto error_exit;
       }
       eager_addr = (uintptr_t)eb->remote.addr + offset;
-      eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | req->id;
+      eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;
       
       dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
       
