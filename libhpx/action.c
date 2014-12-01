@@ -26,6 +26,13 @@
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_TABLE_SIZE 4096
 
+/// Action types
+typedef enum {
+  _ACTION_UNKNOWN = -1,
+  _ACTION_DEFAULT = 0,
+  _ACTION_PINNED,
+  _ACTION_TASK,
+} _action_type_t;
 
 /// An action table entry type.
 ///
@@ -40,6 +47,7 @@ typedef struct {
   hpx_action_handler_t func;
   hpx_action_t        *id;
   const char          *key;
+  _action_type_t      type;
 } _entry_t;
 
 
@@ -114,10 +122,11 @@ static void _assign_ids(_table_t *table) {
 /// @param           id The address of the user's id; written in _assign_ids().
 /// @param          key The unique key for this action; read in _sort_entries().
 /// @param            f The handler for this action.
+/// @param         type The type of this action.
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
 static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
-                       hpx_action_handler_t f) {
+                      hpx_action_handler_t f, _action_type_t type) {
   static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
   int i = table->n++;
   if (i >= capacity) {
@@ -128,6 +137,7 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   back->func = f;
   back->id = id;
   back->key = key;
+  back->type = type;
   return HPX_SUCCESS;
 }
 
@@ -148,7 +158,7 @@ const char *action_table_get_key(const struct action_table *table, hpx_action_t 
 {
   if (id == HPX_INVALID_ACTION_ID) {
     dbg_log("action registration is not complete");
-    return "LIBHPX UNKNOWN ACTION";;
+    return "LIBHPX UNKNOWN ACTION";
   }
 
   if (id < table->n) {
@@ -176,10 +186,62 @@ hpx_action_handler_t action_table_get_handler(const struct action_table *table,
 }
 
 
+static _action_type_t action_table_get_type(const struct action_table *table,
+                                     hpx_action_t id) {
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return _ACTION_UNKNOWN;
+  }
+
+  if (id < table->n) {
+    return table->entries[id].type;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return _ACTION_UNKNOWN;
+}
+
+
+bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_PINNED);
+}
+
+
+bool action_is_task(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_TASK);
+}
+
+
+int action_invoke(hpx_parcel_t *parcel) {
+  const hpx_addr_t target = hpx_parcel_get_target(parcel);
+  const uint32_t owner = gas_owner_of(here->gas, target);
+  DEBUG_IF (owner != here->rank) {
+    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+  }
+
+  hpx_action_t id = hpx_parcel_get_action(parcel);
+  void *args = hpx_parcel_get_data(parcel);
+
+  hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
+  return handler(args);
+}
+
+
 /// Called by the user to register an action.
 int hpx_register_action(hpx_action_t *id, const char *key,
                         hpx_action_handler_t f) {
-  return _push_back(_get_actions(), id, key, f);
+  return _push_back(_get_actions(), id, key, f, _ACTION_DEFAULT);
 }
 
+
+int hpx_register_pinned_action(hpx_action_t *id, const char *key,
+                               hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_PINNED);
+}
+
+
+int hpx_register_task(hpx_action_t *id, const char *key,
+                      hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_TASK);
+}
 

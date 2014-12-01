@@ -44,11 +44,20 @@ int hpx_register_action(hpx_action_t *action, const char *id, hpx_action_handler
 
 #define HPX_STR(l) #l
 
-/// A convenience macro for registering an HPX action
+/// Convenience macros for registering HPX actions
 #define HPX_REGISTER_ACTION(act, f) do {                                \
     *act = HPX_INVALID_ACTION_ID;                                       \
-    hpx_register_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f); \
+    hpx_register_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
   } while (0)
 
+#define HPX_REGISTER_PINNED_ACTION(act, f) do {                                \
+    *act = HPX_INVALID_ACTION_ID;                                              \
+    hpx_register_pinned_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
+  } while (0)
+
+#define HPX_REGISTER_TASK(act, f) do {                                \
+    *act = HPX_INVALID_ACTION_ID;                                     \
+    hpx_register_task(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
+  } while (0)
 
 #endif
