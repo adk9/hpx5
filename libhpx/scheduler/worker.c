@@ -78,17 +78,7 @@ static void *_run(void *worker) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  const hpx_addr_t target = hpx_parcel_get_target(parcel);
-  const uint32_t owner = gas_owner_of(here->gas, target);
-  DEBUG_IF (owner != here->rank) {
-    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
-  }
-
-  hpx_action_t id = hpx_parcel_get_action(parcel);
-  void *args = hpx_parcel_get_data(parcel);
-
-  hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
-  int status = handler(args);
+  int status = action_invoke(parcel);
   switch (status) {
    default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
