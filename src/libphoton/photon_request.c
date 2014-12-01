@@ -44,7 +44,7 @@ photonRequest photon_get_request(int proc) {
   //bit_array_clear_all(req->mmask);
   
   dbg_trace("Returning a new request (curr=%u) with id: 0x%016lx, tail=%u",
-	    req_curr, req->id, tail);
+	    req_ind, req->id, tail);
 
   return req;
 }

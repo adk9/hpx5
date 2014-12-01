@@ -20,8 +20,8 @@ int photon_pwc_init() {
   pwc_table->count = 0;
   pwc_table->cind = 0;
   pwc_table->tail = 0;
-  pwc_table->size = _LEDGER_SIZE;
-  pwc_table->req_ptrs = (photonRequest*)malloc(_LEDGER_SIZE * sizeof(photonRequest));
+  pwc_table->size = _photon_nproc * _LEDGER_SIZE;
+  pwc_table->req_ptrs = (photonRequest*)malloc(_photon_nproc * _LEDGER_SIZE * sizeof(photonRequest));
   if (!pwc_table->req_ptrs) {
     log_err("Could not allocate request pointers for PWC table");
     goto error_exit;
