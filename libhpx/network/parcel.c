@@ -319,7 +319,6 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
   return top;
 }
 
-
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
   DEBUG_IF (parcel_get_stack(parcel) != NULL) {
     dbg_error("parcel should not have an active stack during push.\n");
@@ -329,3 +328,11 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
   *stack = parcel;
 }
 
+void parcel_stack_foreach(hpx_parcel_t *p, void *env,
+                         void (*f)(hpx_parcel_t*, void*))
+{
+  while (p) {
+    f(p, env);
+    p = (void*)parcel_get_stack(p);
+  }
+}
