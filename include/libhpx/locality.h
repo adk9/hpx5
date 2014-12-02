@@ -58,7 +58,7 @@ struct transport_class;
 ///                  infrastructure required to create lightweight threads, and
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
-typedef struct {
+typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
   struct boot_class            *boot;
