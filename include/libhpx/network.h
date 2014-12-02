@@ -23,8 +23,11 @@
 #include <libhpx/config.h>
 
 /// All network objects implement the network interface.
-struct network {
+typedef struct network {
   void (*delete)(struct network *)
+    HPX_NON_NULL(1);
+
+  int (*progress)(struct network *)
     HPX_NON_NULL(1);
 
   int (*startup)(struct network *)
@@ -56,14 +59,14 @@ struct network {
 
   void (*set_flush)(struct network *)
     HPX_NON_NULL(1);
-};
+} network_t;
 
 
 /// Create a new network.
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-struct network *network_new(libhpx_network_t type, int nrx)
+network_t *network_new(libhpx_network_t type, int nrx)
   HPX_MALLOC HPX_INTERNAL;
 
 
@@ -73,15 +76,30 @@ struct network *network_new(libhpx_network_t type, int nrx)
 /// threads may be operating on the network before making this call.
 ///
 /// @param      network The network to delete.
-static inline void network_delete(struct network *network) {
+static inline void network_delete(network_t *network) {
   network->delete(network);
+}
+
+
+/// Perform one network progress operation.
+///
+/// This is not synchronized at this point, and must be synchronized
+/// externally.
+///
+/// @param      network The network to start.
+///
+/// @returns  LIBHPX_OK The network was progressed without error.
+static inline int network_progress(network_t *network) {
+  assert(network);
+  return network->progress(network);
 }
 
 
 /// Start network progress.
 ///
-/// @param     network The network to start.
-static inline int network_startup(struct network *network) {
+/// @param      network The network to start.
+static inline int network_startup(network_t *network) {
+  assert(network);
   return network->startup(network);
 }
 
@@ -91,7 +109,8 @@ static inline int network_startup(struct network *network) {
 /// Indicates that the network should shut down.
 ///
 /// @param      network The network to shut down.
-static inline void network_shutdown(struct network *network) {
+static inline void network_shutdown(network_t *network) {
+  assert(network);
   network->shutdown(network);
 }
 
@@ -108,7 +127,7 @@ static inline void network_shutdown(struct network *network) {
 /// barrier a scheduler->network->scheduler barrier.
 ///
 /// @param      network The network which implements the barrier.
-static inline void network_barrier(struct network *network) {
+static inline void network_barrier(network_t *network) {
   network->barrier(network);
 }
 
@@ -131,8 +150,8 @@ static inline void network_barrier(struct network *network) {
 /// @param      network The network to use for the send.
 /// @param            p The parcel to send.
 ///
-/// @returns            LIBHPX_OK
-static inline int network_send(struct network *network, hpx_parcel_t *p) {
+/// @returns  LIBHPX_OK The send was buffered successfully
+static inline int network_send(network_t *network, hpx_parcel_t *p) {
   return network->send(network, p, HPX_NULL);
 }
 
@@ -159,7 +178,7 @@ static inline int network_send(struct network *network, hpx_parcel_t *p) {
 /// @param           op The remote completion event.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_pwc(struct network *network,
+static inline int network_pwc(network_t *network,
                               hpx_addr_t to, void *from, size_t n,
                               hpx_addr_t local, hpx_addr_t remote,
                               hpx_action_t op) {
@@ -181,7 +200,7 @@ static inline int network_pwc(struct network *network,
 /// @param       remote An LCO to signal remote completion.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_put(struct network *network,
+static inline int network_put(network_t *network,
                               hpx_addr_t to, void *from, size_t n,
                               hpx_addr_t local, hpx_addr_t remote) {
   return network->put(network, to, from, n, local, remote);
@@ -200,7 +219,7 @@ static inline int network_put(struct network *network,
 /// @param        local An LCO to signal local completion.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_get(struct network *network,
+static inline int network_get(network_t *network,
                               void *to, hpx_addr_t from, size_t n,
                               hpx_addr_t local) {
   return network->get(network, to, from, n, local);
@@ -208,7 +227,7 @@ static inline int network_get(struct network *network,
 
 
 /// Probe for received parcels.
-static inline hpx_parcel_t *network_probe(struct network *network, int nrx) {
+static inline hpx_parcel_t *network_probe(network_t *network, int nrx) {
   return network->probe(network, nrx);
 }
 
@@ -222,17 +241,17 @@ static inline hpx_parcel_t *network_probe(struct network *network, int nrx) {
 /// progressing.
 ///
 /// @param      network The network to modify.
-static inline void network_flush_on_shutdown(struct network *network) {
+static inline void network_flush_on_shutdown(network_t *network) {
   network->set_flush(network);
 }
 
 
 /// Used by the progress engine.
-hpx_parcel_t *network_tx_dequeue(struct network *network)
+hpx_parcel_t *network_tx_dequeue(network_t *network)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
+int network_try_notify_rx(network_t *network, hpx_parcel_t *p)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
