@@ -8,6 +8,7 @@
 #include "photon_buffertable.h"
 #include "photon_event.h"
 #include "photon_pwc.h"
+#include "util.h"
 
 static photonRequestTable pwc_table;
 
@@ -21,6 +22,7 @@ int photon_pwc_init() {
   pwc_table->cind = 0;
   pwc_table->tail = 0;
   pwc_table->size = _photon_nproc * _LEDGER_SIZE;
+  assert(is_power_of_2(pwc_table->size));
   pwc_table->req_ptrs = (photonRequest*)malloc(_photon_nproc * _LEDGER_SIZE * sizeof(photonRequest));
   if (!pwc_table->req_ptrs) {
     log_err("Could not allocate request pointers for PWC table");
@@ -35,7 +37,7 @@ int photon_pwc_add_req(photonRequest req) {
   uint64_t req_curr, tail;
   int req_ind;
   req_curr = sync_load(&pwc_table->count, SYNC_ACQUIRE);
-  req_ind = req_curr % pwc_table->size;
+  req_ind = req_curr & (pwc_table->size - 1);
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
   if ((req_curr - tail) > pwc_table->size) {
     log_err("Exceeded PWC table size: %d", pwc_table->size);
@@ -52,9 +54,9 @@ photonRequest photon_pwc_pop_req() {
   req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
   if (tail < req_curr) {
-    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_ACQ_RELAXED, SYNC_RELAXED)) {
+    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_RELAXED, SYNC_RELAXED)) {
       photonRequest req;
-      req_ind = tail % pwc_table->size;
+      req_ind = tail & (pwc_table->size - 1);
       req = pwc_table->req_ptrs[req_ind];
       pwc_table->req_ptrs[req_ind] = NULL;
       return req;
@@ -298,7 +300,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       // check eager region first
       eb = photon_processes[i].local_pwc_buf;
       curr = sync_load(&eb->curr, SYNC_RELAXED);
-      offset = curr % eb->size;
+      offset = curr & (eb->size - 1);
       left = eb->size - offset;
       if (left < EB_MSG_SIZE(_photon_spsize)) {
 	new = left + curr;

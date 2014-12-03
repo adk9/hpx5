@@ -6,6 +6,7 @@
 #include "photon_backend.h"
 #include "photon_forwarder.h"
 #include "logging.h"
+#include "util.h"
 
 #ifdef HAVE_VERBS
 #include "verbs.h"
@@ -167,6 +168,9 @@ int photon_init(photonConfig cfg) {
     _photon_smsize = DEF_SMALL_MSG_SIZE;
   if (_LEDGER_SIZE <= 0)
     _LEDGER_SIZE = DEF_LEDGER_SIZE;
+
+  assert(is_power_of_2(_LEDGER_SIZE));
+  assert(is_power_of_2(_photon_ebsize));
   
   /* figure out forwarder info */
   if (lcfg->forwarder.use_forwarder) {

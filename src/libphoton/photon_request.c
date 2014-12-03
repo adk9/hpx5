@@ -18,7 +18,7 @@ photonRequest photon_get_request(int proc) {
   rt = photon_processes[proc].request_table;
   req_curr = sync_fadd(&rt->count, 1, SYNC_RELAXED);
   // offset request index by 1 since 0 is our NULL_COOKIE
-  req_ind = (req_curr % rt->size) + 1;
+  req_ind = (req_curr & (rt->size - 1)) + 1;
   tail = sync_load(&rt->tail, SYNC_RELAXED);
   if ((req_curr - tail) > rt->size) {
     log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);

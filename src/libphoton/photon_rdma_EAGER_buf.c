@@ -44,7 +44,7 @@ int photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim) {
       log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
       return -1;
     }
-    offset = curr % buf->size;
+    offset = curr & (buf->size - 1);
     left = buf->size - offset;
     if (left < lim) {
       new = curr + left + size;
