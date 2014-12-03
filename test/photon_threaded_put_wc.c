@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <math.h>
 #include <mpi.h>
 #include <sys/time.h>
@@ -9,8 +7,22 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <assert.h>
 #include <semaphore.h>
+#include <sched.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <assert.h>
+#include <err.h>
+
+#if defined(linux)
+#define HAVE_SETAFFINITY
+#include <sched.h>
+#endif
+
+#ifndef CPU_SETSIZE
+#undef HAVE_SETAFFINITY
+#endif
 
 #include "photon.h"
 #include "test_cfg.h"
@@ -41,9 +53,14 @@ static int *recvCompT;
 static int myrank;
 static sem_t sem;
 
+#ifdef HAVE_SETAFFINITY
+static int ncores = 1;                 /* number of CPU cores */
+static cpu_set_t cpu_set;              /* processor CPU set */
+#endif
+
 void *test_thread() {
   photon_rid request;
-  int flag, type, rc;
+  int flag, rc;
   
   do {
     rc = photon_wait_any(&flag, &request);
@@ -51,7 +68,6 @@ void *test_thread() {
       fprintf(stderr, "Error in photon_wait_any\n");
       exit(1);
     }
-    usleep(10);
   } while (!DONE);
 
   pthread_exit(NULL);
@@ -82,10 +98,10 @@ void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
   int flag;
-
+  
   do {
-    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    //photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);
@@ -96,6 +112,7 @@ void *wait_ledger_completions_thread(void *arg) {
 int main(int argc, char **argv) {
   int i, j, k, ns, val;
   int rank, nproc;
+  int aff_main, aff_evq, aff_ledg;
   long t;
 
   MPI_Init(&argc,&argv);
@@ -108,6 +125,14 @@ int main(int argc, char **argv) {
   cfg.address = rank;
 
   photon_init(&cfg);
+
+  aff_main = aff_evq = aff_ledg = -1;
+  if (argc > 1)
+    aff_main = atoi(argv[1]);
+  if (argc > 2)
+    aff_evq = atoi(argv[2]);
+  if (argc > 3)
+    aff_ledg = atoi(argv[3]);
 
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
@@ -148,12 +173,37 @@ int main(int argc, char **argv) {
   pthread_create(&th, NULL, wait_local_completion_thread, NULL);
 
   // Create a thread that simultaneously tests for a rendezvous completion
-  pthread_create(&th2, NULL, test_thread, NULL);
-
+  //pthread_create(&th2, NULL, test_thread, NULL);
+  
   // Create receive threads one per rank
-  for (t=0; t<nproc; t++) {
-    pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
+  //for (t=0; t<nproc; t++) {
+    pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
+  //}
+
+  // set affinity as requested
+#ifdef HAVE_SETAFFINITY
+  if (aff_main >= 0) {
+    //printf("Setting main thread affinity to core %d\n", aff_main);
+    if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+      err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_main, &cpu_set);
+    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
+      err(1, "couldn't change CPU affinity");
   }
+  if (aff_evq >= 0) {
+    //printf("Setting EVQ probe thread affinity to core %d\n", aff_evq);
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_evq, &cpu_set);
+    pthread_setaffinity_np(th, sizeof(cpu_set_t), &cpu_set);
+  }
+  if (aff_evq >= 0) {
+    //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_ledg, &cpu_set);
+    pthread_setaffinity_np(recv_threads[0], sizeof(cpu_set_t), &cpu_set);
+  }
+#endif
   
   // now we can proceed with our benchmark
   if (rank == 0)
@@ -234,8 +284,6 @@ int main(int argc, char **argv) {
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-
-  sleep(1);
 
   DONE = 1;
   // Wait for all threads to complete

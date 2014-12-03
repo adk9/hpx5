@@ -34,7 +34,7 @@ int photon_pwc_init() {
 int photon_pwc_add_req(photonRequest req) {
   uint64_t req_curr, tail;
   int req_ind;
-  req_curr = sync_fadd(&pwc_table->count, 1, SYNC_RELAXED);
+  req_curr = sync_load(&pwc_table->count, SYNC_ACQUIRE);
   req_ind = req_curr % pwc_table->size;
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
   if ((req_curr - tail) > pwc_table->size) {
@@ -42,6 +42,7 @@ int photon_pwc_add_req(photonRequest req) {
     return PHOTON_ERROR;
   }
   pwc_table->req_ptrs[req_ind] = req;
+  sync_fadd(&pwc_table->count, 1, SYNC_ACQ_REL);
   return PHOTON_OK;
 }
 
@@ -51,7 +52,7 @@ photonRequest photon_pwc_pop_req() {
   req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
   if (tail < req_curr) {
-    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_RELAXED, SYNC_RELAXED)) {
+    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_ACQ_RELAXED, SYNC_RELAXED)) {
       photonRequest req;
       req_ind = tail % pwc_table->size;
       req = pwc_table->req_ptrs[req_ind];
@@ -274,7 +275,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       assert(req->op == REQUEST_OP_PWC);
       *flag = 1;
       *request = req->id;
-      dbg_trace("Completed and removing pwc request: 0x%016lx", req->id);
+      dbg_trace("Completed and removing queued pwc request: 0x%016lx", req->id);
       photon_free_request(req);
       return PHOTON_OK;
     }
@@ -366,7 +367,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       if ((req->op == REQUEST_OP_PWC) && (--req->events == 0)) {
 	*flag = 1;
 	*request = req->id;
-	dbg_trace("Completed and removing pwc request: 0x%016lx", cookie);
+	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx", req->id, cookie);
 	photon_free_request(req);
 	return PHOTON_OK;
       }

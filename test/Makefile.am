@@ -28,3 +28,5 @@ photon_pingpong_SOURCES = photon_pingpong.c
 photon_ud_blockid_SOURCES = ud_bravo_tests/photon_ud_blockid.c
 photon_ud_pingpong_SOURCES = ud_bravo_tests/photon_ud_pingpong.c
 photon_ud_mton_SOURCES = ud_bravo_tests/photon_ud_mton.c
+
+photon_threaded_put_wc_CFLAGS = ${AM_CFLAGS} -D_GNU_SOURCE
