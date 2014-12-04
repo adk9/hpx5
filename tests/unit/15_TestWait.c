@@ -30,7 +30,7 @@
 #include "tests.h"
 #include <stdlib.h>
 
-#define FUTURES_PER_LOCALITY 200000
+#define FUTURES_PER_LOCALITY 250000
 #define WAITERS 4
 
 // ***************************************************************************
@@ -44,11 +44,9 @@ int t15_set_action(const hpx_addr_t * const future) {
   return HPX_SUCCESS;
 }
 
-int t15_wait_action(const hpx_addr_t * const lcos) {
+int t15_wait_action(const hpx_addr_t * const future) {
   // printf("Waiting on %zu on %d\n", lcos[0], HPX_LOCALITY_ID);
-  hpx_lco_wait(lcos[0]);
-  // printf("Wait on %zu successful%d\n", lcos[0], HPX_LOCALITY_ID);
-  hpx_lco_set(lcos[2], 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_lco_wait(*future);
   return HPX_SUCCESS;
 }
 
@@ -65,7 +63,7 @@ int t15_spawn_action(const hpx_addr_t * const termination_lco) {
     const hpx_addr_t test_lcos[3] = { hpx_lco_future_new(0), *termination_lco, hpx_lco_and_new(WAITERS) };
     hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_lcos[0], sizeof(hpx_addr_t), HPX_NULL);
     for(size_t j = 0; j < WAITERS; ++j) {
-      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, test_lcos, sizeof(test_lcos), HPX_NULL);
+      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_lcos[0], sizeof(hpx_addr_t), test_lcos[2]);
     }
     hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_lcos, sizeof(test_lcos), HPX_NULL);
   }
