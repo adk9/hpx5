@@ -16,7 +16,7 @@
 #include "utility_functions.h"
 
 #define MAX_RETRIES 1
-#define DEF_UGNI_BTE_THRESH 8192
+#define DEF_UGNI_BTE_THRESH (1<<16)
 
 struct rdma_args_t {
   int proc;
