@@ -149,6 +149,11 @@ static int _startup(struct network *o) {
     dbg_log("started network progress.\n");
   }
 
+  cpu_set_t cpu_set;
+  CPU_ZERO(&cpu_set);
+  CPU_SET(system_get_cores()-1, &cpu_set);
+  pthread_setaffinity_np(network->progress, sizeof(cpu_set_t), &cpu_set);
+  
   e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
   if (e) {
     return dbg_error("failed to start network probe\n");
@@ -156,7 +161,7 @@ static int _startup(struct network *o) {
   else {
     dbg_log("started probing the network.\n");
   }
-
+  
   return HPX_SUCCESS;
 }
 
