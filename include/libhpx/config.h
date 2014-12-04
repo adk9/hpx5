@@ -141,11 +141,20 @@ typedef struct {
 #undef LIBHPX_DECL_OPTION
 } hpx_config_t;
 
-hpx_config_t *parse_options(int *argc, char ***argv)
-  HPX_INTERNAL;
 
-/// Free an HPX configuration type.
-void config_free(hpx_config_t *config)
+hpx_config_t *config_new(int *argc, char ***argv)
+  HPX_INTERNAL HPX_MALLOC;
+
+void config_delete(hpx_config_t *cfg)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Check to see if the wait flag is set at a particular locality.
+///
+/// @param     locality The locality to check.
+///
+/// @returns          0 The flag is not set.
+///                   1 The flag is set.
+int config_waitat(hpx_config_t *cfg, const hpx_locality_t locality)
   HPX_INTERNAL;
 
 #endif // LIBHPX_CONFIG_H
