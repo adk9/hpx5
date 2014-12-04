@@ -89,6 +89,10 @@ hpx_action_t t10_set;
 hpx_action_t t11_increment;
 hpx_action_t t12_init_array;
 hpx_action_t t13_memput_verify;
+hpx_action_t t15_set;
+hpx_action_t t15_wait;
+hpx_action_t t15_spawn;
+hpx_action_t t15_delete;
 
 //****************************************************************************
 // Options
@@ -131,6 +135,7 @@ Suite *test_suite(void)
   add_11_TestGenCountLCO(tc);
   add_12_TestMemget(tc);
   add_13_TestMemput(tc);
+  add_15_TestWait(tc);
 
   suite_add_tcase(s, tc);
   return s;
@@ -228,6 +233,12 @@ void _register_actions(void) {
 
   //13_TestMemput.c
   HPX_REGISTER_ACTION(&t13_memput_verify, t13_memput_verify_action);
+  
+  // 15_TestWait.c
+  HPX_REGISTER_ACTION(&t15_set, t15_set_action);
+  HPX_REGISTER_ACTION(&t15_wait, t15_wait_action);
+  HPX_REGISTER_ACTION(&t15_spawn, t15_spawn_action);
+  HPX_REGISTER_ACTION(&t15_delete, t15_delete_action);
 }
 
 //****************************************************************************
