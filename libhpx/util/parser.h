@@ -70,8 +70,10 @@ struct hpx_options_t
   enum enum_hpx_transport hpx_transport_arg;	/**< @brief type of transport to use.  */
   char * hpx_transport_orig;	/**< @brief type of transport to use original value given at command line.  */
   const char *hpx_transport_help; /**< @brief type of transport to use help description.  */
-  int hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
-  char * hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
+  int* hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
+  char ** hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
+  int hpx_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
+  int hpx_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
   const char *hpx_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
   enum enum_hpx_loglevel *hpx_loglevel_arg;	/**< @brief set the logging level.  */
   char ** hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */

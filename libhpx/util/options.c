@@ -136,6 +136,12 @@ static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
     }
   }
 
+  cfg->waitat = calloc(opts->hpx_waitat_given + 1, sizeof(int));
+  for (int i = 0, e = opts->hpx_waitat_given; i < e; ++i) {
+    cfg->waitat[i] = opts->hpx_waitat_arg[i];
+  }
+  cfg->waitat[opts->hpx_waitat_given] = HPX_LOCALITY_NONE;
+
   if (opts->hpx_configfile_given) {
     if (cfg->configfile)
       free(cfg->configfile);

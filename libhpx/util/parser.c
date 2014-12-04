@@ -145,6 +145,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_boot_orig = NULL;
   args_info->hpx_transport_arg = hpx_transport__NULL;
   args_info->hpx_transport_orig = NULL;
+  args_info->hpx_waitat_arg = NULL;
   args_info->hpx_waitat_orig = NULL;
   args_info->hpx_loglevel_arg = NULL;
   args_info->hpx_loglevel_orig = NULL;
@@ -157,7 +158,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_mprotectstacks_flag = 0;
   args_info->hpx_waitonabort_flag = 0;
-  
+
 }
 
 static
@@ -174,6 +175,8 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_boot_help = hpx_options_t_help[8] ;
   args_info->hpx_transport_help = hpx_options_t_help[9] ;
   args_info->hpx_waitat_help = hpx_options_t_help[10] ;
+  args_info->hpx_waitat_min = -1;
+  args_info->hpx_waitat_max = -1;
   args_info->hpx_loglevel_help = hpx_options_t_help[11] ;
   args_info->hpx_loglevel_min = 0;
   args_info->hpx_loglevel_max = 0;
@@ -186,7 +189,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_configfile_help = hpx_options_t_help[16] ;
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[17] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[18] ;
-  
+
 }
 
 void
@@ -236,7 +239,7 @@ void
 hpx_option_parser_params_init(struct hpx_option_parser_params *params)
 {
   if (params)
-    { 
+    {
       params->override = 0;
       params->initialize = 1;
       params->check_required = 1;
@@ -248,9 +251,9 @@ hpx_option_parser_params_init(struct hpx_option_parser_params *params)
 struct hpx_option_parser_params *
 hpx_option_parser_params_create(void)
 {
-  struct hpx_option_parser_params *params = 
+  struct hpx_option_parser_params *params =
     (struct hpx_option_parser_params *)malloc(sizeof(struct hpx_option_parser_params));
-  hpx_option_parser_params_init(params);  
+  hpx_option_parser_params_init(params);
   return params;
 }
 
@@ -281,7 +284,7 @@ struct generic_list
 };
 
 /**
- * @brief add a node at the head of the list 
+ * @brief add a node at the head of the list
  */
 static void add_node(struct generic_list **list) {
   struct generic_list *new_node = (struct generic_list *) malloc (sizeof (struct generic_list));
@@ -328,12 +331,14 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   args_info->hpx_loglevel_arg = 0;
   free_multiple_field (args_info->hpx_logat_given, (void *)(args_info->hpx_logat_arg), &(args_info->hpx_logat_orig));
   args_info->hpx_logat_arg = 0;
+  free_multiple_field (args_info->hpx_waitat_given, (void **)&(args_info->hpx_waitat_arg), &(args_info->hpx_waitat_orig));
+  free_multiple_field (args_info->hpx_loglevel_given, (void **)&(args_info->hpx_loglevel_arg), &(args_info->hpx_loglevel_orig));
   free_string_field (&(args_info->hpx_sendlimit_orig));
   free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
-  
-  
+
+
 
   clear_given (args_info);
 }
@@ -380,7 +385,7 @@ write_into_file(FILE *outfile, const char *opt, const char *arg, const char *val
   int found = -1;
   if (arg) {
     if (values) {
-      found = check_possible_values(arg, values);      
+      found = check_possible_values(arg, values);
     }
     if (found >= 0)
       fprintf(outfile, "%s=\"%s\" # %s\n", opt, arg, values[found]);
@@ -395,7 +400,7 @@ static void
 write_multiple_into_file(FILE *outfile, int len, const char *opt, char **arg, const char *values[])
 {
   int i;
-  
+
   for (i = 0; i < len; ++i)
     write_into_file(outfile, opt, (arg ? arg[i] : 0), values);
 }
@@ -427,8 +432,7 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-boot", args_info->hpx_boot_orig, hpx_option_parser_hpx_boot_values);
   if (args_info->hpx_transport_given)
     write_into_file(outfile, "hpx-transport", args_info->hpx_transport_orig, hpx_option_parser_hpx_transport_values);
-  if (args_info->hpx_waitat_given)
-    write_into_file(outfile, "hpx-waitat", args_info->hpx_waitat_orig, 0);
+  write_multiple_into_file(outfile, args_info->hpx_waitat_given, "hpx-waitat", args_info->hpx_waitat_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_loglevel_given, "hpx-loglevel", args_info->hpx_loglevel_orig, hpx_option_parser_hpx_loglevel_values);
   write_multiple_into_file(outfile, args_info->hpx_logat_given, "hpx-logat", args_info->hpx_logat_orig, 0);
   if (args_info->hpx_statistics_given)
@@ -443,7 +447,7 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-mprotectstacks", 0, 0 );
   if (args_info->hpx_waitonabort_given)
     write_into_file(outfile, "hpx-waitonabort", 0, 0 );
-  
+
 
   i = EXIT_SUCCESS;
   return i;
@@ -529,9 +533,9 @@ get_multiple_arg_token(const char *arg)
   j = 0;
   while (arg[i] && (j < len-1))
     {
-      if (arg[i] == '\\' && 
-	  arg[ i + 1 ] && 
-	  arg[ i + 1 ] == ',')
+      if (arg[i] == '\\' &&
+      arg[ i + 1 ] &&
+      arg[ i + 1 ] == ',')
         ++i;
 
       ret[j++] = arg[i++];
@@ -622,7 +626,7 @@ check_multiple_option_occurrences(const char *prog_name, unsigned int option_giv
             }
         }
     }
-    
+
   return error_occurred;
 }
 int
@@ -643,7 +647,7 @@ hpx_option_parser_ext (int argc, char **argv, struct hpx_options_t *args_info,
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -652,7 +656,7 @@ hpx_option_parser2 (int argc, char **argv, struct hpx_options_t *args_info, int 
 {
   int result;
   struct hpx_option_parser_params params;
-  
+
   params.override = override;
   params.initialize = initialize;
   params.check_required = check_required;
@@ -666,7 +670,7 @@ hpx_option_parser2 (int argc, char **argv, struct hpx_options_t *args_info, int 
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -683,7 +687,7 @@ hpx_option_parser_required (struct hpx_options_t *args_info, const char *prog_na
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -694,13 +698,16 @@ hpx_option_parser_required2 (struct hpx_options_t *args_info, const char *prog_n
   FIX_UNUSED (additional_error);
 
   /* checks for required options */
+  if (check_multiple_option_occurrences(prog_name, args_info->hpx_waitat_given, args_info->hpx_waitat_min, args_info->hpx_waitat_max, "'--hpx-waitat'"))
+     error = 1;
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_loglevel_given, args_info->hpx_loglevel_min, args_info->hpx_loglevel_max, "'--hpx-loglevel'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_logat_given, args_info->hpx_logat_min, args_info->hpx_logat_max, "'--hpx-logat'"))
      error_occurred = 1;
-  
-  
+
+
   /* checks for dependences among options */
 
   return error_occurred;
@@ -729,7 +736,7 @@ static char *package_name = 0;
  */
 static
 int update_arg(void *field, char **orig_field,
-               unsigned int *field_given, unsigned int *prev_given, 
+               unsigned int *field_given, unsigned int *prev_given,
                char *value, const char *possible_values[],
                const char *default_value,
                hpx_option_parser_arg_type arg_type,
@@ -750,11 +757,11 @@ int update_arg(void *field, char **orig_field,
   if (!multiple_option && prev_given && (*prev_given || (check_ambiguity && *field_given)))
     {
       if (short_opt != '-')
-        fprintf (stderr, "%s: `--%s' (`-%c') option given more than once%s\n", 
+        fprintf (stderr, "%s: `--%s' (`-%c') option given more than once%s\n",
                package_name, long_opt, short_opt,
                (additional_error ? additional_error : ""));
       else
-        fprintf (stderr, "%s: `--%s' option given more than once%s\n", 
+        fprintf (stderr, "%s: `--%s' option given more than once%s\n",
                package_name, long_opt,
                (additional_error ? additional_error : ""));
       return 1; /* failure */
@@ -763,16 +770,16 @@ int update_arg(void *field, char **orig_field,
   if (possible_values && (found = check_possible_values((value ? value : default_value), possible_values)) < 0)
     {
       if (short_opt != '-')
-        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s' (`-%c')%s\n", 
+        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s' (`-%c')%s\n",
           package_name, (found == -2) ? "ambiguous" : "invalid", value, long_opt, short_opt,
           (additional_error ? additional_error : ""));
       else
-        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s'%s\n", 
+        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s'%s\n",
           package_name, (found == -2) ? "ambiguous" : "invalid", value, long_opt,
           (additional_error ? additional_error : ""));
       return 1; /* failure */
     }
-    
+
   if (field_given && *field_given && ! override)
     return 0;
   if (prev_given)
@@ -868,7 +875,7 @@ int update_multiple_arg_temp(struct generic_list **list,
     {
       add_node (list);
       if (update_arg((void *)&((*list)->arg), &((*list)->orig), 0,
-          prev_given, multi_token, possible_values, default_value, 
+          prev_given, multi_token, possible_values, default_value,
           arg_type, 0, 1, 1, 1, long_opt, short_opt, additional_error)) {
         if (multi_token) free(multi_token);
         return 1; /* failure */
@@ -933,11 +940,11 @@ void update_multiple_arg(void *field, char ***orig_field,
     default:
       break;
     };
-    
+
     for (i = (prev_given - 1); i >= 0; --i)
       {
         tmp = list;
-        
+
         switch(arg_type) {
         case ARG_INT:
           (*((int **)field))[i + field_given] = tmp->arg.int_arg; break;
@@ -949,7 +956,7 @@ void update_multiple_arg(void *field, char ***orig_field,
           (*((char ***)field))[i + field_given] = tmp->arg.string_arg; break;
         default:
           break;
-        }        
+        }
         (*orig_field) [i + field_given] = list->orig;
         list = list->next;
         free (tmp);
@@ -961,7 +968,7 @@ void update_multiple_arg(void *field, char ***orig_field,
       case ARG_ENUM:
         if (! *((int **)field)) {
           *((int **)field) = (int *)malloc (sizeof (int));
-          (*((int **)field))[0] = default_value->int_arg; 
+          (*((int **)field))[0] = default_value->int_arg;
         }
         break;
       case ARG_LONG:
@@ -991,20 +998,21 @@ hpx_option_parser_internal (
   int argc, char **argv, struct hpx_options_t *args_info,
                         struct hpx_option_parser_params *params, const char *additional_error)
 {
-  int c;	/* Character of the parsed option.  */
+  int c;    /* Character of the parsed option.  */
 
+  struct generic_list * hpx_waitat_list = NULL;
   struct generic_list * hpx_loglevel_list = NULL;
   struct generic_list * hpx_logat_list = NULL;
   int error_occurred = 0;
   struct hpx_options_t local_args_info;
-  
+
   int override;
   int initialize;
   int check_required;
   int check_ambiguity;
-  
+
   package_name = argv[0];
-  
+
   override = params->override;
   initialize = params->initialize;
   check_required = params->check_required;
@@ -1025,273 +1033,274 @@ hpx_option_parser_internal (
       int option_index = 0;
 
       static struct option long_options[] = {
-        { "hpx-cores",	1, NULL, 0 },
-        { "hpx-threads",	1, NULL, 0 },
-        { "hpx-backoffmax",	1, NULL, 0 },
-        { "hpx-stacksize",	1, NULL, 0 },
-        { "hpx-heapsize",	1, NULL, 0 },
-        { "hpx-gas",	1, NULL, 0 },
-        { "hpx-boot",	1, NULL, 0 },
-        { "hpx-transport",	1, NULL, 0 },
-        { "hpx-waitat",	2, NULL, 0 },
-        { "hpx-loglevel",	2, NULL, 0 },
-        { "hpx-logat",	1, NULL, 0 },
-        { "hpx-statistics",	0, NULL, 0 },
-        { "hpx-sendlimit",	1, NULL, 0 },
-        { "hpx-recvlimit",	1, NULL, 0 },
-        { "hpx-configfile",	1, NULL, 0 },
-        { "hpx-mprotectstacks",	0, NULL, 0 },
-        { "hpx-waitonabort",	0, NULL, 0 },
+        { "hpx-cores",  1, NULL, 0 },
+        { "hpx-threads",    1, NULL, 0 },
+        { "hpx-backoffmax", 1, NULL, 0 },
+        { "hpx-stacksize",  1, NULL, 0 },
+        { "hpx-heapsize",   1, NULL, 0 },
+        { "hpx-gas",    1, NULL, 0 },
+        { "hpx-boot",   1, NULL, 0 },
+        { "hpx-transport",  1, NULL, 0 },
+        { "hpx-waitat", 2, NULL, 0 },
+        { "hpx-loglevel",   2, NULL, 0 },
+        { "hpx-logat",  1, NULL, 0 },
+        { "hpx-statistics", 0, NULL, 0 },
+        { "hpx-sendlimit",  1, NULL, 0 },
+        { "hpx-recvlimit",  1, NULL, 0 },
+        { "hpx-configfile", 1, NULL, 0 },
+        { "hpx-mprotectstacks", 0, NULL, 0 },
+        { "hpx-waitonabort",    0, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
       c = getopt_long (argc, argv, "", long_options, &option_index);
 
-      if (c == -1) break;	/* Exit from `while (1)' loop.  */
+      if (c == -1) break;   /* Exit from `while (1)' loop.  */
 
       switch (c)
         {
 
-        case 0:	/* Long option with no short option */
+        case 0: /* Long option with no short option */
           /* number of cores to run on.  */
           if (strcmp (long_options[option_index].name, "hpx-cores") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_cores_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_cores_arg),
                  &(args_info->hpx_cores_orig), &(args_info->hpx_cores_given),
                 &(local_args_info.hpx_cores_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-cores", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* number of scheduler threads.  */
           else if (strcmp (long_options[option_index].name, "hpx-threads") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_threads_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_threads_arg),
                  &(args_info->hpx_threads_orig), &(args_info->hpx_threads_given),
                 &(local_args_info.hpx_threads_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-threads", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* upper bound for worker-thread backoff.  */
           else if (strcmp (long_options[option_index].name, "hpx-backoffmax") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_backoffmax_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_backoffmax_arg),
                  &(args_info->hpx_backoffmax_orig), &(args_info->hpx_backoffmax_given),
                 &(local_args_info.hpx_backoffmax_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-backoffmax", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set HPX stack size.  */
           else if (strcmp (long_options[option_index].name, "hpx-stacksize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_stacksize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_stacksize_arg),
                  &(args_info->hpx_stacksize_orig), &(args_info->hpx_stacksize_given),
                 &(local_args_info.hpx_stacksize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-stacksize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set HPX per-PE global heap size.  */
           else if (strcmp (long_options[option_index].name, "hpx-heapsize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_heapsize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_heapsize_arg),
                  &(args_info->hpx_heapsize_orig), &(args_info->hpx_heapsize_given),
                 &(local_args_info.hpx_heapsize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-heapsize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* type of Global Address Space (GAS).  */
           else if (strcmp (long_options[option_index].name, "hpx-gas") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_gas_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_gas_arg),
                  &(args_info->hpx_gas_orig), &(args_info->hpx_gas_given),
                 &(local_args_info.hpx_gas_given), optarg, hpx_option_parser_hpx_gas_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-gas", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX bootstrap method to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-boot") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_boot_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_boot_arg),
                  &(args_info->hpx_boot_orig), &(args_info->hpx_boot_given),
                 &(local_args_info.hpx_boot_given), optarg, hpx_option_parser_hpx_boot_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-boot", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* type of transport to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-transport") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_transport_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_transport_arg),
                  &(args_info->hpx_transport_orig), &(args_info->hpx_transport_given),
                 &(local_args_info.hpx_transport_given), optarg, hpx_option_parser_hpx_transport_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-transport", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* wait for debugger at specific locality.  */
           else if (strcmp (long_options[option_index].name, "hpx-waitat") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_waitat_arg), 
-                 &(args_info->hpx_waitat_orig), &(args_info->hpx_waitat_given),
+
+            if (update_multiple_arg_temp(&hpx_waitat_list,
                 &(local_args_info.hpx_waitat_given), optarg, 0, 0, ARG_INT,
-                check_ambiguity, override, 0, 0,
                 "hpx-waitat", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the logging level.  */
           else if (strcmp (long_options[option_index].name, "hpx-loglevel") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_loglevel_list, 
+
+            if (update_multiple_arg_temp(&hpx_loglevel_list,
                 &(local_args_info.hpx_loglevel_given), optarg, hpx_option_parser_hpx_loglevel_values, 0, ARG_ENUM,
                 "hpx-loglevel", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* selectively output log information.  */
           else if (strcmp (long_options[option_index].name, "hpx-logat") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_logat_list, 
+
+            if (update_multiple_arg_temp(&hpx_logat_list,
                 &(local_args_info.hpx_logat_given), optarg, 0, 0, ARG_INT,
                 "hpx-logat", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* print HPX runtime statistics.  */
           else if (strcmp (long_options[option_index].name, "hpx-statistics") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_statistics_flag), 0, &(args_info->hpx_statistics_given),
                 &(local_args_info.hpx_statistics_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-statistics", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX transport-specific send limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-sendlimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_sendlimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_sendlimit_arg),
                  &(args_info->hpx_sendlimit_orig), &(args_info->hpx_sendlimit_given),
                 &(local_args_info.hpx_sendlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-sendlimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX transport-specific recv limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-recvlimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_recvlimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_recvlimit_arg),
                  &(args_info->hpx_recvlimit_orig), &(args_info->hpx_recvlimit_given),
                 &(local_args_info.hpx_recvlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-recvlimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX runtime configuration file.  */
           else if (strcmp (long_options[option_index].name, "hpx-configfile") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_configfile_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_configfile_arg),
                  &(args_info->hpx_configfile_orig), &(args_info->hpx_configfile_given),
                 &(local_args_info.hpx_configfile_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-configfile", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* use mprotect() to bracket stacks to look for stack overflows.  */
           else if (strcmp (long_options[option_index].name, "hpx-mprotectstacks") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_mprotectstacks_flag), 0, &(args_info->hpx_mprotectstacks_given),
                 &(local_args_info.hpx_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-mprotectstacks", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* call hpx_wait() inside of hpx_abort() for debugging.  */
           else if (strcmp (long_options[option_index].name, "hpx-waitonabort") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_waitonabort_flag), 0, &(args_info->hpx_waitonabort_given),
                 &(local_args_info.hpx_waitonabort_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-waitonabort", '-',
                 additional_error))
               goto failure;
-          
+
           }
-          
+
           break;
-        case '?':	/* Invalid option.  */
+        case '?':   /* Invalid option.  */
           /* `getopt_long' already printed an error message.  */
           goto failure;
 
-        default:	/* bug: option not considered.  */
+        default:    /* bug: option not considered.  */
           fprintf (stderr, "%s: option unknown: %c%s\n", HPX_OPTION_PARSER_PACKAGE, c, (additional_error ? additional_error : ""));
           abort ();
         } /* switch */
     } /* while */
 
 
+  update_multiple_arg((void *)&(args_info->hpx_waitat_arg),
+    &(args_info->hpx_waitat_orig), args_info->hpx_waitat_given,
+    local_args_info.hpx_waitat_given, 0 ,
+    ARG_INT, hpx_waitat_list);
   update_multiple_arg((void *)&(args_info->hpx_loglevel_arg),
     &(args_info->hpx_loglevel_orig), args_info->hpx_loglevel_given,
     local_args_info.hpx_loglevel_given, 0,
@@ -1301,11 +1310,13 @@ hpx_option_parser_internal (
     local_args_info.hpx_logat_given, 0,
     ARG_INT, hpx_logat_list);
 
+  args_info->hpx_waitat_given += local_args_info.hpx_waitat_given;
+  local_args_info.hpx_waitat_given = 0;
   args_info->hpx_loglevel_given += local_args_info.hpx_loglevel_given;
   local_args_info.hpx_loglevel_given = 0;
   args_info->hpx_logat_given += local_args_info.hpx_logat_given;
   local_args_info.hpx_logat_given = 0;
-  
+
   if (check_required)
     {
       error_occurred += hpx_option_parser_required2 (args_info, argv[0], additional_error);
@@ -1319,9 +1330,10 @@ hpx_option_parser_internal (
   return 0;
 
 failure:
+  free_list (hpx_waitat_list, 0 );
   free_list (hpx_loglevel_list, 0 );
   free_list (hpx_logat_list, 0 );
-  
+
   hpx_option_parser_release (&local_args_info);
   return (EXIT_FAILURE);
 }
@@ -1484,7 +1496,7 @@ hpx_option_parser_configfile (
   params.check_required = check_required;
   params.check_ambiguity = 0;
   params.print_errors = 1;
-  
+
   return hpx_option_parser_config_file (filename, args_info, &params);
 }
 
@@ -1535,7 +1547,7 @@ hpx_option_parser_config_file (const char *filename,
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -1627,25 +1639,25 @@ hpx_option_parser_string_ext(const char *cmdline, struct hpx_options_t *args_inf
   char **argv_ptr = 0;
   int result;
   unsigned int argc;
-  
+
   argc = hpx_option_parser_create_argv(cmdline, &argv_ptr, prog_name);
-  
+
   result =
     hpx_option_parser_internal (argc, argv_ptr, args_info, params, 0);
-  
+
   if (argv_ptr)
     {
       free (argv_ptr);
     }
 
   free_cmd_list();
-  
+
   if (result == EXIT_FAILURE)
     {
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
