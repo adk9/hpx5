@@ -2,7 +2,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "libphoton.h"
+#include "photon_backend.h"
 #include "photon_exchange.h"
 #include "logging.h"
 #include "verbs_util.h"
