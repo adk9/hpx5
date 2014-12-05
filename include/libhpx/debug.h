@@ -27,8 +27,18 @@ HPX_INTERNAL extern hpx_log_t dbg_log_level;
 #endif
 
 /// Some output wrappers
-HPX_INTERNAL void dbg_log1(unsigned line, const char *f, const hpx_log_t level, const char *fmt, ...) HPX_PRINTF(4, 5);
-HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) HPX_PRINTF(3, 4);
+void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
+              const char *fmt, ...)
+  HPX_PRINTF(4, 5) HPX_INTERNAL;
+
+
+int dbg_error1(unsigned line, const char *f, const char *fmt, ...)
+  HPX_PRINTF(3, 4) HPX_INTERNAL;
+
+
+void dbg_wait(void)
+  HPX_INTERNAL;
+
 
 #ifdef ENABLE_DEBUG
 #define _dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
@@ -39,16 +49,14 @@ HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) 
 #elif defined(NDEBUG)
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
-#define dbg_check(e, ...) (void)e
+#define dbg_check(e, ...) (void)(e)
 #define dbg_assert(e)
 #else
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
-#define dbg_check(e, ...) assert(e == HPX_SUCCESS)
+#define dbg_check(e, ...) assert((e) == HPX_SUCCESS)
 #define dbg_assert(e)
 #endif
-
-HPX_INTERNAL void dbg_wait(void);
 
 /// Wrappers to log level-specific debug messages
 #define dbg_log(...) _dbg_log(HPX_LOG_DEFAULT, __VA_ARGS__)
