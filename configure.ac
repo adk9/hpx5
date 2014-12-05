@@ -205,6 +205,8 @@ AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
   [enable_tests=no])
 AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [test "x$enable_tests" != xno])
 
+AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
+
 # Set source and build directories
 AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
 AC_SUBST(PHOTON_BUILDDIR, "\${top_builddir}")
@@ -214,6 +216,7 @@ AC_CONFIG_FILES([
 	src/contrib/Makefile
 	src/contrib/bit_array/Makefile
 	src/contrib/libsync/Makefile
+	src/contrib/libsync/arch/Makefile
 	src/util/Makefile
 	src/Makefile
 	photon.pc
