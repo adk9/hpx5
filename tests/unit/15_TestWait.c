@@ -30,8 +30,9 @@
 #include "tests.h"
 #include <stdlib.h>
 
-#define FUTURES_PER_LOCALITY 250000
+#define LCOS_PER_LOCALITY 100000
 #define WAITERS 4
+#define PARTICIPANTS 4
 
 // ***************************************************************************
 // This tests waiting on lcos.  Best run with many cores. Eg., on cutter:
@@ -59,13 +60,24 @@ int t15_delete_action(const hpx_addr_t * const lcos) {
 }
 
 int t15_spawn_action(const hpx_addr_t * const termination_lco) {
-  for(size_t i = 0; i < FUTURES_PER_LOCALITY; ++i) {
-    const hpx_addr_t test_lcos[3] = { hpx_lco_future_new(0), *termination_lco, hpx_lco_and_new(WAITERS) };
-    hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_lcos[0], sizeof(hpx_addr_t), HPX_NULL);
+  for(size_t i = 0; i < LCOS_PER_LOCALITY; ++i) {
+    // test futures
+    const hpx_addr_t test_futures[3] = { hpx_lco_future_new(0), *termination_lco, hpx_lco_and_new(WAITERS) };
+    hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_futures[0], sizeof(hpx_addr_t), HPX_NULL);
     for(size_t j = 0; j < WAITERS; ++j) {
-      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_lcos[0], sizeof(hpx_addr_t), test_lcos[2]);
+      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_futures[0], sizeof(hpx_addr_t), test_futures[2]);
     }
-    hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_lcos, sizeof(test_lcos), HPX_NULL);
+    hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_futures, sizeof(test_futures), HPX_NULL);
+
+    // test and lco
+    const hpx_addr_t test_ands[3] = { hpx_lco_and_new(PARTICIPANTS), *termination_lco, hpx_lco_and_new(WAITERS) };
+    for(size_t j = 0; j < PARTICIPANTS; ++j) {
+      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_ands[0], sizeof(hpx_addr_t), HPX_NULL);      
+    }
+    for(size_t j = 0; j < WAITERS; ++j) {
+      hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_ands[0], sizeof(hpx_addr_t), test_ands[2]);
+    }
+    hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_ands, sizeof(test_ands), HPX_NULL);
   }
   return HPX_SUCCESS;
 }
@@ -76,7 +88,7 @@ START_TEST (test_libhpx_lco_wait) {
   // allocate and start a timer
   const hpx_time_t t1 = hpx_time_now();
   
-  const hpx_addr_t termination_lco = hpx_lco_and_new(FUTURES_PER_LOCALITY * HPX_LOCALITIES);
+  const hpx_addr_t termination_lco = hpx_lco_and_new(2 * LCOS_PER_LOCALITY * HPX_LOCALITIES);
   hpx_bcast(t15_spawn, &termination_lco, sizeof(termination_lco), HPX_NULL);
   hpx_lco_wait(termination_lco);
   hpx_lco_delete(termination_lco, HPX_NULL);
