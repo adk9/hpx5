@@ -1,0 +1,7 @@
+# The isend-irecv network implementations
+noinst_LTLIBRARIES	= libisir.la
+
+libisir_la_CPPFLAGS = -I$(top_srcdir)/include
+libisir_la_CFLAGS   = $(MPI_CFLAGS)
+libisir_la_SOURCES  = buffer.c isend_buffer.c irecv_buffer.c funneled.c
+libisir_la_LIBADD   = $(MPI_LIBS)
