@@ -16,15 +16,17 @@ typedef struct photon_ri_ledger_entry_t {
 
 typedef struct photon_ri_ledger_t {
   photon_ri_ledger_entry *entries;
-  int num_entries;
-  int curr;
+  uint64_t curr;
+  uint64_t tail;
+  uint32_t num_entries;
   struct photon_buffer_t remote;
 } photon_ri_ledger;
 
 typedef struct photon_ri_ledger_entry_t * photonRILedgerEntry;
 typedef struct photon_ri_ledger_t * photonRILedger;
 
-photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size);
-void photon_ri_ledger_free(photonRILedger ledger);
+PHOTON_INTERNAL photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size);
+PHOTON_INTERNAL void photon_ri_ledger_free(photonRILedger ledger);
+PHOTON_INTERNAL int photon_ri_ledger_get_next(photonRILedger ledger);
 
 #endif

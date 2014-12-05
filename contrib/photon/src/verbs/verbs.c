@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 
 #include "photon_backend.h"
+#include "photon_forwarder.h"
 #include "photon_buffer.h"
 #include "photon_exchange.h"
 
@@ -240,7 +241,6 @@ static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, voi
 static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_size, photon_info_t type) {
   int i;
   struct photon_buffer_t *info;
-  extern photonBI shared_storage;
 
   switch (type) {
   case PHOTON_MTU:

@@ -38,7 +38,6 @@ error_exit:
 
 static int hash_key(uint64_t key, int table_size) {
   return (int)(key%table_size);
-
 }
 
 

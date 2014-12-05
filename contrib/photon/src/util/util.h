@@ -1,6 +1,7 @@
 #ifndef util_H
 #define util_H
 
+#include <stdbool.h>
 #include "photon.h"
 
 typedef struct photon_dev_list_t {
@@ -15,5 +16,11 @@ int photon_match_dev(photon_dev_list *dlist, const char *dev, int port);
 void photon_free_devlist(photon_dev_list *d);
 void photon_gettime_(double *s);
 const char *photon_addr_str(photon_addr *addr, int af);
+
+static inline __attribute__((const))
+bool is_power_of_2(unsigned long n)
+{
+  return (n != 0 && ((n & (n - 1)) == 0));
+}
 
 #endif

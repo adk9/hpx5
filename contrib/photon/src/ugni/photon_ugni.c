@@ -14,9 +14,10 @@
 #include "photon_ugni_connect.h"
 #include "logging.h"
 #include "utility_functions.h"
+#include "libsync/include/locks.h"
 
 #define MAX_RETRIES 1
-#define DEF_UGNI_BTE_THRESH 8192
+#define DEF_UGNI_BTE_THRESH (1<<16)
 
 struct rdma_args_t {
   int proc;
@@ -29,10 +30,12 @@ struct rdma_args_t {
 };
 
 typedef struct photon_gni_descriptor_t {
-  int curr;
+  tatas_lock_t lock;
+  uint64_t curr;
   gni_post_descriptor_t *entries;
 } photon_gni_descriptor;
 
+static tatas_lock_t cq_lock;
 static int __initialized = 0;
 
 static int ugni_initialized(void);
@@ -107,6 +110,8 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
+  sync_tatas_init(&cq_lock);
+
   if (cfg->ugni.bte_thresh < 0)
     cfg->ugni.bte_thresh = DEF_UGNI_BTE_THRESH;
   else if (cfg->ugni.bte_thresh == 0)
@@ -142,6 +147,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   // initialize the available descriptors
   descriptors = (photon_gni_descriptor*)calloc(_photon_nproc, sizeof(photon_gni_descriptor));
   for (i=0; i<_photon_nproc; i++) {
+    sync_tatas_init(&descriptors[i].lock);
     descriptors[i].entries = (gni_post_descriptor_t*)calloc(_LEDGER_SIZE, sizeof(gni_post_descriptor_t));
   }
 
@@ -167,11 +173,11 @@ static int ugni_finalize() {
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err, curr;
-
-  curr = descriptors[args->proc].curr;
-  fma_desc = &(descriptors[args->proc].entries[curr]);
-  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % _LEDGER_SIZE;
+  int err, curr, curr_ind;
+  
+  curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
+  curr_ind = curr & (_LEDGER_SIZE - 1);
+  fma_desc = &(descriptors[args->proc].entries[curr_ind]);
 
   if (flags & RDMA_FLAG_NO_CQE) {
     fma_desc->cq_mode = GNI_CQMODE_SILENT;
@@ -193,12 +199,18 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
 
-  err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
-  if (err != GNI_RC_SUCCESS) {
-    log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
-    goto error_exit;
+  //sync_tatas_acquire(&descriptors[args->proc].lock);
+  sync_tatas_acquire(&cq_lock);
+  {
+    err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
+    if (err != GNI_RC_SUCCESS) {
+      log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+      goto error_exit;
+    }
+    dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
   }
-  dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
+  //sync_tatas_release(&descriptors[args->proc].lock);
+  sync_tatas_release(&cq_lock);
 
   return PHOTON_OK;
 
@@ -208,11 +220,11 @@ error_exit:
 
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err, curr;
+  int err, curr, curr_ind;
   
-  curr = descriptors[args->proc].curr;
-  fma_desc = &(descriptors[args->proc].entries[curr]);
-  descriptors[args->proc].curr = (descriptors[args->proc].curr + 1) % _LEDGER_SIZE;
+  curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
+  curr_ind = curr & (_LEDGER_SIZE - 1);
+  fma_desc = &(descriptors[args->proc].entries[curr_ind]);
 
   if (flags & RDMA_FLAG_NO_CQE) {
     fma_desc->cq_mode = GNI_CQMODE_SILENT;
@@ -234,12 +246,18 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
 
-  err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
-  if (err != GNI_RC_SUCCESS) {
-    log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
-    goto error_exit;
+  //sync_tatas_acquire(&descriptors[args->proc].lock);
+  sync_tatas_acquire(&cq_lock);
+  {
+    err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
+    if (err != GNI_RC_SUCCESS) {
+      log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
+      goto error_exit;
+    }
+    dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
   }
-  dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
+  //sync_tatas_release(&descriptors[args->proc].lock);
+  sync_tatas_release(&cq_lock);
 
   return PHOTON_OK;
 
@@ -301,22 +319,26 @@ static int ugni_get_event(photonEventStatus stat) {
   uint64_t cookie;
   int rc;
 
+  sync_tatas_acquire(&cq_lock);
   rc = get_cq_event(ugni_ctx.local_cq_handle, 1, 0, &current_event);
   if (rc == 0) {
     rc = GNI_GetCompleted(ugni_ctx.local_cq_handle, current_event, &event_post_desc_ptr);
+    sync_tatas_release(&cq_lock);
     if (rc != GNI_RC_SUCCESS) {
       dbg_err("GNI_GetCompleted  data ERROR status: %s (%d)", gni_err_str[rc], rc);
     }
   }
   else if (rc == 3) {
     /* nothing available */
+    sync_tatas_release(&cq_lock);
     return 1;
   }
   else {
+    sync_tatas_release(&cq_lock);
     /* rc == 2 is an overrun */
     dbg_err("Error getting CQ event: %d\n", rc);
   }
-
+  
   cookie = event_post_desc_ptr->post_id;
   dbg_trace("received event with cookie:%"PRIx64, cookie);
 

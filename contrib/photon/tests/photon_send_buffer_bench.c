@@ -71,12 +71,11 @@ START_TEST (test_photon_send_buffer_bench)
       if (i == skip) t_start = TIME();
       // Source: post buffer
       if (rank == 0) {
-        photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
-        // the source can also do wait_any() to reap the event associated with the 
         // local post buffer operation.
-
-        // clear the EVQ event from the post_send
-        photon_wait_any(&ret_proc, &req);
+	int rc;
+        rc = photon_post_send_buffer_rdma(next, s_buf, k, PHOTON_TAG, &sendReq);
+	if (rc != PHOTON_OK)
+	  exit(1);
         // wait on the ledger event (FIN from other side)
         photon_wait(sendReq);
       }

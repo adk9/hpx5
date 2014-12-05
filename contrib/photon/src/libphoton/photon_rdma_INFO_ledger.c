@@ -35,3 +35,14 @@ error_exit:
 void photon_ri_ledger_free(photonRILedger ledger) {
   free(ledger);
 }
+
+int photon_ri_ledger_get_next(photonRILedger l) {
+  uint64_t curr, tail;
+  curr = sync_fadd(&l->curr, 1, SYNC_RELAXED);
+  tail = sync_load(&l->tail, SYNC_RELAXED);
+  if ((curr - tail) > l->num_entries) {
+    log_err("Exceeded number of outstanding RI ledger entries - increase ledger size or wait for completion");
+    return -1;
+  }  
+  return curr % l->num_entries;
+}

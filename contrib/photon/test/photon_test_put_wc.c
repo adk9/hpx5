@@ -150,8 +150,6 @@ int main(int argc, char *argv[]) {
   for (i=0; i<nproc; i++) {
     // everyone posts their recv buffers
     photon_post_recv_buffer_rdma(i, recv[i], PHOTON_BUF_SIZE, PHOTON_TAG, &recvReq[i]);
-    // make sure we clear the local post event
-    photon_wait_any(&ret_proc, &request);
   }
 
   for (i=0; i<nproc; i++) {
@@ -159,6 +157,8 @@ int main(int argc, char *argv[]) {
     photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     // get the remote buffer info so we can do our own put
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
+    photon_send_FIN(sendReq[i], i, PHOTON_REQ_COMPLETED);
+    photon_wait(recvReq[i]);
   }
 
   // now we can proceed with our benchmark
