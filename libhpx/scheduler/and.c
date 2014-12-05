@@ -50,8 +50,7 @@ static hpx_status_t _wait(_and_t *and) {
   // and we can correctly return the status that we read (the status won't
   // change, because that's done through the hpx_lco_error() handler which would
   // need the lock too).
-  intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
-  if (val == 0)
+  if (and->value == 0)
     return status;
 
   // otherwise wait for the and to be signaled
@@ -71,16 +70,15 @@ static hpx_status_t _try_wait(_and_t *and, hpx_time_t time) {
   // and we can correctly return the status that we read (the status won't
   // change, because that's done through the hpx_lco_error() handler which would
   // need the lock too).
-  intptr_t val = sync_load(&and->value, SYNC_ACQUIRE);
-  if (val == 0)
+  if (and->value == 0)
     return status;
 
   // otherwise wait for the and barrier to reach 0 or return if out of time
-  while (val != 0) {
+  while (and->value != 0) {
     if (hpx_time_diff_us(hpx_time_now(), time) > 0)
       return HPX_LCO_TIMEOUT;
     hpx_thread_yield();
-    val = sync_load(&and->value, SYNC_ACQUIRE);
+    // ADK: Don't you need to yield the lock here?
   }
 
   return HPX_SUCCESS;
@@ -106,18 +104,20 @@ static void _and_error(lco_t *lco, hpx_status_t code) {
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
-  intptr_t val = sync_fadd(&and->value, -1, SYNC_ACQ_REL);
+  lco_lock(&and->lco);
+  and->value--;
 
-  if (val > 1)
-    return;
-
-  if (val < 1) {
-    dbg_error("and: too many threads joined the AND lco.\n");
-    return;
+  if (and->value > 0) {
+    goto done;
   }
 
-  lco_lock(&and->lco);
+  if (and->value < 0) {
+    dbg_error("and: too many threads joined the AND lco.\n");
+    goto done;
+  }
+
   scheduler_signal_all(&and->barrier);
+done:
   lco_unlock(&and->lco);
 }
 
