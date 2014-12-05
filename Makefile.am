@@ -11,8 +11,8 @@ EXTRA_DIST = \
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.10.0/config
 
-SUBDIRS       = contrib libsync libhpx include examples bench
-DIST_SUBDIRS  = contrib libsync libhpx include examples bench
+SUBDIRS       = contrib libsync libhpx include examples bench tutorial 
+DIST_SUBDIRS  = contrib libsync libhpx include examples bench tutorial
 
 if ENABLE_DOCS
 SUBDIRS      += docs
