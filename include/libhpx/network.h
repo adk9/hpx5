@@ -13,6 +13,7 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
+
 /// @file include/libhpx/network.h
 /// @brief Declare the network_class_t structure.
 ///
@@ -22,18 +23,19 @@
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
 
+
+/// Forward declarations.
+/// @{
+struct gas_class;
+/// @}
+
+
 /// All network objects implement the network interface.
 typedef struct network {
   void (*delete)(struct network *)
     HPX_NON_NULL(1);
 
   int (*progress)(struct network *)
-    HPX_NON_NULL(1);
-
-  int (*startup)(struct network *)
-    HPX_NON_NULL(1);
-
-  void (*shutdown)(struct network *)
     HPX_NON_NULL(1);
 
   void (*barrier)(struct network *)
@@ -66,7 +68,13 @@ typedef struct network {
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-network_t *network_new(libhpx_network_t type, int nrx)
+///
+/// @param         type The type of the network to instantiate.
+/// @param          gas The global address space.
+/// @param          nrx The number of receive queues.
+///
+/// @returns            The network object, or NULL if there was an issue.
+network_t *network_new(libhpx_network_t type, struct gas_class *gas, int nrx)
   HPX_MALLOC HPX_INTERNAL;
 
 
@@ -92,26 +100,6 @@ static inline void network_delete(network_t *network) {
 static inline int network_progress(network_t *network) {
   assert(network);
   return network->progress(network);
-}
-
-
-/// Start network progress.
-///
-/// @param      network The network to start.
-static inline int network_startup(network_t *network) {
-  assert(network);
-  return network->startup(network);
-}
-
-
-/// Shuts down network progress.
-///
-/// Indicates that the network should shut down.
-///
-/// @param      network The network to shut down.
-static inline void network_shutdown(network_t *network) {
-  assert(network);
-  network->shutdown(network);
 }
 
 

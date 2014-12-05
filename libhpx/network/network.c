@@ -21,8 +21,6 @@
 /// shielding it from the details of the underlying transport interface.
 #include <assert.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <sched.h>
 
 #include <libsync/sync.h>
 #include <libsync/queues.h>
@@ -41,6 +39,7 @@
 #include <libhpx/transport.h>
 #include <libhpx/routing.h>
 
+#include "isir/isir.h"
 
 //#define _QUEUE(pre, post) pre##spscq##post
 //#define _QUEUE(pre, post) pre##ms_queue##post
@@ -55,17 +54,15 @@
 
 /// The network class data.
 struct _network {
-  struct network             vtable;
+  network_t                  vtable;
   volatile int                flush;
   struct transport_class *transport;
-  pthread_t                progress;
   int                           nrx;
 
   // make sure the rest of this structure is cacheline aligned
-  const char _paddinga[HPX_CACHELINE_SIZE - ((sizeof(struct network) +
+  const char _paddinga[HPX_CACHELINE_SIZE - ((sizeof(network_t) +
                                               sizeof(int) +
                                               sizeof(struct transport_class*) +
-                                              sizeof(pthread_t) +
                                               sizeof(int)) %
                                              HPX_CACHELINE_SIZE)];
 
@@ -74,57 +71,24 @@ struct _network {
 };
 
 
-static void *_progress(void *o) {
-  // system_set_affinity(pthread_self(), 0);
-
-  struct _network *network = o;
-
-  // we have to join the GAS so that we can allocate parcels in here.
-  int e = here->gas->join();
-  if (e) {
-    dbg_error("network failed to join the global address space.\n");
+static void _finish(struct _network *network) {
+  int flush = sync_load(&network->flush, SYNC_ACQUIRE);
+  if (flush) {
+    transport_progress(network->transport, TRANSPORT_FLUSH);
   }
-
-  while (true) {
-    pthread_testcancel();
-    profile_ctr(scheduler_get_stats(here->sched)->progress++);
-    transport_progress(network->transport, TRANSPORT_POLL);
-    sched_yield();
+  else {
+    transport_progress(network->transport, TRANSPORT_CANCEL);
   }
-  return NULL;
 }
 
 
-static hpx_action_t _probe = 0;
-
-
-static int _probe_handler(void *o) {
-  struct network *network = *(struct network **)o;
-  hpx_parcel_t *stack = NULL;
-  int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
-  if (e != HPX_SUCCESS)
-    return e;
-
-  while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
-    hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&stack))) {
-      scheduler_spawn(p);
-    }
-  }
-  return HPX_SUCCESS;
-}
-
-
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_probe, _probe_handler);
-}
-
-
-static void _delete(struct network *o) {
+static void _delete(network_t *o) {
   if (!o)
     return;
 
   struct _network *network = (struct _network*)o;
+
+  _finish(network);
 
   hpx_parcel_t *p = NULL;
 
@@ -137,100 +101,51 @@ static void _delete(struct network *o) {
 }
 
 
-static int _startup(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  if (network->transport->type == HPX_TRANSPORT_SMP)
-    return LIBHPX_OK;
-
-  int e = pthread_create(&network->progress, NULL, _progress, network);
-  if (e) {
-    return dbg_error("failed to start network progress.\n");
-  }
-  else {
-    dbg_log("started network progress.\n");
-  }
-
-  system_set_affinity(network->progress, -1);
-
-  e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
-  if (e) {
-    return dbg_error("failed to start network probe\n");
-  }
-  else {
-    dbg_log("started probing the network.\n");
-  }
-  
-  return HPX_SUCCESS;
-}
-
-
-static void _shutdown(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  if (network->transport->type == HPX_TRANSPORT_SMP)
-    return;
-
-  int e = pthread_cancel(network->progress);
-  if (e) {
-    dbg_error("could not cancel the network progress thread.\n");
-  }
-
-  e = pthread_join(network->progress, NULL);
-  if (e) {
-    dbg_error("could not join the network progress thread.\n");
-  }
-  else {
-    dbg_log("shutdown network progress.\n");
-  }
-
-  int flush = sync_load(&network->flush, SYNC_ACQUIRE);
-  if (flush) {
-    transport_progress(network->transport, TRANSPORT_FLUSH);
-  }
-  else {
-    transport_progress(network->transport, TRANSPORT_CANCEL);
-  }
-}
-
-
-static void _barrier(struct network *o) {
+static void _barrier(network_t *o) {
   struct _network *network = (struct _network*)o;
   transport_barrier(network->transport);
 }
 
 
-static int _send(struct network *o, hpx_parcel_t *p, hpx_addr_t complete) {
+static int _send(network_t *o, hpx_parcel_t *p, hpx_addr_t complete) {
   struct _network *network = (struct _network*)o;
   _QUEUE_ENQUEUE(&network->tx, p);
   return LIBHPX_OK;
 }
 
 
-hpx_parcel_t *network_tx_dequeue(struct network *o) {
+hpx_parcel_t *network_tx_dequeue(network_t *o) {
   struct _network *network = (struct _network*)o;
   return _QUEUE_DEQUEUE(&network->tx);
 }
 
 
-static hpx_parcel_t *_probe_parcel(struct network *o, int nrx) {
+static hpx_parcel_t *_probe_parcel(network_t *o, int nrx) {
   struct _network *network = (struct _network*)o;
   return _QUEUE_DEQUEUE(&network->rx);
 }
 
 
-static void _set_flush(struct network *o) {
+static void _set_flush(network_t *o) {
   struct _network *network = (struct _network*)o;
   sync_store(&network->flush, 1, SYNC_RELEASE);
 }
 
 
-int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
+int network_try_notify_rx(network_t *o, hpx_parcel_t *p) {
   struct _network *network = (struct _network*)o;
   _QUEUE_ENQUEUE(&network->rx, p);
   return 1;
 }
 
 
-struct network *network_new(libhpx_network_t type, int nrx) {
+static int _progress(network_t *n) {
+  struct _network *network = (void*)n;
+  transport_progress(network->transport, TRANSPORT_POLL);
+  return LIBHPX_OK;
+}
+
+static network_t *_old_new(int nrx) {
   struct _network *n = NULL;
   int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n));
   if (e) {
@@ -239,8 +154,7 @@ struct network *network_new(libhpx_network_t type, int nrx) {
   }
 
   n->vtable.delete = _delete;
-  n->vtable.startup = _startup;
-  n->vtable.shutdown = _shutdown;
+  n->vtable.progress = _progress;
   n->vtable.barrier = _barrier;
   n->vtable.send = _send;
   n->vtable.probe = _probe_parcel;
@@ -256,4 +170,9 @@ struct network *network_new(libhpx_network_t type, int nrx) {
   _QUEUE_INIT(&n->rx, 0);
 
   return &n->vtable;
+}
+
+network_t *network_new(libhpx_network_t type, struct gas_class *gas, int nrx) {
+  // return _old_new(nrx);
+  return network_isir_funneled_new(gas, nrx);
 }
