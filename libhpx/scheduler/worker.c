@@ -352,10 +352,11 @@ void worker_bind_self(struct worker *worker) {
   self = worker;
   self->thread = pthread_self();
 
-  if (self->core >= 0) {
-    dbg_log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
-    system_set_affinity(self->thread, self->core);
-  }
+  // we set worker thread affinity in worker_create()
+  //if (self->core >= 0) {
+  //   dbg_log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
+  //  system_set_affinity(self->thread, self->core);
+  //}
 }
 
 int worker_start(void) {
@@ -378,12 +379,26 @@ int worker_start(void) {
 
 
 int worker_create(struct worker *worker) {
+  cpu_set_t cpu_set;
   pthread_t thread;
+
   int e = pthread_create(&thread, NULL, _run, worker);
   if (e) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
   }
+  
+  CPU_ZERO(&cpu_set);
+  for (e=0; e<system_get_cores(); e++) {
+    CPU_SET(e, &cpu_set);
+  }
+
+  e = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
+  if (e) {
+    dbg_log("failed to affinitize a scheduler worker pthread.\n");
+    // return e; // non-fatal error
+  }
+
   return LIBHPX_OK;
 }
 
