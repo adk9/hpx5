@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
             }
             else {
               //fprintf(stderr,"%d: Busy waiting for send\n", rank);
-              usleep(10*1000); // 1/100th of a second
+              //usleep(10*1000); // 1/100th of a second
             }
           }
         }
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
             }
             else {
               //fprintf(stderr,"%d: Busy waiting for recv\n", rank);
-              usleep(10*1000); // 1/100th of a second
+              //usleep(10*1000); // 1/100th of a second
             }
           }
         }

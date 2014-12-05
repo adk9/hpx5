@@ -148,6 +148,8 @@ START_TEST(test_photon_put_wc)
     photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     // get the remote buffer info so we can do our own put
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
+    photon_send_FIN(sendReq[i], i, PHOTON_REQ_COMPLETED);
+    photon_wait(recvReq[i]);
   }
 
   // now we can proceed with our benchmark

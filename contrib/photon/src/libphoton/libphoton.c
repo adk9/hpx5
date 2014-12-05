@@ -1,8 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include "libphoton.h"
+#include "photon_backend.h"
+#include "photon_forwarder.h"
 #include "logging.h"
+#include "util.h"
 
 #ifdef HAVE_VERBS
 #include "verbs.h"
@@ -28,6 +32,7 @@ int _photon_nforw;
 int _photon_fproc;
 int _photon_ebsize;
 int _photon_smsize;
+int _photon_spsize;
 int _forwarder;
 
 #ifdef DEBUG
@@ -153,6 +158,7 @@ int photon_init(photonConfig cfg) {
   _photon_nforw = lcfg->forwarder.use_forwarder;
   _photon_ebsize = lcfg->cap.eager_buf_size;
   _photon_smsize = lcfg->cap.small_msg_size;
+  _photon_spsize = lcfg->cap.small_pwc_size;
   _LEDGER_SIZE = lcfg->cap.ledger_entries;
   
   /* update defaults */
@@ -162,6 +168,9 @@ int photon_init(photonConfig cfg) {
     _photon_smsize = DEF_SMALL_MSG_SIZE;
   if (_LEDGER_SIZE <= 0)
     _LEDGER_SIZE = DEF_LEDGER_SIZE;
+
+  assert(is_power_of_2(_LEDGER_SIZE));
+  assert(is_power_of_2(_photon_ebsize));
   
   /* figure out forwarder info */
   if (lcfg->forwarder.use_forwarder) {
@@ -532,10 +541,10 @@ int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, s
 }
 
 int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
-  if(__photon_default->initialized() != PHOTON_OK) {
-    init_err();
-    return PHOTON_ERROR_NOINIT;
-  }
+  //if(__photon_default->initialized() != PHOTON_OK) {
+  //  init_err();
+  //  return PHOTON_ERROR_NOINIT;
+  //}
   
   return __photon_default->probe_completion(proc, flag, request, flags);
 }
@@ -565,6 +574,7 @@ void photon_io_print_info(void *io) {
     __photon_forwarder->io_print(io);
   }
 }
+
 /* end I/O */
 
 /* utility API method to get backend-specific buffer info */

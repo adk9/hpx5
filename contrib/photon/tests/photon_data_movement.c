@@ -48,13 +48,8 @@ START_TEST (test_photon_test_get)
 
   // everyone posts their send buffer to their next rank
   photon_post_send_buffer_rdma(next, send, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
-
-  // do some "work"
-  //sleep(1);
-
   // wait for the send buffer that was posted from the previous rank
   photon_wait_send_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &recvReq);
-
   // get that posted send buffer
   photon_post_os_get(recvReq, prev, recv, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
   photon_send_FIN(recvReq, prev, 0);
@@ -130,13 +125,8 @@ START_TEST (test_photon_test_put)
 
   // everyone posts their recv buffer to their next rank
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-
-  // do some "work"
-  //sleep(1);
-
   // wait for the recv buffer that was posted from the previous rank
   photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
-
   // put directly into that recv buffer
   photon_post_os_put(sendReq, prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
   photon_send_FIN(sendReq, prev, 0);
