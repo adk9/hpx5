@@ -240,6 +240,12 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
+  tutorial/Makefile
+  tutorial/threads/Makefile
+  tutorial/gas/Makefile
+  tutorial/collectives/Makefile
+  tutorial/lco/Makefile
+  tutorial/parcel/Makefile
   bench/Makefile])
 
 AS_IF([test "x$enable_apps" != xno],
