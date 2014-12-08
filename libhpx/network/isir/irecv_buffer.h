@@ -16,6 +16,7 @@
 #include <mpi.h>
 #include <hpx/hpx.h>
 
+
 typedef struct {
   uint32_t limit;
   uint32_t size;
@@ -29,6 +30,7 @@ typedef struct {
     hpx_addr_t   handler;
   } *records;
 } irecv_buffer_t;
+
 
 /// Initialize an irecv buffer.
 ///
