@@ -26,7 +26,6 @@
 
 static hpx_action_t _probe = 0;
 
-
 static int _probe_handler(void *o) {
   network_t *network = *(network_t **)o;
 
@@ -43,6 +42,7 @@ static int _probe_handler(void *o) {
       scheduler_spawn(p);
     }
   }
+
   return HPX_SUCCESS;
 }
 
@@ -58,7 +58,7 @@ int probe_start(network_t *network) {
     return dbg_error("failed to start network probe\n");
   }
   else {
-    dbg_log("started probing the network.\n");
+    dbg_log_net("started probing the network\n");
   }
 
   return LIBHPX_OK;
