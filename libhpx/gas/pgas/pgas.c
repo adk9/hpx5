@@ -259,6 +259,10 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
+  if (gpa == HPX_NULL) {
+    return;
+  }
+
   const uint64_t offset = pgas_gpa_to_offset(gpa);
 
   DEBUG_IF (true) {
