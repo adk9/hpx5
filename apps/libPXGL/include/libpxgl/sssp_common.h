@@ -23,6 +23,7 @@ typedef struct {
 
 bool _try_update_vertex_distance(adj_list_vertex_t *vertex, distance_t distance);
 void _send_update_to_neighbors(adj_list_t graph, adj_list_vertex_t *vertex, distance_t distance);
-
+extern hpx_action_t _sssp_visit_vertex;
+extern sssp_kind_t _sssp_kind;
 
 #endif // LIBPXGL_SSSP_COMMON_H

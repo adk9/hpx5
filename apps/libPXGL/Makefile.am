@@ -9,6 +9,7 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
                        src/sssp_common.c \
                        src/sssp_chaotic.c \
                        src/sssp_dc.c \
+                       src/sssp_delta.c \
 		       src/dimacs.c \
 		       src/gteps.c \
 		       src/statistics.c \

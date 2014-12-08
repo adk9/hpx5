@@ -12,5 +12,6 @@ nobase_include_HEADERS = pxgl/pxgl.h \
                          libpxgl/sssp_queue.h \
                          libpxgl/sssp_common.h \
                          libpxgl/sssp_dc.h \
+                         libpxgl/sssp_delta.h \
                          libpxgl/sssp_chaotic.h \
                          libpxgl/termination.h

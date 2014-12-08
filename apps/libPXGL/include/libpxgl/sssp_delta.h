@@ -11,16 +11,11 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBPXGL_TERMINATION_H
-#define LIBPXGL_TERMINATION_H
+#ifndef LIBPXGL_SSSP_DELTA_H
+#define LIBPXGL_SSSP_DELTA_H
 
-#include "pxgl/pxgl.h"
+#include <pxgl/pxgl.h>
 
-void _increment_active_count(sssp_uint_t n);
-void _increment_finished_count();
-termination_t _get_termination();
-void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t internal_termination_lco);
-extern hpx_action_t _initialize_termination_detection;
-extern termination_t _termination;
+int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const _sssp_visit_vertex_args_t * const args, const size_t len, const hpx_addr_t result);
 
-#endif // LIBPXGL_TERMINATION_H
+#endif // LIBPXGL_SSSP_DELTA_H

@@ -20,13 +20,15 @@ typedef struct {
   adj_list_t graph;
   vertex_t source;
   hpx_addr_t termination_lco;
+  size_t delta;
 } call_sssp_args_t;
 
 typedef enum { CHAOTIC_SSSP_KIND, DC_SSSP_KIND } sssp_kind_t;
 
-// This invokes the chaotic-relaxation SSSP algorithm on the given
-// graph, starting from the given source.
 extern hpx_action_t call_sssp;
+extern hpx_action_t sssp_run_delta_stepping;
+extern hpx_action_t call_delta_sssp;
+
 extern hpx_action_t sssp_init_dc;
 typedef struct {
   size_t num_pq;
