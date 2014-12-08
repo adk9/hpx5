@@ -75,6 +75,11 @@ AC_ARG_ENABLE([apps],
                   [Enable mini-apps @<:@default=no@:>@])],
   [], [enable_apps=no])
 
+AC_ARG_ENABLE([tutorial],
+  [AS_HELP_STRING([--enable-tutorial],
+                  [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
+  [], [enable_tutorial=no])
+
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
@@ -190,6 +195,7 @@ AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
+AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
@@ -240,13 +246,15 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  tutorial/Makefile
+  bench/Makefile])
+
+AS_IF([test "x$enable_tutorial" != xno],
+  [AC_CONFIG_FILES([tutorial/Makefile
   tutorial/threads/Makefile
   tutorial/gas/Makefile
   tutorial/collectives/Makefile
   tutorial/lco/Makefile
-  tutorial/parcel/Makefile
-  bench/Makefile])
+  tutorial/parcel/Makefile])])
 
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
