@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+// #include <pthread.h>
 
 #include <hpx/hpx.h>
 
@@ -222,7 +222,7 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     goto unwind0;
   }
 
-  // _progress = progress_start(here);
+  // pthread_t _progress = progress_start(here);
   // if (pthread_equal(_progress, pthread_self())) {
   //   dbg_error("failed to start progress\n");
   // }
