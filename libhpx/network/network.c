@@ -149,18 +149,7 @@ static int _startup(struct network *o) {
     dbg_log("started network progress.\n");
   }
 
-  cpu_set_t cpu_set;
-  CPU_ZERO(&cpu_set);
-  CPU_ZERO(&cpu_set);
-  for (e=0; e<system_get_cores(); e++) {
-    CPU_SET(e, &cpu_set);
-  }
-
-  e = pthread_setaffinity_np(network->progress, sizeof(cpu_set_t), &cpu_set);
-  if (e) {
-    dbg_log("failed to affinitize network progress pthread.\n");
-    //return e; // non-fatal error
-  }
+  system_set_affinity(network->progress, -1);
 
   e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
   if (e) {
