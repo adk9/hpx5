@@ -147,6 +147,7 @@ static int _main_action(_sssp_args_t *args) {
   hpx_addr_t kind_bcast_lco = hpx_lco_future_new(0), dc_bcast_lco = hpx_lco_future_new(0);
   hpx_bcast(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind), kind_bcast_lco);
   if(args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
+  printf("# priority  queues: %zd\n",args->sssp_init_dc_args.num_pq);
   hpx_bcast(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args), dc_bcast_lco);
   hpx_lco_wait(kind_bcast_lco);
   hpx_lco_wait(dc_bcast_lco);
@@ -292,6 +293,8 @@ int main(int argc, char *argv[argc]) {
   int realloc_adj_list = 0;
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = DC_SSSP_KIND;
+  size_t frequency = 0;
+  size_t num_pqueue = 0;
 
   int e = hpx_init(&argc, &argv);
   if (e) {
@@ -300,7 +303,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:cdaphk?")) != -1) {
+  while ((opt = getopt(argc, argv, "q:f:l:cdaphk?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -317,6 +320,12 @@ int main(int argc, char *argv[argc]) {
     case 'd':
       sssp_kind = DC_SSSP_KIND;
       // TBD: add options to adjust dc parameters
+      break;
+    case 'f':
+      sssp_init_dc_args.freq = strtoul(optarg,NULL,0);
+      break;
+    case 'l':
+      sssp_init_dc_args.num_pq = strtoul(optarg,NULL,0);
       break;
     case 'c':
       sssp_kind = CHAOTIC_SSSP_KIND;
