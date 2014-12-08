@@ -25,8 +25,6 @@
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
-#include "request.h"
-#include "request_list.h"
 
 
 #define _CAT1(S, T) S##T
