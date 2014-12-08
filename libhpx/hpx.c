@@ -111,7 +111,7 @@ int hpx_init(int *argc, char ***argv) {
     _cleanup(here);
     return dbg_error("failed to initialize a topology.\n");
   }
-  e = hwloc_topology_load(here->topology);
+  e = libhpx_hwloc_topology_load(here->topology);
   if (e) {
     _cleanup(here);
     return dbg_error("failed to load the topology.\n");
