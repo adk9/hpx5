@@ -22,19 +22,29 @@
 
 #include <unistd.h>
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/system.h"
 #include "hpx/hpx.h"
+
 
 int system_get_cores(void) {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
+
 int system_set_affinity(pthread_t thread, int core_id) {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(core_id, &cpuset);
+  if (core_id == -1) {
+    for (int e=0; e<system_get_cores(); e++)
+      CPU_SET(e, &cpuset);
+  } else {
+    CPU_SET(core_id, &cpuset);
+  }
   int e = pthread_setaffinity_np(thread, sizeof(cpuset), &cpuset);
-  if (e) // not fatal
-    return dbg_error("system: failed to bind thread affinity.\n");
-  return HPX_SUCCESS;
+  if (e) {
+    dbg_log("failed to bind thread affinity.\n");
+    return LIBHPX_ERROR;
+  }
+  return LIBHPX_OK;
 }
