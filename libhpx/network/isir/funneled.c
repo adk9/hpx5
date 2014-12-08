@@ -23,6 +23,7 @@
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include "buffers.h"
+#include "irecv_buffer.h"
 #include "isir.h"
 #include "request.h"
 #include "request_list.h"
@@ -41,7 +42,7 @@ typedef struct {
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   buffer_t        isends;
-  buffer_t        irecvs;
+  irecv_buffer_t  irecvs;
 } _funneled_t;
 
 
@@ -58,7 +59,7 @@ static void _funneled_delete(network_t *network) {
   }
 
   buffer_fini(&this->isends);
-  buffer_fini(&this->irecvs);
+  irecv_buffer_fini(&this->irecvs);
 
   hpx_parcel_t *p = NULL;
   while ((p = sync_two_lock_queue_dequeue(&this->sends))) {
@@ -126,9 +127,12 @@ static void _funneled_set_flush(network_t *network) {
 
 static int _funneled_progress(network_t *network) {
   _funneled_t *this = (void*)network;
-  int n = irecv_buffer_progress(&this->irecvs, &this->recvs);
-  dbg_log_net("completed %d recvs\n", n);
-  n = isend_buffer_progress(&this->isends, &this->sends);
+  hpx_parcel_t *chain = irecv_buffer_progress(&this->irecvs);
+  if (chain) {
+    sync_two_lock_queue_enqueue(&this->recvs, chain);
+  }
+
+  int n = isend_buffer_progress(&this->isends, &this->sends);
   dbg_log_net("completed %d sends\n", n);
   return LIBHPX_OK;
 
