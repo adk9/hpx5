@@ -131,20 +131,4 @@ void isend_buffer_flush(buffer_t *buffer, two_lock_queue_t *parcels)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Initialize an irecv buffer.
-///
-/// @param       buffer The buffer to initialize.
-/// @param         size The initial size for the buffer.
-/// @param        limit The limit of the number of active requests.
-///
-/// @returns            LIBHPX_OK or an error code.
-int irecv_buffer_init(buffer_t *buffer, uint32_t size, uint32_t limit)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-/// Progress an irecv buffer.
-int irecv_buffer_progress(buffer_t *buffer, two_lock_queue_t *parcels)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
 #endif // LIBHPX_NETWORK_ISIR_BUFFERS_H
