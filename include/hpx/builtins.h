@@ -71,4 +71,8 @@ static inline int min_int(int lhs, int rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
+static inline uint64_t min_uint_64(uint64_t lhs, uint64_t rhs) {
+  return (lhs < rhs) ? lhs : rhs;
+}
+
 #endif // HPX_BUILTINS_H
