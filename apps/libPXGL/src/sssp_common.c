@@ -1,6 +1,7 @@
 #include "hpx/hpx.h"
 #include "libpxgl/sssp_common.h"
 #include "libpxgl/sssp_dc.h"
+#include "libpxgl/sssp_delta.h"
 #include "libpxgl/sssp_chaotic.h"
 #include "libpxgl/termination.h"
 #include "pxgl/pxgl.h"
@@ -8,11 +9,15 @@
 #include <stdio.h>
 
 static hpx_action_t _sssp_process_vertex = 0;
-static hpx_action_t _sssp_visit_vertex = 0;
+hpx_action_t _sssp_visit_vertex = 0;
 
-static sssp_kind_t _sssp_kind = CHAOTIC_SSSP_KIND;
+sssp_kind_t _sssp_kind = CHAOTIC_SSSP_KIND;
+
+typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, const void*, size_t, hpx_addr_t);
+static send_vertex_t send_vertex = hpx_call;
 
 bool _try_update_vertex_distance(adj_list_vertex_t *vertex, distance_t distance) {
+  // printf("try update, vertex: %zu, distance: %zu\n", vertex, distance);
   distance_t prev_dist = sync_load(&vertex->distance, SYNC_RELAXED);
   distance_t old_dist = prev_dist;
   while (distance < prev_dist) {
@@ -45,7 +50,8 @@ void _send_update_to_neighbors(adj_list_t graph, adj_list_vertex_t *vertex, dist
       = hpx_addr_add(graph, e->dest * sizeof(hpx_addr_t), _index_array_block_size);
     
     const _sssp_visit_vertex_args_t visit_args = { .graph = graph, .distance = distance };
-    hpx_call(index, _sssp_visit_vertex, &visit_args, sizeof(visit_args), 
+    // printf("Calling send_vertex with vertex: %zu and distance: %zu\n", index, distance);
+    send_vertex(index, _sssp_visit_vertex, &visit_args, sizeof(visit_args), 
 	     _get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL);
   }
   
@@ -56,8 +62,10 @@ void _send_update_to_neighbors(adj_list_t graph, adj_list_vertex_t *vertex, dist
   }
 }
 
-static int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args) {
+int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args) {
   const hpx_addr_t target = hpx_thread_current_target();
+
+  // printf("visit_vertex at %zu with distance %" SSSP_UINT_PRI"\n", target, args->distance);
 
   hpx_addr_t vertex;
   hpx_addr_t *v;
@@ -81,10 +89,6 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), _index_array_block_size);
   _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
-
-#ifdef GATHER_STAT
-  sssp_args.sssp_stat = args->sssp_stat;
-#endif // GATHER_STAT
 
   // DC is only supported with count termination now.
   assert(_sssp_kind != DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
@@ -113,7 +117,6 @@ int call_sssp_action(const call_sssp_args_t *const args) {
       hpx_lco_wait(init_queues_lco);
       hpx_lco_delete(init_queues_lco, HPX_NULL);
     }
-
     _increment_active_count(1);
     hpx_call(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), HPX_NULL);
     // printf("starting termination detection\n");
@@ -126,12 +129,10 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     hpx_lco_delete(termination_lco, HPX_NULL);
     hpx_process_delete(process, HPX_NULL);
     hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
-
   } else if (_get_termination() == AND_LCO_TERMINATION) {
     // printf("Calling first visit vertex.\n");
     // start the algorithm from source once
     hpx_call(index, _sssp_visit_vertex, &sssp_args, sizeof(sssp_args), args->termination_lco);
-
   } else {
     fprintf(stderr, "sssp: invalid termination mode.\n");
     hpx_abort();
@@ -151,6 +152,12 @@ int initialize_sssp_kind_action(sssp_kind_t *arg) {
   return HPX_SUCCESS;
 }
 
+hpx_action_t sssp_run_delta_stepping = 0;
+int sssp_run_delta_stepping_action(const void * const args) {
+  send_vertex = (send_vertex_t)_delta_sssp_send_vertex;
+  return HPX_SUCCESS;
+}
+
 static HPX_CONSTRUCTOR void _sssp_register_actions() {
   HPX_REGISTER_ACTION(&_sssp_visit_vertex,
                       _sssp_visit_vertex_action);
@@ -158,4 +165,6 @@ static HPX_CONSTRUCTOR void _sssp_register_actions() {
                       call_sssp_action);
   HPX_REGISTER_ACTION(&initialize_sssp_kind,
                       initialize_sssp_kind_action);
+  HPX_REGISTER_ACTION(&sssp_run_delta_stepping,
+		      sssp_run_delta_stepping_action);
 }

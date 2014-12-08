@@ -220,7 +220,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   hpx_addr_t index_arr_sync = hpx_lco_future_new(0);
   hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(uint32_t), index_arr_sync);
 
-  // Array is allocated whyle the broadst of the block size is performed
+  // Array is allocated while the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
 
   // Start allocating the count array for creating an edge histogram

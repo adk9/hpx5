@@ -105,6 +105,7 @@ typedef struct {
   int realloc_adj_list;
   sssp_kind_t sssp_kind;
   sssp_init_dc_args_t sssp_init_dc_args;
+  size_t delta;
 } _sssp_args_t;
 
 static hpx_action_t _main;
@@ -149,10 +150,19 @@ static int _main_action(_sssp_args_t *args) {
   if(args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
   printf("# priority  queues: %zd\n",args->sssp_init_dc_args.num_pq);
   hpx_bcast(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args), dc_bcast_lco);
+  if(args->delta > 0) {
+    hpx_addr_t delta_bcast_lco = hpx_lco_future_new(0);
+    hpx_bcast(sssp_run_delta_stepping, NULL, 0, delta_bcast_lco);
+    hpx_lco_wait(delta_bcast_lco);
+    hpx_lco_delete(delta_bcast_lco, HPX_NULL);
+    sargs.delta = args->delta;
+  }
   hpx_lco_wait(kind_bcast_lco);
   hpx_lco_wait(dc_bcast_lco);
   hpx_lco_delete(kind_bcast_lco, HPX_NULL);
   hpx_lco_delete(dc_bcast_lco, HPX_NULL);
+
+  printf("About to enter problem loop.\n");
 
   for (int i = 0; i < args->nproblems; ++i) {
     if(total_elapsed_time > args->time_limit) {
@@ -173,7 +183,13 @@ static int _main_action(_sssp_args_t *args) {
     // Call the SSSP algorithm
     hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     sargs.termination_lco = sssp_lco;
-    hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    if (sargs.delta == 0) {
+      printf("Calling SSSP.\n");
+      hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    } else {
+      printf("Calling delta-stepping.\n");
+      hpx_call(HPX_HERE, call_delta_sssp, &sargs, sizeof(sargs), HPX_NULL);
+    }
     // printf("Waiting for termination LCO at: %zu\n", sssp_lco);
     hpx_lco_wait(sssp_lco);
     // printf("Finished waiting for termination LCO at: %zu\n", sssp_lco);
@@ -293,6 +309,7 @@ int main(int argc, char *argv[argc]) {
   int realloc_adj_list = 0;
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = DC_SSSP_KIND;
+  size_t delta = 0;
 
   int e = hpx_init(&argc, &argv);
   if (e) {
@@ -301,7 +318,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:f:l:cdaphk?")) != -1) {
+  while ((opt = getopt(argc, argv, "q:f:l:z:cdaphk?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -331,6 +348,9 @@ int main(int argc, char *argv[argc]) {
     case 'h':
       _usage(stdout);
       return 0;
+    case 'z':
+      delta = strtoul(optarg, NULL, 0);
+      break;
     case '?':
     default:
       _usage(stderr);
@@ -374,7 +394,8 @@ int main(int argc, char *argv[argc]) {
                         .time_limit = time_limit,
                         .realloc_adj_list = realloc_adj_list,
 			.sssp_kind = sssp_kind,
-			.sssp_init_dc_args = sssp_init_dc_args
+			.sssp_init_dc_args = sssp_init_dc_args,
+			.delta = delta
   };
 
   // register the actions

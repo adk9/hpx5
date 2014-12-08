@@ -21,7 +21,7 @@ static int _sssp_chaotic_process_vertex_action(_sssp_visit_vertex_args_t *const 
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
 
-  // printf("Distance Action on %" SSSP_UINT_PRI "\n", target);
+  // printf("Distance Action on %" SSSP_UINT_PRI " with distance %" SSSP_UINT_PRI "\n", target, args->distance);
 
   if (_try_update_vertex_distance(vertex, args->distance)) {
     _send_update_to_neighbors(args->graph, vertex, args->distance);
