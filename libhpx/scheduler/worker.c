@@ -379,7 +379,6 @@ int worker_start(void) {
 
 
 int worker_create(struct worker *worker) {
-  cpu_set_t cpu_set;
   pthread_t thread;
 
   int e = pthread_create(&thread, NULL, _run, worker);
@@ -387,17 +386,9 @@ int worker_create(struct worker *worker) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
   }
-  
-  CPU_ZERO(&cpu_set);
-  for (e=0; e<system_get_cores(); e++) {
-    CPU_SET(e, &cpu_set);
-  }
 
-  e = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
-  if (e) {
-    dbg_log("failed to affinitize a scheduler worker pthread.\n");
-    // return e; // non-fatal error
-  }
+  // unbind the worker thread (-1 indicates run on all available cores)
+  system_set_affinity(thread, -1);
 
   return LIBHPX_OK;
 }
