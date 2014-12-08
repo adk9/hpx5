@@ -22,8 +22,8 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
-#include "buffers.h"
 #include "irecv_buffer.h"
+#include "isend_buffer.h"
 #include "isir.h"
 #include "request.h"
 #include "request_list.h"
@@ -41,9 +41,18 @@ typedef struct {
   _PAD(sizeof(network_t) + sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
-  buffer_t        isends;
+  isend_buffer_t  isends;
   irecv_buffer_t  irecvs;
 } _funneled_t;
+
+
+///
+static void _send_all(_funneled_t *network) {
+  hpx_parcel_t *p = NULL;
+  while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
+    isend_buffer_append(&network->isends, p, HPX_NULL);
+  }
+}
 
 
 /// Delete a funneled network.
@@ -55,10 +64,11 @@ static void _funneled_delete(network_t *network) {
 
   // flush sends if we're supposed to
   if (this->flush) {
-    isend_buffer_flush(&this->isends, &this->sends);
+    _send_all(this);
+    isend_buffer_flush(&this->isends);
   }
 
-  buffer_fini(&this->isends);
+  isend_buffer_fini(&this->isends);
   irecv_buffer_fini(&this->irecvs);
 
   hpx_parcel_t *p = NULL;
@@ -125,15 +135,28 @@ static void _funneled_set_flush(network_t *network) {
   sync_store(&this->flush, 1, SYNC_RELEASE);
 }
 
+
 static int _funneled_progress(network_t *network) {
   _funneled_t *this = (void*)network;
   hpx_parcel_t *chain = irecv_buffer_progress(&this->irecvs);
+  int n = 0;
   if (chain) {
+    ++n;
     sync_two_lock_queue_enqueue(&this->recvs, chain);
   }
 
-  int n = isend_buffer_progress(&this->isends, &this->sends);
-  dbg_log_net("completed %d sends\n", n);
+  DEBUG_IF(n) {
+    dbg_log_net("completed %d recvs\n", n);
+  }
+
+  int m = isend_buffer_progress(&this->isends);
+
+  DEBUG_IF(m) {
+    dbg_log_net("completed %d sends\n", m);
+  }
+
+  _send_all(this);
+
   return LIBHPX_OK;
 
   // suppress unused warnings

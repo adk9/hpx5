@@ -21,147 +21,335 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include "buffers.h"
+#include "isend_buffer.h"
 #include "parcel_utils.h"
 
-/// Add all of the available elements in the queue to the buffer.
+
+/// Compute the buffer index of an abstract index.
 ///
-/// This is just a temporary design, as it ties us too closely to the funneled
-/// network.
+/// @param            i The abstract index.
+/// @param            n The size of the buffer (must be 2^k).
 ///
-/// @param       isends The buffer to append to.
-/// @param        sends The queue of parcels to append.
-static void _append_all(buffer_t *isends, two_lock_queue_t *sends) {
-  hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(sends))) {
-    record_t record = {
-      .parcel = p,
-      .local = HPX_NULL
-    };
-    buffer_append(isends, record);
+/// @returns            The index in the buffer for this abstract index.
+static int _index_of(uint64_t i, uint32_t n) {
+  return (i & (n - 1));
+}
+
+
+/// Resize an isend buffer to the requested size.
+///
+/// Buffer sizes can only be increased in the current implementation. The size
+/// must be a power of 2.
+///
+/// @param       buffer The buffer to resize.
+/// @param         size The new size.
+///
+/// @returns  LIBHPX_OK The buffer was resized correctly.
+///       LIBHPX_ENOMEM There was not enough memory to resize the buffer.
+static int _resize(isend_buffer_t *buffer, uint32_t size) {
+  if (size < buffer->size) {
+    return dbg_error("cannot shrink send buffer\n");
   }
+
+  if (size == buffer->size) {
+    return LIBHPX_OK;
+  }
+
+  // start by resizing the buffers
+  buffer->requests = realloc(buffer->requests, size * sizeof(MPI_Request));
+  buffer->out = realloc(buffer->out, size * sizeof(int));
+  buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
+
+  if (!buffer->requests || !buffer->out || !buffer->records) {
+    return dbg_error("failed to resize a send buffer from %u to %u\n",
+                     buffer->size, size);
+  }
+
+  // If the buffer is wrapped, we need to copy the bottom half of the buffer to
+  // the end. Note that we use memmove here. We can statically switch to memcpy
+  // if we know the new size is always at least twice the old size, or we can
+  // dynamically check offset vs. n.
+  int min = _index_of(buffer->min, buffer->size);
+  int max = _index_of(buffer->max, buffer->size);
+  if (max > min) {
+    int n = buffer->size - min;
+    int offset = size - n;
+
+    memmove(buffer->requests + offset,
+            buffer->requests + min,
+            n * sizeof(*buffer->requests));
+
+    memmove(buffer->records + offset,
+            buffer->records + min,
+            n * sizeof(*buffer->records));
+  }
+
+  dbg_log_net("resized a send buffer from %u to %u\n", buffer->size, size);
+  buffer->size = size;
+  return LIBHPX_OK;
 }
 
 
 /// Start an isend operation.
 ///
-/// The isend buffer keeps two ranges, [min, active) and [active, max). This
-/// operation issues an MPI_Isend for the element at the active index, and
-/// increments the active index.
-///
 /// @precondition There must be a valid entry in the buffer that is not yet
 ///               active.
 ///
 /// @param       isends The buffer to start the send from.
-/// @param          gas The global address space used for address translation.
+/// @param            i The index to start.
 ///
 /// @returns  LIBHPX_OK success
-///        LIBHPX_RETRY MPI internal error
-///        LIBHPX_ERROR other error
-static int _start_isend(buffer_t *isends, gas_class_t *gas) {
-  assert(isends->active < isends->max);
+///        LIBHPX_ERROR MPI error
+static int _start(isend_buffer_t *isends, int i) {
+  assert(0 <= i && i < isends->size);
 
-  uint64_t i = isends->active++;
-  uint32_t j = buffer_index_of(isends, i);
+  hpx_parcel_t *p = isends->records[i].parcel;
 
-  MPI_Request *req = &isends->requests[j];
-  hpx_parcel_t  *p = isends->records[j].parcel;
-
+  MPI_Request *r = isends->requests + i;
   void *from = mpi_offset_of_parcel(p);
-  int     to = gas_owner_of(gas, p->target);
-  int      n = payload_size_to_mpi_bytes(p->size);
-  int    tag = payload_size_to_tag(p->size);
+  int to = gas_owner_of(here->gas, p->target);
+  int n = payload_size_to_mpi_bytes(p->size);
+  int tag = payload_size_to_tag(p->size);
 
-  DEBUG_IF(true) {
-    *req = MPI_REQUEST_NULL;
+
+  if (MPI_SUCCESS != MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r)) {
+    return dbg_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
 
-  int e = MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, req);
-  if (e == MPI_SUCCESS) {
-    dbg_log_net("started MPI_Isend: %u bytes to %d\n", n, to);
-    return LIBHPX_OK;
-  }
-
-  if (e == MPI_ERR_INTERN) {
-    dbg_log_net("MPI_Isend encountered an internal error: %d\n", e);
-    return LIBHPX_RETRY;
-  }
-
-  return dbg_error("failed MPI_Isend: %u bytes to %d (%d)\n", n, to, e);
+  dbg_log_net("started MPI_Isend: %u bytes to %d\n", n, to);
+  return LIBHPX_OK;
 }
 
 
 /// Start as many isend operations as we can.
 ///
-/// @param       isends The buffer containing the requests that we want to
-///                     start.
+/// @param       isends The buffer from which to start isends.
 ///
-/// @returns  LIBHPX_OK no errors were encountered
-///        LIBHPX_ERROR we encountered an error that we couldn't handle
-static int _start_all(buffer_t *isends) {
-  int n = isends->max - isends->active;
-  if (isends->limit) {
-    n =  min_int(n, isends->limit);
+/// @returns            The number of sends that remain unstarted.
+int _start_all(isend_buffer_t *isends) {
+  uint32_t size = isends->size;
+  uint64_t max = isends->max;
+  uint64_t limit = isends->limit;
+  uint64_t end = (limit) ? min_uint_64(isends->min + limit, max) : max;
+
+  for (uint64_t i = isends->active; i < end; ++i) {
+    int j = _index_of(i, size);
+    int e = _start(isends, j);
+    dbg_check(e, "Failed to start an Isend operation.\n");
   }
-  for (int i = 0; i < n; ++i) {
-    int e = _start_isend(isends, here->gas);
-    switch (e) {
-     case LIBHPX_OK:
-      break;
-     case LIBHPX_RETRY:
-      return LIBHPX_OK;
-     default:
-      return LIBHPX_ERROR;
-    }
+  isends->active = end;
+  return (max - end);
+}
+
+
+/// Test a contiguous range of the buffer.
+///
+/// This performs a single MPI_Testsome() on a range of requests covering
+/// [i, i + n), and calls _finish() for each request that is completed.
+///
+/// @param       buffer The buffer to test.
+/// @param            i The physical index at which the range starts.
+/// @param            n The number of sends to test.
+///
+/// @returns            The number of completed requests in this range.
+static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
+  assert(0 <= i && i + n <= buffer->size);
+
+  if (!n)
+    return 0;
+
+  int cnt = 0;
+  MPI_Request *requests = buffer->requests + i;
+  int *out = buffer->out;
+  if (MPI_SUCCESS != MPI_Testsome(n, requests, &cnt, out, MPI_STATUS_IGNORE)) {
+    dbg_error("MPI_Testsome error is fatal.\n");
+    return 0;
+  }
+
+  uint32_t size = buffer->size;
+  for (int j = 0; j < cnt; ++j) {
+    int k = out[j] + i;
+    assert(i <= k && k < i + n);
+
+    // handle each of the completed requests
+    hpx_parcel_release(buffer->records[k].parcel);
+    hpx_gas_free(buffer->records[k].handler, HPX_NULL);
+
+    // compact the buffer
+    uint64_t min = buffer->min++;
+    int l = _index_of(min, size);
+    buffer->requests[k] = buffer->requests[l];
+    buffer->records[k] = buffer->records[l];
+  }
+
+  return cnt;
+}
+
+
+/// Test all of the active isend operations.
+///
+/// The isend buffer is a standard circular buffer, so we need to test one or
+/// two ranges, depending on if the buffer is currently wrapped.
+///
+/// @param       buffer The buffer to test.
+///
+/// @returns            The number of sends completed.
+static int _test_all(isend_buffer_t *buffer) {
+  uint32_t size = buffer->size;
+  uint32_t i = _index_of(buffer->min, size);
+  uint32_t j = _index_of(buffer->active, size);
+
+  // might have to test two ranges, [i, size) and [0, j), or just [i, j)
+  bool wrapped = (j < i);
+  uint32_t n = (wrapped) ? buffer->size - i : j - i;
+  uint32_t m = (wrapped) ? j : 0;
+
+  int total = 0;
+  total += _test_range(buffer, i, n);
+  total += _test_range(buffer, j, m);
+  dbg_log_net("tested %u sends, finished %d\n", n+m, total);
+  return total;
+}
+
+
+/// Cancel an active request.
+///
+/// This is synchronous, and will wait until the request has been canceled.
+///
+/// @param       buffer The buffer.
+/// @param            i The index to cancel.
+///
+/// @returns  LIBHPX_OK The request was successfully canceled.
+///        LIBHPX_ERROR Three was an error during the operation.
+static int _cancel(isend_buffer_t *buffer, int i) {
+  assert(0 <= i && i < buffer->size);
+  assert(false);
+
+  if (MPI_SUCCESS != MPI_Cancel(buffer->requests + i)) {
+    return dbg_error("could not cancel MPI request\n");
+  }
+
+  MPI_Status status;
+  if (MPI_SUCCESS != MPI_Wait(buffer->requests + i, &status)) {
+    return dbg_error("could not cleanup a canceled MPI request\n");
+  }
+
+  int cancelled;
+  if (MPI_SUCCESS != MPI_Test_cancelled(&status, &cancelled)) {
+    return dbg_error("could not test a status\n");
+  }
+
+  if (buffer->records) {
+    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
+    hpx_parcel_release(buffer->records[i].parcel);
   }
   return LIBHPX_OK;
 }
 
 
-/// Finish an isend operation.
+/// Cancel and cleanup all outstanding requests in the buffer.
 ///
-/// This is used as a finalizer for the buffer. Currently, finishing an isend
-/// operation just requires that we free the buffer associated with the parcel.
-///
-/// @param            p The parcel (i.e., buffer) associated with the isend.
-/// @param            s The status of the isend operation.
-///
-/// @returns          NULL
-static hpx_parcel_t *_finish_isend(hpx_parcel_t *p, MPI_Status *s) {
-  hpx_parcel_release(p);
-  return NULL;
+/// @param       buffer The buffer.
+static void _cancel_all(isend_buffer_t *buffer) {
+  if (!buffer->requests) {
+    return;
+  }
+
+  uint32_t size = buffer->size;
+  for (uint64_t i = buffer->min, e = buffer->active; i < e; ++i) {
+    if (LIBHPX_OK != _cancel(buffer, _index_of(i, size))) {
+      dbg_error("failed to cancel pending sends\n");
+      return;
+    }
+  }
 }
 
 
-int isend_buffer_init(buffer_t *buffer, uint32_t size, uint32_t limit) {
-  return buffer_init(buffer, size, limit, _finish_isend);
+int isend_buffer_init(isend_buffer_t *buffer, uint32_t size, uint32_t limit) {
+  buffer->limit = limit;
+  buffer->size = 0;
+  buffer->min = 0;
+  buffer->active = 0;
+  buffer->max = 0;
+
+  buffer->requests = NULL;
+  buffer->out = NULL;
+  buffer->records = NULL;
+
+  size = 1 << ceil_log2_32(size);
+  int e = _resize(buffer, size);
+  if (LIBHPX_OK != e) {
+    isend_buffer_fini(buffer);
+  }
+  return e;
 }
 
 
-void isend_buffer_flush(buffer_t *buffer, two_lock_queue_t *parcels) {
-  // always progress at least once to empty the parcels queue
+void isend_buffer_fini(isend_buffer_t *buffer) {
+  if (!buffer) {
+    return;
+  }
+
+  _cancel_all(buffer);
+
+  if (buffer->records) {
+    free(buffer->records);
+  }
+
+  if (buffer->out) {
+    free(buffer->out);
+  }
+
+  if (buffer->requests) {
+    free(buffer->requests);
+  }
+}
+
+
+int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
+{
+  uint64_t i = buffer->max++;
+  uint32_t size = buffer->size;
+  if (size <= buffer->max - buffer->min) {
+    size = 2 * size;
+    if (LIBHPX_OK != _resize(buffer, size)) {
+      return dbg_error("failed to resize isend buffer during append\n");
+    }
+  }
+
+  int j = _index_of(i, size);
+  assert(0 <= j && j < buffer->size);
+  DEBUG_IF(true) {
+    buffer->requests[j] = MPI_REQUEST_NULL;
+  }
+  buffer->records[j].parcel = p;
+  buffer->records[j].handler = h;
+  return LIBHPX_OK;
+}
+
+
+int isend_buffer_flush(isend_buffer_t *buffer) {
+  int total = 0;
   do {
-    isend_buffer_progress(buffer, parcels);
+    total += isend_buffer_progress(buffer);
   } while (buffer->min != buffer->max);
-  assert(sync_two_lock_queue_dequeue(parcels) == NULL);
+  return total;
 }
 
 
-int isend_buffer_progress(buffer_t *isends, two_lock_queue_t *parcels) {
-  // Test all of the active isends in the buffer. We know that the isend
-  // finalizer doesn't create an output list, but we still need a non-null
-  // hpx_parcel_t* for the call.
-  hpx_parcel_t *unused = NULL;
-  int n = buffer_test_all(isends, &unused);
-  assert(!unused);
+int isend_buffer_progress(isend_buffer_t *isends) {
+  int n = _start_all(isends);
+  DEBUG_IF (n) {
+    dbg_log_net("failed to start %d sends\n", n);
+  }
 
-  // Move all of the isends that are pending in the parcel queue into the
-  // buffer.
-  _append_all(isends, parcels);
+  int m = _test_all(isends);
+  DEBUG_IF (m) {
+    dbg_log_net("finished %d sends\n", m);
+  }
 
-  // Start as many isend operations as possible from the buffer.
-  _start_all(isends);
+  return m;
 
-  // Return the number of isend operations that we completed.
-  return n;
+  // avoid unused errors.
+  (void)n;
 }
