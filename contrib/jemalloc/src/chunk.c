@@ -27,9 +27,6 @@ rtree_t		*chunks_rtree;
 size_t		chunksize;
 size_t		chunksize_mask; /* (chunksize - 1). */
 size_t		chunk_npages;
-size_t		map_bias;
-size_t		map_misc_offset;
-size_t		arena_maxclass; /* Max size class for arenas. */
 
 /******************************************************************************/
 /*
@@ -157,16 +154,15 @@ chunk_alloc_core(void *new_addr, size_t size, size_t alignment, bool base,
 		if ((ret = chunk_recycle(&chunks_szad_dss, &chunks_ad_dss,
 		    new_addr, size, alignment, base, zero)) != NULL)
 			return (ret);
-		/* requesting an address only implemented for recycle */
-		if (new_addr == NULL
-		    && (ret = chunk_alloc_dss(size, alignment, zero)) != NULL)
+		if ((ret = chunk_alloc_dss(new_addr, size, alignment, zero))
+		    != NULL)
 			return (ret);
 	}
 	/* mmap. */
 	if ((ret = chunk_recycle(&chunks_szad_mmap, &chunks_ad_mmap, new_addr,
 	    size, alignment, base, zero)) != NULL)
 		return (ret);
-	/* requesting an address only implemented for recycle */
+	/* requesting an address not implemented for chunk_alloc_mmap */
 	if (new_addr == NULL &&
 	    (ret = chunk_alloc_mmap(size, alignment, zero)) != NULL)
 		return (ret);
@@ -175,9 +171,8 @@ chunk_alloc_core(void *new_addr, size_t size, size_t alignment, bool base,
 		if ((ret = chunk_recycle(&chunks_szad_dss, &chunks_ad_dss,
 		    new_addr, size, alignment, base, zero)) != NULL)
 			return (ret);
-		/* requesting an address only implemented for recycle */
-		if (new_addr == NULL &&
-		    (ret = chunk_alloc_dss(size, alignment, zero)) != NULL)
+		if ((ret = chunk_alloc_dss(new_addr, size, alignment, zero))
+		    != NULL)
 			return (ret);
 	}
 
@@ -257,9 +252,17 @@ void *
 chunk_alloc_default(void *new_addr, size_t size, size_t alignment, bool *zero,
     unsigned arena_ind)
 {
+	arena_t *arena;
+
+	arena = arena_get(tsd_fetch(), arena_ind, false, true);
+	/*
+	 * The arena we're allocating on behalf of must have been initialized
+	 * already.
+	 */
+	assert(arena != NULL);
 
 	return (chunk_alloc_core(new_addr, size, alignment, false, zero,
-	    arenas[arena_ind]->dss_prec));
+	    arena->dss_prec));
 }
 
 static void
@@ -404,11 +407,10 @@ chunk_boot(void)
 	chunksize_mask = chunksize - 1;
 	chunk_npages = (chunksize >> LG_PAGE);
 
-	if (config_stats || config_prof) {
-		if (malloc_mutex_init(&chunks_mtx))
-			return (true);
+	if (malloc_mutex_init(&chunks_mtx))
+		return (true);
+	if (config_stats || config_prof)
 		memset(&stats_chunks, 0, sizeof(chunk_stats_t));
-	}
 	if (have_dss && chunk_dss_boot())
 		return (true);
 	extent_tree_szad_new(&chunks_szad_mmap);

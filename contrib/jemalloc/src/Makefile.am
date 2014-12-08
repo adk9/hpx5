@@ -5,5 +5,5 @@ libhpx_jemalloc_la_SOURCES  = arena.c atomic.c base.c bitmap.c chunk.c chunk_dss
                               quarantine.c rtree.c stats.c tcache.c tsd.c util.c
 
 libhpx_jemalloc_la_CPPFLAGS = -I$(top_srcdir)/contrib/jemalloc/include $(HPX_JEMALLOC_BUILD_CPPFLAGS)
-libhpx_jemalloc_la_LIBADD = $(HPX_JEMALLOC_BUISD_LIBS)
+libhpx_jemalloc_la_LIBADD = $(HPX_JEMALLOC_BUILD_LIBS)
 

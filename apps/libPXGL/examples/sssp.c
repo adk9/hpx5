@@ -293,8 +293,6 @@ int main(int argc, char *argv[argc]) {
   int realloc_adj_list = 0;
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = DC_SSSP_KIND;
-  size_t frequency = 0;
-  size_t num_pqueue = 0;
 
   int e = hpx_init(&argc, &argv);
   if (e) {

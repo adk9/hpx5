@@ -22,6 +22,9 @@
  */
 #undef CPU_SPINWAIT
 
+/* Defined if C11 atomics are available. */
+#undef JEMALLOC_C11ATOMICS
+
 /* Defined if the equivalent of FreeBSD's atomic(9) functions are available. */
 #undef JEMALLOC_ATOMIC9
 
@@ -144,8 +147,17 @@
 /* Support lazy locking (avoid locking unless a second thread is launched). */
 #undef JEMALLOC_LAZY_LOCK
 
-/* One page is 2^STATIC_PAGE_SHIFT bytes. */
-#undef STATIC_PAGE_SHIFT
+/* Minimum size class to support is 2^LG_TINY_MIN bytes. */
+#undef LG_TINY_MIN
+
+/*
+ * Minimum allocation alignment is 2^LG_QUANTUM bytes (ignoring tiny size
+ * classes).
+ */
+#undef LG_QUANTUM
+
+/* One page is 2^LG_PAGE bytes. */
+#undef LG_PAGE
 
 /*
  * If defined, use munmap() to unmap freed chunks, rather than storing them for
