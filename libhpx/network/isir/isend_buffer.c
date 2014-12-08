@@ -22,7 +22,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include "buffers.h"
-
+#include "parcel_utils.h"
 
 /// Add all of the available elements in the queue to the buffer.
 ///
@@ -61,25 +61,24 @@ static void _append_all(buffer_t *isends, two_lock_queue_t *sends) {
 static int _start_isend(buffer_t *isends, gas_class_t *gas) {
   assert(isends->active < isends->max);
 
-  static const    int OFFSET = sizeof(void*) + 2 * sizeof(int);
-  static const       int TAG = 0;
-  static const MPI_Comm COMM = MPI_COMM_WORLD;
+  uint64_t i = isends->active++;
+  uint32_t j = buffer_index_of(isends, i);
 
-  uint64_t            i = isends->active++;
-  uint32_t            j = buffer_index_of(isends, i);
-  MPI_Request      *req = &isends->requests[j];
-  const hpx_parcel_t *p = isends->records[j].parcel;
-  void            *data = (void*)&p->action;
-  unsigned            n = sizeof(*p) + p->size - OFFSET;
-  int              rank = gas_owner_of(gas, p->target);
+  MPI_Request *req = &isends->requests[j];
+  hpx_parcel_t  *p = isends->records[j].parcel;
+
+  void *from = mpi_offset_of_parcel(p);
+  int     to = gas_owner_of(gas, p->target);
+  int      n = payload_size_to_mpi_bytes(p->size);
+  int    tag = payload_size_to_tag(p->size);
 
   DEBUG_IF(true) {
     *req = MPI_REQUEST_NULL;
   }
 
-  int e = MPI_Isend(data, n, MPI_BYTE, rank, TAG, COMM, req);
+  int e = MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, req);
   if (e == MPI_SUCCESS) {
-    dbg_log_net("started MPI_Isend: %u bytes to %d\n", n, rank);
+    dbg_log_net("started MPI_Isend: %u bytes to %d\n", n, to);
     return LIBHPX_OK;
   }
 
@@ -88,7 +87,7 @@ static int _start_isend(buffer_t *isends, gas_class_t *gas) {
     return LIBHPX_RETRY;
   }
 
-  return dbg_error("failed MPI_Isend: %u bytes to %d (%d)\n", n, rank, e);
+  return dbg_error("failed MPI_Isend: %u bytes to %d (%d)\n", n, to, e);
 }
 
 
