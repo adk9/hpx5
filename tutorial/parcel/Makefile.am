@@ -1,7 +1,8 @@
 parceldir                     = $(datarootdir)/doc/@PACKAGE@
-parcel_PROGRAMS               = parcelTest
+parcel_PROGRAMS               = parcelSend parcelSendSync
 
-parcelTest_SOURCES            = parcelTest.c 
+parcelSend_SOURCES            = parcelSend.c 
+parcelSendSync_SOURCES        = parcelSendSync.c
 
 all_LIBS                      = $(top_builddir)/libhpx/libhpx.la
 
@@ -12,4 +13,5 @@ if HAVE_MPI
 AM_CFLAGS                    += @MPI_CFLAGS@
 endif
 
-parcelTest_LDADD              = $(all_LIBS)
+parcelSend_LDADD              = $(all_LIBS)
+parcelSendSync_LDADD          = $(all_LIBS)
