@@ -36,12 +36,12 @@ static int _index_of(uint64_t i, uint32_t n) {
 }
 
 
-/// Resize an isend buffer to the requested size.
+/// Re-size an isend buffer to the requested size.
 ///
 /// Buffer sizes can only be increased in the current implementation. The size
 /// must be a power of 2.
 ///
-/// @param       buffer The buffer to resize.
+/// @param       buffer The buffer to re-size.
 /// @param         size The new size.
 ///
 /// @returns  LIBHPX_OK The buffer was resized correctly.
@@ -56,36 +56,63 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   }
 
   // start by resizing the buffers
+  uint32_t oldsize = buffer->size;
+  buffer->size = size;
   buffer->requests = realloc(buffer->requests, size * sizeof(MPI_Request));
   buffer->out = realloc(buffer->out, size * sizeof(int));
   buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
 
   if (!buffer->requests || !buffer->out || !buffer->records) {
     return dbg_error("failed to resize a send buffer from %u to %u\n",
-                     buffer->size, size);
+                     oldsize, size);
   }
 
-  // If the buffer is wrapped, we need to copy the bottom half of the buffer to
-  // the end. Note that we use memmove here. We can statically switch to memcpy
-  // if we know the new size is always at least twice the old size, or we can
-  // dynamically check offset vs. n.
-  int min = _index_of(buffer->min, buffer->size);
-  int max = _index_of(buffer->max, buffer->size);
-  if (max > min) {
-    int n = buffer->size - min;
-    int offset = size - n;
-
-    memmove(buffer->requests + offset,
-            buffer->requests + min,
-            n * sizeof(*buffer->requests));
-
-    memmove(buffer->records + offset,
-            buffer->records + min,
-            n * sizeof(*buffer->records));
+  int n = buffer->max - buffer->min;
+  if (!n) {
+    goto exit;
   }
 
-  dbg_log_net("resized a send buffer from %u to %u\n", buffer->size, size);
-  buffer->size = size;
+  // Resizing the buffer changes where our index mapping is, we need to move
+  // data around in the arrays. We do that by memcpy-ing either the prefix or
+  // suffix of a wrapped buffer into the new position. After resizing the buffer
+  // should never be wrapped.
+  int min = _index_of(buffer->min, oldsize);
+  int max = _index_of(buffer->max, oldsize);
+  int prefix = (min < max) ? max - min : oldsize - min;
+  int suffix = (min < max) ? 0 : max;
+
+  int nmin = _index_of(buffer->min, size);
+  int nmax = _index_of(buffer->max, size);
+
+  // This code is slightly tricky. We only need to move one of the ranges,
+  // either [min, oldsize) or [0, max). We determine which range we need to move
+  // by seeing if the min or max index is different in the new buffer, and then
+  // copying the appropriate bytes of the requests and records arrays to the
+  // right place in the new buffer.
+  if (min == nmin) {
+    assert(max != nmax);
+    assert(0 < suffix);
+    assert(min + prefix == nmax - suffix);
+
+    size_t bytes = suffix * sizeof(*buffer->requests);
+    memcpy(buffer->requests + min + prefix, buffer->requests, bytes);
+    bytes = suffix * sizeof(*buffer->records);
+    memcpy(buffer->records + min + prefix, buffer->records, bytes);
+  }
+  else if (max == nmax) {
+    assert(0 < prefix);
+    assert(nmin + prefix <= size);
+    size_t bytes = prefix * sizeof(*buffer->requests);
+    memcpy(buffer->requests + nmin, buffer->requests + min, bytes);
+    bytes = prefix * sizeof(*buffer->records);
+    memcpy(buffer->records + nmin, buffer->records + min, bytes);
+  }
+  else {
+    return dbg_error("unexpected shift in isend buffer _resize\n");
+  }
+
+ exit:
+  dbg_log_net("resized a send buffer from %u to %u\n", oldsize, size);
   return LIBHPX_OK;
 }
 
@@ -206,7 +233,7 @@ static int _test_all(isend_buffer_t *buffer) {
 
   int total = 0;
   total += _test_range(buffer, i, n);
-  total += _test_range(buffer, j, m);
+  total += _test_range(buffer, 0, m);
   dbg_log_net("tested %u sends, finished %d\n", n+m, total);
   return total;
 }
