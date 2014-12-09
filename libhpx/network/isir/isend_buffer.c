@@ -179,7 +179,7 @@ int _start_all(isend_buffer_t *isends) {
 /// @param            n The number of sends to test.
 ///
 /// @returns            The number of completed requests in this range.
-static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
+static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
   assert(0 <= i && i + n <= buffer->size);
 
   if (n == 0)
@@ -187,7 +187,7 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
 
   int cnt = 0;
   MPI_Request *requests = buffer->requests + i;
-  int *out = buffer->out;
+  int *out = buffer->out + o;
   if (MPI_SUCCESS != MPI_Testsome(n, requests, &cnt, out, MPI_STATUS_IGNORE)) {
     dbg_error("MPI_Testsome error is fatal.\n");
     return 0;
@@ -198,41 +198,49 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
     return 0;
   }
 
-  if (!cnt) {
-    return 0;
-  }
-
-  uint32_t size = buffer->size;
-  const bool incremental = ((n != cnt) || (i != _index_of(buffer->min, size)));
   for (int j = 0; j < cnt; ++j) {
-    int k = out[j] + i;
+    out[j] += i;
+    int k = out[j];
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
     hpx_parcel_release(buffer->records[k].parcel);
     hpx_gas_free(buffer->records[k].handler, HPX_NULL);
-
-    // incremental compaction
-    if (incremental) {
-      uint64_t min = buffer->min++;
-      int l = _index_of(min, size);
-      DEBUG_IF(true) {
-        buffer->requests[k] = NULL;
-      }
-      buffer->requests[k] = buffer->requests[l];
-      buffer->records[k] = buffer->records[l];
-    }
-  }
-
-  if (!incremental) {
-    dbg_log_net("bulk compaction of %d sends in buffer\n", cnt);
-    buffer->min += n;
-  }
-  else {
-    dbg_log_net("incremental compaction of %d sends in buffer\n", cnt);
   }
 
   return cnt;
+}
+
+
+/// Compact the buffer after testing.
+///
+/// @param       buffer The buffer to compact.
+/// @param            n The number of valid entries in buffer->out.
+static void _compact(isend_buffer_t *buffer, int n) {
+  uint32_t size = buffer->size;
+  uint64_t m = buffer->active - buffer->min;
+  if (n == m) {
+    dbg_log_net("bulk compaction of %d/%lu sends in buffer (%u)\n", n, m,
+                size);
+    buffer->min += n;
+    return;
+  }
+
+  // incremental compaction
+  for (int i = 0; i < n; ++i) {
+    int j = buffer->out[i];
+    DEBUG_IF(true) {
+      buffer->requests[j] = NULL;
+    }
+
+    uint64_t min = buffer->min++;
+    int k = _index_of(min, size);
+    buffer->requests[j] = buffer->requests[k];
+    buffer->records[j] = buffer->records[k];
+  }
+
+  dbg_log_net("incremental compaction of %d/%lu sends in buffer (%u)\n", n, m,
+              size);
 }
 
 
@@ -255,9 +263,12 @@ static int _test_all(isend_buffer_t *buffer) {
   uint32_t m = (wrapped) ? j : 0;
 
   int total = 0;
-  total += _test_range(buffer, i, n);
-  total += _test_range(buffer, 0, m);
-  dbg_log_net("tested %u sends, finished %d\n", n+m, total);
+  total += _test_range(buffer, i, n, total);
+  total += _test_range(buffer, 0, m, total);
+  if (total) {
+    _compact(buffer, total);
+  }
+  dbg_log_net("tested %u sends, completed %d\n", n+m, total);
   return total;
 }
 
@@ -388,14 +399,14 @@ int isend_buffer_flush(isend_buffer_t *buffer) {
 
 
 int isend_buffer_progress(isend_buffer_t *isends) {
-  int n = _start_all(isends);
-  DEBUG_IF (n) {
-    dbg_log_net("failed to start %d sends\n", n);
-  }
-
   int m = _test_all(isends);
   DEBUG_IF (m) {
     dbg_log_net("finished %d sends\n", m);
+  }
+
+  int n = _start_all(isends);
+  DEBUG_IF (n) {
+    dbg_log_net("failed to start %d sends\n", n);
   }
 
   return m;
