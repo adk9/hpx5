@@ -69,8 +69,8 @@ dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
 HPX_OPTIMIZE("O0")
 void dbg_wait(void) {
   int i = 0;
-  char hostname[HOST_NAME_MAX];
-  gethostname(hostname, HOST_NAME_MAX);
+  char hostname[255];
+  gethostname(hostname, 255);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)
