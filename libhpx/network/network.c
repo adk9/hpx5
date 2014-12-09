@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sched.h>
 
 #include <libsync/sync.h>
 #include <libsync/queues.h>
@@ -88,7 +89,7 @@ static void *_progress(void *o) {
     pthread_testcancel();
     profile_ctr(scheduler_get_stats(here->sched)->progress++);
     transport_progress(network->transport, TRANSPORT_POLL);
-    pthread_yield();
+    sched_yield();
   }
   return NULL;
 }
