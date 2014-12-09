@@ -4,6 +4,10 @@ if HAVE_MPI
 SUBDIRS += isir
 endif
 
+if HAVE_PHOTON
+SUBDIRS += pwc
+endif
+
 # The networking library
 noinst_LTLIBRARIES	   = libnetwork.la
 
@@ -15,6 +19,10 @@ libnetwork_la_LIBADD   =
 
 if HAVE_MPI
 libnetwork_la_LIBADD  += isir/libisir.la
+endif
+
+if HAVE_PHOTON
+libnetwork_la_LIBADD  += pwc/libpwc.la
 endif
 
 if HAVE_TREMA
