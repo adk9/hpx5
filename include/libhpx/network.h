@@ -234,13 +234,4 @@ static inline void network_flush_on_shutdown(network_t *network) {
 }
 
 
-/// Used by the progress engine.
-hpx_parcel_t *network_tx_dequeue(network_t *network)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
-int network_try_notify_rx(network_t *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
-
-
 #endif // LIBHPX_NETWORK_H
