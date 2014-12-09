@@ -32,6 +32,8 @@ struct gas_class;
 
 /// All network objects implement the network interface.
 typedef struct network {
+  const char *(*id)(void);
+
   void (*delete)(struct network *)
     HPX_NON_NULL(1);
 
