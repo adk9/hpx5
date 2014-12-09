@@ -21,6 +21,7 @@ typedef struct {
   uint32_t limit;
   uint32_t size;
   uint32_t n;
+  uint32_t UNUSED;
   MPI_Request *requests;
   MPI_Status  *statuses;
   int              *out;
