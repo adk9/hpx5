@@ -182,7 +182,7 @@ int _start_all(isend_buffer_t *isends) {
 static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
   assert(0 <= i && i + n <= buffer->size);
 
-  if (!n)
+  if (n == 0)
     return 0;
 
   int cnt = 0;
@@ -193,7 +193,17 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
     return 0;
   }
 
+  DEBUG_IF(cnt == MPI_UNDEFINED) {
+    dbg_error("Silent MPI_Testsome error detected\n");
+    return 0;
+  }
+
+  if (!cnt) {
+    return 0;
+  }
+
   uint32_t size = buffer->size;
+  const bool incremental = ((n != cnt) || (i != _index_of(buffer->min, size)));
   for (int j = 0; j < cnt; ++j) {
     int k = out[j] + i;
     assert(i <= k && k < i + n);
@@ -202,11 +212,24 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n) {
     hpx_parcel_release(buffer->records[k].parcel);
     hpx_gas_free(buffer->records[k].handler, HPX_NULL);
 
-    // compact the buffer
-    uint64_t min = buffer->min++;
-    int l = _index_of(min, size);
-    buffer->requests[k] = buffer->requests[l];
-    buffer->records[k] = buffer->records[l];
+    // incremental compaction
+    if (incremental) {
+      uint64_t min = buffer->min++;
+      int l = _index_of(min, size);
+      DEBUG_IF(true) {
+        buffer->requests[k] = NULL;
+      }
+      buffer->requests[k] = buffer->requests[l];
+      buffer->records[k] = buffer->records[l];
+    }
+  }
+
+  if (!incremental) {
+    dbg_log_net("bulk compaction of %d sends in buffer\n", cnt);
+    buffer->min += n;
+  }
+  else {
+    dbg_log_net("incremental compaction of %d sends in buffer\n", cnt);
   }
 
   return cnt;
