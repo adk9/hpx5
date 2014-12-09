@@ -40,9 +40,6 @@ typedef struct network {
   int (*progress)(struct network *)
     HPX_NON_NULL(1);
 
-  void (*barrier)(struct network *)
-    HPX_NON_NULL(1);
-
   int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t local)
     HPX_NON_NULL(1, 2);
 
@@ -102,23 +99,6 @@ static inline void network_delete(network_t *network) {
 static inline int network_progress(network_t *network) {
   assert(network);
   return network->progress(network);
-}
-
-
-/// A network barrier.
-///
-/// Should only be called by one thread per locality. For a full system barrier,
-/// callers should use the scheduler barrier first, and the thread that arrives
-/// last at the scheduler barrier (see sync barrier interface) can call the
-/// network barrier.
-///
-/// To block all threads through the network barrier, the user can re-join the
-/// scheduler barrier with all of the other threads, thus making a full global
-/// barrier a scheduler->network->scheduler barrier.
-///
-/// @param      network The network which implements the barrier.
-static inline void network_barrier(network_t *network) {
-  network->barrier(network);
 }
 
 
