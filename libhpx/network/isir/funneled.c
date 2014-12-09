@@ -43,6 +43,9 @@ typedef struct {
   irecv_buffer_t  irecvs;
 } _funneled_t;
 
+static const char *_funneled_id() {
+  return "Isend/Irecv Funneled";
+}
 
 ///
 static void _send_all(_funneled_t *network) {
@@ -168,6 +171,7 @@ network_t *network_isir_funneled_new(struct gas_class *gas, int nrx) {
     return NULL;
   }
 
+  network->vtable.id = _funneled_id;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.barrier = _funneled_barrier;
