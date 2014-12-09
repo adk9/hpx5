@@ -23,7 +23,6 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "../mallctl.h"
-#include "../malloc.h"
 #include "bitmap.h"
 #include "gpa.h"
 #include "heap.h"
