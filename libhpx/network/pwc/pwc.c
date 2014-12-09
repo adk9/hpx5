@@ -14,4 +14,11 @@
 # include "config.h"
 #endif
 
+
+#include <libhpx/network.h>
 #include "pwc.h"
+
+
+network_t *network_pwc_funneled_new(struct gas_class *gas, int nrx) {
+  return NULL;
+}
