@@ -30,6 +30,14 @@
 #include "libhpx/transport.h"
 #include "progress.h"
 
+/// NB: here temporarily while we convert to new progress model.
+static hpx_parcel_t *network_tx_dequeue(network_t *network) {
+  return NULL;
+}
+
+static int network_try_notify_rx(network_t *network, hpx_parcel_t *p) {
+  return 0;
+}
 
 static request_t *request_init(request_t *request, hpx_parcel_t *p) {
   request->next = NULL;
