@@ -29,8 +29,14 @@ static inline uint32_t mpi_bytes_to_payload_size(int bytes) {
 static inline int payload_size_to_tag(uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
-  DEBUG_IF(MPI_TAG_UB && MPI_TAG_UB < tag) {
-    dbg_error("tag value out of bounds (%d > %d)\n", tag, MPI_TAG_UB);
+  DEBUG_IF(true) {
+    int tag_ub;
+    int flag;
+    int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
+    dbg_check(e, "Could not extract tag upper bound\n");
+    if (tag_ub <= tag) {
+      dbg_error("tag value out of bounds (%d > %d)\n", tag, tag_ub);
+    }
   }
   return tag;
 }
