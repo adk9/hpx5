@@ -29,18 +29,43 @@ typedef int (*hpx_action_handler_t)(void *);
 /// This special action does nothing (i.e. it is a nop).
 extern hpx_action_t HPX_ACTION_NULL;
 
+/// Identifier for an invalid action.
+#define HPX_INVALID_ACTION_ID UINT16_MAX
+
 
 /// Should be called by the main native thread only, between the execution of
 /// hpx_init() and hpx_run(). Should not be called from an HPX lightweight
 /// thread.
 ///
-/// @param   a key to be used for the action when needed
-/// @param   id a unique string name for the action
+/// @param   id the action id for this action to be returned after registration
+/// @param  key a unique string key for the action
 /// @param func the local function pointer to associate with the action
 /// @returns error code
-int hpx_register_action(hpx_action_t *action, const char *id, hpx_action_handler_t func);
+int hpx_register_action(hpx_action_t *id, const char *key, hpx_action_handler_t func);
 
-#define HPX_INVALID_ACTION_ID UINT16_MAX
+
+/// Register a pinned action. The global address that these actions
+/// are addressed to is pinned by the runtime during the course of
+/// execution of the action.
+///
+/// @param   id the action id for this action to be returned after registration
+/// @param  key a unique string key for the action
+/// @param func the local function pointer to associate with the action
+/// @returns error code
+int hpx_register_pinned_action(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+
+
+/// Register an HPX task. Tasks are non-blocking actions that do not
+/// need a stack. They are immediate actions that can safely run in an
+/// interrupt context (for instance, doing a memory store operation or
+/// performing an asynchronous call).
+///
+/// @param   id the action id for this action to be returned after registration
+/// @param  key a unique string key for the action
+/// @param func the local function pointer to associate with the action
+/// @returns error code
+int hpx_register_task(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+
 
 #define HPX_STR(l) #l
 

@@ -165,6 +165,12 @@ void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
+/// Spawn a new user-level task (thread with no stack) for the parcel.
+///
+void scheduler_spawn_task(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
 /// Yield a user-level thread.
 ///
 /// This triggers a scheduling event, and possibly selects a new user-level
