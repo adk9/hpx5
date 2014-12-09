@@ -163,21 +163,26 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
 ///        LIBHPX_ERROR We overran the limit.
 static int _append(irecv_buffer_t *irecvs, int tag) {
   // acquire an entry
-  int i = irecvs->n++;
-  if (irecvs->limit && irecvs->limit <= i) {
-    if (LIBHPX_OK != _resize(irecvs, 2 * irecvs->size, NULL)) {
-      return dbg_error("failed to extend irecvs (limit %u)\n", irecvs->limit);
+  uint32_t n = irecvs->n++;
+  if (n >= irecvs->size) {
+    uint32_t limit = irecvs->limit;
+    uint32_t size = 2 * irecvs->size;
+    if (limit && limit < size) {
+      return dbg_error("failed to extend irecvs (limit %u)\n", limit);
+    }
+    if (LIBHPX_OK != _resize(irecvs, size, NULL)) {
+      return dbg_error("failed to extend irecvs (limit %u)\n", limit);
     }
   }
 
   // initialize the request
-  irecvs->requests[i] = MPI_REQUEST_NULL;
-  irecvs->records[i].tag = tag;
-  irecvs->records[i].parcel = NULL;
-  irecvs->records[i].handler = HPX_NULL;
+  irecvs->requests[n] = MPI_REQUEST_NULL;
+  irecvs->records[n].tag = tag;
+  irecvs->records[n].parcel = NULL;
+  irecvs->records[n].handler = HPX_NULL;
 
   // start the irecv
-  return _start(irecvs, i);
+  return _start(irecvs, n);
 }
 
 
