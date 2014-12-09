@@ -19,10 +19,10 @@
 # define LABEL(S) SYMBOL(S):
 # define INTERNAL(S) .private_extern SYMBOL(S)
 # define SIZE(S)
-# define TYPE(S, T) .type SYMBOL(S), T
+# define TYPE(S, T)
 # define STARTPROC .cfi_startproc
 # define ENDPROC .cfi_endproc
-# define SECTION(S) .section .S
+# define SECTION(S)
 # define CFA_DEF_OFFSET(N) .cfi_def_cfa_offset N
 # define CFA_ADJ_OFFSET(N) .cfi_adjust_cfa_offset N
 # define CFA_REGISTER(R) .cfi_def_cfa_register R
