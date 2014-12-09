@@ -170,7 +170,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   pwc_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
-  pwc_bufsize = 2 * PHOTON_NP_PBUF_SIZE;
+  pwc_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
   bufsize = info_ledger_size + fin_ledger_size + pwc_ledger_size + eager_ledger_size;
   bufsize += (eager_bufsize + pwc_bufsize);
 

@@ -15,6 +15,7 @@ typedef struct photon_rdma_eager_buf_t {
   uint64_t tail;
   uint32_t size;
   struct photon_buffer_t remote;
+  volatile uint64_t rcur;
 } photon_rdma_eager_buf;
 
 typedef struct photon_rdma_eager_buf_entry_t * photonEagerBufEntry;

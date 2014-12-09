@@ -2,17 +2,14 @@
 #include <string.h>
 
 #include "photon_rdma_INFO_ledger.h"
-#include "photon_backend.h"
+#include "photon_exchange.h"
 #include "logging.h"
 
 photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size) {
   photonRILedger new;
 
-  new = malloc(sizeof(struct photon_ri_ledger_t));
-  if (!new) {
-    log_err("couldn't allocate space for the ledger");
-    goto error_exit;
-  }
+  new = (struct photon_ri_ledger_t *)((uintptr_t)ledger_buffer + PHOTON_INFO_SSIZE(ledger_size) -
+				      sizeof(struct photon_ri_ledger_t));
 
   memset(new, 0, sizeof(struct photon_ri_ledger_t));
 
@@ -27,13 +24,10 @@ photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, 
   new->num_entries = ledger_size;
 
   return new;
-
-error_exit:
-  return NULL;
 }
 
 void photon_ri_ledger_free(photonRILedger ledger) {
-  free(ledger);
+  //free(ledger);
 }
 
 int photon_ri_ledger_get_next(photonRILedger l) {

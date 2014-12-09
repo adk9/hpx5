@@ -143,60 +143,52 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   }
 
   if (flags & LEDGER_INFO) {
-    uint64_t lsize = sizeof(struct photon_ri_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_rcv_info_ledger->remote.addr = PHOTON_LRI_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_rcv_info_ledger->remote.addr = PHOTON_LRI_PTR(va[i]) + PHOTON_INFO_SIZE * _photon_myrank;
       processes[i].remote_rcv_info_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_rcv_info_ledger->remote.priv.key1 = key_1[i];
 
-      processes[i].remote_snd_info_ledger->remote.addr = PHOTON_LSI_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_snd_info_ledger->remote.addr = PHOTON_LSI_PTR(va[i]) + PHOTON_INFO_SIZE * _photon_myrank;
       processes[i].remote_snd_info_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_snd_info_ledger->remote.priv.key1 = key_1[i];
     }
   }
   
   if (flags & LEDGER_FIN) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_fin_ledger->remote.addr = PHOTON_LF_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_fin_ledger->remote.addr = PHOTON_LF_PTR(va[i]) + PHOTON_LEDG_SIZE * _photon_myrank;
       processes[i].remote_fin_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_fin_ledger->remote.priv.key1 = key_1[i];
     }
   }
 
   if (flags & LEDGER_PWC) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_pwc_ledger->remote.addr = PHOTON_LP_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_pwc_ledger->remote.addr = PHOTON_LP_PTR(va[i]) + PHOTON_LEDG_SIZE * _photon_myrank;
       processes[i].remote_pwc_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_pwc_ledger->remote.priv.key1 = key_1[i];
     }
   }
 
   if (flags & LEDGER_EAGER) {
-    uint64_t lsize = sizeof(struct photon_rdma_ledger_entry_t) * _LEDGER_SIZE;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_eager_ledger->remote.addr = PHOTON_LE_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_eager_ledger->remote.addr = PHOTON_LE_PTR(va[i]) + PHOTON_LEDG_SIZE * _photon_myrank;
       processes[i].remote_eager_ledger->remote.priv.key0 = key_0[i];
       processes[i].remote_eager_ledger->remote.priv.key1 = key_1[i];
     }
   }
-
+  
   if (flags & LEDGER_BUF) {
-    //uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
-    uint64_t lsize = _photon_ebsize;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_eager_buf->remote.addr = PHOTON_LEB_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_eager_buf->remote.addr = PHOTON_LEB_PTR(va[i]) + PHOTON_EBUF_SIZE * _photon_myrank;
       processes[i].remote_eager_buf->remote.priv.key0 = key_0[i];
       processes[i].remote_eager_buf->remote.priv.key1 = key_1[i];
     }
   }
 
   if (flags & LEDGER_PBUF) {
-    //uint64_t lsize = sizeof(struct photon_rdma_eager_buf_entry_t) * _LEDGER_SIZE;
-    uint64_t lsize = _photon_ebsize;
     for (i=0; i<_photon_nproc; i++) {
-      processes[i].remote_pwc_buf->remote.addr = PHOTON_LPB_PTR(va[i]) + lsize * _photon_myrank;
+      processes[i].remote_pwc_buf->remote.addr = PHOTON_LPB_PTR(va[i]) + PHOTON_EBUF_SIZE * _photon_myrank;
       processes[i].remote_pwc_buf->remote.priv.key0 = key_0[i];
       processes[i].remote_pwc_buf->remote.priv.key1 = key_1[i];
     }
@@ -218,7 +210,7 @@ int photon_setup_ri_ledger(ProcessInfo *photon_processes, char *buf, int num_ent
 
   dbg_trace("Setting up RI ledgers");
 
-  ledger_size = sizeof(struct photon_ri_ledger_entry_t) * num_entries;
+  ledger_size = PHOTON_INFO_SSIZE(num_entries);
 
   // Allocate the receive info ledgers
   for(i = 0; i < PHOTON_TPROC; i++) {
@@ -274,7 +266,7 @@ int photon_setup_fin_ledger(ProcessInfo *photon_processes, char *buf, int num_en
 
   dbg_trace("Setting up FIN ledgers");
 
-  ledger_size = sizeof(struct photon_rdma_ledger_entry_t) * num_entries;
+  ledger_size = PHOTON_LEDG_SSIZE(num_entries);
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     // allocate the ledger
@@ -304,7 +296,7 @@ int photon_setup_pwc_ledger(ProcessInfo *photon_processes, char *buf, int num_en
 
   dbg_trace("Setting up PWC ledgers");
 
-  ledger_size = sizeof(struct photon_rdma_ledger_entry_t) * num_entries;
+  ledger_size = PHOTON_LEDG_SSIZE(num_entries);
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     // allocate the ledger
@@ -323,9 +315,9 @@ int photon_setup_pwc_ledger(ProcessInfo *photon_processes, char *buf, int num_en
       log_err("couldn't create remote PWC ledger for process %d", i);
       return PHOTON_ERROR;
     }
-
+    
     // set all 1s for PWC ledgers
-    for (j = 0; j <= num_entries; j++) {
+    for (j = 0; j < num_entries; j++) {
       photon_processes[i].local_pwc_ledger->entries[j].request = UINT64_MAX;
       photon_processes[i].remote_pwc_ledger->entries[j].request = UINT64_MAX;
     }
@@ -340,7 +332,7 @@ int photon_setup_eager_ledger(ProcessInfo *photon_processes, char *buf, int num_
 
   dbg_trace("Setting up EAGER ledgers");
 
-  ledger_size = sizeof(struct photon_rdma_ledger_entry_t) * num_entries;
+  ledger_size = PHOTON_LEDG_SSIZE(num_entries);
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     // allocate the ledger
@@ -371,7 +363,7 @@ int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
   dbg_trace("Setting up EAGER buffers");
 
   //buf_size = sizeof(struct photon_rdma_eager_buf_entry_t) * num_entries;
-  buf_size = size;
+  buf_size = PHOTON_EBUF_SSIZE(size);
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     
@@ -402,7 +394,7 @@ int photon_setup_pwc_buf(ProcessInfo *photon_processes, char *buf, int size) {
   dbg_trace("Setting up PWC buffers");
 
   //buf_size = sizeof(struct photon_rdma_eager_buf_entry_t) * num_entries;
-  buf_size = size;
+  buf_size = PHOTON_EBUF_SSIZE(size);
 
   for(i = 0; i < PHOTON_TPROC; i++) {
     

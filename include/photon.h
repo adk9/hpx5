@@ -107,7 +107,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
 #define PHOTON_ERROR           0x0002
-#define PHOTON_SHUTDOWN        0x0004
+#define PHOTON_ERROR_RESOURCE  0x0004
+#define PHOTON_SHUTDOWN        0x0008
 
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
