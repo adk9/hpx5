@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 
 #include "pwc.h"
@@ -29,6 +30,56 @@ static const char *_photon_id() {
   return "Photon put-with-completion\n";
 }
 
+static void _photon_delete(network_t *network) {
+  if (!network) {
+    return;
+  }
+}
+
+static int _photon_progress(network_t *network) {
+  return 0;
+}
+
+static int _photon_send(network_t *network, hpx_parcel_t *p,
+                          hpx_addr_t l)
+{
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static int _photon_pwc(network_t *network,
+                         hpx_addr_t to, void *from, size_t n,
+                         hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+{
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static int _photon_put(network_t *network,
+                         hpx_addr_t to, void *from, size_t n,
+                         hpx_addr_t local, hpx_addr_t remote)
+{
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static int _photon_get(network_t *network,
+                         void *to, hpx_addr_t from, size_t n,
+                         hpx_addr_t local)
+{
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static hpx_parcel_t *_photon_probe(network_t *network, int nrx) {
+  return NULL;
+}
+
+
+static void _photon_set_flush(network_t *network) {
+}
+
+
 network_t *network_pwc_funneled_new(struct gas_class *gas, int nrx) {
   _pwc_t *photon =  malloc(sizeof(*photon));
   if (!photon) {
@@ -37,14 +88,14 @@ network_t *network_pwc_funneled_new(struct gas_class *gas, int nrx) {
   }
 
   photon->vtable.id = _photon_id;
-  photon->vtable.delete = NULL;
-  photon->vtable.progress = NULL;
-  photon->vtable.send = NULL;
-  photon->vtable.pwc = NULL;
-  photon->vtable.put = NULL;
-  photon->vtable.get = NULL;
-  photon->vtable.probe = NULL;
-  photon->vtable.set_flush = NULL;
+  photon->vtable.delete = _photon_delete;
+  photon->vtable.progress = _photon_progress;
+  photon->vtable.send = _photon_send;
+  photon->vtable.pwc = _photon_pwc;
+  photon->vtable.put = _photon_put;
+  photon->vtable.get = _photon_get;
+  photon->vtable.probe = _photon_probe;
+  photon->vtable.set_flush = _photon_set_flush;
 
   return &photon->vtable;
 }
