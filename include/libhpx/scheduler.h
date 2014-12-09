@@ -161,12 +161,14 @@ void scheduler_abort(struct scheduler *scheduler)
 
 /// Spawn a new user-level thread for the parcel.
 ///
+/// @param    parcel The parcel to spawn.
 void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
 /// Spawn a new user-level task (thread with no stack) for the parcel.
 ///
+/// @param    parcel The parcel to spawn.
 void scheduler_spawn_task(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
