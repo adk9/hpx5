@@ -259,6 +259,7 @@ AC_CONFIG_FILES([
   libhpx/transport/Makefile
   libhpx/network/Makefile
   libhpx/network/isir/Makefile
+  libhpx/network/pwc/Makefile
   libhpx/system/Makefile
   libhpx/util/Makefile
   libhpx/scheduler/Makefile
