@@ -87,11 +87,6 @@ static void _funneled_delete(network_t *network) {
 }
 
 
-static void _funneled_barrier(network_t *network) {
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-
 static int _funneled_send(network_t *network, hpx_parcel_t *p,
                           hpx_addr_t l)
 {
@@ -174,7 +169,6 @@ network_t *network_isir_funneled_new(struct gas_class *gas, int nrx) {
   network->vtable.id = _funneled_id;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
-  network->vtable.barrier = _funneled_barrier;
   network->vtable.send = _funneled_send;
   network->vtable.pwc = _funneled_pwc;
   network->vtable.put = _funneled_put;
