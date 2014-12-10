@@ -20,18 +20,26 @@
 #include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
-
+#include "smp.h"
 
 static network_t *_default(struct boot *boot, struct gas *gas, int nrx) {
+  network_t *network = NULL;
 #ifdef HAVE_PHOTON
-  return network_pwc_funneled_new(boot, gas, nrx);
+  network = network_pwc_funneled_new(boot, gas, nrx);
+  if (network) {
+    return network;
+  }
 #endif
 
 #ifdef HAVE_MPI
-  return network_isir_funneled_new(gas, nrx);
+  network = network_isir_funneled_new(gas, nrx);
+  if (network) {
+    return network;
+  }
 #endif
 
-  return NULL;
+  network = network_smp_new();
+  return network;
 }
 
 
@@ -61,7 +69,7 @@ network_t *network_new(libhpx_network_t type, struct boot *boot,
     dbg_error("failed to initialize the network\n");
   }
   else {
-    dbg_log("network initialized using %s.\n", network->id());
+    dbg_log("network initialized using %s.", network->id());
   }
 
   return network;

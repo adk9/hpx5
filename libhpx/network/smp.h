@@ -10,21 +10,19 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_PWC_PWC_H
-#define LIBHPX_NETWORK_PWC_PWC_H
+#ifndef LIBHPX_NETWORK_SMP_H
+#define LIBHPX_NETWORK_SMP_H
 
 #include <hpx/attributes.h>
 
 /// Forward declarations.
 /// @{
-struct boot;
-struct gas;
 struct network;
 /// @}
 
 
-struct network *network_pwc_funneled_new(struct boot *, struct gas *, int nrx)
-  HPX_NON_NULL(1, 2) HPX_MALLOC HPX_INTERNAL;
+struct network *network_smp_new(void)
+  HPX_INTERNAL;
 
 
 #endif

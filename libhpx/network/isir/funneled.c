@@ -18,10 +18,13 @@
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
+
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
+
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
@@ -162,6 +165,11 @@ static int _funneled_progress(network_t *network) {
 
 
 network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
+  if (gas->type == HPX_GAS_SMP) {
+    dbg_log_net("will not initialize a %s network for SMP\n", _funneled_id());
+    return NULL;
+  }
+
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
     dbg_error("could not allocate a funneled Isend/Irecv network\n");
