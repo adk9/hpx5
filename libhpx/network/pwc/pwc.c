@@ -25,10 +25,19 @@
 #include <photon.h>
 #include "pwc.h"
 
+typedef struct photon_buffer_priv_t _key_t;
+
 typedef struct {
-  network_t vtable;
-  gas_t       *gas;
-  void      *bases;
+  void *base;
+  _key_t key;
+} _segment_t;
+
+typedef struct {
+  network_t    vtable;
+  gas_t          *gas;
+  int            rank;
+  int          UNUSED;
+  _segment_t segments[];
 } _pwc_t;
 
 static const char *_photon_id() {
@@ -39,6 +48,15 @@ static void _photon_delete(network_t *network) {
   if (!network) {
     return;
   }
+
+  _pwc_t *pwc = (_pwc_t*)network;
+  size_t size = pwc->gas->local_size(pwc->gas);
+  void *base = pwc->gas->local_base(pwc->gas);
+  if (PHOTON_OK != photon_unregister_buffer(base, size)) {
+    dbg_log_net("could not unregister the local heap segment %p\n", base);
+  }
+
+  free(pwc);
 }
 
 static int _photon_progress(network_t *network) {
@@ -89,10 +107,21 @@ static void _photon_set_flush(network_t *network) {
 
 
 network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
-  _pwc_t *photon =  malloc(sizeof(*photon));
+  if (boot->type == HPX_BOOT_SMP) {
+    dbg_log_net("will not instantiate photon for the SMP boot network\n");
+    goto unwind0;
+  }
+
+  if (gas->type == HPX_GAS_SMP) {
+    dbg_log_net("will not instantiate photon for the SMP GAS\n");
+    goto unwind0;
+  }
+
+  int ranks = boot_n_ranks(boot);
+  _pwc_t *photon = malloc(sizeof(*photon) + ranks * sizeof(_segment_t));
   if (!photon) {
     dbg_error("could not allocate a Photon put-with-completion network\n");
-    return NULL;
+    goto unwind0;
   }
 
   photon->vtable.id = _photon_id;
@@ -106,6 +135,48 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   photon->vtable.set_flush = _photon_set_flush;
 
   photon->gas = gas;
+  photon->rank = boot_rank(boot);
+
+  // Register the local heap segment.
+  size_t size = gas->local_size(gas);
+  void *base = gas->local_base(gas);
+
+  if (PHOTON_OK != photon_register_buffer(base, size)) {
+    dbg_error("failed to register the local heap segment with Photon\n");
+    goto unwind1;
+  }
+  else {
+    dbg_log_net("registered the local segment (%p, %lu)\n", base, size);
+  }
+
+  _key_t key;
+  if (PHOTON_OK != photon_get_buffer_private(base, size , &key)) {
+    dbg_error("failed to get the local segment access key from Photon\n");
+    goto unwind2;
+  }
+  _segment_t *local = photon->segments + photon->rank;
+  local->base = base;
+  local->key = key;
+
+  if (LIBHPX_OK != boot_allgather(boot, local, &photon->segments, sizeof(*local))) {
+    dbg_error("could not exchange heap segments\n");
+    goto unwind2;
+  }
+
+  // wait for the exchange to happen on all localities
+  boot_barrier(boot);
+
+  assert(local->base == base);
+  assert(local->key.key0 == key.key0);
+  assert(local->key.key1 == key.key1);
+
 
   return &photon->vtable;
+
+ unwind2:
+  photon_unregister_buffer(base, size);
+ unwind1:
+  free(photon);
+ unwind0:
+  return NULL;
 }
