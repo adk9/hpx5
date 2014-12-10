@@ -137,7 +137,7 @@ void pgas_leave(void) {
 }
 
 
-static void _pgas_delete(gas_class_t *gas) {
+static void _pgas_delete(gas_t *gas) {
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -146,7 +146,7 @@ static void _pgas_delete(gas_class_t *gas) {
 }
 
 
-static bool _pgas_is_global(gas_class_t *gas, void *lva) {
+static bool _pgas_is_global(gas_t *gas, void *lva) {
   return heap_contains_lva(global_heap, lva);
 }
 
@@ -352,7 +352,7 @@ static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 }
 
 
-static gas_class_t _pgas_vtable = {
+static gas_t _pgas_vtable = {
   .type          = HPX_GAS_PGAS,
   .delete        = _pgas_delete,
   .join          = pgas_join,
@@ -377,8 +377,8 @@ static gas_class_t _pgas_vtable = {
   .owner_of      = pgas_gpa_to_rank
 };
 
-gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
-                          struct transport_class *transport) {
+gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
+{
   if (here->ranks == 1) {
     dbg_log_gas("PGAS requires at least two ranks\n");
     return NULL;

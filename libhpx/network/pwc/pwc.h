@@ -16,10 +16,16 @@
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
 
+/// Forward declarations.
+/// @{
+struct boot;
+struct gas;
 struct network;
-struct gas_class;
+/// @}
 
-struct network *network_pwc_funneled_new(struct gas_class *gas, int nrx)
+
+struct network *network_pwc_funneled_new(struct boot *, struct gas *, int nrx)
   HPX_NON_NULL(1) HPX_MALLOC HPX_INTERNAL;
+
 
 #endif

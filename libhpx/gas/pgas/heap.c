@@ -19,10 +19,10 @@
 #include <jemalloc/jemalloc.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/transport.h"
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/transport.h>
 #include "../mallctl.h"
 #include "bitmap.h"
 #include "gpa.h"
@@ -271,7 +271,7 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
 }
 
 
-int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
+int heap_bind_transport(heap_t *heap, transport_t *transport) {
   heap->transport = transport;
   return transport->pin(transport, heap->base, heap->nbytes);
 }

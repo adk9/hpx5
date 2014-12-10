@@ -17,6 +17,7 @@
 #include <hpx/hpx.h>
 
 typedef struct {
+  struct       gas *gas;
   uint32_t        limit;
   uint32_t         size;
   uint64_t          min;
@@ -38,7 +39,8 @@ typedef struct {
 /// @param        limit The limit of the number of active requests.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int isend_buffer_init(isend_buffer_t *buffer, uint32_t size, uint32_t limit)
+int isend_buffer_init(isend_buffer_t *buffer, struct gas *gas, uint32_t size,
+                      uint32_t limit)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

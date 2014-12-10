@@ -22,9 +22,9 @@
 #include <assert.h>
 #include <pmi.h>
 
-#include "libhpx/boot.h"
-#include "libhpx/locality.h"
-#include "libhpx/debug.h"
+#include <libhpx/boot.h>
+#include <libhpx/locality.h>
+#include <libhpx/debug.h>
 
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
@@ -32,12 +32,12 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 }
 
 
-static void _delete(boot_class_t *boot) {
+static void _delete(boot_t *boot) {
   PMI_Finalize();
 }
 
 
-static int _rank(const boot_class_t *boot) {
+static int _rank(const boot_t *boot) {
   int rank;
   if (PMI_Get_rank(&rank) != PMI_SUCCESS)
     hpx_abort();
@@ -45,7 +45,7 @@ static int _rank(const boot_class_t *boot) {
 }
 
 
-static int _n_ranks(const boot_class_t *boot) {
+static int _n_ranks(const boot_t *boot) {
   int ranks;
   if (PMI_Get_size(&ranks) != PMI_SUCCESS)
     hpx_abort();
@@ -53,12 +53,12 @@ static int _n_ranks(const boot_class_t *boot) {
 }
 
 
-static int _barrier(const boot_class_t *boot) {
+static int _barrier(const boot_t *boot) {
   return (PMI_Barrier() != PMI_SUCCESS) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 
-static void _abort(const boot_class_t *boot) {
+static void _abort(const boot_t *boot) {
   PMI_Abort(-6, "HPX aborted.");
 }
 
@@ -210,7 +210,9 @@ error:
 }
 
 
-static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
+static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
+  void *in = (void*)cin;
+
 #if HAVE_PMI_CRAY_EXT
   // nb: Cray PMI allgather does not guarantee process-rank
   // order. Here, we assume that the ordering is, at least,
@@ -230,8 +232,9 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
     return dbg_error("pmi: failed in PMI_Allgather.\n");
   }
 
-  for (int i = 0; i < here->ranks; i++)
+  for (int i = 0; i < here->ranks; i++) {
     memcpy((char*)out+(nranks[i]*n), (char*)buf+(i*n), n);
+  }
 
   free(buf);
   free(nranks);
@@ -259,7 +262,7 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
 }
 
 
-static boot_class_t _pmi = {
+static boot_t _pmi = {
   .type      = HPX_BOOT_PMI,
   .id        = _id,
   .delete    = _delete,
@@ -271,11 +274,12 @@ static boot_class_t _pmi = {
 };
 
 
-boot_class_t *boot_new_pmi(void) {
+boot_t *boot_new_pmi(void) {
   int init;
   PMI_Initialized(&init);
-  if (init)
+  if (init) {
     return &_pmi;
+  }
 
   int spawned;
   if (PMI_Init(&spawned) == PMI_SUCCESS) {
@@ -283,5 +287,6 @@ boot_class_t *boot_new_pmi(void) {
     return &_pmi;
   }
 
+  dbg_log_boot("failed to initialize PMI bootstrap network\n");
   return NULL;
 }

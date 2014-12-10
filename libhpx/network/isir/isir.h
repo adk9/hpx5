@@ -16,10 +16,17 @@
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
 
-struct network;
-struct gas_class;
 
-struct network *network_isir_funneled_new(struct gas_class *gas, int nrx)
+/// Forward declarations.
+/// @{
+struct gas;
+struct network;
+/// @}
+
+
+/// Allocate a new Isend/Irecv funneled network.
+struct network *network_isir_funneled_new(struct gas *gas, int nrx)
   HPX_NON_NULL(1) HPX_MALLOC HPX_INTERNAL;
+
 
 #endif

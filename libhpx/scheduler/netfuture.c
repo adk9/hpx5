@@ -210,7 +210,7 @@ _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
   return HPX_SUCCESS;
 }
 
-static void 
+static void
 _progress_sends() {
   int phstat;
   if (_outstanding_sends < _outstanding_send_limit) {
@@ -222,13 +222,13 @@ _progress_sends() {
              _netfuture_table.buffers[pwc_args->remote_rank].addr +
              _netfuture_cfg.max_size);
       do {
-	phstat =
-	  photon_put_with_completion(pwc_args->remote_rank,
-				     pwc_args->data, pwc_args->size,
-				     pwc_args->remote_ptr, pwc_args->remote_priv,
-				     pwc_args->local_rid, pwc_args->remote_rid,
-				     0);
-	assert(phstat != PHOTON_ERROR);
+    phstat =
+      photon_put_with_completion(pwc_args->remote_rank,
+                     pwc_args->data, pwc_args->size,
+                     pwc_args->remote_ptr, pwc_args->remote_priv,
+                     pwc_args->local_rid, pwc_args->remote_rid,
+                     0);
+    assert(phstat != PHOTON_ERROR);
       } while (phstat == PHOTON_ERROR_RESOURCE);
       free(pwc_args);
     }
@@ -267,7 +267,7 @@ _progress_recvs() {
     dbg_printf("  Received recv completion on rank %d for future at %" PRIx64 "\n", hpx_get_my_rank(), request);
     _netfuture_t *f = (_netfuture_t*)request;
     lco_lock(&f->lco);
-    
+
     // do set stuff
     if (!_empty(f)) {
       lco_unlock(&f->lco);
@@ -287,7 +287,7 @@ _progress_recv_action() {
   }
 }
 
-static void 
+static void
 _progress_body() {
   if (_netfuture_table.inited != 1)
     return;
@@ -370,7 +370,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 
   if (hpx_get_num_ranks() > 1) {
     for (int i = 0; i < hpx_get_num_ranks(); i++) {
-      transport_class_t *transport = here->transport;
+      transport_t *transport = here->transport;
       memcpy(&_netfuture_table.buffers[i].priv, &transport->rkey_table[i].rkey, sizeof(_netfuture_table.buffers[i].priv));
       dbg_printf("  At rank %d, buffer[%d].priv = %"PRIx64",%"PRIx64"\n", hpx_get_my_rank(), i, _netfuture_table.buffers[i].priv.key0,  _netfuture_table.buffers[i].priv.key1);
     }

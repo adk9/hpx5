@@ -34,8 +34,8 @@
 
 
 typedef struct {
-  network_t                 vtable;
-  volatile int               flush;
+  network_t       vtable;
+  volatile int     flush;
   _PAD(sizeof(network_t) + sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
@@ -43,16 +43,19 @@ typedef struct {
   irecv_buffer_t  irecvs;
 } _funneled_t;
 
-static const char *_funneled_id() {
-  return "Isend/Irecv Funneled";
-}
 
-///
+/// Transfer any parcels in the funneled sends queue into the isends buffer.
 static void _send_all(_funneled_t *network) {
   hpx_parcel_t *p = NULL;
   while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
     isend_buffer_append(&network->isends, p, HPX_NULL);
   }
+}
+
+
+/// Return the network ID.
+static const char *_funneled_id() {
+  return "Isend/Irecv Funneled";
 }
 
 
@@ -87,9 +90,7 @@ static void _funneled_delete(network_t *network) {
 }
 
 
-static int _funneled_send(network_t *network, hpx_parcel_t *p,
-                          hpx_addr_t l)
-{
+static int _funneled_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
   _funneled_t *this = (void*)network;
   sync_two_lock_queue_enqueue(&this->sends, p);
   return LIBHPX_OK;
@@ -159,7 +160,8 @@ static int _funneled_progress(network_t *network) {
   (void)n;
 }
 
-network_t *network_isir_funneled_new(struct gas_class *gas, int nrx) {
+
+network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
     dbg_error("could not allocate a funneled Isend/Irecv network\n");
@@ -179,7 +181,7 @@ network_t *network_isir_funneled_new(struct gas_class *gas, int nrx) {
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
-  isend_buffer_init(&network->isends, 64, 0);
+  isend_buffer_init(&network->isends, gas, 64, 0);
   irecv_buffer_init(&network->irecvs, 64, 0);
 
   return &network->vtable;
