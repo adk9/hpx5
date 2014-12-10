@@ -143,12 +143,28 @@ static uint32_t _smp_owner_of(hpx_addr_t addr) {
   return 0;
 }
 
+static size_t _smp_local_size(gas_t *gas) {
+  DEBUG_IF(true) {
+    dbg_error("runtime should not call this function\n");
+  }
+  return 0;
+}
+
+static void *_smp_local_base(gas_t *gas) {
+  DEBUG_IF(true) {
+    dbg_error("runtime should not call this function\n");
+  }
+  return NULL;
+}
+
 static gas_t _smp_vtable = {
   .type          = HPX_GAS_SMP,
   .delete        = _smp_delete,
   .join          = _smp_join,
   .leave         = _smp_leave,
   .is_global     = _smp_is_global,
+  .local_size    = _smp_local_size,
+  .local_base    = _smp_local_base,
   .locality_of   = _smp_locality_of,
   .sub           = _smp_sub,
   .add           = _smp_add,
