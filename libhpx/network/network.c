@@ -35,7 +35,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
-#include <libhpx/process.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/stats.h>
 #include <libhpx/system.h>
