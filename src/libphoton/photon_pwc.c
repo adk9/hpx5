@@ -197,18 +197,25 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   int rc, nentries;
 
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
+
+  if (!size && (flags & PHOTON_REQ_PWC_NO_RCE)) {
+    dbg_warn("Nothing to send and no remote completion requested!");
+    return PHOTON_OK;
+  }
   
   // if we didn't send any data, then we only wait on one event
   nentries = (size > 0)?2:1;
   // if we are under the small pwc eager limit, only one event
   nentries = (size <= _photon_spsize)?1:2;
 
-  // check if we only get event for one put
-  if (nentries == 2 && (flags & PHOTON_REQ_ONE_CQE))
+  // override nentries depending on specified flags
+  if ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_PWC_NO_RCE)) {
     nentries = 1;
+  }
   // or no events for either put
-  if (flags & PHOTON_REQ_NO_CQE)
+  if (flags & PHOTON_REQ_NO_CQE) {
     nentries = 0;
+  }
   
   if (nentries > 0) {
     req = photon_setup_request_direct(NULL, proc, nentries);

@@ -121,7 +121,7 @@ typedef struct photon_buffer_t      * photonBuffer;
 
 #define PHOTON_REQ_NIL         0x0000
 #define PHOTON_REQ_USERID      0x0001 
-#define PHOTON_REQ_NO_CQE      0x0002  // don't generate internal CQ events
+#define PHOTON_REQ_NO_CQE      0x0002  // don't generate local CQ events, implies PWC_NO_LCE
 #define PHOTON_REQ_ONE_CQE     0x0004  // only generate one CQ event (for multiple ops, 2-put)
 #define PHOTON_REQ_COMPLETED   0x0008  // explitily set a request completed for FIN
 #define PHOTON_REQ_PWC_NO_LCE  0x0010  // don't return a local rid (pwc-specific)
