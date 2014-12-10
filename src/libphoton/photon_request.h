@@ -30,8 +30,9 @@
 #define REQUEST_FLAG_EDONE   (1<<3)
 #define REQUEST_FLAG_LDONE   (1<<4)
 #define REQUEST_FLAG_USERID  (1<<5)
-#define REQUEST_FLAG_1PWC    (1<<6)
-#define REQUEST_FLAG_2PWC    (1<<7)
+#define REQUEST_FLAG_NO_LCE  (1<<6)
+#define REQUEST_FLAG_1PWC    (1<<7)
+#define REQUEST_FLAG_2PWC    (1<<8)
 
 #define INC_ENTRY(e)           (e->curr = (e->curr + 1) % e->num_entries)
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))

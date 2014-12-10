@@ -163,22 +163,24 @@ static int photon_pwc_try_ledger(photonRequest req, int proc, void *ptr, uint64_
       goto error_exit;
     }
   }
-  
-  entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
-  entry->request = remote;
 
-  rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);        
-  dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
-  
-  req->length = size;
-  req->flags |= REQUEST_FLAG_2PWC;
-  
-  rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-				  &(photon_processes[proc].remote_pwc_ledger->remote), cookie, p1_flags);
-  
-  if (rc != PHOTON_OK) {
-    dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", cookie);
-    goto error_exit;
+  if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
+    entry = &(photon_processes[proc].remote_pwc_ledger->entries[curr]);
+    entry->request = remote;
+    
+    rmt_addr = (uintptr_t)photon_processes[proc].remote_pwc_ledger->remote.addr + (sizeof(*entry) * curr);        
+    dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
+    
+    req->length = size;
+    req->flags |= REQUEST_FLAG_2PWC;
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+				    &(photon_processes[proc].remote_pwc_ledger->remote), cookie, p1_flags);
+    
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", cookie);
+      goto error_exit;
+    }
   }
   
   return PHOTON_OK;
@@ -222,6 +224,10 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   }
   else {
     cookie = NULL_COOKIE;
+  }
+
+  if (flags & PHOTON_REQ_PWC_NO_LCE) {
+    flags |= REQUEST_FLAG_NO_LCE;
   }
 
   rc = photon_pwc_try_packed(req, proc, ptr, size, rptr, priv, local, remote, flags, cookie);
@@ -408,8 +414,11 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       // set flag and request only if we have processed the number of outstanding
       // events expected for this reqeust
       if ((req->op == REQUEST_OP_PWC) && (--req->events == 0)) {
-	*flag = 1;
-	*request = req->id;
+	// sometimes the requestor doesn't care about the completion
+	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+	  *flag = 1;
+	  *request = req->id;
+	}
 	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx", req->id, cookie);
 	photon_free_request(req);
 	return PHOTON_OK;
