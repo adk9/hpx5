@@ -54,8 +54,8 @@ const struct action_table *action_table_finalize(void)
 void action_table_free(const struct action_table *action)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Invoke the handler associated with the action of a parcel.
-int action_invoke(hpx_parcel_t *parcel)
+/// Run the handler associated a parcel's action.
+int action_run_handler(hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #define LIBHPX_REGISTER_ACTION        HPX_REGISTER_ACTION

@@ -111,6 +111,20 @@ void hpx_parcel_send_sync(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 
+/// Synchronously execute the action associated with a parcel.
+///
+/// This operation calls the action in the context of the calling
+/// thread, and should be used with caution. In particular, if the
+/// action performs a blocking operation, it could potentially block
+/// the entire thread without co-operatively yielding to other useful
+/// work. Like hpx_parcel_send(), the parcel pointed to by @p p may
+/// not be reused and must not be released with hpx_parcel_release().
+///
+/// @param p The parcel to execute.
+void hpx_parcel_execute(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
+
 /// Get the action associated with a parcel.
 ///
 /// @param p The parcel to query.
