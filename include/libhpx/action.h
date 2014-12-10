@@ -36,9 +36,13 @@ bool action_is_pinned(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Is the action a non-blocking action that does not require a stack
-/// to execute, aka a task?
+/// Is the action a task?
 bool action_is_task(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Is the action an interrupt?
+bool action_is_interrupt(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

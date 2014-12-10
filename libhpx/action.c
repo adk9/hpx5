@@ -32,6 +32,7 @@ typedef enum {
   _ACTION_DEFAULT = 0,
   _ACTION_PINNED,
   _ACTION_TASK,
+  _ACTION_INTERRUPT,
 } _action_type_t;
 
 /// An action table entry type.
@@ -212,6 +213,11 @@ bool action_is_task(const struct action_table *table, hpx_action_t id) {
 }
 
 
+bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_INTERRUPT);
+}
+
+
 int action_run_handler(hpx_parcel_t *parcel) {
   const hpx_addr_t target = hpx_parcel_get_target(parcel);
   const uint32_t owner = gas_owner_of(here->gas, target);
@@ -243,5 +249,11 @@ int hpx_register_pinned_action(hpx_action_t *id, const char *key,
 int hpx_register_task(hpx_action_t *id, const char *key,
                       hpx_action_handler_t f) {
   return _push_back(_get_actions(), id, key, f, _ACTION_TASK);
+}
+
+
+int hpx_register_interrupt(hpx_action_t *id, const char *key,
+                           hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_INTERRUPT);
 }
 
