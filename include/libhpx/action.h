@@ -24,19 +24,23 @@ struct action_table;
 const char *action_table_get_key(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+
 /// Get the handler associated with an action.
 hpx_action_handler_t action_table_get_handler(const struct action_table *,
                                               hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
+
 
 /// Is the action a non-blocking action that does not require a stack
 /// to execute, aka a task?
 bool action_is_task(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
+
 
 /// Build an action table.
 ///
@@ -54,12 +58,15 @@ const struct action_table *action_table_finalize(void)
 void action_table_free(const struct action_table *action)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+
 /// Run the handler associated a parcel's action.
 int action_run_handler(hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+
 #define LIBHPX_REGISTER_ACTION        HPX_REGISTER_ACTION
 #define LIBHPX_REGISTER_PINNED_ACTION HPX_REGISTER_PINNED_ACTION
 #define LIBHPX_REGISTER_TASK          HPX_REGISTER_TASK
+#define LIBHPX_REGISTER_INTERRUPT     HPX_REGISTER_INTERRUPT
 
 #endif // LIBHPX_ACTION_H
