@@ -19,6 +19,7 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
@@ -39,7 +40,12 @@ static int _probe_handler(void *o) {
   while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
     hpx_parcel_t *p = NULL;
     while ((p = parcel_stack_pop(&stack))) {
-      scheduler_spawn(p);
+      if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
+        hpx_parcel_execute(p);
+      }
+      else {
+        scheduler_spawn(p);
+      }
     }
   }
 
