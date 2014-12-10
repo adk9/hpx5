@@ -27,10 +27,20 @@ typedef struct gas {
   hpx_gas_t type;
 
   // Initialization
-  void (*delete)(struct gas *gas);
+  void (*delete)(struct gas *gas)
+    HPX_NON_NULL(1);
+
   int (*join)(void);
   void (*leave)(void);
-  bool (*is_global)(struct gas *gas, void *addr);
+
+  bool (*is_global)(struct gas *gas, void *addr)
+    HPX_NON_NULL(1);
+
+  size_t (*local_size)(struct gas *gas)
+    HPX_NON_NULL(1);
+
+  void *(*local_base)(struct gas *gas)
+    HPX_NON_NULL(1);
 
   // Dealing with global addresses
   uint32_t (*locality_of)(hpx_addr_t gva);
