@@ -78,7 +78,14 @@ static void *_run(void *worker) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
+  bool pinned = action_is_pinned(here->actions, hpx_parcel_get_action(parcel));
+  if (pinned) {
+    hpx_gas_try_pin(parcel->target, NULL);
+  }
   int status = action_run_handler(parcel);
+  if (pinned) {
+    hpx_gas_unpin(parcel->target);
+  }
   switch (status) {
    default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
@@ -648,6 +655,17 @@ uint32_t hpx_thread_current_args_size(void) {
 
 hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
+}
+
+
+void *hpx_thread_current_local_target(void) {
+  void *local;
+  hpx_parcel_t *p = scheduler_current_parcel();
+  if (p) {
+    hpx_gas_try_pin(p->target, &local);
+    return local;
+  }
+  return NULL;
 }
 
 
