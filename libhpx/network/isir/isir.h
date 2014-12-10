@@ -13,7 +13,6 @@
 #ifndef LIBHPX_NETWORK_ISIR_ISIR_H
 #define LIBHPX_NETWORK_ISIR_ISIR_H
 
-#include <hpx/hpx.h>
 #include <hpx/attributes.h>
 
 
