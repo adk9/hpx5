@@ -1,10 +1,39 @@
+#include <assert.h>
+
 #include "photon_event.h"
 #include "photon_pwc.h"
 
-int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
+int __photon_handle_cq_special(photon_rid cookie) {
   uint32_t prefix;
   prefix = (uint32_t)(cookie>>32);
-  if (prefix == REQUEST_COOK_EAGER) {
+
+  switch (prefix) {
+  case REQUEST_COOK_EAGER:
+    break;
+  case REQUEST_COOK_EBUF:
+    break;
+  case REQUEST_COOK_PBUF:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_pwc_buf->rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_INFO:
+    break;
+  case REQUEST_COOK_LEDG:
+    break;
+  default:
+    return PHOTON_ERROR;
+    break;
+  }
+
+  return PHOTON_OK;
+}
+
+int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
+  int rc = __photon_handle_cq_special(cookie);
+  if (rc == PHOTON_OK) {
     return 1;
   }
   

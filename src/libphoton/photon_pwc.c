@@ -80,7 +80,8 @@ static int photon_pwc_try_packed(photonRequest req, int proc, void *ptr, uint64_
     p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
       
     eb = photon_processes[proc].remote_pwc_buf;
-    offset = photon_rdma_eager_buf_get_offset(eb, EB_MSG_SIZE(size), EB_MSG_SIZE(_photon_spsize));
+    offset = photon_rdma_eager_buf_get_offset(proc, eb, EB_MSG_SIZE(size),
+					      EB_MSG_SIZE(_photon_spsize));
     if (offset < 0) {
       if (offset == -2) {
 	return PHOTON_ERROR_RESOURCE;
@@ -404,12 +405,12 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   
   // we found something to process
   if (cookie != NULL_COOKIE) {
-    uint32_t prefix;
-    prefix = (uint32_t)(cookie>>32);
-    if (prefix == REQUEST_COOK_EAGER) {
-      return PHOTON_OK;
+    // handle any non request-bound events
+    rc = __photon_handle_cq_special(cookie);
+    if (rc == PHOTON_OK) {
+      return rc;
     }
-   
+    
     req = photon_lookup_request(cookie);
     if (req) {
       // allow pwc probe to work with photon_test()

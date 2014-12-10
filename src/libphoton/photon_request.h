@@ -13,9 +13,13 @@
 #define REQUEST_FAILED       0x03
 #define REQUEST_COMPLETED    0x04
 
-#define REQUEST_COOK_SEND    0xbeef
-#define REQUEST_COOK_RECV    0xcafebabe
-#define REQUEST_COOK_EAGER   0xdeadfeed
+#define REQUEST_COOK_SEND    0xff000000
+#define REQUEST_COOK_RECV    0xff100000
+#define REQUEST_COOK_EAGER   0xff200000
+#define REQUEST_COOK_EBUF    0xff300000
+#define REQUEST_COOK_PBUF    0xff400000
+#define REQUEST_COOK_LEDG    0xff500000
+#define REQUEST_COOK_INFO    0xff600000
 
 #define REQUEST_OP_DEFAULT   0x00
 #define REQUEST_OP_SENDBUF   (1<<1)
@@ -38,6 +42,7 @@
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)         (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 #define PROC_REQUEST_ID(p, id) (((uint64_t)p<<32) | id)
+#define IS_VALID_PROC(p)       ((p >= 0) && (p < _photon_nproc))
 
 typedef struct photon_req_t {
   uint32_t index;

@@ -667,7 +667,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       int offset;
 
       eb = photon_processes[proc].remote_eager_buf;
-      offset = photon_rdma_eager_buf_get_offset(eb, size, size);
+      offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
       if (offset < 0) {
 	log_err("Exceeded outstanding eager buffer limit - increase eager buf size or wait for local completion");
 	goto error_exit;

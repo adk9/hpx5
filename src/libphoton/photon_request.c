@@ -54,7 +54,7 @@ photonRequest photon_lookup_request(photon_rid rid) {
   uint32_t proc, id;
   id = (uint32_t)(rid<<32>>32);
   proc = (uint32_t)(rid>>32);
-  if (proc >= 0 && proc < _photon_nproc) {
+  if (IS_VALID_PROC(proc)) {
     rt = photon_processes[proc].request_table;
   }
   else {
