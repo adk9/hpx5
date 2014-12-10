@@ -22,27 +22,22 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 
-#include <photon.h>
 #include "pwc.h"
-
-typedef struct photon_buffer_priv_t _key_t;
-
-typedef struct {
-  void *base;
-  _key_t key;
-} _segment_t;
+#include "pwc_buffer.h"
 
 typedef struct {
-  network_t    vtable;
-  gas_t          *gas;
-  int            rank;
-  int          UNUSED;
-  _segment_t segments[];
+  network_t     vtable;
+  gas_t           *gas;
+  int             rank;
+  int           UNUSED;
+  pwc_buffer_t buffers[];
 } _pwc_t;
+
 
 static const char *_photon_id() {
   return "Photon put-with-completion\n";
 }
+
 
 static void _photon_delete(network_t *network) {
   if (!network) {
@@ -59,41 +54,52 @@ static void _photon_delete(network_t *network) {
   free(pwc);
 }
 
+
 static int _photon_progress(network_t *network) {
   return 0;
 }
+
 
 static int _photon_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
 
-static int _photon_pwc(network_t *network, hpx_addr_t to, void *from, size_t n,
+static int _photon_pwc(network_t *network, hpx_addr_t to, void *lva, size_t n,
                        hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
 {
   _pwc_t *pwc = (void*)network;
-
   int rank = gas_owner_of(pwc->gas, to);
-  // int e = photon_put_with_completion(rank, void *ptr, uint64_t size, void
-  //                                    *rptr, struct photon_buffer_priv_t priv,
-  //                                    photon_rid local, photon_rid remote, int
-  //                                    flags);
-
-  return LIBHPX_EUNIMPLEMENTED;
+  void *rva = pwc->buffers[rank].base + gas_offset_of(pwc->gas, to);
+  return pwc_buffer_pwc(pwc->buffers + rank, rva, lva, n, local, remote, op);
 }
 
 
 static int _photon_put(network_t *network, hpx_addr_t to, void *from, size_t n,
                        hpx_addr_t local, hpx_addr_t remote)
 {
-  return LIBHPX_EUNIMPLEMENTED;
+
+  return _photon_pwc(network, to, from, n, local, remote, HPX_NULL);
 }
 
 
-static int _photon_get(network_t *network, void *to, hpx_addr_t from, size_t n,
+static int _photon_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
                        hpx_addr_t local)
 {
-  return LIBHPX_EUNIMPLEMENTED;
+  _pwc_t *pwc = (void*)network;
+
+  int flags = (local != HPX_NULL) ? PHOTON_REQ_ONE_CQE : PHOTON_REQ_NO_CQE;
+  int rank = gas_owner_of(pwc->gas, from);
+  const void *rva = pwc->buffers[rank].base + gas_offset_of(pwc->gas, from);
+  void *vrva = (void*)rva;
+  struct photon_buffer_priv_t key = pwc->buffers[rank].key;
+
+  int e = photon_get_with_completion(rank, lva, n, vrva, key, local, flags);
+  if (PHOTON_OK != e) {
+    return dbg_error("could not initiate a get()\n");
+  }
+
+  return LIBHPX_OK;
 }
 
 
@@ -118,7 +124,7 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   }
 
   int ranks = boot_n_ranks(boot);
-  _pwc_t *photon = malloc(sizeof(*photon) + ranks * sizeof(_segment_t));
+  _pwc_t *photon = malloc(sizeof(*photon) + ranks * sizeof(pwc_buffer_t));
   if (!photon) {
     dbg_error("could not allocate a Photon put-with-completion network\n");
     goto unwind0;
@@ -149,16 +155,17 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
     dbg_log_net("registered the local segment (%p, %lu)\n", base, size);
   }
 
-  _key_t key;
+  struct photon_buffer_priv_t key;
   if (PHOTON_OK != photon_get_buffer_private(base, size , &key)) {
     dbg_error("failed to get the local segment access key from Photon\n");
     goto unwind2;
   }
-  _segment_t *local = photon->segments + photon->rank;
+  pwc_buffer_t *local = photon->buffers + photon->rank;
   local->base = base;
   local->key = key;
+  local->rank = photon->rank;
 
-  if (LIBHPX_OK != boot_allgather(boot, local, &photon->segments, sizeof(*local))) {
+  if (LIBHPX_OK != boot_allgather(boot, local, &photon->buffers, sizeof(*local))) {
     dbg_error("could not exchange heap segments\n");
     goto unwind2;
   }
@@ -170,6 +177,9 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   assert(local->key.key0 == key.key0);
   assert(local->key.key1 == key.key1);
 
+  for (int i = 0; i < ranks; ++i) {
+    pwc_buffer_init(photon->buffers + i, i, 32);
+  }
 
   return &photon->vtable;
 
