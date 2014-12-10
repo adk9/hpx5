@@ -22,9 +22,9 @@
 #include "pwc/pwc.h"
 
 
-static network_t *_default(struct gas_class *gas, int nrx) {
+static network_t *_default(struct boot *boot, struct gas *gas, int nrx) {
 #ifdef HAVE_PHOTON
-  return network_pwc_funneled_new(gas, nrx);
+  return network_pwc_funneled_new(boot, gas, nrx);
 #endif
 
 #ifdef HAVE_MPI
@@ -35,24 +35,26 @@ static network_t *_default(struct gas_class *gas, int nrx) {
 }
 
 
-network_t *network_new(libhpx_network_t type, struct gas_class *gas, int nrx) {
+network_t *network_new(libhpx_network_t type, struct boot *boot,
+                       struct gas *gas, int nrx)
+{
   // return _old_new(nrx);
   network_t *network = NULL;
 
   switch (type) {
    case LIBHPX_NETWORK_PHOTON:
-    network = network_pwc_funneled_new(gas, nrx);
+    network = network_pwc_funneled_new(boot, gas, nrx);
     break;
    case LIBHPX_NETWORK_MPI:
     network = network_isir_funneled_new(gas, nrx);
     break;
    default:
-    network = _default(gas, nrx);
+    network = _default(boot, gas, nrx);
     break;
   }
 
   if (!network) {
-    network = _default(gas, nrx);
+    network = _default(boot, gas, nrx);
   }
 
   if (!network) {

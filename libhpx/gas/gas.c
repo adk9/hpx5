@@ -14,12 +14,12 @@
 #include "config.h"
 #endif
 
-#include "libhpx/gas.h"
-#include "libhpx/debug.h"
+#include <libhpx/gas.h>
+#include <libhpx/debug.h>
 
-gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type) {
-  gas_class_t *gas = NULL;
+gas_t *gas_new(size_t heap_size, struct boot *boot, struct transport *transport,
+               hpx_gas_t type) {
+  gas_t *gas = NULL;
 
   if (type == HPX_GAS_DEFAULT) {
     dbg_log_gas("HPX GAS defaults to PGAS.\n");
@@ -37,7 +37,7 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
   }
 
   if (type == HPX_GAS_SMP || !gas) {
-    gas = gas_smp_new(heap_size, boot, transport);
+    gas = gas_smp_new();
     if (!gas) {
       dbg_log_gas("SMP failed to initialize\n");
     }

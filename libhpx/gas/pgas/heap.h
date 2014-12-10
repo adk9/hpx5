@@ -51,21 +51,24 @@
 
 #define HEAP_USE_CYCLIC_CSBRK_BARRIER 0
 
-struct transport_class;
+/// Forward declarations.
+/// @{
+struct transport;
 struct bitmap;
+/// @}
 
 typedef struct heap {
-  volatile uint64_t           csbrk;
-  size_t            bytes_per_chunk;
-  size_t                raw_nchunks;
-  size_t                    nchunks;
-  struct bitmap             *chunks;
-  size_t                     nbytes;
-  char                        *base;
-  size_t                 raw_nbytes;
-  char                    *raw_base;
-  struct transport_class *transport;
-  unsigned             cyclic_arena;
+  volatile uint64_t     csbrk;
+  size_t      bytes_per_chunk;
+  size_t          raw_nchunks;
+  size_t              nchunks;
+  struct bitmap       *chunks;
+  size_t               nbytes;
+  char                  *base;
+  size_t           raw_nbytes;
+  char              *raw_base;
+  struct transport *transport;
+  unsigned       cyclic_arena;
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
@@ -126,7 +129,7 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
 /// @param    transport The transport to bind.
 ///
 /// @returns TRUE if the transport requires mallctl_disable_dirty_page_purge().
-int heap_bind_transport(heap_t *heap, struct transport_class *transport)
+int heap_bind_transport(heap_t *heap, struct transport *transport)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
 

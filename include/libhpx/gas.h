@@ -16,19 +16,21 @@
 #include <hpx/hpx.h>
 #include "libhpx/config.h"
 
-struct boot_class;
-struct transport_class;
+/// Forward declarations.
+/// @{
+struct boot;
+struct transport;
+/// @}
 
 /// Generic object oriented interface to the global address space.
-typedef struct gas_class gas_class_t;
-struct gas_class {
+typedef struct gas {
   hpx_gas_t type;
 
   // Initialization
-  void (*delete)(gas_class_t *gas);
+  void (*delete)(struct gas *gas);
   int (*join)(void);
   void (*leave)(void);
-  bool (*is_global)(gas_class_t *gas, void *addr);
+  bool (*is_global)(struct gas *gas, void *addr);
 
   // Dealing with global addresses
   uint32_t (*locality_of)(hpx_addr_t gva);
@@ -54,36 +56,33 @@ struct gas_class {
 
   // network operation
   uint32_t (*owner_of)(hpx_addr_t gva);
-};
+} gas_t;
 
-gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
-                         struct transport_class *transport)
+gas_t *gas_smp_new(void)
+  HPX_INTERNAL;
+
+gas_t *gas_pgas_new(size_t heap_size, struct boot *, struct transport *)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot,
-                          struct transport_class *transport)
+gas_t *gas_new(size_t heap_size, struct boot *, struct transport *, hpx_gas_t type)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type)
-  HPX_INTERNAL HPX_NON_NULL(2,3);
-
-inline static void gas_delete(gas_class_t *gas) {
+inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);
   gas->delete(gas);
 }
 
-inline static int gas_join(gas_class_t *gas) {
+inline static int gas_join(gas_t *gas) {
   assert(gas && gas->join);
   return gas->join();
 }
 
-inline static void gas_leave(gas_class_t *gas) {
+inline static void gas_leave(gas_t *gas) {
   assert(gas && gas->leave);
   gas->leave();
 }
 
-inline static uint32_t gas_owner_of(gas_class_t *gas, hpx_addr_t addr) {
+inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   assert(gas && gas->owner_of);
   return gas->owner_of(addr);
 }

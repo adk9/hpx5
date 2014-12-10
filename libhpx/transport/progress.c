@@ -218,7 +218,7 @@ unwind0:
 /// @returns The total number of completed requests.
 static int _test(progress_t *p, request_t **i,
                  void (*finish)(progress_t*, request_t*)) {
-  transport_class_t *t = here->transport;
+  transport_t *t = here->transport;
   int n = 0;
   while (*i != NULL) {
     request_t *j = *i;
@@ -302,7 +302,7 @@ void network_progress_poll(progress_t *p) {
   }
 }
 
-progress_t *network_progress_new(transport_class_t *t) {
+progress_t *network_progress_new(transport_t *t) {
   progress_t *p = malloc(sizeof(*p));
   assert(p);
   p->psend_limit   = t->get_send_limit(t);

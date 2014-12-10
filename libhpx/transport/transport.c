@@ -19,7 +19,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 
-static transport_class_t *_default(uint32_t send_limit, uint32_t recv_limit) {
+static transport_t *_default(uint32_t send_limit, uint32_t recv_limit) {
 #ifdef HAVE_PHOTON
   return transport_new_photon(send_limit, recv_limit);
 #endif
@@ -32,17 +32,16 @@ static transport_class_t *_default(uint32_t send_limit, uint32_t recv_limit) {
   return transport_new_mpi(send_limit, recv_limit);
 #endif
 
-  return transport_new_smp(send_limit, recv_limit);
+  return transport_new_smp();
 }
 
-transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
-                                 uint32_t recv_limit) {
-  transport_class_t *transport = NULL;
+transport_t *transport_new(hpx_transport_t type, uint32_t slim, uint32_t rlim) {
+  transport_t *transport = NULL;
 
   switch (type) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    transport = transport_new_photon(send_limit, recv_limit);
+    transport = transport_new_photon(slim, rlim);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
 #endif
@@ -50,7 +49,7 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    transport = transport_new_mpi(send_limit, recv_limit);
+    transport = transport_new_mpi(slim, rlim);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
 #endif
@@ -58,24 +57,24 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    transport = transport_new_portals(send_limit, recv_limit);
+    transport = transport_new_portals(slim, rlim);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
 #endif
     break;
 
    case (HPX_TRANSPORT_SMP):
-    transport = transport_new_smp(send_limit, recv_limit);
+    transport = transport_new_smp();
     break;
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
-    transport = _default(send_limit, recv_limit);
+    transport = _default(slim, rlim);
     break;
   };
 
   if (!transport) {
-    transport = _default(send_limit, recv_limit);
+    transport = _default(slim, rlim);
   }
 
   if (!transport) {
