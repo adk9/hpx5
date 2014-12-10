@@ -352,12 +352,24 @@ static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 }
 
 
+static size_t _pgas_local_size(gas_t *gas) {
+  return global_heap->nbytes;
+}
+
+
+static void *_pgas_local_base(gas_t *gas) {
+  return global_heap->base;
+}
+
+
 static gas_t _pgas_vtable = {
   .type          = HPX_GAS_PGAS,
   .delete        = _pgas_delete,
   .join          = pgas_join,
   .leave         = pgas_leave,
   .is_global     = _pgas_is_global,
+  .local_size    = _pgas_local_size,
+  .local_base    = _pgas_local_base,
   .locality_of   = pgas_gpa_to_rank,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
