@@ -212,7 +212,7 @@ bool action_is_task(const struct action_table *table, hpx_action_t id) {
 }
 
 
-int action_invoke(hpx_parcel_t *parcel) {
+int action_run_handler(hpx_parcel_t *parcel) {
   const hpx_addr_t target = hpx_parcel_get_target(parcel);
   const uint32_t owner = gas_owner_of(here->gas, target);
   DEBUG_IF (owner != here->rank) {
