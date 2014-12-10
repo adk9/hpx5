@@ -78,17 +78,14 @@ static void *_run(void *worker) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  const hpx_addr_t target = hpx_parcel_get_target(parcel);
-  const uint32_t owner = gas_owner_of(here->gas, target);
-  DEBUG_IF (owner != here->rank) {
-    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+  bool pinned = action_is_pinned(here->actions, hpx_parcel_get_action(parcel));
+  if (pinned) {
+    hpx_gas_try_pin(parcel->target, NULL);
   }
-
-  hpx_action_t id = hpx_parcel_get_action(parcel);
-  void *args = hpx_parcel_get_data(parcel);
-
-  hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
-  int status = handler(args);
+  int status = action_run_handler(parcel);
+  if (pinned) {
+    hpx_gas_unpin(parcel->target);
+  }
   switch (status) {
    default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
@@ -297,8 +294,13 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   }
 
   assert(p);
-  _try_bind(p);
-  return p;
+  if (!fast && action_is_task(here->actions, hpx_parcel_get_action(p))) {
+    hpx_parcel_execute(p);
+    return _schedule(fast, final);
+  } else {
+    _try_bind(p);
+    return p;
+  }
 }
 
 
@@ -653,6 +655,17 @@ uint32_t hpx_thread_current_args_size(void) {
 
 hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
+}
+
+
+void *hpx_thread_current_local_target(void) {
+  void *local;
+  hpx_parcel_t *p = scheduler_current_parcel();
+  if (p) {
+    hpx_gas_try_pin(p->target, &local);
+    return local;
+  }
+  return NULL;
 }
 
 

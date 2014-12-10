@@ -21,12 +21,30 @@ struct action_table;
 
 
 /// Get the key for an action.
-const char *action_table_get_key(const struct action_table *, hpx_action_t id)
+const char *action_table_get_key(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+
+/// Get the handler associated with an action.
 hpx_action_handler_t action_table_get_handler(const struct action_table *,
-                                              hpx_action_t id)
+                                              hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Is the action a pinned action?
+bool action_is_pinned(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Is the action a task?
+bool action_is_task(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+/// Is the action an interrupt?
+bool action_is_interrupt(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 
 /// Build an action table.
 ///
@@ -45,6 +63,14 @@ void action_table_free(const struct action_table *action)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-#define LIBHPX_REGISTER_ACTION HPX_REGISTER_ACTION
+/// Run the handler associated a parcel's action.
+int action_run_handler(hpx_parcel_t *parcel)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+#define LIBHPX_REGISTER_ACTION        HPX_REGISTER_ACTION
+#define LIBHPX_REGISTER_PINNED_ACTION HPX_REGISTER_PINNED_ACTION
+#define LIBHPX_REGISTER_TASK          HPX_REGISTER_TASK
+#define LIBHPX_REGISTER_INTERRUPT     HPX_REGISTER_INTERRUPT
 
 #endif // LIBHPX_ACTION_H
