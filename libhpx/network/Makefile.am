@@ -13,7 +13,7 @@ noinst_LTLIBRARIES	   = libnetwork.la
 
 libnetwork_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/contrib -DJEMALLOC_RENAME=libhpx_global_
 libnetwork_la_CFLAGS   = 
-libnetwork_la_SOURCES  = locality.c network.c parcel.c progress.c probe.c \
+libnetwork_la_SOURCES  = locality.c network.c parcel.c progress.c probe.c smp.c \
                          routing/routing.c routing/dummy.c 
 libnetwork_la_LIBADD   =
 
