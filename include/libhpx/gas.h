@@ -65,7 +65,8 @@ typedef struct gas {
   __typeof(hpx_gas_memcpy) *memcpy;
 
   // network operation
-  uint32_t (*owner_of)(hpx_addr_t gva);
+  uint32_t (*owner_of)(hpx_addr_t gpa);
+  uint64_t (*offset_of)(hpx_addr_t gpa);
 } gas_t;
 
 gas_t *gas_smp_new(void)
@@ -95,6 +96,11 @@ inline static void gas_leave(gas_t *gas) {
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   assert(gas && gas->owner_of);
   return gas->owner_of(addr);
+}
+
+inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
+  assert(gas && gas->offset_of);
+  return gas->offset_of(gpa);
 }
 
 #endif// LIBHPX_GAS_H
