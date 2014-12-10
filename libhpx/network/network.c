@@ -109,11 +109,7 @@ static int _probe_handler(void *o) {
   while ((stack = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
     hpx_parcel_t *p = NULL;
     while ((p = parcel_stack_pop(&stack))) {
-      if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
-        scheduler_spawn_task(p);
-      } else {
-        scheduler_spawn(p);
-      }
+      scheduler_spawn(p);
     }
   }
   return HPX_SUCCESS;
