@@ -57,7 +57,7 @@ struct _portals_buf {
 
 /// the Portals transport.
 typedef struct {
-  transport_class_t class;
+  transport_t class;
   ptl_process_t     id;                 // my (physical) ID
   _portals_lim_t    limits;             // portals transport resource limits
   ptl_handle_ni_t   interface;          // handle to the non-matching interface
@@ -259,20 +259,20 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static int _pin(transport_t *transport, const void* buffer, size_t len) {
   return 0;
 }
 
 /// ----------------------------------------------------------------------------
 /// Unpinning not necessary.
 /// ----------------------------------------------------------------------------
-static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
+static void _unpin(transport_t *transport, const void* buffer, size_t len) {
 }
 
 /// ----------------------------------------------------------------------------
 /// Put data via Portals.
 /// ----------------------------------------------------------------------------
-static int _put(transport_class_t *t, int dest, const void *data, size_t n,
+static int _put(transport_t *t, int dest, const void *data, size_t n,
                 void *rbuffer, size_t rn, void *rid, void *r)
 {
   dbg_log_trans("portals: put unsupported.\n");
@@ -282,7 +282,7 @@ static int _put(transport_class_t *t, int dest, const void *data, size_t n,
 /// ----------------------------------------------------------------------------
 /// Get data via Portals.
 /// ----------------------------------------------------------------------------
-static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
+static int _get(transport_t *t, int dest, void *buffer, size_t n,
                 const void *rdata, size_t rn, void *rid, void *r)
 {
   dbg_log_trans("portals: get unsupported.\n");
@@ -292,7 +292,7 @@ static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
 /// ----------------------------------------------------------------------------
 /// Send data via Portals.
 /// ----------------------------------------------------------------------------
-static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
+static int _send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
   dbg_log_trans("portals: send unsupported.\n");
   return HPX_SUCCESS;
@@ -301,7 +301,7 @@ static int _send(transport_class_t *t, int dest, const void *data, size_t n, voi
 /// ----------------------------------------------------------------------------
 /// Test for request completion.
 /// ----------------------------------------------------------------------------
-static int _test(transport_class_t *t, void *request, int *success) {
+static int _test(transport_t *t, void *request, int *success) {
   dbg_log_trans("portals: test unsupported.\n");
   return HPX_SUCCESS;
 }
@@ -309,7 +309,7 @@ static int _test(transport_class_t *t, void *request, int *success) {
 /// ----------------------------------------------------------------------------
 /// Probe the Portals transport to see if anything has been received.
 /// ----------------------------------------------------------------------------
-static size_t _probe(transport_class_t *t, int *source) {
+static size_t _probe(transport_t *t, int *source) {
   dbg_log_trans("portals: probe unsupported.\n");
   return 0;
 }
@@ -317,7 +317,7 @@ static size_t _probe(transport_class_t *t, int *source) {
 /// ----------------------------------------------------------------------------
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
-static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
+static int _recv(transport_t *t, int src, void* buffer, size_t n, void *r) {
   dbg_log_trans("portals: recv unsupported.\n");
   return HPX_SUCCESS;
 }
@@ -326,7 +326,7 @@ static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
 /// ----------------------------------------------------------------------------
 /// Shut down Portals, and delete the transport.
 /// ----------------------------------------------------------------------------
-static void _delete(transport_class_t *transport) {
+static void _delete(transport_t *transport) {
   portals_t *ptl = (portals_t*)transport;
 
   for (int i = 0; i < PORTALS_NUM_BUF_MAX; ++i)
@@ -396,7 +396,7 @@ static int _handle_send_event(ptl_event_t *pe) {
   return PTL_OK;
 }
 
-static int _send_progress(transport_class_t **t) {
+static int _send_progress(transport_t **t) {
   portals_t *ptl = (portals_t*)*t;
 
   bool send = _try_start_send(ptl);
@@ -411,7 +411,7 @@ static int _send_progress(transport_class_t **t) {
   return HPX_SUCCESS;
 }
 
-static void _send_flush(transport_class_t *t) {
+static void _send_flush(transport_t *t) {
   portals_t *ptl = (portals_t*)t;
 
   bool send = true;
@@ -427,7 +427,7 @@ static void _send_flush(transport_class_t *t) {
   } while (e != PTL_EQ_EMPTY);
 }
 
-static int _recv_progress(transport_class_t **t) {
+static int _recv_progress(transport_t **t) {
   portals_t *ptl = (portals_t*)*t;
   ptl_event_t pe;
 
@@ -458,7 +458,7 @@ static int _recv_progress(transport_class_t **t) {
   return HPX_SUCCESS;
 }
 
-static void _progress(transport_class_t *t, transport_op_t op) {
+static void _progress(transport_t *t, transport_op_t op) {
   switch (op) {
   case TRANSPORT_FLUSH:
     _send_flush(t);
@@ -477,16 +477,16 @@ static void _progress(transport_class_t *t, transport_op_t op) {
   }
 }
 
-static uint32_t _get_send_limit(transport_class_t *t) {
+static uint32_t _get_send_limit(transport_t *t) {
   return t->send_limit;
 }
 
-static uint32_t _get_recv_limit(transport_class_t *t) {
+static uint32_t _get_recv_limit(transport_t *t) {
   return t->recv_limit;
 }
 
 
-transport_class_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
   }

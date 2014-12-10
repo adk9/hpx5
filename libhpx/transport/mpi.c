@@ -29,7 +29,7 @@
 
 /// the MPI transport
 typedef struct {
-  transport_class_t class;
+  transport_t class;
   progress_t *progress;
 } mpi_t;
 
@@ -70,7 +70,7 @@ static int _mpi_request_cancel(void *request) {
 
 
 /// Shut down MPI, and delete the transport.
-static void _mpi_delete(transport_class_t *transport) {
+static void _mpi_delete(transport_t *transport) {
   mpi_t *mpi = (mpi_t*)transport;
   network_progress_delete(mpi->progress);
   int finalized;
@@ -82,20 +82,20 @@ static void _mpi_delete(transport_class_t *transport) {
 
 
 /// Pinning not necessary.
-static int _mpi_pin(transport_class_t *transport, const void* buffer,
+static int _mpi_pin(transport_t *transport, const void* buffer,
                     size_t len) {
   return 0;
 }
 
 
 /// Unpinning not necessary.
-static void _mpi_unpin(transport_class_t *transport, const void* buffer,
+static void _mpi_unpin(transport_t *transport, const void* buffer,
                        size_t len) {
 }
 
 
 /// Put data via MPI_Put
-static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
+static int _mpi_put(transport_t *t, int dest, const void *data, size_t n,
                     void *rbuffer, size_t rn, void *rid, void *r)
 {
   dbg_log_trans("put unsupported.\n");
@@ -104,7 +104,7 @@ static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
 
 
 /// Get data via MPI_Get
-static int _mpi_get(transport_class_t *t, int dest, void *buffer, size_t n,
+static int _mpi_get(transport_t *t, int dest, void *buffer, size_t n,
                     const void *rdata, size_t rn, void *rid, void *r)
 {
   dbg_log_trans("get unsupported.\n");
@@ -115,7 +115,7 @@ static int _mpi_get(transport_class_t *t, int dest, void *buffer, size_t n,
 /// Send data via MPI.
 ///
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
-static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
+static int _mpi_send(transport_t *t, int dest, const void *data, size_t n,
                  void *r)
 {
   void *b = (void*)data;
@@ -127,7 +127,7 @@ static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
 
 
 /// Probe MPI to see if anything has been received.
-static size_t _mpi_probe(transport_class_t *transport, int *source) {
+static size_t _mpi_probe(transport_t *transport, int *source) {
   if (*source != TRANSPORT_ANY_SOURCE) {
     dbg_error("cannot currently probe source %d.\n", *source);
     return 0;
@@ -161,7 +161,7 @@ static size_t _mpi_probe(transport_class_t *transport, int *source) {
 
 
 /// Receive a buffer.
-static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+static int _mpi_recv(transport_t *t, int src, void* buffer, size_t n, void *r)
 {
   assert(src != TRANSPORT_ANY_SOURCE);
   assert(src >= 0);
@@ -175,7 +175,7 @@ static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void
 }
 
 
-static int _mpi_test(transport_class_t *t, void *request, int *success) {
+static int _mpi_test(transport_t *t, void *request, int *success) {
   int e = MPI_Test(request, success, MPI_STATUS_IGNORE);
   if (e != MPI_SUCCESS)
     return dbg_error("failed MPI_Test %d.\n", e);
@@ -183,7 +183,7 @@ static int _mpi_test(transport_class_t *t, void *request, int *success) {
 }
 
 
-static void _mpi_progress(transport_class_t *t, transport_op_t op) {
+static void _mpi_progress(transport_t *t, transport_op_t op) {
   mpi_t *mpi = (mpi_t*)t;
   switch (op) {
   case TRANSPORT_FLUSH:
@@ -200,17 +200,17 @@ static void _mpi_progress(transport_class_t *t, transport_op_t op) {
 }
 
 
-static uint32_t _mpi_get_send_limit(transport_class_t *t) {
+static uint32_t _mpi_get_send_limit(transport_t *t) {
   return t->send_limit;
 }
 
 
-static uint32_t _mpi_get_recv_limit(transport_class_t *t) {
+static uint32_t _mpi_get_recv_limit(transport_t *t) {
   return t->recv_limit;
 }
 
 
-transport_class_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
   int init = 0;
   MPI_Initialized(&init);
   if (!init) {

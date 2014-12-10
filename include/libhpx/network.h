@@ -15,7 +15,7 @@
 
 
 /// @file include/libhpx/network.h
-/// @brief Declare the network_class_t structure.
+/// @brief Declare the network_t interface.
 ///
 /// This file declares the interface to the parcel network subsystem in HPX. The
 /// network's primary responsibility is to accept send requests from the
@@ -26,7 +26,8 @@
 
 /// Forward declarations.
 /// @{
-struct gas_class;
+struct boot;
+struct gas;
 /// @}
 
 
@@ -69,12 +70,14 @@ typedef struct network {
 /// the "here" locality.
 ///
 /// @param         type The type of the network to instantiate.
+/// @param         boot The bootstrap network object.
 /// @param          gas The global address space.
 /// @param          nrx The number of receive queues.
 ///
 /// @returns            The network object, or NULL if there was an issue.
-network_t *network_new(libhpx_network_t type, struct gas_class *gas, int nrx)
-  HPX_MALLOC HPX_INTERNAL;
+network_t *network_new(libhpx_network_t type, struct boot *boot,
+                       struct gas *gas, int nrx)
+  HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
 
 
 /// Delete a network object.

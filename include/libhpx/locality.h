@@ -30,16 +30,16 @@
 #include <jemalloc/jemalloc.h>
 #include <hwloc.h>
 
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
 
 /// Forward declarations.
 /// @{
-struct boot_class;
+struct boot;
 struct network;
 struct scheduler;
-struct transport_class;
+struct transport;
 /// @}
 
 /// The locality object.
@@ -61,9 +61,9 @@ struct transport_class;
 typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
-  struct boot_class            *boot;
-  struct gas_class              *gas;
-  struct transport_class  *transport;
+  struct boot                  *boot;
+  struct gas                    *gas;
+  struct transport        *transport;
   struct network            *network;
   struct scheduler            *sched;
   hpx_config_t               *config;

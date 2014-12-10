@@ -16,14 +16,19 @@
 
 #include <stdlib.h>
 
+#include <libhpx/boot.h>
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 
+#include <photon.h>
 #include "pwc.h"
 
 typedef struct {
   network_t vtable;
+  gas_t       *gas;
+  void      *bases;
 } _pwc_t;
 
 static const char *_photon_id() {
@@ -40,32 +45,35 @@ static int _photon_progress(network_t *network) {
   return 0;
 }
 
-static int _photon_send(network_t *network, hpx_parcel_t *p,
-                          hpx_addr_t l)
+static int _photon_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static int _photon_pwc(network_t *network, hpx_addr_t to, void *from, size_t n,
+                       hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+{
+  _pwc_t *pwc = (void*)network;
+
+  int rank = gas_owner_of(pwc->gas, to);
+  // int e = photon_put_with_completion(rank, void *ptr, uint64_t size, void
+  //                                    *rptr, struct photon_buffer_priv_t priv,
+  //                                    photon_rid local, photon_rid remote, int
+  //                                    flags);
+
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+
+static int _photon_put(network_t *network, hpx_addr_t to, void *from, size_t n,
+                       hpx_addr_t local, hpx_addr_t remote)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
 
-static int _photon_pwc(network_t *network,
-                         hpx_addr_t to, void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
-{
-  return LIBHPX_EUNIMPLEMENTED;
-}
-
-
-static int _photon_put(network_t *network,
-                         hpx_addr_t to, void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote)
-{
-  return LIBHPX_EUNIMPLEMENTED;
-}
-
-
-static int _photon_get(network_t *network,
-                         void *to, hpx_addr_t from, size_t n,
-                         hpx_addr_t local)
+static int _photon_get(network_t *network, void *to, hpx_addr_t from, size_t n,
+                       hpx_addr_t local)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }
@@ -80,7 +88,7 @@ static void _photon_set_flush(network_t *network) {
 }
 
 
-network_t *network_pwc_funneled_new(struct gas_class *gas, int nrx) {
+network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   _pwc_t *photon =  malloc(sizeof(*photon));
   if (!photon) {
     dbg_error("could not allocate a Photon put-with-completion network\n");
@@ -96,6 +104,8 @@ network_t *network_pwc_funneled_new(struct gas_class *gas, int nrx) {
   photon->vtable.get = _photon_get;
   photon->vtable.probe = _photon_probe;
   photon->vtable.set_flush = _photon_set_flush;
+
+  photon->gas = gas;
 
   return &photon->vtable;
 }
