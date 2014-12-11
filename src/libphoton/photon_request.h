@@ -42,7 +42,6 @@
 #define REQUEST_FLAG_1PWC    (1<<7)
 #define REQUEST_FLAG_2PWC    (1<<8)
 
-#define INC_ENTRY(e)           (e->curr = (e->curr + 1) % e->num_entries)
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)         (sizeof(struct photon_eb_hdr_t) + s + sizeof(uintmax_t))
 #define PROC_REQUEST_ID(p, id) (((uint64_t)p<<32) | id)

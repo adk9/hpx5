@@ -15,10 +15,10 @@ typedef struct photon_ri_ledger_entry_t {
 } photon_ri_ledger_entry;
 
 typedef struct photon_ri_ledger_t {
-  photon_ri_ledger_entry *entries;
   uint64_t curr;
   uint64_t tail;
   uint32_t num_entries;
+  photon_ri_ledger_entry *entries;
   struct photon_buffer_t remote;
   struct photon_acct_t   acct;
 } photon_ri_ledger;

@@ -1,10 +1,13 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "logging.h"
 #include "photon_rdma_ledger.h"
 #include "photon_buffer.h"
 #include "photon_exchange.h"
+
+static int _get_remote_progress(int proc, photonLedger buf);
 
 photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, int num_entries, int prefix) {
   photonLedger new;
@@ -35,7 +38,7 @@ void photon_rdma_ledger_free(photonLedger ledger) {
   //free(ledger);
 }
 
-int photon_rdma_ledger_get_next(photonLedger l) {
+int photon_rdma_ledger_get_next(int proc, photonLedger l) {
   uint64_t curr, tail;
   curr = sync_fadd(&l->curr, 1, SYNC_RELAXED);
   tail = sync_load(&l->tail, SYNC_RELAXED);
@@ -43,5 +46,42 @@ int photon_rdma_ledger_get_next(photonLedger l) {
     log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
     return -1;
   }
+  if (((curr - l->acct.rcur)) >= l->num_entries) {
+    // receiver not ready, request an updated rcur
+    _get_remote_progress(proc, l);
+    dbg_info("No new ledger entry until receiver catches up...");
+    return -2;
+  }
+  else if ((curr - l->acct.rcur) >= (l->num_entries * 0.8)) {
+    // do a pro-active fetch of the remote ledger progress
+    _get_remote_progress(proc, l);
+  }
   return curr & (l->num_entries - 1);
+}
+
+static int _get_remote_progress(int proc, photonLedger buf) {
+  int rc;
+  uint8_t rloc;
+  uint64_t cookie;
+  uintptr_t rmt_addr;
+
+  rloc = sync_load(&buf->acct.rloc, SYNC_RELAXED);
+  if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
+    
+    dbg_trace("Fetching remote curr at rcur: %llu", buf->acct.rcur);
+
+    rmt_addr = buf->remote.addr + PHOTON_LEDG_SSIZE(buf->num_entries) -
+      sizeof(struct photon_rdma_ledger_t) + offsetof(struct photon_rdma_ledger_t, curr); 
+    
+    cookie = ( (uint64_t)buf->acct.event_prefix<<32) | proc;
+    
+    rc = __photon_backend->rdma_get(proc, (uintptr_t)&buf->acct.rcur, rmt_addr, sizeof(buf->acct.rcur),
+				    &(shared_storage->buf), &buf->remote, cookie, 0);
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA GET for remote ledger progress counter failed");
+      return PHOTON_ERROR;
+    }
+  }
+  
+  return PHOTON_OK;
 }

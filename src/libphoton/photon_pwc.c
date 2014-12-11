@@ -139,7 +139,7 @@ static int photon_pwc_try_ledger(photonRequest req, int proc, void *ptr, uint64_
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
 
-  curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_pwc_ledger);
+  curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_pwc_ledger);
   if (curr < 0) {
     if (curr == -2) {
       return PHOTON_ERROR_RESOURCE;
@@ -390,7 +390,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
       curr = sync_load(&ledger->curr, SYNC_RELAXED);
-      offset = curr % ledger->num_entries;
+      offset = curr & (ledger->num_entries - 1);
       entry_iter = &(ledger->entries[offset]);
       if (entry_iter->request != (photon_rid) UINT64_MAX && 
 	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {

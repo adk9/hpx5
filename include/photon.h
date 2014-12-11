@@ -173,7 +173,8 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // RDMA with completion
 // If @p ptr is NULL, then only completion value in @p remote is sent
 // The remote buffer is specified in @p rptr and the rkey in @p priv
-// The default behavior is to return no local or remote rids from probe, see PWC_
+// The default behavior is to enable all CQ events and local and
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
 int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
