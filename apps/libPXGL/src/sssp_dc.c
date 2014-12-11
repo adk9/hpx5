@@ -117,12 +117,17 @@ static int _handle_queue_action(const _handle_queue_args_t * const args) {
   hpx_addr_t v;
   distance_t d;
   adj_list_vertex_t *vertex;
-  while(sssp_queue_pop(args->queue, &v, &d)) {
+  while (sssp_queue_pop(args->queue, &v, &d)) {
     //printf("Trying to pop one vertex from the priority queue in the handle queue action\n");
     // We are not handling AGAS currently and assume the vertex is on the same locality.
     // For AGAS we could just send an action.
-    if(!hpx_gas_try_pin(v, (void**)&vertex)) hpx_abort();
-    _send_update_to_neighbors(args->graph, vertex, d);
+    if (!hpx_gas_try_pin(v, (void**)&vertex)) hpx_abort();
+    const distance_t current_d = sync_load(&vertex->distance, SYNC_RELAXED);
+    if (current_d == d) {
+      _send_update_to_neighbors(args->graph, vertex, d);
+    } else {
+      /* stale */
+    }
     _increment_finished_count();
     hpx_gas_unpin(v);
     if (++processed == freq) {
