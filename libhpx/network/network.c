@@ -78,7 +78,7 @@ network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
     dbg_error("failed to initialize the network\n");
   }
   else {
-    dbg_log("network initialized using %s.", network->id());
+    dbg_log("network initialized using %s", network->id());
   }
 
   return network;
