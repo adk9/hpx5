@@ -16,6 +16,10 @@
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
 
+#include <stddef.h>
+#include <stdint.h>
+#include <hpx/attributes.h>
+
 //! Configuration options for which global memory model to use.
 typedef enum {
   HPX_GAS_DEFAULT = 0, //!< Let HPX choose what memory model to use.
@@ -59,19 +63,17 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
 
 typedef enum {
   LIBHPX_NETWORK_DEFAULT = 0,
-  LIBHPX_NETWORK_NONE,
-  LIBHPX_NETWORK_PHOTON,
-  LIBHPX_NETWORK_PORTALS,
-  LIBHPX_NETWORK_MPI,
+  LIBHPX_NETWORK_SMP,
+  LIBHPX_NETWORK_PWC,
+  LIBHPX_NETWORK_ISIR,
   LIBHPX_NETWORK_MAX
 } libhpx_network_t;
 
 static const char * const LIBHPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
   "NONE",
-  "PHOTON",
-  "PORTALS",
-  "MPI",
+  "PWC",
+  "ISIR",
   "INVALID_ID"
 };
 
@@ -89,7 +91,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
   "SMP",
   "MPI",
   "PMI",
-  ""
+  "INVALID_ID"
 };
 
 
@@ -135,17 +137,17 @@ static const char* const HPX_LOG_TO_STRING[] = {
 ///
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
-typedef struct {
+typedef struct config {
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
 # include "options.def"
 #undef LIBHPX_DECL_OPTION
-} hpx_config_t;
+} config_t;
 
 
-hpx_config_t *config_new(int *argc, char ***argv)
+config_t *config_new(int *argc, char ***argv)
   HPX_INTERNAL HPX_MALLOC;
 
-void config_delete(hpx_config_t *cfg)
+void config_delete(config_t *cfg)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Check to see if the wait flag is set at a particular locality.
@@ -154,7 +156,7 @@ void config_delete(hpx_config_t *cfg)
 ///
 /// @returns          0 The flag is not set.
 ///                   1 The flag is set.
-int config_waitat(hpx_config_t *cfg, const hpx_locality_t locality)
+int config_waitat(config_t *cfg, const hpx_locality_t locality)
   HPX_INTERNAL;
 
 #endif // LIBHPX_CONFIG_H
