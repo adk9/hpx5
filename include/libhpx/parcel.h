@@ -88,5 +88,20 @@ void parcel_stack_foreach(hpx_parcel_t *p, void *env,
                           void (*f)(hpx_parcel_t*, void*))
   HPX_INTERNAL HPX_NON_NULL(3);
 
+static inline uint32_t parcel_size(hpx_parcel_t *p) {
+  return sizeof(*p) + p->size;
+}
+
+static inline uint32_t parcel_payload_size(hpx_parcel_t *p) {
+  return p->size;
+}
+
+static inline uint32_t parcel_network_size(hpx_parcel_t *p) {
+  return parcel_size(p) - offsetof(hpx_parcel_t, action);
+}
+
+static inline void *parcel_network_offset(hpx_parcel_t *p) {
+  return &p->action;
+}
 
 #endif // LIBHPX_PARCEL_H

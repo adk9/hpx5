@@ -133,7 +133,7 @@ static int _start(isend_buffer_t *isends, int i) {
   hpx_parcel_t *p = isends->records[i].parcel;
 
   MPI_Request *r = isends->requests + i;
-  void *from = mpi_offset_of_parcel(p);
+  void *from = parcel_network_offset(p);
   int to = gas_owner_of(isends->gas, p->target);
   int n = payload_size_to_mpi_bytes(p->size);
   int tag = payload_size_to_tag(p->size);
