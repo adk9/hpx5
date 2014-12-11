@@ -39,7 +39,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
   "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
   "      --hpx-network=type        type of network to use  (possible \n                                  values=\"default\", \"smp\", \"pwc\", \n                                  \"isir\")",
-  "      --hpx-waitat[=locality]   wait for debugger at specific locality",
+  "      --hpx-waitat[=[locality]] wait for debugger at specific locality",
   "      --hpx-loglevel[=level]    set the logging level  (possible \n                                  values=\"default\", \"boot\", \"sched\", \n                                  \"gas\", \"lco\", \"net\", \"trans\", \n                                  \"parcel\", \"all\")",
   "      --hpx-logat=[localities]  selectively output log information",
   "      --hpx-statistics          print HPX runtime statistics  (default=off)",
