@@ -184,8 +184,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // parcel network
-  here->network = network_new(LIBHPX_NETWORK_DEFAULT, here->boot, here->gas,
-                              workers);
+  here->network = network_new(here->config, here->boot, here->gas, workers);
   if (!here->network) {
     status = dbg_error("failed to create network.\n");
     goto unwind1;
