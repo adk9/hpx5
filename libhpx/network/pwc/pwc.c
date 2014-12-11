@@ -16,103 +16,111 @@
 
 #include <stdlib.h>
 
-#include <libhpx/boot.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/network.h>
+#include "libhpx/boot.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/network.h"
 
+#include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
 
 typedef struct {
-  network_t     vtable;
-  gas_t           *gas;
-  int             rank;
-  int           UNUSED;
-  pwc_buffer_t buffers[];
-} _pwc_t;
+  network_t vtable;
+  uint32_t    rank;
+  uint32_t   ranks;
+  gas_t       *gas;
+  peer_t     peers[];
+} pwc_network_t;
 
 
-static const char *_photon_id() {
+static const char *_pwc_id() {
   return "Photon put-with-completion\n";
 }
 
 
-static void _photon_delete(network_t *network) {
+static void _pwc_delete(network_t *network) {
   if (!network) {
     return;
   }
 
-  _pwc_t *pwc = (_pwc_t*)network;
-  size_t size = gas_local_size(pwc->gas);
-  void *base = gas_local_base(pwc->gas);
-  if (PHOTON_OK != photon_unregister_buffer(base, size)) {
-    dbg_log_net("could not unregister the local heap segment %p\n", base);
+  pwc_network_t *pwc = (pwc_network_t*)network;
+  for (int i = 0; i < pwc->ranks; ++i) {
+    pwc_buffer_fini(&pwc->peers[i].puts);
   }
-
+  peer_t *local = pwc->peers + pwc->rank;
+  segment_deregister(&local->segments[SEGMENT_HEAP]);
+  segment_deregister(&local->segments[SEGMENT_PARCEL]);
+  free(local->segments[SEGMENT_PARCEL].base);
   free(pwc);
 }
 
 
-static int _photon_progress(network_t *network) {
+static int _pwc_progress(network_t *network) {
   return 0;
 }
 
 
-static int _photon_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
+/// Perform a parcel-send operation.
+static int _pwc_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
 
-static int _photon_pwc(network_t *network, hpx_addr_t to, void *lva, size_t n,
-                       hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+/// Perform a put-with-completion operation to a global heap address.
+///
+/// This simply the global address into a symmetric-heap offset, finds the
+/// peer for the request, and forwards to the p2p put operation.
+static int _pwc_pwc(network_t *network, hpx_addr_t to, void *lva, size_t n,
+                    hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
 {
-  _pwc_t *pwc = (void*)network;
+  pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
-  void *rva = pwc->buffers[rank].base + gas_offset_of(pwc->gas, to);
-  return pwc_buffer_pwc(pwc->buffers + rank, rva, lva, n, local, remote, op);
+  peer_t *peer = pwc->peers + rank;
+  uint64_t offset = gas_offset_of(pwc->gas, to);
+  return peer_put(peer, offset, lva, n, local, remote, op, SEGMENT_HEAP);
 }
 
 
-static int _photon_put(network_t *network, hpx_addr_t to, void *from, size_t n,
-                       hpx_addr_t local, hpx_addr_t remote)
+/// Perform a put operation to a global heap address.
+///
+/// This simply forwards to the pwc handler with no remote completion address.
+static int _pwc_put(network_t *network, hpx_addr_t to, void *from, size_t n,
+                    hpx_addr_t local, hpx_addr_t remote)
 {
-
-  return _photon_pwc(network, to, from, n, local, remote, HPX_NULL);
+  return _pwc_pwc(network, to, from, n, local, remote, HPX_NULL);
 }
 
 
-static int _photon_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
-                       hpx_addr_t local)
+/// Perform a get operation to a global heap address.
+///
+/// This simply the global address into a symmetric-heap offset, finds the
+/// peer for the request, and forwards to the p2p get operation.
+static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
+                    hpx_addr_t local)
 {
-  _pwc_t *pwc = (void*)network;
-
-  int flags = (local != HPX_NULL) ? PHOTON_REQ_ONE_CQE : PHOTON_REQ_NO_CQE;
+  pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, from);
-  const void *rva = pwc->buffers[rank].base + gas_offset_of(pwc->gas, from);
-  void *vrva = (void*)rva;
-  struct photon_buffer_priv_t key = pwc->buffers[rank].key;
-
-  int e = photon_get_with_completion(rank, lva, n, vrva, key, local, flags);
-  if (PHOTON_OK != e) {
-    return dbg_error("could not initiate a get()\n");
-  }
-
-  return LIBHPX_OK;
+  peer_t *peer = pwc->peers + rank;
+  uint64_t offset = gas_offset_of(pwc->gas, from);
+  return peer_get(peer, lva, n, offset, local);
 }
 
 
-static hpx_parcel_t *_photon_probe(network_t *network, int nrx) {
+static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   return NULL;
 }
 
 
-static void _photon_set_flush(network_t *network) {
+static void _pwc_set_flush(network_t *network) {
 }
 
 
-network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
+network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
+                                    int nrx)
+{
   if (boot->type == HPX_BOOT_SMP) {
     dbg_log_net("will not instantiate photon for the SMP boot network\n");
     goto unwind0;
@@ -124,69 +132,82 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   }
 
   int ranks = boot_n_ranks(boot);
-  _pwc_t *photon = malloc(sizeof(*photon) + ranks * sizeof(pwc_buffer_t));
-  if (!photon) {
-    dbg_error("could not allocate a Photon put-with-completion network\n");
+  pwc_network_t *pwc = malloc(sizeof(*pwc) + ranks * sizeof(peer_t));
+  if (!pwc) {
+    dbg_error("could not allocate a put-with-completion network\n");
     goto unwind0;
   }
 
-  photon->vtable.id = _photon_id;
-  photon->vtable.delete = _photon_delete;
-  photon->vtable.progress = _photon_progress;
-  photon->vtable.send = _photon_send;
-  photon->vtable.pwc = _photon_pwc;
-  photon->vtable.put = _photon_put;
-  photon->vtable.get = _photon_get;
-  photon->vtable.probe = _photon_probe;
-  photon->vtable.set_flush = _photon_set_flush;
+  pwc->vtable.id = _pwc_id;
+  pwc->vtable.delete = _pwc_delete;
+  pwc->vtable.progress = _pwc_progress;
+  pwc->vtable.send = _pwc_send;
+  pwc->vtable.pwc = _pwc_pwc;
+  pwc->vtable.put = _pwc_put;
+  pwc->vtable.get = _pwc_get;
+  pwc->vtable.probe = _pwc_probe;
+  pwc->vtable.set_flush = _pwc_set_flush;
 
-  photon->gas = gas;
-  photon->rank = boot_rank(boot);
+  pwc->gas = gas;
+  pwc->rank = boot_rank(boot);
+  pwc->ranks = ranks;
 
-  // Register the local heap segment.
-  size_t size = gas_local_size(gas);
-  void *base = gas_local_base(gas);
+  peer_t *local = &pwc->peers[pwc->rank];
 
-  if (PHOTON_OK != photon_register_buffer(base, size)) {
-    dbg_error("failed to register the local heap segment with Photon\n");
+  // allocate a parcel recv buffer for the parcel segment
+  segment_t *parcels = &local->segments[SEGMENT_PARCEL];
+  parcels->size = ranks * cfg->parcelbuffersize;
+  parcels->base = malloc(parcels->size);
+  if (NULL == parcels->base) {
+    dbg_error("could not allocate the parcel buffer segment\n");
     goto unwind1;
   }
-  else {
-    dbg_log_net("registered the local segment (%p, %lu)\n", base, size);
-  }
 
-  struct photon_buffer_priv_t key;
-  if (PHOTON_OK != photon_get_buffer_private(base, size , &key)) {
-    dbg_error("failed to get the local segment access key from Photon\n");
-    goto unwind2;
-  }
-  pwc_buffer_t *local = photon->buffers + photon->rank;
-  local->base = base;
-  local->key = key;
-  local->rank = photon->rank;
-
-  if (LIBHPX_OK != boot_allgather(boot, local, &photon->buffers, sizeof(*local))) {
-    dbg_error("could not exchange heap segments\n");
+  // register the parcel segment
+  if (LIBHPX_OK != segment_register(parcels)) {
+    dbg_error("could not register the parcel buffer segment\n");
     goto unwind2;
   }
 
-  // wait for the exchange to happen on all localities
+  // register the heap segment
+  segment_t *heap = &local->segments[SEGMENT_HEAP];
+  heap->base = gas_local_base(gas);
+  heap->size = gas_local_size(gas);
+  if (LIBHPX_OK != segment_register(heap)) {
+    dbg_error("could not register the heap segment\n");
+    goto unwind3;
+  }
+
+  // exchange my segments with my peers
+  if (LIBHPX_OK != boot_allgather(boot, local, &pwc->peers, sizeof(*local))) {
+    dbg_error("could not exchange peer segments\n");
+    goto unwind4;
+  }
   boot_barrier(boot);
 
-  assert(local->base == base);
-  assert(local->key.key0 == key.key0);
-  assert(local->key.key1 == key.key1);
-
-  for (int i = 0; i < ranks; ++i) {
-    pwc_buffer_init(photon->buffers + i, i, 32);
+  // initialize all of the buffers
+  int i;
+  for (i = 0; i < ranks; ++i) {
+    int n = (i != pwc->rank) ? 8 : 0;
+    if (LIBHPX_OK != pwc_buffer_init(&pwc->peers[i].puts, i, n)) {
+      goto unwind5;
+    }
   }
 
-  return &photon->vtable;
+  return &pwc->vtable;
 
+ unwind5:
+  for (int j = 0; j < i; ++j) {
+    pwc_buffer_fini(&pwc->peers[j].puts);
+  }
+ unwind4:
+  segment_deregister(&local->segments[SEGMENT_HEAP]);
+ unwind3:
+  segment_deregister(&local->segments[SEGMENT_PARCEL]);
  unwind2:
-  photon_unregister_buffer(base, size);
+  free(local->segments[SEGMENT_PARCEL].base);
  unwind1:
-  free(photon);
+  free(pwc);
  unwind0:
   return NULL;
 }
