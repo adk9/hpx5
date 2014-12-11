@@ -45,8 +45,8 @@ static void _photon_delete(network_t *network) {
   }
 
   _pwc_t *pwc = (_pwc_t*)network;
-  size_t size = pwc->gas->local_size(pwc->gas);
-  void *base = pwc->gas->local_base(pwc->gas);
+  size_t size = gas_local_size(pwc->gas);
+  void *base = gas_local_base(pwc->gas);
   if (PHOTON_OK != photon_unregister_buffer(base, size)) {
     dbg_log_net("could not unregister the local heap segment %p\n", base);
   }
@@ -144,8 +144,8 @@ network_t *network_pwc_funneled_new(boot_t *boot, gas_t *gas, int nrx) {
   photon->rank = boot_rank(boot);
 
   // Register the local heap segment.
-  size_t size = gas->local_size(gas);
-  void *base = gas->local_base(gas);
+  size_t size = gas_local_size(gas);
+  void *base = gas_local_base(gas);
 
   if (PHOTON_OK != photon_register_buffer(base, size)) {
     dbg_error("failed to register the local heap segment with Photon\n");
