@@ -27,16 +27,16 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <jemalloc/jemalloc.h>
 #include <hwloc.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
 
 /// Forward declarations.
 /// @{
 struct boot;
+struct config;
 struct network;
 struct scheduler;
 struct transport;
@@ -66,7 +66,7 @@ typedef struct locality {
   struct transport        *transport;
   struct network            *network;
   struct scheduler            *sched;
-  hpx_config_t               *config;
+  struct config              *config;
   const struct action_table *actions;
   libhpx_hwloc_topology_t   topology;
 } locality_t
