@@ -244,8 +244,8 @@ void config_delete(config_t *cfg) {
     return;
   }
 
-  if (config->logat && config->logat != (int*)HPX_LOCALITY_ALL) {
-    free(config->logat);
+  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
+    free(cfg->logat);
   }
 
   if (cfg->waitat) {
