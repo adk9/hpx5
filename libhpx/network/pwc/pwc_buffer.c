@@ -119,13 +119,12 @@ static int _expand(pwc_buffer_t *buffer, uint32_t size) {
   uint32_t oldsize = buffer->size;
   buffer->size = size;
   buffer->records = realloc(buffer->records, size * sizeof(pwc_record_t));
-  if (!buffer->records) {
-    dbg_error("failed to resize a pwc buffer (%u to %u)\n", oldsize, size);
-    return LIBHPX_ENOMEM;
-  }
-  else {
+  if (buffer->records) {
     return _reflow(buffer, oldsize);
   }
+
+  dbg_error("failed to resize a pwc buffer (%u to %u)\n", oldsize, size);
+  return LIBHPX_ENOMEM;
 }
 
 

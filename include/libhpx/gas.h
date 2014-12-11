@@ -103,4 +103,14 @@ inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
   return gas->offset_of(gpa);
 }
 
+static inline size_t gas_local_size(gas_t *gas) {
+  assert(gas && gas->local_size);
+  return gas->local_size(gas);
+}
+
+inline static void *gas_local_base(gas_t *gas) {
+  assert(gas && gas->local_base);
+  return gas->local_base(gas);
+}
+
 #endif// LIBHPX_GAS_H
