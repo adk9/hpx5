@@ -85,7 +85,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   const MPI_Comm com = MPI_COMM_WORLD;
   MPI_Request *r = irecvs->requests + i;
   int n = payload_size_to_mpi_bytes(payload);
-  void *b = mpi_offset_of_parcel(p);
+  void *b = parcel_network_offset(p);
 
   if (MPI_SUCCESS != MPI_Irecv(b, n, MPI_BYTE, src, tag, com, r)) {
     return dbg_error("could not start irecv\n");
