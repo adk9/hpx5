@@ -136,11 +136,11 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
-  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
+  if (here->config->logat && here->config->logat != (int*)HPX_LOCALITY_ALL) {
     int orig_level = dbg_log_level;
     dbg_log_level = 0;
-    for (int i = 0; i < cfg->logat[0]; ++i) {
-      if (cfg->logat[i+1] == here->rank) {
+    for (int i = 0; i < here->config->logat[0]; ++i) {
+      if (here->config->logat[i+1] == here->rank) {
         dbg_log_level = orig_level;
       }
     }
