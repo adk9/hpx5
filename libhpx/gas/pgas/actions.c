@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include <hpx/builtins.h>
+#include "jemalloc/jemalloc.h"
 #include "libhpx/locality.h"
 #include "libhpx/action.h"
 
