@@ -106,11 +106,15 @@ typedef struct {
   sssp_kind_t sssp_kind;
   sssp_init_dc_args_t sssp_init_dc_args;
   size_t delta;
+  termination_t termination;
 } _sssp_args_t;
 
 static hpx_action_t _main;
 static int _main_action(_sssp_args_t *args) {
   const int realloc_adj_list = args->realloc_adj_list;
+
+  // set the termination-detection algorithm type.
+  set_termination(args->termination);
 
   // Create an edge list structure from the given filename
   edge_list_t el;
@@ -310,6 +314,7 @@ int main(int argc, char *argv[argc]) {
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = DC_SSSP_KIND;
   size_t delta = 0;
+  termination_t termination = COUNT_TERMINATION;
 
   int e = hpx_init(&argc, &argv);
   if (e) {
@@ -327,10 +332,10 @@ int main(int argc, char *argv[argc]) {
       realloc_adj_list = 1;
       break;
     case 'k':
-      set_termination(AND_LCO_TERMINATION);
+      termination = AND_LCO_TERMINATION;
       break;
     case 'p':
-      set_termination(PROCESS_TERMINATION);
+      termination = PROCESS_TERMINATION;
       break;
     case 'd':
       sssp_kind = DC_SSSP_KIND;
@@ -395,7 +400,8 @@ int main(int argc, char *argv[argc]) {
                         .realloc_adj_list = realloc_adj_list,
 			.sssp_kind = sssp_kind,
 			.sssp_init_dc_args = sssp_init_dc_args,
-			.delta = delta
+			.delta = delta,
+                        .termination = termination
   };
 
   // register the actions
