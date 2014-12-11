@@ -669,8 +669,12 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
       eb = photon_processes[proc].remote_eager_buf;
       offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
       if (offset < 0) {
-	log_err("Exceeded outstanding eager buffer limit - increase eager buf size or wait for local completion");
-	goto error_exit;
+	if (offset == -2) {
+	  dbg_warn("Exceeding known receiver eager progress!");
+	}
+	else {
+	  goto error_exit;
+	}
       }
       eager_addr = (uintptr_t)eb->remote.addr + offset;
       eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;

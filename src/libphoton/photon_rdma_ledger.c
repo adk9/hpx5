@@ -6,7 +6,7 @@
 #include "photon_buffer.h"
 #include "photon_exchange.h"
 
-photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, int num_entries) {
+photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, int num_entries, int prefix) {
   photonLedger new;
   
   new = (struct photon_rdma_ledger_t *)((uintptr_t)ledger_buffer + PHOTON_LEDG_SSIZE(num_entries) -
@@ -23,8 +23,10 @@ photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, in
 
   new->curr = 0;
   new->tail = 0;
-  new->rcur = 0;
   new->num_entries = num_entries;
+  new->acct.rcur = 0;
+  new->acct.rloc = 0;
+  new->acct.event_prefix = prefix;
 
   return new;
 }

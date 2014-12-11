@@ -9,7 +9,7 @@
 
 static int _get_remote_progress(int proc, photonEagerBuf buf);
 
-photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size) {
+photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size, int prefix) {
   photonEagerBuf new;
   
   new = (struct photon_rdma_eager_buf_t *)(eager_buffer + PHOTON_EBUF_SSIZE(size) -
@@ -22,8 +22,10 @@ photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int siz
 
   new->size = size;
   new->curr = 0;
-  new->rcur = 0;
   new->tail = 0;
+  new->acct.rcur = 0;
+  new->acct.rloc = 0;
+  new->acct.event_prefix = prefix;
 
   return new;
 }
@@ -43,7 +45,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
       log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
       return -1;
     }
-    if (((curr - buf->rcur) + size) >= buf->size) {
+    if (((curr - buf->acct.rcur) + size) >= buf->size) {
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, buf);
       dbg_trace("No new offset until receiver catches up...");
@@ -63,7 +65,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
   if (left < lim)
     sync_fadd(&buf->tail, left, SYNC_RELAXED);
 
-  if ((curr - buf->rcur) >= (buf->size * 0.8)) {
+  if ((curr - buf->acct.rcur) >= (buf->size * 0.8)) {
     // pro-actively request remote progress at the halfway point
     _get_remote_progress(proc, buf);
   }
@@ -77,17 +79,17 @@ static int _get_remote_progress(int proc, photonEagerBuf buf) {
   uint64_t cookie;
   uintptr_t rmt_addr;
 
-  rloc = sync_load(&buf->rloc, SYNC_RELAXED);
-  if (!rloc && sync_cas(&buf->rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
+  rloc = sync_load(&buf->acct.rloc, SYNC_RELAXED);
+  if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
     
-    dbg_trace("Fetching remote curr at rcur: %llu", buf->rcur);
+    dbg_trace("Fetching remote curr at rcur: %llu", buf->acct.rcur);
 
     rmt_addr = buf->remote.addr + PHOTON_EBUF_SSIZE(buf->size) -
       sizeof(struct photon_rdma_eager_buf_t) + offsetof(struct photon_rdma_eager_buf_t, curr); 
     
-    cookie = ( (uint64_t)REQUEST_COOK_PBUF<<32) | proc;
+    cookie = ( (uint64_t)buf->acct.event_prefix<<32) | proc;
     
-    rc = __photon_backend->rdma_get(proc, (uintptr_t)&buf->rcur, rmt_addr, sizeof(buf->rcur),
+    rc = __photon_backend->rdma_get(proc, (uintptr_t)&buf->acct.rcur, rmt_addr, sizeof(buf->acct.rcur),
 				    &(shared_storage->buf), &buf->remote, cookie, 0);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA GET for remote ledger progress counter failed");

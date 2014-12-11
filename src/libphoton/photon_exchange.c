@@ -218,7 +218,7 @@ int photon_setup_ri_ledger(ProcessInfo *photon_processes, char *buf, int num_ent
     dbg_trace("Offset: %d", ledger_size * i);
 
     // allocate the ledger
-    photon_processes[i].local_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * i), num_entries);
+    photon_processes[i].local_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * i), num_entries, REQUEST_COOK_RINFO);
     if (!photon_processes[i].local_rcv_info_ledger) {
       log_err("couldn't create local rcv info ledger for process %d", i);
       return PHOTON_ERROR;
@@ -227,7 +227,7 @@ int photon_setup_ri_ledger(ProcessInfo *photon_processes, char *buf, int num_ent
     dbg_trace("allocating remote ri ledger for %d: %p", i, buf + ledger_size * PHOTON_TPROC + ledger_size * i);
     dbg_trace("Offset: %d", ledger_size * PHOTON_TPROC + ledger_size * i);
 
-    photon_processes[i].remote_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    photon_processes[i].remote_rcv_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries, REQUEST_COOK_RINFO);
     if (!photon_processes[i].remote_rcv_info_ledger) {
       log_err("couldn't create remote rcv info ledger for process %d", i);
       return PHOTON_ERROR;
@@ -241,7 +241,7 @@ int photon_setup_ri_ledger(ProcessInfo *photon_processes, char *buf, int num_ent
     dbg_trace("Offset: %d", offset + ledger_size * i);
 
     // allocate the ledger
-    photon_processes[i].local_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * i), num_entries);
+    photon_processes[i].local_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * i), num_entries, REQUEST_COOK_SINFO);
     if (!photon_processes[i].local_snd_info_ledger) {
       log_err("couldn't create local snd info ledger for process %d", i);
       return PHOTON_ERROR;
@@ -250,7 +250,7 @@ int photon_setup_ri_ledger(ProcessInfo *photon_processes, char *buf, int num_ent
     dbg_trace("allocating remote ri ledger for %d: %p", i, buf + offset + ledger_size * PHOTON_TPROC + ledger_size * i);
     dbg_trace("Offset: %d", offset + ledger_size * PHOTON_TPROC + ledger_size * i);
 
-    photon_processes[i].remote_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    photon_processes[i].remote_snd_info_ledger = photon_ri_ledger_create_reuse((photonRILedgerEntry) (buf + offset + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries, REQUEST_COOK_SINFO);
     if (!photon_processes[i].remote_snd_info_ledger) {
       log_err("couldn't create remote snd info ledger for process %d", i);
       return PHOTON_ERROR;
@@ -272,7 +272,7 @@ int photon_setup_fin_ledger(ProcessInfo *photon_processes, char *buf, int num_en
     // allocate the ledger
     dbg_trace("allocating local FIN ledger for %d", i);
 
-    photon_processes[i].local_fin_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries);
+    photon_processes[i].local_fin_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries, REQUEST_COOK_FIN);
     if (!photon_processes[i].local_fin_ledger) {
       log_err("couldn't create local FIN ledger for process %d", i);
       return PHOTON_ERROR;
@@ -280,7 +280,7 @@ int photon_setup_fin_ledger(ProcessInfo *photon_processes, char *buf, int num_en
 
     dbg_trace("allocating remote FIN ledger for %d", i);
 
-    photon_processes[i].remote_fin_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    photon_processes[i].remote_fin_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries, REQUEST_COOK_FIN);
     if (!photon_processes[i].remote_fin_ledger) {
       log_err("couldn't create remote FIN ledger for process %d", i);
       return PHOTON_ERROR;
@@ -302,7 +302,7 @@ int photon_setup_pwc_ledger(ProcessInfo *photon_processes, char *buf, int num_en
     // allocate the ledger
     dbg_trace("allocating local PWC ledger for %d", i);
 
-    photon_processes[i].local_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries);
+    photon_processes[i].local_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries, REQUEST_COOK_PLEDG);
     if (!photon_processes[i].local_pwc_ledger) {
       log_err("couldn't create local PWC ledger for process %d", i);
       return PHOTON_ERROR;
@@ -310,7 +310,7 @@ int photon_setup_pwc_ledger(ProcessInfo *photon_processes, char *buf, int num_en
 
     dbg_trace("allocating remote PWC ledger for %d", i);
 
-    photon_processes[i].remote_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    photon_processes[i].remote_pwc_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries, REQUEST_COOK_PLEDG);
     if (!photon_processes[i].remote_pwc_ledger) {
       log_err("couldn't create remote PWC ledger for process %d", i);
       return PHOTON_ERROR;
@@ -338,7 +338,7 @@ int photon_setup_eager_ledger(ProcessInfo *photon_processes, char *buf, int num_
     // allocate the ledger
     dbg_trace("allocating local EAGER ledger for %d", i);
 
-    photon_processes[i].local_eager_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries);
+    photon_processes[i].local_eager_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * i), num_entries, REQUEST_COOK_ELEDG);
     if (!photon_processes[i].local_eager_ledger) {
       log_err("couldn't create local EAGER ledger for process %d", i);
       return PHOTON_ERROR;
@@ -346,7 +346,7 @@ int photon_setup_eager_ledger(ProcessInfo *photon_processes, char *buf, int num_
 
     dbg_trace("allocating remote EAGER ledger for %d", i);
 
-    photon_processes[i].remote_eager_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries);
+    photon_processes[i].remote_eager_ledger = photon_rdma_ledger_create_reuse((photonLedgerEntry) (buf + ledger_size * PHOTON_TPROC + ledger_size * i), num_entries, REQUEST_COOK_ELEDG);
     if (!photon_processes[i].remote_eager_ledger) {
       log_err("couldn't create remote EAGER ledger for process %d", i);
       return PHOTON_ERROR;
@@ -369,7 +369,7 @@ int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
     
     dbg_trace("allocating local eager buffer for %d", i);
     
-    photon_processes[i].local_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size);
+    photon_processes[i].local_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size, REQUEST_COOK_EBUF);
     if (!photon_processes[i].local_eager_buf) {
       log_err("couldn't create local eager buffer for process %d", i);
       return PHOTON_ERROR;
@@ -377,7 +377,7 @@ int photon_setup_eager_buf(ProcessInfo *photon_processes, char *buf, int size) {
 
     dbg_trace("allocating remote eager buffer for %d", i);
     
-    photon_processes[i].remote_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size);
+    photon_processes[i].remote_eager_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size, REQUEST_COOK_EBUF);
     if (!photon_processes[i].remote_eager_buf) {
       log_err("couldn't create remote eager buffer for process %d", i);
       return PHOTON_ERROR;
@@ -400,7 +400,7 @@ int photon_setup_pwc_buf(ProcessInfo *photon_processes, char *buf, int size) {
     
     dbg_trace("allocating local pwc eager buffer for %d", i);
     
-    photon_processes[i].local_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size);
+    photon_processes[i].local_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * i), size, REQUEST_COOK_PBUF);
     if (!photon_processes[i].local_eager_buf) {
       log_err("couldn't create local pwc eager buffer for process %d", i);
       return PHOTON_ERROR;
@@ -408,7 +408,7 @@ int photon_setup_pwc_buf(ProcessInfo *photon_processes, char *buf, int size) {
 
     dbg_trace("allocating remote pwc eager buffer for %d", i);
     
-    photon_processes[i].remote_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size);
+    photon_processes[i].remote_pwc_buf = photon_rdma_eager_buf_create_reuse((uint8_t *) (buf + buf_size * PHOTON_TPROC + buf_size * i), size, REQUEST_COOK_PBUF);
     if (!photon_processes[i].remote_eager_buf) {
       log_err("couldn't create remote pwc eager buffer for process %d", i);
       return PHOTON_ERROR;

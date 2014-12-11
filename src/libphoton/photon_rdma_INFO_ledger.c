@@ -5,7 +5,7 @@
 #include "photon_exchange.h"
 #include "logging.h"
 
-photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size) {
+photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size, int prefix) {
   photonRILedger new;
 
   new = (struct photon_ri_ledger_t *)((uintptr_t)ledger_buffer + PHOTON_INFO_SSIZE(ledger_size) -
@@ -22,6 +22,9 @@ photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, 
 
   new->curr = 0;
   new->num_entries = ledger_size;
+  new->acct.rcur = 0;
+  new->acct.rloc = 0;
+  new->acct.event_prefix = prefix;
 
   return new;
 }

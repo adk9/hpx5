@@ -128,25 +128,30 @@ START_TEST (test_rdma_one_sided_put_direct_array)
     photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
     photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &sendReq[i]);
-    photon_send_FIN(sendReq[i], prev, 0);
   }
 
-
-  int flag;
-  photon_rid req[ARRAY_SIZE];
   for (i = 0; i < ARRAY_SIZE; i++) {
-    int send_comp = 0;
-    while (send_comp) {
-      int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req[i], PHOTON_PROBE_ANY);
-      if (rc != PHOTON_OK)
-        continue;  // no events
-      if (flag) {
-        if (req[i] == PHOTON_TAG)
-          send_comp--;
+    while (1) {
+      int flag, type;
+      struct photon_status_t stat;
+      int tst = photon_test(sendReq[i], &flag, &type, &stat);
+      if( tst < 0 ) {
+	fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
+	exit(-1);
+      }
+      else if( tst > 0 ) {
+	fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
+	exit(0);
+      }
+      else {
+	if (flag > 0) {
+	  fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+	  photon_send_FIN(sendReq[i], prev, PHOTON_REQ_COMPLETED);
+	  break;
+	}
       }
     }
   }
- 
 
   MPI_Barrier(MPI_COMM_WORLD);
   for (i = 0; i < ARRAY_SIZE; i++) {

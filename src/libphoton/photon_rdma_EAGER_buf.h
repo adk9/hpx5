@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "photon.h"
+#include "photon_buffer.h"
 
 typedef struct photon_rdma_eager_buf_entry_t {
   uint8_t *data;
@@ -14,14 +15,13 @@ typedef struct photon_rdma_eager_buf_t {
   uint32_t size;
   uint8_t *data;
   struct photon_buffer_t remote;
-  volatile uint64_t rcur;
-  uint8_t  rloc;
+  struct photon_acct_t   acct;
 } photon_rdma_eager_buf;
 
 typedef struct photon_rdma_eager_buf_entry_t * photonEagerBufEntry;
 typedef struct photon_rdma_eager_buf_t       * photonEagerBuf;
 
-PHOTON_INTERNAL photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size);
+PHOTON_INTERNAL photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size, int prefix);
 PHOTON_INTERNAL void photon_rdma_eager_buf_free(photonEagerBuf buf);
 PHOTON_INTERNAL int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int lim);
 

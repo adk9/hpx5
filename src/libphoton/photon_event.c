@@ -11,17 +11,28 @@ int __photon_handle_cq_special(photon_rid cookie) {
   case REQUEST_COOK_EAGER:
     break;
   case REQUEST_COOK_EBUF:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_eager_buf->acct.rloc, 0, SYNC_RELEASE);
+    }
     break;
   case REQUEST_COOK_PBUF:
     {
       int proc = (int)(cookie<<32>>32);
       assert(IS_VALID_PROC(proc));
-      sync_store(&photon_processes[proc].remote_pwc_buf->rloc, 0, SYNC_RELEASE);
+      sync_store(&photon_processes[proc].remote_pwc_buf->acct.rloc, 0, SYNC_RELEASE);
     }
     break;
-  case REQUEST_COOK_INFO:
+  case REQUEST_COOK_FIN:
     break;
-  case REQUEST_COOK_LEDG:
+  case REQUEST_COOK_RINFO:
+    break;
+  case REQUEST_COOK_SINFO:
+    break;
+  case REQUEST_COOK_ELEDG:
+    break;
+  case REQUEST_COOK_PLEDG:
     break;
   default:
     return PHOTON_ERROR;
