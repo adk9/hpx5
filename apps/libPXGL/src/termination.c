@@ -86,7 +86,7 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
     const sssp_uint_t active_count = activity_counts[0];
     const sssp_uint_t finished_count = activity_counts[1];
     sssp_int_t activity_count = active_count - finished_count;
-    printf("activity_count: %" SSSP_INT_PRI ", active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
+    //printf("activity_count: %" SSSP_INT_PRI ", active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
     if (activity_count != 0) {
       phase = PHASE_1;
       continue;
