@@ -41,9 +41,16 @@ const char *hpx_options_t_help[] = {
   "      --hpx-backoffmax=count    upper bound for worker-thread backoff",
   "      --hpx-stacksize=bytes     set HPX stack size",
   "      --hpx-heapsize=bytes      set HPX per-PE global heap size",
+<<<<<<< HEAD
   "      --hpx-gas=type            type of Global Address Space (GAS)  (possible\n                                  values=\"default\", \"smp\", \"pgas\",\n                                  \"agas\", \"pgas_switch\", \"agas_switch\")",
   "      --hpx-boot=type           HPX bootstrap method to use  (possible\n                                  values=\"default\", \"smp\", \"mpi\",\n                                  \"pmi\")",
   "      --hpx-transport=type      type of transport to use  (possible\n                                  values=\"default\", \"smp\", \"mpi\",\n                                  \"portals\", \"photon\")",
+=======
+  "      --hpx-gas=type            type of Global Address Space (GAS)  (possible \n                                  values=\"default\", \"smp\", \"pgas\", \n                                  \"agas\", \"pgas_switch\", \"agas_switch\")",
+  "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
+  "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
+  "      --hpx-network=type        type of network to use  (possible \n                                  values=\"default\", \"smp\", \"pwc\", \n                                  \"isir\")",
+>>>>>>> Added parameters to control the network and the parcel buffer size.
   "      --hpx-waitat[=locality]   wait for debugger at specific locality",
   "      --hpx-loglevel[=level]    set the logging level  (possible\n                                  values=\"default\", \"boot\", \"sched\",\n                                  \"gas\", \"lco\", \"net\", \"trans\",\n                                  \"parcel\", \"all\")",
   "      --hpx-logat=[localities]  selectively output log information",
@@ -51,8 +58,15 @@ const char *hpx_options_t_help[] = {
   "      --hpx-sendlimit=requests  HPX transport-specific send limit",
   "      --hpx-recvlimit=requests  HPX transport-specific recv limit",
   "      --hpx-configfile=file     HPX runtime configuration file",
+<<<<<<< HEAD
   "      --hpx-mprotectstacks      use mprotect() to bracket stacks to look for\n                                  stack overflows  (default=off)",
   "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for\n                                  debugging  (default=off)",
+=======
+  "      --hpx-mprotectstacks      use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
+  "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
+  "\nPWC Network Options:",
+  "      --hpx-parcelbuffersize=LONG\n                                set the size of p2p recv buffers for parcel \n                                  sends",
+>>>>>>> Added parameters to control the network and the parcel buffer size.
     0
 };
 
@@ -100,10 +114,18 @@ free_cmd_list(void)
 }
 
 
+<<<<<<< HEAD
 const char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", "pgas_switch", "agas_switch", 0}; /*< Possible values for hpx-gas. */
 const char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0}; /*< Possible values for hpx-boot. */
 const char *hpx_option_parser_hpx_transport_values[] = {"default", "smp", "mpi", "portals", "photon", 0}; /*< Possible values for hpx-transport. */
 const char *hpx_option_parser_hpx_loglevel_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "all", 0}; /*< Possible values for hpx-loglevel. */
+=======
+char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", "pgas_switch", "agas_switch", 0} ;	/* Possible values for hpx-gas.  */
+char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0} ;	/* Possible values for hpx-boot.  */
+char *hpx_option_parser_hpx_transport_values[] = {"default", "smp", "mpi", "portals", "photon", 0} ;	/* Possible values for hpx-transport.  */
+char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0} ;	/* Possible values for hpx-network.  */
+char *hpx_option_parser_hpx_loglevel_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "all", 0} ;	/* Possible values for hpx-loglevel.  */
+>>>>>>> Added parameters to control the network and the parcel buffer size.
 
 static char *
 gengetopt_strdup (const char *s);
@@ -119,6 +141,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_gas_given = 0 ;
   args_info->hpx_boot_given = 0 ;
   args_info->hpx_transport_given = 0 ;
+  args_info->hpx_network_given = 0 ;
   args_info->hpx_waitat_given = 0 ;
   args_info->hpx_loglevel_given = 0 ;
   args_info->hpx_logat_given = 0 ;
@@ -128,6 +151,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_configfile_given = 0 ;
   args_info->hpx_mprotectstacks_given = 0 ;
   args_info->hpx_waitonabort_given = 0 ;
+  args_info->hpx_parcelbuffersize_given = 0 ;
 }
 
 static
@@ -145,6 +169,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_boot_orig = NULL;
   args_info->hpx_transport_arg = hpx_transport__NULL;
   args_info->hpx_transport_orig = NULL;
+  args_info->hpx_network_arg = -1;
+  args_info->hpx_network_orig = NULL;
   args_info->hpx_waitat_arg = NULL;
   args_info->hpx_waitat_orig = NULL;
   args_info->hpx_loglevel_arg = NULL;
@@ -158,7 +184,12 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_mprotectstacks_flag = 0;
   args_info->hpx_waitonabort_flag = 0;
+<<<<<<< HEAD
 
+=======
+  args_info->hpx_parcelbuffersize_orig = NULL;
+  
+>>>>>>> Added parameters to control the network and the parcel buffer size.
 }
 
 static
@@ -174,22 +205,34 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_gas_help = hpx_options_t_help[7] ;
   args_info->hpx_boot_help = hpx_options_t_help[8] ;
   args_info->hpx_transport_help = hpx_options_t_help[9] ;
-  args_info->hpx_waitat_help = hpx_options_t_help[10] ;
+  args_info->hpx_network_help = hpx_options_t_help[10] ;
+  args_info->hpx_waitat_help = hpx_options_t_help[11] ;
   args_info->hpx_waitat_min = -1;
   args_info->hpx_waitat_max = -1;
+<<<<<<< HEAD
   args_info->hpx_loglevel_help = hpx_options_t_help[11] ;
   args_info->hpx_loglevel_min = 0;
   args_info->hpx_loglevel_max = 0;
   args_info->hpx_logat_help = hpx_options_t_help[12] ;
   args_info->hpx_logat_min = 0;
   args_info->hpx_logat_max = 0;
+=======
+  args_info->hpx_loglevel_help = hpx_options_t_help[12] ;
+  args_info->hpx_loglevel_min = -1;
+  args_info->hpx_loglevel_max = -1;
+>>>>>>> Added parameters to control the network and the parcel buffer size.
   args_info->hpx_statistics_help = hpx_options_t_help[13] ;
   args_info->hpx_sendlimit_help = hpx_options_t_help[14] ;
   args_info->hpx_recvlimit_help = hpx_options_t_help[15] ;
   args_info->hpx_configfile_help = hpx_options_t_help[16] ;
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[17] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[18] ;
+<<<<<<< HEAD
 
+=======
+  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[20] ;
+  
+>>>>>>> Added parameters to control the network and the parcel buffer size.
 }
 
 void
@@ -326,19 +369,29 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_gas_orig));
   free_string_field (&(args_info->hpx_boot_orig));
   free_string_field (&(args_info->hpx_transport_orig));
+<<<<<<< HEAD
   free_string_field (&(args_info->hpx_waitat_orig));
   free_multiple_field (args_info->hpx_loglevel_given, (void *)(args_info->hpx_loglevel_arg), &(args_info->hpx_loglevel_orig));
   args_info->hpx_loglevel_arg = 0;
   free_multiple_field (args_info->hpx_logat_given, (void *)(args_info->hpx_logat_arg), &(args_info->hpx_logat_orig));
   args_info->hpx_logat_arg = 0;
+=======
+  free_string_field (&(args_info->hpx_network_orig));
+>>>>>>> Added parameters to control the network and the parcel buffer size.
   free_multiple_field (args_info->hpx_waitat_given, (void **)&(args_info->hpx_waitat_arg), &(args_info->hpx_waitat_orig));
   free_multiple_field (args_info->hpx_loglevel_given, (void **)&(args_info->hpx_loglevel_arg), &(args_info->hpx_loglevel_orig));
   free_string_field (&(args_info->hpx_sendlimit_orig));
   free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
+<<<<<<< HEAD
 
 
+=======
+  free_string_field (&(args_info->hpx_parcelbuffersize_orig));
+  
+  
+>>>>>>> Added parameters to control the network and the parcel buffer size.
 
   clear_given (args_info);
 }
@@ -432,6 +485,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-boot", args_info->hpx_boot_orig, hpx_option_parser_hpx_boot_values);
   if (args_info->hpx_transport_given)
     write_into_file(outfile, "hpx-transport", args_info->hpx_transport_orig, hpx_option_parser_hpx_transport_values);
+  if (args_info->hpx_network_given)
+    write_into_file(outfile, "hpx-network", args_info->hpx_network_orig, hpx_option_parser_hpx_network_values);
   write_multiple_into_file(outfile, args_info->hpx_waitat_given, "hpx-waitat", args_info->hpx_waitat_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_loglevel_given, "hpx-loglevel", args_info->hpx_loglevel_orig, hpx_option_parser_hpx_loglevel_values);
   write_multiple_into_file(outfile, args_info->hpx_logat_given, "hpx-logat", args_info->hpx_logat_orig, 0);
@@ -447,7 +502,13 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-mprotectstacks", 0, 0 );
   if (args_info->hpx_waitonabort_given)
     write_into_file(outfile, "hpx-waitonabort", 0, 0 );
+<<<<<<< HEAD
 
+=======
+  if (args_info->hpx_parcelbuffersize_given)
+    write_into_file(outfile, "hpx-parcelbuffersize", args_info->hpx_parcelbuffersize_orig, 0);
+  
+>>>>>>> Added parameters to control the network and the parcel buffer size.
 
   i = EXIT_SUCCESS;
   return i;
@@ -1033,6 +1094,7 @@ hpx_option_parser_internal (
       int option_index = 0;
 
       static struct option long_options[] = {
+<<<<<<< HEAD
         { "hpx-cores",  1, NULL, 0 },
         { "hpx-threads",    1, NULL, 0 },
         { "hpx-backoffmax", 1, NULL, 0 },
@@ -1051,6 +1113,27 @@ hpx_option_parser_internal (
         { "hpx-mprotectstacks", 0, NULL, 0 },
         { "hpx-waitonabort",    0, NULL, 0 },
         { 0,  0, 0, 0 }
+=======
+        { "hpx-cores",	1, NULL, 0 },
+        { "hpx-threads",	1, NULL, 0 },
+        { "hpx-backoffmax",	1, NULL, 0 },
+        { "hpx-stacksize",	1, NULL, 0 },
+        { "hpx-heapsize",	1, NULL, 0 },
+        { "hpx-gas",	1, NULL, 0 },
+        { "hpx-boot",	1, NULL, 0 },
+        { "hpx-transport",	1, NULL, 0 },
+        { "hpx-network",	1, NULL, 0 },
+        { "hpx-waitat",	2, NULL, 0 },
+        { "hpx-loglevel",	2, NULL, 0 },
+        { "hpx-statistics",	0, NULL, 0 },
+        { "hpx-sendlimit",	1, NULL, 0 },
+        { "hpx-recvlimit",	1, NULL, 0 },
+        { "hpx-configfile",	1, NULL, 0 },
+        { "hpx-mprotectstacks",	0, NULL, 0 },
+        { "hpx-waitonabort",	0, NULL, 0 },
+        { "hpx-parcelbuffersize",	1, NULL, 0 },
+        { NULL,	0, NULL, 0 }
+>>>>>>> Added parameters to control the network and the parcel buffer size.
       };
 
       c = getopt_long (argc, argv, "", long_options, &option_index);
@@ -1173,6 +1256,20 @@ hpx_option_parser_internal (
               goto failure;
 
           }
+          /* type of network to use.  */
+          else if (strcmp (long_options[option_index].name, "hpx-network") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_network_arg), 
+                 &(args_info->hpx_network_orig), &(args_info->hpx_network_given),
+                &(local_args_info.hpx_network_given), optarg, hpx_option_parser_hpx_network_values, 0, ARG_ENUM,
+                check_ambiguity, override, 0, 0,
+                "hpx-network", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* wait for debugger at specific locality.  */
           else if (strcmp (long_options[option_index].name, "hpx-waitat") == 0)
           {
@@ -1284,7 +1381,25 @@ hpx_option_parser_internal (
               goto failure;
 
           }
+<<<<<<< HEAD
 
+=======
+          /* set the size of p2p recv buffers for parcel sends.  */
+          else if (strcmp (long_options[option_index].name, "hpx-parcelbuffersize") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_parcelbuffersize_arg), 
+                 &(args_info->hpx_parcelbuffersize_orig), &(args_info->hpx_parcelbuffersize_given),
+                &(local_args_info.hpx_parcelbuffersize_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-parcelbuffersize", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          
+>>>>>>> Added parameters to control the network and the parcel buffer size.
           break;
         case '?':   /* Invalid option.  */
           /* `getopt_long' already printed an error message.  */

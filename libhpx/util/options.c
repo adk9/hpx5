@@ -43,7 +43,7 @@
 typedef struct hpx_options_t hpx_options_t;
 
 /// The default configuration.
-static const hpx_config_t _default_cfg = {
+static const config_t _default_cfg = {
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, default) .id = default,
 # include "libhpx/options.def"
 #undef LIBHPX_DECL_OPTION
@@ -102,7 +102,7 @@ int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
 
 /// Update the configuration structure @p cfg with the option values
 /// specified in @p opts.
-static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
+static void _set_config_options(config_t *cfg, hpx_options_t *opts) {
 
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, default)   \
   {                                                           \
@@ -155,8 +155,7 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-
-int config_waitat(hpx_config_t *cfg, const hpx_locality_t locality) {
+int config_waitat(config_t *cfg, const hpx_locality_t locality) {
   for (int i = 0; cfg->waitat[i] != HPX_LOCALITY_NONE; ++i) {
     if (cfg->waitat[i] == locality) {
       return 1;
@@ -167,10 +166,10 @@ int config_waitat(hpx_config_t *cfg, const hpx_locality_t locality) {
 
 
 /// Parse HPX command-line options to create a new config object.
-hpx_config_t *config_new(int *argc, char ***argv) {
+config_t *config_new(int *argc, char ***argv) {
 
   // first, initialize to the default configuration
-  hpx_config_t *cfg = malloc(sizeof(*cfg));
+  config_t *cfg = malloc(sizeof(*cfg));
   *cfg = _default_cfg;
 
   char *progname = (argv) ? (*argv)[0] : "";
@@ -240,7 +239,7 @@ hpx_config_t *config_new(int *argc, char ***argv) {
   return cfg;
 }
 
-void config_delete(hpx_config_t *cfg) {
+void config_delete(config_t *cfg) {
   if (!cfg) {
     return;
   }
