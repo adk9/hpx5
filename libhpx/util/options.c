@@ -157,6 +157,10 @@ void hpx_print_help(void) {
 
 int config_waitat(config_t *cfg, const hpx_locality_t locality) {
   for (int i = 0; cfg->waitat[i] != HPX_LOCALITY_NONE; ++i) {
+    if (cfg->waitat[i] == HPX_LOCALITY_ALL) {
+      return 1;
+    }
+
     if (cfg->waitat[i] == locality) {
       return 1;
     }

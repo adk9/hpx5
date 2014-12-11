@@ -48,7 +48,7 @@ values="default","smp","pwc","isir"
 enum optional
 
 option "hpx-waitat" - "wait for debugger at specific locality"
-typestr="locality"
+typestr="[locality]"
 int optional argoptional multiple
 
 option "hpx-loglevel" - "set the logging level"
