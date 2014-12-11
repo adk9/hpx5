@@ -33,6 +33,7 @@ void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
   if (dbg_log_level & level) {
     int tid = hpx_get_my_thread_id();
     int rank = hpx_get_my_rank();
+
     sync_tatas_acquire(&lock);
     printf("LIBHPX<%d,%d>: (%s:%u) ", rank, tid, f, line);
 

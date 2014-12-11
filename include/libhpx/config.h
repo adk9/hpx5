@@ -141,7 +141,11 @@ typedef struct {
 #undef LIBHPX_DECL_OPTION
 } hpx_config_t;
 
-hpx_config_t *hpx_parse_options(int *argc, char ***argv)
+hpx_config_t *parse_options(int *argc, char ***argv)
+  HPX_INTERNAL;
+
+/// Free an HPX configuration type.
+void config_free(hpx_config_t *config)
   HPX_INTERNAL;
 
 #endif // LIBHPX_CONFIG_H
