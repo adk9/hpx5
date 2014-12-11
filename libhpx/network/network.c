@@ -25,6 +25,7 @@
 #include "pwc/pwc.h"
 #include "smp.h"
 
+
 static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
                            int nrx)
 {
@@ -55,10 +56,14 @@ network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
 
   switch (cfg->network) {
    case LIBHPX_NETWORK_PWC:
+#ifdef HAVE_PHOTON
     network = network_pwc_funneled_new(cfg, boot, gas, nrx);
+#endif
     break;
    case LIBHPX_NETWORK_ISIR:
+#ifdef HAVE_MPI
     network = network_isir_funneled_new(gas, nrx);
+#endif
     break;
    default:
     network = _default(cfg, boot, gas, nrx);
