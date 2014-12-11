@@ -13,13 +13,12 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
-#include "hpx/attributes.h"
-#include "libsync/lockable_ptr.h"
+#include <hpx/attributes.h>
+#include <libsync/lockable_ptr.h>
+#include <jemalloc/jemalloc.h>
 
-/// ----------------------------------------------------------------------------
 /// This constant is used to determine when a set should be performed
 /// asynchronously, even if the set is actually local.
-/// ----------------------------------------------------------------------------
 static const int HPX_LCO_SET_ASYNC = 512;
 
 typedef struct lco_class lco_class_t;
@@ -33,7 +32,7 @@ typedef union {
   #endif
 ;
 
-/// ----------------------------------------------------------------------------
+
 /// The LCO abstract class interface.
 ///
 /// All LCOs will implement this interface, which is accessible through the
@@ -42,7 +41,6 @@ typedef union {
 ///
 /// This interface is locally synchronous, but will be invoked externally
 /// through the set of hpx_lco_* operations that may use them asynchronously.
-/// ----------------------------------------------------------------------------
 typedef void (*lco_fini_t)(lco_t *lco);
 typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
@@ -158,7 +156,7 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_INTERNAL;
 
-void lco_future_set(lco_t *lco, int size, const void *from) 
+void lco_future_set(lco_t *lco, int size, const void *from)
   HPX_INTERNAL;
 
 #endif // LIBHPX_LCO_H
