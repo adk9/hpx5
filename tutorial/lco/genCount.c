@@ -30,7 +30,7 @@ static int _main_action(void *args) {
   for (int i = 0; i < ninplace; i++)
     hpx_call(HPX_HERE, _increment, &lco, sizeof(lco), done);
 
-  hpx_lco_gencount_wait(lco, ninplace);
+  hpx_lco_gencount_wait(lco, ninplace - 1);
 
   hpx_lco_wait(done);
 
