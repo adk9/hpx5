@@ -51,9 +51,5 @@ static inline uint32_t tag_to_mpi_bytes(int tag) {
   return parcel_size - offsetof(hpx_parcel_t, action);
 }
 
-static inline void *mpi_offset_of_parcel(hpx_parcel_t *parcel) {
-  return &parcel->action;
-}
-
 
 #endif // LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
