@@ -17,13 +17,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <hpx/builtins.h>
-
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-
-
+#include "hpx/builtins.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "segment.h"
 #include "pwc_buffer.h"
+
+typedef struct photon_buffer_priv_t rdma_key_t;
+
+
+typedef struct pwc_record {
+  void         *rva;
+  const void   *lva;
+  size_t          n;
+  hpx_addr_t  local;
+  hpx_addr_t remote;
+  hpx_action_t   op;
+  rdma_key_t    key;
+} pwc_record_t;
 
 
 /// Compute the index into the buffer for an abstract index.
@@ -130,7 +141,8 @@ static int _expand(pwc_buffer_t *buffer, uint32_t size) {
 
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                  hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+                  hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                  rdma_key_t key)
 {
   if (remote != HPX_NULL) {
     dbg_error("remote receive event currently unsupported");
@@ -141,7 +153,6 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
               ((op) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
   int rank = buffer->rank;
-  struct photon_buffer_priv_t key = buffer->key;
   void *vlva = (void*)lva;
   int e = photon_put_with_completion(rank, vlva, n, rva, key, local, op, flags);
   switch (e) {
@@ -157,7 +168,8 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
 
 /// Try to append a pwc request to be started in the future.
 static int _append(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                   rdma_key_t key)
 {
   uint32_t size = buffer->size;
   if (size <= buffer->max - buffer->min) {
@@ -175,6 +187,7 @@ static int _append(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
   buffer->records[i].local = local;
   buffer->records[i].remote = remote;
   buffer->records[i].op = op;
+  buffer->records[i].key = key;
   return LIBHPX_OK;
 }
 
@@ -204,23 +217,26 @@ void pwc_buffer_fini(pwc_buffer_t *buffer) {
 }
 
 
-int pwc_buffer_pwc(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
+                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                   segment_t *segment)
 {
+  void *rva = segment_offset_to_rva(segment, roff);
+
   if (pwc_buffer_progress(buffer) == 0) {
-    int e = _start(buffer, rva, lva, n, local, remote, op);
+    int e = _start(buffer, rva, lva, n, local, remote, op, segment->key);
 
     if (LIBHPX_OK == e) {
       return LIBHPX_OK;
     }
 
     if (LIBHPX_RETRY != e) {
-      return dbg_error("pwc failed\n");
+      return dbg_error("buffered put failed\n");
     }
   }
 
-  if (LIBHPX_OK != _append(buffer, rva, lva, n, local, remote, op)) {
-    return dbg_error("could not append pwc request\n");
+  if (LIBHPX_OK != _append(buffer, rva, lva, n, local, remote, op, segment->key)) {
+    return dbg_error("could not append put request\n");
   }
 
   return LIBHPX_OK;
@@ -233,7 +249,8 @@ int pwc_buffer_progress(pwc_buffer_t *buffer) {
     uint64_t next = buffer->min++;
     uint32_t i = _index_of(next, size);
     pwc_record_t *r = buffer->records + i;
-    int e = _start(buffer, r->rva, r->lva, r->n, r->local, r->remote, r->op);
+    int e = _start(buffer, r->rva, r->lva, r->n, r->local, r->remote, r->op,
+                   r->key);
 
     if (LIBHPX_RETRY == e) {
       return buffer->max - buffer->min;
