@@ -25,6 +25,7 @@
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
+#include <jemalloc/jemalloc.h>
 
 #include <inttypes.h>
 
