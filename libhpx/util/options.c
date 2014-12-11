@@ -124,6 +124,18 @@ static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
     }
   }
 
+  if (opts->hpx_logat_given) {
+    if (opts->hpx_logat_arg[0] == HPX_LOCALITY_ALL) {
+      cfg->logat = (int*)HPX_LOCALITY_ALL;
+    } else {
+      cfg->logat = malloc(sizeof(*cfg->logat) * (opts->hpx_logat_given+1));
+      cfg->logat[0] = opts->hpx_logat_given;
+      for (int i = 0; i < opts->hpx_logat_given; ++i) {
+        cfg->logat[i+1] = opts->hpx_logat_arg[i];
+      }
+    }
+  }
+
   if (opts->hpx_configfile_given) {
     if (cfg->configfile)
       free(cfg->configfile);
@@ -137,7 +149,7 @@ void hpx_print_help(void) {
 }
 
 /// Parse HPX command-line options
-hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
+hpx_config_t *parse_options(int *argc, char ***argv) {
 
   // first, initialize to the default configuration
   hpx_config_t *cfg = malloc(sizeof(*cfg));
@@ -152,6 +164,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
     fprintf(stderr, "failed to read options from the environment variables.\n");
 
   _set_config_options(cfg, &opts);
+  hpx_option_parser_free(&opts);
 
   // finally, use the CLI-specified options to override the above
   // values
@@ -185,6 +198,7 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
 
   _set_config_options(cfg, &opts);
   utstring_free(str);
+  hpx_option_parser_free(&opts);
 
   // the config file takes the highest precedence in determining the
   // runtime parameters
@@ -197,8 +211,18 @@ hpx_config_t *hpx_parse_options(int *argc, char ***argv) {
       _set_config_options(cfg, &opts);
 
     free(params);
+    hpx_option_parser_free(&opts);
   }
 
   optind = 0;
   return cfg;
+}
+
+
+void config_free(hpx_config_t *config) {
+  if (config->configfile)
+    free(config->configfile);
+  if (config->logat && config->logat != (int*)HPX_LOCALITY_ALL)
+    free(config->logat);
+  free(config);
 }

@@ -78,7 +78,7 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->config) {
-    free(l->config);
+    config_free(l->config);
   }
 
   free(l);
@@ -86,7 +86,7 @@ static void _cleanup(locality_t *l) {
 
 
 int hpx_init(int *argc, char ***argv) {
-  hpx_config_t *cfg = hpx_parse_options(argc, argv);
+  hpx_config_t *cfg = parse_options(argc, argv);
   if (!cfg) {
     return dbg_error("failed to create a configuration.\n");
   }
@@ -127,6 +127,16 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = boot_n_ranks(here->boot);
   if (cfg->waitat == here->rank) {
     dbg_wait();
+  }
+
+  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
+    int orig_level = dbg_log_level;
+    dbg_log_level = 0;
+    for (int i = 0; i < cfg->logat[0]; ++i) {
+      if (cfg->logat[i+1] == here->rank) {
+        dbg_log_level = orig_level;
+      }
+    }
   }
 
   // byte transport
