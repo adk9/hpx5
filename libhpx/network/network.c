@@ -16,16 +16,21 @@
 
 /// @file libhpx/network/network.c
 
-#include <libhpx/debug.h>
-#include <libhpx/network.h>
+
+#include "libhpx/config.h"
+
+#include "libhpx/debug.h"
+#include "libhpx/network.h"
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "smp.h"
 
-static network_t *_default(struct boot *boot, struct gas *gas, int nrx) {
+static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
+                           int nrx)
+{
   network_t *network = NULL;
 #ifdef HAVE_PHOTON
-  network = network_pwc_funneled_new(boot, gas, nrx);
+  network = network_pwc_funneled_new(cfg, boot, gas, nrx);
   if (network) {
     return network;
   }
@@ -43,26 +48,25 @@ static network_t *_default(struct boot *boot, struct gas *gas, int nrx) {
 }
 
 
-network_t *network_new(libhpx_network_t type, struct boot *boot,
-                       struct gas *gas, int nrx)
+network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
+                       int nrx)
 {
-  // return _old_new(nrx);
   network_t *network = NULL;
 
-  switch (type) {
-   case LIBHPX_NETWORK_PHOTON:
-    network = network_pwc_funneled_new(boot, gas, nrx);
+  switch (cfg->network) {
+   case LIBHPX_NETWORK_PWC:
+    network = network_pwc_funneled_new(cfg, boot, gas, nrx);
     break;
-   case LIBHPX_NETWORK_MPI:
+   case LIBHPX_NETWORK_ISIR:
     network = network_isir_funneled_new(gas, nrx);
     break;
    default:
-    network = _default(boot, gas, nrx);
+    network = _default(cfg, boot, gas, nrx);
     break;
   }
 
   if (!network) {
-    network = _default(boot, gas, nrx);
+    network = _default(cfg, boot, gas, nrx);
   }
 
   if (!network) {

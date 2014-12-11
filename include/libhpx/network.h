@@ -21,12 +21,12 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
-#include <libhpx/config.h>
 
 
 /// Forward declarations.
 /// @{
 struct boot;
+struct config;
 struct gas;
 /// @}
 
@@ -75,7 +75,7 @@ typedef struct network {
 /// @param          nrx The number of receive queues.
 ///
 /// @returns            The network object, or NULL if there was an issue.
-network_t *network_new(libhpx_network_t type, struct boot *boot,
+network_t *network_new(struct config *config, struct boot *boot,
                        struct gas *gas, int nrx)
   HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
 
