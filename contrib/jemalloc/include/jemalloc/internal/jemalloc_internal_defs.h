@@ -6,8 +6,8 @@
  * public APIs to be prefixed.  This makes it possible, with some care, to use
  * multiple allocators simultaneously.
  */
-#define JEMALLOC_PREFIX "libhpx_global_"
-#define JEMALLOC_CPREFIX "LIBHPX_GLOBAL_"
+//#define JEMALLOC_PREFIX "libhpx_global_"
+//#define JEMALLOC_CPREFIX "LIBHPX_GLOBAL_"
 
 /*
  * JEMALLOC_PRIVATE_NAMESPACE is used as a prefix for all library-private APIs.
@@ -15,7 +15,9 @@
  * from being exported, but for static libraries, naming collisions are a real
  * possibility.
  */
-#define JEMALLOC_PRIVATE_NAMESPACE je_
+#define TOKENPASTE_HELPER(x, y) x ## y
+#define TOKENPASTE(x, y) TOKENPASTE_HELPER(x, y)
+#define JEMALLOC_PRIVATE_NAMESPACE TOKENPASTE(JEMALLOC_NAMESPACE, je_)
 
 /*
  * Hyper-threaded CPUs may need a special instruction inside spin loops in
