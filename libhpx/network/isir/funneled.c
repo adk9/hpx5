@@ -19,12 +19,13 @@
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
 
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/network.h>
-#include <libhpx/parcel.h>
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"
 
+#include "emulate_pwc.h"
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
@@ -38,8 +39,9 @@
 
 typedef struct {
   network_t       vtable;
+  gas_t             *gas;
   volatile int     flush;
-  _PAD(sizeof(network_t) + sizeof(int));
+  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -101,26 +103,63 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
 
 
 static int _funneled_pwc(network_t *network,
-                         hpx_addr_t to, void *from, size_t n,
+                         hpx_addr_t to, const void *from, size_t n,
                          hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
 {
-  return LIBHPX_EUNIMPLEMENTED;
+  if (remote != HPX_NULL) {
+    dbg_error("Remote completion not yet supported\n");
+    return LIBHPX_EUNIMPLEMENTED;
+  }
+  hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, to, op,
+                                  hpx_thread_current_pid(), false);
+  if (!p) {
+    dbg_error("could not allocate a parcel to emulate put-with-completion\n");
+    return LIBHPX_ENOMEM;
+  }
+
+  hpx_parcel_send(p, local);
+  return LIBHPX_OK;
 }
 
 
 static int _funneled_put(network_t *network,
-                         hpx_addr_t to, void *from, size_t n,
+                         hpx_addr_t to, const void *from, size_t n,
                          hpx_addr_t local, hpx_addr_t remote)
 {
-  return LIBHPX_EUNIMPLEMENTED;
+  return _funneled_pwc(network, to, from, n, local, remote, HPX_ACTION_NULL);
 }
 
 
+/// Transform the get() operation into a parcel emulation.
 static int _funneled_get(network_t *network,
                          void *to, hpx_addr_t from, size_t n,
                          hpx_addr_t local)
 {
-  return LIBHPX_EUNIMPLEMENTED;
+  _funneled_t *isir = (_funneled_t*)network;
+
+  // go ahead an set the local lco if there is nothing to do
+  if (!n) {
+    if (local) {
+      hpx_lco_set(local, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+    return LIBHPX_OK;
+  }
+
+  // make sure the to address is in the global address space
+  if (!isir->gas->is_global(isir->gas, to)) {
+    return dbg_error("network_get() expects a global heap address\n");
+  }
+
+  // send the remote endpoint enough information to perform the operation
+  struct isir_emulate_gwc_args args = {
+    .n = n,
+    .to = isir->gas->lva_to_gva(to),
+    .complete = local
+  };
+
+  // and spawn the remote operation---hpx_call eagerly copies the args buffer so
+  // there is no need to wait
+  return hpx_call(from, isir_emulate_gwc, &args, sizeof(args), HPX_NULL);
 }
 
 
@@ -185,6 +224,8 @@ network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
   network->vtable.set_flush = _funneled_set_flush;
+
+  network->gas = gas;
 
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
