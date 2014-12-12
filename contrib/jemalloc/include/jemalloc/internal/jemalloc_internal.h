@@ -1,6 +1,14 @@
 #ifndef JEMALLOC_INTERNAL_H
 #define	JEMALLOC_INTERNAL_H
 
+#define TOKENPASTE_HELPER(x, y) x ## y
+#define TOKENPASTE(x, y) TOKENPASTE_HELPER(x, y)
+#define arena_dalloc_large_locked_impl TOKENPASTE(JEMALLOC_RENAME, arena_dalloc_large_locked_impl)
+#define opt_prof_thread_active_init TOKENPASTE(JEMALLOC_RENAME, opt_prof_thread_active_init)
+#define prof_tdata_reinit TOKENPASTE(JEMALLOC_RENAME, prof_tdata_reinit)
+#define extent_tree_ad_empty TOKENPASTE(JEMALLOC_RENAME, extent_tree_ad_empty)
+#define extent_tree_szad_empty TOKENPASTE(JEMALLOC_RENAME, extent_tree_szad_empty)
+
 #include "jemalloc_internal_defs.h"
 #include "jemalloc/internal/jemalloc_internal_decls.h"
 
@@ -16,7 +24,8 @@
 #  include "../jemalloc.h"
 #  undef JEMALLOC_NO_RENAME
 #else
-#  define JEMALLOC_N(n) je_##n
+#  define NAMESPACE_TEMP TOKENPASTE(JEMALLOC_NAMESPACE, je_)
+#  define JEMALLOC_N(n) TOKENPASTE(NAMESPACE_TEMP, n)
 #  include "../jemalloc.h"
 #endif
 #include "jemalloc/internal/private_namespace.h"
