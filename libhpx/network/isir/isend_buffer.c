@@ -284,7 +284,6 @@ static int _test_all(isend_buffer_t *buffer) {
 ///        LIBHPX_ERROR Three was an error during the operation.
 static int _cancel(isend_buffer_t *buffer, int i) {
   assert(0 <= i && i < buffer->size);
-  assert(false);
 
   if (MPI_SUCCESS != MPI_Cancel(buffer->requests + i)) {
     return dbg_error("could not cancel MPI request\n");
