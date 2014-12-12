@@ -80,6 +80,11 @@ AC_ARG_ENABLE([tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
   [], [enable_tutorial=no])
 
+AC_ARG_ENABLE([tutorial],
+  [AS_HELP_STRING([--enable-jemalloc],
+                  [Enable using of jemalloc as the default allocator @<:@default=yes@:>@])],
+  [], [enable_tutorial=yes])
+
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
@@ -196,6 +201,7 @@ AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" !=
 AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
+AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
@@ -219,6 +225,9 @@ AS_IF([test "x$enable_wall" != xno],
   
 AS_IF([test "x$enable_werror" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
+
+AS_IF([test "x$enable_jemalloc" != xno],
+  [HPX_JEMALLOC_LDADD="../contrib/jemalloc/src/libjemalloc.la $HPX_JEMALLOC_LDADD"])
 
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
@@ -305,6 +314,7 @@ echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
+echo "               jemalloc : $enable_jemalloc"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
 echo "            SDN support : $with_trema"
