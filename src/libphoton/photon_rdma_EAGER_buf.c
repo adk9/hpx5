@@ -75,11 +75,11 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
 
 static int _get_remote_progress(int proc, photonEagerBuf buf) {
   int rc;
-  uint8_t rloc;
+  uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
 
-  rloc = sync_load(&buf->acct.rloc, SYNC_RELAXED);
+  rloc = 0;
   if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
     
     dbg_trace("Fetching remote curr at rcur: %llu", buf->acct.rcur);

@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
   
   // Create receive threads one per rank
   //for (t=0; t<nproc; t++) {
-    pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
+      pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
   //}
 
   // set affinity as requested
@@ -229,9 +229,20 @@ int main(int argc, char **argv) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
-	    photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	    int rc;
+	    do {
+	      rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	      if (rc == PHOTON_ERROR) {
+		fprintf(stderr, "Error doing PWC\n");
+		exit(1);
+	      }
+	      else if (rc == PHOTON_ERROR_RESOURCE) {
+		fprintf(stderr, "retrying...\n");
+		sleep(1);
+	      }
+	    } while (rc == PHOTON_ERROR_RESOURCE);
 	  }
-        }
+	}
         clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
       
@@ -255,7 +266,10 @@ int main(int argc, char **argv) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
               if (sem_wait(&sem) == 0) {
-                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+                if (photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0)) {
+		  fprintf(stderr, "Error doing GWC\n");
+		  exit(1);
+		}
               }
           }
           clock_gettime(CLOCK_MONOTONIC, &time_e);
