@@ -35,22 +35,24 @@ static int _smp_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
 }
 
 
-static int _smp_pwc(network_t *network, hpx_addr_t to, void *from, size_t n,
-                       hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+static int _smp_pwc(network_t *network,
+                    hpx_addr_t to, const void *from, size_t n,
+                    hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
 
-static int _smp_put(network_t *network, hpx_addr_t to, void *from, size_t n,
-                       hpx_addr_t local, hpx_addr_t remote)
+static int _smp_put(network_t *network, hpx_addr_t to,
+                    const void *from, size_t n,
+                    hpx_addr_t local, hpx_addr_t remote)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
 
 static int _smp_get(network_t *network, void *to, hpx_addr_t from, size_t n,
-                       hpx_addr_t local)
+                    hpx_addr_t local)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }
