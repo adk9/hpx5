@@ -44,11 +44,11 @@ typedef struct network {
   int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t local)
     HPX_NON_NULL(1, 2);
 
-  int (*pwc)(struct network *, hpx_addr_t to, void *from, size_t n,
+  int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
              hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
     HPX_NON_NULL(1);
 
-  int (*put)(struct network *, hpx_addr_t to, void *from, size_t n,
+  int (*put)(struct network *, hpx_addr_t to, const void *from, size_t n,
              hpx_addr_t local, hpx_addr_t remote)
     HPX_NON_NULL(1);
 
