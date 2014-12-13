@@ -90,6 +90,8 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
       }
       goto error_exit;
     }
+
+    eager_addr = (uintptr_t)eb->remote.addr + offset;
     
     if (nentries > 0) {
       req = photon_setup_request_direct(NULL, proc, nentries);
@@ -100,7 +102,11 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
       cookie = req->id;
       req->id = local;
       req->op = REQUEST_OP_PWC;
-      req->flags = REQUEST_FLAG_USERID;
+      req->flags = (REQUEST_FLAG_USERID | REQUEST_FLAG_1PWC);
+      req->length = EB_MSG_SIZE(size);
+      req->remote_buffer.buf.addr = eager_addr;
+      req->remote_buffer.buf.size = EB_MSG_SIZE(size);
+      req->remote_buffer.buf.priv = shared_storage->buf.priv;
     }
     else {
       cookie = NULL_COOKIE;
@@ -120,16 +126,6 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
     tail += tadd;
     *tail = UINT8_MAX;
 
-    eager_addr = (uintptr_t)eb->remote.addr + offset;
-
-    if (req) {
-      req->remote_buffer.buf.addr = eager_addr;
-      req->remote_buffer.buf.size = EB_MSG_SIZE(size);
-      req->remote_buffer.buf.priv = shared_storage->buf.priv;
-      req->length = EB_MSG_SIZE(size);
-      req->flags |= REQUEST_FLAG_1PWC;
-    }
-      
     rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size),
                                     &(shared_storage->buf), &eb->remote, cookie, p1_flags);
     if (rc != PHOTON_OK) {
@@ -180,7 +176,11 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
     cookie = req->id;
     req->id = local;
     req->op = REQUEST_OP_PWC;
-    req->flags = REQUEST_FLAG_USERID;
+    req->flags = (REQUEST_FLAG_USERID | REQUEST_FLAG_2PWC);
+    req->length = size;
+    req->remote_buffer.buf.addr = (uintptr_t)rptr;
+    req->remote_buffer.buf.size = size;
+    req->remote_buffer.buf.priv = priv;
   }
   else {
     cookie = NULL_COOKIE;
@@ -192,13 +192,7 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
       log_err("Tried posting from a buffer that's not registered");
       goto error_exit;
     }
-    
-    if (req) {
-      req->remote_buffer.buf.addr = (uintptr_t)rptr;
-      req->remote_buffer.buf.size = size;
-      req->remote_buffer.buf.priv = priv;
-    }
-    
+        
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
 				    &req->remote_buffer.buf, cookie, p0_flags);
     if (rc != PHOTON_OK) {
@@ -222,12 +216,7 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
       goto error_exit;
     }
   }
-  
-  if (req) {
-    req->length = size;
-    req->flags |= REQUEST_FLAG_2PWC;
-  }
-  
+    
   return PHOTON_OK;
   
  error_exit:
