@@ -214,7 +214,7 @@ hpx_config_t *parse_options(int *argc, char ***argv) {
     hpx_option_parser_free(&opts);
   }
 
-  optind = 0;
+  optind = 1;
   return cfg;
 }
 
