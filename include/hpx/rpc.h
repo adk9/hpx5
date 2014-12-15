@@ -115,4 +115,16 @@ int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
 int hpx_bcast(hpx_action_t action, const void *args, size_t len,
               hpx_addr_t lco);
 
+/// HPX collective operations.
+///
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all available localities. The output values are not returned.
+///
+/// @param action the action to perform
+/// @param   args the argument data for @p action
+/// @param    len the length of @p args
+///
+/// @returns      HPX_SUCCESS if no errors were encountered
+int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
+
 #endif
