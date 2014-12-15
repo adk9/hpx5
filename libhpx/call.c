@@ -125,7 +125,7 @@ hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
 
 int
 hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
-  hpx_addr_t lco = hpx_lco_and_new(here->ranks);
+  hpx_addr_t lco = hpx_lco_future_new(0);
   if (lco == HPX_NULL) {
     return dbg_error("could not allocate an LCO.\n");
   }
