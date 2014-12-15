@@ -136,7 +136,7 @@ hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
     return e;
   }
 
-  e = hpx_lco_wait(e);
+  e = hpx_lco_wait(lco);
   DEBUG_IF(e != HPX_SUCCESS) {
     dbg_error("error waiting for bcast and gate");
   }
