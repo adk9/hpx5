@@ -74,16 +74,20 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uint64_t cookie;
+    uint64_t asize;
     uintptr_t eager_addr;
     uint8_t *tail;
     int rc, offset;
-    int tadd = 0, p1_flags = 0;
+    int p1_flags = 0;
 
     p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
-      
+    
+    // keep offsets aligned
+    asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
+
     eb = photon_processes[proc].remote_pwc_buf;
-    offset = photon_rdma_eager_buf_get_offset(proc, eb, EB_MSG_SIZE(size),
-					      EB_MSG_SIZE(_photon_spsize));
+    offset = photon_rdma_eager_buf_get_offset(proc, eb, asize,
+					      ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
     if (offset < 0) {
       if (offset == -2) {
 	return PHOTON_ERROR_RESOURCE;
@@ -103,9 +107,9 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
       req->id = local;
       req->op = REQUEST_OP_PWC;
       req->flags = (REQUEST_FLAG_USERID | REQUEST_FLAG_1PWC);
-      req->length = EB_MSG_SIZE(size);
+      req->length = asize;
       req->remote_buffer.buf.addr = eager_addr;
-      req->remote_buffer.buf.size = EB_MSG_SIZE(size);
+      req->remote_buffer.buf.size = asize;
       req->remote_buffer.buf.priv = shared_storage->buf.priv;
     }
     else {
@@ -119,14 +123,11 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
     hdr->length = size;
     hdr->head = UINT8_MAX;
     memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), ptr, size);
-    // set a tail flag
-    tail = (uint8_t*)((uintptr_t)hdr + sizeof(*hdr) + size);
-    // align to correct boundary
-    tadd = ((uintptr_t)tail % PWC_ALIGN != 0)?(PWC_ALIGN - (uintptr_t)tail % PWC_ALIGN):0;
-    tail += tadd;
+    // set a tail flag, the last byte in aligned buffer
+    tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
     *tail = UINT8_MAX;
-
-    rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, EB_MSG_SIZE(size),
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
                                     &(shared_storage->buf), &eb->remote, cookie, p1_flags);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", cookie);
@@ -389,32 +390,31 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       curr = sync_load(&eb->curr, SYNC_RELAXED);
       offset = curr & (eb->size - 1);
       left = eb->size - offset;
-      if (left < EB_MSG_SIZE(_photon_spsize)) {
+      if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
 	new = left + curr;
 	offset = 0;
       }
       else {
 	new = curr;
       }
+
       hdr = (photon_eb_hdr *)&(eb->data[offset]);
       if (hdr->head == UINT8_MAX) {
-	uint16_t size = hdr->length;
 	photon_rid req = hdr->request;
 	uintptr_t addr = hdr->addr;
-	new += EB_MSG_SIZE(size);
-	if (sync_cas(&eb->curr, curr, new, SYNC_RELAXED, SYNC_RELAXED)) {
+	uint16_t size = hdr->length;
+	uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
+	if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
 	  // now check for tail flag (or we could return to check later)
-	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + sizeof(*hdr) + size);
-	  int tadd = ((uintptr_t)tail % PWC_ALIGN != 0)?(PWC_ALIGN - (uintptr_t)tail % PWC_ALIGN):0;
-	  tail += tadd;
+	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
 	  while (*tail != UINT8_MAX)
 	    ;
 	  memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
 	  *request = req;
 	  *flag = 1;
 	  dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
-		    size, addr, req);
-	  memset((void*)hdr, 0, EB_MSG_SIZE(size));
+		   size, addr, req);
+	  memset((void*)hdr, 0, asize);
 	  return PHOTON_OK;
 	}
       }

@@ -337,7 +337,8 @@ static int ugni_get_event(photonEventStatus stat) {
   else {
     sync_tatas_release(&cq_lock);
     /* rc == 2 is an overrun */
-    dbg_err("Error getting CQ event: %d\n", rc);
+    dbg_err("Error getting CQ event: %d", rc);
+    return 1;
   }
   
   dbg_trace("received event with cookie:%"PRIx64, cookie);

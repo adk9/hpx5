@@ -145,6 +145,7 @@ int main(int argc, char **argv) {
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
   send = malloc(PHOTON_BUF_SIZE);
+  memset(send, 1, PHOTON_BUF_SIZE);
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
   // ... but recv buffers for each potential sender
