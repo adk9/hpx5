@@ -13,6 +13,7 @@
 #include <assert.h>
 #include "tests.h"
 #include <semaphore.h>
+#include <sched.h>
 #include "photon.h"
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
@@ -83,9 +84,16 @@ void *wait_ledger_completions_thread(void *arg) {
 START_TEST(test_photon_threaded_put_wc) 
 {
   printf("Starting the photon threaded put wc test\n");
-  int i, j, k, ns, val;
+  int i, j, k, ns, val, ncores;
   int rank, nproc, ret_proc;
   long t;
+  cpu_set_t def_set;
+
+  if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+    fprintf(stderr, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
+  CPU_ZERO(&def_set);
+  for (i=0; i<ncores; i++)
+    CPU_SET(i, &def_set);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -113,8 +121,6 @@ START_TEST(test_photon_threaded_put_wc)
   for (i=0; i<nproc; i++) {
     // everyone posts their recv buffers
     photon_post_recv_buffer_rdma(i, recv[i], PHOTON_BUF_SIZE, PHOTON_TAG, &recvReq[i]);
-    // make sure we clear the local post event
-    photon_wait_any(&ret_proc, &request);
   }
 
   for (i=0; i<nproc; i++) {
@@ -122,17 +128,22 @@ START_TEST(test_photon_threaded_put_wc)
     photon_wait_recv_buffer_rdma(i, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     // get the remote buffer info so we can do our own put
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
+    photon_send_FIN(sendReq[i], i, PHOTON_REQ_COMPLETED);
+    photon_wait(recvReq[i]);
   }
 
   sem_init(&sem, 0, SQ_SIZE);
 
   // Create a thread to wait for local completions 
   pthread_create(&th, NULL, wait_local_completion_thread, NULL);
+  sched_setaffinity(th, sizeof(cpu_set_t), &def_set);
 
   // Create receive threads one per rank
   for (t=0; t<nproc; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
+    sched_setaffinity(recv_threads[t], sizeof(cpu_set_t), &def_set);
   }
+  sched_setaffinity(0, sizeof(cpu_set_t), &def_set);
   
   // now we can proceed with our benchmark
   if (rank == 0)
@@ -158,7 +169,18 @@ START_TEST(test_photon_threaded_put_wc)
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
-	    photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	    int rc;
+	    do {
+              rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+              if (rc == PHOTON_ERROR) {
+		fprintf(stderr, "Error doing PWC\n");
+                exit(1);
+              }
+              else if (rc == PHOTON_ERROR_RESOURCE) {
+                //fprintf(stderr, "retrying...\n");
+		//sleep(1);
+              }
+            } while (rc == PHOTON_ERROR_RESOURCE);
 	  }
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
