@@ -146,6 +146,10 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync);
 
 
+/// Synchronous interface to memget.
+int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
+
+
 /// This copies data from a local buffer to a global address, asynchronously.
 ///
 /// The global address range [to, to + size) must be within a single block
