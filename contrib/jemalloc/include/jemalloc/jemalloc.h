@@ -31,30 +31,32 @@ extern "C" {
  * --with-jemalloc-prefix.  With default settings the je_ prefix is stripped by
  * these macro definitions.
  */
+#define TOKENPASTE_HELPER(x, y) x ## y
+#define TOKENPASTE(x, y) TOKENPASTE_HELPER(x, y)
 #ifndef JEMALLOC_NO_RENAME
 #  define je_no
-#  define je_malloc_conf libhpx_global_malloc_conf
-#  define je_malloc_message libhpx_global_malloc_message
-#  define je_malloc libhpx_global_malloc
-#  define je_calloc libhpx_global_calloc
-#  define je_posix_memalign libhpx_global_posix_memalign
-#  define je_aligned_alloc libhpx_global_aligned_alloc
-#  define je_realloc libhpx_global_realloc
-#  define je_free libhpx_global_free
-#  define je_mallocx libhpx_global_mallocx
-#  define je_rallocx libhpx_global_rallocx
-#  define je_xallocx libhpx_global_xallocx
-#  define je_sallocx libhpx_global_sallocx
-#  define je_dallocx libhpx_global_dallocx
-#  define je_sdallocx libhpx_global_sdallocx
-#  define je_nallocx libhpx_global_nallocx
-#  define je_mallctl libhpx_global_mallctl
-#  define je_mallctlnametomib libhpx_global_mallctlnametomib
-#  define je_mallctlbymib libhpx_global_mallctlbymib
-#  define je_malloc_stats_print libhpx_global_malloc_stats_print
-#  define je_malloc_usable_size libhpx_global_malloc_usable_size
-#  define je_memalign libhpx_global_memalign
-#  define je_valloc libhpx_global_valloc
+#  define je_malloc_conf TOKENPASTE(JEMALLOC_RENAME, malloc_conf)
+#  define je_malloc_message TOKENPASTE(JEMALLOC_RENAME, malloc_message)
+#  define je_malloc TOKENPASTE(JEMALLOC_RENAME, malloc)
+#  define je_calloc TOKENPASTE(JEMALLOC_RENAME, calloc)
+#  define je_posix_memalign TOKENPASTE(JEMALLOC_RENAME, posix_memalign)
+#  define je_aligned_alloc TOKENPASTE(JEMALLOC_RENAME, aligned_alloc)
+#  define je_realloc TOKENPASTE(JEMALLOC_RENAME, realloc)
+#  define je_free TOKENPASTE(JEMALLOC_RENAME, free)
+#  define je_mallocx TOKENPASTE(JEMALLOC_RENAME, mallocx)
+#  define je_rallocx TOKENPASTE(JEMALLOC_RENAME, rallocx)
+#  define je_xallocx TOKENPASTE(JEMALLOC_RENAME, xallocx)
+#  define je_sallocx TOKENPASTE(JEMALLOC_RENAME, sallocx)
+#  define je_dallocx TOKENPASTE(JEMALLOC_RENAME, dallocx)
+#  define je_sdallocx TOKENPASTE(JEMALLOC_RENAME, sdallocx)
+#  define je_nallocx TOKENPASTE(JEMALLOC_RENAME, nallocx)
+#  define je_mallctl TOKENPASTE(JEMALLOC_RENAME, mallctl)
+#  define je_mallctlnametomib TOKENPASTE(JEMALLOC_RENAME, mallctlnametomib)
+#  define je_mallctlbymib TOKENPASTE(JEMALLOC_RENAME, mallctlbymib)
+#  define je_malloc_stats_print TOKENPASTE(JEMALLOC_RENAME, malloc_stats_print)
+#  define je_malloc_usable_size TOKENPASTE(JEMALLOC_RENAME, malloc_usable_size)
+#  define je_memalign TOKENPASTE(JEMALLOC_RENAME, memalign)
+#  define je_valloc TOKENPASTE(JEMALLOC_RENAME, valloc)
 #endif
 
 #include <stdlib.h>
