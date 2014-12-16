@@ -122,3 +122,24 @@ hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+
+int
+hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
+  hpx_addr_t lco = hpx_lco_future_new(0);
+  if (lco == HPX_NULL) {
+    return dbg_error("could not allocate an LCO.\n");
+  }
+  int e = hpx_bcast(action, data, len, lco);
+  if (e != HPX_SUCCESS) {
+    dbg_error("hpx_bcast returned an error.\n");
+    hpx_lco_delete(lco, HPX_NULL);
+    return e;
+  }
+
+  e = hpx_lco_wait(lco);
+  DEBUG_IF(e != HPX_SUCCESS) {
+    dbg_error("error waiting for bcast and gate");
+  }
+  hpx_lco_delete(lco, HPX_NULL);
+  return e;
+}
