@@ -1,1 +1,1 @@
-SUBDIRS = Basic HeatSeq
+SUBDIRS = Beginners HeatSeq
