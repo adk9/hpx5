@@ -1433,8 +1433,9 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
   photonRILedger ledger;
   photonLedgerEntry eager_entry;
   photonRILedgerEntry entry_iterator;
+  uint64_t curr;
   int i;
-  int start, end, curr;
+  int start, end, c_ind;
 
   //dbg_trace("(%d, %d)", proc, type);
 
@@ -1467,20 +1468,23 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
     {
       // process any eager entry first
       if (type == PHOTON_SEND_LEDGER) {
-        curr = photon_processes[i].local_eager_ledger->curr;
-        eager_entry = &(photon_processes[i].local_eager_ledger->entries[curr]);
+        curr = sync_load(&photon_processes[i].local_eager_ledger->curr, SYNC_RELAXED);
+	c_ind = curr & (photon_processes[i].local_eager_ledger->num_entries - 1);
+        eager_entry = &(photon_processes[i].local_eager_ledger->entries[c_ind]);
         if (eager_entry->request) {
           status->src_addr.global.proc_id = i;
           status->request = eager_entry->request;
           status->size = eager_entry->request>>32;
 
           *flag = 1;
-   
+
           return PHOTON_OK;
         }
       }
       
-      entry_iterator = &(ledger->entries[ledger->curr]);
+      curr = sync_load(&ledger->curr, SYNC_RELAXED);
+      c_ind = curr & (ledger->num_entries - 1);
+      entry_iterator = &(ledger->entries[c_ind]);
       if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
         status->src_addr.global.proc_id = i;
         status->request = entry_iterator->request;
