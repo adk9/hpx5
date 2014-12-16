@@ -125,7 +125,7 @@ AC_ARG_ENABLE([testsuite],
                   [Enable test suite (requires check) @<:@default=yes@:>@])],
   [], [enable_testsuite=yes])
 
-HPX_OPENFLOW
+#HPX_OPENFLOW
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
