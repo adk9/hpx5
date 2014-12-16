@@ -26,8 +26,7 @@ hpx_action_t isir_emulate_gwc = 0;
 
 /// Emulate a put-with-completion operation.
 ///
-/// This will copy the data buffer into the correct place, and then signal the
-/// continuation LCO that the operation is complete.
+/// This will copy the data buffer into the correct place, and then
 static int _emulate_pwc_handler(void *buffer) {
   hpx_parcel_t *p = scheduler_current_parcel();
   if (!p->size) {
