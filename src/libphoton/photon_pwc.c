@@ -118,10 +118,11 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
     }
 
     hdr = (photon_eb_hdr *)&(eb->data[offset]);
+    hdr->header = UINT8_MAX;
     hdr->request = remote;
     hdr->addr = (uintptr_t)rptr;
     hdr->length = size;
-    hdr->head = UINT8_MAX;
+    hdr->footer = UINT8_MAX;
     memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), ptr, size);
     // set a tail flag, the last byte in aligned buffer
     tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
@@ -266,7 +267,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     flags |= REQUEST_FLAG_NO_LCE;
   }
 
-  rc = photon_pwc_try_packed(proc, ptr, size, rptr, priv, local, remote, flags, nentries);
+  rc = photon_pwc_try_packed(proc, ptr, size, rptr, priv, local, remote, flags, nentries);  
   if (rc == PHOTON_ERROR_RESOURCE) {
     rc = photon_pwc_try_ledger(proc, ptr, size, rptr, priv, local, remote, flags, nentries);
   }
@@ -399,7 +400,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       }
 
       hdr = (photon_eb_hdr *)&(eb->data[offset]);
-      if (hdr->head == UINT8_MAX) {
+      if ((hdr->header == UINT8_MAX) && (hdr->footer == UINT8_MAX)) {
 	photon_rid req = hdr->request;
 	uintptr_t addr = hdr->addr;
 	uint16_t size = hdr->length;
