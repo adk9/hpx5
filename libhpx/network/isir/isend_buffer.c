@@ -36,6 +36,27 @@ static int _index_of(uint64_t i, uint32_t n) {
 }
 
 
+/// Figure out what tag I'm supposed to use for a particular payload size.
+///
+/// @param       payload The payload size.
+///
+/// @returns             The correct tag.
+static int _payload_size_to_tag(uint32_t payload) {
+  uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
+  int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
+  DEBUG_IF(true) {
+    uint32_t tag_ub;
+    int flag;
+    int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
+    dbg_check(e, "Could not extract tag upper bound\n");
+    if (tag_ub <= tag) {
+      dbg_error("tag value out of bounds (%d > %d)\n", tag, tag_ub);
+    }
+  }
+  return tag;
+}
+
+
 /// Re-size an isend buffer to the requested size.
 ///
 /// Buffer sizes can only be increased in the current implementation. The size
@@ -136,7 +157,7 @@ static int _start(isend_buffer_t *isends, int i) {
   void *from = parcel_network_offset(p);
   int to = gas_owner_of(isends->gas, p->target);
   int n = payload_size_to_mpi_bytes(p->size);
-  int tag = payload_size_to_tag(p->size);
+  int tag = _payload_size_to_tag(p->size);
 
 
   if (MPI_SUCCESS != MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r)) {
