@@ -15,7 +15,7 @@
 
 #include <hpx/hpx.h>
 
-hpx_action_t isir_emulate_pwc;
+extern hpx_action_t isir_emulate_pwc;
 
 struct isir_emulate_gwc_args {
   size_t            n;
@@ -23,7 +23,7 @@ struct isir_emulate_gwc_args {
   hpx_addr_t complete;
 };
 
-hpx_action_t isir_emulate_gwc;
+extern hpx_action_t isir_emulate_gwc;
 
 
 #endif
