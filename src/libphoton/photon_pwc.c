@@ -278,7 +278,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   
   dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
   
-  return rc;
+  return PHOTON_OK;
   
  error_exit:
   return rc;

@@ -620,17 +620,114 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
-  photonBI db;
-  photonRequest req;
-  int curr, rc;
+static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon_rid *request, photonBI db) {
+  if (size <= _photon_smsize) {
+    photonRequest req;
+    uintptr_t rmt_addr, eager_addr;
+    photon_rid eager_cookie;
+    photonLedgerEntry entry;
+    photonEagerBuf eb;
+    int offset, rc, curr;
+    
+    eb = photon_processes[proc].remote_eager_buf;
+    offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
+    if (offset < 0) {
+      if (offset == -2) {
+	dbg_warn("Exceeding known receiver eager buf progress!");
+	return PHOTON_ERROR_RESOURCE;
+      }
+      else {
+	goto error_exit;
+      }
+    }
 
-  dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
+    req = photon_get_request(proc);
+    if (!req) {
+      log_err("Could not get request descriptor for proc %d", proc);
+      goto error_exit;
+    }    
+    // photon_post_send_buffer_rdma() initiates a sender initiated handshake.For this reason,
+    // we don't care when the function is completed, but rather when the transfer associated with
+    // this handshake is completed. This will be reflected in the LEDGER by the corresponding  
+    // photon_send_FIN() posted by the receiver.
+    req->state = REQUEST_PENDING;
+    req->op = REQUEST_OP_SENDBUF;
+    req->flags = REQUEST_FLAG_EAGER;
+    req->type = LEDGER;
+    req->proc = proc;
+    req->tag = tag;
+    req->length = size;
+    req->events = 1;
+    
+    if (request != NULL) {
+      *request = req->id;
+    }
+    else {
+      log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
+    }
+
+    eager_addr = (uintptr_t)eb->remote.addr + offset;
+    eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;
+    
+    dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
+				    &eb->remote, eager_cookie, 0);
+    
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
+      goto error_exit;
+    }
+    
+    curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_eager_ledger);
+    if (curr < 0) {
+      if (offset == -2) {
+	dbg_warn("Exceeding known receiver eager ledger progress!");
+	return PHOTON_ERROR_RESOURCE;
+      }
+      goto error_exit;
+    }
+
+    dbg_trace("new eager curr == %d", curr);
+    rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
+    rmt_addr += curr * sizeof(*entry);
+    
+    entry = &photon_processes[proc].remote_eager_ledger->entries[curr]; 
+    // encode the eager size and request id in the eager ledger
+    entry->request = (size<<32) | (req->id<<32>>32);
+    
+    dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+				    &(photon_processes[proc].remote_eager_ledger->remote), req->id, 0);
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA PUT failed for 0x%016lx", req->id);
+      goto error_exit;
+    }
+    
+    return PHOTON_OK;
+  }
+  else {
+    return PHOTON_ERROR_RESOURCE;
+  }
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
+static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_rid *request, photonBI db) {
+  int curr, rc;
+  uintptr_t rmt_addr;
+  photonRequest req;
+  photonRILedgerEntry entry;
   
-  if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
-    log_err("Requested post of send buffer for ptr not in table");
+  // XXX: no flow control here yet
+  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+  if (curr < 0) {
+    dbg_warn("Exceeding known receiver snd_info progress!");
     goto error_exit;
   }
+  dbg_trace("new curr == %d", curr);
   
   req = photon_get_request(proc);
   if (!req) {
@@ -638,19 +735,15 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
   
-  // photon_post_send_buffer_rdma() initiates a sender initiated handshake.For this reason,
-  // we don't care when the function is completed, but rather when the transfer associated with
-  // this handshake is completed. This will be reflected in the LEDGER by the corresponding  
-  // photon_send_FIN() posted by the receiver.
   req->state = REQUEST_PENDING;
   req->op = REQUEST_OP_SENDBUF;
-  req->type = LEDGER;
   req->flags = REQUEST_FLAG_NIL;
+  req->type = LEDGER;
   req->proc = proc;
   req->tag = tag;
   req->length = size;
   req->events = 1;
-
+  
   if (request != NULL) {
     *request = req->id;
   }
@@ -658,107 +751,68 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
   }
   
-  {
-    if (size <= _photon_smsize) {
-      uintptr_t rmt_addr, eager_addr;
-      photon_rid eager_cookie;
-      photonLedgerEntry entry;
-      photonEagerBuf eb;
-      int offset;
-
-      eb = photon_processes[proc].remote_eager_buf;
-      offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
-      if (offset < 0) {
-	if (offset == -2) {
-	  dbg_warn("Exceeding known receiver eager progress!");
-	}
-	else {
-	  goto error_exit;
-	}
-      }
-      eager_addr = (uintptr_t)eb->remote.addr + offset;
-      eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;
-      
-      dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
-      
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
-				      &eb->remote, eager_cookie, 0);
-
-      if (rc != PHOTON_OK) {
-	dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
-	goto error_exit;
-      }
-
-      curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_eager_ledger);
-      if (curr < 0) {
-	goto error_exit;
-      }
-      dbg_trace("new eager curr == %d", curr);
-      rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
-      rmt_addr += curr * sizeof(*entry);
-
-      entry = &photon_processes[proc].remote_eager_ledger->entries[curr]; 
-      // encode the eager size and request id in the eager ledger
-      entry->request = (size<<32) | (req->id<<32>>32);
-
-      dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
-     
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_eager_ledger->remote), req->id, 0);
-      if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx", req->id);
-        goto error_exit;
-      }
-      req->flags = REQUEST_FLAG_EAGER;
-    }
-    else {
-      uintptr_t rmt_addr;
-      photonRILedgerEntry entry;
-
-      curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
-      if (curr < 0) {
-	goto error_exit;
-      }
-      dbg_trace("new curr == %d", curr);
-
-      rmt_addr  = photon_processes[proc].remote_snd_info_ledger->remote.addr;
-      rmt_addr += curr * sizeof(*entry);
-      entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
-      
-      // fill in what we're going to transfer
-      entry->header = 1;
-      entry->request = req->id;
-      entry->tag = tag;
-      entry->addr = (uintptr_t)ptr;
-      entry->size = size;
-      entry->priv = db->buf.priv;
-      entry->footer = 1;
-      entry->flags = REQUEST_FLAG_NIL;
-      
-      dbg_trace("Post send request");
-      dbg_trace("Request: 0x%016lx", entry->request);
-      dbg_trace("Addr: %p", (void *)entry->addr);
-      dbg_trace("Size: %lu", entry->size);
-      dbg_trace("Tag: %d", entry->tag);
-      dbg_trace("Keys: 0x%016lx / 0x%016lx", entry->priv.key0, entry->priv.key1);
-      dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
-
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_snd_info_ledger->remote), req->id, 0);
-      if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx", req->id);
-        goto error_exit;
-      }
-    }
+  rmt_addr  = photon_processes[proc].remote_snd_info_ledger->remote.addr;
+  rmt_addr += curr * sizeof(*entry);
+  entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
+  
+  // fill in what we're going to transfer
+  entry->header = 1;
+  entry->request = req->id;
+  entry->tag = tag;
+  entry->addr = (uintptr_t)ptr;
+  entry->size = size;
+  entry->priv = db->buf.priv;
+  entry->footer = 1;
+  entry->flags = REQUEST_FLAG_NIL;
+  
+  dbg_trace("Post send request");
+  dbg_trace("Request: 0x%016lx", entry->request);
+  dbg_trace("Addr: %p", (void *)entry->addr);
+  dbg_trace("Size: %lu", entry->size);
+  dbg_trace("Tag: %d", entry->tag);
+  dbg_trace("Keys: 0x%016lx / 0x%016lx", entry->priv.key0, entry->priv.key1);
+  dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
+  
+  rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+				  &(photon_processes[proc].remote_snd_info_ledger->remote), req->id, 0);
+  if (rc != PHOTON_OK) {
+    dbg_err("RDMA PUT failed for 0x%016lx", req->id);
+    goto error_exit;
   }
   
   return PHOTON_OK;
+  
+ error_exit:
+  return PHOTON_ERROR;
+}
 
-error_exit:
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
+  photonBI db;
+  int rc;
+  
+  dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
+  
+  if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
+    log_err("Requested post of send buffer for ptr not in table");
+    goto error_exit;
+  }
+  
+  rc = _photon_try_eager(proc, ptr, size, tag, request, db);
+  if (rc == PHOTON_ERROR_RESOURCE) {
+    rc = _photon_try_rndv(proc, ptr, size, tag, request, db);
+  }
+  
+  if (rc != PHOTON_OK) {
+    goto error_exit;
+  }
+
+  return PHOTON_OK;
+  
+ error_exit:
   if (request != NULL) {
     *request = NULL_COOKIE;
   }
-  return PHOTON_ERROR;
+  return rc;
 }
 
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
@@ -1268,8 +1322,13 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
 
   curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_fin_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      dbg_warn("Exceeding known receiver FIN progress!");
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
+
   entry = &photon_processes[proc].remote_fin_ledger->entries[curr];
   dbg_trace("photon_processes[%d].remote_fin_ledger->curr==%d", proc, curr);
   
