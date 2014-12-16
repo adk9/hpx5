@@ -56,6 +56,7 @@ static sem_t sem;
 #ifdef HAVE_SETAFFINITY
 static int ncores = 1;                 /* number of CPU cores */
 static cpu_set_t cpu_set;              /* processor CPU set */
+static cpu_set_t def_set;
 #endif
 
 void *test_thread() {
@@ -177,32 +178,41 @@ int main(int argc, char **argv) {
   
   // Create receive threads one per rank
   //for (t=0; t<nproc; t++) {
-      pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
+  pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
   //}
-
+  
   // set affinity as requested
 #ifdef HAVE_SETAFFINITY
+  if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+    err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
+  CPU_ZERO(&def_set);
+  for (i=0; i<ncores; i++)
+    CPU_SET(i, &def_set);
   if (aff_main >= 0) {
     //printf("Setting main thread affinity to core %d\n", aff_main);
-    if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
-      err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_main, &cpu_set);
     if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
       err(1, "couldn't change CPU affinity");
   }
+  else
+    sched_setaffinity(0, sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting EVQ probe thread affinity to core %d\n", aff_evq);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_evq, &cpu_set);
     pthread_setaffinity_np(th, sizeof(cpu_set_t), &cpu_set);
   }
+  else
+    sched_setaffinity(th, sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_ledg, &cpu_set);
     pthread_setaffinity_np(recv_threads[0], sizeof(cpu_set_t), &cpu_set);
   }
+  else
+    sched_setaffinity(recv_threads[0], sizeof(cpu_set_t), &def_set);
 #endif
   
   // now we can proceed with our benchmark
@@ -231,14 +241,14 @@ int main(int argc, char **argv) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
 	    do {
-	      rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	      rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
 	      if (rc == PHOTON_ERROR) {
 		fprintf(stderr, "Error doing PWC\n");
 		exit(1);
 	      }
 	      else if (rc == PHOTON_ERROR_RESOURCE) {
-		fprintf(stderr, "retrying...\n");
-		sleep(1);
+		//fprintf(stderr, "retrying...\n");
+		//sleep(1);
 	      }
 	    } while (rc == PHOTON_ERROR_RESOURCE);
 	  }
