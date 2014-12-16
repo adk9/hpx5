@@ -259,12 +259,12 @@ AC_CONFIG_FILES([
 
 AS_IF([test "x$enable_tutorial" != xno],
   [AC_CONFIG_FILES([tutorial/Makefile
-  tutorial/Basic/Makefile
-  tutorial/Basic/threads/Makefile
-  tutorial/Basic/gas/Makefile
-  tutorial/Basic/collectives/Makefile
-  tutorial/Basic/lco/Makefile
-  tutorial/Basic/parcel/Makefile
+  tutorial/Beginners/Makefile
+  tutorial/Beginners/threads/Makefile
+  tutorial/Beginners/gas/Makefile
+  tutorial/Beginners/collectives/Makefile
+  tutorial/Beginners/lco/Makefile
+  tutorial/Beginners/parcel/Makefile
   tutorial/HeatSeq/Makefile])])
 
 AS_IF([test "x$enable_apps" != xno],
