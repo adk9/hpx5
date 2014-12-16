@@ -48,6 +48,9 @@ HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
+# Check if the assembler supports CFI directives
+AX_CFI_DIRECTIVES
+
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
 #     false sense of security.
