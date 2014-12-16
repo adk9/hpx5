@@ -1324,7 +1324,6 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
 
   while(1) {
     photon_rid cookie;
-    uint32_t prefix;
     int existed = -1;
     photon_event_status event;
 
@@ -1336,17 +1335,18 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
     else if (rc != PHOTON_OK) {
       continue;
     }
-
+    
     cookie = event.id;
-    prefix = (uint32_t)(cookie>>32);
-    if (prefix == REQUEST_COOK_EAGER) {
+    rc = __photon_handle_cq_special(cookie);
+    if (rc == PHOTON_OK) {
       continue;
     }
 
     if (cookie != (photon_rid)NULL_COOKIE) {
       photonRequest req = NULL;      
       if ((req = photon_lookup_request(cookie)) != NULL) {
-        if (req->type == EVQUEUE && (--req->events) == 0) {
+	int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
+        if ((req->type == EVQUEUE) && (nevents == 0)) {
           dbg_trace("Setting request completed with cookie: 0x%016lx", cookie);
           req->state = REQUEST_COMPLETED;
 	  // handle pwc local completions

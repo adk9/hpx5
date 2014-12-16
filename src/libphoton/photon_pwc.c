@@ -364,8 +364,10 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     req = photon_pwc_pop_req();
     if (req != NULL) {
       assert(req->op == REQUEST_OP_PWC);
-      *flag = 1;
-      *request = req->id;
+      if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+	*flag = 1;
+	*request = req->id;
+      }
       dbg_trace("Completed and removing queued pwc request: 0x%016lx", req->id);
       photon_free_request(req);
       return PHOTON_OK;
@@ -454,7 +456,8 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       
       // set flag and request only if we have processed the number of outstanding
       // events expected for this reqeust
-      if ((req->op == REQUEST_OP_PWC) && (--req->events == 0)) {
+      int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
+      if ((req->op == REQUEST_OP_PWC) && (nevents == 0)) {
 	// sometimes the requestor doesn't care about the completion
 	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
 	  *flag = 1;
