@@ -80,10 +80,10 @@ AC_ARG_ENABLE([tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
   [], [enable_tutorial=no])
 
-AC_ARG_ENABLE([tutorial],
+AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=yes@:>@])],
-  [], [enable_tutorial=yes])
+  [], [enable_jemalloc=yes])
 
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
