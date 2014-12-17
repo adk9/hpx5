@@ -14,12 +14,14 @@
 # include <config.h>
 #endif
 
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/network.h>
-#include <libhpx/stats.h>
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/network.h"
+#include "libhpx/stats.h"
+#include "libhpx/system.h"
+
 #include "progress.h"
 
 static void *_pthread_progress(void *arg) {
