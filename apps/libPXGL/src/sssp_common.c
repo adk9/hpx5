@@ -11,6 +11,8 @@
 static hpx_action_t _sssp_process_vertex = 0;
 hpx_action_t _sssp_visit_vertex = 0;
 
+static hpx_action_t _sssp_visit_source = 0;
+static hpx_action_t _sssp_print_source_adj_list = 0;
 sssp_kind_t _sssp_kind = CHAOTIC_SSSP_KIND;
 
 typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, const void*, size_t, hpx_addr_t);
@@ -84,11 +86,50 @@ int _sssp_visit_vertex_action(const _sssp_visit_vertex_args_t *const args) {
   }
 }
 
+static int _sssp_print_source_adj_list_action(_sssp_visit_vertex_args_t *const args) {
+  const hpx_addr_t target = hpx_thread_current_target();
+  adj_list_vertex_t *vertex;
+  if (!hpx_gas_try_pin(target, (void**)&vertex))
+    return HPX_RESEND;
+  const SSSP_UINT_T num_edges = vertex->num_edges;
+  const SSSP_UINT_T old_distance = args->distance;
+
+  printf("Printing source stat\n-------------------------------\n");
+  if(num_edges>0){
+    for (int i = 0; i < num_edges; ++i) {
+      adj_list_edge_t *e = &vertex->edge_list[i];
+      printf("dest %" PRIu64 " weight %" PRIu64 "\n", e->dest, e->weight);
+    }
+  }
+  else{
+    printf("Source does not have any neighbours\n");
+  }
+  hpx_gas_unpin(target);
+  return HPX_SUCCESS;
+}
+
+static int _sssp_visit_source_action(const _sssp_visit_vertex_args_t *const args) {
+  const hpx_addr_t target = hpx_thread_current_target();
+  
+  hpx_addr_t vertex;
+  hpx_addr_t *v;
+  if (!hpx_gas_try_pin(target, (void**)&v))
+    return HPX_RESEND;
+  vertex = *v;
+  hpx_gas_unpin(target);
+  printf("printing adjacency list for source %" SSSP_UINT_PRI "\n", vertex);
+
+  return hpx_call_sync(vertex, _sssp_print_source_adj_list, args, sizeof(*args), NULL, 0);
+}
+
+
 hpx_action_t call_sssp = 0;
 int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), _index_array_block_size);
   _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
+  printf("Calling sssp visit source action\n");
+  //hpx_call_sync(index, _sssp_visit_source, &sssp_args, sizeof(sssp_args), HPX_NULL,0);
 
   // DC is only supported with count termination now.
   assert(_sssp_kind != DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
@@ -167,4 +208,6 @@ static HPX_CONSTRUCTOR void _sssp_register_actions() {
                       initialize_sssp_kind_action);
   HPX_REGISTER_ACTION(&sssp_run_delta_stepping,
 		      sssp_run_delta_stepping_action);
+  HPX_REGISTER_ACTION(&_sssp_visit_source, _sssp_visit_source_action);
+  HPX_REGISTER_ACTION(&_sssp_print_source_adj_list,_sssp_print_source_adj_list_action);
 }

@@ -24,6 +24,7 @@ typedef struct {
 } call_sssp_args_t;
 
 typedef enum { CHAOTIC_SSSP_KIND, DC_SSSP_KIND } sssp_kind_t;
+typedef enum {_GRAPH500, _DIMACS} graph_generator_type_t;
 
 extern hpx_action_t call_sssp;
 extern hpx_action_t sssp_run_delta_stepping;
