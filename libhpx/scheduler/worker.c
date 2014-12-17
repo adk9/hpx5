@@ -260,47 +260,55 @@ static void _try_shutdown(struct worker *w) {
 ///
 /// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
-  hpx_parcel_t *p = NULL;
+  hpx_parcel_t *p;
 
-  while (true) {
-    _try_shutdown(self);
+restart:
+  p = NULL;
 
-    // prioritize our mailbox
-    _handle_mail(self);
+  _try_shutdown(self);
 
-    // if there is any LIFO work, process it
-    p = _schedule_lifo(self);
-    if (p) {
-      break;
-    }
+  // prioritize our mailbox
+  _handle_mail(self);
 
-    // if we're in a hurry just return final or a NULL action
-    if (fast) {
-      p = (final) ? final : hpx_parcel_acquire(NULL, 0);
-      break;
-    }
-
-    // we prioritize yielded threads over stealing
-    p = _schedule_yielded(self);
-    if (p) {
-      break;
-    }
-
-    // try to steal some work
-    p = _schedule_steal(self);
-    if (p) {
-      break;
-    }
+  // if there is any LIFO work, process it
+  p = _schedule_lifo(self);
+  if (p) {
+    goto finish;
   }
 
-  assert(p);
-  if (!fast && action_is_task(here->actions, hpx_parcel_get_action(p))) {
+  // if we're in a hurry just return final or a NULL action
+  if (fast) {
+    p = (final) ? final: hpx_parcel_acquire(NULL, 0);
+    goto finish_fast;
+  }
+
+  // we prioritize yielded threads over stealing
+  p = _schedule_yielded(self);
+  if (p) {
+    goto finish;
+  }
+
+  // try to steal some work
+  p = _schedule_steal(self);
+  if (p) {
+    goto finish;
+  }
+
+  p = (final) ? final: hpx_parcel_acquire(NULL, 0);
+
+ finish:
+  if (fast) {
+    goto finish_fast;
+  }
+
+  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
     hpx_parcel_execute(p);
-    return _schedule(fast, final);
-  } else {
-    _try_bind(p);
-    return p;
+    goto restart;
   }
+
+ finish_fast:
+  _try_bind(p);
+  return p;
 }
 
 
