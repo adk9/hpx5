@@ -43,4 +43,31 @@ typedef struct {
 extern hpx_action_t edge_list_from_file;
 extern int edge_list_from_file_action(const edge_list_from_file_args_t * const args);
 
+
+typedef struct {
+  int scale;
+  int edgefactor;
+  unsigned int locality_readers;
+  unsigned int thread_readers;
+} graph500_edge_list_generator_args_t;
+
+
+typedef struct {
+  int64_t edges_skip;
+  int64_t edges_no;
+  hpx_addr_t edges_sync;
+  edge_list_t el;
+  int log_numverts; 
+  int64_t M; 
+  uint64_t userseed1;
+  uint64_t userseed2;
+  unsigned int locality_readers;
+  unsigned int thread_readers;
+  //int64_t* nedges_ptr; 
+  //edge_list_t* result_ptr
+} graph500_edge_list_local_args_t;
+
+hpx_action_t graph500_edge_list_generator;
+extern int graph500_edge_list_generator_action(const graph500_edge_list_generator_args_t * const args);
+
 #endif // PXGL_EDGE_LIST_H

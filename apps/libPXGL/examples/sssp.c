@@ -23,6 +23,8 @@
 #include "libsync/sync.h"
 #include "libhpx/debug.h"
 
+#include "../generatorhelper/include/prng.h"
+
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
           "\t-k, use and-lco-based termination detection\n"
@@ -68,6 +70,12 @@ static int _print_vertex_distance_index_action(int *i)
   return hpx_call_sync(vertex, _print_vertex_distance, i, sizeof(*i), NULL, 0);
 }
 
+void sample_graph(sssp_uint_t **problems, sssp_uint_t nproblems, size_t num_edges, sssp_uint_t numvertices, adj_list_t *graph){
+  *problems = malloc(nproblems * sizeof(sssp_uint_t));
+  assert(*problems);
+  printf("calling sample root\n");
+  sample_roots(*problems, nproblems, num_edges, numvertices, graph);
+}
 
 static int _read_dimacs_spec(char **filename, sssp_uint_t *nproblems, sssp_uint_t **problems) {
   FILE *f = fopen(*filename, "r");
@@ -107,6 +115,9 @@ typedef struct {
   sssp_init_dc_args_t sssp_init_dc_args;
   size_t delta;
   termination_t termination;
+  graph_generator_type_t graph_generator_type;
+  int scale;                    
+  int edgefactor;
 } _sssp_args_t;
 
 static hpx_action_t _main;
@@ -115,9 +126,25 @@ static int _main_action(_sssp_args_t *args) {
 
   // set the termination-detection algorithm type.
   set_termination(args->termination);
-
-  // Create an edge list structure from the given filename
   edge_list_t el;
+  
+  if(args->graph_generator_type == _GRAPH500) {
+    // Create an edge list structure          
+    printf("Generating edge-list as Graph500 spec\n");
+    const graph500_edge_list_generator_args_t graph500_edge_list_generator_args = {
+      .scale = args->scale,
+      .locality_readers = HPX_LOCALITIES,
+      .thread_readers = 1,
+      .edgefactor = args->edgefactor
+    };
+    hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &graph500_edge_list_generator_args,
+                  sizeof(graph500_edge_list_generator_args), &el, sizeof(el));
+    printf("Edge List: #v = %lu, #e = %lu\n", el.num_vertices, el.num_edges);
+
+  }
+
+  else if(args->graph_generator_type == _DIMACS) {
+  // Create an edge list structure from the given filename
   printf("Allocating edge-list from file %s.\n", args->filename);
   const edge_list_from_file_args_t edge_list_from_file_args = {
     .locality_readers = HPX_LOCALITIES,
@@ -128,7 +155,7 @@ static int _main_action(_sssp_args_t *args) {
 		sizeof(edge_list_from_file_args), &el, sizeof(el));
   printf("Edge List: #v = %lu, #e = %lu\n",
          el.num_vertices, el.num_edges);
-
+  }
   // Open the results file and write the basic info out
   FILE *results_file = fopen("sample.ss.chk", "w");
   fprintf(results_file, "%s\n","p chk sp ss sssp");
@@ -147,6 +174,12 @@ static int _main_action(_sssp_args_t *args) {
   if (!realloc_adj_list) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+  }
+
+  if(args->graph_generator_type == _GRAPH500) {
+    printf("Starting sampling the graph for sources\n");
+    sample_graph(&args->problems, args->nproblems,args->edgefactor,el.num_vertices,&sargs.graph);
+    printf("Sampling done\n");
   }
 
   hpx_addr_t kind_bcast_lco = hpx_lco_future_new(0), dc_bcast_lco = hpx_lco_future_new(0);
@@ -315,6 +348,12 @@ int main(int argc, char *argv[argc]) {
   sssp_kind_t sssp_kind = DC_SSSP_KIND;
   size_t delta = 0;
   termination_t termination = COUNT_TERMINATION;
+  graph_generator_type_t graph_generator_type = _DIMACS;
+  int SCALE = 16 ;
+  int edgefactor = 16;
+
+  sssp_uint_t nproblems = 2;
+  sssp_uint_t *problems;
 
   int e = hpx_init(&argc, &argv);
   if (e) {
@@ -323,7 +362,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:f:l:z:cdaphk?")) != -1) {
+  while ((opt = getopt(argc, argv, "q:f:l:z:g:s:cdaphk?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -356,6 +395,13 @@ int main(int argc, char *argv[argc]) {
     case 'z':
       delta = strtoul(optarg, NULL, 0);
       break;
+    case 'g':
+      graph_generator_type = _GRAPH500;
+      SCALE = strtoul(optarg, NULL, 0);
+      break;
+    case 's':
+      nproblems = strtoul(optarg, NULL, 0);
+      break;
     case '?':
     default:
       _usage(stderr);
@@ -366,32 +412,32 @@ int main(int argc, char *argv[argc]) {
   argc -= optind;
   argv += optind;
 
-  char *graph_file;
-  char *problem_file;
-
-  switch (argc) {
-   case 0:
-    fprintf(stderr, "\nMissing graph (.gr) file.\n");
-    _usage(stderr);
-    return -1;
-   case 1:
-    fprintf(stderr, "\nMissing problem specification (.ss) file.\n");
-    _usage(stderr);
-    return -1;
-   default:
-    _usage(stderr);
-    return -1;
-   case 2:
-     graph_file = argv[0];
-     problem_file = argv[1];
-     break;
+  char *graph_file = NULL;
+  char *problem_file = NULL  ;
+  if(graph_generator_type == _DIMACS){
+    switch (argc) {
+    case 0:
+      fprintf(stderr, "\nMissing graph (.gr) file.\n");
+      _usage(stderr);
+      return -1;
+    case 1:
+      fprintf(stderr, "\nMissing problem specification (.ss) file.\n");
+      _usage(stderr);
+      return -1;
+    default:
+      _usage(stderr);
+      return -1;
+    case 2:
+      graph_file = argv[0];
+      problem_file = argv[1];
+      break;
+    }
   }
-
-  sssp_uint_t nproblems;
-  sssp_uint_t *problems;
-  // Read the DIMACS problem specification file
-  _read_dimacs_spec(&problem_file, &nproblems, &problems);
-
+  if(graph_generator_type == _DIMACS){
+    // Read the DIMACS problem specification file
+    _read_dimacs_spec(&problem_file, &nproblems, &problems);
+  }
+  
   _sssp_args_t args = { .filename = graph_file,
                         .nproblems = nproblems,
                         .problems = problems,
@@ -401,7 +447,10 @@ int main(int argc, char *argv[argc]) {
 			.sssp_kind = sssp_kind,
 			.sssp_init_dc_args = sssp_init_dc_args,
 			.delta = delta,
-                        .termination = termination
+                        .termination = termination,
+			.graph_generator_type = graph_generator_type, 
+			.scale = SCALE, 
+			.edgefactor = edgefactor
   };
 
   // register the actions

@@ -279,7 +279,8 @@ AS_IF([test "x$enable_apps" != xno],
   apps/miniAMR/parcels/Makefile
   apps/libPXGL/Makefile
   apps/libPXGL/include/Makefile
-  apps/libPXGL/examples/Makefile])])
+  apps/libPXGL/examples/Makefile
+  apps/libPXGL/generatorhelper/include/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
