@@ -37,7 +37,8 @@ AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror]
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
+LT_INIT()
+#LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
@@ -226,7 +227,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_JEMALLOC_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_JEMALLOC_LDADD $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
 hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
@@ -334,7 +335,6 @@ echo "               jemalloc : $enable_jemalloc"
 echo "              hugetlbfs : $with_hugetlbfs"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
-echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"
 echo "             Test Suite : $enable_tests"
