@@ -122,13 +122,30 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 /// the same way as any other lightweight thread can be.
 ///
 /// @param          p The parcel that is generating this thread.
-
-static void _try_bind(hpx_parcel_t *p) {
+///
+/// @returns          The parcel @p, but with a valid stack.
+static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   assert(p);
   if (!parcel_get_stack(p)) {
     ustack_t *stack = thread_new(p, _thread_enter);
     parcel_set_stack(p, stack);
   }
+  return p;
+}
+
+
+/// Try to execute a parcel as a task.
+///
+/// @param            p The parcel to test.
+///
+/// @returns       NULL The parcel was processed as a task.
+///                  @p The parcel was not a task.
+static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
+  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
+    hpx_parcel_execute(p);
+    return NULL;
+  }
+  return p;
 }
 
 
@@ -239,6 +256,37 @@ static void _try_shutdown(struct worker *w) {
 }
 
 
+/// Schedule something quickly.
+///
+/// This routine does not try very hard to find work, and is typically used to
+/// transfer inside of an LCO when the caller is holding the LCO lock and wants
+/// to release it.
+///
+/// This routine will not process any tasks.
+///
+/// @param        final A thread to transfer to if we can't find any other
+///                       work.
+///
+/// @returns            A parcel to transfer to.
+static hpx_parcel_t *_schedule_fast(hpx_parcel_t *final) {
+  _try_shutdown(self);
+
+  // if there is any LIFO work, process it
+  hpx_parcel_t *p = _schedule_lifo(self);
+  if (p) {
+    return _try_bind(p);
+  }
+
+  p = final;
+  if (p) {
+    return _try_bind(p);
+  }
+
+  p = hpx_parcel_acquire(NULL, 0);
+  return _try_bind(p);
+}
+
+
 /// The main scheduling "loop."
 ///
 /// Selects a new lightweight thread to run. If @p fast is set then the
@@ -260,55 +308,57 @@ static void _try_shutdown(struct worker *w) {
 ///
 /// @returns A thread to transfer to.
 static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
-  hpx_parcel_t *p;
-
-restart:
-  p = NULL;
-
-  _try_shutdown(self);
-
-  // prioritize our mailbox
-  _handle_mail(self);
-
-  // if there is any LIFO work, process it
-  p = _schedule_lifo(self);
-  if (p) {
-    goto finish;
-  }
-
-  // if we're in a hurry just return final or a NULL action
   if (fast) {
-    p = (final) ? final: hpx_parcel_acquire(NULL, 0);
-    goto finish_fast;
+    return _schedule_fast(final);
   }
 
-  // we prioritize yielded threads over stealing
-  p = _schedule_yielded(self);
-  if (p) {
-    goto finish;
+  hpx_parcel_t *p = NULL;
+
+  // We spin in the scheduler processing tasks, until we find a parcel to run
+  // that does not represent a task.
+  while (p == NULL) {
+
+    _try_shutdown(self);
+
+    // prioritize our mailbox
+    _handle_mail(self);
+
+    // if there is any LIFO work, process it
+    p = _schedule_lifo(self);
+    if (p) {
+      p = _try_task(p);
+      continue;
+    }
+
+    // we prioritize yielded threads over stealing
+    p = _schedule_yielded(self);
+    if (p) {
+      p = _try_task(p);
+      continue;
+    }
+
+    // try to steal some work
+    p = _schedule_steal(self);
+    if (p) {
+      p = _try_task(p);
+      continue;
+    }
+
+    // try to run the final, but only the first time around
+    p = final;
+    if (p) {
+      p = _try_task(p);
+      final = NULL;
+      continue;
+    }
+
+    // couldn't find any work to do, we're not going to go into an infinite loop
+    // here because the caller might be trying to yield() and we need to
+    // guarantee some sort of progress in the system in that case.
+    p = hpx_parcel_acquire(NULL, 0);
   }
 
-  // try to steal some work
-  p = _schedule_steal(self);
-  if (p) {
-    goto finish;
-  }
-
-  p = (final) ? final: hpx_parcel_acquire(NULL, 0);
-
- finish:
-  if (fast) {
-    goto finish_fast;
-  }
-
-  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
-    hpx_parcel_execute(p);
-    goto restart;
-  }
-
- finish_fast:
-  _try_bind(p);
-  return p;
+  return _try_bind(p);
 }
 
 
