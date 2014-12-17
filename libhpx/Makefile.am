@@ -16,13 +16,12 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
                      util/libutil.la \
-                     $(HPX_JEMALLOC_LDADD) \
                      $(HPX_PHOTON_LDADD) \
                      $(HWLOC_EMBEDDED_LDADD)
 
 
 if HAVE_PAPI
-libhpx_la_CFLAGS   = @PAPI_CFLAGS@
-libhpx_la_LIBADD  += @PAPI_LIBS@
+libhpx_a_CFLAGS   = @PAPI_CFLAGS@
+libhpx_a_LIBADD  += @PAPI_LIBS@
 endif
 

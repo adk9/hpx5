@@ -45,6 +45,7 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
+HPX_CONTRIB_LIBFFI
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
@@ -225,7 +226,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_JEMALLOC_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
 hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
