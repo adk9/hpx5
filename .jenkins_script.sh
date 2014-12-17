@@ -34,8 +34,14 @@ cd build
 ../configure $CFGFLAGS --with-check --enable-testsuite --enable-apps $HPXDEBUG
 make
 
-# Finally, run all the unit tests:
+# Run all the unit tests:
 make check
+
+# Check the output of the unit tests:
+if [ $(grep -c Failed tests/unit/output.log) -eq 0 ]
+then
+    exit 1
+fi
 
 # TODO: Run the apps and check their output...
 
