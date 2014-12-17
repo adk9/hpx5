@@ -55,10 +55,7 @@ uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-  hpx_addr_t lco = hpx_lco_future_new(0);
-  hpx_gas_memget(&val, there, n, lco);
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  hpx_gas_memget_sync(&val, there, n);
   return val;
 }
 
