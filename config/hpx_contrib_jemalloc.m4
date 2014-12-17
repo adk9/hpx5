@@ -2,8 +2,10 @@
 # HPX_CONTRIB_JEMALLOC([path],[prefix])
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONTRIB_JEMALLOC],
-  [ACX_CONFIGURE_DIR([jemalloc], [contrib/jemalloc],
+  [ACX_CONFIGURE_DIR([../contrib/jemalloc], [libhpx/jemalloc],
                      ["--disable-valgrind --disable-fill --disable-stats --with-jemalloc-prefix=libhpx_global_ --without-mangling"])
  
-   AC_SUBST(HPX_JEMALLOC_CPPFLAGS, " -I\$(top_srcdir)/$1/include")
-   AC_SUBST(HPX_JEMALLOC_LIBS, "\$(top_builddir)/$1/lib/libjemalloc.a")])
+   AC_SUBST(HPX_JEMALLOC_CPPFLAGS, " -I\$(top_builddir)/libhpx/jemalloc/include")
+   AC_SUBST(HPX_JEMALLOC_LDFLAGS, " -L\$(top_builddir)/libhpx/jemalloc/lib/")
+   AC_SUBST(HPX_JEMALLOC_LIBS, " -ljemalloc")
+   AC_SUBST(HPX_JEMALLOC_LDADD, "\$(top_builddir)/libhpx/jemalloc/lib/libjemalloc.a")])
