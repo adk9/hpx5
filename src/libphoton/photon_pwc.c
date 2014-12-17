@@ -22,7 +22,7 @@ int photon_pwc_init() {
   pwc_table->cind = 0;
   pwc_table->tail = 0;
   pwc_table->size = roundup2pow(_photon_nproc * _LEDGER_SIZE);
-  pwc_table->req_ptrs = (photonRequest*)malloc(_photon_nproc * _LEDGER_SIZE * sizeof(photonRequest));
+  pwc_table->req_ptrs = (photonRequest*)malloc(pwc_table->size * sizeof(photonRequest));
   if (!pwc_table->req_ptrs) {
     log_err("Could not allocate request pointers for PWC table");
     goto error_exit;
@@ -35,7 +35,7 @@ int photon_pwc_init() {
 int photon_pwc_add_req(photonRequest req) {
   uint64_t req_curr, tail;
   int req_ind;
-  req_curr = sync_load(&pwc_table->count, SYNC_ACQUIRE);
+  req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
   req_ind = req_curr & (pwc_table->size - 1);
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
   if ((req_curr - tail) > pwc_table->size) {
@@ -43,7 +43,7 @@ int photon_pwc_add_req(photonRequest req) {
     return PHOTON_ERROR;
   }
   pwc_table->req_ptrs[req_ind] = req;
-  sync_fadd(&pwc_table->count, 1, SYNC_ACQ_REL);
+  sync_fadd(&pwc_table->count, 1, SYNC_RELAXED);
   return PHOTON_OK;
 }
 
@@ -111,6 +111,9 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
       req->remote_buffer.buf.addr = eager_addr;
       req->remote_buffer.buf.size = asize;
       req->remote_buffer.buf.priv = shared_storage->buf.priv;
+      if (flags & PHOTON_REQ_PWC_NO_LCE) {
+	req->flags |= REQUEST_FLAG_NO_LCE;
+      }
     }
     else {
       cookie = NULL_COOKIE;
@@ -161,12 +164,14 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
   p1_flags |= (flags & PHOTON_REQ_NO_CQE)?RDMA_FLAG_NO_CQE:0;
 
-  curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_pwc_ledger);
-  if (curr < 0) {
-    if (curr == -2) {
-      return PHOTON_ERROR_RESOURCE;
+  if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
+    curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_pwc_ledger);
+    if (curr < 0) {
+      if (curr == -2) {
+	return PHOTON_ERROR_RESOURCE;
+      }
+      goto error_exit;
     }
-    goto error_exit;
   }
 
   if (nentries > 0) {
@@ -183,6 +188,9 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
     req->remote_buffer.buf.addr = (uintptr_t)rptr;
     req->remote_buffer.buf.size = size;
     req->remote_buffer.buf.priv = priv;
+    if (flags & PHOTON_REQ_PWC_NO_LCE) {
+      req->flags |= REQUEST_FLAG_NO_LCE;
+    }
   }
   else {
     cookie = NULL_COOKIE;
@@ -261,10 +269,6 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   // or no events for either put
   if (flags & PHOTON_REQ_NO_CQE) {
     nentries = 0;
-  }
-
-  if (flags & PHOTON_REQ_PWC_NO_LCE) {
-    flags |= REQUEST_FLAG_NO_LCE;
   }
 
   rc = photon_pwc_try_packed(proc, ptr, size, rptr, priv, local, remote, flags, nentries);  
@@ -368,7 +372,8 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
 	*flag = 1;
 	*request = req->id;
       }
-      dbg_trace("Completed and removing queued pwc request: 0x%016lx", req->id);
+      dbg_trace("Completed and removing queued pwc request: 0x%016lx (ind=%u)",
+		req->id, req->index);
       photon_free_request(req);
       return PHOTON_OK;
     }
@@ -427,13 +432,14 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       curr = sync_load(&ledger->curr, SYNC_RELAXED);
       offset = curr & (ledger->num_entries - 1);
       entry_iter = &(ledger->entries[offset]);
-      if (entry_iter->request != (photon_rid) UINT64_MAX && 
-	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
-	  *request = entry_iter->request;
+      if (entry_iter->request != (photon_rid) UINT64_MAX) {
+	*request = entry_iter->request;
+	entry_iter->request = UINT64_MAX;
+	if (sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
 	  *flag = 1;
-	  entry_iter->request = UINT64_MAX;
-	  dbg_trace("Popped ledger event with id: 0x%016lx", *request);
+	  dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
 	  return PHOTON_OK;
+	}
       }
     }
   }
@@ -463,7 +469,8 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
 	  *flag = 1;
 	  *request = req->id;
 	}
-	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx", req->id, cookie);
+	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx (ind=%u)",
+		  req->id, cookie, req->index);
 	photon_free_request(req);
 	return PHOTON_OK;
       }

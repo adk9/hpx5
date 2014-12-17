@@ -41,7 +41,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
   do {
     curr = sync_load(&buf->curr, SYNC_RELAXED);
     tail = sync_load(&buf->tail, SYNC_RELAXED);
-    if ((curr - tail) > buf->size) {
+    if ((curr - tail) >= buf->size) {
       log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
       return -1;
     }

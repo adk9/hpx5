@@ -32,7 +32,8 @@ photonRequest photon_get_request(int proc) {
   }
 
   if (req->state && (req->state != REQUEST_COMPLETED)) {
-    log_warn("Overwriting a request (id=0x%016lx) that hasn't completed...", req->id);
+    log_warn("Overwriting a request (id=0x%016lx, ind=%u, state=%d) that hasn't completed (curr=%lu, tail=%lu)",
+	     req->id, req->index, req->state, req_curr, tail);
   }
 
   req->id     = PROC_REQUEST_ID(proc, req_ind);

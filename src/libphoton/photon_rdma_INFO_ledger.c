@@ -41,7 +41,7 @@ int photon_ri_ledger_get_next(int proc, photonRILedger l) {
   do {
     curr = sync_load(&l->curr, SYNC_RELAXED);
     tail = sync_load(&l->tail, SYNC_RELAXED);
-    if ((curr - tail) > l->num_entries) {
+    if ((curr - tail) >= l->num_entries) {
       log_err("Exceeded number of outstanding RI ledger entries - increase ledger size or wait for completion");
       return -1;
     }

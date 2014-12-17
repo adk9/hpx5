@@ -119,6 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("num ledgers: %d", _LEDGER_SIZE);
   dbg_trace("eager buf size: %d", _photon_ebsize);
   dbg_trace("small msg size: %d", _photon_smsize);
+  dbg_info("num requests per rank: %d\n", DEF_NUM_REQUESTS);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -1416,11 +1417,11 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
 	int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
         if ((req->type == EVQUEUE) && (nevents == 0)) {
           dbg_trace("Setting request completed with cookie: 0x%016lx", cookie);
-          req->state = REQUEST_COMPLETED;
+	  req->state = REQUEST_COMPLETED;
 	  // handle pwc local completions
 	  if (req->op == REQUEST_OP_PWC) {
 	    photon_pwc_add_req(req);
-	    dbg_trace("Enqueuing PWC local completion");
+	    dbg_trace("Enqueuing PWC local completion 0x%016lx (ind=%u)", req->id, req->index);
 	  }
         }
 	if (req && (req->type == EVQUEUE) && (req->state == REQUEST_COMPLETED) &&
