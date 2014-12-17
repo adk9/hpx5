@@ -25,14 +25,3 @@ if HAVE_PHOTON
 libnetwork_la_LIBADD  += pwc/libpwc.la
 endif
 
-if HAVE_TREMA
-libnetwork_la_SOURCES += routing/trema.c
-libnetwork_la_CFLAGS  += @TREMA_CFLAGS@
-libnetwork_la_LIBADD  += @TREMA_LIBS@
-endif
-
-if HAVE_FLOODLIGHT
-libnetwork_la_SOURCES += routing/floodlight.c
-libnetwork_la_CFLAGS  += @JANSSON_CFLAGS@ @CURL_CFLAGS@
-libnetwork_la_LIBADD  += @JANSSON_LIBS@ @CURL_LIBS@
-endif
