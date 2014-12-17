@@ -82,7 +82,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
     photonRequest treq;
     treq = photon_lookup_request(cookie);
     if (treq) {
-      int nevents = sync_addf(&treq->events, -1, SYNC_RElAXED);
+      int nevents = sync_addf(&treq->events, -1, SYNC_RELAXED);
       if ((treq->type == EVQUEUE) && (nevents == 0)) {
 	treq->state = REQUEST_COMPLETED;
 	if (treq->op == REQUEST_OP_PWC) {
