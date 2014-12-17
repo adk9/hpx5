@@ -27,13 +27,13 @@ typedef struct photon_buffer_priv_t rdma_key_t;
 
 
 typedef struct pwc_record {
-  void         *rva;
-  const void   *lva;
-  size_t          n;
-  hpx_addr_t  local;
-  hpx_addr_t remote;
-  hpx_action_t   op;
-  rdma_key_t    key;
+  void            *rva;
+  const void      *lva;
+  size_t             n;
+  hpx_addr_t     local;
+  hpx_addr_t    remote;
+  uint64_t  completion;
+  rdma_key_t       key;
 } pwc_record_t;
 
 
@@ -141,7 +141,7 @@ static int _expand(pwc_buffer_t *buffer, uint32_t size) {
 
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                  hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                  hpx_addr_t local, hpx_addr_t remote, uint64_t completion,
                   rdma_key_t key)
 {
   if (remote != HPX_NULL) {
@@ -150,11 +150,12 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
 
   int flags = PHOTON_REQ_ONE_CQE |
               ((local) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+              ((completion) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
   int rank = buffer->rank;
   void *vlva = (void*)lva;
-  int e = photon_put_with_completion(rank, vlva, n, rva, key, local, op, flags);
+  int e = photon_put_with_completion(rank, vlva, n, rva, key, local, completion,
+                                     flags);
   switch (e) {
    case PHOTON_OK:
     return LIBHPX_OK;
@@ -166,9 +167,21 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
 }
 
 
+static int _start_record(pwc_buffer_t *b, pwc_record_t *r) {
+  void *rva = r->rva;
+  const void *lva = r->lva;
+  size_t n = r->n;
+  hpx_addr_t local = r->local;
+  hpx_addr_t remote = r->remote;
+  uint64_t completion = r->completion;
+  rdma_key_t key = r->key;
+  return _start(b, rva, lva, n, local, remote, completion, key);
+}
+
+
 /// Try to append a pwc request to be started in the future.
 static int _append(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                   hpx_addr_t local, hpx_addr_t remote, uint64_t completion,
                    rdma_key_t key)
 {
   uint32_t size = buffer->size;
@@ -186,7 +199,7 @@ static int _append(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
   buffer->records[i].n = n;
   buffer->records[i].local = local;
   buffer->records[i].remote = remote;
-  buffer->records[i].op = op;
+  buffer->records[i].completion = completion;
   buffer->records[i].key = key;
   return LIBHPX_OK;
 }
@@ -218,13 +231,13 @@ void pwc_buffer_fini(pwc_buffer_t *buffer) {
 
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
+                   hpx_addr_t local, hpx_addr_t remote, uint64_t completion,
                    segment_t *segment)
 {
   void *rva = segment_offset_to_rva(segment, roff);
 
   if (pwc_buffer_progress(buffer) == 0) {
-    int e = _start(buffer, rva, lva, n, local, remote, op, segment->key);
+    int e = _start(buffer, rva, lva, n, local, remote, completion, segment->key);
 
     if (LIBHPX_OK == e) {
       return LIBHPX_OK;
@@ -235,7 +248,8 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
     }
   }
 
-  if (LIBHPX_OK != _append(buffer, rva, lva, n, local, remote, op, segment->key)) {
+  int e = _append(buffer, rva, lva, n, local, remote, completion, segment->key);
+  if (LIBHPX_OK != e) {
     return dbg_error("could not append put request\n");
   }
 
@@ -249,8 +263,7 @@ int pwc_buffer_progress(pwc_buffer_t *buffer) {
     uint64_t next = buffer->min++;
     uint32_t i = _index_of(next, size);
     pwc_record_t *r = buffer->records + i;
-    int e = _start(buffer, r->rva, r->lva, r->n, r->local, r->remote, r->op,
-                   r->key);
+    int e = _start_record(buffer, r);
 
     if (LIBHPX_RETRY == e) {
       return buffer->max - buffer->min;
