@@ -575,8 +575,11 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     proc = photon_wait_send_request_rdma(tag);
   }
 
-  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_rcv_info_ledger);
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_rcv_info_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
   dbg_trace("New curr (proc=%d): %u", proc, curr);
@@ -633,7 +636,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
     offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
     if (offset < 0) {
       if (offset == -2) {
-	dbg_warn("Exceeding known receiver eager buf progress!");
+	dbg_trace("Exceeding known receiver eager buf progress!");
 	return PHOTON_ERROR_RESOURCE;
       }
       else {
@@ -720,11 +723,14 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
   uintptr_t rmt_addr;
   photonRequest req;
   photonRILedgerEntry entry;
-  
+
   // XXX: no flow control here yet
-  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
   if (curr < 0) {
-    dbg_warn("Exceeding known receiver snd_info progress!");
+    if (curr == -2) {
+      dbg_warn("Exceeding known receiver snd_info progress!");
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
   dbg_trace("new curr == %d", curr);
@@ -845,8 +851,11 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
   }  
 
-  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
   dbg_trace("new curr == %d", curr);
@@ -989,7 +998,7 @@ static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photo
       else goto start;
     }
   } while(1);
-  
+
   if (request != NULL) {
     photonRequest req;
     if (eager) {

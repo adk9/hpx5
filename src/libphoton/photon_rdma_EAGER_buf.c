@@ -82,7 +82,7 @@ static int _get_remote_progress(int proc, photonEagerBuf buf) {
   rloc = 0;
   if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
     
-    dbg_trace("Fetching remote curr at rcur: %llu", buf->acct.rcur);
+    dbg_trace("Fetching remote eager curr at rcur: %llu", buf->acct.rcur);
 
     rmt_addr = buf->remote.addr + PHOTON_EBUF_SSIZE(buf->size) -
       sizeof(struct photon_rdma_eager_buf_t) + offsetof(struct photon_rdma_eager_buf_t, curr); 

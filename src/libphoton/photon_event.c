@@ -32,8 +32,18 @@ int __photon_handle_cq_special(photon_rid cookie) {
     }
     break;
   case REQUEST_COOK_RINFO:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_rcv_info_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
     break;
   case REQUEST_COOK_SINFO:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_snd_info_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
     break;
   case REQUEST_COOK_ELEDG:
     {

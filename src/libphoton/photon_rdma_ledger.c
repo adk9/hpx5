@@ -73,7 +73,7 @@ static int _get_remote_progress(int proc, photonLedger buf) {
   rloc = 0;
   if (sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
       
-    dbg_trace("Fetching remote curr at rcur: %llu", buf->acct.rcur);
+    dbg_trace("Fetching remote ledger curr at rcur: %llu", buf->acct.rcur);
     
     rmt_addr = buf->remote.addr + PHOTON_LEDG_SSIZE(buf->num_entries) -
       sizeof(struct photon_rdma_ledger_t) + offsetof(struct photon_rdma_ledger_t, curr); 

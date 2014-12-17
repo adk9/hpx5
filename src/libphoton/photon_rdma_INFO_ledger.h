@@ -28,6 +28,6 @@ typedef struct photon_ri_ledger_t * photonRILedger;
 
 PHOTON_INTERNAL photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, int ledger_size, int prefix);
 PHOTON_INTERNAL void photon_ri_ledger_free(photonRILedger ledger);
-PHOTON_INTERNAL int photon_ri_ledger_get_next(photonRILedger ledger);
+PHOTON_INTERNAL int photon_ri_ledger_get_next(int proc, photonRILedger ledger);
 
 #endif
