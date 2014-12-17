@@ -33,11 +33,11 @@ typedef struct {
 } peer_t;
 
 static inline int peer_put(peer_t *peer, size_t roff, const void *lva, size_t n,
-                           hpx_addr_t local, hpx_addr_t remote, hpx_action_t op,
-                           segment_id_t segment_id) {
+                           hpx_addr_t local, hpx_addr_t remote,
+                           uint64_t completion, segment_id_t segment_id) {
   pwc_buffer_t *puts = &peer->puts;
   segment_t *segment = &peer->segments[segment_id];
-  return pwc_buffer_put(puts, roff, lva, n, local, remote, op, segment);
+  return pwc_buffer_put(puts, roff, lva, n, local, remote, completion, segment);
 }
 
 
