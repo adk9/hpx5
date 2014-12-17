@@ -45,12 +45,12 @@ static int _payload_size_to_tag(uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
   DEBUG_IF(true) {
-    uint32_t tag_ub;
-    int flag;
+    int *tag_ub;
+    int flag = 0;
     int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
     dbg_check(e, "Could not extract tag upper bound\n");
-    if (tag_ub <= tag) {
-      dbg_error("tag value out of bounds (%d > %d)\n", tag, tag_ub);
+    if (*tag_ub <= tag) {
+      dbg_error("tag value out of bounds (%d > %d)\n", tag, *tag_ub);
     }
   }
   return tag;
