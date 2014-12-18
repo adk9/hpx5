@@ -21,7 +21,6 @@
 #define CDM_ID_MULTIPLIER        1000
 #define POST_ID_MULTIPLIER       1000
 #define GEMINI_DEVICE_ID         0x0
-#define MAX_CQ_ENTRIES           1000
 
 int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugni_cnct_info *remote_info);
 

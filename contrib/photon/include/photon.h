@@ -107,7 +107,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
 #define PHOTON_ERROR           0x0002
-#define PHOTON_SHUTDOWN        0x0004
+#define PHOTON_ERROR_RESOURCE  0x0004
+#define PHOTON_SHUTDOWN        0x0008
 
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
@@ -119,10 +120,12 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_RECV_LEDGER     0x0001
 
 #define PHOTON_REQ_NIL         0x0000
-#define PHOTON_REQ_USERID      0x0001
-#define PHOTON_REQ_NO_CQE      0x0002
-#define PHOTON_REQ_ONE_CQE     0x0004
-#define PHOTON_REQ_COMPLETED   0x0008
+#define PHOTON_REQ_USERID      0x0001 
+#define PHOTON_REQ_NO_CQE      0x0002  // don't generate local CQ events, implies PWC_NO_LCE
+#define PHOTON_REQ_ONE_CQE     0x0004  // only generate one CQ event (for multiple ops, 2-put)
+#define PHOTON_REQ_COMPLETED   0x0008  // explitily set a request completed for FIN
+#define PHOTON_REQ_PWC_NO_LCE  0x0010  // don't return a local rid (pwc-specific)
+#define PHOTON_REQ_PWC_NO_RCE  0x0020  // don't send a remote rid (pwc-specific)
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
@@ -170,6 +173,8 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // RDMA with completion
 // If @p ptr is NULL, then only completion value in @p remote is sent
 // The remote buffer is specified in @p rptr and the rkey in @p priv
+// The default behavior is to enable all CQ events and local and
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
 int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
