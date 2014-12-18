@@ -142,7 +142,7 @@ HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
 HPX_WITH_VERBS
-HPX_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
+HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 
 AM_CONDITIONAL([HAVE_XSP], [false])
 AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [false])
