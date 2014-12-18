@@ -220,13 +220,19 @@ _progress_sends() {
       assert((size_t)pwc_args->remote_ptr + pwc_args->size <
              _netfuture_table.buffers[pwc_args->remote_rank].addr +
              _netfuture_cfg.max_size);
-      phstat =
-        photon_put_with_completion(pwc_args->remote_rank,
-                                   pwc_args->data, pwc_args->size,
-                                   pwc_args->remote_ptr, pwc_args->remote_priv,
-                                   pwc_args->local_rid, pwc_args->remote_rid,
-                                   PHOTON_REQ_ONE_CQE);
-      assert(phstat == PHOTON_OK);
+      do {
+	phstat =
+	  photon_put_with_completion(pwc_args->remote_rank,
+				     pwc_args->data, pwc_args->size,
+				     pwc_args->remote_ptr, pwc_args->remote_priv,
+				     pwc_args->local_rid, pwc_args->remote_rid,
+				     0);
+	assert(phstat != PHOTON_ERROR);
+	if (phstat == PHOTON_ERROR_RESOURCE) {
+	  //printf("retrying...\n");
+	  //usleep(100000);
+	}
+      } while (phstat == PHOTON_ERROR_RESOURCE);
       free(pwc_args);
     }
   }
