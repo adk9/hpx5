@@ -127,7 +127,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   const hpx_addr_t index
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), _index_array_block_size);
   _sssp_visit_vertex_args_t sssp_args = { .graph = args->graph, .distance = 0 };
-  printf("Calling sssp visit source action\n");
+  //printf("Calling sssp visit source action to verify the neighbours\n");
   //hpx_call_sync(index, _sssp_visit_source, &sssp_args, sizeof(sssp_args), HPX_NULL,0);
 
   // DC is only supported with count termination now.
