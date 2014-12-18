@@ -78,14 +78,7 @@ static void *_run(void *worker) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  bool pinned = action_is_pinned(here->actions, hpx_parcel_get_action(parcel));
-  if (pinned) {
-    hpx_gas_try_pin(parcel->target, NULL);
-  }
   int status = action_run_handler(parcel);
-  if (pinned) {
-    hpx_gas_unpin(parcel->target);
-  }
   switch (status) {
    default:
     dbg_error("action: produced unhandled error %i.\n", (int)status);
@@ -243,7 +236,9 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = env;
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
-  thread_delete(stack);
+  if (stack) {
+    thread_delete(stack);
+  }
   hpx_parcel_send(prev, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -499,12 +494,11 @@ void scheduler_exec(hpx_parcel_t *p) {
   switch (status) {
     default:
       dbg_error("action: produced unhandled error %i.\n", (int)status);
-      hpx_shutdown(status);
     case HPX_ERROR:
       dbg_error("action: produced error.\n");
-      hpx_abort();
     case HPX_RESEND:
       hpx_parcel_send(p, HPX_NULL);
+      break;
     case HPX_SUCCESS:
     case HPX_LCO_ERROR:
       process_recover_credit(p);
@@ -562,6 +556,11 @@ void scheduler_yield(void) {
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
     return;
+
+  // parcel represents a task or an interrupt
+  if (!parcel_get_stack(from)) {
+    return;
+  }
 
   assert(to);
   assert(parcel_get_stack(to));

@@ -229,7 +229,15 @@ int action_run_handler(hpx_parcel_t *parcel) {
   void *args = hpx_parcel_get_data(parcel);
 
   hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
-  return handler(args);
+  bool pinned = action_is_pinned(here->actions, id);
+  if (pinned) {
+    hpx_gas_try_pin(target, NULL);
+  }
+  int e = handler(args);
+  if (pinned) {
+    hpx_gas_unpin(target);
+  }
+  return e;
 }
 
 
