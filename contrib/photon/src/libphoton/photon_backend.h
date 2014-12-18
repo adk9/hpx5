@@ -93,10 +93,11 @@ typedef struct photon_ud_hdr_t {
 } photon_ud_hdr;
 
 typedef struct photon_eb_hdr_t {
+  volatile uint8_t header;
   photon_rid request;
   uintptr_t addr;
   uint16_t length;
-  volatile uint8_t head;
+  volatile uint8_t footer;
 } photon_eb_hdr;
 
 typedef struct photon_event_status_t * photonEventStatus;

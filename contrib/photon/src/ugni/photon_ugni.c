@@ -148,7 +148,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   descriptors = (photon_gni_descriptor*)calloc(_photon_nproc, sizeof(photon_gni_descriptor));
   for (i=0; i<_photon_nproc; i++) {
     sync_tatas_init(&descriptors[i].lock);
-    descriptors[i].entries = (gni_post_descriptor_t*)calloc(_LEDGER_SIZE, sizeof(gni_post_descriptor_t));
+    descriptors[i].entries = (gni_post_descriptor_t*)calloc(MAX_CQ_ENTRIES, sizeof(gni_post_descriptor_t));
   }
 
   __initialized = 1;
@@ -176,7 +176,7 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   int err, curr, curr_ind;
   
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
-  curr_ind = curr & (_LEDGER_SIZE - 1);
+  curr_ind = curr & (MAX_CQ_ENTRIES - 1);
   fma_desc = &(descriptors[args->proc].entries[curr_ind]);
 
   if (flags & RDMA_FLAG_NO_CQE) {
@@ -223,7 +223,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   int err, curr, curr_ind;
   
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
-  curr_ind = curr & (_LEDGER_SIZE - 1);
+  curr_ind = curr & (MAX_CQ_ENTRIES - 1);
   fma_desc = &(descriptors[args->proc].entries[curr_ind]);
 
   if (flags & RDMA_FLAG_NO_CQE) {
@@ -316,13 +316,14 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int ugni_get_event(photonEventStatus stat) {
   gni_post_descriptor_t *event_post_desc_ptr;
   gni_cq_entry_t current_event;
-  uint64_t cookie;
+  uint64_t cookie = NULL_COOKIE;
   int rc;
 
   sync_tatas_acquire(&cq_lock);
   rc = get_cq_event(ugni_ctx.local_cq_handle, 1, 0, &current_event);
   if (rc == 0) {
     rc = GNI_GetCompleted(ugni_ctx.local_cq_handle, current_event, &event_post_desc_ptr);
+    cookie = event_post_desc_ptr->post_id;
     sync_tatas_release(&cq_lock);
     if (rc != GNI_RC_SUCCESS) {
       dbg_err("GNI_GetCompleted  data ERROR status: %s (%d)", gni_err_str[rc], rc);
@@ -336,10 +337,10 @@ static int ugni_get_event(photonEventStatus stat) {
   else {
     sync_tatas_release(&cq_lock);
     /* rc == 2 is an overrun */
-    dbg_err("Error getting CQ event: %d\n", rc);
+    dbg_err("Error getting CQ event: %d", rc);
+    return 1;
   }
   
-  cookie = event_post_desc_ptr->post_id;
   dbg_trace("received event with cookie:%"PRIx64, cookie);
 
   stat->id = cookie;

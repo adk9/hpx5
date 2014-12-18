@@ -5,6 +5,12 @@
 #include "config.h"
 #include "photon.h"
 
+struct photon_acct_t {
+  volatile uint64_t rcur;
+  uint32_t rloc;
+  uint32_t event_prefix;
+};
+
 typedef struct photon_buffer_internal_t {
   struct photon_buffer_t buf;
   photon_rid request;

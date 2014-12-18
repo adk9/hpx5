@@ -11,7 +11,7 @@ struct photon_config_t cfg = {
     .use_cma = 0,
     .use_ud = 0,
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_0",
+    .ib_dev = "mlx4_0+qib0",
   },
   .ugni = {
     .bte_thresh = -1,
