@@ -276,11 +276,14 @@ static int
 _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
   void *b = (void*)data;
+  int e;
 
   //int e = photon_send(&daddr, b, n, 0, r);
-  int e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
-  if (e != PHOTON_OK)
-    return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+  do {
+    e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
+    if (e == PHOTON_ERROR)
+      return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+  } while (e == PHOTON_ERROR_RESOURCE);
   return HPX_SUCCESS;
 }
 
@@ -356,11 +359,13 @@ _test(transport_class_t *t, void *request, int *success)
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
-    e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
-    if (e != PHOTON_OK) {
-      return dbg_error("photon: could not send FIN back to %lu.\n",
-                       status.src_addr.global.proc_id);
-    }
+    do {
+      e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
+      if (e == PHOTON_ERROR) {
+	return dbg_error("photon: could not send FIN back to %lu.\n",
+			 status.src_addr.global.proc_id);
+      }
+    } while (e == PHOTON_ERROR_RESOURCE);
   }
 
   return HPX_SUCCESS;
@@ -380,9 +385,9 @@ _progress(transport_class_t *t, transport_op_t op)
     {
       request_t **i = &(photon->progress)->pending_sends;
       while (*i != NULL) {
-    request_t *j = *i;
-    photon_cancel((photon_rid)j->request, 0);
-    *i = j->next;
+	request_t *j = *i;
+	photon_cancel((photon_rid)j->request, 0);
+	*i = j->next;
       }
     }
     break;
@@ -439,7 +444,7 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   char* backend;
   // int ib_port;
   int use_cma;
-  int ledger_entries = -1;  // default is 64
+  int ledger_entries = 512;  // default val (-1) is 64
   int val = 0;
 
   // TODO: make eth_dev and ib_dev runtime configurable!
@@ -474,10 +479,10 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->ibv.eth_dev         = eth_dev;
   cfg->ibv.ib_dev          = ib_dev;
-  cfg->cap.eager_buf_size  = -1;     // default 128k
+  cfg->cap.eager_buf_size  = -1;     // default 256k
   cfg->cap.small_msg_size  = -1;     // default 8192
-  cfg->cap.small_pwc_size  =  1024;     // 0 disabled
-  cfg->cap.ledger_entries  = ledger_entries;     // default 64;
+  cfg->cap.small_pwc_size  =  1024;  // 0 disabled
+  cfg->cap.ledger_entries  = ledger_entries;
   cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
   cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
   cfg->backend             = backend;
