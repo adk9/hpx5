@@ -119,28 +119,24 @@ static int _sssp_check_for_nonzero_neighbor_action() {
     return HPX_RESEND;
   const size_t num_edges = vertex->num_edges;
   hpx_gas_unpin(target);
-  printf("Num edges--: %" PRIu64 " \n",num_edges);
   HPX_THREAD_CONTINUE(num_edges);
   return HPX_SUCCESS;
 }
 
 static int _sssp_visit_source_action() {
   const hpx_addr_t target = hpx_thread_current_target();
-  
   hpx_addr_t vertex;
   hpx_addr_t *v;
   if (!hpx_gas_try_pin(target, (void**)&v))
     return HPX_RESEND;
   vertex = *v;
   hpx_gas_unpin(target);
-  printf("Source invocation in %" SSSP_UINT_PRI "\n", vertex); 
   size_t num_edges;
-  return hpx_call_sync(vertex, _sssp_check_for_nonzero_neighbor, NULL, 0, &num_edges, sizeof(num_edges));
+  hpx_call_sync(vertex, _sssp_check_for_nonzero_neighbor, NULL, 0, &num_edges, sizeof(num_edges));
+  HPX_THREAD_CONTINUE(num_edges);
+  return HPX_SUCCESS;
 }
 
-
-//void
-//sample_roots (int64_t * root, int64_t nroot, int64_t KEY)
 void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t numvertices,adj_list_t *graph)
 {
   /* Method A in Jeffrey Scott Vitter, "An Efficient Algorithm for
@@ -168,31 +164,29 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
       quot *= top / n;
     }
     cur += S+1;
-    /* const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
-    /* size_t num_edges = 0; */
-    /* hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
-    /* printf("Num edges %zu\n",num_edges); */
-    /* if(num_edges==0){ */
-    /*   printf("Escaping one source with no edges\n"); */
-    /*   m--; */
-    /*   continue; */
-    /* } */
+    const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size);
+    size_t num_edges = 0;
+    hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
+    if(num_edges==0){
+      m--;
+      continue;
+    }
     root[m] = cur;
     n -= 1;
   }
-  //while(true){
+  while(true){
     r = dprng (KEY, nroot-1);
     S = floor (n * r);
     cur += S+1;
-    /* const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
-    /* SSSP_UINT_T num_edges; */
-    /* hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
-    /* if(num_edges==0){ */
-    /*   continue; */
-    /* } */
+    const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size);
+    SSSP_UINT_T num_edges;
+    hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
+    if(num_edges==0){
+      continue;
+    }
     root[nroot-1] = cur;
-    //break;
-    //}
+    break;
+  }
 
 #if !defined (NDEBUG)
   for (sssp_uint_t m = 0; m < nroot; ++m) {
