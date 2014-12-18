@@ -78,8 +78,7 @@ void generate_kronecker_range(
        const uint_fast32_t seed[5] /* All values in [0, 2^31 - 1) */,
        int logN /* In base 2 */,
        int64_t start_edge, int64_t end_edge /* Indices (in [0, M)) for the edges to generate */,
-       const graph500_edge_list_local_args_t * const args/*packed_edge* edges /* Size >= end_edge - start_edge */
-);
+       const graph500_edge_list_local_args_t * const args);
 
 void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const graph500_edge_list_local_args_t * const args/*packed_edge* result*/, uint64_t val0, uint64_t val1, int64_t start_edge, int64_t* count);
 
