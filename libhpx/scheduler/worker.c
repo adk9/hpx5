@@ -701,6 +701,11 @@ hpx_addr_t hpx_thread_current_cont_target(void) {
 }
 
 
+hpx_action_t hpx_thread_current_action(void) {
+  return (self && self->current) ? self->current->action : HPX_ACTION_NULL;
+}
+
+
 hpx_action_t hpx_thread_current_cont_action(void) {
   return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
