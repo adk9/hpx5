@@ -158,7 +158,7 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
   photonLedgerEntry entry;
   uint64_t cookie;
   uintptr_t rmt_addr;
-  int rc, curr;
+  int rc, curr = 0;
   int p0_flags = 0, p1_flags = 0;
   
   p0_flags |= ((flags & PHOTON_REQ_ONE_CQE) || (flags & PHOTON_REQ_NO_CQE))?RDMA_FLAG_NO_CQE:0;
