@@ -4,15 +4,25 @@
 #include "photon_backend.h"
 
 #define PHOTON_TPROC (_photon_nproc + _photon_nforw)
-#define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_ri_ledger_entry_t))
-#define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * _LEDGER_SIZE * sizeof(struct photon_rdma_ledger_entry_t))
-#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * _photon_ebsize)
-#define PHOTON_NP_PBUF_SIZE (PHOTON_TPROC * _photon_ebsize)
+
+#define PHOTON_INFO_SSIZE(s) (s * sizeof(struct photon_ri_ledger_entry_t) + sizeof(struct photon_ri_ledger_t))
+#define PHOTON_LEDG_SSIZE(s) (s * sizeof(struct photon_rdma_ledger_entry_t) + sizeof(struct photon_rdma_ledger_t))
+#define PHOTON_EBUF_SSIZE(s) (s + sizeof(struct photon_rdma_eager_buf_t))
+
+#define PHOTON_INFO_SIZE (PHOTON_INFO_SSIZE(_LEDGER_SIZE))
+#define PHOTON_LEDG_SIZE (PHOTON_LEDG_SSIZE(_LEDGER_SIZE))
+#define PHOTON_EBUF_SIZE (PHOTON_EBUF_SSIZE(_photon_ebsize))
+
+#define PHOTON_NP_INFO_SIZE (PHOTON_TPROC * PHOTON_INFO_SIZE)
+#define PHOTON_NP_LEDG_SIZE (PHOTON_TPROC * PHOTON_LEDG_SIZE)
+#define PHOTON_NP_EBUF_SIZE (PHOTON_TPROC * PHOTON_EBUF_SIZE)
 
 // The ledger buffer (shared_storage) is laid out as follows:
 // | local_rcv | remote_rcv | local_snd | remote_snd | local_fin | remote_fin |
 // | local_pwc | remote_pwc | local_eager | remote_eager | local_eager_bufs | remote_eager_bufs |
 // | local_pwc_bufs | remote_pwc_bufs |
+
+// accounting structs are now included at the end of each buffer
 
 #define PHOTON_LRI_PTR(a) (a)
 #define PHOTON_RRI_PTR(a) (a + PHOTON_NP_INFO_SIZE)

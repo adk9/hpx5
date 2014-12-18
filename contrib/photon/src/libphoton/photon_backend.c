@@ -119,6 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("num ledgers: %d", _LEDGER_SIZE);
   dbg_trace("eager buf size: %d", _photon_ebsize);
   dbg_trace("small msg size: %d", _photon_smsize);
+  dbg_trace("num requests per rank: %d\n", DEF_NUM_REQUESTS);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -170,7 +171,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   pwc_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_ledger_size = 2 * PHOTON_NP_LEDG_SIZE;
   eager_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
-  pwc_bufsize = 2 * PHOTON_NP_PBUF_SIZE;
+  pwc_bufsize = 2 * PHOTON_NP_EBUF_SIZE;
   bufsize = info_ledger_size + fin_ledger_size + pwc_ledger_size + eager_ledger_size;
   bufsize += (eager_bufsize + pwc_bufsize);
 
@@ -575,8 +576,11 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
     proc = photon_wait_send_request_rdma(tag);
   }
 
-  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_rcv_info_ledger);
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_rcv_info_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
   dbg_trace("New curr (proc=%d): %u", proc, curr);
@@ -620,17 +624,118 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
-  photonBI db;
-  photonRequest req;
-  int curr, rc;
+static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon_rid *request, photonBI db) {
+  if (size <= _photon_smsize) {
+    photonRequest req;
+    uintptr_t rmt_addr, eager_addr;
+    photon_rid eager_cookie;
+    photonLedgerEntry entry;
+    photonEagerBuf eb;
+    photonLedger l;
+    int offset, rc, curr;
+    
+    eb = photon_processes[proc].remote_eager_buf;
+    offset = photon_rdma_eager_buf_get_offset(proc, eb, size, size);
+    if (offset < 0) {
+      if (offset == -2) {
+	dbg_trace("Exceeding known receiver eager buf progress!");
+	return PHOTON_ERROR_RESOURCE;
+      }
+      else {
+	goto error_exit;
+      }
+    }
 
-  dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
-  
-  if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
-    log_err("Requested post of send buffer for ptr not in table");
+    l = photon_processes[proc].remote_eager_ledger;
+    curr = photon_rdma_ledger_get_next(proc, l);
+    if (curr < 0) {
+      if (offset == -2) {
+	dbg_trace("Exceeding known receiver eager ledger progress!");
+	return PHOTON_ERROR_RESOURCE;
+      }
+      goto error_exit;
+    }
+
+    req = photon_get_request(proc);
+    if (!req) {
+      log_err("Could not get request descriptor for proc %d", proc);
+      goto error_exit;
+    }    
+    // photon_post_send_buffer_rdma() initiates a sender initiated handshake.For this reason,
+    // we don't care when the function is completed, but rather when the transfer associated with
+    // this handshake is completed. This will be reflected in the LEDGER by the corresponding  
+    // photon_send_FIN() posted by the receiver.
+    req->state = REQUEST_PENDING;
+    req->op = REQUEST_OP_SENDBUF;
+    req->flags = REQUEST_FLAG_EAGER;
+    req->type = LEDGER;
+    req->proc = proc;
+    req->tag = tag;
+    req->length = size;
+    req->events = 1;
+    
+    if (request != NULL) {
+      *request = req->id;
+    }
+    else {
+      log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
+    }
+
+    eager_addr = (uintptr_t)eb->remote.addr + offset;
+    eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;
+    
+    dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
+				    &eb->remote, eager_cookie, 0);
+    
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
+      goto error_exit;
+    }
+    
+    dbg_trace("new eager curr == %d", curr);
+    rmt_addr  = l->remote.addr + (curr * sizeof(*entry));
+    
+    entry = &l->entries[curr]; 
+    // encode the eager size and request id in the eager ledger
+    entry->request = (size<<32) | (req->id<<32>>32);
+    
+    dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
+    
+    rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+				    &(photon_processes[proc].remote_eager_ledger->remote), req->id, 0);
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA PUT failed for 0x%016lx", req->id);
+      goto error_exit;
+    }
+
+    return PHOTON_OK;
+  }
+  else {
+    return PHOTON_ERROR_RESOURCE;
+  }
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
+static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_rid *request, photonBI db) {
+  int curr, rc;
+  uintptr_t rmt_addr;
+  photonRequest req;
+  photonRILedgerEntry entry;
+
+  // XXX: no flow control here yet
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
+  if (curr < 0) {
+    if (curr == -2) {
+      dbg_trace("Exceeding known receiver snd_info progress!");
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
+  dbg_trace("new curr == %d", curr);
   
   req = photon_get_request(proc);
   if (!req) {
@@ -638,19 +743,15 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
   
-  // photon_post_send_buffer_rdma() initiates a sender initiated handshake.For this reason,
-  // we don't care when the function is completed, but rather when the transfer associated with
-  // this handshake is completed. This will be reflected in the LEDGER by the corresponding  
-  // photon_send_FIN() posted by the receiver.
   req->state = REQUEST_PENDING;
   req->op = REQUEST_OP_SENDBUF;
-  req->type = LEDGER;
   req->flags = REQUEST_FLAG_NIL;
+  req->type = LEDGER;
   req->proc = proc;
   req->tag = tag;
   req->length = size;
   req->events = 1;
-
+  
   if (request != NULL) {
     *request = req->id;
   }
@@ -658,103 +759,68 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
   }
   
-  {
-    if (size <= _photon_smsize) {
-      uintptr_t rmt_addr, eager_addr;
-      photon_rid eager_cookie;
-      photonLedgerEntry entry;
-      photonEagerBuf eb;
-      int offset;
-
-      eb = photon_processes[proc].remote_eager_buf;
-      offset = photon_rdma_eager_buf_get_offset(eb, size, size);
-      if (offset < 0) {
-	log_err("Exceeded outstanding eager buffer limit - increase eager buf size or wait for local completion");
-	goto error_exit;
-      }
-      eager_addr = (uintptr_t)eb->remote.addr + offset;
-      eager_cookie = (( (uint64_t)REQUEST_COOK_EAGER)<<32) | (req->id<<32)>>32;
-      
-      dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
-      
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
-				      &eb->remote, eager_cookie, 0);
-
-      if (rc != PHOTON_OK) {
-	dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);
-	goto error_exit;
-      }
-
-      curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_eager_ledger);
-      if (curr < 0) {
-	goto error_exit;
-      }
-      dbg_trace("new eager curr == %d", curr);
-      rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
-      rmt_addr += curr * sizeof(*entry);
-
-      entry = &photon_processes[proc].remote_eager_ledger->entries[curr]; 
-      // encode the eager size and request id in the eager ledger
-      entry->request = (size<<32) | (req->id<<32>>32);
-
-      dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
-     
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_eager_ledger->remote), req->id, 0);
-      if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx", req->id);
-        goto error_exit;
-      }
-      req->flags = REQUEST_FLAG_EAGER;
-    }
-    else {
-      uintptr_t rmt_addr;
-      photonRILedgerEntry entry;
-
-      curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
-      if (curr < 0) {
-	goto error_exit;
-      }
-      dbg_trace("new curr == %d", curr);
-
-      rmt_addr  = photon_processes[proc].remote_snd_info_ledger->remote.addr;
-      rmt_addr += curr * sizeof(*entry);
-      entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
-      
-      // fill in what we're going to transfer
-      entry->header = 1;
-      entry->request = req->id;
-      entry->tag = tag;
-      entry->addr = (uintptr_t)ptr;
-      entry->size = size;
-      entry->priv = db->buf.priv;
-      entry->footer = 1;
-      entry->flags = REQUEST_FLAG_NIL;
-      
-      dbg_trace("Post send request");
-      dbg_trace("Request: 0x%016lx", entry->request);
-      dbg_trace("Addr: %p", (void *)entry->addr);
-      dbg_trace("Size: %lu", entry->size);
-      dbg_trace("Tag: %d", entry->tag);
-      dbg_trace("Keys: 0x%016lx / 0x%016lx", entry->priv.key0, entry->priv.key1);
-      dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
-
-      rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                      &(photon_processes[proc].remote_snd_info_ledger->remote), req->id, 0);
-      if (rc != PHOTON_OK) {
-        dbg_err("RDMA PUT failed for 0x%016lx", req->id);
-        goto error_exit;
-      }
-    }
+  rmt_addr  = photon_processes[proc].remote_snd_info_ledger->remote.addr;
+  rmt_addr += curr * sizeof(*entry);
+  entry = &photon_processes[proc].remote_snd_info_ledger->entries[curr];
+  
+  // fill in what we're going to transfer
+  entry->header = 1;
+  entry->request = req->id;
+  entry->tag = tag;
+  entry->addr = (uintptr_t)ptr;
+  entry->size = size;
+  entry->priv = db->buf.priv;
+  entry->footer = 1;
+  entry->flags = REQUEST_FLAG_NIL;
+  
+  dbg_trace("Post send request");
+  dbg_trace("Request: 0x%016lx", entry->request);
+  dbg_trace("Addr: %p", (void *)entry->addr);
+  dbg_trace("Size: %lu", entry->size);
+  dbg_trace("Tag: %d", entry->tag);
+  dbg_trace("Keys: 0x%016lx / 0x%016lx", entry->priv.key0, entry->priv.key1);
+  dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
+  
+  rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
+				  &(photon_processes[proc].remote_snd_info_ledger->remote), req->id, 0);
+  if (rc != PHOTON_OK) {
+    dbg_err("RDMA PUT failed for 0x%016lx", req->id);
+    goto error_exit;
   }
   
   return PHOTON_OK;
+  
+ error_exit:
+  return PHOTON_ERROR;
+}
 
-error_exit:
+static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
+  photonBI db;
+  int rc;
+  
+  dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
+  
+  if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
+    log_err("Requested post of send buffer for ptr not in table");
+    goto error_exit;
+  }
+  
+  rc = _photon_try_eager(proc, ptr, size, tag, request, db);
+  if (rc == PHOTON_ERROR_RESOURCE) {
+    rc = _photon_try_rndv(proc, ptr, size, tag, request, db);
+  }
+  
+  if (rc != PHOTON_OK) {
+    goto error_exit;
+  }
+
+  return PHOTON_OK;
+  
+ error_exit:
   if (request != NULL) {
     *request = NULL_COOKIE;
   }
-  return PHOTON_ERROR;
+  return rc;
 }
 
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
@@ -787,8 +853,11 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
     log_warn("request == NULL, could not return request ID: 0x%016lx", req->id);
   }  
 
-  curr = photon_ri_ledger_get_next(photon_processes[proc].remote_snd_info_ledger);
+  curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
   dbg_trace("new curr == %d", curr);
@@ -835,59 +904,41 @@ error_exit:
 
 static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonRILedgerEntry curr_entry, entry_iterator;
-  struct photon_ri_ledger_entry_t tmp_entry;
-  int count, curr, still_searching, num_entries;
+  uint64_t curr;
+  int c_ind;
 
   dbg_trace("(%d, %d)", proc, tag);
+
+ start:
+  curr = sync_load(&photon_processes[proc].local_rcv_info_ledger->curr, SYNC_RELAXED);
+  c_ind = curr & (photon_processes[proc].local_rcv_info_ledger->num_entries - 1);
+  curr_entry = &(photon_processes[proc].local_rcv_info_ledger->entries[c_ind]);
+  
   dbg_trace("Spinning on info ledger looking for receive request");
-  dbg_trace("curr == %d", photon_processes[proc].local_rcv_info_ledger->curr);
+  dbg_trace("looking in position %d/%p", c_ind, curr_entry);
 
-  curr = photon_processes[proc].local_rcv_info_ledger->curr;
-  curr_entry = &(photon_processes[proc].local_rcv_info_ledger->entries[curr]);
-
-  dbg_trace("looking in position %d/%p", photon_processes[proc].local_rcv_info_ledger->curr, curr_entry);
-
-  count = 1;
-  still_searching = 1;
   entry_iterator = curr_entry;
   do {
     while (entry_iterator->header == 0 || entry_iterator->footer == 0) {
       ;
     }
     if( (tag < 0) || (entry_iterator->tag == tag ) ) {
-      still_searching = 0;
+      if (sync_cas(&photon_processes[proc].local_rcv_info_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	break;
+      }
+      else goto start;
     }
-    else {
-      curr = photon_processes[proc].local_rcv_info_ledger->curr;
-      num_entries = photon_processes[proc].local_rcv_info_ledger->num_entries;
-      curr = (curr + count++) % num_entries;
-      entry_iterator = &(photon_processes[proc].local_rcv_info_ledger->entries[curr]);
-    }
-  }
-  while(still_searching);
-
-  /* If it wasn't the first pending receive request, swap the one we will serve ( entry_iterator) with
-     the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
-     (photon_processes[proc].local_rcv_info_ledger->curr) and skip the request we will serve without losing any
-     pending requests. */
-  if( entry_iterator != curr_entry ) {
-    tmp_entry = *entry_iterator;
-    *entry_iterator = *curr_entry;
-    *curr_entry = tmp_entry;
-  }
+  } while(1);
 
   if (request != NULL) {
     photonRequest req;
-    req = photon_setup_request_ledger_info(curr_entry, curr, proc);
+    req = photon_setup_request_ledger_info(curr_entry, c_ind, proc);
     if (req == NULL) {
       log_err("Could not setup request for proc %d", proc);
       goto error_exit;
     }
     *request = req->id;
   }
-  
-  curr = INC_ENTRY(photon_processes[proc].local_rcv_info_ledger);
-  dbg_trace("new curr == %d", curr);
   
   return PHOTON_OK;
  error_exit:
@@ -897,84 +948,74 @@ static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photo
 static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonLedgerEntry eager_entry;
   photonRILedgerEntry curr_entry, entry_iterator;
-  struct photon_ri_ledger_entry_t tmp_entry;
-  int count, curr, curr_eager, still_searching;
+  uint64_t curr, curr_eager;
+  int c_ind, ce_ind;
   bool eager = false;
 
   dbg_trace("(%d, %d)", proc, tag);
 
-  curr = photon_processes[proc].local_snd_info_ledger->curr;
-  curr_entry = &(photon_processes[proc].local_snd_info_ledger->entries[curr]);
-
-  curr_eager = photon_processes[proc].local_eager_ledger->curr;
-  eager_entry = &(photon_processes[proc].local_eager_ledger->entries[curr_eager]);
+ start:
+  
+  curr = sync_load(&photon_processes[proc].local_snd_info_ledger->curr, SYNC_RELAXED);
+  c_ind = curr & (photon_processes[proc].local_snd_info_ledger->num_entries - 1);
+  curr_entry = &(photon_processes[proc].local_snd_info_ledger->entries[c_ind]);
+  
+  curr_eager = sync_load(&photon_processes[proc].local_eager_ledger->curr, SYNC_RELAXED);
+  ce_ind = curr_eager & (photon_processes[proc].local_eager_ledger->num_entries - 1);
+  eager_entry = &(photon_processes[proc].local_eager_ledger->entries[ce_ind]);
 
   dbg_trace("Spinning on info/eager ledger looking for receive request");
-  dbg_trace("looking in position %d/%p (%d/%p)", curr, curr_entry, curr_eager, eager_entry);
+  dbg_trace("looking in position %d/%p (%d/%p)", c_ind, curr_entry, ce_ind, eager_entry);
 
-  count = 1;
-  still_searching = 1;
   entry_iterator = curr_entry;
-  /* TODO:  clean up this hacked loop */
+
   do {
     while((entry_iterator->header == 0 || entry_iterator->footer == 0) && (eager_entry->request == 0)) {
       ;
     }
     if (eager_entry->request && (size == PHOTON_ANY_SIZE)) {
-      still_searching = 0;
-      eager = true;
+      if (sync_cas(&photon_processes[proc].local_eager_ledger->curr, curr_eager, curr_eager+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	eager = true;
+	break;
+      }
+      else goto start;
     }
     else if (eager_entry->request && (size == eager_entry->request>>32)) {
-      still_searching = 0;
-      eager = true;
+      if (sync_cas(&photon_processes[proc].local_eager_ledger->curr, curr_eager, curr_eager+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	eager = true;
+	break;
+      }
+      else goto start;
     }
-    if (still_searching) {
-      if( ((tag < 0) || (entry_iterator->tag == tag )) && (size == PHOTON_ANY_SIZE) ) {
-	still_searching = 0;
+    else if( ((tag < 0) || (entry_iterator->tag == tag )) && (size == PHOTON_ANY_SIZE) ) {
+      if (sync_cas(&photon_processes[proc].local_snd_info_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	break;
       }
-      else if (((tag < 0) || (entry_iterator->tag == tag )) && (size == entry_iterator->size)) {
-	still_searching = 0;
-      }
-      else {
-	curr = (photon_processes[proc].local_snd_info_ledger->curr + count++) % photon_processes[proc].local_snd_info_ledger->num_entries;
-	entry_iterator = &(photon_processes[proc].local_snd_info_ledger->entries[curr]);
-      }
+      else goto start;
     }
-  }
-  while(still_searching);
-  
-  /* If it wasn't the first pending receive request, swap the one we will serve (entry_iterator) with
-     the first pending (curr_entry) in the info ledger, so that we can increment the current pointer
-     (photon_processes[proc].local_snd_info_ledger->curr) and skip the request we will serve without losing any
-     pending requests. */
-  if( entry_iterator != curr_entry ) {
-    tmp_entry = *entry_iterator;
-    *entry_iterator = *curr_entry;
-    *curr_entry = tmp_entry;
-  }
+    else if (((tag < 0) || (entry_iterator->tag == tag )) && (size == entry_iterator->size)) {
+      if (sync_cas(&photon_processes[proc].local_snd_info_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	break;
+      }
+      else goto start;
+    }
+  } while(1);
 
   if (request != NULL) {
     photonRequest req;
     if (eager) {
-      req = photon_setup_request_ledger_eager(eager_entry, curr_eager, proc);
+      req = photon_setup_request_ledger_eager(eager_entry, ce_ind, proc);
+      sync_fadd(&photon_processes[proc].local_eager_ledger->prog, 1, SYNC_RELAXED);
     }
     else {
-      req = photon_setup_request_ledger_info(curr_entry, curr, proc);
+      req = photon_setup_request_ledger_info(curr_entry, c_ind, proc);
+      sync_fadd(&photon_processes[proc].local_snd_info_ledger->prog, 1, SYNC_RELAXED);
     }
     if (req == NULL) {
       log_err("Could not setup request for proc %d", proc);
       goto error_exit;
     }
     *request = req->id;
-  }
-
-  if (eager) {
-    curr = INC_ENTRY(photon_processes[proc].local_eager_ledger);
-    dbg_trace("new curr == %d", curr);
-  }
-  else {
-    curr = INC_ENTRY(photon_processes[proc].local_snd_info_ledger);
-    dbg_trace("new curr == %d", curr);
   }
 
   return PHOTON_OK;
@@ -984,69 +1025,44 @@ error_exit:
 
 static int _photon_wait_send_request_rdma(int tag) {
   photonRILedgerEntry curr_entry, entry_iterator;
-  struct photon_ri_ledger_entry_t tmp_entry;
-  int count, iproc;
+  int iproc, still_searching = 1;
 #ifdef DEBUG
   time_t stime;
 #endif
-  int curr, still_searching;
+  uint64_t curr;
+  int c_ind;
 
   dbg_trace("(%d)", tag);
 
   dbg_trace("Spinning on send info ledger looking for send request");
 
-  still_searching = 1;
   iproc = -1;
 #ifdef DEBUG
   stime = time(NULL);
 #endif
   do {
     iproc = (iproc+1)%_photon_nproc;
-    curr = photon_processes[iproc].local_snd_info_ledger->curr;
-    curr_entry = &(photon_processes[iproc].local_snd_info_ledger->entries[curr]);
-    dbg_trace("looking in position %d/%p for proc %d", curr, curr_entry,iproc);
-
-    count = 1;
+    curr = sync_load(&photon_processes[iproc].local_snd_info_ledger->curr, SYNC_RELAXED);
+    c_ind = curr & (photon_processes[iproc].local_snd_info_ledger->num_entries - 1);
+    curr_entry = &(photon_processes[iproc].local_snd_info_ledger->entries[c_ind]);
+    dbg_trace("looking in position %d/%p for proc %d", c_ind, curr_entry, iproc);
+    
     entry_iterator = curr_entry;
-    // Some peers (procs) might have sent more than one send requests using different tags, so check them all.
-    while(entry_iterator->header == 1 && entry_iterator->footer == 1) {
+    while(entry_iterator->header == 1 && entry_iterator->footer == 1)
       if( (entry_iterator->addr == (uintptr_t)0) && (entry_iterator->priv.key0 == 0) && ((tag < 0) || (entry_iterator->tag == tag )) ) {
-        still_searching = 0;
-        dbg_trace("Found matching send request with tag %d from proc %d", tag, iproc);
-        break;
+	if (sync_cas(&photon_processes[iproc].local_snd_info_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	  dbg_trace("Found matching send request with tag %d from proc %d", tag, iproc);
+	  still_searching = 0;
+	  break;
+	}
       }
-      else {
-        dbg_trace("Found non-matching send request with tag %d from proc %d", tag, iproc);
-        curr = (photon_processes[iproc].local_snd_info_ledger->curr + count) % photon_processes[iproc].local_snd_info_ledger->num_entries;
-        ++count;
-        entry_iterator = &(photon_processes[iproc].local_snd_info_ledger->entries[curr]);
-      }
-    }
 #ifdef DEBUG
     stime = _tictoc(stime, -1);
 #endif
-  }
-  while(still_searching);
-
-  // If it wasn't the first pending send request, swap the one we will serve (entry_iterator) with
-  // the first pending (curr_entry) in the send info ledger, so that we can increment the current pointer
-  // (photon_processes[iproc].local_snd_info_ledger->curr) and skip the request we will serve without losing any
-  // pending requests.
-  if( entry_iterator != curr_entry ) {
-    tmp_entry = *entry_iterator;
-    *entry_iterator = *curr_entry;
-    *curr_entry = tmp_entry;
-  }
-
+  } while(still_searching);
+  
   curr_entry->header = 0;
   curr_entry->footer = 0;
-  // NOTE:
-  // curr_entry->request contains the curr_cookie_count om the sender size.	 In the current implementation we
-  // are not doing anything with it.	Maybe we should keep it somehow and pass it back to the sender with
-  // through post_recv_buffer().
-
-  curr = INC_ENTRY(photon_processes[iproc].local_snd_info_ledger);
-  dbg_trace("new curr == %d", curr);
 
   return PHOTON_OK;
 }
@@ -1155,24 +1171,28 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
 
   if (req->flags & REQUEST_FLAG_EAGER) {
     photonEagerBuf eb = photon_processes[proc].local_eager_buf;
-    uint64_t offset, curr, new;
+    uint64_t offset, curr, new, left;
 
-    curr = sync_load(&eb->curr, SYNC_ACQUIRE);
-    offset = curr % eb->size;
-    if ((offset + size) > eb->size) {
-      new = (eb->size - offset) + curr + size;
+    curr = sync_load(&eb->curr, SYNC_RELAXED);
+    offset = curr & (eb->size - 1);
+    left = eb->size - offset;
+    if (left < size) {
+      new = curr + left + size;;
       offset = 0;
     }
     else {
       new = curr + size;
     }
     
-    if (sync_cas(&eb->curr, curr, new, SYNC_ACQ_REL, SYNC_RELAXED)) {
-      dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&eb->data[offset]);
+    if (sync_cas(&eb->curr, curr, new, SYNC_RELAXED, SYNC_RELAXED)) {
+      dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx (offset=%lu)",
+	       size, (uintptr_t)&eb->data[offset], offset);
       memcpy(ptr, &eb->data[offset], size);
       memset(&eb->data[offset], 0, size);
       req->flags |= REQUEST_FLAG_EDONE;
+      sync_store(&eb->prog, new, SYNC_RELAXED);
     }
+
     return PHOTON_OK;
   }
   
@@ -1315,10 +1335,15 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
     goto error_exit;
   }
 
-  curr = photon_rdma_ledger_get_next(photon_processes[proc].remote_fin_ledger);
+  curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_fin_ledger);
   if (curr < 0) {
+    if (curr == -2) {
+      dbg_trace("Exceeding known receiver FIN progress!");
+      return PHOTON_ERROR_RESOURCE;
+    }
     goto error_exit;
   }
+
   entry = &photon_processes[proc].remote_fin_ledger->entries[curr];
   dbg_trace("photon_processes[%d].remote_fin_ledger->curr==%d", proc, curr);
   
@@ -1373,7 +1398,6 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
 
   while(1) {
     photon_rid cookie;
-    uint32_t prefix;
     int existed = -1;
     photon_event_status event;
 
@@ -1385,23 +1409,24 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
     else if (rc != PHOTON_OK) {
       continue;
     }
-
+    
     cookie = event.id;
-    prefix = (uint32_t)(cookie>>32);
-    if (prefix == REQUEST_COOK_EAGER) {
+    rc = __photon_handle_cq_special(cookie);
+    if (rc == PHOTON_OK) {
       continue;
     }
 
     if (cookie != (photon_rid)NULL_COOKIE) {
       photonRequest req = NULL;      
       if ((req = photon_lookup_request(cookie)) != NULL) {
-        if (req->type == EVQUEUE && (--req->events) == 0) {
+	int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
+        if ((req->type == EVQUEUE) && (nevents == 0)) {
           dbg_trace("Setting request completed with cookie: 0x%016lx", cookie);
-          req->state = REQUEST_COMPLETED;
+	  req->state = REQUEST_COMPLETED;
 	  // handle pwc local completions
 	  if (req->op == REQUEST_OP_PWC) {
 	    photon_pwc_add_req(req);
-	    dbg_trace("Enqueuing PWC local completion");
+	    dbg_trace("Enqueuing PWC local completion 0x%016lx (ind=%u)", req->id, req->index);
 	  }
         }
 	if (req && (req->type == EVQUEUE) && (req->state == REQUEST_COMPLETED) &&
@@ -1435,7 +1460,8 @@ error_exit:
 
 static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
   static int i = -1; // this is static so we don't starve events in later processes
-  int curr;
+  uint64_t curr;
+  int c_ind;
 
   if (ret_req == NULL || ret_proc == NULL) {
     goto error_exit;
@@ -1450,11 +1476,13 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
 
     i=(i+1)%_photon_nproc;
     // check if an event occurred on the RDMA end of things
-    curr = photon_processes[i].local_fin_ledger->curr;
+    curr = sync_load(&photon_processes[i].local_fin_ledger->curr, SYNC_RELAXED);
+    c_ind = curr & (photon_processes[i].local_fin_ledger->num_entries - 1);
     dbg_trace("Wait All Out: %d", curr);
-    curr_entry = &(photon_processes[i].local_fin_ledger->entries[curr]);
+    curr_entry = &(photon_processes[i].local_fin_ledger->entries[c_ind]);
 
-    if (curr_entry->request != (uint64_t) 0) {
+    if ((curr_entry->request != (uint64_t) 0) && 
+	sync_cas(&photon_processes[i].local_fin_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
       photonRequest req;
       dbg_trace("Wait All In: %d/0x%016lx", curr, curr_entry->request);
       
@@ -1466,7 +1494,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
         break;
       }
       curr_entry->request = 0;
-      INC_ENTRY(photon_processes[i].local_fin_ledger);
+      sync_fadd(&photon_processes[i].local_fin_ledger->prog, 1, SYNC_RELAXED);
     }
   }
   
@@ -1480,8 +1508,9 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
   photonRILedger ledger;
   photonLedgerEntry eager_entry;
   photonRILedgerEntry entry_iterator;
+  uint64_t curr;
   int i;
-  int start, end, curr;
+  int start, end, c_ind;
 
   //dbg_trace("(%d, %d)", proc, type);
 
@@ -1514,20 +1543,23 @@ static int _photon_probe_ledger(int proc, int *flag, int type, photonStatus stat
     {
       // process any eager entry first
       if (type == PHOTON_SEND_LEDGER) {
-        curr = photon_processes[i].local_eager_ledger->curr;
-        eager_entry = &(photon_processes[i].local_eager_ledger->entries[curr]);
+        curr = sync_load(&photon_processes[i].local_eager_ledger->curr, SYNC_RELAXED);
+	c_ind = curr & (photon_processes[i].local_eager_ledger->num_entries - 1);
+        eager_entry = &(photon_processes[i].local_eager_ledger->entries[c_ind]);
         if (eager_entry->request) {
           status->src_addr.global.proc_id = i;
           status->request = eager_entry->request;
           status->size = eager_entry->request>>32;
 
           *flag = 1;
-   
+
           return PHOTON_OK;
         }
       }
       
-      entry_iterator = &(ledger->entries[ledger->curr]);
+      curr = sync_load(&ledger->curr, SYNC_RELAXED);
+      c_ind = curr & (ledger->num_entries - 1);
+      entry_iterator = &(ledger->entries[c_ind]);
       if (entry_iterator->header && entry_iterator->footer && (entry_iterator->tag > 0)) {
         status->src_addr.global.proc_id = i;
         status->request = entry_iterator->request;

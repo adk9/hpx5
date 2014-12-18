@@ -1,10 +1,75 @@
+#include <assert.h>
+
 #include "photon_event.h"
 #include "photon_pwc.h"
 
-int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
+int __photon_handle_cq_special(photon_rid cookie) {
   uint32_t prefix;
   prefix = (uint32_t)(cookie>>32);
-  if (prefix == REQUEST_COOK_EAGER) {
+
+  switch (prefix) {
+  case REQUEST_COOK_EAGER:
+    break;
+  case REQUEST_COOK_EBUF:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_eager_buf->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_PBUF:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_pwc_buf->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_FIN:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_fin_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_RINFO:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_rcv_info_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_SINFO:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_snd_info_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_ELEDG:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_eager_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  case REQUEST_COOK_PLEDG:
+    {
+      int proc = (int)(cookie<<32>>32);
+      assert(IS_VALID_PROC(proc));
+      sync_store(&photon_processes[proc].remote_pwc_ledger->acct.rloc, 0, SYNC_RELEASE);
+    }
+    break;
+  default:
+    return PHOTON_ERROR;
+    break;
+  }
+
+  return PHOTON_OK;
+}
+
+int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
+  int rc = __photon_handle_cq_special(cookie);
+  if (rc == PHOTON_OK) {
     return 1;
   }
   
@@ -17,7 +82,8 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie) {
     photonRequest treq;
     treq = photon_lookup_request(cookie);
     if (treq) {
-      if (treq->type == EVQUEUE && (--treq->events) == 0) {
+      int nevents = sync_addf(&treq->events, -1, SYNC_RELAXED);
+      if ((treq->type == EVQUEUE) && (nevents == 0)) {
 	treq->state = REQUEST_COMPLETED;
 	if (treq->op == REQUEST_OP_PWC) {
 	  photon_pwc_add_req(treq);
@@ -67,7 +133,6 @@ int __photon_nbpop_event(photonRequest req) {
     }
     
     cookie = event.id;
-    
     dbg_trace("(req type=%d) got completion for: 0x%016lx", req->type, cookie);
     
     rc = __photon_handle_cq_event(req, cookie);
@@ -102,7 +167,8 @@ int __photon_nbpop_sr(photonRequest req) {
 //		call to __photon_nbpop_ledger() popped the FIN that corresponds to "req".
 //	1 if the request is pending and the FIN has not arrived yet
 int __photon_nbpop_ledger(photonRequest req) {
-  int curr, i=-1;
+  uint64_t curr;
+  int c_ind, i=-1;
 
   dbg_trace("(0x%016lx)", req->id);
 
@@ -115,12 +181,14 @@ int __photon_nbpop_ledger(photonRequest req) {
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
-      curr = photon_processes[i].local_fin_ledger->curr;
-      curr_entry = &(photon_processes[i].local_fin_ledger->entries[curr]);
-      if (curr_entry->request != (uint64_t) 0) {
+      curr = sync_load(&photon_processes[i].local_fin_ledger->curr, SYNC_RELAXED);
+      c_ind = curr & (photon_processes[i].local_fin_ledger->num_entries - 1);
+      curr_entry = &(photon_processes[i].local_fin_ledger->entries[c_ind]);
+      if ((curr_entry->request != (uint64_t) 0) &&
+	  sync_cas(&photon_processes[i].local_fin_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
         dbg_trace("Found curr: %d, req: 0x%016lx while looking for req: 0x%016lx",
-                 curr, curr_entry->request, req->id);
-
+		  c_ind, curr_entry->request, req->id);
+	
         if (curr_entry->request == req->id) {
           req->state = REQUEST_COMPLETED;
         }
@@ -134,7 +202,7 @@ int __photon_nbpop_ledger(photonRequest req) {
 	}
 	// reset entry
         curr_entry->request = 0;
-	INC_ENTRY(photon_processes[i].local_fin_ledger);
+	sync_fadd(&photon_processes[req->proc].local_fin_ledger->prog, 1, SYNC_RELAXED);
       }
     }
   }
@@ -154,7 +222,8 @@ int __photon_nbpop_ledger(photonRequest req) {
 }
 
 int __photon_wait_ledger(photonRequest req) {
-  int curr, i=-1;
+  uint64_t curr;
+  int c_ind, i=-1;
 
   dbg_trace("(0x%016lx)",req->id);
 
@@ -175,11 +244,13 @@ int __photon_wait_ledger(photonRequest req) {
     // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
-      curr = photon_processes[i].local_fin_ledger->curr;
-      curr_entry = &(photon_processes[i].local_fin_ledger->entries[curr]);
-      if (curr_entry->request != (uint64_t) 0) {
-        dbg_trace("Found: %d/0x%016lx/0x%016lx", curr, curr_entry->request, req->id);
-
+      curr = sync_load(&photon_processes[i].local_fin_ledger->curr, SYNC_RELAXED);
+      c_ind = curr & (photon_processes[i].local_fin_ledger->num_entries - 1);
+      curr_entry = &(photon_processes[i].local_fin_ledger->entries[c_ind]);
+      if ((curr_entry->request != (uint64_t) 0) &&
+	  sync_cas(&photon_processes[i].local_fin_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+        dbg_trace("Found: %d/0x%016lx/0x%016lx", c_ind, curr_entry->request, req->id);
+	
         if (curr_entry->request == req->id) {
           req->state = REQUEST_COMPLETED;
         }
@@ -190,7 +261,7 @@ int __photon_wait_ledger(photonRequest req) {
 	  }
 	}
         curr_entry->request = 0;
-	INC_ENTRY(photon_processes[i].local_fin_ledger);
+	sync_fadd(&photon_processes[i].local_fin_ledger->prog, 1, SYNC_RELAXED);
       }
     }
   }
