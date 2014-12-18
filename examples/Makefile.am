@@ -1,8 +1,8 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
-                       countdown seqspawn parspawn future agas_test memput \
-                       memget guppie sendrecv sendrecv-chan allreduce-chan \
+                       countdown seqspawn parspawn future memput memget \
+                       guppie sendrecv sendrecv-chan allreduce-chan \
                        pingpong-chan hello alltoall
 
 hello_SOURCES           = hello.c
@@ -16,7 +16,6 @@ countdown_SOURCES       = countdown.c
 seqspawn_SOURCES        = seqspawn.c
 parspawn_SOURCES        = parspawn.c
 future_SOURCES          = future.c
-agas_test_SOURCES       = agas_test.c
 memput_SOURCES          = memput.c
 memget_SOURCES          = memget.c
 guppie_SOURCES          = guppie.c
@@ -50,7 +49,6 @@ countdown_LDADD       = $(all_LIBS)
 seqspawn_LDADD        = $(all_LIBS)
 parspawn_LDADD        = $(all_LIBS)
 future_LDADD          = $(all_LIBS)
-agas_test_LDADD       = $(all_LIBS)
 memput_LDADD          = $(all_LIBS)
 memget_LDADD          = $(all_LIBS)
 guppie_LDADD          = $(all_LIBS)
