@@ -438,7 +438,7 @@ hpx_lco_chan_array_new(int n, int size, int chans_per_block)
   hpx_addr_t       base = hpx_gas_global_alloc(blocks, block_bytes);
 
   // for each rank, send an initialization message
-  uint32_t args[] = { size, chans_per_block };
+  uint32_t args[] = { chans_per_block, size };
 
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; ++i) {
