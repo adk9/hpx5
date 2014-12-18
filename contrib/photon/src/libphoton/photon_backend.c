@@ -796,7 +796,6 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
 
 static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int tag, photon_rid *request) {
   photonBI db;
-  int rc;
   
   dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
   
@@ -805,13 +804,13 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
     goto error_exit;
   }
   
-  rc = _photon_try_eager(proc, ptr, size, tag, request, db);
+  int rc = _photon_try_eager(proc, ptr, size, tag, request, db);
   if (rc == PHOTON_ERROR_RESOURCE) {
     rc = _photon_try_rndv(proc, ptr, size, tag, request, db);
   }
   
   if (rc != PHOTON_OK) {
-    goto error_exit;
+    return rc;
   }
 
   return PHOTON_OK;
@@ -820,7 +819,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   if (request != NULL) {
     *request = NULL_COOKIE;
   }
-  return rc;
+  return PHOTON_ERROR;
 }
 
 static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
