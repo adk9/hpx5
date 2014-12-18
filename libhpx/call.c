@@ -24,6 +24,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 
 static hpx_action_t _bcast = 0;
 
@@ -70,8 +71,7 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 /// Encapsulates an asynchronous remote-procedure-call.
 int
 hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-         size_t len, hpx_addr_t result)
-{
+         size_t len, hpx_addr_t result) {
   return hpx_call_with_continuation(addr, action, args, len, result,
                                     hpx_lco_set_action);
 }
@@ -80,8 +80,7 @@ hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 int
 hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
               const void *args, size_t alen,
-              void *out, size_t olen)
-{
+              void *out, size_t olen) {
   hpx_addr_t result = hpx_lco_future_new(olen);
   hpx_call(addr, action, args, alen, result);
   int status = hpx_lco_get(result, olen, out);
@@ -93,8 +92,7 @@ hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
 int
 hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                const void *args, size_t len,
-               hpx_addr_t args_reuse, hpx_addr_t result)
-{
+               hpx_addr_t args_reuse, hpx_addr_t result) {
   hpx_parcel_t *p =
       parcel_create(addr, action, args, len, result, hpx_lco_set_action,
                     hpx_thread_current_pid(), false);
@@ -103,6 +101,20 @@ hpx_call_async(hpx_addr_t addr, hpx_action_t action,
 
   hpx_parcel_send(p, args_reuse);
   return HPX_SUCCESS;
+}
+
+
+void
+hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args, size_t len,
+            void (*cleanup)(void*), void *env) {
+  hpx_parcel_t *p = scheduler_current_parcel();
+  int e = hpx_call_with_continuation(addr, action, args, len, p->c_target, p->c_action);
+  if (e != HPX_SUCCESS) {
+    dbg_error("hpx_call_with_continuation returned an error.\n");
+  }
+  p->c_target = HPX_NULL;
+  p->c_action = HPX_NULL;
+  hpx_thread_continue_cleanup(0, NULL, cleanup, env);
 }
 
 
