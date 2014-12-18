@@ -92,8 +92,7 @@ static int _sssp_print_source_adj_list_action(_sssp_visit_vertex_args_t *const a
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
   const SSSP_UINT_T num_edges = vertex->num_edges;
-  const SSSP_UINT_T old_distance = args->distance;
-
+ 
   printf("Printing source stat\n-------------------------------\n");
   if(num_edges>0){
     for (int i = 0; i < num_edges; ++i) {

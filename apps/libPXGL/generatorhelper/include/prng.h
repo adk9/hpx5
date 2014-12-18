@@ -10,8 +10,8 @@
 #endif
 //extern threefry4x32_key_t key;
 				 
-inline threefry4x32_ctr_t ctr1 (int64_t);
-inline threefry4x32_ctr_t ctr2 (int64_t, int64_t);
+threefry4x32_ctr_t ctr1 (int64_t);
+threefry4x32_ctr_t ctr2 (int64_t, int64_t);
 
 void init_prng (void);
 //int64_t scramble (int64_t);
