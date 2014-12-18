@@ -25,5 +25,5 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
                        #generatorhelper/src/mrg_transitions.c
 
 
-libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_64BIT
+libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_64BIT 
 libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la -lm
