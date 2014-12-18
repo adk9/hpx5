@@ -55,7 +55,6 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
              size_t len, hpx_addr_t result);
 
 
-
 /// Locally synchronous call with continuation interface.
 ///
 /// This is similar to hpx_call with additional parameters to specify
@@ -99,6 +98,25 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///          the hpx_call_async invocation.
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
                    size_t len, hpx_addr_t args_reuse, hpx_addr_t result);
+
+
+/// Call with current continuation.
+///
+/// This calls an action passing the currrent thread's continuation as
+/// the continuation for the called action. It finishes the current
+/// thread's execution, and does not yield control back to the thread.
+///
+/// @param    addr The address where the action is executed.
+/// @param  action The action to perform.
+/// @param    args The argument data buffer for @p action.
+/// @param     len The length of the @p args buffer.
+/// @param cleanup A callback function that is run after the action
+///                has been invoked.
+/// @param     env The environment to pass to the cleanup function.
+/// @returns HPX_SUCCESS, or an error code if there was a problem during
+///          the hpx_call_cc invocation.
+void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args, size_t len,
+                 void (*cleanup)(void*), void *env);
 
 
 /// HPX collective operations.
