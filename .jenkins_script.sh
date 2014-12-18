@@ -35,7 +35,7 @@ cd build
 make
 
 # Run all the unit tests:
-#make check
+make check
 
 # Check the output of the unit tests:
 if grep -q Failed tests/unit/output.log
