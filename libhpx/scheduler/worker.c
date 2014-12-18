@@ -221,7 +221,9 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = env;
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
-  thread_delete(stack);
+  if (stack) {
+    thread_delete(stack);
+  }
   hpx_parcel_release(prev);
   return HPX_SUCCESS;
 }
@@ -489,7 +491,11 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// Synchronously execute the action associated with a parcel in the
 /// calling thread.
 void scheduler_exec(hpx_parcel_t *p) {
+  // swap the "current" parcel with the one that we are executing
+  hpx_parcel_t *oldp = self->current;
+  self->current = p;
   int status = action_run_handler(p);
+  self->current = oldp;
   switch (status) {
     default:
       dbg_error("action: produced unhandled error %i.\n", (int)status);
