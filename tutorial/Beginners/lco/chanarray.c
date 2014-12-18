@@ -28,12 +28,12 @@ static int _sender_action(hpx_addr_t *args) {
 
   printf("Source sending data = %"PRIu64"\n", data);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 1, 1);
+  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 8, 1);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_addr_t chan = hpx_lco_chan_array_at(channels, 1, 1, 1);
+  hpx_addr_t chan = hpx_lco_chan_array_at(channels, 1, 8, 1);
   hpx_lco_chan_recv(chan, NULL, (void**)&result);
   printf("The data received by source is: = %"PRIu64"\n", *result);
   free(result);
@@ -44,14 +44,14 @@ int _receiver_action(hpx_addr_t *args) {
   uint64_t *result;
   uint64_t data = 5678;
   hpx_addr_t channels = *args;
-  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 1, 1);
+  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 8, 1);
   hpx_lco_chan_recv(addr, NULL, (void**)&result);
   printf("The data received by destination is: = %"PRIu64"\n", *result);
   free(result);
 
   hpx_addr_t done = hpx_lco_future_new(0);
   printf("Destination sending data = %"PRIu64"\n", data);
-  addr = hpx_lco_chan_array_at(channels, 1, 1, 1);
+  addr = hpx_lco_chan_array_at(channels, 1, 8, 1);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
@@ -61,12 +61,12 @@ int _receiver_action(hpx_addr_t *args) {
 static int _main_action(void *args) {
   hpx_addr_t addr1, addr2;
   // Allocate a global array of 2 channels with block size of 1.
-  hpx_addr_t channels = hpx_lco_chan_array_new(2, 1, 1);
+  hpx_addr_t channels = hpx_lco_chan_array_new(2, 8, 1);
   hpx_addr_t completed = hpx_lco_and_new(2);
 
-  addr1 = hpx_lco_chan_array_at(channels, 0, 1, 1);
+  addr1 = hpx_lco_chan_array_at(channels, 0, 8, 1);
   hpx_call(addr1, _sender, &channels, sizeof(channels), completed);
-  addr2 = hpx_lco_chan_array_at(channels, 1, 1, 1);
+  addr2 = hpx_lco_chan_array_at(channels, 1, 8, 1);
   hpx_call(addr2, _receiver, &channels, sizeof(channels), completed);
 
   hpx_lco_wait(completed);
