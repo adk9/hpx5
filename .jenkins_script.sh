@@ -38,7 +38,7 @@ make
 make check
 
 # Check the output of the unit tests:
-if [ $(grep -c Failed tests/unit/output.log) ]
+if [ $(grep -q Failed tests/unit/output.log) -eq 1 ]
 then
     exit 1
 fi
