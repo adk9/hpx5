@@ -20,7 +20,9 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      $(HPX_PHOTON_LDADD) \
                      $(HWLOC_EMBEDDED_LDADD)
 
+
 if HAVE_PAPI
 libhpx_la_CFLAGS   = @PAPI_CFLAGS@
 libhpx_la_LIBADD  += @PAPI_LIBS@
 endif
+
