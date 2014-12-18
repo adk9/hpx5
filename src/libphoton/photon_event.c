@@ -133,7 +133,6 @@ int __photon_nbpop_event(photonRequest req) {
     }
     
     cookie = event.id;
-    
     dbg_trace("(req type=%d) got completion for: 0x%016lx", req->type, cookie);
     
     rc = __photon_handle_cq_event(req, cookie);
@@ -203,6 +202,7 @@ int __photon_nbpop_ledger(photonRequest req) {
 	}
 	// reset entry
         curr_entry->request = 0;
+	sync_fadd(&photon_processes[req->proc].local_fin_ledger->prog, 1, SYNC_RELAXED);
       }
     }
   }
@@ -261,6 +261,7 @@ int __photon_wait_ledger(photonRequest req) {
 	  }
 	}
         curr_entry->request = 0;
+	sync_fadd(&photon_processes[i].local_fin_ledger->prog, 1, SYNC_RELAXED);
       }
     }
   }

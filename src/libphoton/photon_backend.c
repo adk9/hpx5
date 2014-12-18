@@ -119,7 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("num ledgers: %d", _LEDGER_SIZE);
   dbg_trace("eager buf size: %d", _photon_ebsize);
   dbg_trace("small msg size: %d", _photon_smsize);
-  dbg_info("num requests per rank: %d\n", DEF_NUM_REQUESTS);
+  dbg_trace("num requests per rank: %d\n", DEF_NUM_REQUESTS);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -631,6 +631,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
     photon_rid eager_cookie;
     photonLedgerEntry entry;
     photonEagerBuf eb;
+    photonLedger l;
     int offset, rc, curr;
     
     eb = photon_processes[proc].remote_eager_buf;
@@ -643,6 +644,16 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
       else {
 	goto error_exit;
       }
+    }
+
+    l = photon_processes[proc].remote_eager_ledger;
+    curr = photon_rdma_ledger_get_next(proc, l);
+    if (curr < 0) {
+      if (offset == -2) {
+	dbg_trace("Exceeding known receiver eager ledger progress!");
+	return PHOTON_ERROR_RESOURCE;
+      }
+      goto error_exit;
     }
 
     req = photon_get_request(proc);
@@ -683,20 +694,10 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
       goto error_exit;
     }
     
-    curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_eager_ledger);
-    if (curr < 0) {
-      if (offset == -2) {
-	dbg_warn("Exceeding known receiver eager ledger progress!");
-	return PHOTON_ERROR_RESOURCE;
-      }
-      goto error_exit;
-    }
-
     dbg_trace("new eager curr == %d", curr);
-    rmt_addr  = photon_processes[proc].remote_eager_ledger->remote.addr;
-    rmt_addr += curr * sizeof(*entry);
+    rmt_addr  = l->remote.addr + (curr * sizeof(*entry));
     
-    entry = &photon_processes[proc].remote_eager_ledger->entries[curr]; 
+    entry = &l->entries[curr]; 
     // encode the eager size and request id in the eager ledger
     entry->request = (size<<32) | (req->id<<32>>32);
     
@@ -708,7 +709,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
       dbg_err("RDMA PUT failed for 0x%016lx", req->id);
       goto error_exit;
     }
-    
+
     return PHOTON_OK;
   }
   else {
@@ -729,7 +730,7 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
   curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
   if (curr < 0) {
     if (curr == -2) {
-      dbg_warn("Exceeding known receiver snd_info progress!");
+      dbg_trace("Exceeding known receiver snd_info progress!");
       return PHOTON_ERROR_RESOURCE;
     }
     goto error_exit;
@@ -912,7 +913,7 @@ static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photo
   curr = sync_load(&photon_processes[proc].local_rcv_info_ledger->curr, SYNC_RELAXED);
   c_ind = curr & (photon_processes[proc].local_rcv_info_ledger->num_entries - 1);
   curr_entry = &(photon_processes[proc].local_rcv_info_ledger->entries[c_ind]);
-
+  
   dbg_trace("Spinning on info ledger looking for receive request");
   dbg_trace("looking in position %d/%p", c_ind, curr_entry);
 
@@ -964,7 +965,7 @@ static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photo
   eager_entry = &(photon_processes[proc].local_eager_ledger->entries[ce_ind]);
 
   dbg_trace("Spinning on info/eager ledger looking for receive request");
-  dbg_trace("looking in position %d/%p (%d/%p)", curr, curr_entry, curr_eager, eager_entry);
+  dbg_trace("looking in position %d/%p (%d/%p)", c_ind, curr_entry, ce_ind, eager_entry);
 
   entry_iterator = curr_entry;
 
@@ -1004,9 +1005,11 @@ static int _photon_wait_send_buffer_rdma(int proc, uint64_t size, int tag, photo
     photonRequest req;
     if (eager) {
       req = photon_setup_request_ledger_eager(eager_entry, ce_ind, proc);
+      sync_fadd(&photon_processes[proc].local_eager_ledger->prog, 1, SYNC_RELAXED);
     }
     else {
       req = photon_setup_request_ledger_info(curr_entry, c_ind, proc);
+      sync_fadd(&photon_processes[proc].local_snd_info_ledger->prog, 1, SYNC_RELAXED);
     }
     if (req == NULL) {
       log_err("Could not setup request for proc %d", proc);
@@ -1182,10 +1185,12 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
     }
     
     if (sync_cas(&eb->curr, curr, new, SYNC_RELAXED, SYNC_RELAXED)) {
-      dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx", size, (uintptr_t)&eb->data[offset]);
+      dbg_trace("EAGER copy message of size %lu from addr: 0x%016lx (offset=%lu)",
+	       size, (uintptr_t)&eb->data[offset], offset);
       memcpy(ptr, &eb->data[offset], size);
       memset(&eb->data[offset], 0, size);
       req->flags |= REQUEST_FLAG_EDONE;
+      sync_store(&eb->prog, new, SYNC_RELAXED);
     }
 
     return PHOTON_OK;
@@ -1333,7 +1338,7 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
   curr = photon_rdma_ledger_get_next(proc, photon_processes[proc].remote_fin_ledger);
   if (curr < 0) {
     if (curr == -2) {
-      dbg_warn("Exceeding known receiver FIN progress!");
+      dbg_trace("Exceeding known receiver FIN progress!");
       return PHOTON_ERROR_RESOURCE;
     }
     goto error_exit;
@@ -1489,6 +1494,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
         break;
       }
       curr_entry->request = 0;
+      sync_fadd(&photon_processes[i].local_fin_ledger->prog, 1, SYNC_RELAXED);
     }
   }
   

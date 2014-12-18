@@ -23,6 +23,7 @@ photonRILedger photon_ri_ledger_create_reuse(photonRILedgerEntry ledger_buffer, 
   // know that the values have been filled in
   memset(new->entries, 0, sizeof(struct photon_ri_ledger_entry_t) * ledger_size);
 
+  new->prog = 0;
   new->curr = 0;
   new->num_entries = ledger_size;
   new->acct.rcur = 0;
@@ -69,11 +70,11 @@ static int _get_remote_progress(int proc, photonRILedger buf) {
 
   rloc = 0;
   if (sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
-      
+    
     dbg_trace("Fetching remote info ledger curr at rcur: %llu", buf->acct.rcur);
     
     rmt_addr = buf->remote.addr + PHOTON_INFO_SSIZE(buf->num_entries) -
-      sizeof(struct photon_ri_ledger_t) + offsetof(struct photon_ri_ledger_t, curr);
+      sizeof(struct photon_ri_ledger_t) + offsetof(struct photon_ri_ledger_t, prog);
     
     cookie = ( (uint64_t)buf->acct.event_prefix<<32) | proc;
     

@@ -423,6 +423,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
 	  dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
 		   size, addr, req);
 	  memset((void*)hdr, 0, asize);
+	  sync_store(&eb->prog, new+asize, SYNC_RELAXED);
 	  return PHOTON_OK;
 	}
       }
@@ -432,14 +433,14 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       curr = sync_load(&ledger->curr, SYNC_RELAXED);
       offset = curr & (ledger->num_entries - 1);
       entry_iter = &(ledger->entries[offset]);
-      if (entry_iter->request != (photon_rid) UINT64_MAX) {
+      if (entry_iter->request != (photon_rid) UINT64_MAX &&
+	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
 	*request = entry_iter->request;
 	entry_iter->request = UINT64_MAX;
-	if (sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
-	  *flag = 1;
-	  dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
-	  return PHOTON_OK;
-	}
+	*flag = 1;
+	sync_fadd(&ledger->prog, 1, SYNC_RELAXED);
+	dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
+	return PHOTON_OK;
       }
     }
   }

@@ -21,6 +21,7 @@ photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int siz
   memset(new->data, 0, sizeof(uint8_t) * size);
 
   new->size = size;
+  new->prog = 0;
   new->curr = 0;
   new->tail = 0;
   new->acct.rcur = 0;
@@ -85,7 +86,7 @@ static int _get_remote_progress(int proc, photonEagerBuf buf) {
     dbg_trace("Fetching remote eager curr at rcur: %llu", buf->acct.rcur);
 
     rmt_addr = buf->remote.addr + PHOTON_EBUF_SSIZE(buf->size) -
-      sizeof(struct photon_rdma_eager_buf_t) + offsetof(struct photon_rdma_eager_buf_t, curr); 
+      sizeof(struct photon_rdma_eager_buf_t) + offsetof(struct photon_rdma_eager_buf_t, prog); 
     
     cookie = ( (uint64_t)buf->acct.event_prefix<<32) | proc;
     

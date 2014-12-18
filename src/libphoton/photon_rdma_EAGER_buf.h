@@ -10,6 +10,7 @@ typedef struct photon_rdma_eager_buf_entry_t {
 } photon_rdma_eager_buf_entry;
 
 typedef struct photon_rdma_eager_buf_t {
+  uint64_t prog;
   uint64_t curr;
   uint64_t tail;
   uint32_t size;

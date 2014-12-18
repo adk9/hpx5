@@ -25,6 +25,7 @@ photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, in
   // know that the values have been filled in
   memset(new->entries, 0, sizeof(struct photon_rdma_ledger_entry_t) * num_entries);
 
+  new->prog = 0;
   new->curr = 0;
   new->tail = 0;
   new->num_entries = num_entries;
@@ -49,7 +50,8 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
       log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
       return -1;
     }
-    if (((curr - l->acct.rcur)) >= l->num_entries) {
+    if (((curr - l->acct.rcur)) >= l->num_entries &&
+	l->acct.event_prefix != REQUEST_COOK_FIN) {  //XXX: don't wait for FIN ledger
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, l);
       dbg_trace("No new ledger entry until receiver catches up...");
@@ -77,7 +79,7 @@ static int _get_remote_progress(int proc, photonLedger buf) {
     dbg_trace("Fetching remote ledger curr at rcur: %llu", buf->acct.rcur);
     
     rmt_addr = buf->remote.addr + PHOTON_LEDG_SSIZE(buf->num_entries) -
-      sizeof(struct photon_rdma_ledger_t) + offsetof(struct photon_rdma_ledger_t, curr); 
+      sizeof(struct photon_rdma_ledger_t) + offsetof(struct photon_rdma_ledger_t, prog); 
     
     cookie = ( (uint64_t)buf->acct.event_prefix<<32) | proc;
     
