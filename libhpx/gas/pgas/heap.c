@@ -28,6 +28,9 @@
 #include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
+#ifdef HAVE_HUGETLBFS
+  #include <hugetlbfs.h>
+#endif
 
 const uintptr_t MAX_HEAP_BYTES = 1lu << GPA_OFFSET_BITS;
 
@@ -171,7 +174,12 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   // use one extra chunk to deal with alignment
   heap->raw_nchunks = heap->nchunks + 1;
   heap->raw_nbytes  = heap->raw_nchunks * heap->bytes_per_chunk;
-  heap->raw_base    = malloc(heap->raw_nbytes);
+  heap->raw_base    = 
+#ifdef HAVE_HUGETLBFS
+    get_huge_pages(heap->raw_nbytes, GHP_DEFAULT);
+#else
+    malloc(heap->raw_nbytes);
+#endif
   if (!heap->raw_base) {
     dbg_error("could not allocate %lu bytes for the global heap\n",
               heap->raw_nbytes);
@@ -215,7 +223,11 @@ void heap_fini(heap_t *heap) {
   if (heap->raw_base) {
     if (heap->transport)
       heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
+#ifdef HUGETLBFS
+    free_huge_pages(heap->raw_base);
+#else
     free(heap->raw_base);
+#endif
   }
 }
 
