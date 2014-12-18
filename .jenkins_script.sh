@@ -45,3 +45,4 @@ fi
 
 # TODO: Run the apps and check their output...
 
+exit 0
