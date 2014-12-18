@@ -3,9 +3,8 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
                        countdown seqspawn parspawn future memput memget \
                        guppie sendrecv sendrecv-chan allreduce-chan \
-                       pingpong-chan hello alltoall
+                       pingpong-chan hello alltoall call
 
-hello_SOURCES           = hello.c
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
 allgather_SOURCES       = allgather.c
@@ -23,6 +22,8 @@ sendrecv_SOURCES        = sendrecv.c
 sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
 pingpong_chan_SOURCES   = pingpong-chan.c
+hello_SOURCES           = hello.c
+call_SOURCES            = call.c
 
 all_LIBS = $(top_builddir)/libhpx/libhpx.la
 
@@ -38,7 +39,6 @@ if HAVE_MPI
 AM_CFLAGS           += @MPI_CFLAGS@
 endif
 
-hello_LDADD           = $(all_LIBS)
 fibonacci_LDADD       = $(all_LIBS)
 pingpong_LDADD        = $(all_LIBS)
 allgather_LDADD       = $(all_LIBS)
@@ -57,4 +57,6 @@ sendrecv_LDADD        = $(all_LIBS)
 sendrecv_chan_LDADD   = $(all_LIBS)
 allreduce_chan_LDADD  = $(all_LIBS)
 pingpong_chan_LDADD   = $(all_LIBS)
+hello_LDADD           = $(all_LIBS)
+call_LDADD            = $(all_LIBS)
 
