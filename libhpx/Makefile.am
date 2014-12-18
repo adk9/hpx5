@@ -18,6 +18,7 @@ libhpx_la_LIBADD   = system/libsystem.la \
                      scheduler/libscheduler.la \
                      util/libutil.la \
                      $(HPX_JEMALLOC_LDADD) \
+                     $(HPX_LIBFFI_LDADD) \
                      $(HPX_PHOTON_LDADD) \
                      $(HWLOC_EMBEDDED_LDADD)
 
