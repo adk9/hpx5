@@ -4,6 +4,7 @@
 
 #include "photon_rdma_EAGER_buf.h"
 #include "photon_exchange.h"
+#include "photon_event.h"
 #include "logging.h"
 #include "libsync/include/sync.h"
 
@@ -75,10 +76,17 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
 }
 
 static int _get_remote_progress(int proc, photonEagerBuf buf) {
-  int rc;
+  int rc, ret_proc;
   uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
+  photon_rid ret_req;
+
+  rc = __photon_try_one_event(&ret_proc, &ret_req);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Failure getting event");
+    return PHOTON_ERROR;
+  }
 
   rloc = 0;
   if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {

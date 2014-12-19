@@ -54,15 +54,11 @@ START_TEST(test_rdma_one_sided_get_direct)
     photon_test(directReq, &flag, &type, &stat);
     if (flag > 0) {
       fprintf(detailed_log, "direct get of size %d completed successfully\n", (int)stat.size);
-      photon_send_FIN(recvReq, prev, 0); 
+      photon_send_FIN(recvReq, prev, PHOTON_REQ_COMPLETED); 
       break;
     }
   }
 
-  // clear the FIN event to avoid it being reaped in later tests
-  int ret_proc;
-  photon_rid req;
-  photon_wait_any(&ret_proc, &req);
   photon_wait(sendReq);
 
   MPI_Barrier(MPI_COMM_WORLD);

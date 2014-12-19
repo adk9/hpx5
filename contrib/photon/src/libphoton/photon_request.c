@@ -20,6 +20,7 @@ photonRequest photon_get_request(int proc) {
   // offset request index by 1 since 0 is our NULL_COOKIE
   req_ind = (req_curr & (rt->size - 1)) + 1;
   tail = sync_load(&rt->tail, SYNC_RELAXED);
+  assert(tail <= req_curr);
   if ((req_curr - tail) > rt->size) {
     log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
     return NULL;
@@ -31,8 +32,8 @@ photonRequest photon_get_request(int proc) {
     return NULL;
   }
 
-  if (req->state && (req->state != REQUEST_COMPLETED)) {
-    log_warn("Overwriting a request (id=0x%016lx, ind=%u, state=%d) that hasn't completed (curr=%lu, tail=%lu)",
+  if (req->state && (req->state != REQUEST_FREE)) {
+    log_warn("Overwriting a request (id=0x%016lx, ind=%u, state=%d) that never completed (curr=%lu, tail=%lu)",
 	     req->id, req->index, req->state, req_curr, tail);
   }
 
@@ -255,6 +256,10 @@ photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs) {
 }
 
 static int __photon_cleanup_request(photonRequest req) {
+
+  assert(req->state != REQUEST_FREE);
+  req->state = REQUEST_FREE;
+
   switch (req->op) {
   case REQUEST_OP_SENDBUF:
     if (req->flags & REQUEST_FLAG_EAGER) {
@@ -287,8 +292,6 @@ static int __photon_cleanup_request(photonRequest req) {
     log_err("Tried to cleanup a request op we don't recognize: %d", req->op);
     break;
   }
-
-  req->state = REQUEST_COMPLETED;
 
   return PHOTON_OK;
 }
