@@ -20,7 +20,6 @@ static  hpx_action_t _set  = 0;
 static int _set_action(void *args) {
   hpx_addr_t addr = *(hpx_addr_t*)args;
   hpx_lco_error(addr, HPX_LCO_ERROR, HPX_NULL);
-  hpx_lco_and_set(addr, HPX_NULL);
   return HPX_SUCCESS;
 }
 
