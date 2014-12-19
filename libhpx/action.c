@@ -218,7 +218,7 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 }
 
 
-int action_run_handler(hpx_parcel_t *parcel) {
+void HPX_NORETURN action_run_handler(hpx_parcel_t *parcel) {
   const hpx_addr_t target = hpx_parcel_get_target(parcel);
   const uint32_t owner = gas_owner_of(here->gas, target);
   DEBUG_IF (owner != here->rank) {
@@ -233,11 +233,20 @@ int action_run_handler(hpx_parcel_t *parcel) {
   if (pinned) {
     hpx_gas_try_pin(target, NULL);
   }
-  int e = handler(args);
+  int status = handler(args);
   if (pinned) {
     hpx_gas_unpin(target);
   }
-  return e;
+  switch (status) {
+    default:
+      dbg_error("action: produced unhandled error %i.\n", (int)status);
+    case HPX_ERROR:
+      dbg_error("action: produced error.\n");
+    case HPX_RESEND:
+    case HPX_SUCCESS:
+    case HPX_LCO_ERROR:
+      hpx_thread_exit(status);
+  }
 }
 
 

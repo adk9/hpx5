@@ -64,7 +64,7 @@ void action_table_free(const struct action_table *action)
 
 
 /// Run the handler associated a parcel's action.
-int action_run_handler(hpx_parcel_t *parcel)
+void HPX_NORETURN action_run_handler(hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

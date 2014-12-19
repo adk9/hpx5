@@ -55,6 +55,7 @@
 /examples/alltoall
 /examples/hello
 /examples/netfutures
+/examples/call
 
 # /apps/
 /apps/miniAMR/Makefile

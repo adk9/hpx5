@@ -78,19 +78,7 @@ static void *_run(void *worker) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  int status = action_run_handler(parcel);
-  switch (status) {
-   default:
-    dbg_error("action: produced unhandled error %i.\n", (int)status);
-    hpx_shutdown(status);
-   case HPX_ERROR:
-    dbg_error("action: produced error.\n");
-    hpx_abort();
-   case HPX_RESEND:
-   case HPX_SUCCESS:
-   case HPX_LCO_ERROR:
-    hpx_thread_exit(status);
-  }
+  action_run_handler(parcel);
   unreachable();
 }
 
@@ -489,40 +477,8 @@ void scheduler_exec(hpx_parcel_t *p) {
   // swap the "current" parcel with the one that we are executing
   hpx_parcel_t *oldp = self->current;
   self->current = p;
-  int status = action_run_handler(p);
+  action_run_handler(p);
   self->current = oldp;
-  switch (status) {
-    default:
-      dbg_error("action: produced unhandled error %i.\n", (int)status);
-    case HPX_ERROR:
-      dbg_error("action: produced error.\n");
-    case HPX_RESEND:
-      hpx_parcel_send(p, HPX_NULL);
-      break;
-    case HPX_SUCCESS:
-    case HPX_LCO_ERROR:
-      process_recover_credit(p);
-      hpx_action_t c_act = hpx_parcel_get_cont_action(p);
-      hpx_addr_t c_target = hpx_parcel_get_cont_target(p);
-      if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
-        if (p->pid != HPX_NULL) {
-          --p->credit;
-        }
-
-        if (c_act == hpx_lco_set_action) {
-          hpx_call_with_continuation(c_target, c_act, NULL, 0, HPX_NULL,
-                                     HPX_ACTION_NULL);
-        } else {
-          locality_cont_args_t cargs = { .action = c_act,
-                                         .status = status };
-          hpx_call_with_continuation(c_target, locality_call_continuation, &cargs,
-                                     sizeof(cargs),
-                                     HPX_NULL, HPX_ACTION_NULL);
-        }
-      }
-      hpx_parcel_release(p);
-      break;
-  }
 }
 
 
