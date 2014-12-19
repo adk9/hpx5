@@ -319,7 +319,6 @@ static int _photon_cancel(photon_rid request, int flags) {
     }
     while (!(req->flags & REQUEST_FLAG_LDONE))
       __photon_nbpop_event(req);
-
     photon_free_request(req);
   }
 
@@ -483,26 +482,41 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
     break;
   }
 
-  if( !ret_val ) {
-    *flag = 1;
-    status->src_addr.global.proc_id = req->proc;
-    status->tag = req->tag;
-    status->size = req->length;
-    status->count = 1;
-    status->error = 0;
-    dbg_trace("returning 0, flag:1");
-    return 0;
-  }
-  else if( ret_val > 0 ) {
-    dbg_trace("returning 0, flag:0");
-    *flag = 0;
-    return 0;
-  }
-  else {
-    dbg_trace("returning -1, flag:0");
-    *flag = 0;
+  switch (ret_val) {
+  case PHOTON_EVENT_REQCOMP: 
+    {
+      *flag = 1;
+      status->src_addr.global.proc_id = req->proc;
+      status->tag = req->tag;
+      status->size = req->length;
+      status->count = 1;
+      status->error = 0;
+      dbg_trace("returning 0, flag:1");
+      return 0;
+    }
+    break;
+  case PHOTON_EVENT_NONE:
+  case PHOTON_EVENT_OK:
+    {
+      dbg_trace("returning 0, flag:0");
+      *flag = 0;
+      return 0;
+    }
+    break;
+  case PHOTON_EVENT_ERROR:
+    {
+      dbg_trace("returning -1, flag:0");
+      *flag = 0;
+      return -1;
+    }
+    break;
+  default:
+    dbg_warn("Reached default case");
     return -1;
+    break;
   }
+
+  return -1;
 }
 
 static int _photon_wait(photon_rid request) {
@@ -513,7 +527,12 @@ static int _photon_wait(photon_rid request) {
   req = photon_lookup_request(request);
   if (req == NULL) {
     log_err("Wrong request value, operation not in table");
-    return -1;
+    return PHOTON_ERROR;
+  }
+
+  if (req->state == REQUEST_FREE) {
+    dbg_warn("Request 0x%016lx is already free!", req->id);
+    return PHOTON_ERROR;
   }
 
   if (req->type == LEDGER)
@@ -538,7 +557,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
 
   dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
   
-  if (buffertable_find_containing( (void *) ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void *) ptr, size, &db) != 0) {
     log_err("Requested recv from ptr not in table");
     goto error_exit;
   }
@@ -799,7 +818,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   
   dbg_trace("(%d, %p, %lu, %d, %p)", proc, ptr, size, tag, request);
   
-  if (buffertable_find_containing( (void*)ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void*)ptr, size, &db) != 0) {
     log_err("Requested post of send buffer for ptr not in table");
     goto error_exit;
   }
@@ -937,6 +956,7 @@ static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photo
       goto error_exit;
     }
     *request = req->id;
+    sync_fadd(&photon_processes[proc].local_rcv_info_ledger->prog, 1, SYNC_RELAXED);
   }
   
   return PHOTON_OK;
@@ -1062,6 +1082,7 @@ static int _photon_wait_send_request_rdma(int tag) {
   
   curr_entry->header = 0;
   curr_entry->footer = 0;
+  sync_fadd(&photon_processes[iproc].local_snd_info_ledger->prog, 1, SYNC_RELAXED);  
 
   return PHOTON_OK;
 }
@@ -1098,7 +1119,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
   /* get the remote buffer saved in the request */
   drb = &(req->remote_buffer);
   
-  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void *)ptr, size, &db) != 0) {
     log_err("Tried posting a send for a buffer not registered");
     goto error_exit;
   }
@@ -1158,7 +1179,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   /* get the remote buffer saved in the request */
   drb = &(req->remote_buffer);
 
-  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void *)ptr, size, &db) != 0) {
     log_err("Tried posting a os_get() into a buffer that's not registered");
     return -1;
   }
@@ -1221,7 +1242,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
 
   dbg_trace("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
 
-  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void *)ptr, size, &db) != 0) {
     log_err("Tried posting a os_put_direct() from a buffer that's not registered");
     return -1;
   }
@@ -1271,7 +1292,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
 
   dbg_trace("(%d, %p, %lu, %lu, %p)", proc, ptr, size, rbuf->size, request);
 
-  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+  if (buffertable_find_containing( (void *)ptr, size, &db) != 0) {
     log_err("Tried posting a os_get_direct() from a buffer that's not registered");
     return -1;
   }
@@ -1384,10 +1405,9 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-// Polls EVQ waiting for an event.
-// Returns the request associated with the event, but only removes request
-// if it is an EVQUEUE event, not LEDGER.
-// Can also return if an event not associated with a pending request was popped.
+// Polls EVQ waiting for an event associated with a request.
+// Returns the request associated with the event, but only removes
+// request if it is an EVQUEUE event, not LEDGER.
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   int rc;
 
@@ -1395,65 +1415,12 @@ static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
     goto error_exit;
   }
 
-  while(1) {
-    photon_rid cookie;
-    int existed = -1;
-    photon_event_status event;
-
-    rc = __photon_backend->get_event(&event);
-    if (rc < 0) {
-      dbg_err("Error getting event");
-      goto error_exit;
-    }
-    else if (rc != PHOTON_OK) {
-      continue;
-    }
-    
-    cookie = event.id;
-    rc = __photon_handle_cq_special(cookie);
-    if (rc == PHOTON_OK) {
-      continue;
-    }
-
-    if (cookie != (photon_rid)NULL_COOKIE) {
-      photonRequest req = NULL;      
-      if ((req = photon_lookup_request(cookie)) != NULL) {
-	int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
-        if ((req->type == EVQUEUE) && (nevents == 0)) {
-          dbg_trace("Setting request completed with cookie: 0x%016lx", cookie);
-	  req->state = REQUEST_COMPLETED;
-	  // handle pwc local completions
-	  if (req->op == REQUEST_OP_PWC) {
-	    photon_pwc_add_req(req);
-	    dbg_trace("Enqueuing PWC local completion 0x%016lx (ind=%u)", req->id, req->index);
-	  }
-        }
-	if (req && (req->type == EVQUEUE) && (req->state == REQUEST_COMPLETED) &&
-	    (req->op != REQUEST_OP_PWC)) {
-	  dbg_trace("Clearing event with cookie: 0x%016lx", cookie);
-	  photon_free_request(req);
-	  existed = 1;
-	}
-	else if (req) {
-	  existed = 1;
-	}
-      }
-    }
-
-    if (existed == -1) {
-      *ret_req = UINT64_MAX;
-      *ret_proc = (uint32_t)(event.id>>32);
-      return PHOTON_OK;
-    }
-    else {
-      *ret_req = cookie;
-      *ret_proc = (uint32_t)(event.id>>32);
-      return PHOTON_OK;
-    }
-  }
+  do {
+    rc = __photon_try_one_event(ret_proc, ret_req);
+  } while (rc != PHOTON_EVENT_REQCOMP);
 
   return PHOTON_OK;
-error_exit:
+ error_exit:
   return PHOTON_ERROR;
 }
 
@@ -1472,18 +1439,20 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
   
   while(1) {
     photonLedgerEntry curr_entry;
+    photonLedger l;
 
-    i=(i+1)%_photon_nproc;
+    i= (i+1) % _photon_nproc;
+    l = photon_processes[i].local_fin_ledger;
     // check if an event occurred on the RDMA end of things
-    curr = sync_load(&photon_processes[i].local_fin_ledger->curr, SYNC_RELAXED);
-    c_ind = curr & (photon_processes[i].local_fin_ledger->num_entries - 1);
-    dbg_trace("Wait All Out: %d", curr);
-    curr_entry = &(photon_processes[i].local_fin_ledger->entries[c_ind]);
+    curr = sync_load(&l->curr, SYNC_RELAXED);
+    c_ind = curr & (l->num_entries - 1);
+    curr_entry = &(l->entries[c_ind]);
+    dbg_trace("Wait All Out: %d", c_ind);
 
     if ((curr_entry->request != (uint64_t) 0) && 
-	sync_cas(&photon_processes[i].local_fin_ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	sync_cas(&l->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
       photonRequest req;
-      dbg_trace("Wait All In: %d/0x%016lx", curr, curr_entry->request);
+      dbg_trace("Wait All In: %d/0x%016lx", c_ind, curr_entry->request);
       
       req = photon_lookup_request(curr_entry->request);
       if (req != NULL) {
@@ -1493,7 +1462,7 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
         break;
       }
       curr_entry->request = 0;
-      sync_fadd(&photon_processes[i].local_fin_ledger->prog, 1, SYNC_RELAXED);
+      sync_fadd(&l->prog, 1, SYNC_RELAXED);
     }
   }
   

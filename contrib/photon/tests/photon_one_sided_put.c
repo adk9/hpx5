@@ -19,7 +19,7 @@ START_TEST(test_rdma_one_sided_put_direct)
 {
   struct photon_buffer_t rbuf;
   char *send, *recv;
-  int rank, size, next, prev, ret_proc;
+  int rank, size, next, prev;
   fprintf(detailed_log, "Starting RDMA one sided put direct test\n");
 
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
@@ -38,9 +38,8 @@ START_TEST(test_rdma_one_sided_put_direct)
     send[i] = i;
   }
 
-  photon_rid sendReq, recvReq, directReq, request;
+  photon_rid sendReq, recvReq, directReq;
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  photon_wait_any(&ret_proc, &request);
   photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   photon_get_buffer_remote(sendReq, &rbuf);
   photon_post_os_put_direct(prev, send, PHOTON_SEND_SIZE, &rbuf, 0, &directReq);
@@ -66,6 +65,8 @@ START_TEST(test_rdma_one_sided_put_direct)
     }
   }
 
+  photon_wait(recvReq);
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   fprintf(detailed_log, "%d received buffer: ", rank);
@@ -89,9 +90,9 @@ START_TEST (test_rdma_one_sided_put_direct_array)
 {
   struct photon_buffer_t rbuf[ARRAY_SIZE];
 
-  photon_rid recvReq[ARRAY_SIZE], sendReq[ARRAY_SIZE], directReq[ARRAY_SIZE], request;
+  photon_rid recvReq[ARRAY_SIZE], sendReq[ARRAY_SIZE], directReq[ARRAY_SIZE];
   char *send[ARRAY_SIZE], *recv[ARRAY_SIZE];
-  int rank, size, prev, next, i, j, ret_proc;
+  int rank, size, prev, next, i, j;
 
   fprintf(detailed_log, "Starting the photon vectored RDMA one sided put test\n");
 
@@ -119,7 +120,6 @@ START_TEST (test_rdma_one_sided_put_direct_array)
   // everyone posts their send buffers to their next rank
   for (i = 0; i < ARRAY_SIZE; i++) {
     photon_post_recv_buffer_rdma(next, recv[i], PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i]);
-    photon_wait_any(&ret_proc, &request);
     photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
     photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &directReq[i]);
@@ -146,6 +146,10 @@ START_TEST (test_rdma_one_sided_put_direct_array)
 	}
       }
     }
+  }
+
+  for (i = 0; i < ARRAY_SIZE; i++) {
+    photon_wait(recvReq[i]);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

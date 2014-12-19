@@ -23,8 +23,8 @@ char *sendP, *recvP;
 //****************************************************************************
 START_TEST (test_photon_get_remote_buffers) 
 {
-  photon_rid sendReq, recvReq, request, req;
-  int ret, flag, rc;
+  photon_rid sendReq, recvReq, req;
+  int flag, rc;
   int send_comp = 0;
   int recv_comp = 0;
 
@@ -49,8 +49,6 @@ START_TEST (test_photon_get_remote_buffers)
 
   // Post the recv buffer
   photon_post_recv_buffer_rdma(other_rank, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  // Make sure we clear the local post event
-  photon_wait_any(&ret, &request);
   // wait for a recv buffer that was posted
   photon_wait_recv_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   // Get the remote buffer info so we can do our own put.

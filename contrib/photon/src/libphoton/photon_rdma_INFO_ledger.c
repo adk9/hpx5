@@ -4,6 +4,7 @@
 
 #include "photon_rdma_INFO_ledger.h"
 #include "photon_exchange.h"
+#include "photon_event.h"
 #include "logging.h"
 
 static int _get_remote_progress(int proc, photonRILedger buf);
@@ -63,10 +64,17 @@ int photon_ri_ledger_get_next(int proc, photonRILedger l) {
 }
 
 static int _get_remote_progress(int proc, photonRILedger buf) {
-  int rc;
+  int rc, ret_proc;
   uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
+  photon_rid ret_req;
+
+  rc = __photon_try_one_event(&ret_proc, &ret_req);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Failure getting event");
+    return PHOTON_ERROR;
+  }
 
   rloc = 0;
   if (sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {

@@ -9,6 +9,7 @@
 #include "photon_backend.h"
 #include "photon_buffer.h"
 #include "photon_exchange.h"
+#include "photon_event.h"
 
 #include "photon_ugni.h"
 #include "photon_ugni_connect.h"
@@ -332,13 +333,13 @@ static int ugni_get_event(photonEventStatus stat) {
   else if (rc == 3) {
     /* nothing available */
     sync_tatas_release(&cq_lock);
-    return 1;
+    return PHOTON_EVENT_NONE;
   }
   else {
     sync_tatas_release(&cq_lock);
     /* rc == 2 is an overrun */
     dbg_err("Error getting CQ event: %d", rc);
-    return 1;
+    return PHOTON_EVENT_ERROR;
   }
   
   dbg_trace("received event with cookie:%"PRIx64, cookie);
@@ -347,5 +348,5 @@ static int ugni_get_event(photonEventStatus stat) {
   stat->proc = 0x0;
   stat->priv = NULL;
 
-  return PHOTON_OK;
+  return PHOTON_EVENT_OK;
 }
