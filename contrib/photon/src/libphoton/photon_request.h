@@ -12,6 +12,7 @@
 #define REQUEST_PENDING      0x02
 #define REQUEST_FAILED       0x03
 #define REQUEST_COMPLETED    0x04
+#define REQUEST_FREE         0x05
 
 #define REQUEST_COOK_SEND    0xff000000
 #define REQUEST_COOK_RECV    0xff100000

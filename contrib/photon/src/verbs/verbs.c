@@ -10,6 +10,7 @@
 #include "photon_forwarder.h"
 #include "photon_buffer.h"
 #include "photon_exchange.h"
+#include "photon_event.h"
 
 #include "verbs.h"
 #include "verbs_connect.h"
@@ -531,7 +532,7 @@ static int verbs_get_event(photonEventStatus stat) {
 
   // CQ is empty
   if (ne == 0) {
-    return 1;
+    return PHOTON_EVENT_NONE;
   }
   else if (wc.status != IBV_WC_SUCCESS) {
     log_err("(status==%d) != IBV_WC_SUCCESS: %s",
@@ -543,10 +544,10 @@ static int verbs_get_event(photonEventStatus stat) {
   stat->proc = 0x0;
   stat->priv = NULL;
 
-  return PHOTON_OK;
+  return PHOTON_EVENT_OK;
 
 error_exit:
-  return -1;
+  return PHOTON_EVENT_ERROR;
 }
 
 static int verbs_get_dev_addr(int af, photonAddr addr) {

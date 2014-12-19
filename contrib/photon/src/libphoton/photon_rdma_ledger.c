@@ -7,6 +7,7 @@
 #include "photon_rdma_ledger.h"
 #include "photon_buffer.h"
 #include "photon_exchange.h"
+#include "photon_event.h"
 
 static int _get_remote_progress(int proc, photonLedger buf);
 
@@ -50,8 +51,7 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
       log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
       return -1;
     }
-    if (((curr - l->acct.rcur)) >= l->num_entries &&
-	l->acct.event_prefix != REQUEST_COOK_FIN) {  //XXX: don't wait for FIN ledger
+    if (((curr - l->acct.rcur)) >= l->num_entries) {
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, l);
       dbg_trace("No new ledger entry until receiver catches up...");
@@ -68,14 +68,21 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
 }
 
 static int _get_remote_progress(int proc, photonLedger buf) {
-  int rc;
+  int rc, ret_proc;
   uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
+  photon_rid ret_req;
+
+  rc = __photon_try_one_event(&ret_proc, &ret_req);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Failure getting event");
+    return PHOTON_ERROR;
+  }
 
   rloc = 0;
   if (sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
-      
+    
     dbg_trace("Fetching remote ledger curr at rcur: %llu", buf->acct.rcur);
     
     rmt_addr = buf->remote.addr + PHOTON_LEDG_SSIZE(buf->num_entries) -

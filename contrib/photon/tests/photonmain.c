@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
   add_photon_os_put_bench(tc);
   //add_photon_send_buffer_bench(tc);
   //add_photon_recv_buffer_bench(tc);
-  //add_photon_send_buffer_bd_bench(tc);
-  //add_photon_recv_buffer_bd_bench(tc);
+  add_photon_send_buffer_bd_bench(tc);
+  add_photon_recv_buffer_bd_bench(tc);
   //add_photon_put_wc_bw_bench(tc);
   suite_add_tcase(s, tc);
 

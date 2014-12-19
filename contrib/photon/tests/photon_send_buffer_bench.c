@@ -34,11 +34,10 @@ START_TEST (test_photon_send_buffer_bench)
   int skip = 1000;
   int loop = 10000;
 
-  photon_rid sendReq, recvReq, req;
+  photon_rid sendReq, recvReq;
   char *s_buf;
   int64_t t_start = 0, t_end = 0;
   int i, k;
-  int ret_proc;
 
   int rank, size, next, prev;
   fprintf(detailed_log, "Starting the photon send buffer latency benchmark test\n");
@@ -84,8 +83,6 @@ START_TEST (test_photon_send_buffer_bench)
         // wait for the send buffer that was posted from the previous rank
         photon_wait_send_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &recvReq);
         photon_send_FIN(recvReq, prev, PHOTON_REQ_COMPLETED);
-        // clear the EVQ event resulting from the FIN
-        photon_wait_any(&ret_proc, &req);
       }
     } // End of for loop
     t_end = TIME();
