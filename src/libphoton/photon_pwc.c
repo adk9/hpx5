@@ -35,15 +35,15 @@ int photon_pwc_init() {
 int photon_pwc_add_req(photonRequest req) {
   uint64_t req_curr, tail;
   int req_ind;
-  req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
-  req_ind = req_curr & (pwc_table->size - 1);
+  req_curr = sync_addf(&pwc_table->count, 1, SYNC_RELAXED);
   tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
+  assert(tail <= req_curr);
   if ((req_curr - tail) > pwc_table->size) {
     log_err("Exceeded PWC table size: %d", pwc_table->size);
     return PHOTON_ERROR;
   }
+  req_ind = req_curr & (pwc_table->size - 1);
   pwc_table->req_ptrs[req_ind] = req;
-  sync_fadd(&pwc_table->count, 1, SYNC_RELAXED);
   return PHOTON_OK;
 }
 
@@ -55,8 +55,10 @@ photonRequest photon_pwc_pop_req() {
   if (tail < req_curr) {
     if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_RELAXED, SYNC_RELAXED)) {
       photonRequest req;
-      req_ind = tail & (pwc_table->size - 1);
-      req = pwc_table->req_ptrs[req_ind];
+      req_ind = (tail+1) & (pwc_table->size - 1);
+      do {
+	req = pwc_table->req_ptrs[req_ind];
+      } while (!req);
       pwc_table->req_ptrs[req_ind] = NULL;
       return req;
     }
@@ -198,7 +200,7 @@ static int photon_pwc_try_ledger(int proc, void *ptr, uint64_t size,
   }
   
   if (size > 0) {
-    if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
+    if (buffertable_find_containing( (void *)ptr, size, &db) != 0) {
       log_err("Tried posting from a buffer that's not registered");
       goto error_exit;
     }
@@ -347,7 +349,6 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   photonLedgerEntry entry_iter;
   photonRequest req;
   photonEagerBuf eb;
-  photon_event_status event;
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_COOKIE;
   int i, rc, start, end;
@@ -378,17 +379,39 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       return PHOTON_OK;
     }
 
-    rc = __photon_backend->get_event(&event);
-    if (rc < 0) {
+    rc = __photon_get_event(&cookie);
+    if (rc == PHOTON_EVENT_ERROR) {
       dbg_err("Error getting event, rc=%d", rc);
       goto error_exit;
     }
-    if (rc == PHOTON_OK) {
-      cookie = event.id;
-      dbg_trace("popped CQ event with id: 0x%016lx", cookie);
+    else if (rc == PHOTON_EVENT_NONE) {
+      cookie = NULL_COOKIE;
+    }
+    else {
+      // we found an event to process
+      int rc;
+      rc = __photon_handle_cq_event(NULL, cookie, &req);
+      if (rc == PHOTON_EVENT_ERROR) {
+	goto error_exit;
+      }
+      else if ((rc == PHOTON_EVENT_REQCOMP) && req &&
+	       (req->op == REQUEST_OP_PWC)) {
+	// sometimes the requestor doesn't care about the completion
+	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+	  *flag = 1;
+	  *request = req->id;
+	}
+	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx (ind=%u)",
+		  req->id, cookie, req->index);
+	photon_free_request(req);
+	return PHOTON_OK;
+      }
+      else {
+	dbg_trace("PWC probe handled non-completion event: 0x%016lx", cookie);
+      }
     }
   }
-
+  
   // only check recv ledgers if an event we don't care about was popped
   if ((cookie == NULL_COOKIE) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
@@ -444,44 +467,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       }
     }
   }
-  
-  // we found something to process
-  if (cookie != NULL_COOKIE) {
-    // handle any non request-bound events
-    rc = __photon_handle_cq_special(cookie);
-    if (rc == PHOTON_OK) {
-      return rc;
-    }
     
-    req = photon_lookup_request(cookie);
-    if (req) {
-      // allow pwc probe to work with photon_test()
-      if (req->op != REQUEST_OP_PWC) {
-	__photon_handle_cq_event(req, cookie);
-	return PHOTON_OK;
-      }
-      
-      // set flag and request only if we have processed the number of outstanding
-      // events expected for this reqeust
-      int nevents = sync_addf(&req->events, -1, SYNC_RELAXED);
-      if ((req->op == REQUEST_OP_PWC) && (nevents == 0)) {
-	// sometimes the requestor doesn't care about the completion
-	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-	  *flag = 1;
-	  *request = req->id;
-	}
-	dbg_trace("Completed and removing pwc request: 0x%016lx/0x%016lx (ind=%u)",
-		  req->id, cookie, req->index);
-	photon_free_request(req);
-	return PHOTON_OK;
-      }
-    }
-    else {
-      dbg_warn("Got a CQ event not tracked: 0x%016lx", cookie);
-      goto error_exit;
-    }
-  }
-  
   return PHOTON_OK;
 
  error_exit:

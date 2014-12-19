@@ -48,8 +48,6 @@ START_TEST(test_rdma_with_completion)
 
   // Post the recv buffer
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  // Make sure we clear the local post event
-  photon_wait_any(&ret, &request);
   // wait for a recv buffer that was posted
   photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   // Get the remote buffer info so we can do our own put.
