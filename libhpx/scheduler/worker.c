@@ -406,13 +406,11 @@ int worker_start(void) {
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
-    dbg_error("failed to acquire an initial parcel.\n");
-    return LIBHPX_ERROR;
+    return dbg_error("failed to acquire an initial parcel.\n");
   }
 
   if (thread_transfer(p, _on_startup, NULL)) {
-    dbg_error("shutdown returned error.\n");
-    return LIBHPX_ERROR;
+    return dbg_error("failed to start a worker\n");
   }
 
   return LIBHPX_OK;
@@ -467,14 +465,36 @@ void scheduler_spawn(hpx_parcel_t *p) {
 }
 
 
+static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *from = self->current;
+
+  // If we're transferring from a task, then we want to delete the current
+  // task's parcel. Otherwise we are transferring from a thread and we want to
+  // checkpoint the current thread so that we can return to it and then push it
+  // so we can find it later (or have it stolen later).
+  if (parcel_get_stack(from) == NULL) {
+    hpx_parcel_release(from);
+  }
+  else {
+    parcel_get_stack(from)->sp = sp;
+    _spawn_lifo(self, from);
+  }
+
+  // otherwise run the action
+  self->current = env;
+  assert(parcel_get_stack(self->current) == NULL);
+  action_run_handler(env);
+  unreachable();
+  return HPX_SUCCESS;
+}
+
+
 /// Synchronously execute the action associated with a parcel in the
 /// calling thread.
 void scheduler_exec(hpx_parcel_t *p) {
   // swap the "current" parcel with the one that we are executing
-  hpx_parcel_t *oldp = self->current;
-  self->current = p;
-  action_run_handler(p);
-  self->current = oldp;
+  void **sp = &self->sp;
+  thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
 }
 
 
@@ -656,7 +676,10 @@ void hpx_thread_exit(int status) {
 
   if (status == HPX_RESEND) {
     // Get a parcel to transfer to, and transfer using the resend continuation.
-    hpx_parcel_t *to = _schedule(false, NULL);
+    // NB: "fast" argument to schedule is "true" so that we don't try to run a
+    //      task inside of schedule() which would cause the current task to be
+    //      freed.
+    hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }
