@@ -84,15 +84,11 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
 
 
 /// A thread_transfer() continuation that runs after a worker first starts it's
-/// scheduling loop, but before any user defined lightweight threads run.
+/// scheduling loop.
 static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self->sp = sp;
   self->current = to;
-
-  // wait for the rest of the scheduler to catch up to me
-  sync_barrier_join(here->sched->barrier, self->id);
-
   return HPX_SUCCESS;
 }
 
