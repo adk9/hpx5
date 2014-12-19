@@ -63,11 +63,6 @@ void action_table_free(const struct action_table *action)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Run the handler associated a parcel's action.
-void HPX_NORETURN action_run_handler(hpx_parcel_t *parcel)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
 #define LIBHPX_REGISTER_ACTION        HPX_REGISTER_ACTION
 #define LIBHPX_REGISTER_PINNED_ACTION HPX_REGISTER_PINNED_ACTION
 #define LIBHPX_REGISTER_TASK          HPX_REGISTER_TASK
