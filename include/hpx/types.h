@@ -29,4 +29,32 @@ typedef short hpx_status_t;
 #define  HPX_USER            ((hpx_status_t)127)
 /// @}
 
+/// HPX datatypes
+/// @{
+#define HPX_UCHAR              &ffi_type_uchar
+#define HPX_SCHAR              &ffi_type_schar
+#define HPX_USHORT             &ffi_type_ushort
+#define HPX_SSHORT             &ffi_type_sshort
+#define HPX_UINT               &ffi_type_uint
+#define HPX_SINT               &ffi_type_sint
+#define HPX_ULONG              &ffi_type_ulong
+#define HPX_SLONG              &ffi_type_slong
+#define HPX_VOID               &ffi_type_void
+#define HPX_UINT8              &ffi_type_uint8
+#define HPX_SINT8              &ffi_type_sint8
+#define HPX_UINT16             &ffi_type_uint16
+#define HPX_SINT16             &ffi_type_sint16
+#define HPX_UINT32             &ffi_type_uint32
+#define HPX_SINT32             &ffi_type_sint32
+#define HPX_UINT64             &ffi_type_uint64
+#define HPX_SINT64             &ffi_type_sint64
+#define HPX_FLOAT              &ffi_type_float
+#define HPX_DOUBLE             &ffi_type_double
+#define HPX_POINTER            &ffi_type_pointer
+#define HPX_LONGDOUBLE         &ffi_type_longdouble
+#define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
+#define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
+#define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
+/// @}
+
 #endif
