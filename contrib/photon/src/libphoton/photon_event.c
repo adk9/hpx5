@@ -100,6 +100,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
     // mark complete if request is type EVQUEUE and request id matches the event
     if ((cookie == req->id) && (req->type == EVQUEUE)) {
       req->state = REQUEST_COMPLETED;
+      *rreq = req;
       dbg_trace("Set request completed with rid: 0x%016lx", cookie);
       return PHOTON_EVENT_REQCOMP;
     }
