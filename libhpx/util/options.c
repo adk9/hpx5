@@ -214,7 +214,7 @@ hpx_config_t *parse_options(int *argc, char ***argv) {
     hpx_option_parser_free(&opts);
   }
 
-#if defined __GLIBC_MINOR__ && __GLIBC_MINOR__ < 13
+#ifdef __GLIBC__
   optind = 0;
 #else
   optind = 1;
