@@ -85,8 +85,8 @@ AC_ARG_ENABLE([tutorial],
 
 AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
-                  [Enable using of jemalloc as the default allocator @<:@default=yes@:>@])],
-  [], [enable_jemalloc=yes])
+                  [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
+  [], [enable_jemalloc=no])
 
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
