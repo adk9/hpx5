@@ -24,7 +24,7 @@
 typedef uint16_t hpx_action_t;
 
 /// The type of functions that can be registered with hpx_register_action().
-typedef int (*hpx_action_handler_t)(void *);
+typedef int (*hpx_action_handler_t)(void);
 
 /// This special action does nothing (i.e. it is a nop).
 extern hpx_action_t HPX_ACTION_NULL;

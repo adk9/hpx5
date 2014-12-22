@@ -61,12 +61,12 @@ int hpx_init(int *argc, char ***argv);
 /// inter-locality steal operation (if that is implemented) or a
 /// network parcel.
 ///
-/// @param entry an action to execute, or HPX_ACTION NULL to wait for an
-///              incoming parcel or a inter-locality steal (if implemented)
-/// @param  args arguments to pass to @p entry
-/// @param  size the size of @p args
-/// @returns     the status code passed to hpx_shutdown() upon termination
-int hpx_run(hpx_action_t *entry, const void *args, size_t size);
+/// @param action an action to execute, or HPX_ACTION NULL to wait for an
+///               incoming parcel or a inter-locality steal (if implemented)
+/// @param  ...   variadic arguments of type @p hpx_type_t to pass to
+///               the @p action
+/// @returns      the status code passed to hpx_shutdown() upon termination
+int hpx_run(hpx_action_t *action, ...);
 
 
 /// Shutdown the HPX runtime.
