@@ -106,4 +106,10 @@ int hpx_register_interrupt(hpx_action_t *id, const char *key, hpx_action_handler
     hpx_register_interrupt(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
   } while (0)
 
+
+int hpx_register_action2(hpx_action_t *id, const char *key,
+                         hpx_action_handler_t f,
+                         hpx_type_t rtype, unsigned int nargs, ...);
+
+
 #endif
