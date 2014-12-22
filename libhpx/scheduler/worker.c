@@ -556,14 +556,14 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self->current;
-  hpx_parcel_t *to = _schedule(false, from);
-  if (from == to)
-    return;
-
   // parcel represents a task or an interrupt
   if (!parcel_get_stack(from)) {
     return;
   }
+
+  hpx_parcel_t *to = _schedule(false, from);
+  if (from == to)
+    return;
 
   assert(to);
   assert(parcel_get_stack(to));
