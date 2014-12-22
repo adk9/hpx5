@@ -19,6 +19,7 @@
 ///
 
 #include <string.h>
+#include <stdarg.h>
 #include <hpx/hpx.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -154,4 +155,25 @@ hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
   }
   hpx_lco_delete(lco, HPX_NULL);
   return e;
+}
+
+/// Experimental HPX call interface.
+int
+hpx_call2(hpx_addr_t addr, hpx_action_t action, ...) {
+
+  void *args;
+  size_t len;
+  va_list vargs;
+  va_start(vargs, action);
+  int e = action_table_get_args(here->actions, action, vargs, &args, &len);
+  va_end(vargs);
+  
+  hpx_parcel_t *p = parcel_create(addr, action, args, len, HPX_NULL, HPX_ACTION_NULL,
+                                  hpx_thread_current_pid(), true);
+  if (!p)
+    return dbg_error("rpc: failed to create parcel.\n");
+
+  hpx_parcel_send_sync(p);
+  free(args);
+  return HPX_SUCCESS;
 }
