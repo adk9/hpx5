@@ -208,8 +208,8 @@ int action_table_get_args(const struct action_table *table, hpx_action_t id,
     dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
   }
 
-  void **args = malloc(sizeof(void*) * cif->nargs);
-  for (int i = 0; i < cif->nargs; i++) {
+  void **args = (void**)malloc(sizeof(void*) * cif->nargs);
+  for (int i = 0; i < cif->nargs; ++i) {
     args[i] = va_arg(inargs, void*);
   }
 
@@ -312,7 +312,7 @@ int hpx_register_action2(hpx_action_t *id, const char *key,
 
   hpx_type_t *args = malloc(sizeof(*args) * nargs);
   va_start(vargs, nargs);
-  for (int i = 0; i < nargs; i++) {
+  for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);

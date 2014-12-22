@@ -23,6 +23,7 @@
 #include <hpx/hpx.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -166,8 +167,11 @@ hpx_call2(hpx_addr_t addr, hpx_action_t action, ...) {
   va_list vargs;
   va_start(vargs, action);
   int e = action_table_get_args(here->actions, action, vargs, &args, &len);
+  if (e != LIBHPX_OK) {
+    dbg_error("error getting arguments associated with action id %d\n", action);
+  }
   va_end(vargs);
-  
+
   hpx_parcel_t *p = parcel_create(addr, action, args, len, HPX_NULL, HPX_ACTION_NULL,
                                   hpx_thread_current_pid(), true);
   if (!p)
