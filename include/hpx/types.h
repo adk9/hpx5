@@ -13,6 +13,8 @@
 #ifndef HPX_TYPES_H
 #define HPX_TYPES_H
 
+#include <ffi.h>
+
 /// @file include/hpx/types.h
 
 /// Extern HPX macros
@@ -56,5 +58,8 @@ typedef short hpx_status_t;
 #define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
 #define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
 /// @}
+
+/// An HPX datatype
+typedef ffi_type* hpx_type_t;
 
 #endif

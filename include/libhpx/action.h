@@ -13,8 +13,8 @@
 #ifndef LIBHPX_ACTION_H
 #define LIBHPX_ACTION_H
 
+#include <stdarg.h>
 #include <hpx/hpx.h>
-
 
 ///
 struct action_table;
@@ -25,11 +25,14 @@ const char *action_table_get_key(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Get the handler associated with an action.
-hpx_action_handler_t action_table_get_handler(const struct action_table *,
-                                              hpx_action_t)
+/// Run the handler associated with a parcel.
+int action_table_run_handler(const struct action_table *, hpx_parcel_t *)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Get the serialized/marshalled arguments associated with an action
+int action_table_get_args(const struct action_table *table, hpx_action_t id,
+                          va_list inargs, void **outargs, size_t *len)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)
