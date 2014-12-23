@@ -12,7 +12,7 @@
 // =============================================================================
 
 // The program heats one of the sides as the initial condition, and iterates to
-// study how the heat transfers across the surface. 
+// study how the heat transfers across the surface.
 
 #include "heat_1.h"
 
@@ -48,6 +48,7 @@ static void _register_actions(void);
              __VA_ARGS__);                                              \
   } while (0)
 
+
 void problem_init(Domain *ld) {
   ld->grid_points = calloc(1, sizeof(grid_storage_t));
   assert(ld->grid_points != NULL);
@@ -70,14 +71,142 @@ void problem_init(Domain *ld) {
   }
 }
 
+static hpx_action_t write_double = 0;
+
+static int write_double_action(double *d) {
+  hpx_addr_t target = hpx_thread_current_target();
+  double *addr = NULL;
+  if (!hpx_gas_pin(target, &addr)) {
+    return HPX_RESEND;
+  }
+  *addr = d[0];
+  hpx_gas_unpin(target);
+  hpx_thread_continue(sizeof(double), &d[1]);
+}
+
+static hpx_action_t read_double = 0;
+
+static int read_double_action(void *unused) {
+  hpx_addr_t target = hpx_thread_current_target();
+  double *addr = NULL;
+  if (!hpx_gas_pin(target, (void**)&addr)) {
+    return HPX_RESEND;
+  }
+  double d = *addr;
+  hpx_gas_unpin(target);
+  hpx_thread_continue(sizeof(d), d);
+}
+
+static int offset_of(int i, int j) {
+  return (i * (N + 2) * sizeof(double)) + (j * sizeof(double));
+}
+
+static hpx_action_t stencil = 0;
+
+static int stencil_action(int *ij) {
+  // read the value in this cell
+  hpx_addr_t target = hpx_thread_current_target();
+  double *addr = NULL;
+  if (!hpx_gas_pin(target, (void**)&addr)) {
+    return HPX_RESEND;
+  }
+  double v = *addr;
+  hpx_gas_unpin(target);
+
+  // read the four neighbor cells asynchronously
+  double vals[4] = {
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  };
+
+  void *addrs[4] = {
+    vals + 0,
+    vals + 1,
+    vals + 2,
+    vals + 3
+  };
+
+  hpx_addr_t futures[4] = {
+    hpx_future_new(sizeof(double)),
+    hpx_future_new(sizeof(double)),
+    hpx_future_new(sizeof(double)),
+    hpx_future_new(sizeof(double))
+  };
+
+  size_t sizes[4] = {
+    sizeof(double),
+    sizeof(double),
+    sizeof(double),
+    sizeof(double)
+  };
+
+  int i = ij[0];
+  int j = ij[1];
+
+  hpx_addr_t neighbors[4] = {
+    hpx_addr_add(grid, offset_of(i + 1, j), BLOCKSIZE),
+    hpx_addr_add(grid, offset_of(i - 1, j), BLOCKSIZE),
+    hpx_addr_add(grid, offset_of(i, j - 1), BLOCKSIZE),
+    hpx_addr_add(grid, offset_of(i, j + 1), BLOCKSIZE)
+  }
+
+  for (int i = 0; i < 4; ++i) {
+    hpx_call(neighbors[i], read_double, NULL, 0, futures[i]);
+  }
+
+  hpx_lco_get_all(4, futures, sizes, addrs, NULL);
+
+  for (int n = 0; n < 4; ++i) {
+    hpx_lco_delete(futures[n]);
+  }
+
+  // compute the new T and dT
+  double T = 0.25 * (vals[0] + vals[1] + vals[2] + vals[3]); // stencil
+  double dT = T - v; // local variation
+
+  // write out the new T and continue the dT for the min reduction
+  double cont_args[2] = { T, fabs(dT) };
+  hpx_addr_t new_grid_addr = hpx_addr_add(new_grid, offset_of(i, j), BLOCKSIZE);
+  hpx_call_cc(new_grid_addr, write_double, cont_args, sizeof(cont_args), NULL,
+              NULL);
+}
+
+static hpx_action_t spawn_stencil = 0;
+
+static void spawn_stencil_args_init(void *out, const int j, const void *env) {
+  int *ij = out;
+  int *i = env;
+  ij[0] = *i;
+  ij[1] = j;
+}
+
+static int spawn_stencil_action(int *ij) {
+  int i = ij[0];
+  int j = ij[1];
+  hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
+  hpx_call_cc(cell, stencil, ij, 2*sizeof(int), NULL, NULL);
+}
+
+static void row_stencil_args_init(void *out, const int i, const void *env) {
+  *((int*)out) = i;
+}
+
+static int row_stencil_action(int *i) {
+  row_stencil_args_t *args = out;
+  hpx_par_call_sync(spawn_stencil, 1, N + 1, 1, N + 2, 2 * sizeof(int),
+                    spawn_stencil_args_init, sizeof(int), i);
+}
+
 void update_grid(Domain *ld)
 {
   struct timeval ts_st, ts_end;
   double time;
-  double T, dT, dTmax, epsilon;
+  double dT, dTmax, epsilon;
   int finished;
   int nr_iter;
- 
+
   /* Set the precision wanted */
   epsilon  = 0.0001;
   finished = 0;
@@ -86,25 +215,28 @@ void update_grid(Domain *ld)
   gettimeofday( &ts_st, NULL );
 
   do {
-    dTmax = 0.0; 
-    for (int i = 1; i < N + 1; i++) {
-      for (int j = 1; j < N + 1; j++) {
-        T = 0.25 *
-           (ld->grid_points->array->grid[i+1][j] + 
-            ld->grid_points->array->grid[i-1][j] +
-            ld->grid_points->array->grid[i][j-1] + 
-            ld->grid_points->array->grid[i][j+1]); // stencil 
-        dT = T - ld->grid_points->array->grid[i][j]; // local variation 
-        ld->grid_points->array->new_grid[i][j] = T;
-        if (dTmax < fabs(dT))
-          dTmax = fabs(dT); // max variation in this iteration 
-      }
-    }
-    if (dTmax < epsilon ) // is the precision reached good enough ? 
+    dTmax = 0.0;
+
+    hpx_addr_t min = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), min_double, init_double);
+    // for (int i = 1; i < N + 1; i++) {
+    //   for (int j = 1; j < N + 1; j++) {
+    //     int args[2] = { i, j };
+    //     hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
+    //     hpx_call(cell, stencil, args, sizeof(args), min);
+    //   }
+    // }
+    hpx_par_call(row_stencil, 1, N + 1, 1, N + 2, sizeof(row_stencil_args_t),
+                 row_stencil_args_init, 0, NULL, min);
+    int e = hpx_lco_get(min, sizeof(dTmax), &dTMax);
+    dbg_check(e, "failed to get min");
+
+
+
+    if (dTmax < epsilon ) // is the precision reached good enough ?
       finished = 1;
     else {
-      for (int k = 0; k < N + 2; k++)      // not yet  Need to prepare 
-        for (int l = 0; l < N + 2; l++)    // ourselves for doing a new 
+      for (int k = 0; k < N + 2; k++)      // not yet  Need to prepare
+        for (int l = 0; l < N + 2; l++)    // ourselves for doing a new
           ld->grid_points->array->grid[k][l] = ld->grid_points->array->new_grid[k][l];
     }
     nr_iter++;
@@ -116,7 +248,7 @@ void update_grid(Domain *ld)
   time = ts_end.tv_sec + (ts_end.tv_usec / 1000000.0);
   time -= ts_st.tv_sec + (ts_st.tv_usec / 1000000.0);
 
-  if (ld->myIndex == 0) { 
+  if (ld->myIndex == 0) {
     printf("%d iterations in %.3lf sec\n", nr_iter, time ); /* and prints it */
   }
 }
@@ -160,7 +292,7 @@ static int _main_action(int *input)
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
 
-  hpx_gas_free(domain, HPX_NULL);  
+  hpx_gas_free(domain, HPX_NULL);
   hpx_shutdown(HPX_SUCCESS);
 }
 
@@ -172,7 +304,7 @@ void _register_actions(void) {
   HPX_REGISTER_ACTION(&_main, _main_action);
   HPX_REGISTER_ACTION(&_evolve, _evolve_action);
 }
-  
+
 // Main routine
 int main(int argc, char *argv[])
 {
@@ -216,7 +348,7 @@ int main(int argc, char *argv[])
   input[0] = nDoms;
   input[1] = nx;
   input[2] = maxcycles;
-  printf("Number of domains: %d maxcycles: %d, nx = %d\n", nDoms, 
+  printf("Number of domains: %d maxcycles: %d, nx = %d\n", nDoms,
            maxcycles, nx);
 
   e = hpx_run(&_main, input, 3*sizeof(int));
