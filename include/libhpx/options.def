@@ -34,7 +34,13 @@ LIBHPX_DECL_OPTION(hpx, arg, int, cores, 0)
 LIBHPX_DECL_OPTION(hpx, arg, int, threads, 0)
 LIBHPX_DECL_OPTION(hpx, arg, unsigned int, backoffmax, 1024)
 LIBHPX_DECL_OPTION(hpx, arg, int, stacksize, 32768)
+
+#ifdef __ARMEL__
+LIBHPX_DECL_OPTION(hpx, arg, size_t, heapsize, 1024*1024*128)
+#else
 LIBHPX_DECL_OPTION(hpx, arg, size_t, heapsize, 1lu << 30)
+#endif
+
 LIBHPX_DECL_OPTION(hpx, arg, hpx_gas_t, gas, HPX_GAS_PGAS)
 LIBHPX_DECL_OPTION(hpx, arg, hpx_boot_t, boot, HPX_BOOT_DEFAULT)
 LIBHPX_DECL_OPTION(hpx, arg, hpx_transport_t, transport, HPX_TRANSPORT_DEFAULT)

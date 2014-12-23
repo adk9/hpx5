@@ -117,7 +117,11 @@ static size_t _alignment(void) {
   }
   else
 #endif
+  #if defined(__ARMEL__)
+    return 8;
+  #else
     return 16;
+  #endif
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {

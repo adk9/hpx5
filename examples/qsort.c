@@ -25,25 +25,17 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
-#include <check.h>
 #include "hpx/hpx.h"
 
 #define DNUM 1000000
 #define THREAD_LEVEL 10
 
-/// This file tests cost of GAS operations
-static void usage(FILE *stream) {
-  fprintf(stream, "Usage:  [options] DNUM\n"
-          "\t-c, number of cores to run on\n"
-          "\t-t, number of scheduler threads\n"
-          "\t-T, select a transport by number (see hpx_config.h)\n"
-          "\t-D, all localities wait for debugger\n"
-          "\t-d, wait for debugger at specific locality\n"
-          "\t-l, set logging level\n"
-          "\t-s, set stack size\n"
-          "\t-p, set per-PE global heap size\n"
-          "\t-r, set send/receive request limit\n"
-          "\t-h, this help display\n");
+static void _usage(FILE *f, int error) {
+  fprintf(f, "Usage: fibonacci [options] NUMBER\n"
+          "\t-h, show help\n");
+  hpx_print_help();
+  fflush(f);
+  exit(error);
 }
 
 //for sequential and parallel implementation
@@ -82,7 +74,7 @@ static int _main_action(uint64_t *args) {
   srand(time(NULL)); //seed random
   uint64_t NUM = *(uint64_t *)args;
 
-  fprintf(test_log, "parallel Quick Sort for %"PRIu64"\n", NUM);
+  printf("parallel Quick Sort for %"PRIu64"\n", NUM);
   //Want to compare sorting on the same list,
   //so backup.
   double *lystbck = (double *) malloc(NUM*sizeof(double));
@@ -98,7 +90,7 @@ static int _main_action(uint64_t *args) {
   //Sequential mergesort, and timing
   start = hpx_time_now();
   quicksort(lyst, NUM);
-  fprintf(test_log, "Sequential quicksort took: %g ms. \n", hpx_time_elapsed_ms(start));
+  printf("Sequential quicksort took: %g ms. \n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by quicksort.\n");
   }
@@ -108,7 +100,7 @@ static int _main_action(uint64_t *args) {
   memcpy(lyst, lystbck, NUM*sizeof(double));
   start = hpx_time_now();
   parallelQuicksort(lyst, NUM, THREAD_LEVEL);
-  fprintf(test_log, "Parallel quicksort took: %g ms.\n", hpx_time_elapsed_ms(start));
+  printf("Parallel quicksort took: %g ms.\n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by parallelQuicksort.\n");
   }
@@ -118,77 +110,50 @@ static int _main_action(uint64_t *args) {
   start = hpx_time_now();
   qsort(lyst, NUM, sizeof(double), compare_doubles);
   //Compute time difference.
-  fprintf(test_log, "Built-in qsort took: %g ms.\n\n", hpx_time_elapsed_ms(start));
+  printf("Built-in qsort took: %g ms.\n\n", hpx_time_elapsed_ms(start));
   if (!isSorted(lyst, NUM)) {
     printf("Oops, lyst did not get sorted by qsort.\n");
   }
 
   free(lyst);
   free(lystbck);
-  fclose(test_log);
   hpx_shutdown(HPX_SUCCESS);
 }
 
 int main (int argc, char *argv[])
 {
-  hpx_config_t cfg = HPX_CONFIG_DEFAULTS;
   int opt = 0;
   srand(time(NULL)); //seed random
   int NUM = DNUM;
 
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dl:s:p:r:q:h")) != -1) {
+  while ((opt = getopt(argc, argv,  "h?")) != -1) {
     switch (opt) {
-     case 'c':
-      cfg.cores = atoi(optarg);
-      break;
-     case 't':
-      cfg.threads = atoi(optarg);
-      break;
-     case 'T':
-      cfg.transport = atoi(optarg);
-      assert(0 <= cfg.transport && cfg.transport < HPX_TRANSPORT_MAX);
-      break;
-     case 'D':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = HPX_LOCALITY_ALL;
-      break;
-     case 'd':
-      cfg.wait = HPX_WAIT;
-      cfg.wait_at = atoi(optarg);
-      break;
-     case 'l':
-      cfg.log_level = atoi(optarg);
-      break;
-     case 's':
-      cfg.stack_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'p':
-      cfg.heap_bytes = strtoul(optarg, NULL, 0);
-      break;
-     case 'r':
-      cfg.req_limit = strtoul(optarg, NULL, 0);
-      break;
      case 'h':
-      usage(stdout);
-      return 0;
+      _usage(stdout, EXIT_SUCCESS);
      case '?':
      default:
-      usage(stderr);
-      return -1;
+      _usage(stderr, EXIT_FAILURE);
     }
   }
 
-  if (argc == 2) //user specified list size.
-  {
-    NUM = atoi(argv[1]);
+  argc -= optind;
+  argv += optind;
+
+  switch (argc) {
+   case 0:
+     fprintf(stderr, "\nMissing user specified list size.\n"); // fall through
+   default:
+     _usage(stderr, EXIT_FAILURE);
+   case 1:
+     NUM = atoi(argv[0]);
+     break;
   }
 
-  if (hpx_init(&cfg)) {
+  int e = hpx_init(&argc, &argv);
+  if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
-    return 1;
+    return e;
   }
-
-  test_log = fopen("test.log", "a+");
 
   // Register the main action
   HPX_REGISTER_ACTION(&_main, _main_action);

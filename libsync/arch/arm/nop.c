@@ -10,22 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_LIBHPX_H
-#define LIBHPX_LIBHPX_H
-
-#include <errno.h>
-
-#if defined(__ARMEL__)
-extern int libhpx_arm_shutdown_code;
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-enum {
-  LIBHPX_ENOMEM = -(ENOMEM),
-  LIBHPX_EINVAL = -(EINVAL),
-  LIBHPX_ERROR = -2,
-  LIBHPX_EUNIMPLEMENTED = -1,
-  LIBHPX_OK = 0
-};
+#include "nop.h"
 
+void sync_nop(void) {
+  __asm__ volatile ("nop");
+}
 
-#endif  // LIBHPX_LIBHPX_H
+void sync_pause(void) {
+  __asm__ volatile ("nop");
+}
+

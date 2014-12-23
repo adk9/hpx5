@@ -39,6 +39,11 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
+#if defined(__ARMEL__)
+int libhpx_arm_shutdown_code;
+#endif
+
+
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated.
@@ -256,6 +261,10 @@ int hpx_get_num_threads(void) {
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
+  #if defined(__ARMEL__)
+  libhpx_arm_shutdown_code = code;
+  #endif
+
   if (!here->ranks) {
     dbg_error("hpx_shutdown can only be called when the system is running.\n");
   }

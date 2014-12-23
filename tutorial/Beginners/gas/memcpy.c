@@ -85,7 +85,7 @@ static int _main_action(void *args) {
     assert(local[i] == size - 1);
   hpx_gas_unpin(data);
 
-  printf("hpx_gas_memcpy succeeded for size = %ld\n", BLOCK_SIZE);
+  printf("hpx_gas_memcpy succeeded for size = %u\n", BLOCK_SIZE);
 
   hpx_gas_free(data, HPX_NULL);
   free(src);

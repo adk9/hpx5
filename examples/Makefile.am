@@ -3,7 +3,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
                        countdown seqspawn parspawn future memput memget \
                        guppie sendrecv sendrecv-chan allreduce-chan \
-                       pingpong-chan hello alltoall call
+                       pingpong-chan hello alltoall qsort call
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -22,6 +22,7 @@ sendrecv_SOURCES        = sendrecv.c
 sendrecv_chan_SOURCES   = sendrecv-chan.c
 allreduce_chan_SOURCES  = allreduce-chan.c
 pingpong_chan_SOURCES   = pingpong-chan.c
+qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 
@@ -57,6 +58,6 @@ sendrecv_LDADD        = $(all_LIBS)
 sendrecv_chan_LDADD   = $(all_LIBS)
 allreduce_chan_LDADD  = $(all_LIBS)
 pingpong_chan_LDADD   = $(all_LIBS)
+qsort_LDADD           = $(all_LIBS)
 hello_LDADD           = $(all_LIBS)
 call_LDADD            = $(all_LIBS)
-
