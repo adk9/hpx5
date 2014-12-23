@@ -14,7 +14,7 @@
 #define LIBHPX_NETWORK_PWC_PWC_H
 
 
-#include <hpx/attributes.h>
+#include <hpx/hpx.h>
 
 
 /// Forward declarations.

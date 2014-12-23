@@ -23,12 +23,11 @@ typedef struct segment {
   struct photon_buffer_priv_t key;
 } segment_t;
 
+///
+int segment_init(segment_t *segment, char *base, size_t size)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
-int segment_register(segment_t *segment)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-void segment_deregister(segment_t *segment)
+void segment_fini(segment_t *segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 static inline void *segment_offset_to_rva(segment_t *segment, size_t offset) {
