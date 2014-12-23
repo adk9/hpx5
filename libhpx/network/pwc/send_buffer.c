@@ -16,24 +16,18 @@
 
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
-#include "peer.h"
+#include "eager_buffer.h"
+#include "send_buffer.h"
 
-
-void peer_fini(peer_t *peer) {
-  pwc_buffer_fini(&peer->pwc);
-  send_buffer_fini(&peer->send);
-  eager_buffer_fini(&peer->tx);
-  eager_buffer_fini(&peer->rx);
+int send_buffer_init(send_buffer_t *sends, struct eager_buffer *endpoint) {
+  sends->endpoint = endpoint;
+  return LIBHPX_OK;
 }
 
+void send_buffer_fini(send_buffer_t *sends) {
+  dbg_error("unimplemented\n");
+}
 
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, hpx_addr_t l) {
-  segment_t *segment = &peer->segments[SEGMENT_HEAP];
-  const void *rva = segment_offset_to_rva(segment, offset);
-  struct photon_buffer_priv_t key = segment->key;
-  int e = photon_get_with_completion(peer->rank, lva, n, (void*)rva, key, l, 0);
-  if (PHOTON_OK != e) {
-    hpx_abort();
-  }
-  return LIBHPX_OK;
+int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
+  return LIBHPX_EUNIMPLEMENTED;
 }

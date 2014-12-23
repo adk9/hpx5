@@ -18,9 +18,9 @@
 #include "libhpx/libhpx.h"
 #include "segment.h"
 
-int segment_register(segment_t *segment) {
-  void *base = segment->base;
-  size_t size = segment->size;
+int segment_init(segment_t *segment, char *base, size_t size) {
+  segment->base = base;
+  segment->size = size;
 
   if (PHOTON_OK != photon_register_buffer(base, size)) {
     return dbg_error("failed to register segment with Photon\n");
@@ -36,7 +36,7 @@ int segment_register(segment_t *segment) {
   return LIBHPX_OK;
 }
 
-void segment_deregister(segment_t *segment) {
+void segment_fini(segment_t *segment) {
   void *base = segment->base;
   size_t size = segment->size;
   if (PHOTON_OK != photon_unregister_buffer(base, size)) {

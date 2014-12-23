@@ -14,26 +14,21 @@
 # include "config.h"
 #endif
 
-#include "libhpx/debug.h"
+#include <stddef.h>
 #include "libhpx/libhpx.h"
-#include "peer.h"
+#include "eager_buffer.h"
 
-
-void peer_fini(peer_t *peer) {
-  pwc_buffer_fini(&peer->pwc);
-  send_buffer_fini(&peer->send);
-  eager_buffer_fini(&peer->tx);
-  eager_buffer_fini(&peer->rx);
+int eager_buffer_init(eager_buffer_t* b, char *base, uint32_t size) {
+  b->size = size;
+  b->base = base;
+  b->next = 0;
+  b->last = 0;
+  return LIBHPX_OK;
 }
 
 
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, hpx_addr_t l) {
-  segment_t *segment = &peer->segments[SEGMENT_HEAP];
-  const void *rva = segment_offset_to_rva(segment, offset);
-  struct photon_buffer_priv_t key = segment->key;
-  int e = photon_get_with_completion(peer->rank, lva, n, (void*)rva, key, l, 0);
-  if (PHOTON_OK != e) {
-    hpx_abort();
-  }
-  return LIBHPX_OK;
+void eager_buffer_fini(eager_buffer_t *b) {
+}
+
+void eager_buffer_progress(eager_buffer_t *b) {
 }
