@@ -25,8 +25,7 @@
 
 typedef struct photon_buffer_priv_t rdma_key_t;
 
-
-typedef struct pwc_record {
+typedef struct {
   void            *rva;
   const void      *lva;
   size_t             n;
@@ -34,110 +33,7 @@ typedef struct pwc_record {
   hpx_addr_t    remote;
   uint64_t  completion;
   rdma_key_t       key;
-} pwc_record_t;
-
-
-/// Compute the index into the buffer for an abstract index.
-///
-/// The size must be 2^k because we mask instead of %.
-///
-/// @param            i The abstract index.
-/// @param            n The size of the buffer.
-///
-/// @returns            i % size
-static int _index_of(uint32_t i, uint32_t size) {
-  return (i & (size - 1));
-}
-
-
-/// Reflow the elements in a buffer.
-///
-/// After resizing a buffer, existing elements are likely to be in the wrong
-/// place, given the new size. This function will reflow the part of the buffer
-/// that is in the wrong place.
-///
-/// @param       buffer The buffer to reflow.
-/// @param      oldsize The size of the buffer prior to the resize operation.
-///
-/// @returns  LIBHPX_OK The reflow was successful.
-///        LIBHPX_ERROR An unexpected error occurred.
-static int _reflow(pwc_buffer_t *buffer, uint32_t oldsize) {
-  int n = buffer->max - buffer->min;
-  if (!n) {
-    goto exit;
-  }
-
-  // Resizing the buffer changes where our index mapping is, we need to move
-  // data around in the arrays. We do that by memcpy-ing either the prefix or
-  // suffix of a wrapped buffer into the new position. After resizing the buffer
-  // should never be wrapped.
-  int min = _index_of(buffer->min, oldsize);
-  int max = _index_of(buffer->max, oldsize);
-  int prefix = (min < max) ? max - min : oldsize - min;
-  int suffix = (min < max) ? 0 : max;
-
-  uint32_t size = buffer->size;
-  int nmin = _index_of(buffer->min, size);
-  int nmax = _index_of(buffer->max, size);
-
-  // This code is slightly tricky. We only need to move one of the ranges,
-  // either [min, oldsize) or [0, max). We determine which range we need to move
-  // by seeing if the min or max index is different in the new buffer, and then
-  // copying the appropriate bytes of the requests and records arrays to the
-  // right place in the new buffer.
-  if (min == nmin) {
-    assert(max != nmax);
-    assert(0 < suffix);
-    assert(min + prefix == nmax - suffix);
-    size_t bytes = suffix * sizeof(*buffer->records);
-    memcpy(buffer->records + min + prefix, buffer->records, bytes);
-  }
-  else if (max == nmax) {
-    assert(0 < prefix);
-    assert(nmin + prefix <= size);
-    size_t bytes = prefix * sizeof(*buffer->records);
-    memcpy(buffer->records + nmin, buffer->records + min, bytes);
-  }
-  else {
-    return dbg_error("unexpected shift in pwc buffer _reflow\n");
-  }
-
- exit:
-  dbg_log_net("reflowed a send buffer from %u to %u\n", oldsize, size);
-  return LIBHPX_OK;
-}
-
-
-/// Expand the size of a buffer.
-///
-/// @param       buffer The buffer to expand.
-/// @param         size The new size for the buffer.
-///
-/// @returns  LIBHPX_OK The buffer was expanded successfully.
-///       LIBHPX_ENOMEM We ran out of memory during expansion.
-///        LIBHPX_ERROR There was an unexpected error during expansion.
-static int _expand(pwc_buffer_t *buffer, uint32_t size) {
-  assert(size != 0);
-
-  if (size < buffer->size) {
-    return dbg_error("cannot string a pwc buffer\n");
-  }
-
-  if (size == buffer->size) {
-    return LIBHPX_OK;
-  }
-
-  uint32_t oldsize = buffer->size;
-  buffer->size = size;
-  buffer->records = realloc(buffer->records, size * sizeof(pwc_record_t));
-  if (buffer->records) {
-    return _reflow(buffer, oldsize);
-  }
-
-  dbg_error("failed to resize a pwc buffer (%u to %u)\n", oldsize, size);
-  return LIBHPX_ENOMEM;
-}
-
+} record_t;
 
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
@@ -166,8 +62,10 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
   }
 }
 
-
-static int _start_record(pwc_buffer_t *b, pwc_record_t *r) {
+/// Used as a function callback in circular_buffer_progress.
+static int _start_record(void *buffer, void *record) {
+  pwc_buffer_t *b = buffer;
+  record_t *r = record;
   void *rva = r->rva;
   const void *lva = r->lva;
   size_t n = r->n;
@@ -178,66 +76,26 @@ static int _start_record(pwc_buffer_t *b, pwc_record_t *r) {
   return _start(b, rva, lva, n, local, remote, completion, key);
 }
 
-
-/// Try to append a pwc request to be started in the future.
-static int _append(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, uint64_t completion,
-                   rdma_key_t key)
-{
-  uint32_t size = buffer->size;
-  if (size <= buffer->max - buffer->min) {
-    size = size * 2;
-    if (LIBHPX_OK != _expand(buffer, size)) {
-      return dbg_error("failed to resize a pwc() buffer during append\n");
-    }
-  }
-
-  uint64_t next = buffer->max++;
-  uint32_t i = _index_of(next, size);
-  buffer->records[i].rva = rva;
-  buffer->records[i].lva = lva;
-  buffer->records[i].n = n;
-  buffer->records[i].local = local;
-  buffer->records[i].remote = remote;
-  buffer->records[i].completion = completion;
-  buffer->records[i].key = key;
-  return LIBHPX_OK;
-}
-
-
 int pwc_buffer_init(pwc_buffer_t *buffer, uint32_t rank, uint32_t size) {
   buffer->rank = rank;
-  buffer->size = 0;
-  buffer->min = 0;
-  buffer->max = 0;
-  buffer->records = NULL;
-
-  size = 1 << ceil_log2_32(size);
-  return _expand(buffer, size);
+  return circular_buffer_init(&buffer->pending, sizeof(record_t), size);
 }
-
 
 void pwc_buffer_fini(pwc_buffer_t *buffer) {
-  if (!buffer) {
-    return;
-  }
-
-  if (buffer->records) {
-    free(buffer->records);
-  }
-
-  free(buffer);
+  circular_buffer_fini(&buffer->pending);
 }
-
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
                    hpx_addr_t local, hpx_addr_t remote, uint64_t completion,
                    segment_t *segment)
 {
   void *rva = segment_offset_to_rva(segment, roff);
+  rdma_key_t key = segment->key;
 
+  // Before performing this put, try to progress the buffer. The progress call
+  // returns the number of buffered requests remaining.
   if (pwc_buffer_progress(buffer) == 0) {
-    int e = _start(buffer, rva, lva, n, local, remote, completion, segment->key);
+    int e = _start(buffer, rva, lva, n, local, remote, completion, key);
 
     if (LIBHPX_OK == e) {
       return LIBHPX_OK;
@@ -248,31 +106,28 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
     }
   }
 
-  int e = _append(buffer, rva, lva, n, local, remote, completion, segment->key);
-  if (LIBHPX_OK != e) {
-    return dbg_error("could not append put request\n");
+  // Either there were buffered PWCs remaining, or the _start() returned retry,
+  // so buffer this pwc for now.
+  record_t *r = circular_buffer_append(&buffer->pending);
+  if (!r) {
+    return dbg_error("could not allocate a circular buffer record\n");
   }
+
+  r->rva = rva;
+  r->lva = lva;
+  r->n = n;
+  r->local = local;
+  r->remote = remote;
+  r->completion = completion;
+  r->key = key;
 
   return LIBHPX_OK;
 }
 
-
 int pwc_buffer_progress(pwc_buffer_t *buffer) {
-  uint32_t size = buffer->size;
-  while (buffer->min != buffer->max) {
-    uint64_t next = buffer->min++;
-    uint32_t i = _index_of(next, size);
-    pwc_record_t *r = buffer->records + i;
-    int e = _start_record(buffer, r);
-
-    if (LIBHPX_RETRY == e) {
-      return buffer->max - buffer->min;
-    }
-
-    if (LIBHPX_OK != e) {
-      return dbg_error("pwc failed\n");
-    }
+  int i = circular_buffer_progress(&buffer->pending, _start_record, buffer);
+  if (i < 0) {
+    dbg_error("failed to progress the pwc buffer\n");
   }
-
-  return 0;
+  return i;
 }

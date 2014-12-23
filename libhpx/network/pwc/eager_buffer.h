@@ -37,11 +37,11 @@
 /// If there is not enough space in the buffer, the sender will issue a pwc() to
 /// the remote buffer that encodes the number of bytes to skip.
 typedef struct eager_buffer {
-  uint32_t               size;
-  const uint32_t       UNUSED;
-  char                  *base;
-  uint64_t               next;
-  uint64_t               last;
+  uint32_t         size;
+  const uint32_t UNUSED;
+  uint64_t          max;
+  uint64_t          min;
+  char            *base;
 } eager_buffer_t;
 
 /// Initialize an eager buffer.
