@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "hpx/hpx.h"
 
 #define BUFFER_SIZE 128
@@ -137,7 +138,7 @@ static int _action_ping(args_t *args) {
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();
-  RANK_PRINTF("pinging block (%lu), msg= '%s'\n", to, args->msg);
+  RANK_PRINTF("pinging block (%"PRIu64"), msg= '%s'\n", to, args->msg);
 
   hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Failed to acquire parcel in 'ping' action");
@@ -164,7 +165,7 @@ static int _action_pong(args_t *args) {
 
 
   hpx_addr_t to = _partner();
-  RANK_PRINTF("ponging block (%lu), msg='%s'\n", to, args->msg);
+  RANK_PRINTF("ponging block (%"PRIu64"), msg='%s'\n", to, args->msg);
 
   hpx_parcel_t *p = hpx_parcel_acquire(args, sizeof(*args));
   CHECK_NOT_NULL(p, "Could not allocate parcel in 'pong' action\n");

@@ -178,11 +178,16 @@ AS_IF([test "x$DOXYGEN" != x],
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
+
 AS_CASE([$host_os],
-      [linux*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-                 dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
-                 l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
-                 pagesize=`getconf PAGESIZE`],
+     [linux*], [AS_CASE([$host_cpu],
+         [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             l1d_linesize=32
+             pagesize=`getconf PAGESIZE`],
+         [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+             l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
+             pagesize=`getconf PAGESIZE`])],
      [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
                  pagesize=`getconf PAGESIZE`],
     [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
@@ -191,7 +196,7 @@ AS_CASE([$host_os],
                 [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
                  l1d_linesize=128
                  pagesize=4096])
-                 
+
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
@@ -201,6 +206,7 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
+AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])

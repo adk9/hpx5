@@ -27,7 +27,11 @@ typedef union {
   lockable_ptr_t       lock;
   const lco_class_t *vtable;
   uintptr_t            bits;
-} lco_t;
+} lco_t
+  #ifdef __ARMEL__
+  HPX_ALIGNED(16)
+  #endif
+;
 
 /// ----------------------------------------------------------------------------
 /// The LCO abstract class interface.
@@ -56,7 +60,11 @@ struct lco_class {
   lco_wait_t   on_wait;
   lco_try_get_t on_try_get;
   lco_try_wait_t on_try_wait;
-};
+}
+  #ifdef __ARMEL__
+  HPX_ALIGNED(16)
+  #endif
+;
 
 // -----------------------------------------------------------------------------
 // LCO operations merely operate on the bits of an lco vtable pointer.

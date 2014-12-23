@@ -140,7 +140,7 @@ static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
   void *b = (void*)data;
   int e = MPI_Isend(b, n, MPI_BYTE, dest, here->rank, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("mpi: could not send %lu bytes to %i.\n", n, dest);
+    return dbg_error("mpi: could not send %zu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
 }
 
@@ -192,7 +192,7 @@ static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void
 
   int e = MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("mpi: could not receive %lu bytes from %i.\n", n, src);
+    return dbg_error("mpi: could not receive %zu bytes from %i.\n", n, src);
 
   return HPX_SUCCESS;
 }

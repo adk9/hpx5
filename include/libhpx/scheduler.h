@@ -202,7 +202,7 @@ void scheduler_yield(void)
 /// @param         cvar The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-int scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
+hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 

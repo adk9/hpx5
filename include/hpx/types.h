@@ -17,6 +17,7 @@
 
 /// Extern HPX macros
 /// @{
+#if defined(__x86_64__)
 typedef enum {
   HPX_ERROR          = -1,
   HPX_SUCCESS        = 0,
@@ -26,6 +27,16 @@ typedef enum {
   HPX_LCO_TIMEOUT    = 4,
   HPX_USER           = 127
 } hpx_status_t;
+#elif defined( __ARMEL__)
+typedef short hpx_status_t;
+#define  HPX_ERROR           -1
+#define  HPX_SUCCESS         0
+#define  HPX_RESEND          1
+#define  HPX_LCO_ERROR       2
+#define  HPX_LCO_CHAN_EMPTY  3
+#define  HPX_LCO_TIMEOUT     4
+#define  HPX_USER            127
+#endif
 /// @}
 
 #endif

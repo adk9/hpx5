@@ -23,7 +23,11 @@
 #define     GPA_PE_BITS (16)
 #define   GPA_CORE_BITS (8)
 #define GPA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GPA_PE_BITS - GPA_CORE_BITS)
+#ifdef __ARMEL__
+#define     GPA_PE_MASK ((uint64_t)UINT32_MAX << GPA_OFFSET_BITS)
+#else
 #define     GPA_PE_MASK (UINTPTR_MAX << GPA_OFFSET_BITS)
+#endif
 #define GPA_OFFSET_MASK (~(GPA_PE_MASK))
 
 

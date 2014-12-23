@@ -76,7 +76,7 @@ static int _pinger_action(hpx_addr_t *chans) {
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
-    fprintf(stdout, "%-*lu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * _loop));
+    fprintf(stdout, "%-*zu%*g\n", 10, size, FIELD_WIDTH, elapsed/(1.0 * _loop));
   }
   return HPX_SUCCESS;
 }
