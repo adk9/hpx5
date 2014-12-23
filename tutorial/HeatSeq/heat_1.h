@@ -10,6 +10,11 @@
 
 #define N 30
 
+hpx_addr_t grid;
+hpx_addr_t new_grid;
+
+#define BLOCKSIZE sizeof(double)
+
 /* Grid declarations to be shared and blocked as the biggest chunks of rows */
 typedef struct grid_point {
   double grid[N+2][N+2];
