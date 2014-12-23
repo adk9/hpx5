@@ -31,7 +31,6 @@
 /// big hack
 #include "../../gas/pgas/gpa.h"
 
-
 typedef struct {
   network_t            vtable;
   uint32_t               rank;
@@ -80,7 +79,7 @@ static int _pwc_progress(network_t *network) {
   return 0;
 }
 
-/// Perform a parcel-send operation.
+/// Perform a parcel send operation to an eager buffer.
 ///
 /// This transforms the parcel send operation into a pwc() operation into the
 /// parcel buffer on the target peer.
@@ -94,7 +93,7 @@ static int _pwc_progress(network_t *network) {
 static int _pwc_send(network_t *network, hpx_parcel_t *p, hpx_addr_t lsync) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, p->target);
-  peer_t *peer = pwc->peers + rank;
+  peer_t *peer = &pwc->peers[rank];
   return peer_send(peer, p, lsync);
 }
 
@@ -108,7 +107,7 @@ static int _pwc_pwc(network_t *network,
 {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
-  peer_t *peer = pwc->peers + rank;
+  peer_t *peer = &pwc->peers[rank];
   uint64_t offset = gas_offset_of(pwc->gas, to);
   uint64_t complete = _completion(op, offset);
   return peer_pwc(peer, offset, lva, n, lsync, rsync, complete, SEGMENT_HEAP);
@@ -171,7 +170,7 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
 
-  if (LIBHPX_OK != send_buffer_init(&peer->send, &peer->tx)) {
+  if (LIBHPX_OK != send_buffer_init(&peer->send, &peer->tx, 8)) {
     return dbg_error("could not initialize the send buffer\n");
   }
 

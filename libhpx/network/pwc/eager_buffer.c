@@ -20,15 +20,19 @@
 
 int eager_buffer_init(eager_buffer_t* b, char *base, uint32_t size) {
   b->size = size;
+  b->min = 0;
+  b->max = 0;
   b->base = base;
-  b->next = 0;
-  b->last = 0;
   return LIBHPX_OK;
 }
-
 
 void eager_buffer_fini(eager_buffer_t *b) {
 }
 
-void eager_buffer_progress(eager_buffer_t *b) {
+int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t lsync) {
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+hpx_parcel_t *eager_buffer_rx(eager_buffer_t *buffer) {
+  return NULL;
 }

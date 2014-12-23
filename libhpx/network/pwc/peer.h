@@ -28,7 +28,6 @@ typedef enum {
   SEGMENT_MAX
 } segment_id_t;
 
-
 /// This structure tracks the peer-to-peer information needed for the network.
 ///
 /// Each peer contains three different remote rdma segments, one for the HPX
@@ -58,11 +57,9 @@ typedef struct peer {
   send_buffer_t    send;                        // the parcel send buffer
 } peer_t;
 
-
 /// Finalize a peer structure.
 void peer_fini(peer_t *peer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Perform a put-with-completion operation to a specific peer.
 ///
@@ -87,11 +84,10 @@ static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
   return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, completion, segment);
 }
 
-
 /// Perform a parcel send operation to a specific peer.
 ///
 /// This simply forwards the operation through the send buffer structure, which
-/// will either put the parcel directly into the remote parcel buffer for this
+/// will either put the parcel directly into the remote eager buffer for this
 /// peer, or will buffer the parcel to be sent in the future.
 ///
 /// @param         peer The peer structure representing the send target.
@@ -102,7 +98,6 @@ static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
 static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
   return send_buffer_send(&peer->send, p, lsync);
 }
-
 
 /// Perform a get operation from a specific peer.
 ///
