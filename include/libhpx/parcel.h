@@ -41,6 +41,13 @@ struct hpx_parcel {
   char         buffer[];
 };
 
+
+typedef struct parcel_queue {
+  hpx_parcel_t *head;
+  hpx_parcel_t *tail;
+} parcel_queue_t;
+
+
 hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
                             const void *args, size_t len, hpx_addr_t c_target,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
@@ -87,6 +94,27 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
 void parcel_stack_foreach(hpx_parcel_t *p, void *env,
                           void (*f)(hpx_parcel_t*, void*))
   HPX_INTERNAL HPX_NON_NULL(3);
+
+
+void parcel_queue_init(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+void parcel_queue_fini(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+void parcel_queue_enqueue(parcel_queue_t *q, hpx_parcel_t *p)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
+
+hpx_parcel_t *parcel_queue_dequeue(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+hpx_parcel_t *parcel_queue_dequeue_all(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 
 static inline uint32_t parcel_size(hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
