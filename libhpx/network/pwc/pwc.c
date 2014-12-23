@@ -161,12 +161,12 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer) {
 
   uint32_t size = pwc->parcel_buffer_size;
   void *rx_base = pwc->eager + rank * size;
-  if (LIBHPX_OK != eager_buffer_init(&peer->rx, rx_base, size)) {
+  if (LIBHPX_OK != eager_buffer_init(&peer->rx, peer, rx_base, size)) {
     return dbg_error("could not initialize the parcel rx endpoint\n");
   }
 
   void *tx_base = peer->segments[SEGMENT_EAGER].base + rank * size;
-  if (LIBHPX_OK != eager_buffer_init(&peer->tx, tx_base, size)) {
+  if (LIBHPX_OK != eager_buffer_init(&peer->tx, peer, tx_base, size)) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
 
