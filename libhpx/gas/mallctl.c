@@ -21,7 +21,9 @@
 #include "libhpx/debug.h"
 #include "mallctl.h"
 
+#ifdef __ARMEL__
 const char *malloc_conf = "lg_dirty_mult:-1";
+#endif
 
 int mallctl_get_lg_dirty_mult(void) {
   ssize_t opt = -1;
@@ -38,6 +40,9 @@ int mallctl_get_lg_dirty_mult(void) {
 extern ssize_t hpxje_opt_lg_dirty_mult;
 
 bool mallctl_disable_dirty_page_purge(void) {
+#if !defined(__ARMEL__) 
+  hpxje_opt_lg_dirty_mult = -1;
+#endif
   return (mallctl_get_lg_dirty_mult() == -1);
 }
 
