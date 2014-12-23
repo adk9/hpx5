@@ -14,17 +14,14 @@
 #define LIBHPX_NETWORK_PWC_BUFFER_H
 
 #include <hpx/hpx.h>
+#include "circular_buffer.h"
 
 struct segment;
-struct photon_buffer_priv_t;
-struct pwc_record;
 
 typedef struct {
-  uint32_t              rank;
-  uint32_t              size;
-  uint64_t               min;
-  uint64_t               max;
-  struct pwc_record *records;
+  uint32_t             rank;
+  const uint32_t     UNUSED;
+  circular_buffer_t pending;
 } pwc_buffer_t;
 
 

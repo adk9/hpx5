@@ -14,20 +14,26 @@
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
 #include <hpx/hpx.h>
+#include "circular_buffer.h"
 
 struct eager_buffer;
 
 typedef struct {
-  struct eager_buffer *endpoint;
+  struct eager_buffer   *tx;
+  circular_buffer_t pending;
 } send_buffer_t;
 
-int send_buffer_init(send_buffer_t *sends, struct eager_buffer *endpoint)
+int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
+                     uint32_t size)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 void send_buffer_fini(send_buffer_t *sends)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+int send_buffer_progress(send_buffer_t *sends)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H
