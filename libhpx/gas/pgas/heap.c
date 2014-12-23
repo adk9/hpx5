@@ -32,8 +32,11 @@
   #include <hugetlbfs.h>
 #endif
 
+#if defined(__ARMEL__)
+const uint64_t MAX_HEAP_BYTES =  1099511627776;
+#else
 const uintptr_t MAX_HEAP_BYTES = 1lu << GPA_OFFSET_BITS;
-
+#endif
 
 /// This operates as an atomic fetch and add, with the added caveat that the
 /// "fetched" value will be aligned to an @p align alignment.
@@ -159,17 +162,17 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   sync_store(&heap->csbrk, 0, SYNC_RELEASE);
 
   heap->bytes_per_chunk = mallctl_get_chunk_size();
-  dbg_log_gas("heap bytes per chunk is %lu\n", heap->bytes_per_chunk);
+  dbg_log_gas("heap bytes per chunk is %zu\n", heap->bytes_per_chunk);
 
   // align size to bytes-per-chunk boundary
   heap->nbytes = size - (size % heap->bytes_per_chunk);
-  dbg_log_gas("heap nbytes is aligned as %lu\n", heap->nbytes);
+  dbg_log_gas("heap nbytes is aligned as %zu\n", heap->nbytes);
   if (heap->nbytes > MAX_HEAP_BYTES) {
-    dbg_error("%lu > max heap bytes of %lu\n", heap->nbytes, MAX_HEAP_BYTES);
+    dbg_error("%zu > max heap bytes of %"PRIu64"\n", heap->nbytes, MAX_HEAP_BYTES);
   }
 
   heap->nchunks = ceil_div_64(heap->nbytes, heap->bytes_per_chunk);
-  dbg_log_gas("heap nchunks is %lu\n", heap->nchunks);
+  dbg_log_gas("heap nchunks is %zu\n", heap->nchunks);
 
   // use one extra chunk to deal with alignment
   heap->raw_nchunks = heap->nchunks + 1;
@@ -181,23 +184,23 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
     malloc(heap->raw_nbytes);
 #endif
   if (!heap->raw_base) {
-    dbg_error("could not allocate %lu bytes for the global heap\n",
+    dbg_error("could not allocate %zu bytes for the global heap\n",
               heap->raw_nbytes);
     return LIBHPX_ENOMEM;
   }
-  dbg_log_gas("allocated %lu bytes for the global heap\n", heap->raw_nbytes);
+  dbg_log_gas("allocated %zu bytes for the global heap\n", heap->raw_nbytes);
 
   // adjust stored base based on alignment requirements
   const size_t r = ((uintptr_t)heap->raw_base % heap->bytes_per_chunk);
   const size_t l = (heap->bytes_per_chunk - r) % heap->bytes_per_chunk;
   heap->base = heap->raw_base + l;
-  dbg_log_gas("%lu-byte heap reserved at %p\n", heap->nbytes, heap->base);
+  dbg_log_gas("%zu-byte heap reserved at %p\n", heap->nbytes, heap->base);
 
   assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
   assert(heap->base + heap->nbytes <= heap->raw_base + heap->raw_nbytes);
 
   heap->chunks = _new_bitmap(heap->nchunks);
-  dbg_log_gas("allocated chunk bitmap to manage %lu chunks.\n", heap->nchunks);
+  dbg_log_gas("allocated chunk bitmap to manage %zu chunks.\n", heap->nchunks);
 
   if (init_cyclic) {
     heap->cyclic_arena = mallctl_create_arena(_chunk_alloc_cyclic,
@@ -294,7 +297,7 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
 
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
   DEBUG_IF (heap->nbytes < offset) {
-    dbg_error("offset %lu out of range (0,%lu)\n", offset, heap->nbytes);
+    dbg_error("offset %"PRIu64" out of range (0,%zu)\n", offset, heap->nbytes);
   }
 
   return heap->base + offset;
@@ -327,7 +330,7 @@ void heap_free_cyclic(heap_t *heap, uint64_t offset) {
 
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
   if (offset >= heap->nbytes) {
-    dbg_log_gas("offset %lu is not in the heap\n", offset);
+    dbg_log_gas("offset %"PRIu64" is not in the heap\n", offset);
     return false;
   }
 
@@ -359,9 +362,9 @@ uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
 oom:
   dbg_error("\n"
             "out-of-memory detected during csbrk allocation\n"
-            "\t-global heap size: %lu bytes\n"
-            "\t-previous cyclic allocation total: %lu bytes\n"
-            "\t-current allocation request: %lu bytes\n",
+            "\t-global heap size: %zu bytes\n"
+            "\t-previous cyclic allocation total: %"PRIu64" bytes\n"
+            "\t-current allocation request: %zu bytes\n",
             heap->nbytes, offset, bytes);
 
   return 0;

@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <limits.h>
 #include <string.h>
 #include <hpx/hpx.h>
@@ -210,7 +211,7 @@ static bool _pgas_try_pin(const hpx_addr_t gpa, void **local) {
 
 static void _pgas_unpin(const hpx_addr_t addr) {
   DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
-    dbg_error("%lu is not local to %u\n", addr, here->rank);
+    dbg_error("%"PRIu64" is not local to %u\n", addr, here->rank);
   }
 }
 
@@ -263,7 +264,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
   DEBUG_IF (true) {
     const void *lva = heap_offset_to_lva(global_heap, offset);
     if (!heap_contains_lva(global_heap, lva))
-      dbg_error("attempt to free out of bounds offset %lu", offset);
+      dbg_error("attempt to free out of bounds offset %"PRIu64"", offset);
   }
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
@@ -274,7 +275,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
   }
   else {
     int e = hpx_call(gpa, pgas_free, NULL, 0, sync);
-    dbg_check(e, "failed to call pgas_free on %lu", gpa);
+    dbg_check(e, "failed to call pgas_free on %"PRIu64"", gpa);
     return;
   }
 

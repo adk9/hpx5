@@ -103,7 +103,7 @@ static int _main_action(void *args) {
     wtime(&t_end);
 
     double latency = (t_end - t_start)/(1.0 * loop);
-    fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
+    fprintf(stdout, "%-*zu%*.*f\n", 10, size, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }

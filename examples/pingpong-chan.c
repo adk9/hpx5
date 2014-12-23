@@ -60,7 +60,7 @@ static int _pinger_action(hpx_addr_t *chans) {
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
-    printf("Size %lu, Latency: %g\n", size, elapsed/(1.0 * _loop));
+    printf("Size %zu, Latency: %g\n", size, elapsed/(1.0 * _loop));
   }
   return HPX_SUCCESS;
 }

@@ -69,7 +69,11 @@ typedef struct {
   hpx_config_t               *config;
   const struct action_table *actions;
   libhpx_hwloc_topology_t   topology;
-} locality_t;
+} locality_t
+#ifdef __ARMEL__
+HPX_ALIGNED(8)
+#endif
+;
 
 
 /// Inter-locality action interface.

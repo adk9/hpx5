@@ -26,6 +26,8 @@
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 
+#include <inttypes.h>
+
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
@@ -138,7 +140,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   hpx_parcel_t *p = libhpx_global_memalign(HPX_CACHELINE_SIZE, size);
 
   if (!p) {
-    dbg_error("parcel: failed to get an %lu bytes from the allocator.\n", bytes);
+    dbg_error("parcel: failed to get an %zu bytes from the allocator.\n", bytes);
     return NULL;
   }
 
@@ -225,7 +227,7 @@ void hpx_parcel_send_sync(hpx_parcel_t *p) {
   }
 
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu) => %s@(%lu)\n",
+    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),
@@ -235,7 +237,7 @@ void hpx_parcel_send_sync(hpx_parcel_t *p) {
                    action_table_get_key(here->actions, p->c_action),
                    p->c_target);
   } else {
-    dbg_log_parcel("PID:%lu CREDIT:%lu %s(%p,%u)@(%lu)\n",
+    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),

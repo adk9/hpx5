@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -88,7 +89,7 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
   // make sure we're not crazy
   DEBUG_IF (pgas_gpa_add_cyclic(lhs, d, bsize) != rhs) {
-    dbg_error("difference between %lu and %lu computed incorrectly as %ld\n",
+    dbg_error("difference between %"PRIu64" and %"PRIu64" computed incorrectly as %"PRId64"\n",
               lhs, rhs, d);
   }
   return d;
