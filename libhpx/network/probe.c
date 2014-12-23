@@ -16,14 +16,13 @@
 
 #include <hpx/hpx.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/network.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
-
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 
 static hpx_action_t _probe = 0;
 
@@ -40,23 +39,16 @@ static int _probe_handler(void *o) {
   while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
     hpx_parcel_t *p = NULL;
     while ((p = parcel_stack_pop(&stack))) {
-      if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
-        hpx_parcel_execute(p);
-      }
-      else {
-        scheduler_spawn(p);
-      }
+      scheduler_spawn(p);
     }
   }
 
   return HPX_SUCCESS;
 }
 
-
 static void HPX_CONSTRUCTOR _register_actions(void) {
   LIBHPX_REGISTER_ACTION(&_probe, _probe_handler);
 }
-
 
 int probe_start(network_t *network) {
   int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
@@ -69,7 +61,6 @@ int probe_start(network_t *network) {
 
   return LIBHPX_OK;
 }
-
 
 void probe_stop(void) {
 }
