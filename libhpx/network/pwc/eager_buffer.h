@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <hpx/hpx.h>
 
+struct peer;
+
 /// Represents an eager buffer that supports peer-to-peer active message sends.
 ///
 /// This buffer supports both a tx and rx view. Each point-to-point buffer
@@ -37,6 +39,7 @@
 /// If there is not enough space in the buffer, the sender will issue a pwc() to
 /// the remote buffer that encodes the number of bytes to skip.
 typedef struct eager_buffer {
+  struct peer     *peer;
   uint32_t         size;
   const uint32_t UNUSED;
   uint64_t          max;
@@ -51,8 +54,9 @@ typedef struct eager_buffer {
 /// @param         size The size of the buffer.
 ///
 /// @returns  LIBHPX_OK The buffer was initialized correctly.
-int eager_buffer_init(eager_buffer_t *buffer, char *base, uint32_t size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+int eager_buffer_init(eager_buffer_t *buffer, struct peer *peer, char *base,
+                      uint32_t size)
+  HPX_INTERNAL HPX_NON_NULL(1, 2, 3);
 
 /// Finalize a buffer.
 void eager_buffer_fini(eager_buffer_t *buffer)
