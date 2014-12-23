@@ -154,7 +154,7 @@ void circular_buffer_fini(circular_buffer_t *b) {
 }
 
 void *circular_buffer_append(circular_buffer_t *buffer) {
-  uint64_t i = buffer->max++;
+  uint64_t next = buffer->max++;
   if (buffer->max - buffer->min >= buffer->size) {
     uint32_t size = 1 << buffer->size;
     if (LIBHPX_OK != _expand(buffer, size)) {
@@ -163,6 +163,7 @@ void *circular_buffer_append(circular_buffer_t *buffer) {
       return NULL;
     }
   }
+  uint32_t i = _index_of(next, buffer->size);
   return _address_of(buffer, i);
 }
 
@@ -170,7 +171,8 @@ int circular_buffer_progress(circular_buffer_t *buffer,
                              int (*progress_callback)(void *env, void *record),
                              void *progress_env) {
   while (buffer->min < buffer->max) {
-    void *record = _address_of(buffer, buffer->min);
+    uint32_t i = _index_of(buffer->min, buffer->size);
+    void *record = _address_of(buffer, i);
     int e = progress_callback(progress_env, record);
     switch (e) {
      default:
