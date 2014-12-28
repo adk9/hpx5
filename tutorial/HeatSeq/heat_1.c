@@ -133,7 +133,7 @@ static int _stencil_action(int *ij) {
   };
 
   for (int i = 0; i < 4; ++i) {
-    hpx_call(neighbors[i], _read_double, NULL, 0, futures[i]);
+    hpx_call(neighbors[i], _read_double, &vals[i], sizes[i], futures[i]);
   }
 
   hpx_lco_get_all(4, futures, sizes, addrs, NULL);
@@ -165,8 +165,6 @@ static int _spawn_stencil_action(int *ij) {
   int i = ij[0];
   int j = ij[1];
 
-  //printf("Value of i & j = %d, %d\n", i, j);
-
   hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
   hpx_call_cc(cell, _stencil, ij, 2*sizeof(int), NULL, NULL);
   return HPX_SUCCESS;
@@ -177,7 +175,6 @@ static void row_stencil_args_init(void *out, const int i, const void *env) {
 }
 
 static int _row_stencil_action(int *i) {
-  //printf("Value of i = %d\n", *i);
   hpx_par_call_sync(_spawn_stencil, 1, N + 1, N, N + 2, 2 * sizeof(int),
                     spawn_stencil_args_init, sizeof(int), i);
   return HPX_SUCCESS;
@@ -203,13 +200,13 @@ static int update_grid() {
     hpx_addr_t min = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
                          (hpx_commutative_associative_op_t)minDouble, 
                          (void (*)(void *, const size_t size))initDouble);
-    // for (int i = 1; i < N + 1; i++) {
-    //   for (int j = 1; j < N + 1; j++) {
-    //     int args[2] = { i, j };
-    //     hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-    //     hpx_call(cell, stencil, args, sizeof(args), min);
-    //   }
-    // }
+     //for (int i = 1; i < N + 1; i++) {
+     //  for (int j = 1; j < N + 1; j++) {
+     //    int args[2] = { i, j };
+     //    hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
+     //    hpx_call(cell, _stencil, args, sizeof(args), min);
+     //  }
+     //}
     hpx_par_call(_row_stencil, 1, N + 1 , N, N + 2, sizeof(int),
                  row_stencil_args_init, 0, NULL, min);
     hpx_lco_get(min, sizeof(dTmax), &dTmax);

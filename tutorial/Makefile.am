@@ -1,1 +1,1 @@
-SUBDIRS = Beginners HeatSeq
+SUBDIRS = Beginners CollectiveBench HeatSeq cpi 
