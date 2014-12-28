@@ -275,7 +275,9 @@ AS_IF([test "x$enable_tutorial" != xno],
   tutorial/Beginners/collectives/Makefile
   tutorial/Beginners/lco/Makefile
   tutorial/Beginners/parcel/Makefile
-  tutorial/HeatSeq/Makefile])])
+  tutorial/HeatSeq/Makefile
+  tutorial/CollectiveBench/Makefile
+  tutorial/cpi/Makefile])])
 
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
