@@ -75,8 +75,9 @@ static int _read_double_action(void *unused) {
     return HPX_RESEND;
   
   double d = *addr;
+
   hpx_gas_unpin(target);
-  hpx_thread_continue(sizeof(d), &d);
+  HPX_THREAD_CONTINUE(d);
 }
 
 static int offset_of(int i, int j) {
@@ -138,7 +139,7 @@ static int _stencil_action(int *ij) {
 
   hpx_lco_get_all(4, futures, sizes, addrs, NULL);
 
-  for (int n = 0; n < 4; ++i) {
+  for (int n = 0; n < 4; ++n) {
     hpx_lco_delete(futures[n], HPX_NULL);
   }
 
@@ -209,6 +210,7 @@ static int update_grid() {
      //}
     hpx_par_call(_row_stencil, 1, N + 1 , N, N + 2, sizeof(int),
                  row_stencil_args_init, 0, NULL, min);
+   
     hpx_lco_get(min, sizeof(dTmax), &dTmax);
 
     if (dTmax < epsilon ) // is the precision reached good enough ?
