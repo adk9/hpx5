@@ -171,13 +171,26 @@ static int _spawn_stencil_action(int *ij) {
   return HPX_SUCCESS;
 }
 
+typedef struct {
+  int index;
+  hpx_addr_t min;
+}row_stencil_args_t;
+
 static void row_stencil_args_init(void *out, const int i, const void *env) {
-  *((int*)out) = i;
+  const row_stencil_args_t *args =  env;
+  row_stencil_args_t init = {
+    .index = i,
+    .min = args->min
+  };
+  *((row_stencil_args_t*)out) = init;
 }
 
-static int _row_stencil_action(int *i) {
-  hpx_par_call_sync(_spawn_stencil, 1, N + 1, N, N + 2, 2 * sizeof(int),
-                    spawn_stencil_args_init, sizeof(int), i);
+static int _row_stencil_action(row_stencil_args_t *args) {
+  hpx_addr_t min = args->min;
+  int i = args->index;
+
+  hpx_par_call(_spawn_stencil, 1, N + 1, N, N + 2, 2 * sizeof(int),
+                    spawn_stencil_args_init, sizeof(int), &i, min);
   return HPX_SUCCESS;
 }
 
@@ -201,25 +214,28 @@ static int update_grid() {
     hpx_addr_t min = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
                          (hpx_commutative_associative_op_t)minDouble, 
                          (void (*)(void *, const size_t size))initDouble);
-     //for (int i = 1; i < N + 1; i++) {
-     //  for (int j = 1; j < N + 1; j++) {
-     //    int args[2] = { i, j };
-     //    hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-     //    hpx_call(cell, _stencil, args, sizeof(args), min);
-     //  }
-     //}
-    hpx_par_call(_row_stencil, 1, N + 1 , N, N + 2, sizeof(int),
-                 row_stencil_args_init, 0, NULL, min);
+    //for (int i = 1; i < N + 1; i++) {
+    //  for (int j = 1; j < N + 1; j++) {
+    //    int args[2] = { i, j };
+    //     hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
+    //     hpx_call(cell, _stencil, args, sizeof(args), min);
+    //   }
+    // }
+    row_stencil_args_t init = {
+      .min = min
+    };
+    hpx_par_call(_row_stencil, 1, N + 1 , N, N + 2, 
+                 sizeof(int), row_stencil_args_init, 
+                 sizeof(row_stencil_args_t), &init, HPX_NULL);
    
     hpx_lco_get(min, sizeof(dTmax), &dTmax);
 
     if (dTmax < epsilon ) // is the precision reached good enough ?
       finished = 1;
     else {
-      hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_gas_memcpy(grid, new_grid, ((N+2)*(N+2)*sizeof(double)), done);
-      hpx_lco_wait(done);
-      hpx_lco_delete(done, HPX_NULL);
+      hpx_addr_t tmp_grid = grid;
+      grid = new_grid;
+      new_grid = tmp_grid;
     }
     nr_iter++;
   } while (finished == 0);
