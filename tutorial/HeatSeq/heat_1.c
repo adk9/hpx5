@@ -31,6 +31,7 @@ hpx_addr_t new_grid;
 #define BLOCKSIZE sizeof(double)
 
 static hpx_action_t _main          = 0;
+static hpx_action_t _initGlobals   = 0;
 static hpx_action_t _initialize    = 0;
 static hpx_action_t _write_double  = 0;
 static hpx_action_t _read_double   = 0;
@@ -253,6 +254,25 @@ static int update_grid() {
   return HPX_SUCCESS;
 }
 
+typedef struct {
+  hpx_addr_t grid;
+  hpx_addr_t new_grid;
+}global_args_t;
+
+static int _initGlobals_action(global_args_t *args) {
+  grid = args->grid;
+  new_grid = args->new_grid;
+  return HPX_SUCCESS;
+}
+
+void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
+  hpx_addr_t init_lco = hpx_lco_future_new(0);
+  const global_args_t init_args = { .grid = grid, .new_grid = new_grid };
+  hpx_bcast(_initGlobals, &init_args, sizeof(init_args), init_lco);
+  hpx_lco_wait(init_lco);
+  hpx_lco_delete(init_lco, HPX_NULL);
+}
+
 static int _initialize_action(void *args) {
   hpx_addr_t local = hpx_thread_current_target();
   double *ld = NULL;
@@ -273,16 +293,17 @@ static int _main_action(int *input)
   grid = hpx_gas_global_calloc(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double));
   new_grid = hpx_gas_global_calloc(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double));
 
-  hpx_addr_t gDone   = hpx_lco_and_new(HPX_LOCALITIES);
+  hpx_addr_t gDone   = hpx_lco_future_new(0);
   hpx_call(grid, _initialize, NULL, 0, gDone);
   hpx_lco_wait(gDone);
   hpx_lco_delete(gDone, HPX_NULL);
 
-  hpx_addr_t nDone   = hpx_lco_and_new(HPX_LOCALITIES);
+  hpx_addr_t nDone   = hpx_lco_future_new(0);
   hpx_call(new_grid, _initialize, NULL, 0, nDone);
   hpx_lco_wait(nDone);
   hpx_lco_delete(nDone, HPX_NULL);
 
+  init_globals(grid, new_grid);
   update_grid();
 
   hpx_gas_free(grid, HPX_NULL);
@@ -297,6 +318,7 @@ static int _main_action(int *input)
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
   HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_initGlobals, _initGlobals_action);
   HPX_REGISTER_ACTION(&_initialize, _initialize_action);
   HPX_REGISTER_ACTION(&_write_double, _write_double_action);
   HPX_REGISTER_ACTION(&_read_double, _read_double_action);
