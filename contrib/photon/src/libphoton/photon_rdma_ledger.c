@@ -42,16 +42,17 @@ void photon_rdma_ledger_free(photonLedger ledger) {
 }
 
 int photon_rdma_ledger_get_next(int proc, photonLedger l) {
-  uint64_t curr, tail;
+  uint64_t curr, tail, rcur;
  
   do {
+    rcur = sync_load(&l->acct.rcur, SYNC_RELAXED);
     curr = sync_load(&l->curr, SYNC_RELAXED);
     tail = sync_load(&l->tail, SYNC_RELAXED);
     if ((curr - tail) >= l->num_entries) {
       log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
       return -1;
     }
-    if (((curr - l->acct.rcur)) >= l->num_entries) {
+    if (((curr - rcur)) >= (l->num_entries)) {
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, l);
       dbg_trace("No new ledger entry until receiver catches up...");
@@ -59,7 +60,7 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
     }
   } while (!sync_cas(&l->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED));
 
-  if ((curr - l->acct.rcur) >= (l->num_entries * 0.8)) {
+  if ((curr - rcur) >= (l->num_entries * 0.8)) {
     // do a pro-active fetch of the remote ledger progress
     _get_remote_progress(proc, l);
   }
@@ -68,13 +69,13 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
 }
 
 static int _get_remote_progress(int proc, photonLedger buf) {
-  int rc, ret_proc;
+  int rc;
   uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
-  photon_rid ret_req;
-
-  rc = __photon_try_one_event(&ret_proc, &ret_req);
+  photonRequest req;
+  
+  rc = __photon_try_one_event(&req);
   if (rc == PHOTON_EVENT_ERROR) {
     dbg_err("Failure getting event");
     return PHOTON_ERROR;
@@ -83,7 +84,7 @@ static int _get_remote_progress(int proc, photonLedger buf) {
   rloc = 0;
   if (sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
     
-    dbg_trace("Fetching remote ledger curr at rcur: %llu", buf->acct.rcur);
+    dbg_trace("Fetching remote ledger (%d) curr at rcur: %llu", proc, buf->acct.rcur);
     
     rmt_addr = buf->remote.addr + PHOTON_LEDG_SSIZE(buf->num_entries) -
       sizeof(struct photon_rdma_ledger_t) + offsetof(struct photon_rdma_ledger_t, prog); 

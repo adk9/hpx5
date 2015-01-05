@@ -76,13 +76,13 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
 }
 
 static int _get_remote_progress(int proc, photonEagerBuf buf) {
-  int rc, ret_proc;
+  int rc;
   uint32_t rloc;
   uint64_t cookie;
   uintptr_t rmt_addr;
-  photon_rid ret_req;
+  photonRequest req;
 
-  rc = __photon_try_one_event(&ret_proc, &ret_req);
+  rc = __photon_try_one_event(&req);
   if (rc == PHOTON_EVENT_ERROR) {
     dbg_err("Failure getting event");
     return PHOTON_ERROR;
@@ -91,7 +91,7 @@ static int _get_remote_progress(int proc, photonEagerBuf buf) {
   rloc = 0;
   if (!rloc && sync_cas(&buf->acct.rloc, rloc, 1, SYNC_ACQUIRE, SYNC_RELAXED)) {
     
-    dbg_trace("Fetching remote eager curr at rcur: %llu", buf->acct.rcur);
+    dbg_trace("Fetching remote eager (%d) curr at rcur: %llu", proc, buf->acct.rcur);
 
     rmt_addr = buf->remote.addr + PHOTON_EBUF_SSIZE(buf->size) -
       sizeof(struct photon_rdma_eager_buf_t) + offsetof(struct photon_rdma_eager_buf_t, prog); 

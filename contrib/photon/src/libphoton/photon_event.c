@@ -118,6 +118,10 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
 	*rreq = treq;
 	return PHOTON_EVENT_REQCOMP;
       }
+      else if (nentries != 1) {
+	dbg_trace("Unexpected nentries value: %d, op=%d, 0x%016lx",
+		  nentries, treq->op,treq->flags);
+      }
     }
     else if (treq->type == LEDGER) {
       // this was an RDMA event associated with a ledger
@@ -145,7 +149,6 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
 //     PHOTON_EVENT_NONE    if there was no event
 int __photon_nbpop_event(photonRequest req) {
   int rc;
-  int state;
 
   dbg_trace("(%d/0x%016lx)", req->proc, req->id);
 
@@ -166,8 +169,10 @@ int __photon_nbpop_event(photonRequest req) {
       }
       else if ((rc == PHOTON_EVENT_REQCOMP) && treq &&
 	       (treq->op == REQUEST_OP_PWC)) {
+	assert(treq->state == REQUEST_COMPLETED);
 	photon_pwc_add_req(treq);
 	dbg_trace("Enqueuing PWC local completion");
+	return PHOTON_EVENT_OK;
       }
     }
     else {
@@ -175,20 +180,9 @@ int __photon_nbpop_event(photonRequest req) {
     }
   }
   
-  // save the state as we might free and reset below
-  state = req->state;
-
-  // clean up a completed request if the FIN has already been sent
-  // otherwise, we clean up in send_FIN()
-  if ((state == REQUEST_COMPLETED) && (req->flags & REQUEST_FLAG_FIN)) {
-    dbg_trace("Freeing FIN'd request 0x%016lx (remote=0x%016lx)", req->id, req->remote_buffer.request);
-    photon_free_request(req);
-    dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc), req->proc);
-  } 
+  dbg_trace("returning %d", (req->state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_OK);
+  return (req->state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_OK;
   
-  dbg_trace("returning %d", (state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_OK);
-  return (state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_OK;
-
 error_exit:
   return PHOTON_EVENT_ERROR;
 }
@@ -208,18 +202,17 @@ int __photon_nbpop_sr(photonRequest req) {
 //     PHOTON_EVENT_NONE    if the request is pending and the FIN has not arrived yet
 int __photon_nbpop_ledger(photonRequest req) {
   uint64_t curr;
-  int state;
   int c_ind, i=-1;
 
   dbg_trace("(0x%016lx)", req->id);
 
-  if(req->state == REQUEST_PENDING) {
+  if (req->state == REQUEST_PENDING) {
     
     // clear any completed tasks from the event queue
     while (__photon_nbpop_event(req) != PHOTON_EVENT_NONE)
       ;
 
-    // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
+    // Check if an entry of the FIN LEDGER was written with "id" equal to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
       photonLedger l = photon_processes[i].local_fin_ledger;
@@ -249,20 +242,13 @@ int __photon_nbpop_ledger(photonRequest req) {
     }
   }
 
-  state = req->state;
-
-  if (state == REQUEST_COMPLETED) {
-    dbg_trace("removing RDMA req: 0x%016lx", req->id);
-    photon_free_request(req);
-  }
-  
-  if ((state != REQUEST_COMPLETED) && (state != REQUEST_PENDING)) {
-    dbg_trace("req->state != (PENDING | COMPLETE), returning 0");
+  if ((req->state != REQUEST_COMPLETED) && (req->state != REQUEST_PENDING)) {
+    dbg_warn("req->state != (PENDING | COMPLETE), returning 0");
     return PHOTON_EVENT_OK;
   }
   
-  dbg_trace("at end, returning %d", (state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_NONE);
-  return (state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_NONE;
+  dbg_trace("at end, returning %d", (req->state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_NONE);
+  return (req->state == REQUEST_COMPLETED)?PHOTON_EVENT_REQCOMP:PHOTON_EVENT_NONE;
 }
 
 int __photon_wait_ledger(photonRequest req) {
@@ -285,7 +271,7 @@ int __photon_wait_ledger(photonRequest req) {
     while (__photon_nbpop_event(req) != PHOTON_EVENT_NONE)
       ;
     
-    // Check if an entry of the FIN LEDGER was written with "id" equal to to "req"
+    // Check if an entry of the FIN LEDGER was written with "id" equal to "req"
     for(i = 0; i < _photon_nproc; i++) {
       photonLedgerEntry curr_entry;
       photonLedger l = photon_processes[i].local_fin_ledger;
@@ -311,14 +297,10 @@ int __photon_wait_ledger(photonRequest req) {
     }
   }
 
-  dbg_trace("Removing RDMA: %u/0x%016lx", i, req->id);
-  photon_free_request(req);
-  dbg_trace("%d requests left in %d's reqtable", photon_count_request(req->proc), req->proc);
-
   return (req->state == REQUEST_COMPLETED)?PHOTON_OK:PHOTON_ERROR;
 }
 
-int __photon_try_one_event(int *ret_proc, photon_rid *ret_req) {
+int __photon_try_one_event(photonRequest *rreq) {
   int rc;
   photon_rid cookie;
   photonRequest treq;
@@ -336,12 +318,11 @@ int __photon_try_one_event(int *ret_proc, photon_rid *ret_req) {
   if ((rc == PHOTON_EVENT_REQCOMP) && treq) {
     if (treq->op == REQUEST_OP_PWC) {
       photon_pwc_add_req(treq);
+      assert(treq->state == REQUEST_COMPLETED);
       dbg_trace("Enqueuing PWC local completion");
     }
     else {
-      *ret_proc = treq->proc;
-      *ret_req = treq->id;
-      photon_free_request(treq);
+      *rreq = treq;
       return PHOTON_EVENT_REQCOMP;
     }
   }
@@ -352,12 +333,12 @@ int __photon_try_one_event(int *ret_proc, photon_rid *ret_req) {
 }
 
 int __photon_wait_event(photonRequest req) {
-  int rc, ret_proc;
-  photon_rid ret_req;
+  int rc;
+  photonRequest treq;
   
   do {
-    rc = __photon_try_one_event(&ret_proc, &ret_req);
-  } while (rc != PHOTON_EVENT_REQCOMP && (ret_req != req->id));
+    rc = __photon_try_one_event(&treq);
+  } while (rc != PHOTON_EVENT_REQCOMP && (treq->id != req->id));
   
   return PHOTON_OK;
 }

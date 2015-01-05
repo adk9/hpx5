@@ -107,6 +107,7 @@ static uint32_t _outstanding_send_limit = 0;
 
 static hpx_action_t _future_set_no_copy_from_remote = 0;
 static hpx_action_t _progress = 0;
+static hpx_action_t _progress_recv = 0;
 static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
@@ -228,10 +229,6 @@ _progress_sends() {
 				     pwc_args->local_rid, pwc_args->remote_rid,
 				     0);
 	assert(phstat != PHOTON_ERROR);
-	if (phstat == PHOTON_ERROR_RESOURCE) {
-	  //printf("retrying...\n");
-	  //usleep(100000);
-	}
       } while (phstat == PHOTON_ERROR_RESOURCE);
       free(pwc_args);
     }
@@ -282,13 +279,21 @@ _progress_recvs() {
   } // end if
 }
 
+static void
+_progress_recv_action() {
+  while (!shutdown) {
+    _progress_recvs();
+    hpx_thread_yield();
+  }
+}
+
 static void 
 _progress_body() {
   if (_netfuture_table.inited != 1)
     return;
   _progress_sends();
   _progress_send_completions();
-  _progress_recvs();
+  //_progress_recvs();
 }
 
 /// This action handles all Photon completions, local and remote, affecting
@@ -381,6 +386,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
   _netfuture_table.inited = 1;
 
   hpx_call_async(HPX_HERE, _progress, NULL, 0, HPX_NULL, HPX_NULL);
+  hpx_call_async(HPX_HERE, _progress_recv, NULL, 0, HPX_NULL, HPX_NULL);
 
   _table_unlock();
 
@@ -796,6 +802,7 @@ static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
   LIBHPX_REGISTER_ACTION(&_future_set_no_copy_from_remote, _future_set_no_copy_from_remote_action);
   LIBHPX_REGISTER_ACTION(&_progress, _progress_action);
+  LIBHPX_REGISTER_ACTION(&_progress_recv, _progress_recv_action);
   LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
   LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
 }

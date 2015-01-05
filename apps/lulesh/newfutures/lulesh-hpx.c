@@ -117,7 +117,10 @@ static int _advanceDomain_action(unsigned long *epoch) {
     start_time = hpx_time_now();
   }
 
-
+  if ( domain->rank == 0 ) {
+    printf("Computing cycle %d\n", domain->cycle);
+  }
+  
   // 4. Perform the local computation for epoch n
   double targetdt = domain->stoptime - domain->time;
   if ((domain->dtfixed <= 0.0) && (domain->cycle != 0)) {

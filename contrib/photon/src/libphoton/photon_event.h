@@ -16,7 +16,7 @@ PHOTON_INTERNAL int __photon_nbpop_sr(photonRequest req);
 PHOTON_INTERNAL int __photon_nbpop_ledger(photonRequest req);
 PHOTON_INTERNAL int __photon_wait_ledger(photonRequest req);
 PHOTON_INTERNAL int __photon_wait_event(photonRequest req);
-PHOTON_INTERNAL int __photon_try_one_event(int *rproc, photon_rid *rrid);
+PHOTON_INTERNAL int __photon_try_one_event(photonRequest *rreq);
 
 PHOTON_INTERNAL int __photon_handle_cq_special(photon_rid rid);
 PHOTON_INTERNAL int __photon_handle_cq_event(photonRequest req, photon_rid rid, photonRequest *rreq);
