@@ -18,6 +18,7 @@ int photon_pwc_init() {
     log_err("Could not allocate PWC request table");
     goto error_exit;
   }
+  sync_tatas_init(&pwc_table->tloc);
   pwc_table->count = 0;
   pwc_table->cind = 0;
   pwc_table->tail = 0;
@@ -27,42 +28,49 @@ int photon_pwc_init() {
     log_err("Could not allocate request pointers for PWC table");
     goto error_exit;
   }
-  memset(pwc_table->req_ptrs, 0, _LEDGER_SIZE);
+  memset(pwc_table->req_ptrs, 0, pwc_table->size);
  error_exit:
   return PHOTON_OK;
 }
 
 int photon_pwc_add_req(photonRequest req) {
-  uint64_t req_curr, tail;
-  int req_ind;
-  req_curr = sync_addf(&pwc_table->count, 1, SYNC_RELAXED);
-  tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
-  assert(tail <= req_curr);
-  if ((req_curr - tail) > pwc_table->size) {
-    log_err("Exceeded PWC table size: %d", pwc_table->size);
-    return PHOTON_ERROR;
+  uint64_t curr, tail;
+  int ind;
+  sync_tatas_acquire(&pwc_table->tloc);
+  {
+    curr = sync_addf(&pwc_table->count, 1, SYNC_RELAXED);
+    tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
+    if ((curr - tail) >= pwc_table->size) {
+      log_err("Exceeded PWC table size: %d", pwc_table->size);
+      sync_tatas_release(&pwc_table->tloc);
+      return PHOTON_ERROR;
+    }
+    ind = curr & (pwc_table->size - 1);
+    pwc_table->req_ptrs[ind] = req;
   }
-  req_ind = req_curr & (pwc_table->size - 1);
-  pwc_table->req_ptrs[req_ind] = req;
+  sync_tatas_release(&pwc_table->tloc);
   return PHOTON_OK;
 }
 
 photonRequest photon_pwc_pop_req() {
-  uint64_t req_curr, tail;
-  int req_ind;
-  req_curr = sync_load(&pwc_table->count, SYNC_RELAXED);
-  tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
-  if (tail < req_curr) {
-    if (sync_cas(&pwc_table->tail, tail, tail+1, SYNC_RELAXED, SYNC_RELAXED)) {
+  uint64_t curr, tail;
+  int ind;
+  sync_tatas_acquire(&pwc_table->tloc); 
+  {
+    curr = sync_load(&pwc_table->count, SYNC_RELAXED);
+    tail = sync_load(&pwc_table->tail, SYNC_RELAXED);
+    if (tail < curr) {
       photonRequest req;
-      req_ind = (tail+1) & (pwc_table->size - 1);
-      do {
-	req = pwc_table->req_ptrs[req_ind];
-      } while (!req);
-      pwc_table->req_ptrs[req_ind] = NULL;
+      ind = (tail+1) & (pwc_table->size - 1);
+      req = pwc_table->req_ptrs[ind];
+      pwc_table->req_ptrs[ind] = NULL;
+      sync_fadd(&pwc_table->tail, 1, SYNC_RELAXED);
+      sync_tatas_release(&pwc_table->tloc);
+      assert(req);
       return req;
     }
   }
+  sync_tatas_release(&pwc_table->tloc);
   return NULL;
 }
 
@@ -99,29 +107,24 @@ static int photon_pwc_try_packed(int proc, void *ptr, uint64_t size,
 
     eager_addr = (uintptr_t)eb->remote.addr + offset;
     
-    if (nentries > 0) {
-      req = photon_setup_request_direct(NULL, proc, nentries);
-      if (req == NULL) {
-	dbg_err("Could not setup direct buffer request");
-	goto error_exit;
-      }
-      cookie = req->id;
-      req->id = local;
-      req->op = REQUEST_OP_PWC;
-      req->flags = (REQUEST_FLAG_USERID | REQUEST_FLAG_1PWC);
-      req->length = asize;
-      req->remote_buffer.buf.addr = eager_addr;
-      req->remote_buffer.buf.size = asize;
-      req->remote_buffer.buf.priv = shared_storage->buf.priv;
-      if (flags & PHOTON_REQ_PWC_NO_LCE) {
-	req->flags |= REQUEST_FLAG_NO_LCE;
-      }
+    assert(nentries==1);
+    req = photon_setup_request_direct(NULL, proc, nentries);
+    if (req == NULL) {
+      dbg_err("Could not setup direct buffer request");
+      goto error_exit;
     }
-    else {
-      cookie = NULL_COOKIE;
-      req = NULL;
+    cookie = req->id;
+    req->id = local;
+    req->op = REQUEST_OP_PWC;
+    req->flags = (REQUEST_FLAG_USERID | REQUEST_FLAG_1PWC);
+    req->length = asize;
+    req->remote_buffer.buf.addr = eager_addr;
+    req->remote_buffer.buf.size = asize;
+    req->remote_buffer.buf.priv = shared_storage->buf.priv;
+    if (flags & PHOTON_REQ_PWC_NO_LCE) {
+      req->flags |= REQUEST_FLAG_NO_LCE;
     }
-
+    
     hdr = (photon_eb_hdr *)&(eb->data[offset]);
     hdr->header = UINT8_MAX;
     hdr->request = remote;
@@ -272,9 +275,13 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   if (flags & PHOTON_REQ_NO_CQE) {
     nentries = 0;
   }
-
+ 
   rc = photon_pwc_try_packed(proc, ptr, size, rptr, priv, local, remote, flags, nentries);  
   if (rc == PHOTON_ERROR_RESOURCE) {
+    // adjust nentries
+    if ((nentries == 1) && (size > 0)) {
+      nentries = 2;
+    }
     rc = photon_pwc_try_ledger(proc, ptr, size, rptr, priv, local, remote, flags, nentries);
   }
   
@@ -369,6 +376,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     req = photon_pwc_pop_req();
     if (req != NULL) {
       assert(req->op == REQUEST_OP_PWC);
+      assert(req->state == REQUEST_COMPLETED);
       if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
 	*flag = 1;
 	*request = req->id;

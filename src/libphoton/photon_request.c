@@ -21,7 +21,7 @@ photonRequest photon_get_request(int proc) {
   req_ind = (req_curr & (rt->size - 1)) + 1;
   tail = sync_load(&rt->tail, SYNC_RELAXED);
   assert(tail <= req_curr);
-  if ((req_curr - tail) > rt->size) {
+  if ((req_curr - tail) >= rt->size) {
     log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
     return NULL;
   }
@@ -64,7 +64,12 @@ photonRequest photon_lookup_request(photon_rid rid) {
     return NULL;
   }
   if (id > 0 && id <= rt->size) {
-    return &rt->reqs[id];
+    photonRequest req = &rt->reqs[id];
+    if (req->state == REQUEST_FREE) {
+      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+	       req->op, req->type, req->id);
+    }
+    return req;
   }
   else {
     dbg_trace("Unknown request id (%u) obtained from rid: 0x%016lx", id, rid);
@@ -88,6 +93,11 @@ int photon_count_request(int proc) {
 
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
+  int state = REQUEST_COMPLETED;
+  if (!sync_cas(&req->state, state, REQUEST_FREE, SYNC_RELAXED, SYNC_RELAXED)) {
+    dbg_trace("Trying to free a request that was already freed or otherwise not completed!");
+    return PHOTON_ERROR;
+  }
   __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
   sync_fadd(&rt->tail, 1, SYNC_RELAXED);
@@ -256,10 +266,6 @@ photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs) {
 }
 
 static int __photon_cleanup_request(photonRequest req) {
-
-  assert(req->state != REQUEST_FREE);
-  req->state = REQUEST_FREE;
-
   switch (req->op) {
   case REQUEST_OP_SENDBUF:
     if (req->flags & REQUEST_FLAG_EAGER) {

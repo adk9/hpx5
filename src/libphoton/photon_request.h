@@ -5,6 +5,7 @@
 #include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "bit_array/bit_array.h"
+#include "libsync/include/locks.h"
 
 #define DEF_MAX_BUF_ENTRIES  64    // The number msgbuf entries for UD mode
 
@@ -34,7 +35,7 @@
 #define REQUEST_OP_PWC       (1<<5)
 
 #define REQUEST_FLAG_NIL     0x00
-#define REQUEST_FLAG_FIN     (1<<1)
+#define REQUEST_FLAG_WFIN    (1<<1)
 #define REQUEST_FLAG_EAGER   (1<<2)
 #define REQUEST_FLAG_EDONE   (1<<3)
 #define REQUEST_FLAG_LDONE   (1<<4)
@@ -72,6 +73,7 @@ typedef struct photon_req_table_t {
   uint32_t size;
   struct photon_req_t  *reqs;
   struct photon_req_t **req_ptrs;
+  tatas_lock_t tloc;
 } photon_req_table;
 
 typedef struct photon_req_t       * photonRequest;
