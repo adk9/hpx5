@@ -491,10 +491,13 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
       status->size = req->length;
       status->count = 1;
       status->error = 0;
+      if (!(req->flags & REQUEST_FLAG_WFIN))
+	photon_free_request(req);
       dbg_trace("returning 0, flag:1");
       return 0;
     }
     break;
+  case PHOTON_EVENT_REQFOUND:
   case PHOTON_EVENT_NONE:
   case PHOTON_EVENT_OK:
     {
@@ -511,6 +514,7 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
     }
     break;
   default:
+    *flag = 0;
     dbg_warn("Reached default case");
     return -1;
     break;
@@ -521,6 +525,7 @@ static int _photon_test(photon_rid request, int *flag, int *type, photonStatus s
 
 static int _photon_wait(photon_rid request) {
   photonRequest req;
+  int rc;
 
   dbg_trace("(0x%016lx)", request);
 
@@ -536,9 +541,16 @@ static int _photon_wait(photon_rid request) {
   }
 
   if (req->type == LEDGER)
-    return __photon_wait_ledger(req);
+    rc =__photon_wait_ledger(req);
   else
-    return __photon_wait_event(req);
+    rc = __photon_wait_event(req);
+
+  if (rc == PHOTON_OK) {
+    photon_free_request(req);
+    return PHOTON_OK;
+  }
+  
+  return PHOTON_ERROR;
 }
 
 static int _photon_send(photonAddr addr, void *ptr, uint64_t size, int flags, photon_rid *request) {
@@ -745,7 +757,6 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
   photonRequest req;
   photonRILedgerEntry entry;
 
-  // XXX: no flow control here yet
   curr = photon_ri_ledger_get_next(proc, photon_processes[proc].remote_snd_info_ledger);
   if (curr < 0) {
     if (curr == -2) {
@@ -1115,6 +1126,7 @@ static int _photon_post_os_put(photon_rid request, int proc, void *ptr, uint64_t
   req->type = EVQUEUE;
   req->tag = tag;
   req->state = REQUEST_PENDING;
+  req->flags |= REQUEST_FLAG_WFIN;
 
   /* get the remote buffer saved in the request */
   drb = &(req->remote_buffer);
@@ -1175,6 +1187,7 @@ static int _photon_post_os_get(photon_rid request, int proc, void *ptr, uint64_t
   req->type = EVQUEUE;
   req->tag = tag;
   req->state = REQUEST_PENDING;
+  req->flags |= REQUEST_FLAG_WFIN;
 
   /* get the remote buffer saved in the request */
   drb = &(req->remote_buffer);
@@ -1347,7 +1360,7 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
   }
 
   if (req->state != REQUEST_COMPLETED) {
-    dbg_trace("Warning: sending FIN for a request (EVQUEUE) that has not yet completed");
+    dbg_trace("Warning: sending FIN for a request (EVQUEUE) that is not in completed state (state==%d)", req->state);
   }
   
   if (req->remote_buffer.request == NULL_COOKIE) {
@@ -1389,16 +1402,17 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
 
   if (req->state == REQUEST_COMPLETED || flags & PHOTON_REQ_COMPLETED) {
     dbg_trace("Removing request 0x%016lx for remote buffer request 0x%016lx", request, req->remote_buffer.request);
+    req->state = REQUEST_COMPLETED;
     photon_free_request(req);
     dbg_trace("%d requests left in reqtable for proc %d", photon_count_request(req->proc), req->proc);
   }
   else {
-    req->flags |= REQUEST_FLAG_FIN;
+    req->flags &= ~REQUEST_FLAG_WFIN;
     req->remote_buffer.request = NULL_COOKIE;
   }
-
+  
   MARK_DONE(photon_processes[proc].remote_fin_ledger, 1);
-
+  
   return PHOTON_OK;
 
 error_exit:
@@ -1410,14 +1424,20 @@ error_exit:
 // request if it is an EVQUEUE event, not LEDGER.
 static int _photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   int rc;
+  photonRequest req;
 
   if (ret_req == NULL) {
     goto error_exit;
   }
 
   do {
-    rc = __photon_try_one_event(ret_proc, ret_req);
+    rc = __photon_try_one_event(&req);
   } while (rc != PHOTON_EVENT_REQCOMP);
+
+  *ret_proc = req->proc;
+  *ret_req = req->id;
+
+  photon_free_request(req);
 
   return PHOTON_OK;
  error_exit:
@@ -1456,9 +1476,9 @@ static int _photon_wait_any_ledger(int *ret_proc, photon_rid *ret_req) {
       
       req = photon_lookup_request(curr_entry->request);
       if (req != NULL) {
-	photon_free_request(req);
         *ret_req = curr_entry->request;
         *ret_proc = i;
+	photon_free_request(req);
         break;
       }
       curr_entry->request = 0;
