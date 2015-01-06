@@ -220,11 +220,11 @@ static int _main_action(_sssp_args_t *args) {
     // Call the SSSP algorithm
     hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     sargs.termination_lco = sssp_lco;
-    if (sargs.delta == 0) {
+    if (args->delta == 0) {
       printf("Calling SSSP.\n");
       hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
     } else {
-      printf("Calling delta-stepping.\n");
+      printf("Calling delta-stepping with delta %zu.\n", sargs.delta);
       hpx_call(HPX_HERE, call_delta_sssp, &sargs, sizeof(sargs), HPX_NULL);
     }
     // printf("Waiting for termination LCO at: %zu\n", sssp_lco);
