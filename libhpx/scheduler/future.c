@@ -98,6 +98,12 @@ static void _future_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(&f->lco);
 }
 
+static void _future_reset(_future_t *f) {
+  lco_lock(&f->lco);
+  scheduler_signal_error(&f->full, HPX_LCO_RESET);
+  cvar_reset(&f->full);
+  lco_unlock(&f->lco);
+}
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
@@ -126,6 +132,17 @@ static hpx_status_t _future_try_wait(lco_t *lco, hpx_time_t time) {
   hpx_status_t status = _try_wait(f, time);
   lco_unlock(&f->lco);
   return status;
+}
+
+static int _future_reset_handler(void *UNUSED) {
+  hpx_addr_t target = hpx_thread_current_target();
+  _future_t *f = NULL;
+  if (!hpx_gas_try_pin(target, (void**)&f))
+    return HPX_RESEND;
+
+  _future_reset(f);
+  hpx_gas_unpin(target);
+  return HPX_SUCCESS;
 }
 
 /// initialize the future
@@ -168,9 +185,11 @@ static int _future_block_init_handler(uint32_t *args) {
 }
 
 static hpx_action_t _block_init = 0;
+static hpx_action_t _future_reset_action = 0;
 
 static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
   LIBHPX_REGISTER_ACTION(&_block_init, _future_block_init_handler);
+  LIBHPX_REGISTER_ACTION(&_future_reset_action, _future_reset_handler);
 }
 
 
@@ -179,6 +198,19 @@ hpx_addr_t hpx_lco_future_new(int size) {
   assert(local);
   _future_init(local, size);
   return lva_to_gva(local);
+}
+
+void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync) {
+  _future_t *f;
+  if (!hpx_gas_try_pin(future, (void**)&f)) {
+    hpx_call_async(future, _future_reset_action, NULL, 0, HPX_NULL, sync);
+    return;
+  }
+
+  _future_reset(f);
+  hpx_gas_unpin(future);
+  if (sync)
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
