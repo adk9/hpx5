@@ -35,8 +35,8 @@ hpx_action_t locality_shutdown = 0;
 hpx_action_t locality_call_continuation = 0;
 
 /// The action that shuts down the HPX scheduler.
-static int _shutdown_handler(void *UNUSED) {
-  scheduler_shutdown(here->sched, LIBHPX_OK);
+static int _shutdown_handler(int *code) {
+  scheduler_shutdown(here->sched, *code);
   return HPX_SUCCESS;
 }
 
