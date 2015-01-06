@@ -19,14 +19,14 @@
 /// @{
 typedef short hpx_status_t;
 
-#define  HPX_ERROR           -1
-#define  HPX_SUCCESS         0
-#define  HPX_RESEND          1
-#define  HPX_LCO_ERROR       2
-#define  HPX_LCO_CHAN_EMPTY  3
-#define  HPX_LCO_TIMEOUT     4
-#define  HPX_LCO_RESET       5
-#define  HPX_USER            127
+#define  HPX_ERROR           ((hpx_status_t)-1)
+#define  HPX_SUCCESS         ((hpx_status_t)0)
+#define  HPX_RESEND          ((hpx_status_t)1)
+#define  HPX_LCO_ERROR       ((hpx_status_t)2)
+#define  HPX_LCO_CHAN_EMPTY  ((hpx_status_t)3)
+#define  HPX_LCO_TIMEOUT     ((hpx_status_t)4)
+#define  HPX_LCO_RESET       ((hpx_status_t)5)
+#define  HPX_USER            ((hpx_status_t)127)
 /// @}
 
 #endif
