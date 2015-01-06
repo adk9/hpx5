@@ -225,15 +225,16 @@ static void _handle_mail(struct worker *w) {
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
 static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self->current;
   self->current = to;
-  hpx_parcel_t *prev = env;
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
     thread_delete(stack);
   }
   hpx_parcel_release(prev);
-  return HPX_SUCCESS;
+  int status = (intptr_t)env;
+  return status;
 }
 
 
@@ -262,7 +263,8 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 static void _try_shutdown(struct worker *w) {
   if (!scheduler_running(w->sched)) {
     void **sp = &w->sp;
-    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, w->current);
+    intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
+    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
     unreachable();
   }
 }
@@ -690,7 +692,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   assert(to);
   assert(parcel_get_stack(to));
   assert(parcel_get_stack(to)->sp);
-  thread_transfer(to, _free_parcel, parcel);
+  thread_transfer(to, _free_parcel, (void*)status);
   unreachable();
 }
 
