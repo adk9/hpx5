@@ -25,6 +25,7 @@ typedef enum {
   HPX_LCO_ERROR      = 2,
   HPX_LCO_CHAN_EMPTY = 3,
   HPX_LCO_TIMEOUT    = 4,
+  HPX_LCO_RESET      = 5,
   HPX_USER           = 127
 } hpx_status_t;
 #elif defined( __ARMEL__)
@@ -35,6 +36,7 @@ typedef short hpx_status_t;
 #define  HPX_LCO_ERROR       2
 #define  HPX_LCO_CHAN_EMPTY  3
 #define  HPX_LCO_TIMEOUT     4
+#define  HPX_LCO_RESET       5
 #define  HPX_USER            127
 #endif
 /// @}
