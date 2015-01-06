@@ -272,7 +272,7 @@ void hpx_shutdown(int code) {
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
   hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-  hpx_thread_exit(0);
+  hpx_thread_exit(code);
 }
 
 
