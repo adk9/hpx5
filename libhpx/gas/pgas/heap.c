@@ -32,11 +32,7 @@
   #include <hugetlbfs.h>
 #endif
 
-#if defined(__ARMEL__)
-const uint64_t MAX_HEAP_BYTES =  1099511627776;
-#else
-const uintptr_t MAX_HEAP_BYTES = 1lu << GPA_OFFSET_BITS;
-#endif
+const uint64_t MAX_HEAP_BYTES = (uint64_t)1lu << GPA_OFFSET_BITS;
 
 /// This operates as an atomic fetch and add, with the added caveat that the
 /// "fetched" value will be aligned to an @p align alignment.
