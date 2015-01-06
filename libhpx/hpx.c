@@ -39,10 +39,6 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
-#if defined(__ARMEL__)
-int libhpx_arm_shutdown_code;
-#endif
-
 
 /// Cleanup utility function.
 ///
@@ -261,18 +257,14 @@ int hpx_get_num_threads(void) {
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
-  #if defined(__ARMEL__)
-  libhpx_arm_shutdown_code = code;
-  #endif
-
   if (!here->ranks) {
     dbg_error("hpx_shutdown can only be called when the system is running.\n");
   }
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
-  hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-  hpx_thread_exit(code);
+  int e = hpx_bcast(locality_shutdown, &code, sizeof(code), HPX_NULL);
+  hpx_thread_exit(e);
 }
 
 
