@@ -15,10 +15,6 @@
 
 #include <errno.h>
 
-#if defined(__ARMEL__)
-extern int libhpx_arm_shutdown_code;
-#endif
-
 enum {
   LIBHPX_ENOMEM = -(ENOMEM),
   LIBHPX_EINVAL = -(EINVAL),
