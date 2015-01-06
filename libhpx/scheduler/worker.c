@@ -442,8 +442,12 @@ int worker_start(void) {
     return dbg_error("failed to acquire an initial parcel.\n");
   }
 
-  if (thread_transfer(p, _on_startup, NULL)) {
-    return dbg_error("failed to start a worker\n");
+  int e = thread_transfer(p, _on_startup, NULL);
+  if (e) {
+    if (here->rank == 0) {
+      return dbg_error("application exited with a non-zero exit code: %d.\n", e);
+    }
+    return e;
   }
 
   return LIBHPX_OK;
