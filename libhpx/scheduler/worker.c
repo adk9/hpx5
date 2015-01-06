@@ -442,11 +442,7 @@ int worker_start(void) {
     return dbg_error("failed to acquire an initial parcel.\n");
   }
 
-  int e = thread_transfer(p, _on_startup, NULL);
-  #if defined(__ARMEL__)
-  e = libhpx_arm_shutdown_code;
-  #endif
-  if (e) {
+  if (thread_transfer(p, _on_startup, NULL)) {
     return dbg_error("failed to start a worker\n");
   }
 
