@@ -204,6 +204,22 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
 /// @returns    the glboal address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size);
 
+/// Reset a "future" LCO.
+///
+/// This operation allows reusing a future LCO by resetting its
+/// internal state. The reset operation is idempotent---resetting an
+/// unset LCO has no effect if there are no waiting threads. To
+/// distinguish a set from a reset, waiting threads are signalled a
+/// "reset" exception before they are released.
+///
+/// N.B. This operation does not reset/zero the data buffer associated
+/// with the future.
+///
+/// @param  future the global address of the future to reset.
+/// @param    sync the address of an LCO to set when the future is reset;
+///                may be HPX_NULL
+void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync); // async
+/// @}
 
 /// Allocate a global array of futures.
 ///
@@ -211,7 +227,6 @@ hpx_addr_t hpx_lco_future_new(int size);
 /// @param       size The size of each futures' value
 /// @param block_size The number of futures per block
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
-
 
 /// Get an address of a future in a future array
 ///
