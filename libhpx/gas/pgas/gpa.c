@@ -29,7 +29,7 @@ static uint32_t _phase_of(hpx_addr_t gpa, uint32_t bsize) {
   //
   // before: (locality, offset, phase)
   //  after: (00000000  000000  phase)
-  const uint64_t mask = ceil_log2_32(bsize) - 1;
+  const uint64_t mask = (1ul << ceil_log2_32(bsize)) - 1;
   return (uint32_t)(gpa & mask);
 }
 
