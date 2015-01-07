@@ -25,6 +25,16 @@
 
 #include "../generatorhelper/include/prng.h"
 
+const char *sssp_kind_str[] = {
+  "Chaotic Relaxation",
+  "Distributed Control"
+};
+
+const char *graph_generator_type_str[] = {
+  "Graph500 generator",
+  "DIMACS generator"
+};
+
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
           "\t-k, use and-lco-based termination detection\n"
@@ -35,7 +45,6 @@ static void _usage(FILE *stream) {
   hpx_print_help();
   fflush(stream);
 }
-
 
 static hpx_action_t _print_vertex_distance;
 static int _print_vertex_distance_action(int *i)
@@ -128,7 +137,7 @@ static int _main_action(_sssp_args_t *args) {
   set_termination(args->termination);
   edge_list_t el;
   
-  if(args->graph_generator_type == _GRAPH500) {
+  if (args->graph_generator_type == _GRAPH500) {
     // Create an edge list structure          
     printf("Generating edge-list as Graph500 spec\n");
     const graph500_edge_list_generator_args_t graph500_edge_list_generator_args = {
@@ -143,7 +152,7 @@ static int _main_action(_sssp_args_t *args) {
 
   }
 
-  else if(args->graph_generator_type == _DIMACS) {
+  else if (args->graph_generator_type == _DIMACS) {
   // Create an edge list structure from the given filename
   printf("Allocating edge-list from file %s.\n", args->filename);
   const edge_list_from_file_args_t edge_list_from_file_args = {
@@ -176,33 +185,29 @@ static int _main_action(_sssp_args_t *args) {
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
   }
 
-  if(args->graph_generator_type == _GRAPH500) {
+  if (args->graph_generator_type == _GRAPH500) {
     printf("Starting sampling the graph for sources\n");
     sample_graph(&args->problems, args->nproblems,args->edgefactor,el.num_vertices,&sargs.graph);
     printf("Sampling done\n");
   }
 
-  hpx_addr_t kind_bcast_lco = hpx_lco_future_new(0), dc_bcast_lco = hpx_lco_future_new(0);
-  hpx_bcast(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind), kind_bcast_lco);
-  if(args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
-  printf("# priority  queues: %zd\n",args->sssp_init_dc_args.num_pq);
-  hpx_bcast(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args), dc_bcast_lco);
-  if(args->delta > 0) {
-    hpx_addr_t delta_bcast_lco = hpx_lco_future_new(0);
-    hpx_bcast(sssp_run_delta_stepping, NULL, 0, delta_bcast_lco);
-    hpx_lco_wait(delta_bcast_lco);
-    hpx_lco_delete(delta_bcast_lco, HPX_NULL);
+  hpx_bcast_sync(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind));
+
+  if (args->sssp_kind == _DC_SSSP_KIND) {
+    if (args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
+    printf("# priority  queues: %zd\n",args->sssp_init_dc_args.num_pq);
+    hpx_bcast_sync(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args));
+  }
+
+  if (args->delta > 0) {
+    hpx_bcast_sync(sssp_run_delta_stepping, NULL, 0);
     sargs.delta = args->delta;
   }
-  hpx_lco_wait(kind_bcast_lco);
-  hpx_lco_wait(dc_bcast_lco);
-  hpx_lco_delete(kind_bcast_lco, HPX_NULL);
-  hpx_lco_delete(dc_bcast_lco, HPX_NULL);
 
   printf("About to enter problem loop.\n");
 
   for (int i = 0; i < args->nproblems; ++i) {
-    if(total_elapsed_time > args->time_limit) {
+    if (total_elapsed_time > args->time_limit) {
       printf("Time limit of %" SSSP_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
       args->nproblems = i;
       break;
@@ -221,7 +226,7 @@ static int _main_action(_sssp_args_t *args) {
     hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     sargs.termination_lco = sssp_lco;
     if (args->delta == 0) {
-      printf("Calling SSSP.\n");
+      printf("Calling SSSP (%s).\n", sssp_kind_str[args->sssp_kind]);
       hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
     } else {
       printf("Calling delta-stepping with delta %zu.\n", sargs.delta);
@@ -345,7 +350,7 @@ int main(int argc, char *argv[argc]) {
   sssp_uint_t time_limit = 1000;
   int realloc_adj_list = 0;
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
-  sssp_kind_t sssp_kind = DC_SSSP_KIND;
+  sssp_kind_t sssp_kind = _DC_SSSP_KIND;
   size_t delta = 0;
   termination_t termination = COUNT_TERMINATION;
   graph_generator_type_t graph_generator_type = _DIMACS;
@@ -377,7 +382,7 @@ int main(int argc, char *argv[argc]) {
       termination = PROCESS_TERMINATION;
       break;
     case 'd':
-      sssp_kind = DC_SSSP_KIND;
+      sssp_kind = _DC_SSSP_KIND;
       // TBD: add options to adjust dc parameters
       break;
     case 'f':
@@ -387,7 +392,7 @@ int main(int argc, char *argv[argc]) {
       sssp_init_dc_args.num_pq = strtoul(optarg,NULL,0);
       break;
     case 'c':
-      sssp_kind = CHAOTIC_SSSP_KIND;
+      sssp_kind = _CHAOTIC_SSSP_KIND;
       break;
     case 'h':
       _usage(stdout);
@@ -414,7 +419,7 @@ int main(int argc, char *argv[argc]) {
 
   char *graph_file = NULL;
   char *problem_file = NULL  ;
-  if(graph_generator_type == _DIMACS){
+  if (graph_generator_type == _DIMACS){
     switch (argc) {
     case 0:
       fprintf(stderr, "\nMissing graph (.gr) file.\n");
@@ -433,7 +438,7 @@ int main(int argc, char *argv[argc]) {
       break;
     }
   }
-  if(graph_generator_type == _DIMACS){
+  if (graph_generator_type == _DIMACS){
     // Read the DIMACS problem specification file
     _read_dimacs_spec(&problem_file, &nproblems, &problems);
   }

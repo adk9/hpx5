@@ -257,7 +257,7 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
     // The following code is similar to sssp_common.  The 2 should be unified somehow.
 
     // DC is only supported with count termination now.
-    assert(_sssp_kind != DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
+    assert(_sssp_kind != _DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
 
     // Initialize counts and increment the active count for the first vertex.
     // We expect that the termination global variable is set correctly
@@ -271,7 +271,7 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
 
       // Initialize DC if necessary
       hpx_addr_t init_queues_lco = HPX_NULL;
-      if(_sssp_kind == DC_SSSP_KIND) {
+      if(_sssp_kind == _DC_SSSP_KIND) {
 	init_queues_lco = hpx_lco_future_new(0);
 	hpx_bcast(_sssp_init_queues, &internal_termination_lco, sizeof(internal_termination_lco), init_queues_lco);
       }
@@ -285,7 +285,7 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
       hpx_bcast(_delta_sssp_increase_active_counts, NULL, 0, active_counts_termination_lco);
       hpx_lco_wait(active_counts_termination_lco);
       hpx_lco_delete(active_counts_termination_lco, HPX_NULL);
-      if(_sssp_kind == DC_SSSP_KIND) {
+      if(_sssp_kind == _DC_SSSP_KIND) {
 	hpx_lco_wait(init_queues_lco);
 	hpx_lco_delete(init_queues_lco, HPX_NULL);
       }
