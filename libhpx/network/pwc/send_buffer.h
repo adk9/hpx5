@@ -14,25 +14,67 @@
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
 #include <hpx/hpx.h>
+#include "libsync/locks.h"
 #include "circular_buffer.h"
 
 struct eager_buffer;
 
 typedef struct {
+  struct tatas_lock    lock;
   struct eager_buffer   *tx;
   circular_buffer_t pending;
 } send_buffer_t;
 
+/// Initialize a send buffer.
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
                      uint32_t size)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
+/// Finalize a send buffer.
 void send_buffer_fini(send_buffer_t *sends)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Perform a parcel send operation.
+///
+/// The parcel send is a fundamentally asynchronous operation. If @p lsync is
+/// not HPX_NULL then it will be signaled when the local send operation
+/// completes at the network level.
+///
+/// This send operation must be properly synchronized with other sends, and with
+/// send_buffer_progress() since they may be called concurrently from more than
+/// one thread.
+///
+/// NB: We don't currently support the @p lsync operation. When a send
+///     completes, it generates a local completion event that is returned
+///     through a local probe (local progress) operation. This completion event
+///     will delete the parcel.
+///
+/// @param        sends The send buffer.
+/// @param            p The parcel to send.
+/// @param        lsync An event to signal when the send completes locally.
+///
+/// @returns  LIBHPX_OK The send operation was successful (i.e., it was passed
+///                       to the network or it was buffered).
+///       LIBHPX_ENOMEM The send operation could not complete because it needed
+///                       to be buffered but the system was out of memory.
+///        LIBHPX_ERROR An unexpected error occurred.
 int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
+/// Progress a send buffer.
+///
+/// Progressing a send buffer means transferring as many buffered sends to the
+/// network as is currently possible. This will return the number of remaining
+/// buffered sends.
+///
+/// Progressing a send buffer mus t be properly synchronized with the send
+/// operation, as well as with concurrent attempts to progress the buffer, since
+/// they may be called concurrently from more than one thread.
+///
+/// @param        sends The send buffer.
+///
+/// @returns            The number of sends that remain in the buffer after the
+///                       progress call.
 int send_buffer_progress(send_buffer_t *sends)
   HPX_INTERNAL HPX_NON_NULL(1);
 

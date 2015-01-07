@@ -24,10 +24,10 @@ typedef struct {
   hpx_addr_t lsync;
 } record_t;
 
-
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
                      uint32_t size)
 {
+  sync_tatas_init(&sends->lock);
   sends->tx = tx;
   return circular_buffer_init(&sends->pending, sizeof(record_t), size);
 }
@@ -37,31 +37,41 @@ void send_buffer_fini(send_buffer_t *sends) {
 }
 
 int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
-  // Before performing a send operation, we try and progress any pending
-  // sends. The progress operation will return the number of remaining send
-  // operations that are pending.
-  if (send_buffer_progress(sends) == 0) {
-    int e = eager_buffer_tx(sends->tx, p, lsync);
-    if (LIBHPX_OK == e) {
-      return e;
+  if (lsync != HPX_NULL) {
+    dbg_error("local send complete event unimplemented\n");
+    return LIBHPX_EUNIMPLEMENTED;
+  }
+
+  int status = LIBHPX_OK;
+  sync_tatas_acquire(&sends->lock);
+
+  // Try an eager send if we don't have anything pending.
+  if (circular_buffer_size(&sends->pending) == 0) {
+    status = eager_buffer_tx(sends->tx, p);
+    if (LIBHPX_OK == status) {
+      goto unlock;
     }
 
-    if (LIBHPX_RETRY != e) {
-      return dbg_error("error sending parcel\n");
+    if (LIBHPX_RETRY != status) {
+      status = dbg_error("error sending parcel\n");
+      goto unlock;
     }
   }
 
-  // Either there are still pending sends, or the attempt to _start() returned a
-  // retry signal, so buffer this send for now.
+  // We get here if there were already buffered sends, or if the network told us
+  // to retry.
   record_t *r = circular_buffer_append(&sends->pending);
   if (!r) {
-    return dbg_error("could not append a send operation to the buffer\n");
+    status = dbg_error("could not append a send operation to the buffer\n");
+    goto unlock;
   }
 
   r->p = p;
   r->lsync = lsync;
 
-  return LIBHPX_OK;
+ unlock:
+  sync_tatas_release(&sends->lock);
+  return status;
 }
 
 /// Wrap the eager_buffer_tx() operation in an interface that matches the
@@ -69,13 +79,16 @@ int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
 static int _start_record(void *buffer, void *record) {
   send_buffer_t *sends = buffer;
   record_t *r = record;
-  return eager_buffer_tx(sends->tx, r->p, r->lsync);
+  return eager_buffer_tx(sends->tx, r->p);
 }
 
 int send_buffer_progress(send_buffer_t *sends) {
-  int i = circular_buffer_progress(&sends->pending, _start_record, sends);
+  int i = 0;
+  sync_tatas_acquire(&sends->lock);
+  i = circular_buffer_progress(&sends->pending, _start_record, sends);
   if (i < 0) {
     dbg_error("failed to progress the send buffer\n");
   }
+  sync_tatas_release(&sends->lock);
   return i;
 }

@@ -73,7 +73,7 @@ void eager_buffer_fini(eager_buffer_t *buffer)
 /// @returns  LIBHPX_OK The send completed successfully.
 ///        LIBHPX_RETRY There was not enough space in the buffer.
 ///        LIBHPX_ERROR There was another error during the send operation.
-int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t lsync)
+int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 /// Perform an eager parcel recv.
