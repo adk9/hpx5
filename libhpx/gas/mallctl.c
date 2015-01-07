@@ -21,9 +21,6 @@
 #include "libhpx/debug.h"
 #include "mallctl.h"
 
-#ifdef __ARMEL__
-const char *malloc_conf = "lg_dirty_mult:-1";
-#endif
 
 int mallctl_get_lg_dirty_mult(void) {
   ssize_t opt = -1;
@@ -55,11 +52,7 @@ size_t mallctl_get_chunk_size(void) {
   if (e)
     dbg_error("jemalloc: failed to read the chunk size\n");
 
-  #if defined(__ARMEL__) 
   return (size_t)1 << log2_bytes_per_chunk;
-  #else
-  return 1 << log2_bytes_per_chunk;
-  #endif
 }
 
 unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc) {
