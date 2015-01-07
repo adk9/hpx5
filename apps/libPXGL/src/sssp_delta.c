@@ -244,7 +244,7 @@ static void _find_next_level() {
 
 hpx_action_t call_delta_sssp = 0;
 int call_delta_sssp_action(const call_sssp_args_t *const args) {
-  printf("Delta-stepping called.\n");
+  // printf("Delta-stepping called.\n");
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);  
   hpx_bcast(_init_buckets, &args->delta, sizeof(args->delta), bcast_lco);
   hpx_lco_wait(bcast_lco);
@@ -275,16 +275,9 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
 	init_queues_lco = hpx_lco_future_new(0);
 	hpx_bcast(_sssp_init_queues, &internal_termination_lco, sizeof(internal_termination_lco), init_queues_lco);
       }
-      hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
       // printf("Starting initialization bcast.\n");
-      hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
-      // printf("Waiting on bcast.\n");
-      hpx_lco_wait(init_termination_count_lco);
-      hpx_lco_delete(init_termination_count_lco, HPX_NULL);
-      const hpx_addr_t active_counts_termination_lco = hpx_lco_future_new(0);
-      hpx_bcast(_delta_sssp_increase_active_counts, NULL, 0, active_counts_termination_lco);
-      hpx_lco_wait(active_counts_termination_lco);
-      hpx_lco_delete(active_counts_termination_lco, HPX_NULL);
+      hpx_bcast_sync(_initialize_termination_detection, NULL, 0);
+      hpx_bcast_sync(_delta_sssp_increase_active_counts, NULL, 0);
       if(_sssp_kind == _DC_SSSP_KIND) {
 	hpx_lco_wait(init_queues_lco);
 	hpx_lco_delete(init_queues_lco, HPX_NULL);
