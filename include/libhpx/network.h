@@ -41,7 +41,7 @@ typedef struct network {
   int (*progress)(struct network *)
     HPX_NON_NULL(1);
 
-  int (*send)(struct network *, hpx_parcel_t *p, hpx_addr_t local)
+  int (*send)(struct network *, hpx_parcel_t *p)
     HPX_NON_NULL(1, 2);
 
   int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
@@ -125,7 +125,7 @@ static inline int network_progress(network_t *network) {
 ///
 /// @returns  LIBHPX_OK The send was buffered successfully
 static inline int network_send(network_t *network, hpx_parcel_t *p) {
-  return network->send(network, p, HPX_NULL);
+  return network->send(network, p);
 }
 
 

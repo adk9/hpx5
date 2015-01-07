@@ -95,7 +95,7 @@ static void _funneled_delete(network_t *network) {
 }
 
 
-static int _funneled_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
+static int _funneled_send(network_t *network, hpx_parcel_t *p) {
   _funneled_t *this = (void*)network;
   sync_two_lock_queue_enqueue(&this->sends, p);
   return LIBHPX_OK;
