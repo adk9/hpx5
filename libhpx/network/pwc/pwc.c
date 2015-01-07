@@ -24,12 +24,10 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 
+#include "completions.h"
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
-
-/// big hack
-#include "../../gas/pgas/gpa.h"
 
 typedef struct {
   network_t            vtable;
@@ -42,11 +40,6 @@ typedef struct {
   char                 *eager;
   peer_t                peers[];
 } pwc_network_t;
-
-/// This compacts an operation and offset into a single completion command.
-static uint64_t _completion(hpx_action_t op, uint64_t offset) {
-  return ((uint64_t)op << GPA_OFFSET_BITS) + (offset & GPA_OFFSET_MASK);
-}
 
 static const char *_pwc_id() {
   return "Photon put-with-completion\n";
@@ -84,17 +77,21 @@ static int _pwc_progress(network_t *network) {
 /// This transforms the parcel send operation into a pwc() operation into the
 /// parcel buffer on the target peer.
 ///
+/// This is basically exposed directly to the application programmer through the
+/// network interface, and could be called concurrently by a number of different
+/// threads. It does not perform any internal locking, as it is merely finding
+/// the right peer structure to send through.
+///
 /// @param      network The network object.
 /// @param            p The parcel to send.
-/// @param        lsync The local LCO to synchronize with.
 ///
 /// @returns  LIBHPX_OK The operation completed successfully.
 ///        LIBHPX_ERROR The operation produced an error.
-static int _pwc_send(network_t *network, hpx_parcel_t *p, hpx_addr_t lsync) {
+static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
-  return peer_send(peer, p, lsync);
+  return peer_send(peer, p, HPX_NULL);
 }
 
 /// Perform a put-with-completion operation to a global heap address.
@@ -109,7 +106,7 @@ static int _pwc_pwc(network_t *network,
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
   uint64_t offset = gas_offset_of(pwc->gas, to);
-  uint64_t complete = _completion(op, offset);
+  completion_t complete = encode_completion(op, offset);
   return peer_pwc(peer, offset, lva, n, lsync, rsync, complete, SEGMENT_HEAP);
 }
 
@@ -136,8 +133,50 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, lsync);
 }
 
+static int _probe_local(int rank, uint64_t *op) {
+  int flag = 0;
+  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_EVQ);
+  if (PHOTON_OK != e) {
+    dbg_error("photon probe error\n");
+  }
+  return flag;
+}
+
+static int _probe_completion(int rank, uint64_t *op) {
+  int flag = 0;
+  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_LEDGER);
+  if (PHOTON_OK != e) {
+    dbg_error("photon probe error\n");
+  }
+  return flag;
+}
+
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
-  return NULL;
+  pwc_network_t *pwc = (void*)network;
+  int rank = pwc->rank;
+  hpx_parcel_t *parcels = NULL;
+
+  // each time through the loop, we deal with local completions
+  completion_t completion;
+  while (_probe_local(rank, &completion)) {
+    dbg_log_net("processing local completion %lu\n", completion);
+    hpx_addr_t addr;
+    hpx_action_t op;
+    decode_completion(completion, &op, &addr);
+    dbg_log_net("extracted local interrupt of %d\n", op);
+  }
+
+  // deal with received completions
+  for (int i = 0, e = pwc->ranks; i < e; ++i) {
+    while (_probe_completion(i, &completion)) {
+      hpx_addr_t addr;
+      hpx_action_t op;
+      decode_completion(completion, &op, &addr);
+      dbg_log_net("processing completion %d from rank %d\n", op, i);
+    }
+  }
+
+  return parcels;
 }
 
 static void _pwc_set_flush(network_t *network) {

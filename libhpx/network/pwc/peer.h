@@ -13,6 +13,7 @@
 #ifndef LIBHPX_NETWORK_PWC_PEER_H
 #define LIBHPX_NETWORK_PWC_PEER_H
 
+#include "completions.h"
 #include "eager_buffer.h"
 #include "pwc_buffer.h"
 #include "segment.h"
@@ -78,7 +79,7 @@ void peer_fini(peer_t *peer)
 /// @return  LIBHPX_OK The operation was successful.
 static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
                            hpx_addr_t lsync, hpx_addr_t rsync,
-                           uint64_t completion, segment_id_t segment_id) {
+                           completion_t completion, segment_id_t segment_id) {
   pwc_buffer_t *pwc = &peer->pwc;
   segment_t *segment = &peer->segments[segment_id];
   return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, completion, segment);
@@ -89,6 +90,9 @@ static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
 /// This simply forwards the operation through the send buffer structure, which
 /// will either put the parcel directly into the remote eager buffer for this
 /// peer, or will buffer the parcel to be sent in the future.
+///
+/// This may be called concurrently by a number of different threads, and
+/// expects the send buffers to be properly synchronized.
 ///
 /// @param         peer The peer structure representing the send target.
 /// @param            p The parcel to send.

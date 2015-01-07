@@ -17,25 +17,52 @@
 #include <hpx/attributes.h>
 
 typedef struct {
-  uint32_t  size;
-  uint32_t esize;
-  uint64_t   max;
-  uint64_t   min;
+  uint32_t     capacity;
+  uint32_t element_size;
+  uint64_t          max;
+  uint64_t          min;
   void  *records;
 } circular_buffer_t;
 
-int circular_buffer_init(circular_buffer_t *b, uint32_t esize, uint32_t size)
+
+/// Initialize a circular buffer.
+///
+/// @param            b The buffer to initialize.
+/// @param        esize The size of a buffer element.
+/// @param          cap The initial buffer capacity.
+///
+/// @returns  LIBHPX_OK The buffer was initialized successfully.
+///       LIBHPX_ENOMEM There was not enough memory for @p cap elements.
+///        LIBHPX_ERROR There was an unexpected error.
+int circular_buffer_init(circular_buffer_t *b, uint32_t esize, uint32_t cap)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Finalize a circular buffer.
 void circular_buffer_fini(circular_buffer_t *b)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Append an element to the circular buffer.
+///
+/// @param            b The buffer to append to.
+///
+/// @returns       NULL There was an error appending to the buffer.
+///            NON-NULL The address of the start of the next record in the
+///                       buffer.
 void *circular_buffer_append(circular_buffer_t *b)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Compute the number of elements in the buffer.
+uint32_t circular_buffer_size(circular_buffer_t *b)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Apply the callback closure to each element in the buffer, in a FIFO order.
+///
+///
+/// @returns            The number of elements left in the buffer.
 int circular_buffer_progress(circular_buffer_t *b,
                              int (*progress_callback)(void *env, void *record),
                              void *progress_env)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
+
 
 #endif // LIBHPX_NETWORK_PWC_CIRCULAR_BUFFER_H
