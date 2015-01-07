@@ -30,7 +30,7 @@ static int _smp_progress(network_t *network) {
   return 0;
 }
 
-static int _smp_send(network_t *network, hpx_parcel_t *p, hpx_addr_t l) {
+static int _smp_send(network_t *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
