@@ -166,19 +166,6 @@ void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Synchronously execute the action associated with a parcel.
-///
-/// This operation calls the action in the context of the calling
-/// thread, and should be used with caution. In particular, if the
-/// action performs a blocking operation, it could potentially block
-/// the entire thread without co-operatively yielding to other useful
-/// work.
-///
-/// @param p The parcel to execute.
-void scheduler_exec(hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Yield a user-level thread.
 ///
 /// This triggers a scheduling event, and possibly selects a new user-level
