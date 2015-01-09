@@ -691,7 +691,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   assert(to);
   assert(parcel_get_stack(to));
   assert(parcel_get_stack(to)->sp);
-  thread_transfer(to, _free_parcel, (void*)status);
+  thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
 

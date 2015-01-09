@@ -13,7 +13,7 @@ hpx_action_t _sssp_visit_vertex = 0;
 
 static hpx_action_t _sssp_visit_source = 0;
 static hpx_action_t _sssp_print_source_adj_list = 0;
-sssp_kind_t _sssp_kind = CHAOTIC_SSSP_KIND;
+sssp_kind_t _sssp_kind = _CHAOTIC_SSSP_KIND;
 
 typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, const void*, size_t, hpx_addr_t);
 static send_vertex_t send_vertex = hpx_call;
@@ -131,7 +131,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   //hpx_call_sync(index, _sssp_visit_source, &sssp_args, sizeof(sssp_args), HPX_NULL,0);
 
   // DC is only supported with count termination now.
-  assert(_sssp_kind != DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
+  assert(_sssp_kind != _DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
 
   // Initialize counts and increment the active count for the first vertex.
   // We expect that the termination global variable is set correctly
@@ -143,7 +143,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
 
     // Initialize DC if necessary
     hpx_addr_t init_queues_lco = HPX_NULL;
-    if(_sssp_kind == DC_SSSP_KIND) {
+    if(_sssp_kind == _DC_SSSP_KIND) {
       init_queues_lco = hpx_lco_future_new(0);
       hpx_bcast(_sssp_init_queues, &internal_termination_lco, sizeof(internal_termination_lco), init_queues_lco);
     }
@@ -153,7 +153,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     // printf("Waiting on bcast.\n");
     hpx_lco_wait(init_termination_count_lco);
     hpx_lco_delete(init_termination_count_lco, HPX_NULL);
-    if(_sssp_kind == DC_SSSP_KIND) {
+    if(_sssp_kind == _DC_SSSP_KIND) {
       hpx_lco_wait(init_queues_lco);
       hpx_lco_delete(init_queues_lco, HPX_NULL);
     }
@@ -184,7 +184,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
 hpx_action_t initialize_sssp_kind = 0;
 int initialize_sssp_kind_action(sssp_kind_t *arg) {
   _sssp_kind = *arg;
-  if (_sssp_kind == CHAOTIC_SSSP_KIND) {
+  if (_sssp_kind == _CHAOTIC_SSSP_KIND) {
     _sssp_process_vertex = _sssp_chaotic_process_vertex;
   } else {
     _sssp_process_vertex = _sssp_dc_process_vertex;
