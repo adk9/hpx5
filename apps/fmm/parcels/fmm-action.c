@@ -70,7 +70,7 @@ int _fmm_main_action(void) {
 
   // Partition the source and target ensemble. On the source part, the
   // aggregate action is invoked immediately when a leaf is reached
-/*  hpx_addr_t partition_done = hpx_lco_and_new(2);
+  hpx_addr_t partition_done = hpx_lco_and_new(2);
   char type1 = 'S', type2 = 'T';
   hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done);
   hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done);
@@ -82,7 +82,7 @@ int _fmm_main_action(void) {
 
   // Wait for completion
   hpx_lco_wait(fmm_param->fmm_done);
-*/
+
   // Cleanup
   hpx_gas_free(sources, HPX_NULL);
   hpx_gas_free(targets, HPX_NULL);
