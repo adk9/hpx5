@@ -5,7 +5,7 @@
 #include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "bit_array/bit_array.h"
-#include "libsync/include/locks.h"
+#include "libsync/locks.h"
 
 #define DEF_MAX_BUF_ENTRIES  64    // The number msgbuf entries for UD mode
 
@@ -50,20 +50,28 @@
 #define IS_VALID_PROC(p)       ((p >= 0) && (p < _photon_nproc))
 
 typedef struct photon_req_t {
-  uint32_t index;
   photon_rid id;
-  int op;
-  int state;
-  int flags;
-  int type;
-  int proc;
-  int tag;
-  int events;
+  int        proc;
+  int        tag;
+  uint16_t   op;
+  uint16_t   type;
+  uint16_t   state;
+  uint16_t   flags;
+  struct {
+    struct photon_buffer_t buf;
+  } local_info;
+  struct {
+    struct photon_buffer_t buf;
+    photon_rid             id;
+  } remote_info;
+  struct {
+    volatile uint16_t      events;
+    uint16_t               rflags;
+    uint64_t               cookie;
+    uint64_t               size;
+  } rattr;
   //int bentries[DEF_MAX_BUF_ENTRIES];
   //BIT_ARRAY *mmask;
-  uint64_t length;
-  photon_addr addr;
-  struct photon_buffer_internal_t remote_buffer;
 } photon_req;
 
 typedef struct photon_req_table_t {

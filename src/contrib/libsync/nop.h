@@ -17,7 +17,7 @@
 
 /* This file defines an interface to nop. */
 #include "hpx/attributes.h"
-#include "include/sync.h"
+#include "libsync/sync.h"
 
 /// ----------------------------------------------------------------------------
 /// Your basic no-op.

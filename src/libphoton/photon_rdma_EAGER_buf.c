@@ -6,7 +6,6 @@
 #include "photon_exchange.h"
 #include "photon_event.h"
 #include "logging.h"
-#include "libsync/include/sync.h"
 
 static int _get_remote_progress(int proc, photonEagerBuf buf);
 

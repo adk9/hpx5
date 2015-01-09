@@ -94,7 +94,6 @@ struct photon_buffer_priv_t {
 struct photon_buffer_t {
   uintptr_t addr;
   uint64_t size;
-  uint64_t offset;
   struct photon_buffer_priv_t priv;
 };
 

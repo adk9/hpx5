@@ -33,16 +33,15 @@ photonRequest photon_get_request(int proc) {
   }
 
   if (req->state && (req->state != REQUEST_FREE)) {
-    log_warn("Overwriting a request (id=0x%016lx, ind=%u, state=%d) that never completed (curr=%lu, tail=%lu)",
-	     req->id, req->index, req->state, req_curr, tail);
+    log_warn("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
+	     req->id, req->state, req_curr, tail);
   }
 
+  memset(req, 0, sizeof(struct photon_req_t));
   req->id     = PROC_REQUEST_ID(proc, req_ind);
-  req->index  = req_ind;
   req->op     = REQUEST_OP_DEFAULT;
   req->state  = REQUEST_NEW;
   req->flags  = REQUEST_FLAG_NIL;
-  req->events = 0;
   //bit_array_clear_all(req->mmask);
   
   dbg_trace("Returning a new request (curr=%u) with id: 0x%016lx, tail=%u",
@@ -101,7 +100,7 @@ int photon_free_request(photonRequest req) {
   __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
   sync_fadd(&rt->tail, 1, SYNC_RELAXED);
-  dbg_trace("Cleared request (ind=%u) 0x%016lx", req->index, req->id);
+  dbg_trace("Cleared request 0x%016lx", req->id);
   return PHOTON_OK;
 }
 
@@ -120,20 +119,19 @@ photonRequest photon_setup_request_direct(photonBuffer rbuf, int proc, int event
   req->proc = proc;
   req->type = EVQUEUE;
   req->tag = 0;
-  req->events = events;
+  req->rattr.events = events;
 
   if (rbuf) {
     // fill in the internal buffer with the rbuf contents
-    memcpy(&req->remote_buffer, rbuf, sizeof(*rbuf));
+    memcpy(&req->remote_info.buf, rbuf, sizeof(*rbuf));
     // there is no matching request from the remote side, so fill in local values */
-    req->remote_buffer.request = 0;
-    req->remote_buffer.tag = 0;
-
+    req->remote_info.id = 0;
+    
     dbg_trace("Addr: %p", (void *)rbuf->addr);
     dbg_trace("Size: %lu", rbuf->size);
     dbg_trace("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
   }
-
+  
   return req;
   
  error_exit:
@@ -151,19 +149,18 @@ photonRequest photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int
 
   dbg_trace("Setting up a new send buffer request: %d/0x%016lx/%p", proc, req->id, req);
 
-  req->state = REQUEST_NEW;
-  req->type = EVQUEUE;
-  req->proc = proc;
-  req->flags = ri_entry->flags;
-  req->length = ri_entry->size;
-  req->events = 1;
+  req->state        = REQUEST_NEW;
+  req->type         = EVQUEUE;
+  req->proc         = proc;
+  req->flags        = ri_entry->flags;
+  req->rattr.size   = ri_entry->size;
+  req->rattr.events = 1;
 
-  /* save the remote buffer in the request */
-  req->remote_buffer.request   = ri_entry->request;
-  req->remote_buffer.tag       = ri_entry->tag;
-  req->remote_buffer.buf.addr  = ri_entry->addr;
-  req->remote_buffer.buf.size  = ri_entry->size;
-  req->remote_buffer.buf.priv  = ri_entry->priv;
+  // save the remote buffer in the request
+  req->remote_info.id       = ri_entry->request;
+  req->remote_info.buf.addr = ri_entry->addr;
+  req->remote_info.buf.size = ri_entry->size;
+  req->remote_info.buf.priv = ri_entry->priv;
   
   dbg_trace("Remote request: 0x%016lx", ri_entry->request);
   dbg_trace("Addr: %p", (void *)ri_entry->addr);
@@ -192,15 +189,15 @@ photonRequest photon_setup_request_ledger_eager(photonLedgerEntry entry, int cur
 
   dbg_trace("Setting up a new eager buffer request: %d/0x%016lx/%p", proc, req->id, req);
 
-  req->state = REQUEST_NEW;
-  req->type = EVQUEUE;
-  req->proc = proc;
-  req->flags = REQUEST_FLAG_EAGER;
-  req->length = (entry->request>>32);
-  req->events = 1;
+  req->state        = REQUEST_NEW;
+  req->type         = EVQUEUE;
+  req->proc         = proc;
+  req->flags        = REQUEST_FLAG_EAGER;
+  req->rattr.size   = (entry->request>>32);
+  req->rattr.events = 1;
 
-  req->remote_buffer.buf.size = req->length;
-  req->remote_buffer.request = (( (uint64_t)_photon_myrank)<<32) | (entry->request<<32>>32);
+  req->remote_info.buf.size = req->rattr.size;
+  req->remote_info.id       = (( (uint64_t)_photon_myrank)<<32) | (entry->request<<32>>32);
   
   // reset the info ledger entry
   entry->request = 0;
@@ -225,14 +222,14 @@ photonRequest photon_setup_request_recv(photonAddr addr, int msn, int msize, int
     goto error_exit;
   }
 
-  req->tag = -1;
-  req->state = REQUEST_PENDING;
-  req->type = SENDRECV;
-  req->proc = addr->global.proc_id;
-  req->events = nbufs;
-  req->length = msize;
+  req->tag          = PHOTON_ANY_TAG;
+  req->state        = REQUEST_PENDING;
+  req->type         = SENDRECV;
+  req->proc         = addr->global.proc_id;
+  req->rattr.events = nbufs;
+  req->rattr.size   = msize;
   //req->bentries[msn] = bindex;
-  memcpy(&req->addr, addr, sizeof(*addr));
+  //memcpy(&req->addr, addr, sizeof(*addr));
   
   //bit_array_set(req->mmask, msn);
 
@@ -251,12 +248,12 @@ photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs) {
     goto error_exit;
   }
 
-  req->tag = -1;
-  req->state = REQUEST_PENDING;
-  req->type = SENDRECV;
-  req->events = nbufs;
-  req->length = 0;
-  memcpy(&req->addr, addr, sizeof(*addr));
+  req->tag          = PHOTON_ANY_TAG;
+  req->state        = REQUEST_PENDING;
+  req->type         = SENDRECV;
+  req->rattr.events = nbufs;
+  req->rattr.size   = 0;
+  //memcpy(&req->addr, addr, sizeof(*addr));
   //memcpy(req->bentries, bufs, sizeof(int)*DEF_MAX_BUF_ENTRIES);
   
   return req;
@@ -269,7 +266,7 @@ static int __photon_cleanup_request(photonRequest req) {
   switch (req->op) {
   case REQUEST_OP_SENDBUF:
     if (req->flags & REQUEST_FLAG_EAGER) {
-      MARK_DONE(photon_processes[req->proc].remote_eager_buf, req->length);
+      MARK_DONE(photon_processes[req->proc].remote_eager_buf, req->rattr.size);
       MARK_DONE(photon_processes[req->proc].remote_eager_ledger, 1);
     }
     else {
@@ -286,7 +283,7 @@ static int __photon_cleanup_request(photonRequest req) {
     break;
   case REQUEST_OP_PWC:
     if (req->flags & REQUEST_FLAG_1PWC) {
-      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->length);
+      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->rattr.size);
     }
     else if (req->flags & REQUEST_FLAG_2PWC) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);

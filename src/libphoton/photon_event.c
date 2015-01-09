@@ -111,7 +111,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
   treq = photon_lookup_request(cookie);
   if (treq) {
     if (treq->type == EVQUEUE) {
-      int nentries = sync_addf(&treq->events, -1, SYNC_RELAXED);
+      int nentries = sync_addf(&treq->rattr.events, -1, SYNC_RELAXED);
       if (nentries == 0) {
 	treq->state = REQUEST_COMPLETED;
 	dbg_trace("Set request completed, rid: 0x%016lx", cookie);

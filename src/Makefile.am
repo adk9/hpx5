@@ -3,7 +3,8 @@ AM_CFLAGS = @CFLAGS@                            \
             -I@PHOTON_SRCDIR@/src/util          \
             -I@PHOTON_SRCDIR@/src/libphoton     \
             -I@PHOTON_SRCDIR@/src/forwarder     \
-	    -I@PHOTON_SRCDIR@/src/contrib
+	    -I@PHOTON_SRCDIR@/src/contrib       \
+	    -I@PHOTON_SRCDIR@/src/contrib/libsync/include
 #-DPHOTON_MULTITHREADED
 
 SUBDIRS      = util contrib
