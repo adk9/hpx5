@@ -59,16 +59,16 @@ struct transport_class;
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
 typedef struct {
-  uint32_t                      rank;
-  uint32_t                     ranks;
-  struct boot_class            *boot;
-  struct gas_class              *gas;
-  struct transport_class  *transport;
-  struct network            *network;
-  struct scheduler            *sched;
-  hpx_config_t               *config;
-  const struct action_table *actions;
-  libhpx_hwloc_topology_t   topology;
+  uint32_t                                 rank;
+  uint32_t                                ranks;
+  struct boot_class                       *boot;
+  struct gas_class                         *gas;
+  struct transport_class             *transport;
+  struct network                       *network;
+  struct scheduler                       *sched;
+  hpx_config_t                          *config;
+  const struct action_table            *actions;
+  hwloc_topology_t topology;
 } locality_t
 #ifdef __ARMEL__
 HPX_ALIGNED(8)
