@@ -65,7 +65,7 @@ photonRequest photon_lookup_request(photon_rid rid) {
   if (id > 0 && id <= rt->size) {
     photonRequest req = &rt->reqs[id];
     if (req->state == REQUEST_FREE) {
-      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+      dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
 	       req->op, req->type, req->id);
     }
     return req;
@@ -104,7 +104,7 @@ int photon_free_request(photonRequest req) {
   return PHOTON_OK;
 }
 
-photonRequest photon_setup_request_direct(photonBuffer rbuf, int proc, int events) {
+photonRequest photon_setup_request_direct(photonBuffer lbuf, photonBuffer rbuf, uint64_t size, int proc, int events) {
   photonRequest req;
   
   req = photon_get_request(proc);
@@ -120,16 +120,28 @@ photonRequest photon_setup_request_direct(photonBuffer rbuf, int proc, int event
   req->type = EVQUEUE;
   req->tag = 0;
   req->rattr.events = events;
+  req->rattr.cookie = req->id;
 
+  if (lbuf) {
+    memcpy(&req->local_info.buf, lbuf, sizeof(*lbuf));
+    req->local_info.id = 0;
+
+    dbg_trace("Local info ...");
+    dbg_trace("  Addr: %p", (void *)lbuf->addr);
+    dbg_trace("  Size: %lu", lbuf->size);
+    dbg_trace("  Keys: 0x%016lx / 0x%016lx", lbuf->priv.key0, lbuf->priv.key1);
+  }
+  
   if (rbuf) {
     // fill in the internal buffer with the rbuf contents
     memcpy(&req->remote_info.buf, rbuf, sizeof(*rbuf));
     // there is no matching request from the remote side, so fill in local values */
     req->remote_info.id = 0;
     
-    dbg_trace("Addr: %p", (void *)rbuf->addr);
-    dbg_trace("Size: %lu", rbuf->size);
-    dbg_trace("Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
+    dbg_trace("Remote info ...");
+    dbg_trace("  Addr: %p", (void *)rbuf->addr);
+    dbg_trace("  Size: %lu", rbuf->size);
+    dbg_trace("  Keys: 0x%016lx / 0x%016lx", rbuf->priv.key0, rbuf->priv.key1);
   }
   
   return req;
@@ -153,7 +165,7 @@ photonRequest photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int
   req->type         = EVQUEUE;
   req->proc         = proc;
   req->flags        = ri_entry->flags;
-  req->rattr.size   = ri_entry->size;
+  req->size         = ri_entry->size;
   req->rattr.events = 1;
 
   // save the remote buffer in the request
@@ -193,10 +205,10 @@ photonRequest photon_setup_request_ledger_eager(photonLedgerEntry entry, int cur
   req->type         = EVQUEUE;
   req->proc         = proc;
   req->flags        = REQUEST_FLAG_EAGER;
-  req->rattr.size   = (entry->request>>32);
+  req->size         = (entry->request>>32);
   req->rattr.events = 1;
 
-  req->remote_info.buf.size = req->rattr.size;
+  req->remote_info.buf.size = req->size;
   req->remote_info.id       = (( (uint64_t)_photon_myrank)<<32) | (entry->request<<32>>32);
   
   // reset the info ledger entry
@@ -226,8 +238,8 @@ photonRequest photon_setup_request_recv(photonAddr addr, int msn, int msize, int
   req->state        = REQUEST_PENDING;
   req->type         = SENDRECV;
   req->proc         = addr->global.proc_id;
+  req->size         = msize;
   req->rattr.events = nbufs;
-  req->rattr.size   = msize;
   //req->bentries[msn] = bindex;
   //memcpy(&req->addr, addr, sizeof(*addr));
   
@@ -251,8 +263,8 @@ photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs) {
   req->tag          = PHOTON_ANY_TAG;
   req->state        = REQUEST_PENDING;
   req->type         = SENDRECV;
+  req->size         = 0;
   req->rattr.events = nbufs;
-  req->rattr.size   = 0;
   //memcpy(&req->addr, addr, sizeof(*addr));
   //memcpy(req->bentries, bufs, sizeof(int)*DEF_MAX_BUF_ENTRIES);
   
@@ -266,7 +278,7 @@ static int __photon_cleanup_request(photonRequest req) {
   switch (req->op) {
   case REQUEST_OP_SENDBUF:
     if (req->flags & REQUEST_FLAG_EAGER) {
-      MARK_DONE(photon_processes[req->proc].remote_eager_buf, req->rattr.size);
+      MARK_DONE(photon_processes[req->proc].remote_eager_buf, req->size);
       MARK_DONE(photon_processes[req->proc].remote_eager_ledger, 1);
     }
     else {
@@ -283,7 +295,7 @@ static int __photon_cleanup_request(photonRequest req) {
     break;
   case REQUEST_OP_PWC:
     if (req->flags & REQUEST_FLAG_1PWC) {
-      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->rattr.size);
+      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->size);
     }
     else if (req->flags & REQUEST_FLAG_2PWC) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);

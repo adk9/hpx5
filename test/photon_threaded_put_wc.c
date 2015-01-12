@@ -10,6 +10,7 @@
 #include <semaphore.h>
 #include <sched.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
@@ -29,7 +30,7 @@
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 10
+#define SQ_SIZE 100
 
 static int ITERS = 10000;
 
@@ -101,12 +102,12 @@ void *wait_ledger_completions_thread(void *arg) {
   int flag;
   
   do {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    //photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);
-
+  
   pthread_exit(NULL);
 }
 
@@ -178,9 +179,9 @@ int main(int argc, char **argv) {
   //pthread_create(&th2, NULL, test_thread, NULL);
   
   // Create receive threads one per rank
-  //for (t=0; t<nproc; t++) {
-  pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
-  //}
+  for (t=0; t<nproc; t++) {
+    pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
+  }
   
   // set affinity as requested
 #ifdef HAVE_SETAFFINITY
@@ -234,33 +235,28 @@ int main(int argc, char **argv) {
       // send to random rank, excluding self
       while (j == rank)
         j = rand() % nproc;
-    
+
       // PUT
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    do {
-	      rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
-	      if (rc == PHOTON_ERROR) {
-		fprintf(stderr, "Error doing PWC\n");
-		exit(1);
-	      }
-	      else if (rc == PHOTON_ERROR_RESOURCE) {
-		//fprintf(stderr, "retrying...\n");
-		//sleep(1);
-	      }
-	    } while (rc == PHOTON_ERROR_RESOURCE);
+	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    if (rc == PHOTON_ERROR) {
+	      fprintf(stderr, "Error doing PWC\n");
+	      exit(1);
+	    }
 	  }
 	}
-        clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
       
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
+
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -283,15 +279,16 @@ int main(int argc, char **argv) {
 		}
               }
           }
-          clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
       }
-
+      
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
       
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
+
       MPI_Barrier(MPI_COMM_WORLD);
       
       if (rank == 0 && i && !(sizes[i] % 8)) {

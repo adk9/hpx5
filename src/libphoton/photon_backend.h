@@ -64,7 +64,6 @@ typedef struct proc_info_t {
   photonMsgBuf       smsgbuf;
 
   photonRequestTable request_table;
-  two_lock_queue_t   *pending_reqs;
 
 #ifdef HAVE_XSP
   libxspSess *sess;
