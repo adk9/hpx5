@@ -217,12 +217,12 @@ int hpx_par_call_sync(hpx_action_t action,
 }
 
 int hpx_count_range_call(hpx_action_t action,
-			 const hpx_addr_t addr,
-			 const size_t count,
-			 const size_t increment,
-			 const size_t bsize,
-			 const size_t arg_size,
-			 void *const arg) {
+             const hpx_addr_t addr,
+             const size_t count,
+             const size_t increment,
+             const size_t bsize,
+             const size_t arg_size,
+             void *const arg) {
   const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
   // printf("Chunk %zu, count %zu, increment %zu, action %zu.\n", thread_chunk, count, increment, action);
   hpx_count_range_call_args_t *args = malloc(sizeof(*args) + arg_size);
@@ -241,4 +241,5 @@ int hpx_count_range_call(hpx_action_t action,
   //  printf("Starting chunk with addr %zu.\n", args->addr);
   hpx_call(HPX_HERE, _hpx_count_range_call, args, sizeof(*args) + arg_size, HPX_NULL);
   free(args);
+  return HPX_SUCCESS;
 }
