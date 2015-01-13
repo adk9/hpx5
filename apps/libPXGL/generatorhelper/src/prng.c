@@ -143,17 +143,16 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   Sequential Random Sampling," ACM Transactions on Mathematical
   Software, 13(1), March 1987, 58-67. */
 
-  double n = numvertices;//NV;
-  int64_t top = numvertices  - nroot; //NV
-  int64_t cur = -1;
-  int64_t S;
-  double r;
+  /* double n = numvertices;//NV; */
+  /* int64_t top = numvertices  - nroot; //NV */
+  /* int64_t cur = -1; */
+  /* int64_t S; */
+  /* double r; */
   sssp_uint_t m, t;
 
   for (m = 0; m < nroot; ++m) root[m] = SSSP_UINT_MAX;
   m = 0; t = 0;
   while (m < nroot && t < numvertices) {
-    double R = dprng(KEY, m);
     size_t num_edges = 0;
     const hpx_addr_t index = hpx_addr_add(*graph, t * sizeof(hpx_addr_t), _index_array_block_size);
     hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
