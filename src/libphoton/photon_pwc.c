@@ -10,10 +10,10 @@
 #include "photon_pwc.h"
 #include "util.h"
 
-two_lock_queue_t          *pwc_q;
+ms_queue_t          *pwc_q;
 
 int photon_pwc_init() {
-  pwc_q = sync_two_lock_queue_new();
+  pwc_q = sync_ms_queue_new();
   if (!pwc_q)
     goto error_exit;
   return PHOTON_OK;
@@ -23,12 +23,12 @@ int photon_pwc_init() {
 }
 
 int photon_pwc_add_req(photonRequest req) {
-  sync_two_lock_queue_enqueue(pwc_q, req);
+  sync_ms_queue_enqueue(pwc_q, req);
   return PHOTON_OK;
 }
 
 photonRequest photon_pwc_pop_req() {
-  return sync_two_lock_queue_dequeue(pwc_q);
+  return sync_ms_queue_dequeue(pwc_q);
 }
 
 static int photon_pwc_try_packed(photonRequest req) {
@@ -152,7 +152,6 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
                                        photon_rid local, photon_rid remote, int flags) {
   photonRequest req;
   int rc;
-  static int count = 0;
 
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
 
@@ -216,8 +215,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   }
   
   if (rc != PHOTON_OK) {
-    sync_two_lock_queue_enqueue(photon_processes[proc].request_table->req_q, req);
-    //dbg_info("enqueue count: %d", ++count);
+    sync_ms_queue_enqueue(photon_processes[proc].request_table->req_q, req);
     goto error_exit;
   }
   
@@ -295,7 +293,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_COOKIE;
   int i, rc, start, end;
-
+  
   *flag = 0;
 
   if (proc == PHOTON_ANY_SOURCE) {
@@ -310,11 +308,11 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   if (flags & PHOTON_PROBE_EVQ) {
     // process any queued PWC requests
     for (i=start; i<end; i++) {
-      req = sync_two_lock_queue_dequeue(photon_processes[i].request_table->req_q);
+      req = sync_ms_queue_dequeue(photon_processes[i].request_table->req_q);
       if (req) {
 	rc = photon_pwc_try_ledger(req);
 	if (rc != PHOTON_OK) {
-	  sync_two_lock_queue_enqueue(photon_processes[i].request_table->req_q, req);
+	  sync_ms_queue_enqueue(photon_processes[i].request_table->req_q, req);
 	}
       }
     }

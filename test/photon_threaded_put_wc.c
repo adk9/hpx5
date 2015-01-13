@@ -125,8 +125,9 @@ int main(int argc, char **argv) {
 
   cfg.nproc = nproc;
   cfg.address = rank;
-
-  photon_init(&cfg);
+  
+  if (photon_init(&cfg))
+    exit(1);
 
   aff_main = aff_evq = aff_ledg = -1;
   if (argc > 1)
@@ -194,11 +195,11 @@ int main(int argc, char **argv) {
     //printf("Setting main thread affinity to core %d\n", aff_main);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_main, &cpu_set);
-    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set) != 0)
       err(1, "couldn't change CPU affinity");
   }
   else
-    sched_setaffinity(0, sizeof(cpu_set_t), &def_set);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting EVQ probe thread affinity to core %d\n", aff_evq);
     CPU_ZERO(&cpu_set);
@@ -206,15 +207,20 @@ int main(int argc, char **argv) {
     pthread_setaffinity_np(th, sizeof(cpu_set_t), &cpu_set);
   }
   else
-    sched_setaffinity(th, sizeof(cpu_set_t), &def_set);
+    pthread_setaffinity_np(th, sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_ledg, &cpu_set);
-    pthread_setaffinity_np(recv_threads[0], sizeof(cpu_set_t), &cpu_set);
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
   }
-  else
-    sched_setaffinity(recv_threads[0], sizeof(cpu_set_t), &def_set);
+  else {
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &def_set);
+  }
+
+  //pthread_setaffinity_np(th2, sizeof(cpu_set_t), &def_set);
 #endif
   
   // now we can proceed with our benchmark

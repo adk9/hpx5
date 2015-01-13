@@ -147,7 +147,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     }
     photonRequestTable rt = photon_processes[i].request_table;
     rt->count = 0;
-    rt->cind = 0;
     rt->tail = 0;
     rt->size = DEF_NUM_REQUESTS;
     rt->reqs = (photonRequest)malloc((DEF_NUM_REQUESTS + 1) * sizeof(struct photon_req_t));
@@ -155,7 +154,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       log_err("Could not allocate request descriptors for proc %d", i);
       goto error_exit_bt;
     }
-    rt->req_q = sync_two_lock_queue_new();
+    rt->req_q = sync_ms_queue_new();
     if (!rt->req_q) {
       log_err("Could not allocate request queue for proc %d", i);
       goto error_exit_bt;
@@ -726,7 +725,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
     dbg_trace("EAGER PUT of size %lu to addr: 0x%016lx", size, eager_addr);
     
     rc = __photon_backend->rdma_put(proc, (uintptr_t)ptr, eager_addr, size, &(db->buf),
-				    &eb->remote, eager_cookie, 0);
+				    &eb->remote, eager_cookie, RDMA_FLAG_NIL);
     
     if (rc != PHOTON_OK) {
       dbg_err("RDMA EAGER PUT failed for 0x%016lx", eager_cookie);

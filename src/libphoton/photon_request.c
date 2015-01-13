@@ -14,7 +14,7 @@ photonRequest photon_get_request(int proc) {
   uint32_t           req_ind;
 
   assert(proc >= 0 && proc < _photon_nproc);
-
+  
   rt = photon_processes[proc].request_table;
   req_curr = sync_fadd(&rt->count, 1, SYNC_RELAXED);
   // offset request index by 1 since 0 is our NULL_COOKIE

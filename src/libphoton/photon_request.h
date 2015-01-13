@@ -79,11 +79,9 @@ typedef struct photon_req_t {
 typedef struct photon_req_table_t {
   uint64_t count;
   uint64_t tail;
-  uint64_t cind;
   uint32_t size;
   struct photon_req_t  *reqs;
-  //struct photon_req_t **req_ptrs;
-  two_lock_queue_t     *req_q;
+  ms_queue_t           *req_q;
   tatas_lock_t tloc;
 } photon_req_table;
 

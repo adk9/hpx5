@@ -119,7 +119,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
 	return PHOTON_EVENT_REQCOMP;
       }
       else if (nentries != 1) {
-	dbg_trace("Unexpected nentries value: %d, op=%d, 0x%016lx",
+	dbg_info("Unexpected nentries value: %d, op=%d, 0x%016lx",
 		  nentries, treq->op,treq->flags);
       }
     }
@@ -169,7 +169,6 @@ int __photon_nbpop_event(photonRequest req) {
       }
       else if ((rc == PHOTON_EVENT_REQCOMP) && treq &&
 	       (treq->op == REQUEST_OP_PWC)) {
-	assert(treq->state == REQUEST_COMPLETED);
 	photon_pwc_add_req(treq);
 	dbg_trace("Enqueuing PWC local completion");
 	return PHOTON_EVENT_OK;
@@ -318,7 +317,6 @@ int __photon_try_one_event(photonRequest *rreq) {
   if ((rc == PHOTON_EVENT_REQCOMP) && treq) {
     if (treq->op == REQUEST_OP_PWC) {
       photon_pwc_add_req(treq);
-      assert(treq->state == REQUEST_COMPLETED);
       dbg_trace("Enqueuing PWC local completion");
     }
     else {
