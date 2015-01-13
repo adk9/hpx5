@@ -20,15 +20,17 @@ static size_t num_pq;
 static size_t num_elem;
 static size_t freq;
 
-static hpx_action_t _handle_queue = 0;
-typedef struct {
-  sssp_queue_t *queue;
-  adj_list_t graph;
-} _handle_queue_args_t;
+// DC Actions
+hpx_action_t _sssp_dc_process_vertex = HPX_INVALID_ACTION_ID;
+hpx_action_t sssp_init_dc = HPX_INVALID_ACTION_ID;
+hpx_action_t _sssp_init_queues = HPX_INVALID_ACTION_ID;
+static hpx_action_t _sssp_delete_queues = HPX_INVALID_ACTION_ID;
+static hpx_action_t _handle_queue = HPX_INVALID_ACTION_ID;
 
-hpx_action_t _sssp_dc_process_vertex = 0;
-int _sssp_dc_process_vertex_action(_sssp_visit_vertex_args_t *const args) {
+static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
   const hpx_addr_t target = hpx_thread_current_target();
+
+  // printf("Processing vertex %zu with distance %zu\n", target, distance);
 
   adj_list_vertex_t *vertex;
   if (!hpx_gas_try_pin(target, (void**)&vertex))
@@ -36,11 +38,10 @@ int _sssp_dc_process_vertex_action(_sssp_visit_vertex_args_t *const args) {
 
   // printf("Distance Action on %" SSSP_UINT_PRI "\n", target);
 
-  if (_try_update_vertex_distance(vertex, args->distance)) {
+  if (_try_update_vertex_distance(vertex, *distance)) {
     sssp_queue_t *queue = sssp_queues[rand() % num_pq];
-    if(sssp_queue_push(queue, target, args->distance)) {
-      const _handle_queue_args_t handle_args = { .queue = queue, .graph = args->graph };
-      hpx_call(HPX_HERE, _handle_queue, &handle_args, sizeof(handle_args), HPX_NULL);
+    if(sssp_queue_push(queue, target, *distance)) {
+      hpx_call(HPX_HERE, _handle_queue, &queue, sizeof(queue), HPX_NULL);
     }
   } else if (_get_termination() == COUNT_TERMINATION) {
     _increment_finished_count();
@@ -54,32 +55,30 @@ int _sssp_dc_process_vertex_action(_sssp_visit_vertex_args_t *const args) {
   return HPX_SUCCESS;
 }
 
-hpx_action_t sssp_init_dc = 0;
 static int sssp_init_dc_action(sssp_init_dc_args_t *args) {
   num_pq = args->num_pq;
   // printf("num_pq: %zu\n", num_pq);
   freq = args->freq;
-  // printf("freq: %zu\n", freq);  
+  // printf("freq(DC): %zu\n", freq);  
   num_elem = args->num_elem;
   // printf("num_elem: %zu\n", num_elem);
 
   return HPX_SUCCESS;
 }
 
-void _sssp_init_dc_function(size_t num_pq, size_t freq) {
-  hpx_addr_t init_lco = hpx_lco_future_new(0);
-  const sssp_init_dc_args_t init_args = { .num_pq = num_pq, .freq = freq };
-  hpx_bcast(sssp_init_dc, &init_args, sizeof(init_args), init_lco);
-  hpx_lco_wait(init_lco);
-  hpx_lco_delete(init_lco, HPX_NULL);
-}
+/* void _sssp_init_dc_function(size_t num_pq, size_t freq) { */
+/*   hpx_addr_t init_lco = hpx_lco_future_new(0); */
+/*   const sssp_init_dc_args_t init_args = { .num_pq = num_pq, .freq = freq }; */
+/*   hpx_bcast(sssp_init_dc, &init_args, sizeof(init_args), init_lco); */
+/*   hpx_lco_wait(init_lco); */
+/*   hpx_lco_delete(init_lco, HPX_NULL); */
+/* } */
 
-hpx_action_t _sssp_delete_queues = 0;
 typedef struct {
   hpx_addr_t termination_lco;
   sssp_queue_t **queues;
 } _sssp_delete_queues_args_t;
-int _sssp_delete_queues_action(const _sssp_delete_queues_args_t * const args) {
+static int _sssp_delete_queues_action(const _sssp_delete_queues_args_t * const args) {
   hpx_lco_wait(args->termination_lco);
 
   // printf("Delete queues wait succeeded at %zu. Deleting queues.\n", args->termination_lco);
@@ -96,8 +95,8 @@ int _sssp_delete_queues_action(const _sssp_delete_queues_args_t * const args) {
   return HPX_SUCCESS;
 }
 
-hpx_action_t _sssp_init_queues = 0;
-int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
+static int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
+  // printf("_sssp_init_queues_action (DC).\n");
   // printf("num_pq in init queues: %zu\n", num_pq);
   // printf("sssp_queues before malloc: %" PRIxPTR "\n", (uintptr_t)sssp_queues);
   sssp_queues = malloc(sizeof(sssp_queue_t) * num_pq);
@@ -110,28 +109,32 @@ int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
   return HPX_SUCCESS;
 }
 
-static int _handle_queue_action(const _handle_queue_args_t * const args) {
-  // printf("In the handle queue action....\n");
+static int _handle_queue_action(sssp_queue_t * const * const queue) {
+  // printf("In the handle queue action (DC)...\n");
   uint64_t processed = 0;
   // Because we don't have a try_wait for LCOs, we kill handle queue every time a queue gets empty and restart it when we insert something.  
   hpx_addr_t v;
   distance_t d;
   adj_list_vertex_t *vertex;
-  while (sssp_queue_pop(args->queue, &v, &d)) {
-    //printf("Trying to pop one vertex from the priority queue in the handle queue action\n");
+  while (sssp_queue_pop(*queue, &v, &d)) {
+    // if(rand() % 5000 == 1) printf("DC queue size %zu at pop.\n", sssp_queue_size(*queue));
+    // printf("Trying to pop one vertex from the priority queue in the handle queue action\n");
     // We are not handling AGAS currently and assume the vertex is on the same locality.
     // For AGAS we could just send an action.
     if (!hpx_gas_try_pin(v, (void**)&vertex)) hpx_abort();
     const distance_t current_d = sync_load(&vertex->distance, SYNC_RELAXED);
     if (current_d == d) {
-      _send_update_to_neighbors(args->graph, vertex, d);
+      // printf("Sending update to neighbors of vertex %zu\n", vertex);
+      _send_update_to_neighbors(vertex, d);
     } else {
+      // printf("Vertex %zu is stale.\n", vertex);
       /* stale */
     }
     _increment_finished_count();
     hpx_gas_unpin(v);
     if (++processed == freq) {
       processed = 0;
+      // printf("DC yielding.\n");
       hpx_thread_yield();
     }
   }
@@ -139,7 +142,7 @@ static int _handle_queue_action(const _handle_queue_args_t * const args) {
   return HPX_SUCCESS;
 }
 
-static __attribute__((constructor)) void _sssp_register_actions() {
+static __attribute__((constructor)) void _sssp_dc_register_actions() {
   HPX_REGISTER_ACTION(&_sssp_dc_process_vertex, _sssp_dc_process_vertex_action);
   HPX_REGISTER_ACTION(&sssp_init_dc, sssp_init_dc_action);
   HPX_REGISTER_ACTION(&_sssp_delete_queues, _sssp_delete_queues_action);

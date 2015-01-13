@@ -68,7 +68,7 @@ typedef struct locality {
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
-  libhpx_hwloc_topology_t   topology;
+  hwloc_topology_t          topology;
 } locality_t
 #ifdef __ARMEL__
 HPX_ALIGNED(8)

@@ -141,26 +141,10 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 }
 
 
-/// Try to execute a parcel as a task.
-///
-/// @param            p The parcel to test.
-///
-/// @returns       NULL The parcel was processed as a task.
-///                  @p The parcel was not a task.
-static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
-  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
-    scheduler_exec(p);
-    return NULL;
-  }
-  return p;
-}
-
-
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
   sync_chase_lev_ws_deque_push(&w->work, p);
 }
-
 
 
 /// Process the next available parcel from our work queue in a lifo order.
@@ -266,6 +250,46 @@ static void _try_shutdown(struct worker *w) {
     thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
     unreachable();
   }
+}
+
+
+static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *from = self->current;
+
+  // If we're transferring from a task, then we want to delete the current
+  // task's parcel. Otherwise we are transferring from a thread and we want to
+  // checkpoint the current thread so that we can return to it and then push it
+  // so we can find it later (or have it stolen later).
+  if (parcel_get_stack(from) == NULL) {
+    hpx_parcel_release(from);
+  }
+  else {
+    parcel_get_stack(from)->sp = sp;
+    _spawn_lifo(self, from);
+  }
+
+  // otherwise run the action
+  self->current = env;
+  assert(parcel_get_stack(self->current) == NULL);
+  _thread_enter(env);
+  unreachable();
+  return HPX_SUCCESS;
+}
+
+
+/// Try to execute a parcel as a task.
+///
+/// @param            p The parcel to test.
+///
+/// @returns       NULL The parcel was processed as a task.
+///                  @p The parcel was not a task.
+static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
+  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
+    void **sp = &self->sp;
+    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+    return NULL;
+  }
+  return p;
 }
 
 
@@ -493,44 +517,12 @@ void scheduler_spawn(hpx_parcel_t *p) {
   assert(p);
   assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
   if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
-    scheduler_exec(p);
+    void **sp = &self->sp;
+    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
     return;
   }
   profile_ctr(self->stats.spawns++);
   _spawn_lifo(self, p);
-}
-
-
-static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *from = self->current;
-
-  // If we're transferring from a task, then we want to delete the current
-  // task's parcel. Otherwise we are transferring from a thread and we want to
-  // checkpoint the current thread so that we can return to it and then push it
-  // so we can find it later (or have it stolen later).
-  if (parcel_get_stack(from) == NULL) {
-    hpx_parcel_release(from);
-  }
-  else {
-    parcel_get_stack(from)->sp = sp;
-    _spawn_lifo(self, from);
-  }
-
-  // otherwise run the action
-  self->current = env;
-  assert(parcel_get_stack(self->current) == NULL);
-  _thread_enter(env);
-  unreachable();
-  return HPX_SUCCESS;
-}
-
-
-/// Synchronously execute the action associated with a parcel in the
-/// calling thread.
-void scheduler_exec(hpx_parcel_t *p) {
-  // swap the "current" parcel with the one that we are executing
-  void **sp = &self->sp;
-  thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
 }
 
 
@@ -641,8 +633,7 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 
 static void _call_continuation(hpx_addr_t target, hpx_action_t action,
                                const void *args, size_t len,
-                               hpx_status_t status)
-{
+                               hpx_status_t status) {
   // get a parcel we can use to call locality_call_continuation().
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
   assert(p);
@@ -661,8 +652,7 @@ static void _call_continuation(hpx_addr_t target, hpx_action_t action,
 /// unified continuation handler
 static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
                                    const void *value,
-                                   void (*cleanup)(void*), void *env)
-{
+                                   void (*cleanup)(void*), void *env) {
   hpx_parcel_t *parcel = self->current;
   hpx_action_t c_act   = parcel->c_action;
   hpx_addr_t c_target   = parcel->c_target;

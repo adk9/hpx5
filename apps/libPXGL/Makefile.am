@@ -9,12 +9,11 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
                        src/sssp_common.c \
                        src/sssp_chaotic.c \
                        src/sssp_dc.c \
+                       src/sssp_dc1.c \
                        src/sssp_delta.c \
 		       src/dimacs.c \
 		       src/gteps.c \
 		       src/statistics.c \
-                       src/pqueue.c \
-                       src/pqueue_wrapper.c \
                        src/pqueue.c \
                        src/termination.c \
 		       src/graph500_edge_list_generator.c \
