@@ -19,6 +19,7 @@ bool sssp_queue_pop(sssp_queue_t *q, hpx_addr_t *v, distance_t *d);
 bool sssp_queue_push(sssp_queue_t *q, hpx_addr_t v, distance_t d);
 sssp_queue_t *sssp_queue_create(size_t num_elem);
 void sssp_queue_free(sssp_queue_t *q);
+size_t sssp_queue_size(sssp_queue_t *q);
 
 // TBD: The push and the empty calls could be merged since we use empty followed by push.  That could help us avoid one lock acquire.
 

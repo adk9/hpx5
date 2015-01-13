@@ -9,6 +9,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libpxgl/termination.h"
 #include "pxgl/edge_list.h"
 
 static hpx_action_t _put_edge_edgelist;
@@ -22,17 +23,17 @@ static int _put_edge_edgelist_action(edge_list_edge_t *e)
 
    memcpy(edge, e, sizeof(*e));
    hpx_gas_unpin(target);
+   _increment_finished_count();
    return HPX_SUCCESS;
 }
 
 typedef struct {
   unsigned int edges_skip;
   unsigned int edges_no;
-  hpx_addr_t edges_sync;
   edge_list_t el;
   char filename[];
 } _edge_list_from_file_local_args_t;
-hpx_action_t _edge_list_from_file_local = 0;
+hpx_action_t _edge_list_from_file_local = HPX_INVALID_ACTION_ID;
 int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *args) {
   // Read from the edge-list filename
   FILE *f = fopen(args->filename, "r");
@@ -57,8 +58,7 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
       // printf("%s", &line[1]);
       const sssp_uint_t position = count++ + skipped;
       hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize);
-      assert(args->edges_sync != HPX_NULL);
-      hpx_call(e, _put_edge_edgelist, edge, sizeof(*edge), args->edges_sync);
+      hpx_call(e, _put_edge_edgelist, edge, sizeof(*edge), HPX_NULL);
       continue;
     case 'p': continue;
     default:
@@ -72,19 +72,18 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
   return HPX_SUCCESS;
 }
 
-hpx_action_t edge_list_from_file = 0;
+hpx_action_t edge_list_from_file = HPX_INVALID_ACTION_ID;
 int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   // Read from the edge-list filename
   FILE *f = fopen(args->filename, "r");
   assert(f);
   edge_list_t *el = malloc(sizeof(*el));
   assert(el);
-  hpx_addr_t edges_sync = HPX_NULL;
 
   printf("Starting DIMACS file reading\n");
   hpx_time_t now = hpx_time_now();
   char line[LINE_MAX];
-  while (fgets(line, sizeof(line), f) != NULL && edges_sync == HPX_NULL) {
+  while (fgets(line, sizeof(line), f) != NULL) {
     switch (line[0]) {
     case 'c': continue;
     case 'a': continue;
@@ -97,21 +96,25 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
       el->edge_list_bsize = ((el->num_edges + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(edge_list_edge_t);
       // Allocate an edge_list array in the global address space
       el->edge_list = hpx_gas_global_alloc(HPX_LOCALITIES, el->edge_list_bsize);
-      // Create synchronization lco
-      edges_sync = hpx_lco_and_new(el->num_edges);
-      continue;
+      break;
     default:
       fprintf(stderr, "invalid command specifier '%c' in graph file. skipping..\n", line[0]);
       continue;
     }
+    break;
   }
-  assert(edges_sync != HPX_NULL);
+
+  hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
+  // printf("Starting initialization bcast.\n");
+  hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+  // printf("Waiting on bcast.\n");
+  hpx_lco_wait(init_termination_count_lco);
+  hpx_lco_delete(init_termination_count_lco, HPX_NULL);
 
   size_t filename_len = strlen(args->filename);
   const size_t local_args_size = sizeof(_edge_list_from_file_local_args_t) + filename_len;
   _edge_list_from_file_local_args_t *local_args = malloc(local_args_size);
   local_args->el = *el;
-  local_args->edges_sync = edges_sync;
   memcpy(local_args->filename, args->filename, filename_len);
   const sssp_uint_t thread_chunk = el->num_edges / (args->thread_readers * args->locality_readers) + 1;
   local_args->edges_no = thread_chunk;
@@ -121,10 +124,12 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
       hpx_call(HPX_THERE(locality_desc), _edge_list_from_file_local, local_args, local_args_size, HPX_NULL);
     }
   }
-
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Waiting for completion LCO.  Time took to start local read loops: %fs\n", elapsed);
   now = hpx_time_now();
+  hpx_addr_t edges_sync = hpx_lco_and_new(2);
+  _increment_active_count(el->num_edges);
+  _detect_termination(edges_sync, edges_sync);
   hpx_lco_wait(edges_sync);
   elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Fininshed waiting for edge list completion.  Time waiting: %fs\n", elapsed);
