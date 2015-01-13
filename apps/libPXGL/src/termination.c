@@ -27,6 +27,14 @@ void _increment_finished_count() {
   sync_fadd(&finished_count, 1, SYNC_RELAXED);
 }
 
+sssp_uint_t _relaxed_get_active_count() {
+  return sync_load(&active_count, SYNC_RELAXED);
+}
+
+sssp_uint_t _relaxed_get_finished_count() {
+  return sync_load(&finished_count, SYNC_RELAXED);
+}
+
 termination_t _get_termination() {
   return sync_load(&_termination, SYNC_RELAXED);
 }
@@ -86,7 +94,7 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
     const sssp_uint_t active_count = activity_counts[0];
     const sssp_uint_t finished_count = activity_counts[1];
     sssp_int_t activity_count = active_count - finished_count;
-    //printf("activity_count: %" SSSP_INT_PRI ", active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
+    // printf("activity_count: %" SSSP_INT_PRI ", active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
     if (activity_count != 0) {
       phase = PHASE_1;
       continue;
@@ -95,6 +103,7 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
       hpx_lco_set(termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       hpx_lco_set(internal_termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       // printf("Termination LCOs set.\n");
+      // printf("Finished termination detection with active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI "\n", active_count, finished_count);
       break;
     } else {
       phase = PHASE_2;

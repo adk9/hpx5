@@ -16,6 +16,6 @@
 
 #include <pxgl/pxgl.h>
 
-int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const _sssp_visit_vertex_args_t * const args, const size_t len, const hpx_addr_t result);
+int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const distance_t *const distance, const size_t len, const hpx_addr_t result);
 
 #endif // LIBPXGL_SSSP_DELTA_H

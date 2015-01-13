@@ -16,14 +16,11 @@
 
 #include <pxgl/pxgl.h>
 
-typedef struct {
-  adj_list_t graph;
-  sssp_uint_t distance;
-} _sssp_visit_vertex_args_t;
-
-bool _try_update_vertex_distance(adj_list_vertex_t *vertex, distance_t distance);
-void _send_update_to_neighbors(adj_list_t graph, adj_list_vertex_t *vertex, distance_t distance);
+bool _try_update_vertex_distance(adj_list_vertex_t *const vertex, distance_t distance);
+void _send_update_to_neighbors(adj_list_vertex_t *const vertex, distance_t distance);
 extern hpx_action_t _sssp_visit_vertex;
 extern sssp_kind_t _sssp_kind;
+extern adj_list_t graph;
+extern hpx_action_t _sssp_initialize_graph;
 
 #endif // LIBPXGL_SSSP_COMMON_H

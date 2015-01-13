@@ -77,10 +77,10 @@ static inline void write_edge(packed_edge* p, int64_t v0, int64_t v1) {
 void generate_kronecker_range(
        const uint_fast32_t seed[5] /* All values in [0, 2^31 - 1) */,
        int logN /* In base 2 */,
-       int64_t start_edge, int64_t end_edge /* Indices (in [0, M)) for the edges to generate */,
+       sssp_uint_t start_edge, sssp_uint_t end_edge /* Indices (in [0, M)) for the edges to generate */,
        const graph500_edge_list_local_args_t * const args);
 
-void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const graph500_edge_list_local_args_t * const args/*packed_edge* result*/, uint64_t val0, uint64_t val1, int64_t start_edge, int64_t* count);
+void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const graph500_edge_list_local_args_t * const args/*packed_edge* result*/, uint64_t val0, uint64_t val1, sssp_uint_t edge_index);
 
 #ifdef __cplusplus
 }

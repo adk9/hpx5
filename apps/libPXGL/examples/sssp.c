@@ -27,7 +27,8 @@
 
 const char *sssp_kind_str[] = {
   "Chaotic Relaxation",
-  "Distributed Control"
+  "Distributed Control",
+  "New Distributed Control"
 };
 
 const char *graph_generator_type_str[] = {
@@ -37,11 +38,22 @@ const char *graph_generator_type_str[] = {
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: sssp [options] <graph-file> <problem-file>\n"
+          "\t-a, instead resetting adj list between the runs, reallocate it\n"
+	  "\t-b, do not compute checksum (for speed up of correct tests)\n"
+	  "\t-c, use chaotic algorithm\n"
+	  "\t-d, use distributed control\n"
+	  "\t-f, frequency for distributed control\n"
+	  "\t-g, use groph500 generator with scale parameter\n"
+          "\t-h, this help display\n"
           "\t-k, use and-lco-based termination detection\n"
+	  "\t-l, number of queues for distributed control (does not work with DC1)\n"
           "\t-p, use process-based termination detection\n"
           "\t-q, limit time for SSSP executions in seconds\n"
-          "\t-a, instead resetting adj list between the runs, reallocate it\n"
-          "\t-h, this help display\n");
+	  "\t-s, nuber of problems to run\n"
+	  "\t-t, queue size threshold for chatoic relaxation\n"
+	  "\t-u, use the DC1 implementation of distributed control\n"
+	  "\t-y, yield count\n"
+	  "\t-z, use delta stepping (with chaotic or DC), specify delta parameter\n");
   hpx_print_help();
   fflush(stream);
 }
@@ -82,7 +94,7 @@ static int _print_vertex_distance_index_action(int *i)
 void sample_graph(sssp_uint_t **problems, sssp_uint_t nproblems, size_t num_edges, sssp_uint_t numvertices, adj_list_t *graph){
   *problems = malloc(nproblems * sizeof(sssp_uint_t));
   assert(*problems);
-  printf("calling sample root\n");
+  // printf("calling sample root\n");
   sample_roots(*problems, nproblems, num_edges, numvertices, graph);
 }
 
@@ -127,6 +139,7 @@ typedef struct {
   graph_generator_type_t graph_generator_type;
   int scale;                    
   int edgefactor;
+  bool checksum;
 } _sssp_args_t;
 
 static hpx_action_t _main;
@@ -139,11 +152,11 @@ static int _main_action(_sssp_args_t *args) {
   
   if (args->graph_generator_type == _GRAPH500) {
     // Create an edge list structure          
-    printf("Generating edge-list as Graph500 spec\n");
+    // printf("Generating edge-list as Graph500 spec\n");
     const graph500_edge_list_generator_args_t graph500_edge_list_generator_args = {
       .scale = args->scale,
       .locality_readers = HPX_LOCALITIES,
-      .thread_readers = 1,
+      .thread_readers = HPX_THREADS,
       .edgefactor = args->edgefactor
     };
     hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &graph500_edge_list_generator_args,
@@ -153,17 +166,17 @@ static int _main_action(_sssp_args_t *args) {
   }
 
   else if (args->graph_generator_type == _DIMACS) {
-  // Create an edge list structure from the given filename
-  printf("Allocating edge-list from file %s.\n", args->filename);
-  const edge_list_from_file_args_t edge_list_from_file_args = {
-    .locality_readers = HPX_LOCALITIES,
-    .thread_readers = 1,
-    .filename = args->filename
-  };
-  hpx_call_sync(HPX_HERE, edge_list_from_file, &edge_list_from_file_args,
-		sizeof(edge_list_from_file_args), &el, sizeof(el));
-  printf("Edge List: #v = %lu, #e = %lu\n",
-         el.num_vertices, el.num_edges);
+    // Create an edge list structure from the given filename
+    printf("Allocating edge-list from file %s.\n", args->filename);
+    const edge_list_from_file_args_t edge_list_from_file_args = {
+      .locality_readers = HPX_LOCALITIES,
+      .thread_readers = HPX_THREADS/2 + 1,
+      .filename = args->filename
+    };
+    hpx_call_sync(HPX_HERE, edge_list_from_file, &edge_list_from_file_args,
+		  sizeof(edge_list_from_file_args), &el, sizeof(el));
+    printf("Edge List: #v = %lu, #e = %lu\n",
+	   el.num_vertices, el.num_edges);
   }
   // Open the results file and write the basic info out
   FILE *results_file = fopen("sample.ss.chk", "w");
@@ -179,32 +192,35 @@ static int _main_action(_sssp_args_t *args) {
 
   size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
   double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
-
+  
   if (!realloc_adj_list) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
   }
-
+  
   if (args->graph_generator_type == _GRAPH500) {
-    printf("Starting sampling the graph for sources\n");
+    // printf("Starting sampling the graph for sources\n");
     sample_graph(&args->problems, args->nproblems,args->edgefactor,el.num_vertices,&sargs.graph);
-    printf("Sampling done\n");
+    // printf("Sampling done\n");
   }
-
+  
   hpx_bcast_sync(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind));
-
-  if (args->sssp_kind == _DC_SSSP_KIND) {
-    if (args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
+  
+  if (args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
+  hpx_bcast_sync(initialize_sssp_kind, &args->sssp_kind, sizeof(args->sssp_kind));
+  if (args->sssp_kind == _DC_SSSP_KIND || args->sssp_kind == _DC1_SSSP_KIND) {
+    if(args->sssp_init_dc_args.num_pq == 0) args->sssp_init_dc_args.num_pq = HPX_THREADS;
     printf("# priority  queues: %zd\n",args->sssp_init_dc_args.num_pq);
     hpx_bcast_sync(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args));
   }
-
-  if (args->delta > 0) {
+  if(args->delta > 0) {
     hpx_bcast_sync(sssp_run_delta_stepping, NULL, 0);
     sargs.delta = args->delta;
+  } else {
+    sargs.delta = 0;
   }
 
-  printf("About to enter problem loop.\n");
+  // printf("About to enter problem loop.\n");
 
   for (int i = 0; i < args->nproblems; ++i) {
     if (total_elapsed_time > args->time_limit) {
@@ -263,12 +279,15 @@ static int _main_action(_sssp_args_t *args) {
     hpx_lco_delete(vertices, HPX_NULL);
 #endif
 
+    
     hpx_addr_t checksum_lco = HPX_NULL;
-    hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices),
+    if(args->checksum)hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices),
                   &checksum_lco, sizeof(checksum_lco));
     size_t checksum = 0;
-    hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
-    hpx_lco_delete(checksum_lco, HPX_NULL);
+    if(args->checksum) {
+      hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
+      hpx_lco_delete(checksum_lco, HPX_NULL);
+    }
 
     //printf("Computing GTEPS...\n");
     hpx_addr_t gteps_lco = HPX_NULL;
@@ -280,7 +299,7 @@ static int _main_action(_sssp_args_t *args) {
     //printf("Gteps is %zu\n", gteps);
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
-    fprintf(results_file, "d %zu\n", checksum);
+    if(args->checksum) fprintf(results_file, "d %zu\n", checksum);
 
     if (realloc_adj_list) {
       hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
@@ -349,13 +368,15 @@ static int _main_action(_sssp_args_t *args) {
 int main(int argc, char *argv[argc]) {
   sssp_uint_t time_limit = 1000;
   int realloc_adj_list = 0;
-  sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .freq = 100, .num_elem = 100 };
+
+  sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .yield_count = 0, .queue_threshold = 50, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = _DC_SSSP_KIND;
   size_t delta = 0;
   termination_t termination = COUNT_TERMINATION;
   graph_generator_type_t graph_generator_type = _DIMACS;
   int SCALE = 16 ;
   int edgefactor = 16;
+  bool checksum = true;
 
   sssp_uint_t nproblems = 2;
   sssp_uint_t *problems;
@@ -367,13 +388,16 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "q:f:l:z:g:s:cdaphk?")) != -1) {
+  while ((opt = getopt(argc, argv, "f:g:l:q:s:t:y:z:abcdhkpu?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
       break;
     case 'a':
       realloc_adj_list = 1;
+      break;
+    case 'b':
+      checksum = false;
       break;
     case 'k':
       termination = AND_LCO_TERMINATION;
@@ -384,6 +408,9 @@ int main(int argc, char *argv[argc]) {
     case 'd':
       sssp_kind = _DC_SSSP_KIND;
       // TBD: add options to adjust dc parameters
+      break;
+    case 'u':
+      sssp_kind = _DC1_SSSP_KIND;
       break;
     case 'f':
       sssp_init_dc_args.freq = strtoul(optarg,NULL,0);
@@ -406,6 +433,12 @@ int main(int argc, char *argv[argc]) {
       break;
     case 's':
       nproblems = strtoul(optarg, NULL, 0);
+      break;
+    case 't':
+      sssp_init_dc_args.queue_threshold = strtoul(optarg, NULL, 0);
+      break;
+    case 'y':
+      sssp_init_dc_args.yield_count = strtoul(optarg, NULL, 0);
       break;
     case '?':
     default:
@@ -455,7 +488,8 @@ int main(int argc, char *argv[argc]) {
                         .termination = termination,
 			.graph_generator_type = graph_generator_type, 
 			.scale = SCALE, 
-			.edgefactor = edgefactor
+			.edgefactor = edgefactor,
+			.checksum = checksum
   };
 
   // register the actions
