@@ -29,30 +29,63 @@ typedef int (*hpx_action_handler_t)(void);
 /// This special action does nothing (i.e. it is a nop).
 extern hpx_action_t HPX_ACTION_NULL;
 
-/// Identifier for an invalid action.
-#define HPX_INVALID_ACTION_ID UINT16_MAX
+/// Action types.
+typedef enum {
+  HPX_ACTION_INVALID = -1,
+  HPX_ACTION_DEFAULT = 0,
+  HPX_ACTION_PINNED,
+  HPX_ACTION_TASK,
+  HPX_ACTION_INTERRUPT,
+} hpx_action_type_t;
 
 
-/// Should be called by the main native thread only, between the execution of
-/// hpx_init() and hpx_run(). Should not be called from an HPX lightweight
-/// thread.
+
+/// Register an HPX action of a given @p type.
 ///
-/// @param   id the action id for this action to be returned after registration
-/// @param  key a unique string key for the action
-/// @param func the local function pointer to associate with the action
-/// @returns error code
-int hpx_register_action(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+/// The action could be a regular action, a pinned action, or a task
+/// or an interrupt. Actions should be registered from the main thread
+/// after calling hpx_init and before calling hpx_run.
+///
+/// @param    id the action id for this action to be returned after registration
+/// @param   key a unique string key for the action
+/// @param     f the local function pointer to associate with the action
+/// @param nargs the variadic number of arguments that this action accepts
+/// @param  type the type of the action to be registered
+/// @returns     error code
+int hpx_register_typed_action(hpx_action_t *id, const char *key, hpx_action_handler_t f,
+                              unsigned int nargs, hpx_action_type_t type, ...);
 
+
+/// Miscellaneous utility macros.
+/// TODO: move to utils.h
+
+#define _HPX_STR(l) #l
+
+#define _HPX_RSEQ_N() 63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,  \
+  41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13, \
+  12,11,10,9,8,7,6,5,4,3,2,1,0
+#define _HPX_NARG(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
+  _21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_35,_36,_37,_38,_39,_40,_41,\
+  _42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,\
+  type,N,...) N
+#define __HPX_NARGS(...) _HPX_NARGS(__VA_ARGS__,_HPX_RSEQ_N())
+#define _HPX_NARGS(...)  _HPX_NARG(__VA_ARGS__)
+
+
+// Generic action registration macro.
+#define HPX_REGISTER(act, f, ...) do {                                      \
+  *act = HPX_ACTION_INVALID;                                                \
+  hpx_register_typed_action(act, _HPX_STR(_hpx##f), (hpx_action_handler_t)f,\
+                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__);         \
+  } while (0)
+
+// Register a regular HPX action.
+#define HPX_REGISTER_ACTION(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_DEFAULT, __VA_ARGS__)
 
 /// Register a pinned action. The global address that these actions
 /// are addressed to is pinned by the runtime during the course of
 /// execution of the action.
-///
-/// @param   id the action id for this action to be returned after registration
-/// @param  key a unique string key for the action
-/// @param func the local function pointer to associate with the action
-/// @returns error code
-int hpx_register_pinned_action(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+#define HPX_REGISTER_PINNED_ACTION(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_PINNED, __VA_ARGS__)
 
 
 /// Register an HPX "task". Tasks are non-blocking actions that do not
@@ -61,12 +94,7 @@ int hpx_register_pinned_action(hpx_action_t *id, const char *key, hpx_action_han
 /// thread) on a locality. Tasks can be stolen, like other HPX
 /// threads, but avoid the stack creation overhead since they do not
 /// block.
-///
-/// @param   id the action id for this action to be returned after registration
-/// @param  key a unique string key for the action
-/// @param func the local function pointer to associate with the action
-/// @returns error code
-int hpx_register_task(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+#define HPX_REGISTER_TASK(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_TASK, __VA_ARGS__)
 
 
 /// Register an HPX "interrupt". Interrupts are immediate,
@@ -75,41 +103,24 @@ int hpx_register_task(hpx_action_t *id, const char *key, hpx_action_handler_t fu
 /// asynchronous call). They avoid both, the stack creation overhead
 /// and the scheduling overhead, as they are executed inline by the
 /// communication thread.
-///
-/// @param   id the action id for this action to be returned after registration
-/// @param  key a unique string key for the action
-/// @param func the local function pointer to associate with the action
-/// @returns error code
-int hpx_register_interrupt(hpx_action_t *id, const char *key, hpx_action_handler_t func);
+#define HPX_REGISTER_INTERRUPT(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_INTERRUPT, __VA_ARGS__)
 
 
-#define HPX_STR(l) #l
+/// A helper macro to declare and define HPX actions.
+#define HPX_DEFINE_ACTION(type, action)             \
+  static int action##_##type(void*);                \
+  static hpx_action_t action;                       \
+  static __attribute__((constructor))               \
+  void _register_##action##_##type(void) {          \
+    HPX_REGISTER_##type(&action, action##_##type);  \
+  }                                                 \
+  static int action##_##type
 
-/// Convenience macros for registering HPX actions
-#define HPX_REGISTER_ACTION(act, f) do {                                \
-    *act = HPX_INVALID_ACTION_ID;                                       \
-    hpx_register_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
-  } while (0)
+#define HPX_ACTION(n)        HPX_DEFINE_ACTION(ACTION, n)
+#define HPX_PINNED_ACTION(n) HPX_DEFINE_ACTION(PINNED_ACTION, n)
+#define HPX_TASK(n)          HPX_DEFINE_ACTION(TASK, n)
+#define HPX_INTERRUPT(n)     HPX_DEFINE_ACTION(INTERRUPT, n)
 
-#define HPX_REGISTER_PINNED_ACTION(act, f) do {                                \
-    *act = HPX_INVALID_ACTION_ID;                                              \
-    hpx_register_pinned_action(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
-  } while (0)
-
-#define HPX_REGISTER_TASK(act, f) do {                                \
-    *act = HPX_INVALID_ACTION_ID;                                     \
-    hpx_register_task(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
-  } while (0)
-
-#define HPX_REGISTER_INTERRUPT(act, f) do {                                \
-    *act = HPX_INVALID_ACTION_ID;                                          \
-    hpx_register_interrupt(act, HPX_STR(_hpx##f), (hpx_action_handler_t)f);\
-  } while (0)
-
-
-int hpx_register_action2(hpx_action_t *id, const char *key,
-                         hpx_action_handler_t f,
-                         hpx_type_t rtype, unsigned int nargs, ...);
 
 
 #endif

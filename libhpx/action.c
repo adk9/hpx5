@@ -29,15 +29,6 @@
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_TABLE_SIZE 4096
 
-/// Action types
-typedef enum {
-  _ACTION_UNKNOWN = -1,
-  _ACTION_DEFAULT = 0,
-  _ACTION_PINNED,
-  _ACTION_TASK,
-  _ACTION_INTERRUPT,
-} _action_type_t;
-
 /// An action table entry type.
 ///
 /// This will store the function and unique key associated with the action, as
@@ -51,7 +42,7 @@ typedef struct {
   hpx_action_handler_t func;
   hpx_action_t        *id;
   const char          *key;
-  _action_type_t      type;
+  hpx_action_type_t   type;
   ffi_cif             *cif;
 } _entry_t;
 
@@ -131,8 +122,7 @@ static void _assign_ids(_table_t *table) {
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
 static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
-                      hpx_action_handler_t f, _action_type_t type,
-                      ffi_cif* cif) {
+                      hpx_action_handler_t f, hpx_action_type_t type, ffi_cif* cif) {
   static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
   int i = table->n++;
   if (i >= capacity) {
@@ -162,7 +152,7 @@ void action_table_free(const _table_t *table) {
 
 
 const char *action_table_get_key(const struct action_table *table, hpx_action_t id) {
-  if (id == HPX_INVALID_ACTION_ID) {
+  if (id == HPX_ACTION_INVALID) {
     dbg_log("action registration is not complete");
     return "LIBHPX UNKNOWN ACTION";
   }
@@ -176,10 +166,10 @@ const char *action_table_get_key(const struct action_table *table, hpx_action_t 
 }
 
 
-static _action_type_t action_table_get_type(const struct action_table *table, hpx_action_t id) {
-  if (id == HPX_INVALID_ACTION_ID) {
+hpx_action_type_t action_table_get_type(const struct action_table *table, hpx_action_t id) {
+  if (id == HPX_ACTION_INVALID) {
     dbg_log("action registration is not complete");
-    return _ACTION_UNKNOWN;
+    return id;
   }
 
   if (id < table->n) {
@@ -187,7 +177,7 @@ static _action_type_t action_table_get_type(const struct action_table *table, hp
   }
 
   dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
-  return _ACTION_UNKNOWN;
+  return HPX_ACTION_INVALID;
 }
 
 
@@ -196,7 +186,7 @@ int action_table_get_args(const struct action_table *table, hpx_action_t id,
   *outargs = NULL;
   *len = 0;
 
-  if (id == HPX_INVALID_ACTION_ID) {
+  if (id == HPX_ACTION_INVALID) {
     dbg_log("action registration is not complete");
     return LIBHPX_ERROR;
   } 
@@ -234,7 +224,7 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
   hpx_action_t id = hpx_parcel_get_action(parcel);
   void *args = hpx_parcel_get_data(parcel);
 
-  if (id == HPX_INVALID_ACTION_ID) {
+  if (id == HPX_ACTION_INVALID) {
     dbg_error("action registration is not complete");
   }
 
@@ -262,54 +252,30 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
 
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
-  return (action_table_get_type(table, id) == _ACTION_PINNED);
+  return (action_table_get_type(table, id) == HPX_ACTION_PINNED);
 }
 
 
 bool action_is_task(const struct action_table *table, hpx_action_t id) {
-  return (action_table_get_type(table, id) == _ACTION_TASK);
+  return (action_table_get_type(table, id) == HPX_ACTION_TASK);
 }
 
 
 bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
-  return (action_table_get_type(table, id) == _ACTION_INTERRUPT);
+  return (action_table_get_type(table, id) == HPX_ACTION_INTERRUPT);
 }
 
 
-/// Called by the user to register an action.
-int hpx_register_action(hpx_action_t *id, const char *key,
-                        hpx_action_handler_t f) {
-  return _push_back(_get_actions(), id, key, f, _ACTION_DEFAULT, NULL);
-}
-
-
-int hpx_register_pinned_action(hpx_action_t *id, const char *key,
-                               hpx_action_handler_t f) {
-  return _push_back(_get_actions(), id, key, f, _ACTION_PINNED, NULL);
-}
-
-
-int hpx_register_task(hpx_action_t *id, const char *key,
-                      hpx_action_handler_t f) {
-  return _push_back(_get_actions(), id, key, f, _ACTION_TASK, NULL);
-}
-
-
-int hpx_register_interrupt(hpx_action_t *id, const char *key,
-                           hpx_action_handler_t f) {
-  return _push_back(_get_actions(), id, key, f, _ACTION_INTERRUPT, NULL);
-}
-
-
-/// Called by the user to register an action.
-int hpx_register_action2(hpx_action_t *id, const char *key,
-                         hpx_action_handler_t f, hpx_type_t rtype,
-                         unsigned int nargs, ...) {
-  va_list vargs;
+int hpx_register_action_type(hpx_action_t *id, const char *key, hpx_action_handler_t f,
+                             unsigned int nargs, hpx_action_type_t type, ...) {
+  if (!nargs) {
+    return _push_back(_get_actions(), id, key, f, type, NULL);
+  }
 
   ffi_cif *cif = malloc(sizeof(*cif));
   assert(cif);
 
+  va_list vargs;
   hpx_type_t *args = malloc(sizeof(*args) * nargs);
   va_start(vargs, nargs);
   for (int i = 0; i < nargs; ++i) {
@@ -321,5 +287,5 @@ int hpx_register_action2(hpx_action_t *id, const char *key,
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }
-  return _push_back(_get_actions(), id, key, f, _ACTION_DEFAULT, cif);
+  return _push_back(_get_actions(), id, key, f, type, cif);
 }
