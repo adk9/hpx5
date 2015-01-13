@@ -125,6 +125,7 @@ typedef struct {
   int level; ///< level of the box 
   int index[3]; ///< index of the box
   hpx_addr_t parent; ///< parent of the box being set
+  hpx_addr_t sema;
 } set_box_action_arg_t; 
 
 /// ---------------------------------------------------------------------------
