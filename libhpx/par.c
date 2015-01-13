@@ -109,9 +109,33 @@ static int _par_call_async_action(par_call_async_args_t *args) {
 
 static hpx_action_t _par_call_async = 0;
 
+typedef struct {
+  hpx_action_t action;
+  hpx_addr_t addr;
+  size_t count;
+  size_t increment;
+  size_t bsize;
+  size_t arg_size;
+  char arg[];
+} hpx_count_range_call_args_t;
+
+static int _hpx_count_range_call_action(const hpx_count_range_call_args_t *const args) {
+  int status;
+  for (size_t i = 0; i < args->count; ++i) {
+    const hpx_addr_t target = hpx_addr_add(args->addr, i * args->increment, args->bsize);
+    status = hpx_call(target, args->action, args->arg, args->arg_size, HPX_NULL);
+    if (status != HPX_SUCCESS) return status;
+  }
+
+  return HPX_SUCCESS;
+}
+
+static hpx_action_t _hpx_count_range_call = HPX_INVALID_ACTION_ID;
+
 static HPX_CONSTRUCTOR void _init_actions(void) {
   LIBHPX_REGISTER_ACTION(&_par_for_async, _par_for_async_action);
   LIBHPX_REGISTER_ACTION(&_par_call_async, _par_call_async_action);
+  LIBHPX_REGISTER_ACTION(&_hpx_count_range_call, _hpx_count_range_call_action);
 }
 
 
@@ -190,4 +214,31 @@ int hpx_par_call_sync(hpx_action_t action,
     e = hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return e;
+}
+
+int hpx_count_range_call(hpx_action_t action,
+			 const hpx_addr_t addr,
+			 const size_t count,
+			 const size_t increment,
+			 const size_t bsize,
+			 const size_t arg_size,
+			 void *const arg) {
+  const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
+  // printf("Chunk %zu, count %zu, increment %zu, action %zu.\n", thread_chunk, count, increment, action);
+  hpx_count_range_call_args_t *args = malloc(sizeof(*args) + arg_size);
+  memcpy(args->arg, arg, arg_size);
+  args->action = action; args->count = thread_chunk; args->increment = increment; args->bsize = bsize; args->arg_size = arg_size;
+  for(size_t l = 0; l < HPX_LOCALITIES; ++l) {
+    for(size_t t = 0; t < HPX_THREADS; ++t) {
+      args->addr = hpx_addr_add(addr, (l * HPX_THREADS + t) * thread_chunk * increment, bsize);
+      //      sleep(10);
+      // printf("Starting chunk with addr %zu for locality %zu and thread %zu. Action: %zu.\n", args->addr, l, t, args->action);
+      hpx_call(HPX_THERE(l), _hpx_count_range_call, args, sizeof(*args) + arg_size, HPX_NULL);
+    }
+  }
+  args->count = count % (HPX_LOCALITIES * HPX_THREADS);
+  args->addr = hpx_addr_add(addr, HPX_LOCALITIES * HPX_THREADS * thread_chunk * increment, bsize);
+  //  printf("Starting chunk with addr %zu.\n", args->addr);
+  hpx_call(HPX_HERE, _hpx_count_range_call, args, sizeof(*args) + arg_size, HPX_NULL);
+  free(args);
 }
