@@ -21,6 +21,7 @@
 //#include "user_settings.h"
 #include "generatorhelper/include/splittable_mrg.h"
 #include "libpxgl/graph_generator.h"
+#include "libpxgl/termination.h"
 #include "pxgl/edge_list.h"
 #include "generatorhelper/include/globals.h"
 #include "generatorhelper/include/prng.h"
@@ -159,6 +160,7 @@ static int _put_edge_in_edgelist_action(edge_list_edge_t *e)
    memcpy(edge, e, sizeof(*e));
    //printf("source %" SSSP_UINT_PRI " dest %" SSSP_UINT_PRI " weight %" SSSP_UINT_PRI ".\n", edge->source, edge->dest, edge->weight);
 
+   _increment_finished_count();
 
    hpx_gas_unpin(target);
    //printf("Returning from the put edge action\n");
@@ -168,7 +170,7 @@ static int _put_edge_in_edgelist_action(edge_list_edge_t *e)
 
 /* Make a single graph edge using a pre-set MRG state. */
 
-void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const graph500_edge_list_local_args_t * const args/*packed_edge* result*/, uint64_t val0, uint64_t val1, int64_t start_edge, int64_t* count) {
+void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const graph500_edge_list_local_args_t * const args/*packed_edge* result*/, uint64_t val0, uint64_t val1, sssp_uint_t edge_index) {
   int64_t base_src = 0, base_tgt = 0;
   while (nverts > 1) {
     int square = generate_4way_bernoulli(st, level, lgN);
@@ -189,31 +191,29 @@ void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const grap
     base_tgt += nverts * tgt_offset;
   }
   //printf("Inside make one edge function\n");
-  int64_t endpoint_1 = scramble(base_src, lgN, val0, val1);
-  int64_t endpoint_2 = scramble(base_tgt, lgN, val0, val1);
+  sssp_uint_t endpoint_1 = scramble(base_src, lgN, val0, val1);
+  sssp_uint_t endpoint_2 = scramble(base_tgt, lgN, val0, val1);
   //printf("Count before: %" PRId64 "\n",*count);
-  uint64_t weight = (uint64_t) random_weight(*count);//TODO: how to generate weight?
+  sssp_uint_t weight = (uint64_t) random_weight(edge_index);//TODO: how to generate weight?
   edge_list_edge_t *edge = malloc(sizeof(*edge));
   edge->source = endpoint_1;
   edge->dest = endpoint_2;
   edge->weight = weight;
-  //printf("Generated source %" PRId64 " destination %" PRId64 " weight %" PRIu64 " count %" PRId64 "\n", endpoint_1, endpoint_2, weight, *count);
-  const int64_t position = start_edge + *count ;
+  // printf("Generated source %" PRId64 " destination %" PRId64 " weight %" PRIu64 " count %" PRId64 " at index %" SSSP_UINT_PRI "\n", endpoint_1, endpoint_2, weight, edge_index);
+  const int64_t position = edge_index * 2;
   //printf("Inserting at position %" PRId64 " \n", position);
   hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize); //TODO: verify
-  assert(args->edges_sync != HPX_NULL);
-  hpx_call(e, _put_edge_in_edgelist, edge, sizeof(*edge), args->edges_sync);
+  hpx_call(e, _put_edge_in_edgelist, edge, sizeof(*edge), HPX_NULL);
   
    //now insert flipped edge
    sssp_uint_t temp = edge->source; 
    edge->source = edge->dest;
    edge->dest = temp;
    hpx_addr_t e_1 = hpx_addr_add(args->el.edge_list, (position+1) * sizeof(edge_list_edge_t), args->el.edge_list_bsize); //TODO: verify
-   assert(args->edges_sync != HPX_NULL);
    //printf("Reverse direction Inserting at position %"PRId64 " \n", position+1);
-   hpx_call(e_1, _put_edge_in_edgelist, edge, sizeof(*edge), args->edges_sync); 
+   hpx_call(e_1, _put_edge_in_edgelist, edge, sizeof(*edge), HPX_NULL); 
    
-   //printf("Inserted 2 edges\n");
+   // printf("Inserted 2 edges\n");
 }
 
 static __attribute__((constructor)) void _edge_register_actions() {

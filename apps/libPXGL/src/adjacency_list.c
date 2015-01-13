@@ -5,6 +5,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
+#include "libpxgl/termination.h"
 #include "libpxgl/adjacency_list.h"
 
 #define PXGL_ADJ_SYNC_ARG(orig, lco_name, arg_name) \
@@ -18,8 +19,8 @@ typedef uint32_t count_t;
 hpx_addr_t count_array;
 hpx_addr_t index_array;
 
-uint32_t _count_array_block_size = 0;
-uint32_t _index_array_block_size = 0;
+sssp_uint_t _count_array_block_size = 0;
+sssp_uint_t _index_array_block_size = 0;
 
 static hpx_action_t _set_count_array_bsize;
 static int _set_count_array_bsize_action(const uint32_t *arg) {
@@ -35,8 +36,10 @@ static int _set_index_array_bsize_action(const uint32_t *arg) {
 
 // Action to increment count in the count array
 static hpx_action_t _increment_count;
-static int _increment_count_action(const hpx_addr_t * const edges_sync) {
+static int _increment_count_action(const void *const args) {
   const hpx_addr_t target = hpx_thread_current_target();
+
+  //printf("_increment_count with %zu.\n", target);
 
   volatile count_t * const count;
   if (!hpx_gas_try_pin(target, (void**)&count))
@@ -44,7 +47,7 @@ static int _increment_count_action(const hpx_addr_t * const edges_sync) {
 
   sync_fadd(count, 1, SYNC_RELAXED);
 
-  hpx_lco_set(*edges_sync, 0, NULL, HPX_NULL, HPX_NULL);
+  _increment_finished_count();
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -52,20 +55,23 @@ static int _increment_count_action(const hpx_addr_t * const edges_sync) {
 
 
 // Action to count an edge
-PXGL_ADJ_SYNC_ARG(hpx_addr_t count_array, edges_sync, _count_edge)
 static hpx_action_t _count_edge;
-static int _count_edge_action(const _count_edge_args_t * const args) {
+static int _count_edge_action(const hpx_addr_t * const count_array) {
   const hpx_addr_t target = hpx_thread_current_target();
+
+  // printf("_count_edge with %zu.\n", target);
 
   const edge_list_edge_t * const edge;
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
-  const hpx_addr_t count = hpx_addr_add(args->count_array, edge->source * sizeof(count_t),
+  // if(*count_array != 272629760) printf("Huston, we have a problem: %zu.\n", *count_array);
+
+  const hpx_addr_t count = hpx_addr_add(*count_array, edge->source * sizeof(count_t),
                                         _count_array_block_size);
   hpx_gas_unpin(target);
 
-  return hpx_call(count, _increment_count, &args->edges_sync, sizeof(args->edges_sync), HPX_NULL);
+  return hpx_call(count, _increment_count, NULL, 0, HPX_NULL);
 }
 
 
@@ -114,7 +120,7 @@ static hpx_action_t _alloc_adj_list_entry;
 static int _alloc_adj_list_entry_action(const _alloc_adj_list_entry_args_t * const args)
 {
   const hpx_addr_t target = hpx_thread_current_target();
-
+  
   volatile count_t * const local;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
@@ -126,9 +132,8 @@ static int _alloc_adj_list_entry_action(const _alloc_adj_list_entry_args_t * con
   return hpx_call(args->index, _alloc_vertex, &_alloc_vertex_args, sizeof(_alloc_vertex_args), HPX_NULL);
 }
 
-PXGL_ADJ_SYNC_ARG(adj_list_edge_t edge, edges_sync, _put_edge)
 static hpx_action_t _put_edge;
-static int _put_edge_action(const _put_edge_args_t *args)
+static int _put_edge_action(const adj_list_edge_t *edge)
 {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -139,9 +144,9 @@ static int _put_edge_action(const _put_edge_args_t *args)
   // Increment the size of the vertex
   sssp_uint_t num_edges = sync_fadd(&vertex->num_edges, 1, SYNC_RELAXED);
 
-  vertex->edge_list[num_edges] = args->edge;
+  vertex->edge_list[num_edges] = *edge;
 
-  hpx_lco_set(args->edges_sync, 0, NULL, HPX_NULL, HPX_NULL);
+  _increment_finished_count();
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -150,7 +155,7 @@ static int _put_edge_action(const _put_edge_args_t *args)
 
 PXGL_ADJ_SYNC_ARG(adj_list_edge_t edge, edges_sync, _put_edge_index)
 static hpx_action_t _put_edge_index;
-static int _put_edge_index_action(const _put_edge_index_args_t *args)
+static int _put_edge_index_action(const adj_list_edge_t *edge)
 {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -162,13 +167,11 @@ static int _put_edge_index_action(const _put_edge_index_args_t *args)
   vertex = *v;
   hpx_gas_unpin(target);
 
-  const _put_edge_args_t _put_edge_args = { .edge = args->edge, .edges_sync = args->edges_sync };
-  return hpx_call(vertex, _put_edge, &_put_edge_args, sizeof(_put_edge_args), HPX_NULL);
+  return hpx_call(vertex, _put_edge, edge, sizeof(*edge), HPX_NULL);
 }
 
-PXGL_ADJ_SYNC_ARG(hpx_addr_t index_array, edges_sync, _insert_edge)
 static hpx_action_t _insert_edge;
-static int _insert_edge_action(const _insert_edge_args_t * const args)
+static int _insert_edge_action(const hpx_addr_t * const index_array)
 {
   const hpx_addr_t target = hpx_thread_current_target();
 
@@ -187,13 +190,12 @@ static int _insert_edge_action(const _insert_edge_args_t * const args)
  // Then get the appropriate index array position to retrieve the
  // address of the vertex in the adjacency list
   const hpx_addr_t index
-    = hpx_addr_add(args->index_array, source * sizeof(hpx_addr_t), _index_array_block_size);
+    = hpx_addr_add(*index_array, source * sizeof(hpx_addr_t), _index_array_block_size);
 
   // Insert the edge into the index array at the right index. Since we
   // call this action synchronously, we can safely send the stack
   // pointer out.
-  const _put_edge_index_args_t _put_edge_index_args = { .edge = e, .edges_sync = args->edges_sync };
-  return hpx_call(index, _put_edge_index, &_put_edge_index_args, sizeof(_put_edge_index_args), HPX_NULL);
+  return hpx_call(index, _put_edge_index, &e, sizeof(e), HPX_NULL);
 }
 
 
@@ -217,8 +219,9 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   // Start allocating the index array.
   _index_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
+  // printf("Index array block size is %" SSSP_UINT_PRI ".\n", _index_array_block_size); 
   hpx_addr_t index_arr_sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(uint32_t), index_arr_sync);
+  hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(_index_array_block_size), index_arr_sync);
 
   // Array is allocated while the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
@@ -226,10 +229,11 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   // Start allocating the count array for creating an edge histogram
   _count_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(count_t);
   hpx_addr_t count_arr_sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_count_array_bsize, &_count_array_block_size, sizeof(uint32_t), count_arr_sync);
+  hpx_bcast(_set_count_array_bsize, &_count_array_block_size, sizeof(_count_array_block_size), count_arr_sync);
 
   // Array is allocated while the broadcast of the block size is performed
   count_array = hpx_gas_global_calloc(HPX_LOCALITIES, _count_array_block_size);
+  // printf("count_array hpx address is %zu.\n", count_array);
 
   // Finish allocating the count array
   hpx_lco_wait(count_arr_sync);
@@ -237,16 +241,32 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   printf("Count the number of edges per source vertex\n");
   hpx_time_t now = hpx_time_now();
+
+  hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
+  // printf("Starting initialization bcast.\n");
+  hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+  // printf("Waiting on bcast.\n");
+  hpx_lco_wait(init_termination_count_lco);
+  hpx_lco_delete(init_termination_count_lco, HPX_NULL);
+
+  edge_list_edge_t *edge_list;
+  hpx_gas_try_pin(el->edge_list, (void**)&edge_list);
+  // printf("edge_list is %" PRIxPTR " with source %" SSSP_UINT_PRI ", target %" SSSP_UINT_PRI ", and weight %" SSSP_UINT_PRI ".\n", edge_list, edge_list->source, edge_list->dest, edge_list->weight);
+  //#include <sys/mman.h>
+  //mprotect(edge_list, el->edge_list_bsize * 24, PROT_READ);
+
   // Count the number of edges per source vertex
-  hpx_addr_t edges_sync = hpx_lco_and_new(el->num_edges);
-  for (int i = 0; i < el->num_edges; ++i) {
-    hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
-    _count_edge_args_t _count_edge_args = { .count_array = count_array, .edges_sync = edges_sync };
-    hpx_call(edge, _count_edge, &_count_edge_args, sizeof(_count_edge_args), HPX_NULL);
-  }
+  //for (int i = 0; i < el->num_edges; ++i) {
+    //hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
+   //hpx_call(edge, _count_edge, &count_array, sizeof(count_array), HPX_NULL);
+   //}
+  hpx_count_range_call(_count_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, sizeof(count_array), &count_array);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed in the loop: %f\n", elapsed);
   now = hpx_time_now();
+  hpx_addr_t edges_sync = hpx_lco_and_new(2);
+  _increment_active_count(el->num_edges);
+  _detect_termination(edges_sync, edges_sync);
   hpx_lco_wait(edges_sync);
   elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed waiting for completion: %f\n", elapsed);
@@ -282,23 +302,35 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   // For each edge in the edge list, we add it as an adjacency to a
   // vertex
   now = hpx_time_now();
-  edges_sync = hpx_lco_and_new(el->num_edges);
-  for (int i = 0; i < el->num_edges; ++i) {
-    hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
-    _insert_edge_args_t _insert_edge_args = {
-      .index_array = index_array,
-      .edges_sync = edges_sync
-    };
-    hpx_call(edge, _insert_edge, &_insert_edge_args, 
-	     sizeof(_insert_edge_args), HPX_NULL);
-  }
+
+  init_termination_count_lco = hpx_lco_future_new(0);
+  // printf("Starting initialization bcast.\n");
+  hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+  // printf("Waiting on bcast.\n");
+  hpx_lco_wait(init_termination_count_lco);
+  hpx_lco_delete(init_termination_count_lco, HPX_NULL);
+
+  /* for (int i = 0; i < el->num_edges; ++i) { */
+  /*   hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize); */
+  /*   _insert_edge_args_t _insert_edge_args = { */
+  /*     .index_array = index_array, */
+  /*     .edges_sync = edges_sync */
+  /*   }; */
+  /*   hpx_call(edge, _insert_edge, &_insert_edge_args,  */
+  /* 	     sizeof(_insert_edge_args), HPX_NULL); */
+  /* } */
+  hpx_count_range_call(_insert_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, sizeof(index_array), &index_array);
   elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed in the loop: %f\n", elapsed);
   now = hpx_time_now();
+  edges_sync = hpx_lco_and_new(2);
+  _increment_active_count(el->num_edges);
+  _detect_termination(edges_sync, edges_sync);
   hpx_lco_wait(edges_sync);
-  hpx_lco_delete(edges_sync, HPX_NULL);
   elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed waiting for completion: %f\n", elapsed);
+  hpx_lco_delete(edges_sync, HPX_NULL);
+
   HPX_THREAD_CONTINUE(index_array);
   return HPX_SUCCESS;
 }
