@@ -24,6 +24,9 @@ struct action_table;
 const char *action_table_get_key(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Get the action type.
+hpx_action_type_t action_table_get_type(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Run the handler associated with a parcel.
 int action_table_run_handler(const struct action_table *, hpx_parcel_t *)
@@ -33,6 +36,7 @@ int action_table_run_handler(const struct action_table *, hpx_parcel_t *)
 int action_table_get_args(const struct action_table *table, hpx_action_t id,
                           va_list inargs, void **outargs, size_t *len)
   HPX_INTERNAL HPX_NON_NULL(1);
+
 
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)
