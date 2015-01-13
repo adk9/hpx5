@@ -52,40 +52,45 @@ typedef enum {
 /// @param nargs the variadic number of arguments that this action accepts
 /// @param  type the type of the action to be registered
 /// @returns     error code
-int hpx_register_typed_action(hpx_action_t *id, const char *key, hpx_action_handler_t f,
-                              unsigned int nargs, hpx_action_type_t type, ...);
-
+int hpx_register_typed_action(hpx_action_type_t type, const char *key,
+                              hpx_action_handler_t f, unsigned int nargs,
+                              hpx_action_t *id, ...);
 
 /// Miscellaneous utility macros.
-/// TODO: move to utils.h
 
+#define _HPX_XSTR(s) _HPX_STR(s)
 #define _HPX_STR(l) #l
+
+
+/// Macro to count the number of variadic arguments
+/// Source: https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s
 
 #define _HPX_RSEQ_N() 63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,  \
   41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13, \
   12,11,10,9,8,7,6,5,4,3,2,1,0
 #define _HPX_NARG(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
-  _21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_35,_36,_37,_38,_39,_40,_41,\
-  _42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,\
+  _21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,\
+  _43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,    \
   type,N,...) N
 #define __HPX_NARGS(...) _HPX_NARGS(__VA_ARGS__,_HPX_RSEQ_N())
 #define _HPX_NARGS(...)  _HPX_NARG(__VA_ARGS__)
 
 
 // Generic action registration macro.
-#define HPX_REGISTER(act, f, ...) do {                                      \
-  *act = HPX_ACTION_INVALID;                                                \
-  hpx_register_typed_action(act, _HPX_STR(_hpx##f), (hpx_action_handler_t)f,\
-                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__);         \
+#define HPX_REGISTER(type, f, ...) do {                                       \
+  *act = HPX_ACTION_INVALID;                                                  \
+  hpx_register_typed_action(type, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
+                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__);           \
   } while (0)
 
 // Register a regular HPX action.
-#define HPX_REGISTER_ACTION(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_DEFAULT, __VA_ARGS__)
+#define HPX_REGISTER_ACTION(f, ...) HPX_REGISTER(HPX_ACTION_DEFAULT, f, __VA_ARGS__)
+
 
 /// Register a pinned action. The global address that these actions
 /// are addressed to is pinned by the runtime during the course of
 /// execution of the action.
-#define HPX_REGISTER_PINNED_ACTION(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_PINNED, __VA_ARGS__)
+#define HPX_REGISTER_PINNED_ACTION(f, ...) HPX_REGISTER(HPX_ACTION_PINNED, f, __VA_ARGS__)
 
 
 /// Register an HPX "task". Tasks are non-blocking actions that do not
@@ -94,7 +99,7 @@ int hpx_register_typed_action(hpx_action_t *id, const char *key, hpx_action_hand
 /// thread) on a locality. Tasks can be stolen, like other HPX
 /// threads, but avoid the stack creation overhead since they do not
 /// block.
-#define HPX_REGISTER_TASK(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_TASK, __VA_ARGS__)
+#define HPX_REGISTER_TASK(f, ...) HPX_REGISTER(HPX_ACTION_TASK, f, __VA_ARGS__)
 
 
 /// Register an HPX "interrupt". Interrupts are immediate,
@@ -103,7 +108,7 @@ int hpx_register_typed_action(hpx_action_t *id, const char *key, hpx_action_hand
 /// asynchronous call). They avoid both, the stack creation overhead
 /// and the scheduling overhead, as they are executed inline by the
 /// communication thread.
-#define HPX_REGISTER_INTERRUPT(act, f, ...) HPX_REGISTER(act, f, HPX_ACTION_INTERRUPT, __VA_ARGS__)
+#define HPX_REGISTER_INTERRUPT(f, ...) HPX_REGISTER(HPX_ACTION_INTERRUPT, f, __VA_ARGS__)
 
 
 /// A helper macro to declare and define HPX actions.
@@ -120,7 +125,6 @@ int hpx_register_typed_action(hpx_action_t *id, const char *key, hpx_action_hand
 #define HPX_PINNED_ACTION(n) HPX_DEFINE_ACTION(PINNED_ACTION, n)
 #define HPX_TASK(n)          HPX_DEFINE_ACTION(TASK, n)
 #define HPX_INTERRUPT(n)     HPX_DEFINE_ACTION(INTERRUPT, n)
-
 
 
 #endif
