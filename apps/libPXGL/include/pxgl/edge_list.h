@@ -29,7 +29,7 @@ typedef struct {
   sssp_uint_t num_edges;
   sssp_uint_t num_vertices;
   hpx_addr_t  edge_list;
-  uint32_t   edge_list_bsize;
+  sssp_uint_t edge_list_bsize;
 } edge_list_t;
 
 
@@ -55,7 +55,6 @@ typedef struct {
 typedef struct {
   int64_t edges_skip;
   int64_t edges_no;
-  hpx_addr_t edges_sync;
   edge_list_t el;
   int log_numverts; 
   int64_t M; 

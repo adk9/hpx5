@@ -14,9 +14,8 @@
 #ifndef LIBPXGL_SSSP_DC_H
 #define LIBPXGL_SSSP_DC_H
 
-extern hpx_action_t sssp_init_dc;
-extern hpx_action_t _sssp_init_queues;
-extern hpx_action_t _sssp_delete_queues_proxy;
 extern hpx_action_t _sssp_dc_process_vertex;
+extern hpx_action_t _sssp_init_queues;
+void _switch_to_dc1();
 
 #endif // LIBPXGL_SSSP_DC_H

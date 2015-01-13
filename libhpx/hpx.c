@@ -71,7 +71,7 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  libhpx_hwloc_topology_destroy(l->topology);
+  hwloc_topology_destroy(l->topology);
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -113,12 +113,12 @@ int hpx_init(int *argc, char ***argv) {
   dbg_log_level = here->config->loglevel;
 
   // topology
-  int e = libhpx_hwloc_topology_init(&here->topology);
+  int e = hwloc_topology_init(&here->topology);
   if (e) {
     status = dbg_error("failed to initialize a topology.\n");
     goto unwind1;
   }
-  e = libhpx_hwloc_topology_load(here->topology);
+  e = hwloc_topology_load(here->topology);
   if (e) {
     status = dbg_error("failed to load the topology.\n");
     goto unwind1;

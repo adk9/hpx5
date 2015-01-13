@@ -88,7 +88,7 @@ random_weight (int64_t idx)
 {
   uint8_t out;
   float outf;
-  outf = ceilf (MAXWEIGHT * fprng (idx, 0));
+  outf = ceilf (MAXWEIGHT * dprng (idx, 0));
   out = (uint8_t) outf;
   if (!out) fprintf (stderr, "wtf %d %g %d\n", MAXWEIGHT, (double)outf, (int)out);
   assert (out > 0);
@@ -148,48 +148,58 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   int64_t cur = -1;
   int64_t S;
   double r;
-  sssp_uint_t m;
+  sssp_uint_t m, t;
 
-  for (m = 0; m < nroot; ++m) root[m] = 0 ;//-1;
-
-  for (m = 0; m < nroot-1; ++m) {
-    double quot;
-    r = dprng (KEY, m);
-    S = 0;
-    quot = top / n;
-    while (quot > r) {
-      S += 1;
-      top -= 1;
-      n -= 1;
-      quot *= top / n;
-    }
-    cur += S+1;
-    const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size);
+  for (m = 0; m < nroot; ++m) root[m] = SSSP_UINT_MAX;
+  m = 0; t = 0;
+  while (m < nroot && t < numvertices) {
+    double R = dprng(KEY, m);
     size_t num_edges = 0;
+    const hpx_addr_t index = hpx_addr_add(*graph, t * sizeof(hpx_addr_t), _index_array_block_size);
     hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
-    if(num_edges==0){
-      m--;
-      continue;
-    }
-    root[m] = cur;
-    n -= 1;
+    if (!num_edges) ++t;
+    else root[m++] = t++;
   }
-  while(true){
-    r = dprng (KEY, nroot-1);
-    S = floor (n * r);
-    cur += S+1;
-    const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size);
-    SSSP_UINT_T num_edges;
-    hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
-    if(num_edges==0){
-      continue;
-    }
-    root[nroot-1] = cur;
-    break;
-  }
+
+  /* for (m = 0; m < nroot; ++m) { */
+  /*   double quot; */
+  /*   r = dprng (KEY, m); */
+  /*   S = 0; */
+  /*   quot = top / n; */
+  /*   while (quot > r) { */
+  /*     S += 1; */
+  /*     top -= 1; */
+  /*     n -= 1; */
+  /*     quot *= top / n; */
+  /*   } */
+  /*   cur += S; */
+  /*   const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
+  /*   size_t num_edges = 0; */
+  /*   hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
+  /*   if(num_edges==0){ */
+  /*     m--; */
+  /*     continue; */
+  /*   } */
+  /*   root[m] = cur; */
+  /*   n -= 1; */
+  /* } */
+  /* while(true){ */
+  /*   r = dprng (KEY, nroot-1); */
+  /*   S = floor (n * r); */
+  /*   cur += S+1; */
+  /*   const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
+  /*   SSSP_UINT_T num_edges; */
+  /*   hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
+  /*   if(num_edges==0){ */
+  /*     continue; */
+  /*   } */
+  /*   root[nroot-1] = cur; */
+  /*   break; */
+  /* } */
 
 #if !defined (NDEBUG)
   for (sssp_uint_t m = 0; m < nroot; ++m) {
+    // printf("root[%" SSSP_UINT_PRI "] is %" SSSP_UINT_PRI ".\n", m, root[m]);
     assert (root[m] >= 0 && root[m] < numvertices);
     for (sssp_uint_t m2 = m+1; m2 < nroot; ++m2)
       assert (root[m2] != root[m]);
