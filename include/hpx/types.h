@@ -33,12 +33,16 @@ typedef short hpx_status_t;
 
 /// HPX datatypes
 /// @{
+#define HPX_CHAR               &ffi_type_uchar
 #define HPX_UCHAR              &ffi_type_uchar
 #define HPX_SCHAR              &ffi_type_schar
+#define HPX_SHORT              &ffi_type_ushort
 #define HPX_USHORT             &ffi_type_ushort
 #define HPX_SSHORT             &ffi_type_sshort
+#define HPX_INT                &ffi_type_uint
 #define HPX_UINT               &ffi_type_uint
 #define HPX_SINT               &ffi_type_sint
+#define HPX_LONG               &ffi_type_ulong
 #define HPX_ULONG              &ffi_type_ulong
 #define HPX_SLONG              &ffi_type_slong
 #define HPX_VOID               &ffi_type_void
