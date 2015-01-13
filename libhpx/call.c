@@ -158,14 +158,14 @@ hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
   return e;
 }
 
-/// Experimental HPX call interface.
+/// Experimental HPX typed call interface.
 int
-hpx_call2(hpx_addr_t addr, hpx_action_t action, ...) {
-
+hpx_typed_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                                 hpx_addr_t c_target, hpx_action_t c_action, ...) {
   void *args;
   size_t len;
   va_list vargs;
-  va_start(vargs, action);
+  va_start(vargs, c_action);
   int e = action_table_get_args(here->actions, action, vargs, &args, &len);
   if (e != LIBHPX_OK) {
     dbg_error("error getting arguments associated with action id %d\n", action);
