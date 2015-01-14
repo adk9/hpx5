@@ -416,17 +416,17 @@ int main(int argc, char **argv)
     }
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
-  HPX_REGISTER_ACTION(&_SBN1_sends, _SBN1_sends_action);
-  HPX_REGISTER_ACTION(&_SBN1_result, _SBN1_result_action);
-  HPX_REGISTER_ACTION(&_SBN3_sends, _SBN3_sends_action);
-  HPX_REGISTER_ACTION(&_SBN3_result, _SBN3_result_action);
-  HPX_REGISTER_ACTION(&_PosVel_sends, _PosVel_sends_action);
-  HPX_REGISTER_ACTION(&_PosVel_result, _PosVel_result_action);
-  HPX_REGISTER_ACTION(&_MonoQ_sends, _MonoQ_sends_action);
-  HPX_REGISTER_ACTION(&_MonoQ_result, _MonoQ_result_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
+  HPX_REGISTER_ACTION(_advanceDomain_action, &_advanceDomain);
+  HPX_REGISTER_ACTION(_SBN1_sends_action, &_SBN1_sends);
+  HPX_REGISTER_ACTION(_SBN1_result_action, &_SBN1_result);
+  HPX_REGISTER_ACTION(_SBN3_sends_action, &_SBN3_sends);
+  HPX_REGISTER_ACTION(_SBN3_result_action, &_SBN3_result);
+  HPX_REGISTER_ACTION(_PosVel_sends_action, &_PosVel_sends);
+  HPX_REGISTER_ACTION(_PosVel_result_action, &_PosVel_result);
+  HPX_REGISTER_ACTION(_MonoQ_sends_action, &_MonoQ_sends);
+  HPX_REGISTER_ACTION(_MonoQ_result_action, &_MonoQ_result);
 
   int input[3];
   input[0] = nDoms;

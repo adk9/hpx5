@@ -800,11 +800,11 @@ hpx_lco_netfuture_get_rank(hpx_netfuture_t future) {
 
 static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_future_set_no_copy_from_remote, _future_set_no_copy_from_remote_action);
-  LIBHPX_REGISTER_ACTION(&_progress, _progress_action);
-  LIBHPX_REGISTER_ACTION(&_progress_recv, _progress_recv_action);
-  LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
-  LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
+  LIBHPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action, &_future_set_no_copy_from_remote);
+  LIBHPX_REGISTER_ACTION(_progress_action, &_progress);
+  LIBHPX_REGISTER_ACTION(_progress_recv_action, &_progress_recv);
+  LIBHPX_REGISTER_ACTION(_add_future_to_table_action, &_add_future_to_table);
+  LIBHPX_REGISTER_ACTION(_initialize_netfutures_action, &_initialize_netfutures);
 }
 
 void (*netfuture_progress)() = _progress_body;

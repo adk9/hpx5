@@ -173,7 +173,7 @@ int graph500_edge_list_generator_action(const graph500_edge_list_generator_args_
 
 
 static __attribute__((constructor)) void graph500_edge_list_register_actions() {
-  HPX_REGISTER_ACTION(&graph500_edge_list_generator,
-                      graph500_edge_list_generator_action);
-  HPX_REGISTER_ACTION(&generate_edgelist,generate_edgelist_action);
+  HPX_REGISTER_ACTION(graph500_edge_list_generator_action,
+                      &graph500_edge_list_generator);
+  HPX_REGISTER_ACTION(generate_edgelist_action, &generate_edgelist);
 }

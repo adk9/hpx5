@@ -38,6 +38,6 @@ static int _sssp_chaotic_process_vertex_action(distance_t *const distance) {
 }
 
 static __attribute__((constructor)) void _sssp_register_actions() {
-  HPX_REGISTER_ACTION(&_sssp_chaotic_process_vertex,
-                      _sssp_chaotic_process_vertex_action);
+  HPX_REGISTER_ACTION(_sssp_chaotic_process_vertex_action,
+                      &_sssp_chaotic_process_vertex);
 }

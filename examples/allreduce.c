@@ -90,9 +90,9 @@ int main(int argc, char** argv) {
   }
 
   // register action for parcel
-  HPX_REGISTER_ACTION(&set_value, action_set_value);
-  HPX_REGISTER_ACTION(&get_value, action_get_value);
-  HPX_REGISTER_ACTION(&allreduce, action_allreduce);
+  HPX_REGISTER_ACTION(action_set_value, &set_value);
+  HPX_REGISTER_ACTION(action_get_value, &get_value);
+  HPX_REGISTER_ACTION(action_allreduce, &allreduce);
 
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;

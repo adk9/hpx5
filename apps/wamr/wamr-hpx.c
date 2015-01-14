@@ -187,8 +187,8 @@ static int _action_evolve(InitArgs *init) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(&_main, _action_main);
-  HPX_REGISTER_ACTION(&_evolve, _action_evolve);
+  HPX_REGISTER_ACTION(_action_main, &_main);
+  HPX_REGISTER_ACTION(_action_evolve, &_evolve);
 //  _ping = HPX_REGISTER_ACTION(_action_ping);
 //  _pong = HPX_REGISTER_ACTION(_action_pong);
 }

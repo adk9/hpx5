@@ -51,6 +51,6 @@ static int _call_cont_handler(locality_cont_args_t *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&locality_shutdown, _shutdown_handler);
-  LIBHPX_REGISTER_ACTION(&locality_call_continuation, _call_cont_handler);
+  LIBHPX_REGISTER_ACTION(_shutdown_handler, &locality_shutdown);
+  LIBHPX_REGISTER_ACTION(_call_cont_handler, &locality_call_continuation);
 }

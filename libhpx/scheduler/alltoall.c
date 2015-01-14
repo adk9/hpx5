@@ -321,8 +321,8 @@ static hpx_status_t _alltoall_setid_proxy(void *args) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_alltoall_setid_action, _alltoall_setid_proxy);
-  LIBHPX_REGISTER_ACTION(&_alltoall_getid_action, _alltoall_getid_proxy);
+  LIBHPX_REGISTER_ACTION(_alltoall_setid_proxy, &_alltoall_setid_action);
+  LIBHPX_REGISTER_ACTION(_alltoall_getid_proxy, &_alltoall_getid_action);
 }
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {

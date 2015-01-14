@@ -48,9 +48,9 @@ static int _proc_delete_handler(void *args);
 static int _proc_return_credit_handler(uint64_t *args);
 
 static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_proc_call, _proc_call_handler);
-  LIBHPX_REGISTER_ACTION(&_proc_delete, _proc_delete_handler);
-  LIBHPX_REGISTER_ACTION(&_proc_return_credit, _proc_return_credit_handler);
+  LIBHPX_REGISTER_ACTION(_proc_call_handler, &_proc_call);
+  LIBHPX_REGISTER_ACTION(_proc_delete_handler, &_proc_delete);
+  LIBHPX_REGISTER_ACTION(_proc_return_credit_handler, &_proc_return_credit);
 }
 
 

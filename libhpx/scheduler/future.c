@@ -188,8 +188,8 @@ static hpx_action_t _block_init = 0;
 static hpx_action_t _future_reset_action = 0;
 
 static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_block_init, _future_block_init_handler);
-  LIBHPX_REGISTER_ACTION(&_future_reset_action, _future_reset_handler);
+  LIBHPX_REGISTER_ACTION(_future_block_init_handler, &_block_init);
+  LIBHPX_REGISTER_ACTION(_future_reset_handler, &_future_reset_action);
 }
 
 
