@@ -49,11 +49,6 @@ static void set_pos(void *a, size_t pos) {
   ((pqueue_node *) a)->pos = pos;
 }
 
-static bool sssp_queue_empty(sssp_queue_t *q) {
-  const size_t size = pqueue_size(q);
-  return size == 0;
-}
-
 static bool sssp_queue_pop(sssp_queue_t *q, hpx_addr_t *v, distance_t *d) {
   // printf("sssp_queue_pop on queue %" PRIxPTR "\n", (uintptr_t)q);
   // printf("Inside the pop function\n");
