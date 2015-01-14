@@ -41,9 +41,7 @@ static bool _maybe_process_one(sssp_queue_t *const q) {
   hpx_addr_t v;
   distance_t d;
   adj_list_vertex_t *vertex;
-  const int thread_id = HPX_THREAD_ID;
   if (sssp_queue_pop(q, &v, &d)) {
-    const size_t qsize = sssp_queue_size(q);
     // if (rand() % 5000 == 1) printf("Queue size at pop %zu on thread %d.\n", qsize, thread_id);
     // printf("Trying to pop one vertex from the priority queue in the handle queue action\n");
     // We are not handling AGAS currently and assume the vertex is on the same locality.
