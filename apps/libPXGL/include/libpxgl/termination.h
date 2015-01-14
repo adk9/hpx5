@@ -21,6 +21,7 @@ void _increment_finished_count();
 sssp_uint_t _relaxed_get_active_count();
 sssp_uint_t _relaxed_get_finished_count();
 termination_t _get_termination();
+void _initialize_termination();
 void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t internal_termination_lco);
 extern hpx_action_t _initialize_termination_detection;
 extern termination_t _termination;
