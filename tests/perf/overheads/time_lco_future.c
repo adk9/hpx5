@@ -127,9 +127,9 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_set_value, action_set_value);
-  HPX_REGISTER_ACTION(&_get_value, action_get_value);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(action_set_value, &_set_value);
+  HPX_REGISTER_ACTION(action_get_value, &_get_value);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);
