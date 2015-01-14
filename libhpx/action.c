@@ -270,9 +270,8 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 }
 
 
-int hpx_register_typed_action(hpx_action_type_t type, const char *key,
-                              hpx_action_handler_t f, unsigned int nargs,
-                              hpx_action_t *id, ...) {
+int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
+                        unsigned int nargs, hpx_action_t *id, ...) {
   *id = HPX_ACTION_INVALID;
   if (!nargs) {
     return _push_back(_get_actions(), id, key, f, type, NULL);
