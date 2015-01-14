@@ -122,7 +122,7 @@ int main(int argc, char *argv[argc]) {
     }
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_allreduce, _allreduce_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_allreduce_action, &_allreduce);
   return hpx_run(&_main, NULL, 0);
 }

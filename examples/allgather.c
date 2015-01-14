@@ -174,9 +174,9 @@ allgather_main_action(const main_args_t *args)
 void
 allgather_init_actions(void)
 {
-  HPX_REGISTER_ACTION(&_main, allgather_main_action);
-  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
+  HPX_REGISTER_ACTION(allgather_main_action, &_main);
+  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
+  HPX_REGISTER_ACTION(_advanceDomain_action, &_advanceDomain);
 }
 
 int

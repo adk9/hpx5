@@ -68,8 +68,8 @@ int main(int argc, char *argv[])
   mpi_system_register_actions();
 
   // register local actions
-  HPX_REGISTER_ACTION(&_mpi, _mpi_action);
-  HPX_REGISTER_ACTION(&_hpxmain, _hpxmain_action);
+  HPX_REGISTER_ACTION(_mpi_action, &_mpi);
+  HPX_REGISTER_ACTION(_hpxmain_action, &_hpxmain);
 
   // do stuff here
   int args[2] = { numhpx, its };
