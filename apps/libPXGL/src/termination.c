@@ -82,6 +82,10 @@ int _initialize_termination_detection_action(void *arg) {
   return HPX_SUCCESS;
 }
 
+void _initialize_termination() {
+  hpx_bcast_sync(_initialize_termination_detection, NULL, 0);
+}
+
 void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t internal_termination_lco) {
   hpx_addr_t termination_count_lco = hpx_lco_allreduce_new(HPX_LOCALITIES, 1, 2*sizeof(sssp_int_t), (hpx_commutative_associative_op_t) _termination_detection_op, _termination_detection_init);
   enum { PHASE_1, PHASE_2 } phase = PHASE_1;
