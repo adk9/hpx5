@@ -71,7 +71,7 @@ int gteps_calculate_action(const sssp_uint_t *const num_vertices) {
 }
 
 static __attribute__((constructor)) void _gteps_register_actions() {
-  HPX_REGISTER_ACTION(&gteps_calculate, gteps_calculate_action);
-  HPX_REGISTER_ACTION(&_gteps_visit_vertex, _gteps_visit_vertex_action);
-  HPX_REGISTER_ACTION(&_gteps_send_dist, _gteps_send_dist_action);
+  HPX_REGISTER_ACTION(gteps_calculate_action, &gteps_calculate);
+  HPX_REGISTER_ACTION(_gteps_visit_vertex_action, &_gteps_visit_vertex);
+  HPX_REGISTER_ACTION(_gteps_send_dist_action, &_gteps_send_dist);
 }

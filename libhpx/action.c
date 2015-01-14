@@ -18,6 +18,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "hpx/builtins.h"
 #include "hpx/types.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -212,9 +213,6 @@ int action_table_get_args(const struct action_table *table, hpx_action_t id,
 
 
 int action_table_run_handler(const struct action_table *table, hpx_parcel_t *parcel) {
-  hpx_action_handler_t handler = 0;
-  ffi_cif *cif = NULL;
-
   const hpx_addr_t target = hpx_parcel_get_target(parcel);
   const uint32_t owner = gas_owner_of(here->gas, target);
   DEBUG_IF (owner != here->rank) {
@@ -228,6 +226,8 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
     dbg_error("action registration is not complete");
   }
 
+  hpx_action_handler_t handler = 0;
+  ffi_cif *cif = NULL;
   if (id < table->n) {
     handler = table->entries[id].func;
     cif = table->entries[id].cif;
@@ -241,7 +241,11 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
   }
 
   int ret;
-  ffi_raw_call(cif, FFI_FN(handler), &ret, args);
+  if (cif) {
+    ffi_raw_call(cif, FFI_FN(handler), &ret, args);
+  } else {
+    ret = handler(args);
+  }
 
   if (pinned) {
     hpx_gas_unpin(target);
@@ -269,6 +273,7 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 int hpx_register_typed_action(hpx_action_type_t type, const char *key,
                               hpx_action_handler_t f, unsigned int nargs,
                               hpx_action_t *id, ...) {
+  *id = HPX_ACTION_INVALID;
   if (!nargs) {
     return _push_back(_get_actions(), id, key, f, type, NULL);
   }
@@ -278,13 +283,13 @@ int hpx_register_typed_action(hpx_action_type_t type, const char *key,
 
   va_list vargs;
   hpx_type_t *args = malloc(sizeof(*args) * nargs);
-  va_start(vargs, nargs);
+  va_start(vargs, id);
   for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);
 
-  ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, rtype, args);
+  ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }

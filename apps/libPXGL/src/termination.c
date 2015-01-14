@@ -115,12 +115,12 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
 }
 
 static HPX_CONSTRUCTOR void _sssp_register_actions() {
-  HPX_REGISTER_ACTION(&_initialize_termination_detection,
-                      _initialize_termination_detection_action);
-  HPX_REGISTER_ACTION(&_send_termination_count,
-                      _send_termination_count_action);
-  HPX_REGISTER_ACTION(&_set_termination,
-                      _set_termination_action);
+  HPX_REGISTER_ACTION(_initialize_termination_detection_action,
+                      &_initialize_termination_detection);
+  HPX_REGISTER_ACTION(_send_termination_count_action,
+                      &_send_termination_count);
+  HPX_REGISTER_ACTION(_set_termination_action,
+                      &_set_termination);
   // Default termination detection algorithm
-  _termination                  = COUNT_TERMINATION;
+  _termination = COUNT_TERMINATION;
 }

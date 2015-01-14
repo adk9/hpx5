@@ -60,7 +60,7 @@ int main(int argc, char **argv)
   int cp_interval = 0;
   int restart_cp_num = 0;
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
 
   int input[17];
   input[0] = scaling;

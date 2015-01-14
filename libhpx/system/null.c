@@ -32,6 +32,6 @@ static int _null_action(void *args) {
 
 /// Register the global actions.
 static void HPX_CONSTRUCTOR _init(void) {
-  LIBHPX_REGISTER_ACTION(&HPX_ACTION_NULL, _null_action);
+  LIBHPX_REGISTER_ACTION(_null_action, &HPX_ACTION_NULL);
 }
 

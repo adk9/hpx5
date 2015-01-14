@@ -137,11 +137,11 @@ _lco_wait(void *args)
 static void HPX_CONSTRUCTOR
 _initialize_actions(void)
 {
-  LIBHPX_REGISTER_ACTION(&_lco_fini_action, _lco_fini);
-  LIBHPX_REGISTER_ACTION(&_lco_error_action, _lco_error);
-  LIBHPX_REGISTER_ACTION(&hpx_lco_set_action, _lco_set);
-  LIBHPX_REGISTER_ACTION(&_lco_get_action, _lco_get);
-  LIBHPX_REGISTER_ACTION(&_lco_wait_action, _lco_wait);
+  LIBHPX_REGISTER_ACTION(_lco_fini, &_lco_fini_action);
+  LIBHPX_REGISTER_ACTION(_lco_error, &_lco_error_action);
+  LIBHPX_REGISTER_ACTION(_lco_set, &hpx_lco_set_action);
+  LIBHPX_REGISTER_ACTION(_lco_get, &_lco_get_action);
+  LIBHPX_REGISTER_ACTION(_lco_wait, &_lco_wait_action);
 }
 
 
