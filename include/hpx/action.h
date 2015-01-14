@@ -52,9 +52,8 @@ typedef enum {
 /// @param nargs the variadic number of arguments that this action accepts
 /// @param  type the type of the action to be registered
 /// @returns     error code
-int hpx_register_typed_action(hpx_action_type_t type, const char *key,
-                              hpx_action_handler_t f, unsigned int nargs,
-                              hpx_action_t *id, ...);
+int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
+                        unsigned int nargs, hpx_action_t *id, ...);
 
 /// Miscellaneous utility macros.
 
