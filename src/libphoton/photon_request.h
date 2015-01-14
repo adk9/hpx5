@@ -82,6 +82,7 @@ typedef struct photon_req_table_t {
   uint32_t size;
   struct photon_req_t  *reqs;
   ms_queue_t           *req_q;
+  volatile uint32_t     qcount;
   tatas_lock_t tloc;
 } photon_req_table;
 

@@ -159,6 +159,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       log_err("Could not allocate request queue for proc %d", i);
       goto error_exit_bt;
     }
+    rt->qcount = 0;
   }
   
   // initialize the pwc request table

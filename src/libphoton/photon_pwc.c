@@ -10,7 +10,11 @@
 #include "photon_pwc.h"
 #include "util.h"
 
-ms_queue_t          *pwc_q;
+static int photon_pwc_test_ledger(int proc, int *ret_offset);
+static int photon_pwc_try_ledger(photonRequest req, int curr);
+static int photon_pwc_try_packed(photonRequest req);
+
+static ms_queue_t          *pwc_q;
 
 int photon_pwc_init() {
   pwc_q = sync_ms_queue_new();
@@ -29,6 +33,54 @@ int photon_pwc_add_req(photonRequest req) {
 
 photonRequest photon_pwc_pop_req() {
   return sync_ms_queue_dequeue(pwc_q);
+}
+
+/*
+static int photon_pwc_process_queued_req2(int proc, photonRequestTable rt) {
+  photonRequest req;
+  int offset, rc;
+  req = sync_ms_queue_dequeue(rt->req_q);
+  if (!req) {
+    return PHOTON_ERROR;
+  }
+  rc = photon_pwc_test_ledger(proc, &offset);
+  if (rc == PHOTON_OK)
+    return photon_pwc_try_ledger(req, offset);
+  else {
+    sync_ms_queue_enqueue(rt->req_q, req);
+  }
+  return PHOTON_OK;
+}
+*/  
+
+static int photon_pwc_process_queued_req(int proc, photonRequestTable rt) {
+  photonRequest req;
+  uint32_t val;
+  int offset, rc;
+
+  do {
+    val = sync_load(&rt->qcount, SYNC_RELAXED);
+  } while (val && !sync_cas(&rt->qcount, val, val-1, SYNC_RELAXED, SYNC_RELAXED));
+
+  if (!val) {
+    return PHOTON_ERROR;
+  }
+  // only dequeue a request if there is one and we can send it
+  rc = photon_pwc_test_ledger(proc, &offset);
+  if (rc == PHOTON_OK) {
+    req = sync_ms_queue_dequeue(rt->req_q);
+    assert(req);
+    rc = photon_pwc_try_ledger(req, offset);
+    if (rc != PHOTON_OK) {
+      dbg_err("Could not send queued PWC request");
+    }
+  }
+  else {
+    // if we could not send, indicate that the request is still in the queue
+    sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
+  }
+  
+  return PHOTON_OK;
 }
 
 static int photon_pwc_try_packed(photonRequest req) {
@@ -87,32 +139,36 @@ static int photon_pwc_try_packed(photonRequest req) {
   return PHOTON_ERROR;
 }
 
-static int photon_pwc_try_ledger(photonRequest req) {
-  photonBI db;
+static int photon_pwc_test_ledger(int proc, int *ret_offset) {
   photonLedger l;
+  int curr;
+  l = photon_processes[proc].remote_pwc_ledger;
+  curr = photon_rdma_ledger_get_next(proc, l);
+  if (curr < 0) {
+    return PHOTON_ERROR_RESOURCE;
+  }
+  *ret_offset = curr;
+  return PHOTON_OK;
+}
+
+static int photon_pwc_try_ledger(photonRequest req, int curr) {
+  photonBI db;
   photonLedgerEntry entry;
   uintptr_t rmt_addr;
-  int rc, curr = 0;
+  int rc;
 
   req->flags |= REQUEST_FLAG_2PWC;
   req->rattr.events = 1;
 
-  l = photon_processes[req->proc].remote_pwc_ledger;
-  if (! (req->flags & REQUEST_FLAG_NO_RCE)) {
-    curr = photon_rdma_ledger_get_next(req->proc, l);
-    if (curr < 0) {
-      return PHOTON_ERROR_RESOURCE;
-    }
-  }
-  
   if (req->size > 0) {
     if (buffertable_find_containing( (void *)req->local_info.buf.addr, req->size, &db) != 0) {
       log_err("Tried posting from a buffer that's not registered");
       goto error_exit;
     }
-    
-    req->rattr.events = 2;
 
+    if (! (req->flags & REQUEST_FLAG_NO_RCE))
+      req->rattr.events = 2;
+    
     rc = __photon_backend->rdma_put(req->proc, req->local_info.buf.addr,
 				    req->remote_info.buf.addr, req->size, &(db->buf),
 				    &req->remote_info.buf, req->rattr.cookie,
@@ -124,6 +180,8 @@ static int photon_pwc_try_ledger(photonRequest req) {
   }
   
   if (! (req->flags & REQUEST_FLAG_NO_RCE)) {
+    photonLedger l = photon_processes[req->proc].remote_pwc_ledger;
+    assert(curr >= 0);
     entry = &(l->entries[curr]);
     entry->request = req->remote_info.id;
     
@@ -140,7 +198,7 @@ static int photon_pwc_try_ledger(photonRequest req) {
       goto error_exit;
     }
   }
-  
+
   return PHOTON_OK;
   
  error_exit:
@@ -151,11 +209,10 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 				       struct photon_buffer_priv_t priv,
                                        photon_rid local, photon_rid remote, int flags) {
   photonRequest req;
+  photonRequestTable rt;
   int rc;
-
+  
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
-
-  rc = PHOTON_ERROR;
 
   if (size && !ptr) {
     log_err("Trying to put size %lu and NULL ptr", size);
@@ -204,27 +261,44 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   // control the return of the remote id
   if (flags & PHOTON_REQ_PWC_NO_RCE) {
     req->flags |= REQUEST_FLAG_NO_RCE;
+    return photon_pwc_try_ledger(req, 0);
   }
 
   // set a cookie for the completion events
   req->rattr.cookie = req->id;
+
+  rt = photon_processes[proc].request_table;
   
+  // process any queued requests for this peer first
+  rc = photon_pwc_process_queued_req(proc, rt);
+  if (rc == PHOTON_OK) {
+    goto queue_exit;
+  }
+  
+  // otherwise try to send the current request
   rc = photon_pwc_try_packed(req);
   if (rc == PHOTON_ERROR_RESOURCE) {
-    rc = photon_pwc_try_ledger(req);
+    int offset;
+    rc = photon_pwc_test_ledger(proc, &offset);
+    if (rc == PHOTON_OK) {
+      return photon_pwc_try_ledger(req, offset);
+    }
+    else {
+      goto queue_exit;
+    }
   }
-  
-  if (rc != PHOTON_OK) {
-    sync_ms_queue_enqueue(photon_processes[proc].request_table->req_q, req);
-    goto error_exit;
+  else {
+    return PHOTON_OK;
   }
-  
+
+ queue_exit:
+  sync_ms_queue_enqueue(rt->req_q, req);
+  sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
   dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
-  
-  return PHOTON_OK;
+  return PHOTON_ERROR_RESOURCE;
   
  error_exit:
-  return rc;
+  return PHOTON_ERROR;
 }
 
 int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
@@ -306,22 +380,9 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   }
 
   if (flags & PHOTON_PROBE_EVQ) {
-    // process any queued PWC requests
-    for (i=start; i<end; i++) {
-      req = sync_ms_queue_dequeue(photon_processes[i].request_table->req_q);
-      if (req) {
-	rc = photon_pwc_try_ledger(req);
-	if (rc != PHOTON_OK) {
-	  sync_ms_queue_enqueue(photon_processes[i].request_table->req_q, req);
-	}
-      }
-    }
-
     // handle any pwc requests that were popped in some other path
     req = photon_pwc_pop_req();
     if (req != NULL) {
-      assert(req->op == REQUEST_OP_PWC);
-      assert(req->state == REQUEST_COMPLETED);
       if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
 	*flag = 1;
 	*request = req->local_info.id;
@@ -339,6 +400,10 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     }
     else if (rc == PHOTON_EVENT_NONE) {
       cookie = NULL_COOKIE;
+      // no event so process any queued PWC requests
+      for (i=start; i<end; i++) {
+	photon_pwc_process_queued_req(i, photon_processes[i].request_table);
+      }
     }
     else {
       // we found an event to process
