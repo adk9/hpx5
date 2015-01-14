@@ -73,23 +73,19 @@ int hpx_register_typed_action(hpx_action_type_t type, const char *key,
   _43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,_,...) _
 
 
-// Generic action registration macro.
-#define HPX_REGISTER(type, f, ...)                                            \
-  hpx_register_typed_action(type, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
-                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
-
 
 // Register a regular HPX action.
-#define HPX_REGISTER_ACTION(f, ...) hpx_register_typed_action(HPX_ACTION_DEFAULT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
+#define HPX_REGISTER_ACTION(f, ...)                                                          \
+  hpx_register_typed_action(HPX_ACTION_DEFAULT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f, \
                             __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
-
-//HPX_REGISTER(HPX_ACTION_DEFAULT, f, __VA_ARGS__)
 
 
 /// Register a pinned action. The global address that these actions
 /// are addressed to is pinned by the runtime during the course of
 /// execution of the action.
-#define HPX_REGISTER_PINNED_ACTION(f, ...) HPX_REGISTER(HPX_ACTION_PINNED, f, __VA_ARGS__)
+#define HPX_REGISTER_PINNED_ACTION(f, ...)                                                  \
+  hpx_register_typed_action(HPX_ACTION_PINNED, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f, \
+                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// Register an HPX "task". Tasks are non-blocking actions that do not
@@ -98,7 +94,9 @@ int hpx_register_typed_action(hpx_action_type_t type, const char *key,
 /// thread) on a locality. Tasks can be stolen, like other HPX
 /// threads, but avoid the stack creation overhead since they do not
 /// block.
-#define HPX_REGISTER_TASK(f, ...) HPX_REGISTER(HPX_ACTION_TASK, f, __VA_ARGS__)
+#define HPX_REGISTER_TASK(f, ...)                                                           \
+  hpx_register_typed_action(HPX_ACTION_TASK, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,   \
+                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// Register an HPX "interrupt". Interrupts are immediate,
@@ -107,7 +105,9 @@ int hpx_register_typed_action(hpx_action_type_t type, const char *key,
 /// asynchronous call). They avoid both, the stack creation overhead
 /// and the scheduling overhead, as they are executed inline by the
 /// communication thread.
-#define HPX_REGISTER_INTERRUPT(f, ...) HPX_REGISTER(HPX_ACTION_INTERRUPT, f, __VA_ARGS__)
+#define HPX_REGISTER_INTERRUPT(f, ...)                                                        \
+  hpx_register_typed_action(HPX_ACTION_INTERRUPT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
+                            __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// A helper macro to declare and define HPX actions.
