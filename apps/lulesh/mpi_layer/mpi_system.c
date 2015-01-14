@@ -210,17 +210,17 @@ static int mark_rank_inited(void *args) {
 }
 
 void mpi_system_register_actions() {
-  HPX_REGISTER_ACTION(&action_init, init_action);
-  HPX_REGISTER_ACTION(&action_shutdown, shutdown_action);
-  HPX_REGISTER_ACTION(&action_mark_rank_inited, mark_rank_inited);
-  HPX_REGISTER_ACTION(&action_send_remote, send_remote);
-  HPX_REGISTER_ACTION(&action_scatterv_recv, scatterv_recv);
-  HPX_REGISTER_ACTION(&action_gatherv_recv, gatherv_recv);
-  HPX_REGISTER_ACTION(&action_bcast_recv, bcast_recv);
-  HPX_REGISTER_ACTION(&action_gather_recv, gather_recv);
-  HPX_REGISTER_ACTION(&alltoallv_recv, alltoallv_recv);
-  HPX_REGISTER_ACTION(&action_alltoall_recv, alltoall_recv);
-  HPX_REGISTER_ACTION(&action_reduce_recv, reduce_recv);
+  HPX_REGISTER_ACTION(init_action, &action_init);
+  HPX_REGISTER_ACTION(shutdown_action, &action_shutdown);
+  HPX_REGISTER_ACTION(mark_rank_inited, &action_mark_rank_inited);
+  HPX_REGISTER_ACTION(send_remote, &action_send_remote);
+  HPX_REGISTER_ACTION(scatterv_recv, &action_scatterv_recv);
+  HPX_REGISTER_ACTION(gatherv_recv, &action_gatherv_recv);
+  HPX_REGISTER_ACTION(bcast_recv, &action_bcast_recv);
+  HPX_REGISTER_ACTION(gather_recv, &action_gather_recv);
+  HPX_REGISTER_ACTION(alltoallv_recv, &alltoallv_recv);
+  HPX_REGISTER_ACTION(alltoall_recv, &action_alltoall_recv);
+  HPX_REGISTER_ACTION(reduce_recv, &action_reduce_recv);
 }
 
 // only needs to be called once from HPX root node

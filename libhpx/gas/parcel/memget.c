@@ -72,8 +72,8 @@ static int _memget_request_action(_memget_request_args_t *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_memget_request, _memget_request_action);
-  LIBHPX_REGISTER_ACTION(&_memget_reply, _memget_reply_action);
+  LIBHPX_REGISTER_ACTION(_memget_request_action, &_memget_request);
+  LIBHPX_REGISTER_ACTION(_memget_reply_action, &_memget_reply);
 }
 
 int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {

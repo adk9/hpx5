@@ -50,7 +50,7 @@ static int _bcast_action(_bcast_args_t *args) {
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_bcast, _bcast_action);
+  LIBHPX_REGISTER_ACTION(_bcast_action, &_bcast);
 }
 
 

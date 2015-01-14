@@ -59,8 +59,8 @@ static int _memcpy_request_action(_memcpy_request_args_t *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_memcpy_request, _memcpy_request_action);
-  LIBHPX_REGISTER_ACTION(&_memcpy_reply, _memcpy_reply_action);
+  LIBHPX_REGISTER_ACTION(_memcpy_request_action, &_memcpy_request);
+  LIBHPX_REGISTER_ACTION(_memcpy_reply_action, &_memcpy_reply);
 }
 
 int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)

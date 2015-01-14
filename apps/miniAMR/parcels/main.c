@@ -862,29 +862,29 @@ int main(int argc, char **argv)
          runargs->objects[object_num].orig_size[i] = runargs->objects[object_num].size[i];
       }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(&_advance, _advance_action);
-  HPX_REGISTER_ACTION(&_plot_sends, _plot_sends_action);
-  HPX_REGISTER_ACTION(&_plot_result, _plot_result_action);
-  HPX_REGISTER_ACTION(&_comm_refine_sends, _comm_refine_sends_action);
-  HPX_REGISTER_ACTION(&_comm_refine_result, _comm_refine_result_action);
-  HPX_REGISTER_ACTION(&_comm_parent_sends, _comm_parent_sends_action);
-  HPX_REGISTER_ACTION(&_comm_parent_result, _comm_parent_result_action);
-  HPX_REGISTER_ACTION(&_comm_parent_reverse_sends,
-                      _comm_parent_reverse_sends_action);
-  HPX_REGISTER_ACTION(&_comm_parent_reverse_result,
-                      _comm_parent_reverse_result_action);
-  HPX_REGISTER_ACTION(&_comm_reverse_refine_sends,
-                      _comm_reverse_refine_sends_action);
-  HPX_REGISTER_ACTION(&_comm_reverse_refine_result,
-                      _comm_reverse_refine_result_action);
-  HPX_REGISTER_ACTION(&_comm_proc_sends, _comm_proc_sends_action);
-  HPX_REGISTER_ACTION(&_comm_proc_result, _comm_proc_result_action);
-  HPX_REGISTER_ACTION(&_comm_parent_proc_sends,
-                      _comm_parent_proc_sends_action);
-  HPX_REGISTER_ACTION(&_comm_parent_proc_result,
-                      _comm_parent_proc_result_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
+  HPX_REGISTER_ACTION(_advance_action, &_advance);
+  HPX_REGISTER_ACTION(_plot_sends_action, &_plot_sends);
+  HPX_REGISTER_ACTION(_plot_result_action, &_plot_result);
+  HPX_REGISTER_ACTION(_comm_refine_sends_action, &_comm_refine_sends);
+  HPX_REGISTER_ACTION(_comm_refine_result_action, &_comm_refine_result);
+  HPX_REGISTER_ACTION(_comm_parent_sends_action, &_comm_parent_sends);
+  HPX_REGISTER_ACTION(_comm_parent_result_action, &_comm_parent_result);
+  HPX_REGISTER_ACTION(_comm_parent_reverse_sends_action,
+                      &_comm_parent_reverse_sends);
+  HPX_REGISTER_ACTION(_comm_parent_reverse_result_action,
+                      &_comm_parent_reverse_result);
+  HPX_REGISTER_ACTION(_comm_reverse_refine_sends_action,
+                      &_comm_reverse_refine_sends);
+  HPX_REGISTER_ACTION(_comm_reverse_refine_result_action,
+                      &_comm_reverse_refine_result);
+  HPX_REGISTER_ACTION(_comm_proc_sends_action, &_comm_proc_sends);
+  HPX_REGISTER_ACTION(_comm_proc_result_action, &_comm_proc_result);
+  HPX_REGISTER_ACTION(_comm_parent_proc_sends_action,
+                      &_comm_parent_proc_sends);
+  HPX_REGISTER_ACTION(_comm_parent_proc_result_action,
+                      &_comm_parent_proc_result);
 
   printf(" Number of domains: %d\n",num_pes);
 
