@@ -21,11 +21,11 @@ static size_t num_elem;
 static size_t freq;
 
 // DC Actions
-hpx_action_t _sssp_dc_process_vertex = HPX_INVALID_ACTION_ID;
-hpx_action_t sssp_init_dc = HPX_INVALID_ACTION_ID;
-hpx_action_t _sssp_init_queues = HPX_INVALID_ACTION_ID;
-static hpx_action_t _sssp_delete_queues = HPX_INVALID_ACTION_ID;
-static hpx_action_t _handle_queue = HPX_INVALID_ACTION_ID;
+hpx_action_t _sssp_dc_process_vertex = HPX_ACTION_INVALID;
+hpx_action_t sssp_init_dc = HPX_ACTION_INVALID;
+hpx_action_t _sssp_init_queues = HPX_ACTION_INVALID;
+static hpx_action_t _sssp_delete_queues = HPX_ACTION_INVALID;
+static hpx_action_t _handle_queue = HPX_ACTION_INVALID;
 
 static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
   const hpx_addr_t target = hpx_thread_current_target();

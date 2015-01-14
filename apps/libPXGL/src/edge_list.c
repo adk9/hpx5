@@ -33,7 +33,7 @@ typedef struct {
   edge_list_t el;
   char filename[];
 } _edge_list_from_file_local_args_t;
-hpx_action_t _edge_list_from_file_local = HPX_INVALID_ACTION_ID;
+hpx_action_t _edge_list_from_file_local = HPX_ACTION_INVALID;
 int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *args) {
   // Read from the edge-list filename
   FILE *f = fopen(args->filename, "r");
@@ -72,7 +72,7 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
   return HPX_SUCCESS;
 }
 
-hpx_action_t edge_list_from_file = HPX_INVALID_ACTION_ID;
+hpx_action_t edge_list_from_file = HPX_ACTION_INVALID;
 int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   // Read from the edge-list filename
   FILE *f = fopen(args->filename, "r");
