@@ -26,11 +26,11 @@ static size_t yield;
 static size_t yield_size_threshold;
 static size_t handle_queues_count;
 
-static hpx_action_t _sssp_delete_queues = HPX_INVALID_ACTION_ID;
-static hpx_action_t _sssp_init_queues_dc1 = HPX_INVALID_ACTION_ID;
-static hpx_action_t _handle_queue = HPX_INVALID_ACTION_ID;
-static hpx_action_t _sssp_dc1_process_vertex = HPX_INVALID_ACTION_ID;
-static hpx_action_t sssp_init_dc1 = HPX_INVALID_ACTION_ID;
+static hpx_action_t _sssp_delete_queues = HPX_ACTION_INVALID;
+static hpx_action_t _sssp_init_queues_dc1 = HPX_ACTION_INVALID;
+static hpx_action_t _handle_queue = HPX_ACTION_INVALID;
+static hpx_action_t _sssp_dc1_process_vertex = HPX_ACTION_INVALID;
+static hpx_action_t sssp_init_dc1 = HPX_ACTION_INVALID;
 
 static void _set_affinity(const int thread_id) {
   while (HPX_THREAD_ID != thread_id)
@@ -199,11 +199,11 @@ void _switch_to_dc1() {
   _sssp_init_queues = _sssp_init_queues_dc1;
 }
 
-static __attribute__((constructor)) void _sssp_dc1_register_actions() {
-  HPX_REGISTER_TASK(&_sssp_dc1_process_vertex, _sssp_dc_process_vertex_action);
-  HPX_REGISTER_ACTION(&sssp_init_dc1, sssp_init_dc_action);
-  HPX_REGISTER_ACTION(&_sssp_delete_queues, _sssp_delete_queues_action);
-  HPX_REGISTER_TASK(&_handle_queue, _handle_queue_action);
-  HPX_REGISTER_ACTION(&_sssp_init_queues_dc1, _sssp_init_queues_action);
+static HPX_CONSTRUCTOR void _sssp_dc1_register_actions() {
+  HPX_REGISTER_TASK(_sssp_dc_process_vertex_action, &_sssp_dc1_process_vertex);
+  HPX_REGISTER_ACTION(sssp_init_dc_action, &sssp_init_dc1);
+  HPX_REGISTER_ACTION(_sssp_delete_queues_action, &_sssp_delete_queues);
+  HPX_REGISTER_TASK(_handle_queue_action, &_handle_queue);
+  HPX_REGISTER_ACTION(_sssp_init_queues_action, &_sssp_init_queues_dc1);
   sssp_queues = NULL;
 }

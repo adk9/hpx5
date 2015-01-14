@@ -133,7 +133,7 @@ _hpx_count_range_call_action(const hpx_count_range_call_args_t *const args) {
   return HPX_SUCCESS;
 }
 
-static hpx_action_t _hpx_count_range_call = HPX_INVALID_ACTION_ID;
+static hpx_action_t _hpx_count_range_call;
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
   LIBHPX_REGISTER_ACTION(_par_for_async_action, &_par_for_async);

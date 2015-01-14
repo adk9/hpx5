@@ -241,10 +241,10 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
   }
 
   int ret;
-  if (cif) {
-    ffi_raw_call(cif, FFI_FN(handler), &ret, args);
-  } else {
+  if (likely(cif != NULL)) {
     ret = handler(args);
+  } else {
+    ffi_raw_call(cif, FFI_FN(handler), &ret, args);
   }
 
   if (pinned) {
