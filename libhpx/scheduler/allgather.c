@@ -256,7 +256,7 @@ static hpx_status_t _allgather_setid_proxy(void *args) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_allgather_setid_action, _allgather_setid_proxy);
+  LIBHPX_REGISTER_ACTION(_allgather_setid_proxy, &_allgather_setid_action);
 }
 
 /// Update the gathering, will wait if the phase is reading.

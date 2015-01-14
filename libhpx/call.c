@@ -19,9 +19,11 @@
 ///
 
 #include <string.h>
+#include <stdarg.h>
 #include <hpx/hpx.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -48,7 +50,7 @@ static int _bcast_action(_bcast_args_t *args) {
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_bcast, _bcast_action);
+  LIBHPX_REGISTER_ACTION(_bcast_action, &_bcast);
 }
 
 
@@ -154,4 +156,28 @@ hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
   }
   hpx_lco_delete(lco, HPX_NULL);
   return e;
+}
+
+/// Experimental HPX typed call interface.
+int
+hpx_typed_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                                 hpx_addr_t c_target, hpx_action_t c_action, ...) {
+  void *args;
+  size_t len;
+  va_list vargs;
+  va_start(vargs, c_action);
+  int e = action_table_get_args(here->actions, action, vargs, &args, &len);
+  if (e != LIBHPX_OK) {
+    dbg_error("error getting arguments associated with action id %d\n", action);
+  }
+  va_end(vargs);
+
+  hpx_parcel_t *p = parcel_create(addr, action, args, len, HPX_NULL, HPX_ACTION_NULL,
+                                  hpx_thread_current_pid(), true);
+  if (!p)
+    return dbg_error("rpc: failed to create parcel.\n");
+
+  hpx_parcel_send_sync(p);
+  free(args);
+  return HPX_SUCCESS;
 }

@@ -315,18 +315,13 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
 }
 
 static HPX_CONSTRUCTOR void _sssp_register_actions() {
-  HPX_REGISTER_TASK(& _visit_all_in_buffer,
-                      _visit_all_in_buffer_action);
-  HPX_REGISTER_ACTION(& _send_next_level,
-                      _send_next_level_action);
-  HPX_REGISTER_ACTION(& _init_buckets,
-                      _init_buckets_action);
-  HPX_REGISTER_TASK(& _delta_sssp_increase_active_counts,
-                      _delta_sssp_increase_active_counts_action);
-  HPX_REGISTER_TASK(& _visit_all_in_current_level,
-                      _visit_all_in_current_level_action);
-  HPX_REGISTER_ACTION(& _delete_buckets,
-                      _delete_buckets_action);
-  HPX_REGISTER_ACTION(& call_delta_sssp,
-                      call_delta_sssp_action);
+  HPX_REGISTER_ACTION(_visit_all_in_buffer_action, &_visit_all_in_buffer);
+  HPX_REGISTER_ACTION(_send_next_level_action, &_send_next_level);
+  HPX_REGISTER_ACTION(_init_buckets_action, &_init_buckets);
+  HPX_REGISTER_ACTION(_delta_sssp_increase_active_counts_action,
+                      &_delta_sssp_increase_active_counts);
+  HPX_REGISTER_ACTION(_visit_all_in_current_level_action,
+                      &_visit_all_in_current_level);
+  HPX_REGISTER_ACTION(_delete_buckets_action, &_delete_buckets);
+  HPX_REGISTER_ACTION(call_delta_sssp_action, &call_delta_sssp);
 }

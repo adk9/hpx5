@@ -233,7 +233,7 @@ static int _action_pong(args_t *args) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(&_main, _action_main);
-  HPX_REGISTER_ACTION(&_ping, _action_ping);
-  HPX_REGISTER_ACTION(&_pong, _action_pong);
+  HPX_REGISTER_ACTION(_action_main, &_main);
+  HPX_REGISTER_ACTION(_action_ping, &_ping);
+  HPX_REGISTER_ACTION(_action_pong, &_pong);
 }
