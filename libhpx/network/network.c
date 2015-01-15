@@ -100,15 +100,15 @@ static hpx_action_t _probe = 0;
 
 static int _probe_handler(void *o) {
   struct network *network = *(struct network **)o;
-  hpx_parcel_t *stack = NULL;
+  hpx_parcel_t *p = NULL;
   int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
   if (e != HPX_SUCCESS)
     return e;
 
-  while ((stack = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
-    hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&stack))) {
+  while ((p = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
+    while (p != NULL) {
       scheduler_spawn(p);
+      p = p->next;
     }
   }
   return HPX_SUCCESS;
