@@ -109,7 +109,6 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
 
   AC_MSG_NOTICE([running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir])
   # The eval makes quoting arguments work.
-  echo $src_dir $ac_srcdir $PWD
   eval "\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
        --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\"" ||
     AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
