@@ -146,6 +146,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 
   // initialize the structure with defaults
   p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->next     = NULL;
   p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
