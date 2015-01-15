@@ -139,7 +139,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   LIBHPX_REGISTER_ACTION(_par_for_async_action, &_par_for_async);
   LIBHPX_REGISTER_ACTION(_par_call_async_action, &_par_call_async);
   LIBHPX_REGISTER_ACTION(_hpx_count_range_call_action,
-                         &_hpx_count_range_call_action);
+                         &_hpx_count_range_call);
 }
 
 
