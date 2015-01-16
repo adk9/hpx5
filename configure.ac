@@ -46,7 +46,7 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
-HPX_CONTRIB_LIBFFI([contrib/libffi-3.2.1], [hpx_])
+HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
