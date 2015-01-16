@@ -25,15 +25,15 @@
 ///
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
-/// @param   args The argument data buffer for @p action.
-/// @param   alen The length of the @p args buffer.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
+/// @param   args The argument data buffer for @p action.
+/// @param   alen The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely/
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
-                  size_t alen, void *out, size_t olen);
+int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
+                  const void *args, size_t alen);
 
 
 /// Locally synchronous call interface.
@@ -45,14 +45,14 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, const void *args,
 ///
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
+/// @param result An address of an LCO to trigger with the result.
 /// @param   args The argument data buffer for @p action.
 /// @param    len The length of the @p args buffer.
-/// @param result An address of an LCO to trigger with the result.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-             size_t len, hpx_addr_t result);
+int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
+             const void *args, size_t len);
 
 
 /// Locally synchronous call with continuation interface.
@@ -63,17 +63,16 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
 ///
 /// @param   addr   The address that defines where the action is executed.
 /// @param action   The action to perform.
-/// @param   args   The argument data buffer for @p action.
-/// @param    len   The length of the @p args buffer.
 /// @param c_target The address where the continuation action is executed.
 /// @param c_action The continuation action to perform.
+/// @param   args   The argument data buffer for @p action.
+/// @param    len   The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int
-hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                           const void *args, size_t len,
-                           hpx_addr_t c_target, hpx_action_t c_action);
+int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                               hpx_addr_t c_target, hpx_action_t c_action,
+                               const void *args, size_t len);
 
 
 /// Fully asynchronous call interface.
@@ -87,17 +86,17 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///
 /// @param       addr The address that defines where the action is executed.
 /// @param     action The action to perform.
-/// @param       args The argument data buffer for @p action.
-/// @param        len The length of the @p args buffer.
 /// @param args_reuse The global address of an LCO to signal local completion
 ///                   (i.e., R/W access to, or free of @p args is safe),
 ///                   HPX_NULL if we don't care.
 /// @param     result The global address of an LCO to signal with the result.
+/// @param       args The argument data buffer for @p action.
+/// @param        len The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
-                   size_t len, hpx_addr_t args_reuse, hpx_addr_t result);
+int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t args_reuse,
+                   hpx_addr_t result, const void *args, size_t len);
 
 
 /// Call with current continuation.
@@ -108,15 +107,16 @@ int hpx_call_async(hpx_addr_t addr, hpx_action_t action, const void *args,
 ///
 /// @param    addr The address where the action is executed.
 /// @param  action The action to perform.
-/// @param    args The argument data buffer for @p action.
-/// @param     len The length of the @p args buffer.
 /// @param cleanup A callback function that is run after the action
 ///                has been invoked.
 /// @param     env The environment to pass to the cleanup function.
+/// @param    args The argument data buffer for @p action.
+/// @param     len The length of the @p args buffer.
+///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
-void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args, size_t len,
-                 void (*cleanup)(void*), void *env);
+void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
+                 void *env, const void *args, size_t len);
 
 
 /// HPX collective operations.
@@ -125,13 +125,13 @@ void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args, size_t 
 /// all available localities. The output values are not returned, but the
 /// completion of the broadcast operation can be tracked through the @p lco LCO.
 /// @param action the action to perform
-/// @param   args the argument data for @p action
-/// @param    len the length of @p args
 /// @param    lco the address of an LCO to trigger when the broadcast operation
 ///               is completed
+/// @param   args the argument data for @p action
+/// @param    len the length of @p args
+///
 /// @returns      HPX_SUCCESS if no errors were encountered
-int hpx_bcast(hpx_action_t action, const void *args, size_t len,
-              hpx_addr_t lco);
+int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len);
 
 /// HPX collective operations.
 ///
@@ -146,10 +146,9 @@ int hpx_bcast(hpx_action_t action, const void *args, size_t len,
 int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
 
 
-/// Experimental HPX call interface.
+/// Experimental HPX typed call interface.
 ///
-int
-hpx_call2(hpx_addr_t addr, hpx_action_t action, ...);
-
+int hpx_typed_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                                     hpx_addr_t c_target, hpx_action_t c_action, ...);
 
 #endif
