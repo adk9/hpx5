@@ -39,7 +39,7 @@ static int _main_action(void *args) {
   hpx_lco_delete(done, HPX_NULL);
 
   bool output = false;
-  hpx_call_sync(data, _verify, NULL, 0, &output, sizeof(output));
+  hpx_call_sync(data, _verify, &output, sizeof(output), NULL, 0);
   assert(output == false);
   printf("The hpx_gas_memput succeeded for size = %d\n", SIZE);
 
