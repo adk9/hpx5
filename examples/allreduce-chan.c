@@ -58,7 +58,7 @@ static int _main_action(void *args) {
   for (int k=0; k<ranks; ++k) {
     if (k == HPX_LOCALITY_ID) continue;
     rank = hpx_lco_chan_array_at(channels, k, 1, 1);
-    hpx_call(rank, _allreduce, &channels, sizeof(channels), and);
+    hpx_call(rank, _allreduce, and, &channels, sizeof(channels));
   }
 
   hpx_time_t t1 = hpx_time_now();
