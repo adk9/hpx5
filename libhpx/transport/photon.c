@@ -197,7 +197,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     pbuf.priv = priv;
 
     if (rid) {
-      flags = PHOTON_REQ_USERID;
+      // flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
     }
     else {
@@ -249,7 +249,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     pbuf.priv = priv;
 
     if (rid) {
-      flags = PHOTON_REQ_USERID;
+      // flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
     }
     else {
