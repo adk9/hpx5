@@ -1,7 +1,0 @@
-nx = 1024
-ny = 1024
-k = 0.1
-nsteps = 20000
-wstep = 100
-fileURI = /home/kissel/FRAMES/frame
-autogen = 1
