@@ -22,7 +22,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <jemalloc/jemalloc_hpx.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 
