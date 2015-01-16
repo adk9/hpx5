@@ -13,3 +13,5 @@ AM_CFLAGS                      += @MPI_CFLAGS@
 endif
 
 cpi_LDADD                       = $(all_LIBS)
+
+cpi_DEPENDENCIES                = $(all_LIBS)

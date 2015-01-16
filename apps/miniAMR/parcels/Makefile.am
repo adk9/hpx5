@@ -21,6 +21,7 @@ miniamr_SOURCES  = comm_parent.c \
 
 miniamr_LDFLAGS  = 
 miniamr_LDADD    = $(HPX_LDADD) -lm
+miniamr_DEPENDENCIES = $(HPX_LDADD)
 
 miniamr_CPPFLAGS = -I$(top_srcdir)/include
 miniamr_CFLAGS   = @MPI_CFLAGS@

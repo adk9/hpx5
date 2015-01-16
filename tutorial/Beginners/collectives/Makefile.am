@@ -17,3 +17,7 @@ endif
 allreduce_LDADD               = $(all_LIBS)
 allgather_LDADD               = $(all_LIBS)
 alltoall_LDADD                = $(all_LIBS)
+
+allreduce_DEPENDENCIES        = $(all_LIBS)
+allgather_DEPENDENCIES        = $(all_LIBS)
+alltoall_DEPENDENCIES         = $(all_LIBS)

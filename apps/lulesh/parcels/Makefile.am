@@ -6,6 +6,7 @@ luleshparcels_SOURCES  = lulesh-comp.c  lulesh-hpx.c  lulesh-util.c  lulesh-xfer
 
 luleshparcels_LDFLAGS  = 
 luleshparcels_LDADD    = $(HPX_LDADD) -lm
+luleshparcels_DEPENDENCIES = $(HPX_LDADD)
 
 luleshparcels_CPPFLAGS = -I$(top_srcdir)/include
 luleshparcels_CFLAGS   = @MPI_CFLAGS@

@@ -13,3 +13,5 @@ AM_CFLAGS                      += @MPI_CFLAGS@
 endif
 
 heat_1_LDADD                    = $(all_LIBS)
+
+heat_1_DEPENDENCIES             = $(all_LIBS)
