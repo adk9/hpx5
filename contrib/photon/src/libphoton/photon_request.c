@@ -33,8 +33,8 @@ photonRequest photon_get_request(int proc) {
   }
 
   if (req->state && (req->state != REQUEST_FREE)) {
-    dbg_trace("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
-	      req->id, req->state, req_curr, tail);
+    log_warn("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
+	     req->id, req->state, req_curr, tail);
   }
 
   memset(req, 0, sizeof(struct photon_req_t));
@@ -65,8 +65,8 @@ photonRequest photon_lookup_request(photon_rid rid) {
   if (id > 0 && id <= rt->size) {
     photonRequest req = &rt->reqs[id];
     if (req->state == REQUEST_FREE) {
-      dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
-	       req->op, req->type, req->id);
+      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+		req->op, req->type, req->id);
     }
     return req;
   }
