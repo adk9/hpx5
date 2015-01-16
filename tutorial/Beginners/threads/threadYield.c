@@ -49,7 +49,7 @@ static int _main_action(void *args) {
   hpx_addr_t and = hpx_lco_and_new(2);
   for (int i = 0; i < 2; i++) {
     thread_args[i].message = messages[i];
-    hpx_call(HPX_HERE, _runMe, &thread_args[i], sizeof(thread_args), and);
+    hpx_call(HPX_HERE, _runMe, and, &thread_args[i], sizeof(thread_args));
   }
 
   do {

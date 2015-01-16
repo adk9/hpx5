@@ -65,9 +65,9 @@ static int _main_action(void *args) {
   hpx_addr_t completed = hpx_lco_and_new(2);
 
   addr1 = hpx_lco_chan_array_at(channels, 0, 8, 1);
-  hpx_call(addr1, _sender, &channels, sizeof(channels), completed);
+  hpx_call(addr1, _sender, completed, &channels, sizeof(channels));
   addr2 = hpx_lco_chan_array_at(channels, 1, 8, 1);
-  hpx_call(addr2, _receiver, &channels, sizeof(channels), completed);
+  hpx_call(addr2, _receiver, completed, &channels, sizeof(channels));
 
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);

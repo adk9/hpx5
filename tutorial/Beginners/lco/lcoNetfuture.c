@@ -64,7 +64,7 @@ static int _main_action(args_t *args) {
 
   args->message = base;
 
-  hpx_call(HPX_HERE, _get, args, sizeof(*args), done);
+  hpx_call(HPX_HERE, _get, done, args, sizeof(*args));
  
   hpx_lco_wait(done); 
   hpx_netfutures_fini();

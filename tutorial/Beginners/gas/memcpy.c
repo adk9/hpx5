@@ -52,9 +52,8 @@ static int _main_action(void *args) {
   hpx_addr_t done = hpx_lco_and_new(size);
   for (int i = 0; i < size; i++) {
     hpx_addr_t remote_block = hpx_addr_add(data, i * BLOCK_SIZE, BLOCK_SIZE);
-    hpx_call(remote_block, _init_array, 
-             &src[i * BLOCK_COUNT], BLOCK_SIZE, 
-             done);
+    hpx_call(remote_block, _init_array, done, &src[i * BLOCK_COUNT],
+             BLOCK_SIZE);
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
