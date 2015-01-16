@@ -380,28 +380,35 @@ gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
     return NULL;
   }
 
-  if (global_heap)
+  if (global_heap) {
     return &_pgas_vtable;
+  }
 
   global_heap = malloc(sizeof(*global_heap));
   if (!global_heap) {
-    dbg_error("pgas: could not allocate global heap\n");
-    return NULL;
+    dbg_error("could not allocate global heap\n");
+    goto unwind0;
   }
 
   int e = heap_init(global_heap, heap_size, (here->rank == 0));
-  if (e) {
-    dbg_error("pgas: failed to allocate global heap\n");
-    free(global_heap);
-    return NULL;
+  if (e != LIBHPX_OK) {
+    dbg_error("failed to allocate global heap\n");
+    goto unwind1;
   }
 
-  if (heap_bind_transport(global_heap, transport)) {
-    if (!mallctl_disable_dirty_page_purge()) {
-      dbg_error("pgas: failed to disable dirty page purging\n");
-      return NULL;
-    }
+  if (heap_bind_transport(global_heap, transport) != LIBHPX_OK) {
+    dbg_error("failed to bind the transport\n");
+  }
+
+  if (mallctl_disable_dirty_page_purge() != LIBHPX_OK) {
+    dbg_error("failed to disable dirty page purging\n");
+    goto unwind1;
   }
 
   return &_pgas_vtable;
+
+ unwind1:
+  free(global_heap);
+ unwind0:
+  return NULL;
 }

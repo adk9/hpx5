@@ -23,6 +23,7 @@
 #include "libhpx/btt.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -260,7 +261,7 @@ static int _request_cancel(void *request) {
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
 static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
-  return 0;
+  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
