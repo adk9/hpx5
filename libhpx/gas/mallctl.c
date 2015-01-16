@@ -33,10 +33,10 @@ int mallctl_get_lg_dirty_mult(void) {
 /// This is a hack to force jemalloc to avoid purging pages. The
 /// opt.lg_dirty_mult is a read-only config value, but we can force it to be
 /// what we want because we're using an embedded jemalloc.
-extern ssize_t je_opt_lg_dirty_mult;
+extern ssize_t libhpx_global_je_opt_lg_dirty_mult;
 
 bool mallctl_disable_dirty_page_purge(void) {
-  je_opt_lg_dirty_mult = -1;
+  libhpx_global_je_opt_lg_dirty_mult = -1;
   return (mallctl_get_lg_dirty_mult() == -1);
 }
 
