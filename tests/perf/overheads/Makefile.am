@@ -48,6 +48,16 @@ time_lco_allreduce_SOURCES	= time_lco_allreduce.c
 time_lco_allgather_SOURCES	= time_lco_allgather.c
 time_lco_alltoall_SOURCES	= time_lco_alltoall.c
 
+time_gas_alloc_DEPENDENCIES	= $(HPX_LDADD)
+time_gas_addr_trans_DEPENDENCIES= $(HPX_LDADD)
+time_lco_chan_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_sema_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_and_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_future_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_allreduce_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_allgather_DEPENDENCIES	= $(HPX_LDADD)
+time_lco_alltoall_DEPENDENCIES	= $(HPX_LDADD)
+
 if HAVE_PHOTON
 if ENABLE_LENGTHY_TESTS
 PERFTESTS           += time_lco_netfutures \
@@ -57,6 +67,8 @@ check_PROGRAMS      += time_lco_netfutures \
                        time_lco_netfutures_msgSize
 endif
 time_lco_netfutures_SOURCES		= time_lco_netfutures.c
+time_lco_netfutures_DEPENDENCIES	= $(HPX_LDADD)
 time_lco_netfutures_msgSize_SOURCES	= time_lco_netfutures_msgSize.c
+time_lco_netfutures_msgSize_DEPENDENCIES= $(HPX_LDADD)
 endif
 

@@ -35,6 +35,7 @@ hpxmpi_LDFLAGS  =
 hpxmpi_CPPFLAGS = -I$(top_srcdir)/include
 hpxmpi_CFLAGS   = @HWLOC_CFLAGS@ @PAPI_CFLAGS@
 hpxmpi_LDADD    = libhpxmpi.la $(HPX_LDADD)
+hpxmpi_DEPENDENCIES = $(HPX_LDADD)
 
 if HAVE_PHOTON
 hpxmpi_CFLAGS   += $(PHOTON_CFLAGS)

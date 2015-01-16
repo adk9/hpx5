@@ -17,3 +17,7 @@ endif
 hpx_allreduce_LDADD             = $(all_LIBS)
 hpx_allgather_LDADD             = $(all_LIBS)
 hpx_alltoall_LDADD              = $(all_LIBS)
+
+hpx_allreduce_DEPENDENCIES      = $(all_LIBS)
+hpx_allgather_DEPENDENCIES      = $(all_LIBS)
+hpx_alltoall_DEPENDENCIES       = $(all_LIBS)

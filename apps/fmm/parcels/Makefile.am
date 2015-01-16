@@ -6,6 +6,7 @@ fmmparcels_SOURCES  = fmm-action.c  fmm-main.c  fmm-param.c
 
 fmmparcels_LDFLAGS  = 
 fmmparcels_LDADD    = $(HPX_LDADD) -lm
+fmmparcels_DEPENDENCIES = $(HPX_LDADD)
 
 fmmparcels_CPPFLAGS = -I$(top_srcdir)/include
 fmmparcels_CFLAGS   = @MPI_CFLAGS@
