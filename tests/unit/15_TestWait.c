@@ -69,17 +69,17 @@ int t15_spawn_action(const hpx_addr_t * const termination_lco) {
       hpx_lco_and_new(WAITERS)
     };
 
-    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_futures[0],
-                 sizeof(hpx_addr_t), HPX_NULL);
+    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, HPX_NULL,
+                 &test_futures[0], sizeof(hpx_addr_t));
     assert(e == HPX_SUCCESS);
 
     for(size_t j = 0; j < WAITERS; ++j) {
-      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_futures[0],
-                   sizeof(hpx_addr_t), test_futures[2]);
+      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_futures[2],
+                   test_futures[0], sizeof(hpx_addr_t));
       assert(e == HPX_SUCCESS);
     }
-    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_futures,
-                 sizeof(test_futures), HPX_NULL);
+    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, HPX_NULL,
+                 test_futures, sizeof(test_futures));
     assert(e == HPX_SUCCESS);
 
     // test and lco
@@ -90,19 +90,19 @@ int t15_spawn_action(const hpx_addr_t * const termination_lco) {
     };
 
     for(size_t j = 0; j < PARTICIPANTS; ++j) {
-      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, &test_ands[0],
-                   sizeof(hpx_addr_t), HPX_NULL);
+      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_set, HPX_NULL,
+                   &test_ands[0], sizeof(hpx_addr_t));
       assert(e == HPX_SUCCESS);
     }
 
     for(size_t j = 0; j < WAITERS; ++j) {
-      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_ands[0],
-                   sizeof(hpx_addr_t), test_ands[2]);
+      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_ands[2],
+                   test_ands[0], sizeof(hpx_addr_t));
       assert(e == HPX_SUCCESS);
     }
 
-    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, test_ands,
-                 sizeof(test_ands), HPX_NULL);
+    e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_delete, HPX_NULL,
+                 test_ands, sizeof(test_ands));
     assert(e == HPX_SUCCESS);
   }
   return HPX_SUCCESS;
@@ -115,7 +115,7 @@ START_TEST (test_libhpx_lco_wait) {
   const hpx_time_t t1 = hpx_time_now();
 
   const hpx_addr_t termination_lco = hpx_lco_and_new(2 * LCOS_PER_LOCALITY * HPX_LOCALITIES);
-  hpx_bcast(t15_spawn, &termination_lco, sizeof(termination_lco), HPX_NULL);
+  hpx_bcast(t15_spawn, HPX_NULL, &termination_lco, sizeof(termination_lco));
   hpx_lco_wait(termination_lco);
   hpx_lco_delete(termination_lco, HPX_NULL);
 
