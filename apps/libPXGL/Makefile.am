@@ -28,4 +28,4 @@ libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_32BIT
 else
 libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_64BIT 
 endif
-libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la -lm
+libpxgl_la_LIBADD    = $(HPX_LDADD) -lm

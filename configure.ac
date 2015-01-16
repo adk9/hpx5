@@ -37,8 +37,8 @@ AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror]
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-LT_INIT()
-#LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
+#LT_INIT()
+LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
@@ -227,8 +227,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_JEMALLOC_LDADD $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
-hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
+hpx_extra_ldflags="$HPX_JEMALLOC_LDFLAGS $HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -238,14 +238,13 @@ AS_IF([test "x$enable_wall" != xno],
 AS_IF([test "x$enable_werror" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
 
-AS_IF([test "x$enable_jemalloc" != xno],
-  [HPX_JEMALLOC_LDADD="../contrib/jemalloc/src/libjemalloc.la $HPX_JEMALLOC_LDADD"])
-
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
 LDFLAGS="$hpx_extra_ldflags $LDFLAGS"
+
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

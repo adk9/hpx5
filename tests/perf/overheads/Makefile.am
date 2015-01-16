@@ -34,7 +34,7 @@ NPROCS ?= 2
 LOG_COMPILER = $(TEST_RUNNER)
 
 AM_LDFLAGS         = $(LIBTOOL_WRAPPER_LDFLAGS)
-LDADD              = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ @MPI_LIBS@ -lm
+LDADD              = $(HPX_LDADD) @CHECK_LIBS@ @MPI_LIBS@ -lm
 AM_CPPFLAGS        = -I$(top_srcdir)/include -D_POSIX_C_SOURCE=200809L
 AM_CFLAGS          = @MPI_CFLAGS@ @CHECK_CFLAGS@ @HWLOC_CFLAGS@
 

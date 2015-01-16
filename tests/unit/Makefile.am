@@ -18,7 +18,7 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           13_TestMemput.c \
 			  15_TestWait.c
 
-hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm
+hpxtest_LDADD           = $(HPX_LDADD) @CHECK_LIBS@ -lm
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 

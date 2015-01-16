@@ -6,7 +6,7 @@ netbench_SOURCES  = netbench.c
 
 AM_CPPFLAGS        = -I$(top_srcdir)/include
 AM_CFLAGS          =
-AM_LDFLAGS         = $(top_builddir)/libhpx/libhpx.la
+AM_LDFLAGS         = $(HPX_LDADD)
 
 if HAVE_PAPI
 AM_CFLAGS           += @PAPI_CFLAGS@
