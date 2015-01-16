@@ -108,8 +108,8 @@ START_TEST (test_libhpx_lco_channelSendRecv)
   }; 
 
   // Spawn the sender thread.
-  hpx_call(HPX_HERE, t09_sender, channels, sizeof(channels), done); 
-  hpx_call(HPX_HERE, t09_receiver, channels, sizeof(channels), done);
+  hpx_call(HPX_HERE, t09_sender, done, channels, sizeof(channels)); 
+  hpx_call(HPX_HERE, t09_receiver, done, channels, sizeof(channels));
   hpx_lco_wait(done);
 
   hpx_lco_delete(channels[0], HPX_NULL);
@@ -177,8 +177,8 @@ START_TEST (test_libhpx_lco_channelSendInOrder)
     hpx_lco_chan_new()
   };
 
-  hpx_call(HPX_HERE, t09_sendInOrder, channel, sizeof(channel), done);
-  hpx_call(HPX_HERE, t09_receiveInOrder, channel, sizeof(channel), done);
+  hpx_call(HPX_HERE, t09_sendInOrder, done, channel, sizeof(channel));
+  hpx_call(HPX_HERE, t09_receiveInOrder, done, channel, sizeof(channel));
   hpx_lco_wait(done);
 
   hpx_lco_delete(channel[0], HPX_NULL);
@@ -211,7 +211,7 @@ START_TEST (test_libhpx_lco_channelTryRecvEmpty)
 
   hpx_addr_t done = hpx_lco_and_new(1);
   hpx_addr_t channel = hpx_lco_chan_new();
-  hpx_call(HPX_HERE, t09_tryRecvEmpty, &channel, sizeof(channel), done);
+  hpx_call(HPX_HERE, t09_tryRecvEmpty, done, &channel, sizeof(channel));
   hpx_lco_wait(done);
   hpx_lco_delete(channel, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
@@ -274,9 +274,9 @@ START_TEST (test_libhpx_lco_channelArray)
   hpx_addr_t completed = hpx_lco_and_new(2);
     
   addr1 = hpx_lco_chan_array_at(channels, 0, 8, 1);
-  hpx_call(addr1, t09_senderChannel, &channels, sizeof(channels), completed);
+  hpx_call(addr1, t09_senderChannel, completed, &channels, sizeof(channels));
   addr2 = hpx_lco_chan_array_at(channels, 1, 8, 1);
-  hpx_call(addr2, t09_receiverChannel, &channels, sizeof(channels), completed);
+  hpx_call(addr2, t09_receiverChannel, completed, &channels, sizeof(channels));
 
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
