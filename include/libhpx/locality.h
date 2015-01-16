@@ -27,7 +27,6 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <jemalloc/jemalloc_hpx.h>
 #include <hwloc.h>
 
 #include "libhpx/action.h"

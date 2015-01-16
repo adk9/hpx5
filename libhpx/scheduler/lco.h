@@ -13,8 +13,9 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
-#include "hpx/attributes.h"
-#include "libsync/lockable_ptr.h"
+#include <jemalloc/jemalloc_hpx.h>
+#include <hpx/attributes.h>
+#include <libsync/lockable_ptr.h>
 
 /// ----------------------------------------------------------------------------
 /// This constant is used to determine when a set should be performed
@@ -158,7 +159,7 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_INTERNAL;
 
-void lco_future_set(lco_t *lco, int size, const void *from) 
+void lco_future_set(lco_t *lco, int size, const void *from)
   HPX_INTERNAL;
 
 #endif // LIBHPX_LCO_H
