@@ -25,6 +25,7 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
@@ -127,24 +128,28 @@ static int
 _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
-  if (photon_register_buffer(b, len))
-    dbg_error("photon: could not pin buffer of size %lu.\n", len);
+  if (photon_register_buffer(b, len)) {
+    dbg_error("could not pin buffer of size %lu.\n", len);
+  }
 
   rkey_t *r = new_rkey(transport, b);
-  if (!r)
-    dbg_error("photon: could not allocate registration key.\n");
+  if (!r) {
+    dbg_error("could not allocate registration key.\n");
+  }
 
   int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
-  if (rc != PHOTON_OK)
-    dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
+  if (rc != PHOTON_OK) {
+    dbg_error("could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
               (uintptr_t)b, len);
+  }
 
   assert(!transport->rkey_table);
   transport->rkey_table = exchange_rkey_table(transport, r);
-  if (!transport->rkey_table)
-    dbg_error("photon: error exchanging metadata with peers.\n");
+  if (!transport->rkey_table) {
+    dbg_error("error exchanging metadata with peers.\n");
+  }
 
-  return 1;
+  return LIBHPX_OK;
 }
 
 
@@ -362,8 +367,8 @@ _test(transport_class_t *t, void *request, int *success)
     do {
       e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
       if (e == PHOTON_ERROR) {
-	return dbg_error("photon: could not send FIN back to %lu.\n",
-			 status.src_addr.global.proc_id);
+    return dbg_error("photon: could not send FIN back to %lu.\n",
+             status.src_addr.global.proc_id);
       }
     } while (e == PHOTON_ERROR_RESOURCE);
   }
@@ -385,9 +390,9 @@ _progress(transport_class_t *t, transport_op_t op)
     {
       request_t **i = &(photon->progress)->pending_sends;
       while (*i != NULL) {
-	request_t *j = *i;
-	photon_cancel((photon_rid)j->request, 0);
-	*i = j->next;
+    request_t *j = *i;
+    photon_cancel((photon_rid)j->request, 0);
+    *i = j->next;
       }
     }
     break;

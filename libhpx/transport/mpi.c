@@ -22,6 +22,7 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "progress.h"
@@ -98,7 +99,7 @@ static void _mpi_delete(transport_class_t *transport) {
 /// ----------------------------------------------------------------------------
 static int _mpi_pin(transport_class_t *transport, const void* buffer,
                     size_t len) {
-  return 0;
+  return LIBHPX_OK;
 }
 
 

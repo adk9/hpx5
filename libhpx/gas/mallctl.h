@@ -13,14 +13,13 @@
 #ifndef LIBHPX_GAS_MALLCTL_H
 #define LIBHPX_GAS_MALLCTL_H
 
-#include <stddef.h>
 #include <hpx/attributes.h>
 #include <jemalloc/jemalloc_hpx.h>
 
 int mallctl_get_lg_dirty_mult(void)
   HPX_INTERNAL;
 
-bool mallctl_disable_dirty_page_purge(void)
+int mallctl_disable_dirty_page_purge(void)
   HPX_INTERNAL;
 
 size_t mallctl_get_chunk_size(void)
