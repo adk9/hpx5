@@ -190,7 +190,7 @@ int action_table_get_args(const struct action_table *table, hpx_action_t id,
   if (id == HPX_ACTION_INVALID) {
     dbg_log("action registration is not complete");
     return LIBHPX_ERROR;
-  } 
+  }
 
   ffi_cif *cif = NULL;
   if (id < table->n) {
