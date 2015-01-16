@@ -210,7 +210,7 @@ uintptr_t lco_get_triggered(const lco_t *lco) {
 void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_fini, NULL, 0, HPX_NULL, rsync);
+    hpx_call_async(target, _lco_fini, HPX_NULL, rsync, NULL, 0);
     return;
   }
 
@@ -235,8 +235,8 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
 
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_error, &code, sizeof(code),
-                   HPX_NULL, rsync);
+    hpx_call_async(target, _lco_error, HPX_NULL, rsync,
+                   &code, sizeof(code));
     return;
   }
 
@@ -258,7 +258,7 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
 
   lco_t *lco = NULL;
   if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
+    hpx_call_async(target, hpx_lco_set_action, lsync, rsync, value, size);
     return;
   }
 
@@ -296,7 +296,7 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
     // in which case we would also need an lco_try_wait_action
     // but for now, we will just have the remote side wait and we will
     // bail early if necessary
-    hpx_status_t status = hpx_call(target, _lco_wait, NULL, 0, done);
+    hpx_status_t status = hpx_call(target, _lco_wait, done, NULL, 0);
     if (status != HPX_SUCCESS) {
       return status;
     }
@@ -317,7 +317,7 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_get, &size, sizeof(size), value, size);
+    return hpx_call_sync(target, _lco_get, value, size, &size, sizeof(size));
   }
 
   const lco_class_t *class = _lco_class(lco);
@@ -343,7 +343,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
-      hpx_call_async(lcos[i], _lco_wait, NULL, 0, HPX_NULL, remotes[i]);
+      hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
     }
   }
 
@@ -391,8 +391,8 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
-      hpx_call_async(lcos[i], _lco_get, &sizes[i], sizeof(sizes[i]), HPX_NULL,
-                     remotes[i]);
+      hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
+                     sizeof(sizes[i]));
     }
   }
 
