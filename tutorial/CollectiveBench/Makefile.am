@@ -5,7 +5,7 @@ hpx_allreduce_SOURCES           = hpx_allreduce.c
 hpx_allgather_SOURCES           = hpx_allgather.c
 hpx_alltoall_SOURCES            = hpx_alltoall.c
 
-all_LIBS                        = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                        = $(HPX_LDADD)
 
 AM_CPPFLAGS                     = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                       =
