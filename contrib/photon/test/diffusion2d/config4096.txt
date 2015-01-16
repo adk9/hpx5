@@ -1,7 +1,0 @@
-nx = 4096
-ny = 4096
-k = 0.1
-nsteps = 3000
-wstep = 100
-fileURI = /usa/swany-grp/photon/frames
-autogen = 1
