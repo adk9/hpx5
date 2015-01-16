@@ -49,7 +49,7 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
     curr = sync_load(&l->curr, SYNC_RELAXED);
     tail = sync_load(&l->tail, SYNC_RELAXED);
     if ((curr - tail) >= l->num_entries) {
-      log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
+      //log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
       return -1;
     }
     if (((curr - rcur)) >= (l->num_entries)) {

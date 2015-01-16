@@ -97,22 +97,6 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
-AC_ARG_ENABLE([photon-debug],
-  [AS_HELP_STRING([--enable-photon-debug],
-                  [Enable photon debugging @<:@default=no@:>@])],
-  [], [enable_photon_debug=no])
-AS_IF([test "x$enable_photon_debug" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_DEBUG], [1], [Enable photon debugging stuff])])
-AM_CONDITIONAL([ENABLE_PHOTON_DEBUG], [test "$enable_photon_debug" = "yes"])
-
-AC_ARG_ENABLE([photon-trace],
-  [AS_HELP_STRING([--enable-photon-trace],
-                  [Enable photon call tracing @<:@default=no@:>@])],
-  [], [enable_photon_trace=no])
-AS_IF([test "x$enable_photon_trace" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_TRACE], [1], [Enable photon call tracing (files)])])
-AM_CONDITIONAL([ENABLE_PHOTON_TRACE], [test "$enable_photon_trace" = "yes"])
-
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
                   [Enable profiling support @<:@default=no@:>@])],
@@ -148,7 +132,6 @@ HPX_WITH_VERBS
 HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 
 AM_CONDITIONAL([HAVE_XSP], [false])
-AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [false])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
@@ -157,7 +140,6 @@ AS_IF([test "x$enable_photon" != xno],
   [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
   [hpx_have_photon=no])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
-AM_CONDITIONAL([BUILD_PHOTON], [test "x$hpx_have_photon" == xinternal])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
@@ -244,7 +226,7 @@ CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
 LDFLAGS="$hpx_extra_ldflags $LDFLAGS"
 
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD")
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

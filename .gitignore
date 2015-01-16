@@ -55,6 +55,7 @@
 /examples/alltoall
 /examples/hello
 /examples/netfutures
+/examples/qsort
 /examples/call
 
 # /apps/
@@ -91,32 +92,11 @@
 
 # /contrib/
 contrib/Makefile
-contrib/hwloc-1.10.0/Makefile
-contrib/hwloc-1.10.0/include/Makefile
-contrib/hwloc-1.10.0/include/hwloc/autogen/config.h
-contrib/hwloc-1.10.0/include/hwloc/autogen/stamp-h3
-contrib/hwloc-1.10.0/include/private/autogen/config.h
-contrib/hwloc-1.10.0/include/private/autogen/stamp-h2
-contrib/hwloc-1.10.0/src/Makefile
-contrib/hwloc-1.10.0/src/static-components.h
-contrib/jemalloc/autom4te.cache/
-contrib/jemalloc/configure
-contrib/libffi-3.2.1/Makefile
-contrib/libffi-3.2.1/a.out
-contrib/libffi-3.2.1/autom4te.cache/
-contrib/libffi-3.2.1/config
-contrib/libffi-3.2.1/config.log
-contrib/libffi-3.2.1/config.status
-contrib/libffi-3.2.1/fficonfig.h
-contrib/libffi-3.2.1/include/Makefile
-contrib/libffi-3.2.1/include/ffi.h
-contrib/libffi-3.2.1/include/ffitarget.h
-contrib/libffi-3.2.1/libffi.pc
-contrib/libffi-3.2.1/libtool
-contrib/libffi-3.2.1/local.exp
-contrib/libffi-3.2.1/man/Makefile
-contrib/libffi-3.2.1/stamp-h1
-contrib/libffi-3.2.1/testsuite/Makefile
+contrib/hwloc-1.10.0/
+contrib/libffi-3.2.1/
+contrib/jemalloc/
+contrib/jemalloc_hpx/
+contrib/photon/
 
 # /libhpx/
 /libhpx/Makefile
