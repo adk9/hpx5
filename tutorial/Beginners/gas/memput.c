@@ -54,7 +54,7 @@ static int _main_action(void *args) {
   hpx_lco_delete(rfut, HPX_NULL);
 
   bool output = false;
-  hpx_call_sync(remote, _verify, NULL, 0, &output, sizeof(output));
+  hpx_call_sync(remote, _verify, &output, sizeof(output), NULL, 0);
   assert(output == false);
 
   printf("hpx_gas_memput succeeded\n");
