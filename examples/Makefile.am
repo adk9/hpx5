@@ -26,7 +26,7 @@ qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 
-all_LIBS = $(top_builddir)/libhpx/libhpx.la
+all_LIBS = $(HPX_LDADD)
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =

@@ -24,7 +24,7 @@ libphoton_la_SOURCES = libphoton/libphoton.c                   \
                        libphoton/photon_rdma_EAGER_buf.c
 
 libphoton_ladir = @PHOTON_SRCDIR@/src/libphoton
-libphoton_la_LDFLAGS = @THREAD_LIBS@
+libphoton_la_LDFLAGS = @PTHREAD_LIBS@
 libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la    \
  @PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la       \
  @PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la
