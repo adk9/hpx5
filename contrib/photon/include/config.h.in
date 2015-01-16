@@ -188,12 +188,15 @@
 /* "Build with XSP support" */
 #undef HAVE_XSP
 
+/* OS Memory Page Size */
+#undef HPXPAGE_SIZE
+
+/* Cacheline size */
+#undef HPX_CACHELINE_SIZE
+
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-#undef NO_MINUS_C_MINUS_O
 
 /* Name of package */
 #undef PACKAGE
@@ -215,6 +218,12 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Cacheline size */
+#undef PHOTON_CACHELINE_SIZE
+
+/* OS Memory Page Size */
+#undef PHOTON_PAGE_SIZE
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
@@ -265,6 +274,9 @@
 /* Define to 2 if the system does not provide POSIX.1 features except with
    this defined. */
 #undef _POSIX_1_SOURCE
+
+/* Define the POSIX version */
+#undef _POSIX_C_SOURCE
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 #undef _POSIX_SOURCE

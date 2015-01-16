@@ -16,8 +16,8 @@
 #include "config.h"
 #endif
 
-#include "include/locks.h"
-#include "include/backoff.h"
+#include "libsync/locks.h"
+#include "libsync/backoff.h"
 
 void
 sync_tatas_acquire_slow(tatas_lock_t *l) {

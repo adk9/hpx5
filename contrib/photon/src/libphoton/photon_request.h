@@ -5,7 +5,8 @@
 #include "photon_rdma_ledger.h"
 #include "photon_rdma_INFO_ledger.h"
 #include "bit_array/bit_array.h"
-#include "libsync/include/locks.h"
+#include "libsync/locks.h"
+#include "libsync/queues.h"
 
 #define DEF_MAX_BUF_ENTRIES  64    // The number msgbuf entries for UD mode
 
@@ -27,20 +28,20 @@
 #define REQUEST_COOK_SINFO   0xff800000
 #define REQUEST_COOK_RINFO   0xff900000
 
-#define REQUEST_OP_DEFAULT   0x00
+#define REQUEST_OP_DEFAULT   0x0000
 #define REQUEST_OP_SENDBUF   (1<<1)
 #define REQUEST_OP_SENDREQ   (1<<2)
 #define REQUEST_OP_SENDFIN   (1<<3)
 #define REQUEST_OP_RECVBUF   (1<<4)
 #define REQUEST_OP_PWC       (1<<5)
 
-#define REQUEST_FLAG_NIL     0x00
+#define REQUEST_FLAG_NIL     0x0000
 #define REQUEST_FLAG_WFIN    (1<<1)
 #define REQUEST_FLAG_EAGER   (1<<2)
 #define REQUEST_FLAG_EDONE   (1<<3)
 #define REQUEST_FLAG_LDONE   (1<<4)
-#define REQUEST_FLAG_USERID  (1<<5)
-#define REQUEST_FLAG_NO_LCE  (1<<6)
+#define REQUEST_FLAG_NO_LCE  (1<<5)
+#define REQUEST_FLAG_NO_RCE  (1<<6)
 #define REQUEST_FLAG_1PWC    (1<<7)
 #define REQUEST_FLAG_2PWC    (1<<8)
 
@@ -50,29 +51,38 @@
 #define IS_VALID_PROC(p)       ((p >= 0) && (p < _photon_nproc))
 
 typedef struct photon_req_t {
-  uint32_t index;
   photon_rid id;
-  int op;
-  int state;
-  int flags;
-  int type;
-  int proc;
-  int tag;
-  int events;
+  int        proc;
+  int        tag;
+  uint16_t   op;
+  uint16_t   type;
+  uint16_t   state;
+  uint16_t   flags;
+  uint64_t   size;
+  struct {
+    struct photon_buffer_t buf;
+    photon_rid             id;
+  } local_info;
+  struct {
+    struct photon_buffer_t buf;
+    photon_rid             id;
+  } remote_info;
+  struct {
+    volatile uint16_t      events;
+    uint16_t               rflags;
+    uint64_t               cookie;
+  } rattr;
   //int bentries[DEF_MAX_BUF_ENTRIES];
   //BIT_ARRAY *mmask;
-  uint64_t length;
-  photon_addr addr;
-  struct photon_buffer_internal_t remote_buffer;
 } photon_req;
 
 typedef struct photon_req_table_t {
   uint64_t count;
   uint64_t tail;
-  uint64_t cind;
   uint32_t size;
   struct photon_req_t  *reqs;
-  struct photon_req_t **req_ptrs;
+  ms_queue_t           *req_q;
+  volatile uint32_t     qcount;
   tatas_lock_t tloc;
 } photon_req_table;
 
@@ -84,7 +94,7 @@ PHOTON_INTERNAL photonRequest photon_lookup_request(photon_rid rid);
 PHOTON_INTERNAL int photon_free_request(photonRequest req);
 PHOTON_INTERNAL int photon_count_request();
 
-PHOTON_INTERNAL photonRequest photon_setup_request_direct(photonBuffer rbuf, int proc, int events);
+PHOTON_INTERNAL photonRequest photon_setup_request_direct(photonBuffer lbuf, photonBuffer rbuf, uint64_t size, int proc, int events);
 PHOTON_INTERNAL photonRequest photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int curr, int proc);
 PHOTON_INTERNAL photonRequest photon_setup_request_ledger_eager(photonLedgerEntry l_entry, int curr, int proc);
 PHOTON_INTERNAL photonRequest photon_setup_request_send(photonAddr addr, int *bufs, int nbufs);

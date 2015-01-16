@@ -12,15 +12,16 @@
 #include "htable.h"
 #include "logging.h"
 #include "squeue.h"
-#include "libsync/include/sync.h"
+#include "libsync/sync.h"
+#include "libsync/queues.h"
 
 #ifdef HAVE_XSP
 #include "photon_xsp_forwarder.h"
 #endif
 
-#define DEF_NUM_REQUESTS     (1024*4)   // 4K pre-allocated requests per rank, power of 2
+#define DEF_NUM_REQUESTS     (1024*1024)     // 1K pre-allocated requests per rank, power of 2
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
-#define DEF_SMALL_MSG_SIZE   8192
+#define DEF_SMALL_MSG_SIZE   4096
 #define DEF_LEDGER_SIZE      64         // This should not exceed MCA max_qp_wr (typically 16K)
 
 #define NULL_COOKIE          0x0
