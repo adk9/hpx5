@@ -55,7 +55,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty)
 
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-  hpx_call(HPX_HERE, t06_waitforempty, fut, sizeof(fut), done);
+  hpx_call(HPX_HERE, t06_waitforempty, done, fut, sizeof(fut));
   hpx_lco_wait(done);
   
   hpx_lco_newfuture_free(fut);
@@ -81,7 +81,7 @@ START_TEST (test_libhpx_lco_newfuture_waitat_empty_remote)
     
     hpx_addr_t done = hpx_lco_future_new(0);
     hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-    hpx_call(HPX_THERE(1), t06_waitforempty, fut, sizeof(fut), done);
+    hpx_call(HPX_THERE(1), t06_waitforempty, done, fut, sizeof(fut));
     hpx_lco_wait(done);
     
     hpx_lco_newfuture_free(fut);
@@ -113,7 +113,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-  hpx_call(HPX_HERE, t06_waitforfull, fut, sizeof(fut), done);
+  hpx_call(HPX_HERE, t06_waitforfull, done, fut, sizeof(fut));
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
   hpx_addr_t syncs[] = {lsync, rsync};
   hpx_lco_wait_all(2, syncs, NULL);
@@ -143,7 +143,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_remote)
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
     hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-    hpx_call(HPX_THERE(1), t06_waitforfull, fut, sizeof(fut), done);
+    hpx_call(HPX_THERE(1), t06_waitforfull, done, fut, sizeof(fut));
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
     hpx_addr_t syncs[] = {lsync, rsync};
     hpx_lco_wait_all(2, syncs, NULL);
@@ -180,7 +180,7 @@ START_TEST (test_hpx_lco_newfuture_getat)
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-  hpx_call(HPX_HERE, t06_getat, fut, sizeof(fut), done);
+  hpx_call(HPX_HERE, t06_getat, done, fut, sizeof(fut));
   hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
   hpx_lco_wait(lsync);
   hpx_lco_wait(rsync);
@@ -213,7 +213,7 @@ START_TEST (test_hpx_lco_newfuture_getat_remote)
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_addr_t rsync = hpx_lco_future_new(0);
     hpx_netfuture_t fut = hpx_lco_newfuture_new(sizeof(SET_VALUE_T));
-    hpx_call(HPX_THERE(1), t06_getat, fut, sizeof(fut), done);
+    hpx_call(HPX_THERE(1), t06_getat, done, fut, sizeof(fut));
     hpx_lco_newfuture_setat(fut, 0, sizeof(SET_VALUE), &SET_VALUE, lsync, rsync);
     hpx_addr_t syncs[] = {lsync, rsync};
     hpx_lco_wait_all(2, syncs, NULL);
@@ -338,7 +338,7 @@ START_TEST (test_hpx_lco_newfuture_shared)
     hpx_time_t t1 = hpx_time_now();
 
     hpx_netfuture_t shared_done = hpx_lco_newfuture_shared_new(sizeof(SET_VALUE_T));
-    hpx_call(HPX_HERE, t06_lcoSetGet, &n, sizeof(n), shared_done);
+    hpx_call(HPX_HERE, t06_lcoSetGet, shared_done, &n, sizeof(n));
     
     // Shared futures can be accessed multiple times;
     hpx_lco_get(shared_done, sizeof(int), &result);
@@ -382,7 +382,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
     args[i].index = i;
-    hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_waitforempty_id, &args[i], sizeof(args[i]), done);
+    hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_waitforempty_id, done, &args[i], sizeof(args[i]));
   }
 
   hpx_lco_wait(done);
@@ -416,7 +416,8 @@ START_TEST (test_hpx_lco_newfuture_waitat_empty_array_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
       args[i].index = i;
-      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_waitforempty_id, &args[i], sizeof(args[i]), done);
+      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)),
+               t06_waitforempty_id, done, &args[i], sizeof(args[i]));
     }
     
     hpx_lco_wait(done);
@@ -455,7 +456,7 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
     args[i].index = i;
-    hpx_call(HPX_HERE, t06_waitforfull_id, &args[i], sizeof(args[i]), done);
+    hpx_call(HPX_HERE, t06_waitforfull_id, done, &args[i], sizeof(args[i]));
   }
 
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
@@ -493,7 +494,8 @@ START_TEST (test_hpx_lco_newfuture_waitat_full_array_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
       args[i].index = i;
-      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_waitforfull_id, &args[i], sizeof(args[i]), done);
+      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)),
+               t06_waitforfull_id, done, &args[i], sizeof(args[i]));
     }
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       hpx_addr_t lsync = hpx_lco_future_new(0);
@@ -541,7 +543,7 @@ START_TEST (test_hpx_lco_newfuture_getat_array)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].base = fut;
     args[i].index = i;
-    hpx_call(HPX_HERE, t06_getat_id, &args[i], sizeof(args[i]), done[i]);
+    hpx_call(HPX_HERE, t06_getat_id, done[i], &args[i], sizeof(args[i]));
   }
 
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
@@ -585,7 +587,8 @@ START_TEST (test_hpx_lco_newfuture_getat_array_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].base = fut;
       args[i].index = i;
-      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_getat_id, &args[i], sizeof(args[i]), done);
+      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_getat_id,
+               done, &args[i], sizeof(args[i]));
     }
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       hpx_addr_t lsync = hpx_lco_future_new(0);
@@ -655,7 +658,7 @@ START_TEST (test_hpx_lco_newfuture_wait_all_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].fut = fut;
       args[i].i = i;
-      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_set, HPX_NULL, &args[i], sizeof(args[i]));
     }
     
     hpx_lco_newfuture_wait_all(NUM_LOCAL_FUTURES * ranks, fut, HPX_SET);
@@ -681,7 +684,7 @@ START_TEST (test_hpx_lco_newfuture_get_all)
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     args[i].fut = fut;
     args[i].i = i;
-    hpx_call(HPX_HERE, t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+    hpx_call(HPX_HERE, t06_set, HPX_NULL, &args[i], sizeof(args[i]));
   }
   
   SET_VALUE_T **values = calloc(NUM_LOCAL_FUTURES, sizeof(void*));
@@ -719,7 +722,8 @@ START_TEST (test_hpx_lco_newfuture_get_all_remote)
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       args[i].fut = fut;
       args[i].i = i;
-      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_set, &args[i], sizeof(args[i]), HPX_NULL);
+      hpx_call(HPX_THERE(hpx_lco_newfuture_get_rank(fut)), t06_set, HPX_NULL,
+               &args[i], sizeof(args[i]));
     }
     
     SET_VALUE_T **values = calloc(NUM_LOCAL_FUTURES * ranks, sizeof(void*));

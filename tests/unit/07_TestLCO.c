@@ -72,8 +72,8 @@ START_TEST (test_libhpx_lcoFunction)
     // Create a future. Futures are builtin LCO's that represent from async
     // computation. Futures are allocated in the global address space.
     done = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, t07_init_array, &i, sizeof(i), done);
-    hpx_call_sync(addr, t07_init_array, &i, sizeof(i), &local, sizeof(local));
+    hpx_call(remote, t07_init_array, done, &i, sizeof(i));
+    hpx_call_sync(addr, t07_init_array, &local, sizeof(local), &i, sizeof(i));
     
     // Perform a wait operation. The LCO blocks the caller until an LCO set
     // operation triggers the LCO. 
@@ -122,7 +122,7 @@ START_TEST (test_libhpx_lcoSetGet)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t07_lcoSetGet, &n, sizeof(n), done);
+  hpx_call(HPX_HERE, t07_lcoSetGet, done, &n, sizeof(n));
 
   uint64_t result;
   hpx_lco_get(done, sizeof(uint64_t), &result);
@@ -164,7 +164,7 @@ int t07_initMemory_action(uint32_t *args)
   hpx_addr_t completed = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; i++) {
     hpx_addr_t block = hpx_addr_add(local, i * HPX_LOCALITY_ID * block_bytes, block_bytes);
-    hpx_call(block, t07_initBlock, args, 2 * sizeof(*args), completed);
+    hpx_call(block, t07_initBlock, completed, args, 2 * sizeof(*args));
   }
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
@@ -203,12 +203,12 @@ START_TEST (test_libhpx_lcoWaitAll)
 
   for (int i = 0; i < ranks; i++) {
     hpx_addr_t there = hpx_addr_add(addr, i * block_bytes, block_bytes);
-    hpx_call(there, t07_initMemory, args, sizeof(args), done[0]);
+    hpx_call(there, t07_initMemory, done[0], args, sizeof(args));
   }
 
   for (int i = 0; i < rem; i++) {
     hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes, block_bytes);
-    hpx_call(block, t07_initMemory, args, sizeof(args[0]), done[1]);
+    hpx_call(block, t07_initMemory, done[1], args, sizeof(args[0]));
   }
 
   // Blocks the thread until all of the LCO's have been set.
@@ -261,8 +261,8 @@ int t07_getAll_action(uint32_t *args) {
     sizeof(uint32_t)
   };
 
-  hpx_call(peers[0], t07_getAll, &ns[0], sizeof(uint32_t), futures[0]);
-  hpx_call(peers[1], t07_getAll, &ns[1], sizeof(uint32_t), futures[1]);
+  hpx_call(peers[0], t07_getAll, futures[0], &ns[0], sizeof(uint32_t));
+  hpx_call(peers[1], t07_getAll, futures[1], &ns[1], sizeof(uint32_t));
 
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
 
@@ -288,7 +288,7 @@ START_TEST (test_libhpx_lcoGetAll)
     hpx_time_t t1 = hpx_time_now();
     fprintf(test_log, "Square series for (%d): ", n);
     fflush(stdout);
-    hpx_call_sync(HPX_HERE, t07_getAll, &n, sizeof(n), &ssn, sizeof(ssn));
+    hpx_call_sync(HPX_HERE, t07_getAll, &ssn, sizeof(ssn), &n, sizeof(n));
     fprintf(test_log,"%d", ssn);
     fprintf(test_log, " Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
   }
@@ -311,7 +311,7 @@ START_TEST (test_libhpx_lcoError)
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t lco = hpx_lco_future_new(0);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, t07_errorSet, &lco, sizeof(lco), done);
+  hpx_call(HPX_HERE, t07_errorSet, done, &lco, sizeof(lco));
   hpx_status_t status = hpx_lco_wait(lco);
   fprintf(test_log, "status == %d\n", status);
   ck_assert(status == HPX_ERROR);

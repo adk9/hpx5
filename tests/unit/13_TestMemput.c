@@ -73,8 +73,8 @@ START_TEST (test_libhpx_memput)
   fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   bool output = false;
-  int e = hpx_call_sync(remote, t13_memput_verify, NULL, 0,
-                        &output, sizeof(output));
+  int e = hpx_call_sync(remote, t13_memput_verify,
+                        &output, sizeof(output), NULL, 0);
   ck_assert_msg(e == HPX_SUCCESS, "hpx_call_sync failed with %d", e);
   ck_assert_msg(output == false, "gas_memput failed");
 }

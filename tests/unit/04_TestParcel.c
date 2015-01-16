@@ -87,7 +87,7 @@ START_TEST (test_libhpx_parcelCreate)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t completed = hpx_lco_and_new(1);
-  hpx_call(HPX_HERE, t04_send, &n, sizeof(n), completed);
+  hpx_call(HPX_HERE, t04_send, completed, &n, sizeof(n));
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
 
