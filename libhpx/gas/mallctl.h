@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 #include <hpx/attributes.h>
-#include <jemalloc/jemalloc.h>
+#include <jemalloc/jemalloc_hpx.h>
 
 int mallctl_get_lg_dirty_mult(void)
   HPX_INTERNAL;

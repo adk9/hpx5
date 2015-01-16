@@ -16,7 +16,7 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include <jemalloc/jemalloc.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"

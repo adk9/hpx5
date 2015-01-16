@@ -16,7 +16,7 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <jemalloc/jemalloc.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
 #include "libhpx/debug.h"
@@ -173,7 +173,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   // use one extra chunk to deal with alignment
   heap->raw_nchunks = heap->nchunks + 1;
   heap->raw_nbytes  = heap->raw_nchunks * heap->bytes_per_chunk;
-  heap->raw_base    = 
+  heap->raw_base    =
 #ifdef HAVE_HUGETLBFS
     get_huge_pages(heap->raw_nbytes, GHP_DEFAULT);
 #else

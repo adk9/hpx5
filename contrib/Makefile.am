@@ -1,5 +1,5 @@
-SUBDIRS      = libffi-3.2.1 jemalloc_build
-DIST_SUBDIRS = libffi-3.2.1 jemalloc_build
+SUBDIRS      = libffi-3.2.1 jemalloc_hpx
+DIST_SUBDIRS = libffi-3.2.1 jemalloc_hpx
 
 if BUILD_HWLOC
 SUBDIRS      += hwloc-1.10.0
