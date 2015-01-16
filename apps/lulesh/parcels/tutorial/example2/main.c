@@ -71,7 +71,7 @@ tutorial_main_action(const main_args_t *args)
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
 
     // and send the initDomain action, with the done LCO as the continuation
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
 
   // wait for initialization
