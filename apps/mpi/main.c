@@ -363,7 +363,7 @@ static int _hpxmain_action(int args[2] /* hpxranks, its */) {
 
 
     for (j = 0; j < ranks_there; ++j)
-      hpx_call(HPX_THERE(i), _mpi, &args[1], sizeof(int), and);
+      hpx_call(HPX_THERE(i), _mpi, and, &args[1], sizeof(int));
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);

@@ -127,7 +127,8 @@ static int _action_main(int *input) {
       .nDoms = nDoms,
       .maxcycles = maxcycles,
     };
-    hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, &args, sizeof(args), complete);
+    hpx_call(HPX_THERE(k % hpx_get_num_ranks()), _evolve, complete, &args,
+             sizeof(args));
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);

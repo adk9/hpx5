@@ -132,7 +132,8 @@ static int _sssp_visit_source_action() {
   vertex = *v;
   hpx_gas_unpin(target);
   size_t num_edges;
-  hpx_call_sync(vertex, _sssp_check_for_nonzero_neighbor, NULL, 0, &num_edges, sizeof(num_edges));
+  hpx_call_sync(vertex, _sssp_check_for_nonzero_neighbor, &num_edges,
+                sizeof(num_edges), NULL, 0);
   HPX_THREAD_CONTINUE(num_edges);
   return HPX_SUCCESS;
 }
@@ -155,7 +156,8 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   while (m < nroot && t < numvertices) {
     size_t num_edges = 0;
     const hpx_addr_t index = hpx_addr_add(*graph, t * sizeof(hpx_addr_t), _index_array_block_size);
-    hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges));
+    hpx_call_sync(index, _sssp_visit_source, &num_edges, sizeof(num_edges),
+                  NULL, 0);
     if (!num_edges) ++t;
     else root[m++] = t++;
   }
@@ -174,7 +176,7 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   /*   cur += S; */
   /*   const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
   /*   size_t num_edges = 0; */
-  /*   hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
+  /*   hpx_call_sync(index, _sssp_visit_source, &num_edges,sizeof(num_edges), NULL, 0); */
   /*   if(num_edges==0){ */
   /*     m--; */
   /*     continue; */
@@ -188,7 +190,7 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   /*   cur += S+1; */
   /*   const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
   /*   SSSP_UINT_T num_edges; */
-  /*   hpx_call_sync(index, _sssp_visit_source, NULL, 0, &num_edges,sizeof(num_edges)); */
+  /*   hpx_call_sync(index, _sssp_visit_source, &num_edges,sizeof(num_edges), NULL, 0); */
   /*   if(num_edges==0){ */
   /*     continue; */
   /*   } */

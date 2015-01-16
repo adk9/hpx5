@@ -118,7 +118,7 @@ static int sssp_init_dc_action(sssp_init_dc_args_t *args) {
 /* void _sssp_init_dc_function(size_t num_pq, size_t freq) { */
 /*   hpx_addr_t init_lco = hpx_lco_future_new(0); */
 /*   const sssp_init_dc_args_t init_args = { .num_pq = num_pq, .freq = freq }; */
-/*   hpx_bcast(sssp_init_dc, &init_args, sizeof(init_args), init_lco); */
+/*   hpx_bcast(sssp_init_dc, init_lco, &init_args, sizeof(init_args)); */
 /*   hpx_lco_wait(init_lco); */
 /*   hpx_lco_delete(init_lco, HPX_NULL); */
 /* } */
@@ -160,9 +160,11 @@ static int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
     empty_factors[i] = 1;
   }
   const _sssp_delete_queues_args_t delete_args = { .termination_lco = *termination_lco, .queues = sssp_queues };
-  hpx_call(HPX_HERE, _sssp_delete_queues, &delete_args, sizeof(delete_args), HPX_NULL);
+  hpx_call(HPX_HERE, _sssp_delete_queues, HPX_NULL, &delete_args,
+           sizeof(delete_args));
   for(size_t i = 0; i < handle_queues_count; ++i) {
-    hpx_call(HPX_HERE, _handle_queue, &sssp_queues, sizeof(sssp_queues), HPX_NULL);
+    hpx_call(HPX_HERE, _handle_queue, HPX_NULL, &sssp_queues,
+             sizeof(sssp_queues));
   }
   return HPX_SUCCESS;
 }
@@ -173,7 +175,7 @@ static int _handle_queue_action(sssp_queue_t *const *const *const args) {
   sssp_queue_t *const queue = queues[thread_id];
   // printf("In the handle queue action with queue %" PRIxPTR "\n", (uintptr_t)queues[thread_id]);
   if (!queue) return HPX_SUCCESS;
-  hpx_call(HPX_HERE, _handle_queue, args, sizeof(*args), HPX_NULL);
+  hpx_call(HPX_HERE, _handle_queue, HPX_NULL, args, sizeof(*args));
   const size_t current_size = sssp_queue_size(queue);
   // We only need to increse yield_count if it was 0; otherwise, _maybe_process_one will set it if the queue is small.
   // If last emptying of the queue did not lead to size increase, speed up emptying by 2 and otherwise reset emptying factor to 1;
