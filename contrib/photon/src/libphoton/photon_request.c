@@ -33,8 +33,8 @@ photonRequest photon_get_request(int proc) {
   }
 
   if (req->state && (req->state != REQUEST_FREE)) {
-    log_warn("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
-	     req->id, req->state, req_curr, tail);
+    dbg_trace("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
+	      req->id, req->state, req_curr, tail);
   }
 
   memset(req, 0, sizeof(struct photon_req_t));
