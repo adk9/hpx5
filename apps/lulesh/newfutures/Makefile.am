@@ -6,6 +6,7 @@ luleshnewfutures_SOURCES  = lulesh-comp.c  lulesh-hpx.c  lulesh-util.c  lulesh-x
 
 luleshnewfutures_LDFLAGS  = 
 luleshnewfutures_LDADD    = $(HPX_LDADD) -lm
+luleshnewfutures_DEPENDENCIES = $(HPX_LDADD)
 
 luleshnewfutures_CPPFLAGS = -I$(top_srcdir)/include
 luleshnewfutures_CFLAGS   = @MPI_CFLAGS@
