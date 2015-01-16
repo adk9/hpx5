@@ -20,8 +20,6 @@
 /// @brief HPX system interface.
 /// hpx_init() initializes the scheduler, network, and locality
 ///
-/// hpx_register_action() register a user-level action with the runtime.
-///
 /// hpx_run() is called from the native thread after hpx_init() and action
 /// registration is complete, in order
 ///
