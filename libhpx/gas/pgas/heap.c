@@ -62,7 +62,7 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 
   // figure out the bias and period of our search, not too worried about
   // overhead here---could have log2_base and log2_chunk in the heap structure
-  uint32_t log2_base = ceil_log2_64((uint64_t)heap->base);
+  uint32_t log2_base = ctzl((uintptr_t)heap->base);
   uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
   uint32_t log2_align = ceil_log2_64(align);
 
@@ -244,7 +244,7 @@ void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
 
   // figure out the bias and period of our search, not too worried about
   // overhead here---could have log2_base and log2_chunk in the heap structure
-  uint32_t log2_base = ceil_log2_64((uint64_t)heap->base);
+  uint32_t log2_base = ctzl((uintptr_t)heap->base);
   uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
   uint32_t log2_align = ceil_log2_64(align);
 
