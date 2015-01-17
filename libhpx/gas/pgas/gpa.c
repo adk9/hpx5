@@ -75,8 +75,8 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const uint32_t prhs = _phase_of(rhs, bsize);
   const uint32_t llhs = pgas_gpa_to_rank(lhs);
   const uint32_t lrhs = pgas_gpa_to_rank(rhs);
-  const uint32_t blhs = _block_of(lhs, bsize);
-  const uint32_t brhs = _block_of(rhs, bsize);
+  const uint64_t blhs = _block_of(lhs, bsize);
+  const uint64_t brhs = _block_of(rhs, bsize);
 
   const int32_t dphase = plhs - prhs;
   const int32_t dlocality = llhs - lrhs;
@@ -88,7 +88,7 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const int64_t d = dblock * here->ranks * bsize + dlocality * bsize + dphase;
 
   // make sure we're not crazy
-  DEBUG_IF (pgas_gpa_add_cyclic(lhs, d, bsize) != rhs) {
+  DEBUG_IF (pgas_gpa_add_cyclic(rhs, d, bsize) != lhs) {
     dbg_error("difference between %"PRIu64" and %"PRIu64" computed incorrectly as %"PRId64"\n",
               lhs, rhs, d);
   }

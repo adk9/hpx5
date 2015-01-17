@@ -12,7 +12,7 @@ memcpy_SOURCES                = memcpy.c
 memTryPin_SOURCES             = memTryPin.c
 
 
-all_LIBS                      = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                      = $(HPX_LDADD)
 
 AM_CPPFLAGS                   = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                     =
@@ -29,3 +29,12 @@ memput_LDADD                  = $(all_LIBS)
 memput1_LDADD                 = $(all_LIBS)
 memcpy_LDADD                  = $(all_LIBS)
 memTryPin_LDADD               = $(all_LIBS)
+
+allocZeroBytes_DEPENDENCIES   = $(all_LIBS)
+gasalloc_DEPENDENCIES         = $(all_LIBS)
+memget_DEPENDENCIES           = $(all_LIBS)
+memget1_DEPENDENCIES          = $(all_LIBS)
+memput_DEPENDENCIES           = $(all_LIBS)
+memput1_DEPENDENCIES          = $(all_LIBS)
+memcpy_DEPENDENCIES           = $(all_LIBS)
+memTryPin_DEPENDENCIES        = $(all_LIBS)

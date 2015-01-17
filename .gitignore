@@ -55,6 +55,7 @@
 /examples/alltoall
 /examples/hello
 /examples/netfutures
+/examples/qsort
 /examples/call
 
 # /apps/
@@ -91,20 +92,11 @@
 
 # /contrib/
 contrib/Makefile
-contrib/hwloc-1.10.0/Makefile
-contrib/hwloc-1.10.0/include/Makefile
-contrib/hwloc-1.10.0/include/hwloc/autogen/config.h
-contrib/hwloc-1.10.0/include/hwloc/autogen/stamp-h3
-contrib/hwloc-1.10.0/include/private/autogen/config.h
-contrib/hwloc-1.10.0/include/private/autogen/stamp-h2
-contrib/hwloc-1.10.0/src/Makefile
-contrib/hwloc-1.10.0/src/static-components.h
-contrib/jemalloc/Makefile
-contrib/jemalloc/include/Makefile
-contrib/jemalloc/include/jemalloc/Makefile
-contrib/jemalloc/include/jemalloc/internal/Makefile
-contrib/jemalloc/src/Makefile
-
+contrib/hwloc-1.10.0/
+contrib/libffi/
+contrib/jemalloc/
+contrib/jemalloc_hpx/
+contrib/photon/
 
 # /libhpx/
 /libhpx/Makefile

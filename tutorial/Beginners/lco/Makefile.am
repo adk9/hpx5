@@ -15,7 +15,7 @@ lcoAll_SOURCES                = lcoAll.c
 lcoError_SOURCES              = lcoError.c
 lcoFutureArray_SOURCES        = lcoFutureArray.c
 
-all_LIBS                      = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                      = $(HPX_LDADD)
 
 AM_CPPFLAGS                   = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                     =
@@ -41,3 +41,16 @@ lcoAll_LDADD                  = $(all_LIBS)
 lcoError_LDADD                = $(all_LIBS)
 lcoFutureArray_LDADD          = $(all_LIBS)
 lcoNetfuture_LDADD            = $(all_LIBS)
+
+chan_DEPENDENCIES                    = $(all_LIBS)
+probe_DEPENDENCIES                   = $(all_LIBS)
+chanarray_DEPENDENCIES               = $(all_LIBS)
+chanSendInorder_DEPENDENCIES         = $(all_LIBS)
+sema_DEPENDENCIES                    = $(all_LIBS)
+lcoAnd_DEPENDENCIES                  = $(all_LIBS)
+genCount_DEPENDENCIES                = $(all_LIBS)
+lcoSetGet_DEPENDENCIES               = $(all_LIBS)
+lcoAll_DEPENDENCIES                  = $(all_LIBS)
+lcoError_DEPENDENCIES                = $(all_LIBS)
+lcoFutureArray_DEPENDENCIES          = $(all_LIBS)
+lcoNetfuture_DEPENDENCIES            = $(all_LIBS)

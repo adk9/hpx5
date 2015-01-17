@@ -145,4 +145,11 @@ int hpx_bcast(hpx_action_t action, const void *args, size_t len,
 /// @returns      HPX_SUCCESS if no errors were encountered
 int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
 
+
+/// Experimental HPX call interface.
+///
+int
+hpx_call2(hpx_addr_t addr, hpx_action_t action, ...);
+
+
 #endif

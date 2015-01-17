@@ -6,7 +6,6 @@
 #include "photon_exchange.h"
 #include "photon_event.h"
 #include "logging.h"
-#include "libsync/include/sync.h"
 
 static int _get_remote_progress(int proc, photonEagerBuf buf);
 
@@ -44,7 +43,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
     curr = sync_load(&buf->curr, SYNC_RELAXED);
     tail = sync_load(&buf->tail, SYNC_RELAXED);
     if ((curr - tail) >= buf->size) {
-      log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
+      //log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
       return -1;
     }
     if (((curr - buf->acct.rcur) + size) >= buf->size) {

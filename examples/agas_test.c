@@ -98,7 +98,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&root, root_action);
-  HPX_REGISTER_ACTION(&get_rank, get_rank_action);
+  HPX_REGISTER_ACTION(root_action, &root);
+  HPX_REGISTER_ACTION(get_rank_action, &get_rank);
   return hpx_run(&root, NULL, 0);
 }

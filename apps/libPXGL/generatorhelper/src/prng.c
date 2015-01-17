@@ -327,7 +327,7 @@ bitreverse(uint64_t x) {
 
 
 static HPX_CONSTRUCTOR void _sample_graph_register_actions() {
-  HPX_REGISTER_ACTION(&_sssp_visit_source, _sssp_visit_source_action);
-  HPX_REGISTER_ACTION(&_sssp_check_for_nonzero_neighbor,_sssp_check_for_nonzero_neighbor_action);
+  HPX_REGISTER_ACTION(_sssp_visit_source_action, &_sssp_visit_source);
+  HPX_REGISTER_ACTION(_sssp_check_for_nonzero_neighbor_action, &_sssp_check_for_nonzero_neighbor);
 
 }

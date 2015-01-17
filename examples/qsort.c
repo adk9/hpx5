@@ -156,9 +156,9 @@ int main (int argc, char *argv[])
   }
 
   // Register the main action
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_parallelQuicksortHelper,
-                      _parallelQuicksortHelper_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_parallelQuicksortHelper_action,
+                      &_parallelQuicksortHelper);
   // Run the main action
   return hpx_run(&_main, &NUM, sizeof(NUM));
 }

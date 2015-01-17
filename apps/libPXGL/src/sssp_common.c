@@ -8,8 +8,8 @@
 #include "libsync/sync.h"
 #include <stdio.h>
 
-static hpx_action_t _sssp_process_vertex = HPX_INVALID_ACTION_ID;
-hpx_action_t _sssp_visit_vertex = HPX_INVALID_ACTION_ID;
+static hpx_action_t _sssp_process_vertex = HPX_ACTION_INVALID;
+hpx_action_t _sssp_visit_vertex = HPX_ACTION_INVALID;
 
 static hpx_action_t _sssp_visit_source = 0;
 static hpx_action_t _sssp_print_source_adj_list = 0;
@@ -213,16 +213,17 @@ int sssp_run_delta_stepping_action(const void * const args) {
 }
 
 static HPX_CONSTRUCTOR void _sssp_register_actions() {
-  HPX_REGISTER_TASK(&_sssp_visit_vertex,
-                      _sssp_visit_vertex_action);
-  HPX_REGISTER_ACTION(&_sssp_initialize_graph,
-		      _sssp_initialize_graph_action);
-  HPX_REGISTER_ACTION(&call_sssp,
-                      call_sssp_action);
-  HPX_REGISTER_ACTION(&initialize_sssp_kind,
-                      initialize_sssp_kind_action);
-  HPX_REGISTER_ACTION(&sssp_run_delta_stepping,
-		      sssp_run_delta_stepping_action);
-  HPX_REGISTER_TASK(&_sssp_visit_source, _sssp_visit_source_action);
-  HPX_REGISTER_ACTION(&_sssp_print_source_adj_list,_sssp_print_source_adj_list_action);
+  HPX_REGISTER_ACTION(_sssp_visit_vertex_action,
+                      &_sssp_visit_vertex);
+  HPX_REGISTER_ACTION(_sssp_initialize_graph_action,
+		      &_sssp_initialize_graph);
+  HPX_REGISTER_ACTION(call_sssp_action,
+                      &call_sssp);
+  HPX_REGISTER_ACTION(initialize_sssp_kind_action,
+                      &initialize_sssp_kind);
+  HPX_REGISTER_ACTION(sssp_run_delta_stepping_action,
+		      &sssp_run_delta_stepping);
+  HPX_REGISTER_ACTION(_sssp_visit_source_action, &_sssp_visit_source);
+  HPX_REGISTER_ACTION(_sssp_print_source_adj_list_action,
+                      &_sssp_print_source_adj_list);
 }

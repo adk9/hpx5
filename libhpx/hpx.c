@@ -23,10 +23,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <pthread.h>
-
 #include <hpx/hpx.h>
-
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
@@ -38,6 +35,7 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
+#include "network/probe.h"
 
 /// Cleanup utility function.
 ///

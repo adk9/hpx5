@@ -217,6 +217,5 @@ void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const grap
 }
 
 static __attribute__((constructor)) void _edge_register_actions() {
-  HPX_REGISTER_ACTION(&_put_edge_in_edgelist,
-                      _put_edge_in_edgelist_action);
+  HPX_REGISTER_ACTION(_put_edge_in_edgelist_action, &_put_edge_in_edgelist);
 }

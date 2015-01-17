@@ -21,6 +21,7 @@ struct ustack;
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
 /// @field       ustack A pointer to a stack.
+/// @field         next A pointer to the next parcel.
 /// @field          src The src rank for the parcel.
 /// @field         size The data size in bytes.
 /// @field       action The target action identifier.
@@ -29,16 +30,17 @@ struct ustack;
 /// @field     c_target The target address for the continuation.
 /// @field       buffer Either an in-place payload, or a pointer.
 struct hpx_parcel {
-  struct ustack *ustack;
-  int               src;
-  uint32_t         size;
-  hpx_action_t   action;
-  hpx_addr_t     target;
-  hpx_action_t c_action;
-  hpx_addr_t   c_target;
-  hpx_pid_t         pid;
-  uint64_t       credit;
-  char         buffer[];
+  struct ustack   *ustack;
+  struct hpx_parcel *next;
+  int                 src;
+  uint32_t           size;
+  hpx_action_t     action;
+  hpx_addr_t       target;
+  hpx_action_t   c_action;
+  hpx_addr_t     c_target;
+  hpx_pid_t           pid;
+  uint64_t         credit;
+  char           buffer[];
 };
 
 

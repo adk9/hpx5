@@ -131,9 +131,9 @@ int main(int argc, char *argv[]) {
     interval = atoi(argv[1]);
   }
    
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_setVal, _setVal_action);
-  HPX_REGISTER_ACTION(&_getVal, _getVal_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_setVal_action, &_setVal);
+  HPX_REGISTER_ACTION(_getVal_action, &_getVal);
 
   return hpx_run(&_main, &interval, sizeof(interval));
 }

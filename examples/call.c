@@ -14,19 +14,6 @@
 #include <stdio.h>
 #include <hpx/hpx.h>
 
-#define _HPX(type, action)                              \
-  static int action##_##type(void*);                    \
-  static hpx_action_t action;                           \
-  static __attribute__((constructor))                   \
-  void _register_##action##_##type(void) {              \
-    HPX_REGISTER_##type(&action, action##_##type);      \
-  }                                                     \
-  static int action##_##type
-
-#define HPX_ACTION(n)       _HPX(ACTION, n)
-#define HPX_TASK(n)         _HPX(TASK, n)
-#define HPX_INTERRUPT(n)    _HPX(INTERRUPT, n)
-
 
 HPX_INTERRUPT(_my_interrupt)(void *args) {
   printf("Hi, I am an interrupt!\n");

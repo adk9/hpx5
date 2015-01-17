@@ -73,6 +73,6 @@ static int _emulate_gwc_handler(struct isir_emulate_gwc_args *args) {
 
 
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  HPX_REGISTER_ACTION(&isir_emulate_pwc, _emulate_pwc_handler);
-  HPX_REGISTER_ACTION(&isir_emulate_gwc, _emulate_gwc_handler);
+  HPX_REGISTER_ACTION(_emulate_pwc_handler, &isir_emulate_pwc);
+  HPX_REGISTER_ACTION(_emulate_gwc_handler, &isir_emulate_gwc);
 }

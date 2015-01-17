@@ -36,8 +36,8 @@ static int _handle_finish_eager_tx(void *UNUSED) {
 }
 
 static HPX_CONSTRUCTOR void _init_handlers(void) {
-  LIBHPX_REGISTER_INTERRUPT(&_eager_rx, _handle_eager_rx);
-  LIBHPX_REGISTER_INTERRUPT(&_finish_eager_tx, _handle_finish_eager_tx);
+  LIBHPX_REGISTER_INTERRUPT(_handle_eager_rx, &_eager_rx);
+  LIBHPX_REGISTER_INTERRUPT(_handle_finish_eager_tx, &_finish_eager_tx);
 }
 
 static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {

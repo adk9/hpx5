@@ -113,8 +113,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_dotprod, _dotprod_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_dotprod_action, &_dotprod);
 
   return hpx_run(&_main, NULL, 0);
 }

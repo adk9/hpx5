@@ -20,15 +20,12 @@
 /// actual, "on-the-wire," network data structure, as well as the
 /// "thread-control-block" descriptor for the threading subsystem.
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <jemalloc/jemalloc_hpx.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-#include <jemalloc/jemalloc.h>
-
-#include <inttypes.h>
-
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
@@ -147,6 +144,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 
   // initialize the structure with defaults
   p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->next     = NULL;
   p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
@@ -184,7 +182,7 @@ static int _send_async_action(hpx_parcel_t **p) {
 
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_send_async, _send_async_action);
+  LIBHPX_REGISTER_ACTION(_send_async_action, &_send_async);
 }
 
 
