@@ -69,6 +69,14 @@ hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
   return HPX_SUCCESS;
 }
 
+/// Encapsulates an asynchronous remote-procedure-call.
+int
+hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
+         const void *args, size_t len) {
+  return hpx_call_with_continuation(addr, action, result, hpx_lco_set_action,
+                                    args, len);
+}
+
 
 int
 hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,

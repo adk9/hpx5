@@ -51,10 +51,8 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-///   int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
-///                const void *args, size_t len);
-#define hpx_call(addr, action, result, args, len)                       \
-  hpx_call_with_continuation(addr, action, result, hpx_lco_set_action, args, len)
+int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
+             const void *args, size_t len);
 
 
 /// Locally synchronous call with continuation interface.
