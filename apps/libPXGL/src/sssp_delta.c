@@ -78,7 +78,8 @@ static void _insert_buckets(const int thread_no, const size_t level, const hpx_a
   ++buckets->num_vertices[thread_no];
 }
 
-int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const distance_t *const distance_ptr, const size_t len, const hpx_addr_t result) {
+int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const hpx_addr_t result, const hpx_action_t c_action,
+                            const distance_t *const distance_ptr, const size_t len) {
   const distance_t distance = *distance_ptr;
   // printf("delta_send_vertex, vertex: %zu, distance: %" SSSP_UINT_PRI "\n", vertex, distance);
   if(_get_level(distance) > buckets->current_level) {
