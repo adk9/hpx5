@@ -59,21 +59,29 @@ static uint32_t _fetch_align_and_add(volatile uint64_t *p, uint32_t n,
 static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 {
   assert(bytes % heap->bytes_per_chunk == 0);
-  assert(align % heap->bytes_per_chunk == 0);
 
-  uint64_t   bits = bytes / heap->bytes_per_chunk;
-  uint64_t balign = align / heap->bytes_per_chunk;
-  assert(bits < UINT32_MAX);
-  assert(balign < UINT32_MAX);
+  // figure out the bias and period of our search, not too worried about
+  // overhead here---could have log2_base and log2_chunk in the heap structure
+  uint32_t log2_base = ceil_log2_64((uint64_t)heap->base);
+  uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
+  uint32_t log2_align = ceil_log2_64(align);
+
+  uint32_t bias = max_i32(log2_align - log2_base, 0);
+  uint32_t period = log2_align / log2_chunk;
+
+  assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
+  uint32_t bits = bytes / heap->bytes_per_chunk;
 
   uint32_t bit = 0;
-  if (bitmap_reserve(heap->chunks, bits, balign, &bit))
+  if (bitmap_reserve(heap->chunks, bits, bias, period, &bit)) {
     goto oom;
+  }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
-  assert(offset % align == 0);
   heap_set_csbrk(heap, offset + bytes);
-  return heap_offset_to_lva(heap, offset);
+  void *p = heap_offset_to_lva(heap, offset);
+  assert((uintptr_t)p % align == 0);
+  return p;
 
  oom:
   dbg_error("out-of-memory detected\n");
@@ -233,22 +241,30 @@ void heap_fini(heap_t *heap) {
 
 void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
-  assert(align % heap->bytes_per_chunk == 0);
 
-  uint64_t   bits = bytes / heap->bytes_per_chunk;
-  uint64_t balign = align / heap->bytes_per_chunk;
-  assert(bits < UINT32_MAX);
-  assert(balign < UINT32_MAX);
+  // figure out the bias and period of our search, not too worried about
+  // overhead here---could have log2_base and log2_chunk in the heap structure
+  uint32_t log2_base = ceil_log2_64((uint64_t)heap->base);
+  uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
+  uint32_t log2_align = ceil_log2_64(align);
+
+  uint32_t bias = max_i32(log2_align - log2_base, 0);
+  uint32_t period = log2_align / log2_chunk;
+
+  assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
+  uint32_t bits = bytes / heap->bytes_per_chunk;
 
   uint32_t bit = 0;
-  if (bitmap_rreserve(heap->chunks, bits, balign, &bit))
+  if (bitmap_rreserve(heap->chunks, bits, bias, period, &bit)) {
     goto oom;
+  }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
   assert(offset % align == 0);
 
-  if (offset < heap->csbrk)
+  if (offset < heap->csbrk) {
     goto oom;
+  }
 
   return heap->base + offset;
 
