@@ -16,8 +16,8 @@ static hpx_action_t _sssp_print_source_adj_list = 0;
 sssp_kind_t _sssp_kind = _CHAOTIC_SSSP_KIND;
 adj_list_t graph = HPX_NULL;
 
-typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, const void*, size_t, hpx_addr_t);
-static send_vertex_t send_vertex = hpx_call;
+typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, hpx_addr_t, hpx_action_t, const void*, size_t);
+static send_vertex_t send_vertex = hpx_call_with_continuation;
 
 bool _try_update_vertex_distance(adj_list_vertex_t *const vertex, distance_t distance) {
   // printf("try update, vertex: %zu, distance: %zu\n", vertex, distance);
@@ -53,8 +53,8 @@ void _send_update_to_neighbors(adj_list_vertex_t *const vertex, distance_t dista
       = hpx_addr_add(graph, e->dest * sizeof(hpx_addr_t), _index_array_block_size);
     
     // printf("Calling send_vertex with vertex: %zu and distance: %zu\n", index, distance);
-    send_vertex(index, _sssp_visit_vertex, &distance, sizeof(distance), 
-	     _get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL);
+    send_vertex(index, _sssp_visit_vertex, _get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL, HPX_ACTION_INVALID,
+                &distance, sizeof(distance));
   }
   
   // printf("Distance Action waiting on edges on (%" SSSP_UINT_PRI ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
