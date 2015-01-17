@@ -21,11 +21,11 @@ static size_t num_elem;
 static size_t freq;
 
 // DC Actions
-hpx_action_t _sssp_dc_process_vertex = HPX_INVALID_ACTION_ID;
-hpx_action_t sssp_init_dc = HPX_INVALID_ACTION_ID;
-hpx_action_t _sssp_init_queues = HPX_INVALID_ACTION_ID;
-static hpx_action_t _sssp_delete_queues = HPX_INVALID_ACTION_ID;
-static hpx_action_t _handle_queue = HPX_INVALID_ACTION_ID;
+hpx_action_t _sssp_dc_process_vertex = HPX_ACTION_INVALID;
+hpx_action_t sssp_init_dc = HPX_ACTION_INVALID;
+hpx_action_t _sssp_init_queues = HPX_ACTION_INVALID;
+static hpx_action_t _sssp_delete_queues = HPX_ACTION_INVALID;
+static hpx_action_t _handle_queue = HPX_ACTION_INVALID;
 
 static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
   const hpx_addr_t target = hpx_thread_current_target();
@@ -142,12 +142,13 @@ static int _handle_queue_action(sssp_queue_t * const * const queue) {
   return HPX_SUCCESS;
 }
 
-static __attribute__((constructor)) void _sssp_dc_register_actions() {
-  HPX_REGISTER_ACTION(&_sssp_dc_process_vertex, _sssp_dc_process_vertex_action);
-  HPX_REGISTER_ACTION(&sssp_init_dc, sssp_init_dc_action);
-  HPX_REGISTER_ACTION(&_sssp_delete_queues, _sssp_delete_queues_action);
-  HPX_REGISTER_ACTION(&_handle_queue, _handle_queue_action);
-  HPX_REGISTER_ACTION(&_sssp_init_queues, _sssp_init_queues_action);
+static HPX_CONSTRUCTOR void _sssp_dc_register_actions() {
+  HPX_REGISTER_ACTION(_sssp_dc_process_vertex_action,
+                      &_sssp_dc_process_vertex);
+  HPX_REGISTER_ACTION(sssp_init_dc_action, &sssp_init_dc);
+  HPX_REGISTER_ACTION(_sssp_delete_queues_action, &_sssp_delete_queues);
+  HPX_REGISTER_ACTION(_handle_queue_action, &_handle_queue);
+  HPX_REGISTER_ACTION(_sssp_init_queues_action, &_sssp_init_queues);
   num_pq = 0;
   sssp_queues = NULL;
 }

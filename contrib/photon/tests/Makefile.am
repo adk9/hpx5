@@ -1,6 +1,6 @@
 noinst_PROGRAMS = photontest
-check_SCRIPTS       = $(srcdir)/run_tests.sh
-TESTS               = $(srcdir)/run_tests.sh
+check_SCRIPTS       = run_tests.sh
+TESTS               = run_tests.sh
 check_PROGRAMS      = photontest
 photontest_SOURCES  = photonmain.c \
                       photoninit.c \

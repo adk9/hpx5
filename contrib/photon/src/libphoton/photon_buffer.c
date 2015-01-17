@@ -83,8 +83,6 @@ photonBI _photon_buffer_create(void *buf, uint64_t size) {
   new_buf->buf.size = size;
   new_buf->buf.priv = (struct photon_buffer_priv_t){0,0};
   new_buf->ref_count = 1;
-  new_buf->request = NULL_COOKIE;
-  new_buf->tag = -1;
   new_buf->priv_ptr = NULL;
   new_buf->priv_size = 0;
 

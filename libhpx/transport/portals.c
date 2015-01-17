@@ -23,6 +23,7 @@
 #include "libhpx/btt.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -259,8 +260,8 @@ static int _request_cancel(void *request) {
 /// ----------------------------------------------------------------------------
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
-static int _pin(transport_t *transport, const void* buffer, size_t len) {
-  return 0;
+static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
+  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
@@ -524,8 +525,8 @@ transport_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit) {
   portals->pte                  = PTL_PT_ANY;
   portals->bufdesc              = PTL_INVALID_HANDLE;
 
-  LIBHPX_REGISTER_ACTION(&_send_progress_action, _send_progress);
-  LIBHPX_REGISTER_ACTION(&_recv_progress_action, _recv_progress);
+  LIBHPX_REGISTER_ACTION(_send_progress, &_send_progress_action);
+  LIBHPX_REGISTER_ACTION(_recv_progress, &_recv_progress_action);
 
   _portals_init(portals);
   _set_map(portals);

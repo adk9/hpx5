@@ -37,7 +37,8 @@ AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror]
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
+#LT_INIT()
+LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
@@ -45,7 +46,8 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
-HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
+HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
+HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 
 # Check if the assembler supports CFI directives
@@ -87,29 +89,14 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
-
+AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+  
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
-
-AC_ARG_ENABLE([photon-debug],
-  [AS_HELP_STRING([--enable-photon-debug],
-                  [Enable photon debugging @<:@default=no@:>@])],
-  [], [enable_photon_debug=no])
-AS_IF([test "x$enable_photon_debug" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_DEBUG], [1], [Enable photon debugging stuff])])
-AM_CONDITIONAL([ENABLE_PHOTON_DEBUG], [test "$enable_photon_debug" = "yes"])
-
-AC_ARG_ENABLE([photon-trace],
-  [AS_HELP_STRING([--enable-photon-trace],
-                  [Enable photon call tracing @<:@default=no@:>@])],
-  [], [enable_photon_trace=no])
-AS_IF([test "x$enable_photon_trace" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_TRACE], [1], [Enable photon call tracing (files)])])
-AM_CONDITIONAL([ENABLE_PHOTON_TRACE], [test "$enable_photon_trace" = "yes"])
 
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
@@ -146,7 +133,6 @@ HPX_WITH_VERBS
 HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 
 AM_CONDITIONAL([HAVE_XSP], [false])
-AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [false])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
@@ -155,7 +141,6 @@ AS_IF([test "x$enable_photon" != xno],
   [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
   [hpx_have_photon=no])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
-AM_CONDITIONAL([BUILD_PHOTON], [test "x$hpx_have_photon" == xinternal])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
@@ -212,6 +197,7 @@ AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
 AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
+AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
@@ -226,7 +212,6 @@ hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPF
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
-hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -236,14 +221,12 @@ AS_IF([test "x$enable_wall" != xno],
 AS_IF([test "x$enable_werror" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
 
-AS_IF([test "x$enable_jemalloc" != xno],
-  [HPX_JEMALLOC_LDADD="../contrib/jemalloc/src/libjemalloc.la $HPX_JEMALLOC_LDADD"])
-
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
-LDFLAGS="$hpx_extra_ldflags $LDFLAGS"
+
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
@@ -335,7 +318,6 @@ echo "               jemalloc : $enable_jemalloc"
 echo "              hugetlbfs : $with_hugetlbfs"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
-echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"
 echo "             Test Suite : $enable_tests"

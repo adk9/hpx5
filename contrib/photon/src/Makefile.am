@@ -3,7 +3,8 @@ AM_CFLAGS = @CFLAGS@                            \
             -I@PHOTON_SRCDIR@/src/util          \
             -I@PHOTON_SRCDIR@/src/libphoton     \
             -I@PHOTON_SRCDIR@/src/forwarder     \
-	    -I@PHOTON_SRCDIR@/src/contrib
+	    -I@PHOTON_SRCDIR@/src/contrib       \
+	    -I@PHOTON_SRCDIR@/src/contrib/libsync/include
 #-DPHOTON_MULTITHREADED
 
 SUBDIRS      = util contrib
@@ -68,12 +69,4 @@ if HAVE_XSP
 AM_CFLAGS += @XSP_CFLAGS@
 libphoton_la_LDFLAGS += @XSP_LIBS@
 libphoton_la_SOURCES += forwarder/photon_xsp_forwarder.c
-endif
-
-if ENABLE_PHOTON_DEBUG
-AM_CFLAGS += -DDEBUG
-endif
-
-if ENABLE_PHOTON_TRACE
-AM_CFLAGS += -DCALLTRACE
 endif

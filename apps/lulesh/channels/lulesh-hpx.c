@@ -236,8 +236,8 @@ int main(int argc, char **argv)
         return -1;
     }
   }
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_advanceDomain_action, &_advanceDomain);
 
   int input[4];
   input[0] = nDoms;

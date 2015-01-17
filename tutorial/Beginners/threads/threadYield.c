@@ -75,8 +75,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_runMe, _runMe_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_runMe_action, &_runMe);
 
   return hpx_run(&_main, NULL, 0);
 }
