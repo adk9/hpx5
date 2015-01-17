@@ -66,6 +66,7 @@ typedef struct heap {
   char                    *raw_base;
   struct transport_class *transport;
   unsigned             cyclic_arena;
+
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
