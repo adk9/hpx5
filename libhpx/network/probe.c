@@ -47,7 +47,7 @@ static int _probe_handler(void *o) {
 }
 
 static void HPX_CONSTRUCTOR _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_probe, _probe_handler);
+  LIBHPX_REGISTER_ACTION(_probe_handler, &_probe);
 }
 
 int probe_start(network_t *network) {

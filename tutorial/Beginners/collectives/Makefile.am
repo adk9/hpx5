@@ -5,7 +5,7 @@ allreduce_SOURCES             = allreduce.c
 allgather_SOURCES             = allgather.c
 alltoall_SOURCES              = alltoall.c
 
-all_LIBS                      = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                      = $(HPX_LDADD)
 
 AM_CPPFLAGS                   = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                     =
@@ -17,3 +17,7 @@ endif
 allreduce_LDADD               = $(all_LIBS)
 allgather_LDADD               = $(all_LIBS)
 alltoall_LDADD                = $(all_LIBS)
+
+allreduce_DEPENDENCIES        = $(all_LIBS)
+allgather_DEPENDENCIES        = $(all_LIBS)
+alltoall_DEPENDENCIES         = $(all_LIBS)

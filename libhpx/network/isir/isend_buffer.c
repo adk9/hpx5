@@ -178,7 +178,7 @@ int _start_all(isend_buffer_t *isends) {
   uint32_t size = isends->size;
   uint64_t max = isends->max;
   uint64_t limit = isends->limit;
-  uint64_t end = (limit) ? min_uint_64(isends->min + limit, max) : max;
+  uint64_t end = (limit) ? min_u64(isends->min + limit, max) : max;
 
   for (uint64_t i = isends->active; i < end; ++i) {
     int j = _index_of(i, size);

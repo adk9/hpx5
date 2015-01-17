@@ -197,6 +197,33 @@ fi
 AM_CONDITIONAL(HAVE_XSP, test x$have_xsp = xyes)
 
 # ---------------------------------------------------------------------------
+# Perform host-specific work here.
+# ---------------------------------------------------------------------------
+
+AS_CASE([$host_os],
+     [linux*], [AS_CASE([$host_cpu],
+         [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             l1d_linesize=32
+             pagesize=`getconf PAGESIZE`],
+         [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+             l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
+             pagesize=`getconf PAGESIZE`])],
+     [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
+                 pagesize=`getconf PAGESIZE`],
+    [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
+                               grep l1-dcache-line-size | uniq | \
+                               awk '{print $2}'`]
+                [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
+                 l1d_linesize=128
+                 pagesize=4096])
+
+AC_DEFINE_UNQUOTED([PHOTON_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+AC_DEFINE_UNQUOTED([PHOTON_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+AC_DEFINE_UNQUOTED([HPXPAGE_SIZE], [$pagesize], [OS Memory Page Size])
+
+# ---------------------------------------------------------------------------
 # --with-options, see config/photon_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
 PHOTON_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])

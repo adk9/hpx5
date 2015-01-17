@@ -318,9 +318,9 @@ _block_init_handler(uint32_t *args)
 
 static void HPX_CONSTRUCTOR
 _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_block_init_action, _block_init_handler);
-  LIBHPX_REGISTER_ACTION(&_chan_recv_action, _chan_recv_proxy);
-  LIBHPX_REGISTER_ACTION(&_chan_try_recv_action, _chan_try_recv_proxy);
+  LIBHPX_REGISTER_ACTION(_block_init_handler, &_block_init_action);
+  LIBHPX_REGISTER_ACTION(_chan_recv_proxy, &_chan_recv_action);
+  LIBHPX_REGISTER_ACTION(_chan_try_recv_proxy, &_chan_try_recv_action);
 }
 
 /// @}

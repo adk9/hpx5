@@ -371,15 +371,15 @@ static int _main_action(int *input)
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_initGlobals, _initGlobals_action);
-  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(&_initGrid, _initGrid_action);
-  HPX_REGISTER_ACTION(&_updateGrid, _updateGrid_action);
-  HPX_REGISTER_ACTION(&_write_double, _write_double_action);
-  HPX_REGISTER_ACTION(&_read_double, _read_double_action);
-  HPX_REGISTER_ACTION(&_stencil, _stencil_action);
-  HPX_REGISTER_ACTION(&_spawn_stencil, _spawn_stencil_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_initGlobals_action, &_initGlobals);
+  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
+  HPX_REGISTER_ACTION(_initGrid_action, &_initGrid);
+  HPX_REGISTER_ACTION(_updateGrid_action, &_updateGrid);
+  HPX_REGISTER_ACTION(_write_double_action, &_write_double);
+  HPX_REGISTER_ACTION(_read_double_action, &_read_double);
+  HPX_REGISTER_ACTION(_stencil_action, &_stencil);
+  HPX_REGISTER_ACTION(_spawn_stencil_action, &_spawn_stencil);
 }
 
 // Main routine

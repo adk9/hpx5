@@ -170,26 +170,21 @@ START_TEST(test_photon_threaded_put_wc)
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    do {
-              rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
-              if (rc == PHOTON_ERROR) {
-		fprintf(stderr, "Error doing PWC\n");
-                exit(1);
-              }
-              else if (rc == PHOTON_ERROR_RESOURCE) {
-                //fprintf(stderr, "retrying...\n");
-		//sleep(1);
-              }
-            } while (rc == PHOTON_ERROR_RESOURCE);
+	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    if (rc == PHOTON_ERROR) {
+	      fprintf(stderr, "Error doing PWC\n");
+	      exit(1);
+	    }
 	  }
         }
-        clock_gettime(CLOCK_MONOTONIC, &time_e);
       }
       
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
+
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -209,7 +204,6 @@ START_TEST(test_photon_threaded_put_wc)
                 photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
               }
           }
-          clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
       }
 
@@ -218,6 +212,8 @@ START_TEST(test_photon_threaded_put_wc)
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
       
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
+
       MPI_Barrier(MPI_COMM_WORLD);
       
       if (rank == 0 && i && !(sizes[i] % 8)) {

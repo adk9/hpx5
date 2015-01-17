@@ -14,8 +14,8 @@
 #define LIBHPX_LCO_H
 
 #include <hpx/attributes.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include <libsync/lockable_ptr.h>
-#include <jemalloc/jemalloc.h>
 
 /// This constant is used to determine when a set should be performed
 /// asynchronously, even if the set is actually local.

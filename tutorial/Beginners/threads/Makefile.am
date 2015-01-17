@@ -17,7 +17,7 @@ threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
 threadCurrentCont_SOURCES   = threadCurrentCont.c
 
-all_LIBS                    = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                    = $(HPX_LDADD)
 
 AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                   =
@@ -38,3 +38,16 @@ threadYield_LDADD           = $(all_LIBS)
 threadExit_LDADD            = $(all_LIBS)
 threadCurrentTarget_LDADD   = $(all_LIBS)
 threadCurrentCont_LDADD     = $(all_LIBS)
+
+threadSpawn1_DEPENDENCIES          = $(all_LIBS)
+threadSpawn2_DEPENDENCIES          = $(all_LIBS)
+threadSpawn3_DEPENDENCIES          = $(all_LIBS)
+threadSpawn4_DEPENDENCIES          = $(all_LIBS)
+threadArgPassing_DEPENDENCIES      = $(all_LIBS)
+threadContinue_DEPENDENCIES        = $(all_LIBS)
+threadContCleanup_DEPENDENCIES     = $(all_LIBS)
+threadSemaphores_DEPENDENCIES      = $(all_LIBS)
+threadYield_DEPENDENCIES           = $(all_LIBS)
+threadExit_DEPENDENCIES            = $(all_LIBS)
+threadCurrentTarget_DEPENDENCIES   = $(all_LIBS)
+threadCurrentCont_DEPENDENCIES     = $(all_LIBS)

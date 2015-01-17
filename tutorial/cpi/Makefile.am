@@ -3,7 +3,7 @@ cpi_PROGRAMS                    = cpi
 
 cpi_SOURCES                     = cpi.c 
 
-all_LIBS                        = $(top_builddir)/libhpx/libhpx.la
+all_LIBS                        = $(HPX_LDADD)
 
 AM_CPPFLAGS                     = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                       =
@@ -13,3 +13,5 @@ AM_CFLAGS                      += @MPI_CFLAGS@
 endif
 
 cpi_LDADD                       = $(all_LIBS)
+
+cpi_DEPENDENCIES                = $(all_LIBS)

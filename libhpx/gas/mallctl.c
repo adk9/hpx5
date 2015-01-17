@@ -17,8 +17,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <jemalloc/jemalloc.h>
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "mallctl.h"
 
 
@@ -26,21 +26,21 @@ int mallctl_get_lg_dirty_mult(void) {
   ssize_t opt = -1;
   size_t sz = sizeof(opt);
   int e = libhpx_global_mallctl("opt.lg_dirty_mult", &opt, &sz, NULL, 0);
-  if (e)
-    dbg_error("jemalloc: failed to check opt.lg_dirty_mult.\n");
+  if (e) {
+    dbg_error("failed to check opt.lg_dirty_mult.\n");
+  }
   return (int)opt;
 }
 
 /// This is a hack to force jemalloc to avoid purging pages. The
 /// opt.lg_dirty_mult is a read-only config value, but we can force it to be
 /// what we want because we're using an embedded jemalloc.
-extern ssize_t hpxje_opt_lg_dirty_mult;
+extern ssize_t libhpx_global_je_opt_lg_dirty_mult;
 
-bool mallctl_disable_dirty_page_purge(void) {
-#if !defined(__ARMEL__) 
-  hpxje_opt_lg_dirty_mult = -1;
-#endif
-  return (mallctl_get_lg_dirty_mult() == -1);
+
+int mallctl_disable_dirty_page_purge(void) {
+  libhpx_global_je_opt_lg_dirty_mult = -1;
+  return (mallctl_get_lg_dirty_mult() == -1) ? LIBHPX_OK : LIBHPX_ERROR;
 }
 
 
@@ -50,7 +50,7 @@ size_t mallctl_get_chunk_size(void) {
   int e = libhpx_global_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz,
                                 NULL, 0);
   if (e)
-    dbg_error("jemalloc: failed to read the chunk size\n");
+    dbg_error("failed to read the chunk size\n");
 
   return (size_t)1 << log2_bytes_per_chunk;
 }

@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #include <hpx/builtins.h>
-#include <jemalloc/jemalloc.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include <valgrind/valgrind.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>

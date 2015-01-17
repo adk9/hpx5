@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
     .ranks = hpx_get_num_ranks(),
   };
  
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_get, _get_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_get_action, &_get);
 
   return hpx_run(&_main, &args, sizeof(args));
 }

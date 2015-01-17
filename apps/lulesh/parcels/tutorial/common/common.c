@@ -50,7 +50,8 @@ main(int argc, char * const argv[argc])
   tutorial_init_actions();
 
   // register the main action
-  hpx_action_t _main = HPX_REGISTER_ACTION(tutorial_main_action);
+  hpx_action_t _main;
+  HPX_REGISTER_ACTION(tutorial_main_action, &_main);
 
   // run HPX (this copies the args structure)
   return hpx_run(&_main, &args, sizeof(args));

@@ -151,7 +151,7 @@ static hpx_status_t _gencount_wait_gen_proxy(unsigned long *gen) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_gencount_wait_gen_action, _gencount_wait_gen_proxy);
+  LIBHPX_REGISTER_ACTION(_gencount_wait_gen_proxy, &_gencount_wait_gen_action);
 }
 
 hpx_addr_t

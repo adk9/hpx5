@@ -26,7 +26,7 @@ qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 
-all_LIBS = $(top_builddir)/libhpx/libhpx.la
+all_LIBS = $(HPX_LDADD)
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
@@ -61,3 +61,25 @@ pingpong_chan_LDADD   = $(all_LIBS)
 qsort_LDADD           = $(all_LIBS)
 hello_LDADD           = $(all_LIBS)
 call_LDADD            = $(all_LIBS)
+
+fibonacci_DEPENDENCIES       = $(all_LIBS)
+pingpong_DEPENDENCIES        = $(all_LIBS)
+allgather_DEPENDENCIES       = $(all_LIBS)
+allreduce_bench_DEPENDENCIES = $(all_LIBS)
+alltoall_DEPENDENCIES        = $(all_LIBS)
+allreduce_DEPENDENCIES       = $(all_LIBS)
+countdown_DEPENDENCIES       = $(all_LIBS)
+seqspawn_DEPENDENCIES        = $(all_LIBS)
+parspawn_DEPENDENCIES        = $(all_LIBS)
+future_DEPENDENCIES          = $(all_LIBS)
+memput_DEPENDENCIES          = $(all_LIBS)
+memget_DEPENDENCIES          = $(all_LIBS)
+guppie_DEPENDENCIES          = $(all_LIBS)
+netfutures_DEPENDENCIES      = $(all_LIBS)
+sendrecv_DEPENDENCIES        = $(all_LIBS)
+sendrecv_chan_DEPENDENCIES   = $(all_LIBS)
+allreduce_chan_DEPENDENCIES  = $(all_LIBS)
+pingpong_chan_DEPENDENCIES   = $(all_LIBS)
+qsort_DEPENDENCIES           = $(all_LIBS)
+hello_DEPENDENCIES           = $(all_LIBS)
+call_DEPENDENCIES            = $(all_LIBS)

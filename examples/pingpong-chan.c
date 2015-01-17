@@ -142,8 +142,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_pinger, _pinger_action);
-  HPX_REGISTER_ACTION(&_ponger, _ponger_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_pinger_action, &_pinger);
+  HPX_REGISTER_ACTION(_ponger_action, &_ponger);
   return hpx_run(&_main, NULL, 0);
 }
