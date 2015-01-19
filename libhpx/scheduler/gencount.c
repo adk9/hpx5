@@ -129,11 +129,14 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
 
 static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   static const lco_class_t gencount_vtable = {
-    _gencount_fini,
-    _gencount_error,
-    _gencount_set,
-    _gencount_get,
-    _gencount_wait
+    .on_fini = _gencount_fini,
+    .on_error = _gencount_error,
+    .on_set = _gencount_set,
+    .on_get = _gencount_get,
+    .on_wait = _gencount_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   lco_init(&gencnt->lco, &gencount_vtable, 0);

@@ -107,11 +107,14 @@ _sema_init(_sema_t *sema, unsigned count)
 {
   // the semaphore vtable
   static const lco_class_t vtable = {
-    _sema_fini,
-    _sema_error,
-    _sema_set,
-    _sema_get,
-    _sema_wait
+    .on_fini = _sema_fini,
+    .on_error = _sema_error,
+    .on_set = _sema_set,
+    .on_get = _sema_get,
+    .on_wait = _sema_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   lco_init(&sema->lco, &vtable, 0);

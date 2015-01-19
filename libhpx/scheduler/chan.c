@@ -239,11 +239,14 @@ _chan_wait(lco_t *lco)
 static void
 _chan_init(_chan_t *c) {
   static const lco_class_t vtable = {
-    _chan_fini,
-    _chan_error,
-    _chan_set,
-    _chan_get,
-    _chan_wait
+    .on_fini = _chan_fini,
+    .on_error = _chan_error,
+    .on_set = _chan_set,
+    .on_get = _chan_get,
+    .on_wait = _chan_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   lco_init(&c->lco, &vtable, 0);

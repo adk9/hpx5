@@ -28,11 +28,7 @@ typedef union {
   lockable_ptr_t       lock;
   const lco_class_t *vtable;
   uintptr_t            bits;
-} lco_t
-  #ifdef __ARMEL__
-  HPX_ALIGNED(16)
-  #endif
-;
+} lco_t HPX_ALIGNED(16);
 
 /// ----------------------------------------------------------------------------
 /// The LCO abstract class interface.
@@ -49,23 +45,21 @@ typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
+typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
 typedef hpx_status_t (*lco_try_get_t)(lco_t *lco, int size, void *value, hpx_time_t time);
 typedef hpx_status_t (*lco_try_wait_t)(lco_t *lco, hpx_time_t time);
 
 
 struct lco_class {
-  lco_fini_t   on_fini;
-  lco_error_t on_error;
-  lco_set_t     on_set;
-  lco_get_t     on_get;
-  lco_wait_t   on_wait;
-  lco_try_get_t on_try_get;
+  lco_fini_t         on_fini;
+  lco_error_t       on_error;
+  lco_set_t           on_set;
+  lco_attach_t     on_attach;
+  lco_get_t           on_get;
+  lco_wait_t         on_wait;
+  lco_try_get_t   on_try_get;
   lco_try_wait_t on_try_wait;
-}
-  #ifdef __ARMEL__
-  HPX_ALIGNED(16)
-  #endif
-;
+} HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------
 // LCO operations merely operate on the bits of an lco vtable pointer.
@@ -159,7 +153,5 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_INTERNAL;
 
-void lco_future_set(lco_t *lco, int size, const void *from)
-  HPX_INTERNAL;
 
 #endif // LIBHPX_LCO_H
