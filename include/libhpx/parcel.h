@@ -126,8 +126,12 @@ static inline uint32_t parcel_payload_size(hpx_parcel_t *p) {
   return p->size;
 }
 
+static inline uint32_t parcel_prefix_size(void) {
+  return offsetof(hpx_parcel_t, action);
+}
+
 static inline uint32_t parcel_network_size(hpx_parcel_t *p) {
-  return parcel_size(p) - offsetof(hpx_parcel_t, action);
+  return parcel_size(p) - parcel_prefix_size();
 }
 
 static inline void *parcel_network_offset(hpx_parcel_t *p) {
