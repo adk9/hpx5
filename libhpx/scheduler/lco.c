@@ -332,7 +332,6 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
-
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
@@ -378,7 +377,6 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   }
   return errors;
 }
-
 
 int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                     hpx_status_t statuses[])
@@ -429,16 +427,43 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   return errors;
 }
 
+/// Attach a parcel to an LCO.
+///
+/// If the lco is local, then this just forwards to the LCO's attach handler,
+/// otherwise it will use a remote-procedure-call to copy the parcel data out to
+/// wherever the LCO is located.
+///
+/// The @p lsync LCO will be set when the operation has completed.
+hpx_status_t hpx_lco_attach(hpx_addr_t addr, hpx_parcel_t *p, hpx_addr_t lsync) {
+  lco_t *lco = NULL;
+  if (!hpx_gas_try_pin(addr, (void**)&lco)) {
+    return hpx_call(addr, _lco_attach_action, p, parcel_size(p), lsync);
+  }
 
-void hpx_lco_attach(hpx_addr_t addr, hpx_parcel_t *p, hpx_addr_t lsync) {
-  dbg_error("hpx_lco_attach is not yet implemented\n");
-  hpx_abort();
+  const lco_class_t *class = _lco_class(lco);
+  DEBUG_IF(!class->on_attach) {
+    dbg_error("on_attach uninitialized");
+  }
+  hpx_status_t status = class->on_attach(lco, p);
+  hpx_gas_unpin(addr);
+  if (lsync) {
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
+  return status;
 }
 
-
-void hpx_lco_attach_sync(hpx_addr_t addr, hpx_parcel_t *p) {
+/// Attach a parcel to an LCO synchronously.
+///
+/// This just allocates a future to turn the normal attach into a synchronous
+/// operation.
+hpx_status_t hpx_lco_attach_sync(hpx_addr_t addr, hpx_parcel_t *p) {
   hpx_addr_t lsync = hpx_lco_future_new(0);
-  hpx_lco_attach(addr, p, lsync);
-  hpx_lco_wait(lsync);
+  if (!lsync) {
+    return dbg_error("could not allocate a future\n");
+  }
+  hpx_status_t status = hpx_lco_attach(addr, p, lsync);
+  dbg_check(status, "could not attach to lco\n");
+  status = hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
+  return status;
 }
