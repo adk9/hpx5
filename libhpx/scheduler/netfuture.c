@@ -25,6 +25,7 @@
 
 #include <photon.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"

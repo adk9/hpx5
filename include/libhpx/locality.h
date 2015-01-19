@@ -29,12 +29,12 @@
 #include <hpx/hpx.h>
 #include <hwloc.h>
 
-#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 
 /// Forward declarations.
 /// @{
+struct action_table;
 struct boot;
 struct config;
 struct network;
