@@ -279,12 +279,13 @@ _progress_recvs() {
   } // end if
 }
 
-static void
+static int
 _progress_recv_action() {
   while (!shutdown) {
     _progress_recvs();
     hpx_thread_yield();
   }
+  return HPX_SUCCESS;
 }
 
 static void 
