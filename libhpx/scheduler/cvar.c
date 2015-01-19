@@ -59,16 +59,20 @@ void cvar_clear_error(cvar_t *cvar) {
     cvar->top = NULL;
 }
 
-hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread) {
+hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel) {
   if (_has_error(cvar))
     return cvar_get_error(cvar);
 
-  thread->parcel->next = cvar->top;
-  cvar->top = thread->parcel;
+  parcel->next = cvar->top;
+  cvar->top = parcel;
   return HPX_SUCCESS;
 }
 
-hpx_parcel_t *cvar_pop_thread(cvar_t *cvar) {
+hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread) {
+  return cvar_attach(cvar, thread->parcel);
+}
+
+hpx_parcel_t *cvar_pop(cvar_t *cvar) {
   if (_has_error(cvar))
     return NULL;
 
