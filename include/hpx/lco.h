@@ -68,7 +68,9 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 /// @param          lco The lco.
 /// @param            p The parcel to attach.
 /// @param        lsync An LCO for synchronization.
-void hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t lsync)
+///
+/// @returns            HPX_SUCCESS or an error code
+hpx_status_t hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t lsync)
   HPX_NON_NULL(2);
 
 
@@ -81,7 +83,9 @@ void hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t lsync)
 ///
 /// @param          lco The lco.
 /// @param            p The parcel to attach.
-void hpx_lco_attach_sync(hpx_addr_t lco, struct hpx_parcel *p)
+///
+/// @returns            HPX_SUCCESS or an error code
+hpx_status_t hpx_lco_attach_sync(hpx_addr_t lco, struct hpx_parcel *p)
   HPX_NON_NULL(2);
 
 
