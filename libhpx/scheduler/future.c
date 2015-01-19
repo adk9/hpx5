@@ -106,6 +106,35 @@ static void _future_reset(_future_t *f) {
   lco_unlock(&f->lco);
 }
 
+static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+
+  // if the future isn't triggered, then attach this parcel to the full
+  // condition
+  if (!lco_get_triggered(&f->lco)) {
+    status = cvar_attach(&f->full, p);
+    goto unlock;
+  }
+
+  // if the future has an error, then return that error without sending the
+  // parcel
+  //
+  // NB: should we actually send some sort of error condition?
+  status = cvar_get_error(&f->full);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // go ahead and send this parcel eagerly
+  hpx_parcel_send(p, HPX_NULL);
+
+ unlock:
+  lco_unlock(&f->lco);
+  return status;
+}
+
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
   _future_t *f = (_future_t *)lco;
@@ -156,7 +185,7 @@ static void _future_init(_future_t *f, int size) {
     .on_get = _future_get,
     .on_wait = _future_wait,
     .on_try_wait = _future_try_wait,
-    .on_attach = NULL,
+    .on_attach = _future_attach,
     .on_try_get = NULL
   };
 
