@@ -31,7 +31,6 @@ struct hpx_parcel;
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
-
 /// Propagate an error to an LCO.
 ///
 /// @param   lco the LCO's global address
@@ -39,10 +38,8 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 
-
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
-
 
 /// Set an LCO, optionally with data.
 ///
@@ -55,7 +52,6 @@ extern hpx_action_t hpx_lco_set_action;
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
-
 
 /// Attach a parcel as an LCO continuation.
 ///
@@ -73,7 +69,6 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 hpx_status_t hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t lsync)
   HPX_NON_NULL(2);
 
-
 /// Attach a parcel as an LCO continuation.
 ///
 /// When the LCO is triggered, all of its waiting threads will be restarted, and
@@ -87,7 +82,6 @@ hpx_status_t hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t ls
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t hpx_lco_attach_sync(hpx_addr_t lco, struct hpx_parcel *p)
   HPX_NON_NULL(2);
-
 
 /// Perform a wait operation.
 ///
@@ -157,7 +151,6 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 ///                      @p statuses is NULL
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
 
-
 /// Blocks the thread until all of the LCOs have been set, returning their
 /// values.
 ///
@@ -179,14 +172,12 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
 int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                      hpx_status_t statuses[]);
 
-
 /// Semaphores are builtin LCOs that represent resource usage.
 ///
 /// @param init initial value semaphore will be created with
 ///
 /// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned init);
-
 
 /// Standard semaphore V (signal) operation.
 ///
@@ -197,7 +188,6 @@ hpx_addr_t hpx_lco_sema_new(unsigned init);
 /// @param sema the global address of a semaphore
 void hpx_lco_sema_v(hpx_addr_t sema);
 
-
 /// Standard semaphore P (wait) operation.
 ///
 /// Attempts to decrement the count in the semaphore; blocks if the count is 0.
@@ -207,7 +197,6 @@ void hpx_lco_sema_v(hpx_addr_t sema);
 /// @returns HPX_SUCCESS, or an error code if the semaphore is in an error
 ///          condition
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
-
 
 /// An and LCO represents an AND gate.
 /// @{
@@ -275,7 +264,6 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 /// @returns The address of the ith future in the array.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 
-
 /// Channels.
 ///
 /// The channel LCO approximates an MPI channel.
@@ -284,12 +272,10 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 /// possibly asynchronously, and the channel recv operation returns a pointer to
 /// this buffer (any intermediate copies are managed by the runtime).
 
-
 /// Allocate a new channel.
 ///
 /// @returns The global address of the newly allocated channel.
 hpx_addr_t hpx_lco_chan_new(void);
-
 
 /// Send a buffer through a channel.
 ///
@@ -314,8 +300,6 @@ hpx_addr_t hpx_lco_chan_new(void);
 void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *buffer,
                        hpx_addr_t lsync, hpx_addr_t rsync);
 
-
-
 /// Send a buffer through an ordered channel.
 ///
 /// All in order sends from a thread are guaranteed to be received in the order
@@ -331,7 +315,6 @@ void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *buffer,
 void hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *buffer,
                                hpx_addr_t lsync);
 
-
 /// Receive a buffer from a channel.
 ///
 /// This is a blocking call. The user is responsible for freeing the returned
@@ -343,7 +326,6 @@ void hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *buffer,
 ///
 /// @returns HPX_SUCCESS or an error code
 hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer);
-
 
 /// Probe a single channel to attempt to read.
 ///
@@ -359,7 +341,6 @@ hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer);
 ///          HPX_LCO_CHAN_EMPY if there was no buffer available
 ///          HPX_LCO_ERROR if the channel has an error
 hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer);
-
 
 /// Receive from one of a set of channels.
 ///
@@ -384,7 +365,6 @@ hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block);
 hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i, int size, int bsize);
 void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 
-
 /// Allocate a new generation counter.
 ///
 /// A generation counter allows an application programmer to efficiently wait
@@ -403,13 +383,11 @@ void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 /// @returns The global address of the new generation count.
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace);
 
-
 /// Increment the generation counter.
 ///
 /// @param gencnt the counter to increment
 /// @param  rsync The global address of an LCO signal remote completion.
 void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
-
 
 /// Wait for the generation counter to reach a certain value.
 ///
@@ -429,7 +407,6 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
 /// @returns HPX_SUCCESS or an error code.
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 
-
 /// Perform a commutative-associative reduction.
 ///
 /// This is similar to an ALLREDUCE. It is statically sized at creation time,
@@ -437,14 +414,12 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 /// users should wait to call it until they know that they need it.
 /// @{
 
-
 /// The commutative-associative operation type.
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
 /// number of bytes that the allreduce was allocated with.
 typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
                                                  const size_t bytes);
-
 
 /// Allocate a new reduction LCO.
 ///
@@ -484,7 +459,6 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 /// @param size   The size of the value type that we're gathering.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
 
-
 /// Set an alltoall.
 ///
 /// The alltoall LCO hpx_lco_set operation does not work correctly, because
@@ -517,7 +491,6 @@ hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 /// @param inputs The number of participants in the alltoall.
 /// @param size   The size of the value type that we're gathering.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
-
 
 /// @}
 
