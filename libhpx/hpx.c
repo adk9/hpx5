@@ -37,6 +37,8 @@
 #include "libhpx/transport.h"
 #include "network/probe.h"
 
+#include "network/probe.h"
+
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated.
