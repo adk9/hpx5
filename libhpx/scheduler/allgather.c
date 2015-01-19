@@ -270,11 +270,14 @@ _allgather_set(lco_t *lco, int size, const void *from)
 static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
   // vtable
   static const lco_class_t vtable = {
-    _allgather_fini,
-    _allgather_error,
-    _allgather_set,
-    _allgather_get,
-    _allgather_wait
+    .on_fini = _allgather_fini,
+    .on_error = _allgather_error,
+    .on_set = _allgather_set,
+    .on_attach = NULL,
+    .on_get = _allgather_get,
+    .on_wait = _allgather_wait,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   lco_init(&g->lco, &vtable, 0);

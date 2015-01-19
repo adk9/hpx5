@@ -33,10 +33,11 @@
 #define _STATE_MASK        (0x7)
 
 /// Remote action interface to a future
-static hpx_action_t  _lco_wait_action = 0;
-static hpx_action_t   _lco_get_action = 0;
-static hpx_action_t  _lco_fini_action = 0;
-static hpx_action_t _lco_error_action = 0;
+static hpx_action_t _lco_attach_action = 0;
+static hpx_action_t   _lco_wait_action = 0;
+static hpx_action_t    _lco_get_action = 0;
+static hpx_action_t   _lco_fini_action = 0;
+static hpx_action_t  _lco_error_action = 0;
 
 hpx_action_t hpx_lco_set_action = 0;
 
@@ -133,6 +134,20 @@ _lco_wait(void *args)
 }
 
 
+static int
+_lco_attach(void *p) {
+  hpx_addr_t target = hpx_thread_current_target();
+  lco_t *lco = NULL;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    return HPX_RESEND;
+  }
+
+  hpx_action_t status = _lco_class(lco)->on_attach(lco, p);
+  hpx_gas_unpin(target);
+  return status;
+}
+
+
 /// Register the event handlers.
 static void HPX_CONSTRUCTOR
 _initialize_actions(void)
@@ -141,6 +156,7 @@ _initialize_actions(void)
   LIBHPX_REGISTER_ACTION(_lco_error, &_lco_error_action);
   LIBHPX_REGISTER_ACTION(_lco_set, &hpx_lco_set_action);
   LIBHPX_REGISTER_ACTION(_lco_get, &_lco_get_action);
+  LIBHPX_REGISTER_ACTION(_lco_attach, &_lco_attach_action);
   LIBHPX_REGISTER_ACTION(_lco_wait, &_lco_wait_action);
 }
 

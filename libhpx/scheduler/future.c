@@ -28,6 +28,7 @@
 #include "libhpx/scheduler.h"
 #include "lco.h"
 #include "cvar.h"
+#include "future.h"
 
 /// Local future interface.
 /// @{
@@ -154,8 +155,9 @@ static void _future_init(_future_t *f, int size) {
     .on_set = _future_set,
     .on_get = _future_get,
     .on_wait = _future_wait,
-    //    .on_try_get = _future_try_get,
-    .on_try_wait = _future_try_wait
+    .on_try_wait = _future_try_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL
   };
 
   lco_init(&f->lco, &vtable, 0);

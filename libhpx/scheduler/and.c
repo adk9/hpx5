@@ -153,7 +153,8 @@ static void _and_init(_and_t *and, intptr_t value) {
     .on_get = _and_get,
     .on_wait = _and_wait,
     .on_try_get = _and_try_get,
-    .on_try_wait = _and_try_wait
+    .on_try_wait = _and_try_wait,
+    .on_attach = NULL
   };
 
   assert(value >= 0);
