@@ -69,9 +69,6 @@ uint64_t parcel_get_credit(hpx_parcel_t *p)
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///
-/// This uses the stack field of the parcel to chain the parcels together, so it
-/// can't be used with parcels that have active stacks.
-///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.
 ///
@@ -81,9 +78,6 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
 
 
 /// Treat a parcel as a stack of parcels, and push the parcel.
-///
-/// This uses the stack field of the parcel to chain the parcels together, so it
-/// can't be used with parcels that have active stacks.
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.

@@ -176,10 +176,13 @@ static void _send_mail(int id, hpx_parcel_t *p) {
 
 /// Process my mail queue.
 static void _handle_mail(struct worker *w) {
+  hpx_parcel_t *parcels = NULL;
   hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(&w->inbox))) {
-    profile_ctr(++self->stats.mail);
-    _spawn_lifo(w, p);
+  while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
+    while ((p = parcel_stack_pop(&parcels))) {
+      profile_ctr(++self->stats.mail);
+      _spawn_lifo(w, p);
+    }
   }
 }
 
@@ -586,15 +589,16 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 }
 
 /// Resume a thread.
-static inline void _resume(ustack_t *thread) {
-  while (thread) {
-    if (thread->affinity >= 0 && thread->affinity != self->id) {
-      _send_mail(thread->affinity, thread->parcel);
+static inline void _resume(hpx_parcel_t *parcels) {
+  hpx_parcel_t *p;
+  while ((p = parcel_stack_pop(&parcels))){
+    ustack_t *stack = parcel_get_stack(p);
+    if (stack && stack->affinity >= 0) {
+      _send_mail(stack->affinity, p);
     }
     else {
-      _spawn_lifo(self, thread->parcel);
+      _spawn_lifo(self, p);
     }
-    thread = thread->next;
   }
 }
 
