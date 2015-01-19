@@ -311,19 +311,18 @@ uint64_t parcel_get_credit(hpx_parcel_t *p) {
 hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
   hpx_parcel_t *top = *stack;
   if (top) {
-    *stack = (void*)parcel_get_stack(top);
-    parcel_set_stack(top, NULL);
+    *stack = top->next;
+    top->next = NULL;
   }
   return top;
 }
 
 
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
-  DEBUG_IF (parcel_get_stack(parcel) != NULL) {
-    dbg_error("parcel should not have an active stack during push.\n");
+  DEBUG_IF (parcel->next != NULL) {
+    dbg_error("parcel should not have an active next during push.\n");
   }
-  hpx_parcel_t *top = *stack;
-  parcel_set_stack(parcel, (void*)top);
+  parcel->next = *stack;
   *stack = parcel;
 }
 
