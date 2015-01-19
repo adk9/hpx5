@@ -400,3 +400,17 @@ hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   }
   return errors;
 }
+
+
+void hpx_lco_attach(hpx_addr_t addr, hpx_parcel_t *p, hpx_addr_t lsync) {
+  dbg_error("hpx_lco_attach is not yet implemented\n");
+  hpx_abort();
+}
+
+
+void hpx_lco_attach_sync(hpx_addr_t addr, hpx_parcel_t *p) {
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  hpx_lco_attach(addr, p, lsync);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+}
