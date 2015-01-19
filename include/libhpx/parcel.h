@@ -50,6 +50,7 @@ hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
 
 void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
+
 struct ustack *parcel_get_stack(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
@@ -59,6 +60,12 @@ void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
 uint64_t parcel_get_credit(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
+/// The core send operation.
+///
+/// This sends the parcel synchronously. This assumes that the parcel has been
+/// serialized and has credit already, if necessary.
+int parcel_send(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///
