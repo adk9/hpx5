@@ -112,7 +112,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 /// A helper macro to declare and define HPX actions.
 #define HPX_DEFINE_ACTION(type, action)             \
   static int action##_##type(void*);                \
-  static hpx_action_t action;                       \
+  static hpx_action_t action = 0;                   \
   static HPX_CONSTRUCTOR                            \
   void _register_##action##_##type(void) {          \
     HPX_REGISTER_##type(action##_##type, &action);  \
