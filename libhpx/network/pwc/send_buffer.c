@@ -66,6 +66,9 @@ int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
     goto unlock;
   }
 
+  // clear the retry signal
+  status = LIBHPX_OK;
+
   r->p = p;
   r->lsync = lsync;
 
