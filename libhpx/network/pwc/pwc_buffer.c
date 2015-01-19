@@ -44,10 +44,10 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
     dbg_error("remote complete event currently unsupported");
   }
 
-  // int flags = PHOTON_REQ_ONE_CQE |
-  //             ((local) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-  //             ((completion) ? 0 : PHOTON_REQ_PWC_NO_RCE);
-  int flags = 0;
+  int flags = //PHOTON_REQ_ONE_CQE |
+              ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((completion) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  // int flags = 0;
   int rank = buffer->rank;
   void *vlva = (void*)lva;
   int e = photon_put_with_completion(rank, vlva, n, rva, key, lsync, completion,

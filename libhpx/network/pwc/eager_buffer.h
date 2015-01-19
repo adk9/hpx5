@@ -44,19 +44,19 @@ typedef struct eager_buffer {
   const uint32_t UNUSED;
   uint64_t          max;
   uint64_t          min;
-  char            *base;
+  uint64_t         base;
 } eager_buffer_t;
 
 /// Initialize an eager buffer.
 ///
 /// @param       buffer The buffer to initialize.
-/// @param         base The base virtual address for the buffer.
+/// @param         base The base offset for the buffer.
 /// @param         size The size of the buffer.
 ///
 /// @returns  LIBHPX_OK The buffer was initialized correctly.
-int eager_buffer_init(eager_buffer_t *buffer, struct peer *peer, char *base,
+int eager_buffer_init(eager_buffer_t *buffer, struct peer *peer, uint64_t base,
                       uint32_t size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2, 3);
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 /// Finalize a buffer.
 void eager_buffer_fini(eager_buffer_t *buffer)
@@ -79,7 +79,7 @@ int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p)
 /// Perform an eager parcel recv.
 ///
 /// This only works on the local endpoint for an eager buffer.
-hpx_parcel_t *eager_buffer_rx(eager_buffer_t *buffer)
+hpx_parcel_t *eager_buffer_rx(eager_buffer_t *buffer, uint32_t bytes)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

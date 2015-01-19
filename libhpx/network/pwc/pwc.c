@@ -159,11 +159,14 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   // each time through the loop, we deal with local completions
   completion_t completion;
   while (_probe_local(rank, &completion)) {
-    dbg_log_net("processing local completion %lu\n", completion);
     hpx_addr_t addr;
     hpx_action_t op;
     decode_completion(completion, &op, &addr);
     dbg_log_net("extracted local interrupt of %d\n", op);
+    int e = hpx_call(addr, op, NULL, 0, HPX_NULL);
+    if (HPX_SUCCESS != e) {
+      dbg_error("failed to process local completion");
+    }
   }
 
   // deal with received completions
@@ -173,6 +176,10 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       hpx_action_t op;
       decode_completion(completion, &op, &addr);
       dbg_log_net("processing completion %d from rank %d\n", op, i);
+      int e = hpx_call(addr, op, &i, sizeof(i), HPX_NULL);
+      if (HPX_SUCCESS != e) {
+        dbg_error("failed to process local completion");
+      }
     }
   }
 
@@ -191,21 +198,18 @@ static void _pwc_set_flush(network_t *network) {
 /// @param         peer The peer to initialize.
 ///
 /// @returns  LIBHPX_OK The peer was initialized successfully.
-static int _init_peer(pwc_network_t *pwc, peer_t *peer) {
-  int rank = peer - pwc->peers;
+static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
   peer->rank = rank;
   if (LIBHPX_OK != pwc_buffer_init(&peer->pwc, rank, 8)) {
     return dbg_error("could not initialize the pwc buffer\n");
   }
 
   uint32_t size = pwc->parcel_buffer_size;
-  void *rx_base = pwc->eager + rank * size;
-  if (LIBHPX_OK != eager_buffer_init(&peer->rx, peer, rx_base, size)) {
+  if (LIBHPX_OK != eager_buffer_init(&peer->rx, peer, rank * size, size)) {
     return dbg_error("could not initialize the parcel rx endpoint\n");
   }
 
-  void *tx_base = peer->segments[SEGMENT_EAGER].base + rank * size;
-  if (LIBHPX_OK != eager_buffer_init(&peer->tx, peer, tx_base, size)) {
+  if (LIBHPX_OK != eager_buffer_init(&peer->tx, peer, self * size, size)) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
 
@@ -216,6 +220,10 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer) {
   return LIBHPX_OK;
 }
 
+peer_t *pwc_get_peer(struct network *network, int src) {
+  pwc_network_t *pwc = (void*)network;
+  return &pwc->peers[src];
+}
 
 network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
                                     int nrx)
@@ -266,7 +274,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->ranks = ranks;
   pwc->parcel_buffer_size = cfg->parcelbuffersize;
 
-  peer_t *local = &pwc->peers[pwc->rank];
+  peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
 
   // Register the heap segment.
   segment_t *heap = &local->segments[SEGMENT_HEAP];
@@ -305,7 +313,8 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
 
   // Initialize each of the peer structures.
   for (int i = 0; i < ranks; ++i) {
-    e = _init_peer(pwc, &pwc->peers[i]);
+    peer_t *peer = pwc_get_peer(&pwc->vtable, i);
+    e = _init_peer(pwc, peer, pwc->rank, i);
     if (LIBHPX_OK != e) {
       dbg_error("failed to initialize peer %d of %u\n", i, ranks);
       goto unwind;
@@ -318,3 +327,4 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   _pwc_delete(&pwc->vtable);
   return NULL;
 }
+
