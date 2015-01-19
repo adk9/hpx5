@@ -17,8 +17,13 @@
 /// @brief The HPX LCO interface.
 
 #include "hpx/addr.h"
+#include "hpx/attributes.h"
 #include "hpx/types.h"
 
+/// Forward declarations.
+/// @{
+struct hpx_parcel;
+/// @}
 
 /// Delete an LCO.
 ///
@@ -50,6 +55,34 @@ extern hpx_action_t hpx_lco_set_action;
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
+
+
+/// Attach a parcel as an LCO continuation.
+///
+/// When the LCO is triggered, all of its waiting threads will be restarted, and
+/// all of its attached parcels will be sent to their destinations.
+///
+/// This is asynchronous, i.e., it will possibly return before the parcel has
+/// been attached. Users may supply an LCO for synchronization.
+///
+/// @param          lco The lco.
+/// @param            p The parcel to attach.
+/// @param        lsync An LCO for synchronization.
+void hpx_lco_attach(hpx_addr_t addr, struct hpx_parcel *p, hpx_addr_t lsync)
+  HPX_NON_NULL(2);
+
+
+/// Attach a parcel as an LCO continuation.
+///
+/// When the LCO is triggered, all of its waiting threads will be restarted, and
+/// all of its attached parcels will be sent to their destinations.
+///
+/// This is synchronous and will not return until the parcel has been attached.
+///
+/// @param          lco The lco.
+/// @param            p The parcel to attach.
+void hpx_lco_attach_sync(hpx_addr_t lco, struct hpx_parcel *p)
+  HPX_NON_NULL(2);
 
 
 /// Perform a wait operation.
