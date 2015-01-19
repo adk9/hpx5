@@ -21,7 +21,7 @@ struct ustack;
 /// @}
 
 typedef struct cvar {
-  struct ustack *top;
+  hpx_parcel_t *top;
 } cvar_t;
 
 /// Reset a condition variable.
@@ -30,15 +30,15 @@ void cvar_reset(cvar_t *cvar)
 
 /// Set the condition with an error code.
 ///
-/// This records the error in the condition, and returns the list of stacks that
-/// were waiting. The error code will overwrite this list, so it must be
+/// This records the error in the condition, and returns the list of parcels
+/// that were waiting. The error code will overwrite this list, so it must be
 /// processed here.
 ///
 /// @param         cvar The condition variable to set.
 /// @param         code The user-defined error code.
 ///
 /// @returns            The previous list of waiting parcels.
-struct ustack *cvar_set_error(cvar_t *cvar, hpx_status_t code)
+hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Retrieve an error code from the condition variable.
@@ -77,9 +77,10 @@ hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
 /// Pop the top parcel from a condition variable.
 ///
 /// @param         cvar The condition to pop.
+///
 /// @return             The top parcel, or NULL if the condition is empty or has
 ///                       an error.
-struct ustack *cvar_pop_thread(cvar_t *cvar)
+hpx_parcel_t *cvar_pop_thread(cvar_t *cvar)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Pop the parcel list from a condition variable.
@@ -88,7 +89,7 @@ struct ustack *cvar_pop_thread(cvar_t *cvar)
 ///
 /// @return             The list of continuation parcels (NULL if there are
 ///                       none).
-struct ustack *cvar_pop_all(cvar_t *cvar)
+hpx_parcel_t *cvar_pop_all(cvar_t *cvar)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_CVAR_H
