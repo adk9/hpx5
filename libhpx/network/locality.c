@@ -14,13 +14,11 @@
 # include "config.h"
 #endif
 
-
 /// Implement the locality actions.
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
