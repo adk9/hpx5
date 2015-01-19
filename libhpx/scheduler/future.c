@@ -64,8 +64,9 @@ static bool _trigger(_future_t *f) {
 // Nothing extra allocated in the future
 static void _future_fini(lco_t *lco) {
   _future_t *f = (void*)lco;
-  if (f)
+  if (f) {
     lco_lock(&f->lco);
+  }
   libhpx_global_free(f);
 }
 
@@ -95,6 +96,7 @@ void lco_future_set(lco_t *lco, int size, const void *from) {
 static void _future_error(lco_t *lco, hpx_status_t code) {
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
+  _trigger(f);
   scheduler_signal_error(&f->full, code);
   lco_unlock(&f->lco);
 }
