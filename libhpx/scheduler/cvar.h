@@ -72,7 +72,20 @@ void cvar_clear_error(cvar_t *cvar)
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
+/// Push a parcel onto a condition variable directly.
+///
+/// If the condition is in an error condition, this will return that error
+/// condition without pushing the parcel onto the condition's queue, otherwise
+/// it will push the parcel and return HPX_SUCCESS.
+///
+/// @param         cvar The condition variable to modify.
+/// @param       thread The parcel to push.
+///
+/// @returns            HPX_SUCCESS or an error code
+hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 /// Pop the top parcel from a condition variable.
 ///
@@ -80,7 +93,7 @@ hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
 ///
 /// @return             The top parcel, or NULL if the condition is empty or has
 ///                       an error.
-hpx_parcel_t *cvar_pop_thread(cvar_t *cvar)
+hpx_parcel_t *cvar_pop(cvar_t *cvar)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Pop the parcel list from a condition variable.
