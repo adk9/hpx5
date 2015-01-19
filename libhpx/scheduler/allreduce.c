@@ -147,11 +147,14 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 {
   // vtable
   static const lco_class_t vtable = {
-    _allreduce_fini,
-    _allreduce_error,
-    _allreduce_set,
-    _allreduce_get,
-    _allreduce_wait
+    .on_fini = _allreduce_fini,
+    .on_error = _allreduce_error,
+    .on_set = _allreduce_set,
+    .on_attach = NULL,
+    .on_get = _allreduce_get,
+    .on_wait = _allreduce_wait,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   assert(init);
