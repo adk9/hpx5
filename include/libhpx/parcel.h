@@ -79,4 +79,9 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 
+static inline size_t parcel_size(hpx_parcel_t *p) {
+  assert(p);
+  return sizeof(*p) + p->size;
+}
+
 #endif // LIBHPX_PARCEL_H
