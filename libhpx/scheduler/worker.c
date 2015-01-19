@@ -603,9 +603,8 @@ static inline void _resume(hpx_parcel_t *parcels) {
   }
 }
 
-
 void scheduler_signal(cvar_t *cvar) {
-  _resume(cvar_pop_thread(cvar));
+  _resume(cvar_pop(cvar));
 }
 
 
