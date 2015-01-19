@@ -248,7 +248,6 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   }
 }
 
-
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync)
 {
