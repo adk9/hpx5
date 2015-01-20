@@ -86,10 +86,10 @@ int hpx_logging_init() {
            lt.tm_hour, lt.tm_min, lt.tm_mday, lt.tm_mon + 1, 
            lt.tm_year + 1900, 
            hpx_get_my_rank());
-  success = mkdir(log_dir_name, 777);
+  success = mkdir(log_dir_name, 0777);
   if (success == 0)
     success = chdir(log_dir_name);
-  if (!success) {
+  if (success != 0) {
     perror("Could not create output directory for logging.");
     return -1;
   }
