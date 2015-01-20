@@ -38,11 +38,13 @@ struct photon_config_t {
     char **forwarder_eids;
   } forwarder;
 
-  struct {                  // Various buffer and message sizes (set -1 for defaults)
-    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128k, set 0 to disable)
+  struct {                  // Various buffer and message sizes (-1 for defaults)
+    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128K, set 0 to disable)
     int small_msg_size;     // Messages <= bytes will use eager buffers (default 8192, set 0 to disable)
     int small_pwc_size;     // Messages <= bytes will be coalesced in PWC (default 8192, set 0 to disable)
     int ledger_entries;     // The number of ledger entries (default 64)
+    int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
+    int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
   } cap;
 
   struct {
