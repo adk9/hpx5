@@ -20,7 +20,9 @@ struct photon_config_t cfg = {
     .small_msg_size = -1,
     .small_pwc_size =  1024,
     .eager_buf_size = -1,
-    .ledger_entries = -1
+    .ledger_entries = -1,
+    .max_rd         = -1,
+    .default_rd     = -1
   },
   .exch = {
     .allgather = NULL,
