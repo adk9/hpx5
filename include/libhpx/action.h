@@ -33,8 +33,8 @@ int action_table_run_handler(const struct action_table *, hpx_parcel_t *)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the serialized/marshalled arguments associated with an action
-int action_table_get_args(const struct action_table *table, hpx_action_t id,
-                          va_list inargs, void **outargs, size_t *len)
+bool action_table_get_args(const struct action_table *table, hpx_action_t id,
+                           va_list inargs, void **outargs, size_t *len)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

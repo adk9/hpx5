@@ -74,7 +74,7 @@ int t15_spawn_action(const hpx_addr_t * const termination_lco) {
     assert(e == HPX_SUCCESS);
 
     for(size_t j = 0; j < WAITERS; ++j) {
-      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_futures[2],
+      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, test_futures[2],
                    test_futures[0], sizeof(hpx_addr_t));
       assert(e == HPX_SUCCESS);
     }
@@ -96,7 +96,7 @@ int t15_spawn_action(const hpx_addr_t * const termination_lco) {
     }
 
     for(size_t j = 0; j < WAITERS; ++j) {
-      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, &test_ands[2],
+      e = hpx_call(HPX_THERE(rand() % HPX_LOCALITIES), t15_wait, test_ands[2],
                    test_ands[0], sizeof(hpx_addr_t));
       assert(e == HPX_SUCCESS);
     }
