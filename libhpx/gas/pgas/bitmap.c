@@ -123,6 +123,8 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 ///
 struct bitmap {
   tatas_lock_t      lock;
+  uint32_t     min_align;
+  uint32_t    base_align;
   uint32_t           min;
   uint32_t           max;
   uint32_t         nbits;
@@ -293,26 +295,24 @@ static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
 ///
 /// @param          map The map that is full.
 /// @param        nbits The request size that triggered the OOM.
-/// @param         bias The bias that triggered the OOM.
+/// @param         bias The alignment that triggered OOM.
 /// @param       period The period that triggered the OOM.
 ///
 /// @returns LIBHPX_ENOMEM
-static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t bias,
-                       uint32_t period)
-{
+static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
   uint32_t unused = _bitmap_unused_blocks(map);
   dbg_error("Application ran out of global address space.\n"
-            "\t-%u blocks requested with bias %u, period %u\n"
+            "\t-%u blocks requested with alignment %u\n"
             "\t-%u blocks available\n"
             "This space is used for all global allocation, as well as all\n"
             "stacks and parcel data. Pathological allocation may introduce\n"
             "fragmentation leading to unexpected counts above. Try adjusting\n"
-            "your configuration.\n", nbits, bias, period, unused);
+            "your configuration.\n", nbits, align, unused);
   return LIBHPX_ENOMEM;
 }
 
 
-bitmap_t *bitmap_new(uint32_t nbits) {
+bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align) {
   uint32_t nblocks = ceil_div_32(nbits, BLOCK_BITS);
   bitmap_t *map = NULL;
   int e = posix_memalign((void**)&map, HPX_CACHELINE_SIZE,
@@ -321,26 +321,26 @@ bitmap_t *bitmap_new(uint32_t nbits) {
     dbg_error("failed to allocate a bitmap for %u bits\n", nbits);
 
   sync_tatas_init(&map->lock);
-  map->min     = 0;
-  map->max     = nbits;
-  map->nbits   = nbits;
-  map->nblocks = nblocks;
+  map->min_align  = min_align;
+  map->base_align = base_align;
+  map->min        = 0;
+  map->max        = nbits;
+  map->nbits      = nbits;
+  map->nblocks    = nblocks;
   memset(&map->blocks, BLOCK_ALL_FREE, nblocks * BLOCK_BYTES);
   return map;
 }
 
 
 void bitmap_delete(bitmap_t *map) {
-  if (map)
+  if (map) {
     free(map);
+  }
 }
 
 
-int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t bias,
-                   uint32_t period, uint32_t *i)
-{
-  dbg_log_gas("searching for %u blocks with bias %u and period %u.\n", nbits,
-              bias, period);
+int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
+  dbg_log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
   if (nbits == 0) {
     return LIBHPX_EINVAL;
   }
@@ -352,11 +352,11 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t bias,
     bit = map->min;
     while (true) {
       // only test properly aligned offsets
-      bit = bias + (bit / period) * period;
+      bit = bit; // bias + (bit / period) * period;
 
       // make sure the match is inbounds
       if (bit + nbits > map->max) {
-        return _bitmap_oom(map, nbits, bias, period);
+        return _bitmap_oom(map, nbits, align);
       }
 
       uint32_t matched = _match(map->blocks, bit, nbits, block_ils);
@@ -390,11 +390,10 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t bias,
 }
 
 
-int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t bias,
-                    uint32_t period, uint32_t *i)
+int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 {
-  dbg_log_gas("reverse search for %u blocks with bias %u and period %u.\n",
-              nbits, bias, period);
+  dbg_log_gas("reverse search for %u blocks with alignment %u.\n", nbits,
+              align);
   if (nbits == 0)
     return LIBHPX_EINVAL;
 
@@ -411,18 +410,18 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t bias,
       // shift down by the number of bits we matched in the last round
       uint32_t shift = nbits - matched;
       if (bit < shift) {
-        return _bitmap_oom(map, nbits, bias, period);
+        return _bitmap_oom(map, nbits, align);
       }
 
       bit = bit - shift;
-      if (bit < bias) {
-        return _bitmap_oom(map, nbits, bias, period);
-      }
+      // if (bit < bias) {
+      //   return _bitmap_oom(map, nbits, align);
+      // }
 
       // compute the closest aligned bit to the shifted bit
-      bit = bias + (bit / period) * period;
+      bit = bit; //bias + (bit / period) * period;
       if (bit < map->min) {
-        return _bitmap_oom(map, nbits, bias, period);
+        return _bitmap_oom(map, nbits, align);
       }
 
       // see how far we can match
