@@ -194,6 +194,8 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
 
+  HPX_LOG_EVENT_PARCEL_CREATE(p);
+
   return p;
 }
 
@@ -252,6 +254,7 @@ int parcel_launch(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
+  HPX_LOG_EVENT_PARCEL_SEND(p);
   _prepare(p);
   return parcel_launch(p);
 }
