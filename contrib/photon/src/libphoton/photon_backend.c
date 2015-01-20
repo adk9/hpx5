@@ -119,7 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("num ledgers: %d", _LEDGER_SIZE);
   dbg_trace("eager buf size: %d", _photon_ebsize);
   dbg_trace("small msg size: %d", _photon_smsize);
-  dbg_trace("num requests per rank: %d\n", DEF_NUM_REQUESTS);
+  dbg_trace("num requests per rank: %d", cfg->cap.default_rd);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -752,7 +752,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
     dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
     
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-				    &(photon_processes[proc].remote_eager_ledger->remote), req->rattr.cookie,
+				    &(photon_processes[proc].remote_eager_ledger->remote), NULL_REQUEST,
 				    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx", req->id);
@@ -831,7 +831,7 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
   dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
   
   rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-				  &(photon_processes[proc].remote_snd_info_ledger->remote), req->rattr.cookie,
+				  &(photon_processes[proc].remote_snd_info_ledger->remote), NULL_REQUEST,
 				  RDMA_FLAG_NIL);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA PUT failed for 0x%016lx", req->id);

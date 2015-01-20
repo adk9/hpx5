@@ -30,8 +30,7 @@ photonRequest photon_get_request(int proc) {
     reqs = rt->reqs[rt->level];
     
     // find the next free slot
-    while ((reqs[rt->next].state != REQUEST_FREE) &&
-	   (reqs[rt->next].state != 0)) {
+    while (reqs[rt->next].id) {
       rt->next++;
       rt->next = (rt->next & (rt->size - 1));
     }
@@ -75,8 +74,8 @@ photonRequest photon_lookup_request(photon_rid rid) {
   {
     req = &rt->reqs[level][id];
     if (req->state == REQUEST_FREE) {
-      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
-		req->op, req->type, req->id);
+      dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+	       req->op, req->type, req->id);
     }
   }
   sync_tatas_release(&rt->tloc);
@@ -98,6 +97,7 @@ int photon_free_request(photonRequest req) {
   rt = photon_processes[req->proc].request_table;
   sync_tatas_acquire(&rt->tloc);
   {
+    req->id    = NULL_REQUEST;
     req->state = REQUEST_FREE;
     rt->free[level]++;
   }
