@@ -1,5 +1,15 @@
-#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "libsync/sync.h"
 #include "libhpx/logging.h"
 
 //unsigned int get_logging_record_size(unsigned int user_data_size) {
@@ -14,12 +24,12 @@ int logtable_init(logtable_t *logtable, char* filename, size_t total_size) {
     perror("init_action: open");
     return -1;
   }
-  lseek(fd, logtable->data_length-1, SEEK_SET);
+  lseek(fd, logtable->data_size-1, SEEK_SET);
   int bytes = write(fd, "", 1);
   if (bytes != 1)
     return -1;
 
-  void* data = mmap(NULL, logtable->data_length, 
+  void* data = mmap(NULL, logtable->data_size, 
                     PROT_READ|PROT_WRITE, MAP_SHARED | MAP_NORESERVE, 
                     fd, 0);
   //  printf("mmap at %p\n", data);
@@ -58,6 +68,6 @@ void logtable_fini(logtable_t *logtable) {
 }
 
 hpx_logging_event_t* logtable_next_and_increment(logtable_t *lt) {
-  unsigned int index = sync_fadd(lt->index, 1, SYNC_RELAXED);
+  unsigned int index = sync_fadd(&lt->index, 1, SYNC_RELAXED);
   return (hpx_logging_event_t*)((uintptr_t)lt->data + lt->record_size * index);
 }

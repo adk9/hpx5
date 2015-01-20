@@ -16,8 +16,13 @@ typedef enum {
   HPX_LOG_EVENT_PARCEL_SEND,
   HPX_LOG_EVENT_PARCEL_RECV,
   HPX_LOG_EVENT_PARCEL_RUN,
-  HPX_LOG_EVENT_PARCEL_END
+  HPX_LOG_EVENT_PARCEL_END,
+
+  HPX_LOG_NUM_EVENTS
 } hpx_logging_event_type_t;
+
+static const int HPX_LOG_EVENTS_PER_CLASS[] = {5, 0};
+static const int HPX_LOG_FIRST_EVENT_FOR_CLASS[] = {0, 5};
 
 typedef struct {
   hpx_logging_class_type_t class;      /// event class (i.e. subsystem)
@@ -45,10 +50,8 @@ typedef struct {
 
 } logtable_t;
 
-extern log_t parcel_log;
-
-HPX_INTERNAL int logging_init();
-HPX_INTERNAL void logging_fini();
+HPX_INTERNAL int hpx_logging_init();
+HPX_INTERNAL void hpx_logging_fini();
 
 typedef struct {
   int rank;
@@ -61,43 +64,103 @@ typedef struct {
   size_t bytes;
 } hpx_log_event_parcel_send_t;
 
+typedef struct {
+  int source;
+  int target;
+  size_t bytes;
+} hpx_log_event_parcel_recv_t;
+
+typedef struct {
+  int rank;
+  size_t bytes;
+} hpx_log_event_parcel_run_t;
+
+typedef struct {
+  int rank;
+  size_t bytes;
+} hpx_log_event_parcel_end_t;
+
+static const int HPX_LOG_SIZEOF_EVENT[] = {
+  sizeof(hpx_log_event_parcel_create_t),
+  sizeof(hpx_log_event_parcel_send_t),
+  sizeof(hpx_log_event_parcel_recv_t),
+  sizeof(hpx_log_event_parcel_run_t),
+  sizeof(hpx_log_event_parcel_end_t)
+};
+
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_CREATE((p))                       \
+#define HPX_LOG_EVENT_PARCEL_CREATE(p)                         \
   hpx_log_event_parcel_send_t event;                           \
   event.rank = hpx_get_my_rank();                              \
-  event.size = p->size;                                        \
+  event.size = (p)->size;                                      \
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                  \
                         HPX_LOG_EVENT_PARCEL_CREATE, 0,        \
                         sizeof(hpx_log_event_parcel_create_t)),\
                         event)
 #else
-#define HPX_LOG_EVENT_PARCEL_CREATE((size))
+#define HPX_LOG_EVENT_PARCEL_CREATE(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_SEND((p))                       \
+#define HPX_LOG_EVENT_PARCEL_SEND(p)                         \
   hpx_log_event_parcel_send_t event;                         \
   event.source = hpx_get_my_rank();                          \
-  event.size = p->size;                                      \
-  event.target = p->target;                                  \
+  event.size = (p)->size;                                    \
+  event.target = (p)->target;                                \
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_SEND, 0,        \
                         sizeof(hpx_log_event_parcel_send_t), \
                         event)
 #else
-#define HPX_LOG_EVENT_PARCEL_CREATE((size))
+#define HPX_LOG_EVENT_PARCEL_SEND(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_RECV((p))                       \
+#define HPX_LOG_EVENT_PARCEL_RECV(p)                         \
   hpx_log_event_parcel_recv_t event;                         \
-  event.source = p->src;                                     \
-  event.size = p->size;                                      \
-  event.target = p->target;                                  \
+  event.source = (p)->src;                                   \
+  event.size = (p)->size;                                    \
+  event.target = (p)->target;                                \
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_RECV, 0,        \
                         sizeof(hpx_log_event_parcel_recv_t), \
                         event)
 #else
-#define HPX_LOG_EVENT_PARCEL_CREATE((size))
+#define HPX_LOG_EVENT_PARCEL_RECV(p)
+#endif
+
+#ifdef HPX_LOG_PARCEL_ENABLED
+#define HPX_LOG_EVENT_PARCEL_RUN(p)                          \
+  hpx_log_event_parcel_run_t event;                          \
+  event.rank = hpx_get_my_rank();                            \
+  event.size = (p)->size;                                    \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
+                        HPX_LOG_EVENT_PARCEL_RUN, 0,         \
+                        sizeof(hpx_log_event_parcel_run_t),  \
+                        event)
+#else
+#define HPX_LOG_EVENT_PARCEL_RUN(p)
+#endif
+
+#ifdef HPX_LOG_PARCEL_ENABLED
+#define HPX_LOG_EVENT_PARCEL_END(p)                          \
+  hpx_log_event_parcel_end_t event;                          \
+  event.rank = hpx_get_my_rank();                            \
+  event.size = (p)->size;                                    \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
+                        HPX_LOG_EVENT_PARCEL_END, 0,         \
+                        sizeof(hpx_log_event_parcel_end_t),  \
+                        event)
+#else
+#define HPX_LOG_EVENT_PARCEL_END(p)
+#endif
+
+#ifdef HPX_LOG_ENABLED
+#define HPX_LOG_INIT hpx_logging_init
+#define HPX_LOG_FINI hpx_logging_fini
+#else
+#define HPX_LOG_INIT
+#define HPX_LOG_FINI
+#endif
+
 #endif
