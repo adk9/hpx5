@@ -6,8 +6,8 @@
 int __photon_handle_cq_special(photon_rid cookie) {
   uint32_t prefix;
   prefix = (uint32_t)(cookie>>32);
-
-  if (cookie == NULL_COOKIE)
+  
+  if (cookie == NULL_REQUEST)
     return PHOTON_EVENT_OK;
 
   switch (prefix) {
@@ -120,7 +120,7 @@ int __photon_handle_cq_event(photonRequest req, photon_rid cookie, photonRequest
       }
       else if (nentries != 1) {
 	dbg_info("Unexpected nentries value: %d, op=%d, 0x%016lx",
-		  nentries, treq->op,treq->flags);
+		  nentries, treq->op, treq->flags);
       }
     }
     else if (treq->type == LEDGER) {
@@ -218,7 +218,7 @@ int __photon_nbpop_ledger(photonRequest req) {
       curr = sync_load(&l->curr, SYNC_RELAXED);
       c_ind = curr & (l->num_entries - 1);
       curr_entry = &(l->entries[c_ind]);
-      if ((curr_entry->request != (uint64_t) 0) &&
+      if ((curr_entry->request != (uint64_t) NULL_REQUEST) &&
 	  sync_cas(&l->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
         dbg_trace("Found curr: %d, req: 0x%016lx while looking for req: 0x%016lx",
 		  c_ind, curr_entry->request, req->id);
@@ -235,7 +235,7 @@ int __photon_nbpop_ledger(photonRequest req) {
 	  }
 	}
 	// reset entry
-        curr_entry->request = 0;
+        curr_entry->request = NULL_REQUEST;
 	sync_fadd(&l->prog, 1, SYNC_RELAXED);
       }
     }
