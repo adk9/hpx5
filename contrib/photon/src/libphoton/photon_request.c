@@ -75,8 +75,8 @@ photonRequest photon_lookup_request(photon_rid rid) {
   {
     req = &rt->reqs[level][id];
     if (req->state == REQUEST_FREE) {
-      dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
-	       req->op, req->type, req->id);
+      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+		req->op, req->type, req->id);
     }
   }
   sync_tatas_release(&rt->tloc);
