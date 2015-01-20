@@ -19,6 +19,10 @@
 #   - SRC-DIR-NAME is the source directory, relative to $srcdir.
 #   - BUILD-DIR-NAME is `top-build -> build'
 
+dnl autoconf < 2.63 compatibility
+m4_ifndef([AS_VAR_APPEND],
+	  AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
+
 AC_DEFUN([ACX_CONFIGURE_DIR],
 [
   in_src=$1
