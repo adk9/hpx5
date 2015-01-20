@@ -50,9 +50,6 @@
 /examples/sendrecv
 /examples/sendrecv-chan
 /examples/pingpong-chan
-/examples/allgather
-/examples/allreduce-bench
-/examples/alltoall
 /examples/hello
 /examples/netfutures
 /examples/qsort
@@ -78,6 +75,7 @@
 /apps/libPXGL/include/Makefile
 /apps/libPXGL/examples/Makefile
 /apps/libPXGL/examples/sssp
+/apps/libPXGL/generatorhelper/include/Makefile
 
 # /include/
 /include/stamp-h1
