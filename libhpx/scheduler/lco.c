@@ -124,7 +124,7 @@ static int _lco_get(int *n) {
     hpx_thread_continue(*n, buffer);
   }
   else {
-    hpx_thread_exit(status);
+    return status;
   }
 }
 
@@ -224,12 +224,19 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   }
   class->on_fini(lco);
   hpx_gas_unpin(target);
-  if (rsync) {
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
+  if (code == HPX_SUCCESS) {
+    hpx_lco_set(target, 0, NULL, HPX_NULL, rsync);
+    return;
+  }
+
+  if (target == HPX_NULL) {
+    return;
+  }
+
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_call_async(target, _lco_error_action, &code, sizeof(code),
@@ -243,14 +250,16 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   }
   class->on_error(lco, code);
   hpx_gas_unpin(target);
-  if (rsync) {
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync)
 {
+  if (target == HPX_NULL) {
+    return;
+  }
+
   lco_t *lco = NULL;
   if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_call_async(target, hpx_lco_set_action, value, size, lsync, rsync);
@@ -263,14 +272,8 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
   }
   class->on_set(lco, size, value);
   hpx_gas_unpin(target);
-
-  if (lsync) {
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
-
-  if (rsync) {
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
+  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
 
@@ -445,9 +448,7 @@ hpx_status_t hpx_lco_attach(hpx_addr_t addr, hpx_parcel_t *p, hpx_addr_t lsync) 
   }
   hpx_status_t status = class->on_attach(lco, p);
   hpx_gas_unpin(addr);
-  if (lsync) {
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
+  hpx_lco_error(lsync, status, HPX_NULL);
   return status;
 }
 
