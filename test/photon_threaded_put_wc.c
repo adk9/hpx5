@@ -30,7 +30,7 @@
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 100
+#define SQ_SIZE 3000
 
 static int ITERS = 10000;
 
@@ -305,12 +305,12 @@ int main(int argc, char **argv) {
         fflush(stdout);
       }
       else if (rank == 0) {
-        printf("N/A\n");
-        fflush(stdout);
+	printf("N/A\n");
+	fflush(stdout);
       }
     }
   }
-
+  
   MPI_Barrier(MPI_COMM_WORLD);
 
   DONE = 1;

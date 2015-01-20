@@ -365,7 +365,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   photonRequest req;
   photonEagerBuf eb;
   photon_eb_hdr *hdr;
-  photon_rid cookie = NULL_COOKIE;
+  photon_rid cookie = NULL_REQUEST;
   int i, rc, start, end;
   
   *flag = 0;
@@ -399,7 +399,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       goto error_exit;
     }
     else if (rc == PHOTON_EVENT_NONE) {
-      cookie = NULL_COOKIE;
+      cookie = NULL_REQUEST;
       // no event so process any queued PWC requests
       for (i=start; i<end; i++) {
 	photon_pwc_process_queued_req(i, photon_processes[i].request_table);
@@ -431,7 +431,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   }
   
   // only check recv ledgers if an event we don't care about was popped
-  if ((cookie == NULL_COOKIE) && (flags & PHOTON_PROBE_LEDGER)) {
+  if ((cookie == NULL_REQUEST) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
     for (i=start; i<end; i++) {
       // check eager region first
