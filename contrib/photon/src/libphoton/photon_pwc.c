@@ -295,7 +295,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   sync_ms_queue_enqueue(rt->req_q, req);
   sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
   dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
-  return PHOTON_ERROR_RESOURCE;
+  return PHOTON_OK;
   
  error_exit:
   return PHOTON_ERROR;
