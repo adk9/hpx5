@@ -228,6 +228,9 @@ static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
   int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &args, sizeof(args),
                         &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
+  DEBUG_IF (addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL as a valid location\n");
+  }
   return addr;
 }
 
@@ -243,6 +246,9 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
   int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
                         &args, sizeof(args), &addr, sizeof(addr));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
+  DEBUG_IF (addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL as a valid location\n");
+  }
   return addr;
 }
 
@@ -279,8 +285,9 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     return;
   }
 
-  if (sync != HPX_NULL)
+  if (sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
 }
 
 static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,

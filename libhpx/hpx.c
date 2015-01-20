@@ -39,6 +39,10 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
+HPX_DEFINE_ACTION(ACTION, hpx_143_fix)(void *UNUSED) {
+  hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  return LIBHPX_OK;
+}
 
 /// Cleanup utility function.
 ///
@@ -217,6 +221,13 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     status = hpx_call(HPX_HERE, *act, args, size, HPX_NULL);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn initial action\n");
+      goto unwind2;
+    }
+
+    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
+    status = hpx_call(HPX_HERE, hpx_143_fix, NULL, 0, HPX_NULL);
+    if (status != LIBHPX_OK) {
+      dbg_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
     }
   }
