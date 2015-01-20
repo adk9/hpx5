@@ -32,6 +32,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
+#include "libhpx/logging.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"

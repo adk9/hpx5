@@ -31,6 +31,7 @@
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
+#include "libhpx/logging.h"
 #include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
@@ -189,6 +190,8 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+  HPX_LOG_INIT();
+
   // thread scheduler
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
@@ -253,6 +256,8 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 #ifdef ENABLE_PROFILING
   scheduler_dump_stats(here->sched);
 #endif
+
+  HPX_LOG_FINI();
 
  unwind2:
   // progress_stop(_progress);
