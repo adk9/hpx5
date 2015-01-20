@@ -257,7 +257,7 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
   scheduler_dump_stats(here->sched);
 #endif
 
-  HPX_LOG_FINI();
+  //  HPX_LOG_FINI();
 
  unwind2:
   // progress_stop(_progress);
@@ -265,6 +265,7 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
  unwind1:
   _cleanup(here);
  unwind0:
+  HPX_LOG_FINI();
   return status;
 }
 
