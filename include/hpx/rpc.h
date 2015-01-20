@@ -32,8 +32,7 @@
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely/
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
-                  const void *args, size_t alen);
+int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen, ...);
 
 
 /// Locally synchronous call interface.
@@ -51,8 +50,7 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
-             const void *args, size_t len);
+int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
 
 
 /// Locally synchronous call with continuation interface.
@@ -71,8 +69,7 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                               hpx_addr_t c_target, hpx_action_t c_action,
-                               const void *args, size_t len);
+                               hpx_addr_t c_target, hpx_action_t c_action, ...);
 
 
 /// Fully asynchronous call interface.
@@ -96,7 +93,7 @@ int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t args_reuse,
-                   hpx_addr_t result, const void *args, size_t len);
+                   hpx_addr_t result, ...);
 
 
 /// Call with current continuation.
@@ -115,8 +112,8 @@ int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t args_reuse,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
-void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
-                 void *env, const void *args, size_t len);
+int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
+                void *env, ...);
 
 
 /// HPX collective operations.
@@ -144,11 +141,5 @@ int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len)
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered
 int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
-
-
-/// Experimental HPX typed call interface.
-///
-int hpx_typed_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                                     hpx_addr_t c_target, hpx_action_t c_action, ...);
 
 #endif
