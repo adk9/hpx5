@@ -57,6 +57,7 @@ static hpx_action_t _set_csbrk = 0;
 /// @returns The base address of the global allocation.
 hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
+  assert(offset != 0);
 
   uint64_t csbrk = heap_get_csbrk(global_heap);
   hpx_addr_t sync = hpx_lco_future_new(0);
@@ -64,7 +65,11 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  return pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  DEBUG_IF(addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL during allocation\n");
+  }
+  return addr;
 }
 
 
@@ -106,7 +111,11 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
-  return pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  DEBUG_IF(addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL during allocation\n");
+  }
+  return addr;
 }
 
 
