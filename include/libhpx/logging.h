@@ -52,32 +52,38 @@ typedef struct {
 
 HPX_INTERNAL int hpx_logging_init();
 HPX_INTERNAL void hpx_logging_fini();
+HPX_INTERNAL void hpx_logging_log_event(hpx_logging_class_type_t class,
+                                        hpx_logging_event_type_t event_type,
+                                        int priority,
+                                        int user_data_size,
+                                        void* user_data);
+
 
 typedef struct {
   int rank;
-  size_t bytes;
+  size_t size;
 } hpx_log_event_parcel_create_t;
 
 typedef struct {
   int source;
   int target;
-  size_t bytes;
+  size_t size;
 } hpx_log_event_parcel_send_t;
 
 typedef struct {
   int source;
   int target;
-  size_t bytes;
+  size_t size;
 } hpx_log_event_parcel_recv_t;
 
 typedef struct {
   int rank;
-  size_t bytes;
+  size_t size;
 } hpx_log_event_parcel_run_t;
 
 typedef struct {
   int rank;
-  size_t bytes;
+  size_t size;
 } hpx_log_event_parcel_end_t;
 
 static const int HPX_LOG_SIZEOF_EVENT[] = {
@@ -90,13 +96,13 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
 
 #ifdef HPX_LOG_PARCEL_ENABLED
 #define HPX_LOG_EVENT_PARCEL_CREATE(p)                         \
-  hpx_log_event_parcel_send_t event;                           \
+  hpx_log_event_parcel_create_t event;                         \
   event.rank = hpx_get_my_rank();                              \
   event.size = (p)->size;                                      \
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                  \
                         HPX_LOG_EVENT_PARCEL_CREATE, 0,        \
-                        sizeof(hpx_log_event_parcel_create_t)),\
-                        event)
+                        sizeof(hpx_log_event_parcel_create_t), \
+                        &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_CREATE(p)
 #endif
@@ -110,7 +116,7 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_SEND, 0,        \
                         sizeof(hpx_log_event_parcel_send_t), \
-                        event)
+                        &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_SEND(p)
 #endif
@@ -124,7 +130,7 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_RECV, 0,        \
                         sizeof(hpx_log_event_parcel_recv_t), \
-                        event)
+                        &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_RECV(p)
 #endif
@@ -137,7 +143,7 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_RUN, 0,         \
                         sizeof(hpx_log_event_parcel_run_t),  \
-                        event)
+                        &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_RUN(p)
 #endif
@@ -150,7 +156,7 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
   hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
                         HPX_LOG_EVENT_PARCEL_END, 0,         \
                         sizeof(hpx_log_event_parcel_end_t),  \
-                        event)
+                        &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_END(p)
 #endif

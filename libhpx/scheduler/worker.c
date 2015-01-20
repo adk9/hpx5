@@ -221,7 +221,9 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
-  HPX_LOG_EVENT_PARCEL_RUN(p);
+  if (p != NULL) {
+    HPX_LOG_EVENT_PARCEL_RUN(p);
+  }
   return p;
 }
 

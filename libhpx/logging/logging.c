@@ -24,9 +24,9 @@
 #include "libhpx/logging.h"
 #include "logtable.h"
 
+static logtable_t logtables[HPX_LOG_NUM_EVENTS];
 static size_t logging_max_log_size = 40*1024*1024-1;
 static bool hpx_logging_enabled = false;
-static logtable_t logtables[HPX_LOG_NUM_EVENTS];
 static bool log_class_enabled[HPX_LOG_NUM_CLASSES];
 static char log_dir_name[256];
 
@@ -45,8 +45,7 @@ int log_create(hpx_logging_class_type_t class, hpx_logging_event_type_t event,
   snprintf(filename, 256, "log.%d.%d.%d.log", 
            class, event, hpx_get_my_rank());
   
-  int success = logtable_init(&logtables[event], filename, 
-                              HPX_LOG_SIZEOF_EVENT[event], max_size);
+  int success = logtable_init(&logtables[event], filename, max_size);
   if (success != HPX_ERROR)
     return success;
   return HPX_SUCCESS;
@@ -141,10 +140,12 @@ void hpx_logging_log_event(
   if (!hpx_logging_enabled)
     return;
   
-  logtable_t lt = logtables[class];
+  logtable_t *lt = &logtables[event_type];
   
-  hpx_logging_event_t* event = logtable_next_and_increment(&lt);
-  
+  hpx_logging_event_t* event = logtable_next_and_increment(lt);
+  if (event == NULL)
+    return;
+
   // generate random id? (can't just increment since we're
   // distributed) (also can't use time because small change two events
   // could line up on different ranks)
