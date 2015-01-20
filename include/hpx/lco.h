@@ -33,6 +33,14 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
 /// Propagate an error to an LCO.
 ///
+/// If the error code is HPX_SUCCESS then this is equivalent to
+///
+/// @code
+///   hpx_lco_set(lco, 0, NULL, HPX_NULL, rsync);
+/// @endcode
+///
+/// If @p lco is HPX_NULL then this is equivalent to a no-op.
+///
 /// @param   lco the LCO's global address
 /// @param  code a user-defined error code
 /// @param rsync an LCO to signal remote completion
@@ -43,12 +51,14 @@ extern hpx_action_t hpx_lco_set_action;
 
 /// Set an LCO, optionally with data.
 ///
-/// @param   lco the LCO to set
-/// @param  size the size of the data
-/// @param value the address of the value to set
-/// @param lsync an LCO to signal local completion (HPX_NULL == don't wait)
-///              (Local completion indicates that the @p value may be freed
-///              or reused.)
+/// If @p LCO is HPX_NULL then this is equivalent to a no-op.
+///
+/// @param   lco The LCO to set, can be HPX_NULL.
+/// @param  size The size of the data.
+/// @param value The address of the value to set.
+/// @param lsync An LCO to signal local completion (HPX_NULL == don't wait)
+///                local completion indicates that the @p value may be freed
+///                or reused.
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
