@@ -85,12 +85,12 @@ void hpx_parcel_release(hpx_parcel_t *p)
 /// hpx_parcel_release().
 ///
 /// @param            p The parcel to send, must correspond to a parcel returned
-///                     from hpx_parcel_acquire().
+///                       from hpx_parcel_acquire().
 ///
 /// @param        lsync The global address of an LCO to set once the send has
-///                     completed locally (i.e., the parcel's buffer can be
-///                     written to or freed), or HPX_NULL if the caller does not
-///                     care.
+///                       completed locally (i.e., the parcel's buffer can be
+///                       written to or freed), or HPX_NULL if the caller does
+///                       not care.
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync)
@@ -107,7 +107,7 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync)
 /// hpx_parcel_release().
 ///
 /// @param            p The parcel to send, must correspond to a parcel returned
-///                     from hpx_parcel_acquire().
+///                       from hpx_parcel_acquire().
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
@@ -120,31 +120,43 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
 /// been completed locally.
 ///
 /// @param            p The parcel to send, must correspond to a parcel returned
-///                     from hpx_parcel_acquire().
+///                       from hpx_parcel_acquire().
 ///
 /// @param         gate The LCO that will serve as the gate.
 ///
 /// @param        lsync The global address of an LCO to set once the send has
-///                     completed locally (i.e., the parcel's buffer can be
-///                     written to or freed), or HPX_NULL if the caller does not
-///                     care.
+///                       completed locally (i.e., the parcel's buffer can be
+///                       written to or freed), or HPX_NULL if the caller does
+///                       not care.
+///
+/// @param        rsync An LCO to be set when the parcel has arrived at the
+///                       LCO. This will not indicate if the parcel was buffered
+///                       or simply forwarded.
 ///
 /// @returns            HPX_SUCCESS or an error code.
-void hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate, hpx_addr_t lsync)
+hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
+                                     hpx_addr_t lsync, hpx_addr_t rsync)
   HPX_NON_NULL(1);
 
 /// Send a parcel "through" an LCO.
 ///
 /// This treats the LCO as a gate that will delay the parcel until it has been
-/// triggered. This will not successfully return before the buffered data can be reused.
+/// triggered. This will not successfully return before the buffered data can be
+/// reused. The remote operation is still asynchronous, and the sender can chose
+/// to wait until the parcel has arrived at the LCO.
 ///
 /// @param            p The parcel to send, must correspond to a parcel returned
-///                     from hpx_parcel_acquire().
+///                       from hpx_parcel_acquire().
 ///
 /// @param         gate The LCO that will serve as the gate.
 ///
+/// @param        rsync An LCO to be set when the parcel has arrived at the
+///                       LCO. This will not indicate if the parcel was buffered
+///                       or simply forwarded.
+///
 /// @returns            HPX_SUCCESS or an error code.
-void hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)
+hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco,
+                                          hpx_addr_t rsync)
   HPX_NON_NULL(1);
 
 /// Get the action associated with a parcel.
