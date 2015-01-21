@@ -108,15 +108,16 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   hpx_register_action(HPX_ACTION_INTERRUPT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
                       __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
 
+#define HPX_DECL_ACTION(type, action) int action##_##type(void*);
 
 /// A helper macro to declare and define HPX actions.
-#define HPX_DEFINE_ACTION(type, action)             \
-  static int action##_##type(void*);                \
-  static hpx_action_t action;                       \
-  static HPX_CONSTRUCTOR                            \
-  void _register_##action##_##type(void) {          \
-    HPX_REGISTER_##type(action##_##type, &action);  \
-  }                                                 \
+#define HPX_DEFINE_ACTION(type, action)                    \
+  hpx_action_t action = -1;                                \
+  static int action##_##type(void*);                       \
+  static HPX_CONSTRUCTOR                                   \
+  void register_##action##_##type(void) {                  \
+    HPX_REGISTER_##type(action##_##type, &action);         \
+  }                                                        \
   static int action##_##type
 
 #define HPX_ACTION(n)        HPX_DEFINE_ACTION(ACTION, n)

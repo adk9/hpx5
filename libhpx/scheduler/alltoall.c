@@ -337,11 +337,14 @@ static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
 
 static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
   static const lco_class_t vtable = {
-    _alltoall_fini,
-    _alltoall_error,
-    _alltoall_set,
-    _alltoall_get,
-    _alltoall_wait
+    .on_fini = _alltoall_fini,
+    .on_error = _alltoall_error,
+    .on_set = _alltoall_set,
+    .on_get = _alltoall_get,
+    .on_wait = _alltoall_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   lco_init(&g->lco, &vtable, 0);
