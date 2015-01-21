@@ -19,8 +19,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "libsync/sync.h"
+#include <libsync/sync.h>
 #include "libhpx/action.h"
+#include "libhpx/attach.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
@@ -31,15 +32,6 @@
 #define _TRIGGERED_MASK    (0x2)
 #define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
-
-/// Remote action interface to a future
-static hpx_action_t _lco_attach_action = 0;
-static hpx_action_t   _lco_wait_action = 0;
-static hpx_action_t    _lco_get_action = 0;
-static hpx_action_t   _lco_fini_action = 0;
-static hpx_action_t  _lco_error_action = 0;
-
-hpx_action_t hpx_lco_set_action = 0;
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_lco_class(lco_t *lco) {
@@ -54,7 +46,7 @@ static const lco_class_t *_lco_class(lco_t *lco) {
 /// These try and pin the LCO, and then forward to the local event handler
 /// wrappers. If the pin fails, then the LCO isn't local, so the parcel is
 /// resent.
-static int _lco_fini(void *args) {
+HPX_DEFINE_ACTION(ACTION, _lco_fini)(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -70,7 +62,7 @@ static int _lco_fini(void *args) {
   return HPX_SUCCESS;
 }
 
-static int _lco_set(void *data) {
+HPX_DEFINE_ACTION(ACTION, hpx_lco_set_action)(void *data) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -88,7 +80,8 @@ static int _lco_set(void *data) {
   return HPX_SUCCESS;
 }
 
-static int _lco_error(hpx_status_t *code) {
+HPX_DEFINE_ACTION(ACTION, _lco_error)(void *args) {
+  hpx_status_t *code = args;
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -106,7 +99,8 @@ static int _lco_error(hpx_status_t *code) {
   return HPX_SUCCESS;
 }
 
-static int _lco_get(int *n) {
+HPX_DEFINE_ACTION(ACTION, _lco_get)(void *args) {
+  int *n = args;
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -128,7 +122,7 @@ static int _lco_get(int *n) {
   }
 }
 
-static int _lco_wait(void *args) {
+HPX_DEFINE_ACTION(ACTION, _lco_wait)(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -144,30 +138,32 @@ static int _lco_wait(void *args) {
   hpx_thread_exit(status);
 }
 
-static int _lco_attach(void *p) {
+HPX_DEFINE_ACTION(ACTION, attach)(void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
     return HPX_RESEND;
   }
 
+  /// @todo: This parcel copy shouldn't be necessary. If we can retain the
+  ///        parent parcel and free it appropriately, then we could just enqueue
+  ///        the args directly.
+  const hpx_parcel_t *p = args;
+  hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, p->size);
+  assert(parcel_size(p) == parcel_size(parcel));
+
+  DEBUG_IF(parcel == NULL) {
+    return dbg_error("could not allocate a parcel to attach\n");
+  }
+  memcpy(parcel, p, parcel_size(p));
+
   const lco_class_t *class = _lco_class(lco);
   DEBUG_IF(!class->on_attach) {
     return dbg_error("on_attach uninitialized");
   }
-  hpx_status_t status = class->on_attach(lco, p);
+  hpx_status_t status = class->on_attach(lco, parcel);
   hpx_gas_unpin(target);
   return status;
-}
-
-/// Register the event handlers.
-static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(_lco_fini, &_lco_fini_action);
-  LIBHPX_REGISTER_ACTION(_lco_error, &_lco_error_action);
-  LIBHPX_REGISTER_ACTION(_lco_set, &hpx_lco_set_action);
-  LIBHPX_REGISTER_ACTION(_lco_get, &_lco_get_action);
-  LIBHPX_REGISTER_ACTION(_lco_attach, &_lco_attach_action);
-  LIBHPX_REGISTER_ACTION(_lco_wait, &_lco_wait_action);
 }
 
 /// LCO bit packing and manipulation
@@ -214,7 +210,7 @@ uintptr_t lco_get_triggered(const lco_t *lco) {
 void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_fini_action, NULL, 0, HPX_NULL, rsync);
+    hpx_call_async(target, _lco_fini, NULL, 0, HPX_NULL, rsync);
     return;
   }
 
@@ -239,7 +235,7 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
 
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_error_action, &code, sizeof(code),
+    hpx_call_async(target, _lco_error, &code, sizeof(code),
                    HPX_NULL, rsync);
     return;
   }
@@ -280,7 +276,7 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_wait_action, NULL, 0, NULL, 0);
+    return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
   }
 
   const lco_class_t *class = _lco_class(lco);
@@ -300,7 +296,7 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
     // in which case we would also need an lco_try_wait_action
     // but for now, we will just have the remote side wait and we will
     // bail early if necessary
-    hpx_status_t status = hpx_call(target, _lco_wait_action, NULL, 0, done);
+    hpx_status_t status = hpx_call(target, _lco_wait, NULL, 0, done);
     if (status != HPX_SUCCESS) {
       return status;
     }
@@ -321,8 +317,7 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_get_action, &size, sizeof(size),
-                         value, size);
+    return hpx_call_sync(target, _lco_get, &size, sizeof(size), value, size);
   }
 
   const lco_class_t *class = _lco_class(lco);
@@ -348,7 +343,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
-      hpx_call_async(lcos[i], _lco_wait_action, NULL, 0, HPX_NULL, remotes[i]);
+      hpx_call_async(lcos[i], _lco_wait, NULL, 0, HPX_NULL, remotes[i]);
     }
   }
 
@@ -396,8 +391,8 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
-      hpx_call_async(lcos[i], _lco_get_action, &sizes[i], sizeof(sizes[i]),
-                     HPX_NULL, remotes[i]);
+      hpx_call_async(lcos[i], _lco_get, &sizes[i], sizeof(sizes[i]), HPX_NULL,
+                     remotes[i]);
     }
   }
 
@@ -427,43 +422,4 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     }
   }
   return errors;
-}
-
-/// Attach a parcel to an LCO.
-///
-/// If the lco is local, then this just forwards to the LCO's attach handler,
-/// otherwise it will use a remote-procedure-call to copy the parcel data out to
-/// wherever the LCO is located.
-///
-/// The @p lsync LCO will be set when the operation has completed.
-hpx_status_t hpx_lco_attach(hpx_addr_t addr, hpx_parcel_t *p, hpx_addr_t lsync) {
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(addr, (void**)&lco)) {
-    return hpx_call(addr, _lco_attach_action, p, parcel_size(p), lsync);
-  }
-
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_attach) {
-    dbg_error("on_attach uninitialized");
-  }
-  hpx_status_t status = class->on_attach(lco, p);
-  hpx_gas_unpin(addr);
-  hpx_lco_error(lsync, status, HPX_NULL);
-  return status;
-}
-
-/// Attach a parcel to an LCO synchronously.
-///
-/// This just allocates a future to turn the normal attach into a synchronous
-/// operation.
-hpx_status_t hpx_lco_attach_sync(hpx_addr_t addr, hpx_parcel_t *p) {
-  hpx_addr_t lsync = hpx_lco_future_new(0);
-  if (!lsync) {
-    return dbg_error("could not allocate a future\n");
-  }
-  hpx_status_t status = hpx_lco_attach(addr, p, lsync);
-  dbg_check(status, "could not attach to lco\n");
-  status = hpx_lco_wait(lsync);
-  hpx_lco_delete(lsync, HPX_NULL);
-  return status;
 }
