@@ -51,13 +51,13 @@ hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
 void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-struct ustack *parcel_get_stack(hpx_parcel_t *p)
+struct ustack *parcel_get_stack(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-uint64_t parcel_get_credit(hpx_parcel_t *p)
+uint64_t parcel_get_credit(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 /// The core send operation.
@@ -86,7 +86,7 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 
-static inline size_t parcel_size(hpx_parcel_t *p) {
+static inline size_t parcel_size(const hpx_parcel_t *p) {
   assert(p);
   return sizeof(*p) + p->size;
 }

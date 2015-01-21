@@ -29,6 +29,7 @@
 #include <inttypes.h>
 
 #include "libhpx/action.h"
+#include "libhpx/attach.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/gas.h"
@@ -281,13 +282,16 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate,
                                           hpx_addr_t rsync) {
-  return LIBHPX_EUNIMPLEMENTED;
+  _prepare(p);
+  // return hpx_call(gate, attach, p, parcel_size(p), rsync);
+  return HPX_ERROR;
 }
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync, hpx_addr_t rsync) {
-  return LIBHPX_EUNIMPLEMENTED;
-
+  _prepare(p);
+  // return hpx_call_async(gate, attach, p, parcel_size(p), lsync, rsync);
+  return HPX_ERROR;
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
@@ -321,7 +325,7 @@ void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
   p->ustack = (struct ustack*)(state | (uintptr_t)stack);
 }
 
-struct ustack *parcel_get_stack(hpx_parcel_t *p) {
+struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
   return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
 }
 
@@ -329,7 +333,7 @@ void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
   p->credit = credit;
 }
 
-uint64_t parcel_get_credit(hpx_parcel_t *p) {
+uint64_t parcel_get_credit(const hpx_parcel_t *p) {
   return p->credit;
 }
 
