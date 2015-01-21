@@ -29,6 +29,8 @@ static size_t logging_max_log_size = 40*1024*1024-1;
 static bool hpx_logging_enabled = false;
 static bool log_class_enabled[HPX_LOG_NUM_CLASSES];
 static char log_dir_name[256];
+static hpx_time_t time_start;
+static bool logging_started = false;
 
 static bool get_env_var(char *env_var_name) {
   char* env_var_text;
@@ -109,6 +111,9 @@ int hpx_logging_init() {
     }
   }
 
+  time_start = hpx_time_now();
+
+  logging_started = true;
 #endif
   return HPX_SUCCESS;
 }
@@ -119,6 +124,19 @@ void hpx_logging_fini() {
     if (logtables[i].inited == true)
       logtable_fini(&logtables[i]);
 #endif
+}
+
+static void 
+time_diff(uint64_t *out_s, uint64_t *out_ns, hpx_time_t *start, hpx_time_t *end) {
+  {
+    if ((end->tv_nsec-start->tv_nsec)<0) {
+      *out_s = end->tv_sec-start->tv_sec-1;
+      *out_ns = (1e9+end->tv_nsec)-start->tv_nsec;
+    } else {
+      *out_s = end->tv_sec-start->tv_sec;
+      *out_ns = end->tv_nsec-start->tv_nsec;
+    }
+  }
 }
 
 /// Record an event to the log
@@ -140,22 +158,28 @@ void hpx_logging_log_event(
   if (!hpx_logging_enabled)
     return;
   
+  if (!logging_started)
+    return;
+
   logtable_t *lt = &logtables[event_type];
   
   hpx_logging_event_t* event = logtable_next_and_increment(lt);
   if (event == NULL)
     return;
 
+  event->class = class;
+  event->event_type = event_type;
+  event->rank = hpx_get_my_rank();
+  event->worker = hpx_get_my_thread_id();
+  //  event->thread = hpx_thread_get_tls_id();
+  hpx_time_t time_now = hpx_time_now();
+  time_diff(&event->s, &event->ns, &time_start, &time_now);
+
+  //  event->priority = priority;
+
   // generate random id? (can't just increment since we're
   // distributed) (also can't use time because small change two events
   // could line up on different ranks)
-  //  size_t id = 
-  
-  event->time = hpx_time_now();
-  event->class = class;
-  event->event_type = event_type;
-  // TODO filter based on priority
-  event->priority = priority;
   //  event->id = id;
 
   memcpy(event->data, user_data, user_data_size);
