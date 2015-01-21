@@ -64,28 +64,33 @@ HPX_INTERNAL void hpx_logging_log_event(hpx_logging_class_type_t class,
                                         void* user_data);
 
 typedef struct {
+  uint64_t id;
   uint64_t action;
   uint64_t size;
 } hpx_log_event_parcel_create_t;
 
 typedef struct {
+  uint64_t id;
   uint64_t action;
   uint64_t size;
   uint64_t target;
 } hpx_log_event_parcel_send_t;
 
 typedef struct {
+  uint64_t id;
   uint64_t action;
   uint64_t size;
   uint64_t source;
 } hpx_log_event_parcel_recv_t;
 
 typedef struct {
+  uint64_t id;
   uint64_t action;
   uint64_t size;
 } hpx_log_event_parcel_run_t;
 
 typedef struct {
+  uint64_t id;
   uint64_t action;
   uint64_t size;
 } hpx_log_event_parcel_end_t;
@@ -99,67 +104,72 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
 };
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_CREATE(p)                         \
-  hpx_log_event_parcel_create_t event;                         \
-  event.action = (p)->action;                                  \
-  event.size = (p)->size;                                      \
-  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                  \
-                        HPX_LOG_EVENT_PARCEL_CREATE, 0,        \
-                        sizeof(hpx_log_event_parcel_create_t), \
+#define HPX_LOG_EVENT_PARCEL_CREATE(p)                          \
+  hpx_log_event_parcel_create_t event;                          \
+  event.id = (p)->id;                                           \
+  event.action = (p)->action;                                   \
+  event.size = (p)->size;                                       \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                   \
+                        HPX_LOG_EVENT_PARCEL_CREATE, 0,         \
+                        sizeof(hpx_log_event_parcel_create_t),  \
                         &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_CREATE(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_SEND(p)                         \
-  hpx_log_event_parcel_send_t event;                         \
-  event.action = (p)->action;                                \
-  event.size = (p)->size;                                    \
-  event.target = (p)->target;                                \
-  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
-                        HPX_LOG_EVENT_PARCEL_SEND, 0,        \
-                        sizeof(hpx_log_event_parcel_send_t), \
+#define HPX_LOG_EVENT_PARCEL_SEND(p)                            \
+  hpx_log_event_parcel_send_t event;                            \
+  event.id = (p)->id;                                           \
+  event.action = (p)->action;                                   \
+  event.size = (p)->size;                                       \
+  event.target = (p)->target;                                   \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                   \
+                        HPX_LOG_EVENT_PARCEL_SEND, 0,           \
+                        sizeof(hpx_log_event_parcel_send_t),    \
                         &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_SEND(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_RECV(p)                         \
-  hpx_log_event_parcel_recv_t event;                         \
-  event.action = (p)->action;                                \
-  event.size = (p)->size;                                    \
-  event.source = (p)->src;                                   \
-  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
-                        HPX_LOG_EVENT_PARCEL_RECV, 0,        \
-                        sizeof(hpx_log_event_parcel_recv_t), \
+#define HPX_LOG_EVENT_PARCEL_RECV(p)                            \
+  hpx_log_event_parcel_recv_t event;                            \
+  event.id = (p)->id;                                           \
+  event.action = (p)->action;                                   \
+  event.size = (p)->size;                                       \
+  event.source = (p)->src;                                      \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                   \
+                        HPX_LOG_EVENT_PARCEL_RECV, 0,           \
+                        sizeof(hpx_log_event_parcel_recv_t),    \
                         &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_RECV(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_RUN(p)                          \
-  hpx_log_event_parcel_run_t event;                          \
-  event.action = (p)->action;                                \
-  event.size = (p)->size;                                    \
-  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
-                        HPX_LOG_EVENT_PARCEL_RUN, 0,         \
-                        sizeof(hpx_log_event_parcel_run_t),  \
+#define HPX_LOG_EVENT_PARCEL_RUN(p)                             \
+  hpx_log_event_parcel_run_t event;                             \
+  event.id = (p)->id;                                           \
+  event.action = (p)->action;                                   \
+  event.size = (p)->size;                                       \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                   \
+                        HPX_LOG_EVENT_PARCEL_RUN, 0,            \
+                        sizeof(hpx_log_event_parcel_run_t),     \
                         &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_RUN(p)
 #endif
 
 #ifdef HPX_LOG_PARCEL_ENABLED
-#define HPX_LOG_EVENT_PARCEL_END(p)                          \
-  hpx_log_event_parcel_end_t event;                          \
-  event.action = (p)->action;                                \
-  event.size = (p)->size;                                    \
-  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                \
-                        HPX_LOG_EVENT_PARCEL_END, 0,         \
-                        sizeof(hpx_log_event_parcel_end_t),  \
+#define HPX_LOG_EVENT_PARCEL_END(p)                             \
+  hpx_log_event_parcel_end_t event;                             \
+  event.id = (p)->id;                                           \
+  event.action = (p)->action;                                   \
+  event.size = (p)->size;                                       \
+  hpx_logging_log_event(HPX_LOG_CLASS_PARCEL,                   \
+                        HPX_LOG_EVENT_PARCEL_END, 0,            \
+                        sizeof(hpx_log_event_parcel_end_t),     \
                         &event)
 #else
 #define HPX_LOG_EVENT_PARCEL_END(p)

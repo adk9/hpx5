@@ -40,6 +40,9 @@ struct hpx_parcel {
   hpx_addr_t     c_target;
   hpx_pid_t           pid;
   uint64_t         credit;
+#ifdef HPX_LOG_ENABLED
+  uint64_t             id;
+#endif
   char           buffer[];
 };
 
