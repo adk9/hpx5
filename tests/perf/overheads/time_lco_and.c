@@ -30,8 +30,8 @@ static hpx_action_t _main = 0;
 static hpx_action_t _empty = 0;
 
 
-static int _lco_set_action(void *args) {
-  hpx_lco_and_set(*(hpx_addr_t*)args, HPX_NULL);
+static int _lco_set_action(hpx_addr_t *args) {
+  hpx_lco_and_set(*args, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -40,7 +40,6 @@ static int _empty_action(hpx_addr_t *args) {
 }
 
 static int _main_action(int *args) {
-  hpx_time_t t, t1;
   printf(HEADER);
   printf("# Latency in (ms)\n");
   printf("%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ",
@@ -49,23 +48,23 @@ static int _main_action(int *args) {
   for (int i = 0; i < sizeof(num)/sizeof(num[0]) ; i++) {
     printf("%d", num[i]);
 
-    hpx_addr_t done = hpx_lco_future_new(num[i]);
 
-    t = hpx_time_now();
+    hpx_time_t t = hpx_time_now();
     hpx_addr_t setlco = hpx_lco_and_new(num[i]);
     printf("%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
-    // Time it take to set empty action
+    // Time it takes to set empty action
     hpx_addr_t completed = hpx_lco_and_new(num[i]);
-    t1 = hpx_time_now();
+    hpx_time_t t1 = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(HPX_HERE, _empty, &setlco, sizeof(setlco), completed);
+      hpx_call(HPX_HERE, _empty, NULL, 0, completed);
     hpx_lco_wait(completed);
     double empty_t = hpx_time_elapsed_ms(t1);
     hpx_lco_delete(completed, HPX_NULL);
 
     // Time to set for LCO argument
     t = hpx_time_now();
+    hpx_addr_t done = hpx_lco_and_new(num[i]);
     for (int j = 0; j < num[i]; j++)
       hpx_call(HPX_HERE, _lco_set, &setlco, sizeof(setlco), done);
     hpx_lco_wait(setlco);
@@ -76,6 +75,7 @@ static int _main_action(int *args) {
     hpx_lco_delete(setlco, HPX_NULL);
     printf("%*g\n",FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
+    hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
   }
 
