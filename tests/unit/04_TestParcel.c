@@ -399,7 +399,7 @@ START_TEST(test_libhpx_parcelSendThrough)
     goto unwind1;
   }
 
-  if (_is_error(hpx_call(hpx_lco_set_action, gates, NULL, 0, HPX_NULL))) {
+  if (_is_error(hpx_call(gates, hpx_lco_set_action, NULL, 0, HPX_NULL))) {
     goto unwind2;
   }
 
