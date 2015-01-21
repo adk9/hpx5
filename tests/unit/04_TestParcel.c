@@ -286,7 +286,8 @@ START_TEST(test_libhpx_parcelGetContinuation)
 END_TEST
 
 static int _is_error(hpx_status_t s) {
-  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s", hpx_strerror(s));
+  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s",
+                hpx_strerror(s));
   return (s != HPX_SUCCESS);
 }
 
@@ -300,28 +301,47 @@ static int _is_null(void *addr) {
   return (addr == NULL);
 }
 
-static int _i = 0;
-
-HPX_DEFINE_ACTION(ACTION, _test_libhpx_parcelSendThrough)(void *arg) {
-  // don't need synchronization since this is done in a sequential cascade
-  int i = _i++;
-  int j = *(int*)arg;
-  ck_assert_msg(i == j, "expected to get %d but got %d\n", i, j);
+/// Store a value to an integer in memory.
+HPX_DEFINE_ACTION(PINNED_ACTION, _store_int)(void *val) {
+  int *addr = hpx_thread_current_local_target();
+  *addr = *(int*)val;
   return HPX_SUCCESS;
 }
 
+/// Load a value from an integer in memory.
+HPX_DEFINE_ACTION(PINNED_ACTION, _load_int)(void *UNUSED) {
+  int *addr = hpx_thread_current_local_target();
+  HPX_THREAD_CONTINUE(*addr);
+}
+
+/// Increment an integer in memory.
+///
+/// This is slightly more complicated than an increment. We send along the value
+/// that we expect to see, to make sure our cascade is running in the correct
+/// order.
+HPX_DEFINE_ACTION(PINNED_ACTION, _parcelSendThrough_increment)(void *arg) {
+  // don't need synchronization since this is done in a sequential cascade
+  int *val = hpx_thread_current_local_target();
+  int i = val[0]++;
+  int j = *(int*)arg;
+  fprintf(test_log, "expected %d, got %d\n", i, j);
+  return HPX_SUCCESS;
+}
 
 /// This test sets up a simple cascade of parcels in a cyclic array of
 /// futures. Each parcel waits for the future at i, then executes the
-/// _test_libhpx_parcelSendThrough at the initial locality, with the integer i,
-/// and then triggers the future at i + 1.
-hpx_addr_t _cascade(hpx_addr_t done, const int n) {
+/// _test_libhpx_parcelSendThrough_increment on val, with the integer i, and
+/// then triggers the future at i + 1.
+hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
+  // allocate the cascade array
   hpx_addr_t gates = hpx_lco_future_array_new(n, 0, 1);
   if (_is_hpxnull(gates)) {
     goto unwind0;
   }
 
-  // we'll wait until all of the parcels are gated
+  // we'll wait until all of the parcels are gated before returning---this isn't
+  // strictly necessary and it might make a good test not to do this, but doing
+  // it this way stresses the rsync parameter to hpx_parcel_send_through
   hpx_addr_t and = hpx_lco_and_new(n);
   if (_is_hpxnull(and)) {
     goto unwind1;
@@ -335,8 +355,8 @@ hpx_addr_t _cascade(hpx_addr_t done, const int n) {
     }
 
     // set up the initial action we want to run
-    hpx_parcel_set_target(p, HPX_HERE);
-    hpx_parcel_set_action(p, _test_libhpx_parcelSendThrough);
+    hpx_parcel_set_target(p, val);
+    hpx_parcel_set_action(p, _parcelSendThrough_increment);
     hpx_parcel_set_data(p, &i, sizeof(i));
 
     // set up the continuation (trigger the next lco, or the done lco if we're
@@ -389,28 +409,52 @@ START_TEST(test_libhpx_parcelSendThrough)
   fflush(test_log);
 
   hpx_time_t t1 = hpx_time_now();
+
+  // allocate a future to signal the completion of the cascade
   hpx_addr_t done = hpx_lco_future_new(0);
   if (_is_hpxnull(done)) {
     goto unwind0;
   }
 
-  hpx_addr_t gates = _cascade(done, n);
-  if (gates == HPX_NULL) {
+  // allocate and initialize a shared integer for the cascade to update
+  hpx_addr_t val = hpx_gas_alloc(sizeof(int));
+  if (_is_hpxnull(val)) {
     goto unwind1;
   }
 
+  const int zero = 0;
+  if (_is_error(hpx_call_sync(val, _store_int, &zero, sizeof(zero), NULL, 0))) {
+    goto unwind2;
+  }
+
+  // allocate and initialize the cascade
+  hpx_addr_t gates = _cascade(done, val, n);
+  if (gates == HPX_NULL) {
+    goto unwind2;
+  }
+
+  // start the cascade by setting the first future
   if (_is_error(hpx_call(gates, hpx_lco_set_action, NULL, 0, HPX_NULL))) {
     goto unwind2;
   }
 
+  // wait for the cascade to finish
   if (_is_error(hpx_lco_wait(done))) {
-    goto unwind2;
+    goto unwind3;
   }
 
-  ck_assert_msg(_i == n, "unexpected final value");
+  // check the final value to make sure everything actually worked
+  int fin;
+  if (_is_error(hpx_call_sync(val, _load_int, NULL, 0, &fin, sizeof(fin)))) {
+    goto unwind3;
+  }
 
- unwind2:
+  ck_assert_msg(fin == n, "expected final value %d, got %d", n, fin);
+
+ unwind3:
   hpx_lco_delete(gates, HPX_NULL);
+ unwind2:
+  hpx_gas_free(val, HPX_NULL);
  unwind1:
   hpx_lco_delete(done, HPX_NULL);
  unwind0:
