@@ -11,11 +11,11 @@
 #define HEADER_FIELD_WIDTH 5
 
 static int num[] = {
-  10,
-  20,
-  30,
-  40,
-  50
+  10000,
+  20000,
+  30000,
+  40000,
+  50000
 };
 
 static void _usage(FILE *stream) {
