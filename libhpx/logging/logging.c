@@ -24,13 +24,16 @@
 #include "libhpx/logging.h"
 #include "logtable.h"
 
+#ifdef HPX_LOG_ENABLED
 static logtable_t logtables[HPX_LOG_NUM_EVENTS];
 static size_t logging_max_log_size = 40*1024*1024-1;
 static bool hpx_logging_enabled = false;
 static bool log_class_enabled[HPX_LOG_NUM_CLASSES];
 static char log_dir_name[256];
 static hpx_time_t time_start;
-static bool logging_started = false;
+static bool logging_active = false; // not whether we WANT to log, but whether 
+                                    // we are ABLE to (i.e. after initialization
+                                    // and before shutdown)
 
 static bool get_env_var(char *env_var_name) {
   char* env_var_text;
@@ -41,7 +44,21 @@ static bool get_env_var(char *env_var_name) {
     return false;
 }
 
-int log_create(hpx_logging_class_type_t class, hpx_logging_event_type_t event, 
+static void 
+time_diff(uint64_t *out_s, uint64_t *out_ns, hpx_time_t *start, hpx_time_t *end) {
+  {
+    if ((end->tv_nsec-start->tv_nsec)<0) {
+      *out_s = end->tv_sec-start->tv_sec-1;
+      *out_ns = (1e9+end->tv_nsec)-start->tv_nsec;
+    } else {
+      *out_s = end->tv_sec-start->tv_sec;
+      *out_ns = end->tv_nsec-start->tv_nsec;
+    }
+  }
+}
+
+static int 
+log_create(hpx_logging_class_type_t class, hpx_logging_event_type_t event, 
                size_t max_size) {
   char filename[256];
   snprintf(filename, 256, "log.%d.%d.%d.log", 
@@ -52,6 +69,7 @@ int log_create(hpx_logging_class_type_t class, hpx_logging_event_type_t event,
     return success;
   return HPX_SUCCESS;
 }
+#endif
 
 int hpx_logging_init() {
 #ifdef HPX_LOG_ENABLED
@@ -113,30 +131,18 @@ int hpx_logging_init() {
 
   time_start = hpx_time_now();
 
-  logging_started = true;
+  logging_active = true;
 #endif
   return HPX_SUCCESS;
 }
 
 void hpx_logging_fini() {
 #ifdef HPX_LOG_ENABLED
+  logging_active = false;
   for (int i = 0; i < HPX_LOG_NUM_EVENTS; i++)
     if (logtables[i].inited == true)
       logtable_fini(&logtables[i]);
 #endif
-}
-
-static void 
-time_diff(uint64_t *out_s, uint64_t *out_ns, hpx_time_t *start, hpx_time_t *end) {
-  {
-    if ((end->tv_nsec-start->tv_nsec)<0) {
-      *out_s = end->tv_sec-start->tv_sec-1;
-      *out_ns = (1e9+end->tv_nsec)-start->tv_nsec;
-    } else {
-      *out_s = end->tv_sec-start->tv_sec;
-      *out_ns = end->tv_nsec-start->tv_nsec;
-    }
-  }
 }
 
 /// Record an event to the log
@@ -158,7 +164,7 @@ void hpx_logging_log_event(
   if (!hpx_logging_enabled)
     return;
   
-  if (!logging_started)
+  if (!logging_active)
     return;
 
   logtable_t *lt = &logtables[event_type];
@@ -186,3 +192,4 @@ void hpx_logging_log_event(
 
 #endif
 }
+
