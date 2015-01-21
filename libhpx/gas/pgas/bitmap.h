@@ -42,7 +42,7 @@ typedef struct bitmap bitmap_t;
 /// @param        nbits The number of bits we need to manage.
 ///
 /// @returns The new bitmap or NULL if there was an error.
-bitmap_t *bitmap_new(uint32_t nbits)
+bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align)
   HPX_INTERNAL;
 
 
@@ -60,13 +60,12 @@ void bitmap_delete(bitmap_t *bitmap)
 ///
 /// @param[in]      map The bitmap to allocate from.
 /// @param[in]    nbits The number of continuous bits to allocate.
-/// @param[in]     bias The alignment bias to start the search.
-/// @param[in]   period The alignment period.
+/// @param[in]     align The alignment we need to return
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
-int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t bias, uint32_t period, uint32_t *i)
-  HPX_INTERNAL HPX_NON_NULL(1, 5);
+int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
+  HPX_INTERNAL HPX_NON_NULL(1, 4);
 
 
 /// Allocate @p nbits contiguous bits from the bitmap, aligned to a @p align
@@ -76,13 +75,12 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t bias, uint32_t period
 ///
 /// @param[in]      map The bitmap to allocate from.
 /// @param[in]    nbits The number of continuous bits to allocate.
-/// @param[in]     bias The alignment bias to start the search.
-/// @param[in]   period The alignment period.
+/// @param[in]    align The alignment we need to find.
 /// @param[out]       i The offset of the start of the allocation.
 ///
 /// @returns LIBHPX_OK, LIBHPX_ENOMEM
-int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t bias, uint32_t period, uint32_t *i)
-  HPX_INTERNAL HPX_NON_NULL(1, 5);
+int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
+  HPX_INTERNAL HPX_NON_NULL(1, 4);
 
 
 /// Free @p nbits contiguous bits of memory, starting at offset @p i.
