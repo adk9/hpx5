@@ -237,17 +237,39 @@ static int _test(progress_t *p, request_t **i,
 /// shutdown where we need the "shutdown-action" parcels to go out before
 /// shutting down the scheduler.
 void network_progress_flush(progress_t *p) {
-  bool send = true;
-  while (send)
-    send = _try_start_send(p);
+  int send = 1;
 
-  // flush the pending sends
-  while (p->pending_sends)
-    _test(p, &p->pending_sends, _flush_request);
+  // if there are pending sends, or we have a send we couldn't start, then
+  // progress sends again
+  while (p->npsends || send) {
+    // complete all pending sends
+    int sends = _test(p, &p->pending_sends, _flush_request);
+    assert(sends <= p->npsends);
+    p->npsends -= sends;
+    DEBUG_IF (sends) {
+      dbg_log_trans("finished %d sends in flush.\n", sends);
+    }
+
+    // start as many sends as we can, if this fails then either send was 0
+    // (i.e., we have no more sends to start), or we couldn't try and start.
+    while (send && network_progress_can_send(p)) {
+      send = _try_start_send(p);
+      p->npsends += send;
+      DEBUG_IF(send) {
+        dbg_log_trans("started %d sends in flush.\n", send);
+      }
+    }
+  }
 
   // if we have any pending receives, we wait for those to finish as well
-  while (p->pending_recvs)
-    _test(p, &p->pending_recvs, _flush_request);
+  while (p->nprecvs) {
+    int recvs = recvs = _test(p, &p->pending_recvs, _flush_request);
+    assert(recvs <= p->nprecvs);
+    p->nprecvs -= recvs;
+    DEBUG_IF (recvs) {
+      dbg_log_trans("finished %d receives.\n", recvs);
+    }
+  }
 }
 
 
