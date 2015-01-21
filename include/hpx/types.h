@@ -29,6 +29,9 @@ typedef short hpx_status_t;
 #define  HPX_LCO_TIMEOUT     ((hpx_status_t)4)
 #define  HPX_LCO_RESET       ((hpx_status_t)5)
 #define  HPX_USER            ((hpx_status_t)127)
+
+const char *hpx_strerror(hpx_status_t);
+
 /// @}
 
 /// HPX datatypes
