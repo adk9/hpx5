@@ -15,7 +15,7 @@
 #include "photon_ugni_connect.h"
 #include "logging.h"
 #include "utility_functions.h"
-#include "libsync/include/locks.h"
+#include "libsync/locks.h"
 
 #define MAX_RETRIES 1
 #define DEF_UGNI_BTE_THRESH (1<<16)
@@ -317,7 +317,7 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int ugni_get_event(photonEventStatus stat) {
   gni_post_descriptor_t *event_post_desc_ptr;
   gni_cq_entry_t current_event;
-  uint64_t cookie = NULL_COOKIE;
+  uint64_t cookie = NULL_REQUEST;
   int rc;
 
   sync_tatas_acquire(&cq_lock);
