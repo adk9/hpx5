@@ -286,7 +286,7 @@ START_TEST(test_libhpx_parcelGetContinuation)
 END_TEST
 
 static int _is_error(hpx_status_t s) {
-  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error");
+  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s", hpx_strerror(s));
   return (s != HPX_SUCCESS);
 }
 
