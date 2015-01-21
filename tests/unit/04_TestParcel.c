@@ -285,6 +285,96 @@ START_TEST(test_libhpx_parcelGetContinuation)
 }
 END_TEST
 
+static int _i = 0;
+
+HPX_DEFINE_ACTION(ACTION, _test_libhpx_parcelSendThrough)(void *arg) {
+  // don't need synchronization since this is done in a sequential cascade
+  int i = _i++;
+  int j = *(int*)arg;
+  ck_assert_msg(i == j, "expected to get %d but got %d\n", i, j);
+  return HPX_SUCCESS;
+}
+
+static void _assert_success(hpx_status_t s) {
+  ck_assert(s == HPX_SUCCESS);
+}
+
+static void _assert_not_null(hpx_addr_t addr) {
+  ck_assert(addr != HPX_NULL);
+}
+
+/// This test sets up a simple cascade of parcels in a cyclic array of
+/// futures. Each parcel waits for the future at i, then executes the
+/// _test_libhpx_parcelSendThrough at the initial locality, with the integer i,
+/// and then triggers the future at i + 1.
+hpx_addr_t _cascade(hpx_addr_t done, const int n) {
+  hpx_addr_t gates = hpx_lco_future_array_new(n, 0, 1);
+  _assert_not_null(gates);
+
+  // we'll wait until all of the parcels are gated
+  hpx_addr_t and = hpx_lco_and_new(n);
+  _assert_not_null(and);
+
+  // set up the prefix of the cascade
+  for (int i = 0, e = n; i < e; ++i) {
+    hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(int));
+    ck_assert(p != NULL);
+
+    // set up the initial action we want to run
+    hpx_parcel_set_target(p, HPX_HERE);
+    hpx_parcel_set_action(p, _test_libhpx_parcelSendThrough);
+    hpx_parcel_set_data(p, &i, sizeof(i));
+
+    // set up the continuation (trigger the next lco, or the done lco if we're
+    // done)
+    if (i < n - 1) {
+      hpx_addr_t next = hpx_lco_future_array_at(gates, i + 1, 0, 1);
+      hpx_parcel_set_cont_target(p, next);
+    }
+    else {
+      hpx_parcel_set_cont_target(p, done);
+    }
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+
+    // send the parcel through the current gate
+    hpx_addr_t gate = hpx_lco_future_array_at(gates, i, 0, 1);
+    _assert_not_null(gate);
+    _assert_success(hpx_parcel_send_through_sync(p, gate, and));
+  }
+
+  _assert_success(hpx_lco_wait(and));
+  hpx_lco_delete(and, HPX_NULL);
+  return and;
+}
+
+/// Test the parcel_send_though functionality.
+///
+/// The send-through operation is designed so that LCOs can buffer sent parcels
+/// until their condition triggers. This permits a style of thread-less
+/// synchronization that can aid in dataflow programming.
+///
+START_TEST(test_libhpx_parcelSendThrough)
+{
+  const int n = 2 * HPX_LOCALITIES;
+
+  fprintf(test_log, "Testing parcel sends through LCOs\n");
+
+  hpx_time_t t1 = hpx_time_now();
+  hpx_addr_t done = hpx_lco_future_new(0);
+  ck_assert(done != HPX_NULL);
+  hpx_addr_t gates = _cascade(done, n);
+  _assert_not_null(gates);
+  _assert_success(hpx_call(hpx_lco_set_action, gates, NULL, 0, HPX_NULL));
+  _assert_success(hpx_lco_wait(done));
+  hpx_lco_delete(done, HPX_NULL);
+  hpx_lco_delete(gates, HPX_NULL);
+
+  ck_assert_msg(_i == n, "unexpected final value");
+
+  fprintf(test_log,"Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+}
+END_TEST
+
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
@@ -296,4 +386,5 @@ void add_04_TestParcel(TCase *tc) {
   tcase_add_test(tc, test_libhpx_parcelRelease);
   tcase_add_test(tc, test_libhpx_parcelSend);
   tcase_add_test(tc, test_libhpx_parcelGetContinuation);
+  tcase_add_test(tc, test_libhpx_parcelSendThrough);
 }
