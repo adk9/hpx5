@@ -598,7 +598,7 @@ static inline void _resume(hpx_parcel_t *parcels) {
       _send_mail(stack->affinity, p);
     }
     else {
-      _spawn_lifo(self, p);
+      parcel_launch(p);
     }
   }
 }
