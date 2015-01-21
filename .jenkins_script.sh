@@ -11,18 +11,17 @@ function add_mpi() {
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_USE_ETH_DEV="eth0"
-    export HPX_USE_IB_DEV="mlx4_0"
+    export HPX_USE_IB_DEV=mlx4_0
     export HPX_USE_IB_PORT=1
     export HPX_USE_CMA=0
-    export HPX_USE_BACKEND="verbs"
+    export HPX_USE_ETH_DEV=roce0
 }
 
 set -xe
 case "$HPXMODE" in
     photon)
 	CFGFLAGS=" --with-mpi=ompi --enable-photon "
-	add_mpi	
+	add_mpi
         add_photon
 	;;
     mpi)
