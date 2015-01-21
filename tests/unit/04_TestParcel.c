@@ -285,6 +285,21 @@ START_TEST(test_libhpx_parcelGetContinuation)
 }
 END_TEST
 
+static int _is_error(hpx_status_t s) {
+  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error");
+  return (s != HPX_SUCCESS);
+}
+
+static int _is_hpxnull(hpx_addr_t addr) {
+  ck_assert(addr != HPX_NULL);
+  return (addr == HPX_NULL);
+}
+
+static int _is_null(void *addr) {
+  ck_assert(addr != NULL);
+  return (addr == NULL);
+}
+
 static int _i = 0;
 
 HPX_DEFINE_ACTION(ACTION, _test_libhpx_parcelSendThrough)(void *arg) {
@@ -295,13 +310,6 @@ HPX_DEFINE_ACTION(ACTION, _test_libhpx_parcelSendThrough)(void *arg) {
   return HPX_SUCCESS;
 }
 
-static void _assert_success(hpx_status_t s) {
-  ck_assert(s == HPX_SUCCESS);
-}
-
-static void _assert_not_null(hpx_addr_t addr) {
-  ck_assert(addr != HPX_NULL);
-}
 
 /// This test sets up a simple cascade of parcels in a cyclic array of
 /// futures. Each parcel waits for the future at i, then executes the
@@ -309,16 +317,22 @@ static void _assert_not_null(hpx_addr_t addr) {
 /// and then triggers the future at i + 1.
 hpx_addr_t _cascade(hpx_addr_t done, const int n) {
   hpx_addr_t gates = hpx_lco_future_array_new(n, 0, 1);
-  _assert_not_null(gates);
+  if (_is_hpxnull(gates)) {
+    goto unwind0;
+  }
 
   // we'll wait until all of the parcels are gated
   hpx_addr_t and = hpx_lco_and_new(n);
-  _assert_not_null(and);
+  if (_is_hpxnull(and)) {
+    goto unwind1;
+  }
 
   // set up the prefix of the cascade
   for (int i = 0, e = n; i < e; ++i) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(int));
-    ck_assert(p != NULL);
+    if (_is_null(p)) {
+      goto unwind2;
+    }
 
     // set up the initial action we want to run
     hpx_parcel_set_target(p, HPX_HERE);
@@ -338,13 +352,27 @@ hpx_addr_t _cascade(hpx_addr_t done, const int n) {
 
     // send the parcel through the current gate
     hpx_addr_t gate = hpx_lco_future_array_at(gates, i, 0, 1);
-    _assert_not_null(gate);
-    _assert_success(hpx_parcel_send_through_sync(p, gate, and));
+    if (_is_hpxnull(gate)) {
+      goto unwind2;
+    }
+
+    if (_is_error(hpx_parcel_send_through_sync(p, gate, and))) {
+      goto unwind2;
+    }
   }
 
-  _assert_success(hpx_lco_wait(and));
+  if (_is_error(hpx_lco_wait(and))) {
+    goto unwind2;
+  }
   hpx_lco_delete(and, HPX_NULL);
-  return and;
+  return gates;
+
+ unwind2:
+  hpx_lco_delete(and, HPX_NULL);
+ unwind1:
+  hpx_lco_delete(gates, HPX_NULL);
+ unwind0:
+  return HPX_NULL;
 }
 
 /// Test the parcel_send_though functionality.
@@ -358,20 +386,36 @@ START_TEST(test_libhpx_parcelSendThrough)
   const int n = 2 * HPX_LOCALITIES;
 
   fprintf(test_log, "Testing parcel sends through LCOs\n");
+  fflush(test_log);
 
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t done = hpx_lco_future_new(0);
-  ck_assert(done != HPX_NULL);
+  if (_is_hpxnull(done)) {
+    goto unwind0;
+  }
+
   hpx_addr_t gates = _cascade(done, n);
-  _assert_not_null(gates);
-  _assert_success(hpx_call(hpx_lco_set_action, gates, NULL, 0, HPX_NULL));
-  _assert_success(hpx_lco_wait(done));
-  hpx_lco_delete(done, HPX_NULL);
-  hpx_lco_delete(gates, HPX_NULL);
+  if (gates == HPX_NULL) {
+    goto unwind1;
+  }
+
+  if (_is_error(hpx_call(hpx_lco_set_action, gates, NULL, 0, HPX_NULL))) {
+    goto unwind2;
+  }
+
+  if (_is_error(hpx_lco_wait(done))) {
+    goto unwind2;
+  }
 
   ck_assert_msg(_i == n, "unexpected final value");
 
+ unwind2:
+  hpx_lco_delete(gates, HPX_NULL);
+ unwind1:
+  hpx_lco_delete(done, HPX_NULL);
+ unwind0:
   fprintf(test_log,"Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  fflush(test_log);
 }
 END_TEST
 
