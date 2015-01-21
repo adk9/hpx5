@@ -12,11 +12,11 @@ function add_mpi() {
 set -xe
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon "
+	CFGFLAGS=" --with-mpi=ompi --enable-photon "
 	add_mpi	
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi "
+	CFGFLAGS=" --with-mpi=ompi "
 	add_mpi	
 	;;
     *)
