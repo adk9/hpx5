@@ -179,8 +179,8 @@ static const int HPX_LOG_SIZEOF_EVENT[] = {
 #define HPX_LOG_INIT hpx_logging_init
 #define HPX_LOG_FINI hpx_logging_fini
 #else
-#define HPX_LOG_INIT
-#define HPX_LOG_FINI
+#define HPX_LOG_INIT()
+#define HPX_LOG_FINI()
 #endif
 
 #endif
