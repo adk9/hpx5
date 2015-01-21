@@ -30,6 +30,7 @@
 
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
@@ -79,6 +80,11 @@ static void _bless(hpx_parcel_t *p) {
 
   // parent and child each get half a credit
   p->credit = ++parent->credit;
+}
+
+static void _prepare(hpx_parcel_t *p) {
+  _serialize(p);
+  _bless(p);
 }
 
 void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
@@ -215,7 +221,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
   LIBHPX_REGISTER_ACTION(_parcel_send_async_action, &_parcel_send_async);
 }
 
-int parcel_send(hpx_parcel_t *p) {
+int parcel_launch(hpx_parcel_t *p) {
   DEBUG_IF(!_inplace(p)) {
     return dbg_error("parcel must be serialized before it can be sent\n");
   }
@@ -258,9 +264,8 @@ int parcel_send(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
-  _serialize(p);
-  _bless(p);
-  return parcel_send(p);
+  _prepare(p);
+  return parcel_launch(p);
 }
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
@@ -268,16 +273,21 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
     return hpx_call(HPX_HERE, _parcel_send_async, &p, sizeof(p), lsync);
   }
 
-  hpx_status_t status = hpx_parcel_send_sync(p);
-  if (lsync) {
-    if (status != HPX_SUCCESS) {
-      hpx_lco_error(lsync, status, HPX_NULL);
-    }
-    else {
-      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    }
-  }
+  _prepare(p);
+  hpx_status_t status = parcel_launch(p);
+  hpx_lco_error(lsync, status, HPX_NULL);
   return status;
+}
+
+hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate,
+                                          hpx_addr_t rsync) {
+  return LIBHPX_EUNIMPLEMENTED;
+}
+
+hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
+                                     hpx_addr_t lsync, hpx_addr_t rsync) {
+  return LIBHPX_EUNIMPLEMENTED;
+
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
