@@ -289,3 +289,16 @@ void hpx_abort(void) {
   abort();
 }
 
+const char *hpx_strerror(hpx_status_t s) {
+  switch (s) {
+   case (HPX_ERROR): return "HPX_ERROR";
+   case (HPX_SUCCESS): return "HPX_SUCCESS";
+   case (HPX_RESEND): return "HPX_RESEND";
+   case (HPX_LCO_ERROR): return "HPX_LCO_ERROR";
+   case (HPX_LCO_CHAN_EMPTY): return "HPX_LCO_CHAN_EMPTY";
+   case (HPX_LCO_TIMEOUT): return "HPX_LCO_TIMEOUT";
+   case (HPX_LCO_RESET): return "HPX_LCO_RESET";
+   case (HPX_USER): return "HPX_USER";
+   default: return "HPX undefined error value";
+  }
+}
