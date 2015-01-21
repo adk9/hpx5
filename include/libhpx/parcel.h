@@ -64,7 +64,7 @@ uint64_t parcel_get_credit(hpx_parcel_t *p)
 ///
 /// This sends the parcel synchronously. This assumes that the parcel has been
 /// serialized and has credit already, if necessary.
-int parcel_send(hpx_parcel_t *p)
+int parcel_launch(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 /// Treat a parcel as a stack of parcels, and pop the top.
