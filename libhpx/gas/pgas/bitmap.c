@@ -351,8 +351,14 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
     // scan for a match, starting with the minimum available bit
     bit = map->min;
     while (true) {
-      // only test properly aligned offsets
-      bit = bit; // bias + (bit / period) * period;
+      // crazy way of finding an aligned bit
+      uint64_t val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+      uint32_t max = ctzl(val);
+      while (align > max) {
+        bit += 1;
+        val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+        max = ctzl(val);
+      }
 
       // make sure the match is inbounds
       if (bit + nbits > map->max) {
@@ -414,12 +420,19 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
       }
 
       bit = bit - shift;
-      // if (bit < bias) {
-      //   return _bitmap_oom(map, nbits, align);
-      // }
 
       // compute the closest aligned bit to the shifted bit
-      bit = bit; //bias + (bit / period) * period;
+      uint64_t val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+      uint32_t max = ctzl(val);
+      while (align > max) {
+        if (bit == 0) {
+          return _bitmap_oom(map, nbits, align);
+        }
+        bit -= 1;
+        val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+        max = ctzl(val);
+      }
+
       if (bit < map->min) {
         return _bitmap_oom(map, nbits, align);
       }
