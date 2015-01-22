@@ -89,4 +89,9 @@ flag off
 section "PWC Network Options"
 
 option "hpx-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
+typestr="bytes"
+long optional
+
+option "hpx-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+typestr="bytes"
 long optional
