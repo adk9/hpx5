@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_PWC_PEER_H
 #define LIBHPX_NETWORK_PWC_PEER_H
 
-#include "completions.h"
+#include "commands.h"
 #include "eager_buffer.h"
 #include "pwc_buffer.h"
 #include "segment.h"
@@ -38,7 +38,7 @@ typedef enum {
 ///
 /// The underlying network is expected to support PWC as a native operation, but
 /// the peer structure provides buffering to deal with send overflow when the
-/// peer isn't processing PWC completion events quickly enough. All PWC
+/// peer isn't processing PWC command events quickly enough. All PWC
 /// operations go through the pwc buffer structure and target one of the three
 /// remote segments.
 ///
@@ -63,7 +63,7 @@ typedef struct peer {
 void peer_fini(peer_t *peer)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Perform a put-with-completion operation to a specific peer.
+/// Perform a put-with-command operation to a specific peer.
 ///
 /// This simply translates the segment id into the appropriate segment structure
 /// for this peer, and then forwards the request through the PWC buffer.
@@ -72,22 +72,22 @@ void peer_fini(peer_t *peer)
 /// @param         roff The remote offset for the put operation.
 /// @param          lva The source buffer for the put.
 /// @param            n The number of bytes in the put operation.
-/// @param        lsync An event identifier for local completion.
-/// @param        rsync An event identifier for remote completion.
-/// @param   completion The completion operation to transmit.
+/// @param        lsync An event identifier for local command.
+/// @param        rsync An event identifier for remote command.
+/// @param      command The command to transmit.
 /// @param   segment_id The segment corresponding to @p roff.
 ///
 /// @return  LIBHPX_OK The operation was successful.
 static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
                            hpx_addr_t lsync, hpx_addr_t rsync,
-                           completion_t completion, segid_t segid) {
+                           command_t command, segid_t segid) {
   pwc_buffer_t *pwc = &peer->pwc;
   segment_t *segment = &peer->segments[segid];
-  return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, completion, segment);
+  return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, command, segment);
 }
 
-/// Simply put a control message.
-static inline int peer_put_control(peer_t *p, completion_t op) {
+/// Simply put a command.
+static inline int peer_put_command(peer_t *p, command_t op) {
   return peer_pwc(p, 0, NULL, 0, HPX_NULL, HPX_NULL, op, SEGMENT_NULL);
 }
 
@@ -102,7 +102,7 @@ static inline int peer_put_control(peer_t *p, completion_t op) {
 ///
 /// @param         peer The peer structure representing the send target.
 /// @param            p The parcel to send.
-/// @param        lsync An event identifier representing local completion.
+/// @param        lsync An event identifier representing local command.
 ///
 /// @returns  LIBHPX_OK The send operation was initiated successfully..
 static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
@@ -115,12 +115,12 @@ static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
 /// @param          lva The local virtual address to copy to.
 /// @param       offset The remote offset to get from.
 /// @param            n The number of bytes to copy.
-/// @param         sync An completion specification for get completion.
+/// @param         sync An command specification for get command.
 /// @param      segment The segment corresponding to @p offset
 ///
 /// @returns  LIBHPX_OK The get operation was initiated successfully.
 int peer_get(peer_t *peer, void *lva, size_t offset, size_t n,
-             completion_t sync, segid_t segment)
+             command_t sync, segid_t segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif

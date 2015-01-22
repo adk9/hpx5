@@ -10,14 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_PWC_COMPLETIONS_H
-#define LIBHPX_NETWORK_PWC_COMPLETIONS_H
+#ifndef LIBHPX_NETWORK_PWC_COMMANDS_H
+#define LIBHPX_NETWORK_PWC_COMMANDS_H
 
 #include <hpx/hpx.h>
 
-typedef uint64_t completion_t;
+typedef uint64_t command_t;
 
-completion_t encode_completion(hpx_action_t op, hpx_addr_t addr);
-void decode_completion(completion_t comp, hpx_action_t *op, hpx_addr_t *addr);
+command_t encode_command(hpx_action_t op, hpx_addr_t addr);
+void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr);
 
-#endif // LIBHPX_NETWORK_PWC_COMPLETIONS_H
+#endif // LIBHPX_NETWORK_PWC_COMMANDS_H
