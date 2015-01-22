@@ -50,7 +50,8 @@ const char *hpx_options_t_help[] = {
   "      --hpx-mprotectstacks      use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
   "\nPWC Network Options:",
-  "      --hpx-parcelbuffersize=LONG\n                                set the size of p2p recv buffers for parcel \n                                  sends",
+  "      --hpx-parcelbuffersize=bytes\n                                set the size of p2p recv buffers for parcel \n                                  sends",
+  "      --hpx-parceleagerlimit=bytes\n                                set the largest eager parcel size (header \n                                  inclusive)",
     0
 };
 
@@ -130,6 +131,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_given = 0 ;
   args_info->hpx_waitonabort_given = 0 ;
   args_info->hpx_parcelbuffersize_given = 0 ;
+  args_info->hpx_parceleagerlimit_given = 0 ;
 }
 
 static
@@ -163,6 +165,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_flag = 0;
   args_info->hpx_waitonabort_flag = 0;
   args_info->hpx_parcelbuffersize_orig = NULL;
+  args_info->hpx_parceleagerlimit_orig = NULL;
   
 }
 
@@ -190,6 +193,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_logat_help = hpx_options_t_help[14] ;
   args_info->hpx_logat_min = -1;
   args_info->hpx_logat_max = -1;
+<<<<<<< HEAD
   args_info->hpx_statistics_help = hpx_options_t_help[15] ;
   args_info->hpx_sendlimit_help = hpx_options_t_help[16] ;
   args_info->hpx_recvlimit_help = hpx_options_t_help[17] ;
@@ -197,6 +201,16 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[19] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[20] ;
   args_info->hpx_parcelbuffersize_help = hpx_options_t_help[22] ;
+=======
+  args_info->hpx_statistics_help = hpx_options_t_help[14] ;
+  args_info->hpx_sendlimit_help = hpx_options_t_help[15] ;
+  args_info->hpx_recvlimit_help = hpx_options_t_help[16] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[17] ;
+  args_info->hpx_mprotectstacks_help = hpx_options_t_help[18] ;
+  args_info->hpx_waitonabort_help = hpx_options_t_help[19] ;
+  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[21] ;
+  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[22] ;
+>>>>>>> Add an option for limiting the largest eager parcel we can send.
   
 }
 
@@ -336,6 +350,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
   free_string_field (&(args_info->hpx_parcelbuffersize_orig));
+  free_string_field (&(args_info->hpx_parceleagerlimit_orig));
   
   
 
@@ -452,6 +467,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-waitonabort", 0, 0 );
   if (args_info->hpx_parcelbuffersize_given)
     write_into_file(outfile, "hpx-parcelbuffersize", args_info->hpx_parcelbuffersize_orig, 0);
+  if (args_info->hpx_parceleagerlimit_given)
+    write_into_file(outfile, "hpx-parceleagerlimit", args_info->hpx_parceleagerlimit_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -1051,6 +1068,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-mprotectstacks",	0, NULL, 0 },
         { "hpx-waitonabort",	0, NULL, 0 },
         { "hpx-parcelbuffersize",	1, NULL, 0 },
+        { "hpx-parceleagerlimit",	1, NULL, 0 },
         { NULL,	0, NULL, 0 }
       };
 
@@ -1323,6 +1341,20 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
                 &(local_args_info.hpx_parcelbuffersize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-parcelbuffersize", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* set the largest eager parcel size (header inclusive).  */
+          else if (strcmp (long_options[option_index].name, "hpx-parceleagerlimit") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_parceleagerlimit_arg), 
+                 &(args_info->hpx_parceleagerlimit_orig), &(args_info->hpx_parceleagerlimit_given),
+                &(local_args_info.hpx_parceleagerlimit_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-parceleagerlimit", '-',
                 additional_error))
               goto failure;
           

@@ -101,6 +101,9 @@ struct hpx_options_t
   long hpx_parcelbuffersize_arg;	/**< @brief set the size of p2p recv buffers for parcel sends.  */
   char * hpx_parcelbuffersize_orig;	/**< @brief set the size of p2p recv buffers for parcel sends original value given at command line.  */
   const char *hpx_parcelbuffersize_help; /**< @brief set the size of p2p recv buffers for parcel sends help description.  */
+  long hpx_parceleagerlimit_arg;	/**< @brief set the largest eager parcel size (header inclusive).  */
+  char * hpx_parceleagerlimit_orig;	/**< @brief set the largest eager parcel size (header inclusive) original value given at command line.  */
+  const char *hpx_parceleagerlimit_help; /**< @brief set the largest eager parcel size (header inclusive) help description.  */
   
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
@@ -122,6 +125,7 @@ struct hpx_options_t
   unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
   unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
   unsigned int hpx_parcelbuffersize_given ;	/**< @brief Whether hpx-parcelbuffersize was given.  */
+  unsigned int hpx_parceleagerlimit_given ;	/**< @brief Whether hpx-parceleagerlimit was given.  */
 
 } ;
 

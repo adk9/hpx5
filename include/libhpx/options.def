@@ -52,6 +52,7 @@ LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
 LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
 
 LIBHPX_DECL_OPTION(pwc, arg, size_t, parcelbuffersize, 1lu << 16)
+LIBHPX_DECL_OPTION(pwc, arg, size_t, parceleagerlimit, 1lu << 13)
 
 #ifdef _LIBHPX_DECL_OPTION_UNDEF
 # undef LIBHPX_DECL_OPTION
