@@ -34,7 +34,7 @@ typedef struct {
   uint32_t               rank;
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
-  const uint32_t       UNUSED;                  // padding
+  uint32_t parcel_eager_limit;
   gas_t                  *gas;
   size_t          eager_bytes;
   char                 *eager;
@@ -73,10 +73,10 @@ static int _pwc_progress(network_t *network) {
   return 0;
 }
 
-/// Perform a parcel send operation to an eager buffer.
+/// Perform a parcel send operation.
 ///
-/// This transforms the parcel send operation into a pwc() operation into the
-/// parcel buffer on the target peer.
+/// This determines which peer the operation is occurring to, and which send
+/// protocol to use, and then forwards to the appropriate peer/handler pair.
 ///
 /// This is basically exposed directly to the application programmer through the
 /// network interface, and could be called concurrently by a number of different
@@ -92,7 +92,13 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
-  return peer_send(peer, p, HPX_NULL);
+  size_t bytes = parcel_network_size(p);
+  if (bytes < pwc->parcel_eager_limit) {
+    return peer_send(peer, p, HPX_NULL);
+  }
+  else {
+    return peer_send_rendevous(peer, p, HPX_NULL);
+  }
 }
 
 /// Perform a put-with-command operation to a global heap address.
@@ -280,6 +286,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->rank = boot_rank(boot);
   pwc->ranks = ranks;
   pwc->parcel_buffer_size = cfg->parcelbuffersize;
+  pwc->parcel_eager_limit = cfg->parceleagerlimit;
 
   peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
   // Prepare the null segment.
