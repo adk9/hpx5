@@ -15,24 +15,24 @@
 #include <hpx/hpx.h>
 
 
-HPX_INTERRUPT(_my_interrupt)(void *args) {
+static HPX_INTERRUPT(_my_interrupt, void *args) {
   printf("Hi, I am an interrupt!\n");
   return HPX_SUCCESS;
 }
 
-HPX_TASK(_my_task)(void *args) {
+static HPX_TASK(_my_task, void *args) {
   printf("Hi, I am a task!\n");
   hpx_call_cc(HPX_HERE, _my_interrupt, NULL, 0, NULL, NULL);
   return HPX_SUCCESS;
 }
 
-HPX_ACTION(_my_action)(void *args) {
+static HPX_ACTION(_my_action, void *args) {
   printf("Hi, I am an action!\n");
   hpx_call_cc(HPX_HERE, _my_task, NULL, 0, NULL, NULL);
   return HPX_SUCCESS;
 }
 
-HPX_ACTION(_main)(void *args) {
+static HPX_ACTION(_main, void *args) {
   hpx_call_sync(HPX_HERE, _my_action, NULL, 0, NULL, 0);
   hpx_shutdown(HPX_SUCCESS);
 }
