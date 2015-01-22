@@ -20,7 +20,6 @@ extern hpx_action_t t05_worker;
 extern hpx_action_t t05_assignID;
 extern hpx_action_t t05_cont_thread;
 extern hpx_action_t t05_thread_cont_cleanup;
-extern hpx_action_t t05_thread_current_cont_target;
 extern hpx_action_t t05_yield_worker;
 extern hpx_action_t t06_get_value;
 extern hpx_action_t t06_set_value;
