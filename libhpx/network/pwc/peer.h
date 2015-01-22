@@ -23,6 +23,7 @@ struct gas;
 
 /// Each peer maintains these RDMA segments for remote access.
 typedef enum {
+  SEGMENT_NULL,
   SEGMENT_HEAP,
   SEGMENT_EAGER,
   SEGMENT_PEERS,
@@ -83,6 +84,11 @@ static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
   pwc_buffer_t *pwc = &peer->pwc;
   segment_t *segment = &peer->segments[segid];
   return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, completion, segment);
+}
+
+/// Simply put a control message.
+static inline int peer_put_control(peer_t *p, completion_t op) {
+  return peer_pwc(p, 0, NULL, 0, HPX_NULL, HPX_NULL, op, SEGMENT_NULL);
 }
 
 /// Perform a parcel send operation to a specific peer.
