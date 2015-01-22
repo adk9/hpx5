@@ -304,7 +304,6 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
       hpx_addr_t delete_termination_lco = hpx_lco_and_new(HPX_LOCALITIES);
       hpx_bcast(_delete_buckets, &delete_termination_lco, sizeof(delete_termination_lco), HPX_NULL);
       hpx_lco_wait(delete_termination_lco);
-      hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       hpx_lco_delete(delete_termination_lco, HPX_NULL);
       break;
     }
