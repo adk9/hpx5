@@ -83,7 +83,7 @@ tutorial_main_action(const main_args_t *args)
       .complete = complete                // send along the complete LCO address
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
 
   hpx_lco_wait(done);
@@ -93,7 +93,7 @@ tutorial_main_action(const main_args_t *args)
   const unsigned long epoch = 0;
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i);
-    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advanceDomain, HPX_NULL, &epoch, sizeof(epoch));
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);

@@ -162,7 +162,7 @@ static int _main_action(int *input)
     advance[k].cores = cores;
     advance[k].address = &channels;
     rank = hpx_lco_chan_array_at(channels, k);
-    hpx_call(rank, _advanceDomain, &advance[k], sizeof(advance[k]), and);
+    hpx_call(rank, _advanceDomain, and, &advance[k], sizeof(advance[k]));
   }
 
 #if 0

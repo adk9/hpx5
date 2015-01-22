@@ -179,8 +179,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
     _alltoall_get_offset_t args = {.size = size, .offset = id};
-    return hpx_call_sync(alltoall, _alltoall_getid_action, &args, sizeof(args),
-                         value, size);
+    return hpx_call_sync(alltoall, _alltoall_getid_action, value, size, &args, sizeof(args));
   }
 
   status = _alltoall_getid(local, id, size, value);

@@ -98,8 +98,8 @@ static int _main_action(void *args) {
   };
 
   // spawn the pinger and ponger threads.
-  hpx_call(HPX_HERE, _pinger, chans, sizeof(chans), done);
-  hpx_call(HPX_HERE, _ponger, chans, sizeof(chans), done);
+  hpx_call(HPX_HERE, _pinger, done, chans, sizeof(chans));
+  hpx_call(HPX_HERE, _ponger, done, chans, sizeof(chans));
   hpx_lco_wait(done);
 
   hpx_lco_delete(chans[0], HPX_NULL);
