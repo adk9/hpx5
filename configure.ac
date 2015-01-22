@@ -226,7 +226,7 @@ CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
 
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD $HPX_JEMALLOC_AS_MALLOC_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
