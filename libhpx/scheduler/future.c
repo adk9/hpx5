@@ -77,8 +77,10 @@ static void _future_set(lco_t *lco, int size, const void *from)
   lco_lock(&f->lco);
 
   // futures are write-once
-  if (!_trigger(f))
+  if (!_trigger(f)) {
+    dbg_error("cannot set an already set future\n");
     goto unlock;
+  }
 
   if (from && size)
     memcpy(&f->value, from, size);
