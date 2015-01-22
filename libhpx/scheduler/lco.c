@@ -46,7 +46,7 @@ static const lco_class_t *_lco_class(lco_t *lco) {
 /// These try and pin the LCO, and then forward to the local event handler
 /// wrappers. If the pin fails, then the LCO isn't local, so the parcel is
 /// resent.
-HPX_DEFDECL_ACTION(ACTION, _lco_fini, void *args) {
+HPX_ACTION(_lco_fini, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -62,7 +62,7 @@ HPX_DEFDECL_ACTION(ACTION, _lco_fini, void *args) {
   return HPX_SUCCESS;
 }
 
-HPX_DEFDECL_ACTION(ACTION, hpx_lco_set_action, void *data) {
+HPX_ACTION(hpx_lco_set_action, void *data) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -80,7 +80,7 @@ HPX_DEFDECL_ACTION(ACTION, hpx_lco_set_action, void *data) {
   return HPX_SUCCESS;
 }
 
-HPX_DEFDECL_ACTION(ACTION, _lco_error, void *args) {
+HPX_ACTION(_lco_error, void *args) {
   hpx_status_t *code = args;
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
@@ -99,7 +99,7 @@ HPX_DEFDECL_ACTION(ACTION, _lco_error, void *args) {
   return HPX_SUCCESS;
 }
 
-HPX_DEFDECL_ACTION(ACTION, _lco_get, void *args) {
+HPX_ACTION(_lco_get, void *args) {
   int *n = args;
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
@@ -122,7 +122,7 @@ HPX_DEFDECL_ACTION(ACTION, _lco_get, void *args) {
   }
 }
 
-HPX_DEFDECL_ACTION(ACTION, _lco_wait, void *args) {
+HPX_ACTION(_lco_wait, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -138,7 +138,7 @@ HPX_DEFDECL_ACTION(ACTION, _lco_wait, void *args) {
   hpx_thread_exit(status);
 }
 
-HPX_DEFDECL_ACTION(ACTION, attach, void *args) {
+HPX_ACTION(attach, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
