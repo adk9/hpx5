@@ -263,6 +263,8 @@ int parcel_launch(hpx_parcel_t *p) {
     dbg_error("failed to perform a network send\n");
     return HPX_ERROR;
   }
+
+  return HPX_ERROR;
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
