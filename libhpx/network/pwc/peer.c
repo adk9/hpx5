@@ -27,7 +27,7 @@ void peer_fini(peer_t *peer) {
 }
 
 
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, completion_t l,
+int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
              segid_t segid) {
   segment_t *segment = &peer->segments[segid];
   const void *rva = segment_offset_to_rva(segment, offset);
