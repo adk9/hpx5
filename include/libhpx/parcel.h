@@ -134,7 +134,7 @@ static inline uint32_t parcel_network_size(const hpx_parcel_t *p) {
   return parcel_size(p) - parcel_prefix_size();
 }
 
-static inline void *parcel_network_offset(const hpx_parcel_t *p) {
+static inline void *parcel_network_offset(hpx_parcel_t *p) {
   return &p->action;
 }
 
