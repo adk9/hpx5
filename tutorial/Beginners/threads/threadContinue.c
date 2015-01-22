@@ -27,7 +27,7 @@ static int _doSomething_action(int *args) {
   int tid = *args;
 
   // Do some work
-  for(int i=0; i<(0xFFFFFFFF);i++);
+  sleep(1);
 
   if (tid == 0) {
     printf("First thread processing done\n");
