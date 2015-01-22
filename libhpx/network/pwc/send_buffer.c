@@ -16,13 +16,111 @@
 
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "eager_buffer.h"
+#include "peer.h"
+#include "pwc.h"
 #include "send_buffer.h"
+#include "../../gas/pgas/gpa.h"                 // sort of a hack
 
+/// The record type for the pending send circular buffer.
 typedef struct {
   hpx_parcel_t  *p;
   hpx_addr_t lsync;
 } record_t;
+
+
+static hpx_action_t _finish_get_rx_min;
+
+/// Initiate an rdma get operation for the send buffer.
+static int _start_get_rx_min(send_buffer_t *sends) {
+  const size_t minoffset = offsetof(peer_t, rx) + offsetof(eager_buffer_t, min);
+  size_t offset = here->rank * sizeof(peer_t) + minoffset;
+  // compute the offset into the peer segment
+  peer_t *p = sends->tx->peer;
+  uint64_t *min = &sends->tx->min;
+  completion_t local = encode_completion(_finish_get_rx_min, p->rank);
+  int status = peer_get(p, min, offset, sizeof(*min), local, SEGMENT_PEERS);
+  if (status != LIBHPX_OK) {
+    dbg_error("could not initiate get with transport\n");
+  }
+  return status;
+}
+
+/// Append a record to the parcel's pending send buffer.
+///
+/// @param        sends The send buffer.
+/// @param            p The parcel to buffer.
+/// @param        lsync The local completion operation.
+///
+/// @returns  LIBHXP_OK The parcel was buffered successfully.
+///        LIBHPX_ERROR A pending record could not be allocated.
+static int _append(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
+  record_t *r = circular_buffer_append(&sends->pending);
+  if (!r) {
+    return dbg_error("could not append a send operation to the buffer\n");
+  }
+
+  r->p = p;
+  r->lsync = lsync;
+  return LIBHPX_OK;
+}
+
+/// Wrap the eager_buffer_tx() operation in an interface that matches the
+/// circular_buffer_progress callback type.
+static int _start_record(void *buffer, void *record) {
+  send_buffer_t *sends = buffer;
+  record_t *r = record;
+  return eager_buffer_tx(sends->tx, r->p);
+}
+
+/// Progress a send buffer.
+///
+/// Progressing a send buffer means transferring as many buffered sends to the
+/// network as is currently possible. This will return the number of remaining
+/// buffered sends.
+///
+/// Progressing a send buffer mus t be properly synchronized with the send
+/// operation, as well as with concurrent attempts to progress the buffer, since
+/// they may be called concurrently from more than one thread.
+///
+/// @param        sends The send buffer.
+///
+/// @returns            HPX_SUCCESS or an error code.
+static int _send_buffer_progress(send_buffer_t *sends) {
+  int status = HPX_SUCCESS;
+  sync_tatas_acquire(&sends->lock);
+  int i = circular_buffer_progress(&sends->pending, _start_record, sends);
+  if (i < 0) {
+    dbg_error("failed to progress the send buffer\n");
+    status = HPX_ERROR;
+  }
+
+  // If there are still sends remaining, then
+  if (i > 0) {
+    if (_start_get_rx_min(sends) != LIBHPX_OK) {
+      dbg_error("error initiating an rdma get operation\n");
+      status = HPX_ERROR;
+    }
+  }
+  sync_tatas_release(&sends->lock);
+  return status;
+}
+
+/// This handler is run when the get_rx_min operation completes.
+///
+/// The handler uses the target data to encode the peer for which the rDMA
+/// occurred. This signal indicates that we have an opportunity to progress the
+/// peer's eager send buffer.
+static HPX_ACTION(_finish_get_rx_min)(void *UNUSED) {
+  uint32_t id = pgas_gpa_to_offset(hpx_thread_current_target());
+  peer_t *peer = pwc_get_peer(here->network, id);
+  DEBUG_IF(!peer) {
+    return dbg_error("invalid peer id %u\n", id);
+  }
+
+  return _send_buffer_progress(&peer->send);
+}
 
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
                      uint32_t size)
@@ -45,53 +143,33 @@ int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
   int status = LIBHPX_OK;
   sync_tatas_acquire(&sends->lock);
 
-  // Try an eager send if we don't have anything pending.
+  // If we have no pending sends, try and start a request.
   if (circular_buffer_size(&sends->pending) == 0) {
     status = eager_buffer_tx(sends->tx, p);
-    if (LIBHPX_OK == status) {
+    if (status == LIBHPX_OK) {
       goto unlock;
     }
 
-    if (LIBHPX_RETRY != status) {
-      status = dbg_error("error sending parcel\n");
-      goto unlock;
+    // If it the eager buffer tells us to retry, then we start an rmda request
+    // to read the remote rx progress.
+    if (status == LIBHPX_RETRY) {
+      status = _start_get_rx_min(sends);
+    }
+
+    // If we have an error at this point then report it and buffer the parcel.
+    if (status != LIBHPX_OK) {
+      dbg_error("error in parcel send, buffer the operation\n");
     }
   }
 
-  // We get here if there were already buffered sends, or if the network told us
-  // to retry.
-  record_t *r = circular_buffer_append(&sends->pending);
-  if (!r) {
-    status = dbg_error("could not append a send operation to the buffer\n");
-    goto unlock;
+  // We need to buffer this parcel, because either we're already buffering
+  // parcels, or we need to buffer while the rdma get occurs.
+  status = _append(sends, p, lsync);
+  if (status != LIBHPX_OK) {
+    dbg_error("could not append send operation\n");
   }
-
-  // clear the retry signal
-  status = LIBHPX_OK;
-
-  r->p = p;
-  r->lsync = lsync;
 
  unlock:
   sync_tatas_release(&sends->lock);
   return status;
-}
-
-/// Wrap the eager_buffer_tx() operation in an interface that matches the
-/// circular_buffer_progress callback type.
-static int _start_record(void *buffer, void *record) {
-  send_buffer_t *sends = buffer;
-  record_t *r = record;
-  return eager_buffer_tx(sends->tx, r->p);
-}
-
-int send_buffer_progress(send_buffer_t *sends) {
-  int i = 0;
-  sync_tatas_acquire(&sends->lock);
-  i = circular_buffer_progress(&sends->pending, _start_record, sends);
-  if (i < 0) {
-    dbg_error("failed to progress the send buffer\n");
-  }
-  sync_tatas_release(&sends->lock);
-  return i;
 }
