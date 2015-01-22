@@ -39,6 +39,8 @@ int dbg_error1(unsigned line, const char *f, const char *fmt, ...)
 void dbg_wait(void)
   HPX_INTERNAL;
 
+const char *dbg_straction(hpx_action_t id)
+  HPX_INTERNAL;
 
 #ifdef ENABLE_DEBUG
 #define _dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
