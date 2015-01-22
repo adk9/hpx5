@@ -26,20 +26,19 @@
 #include "pwc.h"
 #include "../../gas/pgas/gpa.h"                 // sort of a hack
 
-static hpx_action_t _eager_rx = 0;
-static hpx_action_t _finish_eager_tx = 0;
-
-static int _handle_eager_rx(int *src) {
+static HPX_INTERRUPT(_eager_rx)(void *args) {
+  int *src = args;
   uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *eager = &peer->rx;
   hpx_parcel_t *parcel = eager_buffer_rx(eager, bytes);
-  dbg_log_net("received %u eager parcel bytes from %d\n", bytes, *src);
+  dbg_log_net("received %u eager parcel bytes from %d (%s)\n", bytes, *src,
+              action_table_get_key(here->actions, parcel->action));
   scheduler_spawn(parcel);
   return LIBHPX_OK;
 }
 
-static int _handle_finish_eager_tx(void *UNUSED) {
+static HPX_INTERRUPT(_finish_eager_tx)(void *UNUSED) {
   hpx_parcel_t *p = NULL;
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&p)) {
@@ -49,11 +48,6 @@ static int _handle_finish_eager_tx(void *UNUSED) {
   hpx_parcel_release(p);
   hpx_gas_unpin(target);
   return LIBHPX_OK;
-}
-
-static HPX_CONSTRUCTOR void _init_handlers(void) {
-  LIBHPX_REGISTER_INTERRUPT(_handle_eager_rx, &_eager_rx);
-  LIBHPX_REGISTER_INTERRUPT(_handle_finish_eager_tx, &_finish_eager_tx);
 }
 
 static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
@@ -105,7 +99,8 @@ int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p) {
   assert(parcel != HPX_NULL);
   const completion_t lsync = encode_completion(_finish_eager_tx, parcel);
   const completion_t completion = encode_completion(_eager_rx, n);
-  dbg_log_net("sending %d byte parcel\n", n);
+  dbg_log_net("sending %d byte parcel to %d (%s)\n", n, buffer->peer->rank,
+              action_table_get_key(here->actions, p->action));
   return peer_pwc(buffer->peer, roff + buffer->base, lva, n, lsync, HPX_NULL,
                   completion, SEGMENT_EAGER);
 }
