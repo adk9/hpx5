@@ -52,7 +52,7 @@ static int _memcpy_request_action(_memcpy_request_args_t *args) {
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  int e = hpx_call(args->to, _memcpy_reply, local, args->size, args->sync);
+  int e = hpx_call(args->to, _memcpy_reply, args->sync, local, args->size);
   dbg_check(e, "could not initiate a memcpy reply.\n");
   hpx_gas_unpin(target);
   return e;
@@ -71,7 +71,7 @@ int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
     .sync = sync
   };
 
-  int e = hpx_call(from, _memcpy_request, &args, sizeof(args), HPX_NULL);
+  int e = hpx_call(from, _memcpy_request, HPX_NULL, &args, sizeof(args));
   dbg_check(e, "Failed to initiate a memcpy request.\n");
   return e;
 }

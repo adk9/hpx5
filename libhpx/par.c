@@ -61,7 +61,7 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
     base = a->max;
     a->args = args;
 
-    int e = hpx_call(HPX_HERE, _par_for_async, a, sizeof(*a), sync);
+    int e = hpx_call(HPX_HERE, _par_for_async, sync, a, sizeof(*a));
     if (e)
       return e;
   }
@@ -125,8 +125,7 @@ _hpx_count_range_call_action(const hpx_count_range_call_args_t *const args) {
   for (size_t i = 0; i < args->count; ++i) {
     const hpx_addr_t target = 
       hpx_addr_add(args->addr, i * args->increment, args->bsize);
-    status = hpx_call(target, args->action, args->arg, args->arg_size, 
-		      HPX_NULL);
+    status = hpx_call(target, args->action, HPX_NULL, args->arg, args->arg_size);
     if (status != HPX_SUCCESS) return status;
   }
 
@@ -174,8 +173,7 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
     memcpy(&args->env, env, env_size);
 
     for (int i = 0, e = branching_factor; i < e; ++i) {
-      int e = hpx_call(HPX_HERE, _par_call_async, args, sizeof(*args) + env_size,
-                       HPX_NULL);
+      int e = hpx_call(HPX_HERE, _par_call_async, HPX_NULL, args, sizeof(*args) + env_size);
       if (e)
         return e;
 
@@ -238,16 +236,16 @@ int hpx_count_range_call(hpx_action_t action,
 	(l * HPX_THREADS + t) * thread_chunk * increment;
       args->addr = hpx_addr_add(
 		     addr, addr_delta, bsize);
-      hpx_call(HPX_THERE(l), _hpx_count_range_call, args, 
-	       sizeof(*args) + arg_size, HPX_NULL);
+      hpx_call(HPX_THERE(l), _hpx_count_range_call, HPX_NULL, args,
+               sizeof(*args) + arg_size);
     }
   }
   args->count = count % (HPX_LOCALITIES * HPX_THREADS);
   const uint64_t addr_delta = 
     HPX_LOCALITIES * HPX_THREADS * thread_chunk * increment;
   args->addr = hpx_addr_add(addr, addr_delta, bsize);
-  hpx_call(HPX_HERE, _hpx_count_range_call, args, 
-	   sizeof(*args) + arg_size, HPX_NULL);
+  hpx_call(HPX_HERE, _hpx_count_range_call, HPX_NULL, args,
+           sizeof(*args) + arg_size);
   free(args);
   return HPX_SUCCESS;
 }
