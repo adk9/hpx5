@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <hpx/hpx.h>
+#include <unistd.h>
 
 static  hpx_action_t _main       = 0;
 static  hpx_action_t _init_array = 0;
@@ -85,7 +86,7 @@ static int _main_action(void *args) {
     assert(local[i] == size - 1);
   hpx_gas_unpin(data);
 
-  printf("hpx_gas_memcpy succeeded for size = %u\n", BLOCK_SIZE);
+  printf("hpx_gas_memcpy succeeded for size = %zu\n", BLOCK_SIZE);
 
   hpx_gas_free(data, HPX_NULL);
   free(src);
