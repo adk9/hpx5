@@ -25,13 +25,13 @@ typedef struct segment {
 
 ///
 int segment_init(segment_t *segment, char *base, size_t size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 void segment_fini(segment_t *segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 static inline void *segment_offset_to_rva(segment_t *segment, size_t offset) {
-  assert(offset < segment->size);
+  assert(!segment->size || offset < segment->size);
   return segment->base + offset;
 }
 

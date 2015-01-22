@@ -54,6 +54,7 @@ static void _pwc_delete(network_t *network) {
   for (int i = 0; i < pwc->ranks; ++i) {
     peer_t *peer = &pwc->peers[i];
     if (i == pwc->rank) {
+      segment_fini(&peer->segments[SEGMENT_NULL]);
       segment_fini(&peer->segments[SEGMENT_HEAP]);
       segment_fini(&peer->segments[SEGMENT_PEERS]);
       segment_fini(&peer->segments[SEGMENT_EAGER]);
@@ -281,6 +282,13 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->parcel_buffer_size = cfg->parcelbuffersize;
 
   peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
+  // Prepare the null segment.
+  segment_t *null = &local->segments[SEGMENT_NULL];
+  e = segment_init(null, NULL, 0);
+  if (LIBHPX_OK != e) {
+    dbg_error("could not initialize the NULL segment\n");
+    goto unwind;
+  }
 
   // Register the heap segment.
   segment_t *heap = &local->segments[SEGMENT_HEAP];
