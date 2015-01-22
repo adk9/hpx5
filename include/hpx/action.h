@@ -108,22 +108,28 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   hpx_register_action(HPX_ACTION_INTERRUPT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
                       __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
 
-#define HPX_DECL_ACTION(type, action) int action##_##type(void*);
+/// Note that one can add static keyword before invoking thisn macro to make the action
+/// static.
+#define HPX_DECL_ACTION(type, action) hpx_action_t action = -1;
 
 /// A helper macro to declare and define HPX actions.
-#define HPX_DEFINE_ACTION(type, action)                    \
-  hpx_action_t action = -1;                                \
-  static int action##_##type(void*);                       \
-  static HPX_CONSTRUCTOR                                   \
-  void register_##action##_##type(void) {                  \
-    HPX_REGISTER_##type(action##_##type, &action);         \
-  }                                                        \
-  static int action##_##type
+#define HPX_DEFINE_ACTION(type, action, arg_sig)	    \
+  static int action##_##type(arg_sig);                      \
+  static HPX_CONSTRUCTOR                                    \
+  void _register_##action##_##type(void) {                  \
+    HPX_REGISTER_##type(action##_##type, &action);          \
+  }                                                         \
+  static int action##_##type(arg_sig)
 
-#define HPX_ACTION(n)        HPX_DEFINE_ACTION(ACTION, n)
-#define HPX_PINNED_ACTION(n) HPX_DEFINE_ACTION(PINNED_ACTION, n)
-#define HPX_TASK(n)          HPX_DEFINE_ACTION(TASK, n)
-#define HPX_INTERRUPT(n)     HPX_DEFINE_ACTION(INTERRUPT, n)
+/// Note that one can add static keyword before invoking thisn macro to make the action
+/// static.
+#define HPX_DEFDECL_ACTION(type, action, arg_sig) \
+hpx_action_t action = -1;                         \
+HPX_DEFINE_ACTION(type, action, arg_sig)
 
+#define HPX_ACTION(n, arg_sig)        HPX_DEFDECL_ACTION(ACTION, n, arg_sig)
+#define HPX_PINNED_ACTION(n, arg_sig) HPX_DEFDECL_ACTION(PINNED_ACTION, n, arg_sig)
+#define HPX_TASK(n, arg_sig)          HPX_DEFDECL_ACTION(TASK, n, arg_sig)
+#define HPX_INTERRUPT(n, arg_sig)     HPX_DEFDECL_ACTION(INTERRUPT, n, arg_sig)
 
 #endif
