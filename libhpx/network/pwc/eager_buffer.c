@@ -20,7 +20,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
-#include "completions.h"
+#include "commands.h"
 #include "eager_buffer.h"
 #include "peer.h"
 #include "pwc.h"
@@ -95,8 +95,8 @@ static HPX_INTERRUPT(_eager_rx_pad)(void *args) {
 ///
 static int _pad(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   dbg_log_net("sending %u bytes of padding\n", bytes);
-  completion_t op = encode_completion(_eager_rx_pad, (uint64_t)bytes);
-  int status = peer_put_control(tx->peer, op);
+  command_t cmd = encode_command(_eager_rx_pad, (uint64_t)bytes);
+  int status = peer_put_command(tx->peer, cmd);
   if (status != LIBHPX_OK) {
     return dbg_error("could not send command to pad eager buffer\n");
   }
@@ -142,17 +142,20 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     return _pad(tx, p, tx->size - roff);
   }
 
-  tx->max += n;
-
+  peer_t *peer = tx->peer;
   const void *lva = parcel_network_offset(p);
   const hpx_addr_t parcel = lva_to_gva(p);
   assert(parcel != HPX_NULL);
-  const completion_t lsync = encode_completion(_finish_eager_tx, parcel);
-  const completion_t completion = encode_completion(_eager_rx, n);
+  const command_t lsync = encode_command(_finish_eager_tx, parcel);
+  const command_t cmd = encode_command(_eager_rx, n);
   dbg_log_net("sending %d byte parcel to %d (%s)\n", n, tx->peer->rank,
               action_table_get_key(here->actions, p->action));
-  return peer_pwc(tx->peer, roff + tx->base, lva, n, lsync, HPX_NULL,
-                  completion, SEGMENT_EAGER);
+  int e = peer_pwc(peer, roff + tx->base, lva, n, lsync, HPX_NULL, cmd,
+                   SEGMENT_EAGER);
+  if (e == LIBHPX_OK) {
+    tx->max += n;
+  }
+  return e;
 }
 
 hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx, uint32_t bytes) {

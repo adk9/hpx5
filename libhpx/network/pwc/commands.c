@@ -15,15 +15,15 @@
 #endif
 
 #include "libhpx/locality.h"
-#include "completions.h"
+#include "commands.h"
 #include "../../gas/pgas/gpa.h"                 // big hack
 
-completion_t encode_completion(hpx_action_t op, hpx_addr_t addr) {
+command_t encode_command(hpx_action_t op, hpx_addr_t addr) {
   return ((uint64_t)op << GPA_OFFSET_BITS) + (addr & GPA_OFFSET_MASK);
 }
 
-void decode_completion(completion_t comp, hpx_action_t *op, hpx_addr_t *addr) {
-  *addr = pgas_offset_to_gpa(here->rank, comp);
-  *op = comp >> GPA_OFFSET_BITS;
+void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr) {
+  *addr = pgas_offset_to_gpa(here->rank, cmd);
+  *op = cmd >> GPA_OFFSET_BITS;
 }
 

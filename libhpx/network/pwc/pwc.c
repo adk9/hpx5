@@ -24,7 +24,7 @@
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 
-#include "completions.h"
+#include "commands.h"
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
@@ -95,7 +95,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   return peer_send(peer, p, HPX_NULL);
 }
 
-/// Perform a put-with-completion operation to a global heap address.
+/// Perform a put-with-command operation to a global heap address.
 ///
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p put operation.
@@ -107,13 +107,13 @@ static int _pwc_pwc(network_t *network,
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
   uint64_t offset = gas_offset_of(pwc->gas, to);
-  completion_t complete = encode_completion(op, offset);
-  return peer_pwc(peer, offset, lva, n, lsync, rsync, complete, SEGMENT_HEAP);
+  command_t cmd = encode_command(op, offset);
+  return peer_pwc(peer, offset, lva, n, lsync, rsync, cmd, SEGMENT_HEAP);
 }
 
 /// Perform a put operation to a global heap address.
 ///
-/// This simply forwards to the pwc handler with no remote completion address.
+/// This simply forwards to the pwc handler with no remote command.
 static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
                     size_t n, hpx_addr_t lsync, hpx_addr_t rsync)
 {
@@ -131,8 +131,8 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   int rank = gas_owner_of(pwc->gas, from);
   peer_t *peer = pwc->peers + rank;
   uint64_t offset = gas_offset_of(pwc->gas, from);
-  completion_t complete = encode_completion(hpx_lco_set_action, lsync);
-  return peer_get(peer, lva, n, offset, complete, SEGMENT_HEAP);
+  command_t cmd = encode_command(hpx_lco_set_action, lsync);
+  return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
 }
 
 static int _probe_local(int rank, uint64_t *op) {
@@ -158,30 +158,30 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   int rank = pwc->rank;
   hpx_parcel_t *parcels = NULL;
 
-  // each time through the loop, we deal with local completions
-  completion_t completion;
-  while (_probe_local(rank, &completion)) {
+  // each time through the loop, we deal with local command completions
+  command_t command;
+  while (_probe_local(rank, &command)) {
     hpx_addr_t addr;
     hpx_action_t op;
-    decode_completion(completion, &op, &addr);
+    decode_command(command, &op, &addr);
     dbg_log_net("extracted local interrupt of %s\n", dbg_straction(op));
     int e = hpx_call(addr, op, NULL, 0, HPX_NULL);
     if (HPX_SUCCESS != e) {
-      dbg_error("failed to process local completion");
+      dbg_error("failed to process local command");
     }
   }
 
-  // deal with received completions
+  // deal with received commands
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    while (_probe_completion(i, &completion)) {
+    while (_probe_completion(i, &command)) {
       hpx_addr_t addr;
       hpx_action_t op;
-      decode_completion(completion, &op, &addr);
-      dbg_log_net("processing completion %s from rank %d\n", dbg_straction(op),
+      decode_command(command, &op, &addr);
+      dbg_log_net("processing command %s from rank %d\n", dbg_straction(op),
                   i);
       int e = hpx_call(addr, op, &i, sizeof(i), HPX_NULL);
       if (HPX_SUCCESS != e) {
-        dbg_error("failed to process local completion");
+        dbg_error("failed to process local command");
       }
     }
   }

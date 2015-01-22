@@ -15,7 +15,7 @@
 
 #include <hpx/hpx.h>
 #include "circular_buffer.h"
-#include "completions.h"
+#include "commands.h"
 
 struct segment;
 
@@ -35,7 +35,7 @@ void pwc_buffer_fini(pwc_buffer_t *buffer)
 
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t offset, const void *lva, size_t n,
-                   hpx_addr_t local, hpx_addr_t remote, completion_t completion,
+                   hpx_addr_t local, hpx_addr_t remote, command_t cmd,
                    struct segment *segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 

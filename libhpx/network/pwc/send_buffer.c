@@ -39,8 +39,8 @@ static int _start_get_rx_min(send_buffer_t *sends) {
   // compute the offset into the peer segment
   peer_t *p = sends->tx->peer;
   uint64_t *min = &sends->tx->min;
-  completion_t local = encode_completion(_finish_get_rx_min, p->rank);
-  int status = peer_get(p, min, offset, sizeof(*min), local, SEGMENT_PEERS);
+  command_t cmd = encode_command(_finish_get_rx_min, p->rank);
+  int status = peer_get(p, min, offset, sizeof(*min), cmd, SEGMENT_PEERS);
   if (status != LIBHPX_OK) {
     dbg_error("could not initiate get with transport\n");
   }
@@ -51,7 +51,7 @@ static int _start_get_rx_min(send_buffer_t *sends) {
 ///
 /// @param        sends The send buffer.
 /// @param            p The parcel to buffer.
-/// @param        lsync The local completion operation.
+/// @param        lsync The local command.
 ///
 /// @returns  LIBHXP_OK The parcel was buffered successfully.
 ///        LIBHPX_ERROR A pending record could not be allocated.
