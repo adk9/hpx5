@@ -367,7 +367,7 @@ END_TEST
 // hpx_thread_current_cont_action gets the continuation action for the current
 // thread
 //****************************************************************************
-HPX_DEFINE_ACTION(ACTION, t05_thread_current_cont_target)(void *args) {
+static HPX_DEFDECL_ACTION(ACTION, t05_thread_current_cont_target, void *args) {
   hpx_action_t c_action = hpx_thread_current_cont_action();
   hpx_addr_t c_target = hpx_thread_current_cont_target();
   hpx_call(c_target, c_action, NULL, 0, HPX_NULL);
