@@ -283,13 +283,13 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate,
                                           hpx_addr_t rsync) {
   _prepare(p);
-  return hpx_call(gate, attach, p, parcel_size(p), rsync);
+  return hpx_call(gate, attach, rsync, p, parcel_size(p));
 }
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync, hpx_addr_t rsync) {
   _prepare(p);
-  return hpx_call_async(gate, attach, p, parcel_size(p), lsync, rsync);
+  return hpx_call_async(gate, attach, lsync, rsync, p, parcel_size(p));
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
