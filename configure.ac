@@ -208,7 +208,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
@@ -226,7 +226,7 @@ CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 LIBS="$hpx_extra_libs $LIBS"
 
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD")
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

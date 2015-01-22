@@ -33,6 +33,7 @@
 #include "libsync/queues.h"
 #include "lco.h"
 #include "cvar.h"
+#include "future.h"
 
 #define dbg_printf0(...)
 //#define dbg_printf0 printf
@@ -280,12 +281,13 @@ _progress_recvs() {
   } // end if
 }
 
-static void
+static int
 _progress_recv_action() {
   while (!shutdown) {
     _progress_recvs();
     hpx_thread_yield();
   }
+  return HPX_SUCCESS;
 }
 
 static void
@@ -509,11 +511,14 @@ _future_init(_netfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    .on_fini = NULL,
+    .on_error = NULL,
+    .on_set = NULL,
+    .on_get = NULL,
+    .on_wait = NULL,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   bool inplace = false;
