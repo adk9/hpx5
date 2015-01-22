@@ -114,10 +114,10 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
 }
 
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
-                   hpx_addr_t args_reuse, hpx_addr_t result, ...) {
+                   hpx_addr_t lsync, hpx_addr_t result, ...) {
   va_list vargs;
   va_start(vargs, result);
-  int e = libhpx_call(addr, action, result, hpx_lco_set_action, args_reuse, &vargs);
+  int e = libhpx_call(addr, action, result, hpx_lco_set_action, lsync, &vargs);
   va_end(vargs);
   return e;
 }
