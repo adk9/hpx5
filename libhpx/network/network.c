@@ -101,7 +101,7 @@ static hpx_action_t _probe = 0;
 static int _probe_handler(void *o) {
   struct network *network = *(struct network **)o;
   hpx_parcel_t *p = NULL;
-  int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
+  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
   if (e != HPX_SUCCESS)
     return e;
 
@@ -152,7 +152,7 @@ static int _startup(struct network *o) {
 
   system_set_affinity(network->progress, -1);
 
-  e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
+  e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
   if (e) {
     return dbg_error("failed to start network probe\n");
   }

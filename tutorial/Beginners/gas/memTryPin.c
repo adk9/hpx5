@@ -76,7 +76,7 @@ static int _main_action(void *args) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
 
     // and send the initDomain action, with the done LCO as the continuation
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
 
   // wait for initialization

@@ -215,7 +215,7 @@ static int _advanceDomain_action(unsigned long *epoch) {
   unsigned long next = n + 1;
   n = n + 1;
 
-  //  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  //  return hpx_call(local, _advanceDomain, HPX_NULL, &next, sizeof(next));
   } // end while(true)
   return HPX_ERROR;
 }
@@ -315,7 +315,7 @@ static int _main_action(int *input)
       .newdt = newdt
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _initDomain, &args, sizeof(args), init);
+    hpx_call(block, _initDomain, init, &args, sizeof(args));
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
@@ -325,7 +325,7 @@ static int _main_action(int *input)
 
   for (k=0;k<nDoms;k++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advanceDomain, HPX_NULL, &epoch, sizeof(epoch));
   }
 
   // And wait for each domain to reach the end of its simulation

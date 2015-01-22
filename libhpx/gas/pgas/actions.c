@@ -61,7 +61,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
 
   uint64_t csbrk = heap_get_csbrk(global_heap);
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, &csbrk, sizeof(csbrk), sync);
+  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
@@ -95,7 +95,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   // effective heap_is_cyclic tests.
   uint64_t csbrk = heap_get_csbrk(global_heap);
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, &csbrk, sizeof(csbrk), sync);
+  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 
@@ -107,7 +107,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   };
 
   sync = hpx_lco_future_new(0);
-  hpx_bcast(_calloc_init, &args, sizeof(args), sync);
+  hpx_bcast(_calloc_init, sync, &args, sizeof(args));
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 

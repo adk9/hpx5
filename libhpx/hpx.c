@@ -218,14 +218,14 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    status = hpx_call(HPX_HERE, *act, args, size, HPX_NULL);
+    status = hpx_call(HPX_HERE, *act, HPX_NULL, args, size);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn initial action\n");
       goto unwind2;
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, hpx_143_fix, NULL, 0, HPX_NULL);
+    status = hpx_call(HPX_HERE, hpx_143_fix, HPX_NULL, NULL, 0);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
@@ -274,7 +274,7 @@ void hpx_shutdown(int code) {
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
-  int e = hpx_bcast(locality_shutdown, &code, sizeof(code), HPX_NULL);
+  int e = hpx_bcast(locality_shutdown, HPX_NULL, &code, sizeof(code));
   hpx_thread_exit(e);
 }
 

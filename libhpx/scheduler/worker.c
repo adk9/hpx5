@@ -651,8 +651,8 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
     }
 
     if (c_act == hpx_lco_set_action) {
-      hpx_call_with_continuation(c_target, c_act, value, size, HPX_NULL,
-                                 HPX_ACTION_NULL);
+      hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
+                                 value, size);
     }
     else {
       _call_continuation(c_target, c_act, value, size, status);
