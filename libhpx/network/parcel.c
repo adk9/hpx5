@@ -271,7 +271,7 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   if (p->size >= _SMALL_THRESHOLD && !_inplace(p)) {
-    return hpx_call(HPX_HERE, _parcel_send_async, &p, sizeof(p), lsync);
+    return hpx_call(HPX_HERE, _parcel_send_async, lsync, &p, sizeof(p));
   }
 
   _prepare(p);
