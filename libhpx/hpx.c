@@ -225,7 +225,7 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, hpx_143_fix, NULL, 0, HPX_NULL);
+    status = hpx_call(HPX_HERE, hpx_143_fix, HPX_NULL, NULL, 0);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
