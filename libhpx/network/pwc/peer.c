@@ -38,3 +38,7 @@ int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
   }
   return LIBHPX_OK;
 }
+
+int peer_send_rendevous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
+  return LIBHPX_EUNIMPLEMENTED;
+}
