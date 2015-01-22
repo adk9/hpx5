@@ -59,21 +59,12 @@ static uint32_t _fetch_align_and_add(volatile uint64_t *p, uint32_t n,
 static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 {
   assert(bytes % heap->bytes_per_chunk == 0);
-
-  // figure out the bias and period of our search, not too worried about
-  // overhead here---could have log2_base and log2_chunk in the heap structure
-  uint32_t log2_base = ctzl((uintptr_t)heap->base);
-  uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
-  uint32_t log2_align = ceil_log2_64(align);
-
-  uint32_t bias = max_i32(log2_align - log2_base, 0);
-  uint32_t period = log2_align / log2_chunk;
-
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
+  uint32_t log2_align = ceil_log2_64(align);
 
   uint32_t bit = 0;
-  if (bitmap_reserve(heap->chunks, bits, bias, period, &bit)) {
+  if (bitmap_reserve(heap->chunks, bits, log2_align, &bit)) {
     goto oom;
   }
 
@@ -149,9 +140,12 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 
 
 ///
-static bitmap_t *_new_bitmap(size_t nchunks) {
+static bitmap_t *_new_bitmap(const heap_t *heap) {
+  size_t nchunks = heap->nchunks;
   assert(nchunks <= UINT32_MAX);
-  bitmap_t *bitmap = bitmap_new((uint32_t)nchunks);
+  uint32_t min_align = ceil_log2_64(heap->bytes_per_chunk);
+  uint32_t base_align = ctzl((uintptr_t)heap->base);
+  bitmap_t *bitmap = bitmap_new((uint32_t)nchunks, min_align, base_align);
   if (!bitmap) {
     dbg_error("failed to allocate a bitmap to track free chunks.\n");
   }
@@ -203,7 +197,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
   assert(heap->base + heap->nbytes <= heap->raw_base + heap->raw_nbytes);
 
-  heap->chunks = _new_bitmap(heap->nchunks);
+  heap->chunks = _new_bitmap(heap);
   dbg_log_gas("allocated chunk bitmap to manage %zu chunks.\n", heap->nchunks);
 
   if (init_cyclic) {
@@ -241,21 +235,12 @@ void heap_fini(heap_t *heap) {
 
 void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
-
-  // figure out the bias and period of our search, not too worried about
-  // overhead here---could have log2_base and log2_chunk in the heap structure
-  uint32_t log2_base = ctzl((uintptr_t)heap->base);
-  uint32_t log2_chunk = ceil_log2_64(heap->bytes_per_chunk);
-  uint32_t log2_align = ceil_log2_64(align);
-
-  uint32_t bias = max_i32(log2_align - log2_base, 0);
-  uint32_t period = log2_align / log2_chunk;
-
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
+  uint32_t log2_align = ceil_log2_64(align);
 
   uint32_t bit = 0;
-  if (bitmap_rreserve(heap->chunks, bits, bias, period, &bit)) {
+  if (bitmap_rreserve(heap->chunks, bits, log2_align, &bit)) {
     goto oom;
   }
 

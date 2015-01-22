@@ -6,100 +6,102 @@
 #include "photon_request.h"
 
 static int __photon_cleanup_request(photonRequest req);
+static int __photon_request_grow_table(photonRequestTable rt);
 
 photonRequest photon_get_request(int proc) {
   photonRequestTable rt;
-  photonRequest      req;
-  uint64_t           req_curr, tail;
-  uint32_t           req_ind;
-
-  assert(proc >= 0 && proc < _photon_nproc);
+  photonRequest      req, reqs;
+  uint32_t           rid;
   
+  assert(IS_VALID_PROC(proc));
   rt = photon_processes[proc].request_table;
-  req_curr = sync_fadd(&rt->count, 1, SYNC_RELAXED);
-  // offset request index by 1 since 0 is our NULL_COOKIE
-  req_ind = (req_curr & (rt->size - 1)) + 1;
-  tail = sync_load(&rt->tail, SYNC_RELAXED);
-  assert(tail <= req_curr);
-  if ((req_curr - tail) >= rt->size) {
-    log_err("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
-    return NULL;
-  }
 
-  req = &rt->reqs[req_ind];
-  if (!req) {
-    dbg_err("Uninitialized request pointer in request table");
-    return NULL;
+  sync_tatas_acquire(&rt->tloc);
+  {
+    if (!rt->free[rt->level]) {
+      dbg_trace("Request descriptors exhausted for proc %d, max=%u", proc, rt->size);
+      if (__photon_request_grow_table(rt) != PHOTON_OK) {
+	sync_tatas_release(&rt->tloc);
+	return NULL;
+      }
+    }
+    
+    // get our current request buffer level
+    reqs = rt->reqs[rt->level];
+    
+    // find the next free slot
+    while (reqs[rt->next].id) {
+      rt->next++;
+      rt->next = (rt->next & (rt->size - 1));
+    }
+    rt->count++;
+    rt->free[rt->level]--;
+    
+    req = &reqs[rt->next];  
+    rid = (uint32_t)rt->level<<24;
+    rid |= (uint32_t)((rt->next) + 1);
+    
+    memset(req, 0, sizeof(struct photon_req_t));
+    req->id     = PROC_REQUEST_ID(proc, rid);
+    req->state  = REQUEST_NEW;
+    req->op     = REQUEST_OP_DEFAULT;
+    req->flags  = REQUEST_FLAG_NIL;
+    //bit_array_clear_all(req->mmask);
+    
+    dbg_trace("Returning a new request (count=%lu, free=%u) with id: 0x%016lx",
+	      rt->count, rt->free[rt->level], req->id);
   }
-
-  if (req->state && (req->state != REQUEST_FREE)) {
-    log_warn("Overwriting a request (id=0x%016lx, state=%d) that never completed (curr=%lu, tail=%lu)",
-	     req->id, req->state, req_curr, tail);
-  }
-
-  memset(req, 0, sizeof(struct photon_req_t));
-  req->id     = PROC_REQUEST_ID(proc, req_ind);
-  req->op     = REQUEST_OP_DEFAULT;
-  req->state  = REQUEST_NEW;
-  req->flags  = REQUEST_FLAG_NIL;
-  //bit_array_clear_all(req->mmask);
+  sync_tatas_release(&rt->tloc);
   
-  dbg_trace("Returning a new request (curr=%u) with id: 0x%016lx, tail=%u",
-	    req_ind, req->id, tail);
-
   return req;
 }
 
 photonRequest photon_lookup_request(photon_rid rid) {
+  photonRequest req;
   photonRequestTable rt;
   uint32_t proc, id;
-  id = (uint32_t)(rid<<32>>32);
+  uint16_t level;
+
   proc = (uint32_t)(rid>>32);
-  if (IS_VALID_PROC(proc)) {
-    rt = photon_processes[proc].request_table;
-  }
-  else {
-    dbg_trace("Unknown proc (%u) obtained from rid: 0x%016lx", proc, rid);
-    return NULL;
-  }
-  if (id > 0 && id <= rt->size) {
-    photonRequest req = &rt->reqs[id];
+  level = (uint16_t)(rid<<32>>56);
+  id = (uint32_t)(rid<<40>>40) - 1;
+
+  assert(IS_VALID_PROC(proc));
+  rt = photon_processes[proc].request_table;
+  assert(id >= 0 && id < rt->size);
+    
+  sync_tatas_acquire(&rt->tloc);
+  {
+    req = &rt->reqs[level][id];
     if (req->state == REQUEST_FREE) {
-      dbg_trace("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
-		req->op, req->type, req->id);
+      dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
+	       req->op, req->type, req->id);
     }
-    return req;
   }
-  else {
-    dbg_trace("Unknown request id (%u) obtained from rid: 0x%016lx", id, rid);
-    return NULL;
-  }
+  sync_tatas_release(&rt->tloc);
+  
+  return req;
 }
 
 int photon_count_request(int proc) {
   photonRequestTable rt;
-  uint64_t curr, tail;
-  if (proc >= 0 && proc < _photon_nproc) {
-    rt = photon_processes[proc].request_table;
-    tail = sync_load(&rt->tail, SYNC_RELAXED);
-    curr = sync_load(&rt->count, SYNC_RELAXED);
-    return curr - tail;
-  }
-  else {
-    return 0;
-  }
+  assert(IS_VALID_PROC(proc));
+  rt = photon_processes[proc].request_table;
+  return rt->free[rt->level];
 }
 
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
-  int state = REQUEST_COMPLETED;
-  if (!sync_cas(&req->state, state, REQUEST_FREE, SYNC_RELAXED, SYNC_RELAXED)) {
-    dbg_trace("Trying to free a request that was already freed or otherwise not completed!");
-    return PHOTON_ERROR;
-  }
+  uint16_t level = (uint16_t)(req->id<<32>>56);
   __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
-  sync_fadd(&rt->tail, 1, SYNC_RELAXED);
+  sync_tatas_acquire(&rt->tloc);
+  {
+    req->id    = NULL_REQUEST;
+    req->state = REQUEST_FREE;
+    rt->free[level]++;
+  }
+  sync_tatas_release(&rt->tloc);
   dbg_trace("Cleared request 0x%016lx", req->id);
   return PHOTON_OK;
 }
@@ -307,6 +309,37 @@ static int __photon_cleanup_request(photonRequest req) {
     log_err("Tried to cleanup a request op we don't recognize: %d", req->op);
     break;
   }
+
+  return PHOTON_OK;
+}
+
+static int __photon_request_grow_table(photonRequestTable rt) {
+  uint64_t nsize = rt->size << 1;
+
+  if ((rt->level + 1) >= DEF_NR_LEVELS) {
+    dbg_err("Exceeded max request table buffer allocations: %u", DEF_NR_LEVELS);
+    return PHOTON_ERROR;
+  }
+
+  if (__photon_config->cap.max_rd && (nsize > __photon_config->cap.max_rd)) {
+    dbg_err("Exceeded max allowable request descriptors: %d",
+	    __photon_config->cap.max_rd);
+    return PHOTON_ERROR;
+  }
+
+  rt->level++;
+
+  rt->reqs[rt->level] = (photonRequest)calloc(nsize, sizeof(struct photon_req_t));
+  if (!rt->reqs[rt->level]) {
+    dbg_err("Could not increase request table size to %lu", nsize);
+    return PHOTON_ERROR;
+  }
+  
+  rt->size            = nsize;
+  rt->free[rt->level] = nsize;
+  rt->next            = 0;
+  
+  dbg_trace("Resized request table: %lu (next: %lu)", nsize, rt->next);
 
   return PHOTON_OK;
 }

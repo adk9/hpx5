@@ -28,6 +28,7 @@
 #include "libhpx/scheduler.h"
 #include "lco.h"
 #include "cvar.h"
+#include "future.h"
 
 /// Local future interface.
 /// @{
@@ -63,8 +64,9 @@ static bool _trigger(_future_t *f) {
 // Nothing extra allocated in the future
 static void _future_fini(lco_t *lco) {
   _future_t *f = (void*)lco;
-  if (f)
+  if (f) {
     lco_lock(&f->lco);
+  }
   libhpx_global_free(f);
 }
 
@@ -75,8 +77,10 @@ static void _future_set(lco_t *lco, int size, const void *from)
   lco_lock(&f->lco);
 
   // futures are write-once
-  if (!_trigger(f))
+  if (!_trigger(f)) {
+    dbg_error("cannot set an already set future\n");
     goto unlock;
+  }
 
   if (from && size)
     memcpy(&f->value, from, size);
@@ -94,6 +98,7 @@ void lco_future_set(lco_t *lco, int size, const void *from) {
 static void _future_error(lco_t *lco, hpx_status_t code) {
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
+  _trigger(f);
   scheduler_signal_error(&f->full, code);
   lco_unlock(&f->lco);
 }
@@ -103,6 +108,35 @@ static void _future_reset(_future_t *f) {
   scheduler_signal_error(&f->full, HPX_LCO_RESET);
   cvar_reset(&f->full);
   lco_unlock(&f->lco);
+}
+
+static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+
+  // if the future isn't triggered, then attach this parcel to the full
+  // condition
+  if (!lco_get_triggered(&f->lco)) {
+    status = cvar_attach(&f->full, p);
+    goto unlock;
+  }
+
+  // if the future has an error, then return that error without sending the
+  // parcel
+  //
+  // NB: should we actually send some sort of error condition?
+  status = cvar_get_error(&f->full);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // go ahead and send this parcel eagerly
+  hpx_parcel_send(p, HPX_NULL);
+
+ unlock:
+  lco_unlock(&f->lco);
+  return status;
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
@@ -154,8 +188,9 @@ static void _future_init(_future_t *f, int size) {
     .on_set = _future_set,
     .on_get = _future_get,
     .on_wait = _future_wait,
-    //    .on_try_get = _future_try_get,
-    .on_try_wait = _future_try_wait
+    .on_try_wait = _future_try_wait,
+    .on_attach = _future_attach,
+    .on_try_get = NULL
   };
 
   lco_init(&f->lco, &vtable, 0);

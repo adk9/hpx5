@@ -22,11 +22,11 @@ static hpx_action_t _main = 0;
 #define FIELD_WIDTH 20
 
 static int num[] = {
-  1000000,
-  2000000,
-  3000000,
-  4000000,
-  5000000
+  10000,
+  20000,
+  30000,
+  40000,
+  50000
 };
 
 static int _address_translation_action(void* args) {

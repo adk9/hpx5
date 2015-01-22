@@ -8,7 +8,12 @@
 #include "libsync/locks.h"
 #include "libsync/queues.h"
 
-#define DEF_MAX_BUF_ENTRIES  64    // The number msgbuf entries for UD mode
+#define DEF_NR_LEVELS        (14)    // up to 14 levels of request buffers
+#define DEF_NUM_REQUESTS     (1024)  // 1K pre-allocated requests per rank, power of 2
+#define DEF_MAX_REQUESTS     (1<<20) // Allows up to 1M requests per pank
+
+#define NULL_REQUEST         0x0
+#define DEF_MAX_BUF_ENTRIES  64      // The number msgbuf entries for UD mode
 
 #define REQUEST_NEW          0x01
 #define REQUEST_PENDING      0x02
@@ -16,17 +21,18 @@
 #define REQUEST_COMPLETED    0x04
 #define REQUEST_FREE         0x05
 
-#define REQUEST_COOK_SEND    0xff000000
-#define REQUEST_COOK_RECV    0xff100000
-#define REQUEST_COOK_EAGER   0xff200000
+#define REQUEST_COOK_NIL     0xff000000
+#define REQUEST_COOK_SEND    0xff100000
+#define REQUEST_COOK_RECV    0xff200000
+#define REQUEST_COOK_EAGER   0xff300000
 
-#define REQUEST_COOK_ELEDG   0xff300000
-#define REQUEST_COOK_PLEDG   0xff400000
-#define REQUEST_COOK_EBUF    0xff500000
-#define REQUEST_COOK_PBUF    0xff600000
-#define REQUEST_COOK_FIN     0xff700000
-#define REQUEST_COOK_SINFO   0xff800000
-#define REQUEST_COOK_RINFO   0xff900000
+#define REQUEST_COOK_ELEDG   0xff400000
+#define REQUEST_COOK_PLEDG   0xff500000
+#define REQUEST_COOK_EBUF    0xff600000
+#define REQUEST_COOK_PBUF    0xff700000
+#define REQUEST_COOK_FIN     0xff800000
+#define REQUEST_COOK_SINFO   0xff900000
+#define REQUEST_COOK_RINFO   0xffa00000
 
 #define REQUEST_OP_DEFAULT   0x0000
 #define REQUEST_OP_SENDBUF   (1<<1)
@@ -77,13 +83,15 @@ typedef struct photon_req_t {
 } photon_req;
 
 typedef struct photon_req_table_t {
-  uint64_t count;
-  uint64_t tail;
-  uint32_t size;
-  struct photon_req_t  *reqs;
+  uint64_t  count;
+  uint64_t  next;
+  uint32_t *free;
+  uint32_t  size;
+  uint16_t  level;
+  struct photon_req_t **reqs;
   ms_queue_t           *req_q;
   volatile uint32_t     qcount;
-  tatas_lock_t tloc;
+  tatas_lock_t          tloc;
 } photon_req_table;
 
 typedef struct photon_req_t       * photonRequest;

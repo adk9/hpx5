@@ -58,7 +58,6 @@ hpx_action_t t05_worker;
 hpx_action_t t05_assignID;
 hpx_action_t t05_cont_thread;
 hpx_action_t t05_thread_cont_cleanup;
-hpx_action_t t05_thread_current_cont_target;
 hpx_action_t t05_yield_worker;
 hpx_action_t t06_set_value;
 hpx_action_t t06_get_value;
@@ -185,8 +184,6 @@ void _register_actions(void) {
   HPX_REGISTER_ACTION(t05_set_cont_action, &t05_cont_thread);
   HPX_REGISTER_ACTION(t05_thread_cont_cleanup_action,
                       &t05_thread_cont_cleanup);
-  HPX_REGISTER_ACTION(t05_thread_current_cont_target_action,
-                      &t05_thread_current_cont_target);
   HPX_REGISTER_ACTION(t05_yield_worker_action, &t05_yield_worker);
 
   //06_TestFutures.c
@@ -235,7 +232,7 @@ void _register_actions(void) {
 
   //13_TestMemput.c
   HPX_REGISTER_ACTION(t13_memput_verify_action, &t13_memput_verify);
-  
+
   // 15_TestWait.c
   HPX_REGISTER_ACTION(t15_set_action, &t15_set);
   HPX_REGISTER_ACTION(t15_wait_action, &t15_wait);

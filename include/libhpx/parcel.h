@@ -57,15 +57,22 @@ hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
 
 void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
-struct ustack *parcel_get_stack(hpx_parcel_t *p)
+
+struct ustack *parcel_get_stack(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-uint64_t parcel_get_credit(hpx_parcel_t *p)
+uint64_t parcel_get_credit(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
+/// The core send operation.
+///
+/// This sends the parcel synchronously. This assumes that the parcel has been
+/// serialized and has credit already, if necessary.
+int parcel_launch(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///
@@ -84,7 +91,6 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
 /// @param[in]    parcel The new top of the stack.
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
-
 
 /// Scan through a parcel list applying the passed function to each one.
 void parcel_stack_foreach(hpx_parcel_t *p, void *env,
@@ -112,11 +118,11 @@ hpx_parcel_t *parcel_queue_dequeue_all(parcel_queue_t *q)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-static inline uint32_t parcel_size(hpx_parcel_t *p) {
+static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
 }
 
-static inline uint32_t parcel_payload_size(hpx_parcel_t *p) {
+static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
 }
 
@@ -124,11 +130,11 @@ static inline uint32_t parcel_prefix_size(void) {
   return offsetof(hpx_parcel_t, action);
 }
 
-static inline uint32_t parcel_network_size(hpx_parcel_t *p) {
+static inline uint32_t parcel_network_size(const hpx_parcel_t *p) {
   return parcel_size(p) - parcel_prefix_size();
 }
 
-static inline void *parcel_network_offset(hpx_parcel_t *p) {
+static inline void *parcel_network_offset(const hpx_parcel_t *p) {
   return &p->action;
 }
 

@@ -119,7 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("num ledgers: %d", _LEDGER_SIZE);
   dbg_trace("eager buf size: %d", _photon_ebsize);
   dbg_trace("small msg size: %d", _photon_smsize);
-  dbg_trace("num requests per rank: %d\n", DEF_NUM_REQUESTS);
+  dbg_trace("num requests per rank: %d", cfg->cap.default_rd);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -146,11 +146,19 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       goto error_exit_bt;
     }
     photonRequestTable rt = photon_processes[i].request_table;
-    rt->count = 0;
-    rt->tail = 0;
-    rt->size = DEF_NUM_REQUESTS;
-    rt->reqs = (photonRequest)malloc((DEF_NUM_REQUESTS + 1) * sizeof(struct photon_req_t));
+    rt->count           = 0;
+    rt->level           = 0;
+    rt->next            = 0;
+    rt->size            = cfg->cap.default_rd;
+    rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
+    rt->free[rt->level] = cfg->cap.default_rd;
+    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
     if (!rt->reqs) {
+      log_err("Could not allocate request array for proc %d", i);
+      goto error_exit_bt;
+    }
+    rt->reqs[rt->level] = (photonRequest)calloc(cfg->cap.default_rd, sizeof(struct photon_req_t));
+    if (!rt->reqs[rt->level]) {
       log_err("Could not allocate request descriptors for proc %d", i);
       goto error_exit_bt;
     }
@@ -160,8 +168,9 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       goto error_exit_bt;
     }
     rt->qcount = 0;
+    sync_tatas_init(&rt->tloc);
   }
-  
+
   // initialize the pwc request table
   if (photon_pwc_init() != PHOTON_OK) {
     goto error_exit_bt;
@@ -657,7 +666,7 @@ static int _photon_post_recv_buffer_rdma(int proc, void *ptr, uint64_t size, int
 
 error_exit:
   if (request != NULL) {
-    *request = NULL_COOKIE;
+    *request = NULL_REQUEST;
   }
   return PHOTON_ERROR;
 }
@@ -743,7 +752,7 @@ static int _photon_try_eager(int proc, void *ptr, uint64_t size, int tag, photon
     dbg_trace("Updating remote eager ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
     
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-				    &(photon_processes[proc].remote_eager_ledger->remote), req->rattr.cookie,
+				    &(photon_processes[proc].remote_eager_ledger->remote), NULL_REQUEST,
 				    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT failed for 0x%016lx", req->id);
@@ -822,7 +831,7 @@ static int _photon_try_rndv(int proc, void *ptr, uint64_t size, int tag, photon_
   dbg_trace("Updating remote ledger address: 0x%016lx, %lu", rmt_addr, sizeof(*entry));
   
   rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-				  &(photon_processes[proc].remote_snd_info_ledger->remote), req->rattr.cookie,
+				  &(photon_processes[proc].remote_snd_info_ledger->remote), NULL_REQUEST,
 				  RDMA_FLAG_NIL);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA PUT failed for 0x%016lx", req->id);
@@ -858,7 +867,7 @@ static int _photon_post_send_buffer_rdma(int proc, void *ptr, uint64_t size, int
   
  error_exit:
   if (request != NULL) {
-    *request = NULL_COOKIE;
+    *request = NULL_REQUEST;
   }
   return PHOTON_ERROR;
 }
@@ -940,7 +949,7 @@ static int _photon_post_send_request_rdma(int proc, uint64_t size, int tag, phot
 
 error_exit:
   if (request != NULL) {
-    *request = NULL_COOKIE;
+    *request = NULL_REQUEST;
   }
   return PHOTON_ERROR;
 }
@@ -1303,7 +1312,7 @@ static int _photon_post_os_put_direct(int proc, void *ptr, uint64_t size, photon
   
  error_exit:
   if (request != NULL) {
-    *request = NULL_COOKIE;
+    *request = NULL_REQUEST;
   }
   return PHOTON_ERROR;
 }
@@ -1350,7 +1359,7 @@ static int _photon_post_os_get_direct(int proc, void *ptr, uint64_t size, photon
 
 error_exit:
   if (request != NULL) {
-    *request = NULL_COOKIE;
+    *request = NULL_REQUEST;
   }
   return PHOTON_ERROR;
 }
@@ -1360,7 +1369,7 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
   photonLedgerEntry entry;
   int curr, rc;
 
-  dbg_trace("(%d)", proc);
+  dbg_trace("(%d, 0x%016lx)", proc, request);
 
   if ((req = photon_lookup_request(request)) == NULL) {
     log_err("Could not find request");
@@ -1371,7 +1380,7 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
     dbg_trace("Warning: sending FIN for a request (EVQUEUE) that is not in completed state (state==%d)", req->state);
   }
   
-  if (req->remote_info.id == NULL_COOKIE) {
+  if (req->remote_info.id == NULL_REQUEST) {
     log_err("Trying to FIN a remote buffer request that was never set!");
     goto error_exit;
   }
@@ -1401,15 +1410,16 @@ static int _photon_send_FIN(photon_rid request, int proc, int flags) {
     rmt_addr += curr * sizeof(*entry);
 
     rc = __photon_backend->rdma_put(proc, (uintptr_t)entry, rmt_addr, sizeof(*entry), &(shared_storage->buf),
-                                    &(photon_processes[proc].remote_fin_ledger->remote), (photon_rid)NULL_COOKIE, 0);
+                                    &(photon_processes[proc].remote_fin_ledger->remote), NULL_REQUEST,
+				    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT failed for 0x%016lx", (photon_rid)NULL_COOKIE);
+      dbg_err("RDMA PUT failed for 0x%016lx", NULL_REQUEST);
       goto error_exit;
     }
   }
-
+  
   if (req->state == REQUEST_COMPLETED || flags & PHOTON_REQ_COMPLETED) {
-    dbg_trace("Removing request 0x%016lx for remote buffer request 0x%016lx", request, req->remote_buffer.request);
+    dbg_trace("Removing request 0x%016lx for remote buffer request 0x%016lx", request, req->remote_info.id);
     req->state = REQUEST_COMPLETED;
     photon_free_request(req);
     dbg_trace("%d requests left in reqtable for proc %d", photon_count_request(req->proc), req->proc);
