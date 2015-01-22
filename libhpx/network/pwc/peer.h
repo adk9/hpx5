@@ -27,7 +27,7 @@ typedef enum {
   SEGMENT_EAGER,
   SEGMENT_PEERS,
   SEGMENT_MAX
-} segment_id_t;
+} segid_t;
 
 /// This structure tracks the peer-to-peer information needed for the network.
 ///
@@ -79,9 +79,9 @@ void peer_fini(peer_t *peer)
 /// @return  LIBHPX_OK The operation was successful.
 static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
                            hpx_addr_t lsync, hpx_addr_t rsync,
-                           completion_t completion, segment_id_t segment_id) {
+                           completion_t completion, segid_t segid) {
   pwc_buffer_t *pwc = &peer->pwc;
-  segment_t *segment = &peer->segments[segment_id];
+  segment_t *segment = &peer->segments[segid];
   return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, completion, segment);
 }
 
@@ -109,10 +109,12 @@ static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
 /// @param          lva The local virtual address to copy to.
 /// @param       offset The remote offset to get from.
 /// @param            n The number of bytes to copy.
-/// @param        lsync An event identifier for local completion.
+/// @param         sync An completion specification for get completion.
+/// @param      segment The segment corresponding to @p offset
 ///
 /// @returns  LIBHPX_OK The get operation was initiated successfully.
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, hpx_addr_t local)
+int peer_get(peer_t *peer, void *lva, size_t offset, size_t n,
+             completion_t sync, segid_t segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif
