@@ -39,7 +39,7 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
-HPX_DEFINE_ACTION(ACTION, hpx_143_fix)(void *UNUSED) {
+HPX_DEFDECL_ACTION(ACTION, hpx_143_fix, void *UNUSED) {
   hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
 }
