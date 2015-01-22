@@ -21,6 +21,7 @@
 #include "libsync/locks.h"
 #include "hpx/hpx.h"
 
+#include "libhpx/action.h"
 #include "libhpx/config.h"
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
@@ -76,4 +77,11 @@ void dbg_wait(void) {
   fflush(stdout);
   while (0 == i)
     sleep(12);
+}
+
+const char * dbg_straction(hpx_action_t op) {
+  if (!here || !here->actions) {
+    return "action table uninitialized";
+  }
+  return action_table_get_key(here->actions, op);
 }
