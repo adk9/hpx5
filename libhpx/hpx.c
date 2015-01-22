@@ -37,7 +37,10 @@
 #include "libhpx/transport.h"
 #include "network/probe.h"
 
-#include "network/probe.h"
+HPX_DEFINE_ACTION(ACTION, hpx_143_fix)(void *UNUSED) {
+  hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  return LIBHPX_OK;
+}
 
 /// Cleanup utility function.
 ///
@@ -239,6 +242,13 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
       status = dbg_error("failed to spawn initial action\n");
       goto unwind2;
     }
+
+    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
+    status = hpx_call(HPX_HERE, hpx_143_fix, NULL, 0, HPX_NULL);
+    if (status != LIBHPX_OK) {
+      dbg_error("failed to spawn the initial cyclic allocation");
+      goto unwind2;
+    }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
@@ -299,3 +309,16 @@ void hpx_abort(void) {
   abort();
 }
 
+const char *hpx_strerror(hpx_status_t s) {
+  switch (s) {
+   case (HPX_ERROR): return "HPX_ERROR";
+   case (HPX_SUCCESS): return "HPX_SUCCESS";
+   case (HPX_RESEND): return "HPX_RESEND";
+   case (HPX_LCO_ERROR): return "HPX_LCO_ERROR";
+   case (HPX_LCO_CHAN_EMPTY): return "HPX_LCO_CHAN_EMPTY";
+   case (HPX_LCO_TIMEOUT): return "HPX_LCO_TIMEOUT";
+   case (HPX_LCO_RESET): return "HPX_LCO_RESET";
+   case (HPX_USER): return "HPX_USER";
+   default: return "HPX undefined error value";
+  }
+}

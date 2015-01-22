@@ -1,15 +1,12 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS    = fibonacci pingpong allgather allreduce-bench allreduce \
-                       countdown seqspawn parspawn future memput memget \
-                       guppie sendrecv sendrecv-chan allreduce-chan \
-                       pingpong-chan hello alltoall qsort call
+examples_PROGRAMS    = fibonacci pingpong allreduce countdown seqspawn \
+                       parspawn future memput memget guppie sendrecv \
+                       sendrecv-chan allreduce-chan pingpong-chan hello \
+                       qsort call
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
-allgather_SOURCES       = allgather.c
-allreduce_bench_SOURCES = allreduce-bench.c
-alltoall_SOURCES        = alltoall.c
 allreduce_SOURCES       = allreduce.c
 countdown_SOURCES       = countdown.c
 seqspawn_SOURCES        = seqspawn.c
@@ -42,9 +39,6 @@ endif
 
 fibonacci_LDADD       = $(all_LIBS)
 pingpong_LDADD        = $(all_LIBS)
-allgather_LDADD       = $(all_LIBS)
-allreduce_bench_LDADD = $(all_LIBS)
-alltoall_LDADD        = $(all_LIBS)
 allreduce_LDADD       = $(all_LIBS)
 countdown_LDADD       = $(all_LIBS)
 seqspawn_LDADD        = $(all_LIBS)
@@ -64,9 +58,6 @@ call_LDADD            = $(all_LIBS)
 
 fibonacci_DEPENDENCIES       = $(all_LIBS)
 pingpong_DEPENDENCIES        = $(all_LIBS)
-allgather_DEPENDENCIES       = $(all_LIBS)
-allreduce_bench_DEPENDENCIES = $(all_LIBS)
-alltoall_DEPENDENCIES        = $(all_LIBS)
 allreduce_DEPENDENCIES       = $(all_LIBS)
 countdown_DEPENDENCIES       = $(all_LIBS)
 seqspawn_DEPENDENCIES        = $(all_LIBS)
