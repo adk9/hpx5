@@ -130,7 +130,8 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   int rank = gas_owner_of(pwc->gas, from);
   peer_t *peer = pwc->peers + rank;
   uint64_t offset = gas_offset_of(pwc->gas, from);
-  return peer_get(peer, lva, n, offset, lsync);
+  completion_t complete = encode_completion(hpx_lco_set_action, lsync);
+  return peer_get(peer, lva, n, offset, complete, SEGMENT_HEAP);
 }
 
 static int _probe_local(int rank, uint64_t *op) {
@@ -162,7 +163,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_completion(completion, &op, &addr);
-    dbg_log_net("extracted local interrupt of %d\n", op);
+    dbg_log_net("extracted local interrupt of %s\n", dbg_straction(op));
     int e = hpx_call(addr, op, NULL, 0, HPX_NULL);
     if (HPX_SUCCESS != e) {
       dbg_error("failed to process local completion");
@@ -175,7 +176,8 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       hpx_addr_t addr;
       hpx_action_t op;
       decode_completion(completion, &op, &addr);
-      dbg_log_net("processing completion %d from rank %d\n", op, i);
+      dbg_log_net("processing completion %s from rank %d\n", dbg_straction(op),
+                  i);
       int e = hpx_call(addr, op, &i, sizeof(i), HPX_NULL);
       if (HPX_SUCCESS != e) {
         dbg_error("failed to process local completion");
@@ -200,20 +202,24 @@ static void _pwc_set_flush(network_t *network) {
 /// @returns  LIBHPX_OK The peer was initialized successfully.
 static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
   peer->rank = rank;
-  if (LIBHPX_OK != pwc_buffer_init(&peer->pwc, rank, 8)) {
+  int status = pwc_buffer_init(&peer->pwc, rank, 8);
+  if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the pwc buffer\n");
   }
 
   uint32_t size = pwc->parcel_buffer_size;
-  if (LIBHPX_OK != eager_buffer_init(&peer->rx, peer, rank * size, size)) {
+  status = eager_buffer_init(&peer->rx, peer, rank * size, size);
+  if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel rx endpoint\n");
   }
 
-  if (LIBHPX_OK != eager_buffer_init(&peer->tx, peer, self * size, size)) {
+  status = eager_buffer_init(&peer->tx, peer, self * size, size);
+  if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
 
-  if (LIBHPX_OK != send_buffer_init(&peer->send, &peer->tx, 8)) {
+  status = send_buffer_init(&peer->send, &peer->tx, 8);
+  if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the send buffer\n");
   }
 
