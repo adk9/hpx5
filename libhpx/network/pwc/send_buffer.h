@@ -61,21 +61,4 @@ void send_buffer_fini(send_buffer_t *sends)
 int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
-/// Progress a send buffer.
-///
-/// Progressing a send buffer means transferring as many buffered sends to the
-/// network as is currently possible. This will return the number of remaining
-/// buffered sends.
-///
-/// Progressing a send buffer mus t be properly synchronized with the send
-/// operation, as well as with concurrent attempts to progress the buffer, since
-/// they may be called concurrently from more than one thread.
-///
-/// @param        sends The send buffer.
-///
-/// @returns            The number of sends that remain in the buffer after the
-///                       progress call.
-int send_buffer_progress(send_buffer_t *sends)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H
