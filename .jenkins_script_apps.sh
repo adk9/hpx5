@@ -46,7 +46,7 @@ cd build
 ../configure $CFGFLAGS --enable-apps $HPXDEBUG
 make
 
-# TODO: Run the apps and check their output...
+# Run the apps and check their output...
 set -xe
 case "$HPXMODE" in
     photon)
@@ -56,7 +56,7 @@ case "$HPXMODE" in
         mpirun -np 16 luleshparcels -n 216 -x 48 -i 100
         ;;
     mpi)
-        cd $DIR/build/apps/lulesh/mpi
+        cd $DIR/apps/lulesh/mpi
         mpicxx luleshMPI.cc -O3 -o luleshMPI
         mpirun -np 216 luleshMPI 48 100
         cd $DIR/build/apps/lulesh/parcels
