@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <string.h>
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "segment.h"
@@ -21,6 +22,11 @@
 int segment_init(segment_t *segment, char *base, size_t size) {
   segment->base = base;
   segment->size = size;
+  if (!base) {
+    assert(!size);
+    memset(&segment->key, 0, sizeof(segment->key));
+    return LIBHPX_OK;
+  }
 
   if (PHOTON_OK != photon_register_buffer(base, size)) {
     return dbg_error("failed to register segment with Photon\n");
@@ -39,6 +45,10 @@ int segment_init(segment_t *segment, char *base, size_t size) {
 void segment_fini(segment_t *segment) {
   void *base = segment->base;
   size_t size = segment->size;
+  if (!base) {
+    return;
+  }
+
   if (PHOTON_OK != photon_unregister_buffer(base, size)) {
     dbg_log_net("could not unregister the local heap segment %p\n", base);
   }
