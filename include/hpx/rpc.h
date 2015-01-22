@@ -78,12 +78,12 @@ int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 /// call interface. If @p result is not HPX_NULL, hpx_call puts the
 /// the resulting value in @p result at some point in the future. This
 /// function returns even before the argument buffer has been copied
-/// and is free to reuse. If @p args_reuse is not HPX_NULL, it is set
+/// and is free to reuse. If @p lsync is not HPX_NULL, it is set
 /// when @p args is safe to be reused or freed.
 ///
 /// @param       addr The address that defines where the action is executed.
 /// @param     action The action to perform.
-/// @param args_reuse The global address of an LCO to signal local completion
+/// @param      lsync The global address of an LCO to signal local completion
 ///                   (i.e., R/W access to, or free of @p args is safe),
 ///                   HPX_NULL if we don't care.
 /// @param     result The global address of an LCO to signal with the result.
@@ -92,7 +92,7 @@ int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t args_reuse,
+int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
                    hpx_addr_t result, ...);
 
 
