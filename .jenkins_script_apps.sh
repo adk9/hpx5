@@ -5,8 +5,8 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load openmpi/1.6.3
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.6.3/include/
+    module load openmpi/1.8.1
+    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.1/include/
 }
 
 function add_photon() {
