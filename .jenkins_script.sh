@@ -5,8 +5,8 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load openmpi/1.6.3
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.6.3/include/
+    module load openmpi/1.8.1
+    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.1/include/
 }
 
 function add_photon() {
@@ -54,7 +54,5 @@ if grep -q Failed tests/unit/output.log
 then
     exit 1
 fi
-
-# TODO: Run the apps and check their output...
 
 exit 0

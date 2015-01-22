@@ -64,7 +64,10 @@ static int _advanceDomain_action(unsigned long *epoch) {
       double elapsed_time_max;
       hpx_lco_get(domain->elapsed_ar, sizeof(double), &elapsed_time_max);
 
-      printf("\n\nElapsed time = %12.6e\n\n", elapsed_time_max/1000.0);
+      printf("\n\nSTART_LOG\n");
+      printf("PROGNAME: lulesh-newfutures\n\n");
+      printf("Elapsed time = %12.6e\n", elapsed_time_max/1000.0);
+
       printf("Run completed:  \n");
       printf("  Problem size = %d \n"
              "  Iteration count = %d \n"
@@ -90,10 +93,8 @@ static int _advanceDomain_action(unsigned long *epoch) {
          "  MaxAbsDiff   = %12.6e\n"
          "  TotalAbsDiff = %12.6e\n"
          "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+      printf("END_LOG\n\n");
 
-
-
-      printf("\n\n\n");
       printf("time_in_SBN3 = %e\n", time_in_SBN3/1000.0);
       printf("time_in_PosVel = %e\n", time_in_PosVel/1000.0);
       printf("time_in_MonoQ = %e\n", time_in_MonoQ/1000.0);
