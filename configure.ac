@@ -264,14 +264,6 @@ AS_IF([test "x$enable_tutorial" != xno],
 
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
-  apps/mpi/Makefile
-  apps/fmm/Makefile
-  apps/fmm/parcels/Makefile
-  apps/lulesh/Makefile
-  apps/lulesh/parcels/Makefile
-  apps/lulesh/newfutures/Makefile
-  apps/miniAMR/Makefile
-  apps/miniAMR/parcels/Makefile
   apps/libPXGL/Makefile
   apps/libPXGL/include/Makefile
   apps/libPXGL/examples/Makefile

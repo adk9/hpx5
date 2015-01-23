@@ -1,1 +1,1 @@
-SUBDIRS = mpi lulesh fmm miniAMR libPXGL
+SUBDIRS = libPXGL
