@@ -18,6 +18,7 @@
 /.deps
 /Makefile
 /Makefile.in
+/hpx.pc
 
 # /config/
 /config/*
