@@ -55,29 +55,6 @@
 /examples/qsort
 /examples/call
 
-# /apps/
-/apps/miniAMR/Makefile
-/apps/miniAMR/parcels/Makefile
-/apps/mpi/Makefile
-/apps/Makefile
-/apps/fmm/Makefile
-/apps/fmm/parcels/Makefile
-/apps/lulesh/parcels/Makefile
-/apps/lulesh/parcels/luleshparcels
-/apps/lulesh/Makefile
-/apps/fmm/parcels/fmmparcels
-/apps/lulesh/mpi/luleshMPI
-/apps/miniAMR/parcels/miniamr
-/apps/mpi/hpxmpi
-/apps/lulesh/newfutures/Makefile
-/apps/lulesh/newfutures/luleshnewfutures
-/apps/libPXGL/Makefile
-/apps/libPXGL/include/Makefile
-/apps/libPXGL/generatorhelper/include/Makefile
-/apps/libPXGL/examples/Makefile
-/apps/libPXGL/examples/sssp
-/apps/libPXGL/generatorhelper/include/Makefile
-
 # /include/
 /include/stamp-h1
 /include/config.h
