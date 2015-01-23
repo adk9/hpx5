@@ -87,8 +87,8 @@ START_TEST (test_libhpx_lco_Semaphores)
   // initial value this semaphore would be created with
   mutex = hpx_lco_sema_new(1);
 
-  hpx_call(peers[0], t08_handler, &i[0], sizeof(uint32_t), futures[0]);
-  hpx_call(peers[1], t08_handler, &i[1], sizeof(uint32_t), futures[1]);
+  hpx_call(peers[0], t08_handler, futures[0], &i[0], sizeof(uint32_t));
+  hpx_call(peers[1], t08_handler, futures[1], &i[1], sizeof(uint32_t));
     
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
    

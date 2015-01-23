@@ -60,7 +60,7 @@ START_TEST (test_libhpx_memget)
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, t12_init_array, block, sizeof(block), done);
+  hpx_call(remote, t12_init_array, done, block, sizeof(block));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 

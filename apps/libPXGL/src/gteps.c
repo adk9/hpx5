@@ -47,7 +47,7 @@ static int _gteps_visit_vertex_action(const hpx_addr_t *const args) {
   vertex = *v;
   hpx_gas_unpin(target);
 
-  return hpx_call(vertex, _gteps_send_dist, args, sizeof(*args), HPX_NULL);
+  return hpx_call(vertex, _gteps_send_dist, HPX_NULL, args, sizeof(*args));
 }
 
 hpx_action_t gteps_calculate = HPX_ACTION_INVALID;
@@ -60,7 +60,8 @@ int gteps_calculate_action(const sssp_uint_t *const num_vertices) {
   uint32_t block_size = ((*num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
   for (int i = 0; i < *num_vertices; ++i) {
     const hpx_addr_t vertex_index = hpx_addr_add(adj_list, i * sizeof(hpx_addr_t), block_size);
-    hpx_call(vertex_index, _gteps_visit_vertex, &calculate_lco, sizeof(calculate_lco), HPX_NULL);
+    hpx_call(vertex_index, _gteps_visit_vertex, HPX_NULL, &calculate_lco,
+             sizeof(calculate_lco));
   }
 
   // printf("Finished with the loop\n");

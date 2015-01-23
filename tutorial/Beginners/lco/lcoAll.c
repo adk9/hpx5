@@ -37,7 +37,7 @@ static int _main_action(void *args) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(uint64_t);
     futures[i] = hpx_lco_future_new(sizeof(uint64_t));
-    hpx_call(HPX_HERE, _setValue, NULL, 0, futures[i]);
+    hpx_call(HPX_HERE, _setValue, futures[i], NULL, 0);
   }
   
   hpx_lco_get_all(NUM_FUTURES, futures, sizes, addrs, NULL);

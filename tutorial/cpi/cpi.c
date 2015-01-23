@@ -92,7 +92,7 @@ static int _main_action(int *args) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(double);
     futures[i] = hpx_lco_future_new(sizeof(double));
-    hpx_call(HPX_THERE(i), _getVal, &interval, sizeof(interval), futures[i]);
+    hpx_call(HPX_THERE(i), _getVal, futures[i], &interval, sizeof(interval));
   }
 
   hpx_lco_get_all(THREADS, futures, sizes, addrs, NULL);
@@ -102,7 +102,8 @@ static int _main_action(int *args) {
   for (int i = 0; i < THREADS; ++i) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
-    hpx_call(HPX_THERE(i), _setVal, &reduce_result, sizeof(reduce_result), futures[i]);
+    hpx_call(HPX_THERE(i), _setVal, futures[i], &reduce_result,
+             sizeof(reduce_result));
   }
 
   hpx_lco_get_all(THREADS, futures, sizes, addrs, NULL);
