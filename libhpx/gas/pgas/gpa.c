@@ -41,10 +41,8 @@ static uint64_t _block_of(hpx_addr_t gpa, uint32_t bsize) {
   //
   // before: (locality, block, phase)
   //  after: (00000000000      block)
-  const uint32_t ranks = here->ranks;
-  const uint32_t lshift = ceil_log2_32(ranks);
-  const uint32_t rshift = ceil_log2_32(bsize) + lshift;
-  return (gpa << lshift) >> rshift;
+  const uint32_t rshift = ceil_log2_32(bsize);
+  return (gpa & GPA_OFFSET_MASK) >> rshift;
 }
 
 
