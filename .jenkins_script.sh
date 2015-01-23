@@ -3,8 +3,6 @@
 DIR=$1
 shift
 
-trap 'my_exit; exit' SIGHUP SIGINT SIGQUIT
-
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
     module load openmpi/1.8.1
@@ -20,13 +18,6 @@ function add_photon() {
 
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
-}
-
-my_exit()
-{
-    echo "you cancelled the job, now exiting.."
-    # cleanp commands 
-    qdel $PBS_JOBID
 }
 
 set -xe
