@@ -51,16 +51,16 @@ set -xe
 case "$HPXMODE" in
     photon)
         cd $DIR/build/apps/lulesh/newfutures
-        mpirun -np 16 luleshnewfutures -n 216 -x 48 -i 100
+        mpirun -np 8 luleshnewfutures -n 125 -x 48 -i 100
         cd $DIR/build/apps/lulesh/parcels
-        mpirun -np 16 luleshparcels -n 216 -x 48 -i 100
+        mpirun -np 8 luleshparcels -n 125 -x 48 -i 100
         ;;
     mpi)
-        cd $DIR/apps/lulesh/mpi
-        mpicxx luleshMPI.cc -O3 -o luleshMPI
-        mpirun -np 216 luleshMPI 48 100
+        #cd $DIR/apps/lulesh/mpi
+        #mpicxx luleshMPI.cc -O3 -o luleshMPI
+        #mpirun -np 125 luleshMPI 48 100
         cd $DIR/build/apps/lulesh/parcels
-        mpirun -np 16 luleshparcels -n 216 -x 48 -i 100
+        mpirun -np 8 luleshparcels -n 125 -x 48 -i 100
         ;;
 esac
 
