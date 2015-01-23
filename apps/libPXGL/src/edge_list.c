@@ -17,6 +17,11 @@ static int _put_edge_edgelist_action(edge_list_edge_t *e)
 {
    const hpx_addr_t target = hpx_thread_current_target();
 
+   if (e->source > 1048577) {
+     printf("Source too big %zu.\n", e->source);
+     hpx_abort();
+   }
+
    edge_list_edge_t *edge;
    if (!hpx_gas_try_pin(target, (void**)&edge))
      return HPX_RESEND;
