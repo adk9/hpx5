@@ -41,7 +41,7 @@ static int root_action(void *args) {
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(int), 1);
 
   int r = 0;
-  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
+  hpx_call_sync(other, get_rank, &r, sizeof(r), NULL, 0);
   printf("target locality's ID (before move): %d\n", r);
 
   if (r == HPX_LOCALITY_ID) {
@@ -58,7 +58,7 @@ static int root_action(void *args) {
 
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_call_sync(other, get_rank, NULL, 0, &r, sizeof(r));
+  hpx_call_sync(other, get_rank, &r, sizeof(r), NULL, 0);
   printf("target locality's rank (after move): %d\n", r);
 
   printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "passed" : "failed"));

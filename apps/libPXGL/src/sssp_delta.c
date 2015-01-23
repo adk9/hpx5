@@ -78,7 +78,7 @@ static void _insert_buckets(const int thread_no, const size_t level, const hpx_a
   ++buckets->num_vertices[thread_no];
 }
 
-int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const distance_t *const distance_ptr, const size_t len, const hpx_addr_t result) {
+int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, const hpx_addr_t result, const distance_t *const distance_ptr, const size_t len) {
   const distance_t distance = *distance_ptr;
   // printf("delta_send_vertex, vertex: %zu, distance: %" SSSP_UINT_PRI "\n", vertex, distance);
   if(_get_level(distance) > buckets->current_level) {
@@ -86,7 +86,8 @@ int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, 
     if (_get_termination() == COUNT_TERMINATION) _increment_finished_count();
     if (_get_termination() == AND_LCO_TERMINATION) hpx_lco_set(result, 0, NULL, HPX_NULL, HPX_NULL);
   } else {
-    hpx_call(vertex, _sssp_visit_vertex, &distance, sizeof(distance), HPX_NULL);
+    hpx_call(vertex, _sssp_visit_vertex, HPX_NULL, &distance,
+             sizeof(distance));
     // printf("after delta_sssp_send vertex: %zu, distance: %" SSSP_UINT_PRI "\n", vertex, distance);
   }
   return HPX_SUCCESS;
@@ -161,7 +162,8 @@ static int _visit_all_in_buffer_action(buffer_t * const * const buffer) {
     // printf("popping in visit_all. buffer: %zu, bucket [%d][%zu]\n.", args->buffer, HPX_THREAD_ID, buckets->current_level);
     buffer_node_t node = pop(*buffer);
     // printf("Calling visit_vertex with vertex %zu and distance %" SSSP_UINT_PRI " (node.distance is: %zu in zu, and %" SSSP_UINT_PRI " in sssp_uint_pri\n", node.vertex, sssp_args.distance, node.distance, node.distance);
-    hpx_call(node.vertex, _sssp_visit_vertex, &node.distance, sizeof(node.distance), HPX_NULL); 
+    hpx_call(node.vertex, _sssp_visit_vertex, HPX_NULL, &node.distance,
+             sizeof(node.distance)); 
   }
   delete_buffer(*buffer);
   //  buckets->buckets[args->thread_id][buckets->current_level] = NULL;
@@ -173,7 +175,9 @@ static int _visit_all_in_current_level_action(const hpx_addr_t * const args) {
   for(size_t i = 0; i < HPX_THREADS; ++i) {
     if(buckets->num_buckets[i] > buckets->current_level && buckets->buckets[i][buckets->current_level] != NULL) {
       // printf("_visit_all_in_current_level_action visiting bucket [%zu][%zu] with bucket %" PRIxPTR".\n", i, buckets->current_level, buckets->buckets[i][buckets->current_level]);
-      hpx_call(HPX_HERE, _visit_all_in_buffer, &buckets->buckets[i][buckets->current_level], sizeof(buckets->buckets[i][buckets->current_level]), HPX_NULL);
+      hpx_call(HPX_HERE, _visit_all_in_buffer, HPX_NULL,
+               &buckets->buckets[i][buckets->current_level],
+               sizeof(buckets->buckets[i][buckets->current_level]));
     }
   }
   return HPX_SUCCESS;
@@ -237,7 +241,8 @@ static void _find_next_level() {
       (hpx_commutative_associative_op_t)_size_t_minimum_op, 
       (void (*)(void *, const size_t))_size_t_minimum_init);
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);
-  hpx_bcast(_send_next_level, &level_reduce_lco, sizeof(level_reduce_lco), bcast_lco);
+  hpx_bcast(_send_next_level, bcast_lco, &level_reduce_lco,
+            sizeof(level_reduce_lco));
   hpx_lco_wait(bcast_lco);
   hpx_lco_delete(bcast_lco, HPX_NULL);
   hpx_lco_delete(level_reduce_lco, HPX_NULL);
@@ -249,8 +254,9 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
   // printf("Delta-stepping called.\n");
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);  
   const hpx_addr_t initialize_graph_lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_buckets, &args->delta, sizeof(args->delta), bcast_lco);
-  hpx_bcast(_sssp_initialize_graph, &args->graph, sizeof(args->graph), initialize_graph_lco);
+  hpx_bcast(_init_buckets, bcast_lco, &args->delta, sizeof(args->delta));
+  hpx_bcast(_sssp_initialize_graph, initialize_graph_lco, &args->graph,
+            sizeof(args->graph));
   hpx_lco_wait(initialize_graph_lco);
   hpx_lco_delete(initialize_graph_lco, HPX_NULL);
   hpx_lco_wait(bcast_lco);
@@ -286,7 +292,7 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
       hpx_bcast_sync(_initialize_termination_detection, NULL, 0);
       hpx_bcast_sync(_delta_sssp_increase_active_counts, NULL, 0);
       // printf("Visiting all in level %zu.\n", buckets->current_level);
-      hpx_bcast(_visit_all_in_current_level, NULL, 0, HPX_NULL);
+      hpx_bcast(_visit_all_in_current_level, HPX_NULL, NULL, 0);
       // printf("starting termination detection\n");
       _detect_termination(termination_lco, internal_termination_lco);
     } else {
@@ -302,7 +308,8 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
     _find_next_level();
     if (buckets->current_level == size_t_max) {
       hpx_addr_t delete_termination_lco = hpx_lco_and_new(HPX_LOCALITIES);
-      hpx_bcast(_delete_buckets, &delete_termination_lco, sizeof(delete_termination_lco), HPX_NULL);
+      hpx_bcast(_delete_buckets, HPX_NULL, &delete_termination_lco,
+                sizeof(delete_termination_lco));
       hpx_lco_wait(delete_termination_lco);
       hpx_lco_delete(delete_termination_lco, HPX_NULL);
       break;

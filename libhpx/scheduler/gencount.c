@@ -174,7 +174,7 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
   _gencount_t *local;
   if (!hpx_gas_try_pin(gencnt, (void**)&local))
-    return hpx_call_sync(gencnt, _gencount_wait_gen_action, &gen, gen, NULL, 0);
+    return hpx_call_sync(gencnt, _gencount_wait_gen_action, NULL, 0, &gen, gen);
 
   hpx_status_t status = _gencount_wait_gen(local, gen);
   hpx_gas_unpin(gencnt);

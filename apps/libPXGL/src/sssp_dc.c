@@ -41,7 +41,7 @@ static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
   if (_try_update_vertex_distance(vertex, *distance)) {
     sssp_queue_t *queue = sssp_queues[rand() % num_pq];
     if(sssp_queue_push(queue, target, *distance)) {
-      hpx_call(HPX_HERE, _handle_queue, &queue, sizeof(queue), HPX_NULL);
+      hpx_call(HPX_HERE, _handle_queue, HPX_NULL, &queue, sizeof(queue));
     }
   } else if (_get_termination() == COUNT_TERMINATION) {
     _increment_finished_count();
@@ -69,7 +69,7 @@ static int sssp_init_dc_action(sssp_init_dc_args_t *args) {
 /* void _sssp_init_dc_function(size_t num_pq, size_t freq) { */
 /*   hpx_addr_t init_lco = hpx_lco_future_new(0); */
 /*   const sssp_init_dc_args_t init_args = { .num_pq = num_pq, .freq = freq }; */
-/*   hpx_bcast(sssp_init_dc, &init_args, sizeof(init_args), init_lco); */
+/*   hpx_bcast(sssp_init_dc, init_lco, &init_args, sizeof(init_args)); */
 /*   hpx_lco_wait(init_lco); */
 /*   hpx_lco_delete(init_lco, HPX_NULL); */
 /* } */
@@ -105,7 +105,8 @@ static int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
     sssp_queues[i] = sssp_queue_create(num_elem);
   }
   const _sssp_delete_queues_args_t delete_args = { .termination_lco = *termination_lco, .queues = sssp_queues };
-  hpx_call(HPX_HERE, _sssp_delete_queues, &delete_args, sizeof(delete_args), HPX_NULL);
+  hpx_call(HPX_HERE, _sssp_delete_queues, HPX_NULL, &delete_args,
+           sizeof(delete_args));
   return HPX_SUCCESS;
 }
 

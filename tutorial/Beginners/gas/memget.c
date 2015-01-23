@@ -50,7 +50,7 @@ static int _main_action(void *args) {
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(src), sizeof(src));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, _init_array, src, sizeof(src), done);
+  hpx_call(remote, _init_array, done, src, sizeof(src));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
  

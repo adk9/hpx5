@@ -156,14 +156,14 @@ static int _main_action(int *args) {
        .avgTime = avgTime
      };
      hpx_addr_t remote = hpx_addr_add(src, sizeof(Domain) * i, sizeof(Domain));
-     hpx_call(remote, _init, &init, sizeof(init), done);
+     hpx_call(remote, _init, done, &init, sizeof(init));
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
   for (i = 0; i < THREADS; ++i) {
     hpx_addr_t remote = hpx_addr_add(src, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(remote, _gather, NULL, 0, HPX_NULL);
+    hpx_call(remote, _gather, HPX_NULL, NULL, 0);
   }
 
   hpx_lco_wait(complete);

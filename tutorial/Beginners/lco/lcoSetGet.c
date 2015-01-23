@@ -31,7 +31,7 @@ static int _main_action(void *args) {
   hpx_addr_t lco;
   uint64_t result;
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, _lcoSetGet, &lco, sizeof(lco), done);
+  hpx_call(HPX_HERE, _lcoSetGet, done, &lco, sizeof(lco));
   hpx_lco_wait(done);
 
   hpx_lco_get(done, sizeof(uint64_t), &result);

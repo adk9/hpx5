@@ -64,7 +64,7 @@ START_TEST (test_libhpx_lco_gencount)
   hpx_addr_t lco = hpx_lco_gencount_new(0);
   hpx_addr_t done = hpx_lco_future_new(0);
   //for (int i = 0; i < ninplace; i++)  
-    hpx_call(HPX_HERE, t11_increment, &lco, sizeof(lco), done);
+    hpx_call(HPX_HERE, t11_increment, done, &lco, sizeof(lco));
 
   // Wait for the generation counter to reach a certain value.
   //hpx_lco_gencount_wait(lco, ninplace);

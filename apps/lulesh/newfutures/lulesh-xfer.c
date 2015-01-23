@@ -299,7 +299,7 @@ void SBN3(hpx_addr_t local,Domain *domain,unsigned long epoch)
     NodalArgs args;
     args.srcLocalIdx = srcLocalIdx;
     args.epoch = epoch;
-    hpx_call(local, _SBN3_result, &args, sizeof(args), HPX_NULL);
+    hpx_call(local, _SBN3_result, HPX_NULL, &args, sizeof(args));
   }
 
   // Make sure the parallel spawn loop above is done so that we can release the
@@ -478,7 +478,7 @@ void PosVel(hpx_addr_t local,Domain *domain,unsigned long epoch)
     NodalArgs args;
     args.srcLocalIdx = srcLocalIdx;
     args.epoch = epoch;
-    hpx_call(local, _PosVel_result, &args, sizeof(args), HPX_NULL);
+    hpx_call(local, _PosVel_result, HPX_NULL, &args, sizeof(args));
 
   }
 
@@ -649,7 +649,7 @@ void MonoQ(hpx_addr_t local,Domain *domain,unsigned long epoch)
     NodalArgs args;
     args.srcLocalIdx = srcLocalIdx;
     args.epoch = epoch;
-    hpx_call(local, _MonoQ_result, &args, sizeof(args), HPX_NULL);
+    hpx_call(local, _MonoQ_result, HPX_NULL, &args, sizeof(args));
   }
 
   // Make sure the parallel spawn loop above is done so that we can release the

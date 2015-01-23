@@ -345,7 +345,7 @@ static int _main_action(int *input)
     memcpy(args.posvel, posvel, 2 * 26 * sizeof(hpx_netfuture_t));
     memcpy(args.monoq, monoq, 2 * 26 * sizeof(hpx_netfuture_t));
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _initDomain, &args, sizeof(args), init);
+    hpx_call(block, _initDomain, init, &args, sizeof(args));
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
@@ -355,7 +355,7 @@ static int _main_action(int *input)
 
   for (k=0;k<nDoms;k++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advanceDomain, HPX_NULL, &epoch, sizeof(epoch));
   }
 
   // And wait for each domain to reach the end of its simulation
