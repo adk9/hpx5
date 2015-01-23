@@ -87,7 +87,7 @@ START_TEST (test_libhpx_parcelCreate)
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t completed = hpx_lco_and_new(1);
-  hpx_call(HPX_HERE, t04_send, &n, sizeof(n), completed);
+  hpx_call(HPX_HERE, t04_send, completed, &n, sizeof(n));
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
 
@@ -302,14 +302,14 @@ static int _is_null(void *addr) {
 }
 
 /// Store a value to an integer in memory.
-HPX_DEFINE_ACTION(PINNED_ACTION, _store_int)(void *val) {
+static HPX_DEFDECL_ACTION(PINNED_ACTION, _store_int, void *val) {
   int *addr = hpx_thread_current_local_target();
   *addr = *(int*)val;
   return HPX_SUCCESS;
 }
 
 /// Load a value from an integer in memory.
-HPX_DEFINE_ACTION(PINNED_ACTION, _load_int)(void *UNUSED) {
+static HPX_DEFDECL_ACTION(PINNED_ACTION, _load_int, void *UNUSED) {
   int *addr = hpx_thread_current_local_target();
   HPX_THREAD_CONTINUE(*addr);
 }
@@ -319,7 +319,7 @@ HPX_DEFINE_ACTION(PINNED_ACTION, _load_int)(void *UNUSED) {
 /// This is slightly more complicated than an increment. We send along the value
 /// that we expect to see, to make sure our cascade is running in the correct
 /// order.
-HPX_DEFINE_ACTION(PINNED_ACTION, _parcelSendThrough_increment)(void *arg) {
+static HPX_DEFDECL_ACTION(PINNED_ACTION, _parcelSendThrough_increment, void *arg) {
   // don't need synchronization since this is done in a sequential cascade
   int *val = hpx_thread_current_local_target();
   int i = val[0]++;
@@ -423,7 +423,7 @@ START_TEST(test_libhpx_parcelSendThrough)
   }
 
   const int zero = 0;
-  if (_is_error(hpx_call_sync(val, _store_int, &zero, sizeof(zero), NULL, 0))) {
+  if (_is_error(hpx_call_sync(val, _store_int, NULL, 0, &zero, sizeof(zero)))) {
     goto unwind2;
   }
 
@@ -434,7 +434,7 @@ START_TEST(test_libhpx_parcelSendThrough)
   }
 
   // start the cascade by setting the first future
-  if (_is_error(hpx_call(gates, hpx_lco_set_action, NULL, 0, HPX_NULL))) {
+  if (_is_error(hpx_call(gates, hpx_lco_set_action, HPX_NULL, NULL, 0))) {
     goto unwind2;
   }
 
@@ -445,7 +445,7 @@ START_TEST(test_libhpx_parcelSendThrough)
 
   // check the final value to make sure everything actually worked
   int fin;
-  if (_is_error(hpx_call_sync(val, _load_int, NULL, 0, &fin, sizeof(fin)))) {
+  if (_is_error(hpx_call_sync(val, _load_int, &fin, sizeof(fin), NULL, 0))) {
     goto unwind3;
   }
 

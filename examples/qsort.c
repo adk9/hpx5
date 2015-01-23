@@ -215,7 +215,7 @@ int parallelQuicksort(double lyst[], int size, int tlevel)
 
   //The top-level thread
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  hpx_call(theThread, _parallelQuicksortHelper, &td, sizeof(td), done);
+  hpx_call(theThread, _parallelQuicksortHelper, done, &td, sizeof(td));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
@@ -299,8 +299,8 @@ static int _parallelQuicksortHelper_action(void *threadarg)
   };
 
   for (t = 0; t < 2; t++){
-    hpx_call(threads[t], _parallelQuicksortHelper, (void *) &thread_data_array[t],
-             sizeof(thread_data_array[t]), futures[t]);
+    hpx_call(threads[t], _parallelQuicksortHelper, futures[t],
+             (void *)&thread_data_array[t], sizeof(thread_data_array[t]));
   }
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   hpx_lco_delete(futures[0], HPX_NULL);

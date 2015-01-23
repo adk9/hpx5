@@ -57,7 +57,7 @@ static int _main_action(int *args) {
     hpx_addr_t completed = hpx_lco_and_new(num[i]);
     hpx_time_t t1 = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(HPX_HERE, _empty, NULL, 0, completed);
+      hpx_call(HPX_HERE, _empty, completed, NULL, 0);
     hpx_lco_wait(completed);
     double empty_t = hpx_time_elapsed_ms(t1);
     hpx_lco_delete(completed, HPX_NULL);
@@ -66,7 +66,7 @@ static int _main_action(int *args) {
     t = hpx_time_now();
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     for (int j = 0; j < num[i]; j++)
-      hpx_call(HPX_HERE, _lco_set, &setlco, sizeof(setlco), done);
+      hpx_call(HPX_HERE, _lco_set, done, &setlco, sizeof(setlco));
     hpx_lco_wait(setlco);
     double end_t = hpx_time_elapsed_ms(t);
     printf("%*g",FIELD_WIDTH, end_t - empty_t);

@@ -83,7 +83,7 @@ static int _count_edge_action(const void * const args) {
                                         _count_array_block_size);
   hpx_gas_unpin(target);
 
-  return hpx_call(count, _increment_count, NULL, 0, HPX_NULL);
+  return hpx_call(count, _increment_count, HPX_NULL, NULL, 0);
 }
 
 
@@ -120,7 +120,7 @@ static int _alloc_vertex_action(const count_t * const count) {
   *index = vertex;
   hpx_gas_unpin(target);
 
-  return hpx_call(vertex, _init_vertex, NULL, 0, HPX_NULL);
+  return hpx_call(vertex, _init_vertex, HPX_NULL, NULL, 0);
 }
 
 
@@ -140,7 +140,7 @@ static int _alloc_adj_list_entry_action(const void * const args)
 
   const int64_t offset = hpx_addr_sub(target, count_array, _count_array_block_size) / sizeof(count_t);
   const hpx_addr_t index = hpx_addr_add(index_array, offset * sizeof(hpx_addr_t), _index_array_block_size);
-  return hpx_call(index, _alloc_vertex, &count, sizeof(count), HPX_NULL);
+  return hpx_call(index, _alloc_vertex, HPX_NULL, &count, sizeof(count));
 }
 
 static hpx_action_t _put_edge = HPX_ACTION_INVALID;
@@ -178,7 +178,7 @@ static int _put_edge_index_action(const adj_list_edge_t *edge)
   vertex = *v;
   hpx_gas_unpin(target);
 
-  return hpx_call(vertex, _put_edge, edge, sizeof(*edge), HPX_NULL);
+  return hpx_call(vertex, _put_edge, HPX_NULL, edge, sizeof(*edge));
 }
 
 static hpx_action_t _insert_edge = HPX_ACTION_INVALID;
@@ -206,7 +206,7 @@ static int _insert_edge_action(const void * const args)
   // Insert the edge into the index array at the right index. Since we
   // call this action synchronously, we can safely send the stack
   // pointer out.
-  return hpx_call(index, _put_edge_index, &e, sizeof(e), HPX_NULL);
+  return hpx_call(index, _put_edge_index, HPX_NULL, &e, sizeof(e));
 }
 
 
@@ -235,16 +235,20 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   // Array is allocated while the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
   // printf("Index array block size is %" SSSP_UINT_PRI ".\n", _index_array_block_size); 
-  hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(_index_array_block_size), allocs_sync_lco);
-  hpx_bcast(_set_index_array, &index_array, sizeof(index_array), allocs_sync_lco);
+  hpx_bcast(_set_index_array_bsize, allocs_sync_lco,
+	    &_index_array_block_size, sizeof(_index_array_block_size));
+  hpx_bcast(_set_index_array, allocs_sync_lco, &index_array,
+	    sizeof(index_array));
 
   // Start allocating the count array for creating an edge histogram
   _count_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(count_t);
   // Array is allocated while the broadcast of the block size is performed
   count_array = hpx_gas_global_calloc(HPX_LOCALITIES, _count_array_block_size);
-  printf("count_array hpx address is %zu.\n", count_array);
-  hpx_bcast(_set_count_array_bsize, &_count_array_block_size, sizeof(_count_array_block_size), allocs_sync_lco);
-  hpx_bcast(_set_count_array, &count_array, sizeof(count_array), allocs_sync_lco);
+  // printf("count_array hpx address is %zu.\n", count_array);
+  hpx_bcast(_set_count_array_bsize, allocs_sync_lco,
+	    &_count_array_block_size, sizeof(_count_array_block_size));
+  hpx_bcast(_set_count_array, allocs_sync_lco, &count_array,
+	    sizeof(count_array));
 
   hpx_lco_wait(allocs_sync_lco);
   hpx_lco_delete(allocs_sync_lco, HPX_NULL);
@@ -263,7 +267,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   // Count the number of edges per source vertex
   //for (int i = 0; i < el->num_edges; ++i) {
     //hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
-   //hpx_call(edge, _count_edge, &count_array, sizeof(count_array), HPX_NULL);
+   //hpx_call(edge, _count_edge, HPX_NULL, &count_array, sizeof(count_array));
    //}
   hpx_count_range_call(_count_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, 0, NULL);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
@@ -350,7 +354,7 @@ int reset_adj_list(adj_list_t adj_list, edge_list_t *el) {
   hpx_addr_t vertices = hpx_lco_and_new(el->num_vertices);
   for (int i = 0; i < el->num_vertices; ++i) {
     hpx_addr_t index = hpx_addr_add(index_array, i * sizeof(hpx_addr_t), _index_array_block_size);
-    hpx_call(index, _reset_vertex, NULL, 0, vertices);
+    hpx_call(index, _reset_vertex, vertices, NULL, 0);
   }
   hpx_lco_wait(vertices);
   hpx_lco_delete(vertices, HPX_NULL);

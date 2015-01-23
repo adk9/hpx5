@@ -50,7 +50,7 @@ START_TEST (test_libhpx_lco_and)
   // gate. Inputs should be >=0;
   hpx_addr_t lco = hpx_lco_and_new(1);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, t10_set, &lco, sizeof(lco), done);
+  hpx_call(HPX_HERE, t10_set, done, &lco, sizeof(lco));
   hpx_lco_wait(lco);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);

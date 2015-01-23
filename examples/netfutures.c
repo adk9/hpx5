@@ -150,8 +150,8 @@ static int _action_main(args_t *args) {
   printf("Futures allocated\n");
   args->pingpong = base;
 
-  hpx_call(HPX_HERE, _ping, args, sizeof(*args), done);
-  hpx_call(HPX_THERE(1), _pong, args, sizeof(*args), done);
+  hpx_call(HPX_HERE, _ping, done, args, sizeof(*args));
+  hpx_call(HPX_THERE(1), _pong, done, args, sizeof(*args));
 
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);

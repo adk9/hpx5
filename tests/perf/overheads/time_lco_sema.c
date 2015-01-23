@@ -98,8 +98,8 @@ static int _main_action(void *args) {
     sem1 = hpx_lco_sema_new(num[i]);
     sem2 = hpx_lco_sema_new(num[i]);
 
-    hpx_call(peers[0], _thread1, &value, sizeof(uint32_t), futures[0]);
-    hpx_call(peers[1], _thread2, &value, sizeof(uint32_t), futures[1]);
+    hpx_call(peers[0], _thread1, futures[0], &value, sizeof(uint32_t));
+    hpx_call(peers[1], _thread2, futures[1], &value, sizeof(uint32_t));
 
     hpx_lco_get_all(2, futures, sizes, addrs, NULL);
 

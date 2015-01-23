@@ -56,7 +56,7 @@ static int _main_action(void *args) {
   };
 
   for (int i = 0; i < NUM_THREADS; i++) 
-    hpx_call(HPX_HERE, _doSomething, &i, sizeof(i), futures[i]);
+    hpx_call(HPX_HERE, _doSomething, futures[i], &i, sizeof(i));
   
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   hpx_lco_delete(futures[0], HPX_NULL);
