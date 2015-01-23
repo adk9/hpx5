@@ -272,7 +272,8 @@ _progress_recvs() {
     // do set stuff
     if (!_empty(f)) {
       lco_unlock(&f->lco);
-      hpx_call(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(f), HPX_NULL);
+      hpx_call(HPX_HERE, _future_set_no_copy_from_remote, HPX_NULL, &f,
+               sizeof(f));
     } else {
       _future_set_no_copy(f);
       lco_unlock(&f->lco);
@@ -387,8 +388,8 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 
   _netfuture_table.inited = 1;
 
-  hpx_call_async(HPX_HERE, _progress, NULL, 0, HPX_NULL, HPX_NULL);
-  hpx_call_async(HPX_HERE, _progress_recv, NULL, 0, HPX_NULL, HPX_NULL);
+  hpx_call_async(HPX_HERE, _progress, HPX_NULL, HPX_NULL, NULL, 0);
+  hpx_call_async(HPX_HERE, _progress_recv, HPX_NULL, HPX_NULL, NULL, 0);
 
   _table_unlock();
 
@@ -420,7 +421,8 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks());
   _nf_init_args_t init_args = {.ag = ag, .cfg = _netfuture_cfg};
   for (int i = 0; i < hpx_get_num_ranks(); i++)
-    hpx_call(HPX_THERE(i), _initialize_netfutures, &init_args, sizeof(init_args), done);
+    hpx_call(HPX_THERE(i), _initialize_netfutures, done, &init_args,
+             sizeof(init_args));
   hpx_lco_wait(done);
   return HPX_SUCCESS;
 }
@@ -605,7 +607,7 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
   for (int i = 1; i < hpx_get_num_ranks(); i++)
-    hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
+    hpx_call(HPX_THERE(i), _add_future_to_table, done, &f, sizeof(f));
 
   hpx_lco_wait(done);
 

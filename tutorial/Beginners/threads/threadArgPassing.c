@@ -60,7 +60,8 @@ static int _main_action(void *args) {
   for (int i = 0; i < NUM_THREADS; i++) {
     thread_data_array[i].thread_id = i;
     thread_data_array[i].message = messages[i];
-    hpx_call(HPX_HERE, _printHello, &thread_data_array[i], sizeof(thread_data_array), and);
+    hpx_call(HPX_HERE, _printHello, and, &thread_data_array[i],
+             sizeof(thread_data_array));
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);

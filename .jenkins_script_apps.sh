@@ -43,16 +43,25 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --with-check --enable-testsuite --enable-apps $HPXDEBUG
+../configure $CFGFLAGS --enable-apps $HPXDEBUG
 make
 
-# Run all the unit tests:
-make check
-
-# Check the output of the unit tests:
-if grep -q Failed tests/unit/output.log
-then
-    exit 1
-fi
+# Run the apps and check their output...
+set -xe
+case "$HPXMODE" in
+    photon)
+        cd $DIR/build/apps/lulesh/newfutures
+        mpirun -np 16 luleshnewfutures -n 216 -x 48 -i 100
+        cd $DIR/build/apps/lulesh/parcels
+        mpirun -np 16 luleshparcels -n 216 -x 48 -i 100
+        ;;
+    mpi)
+        cd $DIR/apps/lulesh/mpi
+        mpicxx luleshMPI.cc -O3 -o luleshMPI
+        mpirun -np 216 luleshMPI 48 100
+        cd $DIR/build/apps/lulesh/parcels
+        mpirun -np 16 luleshparcels -n 216 -x 48 -i 100
+        ;;
+esac
 
 exit 0

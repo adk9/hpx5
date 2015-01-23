@@ -43,7 +43,7 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 
 int parcel_memput(hpx_addr_t to, const void *from, size_t size,
                   hpx_addr_t lsync, hpx_addr_t rsync) {
-  int e = hpx_call_async(to, _memput_request, from, size, lsync, rsync);
+  int e = hpx_call_async(to, _memput_request, lsync, rsync, from, size);
   dbg_check(e, "failed to initiate a memput request.\n");
   return e;
 }

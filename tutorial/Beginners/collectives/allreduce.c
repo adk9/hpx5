@@ -124,14 +124,14 @@ static int _main_action(void *args) {
       .gsum = gsum
     };
     hpx_addr_t remote = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(remote, _init, &init, sizeof(init), done);
+    hpx_call(remote, _init, done, &init, sizeof(init));
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     hpx_addr_t remote = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(remote, _check_sum, NULL, 0, HPX_NULL);
+    hpx_call(remote, _check_sum, HPX_NULL, NULL, 0);
   }
 
   hpx_lco_wait(complete);
